@@ -1,6 +1,6 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
-import { TextInput, SectionHeader } from '$lib/bits/custom/form'
+import { m } from '#lib/i18n.js'
+import { TextInput, SectionHeader } from '#lib/bits/custom/form/index.js'
 import FormSection from './FormSection.svelte'
 
 type FormFieldControl = {

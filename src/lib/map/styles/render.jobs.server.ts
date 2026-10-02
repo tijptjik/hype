@@ -1,5 +1,5 @@
 // TYPES
-import type { MapRenderJob } from '$lib/map/renders/render.types'
+import type { MapRenderJob } from '#lib/map/renders/render.types.js'
 // HELPERS
 import {
   getMapStyleRenderObjectKey,

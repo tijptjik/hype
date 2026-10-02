@@ -4,17 +4,17 @@ import { useLanguageSettingsModel } from './useLanguageSettingsModel.svelte'
 import { useExperimentalSettingsModel } from './useExperimentalSettingsModel.svelte'
 import { useDefaultMapSettingsModel } from './useDefaultMapSettingsModel.svelte'
 // AUTH
-import { useSession } from '$lib/auth/client'
+import { useSession } from '#lib/auth/client.js'
 // ADAPTERS
 import { useProfileSectionModel } from './useProfileSectionModel.svelte'
 // ENUMS
-import { Panel, PanelSide } from '$lib/enums'
+import { Panel, PanelSide } from '#lib/enums.js'
 // TYPES
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { AdminPreferenceCode } from '$lib/db/zod/schema/user.types'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { ThemeModel } from '$lib/themes/theme.svelte'
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { AdminPreferenceCode } from '#lib/db/zod/schema/user.types.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ThemeModel } from '#lib/themes/theme.svelte.js'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 /**
  * Owns settings application/session wiring outside the rendering pattern.

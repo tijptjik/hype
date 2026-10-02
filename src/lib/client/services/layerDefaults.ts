@@ -1,9 +1,9 @@
 // TYPES
-import type { Id } from '$lib/types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Id } from '#lib/types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 // TYPES
-import type { HubLayer } from '$lib/db/zod/schema/hub.types'
+import type { HubLayer } from '#lib/db/zod/schema/hub.types.js'
 
 /**
  * Minimal hub configuration required to resolve an initial layer selection.
@@ -13,7 +13,6 @@ type HubLayerDefaultsContext = {
   isCore?: boolean
   layerDefaults?: ReadonlyArray<Pick<HubLayer, 'layerId' | 'isDefaultVisible'>>
 }
-
 
 // The Neon Signs project is the curated starting point for visitors to hype.hk.
 export const CORE_DEFAULT_PROJECT_CODE = 'neon'

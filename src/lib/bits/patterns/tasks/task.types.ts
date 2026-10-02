@@ -1,8 +1,6 @@
-import type { Task } from '$lib/db/zod/schema/task.types'
-import type { AddressMeta } from '$lib/utils/address.types'
-import type {
-  TaskEditorLayerOption as TaskEditorLayerOptionSchema,
-} from '$lib/db/zod/schema/task.types'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
+import type { AddressMeta } from '#lib/utils/address.types.js'
+import type { TaskEditorLayerOption as TaskEditorLayerOptionSchema } from '#lib/db/zod/schema/task.types.js'
 
 export type TaskEditorLayerOption = TaskEditorLayerOptionSchema
 

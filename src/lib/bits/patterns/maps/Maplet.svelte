@@ -3,21 +3,21 @@
 import { fade } from 'svelte/transition'
 import { onDestroy } from 'svelte'
 // MapLibre
-import { addAddressMarker } from '$lib/map/markers'
-import { getCoordinates } from '$lib/client/services/geospatial'
-import { getLocaleKey } from '$lib/i18n'
+import { addAddressMarker } from '#lib/map/markers.js'
+import { getCoordinates } from '#lib/client/services/geospatial.js'
+import { getLocaleKey } from '#lib/i18n.js'
 import {
   applyRuntimeBasemapSource,
   buildCatalogMapStyle,
   getConfiguredBasemapAccessToken,
   listMapStyleCatalog,
-} from '$lib/map/styles'
-import { createMapController, type MapController } from '$lib/map/controller'
-import MapSurface from '$lib/bits/custom/map/MapSurface.svelte'
+} from '#lib/map/styles/index.js'
+import { createMapController, type MapController } from '#lib/map/controller.js'
+import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 // ICONS
 import ArrowsPointingIn from 'virtual:icons/proicons/full-screen-minimize'
 import ArrowsPointingOut from 'virtual:icons/proicons/full-screen-maximize'
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // TYPES
 import * as maplibregl from 'maplibre-gl'
 import type {
@@ -26,9 +26,9 @@ import type {
   Marker,
   MarkerDragEvent,
 } from 'maplibre-gl'
-import type { Id } from '$lib/types'
-import type { AddressMeta } from '$lib/utils/address.types'
-import type { MapStyleCatalogKey } from '$lib/map/styles/catalog'
+import type { Id } from '#lib/types.js'
+import type { AddressMeta } from '#lib/utils/address.types.js'
+import type { MapStyleCatalogKey } from '#lib/map/styles/catalog.js'
 type MapProps = {
   coordinates: number[]
   initialCenter?: [number, number] | null
@@ -266,11 +266,11 @@ $effect(() => {
           ? 'hidden'
           : ''} "
         transition:fade={{ duration: 300 }}
-        onclick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          isCollapsed = !isCollapsed;
-          mapProps.toggleCollapsed?.(isCollapsed);
+        onclick={e => {
+          e.preventDefault()
+          e.stopPropagation()
+          isCollapsed = !isCollapsed
+          mapProps.toggleCollapsed?.(isCollapsed)
         }}
       >
         <div class="swap">
@@ -279,8 +279,8 @@ $effect(() => {
             type="checkbox"
             checked={isCollapsed}
             onchange={() => {
-              isCollapsed = !isCollapsed;
-              mapProps.toggleCollapsed?.(isCollapsed);
+              isCollapsed = !isCollapsed
+              mapProps.toggleCollapsed?.(isCollapsed)
             }}
           >
           <Icon src={ArrowsPointingOut} class="swap-on h-5 w-5" />
@@ -295,11 +295,11 @@ $effect(() => {
           ? 'hidden'
           : ''}"
         transition:fade={{ duration: 300 }}
-        onclick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          isFullscreen = !isFullscreen;
-          mapProps.toggleFullscreen?.(isFullscreen);
+        onclick={e => {
+          e.preventDefault()
+          e.stopPropagation()
+          isFullscreen = !isFullscreen
+          mapProps.toggleFullscreen?.(isFullscreen)
         }}
       >
         <div class="swap">
@@ -308,8 +308,8 @@ $effect(() => {
             type="checkbox"
             checked={isFullscreen}
             onchange={() => {
-              isFullscreen = !isFullscreen;
-              mapProps.toggleFullscreen?.(isFullscreen);
+              isFullscreen = !isFullscreen
+              mapProps.toggleFullscreen?.(isFullscreen)
             }}
           >
           <Icon src={ArrowsPointingIn} class="swap-on h-5 w-5" />

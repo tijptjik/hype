@@ -1,16 +1,16 @@
 <script lang="ts">
 // I18N
 import { formatDistanceToNow } from 'date-fns'
-import { getFPI18n, getI18n, m } from '$lib/i18n'
+import { getFPI18n, getI18n, m } from '#lib/i18n.js'
 // BITS
 import * as TaskPrimitive from './components'
-import { ResourceViewer } from '$lib/bits'
+import { ResourceViewer } from '#lib/bits/index.js'
 // COMPONENTS
 // UTILS
-import { calculateDistance } from '$lib/map'
-import { getMetadata } from '$lib/api/server/image.remote'
+import { calculateDistance } from '#lib/map/index.js'
+import { getMetadata } from '#lib/api/server/image.remote.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // TYPES
 import type { Point } from 'geojson'
 import type { TaskEditorProps, TaskFieldItem, TaskDescriptorItem } from './task.types'

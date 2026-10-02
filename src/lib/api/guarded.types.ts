@@ -1,5 +1,5 @@
 // TYPES
-import type { setupRequestHandler } from '$lib/api'
+import type { setupRequestHandler } from '#lib/api/index.js'
 import type { RequestEvent } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 

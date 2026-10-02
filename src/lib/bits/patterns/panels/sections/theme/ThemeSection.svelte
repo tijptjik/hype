@@ -1,20 +1,18 @@
 <script lang="ts">
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // COMPONENTS
-import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
-import { ThemePicker } from '$lib/bits/patterns/themePicker'
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
+import { ThemePicker } from '#lib/bits/patterns/themePicker/index.js'
 // ICONS
 import ThemeIllustration from './components/ThemeIllustration.svelte'
 // MAP STYLES
-import { REGISTERED_MAP_STYLE_CATALOG } from '$lib/map/styles/catalog'
-import { getMapStyleCatalogCopy } from '$lib/map/styles/i18n'
-import { getMapStyleRenderAssetPath } from '$lib/map/styles/render.shared'
+import { REGISTERED_MAP_STYLE_CATALOG } from '#lib/map/styles/catalog.js'
+import { getMapStyleCatalogCopy } from '#lib/map/styles/i18n.js'
+import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
 // TYPES
-import type {
-  useSettingsPanelModel,
-} from '$lib/adapters/panels/useSettingsPanelModel.svelte'
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPanelModel.svelte.js'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 let {
   model,
@@ -55,7 +53,10 @@ const name = $props.id()
         {#each styles as style (style.key)}
           {@const copy = getMapStyleCatalogCopy(style.key, getLocaleKey())}
           <label
-            class="relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border-2 bg-card transition-colors hover:border-primary {model.mapTheme === style.key ? 'border-primary' : 'border-border'}"
+            class="relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border-2 bg-card transition-colors hover:border-primary {model.mapTheme ===
+            style.key
+              ? 'border-primary'
+              : 'border-border'}"
           >
             <input
               type="radio"

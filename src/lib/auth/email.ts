@@ -1,7 +1,7 @@
 // IMAGE
-import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
+import { toCloudflareImageWorkerPath } from '#lib/images/delivery.js'
 // TYPES
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 
 type AuthEmailKind = 'password-reset' | 'verification'
 

@@ -1,9 +1,9 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
-import { getGenAiState, toggleGenAiField } from '$lib/client/services/form'
-import { TextArea, TextInput } from '$lib/bits/custom/form'
-import type { FormBooleanValue, GenAiField } from '$lib/client/services/form.types'
-import type { LocaleKey } from '$lib/types'
+import { m } from '#lib/i18n.js'
+import { getGenAiState, toggleGenAiField } from '#lib/client/services/form.js'
+import { TextArea, TextInput } from '#lib/bits/custom/form/index.js'
+import type { FormBooleanValue, GenAiField } from '#lib/client/services/form.types.js'
+import type { LocaleKey } from '#lib/types.js'
 
 type DescriptorFieldConfig = {
   key: GenAiField

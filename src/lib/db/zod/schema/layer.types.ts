@@ -1,8 +1,8 @@
 import type { z } from 'zod'
-import type { EntityResponse } from '$lib/types'
-import type { FormLocaleInput } from '$lib/client/services/formLocale.types'
-import type { LayerMetadata } from '$lib/db/zod/schema/layerMetadata.types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+import type { EntityResponse } from '#lib/types.js'
+import type { FormLocaleInput } from '#lib/client/services/formLocale.types.js'
+import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
   LayerCompactProfileAPI,
   LayerAdminProfileAPI,
@@ -29,7 +29,7 @@ import type {
   RemoveLayerSchema,
   UserLayerRecord,
   UserLayerRecordCreate,
-} from '$lib/db/zod/schema/layer'
+} from '#lib/db/zod/schema/layer.js'
 
 export type LayerListParams = ListQueryParams
 export type LayerGetParams = GetQueryParams

@@ -22,9 +22,9 @@ import {
 } from '..'
 import { insert, insertMany, insertManyRelated, replaceManyRelated } from '../crud'
 import { retryBusyRead } from './sqlite'
-import { autochunk, chunkedInArray } from '$lib/utils/batch-query'
+import { autochunk, chunkedInArray } from '#lib/utils/batch-query.js'
 // I18N
-import { normalizeI18nLocaleRecord } from '$lib/i18n'
+import { normalizeI18nLocaleRecord } from '#lib/i18n.js'
 // TYPES
 import type {
   Database,
@@ -33,10 +33,10 @@ import type {
   Locale,
   ListResponse,
   QueryParams,
-} from '$lib/types'
-import type { LayerMetadata } from '$lib/db/zod/schema/layerMetadata.types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/types.js'
+import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type {
   LayerCommandProbe,
   LayerDB,
@@ -47,8 +47,8 @@ import type {
   LayerI18nPartial,
   LayerPropertyDBRaw,
   LayerPropertyNew,
-} from '$lib/db/zod/schema/layer.types'
-import type { TaskEditorLayerOption } from '$lib/db/zod/schema/task.types'
+} from '#lib/db/zod/schema/layer.types.js'
+import type { TaskEditorLayerOption } from '#lib/db/zod/schema/task.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

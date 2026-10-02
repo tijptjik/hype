@@ -1,8 +1,6 @@
 import type { Snippet } from 'svelte'
-import type { NavigableResource, Resource } from '$lib/types'
-import type {
-  ResourceIndexRowSelectionState,
-} from '$lib/client/services/bulkEdit.types'
+import type { NavigableResource, Resource } from '#lib/types.js'
+import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEdit.types.js'
 
 export type ResourceIndexProps<T extends Resource> = {
   resource: NavigableResource

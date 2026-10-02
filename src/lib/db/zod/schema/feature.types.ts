@@ -4,10 +4,16 @@ import type {
   ChangedRelationResolution,
   ResolveChangedRelationParams,
   ResourceSubmitMode,
-} from '$lib/client/services/formRelations.types'
-import type { EntityResponse, Id, Locale, LocaleKey, PartialExcept } from '$lib/types'
-import type { NewFeatureTask } from '$lib/api/services/taskCreation.types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+} from '#lib/client/services/formRelations.types.js'
+import type {
+  EntityResponse,
+  Id,
+  Locale,
+  LocaleKey,
+  PartialExcept,
+} from '#lib/types.js'
+import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
   FeatureCompactProfileAPI,
   FeatureAdminProfileAPI,
@@ -41,8 +47,8 @@ import type {
   UserFeatureUpdate,
   PublishFeatureSchema,
   RemoveFeatureSchema,
-} from '$lib/db/zod/schema/feature'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/db/zod/schema/feature.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type { Geometry } from 'geojson'
 
 export type FeatureListParams = ListQueryParams

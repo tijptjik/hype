@@ -3,12 +3,12 @@
 import { untrack } from 'svelte'
 import type { Component, Snippet } from 'svelte'
 // COMPONENTS
-import * as Panel from '$lib/bits/patterns/panels'
+import * as Panel from '#lib/bits/patterns/panels/index.js'
 // SERVICES
-import { navigateOnAdmin } from '$lib/navigation'
+import { navigateOnAdmin } from '#lib/navigation/index.js'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type { FirstClassResource } from '$lib/enums'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+import type { FirstClassResource } from '#lib/enums.js'
 
 // PROPS
 let {

@@ -2,7 +2,7 @@
 import { tick, untrack } from 'svelte'
 import { slide } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { SearchProps } from './search.types'
 // UTILS
@@ -10,7 +10,7 @@ import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.ut
 // COMPONENTS
 import * as SearchPrimitive from './src/components'
 // API
-import { searchUsers as searchUsersRemote } from '$lib/api/server/user.remote'
+import { searchUsers as searchUsersRemote } from '#lib/api/server/user.remote.js'
 
 let {
   placeholder = 'Search',
@@ -273,7 +273,8 @@ $effect(() => {
         <div class="overflow-hidden rounded-md">
           <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
             {#each results as item, index (index)}
-              {#if resultMap.variant?.(item) === 'visual' || resultMap.previewImage?.(item)}
+              {#if resultMap.variant?.(item) === 'visual' ||
+                resultMap.previewImage?.(item)}
                 <SearchPrimitive.VisualResultItem
                   title={resultMap.title(item)}
                   descriminator={resultMap.descriminator?.(item)}

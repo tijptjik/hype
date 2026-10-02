@@ -28,8 +28,8 @@ import type {
   LocaleKey,
   QueryParams,
   ListResponse,
-} from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+} from '#lib/types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type {
   OrganisationDB,
   OrganisationDBNew,
@@ -40,9 +40,9 @@ import type {
   OrganisationI18nPartial,
   OrganisationRoleDB,
   OrganisationRoleNew,
-} from '$lib/db/zod/schema/organisation.types'
+} from '#lib/db/zod/schema/organisation.types.js'
 // TYPES
-import type { CapabilityDefinitions } from '$lib/capabilities.types'
+import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
 
 type OrganisationProbe = {
   id: string
@@ -63,7 +63,6 @@ type OrganisationCommandProbe = {
   id: string
   hubId: string | null
 }
-
 
 // ═══════════════════════
 // TABLE OF CONTENTS

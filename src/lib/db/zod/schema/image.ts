@@ -3,16 +3,16 @@ import { z } from 'zod'
 // DRIZZLE
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { feature, featureImage, image } from '$lib/db/schema/index'
+import { feature, featureImage, image } from '#lib/db/schema/index.js'
 // IMAGE
-import { isSupportedUploadImageContentType } from '$lib/images/accept'
+import { isSupportedUploadImageContentType } from '#lib/images/accept.js'
 import {
   ImageCDN,
   ImageContextResource,
   ImageContextResourceExtended,
   ImageEnv,
   ImageIntent,
-} from '$lib/enums'
+} from '#lib/enums.js'
 import { UserBase } from './user'
 
 // ═══════════════════════

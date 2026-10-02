@@ -1,16 +1,16 @@
-import type { ParentSectionProjectItem } from '$lib/bits'
-import { getI18n, m, normalizeI18nLocaleRecord, toFormLocaleRecord } from '$lib/i18n'
+import type { ParentSectionProjectItem } from '#lib/bits/index.js'
+import { getI18n, m, normalizeI18nLocaleRecord, toFormLocaleRecord } from '#lib/i18n.js'
 import {
   resolveLayerActionPermissions,
   resolveLayerProjectSelectionScope,
   toLayerAuthActor,
-} from '$lib/api/services/authz'
-import type { LayerProjectSelectionScope } from '$lib/api/services/authz/layer'
-import { updateFormData } from '$lib/client/services/form'
+} from '#lib/api/services/authz/index.js'
+import type { LayerProjectSelectionScope } from '#lib/api/services/authz/layer.js'
+import { updateFormData } from '#lib/client/services/form.js'
 import {
   overrideResourceEntityBoolean,
   overrideResourceListItemBoolean,
-} from '$lib/client/services/resource'
+} from '#lib/client/services/resource.js'
 import type {
   LayerEditorPermissions,
   LayerFormLocale,
@@ -21,10 +21,10 @@ import type {
   LayerParentProjectFormData,
   LayerPropertyRow,
   ResolvedLayerProperty,
-} from '$lib/client/services/layer.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
+} from '#lib/client/services/layer.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 import type {
   Layer,
   LayerBooleanField,
@@ -33,9 +33,9 @@ import type {
   LayerPropertyPartialExtra,
   LayerSubmitData,
   LayerSubmitUpdatesParams,
-} from '$lib/db/zod/schema/layer.types'
-import type { FormDataUpdaterForm } from '$lib/client/services/form.types'
-import type { Locale } from '$lib/types'
+} from '#lib/db/zod/schema/layer.types.js'
+import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
+import type { Locale } from '#lib/types.js'
 import Blend from 'virtual:icons/proicons/shape-intersect'
 import TypeIcon from 'virtual:icons/proicons/text'
 

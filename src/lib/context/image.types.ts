@@ -1,15 +1,15 @@
 // TYPES
-import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
-import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
-import type { ProjectDB } from '$lib/db/zod/schema/project.types'
+import type { ImageContextResource, ImageContextResourceExtended } from '#lib/enums.js'
+import type { OrganisationDB } from '#lib/db/zod/schema/organisation.types.js'
+import type { ProjectDB } from '#lib/db/zod/schema/project.types.js'
 import type {
   ImageUpload,
   LoadStatus,
   ImageCtxEnvelope,
-} from '$lib/db/zod/schema/image.types'
+} from '#lib/db/zod/schema/image.types.js'
 import type { SvelteSet } from 'svelte/reactivity'
-import type { Id } from '$lib/types'
-import type { HubDB } from '$lib/db/zod/schema/hub.types'
+import type { Id } from '#lib/types.js'
+import type { HubDB } from '#lib/db/zod/schema/hub.types.js'
 
 type ImageCtxMode = 'standalone' | 'gallery' | 'carousel'
 

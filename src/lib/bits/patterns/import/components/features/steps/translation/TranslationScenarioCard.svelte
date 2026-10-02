@@ -1,8 +1,8 @@
 <script lang="ts">
 // COMPONENTS
-import Badge from '$lib/bits/custom/badge/Badge.svelte'
+import Badge from '#lib/bits/custom/badge/Badge.svelte'
 // TYPES
-import type { FeatureTranslationScenarioSummary } from '$lib/client/services/import/features/translation'
+import type { FeatureTranslationScenarioSummary } from '#lib/client/services/import/features/translation.js'
 
 type Props = {
   summary: FeatureTranslationScenarioSummary

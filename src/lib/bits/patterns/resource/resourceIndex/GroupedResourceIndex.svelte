@@ -7,13 +7,13 @@ import ResourceCardRow from './components/ResourceCardRow.svelte'
 import ResourceEmptyState from './components/ResourceEmptyState.svelte'
 import ResourceTableRow from './components/ResourceTableRow.svelte'
 // BITS
-import { VirtualList } from '$lib/bits/custom/index/src'
+import { VirtualList } from '#lib/bits/custom/index/src/index.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // TYPES
-import type { Resource } from '$lib/types'
+import type { Resource } from '#lib/types.js'
 import type { GroupedResourceIndexProps } from './resourceIndex.types'
 import {
   RESOURCE_INDEX_LIST_HORIZONTAL_PADDING_PX,
@@ -260,7 +260,10 @@ function getGroupId(group: Record<string, unknown>): string {
 }
 </script>
 
-{#snippet children(item: GroupedResourceIndexItem<T, G>, _index: number)}
+{#snippet children(
+  item: GroupedResourceIndexItem<T, G>,
+  _index: number,
+)}
   {#if item.kind === 'header'}
     <div class="pt-4 pb-2">
       <GroupHeader

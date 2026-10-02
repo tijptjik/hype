@@ -1,11 +1,11 @@
 // TYPES
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Resource } from '$lib/types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
-import type { Task } from '$lib/db/zod'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Resource } from '#lib/types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { Hub } from '#lib/db/zod/schema/hub.types.js'
+import type { Task } from '#lib/db/zod/index.js'
 
 /* ----------------- */
 // GUARDS

@@ -1,6 +1,6 @@
 // TYPES
-import type { FeatureDB } from '$lib/db/zod/schema/feature.types'
-import type { Id } from '$lib/types'
+import type { FeatureDB } from '#lib/db/zod/schema/feature.types.js'
+import type { Id } from '#lib/types.js'
 
 export type ResourceBulkEditOption = {
   value: string

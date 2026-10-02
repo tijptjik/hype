@@ -2,15 +2,15 @@
 // SVELTE
 import { untrack } from 'svelte'
 // BITS COMPONENTS
-import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
+import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import ChevronUp from 'virtual:icons/proicons/chevron-up'
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // ADAPTERS
-import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
+import type { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
 // TYPES
-import type { Property, PropertyValue } from '$lib/db/zod/schema/property.types'
+import type { Property, PropertyValue } from '#lib/db/zod/schema/property.types.js'
 
 type Props = {
   property: Property
@@ -68,7 +68,7 @@ let displayText = $derived(filter.displayText)
         >
           <div
             class="h-2 w-2 shrink-0 rounded-full group-hover:bg-base-content/60 group-focus:outline-none group-focus:ring-0 group-focus-visible:bg-base-content/60 {selectedPropertyValueIds.includes(
-              value.id
+              value.id,
             )
               ? 'bg-sky-600 group-hover:bg-sky-600/60 group-focus-visible:bg-sky-600/60'
               : 'border-1 border-base-content/60 bg-transparent'}"

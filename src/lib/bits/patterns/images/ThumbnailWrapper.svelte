@@ -3,8 +3,8 @@
 import { flip } from 'svelte/animate'
 import { onDestroy } from 'svelte'
 // LIB
-import { cx } from '$lib/bits/utils'
-import { buildGallerySceneAssetUrls } from '$lib/client/services/image'
+import { cx } from '#lib/bits/utils.js'
+import { buildGallerySceneAssetUrls } from '#lib/client/services/image.js'
 // BITS
 import Thumbnail from './Thumbnail.svelte'
 import AdminThumbnail from './AdminThumbnail.svelte'
@@ -417,7 +417,10 @@ onDestroy(() => {
 </script>
 
 <div
-  class={cx('flex h-full w-full min-h-0 flex-col overflow-hidden select-none', className)}
+  class={cx(
+    'flex h-full w-full min-h-0 flex-col overflow-hidden select-none',
+    className,
+  )}
 >
   {#each prefetchedSceneAssetUrls as url (url)}
     <img
@@ -504,9 +507,7 @@ onDestroy(() => {
   {#if footer}
     <div
       class={cx(
-        variant === 'admin'
-          ? 'border-t border-black/10 bg-base-300 px-3 py-3'
-          : 'pt-4',
+        variant === 'admin' ? 'border-t border-black/10 bg-base-300 px-3 py-3' : 'pt-4',
       )}
     >
       {@render footer()}

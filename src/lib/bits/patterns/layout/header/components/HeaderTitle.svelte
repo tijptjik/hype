@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS COMPONENTS
-import BitsHeader from '$lib/bits/custom/header/Header.svelte'
-import { Dropdown } from '$lib/bits/core'
+import BitsHeader from '#lib/bits/custom/header/Header.svelte'
+import { Dropdown } from '#lib/bits/core/index.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // SVELTE
 import { slide } from 'svelte/transition'
 // TYPES

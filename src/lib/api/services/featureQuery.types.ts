@@ -1,7 +1,7 @@
 // TYPES
-import type { RangeFilterValue } from '$lib/client/services/propertyFilters.types'
-import type { LocaleKey, Prisms } from '$lib/types'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
+import type { LocaleKey, Prisms } from '#lib/types.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 
 /** Geographic membership for a bounded feature query; bounds use GeoJSON axis order. */
 export type FeatureSpatialQuery = {
@@ -44,7 +44,7 @@ export type FeatureQueryPage = {
   nextCursor: { id: string; signature: string; value?: string | null } | null
   facets: { divisions: Record<string, DivisionFacet> } | null
   /** Current actor's membership state for returned features, including rows beyond bootstrap. */
-  userFeatures?: import('$lib/db/zod/schema/user.types').UserFeature[]
+  userFeatures?: import('#lib/db/zod/schema/user.types.js').UserFeature[]
 }
 
 /** One selected division, counted independently across all contained features. */

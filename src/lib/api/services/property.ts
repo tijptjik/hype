@@ -2,13 +2,13 @@
 import type { SQL } from 'drizzle-orm'
 // API
 import { applyQueryFilters } from '..'
-import { chunkedInArray } from '$lib/utils/batch-query'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // DB
-import { transformI18nSafely } from '$lib/db'
+import { transformI18nSafely } from '#lib/db/index.js'
 // SCHEMA
-import { property, project as projectTable } from '$lib/db/schema/index'
+import { property, project as projectTable } from '#lib/db/schema/index.js'
 // ZOD
-import { PropertyDetailProfileAPI } from '$lib/db/zod'
+import { PropertyDetailProfileAPI } from '#lib/db/zod/index.js'
 // TYPES
 import type {
   Database,
@@ -16,8 +16,8 @@ import type {
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
-import type { Property, PropertyDBRaw } from '$lib/db/zod/schema/property.types'
+} from '#lib/types.js'
+import type { Property, PropertyDBRaw } from '#lib/db/zod/schema/property.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

@@ -2,33 +2,31 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import Button from '$lib/bits/core/button/Button.svelte'
-import { cx } from '$lib/bits/utils'
-import * as ResourceControlBarPrimitive from '$lib/bits/patterns/resource/resourceControlBar/components'
-import ResourceBulkEditControl from '$lib/bits/patterns/resource/resourceControlBar/ResourceBulkEditControl.svelte'
-import { ResourceSortControl } from '$lib/bits/patterns/resource/resourceSortControl'
+import Button from '#lib/bits/core/button/Button.svelte'
+import { cx } from '#lib/bits/utils.js'
+import * as ResourceControlBarPrimitive from '#lib/bits/patterns/resource/resourceControlBar/components/index.js'
+import ResourceBulkEditControl from '#lib/bits/patterns/resource/resourceControlBar/ResourceBulkEditControl.svelte'
+import { ResourceSortControl } from '#lib/bits/patterns/resource/resourceSortControl/index.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // SERVICES
 import {
   getFeatureTaskLabel,
   getFilterRenderItems,
   getFilterSectionCount,
   getResourceLocaleToggleItems,
-} from '$lib/client/services/filters'
+} from '#lib/client/services/filters.js'
 // ICONS
 import ChevronLeftIcon from 'virtual:icons/proicons/chevron-left'
 import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 import FunnelIcon from 'virtual:icons/proicons/filter'
 // TYPES
-import type { NavigableResource } from '$lib/types'
-import type { ResourceBulkEditConfig } from '$lib/client/services/bulkEdit.types'
-import type {
-  ResourceControlBarConfig,
-} from '$lib/client/services/resourceFilters.types'
-import type { ResourceSortConfig } from '$lib/client/services/filters.types'
+import type { NavigableResource } from '#lib/types.js'
+import type { ResourceBulkEditConfig } from '#lib/client/services/bulkEdit.types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { ResourceSortConfig } from '#lib/client/services/filters.types.js'
 
 let {
   resource,
@@ -194,7 +192,10 @@ $effect(() => {
       {/if}
     {/snippet}
 
-    {#snippet filterMenuContent({ notifyLayoutChange, closeMenu })}
+    {#snippet filterMenuContent({
+      notifyLayoutChange,
+      closeMenu,
+    })}
       {#if !singleSectionConfig}
         {#each filters.sections as section, idx (section.key)}
           {#if activeSection !== section.key}
@@ -237,8 +238,7 @@ $effect(() => {
             effectiveSectionConfig,
             isSuperAdmin,
           )}
-          {@const isCarouselActive =
-            activeItems.length > FILTER_CAROUSEL_VISIBLE_COUNT}
+          {@const isCarouselActive = activeItems.length > FILTER_CAROUSEL_VISIBLE_COUNT}
           {@const visibleItems = isCarouselActive
             ? activeItems.slice(
                 filterCarouselIndex,
@@ -247,7 +247,9 @@ $effect(() => {
             : activeItems}
           {@const activeSectionHasTranslations =
             !('type' in effectiveSectionConfig) &&
-            effectiveSectionConfig.filters.some(filter => filter.type === 'translation')}
+            effectiveSectionConfig.filters.some(
+              filter => filter.type === 'translation',
+            )}
 
           <div class="flex h-16 flex-row items-center justify-center gap-4">
             {#if activeSectionHasTranslations}
@@ -322,7 +324,8 @@ $effect(() => {
                 style="ghost"
                 color="light"
                 class="bits-resource-filter-bar__carousel-nav"
-                disabled={filterCarouselIndex + FILTER_CAROUSEL_VISIBLE_COUNT >= activeItems.length}
+                disabled={filterCarouselIndex + FILTER_CAROUSEL_VISIBLE_COUNT >=
+                  activeItems.length}
                 onClick={() => pageFilterCarousel('next', activeItems.length)}
               />
             {/if}

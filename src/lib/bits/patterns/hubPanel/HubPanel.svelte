@@ -5,22 +5,24 @@
 -->
 <script lang="ts">
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // CONTEXT
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 // BITS
-import { HubPanelSubscription, HubPolicyDialog, PanelRoot as Panel } from '$lib/bits'
-import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
+import {
+  HubPanelSubscription,
+  HubPolicyDialog,
+  PanelRoot as Panel,
+} from '#lib/bits/index.js'
+import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
 // ENUMS
-import { Panel as PanelEnum, PanelSide } from '$lib/enums'
+import { Panel as PanelEnum, PanelSide } from '#lib/enums.js'
 // TYPES
-import type { HubPolicyDialogProps } from '$lib/bits/patterns/policies'
-import type {
-  HubPanelSubscriptionProps,
-} from '$lib/bits/patterns/panels/hubPanelSubscription'
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { HubPolicyDialogProps } from '#lib/bits/patterns/policies/index.js'
+import type { HubPanelSubscriptionProps } from '#lib/bits/patterns/panels/hubPanelSubscription/index.js'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+import type { usePanelShellModel } from '#lib/adapters/panels/usePanelShellModel.svelte.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 
 // CONTEXT
 
@@ -66,12 +68,7 @@ let isTermsOfServiceOpen = $state(false)
     </h2>
     <div class="preformatted mb-12">
       <p class="mb-12">
-        {@html getI18n(
-          hubI18n,
-          'description',
-          preferences,
-          m.menu_about(),
-        )}
+        {@html getI18n(hubI18n, 'description', preferences, m.menu_about())}
       </p>
     </div>
     {#if showSubscription && subscriptionProps}

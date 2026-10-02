@@ -1,14 +1,14 @@
 <script lang="ts">
-import { Button } from '$lib/bits/core/button'
-import { cx } from '$lib/bits/utils'
-import { InfoDialog } from '$lib/bits/core/dialog'
-import { Separator } from '$lib/bits/core/separator'
+import { Button } from '#lib/bits/core/button/index.js'
+import { cx } from '#lib/bits/utils.js'
+import { InfoDialog } from '#lib/bits/core/dialog/index.js'
+import { Separator } from '#lib/bits/core/separator/index.js'
 import * as Main from '../../../main'
-import { m } from '$lib/i18n'
-import { SwapField } from '$lib/bits/patterns/forms/swapField'
-import UserAttributionCard from '$lib/bits/patterns/cards/userAttributionCard/UserAttributionCard.svelte'
-import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
-import { resolveAvatarImageSrc } from '$lib/utils/avatar'
+import { m } from '#lib/i18n.js'
+import { SwapField } from '#lib/bits/patterns/forms/swapField/index.js'
+import UserAttributionCard from '#lib/bits/patterns/cards/userAttributionCard/UserAttributionCard.svelte'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
+import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 import type { FormFeatureVisualSectionProps } from './formFeatureVisualSection.types'
 import ChevronLeftIcon from 'virtual:icons/proicons/chevron-left'
 import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
@@ -66,13 +66,17 @@ const rootClass = $derived(
         <img
           class="h-12 w-12 shrink-0 rounded-full bg-[color:color-mix(in_oklab,var(--color-base-content)_16%,transparent)] object-cover shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-base-content)_12%,transparent)]"
           src={resolveAvatarImageSrc(contributorUser.image) ?? ''}
-          alt={contributorUser.name ?? contributorUser.attribution ?? m.user__current_user()}
+          alt={contributorUser.name ??
+            contributorUser.attribution ??
+            m.user__current_user()}
         >
         <div
           class="-ml-12 flex h-11 min-w-max max-w-none flex-col justify-center gap-0.5 rounded-full border border-[color:color-mix(in_oklab,var(--color-base-content)_12%,transparent)] bg-[color:color-mix(in_oklab,black_82%,var(--color-glass-result)_18%)] py-0.5 pr-4 pl-14 backdrop-blur-[14px]"
         >
           <span class="whitespace-nowrap text-[0.9375rem] leading-[1.1] font-semibold">
-            {contributorUser.name ?? contributorUser.attribution ?? m.user__current_user()}
+            {contributorUser.name ??
+              contributorUser.attribution ??
+              m.user__current_user()}
           </span>
           <span
             class="flex items-center gap-[0.35rem] whitespace-nowrap text-[0.8125rem] leading-none text-[color:color-mix(in_oklab,var(--color-base-content)_65%,transparent)]"

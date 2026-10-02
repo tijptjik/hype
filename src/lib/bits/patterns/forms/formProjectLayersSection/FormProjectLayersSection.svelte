@@ -4,15 +4,15 @@ import { draggable, droppable, dndState, type DragDropState } from '@thisux/svel
 import EyeIcon from 'virtual:icons/proicons/eye'
 
 // SERVICES
-import { getDropIndex } from '$lib/client/services/dragDrop'
+import { getDropIndex } from '#lib/client/services/dragDrop.js'
 
 // BITS COMPONENTS
-import { SimpleTooltip } from '$lib/bits/core'
-import { Card, SectionHeader, Switch } from '$lib/bits/custom'
-import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
+import { SimpleTooltip } from '#lib/bits/core/index.js'
+import { Card, SectionHeader, Switch } from '#lib/bits/custom/index.js'
+import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 // TYPES
 import type { FormProjectLayersSectionProps } from './formProjectLayersSection.types'
@@ -117,7 +117,8 @@ function handleDrop(state: DragDropState, targetLayerId: string): void {
                       checked={item.isDefaultVisible}
                       disabled={isDisabled}
                       size="sm"
-                      onCheckedChange={value => onToggleDefault(item.id, value === true)}
+                      onCheckedChange={value =>
+                        onToggleDefault(item.id, value === true)}
                     />
                   </label>
                 {/snippet}

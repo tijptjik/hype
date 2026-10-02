@@ -6,11 +6,11 @@ import ResourceEmptyState from './src/ResourceEmptyState.svelte'
 import ResourceLoadingState from './src/ResourceLoadingState.svelte'
 import ResourceTableRow from './src/ResourceTableRow.svelte'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // TYPES
-import type { Resource } from '$lib/types'
+import type { Resource } from '#lib/types.js'
 import type {
   ResourceIndexGridRow,
   ResourceIndexItem,
@@ -130,7 +130,10 @@ $effect(() => {
 })
 </script>
 
-{#snippet children(item: ResourceIndexItem<T>, index: number)}
+{#snippet children(
+  item: ResourceIndexItem<T>,
+  index: number,
+)}
   {#if layoutMode === 'card'}
     {@const cardRow = item as ResourceIndexGridRow<T>}
     <ResourceCardRow

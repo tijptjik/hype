@@ -1,5 +1,5 @@
 // TYPES
-import type { OmniCollection } from '$lib/enums'
+import type { OmniCollection } from '#lib/enums.js'
 
 export type SearchResult = {
   name: string

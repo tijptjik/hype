@@ -1,23 +1,21 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
 
-import { Panel as PanelType } from '$lib/enums'
+import { Panel as PanelType } from '#lib/enums.js'
 // BITS
-import { PanelRoot as Panel } from '$lib/bits'
+import { PanelRoot as Panel } from '#lib/bits/index.js'
 // COMPONENTS
-import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
-import Info from '$lib/bits/patterns/panels/components/info/Stars.svelte'
-import WantToVisit from '$lib/bits/patterns/panels/sections/wantToVisit/WantToVisitSection.svelte'
-import HaveVisited from '$lib/bits/patterns/panels/sections/haveVisited/HaveVisitedSection.svelte'
-import GuestAccountReminder from '$lib/bits/custom/GuestAccountReminder.svelte'
+import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
+import Info from '#lib/bits/patterns/panels/components/info/Stars.svelte'
+import WantToVisit from '#lib/bits/patterns/panels/sections/wantToVisit/WantToVisitSection.svelte'
+import HaveVisited from '#lib/bits/patterns/panels/sections/haveVisited/HaveVisitedSection.svelte'
+import GuestAccountReminder from '#lib/bits/custom/GuestAccountReminder.svelte'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
-import type {
-  useSavedFeatureListModel,
-} from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+import type { usePanelShellModel } from '#lib/adapters/panels/usePanelShellModel.svelte.js'
+import type { useSavedFeatureListModel } from '#lib/adapters/panels/useSavedFeatureListModel.svelte.js'
 
 // CONTEXT
 
@@ -68,8 +66,8 @@ const panelProps = $derived(shell.panel)
     onClose={shell.onClose}
     {...panelProps}
     title={m.menu_stars()}
-    onToggleInfo={(e) => {
-      handleToggleInfo(e);
+    onToggleInfo={e => {
+      handleToggleInfo(e)
     }}
   />
   <Info isOpen={isInfoOpen} />

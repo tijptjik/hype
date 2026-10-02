@@ -1,8 +1,8 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getCardCtx } from '$lib/context/card.svelte'
+import { getCardCtx } from '#lib/context/card.svelte.js'
 // ICONS
 import TriangleAlert from 'virtual:icons/proicons/alert-triangle'
 // LOCAL

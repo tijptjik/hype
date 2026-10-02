@@ -1,10 +1,10 @@
 // TYPES
-import type { Task } from '$lib/db/zod'
+import type { Task } from '#lib/db/zod/index.js'
 import type {
   ImageContextEnvelope,
   ImageCtxEnvelope,
-} from '$lib/db/zod/schema/image.types'
-import type { Resource } from '$lib/types'
+} from '#lib/db/zod/schema/image.types.js'
+import type { Resource } from '#lib/types.js'
 
 /* ----------------- */
 // ENTITY CARDS

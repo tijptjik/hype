@@ -1,13 +1,13 @@
 <script lang="ts">
 // BITS
-import { Row } from '$lib/bits/custom'
-import * as VirtualListPrimitive from '$lib/bits/custom/index/src'
-import StatsPips from '$lib/bits/custom/featureStats/components/StatsPips.svelte'
+import { Row } from '#lib/bits/custom/index.js'
+import * as VirtualListPrimitive from '#lib/bits/custom/index/src/index.js'
+import StatsPips from '#lib/bits/custom/featureStats/components/StatsPips.svelte'
 import * as FeatureRowPrimitive from './components'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation'
+import { navigateOnAdmin } from '#lib/navigation/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // ICONS
 import DatabaseIcon from 'virtual:icons/proicons/database'
 import BookOpenIcon from 'virtual:icons/proicons/book-open'
@@ -16,12 +16,12 @@ import ImageIcon from 'virtual:icons/proicons/photo'
 import TagsIcon from 'virtual:icons/proicons/tag-multiple'
 import PenIcon from 'virtual:icons/proicons/pencil'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
-import { getFeatureIdenticonUrl } from '$lib/client/services/image'
+import { getFeatureIdenticonUrl } from '#lib/client/services/image.js'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { FeatureRowStatMap } from '$lib/client/services/featureRows.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { FeatureRowStatMap } from '#lib/client/services/featureRows.types.js'
 import type { FeatureRowProps } from './featureRow.types'
 
 let {
@@ -133,7 +133,9 @@ function handleDescriptionClick(): void {
   image={entity.image}
   imageSrc={fallbackImageSrc}
   alt={model.imageAlt}
-  onImageClick={entity.image ? (handleImageClick as (image: unknown) => void) : undefined}
+  onImageClick={entity.image
+    ? (handleImageClick as (image: unknown) => void)
+    : undefined}
   title={model.title || m.deft_dry_chipmunk_blink()}
   onTitleClick={handleTitleClick}
   description={model.description}

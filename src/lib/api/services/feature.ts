@@ -1,15 +1,15 @@
 // DRIZZLE
 import { eq, inArray, sql, type SQL } from 'drizzle-orm'
 // API
-import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
-import { toBooleanOrUndefined } from '$lib/api/services'
-import { isRelevantHubAdmin } from '$lib/api/services/authz'
+import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
+import { toBooleanOrUndefined } from '#lib/api/services/index.js'
+import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
 // DB
-import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
-import { applyTriStateBooleanCondition } from '$lib/db/query'
-import { chunkedInArray } from '$lib/utils/batch-query'
-import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
+import { applyTriStateBooleanCondition } from '#lib/db/query.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
+import { toImageEnvelope, toNormalizedImageRecord } from '#lib/db/services/image.js'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 import {
   createFeature,
   createI18n,
@@ -19,12 +19,12 @@ import {
   updateFeatureByIdWithConcurrency,
   updateI18n,
   updateProperties,
-} from '$lib/db/services/feature'
-import { probeLayerForUpdate } from '$lib/db/services/layer'
+} from '#lib/db/services/feature.js'
+import { probeLayerForUpdate } from '#lib/db/services/layer.js'
 // I18N
-import { supportedLocaleKeys, toFormLocaleRecord, toLocaleKey } from '$lib/i18n'
+import { supportedLocaleKeys, toFormLocaleRecord, toLocaleKey } from '#lib/i18n.js'
 // SCHEMA
-import { feature, layer } from '$lib/db/schema/index'
+import { feature, layer } from '#lib/db/schema/index.js'
 import {
   FeatureCompactProfileAPI,
   FeatureAdminProfileAPI,
@@ -33,9 +33,9 @@ import {
   FeatureDetailProfileAPI,
   FeatureEntityFormData,
   FeatureListProfileAPI,
-} from '$lib/db/zod/schema/feature'
+} from '#lib/db/zod/schema/feature.js'
 // ENUMS
-import { HierarchicalResource, ImageContextResource } from '$lib/enums'
+import { HierarchicalResource, ImageContextResource } from '#lib/enums.js'
 // CLIENT
 // TYPES
 import type {
@@ -48,9 +48,9 @@ import type {
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
-import type { ImageDB } from '$lib/db/zod/schema/image.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+} from '#lib/types.js'
+import type { ImageDB } from '#lib/db/zod/schema/image.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type {
   Feature,
   FeatureAdminDBRaw,
@@ -61,7 +61,7 @@ import type {
   FeatureProfile,
   FeatureQueryRowByProfile,
   UserContributedFeature,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 
 const requiredLocaleKeys = supportedLocaleKeys
 
@@ -860,7 +860,7 @@ const prepareUserContributedFeatureDraft = async (
 
       let translatedValues: string[] = []
       if (fieldsToTranslate.length > 0 && subscriptionKey) {
-        const { translateText } = await import('$lib/api/external/translation')
+        const { translateText } = await import('#lib/api/external/translation.js')
         try {
           translatedValues = await translateText(
             fieldsToTranslate,
@@ -940,7 +940,7 @@ const prepareUserContributedFeatureDraft = async (
         let translatedValue: string | null = null
         if (subscriptionKey) {
           try {
-            const { translateText } = await import('$lib/api/external/translation')
+            const { translateText } = await import('#lib/api/external/translation.js')
             translatedValue =
               (
                 await translateText(

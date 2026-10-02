@@ -2,11 +2,14 @@
 import type { Component, Snippet } from 'svelte'
 // QUERY
 // CUSTOM
-import type { LoadScreenColor, LoadScreenSurface } from '$lib/bits/custom/loading'
+import type {
+  LoadScreenColor,
+  LoadScreenSurface,
+} from '#lib/bits/custom/loading/index.js'
 // LAYOUT
 import type { HeaderProps } from '../header'
 // TYPES
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey } from '#lib/types.js'
 
 export interface AppSocialImage {
   image: string

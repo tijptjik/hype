@@ -2,12 +2,12 @@
 // SVELTE
 import { slide } from 'svelte/transition'
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getCardCtx } from '$lib/context/card.svelte'
-import { getImageCtx } from '$lib/context/image.svelte'
+import { getCardCtx } from '#lib/context/card.svelte.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 // ICONS
 import ExclamationTriangle from 'virtual:icons/proicons/alert-triangle'
 

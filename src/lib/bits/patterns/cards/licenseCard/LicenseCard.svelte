@@ -1,6 +1,6 @@
 <script lang="ts">
-import { SimpleTooltip } from '$lib/bits/core'
-import { Card, Icon } from '$lib/bits/custom'
+import { SimpleTooltip } from '#lib/bits/core/index.js'
+import { Card, Icon } from '#lib/bits/custom/index.js'
 import CcIcon from 'virtual:icons/cib/creative-commons'
 import CopyrightLineIcon from 'virtual:icons/mingcute/copyright-line'
 import CcPdAltIcon from 'virtual:icons/cib/creative-commons-pd-alt'

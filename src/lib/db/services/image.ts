@@ -33,11 +33,11 @@ import {
   ImageContextResourceExtended,
   ImageEnv,
   ImageIntentPublic,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // DB
-import { autochunk, SQL_BATCH_SIZE } from '$lib/utils/batch-query'
+import { autochunk, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // TYPES
-import type { Id, Database, EntityResponse } from '$lib/types'
+import type { Id, Database, EntityResponse } from '#lib/types.js'
 import type {
   FeatureImage,
   FeatureImageDB,
@@ -53,8 +53,8 @@ import type {
   ImageListByProfile,
   ImageProfile,
   Intent,
-} from '$lib/db/zod/schema/image.types'
-import { ImageListProfileAPI, ImageAdminProfileAPI } from '$lib/db/zod'
+} from '#lib/db/zod/schema/image.types.js'
+import { ImageListProfileAPI, ImageAdminProfileAPI } from '#lib/db/zod/index.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

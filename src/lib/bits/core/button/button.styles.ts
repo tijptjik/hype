@@ -1,5 +1,5 @@
 // BITS
-import { cssVars, cx } from '$lib/bits/utils'
+import { cssVars, cx } from '#lib/bits/utils.js'
 // TYPES
 import type {
   ButtonColor,

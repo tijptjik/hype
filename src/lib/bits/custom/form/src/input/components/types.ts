@@ -1,4 +1,4 @@
-import type { InputType, LocaleExtended } from '$lib/types'
+import type { InputType, LocaleExtended } from '#lib/types.js'
 
 export interface FormControlPrimitiveProps {
   id?: string

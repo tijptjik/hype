@@ -1,5 +1,5 @@
-import { cx } from '$lib/bits/utils'
-import { cssVars } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
+import { cssVars } from '#lib/bits/utils.js'
 
 const APP_MENU_TRANSITION_CLASSES = 'transition-[padding] duration-260 ease-[ease]'
 

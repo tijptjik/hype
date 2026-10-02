@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS
-import Button from '$lib/bits/core/button/Button.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
 // TYPES
 import type { ResourceControlBarFilterCtrlProps } from './resourceControlBarPrimitives.types'
 

@@ -1,7 +1,5 @@
 import type { Snippet } from 'svelte'
-import type {
-  ResourceIndexRowSelectionState,
-} from '$lib/client/services/bulkEdit.types'
+import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEdit.types.js'
 
 export type RowImageClickHandler = ((image: unknown) => void) | (() => void)
 

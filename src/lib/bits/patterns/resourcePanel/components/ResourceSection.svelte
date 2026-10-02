@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SVELTE
 import { untrack } from 'svelte'
 // ICONS
@@ -12,7 +12,7 @@ import Users from 'virtual:icons/proicons/person-multiple'
 import Grid from 'virtual:icons/proicons/grid'
 import Layers from 'virtual:icons/proicons/layers'
 // COMPONENTS
-import VirtualResourceList from '$lib/bits/custom/resources/VirtualResourceList.svelte'
+import VirtualResourceList from '#lib/bits/custom/resources/VirtualResourceList.svelte'
 import ResourceRow from './ResourceRow.svelte'
 // TYPES
 import type { ResourceSectionProps } from './resourcePanelPrimitives.types'
@@ -54,7 +54,9 @@ const items = $derived(
     <button
       type="button"
       class="rounded-lg p-1 text-muted-foreground hover:bg-surface focus-override outline-none focus-visible:text-primary"
-      aria-label={open ? m.panel__collapse({ name: section.title }) : m.panel__expand({ name: section.title })}
+      aria-label={open
+        ? m.panel__collapse({ name: section.title })
+        : m.panel__expand({ name: section.title })}
       aria-expanded={open}
       aria-controls={id}
       onclick={toggleOpen}
@@ -103,7 +105,12 @@ const items = $derived(
           placeholder={m.panel__search({ name: section.title })}
           value={section.search}
           oninput={event => section.onSearch(event.currentTarget.value)}
-          onkeydown={event => { if (event.key === 'Escape') { event.stopPropagation(); section.search ? section.onSearch('') : section.onReset() } }}
+          onkeydown={event => {
+            if (event.key === 'Escape') {
+              event.stopPropagation()
+              section.search ? section.onSearch('') : section.onReset()
+            }
+          }}
         >
       </label>
     {/if}
@@ -119,7 +126,9 @@ const items = $derived(
         animateRows
         estimateSize={section.id === 'organisation' ? 40 : 56}
       >
-        {#snippet item(row)}
+        {#snippet item(
+          row,
+        )}
           <ResourceRow {row} {tone} {narrow} />
         {/snippet}
       </VirtualResourceList>

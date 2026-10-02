@@ -6,13 +6,13 @@ import {
   getStandardLicenseLabel,
   normalizeProjectLicense,
   projectLicenseLeafMediaTypes,
-} from '$lib/db/services/licence'
+} from '#lib/db/services/licence.js'
 // TYPES
 import type {
   ProjectLicense,
   ProjectLicenseMediaType,
   ProjectLicenseRights,
-} from '$lib/db/zod/schema/projectLicense.types'
+} from '#lib/db/zod/schema/projectLicense.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

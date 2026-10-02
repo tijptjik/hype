@@ -1,19 +1,19 @@
 <script lang="ts">
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
 import {
   getLayerResolutionParts,
   handleLayerResolutionSearch,
   resetLayerResolution,
   selectLayerForResolution,
-} from '$lib/client/services/import/features/layer'
+} from '#lib/client/services/import/features/layer.js'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
 import ImportSearchBox from '../../../shared/ImportSearchBox.svelte'
 import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'

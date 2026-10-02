@@ -1,7 +1,7 @@
 <script lang="ts">
-import { getCapabilityLabel } from '$lib/capabilities'
-import { LocalSearch } from '$lib/bits/custom'
-import { m } from '$lib/i18n'
+import { getCapabilityLabel } from '#lib/capabilities.js'
+import { LocalSearch } from '#lib/bits/custom/index.js'
+import { m } from '#lib/i18n.js'
 import type { OrganisationCapabilitiesSearchProps } from '../organisationCapabilities.types'
 
 let {
@@ -23,7 +23,8 @@ let {
       maxResults={5}
       excludeIds={selectedCapabilityIds}
       getItemId={item => item.id}
-      getSearchText={item => `${item.key} ${getCapabilityLabel(item.key, currentLocaleKey)}`}
+      getSearchText={item =>
+        `${item.key} ${getCapabilityLabel(item.key, currentLocaleKey)}`}
       onSelect={onAddCapability}
       resultMap={{
         image: () => null,

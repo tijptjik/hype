@@ -9,7 +9,7 @@ import {
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 // SCHEMA
-import { hub, organisation } from '$lib/db/schema'
+import { hub, organisation } from '#lib/db/schema/index.js'
 import { hasAuthenticatedSession } from './user'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -18,10 +18,10 @@ import type {
   HubAuthorizationAction,
   HubAuthorizationField,
   HubAuthorizeParams,
-} from '$lib/api/services/authz/authorization.types'
-import type { Database, Id, UserRoleDisco } from '$lib/types'
-import type { HubProfile } from '$lib/db/zod/schema/hub.types'
-import { chunkedInArray } from '$lib/utils/batch-query'
+} from '#lib/api/services/authz/authorization.types.js'
+import type { Database, Id, UserRoleDisco } from '#lib/types.js'
+import type { HubProfile } from '#lib/db/zod/schema/hub.types.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

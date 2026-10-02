@@ -3,21 +3,21 @@
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 // AUTH
-import { canAccessAdminPanel } from '$lib/api/services/authz'
-import { useSession } from '$lib/auth/client'
-import { requestAccountUpgrade } from '$lib/auth/upgrade'
+import { canAccessAdminPanel } from '#lib/api/services/authz/index.js'
+import { useSession } from '#lib/auth/client.js'
+import { requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // SERVICES
-import { initAddNewFeature } from '$lib/client/services/feature'
+import { initAddNewFeature } from '#lib/client/services/feature.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // COMPONENTS
-import { AppMenu } from '$lib/bits/patterns/bars/appMenu'
+import { AppMenu } from '#lib/bits/patterns/bars/appMenu/index.js'
 import PlusCircleIcon from 'virtual:icons/proicons/add-circle'
 import FunnelIcon from 'virtual:icons/proicons/filter'
 import InformationCircleIcon from 'virtual:icons/proicons/info'
@@ -27,8 +27,8 @@ import NewspaperIcon from 'virtual:icons/proicons/file-text'
 import SettingsIcon from 'virtual:icons/proicons/settings'
 import StarIcon from 'virtual:icons/proicons/star'
 // TYPES
-import type { AppMenuItem } from '$lib/bits/patterns/bars/appMenu'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { AppMenuItem } from '#lib/bits/patterns/bars/appMenu/index.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 
 type AppNavProps = {
   hub: HubOptsExtended

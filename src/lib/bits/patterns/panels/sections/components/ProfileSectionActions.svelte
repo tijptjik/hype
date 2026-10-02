@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import Button from '$lib/bits/core/button/Button.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
 
 type Props = {
   isGuest?: boolean

@@ -15,10 +15,10 @@ import {
   isAdminRequest,
   removeExcludedColumns,
   toTriStateBoolean,
-} from '$lib/api'
-import { isSuperAdmin } from '$lib/client/services/auth'
-import { applyPrismConstraints } from '$lib/db'
-import { chunkedInArray } from '$lib/utils/batch-query'
+} from '#lib/api/index.js'
+import { isSuperAdmin } from '#lib/client/services/auth.js'
+import { applyPrismConstraints } from '#lib/db/index.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // SCHEMA
 import {
   feature,
@@ -31,9 +31,9 @@ import {
   organisationRole,
   project,
   projectRole,
-} from '$lib/db/schema/index'
-import { getFeatureHubFilter } from '$lib/db/services/hub'
-import { toSearchCondition } from '$lib/db/services/user'
+} from '#lib/db/schema/index.js'
+import { getFeatureHubFilter } from '#lib/db/services/hub.js'
+import { toSearchCondition } from '#lib/db/services/user.js'
 // ZOD
 import {
   UserAdminListProfileAPI,
@@ -46,7 +46,7 @@ import {
   UserHydrationCardProfileAPI,
   UserLeaderboardProfileAPI,
   UserSelfProfileAPI,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // TYPES
 import type {
   Database,
@@ -55,8 +55,8 @@ import type {
   RelationShape,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+} from '#lib/types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type {
   UserDB,
   UserEntityByProfile,
@@ -68,9 +68,9 @@ import type {
   UserRaw,
   UserRoleEntityType,
   UserRoleFilter,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 import type { z } from 'zod'
-import { HierarchicalResource } from '$lib/enums'
+import { HierarchicalResource } from '#lib/enums.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

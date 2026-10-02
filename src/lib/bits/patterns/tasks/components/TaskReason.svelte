@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button, Popover } from '$lib/bits/core'
+import { Button, Popover } from '#lib/bits/core/index.js'
 // ICONS
 import CircleHelpIcon from 'virtual:icons/proicons/question-circle'
 

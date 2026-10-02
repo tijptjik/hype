@@ -1,19 +1,19 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import StatsPips from './components/StatsPips.svelte'
 // SERVICES
 import {
   calculateTranslationStatuses,
   clearCachedFeatureTranslationStats,
-} from '$lib/client/services/stats'
+} from '#lib/client/services/stats.js'
 // ICONS
 import LanguagesIcon from 'virtual:icons/tabler/language'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey } from '#lib/types.js'
 import type { FeatureStatsProps } from './featureStats.types'
 
 let { feature, appCtx, showTitle = true }: FeatureStatsProps = $props()

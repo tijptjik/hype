@@ -1,5 +1,5 @@
 // TYPES
-import type { Id } from '$lib/types'
+import type { Id } from '#lib/types.js'
 
 export type EventCompanionPlatform = 'instagram' | 'linkedin' | 'facebook' | 'web'
 

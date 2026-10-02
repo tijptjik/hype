@@ -6,24 +6,24 @@ import { slide } from 'svelte/transition'
 import { tick } from 'svelte'
 import Portal from 'svelte-portal'
 // I18N
-import { getI18n } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
 // ICONS
 import Funnel from 'virtual:icons/proicons/filter'
 import XMark from 'virtual:icons/proicons/cancel'
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // COMPONENTS
-import ResourceHierarchyPath from '$lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'
+import ResourceHierarchyPath from '#lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // ENUMS
-import type { FirstClassResource } from '$lib/enums'
+import type { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type { DivisionFacet } from '$lib/api/services/featureQuery.types'
-import type { Resource, ResourceContext } from '$lib/types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+
+import type { DivisionFacet } from '#lib/api/services/featureQuery.types.js'
+import type { Resource, ResourceContext } from '#lib/types.js'
 
 let pendingFocusRestoreKey: string | null = null
-
 const appCtx = getAppCtx()
 
 type Props = {
@@ -68,11 +68,11 @@ let colorTone = $derived(
         ? 'secondary'
         : 'neutral',
 )
+
 let itemSlideDuration = $derived(panelProps.isAdmin && panelProps.isNarrow ? 0 : 200)
 let focusRestoreKey = $derived(
   `${panelProps.panelType}:${resourceType}:${resource.id}:${panelProps.isNarrow ? 'narrow' : 'wide'}`,
 )
-
 let buttonEl: HTMLFieldSetElement
 let toolTipActive = $state(false)
 let tooltipPosition = $state({ left: 0, top: 0, width: 0, height: 0 })
@@ -135,7 +135,8 @@ async function restoreFocus(): Promise<void> {
   focusTarget?.focus()
 }
 
-afterNavigate(async () => {
+afterNavigate(async ({ shallow }) => {
+  if (shallow) return
   if (pendingFocusRestoreKey !== focusRestoreKey) return
 
   pendingFocusRestoreKey = null
@@ -161,7 +162,7 @@ afterNavigate(async () => {
     data-resource-focus-key={focusRestoreKey}
     aria-label={name}
     onclick={panelProps.isAdmin ? onNavigate : onToggle}
-    onkeydown={async (event) => {
+    onkeydown={async event => {
       if (event.key === 'Enter') {
         event.preventDefault()
         await onToggle(event)
@@ -212,10 +213,17 @@ afterNavigate(async () => {
         class="bits-panel-item-resource__dot pointer-events-auto border-0 p-0"
         aria-label={name}
         onclick={event =>
-          handleControlClick(event, panelProps.isNarrow ? (onNavigate ?? onToggle) : onToggle)}
+          handleControlClick(
+            event,
+            panelProps.isNarrow ? (onNavigate ?? onToggle) : onToggle,
+          )}
         onkeydown={stopControlKeydown}
-        class:bits-panel-item-resource__dot--hidden={!alwaysShowDot && !panelProps.isNarrow && !isSelected && !isCurrentActive}
-        class:bits-panel-item-resource__dot--narrow-unselected={panelProps.isNarrow && !isSelected}
+        class:bits-panel-item-resource__dot--hidden={!alwaysShowDot &&
+          !panelProps.isNarrow &&
+          !isSelected &&
+          !isCurrentActive}
+        class:bits-panel-item-resource__dot--narrow-unselected={panelProps.isNarrow &&
+          !isSelected}
         class:bits-panel-item-resource__dot--active={isCurrentActive}
       ></button>
     {/if}
@@ -223,6 +231,7 @@ afterNavigate(async () => {
     {#if !panelProps.isNarrow}
       <div class="flex min-w-0 overflow-visible flex-col items-start gap-0">
         <ResourceHierarchyPath {hierarchy} />
+
         <p
           class="bits-panel-item-resource__name"
           class:bits-panel-item-resource__name--active={isCurrentActive}

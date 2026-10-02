@@ -3,10 +3,10 @@
 import { untrack } from 'svelte'
 import { fade } from 'svelte/transition'
 // BITS
-import { Icon } from '$lib/bits'
-import { cx } from '$lib/bits/utils'
+import { Icon } from '#lib/bits/index.js'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
-import type { FeatureCardActionDisplay } from '$lib/context/featureCard.types'
+import type { FeatureCardActionDisplay } from '#lib/context/featureCard.types.js'
 // ICONS
 import Check from 'virtual:icons/proicons/checkmark'
 // LOCAL
@@ -151,7 +151,9 @@ $effect(() => {
 })
 </script>
 
-{#snippet visitValue(value: FeatureCardActionDisplay)}
+{#snippet visitValue(
+  value: FeatureCardActionDisplay,
+)}
   <div class="flex h-10 min-w-0 flex-col justify-center text-left">
     {#if value.detail}
       <p
@@ -172,7 +174,9 @@ $effect(() => {
   </div>
 {/snippet}
 
-{#snippet visitContent(isCollapsed: boolean)}
+{#snippet visitContent(
+  isCollapsed: boolean,
+)}
   <!-- Root: this action consumes only the flex space that remains before the directions portal. -->
   <div class="flex min-w-0 flex-1 items-center gap-2">
     <!-- Icon: stable, fixed-position, and always primary. -->

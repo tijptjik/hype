@@ -1,7 +1,7 @@
 <script lang="ts">
-import { toLocaleKebab } from '$lib/i18n'
+import { toLocaleKebab } from '#lib/i18n.js'
 import FormI18nTranslationBar from './FormI18nTranslationBar.svelte'
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey } from '#lib/types.js'
 import type { Snippet } from 'svelte'
 import type { FormSectionProps } from '../formI18nSection.types'
 

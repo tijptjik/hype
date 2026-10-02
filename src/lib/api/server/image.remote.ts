@@ -1,5 +1,5 @@
 // REMOTE
-import { guardedCommand, guardedQuery } from '$lib/api/server/remote'
+import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 import { error, isHttpError } from '@sveltejs/kit'
 // DRIZZLE
 import { and, eq, inArray } from 'drizzle-orm'
@@ -10,7 +10,7 @@ import {
   authorizeImageList,
   authorizeImageRead,
   toAuthMessage,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // API SERVICES
 import {
   assertPermissionsToCreateImage,
@@ -24,7 +24,7 @@ import {
   toResponseShapeProjectOrOrganisation,
   updateImageForContext,
   enqueueDerivedAssetWarmup,
-} from '$lib/api/services/image'
+} from '#lib/api/services/image.js'
 // DB SERVICES
 import {
   createFeatureImage,
@@ -38,11 +38,11 @@ import {
   getImagesByIds,
   toImageEntityResponseShape,
   toImageListResponseShape,
-} from '$lib/db/services/image'
-import { taskFeatureScopeCondition } from '$lib/db/services/task-scope'
-import { updateOrganisationById } from '$lib/db/services/organisation'
-import { updateProjectById } from '$lib/db/services/project'
-import { getUserById } from '$lib/db/services/user'
+} from '#lib/db/services/image.js'
+import { taskFeatureScopeCondition } from '#lib/db/services/task-scope.js'
+import { updateOrganisationById } from '#lib/db/services/organisation.js'
+import { updateProjectById } from '#lib/db/services/project.js'
+import { getUserById } from '#lib/db/services/user.js'
 // DB SCHEMA
 import {
   featureImage,
@@ -54,7 +54,7 @@ import {
   task,
   taskImage,
   user as userTable,
-} from '$lib/db/schema'
+} from '#lib/db/schema/index.js'
 // SCHEMA
 import {
   DeleteImageSchema,
@@ -71,16 +71,16 @@ import {
   GetImageMetadataSchema,
   AuthImageUploadSchema,
   FinalizeImageUploadSchema,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // ENUMS
 import {
   ImageContextResource,
   ImageContextResourceExtended,
   ImageEnv,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // TYPES
-import type { Database, EntityResponse, Id, UserRoleDisco } from '$lib/types'
-import type { GuardedQueryContext } from '$lib/api/guarded.types'
+import type { Database, EntityResponse, Id, UserRoleDisco } from '#lib/types.js'
+import type { GuardedQueryContext } from '#lib/api/guarded.types.js'
 import type {
   CreateImageParams,
   FinalizeImageUploadLink,
@@ -97,8 +97,8 @@ import type {
   ImageUploadSession,
   ImageMetadataResponse,
   GetImageMetadataParams,
-} from '$lib/db/zod/schema/image.types'
-import { createUploadToken, verifyUploadToken } from '$lib/images/auth'
+} from '#lib/db/zod/schema/image.types.js'
+import { createUploadToken, verifyUploadToken } from '#lib/images/auth.js'
 import {
   createPresignedR2UploadUrl,
   getDerivedBucketForStage,
@@ -114,7 +114,7 @@ import {
   toMetadataObjectKey,
   toImageStage,
   toMetadataProfilePayload,
-} from '$lib/images/storage'
+} from '#lib/images/storage.js'
 
 const FeatureCanonicalImagesSchema = z.object({
   featureIds: z.array(z.string().min(1)).min(1),
@@ -574,7 +574,7 @@ const authorizeMetadataRead = async (
     throw error(403, 'INSUFFICIENT_ROLE')
   }
 
-  const env = toImageStage(params.env ?? ctx.event.platform?.env.ENVIRONMENT)
+  const env = toImageStage(params.env ?? ctx.event.locals.platform?.env.ENVIRONMENT)
   const normalizedPublicId = normalizeMetadataPublicId(params.publicId)
   const imageIdRows = await ctx.db
     .select({ id: image.id })
@@ -750,7 +750,7 @@ const verifyUploadedOriginal = async (params: {
   key: string
   stage: ReturnType<typeof toImageStage>
   event: {
-    platform: App.Platform | undefined
+    locals: Pick<App.Locals, 'platform'>
     fetch: typeof fetch
   }
 }): Promise<{ size: number; contentType: string | null } | null> => {
@@ -763,7 +763,7 @@ const verifyUploadedOriginal = async (params: {
     }
   }
 
-  const credentials = getStorageApiCredentials(params.event.platform)
+  const credentials = getStorageApiCredentials(params.event.locals.platform)
 
   if (!credentials) {
     return null
@@ -789,7 +789,7 @@ const readOriginalObjectViaBindingsOrApi = async (params: {
   key: string
   stage: ReturnType<typeof toImageStage>
   event: {
-    platform: App.Platform | undefined
+    locals: Pick<App.Locals, 'platform'>
     fetch: typeof fetch
   }
 }): Promise<{ body: Uint8Array; contentType: string | null } | null> => {
@@ -802,7 +802,7 @@ const readOriginalObjectViaBindingsOrApi = async (params: {
     }
   }
 
-  const credentials = getStorageApiCredentials(params.event.platform)
+  const credentials = getStorageApiCredentials(params.event.locals.platform)
 
   if (!credentials) {
     return null
@@ -830,7 +830,7 @@ const putOriginalObjectViaBindingsOrApi = async (params: {
   contentType: string
   stage: ReturnType<typeof toImageStage>
   event: {
-    platform: App.Platform | undefined
+    locals: Pick<App.Locals, 'platform'>
     fetch: typeof fetch
   }
 }): Promise<void> => {
@@ -842,7 +842,7 @@ const putOriginalObjectViaBindingsOrApi = async (params: {
     })
     return
   } catch (cause) {
-    const credentials = getStorageApiCredentials(params.event.platform)
+    const credentials = getStorageApiCredentials(params.event.locals.platform)
 
     if (!credentials) {
       throw cause
@@ -883,7 +883,7 @@ const persistOriginalMetadataSidecars = async (params: {
   manifestDocument: { publicId: string; version: number; updatedAt: string }
   stage: ReturnType<typeof toImageStage>
   event: {
-    platform: App.Platform | undefined
+    locals: Pick<App.Locals, 'platform'>
     fetch: typeof fetch
   }
 }): Promise<void> => {
@@ -910,7 +910,7 @@ const persistOriginalMetadataSidecars = async (params: {
     }
     return
   } catch (cause) {
-    const credentials = getStorageApiCredentials(params.event.platform)
+    const credentials = getStorageApiCredentials(params.event.locals.platform)
 
     if (!credentials) {
       throw cause
@@ -952,7 +952,7 @@ const enqueueMetadataSidecarPersistence = (params: {
   manifestDocument: { publicId: string; version: number; updatedAt: string }
   stage: ReturnType<typeof toImageStage>
   event: {
-    platform: App.Platform | undefined
+    locals: Pick<App.Locals, 'platform'>
     fetch: typeof fetch
   }
 }): void => {
@@ -967,8 +967,8 @@ const enqueueMetadataSidecarPersistence = (params: {
     )
   })
 
-  if (params.event.platform?.context) {
-    params.event.platform.context.waitUntil(persistenceTask)
+  if (params.event.locals.platform?.context) {
+    params.event.locals.platform.context.waitUntil(persistenceTask)
     return
   }
 
@@ -1690,12 +1690,12 @@ export const getMetadata = guardedQuery(
     const startedAt = Date.now()
     await authorizeMetadataRead(params, ctx)
     const env = toImageStage(
-      params.env ?? ctx.event.platform?.env.ENVIRONMENT ?? ImageEnv.local,
+      params.env ?? ctx.event.locals.platform?.env.ENVIRONMENT ?? ImageEnv.local,
     )
 
     try {
       const { document } = await readMetadataDocument({
-        platform: ctx.event.platform,
+        platform: ctx.event.locals.platform,
         env,
         publicId: params.publicId,
         version: params.version,
@@ -1745,11 +1745,11 @@ export const authImageUpload = guardedCommand(
       params.links,
     )
 
-    const stage = toImageStage(event.platform?.env.ENVIRONMENT ?? params.env)
-    const bucket = getOriginalsBucketForStage(event.platform, stage)
+    const stage = toImageStage(event.locals.platform?.env.ENVIRONMENT ?? params.env)
+    const bucket = getOriginalsBucketForStage(event.locals.platform, stage)
     const bucketName = getOriginalsBucketNameForStage(stage)
-    const credentials = getStorageApiCredentials(event.platform)
-    const authSecret = event.platform?.env.AUTH_SECRET
+    const credentials = getStorageApiCredentials(event.locals.platform)
+    const authSecret = event.locals.platform?.env.AUTH_SECRET
     let publicId = `h/${params.ctxType}s/${params.ctxId}/${nanoid(16)}`
 
     if (!credentials || !authSecret) {
@@ -1827,7 +1827,7 @@ export const finalizeImageUpload = guardedCommand(
   async (params: FinalizeImageUploadParams, ctx) => {
     const { db, user, userId, userRoles, event } = ctx
     if (user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
-    const secret = event.platform?.env.AUTH_SECRET
+    const secret = event.locals.platform?.env.AUTH_SECRET
     if (!secret) throw error(500, 'Upload auth secret not available')
 
     const payload = await verifyUploadToken(params.token, secret)
@@ -1859,7 +1859,7 @@ export const finalizeImageUpload = guardedCommand(
         : null
 
     const stage = toImageStage(payload.env)
-    const originalsBucket = getOriginalsBucketForStage(event.platform, stage)
+    const originalsBucket = getOriginalsBucketForStage(event.locals.platform, stage)
     // Verify the upload through the binding first, then fall back to the
     // direct R2 API for local/dev setups where the binding and signed upload
     // target can diverge.
@@ -1913,7 +1913,7 @@ export const finalizeImageUpload = guardedCommand(
       }
 
       const { document: existingDocument } = await readMetadataDocument({
-        platform: event.platform,
+        platform: event.locals.platform,
         env: stage,
         publicId: existing.publicId,
         version: existing.version ?? undefined,
@@ -1993,7 +1993,7 @@ export const finalizeImageUpload = guardedCommand(
         stage,
         event,
       })
-      event.platform?.context.waitUntil(
+      event.locals.platform?.context.waitUntil(
         enqueueDerivedAssetWarmup({
           event,
           env: stage,
@@ -2035,7 +2035,7 @@ export const finalizeImageUpload = guardedCommand(
     const previousMetadata =
       persistedVersion !== version
         ? await readMetadataDocument({
-            platform: event.platform,
+            platform: event.locals.platform,
             env: stage,
             publicId: payload.publicId,
             version: persistedVersion,
@@ -2064,10 +2064,10 @@ export const finalizeImageUpload = guardedCommand(
     }
 
     if (previousResourceImage && previousResourceImage.id !== created.data?.image?.id) {
-      event.platform?.context.waitUntil(
+      event.locals.platform?.context.waitUntil(
         cleanupDetachedResourceImage({
           db,
-          platform: event.platform,
+          platform: event.locals.platform,
           image: previousResourceImage,
           preserveAssets:
             previousResourceImage.publicId === payload.publicId &&
@@ -2076,7 +2076,7 @@ export const finalizeImageUpload = guardedCommand(
       )
     }
 
-    event.platform?.context.waitUntil(
+    event.locals.platform?.context.waitUntil(
       enqueueDerivedAssetWarmup({
         event,
         env: stage,
@@ -2217,10 +2217,10 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
   )
 
   const env = toImageStage(
-    existing.env ?? event.platform?.env.ENVIRONMENT ?? ImageEnv.local,
+    existing.env ?? event.locals.platform?.env.ENVIRONMENT ?? ImageEnv.local,
   )
   const { document, resolvedEnv } = await readMetadataDocument({
-    platform: event.platform,
+    platform: event.locals.platform,
     env,
     publicId: existing.publicId,
     version: existing.version ?? undefined,
@@ -2231,7 +2231,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     throw error(404, 'Image metadata not found')
   }
 
-  const originalsBucket = getOriginalsBucketForStage(event.platform, resolvedEnv)
+  const originalsBucket = getOriginalsBucketForStage(event.locals.platform, resolvedEnv)
   const originalObject = await readOriginalObjectViaBindingsOrApi({
     bucket: originalsBucket,
     key: existing.publicId,
@@ -2316,7 +2316,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     },
   })
 
-  event.platform?.context.waitUntil(
+  event.locals.platform?.context.waitUntil(
     enqueueDerivedAssetWarmup({
       event,
       env: resolvedEnv,
@@ -2361,9 +2361,9 @@ export const deleteImage = guardedCommand(DeleteImageSchema, async (params, ctx)
     db.delete(image).where(eq(image.id, params.id as Id)),
   ])
 
-  event.platform?.context.waitUntil(
+  event.locals.platform?.context.waitUntil(
     cleanupImageAssets({
-      platform: event.platform,
+      platform: event.locals.platform,
       image: imageToDelete,
     }).catch(cleanupError => {
       console.error('[image.remote.deleteImage] storage cleanup failed', {

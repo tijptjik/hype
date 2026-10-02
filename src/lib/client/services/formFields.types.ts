@@ -1,7 +1,7 @@
 // TYPES
-import type { FieldComponentType } from '$lib/client/services/fieldComponents'
-import type { InputType, Key, Field } from '$lib/types'
-import type { FieldDiscriminator as FieldDiscriminatorEnum } from '$lib/enums'
+import type { FieldComponentType } from '#lib/client/services/fieldComponents.js'
+import type { InputType, Key, Field } from '#lib/types.js'
+import type { FieldDiscriminator as FieldDiscriminatorEnum } from '#lib/enums.js'
 
 /* ----------------- */
 // FORM FIELDS

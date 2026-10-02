@@ -1,4 +1,4 @@
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import { getElevatedChromeXGutter, getOmnibarTopGutter } from './Omnibar.layout'
 
 type OmnibarResponsiveLayout = {

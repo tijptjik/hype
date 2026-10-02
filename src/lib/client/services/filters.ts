@@ -1,20 +1,20 @@
 // GUARDS
-import { isFeature } from '$lib/utils/resourceGuards'
+import { isFeature } from '#lib/utils/resourceGuards.js'
 //I18N
-import { getLocaleKey, m, supportedLocaleKeys } from '$lib/i18n'
+import { getLocaleKey, m, supportedLocaleKeys } from '#lib/i18n.js'
 // ENUMS
-import { localeCodes } from '$lib/enums'
-import type { FirstClassResource } from '$lib/enums'
+import { localeCodes } from '#lib/enums.js'
+import type { FirstClassResource } from '#lib/enums.js'
 // CONTEXT
 import type { AdminCtx } from '../../context/admin.svelte'
 // SERVICES
-import { sortProperties } from '$lib/client/services/property'
+import { sortProperties } from '#lib/client/services/property.js'
 // TYPES
 import type {
   FilterTriState,
   FeatureViewFilters,
   ViewFilters,
-} from '$lib/client/services/viewFilters.types'
+} from '#lib/client/services/viewFilters.types.js'
 import type {
   PropertyFilterType,
   ResourceControlBarConfig,
@@ -23,21 +23,22 @@ import type {
   ResourcePropertyFilterSectionConfig,
   ResourceFilterSection,
   ViewFilterResource,
-} from '$lib/client/services/resourceFilters.types'
+} from '#lib/client/services/resourceFilters.types.js'
 import type {
   ResourceSortConfig,
   ResourceSortItemConfig,
-} from '$lib/client/services/filters.types'
-import type { LocaleKey, Id } from '$lib/types'
+} from '#lib/client/services/filters.types.js'
+import type { LocaleKey, Id } from '#lib/types.js'
+import type { ResourceControlBarLocaleToggleItem } from '#lib/bits/patterns/resource/resourceControlBar/components/index.js'
 import type {
-  ResourceControlBarLocaleToggleItem,
-} from '$lib/bits/patterns/resource/resourceControlBar/components'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Hub } from '#lib/db/zod/schema/hub.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 // TYPES
 
 type FeatureTranslationFilterKey =
@@ -45,7 +46,6 @@ type FeatureTranslationFilterKey =
   | 'isDescriptionTranslated'
   | 'isAddressTranslated'
   | 'isSpecifierTranslated'
-
 
 // +++ Table Of Contents
 // ═══════════════════════

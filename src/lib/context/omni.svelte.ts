@@ -1,18 +1,18 @@
 // SVELTE
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import { getContext, setContext, tick, untrack } from 'svelte'
 // LIB
-import { isMobile } from '$lib'
-import { searchAllAsync } from '$lib/map/data'
+import { isMobile } from '#lib'
+import { searchAllAsync } from '#lib/map/data.js'
 // I18N
-import { getI18n } from '$lib/i18n'
-import { m } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
 // NAVIGATION
 import {
   COLLECTION_QUERY_PARAM,
   navigate,
   serializeCollectionDescriptor,
-} from '$lib/navigation'
+} from '#lib/navigation/index.js'
 // ENUMS
 import {
   FeatureCardMode,
@@ -20,18 +20,22 @@ import {
   OmniCollection,
   OmniMode,
   PageState,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // TYPES
-import type { SearchResult, OmniCollectionDescriptor } from '$lib/context/omni.types'
-import type { Id, Locale, LocaleKey } from '$lib/types'
-import type { ActiveCollection } from '$lib/context/resourceCollection.types'
-import type { FeatureQueryInput } from '$lib/api/services/featureQuery.types'
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { SearchResult, OmniCollectionDescriptor } from '#lib/context/omni.types.js'
+import type { Id, Locale, LocaleKey } from '#lib/types.js'
+import type { ActiveCollection } from '#lib/context/resourceCollection.types.js'
+import type { FeatureQueryInput } from '#lib/api/services/featureQuery.types.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 // TYPES
 import type { CardCtx } from './card.svelte'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-// TYPES
 
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+
+// TYPES
 type FeatureCardTransitionRect = {
   left: number
   top: number
@@ -40,7 +44,6 @@ type FeatureCardTransitionRect = {
 }
 
 type FeatureCardTransitionSourceKind = 'marker' | 'toggle' | 'none'
-
 type FeatureCardTransitionPhase = 'idle' | 'opening' | 'closing'
 
 type FeatureCardTransitionState = {
@@ -105,12 +108,12 @@ export class OmniCtx {
   cardCtx: CardCtx | null = null
   eventCleanup?: () => void
   pendingOpenCardTimeout: ReturnType<typeof setTimeout> | null = null
-
   pageState: PageState = $state(PageState.NoTransition)
   isIntentionallyClosing: boolean = $state(false)
   activeCollectionDescriptor: OmniCollectionDescriptor | null = $state(null)
   private pendingCollectionDescriptor: OmniCollectionDescriptor | null = null
   private pendingCollectionOptions: OmniSelectionOptions | null = null
+
   cardTransition: FeatureCardTransitionState = $state({
     phase: 'idle',
     sourceRect: null,
@@ -148,28 +151,35 @@ export class OmniCtx {
             .catch(console.error)
         }
       }, 120)
+
       return () => clearTimeout(timer)
     })
 
     // Explicitly track cached and returned pages so optimistic results appear before the network.
     $effect(() => {
       const searchTerm = this.state.searchTerm
+
       this.appCtx.cacheCtx.featureQueries.search.rows
       this.appCtx.cacheCtx.featureQueries.searchWishlist.totalCount
       this.appCtx.placeCtx.neighbourhoodFeatureCounts.size
+
       const timer = setTimeout(() => this.updateSearchResults(searchTerm), 0)
+
       return () => clearTimeout(timer)
     })
 
     // Active collections use current filters and retain query ordering across refreshes.
     $effect(() => {
       const descriptor = this.activeCollectionDescriptor
+
       if (
         !descriptor ||
         (descriptor.kind === 'walk' && !['stars', 'visited'].includes(descriptor.ref))
       )
         return
+
       const input = this.collectionQueryInput(descriptor)
+
       untrack(() => {
         void this.appCtx.loadFeatureQuery('collection', input).catch(console.error)
       })
@@ -212,6 +222,7 @@ export class OmniCtx {
 
     // Register event listeners with namespace
     window.addEventListener('OmniCtx.openCard', handleOpenCard as EventListener)
+
     window.addEventListener('OmniCtx.closeCard', handleCloseCard as EventListener)
 
     // Store cleanup function for potential future use
@@ -224,8 +235,8 @@ export class OmniCtx {
   // ═══════════════════════
   // MODE
   // ═══════════════════════
-
   isFeatureMode = $derived(this.state.mode === 'feature')
+
   isNewFeatureMode = $derived(this.state.mode === 'new-feature')
   isSearchMode = $derived(this.state.mode === 'search')
   isNavigationMode = $derived(this.state.mode === 'navigation')
@@ -397,6 +408,7 @@ export class OmniCtx {
   // Calculate limits for each group
   getLimits(groups: Record<OmniCollection, SearchResult[]>) {
     const nonEmptyGroups = Object.values(groups).filter(g => g.length > 0).length
+
     if (nonEmptyGroups === 0) return { walk: 0, neighbourhood: 0, feature: 0 }
 
     const baseLimit = Math.floor(MAX_RESULTS / nonEmptyGroups)
@@ -757,7 +769,6 @@ export class OmniCtx {
   // ═══════════════════════
   // NAVIGATION
   // ═══════════════════════
-
   navIndex = $derived(
     this.appCtx.state.active.collection?.items.findIndex(
       item => item.id === this.appCtx.state.active.feature?.id,
@@ -831,9 +842,16 @@ export class OmniCtx {
       filters:
         descriptor.kind === 'neighbourhood'
           ? { divisionIds: [descriptor.ref] }
-          : { list: { listId: descriptor.ref === 'visited' ? 'visited' : 'wishlist' } },
+          : {
+              list: {
+                listId: descriptor.ref === 'visited' ? 'visited' : 'wishlist',
+              },
+            },
+
       ...(descriptor.kind === 'walk' && descriptor.ref === 'visited'
-        ? { sorting: { sortBy: 'visitedAt' as const, sortOrder: 'desc' as const } }
+        ? {
+            sorting: { sortBy: 'visitedAt' as const, sortOrder: 'desc' as const },
+          }
         : {}),
     })
   }
@@ -858,14 +876,17 @@ export class OmniCtx {
     if (initial) initial.totalCount = query.totalCount
     // Preserve cold-start selection intent across intervening filter requests for this collection.
     this.pendingCollectionDescriptor = initial?.items.length ? null : descriptor
+
     this.pendingCollectionOptions = initial?.items.length ? null : options
     initializeCollection(this, initial, OmniMode.navigation, options)
+
     void pending
       .then(() => {
         if (
           JSON.stringify(descriptor) !== JSON.stringify(this.activeCollectionDescriptor)
         )
           return
+
         this.syncFeatureCollection(descriptor, query.rows, query.totalCount)
       })
       .catch(error => console.error('[Feature collection] Query failed:', error))
@@ -896,7 +917,9 @@ export class OmniCtx {
     const updated = {
       ...current,
       ...(descriptor.kind === 'neighbourhood'
-        ? { i18n: this.toNeighbourhoodCollection(descriptor.ref, rows).i18n }
+        ? {
+            i18n: this.toNeighbourhoodCollection(descriptor.ref, rows).i18n,
+          }
         : {}),
       items: rows,
       totalCount,
@@ -1063,6 +1086,7 @@ export class OmniCtx {
         ),
       },
     }
+
     // Run the default selection initialization
     this.initSelection()
 
@@ -1162,6 +1186,7 @@ export class OmniCtx {
     const featureInCollection = activeCollection.items.some(
       item => item.id === featureId,
     )
+
     return !featureInCollection
   }
 
@@ -1378,6 +1403,7 @@ const getStandardNavOptions = (
       ...(additionalOptions.paramsToDrop ?? []),
     ]),
   )
+
   const paramsToAdd = { ...(additionalOptions.paramsToAdd ?? {}) }
   const collectionParamValue = getCollectionParamValue(descriptor)
 
@@ -1467,11 +1493,12 @@ const navigateCollection = (
   direction: 'next' | 'previous' | number,
 ): boolean => {
   const collection = omniCtx.appCtx.state.active.collection
+
   if (!collection) return false
+
   const collectionDescriptor =
     omniCtx.activeCollectionDescriptor ??
     getCollectionDescriptorFromActiveCollection(collection)
-
   const currentIndex = omniCtx.navIndex
   let targetIndex: number
 
@@ -1522,7 +1549,6 @@ const initializeCollection = (
 }
 
 export const OMNI_CONTEXT_KEY = Symbol('omniContext')
-
 export const setOmniCtx = (appCtx: AppCtx) =>
   setContext(OMNI_CONTEXT_KEY, new OmniCtx(appCtx))
 

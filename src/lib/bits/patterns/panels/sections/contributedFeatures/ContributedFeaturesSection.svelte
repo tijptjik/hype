@@ -2,20 +2,20 @@
 // SVELTE
 import { slide } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
-import { formatDistanceToNow } from '$lib'
+import { formatDistanceToNow } from '#lib'
 // COMPONENTS
-import { Scrollbar } from '$lib/bits/custom/scrollbar'
-import { ScrollableText } from '$lib/bits'
+import { Scrollbar } from '#lib/bits/custom/scrollbar/index.js'
+import { ScrollableText } from '#lib/bits/index.js'
 // ICONS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import MapPin from 'virtual:icons/proicons/location'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 // TYPES
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { UserProfile } from '$lib/db/zod/schema/user.types'
-import type { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+import type { UserProfile } from '#lib/db/zod/schema/user.types.js'
+import type { useProfilePanelModel } from '#lib/adapters/panels/useProfilePanelModel.svelte.js'
 // PROPS
 let {
   userData,
@@ -131,11 +131,14 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
     {m.omni__title_features()}
   </h3>
 
-  {#if userData?.contributedFeatures && Object.keys(userData.contributedFeatures).length > 0}
+  {#if userData?.contributedFeatures &&
+    Object.keys(userData.contributedFeatures).length > 0}
     <div class="relative pb-3 pr-2">
       <div class="max-h-105 space-y-0 overflow-y-auto" bind:this={viewport}>
         <div bind:this={contents}>
-          {#each Object.entries(userData.contributedFeatures) as [projectId, featureIds] (projectId)}
+          {#each Object.entries(
+            userData.contributedFeatures,
+          ) as [projectId, featureIds] (projectId)}
             {#await fetchFeaturesForProject(featureIds) then groupData}
               <div class="group-container" data-group-id={projectId}>
                 <!-- Sticky Group Header -->
@@ -148,7 +151,7 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                     <Icon
                       src={ChevronDown}
                       class="h-4 w-4 transition-transform duration-200 {collapsedGroups.has(
-                        projectId
+                        projectId,
                       )
                         ? '-rotate-90'
                         : ''}"
@@ -158,7 +161,9 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                     >
                       {#if groupData.hierarchy?.organisation}
                         <span class="text-primary"
-                          >{model.getOrganisationName(groupData.hierarchy.organisation)}</span
+                          >{model.getOrganisationName(
+                            groupData.hierarchy.organisation,
+                          )}</span
                         >
                       {/if}
                       {#if model.getProjectName(groupData.hierarchy?.project)}
@@ -183,18 +188,20 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                     class="group-content space-y-2 py-2"
                     transition:slide={{ duration: 300 }}
                   >
-                    {#each groupData.features.filter((f) => f !== null && f !== undefined) as feature, index (feature.id)}
+                    {#each groupData.features.filter(
+                      f => f !== null && f !== undefined,
+                    ) as feature, index (feature.id)}
                       <a
                         href={`/features/${feature.id}`}
-                        onclick={(e) => {
-                          e.preventDefault();
+                        onclick={e => {
+                          e.preventDefault()
                           model.onContributedFeature(
                             feature.id,
                             projectId,
                             groupData.features,
                             model.getProjectTitle(groupData.hierarchy?.project),
-                            userData?.username ?? ''
-                          );
+                            userData?.username ?? '',
+                          )
                         }}
                         class="flex w-full cursor-pointer items-center gap-2 rounded px-4 text-left transition-colors hover:bg-base-300/20"
                       >
@@ -208,18 +215,23 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                           <span class="text-xs text-base-content/60"
                             ><ScrollableText
                               text={getFeatureDisplayAddress(
-                                feature as FeatureFromCollection
+                                feature as FeatureFromCollection,
                               )}
                             /></span
                           >
                           <ScrollableText
-                            text={model.getFeatureName(feature as FeatureFromCollection)}
+                            text={model.getFeatureName(
+                              feature as FeatureFromCollection,
+                            )}
                           />
                         </div>
-                        {#if shouldShowDate( groupData.features.filter((f) => f !== null && f !== undefined), index ) && feature.createdAt}
+                        {#if shouldShowDate(
+                          groupData.features.filter(f => f !== null && f !== undefined),
+                          index,
+                        ) && feature.createdAt}
                           <div class="font-mono text-xs text-base-content/40">
                             {formatDistanceToNow(new Date(feature.createdAt), {
-                              addSuffix: true
+                              addSuffix: true,
                             })}
                           </div>
                         {/if}

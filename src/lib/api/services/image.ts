@@ -1,9 +1,9 @@
 // DRIZZLE
 import { and, eq, isNull, or, sql, type SQL } from 'drizzle-orm'
 // LIB
-import { isAdminRequest } from '$lib/api'
+import { isAdminRequest } from '#lib/api/index.js'
 // API
-import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
+import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -13,13 +13,13 @@ import {
   assertOrganisationOwnerOrSuperAdmin,
   assertProjectMaintainerOrMemberOrSuperAdmin,
   assertParamIdentifierEqualsFormIdentifier,
-} from '$lib/auth/asserts'
+} from '#lib/auth/asserts.js'
 // DB
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { taskFeatureScopeCondition } from '$lib/db/services/task-scope'
-import { isSuperAdmin } from '$lib/client/services/auth'
-import { isRelevantHubAdmin } from '$lib/api/services/authz/hub'
-import { authorizeTaskReadForProbe } from '$lib/api/services/authz/task'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
+import { taskFeatureScopeCondition } from '#lib/db/services/task-scope.js'
+import { isSuperAdmin } from '#lib/client/services/auth.js'
+import { isRelevantHubAdmin } from '#lib/api/services/authz/hub.js'
+import { authorizeTaskReadForProbe } from '#lib/api/services/authz/task.js'
 // SCHEMA
 import {
   image,
@@ -29,7 +29,7 @@ import {
   hub,
   task,
   taskImage,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 import {
   getImageById as loadImageById,
   toImageEntityResponseShape,
@@ -37,10 +37,16 @@ import {
   toResponseShapeProjectOrOrganisation as toImageProjectOrOrganisationResponseShapeFromDb,
   updateFeatureImage,
   updateImage as updateImageRecord,
-} from '$lib/db/services/image'
+} from '#lib/db/services/image.js'
 // TYPES
-import type { UserRoleDisco, Database, Id, QueryParams, SessionUser } from '$lib/types'
-import type { AssetRenderJob } from '$lib/map/renders/render.types'
+import type {
+  UserRoleDisco,
+  Database,
+  Id,
+  QueryParams,
+  SessionUser,
+} from '#lib/types.js'
+import type { AssetRenderJob } from '#lib/map/renders/render.types.js'
 import type {
   Image,
   ImageContextEnvelope,
@@ -48,13 +54,13 @@ import type {
   ImageDBFlat,
   FinalizeImageUploadLink,
   ImageProfile,
-} from '$lib/db/zod/schema/image.types'
-import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
+} from '#lib/db/zod/schema/image.types.js'
+import { ImageContextResource, ImageContextResourceExtended } from '#lib/enums.js'
 import { error, type RequestEvent } from '@sveltejs/kit'
-import { applyResourceContextConstraints } from '$lib/db/services/image'
-import { getProjectForFeatureId } from '$lib/db/services/project'
-import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image'
-import { getUserById } from '$lib/db/services/user'
+import { applyResourceContextConstraints } from '#lib/db/services/image.js'
+import { getProjectForFeatureId } from '#lib/db/services/project.js'
+import { ImageFlatUpdate, ImageUpdate } from '#lib/db/zod/schema/image.js'
+import { getUserById } from '#lib/db/services/user.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -596,7 +602,7 @@ export const enqueueDerivedAssetWarmup = async (params: {
   publicId: string
   version?: number | null
 }): Promise<void> => {
-  const queue = getAssetRenderQueue(params.event.platform)
+  const queue = getAssetRenderQueue(params.event.locals.platform)
   if (!queue) return
 
   await queue.send({

@@ -1,26 +1,26 @@
 import { customAlphabet } from 'nanoid'
 import { tick } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
-import { ensureLocaleEntryForWrite } from '$lib/i18n'
-import { getI18n } from '$lib/i18n'
-import { toLocaleKey } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
+import { ensureLocaleEntryForWrite } from '#lib/i18n.js'
+import { getI18n } from '#lib/i18n.js'
+import { toLocaleKey } from '#lib/i18n.js'
 // FORMS
-import { updateFormData } from '$lib/client/services/form'
+import { updateFormData } from '#lib/client/services/form.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { Locale, LocaleExtended, Id } from '$lib/types'
-import type { RangeFilterValue } from '$lib/client/services/propertyFilters.types'
-import type { FormDataUpdaterForm } from '$lib/client/services/form.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { Locale, LocaleExtended, Id } from '#lib/types.js'
+import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
+import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
 import type {
   Feature,
   FeatureFromCollection,
   FeatureProperty,
   FeaturePropertyI18nDB,
   UserContributedFeatureProperty,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 import type {
   Property,
   PropertyDiscriminator,
@@ -30,7 +30,7 @@ import type {
   PropertyValue,
   PropertyValueI18nDB,
   WritableI18nRecord,
-} from '$lib/db/zod/schema/property.types'
+} from '#lib/db/zod/schema/property.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -598,7 +598,7 @@ async function requestPropertyTranslations(
 ): Promise<string[] | null> {
   try {
     const { translateText: translateTextRemote } = await import(
-      '$lib/api/server/translation.remote'
+      '#lib/api/server/translation.remote.js'
     )
     const translatedTexts = await translateTextRemote({
       source: sourceLocale,

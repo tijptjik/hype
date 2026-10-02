@@ -1,4 +1,4 @@
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 export interface HubSubscriptionOverlayProps {
   title?: string

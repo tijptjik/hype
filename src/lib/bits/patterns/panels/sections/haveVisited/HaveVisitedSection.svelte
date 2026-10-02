@@ -1,16 +1,14 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
-import FilterBar from '$lib/bits/patterns/panels/components/common/FilterBar.svelte'
-import { Icon } from '$lib/bits'
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
+import FilterBar from '#lib/bits/patterns/panels/components/common/FilterBar.svelte'
+import { Icon } from '#lib/bits/index.js'
 import Squares2x2 from 'virtual:icons/proicons/grid'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type {
-  useSavedFeatureListModel,
-} from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+import type { useSavedFeatureListModel } from '#lib/adapters/panels/useSavedFeatureListModel.svelte.js'
 
 let {
   model,

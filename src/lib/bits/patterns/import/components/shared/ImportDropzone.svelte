@@ -1,6 +1,6 @@
 <script lang="ts">
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import SvelteDropzone from 'svelte-file-dropzone'
 // TYPES
 import type { Component } from 'svelte'

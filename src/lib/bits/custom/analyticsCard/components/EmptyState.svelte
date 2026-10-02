@@ -1,5 +1,5 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import type { AnalyticsCardEmptyStateProps } from '../analyticsCard.types'
 
 let {

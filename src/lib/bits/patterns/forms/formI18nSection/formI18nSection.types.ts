@@ -1,9 +1,9 @@
-import type { Locale, LocaleKey } from '$lib/types'
+import type { Locale, LocaleKey } from '#lib/types.js'
 import type {
   SectionHeaderAction,
   SectionHeaderFlag,
   SectionHeaderTrigger,
-} from '$lib/bits/custom/form/sectionHeader.types'
+} from '#lib/bits/custom/form/sectionHeader.types.js'
 import type { Snippet } from 'svelte'
 
 export interface FormI18nSectionProps {

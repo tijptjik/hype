@@ -1,7 +1,7 @@
 <script lang="ts">
 // ICONS
-import { Icon } from '$lib/bits'
-import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
+import { Icon } from '#lib/bits/index.js'
+import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
 import Check from 'virtual:icons/proicons/checkmark'
 import PencilSquare from 'virtual:icons/proicons/compose'
 import Star from 'virtual:icons/proicons/star'
@@ -9,20 +9,20 @@ import Star from 'virtual:icons/proicons/star'
 import {
   getFeatureCardEditableProperties,
   updateNewFeatureProperty,
-} from '$lib/client/services/property'
+} from '#lib/client/services/property.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getCardCtx } from '#lib/context/card.svelte.js'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // TYPES
 import type {
   Feature,
   FeatureProperty,
   UserContributedFeature,
-} from '$lib/db/zod/schema/feature.types'
-import type { LayerPropertyAdminProfile } from '$lib/db/zod/schema/layer.types'
-import type { Id } from '$lib/types'
+} from '#lib/db/zod/schema/feature.types.js'
+import type { LayerPropertyAdminProfile } from '#lib/db/zod/schema/layer.types.js'
+import type { Id } from '#lib/types.js'
 
 let titleInput = $state<HTMLInputElement | undefined>()
 
@@ -219,11 +219,9 @@ function handleDescriptionToggle(event: Event): void {
           >
             <Icon
               src={Star}
-              class={`h-6 w-6 group-hover:text-primary group-focus:text-primary ${Number(
-                grade,
-              ) > index
-                ? 'text-primary'
-                : 'text-neutral-content'}`}
+              class={`h-6 w-6 group-hover:text-primary group-focus:text-primary ${
+                Number(grade) > index ? 'text-primary' : 'text-neutral-content'
+              }`}
               theme="solid"
             />
           </button>

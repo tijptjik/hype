@@ -1,5 +1,5 @@
 // TYPES
-import { TaskType as TaskTypeEnum, TaskReviewOutcome } from '$lib/enums'
+import { TaskType as TaskTypeEnum, TaskReviewOutcome } from '#lib/enums.js'
 
 const taskTypes = Object.values(TaskTypeEnum)
 

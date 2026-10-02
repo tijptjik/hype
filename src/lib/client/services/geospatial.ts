@@ -1,10 +1,10 @@
 // I18N
-import { getI18n } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
 // TYPES
 import type { LngLatLike } from 'maplibre-gl'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { DivisionFacet } from '$lib/api/services/featureQuery.types'
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { DivisionFacet } from '#lib/api/services/featureQuery.types.js'
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 
 /**
  * Resolves a division label in the user's locale and preferred fallback languages.

@@ -1,6 +1,6 @@
 // TYPES
-import type { ResourceContext, Id } from '$lib/types'
-import type { Image } from '$lib/db/zod/schema/image.types'
+import type { ResourceContext, Id } from '#lib/types.js'
+import type { Image } from '#lib/db/zod/schema/image.types.js'
 
 /* ----------------- */
 // USER :: PROFILES

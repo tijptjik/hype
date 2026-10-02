@@ -11,14 +11,14 @@ import {
   boolToTrueOrUndef,
   createBitsAttrs,
   boolToEmptyStrOrUndef,
-} from '$lib/internal/attrs.js'
-import { kbd } from '$lib/internal/kbd.js'
+} from '#lib/internal/attrs.js'
+import { kbd } from '#lib/internal/kbd.js'
 import type {
   BitsKeyboardEvent,
   BitsPointerEvent,
   RefAttachment,
   WithRefOpts,
-} from '$lib/internal/types.js'
+} from '#lib/internal/types.js'
 
 const switchAttrs = createBitsAttrs({
   component: 'switch',

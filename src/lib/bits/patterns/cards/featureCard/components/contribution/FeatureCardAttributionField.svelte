@@ -1,13 +1,13 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // API
-import { updateUserProfile } from '$lib/api/server/user.remote'
+import { updateUserProfile } from '#lib/api/server/user.remote.js'
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getCardCtx } from '#lib/context/card.svelte.js'
 // ICONS
 import Check from 'virtual:icons/proicons/checkmark'
 import PencilSquare from 'virtual:icons/proicons/compose'

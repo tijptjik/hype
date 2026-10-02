@@ -1,10 +1,10 @@
-import { getLocaleKey } from '$lib/i18n'
+import { getLocaleKey } from '#lib/i18n.js'
 // SVELTE
 import { error } from '@sveltejs/kit'
 // SCHEMA
 import { z } from 'zod'
 // REMOTE
-import { guardedBatchQuery, guardedQuery } from './remote'
+import { guardedBatchQuery, guardedQuery } from './guarded.js'
 import {
   getOrganisations,
   getOrganisationsWhichHaveLayers,
@@ -12,7 +12,10 @@ import {
 import { getProjects } from './project.remote'
 import { getLayers } from './layer.remote'
 // TYPES
-import type { PanelResource, ResourcePage } from '$lib/api/services/resourcePage.types'
+import type {
+  PanelResource,
+  ResourcePage,
+} from '#lib/api/services/resourcePage.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

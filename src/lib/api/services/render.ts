@@ -1,13 +1,13 @@
-import { error, json, redirect } from '@sveltejs/kit'
+import { error, redirect } from '@sveltejs/kit'
 
-import { buildMapRenderJob } from '$lib/map/renders/jobs.server'
-import { enqueueMapRenderJob } from '$lib/map/renders/queue.server'
-import { resolveMapRenderAssetUrl } from '$lib/map/renders/storage.shared'
+import { buildMapRenderJob } from '#lib/map/renders/jobs.server.js'
+import { enqueueMapRenderJob } from '#lib/map/renders/queue.server.js'
+import { resolveMapRenderAssetUrl } from '#lib/map/renders/storage.shared.js'
 import type {
   MapRenderAssetKind,
   MapRenderJob,
   MapRenderRemoteConfig,
-} from '$lib/map/renders/render.types'
+} from '#lib/map/renders/render.types.js'
 
 type RemoteStage = 'preview' | 'production'
 
@@ -19,7 +19,7 @@ type MapRenderPayloadSource = {
 }
 
 const loadLocalMapRenderRuntime = async () =>
-  await import('$lib/map/renders/local.server')
+  await import('#lib/map/renders/local.server.js')
 
 /**
  * Returns the R2 credentials used to persist local and remote map renders.
@@ -160,7 +160,7 @@ export const runSingleMapRenderRefresh = async (params: {
   if (isRemoteRenderStage(params.stage)) {
     await enqueueMapRenderJob(getMapRenderQueue(params.platform), job)
 
-    return json({
+    return Response.json({
       ok: true,
       mode: 'enqueue',
       assetUrl,
@@ -175,7 +175,7 @@ export const runSingleMapRenderRefresh = async (params: {
     remoteConfig: getMapRenderRemoteConfig(params.platform),
   })
 
-  return json({
+  return Response.json({
     ok: true,
     mode: 'local-generate',
     assetUrl,

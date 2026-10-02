@@ -2,7 +2,7 @@
 import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
 import type { Component } from 'svelte'
-import { SectionHeader } from '$lib/bits/custom/form'
+import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import Actions from './Actions.svelte'
 import Body from './Body.svelte'
 import Root from './Root.svelte'
@@ -84,7 +84,8 @@ let {
               onUserContributableChange?.(row.index, value)}
           />
 
-          {@const rowFields = (toRowFields?.(row.index) ?? null) as PropertyFieldRow | null}
+          {@const rowFields = (toRowFields?.(row.index) ??
+            null) as PropertyFieldRow | null}
           {@const propertyIdAttrs = rowFields?.propertyId?.as('hidden', row.propertyId)}
           {@const visibleAttrs = rowFields?.isVisible?.as(
             'hidden',

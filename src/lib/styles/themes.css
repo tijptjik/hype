@@ -30,12 +30,12 @@
   --theme-text: #f4f0fa;
   --theme-muted: #b6b6c8;
   --theme-border: #333333;
-  --theme-primary: #fa659b;
+  --theme-primary: #ff4081;
   --theme-on-primary: #200a15;
-  --theme-secondary: #9d9bff;
-  --theme-on-secondary: #171335;
-  --theme-tertiary: #72d8cf;
-  --theme-on-tertiary: #092622;
+  --theme-secondary: #6666ff;
+  --theme-on-secondary: #000000;
+  --theme-tertiary: #8659e8;
+  --theme-on-tertiary: #000000;
   --theme-info: #82c4ff;
   --theme-success: #76d9ad;
   --theme-warning: #f2cc83;

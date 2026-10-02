@@ -1,10 +1,10 @@
 <script lang="ts">
 // BITS CORE
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // BITS COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // ICONS
 import PencilSquare from 'virtual:icons/proicons/compose'
 import Check from 'virtual:icons/proicons/checkmark'

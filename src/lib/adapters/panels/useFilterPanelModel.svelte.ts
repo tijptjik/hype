@@ -1,7 +1,7 @@
 // SVELTE
 import { untrack } from 'svelte'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // SERVICES
 import {
   displayRangeFilter,
@@ -11,16 +11,16 @@ import {
   propertyValuesToLocalisedOptions,
   setRangePropertyFilter,
   toggleCategoricalPropertyValue,
-} from '$lib/client/services/property'
-import { filterPlaces, getDivisionName } from '$lib/client/services/geospatial'
+} from '#lib/client/services/property.js'
+import { filterPlaces, getDivisionName } from '#lib/client/services/geospatial.js'
 // ENUMS
-import { FirstClassResource, OmniMode } from '$lib/enums'
+import { FirstClassResource, OmniMode } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { Id } from '$lib/types'
-import type { RangeFilterValue } from '$lib/client/services/propertyFilters.types'
-import type { Property, PropertyValue } from '$lib/db/zod/schema/property.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { Id } from '#lib/types.js'
+import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
+import type { Property, PropertyValue } from '#lib/db/zod/schema/property.types.js'
 
 type ClassifierGroup = Awaited<
   ReturnType<typeof getGroupedClassifierProperties>

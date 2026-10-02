@@ -3,7 +3,7 @@ import { getContext, setContext } from 'svelte'
 import { SvelteSet, SvelteMap } from 'svelte/reactivity'
 import { toast } from 'svelte-sonner'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
 import {
   finalizePreparedImageUpload,
@@ -12,27 +12,27 @@ import {
   prepareImageUpload,
   sortImages,
   uploadPreparedImageObject,
-} from '$lib/client/services/image'
-import { createPreviewableUploadFile } from '$lib/images/upload'
+} from '#lib/client/services/image.js'
+import { createPreviewableUploadFile } from '#lib/images/upload.js'
 import {
   deleteImage as deleteImageRemote,
   getImagesForContext,
   rotateImage as rotateImageRemote,
   setImageIntent,
   setImagePublished,
-} from '$lib/api/server/image.remote'
-import { runRemoteQuery } from '$lib/remote'
+} from '#lib/api/server/image.remote.js'
+import { runRemoteQuery } from '#lib/remote/index.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
-import type { Id } from '$lib/types'
+import type { ImageContextResource, ImageContextResourceExtended } from '#lib/enums.js'
+import type { Id } from '#lib/types.js'
 import type {
   ImageCtxConstructorOptions,
   ImageContextConfig,
-} from '$lib/context/imageProvider.types'
+} from '#lib/context/imageProvider.types.js'
 import type {
   Image,
   ImageCtxEnvelope,
@@ -42,12 +42,12 @@ import type {
   Intent,
   LoadStatus,
   UploadStatus,
-} from '$lib/db/zod/schema/image.types'
-import type { HubDB } from '$lib/db/zod/schema/hub.types'
-import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
-import type { ProjectDB } from '$lib/db/zod/schema/project.types'
-import { addParamToUrl } from '$lib/navigation'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/image.types.js'
+import type { HubDB } from '#lib/db/zod/schema/hub.types.js'
+import type { OrganisationDB } from '#lib/db/zod/schema/organisation.types.js'
+import type { ProjectDB } from '#lib/db/zod/schema/project.types.js'
+import { addParamToUrl } from '#lib/navigation/index.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 function isAbortedImageLoadError(error: unknown): boolean {
   if (typeof DOMException !== 'undefined' && error instanceof DOMException) {

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { goto } from '$app/navigation'
 // ICONS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import ChevronRight from 'virtual:icons/proicons/chevron-right'
 

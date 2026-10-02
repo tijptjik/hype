@@ -1,8 +1,8 @@
 <script lang="ts">
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
 import {
   getLayerCreationPrefill,
@@ -15,12 +15,12 @@ import {
   showLayerCreationForm,
   submitLayerForm,
   translateLayerFormLocale,
-} from '$lib/client/services/import/features/layer'
+} from '#lib/client/services/import/features/layer.js'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import FormI18nTranslationBar from '$lib/bits/patterns/forms/formI18nSection/components/FormI18nTranslationBar.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import FormI18nTranslationBar from '#lib/bits/patterns/forms/formI18nSection/components/FormI18nTranslationBar.svelte'
 import ImportAnalysisStatus from '../../../shared/ImportAnalysisStatus.svelte'
 import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
 import ImportSearchBox from '../../../shared/ImportSearchBox.svelte'
@@ -29,10 +29,10 @@ import LayerValidationResults from './LayerValidationResults.svelte'
 import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
 import XCircle from 'virtual:icons/proicons/cancel-circle'
 // ENUMS
-import { SupportedLocales } from '$lib/enums'
+import { SupportedLocales } from '#lib/enums.js'
 // TYPES
-import type { LayerFormInput } from '$lib/db/zod/schema/layer.types'
-import type { Locale } from '$lib/types'
+import type { LayerFormInput } from '#lib/db/zod/schema/layer.types.js'
+import type { Locale } from '#lib/types.js'
 import type { ImportSearchBoxItem } from '../../../shared/importSearch.types'
 
 type LayerLike = {
@@ -229,11 +229,7 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
               class="input input-bordered input-sm w-full bg-base-100/90 px-3 py-2"
               value={layerFormData.i18n[localeKey]?.name ?? ''}
               oninput={event =>
-                updateLayerFormField(
-                  localeKey,
-                  'name',
-                  event.currentTarget.value,
-                )}
+                updateLayerFormField(localeKey, 'name', event.currentTarget.value)}
             >
           </div>
           <div class="space-y-1.5">
@@ -248,11 +244,7 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
               class="input input-bordered input-sm w-full bg-base-100/90 px-3 py-2"
               value={layerFormData.i18n[localeKey]?.nameShort ?? ''}
               oninput={event =>
-                updateLayerFormField(
-                  localeKey,
-                  'nameShort',
-                  event.currentTarget.value,
-                )}
+                updateLayerFormField(localeKey, 'nameShort', event.currentTarget.value)}
             >
           </div>
           <div class="space-y-1.5">
@@ -390,7 +382,9 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
                   onClick={handleLayerCreationHide}
                 />
                 <Button
-                  text={importCtx.getIsSubmittingLayer() ? 'Creating...' : 'Create Layer'}
+                  text={importCtx.getIsSubmittingLayer()
+                    ? 'Creating...'
+                    : 'Create Layer'}
                   style="none"
                   color="primary"
                   size="md"
@@ -407,16 +401,19 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
   </div>
 {/if}
 
-{#if !importCtx.getLayerValidation().isValidating && !importCtx.getLayerValidation().showLayerSelection}
+{#if !importCtx.getLayerValidation().isValidating &&
+  !importCtx.getLayerValidation().showLayerSelection}
   <div class="space-y-4 mt-4">
-    {#if importCtx.getLayerValidation().results.length > 0 && !importCtx.getLayerValidation().showLayerResolution}
+    {#if importCtx.getLayerValidation().results.length > 0 &&
+      !importCtx.getLayerValidation().showLayerResolution}
       <h4 class="font-medium">Validation Results</h4>
       <LayerValidationResults results={importCtx.getLayerValidation().results} />
     {:else}
       <LayerResolutionPanel {importCtx} onCreateLayer={handleLayerResolutionCreate} />
 
       {#each importCtx.getLayerResolution().invalidValues as invalidValue}
-        {#if importCtx.getIsCreatingLayer() && importCtx.getActiveLayerCreation() === invalidValue}
+        {#if importCtx.getIsCreatingLayer() &&
+          importCtx.getActiveLayerCreation() === invalidValue}
           <div class="mt-4 rounded-lg bg-primary/5 p-4">
             <div class="mb-4 flex items-center justify-between">
               <h4 class="font-medium text-white">

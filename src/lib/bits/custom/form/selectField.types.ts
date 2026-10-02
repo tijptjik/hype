@@ -1,4 +1,4 @@
-import type { SelectItem, SelectProps } from '$lib/bits/core/select/select.types'
+import type { SelectItem, SelectProps } from '#lib/bits/core/select/select.types.js'
 import type { FormIssueValue } from './src/label/types'
 
 export interface SelectFieldProps {

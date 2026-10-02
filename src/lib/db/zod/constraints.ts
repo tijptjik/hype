@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import type {
   feature,
   featureI18n,

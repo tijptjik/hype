@@ -1,11 +1,16 @@
 import type { z } from 'zod'
-import type { EntityResponse, Locale, ResourceContext, UserRoleDisco } from '$lib/types'
+import type {
+  EntityResponse,
+  Locale,
+  ResourceContext,
+  UserRoleDisco,
+} from '#lib/types.js'
 import type {
   UserFeatureBase,
   UserFeatureInsert,
   UserFeatureUpdate,
-} from '$lib/db/zod/schema/feature'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type {
   UserAdminListProfileAPI,
   UserAdminProfileAPI,
@@ -22,18 +27,18 @@ import type {
   UserSelfProfileAPI,
   UserUpdate,
   UserUpdateAPI,
-} from '$lib/db/zod/schema/user'
+} from '#lib/db/zod/schema/user.js'
 import type {
   SetUserLayerDefaultsItemSchema,
   UserBaseRaw,
   UserFeatureUpdateAPI,
   UserLayerDetailProfileAPI,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 import type {
   UserLayerRecord,
   UserLayerRecordCreate,
   UserLayerRecordUpdate,
-} from '$lib/db/zod/schema/layer'
+} from '#lib/db/zod/schema/layer.js'
 
 export type UserRoleEntityType = 'hub' | 'organisation' | 'project'
 export type UserParentEntityType = 'organisation' | 'project'

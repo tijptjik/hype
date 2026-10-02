@@ -1,4 +1,4 @@
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey } from '#lib/types.js'
 
 export type HubLayerSectionItem = {
   id: string

@@ -2,19 +2,19 @@
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { getLocale, m } from '$lib/i18n'
+import { getLocale, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
-import { getImageCtx } from '$lib/context/image.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getCardCtx } from '#lib/context/card.svelte.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
 // SERVICES
-import { submitNewFeature as submitNewFeatureAPI } from '$lib/client/services/task'
+import { submitNewFeature as submitNewFeatureAPI } from '#lib/client/services/task.js'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums'
+import { FeatureCardMode } from '#lib/enums.js'
 // TYPES
-import type { ImageUpload } from '$lib/db/zod/schema/image.types'
-import type { NewFeatureTask } from '$lib/api/services/taskCreation.types'
+import type { ImageUpload } from '#lib/db/zod/schema/image.types.js'
+import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
 // LOCAL
 import FeatureCardSubmitButton from './FeatureCardSubmitButton.svelte'
 

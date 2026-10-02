@@ -2,9 +2,9 @@
 import { fade } from 'svelte/transition'
 import { Button } from 'bits-ui'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // STYLES
 import {
   BUTTON_ICON_CLASSES,

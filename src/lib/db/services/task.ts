@@ -13,7 +13,7 @@ import {
   project,
   task,
   taskImage,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // CRUD
 import { insert, update, del } from '../crud'
 // SERVICES
@@ -21,32 +21,35 @@ import { getProjectForFeatureId } from './project'
 import { getOrganisationForProjectId } from './organisation'
 import { getTaskHubFilter } from './hub'
 import { assertTaskFeatureScope, taskFeatureScopeCondition } from './task-scope'
-import { uploadAndProcessImage } from '$lib/client/services/image'
+import { uploadAndProcessImage } from '#lib/client/services/image.js'
 // FEATURE
 // ENUMS
-import { ImageContextResource } from '$lib/enums'
+import { ImageContextResource } from '#lib/enums.js'
 // DB
 import { firstOrNull, toOrderByWithLocalizedFields } from '..'
 // TYPES
-import type { Database, Id, ListResponse, Locale, QueryParams } from '$lib/types'
+import type { Database, Id, ListResponse, Locale, QueryParams } from '#lib/types.js'
 import type {
   TaskDB,
   TaskDBRaw,
   TaskDBPartial,
   TaskNew,
-} from '$lib/db/zod/schema/task.types'
+} from '#lib/db/zod/schema/task.types.js'
 import type {
   TaskFeatureReviewCommit,
   TaskReviewCommitContext,
-} from '$lib/db/services/taskReview.types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { Image, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
+} from '#lib/db/services/taskReview.types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { Image, ImageUploadCtx } from '#lib/db/zod/schema/image.types.js'
 // API SERVICES
-import { createUserContributedFeature } from '$lib/api/services/feature'
-import type { UserContributedFeature } from '$lib/db/zod/schema/feature.types'
+import { createUserContributedFeature } from '#lib/api/services/feature.js'
+import type { UserContributedFeature } from '#lib/db/zod/schema/feature.types.js'
 // TYPES
-import type { BaseTaskData, NewFeatureTask } from '$lib/api/services/taskCreation.types'
-import type { FeatureDB } from '$lib/db/zod/schema/feature.types'
+import type {
+  BaseTaskData,
+  NewFeatureTask,
+} from '#lib/api/services/taskCreation.types.js'
+import type { FeatureDB } from '#lib/db/zod/schema/feature.types.js'
 
 // Specific task types
 type ReportedMissingTask = BaseTaskData & {
@@ -88,7 +91,6 @@ type TaskFeatureDraftFinalizationCommit = {
   task: Pick<TaskDB, 'id' | 'featureId' | 'contributorId' | 'modifiedAt'>
   feature: Pick<FeatureDB, 'id' | 'modifiedAt'>
 }
-
 
 // ═══════════════════════
 // TABLE OF CONTENTS

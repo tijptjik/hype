@@ -1,18 +1,18 @@
 // THIRD PARTY
 import { layout, prepare, prepareWithSegments } from '@chenglou/pretext'
 // BITS
-import { cssVars } from '$lib/bits/utils'
+import { cssVars } from '#lib/bits/utils.js'
 // BARS
 import {
   getMenuClearanceHeight,
   getMenuReservedHeight,
-} from '$lib/bits/patterns/bars/appMenu/appMenu.layout'
+} from '#lib/bits/patterns/bars/appMenu/appMenu.layout.js'
 import {
   getElevatedChromeXGutter,
   getOmnibarClearanceHeight,
-} from '$lib/bits/patterns/bars/omnibar/Omnibar.layout'
+} from '#lib/bits/patterns/bars/omnibar/Omnibar.layout.js'
 // CONTEXT
-import { hasElevatedChrome } from '$lib/context/responsive.svelte'
+import { hasElevatedChrome } from '#lib/context/responsive.svelte.js'
 // TYPES
 import type {
   FeatureCardLayout,

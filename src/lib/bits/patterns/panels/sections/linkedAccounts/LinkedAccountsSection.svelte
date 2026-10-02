@@ -10,19 +10,19 @@ import Wechat from 'virtual:icons/simple-icons/wechat'
 import Mail from 'virtual:icons/proicons/mail'
 import KeyRound from 'virtual:icons/proicons/key'
 // AUTH
-import { authClient, signIn, signUp, useSession } from '$lib/auth/client'
+import { authClient, signIn, signUp, useSession } from '#lib/auth/client.js'
 import {
   completePasskeyAccountUpgrade,
   PasskeyRegistrationError,
   PasskeySessionRefreshError,
-} from '$lib/auth/passkey-upgrade'
-import { isAuthProviderEnabled } from '$lib/auth/providers'
-import { toLinkedAccountSelector } from '$lib/auth/account-selector'
+} from '#lib/auth/passkey-upgrade.js'
+import { isAuthProviderEnabled } from '#lib/auth/providers.js'
+import { toLinkedAccountSelector } from '#lib/auth/account-selector.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 // TYPES
-import type { LinkedAuthAccount as Account } from '$lib/client/services/account.types'
+import type { LinkedAuthAccount as Account } from '#lib/client/services/account.types.js'
 type Passkey = { id: string; name?: string; credentialID: string }
 type SocialProvider = 'facebook' | 'google' | 'wechat'
 type GuestAuthMode = 'create' | 'sign-in'
@@ -530,10 +530,10 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             type="button"
             aria-expanded={isEditing}
             onclick={() => {
-                isEditing = !isEditing
-                errorMessage = ''
-                statusMessage = ''
-              }}
+              isEditing = !isEditing
+              errorMessage = ''
+              statusMessage = ''
+            }}
           >
             {m.guest__upgrade_title()}
           </button>
@@ -544,14 +544,14 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
     {#if isEditing}
       <div
         class={`flex flex-col gap-4 ${
-            startGuestUpgradeOpen ? '' : 'mt-4 border-t border-base-content/10 pt-4'
-          }`}
+          startGuestUpgradeOpen ? '' : 'mt-4 border-t border-base-content/10 pt-4'
+        }`}
       >
         <div class="flex flex-col gap-2">
           <h3 class="text-center text-sm font-medium text-base-content/70">
             {isGuestSignIn
-                ? m.guest__sign_in_social_account()
-                : m.guest__linked_account()}
+              ? m.guest__sign_in_social_account()
+              : m.guest__linked_account()}
           </h3>
           <div class="flex flex-wrap justify-center gap-2">
             {#each socialProviders as provider (provider.id)}
@@ -573,8 +573,8 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
         <div class="flex flex-col gap-2">
           <h3 class="text-center text-sm font-medium text-base-content/70">
             {isGuestSignIn
-                ? m.guest__sign_in_standard_method()
-                : m.guest__login_methods()}
+              ? m.guest__sign_in_standard_method()
+              : m.guest__login_methods()}
           </h3>
           <div class="flex flex-wrap justify-center gap-2">
             {#if !showEmailSetup}
@@ -583,9 +583,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 type="button"
                 disabled={isBusy}
                 onclick={() => {
-                    showEmailSetup = true
-                    showPasskeySetup = false
-                  }}
+                  showEmailSetup = true
+                  showPasskeySetup = false
+                }}
               >
                 <Mail class="h-4 w-4" />{m.account__email()}
               </button>
@@ -596,18 +596,16 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 type="button"
                 disabled={isBusy}
                 onclick={() => {
-                    if (isGuestSignIn) {
-                      void handleGuestPasskeySignIn()
-                    } else {
-                      showPasskeySetup = true
-                      showEmailSetup = false
-                    }
-                  }}
+                  if (isGuestSignIn) {
+                    void handleGuestPasskeySignIn()
+                  } else {
+                    showPasskeySetup = true
+                    showEmailSetup = false
+                  }
+                }}
               >
                 <KeyRound class="h-4 w-4" />
-                {isGuestSignIn
-                    ? m.account__passkey()
-                    : m.account__setup_passkey()}
+                {isGuestSignIn ? m.account__passkey() : m.account__setup_passkey()}
               </button>
             {/if}
           </div>
@@ -739,7 +737,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             <div class="flex items-center justify-between gap-3 text-sm">
               <span class="flex min-w-0 flex-1 items-center gap-2.5"
                 ><ProviderIcon
-                  class={provider.id === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
+                  class={provider.id === 'facebook'
+                    ? 'h-5 w-5 text-[#1877F2]'
+                    : 'h-5 w-5'}
                 /><span class="text-base-content">{provider.label}</span></span
               >
               <span
@@ -756,9 +756,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             {m.account__standard_login_methods()}
           </h3>
           {#each [
-              { label: m.account__email(), icon: Mail },
-              { label: m.account__passkey(), icon: KeyRound },
-            ] as method (method.label)}
+            { label: m.account__email(), icon: Mail },
+            { label: m.account__passkey(), icon: KeyRound },
+          ] as method (method.label)}
             {@const MethodIcon = method.icon}
             <div class="flex items-center justify-between gap-3 text-sm">
               <span class="flex min-w-0 flex-1 items-center gap-2.5"
@@ -778,12 +778,16 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           <h3 class="text-sm font-medium text-base-content/70">
             {m.account__social_accounts()}
           </h3>
-          {#each accounts.filter(account => account.providerId !== 'credential') as account (account.id)}
+          {#each accounts.filter(
+            account => account.providerId !== 'credential',
+          ) as account (account.id)}
             {@const Icon = providerIcon(account.providerId)}
             <div class="flex items-center justify-between gap-3 text-sm">
               <span class="flex min-w-0 flex-1 items-center gap-2.5"
                 ><Icon
-                  class={account.providerId === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
+                  class={account.providerId === 'facebook'
+                    ? 'h-5 w-5 text-[#1877F2]'
+                    : 'h-5 w-5'}
                 /><span class="min-w-0 text-base-content"
                   >{providerLabel(account.providerId)}
                   {#if providerEmails[accountKey(account)]}
@@ -809,7 +813,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               <div class="flex items-center justify-between gap-3 text-sm">
                 <span class="flex min-w-0 flex-1 items-center gap-2.5"
                   ><ProviderIcon
-                    class={provider.id === 'facebook' ? 'h-5 w-5 text-[#1877F2]' : 'h-5 w-5'}
+                    class={provider.id === 'facebook'
+                      ? 'h-5 w-5 text-[#1877F2]'
+                      : 'h-5 w-5'}
                   /><span class="text-base-content">{provider.label}</span></span
                 >
                 <button
@@ -829,7 +835,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
           <h3 class="text-sm font-medium text-base-content/70">
             {m.account__standard_login_methods()}
           </h3>
-          {#each accounts.filter(account => account.providerId === 'credential') as account (account.id)}
+          {#each accounts.filter(
+            account => account.providerId === 'credential',
+          ) as account (account.id)}
             <div class="flex items-center justify-between gap-3 text-sm">
               <span class="flex min-w-0 flex-1 items-center gap-2.5"
                 ><Mail class="h-5 w-5" />
@@ -887,7 +895,8 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               </button>
             </div>
           {/if}
-          {#if !accounts.some(account => account.providerId === 'credential') && !showEmailSetup}
+          {#if !accounts.some(account => account.providerId === 'credential') &&
+            !showEmailSetup}
             <div class="flex items-center justify-between gap-3 text-sm">
               <span class="flex min-w-0 flex-1 items-center gap-2.5"
                 ><Mail class="h-5 w-5" />
@@ -904,7 +913,8 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             </div>
           {/if}
 
-          {#if !accounts.some(account => account.providerId === 'credential') && showEmailSetup}
+          {#if !accounts.some(account => account.providerId === 'credential') &&
+            showEmailSetup}
             <form class="mt-2 flex flex-col gap-2" onsubmit={handlePasswordSubmit}>
               <label class="text-sm" for="profile-account-email"
                 >{m.guest__email()}</label

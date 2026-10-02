@@ -1,6 +1,6 @@
 <script lang="ts">
-import { handleTrimmedTextControlBlur } from '$lib/client/services/form'
-import { m } from '$lib/i18n'
+import { handleTrimmedTextControlBlur } from '#lib/client/services/form.js'
+import { m } from '#lib/i18n.js'
 import type { FormInputPrimitiveProps } from './types'
 
 let {

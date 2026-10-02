@@ -1,17 +1,16 @@
 import { z } from 'zod'
-import { env } from '$env/dynamic/private'
-import { FormBoolean } from '$lib/db/zod/form'
+import { FormBoolean } from '#lib/db/zod/form.js'
 // REMOTE
-import { guardedQuery } from '$lib/api/server/remote'
+import { guardedQuery } from '#lib/api/server/guarded.js'
 import { error } from '@sveltejs/kit'
 // AUTHORIZATION
-import { resolveAnalyticsScope, toAuthMessage } from '$lib/api/services/authz'
-import { canAccessAnalytics } from '$lib/api/services/authz/user'
+import { resolveAnalyticsScope, toAuthMessage } from '#lib/api/services/authz/index.js'
+import { canAccessAnalytics } from '#lib/api/services/authz/user.js'
 // SERVER
 import {
   fetchAssetAnalyticsSummary,
   resolveAssetAnalyticsConfig,
-} from '$lib/api/services/analytics'
+} from '#lib/api/services/analytics.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -30,8 +29,6 @@ const assetAnalyticsSummaryParamsSchema = z.object({
     })
     .optional(),
 })
-
-const privateEnv = env as Record<string, string | undefined>
 
 /**
  * Loads the asset analytics summary for admin-only monitoring surfaces.
@@ -70,11 +67,12 @@ export const getAssetAnalyticsSummary = guardedQuery(
 
     return fetchAssetAnalyticsSummary({
       ...resolveAssetAnalyticsConfig({
-        environment: ctx.event.platform?.env.ENVIRONMENT,
-        baseUrl: ctx.event.platform?.env.PUBLIC_ASSET_BASE_URL,
-        readToken: ctx.event.platform?.env.ASSET_ANALYTICS_READ_TOKEN,
-        privateReadToken: privateEnv.ASSET_ANALYTICS_READ_TOKEN,
-        legacyPrivateReadToken: privateEnv.IMAGE_ANALYTICS_READ_TOKEN,
+        environment: ctx.event.locals.platform?.env.ENVIRONMENT,
+        baseUrl: ctx.event.locals.platform?.env.PUBLIC_ASSET_BASE_URL,
+        readToken: ctx.event.locals.platform?.env.ASSET_ANALYTICS_READ_TOKEN,
+        privateReadToken: ctx.event.locals.platform?.env.ASSET_ANALYTICS_READ_TOKEN,
+        legacyPrivateReadToken:
+          ctx.event.locals.platform?.env.IMAGE_ANALYTICS_READ_TOKEN,
       }),
       scopePrefixes: scope.scope.scopePrefixes,
       organisationIds: scope.scope.organisationIds,

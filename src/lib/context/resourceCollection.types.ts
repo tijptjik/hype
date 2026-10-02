@@ -1,6 +1,9 @@
 // TYPES
-import type { FeatureFromCollection, Feature } from '$lib/db/zod/schema/feature.types'
-import type { LocaleKey } from '$lib/types'
+import type {
+  FeatureFromCollection,
+  Feature,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { LocaleKey } from '#lib/types.js'
 
 export type ActiveCollection = {
   id: string

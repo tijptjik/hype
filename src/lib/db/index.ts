@@ -17,8 +17,8 @@ import {
   type Table,
 } from 'drizzle-orm'
 // I18N
-import { toLocaleKey, toLocaleKebab } from '$lib/i18n'
-import { chunkedInArray } from '$lib/utils/batch-query'
+import { toLocaleKey, toLocaleKebab } from '#lib/i18n.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // SCHEMA
 import * as schema from './schema'
 // ENUMS
@@ -32,17 +32,17 @@ import type {
   LocaleKey,
   Database,
   Prisms,
-} from '$lib/types'
+} from '#lib/types.js'
 import type { SQLiteTableWithColumns, TableConfig } from 'drizzle-orm/sqlite-core'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 // TYPES
-import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
-import type { ProjectDB } from '$lib/db/zod/schema/project.types'
-import type { LayerDB } from '$lib/db/zod/schema/layer.types'
-import type { FeatureDB } from '$lib/db/zod/schema/feature.types'
-import type { TaskDB } from '$lib/db/zod'
-import type { HubDB } from '$lib/db/zod/schema/hub.types'
+import type { OrganisationDB } from '#lib/db/zod/schema/organisation.types.js'
+import type { ProjectDB } from '#lib/db/zod/schema/project.types.js'
+import type { LayerDB } from '#lib/db/zod/schema/layer.types.js'
+import type { FeatureDB } from '#lib/db/zod/schema/feature.types.js'
+import type { TaskDB } from '#lib/db/zod/index.js'
+import type { HubDB } from '#lib/db/zod/schema/hub.types.js'
 
 type ResourceConfig = {
   name: string
@@ -62,14 +62,7 @@ interface LocaleBundle {
   [key: string]: unknown
 }
 
-type ResourceDB =
-  | OrganisationDB
-  | ProjectDB
-  | LayerDB
-  | FeatureDB
-  | TaskDB
-  | HubDB
-
+type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB | TaskDB | HubDB
 
 // ═══════════════════════
 // TABLE OF CONTENTS

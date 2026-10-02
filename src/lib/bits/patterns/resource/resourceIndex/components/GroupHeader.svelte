@@ -1,7 +1,7 @@
 <script lang="ts" generics="G extends Record<string, unknown>">
 import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 // BITS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 
 type GroupHeaderProps<G extends Record<string, unknown>> = {
   group: G

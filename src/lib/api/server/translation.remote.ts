@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit'
 import { z } from 'zod'
-import { translateText as translateWithAzure } from '$lib/api/external/translation'
-import { guardedCommand } from '$lib/api/server/remote'
+import { translateText as translateWithAzure } from '#lib/api/external/translation.js'
+import { guardedCommand } from '#lib/api/server/guarded.js'
 
 const TranslationParamsSchema = z.object({
   source: z.enum(['en', 'zhHans', 'zhHant']),
@@ -22,8 +22,9 @@ export const translateText = guardedCommand(
       throw error(403, 'ACCOUNT_REQUIRED')
     }
 
-    const subscriptionKey = ctx.event.platform?.env.AZURE_TRANSLATION_KEY
-    const region = ctx.event.platform?.env.PUBLIC_AZURE_TRANSLATION_REGION || 'eastasia'
+    const subscriptionKey = ctx.event.locals.platform?.env.AZURE_TRANSLATION_KEY
+    const region =
+      ctx.event.locals.platform?.env.PUBLIC_AZURE_TRANSLATION_REGION || 'eastasia'
 
     if (!subscriptionKey) {
       throw error(500, 'Missing Azure subscription key')

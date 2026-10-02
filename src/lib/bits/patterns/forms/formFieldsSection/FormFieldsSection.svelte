@@ -1,7 +1,7 @@
 <script lang="ts">
 import { untrack } from 'svelte'
 import * as FormFieldsSectionPrimitive from './components'
-import { SectionHeader, SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import type {
   FormFieldsSectionLoadingItem,
   FormFieldsSectionProps,

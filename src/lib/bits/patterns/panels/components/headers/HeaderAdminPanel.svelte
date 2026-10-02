@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // ICONS
 import Bolt from 'virtual:icons/proicons/bolt'
 import Menu from 'virtual:icons/proicons/menu'

@@ -1,7 +1,7 @@
 <script lang="ts">
 import FeatureCardViewerAttribution from './FeatureCardViewerAttribution.svelte'
 import FeatureCardViewerIntent from './FeatureCardViewerIntent.svelte'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 let { currentImage }: { currentImage: ImageCtxEnvelope } = $props()
 </script>

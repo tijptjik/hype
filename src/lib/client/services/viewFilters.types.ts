@@ -1,6 +1,6 @@
 // TYPES
-import type { LocaleKey, Id } from '$lib/types'
-import type { ReviewAction, TaskType } from '$lib/api/services/taskReview'
+import type { LocaleKey, Id } from '#lib/types.js'
+import type { ReviewAction, TaskType } from '#lib/api/services/taskReview.js'
 
 /* ----------------- */
 // VIEW FILTERS (TIER 3)

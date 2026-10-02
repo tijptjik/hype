@@ -1,20 +1,20 @@
 <script lang="ts">
 // SVELTEKIT
-import { goto, pushState } from '$app/navigation'
+import { goto } from '$app/navigation'
 import { page } from '$app/state'
 // BITS COMPONENTS
 import { Dialog } from 'bits-ui'
 // AUTH
-import { authClient, signIn } from '$lib/auth/client'
-import { toSafeReturnPath } from '$lib/auth/upgrade'
+import { authClient, signIn } from '#lib/auth/client.js'
+import { toSafeReturnPath } from '#lib/auth/upgrade.js'
 // DEBUG
-import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
+import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 // COMPONENTS
 import AccountCreatedDialogContent from './components/AccountCreatedDialogContent.svelte'
 import AuthPanel from './AuthPanel.svelte'
-import FlightSurface from '$lib/bits/patterns/layout/app/components/FlightSurface.svelte'
+import FlightSurface from '#lib/bits/patterns/layout/app/components/FlightSurface.svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 const returnTo = $derived(toSafeReturnPath(page.url.searchParams.get('returnTo')))
 let authMode = $state<'sign-in' | 'sign-up'>(
@@ -30,9 +30,9 @@ const modeToggleHref = $derived(
 /** Switches between the shareable auth routes without rerunning their page loads. */
 function setAuthMode(nextMode: 'sign-in' | 'sign-up'): void {
   authMode = nextMode
-  const url = new URL(page.url)
+  const url = new URL(page.url.href)
   url.pathname = nextMode === 'sign-up' ? '/signup' : '/signin'
-  pushState(url, {})
+  goto(url, { shallow: true })
 }
 
 /** Opens the shared account-created dialog after the verification email is sent. */

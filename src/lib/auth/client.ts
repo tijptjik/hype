@@ -10,7 +10,7 @@ import {
   usernameClient,
 } from 'better-auth/client/plugins'
 // TYPES
-import type { Auth } from '$lib/auth'
+import type { Auth } from '#lib/auth.js'
 
 export const authClient = createAuthClient({
   sessionOptions: {

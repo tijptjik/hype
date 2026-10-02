@@ -1,6 +1,6 @@
 <script lang="ts">
-import { SectionHeader, TextInput } from '$lib/bits/custom/form'
-import { m } from '$lib/i18n'
+import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
+import { m } from '#lib/i18n.js'
 import FormSection from './FormSection.svelte'
 
 type HubSpecifiersField = {

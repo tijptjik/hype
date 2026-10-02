@@ -1,7 +1,7 @@
 <script lang="ts">
 import { fly } from 'svelte/transition'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // ICONS
 import Plus from 'virtual:icons/proicons/add'
 // TYPES

@@ -1,15 +1,15 @@
 // I18N
-import { getI18n } from '$lib/i18n'
-import { m } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
 // SERVICES
-import { filterPlaces, getDivisionName } from '$lib/client/services/geospatial'
+import { filterPlaces, getDivisionName } from '#lib/client/services/geospatial.js'
 /// ENUMS
-import { OmniCollection } from '$lib/enums'
+import { OmniCollection } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { SearchResult } from '$lib/context/omni.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { FeatureExtended } from '$lib/db/zod/schema/feature.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { SearchResult } from '#lib/context/omni.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { FeatureExtended } from '#lib/db/zod/schema/feature.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

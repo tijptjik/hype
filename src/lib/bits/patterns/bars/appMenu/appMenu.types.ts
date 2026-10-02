@@ -1,5 +1,5 @@
 import type { Component } from 'svelte'
-import type { ButtonColor } from '$lib/bits/core/button'
+import type { ButtonColor } from '#lib/bits/core/button/index.js'
 
 export type AppMenuTone = 'primary' | 'secondary'
 

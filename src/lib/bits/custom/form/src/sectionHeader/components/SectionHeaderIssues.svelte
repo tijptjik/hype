@@ -1,6 +1,6 @@
 <script lang="ts">
-import { SimpleTooltip } from '$lib/bits/core'
-import { toIssueChipParts } from '$lib/client/services/form'
+import { SimpleTooltip } from '#lib/bits/core/index.js'
+import { toIssueChipParts } from '#lib/client/services/form.js'
 import TriangleAlert from 'virtual:icons/proicons/alert-triangle'
 import type { SectionHeaderIssues } from './types'
 

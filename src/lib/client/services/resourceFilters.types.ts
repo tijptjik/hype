@@ -1,6 +1,6 @@
 // TYPES
-import type { ViewFilters } from '$lib/client/services/viewFilters.types'
-import type { FirstClassResource } from '$lib/enums'
+import type { ViewFilters } from '#lib/client/services/viewFilters.types.js'
+import type { FirstClassResource } from '#lib/enums.js'
 import type { Component } from 'svelte'
 
 // Organisation filter keys

@@ -1,3 +1,5 @@
+import type { RemoteQuery } from '$app/server'
+
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -16,21 +18,21 @@ import {
   featureQueryKey,
   featureQueryScopeKey,
   matchesFeatureQuery,
-} from '$lib/client/services/featureQuery'
+} from '#lib/client/services/featureQuery.js'
 // TYPES
-import type { RemoteQuery } from '@sveltejs/kit'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+
 import type {
   FeatureQueryInput,
   FeatureQueryPage,
-} from '$lib/api/services/featureQuery.types'
-import type { FeatureQueryMatchContext } from '$lib/context/featureQuery.types'
-// TYPES
+} from '#lib/api/services/featureQuery.types.js'
+import type { FeatureQueryMatchContext } from '#lib/context/featureQuery.types.js'
 
+// TYPES
 /** Native remote queries own page payloads and concurrent request deduplication. */
 type FeatureQueryFactory = (
   input: FeatureQueryInput,
-) => import('@sveltejs/kit').RemoteQuery<FeatureQueryPage>
+) => import('$app/server').RemoteQuery<FeatureQueryPage>
 
 /** Retained feature payloads expire using the collection freshness window. */
 type FeatureQueryCachedEntity = {
@@ -44,17 +46,16 @@ type FeatureQueryCachedEntity = {
 
 /** Exact page ownership retained for fresh shared entities without duplicating remote state. */
 type FeatureQueryNativePage = {
-  page: import('@sveltejs/kit').RemoteQuery<FeatureQueryPage>
+  page: import('$app/server').RemoteQuery<FeatureQueryPage>
   input: FeatureQueryInput
   fetchedAt: number
 }
 
 /** Retained native handles for a previously visited query. */
 type FeatureQueryHistory = {
-  pages: import('@sveltejs/kit').RemoteQuery<FeatureQueryPage>[]
+  pages: import('$app/server').RemoteQuery<FeatureQueryPage>[]
   fetchedAt: number
 }
-
 
 const FRESHNESS_MS = 60_000
 const MAX_RETAINED_ENTITIES = 2_000
@@ -132,16 +133,22 @@ export class FeatureQueryRetention {
     context: FeatureQueryMatchContext,
   ): FeatureQueryCachedEntity[] {
     this.prune(Date.now())
+
     const scope = featureQueryScopeKey(input.meta)
+
     return [...this.entities.values()]
       .filter(entry => {
         if (featureQueryScopeKey(entry.meta) !== scope) return false
+
         return matchesFeatureQuery(entry.row, input, {
           ...context,
           listMembership: (row, list) => {
             const known = context.listMembership?.(row, list)
+
             if (known !== undefined) return known
+
             const checkedAt = entry.listMemberships?.[featureListMembershipKey(list)]
+
             return checkedAt !== undefined && Date.now() - checkedAt < FRESHNESS_MS
               ? true
               : undefined
@@ -173,8 +180,10 @@ export class FeatureQueryRetention {
         entry.nativeSource ? [entry.nativeSource.page] : [],
       ),
     )
+
     for (const page of this.nativePages.keys())
       if (!referenced.has(page)) this.nativePages.delete(page)
+
     while (this.nativePages.size > MAX_RETAINED_PAGES) {
       const oldestPage = this.nativePages.keys().next().value
       if (!oldestPage) break
@@ -421,6 +430,7 @@ export class FeatureQuery {
       !this.input
     )
       return
+
     await this.load(this.input, true).catch(() => {})
   }
 
@@ -519,6 +529,7 @@ export class FeatureQuery {
         else rows.delete(row.id)
       }
     }
+
     return [...rows.values()]
       .filter(row =>
         matchesFeatureQuery(row, input, {
@@ -565,6 +576,7 @@ export class FeatureQuery {
       await this.pages.at(-1)
       return
     }
+
     if (
       !force &&
       sameQuery &&
@@ -584,6 +596,7 @@ export class FeatureQuery {
       input.filters?.list &&
       featureListMembershipKey(previousInput.filters.list) ===
         featureListMembershipKey(input.filters.list)
+
     const rows = new Map(
       previousRows
         .filter(row =>
@@ -595,6 +608,7 @@ export class FeatureQuery {
         )
         .map(row => [row.id, row]),
     )
+
     // Fresh cached matches fill available slots without moving markers already on screen.
     const cached = this.retained.preview({ ...input, limit: MAX_MAP_MARKERS }, context)
     for (const entry of cached) {
@@ -612,7 +626,9 @@ export class FeatureQuery {
         rows.has(entry.row.id) && entry.nativeSource ? [entry.nativeSource] : [],
       )
       .sort((left, right) => left.fetchedAt - right.fetchedAt)
+
     for (const source of sources) this.mapPageInputs.set(source.page, source.input)
+
     this.pages = this.visibleMapPages(new Set(rows.keys()), [
       ...sources.map(source => source.page),
       ...(sameScope ? this.pages : []),
@@ -624,7 +640,9 @@ export class FeatureQuery {
       // Refresh existing native payloads in place so ordinary staleness never clears the map.
       if ((force || sameQuery) && this.pages.length) {
         await Promise.all(this.pages.map(page => page.refresh()))
+
         if (generation !== this.generation) return
+
         for (const page of this.pages)
           if (page.current)
             this.retained.retain(
@@ -632,6 +650,7 @@ export class FeatureQuery {
               this.mapPageInputs.get(page) ?? input,
               page,
             )
+
         this.mapRows = this.rows
       }
 
@@ -649,14 +668,18 @@ export class FeatureQuery {
           includeCounts: false,
           excludeIds: [...new Set(visible.map(row => row.id))],
         }
+
         const page = this.query(transportInput)
+
         this.mapPageInputs.set(page, transportInput)
         this.mapIncomingPage = page
         this.pages = [...this.pages, page]
+
         if (page.ready) await page.refresh()
         else await page
         if (generation !== this.generation) return
         if (page.current) this.retained.retain(page.current.data, transportInput, page)
+
         this.mapRows = this.rows
         this.mapIncomingPage = undefined
         this.pages = this.visibleMapPages(new Set(this.mapRows.map(row => row.id)))

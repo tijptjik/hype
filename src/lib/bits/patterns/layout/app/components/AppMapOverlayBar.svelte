@@ -1,10 +1,10 @@
 <script lang="ts">
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
-import { MapOverlayBar } from '$lib/bits/patterns/bars/mapOverlayBar'
+import { MapOverlayBar } from '#lib/bits/patterns/bars/mapOverlayBar/index.js'
 
 const appCtx = getAppCtx()
 const omniCtx = getOmniCtx()

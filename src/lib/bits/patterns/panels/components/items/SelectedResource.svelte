@@ -1,19 +1,19 @@
 <script lang="ts">
 // ICONS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import XMark from 'virtual:icons/proicons/cancel'
 // I18N
-import { getI18n } from '$lib/i18n'
-import { m } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // SERVICES
-import { navigateOnAdminById } from '$lib/navigation'
+import { navigateOnAdminById } from '#lib/navigation/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { Id } from '$lib/types'
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { Id } from '#lib/types.js'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 // COMPONENTS
 import ItemResource from './ItemResource.svelte'
 
@@ -167,13 +167,15 @@ function getSelectedResourceName(
         class="mb-0 flex max-h-[33vh] flex-wrap content-start items-start gap-x-0 gap-y-2 overflow-y-auto overscroll-contain px-6 pt-0"
       >
         {#each resourcesToDisplay as id (id)}
-          {@const resource = props.resources.find((item) => item.id === id)}
-          {@const name = resource ? getSelectedResourceName(props.resourceType, resource) : id}
+          {@const resource = props.resources.find(item => item.id === id)}
+          {@const name = resource
+            ? getSelectedResourceName(props.resourceType, resource)
+            : id}
           <button
             type="button"
             class="bits-panel-selected-resource__wide-chip {colorClass} {hoverColorClass}"
             data-resource-type={props.resourceType}
-            onclick={(event) => {
+            onclick={event => {
               event.stopPropagation()
               handleToggle(id)
             }}
@@ -203,7 +205,7 @@ function getSelectedResourceName(
     >
       <div class="flex w-auto min-w-12 flex-col items-center justify-start gap-[1px]">
         {#each resourcesToDisplay as id (id)}
-          {@const resource = props.resources.find((item) => item.id === id)}
+          {@const resource = props.resources.find(item => item.id === id)}
           {#if resource}
             <ItemResource
               panelType={props.panelType}
@@ -218,12 +220,12 @@ function getSelectedResourceName(
               {resource}
               {selectedClass}
               isSelected={props.selectedIds.includes(id)}
-              onNavigate={(event) => {
+              onNavigate={event => {
                 if (event instanceof MouseEvent) {
                   handleClickOnNarrow(id, event)
                 }
               }}
-              onToggle={(event) => {
+              onToggle={event => {
                 event.stopPropagation()
                 handleToggle(id as Id)
               }}

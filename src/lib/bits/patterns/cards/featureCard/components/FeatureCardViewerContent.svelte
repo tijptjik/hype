@@ -1,12 +1,12 @@
 <script lang="ts">
-import { useImageEditorGalleryModel } from '$lib/adapters/image'
-import { getURLfromImage } from '$lib/client/services/image'
-import { CameraViewer } from '$lib/bits/patterns/images'
-import Viewer from '$lib/bits/patterns/images/components/Viewer.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
-import { getImageCtx } from '$lib/context/image.svelte'
+import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
+import { getURLfromImage } from '#lib/client/services/image.js'
+import { CameraViewer } from '#lib/bits/patterns/images/index.js'
+import Viewer from '#lib/bits/patterns/images/components/Viewer.svelte'
+import { getCardCtx } from '#lib/context/card.svelte.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 import * as ViewerPrimitive from './images'
-import type { ViewerRenderable } from '$lib/bits/patterns/images'
+import type { ViewerRenderable } from '#lib/bits/patterns/images/index.js'
 
 const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
@@ -138,7 +138,9 @@ const viewerStyle = $derived.by(() => {
 })
 </script>
 
-{#snippet rightRail(_item: ViewerRenderable)}
+{#snippet rightRail(
+  _item: ViewerRenderable,
+)}
   <ViewerPrimitive.Counter
     requestedIndex={activeIndex}
     {loadedIndex}

@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { Snippet } from 'svelte'
-import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
+import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
 import type { CardBodyProps } from '../card.types'
 
 type Props = CardBodyProps & {

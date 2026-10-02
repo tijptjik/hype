@@ -2,10 +2,10 @@
 // SVELTE
 import { tick } from 'svelte'
 // ACTIONS
-import { clickOutside } from '$lib/actions'
+import { clickOutside } from '#lib/actions.js'
 // CONTEXT
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // LOCAL
 import { getFeatureCardLayout, getFeatureCardLayoutVars } from '../featureCard.layout'
 import { getFeatureCardRootVars } from '../featureCard.styles'
@@ -312,7 +312,9 @@ function handleClickOutside(event: MouseEvent): void {
 }
 </script>
 
-{#snippet cardChrome(cardStyle: string)}
+{#snippet cardChrome(
+  cardStyle: string,
+)}
   <div
     bind:this={shellElement}
     id="feature-card-shell"

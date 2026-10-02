@@ -1,19 +1,19 @@
 // API
-import { getImageSrc } from '$lib/client/services/image'
+import { getImageSrc } from '#lib/client/services/image.js'
 // DEBUG
 import {
   isMarkerBootstrapDebugEnabled,
   logMarkerBootstrap,
-} from '$lib/debug/markerBootstrap'
+} from '#lib/debug/markerBootstrap.js'
 // GEOMETRY
 import { getFeaturePointCoordinates } from './featureSpatial'
 import { isWithinMarkerRetentionPerimeter } from './markerRetention'
 // STYLES
-import '$lib/styles/map-markers.css'
+import '#lib/styles/map-markers.css'
 // TYPES
 import type { Map as MaplibreMap } from 'maplibre-gl'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { Id } from '$lib/types'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+import type { Id } from '#lib/types.js'
 import type { MapMarkerTheme } from './styles/catalog'
 
 // ═══════════════════════

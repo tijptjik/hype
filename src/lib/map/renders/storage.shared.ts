@@ -1,7 +1,7 @@
 // TYPES
-import type { PreviewStage } from '$lib/map/renders/render.types'
+import type { PreviewStage } from '#lib/map/renders/render.types.js'
 // TYPES
-import type { MapRenderAssetKind } from '$lib/map/renders/render.types'
+import type { MapRenderAssetKind } from '#lib/map/renders/render.types.js'
 
 type MapRenderStorageMode = 'r2'
 
@@ -11,7 +11,6 @@ type MapRenderAssetLocator = {
   hash: string
   extension?: 'png'
 }
-
 
 // ═══════════════════════
 // TABLE OF CONTENTS

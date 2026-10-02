@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import MagnifyingGlass from 'virtual:icons/proicons/search'
 // TYPES
 import type { ImportSearchBoxItem, ImportSearchBoxProps } from './importSearch.types'

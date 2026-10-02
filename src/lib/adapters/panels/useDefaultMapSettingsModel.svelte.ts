@@ -1,11 +1,11 @@
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { getI18n } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
 // API
-import { getUserLayers, setUserLayerDefaults } from '$lib/api/server/user.remote'
+import { getUserLayers, setUserLayerDefaults } from '#lib/api/server/user.remote.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 
 /**
  * Owns default layer selection and optimistic mutation reconciliation.

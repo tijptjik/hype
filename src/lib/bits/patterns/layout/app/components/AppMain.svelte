@@ -1,8 +1,8 @@
 <script lang="ts">
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 type AppMainProps = {
   children: import('svelte').Snippet

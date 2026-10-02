@@ -1,11 +1,13 @@
-import { updateUserProfile } from '$lib/api/server/user.remote'
-import { useSession } from '$lib/auth/client'
-import { m } from '$lib/i18n'
-import { normalizeUsername, validateUsername } from '$lib/utils/username'
+import type { RemoteFormIssue } from '$app/server'
+import { updateUserProfile } from '#lib/api/server/user.remote.js'
+import { useSession } from '#lib/auth/client.js'
+import { m } from '#lib/i18n.js'
+import { normalizeUsername, validateUsername } from '#lib/utils/username.js'
+
 // TYPES
-import type { Id } from '$lib/types'
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
-import type { RemoteFormIssue } from '@sveltejs/kit'
+import type { Id } from '#lib/types.js'
+
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 
 /**
  * Refreshes the shared Better Auth session atom after a successful user-profile mutation.

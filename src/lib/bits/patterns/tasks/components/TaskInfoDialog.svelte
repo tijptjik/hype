@@ -1,6 +1,6 @@
 <script lang="ts">
 import { Dialog } from 'bits-ui'
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import XIcon from 'virtual:icons/proicons/cancel'
 import CheckIcon from 'virtual:icons/proicons/checkmark-circle'
 import CheckBadgeIcon from 'virtual:icons/proicons/checkmark-starburst'
@@ -9,7 +9,7 @@ import GhostIcon from 'virtual:icons/lucide/ghost'
 import TrashIcon from 'virtual:icons/proicons/delete'
 import XCircleIcon from 'virtual:icons/proicons/cancel-circle'
 import type { Component } from 'svelte'
-import type { TaskType } from '$lib/api/services/taskReview'
+import type { TaskType } from '#lib/api/services/taskReview.js'
 
 type ActionDescriptor = {
   label: string

@@ -6,27 +6,27 @@ import {
   removeExcludedColumns,
   toStableSignature,
   toTriStateBoolean,
-} from '$lib/api'
-import { toBooleanOrUndefined } from '$lib/api/services'
+} from '#lib/api/index.js'
+import { toBooleanOrUndefined } from '#lib/api/services/index.js'
 // DB
-import { transformI18nSafely } from '$lib/db'
-import { applyTriStateBooleanCondition } from '$lib/db/query'
-import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { isSuperAdmin } from '$lib/client/services/auth'
+import { transformI18nSafely } from '#lib/db/index.js'
+import { applyTriStateBooleanCondition } from '#lib/db/query.js'
+import { toImageEnvelope, toNormalizedImageRecord } from '#lib/db/services/image.js'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
+import { isSuperAdmin } from '#lib/client/services/auth.js'
 import {
   OrganisationCompactProfileAPI,
   OrganisationAdminProfileAPI,
   OrganisationCardProfileAPI,
   OrganisationDetailProfileAPI,
   OrganisationListProfileAPI,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // SCHEMA
-import { organisation, organisationProperty } from '$lib/db/schema/index'
+import { organisation, organisationProperty } from '#lib/db/schema/index.js'
 // ENUMS
-import { ImageContextResource } from '$lib/enums'
+import { ImageContextResource } from '#lib/enums.js'
 // TYPES
-import type { CapabilityDefinitions } from '$lib/capabilities.types'
+import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
 import type {
   EntityResponse,
   Id,
@@ -34,7 +34,7 @@ import type {
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
+} from '#lib/types.js'
 import type {
   Organisation,
   OrganisationDB,
@@ -42,8 +42,8 @@ import type {
   OrganisationEntityByProfile,
   OrganisationListByProfile,
   OrganisationProfile,
-} from '$lib/db/zod/schema/organisation.types'
-import { chunkedInArray } from '$lib/utils/batch-query'
+} from '#lib/db/zod/schema/organisation.types.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

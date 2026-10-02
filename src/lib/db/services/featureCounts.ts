@@ -1,22 +1,22 @@
 // DRIZZLE
 import { and, eq, sql, type SQL } from 'drizzle-orm'
 // DB
-import { feature } from '$lib/db/schema/feature'
-import { divisionDefinition } from '$lib/db/schema/division'
-import { featureDivisionMembership } from '$lib/db/schema/featureDivision'
+import { feature } from '#lib/db/schema/feature.js'
+import { divisionDefinition } from '#lib/db/schema/division.js'
+import { featureDivisionMembership } from '#lib/db/schema/featureDivision.js'
 import {
   featureCountCache,
   featureCountRevision,
   featureCountRollup,
   featureCountUserRevision,
-} from '$lib/db/schema/featureCount'
+} from '#lib/db/schema/featureCount.js'
 import { isSqliteBusyError, retryBusyRead } from './sqlite'
 // TYPES
-import type { Database } from '$lib/types'
+import type { Database } from '#lib/types.js'
 import type {
   DivisionFacet,
   FeatureQueryInput,
-} from '$lib/api/services/featureQuery.types'
+} from '#lib/api/services/featureQuery.types.js'
 // TYPES
 
 /** Exact count metadata, stored together for an authorized feature-query fingerprint. */

@@ -1,22 +1,22 @@
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
 // REMOTE
-import { getResourcePage, getPinnedResource } from '$lib/api/server/resources.remote'
-import { getFeaturePage } from '$lib/api/server/featureQueries.remote'
+import { getResourcePage, getPinnedResource } from '#lib/api/server/resources.remote.js'
+import { getFeaturePage } from '#lib/api/server/featureQueries.remote.js'
 // CONTEXT
 import { ResourceList } from './resource-list.svelte'
 import { FeatureQuery, FeatureQueryRetention } from './feature-query.svelte'
 // TYPES
-import type { Cache } from '$lib/context/cache.types'
+import type { Cache } from '#lib/context/cache.types.js'
 import type {
   PanelResourceType,
   PanelResource,
-} from '$lib/api/services/resourcePage.types'
+} from '#lib/api/services/resourcePage.types.js'
 import type {
   ResourceDetailHandle,
   ResourceOptimisticInput,
   FeatureCollectionHandle,
-} from '$lib/context/featureQuery.types'
+} from '#lib/context/featureQuery.types.js'
 
 /** Session-local domain retention. SvelteKit owns active page payloads and request deduplication. */
 export class CacheCtx {

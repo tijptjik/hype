@@ -1,11 +1,11 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
-import { Button } from '$lib/bits/core'
-import { SectionHeader, SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import { m } from '#lib/i18n.js'
+import { Button } from '#lib/bits/core/index.js'
+import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import {
   FormI18nCapabilities,
   FormI18nSection,
-} from '$lib/bits/patterns/forms/formI18nSection'
+} from '#lib/bits/patterns/forms/formI18nSection/index.js'
 import type { OrganisationCapabilitiesProps } from './organisationCapabilities.types'
 import OrganisationCapabilitiesEmpty from './components/OrganisationCapabilitiesEmpty.svelte'
 import OrganisationCapabilitiesSearch from './components/OrganisationCapabilitiesSearch.svelte'
@@ -138,7 +138,9 @@ $effect(() => {
       {locales}
       {isEditing}
     >
-      {#snippet children(locale)}
+      {#snippet children(
+        locale,
+      )}
         <FormI18nCapabilities
           fields={formCapabilityFields}
           capabilityKeys={selectedCapabilityKeys}

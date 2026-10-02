@@ -1,5 +1,5 @@
 // CONTEXT
-import type { ResponsiveCtx } from '$lib/context/responsive.svelte'
+import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
 
 /**
  * Returns the effective width available to the feature card after open panels

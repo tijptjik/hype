@@ -22,9 +22,9 @@ import {
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 // MAP
-import { createFeatureSpatialIndex } from '$lib/map/featureSpatial'
+import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // I18N
-import { normalizeI18nLocaleRecord, toLocaleKebab } from '$lib/i18n'
+import { normalizeI18nLocaleRecord, toLocaleKebab } from '#lib/i18n.js'
 // TYPES
 import type {
   Database,
@@ -33,9 +33,9 @@ import type {
   Locale,
   LocaleKey,
   QueryParams,
-} from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+} from '#lib/types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type {
   Feature,
   FeatureDB,
@@ -45,7 +45,7 @@ import type {
   FeatureI18nPartial,
   FeatureProperty,
   NewFeatureProperty,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

@@ -1,10 +1,10 @@
 <script lang="ts">
 // CORE
-import Button from '$lib/bits/core/button/Button.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // TYPES
 import type { Snippet } from 'svelte'
 // LOCAL

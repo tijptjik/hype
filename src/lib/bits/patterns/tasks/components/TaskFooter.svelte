@@ -1,9 +1,9 @@
 <script lang="ts">
 // ADAPTERS
-import { useImageEditorGalleryModel } from '$lib/adapters/image'
+import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS
-import { ThumbnailWrapper } from '$lib/bits'
-import { getImageCtx } from '$lib/context/image.svelte'
+import { ThumbnailWrapper } from '#lib/bits/index.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 import type { Snippet } from 'svelte'
 import type { TaskFooterProps } from '../task.types'
 

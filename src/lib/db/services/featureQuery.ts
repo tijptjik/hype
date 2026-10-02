@@ -15,7 +15,10 @@ import {
   type SQL,
 } from 'drizzle-orm'
 // API
-import { getFeatureWithRelations, toListResponseShape } from '$lib/api/services/feature'
+import {
+  getFeatureWithRelations,
+  toListResponseShape,
+} from '#lib/api/services/feature.js'
 // DB
 import {
   feature,
@@ -25,21 +28,21 @@ import {
   project,
   organisation,
   userFeature,
-} from '$lib/db/schema'
-import { featureSearchDocument } from '$lib/db/schema/featureQuery'
+} from '#lib/db/schema/index.js'
+import { featureSearchDocument } from '#lib/db/schema/featureQuery.js'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 import { getFeatureQueryCounts } from './featureCounts'
 // UTILS
-import { chunkedInArray } from '$lib/utils/batch-query'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // TYPES
-import type { Database } from '$lib/types'
+import type { Database } from '#lib/types.js'
 import type {
   FeatureQueryInput,
   FeatureQueryPage,
-} from '$lib/api/services/featureQuery.types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { FeatureListDBRaw } from '$lib/db/zod/schema/feature.types'
+} from '#lib/api/services/featureQuery.types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { FeatureListDBRaw } from '#lib/db/zod/schema/feature.types.js'
 
 // +++ Table Of Contents
 // ═══════════════════════

@@ -1,5 +1,5 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -11,7 +11,7 @@ import {
   featureProperty,
   featurePropertyI18n,
   userFeature,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // CONSTRAINTS
 import { getLocales } from '../constraints'
 import { FormBoolean } from '../form'
@@ -25,9 +25,9 @@ import {
 import { ImageContextEnvelopeAPI } from './image'
 import { UserBasic } from './user'
 // ENUMS
-import { supportedLocales } from '$lib/enums'
+import { supportedLocales } from '#lib/enums.js'
 // TYPES
-import type { AddressMeta, AddressProperties } from '$lib/utils/address.types'
+import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
 import type { GeometryObject } from 'geojson'
 
 // ═══════════════════════

@@ -2,7 +2,7 @@
 // COMPONENTS
 import OmnibarSection from './OmnibarSection.svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { OmnibarResultsProps } from './omnibarPrimitives.types'
 
@@ -16,7 +16,9 @@ let { sections }: OmnibarResultsProps = $props()
 >
   {#if sections.every(section => section.results.length === 0)}
     <div class="p-4 text-center text-base-content/60">
-      {sections.some(section => section.loading) ? m.resource_loading() : m.omni__no_results()}
+      {sections.some(section => section.loading)
+        ? m.resource_loading()
+        : m.omni__no_results()}
     </div>
   {:else}
     {#each sections as section (section.collectionType)}

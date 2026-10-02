@@ -1,6 +1,6 @@
 <script lang="ts">
-import { SimpleTooltip } from '$lib/bits/core'
-import { m } from '$lib/i18n'
+import { SimpleTooltip } from '#lib/bits/core/index.js'
+import { m } from '#lib/i18n.js'
 import Bot from 'virtual:icons/proicons/toy-brick'
 import Smile from 'virtual:icons/proicons/emoji'
 import type { FormGenAIProps } from './types'

@@ -1,18 +1,19 @@
 // SVELTE
-import { goto, pushState } from '$app/navigation'
+import { goto } from '$app/navigation'
 // LIB
-import { ADMIN_PATH } from '$lib/constants'
+import { ADMIN_PATH } from '#lib/constants.js'
 // ENUMS
-import { FirstClassResource, ResourcePath, ResourceRefKey } from '$lib/enums'
-import type { HeaderCrumb } from '$lib/bits/custom/header'
+import { FirstClassResource, ResourcePath, ResourceRefKey } from '#lib/enums.js'
+import type { HeaderCrumb } from '#lib/bits/custom/header/index.js'
 // TYPES
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { Code, Id, NavigableResource, Resource } from '$lib/types'
-import type { FacetType } from '$lib/context/facets'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { Code, Id, NavigableResource, Resource } from '#lib/types.js'
+import type { FacetType } from '#lib/context/facets.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 
 function isNavigable(resource: unknown): resource is NavigableResource {
   return (
@@ -23,6 +24,7 @@ function isNavigable(resource: unknown): resource is NavigableResource {
 
 export const getResourcePathPart = (resource?: FirstClassResource) => {
   if (!resource) return null
+
   return ResourcePath[resource]
 }
 
@@ -75,9 +77,12 @@ export const getResourceRef = (
   id: Id,
 ) => {
   if (!resource) return false
+
   const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
   const entity = adminCtx.appCtx.cache[resource].get(id)
+
   if (!entity) return false
+
   return entity[refKey as keyof Resource]
 }
 
@@ -127,7 +132,9 @@ export const getUrlForResource = (
   facet?: string,
 ) => {
   const ref = getResourceRef(adminCtx, resource, id)
+
   if (!ref) return null
+
   return `${ADMIN_PATH}/${getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`
 }
 
@@ -176,11 +183,11 @@ export const navigateOnAdmin = (
     currentUrl.hash !== targetUrl.hash
 
   if (isHashOnlyNavigation) {
-    pushState(targetUrl.toString(), {})
+    goto(targetUrl.toString(), { shallow: true })
     return
   }
 
-  void goto(url, { noScroll: true, keepFocus: true, replaceState: false })
+  void goto(url, { reset: false, replace: false })
 }
 
 export async function navigateOnAdminById(
@@ -232,6 +239,7 @@ export async function getBreadcrumbs(
         i18n?.zhHant?.nameShort ??
         ''
       ).trim()
+
       return code || shortName || 'Hub'
     }
 
@@ -245,6 +253,7 @@ export async function getBreadcrumbs(
 
     const projectOrganisationCode = async (): Promise<string | null> => {
       if (resourceType !== FirstClassResource.project) return null
+
       const projectResource = currentResource as {
         code?: unknown
         organisationId?: unknown
@@ -268,6 +277,7 @@ export async function getBreadcrumbs(
         const parentOrganisation = await appCtx.getOrganisationById(organisationId)
         if (parentOrganisation?.code) return parentOrganisation.code
       }
+
       return hierarchyOrgCode ?? null
     }
 

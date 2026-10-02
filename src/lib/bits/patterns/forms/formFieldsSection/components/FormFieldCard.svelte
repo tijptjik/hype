@@ -111,7 +111,10 @@ const cardClass = $derived(
 </script>
 
 <article class={cardClass}>
-  {#snippet hiddenInput(name: string, value: string)}
+  {#snippet hiddenInput(
+    name: string,
+    value: string,
+  )}
     <input type="hidden" {name} {value}>
   {/snippet}
 
@@ -163,9 +166,18 @@ const cardClass = $derived(
         `data.properties[${propertyIndex}].organisationId`,
         property.organisationId ?? '',
       )}
-      {@render hiddenInput(`data.properties[${propertyIndex}].hubId`, property.hubId ?? '')}
-      {@render hiddenInput(`data.properties[${propertyIndex}].scope`, property.scope ?? 'project')}
-      {@render hiddenInput(`data.properties[${propertyIndex}].type`, property.type ?? '')}
+      {@render hiddenInput(
+        `data.properties[${propertyIndex}].hubId`,
+        property.hubId ?? '',
+      )}
+      {@render hiddenInput(
+        `data.properties[${propertyIndex}].scope`,
+        property.scope ?? 'project',
+      )}
+      {@render hiddenInput(
+        `data.properties[${propertyIndex}].type`,
+        property.type ?? '',
+      )}
       {@render hiddenInput(`data.properties[${propertyIndex}].key`, property.key ?? '')}
       {@render hiddenInput(
         `data.properties[${propertyIndex}].component`,
@@ -187,7 +199,10 @@ const cardClass = $derived(
         `data.properties[${propertyIndex}].isDefaultEnabled`,
         property.isDefaultEnabled ? 'true' : 'false',
       )}
-      {@render hiddenInput(`data.properties[${propertyIndex}].isEnabled`, isEnabledInputValue)}
+      {@render hiddenInput(
+        `data.properties[${propertyIndex}].isEnabled`,
+        isEnabledInputValue,
+      )}
 
       {#each localeKeys as locale}
         {@const localeI18n = property.i18n?.[locale]}

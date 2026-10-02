@@ -1,5 +1,5 @@
-import { FirstClassResource } from '$lib/enums'
-import { navigateOnAdmin } from '$lib/navigation'
+import { FirstClassResource } from '#lib/enums.js'
+import { navigateOnAdmin } from '#lib/navigation/index.js'
 
 /********************
  *  TABLE OF CONTENTS

@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import type { EntityResponse, ListQueryParams } from '$lib/types'
+import type { EntityResponse, ListQueryParams } from '#lib/types.js'
 import type {
   BeginMissingReportDraftSchema,
   BeginNewFeatureDraftSchema,
@@ -27,7 +27,7 @@ import type {
   TaskProfile as TaskProfileSchema,
   TaskUpdate,
   TaskUpdateAPI,
-} from '$lib/db/zod/schema/task'
+} from '#lib/db/zod/schema/task.js'
 
 export type TaskListParams = ListQueryParams
 export type TaskProfile = z.infer<typeof TaskProfileSchema>

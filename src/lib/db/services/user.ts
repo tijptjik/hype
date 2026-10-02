@@ -14,16 +14,16 @@ import {
 import { hub, hubRole, user, userFeature, userLayer } from '../schema'
 import { isSqliteMissingSchemaError, retryBusyRead } from './sqlite'
 // TYPES
-import type { Id, UserRoleDisco, Database } from '$lib/types'
+import type { Id, UserRoleDisco, Database } from '#lib/types.js'
 import type {
   UserDB,
   UserFeatureDB,
   UserLayerDB,
   UserLayerNew,
   UserPartial,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 import { update } from '../crud'
-import { autochunk, SQL_BATCH_SIZE } from '$lib/utils/batch-query'
+import { autochunk, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

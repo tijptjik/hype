@@ -1,12 +1,12 @@
 import type { z } from 'zod'
-import type { CapabilityDefinitions } from '$lib/capabilities.types'
-import type { EntityResponse, Locale } from '$lib/types'
+import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
+import type { EntityResponse, Locale } from '#lib/types.js'
 import type {
   FormLocaleInput,
   FormLocaleSource,
-} from '$lib/client/services/formLocale.types'
-import type { QueryWithOverride } from '$lib/client/services/formRelations.types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+} from '#lib/client/services/formLocale.types.js'
+import type { QueryWithOverride } from '#lib/client/services/formRelations.types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
   OrganisationCompactProfileAPI,
   OrganisationAdminProfileAPI,
@@ -32,7 +32,7 @@ import type {
   OrganisationUpdate,
   PublishOrganisationSchema,
   RemoveOrganisationSchema,
-} from '$lib/db/zod/schema/organisation'
+} from '#lib/db/zod/schema/organisation.js'
 
 export type OrganisationDB = Omit<z.infer<typeof OrganisationBase>, 'isCoreInclusive'>
 export type OrganisationDBSuperAdmin = z.infer<typeof OrganisationBase>

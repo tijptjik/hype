@@ -1,14 +1,14 @@
 <script lang="ts">
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import {
   FormParentSection,
   type ParentSectionOrganisationItem,
   type ParentSectionProjectItem,
-} from '$lib/bits/patterns/forms/formParentSection'
+} from '#lib/bits/patterns/forms/formParentSection/index.js'
 import ImportRows from '../../../shared/ImportRows.svelte'
 import ImportRowCol from '../../../shared/ImportRowCol.svelte'
 import ImportRowCols from '../../../shared/ImportRowCols.svelte'

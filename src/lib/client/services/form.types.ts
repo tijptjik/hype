@@ -1,5 +1,5 @@
 // TYPES
-import type { CapabilityKey } from '$lib/capabilities.types'
+import type { CapabilityKey } from '#lib/capabilities.types.js'
 
 /* ----------------- */
 // FORMS

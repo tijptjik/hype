@@ -13,15 +13,15 @@ import {
   projectMapStyles,
 } from '../schema'
 // MAP
-import { REGISTERED_MAP_STYLE_CATALOG } from '$lib/map/styles/catalog'
-import { getMapStyleCatalogI18n } from '$lib/map/styles/i18n'
+import { REGISTERED_MAP_STYLE_CATALOG } from '#lib/map/styles/catalog.js'
+import { getMapStyleCatalogI18n } from '#lib/map/styles/i18n.js'
 // TYPES
-import type { Database } from '$lib/types'
+import type { Database } from '#lib/types.js'
 import type {
   MapStyleResolvedDB,
   MapStyleRowDB,
   ProjectMapStyleDB,
-} from '$lib/db/zod/schema/map.types'
+} from '#lib/db/zod/schema/map.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

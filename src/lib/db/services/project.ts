@@ -3,14 +3,14 @@ import { gt } from 'drizzle-orm'
 import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { and, eq, like, or, sql, getTableColumns, type SQL } from 'drizzle-orm'
-import { SQL_BATCH_SIZE } from '$lib/utils/batch-query'
+import { SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // CAPABILITIES
 import {
   getCapabilityKeysFromDefinitions,
   isProjectCapabilityKey,
   normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
-} from '$lib/capabilities'
+} from '#lib/capabilities.js'
 // SCHEMA
 import {
   feature,
@@ -34,7 +34,7 @@ import { retryBusyRead } from './sqlite'
 // ZOD
 import { getProjectHubFilter } from './hub'
 // TYPES
-import type { CapabilityDefinitions } from '$lib/capabilities.types'
+import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
 import type {
   Id,
   Database,
@@ -42,8 +42,8 @@ import type {
   Locale,
   ListResponse,
   QueryParams,
-} from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+} from '#lib/types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type {
   ProjectAdminDBRaw,
   ProjectDB,
@@ -54,7 +54,7 @@ import type {
   ProjectI18nPartial,
   ProjectRoleDB,
   ProjectRoleNew,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

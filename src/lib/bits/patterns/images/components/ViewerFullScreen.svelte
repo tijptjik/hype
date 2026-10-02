@@ -1,7 +1,7 @@
 <script lang="ts">
 import Portal from 'svelte-portal'
 import { fade } from 'svelte/transition'
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import ViewerStage from './ViewerStage.svelte'
 import type { FullScreenProps } from './imagePrimitives.types'
 

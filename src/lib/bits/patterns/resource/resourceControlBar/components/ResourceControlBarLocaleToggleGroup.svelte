@@ -1,7 +1,7 @@
 <script lang="ts">
 // BITS CORE
-import Button from '$lib/bits/core/button/Button.svelte'
-import Separator from '$lib/bits/core/separator/Separator.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
+import Separator from '#lib/bits/core/separator/Separator.svelte'
 // TYPES
 import type { ResourceControlBarLocaleToggleGroupProps } from './resourceControlBarPrimitives.types'
 

@@ -1,11 +1,11 @@
 // THIRD-PARTY
 import proj from 'proj4'
 // DATA
-import streetsData from '$lib/map/streets.json'
+import streetsData from '#lib/map/streets.json'
 // TYPES
-import type { AddressMeta, AddressProperties } from '$lib/utils/address.types'
-import type { LocaleKey } from '$lib/types'
-import type { ParsedReverseGeocodeResult } from '$lib/utils/geocoding.types'
+import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
+import type { LocaleKey } from '#lib/types.js'
+import type { ParsedReverseGeocodeResult } from '#lib/utils/geocoding.types.js'
 
 type StreetsData = {
   en?: string[]

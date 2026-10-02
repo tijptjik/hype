@@ -3,10 +3,10 @@
 import { goto } from '$app/navigation'
 import { fade } from 'svelte/transition'
 // CONTEXT
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
 import {
   handleProjectSelection,
@@ -22,40 +22,44 @@ import {
   enrichFeatureImportBooleanFields,
   type FeatureResolutionStatusCounts,
   type GeoLookupStatusCounts,
-} from '$lib/client/services/import/features'
+} from '#lib/client/services/import/features.js'
 import {
   setAllFeatureResolutionUpdatePolicyRows,
   type FeatureResolutionData,
-} from '$lib/client/services/import/features/resolution'
+} from '#lib/client/services/import/features/resolution.js'
 import {
   canCompleteUserResolution,
   validateUsers,
   startUserResolution,
   enrichFeaturesWithUserData,
-} from '$lib/client/services/import/users'
+} from '#lib/client/services/import/users.js'
 import {
   fetchAvailablePropertyKeys,
   validatePropertyColumns,
-} from '$lib/client/services/import/features/property'
+} from '#lib/client/services/import/features/property.js'
 import {
   preloadLayers,
   canCompleteLayerResolution,
   validateLayers,
   enrichFeaturesWithLayerData,
-} from '$lib/client/services/import/features/layer'
+} from '#lib/client/services/import/features/layer.js'
 // BITS COMPONENTS
-import { Switch } from '$lib/bits/custom/switch'
+import { Switch } from '#lib/bits/custom/switch/index.js'
 // PATTERN COMPONENTS
 import * as ImportPrimitive from './components'
 // COMPONENT TYPES
 import type {
   ParentSectionOrganisationItem,
   ParentSectionProjectItem,
-} from '$lib/bits/patterns/forms/formParentSection'
+} from '#lib/bits/patterns/forms/formParentSection/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { Project, Organisation, Resource } from '$lib/client/services/import/types'
+import type {
+  Project,
+  Organisation,
+  Resource,
+} from '#lib/client/services/import/types.js'
 
 type Props = {
   appCtx: AppCtx

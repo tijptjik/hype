@@ -1,5 +1,5 @@
-import { toLocaleKey } from '$lib/i18n'
-import type { LocaleKey } from '$lib/types'
+import { toLocaleKey } from '#lib/i18n.js'
+import type { LocaleKey } from '#lib/types.js'
 import type { Map as MapLibreMap, StyleSpecification } from 'maplibre-gl'
 import { applyRuntimeBasemapSource, getConfiguredBasemapAccessToken } from './source'
 

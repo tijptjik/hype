@@ -1,7 +1,7 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
-import { SectionHeader, SectionHeaderPrimitive } from '$lib/bits/custom/form'
-import { UserCapabilityMatrix } from '$lib/bits/patterns/capabilities/userCapabilityMatrix'
+import { m } from '#lib/i18n.js'
+import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import { UserCapabilityMatrix } from '#lib/bits/patterns/capabilities/userCapabilityMatrix/index.js'
 import * as ProjectCapabilitiesPrimitive from './components'
 import type { ProjectCapabilitiesProps } from './projectCapabilities.types'
 

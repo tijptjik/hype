@@ -1,5 +1,5 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import ResourceStatusBadge from './ResourceStatusBadge.svelte'
 import type { ResourceFeatureStatusBadgeProps } from './resourceStatusBadge.types'
 

@@ -2,11 +2,11 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
-import { Button, Icon, OverlayBar } from '$lib/bits'
+import { Button, Icon, OverlayBar } from '#lib/bits/index.js'
 // ICONS
 import SwatchIcon from 'virtual:icons/proicons/color-palette'
 

@@ -1,5 +1,5 @@
-import type { ButtonProps } from '$lib/bits/core/button/button.types'
-import type { SwitchProps } from '$lib/bits/custom/switch/switch.types'
+import type { ButtonProps } from '#lib/bits/core/button/button.types.js'
+import type { SwitchProps } from '#lib/bits/custom/switch/switch.types.js'
 
 export interface SectionHeaderFlag extends SwitchProps {
   isEditing?: boolean

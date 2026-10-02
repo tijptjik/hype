@@ -1,5 +1,5 @@
 import type { Component } from 'svelte'
-import type { ButtonColor, ButtonSize } from '$lib/bits/core/button/button.types'
+import type { ButtonColor, ButtonSize } from '#lib/bits/core/button/button.types.js'
 
 export type SwapVariant = 'default' | 'transparent'
 

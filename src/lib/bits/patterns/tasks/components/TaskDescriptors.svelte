@@ -1,5 +1,5 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import type { Snippet } from 'svelte'
 import type { TaskDescriptorsProps } from '../task.types'
 
@@ -39,7 +39,9 @@ function getDisplayValue(value: string): string {
         <div
           class={cx(
             'text-md leading-6 text-white/88',
-            item.wrap ? 'whitespace-pre-wrap' : 'overflow-hidden text-ellipsis whitespace-nowrap',
+            item.wrap
+              ? 'whitespace-pre-wrap'
+              : 'overflow-hidden text-ellipsis whitespace-nowrap',
           )}
         >
           {getDisplayValue(item.value)}

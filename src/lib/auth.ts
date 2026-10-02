@@ -15,16 +15,19 @@ import { parseSessionSettings } from './auth/session-settings'
 import { requireAvailableAuthUser } from './auth/account-state.server'
 import { passwordSetup } from './auth/password-setup.server'
 // DB SCHEMA
-import * as schema from '$lib/db/schema/index'
+import * as schema from '#lib/db/schema/index.js'
 // TYPES
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import type { UserRoleDisco, Locale } from '$lib/types'
-import type { UserExperimental, UserPreferences } from '$lib/db/zod/schema/user.types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { user as userSchema } from '$lib/db/schema/user'
-import { migrateAnonymousUserState } from '$lib/auth/anonymous.server'
-import { createAuthDiagnosticId } from '$lib/auth/diagnostics.server'
+import type { UserRoleDisco, Locale } from '#lib/types.js'
+import type {
+  UserExperimental,
+  UserPreferences,
+} from '#lib/db/zod/schema/user.types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { user as userSchema } from '#lib/db/schema/user.js'
+import { migrateAnonymousUserState } from '#lib/auth/anonymous.server.js'
+import { createAuthDiagnosticId } from '#lib/auth/diagnostics.server.js'
 
 // ═══════════════════════════════════════════════════════════════
 // CACHE: AUTH INSTANCES BY BASE URL
@@ -161,7 +164,7 @@ function createAuthInstance(
             const dbUser = user as Partial<typeof userSchema.$inferSelect>
             if (!dbUser.username && dbUser.isAnonymous !== true) {
               const { generateUsernameFromId } = await import(
-                '$lib/utils/username-generator.server'
+                '#lib/utils/username-generator.server.js'
               )
               const username = generateUsernameFromId(user.id)
               return {
@@ -279,7 +282,7 @@ function createAuthInstance(
           }
 
           // Check if username conflicts with existing usernames or user IDs
-          const { user } = await import('$lib/db/schema/user')
+          const { user } = await import('#lib/db/schema/user.js')
           const { or, eq } = await import('drizzle-orm')
 
           const existingUser = await db
@@ -300,7 +303,7 @@ function createAuthInstance(
 
       customSession(async ({ user, session }) => {
         // Import these here to avoid circular dependencies
-        const { getUserRoles } = await import('$lib/db/services/user')
+        const { getUserRoles } = await import('#lib/db/services/user.js')
 
         // Guest accounts cannot hold roles, so avoid an unnecessary D1 query.
         const dbUser = user as typeof userSchema.$inferSelect

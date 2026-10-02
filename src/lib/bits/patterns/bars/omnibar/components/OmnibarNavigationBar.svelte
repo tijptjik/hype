@@ -4,7 +4,7 @@ import OmnibarCollection from './OmnibarCollection.svelte'
 import OmnibarNavigationArrow from './OmnibarNavigationArrow.svelte'
 import OmnibarNavigationHeader from './OmnibarNavigationHeader.svelte'
 // ENUMS
-import { OmniMode } from '$lib/enums'
+import { OmniMode } from '#lib/enums.js'
 // STYLES
 import { getOmnibarNavBarClasses, getOmnibarSurfaceClasses } from '../omnibar.styles'
 // TYPES

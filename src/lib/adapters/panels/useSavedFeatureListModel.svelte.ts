@@ -3,13 +3,13 @@ import { untrack } from 'svelte'
 // DATE
 import { formatDistanceToNow } from 'date-fns'
 // I18N
-import { getI18n, toDateFnsLocale, m } from '$lib/i18n'
+import { getI18n, toDateFnsLocale, m } from '#lib/i18n.js'
 // NAVIGATION
-import { navigateToStarred, navigateToVisited } from '$lib/navigation'
+import { navigateToStarred, navigateToVisited } from '#lib/navigation/index.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { UserFeatureWithHierarchy } from '#lib/db/zod/schema/user.types.js'
 
 export type SavedFeatureRow = {
   id: string

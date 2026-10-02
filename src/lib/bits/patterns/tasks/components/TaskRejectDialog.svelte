@@ -1,6 +1,6 @@
 <script lang="ts">
 import { Dialog } from 'bits-ui'
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import XIcon from 'virtual:icons/proicons/cancel'
 
 let {

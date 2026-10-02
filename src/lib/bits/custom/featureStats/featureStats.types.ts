@@ -1,6 +1,6 @@
 import type { Component } from 'svelte'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 export type FeatureStatsProps = {
   feature: Feature

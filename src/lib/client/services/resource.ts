@@ -1,4 +1,4 @@
-import { getLocaleKey } from '$lib/i18n'
+import { getLocaleKey } from '#lib/i18n.js'
 
 // INTERACTIONS
 export function focusFirstChildOfResourceIndex(

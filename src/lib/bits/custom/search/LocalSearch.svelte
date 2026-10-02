@@ -1,7 +1,7 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
 import { tick } from 'svelte'
 import { slide } from 'svelte/transition'
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import type { LocalSearchProps } from './search.types'
 import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.utils'
 import * as SearchPrimitive from './src/components'
@@ -166,7 +166,8 @@ $effect(() => {
         <div class="overflow-hidden rounded-md">
           <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
             {#each results as item, index (index)}
-              {#if resultMap.variant?.(item) === 'visual' || resultMap.previewImage?.(item)}
+              {#if resultMap.variant?.(item) === 'visual' ||
+                resultMap.previewImage?.(item)}
                 <SearchPrimitive.VisualResultItem
                   title={resultMap.title(item)}
                   descriminator={resultMap.descriminator?.(item)}

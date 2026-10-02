@@ -1,20 +1,20 @@
 <script lang="ts">
 import { Dialog } from 'bits-ui'
-import { Button, SimpleTooltip } from '$lib/bits/core'
-import { Card, SectionHeader } from '$lib/bits/custom'
-import { LicenseCard } from '$lib/bits/patterns/cards/licenseCard'
-import { m } from '$lib/i18n'
+import { Button, SimpleTooltip } from '#lib/bits/core/index.js'
+import { Card, SectionHeader } from '#lib/bits/custom/index.js'
+import { LicenseCard } from '#lib/bits/patterns/cards/licenseCard/index.js'
+import { m } from '#lib/i18n.js'
 import {
   buildProjectLicense,
   createDefaultProjectLicense,
   getProjectLicenseIntent,
   type ProjectLicenseIntent,
-} from '$lib/client/services/licence'
+} from '#lib/client/services/licence.js'
 import {
   inferProjectLicenseRightsFromLabel,
   isRecognizedPublicDomainLicenseLabel,
   isKnownGeneratedProjectLicenseLabel,
-} from '$lib/db/services/licence'
+} from '#lib/db/services/licence.js'
 import type { Component } from 'svelte'
 import BrainIcon from 'virtual:icons/proicons/brain'
 import BinaryIcon from 'virtual:icons/proicons/code'
@@ -32,8 +32,8 @@ import type {
   ProjectLicense,
   ProjectLicenseMediaType,
   ProjectLicenseRights,
-} from '$lib/db/zod/schema/projectLicense.types'
-import type { LicenseCardCondition } from '$lib/bits/patterns/cards/licenseCard'
+} from '#lib/db/zod/schema/projectLicense.types.js'
+import type { LicenseCardCondition } from '#lib/bits/patterns/cards/licenseCard/index.js'
 import type {
   FormProjectLicenseCustomLabels,
   FormProjectLicenseLeafMediaType,
@@ -769,7 +769,9 @@ $effect(() => {
           !isKnownGeneratedProjectLicenseLabel(summaryLicenseLabelByMedia[media.key])}
         isPublicDomain={license.media[media.key].isPublicDomain ||
           (shouldShowCustomLicenseNames &&
-            isRecognizedPublicDomainLicenseLabel(summaryLicenseLabelByMedia[media.key]))}
+            isRecognizedPublicDomainLicenseLabel(
+              summaryLicenseLabelByMedia[media.key],
+            ))}
         isAllRightsReserved={license.media[media.key].isAllRightsReserved}
       />
     {/each}
@@ -847,7 +849,9 @@ $effect(() => {
                   'bits-license__choice-card',
                   'bits-license__choice-card--large',
                   'bits-license__choice-card--centered',
-                  draftIntent === 'allRightsReserved' ? 'bits-license__choice-card--active' : '',
+                  draftIntent === 'allRightsReserved'
+                    ? 'bits-license__choice-card--active'
+                    : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -864,7 +868,9 @@ $effect(() => {
                   'bits-license__choice-card',
                   'bits-license__choice-card--large',
                   'bits-license__choice-card--centered',
-                  draftIntent === 'conditional' ? 'bits-license__choice-card--active' : '',
+                  draftIntent === 'conditional'
+                    ? 'bits-license__choice-card--active'
+                    : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -887,7 +893,9 @@ $effect(() => {
                   'bits-license__choice-card',
                   'bits-license__choice-card--large',
                   'bits-license__choice-card--centered',
-                  draftIntent === 'publicDomain' ? 'bits-license__choice-card--active' : '',
+                  draftIntent === 'publicDomain'
+                    ? 'bits-license__choice-card--active'
+                    : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -1049,7 +1057,8 @@ $effect(() => {
                       <input
                         type="checkbox"
                         class="bits-license__checkbox"
-                        checked={draftRights.all[rightRow.key] === true || rightRow.key === 'BY'}
+                        checked={draftRights.all[rightRow.key] === true ||
+                          rightRow.key === 'BY'}
                         disabled={rightRow.key === 'BY'}
                         onchange={event =>
                           toggleDraftRight(
@@ -1114,7 +1123,9 @@ $effect(() => {
                     'bits-license__choice-card--compact',
                     'bits-license__choice-card--large',
                     'bits-license__choice-card--centered',
-                    !draftUseCustomLicenseLabels ? 'bits-license__choice-card--active' : '',
+                    !draftUseCustomLicenseLabels
+                      ? 'bits-license__choice-card--active'
+                      : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -1135,7 +1146,9 @@ $effect(() => {
                     'bits-license__choice-card--compact',
                     'bits-license__choice-card--large',
                     'bits-license__choice-card--centered',
-                    draftUseCustomLicenseLabels ? 'bits-license__choice-card--active' : '',
+                    draftUseCustomLicenseLabels
+                      ? 'bits-license__choice-card--active'
+                      : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -1158,7 +1171,9 @@ $effect(() => {
                 class={[
                   'bits-license__custom-grid',
                   'bits-license__custom-grid--stage',
-                  draftUseCustomLicenseLabels ? 'bits-license__license-panel--active' : '',
+                  draftUseCustomLicenseLabels
+                    ? 'bits-license__license-panel--active'
+                    : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -1194,7 +1209,8 @@ $effect(() => {
                     <button
                       type="button"
                       class="bits-license__custom-preset-button"
-                      onclick={() => applyDraftCustomPreset('text', 'allRightsReserved')}
+                      onclick={() =>
+                        applyDraftCustomPreset('text', 'allRightsReserved')}
                     >
                       <span class="bits-license__custom-preset-label">
                         {m.admin__project_license_set()}
@@ -1235,7 +1251,8 @@ $effect(() => {
                     <button
                       type="button"
                       class="bits-license__custom-preset-button"
-                      onclick={() => applyDraftCustomPreset('image', 'allRightsReserved')}
+                      onclick={() =>
+                        applyDraftCustomPreset('image', 'allRightsReserved')}
                     >
                       <span class="bits-license__custom-preset-label">
                         {m.admin__project_license_set()}
@@ -1276,7 +1293,8 @@ $effect(() => {
                     <button
                       type="button"
                       class="bits-license__custom-preset-button"
-                      onclick={() => applyDraftCustomPreset('data', 'allRightsReserved')}
+                      onclick={() =>
+                        applyDraftCustomPreset('data', 'allRightsReserved')}
                     >
                       <span class="bits-license__custom-preset-label">
                         {m.admin__project_license_set()}
@@ -1291,7 +1309,9 @@ $effect(() => {
                 class={[
                   'bits-license__preview-grid',
                   'bits-license__preview-grid--stage',
-                  !draftUseCustomLicenseLabels ? 'bits-license__license-panel--active' : '',
+                  !draftUseCustomLicenseLabels
+                    ? 'bits-license__license-panel--active'
+                    : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}

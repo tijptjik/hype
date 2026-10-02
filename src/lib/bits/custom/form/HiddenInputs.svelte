@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 type HiddenInputAttrs = Record<string, string | number | boolean | null | undefined>
 

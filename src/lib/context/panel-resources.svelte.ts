@@ -6,7 +6,7 @@ import type { AppCtx } from './app.svelte'
 import type {
   PanelResource,
   PanelResourceType,
-} from '$lib/api/services/resourcePage.types'
+} from '#lib/api/services/resourcePage.types.js'
 
 /**
  * Connects a panel's find-ahead search and pinned selection to native query results.

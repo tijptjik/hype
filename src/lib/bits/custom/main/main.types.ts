@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import type { FormFacetNavAction } from '$lib/bits/patterns/forms/formFacetNav'
+import type { FormFacetNavAction } from '#lib/bits/patterns/forms/formFacetNav/index.js'
 
 export interface MainRootProps {
   children?: Snippet

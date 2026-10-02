@@ -1,9 +1,9 @@
 <script lang="ts">
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 import UserPlusIcon from 'virtual:icons/proicons/person-add'
 import UserMinusIcon from 'virtual:icons/tabler/user-minus'
 import XIcon from 'virtual:icons/proicons/cancel'
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import type { FormUserRolesSectionActionsProps } from '../formUserRolesSection.types'
 
 let {
@@ -22,9 +22,7 @@ let {
   >
     {#if !isAdding}
       <Button
-        text={isRemoving
-        ? m.moving_each_orangutan_care()
-        : m.hour_polite_ocelot_kiss()}
+        text={isRemoving ? m.moving_each_orangutan_care() : m.hour_polite_ocelot_kiss()}
         hideLabel={true}
         style="ghost"
         color="light"

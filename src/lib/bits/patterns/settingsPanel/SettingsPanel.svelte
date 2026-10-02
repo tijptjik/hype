@@ -1,33 +1,31 @@
 <script lang="ts">
 // SVELTE
 import { slide } from 'svelte/transition'
-import Theme from '$lib/bits/patterns/panels/sections/theme/ThemeSection.svelte'
+import Theme from '#lib/bits/patterns/panels/sections/theme/ThemeSection.svelte'
 
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import { PanelRoot as Panel, ProfileSection } from '$lib/bits'
+import { PanelRoot as Panel, ProfileSection } from '#lib/bits/index.js'
 // ADAPTERS
-import type {
-  useSettingsPanelModel,
-} from '$lib/adapters/panels/useSettingsPanelModel.svelte'
+import type { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPanelModel.svelte.js'
 // AUTH
 
 // COMPONENTS
-import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
-import Info from '$lib/bits/patterns/panels/components/info/Settings.svelte'
-import LinkedAccounts from '$lib/bits/patterns/panels/sections/linkedAccounts/LinkedAccountsSection.svelte'
-import Language from '$lib/bits/patterns/panels/sections/language/LanguageSection.svelte'
-import Contributor from '$lib/bits/patterns/panels/sections/contributor/ContributorSection.svelte'
-import DefaultMap from '$lib/bits/patterns/panels/sections/defaultMap/DefaultMapSection.svelte'
-import Experimental from '$lib/bits/patterns/panels/sections/experimental/ExperimentalSection.svelte'
-import Admin from '$lib/bits/patterns/panels/sections/admin/AdminSection.svelte'
+import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
+import Info from '#lib/bits/patterns/panels/components/info/Settings.svelte'
+import LinkedAccounts from '#lib/bits/patterns/panels/sections/linkedAccounts/LinkedAccountsSection.svelte'
+import Language from '#lib/bits/patterns/panels/sections/language/LanguageSection.svelte'
+import Contributor from '#lib/bits/patterns/panels/sections/contributor/ContributorSection.svelte'
+import DefaultMap from '#lib/bits/patterns/panels/sections/defaultMap/DefaultMapSection.svelte'
+import Experimental from '#lib/bits/patterns/panels/sections/experimental/ExperimentalSection.svelte'
+import Admin from '#lib/bits/patterns/panels/sections/admin/AdminSection.svelte'
 // CONTEXT
 
 // ENUMS
-import { Panel as PanelEnum, PanelSide } from '$lib/enums'
+import { Panel as PanelEnum, PanelSide } from '#lib/enums.js'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 // CONTEXT
 let { model }: { model: ReturnType<typeof useSettingsPanelModel> } = $props()

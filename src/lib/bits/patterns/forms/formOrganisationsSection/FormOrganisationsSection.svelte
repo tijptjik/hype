@@ -1,10 +1,10 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
-import { Search, SectionHeader } from '$lib/bits/custom'
-import { getURLfromImage } from '$lib/client/services/image'
-import { m } from '$lib/i18n'
+import { Search, SectionHeader } from '#lib/bits/custom/index.js'
+import { getURLfromImage } from '#lib/client/services/image.js'
+import { m } from '#lib/i18n.js'
 import * as FormOrganisationsSectionPrimitive from './components'
-import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
+import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 import {
   isOrganisationSearchResultDisabled,
   toOrganisationSearchDisabledMeta,
@@ -226,7 +226,8 @@ $effect(() => {
           {canSetCoreInclusive}
           isHubExclusive={selection.isHubExclusive}
           isCoreInclusive={selection.isCoreInclusive}
-          onToggleHubExclusive={value => handleHubExclusiveToggle(organisation.id, value)}
+          onToggleHubExclusive={value =>
+            handleHubExclusiveToggle(organisation.id, value)}
           onToggleCoreInclusive={value =>
             handleCoreInclusiveToggle(organisation.id, value)}
           onRemove={() => onRemoveOrganisation(organisation.id)}

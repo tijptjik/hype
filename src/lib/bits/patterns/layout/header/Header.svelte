@@ -97,7 +97,10 @@ const rootClass = $derived(
 
 <HeaderPrimitive.Wrapper class={wrapperClass} {...restProps}>
   <HeaderPrimitive.Root class={rootClass}>
-    {#snippet left({ showButtonText, isMeasuring })}
+    {#snippet left({
+      showButtonText,
+      isMeasuring,
+    })}
       <HeaderPrimitive.Title
         text={title.text}
         description={title.description}
@@ -115,7 +118,9 @@ const rootClass = $derived(
       />
     {/snippet}
 
-    {#snippet right({ showButtonText })}
+    {#snippet right({
+      showButtonText,
+    })}
       <div class="flex items-center justify-end gap-0 mr-4 min-w-0">
         {#if showFacets || showTaskActions || showFormActions}
           <div

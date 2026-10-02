@@ -1,12 +1,12 @@
 // TOAST
 import { toast } from 'svelte-sonner'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import RefreshCwIcon from 'virtual:icons/proicons/arrow-sync'
 // TYPES
-import type { HeaderTitleMenuItemConfig } from '$lib/bits/patterns/layout/header/header.types'
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { HeaderTitleMenuItemConfig } from '#lib/bits/patterns/layout/header/header.types.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

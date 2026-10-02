@@ -3,14 +3,14 @@
 import { onDestroy } from 'svelte'
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import Trophy from 'virtual:icons/proicons/trophy'
 import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
-import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 // CONTEXT
 

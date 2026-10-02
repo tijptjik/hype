@@ -1,11 +1,14 @@
 <script lang="ts">
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { Point } from 'geojson'
-import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
+import type {
+  Feature,
+  UserContributedFeature,
+} from '#lib/db/zod/schema/feature.types.js'
 // ICONS
 import MapIcon from 'virtual:icons/proicons/map'
 // LOCAL

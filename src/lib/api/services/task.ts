@@ -1,9 +1,9 @@
 // DRIZZLE
 import { eq, type SQL, sql } from 'drizzle-orm'
 // API
-import { applyQueryFilters } from '$lib/api'
-import { toBooleanOrUndefined } from '$lib/api/services'
-import { isRelevantHubAdmin } from '$lib/api/services/authz'
+import { applyQueryFilters } from '#lib/api/index.js'
+import { toBooleanOrUndefined } from '#lib/api/services/index.js'
+import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -11,24 +11,24 @@ import {
   runAssertions,
   assertProjectMaintainerOrMemberOrSuperAdmin,
   assertParamIdentifierEqualsFormIdentifier,
-} from '$lib/auth/asserts'
+} from '#lib/auth/asserts.js'
 
 // DB
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 // SCHEMA
-import { task } from '$lib/db/schema/index'
+import { task } from '#lib/db/schema/index.js'
 // DB
-import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
-import { toNormalizedImageRecord } from '$lib/db/services/image'
+import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
+import { toNormalizedImageRecord } from '#lib/db/services/image.js'
 // ZOD
 import {
   TaskAdminProfileAPI,
   TaskCardProfileAPI,
   TaskDetailProfileAPI,
   TaskListProfileAPI,
-} from '$lib/db/zod/schema/task'
+} from '#lib/db/zod/schema/task.js'
 // ENUMS
-import { HierarchicalResource } from '$lib/enums'
+import { HierarchicalResource } from '#lib/enums.js'
 // TYPES
 import type {
   Database,
@@ -39,14 +39,14 @@ import type {
   SessionUser,
   Id,
   UserRoleDisco,
-} from '$lib/types'
-import type { TaskDB, TaskDBRaw } from '$lib/db/zod/schema/task.types'
+} from '#lib/types.js'
+import type { TaskDB, TaskDBRaw } from '#lib/db/zod/schema/task.types.js'
 import type {
   TaskEditorLayerOption,
   TaskEntityByProfile,
   TaskListByProfile,
   TaskProfile,
-} from '$lib/db/zod/schema/task.types'
+} from '#lib/db/zod/schema/task.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

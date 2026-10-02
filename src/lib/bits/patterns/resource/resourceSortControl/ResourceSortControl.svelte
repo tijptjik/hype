@@ -1,13 +1,13 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import Button from '$lib/bits/core/button/Button.svelte'
-import Select from '$lib/bits/core/select/Select.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
+import Select from '#lib/bits/core/select/Select.svelte'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // ICONS
 import ArrowDownIcon from 'virtual:icons/proicons/arrow-down'
 import ArrowUpDownIcon from 'virtual:icons/proicons/arrow-up-down'

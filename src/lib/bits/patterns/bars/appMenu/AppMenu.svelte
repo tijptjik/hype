@@ -1,10 +1,10 @@
 <script lang="ts" generics="T = string">
 // COMPONENTS
-import { Button, SimpleTooltip } from '$lib/bits/core'
-import { Icon } from '$lib/bits/custom/icon'
-import { cx } from '$lib/bits/utils'
+import { Button, SimpleTooltip } from '#lib/bits/core/index.js'
+import { Icon } from '#lib/bits/custom/icon/index.js'
+import { cx } from '#lib/bits/utils.js'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // STYLES
 import {
   getAppMenuItemButtonClasses,
@@ -17,7 +17,7 @@ import {
 // TYPES
 import type { AppMenuItem, AppMenuProps } from './appMenu.types'
 import { getAppMenuBottomGutter, getAppMenuViewportState } from './appMenu.layout'
-import { getElevatedChromeXGutter } from '$lib/bits/patterns/bars/omnibar'
+import { getElevatedChromeXGutter } from '#lib/bits/patterns/bars/omnibar/index.js'
 
 let {
   items,
@@ -130,7 +130,9 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
 }
 </script>
 
-{#snippet menuButton(item: AppMenuItem<T>)}
+{#snippet menuButton(
+  item: AppMenuItem<T>,
+)}
   {#snippet itemIcon()}
     <Icon
       src={item.icon}
@@ -146,7 +148,8 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
         text={item.label}
         icon={itemIcon}
         style="transparent"
-        color={item.color ?? (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
+        color={item.color ??
+          (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
         size="md"
         hideLabel={item.hideLabel || viewportState.isIconOnlyMenu}
         class={getItemButtonClasses()}

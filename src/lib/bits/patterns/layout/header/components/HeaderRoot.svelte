@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { AdaptiveToolbar } from '$lib/bits/patterns/layout/adaptiveToolbar'
+import { AdaptiveToolbar } from '#lib/bits/patterns/layout/adaptiveToolbar/index.js'
 // TYPES
 import type { HeaderRootProps } from './headerPrimitives.types'
 

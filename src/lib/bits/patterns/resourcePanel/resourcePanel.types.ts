@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 export type ResourcePanelRow = {
   id: string

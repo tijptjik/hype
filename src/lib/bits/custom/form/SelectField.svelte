@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Select } from '$lib/bits/core'
+import { Select } from '#lib/bits/core/index.js'
 import Label from './src/label/Label.svelte'
 import type { SelectFieldProps } from './selectField.types'
 

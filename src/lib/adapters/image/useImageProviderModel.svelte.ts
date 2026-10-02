@@ -1,15 +1,18 @@
+import type { Page } from '$app/state'
+
 // SVELTE
 import { untrack } from 'svelte'
-import type { Page } from '@sveltejs/kit'
+
 // REMOTE
-import { getImageById } from '$lib/api/server/image.remote'
+import { getImageById } from '#lib/api/server/image.remote.js'
 // TYPES
 import type {
   ImageCtxConstructorOptions,
   ImageProviderModel,
   ImageProviderSyncTarget,
-} from '$lib/context/imageProvider.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+} from '#lib/context/imageProvider.types.js'
+
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 /**
  * Adapter that owns URL/image orchestration for ImageCtx-backed views.
@@ -172,11 +175,9 @@ export function useImageProviderModel(
 
       if (contextChanged || imageStateChanged) {
         initialisingContext = true
+
         imageCtx
-          .setContext({
-            ...options,
-            image: getInitialImage(),
-          })
+          .setContext({ ...options, image: getInitialImage() })
           .then(() => {
             initialisingContext = false
           })

@@ -13,8 +13,8 @@ import type {
   OrganisationAuthorizeParams,
   OrganisationAuthorizationAction,
   OrganisationAuthorizationField,
-} from '$lib/api/services/authz/authorization.types'
-import type { UserRoleDisco } from '$lib/types'
+} from '#lib/api/services/authz/authorization.types.js'
+import type { UserRoleDisco } from '#lib/types.js'
 // TYPES
 
 type OrganisationActionPermissions = {
@@ -23,7 +23,6 @@ type OrganisationActionPermissions = {
   canPublish: boolean
   canDelete: boolean
 }
-
 
 // ═══════════════════════
 // TABLE OF CONTENTS

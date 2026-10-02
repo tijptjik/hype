@@ -11,7 +11,7 @@ import {
   featurePropertyI18n,
   image,
   userFeature,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../../constraints'
 // ZOD SCHEMAS
@@ -27,10 +27,10 @@ import {
 } from '../property'
 import { UserBasic } from '../user'
 // ENUMS
-import { supportedLocales } from '$lib/enums'
+import { supportedLocales } from '#lib/enums.js'
 // TYPES
-import type { AddressMeta, AddressProperties } from '$lib/utils/address.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type { GeometryObject } from 'geojson'
 
 // ═══════════════════════

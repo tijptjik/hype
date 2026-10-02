@@ -20,8 +20,8 @@ import { propertyValue } from './property'
 import { supportedLocales } from '../../enums'
 // TYPES
 import type { GeometryObject } from 'geojson'
-import type { AddressProperties, AddressMeta } from '$lib/utils/address.types'
-import type { FeatureSpatialIndex } from '$lib/db/services/featureSpatial.types'
+import type { AddressProperties, AddressMeta } from '#lib/utils/address.types.js'
+import type { FeatureSpatialIndex } from '#lib/db/services/featureSpatial.types.js'
 
 /* ============================================================================
  * FEATURE MANAGEMENT

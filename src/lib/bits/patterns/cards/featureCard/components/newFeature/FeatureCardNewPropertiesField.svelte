@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // I18N
-import { getI18n, getLocaleKey, m } from '$lib/i18n'
+import { getI18n, getLocaleKey, m } from '#lib/i18n.js'
 // SERVICES
 import {
   getClassifierValueId,
@@ -12,17 +12,20 @@ import {
   getUniversalSpecifierValue,
   handleCategoricalChange,
   handleSpecifierChange,
-} from '$lib/client/services/property'
+} from '#lib/client/services/property.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getCardCtx } from '#lib/context/card.svelte.js'
 // ICONS
 import Check from 'virtual:icons/proicons/checkmark'
 import PencilSquare from 'virtual:icons/proicons/compose'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { Id } from '$lib/types'
+import type {
+  Feature,
+  UserContributedFeature,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { Id } from '#lib/types.js'
 
 type FeatureCardNewPropertiesFieldProps = {
   feature: Feature | UserContributedFeature

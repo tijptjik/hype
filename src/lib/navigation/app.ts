@@ -1,9 +1,11 @@
-// I18N
-import { m } from '$lib/i18n'
 // SVELTE
-import { goto, pushState, replaceState } from '$app/navigation'
+import type { ReadonlyURLSearchParams } from '$app/state'
+// I18N
+import { m } from '#lib/i18n.js'
+// SVELTE
+import { goto } from '$app/navigation'
 // LIB
-import { isMobile } from '$lib/constants'
+import { isMobile } from '#lib/constants.js'
 // ENUMS
 import {
   FirstClassResource,
@@ -12,20 +14,24 @@ import {
   ResourcePath,
   PanelSide,
   Panel,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { Code, Id, NavigableResource, Locale, LocaleKey } from '$lib/types'
-import type { CollectionNavOptions } from '$lib/client/services/form.types'
-import type { OmniCollectionDescriptor } from '$lib/context/omni.types'
-import type { Image } from '$lib/db/zod/schema/image.types'
-import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { Code, Id, NavigableResource, Locale, LocaleKey } from '#lib/types.js'
+import type { CollectionNavOptions } from '#lib/client/services/form.types.js'
+import type { OmniCollectionDescriptor } from '#lib/context/omni.types.js'
+import type { Image } from '#lib/db/zod/schema/image.types.js'
+import type { UserFeatureWithHierarchy } from '#lib/db/zod/schema/user.types.js'
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
 
 const loadImageRemote = async (): Promise<
-  Pick<typeof import('$lib/api/server/image.remote'), 'getImageById'>
-> => await import('$lib/api/server/image.remote')
+  Pick<typeof import('#lib/api/server/image.remote.js'), 'getImageById'>
+> => await import('#lib/api/server/image.remote.js')
 
 // ═══════════════════════
 // 1. CORE NAVIGATION
@@ -54,12 +60,9 @@ export const navigate = (
     paramsToAdd: {},
   },
 ) => {
-  const paramSets = {
-    panels: ['panel', 'username'],
-    image: ['imageId'],
-  }
-
+  const paramSets = { panels: ['panel', 'username'], image: ['imageId'] }
   let baseUrl = '/'
+
   if (resource !== '/') {
     baseUrl = `/${ResourcePath[resource]}/${entityRef}`
   }
@@ -132,7 +135,6 @@ export const getActiveResourceAndRefFromUrl = (): {
 } => {
   const urlObj = new URL(window.location.href)
   const pathParts = urlObj.pathname.split('/').filter(Boolean)
-
   const resourceType = reversePath.get(pathParts[0]) || false
   const resourceRef = pathParts[1] || false
 
@@ -191,7 +193,7 @@ export const parseCollectionDescriptor = (
  * @returns Parsed collection descriptor or `null`.
  */
 export const getCollectionDescriptorFromSearchParams = (
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
 ): OmniCollectionDescriptor | null => {
   return parseCollectionDescriptor(searchParams.get(COLLECTION_QUERY_PARAM))
 }
@@ -207,10 +209,11 @@ export const getCollectionDescriptorFromSearchParams = (
  * @returns The last panel parameter for the specified side, or overall last if no side specified
  */
 export const getLastPanelParam = (
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
   side: PanelSide | null = null,
 ): string | null => {
   const panels = searchParams.getAll('panel') as Panel[]
+
   if (panels.length === 0) return null
 
   if (side === null) {
@@ -220,6 +223,7 @@ export const getLastPanelParam = (
 
   // For sided panels, we need to determine which panels go to which side
   const leftPanels = Object.values(PanelLeft)
+
   const rightPanels = Object.values(PanelRight)
 
   if (side === 'left') {
@@ -246,7 +250,10 @@ export const getLastPanelParam = (
  * @param appCtx - Application context
  * @param searchParams - URL search params
  */
-export const handlePanelParams = (appCtx: AppCtx, searchParams: URLSearchParams) => {
+export const handlePanelParams = (
+  appCtx: AppCtx,
+  searchParams: ReadonlyURLSearchParams,
+) => {
   if (isMobile()) {
     // On mobile, only one panel can be active - use the last panel parameter
     const lastPanel = getLastPanelParam(searchParams)
@@ -257,6 +264,7 @@ export const handlePanelParams = (appCtx: AppCtx, searchParams: URLSearchParams)
   } else {
     // On desktop, both left and right panels can be active
     const leftPanel = getLastPanelParam(searchParams, PanelSide.left)
+
     const rightPanel = getLastPanelParam(searchParams, PanelSide.right)
 
     if (leftPanel && isValidPanelType(leftPanel)) {
@@ -295,6 +303,7 @@ export const updatePanelUrlParams = (
 
   // CONSISTENCY CHECK: If URL already matches the panel state, return early
   const currentPanels = searchParams.getAll('panel')
+
   const currentUsername = searchParams.get('username')
 
   // Build expected panel list from panelState
@@ -310,6 +319,7 @@ export const updatePanelUrlParams = (
 
   // Compare current vs expected
   const panelsMatch = currentPanels.sort().join(',') === expectedPanels.join(',')
+
   const usernameMatch = currentUsername === expectedUsername
 
   if (panelsMatch && usernameMatch) {
@@ -349,7 +359,8 @@ export const updatePanelUrlParams = (
 
   // Update URL and add to browser history for back/forward navigation
   const newUrl = `${url.pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}${url.hash}`
-  pushState(newUrl, {})
+
+  goto(newUrl, { shallow: true })
 }
 
 /**
@@ -362,7 +373,7 @@ export const updatePanelUrlParams = (
 const handleStatefulPanelParams = (
   appCtx: AppCtx,
   panelType: string,
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
   updateUrl: boolean = false,
 ): void => {
   if (panelType === 'profile') {
@@ -378,6 +389,7 @@ const handleStatefulPanelParams = (
 
 export const getUrlParam = (param: string): string | null => {
   const url = new URL(window.location.href)
+
   return url.searchParams.get(param)
 }
 
@@ -391,7 +403,7 @@ export const getUrlParam = (param: string): string | null => {
  * @returns Object containing imageId and fullscreen flag
  */
 export const getImageParams = (
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
 ): {
   imageId: string | null
   fullscreen: boolean
@@ -411,7 +423,7 @@ export const getImageParams = (
  * @returns Promise resolving to image configuration for ImageProvider
  */
 export const handleImageParams = async (
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
 ): Promise<{
   targetImageId?: string
   isFullScreen?: boolean
@@ -434,10 +446,8 @@ export const handleImageParams = async (
 
   try {
     const { getImageById } = await loadImageRemote()
-    const target = await getImageById({
-      id: imageId,
-      meta: { isAdminRequest: true },
-    })
+    const target = await getImageById({ id: imageId, meta: { isAdminRequest: true } })
+
     if (!target?.data?.image) return null
 
     return {
@@ -653,9 +663,11 @@ export const getFeaturesFromImages = async (
   const featureIds = [
     ...new Set(images.map(img => img.featureId).filter((f): f is string => !!f)),
   ]
+
   const features = await Promise.all(
     featureIds.map(featureId => appCtx.getFeatureById(featureId)),
   )
+
   return features.filter(Boolean) as (FeatureFromCollection | Feature)[]
 }
 
@@ -687,6 +699,7 @@ const activateLayersForFeatures = (
       ...appCtx.getPrism(FirstClassResource.layer),
     ]),
   )
+
   appCtx.setLayers(layerIds)
 }
 
@@ -746,19 +759,20 @@ const handleUrlParamChange = (
   reload: boolean = true,
 ): void => {
   const urlObj = new URL(window.location.href)
+
   urlModifier(urlObj)
 
   if (replace) {
     if (reload) {
-      goto(urlObj.toString(), { noScroll: true, replaceState: true })
+      goto(urlObj.toString(), { reset: false, replace: true })
     } else {
-      replaceState(urlObj.toString(), pageState)
+      goto(urlObj.toString(), { shallow: true, replace: true, state: pageState })
     }
   } else {
     if (reload) {
-      goto(urlObj.toString(), { noScroll: true, replaceState: false })
+      goto(urlObj.toString(), { reset: false, replace: false })
     } else {
-      pushState(urlObj.toString(), pageState)
+      goto(urlObj.toString(), { shallow: true, state: pageState })
     }
   }
 }

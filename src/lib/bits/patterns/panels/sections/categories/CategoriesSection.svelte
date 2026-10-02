@@ -1,12 +1,12 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import CategorySection from '$lib/bits/patterns/panels/sections/categorySection/CategorySection.svelte'
-import CategoryFilter from '$lib/bits/patterns/panels/components/controls/CategoryFilter.svelte'
-import RangeFilter from '$lib/bits/patterns/panels/components/controls/RangeFilter.svelte'
+import CategorySection from '#lib/bits/patterns/panels/sections/categorySection/CategorySection.svelte'
+import CategoryFilter from '#lib/bits/patterns/panels/components/controls/CategoryFilter.svelte'
+import RangeFilter from '#lib/bits/patterns/panels/components/controls/RangeFilter.svelte'
 // ADAPTERS
-import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
+import type { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
 let { model }: { model: ReturnType<typeof useFilterPanelModel> } = $props()
 </script>
 

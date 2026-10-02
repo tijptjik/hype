@@ -1,10 +1,10 @@
 <script lang="ts">
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // COMPONENTS
 import StatsPips from './components/StatsPips.svelte'
 // SERVICES
-import { calculateCategoricalStatuses } from '$lib/client/services/stats'
+import { calculateCategoricalStatuses } from '#lib/client/services/stats.js'
 // ICONS
 import TagsIcon from 'virtual:icons/proicons/tag-multiple'
 // TYPES

@@ -1,12 +1,10 @@
 // I18N
-import { m, toLocaleKey, translateI18nFields } from '$lib/i18n'
+import { m, toLocaleKey, translateI18nFields } from '#lib/i18n.js'
 // API
-import { createLayer, getLayer, getLayers } from '$lib/api/server/layer.remote'
-import {
-  getProjectProperties as getProjectPropertiesRemote,
-} from '$lib/api/server/property.remote'
+import { createLayer, getLayer, getLayers } from '#lib/api/server/layer.remote.js'
+import { getProjectProperties as getProjectPropertiesRemote } from '#lib/api/server/property.remote.js'
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // TYPES
 import type {
   Layer,
@@ -14,9 +12,9 @@ import type {
   Id,
   LayerValidationResult,
   FeatureCSVColumn,
-} from '$lib/client/services/import/types'
-import type { LayerFormInput } from '$lib/db/zod/schema/layer.types'
-import type { Locale, LocaleKey } from '$lib/types'
+} from '#lib/client/services/import/types.js'
+import type { LayerFormInput } from '#lib/db/zod/schema/layer.types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
 // Layer validation and resolution functions for CSV import
 
 type LayerReferencePart = {

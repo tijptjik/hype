@@ -2,29 +2,27 @@
 // SVELTE
 import { slide } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import { PanelRoot as Panel, ProfileSection } from '$lib/bits'
+import { PanelRoot as Panel, ProfileSection } from '#lib/bits/index.js'
 // ADAPTERS
-import type {
-  useProfilePanelModel,
-} from '$lib/adapters/panels/useProfilePanelModel.svelte'
+import type { useProfilePanelModel } from '#lib/adapters/panels/useProfilePanelModel.svelte.js'
 // COMPONENTS
-import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
-import ContributionStats from '$lib/bits/patterns/panels/sections/contributionStats/ContributionStatsSection.svelte'
-import ContributedFeatures from '$lib/bits/patterns/panels/sections/contributedFeatures/ContributedFeaturesSection.svelte'
-import ContributedImages from '$lib/bits/patterns/panels/sections/contributedImages/ContributedImagesSection.svelte'
-import ContributedReports from '$lib/bits/patterns/panels/sections/contributedReports/ContributedReportsSection.svelte'
-import LinkedAccounts from '$lib/bits/patterns/panels/sections/linkedAccounts/LinkedAccountsSection.svelte'
+import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
+import ContributionStats from '#lib/bits/patterns/panels/sections/contributionStats/ContributionStatsSection.svelte'
+import ContributedFeatures from '#lib/bits/patterns/panels/sections/contributedFeatures/ContributedFeaturesSection.svelte'
+import ContributedImages from '#lib/bits/patterns/panels/sections/contributedImages/ContributedImagesSection.svelte'
+import ContributedReports from '#lib/bits/patterns/panels/sections/contributedReports/ContributedReportsSection.svelte'
+import LinkedAccounts from '#lib/bits/patterns/panels/sections/linkedAccounts/LinkedAccountsSection.svelte'
 // AUTH
 
 // CONTEXT
 
 // ENUMS
-import { Panel as PanelEnum, PanelSide } from '$lib/enums'
+import { Panel as PanelEnum, PanelSide } from '#lib/enums.js'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+import type { usePanelShellModel } from '#lib/adapters/panels/usePanelShellModel.svelte.js'
 
 // CONTEXT
 

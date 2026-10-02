@@ -1,20 +1,20 @@
-import { beforeNavigate } from '$app/navigation'
-import { debounce, deepEqual } from '@sillvva/utils'
-import type { StandardSchemaV1 } from '@standard-schema/spec'
-import { handleResourceFormSubmissionResult } from '$lib/client/services/form'
-import { m } from '$lib/i18n'
 import type {
   RemoteForm,
   RemoteFormInput,
   RemoteFormIssue,
   RemoteQuery,
   RemoteQueryOverride,
-} from '@sveltejs/kit'
+} from '$app/server'
 
+import { beforeNavigate } from '$app/navigation'
+import { debounce, deepEqual } from '@sillvva/utils'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
+import { handleResourceFormSubmissionResult } from '#lib/client/services/form.js'
+import { m } from '#lib/i18n.js'
 import { onMount, tick, untrack } from 'svelte'
 import { v7 } from 'uuid'
-// TYPES
 
+// TYPES
 type SubmitOutcome = {
   success: boolean
   result?: unknown
@@ -45,7 +45,6 @@ type ConfigureFormResourceResultOptions<Input> = {
   onRedirect?: (ctx: { data: Input; success: boolean }) => void | Promise<void>
 }
 
-
 type Awaitable<T> = T | PromiseLike<T>
 
 const META_HIDDEN_ATTR = 'data-remote-meta-hidden'
@@ -57,6 +56,7 @@ const hasDefinedValue = (value: unknown): boolean => {
   if (typeof value === 'object') {
     return Object.values(value as Record<string, unknown>).some(hasDefinedValue)
   }
+
   return true
 }
 
@@ -65,6 +65,7 @@ const isServerIssue = (issue: RemoteFormIssue): boolean =>
 
 const toIssuePathString = (path: readonly (string | number)[] | undefined): string => {
   if (!path || path.length === 0) return '<root>'
+
   return path
     .map(segment => (typeof segment === 'number' ? `[${segment}]` : String(segment)))
     .join('.')
@@ -88,6 +89,7 @@ const getValueAtIssuePath = (
     if (typeof current !== 'object') return undefined
     current = (current as Record<string, unknown>)[segment]
   }
+
   return current
 }
 
@@ -96,6 +98,7 @@ const mergeWithDescriptors = <T extends object, U extends object>(
   extra: U,
 ): T & U => {
   const merged = {} as T & U
+
   for (const source of [base, extra]) {
     for (const key of Reflect.ownKeys(source)) {
       const descriptor = Object.getOwnPropertyDescriptor(source, key)
@@ -103,6 +106,7 @@ const mergeWithDescriptors = <T extends object, U extends object>(
       Object.defineProperty(merged, key, descriptor)
     }
   }
+
   return merged
 }
 
@@ -110,14 +114,16 @@ const toSubmitWriteToken = (
   result: unknown,
 ): { id?: string; updatedAt?: string } | null => {
   if (!result || typeof result !== 'object') return null
+
   const data = (result as { data?: unknown }).data
+
   if (!data || typeof data !== 'object') return null
 
   const id = (data as { id?: unknown }).id
   const modifiedAt = (data as { modifiedAt?: unknown }).modifiedAt
   const updatedAt = (data as { updatedAt?: unknown }).updatedAt
-
   const resolvedId = typeof id === 'string' && id.trim().length > 0 ? id : undefined
+
   const resolvedUpdatedAt =
     typeof modifiedAt === 'string' && modifiedAt.trim().length > 0
       ? modifiedAt
@@ -137,10 +143,12 @@ const syncMetaWriteTokenFromResult = <TFormValue extends Record<string, unknown>
   result: unknown,
 ): void => {
   const token = toSubmitWriteToken(result)
+
   if (!token) return
 
   const current = form.fields.value()
   const currentMeta = (current as { meta?: Record<string, unknown> }).meta ?? {}
+
   form.fields.set({
     ...current,
     meta: {
@@ -156,6 +164,7 @@ const syncMetaWriteTokenFromResult = <TFormValue extends Record<string, unknown>
 const syncMetaHiddenInputs = (
   formEl: HTMLFormElement | undefined,
   meta: unknown,
+  form: { fields: unknown },
 ): void => {
   if (!formEl) return
 
@@ -166,15 +175,26 @@ const syncMetaHiddenInputs = (
   }
 
   if (!meta || typeof meta !== 'object') return
-  const metaRecord = meta as Record<string, unknown>
 
+  const metaRecord = meta as Record<string, unknown>
+  const fields = form.fields as {
+    meta?: Record<
+      string,
+      { as: (type: 'hidden', value: string) => { name: string; value: string } }
+    >
+  }
+
+  // Register generated metadata controls with this exact remote form instance.
   for (const key of META_KEYS) {
     const value = metaRecord[key]
     if (value === undefined) continue
     const input = document.createElement('input')
     input.type = 'hidden'
-    input.name = `meta.${key}`
-    input.value = String(value)
+    const field = fields.meta?.[key]
+    if (!field) continue
+    const attributes = field.as('hidden', String(value))
+    input.name = attributes.name
+    input.value = attributes.value
     input.setAttribute(META_HIDDEN_ATTR, 'true')
     formEl.appendChild(input)
   }
@@ -245,8 +265,11 @@ export function use<T>(
         mounted = true
         return
       }
+
       const cleanup = args.effect?.(current, prev)
+
       prev = current
+
       return cleanup
     })
   })
@@ -310,20 +333,18 @@ export function configureForm<Input = RemoteFormInput>(
   } = $derived(getProps())
 
   type FormData = Input extends undefined ? Record<string, never> : Input
+
   const data = $derived((formData ?? {}) as FormData)
   const dataId = $derived((data as { id?: string | number } | null)?.id)
   const key = $derived(formKey ?? ((dataId ?? v7()) as FormId<Input>))
+
   const form = $derived(
     schema ? remoteForm.for(key).preflight(schema) : remoteForm.for(key),
   )
 
   let initial: FormData = $state.raw(
-    use({
-      track: () => data,
-      ssr: value => form.fields.set(value),
-    }) as FormData,
+    use({ track: () => data, ssr: value => form.fields.set(value) }) as FormData,
   )
-
   let touched = $state.raw(false)
   let submitting = $state.raw(false)
   let submitted = $state.raw(false)
@@ -373,11 +394,8 @@ export function configureForm<Input = RemoteFormInput>(
             ? (data as Record<string, unknown>)
             : undefined,
         successPrefix:
-          ((
-            data as {
-              meta?: { mode?: unknown }
-            } | null
-          )?.meta?.mode ?? undefined) === 'create'
+          ((data as { meta?: { mode?: unknown } } | null)?.meta?.mode ?? undefined) ===
+          'create'
             ? m.gaudy_heavy_puma_adore()
             : m.tidy_game_jellyfish_pop(),
       })
@@ -401,10 +419,12 @@ export function configureForm<Input = RemoteFormInput>(
       // Lock immediately so rapid repeat submits cannot race preflight and send
       // duplicate requests with the same optimistic-concurrency token.
       submitting = true
+
       beginSubmitAttempt()
 
       const preflightIssues = await validate()
       const hasPreflightIssues = preflightIssues.length > 0
+
       if (hasPreflightIssues) {
         logValidationIssues('preflight', preflightIssues, typedData)
         await focusInvalid(preflightIssues)
@@ -430,12 +450,15 @@ export function configureForm<Input = RemoteFormInput>(
         } else {
           await instance.submit()
         }
+
         submitted = true
 
         const submitIssues = form.fields.allIssues() ?? []
         const hasIssues = submitIssues.length > 0
         const success = !hasIssues
+
         if (!success) logValidationIssues('submit', submitIssues, form.fields.value())
+
         if (success) {
           syncMetaWriteTokenFromResult(
             form as unknown as {
@@ -453,8 +476,10 @@ export function configureForm<Input = RemoteFormInput>(
           result: form.result,
           issues: hasIssues ? submitIssues : undefined,
         }
+
         if (success) clearSubmitAttemptState()
         else isSubmitRequested = false
+
         await dispatchResult(outcome, typedData)
 
         if (!success) {
@@ -488,14 +513,17 @@ export function configureForm<Input = RemoteFormInput>(
     })
 
     const enhancedRecord = enhanced as Record<string | symbol, unknown>
+
     const enhancedOnSubmit =
       typeof enhancedRecord.onsubmit === 'function'
         ? (enhancedRecord.onsubmit as (event: SubmitEvent) => unknown)
         : undefined
+
     const enhancedOnInput =
       typeof enhancedRecord.oninput === 'function'
         ? (enhancedRecord.oninput as (event: Event) => unknown)
         : undefined
+
     const enhancedOnChange =
       typeof enhancedRecord.onchange === 'function'
         ? (enhancedRecord.onchange as (event: Event) => unknown)
@@ -504,7 +532,7 @@ export function configureForm<Input = RemoteFormInput>(
     return mergeWithDescriptors(enhanced, {
       onsubmit: (event: SubmitEvent) => {
         const currentMeta = (form.fields.value() as { meta?: unknown } | null)?.meta
-        syncMetaHiddenInputs(formEl, currentMeta)
+        syncMetaHiddenInputs(formEl, currentMeta, form)
         enhancedOnSubmit?.(event)
       },
       oninput: (event: Event) => {
@@ -513,6 +541,7 @@ export function configureForm<Input = RemoteFormInput>(
       },
       onchange: (event: Event) => {
         enhancedOnChange?.(event)
+
         if (wasSubmitAttempted) runDebouncedValidate()
       },
     })
@@ -531,6 +560,7 @@ export function configureForm<Input = RemoteFormInput>(
     mount: async current => {
       if (current.initialErrors) await validate().then(focusInvalid)
     },
+
     effect: current => {
       const currentForm = untrack(() => form)
       const nextData = $state.snapshot(current.data) as FormData
@@ -610,12 +640,14 @@ export function configureForm<Input = RemoteFormInput>(
     await tick()
 
     const nextIssues = currentIssues ?? form.fields.allIssues() ?? []
+
     if (nextIssues.length > 0) lastIssues = nextIssues
     else return
 
     const invalid = formEl?.querySelector(
       ':is(input, select, textarea):not(.hidden, [type=hidden], :disabled)[aria-invalid]',
     ) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null | undefined
+
     invalid?.focus()
 
     if (
@@ -641,6 +673,7 @@ export function configureForm<Input = RemoteFormInput>(
   })
 
   beforeNavigate(ev => {
+    if (ev.shallow) return
     if ((dirty || issues) && navBlockMessage && !confirm(navBlockMessage)) ev.cancel()
   })
 
@@ -665,15 +698,17 @@ export function configureForm<Input = RemoteFormInput>(
         const current = form.fields.value() as {
           meta?: Record<string, unknown>
         } & Record<string, unknown>
+
         form.fields.set({
           ...current,
-          meta: {
-            ...options.meta,
-            ...(current.meta ?? {}),
-          },
+          meta: { ...options.meta, ...(current.meta ?? {}) },
         } as Parameters<typeof form.fields.set>[0])
       }
-      syncMetaHiddenInputs(formEl, (form.fields.value() as { meta?: unknown })?.meta)
+      syncMetaHiddenInputs(
+        formEl,
+        (form.fields.value() as { meta?: unknown })?.meta,
+        form,
+      )
       beginSubmitAttempt()
       formEl?.requestSubmit()
     },
@@ -687,7 +722,7 @@ export function configureForm<Input = RemoteFormInput>(
       lastIssues = undefined
       clearSubmitAttemptState()
       form.fields.set(resolved)
-      syncMetaHiddenInputs(formEl, (resolved as { meta?: unknown } | null)?.meta)
+      syncMetaHiddenInputs(formEl, (resolved as { meta?: unknown } | null)?.meta, form)
     },
   })
 }

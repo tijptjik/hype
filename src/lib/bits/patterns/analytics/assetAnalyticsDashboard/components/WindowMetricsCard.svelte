@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import * as AnalyticsCardPrimitive from '$lib/bits/custom/analyticsCard/components'
-import { cx } from '$lib/bits/utils'
+import * as AnalyticsCardPrimitive from '#lib/bits/custom/analyticsCard/components/index.js'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // LOCAL
 import {
   ASSET_ANALYTICS_SERIES,
@@ -17,14 +17,11 @@ import {
 import type {
   AssetAnalyticsBreakdownItem,
   AssetAnalyticsSeriesKey,
-} from '$lib/api/services/assetAnalytics.types'
-import type {
-  AssetAnalyticsWindowMetricsCardProps,
-} from '../assetAnalyticsDashboard.types'
+} from '#lib/api/services/assetAnalytics.types.js'
+import type { AssetAnalyticsWindowMetricsCardProps } from '../assetAnalyticsDashboard.types'
 // TYPES
 
 type AssetAnalyticsLatencyTier = 'p50Ms' | 'p95Ms' | 'p99Ms'
-
 
 type LatencyBar = {
   key: AssetAnalyticsSeriesKey
@@ -155,7 +152,9 @@ function getBreakdownItems(
 <section class="flex min-h-0 flex-col gap-4">
   {#if !windowData}
     <AnalyticsCardPrimitive.EmptyState
-      title={windowError ? 'Analytics window unavailable' : 'No analytics window available'}
+      title={windowError
+        ? 'Analytics window unavailable'
+        : 'No analytics window available'}
       description={windowError
         ? windowError
         : 'This time range has not been emitted by the analytics engine yet.'}

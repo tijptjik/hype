@@ -1,6 +1,6 @@
 <script lang="ts">
-import { SectionHeader } from '$lib/bits/custom'
-import { FormFeatureField } from '$lib/bits/patterns/forms/formFeatureField'
+import { SectionHeader } from '#lib/bits/custom/index.js'
+import { FormFeatureField } from '#lib/bits/patterns/forms/formFeatureField/index.js'
 import type { FormFeatureFieldsSectionProps } from './formFeatureFieldsSection.types'
 
 let {

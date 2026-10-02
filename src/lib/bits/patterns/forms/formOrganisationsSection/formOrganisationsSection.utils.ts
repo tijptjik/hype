@@ -1,5 +1,5 @@
-import type { SearchResultDisabledMeta } from '$lib/bits/custom/search'
-import { m } from '$lib/i18n'
+import type { SearchResultDisabledMeta } from '#lib/bits/custom/search/index.js'
+import { m } from '#lib/i18n.js'
 
 export function toOrganisationSearchDiscriminator(organisation: {
   code?: string | null

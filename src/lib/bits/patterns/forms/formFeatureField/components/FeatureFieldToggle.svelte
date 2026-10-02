@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Switch } from '$lib/bits/custom'
+import { Switch } from '#lib/bits/custom/index.js'
 
 type Props = {
   checked?: boolean

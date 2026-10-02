@@ -2,9 +2,9 @@
 import { APIError } from 'better-auth/api'
 // DB
 import { eq } from 'drizzle-orm'
-import { user } from '$lib/db/schema'
+import { user } from '#lib/db/schema/index.js'
 // TYPES
-import type { Database } from '$lib/types'
+import type { Database } from '#lib/types.js'
 
 /**
  * Requires a currently available account before creating or using an auth session.

@@ -4,7 +4,7 @@ import type {
   FormParentSectionHeaderContext,
   FormParentLayerSectionProps,
   FormParentSectionProps,
-} from '$lib/bits/patterns/forms/formParentSection'
+} from '#lib/bits/patterns/forms/formParentSection/index.js'
 
 export type FormFeatureParentSectionSharedProps = Pick<
   FormParentSectionProps,

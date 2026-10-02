@@ -1,16 +1,16 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
-import { m } from '$lib/i18n'
-import { SectionHeader, Search, TransitionStack } from '$lib/bits/custom'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
-import { FormGrid } from '$lib/bits/patterns/layout'
-import { OrganisationRoleType } from '$lib/enums'
-import { resolveAvatarImageSrc } from '$lib/utils/avatar'
+import { m } from '#lib/i18n.js'
+import { SectionHeader, Search, TransitionStack } from '#lib/bits/custom/index.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import { FormGrid } from '#lib/bits/patterns/layout/index.js'
+import { OrganisationRoleType } from '#lib/enums.js'
+import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 import * as FormUserRolesSectionPrimitive from './components'
-import { UserCard } from '$lib/bits/patterns/cards/userCard'
+import { UserCard } from '#lib/bits/patterns/cards/userCard/index.js'
 import type { FormUserRolesSectionProps } from './formUserRolesSection.types'
-import type { OrganisationRoleUser } from '$lib/db/zod/schema/organisation.types'
-import type { User } from '$lib/db/zod/schema/user.types'
+import type { OrganisationRoleUser } from '#lib/db/zod/schema/organisation.types.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
 
 type UserRoleCardViewModel = {
   userId: string
@@ -244,7 +244,9 @@ $effect(() => {
     persistenceKey={transitionPersistenceKey}
     duration={160}
   >
-    {#snippet children(userRoles)}
+    {#snippet children(
+      userRoles,
+    )}
       <FormGrid minWidth={minCardWidth}>
         {#each userRoles as userRole (userRole.userId)}
           <UserCard.Root class="bits-form__user-card-root--full">
@@ -264,7 +266,9 @@ $effect(() => {
       </FormGrid>
     {/snippet}
 
-    {#snippet previous(userRoles)}
+    {#snippet previous(
+      userRoles,
+    )}
       <FormGrid minWidth={minCardWidth}>
         {#each userRoles as userRole (userRole.userId)}
           <UserCard.Root class="bits-form__user-card-root--full">

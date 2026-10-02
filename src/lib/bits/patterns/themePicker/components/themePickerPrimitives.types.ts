@@ -1,4 +1,4 @@
-import type { ThemeDefinition } from '$lib/themes/themes.types'
+import type { ThemeDefinition } from '#lib/themes/themes.types.js'
 
 export type ThemeOptionProps = {
   theme: ThemeDefinition

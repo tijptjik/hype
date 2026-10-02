@@ -3,7 +3,7 @@
 import OmnibarSectionEntries from './OmnibarSectionEntries.svelte'
 import OmnibarSectionHeader from './OmnibarSectionHeader.svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { OmnibarSectionProps } from './omnibarPrimitives.types'
 

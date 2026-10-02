@@ -1,7 +1,7 @@
 <script lang="ts">
 // CORE
-import { Button } from '$lib/bits/core'
-import { cx } from '$lib/bits/utils'
+import { Button } from '#lib/bits/core/index.js'
+import { cx } from '#lib/bits/utils.js'
 // ICONS
 import ChevronLeftIcon from 'virtual:icons/proicons/chevron-left'
 import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'

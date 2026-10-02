@@ -11,8 +11,8 @@ import type {
 } from './authorization.constants'
 
 // TYPES
-import type { UserRoleDisco } from '$lib/types'
-import type { HubProfile } from '$lib/db/zod/schema/hub.types'
+import type { UserRoleDisco } from '#lib/types.js'
+import type { HubProfile } from '#lib/db/zod/schema/hub.types.js'
 
 type AuthorizationResourceType = (typeof authorizationResourceTypes)[number]
 

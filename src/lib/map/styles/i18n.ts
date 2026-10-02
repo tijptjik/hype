@@ -1,8 +1,8 @@
-import { toLocaleKebab } from '$lib/i18n'
+import { toLocaleKebab } from '#lib/i18n.js'
 import { supportedLocaleKeys } from '../../enums'
 import * as m from '../../paraglide/messages.js'
 
-import type { Locale, LocaleKey } from '$lib/types'
+import type { Locale, LocaleKey } from '#lib/types.js'
 import type { MapStyleCatalogKey } from './catalog'
 
 // ═══════════════════════

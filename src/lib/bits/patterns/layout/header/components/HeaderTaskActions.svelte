@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // ICONS
 import LoaderCircle from 'virtual:icons/proicons/spinner'
 // TYPES
@@ -37,7 +37,7 @@ function resolveIconClasses(icon?: unknown, iconClass?: string): string {
   {#if content?.component}
     {@const InlineContent = content.component}
     <div class="mr-2 flex items-center">
-      <InlineContent {...(content.props ?? {})} isCompact={hideLabel} />
+      <InlineContent {...content.props ?? {}} isCompact={hideLabel} />
     </div>
   {/if}
 

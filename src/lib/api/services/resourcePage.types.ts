@@ -15,9 +15,9 @@ export type CompactAncestorRow = {
 export type PanelResourceType = 'organisation' | 'project' | 'layer'
 
 export type PanelResource =
-  | import('$lib/db/zod/schema/organisation.types').OrganisationEntityByProfile<'compact'>
-  | import('$lib/db/zod/schema/project.types').ProjectEntityByProfile<'compact'>
-  | import('$lib/db/zod/schema/layer.types').LayerEntityByProfile<'compact'>
+  | import('#lib/db/zod/schema/organisation.types.js').OrganisationEntityByProfile<'compact'>
+  | import('#lib/db/zod/schema/project.types.js').ProjectEntityByProfile<'compact'>
+  | import('#lib/db/zod/schema/layer.types.js').LayerEntityByProfile<'compact'>
 
 export type ResourcePage = {
   data: PanelResource[]

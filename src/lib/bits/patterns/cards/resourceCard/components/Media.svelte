@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Card } from '$lib/bits/custom'
+import { Card } from '#lib/bits/custom/index.js'
 import type { ResourceCardMediaProps } from '../resourceCard.types'
 let {
   image = null,

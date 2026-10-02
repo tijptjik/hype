@@ -9,7 +9,7 @@ import type {
   AssetAnalyticsSummaryWindow,
   AssetAnalyticsTimeseriesPoint,
   AssetAnalyticsWindowKey,
-} from '$lib/api/services/assetAnalytics.types'
+} from '#lib/api/services/assetAnalytics.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

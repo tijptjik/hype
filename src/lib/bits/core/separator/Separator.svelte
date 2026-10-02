@@ -3,7 +3,7 @@ import { Separator as SeparatorPrimitive } from 'bits-ui'
 // ICONS
 import Dot from 'virtual:icons/proicons/circle-small'
 // STYLES
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { SeparatorProps } from './separator.types'
 

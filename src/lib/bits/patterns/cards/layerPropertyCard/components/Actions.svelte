@@ -1,8 +1,8 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
-import { Button, SimpleTooltip } from '$lib/bits/core'
-import { Card, Switch } from '$lib/bits/custom'
-import { m } from '$lib/i18n'
+import { Button, SimpleTooltip } from '#lib/bits/core/index.js'
+import { Card, Switch } from '#lib/bits/custom/index.js'
+import { m } from '#lib/i18n.js'
 import Inbox from 'virtual:icons/proicons/archive'
 import Plus from 'virtual:icons/proicons/add'
 import X from 'virtual:icons/proicons/cancel'

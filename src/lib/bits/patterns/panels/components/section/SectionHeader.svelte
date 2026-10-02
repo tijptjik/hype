@@ -1,11 +1,11 @@
 <script lang="ts">
 import type { Component } from 'svelte'
 // SERVICES
-import { getUrlForResourceIndex } from '$lib/navigation'
+import { getUrlForResourceIndex } from '#lib/navigation/index.js'
 // ENUMS
-import type { FirstClassResource } from '$lib/enums'
+import type { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 // COMPONENTS
 import SectionHeaderRoot from './SectionHeaderRoot.svelte'
 import SectionHeaderTitle from './SectionHeaderTitle.svelte'

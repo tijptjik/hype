@@ -1,10 +1,10 @@
 <script lang="ts">
 // BITS
-import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // UTILS
-import { formatDate } from '$lib'
+import { formatDate } from '#lib'
 import { formatDistanceToNow } from 'date-fns'
 
 let {

@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // COMPONENTS
 import LayerResolutionRow from './LayerResolutionRow.svelte'
 

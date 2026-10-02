@@ -1,6 +1,6 @@
 import type { Component } from 'svelte'
 import type { HTMLAttributes } from 'svelte/elements'
-import type { ButtonColor, ButtonStyle } from '$lib/bits/core'
+import type { ButtonColor, ButtonStyle } from '#lib/bits/core/index.js'
 
 export type HeaderLayoutMode = 'card' | 'table' | 'list'
 

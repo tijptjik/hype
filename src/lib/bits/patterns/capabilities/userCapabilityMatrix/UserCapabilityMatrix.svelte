@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SectionHeader } from '$lib/bits/custom/form'
+import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import * as UserCapabilityMatrixPrimitive from './components'
 import type { UserCapabilityMatrixProps } from './userCapabilityMatrix.types'
 

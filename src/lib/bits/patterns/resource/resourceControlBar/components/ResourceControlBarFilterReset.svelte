@@ -1,8 +1,8 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import Button from '$lib/bits/core/button/Button.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
 // ICONS
 import XIcon from 'virtual:icons/proicons/cancel'
 // TYPES

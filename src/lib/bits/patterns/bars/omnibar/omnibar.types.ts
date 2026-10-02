@@ -1,5 +1,5 @@
-import type { OmniCollection, OmniMode } from '$lib/enums'
-import type { SearchResult } from '$lib/context/omni.types'
+import type { OmniCollection, OmniMode } from '#lib/enums.js'
+import type { SearchResult } from '#lib/context/omni.types.js'
 
 export type OmnibarResultSection = {
   collectionType: OmniCollection

@@ -11,12 +11,15 @@ import {
   getNormalisedCountry,
   districtCodeToName,
   parseSubPremisesComponent,
-} from '$lib/utils/geocoding'
-import { translateText } from '$lib/api/external/translation'
+} from '#lib/utils/geocoding.js'
+import { translateText } from '#lib/api/external/translation.js'
 // TYPES
-import type { AddressProperties, AddressMeta } from '$lib/utils/address.types'
-import type { ParsedReverseGeocodeResult, ALSResult } from '$lib/utils/geocoding.types'
-import type { LocaleKey } from '$lib/types'
+import type { AddressProperties, AddressMeta } from '#lib/utils/address.types.js'
+import type {
+  ParsedReverseGeocodeResult,
+  ALSResult,
+} from '#lib/utils/geocoding.types.js'
+import type { LocaleKey } from '#lib/types.js'
 // TYPES
 
 interface ReverseGeocodeResult {

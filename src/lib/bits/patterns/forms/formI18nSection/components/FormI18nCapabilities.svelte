@@ -1,7 +1,7 @@
 <script lang="ts">
-import { TextInput } from '$lib/bits/custom/form'
-import type { CapabilityI18nRoot, CapabilityKey } from '$lib/capabilities.types'
-import type { LocaleKey } from '$lib/types'
+import { TextInput } from '#lib/bits/custom/form/index.js'
+import type { CapabilityI18nRoot, CapabilityKey } from '#lib/capabilities.types.js'
+import type { LocaleKey } from '#lib/types.js'
 
 type CapabilityLabelField = {
   as: (type: 'text') => Record<string, unknown>

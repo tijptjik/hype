@@ -3,7 +3,7 @@
 import { slide } from 'svelte/transition'
 import type { Component, Snippet } from 'svelte'
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // ICONS
 import Heart from 'virtual:icons/proicons/heart'
 import Info from 'virtual:icons/proicons/info'

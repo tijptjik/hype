@@ -1,10 +1,10 @@
 import type { z } from 'zod'
-import type { EntityResponse, Locale, LocaleKey } from '$lib/types'
+import type { EntityResponse, Locale, LocaleKey } from '#lib/types.js'
 import type {
   FormLocaleInput,
   FormLocaleSource,
-} from '$lib/client/services/formLocale.types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+} from '#lib/client/services/formLocale.types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
   HubAdminProfileAPI,
   HubBase,
@@ -32,7 +32,7 @@ import type {
   JoinHubSubscriptionSchema,
   PublishHubSchema,
   RemoveHubSchema,
-} from '$lib/db/zod/schema/hub'
+} from '#lib/db/zod/schema/hub.js'
 
 export type HubDB = z.infer<typeof HubBase>
 export type HubDBNew = z.infer<typeof HubInsert>

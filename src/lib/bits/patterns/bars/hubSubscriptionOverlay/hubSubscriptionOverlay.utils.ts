@@ -1,7 +1,7 @@
 // SERVICES
-import { getURLfromImage } from '$lib/client/services/image'
+import { getURLfromImage } from '#lib/client/services/image.js'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 export type DecorativeFeatureImage = {
   id: string

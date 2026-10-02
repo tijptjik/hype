@@ -9,11 +9,11 @@ import type {
   Locale,
   LocaleExtended,
   Resource,
-} from '$lib/types'
-import type { PreviewStage } from '$lib/map/renders/render.types'
-import type { FormFieldDefinition } from '$lib/client/services/formFields.types'
-import type { Form, FeatureForm } from '$lib/client/services/form.types'
-import type { Task } from '$lib/db/zod/schema/task.types'
+} from '#lib/types.js'
+import type { PreviewStage } from '#lib/map/renders/render.types.js'
+import type { FormFieldDefinition } from '#lib/client/services/formFields.types.js'
+import type { Form, FeatureForm } from '#lib/client/services/form.types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
 
 export {
   ADMIN_PATH,

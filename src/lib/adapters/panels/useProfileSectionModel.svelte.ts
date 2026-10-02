@@ -3,28 +3,28 @@ import { onDestroy } from 'svelte'
 // SVELTEKIT
 import { goto } from '$app/navigation'
 // AUTH
-import { signOut } from '$lib/auth/client'
-import { clearSignOutIntent, markSignOutIntent } from '$lib/auth/bootstrap'
+import { signOut } from '#lib/auth/client.js'
+import { clearSignOutIntent, markSignOutIntent } from '#lib/auth/bootstrap.js'
 import {
   isGuestUser as isGuestUserSession,
   requestAccountUpgrade,
   requestProfileUpgrade,
   toSafeReturnPath,
-} from '$lib/auth/upgrade'
+} from '#lib/auth/upgrade.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
 import {
   debouncedUpdateUsername,
   validateUsernameIssues,
-} from '$lib/client/services/user'
+} from '#lib/client/services/user.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // CONTEXT
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { ProfileSectionProps } from '$lib/bits/patterns/panels/sections'
-import type { CurrentUser } from '$lib/db/zod/schema/user.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ProfileSectionProps } from '#lib/bits/patterns/panels/sections/index.js'
+import type { CurrentUser } from '#lib/db/zod/schema/user.types.js'
 
 type UseProfileSectionModelOptions = {
   hideActions?: boolean

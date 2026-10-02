@@ -6,13 +6,13 @@ import type {
   HeaderFacetItem,
   HeaderFormActionsState,
   HeaderVisibilityOverrides,
-} from '$lib/context/headerState.types'
+} from '#lib/context/headerState.types.js'
 import type {
   HeaderButtonActionConfig,
   HeaderCrumb,
   HeaderLayoutRegionConfig,
   HeaderTitleMenuItemConfig,
-} from '$lib/bits/patterns/layout/header/header.types'
+} from '#lib/bits/patterns/layout/header/header.types.js'
 
 const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   dirty: false,

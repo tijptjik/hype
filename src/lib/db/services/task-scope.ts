@@ -3,10 +3,10 @@ import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { and, eq, sql, type SQL } from 'drizzle-orm'
 // DB
-import { feature, organisation, project, task } from '$lib/db/schema'
+import { feature, organisation, project, task } from '#lib/db/schema/index.js'
 // TYPES
-import type { Database } from '$lib/types'
-import type { TaskNew } from '$lib/db/zod/schema/task.types'
+import type { Database } from '#lib/types.js'
+import type { TaskNew } from '#lib/db/zod/schema/task.types.js'
 
 /**
  * Restricts persisted tasks to their feature's canonical project/organisation chain.

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getLocaleKey, getLocaleOrder } from '$lib/i18n'
+import { getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
 import type { FormI18nSectionProps } from './formI18nSection.types'
 import * as FormI18nSectionPrimitive from './components'
 

@@ -1,8 +1,8 @@
 // REMOTE
-import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
+import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
 import { error } from '@sveltejs/kit'
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocale } from '#lib/i18n.js'
 import {
   getDuplicateValues,
   hasRoleMembershipChanged,
@@ -10,7 +10,7 @@ import {
   toBooleanStateResponseShape,
   toCreatedResponseShape,
   validateUniqueNonReservedCode,
-} from '$lib/api/services'
+} from '#lib/api/services/index.js'
 // UTILS
 import { nanoid } from 'nanoid'
 import {
@@ -22,8 +22,8 @@ import {
   toLookupConditions,
   toQueryConditions,
   toRequestedListState,
-} from '$lib/api/services/hub'
-import { normalizeSubmittedPropertyRanks } from '$lib/api/services/project'
+} from '#lib/api/services/hub.js'
+import { normalizeSubmittedPropertyRanks } from '#lib/api/services/project.js'
 // AUTHORIZATION
 import {
   authorizeHubReadForProbe,
@@ -41,7 +41,7 @@ import {
   toHubUserRoleSignature,
   authorizeHubList,
   isRelevantHubAdmin,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // SERVICES
 import {
   createHub,
@@ -64,17 +64,17 @@ import {
   getHub as loadHub,
   syncOrganisations,
   syncHubLayerDefaults,
-} from '$lib/db/services/hub'
-import { syncHubProperties } from '$lib/db/services/property'
+} from '#lib/db/services/hub.js'
+import { syncHubProperties } from '#lib/db/services/property.js'
 import {
   normalizeSubstackSessionCookie,
   normalizeSubstackSubscriptionId,
   toSubstackSubscribeUrl,
-} from '$lib/api/external/substack.shared'
+} from '#lib/api/external/substack.shared.js'
 // API UTILS
-import { getValidQueryParams as validateQueryParams } from '$lib/api'
+import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 // SCHEMA
-import { hub } from '$lib/db/schema'
+import { hub } from '#lib/db/schema/index.js'
 // ZOD
 import {
   ListQueryParamsSchema,
@@ -84,9 +84,9 @@ import {
   JoinHubSubscriptionSchema,
   PublishHubSchema,
   RemoveHubSchema,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // TYPES
-import type { EntityResponse, Id, ListResponse } from '$lib/types'
+import type { EntityResponse, Id, ListResponse } from '#lib/types.js'
 import type {
   HubDB,
   HubEntityByProfile,
@@ -94,7 +94,7 @@ import type {
   HubListByProfile,
   HubListParamsByProfile,
   HubProfile as HubProfileType,
-} from '$lib/db/zod/schema/hub.types'
+} from '#lib/db/zod/schema/hub.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -653,7 +653,7 @@ export const joinSubscription = guardedCommand(
     }
 
     // Load the provider adapter only for the live subscription action.
-    const { subscribeToSubstack } = await import('$lib/api/external/substack')
+    const { subscribeToSubstack } = await import('#lib/api/external/substack.js')
     const providerResponse = await subscribeToSubstack(
       user.email,
       target.subscriptionId,

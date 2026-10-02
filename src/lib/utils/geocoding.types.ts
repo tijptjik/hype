@@ -1,6 +1,6 @@
 // TYPES
-import type { AddressProperties, AddressMeta } from '$lib/utils/address.types'
-import type { LocaleKey } from '$lib/types'
+import type { AddressProperties, AddressMeta } from '#lib/utils/address.types.js'
+import type { LocaleKey } from '#lib/types.js'
 
 /* ----------------- */
 // GEOCODING

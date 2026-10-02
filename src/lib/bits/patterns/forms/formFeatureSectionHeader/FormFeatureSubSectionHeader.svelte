@@ -2,11 +2,11 @@
 // SVELTE
 import { slide } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CORE
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // CUSTOM
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ICONS
 import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
 import XIcon from 'virtual:icons/proicons/cancel'

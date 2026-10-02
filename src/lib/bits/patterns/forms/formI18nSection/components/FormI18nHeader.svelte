@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SectionHeader } from '$lib/bits/custom/form'
+import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import type { FormI18nHeaderProps } from '../formI18nSection.types'
 
 let {
@@ -15,7 +15,15 @@ let {
 }: FormI18nHeaderProps = $props()
 </script>
 
-{#if title || subtitle || headerActions || flags.length > 0 || actions.length > 0 || triggers.length > 0 || left || center || right}
+{#if title ||
+  subtitle ||
+  headerActions ||
+  flags.length > 0 ||
+  actions.length > 0 ||
+  triggers.length > 0 ||
+  left ||
+  center ||
+  right}
   <SectionHeader
     {title}
     description={subtitle}

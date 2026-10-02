@@ -5,7 +5,7 @@ import { flip } from 'svelte/animate'
 // VIRTUALIZATION
 import { createVirtualizer } from '@tanstack/svelte-virtual'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 let {
   items,
@@ -92,7 +92,9 @@ function measure(node: HTMLDivElement): void {
     {/each}
   {:else}
     <div class="relative w-full" style:height={`${$virtualizer.getTotalSize()}px`}>
-      {#each $virtualizer.getVirtualItems().filter(row => items[row.index]) as row (row.key)}
+      {#each $virtualizer
+        .getVirtualItems()
+        .filter(row => items[row.index]) as row (row.key)}
         <!-- A search can shrink items before the virtualizer updates its measured range. -->
         <div
           data-index={row.index}

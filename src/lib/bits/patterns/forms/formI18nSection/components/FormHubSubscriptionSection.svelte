@@ -1,24 +1,24 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import { Switch } from '$lib/bits/custom'
+import { Switch } from '#lib/bits/custom/index.js'
 import {
   SectionHeader,
   SectionHeaderPrimitive,
   SelectField,
   TextArea,
   TextInput,
-} from '$lib/bits/custom/form'
+} from '#lib/bits/custom/form/index.js'
 import {
   getGenAiState,
   toUniqueIssueMessages,
   toggleGenAiField,
-} from '$lib/client/services/form'
-import { HubSubscriptionService } from '$lib/enums'
-import type { FormIssueLike } from '$lib/client/services/form.types'
-import type { HubSubscriptionPlacement } from '$lib/api/services/hub.types'
-import type { LocaleKey } from '$lib/types'
+} from '#lib/client/services/form.js'
+import { HubSubscriptionService } from '#lib/enums.js'
+import type { FormIssueLike } from '#lib/client/services/form.types.js'
+import type { HubSubscriptionPlacement } from '#lib/api/services/hub.types.js'
+import type { LocaleKey } from '#lib/types.js'
 import FormSection from './FormSection.svelte'
 
 type IssueField = {
@@ -231,29 +231,29 @@ const sectionBodyClass = $derived(
 
 <section class="bits-form__section">
   <div class="hidden" aria-hidden="true">
-    <input {...(availabilityInputAttrs as Record<string, unknown>)}>
+    <input {...availabilityInputAttrs as Record<string, unknown>}>
     {#if shouldMirrorSubscriptionService}
-      <input {...(subscriptionServiceHiddenAttrs as Record<string, unknown>)}>
+      <input {...subscriptionServiceHiddenAttrs as Record<string, unknown>}>
     {/if}
     {#if shouldMirrorSubscriptionId}
-      <input {...(subscriptionIdHiddenAttrs as Record<string, unknown>)}>
+      <input {...subscriptionIdHiddenAttrs as Record<string, unknown>}>
     {/if}
     {#if shouldMirrorSubscriptionSessionCookie}
-      <input {...(subscriptionSessionCookieHiddenAttrs as Record<string, unknown>)}>
+      <input {...subscriptionSessionCookieHiddenAttrs as Record<string, unknown>}>
     {/if}
     {#if !isSubscriptionFieldEditing}
       {#each subscriptionBenefitsFieldModels as field (field.localeKey)}
-        <input {...(field.genAttrs as Record<string, unknown>)}>
-        <input {...(field.hiddenAttrs as Record<string, unknown>)}>
+        <input {...field.genAttrs as Record<string, unknown>}>
+        <input {...field.hiddenAttrs as Record<string, unknown>}>
       {/each}
     {:else}
       {#each subscriptionBenefitsFieldModels as field (field.localeKey)}
-        <input {...(field.genAttrs as Record<string, unknown>)}>
+        <input {...field.genAttrs as Record<string, unknown>}>
       {/each}
     {/if}
-    <input {...(hubPanelInputAttrs as Record<string, unknown>)}>
-    <input {...(topBarInputAttrs as Record<string, unknown>)}>
-    <input {...(menuInputAttrs as Record<string, unknown>)}>
+    <input {...hubPanelInputAttrs as Record<string, unknown>}>
+    <input {...topBarInputAttrs as Record<string, unknown>}>
+    <input {...menuInputAttrs as Record<string, unknown>}>
   </div>
 
   <SectionHeader
@@ -356,7 +356,8 @@ const sectionBodyClass = $derived(
             checked={subscriptionPlacement.menu}
             disabled={!isEditing || !isSubscriptionAvailable}
             rightText="Menu"
-            onCheckedChange={nextValue => onPlacementChange?.('menu', Boolean(nextValue))}
+            onCheckedChange={nextValue =>
+              onPlacementChange?.('menu', Boolean(nextValue))}
           />
         </div>
       </div>

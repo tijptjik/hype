@@ -4,33 +4,33 @@ import type {
   FirstClassResource,
   SupportedLocales,
   FieldDiscriminator as FieldDiscriminatorEnum,
-} from '$lib/enums'
+} from '#lib/enums.js'
 import type {
   Feature,
   FeatureFromCollection,
   FeatureI18nDB,
   FeatureNew,
-} from '$lib/db/zod/schema/feature.types'
-import type { Layer, LayerI18nDB, LayerNew } from '$lib/db/zod/schema/layer.types'
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Layer, LayerI18nDB, LayerNew } from '#lib/db/zod/schema/layer.types.js'
 import type {
   Project,
   ProjectI18nDB,
   ProjectNew,
   ProjectRole,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 import type {
   Organisation,
   OrganisationI18nDB,
   OrganisationNew,
   OrganisationRole,
-} from '$lib/db/zod/schema/organisation.types'
+} from '#lib/db/zod/schema/organisation.types.js'
 import type {
   SessionSession as BetterAuthSessionSession,
   SessionUser as BetterAuthSessionUser,
-} from '$lib/auth'
-import type { Hub, HubNew, HubRole } from '$lib/db/zod/schema/hub.types'
-import type { Task, TaskNew } from '$lib/db/zod'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/auth.js'
+import type { Hub, HubNew, HubRole } from '#lib/db/zod/schema/hub.types.js'
+import type { Task, TaskNew } from '#lib/db/zod/index.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 
 /* ----------------- */
 // NAMING CONVENTIONS
@@ -86,7 +86,7 @@ import type { Property } from '$lib/db/zod/schema/property.types'
 /* -------- */
 
 // Drizzle Database
-export type Database = DrizzleD1Database<typeof import('$lib/db/schema')>
+export type Database = DrizzleD1Database<typeof import('#lib/db/schema/index.js')>
 
 export type DbTable = SQLiteTable
 

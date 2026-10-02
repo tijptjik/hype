@@ -1,8 +1,8 @@
 <script lang="ts">
 import { fly, slide } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
-import { PANEL_WIDTH } from '$lib/constants'
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import { PANEL_WIDTH } from '#lib/constants.js'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 import type { Snippet } from 'svelte'
 
 type Props = PanelProps & {

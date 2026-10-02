@@ -1,5 +1,5 @@
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 const TRANSITION_CLASSES = cx(
   'transition-[background-color,color,opacity,transform]',

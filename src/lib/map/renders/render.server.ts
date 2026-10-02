@@ -8,17 +8,20 @@ import {
   organisation,
   project,
   projectMapStyles,
-} from '$lib/db/schema'
-import { getFeatureWithRelations, toListResponseShape } from '$lib/api/services/feature'
-import { listFeatures } from '$lib/db/services/feature'
-import { autochunk } from '$lib/utils/batch-query'
+} from '#lib/db/schema/index.js'
+import {
+  getFeatureWithRelations,
+  toListResponseShape,
+} from '#lib/api/services/feature.js'
+import { listFeatures } from '#lib/db/services/feature.js'
+import { autochunk } from '#lib/utils/batch-query.js'
 // TYPES
-import type { Database } from '$lib/types'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { Database } from '#lib/types.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type { FeatureCollection, GeometryObject } from 'geojson'
 // HELPERS
 import { buildMapRenderJob } from './jobs.server'
-import type { MapRenderJob } from '$lib/map/renders/render.types'
+import type { MapRenderJob } from '#lib/map/renders/render.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

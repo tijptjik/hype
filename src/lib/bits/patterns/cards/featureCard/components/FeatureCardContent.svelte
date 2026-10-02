@@ -10,15 +10,15 @@ import {
   type PreparedTextWithSegments,
 } from '@chenglou/pretext'
 // SERVICES
-import { getFeatureCardDisplayProperties } from '$lib/client/services/property'
+import { getFeatureCardDisplayProperties } from '#lib/client/services/property.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // I18N
-import { getFPI18n, getI18n, m } from '$lib/i18n'
+import { getFPI18n, getI18n, m } from '#lib/i18n.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { FeatureCardPortalObstacle } from '$lib/context/featureCard.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { FeatureCardPortalObstacle } from '#lib/context/featureCard.types.js'
 import type { PropertyLayoutResult } from '../featureCard.types'
 // LOCAL
 import {

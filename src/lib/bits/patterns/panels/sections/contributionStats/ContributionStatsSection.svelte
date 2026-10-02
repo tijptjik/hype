@@ -1,17 +1,17 @@
 <script lang="ts">
 // SVELTE
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ADAPTERS
-import type { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
+import type { useProfilePanelModel } from '#lib/adapters/panels/useProfilePanelModel.svelte.js'
 
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import Camera from 'virtual:icons/proicons/camera'
 import MapPin from 'virtual:icons/proicons/location'
 import CubeTransparent from 'virtual:icons/lucide/ghost'
 import ExclamationTriangle from 'virtual:icons/proicons/alert-triangle'
-import type { UserProfile } from '$lib/db/zod/schema/user.types'
+import type { UserProfile } from '#lib/db/zod/schema/user.types.js'
 
 // PROPS
 type Props = {

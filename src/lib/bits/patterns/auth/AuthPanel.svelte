@@ -9,18 +9,18 @@ import Mail from 'virtual:icons/proicons/mail'
 import KeyRound from 'virtual:icons/proicons/key'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
 // AUTH
-import { authClient, signIn, signUp } from '$lib/auth/client'
+import { authClient, signIn, signUp } from '#lib/auth/client.js'
 import {
   completePasskeyAccountUpgrade,
   PasskeySessionRefreshError,
-} from '$lib/auth/passkey-upgrade'
-import { toSafeReturnPath } from '$lib/auth/upgrade'
-import { isAuthProviderEnabled, type AuthProviderId } from '$lib/auth/providers'
+} from '#lib/auth/passkey-upgrade.js'
+import { toSafeReturnPath } from '#lib/auth/upgrade.js'
+import { isAuthProviderEnabled, type AuthProviderId } from '#lib/auth/providers.js'
 // COMPONENTS
 import AuthSocialButtons from './AuthSocialButtons.svelte'
 import AuthTextField from './AuthTextField.svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 let {
   title = m.guest__upgrade_title(),

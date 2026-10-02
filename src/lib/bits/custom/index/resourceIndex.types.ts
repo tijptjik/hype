@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import type { NavigableResource, Resource } from '$lib/types'
+import type { NavigableResource, Resource } from '#lib/types.js'
 
 export type ResourceIndexProps<T extends Resource> = {
   resource: NavigableResource

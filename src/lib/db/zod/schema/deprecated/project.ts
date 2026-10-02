@@ -1,18 +1,18 @@
 // I18N
-import { m } from '$lib/i18n'
-import { ProjectRoleType } from '$lib/enums'
+import { m } from '#lib/i18n.js'
+import { ProjectRoleType } from '#lib/enums.js'
 import type {
   CapabilityDefinitions,
   CapabilityDefinition,
   CapabilityKey,
-} from '$lib/capabilities.types'
+} from '#lib/capabilities.types.js'
 import type { ProjectRoleCapabilities } from '../project.types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { project, projectI18n, projectRole } from '$lib/db/schema/index'
+import { project, projectI18n, projectRole } from '#lib/db/schema/index.js'
 // CONSTRAINTS
 import { FormI18nRoot, getDefaultConstraints, getLocales } from '../../constraints'
 // ZOD SCHEMAS

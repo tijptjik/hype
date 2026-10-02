@@ -1,6 +1,6 @@
 <script lang="ts">
-import { Button } from '$lib/bits/core'
-import { m } from '$lib/i18n'
+import { Button } from '#lib/bits/core/index.js'
+import { m } from '#lib/i18n.js'
 import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
 import XIcon from 'virtual:icons/proicons/cancel'
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { TextDescription, TextTitle } from '$lib/bits/custom/text'
+import { TextDescription, TextTitle } from '#lib/bits/custom/text/index.js'
 import RowThumbnail from './RowThumbnail.svelte'
 import { rowTitleClass, rowTitleContentClass } from '../row.styles'
 import type { RowTitleProps } from '../row.types'

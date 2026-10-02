@@ -1,15 +1,16 @@
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // TYPES
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
 import type {
-  HubSubscriptionModelParams,
-} from '$lib/adapters/hub/useHubSubscriptionModel.svelte'
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { HubSubscriptionModelParams } from '#lib/adapters/hub/useHubSubscriptionModel.svelte.js'
 import type {
   HubSubscriptionPlacement,
   HubUserStateFlags,
-} from '$lib/api/services/hub.types'
+} from '#lib/api/services/hub.types.js'
 
 type HubSubscriptionI18n = Record<string, Record<string, string | null | undefined>>
 

@@ -1,12 +1,12 @@
 <script lang="ts">
 import { fade } from 'svelte/transition'
-import { localeCodes, supportedLocales } from '$lib/enums'
-import type { Locale } from '$lib/types'
+import { localeCodes, supportedLocales } from '#lib/enums.js'
+import type { Locale } from '#lib/types.js'
 import AlertCircle from 'virtual:icons/proicons/alert-circle'
 import Eraser from 'virtual:icons/proicons/eraser'
 import Languages from 'virtual:icons/tabler/language'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
-import { toLocaleKey } from '$lib/i18n'
+import { toLocaleKey } from '#lib/i18n.js'
 import type { FormSectionProps } from '../formI18nSection.types'
 
 type Props = Pick<

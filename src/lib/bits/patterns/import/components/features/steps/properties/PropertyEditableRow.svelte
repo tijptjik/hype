@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Swap } from '$lib/bits/custom/swap'
+import { Swap } from '#lib/bits/custom/swap/index.js'
 // ICONS
 import Check from 'virtual:icons/proicons/checkmark'
 import Pencil from 'virtual:icons/proicons/pencil'

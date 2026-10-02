@@ -1,5 +1,5 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -10,7 +10,7 @@ import {
   propertyI18n,
   propertyValue,
   propertyValueI18n,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../../constraints'
 import { FormBoolean } from '../../form'

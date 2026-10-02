@@ -4,7 +4,7 @@ import { Dialog } from 'bits-ui'
 // BITS
 import Button from '../button/Button.svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { DestructiveDialogProps } from './dialog.types'
 

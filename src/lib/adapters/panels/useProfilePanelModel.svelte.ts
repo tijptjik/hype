@@ -2,24 +2,27 @@
 import { untrack } from 'svelte'
 import { fromStore } from 'svelte/store'
 // AUTH
-import { useSession } from '$lib/auth/client'
-import { isGuestUser } from '$lib/auth/upgrade'
+import { useSession } from '#lib/auth/client.js'
+import { isGuestUser } from '#lib/auth/upgrade.js'
 // I18N
-import { getI18n } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
 // ADAPTERS
 import { useProfileSectionModel } from './useProfileSectionModel.svelte'
 // NAVIGATION
 import {
   navigateToContributedFeature,
   navigateToContributedImage,
-} from '$lib/navigation'
+} from '#lib/navigation/index.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { Id, ResourceContext } from '$lib/types'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { Image } from '$lib/db/zod/schema/image.types'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { Id, ResourceContext } from '#lib/types.js'
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Image } from '#lib/db/zod/schema/image.types.js'
+import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 
 /**
  * Resolves the displayed profile and guest-upgrade state at the route boundary.

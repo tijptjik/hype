@@ -1,8 +1,8 @@
 // TYPES
-import type { Panel, FirstClassResource } from '$lib/enums'
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { Id, Code } from '$lib/types'
-import type { FacetType } from '$lib/context/facets'
+import type { Panel, FirstClassResource } from '#lib/enums.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { Id, Code } from '#lib/types.js'
+import type { FacetType } from '#lib/context/facets.js'
 
 /* ----------------- */
 // PANELS :: APP

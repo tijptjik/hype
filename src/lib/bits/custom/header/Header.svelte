@@ -3,7 +3,7 @@
 import { Header as HeaderPrimitive } from './src'
 import HeaderBreadcrumbs from './src/components/HeaderBreadcrumbs.svelte'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { HeaderProps } from './header.types'
 
@@ -80,7 +80,7 @@ const iconStyle = $derived(
     <HeaderPrimitive.Subtitle
       class={[
         'bits-header__subtitle',
-        text ? 'bits-header__subtitle--with-title' : 'bits-header__subtitle--solo'
+        text ? 'bits-header__subtitle--with-title' : 'bits-header__subtitle--solo',
       ]
         .filter(Boolean)
         .join(' ')}

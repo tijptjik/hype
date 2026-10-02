@@ -3,7 +3,7 @@ import type { Snippet } from 'svelte'
 import { MapLibre } from 'svelte-maplibre-gl'
 import type { Map as MapLibreMap, MapOptions } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import '$lib/styles/map.css'
+import '#lib/styles/map.css'
 
 type MapSurfaceProps = Omit<MapOptions, 'container' | 'style'> & {
   style: MapOptions['style']
@@ -30,7 +30,7 @@ let {
   class={className}
   {inlineStyle}
   autoloadGlobalCss={false}
-  {...(options as Omit<MapOptions, 'container' | 'style'>)}
+  {...options as Omit<MapOptions, 'container' | 'style'>}
 >
   {#if map}
     {@render children?.(map)}

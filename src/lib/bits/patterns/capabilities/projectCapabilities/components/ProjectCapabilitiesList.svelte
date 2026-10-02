@@ -1,9 +1,9 @@
 <script lang="ts">
-import { Card } from '$lib/bits/custom'
-import { Switch } from '$lib/bits/custom'
-import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
+import { Card } from '#lib/bits/custom/index.js'
+import { Switch } from '#lib/bits/custom/index.js'
+import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
-import type { CapabilityKey } from '$lib/capabilities.types'
+import type { CapabilityKey } from '#lib/capabilities.types.js'
 
 let {
   availableCapabilityKeys,

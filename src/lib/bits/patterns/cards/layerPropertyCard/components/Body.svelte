@@ -1,6 +1,6 @@
 <script lang="ts">
-import { Card } from '$lib/bits/custom'
-import { SimpleTooltip } from '$lib/bits/core'
+import { Card } from '#lib/bits/custom/index.js'
+import { SimpleTooltip } from '#lib/bits/core/index.js'
 import type { LayerPropertyCardBodyProps } from '../layerPropertyCard.types'
 
 let {

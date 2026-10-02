@@ -1,7 +1,7 @@
 // TYPES
-import type { TaskDB } from '$lib/db/zod'
-import type { Id } from '$lib/types'
-import type { FeatureDB } from '$lib/db/zod/schema/feature.types'
+import type { TaskDB } from '#lib/db/zod/index.js'
+import type { Id } from '#lib/types.js'
+import type { FeatureDB } from '#lib/db/zod/schema/feature.types.js'
 
 export type TaskReviewCommitContext = {
   task: Pick<

@@ -1,7 +1,7 @@
 <script module lang="ts">
-import type { ImageMetadataBasic } from '$lib/db/zod/schema/image.types'
+import type { ImageMetadataBasic } from '#lib/db/zod/schema/image.types.js'
 import type { ViewerRenderable } from './images.types'
-import type { ImageCtx } from '$lib/context/image.svelte'
+import type { ImageCtx } from '#lib/context/image.svelte.js'
 
 const RESOURCE_VIEWER_RETAIN_MS = 1500
 
@@ -66,21 +66,21 @@ function setRetainedViewerSnapshot(snapshot: ResourceViewerSnapshot | null): voi
 <script lang="ts">
 import { onDestroy, untrack } from 'svelte'
 // ADAPTERS
-import { useEntityImageViewerModel } from '$lib/adapters/image'
+import { useEntityImageViewerModel } from '#lib/adapters/image/index.js'
 // BITS COMPONENTS
-import { UserAttributionCard } from '$lib/bits'
-import { AdminViewer, Dropzone } from '$lib/bits/patterns/images'
-import ImageMetadataCard from '$lib/bits/patterns/images/components/ImageMetadataCard.svelte'
-import ViewerControls from '$lib/bits/patterns/images/components/controls/ViewerControls.svelte'
+import { UserAttributionCard } from '#lib/bits/index.js'
+import { AdminViewer, Dropzone } from '#lib/bits/patterns/images/index.js'
+import ImageMetadataCard from '#lib/bits/patterns/images/components/ImageMetadataCard.svelte'
+import ViewerControls from '#lib/bits/patterns/images/components/controls/ViewerControls.svelte'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // CONTEXT
-import { getImageCtx } from '$lib/context/image.svelte'
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getImageCtx } from '#lib/context/image.svelte.js'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ICONS
 import CameraIcon from 'virtual:icons/proicons/camera'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 let {
   canEditPresentationMode = true,
@@ -341,7 +341,9 @@ onDestroy(() => {
       onActiveIdChange={model.actions.select}
       onCurrentItemLoad={handleCurrentItemLoad}
     >
-      {#snippet leftRail(_item)}
+      {#snippet leftRail(
+        _item,
+      )}
         {#if displayedActiveImage}
           <UserAttributionCard
             userId={displayedActiveImage.image.contributorId}
@@ -354,7 +356,9 @@ onDestroy(() => {
         {/if}
       {/snippet}
 
-      {#snippet centerRail(_item)}
+      {#snippet centerRail(
+        _item,
+      )}
         <ViewerControls
           presentationMode={displayedPresentationMode}
           canMutate={displayedCanChangePresentationMode}
@@ -383,7 +387,9 @@ onDestroy(() => {
         />
       {/snippet}
 
-      {#snippet rightRail(_item)}
+      {#snippet rightRail(
+        _item,
+      )}
         {#if displayedActiveImage}
           <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
           <div

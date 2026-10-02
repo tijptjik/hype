@@ -1,12 +1,12 @@
 import { CompactAncestorsSchema } from './api'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { layer, layerI18n, layerProperty, userLayer } from '$lib/db/schema/index'
+import { layer, layerI18n, layerProperty, userLayer } from '#lib/db/schema/index.js'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints'
 import { FormBoolean } from '../form'
@@ -14,7 +14,7 @@ import { FormBoolean } from '../form'
 import { PropertyAdminProfileAPI } from './property'
 import { UserBasic } from './user'
 // TYPES
-import type { LayerMetadata } from '$lib/db/zod/schema/layerMetadata.types'
+import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

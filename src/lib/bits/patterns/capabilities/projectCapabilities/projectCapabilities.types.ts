@@ -1,7 +1,5 @@
-import type { CapabilityKey } from '$lib/capabilities.types'
-import type {
-  UserCapabilityMatrixRow,
-} from '$lib/bits/patterns/capabilities/userCapabilityMatrix'
+import type { CapabilityKey } from '#lib/capabilities.types.js'
+import type { UserCapabilityMatrixRow } from '#lib/bits/patterns/capabilities/userCapabilityMatrix/index.js'
 
 export interface ProjectCapabilitiesProps {
   title?: string

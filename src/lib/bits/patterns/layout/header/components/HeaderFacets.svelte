@@ -2,7 +2,7 @@
 // SVELTE
 import { fade, scale } from 'svelte/transition'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // TYPES
 import type { HeaderFacetsProps } from './headerPrimitives.types'
 // STYLES
@@ -27,8 +27,10 @@ let {
   <div class={HEADER_FACETS_WRAP_CLASSES}>
     <ul class={HEADER_FACETS_LIST_CLASSES} style={HEADER_FACETS_LIST_STYLE}>
       {#each items as facet (facet.ref)}
-        {@const isActive = active === facet.ref || (active === false && facet.ref === 'core')}
-        {@const color = facet.hasIssues === true ? 'error' : isActive ? 'primary' : 'neutral'}
+        {@const isActive =
+          active === facet.ref || (active === false && facet.ref === 'core')}
+        {@const color =
+          facet.hasIssues === true ? 'error' : isActive ? 'primary' : 'neutral'}
         {@const facetButtonClass = getHeaderFacetButtonClasses({
           isActive,
           hasIssues: facet.hasIssues === true,

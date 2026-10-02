@@ -1,21 +1,21 @@
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { m, supportedLocaleKeys } from '$lib/i18n'
+import { m, supportedLocaleKeys } from '#lib/i18n.js'
 // SERVICES
-import { sortProperties } from '$lib/client/services/property'
+import { sortProperties } from '#lib/client/services/property.js'
 // TYPES
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 import type {
   Feature,
   FeatureFromCollection,
   FeatureI18nDB,
   UserContributedFeature,
-} from '$lib/db/zod/schema/feature.types'
-import type { Id, LocaleKey } from '$lib/types'
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Id, LocaleKey } from '#lib/types.js'
 
 type StatisticType = 'boolean' | 'count' | 'mean' | 'sum'
 type StatisticValue = boolean | number | null

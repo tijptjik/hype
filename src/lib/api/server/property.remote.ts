@@ -1,25 +1,28 @@
 // REMOTE
-import { guardedCommand, guardedQuery } from '$lib/api/server/remote'
+import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { and, eq, inArray } from 'drizzle-orm'
 // API
-import { getPrisms, getValidQueryParams as validateQueryParams } from '$lib/api'
+import {
+  getPrisms,
+  getValidQueryParams as validateQueryParams,
+} from '#lib/api/index.js'
 import {
   getPropertyQueryContext,
   propertyCollectionWithRelations,
   toPropertyPrismConditions,
   toPropertyResponseShape,
-} from '$lib/api/services/property'
+} from '#lib/api/services/property.js'
 import {
   authorizeHubUpdateForSubmission,
   authorizeOrganisationUpdateForSubmission,
   authorizeProjectReadForProbe,
   authorizeProjectUpdateForSubmission,
   toAuthMessage,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // DB
-import { hub, organisation, project, property } from '$lib/db/schema'
+import { hub, organisation, project, property } from '#lib/db/schema/index.js'
 import {
   listProperties,
   listResolvedProjectProperties,
@@ -28,30 +31,30 @@ import {
   createI18n,
   createPropertyValues,
   createPropertyValueI18n,
-} from '$lib/db/services/property'
-import { probeProjectQuery } from '$lib/db/services/project'
-import { retryBusyRead } from '$lib/db/services/sqlite'
+} from '#lib/db/services/property.js'
+import { probeProjectQuery } from '#lib/db/services/project.js'
+import { retryBusyRead } from '#lib/db/services/sqlite.js'
 // SCHEMA
 import {
   ListQueryParamsSchema,
   ProjectPropertiesQuery,
   ProjectPropertyValueFormData,
   ProjectPropertyFormData,
-} from '$lib/db/zod'
-import { FormBoolean } from '$lib/db/zod/form'
+} from '#lib/db/zod/index.js'
+import { FormBoolean } from '#lib/db/zod/form.js'
 // ZOD
 import { z } from 'zod'
-import { autochunk } from '$lib/utils/batch-query'
+import { autochunk } from '#lib/utils/batch-query.js'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
-import type { Locale, Prisms, QueryParams } from '$lib/types'
+import type { Locale, Prisms, QueryParams } from '#lib/types.js'
 import type {
   Property,
   PropertyDB,
   PropertyI18nNew,
   PropertyValueI18nNew,
   PropertyValueNew,
-} from '$lib/db/zod/schema/property.types'
+} from '#lib/db/zod/schema/property.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -414,7 +417,11 @@ const getPropertiesQuery = guardedQuery(ListQueryParamsSchema, async (params, ct
   const scopedConditions = await toPropertyPrismConditions({
     db,
     conditions,
-    prisms: ((params.prisms as Prisms | undefined) ?? getPrisms(event.url)) as Prisms,
+    prisms: ((params.prisms as Prisms | undefined) ?? {
+      organisation: [],
+      project: [],
+      layer: [],
+    }) as Prisms,
   })
 
   const rows = await listProperties(
@@ -759,7 +766,6 @@ export const getProjectProperties = guardedQuery(
       meta: {
         isAdminRequest: ctx.isAdminRequest,
         projectId: params.projectId,
-        requestPath: event.url.pathname,
       },
     }
   },

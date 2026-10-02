@@ -1,9 +1,9 @@
 <script lang="ts">
 // CONTEXT
-import { setImageCtx } from '$lib/context/image.svelte'
+import { setImageCtx } from '#lib/context/image.svelte.js'
 // TYPES
 import type { Snippet } from 'svelte'
-import type { ImageProviderModel } from '$lib/context/imageProvider.types'
+import type { ImageProviderModel } from '#lib/context/imageProvider.types.js'
 
 // PROVIDERS
 

@@ -2,11 +2,11 @@
 // PATTERN PRIMITIVES
 import * as ResourcePanelPrimitive from './components'
 // BITS
-import { PanelRoot } from '$lib/bits/patterns/panels'
-import Info from '$lib/bits/patterns/panels/components/info/Maps.svelte'
+import { PanelRoot } from '#lib/bits/patterns/panels/index.js'
+import Info from '#lib/bits/patterns/panels/components/info/Maps.svelte'
 import X from 'virtual:icons/proicons/cancel-circle'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { ResourcePanelProps } from './resourcePanel.types'
 let isInfoOpen = $state(false)
@@ -29,7 +29,7 @@ let { model, footer }: ResourcePanelProps = $props()
           class="ml-auto rounded-full p-2 text-muted-foreground hover:bg-surface"
           aria-label={m.menu_about()}
           aria-expanded={isInfoOpen}
-          onclick={() => isInfoOpen = !isInfoOpen}
+          onclick={() => (isInfoOpen = !isInfoOpen)}
         >
           <span class="text-2xl font-medium" aria-hidden="true">?</span>
         </button>

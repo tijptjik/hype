@@ -1,6 +1,6 @@
 <script lang="ts">
-import { cx } from '$lib/bits'
-import * as ImagePrimitive from '$lib/bits/patterns/images/components'
+import { cx } from '#lib/bits/index.js'
+import * as ImagePrimitive from '#lib/bits/patterns/images/components/index.js'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import type { MainVisualSectionImageProps } from './main.types'
 

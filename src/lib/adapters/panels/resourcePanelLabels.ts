@@ -1,7 +1,7 @@
 // I18N
-import { getI18n } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
 // TYPES
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 
 /**
  * Resolves the compact label shared by hierarchy breadcrumbs and selected tags.

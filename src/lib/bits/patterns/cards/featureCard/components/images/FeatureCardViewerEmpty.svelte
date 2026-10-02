@@ -1,13 +1,13 @@
 <script lang="ts">
 // CONTEXT
-import { getCardCtx } from '$lib/context/card.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getCardCtx } from '#lib/context/card.svelte.js'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // AUTH
-import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
+import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums'
+import { FeatureCardMode } from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import CameraIcon from 'virtual:icons/proicons/camera'
 

@@ -1,46 +1,47 @@
 <script lang="ts">
+import type { ReadonlyURL } from '$app/state'
 // SVELTEKIT
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import { page } from '$app/state'
 import { onDestroy, untrack } from 'svelte'
 import { watch } from 'runed'
 // I18N
-import { getLocale, m } from '$lib/i18n'
+import { getLocale, m } from '#lib/i18n.js'
 // ANIMATION
 import { fade } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
 // BITS COMPONENTS
-import { Button } from '$lib/bits'
+import { Button } from '#lib/bits/index.js'
 // LIB
 import {
   createMarkerRenderer,
   getUserMarkerStyleVariant,
   USER_MARKER_STYLE_PARAM,
   type MarkerRenderer,
-} from '$lib/map/markers'
+} from '#lib/map/markers.js'
 import {
   getDefaultMapStyleKey,
   getMapStyleDefinition,
   isMapStyleKey,
-} from '$lib/map/styles'
-import { getFeatureViewportQuery } from '$lib/map/featureSpatial'
-import { getMarkerRetentionBudget } from '$lib/map/markerRetention'
-import { featureQueryKey } from '$lib/client/services/featureQuery'
+} from '#lib/map/styles/index.js'
+import { getFeatureViewportQuery } from '#lib/map/featureSpatial.js'
+import { getMarkerRetentionBudget } from '#lib/map/markerRetention.js'
+import { featureQueryKey } from '#lib/client/services/featureQuery.js'
 import {
   applyMapCanvasBackground,
   resolveRuntimeMapStyle,
-} from '$lib/map/styles/runtime'
-import { createMapController, type MapController } from '$lib/map/controller'
-import MapSurface from '$lib/bits/custom/map/MapSurface.svelte'
+} from '#lib/map/styles/runtime.js'
+import { createMapController, type MapController } from '#lib/map/controller.js'
+import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 import { GeolocateControl, NavigationControl } from 'svelte-maplibre-gl'
 // ICONS
 import Square3Stack3d from 'virtual:icons/proicons/layers'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // TYPES
 import type {
   LngLatLike,
@@ -49,11 +50,12 @@ import type {
   Point,
   PointLike,
 } from 'maplibre-gl'
+
 import * as maplibregl from 'maplibre-gl'
 import type { Point as GeoJSONPoint } from 'geojson'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type { StyleSpecification } from 'maplibre-gl'
-import type { FeatureQueryChannel } from '$lib/context/featureQuery.types'
+import type { FeatureQueryChannel } from '#lib/context/featureQuery.types.js'
 
 /**
  * Application map adapter. Context and route policy stay at this boundary;
@@ -98,11 +100,13 @@ let mapContainer: HTMLDivElement
 
 // CONTEXT
 const appCtx = getAppCtx()
+
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
 
 // STATE
 let lastHorizontalOffset = $state(0)
+
 let isAnimating = $state(false)
 let isTrackingMapUrl = $state(false)
 let detachMapUrlTracking: (() => void) | null = null
@@ -117,7 +121,6 @@ let featureCardDescriptionExpanded = $state(false)
 let markerRenderer: MarkerRenderer | null = null
 let markerRendererMap: MaplibreMap | undefined
 let mapStyleAbortController: AbortController | null = null
-
 const MAP_TRACKING_PARAM = 'mapTracking'
 const MAP_LNG_PARAM = 'lng'
 const MAP_LAT_PARAM = 'lat'
@@ -131,6 +134,7 @@ const DEFAULT_MAP_VIEW = {
   zoom: 14,
   pitch: 45,
 }
+
 const MIN_MAP_ZOOM = 9
 const FEATURE_PORTAL_FLY_TO_DELAY_MS = 300
 const FEATURE_PORTAL_FLY_TO_DURATION_MS = 2000
@@ -140,11 +144,11 @@ const parseNumericSearchParam = (value: string | null): number | null => {
   if (!value) return null
 
   const parsedValue = Number(value)
+
   return Number.isFinite(parsedValue) ? parsedValue : null
 }
-
 const getTrackedMapViewFromUrl = (
-  url: URL,
+  url: ReadonlyURL,
 ): {
   center: [number, number]
   bearing: number
@@ -167,8 +171,7 @@ const getTrackedMapViewFromUrl = (
 
 const formatMapViewNumber = (value: number, digits: number): string =>
   value.toFixed(digits).replace(/\.?0+$/, '')
-
-const isMapTrackingEnabled = (url: URL): boolean =>
+const isMapTrackingEnabled = (url: ReadonlyURL): boolean =>
   url.searchParams.get(MAP_TRACKING_PARAM) === 'true'
 
 const syncMapViewToUrl = (map: MaplibreMap | undefined): void => {
@@ -185,7 +188,6 @@ const syncMapViewToUrl = (map: MaplibreMap | undefined): void => {
   url.searchParams.set(MAP_ZOOM_PARAM, formatMapViewNumber(map.getZoom(), 2))
   url.searchParams.set(MAP_BEARING_PARAM, formatMapViewNumber(map.getBearing(), 1))
   url.searchParams.set(MAP_PITCH_PARAM, formatMapViewNumber(map.getPitch(), 1))
-
   window.history.replaceState(window.history.state, '', url.toString())
 }
 
@@ -201,7 +203,6 @@ const clearTrackedMapViewFromUrl = (): void => {
   url.searchParams.delete(MAP_ZOOM_PARAM)
   url.searchParams.delete(MAP_BEARING_PARAM)
   url.searchParams.delete(MAP_PITCH_PARAM)
-
   window.history.replaceState(window.history.state, '', url.toString())
 }
 
@@ -232,6 +233,7 @@ const updateMapUrlTracking = (): void => {
   detachMapUrlTracking = () => {
     map.off('moveend', onMoveEnd)
   }
+
   syncMapViewToUrl(map)
 }
 
@@ -372,6 +374,7 @@ const projectMarkerThemes = $derived.by(() => {
 })
 // MAP SURFACE LIFECYCLE
 let geolocateControl: GeolocateControlWithPrivateFields | undefined = $state(undefined)
+
 let geolocationFixStarted = false
 let geolocationLoadMap: MaplibreMap | null = null
 let geolocationLoadHandler: (() => void) | null = null
@@ -450,6 +453,7 @@ const setupMap = (map: MaplibreMap): void => {
             latitude <= 22.4393278 &&
             longitude >= 114.0028131 &&
             longitude <= 114.3228131
+
           if (!inHongKong) {
             console.warn(
               'User location outside Hong Kong bounds, disabling location tracking',
@@ -475,9 +479,14 @@ const setupMap = (map: MaplibreMap): void => {
           }
         },
         error => console.error('Error getting geolocation:', error),
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: Infinity },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: Infinity,
+        },
       )
     }
+
     if (map.loaded()) {
       configureGeolocation()
     } else if (geolocationLoadMap !== map) {
@@ -487,6 +496,7 @@ const setupMap = (map: MaplibreMap): void => {
         geolocationLoadHandler = null
         configureGeolocation()
       }
+
       map.once('load', geolocationLoadHandler)
     }
   }
@@ -522,7 +532,9 @@ $effect(() => {
 
 $effect(() => {
   const map = activeMapInstance
+
   if (!map || !initialStyle) return
+
   applyMapCanvasBackground(mapContainer, initialStyle, map)
 })
 
@@ -548,6 +560,7 @@ $effect(() => {
         console.error('Failed to resolve map style', error)
       }
     })
+
   return () => abortController.abort()
 })
 
@@ -590,10 +603,12 @@ onDestroy(() => {
 $effect(() => {
   const handleDescriptionExpandedChange = (event: Event): void => {
     const customEvent = event as CustomEvent<{ expanded?: boolean }>
+
     featureCardDescriptionExpanded = Boolean(customEvent.detail?.expanded)
 
     if (featureCardDescriptionExpanded) {
       window.clearTimeout(portalRecenterTimeout)
+
       return
     }
 
@@ -664,11 +679,13 @@ $effect(() => {
     appCtx.featureLoadState = 'complete'
     return
   }
+
   const timer = setTimeout(() => {
     void appCtx.loadFeatureQuery('map', input).catch(error => {
       console.error('[Map features] Query failed:', error)
     })
   }, 120)
+
   return () => clearTimeout(timer)
 })
 
@@ -683,16 +700,19 @@ $effect(() => {
     untrack(() => appCtx.cacheCtx.featureQueries.facets.clear())
     return
   }
+
   const timer = setTimeout(() => {
     void appCtx.loadFeatureQuery('facets', input).catch(error => {
       console.error('[Feature counts] Query failed:', error)
     })
   }, 120)
+
   return () => clearTimeout(timer)
 })
 
 $effect(() => {
   const counts = appCtx.cacheCtx.featureQueries.facets.facets?.divisions ?? null
+
   untrack(() => appCtx.placeCtx.setNeighbourhoodCounts(counts))
 })
 
@@ -705,7 +725,9 @@ $effect(() => {
         .then(() => appCtx.retainFeatureQueryRows(channel as FeatureQueryChannel))
     }
   }
+
   window.addEventListener('focus', onFocus)
+
   return () => window.removeEventListener('focus', onFocus)
 })
 
@@ -768,6 +790,7 @@ $effect(() => {
   })
 
   observer.observe(featureCardElement)
+
   if (featureCardViewport) observer.observe(featureCardViewport)
   if (featureCardPortal) observer.observe(featureCardPortal)
 
@@ -776,7 +799,6 @@ $effect(() => {
   }
 
   document.addEventListener('containerscrollend', handleScrollEnd)
-
   schedulePortalRecenter()
 
   return () => {
@@ -802,6 +824,7 @@ $effect(() => {
         (horizontalOffset === 0 ? lastHorizontalOffset : -horizontalOffset),
       centerInPx.y,
     ]
+
     const newCenter: LngLatLike = map.unproject(newPoint)
 
     lastHorizontalOffset = horizontalOffset
@@ -811,6 +834,7 @@ $effect(() => {
       isAnimating = false
       map.off('moveend', onMoveEnd)
     }
+
     map.on('moveend', onMoveEnd)
 
     // Start the animation
@@ -840,10 +864,22 @@ $effect(() => {
       bind:map={activeMapInstance}
       class="absolute inset-0"
       style={initialStyle}
-      center={(isMapTrackingEnabled(page.url) ? getTrackedMapViewFromUrl(page.url) : DEFAULT_MAP_VIEW).center}
-      bearing={(isMapTrackingEnabled(page.url) ? getTrackedMapViewFromUrl(page.url) : DEFAULT_MAP_VIEW).bearing}
-      zoom={(isMapTrackingEnabled(page.url) ? getTrackedMapViewFromUrl(page.url) : DEFAULT_MAP_VIEW).zoom}
-      pitch={(isMapTrackingEnabled(page.url) ? getTrackedMapViewFromUrl(page.url) : DEFAULT_MAP_VIEW).pitch}
+      center={(isMapTrackingEnabled(page.url)
+        ? getTrackedMapViewFromUrl(page.url)
+        : DEFAULT_MAP_VIEW
+      ).center}
+      bearing={(isMapTrackingEnabled(page.url)
+        ? getTrackedMapViewFromUrl(page.url)
+        : DEFAULT_MAP_VIEW
+      ).bearing}
+      zoom={(isMapTrackingEnabled(page.url)
+        ? getTrackedMapViewFromUrl(page.url)
+        : DEFAULT_MAP_VIEW
+      ).zoom}
+      pitch={(isMapTrackingEnabled(page.url)
+        ? getTrackedMapViewFromUrl(page.url)
+        : DEFAULT_MAP_VIEW
+      ).pitch}
       minZoom={MIN_MAP_ZOOM}
       hash={false}
       attributionControl={false}
@@ -854,14 +890,18 @@ $effect(() => {
       {#if showControls && appCtx.user}
         <GeolocateControl
           bind:control={geolocateControl}
-          {...({
+          {...{
             position: 'bottom-right',
-            positionOptions: { timeout: 5000, enableHighAccuracy: true, maximumAge: Infinity },
+            positionOptions: {
+              timeout: 5000,
+              enableHighAccuracy: true,
+              maximumAge: Infinity,
+            },
             trackUserLocation: true,
             showUserHeading: true,
             showUserLocation: true,
             autoTrigger: false,
-          } satisfies GeolocateControlProps)}
+          } satisfies GeolocateControlProps}
         />
         <NavigationControl
           position="bottom-right"
@@ -871,7 +911,12 @@ $effect(() => {
       {/if}
     </MapSurface>
   {/if}
-  {#if showControls && appCtx.user && activeMapInstance && appCtx.state.resources.layer.length > 0 && !appCtx.state.prisms.layer.length && !appCtx.isPanelOpen(Panel.prisms)}
+  {#if showControls &&
+    appCtx.user &&
+    activeMapInstance &&
+    appCtx.state.resources.layer.length > 0 &&
+    !appCtx.state.prisms.layer.length &&
+    !appCtx.isPanelOpen(Panel.prisms)}
     <!-- biome-ignore lint/a11y/useSemanticElements: composite prompt contains a nested button, so this cannot be a native button. -->
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"

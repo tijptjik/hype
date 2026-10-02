@@ -1,40 +1,42 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
-import { env as publicEnv } from '$env/dynamic/public'
+import { PUBLIC_ASSET_BASE_URL, PUBLIC_PREVIEW_ASSET_BASE_URL } from '$app/env/public'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // IMAGE
-import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
+import { toCloudflareImageWorkerPath } from '#lib/images/delivery.js'
 import {
   extractImageUploadMetadata,
   type ExtractedImageUploadMetadata,
-} from '$lib/images/metadata'
-import { normalizeUploadFileForAssetPipeline } from '$lib/images/upload'
+} from '#lib/images/metadata.js'
+import { normalizeUploadFileForAssetPipeline } from '#lib/images/upload.js'
 // UTILS
-import { resolveAppStage } from '$lib'
+import { resolveAppStage } from '#lib'
 // SERVICES
-import { adminIntentOrder, intentOrder } from '$lib/api/services/image'
+import { adminIntentOrder, intentOrder } from '#lib/api/services/image.js'
 // NAVIGATION
-import { getUrlForResource } from '$lib/navigation'
-import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types'
-import type { ProjectGetState } from '$lib/db/zod/schema/project.types'
-import type { HubGetState } from '$lib/db/zod/schema/hub.types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import { getUrlForResource } from '#lib/navigation/index.js'
+import type { OrganisationGetState } from '#lib/db/zod/schema/organisation.types.js'
+import type { ProjectGetState } from '#lib/db/zod/schema/project.types.js'
+import type { HubGetState } from '#lib/db/zod/schema/hub.types.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 // ENUMS
-import { FirstClassResource, ImageContextResource } from '$lib/enums'
+import { FirstClassResource, ImageContextResource } from '#lib/enums.js'
 // TYPES
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { Id } from '$lib/types'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+
+import type { Id } from '#lib/types.js'
 import type {
   ImageCtxConstructorOptions,
   NormalizedImageUploadAsset,
-} from '$lib/context/imageProvider.types'
-import type { PreviewStage } from '$lib/map/renders/render.types'
+} from '#lib/context/imageProvider.types.js'
+import type { PreviewStage } from '#lib/map/renders/render.types.js'
 import type {
   GalleryObjectFit,
   ViewerRenderable,
   ViewerRenderableStatus,
-} from '$lib/bits/patterns/images/images.types'
+} from '#lib/bits/patterns/images/images.types.js'
+
 import type {
   Image,
   ImageContextEnvelope,
@@ -46,15 +48,13 @@ import type {
   ImageDBBasic,
   ImageNew,
   ImageMetadataBasic,
-} from '$lib/db/zod/schema/image.types'
+} from '#lib/db/zod/schema/image.types.js'
 // CONTEXT
-import type { ImageCtx } from '$lib/context/image.svelte'
+import type { ImageCtx } from '#lib/context/image.svelte.js'
+
 import { hashicon } from '@emeraldpay/hashicon'
 
-type FeatureImageProviderOrganisation = {
-  id?: string | null
-  code?: string | null
-}
+type FeatureImageProviderOrganisation = { id?: string | null; code?: string | null }
 
 type FeatureImageProviderProject = {
   id?: string | null
@@ -134,7 +134,7 @@ export async function prepareImageUpload(
   normalizedUpload: NormalizedImageUploadAsset
   metadata: ImageMetadataBasic & { metadata?: Record<string, string> | null }
   auth: Awaited<
-    ReturnType<typeof import('$lib/api/server/image.remote')['authImageUpload']>
+    ReturnType<typeof import('#lib/api/server/image.remote.js')['authImageUpload']>
   >
   isAdminRequest: boolean
   persist: {
@@ -191,6 +191,7 @@ export async function prepareImageUpload(
     links: uploadCtx.links,
     meta: { isAdminRequest },
   })
+
   const authAt = now()
 
   return {
@@ -310,14 +311,14 @@ export async function uploadAndProcessImage(
 // ═══════════════════════
 // 3. UPLOAD / URL UTILS
 // ═══════════════════════
-
 const DEFAULT_PUBLIC_ASSET_BASE_URL = 'https://assets.hype.hk'
+
 const DEFAULT_PUBLIC_PREVIEW_ASSET_BASE_URL = 'https://assets.preview.hype.hk'
 const DEFAULT_LOCAL_ASSET_BASE_URL = 'http://assets.hype.localhost'
 
 const resolvePublicAssetBaseUrl = (): string => {
   const configuredBaseUrl =
-    publicEnv.PUBLIC_ASSET_BASE_URL || import.meta.env.PUBLIC_ASSET_BASE_URL || ''
+    PUBLIC_ASSET_BASE_URL || import.meta.env.PUBLIC_ASSET_BASE_URL || ''
 
   if (configuredBaseUrl) {
     return configuredBaseUrl
@@ -328,9 +329,7 @@ const resolvePublicAssetBaseUrl = (): string => {
 
 const resolvePreviewAssetBaseUrl = (): string => {
   const configuredBaseUrl =
-    publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL ||
-    import.meta.env.PUBLIC_PREVIEW_ASSET_BASE_URL ||
-    ''
+    PUBLIC_PREVIEW_ASSET_BASE_URL || import.meta.env.PUBLIC_PREVIEW_ASSET_BASE_URL || ''
 
   if (configuredBaseUrl) {
     return configuredBaseUrl
@@ -402,8 +401,8 @@ export const resolveImageAssetBaseUrl = (
  * eagerly initialize the SvelteKit remote runtime in test and browser contexts.
  */
 const loadImageRemotes = async (): Promise<
-  typeof import('$lib/api/server/image.remote')
-> => await import('$lib/api/server/image.remote')
+  typeof import('#lib/api/server/image.remote.js')
+> => await import('#lib/api/server/image.remote.js')
 
 export async function buildBasicMetadataDocument(
   normalizedUpload: NormalizedImageUploadAsset,
@@ -460,8 +459,10 @@ export async function preloadImageUrl(url: string): Promise<void> {
       } catch {
         // Firefox can reject decode() even when the image is already paintable.
       }
+
       resolve()
     }
+
     image.onerror = event => reject(event)
     image.src = url
   })
@@ -496,6 +497,7 @@ export async function waitForThumbnailReadyEvent(params: {
 
     const settle = (value: boolean): void => {
       if (settled) return
+
       settled = true
       clearTimeout(timeoutId)
       eventSource.close()
@@ -547,6 +549,7 @@ export function sortGalleryItems(itemsToSort: ViewerRenderable[]): ViewerRendera
       'research',
       'closeUp',
     ] as const
+
     const aIntent = intentOrder.indexOf(
       (a.intent ?? 'undefined') as (typeof intentOrder)[number],
     )
@@ -598,6 +601,7 @@ export function getGalleryItemTargetImageId(
   if (!itemId) return null
 
   const item = items.find(candidate => candidate.id === itemId)
+
   if (!item) return null
 
   return getGalleryItemSavedImageId(item) ?? item.id
@@ -618,6 +622,7 @@ export function getGalleryItemThumbnailStatusId(
   if (!itemId) return null
 
   const item = items.find(candidate => candidate.id === itemId)
+
   if (!item) return itemId
 
   return getGalleryItemSavedImageId(item) ?? itemId
@@ -800,9 +805,7 @@ export function getImageSrc(
     const imageEnvelope =
       input && typeof input === 'object' && 'image' in input
         ? (input as ImageContextEnvelope | ImageCtxEnvelope)
-        : ({
-            image: input,
-          } as ImageContextEnvelope)
+        : ({ image: input } as ImageContextEnvelope)
 
     return getURLfromImage({
       image: imageEnvelope,
@@ -887,9 +890,11 @@ export function getFeatureImageProviderOptions(params: {
     isAdminMode: true,
     isValid,
     image: isValid ? ((feature?.image as ImageCtxEnvelope | null) ?? null) : undefined,
+
     images: isValid
       ? ((feature?.images as ImageCtxEnvelope[] | null) ?? null)
       : undefined,
+
     context:
       isValid && feature && organisation && project
         ? ({
@@ -975,6 +980,7 @@ export function sortImages(images: Image[] | ImageDBFlat[], isAdmin: boolean = f
       // Priority 1: Unpublished with no intent (undefined) come first
       const aIsUnpublishedNoIntent =
         !a.isPublished && (!a.intent || a.intent === 'undefined')
+
       const bIsUnpublishedNoIntent =
         !b.isPublished && (!b.intent || b.intent === 'undefined')
 
@@ -1018,9 +1024,11 @@ export function extractVersionFromImageUrl(
   if (!url) return null
 
   const match = url.match(/\/v(\d+)\//)
+
   if (!match) return null
 
   const parsed = Number.parseInt(match[1] ?? '', 10)
+
   return Number.isFinite(parsed) ? parsed : null
 }
 
@@ -1059,11 +1067,13 @@ export function getFeatureIdenticonUrl(seed: string): string {
     for (let column = 0; column < Math.ceil(gridSize / 2); column += 1) {
       const bitIndex = row * Math.ceil(gridSize / 2) + column
       const isFilled = ((hash >>> (bitIndex % 24)) & 1) === 1
+
       if (!isFilled) continue
 
       const mirroredColumn = gridSize - 1 - column
       const x = offset + column * cellSize
       const y = offset + row * cellSize
+
       cells.push(
         `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="3" fill="${foreground}"/>`,
       )
@@ -1105,6 +1115,7 @@ export async function updateImagePresentationMode(options: {
 }): Promise<boolean> {
   const currentImageFromCtx = options.imageCtx?.activeImage?.image ?? null
   const currentImage = options.currentImage ?? currentImageFromCtx ?? null
+
   if (!currentImage?.id) return false
 
   const nextMode =
@@ -1114,12 +1125,13 @@ export async function updateImagePresentationMode(options: {
       : options.nextChecked
         ? 'cover'
         : 'contain')
-
   const currentMode = currentImage.presentationMode ?? 'contain'
+
   if (!nextMode) return false
   if (nextMode === currentMode) return false
 
   let ctx = options.ctx
+
   if (!ctx && options.imageCtx) {
     try {
       ctx = options.imageCtx.getCtx()
@@ -1153,11 +1165,7 @@ export async function updateImagePresentationMode(options: {
 export function setEntityImagePresentationMode<
   TState extends {
     data?: {
-      image?: {
-        image?: {
-          presentationMode?: 'cover' | 'contain'
-        } | null
-      } | null
+      image?: { image?: { presentationMode?: 'cover' | 'contain' } | null } | null
     } | null
   } | null,
 >(state: TState, mode: 'cover' | 'contain'): boolean {
@@ -1211,6 +1219,7 @@ export async function checkCameraAvailability() {
 
     // Check for video input devices
     const devices = await navigator.mediaDevices.enumerateDevices()
+
     const hasVideoInput = devices.some(device => device.kind === 'videoinput')
 
     if (!hasVideoInput) {

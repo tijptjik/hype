@@ -4,19 +4,19 @@ import { toast } from 'svelte-sonner'
 // BITS UI
 import { Dialog } from 'bits-ui'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // AUTH
-import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
+import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // SERVICES
-import { upsertNewFeatureDraft } from '$lib/client/services/task'
+import { upsertNewFeatureDraft } from '#lib/client/services/task.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // ENUMS
-import { NewFeatureMode } from '$lib/enums'
+import { NewFeatureMode } from '#lib/enums.js'
 // ICONS
 import Check from 'virtual:icons/proicons/checkmark'
 import ChevronRight from 'virtual:icons/proicons/chevron-right'
@@ -27,9 +27,9 @@ import Search from 'virtual:icons/proicons/search'
 import Users from 'virtual:icons/proicons/person-multiple'
 import X from 'virtual:icons/proicons/cancel'
 // TYPES
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 import type { Point } from 'geojson'
 
 const appCtx = getAppCtx()

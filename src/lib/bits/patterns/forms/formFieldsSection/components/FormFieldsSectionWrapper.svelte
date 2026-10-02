@@ -4,9 +4,9 @@ import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
 import { fade, slide } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 import Item from './FormFieldsSectionItem.svelte'
 import Loading from './FormFieldsSectionLoading.svelte'
 // ICONS

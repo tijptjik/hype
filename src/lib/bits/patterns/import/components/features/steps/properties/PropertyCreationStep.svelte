@@ -2,16 +2,16 @@
 // SVELTE
 import { untrack } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // API
-import { createProjectProperty } from '$lib/api/server/property.remote'
-import { translateText } from '$lib/api/server/translation.remote'
+import { createProjectProperty } from '#lib/api/server/property.remote.js'
+import { translateText } from '#lib/api/server/translation.remote.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { Switch } from '$lib/bits/custom/switch'
-import { Swap } from '$lib/bits/custom/swap'
+import { Switch } from '#lib/bits/custom/switch/index.js'
+import { Swap } from '#lib/bits/custom/swap/index.js'
 // ICONS
 import Check from 'virtual:icons/proicons/checkmark'
 import Pencil from 'virtual:icons/proicons/pencil'
@@ -26,10 +26,10 @@ import type {
   FieldDiscriminator,
   LocaleKey,
   Property,
-} from '$lib/client/services/import/types'
-import type { ProjectPropertyForm } from '$lib/db/zod/schema/property.types'
+} from '#lib/client/services/import/types.js'
+import type { ProjectPropertyForm } from '#lib/db/zod/schema/property.types.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 
 // NANOID
 const nanoid = customAlphabet(

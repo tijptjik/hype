@@ -1,15 +1,15 @@
 // SVELTE
-import { error, json } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { eq, type AnyColumn } from 'drizzle-orm'
 // LIB
-import { ADMIN_PATH } from '$lib'
+import { ADMIN_PATH } from '#lib'
 // DB
-import client, { createJsonPathCondition, validateTableColumns } from '$lib/db'
-import { getUserRoles } from '$lib/db/services/user'
-import { chunkedInArray } from '$lib/utils/batch-query'
+import client, { createJsonPathCondition, validateTableColumns } from '#lib/db/index.js'
+import { getUserRoles } from '#lib/db/services/user.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // ENUMS
-import { RESERVED_PARAMETERS } from '$lib/enums'
+import { RESERVED_PARAMETERS } from '#lib/enums.js'
 // TYPES
 import type { SQL, Table } from 'drizzle-orm'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
@@ -21,7 +21,7 @@ import type {
   DbTable,
   Session,
   SessionUser,
-} from '$lib/types'
+} from '#lib/types.js'
 
 /**
  * Requires both parts of the request's authenticated session context.
@@ -43,7 +43,7 @@ export const JSONResponseOrError = async (result: unknown): Promise<Response> =>
   if (!result) {
     return error(404, "These aren't the signs you're looking for")
   }
-  return json(result)
+  return Response.json(result)
 }
 
 /**

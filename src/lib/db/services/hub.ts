@@ -14,7 +14,7 @@ import {
   featureImage,
   image,
   hubLayer,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // DB
 import {
   firstOrNull,
@@ -25,8 +25,8 @@ import {
 import { insertMany, insertManyRelated, replaceManyRelated } from '../crud'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
-import type { Database, ListResponse, Locale, LocaleKey, Id } from '$lib/types'
-import { chunkedInArray } from '$lib/utils/batch-query'
+import type { Database, ListResponse, Locale, LocaleKey, Id } from '#lib/types.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 import type {
   HubDB,
   HubDBNew,
@@ -35,8 +35,8 @@ import type {
   HubI18nNew,
   HubI18nPartial,
   HubOptsExtended,
-} from '$lib/db/zod/schema/hub.types'
-import { hubEntityWithRelations } from '$lib/api/services/hub'
+} from '#lib/db/zod/schema/hub.types.js'
+import { hubEntityWithRelations } from '#lib/api/services/hub.js'
 // TYPES
 
 type HubProbe = {
@@ -55,7 +55,6 @@ type HubUpdateProbe = {
 type HubCommandProbe = {
   id: string
 }
-
 
 // ═══════════════════════
 // TABLE OF CONTENTS

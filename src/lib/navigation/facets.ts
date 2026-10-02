@@ -1,5 +1,5 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import FormInputIcon from 'virtual:icons/proicons/button'
 import FileTextIcon from 'virtual:icons/proicons/file-text'
@@ -10,9 +10,9 @@ import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
 import TagIcon from 'virtual:icons/proicons/tag'
 import type { Component } from 'svelte'
 // ENUMS
-import type { FirstClassResource } from '$lib/enums'
+import type { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { FacetType } from '$lib/context/facets'
+import type { FacetType } from '#lib/context/facets.js'
 
 export const ADMIN_FACETS = {
   core: 'core',

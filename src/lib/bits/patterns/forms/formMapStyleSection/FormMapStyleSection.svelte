@@ -1,10 +1,10 @@
 <script lang="ts">
-import { LocalSearch, SectionHeader } from '$lib/bits/custom'
-import { m } from '$lib/i18n'
-import { MapStyleCard } from '$lib/bits/patterns/cards/mapStyleCard'
-import { REGISTERED_MAP_STYLE_CATALOG } from '$lib/map/styles/catalog'
-import { getMapStyleCatalogI18n } from '$lib/map/styles/i18n'
-import { getMapStyleRenderAssetPath } from '$lib/map/styles/render.shared'
+import { LocalSearch, SectionHeader } from '#lib/bits/custom/index.js'
+import { m } from '#lib/i18n.js'
+import { MapStyleCard } from '#lib/bits/patterns/cards/mapStyleCard/index.js'
+import { REGISTERED_MAP_STYLE_CATALOG } from '#lib/map/styles/catalog.js'
+import { getMapStyleCatalogI18n } from '#lib/map/styles/i18n.js'
+import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
 import * as FormMapStyleSectionPrimitive from './components'
 
 import type {
@@ -122,9 +122,11 @@ $effect(() => {
         visualPreviewClass="flex h-auto w-44 basis-44 min-w-44 items-center self-stretch [&_.bits-search-result-item__preview-image]:object-center"
         resultMap={{
           image: () => null,
-          title: (mapStyle: MapStyleSelectionItem) => mapStyle.i18n?.en?.name || mapStyle.code,
+          title: (mapStyle: MapStyleSelectionItem) =>
+            mapStyle.i18n?.en?.name || mapStyle.code,
           descriminator: (mapStyle: MapStyleSelectionItem) => mapStyle.code,
-          previewImage: (mapStyle: MapStyleSelectionItem) => mapStyle.previewImagePath || null,
+          previewImage: (mapStyle: MapStyleSelectionItem) =>
+            mapStyle.previewImagePath || null,
           variant: () => 'visual',
         }}
       />

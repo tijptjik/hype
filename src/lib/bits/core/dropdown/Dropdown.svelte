@@ -2,7 +2,7 @@
 // BITS-UI
 import { DropdownMenu } from 'bits-ui'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { DropdownProps } from './dropdown.types'
 

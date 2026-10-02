@@ -1,31 +1,31 @@
 // SVELTE
 import { onMount } from 'svelte'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // LABELS
 import { getResourcePanelShortName } from './resourcePanelLabels'
 // CONTEXT
-import { usePanelResources } from '$lib/context/panel-resources.svelte'
+import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 // NAVIGATION
 import {
   getSupportedFacetForResource,
   navigateOnAdminById,
   navigateOnAdmin,
   navigate,
-} from '$lib/navigation'
+} from '#lib/navigation/index.js'
 // ENUMS
-import { FirstClassResource, OmniMode, Panel } from '$lib/enums'
+import { FirstClassResource, OmniMode, Panel } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { OmniCtx } from '$lib/context/omni.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type {
   ResourcePanelModel,
   ResourcePanelRow,
   ResourcePanelSection,
-} from '$lib/bits/patterns/resourcePanel'
-import type { Resource } from '$lib/types'
-import type { PanelResourceType } from '$lib/api/services/resourcePage.types'
+} from '#lib/bits/patterns/resourcePanel/index.js'
+import type { Resource } from '#lib/types.js'
+import type { PanelResourceType } from '#lib/api/services/resourcePage.types.js'
 
 /**
  * Maps shared cache queries and selection/navigation intent into a render-only panel.

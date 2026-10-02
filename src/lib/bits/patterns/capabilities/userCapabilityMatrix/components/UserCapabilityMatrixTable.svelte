@@ -1,9 +1,9 @@
 <script lang="ts">
-import { Checkbox } from '$lib/bits/custom'
+import { Checkbox } from '#lib/bits/custom/index.js'
 import ChevronUpIcon from 'virtual:icons/proicons/chevron-up'
 import ChevronDownIcon from 'virtual:icons/proicons/chevron-down'
 import type { UserCapabilityMatrixProps } from '../userCapabilityMatrix.types'
-import type { CapabilityKey } from '$lib/capabilities.types'
+import type { CapabilityKey } from '#lib/capabilities.types.js'
 
 let {
   capabilityKeys,
@@ -66,8 +66,8 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
               <button
                 type="button"
                 class="bits-user-capability-matrix__sort-btn"
-                class:bits-user-capability-matrix__sort-btn--active={sortKey === 'user' &&
-                  sortDirection === 'asc'}
+                class:bits-user-capability-matrix__sort-btn--active={sortKey ===
+                  'user' && sortDirection === 'asc'}
                 aria-label="Sort users ascending"
                 onclick={() => setSort('user', 'asc')}
               >
@@ -76,8 +76,8 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
               <button
                 type="button"
                 class="bits-user-capability-matrix__sort-btn"
-                class:bits-user-capability-matrix__sort-btn--active={sortKey === 'user' &&
-                  sortDirection === 'desc'}
+                class:bits-user-capability-matrix__sort-btn--active={sortKey ===
+                  'user' && sortDirection === 'desc'}
                 aria-label="Sort users descending"
                 onclick={() => setSort('user', 'desc')}
               >

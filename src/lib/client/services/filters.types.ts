@@ -1,13 +1,13 @@
 // TYPES
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { Task } from '$lib/db/zod'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
-import type { Id } from '$lib/types'
-import type { RangeFilterValue } from '$lib/client/services/propertyFilters.types'
-import type { FirstClassResource } from '$lib/enums'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+import type { Task } from '#lib/db/zod/index.js'
+import type { Hub } from '#lib/db/zod/schema/hub.types.js'
+import type { Id } from '#lib/types.js'
+import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
+import type { FirstClassResource } from '#lib/enums.js'
 
 export type ResourceSortItemConfig = {
   value: string

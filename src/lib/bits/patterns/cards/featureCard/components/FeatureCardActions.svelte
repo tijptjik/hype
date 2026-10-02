@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // LOCAL
 import { getFeatureCardLayout } from '../featureCard.layout'
 import { getFeatureCardResponsiveWidth } from '../featureCard.utils'
@@ -66,7 +66,9 @@ const layout = $derived(
         {@render leftActions()}
       {/if}
     </div>
-    {#if responsiveCtx.isMobile && !centerRightActionsOnMobile && !leftActionsFillAvailableWidth}
+    {#if responsiveCtx.isMobile &&
+      !centerRightActionsOnMobile &&
+      !leftActionsFillAvailableWidth}
       <div
         class="pointer-events-none flex min-w-0 items-center justify-center self-center"
       ></div>
@@ -83,7 +85,8 @@ const layout = $derived(
         {@render rightActions()}
       {/if}
     </div>
-    {#if (!responsiveCtx.isMobile || centerRightActionsOnMobile) && !leftActionsFillAvailableWidth}
+    {#if (!responsiveCtx.isMobile || centerRightActionsOnMobile) &&
+      !leftActionsFillAvailableWidth}
       <div
         class="pointer-events-none flex min-w-0 items-center justify-end self-center"
       ></div>

@@ -1,19 +1,17 @@
 <script lang="ts">
 // THIRD PARTY
 // I18N
-import { getI18n } from '$lib/i18n'
-import { m } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
 // API
 // CONTEXT
-import type {
-  useDefaultMapSettingsModel,
-} from '$lib/adapters/panels/useDefaultMapSettingsModel.svelte'
+import type { useDefaultMapSettingsModel } from '#lib/adapters/panels/useDefaultMapSettingsModel.svelte.js'
 // BITS
-import { Switch, cx } from '$lib/bits'
+import { Switch, cx } from '#lib/bits/index.js'
 // COMPONENTS
-import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 // CONTEXT
 
@@ -68,20 +66,12 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
   >
     {#each orderedLayers as layer (layer.id)}
       {@const { organisation, project } = model.getHierarchy(layer)}
-      {@const organisationName = getI18n(
-          organisation,
-          'nameShort',
-          userPreferences
-        )}
+      {@const organisationName = getI18n(organisation, 'nameShort', userPreferences)}
       {@const projectName = model.getProjectName(project)}
-      {@const description = getI18n(
-          layer,
-          'description',
-          userPreferences
-        )}
+      {@const description = getI18n(layer, 'description', userPreferences)}
       {@const hasLongDescription =
-          Boolean(description && description !== '-') &&
-          description.length > DESCRIPTION_PREVIEW_THRESHOLD}
+        Boolean(description && description !== '-') &&
+        description.length > DESCRIPTION_PREVIEW_THRESHOLD}
       {@const isExpanded = isDescriptionExpanded(layer.id)}
       <div
         class="flex w-full flex-row items-start justify-between gap-3 px-4 py-2 pl-2"
@@ -106,9 +96,9 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
                   {#if description && description !== '-'}
                     <p
                       class={cx(
-                          'mt-0.5 block max-h-96 overflow-hidden text-sm leading-5 text-neutral-content transition-[max-height] duration-300 ease-in-out',
-                          !isExpanded && 'max-h-15',
-                        )}
+                        'mt-0.5 block max-h-96 overflow-hidden text-sm leading-5 text-neutral-content transition-[max-height] duration-300 ease-in-out',
+                        !isExpanded && 'max-h-15',
+                      )}
                     >
                       {description}
                     </p>
@@ -140,7 +130,7 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
           color="primary"
           checked={userLayerIds.has(layer.id)}
           disabled={!canSaveUserLayers || isSavingLayers}
-          onCheckedChange={(checked) => void toggleUserLayer(layer.id, checked === true)}
+          onCheckedChange={checked => void toggleUserLayer(layer.id, checked === true)}
         />
       </div>
     {/each}

@@ -2,9 +2,9 @@
 // SVELTE
 import { onMount } from 'svelte'
 // PROJECT
-import { authClient } from '$lib/auth/client'
+import { authClient } from '#lib/auth/client.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 let hasPassword = $state(true)
 let isLoading = $state(true)

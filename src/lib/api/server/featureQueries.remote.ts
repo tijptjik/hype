@@ -4,20 +4,23 @@ import { error } from '@sveltejs/kit'
 import { z } from 'zod'
 import { getResolution, isValidCell } from 'h3-js'
 // API
-import { guardedBatchQuery } from './remote'
-import { authorizeFeatureListForContext, toAuthMessage } from '$lib/api/services/authz'
-import { toQueryConditions, toRequestedListState } from '$lib/api/services/feature'
+import { guardedBatchQuery } from './guarded.js'
+import {
+  authorizeFeatureListForContext,
+  toAuthMessage,
+} from '#lib/api/services/authz/index.js'
+import { toQueryConditions, toRequestedListState } from '#lib/api/services/feature.js'
 // DB
 import {
   buildFeaturePrismConditions,
   featureQuerySignature,
   queryFeaturePage,
-} from '$lib/db/services/featureQuery'
+} from '#lib/db/services/featureQuery.js'
 // TYPES
 import type {
   FeatureQueryInput,
   FeatureQueryPage,
-} from '$lib/api/services/featureQuery.types'
+} from '#lib/api/services/featureQuery.types.js'
 
 const strings = z.array(z.string().min(1).max(200)).max(1000)
 const range = z

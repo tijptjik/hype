@@ -2,11 +2,11 @@
 // SVELTE
 import { onMount } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core/button'
+import { Button } from '#lib/bits/core/button/index.js'
 // LIB
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
 // ICONS
 import CameraIcon from 'virtual:icons/proicons/camera'
 import FolderOpenIcon from 'virtual:icons/proicons/folder-open'

@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import * as ImagePrimitive from './components'
 import type { AdminThumbnailProps } from './images.types'
 
@@ -75,7 +75,11 @@ async function handleDelete(): Promise<void> {
       {onError}
     />
 
-    {#if onIntentChange && !isDeleteMode && !isConfirmingDelete && !isUploading && !isUploadError}
+    {#if onIntentChange &&
+      !isDeleteMode &&
+      !isConfirmingDelete &&
+      !isUploading &&
+      !isUploadError}
       <ImagePrimitive.ThumbnailIntent
         {item}
         disabled={isIntentDisabled}

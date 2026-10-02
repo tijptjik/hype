@@ -1,16 +1,16 @@
 <script lang="ts">
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // API
 import {
   appendPropertyValues,
   getProperties,
   getPropertyValueAppendAccess,
-} from '$lib/api/server/property.remote'
-import { translateText } from '$lib/api/server/translation.remote'
+} from '#lib/api/server/property.remote.js'
+import { translateText } from '#lib/api/server/translation.remote.js'
 // I18N
-import { m, toLocaleKey } from '$lib/i18n'
+import { m, toLocaleKey } from '#lib/i18n.js'
 // TYPES
 import type {
   FeatureCSVColumn,
@@ -18,11 +18,11 @@ import type {
   PropertyValueI18nDB,
   Locale,
   Id,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey } from '#lib/types.js'
 
 type PropertyData = {
   key: string

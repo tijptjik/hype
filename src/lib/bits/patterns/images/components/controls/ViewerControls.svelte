@@ -1,12 +1,12 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import { Tooltip as TooltipPrimitive } from 'bits-ui'
-import { Button, SimpleTooltip, Swap } from '$lib/bits'
+import { Button, SimpleTooltip, Swap } from '#lib/bits/index.js'
 // LIB
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
 import {
   VIEWER_CONTROLS_BUTTON_CLASSES,
   VIEWER_CONTROLS_EDIT_GROUP_CLASSES,

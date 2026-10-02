@@ -1,8 +1,8 @@
 <script lang="ts">
 // QUERY
 // BITS
-import { LoadScreen, Toaster } from '$lib/bits/custom'
-import { cx } from '$lib/bits/utils'
+import { LoadScreen, Toaster } from '#lib/bits/custom/index.js'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { AppShellProps } from '../app.types'
 

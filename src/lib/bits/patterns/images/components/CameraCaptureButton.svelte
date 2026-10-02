@@ -1,10 +1,10 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core/button'
+import { Button } from '#lib/bits/core/button/index.js'
 // LIB
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
 // I18n
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import CameraIcon from 'virtual:icons/proicons/camera'
 

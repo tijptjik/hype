@@ -1,11 +1,13 @@
-import type { RemoteQuery } from '@sveltejs/kit'
+import type { RemoteQuery } from '$app/server'
+import { error } from '@sveltejs/kit'
+
 // Register panel query families for bounded single-flight mutation refreshes.
 import './resources.remote'
 // REMOTE
-import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
-import { error } from '@sveltejs/kit'
+import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
+
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocale } from '#lib/i18n.js'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 // AUTHORIZATION
@@ -18,7 +20,7 @@ import {
   ensureLayerCommandAllowed,
   toAuthMessage,
   toIssueDetailMessage,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // SERVICES
 import {
   getDuplicateValues,
@@ -26,7 +28,7 @@ import {
   toStableSignature,
   toBooleanStateResponseShape,
   toCreatedResponseShape,
-} from '$lib/api/services'
+} from '#lib/api/services/index.js'
 import {
   getLayerWithRelations,
   createLayerFromSubmission,
@@ -38,7 +40,7 @@ import {
   toLookupConditions,
   toQueryConditions,
   toRequestedListState,
-} from '$lib/api/services/layer'
+} from '#lib/api/services/layer.js'
 // DB
 import {
   getLayer as loadLayer,
@@ -53,17 +55,17 @@ import {
   updateLayerPublishedStateById,
   cascadeLayerArchivedStateToDescendants,
   cascadeLayerPublishedStateToDescendants,
-} from '$lib/db/services/layer'
+} from '#lib/db/services/layer.js'
 // SCHEMA
-import { layer } from '$lib/db/schema'
+import { layer } from '#lib/db/schema/index.js'
 import {
   GetQueryParamsSchema,
   LayerFormData,
   ListQueryParamsSchema,
   PublishLayerSchema,
   RemoveLayerSchema,
-} from '$lib/db/zod'
-import type { EntityResponse, Id, ListResponse, RelationShape } from '$lib/types'
+} from '#lib/db/zod/index.js'
+import type { EntityResponse, Id, ListResponse, RelationShape } from '#lib/types.js'
 import type {
   LayerCommandProbe,
   LayerDB,
@@ -72,8 +74,9 @@ import type {
   LayerListByProfile,
   LayerListParamsByProfile,
   LayerProfile,
-} from '$lib/db/zod/schema/layer.types'
-import { getValidQueryParams as validateQueryParams } from '$lib/api'
+} from '#lib/db/zod/schema/layer.types.js'
+
+import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -110,6 +113,7 @@ import { getValidQueryParams as validateQueryParams } from '$lib/api'
 const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toLayerProfile(params.meta?.profile, 'list')
+
   if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   const queryParams = validateQueryParams<LayerDB>(
@@ -139,7 +143,6 @@ const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) =
     normalizedPrisms,
     event.locals.hub.id ?? null,
   )
-
   const result = await listLayers(
     db,
     getLayerWithRelations(profile, Boolean(user.superAdmin)) as RelationShape,
@@ -147,11 +150,7 @@ const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) =
     event.locals.hub,
     params.pagination,
     params.sorting,
-    {
-      q: params.q,
-      filtersToApply,
-      locale: getLocale(),
-    },
+    { q: params.q, filtersToApply, locale: getLocale() },
   )
 
   return toListResponseShape(result, profile)
@@ -178,13 +177,12 @@ export const getLayers = getLayersQuery as unknown as <P extends LayerProfile = 
 const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toLayerProfile(params.meta?.profile, 'detail')
-  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
-  const normalizedParams = {
-    ...params,
-    refKey: 'id' as const,
-  }
 
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+
+  const normalizedParams = { ...params, refKey: 'id' as const }
   const probe = await probeLayerQuery(db, normalizedParams)
+
   if (!probe) {
     return toEntityResponseShape(null, profile)
   }
@@ -207,7 +205,6 @@ const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => 
       isArchived: probe.isArchived,
     } as Partial<LayerDB>,
   )
-
   const { conditions } = toQueryConditions(
     db,
     user,
@@ -217,7 +214,6 @@ const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => 
     undefined,
     event.locals.hub.id ?? null,
   )
-
   const result = await loadLayer(
     db,
     getLayerWithRelations(profile, Boolean(user.superAdmin)) as RelationShape,
@@ -250,10 +246,10 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   const { db, user, userRoles, invalid } = ctx
   const issue = ctx.issue
   const { meta, data } = params
-
   const layerId = meta?.id?.trim()
   const mode = meta?.mode
   const isSupportedMode = mode === 'create' || mode === 'update'
+
   if (!isSupportedMode) {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
@@ -265,8 +261,8 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     isVisible?: boolean
     isUserContributable?: boolean
   }>
-  const hasSubmittedProperties = submittedProperties.length > 0
 
+  const hasSubmittedProperties = submittedProperties.length > 0
   const duplicateSubmittedPropertyIds = getDuplicateValues(
     submittedProperties
       .map(property => property?.propertyId)
@@ -310,10 +306,10 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
   const targetLayerId = requireValue(layerId, () =>
     invalid(issue('MISSING_LAYER_ID')),
   ) as Id
-
   const current = requireValue(await probeLayerForUpdate(db, targetLayerId), () =>
     invalid(issue('LAYER_NOT_FOUND')),
   )
+
   // Layer updates do not support reparenting; reject a caller-controlled scope change.
   if (
     data.projectId !== current.projectId ||
@@ -369,7 +365,6 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     (await toEntityResponseShape(currentWithRelations, 'admin')).data,
     () => invalid(issue('LAYER_NOT_FOUND')),
   )
-
   const propertiesChanged =
     hasSubmittedProperties &&
     toStableSignature(toComparableLayerProperties(submittedProperties)) !==
@@ -413,6 +408,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
     }),
     () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
   )
+
   await updateI18n(db, data.i18n, current.id)
 
   if (propertiesChanged) {
@@ -462,10 +458,8 @@ export const publishLayer = guardedCommand(PublishLayerSchema, async (params, ct
       throw error(404, 'LAYER_NOT_FOUND')
     },
   )
-  await cascadeLayerPublishedStateToDescendants(db, {
-    layerId,
-    state: params.state,
-  })
+
+  await cascadeLayerPublishedStateToDescendants(db, { layerId, state: params.state })
 
   return toBooleanStateResponseShape(persisted, 'isPublished')
 })
@@ -501,18 +495,13 @@ export const archiveLayer = guardedCommand(RemoveLayerSchema, async (params, ctx
   )
 
   const persisted = requireValue(
-    await updateLayerArchivedStateById(db, {
-      id: layerId,
-      state: params.state,
-    }),
+    await updateLayerArchivedStateById(db, { id: layerId, state: params.state }),
     () => {
       throw error(404, 'LAYER_NOT_FOUND')
     },
   )
-  await cascadeLayerArchivedStateToDescendants(db, {
-    layerId,
-    state: params.state,
-  })
+
+  await cascadeLayerArchivedStateToDescendants(db, { layerId, state: params.state })
 
   return toBooleanStateResponseShape(persisted, 'isArchived')
 })
@@ -557,6 +546,7 @@ export const createLayer = guardedCommand(LayerFormData, async (params, ctx) => 
     onNotFound: message => {
       throw error(404, message)
     },
+
     onForbidden: message => {
       throw error(403, toAuthMessage(message))
     },

@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import Camera from 'virtual:icons/proicons/camera'
 import ImageIcon from 'virtual:icons/proicons/photo'

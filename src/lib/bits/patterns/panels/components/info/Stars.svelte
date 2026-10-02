@@ -1,5 +1,5 @@
 <script lang="ts">
-import * as m from '$lib/paraglide/messages'
+import * as m from '#lib/paraglide/messages.js'
 import { slide } from 'svelte/transition'
 let { isOpen = false } = $props<{
   isOpen?: boolean

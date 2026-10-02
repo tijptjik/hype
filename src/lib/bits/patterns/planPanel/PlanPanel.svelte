@@ -2,21 +2,21 @@
 // SVELTE
 import { onMount } from 'svelte'
 // I18N
-import { getFPI18n, getI18n, m } from '$lib/i18n'
+import { getFPI18n, getI18n, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // REMOTE
-import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
-import { getLayer } from '$lib/api/server/layer.remote'
-import { getProject } from '$lib/api/server/project.remote'
+import { getFeature, getFeatures } from '#lib/api/server/feature.remote.js'
+import { getLayer } from '#lib/api/server/layer.remote.js'
+import { getProject } from '#lib/api/server/project.remote.js'
 // SERVICES
-import { getURLfromImage } from '$lib/client/services/image'
+import { getURLfromImage } from '#lib/client/services/image.js'
 // BITS
-import { Button, PanelRoot as Panel } from '$lib/bits'
+import { Button, PanelRoot as Panel } from '#lib/bits/index.js'
 // COMPONENTS
-import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
+import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
 // ENUMS
-import { Panel as PanelType } from '$lib/enums'
+import { Panel as PanelType } from '#lib/enums.js'
 // ICONS
 import GripVerticalIcon from 'virtual:icons/lucide/grip-vertical'
 import MapPinnedIcon from 'virtual:icons/proicons/location'
@@ -25,13 +25,13 @@ import FootprintsIcon from 'virtual:icons/proicons/directions'
 import PlusIcon from 'virtual:icons/proicons/add'
 import FootPrints from 'virtual:icons/proicons/directions'
 // TYPES
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { ProjectDetailProfile } from '$lib/db/zod/schema/project.types'
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+import type { ImageContextEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { ProjectDetailProfile } from '#lib/db/zod/schema/project.types.js'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 // TYPES
-import type { Id } from '$lib/types'
+import type { Id } from '#lib/types.js'
 
 type PlanScheduleStop = {
   time: string
@@ -47,7 +47,6 @@ type PlanScheduleStop = {
   distanceFromPreviousKm: number | null
   distanceLabel: string
 }
-
 
 const appCtx = getAppCtx()
 
@@ -523,7 +522,8 @@ onMount(() => {
 </script>
 
 <Panel
-  isOpen={appCtx.isPanelOpen(panelProps.panelType) || appCtx.isPanelOpenVisually(panelProps.panelType)}
+  isOpen={appCtx.isPanelOpen(panelProps.panelType) ||
+    appCtx.isPanelOpenVisually(panelProps.panelType)}
   {...panelProps}
 >
   <Header

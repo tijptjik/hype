@@ -1,5 +1,5 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import MapPrimitive from './components/MapPrimitive.svelte'
 import type { FormMapSectionProps } from './formMapSection.types'
 

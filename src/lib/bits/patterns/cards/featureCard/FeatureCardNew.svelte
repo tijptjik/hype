@@ -2,9 +2,9 @@
 // SVELTE
 import { page } from '$app/state'
 // CONSTANTS
-import { NEW_REF } from '$lib'
+import { NEW_REF } from '#lib'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // BITS
 import FeatureCardActions from './components/FeatureCardActions.svelte'
 import FeatureCardBreadcrumbs from './components/FeatureCardBreadcrumbs.svelte'
@@ -15,21 +15,21 @@ import FeatureCardViewerContent from './components/FeatureCardViewerContent.svel
 import * as FeatureCardActionPrimitive from './components/actions'
 import * as FeatureCardNewPrimitive from './components/newFeature'
 // PROVIDERS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx, setCardCtx } from '$lib/context/card.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx, setResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getCardCtx, setCardCtx } from '#lib/context/card.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import { getResponsiveCtx, setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
-import { FeatureCardMode, ImageContextResource, NewFeatureMode } from '$lib/enums'
+import { FeatureCardMode, ImageContextResource, NewFeatureMode } from '#lib/enums.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type {
   Organisation,
   OrganisationDB,
-} from '$lib/db/zod/schema/organisation.types'
-import type { Project, ProjectDB } from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/organisation.types.js'
+import type { Project, ProjectDB } from '#lib/db/zod/schema/project.types.js'
 // LOCAL
 import { getFeatureCardLayout } from './featureCard.layout'
 import { getFeatureCardResponsiveWidth } from './featureCard.utils'
@@ -278,7 +278,10 @@ const imageProviderModel = useImageProviderModel(
 )
 </script>
 
-{#if appCtx.newFeatureMode === NewFeatureMode.card && feature && organisation && project}
+{#if appCtx.newFeatureMode === NewFeatureMode.card &&
+  feature &&
+  organisation &&
+  project}
   <ImageProvider model={imageProviderModel}>
     <FeatureCardRoot onContentVisibilityChange={handleRootContentVisibilityChange}>
       <div class="pointer-events-none flex min-h-0 flex-1 flex-col">

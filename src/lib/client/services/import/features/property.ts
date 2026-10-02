@@ -1,14 +1,14 @@
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
-import { getImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // API
-import { getProjectProperties } from '$lib/api/server/property.remote'
+import { getProjectProperties } from '#lib/api/server/property.remote.js'
 // TYPES
 import type {
   FieldDiscriminator,
   Locale,
   Property,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 type EnrichedPropertyValue = {
   propertyId?: string

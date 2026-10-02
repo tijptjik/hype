@@ -3,23 +3,21 @@
 import { fade, slide } from 'svelte/transition'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
-import { Scrollbar } from '$lib/bits/custom/scrollbar'
+import { Scrollbar } from '#lib/bits/custom/scrollbar/index.js'
 // REMOTE
-import { getImagesForIds } from '$lib/api/server/image.remote'
+import { getImagesForIds } from '#lib/api/server/image.remote.js'
 // SERVICES
-import { getURLfromImage } from '$lib/client/services/image'
+import { getURLfromImage } from '#lib/client/services/image.js'
 // NAVIGATION
 // TYPES
-import type { Id, ResourceContext } from '$lib/types'
-import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
-import type { UserProfile } from '$lib/db/zod/schema/user.types'
-import type {
-  useProfilePanelModel,
-} from '$lib/adapters/panels/useProfilePanelModel.svelte'
+import type { Id, ResourceContext } from '#lib/types.js'
+import type { ImageContextEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { UserProfile } from '#lib/db/zod/schema/user.types.js'
+import type { useProfilePanelModel } from '#lib/adapters/panels/useProfilePanelModel.svelte.js'
 import { untrack } from 'svelte'
 
 // MAGICAL CONSTANTS
@@ -457,7 +455,9 @@ const setupNextTrigger = () => {
   {#if userData?.contributedImages && typeof userData.contributedImages === 'object'}
     <div class="relative pb-3 pr-2.25">
       <div class="max-h-[75vh] space-y-0 overflow-auto" bind:this={viewport}>
-        {#each Object.entries(userData.contributedImages) as [projectId, imageIds] (projectId)}
+        {#each Object.entries(
+          userData.contributedImages,
+        ) as [projectId, imageIds] (projectId)}
           <div class="group-container px-1" bind:this={contents}>
             <!-- Sticky Group Header -->
             <button
@@ -469,7 +469,7 @@ const setupNextTrigger = () => {
                 <Icon
                   src={ChevronDown}
                   class="h-4 w-4 transition-transform duration-200 {collapsedGroups.has(
-                    projectId
+                    projectId,
                   )
                     ? '-rotate-90'
                     : ''}"
@@ -477,7 +477,9 @@ const setupNextTrigger = () => {
                 <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
                   {#if hierarchies?.[projectId]?.organisation}
                     <span class="text-primary"
-                      >{model.getOrganisationName(hierarchies?.[projectId]?.organisation)}</span
+                      >{model.getOrganisationName(
+                        hierarchies?.[projectId]?.organisation,
+                      )}</span
                     >
                   {/if}
                   {#if model.getProjectName(hierarchies?.[projectId]?.project)}
@@ -505,10 +507,10 @@ const setupNextTrigger = () => {
                       class="aspect-square cursor-pointer overflow-hidden rounded bg-base-200 transition-transform hover:scale-105"
                       data-image-id={imageId}
                       href={loadedImages.get(imageId)?.href}
-                      onclick={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const image = loadedImages.get(imageId);
+                      onclick={async e => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const image = loadedImages.get(imageId)
                         if (image?.featureId) {
                           model.onContributedImage(
                             image.featureId,
@@ -517,47 +519,50 @@ const setupNextTrigger = () => {
                             model.getProjectTitle(hierarchies?.[projectId]?.project),
                             userData.username ?? '',
                             loadedImages,
-                            projectImageIds
-                          );
+                            projectImageIds,
+                          )
                         } else {
                           // Fallback: If image not in loadedImages but is visible, try to load it
                           try {
                             const fallbackResult = await getImagesForIds({
                               ids: [imageId],
-                              meta: { isAdminRequest: true }
-                            });
+                              meta: { isAdminRequest: true },
+                            })
                             const fallbackEntity = fallbackResult?.data?.[0] as
                               | ImageContextEnvelope
-                              | undefined;
-                            const fallbackFeatureId = fallbackEntity?.ctxType === 'feature'
-                              ? fallbackEntity.ctxId
-                              : undefined;
+                              | undefined
+                            const fallbackFeatureId =
+                              fallbackEntity?.ctxType === 'feature'
+                                ? fallbackEntity.ctxId
+                                : undefined
                             if (fallbackEntity?.image && fallbackFeatureId) {
                               const fallbackImage = {
                                 ...fallbackEntity.image,
-                                featureId: fallbackFeatureId
-                              };
+                                featureId: fallbackFeatureId,
+                              }
                               // Add to loadedImages for future use
                               const processedImage = {
                                 ...fallbackImage,
                                 url: getURLfromImage({
                                   image: fallbackEntity,
                                   transformation: 'c_fill,h_256,w_256',
-                                  quality: 'auto'
+                                  quality: 'auto',
                                 }),
-                                href: `/features/${fallbackFeatureId}`
-                              };
-                              loadedImages.set(imageId as Id, processedImage);
+                                href: `/features/${fallbackFeatureId}`,
+                              }
+                              loadedImages.set(imageId as Id, processedImage)
 
                               model.onContributedImage(
                                 fallbackFeatureId,
                                 projectId,
                                 imageId,
-                                model.getProjectTitle(hierarchies?.[projectId]?.project),
+                                model.getProjectTitle(
+                                  hierarchies?.[projectId]?.project,
+                                ),
                                 userData.username ?? '',
                                 loadedImages,
-                                projectImageIds
-                              );
+                                projectImageIds,
+                              )
                             }
                           } catch (_error) {
                             // Silently handle errors for fallback loading

@@ -1,12 +1,12 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
 import * as CompletionFooterPrimitive from './components'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // SERVICES
-import { calculateOverallStats } from '$lib/client/services/stats'
+import { calculateOverallStats } from '#lib/client/services/stats.js'
 // ICONS
 import BookOpenIcon from 'virtual:icons/proicons/book-open'
 import ImageIcon from 'virtual:icons/proicons/photo'

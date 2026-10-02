@@ -1,10 +1,10 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import ImportSearchBox from '../../../shared/ImportSearchBox.svelte'
 // TYPES
-import type { UserValidationResult } from '$lib/client/services/import/types'
+import type { UserValidationResult } from '#lib/client/services/import/types.js'
 import type { ImportSearchBoxItem } from '../../../shared/importSearch.types'
 
 type Props = {

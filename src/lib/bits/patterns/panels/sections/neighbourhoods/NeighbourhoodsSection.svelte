@@ -1,16 +1,14 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
-import FilterBar from '$lib/bits/patterns/panels/components/common/FilterBar.svelte'
-import FilteredNeighbourhood from '$lib/bits/patterns/panels/components/items/FilteredNeighbourhood.svelte'
-import ResourceContainer from '$lib/bits/patterns/panels/components/common/ResourceContainer.svelte'
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
+import FilterBar from '#lib/bits/patterns/panels/components/common/FilterBar.svelte'
+import FilteredNeighbourhood from '#lib/bits/patterns/panels/components/items/FilteredNeighbourhood.svelte'
+import ResourceContainer from '#lib/bits/patterns/panels/components/common/ResourceContainer.svelte'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type {
-  useFilterPanelModel,
-} from '$lib/adapters/panels/useFilterPanelModel.svelte'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+import type { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
 
 let {
   model,

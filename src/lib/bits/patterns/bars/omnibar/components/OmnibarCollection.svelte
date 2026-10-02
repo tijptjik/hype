@@ -1,9 +1,9 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
 // BITS
-import { Button } from '$lib/bits'
+import { Button } from '#lib/bits/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import XMark from 'virtual:icons/proicons/cancel'
 // STYLES
@@ -113,7 +113,7 @@ $effect(() => {
   transition:slide={{
     duration: COLLECTION_SLIDE_DURATION_MS,
     axis: 'y',
-    delay: panelSlideDelay
+    delay: panelSlideDelay,
   }}
 >
   <div
@@ -128,7 +128,9 @@ $effect(() => {
     {:else}
       <ul class={OMNIBAR_COLLECTION_LIST_CLASSES} bind:this={listContainer}>
         {#each items as item, index}
-          {@const indicatorOpacities = getIndicatorOpacities(Math.abs(currentIndex - index))}
+          {@const indicatorOpacities = getIndicatorOpacities(
+            Math.abs(currentIndex - index),
+          )}
           <li>
             <button
               type="button"

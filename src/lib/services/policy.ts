@@ -1,7 +1,7 @@
 // I18N
-import { toLocaleKebab } from '$lib/i18n'
+import { toLocaleKebab } from '#lib/i18n.js'
 // TYPES
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey } from '#lib/types.js'
 // ASSETS
 import privacyPolicyTemplate from '../../../docs/policies/privacy.md?raw'
 import termsOfServiceTemplate from '../../../docs/policies/terms.md?raw'

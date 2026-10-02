@@ -9,7 +9,7 @@ import {
   getGalleryForegroundSrc,
   getGallerySceneKey,
   shouldUseDirectGalleryScene,
-} from '$lib/client/services/image'
+} from '#lib/client/services/image.js'
 // BITS
 import ImageSurface from './ImageSurface.svelte'
 // TYPES
@@ -312,7 +312,9 @@ onDestroy(() => {
   {/if}
 
   {#if previousScene}
-    {#if showBackdrop && previousScene.fit === 'fit' && getGalleryBackgroundSrc(previousScene.item)}
+    {#if showBackdrop &&
+      previousScene.fit === 'fit' &&
+      getGalleryBackgroundSrc(previousScene.item)}
       <div
         class="viewer-backdrop absolute inset-0"
         style={`opacity: ${crossfadeActive ? '0' : '1'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
@@ -341,9 +343,9 @@ onDestroy(() => {
               src={getGalleryForegroundSrc(previousScene.item)}
               alt={previousScene.item.alt ?? ''}
               style={getGalleryForegroundRotationStyle(previousScene.item)}
-              class={`absolute inset-0 h-full w-full ${previousScene.fit === 'cover'
-                ? 'object-cover'
-                : 'object-contain'} ${getForegroundRotationClass(previousScene.item)}`}
+              class={`absolute inset-0 h-full w-full ${
+                previousScene.fit === 'cover' ? 'object-cover' : 'object-contain'
+              } ${getForegroundRotationClass(previousScene.item)}`}
             >
           </div>
         </div>
@@ -366,7 +368,9 @@ onDestroy(() => {
   {/if}
 
   {#if displayedScene && !previousScene && !incomingScene}
-    {#if showBackdrop && displayedScene.fit === 'fit' && getGalleryBackgroundSrc(displayedScene.item)}
+    {#if showBackdrop &&
+      displayedScene.fit === 'fit' &&
+      getGalleryBackgroundSrc(displayedScene.item)}
       <div class="viewer-backdrop absolute inset-0">
         <img
           src={getGalleryBackgroundSrc(displayedScene.item)}
@@ -392,9 +396,9 @@ onDestroy(() => {
               src={getGalleryForegroundSrc(displayedScene.item)}
               alt={displayedScene.item.alt ?? ''}
               style={getGalleryForegroundRotationStyle(displayedScene.item)}
-              class={`absolute inset-0 h-full w-full ${displayedScene.fit === 'cover'
-                ? 'object-cover'
-                : 'object-contain'} ${getForegroundRotationClass(displayedScene.item)}`}
+              class={`absolute inset-0 h-full w-full ${
+                displayedScene.fit === 'cover' ? 'object-cover' : 'object-contain'
+              } ${getForegroundRotationClass(displayedScene.item)}`}
               onload={() => {
                 if (displayedScene) {
                   onCurrentItemLoad?.(displayedScene.item)
@@ -426,7 +430,9 @@ onDestroy(() => {
   {/if}
 
   {#if incomingScene}
-    {#if showBackdrop && incomingScene.fit === 'fit' && getGalleryBackgroundSrc(incomingScene.item)}
+    {#if showBackdrop &&
+      incomingScene.fit === 'fit' &&
+      getGalleryBackgroundSrc(incomingScene.item)}
       <div
         class="viewer-backdrop absolute inset-0"
         style={`opacity: ${crossfadeActive ? '1' : '0'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
@@ -455,9 +461,9 @@ onDestroy(() => {
               src={getGalleryForegroundSrc(incomingScene.item)}
               alt={incomingScene.item.alt ?? ''}
               style={getGalleryForegroundRotationStyle(incomingScene.item)}
-              class={`absolute inset-0 h-full w-full ${incomingScene.fit === 'cover'
-                ? 'object-cover'
-                : 'object-contain'} ${getForegroundRotationClass(incomingScene.item)}`}
+              class={`absolute inset-0 h-full w-full ${
+                incomingScene.fit === 'cover' ? 'object-cover' : 'object-contain'
+              } ${getForegroundRotationClass(incomingScene.item)}`}
               onload={() => {
                 if (incomingScene) {
                   onCurrentItemLoad?.(incomingScene.item)

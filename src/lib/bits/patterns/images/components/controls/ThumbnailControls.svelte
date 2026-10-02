@@ -1,10 +1,10 @@
 <script lang="ts">
 // LIB
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
-import { Button } from '$lib/bits/core/button'
-import { cx } from '$lib/bits/utils'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
+import { Button } from '#lib/bits/core/button/index.js'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import CloudUploadIcon from 'virtual:icons/proicons/cloud-arrow-up'
 import LoaderCircleIcon from 'virtual:icons/proicons/spinner'
@@ -110,10 +110,10 @@ const deleteModeButtonLabel = $derived(
               hideLabelInstantly={true}
               disabled={disableDeleteMode}
               class={cx(
-                  'bits-admin-menu__button',
-                  iconButtonClass,
-                  isDeleteMode ? 'text-error hover:bg-error/12 hover:text-error' : '',
-                )}
+                'bits-admin-menu__button',
+                iconButtonClass,
+                isDeleteMode ? 'text-error hover:bg-error/12 hover:text-error' : '',
+              )}
               onClick={() => onToggleDeleteMode?.()}
             />
           </div>

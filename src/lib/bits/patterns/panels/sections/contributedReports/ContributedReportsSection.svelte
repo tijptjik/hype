@@ -2,9 +2,9 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import type { UserProfile } from '$lib/db/zod/schema/user.types'
+import type { UserProfile } from '#lib/db/zod/schema/user.types.js'
 
 // PROPS
 let { userData }: { userData?: UserProfile } = $props()

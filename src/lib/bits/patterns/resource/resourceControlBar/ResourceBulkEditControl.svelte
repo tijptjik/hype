@@ -1,7 +1,7 @@
 <script lang="ts">
 // BITS
-import Button from '$lib/bits/core/button/Button.svelte'
-import Select from '$lib/bits/core/select/Select.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
+import Select from '#lib/bits/core/select/Select.svelte'
 // ICONS
 import CheckIcon from 'virtual:icons/proicons/checkmark'
 import ListChecksIcon from 'virtual:icons/proicons/task-list'
@@ -114,9 +114,7 @@ $effect(() => {
 
 <div class="bits-theme bits-resource-bulk-edit">
   <Button
-    text={config.isActive
-      ? `Bulk edit (${config.selectedCount})`
-      : 'Bulk edit'}
+    text={config.isActive ? `Bulk edit (${config.selectedCount})` : 'Bulk edit'}
     iconComponent={ListChecksIcon}
     style="outline"
     color="light"

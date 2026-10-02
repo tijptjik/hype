@@ -1,6 +1,6 @@
 <script lang="ts">
 import { fade } from 'svelte/transition'
-import { Icon } from '$lib/bits/custom/icon'
+import { Icon } from '#lib/bits/custom/icon/index.js'
 import type { MinWidthGuardProps } from './minWidthGuard.types'
 
 let {

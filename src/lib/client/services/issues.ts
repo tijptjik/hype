@@ -1,5 +1,5 @@
 // SERVICES
-import { toIssueMessage } from '$lib/client/services/form'
+import { toIssueMessage } from '#lib/client/services/form.js'
 
 /**
  * Collects unique issue messages whose path starts with the provided path segments.

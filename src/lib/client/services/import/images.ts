@@ -32,17 +32,17 @@
 // - handleImageDrop
 // ---
 
-import { getFeatureForImport } from '$lib/api/server/feature.remote'
-import { getFeatureCanonicalImageOccupancy } from '$lib/api/server/image.remote'
-import { getOrganisation } from '$lib/api/server/organisation.remote'
-import { getProject } from '$lib/api/server/project.remote'
+import { getFeatureForImport } from '#lib/api/server/feature.remote.js'
+import { getFeatureCanonicalImageOccupancy } from '#lib/api/server/image.remote.js'
+import { getOrganisation } from '#lib/api/server/organisation.remote.js'
+import { getProject } from '#lib/api/server/project.remote.js'
 import {
   calculateImageContentHash,
   uploadAndProcessImage,
-} from '$lib/client/services/image'
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import { FirstClassResource, ImageContextResource } from '$lib/enums'
-import { normalizeUploadFileForAssetPipeline } from '$lib/images/upload'
+} from '#lib/client/services/image.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import { FirstClassResource, ImageContextResource } from '#lib/enums.js'
+import { normalizeUploadFileForAssetPipeline } from '#lib/images/upload.js'
 import type {
   Feature,
   BatchUploadResult,
@@ -51,9 +51,12 @@ import type {
   ImageDropEvent,
   ParsedImageFilename,
   FeatureContext,
-} from '$lib/client/services/import/types'
-import type { ImageCtxEnvelope, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
-import type { Intent } from '$lib/db/zod/schema/image.types'
+} from '#lib/client/services/import/types.js'
+import type {
+  ImageCtxEnvelope,
+  ImageUploadCtx,
+} from '#lib/db/zod/schema/image.types.js'
+import type { Intent } from '#lib/db/zod/schema/image.types.js'
 
 /********************
  *  0. QUEUE RESULT FACTORIES

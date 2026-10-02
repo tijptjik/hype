@@ -2,19 +2,19 @@
 // SVELTE
 import { onMount, untrack } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // API
-import { translateText } from '$lib/api/server/translation.remote'
+import { translateText } from '#lib/api/server/translation.remote.js'
 // I18N
-import { m, toLocaleKebab, toLocaleKey } from '$lib/i18n'
+import { m, toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
 // ENUM
-import { supportedLocaleKeys } from '$lib/enums'
+import { supportedLocaleKeys } from '#lib/enums.js'
 // TYPES
 import type {
   FeatureCSVColumn,
   Locale,
   LocaleKey,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 type PropertyData = {
   key: string

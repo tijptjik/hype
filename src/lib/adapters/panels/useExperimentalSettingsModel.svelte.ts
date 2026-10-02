@@ -1,17 +1,17 @@
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // API
-import { getUser, updateUserProfile } from '$lib/api/server/user.remote'
+import { getUser, updateUserProfile } from '#lib/api/server/user.remote.js'
 // SERVICES
-import { refreshUserSession } from '$lib/client/services/user'
+import { refreshUserSession } from '#lib/client/services/user.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 import type {
   ExperimentalFeatureConfig,
   UserExperimental,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 
 /**
  * Owns experimental preference mutations and optimistic rollback.

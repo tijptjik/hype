@@ -1,22 +1,20 @@
 <script lang="ts">
 // THIRD PARTY
 // I18N
-import { getLocale, getLocaleKey, setLocale as setRuntimeLocale } from '$lib/i18n'
-import { m } from '$lib/i18n'
+import { getLocale, getLocaleKey, setLocale as setRuntimeLocale } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
 // API
 // SERVICES
 // BITS
-import { Switch } from '$lib/bits'
+import { Switch } from '#lib/bits/index.js'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import Language from 'virtual:icons/tabler/language'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import ChevronUp from 'virtual:icons/proicons/chevron-up'
-import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 // CONTEXT
-import type {
-  useLanguageSettingsModel,
-} from '$lib/adapters/panels/useLanguageSettingsModel.svelte'
+import type { useLanguageSettingsModel } from '#lib/adapters/panels/useLanguageSettingsModel.svelte.js'
 // ENUMS
 import {
   localeNames,
@@ -24,11 +22,11 @@ import {
   SupportedLocales,
   supportedLocales,
   supportedLocaleKeys,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type { Locale, LocaleKey } from '$lib/types'
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 
 // CONTEXT
 
@@ -76,7 +74,8 @@ const getNextAdvancedPreferences = (
             <p class="font-normal text-base-content">
               {localeNames[localeKey][localeKey]}
             </p>
-            {#if localeKey !== currentLocaleKey && localeNames[currentLocaleKey][localeKey]}
+            {#if localeKey !== currentLocaleKey &&
+              localeNames[currentLocaleKey][localeKey]}
               <p class="text-sm text-neutral-content">
                 ({localeNames[currentLocaleKey][localeKey]})
               </p>
@@ -107,7 +106,9 @@ const getNextAdvancedPreferences = (
         />
       </summary>
       <div class="ml-4 flex flex-col gap-2 pt-2">
-        {#each supportedLocales.filter(locale => locale !== currentLocale) as locale (locale)}
+        {#each supportedLocales.filter(
+          locale => locale !== currentLocale,
+        ) as locale (locale)}
           {@const localeKey = LocaleKeysMap[locale] as LocaleKey}
           {@const isFallbackSelected =
             userPreferences.fallbackLocales?.includes(locale) || false}
@@ -139,7 +140,7 @@ const getNextAdvancedPreferences = (
               color="primary"
               checked={isFallbackSelected}
               disabled={isSavingPreferences}
-              onCheckedChange={(checked) =>
+              onCheckedChange={checked =>
                 void updatePreferences(
                   getNextFallbackPreferences(locale, checked === true),
                 )}
@@ -178,7 +179,7 @@ const getNextAdvancedPreferences = (
               color="primary"
               checked={setting.currentValue}
               disabled={isSavingPreferences}
-              onCheckedChange={(checked) =>
+              onCheckedChange={checked =>
                 void updatePreferences(
                   getNextAdvancedPreferences(
                     setting.code as keyof Pick<

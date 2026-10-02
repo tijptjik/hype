@@ -2,9 +2,9 @@ import type { Component } from 'svelte'
 import type {
   LayerFormInput,
   LayerFormLocaleInput,
-} from '$lib/db/zod/schema/layer.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { LocaleKey } from '$lib/types'
+} from '#lib/db/zod/schema/layer.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { LocaleKey } from '#lib/types.js'
 
 export type LayerFormLocale = LayerFormLocaleInput
 export type LayerFormPayload = LayerFormInput['data']

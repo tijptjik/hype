@@ -1,28 +1,26 @@
 // SERVICES
-import { initAddNewFeature } from '$lib/client/services/feature'
+import { initAddNewFeature } from '#lib/client/services/feature.js'
 // CONTEXT
-import type { AppCtx } from '$lib/context/app.svelte'
-import { dismissActiveFeatureNavigation } from '$lib/navigation'
-import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { ResponsiveCtx } from '$lib/context/responsive.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import { dismissActiveFeatureNavigation } from '#lib/navigation/index.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
-import { OmniCollection, OmniMode } from '$lib/enums'
+import { OmniCollection, OmniMode } from '#lib/enums.js'
 // CONTEXT
-import { hasElevatedChrome } from '$lib/context/responsive.svelte'
+import { hasElevatedChrome } from '#lib/context/responsive.svelte.js'
 // I18N
-import { getI18n, getLocaleKey, getLocaleOrder, m } from '$lib/i18n'
+import { getI18n, getLocaleKey, getLocaleOrder, m } from '#lib/i18n.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type {
   OmnibarProps,
   OmnibarResultSection,
-} from '$lib/bits/patterns/bars/omnibar'
-import type { DeepPartial, Locale, LocaleKey } from '$lib/types'
-import type { NewFeatureTask } from '$lib/api/services/taskCreation.types'
+} from '#lib/bits/patterns/bars/omnibar/index.js'
+import type { DeepPartial, Locale, LocaleKey } from '#lib/types.js'
+import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
 // UTILS
-import {
-  getOmnibarAvailableViewportHeight,
-} from '$lib/bits/patterns/bars/omnibar/omnibar.utils'
+import { getOmnibarAvailableViewportHeight } from '#lib/bits/patterns/bars/omnibar/omnibar.utils.js'
 
 const COLLECTION_OPEN_DELAY_MS = 2000
 

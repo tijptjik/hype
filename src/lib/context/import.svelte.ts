@@ -10,9 +10,9 @@ import type {
   FeatureImportStep,
   Property,
   Layer,
-} from '$lib/client/services/import/types'
-import type { LayerFormInput } from '$lib/db/zod/schema/layer.types'
-import type { Id, Locale, LocaleKey } from '$lib/types'
+} from '#lib/client/services/import/types.js'
+import type { LayerFormInput } from '#lib/db/zod/schema/layer.types.js'
+import type { Id, Locale, LocaleKey } from '#lib/types.js'
 
 export type ImportState = {
   isTypeSelected: boolean

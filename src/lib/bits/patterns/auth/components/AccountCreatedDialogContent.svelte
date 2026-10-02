@@ -4,7 +4,7 @@ import { Dialog } from 'bits-ui'
 // ICONS
 import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 let {
   onClose,

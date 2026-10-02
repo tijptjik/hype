@@ -2,7 +2,7 @@
 // SVELTE
 import type { Snippet } from 'svelte'
 // MAP
-import type { MapController } from '$lib/map/controller'
+import type { MapController } from '#lib/map/controller.js'
 // COMPONENTS
 import AppLanding from './AppLanding.svelte'
 

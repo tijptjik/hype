@@ -13,16 +13,16 @@ import {
   UserAdminListProfileAPI,
   UserHydrationSchema,
   UserSearchQueryParamsSchema,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 // API
-import { getPrisms } from '$lib/api'
+import { getPrisms } from '#lib/api/index.js'
 import {
   guardedBatchByIdQuery,
   guardedCommand,
   guardedQuery,
-} from '$lib/api/server/remote'
+} from '#lib/api/server/guarded.js'
 import {
   isPrivilegedArchivedSearchRequested,
   toEntityResponseShape,
@@ -31,15 +31,15 @@ import {
   toUserProfileResponseShape,
   toUserSearchQueryPlan,
   userEntityWithRelations,
-} from '$lib/api/services/user'
+} from '#lib/api/services/user.js'
 import {
   canOverrideUserSearchArchivedFilter,
   canSearchUsers,
   canUpdateUserProfile,
   toAuthMessage,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // DB
-import { hub, user } from '$lib/db/schema/index'
+import { hub, user } from '#lib/db/schema/index.js'
 import {
   getUser as loadUser,
   getUserFeaturesByUserId,
@@ -50,12 +50,12 @@ import {
   updateUser,
   updateUserLayers,
   upsertUserFeatureState,
-} from '$lib/db/services/user'
+} from '#lib/db/services/user.js'
 // UTILS
-import { normalizeUsername, validateUsername } from '$lib/utils/username'
+import { normalizeUsername, validateUsername } from '#lib/utils/username.js'
 // TYPES
-import type { Id } from '$lib/types'
-import type { UserHydrationResult, UserRaw } from '$lib/db/zod/schema/user.types'
+import type { Id } from '#lib/types.js'
+import type { UserHydrationResult, UserRaw } from '#lib/db/zod/schema/user.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -223,7 +223,7 @@ export const getUser = guardedQuery(GetUserParamsSchema, async (params, ctx) => 
     throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
   }
 
-  const requestPrisms = params.prisms ?? getPrisms(event.url)
+  const requestPrisms = params.prisms ?? { organisation: [], project: [], layer: [] }
 
   const queryPlan = toUserReadQueryPlan(db, {
     lookup: params,

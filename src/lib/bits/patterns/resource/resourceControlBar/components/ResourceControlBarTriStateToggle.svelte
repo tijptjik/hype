@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS
-import { SimpleTooltip } from '$lib/bits/core/tooltip'
+import { SimpleTooltip } from '#lib/bits/core/tooltip/index.js'
 // BITS CUSTOM
-import Switch from '$lib/bits/custom/switch/Switch.svelte'
+import Switch from '#lib/bits/custom/switch/Switch.svelte'
 // TYPES
 import type { ResourceControlBarTriStateToggleProps } from './resourceControlBarPrimitives.types'
 

@@ -2,11 +2,11 @@
 // SVELTE
 import type { Component } from 'svelte'
 // LIB
-import { Icon } from '$lib/bits'
-import { getMetadata } from '$lib/api/server/image.remote'
-import { getAppCtx } from '$lib/context/app.svelte'
-import { m } from '$lib/i18n'
-import { formatDate } from '$lib'
+import { Icon } from '#lib/bits/index.js'
+import { getMetadata } from '#lib/api/server/image.remote.js'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { m } from '#lib/i18n.js'
+import { formatDate } from '#lib'
 // ICONS
 import AtSymbol from 'virtual:icons/proicons/mention'
 import Calendar from 'virtual:icons/proicons/calendar'
@@ -19,7 +19,7 @@ import type {
   Image,
   ImageMetadataBasic,
   ImageMetadataFull,
-} from '$lib/db/zod/schema/image.types'
+} from '#lib/db/zod/schema/image.types.js'
 
 type MetadataRow = {
   icon: Component

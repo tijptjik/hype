@@ -2,10 +2,10 @@ import { useImageEditorGalleryModel } from './useImageEditorGalleryModel.svelte'
 import {
   extractVersionFromImageUrl,
   getGalleryItemTargetImageId,
-} from '$lib/client/services/image'
-import type { ImageCtx } from '$lib/context/image.svelte'
-import type { ImageMetadataBasic } from '$lib/db/zod/schema/image.types'
-import type { ViewerRenderable } from '$lib/bits/patterns/images'
+} from '#lib/client/services/image.js'
+import type { ImageCtx } from '#lib/context/image.svelte.js'
+import type { ImageMetadataBasic } from '#lib/db/zod/schema/image.types.js'
+import type { ViewerRenderable } from '#lib/bits/patterns/images/index.js'
 
 type EntityImageViewerModel = {
   state: {

@@ -2,9 +2,9 @@
 // PATTERN PRIMITIVES
 import * as ThemePickerPrimitive from './components'
 // THEME
-import { THEMES } from '$lib/themes/themes'
+import { THEMES } from '#lib/themes/themes.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { ThemePickerProps } from './themePicker.types'
 let {

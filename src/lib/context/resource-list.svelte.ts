@@ -1,16 +1,16 @@
+import type { RemoteQuery } from '$app/server'
+
 // TYPES
-import type { RemoteQuery } from '@sveltejs/kit'
 import type {
   PanelResource,
   ResourcePage,
   ResourcePageInput,
-} from '$lib/api/services/resourcePage.types'
-// TYPES
+} from '#lib/api/services/resourcePage.types.js'
 
+// TYPES
 type ResourcePageFactory = (
   input: ResourcePageInput,
-) => import('@sveltejs/kit').RemoteQuery<ResourcePage>
-
+) => import('$app/server').RemoteQuery<ResourcePage>
 
 /** Native query handles own page data; this controller owns traversal and retained handles. */
 export class ResourceList {
@@ -36,9 +36,12 @@ export class ResourceList {
       this.fallback.length
     )
       return this.fallback
+
     const rows = new Map<string, PanelResource>()
+
     for (const page of this.pages)
       for (const row of page.current?.data ?? []) rows.set(row.id, row)
+
     return [...rows.values()]
   }
 
@@ -176,7 +179,9 @@ export class ResourceList {
   /** Checks whether a pending create belongs in this unfiltered first page. */
   acceptsPending(patch: Record<string, unknown>): boolean {
     if (!this.input || this.input.q) return false
+
     const { organisation, project } = this.input.prisms ?? {}
+
     return (
       (!organisation?.length || organisation.includes(String(patch.organisationId))) &&
       (!project?.length || project.includes(String(patch.projectId)))

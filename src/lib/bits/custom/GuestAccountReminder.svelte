@@ -2,11 +2,11 @@
 // SVELTE
 import { onMount } from 'svelte'
 // BITS
-import Button from '$lib/bits/core/button/Button.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
 // AUTH
-import { requestAccountUpgrade, type UpgradeReason } from '$lib/auth/upgrade'
+import { requestAccountUpgrade, type UpgradeReason } from '#lib/auth/upgrade.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 const GUEST_REMINDER_DISMISSED_KEY = 'hype:guest-reminder-dismissed'
 

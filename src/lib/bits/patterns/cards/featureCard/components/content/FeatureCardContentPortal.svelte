@@ -1,15 +1,15 @@
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // CONSTANTS
-import { NEW_REF } from '$lib/constants'
+import { NEW_REF } from '#lib/constants.js'
 // TYPES
 import type {
   Feature,
   NewFeatureWithLocationAndParents,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 // LOCAL
 import FeatureCardContentAddress from './FeatureCardContentAddress.svelte'
 

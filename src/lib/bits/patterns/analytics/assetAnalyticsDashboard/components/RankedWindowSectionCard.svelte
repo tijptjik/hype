@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import * as AnalyticsCardPrimitive from '$lib/bits/custom/analyticsCard/components'
-import { cx } from '$lib/bits/utils'
+import * as AnalyticsCardPrimitive from '#lib/bits/custom/analyticsCard/components/index.js'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // LOCAL
 import ImagePopoverCell from './ImagePopoverCell.svelte'
 import {
@@ -15,7 +15,7 @@ import {
 import type {
   AssetAnalyticsRankedImage,
   AssetAnalyticsRankedTransformation,
-} from '$lib/api/services/assetAnalytics.types'
+} from '#lib/api/services/assetAnalytics.types.js'
 import type {
   AssetAnalyticsDashboardWindowSectionKind,
   AssetAnalyticsRankedWindowSectionCardProps,
@@ -102,7 +102,9 @@ const items = $derived(getItems())
 
   {#if !windowData}
     <AnalyticsCardPrimitive.EmptyState
-      title={windowError ? 'Analytics window unavailable' : 'No analytics window available'}
+      title={windowError
+        ? 'Analytics window unavailable'
+        : 'No analytics window available'}
       description={windowError
         ? windowError
         : 'This time range has not been emitted by the analytics engine yet.'}
@@ -154,7 +156,11 @@ const items = $derived(getItems())
           <tr>
             <th class="pb-2 pr-3 font-medium">{m.analytics__public_id()}</th>
             <th class="pb-2 text-right font-medium">
-              {kind === 'missingImages' ? '404s' : kind === 'serverErrorImages' ? '5xx' : 'Requests'}
+              {kind === 'missingImages'
+                ? '404s'
+                : kind === 'serverErrorImages'
+                  ? '5xx'
+                  : 'Requests'}
             </th>
           </tr>
         </thead>

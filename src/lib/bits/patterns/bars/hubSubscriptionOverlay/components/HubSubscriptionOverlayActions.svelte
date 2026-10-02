@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 type Props = {
   ctaText?: string

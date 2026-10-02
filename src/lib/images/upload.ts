@@ -1,5 +1,5 @@
 // TYPES
-import type { NormalizedImageUploadAsset } from '$lib/context/imageProvider.types'
+import type { NormalizedImageUploadAsset } from '#lib/context/imageProvider.types.js'
 
 type Heic2AnyConverter = (params: {
   blob: Blob

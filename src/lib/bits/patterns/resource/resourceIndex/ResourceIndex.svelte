@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends Resource">
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import type { Snippet } from 'svelte'
 // COMPONENTS
 import ResourceCardRow from './components/ResourceCardRow.svelte'
@@ -7,16 +7,14 @@ import ResourceEmptyState from './components/ResourceEmptyState.svelte'
 import ResourceLoadingState from './components/ResourceLoadingState.svelte'
 import ResourceTableRow from './components/ResourceTableRow.svelte'
 // BITS
-import { VirtualList } from '$lib/bits/custom/index/src'
+import { VirtualList } from '#lib/bits/custom/index/src/index.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // TYPES
-import type { Resource } from '$lib/types'
-import type {
-  ResourceIndexRowSelectionState,
-} from '$lib/client/services/bulkEdit.types'
+import type { Resource } from '#lib/types.js'
+import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEdit.types.js'
 import type {
   ResourceIndexGridRow,
   ResourceIndexItem,
@@ -148,7 +146,10 @@ $effect(() => {
 })
 </script>
 
-{#snippet children(item: ResourceIndexItem<T>, index: number)}
+{#snippet children(
+  item: ResourceIndexItem<T>,
+  index: number,
+)}
   {#if layoutMode === 'card'}
     {@const cardRow = item as ResourceIndexGridRow<T>}
     <ResourceCardRow
@@ -191,7 +192,8 @@ $effect(() => {
           padding={RESOURCE_INDEX_LIST_HORIZONTAL_PADDING_PX}
           {applyBottomOverflow}
           onRangeChange={(_start, end) => {
-            if (hasMore && !isLoadingMore && entities.length - end * columnCount <= 10) onNearEnd?.()
+            if (hasMore && !isLoadingMore && entities.length - end * columnCount <= 10)
+              onNearEnd?.()
           }}
         />
       </div>

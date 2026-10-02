@@ -3,7 +3,7 @@ import type { HTMLAttributes } from 'svelte/elements'
 import type {
   AdaptiveToolbarProps,
   AdaptiveToolbarRenderState,
-} from '$lib/bits/patterns/layout/adaptiveToolbar'
+} from '#lib/bits/patterns/layout/adaptiveToolbar/index.js'
 import type {
   HeaderAvatarConfig,
   HeaderFacetsConfig,

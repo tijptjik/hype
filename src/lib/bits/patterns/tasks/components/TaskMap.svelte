@@ -1,9 +1,9 @@
 <script lang="ts">
 import { tick } from 'svelte'
-import { cx } from '$lib/bits/utils'
-import Maplet from '$lib/bits/patterns/maps/Maplet.svelte'
+import { cx } from '#lib/bits/utils.js'
+import Maplet from '#lib/bits/patterns/maps/Maplet.svelte'
 import type { TaskMapProps } from '../task.types'
-import type { MapController } from '$lib/map/controller'
+import type { MapController } from '#lib/map/controller.js'
 import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
 import ShrinkIcon from 'virtual:icons/proicons/full-screen-minimize'
 

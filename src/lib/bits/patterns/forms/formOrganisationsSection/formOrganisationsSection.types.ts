@@ -1,4 +1,4 @@
-import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageContextEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 export interface HubOrganisationItem {
   id: string

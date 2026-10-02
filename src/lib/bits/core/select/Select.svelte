@@ -82,7 +82,9 @@ function handleValueChange(nextValue: string): void {
               disabled={item.disabled}
               class="bits-form__select-item text-white"
             >
-              {#snippet children({ selected })}
+              {#snippet children({
+                selected,
+              })}
                 <span class="bits-form__select-label text-white">{item.label}</span>
                 {#if selected}
                   <CheckIcon class="ml-auto h-4 w-4 shrink-0 text-white" />

@@ -1,10 +1,10 @@
 // API
-import { isAdminRequest } from '$lib/api'
+import { isAdminRequest } from '#lib/api/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
-import type { Code, Id, SessionUser, UserRoleDisco } from '$lib/types'
-import type { OrganisationPartial } from '$lib/db/zod/schema/organisation.types'
+import type { Code, Id, SessionUser, UserRoleDisco } from '#lib/types.js'
+import type { OrganisationPartial } from '#lib/db/zod/schema/organisation.types.js'
 import { error } from '@sveltejs/kit'
 
 /**

@@ -4,11 +4,11 @@ import { error } from '@sveltejs/kit'
 import { nanoid } from 'nanoid'
 // DRIZZLE
 import { and, asc, eq, inArray, or, not, sql, getTableColumns } from 'drizzle-orm'
-import { chunkedInArray, SQL_BATCH_SIZE } from '$lib/utils/batch-query'
+import { chunkedInArray, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // DB
-import { transformI18nSafely, toRelatedRecords } from '$lib/db'
-import { inferPropertyDiscriminatorFromComponent } from '$lib/api/services'
-import { toPropertyResponseFromRaw } from '$lib/api/services/property'
+import { transformI18nSafely, toRelatedRecords } from '#lib/db/index.js'
+import { inferPropertyDiscriminatorFromComponent } from '#lib/api/services/index.js'
+import { toPropertyResponseFromRaw } from '#lib/api/services/property.js'
 import {
   insert,
   update,
@@ -34,11 +34,11 @@ import {
 // ZOD
 import { PropertyRecordCreate, PropertyRecordUpdate } from '../zod'
 // I18N
-import { normalizeI18nLocaleRecord } from '$lib/i18n'
+import { normalizeI18nLocaleRecord } from '#lib/i18n.js'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
-import type { Locale, Database } from '$lib/types'
+import type { Locale, Database } from '#lib/types.js'
 import type {
   Property,
   PropertyDB,
@@ -54,7 +54,7 @@ import type {
   PropertyValueI18nPartial,
   PropertyValueNew,
   ProjectPropertyForm,
-} from '$lib/db/zod/schema/property.types'
+} from '#lib/db/zod/schema/property.types.js'
 import { retryBusyRead } from './sqlite'
 // TYPES
 
@@ -63,7 +63,6 @@ type PropertyCatalogTarget = {
   scope: 'project' | 'hub' | 'organisation'
   id: string
 }
-
 
 // ═══════════════════════
 // TABLE OF CONTENTS

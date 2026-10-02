@@ -5,7 +5,7 @@ import {
   getCoordinatesFromMetadata,
   getCreditFromMetadata,
   type ImageMetadataMap,
-} from '$lib/utils/image-metadata'
+} from '#lib/utils/image-metadata.js'
 
 const JPEG_SOI_MARKER = 0xffd8
 const JPEG_APP1_MARKER = 0xffe1

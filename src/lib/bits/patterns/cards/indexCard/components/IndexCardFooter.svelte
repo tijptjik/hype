@@ -1,6 +1,6 @@
 <script lang="ts">
 import { tick, untrack } from 'svelte'
-import { SimpleTooltip } from '$lib/bits/core'
+import { SimpleTooltip } from '#lib/bits/core/index.js'
 import type { IndexCardFooterProps } from '../indexCard.types'
 
 let { status = null, breadcrumbs = [], cardWidth = 0 }: IndexCardFooterProps = $props()
@@ -149,7 +149,10 @@ $effect(() => {
       class="relative flex justify-end w-full min-w-0"
     >
       <div class="bits-index-card__breadcrumbs bits-index-card__meta">
-        {#each breadcrumbs.slice(0, visibleBreadcrumbCount) as breadcrumb, index (index)}
+        {#each breadcrumbs.slice(
+          0,
+          visibleBreadcrumbCount,
+        ) as breadcrumb, index (index)}
           <SimpleTooltip
             disabled={!breadcrumb.tooltip}
             triggerProps={nonFocusableTooltipTriggerProps}

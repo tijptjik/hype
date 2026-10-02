@@ -3,8 +3,8 @@ import { fade } from 'svelte/transition'
 // ICONS
 import ListPlus from 'virtual:icons/lucide/list-plus'
 import X from 'virtual:icons/proicons/cancel'
-import { Button } from '$lib/bits/core'
-import { m } from '$lib/i18n'
+import { Button } from '#lib/bits/core/index.js'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { FormFieldsSectionActionsProps } from '../formFieldsSection.types'
 

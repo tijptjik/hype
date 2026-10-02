@@ -1,8 +1,8 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
-import { m } from '$lib/i18n'
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '$lib/images/accept'
-import { Icon } from '$lib/bits'
+import { cx } from '#lib/bits/utils.js'
+import { m } from '#lib/i18n.js'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '#lib/images/accept.js'
+import { Icon } from '#lib/bits/index.js'
 import PhotoIcon from 'virtual:icons/proicons/photo'
 import UploadIcon from 'virtual:icons/proicons/arrow-upload'
 import DropzonePrimitive from 'svelte-file-dropzone'
@@ -91,8 +91,8 @@ async function handleFiles(event: CustomEvent): Promise<void> {
         disabled
           ? 'border-black/10 bg-transparent'
           : isDragActive
-          ? 'border-white/45'
-          : 'border-transparent group-hover/gallery-dropzone:border-white/20',
+            ? 'border-white/45'
+            : 'border-transparent group-hover/gallery-dropzone:border-white/20',
       )}
     ></div>
 

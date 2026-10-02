@@ -1,11 +1,13 @@
-import type { RemoteQuery } from '@sveltejs/kit'
+import type { RemoteQuery } from '$app/server'
+import { error } from '@sveltejs/kit'
+
 // Register panel query families for bounded single-flight mutation refreshes.
 import './resources.remote'
 // REMOTE
-import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
-import { error } from '@sveltejs/kit'
+import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
+
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocale } from '#lib/i18n.js'
 // UTILS
 import { nanoid } from 'nanoid'
 // AUTHORIZATION
@@ -22,7 +24,7 @@ import {
   authorizeOrganisationPublishForSubmission,
   authorizeOrganisationDeleteForSubmission,
   ensureOrganisationCommandAllowed,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // SERVICES
 import {
   hasOrganisationCapabilitiesChanged,
@@ -33,8 +35,8 @@ import {
   toOrganisationProfile,
   toLookupConditions,
   toRequestedListState,
-} from '$lib/api/services/organisation'
-import { normalizeSubmittedPropertyRanks } from '$lib/api/services/project'
+} from '#lib/api/services/organisation.js'
+import { normalizeSubmittedPropertyRanks } from '#lib/api/services/project.js'
 import {
   getDuplicateValues,
   hasRoleMembershipChanged,
@@ -42,7 +44,7 @@ import {
   toBooleanStateResponseShape,
   toCreatedResponseShape,
   validateUniqueNonReservedCode,
-} from '$lib/api/services'
+} from '#lib/api/services/index.js'
 import {
   createI18n,
   createOrganisation,
@@ -62,14 +64,14 @@ import {
   cascadeOrganisationArchivedStateToDescendants,
   syncUserRoles,
   toUserRoles,
-} from '$lib/db/services/organisation'
-import { hasOrganisationLayersCondition } from '$lib/db/services/layer'
-import { syncOrganisationProperties } from '$lib/db/services/property'
-import { cascadeOrganisationCapabilitiesToProjects } from '$lib/db/services/project'
+} from '#lib/db/services/organisation.js'
+import { hasOrganisationLayersCondition } from '#lib/db/services/layer.js'
+import { syncOrganisationProperties } from '#lib/db/services/property.js'
+import { cascadeOrganisationCapabilitiesToProjects } from '#lib/db/services/project.js'
 // UTILS
-import { getValidQueryParams as validateQueryParams } from '$lib/api'
+import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 // SCHEMA
-import { organisation } from '$lib/db/schema'
+import { organisation } from '#lib/db/schema/index.js'
 // SCHEMA
 import {
   ListQueryParamsSchema,
@@ -77,9 +79,9 @@ import {
   OrganisationFormData,
   PublishOrganisationSchema,
   RemoveOrganisationSchema,
-} from '$lib/db/zod'
-import type { CapabilityDefinitions } from '$lib/capabilities.types'
-import type { EntityResponse, Id, ListResponse, RelationShape } from '$lib/types'
+} from '#lib/db/zod/index.js'
+import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
+import type { EntityResponse, Id, ListResponse, RelationShape } from '#lib/types.js'
 import type {
   OrganisationDB,
   OrganisationEntityByProfile,
@@ -87,7 +89,7 @@ import type {
   OrganisationListByProfile,
   OrganisationListParamsByProfile,
   OrganisationProfile,
-} from '$lib/db/zod/schema/organisation.types'
+} from '#lib/db/zod/schema/organisation.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -133,6 +135,7 @@ const getOrganisationsQuery = guardedQuery(
     const { db, user, userRoles, isAdminRequest, event } = ctx
     // Resolve desired `profile`.
     const profile = toOrganisationProfile(params.meta?.profile, 'list')
+
     if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
     // Resolve desired `query params`.
@@ -195,6 +198,7 @@ const getOrganisationsWhichHaveLayersQuery = guardedQuery(
   async (params, ctx) => {
     const { db, user, userRoles, isAdminRequest, event } = ctx
     const profile = toOrganisationProfile(params.meta?.profile, 'list')
+
     if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
     const queryParams = validateQueryParams<OrganisationDB>(
@@ -204,13 +208,13 @@ const getOrganisationsWhichHaveLayersQuery = guardedQuery(
     const requestedListState = toRequestedListState(
       queryParams as Partial<OrganisationDB>,
     )
-
     const listDecision = authorizeOrganisationListForContext({
       user,
       userRoles,
       hub: event.locals.hub,
       requestedListState,
     })
+
     if (!listDecision.allowed) {
       throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
@@ -273,6 +277,7 @@ const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, c
     const { db, user, userRoles, isAdminRequest, event } = ctx
     // Resolve desired `profile`.
     const profile = toOrganisationProfile(params.meta?.profile, 'detail')
+
     if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
     // Probe the requested organisation for flags.
@@ -362,13 +367,14 @@ export const organisationForm = guardedForm(
   ): Promise<{ data: { id: string; modifiedAt: string } }> => {
     // Parse and normalize submitted form input.
     const params = OrganisationFormData.parse(input)
+
     const { db, user, userRoles, event, invalid } = ctx
     const issue = ctx.issue
     const { meta, data } = params
-
     const organisationId = meta?.id?.trim()
     const mode = meta?.mode
     const isSupportedMode = mode === 'create' || mode === 'update'
+
     if (!isSupportedMode) {
       invalid(issue(toIssueDetailMessage('INVALID_MODE')))
     }
@@ -376,15 +382,18 @@ export const organisationForm = guardedForm(
     const activeHubId = event.locals.hub?.isCore
       ? null
       : ((event.locals.hub as { id?: string } | null | undefined)?.id ?? null)
+
     const isExplicitCreateMode = mode === 'create'
     const submittedRoles = Array.isArray(data.userRoles) ? data.userRoles : []
     const hasSubmittedPropertiesField = Object.hasOwn(data, 'properties')
     const hasSubmittedCapabilitiesField = Object.hasOwn(data, 'capabilities')
     const submittedProperties = Array.isArray(data.properties) ? data.properties : []
+
     const normalizedSubmittedProperties =
       hasSubmittedPropertiesField && Array.isArray(data.properties)
         ? normalizeSubmittedPropertyRanks(submittedProperties)
         : []
+
     const duplicateSubmittedRoleUserIds = getDuplicateValues(
       submittedRoles.map(userRole => userRole.userId),
     )
@@ -623,6 +632,7 @@ export const publishOrganisation = guardedCommand(
         throw error(404, 'ORGANISATION_NOT_FOUND')
       },
     )
+
     await cascadeOrganisationPublishedStateToDescendants(db, {
       organisationId: commandOrganisationId,
       state: params.state,
@@ -678,11 +688,11 @@ export const archiveOrganisation = guardedCommand(
         throw error(404, 'ORGANISATION_NOT_FOUND')
       },
     )
+
     await cascadeOrganisationArchivedStateToDescendants(db, {
       organisationId: commandOrganisationId,
       state: params.state,
     })
-
     return toBooleanStateResponseShape(persisted, 'isArchived')
   },
 )

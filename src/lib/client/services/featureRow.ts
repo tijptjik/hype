@@ -1,4 +1,4 @@
-import { getI18n } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
 import {
   calculateCategoricalStatuses,
   calculateContentStatuses,
@@ -6,12 +6,12 @@ import {
   calculateImageStatuses,
   calculateStatusStatuses,
   calculateTranslationStatuses,
-} from '$lib/client/services/stats'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
-import type { FeatureRowModel } from '$lib/client/services/featureRows.types'
-import type { LocaleKey } from '$lib/types'
+} from '#lib/client/services/stats.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
+import type { FeatureRowModel } from '#lib/client/services/featureRows.types.js'
+import type { LocaleKey } from '#lib/types.js'
 
 type FeatureRowModelCacheEntry = {
   signature: string

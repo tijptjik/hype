@@ -2,13 +2,13 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import ArrowDownAZ from 'virtual:icons/proicons/arrow-sort'
 import X from 'virtual:icons/proicons/cancel'
 import ListPlus from 'virtual:icons/lucide/list-plus'
 // COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // TYPES
 import type { Snippet } from 'svelte'
 
@@ -32,7 +32,10 @@ let labelledWidth = $state(0)
 const hideLabels = $derived(labelledWidth > availableWidth)
 </script>
 
-{#snippet actions(compact: boolean, measuring = false)}
+{#snippet actions(
+  compact: boolean,
+  measuring = false,
+)}
   <Button
     text={m.wacky_home_sawfish_accept()}
     hideLabel={compact}

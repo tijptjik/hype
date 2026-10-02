@@ -2,9 +2,9 @@
 // SVELTE
 import { onMount, untrack } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import PropertyCreationStep from './PropertyCreationStep.svelte'
 import PropertyTranslationPrompt from './PropertyTranslationPrompt.svelte'
@@ -12,15 +12,15 @@ import PropertyDataEnrichment from './PropertyDataEnrichment.svelte'
 import PropertyValueMatching from './PropertyValueMatching.svelte'
 import PropertyRangeValidation from './PropertyRangeValidation.svelte'
 // SERVICES
-import { enrichFeaturesWithPropertyData } from '$lib/client/services/import/features/property'
+import { enrichFeaturesWithPropertyData } from '#lib/client/services/import/features/property.js'
 // ENUMS
-import { supportedLocaleKeys } from '$lib/enums'
+import { supportedLocaleKeys } from '#lib/enums.js'
 // TYPES
 import type {
   FeatureCSVColumn,
   FieldDiscriminator,
   Locale,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 type Props = {
   autoAdvance?: boolean

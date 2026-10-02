@@ -1,7 +1,7 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core/button'
-import { m } from '$lib/i18n'
+import { Button } from '#lib/bits/core/button/index.js'
+import { m } from '#lib/i18n.js'
 import * as OverlayPrimitive from './thumbnailOverlays'
 // ICONS
 import EyeOffIcon from 'virtual:icons/proicons/eye-off'

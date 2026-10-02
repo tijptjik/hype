@@ -1,21 +1,21 @@
 <script lang="ts">
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
 import {
   clearFallbackUser,
   selectFallbackUser,
   updateUserSearchResults,
-} from '$lib/client/services/import/users'
+} from '#lib/client/services/import/users.js'
 // COMPONENTS
 import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
 import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
 import UserIdentity from './UserIdentity.svelte'
 import UserSearchBox from './UserSearchBox.svelte'
 // TYPES
-import type { UserValidationResult } from '$lib/client/services/import/types'
+import type { UserValidationResult } from '#lib/client/services/import/types.js'
 
 type Props = {
   importCtx: ImportCtx

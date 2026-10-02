@@ -1,23 +1,21 @@
 <script lang="ts">
 // THIRD PARTY
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // API
 // SERVICES
 // BITS
-import { Switch } from '$lib/bits'
+import { Switch } from '#lib/bits/index.js'
 // COMPONENTS
-import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 // CONTEXT
-import type {
-  useExperimentalSettingsModel,
-} from '$lib/adapters/panels/useExperimentalSettingsModel.svelte'
+import type { useExperimentalSettingsModel } from '#lib/adapters/panels/useExperimentalSettingsModel.svelte.js'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 import type {
   ExperimentalFeatureConfig,
   UserExperimental,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 
 // CONTEXT
 
@@ -62,7 +60,7 @@ const toggleExperimental = (...args: Parameters<typeof model.toggleExperimental>
           color="primary"
           checked={getFeatureState(feature.code)}
           disabled={isSavingExperimental}
-          onCheckedChange={(checked) =>
+          onCheckedChange={checked =>
             void toggleExperimental(feature.code, checked === true)}
         />
       </div>

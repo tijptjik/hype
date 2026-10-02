@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // ICONS
 import LoaderCircle from 'virtual:icons/proicons/spinner'
 // TYPES

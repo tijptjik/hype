@@ -17,14 +17,14 @@
 // H3
 import { latLngToCell } from 'h3-js'
 // SERVICES
-import { getFeaturePointCoordinates } from '$lib/map/featureSpatial'
+import { getFeaturePointCoordinates } from '#lib/map/featureSpatial.js'
 // TYPES
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type {
   FeatureQueryFilters,
   FeatureQueryInput,
-} from '$lib/api/services/featureQuery.types'
-import type { FeatureQueryMatchContext } from '$lib/context/featureQuery.types'
+} from '#lib/api/services/featureQuery.types.js'
+import type { FeatureQueryMatchContext } from '#lib/context/featureQuery.types.js'
 
 /********************
  *  1. QUERY IDENTITY

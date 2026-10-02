@@ -5,19 +5,19 @@ import { page } from '$app/state'
 // GEO
 import bbox from '@turf/bbox'
 // COMPONENTS
-import MapSurface from '$lib/bits/custom/map/MapSurface.svelte'
+import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 // MAP
-import { createMarkerRenderer, type MarkerRenderer } from '$lib/map/markers'
-import { loadMapLibre } from '$lib/map/maplibreAssets'
-import { getDefaultMapStyleKey, isMapStyleKey } from '$lib/map/styles'
-import { resolveRuntimeMapStyle } from '$lib/map/styles/runtime'
+import { createMarkerRenderer, type MarkerRenderer } from '#lib/map/markers.js'
+import { loadMapLibre } from '#lib/map/maplibreAssets.js'
+import { getDefaultMapStyleKey, isMapStyleKey } from '#lib/map/styles/index.js'
+import { resolveRuntimeMapStyle } from '#lib/map/styles/runtime.js'
 import {
   MAP_RENDER_READY_TIMEOUT_MS,
   waitForMapEvent,
   waitForMarkerImages,
-} from '$lib/map/render-readiness'
+} from '#lib/map/render-readiness.js'
 // TYPES
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type {
   FitBoundsOptions,
   LngLatBoundsLike,

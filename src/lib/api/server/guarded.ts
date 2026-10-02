@@ -1,24 +1,30 @@
-import { command, form, getRequestEvent, query, requested } from '$app/server'
 import { invalid, isRedirect } from '@sveltejs/kit'
+
+import {
+  command,
+  form,
+  getRequestEvent,
+  query,
+  requested,
+  type RemoteCommand,
+  type RemoteForm,
+  type RemoteFormInput,
+  type RemoteQueryFunction,
+} from '$app/server'
+
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type {
-  RemoteCommand,
-  RemoteForm,
-  RemoteFormInput,
-  RemoteQueryFunction,
-} from '@sveltejs/kit'
-import { setupRequestHandler } from '$lib/api'
+import { setupRequestHandler } from '#lib/api/index.js'
+
 import type {
   GuardedBaseContext,
   GuardedCommandContext,
   GuardedFormContext,
   GuardedIssue,
   GuardedQueryContext,
-} from '$lib/api/guarded.types'
+} from '#lib/api/guarded.types.js'
 // TYPES
 
 type SetupRequestEvent = Parameters<typeof setupRequestHandler>[0]
-
 
 // Only query definitions are shared here; results and authorization remain request-local.
 const refreshableQueries = new Set<RemoteQueryFunction<unknown, unknown>>()
@@ -82,9 +88,13 @@ async function withRequestedRefreshes<T>(write: () => Promise<T>): Promise<T> {
 const toMetaAdminRequest = (payload: unknown): boolean | undefined => {
   if (!payload || typeof payload !== 'object') return undefined
   if (!('meta' in payload)) return undefined
+
   const meta = (payload as { meta?: unknown }).meta
+
   if (!meta || typeof meta !== 'object') return undefined
+
   const isAdminRequest = (meta as { isAdminRequest?: unknown }).isAdminRequest
+
   return typeof isAdminRequest === 'boolean' ? isAdminRequest : undefined
 }
 
@@ -100,6 +110,7 @@ const toPayloadAdminRequest = (payload: unknown): boolean => {
     const items = payload
       .map(item => toMetaAdminRequest(item))
       .filter((value): value is boolean => typeof value === 'boolean')
+
     return items.some(value => value === true)
   }
   return toMetaAdminRequest(payload) === true
@@ -120,9 +131,10 @@ const resolveGuardedContext = async (
   const event = getRequestEvent()
   const setupEvent: SetupRequestEvent = {
     locals: event.locals,
-    platform: event.platform,
+    platform: event.locals.platform,
     request: event.request,
   }
+
   const ctx = await setupRequestHandler(setupEvent)
 
   return {
@@ -158,6 +170,7 @@ export function guardedQuery(
     return registerQuery(
       query(schemaOrFn, async output => {
         const ctx = await resolveGuardedContext(output)
+
         return maybeFn(output, ctx)
       }),
     )
@@ -204,13 +217,11 @@ export function guardedBatchQuery<Schema extends StandardSchemaV1, Output>(
     query.batch(schema, async outputs => {
       const ctx = await resolveGuardedContext(outputs)
       const resolver = await fn(outputs, ctx)
+
       const settled = await Promise.all(
         outputs.map(async (output, index) => {
           try {
-            return {
-              ok: true as const,
-              value: await resolver(output, index),
-            }
+            return { ok: true as const, value: await resolver(output, index) }
           } catch (error) {
             return { ok: false as const, error }
           }
@@ -219,8 +230,10 @@ export function guardedBatchQuery<Schema extends StandardSchemaV1, Output>(
 
       return (_output, index) => {
         const result = settled[index]
+
         if (!result) throw new Error(`Missing batch result at index ${index}`)
         if (!result.ok) throw result.error
+
         return result.value
       }
     }) as RemoteQueryFunction<StandardSchemaV1.InferInput<Schema>, Awaited<Output>>,
@@ -246,9 +259,7 @@ export function guardedBatchByIdQuery<
   Output,
   Item extends StandardSchemaV1.InferOutput<Schema> & {
     id: string
-  } = StandardSchemaV1.InferOutput<Schema> & {
-    id: string
-  },
+  } = StandardSchemaV1.InferOutput<Schema> & { id: string },
 >(
   schema: Schema,
   fn: (params: {
@@ -268,7 +279,6 @@ export function guardedBatchByIdQuery<
 /* ----------------- */
 // GUARDED FORM
 /* -------- */
-
 export function guardedForm<
   Schema extends StandardSchemaV1<RemoteFormInput, Record<string, unknown>>,
   Output,

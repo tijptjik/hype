@@ -3,10 +3,10 @@
 import { untrack } from 'svelte'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import ChevronUp from 'virtual:icons/proicons/chevron-up'
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import RangeSlider from 'svelte-range-slider-pips'
 // ADAPTERS
-import type { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
+import type { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
 // TYPES
 
 type Props = {

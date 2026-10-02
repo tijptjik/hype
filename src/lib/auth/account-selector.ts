@@ -1,5 +1,5 @@
 // TYPES
-import type { LinkedAuthAccount } from '$lib/client/services/account.types'
+import type { LinkedAuthAccount } from '#lib/client/services/account.types.js'
 
 /**
  * Selects a linked account using Better Auth's local row identity.

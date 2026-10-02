@@ -1,24 +1,27 @@
 // I18N
-import { getLocaleKey } from '$lib/i18n'
-import { getHubs } from '$lib/api/server/hub.remote'
-import { getFeatures } from '$lib/api/server/feature.remote'
-import { getTasks } from '$lib/api/server/tasks.remote'
-import { refreshRemoteQuery as runRemoteQuery, toSafeListResponse } from '$lib/remote'
+import { getLocaleKey } from '#lib/i18n.js'
+import { getHubs } from '#lib/api/server/hub.remote.js'
+import { getFeatures } from '#lib/api/server/feature.remote.js'
+import { getTasks } from '#lib/api/server/tasks.remote.js'
+import {
+  refreshRemoteQuery as runRemoteQuery,
+  toSafeListResponse,
+} from '#lib/remote/index.js'
 // SERVICES
-import { toProjectLicenseFilterCache } from '$lib/client/services/licence'
-import { debouncedUpdateUserPreferences } from '$lib/client/services/user'
+import { toProjectLicenseFilterCache } from '#lib/client/services/licence.js'
+import { debouncedUpdateUserPreferences } from '#lib/client/services/user.js'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 // ENUMS
-import { FirstClassResource, type HierarchicalResource } from '$lib/enums'
+import { FirstClassResource, type HierarchicalResource } from '#lib/enums.js'
 // GUARDS
-import { isTask } from '$lib/utils/resourceGuards'
+import { isTask } from '#lib/utils/resourceGuards.js'
 // CLIENT SERVICES
 import {
   getCachedFeatureSpecifierTranslation,
   calculateSpecifierTranslation,
-} from '$lib/client/services/stats'
+} from '#lib/client/services/stats.js'
 // TYPES
 import type {
   ListResponse,
@@ -27,30 +30,33 @@ import type {
   Resource,
   LocaleKey,
   NavigableResource,
-} from '$lib/types'
-import type { FacetType } from '$lib/context/facets'
-import type { Task } from '$lib/db/zod/schema/task.types'
+} from '#lib/types.js'
+import type { FacetType } from '#lib/context/facets.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
 import type {
   FilteredResources,
   FilterState,
   ResourceSortState,
-} from '$lib/client/services/filters.types'
+} from '#lib/client/services/filters.types.js'
 import type {
   ViewFilters,
   FilterTriState,
-} from '$lib/client/services/viewFilters.types'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
+} from '#lib/client/services/viewFilters.types.js'
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 import type {
   AdminPreferences,
   CurrentUser,
   UserPreferences,
-} from '$lib/db/zod/schema/user.types'
-import type { UserRoleDisco } from '$lib/types'
+} from '#lib/db/zod/schema/user.types.js'
+import type { UserRoleDisco } from '#lib/types.js'
 
 type LocalizedRecord = Record<string, unknown>
 

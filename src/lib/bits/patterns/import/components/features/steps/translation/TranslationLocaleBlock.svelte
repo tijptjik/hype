@@ -1,10 +1,10 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import Badge from '$lib/bits/custom/badge/Badge.svelte'
+import Badge from '#lib/bits/custom/badge/Badge.svelte'
 // TYPES
-import type { FeatureTranslationLocaleBlock } from '$lib/client/services/import/features/translation'
+import type { FeatureTranslationLocaleBlock } from '#lib/client/services/import/features/translation.js'
 
 type Props = {
   block: FeatureTranslationLocaleBlock

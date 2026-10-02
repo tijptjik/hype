@@ -23,7 +23,7 @@ export function isThemeId(value: unknown): value is ThemeId {
  * Resolves an explicit preference before the hub's default theme.
  * @param preference - Optional persisted user selection.
  * @param hostname - Current host or configured hub domain.
- * @returns Milque for Breadline, otherwise Nebula, unless explicitly selected.
+ * @returns Milque for Breadline, otherwise Nullspace, unless explicitly selected.
  */
 export function resolveTheme(preference: unknown, hostname = ''): ThemeId {
   if (isThemeId(preference)) return preference
@@ -31,5 +31,5 @@ export function resolveTheme(preference: unknown, hostname = ''): ThemeId {
     .toLowerCase()
     .split(':')[0]
     .replace(/^www\./, '')
-  return host === 'breadline.hk' ? 'breadline-light' : 'hype-dark'
+  return host === 'breadline.hk' ? 'breadline-light' : 'hype-black'
 }

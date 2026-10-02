@@ -1,27 +1,25 @@
 // I18N
-import { toLocaleKebab, toFormLocaleRecord } from '$lib/i18n'
+import { toLocaleKebab, toFormLocaleRecord } from '#lib/i18n.js'
 // ENUMS
-import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
-import {
-  normalizeProjectLicense as normalizeSharedProjectLicense,
-} from '$lib/client/services/licence'
+import { OrganisationRoleType, ProjectRoleType } from '#lib/enums.js'
+import { normalizeProjectLicense as normalizeSharedProjectLicense } from '#lib/client/services/licence.js'
 // CAPABILITIES
 import {
   normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
-} from '$lib/capabilities'
+} from '#lib/capabilities.js'
 // SERVICES
 import {
   overrideResourceEntityBoolean,
   overrideResourceListItemBoolean,
-} from '$lib/client/services/resource'
+} from '#lib/client/services/resource.js'
 // TYPES
-import type { CapabilityDefinitions, CapabilityKey } from '$lib/capabilities.types'
-import type { Locale, LocaleKey } from '$lib/types'
-import type { ProjectLicense } from '$lib/db/zod/schema/projectLicense.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { User } from '$lib/db/zod/schema/user.types'
-import type { ProjectParentOrganisationScope } from '$lib/api/services/authz/project'
+import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
+import type { ProjectLicense } from '#lib/db/zod/schema/projectLicense.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
+import type { ProjectParentOrganisationScope } from '#lib/api/services/authz/project.js'
 import type {
   Project,
   ProjectBooleanField,
@@ -30,7 +28,7 @@ import type {
   ProjectOwnerRoleSeedOrganisation,
   ProjectRoleCapabilities,
   ProjectSubmitUpdatesParams,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

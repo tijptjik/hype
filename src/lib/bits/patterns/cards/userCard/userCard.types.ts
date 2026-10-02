@@ -1,4 +1,4 @@
-import type { OrganisationRoleType } from '$lib/enums'
+import type { OrganisationRoleType } from '#lib/enums.js'
 
 export interface UserCardWrapperProps {
   class?: string

@@ -2,55 +2,58 @@ import { CacheCtx } from './cache.svelte'
 import {
   getDefaultLayerResources,
   getPinnedResource,
-} from '$lib/api/server/resources.remote'
+} from '#lib/api/server/resources.remote.js'
 import type {
   PanelResourceType,
   PanelResource,
   ResourcePageInput,
-} from '$lib/api/services/resourcePage.types'
+} from '#lib/api/services/resourcePage.types.js'
 // DATA
 // NAVIGATION
-import { getUrlParam, navigate, updatePanelUrlParams } from '$lib/navigation'
+import { getUrlParam, navigate, updatePanelUrlParams } from '#lib/navigation/index.js'
 // GEO
 import { bbox } from '@turf/bbox'
 // I18N
-import { getFallbackLocales, getLocale, getLocaleKey, getI18n } from '$lib/i18n'
+import { getFallbackLocales, getLocale, getLocaleKey, getI18n } from '#lib/i18n.js'
 // LIB
-import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '$lib/constants'
+import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '#lib/constants.js'
 import {
   getOrganisation,
   getOrganisationsWhichHaveLayers,
-} from '$lib/api/server/organisation.remote'
-import { getHub, getHubs } from '$lib/api/server/hub.remote'
-import { getProject, getProjects } from '$lib/api/server/project.remote'
-import { getLayer, getLayers } from '$lib/api/server/layer.remote'
-import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
-import { getProperties, getProperty } from '$lib/api/server/property.remote'
-import { getUser, getUserFeatures, getUserLayers } from '$lib/api/server/user.remote'
+} from '#lib/api/server/organisation.remote.js'
+import { getHub, getHubs } from '#lib/api/server/hub.remote.js'
+import { getProject, getProjects } from '#lib/api/server/project.remote.js'
+import { getLayer, getLayers } from '#lib/api/server/layer.remote.js'
+import { getFeature, getFeatures } from '#lib/api/server/feature.remote.js'
+import { getProperties, getProperty } from '#lib/api/server/property.remote.js'
+import { getUser, getUserFeatures, getUserLayers } from '#lib/api/server/user.remote.js'
 // SERVICES
-import { debouncedUpdateUserAttribution } from '$lib/client/services/user'
+import { debouncedUpdateUserAttribution } from '#lib/client/services/user.js'
 import {
   consumeEscapeForOpenPanels,
   shouldSkipGlobalKeydown,
-} from '$lib/client/keybindings'
-import { getInitialHubLayerDefaultIds } from '$lib/client/services/layerDefaults'
+} from '#lib/client/keybindings.js'
+import { getInitialHubLayerDefaultIds } from '#lib/client/services/layerDefaults.js'
 // AUTH
-import { isGuestUser, requestProfileUpgrade } from '$lib/auth/upgrade'
+import { isGuestUser, requestProfileUpgrade } from '#lib/auth/upgrade.js'
 import {
   getFeatureIdsForProperties,
   sortProperties,
-} from '$lib/client/services/property'
-import { matchesResourceTextQuery } from '$lib/client/services/filters'
-import { primeFeatureStatsCache } from '$lib/client/services/stats'
-import { refreshRemoteQuery as runRemoteQuery, toSafeListResponse } from '$lib/remote'
+} from '#lib/client/services/property.js'
+import { matchesResourceTextQuery } from '#lib/client/services/filters.js'
+import { primeFeatureStatsCache } from '#lib/client/services/stats.js'
+import {
+  refreshRemoteQuery as runRemoteQuery,
+  toSafeListResponse,
+} from '#lib/remote/index.js'
 // DEBUG
-import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
+import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 // CONTEXT
 import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
 // MARKERS
-import { isFeaturePointWithinBounds } from '$lib/map/featureSpatial'
+import { isFeaturePointWithinBounds } from '#lib/map/featureSpatial.js'
 // ENUMS
 import {
   FirstClassResource,
@@ -59,13 +62,13 @@ import {
   ResourcePath,
   type NewFeatureMode,
   supportedLocaleKeys,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // GUARDS
-import { isTask } from '$lib/utils/resourceGuards'
+import { isTask } from '#lib/utils/resourceGuards.js'
 // TYPES
-import type { ActiveCollection } from '$lib/context/resourceCollection.types'
-import type { Cache } from '$lib/context/cache.types'
-import type { CollectionNavOptions } from '$lib/client/services/form.types'
+import type { ActiveCollection } from '#lib/context/resourceCollection.types.js'
+import type { Cache } from '#lib/context/cache.types.js'
+import type { CollectionNavOptions } from '#lib/client/services/form.types.js'
 import type {
   Code,
   DeepPartial,
@@ -78,67 +81,70 @@ import type {
   SessionUser,
   ListResponse,
   UserRoleDisco,
-} from '$lib/types'
-import type { FacetType } from '$lib/context/facets'
+} from '#lib/types.js'
+import type { FacetType } from '#lib/context/facets.js'
 import type {
   FilterState,
   FilteredResources,
   ResourceSortState,
-} from '$lib/client/services/filters.types'
-import type { FilterTriState } from '$lib/client/services/viewFilters.types'
-import type { FeatureQueryChannel } from '$lib/context/featureQuery.types'
+} from '#lib/client/services/filters.types.js'
+import type { FilterTriState } from '#lib/client/services/viewFilters.types.js'
+import type { FeatureQueryChannel } from '#lib/context/featureQuery.types.js'
 import type {
   FeatureQueryFilters,
   FeatureQueryInput,
   FeatureSpatialQuery,
-} from '$lib/api/services/featureQuery.types'
-import type { NewFeatureTask } from '$lib/api/services/taskCreation.types'
-import type { RangeFilterValue } from '$lib/client/services/propertyFilters.types'
-import type { Task } from '$lib/db/zod/schema/task.types'
-import type { Image } from '$lib/db/zod/schema/image.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Hub, HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+} from '#lib/api/services/featureQuery.types.js'
+import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
+import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
+import type { Image } from '#lib/db/zod/schema/image.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Hub, HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type {
   CurrentUser,
   UserFeature,
   UserLayer,
   UserPreferences,
   UserProfile,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
 import type { PlaceCtx } from './place.svelte'
 import type { ResponsiveCtx } from './responsive.svelte'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { FeatureI18nFieldKeys } from '#lib/db/zod/schema/feature.js'
 // TYPES
-import type { HierarchicalResourceType, Prisms, EntityResponse } from '$lib/types'
+import type { HierarchicalResourceType, Prisms, EntityResponse } from '#lib/types.js'
 import type { Component } from 'svelte'
-import type { ViewFilters } from '$lib/client/services/viewFilters.types'
+import type { ViewFilters } from '#lib/client/services/viewFilters.types.js'
 import type {
   OrganisationProfile,
   OrganisationListParamsByProfile,
   OrganisationListByProfile,
   OrganisationGetParamsByProfile,
   OrganisationEntityByProfile,
-} from '$lib/db/zod/schema/organisation.types'
+} from '#lib/db/zod/schema/organisation.types.js'
 import type {
   HubProfile,
   HubListParamsByProfile,
   HubListByProfile,
   HubGetParamsByProfile,
   HubEntityByProfile,
-} from '$lib/db/zod/schema/hub.types'
+} from '#lib/db/zod/schema/hub.types.js'
 import type {
   LayerProfile,
   LayerListParamsByProfile,
   LayerListByProfile,
   LayerGetParamsByProfile,
   LayerEntityByProfile,
-} from '$lib/db/zod/schema/layer.types'
+} from '#lib/db/zod/schema/layer.types.js'
 
 type ResourceTypeWithChildren = Exclude<HierarchicalResourceType, 'feature' | 'task'>
 
@@ -280,7 +286,7 @@ type RemoteMap = { [Key in FirstClassResource]: RemoteMapEntryByResource[Key] }
 
 /** Explicit recent list edits distinguish an optimistic removal from unknown membership. */
 type FeatureMembershipOverride = {
-  row: import('$lib/db/zod/schema/user.types').UserFeature | null
+  row: import('#lib/db/zod/schema/user.types.js').UserFeature | null
   updatedAt: number
 }
 
@@ -2948,7 +2954,7 @@ export class AppCtx {
     const remoteGet = this.remoteMap[resource]?.get as
       | ((
           params: unknown,
-        ) => import('$lib/context/featureQuery.types').ResourceDetailHandle['query'])
+        ) => import('#lib/context/featureQuery.types.js').ResourceDetailHandle['query'])
       | undefined
     if (!remoteGet) return undefined
     const scope = this.getRoleScopeQueryKey()

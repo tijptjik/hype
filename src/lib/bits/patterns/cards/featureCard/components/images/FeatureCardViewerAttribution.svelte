@@ -1,21 +1,21 @@
 <script lang="ts">
-import { useImageEditorGalleryModel } from '$lib/adapters/image'
-import { formatDistanceToNow } from '$lib'
-import { Icon } from '$lib/bits'
+import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
+import { formatDistanceToNow } from '#lib'
+import { Icon } from '#lib/bits/index.js'
 import { Popover } from 'bits-ui'
-import { getImageSrc } from '$lib/client/services/image'
-import { m } from '$lib/i18n'
-import { getUserForAttribution } from '$lib/api/server/user.remote'
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getImageCtx } from '$lib/context/image.svelte'
+import { getImageSrc } from '#lib/client/services/image.js'
+import { m } from '#lib/i18n.js'
+import { getUserForAttribution } from '#lib/api/server/user.remote.js'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 import FeatureCardViewerAttributionAvatar from './FeatureCardViewerAttributionAvatar.svelte'
 import InfoIcon from 'virtual:icons/proicons/info'
 import CameraIcon from 'virtual:icons/proicons/camera'
 import MapPinIcon from 'virtual:icons/proicons/location'
 import type { Component } from 'svelte'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { UserHydrationResult } from '$lib/db/zod/schema/user.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { UserHydrationResult } from '#lib/db/zod/schema/user.types.js'
 
 const appCtx = getAppCtx()
 const imageCtx = getImageCtx()
@@ -255,7 +255,7 @@ $effect(() => {
   avatarSrc: string | null,
   date: string | null | undefined,
   delayClass: string,
-  isDateLoading: boolean = false
+  isDateLoading: boolean = false,
 )}
   <div
     class={`relative flex w-full min-h-[3.4rem] max-w-full items-center gap-2.5 rounded-[0.875rem] border border-white/10 bg-black/58 pl-2 pr-[4.625rem] py-2 text-white/92 shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all duration-300 ${delayClass} ${animateRows ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}

@@ -1,24 +1,22 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import { PanelRoot as Panel } from '$lib/bits'
+import { PanelRoot as Panel } from '#lib/bits/index.js'
 // COMPONENTS
-import Header from '$lib/bits/patterns/panels/components/common/Header.svelte'
-import Info from '$lib/bits/patterns/panels/components/info/Filters.svelte'
-import Reset from '$lib/bits/patterns/panels/components/controls/Reset.svelte'
-import Neighbourhoods from '$lib/bits/patterns/panels/sections/neighbourhoods/NeighbourhoodsSection.svelte'
-import Categories from '$lib/bits/patterns/panels/sections/categories/CategoriesSection.svelte'
+import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
+import Info from '#lib/bits/patterns/panels/components/info/Filters.svelte'
+import Reset from '#lib/bits/patterns/panels/components/controls/Reset.svelte'
+import Neighbourhoods from '#lib/bits/patterns/panels/sections/neighbourhoods/NeighbourhoodsSection.svelte'
+import Categories from '#lib/bits/patterns/panels/sections/categories/CategoriesSection.svelte'
 // CONTEXT
 
 // ENUMS
-import { Panel as PanelType, PanelSide } from '$lib/enums'
+import { Panel as PanelType, PanelSide } from '#lib/enums.js'
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
-import type { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
-import type {
-  useFilterPanelModel,
-} from '$lib/adapters/panels/useFilterPanelModel.svelte'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+import type { usePanelShellModel } from '#lib/adapters/panels/usePanelShellModel.svelte.js'
+import type { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
 
 // CONTEXT
 
@@ -56,8 +54,8 @@ const panelProps = $derived(shell.panel)
     onClose={shell.onClose}
     {...panelProps}
     title={m.menu_filters()}
-    onToggleInfo={(e) => {
-      handleToggleInfo(e);
+    onToggleInfo={e => {
+      handleToggleInfo(e)
     }}
   />
   <Info isOpen={isInfoOpen} />

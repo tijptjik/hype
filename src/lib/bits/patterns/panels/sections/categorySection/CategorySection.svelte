@@ -4,8 +4,8 @@ import { slide } from 'svelte/transition'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import ChevronRight from 'virtual:icons/proicons/chevron-right'
-import { Icon } from '$lib/bits'
-import SelectedFilter from '$lib/bits/patterns/panels/components/items/SelectedFilter.svelte'
+import { Icon } from '#lib/bits/index.js'
+import SelectedFilter from '#lib/bits/patterns/panels/components/items/SelectedFilter.svelte'
 // TYPES
 import type { Component } from 'svelte'
 import type { Snippet } from 'svelte'
@@ -45,7 +45,9 @@ let {
 </script>
 
 <div
-  class="mt-4 flex min-h-0 shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen ? 'flex-grow' : ''} {hasActiveFilters ? 'pb-[80px]' : ''}"
+  class="mt-4 flex min-h-0 shrink-0 flex-col border-t-4 border-base-300 caret-transparent {isOpen
+    ? 'flex-grow'
+    : ''} {hasActiveFilters ? 'pb-[80px]' : ''}"
   transition:slide
 >
   <button

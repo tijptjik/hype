@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import Heart from 'virtual:icons/proicons/heart'
 // COMPONENTS
@@ -8,7 +8,7 @@ import FeatureCardContributionPanel from './contribution/FeatureCardContribution
 import FeatureCardAttributionField from './contribution/FeatureCardAttributionField.svelte'
 import * as FeatureCardNewPrimitive from './newFeature'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 let { viewport, feature }: { viewport: HTMLElement; feature: Feature } = $props()
 

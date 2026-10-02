@@ -1,6 +1,6 @@
 // TYPES
-import type { Id } from '$lib/types'
-import type { UserContributedFeature } from '$lib/db/zod/schema/feature.types'
+import type { Id } from '#lib/types.js'
+import type { UserContributedFeature } from '#lib/db/zod/schema/feature.types.js'
 
 /* ----------------- */
 // FEATURES : USER CONTRIBUTED

@@ -1,25 +1,25 @@
 import { CompactAncestorsSchema } from './api'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import type {
   ProjectLicense,
   ProjectLicenseRights,
-} from '$lib/db/zod/schema/projectLicense.types'
+} from '#lib/db/zod/schema/projectLicense.types.js'
 import {
   createDefaultProjectLicense,
   normalizeProjectLicense,
   parseProjectLicense,
-} from '$lib/db/services/licence'
+} from '#lib/db/services/licence.js'
 import type {
   ProjectCapabilities,
   ProjectRoleCapabilities,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { project, projectI18n, projectRole } from '$lib/db/schema/index'
+import { project, projectI18n, projectRole } from '#lib/db/schema/index.js'
 // ZOD SCHEMAS
 import { FormBoolean } from '../form'
 import { getLocales } from '../constraints'

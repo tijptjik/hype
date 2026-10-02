@@ -1,10 +1,10 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SVELTE
 import { slide } from 'svelte/transition'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import ChevronRight from 'virtual:icons/proicons/chevron-right'

@@ -4,7 +4,7 @@ import Sun from 'virtual:icons/proicons/brightness'
 import Moon from 'virtual:icons/proicons/moon'
 import Check from 'virtual:icons/proicons/checkmark'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { ThemeOptionProps } from './themePickerPrimitives.types'
 let { theme, selected, name, onSelect }: ThemeOptionProps = $props()
@@ -12,7 +12,9 @@ let { theme, selected, name, onSelect }: ThemeOptionProps = $props()
 
 <label
   data-theme={theme.id}
-  class="relative flex cursor-pointer flex-col gap-4 rounded-2xl border-2 bg-panel p-4 text-base-content transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-focus {selected ? 'border-primary' : 'border-border hover:border-primary/60'}"
+  class="relative flex cursor-pointer flex-col gap-4 rounded-2xl border-2 bg-panel p-4 text-base-content transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-focus {selected
+    ? 'border-primary'
+    : 'border-border hover:border-primary/60'}"
 >
   <input
     class="sr-only"

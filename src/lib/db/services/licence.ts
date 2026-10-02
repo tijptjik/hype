@@ -4,7 +4,7 @@ import type {
   ProjectLicenseHistoryEntry,
   ProjectLicenseMediaType,
   ProjectLicenseRights,
-} from '$lib/db/zod/schema/projectLicense.types'
+} from '#lib/db/zod/schema/projectLicense.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

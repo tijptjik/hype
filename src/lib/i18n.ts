@@ -4,22 +4,22 @@ import { enGB } from 'date-fns/locale/en-GB'
 import { zhCN } from 'date-fns/locale/zh-CN'
 import { zhHK } from 'date-fns/locale/zh-HK'
 // I18N
-import * as runtime from '$lib/paraglide/runtime'
-import * as m from '$lib/paraglide/messages'
+import * as runtime from '#lib/paraglide/runtime.js'
+import * as m from '#lib/paraglide/messages.js'
 // TYPES
-import type { Locale, LocaleKey } from '$lib/types'
-import type { DivisionFacet } from '$lib/api/services/featureQuery.types'
-import type { Resource } from '$lib/types'
+import type { Locale, LocaleKey } from '#lib/types.js'
+import type { DivisionFacet } from '#lib/api/services/featureQuery.types.js'
+import type { Resource } from '#lib/types.js'
 import type {
   PropertyValueI18nDB,
   WritableI18nRecord,
-} from '$lib/db/zod/schema/property.types'
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/property.types.js'
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 import { supportedLocaleKeys, supportedLocales } from './enums'
 import type {
   FeatureProperty,
   FeaturePropertyI18nDB,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 
 export { supportedLocaleKeys }
 
@@ -482,9 +482,9 @@ export { m, runtime }
  * module do not eagerly initialize the SvelteKit remote runtime.
  */
 async function loadTranslateTextRemote(): Promise<
-  typeof import('$lib/api/server/translation.remote').translateText
+  typeof import('#lib/api/server/translation.remote.js').translateText
 > {
-  const { translateText } = await import('$lib/api/server/translation.remote')
+  const { translateText } = await import('#lib/api/server/translation.remote.js')
   return translateText
 }
 

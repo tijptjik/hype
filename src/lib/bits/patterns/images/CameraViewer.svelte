@@ -3,7 +3,7 @@
 import * as ImagePrimitive from './components'
 import Viewer from './components/Viewer.svelte'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // TYPES
 import type { CameraViewerProps, ViewerRenderable } from './images.types'
 

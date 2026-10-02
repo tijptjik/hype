@@ -1,15 +1,15 @@
 // DB
-import { upsert } from '$lib/db/crud'
-import { userFeature } from '$lib/db/schema/index'
+import { upsert } from '#lib/db/crud.js'
+import { userFeature } from '#lib/db/schema/index.js'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 // TYPES
-import type { Database } from '$lib/types'
+import type { Database } from '#lib/types.js'
 import type {
   UserFeature,
   UserFeatureDBNew,
   UserFeaturePartial,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 
 // ═══════════════════════
 // 1. LIST :: USER FEATURES

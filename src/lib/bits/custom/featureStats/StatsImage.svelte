@@ -1,10 +1,10 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import StatsPips from './components/StatsPips.svelte'
 // SERVICES
-import { calculateImageStatuses } from '$lib/client/services/stats'
+import { calculateImageStatuses } from '#lib/client/services/stats.js'
 // ICONS
 import ImageIcon from 'virtual:icons/proicons/photo'
 // TYPES

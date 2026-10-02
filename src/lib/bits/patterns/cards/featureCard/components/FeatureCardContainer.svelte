@@ -1,7 +1,7 @@
 <script lang="ts">
 // BITS
-import { Scrollbar } from '$lib/bits'
-import { cx } from '$lib/bits/utils'
+import { Scrollbar } from '#lib/bits/index.js'
+import { cx } from '#lib/bits/utils.js'
 type ContainerProps = {
   children: import('svelte').Snippet
   viewport?: HTMLElement

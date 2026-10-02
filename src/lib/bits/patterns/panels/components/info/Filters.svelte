@@ -1,5 +1,5 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import { slide } from 'svelte/transition'
 let { isOpen = false } = $props<{
   isOpen?: boolean

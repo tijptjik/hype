@@ -1,5 +1,5 @@
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 export const VIEWER_NAV_ROOT_CLASSES = cx(
   'pointer-events-none',

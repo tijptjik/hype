@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onDestroy, tick } from 'svelte'
-import { cx } from '$lib/bits/utils'
-import { m } from '$lib/i18n'
+import { cx } from '#lib/bits/utils.js'
+import { m } from '#lib/i18n.js'
 import ViewerEmpty from './ViewerEmpty.svelte'
 import ViewerFullScreen from './ViewerFullScreen.svelte'
 import ViewerNav from './ViewerNav.svelte'

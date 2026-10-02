@@ -2,7 +2,7 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import ChevronUp from 'virtual:icons/proicons/chevron-up'
@@ -11,11 +11,11 @@ import Languages from 'virtual:icons/tabler/language'
 import Plus from 'virtual:icons/proicons/add'
 import Trash2 from 'virtual:icons/proicons/delete'
 // COMPONENTS
-import { Button, DestructiveDialog, SimpleTooltip } from '$lib/bits/core'
-import Switch from '$lib/bits/custom/switch/Switch.svelte'
+import { Button, DestructiveDialog, SimpleTooltip } from '#lib/bits/core/index.js'
+import Switch from '#lib/bits/custom/switch/Switch.svelte'
 // TYPES
-import type { Id } from '$lib/types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+import type { Id } from '#lib/types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type { Component } from 'svelte'
 
 let {
@@ -174,7 +174,9 @@ function handleAddToProject(event: Event): void {
         onclick={onToggleCollapse}
       >
         <h3 class="bits-project-field-card__title">
-          {property.i18n?.en?.label || property.key || m.admin__forms_property_untitled()}
+          {property.i18n?.en?.label ||
+            property.key ||
+            m.admin__forms_property_untitled()}
         </h3>
         <ChevronDown
           class={`bits-project-field-card__collapse-icon ${collapsed ? 'bits-project-field-card__collapse-icon--collapsed' : ''}`}
@@ -187,12 +189,16 @@ function handleAddToProject(event: Event): void {
         {#if titleHref}
           <a href={titleHref} class="bits-project-field-card__title-link">
             <h3 class="bits-project-field-card__title">
-              {property.i18n?.en?.label || property.key || m.admin__forms_property_untitled()}
+              {property.i18n?.en?.label ||
+                property.key ||
+                m.admin__forms_property_untitled()}
             </h3>
           </a>
         {:else}
           <h3 class="bits-project-field-card__title">
-            {property.i18n?.en?.label || property.key || m.admin__forms_property_untitled()}
+            {property.i18n?.en?.label ||
+              property.key ||
+              m.admin__forms_property_untitled()}
           </h3>
         {/if}
       </div>
@@ -222,7 +228,7 @@ function handleAddToProject(event: Event): void {
           color="light"
           size="sm"
           onCheckedChange={nextValue =>
-              onToggleIsTranslatable(property.id, Boolean(nextValue))}
+            onToggleIsTranslatable(property.id, Boolean(nextValue))}
         />
       </div>
     {/if}

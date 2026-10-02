@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getURLfromImage } from '$lib/client/services/image'
+import { getURLfromImage } from '#lib/client/services/image.js'
 import {
   getRowThumbnailClass,
   rowThumbnailFallbackClass,

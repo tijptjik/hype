@@ -1,4 +1,6 @@
-import type { RemoteQuery } from '@sveltejs/kit'
+import type { RemoteQuery } from '$app/server'
+import { error } from '@sveltejs/kit'
+
 // Register panel query families for bounded single-flight mutation refreshes.
 import './resources.remote'
 // REMOTE
@@ -8,22 +10,23 @@ import {
   guardedCommand,
   guardedForm,
   guardedQuery,
-} from '$lib/api/server/remote'
-import { error } from '@sveltejs/kit'
+} from '#lib/api/server/guarded.js'
+
 import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
+
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocale } from '#lib/i18n.js'
 // UTILS
 import { nanoid } from 'nanoid'
 // API
-import { getValidQueryParams as validateQueryParams } from '$lib/api'
+import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
   getDuplicateValues,
   requireValue,
   toBooleanStateResponseShape,
   toCreatedResponseShape,
-} from '$lib/api/services'
+} from '#lib/api/services/index.js'
 import {
   getFeatureWithRelations,
   toComparableFeatureProperties,
@@ -33,7 +36,7 @@ import {
   toLookupConditions,
   toQueryConditions,
   toRequestedListState,
-} from '$lib/api/services/feature'
+} from '#lib/api/services/feature.js'
 // AUTHORIZATION
 import {
   authorizeFeatureAdminReadForProbe,
@@ -46,7 +49,7 @@ import {
   ensureFeatureCommandAllowed,
   toAuthMessage,
   toIssueDetailMessage,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // DB
 import {
   createFeature,
@@ -62,23 +65,26 @@ import {
   updateFeaturePublishedStateById,
   updateI18n,
   updateProperties,
-} from '$lib/db/services/feature'
-import { probeLayerForUpdate } from '$lib/db/services/layer'
-import { publishAllImagesWithPublicIntent } from '$lib/db/services/image'
+} from '#lib/db/services/feature.js'
+import { probeLayerForUpdate } from '#lib/db/services/layer.js'
+import { publishAllImagesWithPublicIntent } from '#lib/db/services/image.js'
 // SCHEMA
-import { feature } from '$lib/db/schema'
-import { FormBoolean } from '$lib/db/zod/form'
+import { feature } from '#lib/db/schema/index.js'
+import { FormBoolean } from '#lib/db/zod/form.js'
 import {
   FeatureFormData,
   GetQueryParamsSchema,
   ListQueryParamsSchema,
   PublishFeatureSchema,
   RemoveFeatureSchema,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // TYPES
-import type { EntityResponse, Id, ListResponse } from '$lib/types'
-import type { FeatureBulkStateResult } from '$lib/client/services/bulkEdit.types'
-import type { GuardedCommandContext, GuardedQueryContext } from '$lib/api/guarded.types'
+import type { EntityResponse, Id, ListResponse } from '#lib/types.js'
+import type { FeatureBulkStateResult } from '#lib/client/services/bulkEdit.types.js'
+import type {
+  GuardedCommandContext,
+  GuardedQueryContext,
+} from '#lib/api/guarded.types.js'
 import type {
   FeatureCommandProbe,
   FeatureDB,
@@ -87,7 +93,7 @@ import type {
   FeatureListByProfile,
   FeatureListParamsByProfile,
   FeatureProfile,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -209,6 +215,7 @@ function chunkImportFeatureLookupIds(ids: string[]): string[][] {
 const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toFeatureProfile(params.meta?.profile, 'list')
+
   if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   const queryParams = validateQueryParams<FeatureDB>(
@@ -236,7 +243,6 @@ const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
     params.prisms as never,
     event.locals.hub.id ?? null,
   )
-
   const result = await listFeatures(
     db,
     getFeatureWithRelations(profile) as never,
@@ -244,11 +250,7 @@ const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
     event.locals.hub,
     params.pagination,
     params.sorting,
-    {
-      q: params.q,
-      filtersToApply,
-      locale: getLocale(),
-    },
+    { q: params.q, filtersToApply, locale: getLocale() },
   )
 
   return (await toListResponseShape(
@@ -286,13 +288,12 @@ export const getFeatures = getFeaturesQuery as unknown as <
 const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toFeatureProfile(params.meta?.profile, 'detail')
-  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
-  const normalizedParams = {
-    ...params,
-    refKey: 'id' as const,
-  }
 
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+
+  const normalizedParams = { ...params, refKey: 'id' as const }
   const probe = await probeFeatureQuery(db, normalizedParams)
+
   if (!probe) {
     return toEntityResponseShape(null, profile)
   }
@@ -314,7 +315,6 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
       isArchived: probe.isArchived,
     } as Partial<FeatureDB>,
   )
-
   const { conditions } = toQueryConditions(
     db,
     user,
@@ -324,7 +324,6 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
     undefined,
     event.locals.hub.id ?? null,
   )
-
   const result = await loadFeature(
     db,
     getFeatureWithRelations(profile) as never,
@@ -362,12 +361,7 @@ export const getFeatureForImport = guardedBatchByIdQuery<
   }
 
   const probes = await Promise.all(
-    ids.map(id =>
-      probeFeatureQuery(db, {
-        ref: id,
-        refKey: 'id',
-      }),
-    ),
+    ids.map(id => probeFeatureQuery(db, { ref: id, refKey: 'id' })),
   )
   const probeById = new Map(
     probes
@@ -377,13 +371,10 @@ export const getFeatureForImport = guardedBatchByIdQuery<
 
   const readableIds = ids.filter(id => {
     const probe = probeById.get(id)
+
     if (!probe) return false
 
-    const decision = authorizeFeatureAdminReadForProbe({
-      user,
-      userRoles,
-      probe,
-    })
+    const decision = authorizeFeatureAdminReadForProbe({ user, userRoles, probe })
 
     return decision.allowed
   })
@@ -424,6 +415,7 @@ export const getFeatureForImport = guardedBatchByIdQuery<
       (await toEntityResponseShape((byId.get(id) ?? null) as never, 'admin')) as never,
     ]),
   )
+
   const envelopeById = new Map(
     envelopes as Array<[string, EntityResponse<FeatureEntityByProfile<'admin'>>]>,
   )
@@ -475,6 +467,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
           typeof propertyId === 'string' && propertyId.trim().length > 0,
       ),
   )
+
   if (duplicatePropertyIds.length > 0) {
     invalid(
       issue.data.properties(
@@ -520,6 +513,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       isPublished: false,
       isArchived: false,
     })
+
     await createI18n(db, data.i18n, created.id)
     await createProperties(db, created.id, submittedProperties)
 
@@ -605,11 +599,11 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     ),
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
+
   const currentEntity = requireValue(
     (await toEntityResponseShape(currentWithRelations, 'admin')).data,
     () => invalid(issue('FEATURE_NOT_FOUND')),
   )
-
   const i18nChanged =
     JSON.stringify(data.i18n) !== JSON.stringify(currentEntity.i18n ?? {})
   const propertiesChanged =
@@ -626,14 +620,15 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const visitableChanged = Boolean(data.isVisitable) !== Boolean(current.isVisitable)
   const pendingReviewChanged =
     Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)
-
   const submittedDataForUpdate: Record<string, unknown> = {}
+
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
   if (propertiesChanged) submittedDataForUpdate.properties = submittedProperties
   if (geometryChanged) submittedDataForUpdate.geometry = data.geometry
   if (addressChanged) submittedDataForUpdate.addressMeta = data.addressMeta
   if (intangibleChanged) submittedDataForUpdate.isIntangible = data.isIntangible
   if (visitableChanged) submittedDataForUpdate.isVisitable = data.isVisitable
+
   if (pendingReviewChanged) {
     submittedDataForUpdate.isPendingReview = data.isPendingReview
   }
@@ -1028,6 +1023,7 @@ export const updateFeatureBulkState = guardedBatchQuery(
               ok: true,
               data,
             }
+
             return [key, result] as const
           } catch (err) {
             const result: FeatureBulkStateResult = {
@@ -1035,12 +1031,13 @@ export const updateFeatureBulkState = guardedBatchQuery(
               ok: false,
               error: toFeatureBulkStateErrorMessage(err),
             }
+
             return [key, result] as const
           }
         }),
       )
-    const resultsByKey = new Map(resultEntries)
 
+    const resultsByKey = new Map(resultEntries)
     return params =>
       resultsByKey.get(`${params.id}:${params.field}:${params.value}`) ?? {
         id: params.id as Id,

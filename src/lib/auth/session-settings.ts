@@ -1,7 +1,7 @@
 // SCHEMAS
-import { UserSelfProfileAPI } from '$lib/db/zod/schema/user'
+import { UserSelfProfileAPI } from '#lib/db/zod/schema/user.js'
 // TYPES
-import type { CurrentUser } from '$lib/db/zod/schema/user.types'
+import type { CurrentUser } from '#lib/db/zod/schema/user.types.js'
 
 /**
  * Normalizes stored JSON settings before exposing them in an authenticated session.

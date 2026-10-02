@@ -3,21 +3,21 @@
 import { tick } from 'svelte'
 import { fade } from 'svelte/transition'
 // I18N
-import { m, toLocaleKebab, toLocaleKey } from '$lib/i18n'
+import { m, toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
 // ICONS
 import GripVertical from 'virtual:icons/lucide/grip-vertical'
 // SERVICES
-import { getDropIndex } from '$lib/client/services/dragDrop'
+import { getDropIndex } from '#lib/client/services/dragDrop.js'
 // COMPONENTS
-import { SelectField, Skeleton, TextInput } from '$lib/bits/custom/form'
-import { FormI18nSection } from '$lib/bits/patterns/forms/formI18nSection'
+import { SelectField, Skeleton, TextInput } from '#lib/bits/custom/form/index.js'
+import { FormI18nSection } from '#lib/bits/patterns/forms/formI18nSection/index.js'
 import FormFieldPropertyValueItem from './FormFieldPropertyValueItem.svelte'
 import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelte'
 // TYPES
-import type { SelectItem } from '$lib/bits/core/select/select.types'
-import type { FormIssueLike } from '$lib/client/services/form.types'
-import type { Locale, LocaleKey } from '$lib/types'
-import type { FormFieldCardBodyProps } from '$lib/db/zod/schema/property.types'
+import type { SelectItem } from '#lib/bits/core/select/select.types.js'
+import type { FormIssueLike } from '#lib/client/services/form.types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
+import type { FormFieldCardBodyProps } from '#lib/db/zod/schema/property.types.js'
 import type {
   DragDropState,
   DraggableOptions,
@@ -717,7 +717,9 @@ $effect(() => {
     return onResetLocale(property.id, targetLocale)
   }}
 >
-  {#snippet children(locale)}
+  {#snippet children(
+    locale,
+  )}
     {@const showCoreFields = isPrimary(locale)}
     {@const labelGenValue = getPropertyGenState(locale, 'labelGen')}
     {@const placeholderGenValue = getPropertyGenState(locale, 'placeholderGen')}
@@ -780,7 +782,7 @@ $effect(() => {
         <TextInput
           label={m.admin__forms_property_name_api()}
           required={isFieldRequired(['key'])}
-          value={(keyInputAttrs as { value?: string }).value ?? (property.key ?? '')}
+          value={(keyInputAttrs as { value?: string }).value ?? property.key ?? ''}
           issues={keyIssues}
           {isEditing}
           inputAttrs={withCoreFieldAttrs(keyInputAttrs, locale, 'key')}
@@ -799,11 +801,12 @@ $effect(() => {
         onToggleGenAI={() =>
           onUpdateI18n(property.id, toLocaleKebab(locale), 'labelGen', !labelGenValue)}
         value={(getPropertyLocaleFieldAttrs(locale, 'label') as { value?: string })
-            .value ??
-          (getLocaleEntry(
+          .value ??
+          getLocaleEntry(
             property.i18n as Record<string, { label?: string }> | null | undefined,
             locale,
-          )?.label ?? '')}
+          )?.label ??
+          ''}
         issues={getFieldIssues(['i18n', locale, 'label'])}
         {isEditing}
         inputAttrs={withCoreFieldAttrs(
@@ -828,13 +831,19 @@ $effect(() => {
             'placeholderGen',
             !placeholderGenValue,
           )}
-        value={(getPropertyLocaleFieldAttrs(locale, 'placeholder') as {
+        value={(
+          getPropertyLocaleFieldAttrs(locale, 'placeholder') as {
             value?: string
-          }).value ??
-          (getLocaleEntry(
-            property.i18n as Record<string, { placeholder?: string }> | null | undefined,
+          }
+        ).value ??
+          getLocaleEntry(
+            property.i18n as
+              | Record<string, { placeholder?: string }>
+              | null
+              | undefined,
             locale,
-          )?.placeholder ?? '')}
+          )?.placeholder ??
+          ''}
         issues={getFieldIssues(['i18n', locale, 'placeholder'])}
         {isEditing}
         inputAttrs={withCoreFieldAttrs(
@@ -858,7 +867,8 @@ $effect(() => {
           name={componentName}
           wrapperAttrs={{
             'data-property-core-field': 'component',
-            onkeydown: (event: KeyboardEvent) => onCoreFieldKeydown(event, locale, 'component'),
+            onkeydown: (event: KeyboardEvent) =>
+              onCoreFieldKeydown(event, locale, 'component'),
           }}
           onValueChange={value => {
             onLayoutMutationStart?.()
@@ -878,7 +888,8 @@ $effect(() => {
             <TextInput
               label={m.admin__forms_property_minimum()}
               inputType="number"
-              value={(minAttrs as { value?: string }).value ?? (property.min == null ? '' : String(property.min))}
+              value={(minAttrs as { value?: string }).value ??
+                (property.min == null ? '' : String(property.min))}
               required={rangeBoundsAreRequired}
               issues={minIssues}
               {isEditing}
@@ -887,7 +898,8 @@ $effect(() => {
             <TextInput
               label={m.admin__forms_property_maximum()}
               inputType="number"
-              value={(maxAttrs as { value?: string }).value ?? (property.max == null ? '' : String(property.max))}
+              value={(maxAttrs as { value?: string }).value ??
+                (property.max == null ? '' : String(property.max))}
               required={rangeBoundsAreRequired}
               issues={maxIssues}
               {isEditing}
@@ -917,20 +929,21 @@ $effect(() => {
           {#snippet rows()}
             {#each sortedValues as value, valueIndex (value.id)}
               {@const formValueIndex = (property.values || []).findIndex(
-              candidate => candidate.id === value.id,
-            )}
-              {@const resolvedValueIndex = formValueIndex >= 0 ? formValueIndex : valueIndex}
+                candidate => candidate.id === value.id,
+              )}
+              {@const resolvedValueIndex =
+                formValueIndex >= 0 ? formValueIndex : valueIndex}
               {@const valueDisplayText = getValueDisplayText(value.id, locale)}
               {@const valueIdInputAttrs = getFieldAttrsWithValue(
-              ['values', resolvedValueIndex, 'id'],
-              'text',
-              value.id,
-            )}
+                ['values', resolvedValueIndex, 'id'],
+                'text',
+                value.id,
+              )}
               {@const valueRankInputAttrs = getFieldAttrsWithValue(
-              ['values', resolvedValueIndex, 'rank'],
-              'number',
-              String(valueIndex),
-            )}
+                ['values', resolvedValueIndex, 'rank'],
+                'number',
+                String(valueIndex),
+              )}
               <FormFieldPropertyValueItem
                 {isEditing}
                 {optionRemoveMode}
@@ -985,7 +998,10 @@ $effect(() => {
                       class={`bits-project-field-card__value-editable ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
                       role="textbox"
                       aria-readonly={!isEditing}
-                      contenteditable={isEditing && (!showCoreFields || !valuesAreTranslatable) ? 'plaintext-only' : isEditing}
+                      contenteditable={isEditing &&
+                      (!showCoreFields || !valuesAreTranslatable)
+                        ? 'plaintext-only'
+                        : isEditing}
                       tabindex={isEditing ? 0 : -1}
                       use:bindValueEditable={{
                         valueId: value.id,
@@ -1012,7 +1028,9 @@ $effect(() => {
                   {/if}
                   {#if getValueIssues(value.id, locale)?.length}
                     <div class="bits-form__error">
-                      {getValueIssues(value.id, locale)?.map(issue => issue.message).join(' ')}
+                      {getValueIssues(value.id, locale)
+                        ?.map(issue => issue.message)
+                        .join(' ')}
                     </div>
                   {/if}
                 {/snippet}

@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import Funnel from 'virtual:icons/proicons/filter'
 import Crosshair from 'virtual:icons/proicons/target'
@@ -18,7 +18,9 @@ const color = $derived(
 </script>
 
 <div
-  class="flex min-h-10 items-center gap-3 pl-5 pr-7 py-2 transition-colors {row.active ? 'bg-raised' : 'hover:bg-surface'}"
+  class="flex min-h-10 items-center gap-3 pl-5 pr-7 py-2 transition-colors {row.active
+    ? 'bg-raised'
+    : 'hover:bg-surface'}"
   data-resource-id={row.id}
 >
   <button
@@ -30,7 +32,9 @@ const color = $derived(
     onclick={row.onPrimary}
   >
     <span
-      class="size-2 shrink-0 rounded-full {row.enabled ? `bg-current ${color}` : 'bg-base-content/30'}"
+      class="size-2 shrink-0 rounded-full {row.enabled
+        ? `bg-current ${color}`
+        : 'bg-base-content/30'}"
       aria-hidden="true"
     ></span>
     {#if !narrow}
@@ -44,7 +48,10 @@ const color = $derived(
                 <span aria-hidden="true">›</span>
               {/if}
               <span
-                class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap {index === 0 ? 'text-primary' : 'text-tertiary'}"
+                class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap {index ===
+                0
+                  ? 'text-primary'
+                  : 'text-tertiary'}"
                 >{breadcrumb}</span
               >
             {/each}
@@ -63,14 +70,18 @@ const color = $derived(
     {#if !row.onIsolate}
       <button
         type="button"
-        class="group/funnel inline-flex size-6 shrink-0 items-center justify-center rounded-lg focus-override outline-none hover:bg-raised focus-visible:text-primary {row.selected ? color : 'text-base-content/45'}"
+        class="group/funnel inline-flex size-6 shrink-0 items-center justify-center rounded-lg focus-override outline-none hover:bg-raised focus-visible:text-primary {row.selected
+          ? color
+          : 'text-base-content/45'}"
         aria-label={row.toggleLabel}
         aria-pressed={row.selected}
         title={row.toggleLabel}
         onclick={row.onToggle}
       >
         <Funnel
-          class="size-5 {row.selected ? 'group-hover/funnel:hidden group-focus-visible/funnel:hidden' : ''}"
+          class="size-5 {row.selected
+            ? 'group-hover/funnel:hidden group-focus-visible/funnel:hidden'
+            : ''}"
         />
         {#if row.selected}
           <X

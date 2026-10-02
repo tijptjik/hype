@@ -41,14 +41,17 @@
 // ---
 
 // API
-import { getUser, searchUsers as searchUsersRemote } from '$lib/api/server/user.remote'
+import {
+  getUser,
+  searchUsers as searchUsersRemote,
+} from '#lib/api/server/user.remote.js'
 
 // TYPES
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 import type {
   FeatureCSVColumn,
   UserValidationResult,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 export interface UserCSVDropEvent {
   acceptedFiles: File[]

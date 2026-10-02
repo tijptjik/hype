@@ -2,14 +2,14 @@
 import { fly, slide } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
 // CONSTANTS
-import { PANEL_WIDTH } from '$lib/constants'
+import { PANEL_WIDTH } from '#lib/constants.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 
 const appCtx = getAppCtx()
 
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 let {
   children,
@@ -50,7 +50,7 @@ let shouldShowOverlay = $derived(
     transition:slide={{
       duration: 500,
       easing: cubicInOut,
-      axis: 'x'
+      axis: 'x',
     }}
   >
     <div class="h-full" class:overflow-y-auto={scrollable} bind:this={panelContainer}>
@@ -68,7 +68,7 @@ let shouldShowOverlay = $derived(
     transition:fly={{
       duration: 150,
       easing: cubicInOut,
-      x: position === 'left' ? -PANEL_WIDTH : PANEL_WIDTH
+      x: position === 'left' ? -PANEL_WIDTH : PANEL_WIDTH,
     }}
   >
     <div class="h-full" class:overflow-y-auto={scrollable} bind:this={panelContainer}>

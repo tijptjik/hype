@@ -1,5 +1,5 @@
 // TYPES
-import type { Id, LocaleExtended } from '$lib/types'
+import type { Id, LocaleExtended } from '#lib/types.js'
 
 // ELEMENTS
 

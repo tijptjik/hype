@@ -1,8 +1,8 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
-import { Button } from '$lib/bits/core'
-import { Card } from '$lib/bits/custom'
-import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
+import { m } from '#lib/i18n.js'
+import { Button } from '#lib/bits/core/index.js'
+import { Card } from '#lib/bits/custom/index.js'
+import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 import type { OrganisationCapabilitiesListProps } from '../organisationCapabilities.types'
 import Trash2Icon from 'virtual:icons/proicons/delete'
 import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'

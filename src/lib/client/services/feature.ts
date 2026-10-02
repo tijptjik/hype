@@ -1,23 +1,21 @@
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import { goto } from '$app/navigation'
-import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
+import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 import type { Point } from 'geojson'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { OmniCtx } from '$lib/context/omni.svelte'
-import type {
-  FeatureFieldSectionItem,
-} from '$lib/bits/patterns/forms/formFeatureFieldsSection'
-import { sortFeatureProperties } from '$lib/client/services/property'
-import { upsertNewFeatureDraft } from '$lib/client/services/task'
-import { NewFeatureMode, OmniMode } from '$lib/enums'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { FeatureFieldSectionItem } from '#lib/bits/patterns/forms/formFeatureFieldsSection/index.js'
+import { sortFeatureProperties } from '#lib/client/services/property.js'
+import { upsertNewFeatureDraft } from '#lib/client/services/task.js'
+import { NewFeatureMode, OmniMode } from '#lib/enums.js'
 import type {
   Feature,
   FeatureFormInput,
   FeatureProperty,
-} from '$lib/db/zod/schema/feature.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { CurrentUser, UserProfile } from '$lib/db/zod/schema/user.types'
-import type { SessionUser, UserRoleDisco } from '$lib/types'
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { CurrentUser, UserProfile } from '#lib/db/zod/schema/user.types.js'
+import type { SessionUser, UserRoleDisco } from '#lib/types.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -45,10 +43,7 @@ import type { SessionUser, UserRoleDisco } from '$lib/types'
 export const DEFAULT_NEW_FEATURE_COORDINATES: [number, number] = [
   114.1693671540923, 22.319307515052614,
 ]
-
-type InitAddNewFeatureOptions = {
-  navigateToRoute?: boolean
-}
+type InitAddNewFeatureOptions = { navigateToRoute?: boolean }
 
 function sanitizeFeaturePropertyValueId(
   propertyValueId: string | null | undefined,
@@ -305,6 +300,7 @@ export function toFeatureFormInput(
           addressProperties: value.i18n?.zhHant?.addressProperties ?? {},
         },
       },
+
       properties:
         value.properties?.map(property => ({
           propertyId: property.propertyId,
@@ -390,8 +386,10 @@ export function getProgrammaticFeatureInputEntries(
   })
 
   appendNestedEntries('data.addressMeta', featureData?.addressMeta ?? {})
+
   ;(['en', 'zhHans', 'zhHant'] as const).forEach(locale => {
     const localeI18n = featureData?.i18n?.[locale]
+
     appendEntry(`data.i18n.${locale}.displayAddress`, localeI18n?.displayAddress ?? '')
     appendEntry(
       `data.i18n.${locale}.displayAddressGen`,
@@ -413,6 +411,7 @@ export function getProgrammaticFeatureInputEntries(
 
     if (property.property?.isTranslatable) {
       const propertyI18n = property.i18n ?? {}
+
       ;(['en', 'zhHans', 'zhHant'] as const).forEach(locale => {
         appendEntry(
           `data.properties[${index}].i18n.${locale}.value`,
@@ -486,12 +485,13 @@ export function toCurrentAuthorizationUser(
  *  3. PROPERTY PROJECTIONS
  ************/
 // +++ Property Projections
-
 type FeaturePropertyDefinition = NonNullable<FeatureProperty['property']>
+
 type FeaturePropertyValueOption = NonNullable<
   FeaturePropertyDefinition['values']
 >[number]
 type FeatureFormProperty = NonNullable<FeatureFormInput['data']['properties']>[number]
+
 type FeaturePropertyWithDefinition = FeatureFormProperty & {
   property: FeaturePropertyDefinition
 }
@@ -519,8 +519,11 @@ export function toLayerBackedFeatureProperties(
     .filter(layerProperty => {
       const property = layerProperty.property
       const propertyId = layerProperty.propertyId ?? ''
+
       if (!propertyId || seenPropertyIds.has(propertyId)) return false
+
       seenPropertyIds.add(propertyId)
+
       return (
         layerProperty.isVisible === true &&
         property &&
@@ -530,11 +533,9 @@ export function toLayerBackedFeatureProperties(
     .map(layerProperty => {
       const propertyId = layerProperty.propertyId ?? ''
       const current = currentByPropertyId.get(propertyId)
+
       if (current) {
-        return {
-          ...current,
-          property: layerProperty.property,
-        }
+        return { ...current, property: layerProperty.property }
       }
 
       return {

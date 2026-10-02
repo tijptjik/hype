@@ -11,7 +11,7 @@ import {
   projectRole,
   user,
   userFeature,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

@@ -1,17 +1,17 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import { Switch } from '$lib/bits'
+import { Switch } from '#lib/bits/index.js'
 // COMPONENTS
-import Section from '$lib/bits/patterns/panels/components/common/Section.svelte'
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 // CONTEXT
 
 // TYPES
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 import type {
   AdminPreferenceCode,
   AdminPreferences,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 
 // CONTEXT
 
@@ -82,8 +82,7 @@ const preferencesConfig: {
             size="sm"
             color="primary"
             checked={getPreferenceState(preference.code)}
-            onCheckedChange={(checked) =>
-              onPreference(preference.code, checked === true)}
+            onCheckedChange={checked => onPreference(preference.code, checked === true)}
           />
         </div>
       {/each}

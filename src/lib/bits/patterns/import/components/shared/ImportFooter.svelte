@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // TYPES
 import type { ImportFooterProps } from './importLayout.types'
 

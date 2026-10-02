@@ -1,5 +1,5 @@
 // BITS
-import { cssVars } from '$lib/bits/utils'
+import { cssVars } from '#lib/bits/utils.js'
 // TYPES
 import type { FeatureCardLayout } from './featureCard.types'
 

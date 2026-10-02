@@ -1,13 +1,13 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import ImportRow from '../../../shared/ImportRow.svelte'
 import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
 import XCircle from 'virtual:icons/proicons/cancel-circle'
 // TYPES
-import type { UserValidationResult } from '$lib/client/services/import/types'
+import type { UserValidationResult } from '#lib/client/services/import/types.js'
 
 type Props = {
   results: UserValidationResult[]

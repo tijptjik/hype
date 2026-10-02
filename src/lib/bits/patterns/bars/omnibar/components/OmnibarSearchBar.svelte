@@ -1,14 +1,19 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
 // ACTIONS
-import { clickOutside, focusOnSlash, handleEscape, selectOnEnter } from '$lib/actions'
+import {
+  clickOutside,
+  focusOnSlash,
+  handleEscape,
+  selectOnEnter,
+} from '#lib/actions.js'
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // COMPONENTS
 import OmnibarNewFeature from './OmnibarNewFeature.svelte'
 import OmnibarResults from './OmnibarResults.svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import MagnifyingGlass from 'virtual:icons/proicons/search'
 // STYLES

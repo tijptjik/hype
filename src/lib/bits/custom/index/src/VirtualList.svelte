@@ -3,7 +3,7 @@
 import { tick, untrack } from 'svelte'
 import type { Snippet } from 'svelte'
 // BITS
-import { Scrollbar } from '$lib/bits/custom/scrollbar'
+import { Scrollbar } from '#lib/bits/custom/scrollbar/index.js'
 // CONTEXT
 import { setVirtualListRenderContext } from './virtualListContext'
 

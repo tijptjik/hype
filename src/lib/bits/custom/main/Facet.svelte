@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte'
-import { cx } from '$lib/bits/utils'
-import { FormFacetNav } from '$lib/bits/patterns/forms/formFacetNav'
+import { cx } from '#lib/bits/utils.js'
+import { FormFacetNav } from '#lib/bits/patterns/forms/formFacetNav/index.js'
 import type { MainFacetProps } from './main.types'
 
 let {

@@ -1,25 +1,28 @@
-import type { RemoteQuery } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 import type {
   ProjectProfile,
   ProjectListParamsByProfile,
   ProjectListByProfile,
   ProjectGetParamsByProfile,
   ProjectEntityByProfile,
-} from '$lib/db/zod/schema/project.types'
-import type { ListResponse, EntityResponse } from '$lib/types'
+} from '#lib/db/zod/schema/project.types.js'
+import type { ListResponse, EntityResponse } from '#lib/types.js'
 // Register panel query families for bounded single-flight mutation refreshes.
 import './resources.remote'
 // SVELTE
-import { requested } from '$app/server'
+import { requested, type RemoteQuery } from '$app/server'
 // REMOTE
-import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
-import { error } from '@sveltejs/kit'
+import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
+
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocale } from '#lib/i18n.js'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 // API
-import { getPrisms, getValidQueryParams as validateQueryParams } from '$lib/api'
+import {
+  getPrisms,
+  getValidQueryParams as validateQueryParams,
+} from '#lib/api/index.js'
 import {
   getDuplicateValues,
   hasRoleMembershipChanged,
@@ -27,7 +30,7 @@ import {
   toBooleanStateResponseShape,
   toCreatedResponseShape,
   validateUniqueNonReservedCode,
-} from '$lib/api/services'
+} from '#lib/api/services/index.js'
 import {
   getProjectWithRelations,
   mergeProjectInheritedPropertySyncItems,
@@ -44,7 +47,7 @@ import {
   toQueryConditions,
   toProjectProfile,
   toRequestedListState,
-} from '$lib/api/services/project'
+} from '#lib/api/services/project.js'
 // AUTHORIZATION
 import {
   authorizeProjectAssignCapabilitiesForSubmission,
@@ -65,7 +68,7 @@ import {
   toIssueDetailMessage,
   toProjectUserRoleCapabilitiesSignature,
   toProjectUserRoleSignature,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // DB
 import {
   cascadeOrganisationToDescendants,
@@ -88,29 +91,29 @@ import {
   updateProjectByIdWithConcurrency,
   updateProjectPublishedStateById,
   cascadeProjectPublishedStateToDescendants,
-} from '$lib/db/services/project'
-import { probeOrganisationQuery } from '$lib/db/services/organisation'
-import { hasProjectLayersCondition } from '$lib/db/services/layer'
-import { syncProjectLayerPresentation } from '$lib/db/services/layer'
+} from '#lib/db/services/project.js'
+import { probeOrganisationQuery } from '#lib/db/services/organisation.js'
+import { hasProjectLayersCondition } from '#lib/db/services/layer.js'
+import { syncProjectLayerPresentation } from '#lib/db/services/layer.js'
 import {
   listResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject,
   syncProjectInheritedProperties,
   upsertProjectProperties,
-} from '$lib/db/services/property'
+} from '#lib/db/services/property.js'
 import {
   getOrganisationMapStyleScope,
   listMapStylesForProject,
   listMapStylesForScope,
   syncMapStyleCatalog,
   setProjectMapStyleByCode,
-} from '$lib/db/services/map'
+} from '#lib/db/services/map.js'
 import {
   appendProjectLicenseHistory,
   normalizeProjectLicense,
-} from '$lib/db/services/licence'
-import { isMapStyleKey } from '$lib/map/styles'
-import { resolveMapStyleRenderPathForKey } from '$lib/map/styles/render.shared'
+} from '#lib/db/services/licence.js'
+import { isMapStyleKey } from '#lib/map/styles/index.js'
+import { resolveMapStyleRenderPathForKey } from '#lib/map/styles/render.shared.js'
 // SCHEMA
 import {
   GetProjectMapStylesSchema,
@@ -119,18 +122,17 @@ import {
   ProjectFormData,
   PublishProjectSchema,
   RemoveProjectSchema,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // UTILS
 import { nanoid } from 'nanoid'
 // SCHEMA
-import { project } from '$lib/db/schema'
+import { project } from '#lib/db/schema/index.js'
 // TYPES
-import type { Id, Prisms, QueryParams } from '$lib/types'
-import type {
-  ProjectAuthorizationField,
-} from '$lib/api/services/authz/authorization.types'
-import type { ProjectAdminDBRaw, ProjectDB } from '$lib/db/zod/schema/project.types'
-import type { MapStyleResolvedDB } from '$lib/db/zod/schema/map.types'
+import type { Id, Prisms, QueryParams } from '#lib/types.js'
+
+import type { ProjectAuthorizationField } from '#lib/api/services/authz/authorization.types.js'
+import type { ProjectAdminDBRaw, ProjectDB } from '#lib/db/zod/schema/project.types.js'
+import type { MapStyleResolvedDB } from '#lib/db/zod/schema/map.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -169,6 +171,7 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
   const { db, user, userRoles, event } = ctx
   // Resolve desired `profile`.
   const profile = toProjectProfile(params.meta?.profile, 'list')
+
   if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   // Resolve desired `query params`.
@@ -197,7 +200,11 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
     ctx.isAdminRequest,
     queryParams,
     userRoles,
-    (params.prisms as Prisms | undefined) ?? getPrisms(event.url),
+    (params.prisms as Prisms | undefined) ?? {
+      organisation: [],
+      project: [],
+      layer: [],
+    },
     event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
   )
 
@@ -235,6 +242,7 @@ const getProjectsWhichHaveLayersQuery = guardedQuery(
   async (params, ctx) => {
     const { db, user, userRoles, event } = ctx
     const profile = toProjectProfile(params.meta?.profile, 'list')
+
     if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
     const queryParams = validateQueryParams<ProjectDB>(
@@ -242,13 +250,13 @@ const getProjectsWhichHaveLayersQuery = guardedQuery(
       params.conditions as Partial<ProjectDB> | undefined,
     )
     const requestedListState = toRequestedListState(queryParams as Partial<ProjectDB>)
-
     const listDecision = authorizeProjectListForContext({
       user,
       userRoles,
       hub: event.locals.hub,
       requestedListState,
     })
+
     if (!listDecision.allowed) {
       throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
@@ -259,7 +267,11 @@ const getProjectsWhichHaveLayersQuery = guardedQuery(
       ctx.isAdminRequest,
       queryParams,
       userRoles,
-      (params.prisms as Prisms | undefined) ?? getPrisms(event.url),
+      (params.prisms as Prisms | undefined) ?? {
+        organisation: [],
+        project: [],
+        layer: [],
+      },
       event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
     )
 
@@ -315,6 +327,7 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
   const { db, user, userRoles, isAdminRequest, event } = ctx
   // Resolve desired `profile`.
   const profile = toProjectProfile(params.meta?.profile, 'detail')
+
   if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
 
   // Probe the requested project for flags.
@@ -347,6 +360,7 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
       isArchived: probe.isArchived,
     } as Partial<ProjectDB>,
   )
+
   const { conditions } = toQueryConditions(
     db,
     user,
@@ -400,17 +414,15 @@ export const getProjectMapStylesQuery = guardedQuery(
   GetProjectMapStylesSchema,
   async (params, ctx): Promise<{ data: MapStyleResolvedDB[] }> => {
     const { db, event } = ctx
-    const environment = event.platform?.env?.ENVIRONMENT
+    const environment = event.locals.platform?.env?.ENVIRONMENT
 
     if (params.projectId && params.organisationId) {
       throw error(400, 'Only one map style scope may be requested')
     }
 
     if (params.projectId) {
-      const probe = await probeProjectQuery(db, {
-        ref: params.projectId,
-        refKey: 'id',
-      })
+      const probe = await probeProjectQuery(db, { ref: params.projectId, refKey: 'id' })
+
       if (!probe) return { data: [] }
 
       const decision = authorizeProjectReadForProbe({
@@ -418,6 +430,7 @@ export const getProjectMapStylesQuery = guardedQuery(
         userRoles: ctx.userRoles,
         probe,
       })
+
       if (!decision.allowed) {
         throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
       }
@@ -426,6 +439,7 @@ export const getProjectMapStylesQuery = guardedQuery(
         ref: params.organisationId,
         refKey: 'id',
       })
+
       if (!probe) return { data: [] }
 
       const decision = authorizeOrganisationReadForProbe({
@@ -433,6 +447,7 @@ export const getProjectMapStylesQuery = guardedQuery(
         userRoles: ctx.userRoles,
         probe,
       })
+
       if (!decision.allowed) {
         throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
       }
@@ -498,16 +513,18 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Parse and normalize submitted form input.
   const params = ProjectFormData.parse(input)
+
   const { db, user, userRoles, invalid } = ctx
   const issue = ctx.issue
   const { meta, data } = params
-
   const projectId = meta?.id?.trim()
   const mode = meta?.mode
   const isSupportedMode = mode === 'create' || mode === 'update'
+
   if (!isSupportedMode) {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
+
   const normalizedCode = data.code.trim()
   const hasSubmittedUserRoles = Object.hasOwn(data, 'userRoles')
   const submittedRoles =
@@ -520,6 +537,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     hasSubmittedLayers && Array.isArray(data.layers) ? data.layers : []
   const toSubmittedDefaultVisible = (input: unknown): boolean =>
     input === true || input === 'true'
+
   const normalizedSubmittedLayers = submittedLayers
     .map((layer, index) => ({ layer, index }))
     .filter(
@@ -534,7 +552,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         typeof right.layer.rank === 'number' && Number.isFinite(right.layer.rank)
           ? right.layer.rank
           : right.index
+
       if (leftRank !== rightRank) return leftRank - rightRank
+
       return left.index - right.index
     })
     .map(({ layer }, rank) => ({
@@ -547,6 +567,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   const duplicateSubmittedRoleUserIds = hasSubmittedUserRoles
     ? getDuplicateValues(submittedRoles.map(role => role.userId))
     : []
+
   const duplicateSubmittedPropertyKeys = getDuplicateValues(
     normalizedSubmittedProperties
       .map(property => property?.key)
@@ -575,6 +596,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       ),
     )
   }
+
   if (
     hasSubmittedLayers &&
     normalizedSubmittedLayers.length > 0 &&
@@ -613,6 +635,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       db,
       normalizedSubmittedProperties,
     )
+
     const { local: submittedLocalProperties, inherited: submittedInheritedProperties } =
       splitSubmittedPropertiesByScope(
         normalizedSubmittedProperties,
@@ -790,11 +813,14 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     ),
     () => invalid(issue('PROJECT_NOT_FOUND')),
   )
+
   const currentEntity = requireValue(
     (await toEntityResponseShape(currentWithRelations, 'admin')).data,
     () => invalid(issue('PROJECT_NOT_FOUND')),
   )
+
   currentEntity.properties = await listResolvedProjectProperties(db, current.id)
+
   const licenseTouched = meta?.licenseTouched === true
 
   /* ----------------- */
@@ -828,6 +854,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         })),
       )
     : false
+
   // Compare normalized i18n payloads so translator-only submissions resolve to i18n field auth.
   const i18nChanged =
     toProjectStableAuthzSignature(data.i18n) !==
@@ -1050,6 +1077,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     const shouldPreserveExistingLocalProperties =
       submittedPropertiesWithProjectId.length === 0 &&
       existingLocalProperties.length > 0
+
     const preservedLocalProperties = shouldPreserveExistingLocalProperties
       ? toPreservedLocalPropertiesForProject({
           existingLocalProperties,
@@ -1129,6 +1157,7 @@ export const publishProject = guardedCommand(
         throw error(404, 'PROJECT_NOT_FOUND')
       },
     )
+
     await cascadeProjectPublishedStateToDescendants(db, {
       projectId,
       state: params.state,
@@ -1136,6 +1165,7 @@ export const publishProject = guardedCommand(
 
     // Settle client optimistic overrides with the complete persisted relation graph.
     void requested(getProjectQuery, 1).refreshAll()
+
     void requested(getProjectsQuery, 1).refreshAll()
 
     return toBooleanStateResponseShape(persisted, 'isPublished')
@@ -1186,8 +1216,8 @@ export const archiveProject = guardedCommand(
 
     // Settle client optimistic overrides with the complete persisted relation graph.
     void requested(getProjectQuery, 1).refreshAll()
-    void requested(getProjectsQuery, 1).refreshAll()
 
+    void requested(getProjectsQuery, 1).refreshAll()
     return toBooleanStateResponseShape(persisted, 'isArchived')
   },
 )

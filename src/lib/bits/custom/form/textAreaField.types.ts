@@ -1,4 +1,4 @@
-import type { LocaleExtended } from '$lib/types'
+import type { LocaleExtended } from '#lib/types.js'
 import type { FormIssueValue } from './src/label/types'
 
 export interface TextAreaProps {

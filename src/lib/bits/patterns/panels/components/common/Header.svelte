@@ -1,12 +1,12 @@
 <script lang="ts">
 // BITS COMPONENTS
-import Button from '$lib/bits/core/button/Button.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import XCircle from 'virtual:icons/proicons/cancel-circle'
 // CONTEXT
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // TYPES
 
 let { panelType, title, onToggleInfo, onClose } = $props<{

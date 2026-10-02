@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import * as AnalyticsCardPrimitive from '$lib/bits/custom/analyticsCard/components'
-import { cx } from '$lib/bits/utils'
+import * as AnalyticsCardPrimitive from '#lib/bits/custom/analyticsCard/components/index.js'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // LOCAL
 import {
   ASSET_ANALYTICS_SERIES,
@@ -15,7 +15,7 @@ import {
 import type {
   AssetAnalyticsSeriesKey,
   AssetAnalyticsTimeseriesPoint,
-} from '$lib/api/services/assetAnalytics.types'
+} from '#lib/api/services/assetAnalytics.types.js'
 import type { AssetAnalyticsTimelineCardProps } from '../assetAnalyticsDashboard.types'
 
 type TimelineSegment = {
@@ -230,7 +230,10 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
             {/each}
 
             {#each timeseriesPoints as point, index}
-              {@const x = timelinePlotOffsetX + index * timelineStepWidth + (timelineStepWidth - timelineBarWidth) / 2}
+              {@const x =
+                timelinePlotOffsetX +
+                index * timelineStepWidth +
+                (timelineStepWidth - timelineBarWidth) / 2}
               {@const timelineSegments = getTimelineSegments(point)}
               <g>
                 {#each [...timelineSegments].reverse() as segment}
@@ -242,8 +245,10 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
                       width={timelineBarWidth}
                       height={segment.height}
                       fill={segment.fill}
-                      onmouseenter={event => showTimelineTooltip(event, point, segment.key)}
-                      onmousemove={event => showTimelineTooltip(event, point, segment.key)}
+                      onmouseenter={event =>
+                        showTimelineTooltip(event, point, segment.key)}
+                      onmousemove={event =>
+                        showTimelineTooltip(event, point, segment.key)}
                       onmouseleave={hideTimelineTooltip}
                     />
                   {/if}
@@ -256,7 +261,10 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
                   font-weight="600"
                   letter-spacing="0.16em"
                   fill="var(--color-base-content)"
-                  fill-opacity={shouldRenderTimelineAxisLabel(index, timeseriesPoints.length)
+                  fill-opacity={shouldRenderTimelineAxisLabel(
+                    index,
+                    timeseriesPoints.length,
+                  )
                     ? '0.68'
                     : '0'}
                 >

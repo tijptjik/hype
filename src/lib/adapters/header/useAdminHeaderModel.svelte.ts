@@ -1,14 +1,14 @@
 // SVELTEKIT
-import { replaceState } from '$app/navigation'
+import { goto } from '$app/navigation'
 // CONSTANTS
-import { NEW_REF } from '$lib/constants'
+import { NEW_REF } from '#lib/constants.js'
 // CONTEXT
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // LIB
-import { navigateOnAdmin } from '$lib/navigation'
-import { authorizeHubList, toHubAuthActor } from '$lib/api/services/authz/hub'
+import { navigateOnAdmin } from '#lib/navigation/index.js'
+import { authorizeHubList, toHubAuthActor } from '#lib/api/services/authz/hub.js'
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import Eye from 'virtual:icons/proicons/eye'
 import EyeOff from 'virtual:icons/proicons/eye-off'
@@ -25,22 +25,21 @@ import Trash2 from 'virtual:icons/proicons/delete'
 import Undo2 from 'virtual:icons/proicons/arrow-undo'
 import X from 'virtual:icons/proicons/cancel'
 // ENUMS
-import { FirstClassResource, Panel, ResourcePath } from '$lib/enums'
+import { FirstClassResource, Panel, ResourcePath } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { AdminCtx } from '$lib/context/admin.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
 import type {
   HeaderActionConfig,
   HeaderButtonActionConfig,
   HeaderCrumb,
   HeaderLayoutMode,
   HeaderProps,
-} from '$lib/bits/patterns/layout/header'
+} from '#lib/bits/patterns/layout/header/index.js'
+
 import type { Component } from 'svelte'
-import type { FilterState } from '$lib/client/services/filters.types'
-import type {
-  HeaderTitleMenuItemConfig,
-} from '$lib/bits/patterns/layout/header/header.types'
+import type { FilterState } from '#lib/client/services/filters.types.js'
+import type { HeaderTitleMenuItemConfig } from '#lib/bits/patterns/layout/header/header.types.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -129,12 +128,14 @@ export function useAdminHeaderModel(
           ((resource as { code?: string }).code ?? '').trim() ||
           ((resource as { id?: string }).id ?? '').trim()
         )
+
       case FirstClassResource.feature:
         return (
           localized?.title?.trim() ||
           english?.title?.trim() ||
           ((resource as { id?: string }).id ?? '').trim()
         )
+
       case FirstClassResource.task:
         return `#${((resource as { id?: string }).id ?? '').trim()}`
       default:
@@ -153,16 +154,19 @@ export function useAdminHeaderModel(
           appCtx.getContextualOrganisationName(resource as never, false, false) ||
           getCachedEntityLabel(resourceType, resource)
         )
+
       case FirstClassResource.project:
         return (
           appCtx.getContextualProjectName(resource as never, false, false) ||
           getCachedEntityLabel(resourceType, resource)
         )
+
       case FirstClassResource.layer:
         return (
           appCtx.getContextualLayerName(resource as never, false, false) ||
           getCachedEntityLabel(resourceType, resource)
         )
+
       case FirstClassResource.hub: {
         const localeKey = getLocaleKey()
         const i18n = (
@@ -170,6 +174,7 @@ export function useAdminHeaderModel(
         )?.i18n
         const localized = i18n?.[localeKey]
         const english = i18n?.en
+
         return (
           localized?.nameShort?.trim() ||
           english?.nameShort?.trim() ||
@@ -189,9 +194,11 @@ export function useAdminHeaderModel(
   function getCachedHeaderTitle(): string {
     const resourceType = adminCtx.activeResourceType
     const resourceRef = adminCtx.activeResourceRef
+
     if (!resourceType || resourceRef === false) return ''
 
     const resource = appCtx.getResourceByRefSync(resourceType, resourceRef)
+
     if (!resource) {
       return resourceType === FirstClassResource.task
         ? `#${resourceRef}`
@@ -205,9 +212,11 @@ export function useAdminHeaderModel(
   function getCachedHeaderCrumbs(): HeaderCrumb[] {
     const resourceType = adminCtx.activeResourceType
     const resourceRef = adminCtx.activeResourceRef
+
     if (!resourceType || resourceRef === false) return []
 
     const resource = appCtx.getResourceByRefSync(resourceType, resourceRef)
+
     if (!resource) return []
 
     const toHref = (
@@ -232,8 +241,11 @@ export function useAdminHeaderModel(
         type === FirstClassResource.layer
           ? ((resourceValue as { id?: string }).id ?? '').trim()
           : ((resourceValue as { code?: string }).code ?? '').trim()
+
       const name = getCachedCrumbLabel(type, resourceValue)
+
       if (!name) return
+
       list.push({ name, href: toHref(type, ref) })
     }
 
@@ -278,6 +290,7 @@ export function useAdminHeaderModel(
         layer?: unknown
         feature?: unknown
       }
+
       const organisation = taskResource.organisation
       const project = taskResource.project
       const layer = taskResource.layer
@@ -398,9 +411,12 @@ export function useAdminHeaderModel(
   const visibility = $derived(headerCtrl.state.visibility)
   const resolvedHeaderTitle = $derived.by((): string => {
     const explicitTitle = headerCtrl.state.meta.title
+
     if (explicitTitle) return explicitTitle
+
     return getCachedHeaderTitle()
   })
+
   const headerIcon = $derived(headerCtrl.state.meta.icon)
   const headerIconHoverColor = $derived(getHeaderIconHoverColor(headerResourceType))
   const formActions = $derived(headerCtrl.state.formActions)
@@ -424,6 +440,7 @@ export function useAdminHeaderModel(
 
   // DERIVED :: FORM ACTION STATE
   const isTainted = $derived(Boolean(formActions?.dirty ?? false))
+
   const hasIssues = $derived(Boolean(formActions?.hasIssues ?? false))
   const isSubmitting = $derived(Boolean(formActions?.isSubmitting ?? false))
   const isPublishing = $derived(Boolean(formActions?.isPublishing ?? false))
@@ -442,6 +459,7 @@ export function useAdminHeaderModel(
   const showDeleteMenuAction = $derived(
     showDeleteAction && !isDeleted && Boolean(formActions?.toggleDelete),
   )
+
   const deleteMenuLabel = $derived(
     resolvedHeaderTitle
       ? `${m.forms__delete()} ${resolvedHeaderTitle}`
@@ -452,6 +470,7 @@ export function useAdminHeaderModel(
   )
   const titleMenuItems = $derived.by((): HeaderTitleMenuItemConfig[] => {
     const items = [...titleMenuMetaItems]
+
     if (!showDeleteMenuAction) return items
 
     items.push({
@@ -514,20 +533,24 @@ export function useAdminHeaderModel(
   // Cycle through the supported layout modes for the active resource index view.
   function handleAdvanceLayout(): void {
     const resourceType = appCtx.headerResourceType
+
     if (!resourceType) return
 
     const supportedModes = layoutModes
+
     if (supportedModes.length <= 1) return
 
     const currentMode = appCtx.state.ui.layoutMode[resourceType] as HeaderLayoutMode
     const currentIndex = Math.max(0, supportedModes.indexOf(currentMode))
     const nextMode = supportedModes[(currentIndex + 1) % supportedModes.length]
+
     appCtx.setLayoutMode(nextMode)
   }
 
   // Toggle the resource control bar beneath the header.
   function handleControlsToggle(): void {
     const resourceType = appCtx.headerResourceType
+
     if (!resourceType || !isFilterResource(resourceType)) return
 
     appCtx.setControlBarVisible(!appCtx.state.ui.isControlBarVisible[resourceType])
@@ -541,7 +564,7 @@ export function useAdminHeaderModel(
 
     const url = new URL(window.location.href)
     url.hash = ref
-    replaceState(url, window.history.state)
+    goto(url, { shallow: true, replace: true, state: window.history.state })
   }
 
   // ---
@@ -782,6 +805,7 @@ export function useAdminHeaderModel(
     crumbs: customCrumbs.length > 0 ? customCrumbs : syncCrumbs,
     menuAction: titleMenuAction,
   }))
+
   const inlineViewActionContent = $derived.by(() => null)
   const renderedControlBar = $derived.by(() => headerCtrl.state.layout.controlBar)
 

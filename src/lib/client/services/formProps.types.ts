@@ -5,7 +5,7 @@ import type {
   LayerForm,
   FeatureForm,
   Form,
-} from '$lib/client/services/form.types'
+} from '#lib/client/services/form.types.js'
 import type {
   Resource,
   FieldDiscriminator,
@@ -13,13 +13,13 @@ import type {
   Field,
   Id,
   Locale,
-} from '$lib/types'
+} from '#lib/types.js'
 import type {
   FormField,
   FormFieldArray,
   FormFieldExtendedDefinition,
-} from '$lib/client/services/formFields.types'
-import type { IntermediateValue } from '$lib/client/services/propertyFilters.types'
+} from '#lib/client/services/formFields.types.js'
+import type { IntermediateValue } from '#lib/client/services/propertyFilters.types.js'
 
 /* ----------------- */
 // SVELTE : PROPS

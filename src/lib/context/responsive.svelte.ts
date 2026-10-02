@@ -4,10 +4,10 @@ import { getContext, hasContext, setContext } from 'svelte'
 import {
   getMenuClearanceHeight,
   getMenuReservedHeight,
-} from '$lib/bits/patterns/bars/appMenu/appMenu.layout'
-import { DUAL_PANEL_MIN_WIDTH, MOBILE_MAX_WIDTH, PANEL_WIDTH } from '$lib/constants'
+} from '#lib/bits/patterns/bars/appMenu/appMenu.layout.js'
+import { DUAL_PANEL_MIN_WIDTH, MOBILE_MAX_WIDTH, PANEL_WIDTH } from '#lib/constants.js'
 // ENUMS
-import { Panel, PanelLeft, PanelRight } from '$lib/enums'
+import { Panel, PanelLeft, PanelRight } from '#lib/enums.js'
 
 const RESPONSIVE_CONTEXT_KEY = Symbol('responsive-context')
 const ELEVATED_CHROME_MIN_WIDTH_PX = 480

@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // TYPES
 import type { MainRootProps } from './main.types'
 

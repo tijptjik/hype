@@ -2,15 +2,15 @@
 // SVELTE
 import { page } from '$app/state'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // LIB
-import { ADMIN_PATH } from '$lib/index'
+import { ADMIN_PATH } from '#lib/index.js'
 // AUTH
-import { canViewAnalytics, hasControlPanelAccess } from '$lib/client/services/auth'
+import { canViewAnalytics, hasControlPanelAccess } from '#lib/client/services/auth.js'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation'
+import { navigateOnAdmin } from '#lib/navigation/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // ICONS
 import ChartColumnIncreasing from 'virtual:icons/proicons/bar-chart'
 import CloudArrowUp from 'virtual:icons/proicons/cloud-arrow-up'
@@ -19,9 +19,9 @@ import InboxArrowDown from 'virtual:icons/proicons/mail-open'
 import MapIcon from 'virtual:icons/proicons/map'
 import MapPin from 'virtual:icons/proicons/location'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
-import type { SessionUser } from '$lib/types'
+import type { SessionUser } from '#lib/types.js'
 import type { AdminMenuItem, AdminMenuProps } from './adminMenu.types'
 
 const adminCtx = getAdminCtx()
@@ -318,7 +318,8 @@ $effect(() => {
                   {#if count > 0}
                     <span
                       class="bits-admin-menu__badge"
-                      class:bits-admin-menu__badge--accent={entry.item.tone === 'accent'}
+                      class:bits-admin-menu__badge--accent={entry.item.tone ===
+                        'accent'}
                       class:bits-admin-menu__badge--overflow={count > 99}
                     >
                       {count > 99 ? '∞' : count}

@@ -1,6 +1,7 @@
 // TYPES
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { FeatureQueryFilters } from '$lib/api/services/featureQuery.types'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+
+import type { FeatureQueryFilters } from '#lib/api/services/featureQuery.types.js'
 
 /** Independent views share retained entities without replacing each other's membership. */
 export type FeatureQueryChannel =
@@ -25,7 +26,7 @@ export type FeatureQueryMatchContext = {
 }
 
 /** Native active admin feature collection retained for reactive mutation reconciliation. */
-export type FeatureCollectionHandle = import('@sveltejs/kit').RemoteQuery<{
+export type FeatureCollectionHandle = import('$app/server').RemoteQuery<{
   data: FeatureFromCollection[]
 }>
 

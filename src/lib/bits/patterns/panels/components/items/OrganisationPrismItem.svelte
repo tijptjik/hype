@@ -5,13 +5,13 @@ import { slide } from 'svelte/transition'
 import Funnel from 'virtual:icons/proicons/filter'
 import XMark from 'virtual:icons/proicons/cancel'
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // I18N
-import { getI18n } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // TYPES
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
 
 const appCtx = getAppCtx()
 
@@ -65,8 +65,12 @@ const primaryActionLabel = $derived(
     class="group/funnel inline-flex shrink-0 items-center justify-center {isPrismActive
       ? 'text-primary'
       : 'text-base-content/45 hover:text-base-content/80 focus-visible:text-base-content/80'}"
-    aria-label={isPrismActive ? `Remove ${name} organisation prism` : `Add ${name} organisation prism`}
-    title={isPrismActive ? `Remove ${name} organisation prism` : `Add ${name} organisation prism`}
+    aria-label={isPrismActive
+      ? `Remove ${name} organisation prism`
+      : `Add ${name} organisation prism`}
+    title={isPrismActive
+      ? `Remove ${name} organisation prism`
+      : `Add ${name} organisation prism`}
     onclick={onTogglePrism}
   >
     <Icon

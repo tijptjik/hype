@@ -1,7 +1,7 @@
 <script lang="ts">
 import FeatureRowStats from './FeatureRowStats.svelte'
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 let {
   feature,

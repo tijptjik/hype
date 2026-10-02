@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Avatar, Button } from '$lib/bits/core'
+import { Avatar, Button } from '#lib/bits/core/index.js'
 // SVELTE
 import { fly } from 'svelte/transition'
 // TYPES

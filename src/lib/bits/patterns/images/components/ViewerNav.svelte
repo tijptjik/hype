@@ -1,5 +1,5 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import ChevronLeftIcon from 'virtual:icons/proicons/chevron-left'
 import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 import type { ViewerControlsProps } from './imagePrimitives.types'

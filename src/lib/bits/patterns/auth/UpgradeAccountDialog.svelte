@@ -6,9 +6,9 @@ import { Dialog } from 'bits-ui'
 // COMPONENTS
 import AccountCreatedDialogContent from './components/AccountCreatedDialogContent.svelte'
 // AUTH
-import { toSafeReturnPath, type UpgradeReason } from '$lib/auth/upgrade'
+import { toSafeReturnPath, type UpgradeReason } from '#lib/auth/upgrade.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 let {
   open = $bindable(false),

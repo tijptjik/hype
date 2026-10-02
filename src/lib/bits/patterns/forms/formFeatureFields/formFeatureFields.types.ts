@@ -1,11 +1,9 @@
 // BITS
-import type { FormFacetNavAction } from '$lib/bits/patterns/forms/formFacetNav'
-import type {
-  FeatureFieldSectionItem,
-} from '$lib/bits/patterns/forms/formFeatureFieldsSection'
+import type { FormFacetNavAction } from '#lib/bits/patterns/forms/formFacetNav/index.js'
+import type { FeatureFieldSectionItem } from '#lib/bits/patterns/forms/formFeatureFieldsSection/index.js'
 // TYPES
-import type { FeatureFormInput } from '$lib/db/zod/schema/feature.types'
-import type { Locale, LocaleKey } from '$lib/types'
+import type { FeatureFormInput } from '#lib/db/zod/schema/feature.types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
 
 export type FormFeatureFieldsTranslatableItem = NonNullable<
   FeatureFormInput['data']['properties']

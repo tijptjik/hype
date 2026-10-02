@@ -1,6 +1,6 @@
 <script lang="ts">
 // ENUMS
-import { OmniCollection } from '$lib/enums'
+import { OmniCollection } from '#lib/enums.js'
 // TYPES
 import type { OmnibarEntryProps } from './omnibarPrimitives.types'
 

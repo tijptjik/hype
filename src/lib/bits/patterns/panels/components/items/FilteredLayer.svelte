@@ -3,18 +3,18 @@
 import { slide } from 'svelte/transition'
 // ICONS
 import Crosshair from 'virtual:icons/proicons/target'
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // COMPONENTS
-import ResourceHierarchyPath from '$lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'
+import ResourceHierarchyPath from '#lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'
 // TYPES
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { PanelProps } from '$lib/bits/patterns/panels/panel.types'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 // CONTEXT
 const appCtx = getAppCtx()
@@ -56,8 +56,8 @@ const layerName = $derived(
     type="button"
     class="flex min-w-0 flex-1 -translate-x-5 items-center gap-3 text-left focus:outline-none"
     aria-label={isSelected
-        ? m.panel__deactivate_layer({ name: layerName })
-        : m.panel__activate_layer({ name: layerName })}
+      ? m.panel__deactivate_layer({ name: layerName })
+      : m.panel__activate_layer({ name: layerName })}
     onclick={onToggle}
   >
     <div

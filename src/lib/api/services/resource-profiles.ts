@@ -1,7 +1,7 @@
 // DB
-import { transformI18nSafely } from '$lib/db'
+import { transformI18nSafely } from '#lib/db/index.js'
 // TYPES
-import type { CompactAncestorRow } from '$lib/api/services/resourcePage.types'
+import type { CompactAncestorRow } from '#lib/api/services/resourcePage.types.js'
 
 /** Only public breadcrumb identity is hydrated; role, image and property graphs are excluded. */
 export const compactAncestorRelations = {

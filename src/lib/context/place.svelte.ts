@@ -2,9 +2,9 @@
 import { setContext, getContext } from 'svelte'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 // TYPES
-import type { DivisionFacet } from '$lib/api/services/featureQuery.types'
-import type { Id, Ref } from '$lib/types'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { DivisionFacet } from '#lib/api/services/featureQuery.types.js'
+import type { Id, Ref } from '#lib/types.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 // TYPES
 
 /* ----------------- */

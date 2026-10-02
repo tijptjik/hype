@@ -1,26 +1,26 @@
 // REMOTE
-import { guardedCommand, guardedForm, guardedQuery } from '$lib/api/server/remote'
+import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
 import { error } from '@sveltejs/kit'
 // I18N
-import { getLocale } from '$lib/i18n'
+import { getLocale } from '#lib/i18n.js'
 // DRIZZLE
 import { and, eq } from 'drizzle-orm'
 // API
-import { getValidQueryParams as validateQueryParams } from '$lib/api'
+import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
   authorizeTaskListForContext,
   authorizeTaskReadForProbe,
   authorizeTaskReassignForProbe,
   toAuthMessage,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 import {
   feature,
   layer,
   organisation,
   project,
   task as taskTable,
-} from '$lib/db/schema'
-import { taskFeatureScopeCondition } from '$lib/db/services/task-scope'
+} from '#lib/db/schema/index.js'
+import { taskFeatureScopeCondition } from '#lib/db/services/task-scope.js'
 import {
   BeginMissingReportDraftSchema,
   BeginNewFeatureDraftSchema,
@@ -33,7 +33,7 @@ import {
   SubmitMissingReportSchema,
   SubmitNewFeatureSchema,
   SubmitNewPhotosSchema,
-} from '$lib/db/zod/schema/task'
+} from '#lib/db/zod/schema/task.js'
 import {
   createTask,
   loadTask,
@@ -44,17 +44,20 @@ import {
   commitTaskFeatureReview,
   commitTaskFeatureDraftFinalization,
   createTaskWithDependencies,
-} from '$lib/db/services/task'
+} from '#lib/db/services/task.js'
 import {
   probeFeatureForUpdate,
   updateFeatureByIdWithConcurrency,
-} from '$lib/db/services/feature'
-import { listAssignableTaskLayers, probeLayerForUpdate } from '$lib/db/services/layer'
+} from '#lib/db/services/feature.js'
+import {
+  listAssignableTaskLayers,
+  probeLayerForUpdate,
+} from '#lib/db/services/layer.js'
 import {
   assertUserContributedFeatureDraftIsSubmittable,
   createUserContributedFeature,
   updateUserContributedFeatureDraft,
-} from '$lib/api/services/feature'
+} from '#lib/api/services/feature.js'
 // API SERVICES
 import {
   getTaskWithRelations,
@@ -63,11 +66,14 @@ import {
   toTaskProfile,
   toQueryConditions,
   toTaskPrisms,
-} from '$lib/api/services/task'
+} from '#lib/api/services/task.js'
 // TYPES
-import type { EntityResponse, Id, ListResponse } from '$lib/types'
-import type { GuardedCommandContext, GuardedFormContext } from '$lib/api/guarded.types'
-import type { TaskDB } from '$lib/db/zod/schema/task.types'
+import type { EntityResponse, Id, ListResponse } from '#lib/types.js'
+import type {
+  GuardedCommandContext,
+  GuardedFormContext,
+} from '#lib/api/guarded.types.js'
+import type { TaskDB } from '#lib/db/zod/schema/task.types.js'
 import type {
   BeginMissingReportDraftInput,
   BeginNewFeatureDraftInput,
@@ -81,7 +87,7 @@ import type {
   TaskListByProfile,
   TaskListParamsByProfile,
   TaskProfile,
-} from '$lib/db/zod/schema/task.types'
+} from '#lib/db/zod/schema/task.types.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -450,8 +456,8 @@ export const beginNewFeatureDraft = guardedCommand(
   ): Promise<{ data: unknown }> => {
     assertContributionAccount(ctx.user)
     await assertPublicContributionScope(ctx.db, input.task)
-    const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
-    const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
+    const region = ctx.event.locals.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
+    const subscriptionKey = ctx.event.locals.platform?.env?.AZURE_TRANSLATION_KEY || ''
     const draftFeature = {
       ...input.task.feature,
       contributorId: ctx.userId,
@@ -686,8 +692,8 @@ export const submitMissingReport = guardedForm(
     }
     await assertPublicContributionTarget(ctx.db, input)
 
-    const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
-    const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
+    const region = ctx.event.locals.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
+    const subscriptionKey = ctx.event.locals.platform?.env?.AZURE_TRANSLATION_KEY || ''
 
     const createdTask = await createTaskWithDependencies(
       ctx.db,
@@ -730,8 +736,8 @@ export const submitNewFeature = guardedCommand(
     }
     await assertPublicContributionScope(ctx.db, input.task)
 
-    const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
-    const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
+    const region = ctx.event.locals.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
+    const subscriptionKey = ctx.event.locals.platform?.env?.AZURE_TRANSLATION_KEY || ''
 
     const createdTask = await createTaskWithDependencies(
       ctx.db,
@@ -766,8 +772,8 @@ export const submitNewPhotos = guardedCommand(
     }
     await assertPublicContributionTarget(ctx.db, input)
 
-    const region = ctx.event.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
-    const subscriptionKey = ctx.event.platform?.env?.AZURE_TRANSLATION_KEY || ''
+    const region = ctx.event.locals.platform?.env?.PUBLIC_AZURE_TRANSLATION_REGION || ''
+    const subscriptionKey = ctx.event.locals.platform?.env?.AZURE_TRANSLATION_KEY || ''
 
     const createdTask = await createTaskWithDependencies(
       ctx.db,

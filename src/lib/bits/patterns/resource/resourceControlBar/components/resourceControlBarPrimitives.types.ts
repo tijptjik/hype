@@ -1,7 +1,7 @@
 import type { Component, Snippet } from 'svelte'
 // TYPES
-import type { LocaleKey } from '$lib/types'
-import type { ResourceBulkEditConfig } from '$lib/client/services/bulkEdit.types'
+import type { LocaleKey } from '#lib/types.js'
+import type { ResourceBulkEditConfig } from '#lib/client/services/bulkEdit.types.js'
 
 export type ResourceControlBarRootProps = {
   filterLabel: string

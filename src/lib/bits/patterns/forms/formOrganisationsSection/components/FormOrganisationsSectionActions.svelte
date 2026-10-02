@@ -1,6 +1,6 @@
 <script lang="ts">
-import { Button } from '$lib/bits/core'
-import { m } from '$lib/i18n'
+import { Button } from '#lib/bits/core/index.js'
+import { m } from '#lib/i18n.js'
 import MinusIcon from 'virtual:icons/proicons/subtract'
 import PlusIcon from 'virtual:icons/proicons/add'
 import XIcon from 'virtual:icons/proicons/cancel'
@@ -23,7 +23,9 @@ let {
   >
     {#if !isAdding}
       <Button
-        text={isRemoving ? m.moving_each_orangutan_care() : m.admin__forms_hub_remove_org()}
+        text={isRemoving
+          ? m.moving_each_orangutan_care()
+          : m.admin__forms_hub_remove_org()}
         hideLabel={true}
         style="ghost"
         color="light"

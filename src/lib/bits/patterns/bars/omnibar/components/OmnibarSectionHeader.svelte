@@ -1,10 +1,10 @@
 <script lang="ts">
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // ENUMS
-import { OmniCollection } from '$lib/enums'
+import { OmniCollection } from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import Building from 'virtual:icons/proicons/bank'
 import MapIcon from 'virtual:icons/proicons/map'

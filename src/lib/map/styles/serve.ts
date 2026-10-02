@@ -7,7 +7,7 @@ import {
   isMapStyleKey,
   type MapStyleKey,
 } from './registry'
-import { toLocaleKey } from '$lib/i18n'
+import { toLocaleKey } from '#lib/i18n.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

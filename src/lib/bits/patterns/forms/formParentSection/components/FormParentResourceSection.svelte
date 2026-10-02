@@ -5,18 +5,18 @@
 // SVELTE
 import { untrack } from 'svelte'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
-import { Card, Search, SectionHeader } from '$lib/bits/custom'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import { Button } from '#lib/bits/core/index.js'
+import { Card, Search, SectionHeader } from '#lib/bits/custom/index.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 
 // PATTERNS
-import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
+import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 
 // SERVICES
-import { getImageSrc, getImageSrcOrHashicon } from '$lib/client/services/image'
+import { getImageSrc, getImageSrcOrHashicon } from '#lib/client/services/image.js'
 
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 // ICONS
 import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'

@@ -1,6 +1,6 @@
 <script lang="ts">
-import { Button } from '$lib/bits/core'
-import { Card } from '$lib/bits/custom'
+import { Button } from '#lib/bits/core/index.js'
+import { Card } from '#lib/bits/custom/index.js'
 import Trash2Icon from 'virtual:icons/proicons/delete'
 
 import type { MapStyleCardActionsProps } from '../mapStyleCard.types'

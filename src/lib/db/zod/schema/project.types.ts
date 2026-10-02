@@ -5,9 +5,9 @@ import type {
   ResolveChangedRelationParams,
   ResourceSubmitDraft,
   ResourceSubmitMode,
-} from '$lib/client/services/formRelations.types'
-import type { EntityResponse } from '$lib/types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+} from '#lib/client/services/formRelations.types.js'
+import type { EntityResponse } from '#lib/types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
   ProjectCompactProfileAPI,
   ProjectAdminProfileAPI,
@@ -36,8 +36,8 @@ import type {
   ProjectUpdate,
   PublishProjectSchema,
   RemoveProjectSchema,
-} from '$lib/db/zod/schema/project'
-import type { User } from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/project.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
 
 export type ProjectDB = z.infer<typeof ProjectBase>
 export type ProjectDBNew = z.infer<typeof ProjectInsert>

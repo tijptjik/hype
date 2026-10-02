@@ -1,10 +1,10 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // CONTEXT
-import { getCardCtx } from '$lib/context/card.svelte'
+import { getCardCtx } from '#lib/context/card.svelte.js'
 
 interface Props {
   onSubmit: () => void

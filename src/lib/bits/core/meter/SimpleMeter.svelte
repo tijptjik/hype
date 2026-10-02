@@ -6,7 +6,7 @@ import { Tween } from 'svelte/motion'
 // BITS-UI
 import { Meter as MeterPrimitive } from 'bits-ui'
 // STYLES
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { SimpleMeterProps } from './meter.types'
 

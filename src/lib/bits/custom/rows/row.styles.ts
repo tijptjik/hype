@@ -1,8 +1,6 @@
-import { cx } from '$lib/bits/utils'
-import type { IndexCardProps } from '$lib/bits/patterns/cards/indexCard'
-import type {
-  ResourceIndexRowSelectionState,
-} from '$lib/client/services/bulkEdit.types'
+import { cx } from '#lib/bits/utils.js'
+import type { IndexCardProps } from '#lib/bits/patterns/cards/indexCard/index.js'
+import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEdit.types.js'
 import type { RowVariant } from './row.types'
 
 type RowRootClassParams = {

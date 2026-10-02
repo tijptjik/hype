@@ -1,4 +1,4 @@
-import type { IndexCardProps } from '$lib/bits/patterns/cards/indexCard'
+import type { IndexCardProps } from '#lib/bits/patterns/cards/indexCard/index.js'
 
 export type ResourceRowProps = Pick<
   IndexCardProps,

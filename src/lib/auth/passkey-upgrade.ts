@@ -1,5 +1,5 @@
 // AUTH
-import { authClient, useSession } from '$lib/auth/client'
+import { authClient, useSession } from '#lib/auth/client.js'
 // TYPES
 
 type PasskeyAccountUpgradeInput = {

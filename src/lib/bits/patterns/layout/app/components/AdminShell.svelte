@@ -1,6 +1,6 @@
 <script lang="ts">
 // CUSTOM
-import { LoadScreen } from '$lib/bits/custom'
+import { LoadScreen } from '#lib/bits/custom/index.js'
 // LAYOUT
 import { AutoHide } from '../../autoHide'
 import { Header } from '../../header'
@@ -47,12 +47,12 @@ const footerConfig = $derived(headerProps.footer ?? null)
       </AutoHide>
 
       <main class="bits-admin-shell__main">
-        <Header {...(resolvedHeaderProps as HeaderProps)} />
+        <Header {...resolvedHeaderProps as HeaderProps} />
         {@render children()}
 
         {#if footerConfig?.component}
           {@const Footer = footerConfig.component}
-          <Footer {...(footerConfig.props ?? {})} />
+          <Footer {...footerConfig.props ?? {}} />
         {/if}
       </main>
 

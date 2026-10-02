@@ -1,5 +1,5 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import Icon from './Icon.svelte'
 import type { LazyIconAnchorProps } from './iconAnchor.types'
 

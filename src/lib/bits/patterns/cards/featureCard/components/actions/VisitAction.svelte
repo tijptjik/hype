@@ -3,19 +3,22 @@
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'svelte-sonner'
 // I18N
-import { m, toDateFnsLocale } from '$lib/i18n'
+import { m, toDateFnsLocale } from '#lib/i18n.js'
 // API
 import {
   addUserFeatureToList,
   getUserFeatures,
   removeUserFeatureFromList,
-} from '$lib/api/server/user.remote'
+} from '#lib/api/server/user.remote.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
-import type { UserFeature } from '$lib/db/zod/schema/user.types'
-import type { FeatureCardActionDisplay } from '$lib/context/featureCard.types'
+import type {
+  Feature,
+  UserContributedFeature,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { UserFeature } from '#lib/db/zod/schema/user.types.js'
+import type { FeatureCardActionDisplay } from '#lib/context/featureCard.types.js'
 // LOCAL
 import VisitActionDisplay from './VisitActionDisplay.svelte'
 // TYPES
@@ -24,7 +27,6 @@ type FeatureCardVisitState = {
   isVisited: boolean
   visitedAt: string | null
 }
-
 
 interface Props {
   feature: Feature | UserContributedFeature

@@ -2,11 +2,11 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { Badge } from '$lib/bits/custom/badge'
+import { Badge } from '#lib/bits/custom/badge/index.js'
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
 import XCircle from 'virtual:icons/proicons/cancel-circle'
 import ArrowPath from 'virtual:icons/proicons/arrow-sync'
@@ -18,7 +18,7 @@ import {
   getFeatureResolutionDisplayName,
   isFeatureResolutionCreateResult,
   type FeatureResolutionData,
-} from '$lib/client/services/import/features/resolution'
+} from '#lib/client/services/import/features/resolution.js'
 // TYPES
 import type { Component } from 'svelte'
 

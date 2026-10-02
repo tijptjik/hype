@@ -1,13 +1,13 @@
 <script lang="ts">
 // ADAPTERS
-import { useImageEditorGalleryModel } from '$lib/adapters/image'
+import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS COMPONENTS
-import { Icon, ImageEditor, UserAttributionCard } from '$lib/bits'
+import { Icon, ImageEditor, UserAttributionCard } from '#lib/bits/index.js'
 import ImageMetadataCard from './components/ImageMetadataCard.svelte'
 // CONTEXT
-import { getImageCtx } from '$lib/context/image.svelte'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import CameraIcon from 'virtual:icons/proicons/camera'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
@@ -45,7 +45,9 @@ const model = useImageEditorGalleryModel(getImageCtx())
   onIntentChange={model.actions.setIntent}
   onRetryUpload={model.actions.retryUpload}
 >
-  {#snippet leftRail(_item)}
+  {#snippet leftRail(
+    _item,
+  )}
     {#if model.state.activeImage}
       <UserAttributionCard
         userId={model.state.activeImage.image.contributorId}
@@ -57,7 +59,9 @@ const model = useImageEditorGalleryModel(getImageCtx())
     {/if}
   {/snippet}
 
-  {#snippet rightRail(_item)}
+  {#snippet rightRail(
+    _item,
+  )}
     {#if model.state.activeImage}
       <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
       <div

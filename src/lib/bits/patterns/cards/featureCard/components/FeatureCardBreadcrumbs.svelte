@@ -1,18 +1,18 @@
 <script lang="ts">
 // BITS
-import { Dropdown, Icon } from '$lib/bits'
+import { Dropdown, Icon } from '#lib/bits/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getCardCtx } from '#lib/context/card.svelte.js'
 // AUTH
-import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
+import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums'
+import { FeatureCardMode } from '#lib/enums.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { ResourceContext } from '$lib/types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { ResourceContext } from '#lib/types.js'
 // ICONS
 import Camera from 'virtual:icons/proicons/camera'
 import ChevronRight from 'virtual:icons/proicons/chevron-right'

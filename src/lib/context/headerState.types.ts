@@ -5,7 +5,7 @@ import type {
   HeaderTitleMenuItemConfig,
   HeaderButtonActionConfig,
   HeaderLayoutRegionConfig,
-} from '$lib/bits/patterns/layout/header/header.types'
+} from '#lib/bits/patterns/layout/header/header.types.js'
 
 /* ----------------- */
 // NAVIGATION :: ADMIN :: ACTIVE RESOURCE

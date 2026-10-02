@@ -1,37 +1,37 @@
 import { compactAncestorRelations, toCompactAncestors } from './resource-profiles'
-import type { CompactAncestorRow } from '$lib/api/services/resourcePage.types'
+import type { CompactAncestorRow } from '#lib/api/services/resourcePage.types.js'
 // DRIZZLE
 import type { SQL } from 'drizzle-orm'
 // UTILS
 import { nanoid } from 'nanoid'
 // API
-import { applyQueryFilters } from '$lib/api'
+import { applyQueryFilters } from '#lib/api/index.js'
 import {
   getDuplicateValues,
   requireValue,
   toBooleanOrUndefined,
-} from '$lib/api/services'
+} from '#lib/api/services/index.js'
 import {
   authorizeLayerCreateForSubmission,
   buildLayerVisibilityAndOwnershipConditions,
-} from '$lib/api/services/authz/layer'
+} from '#lib/api/services/authz/layer.js'
 // DB
-import { transformI18nSafely } from '$lib/db'
-import { layer } from '$lib/db/schema'
+import { transformI18nSafely } from '#lib/db/index.js'
+import { layer } from '#lib/db/schema/index.js'
 import {
   createI18n,
   createLayer as insertLayer,
   updateProperties,
-} from '$lib/db/services/layer'
-import { probeProjectForUpdate } from '$lib/db/services/project'
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+} from '#lib/db/services/layer.js'
+import { probeProjectForUpdate } from '#lib/db/services/project.js'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 import {
   LayerCompactProfileAPI,
   LayerAdminProfileAPI,
   LayerCardProfileAPI,
   LayerDetailProfileAPI,
   LayerListProfileAPI,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // ENUMS
 // TYPES
 import type {
@@ -43,7 +43,7 @@ import type {
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
+} from '#lib/types.js'
 import type {
   Layer,
   LayerDB,
@@ -52,7 +52,7 @@ import type {
   LayerListByProfile,
   LayerNew,
   LayerProfile,
-} from '$lib/db/zod/schema/layer.types'
+} from '#lib/db/zod/schema/layer.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

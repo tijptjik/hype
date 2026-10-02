@@ -2,23 +2,23 @@
 // SVELTE
 import { onMount } from 'svelte'
 // BITS COMPONENTS
-import Badge from '$lib/bits/custom/badge/Badge.svelte'
+import Badge from '#lib/bits/custom/badge/Badge.svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // SERVICES
 import {
   fetchALSResultFromAddress,
   processForwardGeocodeResult,
-} from '$lib/api/external/geocoding'
-import { getAddressForQuery, toLocalParseResult } from '$lib/utils/geocoding'
+} from '#lib/api/external/geocoding.js'
+import { getAddressForQuery, toLocalParseResult } from '#lib/utils/geocoding.js'
 // TYPES
-import type { GeoLookupStatusCounts } from '$lib/client/services/import/features'
+import type { GeoLookupStatusCounts } from '#lib/client/services/import/features.js'
 import type {
   ALSResult,
   ParsedReverseGeocodeResultI18n,
-} from '$lib/utils/geocoding.types'
-import type { AddressMeta, AddressProperties } from '$lib/utils/address.types'
-import type { LocaleKey } from '$lib/types'
+} from '#lib/utils/geocoding.types.js'
+import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
+import type { LocaleKey } from '#lib/types.js'
 
 type Props = {
   startProcessing?: () => void
@@ -967,7 +967,8 @@ $effect(() => {
                   Coordinates
                 </div>
                 <div class="font-mono text-sm">
-                  {#if currentRowData.existing.latitude !== undefined && currentRowData.existing.longitude !== undefined}
+                  {#if currentRowData.existing.latitude !== undefined &&
+                    currentRowData.existing.longitude !== undefined}
                     <div class="ml-2">Lat: {currentRowData.existing.latitude}</div>
                     <div class="ml-2">Lng: {currentRowData.existing.longitude}</div>
                   {:else}
@@ -1000,7 +1001,8 @@ $effect(() => {
                       </div>
                     </div>
                   {/if}
-                  {#if !currentRowData.existing.rawAddress && !currentRowData.existing.displayAddress}
+                  {#if !currentRowData.existing.rawAddress &&
+                    !currentRowData.existing.displayAddress}
                     <div class="ml-2 text-base-content/50">No addresses</div>
                   {/if}
                 </div>
@@ -1015,7 +1017,9 @@ $effect(() => {
                     Structured Address
                   </div>
                   <div class="space-y-2 font-mono text-sm">
-                    {#each Object.entries(currentRowData.existing.structuredAddress) as [key, value]}
+                    {#each Object.entries(
+                      currentRowData.existing.structuredAddress,
+                    ) as [key, value]}
                       <div class="ml-2">
                         <div class="mb-1 font-medium text-base-content/80">{key}:</div>
                         <div class="ml-2 break-words text-base-content/70">{value}</div>
@@ -1060,7 +1064,9 @@ $effect(() => {
                     Display Addresses
                   </div>
                   <div class="space-y-2 font-mono text-sm">
-                    {#each Object.entries(currentRowData.processed.displayAddress || {}) as [locale, address]}
+                    {#each Object.entries(
+                      currentRowData.processed.displayAddress || {},
+                    ) as [locale, address]}
                       <div class="ml-2">
                         <div class="mb-1 font-medium text-base-content/80">
                           {locale}:
@@ -1081,7 +1087,9 @@ $effect(() => {
                     Address Properties
                   </div>
                   <div class="space-y-3 font-mono text-sm">
-                    {#each Object.entries(currentRowData.processed.addressProperties || {}) as [locale, properties]}
+                    {#each Object.entries(
+                      currentRowData.processed.addressProperties || {},
+                    ) as [locale, properties]}
                       <div class="ml-2">
                         <div class="mb-1 font-medium text-base-content/80">
                           {locale}:
@@ -1112,7 +1120,9 @@ $effect(() => {
                       Address Meta
                     </div>
                     <div class="space-y-2 font-mono text-sm">
-                      {#each Object.entries(currentRowData.processed.addressMeta) as [key, value]}
+                      {#each Object.entries(
+                        currentRowData.processed.addressMeta,
+                      ) as [key, value]}
                         <div class="ml-2">
                           <div class="mb-1 text-xs text-base-content/60">{key}:</div>
                           <div class="ml-2 break-words text-base-content/70">
@@ -1187,7 +1197,8 @@ $effect(() => {
                   {#if coordinateColumns.longitude.length > 0}
                     <Badge text="longitude" tone="neutral" />
                   {/if}
-                  {#if coordinateColumns.latitude.length === 0 && coordinateColumns.longitude.length === 0}
+                  {#if coordinateColumns.latitude.length === 0 &&
+                    coordinateColumns.longitude.length === 0}
                     <span class="text-sm text-base-content/50">None</span>
                   {/if}
                 </div>

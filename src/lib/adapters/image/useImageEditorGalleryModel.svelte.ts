@@ -2,12 +2,12 @@
 import { onDestroy } from 'svelte'
 import { toast } from 'svelte-sonner'
 // REMOTE
-import { getMetadata } from '$lib/api/server/image.remote'
-import { runRemoteQuery } from '$lib/remote'
+import { getMetadata } from '#lib/api/server/image.remote.js'
+import { runRemoteQuery } from '#lib/remote/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // IMAGE
-import { IMAGE_RAW_INTERMEDIATE_TRANSFORMATION } from '$lib/images/delivery'
+import { IMAGE_RAW_INTERMEDIATE_TRANSFORMATION } from '#lib/images/delivery.js'
 import {
   extractVersionFromImageUrl,
   getGalleryItemTargetImageId,
@@ -17,20 +17,20 @@ import {
   sortGalleryItems,
   updateImagePresentationMode,
   waitForThumbnailReadyEvent,
-} from '$lib/client/services/image'
+} from '#lib/client/services/image.js'
 // TYPES
 import type {
   ViewerRenderable,
   ViewerRenderableStatus,
-} from '$lib/bits/patterns/images'
-import type { ImageCtx } from '$lib/context/image.svelte'
+} from '#lib/bits/patterns/images/index.js'
+import type { ImageCtx } from '#lib/context/image.svelte.js'
 import type {
   ImageCtxEnvelope,
   ImageMetadataFull,
   Intent,
   UploadStatus,
-} from '$lib/db/zod/schema/image.types'
-import type { Id } from '$lib/types'
+} from '#lib/db/zod/schema/image.types.js'
+import type { Id } from '#lib/types.js'
 
 type ImageEditorGalleryModel = {
   state: {

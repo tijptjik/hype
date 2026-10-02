@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SimpleTooltip } from '$lib/bits/core/tooltip'
+import { SimpleTooltip } from '#lib/bits/core/tooltip/index.js'
 import type { ResourceStatusBadgeProps } from './resourceStatusBadge.types'
 
 let {

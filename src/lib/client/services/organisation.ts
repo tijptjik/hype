@@ -1,20 +1,20 @@
 // ENUMS
-import type { OrganisationRoleType } from '$lib/enums'
-import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '$lib/capabilities'
+import type { OrganisationRoleType } from '#lib/enums.js'
+import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '#lib/capabilities.js'
 // I18N
-import { toLocaleKebab, toLocaleKey } from '$lib/i18n'
-import { toFormLocaleRecord } from '$lib/i18n'
+import { toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
+import { toFormLocaleRecord } from '#lib/i18n.js'
 // SERVICES
 import {
   overrideResourceEntityBoolean,
   overrideResourceListItemBoolean,
-} from '$lib/client/services/resource'
+} from '#lib/client/services/resource.js'
 // TYPES
 import type {
   CapabilityDefinition,
   CapabilityDefinitions,
-} from '$lib/capabilities.types'
-import type { Locale } from '$lib/types'
+} from '#lib/capabilities.types.js'
+import type { Locale } from '#lib/types.js'
 import type {
   OrganisationBooleanField,
   OrganisationFormInput,
@@ -23,7 +23,7 @@ import type {
   OrganisationIdentityPatch,
   OrganisationPropertySource,
   OrganisationSubmitUpdatesParams,
-} from '$lib/db/zod/schema/organisation.types'
+} from '#lib/db/zod/schema/organisation.types.js'
 
 function cloneOrganisationProperties(
   properties: OrganisationPropertySource[] | null | undefined,

@@ -4,20 +4,20 @@ import { fade } from 'svelte/transition'
 // PATTERN COMPONENTS
 import * as ImportPrimitive from './components'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import type { AdminCtx } from '$lib/context/admin.svelte'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import ArrowDownTray from 'virtual:icons/proicons/arrow-download'
 // SERVICES
 import {
   downloadImageUploadResults,
   handleImageDropEvent,
   processSingleUpload,
-} from '$lib/client/services/import/images'
+} from '#lib/client/services/import/images.js'
 // TYPES
-import type { BatchUploadResult } from '$lib/client/services/import/types'
+import type { BatchUploadResult } from '#lib/client/services/import/types.js'
 import type { DropzoneEvent } from './import.types'
 
 type Props = {
@@ -281,7 +281,8 @@ $effect(() => {
               {result}
               {index}
               onReplace={handleReplaceUpload}
-              replaceDisabled={!canQueueReplacements || replacingResultIds.has(result.id)}
+              replaceDisabled={!canQueueReplacements ||
+                replacingResultIds.has(result.id)}
             />
           {/each}
         </ImportPrimitive.Rows>

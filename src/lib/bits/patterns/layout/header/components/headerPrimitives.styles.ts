@@ -1,5 +1,5 @@
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 export const HEADER_BUTTON_LABEL_CLASSES = 'whitespace-nowrap'
 

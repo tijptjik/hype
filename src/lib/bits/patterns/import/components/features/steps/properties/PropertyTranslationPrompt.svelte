@@ -2,17 +2,17 @@
 // SVELTE
 import { untrack } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m, toLocaleKey } from '$lib/i18n'
+import { m, toLocaleKey } from '#lib/i18n.js'
 // ENUMS
-import { supportedLocaleKeys } from '$lib/enums'
+import { supportedLocaleKeys } from '#lib/enums.js'
 // TYPES
 import type {
   FeatureCSVColumn,
   Locale,
   LocaleKey,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 type PropertyData = {
   key: string

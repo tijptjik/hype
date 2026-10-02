@@ -1,6 +1,6 @@
 <script lang="ts">
-import HiddenInput from '$lib/bits/utilities/HiddenInput.svelte'
-import { Swap } from '$lib/bits/custom'
+import HiddenInput from '#lib/bits/utilities/HiddenInput.svelte'
+import { Swap } from '#lib/bits/custom/index.js'
 import { useId } from 'bits-ui'
 import type { SwapFieldProps } from './swapField.types'
 

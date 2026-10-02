@@ -2,11 +2,11 @@
 import type {
   HeaderButtonActionConfig,
   HeaderLayoutRegionConfig,
-} from '$lib/bits/patterns/layout/header/header.types'
+} from '#lib/bits/patterns/layout/header/header.types.js'
 import type {
   HeaderFormActionsState,
   HeaderFacetItem,
-} from '$lib/context/headerState.types'
+} from '#lib/context/headerState.types.js'
 
 type HeaderTaskActionsController = {
   setTaskActions: (actions: HeaderButtonActionConfig[]) => void

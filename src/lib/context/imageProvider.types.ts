@@ -1,10 +1,10 @@
 // TYPES
-import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
-import type { HubDB } from '$lib/db/zod/schema/hub.types'
-import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
-import type { ProjectDB } from '$lib/db/zod/schema/project.types'
-import type { Id } from '$lib/types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageContextResource, ImageContextResourceExtended } from '#lib/enums.js'
+import type { HubDB } from '#lib/db/zod/schema/hub.types.js'
+import type { OrganisationDB } from '#lib/db/zod/schema/organisation.types.js'
+import type { ProjectDB } from '#lib/db/zod/schema/project.types.js'
+import type { Id } from '#lib/types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 export type NormalizedImageUploadAsset = {
   file: File

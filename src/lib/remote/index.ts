@@ -1,4 +1,4 @@
-import type { ListResponse } from '$lib/types'
+import type { ListResponse } from '#lib/types.js'
 
 /**
  * Await a remote query result.

@@ -1,7 +1,7 @@
 <script lang="ts">
 import type { Component } from 'svelte'
 
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 let {
   iconComponent: IconComponent,

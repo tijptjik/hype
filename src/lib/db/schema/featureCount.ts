@@ -3,7 +3,7 @@ import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlit
 // SCHEMA
 import { feature } from './feature'
 // TYPES
-import type { FeatureQueryPage } from '$lib/api/services/featureQuery.types'
+import type { FeatureQueryPage } from '#lib/api/services/featureQuery.types.js'
 
 /** One canonical feature contribution; OLD dimensions survive parent deletion cascades. */
 export const featureCountEntry = sqliteTable('featureCountEntry', {

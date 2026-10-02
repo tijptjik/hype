@@ -1,8 +1,8 @@
 <script lang="ts">
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import ImportAnalysisStatus from '../../../shared/ImportAnalysisStatus.svelte'
 import UserFallbackSelection from './UserFallbackSelection.svelte'
