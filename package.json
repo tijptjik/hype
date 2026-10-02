@@ -122,9 +122,9 @@
     "@nerdfolio/drizzle-d1-helpers": "^0.1.5",
     "@playwright/test": "^1.63.0",
     "@protomaps/basemaps": "^5.7.2",
-    "@sveltejs/adapter-cloudflare": "^7.2.9",
-    "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/adapter-cloudflare": "^8.0.0",
+    "@sveltejs/adapter-static": "^4.0.0",
+    "@sveltejs/kit": "^3.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/upgrade": "^4.3.3",
@@ -135,8 +135,8 @@
     "@types/geojson": "^7946.0.16",
     "@types/papaparse": "^5.5.2",
     "@types/proj4": "^2.19.0",
-    "@vitest/coverage-v8": "5.0.0",
-    "@vitest/ui": "5.0.0",
+    "@vitest/coverage-v8": "^5.0.3",
+    "@vitest/ui": "^5.0.3",
     "baseline-browser-mapping": "^2.11.27",
     "branch-name-lint": "^3.0.1",
     "caniuse-lite": "^1.0.30001814",
@@ -174,7 +174,7 @@
     "workerd"
   ],
   "dependencies": {
-    "@better-auth/passkey": "1.7.4",
+    "@better-auth/passkey": "^1.7.7",
     "@chenglou/pretext": "^0.0.9",
     "@emeraldpay/hashicon": "^0.5.2",
     "@jsquash/avif": "^2.1.1",
@@ -216,7 +216,7 @@
     "tailwind-merge": "^3.7.0",
     "unique-names-generator": "^4.7.1",
     "utif": "^3.1.0",
-    "zod": "4.6.2"
+    "zod": "^4.6.5"
   },
   "config": {
     "commitizen": {
