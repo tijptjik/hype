@@ -1,10 +1,10 @@
 import type { AvailableLanguageTag } from '../../lib/paraglide/runtime'
 import type { ParaglideLocals } from '@inlang/paraglide-sveltekit'
-import type { Auth, SessionSession, SessionUser } from '$lib/auth'
-import type { AssetRenderJob, MapRenderJob } from '$lib/map/renders/render.types'
+import type { Auth, SessionSession, SessionUser } from '#lib/auth.js'
+import type { AssetRenderJob, MapRenderJob } from '#lib/map/renders/render.types.js'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { MiniflareD1Database } from 'miniflare'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import 'unplugin-icons/types/svelte'
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
@@ -15,8 +15,10 @@ declare global {
   namespace App {
     // interface Error {}
     interface Locals {
+      /** Cloudflare bindings and lifetime API resolved by the server hook. */
+      platform: Platform
       paraglide: ParaglideLocals<AvailableLanguageTag>
-      db: DrizzleD1Database<typeof import('$lib/db/schema/index')>
+      db: DrizzleD1Database<typeof import('#lib/db/schema/index.js')>
       hub: HubOptsExtended
       auth: Auth
       session?: SessionSession
@@ -45,6 +47,7 @@ declare global {
         MAP_REFRESH_TOKEN: string
         MAP_RENDER_TOKEN: string
         ASSET_ANALYTICS_READ_TOKEN: string
+        IMAGE_ANALYTICS_READ_TOKEN?: string
         // AUTH
         AUTH_SECRET: string
         AUTH_GOOGLE_ID: string
@@ -70,4 +73,9 @@ declare global {
       caches: CacheStorage & { default: Cache }
     }
   }
+}
+
+// Cloudflare exposes bindings through its native module in SvelteKit 3.
+declare namespace Cloudflare {
+  type Env = App.Platform['env']
 }

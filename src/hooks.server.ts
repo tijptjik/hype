@@ -1,29 +1,38 @@
-import { resolveTheme, THEME_COOKIE } from '$lib/themes/themes'
+// CLOUDFLARE
+import { env, waitUntil } from 'cloudflare:workers'
+import { error } from '@sveltejs/kit'
+import { resolveTheme, THEME_COOKIE } from '#lib/themes/themes.js'
+
 // SVELTE
-import { sequence } from '@sveltejs/kit/hooks'
-import type { Handle } from '@sveltejs/kit'
+import { sequence, type Handle } from '@sveltejs/kit/hooks'
+
 // I18N
-import { paraglideMiddleware } from '$lib/paraglide/server'
+import { paraglideMiddleware } from '#lib/paraglide/server.js'
 // SECURITY
-import { isScannerProbePath } from '$lib/utils/scannerProbe'
+import { isScannerProbePath } from '#lib/utils/scannerProbe.js'
 // DB
 import { drizzle } from 'drizzle-orm/d1'
 import { and, eq, inArray } from 'drizzle-orm'
-import * as schema from '$lib/db/schema/index'
-import { retryBusyRead } from '$lib/db/services/sqlite'
-import { autochunk } from '$lib/utils/batch-query'
+import * as schema from '#lib/db/schema/index.js'
+import { retryBusyRead } from '#lib/db/services/sqlite.js'
+import { autochunk } from '#lib/utils/batch-query.js'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
-import { getAuthForRequest } from '$lib/auth'
-import { isAuthEntryPath, isPublicUnauthenticatedPath } from '$lib/auth/redirectGuard'
+import { getAuthForRequest } from '#lib/auth.js'
+import {
+  isAuthEntryPath,
+  isPublicUnauthenticatedPath,
+} from '#lib/auth/redirectGuard.js'
 // TYPES
-import type { LocaleKey, Session, SessionUser, UserRoleDisco } from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { LocaleKey, Session, SessionUser, UserRoleDisco } from '#lib/types.js'
+
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
-import { isAdminRequest } from '$lib/api'
+import { isAdminRequest } from '#lib/api/index.js'
 
 type HubShapeResult = { data: unknown }
-type HubServiceModule = typeof import('$lib/api/services/hub')
+type HubServiceModule = typeof import('#lib/api/services/hub.js')
+
 type HubAdminRole = Extract<UserRoleDisco, { type: 'hub' }> & {
   hub?: { code?: string | null }
 }
@@ -118,9 +127,10 @@ const handle_scanner_probe: Handle = ({ event, resolve }) => {
 /**
  * This hook is used to set the hub info in the locals object.
  * It is used to filter the data in the database.
+ * Unresolved hubs return 404 before the root layout reads the hub context.
  */
 const handle_hub: Handle = async ({ event, resolve }) => {
-  const hubServices: HubServiceModule = await import('$lib/api/services/hub')
+  const hubServices: HubServiceModule = await import('#lib/api/services/hub.js')
   const { getHubFromDomain } = hubServices
 
   // Get host from headers
@@ -132,7 +142,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     : undefined
 
   // Get hub code from platform env for development override
-  const hubCode = devHubCodeOverride || event.platform?.env?.PUBLIC_HUB_CODE
+  const hubCode = devHubCodeOverride || event.locals.platform?.env?.PUBLIC_HUB_CODE
 
   // Parse hub info from domain without DB lookup
   const hubOpts = getHubFromDomain(host, hubCode) as Partial<HubOptsExtended> & {
@@ -148,7 +158,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   }
 
   // DB
-  const db = drizzle(event.platform?.env?.DB as unknown as MiniflareD1Database, {
+  const db = drizzle(event.locals.platform?.env?.DB as unknown as MiniflareD1Database, {
     schema,
   })
 
@@ -158,14 +168,14 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   if (!isAuthEntryPath(event.url.pathname) && isAdminRequest(event.request)) {
     try {
       const auth = getAuthForRequest(event.request.headers, {
-        DB: event.platform?.env?.DB as MiniflareD1Database,
-        AUTH_SECRET: event.platform?.env?.AUTH_SECRET ?? '',
-        AUTH_GOOGLE_ID: event.platform?.env?.AUTH_GOOGLE_ID ?? '',
-        AUTH_GOOGLE_SECRET: event.platform?.env?.AUTH_GOOGLE_SECRET ?? '',
-        AUTH_FACEBOOK_ID: event.platform?.env?.AUTH_FACEBOOK_ID ?? '',
-        AUTH_FACEBOOK_SECRET: event.platform?.env?.AUTH_FACEBOOK_SECRET ?? '',
-        AUTH_EMAIL_FROM: event.platform?.env?.AUTH_EMAIL_FROM,
-        EMAIL: event.platform?.env?.EMAIL,
+        DB: event.locals.platform?.env?.DB as MiniflareD1Database,
+        AUTH_SECRET: event.locals.platform?.env?.AUTH_SECRET ?? '',
+        AUTH_GOOGLE_ID: event.locals.platform?.env?.AUTH_GOOGLE_ID ?? '',
+        AUTH_GOOGLE_SECRET: event.locals.platform?.env?.AUTH_GOOGLE_SECRET ?? '',
+        AUTH_FACEBOOK_ID: event.locals.platform?.env?.AUTH_FACEBOOK_ID ?? '',
+        AUTH_FACEBOOK_SECRET: event.locals.platform?.env?.AUTH_FACEBOOK_SECRET ?? '',
+        AUTH_EMAIL_FROM: event.locals.platform?.env?.AUTH_EMAIL_FROM,
+        EMAIL: event.locals.platform?.env?.EMAIL,
       })
       const sessionData = await auth.api.getSession({ headers: event.request.headers })
       const sessionUser = sessionData?.user as SessionUser | undefined
@@ -199,6 +209,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
         hubDb,
         'card',
       )) as HubShapeResult
+
       event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else if (db && event.locals && hubOpts.domain) {
@@ -223,17 +234,11 @@ const handle_hub: Handle = async ({ event, resolve }) => {
     if (!hubDb && !isCoreAdmin && adminHubCodes.size > 0) {
       // A hub admin may resolve an unpublished or archived hub they administer.
       const [adminHub] = await autochunk(
-        {
-          items: [...adminHubCodes],
-          otherParametersCount: 1,
-        },
+        { items: [...adminHubCodes], otherParametersCount: 1 },
         hubCodeBatch =>
           retryBusyRead(() =>
             db.query.hub.findMany({
-              with: {
-                i18n: true,
-                image: true,
-              },
+              with: { i18n: true, image: true },
               where: and(
                 eq(schema.hub.domain, hubDomain),
                 inArray(schema.hub.code, hubCodeBatch),
@@ -241,6 +246,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
             }),
           ),
       )
+
       hubDb = adminHub
     }
 
@@ -249,17 +255,22 @@ const handle_hub: Handle = async ({ event, resolve }) => {
       (isCoreAdmin ||
         adminHubCodes.has(hubDb?.code ?? '') ||
         (hubDb?.isPublished && !hubDb?.isArchived))
+
     if (hubDb && canUseDomainHub) {
       const hub = (await hubServices.toEntityResponseShape(
         hubDb,
         'card',
       )) as HubShapeResult
+
       event.locals.hub = toHubLocalsShape(hub.data as Partial<HubOptsExtended>)
     }
   } else {
     // Default to Core
     event.locals.hub = toHubLocalsShape(hubOpts)
   }
+
+  // An unknown or unpublished hub cannot supply the root layout's required context.
+  if (!event.locals.hub) error(404, 'Hub not found')
 
   return resolve(event)
 }
@@ -273,7 +284,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
  */
 const handle_auth: Handle = async ({ event, resolve }) => {
   try {
-    if (!event.platform?.env?.DB) {
+    if (!event.locals.platform?.env?.DB) {
       console.error('🔴 Auth: No DB available for:', event.url.pathname)
       return resolve(event)
     }
@@ -282,14 +293,14 @@ const handle_auth: Handle = async ({ event, resolve }) => {
     const auth = getAuthForRequest(
       event.request.headers,
       {
-        DB: event.platform.env.DB,
-        AUTH_SECRET: event.platform.env.AUTH_SECRET,
-        AUTH_GOOGLE_ID: event.platform.env.AUTH_GOOGLE_ID,
-        AUTH_GOOGLE_SECRET: event.platform.env.AUTH_GOOGLE_SECRET,
-        AUTH_FACEBOOK_ID: event.platform.env.AUTH_FACEBOOK_ID,
-        AUTH_FACEBOOK_SECRET: event.platform.env.AUTH_FACEBOOK_SECRET,
-        AUTH_EMAIL_FROM: event.platform.env.AUTH_EMAIL_FROM,
-        EMAIL: event.platform.env.EMAIL,
+        DB: event.locals.platform.env.DB,
+        AUTH_SECRET: event.locals.platform.env.AUTH_SECRET,
+        AUTH_GOOGLE_ID: event.locals.platform.env.AUTH_GOOGLE_ID,
+        AUTH_GOOGLE_SECRET: event.locals.platform.env.AUTH_GOOGLE_SECRET,
+        AUTH_FACEBOOK_ID: event.locals.platform.env.AUTH_FACEBOOK_ID,
+        AUTH_FACEBOOK_SECRET: event.locals.platform.env.AUTH_FACEBOOK_SECRET,
+        AUTH_EMAIL_FROM: event.locals.platform.env.AUTH_EMAIL_FROM,
+        EMAIL: event.locals.platform.env.EMAIL,
       },
       event.locals.hub,
     )
@@ -379,11 +390,11 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
   // LOCALS
   if (event.locals.hub) {
     // Cast user to SessionUser to access superAdmin property from custom session
-    const { isCore } = await import('$lib/api/services/hub')
+    const { isCore } = await import('#lib/api/services/hub.js')
+
     const sessionUser = event.locals.user as SessionUser | undefined
     const hub = event.locals.hub as HubOptsExtended
     const CORE_HUB_CODE = 'core'
-
     let isHubAdminForActiveHub = false
     let isSuperAdmin = false
 
@@ -439,8 +450,23 @@ const translation: Handle = ({ event, resolve }) =>
 /**
  * This is the main hook that is used to sequence the other hooks.
  */
+/**
+ * Makes native Worker bindings available to request-owned services.
+ * @param input - SvelteKit request and resolver.
+ * @returns The resolved response.
+ * @remarks The Cloudflare adapter no longer populates event.platform in v3.
+ */
+const handle_worker_bindings: Handle = ({ event, resolve }) => {
+  event.locals.platform = {
+    env,
+    context: { waitUntil },
+    caches,
+  } as App.Platform
+  return resolve(event)
+}
 
 const handle = sequence(
+  handle_worker_bindings,
   handle_scanner_probe,
   handle_cors,
   handle_hub,
