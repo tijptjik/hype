@@ -1,5 +1,3 @@
-// CLOUDFLARE
-import { env, waitUntil } from 'cloudflare:workers'
 import { error } from '@sveltejs/kit'
 import { resolveTheme, THEME_COOKIE } from '#lib/themes/themes.js'
 
@@ -428,43 +426,48 @@ const handle_hub_enrichment: Handle = async ({ event, resolve }) => {
  */
 const translation: Handle = ({ event, resolve }) =>
   paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
-    event.request = localizedRequest
-    return resolve(event, {
-      transformPageChunk: ({ html }) => {
-        return html
-          .replace('lang="en"', `lang="${event.locals.user?.locale || locale}"`)
-          .replace(
-            '%theme%',
-            resolveTheme(
-              event.cookies.get(THEME_COOKIE),
-              event.locals.hub?.domain ?? event.url.hostname,
-            ),
-          )
+    return resolve(
+      { ...event, request: localizedRequest },
+      {
+        transformPageChunk: ({ html }) => {
+          return html
+            .replace('lang="en"', `lang="${event.locals.user?.locale || locale}"`)
+            .replace(
+              '%theme%',
+              resolveTheme(
+                event.cookies.get(THEME_COOKIE),
+                event.locals.hub?.domain ?? event.url.hostname,
+              ),
+            )
+        },
       },
-    })
+    )
   })
 
 // ═══════════════════════
 // MAIN HOOK
 // ═══════════════════════
 /**
- * This is the main hook that is used to sequence the other hooks.
- */
-/**
  * Makes native Worker bindings available to request-owned services.
  * @param input - SvelteKit request and resolver.
  * @returns The resolved response.
  * @remarks The Cloudflare adapter no longer populates event.platform in v3.
  */
-const handle_worker_bindings: Handle = ({ event, resolve }) => {
+const handle_worker_bindings: Handle = async ({ event, resolve }) => {
+  // Static builds have no Worker bindings; Vite removes the native import from that target.
+  if (import.meta.env.HYPE_STATIC_BUILD) return resolve(event)
+  const { env, waitUntil } = await import('cloudflare:workers')
   event.locals.platform = {
     env,
     context: { waitUntil },
-    caches,
+    caches: globalThis.caches,
   } as App.Platform
   return resolve(event)
 }
 
+/**
+ * This is the main hook that is used to sequence the other hooks.
+ */
 const handle = sequence(
   handle_worker_bindings,
   handle_scanner_probe,
