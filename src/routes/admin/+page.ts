@@ -1,9 +1,9 @@
 // SVELTE
 import { redirect } from '@sveltejs/kit'
 // LIB
-import { ADMIN_PATH } from '$lib/index'
+import { ADMIN_PATH } from '#lib/index.js'
 // ENUMS
-import { FirstClassResource, ResourcePath } from '$lib/enums'
+import { FirstClassResource, ResourcePath } from '#lib/enums.js'
 
 const DEFAULT_RESOURCE = FirstClassResource.feature
 

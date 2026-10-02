@@ -6,23 +6,21 @@ import { onMount, untrack } from 'svelte'
 import { debounce } from '@sillvva/utils'
 import { toast } from 'svelte-sonner'
 // ADAPTERS
-import {
-  createAdminIndexCardModel,
-} from '$lib/adapters/cards/createAdminIndexCardModel'
+import { createAdminIndexCardModel } from '#lib/adapters/cards/createAdminIndexCardModel.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
-import { getFeatures, updateFeatureBulkState } from '$lib/api/server/feature.remote'
+import { getFeatures, updateFeatureBulkState } from '#lib/api/server/feature.remote.js'
 // SERVICES
-import { getCachedFeatureRowModel } from '$lib/client/services/featureRow'
+import { getCachedFeatureRowModel } from '#lib/client/services/featureRow.js'
 import {
   createPropertyFilterSection,
   createSortable,
   createSortables,
   createToggleFilter,
   createTranslationFilter,
-} from '$lib/client/services/filters'
+} from '#lib/client/services/filters.js'
 // BITS PATTERNS
 import {
   CompletionFooter,
@@ -30,11 +28,11 @@ import {
   IndexCard,
   ResourceControlBar,
   ResourceIndex,
-} from '$lib/bits'
+} from '#lib/bits/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import FeatureIcon from 'virtual:icons/proicons/location'
 import StatusIcon from 'virtual:icons/proicons/target'
@@ -45,25 +43,23 @@ import TagsIcon from 'virtual:icons/proicons/tag-multiple'
 import PenLineIcon from 'virtual:icons/proicons/compose'
 import CopyrightIcon from 'virtual:icons/proicons/copyright'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { FeatureRowModel } from '$lib/client/services/featureRows.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { FeatureRowModel } from '#lib/client/services/featureRows.types.js'
 import type {
   FeatureTextSearchWorkerRequest,
   FeatureTextSearchWorkerResponse,
-} from '$lib/client/services/featureTextSearch.types'
+} from '#lib/client/services/featureTextSearch.types.js'
 import type {
   FeatureBulkStateResult,
   ResourceIndexRowSelectionState,
   ResourceBulkEditProgress,
-} from '$lib/client/services/bulkEdit.types'
-import type { KeyMap } from '$lib/client/services/resourceCards.types'
-import type {
-  ResourceControlBarConfig,
-} from '$lib/client/services/resourceFilters.types'
-import type { Resource, LocaleKey } from '$lib/types'
+} from '#lib/client/services/bulkEdit.types.js'
+import type { KeyMap } from '#lib/client/services/resourceCards.types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { Resource, LocaleKey } from '#lib/types.js'
 // TYPES
-import type { ResourceBulkEditOption } from '$lib/client/services/bulkEdit.types'
+import type { ResourceBulkEditOption } from '#lib/client/services/bulkEdit.types.js'
 
 type FeatureBulkStateField =
   | 'isPublished'
@@ -76,7 +72,6 @@ type FeatureBulkEditOption = ResourceBulkEditOption & {
   state: boolean
   pastTense: string
 }
-
 
 const BULK_FEATURE_UPDATE_CHUNK_SIZE = 100
 
@@ -1080,7 +1075,9 @@ function updateRowFocus(index: number) {
     ? toggleFeatureBulkSelection
     : undefined}
 >
-  {#snippet card(entity: Feature)}
+  {#snippet card(
+    entity: Feature,
+  )}
     <IndexCard
       {...createAdminIndexCardModel({
         adminCtx,
@@ -1091,7 +1088,12 @@ function updateRowFocus(index: number) {
       })}
     />
   {/snippet}
-  {#snippet row(entity, index, selectionState, isSelectionModeActive)}
+  {#snippet row(
+    entity,
+    index,
+    selectionState,
+    isSelectionModeActive,
+  )}
     {@const rowModel = rowModelsById.get(entity.id)}
     <FeatureRow
       {entity}

@@ -1,12 +1,15 @@
 <script lang="ts">
+import type { RemoteForm, RemoteFormInput } from '$app/server'
+
 // SVELTE
 import { page } from '$app/state'
+
 import { untrack } from 'svelte'
-import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
+
 // I18N
-import { m } from '$lib/i18n'
-import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
+import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -34,14 +37,14 @@ import {
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
-} from '$lib/client/services/form'
-import { getNameForToast } from '$lib/client/services/resource'
+} from '#lib/client/services/form.js'
+import { getNameForToast } from '#lib/client/services/resource.js'
 import {
   getOrganisationSubmitUpdates,
   overrideOrganisationEntityBoolean,
   overrideOrganisationListItemBoolean,
   toOrganisationFormInput,
-} from '$lib/client/services/organisation'
+} from '#lib/client/services/organisation.js'
 import {
   addProjectPropertyForType,
   addProjectPropertyValue,
@@ -59,10 +62,10 @@ import {
   updateProjectPropertyI18n,
   updateProjectPropertyValue,
   updateProjectPropertyValueI18n,
-} from '$lib/client/services/property'
+} from '#lib/client/services/property.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import {
   archiveOrganisation,
@@ -70,23 +73,23 @@ import {
   getOrganisations,
   organisationForm,
   publishOrganisation,
-} from '$lib/api/server/organisation.remote'
+} from '#lib/api/server/organisation.remote.js'
 import {
   toOrganisationAuthActor,
   resolveOrganisationActionPermissions,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // SCHEMA
 import {
   OrganisationPreflightFormData,
   OrganisationAdminProfileAPI,
-} from '$lib/db/zod/schema/organisation'
+} from '#lib/db/zod/schema/organisation.js'
 import {
   CAPABILITY_I18N_BY_KEY,
   CAPABILITY_KEYS,
   getCapabilityLabel,
-} from '$lib/capabilities'
+} from '#lib/capabilities.js'
 // CONFIG
-import { NEW_REF, NEW_TITLE } from '$lib/constants'
+import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import {
   FormI18nDescriptorFields,
@@ -98,25 +101,25 @@ import {
   GridSpacer,
   Main,
   ResourceViewer,
-} from '$lib/bits'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+} from '#lib/bits/index.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // CLIENT SERVICES
-import { setOrganisationImagePresentationMode } from '$lib/client/services/image'
+import { setOrganisationImagePresentationMode } from '#lib/client/services/image.js'
 // FACTORIES
-import { configureForm } from '$lib/factories.svelte'
+import { configureForm } from '#lib/factories.svelte.js'
 // COMPONENTS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
   getAdminFacetTabsForResource,
   navigateOnAdmin,
-} from '$lib/navigation'
-import type { OrganisationFacet } from '$lib/navigation'
+} from '#lib/navigation/index.js'
+import type { OrganisationFacet } from '#lib/navigation/index.js'
 // UTILS
-import { createSchemaRequiredInferer, toIssueMessages } from '$lib/utils/form-schema'
+import { createSchemaRequiredInferer, toIssueMessages } from '#lib/utils/form-schema.js'
 // ICONS
 import Blend from 'virtual:icons/proicons/shape-intersect'
 import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
@@ -126,33 +129,36 @@ import {
   FirstClassResource,
   ImageContextResource,
   OrganisationRoleType,
-} from '$lib/enums'
+} from '#lib/enums.js'
 import {
   classifierComponentTypes,
   specifierComponentTypes,
-} from '$lib/client/services/fieldComponents'
+} from '#lib/client/services/fieldComponents.js'
 // TYPES
-import type { Locale, Id } from '$lib/types'
-import type { User } from '$lib/db/zod/schema/user.types'
+import type { Locale, Id } from '#lib/types.js'
+
+import type { User } from '#lib/db/zod/schema/user.types.js'
 import type {
   UserRoleFieldNameResolverForm,
   FormDataUpdaterForm,
-} from '$lib/client/services/form.types'
-import type { CapabilityDefinitions, CapabilityKey } from '$lib/capabilities.types'
-import type { HeaderTransitionSnapshot } from '$lib/client/services/formHeader.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/client/services/form.types.js'
+import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
+import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+
 import type {
   OrganisationBooleanField,
   OrganisationDB,
   OrganisationGetState,
   OrganisationRoleUser,
-} from '$lib/db/zod/schema/organisation.types'
-import type { CapabilityFormFields, CapabilitySearchOption } from '$lib/bits'
+} from '#lib/db/zod/schema/organisation.types.js'
+
+import type { CapabilityFormFields, CapabilitySearchOption } from '#lib/bits/index.js'
 
 // § Context
-
 const adminCtx = getAdminCtx()
+
 const headerCtrl = getHeaderCtrl()
 
 // § Config
@@ -166,24 +172,29 @@ const editorCtrl = getEditorCtrl({
 })
 
 // § Config - Derived
-
 const organisationRef = $derived(page.params.organisation as string)
+
 const locales = $derived(getLocaleOrder(getLocaleKey()))
 const currentLocaleKey = $derived(getLocaleKey())
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
+
 // A compact list row cannot initialize an administration editor.
 const cachedOrganisationForRef = $derived.by(() => {
   const cached = adminCtx.appCtx.getResourceByRefSync(
     FirstClassResource.organisation,
     organisationRef,
   )
+
   if (!cached || !('capabilities' in cached) || !('userRoles' in cached))
     return undefined
+
   const parsed = OrganisationAdminProfileAPI.safeParse(cached)
+
   return parsed.success ? parsed.data : undefined
 })
+
 const cachedOrganisationState = $derived(
   cachedOrganisationForRef
     ? ({ data: cachedOrganisationForRef } as OrganisationGetState)
@@ -191,13 +202,13 @@ const cachedOrganisationState = $derived(
 )
 
 // § State - Elements
-
 let contentsElement: HTMLFormElement | undefined = $state()
+
 let lastSyncedFacetHash = $state('')
 
 // § State - State
-
 let lastHeaderKey = $state('')
+
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
 let fieldsLayoutMutationVersion = $state(0)
@@ -205,6 +216,7 @@ let capabilityResetVersion = $state(0)
 let selectedUsersById = $state<Record<string, User>>({})
 let hasAutoEnteredEditForNew = $state(false)
 let settledOrganisationRef = $state<string | null>(null)
+
 let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   canEdit: true,
   canPublish: true,
@@ -216,8 +228,8 @@ let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
 })
 
 // § State - Data
-
 let organisation: OrganisationGetState = $state(null)
+
 let committedOrganisation: OrganisationGetState = $state(null)
 
 const commitOrganisationState = (value: OrganisationGetState): void => {
@@ -231,8 +243,8 @@ const commitSettledOrganisationState = (value: OrganisationGetState): void => {
 }
 
 // § Derived State - Flags
-
 const isCoreFacet = $derived(activeFacet === 'core')
+
 const isCapabilitiesFacet = $derived(activeFacet === 'capabilities')
 const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
@@ -243,8 +255,10 @@ const isNewOrganisationRef = $derived(organisationRef === NEW_REF)
 
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewOrganisationRef) return true
+
   return guardRefDesync(organisation, committedOrganisation, organisationRef)
 })
+
 const isCurrentRefSettled = $derived(
   isNewOrganisationRef || settledOrganisationRef === organisationRef,
 )
@@ -253,10 +267,11 @@ const optimisticOrganisationData = $derived.by(() =>
 )
 
 // § Form
-
 const translatableI18nFields = ['name', 'nameShort', 'description'] as const
+
 type OrganisationEditorFormInput = ReturnType<typeof toOrganisationFormInput>
 type OrganisationRemoteFormInput = RemoteFormInput & OrganisationEditorFormInput
+
 const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(() => ({
   form: organisationForm as unknown as RemoteForm<
     OrganisationRemoteFormInput,
@@ -300,6 +315,7 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
       const refreshed = await refreshOrganisation(
         shouldRedirect ? submittedCode : undefined,
       )
+
       commitSettledOrganisationState(refreshed)
     },
   }),
@@ -310,7 +326,6 @@ const isRequiredInPreflight = createSchemaRequiredInferer(OrganisationPreflightF
 const isDirty = $derived(Boolean(formCtx.dirty))
 
 // ISSUES
-
 const visibleAllIssues = $derived.by((): unknown[] =>
   suppressFormLevelIssues ? [] : (formCtx.allIssues ?? []),
 )
@@ -322,22 +337,29 @@ const userRoleSectionIssues = $derived.by((): string[] => {
   const messages = visibleAllIssues
     .filter(issue => {
       if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+
       const path = (issue as { path?: unknown }).path
+
       return Array.isArray(path) && path[0] === 'data' && path[1] === 'userRoles'
     })
     .map(toIssueMessage)
     .filter((message: string | null): message is string => Boolean(message))
+
   return Array.from(new Set(messages))
 })
+
 const capabilityIssues = $derived.by((): string[] => {
   const messages = visibleAllIssues
     .filter(issue => {
       if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+
       const path = (issue as { path?: unknown }).path
+
       return Array.isArray(path) && path[0] === 'data' && path[1] === 'capabilities'
     })
     .map(toIssueMessage)
     .filter((message: string | null): message is string => Boolean(message))
+
   return Array.from(new Set(messages))
 })
 
@@ -348,13 +370,12 @@ const facetIssueState = $derived.by(() =>
     formEl: contentsElement,
   }),
 )
+
 const facetIssueSummary = $derived(facetIssueState.facetIssueSummary)
 const resolvedFacetTabsWithIssues = $derived(facetIssueState.facetTabsWithIssues)
-
 const organisationPropertyFormAdapter = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{ properties?: Property[] }>,
 )
-
 let fieldRemoveMode = $state(false)
 
 function createPropertyActions(getCount: () => number) {
@@ -378,8 +399,10 @@ function createPropertyActions(getCount: () => number) {
           isDefaultEnabled: false,
         },
       )
+
       revalidateAfterProgrammaticChange()
     },
+
     remove: (event: Event, propertyId: Id): void => {
       stopEvent(event)
       removeProjectProperty(organisationPropertyFormAdapter, propertyId)
@@ -504,7 +527,9 @@ const onTranslatePropertyLocale = async (
     sourceLocale,
     targetLocale,
   )
+
   if (translated) revalidateAfterProgrammaticChange()
+
   return translated
 }
 
@@ -520,7 +545,6 @@ const organisationFieldsInSection = $derived(
 )
 
 const fieldActions = createPropertyActions(() => organisationFieldsInSection.length)
-
 const propertyFormIssues = $derived.by(
   (): Array<{ message: string; path?: Array<string | number> }> =>
     getPropertyFormIssues(visibleAllIssues),
@@ -528,19 +552,25 @@ const propertyFormIssues = $derived.by(
 
 const fieldSectionIssues = $derived.by(() => {
   const messages = propertyFormIssues.map(issue => issue.message).filter(Boolean)
+
   return Array.from(new Set(messages))
 })
 
 const fieldSectionIssueItemIds = $derived.by(() => {
   const properties = getCurrentProjectProperties(organisationPropertyFormAdapter)
+
   return Array.from(
     new Set(
       propertyFormIssues
         .map(issue => {
           const path = issue.path
+
           if (!Array.isArray(path)) return null
+
           const index = path[2]
+
           if (typeof index !== 'number') return null
+
           return properties[index]?.id ?? null
         })
         .filter((id): id is Id => Boolean(id)),
@@ -568,13 +598,13 @@ function resolveOrganisationPropertyTypeTag(property: Property): {
 }
 
 // USER ROLES
-
 const formUserRoleValues = $derived(
   (formCtx.form.fields.value().data?.userRoles ?? []) as Array<{
     userId: string
     role: string
   }>,
 )
+
 const userRoleResolverForm = $derived(
   formCtx.form as unknown as UserRoleFieldNameResolverForm,
 )
@@ -586,6 +616,7 @@ const userRoleUpdaterForm = $derived(
 const hiddenUserIdInputAttrs = $derived(
   getUserRoleHiddenInputAttrs(userRoleResolverForm, formUserRoleValues),
 )
+
 const userRoles = $derived.by(() =>
   guardUserRolesDesync({
     baseRoles: (organisation?.data?.userRoles ?? []) as OrganisationRoleUser[],
@@ -596,12 +627,12 @@ const userRoles = $derived.by(() =>
 )
 
 // CAPABILITIES
-
 const capabilityFormUpdater = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{
     capabilities?: CapabilityDefinitions
   }>,
 )
+
 const formCapabilityDefinitions = $derived(
   (formCtx.form.fields.value().data?.capabilities ?? {}) as CapabilityDefinitions,
 )
@@ -625,7 +656,6 @@ const capabilitySearchOptions = $derived(
       }) satisfies CapabilitySearchOption,
   ),
 )
-
 const capabilityLabelsByKey = CAPABILITY_I18N_BY_KEY
 const shouldSubmitEmptyCapabilities = $derived(selectedCapabilityKeys.length === 0)
 
@@ -645,9 +675,12 @@ function onAddCapability(option: CapabilitySearchOption): void {
           option.key,
       },
     }
+
     data.capabilities = nextCapabilities
+
     return data
   })
+
   revalidateAfterProgrammaticChange()
 }
 
@@ -664,6 +697,7 @@ function onRemoveCapability(capabilityKey: CapabilityKey): void {
 
 function getCapabilityDisplayLabel(capabilityKey: CapabilityKey): string {
   const labels = formCapabilityDefinitions[capabilityKey]?.i18n
+
   return (
     labels?.[currentLocaleKey]?.trim() ||
     getCapabilityLabel(capabilityKey, currentLocaleKey)
@@ -692,16 +726,18 @@ const imageProviderProps = $derived.by(() => {
       : undefined,
   }
 })
+
 const imageProviderModel = useImageProviderModel(
   () => page,
   () => imageProviderProps,
 )
 
 // § Auth
-
 const currentUser = $derived(adminCtx.appCtx.getUser())
+
 const currentHub = $derived(adminCtx.appCtx.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
+
 const organisationPermissions = $derived.by(() => {
   const organisationData = optimisticOrganisationData
   const newEntityHubId = currentHub?.isCore
@@ -730,9 +766,13 @@ const resolvedFacetTabs = $derived.by(() => {
       coreOnly: true,
     })
   }
+
   if (canEditOrganisation) return facetTabs
+
   const tabs = new Map(facetTabs)
+
   tabs.delete('capabilities')
+
   return tabs
 })
 
@@ -773,6 +813,7 @@ bindAdminFacetHistorySync({
   resourceType: FirstClassResource.organisation,
   getResourceRef: () => organisationRef,
 })
+
 const canSubmitOrganisation = $derived(
   isNewOrganisationRef ? canCreateOrganisation : canEditOrganisation,
 )
@@ -789,7 +830,6 @@ const isFormReady = $derived(
 )
 
 // § Handlers
-
 // i18N CARDS
 
 function revalidateAfterProgrammaticChange(): void {
@@ -884,9 +924,11 @@ async function handleOrganisationStateToggle({
   mutate: typeof publishOrganisation | typeof archiveOrganisation
 }): Promise<void> {
   const organisationData = organisation?.data
+
   if (!organisationData) return
 
   const nextState = !organisationData[field]
+
   setBusy(true)
 
   try {
@@ -903,20 +945,19 @@ async function handleOrganisationStateToggle({
         ref: organisationRef,
         refKey: 'code',
         meta: { isAdminRequest: true, profile: 'admin' },
-      }).withOverride(
-        overrideOrganisationEntityBoolean(field, nextState),
-        // TODO Invalidate cache
-      ),
+      }).withOverride(overrideOrganisationEntityBoolean(field, nextState)),
+      // TODO Invalidate cache
       getOrganisations({
         conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
         prisms: adminCtx.appCtx.state.prisms,
         meta: { isAdminRequest: true, profile: 'card' },
       }).withOverride(
         overrideOrganisationListItemBoolean(organisationData.id, field, nextState),
-        // TODO Invalidate cache
       ),
     )
+    // TODO Invalidate cache
     commitSettledOrganisationState(await refreshOrganisation())
+
     await adminCtx.appCtx.cacheCtx.reconcile('organisation')
     toast.success(
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(organisation, 'nameShort')}`,
@@ -990,9 +1031,12 @@ function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
 // Seed the next route with cached entity data when available.
 $effect(() => {
   organisationRef
+
   const cachedCode = cachedOrganisationState?.data?.code
+
   if (!cachedCode) return
   if (organisation?.data?.code === cachedCode) return
+
   commitOrganisationState(cachedOrganisationState)
 })
 
@@ -1048,9 +1092,13 @@ $effect(() => {
     : Array.from(displayFacets.entries())
         .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
         .join('|')
+
   const headerKey = `${organisationRef}:${title}:${facetKey}`
+
   if (headerKey === lastHeaderKey) return
+
   lastHeaderKey = headerKey
+
   if (Array.isArray(displayFacets)) {
     headerCtrl.setHeaderForEntity(title, OrganisationIcon, new Map())
     headerCtrl.setFacets(displayFacets)
@@ -1062,9 +1110,12 @@ $effect(() => {
 $effect(() => {
   if (!formCtx.wasSubmitAttempted) return
   if (visibleAllIssues.length === 0) return
+
   const targetFacet = facetIssueSummary.firstFacetWithIssues
+
   if (!targetFacet) return
   if (activeFacet === targetFacet) return
+
   adminCtx.setFacet(targetFacet, organisationRef, FirstClassResource.organisation)
 })
 
@@ -1072,6 +1123,7 @@ $effect(() => {
 $effect(() => {
   if (!optimisticOrganisationData?.isArchived) return
   if (!headerCtrl.state.isEditing) return
+
   headerCtrl.setEditing(false)
 })
 
@@ -1079,6 +1131,7 @@ $effect(() => {
 $effect(() => {
   if (!isNewOrganisationRef) return
   if (canCreateOrganisation) return
+
   navigateOnAdmin(adminCtx, FirstClassResource.organisation)
 })
 
@@ -1100,6 +1153,7 @@ $effect(() => {
   if (!isCurrentRefSettled && !isNewOrganisationRef) return
   if (canSubmitOrganisation) return
   if (!headerCtrl.state.isEditing) return
+
   headerCtrl.setEditing(false)
 })
 
@@ -1108,6 +1162,7 @@ $effect(() => {
   if (!isCurrentRefSettled) return
   if (activeFacet !== 'capabilities') return
   if (canEditOrganisation) return
+
   adminCtx.setFacet('core', organisationRef, FirstClassResource.organisation)
 })
 
@@ -1115,6 +1170,7 @@ $effect(() => {
 $effect(() => {
   if (!isCurrentRefSettled) return
   if (resolvedFacetTabs.has(activeFacet)) return
+
   adminCtx.setFacet('core', organisationRef, FirstClassResource.organisation)
 })
 
@@ -1192,7 +1248,9 @@ $effect(() => {
           <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {/snippet}
 
-        {#snippet children(locale)}
+        {#snippet children(
+          locale,
+        )}
           <FormI18nDescriptorFields
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[locale]}
@@ -1205,7 +1263,8 @@ $effect(() => {
 
       <GridSpacer>
         {#snippet left()}
-          {@const roleFieldNameByUserId = getRoleFieldNameByUserId(userRoleResolverForm)}
+          {@const roleFieldNameByUserId =
+            getRoleFieldNameByUserId(userRoleResolverForm)}
           <FormUserRolesSection
             title={m.admin__forms_organisation_members_title()}
             subtitle={m.admin__forms_organisation_members_subtitle()}
@@ -1252,7 +1311,8 @@ $effect(() => {
         isArchived={Boolean(optimisticOrganisationData?.isArchived)}
         resetVersion={capabilityResetVersion}
         {capabilityLabelsByKey}
-        formCapabilityFields={formCtx.form.fields.data.capabilities as CapabilityFormFields}
+        formCapabilityFields={formCtx.form.fields.data
+          .capabilities as CapabilityFormFields}
         {shouldSubmitEmptyCapabilities}
         {capabilityIssues}
         {isRequiredInPreflight}

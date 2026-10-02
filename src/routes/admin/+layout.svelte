@@ -4,28 +4,28 @@ import { afterNavigate, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
 // TANSTACK
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import { ResourcePanel } from '$lib/bits/patterns/resourcePanel'
-import { useResourcePanelModel } from '$lib/adapters/panels/useResourcePanelModel.svelte'
-import { AdminMenu } from '$lib/bits'
+import { ResourcePanel } from '#lib/bits/patterns/resourcePanel/index.js'
+import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
+import { AdminMenu } from '#lib/bits/index.js'
 // BITS
-import { AdminShell } from '$lib/bits'
+import { AdminShell } from '#lib/bits/index.js'
 // ADAPTERS
-import { useSettingsPanelModel } from '$lib/adapters/panels/useSettingsPanelModel.svelte'
-import { getThemeModel } from '$lib/themes/theme.svelte'
-import { useAdminHeaderModel } from '$lib/adapters/header'
+import { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPanelModel.svelte.js'
+import { getThemeModel } from '#lib/themes/theme.svelte.js'
+import { useAdminHeaderModel } from '#lib/adapters/header/index.js'
 // NAVIGATION
 import {
   resetAdminIndexResourceRef,
   shouldClearAdminFeatureCacheOnNavigate,
-} from '$lib/navigation'
+} from '#lib/navigation/index.js'
 // CONTEXT
-import { setAdminCtx } from '$lib/context/admin.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
-import { setHeaderCtrl } from '$lib/context/header.svelte'
+import { setAdminCtx } from '#lib/context/admin.svelte.js'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { setHeaderCtrl } from '#lib/context/header.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 import MonitorIcon from 'virtual:icons/proicons/computer'
 // TYPES
 import type { LayoutProps, LayoutData } from './$types'
@@ -45,9 +45,12 @@ const appCtx = getAppCtx()
 // CONTEXT :: ADMIN
 // svelte-ignore state_referenced_locally
 const adminCtx = setAdminCtx(appCtx)
+
 const settingsModel = useSettingsPanelModel(appCtx, getThemeModel(), adminCtx)
+
 type SettingsPanelComponent =
-  typeof import('$lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
+  typeof import('#lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
+
 let SettingsPanel = $state<SettingsPanelComponent | null>(null)
 let settingsPanelLoadError = $state<unknown>(null)
 let settingsPanelPromise: Promise<SettingsPanelComponent> | null = null
@@ -55,26 +58,32 @@ let settingsPanelPromise: Promise<SettingsPanelComponent> | null = null
 /** Loads the admin settings panel on first open and retains it thereafter. */
 function loadSettingsPanel(): Promise<SettingsPanelComponent> {
   settingsPanelPromise ??= import(
-    '$lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
+    '#lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
   )
     .then(module => {
       SettingsPanel = module.default
       settingsPanelLoadError = null
+
       return module.default
     })
     .catch(error => {
       settingsPanelPromise = null
       settingsPanelLoadError = error
+
       throw error
     })
+
   return settingsPanelPromise
 }
 
 $effect(() => {
   if (settingsModel.open) void loadSettingsPanel().catch(() => {})
 })
+
 const sidebarModel = useResourcePanelModel(appCtx, 'admin', adminCtx)
+
 setHeaderCtrl()
+
 const headerModel = useAdminHeaderModel(appCtx, adminCtx)
 const headerProps = $derived(headerModel.getHeaderProps())
 const adminPreferences = $derived(appCtx.getUserPreferences().admin)
@@ -93,15 +102,19 @@ $effect(() => {
 })
 
 // NAVIGATION :: Clear feature cache images when switching between admin/user apps
-beforeNavigate(({ from, to }) => {
+beforeNavigate(({ from, to, shallow }) => {
+  if (shallow) return
+
   if (shouldClearAdminFeatureCacheOnNavigate(from?.route.id, to?.route.id)) {
     appCtx.clearFeatureCacheImages()
   }
 })
 
 // NAVIGATION :: Reset activeResourceRef when navigating to index pages
-afterNavigate(() => {
+afterNavigate(({ shallow }) => {
+  if (shallow) return
   if (!adminCtx.isInitialised) return
+
   resetAdminIndexResourceRef(adminCtx, page.url.pathname)
 })
 </script>

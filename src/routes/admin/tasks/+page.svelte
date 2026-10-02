@@ -1,33 +1,31 @@
 <script lang="ts">
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // SERVICES
 import {
   createSelectFilter,
   createSortable,
   createSortables,
   createToggleFilter,
-} from '$lib/client/services/filters'
-import { getTaskReviewActionLabel } from '$lib/client/services/task'
+} from '#lib/client/services/filters.js'
+import { getTaskReviewActionLabel } from '#lib/client/services/task.js'
 // BITS PATTERNS
-import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '$lib/bits'
+import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '#lib/bits/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import FunnelIcon from 'virtual:icons/proicons/filter'
 import TaskIcon from 'virtual:icons/proicons/archive'
 // TYPES
-import { reviewActions } from '$lib/api/services/taskReview'
-import type { Id } from '$lib/types'
-import type {
-  ResourceControlBarConfig,
-} from '$lib/client/services/resourceFilters.types'
-import type { Task } from '$lib/db/zod/schema/task.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import { reviewActions } from '#lib/api/services/taskReview.js'
+import type { Id } from '#lib/types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 
 const filters = {
   resource: FirstClassResource.task,
@@ -258,7 +256,10 @@ function updateRowFocus(index: number) {
     bind:listContainer
     bind:scrollIndexByEntityId
   >
-    {#snippet row(entity, index)}
+    {#snippet row(
+      entity,
+      index,
+    )}
       <TaskRow
         {entity}
         {index}

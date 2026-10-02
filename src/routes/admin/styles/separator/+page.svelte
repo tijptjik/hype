@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Separator } from '$lib/bits'
+import { Separator } from '#lib/bits/index.js'
 </script>
 
 <main class="h-full overflow-y-auto p-6">

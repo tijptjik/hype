@@ -6,10 +6,10 @@ import { tick, untrack } from 'svelte'
 import {
   classifierComponentTypes,
   specifierComponentTypes,
-} from '$lib/client/services/fieldComponents'
+} from '#lib/client/services/fieldComponents.js'
 // I18N
-import { m } from '$lib/i18n'
-import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
+import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -21,7 +21,7 @@ import {
   normalizeProjectLicense as normalizeSharedProjectLicense,
   projectLicenseLeafMediaTypes,
   type ProjectLicenseIntent,
-} from '$lib/client/services/licence'
+} from '#lib/client/services/licence.js'
 import {
   addUserRoleSelection,
   applyChangedRelationField,
@@ -45,18 +45,18 @@ import {
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
-} from '$lib/client/services/form'
+} from '#lib/client/services/form.js'
 import {
   createMapRenderTitleMenuItem,
   refreshMapRender,
-} from '$lib/client/services/map'
-import { getNameForToast } from '$lib/client/services/resource'
+} from '#lib/client/services/map.js'
+import { getNameForToast } from '#lib/client/services/resource.js'
 import {
   getCapabilityKeysFromDefinitions,
   getCapabilityLabel,
   normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
-} from '$lib/capabilities'
+} from '#lib/capabilities.js'
 import {
   getProjectSubmitUpdates,
   normalizeProjectCapabilitiesForSubmit,
@@ -75,7 +75,7 @@ import {
   toUserRolesForCapabilityToggle,
   toUserRolesWithRoleChange,
   toProjectFormInput,
-} from '$lib/client/services/project'
+} from '#lib/client/services/project.js'
 import {
   addProjectPropertyForType,
   changeProjectPropertyRankUnified,
@@ -95,11 +95,11 @@ import {
   addProjectPropertyValue,
   removeProjectPropertyValue,
   reorderProjectPropertyValue,
-} from '$lib/client/services/property'
-import { setProjectImagePresentationMode } from '$lib/client/services/image'
+} from '#lib/client/services/property.js'
+import { setProjectImagePresentationMode } from '#lib/client/services/image.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import {
   archiveProject,
@@ -108,14 +108,17 @@ import {
   getProjects,
   projectForm,
   publishProject,
-} from '$lib/api/server/project.remote'
-import { getLayers } from '$lib/api/server/layer.remote'
-import { getFeatures } from '$lib/api/server/feature.remote'
-import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
+} from '#lib/api/server/project.remote.js'
+import { getLayers } from '#lib/api/server/layer.remote.js'
+import { getFeatures } from '#lib/api/server/feature.remote.js'
+import {
+  getOrganisation,
+  getOrganisations,
+} from '#lib/api/server/organisation.remote.js'
 // SCHEMA
-import { ProjectPreflightFormData } from '$lib/db/zod/schema/project'
+import { ProjectPreflightFormData } from '#lib/db/zod/schema/project.js'
 // CONFIG
-import { NEW_REF, NEW_TITLE } from '$lib/constants'
+import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import {
   FormFieldsSection,
@@ -131,31 +134,25 @@ import {
   Main,
   ProjectCapabilities,
   ResourceViewer,
-} from '$lib/bits'
+} from '#lib/bits/index.js'
 
-import type {
-  ParentSectionOrganisationItem,
-} from '$lib/bits/patterns/forms/formParentSection'
-import type {
-  MapStyleSelectionItem,
-} from '$lib/bits/patterns/forms/formMapStyleSection'
-import type {
-  UserCapabilityMatrixRow,
-} from '$lib/bits/patterns/capabilities/userCapabilityMatrix'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import type { ParentSectionOrganisationItem } from '#lib/bits/patterns/forms/formParentSection/index.js'
+import type { MapStyleSelectionItem } from '#lib/bits/patterns/forms/formMapStyleSection/index.js'
+import type { UserCapabilityMatrixRow } from '#lib/bits/patterns/capabilities/userCapabilityMatrix/index.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // FACTORIES
-import { configureForm } from '$lib/factories.svelte'
+import { configureForm } from '#lib/factories.svelte.js'
 // COMPONENTS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
   getAdminFacetTabsForResource,
   navigateOnAdmin,
-} from '$lib/navigation'
-import type { ProjectFacet } from '$lib/navigation'
+} from '#lib/navigation/index.js'
+import type { ProjectFacet } from '#lib/navigation/index.js'
 // AUTHZ
 import {
   authorizeProjectDelete,
@@ -165,32 +162,36 @@ import {
   canSetProjectParentOrganisation,
   resolveProjectParentOrganisationScope,
   toProjectAuthActor,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // UTILS
-import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
+import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
 import Blend from 'virtual:icons/proicons/shape-intersect'
 import ProjectIcon from 'virtual:icons/proicons/grid'
 import Type from 'virtual:icons/proicons/text'
 // ENUMS
-import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
+import {
+  FirstClassResource,
+  ImageContextResource,
+  ProjectRoleType,
+} from '#lib/enums.js'
 // TYPES
-import type { CapabilityDefinitions, CapabilityKey } from '$lib/capabilities.types'
+import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
 import type {
   FormDataUpdaterForm,
   UserRoleFieldNameResolverForm,
-} from '$lib/client/services/form.types'
-import type { HeaderTransitionSnapshot } from '$lib/client/services/formHeader.types'
-import type { Locale, ResourceContext, Id } from '$lib/types'
+} from '#lib/client/services/form.types.js'
+import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
+import type { Locale, ResourceContext, Id } from '#lib/types.js'
 import type {
   ProjectLicense,
   ProjectLicenseRights,
   ProjectLicenseMediaType,
-} from '$lib/db/zod/schema/projectLicense.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { User } from '$lib/db/zod/schema/user.types'
-import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types'
+} from '#lib/db/zod/schema/projectLicense.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
+import type { OrganisationGetState } from '#lib/db/zod/schema/organisation.types.js'
 import type {
   ProjectBooleanField,
   ProjectCurrentFormDraft,
@@ -201,7 +202,7 @@ import type {
   ProjectRoleUser,
   ProjectSubmitBaselineRelations,
   ProjectSubmitDraft,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 
 // § Context
 
@@ -1169,22 +1170,11 @@ const hiddenProjectLayerInputAttrs = $derived.by(() => {
     const layerId = typeof layer.id === 'string' ? layer.id : ''
     if (!layerId) return []
 
+    const fields = formCtx.form.fields.data.layers[index]
     return [
-      {
-        type: 'hidden',
-        name: `data.layers[${index}].id`,
-        value: layerId,
-      },
-      {
-        type: 'hidden',
-        name: `data.layers[${index}].rank`,
-        value: String(layer.rank ?? index),
-      },
-      {
-        type: 'hidden',
-        name: `data.layers[${index}].isDefaultVisible`,
-        value: layer.isDefaultVisible ? 'true' : 'false',
-      },
+      fields.id.as('hidden', layerId),
+      fields.rank.as('hidden', String(layer.rank ?? index)),
+      fields.isDefaultVisible.as('hidden', layer.isDefaultVisible ? 'true' : 'false'),
     ]
   })
 })
@@ -2593,7 +2583,9 @@ $effect(() => {
           <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {/snippet}
 
-        {#snippet children(locale)}
+        {#snippet children(
+          locale,
+        )}
           <FormI18nDescriptorFields
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[locale]}
@@ -2681,7 +2673,8 @@ $effect(() => {
           <FormProjectLicenseSection
             title={m.field_license()}
             subtitle={m.admin__project_license_section_subtitle()}
-            attributionPlaceholder={organisationAttributionFallback || m.admin__project_license_attribution_placeholder()}
+            attributionPlaceholder={organisationAttributionFallback ||
+              m.admin__project_license_attribution_placeholder()}
             license={formProjectLicense}
             choiceCards={licenseWizardChoiceCards}
             rightRows={licenseRightRows}
@@ -2798,7 +2791,9 @@ $effect(() => {
           onTranslateLocale: onTranslatePropertyLocale,
           onResetLocale: onResetPropertyLocale,
           getPropertyIndex: (propertyId, _sectionIndex) =>
-            currentProjectProperties.findIndex(candidate => candidate.id === propertyId),
+            currentProjectProperties.findIndex(
+              candidate => candidate.id === propertyId,
+            ),
           getPropertyFields: (_propertyId, propertyIndex) =>
             getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
           resolveCardPresentation: resolveProjectPropertyCardPresentation,
@@ -2815,11 +2810,12 @@ $effect(() => {
     <div class="hidden" aria-hidden="true">
       {#if hasLicenseChanges}
         <input
-          type="hidden"
-          name="data.license"
-          value={JSON.stringify(formProjectLicense)}
+          {...formCtx.form.fields.data.license.as(
+            'hidden',
+            JSON.stringify(formProjectLicense),
+          )}
         >
-        <input type="hidden" name="meta.licenseTouched" value="true">
+        <input {...formCtx.form.fields.meta.licenseTouched.as('hidden', 'true')}>
       {/if}
       {#each hiddenProjectLayerInputAttrs as inputAttrs, index (index)}
         <input {...inputAttrs}>

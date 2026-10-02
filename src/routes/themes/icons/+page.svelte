@@ -6,13 +6,13 @@ import Location from 'virtual:icons/proicons/location'
 import Layers from 'virtual:icons/proicons/layers'
 import Check from 'virtual:icons/proicons/checkmark'
 // BITS COMPONENTS
-import Button from '$lib/bits/core/button/Button.svelte'
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 // DATA
 import { iconComparisons } from './comparisons'
-import { THEMES } from '$lib/themes/themes'
+import { THEMES } from '#lib/themes/themes.js'
 // TYPES
-import type { ThemeId } from '$lib/themes/themes.types'
+import type { ThemeId } from '#lib/themes/themes.types.js'
 
 let selected = $state<ThemeId>('breadline-light')
 let query = $state('')
@@ -191,7 +191,12 @@ const appliedCount = iconComparisons.filter(icon => icon.status === 'Applied').l
                 >{icon.count}
                 source {icon.count === 1 ? 'file' : 'files'}</span
               ><span
-                class={['rounded-full px-2.5 py-1 text-xs font-medium', icon.status === 'Applied' ? 'bg-primary/10 text-primary' : 'bg-canvas']}
+                class={[
+                  'rounded-full px-2.5 py-1 text-xs font-medium',
+                  icon.status === 'Applied'
+                    ? 'bg-primary/10 text-primary'
+                    : 'bg-canvas',
+                ]}
                 >{icon.status}</span
               >
             </div>

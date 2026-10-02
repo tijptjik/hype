@@ -1,10 +1,10 @@
 import { error, redirect, type RequestHandler } from '@sveltejs/kit'
 
-import { getMapStyleAssetRecord, isMapStyleKey } from '$lib/map/styles'
+import { getMapStyleAssetRecord, isMapStyleKey } from '#lib/map/styles/index.js'
 import {
   getMapStyleRenderObjectKey,
   resolveMapStyleRenderUrl,
-} from '$lib/map/styles/render.shared'
+} from '#lib/map/styles/render.shared.js'
 
 const getDevAssetBucket = (platform?: App.Platform): R2Bucket => {
   const bucket = platform?.env.ASSET_PUBLIC_DEV
@@ -16,7 +16,8 @@ const getDevAssetBucket = (platform?: App.Platform): R2Bucket => {
   return bucket
 }
 
-export const GET: RequestHandler = async ({ params, platform }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
+  const { platform } = locals
   const key = params.key
 
   if (!key || !isMapStyleKey(key)) {

@@ -3,9 +3,10 @@ import {
   getOriginalsBucketForStage,
   readManifestVersion,
   toImageStage,
-} from '$lib/images/storage'
+} from '#lib/images/storage.js'
 
-export const GET = async ({ params, platform }) => {
+export const GET = async ({ params, locals }) => {
+  const { platform } = locals
   const segments = (params.path ?? '').split('/').filter(Boolean)
   if (segments.length === 0) throw error(400, 'Invalid image path')
 

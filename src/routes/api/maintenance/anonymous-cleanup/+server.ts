@@ -1,9 +1,9 @@
 // SVELTEKIT
 import { error, json } from '@sveltejs/kit'
 // DB
-import client from '$lib/db'
+import client from '#lib/db/index.js'
 // AUTH
-import { cleanupExpiredAnonymousUsers } from '$lib/auth/anonymous.server'
+import { cleanupExpiredAnonymousUsers } from '#lib/auth/anonymous.server.js'
 // TYPES
 import type { RequestHandler } from './$types'
 import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
@@ -38,7 +38,8 @@ async function secretsMatch(supplied: string, expected: string): Promise<boolean
  * @returns Aggregate cleanup result without deleted identifiers.
  * @remarks The bearer token is a dedicated secret and must not reuse Better Auth keys.
  */
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+  const { platform } = locals
   const expectedToken = platform?.env?.ANONYMOUS_CLEANUP_TOKEN
   const suppliedToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
 

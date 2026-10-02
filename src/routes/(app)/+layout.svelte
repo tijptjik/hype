@@ -1,57 +1,54 @@
 <script lang="ts">
 // ADAPTERS
-import { useProfilePanelModel } from '$lib/adapters/panels/useProfilePanelModel.svelte'
-import {
-  useSavedFeatureListModel,
-} from '$lib/adapters/panels/useSavedFeatureListModel.svelte'
-import { useFilterPanelModel } from '$lib/adapters/panels/useFilterPanelModel.svelte'
-import { usePanelShellModel } from '$lib/adapters/panels/usePanelShellModel.svelte'
-import {
-  useSettingsPanelModel,
-} from '$lib/adapters/panels/useSettingsPanelModel.svelte'
-import { getThemeModel } from '$lib/themes/theme.svelte'
+import { useProfilePanelModel } from '#lib/adapters/panels/useProfilePanelModel.svelte.js'
+import { useSavedFeatureListModel } from '#lib/adapters/panels/useSavedFeatureListModel.svelte.js'
+import { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
+import { usePanelShellModel } from '#lib/adapters/panels/usePanelShellModel.svelte.js'
+import { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPanelModel.svelte.js'
+import { getThemeModel } from '#lib/themes/theme.svelte.js'
 // SVELTE
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import { untrack, type Snippet } from 'svelte'
 // NAVIGATION
 import { goto, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
-import { dismissActiveFeatureNavigation, handlePanelParams } from '$lib/navigation'
-import { useSession } from '$lib/auth/client'
-import { requestAccountUpgrade } from '$lib/auth/upgrade'
-import { useOmnibarModel } from '$lib/adapters/bars'
+import {
+  dismissActiveFeatureNavigation,
+  handlePanelParams,
+} from '#lib/navigation/index.js'
+import { useSession } from '#lib/auth/client.js'
+import { requestAccountUpgrade } from '#lib/auth/upgrade.js'
+import { useOmnibarModel } from '#lib/adapters/bars/index.js'
 import {
   createHubSubscriptionModelParams,
   toHubUserStateFlags,
   useHubSubscriptionModel,
-} from '$lib/adapters/hub'
+} from '#lib/adapters/hub/index.js'
 import {
   dismissHubSubscriptionPrompt,
   joinHubSubscription,
-} from '$lib/client/services/hubSubscription'
-import { shouldSkipGlobalKeydown } from '$lib/client/keybindings'
+} from '#lib/client/services/hubSubscription.js'
+import { shouldSkipGlobalKeydown } from '#lib/client/keybindings.js'
 import { toast } from 'svelte-sonner'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
-import { setOmniCtx } from '$lib/context/omni.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
+import { setOmniCtx } from '#lib/context/omni.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // SERVICES
-import { getActiveMapStyleCode } from '$lib/client/services/map'
-import MapCanvas from '$lib/bits/patterns/maps/MapCanvas.svelte'
-import Filters from '$lib/bits/patterns/filtersPanel/FiltersPanel.svelte'
-import { ResourcePanel } from '$lib/bits/patterns/resourcePanel'
-import {
-  useResourcePanelModel,
-} from '$lib/adapters/panels/useResourcePanelModel.svelte'
-import Stars from '$lib/bits/patterns/starsPanel/StarsPanel.svelte'
-import Hub from '$lib/bits/patterns/hubPanel/HubPanel.svelte'
-// import Plan from '$lib/bits/patterns/planPanel/PlanPanel.svelte'
-// import Passport from '$lib/bits/patterns/passportPanel/PassportPanel.svelte'
-// import EventCompanion from '$lib/bits/patterns/eventCompanionPanel/EventCompanionPanel.svelte'
+import { getActiveMapStyleCode } from '#lib/client/services/map.js'
+import MapCanvas from '#lib/bits/patterns/maps/MapCanvas.svelte'
+import Filters from '#lib/bits/patterns/filtersPanel/FiltersPanel.svelte'
+import { ResourcePanel } from '#lib/bits/patterns/resourcePanel/index.js'
+import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
+import Stars from '#lib/bits/patterns/starsPanel/StarsPanel.svelte'
+import Hub from '#lib/bits/patterns/hubPanel/HubPanel.svelte'
+// import Plan from '#lib/bits/patterns/planPanel/PlanPanel.svelte'
+// import Passport from '#lib/bits/patterns/passportPanel/PassportPanel.svelte'
+// import EventCompanion from '#lib/bits/patterns/eventCompanionPanel/EventCompanionPanel.svelte'
 // BITS
 import {
   AppHubSubscriptionOverlay,
@@ -61,20 +58,19 @@ import {
   AppShell,
   AppSurface,
   Omnibar,
-} from '$lib/bits'
+} from '#lib/bits/index.js'
 // ENUMS
-import { PageState } from '$lib/enums'
+import { PageState } from '#lib/enums.js'
 // TYPES
 import type { LayoutData, LayoutProps } from '../(app)/$types'
-import type { HubUserStateFlags } from '$lib/api/services/hub.types'
 
-type AppRootProps = LayoutProps & {
-  children: Snippet
-  data: LayoutData & {}
-}
+import type { HubUserStateFlags } from '#lib/api/services/hub.types.js'
+
+type AppRootProps = LayoutProps & { children: Snippet; data: LayoutData & {} }
 
 // PROPS
 let { children, data }: AppRootProps = $props()
+
 const hub = $derived(data.hub)
 const hubI18n = $derived(
   (hub?.i18n ?? {}) as Record<string, Record<string, string | null | undefined>>,
@@ -82,6 +78,7 @@ const hubI18n = $derived(
 
 // AUTH
 const session = useSession()
+
 const initialHubUserState = $derived(data.hubUserState ?? null)
 const isHubSubscriptionConfigured = $derived(
   Boolean(
@@ -99,6 +96,7 @@ let navDest = $state('')
 // CONTEXT :: APP
 // Get the shared AppCtx from root layout
 const appCtx = getAppCtx()
+
 const settingsModel = useSettingsPanelModel(appCtx, getThemeModel())
 const filtersShell = usePanelShellModel(appCtx, Panel.filters)
 const starsShell = usePanelShellModel(appCtx, Panel.stars)
@@ -107,9 +105,9 @@ const profileShell = usePanelShellModel(appCtx, Panel.profile)
 const responsiveCtx = getResponsiveCtx()
 
 type SettingsPanelComponent =
-  typeof import('$lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
+  typeof import('#lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
 type ProfilePanelComponent =
-  typeof import('$lib/bits/patterns/profilePanel/ProfilePanel.svelte').default
+  typeof import('#lib/bits/patterns/profilePanel/ProfilePanel.svelte').default
 
 let SettingsPanel = $state<SettingsPanelComponent | null>(null)
 let ProfilePanel = $state<ProfilePanelComponent | null>(null)
@@ -121,34 +119,40 @@ let profilePanelPromise: Promise<ProfilePanelComponent> | null = null
 /** Loads the settings panel once, retaining the component for subsequent opens. */
 function loadSettingsPanel(): Promise<SettingsPanelComponent> {
   settingsPanelPromise ??= import(
-    '$lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
+    '#lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
   )
     .then(module => {
       SettingsPanel = module.default
       settingsPanelLoadError = null
+
       return module.default
     })
     .catch(error => {
       settingsPanelPromise = null
       settingsPanelLoadError = error
+
       throw error
     })
+
   return settingsPanelPromise
 }
 
 /** Loads the profile panel once, retaining the component for subsequent opens. */
 function loadProfilePanel(): Promise<ProfilePanelComponent> {
-  profilePanelPromise ??= import('$lib/bits/patterns/profilePanel/ProfilePanel.svelte')
+  profilePanelPromise ??= import('#lib/bits/patterns/profilePanel/ProfilePanel.svelte')
     .then(module => {
       ProfilePanel = module.default
       profilePanelLoadError = null
+
       return module.default
     })
     .catch(error => {
       profilePanelPromise = null
       profilePanelLoadError = error
+
       throw error
     })
+
   return profilePanelPromise
 }
 
@@ -184,6 +188,7 @@ const starsModel = {
     return $session.data?.user?.isAnonymous === true
   },
 }
+
 const filtersModel = useFilterPanelModel(appCtx, omniCtx)
 const prismsModel = useResourcePanelModel(appCtx, 'prisms', undefined, omniCtx)
 const omnibarModel = useOmnibarModel(appCtx, omniCtx, responsiveCtx)
@@ -194,6 +199,7 @@ let hubUserState = $state<HubUserStateFlags>({
   subscriptionMember: false,
   hasAgreedToTerms: false,
 })
+
 let isSubscriptionBusy = $state(false)
 let isHubSubscriptionOverlayOpen = $state(false)
 
@@ -222,6 +228,7 @@ const subscriptionModel = useHubSubscriptionModel(() => ({
     onDismiss: handleDismissSubscriptionPrompt,
   }),
 }))
+
 const subscriptionVisibility = $derived(subscriptionModel.getVisibility())
 const omnibarProps = $derived(omnibarModel.getOmnibarProps())
 const hubPanelSubscriptionProps = $derived(
@@ -241,7 +248,8 @@ const termsOfServiceDialogProps = $derived(
 )
 
 // NAVIGATION :: Clear feature cache images when switching between admin/user apps
-beforeNavigate(({ from, to }) => {
+beforeNavigate(({ from, to, shallow }) => {
+  if (shallow) return
   if (!from || !to) return
 
   const fromIsAdmin = from.route.id?.startsWith('/admin')
@@ -319,6 +327,7 @@ $effect(() => {
 
   // Handle panel parameters from initial URL
   handlePanelParams(appCtx, page.url.searchParams)
+
   hasRunInitialSync = true // Prevent future runs
 })
 
@@ -404,8 +413,10 @@ async function handleJoinSubscription(): Promise<void> {
         subscriptionPromptDismissed: true,
         hasAgreedToTerms: true,
       }
+
       isHubSubscriptionOverlayOpen = false
       toast.success('Subscription confirmed')
+
       return
     }
 
@@ -550,7 +561,7 @@ $effect(() => {
 })
 </script>
 
-<svelte:window onkeydown={handleWindowKeydown} />
+<svelte:window onkeydown={handleWindowKeydown}></svelte:window>
 
 <AppShell>
   {#if !$session.isPending && $session.data && appCtx.isInitialised}
@@ -644,7 +655,8 @@ $effect(() => {
           subscriptionItem={{
             isVisible: subscriptionVisibility.showAppMenuSubscriptionItem,
             label: appMenuSubscriptionItemProps.label ?? 'Subscribe',
-            onSelect: appMenuSubscriptionItemProps.onSelect ?? handleOpenHubSubscriptionOverlay,
+            onSelect:
+              appMenuSubscriptionItemProps.onSelect ?? handleOpenHubSubscriptionOverlay,
           }}
         />
       </AppMain>

@@ -5,10 +5,10 @@ import {
   createFacebookDeletionConfirmationCode,
   hashFacebookDeletionConfirmationCode,
   parseFacebookSignedRequest,
-} from '$lib/auth/facebook-data-deletion'
-import { generateUsernameFromId } from '$lib/utils/username-generator.server'
+} from '#lib/auth/facebook-data-deletion.js'
+import { generateUsernameFromId } from '#lib/utils/username-generator.server.js'
 // DB
-import * as schema from '$lib/db/schema/index'
+import * as schema from '#lib/db/schema/index.js'
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
@@ -25,7 +25,8 @@ import type { RequestHandler } from './$types'
  * sign-in method remains, or anonymizes and archives the otherwise inaccessible
  * account while retaining submitted public content.
  */
-export const POST: RequestHandler = async ({ request, url, platform }) => {
+export const POST: RequestHandler = async ({ request, url, locals }) => {
+  const { platform } = locals
   const appSecret = platform?.env?.AUTH_FACEBOOK_SECRET
   const database = platform?.env?.DB
   if (!appSecret || !database) throw error(503, 'FACEBOOK_DELETION_UNAVAILABLE')

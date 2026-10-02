@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Button } from '$lib/bits'
+import { Button } from '#lib/bits/index.js'
 import { toast } from 'svelte-sonner'
 
 function showDefault(): void {

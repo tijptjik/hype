@@ -2,19 +2,19 @@
 // SVELTE
 import { page } from '$app/state'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // BITS
-import { TaskEditor } from '$lib/bits'
+import { TaskEditor } from '#lib/bits/index.js'
 import type {
   HeaderButtonActionConfig,
   HeaderCrumb,
-} from '$lib/bits/patterns/layout/header'
-import type { TaskReviewUiAction } from '$lib/bits/patterns/tasks'
+} from '#lib/bits/patterns/layout/header/index.js'
+import type { TaskReviewUiAction } from '#lib/bits/patterns/tasks/index.js'
 import {
   TaskInfoDialog,
   TaskRejectDialog,
   TaskReviewStatusBar,
-} from '$lib/bits/patterns/tasks/components'
+} from '#lib/bits/patterns/tasks/components/index.js'
 // CLIENT SERVICES
 import {
   getEffectiveTaskLayerId,
@@ -23,19 +23,19 @@ import {
   getTaskSyncSignature,
   mergeResolvedTaskFeature,
   syncAssignedTaskLayerCache,
-} from '$lib/client/services/task'
+} from '#lib/client/services/task.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // ENUMS
 import {
   FirstClassResource,
   ImageContextResource,
   ImageContextResourceExtended,
   ResourcePath,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 import { toast } from 'svelte-sonner'
 // ICONS
 import CheckBadgeIcon from 'virtual:icons/proicons/checkmark-starburst'
@@ -47,18 +47,18 @@ import TaskIcon from 'virtual:icons/proicons/archive'
 import TrashIcon from 'virtual:icons/proicons/delete'
 import XCircleIcon from 'virtual:icons/proicons/cancel-circle'
 // NAVIGATION
-import { goToNextTask, navigateOnAdmin } from '$lib/navigation'
+import { goToNextTask, navigateOnAdmin } from '#lib/navigation/index.js'
 // PROVIDERS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // REMOTE
-import { getTask, reassignTaskLayer, reviewTask } from '$lib/api/server/tasks.remote'
+import { getTask, reassignTaskLayer, reviewTask } from '#lib/api/server/tasks.remote.js'
 // TYPES
-import type { Id } from '$lib/types'
-import type { Task } from '$lib/db/zod/schema/task.types'
-import type { TaskType } from '$lib/api/services/taskReview'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Id } from '#lib/types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
+import type { TaskType } from '#lib/api/services/taskReview.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 
 // +++ Table Of Contents
 // ═══════════════════════

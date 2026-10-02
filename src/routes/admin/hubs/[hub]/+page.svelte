@@ -3,8 +3,8 @@
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
-import { getI18n, getLocale, getLocaleKey, getLocaleOrder } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
+import { getI18n, getLocale, getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -35,7 +35,7 @@ import {
   updateFormData,
   updateUserRoleSelection,
   resetLocaleFields,
-} from '$lib/client/services/form'
+} from '#lib/client/services/form.js'
 import {
   getHubOrganisationHiddenInputAttrs,
   getHubLayerDefaultHiddenInputAttrs,
@@ -43,15 +43,15 @@ import {
   overrideHubEntityBoolean,
   overrideHubListItemBoolean,
   toHubFormInput,
-} from '$lib/client/services/hub'
+} from '#lib/client/services/hub.js'
 import {
   createDefaultHubPrivacyPolicy,
   createDefaultHubTermsOfService,
-} from '$lib/services/policy'
+} from '#lib/services/policy.js'
 import {
   normalizePropertiesForSubmit,
   toStableSignature,
-} from '$lib/client/services/project'
+} from '#lib/client/services/project.js'
 import {
   addProjectPropertyForType,
   addProjectPropertyValue,
@@ -70,11 +70,11 @@ import {
   updateProjectPropertyBase,
   updateProjectPropertyI18n,
   updateProjectPropertyValueI18n,
-} from '$lib/client/services/property'
-import { setHubImagePresentationMode } from '$lib/client/services/image'
+} from '#lib/client/services/property.js'
+import { setHubImagePresentationMode } from '#lib/client/services/image.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import {
   archiveHub,
@@ -82,14 +82,17 @@ import {
   getHubs,
   hubForm,
   publishHub,
-} from '$lib/api/server/hub.remote'
-import { getLayers } from '$lib/api/server/layer.remote'
-import { toHubAuthActor, resolveHubActionPermissions } from '$lib/api/services/authz'
-import { getOrganisations } from '$lib/api/server/organisation.remote'
+} from '#lib/api/server/hub.remote.js'
+import { getLayers } from '#lib/api/server/layer.remote.js'
+import {
+  toHubAuthActor,
+  resolveHubActionPermissions,
+} from '#lib/api/services/authz/index.js'
+import { getOrganisations } from '#lib/api/server/organisation.remote.js'
 // SCHEMA
-import { HubPreflightFormData } from '$lib/db/zod/schema/hub'
+import { HubPreflightFormData } from '#lib/db/zod/schema/hub.js'
 // CONFIG
-import { NEW_REF, NEW_TITLE } from '$lib/constants'
+import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import {
   FormFieldsSection,
@@ -104,26 +107,24 @@ import {
   Main,
   ResourceViewer,
   TextArea,
-} from '$lib/bits'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
-import type {
-  HubOrganisationItem,
-} from '$lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types'
+} from '#lib/bits/index.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import type { HubOrganisationItem } from '#lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types.js'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // FACTORIES
-import { configureForm } from '$lib/factories.svelte'
+import { configureForm } from '#lib/factories.svelte.js'
 // COMPONENTS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
   getAdminFacetTabsForResource,
   navigateOnAdmin,
-} from '$lib/navigation'
-import type { HubFacet } from '$lib/navigation'
+} from '#lib/navigation/index.js'
+import type { HubFacet } from '#lib/navigation/index.js'
 // UTILS
-import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
+import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
 import Blend from 'virtual:icons/proicons/shape-intersect'
 import HubIcon from 'virtual:icons/proicons/building-multiple'
@@ -137,26 +138,26 @@ import {
   HubSubscriptionService,
   ImageContextResource,
   specifierComponentTypes,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // TYPES
-import type { Id, Locale, LocaleKey, UserRoleDisco } from '$lib/types'
-import type { User } from '$lib/db/zod/schema/user.types'
+import type { Id, Locale, LocaleKey, UserRoleDisco } from '#lib/types.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
 import type {
   UserRoleFieldNameResolverForm,
   HubOrganisationFieldNameResolverForm,
   FormDataUpdaterForm,
-} from '$lib/client/services/form.types'
-import type { HeaderTransitionSnapshot } from '$lib/client/services/formHeader.types'
-import type { HubSubscriptionPlacement } from '$lib/api/services/hub.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/client/services/form.types.js'
+import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
+import type { HubSubscriptionPlacement } from '#lib/api/services/hub.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type {
   Hub,
   HubFormInput,
   HubGetState,
   HubRoleUser,
-} from '$lib/db/zod/schema/hub.types'
-import type { LayerCardProfile } from '$lib/db/zod/schema/layer.types'
+} from '#lib/db/zod/schema/hub.types.js'
+import type { LayerCardProfile } from '#lib/db/zod/schema/layer.types.js'
 
 // § Context
 
@@ -1625,7 +1626,9 @@ $effect(() => {
           <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {/snippet}
 
-        {#snippet children(locale)}
+        {#snippet children(
+          locale,
+        )}
           <FormI18nDescriptorFields
             form={formCtx.form}
             fields={formCtx.form.fields.data.i18n[locale]}
@@ -1654,8 +1657,8 @@ $effect(() => {
             startInAddingMode={isNewHubRef}
             availableRoles={[{ value: HubRoleType.admin, label: 'Admin' }]}
             userQueryParams={{
-                conditions: { isArchived: false },
-              }}
+              conditions: { isArchived: false },
+            }}
             {onAddUser}
             {onRemoveUser}
             {onRoleChange}
@@ -1667,28 +1670,30 @@ $effect(() => {
             form={formCtx.form}
             {isEditing}
             isSubscriptionAvailable={Boolean(
-                formCtx.form.fields.value().data?.isSubscriptionAvailable,
-              )}
+              formCtx.form.fields.value().data?.isSubscriptionAvailable,
+            )}
             subscriptionService={(formCtx.form.fields.value().data
-                ?.subscriptionService ??
-                HubSubscriptionService.substack) as HubSubscriptionService}
-            subscriptionId={String(formCtx.form.fields.value().data?.subscriptionId ?? '')}
+              ?.subscriptionService ??
+              HubSubscriptionService.substack) as HubSubscriptionService}
+            subscriptionId={String(
+              formCtx.form.fields.value().data?.subscriptionId ?? '',
+            )}
             subscriptionSessionCookie={String(
-                formCtx.form.fields.value().data?.subscriptionSessionCookie ?? '',
-              )}
+              formCtx.form.fields.value().data?.subscriptionSessionCookie ?? '',
+            )}
             subscriptionBenefitsByLocale={{
-                en: String(
-                  formCtx.form.fields.value().data?.i18n?.en?.subscriptionBenefits ?? '',
-                ),
-                zhHans: String(
-                  formCtx.form.fields.value().data?.i18n?.zhHans?.subscriptionBenefits ??
-                    '',
-                ),
-                zhHant: String(
-                  formCtx.form.fields.value().data?.i18n?.zhHant?.subscriptionBenefits ??
-                    '',
-                ),
-              }}
+              en: String(
+                formCtx.form.fields.value().data?.i18n?.en?.subscriptionBenefits ?? '',
+              ),
+              zhHans: String(
+                formCtx.form.fields.value().data?.i18n?.zhHans?.subscriptionBenefits ??
+                  '',
+              ),
+              zhHant: String(
+                formCtx.form.fields.value().data?.i18n?.zhHant?.subscriptionBenefits ??
+                  '',
+              ),
+            }}
             subscriptionPlacement={formSubscriptionPlacement}
             onAvailabilityChange={onToggleSubscriptionAvailability}
             onServiceChange={onSubscriptionServiceChange}
@@ -1774,36 +1779,36 @@ $effect(() => {
           fieldRemoveMode = value
         }}
         card={{
-            removeMode: fieldRemoveMode,
-            locales,
-            isEditing,
-            isRequiredInPreflight,
-            allIssues: visibleAllIssues as Array<{
-              message: string
-              path?: Array<string | number>
-            }>,
-            classifierComponents: classifierComponentTypes,
-            specifierComponents: specifierComponentTypes,
-            onIncreaseRank: fieldActions.increaseRank,
-            onDecreaseRank: fieldActions.decreaseRank,
-            onRemove: fieldActions.remove,
-            onUpdateBase: updatePropertyBase,
-            onUpdateI18n: updatePropertyI18n,
-            onAddValue: addPropertyValue,
-            onRemoveValue: removePropertyValue,
-            onMoveValue: movePropertyValue,
-            onUpdateValue: updatePropertyValue,
-            onUpdateValueI18n: updatePropertyValueI18n,
-            onTranslateLocale: onTranslatePropertyLocale,
-            onResetLocale: onResetPropertyLocale,
-            getPropertyIndex: (propertyId, _sectionIndex) =>
-              getCurrentProjectProperties(hubPropertyFormAdapter).findIndex(
-                candidate => candidate.id === propertyId,
-              ),
-            getPropertyFields: (_propertyId, propertyIndex) =>
-              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-            resolveSourceTag: resolveHubPropertyTypeTag,
-          }}
+          removeMode: fieldRemoveMode,
+          locales,
+          isEditing,
+          isRequiredInPreflight,
+          allIssues: visibleAllIssues as Array<{
+            message: string
+            path?: Array<string | number>
+          }>,
+          classifierComponents: classifierComponentTypes,
+          specifierComponents: specifierComponentTypes,
+          onIncreaseRank: fieldActions.increaseRank,
+          onDecreaseRank: fieldActions.decreaseRank,
+          onRemove: fieldActions.remove,
+          onUpdateBase: updatePropertyBase,
+          onUpdateI18n: updatePropertyI18n,
+          onAddValue: addPropertyValue,
+          onRemoveValue: removePropertyValue,
+          onMoveValue: movePropertyValue,
+          onUpdateValue: updatePropertyValue,
+          onUpdateValueI18n: updatePropertyValueI18n,
+          onTranslateLocale: onTranslatePropertyLocale,
+          onResetLocale: onResetPropertyLocale,
+          getPropertyIndex: (propertyId, _sectionIndex) =>
+            getCurrentProjectProperties(hubPropertyFormAdapter).findIndex(
+              candidate => candidate.id === propertyId,
+            ),
+          getPropertyFields: (_propertyId, propertyIndex) =>
+            getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+          resolveSourceTag: resolveHubPropertyTypeTag,
+        }}
       />
     </Main.Facet>
 
@@ -1838,7 +1843,9 @@ $effect(() => {
         sectionKey="policies"
         {isEditing}
       >
-        {#snippet children(locale)}
+        {#snippet children(
+          locale,
+        )}
           <input
             {...getPolicyGenAttrs(
               locale,
@@ -1860,8 +1867,11 @@ $effect(() => {
             isTranslated={true}
             {isEditing}
             isGenAI={getPolicyGenValue(locale, 'privacyPolicy')}
-            onToggleGenAI={() => toggleGenAiField(formCtx.form, locale, 'privacyPolicy')}
-            value={(getPolicyTextareaAttrs(locale, 'privacyPolicy') as { value?: string }).value ?? ''}
+            onToggleGenAI={() =>
+              toggleGenAiField(formCtx.form, locale, 'privacyPolicy')}
+            value={(
+              getPolicyTextareaAttrs(locale, 'privacyPolicy') as { value?: string }
+            ).value ?? ''}
             issues={getPolicyFields(locale).privacyPolicy.issues()}
             rows={24}
             textareaAttrs={getPolicyTextareaAttrs(locale, 'privacyPolicy')}
@@ -1875,8 +1885,9 @@ $effect(() => {
             isGenAI={getPolicyGenValue(locale, 'termsOfService')}
             onToggleGenAI={() =>
               toggleGenAiField(formCtx.form, locale, 'termsOfService')}
-            value={(getPolicyTextareaAttrs(locale, 'termsOfService') as { value?: string })
-                .value ?? ''}
+            value={(
+              getPolicyTextareaAttrs(locale, 'termsOfService') as { value?: string }
+            ).value ?? ''}
             issues={getPolicyFields(locale).termsOfService.issues()}
             rows={20}
             textareaAttrs={getPolicyTextareaAttrs(locale, 'termsOfService')}

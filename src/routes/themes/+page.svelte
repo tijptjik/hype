@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits'
-import { ThemePicker } from '$lib/bits/patterns/themePicker'
-import { ResourcePanel } from '$lib/bits/patterns/resourcePanel'
+import { Button } from '#lib/bits/index.js'
+import { ThemePicker } from '#lib/bits/patterns/themePicker/index.js'
+import { ResourcePanel } from '#lib/bits/patterns/resourcePanel/index.js'
 // ICONS
 import ArrowUpRight from 'virtual:icons/proicons/arrow-export'
 import Check from 'virtual:icons/proicons/checkmark'
@@ -11,15 +11,15 @@ import Clock from 'virtual:icons/proicons/clock'
 import Sun from 'virtual:icons/proicons/brightness'
 import Moon from 'virtual:icons/proicons/moon'
 // THEME
-import { THEMES } from '$lib/themes/themes'
+import { THEMES } from '#lib/themes/themes.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // TYPES
-import type { ThemeId } from '$lib/themes/themes.types'
+import type { ThemeId } from '#lib/themes/themes.types.js'
 import type {
   ResourcePanelModel,
   ResourcePanelRow,
-} from '$lib/bits/patterns/resourcePanel'
+} from '#lib/bits/patterns/resourcePanel/index.js'
 
 type ThemeColours = {
   primary: string
@@ -289,7 +289,8 @@ const panel: ResourcePanelModel = {
                   value={activeColours[role.key]}
                   aria-label={`${role.name} colour`}
                   class="h-10 w-full cursor-pointer rounded-lg border-0 bg-transparent p-0"
-                  oninput={event => updatePreviewColour(role.key, event.currentTarget.value)}
+                  oninput={event =>
+                    updatePreviewColour(role.key, event.currentTarget.value)}
                 >
                 <span
                   class="mt-2 block truncate text-[10px] font-semibold uppercase tracking-wider"
@@ -514,7 +515,12 @@ const panel: ResourcePanelModel = {
               text={reserved ? 'You’re on the list' : 'Join this collection'}
               color="primary"
               iconComponent={reserved ? Check : ArrowUpRight}
-              onClick={() => { reserved = !reserved; notice = reserved ? 'Your place is reserved in this preview.' : 'Preview reservation removed.' }}
+              onClick={() => {
+                reserved = !reserved
+                notice = reserved
+                  ? 'Your place is reserved in this preview.'
+                  : 'Preview reservation removed.'
+              }}
             />
           </div>
         </div>
@@ -545,12 +551,12 @@ const panel: ResourcePanelModel = {
             text="Save for later"
             color="secondary"
             style="soft"
-            onClick={() => notice = 'Collection saved in this preview.'}
+            onClick={() => (notice = 'Collection saved in this preview.')}
           /><Button
             text="View details"
             color="accent"
             style="outline"
-            onClick={() => notice = 'Try the routes and search in the sample panel.'}
+            onClick={() => (notice = 'Try the routes and search in the sample panel.')}
           />
         </div>
       </section>
@@ -587,7 +593,7 @@ const panel: ResourcePanelModel = {
             <Button
               text="Make a little difference"
               color="primary"
-              onClick={() => selected = theme.id}
+              onClick={() => (selected = theme.id)}
             />
           </section>
         {/each}

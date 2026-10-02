@@ -1,24 +1,24 @@
 <script lang="ts">
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
-import { getImportCtx, setImportCtx } from '$lib/context/import.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
+import { getImportCtx, setImportCtx } from '#lib/context/import.svelte.js'
 // BITS COMPONENTS
-import * as Main from '$lib/bits/custom/main'
+import * as Main from '#lib/bits/custom/main/index.js'
 // COMPONENTS
-import Dropzones from '$lib/bits/patterns/import/Dropzones.svelte'
-import ImportFeatureFlow from '$lib/bits/patterns/import/ImportFeatureFlow.svelte'
-import ImportImageFlow from '$lib/bits/patterns/import/ImportImageFlow.svelte'
+import Dropzones from '#lib/bits/patterns/import/Dropzones.svelte'
+import ImportFeatureFlow from '#lib/bits/patterns/import/ImportFeatureFlow.svelte'
+import ImportImageFlow from '#lib/bits/patterns/import/ImportImageFlow.svelte'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // ICONS
 import Upload from 'virtual:icons/proicons/arrow-upload'
 // TYPES
 import type {
   DropzoneEvent,
   ImportableResource,
-} from '$lib/bits/patterns/import/import.types'
+} from '#lib/bits/patterns/import/import.types.js'
 
 // CONTEXT
 setImportCtx()

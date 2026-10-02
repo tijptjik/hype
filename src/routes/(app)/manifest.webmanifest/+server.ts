@@ -3,15 +3,15 @@ import type { RequestHandler } from './$types'
 import { eq } from 'drizzle-orm'
 
 // DB
-import { getHubFromDomain } from '$lib/api/services/hub'
-import { hub } from '$lib/db/schema'
+import { getHubFromDomain } from '#lib/api/services/hub.js'
+import { hub } from '#lib/db/schema/index.js'
 
 // I18N
-import { getDatabaseWithoutAuth } from '$lib/api'
-import { toLocaleKey } from '$lib/i18n'
-import type { Locale } from '$lib/types'
-import type { HubI18nDB } from '$lib/db/zod/schema/hub.types'
-import type { HubOpts } from '$lib/db/zod/schema/hub.types'
+import { getDatabaseWithoutAuth } from '#lib/api/index.js'
+import { toLocaleKey } from '#lib/i18n.js'
+import type { Locale } from '#lib/types.js'
+import type { HubI18nDB } from '#lib/db/zod/schema/hub.types.js'
+import type { HubOpts } from '#lib/db/zod/schema/hub.types.js'
 
 const getBaseManifest = async (code: string) => {
   try {
@@ -50,7 +50,8 @@ const getLocaleFromHeaders = (request: Request): Locale => {
   return 'en'
 }
 
-export const GET: RequestHandler = async ({ url, request, platform }) => {
+export const GET: RequestHandler = async ({ url, request, locals }) => {
+  const { platform } = locals
   const hubOpts: Partial<HubOpts> = getHubFromDomain(
     url.hostname,
     platform?.env?.PUBLIC_HUB_CODE,

@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Switch } from '$lib/bits/custom'
-import type { ButtonSize } from '$lib/bits/core/button/button.types'
-import type { SwitchColor } from '$lib/bits/custom/switch/switch.types'
+import { Switch } from '#lib/bits/custom/index.js'
+import type { ButtonSize } from '#lib/bits/core/button/button.types.js'
+import type { SwitchColor } from '#lib/bits/custom/switch/switch.types.js'
 
 const sizes: ButtonSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
 const colors: SwitchColor[] = [

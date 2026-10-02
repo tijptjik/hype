@@ -1,19 +1,22 @@
 import { json, type RequestHandler } from '@sveltejs/kit'
 
 // API
-import { getDatabaseWithoutAuth } from '$lib/api'
+import { getDatabaseWithoutAuth } from '#lib/api/index.js'
 // HELPERS
-import { listMapStyleDefinitions } from '$lib/map/styles'
-import { buildMapStyleMapRenderJob } from '$lib/map/styles/render.jobs.server'
-import { getMapStyleAssetRecord } from '$lib/map/styles/registry'
-import { requireMapRefreshAccess } from '$lib/map/renders/auth.server'
-import { enqueueMapRenderJob } from '$lib/map/renders/queue.server'
+import { listMapStyleDefinitions } from '#lib/map/styles/index.js'
+import { buildMapStyleMapRenderJob } from '#lib/map/styles/render.jobs.server.js'
+import { getMapStyleAssetRecord } from '#lib/map/styles/registry.js'
+import { requireMapRefreshAccess } from '#lib/map/renders/auth.server.js'
+import { enqueueMapRenderJob } from '#lib/map/renders/queue.server.js'
 import {
   planLayerMapRenderRefreshJobs,
   planProjectMapRenderRefreshJobs,
-} from '$lib/map/renders/render.server'
-import type { MapRenderJob } from '$lib/map/renders/render.types'
-import { getMapRenderQueue, getMapRenderRemoteConfig } from '$lib/api/services/render'
+} from '#lib/map/renders/render.server.js'
+import type { MapRenderJob } from '#lib/map/renders/render.types.js'
+import {
+  getMapRenderQueue,
+  getMapRenderRemoteConfig,
+} from '#lib/api/services/render.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -29,7 +32,7 @@ import { getMapRenderQueue, getMapRenderRemoteConfig } from '$lib/api/services/r
 type RefreshMode = 'plan' | 'enqueue' | 'local-generate'
 
 const loadLocalMapRenderRuntime = async () =>
-  await import('$lib/map/renders/local.server')
+  await import('#lib/map/renders/local.server.js')
 
 const parseKinds = (url: URL): Array<'styles' | 'layers' | 'projects'> => {
   const rawKinds = url.searchParams.get('kinds') ?? 'layers,projects'
@@ -113,7 +116,8 @@ const planMapRenderJobs = async (
  * @param event Request event.
  * @returns JSON summary of the planned or executed preview work.
  */
-export const POST: RequestHandler = async ({ platform, request, url }) => {
+export const POST: RequestHandler = async ({ request, url, locals }) => {
+  const { platform } = locals
   const environment = platform?.env.ENVIRONMENT
   const kinds = parseKinds(url)
   const mode = parseMode(url, environment)

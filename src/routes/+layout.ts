@@ -1,8 +1,8 @@
-import { getLocaleKey } from '$lib/i18n'
-import { getTitleEnvironmentLabel, resolveTitle } from '$lib/navigation/title'
+import { getLocaleKey } from '#lib/i18n.js'
+import { getTitleEnvironmentLabel, resolveTitle } from '#lib/navigation/title.js'
 // TYPES
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { TitleEnvironmentLabel } from '$lib/bits/patterns/panels/panel.types'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { TitleEnvironmentLabel } from '#lib/bits/patterns/panels/panel.types.js'
 
 export const ssr = true
 export const prerender = false

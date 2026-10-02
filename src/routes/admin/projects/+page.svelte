@@ -1,27 +1,33 @@
 <script lang="ts">
-import { usePanelResources } from '$lib/context/panel-resources.svelte'
+import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 import { page } from '$app/state'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
-import {
-  createAdminIndexCardModel,
-} from '$lib/adapters/cards/createAdminIndexCardModel'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
+import { createAdminIndexCardModel } from '#lib/adapters/cards/createAdminIndexCardModel.js'
 // SERVICES
 import {
   createSortable,
   createSortables,
   createToggleFilter,
   createTranslationFilter,
-} from '$lib/client/services/filters'
+} from '#lib/client/services/filters.js'
 // BITS PATTERNS
-import { IndexCard, ResourceControlBar, ResourceIndex, ResourceRow } from '$lib/bits'
+import {
+  IndexCard,
+  ResourceControlBar,
+  ResourceIndex,
+  ResourceRow,
+} from '#lib/bits/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // AUTHORIZATION
-import { canCreateAnyProject, toProjectAuthActor } from '$lib/api/services/authz'
+import {
+  canCreateAnyProject,
+  toProjectAuthActor,
+} from '#lib/api/services/authz/index.js'
 // ICONS
 import ProjectIcon from 'virtual:icons/proicons/grid'
 import StatusIcon from 'virtual:icons/proicons/target'
@@ -30,11 +36,9 @@ import LanguagesIcon from 'virtual:icons/tabler/language'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import CopyleftIcon from 'virtual:icons/proicons/copyright'
 // TYPES
-import type { KeyMap } from '$lib/client/services/resourceCards.types'
-import type {
-  ResourceControlBarConfig,
-} from '$lib/client/services/resourceFilters.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import type { KeyMap } from '#lib/client/services/resourceCards.types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -255,10 +259,15 @@ function getIndexModel(entity: Project) {
   resource={FirstClassResource.project}
   {entities}
 >
-  {#snippet card(entity: Project)}
+  {#snippet card(
+    entity: Project,
+  )}
     <IndexCard {...getIndexModel(entity)} />
   {/snippet}
-  {#snippet row(entity: Project, index)}
+  {#snippet row(
+    entity: Project,
+    index,
+  )}
     <ResourceRow {index} breadcrumbColumnCount={1} {...getIndexModel(entity)} />
   {/snippet}
 </ResourceIndex>

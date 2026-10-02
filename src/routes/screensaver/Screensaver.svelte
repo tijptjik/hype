@@ -4,11 +4,11 @@ import { untrack } from 'svelte'
 // SVELTEKIT
 import { page } from '$app/state'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // API
-import { getMapResourceDeepLinkLayerIds } from '$lib/client/services/mapResourceDeepLink'
+import { getMapResourceDeepLinkLayerIds } from '#lib/client/services/mapResourceDeepLink.js'
 // COMPONENTS
-import FlightSurface from '$lib/bits/patterns/layout/app/components/FlightSurface.svelte'
+import FlightSurface from '#lib/bits/patterns/layout/app/components/FlightSurface.svelte'
 
 const appCtx = getAppCtx()
 let appliedTarget = $state<string | null>(null)

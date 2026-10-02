@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits'
+import { Button } from '#lib/bits/index.js'
 
 // DATA
 import { ICON_USAGES, ICON_USAGE_EXPORT, TOTAL_IMPORT_SITES } from './icon-usage'

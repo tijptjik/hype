@@ -1,25 +1,28 @@
 <script lang="ts">
-import { usePanelResources } from '$lib/context/panel-resources.svelte'
+import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 import { page } from '$app/state'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
-import {
-  createAdminIndexCardModel,
-} from '$lib/adapters/cards/createAdminIndexCardModel'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
+import { createAdminIndexCardModel } from '#lib/adapters/cards/createAdminIndexCardModel.js'
 // SERVICES
 import {
   createSortable,
   createSortables,
   createToggleFilter,
   createTranslationFilter,
-} from '$lib/client/services/filters'
+} from '#lib/client/services/filters.js'
 // BITS PATTERNS
-import { IndexCard, ResourceControlBar, ResourceIndex, ResourceRow } from '$lib/bits'
+import {
+  IndexCard,
+  ResourceControlBar,
+  ResourceIndex,
+  ResourceRow,
+} from '#lib/bits/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
 import LayerIcon from 'virtual:icons/proicons/layers'
 import StatusIcon from 'virtual:icons/proicons/target'
@@ -27,11 +30,9 @@ import BookOpenIcon from 'virtual:icons/proicons/book-open'
 import LanguagesIcon from 'virtual:icons/tabler/language'
 import CopyleftIcon from 'virtual:icons/proicons/copyright'
 // TYPES
-import type { KeyMap } from '$lib/client/services/resourceCards.types'
-import type {
-  ResourceControlBarConfig,
-} from '$lib/client/services/resourceFilters.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { KeyMap } from '#lib/client/services/resourceCards.types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -223,10 +224,15 @@ $effect(() => {
   resource={FirstClassResource.layer}
   {entities}
 >
-  {#snippet card(entity: Layer)}
+  {#snippet card(
+    entity: Layer,
+  )}
     <IndexCard {...getIndexModel(entity)} />
   {/snippet}
-  {#snippet row(entity: Layer, index)}
+  {#snippet row(
+    entity: Layer,
+    index,
+  )}
     <ResourceRow {index} breadcrumbColumnCount={2} {...getIndexModel(entity)} />
   {/snippet}
 </ResourceIndex>

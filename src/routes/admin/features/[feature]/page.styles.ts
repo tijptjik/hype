@@ -1,5 +1,5 @@
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 type FeatureEditorLayoutState = {
   showsVisualSection: boolean

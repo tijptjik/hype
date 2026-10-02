@@ -2,7 +2,7 @@
 import 'svelte-maplibre-gl/vite'
 // SVELTE
 import { onMount, untrack } from 'svelte'
-import { setThemeModel } from '$lib/themes/theme.svelte'
+import { setThemeModel } from '#lib/themes/theme.svelte.js'
 // SVELTEKIT
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -10,45 +10,43 @@ import { page } from '$app/state'
 import { watch } from 'runed'
 import { toast } from 'svelte-sonner'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // AUTH
-import { signIn, useSession } from '$lib/auth/client'
+import { signIn, useSession } from '#lib/auth/client.js'
 import {
   bootstrapAnonymousSession,
   consumeSignOutIntent,
   isAuthEntryPath,
   shouldBootstrapAnonymous,
-} from '$lib/auth/bootstrap'
+} from '#lib/auth/bootstrap.js'
 // DEBUG
-import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
+import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 import {
   UPGRADE_ACCOUNT_EVENT,
   isGuestUser,
   type UpgradeReason,
   toSafeReturnPath,
-} from '$lib/auth/upgrade'
+} from '#lib/auth/upgrade.js'
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // API
-import {
-  getMapResourceDeepLinkLayerIds,
-} from '$lib/client/services/mapResourceDeepLink'
+import { getMapResourceDeepLinkLayerIds } from '#lib/client/services/mapResourceDeepLink.js'
 // CONTEXT
-import { setAppCtx } from '$lib/context/app.svelte'
-import { setPlaceCtx } from '$lib/context/place.svelte'
-import { setResponsiveCtx } from '$lib/context/responsive.svelte'
+import { setAppCtx } from '#lib/context/app.svelte.js'
+import { setPlaceCtx } from '#lib/context/place.svelte.js'
+import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
-import App from '$lib/bits/patterns/layout/app/App.svelte'
-import UpgradeAccountDialog from '$lib/bits/patterns/auth/UpgradeAccountDialog.svelte'
+import App from '#lib/bits/patterns/layout/app/App.svelte'
+import UpgradeAccountDialog from '#lib/bits/patterns/auth/UpgradeAccountDialog.svelte'
 // STYLES
-import '$lib/styles/app.css'
+import '#lib/styles/app.css'
 // CONSTANTS
-import { FirstClassResource } from '$lib/enums'
-import { MOBILE_MAX_WIDTH } from '$lib/constants'
+import { FirstClassResource } from '#lib/enums.js'
+import { MOBILE_MAX_WIDTH } from '#lib/constants.js'
 // TYPES
 import type { LayoutData, LayoutProps } from './$types'
-import type { SessionUser } from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { SessionUser } from '#lib/types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 
 // PROPS
 let { children, data }: LayoutProps = $props()
@@ -120,14 +118,13 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
     console.error('[Map deep link] Failed to apply map resource target:', error)
   } finally {
     // Consume targeting parameters even if an optional feature refresh fails.
-    const cleanUrl = new URL(page.url)
+    const cleanUrl = new URL(page.url.href)
     cleanUrl.searchParams.delete('layerId')
     cleanUrl.searchParams.delete('projectId')
     cleanUrl.searchParams.delete('project')
     await goto(`${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`, {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     })
   }
 }
@@ -301,13 +298,12 @@ async function handleRequestedUpgrade(): Promise<void> {
   upgradeReturnTo = toSafeReturnPath(page.url.searchParams.get('returnTo'))
   isUpgradeOpen = true
 
-  const cleanUrl = new URL(page.url)
+  const cleanUrl = new URL(page.url.href)
   cleanUrl.searchParams.delete('upgrade')
   cleanUrl.searchParams.delete('returnTo')
   await goto(`${cleanUrl.pathname}${cleanUrl.search}`, {
-    replaceState: true,
-    keepFocus: true,
-    noScroll: true,
+    replace: true,
+    reset: false,
   })
 }
 

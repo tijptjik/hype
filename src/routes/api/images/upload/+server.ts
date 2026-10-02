@@ -1,13 +1,13 @@
 // SVELTE
 import { error, json, type RequestHandler } from '@sveltejs/kit'
 // API
-import { verifyUploadToken } from '$lib/images/auth'
+import { verifyUploadToken } from '#lib/images/auth.js'
 import {
   getOriginalsBucketForStage,
   toImageStage,
   toManifestObjectKey,
   toMetadataObjectKey,
-} from '$lib/images/storage'
+} from '#lib/images/storage.js'
 
 type UploadMetadataInput = {
   originalFilename?: string | null
@@ -268,7 +268,8 @@ const persistUploadedObjects = async (params: {
  * @param event Incoming SvelteKit request event.
  * @returns Upload persistence result for the client.
  */
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+  const { platform } = locals
   const formData = await request.formData()
   const file = formData.get('file')
   const token = formData.get('token') ?? request.headers.get('x-image-upload-token')

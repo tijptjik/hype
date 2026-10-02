@@ -1,20 +1,20 @@
 import { error, type RequestHandler } from '@sveltejs/kit'
 
 // API
-import { getDatabaseWithoutAuth, getSessionOrError } from '$lib/api'
+import { getDatabaseWithoutAuth, getSessionOrError } from '#lib/api/index.js'
 import {
   authorizeProjectPublishForSubmission,
   toAuthMessage,
-} from '$lib/api/services/authz'
-import { getUserRoles } from '$lib/db/services/user'
-import { probeProjectForUpdate } from '$lib/db/services/project'
+} from '#lib/api/services/authz/index.js'
+import { getUserRoles } from '#lib/db/services/user.js'
+import { probeProjectForUpdate } from '#lib/db/services/project.js'
 // HELPERS
 import {
   buildProjectMapRenderHash,
   getProjectMapRenderData,
-} from '$lib/map/renders/render.server'
-import { runSingleMapRenderRefresh } from '$lib/api/services/render'
-import type { Id } from '$lib/types'
+} from '#lib/map/renders/render.server.js'
+import { runSingleMapRenderRefresh } from '#lib/api/services/render.js'
+import type { Id } from '#lib/types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -29,7 +29,8 @@ import type { Id } from '$lib/types'
  * @param event Request event carrying the target project id.
  * @returns JSON summary of the refresh action.
  */
-export const POST: RequestHandler = async ({ params, platform, locals, url }) => {
+export const POST: RequestHandler = async ({ params, locals, url }) => {
+  const { platform } = locals
   const projectId = params.project
 
   if (!projectId) {

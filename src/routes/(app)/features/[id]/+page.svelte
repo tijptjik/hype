@@ -4,23 +4,23 @@ import { untrack } from 'svelte'
 // SVELTEKIT
 import { page } from '$app/state'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // BITS
-import { FeatureCard } from '$lib/bits'
+import { FeatureCard } from '#lib/bits/index.js'
 // NAVIGATION
-import { getCollectionDescriptorFromSearchParams } from '$lib/navigation'
+import { getCollectionDescriptorFromSearchParams } from '#lib/navigation/index.js'
 // PROVIDERS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
-// import FullScreenCarousel from '$lib/components/modals/FullScreenCarousel.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
+// import FullScreenCarousel from '#lib/components/modals/FullScreenCarousel.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getCardCtx, setCardCtx } from '$lib/context/card.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import { getCardCtx, setCardCtx } from '#lib/context/card.svelte.js'
 // ENUMS
-import { ImageContextResource, OmniMode } from '$lib/enums'
+import { ImageContextResource, OmniMode } from '#lib/enums.js'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 // PARAMS
 let featureId = $state(page.params.id ?? '')

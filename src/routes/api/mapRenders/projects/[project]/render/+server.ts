@@ -1,11 +1,11 @@
 import { error, json, type RequestHandler } from '@sveltejs/kit'
 
 // API
-import { getDatabaseWithoutAuth } from '$lib/api'
+import { getDatabaseWithoutAuth } from '#lib/api/index.js'
 // HELPERS
-import { requireMapRenderAccess } from '$lib/map/renders/auth.server'
-import { getProjectMapRenderData } from '$lib/map/renders/render.server'
-import { toMapRenderPayload } from '$lib/api/services/render'
+import { requireMapRenderAccess } from '#lib/map/renders/auth.server.js'
+import { getProjectMapRenderData } from '#lib/map/renders/render.server.js'
+import { toMapRenderPayload } from '#lib/api/services/render.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -20,7 +20,8 @@ import { toMapRenderPayload } from '$lib/api/services/render'
  * @param event Request event carrying the project id.
  * @returns JSON render payload for the headless preview page.
  */
-export const GET: RequestHandler = async ({ params, platform, request, url }) => {
+export const GET: RequestHandler = async ({ params, request, url, locals }) => {
+  const { platform } = locals
   const projectId = params.project
 
   if (!projectId) {

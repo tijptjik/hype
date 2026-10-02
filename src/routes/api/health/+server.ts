@@ -1,5 +1,5 @@
 import { error, type RequestHandler } from '@sveltejs/kit'
-import { JSONResponseOrError } from '$lib/api'
+import { JSONResponseOrError } from '#lib/api/index.js'
 
 /**
  * Masks diagnostic values whose names identify credentials.
@@ -30,7 +30,8 @@ function maskPrivateValues(obj: Record<string, unknown>): Record<string, unknown
  * @param event Request locals and platform bindings.
  * @returns JSON diagnostics, or a service-unavailable error without platform bindings.
  */
-export const GET: RequestHandler = async ({ locals, platform }) => {
+export const GET: RequestHandler = async ({ locals }) => {
+  const { platform } = locals
   if (!platform?.env) throw error(503, 'Platform bindings unavailable')
   // HTTP : 200 JSON or 404
   const vars = platform.env

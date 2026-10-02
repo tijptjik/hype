@@ -4,9 +4,9 @@ import { error } from '@sveltejs/kit'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 // DB
-import { passkey } from '$lib/db/schema'
+import { passkey } from '#lib/db/schema/index.js'
 // AUTH
-import { createAuthDiagnosticId } from '$lib/auth/diagnostics.server'
+import { createAuthDiagnosticId } from '#lib/auth/diagnostics.server.js'
 // TYPES
 import type { RequestHandler } from './$types'
 
@@ -20,7 +20,8 @@ import type { RequestHandler } from './$types'
  * session. It must not update the user again: the request's cookie can still contain the
  * pre-promotion anonymous user.
  */
-export const POST: RequestHandler = async ({ request, url, locals, platform }) => {
+export const POST: RequestHandler = async ({ request, url, locals }) => {
+  const { platform } = locals
   const origin = request.headers.get('origin')
   if (!origin || origin !== url.origin) throw error(403, 'FORBIDDEN')
   if (!locals.session || !locals.user) throw error(401, 'UNAUTHENTICATED')

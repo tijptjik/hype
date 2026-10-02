@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits'
-import { ThemePicker } from '$lib/bits/patterns/themePicker'
-import type { ThemeId } from '$lib/themes/themes.types'
+import { Button } from '#lib/bits/index.js'
+import { ThemePicker } from '#lib/bits/patterns/themePicker/index.js'
+import type { ThemeId } from '#lib/themes/themes.types.js'
 let previewTheme: ThemeId = $state('hype-dark')
 
 const BUTTON_COLORS = [
@@ -33,7 +33,7 @@ function onButtonClick(variant: string) {
   class="bits-theme h-full overflow-y-auto bg-canvas p-6 text-base-content"
 >
   <div class="mb-8 max-w-2xl">
-    <ThemePicker value={previewTheme} onSelect={theme => previewTheme = theme} />
+    <ThemePicker value={previewTheme} onSelect={theme => (previewTheme = theme)} />
     <a
       data-sveltekit-reload
       href="/themes"
@@ -59,7 +59,11 @@ function onButtonClick(variant: string) {
     </svg>
   {/snippet}
 
-  {#snippet buttonDemoColumn(title: string, shellClasses: string, titleClasses: string)}
+  {#snippet buttonDemoColumn(
+    title: string,
+    shellClasses: string,
+    titleClasses: string,
+  )}
     <section class={shellClasses}>
       <div class="space-y-1">
         <h1 class={titleClasses}>{title}</h1>
