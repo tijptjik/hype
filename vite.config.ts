@@ -7,14 +7,12 @@ import { defineConfig } from 'vite'
 import { sveltekit } from '@sveltejs/kit/vite'
 import Icons from 'unplugin-icons/vite'
 import tailwindcss from '@tailwindcss/vite'
-// CLOUDFLARE
-import { cloudflare } from '@cloudflare/vite-plugin'
 // TRANSLATION
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 // DATA
 // import seed from './src/lib/db/seed';
 // TYPES
-import type { ConfigEnv, Plugin } from 'vite'
+import type { Plugin } from 'vite'
 
 // Load env file based on `mode` in the current working directory.
 // Set the third parameter to '' to load all env regardless of the
@@ -38,32 +36,6 @@ import type { ConfigEnv, Plugin } from 'vite'
 //     } satisfies Plugin;
 //   }
 // };
-
-const localCloudflare = async (command: ConfigEnv['command']): Promise<Plugin[]> => {
-  // Only load Cloudflare plugin when explicitly requested, because the default local
-  // app dev flow runs the asset worker as a separate Wrangler process.
-  const isServe = command === 'serve'
-
-  const isCI = process.env.CI === 'true'
-  const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST
-  const useLocalR2 = process.env.HYPE_LOCAL_R2 === '1'
-
-  if (isServe && !isCI && !isTest) {
-    return cloudflare({
-      configPath: useLocalR2 ? './wrangler.local.toml' : './wrangler.toml',
-    })
-  } else {
-    return [
-      {
-        name: 'skip-cloudflare-plugin',
-        apply: 'build',
-        buildStart() {
-          console.log('Skipping Cloudflare plugin on CI and TEST')
-        },
-      },
-    ]
-  }
-}
 
 const suppressOptimizedKyselyMigrationWarning = (): Plugin => ({
   name: 'suppress-optimized-kysely-migration-warning',
@@ -94,6 +66,11 @@ const selectAdapter = () => {
     })
   } else {
     return adapterCloudflare({
+      // Adapter 8 owns the dev binding proxy; the separate asset worker still runs
+      // through Wrangler. Preserve local R2 and named environment selection here.
+      config:
+        process.env.HYPE_LOCAL_R2 === '1' ? './wrangler.local.toml' : './wrangler.toml',
+      platformProxy: { environment: process.env.CLOUDFLARE_ENV },
       // Cloudflare Pages routes policy. Keep this in config rather than a checked-in
       // static `_routes.json`, because the adapter generates that file from here.
       routes: {
@@ -373,6 +350,9 @@ const selectAdapter = () => {
 
 // CONFIG
 export default defineConfig(async ({ command }) => ({
+  define: {
+    'import.meta.env.HYPE_STATIC_BUILD': process.env.SVELTE_ADAPTER === 'static',
+  },
   envPrefix: ['VITE_', 'PUBLIC_'],
   environments: {
     hype_prod: {},
@@ -420,7 +400,6 @@ export default defineConfig(async ({ command }) => ({
     }),
     Icons({ compiler: 'svelte' }),
     tailwindcss(),
-    ...(await localCloudflare(command)),
   ],
   optimizeDeps: {
     // Keep MapLibre and its worker query out of dependency optimization.
@@ -434,9 +413,8 @@ export default defineConfig(async ({ command }) => ({
   server: {
     port: 5175,
     strictPort: true,
-    hmr: {
-      clientPort: 80,
-    },
+    // Vite derives the websocket port from the browser origin, including local proxies.
+    hmr: {},
     allowedHosts: [
       'localhost',
       '127.0.0.1',

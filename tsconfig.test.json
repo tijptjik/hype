@@ -13,13 +13,9 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "types": ["vitest/globals"],
-    "baseUrl": ".",
-    "paths": {
-      "$lib": ["./src/lib"],
-      "$lib/*": ["./src/lib/*"]
-    }
+    "types": ["vitest/globals"]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "tests/**/*.ts", "vitest.config.ts"],
-  "exclude": ["node_modules", ".svelte-kit", "src/lib/paraglide/**/*"]
+  "exclude": ["node_modules", ".svelte-kit", "src/lib/paraglide/**/*"],
+  "extends": "$app/tsconfig"
 }

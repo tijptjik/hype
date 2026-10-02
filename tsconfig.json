@@ -5,5 +5,11 @@
     "strict": true
   },
   "exclude": ["src/lib/paraglide/**/*"],
-  "include": ["src"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }
