@@ -32,6 +32,7 @@ export interface OrganisationCapabilitiesProps {
   resetVersion?: number
   capabilityLabelsByKey: Partial<Record<CapabilityKey, CapabilityI18nRoot>>
   formCapabilityFields: CapabilityFormFields
+  emptyCapabilitiesInputAttrs?: Record<string, unknown>
   shouldSubmitEmptyCapabilities?: boolean
   capabilityIssues?: string[]
   isRequiredInPreflight: (path: Array<string | number>) => boolean

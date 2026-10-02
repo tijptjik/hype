@@ -7,6 +7,7 @@ import { Dialog } from 'bits-ui'
 // AUTH
 import { authClient, signIn } from '#lib/auth/client.js'
 import { toSafeReturnPath } from '#lib/auth/upgrade.js'
+import { navigateAfterAuth } from '#lib/auth/navigation.js'
 // DEBUG
 import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 // COMPONENTS
@@ -43,7 +44,7 @@ function showAccountCreated(): void {
 /** Closes the account-created dialog and returns to the requested destination. */
 async function handleAccountCreatedClose(): Promise<void> {
   isAccountCreated = false
-  await goto(returnTo)
+  await navigateAfterAuth(returnTo)
 }
 
 // Keep browser back/forward navigation and direct URLs aligned with the visible panel.
@@ -61,7 +62,7 @@ async function continueAsGuest(): Promise<void> {
   })
   if (sessionResult.data?.user) {
     logMarkerBootstrap('guest continue restored existing session')
-    await goto(returnTo)
+    await navigateAfterAuth(returnTo)
     return
   }
 
@@ -80,7 +81,7 @@ async function continueAsGuest(): Promise<void> {
     throw new Error(authError.message)
   }
   logMarkerBootstrap('guest session created; navigating to app')
-  await goto(returnTo)
+  await navigateAfterAuth(returnTo)
 }
 </script>
 

@@ -1,12 +1,11 @@
 <script lang="ts">
-// SVELTEKIT
-import { goto } from '$app/navigation'
 // BITS COMPONENTS
 import { Dialog } from 'bits-ui'
 // COMPONENTS
 import AccountCreatedDialogContent from './components/AccountCreatedDialogContent.svelte'
 // AUTH
 import { toSafeReturnPath, type UpgradeReason } from '#lib/auth/upgrade.js'
+import { navigateAfterAuth } from '#lib/auth/navigation.js'
 // I18N
 import { m } from '#lib/i18n.js'
 
@@ -88,13 +87,13 @@ function showAccountComplete(): void {
 async function handlePasskeyAccountComplete(): Promise<void> {
   if (onAccountReady) await onAccountReady()
   open = false
-  await goto(safeReturnTo)
+  await navigateAfterAuth(safeReturnTo)
 }
 
 /** Dismisses the completed email-account guard and resumes the requesting route. */
 async function handleCompletionClose(): Promise<void> {
   open = false
-  await goto(safeReturnTo)
+  await navigateAfterAuth(safeReturnTo)
 }
 </script>
 

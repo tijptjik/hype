@@ -24,6 +24,7 @@ let {
   resetVersion = 0,
   capabilityLabelsByKey,
   formCapabilityFields,
+  emptyCapabilitiesInputAttrs,
   shouldSubmitEmptyCapabilities = false,
   capabilityIssues = [],
   isRequiredInPreflight,
@@ -35,7 +36,6 @@ let {
 
 let isRemoveMode = $state(false)
 let lastResetVersion = $derived(resetVersion)
-const emptyCapabilitiesJson = '{}'
 const hasCapabilities = $derived(selectedCapabilityKeys.length > 0)
 const showInitialAddLayout = $derived(isEditing && !hasCapabilities)
 
@@ -79,8 +79,8 @@ $effect(() => {
   <OrganisationCapabilitiesEmpty {onEnterEditMode} disabled={isArchived} />
 {:else}
   <section class={sectionClass}>
-    {#if shouldSubmitEmptyCapabilities}
-      <input type="hidden" name="data.capabilities" value={emptyCapabilitiesJson}>
+    {#if shouldSubmitEmptyCapabilities && emptyCapabilitiesInputAttrs}
+      <input {...emptyCapabilitiesInputAttrs}>
     {/if}
 
     <SectionHeader

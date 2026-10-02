@@ -76,7 +76,7 @@ let pendingAddedValueFocus = $state<{
 } | null>(null)
 
 type FormFieldAccessor = {
-  as: (kind: string, value?: string) => Record<string, unknown>
+  as: (kind: string, value?: string | number | boolean) => Record<string, unknown>
   issues?: () => FormIssueLike[] | undefined
 }
 
@@ -150,18 +150,24 @@ function getPropertyField(pathSuffix: Array<string | number>): unknown {
   let current: unknown = propertyFields
   for (const segment of pathSuffix) {
     if (current == null) return undefined
-    if (typeof current !== 'object' || current === null) return undefined
+    if (typeof current !== 'object' && typeof current !== 'function') return undefined
     current = (current as Record<string | number, unknown>)[segment]
   }
   return current
 }
 
+/**
+ * Recognises lazy SvelteKit field proxies through their callable accessor.
+ * @param field - Candidate field at a property path.
+ * @returns Whether the candidate exposes remote form control attributes.
+ * @remarks Proxy fields do not enumerate keys or support `in` membership checks.
+ * A field named `value` also exposes the callable value method, so it can be a function.
+ */
 function isFormFieldAccessor(field: unknown): field is FormFieldAccessor {
   return Boolean(
     field &&
-      typeof field === 'object' &&
-      'as' in field &&
-      typeof field.as === 'function',
+      (typeof field === 'object' || typeof field === 'function') &&
+      typeof (field as { as?: unknown }).as === 'function',
   )
 }
 
@@ -215,23 +221,6 @@ function getFieldAttrs(
   const field = getPropertyField(pathSuffix)
   if (!isFormFieldAccessor(field)) return {}
   return field.as(kind) as Record<string, unknown>
-}
-
-function getFieldName(pathSuffix: Array<string | number>): string | undefined {
-  const field = getPropertyField(pathSuffix)
-  if (!isFormFieldAccessor(field)) return undefined
-  const attrs = field.as('text') as { name?: unknown }
-  return typeof attrs?.name === 'string' ? attrs.name : undefined
-}
-
-function withFallbackName(
-  attrs: Record<string, unknown>,
-  fallbackName: string,
-): Record<string, unknown> {
-  return {
-    ...attrs,
-    name: typeof attrs.name === 'string' ? attrs.name : fallbackName,
-  }
 }
 
 function withCoreFieldAttrs(
@@ -364,10 +353,17 @@ function onCoreFieldKeydown(
   }
 }
 
+/**
+ * Registers a control and its explicit value with the owning remote form.
+ * @param pathSuffix - Path within the current property row.
+ * @param kind - Native form control type.
+ * @param value - Value to serialize, retaining number and boolean types.
+ * @returns Form-specific attributes when a field accessor is available.
+ */
 function getFieldAttrsWithValue(
   pathSuffix: Array<string | number>,
   kind: string,
-  value: string,
+  value: string | number | boolean,
 ): Record<string, unknown> | undefined {
   const field = getPropertyField(pathSuffix)
   if (!isFormFieldAccessor(field)) return undefined
@@ -414,23 +410,16 @@ function isFieldRequired(pathSuffix: Array<string | number>): boolean {
 }
 
 const keyAttrs = $derived(getFieldAttrs(['key'], 'text'))
-const keyInputAttrs = $derived(
-  withFallbackName(keyAttrs, `data.properties[${propertyIndex}].key`),
-)
+const keyInputAttrs = $derived(keyAttrs)
 const keyIssues = $derived(getFieldIssues(['key']))
 const getPropertyLocaleFieldAttrs = $derived(
   (locale: LocaleKey, field: 'label' | 'placeholder') =>
-    withFallbackName(
-      getFieldAttrs(['i18n', locale, field], 'text'),
-      `data.properties[${propertyIndex}].i18n.${locale}.${field}`,
-    ),
+    getFieldAttrs(['i18n', locale, field], 'text'),
 )
 const componentAttrs = $derived(
   getFieldAttrs(['component'], 'select') as { name?: string; value?: string },
 )
-const componentName = $derived(
-  componentAttrs.name ?? `data.properties[${propertyIndex}].component`,
-)
+const componentName = $derived(componentAttrs.name ?? '')
 const componentIssues = $derived(getFieldIssues(['component']))
 const minAttrs = $derived(getFieldAttrs(['min'], 'number'))
 const minIssues = $derived(getFieldIssues(['min']))
@@ -723,60 +712,46 @@ $effect(() => {
     {@const showCoreFields = isPrimary(locale)}
     {@const labelGenValue = getPropertyGenState(locale, 'labelGen')}
     {@const placeholderGenValue = getPropertyGenState(locale, 'placeholderGen')}
-    {@const labelGenName = getFieldName(['i18n', locale, 'labelGen'])}
-    {@const placeholderGenName = getFieldName(['i18n', locale, 'placeholderGen'])}
+    {@const labelGenAttrs = getFieldAttrsWithValue(
+      ['i18n', locale, 'labelGen'],
+      'hidden',
+      labelGenValue,
+    )}
+    {@const placeholderGenAttrs = getFieldAttrsWithValue(
+      ['i18n', locale, 'placeholderGen'],
+      'hidden',
+      placeholderGenValue,
+    )}
 
     <div class="flex flex-col gap-2.5">
-      {#if labelGenName}
-        <input
-          type="hidden"
-          name={labelGenName}
-          value={labelGenValue ? 'true' : 'false'}
-        >
+      {#if labelGenAttrs}
+        <input {...labelGenAttrs}>
       {/if}
-      {#if placeholderGenName}
-        <input
-          type="hidden"
-          name={placeholderGenName}
-          value={placeholderGenValue ? 'true' : 'false'}
-        >
+      {#if placeholderGenAttrs}
+        <input {...placeholderGenAttrs}>
       {/if}
 
       {#if showCoreFields}
+        <!-- Register custom hidden controls with this property row's remote fields. -->
+        <input {...getFieldAttrsWithValue(['id'], 'hidden', property.id ?? '')}>
+        <input {...getFieldAttrsWithValue(['type'], 'hidden', property.type ?? '')}>
         <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].id`}
-          value={property.id ?? ''}
+          {...getFieldAttrsWithValue(['scope'], 'hidden', property.scope ?? 'project')}
         >
-
+        <input {...getFieldAttrsWithValue(['hubId'], 'hidden', property.hubId ?? '')}>
         <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].type`}
-          value={property.type ?? ''}
+          {...getFieldAttrsWithValue(
+            ['isDefaultEnabled'],
+            'hidden',
+            Boolean(property.isDefaultEnabled),
+          )}
         >
-
         <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].scope`}
-          value={property.scope ?? 'project'}
-        >
-
-        <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].hubId`}
-          value={property.hubId ?? ''}
-        >
-
-        <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].isDefaultEnabled`}
-          value={property.isDefaultEnabled ? 'true' : 'false'}
-        >
-
-        <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].isTranslatable`}
-          value={property.isTranslatable ? 'true' : 'false'}
+          {...getFieldAttrsWithValue(
+            ['isTranslatable'],
+            'hidden',
+            Boolean(property.isTranslatable),
+          )}
         >
 
         <TextInput
@@ -936,13 +911,13 @@ $effect(() => {
               {@const valueDisplayText = getValueDisplayText(value.id, locale)}
               {@const valueIdInputAttrs = getFieldAttrsWithValue(
                 ['values', resolvedValueIndex, 'id'],
-                'text',
+                'hidden',
                 value.id,
               )}
               {@const valueRankInputAttrs = getFieldAttrsWithValue(
                 ['values', resolvedValueIndex, 'rank'],
-                'number',
-                String(valueIndex),
+                'hidden',
+                valueIndex,
               )}
               <FormFieldPropertyValueItem
                 {isEditing}
@@ -969,15 +944,19 @@ $effect(() => {
                   {/if}
                   {#if valuesAreTranslatable}
                     <input
-                      type="hidden"
-                      name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].i18n.${locale}.value`}
-                      value={valueDisplayText}
+                      {...getFieldAttrsWithValue(
+                        ['values', resolvedValueIndex, 'i18n', locale, 'value'],
+                        'hidden',
+                        valueDisplayText,
+                      )}
                     >
                   {:else if showCoreFields}
                     <input
-                      type="hidden"
-                      name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].value`}
-                      value={valueDisplayText}
+                      {...getFieldAttrsWithValue(
+                        ['values', resolvedValueIndex, 'value'],
+                        'hidden',
+                        valueDisplayText,
+                      )}
                     >
                   {/if}
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { goto } from '$app/navigation'
+// SVELTEKIT
 import { page } from '$app/state'
 // SVELTE
 import { fade } from 'svelte/transition'
@@ -15,6 +15,7 @@ import {
   PasskeySessionRefreshError,
 } from '#lib/auth/passkey-upgrade.js'
 import { toSafeReturnPath } from '#lib/auth/upgrade.js'
+import { navigateAfterAuth } from '#lib/auth/navigation.js'
 import { isAuthProviderEnabled, type AuthProviderId } from '#lib/auth/providers.js'
 // COMPONENTS
 import AuthSocialButtons from './AuthSocialButtons.svelte'
@@ -196,7 +197,7 @@ async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
       return
     }
 
-    await goto(safeCallbackUrl)
+    await navigateAfterAuth(safeCallbackUrl)
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
@@ -228,7 +229,7 @@ async function handlePasskey(): Promise<void> {
       errorMessage = m.guest__auth_generic_error()
       return
     }
-    await goto(safeCallbackUrl)
+    await navigateAfterAuth(safeCallbackUrl)
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
@@ -305,7 +306,7 @@ async function handlePasskeySignUp(event: SubmitEvent): Promise<void> {
       return
     }
 
-    await goto(safeCallbackUrl)
+    await navigateAfterAuth(safeCallbackUrl)
   } catch (error) {
     statusMessage = ''
     errorMessage =

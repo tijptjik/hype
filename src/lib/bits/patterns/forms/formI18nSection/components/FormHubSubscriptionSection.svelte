@@ -32,7 +32,7 @@ type TextField = {
 }
 
 type TextAreaField = {
-  as: (type: 'textarea') => Record<string, unknown>
+  as: (type: 'text') => Record<string, unknown>
   issues: () => FormIssueLike[] | undefined
 }
 
@@ -107,7 +107,7 @@ const supportedLocaleKeys: LocaleKey[] = ['en', 'zhHans', 'zhHant']
 
 const subscriptionIdInputAttrs = $derived(form.fields.data.subscriptionId.as('text'))
 const subscriptionSessionCookieTextareaAttrs = $derived(
-  form.fields.data.subscriptionSessionCookie.as('textarea'),
+  form.fields.data.subscriptionSessionCookie.as('text'),
 )
 const subscriptionServiceAttrs = $derived(
   form.fields.data.subscriptionService.as('select'),
@@ -160,7 +160,7 @@ const subscriptionBenefitsFieldModels = $derived(
   supportedLocaleKeys.map(localeKey => {
     const field = form.fields.data.i18n[localeKey].subscriptionBenefits
     const genField = form.fields.data.i18n[localeKey].subscriptionBenefitsGen
-    const textareaAttrs = field.as('textarea') as Record<string, unknown>
+    const textareaAttrs = field.as('text') as Record<string, unknown>
     const shouldMirror = !isSubscriptionFieldEditing
     const genValue = getGenAiState(form as never, localeKey, 'subscriptionBenefits')
 

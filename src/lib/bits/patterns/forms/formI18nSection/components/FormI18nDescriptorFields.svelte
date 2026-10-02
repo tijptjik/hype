@@ -12,7 +12,8 @@ type DescriptorFieldConfig = {
 }
 
 type FormFieldControl = {
-  as: (type: string, value?: string) => Record<string, unknown>
+  as(type: 'text'): Record<string, unknown>
+  as(type: 'hidden', value: string): Record<string, unknown>
   issues: () => unknown
 }
 
@@ -54,7 +55,7 @@ let {
 {#each fieldConfigs as config (config.key)}
   {@const field = fields[config.key]}
   {@const genField = fields[`${config.key}Gen`]}
-  {@const attrs = field.as(config.kind === 'textarea' ? 'textarea' : 'text')}
+  {@const attrs = field.as('text')}
   {@const genValue = getGenAiState(form, locale, config.key)}
   {@const genAttrs = genField?.as('hidden', genValue ? 'true' : 'false')}
   {@const required = isRequiredInPreflight(['data', 'i18n', locale, config.key])}
