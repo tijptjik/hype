@@ -11,7 +11,7 @@ import { createAdminIndexCardModel } from '#lib/adapters/cards/createAdminIndexC
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
-import { getFeatures, updateFeatureBulkState } from '#lib/api/server/feature.remote.js'
+import { getFeatures, updateFeatureBulkState } from '#lib/api/feature.remote.js'
 // SERVICES
 import { getCachedFeatureRowModel } from '#lib/client/services/featureRow.js'
 import {

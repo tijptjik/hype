@@ -3,7 +3,7 @@ import { toast } from 'svelte-sonner'
 // I18N
 import { m, getLocale, getLocaleKey, setLocale as setRuntimeLocale } from '#lib/i18n.js'
 // API
-import { getUser, updateUserProfile } from '#lib/api/server/user.remote.js'
+import { getUser, updateUserProfile } from '#lib/api/user.remote.js'
 // SERVICES
 import { refreshUserSession } from '#lib/client/services/user.js'
 // TYPES

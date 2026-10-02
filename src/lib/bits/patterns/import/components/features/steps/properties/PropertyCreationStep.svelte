@@ -5,8 +5,8 @@ import { untrack } from 'svelte'
 import { getImportCtx } from '#lib/context/import.svelte.js'
 import { getAppCtx } from '#lib/context/app.svelte.js'
 // API
-import { createProjectProperty } from '#lib/api/server/property.remote.js'
-import { translateText } from '#lib/api/server/translation.remote.js'
+import { createProjectProperty } from '#lib/api/property.remote.js'
+import { translateText } from '#lib/api/translation.remote.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS COMPONENTS

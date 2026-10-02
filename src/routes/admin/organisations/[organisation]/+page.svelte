@@ -73,7 +73,7 @@ import {
   getOrganisations,
   organisationForm,
   publishOrganisation,
-} from '#lib/api/server/organisation.remote.js'
+} from '#lib/api/organisation.remote.js'
 import {
   toOrganisationAuthActor,
   resolveOrganisationActionPermissions,

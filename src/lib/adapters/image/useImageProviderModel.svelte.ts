@@ -4,7 +4,7 @@ import type { Page } from '$app/state'
 import { untrack } from 'svelte'
 
 // REMOTE
-import { getImageById } from '#lib/api/server/image.remote.js'
+import { getImageById } from '#lib/api/image.remote.js'
 // TYPES
 import type {
   ImageCtxConstructorOptions,

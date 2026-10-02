@@ -1,13 +1,13 @@
 // TESTING
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('#lib/api/server/user.remote.js', () => ({
+vi.mock('#lib/api/user.remote.js', () => ({
   getUser: vi.fn(),
   searchUsers: vi.fn(),
 }))
 
 // API
-import { searchUsers } from '#lib/api/server/user.remote.js'
+import { searchUsers } from '#lib/api/user.remote.js'
 // SERVICES
 import {
   validateUsers,

@@ -21,7 +21,7 @@ vi.mock('#lib/i18n.js', () => ({
   m: new Proxy({}, { get: (_target, key) => () => String(key) }),
   toDateFnsLocale: () => undefined,
 }))
-vi.mock('#lib/api/server/user.remote.js', () => ({
+vi.mock('#lib/api/user.remote.js', () => ({
   addUserFeatureToList: () => ({ updates: mocks.updates }),
   removeUserFeatureFromList: () => ({ updates: mocks.updates }),
   getUserFeatures: () => ({ withOverride: () => ({}) }),

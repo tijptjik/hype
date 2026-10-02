@@ -3,7 +3,7 @@
 import type { Component } from 'svelte'
 // LIB
 import { Icon } from '#lib/bits/index.js'
-import { getMetadata } from '#lib/api/server/image.remote.js'
+import { getMetadata } from '#lib/api/image.remote.js'
 import { getAppCtx } from '#lib/context/app.svelte.js'
 import { m } from '#lib/i18n.js'
 import { formatDate } from '#lib'

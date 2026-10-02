@@ -20,7 +20,7 @@ import {
   rotateImage as rotateImageRemote,
   setImageIntent,
   setImagePublished,
-} from '#lib/api/server/image.remote.js'
+} from '#lib/api/image.remote.js'
 import { runRemoteQuery } from '#lib/remote/index.js'
 // CONTEXT
 import { getAppCtx } from '#lib/context/app.svelte.js'

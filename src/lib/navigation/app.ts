@@ -30,8 +30,8 @@ import type {
 } from '#lib/db/zod/schema/feature.types.js'
 
 const loadImageRemote = async (): Promise<
-  Pick<typeof import('#lib/api/server/image.remote.js'), 'getImageById'>
-> => await import('#lib/api/server/image.remote.js')
+  Pick<typeof import('#lib/api/image.remote.js'), 'getImageById'>
+> => await import('#lib/api/image.remote.js')
 
 // ═══════════════════════
 // 1. CORE NAVIGATION

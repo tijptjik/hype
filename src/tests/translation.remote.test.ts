@@ -31,12 +31,12 @@ vi.mock('#lib/api/external/translation.js', () => ({
   translateText: mockTranslateWithAzure,
 }))
 
-let remote: Awaited<typeof import('#lib/api/server/translation.remote.js')>
+let remote: Awaited<typeof import('#lib/api/translation.remote.js')>
 
 describe('translation.remote', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('#lib/api/server/translation.remote.js')
+    remote = await import('#lib/api/translation.remote.js')
     vi.clearAllMocks()
     mockGuardedContext.mockResolvedValue({
       user: { id: 'u-1', isAnonymous: false },

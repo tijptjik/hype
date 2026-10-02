@@ -5,7 +5,7 @@ import { onDestroy } from 'svelte'
 import { getImportCtx } from '#lib/context/import.svelte.js'
 import { getAppCtx } from '#lib/context/app.svelte.js'
 // API
-import { getProperties } from '#lib/api/server/property.remote.js'
+import { getProperties } from '#lib/api/property.remote.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // ENUMS

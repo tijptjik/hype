@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit'
 import { z } from 'zod'
 import { getResolution, isValidCell } from 'h3-js'
 // API
-import { guardedBatchQuery } from './guarded.js'
+import { guardedBatchQuery } from './server/guarded.js'
 import {
   authorizeFeatureListForContext,
   toAuthMessage,

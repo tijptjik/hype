@@ -6,14 +6,14 @@ import {
   setImagePublished,
   setImageIntent,
   rotateImage,
-} from '#lib/api/server/image.remote.js'
+} from '#lib/api/image.remote.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 vi.mock('#lib/context/app.svelte.js', () => ({
   getAppCtx: () => ({ cache: { feature: new Map() } }),
 }))
-vi.mock('#lib/api/server/image.remote.js', async importOriginal => ({
-  ...(await importOriginal<typeof import('#lib/api/server/image.remote.js')>()),
+vi.mock('#lib/api/image.remote.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('#lib/api/image.remote.js')>()),
   deleteImage: vi.fn(),
   setImagePublished: vi.fn(),
   setImageIntent: vi.fn(),

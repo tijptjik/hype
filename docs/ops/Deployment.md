@@ -59,13 +59,17 @@ route-dependent filters as validated arguments rather than reading `event.url`.
 Custom remote form controls must obtain their names from their owning field's
 `.as(...)` method, including generated hidden inputs.
 
-Bun applies `patches/@sveltejs%2Fkit@3.0.0.patch` to fix two upstream issues: dropped
-remote-query return values, and rejection of transformed `.remote.ts` modules in
-`src/lib/api/server/`. Ordinary server-only modules remain guarded. After installing
-or upgrading dependencies, run `bun run verify:sveltekit-patch` and the regression
+Bun applies `patches/@sveltejs%2Fkit@3.0.0.patch` to restore missing client-side
+remote-query return values. Remote entry points live in `src/lib/api/*.remote.ts`,
+outside directories named `server`, as required by
+[SvelteKit's remote-function rules](https://svelte.dev/docs/kit/remote-functions).
+Server-only helpers remain in `src/lib/api/server/`; the framework's import guard
+is unchanged. After installing or upgrading dependencies, run
+`bun run verify:sveltekit-patch` and the regression
 tests in `src/tests/sveltekit-patch.test.ts` and `src/tests/remote-form-fields.test.ts`.
 CI checks the installed patch and includes patch contents in dependency cache keys.
-Reassess both fixes before changing the pinned patch version.
+Reassess the query fix before changing the pinned patch version. The verifier also
+rejects a stale installation that still contains the obsolete import-guard bypass.
 
 The manual migration findings have been reviewed against the
 [SvelteKit 3 guide](https://svelte.dev/docs/kit/migrating-to-sveltekit-3):

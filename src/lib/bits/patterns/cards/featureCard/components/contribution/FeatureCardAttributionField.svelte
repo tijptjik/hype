@@ -2,7 +2,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // API
-import { updateUserProfile } from '#lib/api/server/user.remote.js'
+import { updateUserProfile } from '#lib/api/user.remote.js'
 // BITS
 import { Icon } from '#lib/bits/index.js'
 // CONTEXT

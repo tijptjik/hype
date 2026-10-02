@@ -9,7 +9,7 @@ import { Icon } from '#lib/bits/index.js'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import { Scrollbar } from '#lib/bits/custom/scrollbar/index.js'
 // REMOTE
-import { getImagesForIds } from '#lib/api/server/image.remote.js'
+import { getImagesForIds } from '#lib/api/image.remote.js'
 // SERVICES
 import { getURLfromImage } from '#lib/client/services/image.js'
 // NAVIGATION

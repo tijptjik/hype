@@ -8,7 +8,7 @@ import { ResourceViewer } from '#lib/bits/index.js'
 // COMPONENTS
 // UTILS
 import { calculateDistance } from '#lib/map/index.js'
-import { getMetadata } from '#lib/api/server/image.remote.js'
+import { getMetadata } from '#lib/api/image.remote.js'
 // CONTEXT
 import { getAppCtx } from '#lib/context/app.svelte.js'
 // TYPES

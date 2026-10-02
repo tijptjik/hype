@@ -4,7 +4,7 @@ import { exit } from 'node:process'
 const PATCHED_QUERY_PATH =
   'node_modules/@sveltejs/kit/src/runtime/client/remote-functions/query/index.js'
 
-const PATCHED_GUARD_PATH =
+const FRAMEWORK_GUARD_PATH =
   'node_modules/@sveltejs/kit/src/exports/vite/plugins/guard.js'
 
 const EXPECTED_SNIPPETS = [
@@ -13,7 +13,7 @@ const EXPECTED_SNIPPETS = [
 ]
 
 /**
- * Verifies that Bun applied the local SvelteKit 3 query and remote-module patches.
+ * Verifies the SvelteKit 3 query patch and the unchanged server-only import guard.
  *
  * @returns Process exit code.
  * @remarks This intentionally checks installed package contents so stale
@@ -23,22 +23,22 @@ const verifySvelteKitPatch = (): number => {
   try {
     const source = readFileSync(PATCHED_QUERY_PATH, 'utf8')
 
-    const guard = readFileSync(PATCHED_GUARD_PATH, 'utf8')
+    const guard = readFileSync(FRAMEWORK_GUARD_PATH, 'utf8')
 
     if (
       EXPECTED_SNIPPETS.every(snippet => source.includes(snippet)) &&
-      guard.includes('if (kit.experimental.remoteFunctions && is_remote_module(id)) return;')
+      !guard.includes('if (kit.experimental.remoteFunctions && is_remote_module(id)) return;')
     ) {
       return 0
     }
   } catch (error) {
-    console.error('Unable to read the installed SvelteKit patch targets.')
+    console.error('Unable to read the installed SvelteKit query runtime and import guard.')
     console.error(error)
     return 1
   }
 
-  console.error('SvelteKit patch is missing from installed dependencies.')
-  console.error(`Expected query return flow in ${PATCHED_QUERY_PATH} and remote-module handling in ${PATCHED_GUARD_PATH}.`)
+  console.error('SvelteKit query patch is missing or the obsolete import-guard bypass is still installed.')
+  console.error(`Expected query return flow in ${PATCHED_QUERY_PATH} and no remote-module bypass in ${FRAMEWORK_GUARD_PATH}.`)
 
   return 1
 }

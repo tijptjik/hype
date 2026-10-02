@@ -57,7 +57,7 @@ vi.mock('#lib/db/services/featureQuery.js', async original => ({
   ...(await original<object>()),
   queryFeaturePage: queryPage,
 }))
-import { getFeaturePage } from '#lib/api/server/featureQueries.remote.js'
+import { getFeaturePage } from '#lib/api/featureQueries.remote.js'
 import { featureQuerySignature } from '#lib/db/services/featureQuery.js'
 
 const input = { meta: { isAdminRequest: false, scope: 'cache' } }

@@ -6,7 +6,7 @@ import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // API
-import { translateText } from '#lib/api/server/translation.remote.js'
+import { translateText } from '#lib/api/translation.remote.js'
 // SERVICES
 import {
   analyzeFeatureTranslation,

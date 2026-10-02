@@ -598,7 +598,7 @@ async function requestPropertyTranslations(
 ): Promise<string[] | null> {
   try {
     const { translateText: translateTextRemote } = await import(
-      '#lib/api/server/translation.remote.js'
+      '#lib/api/translation.remote.js'
     )
     const translatedTexts = await translateTextRemote({
       source: sourceLocale,

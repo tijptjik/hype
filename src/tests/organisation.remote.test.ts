@@ -2,8 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Panel and feature query registration is isolated from this resource's authorization fixtures.
-vi.mock('#lib/api/server/resources.remote.js', () => ({}))
-vi.mock('#lib/api/server/featureQueries.remote.js', () => ({}))
+vi.mock('#lib/api/resources.remote.js', () => ({}))
+vi.mock('#lib/api/featureQueries.remote.js', () => ({}))
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -273,13 +273,13 @@ vi.mock('#lib/i18n.js', () => ({
   toLocaleRecordFromOrganisationFormI18n: vi.fn(),
 }))
 
-let remote: Awaited<typeof import('#lib/api/server/organisation.remote.js')>
+let remote: Awaited<typeof import('#lib/api/organisation.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('organisation.remote')
 
 describe('organisation.remote authz', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('#lib/api/server/organisation.remote.js')
+    remote = await import('#lib/api/organisation.remote.js')
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => {})
 

@@ -7,8 +7,8 @@ import { formatDate } from '#lib'
 // CONTEXT
 import { getImageCtx } from '#lib/context/image.svelte.js'
 import { getAppCtx } from '#lib/context/app.svelte.js'
-import { getMetadata } from '#lib/api/server/image.remote.js'
-import { getUserForAttribution } from '#lib/api/server/user.remote.js'
+import { getMetadata } from '#lib/api/image.remote.js'
+import { getUserForAttribution } from '#lib/api/user.remote.js'
 // COMPONENTS
 import { Icon } from '#lib/bits/index.js'
 import Camera from 'virtual:icons/lucide/camera'

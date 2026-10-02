@@ -15,7 +15,7 @@
   - `patterns/`: composed components built from `core` and `custom`.
 - Route files follow SvelteKit conventions (`+page.svelte`, `+server.ts`).
   - `+page.ts` are dropped in favour of svelte remote functions.
-  - Remote functions are stored in `src/lib/api/server/<resourceType>.remote.ts`
+  - Remote functions are stored in `src/lib/api/<resourceType>.remote.ts`
 - Keep domain service modules grouped by entity (`src/lib/db/services/feature.ts`, etc.).
 
 ### Comments

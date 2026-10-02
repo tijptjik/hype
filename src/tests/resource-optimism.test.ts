@@ -7,7 +7,7 @@ import type {
 import type { FeatureQueryPage } from '#lib/api/services/featureQuery.types.js'
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import { withRemoteMeta } from './remote-function-mock'
-vi.mock('#lib/api/server/resources.remote.js', () => ({
+vi.mock('#lib/api/resources.remote.js', () => ({
   getResourcePage: withRemoteMeta(vi.fn(), 'query'),
   getPinnedResource: withRemoteMeta(vi.fn(), 'query'),
 }))

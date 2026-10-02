@@ -32,10 +32,10 @@
 // - handleImageDrop
 // ---
 
-import { getFeatureForImport } from '#lib/api/server/feature.remote.js'
-import { getFeatureCanonicalImageOccupancy } from '#lib/api/server/image.remote.js'
-import { getOrganisation } from '#lib/api/server/organisation.remote.js'
-import { getProject } from '#lib/api/server/project.remote.js'
+import { getFeatureForImport } from '#lib/api/feature.remote.js'
+import { getFeatureCanonicalImageOccupancy } from '#lib/api/image.remote.js'
+import { getOrganisation } from '#lib/api/organisation.remote.js'
+import { getProject } from '#lib/api/project.remote.js'
 import {
   calculateImageContentHash,
   uploadAndProcessImage,

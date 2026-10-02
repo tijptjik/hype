@@ -108,13 +108,10 @@ import {
   getProjects,
   projectForm,
   publishProject,
-} from '#lib/api/server/project.remote.js'
-import { getLayers } from '#lib/api/server/layer.remote.js'
-import { getFeatures } from '#lib/api/server/feature.remote.js'
-import {
-  getOrganisation,
-  getOrganisations,
-} from '#lib/api/server/organisation.remote.js'
+} from '#lib/api/project.remote.js'
+import { getLayers } from '#lib/api/layer.remote.js'
+import { getFeatures } from '#lib/api/feature.remote.js'
+import { getOrganisation, getOrganisations } from '#lib/api/organisation.remote.js'
 // SCHEMA
 import { ProjectPreflightFormData } from '#lib/db/zod/schema/project.js'
 // CONFIG

@@ -2,15 +2,16 @@
 
 ## Goal
 - Migrate an admin resource from legacy REST/superforms/DaisyUI to the current app standard:
-  - remote functions in `src/lib/api/server/<resource>.remote.ts`
+  - remote functions in `src/lib/api/<resource>.remote.ts`
   - Bits UI page composition in `src/routes/admin/<resources>/[resource]/+page.svelte`
   - authz wrappers in `src/lib/api/services/authz/<resource>.ts`
   - db operations in `src/lib/db/services/<resource>.ts`
 
 ## Canonical Entry Points
-- Server entry point: `src/lib/api/server/<resource>.remote.ts`
+- Server entry point: `src/lib/api/<resource>.remote.ts`
   - Export `get<Resource>s`, `get<Resource>`, `<resource>Form`, and command handlers (publish/archive when applicable).
   - Keep this file orchestration-only.
+  - Keep remote modules outside directories named `server`; shared server-only wrappers live in `src/lib/api/server/guarded.ts`.
 - Page entry point: `src/routes/admin/<resources>/[resource]/+page.svelte`
   - Use `configureForm(...)` for form config.
   - Use `Main.Form` as submit boundary.

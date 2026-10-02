@@ -51,7 +51,7 @@ import { goToNextTask, navigateOnAdmin } from '#lib/navigation/index.js'
 // PROVIDERS
 import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // REMOTE
-import { getTask, reassignTaskLayer, reviewTask } from '#lib/api/server/tasks.remote.js'
+import { getTask, reassignTaskLayer, reviewTask } from '#lib/api/tasks.remote.js'
 // TYPES
 import type { Id } from '#lib/types.js'
 import type { Task } from '#lib/db/zod/schema/task.types.js'

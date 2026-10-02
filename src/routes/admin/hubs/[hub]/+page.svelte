@@ -82,13 +82,13 @@ import {
   getHubs,
   hubForm,
   publishHub,
-} from '#lib/api/server/hub.remote.js'
-import { getLayers } from '#lib/api/server/layer.remote.js'
+} from '#lib/api/hub.remote.js'
+import { getLayers } from '#lib/api/layer.remote.js'
 import {
   toHubAuthActor,
   resolveHubActionPermissions,
 } from '#lib/api/services/authz/index.js'
-import { getOrganisations } from '#lib/api/server/organisation.remote.js'
+import { getOrganisations } from '#lib/api/organisation.remote.js'
 // SCHEMA
 import { HubPreflightFormData } from '#lib/db/zod/schema/hub.js'
 // CONFIG

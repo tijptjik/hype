@@ -288,7 +288,7 @@ vi.mock('#lib/db/schema/index.js', () => ({
   },
 }))
 
-let remote: Awaited<typeof import('#lib/api/server/hub.remote.js')>
+let remote: Awaited<typeof import('#lib/api/hub.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('hub.remote')
 
 const buildDbForCreate = () => ({
@@ -323,7 +323,7 @@ const buildDbForUpdate = (params: {
 describe('hub.remote form image handling', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('#lib/api/server/hub.remote.js')
+    remote = await import('#lib/api/hub.remote.js')
     vi.clearAllMocks()
     mockAuthorizeHubCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeHubUpdateForSubmission.mockReturnValue({ allowed: true })

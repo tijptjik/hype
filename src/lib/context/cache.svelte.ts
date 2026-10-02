@@ -1,8 +1,8 @@
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
 // REMOTE
-import { getResourcePage, getPinnedResource } from '#lib/api/server/resources.remote.js'
-import { getFeaturePage } from '#lib/api/server/featureQueries.remote.js'
+import { getResourcePage, getPinnedResource } from '#lib/api/resources.remote.js'
+import { getFeaturePage } from '#lib/api/featureQueries.remote.js'
 // CONTEXT
 import { ResourceList } from './resource-list.svelte'
 import { FeatureQuery, FeatureQueryRetention } from './feature-query.svelte'

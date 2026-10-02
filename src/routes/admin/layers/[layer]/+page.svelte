@@ -59,9 +59,9 @@ import {
   getLayers,
   layerForm,
   publishLayer,
-} from '#lib/api/server/layer.remote.js'
-import { getProjects } from '#lib/api/server/project.remote.js'
-import { getProjectProperties } from '#lib/api/server/property.remote.js'
+} from '#lib/api/layer.remote.js'
+import { getProjects } from '#lib/api/project.remote.js'
+import { getProjectProperties } from '#lib/api/property.remote.js'
 import {
   resolveLayerProjectSelectionScope,
   toLayerAuthActor,

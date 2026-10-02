@@ -2,7 +2,7 @@
 import {
   dismissSubscriptionPrompt as dismissSubscriptionPromptRemote,
   joinSubscription as joinSubscriptionRemote,
-} from '#lib/api/server/hub.remote.js'
+} from '#lib/api/hub.remote.js'
 // TYPES
 import type {
   DismissHubSubscriptionPromptInput,

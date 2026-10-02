@@ -8,7 +8,7 @@ const { translateTextMock } = vi.hoisted(() => ({
   translateTextMock: vi.fn(),
 }))
 
-vi.mock('#lib/api/server/translation.remote.js', () => ({
+vi.mock('#lib/api/translation.remote.js', () => ({
   translateText: translateTextMock,
 }))
 

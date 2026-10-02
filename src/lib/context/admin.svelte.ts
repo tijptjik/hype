@@ -1,8 +1,8 @@
 // I18N
 import { getLocaleKey } from '#lib/i18n.js'
-import { getHubs } from '#lib/api/server/hub.remote.js'
-import { getFeatures } from '#lib/api/server/feature.remote.js'
-import { getTasks } from '#lib/api/server/tasks.remote.js'
+import { getHubs } from '#lib/api/hub.remote.js'
+import { getFeatures } from '#lib/api/feature.remote.js'
+import { getTasks } from '#lib/api/tasks.remote.js'
 import {
   refreshRemoteQuery as runRemoteQuery,
   toSafeListResponse,

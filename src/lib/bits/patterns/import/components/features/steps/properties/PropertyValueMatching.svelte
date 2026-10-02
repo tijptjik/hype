@@ -7,8 +7,8 @@ import {
   appendPropertyValues,
   getProperties,
   getPropertyValueAppendAccess,
-} from '#lib/api/server/property.remote.js'
-import { translateText } from '#lib/api/server/translation.remote.js'
+} from '#lib/api/property.remote.js'
+import { translateText } from '#lib/api/translation.remote.js'
 // I18N
 import { m, toLocaleKey } from '#lib/i18n.js'
 // TYPES

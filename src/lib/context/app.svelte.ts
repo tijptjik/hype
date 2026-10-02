@@ -2,7 +2,7 @@ import { CacheCtx } from './cache.svelte'
 import {
   getDefaultLayerResources,
   getPinnedResource,
-} from '#lib/api/server/resources.remote.js'
+} from '#lib/api/resources.remote.js'
 import type {
   PanelResourceType,
   PanelResource,
@@ -20,13 +20,13 @@ import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '#lib/constants.js'
 import {
   getOrganisation,
   getOrganisationsWhichHaveLayers,
-} from '#lib/api/server/organisation.remote.js'
-import { getHub, getHubs } from '#lib/api/server/hub.remote.js'
-import { getProject, getProjects } from '#lib/api/server/project.remote.js'
-import { getLayer, getLayers } from '#lib/api/server/layer.remote.js'
-import { getFeature, getFeatures } from '#lib/api/server/feature.remote.js'
-import { getProperties, getProperty } from '#lib/api/server/property.remote.js'
-import { getUser, getUserFeatures, getUserLayers } from '#lib/api/server/user.remote.js'
+} from '#lib/api/organisation.remote.js'
+import { getHub, getHubs } from '#lib/api/hub.remote.js'
+import { getProject, getProjects } from '#lib/api/project.remote.js'
+import { getLayer, getLayers } from '#lib/api/layer.remote.js'
+import { getFeature, getFeatures } from '#lib/api/feature.remote.js'
+import { getProperties, getProperty } from '#lib/api/property.remote.js'
+import { getUser, getUserFeatures, getUserLayers } from '#lib/api/user.remote.js'
 // SERVICES
 import { debouncedUpdateUserAttribution } from '#lib/client/services/user.js'
 import {

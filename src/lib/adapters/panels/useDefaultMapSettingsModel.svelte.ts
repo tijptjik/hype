@@ -3,7 +3,7 @@ import { toast } from 'svelte-sonner'
 // I18N
 import { getI18n } from '#lib/i18n.js'
 // API
-import { getUserLayers, setUserLayerDefaults } from '#lib/api/server/user.remote.js'
+import { getUserLayers, setUserLayerDefaults } from '#lib/api/user.remote.js'
 // TYPES
 import type { AppCtx } from '#lib/context/app.svelte.js'
 

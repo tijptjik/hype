@@ -2,7 +2,7 @@
 import { onDestroy } from 'svelte'
 import { toast } from 'svelte-sonner'
 // REMOTE
-import { getMetadata } from '#lib/api/server/image.remote.js'
+import { getMetadata } from '#lib/api/image.remote.js'
 import { runRemoteQuery } from '#lib/remote/index.js'
 // I18N
 import { m } from '#lib/i18n.js'

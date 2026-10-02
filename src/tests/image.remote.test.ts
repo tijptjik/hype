@@ -217,7 +217,7 @@ vi.mock('#lib/db/zod/index.js', () => ({
   UpdateImageSchema: {},
 }))
 
-let remote: Awaited<typeof import('#lib/api/server/image.remote.js')>
+let remote: Awaited<typeof import('#lib/api/image.remote.js')>
 
 const buildDbWithContextRow = (row: Record<string, unknown>) => ({
   select: vi.fn(() => ({
@@ -255,7 +255,7 @@ const buildDbWithContextRow = (row: Record<string, unknown>) => ({
 describe('image.remote', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('#lib/api/server/image.remote.js')
+    remote = await import('#lib/api/image.remote.js')
     vi.clearAllMocks()
     mockCreateImageRecord.mockReset()
     mockCreateImageRecord.mockResolvedValue({ id: 'img-1', publicId: null })

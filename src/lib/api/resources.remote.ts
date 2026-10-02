@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit'
 // SCHEMA
 import { z } from 'zod'
 // REMOTE
-import { guardedBatchQuery, guardedQuery } from './guarded.js'
+import { guardedBatchQuery, guardedQuery } from './server/guarded.js'
 import {
   getOrganisations,
   getOrganisationsWhichHaveLayers,

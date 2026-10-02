@@ -4,7 +4,7 @@ import { mergeFeatureData } from '#lib/client/services/import/features/resolutio
 
 import type { ImportCtx } from '#lib/context/import.svelte.js'
 
-vi.mock('#lib/api/server/feature.remote.js', () => ({
+vi.mock('#lib/api/feature.remote.js', () => ({
   featureForm: {},
   getFeatureForImport: vi.fn(),
 }))

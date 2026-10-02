@@ -10,7 +10,7 @@ import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.ut
 // COMPONENTS
 import * as SearchPrimitive from './src/components'
 // API
-import { searchUsers as searchUsersRemote } from '#lib/api/server/user.remote.js'
+import { searchUsers as searchUsersRemote } from '#lib/api/user.remote.js'
 
 let {
   placeholder = 'Search',

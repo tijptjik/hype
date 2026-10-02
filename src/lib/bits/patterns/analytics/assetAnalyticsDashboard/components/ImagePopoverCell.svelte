@@ -111,7 +111,7 @@ async function loadMetadata(): Promise<void> {
   isMetadataLoading = true
 
   try {
-    const { getMetadata } = await import('#lib/api/server/image.remote.js')
+    const { getMetadata } = await import('#lib/api/image.remote.js')
     const response = await runRemoteQuery(
       getMetadata({
         publicId,

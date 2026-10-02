@@ -71,10 +71,10 @@ import {
   getFeature,
   getFeatures,
   publishFeature,
-} from '#lib/api/server/feature.remote.js'
-import { getLayer, getLayers } from '#lib/api/server/layer.remote.js'
-import { getOrganisationsWhichHaveLayers } from '#lib/api/server/organisation.remote.js'
-import { getProjectsWhichHaveLayers } from '#lib/api/server/project.remote.js'
+} from '#lib/api/feature.remote.js'
+import { getLayer, getLayers } from '#lib/api/layer.remote.js'
+import { getOrganisationsWhichHaveLayers } from '#lib/api/organisation.remote.js'
+import { getProjectsWhichHaveLayers } from '#lib/api/project.remote.js'
 // SCHEMA
 import { FeaturePreflightFormData } from '#lib/db/zod/index.js'
 // FACTORIES

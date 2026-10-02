@@ -119,12 +119,12 @@ vi.mock('#lib/db/zod/index.js', () => ({
   ProjectPropertyValueFormData: {},
 }))
 
-let remote: Awaited<typeof import('#lib/api/server/property.remote.js')>
+let remote: Awaited<typeof import('#lib/api/property.remote.js')>
 
 describe('property.remote', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('#lib/api/server/property.remote.js')
+    remote = await import('#lib/api/property.remote.js')
     vi.clearAllMocks()
     mockToPropertyResponseShape.mockImplementation((row: unknown) => ({ row }))
     mockGuardedContext.mockResolvedValue({

@@ -134,7 +134,7 @@ export async function prepareImageUpload(
   normalizedUpload: NormalizedImageUploadAsset
   metadata: ImageMetadataBasic & { metadata?: Record<string, string> | null }
   auth: Awaited<
-    ReturnType<typeof import('#lib/api/server/image.remote.js')['authImageUpload']>
+    ReturnType<typeof import('#lib/api/image.remote.js')['authImageUpload']>
   >
   isAdminRequest: boolean
   persist: {
@@ -400,9 +400,8 @@ export const resolveImageAssetBaseUrl = (
  * Lazily loads image remotes so utility-only imports of this module do not
  * eagerly initialize the SvelteKit remote runtime in test and browser contexts.
  */
-const loadImageRemotes = async (): Promise<
-  typeof import('#lib/api/server/image.remote.js')
-> => await import('#lib/api/server/image.remote.js')
+const loadImageRemotes = async (): Promise<typeof import('#lib/api/image.remote.js')> =>
+  await import('#lib/api/image.remote.js')
 
 export async function buildBasicMetadataDocument(
   normalizedUpload: NormalizedImageUploadAsset,

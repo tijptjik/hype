@@ -6,11 +6,3 @@ diff --git a/src/runtime/client/remote-functions/query/index.js b/src/runtime/cl
 @@ -34,0 +36,2 @@
 +
 +			return result._;
-diff --git a/src/exports/vite/plugins/guard.js b/src/exports/vite/plugins/guard.js
---- a/src/exports/vite/plugins/guard.js
-+++ b/src/exports/vite/plugins/guard.js
-@@ -10,0 +11 @@
-+	is_remote_module,
-@@ -108,0 +110,2 @@
-+				// Remote modules are replaced with client stubs, including inside server directories.
-+				if (kit.experimental.remoteFunctions && is_remote_module(id)) return;

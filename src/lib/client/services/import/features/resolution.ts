@@ -1,7 +1,7 @@
 import type { RemoteForm, RemoteFormInput } from '$app/server'
 
 // REMOTE
-import { featureForm, getFeatureForImport } from '#lib/api/server/feature.remote.js'
+import { featureForm, getFeatureForImport } from '#lib/api/feature.remote.js'
 // I18N
 import { toLocaleKey } from '#lib/i18n.js'
 // SERVICES

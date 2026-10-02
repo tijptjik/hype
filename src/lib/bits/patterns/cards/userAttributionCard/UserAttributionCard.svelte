@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getUserForAttribution } from '#lib/api/server/user.remote.js'
+import { getUserForAttribution } from '#lib/api/user.remote.js'
 import { TransitionStack } from '#lib/bits/custom/transition/index.js'
 import { getAppCtx } from '#lib/context/app.svelte.js'
 import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'

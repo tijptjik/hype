@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Panel query registration is isolated from this resource's authorization fixtures.
-vi.mock('#lib/api/server/resources.remote.js', () => ({}))
+vi.mock('#lib/api/resources.remote.js', () => ({}))
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -435,7 +435,7 @@ vi.mock('#lib/db/zod/index.js', async importOriginal => {
 
 vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-let remote: Awaited<typeof import('#lib/api/server/project.remote.js')>
+let remote: Awaited<typeof import('#lib/api/project.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('project.remote')
 
 const buildUpdatePayload = (organisationId: string) => ({
@@ -462,7 +462,7 @@ const throwingInvalid = (message: string): never => {
 
 describe('project.remote form organisation move authz', () => {
   beforeAll(async () => {
-    remote = await import('#lib/api/server/project.remote.js')
+    remote = await import('#lib/api/project.remote.js')
   }, 15_000)
 
   beforeEach(async () => {

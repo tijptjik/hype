@@ -80,7 +80,7 @@ import {
   submitNewPhotos,
   reviewTask,
   reassignTaskLayer,
-} from '#lib/api/server/tasks.remote.js'
+} from '#lib/api/tasks.remote.js'
 
 const guestContext = { user: { isAnonymous: true } }
 const incompleteSessionContext = { user: {} }

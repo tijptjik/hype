@@ -4,7 +4,7 @@ import { getLocaleKey } from '#lib/i18n.js'
 import {
   addUserFeatureToList,
   removeUserFeatureFromList,
-} from '#lib/api/server/user.remote.js'
+} from '#lib/api/user.remote.js'
 // TYPES
 import type { Id } from '#lib/types.js'
 import type {

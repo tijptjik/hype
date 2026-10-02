@@ -301,12 +301,12 @@ vi.mock('drizzle-orm', () => ({
   }),
 }))
 
-let remote: Awaited<typeof import('#lib/api/server/user.remote.js')>
+let remote: Awaited<typeof import('#lib/api/user.remote.js')>
 
 describe('user.remote', () => {
   beforeEach(async () => {
     vi.resetModules()
-    remote = await import('#lib/api/server/user.remote.js')
+    remote = await import('#lib/api/user.remote.js')
     vi.clearAllMocks()
 
     mockGetRequestEvent.mockReturnValue({

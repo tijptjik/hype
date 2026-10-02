@@ -1,12 +1,12 @@
 // API
-import { updateFeatureState } from '#lib/api/server/feature.remote.js'
+import { updateFeatureState } from '#lib/api/feature.remote.js'
 import {
   beginMissingReportDraft as beginMissingReportDraftRemote,
   beginNewFeatureDraft as beginNewFeatureDraftRemote,
   beginNewPhotosDraft as beginNewPhotosDraftRemote,
   finalizeTaskDraft as finalizeTaskDraftRemote,
   reviewTask as reviewTaskRemote,
-} from '#lib/api/server/tasks.remote.js'
+} from '#lib/api/tasks.remote.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES

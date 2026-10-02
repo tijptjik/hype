@@ -1,12 +1,12 @@
 // TESTING
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('#lib/api/server/feature.remote.js', () => ({ getFeatureForImport: vi.fn() }))
-vi.mock('#lib/api/server/image.remote.js', () => ({
+vi.mock('#lib/api/feature.remote.js', () => ({ getFeatureForImport: vi.fn() }))
+vi.mock('#lib/api/image.remote.js', () => ({
   getFeatureCanonicalImageOccupancy: vi.fn(),
 }))
-vi.mock('#lib/api/server/organisation.remote.js', () => ({ getOrganisation: vi.fn() }))
-vi.mock('#lib/api/server/project.remote.js', () => ({ getProject: vi.fn() }))
+vi.mock('#lib/api/organisation.remote.js', () => ({ getOrganisation: vi.fn() }))
+vi.mock('#lib/api/project.remote.js', () => ({ getProject: vi.fn() }))
 vi.mock('#lib/client/services/image.js', () => ({
   calculateImageContentHash: vi.fn(),
   uploadAndProcessImage: vi.fn(),
@@ -16,10 +16,10 @@ vi.mock('#lib/images/upload.js', () => ({
 }))
 
 // API
-import { getFeatureForImport } from '#lib/api/server/feature.remote.js'
-import { getFeatureCanonicalImageOccupancy } from '#lib/api/server/image.remote.js'
-import { getOrganisation } from '#lib/api/server/organisation.remote.js'
-import { getProject } from '#lib/api/server/project.remote.js'
+import { getFeatureForImport } from '#lib/api/feature.remote.js'
+import { getFeatureCanonicalImageOccupancy } from '#lib/api/image.remote.js'
+import { getOrganisation } from '#lib/api/organisation.remote.js'
+import { getProject } from '#lib/api/project.remote.js'
 // SERVICES
 import {
   calculateImageContentHash,

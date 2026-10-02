@@ -7,7 +7,7 @@ import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import { runRemoteQuery } from '#lib/remote/index.js'
 // API
-import { getAssetAnalyticsSummary } from '#lib/api/server/analytics.remote.js'
+import { getAssetAnalyticsSummary } from '#lib/api/analytics.remote.js'
 // I18N
 import { getLocale, m } from '#lib/i18n.js'
 // ENUMS

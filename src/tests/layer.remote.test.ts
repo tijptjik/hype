@@ -2,11 +2,11 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Panel query registration is isolated from this resource's authorization fixtures.
-vi.mock('#lib/api/server/resources.remote.js', () => ({}))
+vi.mock('#lib/api/resources.remote.js', () => ({}))
 import { createAuthzMatrixReporter } from './authz-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 // API
-import * as remote from '#lib/api/server/layer.remote.js'
+import * as remote from '#lib/api/layer.remote.js'
 import { authorizeLayerUpdateForSubmission } from '#lib/api/services/authz/layer.js'
 
 type MockDecision = {

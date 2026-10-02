@@ -4,7 +4,7 @@ import { onMount, untrack } from 'svelte'
 // CONTEXT
 import { getImportCtx } from '#lib/context/import.svelte.js'
 // API
-import { translateText } from '#lib/api/server/translation.remote.js'
+import { translateText } from '#lib/api/translation.remote.js'
 // I18N
 import { m, toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
 // ENUM

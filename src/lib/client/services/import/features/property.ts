@@ -2,7 +2,7 @@
 import type { ImportCtx } from '#lib/context/import.svelte.js'
 import { getImportCtx } from '#lib/context/import.svelte.js'
 // API
-import { getProjectProperties } from '#lib/api/server/property.remote.js'
+import { getProjectProperties } from '#lib/api/property.remote.js'
 // TYPES
 import type {
   FieldDiscriminator,

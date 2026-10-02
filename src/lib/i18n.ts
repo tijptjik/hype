@@ -482,9 +482,9 @@ export { m, runtime }
  * module do not eagerly initialize the SvelteKit remote runtime.
  */
 async function loadTranslateTextRemote(): Promise<
-  typeof import('#lib/api/server/translation.remote.js').translateText
+  typeof import('#lib/api/translation.remote.js').translateText
 > {
-  const { translateText } = await import('#lib/api/server/translation.remote.js')
+  const { translateText } = await import('#lib/api/translation.remote.js')
   return translateText
 }
 

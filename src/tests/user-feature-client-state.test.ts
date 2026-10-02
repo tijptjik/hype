@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   addUserFeatureToList,
   removeUserFeatureFromList,
-} from '#lib/api/server/user.remote.js'
+} from '#lib/api/user.remote.js'
 // SERVICES
 import { updateUserFeature } from '#lib/client/services/userFeatures.js'
 
-vi.mock('#lib/api/server/user.remote.js', () => ({
+vi.mock('#lib/api/user.remote.js', () => ({
   addUserFeatureToList: vi.fn(),
   removeUserFeatureFromList: vi.fn(),
 }))

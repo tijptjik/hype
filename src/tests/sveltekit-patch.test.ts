@@ -15,15 +15,16 @@ function runFrameworkProbe(script: string): string {
   })
 }
 
-describe('SvelteKit 3 dependency patches', () => {
-  it('allows transformed remote modules in server directories and rejects ordinary server imports', () => {
+describe('SvelteKit 3 dependency compatibility', () => {
+  it('allows remote entry points outside server directories and enforces server-only imports', () => {
     expect(
       runFrameworkProbe(`
       import assert from 'node:assert/strict';
       import { plugin_guard } from './node_modules/@sveltejs/kit/src/exports/vite/plugins/guard.js';
       const root = process.cwd();
       const page = root + '/src/routes/+page.svelte';
-      const remote = root + '/src/lib/api/server/example.remote.ts';
+      const remote = root + '/src/lib/api/example.remote.ts';
+      const misplaced = root + '/src/lib/api/server/example.remote.ts';
       const server = root + '/src/lib/api/server/example.ts';
       async function createGuard(enabled) {
         const guard = plugin_guard({
@@ -34,16 +35,17 @@ describe('SvelteKit 3 dependency patches', () => {
           normalized_aliases: [], service_worker_entry_file: null
         }), () => ({ nodes: [{ component: page }], hooks: {} }));
         guard.configResolved();
-        for (const id of [remote, server]) {
+        for (const id of [remote, misplaced, server]) {
           await guard.resolveId.handler.call({ resolve: async id => ({ id }) }, id, page, {});
         }
         return guard;
       }
       const enabled = await createGuard(true);
       assert.equal(enabled.load.handler(remote), undefined);
+      assert.throws(() => enabled.load.handler(misplaced), /config_feature_disabled|server_only_import/);
       assert.throws(() => enabled.load.handler(server), /server_only_import/);
       const disabled = await createGuard(false);
-      assert.throws(() => disabled.load.handler(remote), /config_feature_disabled/);
+      assert.throws(() => disabled.load.handler(misplaced), /config_feature_disabled|server_only_import/);
       console.log('ok');
     `).trim(),
     ).toBe('ok')

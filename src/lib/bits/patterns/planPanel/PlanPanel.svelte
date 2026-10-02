@@ -6,9 +6,9 @@ import { getFPI18n, getI18n, m } from '#lib/i18n.js'
 // CONTEXT
 import { getAppCtx } from '#lib/context/app.svelte.js'
 // REMOTE
-import { getFeature, getFeatures } from '#lib/api/server/feature.remote.js'
-import { getLayer } from '#lib/api/server/layer.remote.js'
-import { getProject } from '#lib/api/server/project.remote.js'
+import { getFeature, getFeatures } from '#lib/api/feature.remote.js'
+import { getLayer } from '#lib/api/layer.remote.js'
+import { getProject } from '#lib/api/project.remote.js'
 // SERVICES
 import { getURLfromImage } from '#lib/client/services/image.js'
 // BITS

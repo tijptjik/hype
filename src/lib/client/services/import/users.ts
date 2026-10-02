@@ -41,10 +41,7 @@
 // ---
 
 // API
-import {
-  getUser,
-  searchUsers as searchUsersRemote,
-} from '#lib/api/server/user.remote.js'
+import { getUser, searchUsers as searchUsersRemote } from '#lib/api/user.remote.js'
 
 // TYPES
 import type { ImportCtx } from '#lib/context/import.svelte.js'

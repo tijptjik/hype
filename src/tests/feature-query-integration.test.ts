@@ -10,7 +10,7 @@ import { withRemoteMeta } from './remote-function-mock'
 import { AppCtx } from '#lib/context/app.svelte.js'
 import { OmniCtx } from '#lib/context/omni.svelte.js'
 import { PlaceCtx } from '#lib/context/place.svelte.js'
-import { getFeaturePage } from '#lib/api/server/featureQueries.remote.js'
+import { getFeaturePage } from '#lib/api/featureQueries.remote.js'
 import { getFeatureViewportQuery } from '#lib/map/featureSpatial.js'
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
@@ -22,10 +22,10 @@ vi.mock('#lib/navigation/index.js', async importOriginal => {
   const actual = await importOriginal<typeof import('#lib/navigation/index.js')>()
   return { ...actual, navigate: navigateMock }
 })
-vi.mock('#lib/api/server/featureQueries.remote.js', () => ({
+vi.mock('#lib/api/featureQueries.remote.js', () => ({
   getFeaturePage: withRemoteMeta(vi.fn(), 'query'),
 }))
-vi.mock('#lib/api/server/feature.remote.js', () => ({
+vi.mock('#lib/api/feature.remote.js', () => ({
   getFeature: withRemoteMeta(vi.fn(), 'query'),
   getFeatures: withRemoteMeta(vi.fn(), 'query'),
 }))

@@ -1,5 +1,5 @@
 import type { RemoteFormIssue } from '$app/server'
-import { updateUserProfile } from '#lib/api/server/user.remote.js'
+import { updateUserProfile } from '#lib/api/user.remote.js'
 import { useSession } from '#lib/auth/client.js'
 import { m } from '#lib/i18n.js'
 import { normalizeUsername, validateUsername } from '#lib/utils/username.js'

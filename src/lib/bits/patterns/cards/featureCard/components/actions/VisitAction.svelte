@@ -9,7 +9,7 @@ import {
   addUserFeatureToList,
   getUserFeatures,
   removeUserFeatureFromList,
-} from '#lib/api/server/user.remote.js'
+} from '#lib/api/user.remote.js'
 // CONTEXT
 import { getAppCtx } from '#lib/context/app.svelte.js'
 // TYPES
