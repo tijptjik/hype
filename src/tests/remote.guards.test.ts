@@ -95,6 +95,7 @@ describe('remote guard wrappers', () => {
     expect(result).toEqual({ ok: true })
     expect(mockSetupRequestHandler).toHaveBeenCalledTimes(1)
     expect(mockSetupRequestHandler).toHaveBeenCalledWith({
+      platform: { env: {} },
       locals: { platform: { env: {} }, user: { id: 'u-1' } },
 
       request: { method: 'POST' },
