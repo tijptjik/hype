@@ -4,7 +4,22 @@
     "sourceMap": true,
     "strict": true
   },
-  "exclude": ["src/lib/paraglide/**/*"],
+  // The Svelte TypeScript plugin also scans these paths for component files.
+  // Keep cached workspaces, dependencies and generated output out of the project.
+  "exclude": [
+    "src/lib/paraglide/**/*",
+    "**/.git/**",
+    "**/.delta/**",
+    "**/node_modules/**",
+    "**/.cache/**",
+    "**/.svelte-kit/**",
+    "**/.wrangler/**",
+    "**/.turbo/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "output/**",
+    "tmp/**"
+  ],
   "include": [
     "src/**/*.ts",
     "src/**/*.js",

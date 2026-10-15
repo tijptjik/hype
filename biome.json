@@ -90,6 +90,14 @@
   },
   "overrides": [
     {
+      "includes": ["tsconfig.json"],
+      "json": {
+        "parser": {
+          "allowComments": true
+        }
+      }
+    },
+    {
       "includes": ["**/*.svelte"],
       "linter": {
         "rules": {
