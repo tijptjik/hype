@@ -405,6 +405,10 @@ export default defineConfig(async ({ command }) => ({
     // Keep MapLibre and its worker query out of dependency optimization.
     exclude: ['maplibre-gl'],
   },
+  ssr: {
+    // Keep Svelte context state in one module graph during SSR and hot reloads.
+    optimizeDeps: { exclude: ['svelte'] },
+  },
   build: {
     target: 'es2020',
   },
