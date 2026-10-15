@@ -3,15 +3,14 @@ import type { StyleSpecification } from 'maplibre-gl'
 
 import {
   applyRuntimeBasemapSource,
-  LEGACY_HONG_KONG_TILEJSON_URL,
   resolveBasemapTileJsonUrl,
   SAANSEOI_HONG_KONG_TILEJSON_URL,
 } from '#lib/map/styles/source.js'
 
 describe('runtime basemap source policy', () => {
-  it('falls back to the public legacy endpoint when no SaanSeoi key is configured', () => {
+  it('uses SaanSeoi without a key for configured first-party browser origins', () => {
     expect(resolveBasemapTileJsonUrl(SAANSEOI_HONG_KONG_TILEJSON_URL)).toBe(
-      LEGACY_HONG_KONG_TILEJSON_URL,
+      SAANSEOI_HONG_KONG_TILEJSON_URL,
     )
   })
 
@@ -37,7 +36,9 @@ describe('runtime basemap source policy', () => {
     const resolved = applyRuntimeBasemapSource(style)
     const resolvedSources = resolved.sources as Record<string, { url?: string }>
     const originalSources = style.sources as Record<string, { url?: string }>
-    expect(resolvedSources['hongkong-latest']?.url).toBe(LEGACY_HONG_KONG_TILEJSON_URL)
+    expect(resolvedSources['hongkong-latest']?.url).toBe(
+      SAANSEOI_HONG_KONG_TILEJSON_URL,
+    )
     expect(resolvedSources.other?.url).toBe('https://example.com/tiles.json')
     expect(originalSources['hongkong-latest']?.url).toBe(
       SAANSEOI_HONG_KONG_TILEJSON_URL,

@@ -20,6 +20,5 @@ export {
   applyRuntimeBasemapSource,
   getConfiguredBasemapAccessToken,
   resolveBasemapTileJsonUrl,
-  LEGACY_HONG_KONG_TILEJSON_URL,
   SAANSEOI_HONG_KONG_TILEJSON_URL,
 } from './source'

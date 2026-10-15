@@ -1,12 +1,8 @@
 import type { StyleSpecification } from 'maplibre-gl'
 
-// The SaanSeoi service requires a public access token. Keep the legacy Hype
-// endpoint as a compatibility path for local installations that have not yet
-// configured that token.
+// Configured first-party origins can use SaanSeoi without a public access token.
 export const SAANSEOI_HONG_KONG_TILEJSON_URL =
   'https://tiles.saanseoi.hk/hongkong-latest.json'
-export const LEGACY_HONG_KONG_TILEJSON_URL =
-  'https://tiles.hype.hk/basemap/hongkong-latest.json'
 
 const HONG_KONG_SOURCE_ID = 'hongkong-latest'
 
@@ -41,7 +37,7 @@ export const resolveBasemapTileJsonUrl = (
       return parsedUrl.toString()
     }
 
-    return LEGACY_HONG_KONG_TILEJSON_URL
+    return parsedUrl.toString()
   }
 
   return sourceUrl
