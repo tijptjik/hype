@@ -59,7 +59,7 @@ route-dependent filters as validated arguments rather than reading `event.url`.
 Custom remote form controls must obtain their names from their owning field's
 `.as(...)` method, including generated hidden inputs.
 
-Bun applies `patches/@sveltejs%2Fkit@3.0.0.patch` to restore missing client-side
+Bun applies `patches/@sveltejs%2Fkit@3.1.0.patch` to restore missing client-side
 remote-query return values. Remote entry points live in `src/lib/api/*.remote.ts`,
 outside directories named `server`, as required by
 [SvelteKit's remote-function rules](https://svelte.dev/docs/kit/remote-functions).

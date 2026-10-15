@@ -124,7 +124,7 @@
     "@protomaps/basemaps": "^5.7.2",
     "@sveltejs/adapter-cloudflare": "^8.0.1",
     "@sveltejs/adapter-static": "^4.0.0",
-    "@sveltejs/kit": "^3.0.0",
+    "@sveltejs/kit": "3.1.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/upgrade": "^4.3.3",
@@ -228,7 +228,7 @@
   },
   "license": "FSL-1.1-MIT",
   "patchedDependencies": {
-    "@sveltejs/kit@3.0.0": "patches/@sveltejs%2Fkit@3.0.0.patch"
+    "@sveltejs/kit@3.1.0": "patches/@sveltejs%2Fkit@3.1.0.patch"
   },
   "imports": {
     "#lib": "./src/lib/index.ts",
