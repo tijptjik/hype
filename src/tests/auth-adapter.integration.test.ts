@@ -127,11 +127,18 @@ describe('Better Auth production Drizzle adapter', () => {
     const auth = createAuth()
     const body = {
       name: 'User',
+      username: 'MixedCaseUser',
       email: 'signup@example.com',
       password: 'integration-password-123',
     }
     const registered = await auth.api.signUpEmail({ body })
     expect(registered.user.email).toBe(body.email)
+    // The username plugin must normalize and persist using Hype's single username column.
+    expect(registered.user.username).toBe('mixedcaseuser')
+    expect(registered.user).not.toHaveProperty('displayUsername')
+    expect(
+      sqlite.prepare('SELECT username FROM user WHERE id = ?').get(registered.user.id),
+    ).toMatchObject({ username: 'mixedcaseuser' })
     const account = sqlite
       .prepare('SELECT * FROM account WHERE userId = ?')
       .get(registered.user.id)

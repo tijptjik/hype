@@ -276,6 +276,8 @@ function createAuthInstance(
         },
       }),
       username({
+        // Hype stores a single username; no separate displayUsername column exists.
+        displayUsername: false,
         usernameValidator: async username => {
           if (username === 'admin') {
             return false

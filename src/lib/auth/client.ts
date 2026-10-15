@@ -20,7 +20,7 @@ export const authClient = createAuthClient({
   },
   plugins: [
     anonymousClient(),
-    usernameClient(),
+    usernameClient({ displayUsername: false }),
     passkeyClient(),
     customSessionClient<Auth>(),
   ],
