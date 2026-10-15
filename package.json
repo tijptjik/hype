@@ -175,7 +175,7 @@
   ],
   "dependencies": {
     "@better-auth/passkey": "^1.7.10",
-    "@chenglou/pretext": "^0.0.9",
+    "@chenglou/pretext": "^1.0.0",
     "@emeraldpay/hashicon": "^0.5.2",
     "@jsquash/avif": "^2.1.1",
     "@jsquash/jpeg": "^1.6.0",

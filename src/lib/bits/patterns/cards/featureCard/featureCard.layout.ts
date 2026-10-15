@@ -1,5 +1,5 @@
 // THIRD PARTY
-import { layout, prepare, prepareWithSegments } from '@chenglou/pretext'
+import { layout, measureNaturalWidth, prepare } from '@chenglou/pretext'
 // BITS
 import { cssVars } from '#lib/bits/utils.js'
 // BARS
@@ -333,15 +333,11 @@ export function getFeatureCardCollapsedDescriptionLineCount(
 }
 
 function measureSingleLineWidth(text: string, font: string): number {
-  const prepared = prepareWithSegments(text, font, {
+  const prepared = prepare(text, font, {
     whiteSpace: 'pre-wrap',
   })
 
-  return layout(prepared, 100000, 1).height > 0
-    ? prepared.segments.reduce((total, _segment, index) => {
-        return total + (prepared.widths[index] ?? 0)
-      }, 0)
-    : 0
+  return measureNaturalWidth(prepared)
 }
 
 function measureWidthForLineBudget(

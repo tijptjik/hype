@@ -5,6 +5,8 @@ import { onMount } from 'svelte'
 import {
   layoutNextLine,
   layoutWithLines,
+  measureNaturalWidth,
+  prepare,
   prepareWithSegments,
   type LayoutCursor,
   type PreparedTextWithSegments,
@@ -159,15 +161,11 @@ const expandedFullWidthLines = $derived.by(() => {
   ).lines
 })
 const truncationEllipsisWidth = $derived.by(() =>
-  prepareWithSegments(TRUNCATION_ELLIPSIS, DESCRIPTION_FONT, {
-    whiteSpace: 'pre-wrap',
-  }).widths.reduce((total, width) => total + width, 0),
+  measurePreparedTextWidth(TRUNCATION_ELLIPSIS, DESCRIPTION_FONT),
 )
 const collapsedMoreLabel = $derived('more')
 const collapsedMoreWidth = $derived.by(() =>
-  prepareWithSegments(collapsedMoreLabel, TOGGLE_FONT, {
-    whiteSpace: 'pre-wrap',
-  }).widths.reduce((total, width) => total + width, 0),
+  measurePreparedTextWidth(collapsedMoreLabel, TOGGLE_FONT),
 )
 const adjacentPropertyRegionWidth = $derived(
   Math.max(collapsedPortalGeometry.visualLeft - PORTAL_FIELD_GAP_PX, 0),
@@ -448,9 +446,7 @@ const visibleCollapsedDescriptionLines = $derived.by(() =>
 function measurePreparedTextWidth(text: string, font: string): number {
   if (!text) return 0
 
-  return prepareWithSegments(text, font, {
-    whiteSpace: 'pre-wrap',
-  }).widths.reduce((total, width) => total + width, 0)
+  return measureNaturalWidth(prepare(text, font, { whiteSpace: 'pre-wrap' }))
 }
 
 const collapsedMoreButtonPosition = $derived.by(() => {
@@ -651,7 +647,7 @@ function layoutRoutedDescriptionLines(params: {
       reservedRightWidth,
       reserveLineCount,
     )
-    const nextLine = layoutNextLine(prepared, cursor, lineWidth)
+    const nextLine = layoutNextLine(prepared, lineWidth, cursor)
 
     if (!nextLine) return { lines, hasMore: false }
 
@@ -671,7 +667,6 @@ function layoutRoutedDescriptionLines(params: {
     hasMore:
       layoutNextLine(
         prepared,
-        cursor,
         getRoutedLineWidth(
           lineTop,
           contentWidthPx,
@@ -679,6 +674,7 @@ function layoutRoutedDescriptionLines(params: {
           reservedRightWidth,
           reserveLineCount,
         ),
+        cursor,
       ) !== null,
   }
 }
@@ -702,7 +698,7 @@ function appendTruncationEllipsis(
       1,
       line.width - ellipsisWidth - trailingReservedWidth,
     )
-    const truncatedLine = layoutNextLine(prepared, line.start, truncatedLineWidth)
+    const truncatedLine = layoutNextLine(prepared, truncatedLineWidth, line.start)
     const truncatedText = truncatedLine?.text.trim() ?? ''
 
     if (!truncatedLine || truncatedText.length === 0) {
