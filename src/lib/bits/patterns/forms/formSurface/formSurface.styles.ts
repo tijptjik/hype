@@ -76,4 +76,15 @@ export const formSurfaceStyles = cx(
   readMode,
   translationStatus,
   memberSearch,
+  // Project selectors and licence summaries follow the same section gutters.
+  String.raw`[&_.bits-form\_\_parent-resource-list]:mx-6 [&_.bits-form\_\_parent-resource-list]:w-auto [&_.bits-form\_\_parent-resource-search]:mx-6 [&_.bits-license\_\_cards]:mx-6`,
+)
+
+// Paired resource selections use quiet rows with equal thumbnails and section gutters.
+export const formSelectionSectionStyles = cx(
+  'h-full',
+  String.raw`[&_.bits-form\_\_parent-resource-list]:pt-6`,
+  '[&_article]:h-24 [&_article]:min-h-24 [&_article]:flex-nowrap [&_article]:items-center [&_article]:gap-4 [&_article]:rounded-none [&_article]:border-0 [&_article]:bg-transparent [&_article]:bg-none [&_article]:shadow-none [&_article]:backdrop-filter-none [&_article]:before:hidden',
+  String.raw`[&_:is(.bits-card\_\_media,.bits-map-style-card\_\_preview)]:size-24 [&_:is(.bits-card\_\_media,.bits-map-style-card\_\_preview)]:min-w-24 [&_:is(.bits-card\_\_media,.bits-map-style-card\_\_preview)]:shrink-0 [&_:is(.bits-card\_\_media,.bits-map-style-card\_\_preview)]:rounded-lg`,
+  String.raw`[&_.bits-card\_\_body]:px-0 [&_.bits-card\_\_body]:py-0`,
 )

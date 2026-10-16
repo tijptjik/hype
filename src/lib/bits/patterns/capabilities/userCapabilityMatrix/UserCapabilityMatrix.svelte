@@ -14,11 +14,11 @@ let {
 }: UserCapabilityMatrixProps = $props()
 </script>
 
-<section class="bits-form__section flex flex-col gap-2">
+<section class="bits-form__section flex min-w-0 flex-col gap-0">
   <SectionHeader
     {title}
     description={subtitle}
-    class="min-h-8 items-center pt-0 pb-0"
+    class="min-h-16 items-center pt-0 pb-0"
   />
 
   <UserCapabilityMatrixPrimitive.Table

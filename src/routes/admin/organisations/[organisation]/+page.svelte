@@ -100,7 +100,7 @@ import {
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
-import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles'
+import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import {
   FormSectionSkeleton,
@@ -138,7 +138,7 @@ import { createSchemaRequiredInferer, toIssueMessages } from '#lib/utils/form-sc
 import Blend from 'virtual:icons/proicons/shape-intersect'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
-import { organisationTabsStyles } from '#lib/bits/patterns/forms/formSurface/organisationTabs.styles'
+import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
 import Type from 'virtual:icons/proicons/text'
 // ENUMS
@@ -1490,7 +1490,7 @@ $effect(() => {
       class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
-      <FormSurface class={`${organisationTabsStyles} flex min-h-0 flex-1 flex-col`}>
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <OrganisationCapabilities
           {selectedCapabilityKeys}
           {capabilitySearchOptions}
@@ -1528,7 +1528,7 @@ $effect(() => {
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormSurface class={`${organisationTabsStyles} flex min-h-0 flex-1 flex-col`}>
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <FormFieldsSection
           icon={Type}
           keepHeader

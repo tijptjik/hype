@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Dialog } from 'bits-ui'
 import { Button, SimpleTooltip } from '#lib/bits/core/index.js'
-import { Card, SectionHeader } from '#lib/bits/custom/index.js'
+import { SectionHeader } from '#lib/bits/custom/index.js'
 import { LicenseCard } from '#lib/bits/patterns/cards/licenseCard/index.js'
 import { m } from '#lib/i18n.js'
 import {
@@ -742,11 +742,11 @@ $effect(() => {
         >
           <Button
             text={m.admin__project_license_replace()}
+            hideLabel={true}
+            hideLabelInstantly={true}
             style="ghost"
             color="light"
             size="sm"
-            hideLabel={true}
-            hideLabelInstantly={true}
             iconComponent={ReplaceIcon}
             disabled={isSubmitting}
             onClick={openWizard}
@@ -757,7 +757,7 @@ $effect(() => {
     {/snippet}
   </SectionHeader>
 
-  <Card.Wrapper class="bits-license__cards">
+  <div class="min-w-0 divide-y divide-border/50 px-6">
     {#each displayedMedia as media (media.key)}
       <LicenseCard
         mediaLabel={media.label}
@@ -775,17 +775,19 @@ $effect(() => {
         isAllRightsReserved={license.media[media.key].isAllRightsReserved}
       />
     {/each}
-  </Card.Wrapper>
+  </div>
 
   <Dialog.Root bind:open={isWizardOpen}>
     <Dialog.Portal>
-      <Dialog.Overlay class="bits-dialog__overlay" />
-      <Dialog.Content class="bits-dialog__content bits-theme bits-license__dialog">
+      <Dialog.Overlay class="bits-dialog__overlay z-[1000]!" />
+      <Dialog.Content
+        class="bits-dialog__content bits-theme bits-license__dialog z-[1001]!"
+      >
         <div class="bits-license__dialog-header">
           <Dialog.Title class="bits-license__dialog-title">
             {m.admin__project_license_picker_title()}
           </Dialog.Title>
-          <div class="flex justify-end gap-3">
+          <div class="flex shrink-0 justify-end gap-1">
             <Button
               text={m.admin__project_license_restart()}
               size="sm"
@@ -817,111 +819,52 @@ $effect(() => {
               </h3>
             </div>
 
-            <div class="bits-license__intent-grid">
-              <p
-                class="bits-license__intent-heading bits-license__intent-grid-heading bits-license__intent-grid-heading--no"
-              >
-                {m.admin__project_license_no()}
-              </p>
-              <div class="bits-license__intent-grid-divider" aria-hidden="true"></div>
-              <p
-                class="bits-license__intent-heading bits-license__intent-grid-heading bits-license__intent-grid-heading--yes"
-              >
-                {m.admin__project_license_yes()}
-              </p>
-
-              <div class="min-h-6" aria-hidden="true"></div>
-              <p class="bits-license__intent-subheading">
-                {m.admin__project_license_some_conditions()}
-              </p>
-              <div
-                class="bits-license__intent-option-divider"
-                style="height:117%"
-                aria-hidden="true"
-              ></div>
-              <p class="bits-license__intent-subheading">
-                {m.admin__project_license_no_conditions()}
-              </p>
-
-              <button
-                type="button"
-                class={[
-                  'bits-license__choice-card',
-                  'bits-license__choice-card--large',
-                  'bits-license__choice-card--centered',
-                  draftIntent === 'allRightsReserved'
-                    ? 'bits-license__choice-card--active'
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onclick={() => setDraftIntent('allRightsReserved')}
-              >
-                <span class="bits-license__choice-title"
-                  >{m.admin__project_license_condition_all_rights_reserved()}</span
+            <div class="grid gap-3">
+              {#each [
+                {
+                  intent: 'allRightsReserved',
+                  label: m.admin__project_license_condition_all_rights_reserved(),
+                  description:
+                    m.admin__project_license_step1_all_rights_reserved_description(),
+                },
+                {
+                  intent: 'conditional',
+                  label: m.admin__project_license_permissive(),
+                  description: m.admin__project_license_step1_permissive_description(),
+                },
+                {
+                  intent: 'publicDomain',
+                  label: m.admin__project_license_condition_public_domain(),
+                  description:
+                    m.admin__project_license_step1_public_domain_description(),
+                },
+              ] as const as choice (choice.intent)}
+                <button
+                  type="button"
+                  class={`bits-license__choice-card ${draftIntent === choice.intent ? 'bits-license__choice-card--active' : ''}`}
+                  aria-pressed={draftIntent === choice.intent}
+                  onclick={() => setDraftIntent(choice.intent)}
                 >
-              </button>
-
-              <button
-                type="button"
-                class={[
-                  'bits-license__choice-card',
-                  'bits-license__choice-card--large',
-                  'bits-license__choice-card--centered',
-                  draftIntent === 'conditional'
-                    ? 'bits-license__choice-card--active'
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onclick={() => setDraftIntent('conditional')}
-              >
-                <span class="bits-license__choice-title"
-                  >{m.admin__project_license_permissive()}</span
-                >
-              </button>
-
-              <div
-                class="bits-license__intent-option-divider"
-                style="height:113%"
-                aria-hidden="true"
-              ></div>
-
-              <button
-                type="button"
-                class={[
-                  'bits-license__choice-card',
-                  'bits-license__choice-card--large',
-                  'bits-license__choice-card--centered',
-                  draftIntent === 'publicDomain'
-                    ? 'bits-license__choice-card--active'
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onclick={() => setDraftIntent('publicDomain')}
-              >
-                <span class="bits-license__choice-title"
-                  >{m.admin__project_license_condition_public_domain()}</span
-                >
-              </button>
-
-              <span
-                class="bits-license__choice-description bits-license__choice-description--centered"
-              >
-                {m.admin__project_license_step1_all_rights_reserved_description()}
-              </span>
-              <span
-                class="bits-license__choice-description bits-license__choice-description--centered"
-              >
-                {m.admin__project_license_step1_permissive_description()}
-              </span>
-              <div class="bits-license__intent-option-divider" aria-hidden="true"></div>
-              <span
-                class="bits-license__choice-description bits-license__choice-description--centered"
-              >
-                {m.admin__project_license_step1_public_domain_description()}
-              </span>
+                  <span class="flex w-full items-center gap-3">
+                    <span
+                      class={`flex size-5 shrink-0 items-center justify-center rounded-full border ${draftIntent === choice.intent ? 'border-primary bg-primary text-primary-foreground' : 'border-border'}`}
+                      aria-hidden="true"
+                    >
+                      {#if draftIntent === choice.intent}
+                        <span class="size-2 rounded-full bg-current"></span>
+                      {/if}
+                    </span>
+                    <span class="min-w-0">
+                      <span class="block font-semibold text-foreground"
+                        >{choice.label}</span
+                      >
+                      <span class="mt-1 block text-sm leading-5 text-muted-foreground"
+                        >{choice.description}</span
+                      >
+                    </span>
+                  </span>
+                </button>
+              {/each}
             </div>
           </div>
         {/if}
@@ -1373,7 +1316,9 @@ $effect(() => {
             aria-label="License wizard steps"
           >
             {#each [1, 2, 3, 4] as step}
-              <span
+              <li
+                aria-label={`Step ${step}`}
+                aria-current={wizardStep === step ? 'step' : undefined}
                 class={[
                   'bits-license__step-dot',
                   wizardStep === step ? 'bits-license__step-dot--active' : '',
@@ -1381,7 +1326,7 @@ $effect(() => {
                 ]
                   .filter(Boolean)
                   .join(' ')}
-              ></span>
+              ></li>
             {/each}
           </ol>
           <div class="bits-license__dialog-actions">

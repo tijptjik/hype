@@ -44,6 +44,8 @@ export interface LocalSearchProps<T> {
   onSelect: (item: T) => void
   resultMap: SearchResultMap<T>
   resultItemClass?: string
+  /** Layout classes for the scrollable results list. */
+  resultListClass?: string
   visualResultItemClass?: string
   visualPreviewClass?: string
   class?: string

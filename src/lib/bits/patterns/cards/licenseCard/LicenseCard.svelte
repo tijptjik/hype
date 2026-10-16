@@ -1,9 +1,14 @@
 <script lang="ts">
-import { SimpleTooltip } from '#lib/bits/core/index.js'
-import { Card, Icon } from '#lib/bits/custom/index.js'
+// I18N
+import { m } from '#lib/i18n.js'
+// BITS COMPONENTS
+import { Icon } from '#lib/bits/custom/index.js'
+import { cx } from '#lib/bits/utils.js'
+// ICONS
 import CcIcon from 'virtual:icons/cib/creative-commons'
 import CopyrightLineIcon from 'virtual:icons/mingcute/copyright-line'
 import CcPdAltIcon from 'virtual:icons/cib/creative-commons-pd-alt'
+// TYPES
 import type { LicenseCardProps } from './licenseCard.types'
 
 let {
@@ -26,62 +31,58 @@ const attributionIcon = $derived.by(() => {
   if (isAllRightsReserved || showLicenseName) return CopyrightLineIcon
   return CcIcon
 })
+const licenseTitle = $derived(
+  showLicenseName
+    ? mediaLicense
+    : isPublicDomain
+      ? m.admin__project_license_condition_public_domain()
+      : isAllRightsReserved
+        ? m.admin__project_license_condition_all_rights_reserved()
+        : mediaLicense,
+)
 </script>
 
-<Card.Root class={className}>
-  <SimpleTooltip>
-    {#snippet trigger()}
-      <Card.Media class="bits-license-card__media" size="md">
-        <div class="bits-license-card__media-icon">
-          <Icon src={mediaIcon} size="lg" tone="primary" />
-        </div>
-      </Card.Media>
-    {/snippet}
-    <span>{mediaLicense}</span>
-  </SimpleTooltip>
-
-  <div class="bits-license-card__content">
-    <section class="bits-license-card__body" aria-label={`${mediaLabel} license terms`}>
-      {#if showLicenseName}
-        <p class="m-0">{mediaLicense}</p>
-      {:else if isPublicDomain}
-        <p class="m-0">Public Domain</p>
-      {:else if isAllRightsReserved}
-        <p class="m-0">All Rights Reserved</p>
-      {:else}
-        <div class="bits-license-card__conditions">
-          {#each conditions as condition (condition.key)}
-            <SimpleTooltip>
-              {#snippet trigger()}
-                <span
-                  class="inline-flex flex-none items-center justify-center w-9 h-9 rounded-[999px] bg-base-200/78 text-base-content"
-                  role="img"
-                  aria-label={condition.label}
-                >
-                  <Icon src={condition.icon} size="xl" tone="inherit" />
-                </span>
-              {/snippet}
-              <span class="block mb-1 font-bold text-foreground"
-                >{condition.label}</span
-              >
-              <span>{condition.description}</span>
-            </SimpleTooltip>
-          {/each}
-        </div>
-      {/if}
-    </section>
-  </div>
-
-  {#if attributionLabel}
-    <Card.Actions padding="sm" bg="panel" class="bits-license-card__actions">
-      <span class="inline-flex max-w-full min-w-0 items-center gap-2">
-        <Icon src={attributionIcon} size="lg" tone="inherit" />
-        <span
-          class="bits-license-card__attribution-text overflow-hidden text-ellipsis whitespace-nowrap"
-        >
-          {attributionLabel}
-        </span>
+<article
+  class={cx(
+    'my-5 min-w-0 rounded-lg border border-foreground/10 bg-foreground/[0.025] p-4',
+    className,
+  )}
+  aria-label={`${mediaLabel} license terms`}
+>
+  <div class="flex min-w-0 items-start justify-between gap-3">
+    <div class="flex min-w-0 items-start gap-2">
+      <span class="mt-0.5 shrink-0 text-primary" aria-hidden="true">
+        <Icon src={attributionIcon} size="md" tone="inherit" />
       </span>
-    </Card.Actions>
+      <h3 class="min-w-0 text-base font-semibold leading-6 [overflow-wrap:anywhere]">
+        {licenseTitle}
+      </h3>
+    </div>
+    <span
+      class="flex shrink-0 items-center gap-1.5 text-xs font-medium leading-6 text-muted-foreground"
+    >
+      <span aria-hidden="true"><Icon src={mediaIcon} size="xs" tone="inherit" /></span>
+      {mediaLabel}
+    </span>
+  </div>
+  {#if conditions.length}
+    <ul class="mt-2 space-y-1.5">
+      {#each conditions as condition (condition.key)}
+        <li class="flex items-start gap-2 text-sm leading-5 text-muted-foreground">
+          {#if !isPublicDomain && !isAllRightsReserved}
+            <span class="mt-0.5 shrink-0" aria-hidden="true"
+              ><Icon src={condition.icon} size="sm" tone="inherit" /></span
+            >
+          {/if}
+          <span>{condition.description}</span>
+        </li>
+      {/each}
+    </ul>
   {/if}
-</Card.Root>
+  <dl class="mt-4 min-w-0 border-t border-foreground/10 pt-3">
+    <dt class="text-xs font-medium text-muted-foreground">{m.field_attribution()}</dt>
+    <dd class="mt-1 text-sm font-medium leading-5 [overflow-wrap:anywhere]">
+      {attributionLabel ?? '—'}
+    </dd>
+  </dl>
+</article>

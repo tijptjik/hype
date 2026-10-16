@@ -14,3 +14,11 @@ export const formMemberIssuesHeaderStyles = cx(
   formSearchHeaderStyles,
   '@min-[40rem]:h-auto! @min-[40rem]:grid-cols-1! @min-[40rem]:py-3! @min-[64rem]:grid-cols-[minmax(0,1fr)_minmax(0,48rem)]!',
 )
+
+// Compact selector inputs live in the heading; results anchor to its full width.
+export const formSelectionSearchHeaderStyles = cx(
+  'relative! overflow-visible! h-auto! min-h-[68px]! grid-cols-[minmax(0,1fr)_auto_auto]! gap-x-3 py-3!',
+  String.raw`[&_.bits-form\_\_section-header-right]:col-start-3 [&_.bits-form\_\_section-header-right]:row-start-1 [&_.bits-form\_\_section-header-right]:static! [&_.bits-form\_\_section-header-right]:[container-type:normal]! [&_.bits-form\_\_section-header-right]:overflow-visible! [&_.bits-form\_\_section-header-right]:pr-0`,
+  '[&_.bits-search]:static! [&_.bits-search]:w-full [&_.bits-search-bar]:mb-0 [&_.bits-search-bar_input]:h-9',
+  String.raw`[&_.bits-search\_\_results]:absolute! [&_.bits-search\_\_results]:left-6! [&_.bits-search\_\_results]:right-6! [&_.bits-search\_\_results]:top-full! [&_.bits-search\_\_results]:mx-0! [&_.bits-search\_\_results]:mt-1! [&_.bits-search\_\_results]:w-auto! [&_.bits-search\_\_results]:z-[170]`,
+)

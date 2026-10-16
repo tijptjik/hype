@@ -1,4 +1,5 @@
 <script lang="ts">
+import HtmlPreview from '../htmlPreview/HtmlPreview.svelte'
 import * as InputPrimitive from './src/input/components'
 import Label from './src/label/Label.svelte'
 import FieldError from './src/label/components/Error.svelte'
@@ -10,6 +11,7 @@ let {
   label,
   value = $bindable(''),
   isEditing = true,
+  renderHtml = false,
   placeholder,
   required = false,
   disabled = false,
@@ -71,19 +73,25 @@ function handleValueChange(nextValue: string): void {
   <Label for={id} text={label} {required} {isEditing} />
 
   <div class={controlWrapClass}>
-    <InputPrimitive.TextArea
-      attrs={resolvedTextareaAttrs}
-      {id}
-      {name}
-      bind:value
-      placeholder={resolvedPlaceholder}
-      {locale}
-      {isTranslated}
-      disabled={resolvedDisabled}
-      readonly={resolvedReadonly}
-      {rows}
-      onValueChange={handleValueChange}
-    />
+    {#if renderHtml && !isEditing}
+      <HtmlPreview html={value} {label} class="min-h-32 px-4 py-2 pr-10" />
+    {/if}
+    <!-- Keep the bound control mounted so view previews retain remote form state. -->
+    <div class={renderHtml && !isEditing ? 'hidden' : 'contents'}>
+      <InputPrimitive.TextArea
+        attrs={resolvedTextareaAttrs}
+        {id}
+        {name}
+        bind:value
+        placeholder={resolvedPlaceholder}
+        {locale}
+        {isTranslated}
+        disabled={resolvedDisabled}
+        readonly={resolvedReadonly}
+        {rows}
+        onValueChange={handleValueChange}
+      />
+    </div>
 
     {#if showGenAiToggle}
       <div class="bits-form__gen-ai-wrap">

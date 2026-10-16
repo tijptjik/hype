@@ -1,4 +1,6 @@
 <script lang="ts">
+import { mapStyleResultStyles } from './formMapStyleSection.styles.js'
+import { formSelectionSearchHeaderStyles } from '../formSurface/formSearchHeader.styles.js'
 import { LocalSearch, SectionHeader } from '#lib/bits/custom/index.js'
 import { m } from '#lib/i18n.js'
 import { MapStyleCard } from '#lib/bits/patterns/cards/mapStyleCard/index.js'
@@ -97,8 +99,34 @@ $effect(() => {
 <section
   class={`bits-form__section bits-form__parent-resource bits-map-style-section ${isAdding && showModeUi ? 'bits-form__parent-resource--search-open' : ''} ${className}`}
 >
-  <SectionHeader {title} description={subtitle}>
+  <SectionHeader {title} description={subtitle} class={formSelectionSearchHeaderStyles}>
     {#snippet right()}
+      {#if isAdding && showModeUi}
+        <div class="w-[clamp(7rem,16vw,12rem)] min-w-0">
+          <LocalSearch
+            options={sortedMapStyles}
+            placeholder={m.forms__search_placeholder()}
+            focusOnMount={true}
+            mountTransitionDuration={showModeUi ? 80 : 0}
+            maxResults={20}
+            onSelect={handleSelect}
+            class="[&_.bits-search-result-item]:min-h-40!"
+            resultListClass="grid! grid-cols-2 gap-1!"
+            visualResultItemClass={mapStyleResultStyles}
+            visualPreviewClass="h-40! w-full! basis-full! min-w-0! border-0! [&_img]:h-full! [&_img]:object-cover [&_img]:object-center"
+            resultMap={{
+              image: () => null,
+              title: (mapStyle: MapStyleSelectionItem) =>
+                mapStyle.i18n?.en?.name || mapStyle.code,
+              descriminator: (mapStyle: MapStyleSelectionItem) => mapStyle.code,
+              previewImage: (mapStyle: MapStyleSelectionItem) =>
+                mapStyle.previewImagePath || null,
+              variant: () => 'visual',
+            }}
+          />
+        </div>
+      {/if}
+
       <FormMapStyleSectionPrimitive.Actions
         {isAdding}
         {isEditing}
@@ -108,47 +136,25 @@ $effect(() => {
     {/snippet}
   </SectionHeader>
 
-  {#if isAdding && showModeUi}
-    <div class="bits-form__parent-resource-search bits-map-style-section__search">
-      <LocalSearch
-        options={sortedMapStyles}
-        placeholder={m.forms__search_placeholder()}
-        focusOnMount={true}
-        mountTransitionDuration={showModeUi ? 80 : 0}
-        maxResults={20}
-        onSelect={handleSelect}
-        class="bits-search--compact-results"
-        visualResultItemClass="min-h-[7.5rem] items-stretch [&_.bits-search-result-item__content--visual]:min-h-[7.5rem] [&_.bits-search-result-item__copy]:gap-1.5 [&_.bits-search-result-item__copy]:px-4 [&_.bits-search-result-item__copy]:py-4 [&_.bits-search-result-item__title]:text-lg [&_.bits-search-result-item__discriminator]:text-base [&_.bits-search-result-item__discriminator]:font-mono"
-        visualPreviewClass="flex h-auto w-44 basis-44 min-w-44 items-center self-stretch [&_.bits-search-result-item__preview-image]:object-center"
-        resultMap={{
-          image: () => null,
-          title: (mapStyle: MapStyleSelectionItem) =>
-            mapStyle.i18n?.en?.name || mapStyle.code,
-          descriminator: (mapStyle: MapStyleSelectionItem) => mapStyle.code,
-          previewImage: (mapStyle: MapStyleSelectionItem) =>
-            mapStyle.previewImagePath || null,
-          variant: () => 'visual',
-        }}
+  <!-- Keep the same preview card footprint before and after a style is selected. -->
+  <div class="bits-form__parent-resource-list bits-map-style-section__list">
+    <MapStyleCard.Root>
+      <MapStyleCard.Preview
+        image={selectedMapStyle?.previewImagePath || null}
+        class="shrink-0"
+        alt={selectedMapStyle?.i18n?.en?.name ||
+          selectedMapStyle?.code ||
+          `No ${title}`}
       />
-    </div>
-  {/if}
-
-  {#if selectedMapStyle}
-    <div class="bits-form__parent-resource-list bits-map-style-section__list">
-      <MapStyleCard.Root>
-        <MapStyleCard.Preview
-          image={selectedMapStyle.previewImagePath || null}
-          styleCode={selectedMapStyle.code}
-          alt={selectedMapStyle.i18n?.en?.name || selectedMapStyle.code}
-        />
-        <MapStyleCard.Body
-          code={selectedMapStyle.code}
-          name={selectedMapStyle.i18n?.en?.name || selectedMapStyle.code}
-          description={selectedMapStyle.i18n?.en?.description || null}
-        />
-      </MapStyleCard.Root>
-    </div>
-  {/if}
+      <MapStyleCard.Body
+        code={selectedMapStyle?.code}
+        name={selectedMapStyle?.i18n?.en?.name ||
+          selectedMapStyle?.code ||
+          `No ${title}`}
+        description={selectedMapStyle?.i18n?.en?.description || null}
+      />
+    </MapStyleCard.Root>
+  </div>
 
   <div class="hidden" aria-hidden="true">
     {#each hiddenMapStyleInputAttrs ?? [] as inputAttrs, index (index)}

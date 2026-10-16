@@ -76,18 +76,15 @@
 
   .bits-theme.bits-license__dialog {
     width: min(720px, calc(100vw - 2rem));
-    height: min(640px, calc(100vh - 2rem));
-    max-height: min(640px, calc(100vh - 2rem));
+    height: min(640px, calc(100dvh - 2rem));
+    max-height: min(640px, calc(100dvh - 2rem));
     display: grid;
     grid-template-rows: auto 1fr auto;
     align-items: stretch;
     overflow-y: auto;
-    border: none;
-    background: linear-gradient(
-      180deg,
-      rgba(8, 10, 16, 0.985),
-      rgba(10, 12, 18, 0.985)
-    );
+    border: 1px solid var(--color-border);
+    background: var(--color-panel);
+    color: var(--color-foreground);
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
   }
 
@@ -105,8 +102,8 @@
 
   .bits-theme .bits-license__wizard {
     gap: 1rem;
-    align-self: center;
-    justify-content: center;
+    align-self: start;
+    justify-content: flex-start;
   }
 
   .bits-theme .bits-license__dialog-header {
@@ -114,13 +111,15 @@
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .bits-theme .bits-license__dialog-title {
     margin: 0;
-    color: var(--color-primary);
-    font-size: 1.75rem;
+    color: var(--color-foreground);
+    font-size: 1.25rem;
     font-weight: 700;
     line-height: 1.1;
   }
@@ -150,8 +149,8 @@
     font-weight: 700;
     line-height: 1.25;
     text-align: center;
-    padding-bottom: 32px;
-    font-style: italic;
+    padding-bottom: 1rem;
+    font-style: normal;
   }
 
   .bits-theme .bits-license__eyebrow {
@@ -160,8 +159,8 @@
     font-size: 0.95rem;
     line-height: 1.2;
     text-align: center;
-    padding-bottom: 64px;
-    margin-top: -64px;
+    padding-bottom: 1rem;
+    margin-top: 0;
   }
 
   .bits-theme .bits-license__intent-layout {
@@ -325,8 +324,8 @@
     min-height: 3rem;
     padding: 0.75rem 0.875rem;
     border-radius: 0.875rem;
-    border: 2px solid transparent;
-    background-color: color-mix(in oklab, var(--color-glass-100) 48%, transparent);
+    border: 1px solid var(--color-border);
+    background-color: color-mix(in oklab, var(--color-panel) 100%, transparent);
     color: color-mix(in oklab, var(--color-foreground) 90%, transparent);
     transition:
       border-color 0.16s ease,
@@ -340,7 +339,7 @@
 
   .bits-theme .bits-license__text-input:focus-visible {
     outline: none;
-    border-color: color-mix(in oklab, var(--color-primary) 48%, white 10%);
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 16%, transparent);
   }
 
@@ -350,9 +349,9 @@
   }
 
   .bits-theme .bits-license__text-input--attribution {
-    width: 75%;
-    min-height: 3.5rem;
-    font-size: 1.5rem;
+    width: 100%;
+    min-height: 3rem;
+    font-size: 1rem;
     text-align: center;
   }
 
@@ -368,8 +367,8 @@
   .bits-theme .bits-license__custom-card {
     position: relative;
     border-radius: 1rem;
-    border: 2px solid transparent;
-    background-color: color-mix(in oklab, var(--color-glass-100) 38%, transparent);
+    border: 1px solid var(--color-border);
+    background-color: color-mix(in oklab, var(--color-raised) 100%, transparent);
   }
 
   .bits-theme .bits-license__choice-card {
@@ -390,7 +389,7 @@
   .bits-theme .bits-license__choice-card:focus-visible {
     transform: translateY(-1px);
     outline: none;
-    border-color: color-mix(in oklab, var(--color-primary) 56%, white 10%);
+    border-color: var(--color-primary);
   }
 
   .bits-theme .bits-license__choice-card:disabled {
@@ -399,12 +398,8 @@
   }
 
   .bits-theme .bits-license__choice-card--active {
-    border-color: color-mix(in oklab, var(--color-primary) 82%, white 8%);
-    background-color: color-mix(
-      in oklab,
-      var(--color-glass-100) 54%,
-      var(--color-primary) 12%
-    );
+    border-color: var(--color-primary);
+    background-color: color-mix(in oklab, var(--color-primary) 10%, var(--color-panel));
   }
 
   .bits-theme .bits-license__choice-card--centered {
@@ -481,6 +476,8 @@
     align-items: center;
     gap: 1rem;
     margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
   }
 
   .bits-theme .bits-license__stepper--footer {
@@ -841,6 +838,26 @@
     font-weight: 700;
     line-height: 1.25;
     text-align: center;
+  }
+
+  @media (max-width: 40rem) {
+    .bits-theme.bits-license__dialog {
+      padding: 1rem;
+    }
+
+    .bits-theme .bits-license__dialog-header {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.75rem;
+    }
+
+    .bits-theme .bits-license__binary-choice {
+      grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+      width: 100%;
+    }
+
+    .bits-theme .bits-license__choice-card--compact {
+      min-width: 0;
+    }
   }
 
   @container bits-main-root (min-width: 48rem) {

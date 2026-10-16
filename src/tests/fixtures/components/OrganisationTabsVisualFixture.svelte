@@ -3,7 +3,7 @@
 import { setResponsiveCtx } from '#lib/context/responsive.svelte'
 // COMPONENTS
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
-import { organisationTabsStyles } from '#lib/bits/patterns/forms/formSurface/organisationTabs.styles'
+import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import OrganisationCapabilities from '#lib/bits/patterns/capabilities/organisationCapabilities/OrganisationCapabilities.svelte'
 import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
 import { SectionHeader } from '#lib/bits/custom/form'
@@ -73,7 +73,7 @@ const callbacks = {
 </script>
 <div class="bits-theme">
   <main class="bits-admin-shell__main">
-    <FormSurface class={organisationTabsStyles}>
+    <FormSurface class={resourceTabsStyles}>
       {#if tab === 'capabilities'}
         <OrganisationCapabilities
           selectedCapabilityKeys={['manageVolunteers']}

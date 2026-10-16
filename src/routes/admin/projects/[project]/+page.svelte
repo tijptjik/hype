@@ -117,6 +117,12 @@ import { ProjectPreflightFormData } from '#lib/db/zod/schema/project.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import {
+  formSectionDividerStyles,
+  formSelectionSectionStyles,
+} from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
+import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import {
   FormFieldsSection,
   FormI18nDescriptorFields,
@@ -127,7 +133,6 @@ import {
   FormProjectLicenseSection,
   FormSpecifiersFields,
   FormUserRolesSection,
-  GridSpacer,
   Main,
   ProjectCapabilities,
   ResourceViewer,
@@ -136,7 +141,10 @@ import {
 import type { ParentSectionOrganisationItem } from '#lib/bits/patterns/forms/formParentSection/index.js'
 import type { MapStyleSelectionItem } from '#lib/bits/patterns/forms/formMapStyleSection/index.js'
 import type { UserCapabilityMatrixRow } from '#lib/bits/patterns/capabilities/userCapabilityMatrix/index.js'
-import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+// ICONS
+import ImageIcon from 'virtual:icons/proicons/photo'
+import MembersIcon from 'virtual:icons/proicons/person-multiple'
 // ADAPTERS
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // FACTORIES
@@ -2580,81 +2588,45 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <FormI18nSection
-        title={m.admin__forms_common_descriptors()}
-        {locales}
-        {onTranslate}
-        {onResetLocale}
-        sectionKey="descriptor"
-        {isEditing}
-      >
-        {#snippet center()}
-          <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-        {/snippet}
+      <FormSurface>
+        <FormI18nSection
+          title="Profile"
+          {locales}
+          {onTranslate}
+          {onResetLocale}
+          sectionKey="descriptor"
+          {isEditing}
+        >
+          {#snippet left()}
+            <div class="flex items-center gap-3">
+              <ProjectIcon class="size-6 text-primary" aria-hidden="true" />
+              <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
+            </div>
+          {/snippet}
+          {#snippet center()}
+            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+          {/snippet}
 
-        {#snippet children(
-          locale,
-        )}
-          <FormI18nDescriptorFields
-            form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[locale]}
-            {locale}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </FormI18nSection>
-
-      <GridSpacer cols={3} leftCols={1} centerCols={1} rightCols={1}>
-        {#snippet left()}
-          {#if canSetParentOrganisation}
-            <FormParentSection
-              title="Parent Organisation"
-              subtitle="This project belongs to"
-              issues={parentOrganisationIssues}
-              parent={selectedParentOrganisation}
-              hiddenInputAttrs={hiddenParentOrganisationInputAttrs}
+          {#snippet children(
+            locale,
+          )}
+            <FormI18nDescriptorFields
+              form={formCtx.form}
+              fields={formCtx.form.fields.data.i18n[locale]}
+              {locale}
               {isEditing}
-              isSubmitting={formCtx.submitting}
-              isSubmitRequested={formCtx.isSubmitRequested}
-              startInAddingMode={isNewProjectRef}
-              onSearch={onSearchParentOrganisations}
-              onReplaceParent={onReplaceParentOrganisation}
+              {isRequiredInPreflight}
             />
-          {/if}
-        {/snippet}
+          {/snippet}
+        </FormI18nSection>
 
-        {#snippet center()}
-          <FormMapStyleSection
-            title="Map style"
-            subtitle="Choose the basemap assigned to this project."
-            {availableMapStyles}
-            {selectedMapStyle}
-            {hiddenMapStyleInputAttrs}
-            {isEditing}
-            isSubmitting={formCtx.submitting}
-            isSubmitRequested={formCtx.isSubmitRequested}
-            startInAddingMode={isNewProjectRef}
-            {onSelectMapStyle}
-          />
-        {/snippet}
-
-        {#snippet right()}
-          <FormSpecifiersFields
-            title={m.admin__project_identifiers_title()}
-            form={formCtx.form}
-            fields={['code']}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </GridSpacer>
-
-      <GridSpacer cols={3} leftCols={2} rightCols={1}>
-        {#snippet left()}
+        <div class={formSectionDividerStyles}>
           <FormUserRolesSection
+            icon={MembersIcon}
+            layout="list"
             currentUserId={authActor.userId}
             title={m.admin__forms_project_members_title()}
             subtitle={m.admin__forms_project_members_subtitle()}
@@ -2679,28 +2651,83 @@ $effect(() => {
             {onRemoveUser}
             {onRoleChange}
           />
-        {/snippet}
+        </div>
 
-        {#snippet right()}
-          <FormProjectLicenseSection
-            title={m.field_license()}
-            subtitle={m.admin__project_license_section_subtitle()}
-            attributionPlaceholder={organisationAttributionFallback ||
-              m.admin__project_license_attribution_placeholder()}
-            license={formProjectLicense}
-            choiceCards={licenseWizardChoiceCards}
-            rightRows={licenseRightRows}
-            leafMediaTypes={[...projectLicenseLeafMediaTypes]}
-            {useCustomLicenseLabels}
-            {customLicenseLabels}
-            {isEditing}
-            isSubmitting={formCtx.submitting}
-            onApplyLicense={onApplyProjectLicense}
-          />
-        {/snippet}
-      </GridSpacer>
+        <div
+          class={`${formSectionDividerStyles} grid grid-cols-1 ${canSetParentOrganisation ? 'md:grid-cols-2' : ''}`}
+        >
+          {#if canSetParentOrganisation}
+            <div class="min-w-0">
+              <FormParentSection
+                class={formSelectionSectionStyles}
+                title="Parent Organisation"
+                subtitle="This project belongs to"
+                issues={parentOrganisationIssues}
+                parent={selectedParentOrganisation}
+                hiddenInputAttrs={hiddenParentOrganisationInputAttrs}
+                {isEditing}
+                isSubmitting={formCtx.submitting}
+                isSubmitRequested={formCtx.isSubmitRequested}
+                startInAddingMode={isNewProjectRef}
+                onSearch={onSearchParentOrganisations}
+                onReplaceParent={onReplaceParentOrganisation}
+              />
+            </div>
+          {/if}
 
-      <div class="h-16 shrink-0" aria-hidden="true"></div>
+          <div
+            class={canSetParentOrganisation
+              ? 'min-w-0 border-t border-border md:border-l md:border-t-0'
+              : 'min-w-0'}
+          >
+            <FormMapStyleSection
+              class={formSelectionSectionStyles}
+              title="Map style"
+              subtitle="Choose the basemap assigned to this project."
+              {availableMapStyles}
+              {selectedMapStyle}
+              {hiddenMapStyleInputAttrs}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewProjectRef}
+              {onSelectMapStyle}
+            />
+          </div>
+        </div>
+
+        <div class={`${formSectionDividerStyles} grid grid-cols-1 md:grid-cols-2`}>
+          <div class="min-w-0">
+            <FormProjectLicenseSection
+              title={m.field_license()}
+              subtitle={m.admin__project_license_section_subtitle()}
+              attributionPlaceholder={organisationAttributionFallback ||
+                m.admin__project_license_attribution_placeholder()}
+              license={formProjectLicense}
+              choiceCards={licenseWizardChoiceCards}
+              rightRows={licenseRightRows}
+              leafMediaTypes={[...projectLicenseLeafMediaTypes]}
+              {useCustomLicenseLabels}
+              {customLicenseLabels}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              onApplyLicense={onApplyProjectLicense}
+            />
+          </div>
+
+          <div
+            class="min-w-0 border-t border-border md:border-l md:border-t-0 [&_.no-i18n>div:first-child]:grid-cols-1!"
+          >
+            <FormSpecifiersFields
+              title={m.admin__project_identifiers_title()}
+              form={formCtx.form}
+              fields={['code']}
+              {isEditing}
+              {isRequiredInPreflight}
+            />
+          </div>
+        </div>
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
@@ -2708,115 +2735,130 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
-      <ProjectCapabilities
-        class={!isCurrentRefSettled ? 'bits-project-capabilities--transitioning' : ''}
-        {capabilityIssues}
-        availableCapabilityKeys={availableProjectCapabilityKeys}
-        enabledCapabilityKeys={stableEnabledProjectCapabilityKeys}
-        capabilityLabelByKey={stableProjectCapabilityLabelByKey}
-        matrixRows={stableCapabilityMatrixRows}
-        {isEditing}
-        onToggleCapability={onToggleProjectCapability}
-        onToggleCell={onToggleUserCapability}
-      />
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <ProjectCapabilities
+          class={!isCurrentRefSettled ? 'bits-project-capabilities--transitioning' : ''}
+          {capabilityIssues}
+          availableCapabilityKeys={availableProjectCapabilityKeys}
+          enabledCapabilityKeys={stableEnabledProjectCapabilityKeys}
+          capabilityLabelByKey={stableProjectCapabilityLabelByKey}
+          matrixRows={stableCapabilityMatrixRows}
+          {isEditing}
+          onToggleCapability={onToggleProjectCapability}
+          onToggleCell={onToggleUserCapability}
+        />
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isLayersFacet}
       transition="fade"
       fillHeight={true}
-      class="bits-theme flex gap-4 min-h-0 flex-col"
+      class="bits-theme min-h-0 left-0! right-0!"
       previousAction={buildFacetNavAction('layers', 'previous')}
       nextAction={buildFacetNavAction('layers', 'next')}
       attrs={{ 'data-facet-id': 'layers' }}
     >
-      <FormProjectLayersSection
-        title="Layer Order"
-        subtitle="Drag layers to control project order and choose which ones appear when the project is added to the map."
-        items={projectLayersInSection.map(layer => ({
-          id: layer.id,
-          projectNameShort: currentProjectShortName,
-          layerName: getI18n(layer, 'name', adminCtx.appCtx.getUserPreferences()),
-          isDefaultVisible: Boolean(layer.isDefaultVisible),
-        }))}
-        issues={projectLayerSectionIssues}
-        {isEditing}
-        isSubmitting={formCtx.submitting}
-        onToggleDefault={onToggleProjectLayerDefault}
-        onMove={onMoveProjectLayer}
-      />
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormProjectLayersSection
+          title="Layer Order"
+          subtitle="Drag layers to control project order and choose which ones appear when the project is added to the map."
+          items={projectLayersInSection.map(layer => ({
+            id: layer.id,
+            projectNameShort: currentProjectShortName,
+            // Admin ordering must identify layers even when generated labels are hidden publicly.
+            layerName: getI18n(
+              layer,
+              'name',
+              adminCtx.appCtx.getUserPreferences(),
+              layer.id,
+              true,
+            ),
+            isDefaultVisible: Boolean(layer.isDefaultVisible),
+          }))}
+          issues={projectLayerSectionIssues}
+          {isEditing}
+          isSubmitting={formCtx.submitting}
+          onToggleDefault={onToggleProjectLayerDefault}
+          onMove={onMoveProjectLayer}
+        />
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
-      class="bits-theme flex gap-4 min-h-0 flex-col"
+      class="bits-theme min-h-0 left-0! right-0!"
       fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormFieldsSection
-        items={projectFieldsInSection}
-        isLoading={isProjectFieldsLoading}
-        title={m.admin__forms_common_fields()}
-        description={m.admin__forms_common_fields_subtitle()}
-        issues={fieldSectionIssues}
-        actions={fieldActions}
-        issueItemIds={fieldSectionIssueItemIds}
-        layoutMutationVersion={fieldsLayoutMutationVersion}
-        forceFlipDisabled={isProjectFieldResetInProgress}
-        canEdit={canSubmitProject && isCurrentRefLoaded}
-        {isEditing}
-        removeMode={fieldRemoveMode}
-        isVisibilityOn={showDisabledFields}
-        onVisibilityToggle={nextVisible => {
-          fieldsLayoutMutationVersion += 1
-          showDisabledFields = nextVisible
-        }}
-        isItemVisible={property => isPropertyVisible(property)}
-        onRemoveModeChange={value => {
-          fieldRemoveMode = value
-        }}
-        card={{
-          removeMode: fieldRemoveMode,
-          locales,
-          isEditing,
-          isRequiredInPreflight,
-          allIssues: visibleAllIssues as Array<{
-            message: string
-            path?: Array<string | number>
-          }>,
-          classifierComponents: classifierComponentTypes,
-          specifierComponents: specifierComponentTypes,
-          onIncreaseRank: fieldActions.increaseRank,
-          onDecreaseRank: fieldActions.decreaseRank,
-          onRemove: fieldActions.remove,
-          onUpdateBase: updatePropertyBase,
-          onUpdateI18n: updatePropertyI18n,
-          onAddValue: addPropertyValue,
-          onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
-          onRemoveValue: removePropertyValue,
-          onMoveValue: movePropertyValue,
-          onUpdateValue: updatePropertyValue,
-          onUpdateValueI18n: updatePropertyValueI18n,
-          onTranslateLocale: onTranslatePropertyLocale,
-          onResetLocale: onResetPropertyLocale,
-          getPropertyIndex: (propertyId, _sectionIndex) =>
-            currentProjectProperties.findIndex(
-              candidate => candidate.id === propertyId,
-            ),
-          getPropertyFields: (_propertyId, propertyIndex) =>
-            getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-          resolveCardPresentation: resolveProjectPropertyCardPresentation,
-          resolveTitleHref: resolveProjectPropertyTitleHref,
-          getMoveWindowSize: () => enabledProjectFieldWindowSize,
-          isMoveLocked: property =>
-            property.scope !== 'project' && !isPropertyEnabled(property),
-          resolveSourceTag: resolveProjectPropertySourceTag,
-        }}
-      />
-      <div class="w-full min-h-20 flex-none"></div>
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormFieldsSection
+          icon={Type}
+          keepHeader
+          items={projectFieldsInSection}
+          isLoading={isProjectFieldsLoading}
+          title={m.admin__forms_common_fields()}
+          description={m.admin__forms_common_fields_subtitle()}
+          issues={fieldSectionIssues}
+          actions={fieldActions}
+          issueItemIds={fieldSectionIssueItemIds}
+          layoutMutationVersion={fieldsLayoutMutationVersion}
+          forceFlipDisabled={isProjectFieldResetInProgress}
+          canEdit={canSubmitProject && isCurrentRefLoaded}
+          {isEditing}
+          removeMode={fieldRemoveMode}
+          isVisibilityOn={showDisabledFields}
+          onVisibilityToggle={nextVisible => {
+            fieldsLayoutMutationVersion += 1
+            showDisabledFields = nextVisible
+          }}
+          isItemVisible={property => isPropertyVisible(property)}
+          onRemoveModeChange={value => {
+            fieldRemoveMode = value
+          }}
+          card={{
+            removeMode: fieldRemoveMode,
+            locales,
+            isEditing,
+            isRequiredInPreflight,
+            allIssues: visibleAllIssues as Array<{
+              message: string
+              path?: Array<string | number>
+            }>,
+            classifierComponents: classifierComponentTypes,
+            specifierComponents: specifierComponentTypes,
+            onIncreaseRank: fieldActions.increaseRank,
+            onDecreaseRank: fieldActions.decreaseRank,
+            onRemove: fieldActions.remove,
+            onUpdateBase: updatePropertyBase,
+            onUpdateI18n: updatePropertyI18n,
+            onAddValue: addPropertyValue,
+            onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
+            onRemoveValue: removePropertyValue,
+            onMoveValue: movePropertyValue,
+            onUpdateValue: updatePropertyValue,
+            onUpdateValueI18n: updatePropertyValueI18n,
+            onTranslateLocale: onTranslatePropertyLocale,
+            onResetLocale: onResetPropertyLocale,
+            getPropertyIndex: (propertyId, _sectionIndex) =>
+              currentProjectProperties.findIndex(
+                candidate => candidate.id === propertyId,
+              ),
+            getPropertyFields: (_propertyId, propertyIndex) =>
+              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+            resolveCardPresentation: resolveProjectPropertyCardPresentation,
+            resolveTitleHref: resolveProjectPropertyTitleHref,
+            getMoveWindowSize: () => enabledProjectFieldWindowSize,
+            isMoveLocked: property =>
+              property.scope !== 'project' && !isPropertyEnabled(property),
+            resolveSourceTag: resolveProjectPropertySourceTag,
+          }}
+        />
+      </FormSurface>
     </Main.Facet>
 
     <div class="hidden" aria-hidden="true">
@@ -2840,22 +2882,33 @@ $effect(() => {
     transition="fade"
     fillHeight={true}
     edgeToEdge={true}
+    contentClass="h-full overflow-hidden"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    {#if imageProviderProps.isValid}
-      <ImageProvider model={imageProviderModel}>
-        <ResourceViewer
-          canEditPresentationMode={canEditImagePresentationMode}
-          canEditDropzone={canEditImageDropzone}
-          {onPresentationModeCommitted}
-        />
-      </ImageProvider>
-    {:else}
-      <div
-        class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
-      >
-        {m.admin__forms_project_image_save_hint()}
+    <FormSurface class="mb-0! flex h-full min-h-0 flex-col">
+      <SectionHeader
+        icon={ImageIcon}
+        title={m.admin__forms_project_image_title()}
+        class="shrink-0"
+      />
+      <div class="min-h-0 flex-1">
+        {#if imageProviderProps.isValid}
+          <ImageProvider model={imageProviderModel}>
+            <ResourceViewer
+              workspace
+              canEditPresentationMode={canEditImagePresentationMode}
+              canEditDropzone={canEditImageDropzone}
+              {onPresentationModeCommitted}
+            />
+          </ImageProvider>
+        {:else}
+          <div
+            class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
+          >
+            {m.admin__forms_project_image_save_hint()}
+          </div>
+        {/if}
       </div>
-    {/if}
+    </FormSurface>
   </Main.Facet>
 </Main.Root>

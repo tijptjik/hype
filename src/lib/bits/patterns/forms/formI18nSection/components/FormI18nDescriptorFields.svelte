@@ -67,6 +67,7 @@ let {
 
   {#if config.kind === 'textarea'}
     <TextArea
+      renderHtml={config.key === 'description'}
       label={config.label}
       {locale}
       isTranslated={true}

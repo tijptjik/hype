@@ -1,4 +1,5 @@
 <script lang="ts">
+import { useId } from 'bits-ui'
 import { Checkbox } from '#lib/bits/custom/index.js'
 import ChevronUpIcon from 'virtual:icons/proicons/chevron-up'
 import ChevronDownIcon from 'virtual:icons/proicons/chevron-down'
@@ -12,6 +13,8 @@ let {
   isEditing = false,
   onToggleCell,
 }: Omit<UserCapabilityMatrixProps, 'title' | 'subtitle'> = $props()
+
+const matrixId = useId()
 
 type SortKey = 'user' | CapabilityKey
 type SortDirection = 'asc' | 'desc'
@@ -56,6 +59,12 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
     <thead>
       <tr>
         <th
+          scope="col"
+          aria-sort={sortKey === 'user'
+            ? sortDirection === 'asc'
+              ? 'ascending'
+              : 'descending'
+            : 'none'}
           class="bits-user-capability-matrix__head-cell bits-user-capability-matrix__head-cell--user"
         >
           <div class="flex items-end justify-between gap-2">
@@ -88,11 +97,17 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
         </th>
         {#each capabilityKeys as capabilityKey (capabilityKey)}
           <th
+            scope="col"
+            aria-sort={sortKey === capabilityKey
+              ? sortDirection === 'asc'
+                ? 'descending'
+                : 'ascending'
+              : 'none'}
             class="bits-user-capability-matrix__head-cell bits-user-capability-matrix__head-cell--capability"
           >
             <div class="flex h-full w-full flex-col items-center justify-end gap-1">
               <span
-                class="block w-full text-center text-xxs tracking-wide normal-case whitespace-nowrap"
+                class="block w-full text-center text-sm leading-snug normal-case whitespace-normal"
                 >{capabilityLabelByKey[capabilityKey] ?? capabilityKey}</span
               >
               <span
@@ -132,13 +147,18 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
               class="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold max-w-80"
               >{row.name}</span
             >
-            <span class="block text-xxs uppercase tracking-wide text-neutral-content/80"
+            <span class="block text-xxs uppercase tracking-wide text-muted-foreground"
               >{row.role}</span
             >
           </th>
           {#each capabilityKeys as capabilityKey (capabilityKey)}
             <td class="bits-user-capability-matrix__cell">
+              <label class="sr-only" for={`${matrixId}-${row.userId}-${capabilityKey}`}
+                >{row.name}:
+                {capabilityLabelByKey[capabilityKey] ?? capabilityKey}</label
+              >
               <Checkbox
+                id={`${matrixId}-${row.userId}-${capabilityKey}`}
                 checked={row.capabilities?.[capabilityKey] === true}
                 disabled={!isEditing}
                 onCheckedChange={value =>

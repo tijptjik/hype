@@ -19,6 +19,7 @@ let {
   onSelect,
   resultMap,
   resultItemClass = '',
+  resultListClass = '',
   visualResultItemClass = '',
   visualPreviewClass = '',
   class: className = '',
@@ -164,7 +165,9 @@ $effect(() => {
     <SearchPrimitive.ResultWrapper class="bits-search__results mx-3 mt-1">
       <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
-          <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
+          <div
+            class={`flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain ${resultListClass}`}
+          >
             {#each results as item, index (index)}
               {#if resultMap.variant?.(item) === 'visual' ||
                 resultMap.previewImage?.(item)}

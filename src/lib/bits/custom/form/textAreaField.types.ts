@@ -6,6 +6,8 @@ export interface TextAreaProps {
   name?: string
   label?: string
   value?: string
+  /** Render sanitized HTML instead of source text while viewing. */
+  renderHtml?: boolean
   isEditing?: boolean
   placeholder?: string
   required?: boolean
