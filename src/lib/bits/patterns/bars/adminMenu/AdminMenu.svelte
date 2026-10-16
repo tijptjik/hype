@@ -16,7 +16,6 @@ import ChartColumnIncreasing from 'virtual:icons/proicons/bar-chart'
 import CloudArrowUp from 'virtual:icons/proicons/cloud-arrow-up'
 import BuildingLibrary from 'virtual:icons/proicons/bank'
 import InboxArrowDown from 'virtual:icons/proicons/mail-open'
-import MapIcon from 'virtual:icons/proicons/map'
 import MapPin from 'virtual:icons/proicons/location'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
@@ -80,15 +79,6 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.hub),
     })
   }
-
-  items.push({
-    href:
-      adminCtx.activeResourceType === 'feature' && adminCtx.activeResourceRef
-        ? `/features/${adminCtx.activeResourceRef}`
-        : '/',
-    label: 'Map',
-    icon: MapIcon,
-  })
 
   if (adminCtx.appCtx.isSuperAdmin()) {
     items.push({

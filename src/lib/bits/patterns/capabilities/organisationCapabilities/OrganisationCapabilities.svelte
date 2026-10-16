@@ -1,6 +1,8 @@
 <script lang="ts">
+import { fade } from 'svelte/transition'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import { formSearchHeaderStyles } from '#lib/bits/patterns/forms/formSurface/formSearchHeader.styles'
 import { m } from '#lib/i18n.js'
-import { Button } from '#lib/bits/core/index.js'
 import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import {
   FormI18nCapabilities,
@@ -10,8 +12,8 @@ import type { OrganisationCapabilitiesProps } from './organisationCapabilities.t
 import OrganisationCapabilitiesEmpty from './components/OrganisationCapabilitiesEmpty.svelte'
 import OrganisationCapabilitiesSearch from './components/OrganisationCapabilitiesSearch.svelte'
 import OrganisationCapabilitiesList from './components/OrganisationCapabilitiesList.svelte'
-import Trash2Icon from 'virtual:icons/proicons/delete'
-import XIcon from 'virtual:icons/proicons/cancel'
+import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
+import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles'
 
 let {
   selectedCapabilityKeys,
@@ -21,7 +23,6 @@ let {
   locales,
   isEditing,
   isArchived = false,
-  resetVersion = 0,
   capabilityLabelsByKey,
   formCapabilityFields,
   emptyCapabilitiesInputAttrs,
@@ -32,90 +33,50 @@ let {
   onAddCapability,
   onRemoveCapability,
   onEnterEditMode,
+  onTranslate,
+  onResetLocale,
 }: OrganisationCapabilitiesProps = $props()
 
-let isRemoveMode = $state(false)
-let lastResetVersion = $derived(resetVersion)
 const hasCapabilities = $derived(selectedCapabilityKeys.length > 0)
-const showInitialAddLayout = $derived(isEditing && !hasCapabilities)
 
-const sectionClass = $derived(
-  [
-    'bits-form__section',
-    'bits-form__parent-resource',
-    'bits-form__capabilities-section',
-    showInitialAddLayout ? 'bits-form__capabilities-section--initial' : '',
-  ]
-    .filter(Boolean)
-    .join(' '),
-)
-
-const headerClass = $derived(
-  [
-    'bits-form__capabilities-header',
-    showInitialAddLayout ? 'bits-form__capabilities-header--initial' : '',
-  ]
-    .filter(Boolean)
-    .join(' '),
-)
-
-function onToggleRemoveMode(): void {
-  isRemoveMode = !isRemoveMode
-}
-
-$effect(() => {
-  if (isEditing) return
-  isRemoveMode = false
-})
-
-$effect(() => {
-  if (resetVersion === lastResetVersion) return
-  lastResetVersion = resetVersion
-  isRemoveMode = false
-})
+const sectionClass =
+  '@container bits-form__section bits-form__parent-resource bits-form__capabilities-section'
+const headerClass = 'bits-form__capabilities-header'
 </script>
 
-{#if !hasCapabilities && !isEditing}
-  <OrganisationCapabilitiesEmpty {onEnterEditMode} disabled={isArchived} />
-{:else}
-  <section class={sectionClass}>
+<div
+  class={`grid flex-1 ${hasCapabilities ? 'grid-rows-[repeat(2,minmax(min-content,1fr))]' : 'grid-rows-[minmax(min-content,1fr)]'}`}
+>
+  <section class={`${sectionClass} flex min-h-0 flex-col`}>
     {#if shouldSubmitEmptyCapabilities && emptyCapabilitiesInputAttrs}
       <input {...emptyCapabilitiesInputAttrs}>
     {/if}
 
     <SectionHeader
+      icon={ShieldIcon}
       title={m.resources__capabilities()}
       description={m.admin__forms_capabilities_add_subtitle()}
-      class={headerClass}
+      class={`${headerClass} ${formSearchHeaderStyles}`}
     >
       {#snippet right()}
-        {#if isEditing && hasCapabilities}
-          <Button
-            text={isRemoveMode
-              ? m.moving_each_orangutan_care()
-              : m.admin__forms_capabilities_remove_mode_enable()}
-            style="ghost"
-            color="light"
-            size="sm"
-            iconComponent={isRemoveMode ? XIcon : Trash2Icon}
-            onClick={onToggleRemoveMode}
-            class="h-10 whitespace-nowrap min-w-max"
-          />
+        {#if isEditing}
+          <div class="w-full" transition:fade={{ duration: 140 }}>
+            <OrganisationCapabilitiesSearch
+              {isEditing}
+              {capabilitySearchOptions}
+              {selectedCapabilityIds}
+              {currentLocaleKey}
+              focusOnMount={false}
+              {onAddCapability}
+            />
+          </div>
         {/if}
       {/snippet}
     </SectionHeader>
 
-    <div class="bits-form__capabilities-search-row">
-      <OrganisationCapabilitiesSearch
-        {isEditing}
-        {capabilitySearchOptions}
-        {selectedCapabilityIds}
-        {currentLocaleKey}
-        focusOnMount={showInitialAddLayout}
-        {onAddCapability}
-      />
-    </div>
-
+    {#if !hasCapabilities && !isEditing}
+      <OrganisationCapabilitiesEmpty {onEnterEditMode} disabled={isArchived} />
+    {/if}
     {#if capabilityIssues.length > 0}
       <SectionHeaderPrimitive.Issues issues={capabilityIssues} />
     {/if}
@@ -124,7 +85,6 @@ $effect(() => {
       <OrganisationCapabilitiesList
         {selectedCapabilityKeys}
         {isEditing}
-        {isRemoveMode}
         {getCapabilityDisplayLabel}
         {onRemoveCapability}
       />
@@ -132,24 +92,42 @@ $effect(() => {
   </section>
 
   {#if hasCapabilities}
-    <FormI18nSection
-      title={m.admin__forms_capabilities_localization_title()}
-      subtitle={m.admin__forms_capabilities_labels_subtitle()}
-      {locales}
-      {isEditing}
-    >
-      {#snippet children(
-        locale,
-      )}
-        <FormI18nCapabilities
-          fields={formCapabilityFields}
-          capabilityKeys={selectedCapabilityKeys}
-          capabilityLabels={capabilityLabelsByKey}
-          {locale}
-          {isEditing}
-          {isRequiredInPreflight}
-        />
-      {/snippet}
-    </FormI18nSection>
+    <div class={formSectionDividerStyles}>
+      <FormI18nSection
+        title={m.admin__forms_capabilities_localization_title()}
+        subtitle={m.admin__forms_capabilities_labels_subtitle()}
+        localeCodeClass="absolute right-6 top-3 text-base font-medium uppercase text-muted-foreground"
+        {locales}
+        {isEditing}
+        {onTranslate}
+        {onResetLocale}
+      >
+        {#snippet left()}
+          <div class="flex items-center gap-3">
+            <LanguagesIcon class="size-6 shrink-0 text-primary" aria-hidden="true" />
+            <div>
+              <h2 class="text-xl font-semibold tracking-tight">
+                {m.admin__forms_capabilities_localization_title()}
+              </h2>
+              <p class="text-xs text-muted-foreground">
+                {m.admin__forms_capabilities_labels_subtitle()}
+              </p>
+            </div>
+          </div>
+        {/snippet}
+        {#snippet children(
+          locale,
+        )}
+          <FormI18nCapabilities
+            fields={formCapabilityFields}
+            capabilityKeys={selectedCapabilityKeys}
+            capabilityLabels={capabilityLabelsByKey}
+            {locale}
+            {isEditing}
+            {isRequiredInPreflight}
+          />
+        {/snippet}
+      </FormI18nSection>
+    </div>
   {/if}
-{/if}
+</div>

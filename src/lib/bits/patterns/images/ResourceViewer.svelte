@@ -86,6 +86,7 @@ let {
   canEditPresentationMode = true,
   canEditDropzone = false,
   hasBottomPadding = false,
+  workspace = false,
   isReadonly = false,
   prefetchMetadata = false,
   onPresentationModeCommitted,
@@ -93,6 +94,7 @@ let {
   canEditPresentationMode?: boolean
   canEditDropzone?: boolean
   hasBottomPadding?: boolean
+  workspace?: boolean
   isReadonly?: boolean
   prefetchMetadata?: boolean
   onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
@@ -312,9 +314,11 @@ onDestroy(() => {
 </script>
 
 <div
-  class={hasBottomPadding
-    ? 'h-full w-full select-none bg-black pb-4 pr-4 pt-1'
-    : 'h-full w-full select-none bg-black pr-4 pt-1'}
+  class={workspace
+    ? 'h-full min-h-0 w-full select-none bg-transparent p-6'
+    : hasBottomPadding
+      ? 'h-full w-full select-none bg-black pb-4 pr-4 pt-1'
+      : 'h-full w-full select-none bg-black pr-4 pt-1'}
 >
   <Dropzone
     disabled={!hasItems || isDropzoneDisabled}

@@ -1,6 +1,7 @@
 <script lang="ts">
 import * as InputPrimitive from './src/input/components'
 import Label from './src/label/Label.svelte'
+import FieldError from './src/label/components/Error.svelte'
 import type { TextInputProps } from './textInputField.types'
 
 let {
@@ -66,13 +67,7 @@ function handleValueChange(nextValue: string): void {
 </script>
 
 <div class={wrapperClass}>
-  <Label
-    for={id}
-    text={label}
-    {required}
-    {isEditing}
-    issues={isEditing ? issues : undefined}
-  />
+  <Label for={id} text={label} {required} {isEditing} />
 
   <div class={controlWrapClass}>
     <InputPrimitive.Input
@@ -100,4 +95,5 @@ function handleValueChange(nextValue: string): void {
       </div>
     {/if}
   </div>
+  <FieldError issues={isEditing ? issues : undefined} class="px-4" />
 </div>

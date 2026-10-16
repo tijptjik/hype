@@ -1,5 +1,5 @@
 import type { CapabilityI18nRoot, CapabilityKey } from '#lib/capabilities.types.js'
-import type { LocaleKey } from '#lib/types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
 
 export type CapabilitySearchOption = {
   id: CapabilityKey
@@ -40,6 +40,8 @@ export interface OrganisationCapabilitiesProps {
   onAddCapability: (option: CapabilitySearchOption) => void
   onRemoveCapability: (key: CapabilityKey) => void
   onEnterEditMode: () => void
+  onTranslate?: (source: Locale, target: Locale) => Promise<boolean | void>
+  onResetLocale?: (target: Locale) => void
 }
 
 export interface OrganisationCapabilitiesSearchProps {
@@ -54,7 +56,6 @@ export interface OrganisationCapabilitiesSearchProps {
 export interface OrganisationCapabilitiesListProps {
   selectedCapabilityKeys: CapabilityKey[]
   isEditing: boolean
-  isRemoveMode: boolean
   getCapabilityDisplayLabel: (key: CapabilityKey) => string
   onRemoveCapability: (key: CapabilityKey) => void
 }

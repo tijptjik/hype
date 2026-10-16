@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { fade, scale } from 'svelte/transition'
+import { fade } from 'svelte/transition'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // TYPES
@@ -40,11 +40,12 @@ let {
         })}
         <li
           class={HEADER_FACET_ITEM_CLASSES}
-          in:scale={{ duration: 120, start: 0.92 }}
+          in:fade={{ duration: 120 }}
           out:fade={{ duration: 120 }}
         >
           <Button
             text={facet.label}
+            attrs={{ 'aria-current': isActive ? 'page' : undefined }}
             {color}
             style="ghost"
             class={facetButtonClass}

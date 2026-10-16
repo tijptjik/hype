@@ -131,6 +131,8 @@ export interface HeaderLayoutRegionConfig {
 }
 
 export interface HeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
+  /** Main-panel left edge, used to align desktop navigation with its content. */
+  contentStart?: number
   brand?: {
     src: string
     alt: string

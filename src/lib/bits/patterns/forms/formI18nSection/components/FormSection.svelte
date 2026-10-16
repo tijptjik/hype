@@ -10,7 +10,7 @@ let {
   cardClass = 'bits-form__i18n-card',
   contentClass = 'flex flex-col gap-4 pb-2 pt-2',
   footerClass = 'mt-auto pt-4',
-  localeCodeClass = 'absolute right-5.5 top-4 text-2xl font-bold uppercase text-muted-foreground',
+  localeCodeClass = 'absolute right-5 top-4 text-xs font-semibold uppercase tracking-widest text-primary',
   onTranslate,
   onResetLocale,
   sectionKey,

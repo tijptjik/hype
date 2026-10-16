@@ -38,6 +38,8 @@ const expandedWidth = $derived(isAdmin ? '380px' : '420px')
     class="bits-theme flex h-full max-w-full shrink-0 select-none flex-col bg-panel shadow-xl transition-all duration-500"
     class:overflow-x-hidden={preserveContentWidth}
     class:overflow-y-auto={scrollable}
+    class:border-r={isAdmin}
+    class:border-border={isAdmin}
     class:left-0={position === 'left'}
     style:width={isNarrow ? (isAdmin ? '64px' : '80px') : expandedWidth}
     transition:slide={{

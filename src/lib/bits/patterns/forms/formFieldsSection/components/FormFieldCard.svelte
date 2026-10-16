@@ -84,16 +84,28 @@ const isInheritedEnabled = $derived(
 
 const localeKeys = ['en', 'zhHans', 'zhHant'] as const
 
-const isEnabledInputValue = $derived(
-  (
-    typeof (property as typeof property & { isEnabled?: boolean }).isEnabled ===
-    'boolean'
-      ? Boolean((property as typeof property & { isEnabled?: boolean }).isEnabled)
-      : Boolean(property.isDefaultEnabled)
-  )
-    ? 'true'
-    : 'false',
-)
+/**
+ * Binds hidden property controls to the owning remote form.
+ * @param path - Field path within this property row.
+ * @param value - Typed value to serialize.
+ * @returns Bound attributes, or no control when no form is available.
+ */
+function getHiddenFieldAttrs(
+  path: string[],
+  value: string | number | boolean,
+): Record<string, unknown> | undefined {
+  let field: unknown = propertyFields
+  for (const segment of path) {
+    if (!field || (typeof field !== 'object' && typeof field !== 'function')) return
+    field = (field as Record<string, unknown>)[segment]
+  }
+  // Lazy field proxies expose methods without enumerable own properties.
+  if (!field || (typeof field !== 'object' && typeof field !== 'function')) return
+  const accessor = field as {
+    as?: (kind: string, value: string | number | boolean) => Record<string, unknown>
+  }
+  return typeof accessor.as === 'function' ? accessor.as('hidden', value) : undefined
+}
 
 const cardClass = $derived(
   [
@@ -112,10 +124,13 @@ const cardClass = $derived(
 
 <article class={cardClass}>
   {#snippet hiddenInput(
-    name: string,
-    value: string,
+    path: string[],
+    value: string | number | boolean,
   )}
-    <input type="hidden" {name} {value}>
+    {@const attrs = getHiddenFieldAttrs(path, value)}
+    {#if attrs}
+      <input {...attrs}>
+    {/if}
   {/snippet}
 
   <FormFieldCardHeader
@@ -149,78 +164,45 @@ const cardClass = $derived(
   />
 
   <div class="hidden" aria-hidden="true">
-    {@render hiddenInput(
-      `data.properties[${propertyIndex}].rank`,
-      String(property.rank ?? sectionRank ?? 0),
-    )}
+    {@render hiddenInput(['rank'], property.rank ?? sectionRank ?? 0)}
   </div>
 
   {#if presentation === 'header'}
     <div class="hidden" aria-hidden="true">
-      {@render hiddenInput(`data.properties[${propertyIndex}].id`, property.id)}
+      {@render hiddenInput(['id'], property.id)}
+      {@render hiddenInput(['projectId'], property.projectId ?? '')}
+      {@render hiddenInput(['organisationId'], property.organisationId ?? '')}
+      {@render hiddenInput(['hubId'], property.hubId ?? '')}
+      {@render hiddenInput(['scope'], property.scope ?? 'project')}
+      {@render hiddenInput(['type'], property.type ?? '')}
+      {@render hiddenInput(['key'], property.key ?? '')}
+      {@render hiddenInput(['component'], property.component ?? '')}
+      {@render hiddenInput(['min'], property.min ?? '')}
+      {@render hiddenInput(['max'], property.max ?? '')}
+      {@render hiddenInput(['isTranslatable'], Boolean(property.isTranslatable))}
+      {@render hiddenInput(['isDefaultEnabled'], Boolean(property.isDefaultEnabled))}
       {@render hiddenInput(
-        `data.properties[${propertyIndex}].projectId`,
-        property.projectId ?? '',
-      )}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].organisationId`,
-        property.organisationId ?? '',
-      )}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].hubId`,
-        property.hubId ?? '',
-      )}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].scope`,
-        property.scope ?? 'project',
-      )}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].type`,
-        property.type ?? '',
-      )}
-      {@render hiddenInput(`data.properties[${propertyIndex}].key`, property.key ?? '')}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].component`,
-        property.component ?? '',
-      )}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].min`,
-        property.min == null ? '' : String(property.min),
-      )}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].max`,
-        property.max == null ? '' : String(property.max),
-      )}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].isTranslatable`,
-        property.isTranslatable ? 'true' : 'false',
-      )}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].isDefaultEnabled`,
-        property.isDefaultEnabled ? 'true' : 'false',
-      )}
-      {@render hiddenInput(
-        `data.properties[${propertyIndex}].isEnabled`,
-        isEnabledInputValue,
+        ['isEnabled'],
+        Boolean(
+          (property as typeof property & { isEnabled?: boolean }).isEnabled ??
+            property.isDefaultEnabled,
+        ),
       )}
 
       {#each localeKeys as locale}
         {@const localeI18n = property.i18n?.[locale]}
+        {@render hiddenInput(['i18n', locale, 'label'], localeI18n?.label ?? '')}
         {@render hiddenInput(
-          `data.properties[${propertyIndex}].i18n.${locale}.label`,
-          localeI18n?.label ?? '',
-        )}
-        {@render hiddenInput(
-          `data.properties[${propertyIndex}].i18n.${locale}.placeholder`,
+          ['i18n', locale, 'placeholder'],
           localeI18n?.placeholder ?? '',
         )}
         {@render hiddenInput(
-          `data.properties[${propertyIndex}].i18n.${locale}.labelGen`,
-          localeI18n?.labelGen ? 'true' : 'false',
+          ['i18n', locale, 'labelGen'],
+          Boolean(localeI18n?.labelGen),
         )}
         {@render hiddenInput(
-          `data.properties[${propertyIndex}].i18n.${locale}.placeholderGen`,
-          localeI18n?.placeholderGen ? 'true' : 'false',
+          ['i18n', locale, 'placeholderGen'],
+          Boolean(localeI18n?.placeholderGen),
         )}
       {/each}
     </div>

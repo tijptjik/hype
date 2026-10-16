@@ -9,10 +9,17 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 // I18N
 import { m } from '#lib/i18n.js'
-import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '#lib/i18n.js'
+import {
+  getLocale,
+  getLocaleKey,
+  getLocaleOrder,
+  toLocaleKey,
+  translateText,
+} from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
+import { translateCapabilityLabels } from '#lib/client/services/capabilityTranslation.js'
 import {
   addUserRoleSelection,
   bindAdminFacetHistorySync,
@@ -91,6 +98,13 @@ import {
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles'
+import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
+import {
+  FormSectionSkeleton,
+  FormProfileSkeleton,
+} from '#lib/bits/patterns/forms/formSkeleton/index.js'
 import {
   FormI18nDescriptorFields,
   FormI18nSection,
@@ -98,11 +112,10 @@ import {
   OrganisationCapabilities,
   FormSpecifiersFields,
   FormUserRolesSection,
-  GridSpacer,
   Main,
   ResourceViewer,
 } from '#lib/bits/index.js'
-import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ADAPTERS
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // CLIENT SERVICES
@@ -122,6 +135,9 @@ import type { OrganisationFacet } from '#lib/navigation/index.js'
 import { createSchemaRequiredInferer, toIssueMessages } from '#lib/utils/form-schema.js'
 // ICONS
 import Blend from 'virtual:icons/proicons/shape-intersect'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
+import { organisationTabsStyles } from '#lib/bits/patterns/forms/formSurface/organisationTabs.styles'
 import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
 import Type from 'virtual:icons/proicons/text'
 // ENUMS
@@ -216,6 +232,7 @@ let capabilityResetVersion = $state(0)
 let selectedUsersById = $state<Record<string, User>>({})
 let hasAutoEnteredEditForNew = $state(false)
 let settledOrganisationRef = $state<string | null>(null)
+let completedOrganisationLoadRef = $state<string | null>(null)
 
 let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   canEdit: true,
@@ -695,6 +712,72 @@ function onRemoveCapability(capabilityKey: CapabilityKey): void {
   revalidateAfterProgrammaticChange()
 }
 
+/**
+ * Fills empty capability labels without overwriting edits made during translation.
+ * @param sourceLocale - Locale to translate from.
+ * @param targetLocale - Locale to fill.
+ * @returns Whether any translated labels were applied.
+ */
+async function onTranslateCapabilities(
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<boolean> {
+  const source = toLocaleKey(sourceLocale)
+  const target = toLocaleKey(targetLocale)
+  const ref = organisationRef
+  const resetVersion = capabilityResetVersion
+  const snapshot = Object.fromEntries(
+    selectedCapabilityKeys.map(key => [
+      key,
+      { i18n: { ...formCapabilityDefinitions[key]?.i18n } },
+    ]),
+  )
+  const translated = await translateCapabilityLabels(
+    snapshot,
+    source,
+    target,
+    translateText,
+  )
+  if (ref !== organisationRef || resetVersion !== capabilityResetVersion || !isEditing)
+    return false
+  let applied = false
+  // Recheck each field after the remote request so newer edits and removals win.
+  updateFormData(capabilityFormUpdater, data => {
+    for (const key of Object.keys(translated) as CapabilityKey[]) {
+      const capability = data.capabilities?.[key]
+      if (
+        !capability ||
+        capability.i18n?.[target]?.trim() ||
+        capability.i18n?.[source] !== snapshot[key]?.i18n?.[source]
+      )
+        continue
+      capability.i18n = { ...capability.i18n, [target]: translated[key] }
+      applied = true
+    }
+    return data
+  })
+  if (applied) revalidateAfterProgrammaticChange()
+  return applied
+}
+
+/**
+ * Clears one locale's capability labels, ready for translation or manual entry.
+ * @param targetLocale - Locale to clear.
+ * @returns Nothing.
+ */
+function onResetCapabilityLocale(targetLocale: Locale): void {
+  capabilityResetVersion += 1
+  const target = toLocaleKey(targetLocale)
+  updateFormData(capabilityFormUpdater, data => {
+    for (const key of selectedCapabilityKeys) {
+      const capability = data.capabilities?.[key]
+      if (capability) capability.i18n = { ...capability.i18n, [target]: '' }
+    }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
 function getCapabilityDisplayLabel(capabilityKey: CapabilityKey): string {
   const labels = formCapabilityDefinitions[capabilityKey]?.i18n
 
@@ -826,7 +909,16 @@ const canEditImageDropzone = $derived(
   canEditOrganisation && isCurrentRefLoaded && !optimisticOrganisationData?.isArchived,
 )
 const isFormReady = $derived(
-  Boolean(formCtx.form?.fields && (organisation?.data || isNewOrganisationRef)),
+  Boolean(
+    formCtx.form?.fields &&
+      (isNewOrganisationRef || (isCurrentRefLoaded && organisation?.data)),
+  ),
+)
+
+const hasProfileLoadFailed = $derived(
+  !isNewOrganisationRef &&
+    completedOrganisationLoadRef === organisationRef &&
+    !isCurrentRefLoaded,
 )
 
 // § Handlers
@@ -908,6 +1000,19 @@ async function refreshOrganisation(
     refKey: 'code',
     meta: { isAdminRequest: true, profile: 'admin' },
   }).catch(() => null)
+}
+
+/**
+ * Retries a failed profile load without committing a response to a different route.
+ * @returns Resolves after the current request completes.
+ */
+async function retryOrganisationLoad(): Promise<void> {
+  const ref = organisationRef
+  completedOrganisationLoadRef = null
+  const result = await refreshOrganisation(ref)
+  if (ref !== organisationRef) return
+  commitSettledOrganisationState(result)
+  completedOrganisationLoadRef = ref
 }
 
 async function handleOrganisationStateToggle({
@@ -1048,12 +1153,14 @@ $effect(() => {
 
 // Keep facet + entity data in sync with the current route ref.
 $effect(() => {
+  const ref = organisationRef
   return editorCtrl.syncRouteAndLoad({
-    ref: organisationRef,
+    ref,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
       settledOrganisationRef = null
+      completedOrganisationLoadRef = null
     },
     setFacetForRef: nextRef => {
       untrack(() => {
@@ -1063,7 +1170,10 @@ $effect(() => {
       })
     },
     load: refreshOrganisation,
-    commit: commitSettledOrganisationState,
+    commit: result => {
+      commitSettledOrganisationState(result)
+      completedOrganisationLoadRef = ref
+    },
   })
 })
 
@@ -1229,43 +1339,101 @@ $effect(() => {
     attrs={formCtx.attributes}
     isReady={isFormReady}
   >
+    {#snippet fallback()}
+      <Main.Facet isVisible={!isImagesFacet} class="left-0! right-0!" fillHeight={true}>
+        {#if hasProfileLoadFailed}
+          <FormSurface>
+            <div role="alert" class="p-6">
+              <p class="text-sm text-muted-foreground">
+                {m.admin__forms_profile_load_failed()}
+              </p>
+              <button
+                type="button"
+                class="mt-4 rounded-lg border border-border px-4 py-2 text-sm hover:bg-raised"
+                onclick={retryOrganisationLoad}
+              >
+                {m.retry()}
+              </button>
+            </div>
+          </FormSurface>
+        {:else if !isCoreFacet}
+          <FormSurface>
+            <div role="status" aria-label={m.resource_loading()} aria-busy="true">
+              <FormSectionSkeleton
+                divided={false}
+                title={isCapabilitiesFacet
+                  ? m.resources__capabilities()
+                  : m.admin__forms_common_fields()}
+                icon={isCapabilitiesFacet ? ShieldIcon : Type}
+              >
+                <div class="space-y-4 p-6">
+                  {#each Array(3) as _}
+                    <Skeleton class="h-14 w-full rounded-md" />
+                  {/each}
+                </div>
+              </FormSectionSkeleton>
+            </div>
+          </FormSurface>
+        {:else}
+          <FormProfileSkeleton
+            {locales}
+            profileIcon={OrganisationIcon}
+            membersIcon={OrganisationIcon}
+            detailsIcon={Type}
+            membersTitle={m.admin__forms_organisation_members_title()}
+            membersSubtitle={m.admin__forms_organisation_members_subtitle()}
+          />
+        {/if}
+      </Main.Facet>
+    {/snippet}
     <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <FormI18nSection
-        title={m.admin__forms_common_descriptors()}
-        {locales}
-        {onTranslate}
-        {onResetLocale}
-        {isEditing}
-      >
-        {#snippet center()}
-          <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-        {/snippet}
+      <FormSurface>
+        <FormI18nSection
+          title="Profile"
+          localeCodeClass="absolute right-6 top-3 text-base font-medium uppercase text-muted-foreground"
+          {locales}
+          {onTranslate}
+          {onResetLocale}
+          {isEditing}
+        >
+          {#snippet left()}
+            <div class="flex items-center gap-3">
+              <OrganisationIcon class="size-6 text-primary" aria-hidden="true" />
+              <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
+            </div>
+          {/snippet}
 
-        {#snippet children(
-          locale,
-        )}
-          <FormI18nDescriptorFields
-            form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[locale]}
-            {locale}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </FormI18nSection>
+          {#snippet center()}
+            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+          {/snippet}
 
-      <GridSpacer>
-        {#snippet left()}
-          {@const roleFieldNameByUserId =
-            getRoleFieldNameByUserId(userRoleResolverForm)}
+          {#snippet children(
+            locale,
+          )}
+            <FormI18nDescriptorFields
+              form={formCtx.form}
+              fields={formCtx.form.fields.data.i18n[locale]}
+              {locale}
+              {isEditing}
+              {isRequiredInPreflight}
+            />
+          {/snippet}
+        </FormI18nSection>
+
+        {@const roleFieldNameByUserId = getRoleFieldNameByUserId(userRoleResolverForm)}
+        <div class={formSectionDividerStyles}>
           <FormUserRolesSection
+            currentUserId={currentActor.userId}
+            icon={OrganisationIcon}
+            layout="list"
             title={m.admin__forms_organisation_members_title()}
             subtitle={m.admin__forms_organisation_members_subtitle()}
             transitionEntityKey={organisation?.data?.id ?? organisationRef}
@@ -1282,16 +1450,17 @@ $effect(() => {
             {onRemoveUser}
             {onRoleChange}
           />
-        {/snippet}
-
-        {#snippet right()}
+        </div>
+        <div class={formSectionDividerStyles}>
           <FormSpecifiersFields
+            icon={Type}
+            title="Details"
             form={formCtx.form}
             {isEditing}
             {isRequiredInPreflight}
           />
-        {/snippet}
-      </GridSpacer>
+        </div>
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isCapabilitiesFacet && canEditOrganisation}
@@ -1299,89 +1468,98 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
-      <OrganisationCapabilities
-        {selectedCapabilityKeys}
-        {capabilitySearchOptions}
-        {selectedCapabilityIds}
-        {currentLocaleKey}
-        {locales}
-        {isEditing}
-        isArchived={Boolean(optimisticOrganisationData?.isArchived)}
-        resetVersion={capabilityResetVersion}
-        {capabilityLabelsByKey}
-        formCapabilityFields={formCtx.form.fields.data
-          .capabilities as CapabilityFormFields}
-        emptyCapabilitiesInputAttrs={formCtx.form.fields.data.capabilities.as(
-          'hidden',
-          '{}',
-        )}
-        {shouldSubmitEmptyCapabilities}
-        {capabilityIssues}
-        {isRequiredInPreflight}
-        {getCapabilityDisplayLabel}
-        {onAddCapability}
-        {onRemoveCapability}
-        onEnterEditMode={() => headerCtrl.setEditing(true)}
-      />
+      <FormSurface class={`${organisationTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <OrganisationCapabilities
+          {selectedCapabilityKeys}
+          {capabilitySearchOptions}
+          {selectedCapabilityIds}
+          {currentLocaleKey}
+          {locales}
+          {isEditing}
+          isArchived={Boolean(optimisticOrganisationData?.isArchived)}
+          resetVersion={capabilityResetVersion}
+          {capabilityLabelsByKey}
+          formCapabilityFields={formCtx.form.fields.data
+            .capabilities as CapabilityFormFields}
+          emptyCapabilitiesInputAttrs={formCtx.form.fields.data.capabilities.as(
+            'hidden',
+            '{}',
+          )}
+          {shouldSubmitEmptyCapabilities}
+          {capabilityIssues}
+          {isRequiredInPreflight}
+          {getCapabilityDisplayLabel}
+          {onAddCapability}
+          {onRemoveCapability}
+          onTranslate={onTranslateCapabilities}
+          onResetLocale={onResetCapabilityLocale}
+          onEnterEditMode={() => headerCtrl.setEditing(true)}
+        />
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
       fillHeight={true}
-      class="bits-theme min-h-0 pb-4"
+      class="bits-theme min-h-0 left-0! right-0!"
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormFieldsSection
-        items={organisationFieldsInSection}
-        title={m.admin__forms_common_fields()}
-        description={m.admin__forms_common_fields_subtitle()}
-        issues={fieldSectionIssues}
-        actions={fieldActions}
-        issueItemIds={fieldSectionIssueItemIds}
-        layoutMutationVersion={fieldsLayoutMutationVersion}
-        canEdit={canSubmitOrganisation || !isCurrentRefSettled}
-        disableEmptyAdd={Boolean(optimisticOrganisationData?.isArchived)}
-        {isEditing}
-        removeMode={fieldRemoveMode}
-        onRemoveModeChange={value => {
-          fieldRemoveMode = value
-        }}
-        card={{
-          removeMode: fieldRemoveMode,
-          locales,
-          isEditing,
-          isRequiredInPreflight,
-          allIssues: visibleAllIssues as Array<{
-            message: string
-            path?: Array<string | number>
-          }>,
-          classifierComponents: classifierComponentTypes,
-          specifierComponents: specifierComponentTypes,
-          onIncreaseRank: fieldActions.increaseRank,
-          onDecreaseRank: fieldActions.decreaseRank,
-          onRemove: fieldActions.remove,
-          onUpdateBase: updatePropertyBase,
-          onUpdateI18n: updatePropertyI18n,
-          onAddValue: addPropertyValue,
-          onRemoveValue: removePropertyValue,
-          onMoveValue: movePropertyValue,
-          onUpdateValue: updatePropertyValue,
-          onUpdateValueI18n: updatePropertyValueI18n,
-          onTranslateLocale: onTranslatePropertyLocale,
-          onResetLocale: onResetPropertyLocale,
-          getPropertyIndex: (propertyId, _sectionIndex) =>
-            getCurrentProjectProperties(organisationPropertyFormAdapter).findIndex(
-              candidate => candidate.id === propertyId,
-            ),
-          getPropertyFields: (_propertyId, propertyIndex) =>
-            getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-          resolveSourceTag: resolveOrganisationPropertyTypeTag,
-        }}
-      />
+      <FormSurface class={`${organisationTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormFieldsSection
+          icon={Type}
+          keepHeader
+          items={organisationFieldsInSection}
+          title={m.admin__forms_common_fields()}
+          description={m.admin__forms_common_fields_subtitle()}
+          issues={fieldSectionIssues}
+          actions={fieldActions}
+          issueItemIds={fieldSectionIssueItemIds}
+          layoutMutationVersion={fieldsLayoutMutationVersion}
+          canEdit={canSubmitOrganisation || !isCurrentRefSettled}
+          disableEmptyAdd={Boolean(optimisticOrganisationData?.isArchived)}
+          {isEditing}
+          removeMode={fieldRemoveMode}
+          onRemoveModeChange={value => {
+            fieldRemoveMode = value
+          }}
+          card={{
+            removeMode: fieldRemoveMode,
+            locales,
+            isEditing,
+            isRequiredInPreflight,
+            allIssues: visibleAllIssues as Array<{
+              message: string
+              path?: Array<string | number>
+            }>,
+            classifierComponents: classifierComponentTypes,
+            specifierComponents: specifierComponentTypes,
+            onIncreaseRank: fieldActions.increaseRank,
+            onDecreaseRank: fieldActions.decreaseRank,
+            onRemove: fieldActions.remove,
+            onUpdateBase: updatePropertyBase,
+            onUpdateI18n: updatePropertyI18n,
+            onAddValue: addPropertyValue,
+            onRemoveValue: removePropertyValue,
+            onMoveValue: movePropertyValue,
+            onUpdateValue: updatePropertyValue,
+            onUpdateValueI18n: updatePropertyValueI18n,
+            onTranslateLocale: onTranslatePropertyLocale,
+            onResetLocale: onResetPropertyLocale,
+            getPropertyIndex: (propertyId, _sectionIndex) =>
+              getCurrentProjectProperties(organisationPropertyFormAdapter).findIndex(
+                candidate => candidate.id === propertyId,
+              ),
+            getPropertyFields: (_propertyId, propertyIndex) =>
+              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+            resolveSourceTag: resolveOrganisationPropertyTypeTag,
+          }}
+        />
+      </FormSurface>
     </Main.Facet>
   </Main.Form>
   <Main.Facet
@@ -1392,20 +1570,50 @@ $effect(() => {
     contentClass="h-full overflow-hidden"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    {#if imageProviderProps.isValid}
-      <ImageProvider model={imageProviderModel}>
-        <ResourceViewer
-          canEditPresentationMode={canEditImagePresentationMode}
-          canEditDropzone={canEditImageDropzone}
-          {onPresentationModeCommitted}
-        />
-      </ImageProvider>
-    {:else}
-      <div
-        class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
-      >
-        {m.admin__forms_organisation_image_save_hint()}
+    <FormSurface class="mb-0! flex h-full min-h-0 flex-col">
+      <SectionHeader
+        icon={ImageIcon}
+        title={m.admin__forms_organisation_image_title()}
+        class="shrink-0"
+      />
+      <div class="min-h-0 flex-1">
+        {#if !isFormReady && !hasProfileLoadFailed}
+          <div
+            role="status"
+            aria-label={m.resource_loading()}
+            aria-busy="true"
+            class="h-full p-6"
+          >
+            <Skeleton class="h-full min-h-64 w-full rounded-xl" />
+          </div>
+        {:else if hasProfileLoadFailed}
+          <div role="alert" class="p-6 text-sm text-muted-foreground">
+            <p>{m.admin__forms_profile_load_failed()}</p>
+            <button
+              type="button"
+              class="mt-4 rounded-lg border border-border px-4 py-2 hover:bg-raised"
+              onclick={retryOrganisationLoad}
+            >
+              {m.retry()}
+            </button>
+          </div>
+        {:else if imageProviderProps.isValid}
+          <ImageProvider model={imageProviderModel}>
+            <ResourceViewer
+              workspace
+              canEditPresentationMode={canEditImagePresentationMode}
+              canEditDropzone={canEditImageDropzone}
+              {onPresentationModeCommitted}
+            />
+          </ImageProvider>
+        {:else}
+          <div
+            class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
+          >
+            {m.admin__forms_organisation_image_save_hint()}
+          </div>
+        {/if}
       </div>
-    {/if}
+    </FormSurface>
   </Main.Facet>
 </Main.Root>

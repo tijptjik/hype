@@ -59,7 +59,7 @@ $effect(() => {
     value={query}
     {placeholder}
     {disabled}
-    class="h-12 w-full rounded-lg bg-glass-300 px-4 pr-11 text-sm outline-none"
+    class="h-12 w-full rounded-lg border border-[var(--form-control-border)] bg-[var(--search-control-fill)] px-4 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
     autocomplete="off"
     oninput={handleInput}
     onfocus={handleFocus}

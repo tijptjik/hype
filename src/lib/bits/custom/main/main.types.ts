@@ -22,6 +22,7 @@ export interface MainFacetProps {
 
 export interface MainFormProps {
   children?: Snippet
+  fallback?: Snippet
   class?: string
   attrs?: Record<string, unknown>
   formEl?: HTMLFormElement

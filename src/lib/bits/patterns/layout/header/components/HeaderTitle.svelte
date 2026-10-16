@@ -38,9 +38,10 @@ const resolvedCrumbs = $derived(
 )
 </script>
 
-<div class="bits-pattern-header__title-group">
+<div class="bits-pattern-header__title-group w-max! shrink-0! min-w-max! gap-2!">
   <BitsHeader
     size="md"
+    class={String.raw`w-auto! max-w-none! flex-none! min-w-max! [&_.bits-header\_\_title]:overflow-visible [&_.bits-header\_\_title]:text-clip`}
     {icon}
     {href}
     crumbs={resolvedCrumbs}

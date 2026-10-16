@@ -7,6 +7,7 @@ import { fade, slide } from 'svelte/transition'
 import { m } from '#lib/i18n.js'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
+import EmptyState from '#lib/bits/custom/emptyState/EmptyState.svelte'
 import Item from './FormFieldsSectionItem.svelte'
 import Loading from './FormFieldsSectionLoading.svelte'
 // ICONS
@@ -53,32 +54,32 @@ const moveWindowSize = $derived(
     <Loading items={loadingItems} />
   </section>
 {:else if items.length === 0}
-  <section
-    class="bits-theme bits-form__section bits-project-fields__empty flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 text-center min-h-64"
+  <div
+    class="flex min-h-0 flex-1 flex-col"
     role="status"
     aria-live="polite"
     in:fade={{ duration: 140 }}
     out:fade={{ duration: 120 }}
   >
-    <div class="flex w-full max-w-2xl flex-col items-center gap-3">
-      <h3 class="bits-project-fields__empty-title text-2xl font-mono font-semibold">
-        {m.admin__forms_project_fields_empty_title()}
-      </h3>
-      <p class="bits-project-fields__empty-description max-w-2xl">
-        {m.admin__forms_project_fields_empty_description()}
-      </p>
-    </div>
-    {#if canEdit}
+    <EmptyState
+      title={m.admin__forms_project_fields_empty_title()}
+      description={m.admin__forms_project_fields_empty_description()}
+      class="bits-theme bits-form__section bits-project-fields__empty"
+      titleClass="bits-project-fields__empty-title"
+      descriptionClass="bits-project-fields__empty-description"
+      actions={canEdit ? emptyActions : undefined}
+    />
+    {#snippet emptyActions()}
       <Button
         text={m.fun_away_bird_peek()}
         color="primary"
         iconComponent={ListPlus}
         disabled={disableEmptyAdd || !onAdd}
         onClick={event => onAdd?.(event)}
-        class="bits-project-fields__empty-add-btn mt-1"
+        class="bits-project-fields__empty-add-btn"
       />
-    {/if}
-  </section>
+    {/snippet}
+  </div>
 {:else}
   <div
     class="flex flex-col gap-3"

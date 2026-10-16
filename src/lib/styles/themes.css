@@ -337,6 +337,11 @@
 
 /* Oblivion: rose and lilac with a cool mint edge, keeping the canvas luminous. */
 [data-theme="hype-light"] {
+  /* Paper-white workspaces and a single lilac tint keep field surfaces clear. */
+  --admin-form-workspace: var(--theme-panel);
+  --admin-form-control-fill: #f8f6fc;
+  --admin-form-search-fill: #f8f6fc;
+  --admin-form-heading: #f8f6fc;
   --admin-form-edge-width: 1px;
   --admin-form-divider-width: 1px;
   --admin-background:

@@ -2652,6 +2652,7 @@ $effect(() => {
       <GridSpacer cols={3} leftCols={2} rightCols={1}>
         {#snippet left()}
           <FormUserRolesSection
+            currentUserId={authActor.userId}
             title={m.admin__forms_project_members_title()}
             subtitle={m.admin__forms_project_members_subtitle()}
             transitionEntityKey={activeProjectData?.id ?? projectRef}

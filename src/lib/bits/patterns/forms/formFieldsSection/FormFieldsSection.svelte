@@ -9,6 +9,8 @@ import type {
 
 let {
   items,
+  icon,
+  keepHeader = false,
   isLoading = false,
   loadingItems: providedLoadingItems = [],
   title,
@@ -176,7 +178,7 @@ $effect(() => {
 })
 </script>
 
-{#if showEmptyState}
+{#if showEmptyState && !keepHeader}
   <FormFieldsSectionPrimitive.Wrapper
     {items}
     {isLoading}
@@ -197,8 +199,9 @@ $effect(() => {
     {onAdd}
   />
 {:else}
-  <section class={rootClass}>
+  <section class={`${rootClass} flex min-h-0 flex-1 flex-col`}>
     <SectionHeader
+      {icon}
       {title}
       description={description ?? ''}
       onCollapsableToggle={hasOptimisticItems ? onCollapsableToggle : undefined}

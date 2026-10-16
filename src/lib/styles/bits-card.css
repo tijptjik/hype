@@ -262,6 +262,16 @@
   .bits-theme .bits-form__user-card-root {
     min-height: 64px;
     max-width: 24rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background: var(--color-panel);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  /* Form members use the same opaque surface as descriptor and metadata fields. */
+  .bits-theme .bits-form__user-card-root::before {
+    content: none;
   }
 
   .bits-theme .bits-form__user-card-root.bits-form__user-card-root--full {

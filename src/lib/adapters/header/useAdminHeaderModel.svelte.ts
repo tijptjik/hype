@@ -718,7 +718,7 @@ export function useAdminHeaderModel(
     return {
       text: !isEditing ? m.forms__edit() : isTainted ? m.forms__reset() : m.cancel(),
       color: 'neutral',
-      style: 'ghost',
+      style: isEditing ? 'ghost' : 'soft',
       icon: isEditing && isTainted ? RotateCcw : isEditing ? X : Pencil,
       class: 'bits-pattern-header__form-action-main',
       disabled: disableEdit || isInFlight,
@@ -743,8 +743,8 @@ export function useAdminHeaderModel(
 
     return {
       text: m.forms__save(),
-      color: 'success',
-      style: 'ghost',
+      color: 'primary',
+      style: 'none',
       icon: isSubmitting ? LoaderCircle : Save,
       class: 'bits-pattern-header__form-action-publish',
       disabled: disableEdit || !isTainted || isInFlight || hasIssues,
@@ -770,8 +770,8 @@ export function useAdminHeaderModel(
       return {
         kind: 'button' as const,
         text: isPublished ? m.forms__unpublish() : m.forms__publish(),
-        color: isPublished ? ('warning' as const) : ('success' as const),
-        style: 'ghost' as const,
+        color: isPublished ? ('neutral' as const) : ('primary' as const),
+        style: isPublished ? ('outline' as const) : ('none' as const),
         icon: isPublishing ? LoaderCircle : isPublished ? EyeOff : Eye,
         class: 'bits-pattern-header__form-action-publish',
         disabled: isPublishBlocked,

@@ -18,6 +18,8 @@ export interface FormFieldsSectionLoadingItem {
 }
 
 export interface FormFieldsSectionProps {
+  icon?: Component
+  keepHeader?: boolean
   items: Property[]
   isLoading?: boolean
   loadingItems?: FormFieldsSectionLoadingItem[]

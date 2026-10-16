@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
 import { tick } from 'svelte'
-import { slide } from 'svelte/transition'
+import { fade } from 'svelte/transition'
 import { m } from '#lib/i18n.js'
 import type { LocalSearchProps } from './search.types'
 import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.utils'
@@ -144,7 +144,7 @@ $effect(() => {
 
 <div
   bind:this={rootEl}
-  transition:slide={{ axis: 'y', duration: mountTransitionDuration }}
+  transition:fade={{ duration: mountTransitionDuration }}
   class={`bits-search ${className}`}
   onfocusin={handleFocusIn}
   onfocusout={handleFocusOut}

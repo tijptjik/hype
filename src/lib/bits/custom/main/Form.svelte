@@ -3,6 +3,7 @@ import type { MainFormProps } from './main.types'
 
 let {
   children,
+  fallback,
   class: className = '',
   attrs = {},
   formEl = $bindable<HTMLFormElement | undefined>(),
@@ -26,4 +27,6 @@ function handleKeyDown(event: KeyboardEvent): void {
   <form bind:this={formEl} {...formAttrs} class={formClass} onkeydown={handleKeyDown}>
     {@render children?.()}
   </form>
+{:else}
+  {@render fallback?.()}
 {/if}

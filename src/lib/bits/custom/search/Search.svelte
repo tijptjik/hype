@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
 import { tick, untrack } from 'svelte'
-import { slide } from 'svelte/transition'
+import { fade } from 'svelte/transition'
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES
@@ -251,7 +251,7 @@ $effect(() => {
 
 <div
   bind:this={rootEl}
-  transition:slide={{ axis: 'y', duration: mountTransitionDuration }}
+  transition:fade={{ duration: mountTransitionDuration }}
   class={`bits-search ${className}`}
   onfocusin={handleRootFocusIn}
   onintroend={handleIntroEnd}

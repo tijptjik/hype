@@ -1,8 +1,6 @@
 <script lang="ts">
 import { m } from '#lib/i18n.js'
 import { Button } from '#lib/bits/core/index.js'
-import { Card } from '#lib/bits/custom/index.js'
-import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 import type { OrganisationCapabilitiesListProps } from '../organisationCapabilities.types'
 import Trash2Icon from 'virtual:icons/proicons/delete'
 import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
@@ -10,7 +8,6 @@ import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
 let {
   selectedCapabilityKeys,
   isEditing,
-  isRemoveMode,
   getCapabilityDisplayLabel,
   onRemoveCapability,
 }: OrganisationCapabilitiesListProps = $props()
@@ -18,18 +15,15 @@ let {
 
 <div class="bits-form__parent-resource-list bits-form__capabilities-list pt-2">
   {#each selectedCapabilityKeys as capabilityKey (capabilityKey)}
-    <ResourceCard.Root class="w-full">
-      <Card.Media class="bg-base-100/76" size="md">
-        <div class="flex w-full h-full items-center justify-center" aria-hidden="true">
-          <ShieldCheckIcon class="h-6 w-6 text-primary" />
-        </div>
-      </Card.Media>
-      <ResourceCard.Body
-        code={capabilityKey}
-        name={getCapabilityDisplayLabel(capabilityKey)}
-      />
-      {#if isEditing && isRemoveMode}
-        <Card.Actions padding="sm" class="min-w-max">
+    <div
+      class="flex min-h-14 items-center gap-4 border-b border-border/40 px-3 last:border-b-0"
+    >
+      <ShieldCheckIcon class="size-5 shrink-0 text-primary" aria-hidden="true" />
+      <span class="min-w-0 flex-1 text-[15px] font-medium"
+        >{getCapabilityDisplayLabel(capabilityKey)}</span
+      >
+      <div class="size-10 shrink-0" inert={!isEditing}>
+        {#if isEditing}
           <Button
             text={m.admin__forms_common_remove()}
             style="ghost"
@@ -40,8 +34,8 @@ let {
             onClick={() => onRemoveCapability(capabilityKey)}
             class="h-10 w-10"
           />
-        </Card.Actions>
-      {/if}
-    </ResourceCard.Root>
+        {/if}
+      </div>
+    </div>
   {/each}
 </div>

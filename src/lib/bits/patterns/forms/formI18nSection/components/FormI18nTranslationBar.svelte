@@ -87,7 +87,7 @@ $effect(() => {
 </script>
 
 <div class="bits-form__i18n-translation" style={positionStyle}>
-  <div class={localeCodeClass}>
+  <div data-locale-code class={localeCodeClass}>
     {#key status}
       {#if status === 'loading'}
         <span in:fade={{ duration: 250 }} out:fade={{ duration: 250 }}>
@@ -112,14 +112,16 @@ $effect(() => {
       class={`bits-form__i18n-translation-bar ${isVisible ? 'bits-form__i18n-translation-bar--visible' : ''}`}
     >
       <div
-        class="inline-flex h-8 w-8 items-center justify-center text-sm text-foreground/55 bg-glass-300"
+        class="inline-flex h-8 w-8 items-center justify-center text-sm text-muted-foreground"
       >
         <Languages />
       </div>
       {#each sourceLocales as sourceLocale (sourceLocale)}
         <button
           type="button"
-          class="bits-form__i18n-translation-source"
+          class="bits-form__i18n-translation-source focus-override focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          aria-label={`Translate from ${sourceLocale} to ${targetLocale}`}
+          title={`Translate from ${sourceLocale} to ${targetLocale}`}
           disabled={!onTranslate}
           tabindex={isVisible ? 0 : -1}
           onclick={event => handleTranslate(event, sourceLocale)}
@@ -129,7 +131,7 @@ $effect(() => {
       {/each}
       <button
         type="button"
-        class="bits-form__i18n-translation-source"
+        class="bits-form__i18n-translation-source focus-override focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
         disabled={!onResetLocale}
         tabindex={isVisible ? 0 : -1}
         onclick={handleResetLocale}

@@ -10,6 +10,7 @@ import EyeOff from 'virtual:icons/proicons/eye-off'
 
 let {
   title,
+  icon,
   description,
   size = 'sm',
   flags = [],
@@ -68,6 +69,7 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
     {:else if title || description}
       <Header
         text={title}
+        {icon}
         {description}
         {size}
         class="bits-form__section-header-heading"

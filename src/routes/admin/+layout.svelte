@@ -154,7 +154,7 @@ afterNavigate(({ shallow }) => {
       <SettingsPanel model={settingsModel} />
     {:else if settingsModel.open}
       <div
-        class="bits-theme flex h-full w-full items-center justify-center bg-panel shadow-xl"
+        class="bits-theme flex h-full w-[380px] max-w-full shrink-0 items-center justify-center bg-panel shadow-xl"
         role="status"
         aria-label={m.resource_loading()}
       >

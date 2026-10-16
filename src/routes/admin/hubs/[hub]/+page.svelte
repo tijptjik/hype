@@ -1642,6 +1642,7 @@ $effect(() => {
       <GridSpacer cols={3} leftCols={1} centerCols={1} rightCols={1}>
         {#snippet right()}
           <FormUserRolesSection
+            currentUserId={currentActor.userId}
             title={m.admin__forms_hub_admins_title()}
             subtitle={m.admin__forms_hub_admins_subtitle()}
             minCardWidth={250}

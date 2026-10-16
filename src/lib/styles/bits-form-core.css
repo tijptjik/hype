@@ -125,7 +125,7 @@
   }
 
   .bits-theme .bits-form__control--textarea {
-    @apply min-h-32 max-h-128 resize-none px-2 py-3.5;
+    @apply min-h-32 max-h-96 resize-none px-2 py-3.5;
     box-sizing: border-box;
     display: block;
     field-sizing: content;

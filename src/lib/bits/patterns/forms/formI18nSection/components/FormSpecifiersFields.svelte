@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { Component } from 'svelte'
 import { m } from '#lib/i18n.js'
 import { TextInput, SectionHeader } from '#lib/bits/custom/form/index.js'
 import FormSection from './FormSection.svelte'
@@ -19,11 +20,13 @@ type SpecifiersForm = {
 
 let {
   form,
+  icon,
   isEditing = false,
   isRequiredInPreflight,
   fields = ['code', 'url'],
   title = m.admin__forms_common_specifiers(),
 }: {
+  icon?: Component
   form: SpecifiersForm
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
@@ -46,7 +49,7 @@ const urlIssues = $derived(showUrl ? form.fields.data.url.issues() : undefined)
 </script>
 
 <section class="bits-form__section">
-  <SectionHeader {title} />
+  <SectionHeader {title} {icon} />
   <FormSection cardClass="bits-form__i18n-card no-i18n">
     {#if showCode}
       <TextInput
