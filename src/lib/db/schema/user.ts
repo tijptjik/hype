@@ -40,6 +40,7 @@ export const user = sqliteTable('user', {
   locale: text('locale', { enum: ['en', 'zh-hant', 'zh-hans'] })
     .notNull()
     .default(SupportedLocales.en),
+  telephone: text('telephone'),
   attribution: text('attribution'),
   // Better Auth guest marker; guest preferences and saved-place state are stored by user ID.
   isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
