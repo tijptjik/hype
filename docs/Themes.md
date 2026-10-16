@@ -52,8 +52,8 @@ base rule: an inline utility can override a modifier still in `@layer components
 
 The admin shell uses one composition token, `--admin-background`. Nullspace keeps
 its saturated rose-to-fuchsia gradient. Nebula blends deep violet and rose with a
-turquoise glow; Oblivion uses luminous rose, lilac and mint; Milque moves from peach
-and cream into frosting blue; Rye pairs ocean blue and teal with a coral glow.
+turquoise glow; Oblivion uses luminous rose, lilac and mint; Milque blends cool frosting blue
+and teal behind its warm peach cards; Rye pairs ocean blue and teal with a coral glow.
 Each composition mixes existing palette colors into the canvas, with lighter or
 deeper stops to suit its foreground. The token is declared at every theme boundary,
 so nested previews do not inherit another palette's background.

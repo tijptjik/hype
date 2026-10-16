@@ -357,7 +357,7 @@
     );
 }
 
-/* Milque: warm peach fading through cream into frosting blue outside form workspaces. */
+/* Milque: cool frosting blue and teal separate the canvas from warm peach cards. */
 [data-theme="breadline-light"] {
   /* Quiet paper surfaces keep peach on editable fields and teal on actions. */
   --admin-form-workspace: var(--theme-panel);
@@ -371,13 +371,13 @@
   --admin-background:
     radial-gradient(
       ellipse at 0% 0%,
-      color-mix(in oklab, var(--theme-tertiary) 30%, transparent),
+      color-mix(in oklab, var(--theme-primary) 12%, transparent),
       transparent 70%
     ),
     linear-gradient(
       135deg,
-      var(--theme-canvas) 10%,
-      color-mix(in oklab, var(--theme-primary) 30%, var(--theme-canvas)) 100%
+      color-mix(in oklab, var(--theme-primary) 18%, var(--theme-panel)) 10%,
+      color-mix(in oklab, var(--theme-secondary) 28%, var(--theme-panel)) 100%
     );
 }
 
