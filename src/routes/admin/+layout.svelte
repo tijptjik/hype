@@ -55,7 +55,12 @@ let SettingsPanel = $state<SettingsPanelComponent | null>(null)
 let settingsPanelLoadError = $state<unknown>(null)
 let settingsPanelPromise: Promise<SettingsPanelComponent> | null = null
 
-/** Loads the admin settings panel on first open and retains it thereafter. */
+/**
+ * Loads and retains the admin settings panel for background preload or first open.
+ *
+ * @returns The shared in-flight or loaded settings component.
+ * @remarks Failed imports are cleared so opening the panel or retrying can recover.
+ */
 function loadSettingsPanel(): Promise<SettingsPanelComponent> {
   settingsPanelPromise ??= import(
     '#lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
@@ -78,6 +83,23 @@ function loadSettingsPanel(): Promise<SettingsPanelComponent> {
 
 $effect(() => {
   if (settingsModel.open) void loadSettingsPanel().catch(() => {})
+})
+
+// Preload settings after admin initialization without blocking the initial render.
+$effect(() => {
+  if (!appCtx.isInitialised || !adminCtx.isInitialised) return
+
+  const preload = (): void => {
+    void loadSettingsPanel().catch(() => {})
+  }
+
+  if (typeof window.requestIdleCallback === 'function') {
+    const callback = window.requestIdleCallback(preload, { timeout: 1000 })
+    return () => window.cancelIdleCallback(callback)
+  }
+
+  const timeout = window.setTimeout(preload, 0)
+  return () => window.clearTimeout(timeout)
 })
 
 const sidebarModel = useResourcePanelModel(appCtx, 'admin', adminCtx)
