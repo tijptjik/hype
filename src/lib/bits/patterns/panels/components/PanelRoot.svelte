@@ -34,7 +34,7 @@ let shouldShowOverlay = $derived(!inline && isOpen)
     class="bits-theme flex h-full max-w-full shrink-0 select-none flex-col bg-panel shadow-xl transition-all duration-500"
     class:overflow-y-auto={scrollable}
     class:left-0={position === 'left'}
-    style:width={isNarrow ? '80px' : isAdmin ? '380px' : '420px'}
+    style:width={isNarrow ? (isAdmin ? '64px' : '80px') : isAdmin ? '380px' : '420px'}
     transition:slide={{
       duration: 500,
       easing: cubicInOut,

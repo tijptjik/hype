@@ -20,12 +20,22 @@ vi.mock('@tanstack/svelte-virtual', () => ({
 // jsdom does not implement scrolling; geometry itself is exercised in Chromium.
 beforeEach(() => {
   vi.useRealTimers()
+  // Layout measurements are exercised in Chromium; jsdom only needs the observer lifecycle.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
   // jsdom has no Web Animations API; real animation is verified in Chromium.
   HTMLElement.prototype.getAnimations = vi.fn(() => [])
   HTMLElement.prototype.scrollTo = vi.fn()
 })
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
   delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations
   delete (HTMLElement.prototype as Partial<HTMLElement>).scrollTo
 })

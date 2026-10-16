@@ -115,7 +115,7 @@ export function useResourcePanelModel(
    * Builds directly joined breadcrumb labels and action callbacks for visible rows.
    * @param type - Resource level to present.
    * @param index - Corresponding query-list index.
-   * @returns Rows sorted with selected and enabled resources first.
+   * @returns Rows sorted with prism selections first in admin, or selections and enabled layers first on maps.
    */
   function rows(type: PanelResourceType, index: number): ResourcePanelRow[] {
     const selected = app.state.prisms[type]
@@ -145,11 +145,13 @@ export function useResourcePanelModel(
           app.getActiveResourceType() === type &&
           app.getActiveResourceId() === resource.id
         const enabled =
-          type === 'organisation'
-            ? app.isOrganisationDefaultLayersActive(resource.id)
-            : type === 'project'
-              ? app.isProjectDefaultLayersActive(resource.id)
-              : pinned
+          mode === 'admin'
+            ? pinned
+            : type === 'organisation'
+              ? app.isOrganisationDefaultLayersActive(resource.id)
+              : type === 'project'
+                ? app.isProjectDefaultLayersActive(resource.id)
+                : pinned
         return {
           id: resource.id,
           name,
@@ -160,7 +162,11 @@ export function useResourcePanelModel(
           enabled,
           primaryLabel:
             mode === 'admin'
-              ? m.panel__open({ name })
+              ? active
+                ? pinned
+                  ? m.panel__unpin({ name })
+                  : m.panel__pin({ name })
+                : m.panel__open({ name })
               : enabled
                 ? m.panel__deactivate_layer({ name })
                 : m.panel__activate_layer({ name }),
@@ -179,8 +185,8 @@ export function useResourcePanelModel(
       })
       .sort(
         (a, b) =>
-          Number(b.selected || b.active || b.enabled) -
-          Number(a.selected || a.active || a.enabled),
+          Number(b.selected || (mode === 'prisms' && b.enabled)) -
+          Number(a.selected || (mode === 'prisms' && a.enabled)),
       )
   }
 

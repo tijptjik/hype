@@ -18,6 +18,7 @@ let {
   viewKey = '',
   animateRows = false,
   estimateSize = 56,
+  contentHeight = $bindable(0),
 }: {
   items: T[]
   item: Snippet<[T]>
@@ -27,6 +28,8 @@ let {
   error?: boolean
   onRetry?: () => void
   animateRows?: boolean
+  /** Intrinsic list height, including padding and status rows, for content-capped layouts. */
+  contentHeight?: number
   estimateSize?: number
   viewKey?: string
 } = $props()
@@ -83,42 +86,44 @@ function measure(node: HTMLDivElement): void {
 
 <div
   bind:this={container}
-  class="scrollbar-thin relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-panel py-1"
+  class="scrollbar-thin relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-panel"
   aria-busy={loading}
 >
-  {#if flow}
-    {#each items as row (row.id)}
-      <div animate:flip={{ duration: 200 }}>{@render item(row)}</div>
-    {/each}
-  {:else}
-    <div class="relative w-full" style:height={`${$virtualizer.getTotalSize()}px`}>
-      {#each $virtualizer
-        .getVirtualItems()
-        .filter(row => items[row.index]) as row (row.key)}
-        <!-- A search can shrink items before the virtualizer updates its measured range. -->
-        <div
-          data-index={row.index}
-          use:measure
-          animate:flip={{ duration: animateRows ? 200 : 0 }}
-          class="absolute left-0 w-full"
-          style:top={`${row.start}px`}
-        >
-          {@render item(items[row.index])}
-        </div>
+  <div class="py-1" bind:clientHeight={contentHeight}>
+    {#if flow}
+      {#each items as row (row.id)}
+        <div animate:flip={{ duration: 200 }}>{@render item(row)}</div>
       {/each}
-    </div>
-  {/if}
-  {#if loading && !items.length}
-    <div
-      role="status"
-      class="h-8 animate-pulse bg-base-200"
-      aria-label={m.resource_loading()}
-    ></div>
-  {:else if error}
-    <button type="button" class="w-full px-3 py-2 text-sm" onclick={onRetry}>
-      {m.resource_retry()}
-    </button>
-  {:else if items.length === 0}
-    <p class="px-3 py-2 text-sm opacity-60">{m.resource_no_results()}</p>
-  {/if}
+    {:else}
+      <div class="relative w-full" style:height={`${$virtualizer.getTotalSize()}px`}>
+        {#each $virtualizer
+          .getVirtualItems()
+          .filter(row => items[row.index]) as row (row.key)}
+          <!-- A search can shrink items before the virtualizer updates its measured range. -->
+          <div
+            data-index={row.index}
+            use:measure
+            animate:flip={{ duration: animateRows ? 200 : 0 }}
+            class="absolute left-0 w-full"
+            style:top={`${row.start}px`}
+          >
+            {@render item(items[row.index])}
+          </div>
+        {/each}
+      </div>
+    {/if}
+    {#if loading && !items.length}
+      <div
+        role="status"
+        class="h-8 animate-pulse bg-base-200"
+        aria-label={m.resource_loading()}
+      ></div>
+    {:else if error}
+      <button type="button" class="w-full px-3 py-2 text-sm" onclick={onRetry}>
+        {m.resource_retry()}
+      </button>
+    {:else if items.length === 0}
+      <p class="px-3 py-2 text-sm opacity-60">{m.resource_no_results()}</p>
+    {/if}
+  </div>
 </div>

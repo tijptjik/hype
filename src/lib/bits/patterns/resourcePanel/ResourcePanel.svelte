@@ -16,7 +16,10 @@ let { model, footer }: ResourcePanelProps = $props()
 <PanelRoot {...model.panel} isOpen={model.open}>
   <div class="flex h-full min-h-0 flex-col bg-panel text-base-content">
     <header
-      class="flex h-18 shrink-0 items-center justify-between gap-3 border-b border-border px-4"
+      class="flex h-18 shrink-0 items-center gap-3 border-b border-border px-2 {model
+        .panel.isNarrow
+        ? 'justify-center'
+        : 'justify-between px-4'}"
     >
       {#if !model.panel.isNarrow}
         <h2 class="text-lg font-medium uppercase tracking-widest text-primary">

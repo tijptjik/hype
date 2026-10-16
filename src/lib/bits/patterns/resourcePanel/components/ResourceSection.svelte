@@ -19,6 +19,18 @@ import type { ResourceSectionProps } from './resourcePanelPrimitives.types'
 let { section, narrow = false, admin = false }: ResourceSectionProps = $props()
 let open = $state(untrack(() => section.defaultOpen))
 let touched = $state(false)
+let headerHeight = $state(0)
+let searchHeight = $state(0)
+let contentHeight = $state(0)
+const hasSearch = $derived(
+  open && (section.rows.length >= 5 || Boolean(section.search)),
+)
+// Cap equal-share flex allocation at actual content height so other sections inherit spare room.
+const maxHeight = $derived(
+  open && contentHeight > 0
+    ? `${headerHeight + (hasSearch ? searchHeight : 0) + contentHeight}px`
+    : undefined,
+)
 $effect(() => {
   if (!touched) open = section.defaultOpen
 })
@@ -47,13 +59,20 @@ const items = $derived(
 </script>
 
 <section
-  class="flex min-h-0 flex-col bg-panel {open ? 'flex-1' : 'shrink-0'}"
+  class="flex min-h-0 min-w-0 flex-col bg-panel {open ? 'flex-1' : 'shrink-0'}"
   aria-label={section.title}
+  style:max-height={maxHeight}
 >
-  <div class="flex h-14 shrink-0 items-center gap-3 pl-5 pr-7">
+  <div
+    class="relative flex h-14 min-w-0 shrink-0 items-center overflow-hidden"
+    bind:clientHeight={headerHeight}
+  >
     <button
       type="button"
-      class="rounded-lg p-1 text-muted-foreground hover:bg-surface focus-override outline-none focus-visible:text-primary"
+      class="absolute right-6 rounded-lg p-1 text-muted-foreground transition-opacity duration-500 hover:bg-surface focus-override outline-none focus-visible:text-primary motion-reduce:transition-none"
+      style:opacity={narrow ? 0 : 1}
+      inert={narrow}
+      aria-hidden={narrow}
       aria-label={open
         ? m.panel__collapse({ name: section.title })
         : m.panel__expand({ name: section.title })}
@@ -67,56 +86,85 @@ const items = $derived(
         <ChevronRight class="size-4" />
       {/if}
     </button>
-    {#if !narrow}
-      <button
-        type="button"
-        class="focus-override outline-none focus-visible:text-primary flex-1 text-left text-sm font-normal uppercase tracking-[0.1em]"
-        onclick={() => {
-          if (section.onNavigate) {
-            section.onNavigate()
-          } else {
-            toggleOpen()
-          }
-        }}
-      >
-        {section.title}
-      </button>
-    {/if}
-    <span class={color}
-      >{#if section.id === 'organisation'}
+    <button
+      type="button"
+      class="focus-override outline-none focus-visible:text-primary min-w-0 flex-1 truncate mx-16 text-left text-sm font-normal uppercase tracking-[0.1em] transition-opacity duration-500 motion-reduce:transition-none"
+      style:opacity={narrow ? 0 : 1}
+      inert={narrow}
+      aria-hidden={narrow}
+      onclick={() => {
+        if (section.onNavigate) {
+          section.onNavigate()
+        } else {
+          toggleOpen()
+        }
+      }}
+    >
+      {section.title}
+    </button>
+    <button
+      type="button"
+      class="absolute left-[32px] top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg focus-override outline-none focus-visible:ring-2 focus-visible:ring-focus {color}"
+      inert={!narrow}
+      aria-hidden={!narrow}
+      aria-label={open
+        ? m.panel__collapse({ name: section.title })
+        : m.panel__expand({ name: section.title })}
+      aria-expanded={open}
+      aria-controls={id}
+      title={section.title}
+      onclick={toggleOpen}
+    >
+      {#if section.id === 'organisation'}
         <Users class="size-6" />
       {:else if section.id === 'project'}
         <Grid class="size-6" />
       {:else}
         <Layers class="size-6" />
-      {/if}</span
-    >
+      {/if}
+    </button>
   </div>
   <div {id} class="flex min-h-0 flex-col {open ? 'flex-1' : ''}">
-    {#if open && !narrow && (section.rows.length >= 5 || section.search)}
-      <label
-        class="mx-3 mb-2 flex shrink-0 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-muted-foreground focus-within:border-focus"
+    {#if hasSearch}
+      <!-- Collapse the search space along with the panel, without remounting the input. -->
+      <div
+        class="shrink-0 overflow-hidden transition-[height,opacity] duration-500 motion-reduce:transition-none"
+        bind:clientHeight={searchHeight}
+        style:height={narrow ? '0px' : '50px'}
+        style:opacity={narrow ? 0 : 1}
+        inert={narrow}
+        aria-hidden={narrow}
       >
-        <Search class="size-4" aria-hidden="true" />
-        <input
-          class="focus-override h-10 min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none"
-          type="search"
-          aria-label={m.panel__search({ name: section.title })}
-          placeholder={m.panel__search({ name: section.title })}
-          value={section.search}
-          oninput={event => section.onSearch(event.currentTarget.value)}
-          onkeydown={event => {
-            if (event.key === 'Escape') {
-              event.stopPropagation()
-              section.search ? section.onSearch('') : section.onReset()
-            }
-          }}
-        >
-      </label>
+        <div class="min-h-0 overflow-hidden">
+          <label
+            class="mx-3 mb-2 flex shrink-0 items-center gap-2 overflow-hidden rounded-xl border border-border bg-surface px-3 text-muted-foreground transition-opacity duration-500 focus-within:border-focus motion-reduce:transition-none"
+            style:opacity={narrow ? 0 : 1}
+            inert={narrow}
+            aria-hidden={narrow}
+          >
+            <Search class="size-4" aria-hidden="true" />
+            <input
+              class="focus-override h-10 min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none"
+              type="search"
+              aria-label={m.panel__search({ name: section.title })}
+              placeholder={m.panel__search({ name: section.title })}
+              value={section.search}
+              oninput={event => section.onSearch(event.currentTarget.value)}
+              onkeydown={event => {
+                if (event.key === 'Escape') {
+                  event.stopPropagation()
+                  section.search ? section.onSearch('') : section.onReset()
+                }
+              }}
+            >
+          </label>
+        </div>
+      </div>
     {/if}
     {#if open}
       <VirtualResourceList
         {items}
+        bind:contentHeight
         loading={section.loading}
         error={section.error}
         onNearEnd={section.onNext}
@@ -132,6 +180,12 @@ const items = $derived(
           <ResourceRow {row} {tone} {narrow} />
         {/snippet}
       </VirtualResourceList>
+    {:else if items.length && narrow}
+      <div class="max-h-32 shrink-0 overflow-y-auto">
+        {#each items as row (row.id)}
+          <ResourceRow {row} {tone} {narrow} />
+        {/each}
+      </div>
     {:else if items.length}
       <div class="flex max-h-32 shrink-0 flex-wrap gap-2 overflow-y-auto px-8 pb-3">
         {#each items as row (row.id)}

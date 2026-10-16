@@ -18,55 +18,61 @@ const color = $derived(
 </script>
 
 <div
-  class="flex min-h-10 items-center gap-3 pl-5 pr-7 py-2 transition-colors {row.active
+  class="relative w-full min-w-0 overflow-hidden transition-colors {row.active
     ? 'bg-raised'
     : 'hover:bg-surface'}"
   data-resource-id={row.id}
 >
+  <span
+    class="pointer-events-none absolute left-[32px] top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full {row.enabled
+      ? `bg-current ${color}`
+      : 'bg-base-content/30'}"
+    aria-hidden="true"
+  ></span>
   <button
     type="button"
-    class="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-override outline-none focus-visible:text-primary"
+    class="block min-h-10 w-full min-w-0 py-2 text-left focus-override outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
     aria-label={row.primaryLabel}
     aria-current={row.active ? 'page' : undefined}
     title={narrow ? row.name : undefined}
     onclick={row.onPrimary}
   >
+    <!-- Keep text mounted with explicit dimensions: Firefox can collapse the intrinsic height of a clipped single-line label. -->
     <span
-      class="size-2 shrink-0 rounded-full {row.enabled
-        ? `bg-current ${color}`
-        : 'bg-base-content/30'}"
-      aria-hidden="true"
-    ></span>
-    {#if !narrow}
-      <span class="flex min-w-0 flex-col">
-        {#if row.breadcrumbs.length}
-          <span
-            class="flex min-w-0 items-center gap-0.5 font-mono text-xs uppercase tracking-widest"
-          >
-            {#each row.breadcrumbs as breadcrumb, index}
-              {#if index}
-                <span aria-hidden="true">›</span>
-              {/if}
-              <span
-                class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap {index ===
-                0
-                  ? 'text-primary'
-                  : 'text-tertiary'}"
-                >{breadcrumb}</span
-              >
-            {/each}
-          </span>
-        {/if}
-        <span class="text-base font-light leading-5">{row.name}</span>
-      </span>
-    {:else}
-      <span
-        class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs"
-        >{row.name.slice(0, 2)}</span
+      class="block w-[max(0px,calc(100%-8rem))] min-w-0 overflow-hidden mx-16 transition-opacity duration-500 motion-reduce:transition-none"
+      style:height={row.breadcrumbs.length ? '2.25rem' : '1.25rem'}
+      style:opacity={narrow ? 0 : 1}
+      aria-hidden={narrow}
+    >
+      {#if row.breadcrumbs.length}
+        <span
+          class="flex h-4 min-w-0 items-center gap-0.5 font-mono text-xs uppercase tracking-widest"
+        >
+          {#each row.breadcrumbs as breadcrumb, index}
+            {#if index}
+              <span aria-hidden="true">›</span>
+            {/if}
+            <span
+              class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap {index ===
+              0
+                ? 'text-primary'
+                : 'text-tertiary'}"
+              >{breadcrumb}</span
+            >
+          {/each}
+        </span>
+      {/if}
+      <span class="block h-5 w-full truncate text-base font-light leading-5"
+        >{row.name}</span
       >
-    {/if}
+    </span>
   </button>
-  {#if !narrow}
+  <div
+    class="absolute right-7 top-1/2 flex -translate-y-1/2 items-center transition-opacity duration-500 motion-reduce:transition-none"
+    style:opacity={narrow ? 0 : 1}
+    inert={narrow}
+    aria-hidden={narrow}
+  >
     {#if !row.onIsolate}
       <button
         type="button"
@@ -100,5 +106,5 @@ const color = $derived(
         <Crosshair class="size-5" />
       </button>
     {/if}
-  {/if}
+  </div>
 </div>

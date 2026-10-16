@@ -19,12 +19,22 @@ vi.mock('@tanstack/svelte-virtual', () => ({
 
 beforeEach(() => {
   vi.useRealTimers()
+  // Layout measurements are exercised in Chromium; jsdom only needs the observer lifecycle.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
   // jsdom has no Web Animations API; real animation is verified in Chromium.
   HTMLElement.prototype.getAnimations = vi.fn(() => [])
   HTMLElement.prototype.scrollTo = vi.fn()
 })
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
   delete (HTMLElement.prototype as Partial<HTMLElement>).scrollTo
   delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations
 })
@@ -88,4 +98,30 @@ it('uses compact names in collapsed tags while preserving full row names', async
   await fireEvent.click(screen.getByRole('button', { name: 'Collapse Layers' }))
   expect(screen.getByRole('button', { name: 'All' })).toBeTruthy()
   expect(screen.queryByText('Layer 0')).toBeNull()
+})
+
+it('preserves organisation names and primary actions across rail collapse and expansion', async () => {
+  const model = section(1)
+  model.id = 'organisation'
+  model.title = 'Organisations'
+  model.rows[0].name = 'HK Ghost Signs'
+  model.rows[0].breadcrumbs = []
+  model.rows[0].onIsolate = undefined
+  const view = render(ResourceSection, { section: model, narrow: false })
+  expect(screen.getByText('HK Ghost Signs')).toBeTruthy()
+  await fireEvent.click(
+    screen.getByRole('button', { name: model.rows[0].primaryLabel }),
+  )
+  await view.rerender({ section: model, narrow: true })
+  expect(
+    screen.getByText('HK Ghost Signs').closest('[aria-hidden="true"]'),
+  ).toBeTruthy()
+  await fireEvent.click(
+    screen.getByRole('button', { name: model.rows[0].primaryLabel }),
+  )
+  await view.rerender({ section: model, narrow: false })
+  expect(screen.getByText('HK Ghost Signs').closest('[aria-hidden="true"]')).toBeNull()
+  await fireEvent.click(screen.getByRole('button', { name: model.rows[0].toggleLabel }))
+  expect(model.rows[0].onPrimary).toHaveBeenCalledTimes(2)
+  expect(model.rows[0].onToggle).toHaveBeenCalledOnce()
 })
