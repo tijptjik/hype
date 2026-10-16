@@ -27,10 +27,10 @@
   --theme-panel: #000000;
   --theme-surface: #0d0d0d;
   --theme-raised: #1c1c1c;
-  --theme-text: #f4f0fa;
+  --theme-text: #f7e7ef;
   --theme-muted: #b6b6c8;
   --theme-border: #333333;
-  --theme-primary: #ff4081;
+  --theme-primary: #f04d7f;
   --theme-on-primary: #200a15;
   --theme-secondary: #6666ff;
   --theme-on-secondary: #000000;
@@ -108,6 +108,21 @@
 /* Re-declare aliases at each theme boundary so nested previews remain independent. */
 :root,
 [data-theme] {
+  /* Palette-derived fallback; the named themes below compose their own admin canvas. */
+  --admin-background: linear-gradient(
+    to bottom left,
+    color-mix(in oklab, var(--theme-primary) 9%, var(--theme-canvas)),
+    color-mix(in oklab, var(--theme-secondary) 7%, var(--theme-canvas))
+  );
+
+  /* Shared form roles allow translucent fields without changing the global surfaces. */
+  --form-control-fill: color-mix(in oklab, var(--theme-surface) 65%, transparent);
+  --form-control-edit-fill: color-mix(in oklab, var(--theme-text) 12%, transparent);
+  --form-label: var(--theme-muted);
+  --form-control-border: var(--border-input);
+  --theme-glass-field: var(--theme-surface);
+  --theme-glass-panel: color-mix(in oklab, var(--theme-panel) 55%, transparent);
+
   /* Compatibility tokens inherit the active palette, including nested theme previews. */
   --background: transparent;
   --background-alt: var(--color-base-200);
@@ -143,9 +158,9 @@
   --shadow-date-field-focus: 0px 0px 0px 3px rgba(24, 24, 27, 0.17);
 
   /* Legacy surface and status utilities follow the active theme. */
-  --color-glass-100: var(--theme-surface);
+  --color-glass-100: var(--theme-glass-field);
   --color-glass-200: color-mix(in oklab, var(--theme-muted) 51%, transparent);
-  --color-glass-300: color-mix(in oklab, var(--theme-panel) 55%, transparent);
+  --color-glass-300: var(--theme-glass-panel);
   --color-glass-300-solid: var(--theme-panel);
   --color-glass-warning: var(--theme-warning);
   --color-glass-result: color-mix(in oklab, var(--theme-surface) 90%, transparent);
@@ -217,9 +232,9 @@
 
 @theme inline {
   /* Legacy surface and status utilities follow the active theme. */
-  --color-glass-100: var(--theme-surface);
+  --color-glass-100: var(--theme-glass-field);
   --color-glass-200: color-mix(in oklab, var(--theme-muted) 51%, transparent);
-  --color-glass-300: color-mix(in oklab, var(--theme-panel) 55%, transparent);
+  --color-glass-300: var(--theme-glass-panel);
   --color-glass-300-solid: var(--theme-panel);
   --color-glass-warning: var(--theme-warning);
   --color-glass-result: color-mix(in oklab, var(--theme-surface) 90%, transparent);
@@ -287,4 +302,80 @@
   --color-destructive: var(--destructive);
   --color-line: var(--line);
   --color-contrast: var(--contrast);
+}
+
+[data-theme="hype-black"] {
+  /* Original warm glass fields and creamy labels over the saturated admin canvas. */
+  --form-control-fill: color-mix(in oklab, #7d4f63 32%, transparent);
+  --form-control-edit-fill: #c3729080;
+  --form-control-border: color-mix(in oklab, #2f282b 22%, transparent);
+  --theme-glass-panel: #20191e8c;
+  --theme-glass-field: #7d475f;
+  --form-label: color-mix(in oklab, #fcc 66%, transparent);
+  --admin-background: linear-gradient(
+    to bottom left in oklab,
+    var(--color-rose-500),
+    var(--color-fuchsia-800)
+  );
+}
+
+/* Nebula: a turquoise glow over a deep violet-to-rose sky. */
+:root:not([data-theme]),
+[data-theme="hype-dark"] {
+  --admin-background:
+    radial-gradient(
+      ellipse at 90% 5%,
+      color-mix(in oklab, var(--theme-tertiary) 22%, transparent),
+      transparent 65%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--theme-secondary) 38%, var(--theme-canvas)),
+      color-mix(in oklab, var(--theme-primary) 28%, var(--theme-canvas))
+    );
+}
+
+/* Oblivion: rose and lilac with a cool mint edge, keeping the canvas luminous. */
+[data-theme="hype-light"] {
+  --admin-background:
+    radial-gradient(
+      ellipse at 100% 100%,
+      color-mix(in oklab, var(--theme-tertiary) 20%, transparent),
+      transparent 65%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--theme-primary) 27%, var(--theme-canvas)),
+      color-mix(in oklab, var(--theme-secondary) 30%, var(--theme-canvas))
+    );
+}
+
+/* Milque: warm peach fading through cream into frosting blue. */
+[data-theme="breadline-light"] {
+  --admin-background:
+    radial-gradient(
+      ellipse at 0% 0%,
+      color-mix(in oklab, var(--theme-tertiary) 30%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      135deg,
+      var(--theme-canvas) 10%,
+      color-mix(in oklab, var(--theme-primary) 30%, var(--theme-canvas)) 100%
+    );
+}
+
+/* Rye: deep ocean blue and teal, warmed by a restrained coral glow. */
+[data-theme="breadline-dark"] {
+  --admin-background:
+    radial-gradient(
+      ellipse at 100% 0%,
+      color-mix(in oklab, var(--theme-secondary) 22%, transparent),
+      transparent 65%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--theme-tertiary) 18%, var(--theme-canvas)),
+      color-mix(in oklab, var(--theme-primary) 32%, var(--theme-canvas))
+    );
 }

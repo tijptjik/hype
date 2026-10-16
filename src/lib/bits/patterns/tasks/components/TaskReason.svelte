@@ -10,7 +10,7 @@ let { reason }: { reason: string } = $props()
 <Popover
   triggerProps={{ 'aria-label': 'Review reason' }}
   contentProps={{ side: 'bottom', align: 'center', sideOffset: 10 }}
-  contentClass="z-50 max-w-sm rounded-2xl border border-white/10 bg-black/95 p-3 text-sm leading-5 text-white shadow-[var(--shadow-popover)]"
+  contentClass="z-50 max-w-sm rounded-2xl border border-foreground/10 bg-panel/95 p-3 text-sm leading-5 text-foreground shadow-[var(--shadow-popover)]"
 >
   {#snippet trigger()}
     <Button
@@ -18,7 +18,7 @@ let { reason }: { reason: string } = $props()
       color="neutral"
       style="ghost"
       modifier="circle"
-      class="h-9 w-9 border border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white"
+      class="h-9 w-9 border border-foreground/10 bg-foreground/[0.04] text-foreground/70 hover:bg-foreground/[0.08] hover:text-foreground"
       iconComponent={CircleHelpIcon}
       hideLabel={true}
       attrs={{ title: reason }}

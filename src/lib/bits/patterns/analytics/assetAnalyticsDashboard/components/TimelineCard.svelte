@@ -204,7 +204,7 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
         {/each}
       </div>
 
-      <div class="rounded-[1.4rem] border border-white/10 bg-[#151515] p-4 pt-8">
+      <div class="rounded-[1.4rem] border border-foreground/10 bg-surface p-4 pt-8">
         <div
           class="relative h-64 overflow-x-auto rounded-[1rem] "
           bind:this={timelineChartContainer}
@@ -278,7 +278,7 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
 
           {#if timelineTooltip}
             <div
-              class="pointer-events-none absolute z-10 min-w-36 -translate-x-1/2 -translate-y-full rounded-[1rem] border border-base-300 bg-black px-3 py-2 shadow-xl"
+              class="pointer-events-none absolute z-10 min-w-36 -translate-x-1/2 -translate-y-full rounded-[1rem] border border-base-300 bg-panel px-3 py-2 shadow-xl"
               style={`left: ${timelineTooltip.left}px; top: ${timelineTooltip.top}px;`}
             >
               <p

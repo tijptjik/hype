@@ -12,7 +12,7 @@ export const HEADER_TASK_ACTIONS_CLASSES = 'ml-2 flex items-center gap-0'
 export const HEADER_FACETS_WRAP_CLASSES = 'flex items-center gap-2'
 
 export const HEADER_FACETS_LIST_CLASSES =
-  'flex h-11 items-stretch gap-1 overflow-clip rounded-full bg-[#181818]'
+  'flex h-11 items-stretch gap-1 overflow-clip rounded-full bg-raised'
 
 export const HEADER_FACETS_LIST_STYLE = ''
 
@@ -37,10 +37,10 @@ export const HEADER_TITLE_MENU_TRIGGER_ICON_CLASSES = 'h-[1.15rem] w-[1.15rem]'
 export const HEADER_TITLE_MENU_SLOT_CLASSES = 'h-8 w-8 shrink-0'
 
 export const HEADER_TITLE_MENU_CONTENT_CLASSES =
-  'z-50 min-w-44 rounded-lg border border-[color:color-mix(in_oklab,white_16%,transparent)] bg-black p-1 shadow-none'
+  'z-50 min-w-44 rounded-lg border border-border bg-panel p-1 shadow-none'
 
 export const HEADER_TITLE_MENU_ITEM_CLASSES =
-  'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-[color:color-mix(in_oklab,var(--color-base-content)_92%,white_8%)] transition-colors duration-150 ease-[ease] hover:bg-[color:color-mix(in_oklab,var(--color-base-300)_88%,transparent)] data-[highlighted]:bg-[color:color-mix(in_oklab,var(--color-base-300)_88%,transparent)]'
+  'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-foreground transition-colors duration-150 ease-[ease] hover:bg-[color:color-mix(in_oklab,var(--color-base-300)_88%,transparent)] data-[highlighted]:bg-[color:color-mix(in_oklab,var(--color-base-300)_88%,transparent)]'
 
 export const HEADER_PUBLISH_STATUS_CLASSES =
   'inline-flex h-10 items-center gap-2 px-3 text-sm font-medium text-base-content'

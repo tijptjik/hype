@@ -416,7 +416,7 @@ async function handleLayerFormSubmit(event: Event): Promise<void> {
           importCtx.getActiveLayerCreation() === invalidValue}
           <div class="mt-4 rounded-lg bg-primary/5 p-4">
             <div class="mb-4 flex items-center justify-between">
-              <h4 class="font-medium text-white">
+              <h4 class="font-medium text-foreground">
                 Create New Layer for
                 <span class="font-semibold text-secondary">{invalidValue}</span>
               </h4>

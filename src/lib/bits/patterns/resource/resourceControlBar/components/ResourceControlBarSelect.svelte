@@ -21,7 +21,7 @@ let {
   <div class="flex min-h-10 items-center">
     <SimpleTooltip disabled={!tooltip}>
       {#snippet trigger()}
-        <div class="text-sm font-medium leading-none text-white/72">{label}</div>
+        <div class="text-sm font-medium leading-none text-foreground/72">{label}</div>
       {/snippet}
 
       {#snippet children()}
@@ -35,8 +35,8 @@ let {
       {allowDeselect}
       {items}
       {placeholder}
-      triggerClass="h-10 w-full rounded-full border border-white/10 bg-base-300/95 px-4 text-sm text-white shadow-none"
-      contentClass="border border-white/10 bg-base-300 text-white"
+      triggerClass="h-10 w-full rounded-full border border-foreground/10 bg-base-300/95 px-4 text-sm text-foreground shadow-none"
+      contentClass="border border-foreground/10 bg-base-300 text-foreground"
       onValueChange={nextValue => onValueChange?.(nextValue)}
     />
   </div>

@@ -125,7 +125,7 @@ $effect(() => {
         variant="default"
         class="bits-resource-sort__select text-sm"
         triggerClass="min-w-[100px] w-auto h-9 px-2 text-sm"
-        contentClass="bits-resource-sort__select-content text-white"
+        contentClass="bits-resource-sort__select-content text-foreground"
         onValueChange={handleSortByChange}
       />
       <Button

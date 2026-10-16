@@ -21,7 +21,7 @@ type Props = Pick<
 
 let {
   targetLocale,
-  localeCodeClass = 'absolute right-5.5 top-4 text-2xl font-bold uppercase text-white/66',
+  localeCodeClass = 'absolute right-5.5 top-4 text-2xl font-bold uppercase text-muted-foreground',
   onTranslate,
   onResetLocale,
   sectionKey,

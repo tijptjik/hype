@@ -302,7 +302,7 @@
   }
 
   .bits-theme .bits-admin-menu--narrow .bits-admin-menu__list {
-    @apply h-full w-full flex-col items-end justify-end;
+    @apply h-full w-full flex-col items-center justify-end;
     gap: var(--bits-admin-menu-slot-gap);
   }
 
@@ -408,7 +408,8 @@
   }
 
   .bits-theme .bits-admin-shell__main {
-    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed;
+    background-image: var(--admin-background);
+    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-fixed;
     container-type: inline-size;
     container-name: bits-admin-shell-main;
   }

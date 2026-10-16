@@ -116,7 +116,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
       >
         <button
           type="button"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/85"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-panel/70 text-foreground transition hover:bg-panel/85"
           aria-label={m.image__metadata_open()}
           onclick={() => {
             isMetadataOpen = !isMetadataOpen

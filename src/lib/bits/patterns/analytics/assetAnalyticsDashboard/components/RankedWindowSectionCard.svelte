@@ -70,7 +70,7 @@ function getBadgeClass(category: AnalyticsTransformationBadge['category']): stri
   if (category === 'format') return 'border-info/35 bg-info/15 text-info'
   if (category === 'dimensions') return 'border-warning/35 bg-warning/15 text-warning'
 
-  return 'border-base-300 bg-[#121212] text-foreground'
+  return 'border-base-300 bg-surface text-foreground'
 }
 
 function getItems():
@@ -87,7 +87,7 @@ const items = $derived(getItems())
 </script>
 
 <section
-  class="min-h-0 rounded-[1.4rem] border border-base-300 bg-[#121212] px-4 pt-4 pb-6"
+  class="min-h-0 rounded-[1.4rem] border border-base-300 bg-surface px-4 pt-4 pb-6"
 >
   <div class="mb-3 flex items-start justify-between gap-3">
     <AnalyticsCardPrimitive.SectionHeader
@@ -124,7 +124,7 @@ const items = $derived(getItems())
         </thead>
         <tbody>
           {#each (items as AssetAnalyticsRankedTransformation[]).slice(0, 25) as item}
-            <tr class="border-t border-white/8 align-top">
+            <tr class="border-t border-foreground/8 align-top">
               <td class="py-2 pr-3">
                 <div class="flex max-w-full flex-wrap gap-1.5">
                   {#each getTransformationBadges(item.transformKey) as badge}
@@ -166,7 +166,7 @@ const items = $derived(getItems())
         </thead>
         <tbody>
           {#each (items as AssetAnalyticsRankedImage[]).slice(0, 25) as item}
-            <tr class="border-t border-white/8 align-top">
+            <tr class="border-t border-foreground/8 align-top">
               <td class="py-2 pr-3">
                 <ImagePopoverCell
                   publicId={item.publicId}

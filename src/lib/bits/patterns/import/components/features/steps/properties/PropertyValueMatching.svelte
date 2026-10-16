@@ -509,7 +509,7 @@ async function handleAccept() {
 {:else}
   <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
     <section
-      class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+      class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
     >
       <div class="mb-5">
         <div
@@ -523,7 +523,7 @@ async function handleAccept() {
       </div>
 
       <div
-        class="mb-4 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-4 md:grid-cols-2"
+        class="mb-4 grid gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-2"
       >
         <div>
           <div
@@ -550,7 +550,7 @@ async function handleAccept() {
       <div class="space-y-3">
         {#each valueMatches as match, index}
           <div
-            class="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-4 md:grid-cols-[5rem_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.1fr)] md:items-center"
+            class="grid gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[5rem_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.1fr)] md:items-center"
           >
             <div
               class="justify-self-start rounded-full border border-info/25 bg-info/10 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-info"
@@ -592,7 +592,7 @@ async function handleAccept() {
                   <span class="text-sm text-success">✓ {m.exists()}</span>
                 {:else}
                   <select
-                    class="select select-bordered select-sm w-full bg-black/30 font-mono text-sm"
+                    class="select select-bordered select-sm w-full bg-panel/30 font-mono text-sm"
                     onchange={event =>
                       updateMatch(
                         index,
@@ -652,7 +652,7 @@ async function handleAccept() {
     </section>
 
     <section
-      class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+      class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
     >
       <div class="mb-5">
         <div
@@ -666,11 +666,13 @@ async function handleAccept() {
       </div>
 
       <div
-        class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+        class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-foreground/10 bg-foreground/[0.04] p-4"
       >
         <div class="space-y-4">
           {#each existingProperty.values || [] as propertyValue}
-            <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-3">
+            <div
+              class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-3"
+            >
               <div class="font-mono text-sm text-base-content/85">
                 {propertyValue.i18n?.en?.value ||
                   propertyValue.value ||
@@ -680,7 +682,7 @@ async function handleAccept() {
                 {#each Object.values(propertyValue.i18n || {}) as translation}
                   <div class="flex items-center gap-2 text-sm">
                     <span
-                      class="rounded-full border border-white/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.18em] text-base-content/60"
+                      class="rounded-full border border-foreground/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.18em] text-base-content/60"
                     >
                       {translation.locale}
                     </span>

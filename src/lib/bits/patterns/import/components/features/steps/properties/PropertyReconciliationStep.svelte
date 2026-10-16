@@ -454,7 +454,7 @@ function getScenarioForKey(key: string): number {
   {:else if currentProperty}
     <div class="mx-auto w-full max-w-5xl">
       <div
-        class="grid gap-3 rounded-3xl border border-info/25 bg-black/[0.45] p-4 shadow-[var(--shadow-mini)] backdrop-blur-xl md:grid-cols-[auto_minmax(0,1fr)] md:items-center"
+        class="grid gap-3 rounded-3xl border border-info/25 bg-panel/[0.45] p-4 shadow-[var(--shadow-mini)] backdrop-blur-xl md:grid-cols-[auto_minmax(0,1fr)] md:items-center"
       >
         <div
           class="flex h-16 w-16 items-center justify-center rounded-2xl border border-info/25 bg-info/10 font-mono text-2xl font-black text-info"

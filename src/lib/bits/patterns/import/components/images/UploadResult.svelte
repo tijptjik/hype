@@ -88,10 +88,10 @@ let shouldShowError = $derived(Boolean(result.error && result.status !== 'upload
                 rel="noreferrer"
                 class="hover:underline"
               >
-                <code class="text-white">{result.featureId}</code>
+                <code class="text-foreground">{result.featureId}</code>
               </a>
             {:else}
-              <code class="text-white">{m.batch_upload__feature_not_found()}</code>
+              <code class="text-foreground">{m.batch_upload__feature_not_found()}</code>
             {/if}
           </div>
         {/if}

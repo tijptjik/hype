@@ -24,7 +24,7 @@
 
   .bits-theme .bits-form__label-text {
     @apply text-sm font-bold;
-    color: color-mix(in oklab, #fcc 66%, transparent);
+    color: var(--form-label);
   }
 
   .bits-theme .bits-form__label-required {
@@ -202,21 +202,29 @@
   }
 
   .bits-theme .bits-form__gen-ai:hover:not(:disabled):not([aria-disabled="true"]) {
-    color: color-mix(in oklab, var(--color-primary) 80%, white);
+    color: color-mix(in oklab, var(--color-primary) 80%, var(--color-foreground));
     border-color: transparent;
-    background-color: color-mix(in oklab, var(--color-background-alt) 78%, black);
+    background-color: color-mix(
+      in oklab,
+      var(--color-background-alt) 78%,
+      var(--color-panel)
+    );
   }
 
   .bits-theme
     .bits-form__gen-ai:focus-visible:not(:disabled):not([aria-disabled="true"]) {
-    color: color-mix(in oklab, var(--color-primary) 80%, white);
+    color: color-mix(in oklab, var(--color-primary) 80%, var(--color-foreground));
     border-color: transparent;
     outline: none;
     box-shadow: none;
   }
 
   .bits-theme .bits-form__gen-ai:active:not(:disabled) {
-    background-color: color-mix(in oklab, var(--color-background-alt) 70%, black);
+    background-color: color-mix(
+      in oklab,
+      var(--color-background-alt) 70%,
+      var(--color-panel)
+    );
   }
 
   .bits-theme .bits-form__gen-ai:disabled {

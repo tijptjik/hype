@@ -107,7 +107,7 @@ function toggleSeries(seriesKey: AssetAnalyticsSeriesKey): void {
         'inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition',
         isSelected
           ? 'border-primary bg-primary text-primary-content'
-          : 'border-white/12 bg-transparent text-foreground-alt hover:border-base-100 hover:text-foreground',
+          : 'border-foreground/12 bg-transparent text-foreground-alt hover:border-base-100 hover:text-foreground',
       )}
     >
       {windowConfig.label}

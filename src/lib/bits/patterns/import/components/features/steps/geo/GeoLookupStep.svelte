@@ -951,7 +951,7 @@ $effect(() => {
         <div class="flex min-h-0 flex-1 gap-4 overflow-hidden p-4">
           <!-- Left Panel - Existing Values -->
           <div
-            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
           >
             <div class="mb-4 flex-none">
               <h5 class="text-sm font-semibold text-base-content/80">
@@ -1033,7 +1033,7 @@ $effect(() => {
 
           <!-- Right Panel - Enriched Data -->
           <div
-            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-success/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-success/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
           >
             <div class="mb-4 flex-none">
               <h5 class="text-sm font-semibold text-base-content/80">
@@ -1151,7 +1151,7 @@ $effect(() => {
         <div class="flex flex-1 items-center p-4">
           <div class="grid w-full grid-cols-1 gap-4 lg:grid-cols-3">
             <section
-              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
               <div
                 class="font-black text-7xl leading-none tracking-[-0.08em] text-info"
@@ -1177,7 +1177,7 @@ $effect(() => {
             </section>
 
             <section
-              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
               <div
                 class="font-black text-7xl leading-none tracking-[-0.08em] text-warning"
@@ -1206,7 +1206,7 @@ $effect(() => {
             </section>
 
             <section
-              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-success/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-success/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
               <div
                 class="font-black text-7xl leading-none tracking-[-0.08em] text-success"

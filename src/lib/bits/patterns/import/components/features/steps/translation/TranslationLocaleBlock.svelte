@@ -38,7 +38,7 @@ const glyphClass = $derived(
 </script>
 
 <section
-  class={`relative flex min-h-48 overflow-hidden rounded-3xl border bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl ${accentClasses.root}`}
+  class={`relative flex min-h-48 overflow-hidden rounded-3xl border bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl ${accentClasses.root}`}
 >
   <div class="flex h-full w-full flex-col justify-between gap-5">
     <div>
@@ -53,7 +53,7 @@ const glyphClass = $derived(
       {#if block.columns.length > 0}
         {#each block.columns as column}
           <div
-            class="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.06] px-3 py-2"
+            class="flex items-center justify-between gap-3 rounded-xl border border-foreground/5 bg-foreground/[0.06] px-3 py-2"
           >
             <span
               class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-base-content/75"
@@ -69,7 +69,7 @@ const glyphClass = $derived(
         {/each}
       {:else}
         <div
-          class="rounded-xl border border-dashed border-base-content/15 bg-white/[0.05] px-3 py-4 text-sm text-base-content/55"
+          class="rounded-xl border border-dashed border-base-content/15 bg-foreground/[0.05] px-3 py-4 text-sm text-base-content/55"
         >
           {m.feature_import__translation_no_columns_assigned()}
         </div>

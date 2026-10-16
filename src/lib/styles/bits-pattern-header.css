@@ -72,15 +72,19 @@
   .bits-pattern-header__title-menu-content,
   .bits-theme .bits-pattern-header__title-menu-content {
     @apply z-50 min-w-44 rounded-lg border p-1 shadow-none;
-    border-color: color-mix(in oklab, white 16%, transparent);
-    background: #000;
+    border-color: var(--color-border);
+    background: var(--color-panel);
   }
 
   .bits-pattern-header__title-menu-item,
   .bits-theme .bits-pattern-header__title-menu-item {
     @apply flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium;
     cursor: pointer;
-    color: color-mix(in oklab, var(--color-base-content) 92%, white 8%);
+    color: color-mix(
+      in oklab,
+      var(--color-base-content) 92%,
+      var(--color-foreground) 8%
+    );
     transition: background-color 0.15s ease;
   }
 
@@ -93,7 +97,11 @@
 
   .bits-pattern-header__title-menu-item--danger,
   .bits-theme .bits-pattern-header__title-menu-item--danger {
-    color: color-mix(in oklab, var(--color-base-content) 92%, white 8%);
+    color: color-mix(
+      in oklab,
+      var(--color-base-content) 92%,
+      var(--color-foreground) 8%
+    );
   }
 
   .bits-pattern-header__title-menu-item-icon,

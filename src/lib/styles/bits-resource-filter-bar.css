@@ -145,12 +145,16 @@
 
   .bits-resource-filter-bar__tri-toggle-control .bits-switch[data-state="unchecked"] {
     --switch-current-color: var(--color-error);
-    background-color: color-mix(in oklab, var(--color-error) 18%, #313131cc);
+    background-color: color-mix(in oklab, var(--color-error) 18%, var(--color-raised));
   }
 
   .bits-resource-filter-bar__tri-toggle-control .bits-switch[data-state="checked"] {
     --switch-current-color: var(--color-success);
-    background-color: color-mix(in oklab, var(--color-success) 24%, #313131cc);
+    background-color: color-mix(
+      in oklab,
+      var(--color-success) 24%,
+      var(--color-raised)
+    );
   }
 
   .bits-resource-filter-bar__tri-toggle-control
@@ -192,7 +196,7 @@
   .bits-resource-filter-bar__locale-group-button--active {
     background-color: var(--color-secondary);
     border-color: transparent;
-    color: white;
+    color: var(--color-secondary-content);
     font-weight: 700;
     box-shadow: none;
   }
@@ -205,6 +209,6 @@
   ):not([aria-disabled="true"]) {
     background-color: color-mix(in oklab, var(--color-secondary) 90%, white);
     border-color: transparent;
-    color: white;
+    color: var(--color-secondary-content);
   }
 }

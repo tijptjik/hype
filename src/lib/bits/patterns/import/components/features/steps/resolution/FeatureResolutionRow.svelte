@@ -91,7 +91,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
 
 <div
   data-feature-resolution-row={index}
-  class="relative rounded-2xl border border-base-content/15 bg-black/[0.28] p-4 shadow-[var(--shadow-mini)] transition-colors hover:border-base-content/25 hover:bg-black/[0.36]"
+  class="relative rounded-2xl border border-base-content/15 bg-panel/[0.28] p-4 shadow-[var(--shadow-mini)] transition-colors hover:border-base-content/25 hover:bg-panel/[0.36]"
   transition:fade={{ duration: 200 }}
 >
   <button

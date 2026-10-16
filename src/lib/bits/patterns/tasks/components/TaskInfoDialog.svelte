@@ -50,7 +50,9 @@ const newPhotoTabs: Array<{ id: NewPhotoInfoTab; label: string }> = [
 function getNewPhotoTabButtonClass(tabId: NewPhotoInfoTab): string {
   return [
     'rounded-xl px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] transition',
-    activeNewPhotoTab === tabId ? 'bg-white text-black' : 'text-white opacity-65',
+    activeNewPhotoTab === tabId
+      ? 'bg-foreground text-panel'
+      : 'text-foreground opacity-65',
   ].join(' ')
 }
 
@@ -115,19 +117,19 @@ const sections = $derived.by((): SectionDescriptor[] => {
             label: m.proof_keen_swan_dart(),
             descriptionHtml: '',
             icon: CheckBadgeIcon,
-            toneClass: 'text-white/72',
+            toneClass: 'text-foreground/72',
           },
           {
             label: m.arable_clear_coyote_sing(),
             descriptionHtml: '',
             icon: CheckBadgeIcon,
-            toneClass: 'text-white/72',
+            toneClass: 'text-foreground/72',
           },
           {
             label: m.zesty_same_cat_clip(),
             descriptionHtml: '',
             icon: CheckBadgeIcon,
-            toneClass: 'text-white/72',
+            toneClass: 'text-foreground/72',
           },
         ],
       },
@@ -169,19 +171,19 @@ const sections = $derived.by((): SectionDescriptor[] => {
   <Dialog.Portal>
     <Dialog.Overlay class="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm" />
     <Dialog.Content
-      class={`fixed left-1/2 top-1/2 z-[1001] ${contentHeightClass} w-[min(92vw,50rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-white/12 bg-neutral-950 p-8 text-white shadow-2xl`}
+      class={`fixed left-1/2 top-1/2 z-[1001] ${contentHeightClass} w-[min(92vw,50rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-foreground/12 bg-panel p-8 text-foreground shadow-2xl`}
     >
       <div class="flex items-start justify-between gap-6">
         <div class="flex min-w-0 items-center gap-4">
           <Dialog.Title
-            class="text-xl font-semibold uppercase tracking-[0.18em] text-white/92"
+            class="text-xl font-semibold uppercase tracking-[0.18em] text-foreground/92"
           >
             {m.antsy_patient_moth_taste()}
           </Dialog.Title>
 
           {#if type === 'newPhoto'}
             <div
-              class="flex shrink-0 gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5"
+              class="flex shrink-0 gap-1.5 rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5"
             >
               {#each newPhotoTabs as tab (tab.id)}
                 <button
@@ -199,35 +201,35 @@ const sections = $derived.by((): SectionDescriptor[] => {
         </div>
 
         <Dialog.Close
-          class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/72 transition hover:bg-white/[0.08] hover:text-white"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-foreground/10 bg-foreground/[0.04] text-foreground/72 transition hover:bg-foreground/[0.08] hover:text-foreground"
           aria-label="Close task information"
         >
           <XIcon class="h-5 w-5" />
         </Dialog.Close>
       </div>
 
-      <div class="mt-6 space-y-6 text-base leading-8 text-white/82">
+      <div class="mt-6 space-y-6 text-base leading-8 text-foreground/82">
         <div class="min-h-[24rem] space-y-4">
           {#each sections as section, index (`${type}:${section.title ?? index}`)}
             {#if type !== 'newPhoto' || activeNewPhotoTab === getSectionTabId(index)}
               <section class="space-y-4">
                 {#if section.title}
                   <h3
-                    class="text-center text-sm font-semibold uppercase tracking-[0.22em] text-white/60"
+                    class="text-center text-sm font-semibold uppercase tracking-[0.22em] text-foreground/60"
                   >
                     {section.title}
                   </h3>
                 {/if}
 
                 {#if section.bodyHtml}
-                  <div class="text-white/84">{@html section.bodyHtml}</div>
+                  <div class="text-foreground/84">{@html section.bodyHtml}</div>
                 {/if}
 
                 {#if section.actions?.length}
                   <div class="space-y-3">
                     {#each section.actions as action (`${action.label}:${action.descriptionHtml}`)}
                       <div
-                        class="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3"
+                        class="flex items-start gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.03] px-4 py-3"
                       >
                         <action.icon
                           class={`mt-1 h-5 w-5 shrink-0 ${action.toneClass}`}
@@ -237,7 +239,7 @@ const sections = $derived.by((): SectionDescriptor[] => {
                             {action.label}
                           </div>
                           {#if action.descriptionHtml}
-                            <div class="text-white/72">
+                            <div class="text-foreground/72">
                               {@html action.descriptionHtml}
                             </div>
                           {/if}

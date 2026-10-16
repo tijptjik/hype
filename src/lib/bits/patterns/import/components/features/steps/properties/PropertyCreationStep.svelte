@@ -551,7 +551,7 @@ function setEditingField(
 
 <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
   >
     <div class="mb-5 flex items-start justify-between gap-4">
       <div>
@@ -630,7 +630,7 @@ function setEditingField(
       />
 
       <div
-        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
+        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
       >
         <div
           class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
@@ -639,7 +639,7 @@ function setEditingField(
         </div>
         {#if editingField === 'component'}
           <select
-            class="select select-bordered w-full bg-black/30 px-3 py-2 font-mono text-sm"
+            class="select select-bordered w-full bg-panel/30 px-3 py-2 font-mono text-sm"
             bind:value={componentType}
             onchange={() => {
               editingField = null
@@ -671,7 +671,7 @@ function setEditingField(
       </div>
 
       <div
-        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
+        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
       >
         <div
           class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
@@ -708,7 +708,7 @@ function setEditingField(
   </section>
 
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
   >
     <div class="mb-5">
       <div
@@ -731,12 +731,12 @@ function setEditingField(
     </div>
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04]"
+      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-foreground/10 bg-foreground/[0.04]"
     >
       {#if componentType === 'InputField' || componentType === 'TextareaField'}
         {#each property.columns[0]?.sampleValues.slice(0, 10) || [] as value}
           <div
-            class="border-b border-white/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+            class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
           >
             {value || m.empty_value()}
           </div>
@@ -744,7 +744,7 @@ function setEditingField(
       {:else}
         {#each visibleValues as value}
           <div
-            class="border-b border-white/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+            class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
           >
             {value || m.empty_value()}
           </div>

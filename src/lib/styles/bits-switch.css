@@ -139,14 +139,14 @@
   /* State Styles */
   /* --------- */
   .bits-theme .bits-switch[data-state="unchecked"] {
-    --switch-current-color: rgba(202, 202, 202, 0.77);
-    background-color: #313131cc;
+    --switch-current-color: var(--color-muted-foreground);
+    background-color: var(--color-raised);
     box-shadow: none;
   }
 
   .bits-theme .bits-switch--states-3[data-state="unchecked"] {
-    --switch-current-color: rgba(202, 202, 202, 0.77);
-    background-color: #313131cc;
+    --switch-current-color: var(--color-muted-foreground);
+    background-color: var(--color-raised);
     box-shadow: none;
   }
 
@@ -161,7 +161,7 @@
     background-color: color-mix(
       in oklab,
       var(--switch-current-color) var(--switch-track-on-mix, 28%),
-      #313131cc
+      var(--color-raised)
     );
     box-shadow: none;
   }

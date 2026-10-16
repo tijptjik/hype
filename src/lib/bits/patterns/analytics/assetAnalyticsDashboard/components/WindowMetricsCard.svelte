@@ -162,7 +162,7 @@ function getBreakdownItems(
   {:else}
     <div class="grid grid-cols-2 gap-3">
       {#each visibleKpiItems as item}
-        <article class="rounded-[1.2rem] border border-base-300 bg-[#121212] px-3 py-3">
+        <article class="rounded-[1.2rem] border border-base-300 bg-surface px-3 py-3">
           <p
             class="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-alt"
           >
@@ -175,9 +175,7 @@ function getBreakdownItems(
       {/each}
     </div>
 
-    <section
-      class="space-y-4 rounded-[1.25rem] border border-base-300 bg-[#121212] p-4"
-    >
+    <section class="space-y-4 rounded-[1.25rem] border border-base-300 bg-surface p-4">
       <AnalyticsCardPrimitive.SectionHeader
         title="Latency"
         tooltip="Percentile response times for the active request classes in this time window."
@@ -197,7 +195,7 @@ function getBreakdownItems(
             {#each bars as bar}
               <div class="grid grid-cols-[88px_1fr_auto] items-center gap-3">
                 <div class="text-xs text-foreground-alt">{bar.label}</div>
-                <div class="h-2.5 overflow-hidden rounded-full bg-white/6">
+                <div class="h-2.5 overflow-hidden rounded-full bg-foreground/6">
                   <div
                     class={cx('h-full rounded-full', bar.color)}
                     style={`width: ${getLatencyWidth(bar.value, maxValue)}`}
@@ -213,9 +211,7 @@ function getBreakdownItems(
       </div>
     </section>
 
-    <section
-      class="space-y-5 rounded-[1.25rem] border border-base-300 bg-[#121212] p-4"
-    >
+    <section class="space-y-5 rounded-[1.25rem] border border-base-300 bg-surface p-4">
       <AnalyticsCardPrimitive.SectionHeader
         title="Transformations"
         tooltip="Request-weighted shares for crop mode, format, dimensions, quality, and gravity in this time window."
@@ -259,7 +255,7 @@ function getBreakdownItems(
                     </div>
 
                     <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                      <div class="h-2 overflow-hidden rounded-full bg-white/6">
+                      <div class="h-2 overflow-hidden rounded-full bg-foreground/6">
                         <div
                           class="h-full rounded-full bg-primary"
                           style={`width: ${Math.max(item.percent, item.percent > 0 ? 4 : 0)}%`}

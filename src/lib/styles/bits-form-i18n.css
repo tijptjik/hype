@@ -66,7 +66,7 @@
   .bits-theme
     .bits-form__i18n-card
     .bits-form__control-wrap:not(.bits-form__control-wrap--skeleton) {
-    background-color: #c3729080;
+    background-color: var(--form-control-edit-fill);
     border: 2px solid transparent;
   }
 
@@ -76,18 +76,18 @@
       .bits-form__control-wrap--editing,
       .bits-form__control-wrap--skeleton
     ) {
-    background-color: color-mix(in oklab, #7d4f63 32%, transparent);
-    border-color: color-mix(in oklab, #2f282b 22%, transparent);
+    background-color: var(--form-control-fill);
+    border-color: var(--form-control-border);
     box-shadow:
-      inset 0 0px 0 color-mix(in oklab, #1a1517 20%, transparent),
-      inset 0 1px 0 color-mix(in oklab, #f6e8ef 8%, transparent);
-    color: white / 80%;
+      inset 0 0px 0 color-mix(in oklab, var(--color-canvas) 20%, transparent),
+      inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 8%, transparent);
+    color: var(--color-foreground);
   }
 
   .bits-theme .bits-form__i18n-card .bits-form__select-trigger {
     border: 2px solid transparent;
-    background-color: #c3729080;
-    color: color-mix(in oklab, white 90%, transparent);
+    background-color: var(--form-control-edit-fill);
+    color: color-mix(in oklab, var(--color-foreground) 90%, transparent);
   }
 
   /* ----------------- */
@@ -130,7 +130,7 @@
   .bits-theme .bits-form__i18n-translation-source:focus-visible:not(:disabled),
   .bits-theme .bits-form__i18n-translation-source:hover:not(:disabled) {
     background-color: color-mix(in oklab, var(--color-glass-200) 68%, transparent);
-    color: color-mix(in oklab, var(--color-primary) 80%, white);
+    color: color-mix(in oklab, var(--color-primary) 80%, var(--color-foreground));
   }
 
   .bits-theme .bits-form__i18n-translation-source:disabled {

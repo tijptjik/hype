@@ -16,7 +16,7 @@ let {
 const model = useImageEditorGalleryModel(getImageCtx())
 </script>
 
-<section class={['bg-black', className].filter(Boolean).join(' ')}>
+<section class={['bg-panel', className].filter(Boolean).join(' ')}>
   <ThumbnailWrapper
     items={model.state.items}
     activeId={model.state.activeId}

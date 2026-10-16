@@ -31,7 +31,7 @@ function handleCommit(): void {
 </script>
 
 <div
-  class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
+  class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
 >
   <div
     class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
@@ -48,7 +48,7 @@ function handleCommit(): void {
         </span>
       {/if}
       <input
-        class="input input-bordered w-full bg-black/30 px-3 py-2 font-mono text-sm"
+        class="input input-bordered w-full bg-panel/30 px-3 py-2 font-mono text-sm"
         {value}
         oninput={event => onInput(event.currentTarget.value)}
         onblur={handleCommit}

@@ -156,7 +156,7 @@ $effect(() => {
           variant="default"
           class="bits-resource-bulk-edit__select text-sm"
           triggerClass="min-w-37 w-max h-9 px-2 text-sm"
-          contentClass="bits-resource-bulk-edit__select-content text-white"
+          contentClass="bits-resource-bulk-edit__select-content text-foreground"
           onValueChange={config.onOptionChange}
         />
         <Button
