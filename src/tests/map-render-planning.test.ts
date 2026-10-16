@@ -1,3 +1,5 @@
+import { DatabaseSync } from 'node:sqlite'
+import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { mockGetFeatureWithRelations, mockListFeatures, mockToListResponseShape } =
@@ -18,7 +20,12 @@ vi.mock('#lib/db/services/feature.js', () => ({
   listFeatures: mockListFeatures,
 }))
 
-import { planLayerMapRenderRefreshJobs } from '#lib/map/renders/render.server.js'
+import {
+  getLayerMapRenderData,
+  getProjectMapRenderData,
+  planProjectMapRenderRefreshJobs,
+  planLayerMapRenderRefreshJobs,
+} from '#lib/map/renders/render.server.js'
 
 type QueryStep = {
   result: unknown
@@ -152,5 +159,53 @@ describe('layer map render refresh planning', () => {
       identifier: 'layer-draft',
       sourceUrl: 'https://preview.hype.hk/headless/map-layer-render/layer-draft',
     })
+  })
+})
+
+describe('unpublished preview SQL eligibility', () => {
+  it('renders draft projects and layers and detects changes in draft default layers', async () => {
+    const sqlite = new DatabaseSync(':memory:')
+    sqlite.exec(`
+      CREATE TABLE organisation(id TEXT, isPublished INTEGER, isArchived INTEGER);
+      CREATE TABLE project(id TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT);
+      CREATE TABLE layer(id TEXT, projectId TEXT, isPublished INTEGER, isArchived INTEGER, isDefaultVisible INTEGER, modifiedAt TEXT, rank INTEGER);
+      CREATE TABLE feature(id TEXT, layerId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, geometry TEXT);
+      CREATE TABLE mapStyles(id TEXT, code TEXT);
+      CREATE TABLE projectMapStyles(projectId TEXT, mapStyleId TEXT);
+      INSERT INTO organisation VALUES('org',0,0);
+      INSERT INTO project VALUES('draft','org',0,0,'2000-01-01T00:00:00.000Z');
+      INSERT INTO layer VALUES('draft-layer','draft',0,0,1,'2099-01-01T00:00:00.000Z',1);
+    `)
+    const db = drizzle(async (query, params) => ({
+      rows: sqlite
+        .prepare(query)
+        .all(...params)
+        .map(row => Object.values(row)),
+    }))
+    try {
+      expect(await getLayerMapRenderData(db as never, 'draft-layer')).toMatchObject({
+        selectedLayerIds: ['draft-layer'],
+      })
+      expect(await getProjectMapRenderData(db as never, 'draft')).toMatchObject({
+        selectedLayerIds: ['draft-layer'],
+      })
+      const jobs = await planProjectMapRenderRefreshJobs(
+        db as never,
+        'http://localhost:5173',
+        null,
+        24,
+        false,
+      )
+      expect(jobs.map(job => job.identifier)).toEqual(['draft'])
+      sqlite.exec('UPDATE layer SET isArchived = 1')
+      expect(await getLayerMapRenderData(db as never, 'draft-layer')).toBeNull()
+      expect(await getProjectMapRenderData(db as never, 'draft')).toMatchObject({
+        selectedLayerIds: [],
+      })
+      sqlite.exec('UPDATE project SET isArchived = 1')
+      expect(await getProjectMapRenderData(db as never, 'draft')).toBeNull()
+    } finally {
+      sqlite.close()
+    }
   })
 })

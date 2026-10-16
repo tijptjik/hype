@@ -89,11 +89,12 @@ export const toMapRenderPayload = (renderData: MapRenderPayloadSource) => ({
 })
 
 /**
- * Redirects remote requests to immutable asset URLs or streams the dev-bucket object locally.
+ * Redirects remote requests to immutable asset URLs or streams a matching object locally.
  *
  * @param params Asset lookup parameters.
  * @returns PNG response in local development.
- * @remarks Throws a redirect for preview/production and a 404 when the object is missing.
+ * @remarks Local reads try dev, preview, then production for the exact content hash.
+ * Throws a redirect for preview/production and a 404 when the object is missing.
  */
 export const serveMapRenderAsset = async (params: {
   platform?: App.Platform
@@ -121,7 +122,17 @@ export const serveMapRenderAsset = async (params: {
     )
   }
 
-  const object = await params.platform?.env.ASSET_PUBLIC_DEV.get(params.objectKey)
+  // Imported databases can reference renders that exist only in a remote-stage bucket.
+  const env = params.platform?.env
+  let object: R2ObjectBody | null = null
+  for (const bucket of [
+    env?.ASSET_PUBLIC_DEV,
+    env?.ASSET_PUBLIC_PREVIEW,
+    env?.ASSET_PUBLIC_PRODUCTION,
+  ]) {
+    object = (await bucket?.get(params.objectKey)) ?? null
+    if (object) break
+  }
 
   if (!object) {
     throw error(404, params.notFoundMessage)

@@ -192,6 +192,7 @@ const getMapRenderFeatureRecords = async (
  * @param db Database connection.
  * @param layerId Target layer id.
  * @returns Render payload or `null` when the layer should not produce a preview.
+ * @remarks Includes unpublished layers and parents; archived resources remain excluded.
  */
 export const getLayerMapRenderData = async (
   db: Database,
@@ -207,16 +208,13 @@ export const getLayerMapRenderData = async (
     .from(layer)
     .innerJoin(project, eq(layer.projectId, project.id))
     .innerJoin(organisation, eq(project.organisationId, organisation.id))
-    // Rendered assets are served through a public immutable URL, so unpublished
-    // layers and features must never enter the payload used to generate them.
+    // Admin previews include unpublished layers and parents; archived resources
+    // remain excluded, and feature publication filtering still applies.
     .where(
       and(
         eq(layer.id, layerId),
-        eq(layer.isPublished, true),
         eq(layer.isArchived, false),
-        eq(project.isPublished, true),
         eq(project.isArchived, false),
-        eq(organisation.isPublished, true),
         eq(organisation.isArchived, false),
       ),
     )
@@ -254,6 +252,7 @@ export const getLayerMapRenderData = async (
  * @param db Database connection.
  * @param projectId Target project id.
  * @returns Render payload or `null` when the project should not produce a preview.
+ * @remarks Includes unpublished projects and default-visible layers, excluding archived rows.
  */
 export const getProjectMapRenderData = async (
   db: Database,
@@ -265,13 +264,7 @@ export const getProjectMapRenderData = async (
       modifiedAt: project.modifiedAt,
     })
     .from(project)
-    .where(
-      and(
-        eq(project.id, projectId),
-        eq(project.isPublished, true),
-        eq(project.isArchived, false),
-      ),
-    )
+    .where(and(eq(project.id, projectId), eq(project.isArchived, false)))
     .limit(1)
 
   const targetProject = projectRows[0]
@@ -290,7 +283,6 @@ export const getProjectMapRenderData = async (
       and(
         eq(layer.projectId, projectId),
         eq(layer.isDefaultVisible, true),
-        eq(layer.isPublished, true),
         eq(layer.isArchived, false),
       ),
     )
@@ -416,7 +408,6 @@ const buildProjectMapRenderRefreshCandidates = async (
           FROM "layer"
           WHERE "layer"."projectId" = ${project.id}
             AND "layer"."isDefaultVisible" = 1
-            AND "layer"."isPublished" = 1
             AND "layer"."isArchived" = 0
             AND "layer"."modifiedAt" >= ${cutoffIso}
         )
@@ -427,7 +418,6 @@ const buildProjectMapRenderRefreshCandidates = async (
             ON "defaultLayer"."id" = "feature"."layerId"
           WHERE "defaultLayer"."projectId" = ${project.id}
             AND "defaultLayer"."isDefaultVisible" = 1
-            AND "defaultLayer"."isPublished" = 1
             AND "defaultLayer"."isArchived" = 0
             AND "feature"."isPublished" = 1
             AND "feature"."isArchived" = 0
