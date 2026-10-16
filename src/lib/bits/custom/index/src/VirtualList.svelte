@@ -487,32 +487,12 @@ svelte-virtual-list-viewport {
   display: block;
   will-change: scroll-position;
   overflow-anchor: none;
-  scrollbar-width: auto;
-  scrollbar-color: auto;
+  /* The custom Scrollbar owns the visible thumb; retain native scrolling only. */
+  scrollbar-width: none;
 }
 
 svelte-virtual-list-viewport::-webkit-scrollbar {
-  width: 12px;
-  will-change: auto;
-  contain: none;
-}
-
-svelte-virtual-list-viewport::-webkit-scrollbar-track {
-  background: transparent;
-  will-change: auto;
-  transform: translateZ(0);
-}
-
-svelte-virtual-list-viewport::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
-  will-change: auto;
-  transform: translateZ(0);
-  contain: none;
-}
-
-svelte-virtual-list-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 0, 0, 0.5);
+  display: none;
 }
 
 svelte-virtual-list-contents,
