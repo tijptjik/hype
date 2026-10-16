@@ -105,7 +105,7 @@ export const UsernameSchema = z
   .trim()
   .min(1)
   .max(32)
-  .regex(/^[a-z0-9_]+$/)
+  .regex(/^[a-zA-Z0-9_]+$/)
 
 const HubRoleBase = createSelectSchema(hubRole)
 const OrganisationRoleBase = createSelectSchema(organisationRole)
@@ -152,6 +152,7 @@ const UserContributionSummaryFields = z.object({
 export const UserAttributionProfileAPI = UserBase.pick({
   id: true,
   username: true,
+  displayUsername: true,
   attribution: true,
 } as const)
 
@@ -159,6 +160,7 @@ export const UserAdminListProfileAPI = UserBase.pick({
   id: true,
   name: true,
   username: true,
+  displayUsername: true,
   email: true,
   image: true,
   attribution: true,
@@ -167,6 +169,7 @@ export const UserAdminListProfileAPI = UserBase.pick({
 export const UserCardProfileAPI = UserBase.pick({
   id: true,
   username: true,
+  displayUsername: true,
   image: true,
   attribution: true,
 } as const)
@@ -174,6 +177,7 @@ export const UserCardProfileAPI = UserBase.pick({
 export const UserLeaderboardProfileAPI = UserBase.pick({
   id: true,
   username: true,
+  displayUsername: true,
 } as const).extend({
   reportedMissingCount: z.number(),
   newPhotoCount: z.number(),
@@ -192,6 +196,7 @@ export const UserSelfProfileAPI = UserBase.pick({
   id: true,
   name: true,
   username: true,
+  displayUsername: true,
   image: true,
   attribution: true,
   locale: true,
@@ -241,7 +246,7 @@ export const UserUpdate = createUpdateSchema(user).omit({
   updatedAt: true,
 })
 
-export const UserUpdateAPI = UserUpdate.extend({
+export const UserUpdateAPI = UserUpdate.omit({ displayUsername: true }).extend({
   username: UsernameSchema.optional(),
 })
 

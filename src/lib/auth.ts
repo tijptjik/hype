@@ -1,6 +1,6 @@
 // BETTER-AUTH
 import { betterAuth } from 'better-auth'
-import { createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
+import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { passkey } from '@better-auth/passkey'
 import { customSession, anonymous, username } from 'better-auth/plugins'
@@ -140,6 +140,31 @@ function createAuthInstance(
     // Recheck account availability even when Better Auth accepts a cached session payload.
     hooks: {
       before: createAuthMiddleware(async ctx => {
+        // A display spelling must identify the same canonical username.
+        if (
+          typeof ctx.body?.username === 'string' &&
+          typeof ctx.body?.displayUsername === 'string' &&
+          ctx.body.username.trim().toLowerCase() !==
+            ctx.body.displayUsername.trim().toLowerCase()
+        ) {
+          throw new APIError('BAD_REQUEST', {
+            message: 'Username and display username must match.',
+          })
+        }
+        // Supply both fields before the plugin short-circuits casing-only edits.
+        if (ctx.path === '/update-user' || ctx.path === '/sign-up/email') {
+          if (
+            typeof ctx.body?.username === 'string' &&
+            ctx.body.displayUsername === undefined
+          ) {
+            ctx.body.displayUsername = ctx.body.username.trim()
+          } else if (
+            typeof ctx.body?.displayUsername === 'string' &&
+            ctx.body.username === undefined
+          ) {
+            ctx.body.username = ctx.body.displayUsername.trim().toLowerCase()
+          }
+        }
         // Clearing a disabled account's session must remain possible.
         if (ctx.path === '/sign-out') return
         const current = await getSessionFromCtx(ctx, { disableRefresh: true })
@@ -171,6 +196,7 @@ function createAuthInstance(
                 data: {
                   ...user,
                   username,
+                  displayUsername: username,
                 },
               }
             }
@@ -276,21 +302,27 @@ function createAuthInstance(
         },
       }),
       username({
-        // Hype stores a single username; no separate displayUsername column exists.
-        displayUsername: false,
+        // Preserve user-chosen casing separately; canonical usernames remain lowercase.
+        minUsernameLength: 1,
+        maxUsernameLength: 32,
+        displayUsernameValidator: value => /^[a-zA-Z0-9_]{1,32}$/.test(value.trim()),
+        usernameNormalization: value => value.trim().toLowerCase(),
+        displayUsernameNormalization: value => value.trim(),
         usernameValidator: async username => {
-          if (username === 'admin') {
+          const canonical = username.trim().toLowerCase()
+          if (!/^[a-z0-9_]{1,32}$/.test(canonical) || canonical === 'admin') {
             return false
           }
 
-          // Check if username conflicts with existing usernames or user IDs
+          // Better Auth handles username uniqueness and permits casing-only edits.
+          // Keep user IDs reserved so profile routes cannot resolve ambiguously.
           const { user } = await import('#lib/db/schema/user.js')
-          const { or, eq } = await import('drizzle-orm')
+          const { eq } = await import('drizzle-orm')
 
           const existingUser = await db
             .select()
             .from(user)
-            .where(or(eq(user.username, username), eq(user.id, username)))
+            .where(eq(user.id, canonical))
             .limit(1)
 
           return existingUser.length === 0
@@ -394,6 +426,7 @@ export type SessionUser = Session['user'] & {
   attribution: string
   isArchived: boolean
   username: string | null
+  displayUsername: string | null
   isAnonymous: boolean
   preferences: UserPreferences
   experimental: UserExperimental

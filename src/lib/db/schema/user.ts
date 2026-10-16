@@ -28,44 +28,49 @@ import { SupportedLocales } from '../../enums'
  * - Contains user preferences for language and experimental features
  * - Links to user activity and roles in organizations/projects
  */
-export const user = sqliteTable('user', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => nanoid(12)),
-  name: text('name'),
-  username: text('username').unique(),
-  email: text('email').unique(),
-  emailVerified: integer('emailVerified', { mode: 'boolean' }).default(false),
-  image: text('image'),
-  locale: text('locale', { enum: ['en', 'zh-hant', 'zh-hans'] })
-    .notNull()
-    .default(SupportedLocales.en),
-  telephone: text('telephone'),
-  attribution: text('attribution'),
-  // Better Auth guest marker; guest preferences and saved-place state are stored by user ID.
-  isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
-  // If a user is archived, their account is effectively disabled, and they are not allowed to login
-  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
-  // Language features
-  preferences: text('preferences')
-    .$type<string>()
-    .default(
-      sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`,
-    )
-    .notNull(),
-  // Experimental features
-  experimental: text('experimental')
-    .$type<string>()
-    .default(sql`'{"contributorMode":false, "noLabelsMode":false}'`)
-    .notNull(),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
-    .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date()),
-})
+export const user = sqliteTable(
+  'user',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    name: text('name'),
+    username: text('username').unique(),
+    displayUsername: text('displayUsername'),
+    email: text('email').unique(),
+    emailVerified: integer('emailVerified', { mode: 'boolean' }).default(false),
+    image: text('image'),
+    locale: text('locale', { enum: ['en', 'zh-hant', 'zh-hans'] })
+      .notNull()
+      .default(SupportedLocales.en),
+    telephone: text('telephone'),
+    attribution: text('attribution'),
+    // Better Auth guest marker; guest preferences and saved-place state are stored by user ID.
+    isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
+    // If a user is archived, their account is effectively disabled, and they are not allowed to login
+    isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+    // Language features
+    preferences: text('preferences')
+      .$type<string>()
+      .default(
+        sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`,
+      )
+      .notNull(),
+    // Experimental features
+    experimental: text('experimental')
+      .$type<string>()
+      .default(sql`'{"contributorMode":false, "noLabelsMode":false}'`)
+      .notNull(),
+    createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+  },
+  table => [uniqueIndex('user_username_nocase_uidx').on(sql`lower(${table.username})`)],
+)
 
 /**
  * User activity tracking

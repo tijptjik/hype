@@ -32,14 +32,15 @@ export const validateUsernameIssues = (
   username: string,
 ): { normalizedUsername: string; issues: RemoteFormIssue[] } => {
   const normalizedUsername = normalizeUsername(username)
-  const issues = validateUsername(normalizedUsername)
-    ? []
-    : [
-        {
-          message: m.validation__username_invalid(),
-          path: ['username'],
-        } satisfies RemoteFormIssue,
-      ]
+  const issues =
+    /^[a-zA-Z0-9_]{1,32}$/.test(username.trim()) && validateUsername(normalizedUsername)
+      ? []
+      : [
+          {
+            message: m.validation__username_invalid(),
+            path: ['username'],
+          } satisfies RemoteFormIssue,
+        ]
 
   return {
     normalizedUsername,
@@ -155,7 +156,7 @@ export const debouncedUpdateUsername = async (
 
   await debouncedUpdateUser(
     userId,
-    { username: normalizedUsername },
+    { username: username.trim() },
     {
       delay: 300,
       timerKey: 'username',

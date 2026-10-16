@@ -24,8 +24,11 @@ const {
   mockToAuthMessage: vi.fn((code: string) => code),
 }))
 
+const mockUpdateUser = vi.hoisted(() => vi.fn())
+
 vi.mock('$app/server', () => ({
   getRequestEvent: mockGetRequestEvent,
+  requested: vi.fn(() => ({ refreshAll: vi.fn() })),
   query: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(handler as (...args: unknown[]) => unknown, 'query'),
 }))
@@ -94,6 +97,7 @@ vi.mock('#lib/api/services/user.js', () => ({
   isPrivilegedArchivedSearchRequested: (state: { isArchived: boolean | null }) =>
     state.isArchived === true || state.isArchived === null,
   toEntityResponseShape: mockToEntityResponseShape,
+  toUserProfileResponseShape: vi.fn(value => value),
   toUserReadQueryPlan: mockToUserReadQueryPlan,
   toEntityRoleExistsCondition: vi.fn(() => ({ fn: 'exists' })),
   toParentChainCondition: vi.fn(async () => ({ fn: 'parent-chain' })),
@@ -226,7 +230,7 @@ vi.mock('#lib/db/services/user.js', () => ({
   getUserFeaturesByUserId: vi.fn(),
   getUserLayersByUserId: vi.fn(),
   removeUserFeatureListState: vi.fn(),
-  updateUser: vi.fn(),
+  updateUser: mockUpdateUser,
   updateUserLayers: vi.fn(),
   upsertUserFeatureState: vi.fn(),
 }))
@@ -437,6 +441,33 @@ describe('user.remote', () => {
     ).rejects.toMatchObject({ status: 403, message: 'INSUFFICIENT_ROLE' })
 
     expect(mockLoadUser).not.toHaveBeenCalled()
+  })
+
+  it('preserves casing for a self username edit while storing a canonical value', async () => {
+    mockLoadUser
+      .mockResolvedValueOnce({ id: 'u-1', username: 'mixedcase' })
+      .mockResolvedValueOnce({ id: 'u-1', username: 'mixedcase' })
+      .mockResolvedValueOnce({
+        id: 'u-1',
+        username: 'mixedcase',
+        displayUsername: 'MixedCase',
+      })
+    await remote.updateUserProfile({ id: 'u-1', data: { username: 'MixedCase' } })
+    expect(mockUpdateUser).toHaveBeenCalledWith(
+      expect.anything(),
+      { username: 'mixedcase', displayUsername: 'MixedCase' },
+      'u-1',
+    )
+  })
+
+  it('rejects a username owned by another user regardless of casing', async () => {
+    mockLoadUser
+      .mockResolvedValueOnce({ id: 'u-1' })
+      .mockResolvedValueOnce({ id: 'u-2', username: 'taken' })
+    await expect(
+      remote.updateUserProfile({ id: 'u-1', data: { username: 'TaKeN' } }),
+    ).rejects.toMatchObject({ status: 409, message: 'USERNAME_IS_ALREADY_TAKEN' })
+    expect(mockUpdateUser).not.toHaveBeenCalled()
   })
 
   it('searchUsers caps limit at 100 and parses count rows', async () => {

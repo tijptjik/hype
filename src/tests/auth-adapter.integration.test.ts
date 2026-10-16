@@ -37,6 +37,7 @@ beforeEach(() => {
     )
     sqlite.exec(`CREATE TABLE "${config.name}" (${columns.join(', ')})`)
   }
+  sqlite.exec('CREATE UNIQUE INDEX user_username_nocase_uidx ON user(lower(username))')
   // Start from the actual account DDL in the deployed migration, not a permissive mock.
   const accountDDL = previousMigration.match(
     /CREATE TABLE "account_new" \([\s\S]*?\n\);/,
@@ -133,12 +134,27 @@ describe('Better Auth production Drizzle adapter', () => {
     }
     const registered = await auth.api.signUpEmail({ body })
     expect(registered.user.email).toBe(body.email)
-    // The username plugin must normalize and persist using Hype's single username column.
+    // Preserve chosen spelling alongside the canonical lookup value.
     expect(registered.user.username).toBe('mixedcaseuser')
-    expect(registered.user).not.toHaveProperty('displayUsername')
+    expect(registered.user.displayUsername).toBe('MixedCaseUser')
     expect(
       sqlite.prepare('SELECT username FROM user WHERE id = ?').get(registered.user.id),
     ).toMatchObject({ username: 'mixedcaseuser' })
+    await expect(
+      auth.api.signUpEmail({
+        body: { ...body, email: 'duplicate@example.com', username: 'MIXEDCASEUSER' },
+      }),
+    ).rejects.toThrow()
+    await expect(
+      auth.api.signUpEmail({
+        body: {
+          ...body,
+          email: 'mismatch@example.com',
+          username: 'Different',
+          displayUsername: 'Impersonated',
+        },
+      }),
+    ).rejects.toThrow()
     const account = sqlite
       .prepare('SELECT * FROM account WHERE userId = ?')
       .get(registered.user.id)
@@ -160,6 +176,12 @@ describe('Better Auth production Drizzle adapter', () => {
         .map(value => value.split(';')[0])
         .join('; '),
     })
+    await auth.api.updateUser({ headers, body: { username: 'MiXeDcAsEuSeR' } })
+    expect(
+      sqlite
+        .prepare('SELECT username, displayUsername FROM user WHERE id = ?')
+        .get(registered.user.id),
+    ).toMatchObject({ username: 'mixedcaseuser', displayUsername: 'MiXeDcAsEuSeR' })
     const current = await auth.api.getSession({ headers })
     expect(current?.user.id).toBe(registered.user.id)
     expect(sqlite.prepare('SELECT userId FROM session').all()).toEqual([
@@ -174,6 +196,7 @@ describe('Better Auth production Drizzle adapter', () => {
     const owner = await context.internalAdapter.createUser(
       {
         name: 'Owner',
+        username: 'owner',
         email: 'owner@example.com',
         emailVerified: true,
       },
@@ -182,6 +205,7 @@ describe('Better Auth production Drizzle adapter', () => {
     const other = await context.internalAdapter.createUser(
       {
         name: 'Other',
+        username: 'other',
         email: 'other@example.com',
         emailVerified: true,
       },

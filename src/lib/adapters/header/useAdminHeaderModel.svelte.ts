@@ -402,7 +402,8 @@ export function useAdminHeaderModel(
   const showAvatar = $derived(!appCtx.state.panels.settings.isOpen)
   const currentUser = $derived(appCtx.user ?? null)
   const currentUserName = $derived(
-    currentUser?.username ??
+    currentUser?.displayUsername ??
+      currentUser?.username ??
       (currentUser && 'name' in currentUser ? currentUser.name : null) ??
       null,
   )

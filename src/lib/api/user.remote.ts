@@ -15,7 +15,7 @@ import {
   UserSearchQueryParamsSchema,
 } from '#lib/db/zod/index.js'
 // DRIZZLE
-import { eq } from 'drizzle-orm'
+import { eq, or, sql } from 'drizzle-orm'
 // API
 import { getPrisms } from '#lib/api/index.js'
 import {
@@ -207,8 +207,9 @@ export const getUser = guardedQuery(GetUserParamsSchema, async (params, ctx) => 
 
   const isSelfLookup =
     params.ref === sessionUser.id ||
-    (params.refKey === 'username' && params.ref === sessionUser.username) ||
-    (!params.refKey && params.ref === sessionUser.username)
+    (params.refKey === 'username' &&
+      params.ref.toLowerCase() === sessionUser.username?.toLowerCase()) ||
+    (!params.refKey && params.ref.toLowerCase() === sessionUser.username?.toLowerCase())
 
   // The detailed user read is also a public remote entry point. Do not let an
   // arbitrary authenticated account enumerate another user's profile or request
@@ -305,7 +306,14 @@ export const updateUserProfile = guardedCommand(
       if (!validateUsername(username)) {
         throw error(400, 'INVALID_USERNAME')
       }
-      newData.username = username
+      // Reserve IDs and check normalized names before the database uniqueness backstop.
+      const conflict = await loadUser(db, {}, [
+        or(eq(user.id, username), sql`lower(${user.username}) = ${username}`)!,
+      ])
+      if (username === 'admin' || (conflict && conflict.id !== existing.id)) {
+        throw error(409, 'USERNAME_IS_ALREADY_TAKEN')
+      }
+      Object.assign(newData, { username, displayUsername: newData.username.trim() })
     }
 
     await updateUser(db, newData, params.id as Id)

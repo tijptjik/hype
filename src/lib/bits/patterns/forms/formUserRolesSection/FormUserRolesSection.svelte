@@ -213,7 +213,7 @@ $effect(() => {
                   image: (user: User) => toImageSrc(user.image),
                   title: (user: User) => user.name || '-',
                   descriminator: (user: User) =>
-                    user.username ? `@${user.username}` : null,
+                    user.username ? `@${user.displayUsername ?? user.username}` : null,
                 }}
                 class="w-full [&_.bits-search-bar]:mb-0"
               />

@@ -121,7 +121,16 @@ export const getUsersForHydration = async (
   ids: Id[],
 ): Promise<
   Array<
-    Pick<UserDB, 'id' | 'name' | 'image' | 'attribution' | 'username' | 'isArchived'>
+    Pick<
+      UserDB,
+      | 'id'
+      | 'name'
+      | 'image'
+      | 'attribution'
+      | 'username'
+      | 'displayUsername'
+      | 'isArchived'
+    >
   >
 > => {
   if (ids.length === 0) return []
@@ -137,6 +146,7 @@ export const getUsersForHydration = async (
             image: user.image,
             attribution: user.attribution,
             username: user.username,
+            displayUsername: user.displayUsername,
             isArchived: user.isArchived,
           })
           .from(user)
@@ -170,6 +180,7 @@ export const searchUsersByConditions = async (
     id: string
     name: string | null
     username: string | null
+    displayUsername: string | null
     email: string | null
     image: unknown
     attribution: string | null
@@ -191,6 +202,7 @@ export const searchUsersByConditions = async (
       id: user.id,
       name: user.name,
       username: user.username,
+      displayUsername: user.displayUsername,
       email: user.email,
       image: user.image,
       attribution: user.attribution,

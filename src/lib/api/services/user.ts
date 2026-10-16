@@ -193,7 +193,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  */
 export const toEntityResponseShape = <P extends UserHydrationProfile = 'attribution'>(
   userEntity:
-    | Pick<UserDB, 'id' | 'attribution' | 'name' | 'image' | 'username'>
+    | Pick<
+        UserDB,
+        'id' | 'attribution' | 'name' | 'image' | 'username' | 'displayUsername'
+      >
     | null
     | undefined,
   profile: P = 'attribution' as P,
@@ -374,12 +377,14 @@ const toProfileData = (
   const baseAttribution = {
     id: user.id,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     attribution: user.attribution,
   }
   const adminList = {
     id: user.id,
     name: user.name,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     email: user.email,
     image: user.image,
     attribution: user.attribution,
@@ -387,12 +392,14 @@ const toProfileData = (
   const card = {
     id: user.id,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     image: user.image,
     attribution: user.attribution,
   }
   const leaderboard = {
     id: user.id,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     reportedMissingCount: contributionSummary.reportedMissingCount,
     newPhotoCount: contributionSummary.newPhotoCount,
     newFeatureCount: contributionSummary.newFeatureCount,
@@ -405,6 +412,7 @@ const toProfileData = (
     id: user.id,
     name: user.name,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     image: user.image,
     attribution: user.attribution,
     locale: user.locale,
@@ -470,8 +478,8 @@ export const toRequestedSearchState = (conditions: { isArchived?: unknown }) => 
  */
 export const toUserLookupCondition = (params: UserLookupParams): SQL<unknown> =>
   params.refKey === 'username'
-    ? eq(user.username, params.ref)
-    : (or(eq(user.id, params.ref), eq(user.username, params.ref)) ??
+    ? eq(user.username, params.ref.toLowerCase())
+    : (or(eq(user.id, params.ref), eq(user.username, params.ref.toLowerCase())) ??
       eq(user.id, params.ref))
 
 /**
@@ -501,7 +509,8 @@ export const resolveUserProfile = (
   }
 
   const isSelf =
-    (params.refKey === 'username' && params.ref === sessionUser.username) ||
+    (params.refKey === 'username' &&
+      params.ref.toLowerCase() === sessionUser.username?.toLowerCase()) ||
     params.ref === sessionUser.id
 
   return isSelf ? 'self' : 'detail'

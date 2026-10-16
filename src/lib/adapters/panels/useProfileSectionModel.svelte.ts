@@ -63,20 +63,29 @@ export function useProfileSectionModel(
    * @param userId - The user ID associated with the optimistic mutation.
    * @param optimisticUsername - The username applied before the save resolved.
    * @param previousUsername - The username value to restore on failure.
+   * @param optimisticDisplayUsername - Casing applied by this save.
+   * @param previousDisplayUsername - Previous casing to restore.
    */
   function restoreOptimisticUsername(
     userId: string,
     optimisticUsername: string,
     previousUsername: CurrentUser['username'],
+    optimisticDisplayUsername: string,
+    previousDisplayUsername: CurrentUser['displayUsername'],
   ): void {
     const currentUser = appCtx.getUser()
 
     if (!currentUser || currentUser.id !== userId) return
-    if (currentUser.username !== optimisticUsername) return
+    if (
+      currentUser.username !== optimisticUsername ||
+      currentUser.displayUsername !== optimisticDisplayUsername
+    )
+      return
 
     appCtx.setUser({
       ...currentUser,
       username: previousUsername,
+      displayUsername: previousDisplayUsername,
     } as CurrentUser)
   }
 
@@ -108,7 +117,12 @@ export function useProfileSectionModel(
       return m.anonymous()
     }
 
-    return user.username ?? ('name' in user ? user.name : null) ?? m.anonymous()
+    return (
+      user.displayUsername ??
+      user.username ??
+      ('name' in user ? user.name : null) ??
+      m.anonymous()
+    )
   }
 
   /** Returns whether the current session belongs to an anonymous guest. */
@@ -130,7 +144,7 @@ export function useProfileSectionModel(
     const user = appCtx.getUser()
     if (!user) return
 
-    editedUsername = user.username || ''
+    editedUsername = user.displayUsername || user.username || ''
     isEditingUsername = true
   }
 
@@ -140,6 +154,8 @@ export function useProfileSectionModel(
 
     const { normalizedUsername, issues } = validateUsernameIssues(editedUsername.trim())
     const previousUsername = user.username ?? null
+    const previousDisplayUsername = user.displayUsername ?? null
+    const displayUsername = editedUsername.trim()
 
     if (issues.length > 0) {
       showTransientError()
@@ -151,22 +167,35 @@ export function useProfileSectionModel(
     appCtx.setUser({
       ...user,
       username: normalizedUsername,
+      displayUsername,
     } as CurrentUser)
 
-    await debouncedUpdateUsername((user as CurrentUser).id, normalizedUsername, {
+    await debouncedUpdateUsername((user as CurrentUser).id, displayUsername, {
       onSuccess: () => {
         isEditingUsername = false
         isLoadingUsername = false
         showTransientSuccess()
       },
       onInvalid: () => {
-        restoreOptimisticUsername(user.id, normalizedUsername, previousUsername)
+        restoreOptimisticUsername(
+          user.id,
+          normalizedUsername,
+          previousUsername,
+          displayUsername,
+          previousDisplayUsername,
+        )
         isLoadingUsername = false
         showTransientError()
       },
       onError: (error: unknown) => {
         console.error('Failed to save username:', error)
-        restoreOptimisticUsername(user.id, normalizedUsername, previousUsername)
+        restoreOptimisticUsername(
+          user.id,
+          normalizedUsername,
+          previousUsername,
+          displayUsername,
+          previousDisplayUsername,
+        )
         isLoadingUsername = false
         showTransientError()
       },
