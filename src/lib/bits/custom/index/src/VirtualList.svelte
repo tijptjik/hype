@@ -1,6 +1,9 @@
-<script lang="ts" generics="T">
+<script lang="ts" generics="T, C = T">
 // SVELTE
 import { tick, untrack } from 'svelte'
+import { flip } from 'svelte/animate'
+import { cubicOut } from 'svelte/easing'
+import { prefersReducedMotion } from 'svelte/motion'
 import type { Snippet } from 'svelte'
 // BITS
 import { Scrollbar } from '#lib/bits/custom/scrollbar/index.js'
@@ -13,7 +16,7 @@ const SECONDARY_RENDER_IDLE_MS = 50
 let {
   items,
   height,
-  itemHeight,
+  itemHeight: estimatedItemHeight,
   children,
   getKey,
   bufferBefore = 20,
@@ -23,7 +26,18 @@ let {
   rowGap = 0,
   applyBottomOverflow = true,
   onRangeChange,
+  getCells,
+  getCellKey,
+  cell,
+  columnCount = 1,
+  columnGap = 0,
 }: {
+  /** Fixed-height grid cells share one keyed list so sorting can animate across rows. */
+  getCells?: (item: T) => C[]
+  getCellKey?: (cell: C) => string | number
+  cell?: Snippet<[C, number]>
+  columnCount?: number
+  columnGap?: number
   items: Array<T>
   height: string
   itemHeight?: number | undefined
@@ -37,6 +51,31 @@ let {
   applyBottomOverflow?: boolean
   onRangeChange?: (start: number, end: number) => void
 } = $props()
+
+// Card height changes with responsive image width; include the gutter in the virtual stride.
+let measuredCellHeight = $state(0)
+const cellHeights = new Map<HTMLElement, number>()
+const itemHeight = $derived(
+  getCells && measuredCellHeight > 0
+    ? measuredCellHeight + rowGap
+    : estimatedItemHeight,
+)
+
+/** Tracks rendered card heights so virtual rows never overlap responsive content. */
+function measureCell(node: HTMLElement): { destroy: () => void } {
+  const observer = new ResizeObserver(() => {
+    cellHeights.set(node, node.offsetHeight)
+    measuredCellHeight = Math.max(0, ...cellHeights.values())
+  })
+  observer.observe(node)
+  return {
+    destroy() {
+      observer.disconnect()
+      cellHeights.delete(node)
+      measuredCellHeight = Math.max(0, ...cellHeights.values())
+    },
+  }
+}
 
 let viewport = $state<HTMLElement | null>(null)
 let contents = $state<HTMLElement | null>(null)
@@ -80,6 +119,33 @@ const renderedItems: Array<{ id: number | string; data: T; index: number }> = $d
     }
   }),
 )
+
+// Flatten only the virtual window, preserving each card's identity across row changes.
+const renderedCells = $derived(
+  renderedItems.flatMap(row =>
+    (getCells?.(row.data) ?? []).map((data, column) => ({
+      id: getCellKey?.(data) ?? row.index * columnCount + column,
+      data,
+      index: row.index * columnCount + column,
+      row: row.index - renderStart,
+      column,
+    })),
+  ),
+)
+
+let previousCellKeys: Array<string | number> = []
+let animateCellReorder = $state(false)
+
+// Animate permutations of the same visible cards, not navigation, resizing, or scrolling.
+$effect.pre(() => {
+  const keys = renderedCells.map(entry => entry.id)
+  const previous = new Set(previousCellKeys)
+  animateCellReorder =
+    keys.length === previousCellKeys.length &&
+    keys.every(key => previous.has(key)) &&
+    keys.some((key, index) => key !== previousCellKeys[index])
+  previousCellKeys = keys
+})
 
 let scrollRAF: number | null = null
 let currentScrollTop = $state(0)
@@ -449,13 +515,36 @@ $effect(() => {
     style="padding-top: {top + padding}px; padding-bottom: {bottom +
       padding}px; padding-left: {padding}px; padding-right: {padding}px;"
   >
-    {#each renderedItems as row (row.id)}
-      <svelte-virtual-list-row
-        style={`--bits-virtual-list-row-gap: ${Math.max(0, rowGap)}px;`}
+    {#if getCells && cell && itemHeight}
+      <div
+        class="relative mx-2"
+        style:height={`${renderedItems.length * itemHeight}px`}
       >
-        {@render children(row.data, row.index)}
-      </svelte-virtual-list-row>
-    {/each}
+        {#each renderedCells as entry (entry.id)}
+          <div
+            class="absolute min-w-0"
+            use:measureCell
+            style:top={`${entry.row * itemHeight}px`}
+            style:left={`calc(${entry.column} * ((100% + ${columnGap}px) / ${columnCount}))`}
+            style:width={`calc((100% - ${(columnCount - 1) * columnGap}px) / ${columnCount})`}
+            animate:flip={{
+              duration: animateCellReorder && !prefersReducedMotion.current ? 250 : 0,
+              easing: cubicOut,
+            }}
+          >
+            {@render cell(entry.data, entry.index)}
+          </div>
+        {/each}
+      </div>
+    {:else}
+      {#each renderedItems as row (row.id)}
+        <svelte-virtual-list-row
+          style={`--bits-virtual-list-row-gap: ${Math.max(0, rowGap)}px;`}
+        >
+          {@render children(row.data, row.index)}
+        </svelte-virtual-list-row>
+      {/each}
+    {/if}
   </svelte-virtual-list-contents>
 </svelte-virtual-list-viewport>
 

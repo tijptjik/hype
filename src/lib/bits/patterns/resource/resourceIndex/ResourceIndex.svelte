@@ -1,6 +1,9 @@
 <script lang="ts" generics="T extends Resource">
-import { m } from '#lib/i18n.js'
+// SVELTE
 import type { Snippet } from 'svelte'
+import { page } from '$app/state'
+// I18N
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import ResourceCardRow from './components/ResourceCardRow.svelte'
 import ResourceEmptyState from './components/ResourceEmptyState.svelte'
@@ -99,7 +102,7 @@ function getColumnCount(nextGridWidth: number, nextLayoutMode: string): number {
 }
 
 function buildItems(): Array<ResourceIndexItem<T>> {
-  if (isRowLayout || columnCount <= 1) {
+  if (isRowLayout) {
     return entities
   }
 
@@ -172,6 +175,17 @@ $effect(() => {
   {/if}
 {/snippet}
 
+{#snippet cardCell(
+  entity: T,
+  index: number,
+)}
+  {#if card}
+    {@render card(entity, index)}
+  {:else}
+    <article class="rounded-lg p-4"><p>{entity.id}</p></article>
+  {/if}
+{/snippet}
+
 <div
   bind:clientWidth={gridWidth}
   bind:this={listContainer}
@@ -182,6 +196,13 @@ $effect(() => {
       <div class="bits-resource-index-wrapper relative min-h-0 flex-1">
         <VirtualList
           {items}
+          getCells={layoutMode === 'card'
+            ? item => (item as ResourceIndexGridRow<T>).entities
+            : undefined}
+          getCellKey={(entity: T) => `${page.url.pathname}:${resource}:${entity.id}`}
+          cell={cardCell}
+          {columnCount}
+          columnGap={GRID_COLUMN_GAP_PX}
           {children}
           getKey={item => item.id}
           height="100%"
