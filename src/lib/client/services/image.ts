@@ -1141,14 +1141,20 @@ export async function updateImagePresentationMode(options: {
   if (!ctx?.ctxType || !ctx?.ctxId) return false
 
   try {
-    const { updateImage: updateImageRemote } = await loadImageRemotes()
-    await updateImageRemote({
-      id: currentImage.id,
-      ctxType: ctx.ctxType,
-      ctxId: ctx.ctxId,
-      data: { presentationMode: nextMode },
-      meta: { isAdminRequest: true },
-    })
+    if (options.imageCtx) {
+      await options.imageCtx.updateMetadata(currentImage.id, {
+        presentationMode: nextMode,
+      })
+    } else {
+      const { updateImage: updateImageRemote } = await loadImageRemotes()
+      await updateImageRemote({
+        id: currentImage.id,
+        ctxType: ctx.ctxType,
+        ctxId: ctx.ctxId,
+        data: { presentationMode: nextMode },
+        meta: { isAdminRequest: true },
+      })
+    }
     options.onSuccess?.(nextMode)
     return true
   } catch (error) {

@@ -902,9 +902,7 @@ export function useImageEditorGalleryModel(
         currentImage,
         nextMode,
         ctx,
-        onSuccess: mode => {
-          imageCtx.setForImage(currentImage.id, 'presentationMode', mode)
-        },
+        imageCtx,
         onFailure: error => {
           console.error('[ImageEditorGalleryModel] Presentation mode update error', {
             imageId: currentImage.id,

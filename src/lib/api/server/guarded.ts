@@ -59,7 +59,10 @@ async function withRequestedRefreshes<T>(write: () => Promise<T>): Promise<T> {
       // Load feature query registration after initialization to avoid remote-module cycles.
       // Only client-requested active pages refresh, including map filters and saved lists.
       await import('../featureQueries.remote.js')
-      for (const remote of refreshableQueries) void requested(remote, 32).refreshAll()
+      // Await async argument validation and refresh registration before Kit collects updates.
+      await Promise.all(
+        Array.from(refreshableQueries, remote => requested(remote, 32).refreshAll()),
+      )
     }
   }
 }

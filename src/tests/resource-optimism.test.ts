@@ -13,6 +13,7 @@ vi.mock('#lib/api/resources.remote.js', () => ({
 }))
 import { CacheCtx } from '#lib/context/cache.svelte.js'
 import { FeatureQuery } from '#lib/context/feature-query.svelte.js'
+import { createResourceFormConfig } from '#lib/client/services/form.js'
 
 function page(data: PanelResource[]) {
   const value: ResourcePage = { data, nextCursor: null }
@@ -35,6 +36,132 @@ const row = (id: string) => ({
 })
 
 describe('native collection optimistic projections', () => {
+  it('projects images into inactive index pages retained for back navigation', async () => {
+    const cache = new CacheCtx()
+    const first = page([
+      {
+        ...row('org'),
+        image: { id: 'image', presentationMode: 'contain' },
+      } as unknown as PanelResource,
+    ])
+    const second = page([row('other')])
+    const { getResourcePage } = await import('#lib/api/resources.remote.js')
+    vi.mocked(getResourcePage)
+      .mockReturnValueOnce(first.query)
+      .mockReturnValueOnce(second.query)
+    const input = {
+      type: 'organisation' as const,
+      meta: { isAdminRequest: true, scope: 'admin' },
+    }
+    await cache.indexLists.organisation.load(input)
+    await cache.indexLists.organisation.load({ ...input, q: 'other' })
+    cache.optimisticUpdates('image', {
+      meta: { id: 'image' },
+      data: { presentationMode: 'cover' },
+    })
+    expect(first.transforms[0](first.value).data[0]).toMatchObject({
+      image: { presentationMode: 'cover' },
+    })
+    expect(second.transforms).toHaveLength(0)
+  })
+
+  it.each([true, false])(
+    'settles retained form edits alongside native updates (success=%s)',
+    async success => {
+      const cache = new CacheCtx()
+      cache.entities.organisation.set('org', { ...row('org'), code: 'before' } as never)
+      const config = createResourceFormConfig({
+        formEl: undefined,
+        key: 'org',
+        schema: {} as never,
+        data: {},
+        submitUpdates: async () => [],
+        adminCtx: { appCtx: { cacheCtx: cache } } as never,
+        headerCtrl: {} as never,
+        resourceType: 'organisation' as never,
+        getEntity: () => null,
+        refreshResource: async () => {},
+      })
+      const updates = (await config.onsubmitupdates({
+        data: { meta: { id: 'org' }, data: { code: 'after' } },
+      })) as import('#lib/context/featureQuery.types.js').OptimisticQueryUpdates
+      expect(cache.entities.organisation.get('org')?.code).toBe('after')
+      updates.settle?.(success)
+      expect(cache.entities.organisation.get('org')?.code).toBe(
+        success ? 'after' : 'before',
+      )
+    },
+  )
+  it('updates shared image metadata in index, panel, feature, pin and detail queries', async () => {
+    const cache = new CacheCtx()
+    const image = { id: 'image', presentationMode: 'contain', version: 1 }
+    const panel = page([{ ...row('org'), image } as PanelResource])
+    const index = page([
+      { ...row('org'), image: { image } } as unknown as PanelResource,
+    ])
+    const feature = page([
+      { ...row('feature'), images: [{ image }] } as unknown as PanelResource,
+    ])
+    cache.lists.organisation.pages = [panel.query]
+    cache.indexLists.organisation.pages = [index.query]
+    cache.featureCollection =
+      feature.query as unknown as import('#lib/context/featureQuery.types.js').FeatureCollectionHandle
+    cache.entities.organisation.set('org', { ...row('org'), image: { image } } as never)
+    const detailTransforms: Array<(value: { data: unknown }) => { data: unknown }> = []
+    const detail = Object.assign(
+      Promise.resolve({ data: { ...row('org'), image: { image } } }),
+      {
+        current: { data: { ...row('org'), image: { image } } },
+        withOverride: vi.fn(transform => {
+          detailTransforms.push(transform)
+          return () => {}
+        }),
+      },
+    )
+    await cache.ensureResource(
+      JSON.stringify(['organisation', 'org']),
+      () => detail as never,
+      () => {},
+    )
+    const pinTransforms: Array<(value: unknown) => unknown> = []
+    vi.mocked(
+      (await import('#lib/api/resources.remote.js')).getPinnedResource,
+    ).mockReturnValue({
+      current: { ...row('org'), image },
+      withOverride: vi.fn(transform => {
+        pinTransforms.push(transform)
+        return () => {}
+      }),
+    } as never)
+    cache.pin('organisation', 'org', { isAdminRequest: true, scope: 'admin' })
+    const mutation = cache.beginMutation('image', {
+      meta: { id: 'image' },
+      data: { presentationMode: 'cover', version: 2 },
+    })
+    expect(panel.transforms[0](panel.value).data[0]).toMatchObject({
+      image: { presentationMode: 'cover', version: 2 },
+    })
+    expect(index.transforms[0](index.value).data[0]).toMatchObject({
+      image: { image: { presentationMode: 'cover' } },
+    })
+    expect(feature.transforms[0](feature.value).data[0]).toMatchObject({
+      images: [{ image: { presentationMode: 'cover' } }],
+    })
+    expect(detailTransforms[0](detail.current)).toMatchObject({
+      data: { image: { image: { presentationMode: 'cover' } } },
+    })
+    expect(pinTransforms[0]({ image })).toMatchObject({
+      image: { presentationMode: 'cover' },
+    })
+    expect(cache.entities.organisation.get('org')).toMatchObject({
+      image: { image: { presentationMode: 'cover' } },
+    })
+    mutation.settle(false)
+    expect(cache.entities.organisation.get('org')).toMatchObject({
+      image: { image: { presentationMode: 'contain' } },
+    })
+    expect(image.presentationMode).toBe('contain')
+  })
   it('patches retained pages past page six without mutating server snapshots', () => {
     const cache = new CacheCtx()
     const pages = Array.from({ length: 9 }, (_, i) => page([row(String(i))]))

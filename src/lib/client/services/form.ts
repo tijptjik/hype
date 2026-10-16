@@ -748,13 +748,16 @@ export function createResourceFormConfig<Input>({
     key,
     schema,
     data,
-    onsubmitupdates: async ctx => [
-      ...((await submitUpdates(ctx)) ?? []),
-      ...adminCtx.appCtx.cacheCtx.optimisticUpdates(
+    onsubmitupdates: async ctx => {
+      const updates = (await submitUpdates(ctx)) ?? []
+      const mutation = adminCtx.appCtx.cacheCtx.beginMutation(
         resourceType,
         ctx.data as import('#lib/context/featureQuery.types.js').ResourceOptimisticInput,
-      ),
-    ],
+      )
+      return Object.assign([...updates, ...mutation.updates], {
+        settle: mutation.settle,
+      })
+    },
     resourceResult: {
       ...createCodeRefResourceResult({
         adminCtx,

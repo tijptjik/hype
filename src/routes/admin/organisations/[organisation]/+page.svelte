@@ -1052,16 +1052,17 @@ async function handleOrganisationStateToggle({
 
   setBusy(true)
 
+  const mutation = adminCtx.appCtx.cacheCtx.beginMutation('organisation', {
+    meta: { id: organisationData.id },
+    data: { [field]: nextState },
+  })
   try {
     await mutate({
       id: organisationData.id,
       state: nextState,
       meta: { isAdminRequest: true },
     }).updates(
-      ...adminCtx.appCtx.cacheCtx.optimisticUpdates('organisation', {
-        meta: { id: organisationData.id },
-        data: { [field]: nextState },
-      }),
+      ...mutation.updates,
       getOrganisation({
         ref: organisationRef,
         refKey: 'code',
@@ -1076,6 +1077,7 @@ async function handleOrganisationStateToggle({
         overrideOrganisationListItemBoolean(organisationData.id, field, nextState),
       ),
     )
+    mutation.settle(true)
     // TODO Invalidate cache
     commitSettledOrganisationState(await refreshOrganisation())
 
@@ -1084,6 +1086,7 @@ async function handleOrganisationStateToggle({
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(organisation, 'nameShort')}`,
     )
   } catch {
+    mutation.settle(false)
     toast.error(m.long_crazy_peacock_care())
   } finally {
     setBusy(false)

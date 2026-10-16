@@ -74,6 +74,11 @@ export class FeatureQueryRetention {
   private entities = new Map<string, FeatureQueryCachedEntity>()
   private nativePages = new Map<RemoteQuery<FeatureQueryPage>, FeatureQueryNativePage>()
 
+  /** Native owners for retained previews. @returns Unique authorized page handles. */
+  get retainedPages(): RemoteQuery<FeatureQueryPage>[] {
+    return [...this.nativePages.keys()]
+  }
+
   /**
    * Retains complete server payloads with their exact authorized scope.
    * @param data - Features returned by a native query page.
@@ -214,6 +219,16 @@ export class FeatureQueryRetention {
 /** Native handles own fetched pages; each controller owns its current query and preview. */
 export class FeatureQuery {
   pages: RemoteQuery<FeatureQueryPage>[] = $state.raw([])
+
+  /** Includes inactive queries when projecting an optimistic record change. @returns Unique handles. */
+  get retainedPages(): RemoteQuery<FeatureQueryPage>[] {
+    return [
+      ...new Set([
+        ...this.pages,
+        ...[...this.history.values()].flatMap(entry => entry.pages),
+      ]),
+    ]
+  }
   loading = $state(false)
   error: unknown = $state(null)
   private input: FeatureQueryInput | undefined = $state.raw()

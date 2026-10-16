@@ -241,4 +241,43 @@ describe('remote guard wrappers', () => {
     await expect(write({})).rejects.toThrow('DENIED')
     expect(mockRequested).not.toHaveBeenCalled()
   })
+
+  it.each(['command', 'form'] as const)(
+    'waits for requested refresh registration before completing a %s',
+    async kind => {
+      vi.useRealTimers()
+      let release!: () => void
+      let started!: () => void
+      const pending = new Promise<void>(resolve => {
+        release = resolve
+      })
+      const registered = new Promise<void>(resolve => {
+        started = resolve
+      })
+      mockRequested.mockImplementation(() => ({
+        refreshAll: async () => {
+          started()
+          await pending
+        },
+      }))
+      const create = kind === 'command' ? guardedCommand : guardedForm
+      const write = create(z.object({}), async () => ({ saved: true }))
+      let completed = false
+      const result = (write as (input: unknown) => Promise<unknown>)({}).then(value => {
+        completed = true
+        return value
+      })
+      try {
+        await registered
+        // Let the mutation settle if it incorrectly discards refreshAll's promise.
+        await new Promise(resolve => setTimeout(resolve, 0))
+        expect(completed).toBe(false)
+      } finally {
+        release()
+        await result
+        mockRequested.mockImplementation(() => ({ refreshAll: async () => {} }))
+      }
+      expect(await result).toEqual({ saved: true })
+    },
+  )
 })

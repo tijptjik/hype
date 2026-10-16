@@ -853,26 +853,29 @@ async function handleLayerStateToggle({
   if (!current) return
   const nextState = !current[field]
   setBusy(true)
+  const mutation = adminCtx.appCtx.cacheCtx.beginMutation('layer', {
+    meta: { id: current.id },
+    data: { [field]: nextState },
+  })
   try {
     await (mutate as typeof publishLayer)({
       id: current.id,
       state: nextState,
       meta: { isAdminRequest: true },
     }).updates(
-      ...adminCtx.appCtx.cacheCtx.optimisticUpdates('layer', {
-        meta: { id: current.id },
-        data: { [field]: nextState },
-      }),
+      ...mutation.updates,
       getLayer({
         ref: layerRef,
         refKey: 'id',
         meta: { isAdminRequest: true, profile: 'admin' },
       }).withOverride(overrideLayerEntityBoolean(field, nextState)),
     )
+    mutation.settle(true)
     commitLayerState(await refreshLayer())
     await adminCtx.appCtx.cacheCtx.reconcile('layer')
     toast.success(nextState ? successWhenTrue : successWhenFalse)
   } catch {
+    mutation.settle(false)
     toast.error(m.long_crazy_peacock_care())
   } finally {
     setBusy(false)

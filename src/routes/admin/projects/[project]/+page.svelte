@@ -2098,16 +2098,17 @@ async function handleProjectStateToggle({
   const nextState = !projectData[field]
   setBusy(true)
 
+  const mutation = adminCtx.appCtx.cacheCtx.beginMutation('project', {
+    meta: { id: projectData.id },
+    data: { [field]: nextState },
+  })
   try {
     await mutate({
       id: projectData.id,
       state: nextState,
       meta: { isAdminRequest: true },
     }).updates(
-      ...adminCtx.appCtx.cacheCtx.optimisticUpdates('project', {
-        meta: { id: projectData.id },
-        data: { [field]: nextState },
-      }),
+      ...mutation.updates,
       getProject({
         ref: projectRef,
         refKey: 'code',
@@ -2119,6 +2120,7 @@ async function handleProjectStateToggle({
         meta: { isAdminRequest: true, profile: 'card' },
       }).withOverride(overrideProjectListItemBoolean(projectData.id, field, nextState)),
     )
+    mutation.settle(true)
 
     commitSettledProjectState(await refreshProject())
     await adminCtx.appCtx.cacheCtx.reconcile('project')
@@ -2126,6 +2128,7 @@ async function handleProjectStateToggle({
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(project, 'nameShort')}`,
     )
   } catch {
+    mutation.settle(false)
     toast.error(m.long_crazy_peacock_care())
   } finally {
     setBusy(false)

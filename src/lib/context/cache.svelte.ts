@@ -6,7 +6,13 @@ import { getFeaturePage } from '#lib/api/featureQueries.remote.js'
 // CONTEXT
 import { ResourceList } from './resource-list.svelte'
 import { FeatureQuery, FeatureQueryRetention } from './feature-query.svelte'
+// SERVICES
+import {
+  OptimisticRecords,
+  projectResourcePatch,
+} from '#lib/client/services/optimisticRecords.js'
 // TYPES
+import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 import type { Cache } from '#lib/context/cache.types.js'
 import type {
   PanelResourceType,
@@ -20,6 +26,7 @@ import type {
 
 /** Session-local domain retention. SvelteKit owns active page payloads and request deduplication. */
 export class CacheCtx {
+  private readonly optimisticRecords = new OptimisticRecords()
   featureCollection: FeatureCollectionHandle | undefined = $state.raw()
   readonly entities: Cache = {
     organisation: new SvelteMap(),
@@ -80,6 +87,34 @@ export class CacheCtx {
   private details = new Map<string, ResourceDetailHandle>()
 
   /**
+   * Starts a shared mutation across retained identities and native query projections.
+   * @param type Mutated resource family.
+   * @param input Record identity and changed fields.
+   * @param stores Additional context-owned record stores to project with the same transaction.
+   * @returns Native updates and an idempotent settlement callback.
+   * @remarks Settle with false on failure; session changes discard pending layers.
+   */
+  beginMutation(
+    type: string,
+    input: ResourceOptimisticInput,
+    stores: Array<[string, Map<string, unknown>]> = [],
+  ): { updates: RemoteQueryOverride[]; settle: (success: boolean) => void } {
+    const settle = this.optimisticRecords.begin(
+      [
+        ...Object.entries(this.entities).filter(([key]) => key !== 'stats'),
+        ...stores,
+      ] as Array<[string, Map<string, unknown>]>,
+      (value, ownerType) => projectResourcePatch(value, type, input, ownerType),
+    )
+    try {
+      return { updates: this.optimisticUpdates(type, input), settle }
+    } catch (error) {
+      settle(false)
+      throw error
+    }
+  }
+
+  /**
    * Retains a native detail handle with five-minute stale-while-revalidate freshness.
    * @param key - Resource, ID, payload profile and authorization scope identity.
    * @param fetcher - Factory for an authorized native query.
@@ -130,17 +165,72 @@ export class CacheCtx {
   }
 
   /**
-   * Supplies native optimistic overrides for every affected active compact collection.
+   * Supplies native optimistic overrides for affected collections and retained details.
    * @param type - Mutated resource type.
-   * @param input - Validated form shape or an identity plus boolean patch.
+   * @param input - Validated form shape or an identity plus changed record fields.
    * @returns Overrides released automatically by SvelteKit on settlement.
    */
-  optimisticUpdates(type: string, input: ResourceOptimisticInput) {
+  optimisticUpdates(
+    type: string,
+    input: ResourceOptimisticInput,
+  ): RemoteQueryOverride[] {
+    const detailUpdates = [...this.details.entries()].flatMap(([key, entry]) => {
+      const ownerType = key.startsWith('[')
+        ? (JSON.parse(key)[0] as string)
+        : key.split(':')[0]
+      if (!entry.query.withOverride) return []
+      const project = (current: { data?: unknown }) => ({
+        ...current,
+        data: projectResourcePatch(current.data, type, input, ownerType),
+      })
+      if (project(entry.query.current ?? {}).data === entry.query.current?.data)
+        return []
+      return [entry.query.withOverride(project)]
+    })
+    if (type === 'image') {
+      // Image metadata is shared by flat compact rows and nested detail/gallery envelopes.
+      const pages = new Set<RemoteQuery<{ data: unknown }>>([
+        ...Object.values(this.lists).flatMap(list => list.retainedPages),
+        ...Object.values(this.indexLists).flatMap(list => list.retainedPages),
+        ...Object.values(this.featureQueries).flatMap(query => query.retainedPages),
+        ...this.featureRetention.retainedPages,
+        ...(this.featureCollection ? [this.featureCollection] : []),
+      ] as RemoteQuery<{ data: unknown }>[])
+      return [
+        ...detailUpdates,
+        ...[...pages].flatMap(page => {
+          if (
+            projectResourcePatch(page.current?.data, type, input, 'resource') ===
+            page.current?.data
+          )
+            return []
+          return [
+            page.withOverride(current => ({
+              ...current,
+              data: projectResourcePatch(current.data, type, input, 'resource'),
+            })),
+          ]
+        }),
+        ...[...this.pins.values()].flatMap(({ query }) => {
+          if (
+            projectResourcePatch(query.current, type, input, 'resource') ===
+            query.current
+          )
+            return []
+          return [
+            query.withOverride(current =>
+              projectResourcePatch(current, type, input, 'resource'),
+            ),
+          ]
+        }),
+      ]
+    }
     if (type === 'feature') {
       const patch = input.data ?? {}
       const id = input.meta?.id
       const temporaryId = `pending:${crypto.randomUUID()}`
       return [
+        ...detailUpdates,
         ...(this.featureCollection
           ? [
               this.featureCollection.withOverride(current => {
@@ -172,7 +262,7 @@ export class CacheCtx {
         ),
       ]
     }
-    if (!(type in this.lists)) return []
+    if (!(type in this.lists)) return detailUpdates
     const resourceType = type as PanelResourceType
     const affected: PanelResourceType[] =
       resourceType === 'organisation'
@@ -196,6 +286,7 @@ export class CacheCtx {
         }),
       )
     return [
+      ...detailUpdates,
       ...pinOverrides,
       ...lists.flatMap(list =>
         list.pages
@@ -271,6 +362,13 @@ export class CacheCtx {
    */
   async reconcile(type: string): Promise<void> {
     const featureRefreshes: Promise<void>[] = []
+    if (type === 'image') {
+      // Native updates already refreshed affected pages; discard detached previews only.
+      this.featureRetention.clear()
+      for (const query of Object.values(this.featureQueries)) query.invalidate()
+      this.details.clear()
+      return
+    }
     // Mutations invalidate shared previews and authoritative query counts together.
     if (['feature', 'organisation', 'project', 'layer'].includes(type)) {
       this.featureRetention.clear()
@@ -308,6 +406,7 @@ export class CacheCtx {
   /** Clears every retained scope-sensitive record and page before an identity transition. */
   clear(): void {
     this.epoch++
+    this.optimisticRecords.clear()
     this.featureCollection = undefined
     this.featureRetention.clear()
     for (const query of Object.values(this.featureQueries)) query.clear()

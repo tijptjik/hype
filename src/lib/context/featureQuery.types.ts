@@ -35,6 +35,7 @@ export type ResourceDetailHandle = {
   query: Promise<{ data?: unknown }> & {
     refresh?: () => Promise<void>
     current?: { data?: unknown }
+    withOverride?: import('$app/server').RemoteQuery<{ data?: unknown }>['withOverride']
   }
   fetchedAt: number
 }
@@ -43,3 +44,8 @@ export type ResourceOptimisticInput = {
   meta?: { id?: string; mode?: string }
   data?: Record<string, unknown>
 }
+
+/** Native query updates with a settlement hook for retained domain projections. */
+export type OptimisticQueryUpdates = Array<
+  import('$app/server').RemoteQuery<unknown> | import('$app/server').RemoteQueryOverride
+> & { settle?: (success: boolean) => void }

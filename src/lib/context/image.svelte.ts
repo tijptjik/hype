@@ -20,8 +20,10 @@ import {
   rotateImage as rotateImageRemote,
   setImageIntent,
   setImagePublished,
+  updateImage as updateImageRemote,
 } from '#lib/api/image.remote.js'
 import { runRemoteQuery } from '#lib/remote/index.js'
+import { projectResourcePatch } from '#lib/client/services/optimisticRecords.js'
 // CONTEXT
 import { getAppCtx } from '#lib/context/app.svelte.js'
 // ENUMS
@@ -1167,6 +1169,65 @@ export class ImageCtx {
         this.state.activeItemId,
       )
     }
+  }
+
+  /**
+   * Saves image metadata with shared optimistic projections and isolated rollback.
+   * @param imageId Image whose metadata changes.
+   * @param data Metadata fields accepted by the update command.
+   * @returns Resolves after persistence and affected collection reconciliation.
+   * @remarks Captures the initiating context so navigation cannot update another viewer.
+   */
+  async updateMetadata(
+    imageId: Id,
+    data: Parameters<typeof updateImageRemote>[0]['data'],
+  ): Promise<void> {
+    const ctx = this.getCtx()
+    const contextAtStart = this.state.context
+    const mutation = this.appCtx.cacheCtx.beginMutation(
+      'image',
+      { meta: { id: imageId }, data },
+      [['image', this.state.images as Map<string, unknown>]],
+    )
+    const syncActive = (): void => {
+      if (
+        this.state.context === contextAtStart &&
+        this.state.activeImage?.image.id === imageId
+      )
+        this.state.activeImage = this.getImage(imageId) ?? null
+    }
+    syncActive()
+    try {
+      await updateImageRemote({
+        id: imageId,
+        ctxType: ctx.ctxType,
+        ctxId: ctx.ctxId,
+        data,
+        meta: { isAdminRequest: true },
+      }).updates(
+        ...mutation.updates,
+        getImagesForContext({
+          ctxType: ctx.ctxType,
+          ctxId: ctx.ctxId,
+          meta: this.isAdminMode ? { isAdminRequest: true } : undefined,
+        }).withOverride(current => ({
+          ...current,
+          data: projectResourcePatch(
+            current.data,
+            'image',
+            { meta: { id: imageId }, data },
+            'image',
+          ),
+        })),
+      )
+      mutation.settle(true)
+    } catch (error) {
+      mutation.settle(false)
+      throw error
+    } finally {
+      syncActive()
+    }
+    await this.appCtx.cacheCtx.reconcile('image')
   }
 
   // ═══════════════════════

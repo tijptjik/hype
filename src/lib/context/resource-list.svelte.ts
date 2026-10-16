@@ -29,6 +29,16 @@ export class ResourceList {
 
   constructor(private readonly query: ResourcePageFactory) {}
 
+  /** All retained native pages, including inactive index queries. @returns Unique handles. */
+  get retainedPages(): RemoteQuery<ResourcePage>[] {
+    return [
+      ...new Set([
+        ...this.pages,
+        ...[...this.history.values()].flatMap(entry => entry.pages),
+      ]),
+    ]
+  }
+
   /** Ordered current rows reflect native optimistic overrides without an AppCtx copy. */
   get rows(): PanelResource[] {
     if (

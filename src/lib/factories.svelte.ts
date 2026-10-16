@@ -444,6 +444,7 @@ export function configureForm<Input = RemoteFormInput>(
 
       const wasDirty = dirty
       let resultDispatched = false
+      let settleUpdates: ((success: boolean) => void) | undefined
       try {
         dirty = false
         const updates = await onsubmitupdates?.({
@@ -451,6 +452,11 @@ export function configureForm<Input = RemoteFormInput>(
           form: formEl,
           data: typedData,
         })
+        settleUpdates = (
+          updates as
+            | import('#lib/context/featureQuery.types.js').OptimisticQueryUpdates
+            | undefined
+        )?.settle
         if (updates && updates.length > 0) {
           await instance.submit().updates(...updates)
         } else {
@@ -462,6 +468,7 @@ export function configureForm<Input = RemoteFormInput>(
         const submitIssues = form.fields.allIssues() ?? []
         const hasIssues = submitIssues.length > 0
         const success = !hasIssues
+        settleUpdates?.(success)
 
         if (!success) logValidationIssues('submit', submitIssues, form.fields.value())
 
@@ -500,6 +507,7 @@ export function configureForm<Input = RemoteFormInput>(
           lastIssues = undefined
         }
       } catch (error) {
+        settleUpdates?.(false)
         // TODO Add a error toast
         if (!resultDispatched) {
           const submitIssues = form.fields.allIssues() ?? []

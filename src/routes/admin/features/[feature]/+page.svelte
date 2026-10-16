@@ -919,22 +919,24 @@ async function handleFeatureStateToggle(
       ? (value: boolean) => headerCtrl.setPublishing(value)
       : (value: boolean) => headerCtrl.setDeleting(value)
   setBusy(true)
+  const mutation = adminCtx.appCtx.cacheCtx.beginMutation('feature', {
+    meta: { id: current.id },
+    data: { [field]: nextState },
+  })
   try {
     await (field === 'isPublished' ? publishFeature : archiveFeature)({
       id: current.id,
       state: nextState,
       meta: { isAdminRequest: true },
     }).updates(
-      ...adminCtx.appCtx.cacheCtx.optimisticUpdates('feature', {
-        meta: { id: current.id },
-        data: { [field]: nextState },
-      }),
+      ...mutation.updates,
       getFeature({
         ref: current.id,
         refKey: 'id',
         meta: { isAdminRequest: true, profile: 'admin' },
       }).withOverride(overrideResourceEntityBoolean(field, nextState)),
     )
+    mutation.settle(true)
     commitSettledFeatureState(await refreshFeature())
     toast.success(
       field === 'isPublished'
@@ -946,6 +948,7 @@ async function handleFeatureStateToggle(
           : m.forms__restored(),
     )
   } catch {
+    mutation.settle(false)
     toast.error(m.long_crazy_peacock_care())
   } finally {
     setBusy(false)

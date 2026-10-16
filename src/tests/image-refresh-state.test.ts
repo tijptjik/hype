@@ -6,21 +6,114 @@ import {
   setImagePublished,
   setImageIntent,
   rotateImage,
+  updateImage,
+  getImagesForContext,
 } from '#lib/api/image.remote.js'
+import { ImageContextResource } from '#lib/enums.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
-vi.mock('#lib/context/app.svelte.js', () => ({
-  getAppCtx: () => ({ cache: { feature: new Map() } }),
-}))
+vi.mock('#lib/context/app.svelte.js', async () => {
+  const { CacheCtx } = await import('#lib/context/cache.svelte.js')
+  return {
+    getAppCtx: () => {
+      const cacheCtx = new CacheCtx()
+      return { cache: cacheCtx.entities, cacheCtx }
+    },
+  }
+})
 vi.mock('#lib/api/image.remote.js', async importOriginal => ({
   ...(await importOriginal<typeof import('#lib/api/image.remote.js')>()),
   deleteImage: vi.fn(),
   setImagePublished: vi.fn(),
   setImageIntent: vi.fn(),
   rotateImage: vi.fn(),
+  updateImage: vi.fn(),
+  getImagesForContext: vi.fn(() => ({ withOverride: vi.fn(() => () => {}) })),
 }))
 
 describe('image refresh ownership', () => {
+  it.each([false, true])(
+    'projects image metadata before persistence and rolls back failures (fail=%s)',
+    async fail => {
+      const ctx = new ImageCtx()
+      vi.spyOn(ctx, 'preloadImages').mockResolvedValue(undefined)
+      await ctx.setContext({
+        context: { ctxType: ImageContextResource.organisation, ctxId: 'org' },
+      })
+      const image = {
+        image: { id: 'image', presentationMode: 'contain', version: 1 },
+      } as ImageCtxEnvelope
+      await ctx.setImages([image])
+      ctx.setActiveImage(image)
+      ctx.appCtx.cache.organisation.set('org', { id: 'org', image } as never)
+      vi.spyOn(ctx.appCtx.cacheCtx, 'reconcile').mockResolvedValue(undefined)
+      let resolve!: () => void
+      let reject!: (error: Error) => void
+      const remote = new Promise<void>((res, rej) => {
+        resolve = res
+        reject = rej
+      })
+      vi.mocked(updateImage).mockReturnValue(
+        Object.assign(remote, { updates: () => remote }) as never,
+      )
+      const pending = ctx.updateMetadata('image', { presentationMode: 'cover' })
+      expect(getImagesForContext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ctxType: ImageContextResource.organisation,
+          ctxId: 'org',
+        }),
+      )
+      expect(ctx.activeImage?.image.presentationMode).toBe('cover')
+      expect(ctx.appCtx.cache.organisation.get('org')).toMatchObject({
+        image: { image: { presentationMode: 'cover' } },
+      })
+      if (fail) {
+        reject(new Error('denied'))
+        await expect(pending).rejects.toThrow('denied')
+      } else {
+        resolve()
+        await pending
+      }
+      expect(ctx.activeImage?.image.presentationMode).toBe(fail ? 'contain' : 'cover')
+      expect(ctx.appCtx.cache.organisation.get('org')).toMatchObject({
+        image: { image: { presentationMode: fail ? 'contain' : 'cover' } },
+      })
+    },
+  )
+
+  it('does not replace the active image after navigation while metadata is saving', async () => {
+    const ctx = new ImageCtx()
+    vi.spyOn(ctx, 'preloadImages').mockResolvedValue(undefined)
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'old' },
+    })
+    const image = {
+      image: { id: 'image', presentationMode: 'contain' },
+    } as ImageCtxEnvelope
+    await ctx.setImages([image])
+    ctx.setActiveImage(image)
+    vi.spyOn(ctx.appCtx.cacheCtx, 'reconcile').mockResolvedValue(undefined)
+    let resolve!: () => void
+    const remote = new Promise<void>(res => {
+      resolve = res
+    })
+    vi.mocked(updateImage).mockReturnValue(
+      Object.assign(remote, { updates: () => remote }) as never,
+    )
+    const pending = ctx.updateMetadata('image', { presentationMode: 'cover' })
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'new' },
+    })
+    const next = {
+      image: { id: 'next', presentationMode: 'contain' },
+    } as ImageCtxEnvelope
+    await ctx.setImages([next])
+    ctx.setActiveImage(next)
+    resolve()
+    await pending
+    expect(ctx.activeImage?.image.id).toBe('next')
+    expect(ctx.activeImage?.image.presentationMode).toBe('contain')
+  })
   it('submits canonical replacement without first clearing the existing canonical image', async () => {
     const ctx = new ImageCtx()
     await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'feature' } })
