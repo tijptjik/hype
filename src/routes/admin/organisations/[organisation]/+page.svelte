@@ -64,6 +64,7 @@ import {
   reorderProjectPropertyValue,
   resetProjectPropertyLocale,
   stopEvent,
+  sortProjectPropertyValuesAlphabetically,
   translateProjectPropertyLocale,
   updateProjectPropertyBase,
   updateProjectPropertyI18n,
@@ -481,6 +482,21 @@ const updatePropertyI18n = (
 
 const addPropertyValue = (propertyId: Id): void => {
   addProjectPropertyValue(organisationPropertyFormAdapter, propertyId)
+  revalidateAfterProgrammaticChange()
+}
+
+/**
+ * Sorts options by the selected locale and revalidates the current form.
+ * @param propertyId - Property whose options should be sorted.
+ * @param locale - Locale supplying the option labels.
+ * @returns Nothing; updates option ranks in the form.
+ */
+const sortPropertyValuesAlphabetically = (propertyId: Id, locale: Locale): void => {
+  sortProjectPropertyValuesAlphabetically(
+    organisationPropertyFormAdapter,
+    propertyId,
+    locale,
+  )
   revalidateAfterProgrammaticChange()
 }
 
@@ -1544,6 +1560,7 @@ $effect(() => {
             onUpdateBase: updatePropertyBase,
             onUpdateI18n: updatePropertyI18n,
             onAddValue: addPropertyValue,
+            onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
             onRemoveValue: removePropertyValue,
             onMoveValue: movePropertyValue,
             onUpdateValue: updatePropertyValue,

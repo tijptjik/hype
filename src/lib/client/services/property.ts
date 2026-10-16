@@ -591,6 +591,13 @@ function collectMissingPropertyTranslations(
   return { texts, origins }
 }
 
+/**
+ * Requests translations using the remote API's canonical locale keys.
+ * @param sourceLocale - Source locale used by the form controls.
+ * @param targetLocale - Destination locale used by the form controls.
+ * @param texts - Nonempty source strings to translate.
+ * @returns Translated strings, or null when the request fails.
+ */
 async function requestPropertyTranslations(
   sourceLocale: Locale,
   targetLocale: Locale,
@@ -601,8 +608,8 @@ async function requestPropertyTranslations(
       '#lib/api/translation.remote.js'
     )
     const translatedTexts = await translateTextRemote({
-      source: sourceLocale,
-      target: targetLocale,
+      source: toLocaleKey(sourceLocale),
+      target: toLocaleKey(targetLocale),
       texts,
     })
     return Array.isArray(translatedTexts) ? translatedTexts : null

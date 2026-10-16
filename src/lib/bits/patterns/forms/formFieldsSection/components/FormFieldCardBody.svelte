@@ -978,7 +978,7 @@ $effect(() => {
                   {#if valuesAreTranslatable || showCoreFields}
                     <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
                     <div
-                      class={`bits-project-field-card__value-editable ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                      class={`bits-project-field-card__value-editable focus-override ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
                       role="textbox"
                       aria-readonly={!isEditing}
                       contenteditable={isEditing &&
