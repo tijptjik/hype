@@ -2,10 +2,10 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // SVELTE
-import { untrack } from 'svelte'
+import { onDestroy, tick, untrack } from 'svelte'
+import { prefersReducedMotion } from 'svelte/motion'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
-import ChevronRight from 'virtual:icons/proicons/chevron-right'
 import X from 'virtual:icons/proicons/cancel'
 import Search from 'virtual:icons/proicons/search'
 import Users from 'virtual:icons/proicons/person-multiple'
@@ -26,6 +26,8 @@ let {
 }: ResourceSectionProps = $props()
 let open = $state(untrack(() => section.defaultOpen))
 let touched = $state(false)
+let element: HTMLElement | undefined = $state()
+let animations: Animation[] = []
 let headerHeight = $state(0)
 let searchHeight = $state(0)
 let contentHeight = $state(0)
@@ -41,10 +43,49 @@ const maxHeight = $derived(
 $effect(() => {
   if (!touched) open = section.defaultOpen
 })
-function toggleOpen(): void {
+/**
+ * Animates the measured flex allocation of this group and its neighbours.
+ * @returns Resolves after the new layout has been measured and animation started.
+ * @remarks Explicit heights avoid scaling text and keep virtual lists constrained.
+ */
+async function toggleOpen(): Promise<void> {
+  const siblings = Array.from(element?.parentElement?.children ?? []).filter(
+    (node): node is HTMLElement =>
+      node instanceof HTMLElement && node.hasAttribute('data-resource-section'),
+  )
+  const heights = siblings.map(node => node.getBoundingClientRect().height)
+  // Reverse an interrupted transition from its current visible size.
+  for (const node of siblings) {
+    for (const animation of node.getAnimations?.() ?? []) {
+      if (animation.id === 'resource-section-collapse') animation.cancel()
+    }
+  }
   touched = true
   open = !open
+  await tick()
+  if (prefersReducedMotion.current) return
+  const targets = siblings.map(node => node.getBoundingClientRect().height)
+  animations = siblings.flatMap((node, index) => {
+    if (!node.animate || Math.abs(heights[index] - targets[index]) < 1) return []
+    const frame = { flex: '0 0 auto', maxHeight: 'none', overflow: 'hidden' }
+    return [
+      node.animate(
+        [
+          { ...frame, height: `${heights[index]}px` },
+          { ...frame, height: `${targets[index]}px` },
+        ],
+        {
+          id: 'resource-section-collapse',
+          duration: 240,
+          easing: 'cubic-bezier(0.33, 1, 0.68, 1)',
+        },
+      ),
+    ]
+  })
 }
+onDestroy(() => {
+  for (const animation of animations) animation.cancel()
+})
 const id = $props.id()
 const tone = $derived(
   section.id === 'organisation'
@@ -66,7 +107,11 @@ const items = $derived(
 </script>
 
 <section
-  class="flex min-h-0 min-w-0 flex-col bg-panel {open ? 'flex-1' : 'shrink-0'}"
+  bind:this={element}
+  data-resource-section
+  class="flex min-h-0 min-w-0 flex-col overflow-hidden bg-panel {open
+    ? 'flex-1'
+    : 'shrink-0'}"
   aria-label={section.title}
   style:max-height={maxHeight}
 >
@@ -89,11 +134,11 @@ const items = $derived(
       aria-controls={id}
       onclick={toggleOpen}
     >
-      {#if open}
-        <ChevronDown class="size-4" />
-      {:else}
-        <ChevronRight class="size-4" />
-      {/if}
+      <ChevronDown
+        class="size-4 transition-transform duration-250 motion-reduce:transition-none {open
+          ? ''
+          : '-rotate-90'}"
+      />
     </button>
     <button
       type="button"

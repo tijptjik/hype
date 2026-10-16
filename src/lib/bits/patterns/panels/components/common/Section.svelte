@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+// ICONS
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import type { Component, Snippet } from 'svelte'
 // COMPONENTS
 import * as Panel from '#lib/bits/patterns/panels/index.js'
@@ -40,6 +42,11 @@ let {
   managedContent?: Snippet<[boolean]>
 } & PanelProps = $props()
 
+const adminSettings = $derived(
+  panelProps.isAdmin && panelProps.panelType === 'settings',
+)
+const contentId = $props.id()
+
 // STATE
 // Apply the default once so user toggles remain independent of prop updates.
 let isOpen = $state(untrack(() => defaultOpen))
@@ -70,29 +77,56 @@ const onNavigate = (e: MouseEvent) => {
 </script>
 
 <section
-  class="bits-theme flex min-h-0 pt-3 flex-col overflow-hidden bg-panel caret-transparent {isOpen
+  class="bits-theme flex min-h-0 {adminSettings
+    ? 'border-b border-border'
+    : 'pt-3'} flex-col overflow-hidden bg-panel caret-transparent {isOpen
     ? 'grow-0'
     : 'shrink-0'} {panelProps.position === 'left' && !panelProps.isNarrow
     ? 'pr-4'
     : ''} {rootClass}"
 >
-  <Panel.Section.Header
-    {title}
-    {icon}
-    {iconGraphicClass}
-    {iconVerticalPaddingClass}
-    {iconColorClass}
-    {description}
-    {isOpen}
-    {onToggle}
-    {onNavigate}
-    {...panelProps}
-  />
-  <Panel.Section.Content
-    {isOpen}
-    {children}
-    {collapsedContent}
-    {managedContent}
-    {...panelProps}
-  />
+  {#if adminSettings}
+    <button
+      type="button"
+      class="flex h-14 w-full shrink-0 items-center gap-4 px-6 text-left text-base-content outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+      aria-expanded={isOpen}
+      aria-controls={contentId}
+      onclick={onToggle}
+    >
+      {#if typeof icon !== 'string'}
+        {@const SectionIcon = icon}
+        <SectionIcon class="size-5 shrink-0" aria-hidden="true" />
+      {/if}
+      <span class="min-w-0 flex-1 text-sm font-normal uppercase tracking-[0.1em]"
+        >{title}</span
+      >
+      <ChevronDown
+        class="size-4 text-muted-foreground transition-transform duration-250 motion-reduce:transition-none {isOpen
+          ? ''
+          : '-rotate-90'}"
+      />
+    </button>
+  {:else}
+    <Panel.Section.Header
+      {title}
+      {icon}
+      {iconGraphicClass}
+      {iconVerticalPaddingClass}
+      {iconColorClass}
+      {description}
+      {isOpen}
+      {onToggle}
+      {onNavigate}
+      {...panelProps}
+    />
+  {/if}
+  <div id={contentId} class="contents">
+    <Panel.Section.Content
+      {isOpen}
+      {children}
+      {collapsedContent}
+      {managedContent}
+      {...panelProps}
+    />
+  </div>
 </section>

@@ -1,5 +1,7 @@
 <script lang="ts">
 import { m } from '#lib/i18n.js'
+// ICONS
+import Adjustments from 'virtual:icons/tabler/adjustments-horizontal'
 // BITS
 import { Switch } from '#lib/bits/index.js'
 // COMPONENTS
@@ -24,6 +26,8 @@ let {
   preferences: AdminPreferences
   onPreference: (code: AdminPreferenceCode, checked: boolean) => void
 } = $props()
+
+const preferenceId = $props.id()
 
 // Get admin preferences from appCtx
 const adminPreferences: AdminPreferences = $derived(preferences)
@@ -60,24 +64,29 @@ const preferencesConfig: {
 {#if panelProps.isAdmin}
   <Section
     title={m.menu_admin()}
-    icon="/admin.svg"
+    icon={Adjustments}
     defaultOpen={true}
     iconVerticalPaddingClass="py-2 pr-4"
     {...panelProps}
   >
-    <div class="flex min-h-0 w-full flex-col gap-2 overflow-y-auto pb-4 pl-4">
+    <div class="flex min-h-0 w-full flex-col gap-1 px-6 pb-5">
       {#each preferencesConfig as preference}
-        <div
-          class="flex w-full flex-row items-start justify-between gap-3 px-4 py-2 pr-6.75"
-        >
+        <div class="flex w-full flex-row items-start justify-between gap-4 py-3">
           <div class="min-w-0 grow flex flex-col gap-0.5">
-            <p class="font-normal text-base-content">{preference.name}</p>
+            <label
+              for={`${preferenceId}-${preference.code}`}
+              class="cursor-pointer text-sm font-medium text-base-content"
+              >{preference.name}</label
+            >
             {#if preference.description}
-              <p class="text-sm text-neutral-content">{preference.description}</p>
+              <p class="text-sm leading-relaxed text-muted-foreground">
+                {preference.description}
+              </p>
             {/if}
           </div>
           <Switch
             name={preference.code}
+            id={`${preferenceId}-${preference.code}`}
             class="mt-0.5 shrink-0"
             size="sm"
             color="primary"

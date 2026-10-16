@@ -9,7 +9,14 @@ import XCircle from 'virtual:icons/proicons/cancel-circle'
 import { Panel } from '#lib/enums.js'
 // TYPES
 
-let { panelType, title, onToggleInfo, onClose } = $props<{
+let {
+  panelType,
+  title,
+  onToggleInfo,
+  onClose,
+  isAdmin = false,
+} = $props<{
+  isAdmin?: boolean
   onClose: () => void
   panelType: Panel
   title: string
@@ -18,10 +25,17 @@ let { panelType, title, onToggleInfo, onClose } = $props<{
 </script>
 
 <header
-  class="sticky top-0 z-30 flex h-18.75 shrink-0 select-none flex-row items-center justify-between border-b-3 border-base-300 bg-panel px-4 py-2 caret-transparent focus:outline-none"
+  class="sticky top-0 z-30 flex shrink-0 select-none flex-row items-center justify-between {isAdmin
+    ? 'h-[calc(4.5rem+1px)] border-b border-border px-6'
+    : 'h-18.75 border-b-3 border-base-300 px-4'} bg-panel py-2 caret-transparent focus:outline-none"
+  style:box-shadow={isAdmin ? 'var(--shadow-lg)' : undefined}
 >
   <div class="flex flex-row items-center gap-2">
-    <h2 class="text-lg font-semibold uppercase tracking-widest text-primary">
+    <h2
+      class={isAdmin
+        ? 'text-sm font-medium uppercase tracking-[0.1em] text-base-content'
+        : 'text-lg font-semibold uppercase tracking-widest text-primary'}
+    >
       {title}
     </h2>
   </div>
