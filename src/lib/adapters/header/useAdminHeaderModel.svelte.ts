@@ -1,5 +1,6 @@
 // SVELTEKIT
 import { goto } from '$app/navigation'
+import { page } from '$app/state'
 // CONSTANTS
 import { NEW_REF } from '#lib/constants.js'
 // CONTEXT
@@ -564,7 +565,10 @@ export function useAdminHeaderModel(
 
     const url = new URL(window.location.href)
     url.hash = ref
-    goto(url, { shallow: true, replace: true, state: window.history.state })
+    if (url.href === window.location.href) return
+
+    // Preserve application state without nesting SvelteKit's serialized history metadata.
+    goto(url, { shallow: true, replace: true, state: page.state })
   }
 
   // ---
