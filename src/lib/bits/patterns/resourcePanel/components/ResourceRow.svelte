@@ -7,7 +7,7 @@ import Crosshair from 'virtual:icons/proicons/target'
 import X from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { ResourceRowProps } from './resourcePanelPrimitives.types'
-let { row, tone, narrow = false }: ResourceRowProps = $props()
+let { row, tone, narrow = false, onLabelShow, onLabelHide }: ResourceRowProps = $props()
 const color = $derived(
   tone === 'primary'
     ? 'text-primary'
@@ -31,10 +31,23 @@ const color = $derived(
   ></span>
   <button
     type="button"
-    class="block min-h-10 w-full min-w-0 py-2 text-left focus-override outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+    class="block w-full min-w-0 overflow-hidden text-left transition-[height,padding] duration-500 motion-reduce:transition-none {narrow
+      ? 'py-0'
+      : 'py-2'} focus-override outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
     aria-label={row.primaryLabel}
     aria-current={row.active ? 'page' : undefined}
-    title={narrow ? row.name : undefined}
+    style:height={narrow ? '24px' : row.breadcrumbs.length ? '3.25rem' : '2.5rem'}
+    onpointerenter={event => {
+      if (narrow) onLabelShow?.(row.name, event.currentTarget)
+    }}
+    onpointerleave={() => onLabelHide?.()}
+    onfocus={event => {
+      if (narrow) onLabelShow?.(row.name, event.currentTarget)
+    }}
+    onblur={() => onLabelHide?.()}
+    onkeydown={event => {
+      if (event.key === 'Escape') onLabelHide?.()
+    }}
     onclick={row.onPrimary}
   >
     <!-- Keep text mounted with explicit dimensions: Firefox can collapse the intrinsic height of a clipped single-line label. -->
@@ -62,7 +75,8 @@ const color = $derived(
           {/each}
         </span>
       {/if}
-      <span class="block h-5 w-full truncate text-base font-light leading-5"
+      <!-- Clip at the outer wrapper; avoid truncate on the name itself (Firefox zero-size rendering). -->
+      <span class="block h-5 w-full whitespace-nowrap text-base font-light leading-5"
         >{row.name}</span
       >
     </span>

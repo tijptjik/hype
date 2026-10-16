@@ -85,7 +85,16 @@ const sidebarModel = useResourcePanelModel(appCtx, 'admin', adminCtx)
 setHeaderCtrl()
 
 const headerModel = useAdminHeaderModel(appCtx, adminCtx)
-const headerProps = $derived(headerModel.getHeaderProps())
+const headerProps = $derived({
+  ...headerModel.getHeaderProps(),
+  brand: {
+    src: '/logos/hype-mark.svg',
+    alt: 'HYPE',
+    monochrome: true,
+    href: '/',
+    label: 'HYPE — Back to map',
+  },
+})
 const adminPreferences = $derived(appCtx.getUserPreferences().admin)
 const isPrimaryPanelAutoHide = $derived(
   appCtx.isAdmin() && (adminPreferences?.isPrimaryPanelAutoHide ?? false),

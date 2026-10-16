@@ -36,27 +36,34 @@ const footerConfig = $derived(headerProps.footer ?? null)
 
 <MinWidthGuard {minWidth} {title} {description} {widthLabel} {icon}>
   {#if isReady}
-    <div class="bits-theme bits-admin-shell">
-      <AutoHide
-        enabled={isPrimaryPanelAutoHide}
-        isOpen={isAdminPanelOpen}
-        {onOpenVisual}
-        {onCloseVisual}
-      >
-        {@render sidebar()}
-      </AutoHide>
+    <div class="bits-theme flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden">
+      <Header
+        {...resolvedHeaderProps as HeaderProps}
+        class={[headerProps.class, 'shrink-0 border-b border-border']
+          .filter(Boolean)
+          .join(' ')}
+      />
+      <div class="bits-admin-shell flex-1">
+        <AutoHide
+          enabled={isPrimaryPanelAutoHide}
+          isOpen={isAdminPanelOpen}
+          {onOpenVisual}
+          {onCloseVisual}
+        >
+          {@render sidebar()}
+        </AutoHide>
 
-      <main class="bits-admin-shell__main">
-        <Header {...resolvedHeaderProps as HeaderProps} />
-        {@render children()}
+        <main class="bits-admin-shell__main">
+          {@render children()}
 
-        {#if footerConfig?.component}
-          {@const Footer = footerConfig.component}
-          <Footer {...footerConfig.props ?? {}} />
-        {/if}
-      </main>
+          {#if footerConfig?.component}
+            {@const Footer = footerConfig.component}
+            <Footer {...footerConfig.props ?? {}} />
+          {/if}
+        </main>
 
-      {@render settings()}
+        {@render settings()}
+      </div>
     </div>
   {:else}
     <LoadScreen color="accent" />

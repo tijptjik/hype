@@ -16,7 +16,14 @@ import VirtualResourceList from '#lib/bits/custom/resources/VirtualResourceList.
 import ResourceRow from './ResourceRow.svelte'
 // TYPES
 import type { ResourceSectionProps } from './resourcePanelPrimitives.types'
-let { section, narrow = false, admin = false }: ResourceSectionProps = $props()
+let {
+  section,
+  narrow = false,
+  admin = false,
+  headerAction,
+  onLabelShow,
+  onLabelHide,
+}: ResourceSectionProps = $props()
 let open = $state(untrack(() => section.defaultOpen))
 let touched = $state(false)
 let headerHeight = $state(0)
@@ -69,7 +76,9 @@ const items = $derived(
   >
     <button
       type="button"
-      class="absolute right-6 rounded-lg p-1 text-muted-foreground transition-opacity duration-500 hover:bg-surface focus-override outline-none focus-visible:text-primary motion-reduce:transition-none"
+      class="absolute {headerAction
+        ? 'right-14'
+        : 'right-6'} rounded-lg p-1 text-muted-foreground transition-opacity duration-500 hover:bg-surface focus-override outline-none focus-visible:text-primary motion-reduce:transition-none"
       style:opacity={narrow ? 0 : 1}
       inert={narrow}
       aria-hidden={narrow}
@@ -88,7 +97,9 @@ const items = $derived(
     </button>
     <button
       type="button"
-      class="focus-override outline-none focus-visible:text-primary min-w-0 flex-1 truncate mx-16 text-left text-sm font-normal uppercase tracking-[0.1em] transition-opacity duration-500 motion-reduce:transition-none"
+      class="focus-override outline-none focus-visible:text-primary min-w-0 flex-1 truncate ml-16 {headerAction
+        ? 'mr-24'
+        : 'mr-16'} text-left text-sm font-normal uppercase tracking-[0.1em] transition-opacity duration-500 motion-reduce:transition-none"
       style:opacity={narrow ? 0 : 1}
       inert={narrow}
       aria-hidden={narrow}
@@ -123,6 +134,11 @@ const items = $derived(
         <Layers class="size-6" />
       {/if}
     </button>
+    {#if headerAction}
+      <div class="absolute right-3 top-1/2 -translate-y-1/2">
+        {@render headerAction()}
+      </div>
+    {/if}
   </div>
   <div {id} class="flex min-h-0 flex-col {open ? 'flex-1' : ''}">
     {#if hasSearch}
@@ -172,18 +188,18 @@ const items = $derived(
         onVisibleItems={section.onVisible}
         viewKey={section.viewKey}
         animateRows
-        estimateSize={section.id === 'organisation' ? 40 : 56}
+        estimateSize={narrow ? 24 : section.id === 'organisation' ? 40 : 52}
       >
         {#snippet item(
           row,
         )}
-          <ResourceRow {row} {tone} {narrow} />
+          <ResourceRow {row} {tone} {narrow} {onLabelShow} {onLabelHide} />
         {/snippet}
       </VirtualResourceList>
     {:else if items.length && narrow}
       <div class="max-h-32 shrink-0 overflow-y-auto">
         {#each items as row (row.id)}
-          <ResourceRow {row} {tone} {narrow} />
+          <ResourceRow {row} {tone} {narrow} {onLabelShow} {onLabelHide} />
         {/each}
       </div>
     {:else if items.length}

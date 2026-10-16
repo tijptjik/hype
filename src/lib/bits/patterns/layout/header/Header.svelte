@@ -7,11 +7,12 @@ import * as HeaderPrimitive from './components'
 import type { HeaderProps } from './header.types'
 
 const DEFAULT_CLASS =
-  'bg-panel py-4 pl-6 navbar flex h-18 w-full justify-between caret-transparent transition-all duration-300'
+  'bg-panel py-4 navbar flex h-18 w-full justify-between caret-transparent transition-all duration-300'
 const CONTROL_BAR_TRANSITION_MS = 180
 
 let {
   query = $bindable(''),
+  brand,
   title = {},
   newAction = {},
   filter = {},
@@ -91,7 +92,9 @@ $effect(() => {
 })
 
 const rootClass = $derived(
-  [DEFAULT_CLASS, showAvatar ? 'pr-6' : 'pr-0'].filter(Boolean).join(' '),
+  [DEFAULT_CLASS, brand ? 'pl-3' : 'pl-6', showAvatar ? 'pr-6' : 'pr-0']
+    .filter(Boolean)
+    .join(' '),
 )
 </script>
 
@@ -101,6 +104,40 @@ const rootClass = $derived(
       showButtonText,
       isMeasuring,
     })}
+      {#if brand}
+        <svelte:element
+          this={brand.href ? 'a' : 'div'}
+          href={brand.href}
+          aria-label={brand.href ? (brand.label ?? brand.alt) : undefined}
+          tabindex={isMeasuring && brand.href ? -1 : undefined}
+          class="flex size-10 shrink-0 items-center justify-center p-0.5 focus-visible:outline-2 focus-visible:outline-focus"
+        >
+          {#if brand.monochrome}
+            <span
+              role="img"
+              aria-label={isMeasuring ? undefined : brand.alt}
+              aria-hidden={isMeasuring}
+              class="size-full bg-panel text-base-content"
+            >
+              <span
+                class="block size-full bg-current"
+                style:mask-image={`url('${brand.src}')`}
+                style:mask-size="contain"
+                style:mask-repeat="no-repeat"
+                style:mask-position="center"
+              ></span>
+            </span>
+          {:else}
+            <img
+              src={brand.src}
+              alt={isMeasuring ? '' : brand.alt}
+              width="36"
+              height="36"
+              class="size-full object-cover"
+            >
+          {/if}
+        </svelte:element>
+      {/if}
       <HeaderPrimitive.Title
         text={title.text}
         description={title.description}

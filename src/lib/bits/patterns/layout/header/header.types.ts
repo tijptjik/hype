@@ -131,6 +131,13 @@ export interface HeaderLayoutRegionConfig {
 }
 
 export interface HeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
+  brand?: {
+    src: string
+    alt: string
+    monochrome?: boolean
+    href?: string
+    label?: string
+  }
   query?: string
   title?: HeaderTitleConfig
   newAction?: HeaderNewConfig
