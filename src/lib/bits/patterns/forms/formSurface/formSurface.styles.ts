@@ -15,17 +15,18 @@ const sections = cx(
   String.raw`[&_.bits-form\_\_section-header_.bits-header\_\_icon-wrap]:text-primary [&_.bits-form\_\_section-header_.bits-header\_\_title]:font-semibold`,
   String.raw`[&_.bits-form\_\_i18n-card[data-locale]]:pt-5`,
   String.raw`[&_.bits-form\_\_section-header-left]:pl-0`,
-  String.raw`[&_.bits-form\_\_section-header]:bg-[var(--admin-form-heading,color-mix(in_oklab,var(--color-primary)_5%,transparent))] [&_.bits-form\_\_section-header]:border-b [&_.bits-form\_\_section-header]:border-primary/10`,
+  String.raw`[&_.bits-form\_\_section-header]:bg-[var(--admin-form-heading,color-mix(in_oklab,var(--color-primary)_12%,var(--form-workspace)))] [&_.bits-form\_\_section-header]:border-b [&_.bits-form\_\_section-header]:border-primary/25`,
   String.raw`[&_.bits-form\_\_section]:rounded-none [&_.bits-form\_\_i18n-section]:rounded-none [&_.bits-form\_\_section]:pb-6`,
   String.raw`[&_.bits-form\_\_section-header]:px-6 [&_.bits-form\_\_section-header]:h-[68px] [&_.bits-form\_\_section-header]:min-h-[68px]`,
   String.raw`[&_.bits-form\_\_section-header_.bits-header\_\_title]:normal-case [&_.bits-form\_\_section-header_.bits-header\_\_title]:text-xl [&_.bits-form\_\_section-header_.bits-header\_\_subtitle]:text-xs [&_.bits-form\_\_section-header_.bits-header\_\_subtitle]:text-muted-foreground`,
   String.raw`[&_.bits-form\_\_i18n-grid]:border-0 [&_.bits-form\_\_i18n-grid]:rounded-none [&_.bits-form\_\_i18n-grid]:bg-transparent`,
   String.raw`[&_.bits-form\_\_i18n-card]:border-0 [&_.bits-form\_\_i18n-card]:rounded-none [&_.bits-form\_\_i18n-card]:bg-transparent [&_.bits-form\_\_i18n-card]:px-6 [&_.bits-form\_\_i18n-card]:pt-0 [&_.bits-form\_\_i18n-card]:pb-2`,
-  String.raw`[&_.bits-form\_\_i18n-grid>article+article]:border-l [&_.bits-form\_\_i18n-grid>article+article]:border-border/40`,
+  String.raw`[&_.bits-form\_\_i18n-grid>article+article]:border-l [&_.bits-form\_\_i18n-grid>article+article]:border-border/70`,
   `[&_.no-i18n>div:first-child]:grid [&_.no-i18n>div:first-child]:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] [&_.no-i18n>div:first-child]:gap-6`,
 )
 
 // Each member has one full-width row, with a stable avatar and role column.
+// Plain rows let the dividers separate members without inset colour bands.
 const members = cx(
   String.raw`[&_.bits-form\_\_user-card-actions-select_.bits-form\_\_select-label]:text-foreground [&_.bits-form\_\_user-card-actions-select_svg]:text-muted-foreground`,
   String.raw`[&_.bits-form\_\_section:has(.bits-form\_\_user-card-root)]:pb-4 [&_.bits-form\_\_user-card-root:last-child]:border-b-0`,
@@ -38,21 +39,21 @@ const members = cx(
 
 // Both modes keep identical field geometry; only borders, fills, and controls change.
 const readMode = cx(
-  String.raw`[&_.bits-form\_\_control]:text-[15px] [&_.bits-form\_\_control]:leading-[22px] [&_.bits-form\_\_label-text]:text-muted-foreground`,
+  String.raw`[&_.bits-form\_\_control]:text-[15px] [&_.bits-form\_\_control]:leading-[22px] [&_.bits-form\_\_label-text]:text-[color:color-mix(in_oklab,var(--color-foreground)_80%,var(--form-workspace))]`,
   String.raw`[&_.bits-form\_\_field]:gap-1 [&_textarea.bits-form\_\_control]:pt-2`,
   // Match the control's 1px border and two 8px padding insets in both modes.
   String.raw`[&_.bits-form\_\_label]:pl-[17px]`,
   String.raw`[&_.bits-form\_\_control:focus-visible]:shadow-none [&_.bits-form\_\_control:focus-visible]:outline-none [&_input:focus-visible]:ring-0 [&_input:focus-visible]:ring-offset-0 [&_textarea:focus-visible]:ring-0 [&_textarea:focus-visible]:ring-offset-0`,
-  String.raw`[&_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing)]:border-transparent [&_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing)]:bg-transparent [&_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing)]:shadow-none`,
+  String.raw`[&_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing,.bits-form\_\_select-display-wrap)]:border-foreground/10 [&_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing,.bits-form\_\_select-display-wrap)]:bg-foreground/4 [&_.bits-form\_\_control-wrap:not(.bits-form\_\_control-wrap--editing,.bits-form\_\_select-display-wrap)]:shadow-none`,
   String.raw`[&_.bits-form\_\_control]:font-normal [&_input.bits-form\_\_control]:h-10`,
-  String.raw`[&_.bits-form\_\_label-text]:leading-5 [&_.bits-form\_\_label-text]:text-[13px] [&_.bits-form\_\_label-text]:font-medium`,
+  String.raw`[&_.bits-form\_\_label-text]:leading-5 [&_.bits-form\_\_label-text]:text-[13px] [&_.bits-form\_\_label-text]:font-semibold`,
 )
 
 // Centre status buttons on single-line fields; textareas keep a top-aligned indicator.
 const translationStatus = cx(
   // Locale and translation actions share one top-right header; its height never changes.
   String.raw`[&_.bits-form\_\_i18n-translation]:left-auto [&_.bits-form\_\_i18n-translation]:right-6 [&_.bits-form\_\_i18n-translation]:top-[10px] [&_.bits-form\_\_i18n-translation]:flex-row [&_.bits-form\_\_i18n-translation]:items-center [&_.bits-form\_\_i18n-translation]:rounded-md [&_.bits-form\_\_i18n-translation]:border [&_.bits-form\_\_i18n-translation]:border-transparent`,
-  '[&_[data-locale-code]]:static [&_[data-locale-code]]:order-2 [&_[data-locale-code]]:flex [&_[data-locale-code]]:h-8 [&_[data-locale-code]]:w-10 [&_[data-locale-code]]:shrink-0 [&_[data-locale-code]]:items-center [&_[data-locale-code]]:justify-center',
+  '[&_[data-locale-code]]:rounded-md [&_[data-locale-code]]:border [&_[data-locale-code]]:border-primary/20 [&_[data-locale-code]]:bg-primary/10 [&_[data-locale-code]]:text-foreground [&_[data-locale-code]]:text-xs [&_[data-locale-code]]:font-semibold [&_[data-locale-code]]:static [&_[data-locale-code]]:order-2 [&_[data-locale-code]]:flex [&_[data-locale-code]]:h-8 [&_[data-locale-code]]:w-10 [&_[data-locale-code]]:shrink-0 [&_[data-locale-code]]:items-center [&_[data-locale-code]]:justify-center',
   String.raw`[&_.bits-form\_\_i18n-translation:has(.bits-form\_\_i18n-translation-bar--visible)]:border-primary/20 [&_.bits-form\_\_i18n-translation:has(.bits-form\_\_i18n-translation-bar--visible)]:bg-[var(--form-control-edit-fill)]`,
   String.raw`[&_.bits-form\_\_i18n-translation-bar]:static [&_.bits-form\_\_i18n-translation-bar]:order-1 [&_.bits-form\_\_i18n-translation-bar]:mt-0 [&_.bits-form\_\_i18n-translation-bar]:transform-none [&_.bits-form\_\_i18n-translation-bar]:rounded-none [&_.bits-form\_\_i18n-translation-bar]:border-0 [&_.bits-form\_\_i18n-translation-bar]:bg-transparent [&_.bits-form\_\_i18n-translation-bar]:shadow-none`,
   String.raw`[&_.bits-form\_\_control-wrap--editing:focus-within]:border-primary/70 [&_.bits-form\_\_control-wrap--editing:focus-within]:ring-2 [&_.bits-form\_\_control-wrap--editing:focus-within]:ring-primary/20`,

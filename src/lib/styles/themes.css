@@ -350,7 +350,11 @@
   --admin-form-workspace: var(--theme-panel);
   --admin-form-control-fill: #f8f6fc;
   --admin-form-search-fill: #f8f6fc;
-  --admin-form-heading: #f8f6fc;
+  --admin-form-heading: color-mix(
+    in oklab,
+    var(--theme-primary) 10%,
+    var(--theme-panel)
+  );
   --admin-form-edge-width: 1px;
   --admin-form-divider-width: 1px;
   --admin-background:
@@ -378,7 +382,11 @@
     var(--theme-raised) 55%,
     var(--theme-panel)
   );
-  --admin-form-heading: var(--theme-panel);
+  --admin-form-heading: color-mix(
+    in oklab,
+    var(--theme-primary) 10%,
+    var(--theme-panel)
+  );
   --admin-form-edge-width: 1px;
   --admin-form-edge: none;
   --admin-form-divider-width: 1px;

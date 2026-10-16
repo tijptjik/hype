@@ -57,9 +57,7 @@ const FOCUS_VISIBLE_CLASSES = cx(
   'focus-visible:not-disabled:focus-visible:not-[aria-disabled=true]:border-[var(--btn-hover-border,var(--btn-border))]',
   'focus-visible:not-disabled:focus-visible:not-[aria-disabled=true]:bg-[var(--btn-hover-bg,var(--btn-bg))]',
   'focus-visible:not-disabled:focus-visible:not-[aria-disabled=true]:text-[var(--btn-hover-fg,var(--btn-fg))]',
-  'focus-visible:outline-2',
-  'focus-visible:outline-offset-2',
-  'focus-visible:outline-focus',
+  'focus-visible:outline-none',
 )
 
 const ARIA_DISABLED_CLASSES = cx(

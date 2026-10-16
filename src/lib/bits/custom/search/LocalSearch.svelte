@@ -203,7 +203,7 @@ $effect(() => {
         <div class="overflow-hidden rounded-md">
           <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
             <div
-              class="flex min-h-[60px] w-full items-center justify-center rounded-md bg-[#242424] px-3 py-3 text-center text-sm font-medium tracking-[0.08em] text-neutral-content/80"
+              class="flex min-h-[60px] w-full items-center justify-center rounded-md bg-panel px-3 py-3 text-center text-sm font-medium tracking-[0.08em] text-muted-foreground"
               aria-live="polite"
             >
               {noResultsText}

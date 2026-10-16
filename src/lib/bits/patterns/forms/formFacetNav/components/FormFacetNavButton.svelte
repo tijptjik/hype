@@ -14,7 +14,10 @@ const isNext = $derived(direction === 'next')
 const iconComponent = $derived(isNext ? ChevronRightIcon : ChevronLeftIcon)
 const resolvedAction = $derived(action ?? null)
 const buttonClass = $derived(
-  cx('flex-none min-w-max whitespace-nowrap', isNext && 'ml-auto flex-row-reverse'),
+  cx(
+    'h-9 flex-none min-w-max whitespace-nowrap rounded-md px-3 text-sm font-medium shadow-none',
+    isNext && 'ml-auto flex-row-reverse',
+  ),
 )
 </script>
 

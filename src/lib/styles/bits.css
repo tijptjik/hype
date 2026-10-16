@@ -213,11 +213,9 @@
     outline: none;
   }
 
-  .bits-theme *:not(.focus-override):focus-visible {
-    @apply focus-visible:ring-foreground focus-visible:ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-1;
-  }
+  /* Components own their focus treatment; a universal ring doubles their indicators. */
 
   .bits-theme .link {
-    @apply hover:text-foreground/80 focus-visible:ring-foreground focus-visible:ring-offset-background rounded-xs focus-visible:outline-hidden inline-flex items-center gap-1 font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-offset-2;
+    @apply hover:text-foreground/80 focus-visible:ring-primary focus-visible:ring-offset-background rounded-xs focus-visible:outline-hidden inline-flex items-center gap-1 font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-offset-2;
   }
 }
