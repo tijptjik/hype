@@ -8,7 +8,7 @@ let { isRowLayout = false }: { isRowLayout?: boolean } = $props()
 </script>
 
 <div
-  class="min-h-0 flex-1 overflow-hidden px-3"
+  class="min-h-0 flex-1 overflow-hidden px-3 pt-3"
   role="status"
   aria-live="polite"
   aria-busy="true"
