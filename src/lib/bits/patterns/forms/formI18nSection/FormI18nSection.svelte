@@ -10,6 +10,7 @@ let {
   locales,
   class: className = '',
   gridClass = '',
+  contentClass,
   cardClass = 'bits-form__i18n-card',
   localeCodeClass = 'absolute right-5 top-4 text-xs font-semibold uppercase tracking-widest text-primary',
   onTranslate,
@@ -56,6 +57,7 @@ const resolvedGridClass = $derived(
       <FormI18nSectionPrimitive.FormSection
         {locale}
         {cardClass}
+        {contentClass}
         {localeCodeClass}
         {onTranslate}
         {onResetLocale}

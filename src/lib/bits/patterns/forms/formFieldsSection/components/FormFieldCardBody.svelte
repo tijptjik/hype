@@ -9,7 +9,7 @@ import GripVertical from 'virtual:icons/lucide/grip-vertical'
 // SERVICES
 import { getDropIndex } from '#lib/client/services/dragDrop.js'
 // COMPONENTS
-import { SelectField, Skeleton, TextInput } from '#lib/bits/custom/form/index.js'
+import { SelectField, TextInput } from '#lib/bits/custom/form/index.js'
 import { FormI18nSection } from '#lib/bits/patterns/forms/formI18nSection/index.js'
 import FormFieldPropertyValueItem from './FormFieldPropertyValueItem.svelte'
 import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelte'
@@ -56,6 +56,8 @@ const componentOptions = $derived<SelectItem[]>(
   ).map(component => ({ value: component, label: component })),
 )
 const canShowRange = $derived(property.component === 'RangeField')
+// Share intrinsic row heights across locales, including validation messages.
+const localeRowsClass = $derived(canShowRange ? 'md:row-span-7' : 'md:row-span-6')
 const rangeBoundsAreRequired = $derived(canShowRange)
 const canShowValues = $derived(
   property.type === 'classifier' && property.component === 'SelectField',
@@ -694,8 +696,9 @@ $effect(() => {
 <FormI18nSection
   title=""
   class="bits-theme w-full"
-  gridClass="bits-project-field-card__i18n-grid"
-  cardClass="bits-form__i18n-card bits-project-field-card__i18n-card"
+  gridClass="bits-project-field-card__i18n-grid grid-cols-1! md:grid-cols-3! gap-x-0! gap-y-3! border-0! bg-transparent!"
+  cardClass={`bits-form__i18n-card grid! gap-3! rounded-none! bg-transparent! shadow-none ${localeRowsClass} md:grid-rows-subgrid`}
+  contentClass={`grid gap-3 pb-2 pt-2 md:grid-rows-subgrid ${localeRowsClass}`}
   {locales}
   sectionKey={`property:${property.id}`}
   {isEditing}
@@ -723,7 +726,7 @@ $effect(() => {
       placeholderGenValue,
     )}
 
-    <div class="flex flex-col gap-2.5">
+    <div class={`grid gap-3 md:grid-rows-subgrid ${localeRowsClass}`}>
       {#if labelGenAttrs}
         <input {...labelGenAttrs}>
       {/if}
@@ -764,7 +767,8 @@ $effect(() => {
           onValueChange={value => onUpdateBase(property.id, 'key', value)}
         />
       {:else}
-        <Skeleton isLabelCovered={false} />
+        <!-- Reserve the API row only while locales are displayed side by side. -->
+        <div class="hidden md:block" aria-hidden="true"></div>
       {/if}
 
       <TextInput
@@ -854,7 +858,7 @@ $effect(() => {
           }}
         />
       {:else}
-        <Skeleton />
+        <div class="hidden md:block" aria-hidden="true"></div>
       {/if}
 
       {#if canShowRange}
@@ -881,8 +885,8 @@ $effect(() => {
               inputAttrs={maxAttrs}
             />
           {:else}
-            <Skeleton />
-            <Skeleton />
+            <div class="hidden md:block" aria-hidden="true"></div>
+            <div class="hidden md:block" aria-hidden="true"></div>
           {/if}
         </div>
       {/if}

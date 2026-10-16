@@ -13,6 +13,7 @@ export interface FormI18nSectionProps {
   locales?: LocaleKey[]
   class?: string
   gridClass?: string
+  contentClass?: string
   cardClass?: string
   localeCodeClass?: string
   onTranslate?: (

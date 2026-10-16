@@ -192,7 +192,8 @@
     border-width: var(--switch-border-width);
     border-color: var(--switch-current-color);
     background-color: var(--switch-current-color);
-    box-shadow: var(--shadow-mini);
+    /* Keep the visible thumb centered; a downward shadow makes it look offset. */
+    box-shadow: none;
     --switch-thumb-x: 0px;
     translate: var(--switch-thumb-x) 0;
     will-change: translate;
