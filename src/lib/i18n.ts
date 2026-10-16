@@ -514,6 +514,7 @@ type TranslateI18nFieldsParams = {
  * Translate selected i18n fields from one locale to another.
  * @param params - Translation request payload and lifecycle callbacks.
  * @returns A field/value map for translated strings.
+ * @remarks Blank source fields are omitted; an entirely blank source makes no request.
  */
 export async function translateI18nFields({
   source,
@@ -524,13 +525,20 @@ export async function translateI18nFields({
   onFailure,
 }: TranslateI18nFieldsParams): Promise<Record<string, string>> {
   try {
-    const sourceTexts = fields.map(field => i18n[source]?.[field] ?? '')
-    const translatedTexts = await translateText(source, target, sourceTexts)
+    // Keep source fields aligned with their translations while skipping empty inputs.
+    const sourceFields = fields.filter(field => i18n[source]?.[field]?.trim())
+    const sourceTexts = sourceFields.map(field => i18n[source]?.[field] ?? '')
+    const translatedTexts = sourceTexts.length
+      ? await translateText(source, target, sourceTexts)
+      : []
 
-    const translated = fields.reduce<Record<string, string>>((acc, field, index) => {
-      acc[field] = translatedTexts[index] ?? ''
-      return acc
-    }, {})
+    const translated = sourceFields.reduce<Record<string, string>>(
+      (acc, field, index) => {
+        acc[field] = translatedTexts[index] ?? ''
+        return acc
+      },
+      {},
+    )
 
     onSuccess?.(translated)
     return translated

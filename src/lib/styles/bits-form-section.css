@@ -130,7 +130,7 @@
   }
 
   .bits-theme .bits-form__section-header-issue-icon-svg {
-    @apply h-[1.2rem] w-[1.2rem] text-foreground;
+    @apply h-[1.2rem] w-[1.2rem] text-inherit;
   }
 
   .bits-theme .bits-form__section-header-issue-icon-svg g,

@@ -83,29 +83,22 @@ const HEADER_FACET_BUTTON_NEUTRAL_VARS = cx(
   '[--btn-active-fg:var(--color-accent-ghost-active-fg)]',
 )
 
+// Invalid facets keep the navigation treatment, using error text and the active underline.
 const HEADER_FACET_BUTTON_ISSUE_VARS = cx(
-  '[--btn-bg:var(--color-danger-solid-bg)]',
-  '[--btn-fg:var(--color-danger-solid-fg)]',
-  '[--btn-border:var(--color-danger-solid-border)]',
-  '[--btn-hover-bg:var(--color-danger-solid-hover-bg)]',
-  '[--btn-hover-fg:var(--color-danger-solid-fg)]',
-  '[--btn-active-bg:var(--color-danger-solid-active-bg)]',
-  '[--btn-active-fg:var(--color-danger-solid-fg)]',
+  '[--btn-bg:transparent]',
+  '[--btn-fg:var(--color-error)]',
+  '[--btn-border:transparent]',
+  '[--btn-hover-bg:color-mix(in_oklab,var(--color-error)_10%,transparent)]',
+  '[--btn-hover-fg:var(--color-error)]',
+  '[--btn-active-bg:color-mix(in_oklab,var(--color-error)_15%,transparent)]',
+  '[--btn-active-fg:var(--color-error)]',
 )
 
 const HEADER_FACET_BUTTON_ISSUE_VISUAL_CLASSES = cx(
-  'bg-[var(--color-danger-solid-bg)]',
-  'text-[var(--color-danger-solid-fg)]',
-  'border-[color:var(--color-danger-solid-rest-border)]',
-  'hover:bg-[var(--color-danger-solid-hover-bg)]',
-  'hover:text-[var(--color-danger-solid-fg)]',
-  'hover:border-[color:var(--color-danger-solid-hover-border)]',
-  'focus-visible:bg-[var(--color-danger-solid-hover-bg)]',
-  'focus-visible:text-[var(--color-danger-solid-fg)]',
-  'focus-visible:border-[color:var(--color-danger-solid-hover-border)]',
-  'active:bg-[var(--color-danger-solid-active-bg)]',
-  'active:text-[var(--color-danger-solid-fg)]',
-  'active:border-[color:var(--color-danger-solid-active-border)]',
+  'bg-transparent text-error',
+  'hover:bg-error/10 hover:text-error',
+  'focus-visible:bg-error/10 focus-visible:text-error',
+  'active:bg-error/15 active:text-error',
 )
 
 function resolveHeaderActionVariantClasses(className?: string): string {

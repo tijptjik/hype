@@ -8,3 +8,9 @@ export const formSearchHeaderStyles = cx(
   '[&_.bits-search]:w-full [&_.bits-search-bar]:mb-0 [&_.bits-search-bar_input]:h-10',
   String.raw`[&_.bits-form\_\_capabilities-search]:w-full! [&_.bits-form\_\_capabilities-search]:max-w-none`,
 )
+
+// Member validation sits beside search on wide sections and wraps within the header.
+export const formMemberIssuesHeaderStyles = cx(
+  formSearchHeaderStyles,
+  '@min-[40rem]:h-auto! @min-[40rem]:grid-cols-1! @min-[40rem]:py-3! @min-[64rem]:grid-cols-[minmax(0,1fr)_minmax(0,48rem)]!',
+)
