@@ -365,8 +365,6 @@ export default defineConfig(async ({ command }) => ({
       outdir: './src/lib/paraglide',
       // Group dev translations by locale to avoid Firefox linking a module per message.
       outputStructure: command === 'serve' ? 'locale-modules' : 'message-modules',
-      strategy: ['cookie', 'preferredLanguage', 'baseLocale'],
-      cookieName: 'lang',
     }),
     // seedDrizzle(),
     sveltekit({
@@ -406,7 +404,9 @@ export default defineConfig(async ({ command }) => ({
     exclude: ['maplibre-gl'],
   },
   ssr: {
-    // Keep Svelte context state in one module graph during SSR and hot reloads.
+    // Keep the dev SSR context singleton outside Vite's reloadable module graph.
+    // Production still bundles Svelte for the Cloudflare runtime.
+    external: command === 'serve' ? ['svelte'] : [],
     optimizeDeps: { exclude: ['svelte'] },
   },
   build: {
@@ -415,6 +415,8 @@ export default defineConfig(async ({ command }) => ({
   // Enable build caching for CI environments
   cacheDir: '.svelte-kit/vite',
   server: {
+    // Local binding storage is runtime data, not an input to HMR or translations.
+    watch: { ignored: ['**/.wrangler/**'] },
     port: 5175,
     strictPort: true,
     // Vite derives the websocket port from the browser origin, including local proxies.
