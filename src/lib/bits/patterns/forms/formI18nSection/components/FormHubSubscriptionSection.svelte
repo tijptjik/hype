@@ -221,7 +221,7 @@ const sectionIssues = $derived.by(() =>
 )
 const sectionBodyClass = $derived(
   [
-    'grid gap-4 transition-opacity',
+    'grid grid-cols-1 gap-6 md:grid-cols-3 transition-opacity',
     !isSubscriptionAvailable ? 'pointer-events-none opacity-45' : '',
   ]
     .filter(Boolean)
@@ -329,13 +329,9 @@ const sectionBodyClass = $derived(
       {/each}
 
       <div>
-        <p
-          class="text-xs font-semibold uppercase tracking-[0.2em] text-base-content/60 pb-4"
-        >
-          Placement
-        </p>
+        <p class="pb-4 text-sm font-semibold text-muted-foreground">Placement</p>
 
-        <div class="grid grid-cols-2 justify-items-start items-start gap-4">
+        <div class="flex flex-wrap items-center gap-6">
           <Switch
             checked={subscriptionPlacement.topBar}
             disabled={!isEditing || !isSubscriptionAvailable}

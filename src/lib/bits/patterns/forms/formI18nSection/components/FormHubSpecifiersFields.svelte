@@ -52,7 +52,7 @@ const legalContactAddressIssues = $derived(
     title={m.admin__forms_hub_routing_title()}
     description={m.admin__forms_hub_routing_subtitle()}
   />
-  <FormSection>
+  <FormSection contentClass="grid grid-cols-1 gap-6 pt-4 pb-2 md:grid-cols-3">
     <TextInput
       label={m.admin__forms_hub_subdomain_label()}
       required={codeRequired}

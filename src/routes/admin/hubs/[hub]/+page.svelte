@@ -104,11 +104,17 @@ import {
   FormI18nDescriptorFields,
   FormI18nSection,
   FormUserRolesSection,
-  GridSpacer,
   Main,
   ResourceViewer,
-  TextArea,
+  SectionHeader,
 } from '#lib/bits/index.js'
+import FormPolicyField from '#lib/bits/patterns/forms/formPolicyField/FormPolicyField.svelte'
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import {
+  formSectionDividerStyles,
+  formSelectionSectionStyles,
+} from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
+import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import type { HubOrganisationItem } from '#lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types.js'
 // ADAPTERS
@@ -128,6 +134,8 @@ import type { HubFacet } from '#lib/navigation/index.js'
 import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
 import Blend from 'virtual:icons/proicons/shape-intersect'
+import MembersIcon from 'virtual:icons/proicons/person-multiple'
+import ImageIcon from 'virtual:icons/proicons/photo'
 import HubIcon from 'virtual:icons/proicons/building-multiple'
 import RefreshCw from 'virtual:icons/proicons/arrow-sync'
 import Type from 'virtual:icons/proicons/text'
@@ -1625,35 +1633,39 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <FormI18nSection
-        title={m.admin__forms_common_descriptors()}
-        {locales}
-        {onTranslate}
-        {onResetLocale}
-        {isEditing}
-      >
-        {#snippet center()}
-          <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-        {/snippet}
+      <FormSurface>
+        <FormI18nSection
+          title={m.admin__forms_common_descriptors()}
+          sectionKey="descriptor"
+          {locales}
+          {onTranslate}
+          {onResetLocale}
+          {isEditing}
+        >
+          {#snippet center()}
+            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+          {/snippet}
 
-        {#snippet children(
-          locale,
-        )}
-          <FormI18nDescriptorFields
-            form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[locale]}
-            {locale}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </FormI18nSection>
+          {#snippet children(
+            locale,
+          )}
+            <FormI18nDescriptorFields
+              form={formCtx.form}
+              fields={formCtx.form.fields.data.i18n[locale]}
+              {locale}
+              {isEditing}
+              {isRequiredInPreflight}
+            />
+          {/snippet}
+        </FormI18nSection>
 
-      <GridSpacer cols={3} leftCols={1} centerCols={1} rightCols={1}>
-        {#snippet right()}
+        <div class={formSectionDividerStyles}>
           <FormUserRolesSection
+            icon={MembersIcon}
+            layout="list"
             currentUserId={currentActor.userId}
             title={m.admin__forms_hub_admins_title()}
             subtitle={m.admin__forms_hub_admins_subtitle()}
@@ -1676,9 +1688,38 @@ $effect(() => {
             {onRemoveUser}
             {onRoleChange}
           />
-        {/snippet}
-
-        {#snippet center()}
+        </div>
+        {#if !isCoreHub}
+          <div class={formSectionDividerStyles}>
+            <FormOrganisationsSection
+              class={formSelectionSectionStyles}
+              title={m.maps__organisations()}
+              subtitle={m.hub__organisations_note()}
+              issues={organisationSectionIssues}
+              organisations={hubOrganisations}
+              selections={formOrganisationValues}
+              {hiddenOrganisationInputAttrs}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewHubRef}
+              {canSetCoreInclusive}
+              {onSearchOrganisations}
+              {onAddOrganisation}
+              {onRemoveOrganisation}
+              {onToggleCoreInclusive}
+              {onToggleHubExclusive}
+            />
+          </div>
+        {/if}
+        <div class={formSectionDividerStyles}>
+          <FormHubSpecifiersFields
+            form={formCtx.form}
+            {isEditing}
+            {isRequiredInPreflight}
+          />
+        </div>
+        <div class={formSectionDividerStyles}>
           <FormHubSubscriptionSection
             form={formCtx.form}
             {isEditing}
@@ -1715,36 +1756,8 @@ $effect(() => {
             {onSubscriptionBenefitsChange}
             onPlacementChange={onToggleSubscriptionPlacement}
           />
-        {/snippet}
-
-        {#snippet left()}
-          {#if !isCoreHub}
-            <FormOrganisationsSection
-              title={m.maps__organisations()}
-              subtitle={m.hub__organisations_note()}
-              issues={organisationSectionIssues}
-              organisations={hubOrganisations}
-              selections={formOrganisationValues}
-              {hiddenOrganisationInputAttrs}
-              {isEditing}
-              isSubmitting={formCtx.submitting}
-              isSubmitRequested={formCtx.isSubmitRequested}
-              startInAddingMode={isNewHubRef}
-              {canSetCoreInclusive}
-              {onSearchOrganisations}
-              {onAddOrganisation}
-              {onRemoveOrganisation}
-              {onToggleCoreInclusive}
-              {onToggleHubExclusive}
-            />
-          {/if}
-          <FormHubSpecifiersFields
-            form={formCtx.form}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </GridSpacer>
+        </div>
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet
@@ -1753,77 +1766,84 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('layers', 'previous')}
       nextAction={buildFacetNavAction('layers', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'layers' }}
     >
-      <FormHubLayersSection
-        title={m.maps__layers()}
-        subtitle={m.admin__forms_hub_layers_subtitle()}
-        localeKey={getLocaleKey()}
-        items={hubLayerItems}
-        issues={hubLayerSectionIssues}
-        {hiddenLayerDefaultInputAttrs}
-        {isEditing}
-        isSubmitting={formCtx.submitting}
-        onToggleDefault={onToggleLayerDefault}
-      />
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormHubLayersSection
+          title={m.maps__layers()}
+          subtitle={m.admin__forms_hub_layers_subtitle()}
+          localeKey={getLocaleKey()}
+          items={hubLayerItems}
+          issues={hubLayerSectionIssues}
+          {hiddenLayerDefaultInputAttrs}
+          {isEditing}
+          isSubmitting={formCtx.submitting}
+          onToggleDefault={onToggleLayerDefault}
+        />
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
       fillHeight={true}
-      class="bits-theme flex gap-4 min-h-0 flex-col"
+      class="bits-theme left-0! right-0! flex gap-4 min-h-0 flex-col"
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormFieldsSection
-        items={hubFieldsInSection}
-        title={m.admin__forms_common_fields()}
-        description={m.admin__forms_common_fields_subtitle()}
-        issues={fieldSectionIssues}
-        actions={fieldActions}
-        issueItemIds={fieldSectionIssueItemIds}
-        layoutMutationVersion={fieldsLayoutMutationVersion}
-        canEdit={canSubmitHub && isCurrentRefLoaded}
-        {isEditing}
-        removeMode={fieldRemoveMode}
-        onRemoveModeChange={value => {
-          fieldRemoveMode = value
-        }}
-        card={{
-          removeMode: fieldRemoveMode,
-          locales,
-          isEditing,
-          isRequiredInPreflight,
-          allIssues: visibleAllIssues as Array<{
-            message: string
-            path?: Array<string | number>
-          }>,
-          classifierComponents: classifierComponentTypes,
-          specifierComponents: specifierComponentTypes,
-          onIncreaseRank: fieldActions.increaseRank,
-          onDecreaseRank: fieldActions.decreaseRank,
-          onRemove: fieldActions.remove,
-          onUpdateBase: updatePropertyBase,
-          onUpdateI18n: updatePropertyI18n,
-          onAddValue: addPropertyValue,
-          onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
-          onRemoveValue: removePropertyValue,
-          onMoveValue: movePropertyValue,
-          onUpdateValue: updatePropertyValue,
-          onUpdateValueI18n: updatePropertyValueI18n,
-          onTranslateLocale: onTranslatePropertyLocale,
-          onResetLocale: onResetPropertyLocale,
-          getPropertyIndex: (propertyId, _sectionIndex) =>
-            getCurrentProjectProperties(hubPropertyFormAdapter).findIndex(
-              candidate => candidate.id === propertyId,
-            ),
-          getPropertyFields: (_propertyId, propertyIndex) =>
-            getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-          resolveSourceTag: resolveHubPropertyTypeTag,
-        }}
-      />
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormFieldsSection
+          icon={Type}
+          keepHeader
+          items={hubFieldsInSection}
+          title={m.admin__forms_common_fields()}
+          description={m.admin__forms_common_fields_subtitle()}
+          issues={fieldSectionIssues}
+          actions={fieldActions}
+          issueItemIds={fieldSectionIssueItemIds}
+          layoutMutationVersion={fieldsLayoutMutationVersion}
+          canEdit={canSubmitHub && isCurrentRefLoaded}
+          {isEditing}
+          removeMode={fieldRemoveMode}
+          onRemoveModeChange={value => {
+            fieldRemoveMode = value
+          }}
+          card={{
+            removeMode: fieldRemoveMode,
+            locales,
+            isEditing,
+            isRequiredInPreflight,
+            allIssues: visibleAllIssues as Array<{
+              message: string
+              path?: Array<string | number>
+            }>,
+            classifierComponents: classifierComponentTypes,
+            specifierComponents: specifierComponentTypes,
+            onIncreaseRank: fieldActions.increaseRank,
+            onDecreaseRank: fieldActions.decreaseRank,
+            onRemove: fieldActions.remove,
+            onUpdateBase: updatePropertyBase,
+            onUpdateI18n: updatePropertyI18n,
+            onAddValue: addPropertyValue,
+            onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
+            onRemoveValue: removePropertyValue,
+            onMoveValue: movePropertyValue,
+            onUpdateValue: updatePropertyValue,
+            onUpdateValueI18n: updatePropertyValueI18n,
+            onTranslateLocale: onTranslatePropertyLocale,
+            onResetLocale: onResetPropertyLocale,
+            getPropertyIndex: (propertyId, _sectionIndex) =>
+              getCurrentProjectProperties(hubPropertyFormAdapter).findIndex(
+                candidate => candidate.id === propertyId,
+              ),
+            getPropertyFields: (_propertyId, propertyIndex) =>
+              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+            resolveSourceTag: resolveHubPropertyTypeTag,
+          }}
+        />
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet
@@ -1832,82 +1852,85 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('policies', 'previous')}
       nextAction={buildFacetNavAction('policies', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'policies' }}
     >
-      <FormI18nSection
-        title="Policies"
-        subtitle="Configure the privacy policy and terms of service shown for this hub."
-        {locales}
-        {onTranslate}
-        {onResetLocale}
-        actions={[
-          {
-            text: 'Regenerate',
-            iconComponent: RefreshCw,
-            hideLabel: false,
-            hideLabelBelow: 0,
-            size: 'sm',
-            style: 'ghost',
-            onClick: () => {
-              onRegeneratePolicies()
+      <FormSurface>
+        <FormI18nSection
+          title="Policies"
+          subtitle="Configure the privacy policy and terms of service shown for this hub."
+          {locales}
+          {onTranslate}
+          {onResetLocale}
+          actions={[
+            {
+              text: 'Regenerate',
+              iconComponent: RefreshCw,
+              hideLabel: false,
+              hideLabelBelow: 0,
+              size: 'sm',
+              style: 'ghost',
+              onClick: () => {
+                onRegeneratePolicies()
+              },
+              disabled: !isEditing,
             },
-            disabled: !isEditing,
-          },
-        ]}
-        sectionKey="policies"
-        {isEditing}
-      >
-        {#snippet children(
-          locale,
-        )}
-          <input
-            {...getPolicyGenAttrs(
-              locale,
-              'privacyPolicyGen',
-              getPolicyGenValue(locale, 'privacyPolicy'),
-            )}
-          >
-          <input
-            {...getPolicyGenAttrs(
-              locale,
-              'termsOfServiceGen',
-              getPolicyGenValue(locale, 'termsOfService'),
-            )}
-          >
+          ]}
+          sectionKey="policies"
+          {isEditing}
+        >
+          {#snippet children(
+            locale,
+          )}
+            <input
+              {...getPolicyGenAttrs(
+                locale,
+                'privacyPolicyGen',
+                getPolicyGenValue(locale, 'privacyPolicy'),
+              )}
+            >
+            <input
+              {...getPolicyGenAttrs(
+                locale,
+                'termsOfServiceGen',
+                getPolicyGenValue(locale, 'termsOfService'),
+              )}
+            >
 
-          <TextArea
-            label="Privacy Policy"
-            {locale}
-            isTranslated={true}
-            {isEditing}
-            isGenAI={getPolicyGenValue(locale, 'privacyPolicy')}
-            onToggleGenAI={() =>
-              toggleGenAiField(formCtx.form, locale, 'privacyPolicy')}
-            value={(
-              getPolicyTextareaAttrs(locale, 'privacyPolicy') as { value?: string }
-            ).value ?? ''}
-            issues={getPolicyFields(locale).privacyPolicy.issues()}
-            rows={24}
-            textareaAttrs={getPolicyTextareaAttrs(locale, 'privacyPolicy')}
-          />
+            <FormPolicyField
+              label="Privacy Policy"
+              {locale}
+              isTranslated={true}
+              {isEditing}
+              isGenAI={getPolicyGenValue(locale, 'privacyPolicy')}
+              onToggleGenAI={() =>
+                toggleGenAiField(formCtx.form, locale, 'privacyPolicy')}
+              value={(
+                getPolicyTextareaAttrs(locale, 'privacyPolicy') as { value?: string }
+              ).value ?? ''}
+              issues={getPolicyFields(locale).privacyPolicy.issues()}
+              rows={24}
+              textareaAttrs={getPolicyTextareaAttrs(locale, 'privacyPolicy')}
+            />
 
-          <TextArea
-            label="Terms Of Service"
-            {locale}
-            isTranslated={true}
-            {isEditing}
-            isGenAI={getPolicyGenValue(locale, 'termsOfService')}
-            onToggleGenAI={() =>
-              toggleGenAiField(formCtx.form, locale, 'termsOfService')}
-            value={(
-              getPolicyTextareaAttrs(locale, 'termsOfService') as { value?: string }
-            ).value ?? ''}
-            issues={getPolicyFields(locale).termsOfService.issues()}
-            rows={20}
-            textareaAttrs={getPolicyTextareaAttrs(locale, 'termsOfService')}
-          />
-        {/snippet}
-      </FormI18nSection>
+            <FormPolicyField
+              label="Terms Of Service"
+              {locale}
+              isTranslated={true}
+              {isEditing}
+              isGenAI={getPolicyGenValue(locale, 'termsOfService')}
+              onToggleGenAI={() =>
+                toggleGenAiField(formCtx.form, locale, 'termsOfService')}
+              value={(
+                getPolicyTextareaAttrs(locale, 'termsOfService') as { value?: string }
+              ).value ?? ''}
+              issues={getPolicyFields(locale).termsOfService.issues()}
+              rows={20}
+              textareaAttrs={getPolicyTextareaAttrs(locale, 'termsOfService')}
+            />
+          {/snippet}
+        </FormI18nSection>
+      </FormSurface>
     </Main.Facet>
   </Main.Form>
 
@@ -1916,22 +1939,33 @@ $effect(() => {
     transition="fade"
     fillHeight={true}
     edgeToEdge={true}
+    contentClass="h-full overflow-hidden"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    {#if imageProviderProps.isValid}
-      <ImageProvider model={imageProviderModel}>
-        <ResourceViewer
-          canEditPresentationMode={canEditImagePresentationMode}
-          canEditDropzone={canEditImageDropzone}
-          {onPresentationModeCommitted}
-        />
-      </ImageProvider>
-    {:else}
-      <div
-        class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
-      >
-        {m.admin__forms_hub_image_save_hint()}
+    <FormSurface class="mb-0! flex h-full min-h-0 flex-col">
+      <SectionHeader
+        icon={ImageIcon}
+        title={m.admin__forms_project_image_title()}
+        class="shrink-0"
+      />
+      <div class="min-h-0 flex-1">
+        {#if imageProviderProps.isValid}
+          <ImageProvider model={imageProviderModel}>
+            <ResourceViewer
+              workspace
+              canEditPresentationMode={canEditImagePresentationMode}
+              canEditDropzone={canEditImageDropzone}
+              {onPresentationModeCommitted}
+            />
+          </ImageProvider>
+        {:else}
+          <div
+            class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted-foreground"
+          >
+            {m.admin__forms_hub_image_save_hint()}
+          </div>
+        {/if}
       </div>
-    {/if}
+    </FormSurface>
   </Main.Facet>
 </Main.Root>
