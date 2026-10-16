@@ -837,6 +837,7 @@ $effect(() => {
       {#if showCoreFields}
         <SelectField
           value={property.component}
+          displayClass="bg-foreground/4 border-foreground/10"
           items={componentOptions}
           label={m.admin__forms_property_component()}
           required={isFieldRequired(['component'])}
