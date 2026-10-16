@@ -61,8 +61,10 @@ const setCollapsed = (nextCollapsed: boolean): void => {
 
 $effect(() => {
   if (collapseAllVersion === appliedCollapseAllVersion) return
+  // Keep new cards open initially, but always honor subsequent section toggles.
+  const isInitialCollapseState = appliedCollapseAllVersion === -1
   appliedCollapseAllVersion = collapseAllVersion
-  if (keepExpandedOnIntro) {
+  if (isInitialCollapseState && keepExpandedOnIntro) {
     setCollapsed(false)
     return
   }

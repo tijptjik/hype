@@ -127,3 +127,47 @@ describe('SvelteKit 3 custom property controls', () => {
     },
   )
 })
+
+describe('new field collapse controls', () => {
+  it('honors subsequent section toggles while the intro flag remains active', async () => {
+    vi.useRealTimers()
+    const onCollapseChange = vi.fn()
+    const { rerender } = render(FormFieldCard, {
+      property: { id: 'der', scope: 'organisation' } as Property,
+      propertyIndex: 0,
+      sectionRank: 0,
+      totalItems: 1,
+      removeMode: false,
+      presentation: 'header',
+      locales: ['en'],
+      classifierComponents: [],
+      specifierComponents: [],
+      isRequiredInPreflight: () => false,
+      onIncreaseRank: vi.fn(),
+      onDecreaseRank: vi.fn(),
+      onRemove: vi.fn(),
+      onUpdateBase: vi.fn(),
+      onUpdateI18n: vi.fn(),
+      onAddValue: vi.fn(),
+      onSortValuesAlphabetically: vi.fn(),
+      onRemoveValue: vi.fn(),
+      onMoveValue: vi.fn(),
+      onUpdateValue: vi.fn(),
+      onUpdateValueI18n: vi.fn(),
+      onTranslateLocale: vi.fn(),
+      onResetLocale: vi.fn(),
+      keepExpandedOnIntro: true,
+      collapsedAll: true,
+      collapseAllVersion: 1,
+      onCollapseChange,
+    })
+
+    // A new field opens even when the existing fields are collapsed.
+    expect(onCollapseChange).not.toHaveBeenCalled()
+    await rerender({ collapsedAll: false, collapseAllVersion: 2 })
+    await rerender({ collapsedAll: true, collapseAllVersion: 3 })
+    expect(onCollapseChange).toHaveBeenLastCalledWith(true)
+    await rerender({ collapsedAll: false, collapseAllVersion: 4 })
+    expect(onCollapseChange).toHaveBeenLastCalledWith(false)
+  })
+})
