@@ -1146,7 +1146,13 @@ export async function handleResourceFormSubmissionResult({
     error,
     onSuccess: async () => {
       const name = getSubmittedName(nameKey)
-      toast.success(`${successPrefix}${name ? ` ${name}` : ''}`)
+      // Show the local confirmation time once the save has succeeded.
+      toast.success(`${successPrefix}${name ? ` “${name}”` : ''}`, {
+        description: new Intl.DateTimeFormat(getLocale(), {
+          dateStyle: 'medium',
+          timeStyle: 'medium',
+        }).format(new Date()),
+      })
       await refreshResource()
       await onSuccess?.()
     },
