@@ -45,6 +45,14 @@ export class ResourceList {
     return [...rows.values()]
   }
 
+  /** Whether results can be shown, including a settled empty result or failure. */
+  get isInitialised(): boolean {
+    return (
+      this.rows.length > 0 ||
+      (!this.loading && (Boolean(this.pages[0]?.current) || Boolean(this.error)))
+    )
+  }
+
   get hasMore(): boolean {
     return Boolean(this.pages.at(-1)?.current?.nextCursor)
   }

@@ -253,6 +253,7 @@ function getIndexModel(entity: Project) {
 </script>
 
 <ResourceIndex
+  isInitialised={resourceList.list.isInitialised}
   onNearEnd={() => resourceList.list.next()}
   hasMore={resourceList.list.hasMore}
   isLoadingMore={resourceList.list.loading}

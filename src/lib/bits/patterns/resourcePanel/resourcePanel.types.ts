@@ -30,6 +30,8 @@ export type ResourcePanelSection = {
   onNext: () => void | Promise<void>
   onRetry: () => void
   onVisible: (rows: ResourcePanelRow[]) => void
+  /** Whether the current route is this section's resource index. */
+  isIndexActive?: boolean
   onNavigate?: () => void | Promise<void>
 }
 export type ResourcePanelModel = {

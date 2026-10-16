@@ -204,3 +204,26 @@ it('keeps the sidebar toggle above the collapsed icons and inside the first expa
   await fireEvent.click(collapse)
   expect(model.onClose).toHaveBeenCalledTimes(2)
 })
+
+it('navigates before toggling a compressed resource section', async () => {
+  const model = { ...section(1), isIndexActive: false, onNavigate: vi.fn() }
+  const view = render(ResourceSection, { section: model, narrow: true })
+  await fireEvent.click(screen.getByRole('button', { name: 'Layers' }))
+  expect(model.onNavigate).toHaveBeenCalledOnce()
+  expect(
+    screen.getByRole('button', { name: 'Layers' }).getAttribute('aria-expanded'),
+  ).toBe('true')
+
+  await view.rerender({ section: { ...model, isIndexActive: true }, narrow: true })
+  await fireEvent.click(screen.getByRole('button', { name: 'Collapse Layers' }))
+  expect(
+    screen.getByRole('button', { name: 'Expand Layers' }).getAttribute('aria-expanded'),
+  ).toBe('false')
+  expect(model.onNavigate).toHaveBeenCalledOnce()
+  await fireEvent.click(screen.getByRole('button', { name: 'Expand Layers' }))
+  expect(
+    screen
+      .getByRole('button', { name: 'Collapse Layers' })
+      .getAttribute('aria-expanded'),
+  ).toBe('true')
+})

@@ -40,6 +40,6 @@ function handleChange(event: Event): void {
   size="sm"
   iconComponent={CameraIcon}
   iconClasses="h-4 w-4"
-  class="rounded-full bg-black/60 text-white shadow-none hover:bg-black/75 hover:text-white"
+  class="rounded-full bg-base-100 text-base-content shadow-none hover:bg-surface hover:text-base-content"
   onClick={() => inputEl?.click()}
 />

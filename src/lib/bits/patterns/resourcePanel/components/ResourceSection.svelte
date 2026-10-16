@@ -86,6 +86,17 @@ async function toggleOpen(): Promise<void> {
 onDestroy(() => {
   for (const animation of animations) animation.cancel()
 })
+/**
+ * Open the resource index before allowing its compact section to collapse.
+ * @returns Resolves after navigation or the section toggle completes.
+ */
+async function handleNarrowClick(): Promise<void> {
+  if (section.onNavigate && !section.isIndexActive) {
+    await section.onNavigate()
+    return
+  }
+  await toggleOpen()
+}
 const id = $props.id()
 const tone = $derived(
   section.id === 'organisation'
@@ -165,13 +176,15 @@ const items = $derived(
       class="absolute left-[32px] top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg focus-override outline-none focus-visible:ring-2 focus-visible:ring-focus {color}"
       inert={!narrow}
       aria-hidden={!narrow}
-      aria-label={open
-        ? m.panel__collapse({ name: section.title })
-        : m.panel__expand({ name: section.title })}
+      aria-label={section.onNavigate && !section.isIndexActive
+        ? section.title
+        : open
+          ? m.panel__collapse({ name: section.title })
+          : m.panel__expand({ name: section.title })}
       aria-expanded={open}
       aria-controls={id}
       title={section.title}
-      onclick={toggleOpen}
+      onclick={handleNarrowClick}
     >
       {#if section.id === 'organisation'}
         <Users class="size-6" />

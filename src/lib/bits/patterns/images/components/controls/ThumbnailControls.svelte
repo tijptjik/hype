@@ -58,7 +58,7 @@ const iconButtonClass = $derived(
   cx(
     variant === 'footer'
       ? 'bits-admin-menu__button disabled:cursor-default disabled:opacity-35'
-      : 'bits-admin-menu__button inline-flex h-11 w-11 items-center justify-center rounded-xl bg-black/60 text-white shadow-[0_10px_28px_rgba(0,0,0,0.28)] transition hover:bg-black/75 disabled:cursor-default disabled:opacity-35',
+      : 'bits-admin-menu__button inline-flex h-11 w-11 items-center justify-center rounded-xl bg-base-100 text-base-content shadow-[0_10px_28px_rgba(0,0,0,0.28)] transition hover:bg-surface disabled:cursor-default disabled:opacity-35',
   ),
 )
 

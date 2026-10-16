@@ -4,6 +4,10 @@ import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS COMPONENTS
 import { Icon, ImageEditor, UserAttributionCard } from '#lib/bits/index.js'
 import ImageMetadataCard from './components/ImageMetadataCard.svelte'
+import {
+  IMAGE_ATTRIBUTION_CLASSES,
+  IMAGE_METADATA_BUTTON_CLASSES,
+} from './components/imageChrome.styles'
 // CONTEXT
 import { getImageCtx } from '#lib/context/image.svelte.js'
 // I18N
@@ -55,6 +59,7 @@ const model = useImageEditorGalleryModel(getImageCtx())
         type="imageContributor"
         openDirection="right"
         isOpen={true}
+        class={IMAGE_ATTRIBUTION_CLASSES}
       />
     {/if}
   {/snippet}
@@ -75,7 +80,7 @@ const model = useImageEditorGalleryModel(getImageCtx())
       >
         <button
           type="button"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/85"
+          class={IMAGE_METADATA_BUTTON_CLASSES}
           aria-label={m.image__metadata_open()}
         >
           {#if model.state.isMetadataLoading}

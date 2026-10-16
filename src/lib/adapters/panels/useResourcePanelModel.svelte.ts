@@ -1,5 +1,8 @@
 // SVELTE
 import { onMount } from 'svelte'
+import { page } from '$app/state'
+// LIB
+import { ADMIN_PATH } from '#lib/constants.js'
 // I18N
 import { getI18n, m } from '#lib/i18n.js'
 // LABELS
@@ -14,7 +17,7 @@ import {
   navigate,
 } from '#lib/navigation/index.js'
 // ENUMS
-import { FirstClassResource, OmniMode, Panel } from '#lib/enums.js'
+import { FirstClassResource, OmniMode, Panel, ResourcePath } from '#lib/enums.js'
 // TYPES
 import type { AppCtx } from '#lib/context/app.svelte.js'
 import type { AdminCtx } from '#lib/context/admin.svelte.js'
@@ -216,6 +219,12 @@ export function useResourcePanelModel(
     },
     get defaultOpen() {
       return mode === 'admin' || tall
+    },
+    get isIndexActive() {
+      return (
+        Boolean(admin) &&
+        page.url.pathname.replace(/\/$/, '') === `${ADMIN_PATH}/${ResourcePath[type]}`
+      )
     },
     onSearch: value => {
       search[type] = value

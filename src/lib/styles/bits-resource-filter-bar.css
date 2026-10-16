@@ -83,16 +83,16 @@
     display: inline-grid;
     justify-items: center;
     row-gap: 0.5rem;
-    padding-top: 1rem;
+    padding-top: calc(1rem + 2px);
     transform: translateX(var(--bits-resource-filter-bar-tri-toggle-offset, 0px));
   }
 
   .bits-resource-filter-bar__tri-toggle-label {
     @apply text-center text-xs uppercase leading-none text-base-content/70;
     position: absolute;
-    top: 0;
+    top: calc(-1rem - 2px);
     left: 50%;
-    max-width: calc(100% + 1.5rem);
+    width: max-content;
     white-space: nowrap;
     transform: translateX(-50%);
   }
@@ -143,17 +143,21 @@
     justify-self: center;
   }
 
-  .bits-resource-filter-bar__tri-toggle-control .bits-switch[data-state="unchecked"] {
+  .bits-resource-filter-bar__tri-toggle-control
+    .bits-switch.bits-switch--states-3[data-state="unchecked"] {
     --switch-current-color: var(--color-error);
-    background-color: color-mix(in oklab, var(--color-error) 18%, var(--color-raised));
+    background-color: var(
+      --theme-switch-off-track,
+      color-mix(in oklab, var(--color-error) 18%, var(--color-raised))
+    );
   }
 
-  .bits-resource-filter-bar__tri-toggle-control .bits-switch[data-state="checked"] {
+  .bits-resource-filter-bar__tri-toggle-control
+    .bits-switch.bits-switch--states-3[data-state="checked"] {
     --switch-current-color: var(--color-success);
-    background-color: color-mix(
-      in oklab,
-      var(--color-success) 24%,
-      var(--color-raised)
+    background-color: var(
+      --theme-switch-on-track,
+      color-mix(in oklab, var(--color-success) 24%, var(--color-raised))
     );
   }
 

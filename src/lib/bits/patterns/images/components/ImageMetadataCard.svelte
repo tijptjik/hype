@@ -262,16 +262,18 @@ $effect(() => {
 </script>
 
 <div
-  class="flex min-w-50 items-center gap-3 rounded-xl border border-white/10 bg-black p-3 text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+  class="flex min-w-50 items-center gap-3 rounded-xl border border-border bg-base-100 p-3 text-base-content shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
 >
   <div class="flex flex-col gap-2">
     {#if metadataRows.length > 0}
       {#each metadataRows as row}
-        <div class="grid grid-cols-[1rem_1fr] gap-x-2 gap-y-1 text-sm text-white/80">
+        <div
+          class="grid grid-cols-[1rem_1fr] gap-x-2 gap-y-1 text-sm text-muted-foreground"
+        >
           <div class="flex items-center justify-center">
-            <Icon src={row.icon} class="h-4 w-4 grow-0 text-white" />
+            <Icon src={row.icon} class="h-4 w-4 grow-0 text-base-content" />
           </div>
-          <p class="font-medium text-white">{row.label}</p>
+          <p class="font-medium text-base-content">{row.label}</p>
           <div></div>
           {#if typeof row.value === 'string'}
             <span>{row.value}</span>
@@ -279,7 +281,7 @@ $effect(() => {
             <div class="flex flex-col gap-0.5">
               <span>
                 <span
-                  class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/55"
+                  class="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground"
                 >
                   LAT
                 </span>
@@ -288,7 +290,7 @@ $effect(() => {
               {#if row.value.secondary}
                 <span>
                   <span
-                    class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/55"
+                    class="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground"
                   >
                     LNG
                   </span>
@@ -302,9 +304,9 @@ $effect(() => {
     {/if}
 
     {#if resolvedLoading}
-      <div class="text-sm text-white/65">{m.image__metadata_loading()}</div>
+      <div class="text-sm text-muted-foreground">{m.image__metadata_loading()}</div>
     {:else if metadataRows.length === 0}
-      <div class="text-sm text-white/65">{m.image__metadata_empty()}</div>
+      <div class="text-sm text-muted-foreground">{m.image__metadata_empty()}</div>
     {/if}
   </div>
 </div>

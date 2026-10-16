@@ -21,6 +21,11 @@ const VIEWER_NAV_EDGE_BASE_CLASSES = cx(
   'p-3',
 )
 
+/**
+ * Position navigation at the requested viewer edge.
+ * @param side - Edge containing the navigation button.
+ * @returns Navigation container classes.
+ */
 export function viewerNavEdgeClass(side: 'left' | 'right'): string {
   return cx(VIEWER_NAV_EDGE_BASE_CLASSES, side === 'left' ? 'left-0' : 'right-0')
 }
@@ -33,10 +38,10 @@ export const VIEWER_NAV_BUTTON_CLASSES = cx(
   'items-center',
   'justify-center',
   'rounded-full',
-  'bg-black/45',
-  'text-white',
+  'bg-base-100',
+  'text-base-content',
   'transition',
-  'hover:bg-black/60',
+  'hover:bg-surface',
   'disabled:cursor-default',
   'disabled:opacity-25',
 )

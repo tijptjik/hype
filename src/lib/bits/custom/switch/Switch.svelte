@@ -35,7 +35,8 @@ const resolvedRightColor = $derived(rightColor ?? color)
 const resolveSwitchColorToken = (
   targetColor: NonNullable<SwitchProps['color']>,
 ): string => {
-  if (targetColor === 'neutral') return 'var(--color-glass-base)'
+  if (targetColor === 'neutral')
+    return 'var(--theme-switch-neutral, var(--color-glass-base))'
   return `var(--color-${targetColor})`
 }
 const resolvedRightColorValue = $derived(resolveSwitchColorToken(resolvedRightColor))

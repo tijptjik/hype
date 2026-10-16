@@ -152,3 +152,33 @@ it('does not latch rows across an authorization scope change', async () => {
   await pending
   expect(list.rows).toEqual([])
 })
+
+it('keeps the index uninitialised until an empty first page settles', async () => {
+  const first = controlledQuery()
+  const list = new ResourceList(() => first.query)
+  expect(list.isInitialised).toBe(false)
+  const pending = list.load(input)
+  expect(list.isInitialised).toBe(false)
+  first.resolve({ data: [], nextCursor: null })
+  await pending
+  expect(list.isInitialised).toBe(true)
+  list.clear()
+  expect(list.isInitialised).toBe(false)
+})
+
+it('preserves populated results while the next view loads', async () => {
+  const first = controlledQuery(),
+    next = controlledQuery()
+  const list = new ResourceList(
+    vi.fn().mockReturnValueOnce(first.query).mockReturnValueOnce(next.query),
+  )
+  const pending = list.load(input)
+  first.resolve({ data: [row('a')], nextCursor: null })
+  await pending
+  const changed = list.load({ ...input, q: 'new' })
+  expect(list.isInitialised).toBe(true)
+  next.resolve({ data: [], nextCursor: null })
+  await changed
+  expect(list.isInitialised).toBe(true)
+  expect(list.rows).toEqual([])
+})

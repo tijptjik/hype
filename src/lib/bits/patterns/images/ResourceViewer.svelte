@@ -74,6 +74,10 @@ import ImageMetadataCard from '#lib/bits/patterns/images/components/ImageMetadat
 import ViewerControls from '#lib/bits/patterns/images/components/controls/ViewerControls.svelte'
 // COMPONENTS
 import { Icon } from '#lib/bits/index.js'
+import {
+  IMAGE_ATTRIBUTION_CLASSES,
+  IMAGE_METADATA_BUTTON_CLASSES,
+} from './components/imageChrome.styles'
 // CONTEXT
 import { getImageCtx } from '#lib/context/image.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
@@ -317,8 +321,8 @@ onDestroy(() => {
   class={workspace
     ? 'h-full min-h-0 w-full select-none bg-transparent p-6'
     : hasBottomPadding
-      ? 'h-full w-full select-none bg-black pb-4 pr-4 pt-1'
-      : 'h-full w-full select-none bg-black pr-4 pt-1'}
+      ? 'h-full w-full select-none bg-base-100 pb-4 pr-4 pt-1'
+      : 'h-full w-full select-none bg-base-100 pr-4 pt-1'}
 >
   <Dropzone
     disabled={!hasItems || isDropzoneDisabled}
@@ -355,7 +359,7 @@ onDestroy(() => {
             type="imageContributor"
             openDirection="right"
             isOpen={true}
-            class="[&_.bits-feature-attribution__avatar]:h-9 [&_.bits-feature-attribution__avatar]:w-9"
+            class={`${IMAGE_ATTRIBUTION_CLASSES} [&_.bits-feature-attribution__avatar]:h-9 [&_.bits-feature-attribution__avatar]:w-9`}
           />
         {/if}
       {/snippet}
@@ -417,7 +421,7 @@ onDestroy(() => {
           >
             <button
               type="button"
-              class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/85 disabled:cursor-default disabled:opacity-45"
+              class={`${IMAGE_METADATA_BUTTON_CLASSES} disabled:cursor-default disabled:opacity-45`}
               disabled={shouldShowRetainedSnapshot}
               aria-label="Open image metadata"
               onclick={() => {

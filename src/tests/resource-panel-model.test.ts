@@ -6,6 +6,11 @@ import type { AppCtx } from '#lib/context/app.svelte'
 import type { AdminCtx } from '#lib/context/admin.svelte'
 import type { ResourcePanelModel } from '#lib/bits/patterns/resourcePanel/resourcePanel.types'
 
+const route = vi.hoisted(() => ({
+  url: new URL('http://localhost/admin/organisations'),
+}))
+vi.mock('$app/state', () => ({ page: route }))
+
 const navigation = vi.hoisted(() => ({ navigate: vi.fn() }))
 vi.mock('#lib/navigation/index.js', () => ({
   navigateOnAdminById: navigation.navigate,
@@ -71,7 +76,7 @@ function setup(selected: string[] = [], active = 'b') {
       model = value
     },
   })
-  return { rows: model.sections[0].rows, toggleOrganisation }
+  return { rows: model.sections[0].rows, sections: model.sections, toggleOrganisation }
 }
 
 it('keeps navigation-only active rows in page order and their dots unselected', async () => {
@@ -105,4 +110,18 @@ it('retains an off-page open resource after the current page without promoting i
     'c',
     'outside',
   ])
+})
+
+it('recognises only the matching resource index for compact section toggling', () => {
+  const { sections } = setup()
+  for (const [path, expected] of [
+    ['/admin/organisations', [true, false, false]],
+    ['/admin/organisations/?panel=settings', [true, false, false]],
+    ['/admin/organisations/hkfoodworks', [false, false, false]],
+    ['/admin/projects', [false, true, false]],
+    ['/admin/layers', [false, false, true]],
+  ] as const) {
+    route.url = new URL(path, 'http://localhost')
+    expect(sections.map(section => section.isIndexActive)).toEqual(expected)
+  }
 })

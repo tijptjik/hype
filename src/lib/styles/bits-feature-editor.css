@@ -687,12 +687,16 @@
       calc(0.5rem + var(--bits-feature-attribution-underlap));
     margin-left: calc(-1 * var(--bits-feature-attribution-underlap));
     border-radius: 999px;
-    background: color-mix(
-      in oklab,
-      var(--color-panel) 82%,
-      var(--color-glass-result) 18%
+    background: var(
+      --bits-feature-attribution-body-bg,
+      color-mix(in oklab, var(--color-panel) 82%, var(--color-glass-result) 18%)
     );
-    border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+    border: 1px solid
+      var(
+        --bits-feature-attribution-body-border,
+        color-mix(in oklab, var(--color-base-content) 12%, transparent)
+      );
+    box-shadow: var(--bits-feature-attribution-body-shadow, none);
     backdrop-filter: blur(14px);
   }
 

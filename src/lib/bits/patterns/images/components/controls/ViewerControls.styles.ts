@@ -1,5 +1,6 @@
 // BITS
 import { cx } from '#lib/bits/utils.js'
+import { IMAGE_CHROME_SURFACE_CLASSES } from '../imageChrome.styles'
 
 const TRANSITION_CLASSES = cx(
   'transition-[background-color,color,opacity,transform]',
@@ -14,20 +15,13 @@ export const VIEWER_CONTROLS_ROOT_CLASSES = cx(
   '-translate-x-1/2',
   'items-center',
   'gap-2',
-  'rounded-full',
-  'border',
-  'border-white/10',
-  'bg-black',
   'p-2',
-  'shadow-[0_10px_30px_rgba(0,0,0,0.25)]',
+  IMAGE_CHROME_SURFACE_CLASSES,
 )
 
 export const VIEWER_CONTROLS_BUTTON_CLASSES = cx(
-  '[--btn-transparent-active-fg:var(--color-white)]',
-  '[--btn-transparent-fg:var(--color-white)]',
-  '[--btn-transparent-hover-fg:var(--color-white)]',
-  'bg-black/70',
-  'hover:bg-black/85',
+  'bg-transparent',
+  'hover:bg-surface',
   TRANSITION_CLASSES,
 )
 
@@ -41,6 +35,11 @@ export const VIEWER_CONTROLS_TOGGLE_ENABLED_CLASSES = TRANSITION_CLASSES
 
 export const VIEWER_CONTROLS_EDIT_GROUP_CLASSES = cx('flex', 'items-center', 'gap-2')
 
+/**
+ * Style the edit toggle for its current availability and expansion state.
+ * @param args - Edit control state.
+ * @returns Theme-aware button classes.
+ */
 export function viewerControlsEditButtonClass(args: {
   isEditExpanded: boolean
   disabled: boolean
@@ -51,10 +50,15 @@ export function viewerControlsEditButtonClass(args: {
     VIEWER_CONTROLS_BUTTON_CLASSES,
     args.isEditExpanded && !args.disabled && !args.isEditBusy && args.canRotate
       ? 'text-primary'
-      : 'text-white',
+      : 'text-base-content',
   )
 }
 
+/**
+ * Reveal rotation actions when editing is expanded and rotation is available.
+ * @param args - Expansion and rotation availability.
+ * @returns Rotation action container classes.
+ */
 export function viewerControlsEditActionsClass(args: {
   isEditExpanded: boolean
   canRotate: boolean
@@ -67,9 +71,4 @@ export function viewerControlsEditActionsClass(args: {
   )
 }
 
-export const VIEWER_CONTROLS_ROTATE_BUTTON_CLASSES = cx(
-  '[--btn-transparent-active-fg:var(--color-white)]',
-  '[--btn-transparent-fg:var(--color-white)]',
-  '[--btn-transparent-hover-fg:var(--color-white)]',
-  TRANSITION_CLASSES,
-)
+export const VIEWER_CONTROLS_ROTATE_BUTTON_CLASSES = TRANSITION_CLASSES

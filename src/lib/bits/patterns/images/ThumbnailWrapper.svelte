@@ -448,7 +448,7 @@ onDestroy(() => {
           ? 'flex-col overflow-x-hidden overflow-y-auto px-4 pb-3 pt-3 pr-2'
           : 'flex-col overflow-x-hidden overflow-y-auto pr-2'
         : variant === 'admin'
-          ? 'overflow-x-auto overflow-y-hidden bg-[#121212] p-3 mt-3 mr-3'
+          ? 'overflow-x-auto overflow-y-hidden bg-surface p-3 mt-3 mr-3'
           : 'overflow-x-auto overflow-y-hidden pb-4',
     )}
   >
@@ -507,7 +507,7 @@ onDestroy(() => {
   {#if footer}
     <div
       class={cx(
-        variant === 'admin' ? 'border-t border-black/10 bg-base-300 px-3 py-3' : 'pt-4',
+        variant === 'admin' ? 'border-t border-border bg-base-300 px-3 py-3' : 'pt-4',
       )}
     >
       {@render footer()}
