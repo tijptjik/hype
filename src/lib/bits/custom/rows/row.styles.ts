@@ -41,8 +41,10 @@ export function getRowRootClass({
   const resolvedSelectionState = selectionState ?? (isSelected ? 'selected' : null)
 
   return cx(
-    'bits-theme overflow-hidden relative grid items-center gap-4 rounded-lg py-1 pl-1.5 caret-transparent shadow-[var(--shadow-mini)] transition-[box-shadow,background,transform] duration-200',
-    'cursor-pointer bg-[color-mix(in_oklab,var(--color-base-300)_46%,transparent)]',
+    'bits-theme overflow-hidden relative grid items-center gap-4 rounded-lg py-1 pl-1.5 caret-transparent shadow-[inset_0_0_0_1px_var(--theme-border),0_2px_4px_-2px_rgb(0_0_0/0.25)] transition-[box-shadow,background,transform] duration-200',
+    // Opaque surfaces keep every palette distinct from the tinted index canvas.
+    'cursor-pointer bg-[var(--theme-panel)] text-base-content',
+    'hover:bg-[var(--theme-surface)]',
     'hover:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
     'hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-primary)_18%,transparent),0_0_1.1rem_color-mix(in_oklab,var(--color-primary)_16%,transparent),0_0_2.2rem_color-mix(in_oklab,var(--color-primary)_10%,transparent)]',
     'focus-visible:outline-none',
@@ -132,7 +134,7 @@ export const resourceRowMetaItemClass =
 export const resourceRowMetaItemStatsClass =
   'grid h-full w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-1.5'
 
-export const resourceRowRailSurfaceClass = 'bg-base-300/70'
+export const resourceRowRailSurfaceClass = 'bg-[var(--theme-surface)]'
 
 export const resourceRowMetaIconClass = cx(
   'inline-flex h-8 w-8 items-center justify-center rounded-full',
@@ -159,7 +161,7 @@ export function getResourceRowMetaLabelClass(variant: ResourceRowMetaVariant): s
 
 export const resourceRowStatusRailClass = cx(
   'flex items-center justify-center self-stretch text-left',
-  '-my-1 -mr-1 rounded-r-lg px-3 py-2',
+  '-my-1 -mr-1 rounded-r-lg px-3 py-2 shadow-[inset_1px_0_0_var(--theme-border)]',
   'w-full md:w-56 md:min-w-56',
   resourceRowRailSurfaceClass,
 )
