@@ -337,6 +337,8 @@
 
 /* Oblivion: rose and lilac with a cool mint edge, keeping the canvas luminous. */
 [data-theme="hype-light"] {
+  --admin-form-edge-width: 1px;
+  --admin-form-divider-width: 1px;
   --admin-background:
     radial-gradient(
       ellipse at 100% 100%,
@@ -350,8 +352,17 @@
     );
 }
 
-/* Milque: warm peach fading through cream into frosting blue. */
+/* Milque: warm peach fading through cream into frosting blue outside form workspaces. */
 [data-theme="breadline-light"] {
+  /* Quiet paper surfaces keep peach on editable fields and teal on actions. */
+  --admin-form-workspace: var(--theme-panel);
+  --admin-form-control-fill: #fcf5ef;
+  --admin-form-search-fill: var(--theme-surface);
+  --admin-form-heading: var(--theme-panel);
+  --admin-form-edge-width: 1px;
+  --admin-form-edge: none;
+  --admin-form-divider-width: 1px;
+  --admin-form-divider: none;
   --admin-background:
     radial-gradient(
       ellipse at 0% 0%,

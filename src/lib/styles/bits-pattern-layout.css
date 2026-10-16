@@ -408,9 +408,52 @@
   }
 
   .bits-theme .bits-admin-shell__main {
+    /* Solid form surfaces remain legible over each theme's signature canvas. */
+    --form-control-fill: var(--color-surface);
+    --form-control-edit-fill: var(--color-canvas);
+    --form-control-border: var(--color-border);
+    --form-label: var(--color-muted-foreground);
+    background-color: var(--color-canvas);
     background-image: var(--admin-background);
     @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-fixed;
     container-type: inline-size;
     container-name: bits-admin-shell-main;
+  }
+
+  /* Form navigation shares the content inset even when the facet reaches the sidebar. */
+  .bits-theme .bits-admin-shell__main:has([data-form-surface]) [data-facet-nav] {
+    padding-inline: 1.5rem;
+  }
+
+  /* A stationary gradient edge delineates the workspace along the top and both sides. */
+  .bits-theme .bits-admin-shell__main:has([data-form-surface]) {
+    --search-control-fill: var(
+      --admin-form-search-fill,
+      color-mix(in oklab, var(--theme-surface) 88%, black)
+    );
+    --form-workspace: var(
+      --admin-form-workspace,
+      color-mix(in oklab, var(--color-primary) 3%, var(--color-surface))
+    );
+    --form-control-edit-fill: var(
+      --admin-form-control-fill,
+      color-mix(in oklab, var(--form-workspace) 50%, var(--color-raised))
+    );
+    --form-control-border: color-mix(
+      in oklab,
+      var(--color-foreground) 20%,
+      var(--form-workspace)
+    );
+    background-color: var(--form-workspace);
+    border: var(--admin-form-edge-width, 3px) solid var(--color-border);
+    border-bottom-width: 0;
+    border-image: var(
+      --admin-form-edge,
+      linear-gradient(145deg, var(--color-primary), var(--color-secondary)) 1
+    );
+    background-image: none;
+    background-size: auto;
+    background-repeat: no-repeat;
+    background-attachment: local;
   }
 }
