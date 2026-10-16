@@ -98,7 +98,7 @@ onDestroy(cancelLabelHide)
     onscrollcapture={clearLabel}
   >
     {#if model.panel.isAdmin && model.panel.isNarrow}
-      <div class="flex h-10 shrink-0 items-center justify-center">
+      <div class="flex h-12 w-16 shrink-0 items-center justify-center">
         {@render sidebarToggle()}
       </div>
     {/if}

@@ -116,7 +116,9 @@ const items = $derived(
   style:max-height={maxHeight}
 >
   <div
-    class="relative flex h-14 min-w-0 shrink-0 items-center overflow-hidden"
+    class="relative flex min-w-0 shrink-0 items-center overflow-hidden {narrow
+      ? 'h-12'
+      : 'h-14'}"
     bind:clientHeight={headerHeight}
   >
     <button

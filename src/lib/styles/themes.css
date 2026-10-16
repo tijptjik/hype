@@ -118,6 +118,9 @@
   /* Shared form roles allow translucent fields without changing the global surfaces. */
   --form-control-fill: color-mix(in oklab, var(--theme-surface) 65%, transparent);
   --form-control-edit-fill: color-mix(in oklab, var(--theme-text) 12%, transparent);
+  /* Search keeps the palette's surface hue with a darker, recessed fill. */
+  --search-control-fill: color-mix(in oklab, var(--theme-surface) 88%, black);
+  --resource-row-active-fill: var(--theme-raised);
   --form-label: var(--theme-muted);
   --form-control-border: var(--border-input);
   --theme-glass-field: var(--theme-surface);
@@ -362,7 +365,13 @@
   /* Quiet paper surfaces keep peach on editable fields and teal on actions. */
   --admin-form-workspace: var(--theme-panel);
   --admin-form-control-fill: #fcf5ef;
+  --search-control-fill: var(--theme-surface);
   --admin-form-search-fill: var(--theme-surface);
+  --resource-row-active-fill: color-mix(
+    in oklab,
+    var(--theme-raised) 55%,
+    var(--theme-panel)
+  );
   --admin-form-heading: var(--theme-panel);
   --admin-form-edge-width: 1px;
   --admin-form-edge: none;

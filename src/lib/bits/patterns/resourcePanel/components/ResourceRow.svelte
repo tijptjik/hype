@@ -19,7 +19,7 @@ const color = $derived(
 
 <div
   class="relative w-full min-w-0 overflow-hidden transition-colors {row.active
-    ? 'bg-raised'
+    ? 'bg-[var(--resource-row-active-fill)]'
     : 'hover:bg-surface'}"
   data-resource-id={row.id}
 >
@@ -59,7 +59,7 @@ const color = $derived(
     >
       {#if row.breadcrumbs.length}
         <span
-          class="flex h-4 min-w-0 items-center gap-0.5 font-mono text-xs uppercase tracking-widest"
+          class="flex h-4 min-w-0 items-center gap-0.5 font-mono text-xs uppercase tracking-widest opacity-95"
         >
           {#each row.breadcrumbs as breadcrumb, index}
             {#if index}
