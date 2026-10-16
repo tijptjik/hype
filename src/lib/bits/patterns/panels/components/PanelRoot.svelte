@@ -9,6 +9,8 @@ type Props = PanelProps & {
   isOpen?: boolean
   children: Snippet
   panelContainer?: HTMLDivElement
+  /** Reveal full-width content without reflowing it during the inline transition. */
+  preserveContentWidth?: boolean
 }
 
 let {
@@ -20,21 +22,24 @@ let {
   inline = false,
   isAdmin = false,
   isNarrow = false,
+  preserveContentWidth = false,
   ...panelProps
 }: Props = $props()
 
 // Visibility belongs to the route adapter; the shell owns only transitions and layout.
 let shouldShowInline = $derived(inline && (isOpen || isNarrow))
 let shouldShowOverlay = $derived(!inline && isOpen)
+const expandedWidth = $derived(isAdmin ? '380px' : '420px')
 </script>
 
 {#if shouldShowInline}
   <div
     id="{position}-panel"
     class="bits-theme flex h-full max-w-full shrink-0 select-none flex-col bg-panel shadow-xl transition-all duration-500"
+    class:overflow-x-hidden={preserveContentWidth}
     class:overflow-y-auto={scrollable}
     class:left-0={position === 'left'}
-    style:width={isNarrow ? (isAdmin ? '64px' : '80px') : isAdmin ? '380px' : '420px'}
+    style:width={isNarrow ? (isAdmin ? '64px' : '80px') : expandedWidth}
     transition:slide={{
       duration: 500,
       easing: cubicInOut,
@@ -43,6 +48,10 @@ let shouldShowOverlay = $derived(!inline && isOpen)
   >
     <div
       class="h-full min-h-0"
+      style:width={preserveContentWidth
+        ? `calc(min(100vw, ${expandedWidth}) - ${isAdmin ? '1px' : '0px'})`
+        : undefined}
+      class:shrink-0={preserveContentWidth}
       class:overflow-y-auto={scrollable}
       bind:this={panelContainer}
     >
