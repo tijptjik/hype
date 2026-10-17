@@ -36,8 +36,10 @@ const mocks = vi.hoisted(() => {
       user: { id: 'user-a' },
       account: { collections: { state: { wishlisted: [], visited: [] } } },
       resources: { featureQueries: { wishlist: query(), visited: query() } },
-      state: {
-        resources: { feature: [] },
+      queries: {
+        rows: { feature: [] },
+        loadFeatureQuery: vi.fn(async () => {}),
+        loadMoreFeatureQuery: vi.fn(async () => {}),
       },
       isAdmin: () => false,
       filters: {
@@ -46,8 +48,6 @@ const mocks = vi.hoisted(() => {
           ...overrides,
         }),
       },
-      loadFeatureQuery: vi.fn(async () => {}),
-      loadMoreFeatureQuery: vi.fn(async () => {}),
       getHierarchySync: () => ({}),
       getUserPreferences: () => ({}),
       getContextualProjectName: () => '',
@@ -81,8 +81,8 @@ vi.mock('#lib/i18n.js', () => ({
 
 beforeEach(() => {
   vi.useRealTimers()
-  mocks.app.loadFeatureQuery.mockClear()
-  mocks.app.loadMoreFeatureQuery.mockClear()
+  mocks.app.queries.loadFeatureQuery.mockClear()
+  mocks.app.queries.loadMoreFeatureQuery.mockClear()
 })
 let disposeModel: (() => void) | undefined
 afterEach(() => {
@@ -114,14 +114,14 @@ describe.each([
     // A single local row must not hide search when the server reports 23 matches.
     expect(screen.getByRole('textbox')).toBeTruthy()
     await fireEvent.click(screen.getByRole('button', { name: 'resource_load_more' }))
-    expect(mocks.app.loadMoreFeatureQuery).toHaveBeenCalledWith(channel)
+    expect(mocks.app.queries.loadMoreFeatureQuery).toHaveBeenCalledWith(channel)
   })
 
   it('sends search and list selectors to the server query without requiring map rows', async () => {
     renderPanel()
     await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'new tea' } })
     await vi.waitFor(() =>
-      expect(mocks.app.loadFeatureQuery).toHaveBeenLastCalledWith(
+      expect(mocks.app.queries.loadFeatureQuery).toHaveBeenLastCalledWith(
         channel,
         expect.objectContaining({
           q: 'new tea',

@@ -59,19 +59,19 @@ describe('AppCtx user updates', () => {
       new AccountState(null),
       {} as ResponsiveCtx,
     )
-    appCtx.queryMap.set(FirstClassResource.feature, {
+    appCtx.queries.queryMap.set(FirstClassResource.feature, {
       queryKey: () => [FirstClassResource.feature],
       queryFn: () => (queryCount++ === 0 ? first.promise : second.promise),
     })
 
-    const olderRefresh = appCtx.refreshFeatures()
-    const newerRefresh = appCtx.refreshFeatures()
+    const olderRefresh = appCtx.queries.refreshFeatures()
+    const newerRefresh = appCtx.queries.refreshFeatures()
 
     second.resolve([
       { id: 'new-feature', layerId: 'new-layer', properties: [] },
     ] as FeatureFromCollection[])
     await newerRefresh
-    expect(appCtx.state.resources.feature.map(feature => feature.id)).toEqual([
+    expect(appCtx.queries.rows.feature.map(feature => feature.id)).toEqual([
       'new-feature',
     ])
 
@@ -79,7 +79,7 @@ describe('AppCtx user updates', () => {
       { id: 'old-feature', layerId: 'old-layer', properties: [] },
     ] as FeatureFromCollection[])
     await olderRefresh
-    expect(appCtx.state.resources.feature.map(feature => feature.id)).toEqual([
+    expect(appCtx.queries.rows.feature.map(feature => feature.id)).toEqual([
       'new-feature',
     ])
   })
@@ -92,17 +92,17 @@ describe('AppCtx user updates', () => {
       {} as ResponsiveCtx,
     )
     appCtx.scope.prisms.layer = ['old-layer']
-    appCtx.queryMap.set(FirstClassResource.feature, {
+    appCtx.queries.queryMap.set(FirstClassResource.feature, {
       queryKey: () => [FirstClassResource.feature],
       queryFn: () => pending.promise,
     })
-    const refresh = appCtx.refreshFeatures()
+    const refresh = appCtx.queries.refreshFeatures()
     appCtx.scope.prisms.layer = ['new-layer']
     pending.resolve([
       { id: 'obsolete', layerId: 'old-layer', properties: [] },
     ] as unknown as FeatureFromCollection[])
     await refresh
-    expect(appCtx.state.resources.feature).toEqual([])
+    expect(appCtx.queries.rows.feature).toEqual([])
     expect(appCtx.cache.feature.has('obsolete')).toBe(false)
   })
 
@@ -113,12 +113,12 @@ describe('AppCtx user updates', () => {
       new AccountState({ id: 'old-user' } as unknown as SessionUser),
       {} as ResponsiveCtx,
     )
-    appCtx.queryMap.set(FirstClassResource.feature, {
+    appCtx.queries.queryMap.set(FirstClassResource.feature, {
       queryKey: () => [FirstClassResource.feature],
       queryFn: () => pendingFeatures.promise,
     })
 
-    const refresh = appCtx.refreshFeatures()
+    const refresh = appCtx.queries.refreshFeatures()
     appCtx.account.syncSession({ id: 'new-user' } as unknown as SessionUser)
     appCtx.syncAccount()
 
@@ -127,7 +127,7 @@ describe('AppCtx user updates', () => {
     ] as FeatureFromCollection[])
     await refresh
 
-    expect(appCtx.state.resources.feature).toEqual([])
+    expect(appCtx.queries.rows.feature).toEqual([])
   })
 
   it('does not restore saved feature state after the user identity changes', async () => {
@@ -137,12 +137,12 @@ describe('AppCtx user updates', () => {
       new AccountState({ id: 'old-user' } as unknown as SessionUser),
       {} as ResponsiveCtx,
     )
-    appCtx.queryMap.set('userFeatures', {
+    appCtx.queries.queryMap.set('userFeatures', {
       queryKey: () => ['userFeatures', 'old-user'],
       queryFn: () => pendingUserFeatures.promise,
     })
 
-    const refresh = appCtx.refreshUserFeatures()
+    const refresh = appCtx.queries.refreshUserFeatures()
     appCtx.account.syncSession({ id: 'new-user' } as unknown as SessionUser)
     appCtx.syncAccount()
 
@@ -165,7 +165,7 @@ describe('AppCtx user updates', () => {
       {} as ResponsiveCtx,
     )
     appCtx.panels.setPanelCtx(Panel.profile, 'username', 'old-user')
-    appCtx.queryMap.set(FirstClassResource.user, {
+    appCtx.queries.queryMap.set(FirstClassResource.user, {
       queryKey: () => [FirstClassResource.user, 'old-user'],
       queryFn: () => pendingProfile.promise,
     })
@@ -193,20 +193,20 @@ describe('AppCtx user updates', () => {
       new AccountState(null),
       {} as ResponsiveCtx,
     )
-    appCtx.queryMap.set(FirstClassResource.project, {
+    appCtx.queries.queryMap.set(FirstClassResource.project, {
       queryKey: () => [FirstClassResource.project],
       queryFn: () => (queryCount++ === 0 ? first.promise : second.promise),
     })
 
-    const olderRefresh = appCtx.refreshProjects(false)
-    const newerRefresh = appCtx.refreshProjects(false)
+    const olderRefresh = appCtx.queries.refreshProjects(false)
+    const newerRefresh = appCtx.queries.refreshProjects(false)
 
     second.resolve([{ id: 'new-project' }] as Project[])
     await newerRefresh
     first.resolve([{ id: 'old-project' }] as Project[])
     await olderRefresh
 
-    expect(appCtx.state.resources.project).toEqual([{ id: 'new-project' }])
+    expect(appCtx.queries.rows.project).toEqual([{ id: 'new-project' }])
   })
 
   it('invalidates dependent resource caches before the next explicit refresh', async () => {
@@ -261,7 +261,7 @@ describe('AppCtx user updates', () => {
     )
 
     appCtx.hub = { id: 'hub-1', code: 'test-hub' } as HubOptsExtended
-    appCtx.state.resources.layer = [{ id: 'saved-layer' }] as Layer[]
+    appCtx.queries.rows.layer = [{ id: 'saved-layer' }] as Layer[]
     appCtx.scope.prisms.layer = ['temporary-layer']
 
     appCtx.applyUserProfile({ username: 'after' })
@@ -356,11 +356,11 @@ describe('AppCtx user updates', () => {
       {} as ResponsiveCtx,
     )
 
-    appCtx.queryMap.set(FirstClassResource.organisation, {
+    appCtx.queries.queryMap.set(FirstClassResource.organisation, {
       queryKey: () => ['organisation'],
       queryFn: () => fetchQuery({ queryKey: ['organisation'] }),
     })
-    appCtx.queryMap.set(FirstClassResource.project, {
+    appCtx.queries.queryMap.set(FirstClassResource.project, {
       queryKey: () => ['project'],
       queryFn: () => fetchQuery({ queryKey: ['project'] }),
     })
@@ -369,10 +369,10 @@ describe('AppCtx user updates', () => {
 
     appCtx.account.syncSession({ id: 'account-user' } as unknown as SessionUser)
     appCtx.syncAccount()
-    appCtx.state.resources.organisation = [
+    appCtx.queries.rows.organisation = [
       { id: 'account-organisation' },
     ] as Organisation[]
-    appCtx.state.resources.project = [{ id: 'account-project' }] as Project[]
+    appCtx.queries.rows.project = [{ id: 'account-project' }] as Project[]
     appCtx.scope.prisms.organisation = ['account-organisation']
     appCtx.scope.prisms.project = ['account-project']
 
@@ -380,10 +380,8 @@ describe('AppCtx user updates', () => {
     projects.resolve([{ id: 'public-project' }] as Project[])
     await bootstrap
 
-    expect(appCtx.state.resources.organisation).toEqual([
-      { id: 'account-organisation' },
-    ])
-    expect(appCtx.state.resources.project).toEqual([{ id: 'account-project' }])
+    expect(appCtx.queries.rows.organisation).toEqual([{ id: 'account-organisation' }])
+    expect(appCtx.queries.rows.project).toEqual([{ id: 'account-project' }])
     expect(appCtx.scope.prisms.organisation).toEqual(['account-organisation'])
     expect(appCtx.scope.prisms.project).toEqual(['account-project'])
   })
@@ -402,21 +400,21 @@ describe('AppCtx user updates', () => {
       {} as ResponsiveCtx,
     )
 
-    appCtx.queryMap.set(FirstClassResource.layer, {
+    appCtx.queries.queryMap.set(FirstClassResource.layer, {
       queryKey: () => ['layer'],
       queryFn: () => fetchQuery({ queryKey: ['layer'] }),
     })
-    appCtx.queryMap.set(FirstClassResource.property, {
+    appCtx.queries.queryMap.set(FirstClassResource.property, {
       queryKey: () => ['property'],
       queryFn: () => fetchQuery({ queryKey: ['property'] }),
     })
-    const refreshLayers = appCtx.refreshLayers(false, true, 'anonymous::')
-    const refreshProperties = appCtx.refreshProperties(false, 'anonymous::')
+    const refreshLayers = appCtx.queries.refreshLayers(false, true, 'anonymous::')
+    const refreshProperties = appCtx.queries.refreshProperties(false, 'anonymous::')
     await vi.waitFor(() => expect(fetchQuery).toHaveBeenCalledTimes(2))
 
     appCtx.account.syncSession({ id: 'account-user' } as unknown as SessionUser)
     appCtx.syncAccount()
-    appCtx.state.resources.layer = [{ id: 'account-layer' }] as Layer[]
+    appCtx.queries.rows.layer = [{ id: 'account-layer' }] as Layer[]
     appCtx.scope.prisms.layer = ['account-layer']
     appCtx.cache.property.set('account-property', {
       id: 'account-property',
@@ -426,7 +424,7 @@ describe('AppCtx user updates', () => {
     properties.resolve([{ id: 'public-property' }] as Property[])
     await Promise.all([refreshLayers, refreshProperties])
 
-    expect(appCtx.state.resources.layer).toEqual([{ id: 'account-layer' }])
+    expect(appCtx.queries.rows.layer).toEqual([{ id: 'account-layer' }])
     expect(appCtx.scope.prisms.layer).toEqual(['account-layer'])
     expect(appCtx.cache.property.has('public-property')).toBe(false)
     expect(appCtx.cache.property.has('account-property')).toBe(true)

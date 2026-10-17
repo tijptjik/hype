@@ -632,7 +632,7 @@ function patchSuccessfulBulkUpdates(
   )
   if (successfulIds.size === 0) return
 
-  const nextFeatures = adminCtx.view.state.resources.feature.map(feature =>
+  const nextFeatures = adminCtx.view.queries.rows.feature.map(feature =>
     successfulIds.has(feature.id)
       ? {
           ...feature,

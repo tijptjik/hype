@@ -30,9 +30,9 @@ import type { AppCtx } from '#lib/context/app.svelte.js'
 export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   const activeResourceType = appCtx.navigation.getActiveResourceType()
   const activeResourceId = appCtx.navigation.getActiveResourceId()
-  const projects = appCtx.state.resources.project
-  const layers = appCtx.state.resources.layer
-  const features = appCtx.state.resources.feature
+  const projects = appCtx.queries.rows.project
+  const layers = appCtx.queries.rows.layer
+  const features = appCtx.queries.rows.feature
 
   const firstPrismProjectId = appCtx.scope.prisms.project[0]
   if (firstPrismProjectId) {

@@ -35,7 +35,7 @@ export async function getWishlistedFeaturesAsync(
       const { layer, project, organisation } = await appCtx.getHierarchy(feature)
 
       const projectLayerCount = project
-        ? appCtx.state.resources.layer.filter((l: Layer) => l.projectId === project.id)
+        ? appCtx.queries.rows.layer.filter((l: Layer) => l.projectId === project.id)
             .length
         : 0
 

@@ -158,8 +158,8 @@ describe('surface context boundaries', () => {
       'admin',
     )
     const revision = root.account.revision
-    app.state.resources.project = [{ id: 'private-project' }] as never
-    admin.state.resources.project = [{ id: 'private-project' }] as never
+    app.queries.rows.project = [{ id: 'private-project' }] as never
+    admin.queries.rows.project = [{ id: 'private-project' }] as never
     root.sync(
       { id: 'bob', roles: [], superAdmin: false } as unknown as SessionUser,
       null,
@@ -167,8 +167,8 @@ describe('surface context boundaries', () => {
     expect(app.applyUserProfile({ attribution: 'Old save' }, revision)).toBe(false)
     app.syncAccount()
     admin.syncAccount()
-    expect(app.state.resources.project).toEqual([])
-    expect(admin.state.resources.project).toEqual([])
+    expect(app.queries.rows.project).toEqual([])
+    expect(admin.queries.rows.project).toEqual([])
     app.dispose()
     admin.dispose()
   })
@@ -200,7 +200,7 @@ describe('surface context boundaries', () => {
       root.responsive,
       root.cacheCtx,
     )
-    const publicQuery = app.queryMap.get(FirstClassResource.project)
+    const publicQuery = app.queries.queryMap.get(FirstClassResource.project)
     const view = new ResourceViewCtx(
       new DivisionCtx(),
       root.account,
@@ -211,7 +211,7 @@ describe('surface context boundaries', () => {
     new AdminCtx(view)
     view.scope.prisms.project = ['private-project']
     view.cache.project.set('private-project', { id: 'private-project' } as never)
-    expect(app.queryMap.get(FirstClassResource.project)).toBe(publicQuery)
+    expect(app.queries.queryMap.get(FirstClassResource.project)).toBe(publicQuery)
     expect(app.scope.prisms.project).toEqual([])
     expect(app.cache.project.has('private-project')).toBe(false)
     expect(app.cacheCtx).toBe(view.cacheCtx)
@@ -230,11 +230,11 @@ describe('surface context boundaries', () => {
       root.cacheCtx,
       'admin',
     )
-    view.state.resources.project = [{ id: 'private-project' }] as never
+    view.queries.rows.project = [{ id: 'private-project' }] as never
     const nextUser = { ...user, superAdmin: false } as SessionUser
     root.sync(nextUser, null)
     view.syncAccount()
-    expect(view.state.resources.project).toEqual([])
+    expect(view.queries.rows.project).toEqual([])
     view.dispose()
   })
 

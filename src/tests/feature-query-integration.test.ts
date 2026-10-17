@@ -257,21 +257,21 @@ describe('map query integration', () => {
     vi.mocked(getFeaturePage)
       .mockReturnValueOnce(older.query)
       .mockReturnValueOnce(newer.query)
-    const previous = app.loadFeatureQuery(
+    const previous = app.queries.loadFeatureQuery(
       'map',
       app.filters.featureQueryInput({ q: 'old' }),
     )
-    const current = app.loadFeatureQuery(
+    const current = app.queries.loadFeatureQuery(
       'map',
       app.filters.featureQueryInput({ q: 'new' }),
     )
     older.resolve([row('old')])
     await previous
     expect(app.resources.featureQueries.map.loading).toBe(true)
-    expect(app.featureLoadState).toBe('loading')
+    expect(app.queries.featureLoadState).toBe('loading')
     newer.resolve([row('new')])
     await current
-    expect(app.featureLoadState).toBe('complete')
+    expect(app.queries.featureLoadState).toBe('complete')
   })
 
   it('keeps a closed search tray idle and loads one page when the user opens it', async () => {
@@ -431,13 +431,13 @@ describe('paginated collection activation', () => {
     vi.mocked(getFeaturePage)
       .mockReturnValueOnce(seed.query)
       .mockReturnValueOnce(collection.query)
-    const seedRequest = app.loadFeatureQuery(
+    const seedRequest = app.queries.loadFeatureQuery(
       'search',
       app.filters.featureQueryInput({ q: 'cached' }),
     )
     seed.resolve([row('cached')], 1)
     await seedRequest
-    expect(app.state.resources.feature).toEqual([])
+    expect(app.queries.rows.feature).toEqual([])
     const omni = createOmni(app)
     omni.initNeighbourhood('causeway-bay', selectionOptions)
     expect(app.selection.collection?.items.map(feature => feature.id)).toEqual([

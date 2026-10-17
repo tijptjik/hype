@@ -334,7 +334,7 @@ export class AdminCtx {
     this.view = view
 
     // Only initialize if view is defined and has the required properties
-    if (this.view?.queryMap) {
+    if (this.view?.queries.queryMap) {
       this.initializeAdminQueryMap()
     }
   }
@@ -342,46 +342,46 @@ export class AdminCtx {
   // Initialize admin-specific query map on view
   private initializeAdminQueryMap = (): void => {
     // Guard against undefined view
-    if (!this.view?.queryMap) {
+    if (!this.view?.queries.queryMap) {
       console.warn('AdminCtx: Cannot initialize query map - view not ready')
       return
     }
 
     // Override the default query functions with admin-specific ones
     // but reuse ResourceViewCtx query keys for common resources
-    this.view.queryMap.set(FirstClassResource.organisation, {
+    this.view.queries.queryMap.set(FirstClassResource.organisation, {
       queryKey: this.view.organisationsQueryKey,
       queryFn: () => this.organisationsQueryFn(),
     })
 
-    this.view.queryMap.set(FirstClassResource.project, {
+    this.view.queries.queryMap.set(FirstClassResource.project, {
       queryKey: this.view.projectsQueryKey,
       queryFn: () => this.projectsQueryFn(),
     })
 
-    this.view.queryMap.set(FirstClassResource.layer, {
+    this.view.queries.queryMap.set(FirstClassResource.layer, {
       queryKey: this.view.layersQueryKey,
       queryFn: () => this.layersQueryFn(),
     })
 
-    this.view.queryMap.set(FirstClassResource.feature, {
+    this.view.queries.queryMap.set(FirstClassResource.feature, {
       queryKey: this.view.featuresQueryKey,
       queryFn: () => this.featuresQueryFn(),
     })
 
     // PROPERTIES - reuse ResourceViewCtx query key and function
-    this.view.queryMap.set(FirstClassResource.property, {
+    this.view.queries.queryMap.set(FirstClassResource.property, {
       queryKey: this.view.propertiesQueryKey,
       queryFn: () => this.propertiesQueryFn(),
     })
 
     // Admin-specific resources with their own query keys
-    this.view.queryMap.set(FirstClassResource.task, {
+    this.view.queries.queryMap.set(FirstClassResource.task, {
       queryKey: () => this.tasksQueryKey,
       queryFn: () => this.tasksQueryFn(),
     })
 
-    this.view.queryMap.set(FirstClassResource.hub, {
+    this.view.queries.queryMap.set(FirstClassResource.hub, {
       queryKey: () => this.hubsQueryKey,
       queryFn: () => this.hubsQueryFn(),
     })
@@ -661,7 +661,7 @@ export class AdminCtx {
     if (this.isInitialised || this.isInitializing) return
 
     // Ensure query map is initialized if it wasn't done in constructor
-    if (this.view?.queryMap && !this.isInitialised) {
+    if (this.view?.queries.queryMap && !this.isInitialised) {
       this.initializeAdminQueryMap()
     }
 
@@ -671,13 +671,13 @@ export class AdminCtx {
       // Initialise only the selected admin resource; panels load their own independent pages.
       const resource = this.navigation.getActiveResourceType()
       if (resource === FirstClassResource.organisation)
-        await this.view.refreshOrganisations(false)
+        await this.view.queries.refreshOrganisations(false)
       else if (resource === FirstClassResource.project)
-        await this.view.refreshProjects(false)
+        await this.view.queries.refreshProjects(false)
       else if (resource === FirstClassResource.layer)
-        await this.view.refreshLayers(false, false)
+        await this.view.queries.refreshLayers(false, false)
       else if (resource === FirstClassResource.feature)
-        await this.view.refreshFeatures(false)
+        await this.view.queries.refreshFeatures(false)
       else if (resource === FirstClassResource.hub) await this.refreshHubs(false)
       else if (resource === FirstClassResource.task)
         await this.invalidateAndRefresh(resource)
@@ -689,7 +689,7 @@ export class AdminCtx {
   }
 
   refreshHubs = async (isCascading: boolean = true): Promise<void> => {
-    await this.view.refreshHubs(isCascading)
+    await this.view.queries.refreshHubs(isCascading)
   }
 
   // ═══════════════════════
@@ -702,7 +702,7 @@ export class AdminCtx {
       await this.refreshHubs()
       return
     }
-    await this.view.refresh(resource)
+    await this.view.queries.refresh(resource)
   }
 
   /**
@@ -726,7 +726,7 @@ export class AdminCtx {
   ): T[] => {
     const query = this.view.filters.values[resource as keyof FilterState].text || ''
     // FULL SET
-    let result = this.view.state.resources[resource as keyof FilteredResources] as T[]
+    let result = this.view.queries.rows[resource as keyof FilteredResources] as T[]
     // TIER 2 FILTERS :: Boolean State :: (App Wide)
     // TODO Implement these filters if the data responses get too large.
     // TIER 2 FILTERS :: Text :: (App Wide)
@@ -1785,19 +1785,15 @@ export class AdminCtx {
   } => {
     const feature =
       task.feature ??
-      this.view.state.resources.feature.find(
-        feature => feature.id === task.featureId,
-      ) ??
+      this.view.queries.rows.feature.find(feature => feature.id === task.featureId) ??
       null
     const project =
       (task.project as Project | null | undefined) ??
-      this.view.state.resources.project.find(
-        project => project.id === task.projectId,
-      ) ??
+      this.view.queries.rows.project.find(project => project.id === task.projectId) ??
       null
     const organisation =
       (task.organisation as unknown as Organisation | null | undefined) ??
-      this.view.state.resources.organisation.find(
+      this.view.queries.rows.organisation.find(
         organisation => organisation.id === task.organisationId,
       ) ??
       null
@@ -2085,7 +2081,7 @@ export class AdminCtx {
   getFilteredTask = () => {
     const query = this.view.filters.values.task.text || ''
     // FULL SET
-    let result: Task[] = this.view.state.resources.task
+    let result: Task[] = this.view.queries.rows.task
 
     // TEXT FILTER
     if (query) {
@@ -2099,7 +2095,7 @@ export class AdminCtx {
     if (!this.view.isSuperAdmin()) return []
     const query = this.view.filters.values.hub.text || ''
     // FULL SET
-    let result: Hub[] = this.view.state.resources.hub
+    let result: Hub[] = this.view.queries.rows.hub
 
     // Use cache if state is empty but cache has data
     if (result.length === 0) {
@@ -2145,13 +2141,13 @@ export class AdminCtx {
   })
 
   filteredTasks = $derived.by(() => {
-    this.view.state.resources.task
+    this.view.queries.rows.task
     this.view.filters.values.task
     return this.getFilteredTask()
   })
   filteredHubs = $derived.by(() => {
     if (!this.view.isSuperAdmin()) return []
-    this.view.state.resources.hub
+    this.view.queries.rows.hub
     this.view.filters.values.hub
     return this.getFilteredHub()
   })
@@ -2178,7 +2174,7 @@ export class AdminCtx {
     next: Partial<ResourceSortState>,
   ): Promise<void> => {
     const current = this.view.filters.sorting[resource]
-    const queryEntry = this.view.queryMap.get(resource)
+    const queryEntry = this.view.queries.queryMap.get(resource)
     const currentQueryKey = queryEntry?.queryKey() ?? []
     const currentQueryMeta = this.view.getListQueryMeta(currentQueryKey)
     const nextSorting = {
@@ -2203,7 +2199,7 @@ export class AdminCtx {
       resource !== FirstClassResource.user
     ) {
       const nextQueryKey = queryEntry.queryKey()
-      const currentEntities = this.view.state.resources[resource] as Resource[]
+      const currentEntities = this.view.queries.rows[resource] as Resource[]
       // Re-sort locally when the full collection is already loaded to avoid an unnecessary request.
       const sortedEntities = this.view.filters.sortLoadedResources(
         resource,
@@ -2230,27 +2226,27 @@ export class AdminCtx {
     }
 
     if (resource === FirstClassResource.organisation) {
-      await this.view.refreshOrganisations(false)
+      await this.view.queries.refreshOrganisations(false)
       return
     }
     if (resource === FirstClassResource.project) {
-      await this.view.refreshProjects(false)
+      await this.view.queries.refreshProjects(false)
       return
     }
     if (resource === FirstClassResource.layer) {
-      await this.view.refreshLayers(false)
+      await this.view.queries.refreshLayers(false)
       return
     }
     if (resource === FirstClassResource.feature) {
-      await this.view.refreshFeatures(false)
+      await this.view.queries.refreshFeatures(false)
       return
     }
     if (resource === FirstClassResource.task) {
-      await this.view.refreshTasks(false)
+      await this.view.queries.refreshTasks(false)
       return
     }
     if (resource === FirstClassResource.hub) {
-      await this.view.refreshHubs(false)
+      await this.view.queries.refreshHubs(false)
     }
   }
 
@@ -2275,7 +2271,7 @@ export class AdminCtx {
   // ═══════════════════════
 
   hasManyEntities = (resource: FirstClassResource | HierarchicalResource) => {
-    return this.view.state.resources[resource as keyof FilteredResources].length > 3
+    return this.view.queries.rows[resource as keyof FilteredResources].length > 3
   }
 
   isViewportContained = $derived(

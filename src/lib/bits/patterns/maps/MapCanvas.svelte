@@ -362,7 +362,7 @@ const projectMarkerThemes = $derived.by(() => {
   const fallbackTheme = getMapStyleDefinition(getDefaultMapStyleKey()).markerTheme
 
   return new Map(
-    appCtx.state.resources.project.map(project => [
+    appCtx.queries.rows.project.map(project => [
       project.id,
       project.mapStyle?.code && isMapStyleKey(project.mapStyle.code)
         ? getMapStyleDefinition(project.mapStyle.code).markerTheme
@@ -675,12 +675,12 @@ $effect(() => {
   if (!activeMapInstance || appCtx.isAdmin() || !appCtx.isInitialised) return
   if (!input.prisms?.layer?.length) {
     untrack(() => appCtx.resources.featureQueries.map.clear())
-    appCtx.featureLoadState = 'complete'
+    appCtx.queries.featureLoadState = 'complete'
     return
   }
 
   const timer = setTimeout(() => {
-    void appCtx.loadFeatureQuery('map', input).catch(error => {
+    void appCtx.queries.loadFeatureQuery('map', input).catch(error => {
       console.error('[Map features] Query failed:', error)
     })
   }, 120)
@@ -701,7 +701,7 @@ $effect(() => {
   }
 
   const timer = setTimeout(() => {
-    void appCtx.loadFeatureQuery('facets', input).catch(error => {
+    void appCtx.queries.loadFeatureQuery('facets', input).catch(error => {
       console.error('[Feature counts] Query failed:', error)
     })
   }, 120)
@@ -721,7 +721,9 @@ $effect(() => {
     for (const [channel, query] of Object.entries(appCtx.resources.featureQueries)) {
       void query
         .revalidate()
-        .then(() => appCtx.retainFeatureQueryRows(channel as FeatureQueryChannel))
+        .then(() =>
+          appCtx.queries.retainFeatureQueryRows(channel as FeatureQueryChannel),
+        )
     }
   }
 
@@ -927,7 +929,7 @@ $effect(() => {
   {#if showControls &&
     appCtx.user &&
     activeMapInstance &&
-    appCtx.state.resources.layer.length > 0 &&
+    appCtx.queries.rows.layer.length > 0 &&
     !appCtx.scope.prisms.layer.length &&
     !appCtx.panels.isPanelOpen(Panel.prisms)}
     <!-- biome-ignore lint/a11y/useSemanticElements: composite prompt contains a nested button, so this cannot be a native button. -->

@@ -1531,7 +1531,7 @@ export function getFeatureCardDisplayProperties(
     return []
   }
   // ASSERT : Layer exists
-  const layer = appCtx.state.resources.layer.find(l => l.id === layerId)
+  const layer = appCtx.queries.rows.layer.find(l => l.id === layerId)
   if (!layer) {
     console.warn(`Layer ${layerId} not found`)
     return []

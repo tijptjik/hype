@@ -46,8 +46,8 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
 
   const selectedLayerIds = getMapResourceDeepLinkLayerIds(
     page.url.searchParams,
-    appCtx.state.resources.layer,
-    appCtx.state.resources.project,
+    appCtx.queries.rows.layer,
+    appCtx.queries.rows.project,
   )
   if (selectedLayerIds === null) return
 
@@ -62,7 +62,7 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
       appCtx.setSortedResourceState(FirstClassResource.feature, [])
     } else {
       await appCtx.postLayerMutation(false)
-      await appCtx.refreshFeatures(false)
+      await appCtx.queries.refreshFeatures(false)
     }
   } catch (error) {
     console.error('[Map deep link] Failed to apply map resource target:', error)

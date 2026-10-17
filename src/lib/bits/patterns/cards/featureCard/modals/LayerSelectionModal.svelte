@@ -52,7 +52,7 @@ const activeLayers = $derived.by(() =>
   appCtx.scope.prisms.layer
     .map(
       layerId =>
-        appCtx.state.resources.layer.find(layer => layer.id === layerId) ??
+        appCtx.queries.rows.layer.find(layer => layer.id === layerId) ??
         appCtx.cache.layer.get(layerId),
     )
     .filter((layer): layer is Layer => Boolean(layer)),
@@ -154,11 +154,10 @@ const activeLayerItems = $derived.by(() =>
     .map(layer => {
       // Resolve the hierarchy from reactive list data before falling back to potentially partial caches.
       const project =
-        appCtx.state.resources.project.find(
-          project => project.id === layer.projectId,
-        ) ?? appCtx.cache.project.get(layer.projectId)
+        appCtx.queries.rows.project.find(project => project.id === layer.projectId) ??
+        appCtx.cache.project.get(layer.projectId)
       const organisation =
-        appCtx.state.resources.organisation.find(
+        appCtx.queries.rows.organisation.find(
           organisation => organisation.id === layer.organisationId,
         ) ?? appCtx.cache.organisation.get(layer.organisationId)
 
@@ -180,7 +179,7 @@ const searchableResources = $derived.by(() => {
   const matchesQuery = (value: string): boolean =>
     !query || value.toLowerCase().includes(query)
 
-  const organisations = appCtx.state.resources.organisation
+  const organisations = appCtx.queries.rows.organisation
     .filter(organisation =>
       selectedOrganisation ? organisation.id === selectedOrganisation.id : true,
     )
@@ -192,7 +191,7 @@ const searchableResources = $derived.by(() => {
       breadcrumb: '',
     }))
 
-  const projects = appCtx.state.resources.project
+  const projects = appCtx.queries.rows.project
     .filter(project =>
       selectedOrganisation ? project.organisationId === selectedOrganisation.id : true,
     )
@@ -209,7 +208,7 @@ const searchableResources = $derived.by(() => {
       }
     })
 
-  const layers = appCtx.state.resources.layer
+  const layers = appCtx.queries.rows.layer
     .filter(layer =>
       selectedOrganisation ? layer.organisationId === selectedOrganisation.id : true,
     )

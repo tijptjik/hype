@@ -32,7 +32,7 @@ $effect(() => {
 
   const resolvedProjectId =
     projectId ||
-    appCtx.state.resources.project.find(project => project.code === projectCode)?.id ||
+    appCtx.queries.rows.project.find(project => project.code === projectCode)?.id ||
     ''
   const targetKey = `${layerId}:${resolvedProjectId}:${projectCode}`
   if (untrack(() => appliedTarget) === targetKey) return
@@ -40,8 +40,8 @@ $effect(() => {
   const selectedLayerIds =
     getMapResourceDeepLinkLayerIds(
       page.url.searchParams,
-      appCtx.state.resources.layer,
-      appCtx.state.resources.project,
+      appCtx.queries.rows.layer,
+      appCtx.queries.rows.project,
     ) ?? []
 
   appliedTarget = targetKey
@@ -53,7 +53,7 @@ $effect(() => {
   // Select the requested layers before refreshing so the feature query is scoped to them.
   void appCtx
     .postLayerMutation(false)
-    .then(() => appCtx.refreshFeatures())
+    .then(() => appCtx.queries.refreshFeatures())
     .catch(error => {
       console.error('[Screensaver] Failed to apply screensaver layers:', error)
       appliedTarget = null

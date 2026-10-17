@@ -615,14 +615,14 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
       toggleResourceFilterState(adminCtx, resource, filterKey, false, activeLocales)
 
       if (filterConfig.refreshResource) {
-        adminCtx.view.refresh(filterConfig.refreshResource)
+        adminCtx.view.queries.refresh(filterConfig.refreshResource)
       }
     },
     onToggleTrue: () => {
       toggleResourceFilterState(adminCtx, resource, filterKey, true, activeLocales)
 
       if (filterConfig.refreshResource) {
-        adminCtx.view.refresh(filterConfig.refreshResource)
+        adminCtx.view.queries.refresh(filterConfig.refreshResource)
       }
     },
     onToggleChange: () => {
@@ -630,7 +630,7 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
       setResourceFilterState(adminCtx, resource, filterKey, nextState, activeLocales)
 
       if (filterConfig.refreshResource) {
-        adminCtx.view.refresh(filterConfig.refreshResource)
+        adminCtx.view.queries.refresh(filterConfig.refreshResource)
       }
     },
     onSelectChange:
@@ -645,7 +645,7 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
             )
 
             if (filterConfig.refreshResource) {
-              adminCtx.view.refresh(filterConfig.refreshResource)
+              adminCtx.view.queries.refresh(filterConfig.refreshResource)
             }
           }
         : undefined,
@@ -691,14 +691,14 @@ export function getFilterRenderItems(
           toggleFilterState(adminCtx, 'properties', false, property.id, undefined)
 
           if (section.refreshResource) {
-            adminCtx.view.refresh(section.refreshResource)
+            adminCtx.view.queries.refresh(section.refreshResource)
           }
         },
         onToggleTrue: () => {
           toggleFilterState(adminCtx, 'properties', true, property.id, undefined)
 
           if (section.refreshResource) {
-            adminCtx.view.refresh(section.refreshResource)
+            adminCtx.view.queries.refresh(section.refreshResource)
           }
         },
         onToggleChange: () => {
@@ -711,7 +711,7 @@ export function getFilterRenderItems(
           )
 
           if (section.refreshResource) {
-            adminCtx.view.refresh(section.refreshResource)
+            adminCtx.view.queries.refresh(section.refreshResource)
           }
         },
       }

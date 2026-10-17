@@ -284,10 +284,10 @@ export function useResourcePanelModel(
     },
     // Map pages refresh silently while the user explores; only failures need panel feedback.
     get loadError() {
-      return mode === 'prisms' && app.featureLoadState === 'error'
+      return mode === 'prisms' && app.queries.featureLoadState === 'error'
     },
     onRetryFeatures: () => {
-      void app.refreshFeatures(false).catch(() => {})
+      void app.queries.refreshFeatures(false).catch(() => {})
     },
   }
 }

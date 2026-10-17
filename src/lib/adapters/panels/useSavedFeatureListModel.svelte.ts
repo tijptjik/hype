@@ -52,7 +52,7 @@ export function useSavedFeatureListModel(
     const input = queryInput()
     untrack(() => {
       if (!userId) query.clear()
-      else void app.loadFeatureQuery(kind, input).catch(() => {})
+      else void app.queries.loadFeatureQuery(kind, input).catch(() => {})
     })
   })
 
@@ -143,10 +143,10 @@ export function useSavedFeatureListModel(
     setSearch: (value: string) => {
       searchTerm = value
     },
-    loadMore: () => app.loadMoreFeatureQuery(kind),
+    loadMore: () => app.queries.loadMoreFeatureQuery(kind),
     retry: () => {
       query.invalidate()
-      void app.loadFeatureQuery(kind, queryInput()).catch(() => {})
+      void app.queries.loadFeatureQuery(kind, queryInput()).catch(() => {})
     },
     onOpen: (featureId: string) => {
       if (kind === 'visited') navigateToVisited(app, omni, featureId, records)

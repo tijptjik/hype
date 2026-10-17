@@ -71,7 +71,7 @@ $effect(() => {
 // Native admin feature payloads remain reactive during optimistic edits.
 $effect(() => {
   const current = root.cacheCtx.featureCollection?.current
-  if (current) view.state.resources.feature = current.data
+  if (current) view.queries.rows.feature = current.data
 })
 
 onDestroy(() => {

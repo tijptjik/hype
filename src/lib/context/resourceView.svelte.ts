@@ -40,8 +40,6 @@ import {
   refreshRemoteQuery as runRemoteQuery,
   toSafeListResponse,
 } from '#lib/remote/index.js'
-// DEBUG
-import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 // CONTEXT
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
@@ -60,11 +58,7 @@ import type {
   UserRoleDisco,
 } from '#lib/types.js'
 import type { FilteredResources } from '#lib/client/services/filters.types.js'
-import type { FeatureQueryChannel } from '#lib/context/featureQuery.types.js'
-import type {
-  FeatureQueryInput,
-  FeatureSpatialQuery,
-} from '#lib/api/services/featureQuery.types.js'
+import type { FeatureSpatialQuery } from '#lib/api/services/featureQuery.types.js'
 import type { Task } from '#lib/db/zod/schema/task.types.js'
 import type { Image } from '#lib/db/zod/schema/image.types.js'
 import type { Property } from '#lib/db/zod/schema/property.types.js'
@@ -82,6 +76,7 @@ import type {
 import type { DivisionCtx } from './division.svelte'
 // CONTEXT
 import type { AccountState, AccountUser } from './account.svelte.js'
+import { ResourceQueryCoordinator } from './resourceQueries.svelte.js'
 import { ResourceFilters } from './resourceFilters.svelte.js'
 import { ResourceScope } from './resourceScope.svelte.js'
 import { FeatureDraft } from './featureDraft.svelte.js'
@@ -122,7 +117,6 @@ import type {
 /* -------- */
 
 type ResourceViewState = {
-  resources: FilteredResources
   userLocation: {
     coords: {
       accuracy: number
@@ -201,22 +195,24 @@ type RemoteMap = { [Key in FirstClassResource]: RemoteMapEntryByResource[Key] }
 
 export class ResourceViewCtx {
   private releaseMembership: () => void = () => {}
+  readonly queries: ResourceQueryCoordinator
   readonly filters: ResourceFilters
   readonly scope = new ResourceScope({
     account: () => this.account,
     hub: () => this.hub,
-    loadedLayers: () => this.state.resources.layer,
+    loadedLayers: () => this.queries.rows.layer,
     projects: () => this.cache.project.values(),
     layers: () => this.cache.layer.values(),
     getHubIdByCode: code => this.getHubIdByCode(code),
     isExpectedRoleScopeCurrent: scope => this.isExpectedRoleScopeCurrent(scope),
-    refreshOrganisations: () => this.refreshOrganisations(),
-    refreshProjects: cascade => this.refreshProjects(cascade),
-    refreshProperties: () => this.refreshProperties(),
-    refreshLayers: (cascade, autoSelect) => this.refreshLayers(cascade, autoSelect),
+    refreshOrganisations: () => this.queries.refreshOrganisations(),
+    refreshProjects: cascade => this.queries.refreshProjects(cascade),
+    refreshProperties: () => this.queries.refreshProperties(),
+    refreshLayers: (cascade, autoSelect) =>
+      this.queries.refreshLayers(cascade, autoSelect),
     refreshLayerDependents: async () => {
-      await this.refreshFeatures()
-      if (this.user?.id && this.isAdmin()) await this.refreshTasks()
+      await this.queries.refreshFeatures()
+      if (this.user?.id && this.isAdmin()) await this.queries.refreshTasks()
       if (this.panels.state.profile.ctx?.username) await this.refreshUserProfile()
     },
     postLayerMutation: (cascade, autoSelect) =>
@@ -230,7 +226,7 @@ export class ResourceViewCtx {
   readonly panels = new PanelController({
     loadProfile: () => this.refreshUserProfile(false),
     invalidateProfile: () => {
-      this.beginResourceRefresh(FirstClassResource.user)
+      this.queries.beginResourceRefresh(FirstClassResource.user)
     },
   })
   /**
@@ -252,18 +248,8 @@ export class ResourceViewCtx {
   }
   // Whether this resource view has completed its initialization
   isInitialised: boolean = $state(false)
-  isLoadingResources = $state(false)
   // Whether the app is in mobile mode
   isMobile: boolean = $state(false)
-
-  // Query map to store different query functions (can be overridden by AdminCtx)
-  queryMap = new Map<
-    FirstClassResource | 'userFeatures',
-    {
-      queryKey: () => unknown[]
-      queryFn: () => Promise<unknown>
-    }
-  >()
 
   listQueryMeta = new Map<string, Omit<ListResponse<unknown>, 'data'>>()
 
@@ -278,11 +264,6 @@ export class ResourceViewCtx {
     [FirstClassResource.property]: {},
     [FirstClassResource.user]: {},
   }
-
-  // Cache for all resources
-  featureLoadState = $state<'idle' | 'loading' | 'partial' | 'complete' | 'error'>(
-    'idle',
-  )
   readonly cacheCtx: CacheCtx
   readonly resources: ResourceClient
   readonly hierarchy: ReturnType<typeof createHierarchyClient>
@@ -293,8 +274,6 @@ export class ResourceViewCtx {
 
   // Features map for current state (rebuilt when state.resources.feature changes)
   private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>()
-  private featureRefreshSerial = 0
-  private resourceRefreshSerials = new Map<string, number>()
   private organisationCodeToId = new Map<Code, Id>()
   private projectCodeToId = new Map<Code, Id>()
   private hubCodeToId = new Map<Code, Id>()
@@ -303,14 +282,6 @@ export class ResourceViewCtx {
     // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AppCtx.state.viewFilters)
     // Only affect the current route/view they are applied on, not the underlying data or map view
     // Resources -- The resources fetched from the database (post prism-filtering, pre filters-filtering)
-    resources: {
-      organisation: [],
-      project: [],
-      layer: [],
-      feature: [],
-      task: [],
-      hub: [],
-    },
     // User Location -- The user's location
     userLocation: null,
     // ENHANCEMENT: Implement distancesFromUser
@@ -362,39 +333,6 @@ export class ResourceViewCtx {
     !expectedRoleScope || expectedRoleScope === this.getRoleScopeQueryKey()
 
   /**
-   * Starts a resource refresh and returns its serial for stale-response checks.
-   *
-   * @param resource - Resource whose previous refreshes must be superseded.
-   * @returns The serial assigned to this refresh.
-   */
-  private beginResourceRefresh = (resource: string): number => {
-    const serial = (this.resourceRefreshSerials.get(resource) ?? 0) + 1
-    this.resourceRefreshSerials.set(resource, serial)
-    return serial
-  }
-
-  /**
-   * Determines whether a resource response is still the newest response.
-   *
-   * @param resource - Resource associated with the request.
-   * @param serial - Serial captured when the request started.
-   * @returns Whether the response may update application state.
-   */
-  private isCurrentResourceRefresh = (resource: string, serial: number): boolean =>
-    this.resourceRefreshSerials.get(resource) === serial
-
-  /**
-   * Invalidates all tracked list refreshes before identity or cache transitions.
-   *
-   * @returns Nothing.
-   */
-  private invalidateResourceRefreshes = (): void => {
-    for (const [resource, serial] of this.resourceRefreshSerials) {
-      this.resourceRefreshSerials.set(resource, serial + 1)
-    }
-  }
-
-  /**
    * Reads roles without depending on unrelated profile hydration.
    * @returns Authoritative session roles used to distinguish authorized query scopes.
    */
@@ -403,23 +341,6 @@ export class ResourceViewCtx {
     // Requiring those unrelated fields changes the scope during parallel bootstrap.
     const roles = this.account.session?.roles ?? []
     return Array.isArray(roles) ? roles : []
-  }
-
-  private getRequiredQueryConfig = (
-    resource: FirstClassResource | 'userFeatures',
-  ): {
-    queryKey: unknown[]
-    queryFn: () => Promise<unknown>
-  } => {
-    const config = this.queryMap.get(resource)
-    if (!config) {
-      throw new Error(`Missing query config for ${resource}`)
-    }
-
-    return {
-      queryKey: config.queryKey(),
-      queryFn: config.queryFn,
-    }
   }
 
   organisationsQueryKey = () => [
@@ -496,11 +417,42 @@ export class ResourceViewCtx {
       this.cache,
       () => this.isAdmin(),
     )
+    this.queries = new ResourceQueryCoordinator({
+      client: this.resources,
+      account: this.account,
+      cache: this.cache,
+      prisms: () => this.scope.prisms,
+      roleScope: () => this.getRoleScopeQueryKey(),
+      isAdmin: () => this.isAdmin(),
+      retain: (resource, rows) => {
+        for (const row of rows)
+          this.cache[resource].set(row.id, {
+            ...this.cache[resource].get(row.id),
+            ...row,
+          } as never)
+        if (resource === 'organisation')
+          this.syncCodeToIdMap(this.organisationCodeToId, rows as Organisation[])
+        if (resource === 'project')
+          this.syncCodeToIdMap(this.projectCodeToId, rows as Project[])
+        if (resource === 'hub') this.syncCodeToIdMap(this.hubCodeToId, rows as Hub[])
+      },
+      featuresChanged: features => {
+        features.forEach(feature => {
+          primeFeatureStatsCache(this, feature)
+        })
+        this.rebuildFeaturesMap()
+        this.divisionCtx.setDivisionFeatures(
+          this.scope.prisms.layer.length > 0 ? features : [],
+        )
+      },
+      afterLayers: (cascade, autoSelect, scope) =>
+        this.postLayerMutation(cascade, autoSelect, scope),
+    })
     this.hierarchy = createHierarchyClient(this.resources)
     this.divisionCtx = divisionCtx
     this.filters = new ResourceFilters({
       prisms: () => this.scope.prisms,
-      rows: () => this.state.resources,
+      rows: () => this.queries.rows,
       scopeKey: () => this.resources.scopeKey,
       isAdmin: () => this.isAdmin(),
       preferences: () => this.getUserPreferences(),
@@ -555,53 +507,53 @@ export class ResourceViewCtx {
 
   // Initialize default query map (can be overridden by AdminCtx)
   private initializeQueryMap = (): void => {
-    this.queryMap.clear()
+    this.queries.queryMap.clear()
 
-    this.queryMap.set(FirstClassResource.organisation, {
+    this.queries.queryMap.set(FirstClassResource.organisation, {
       queryKey: this.organisationsQueryKey,
       queryFn: () => this.organisationsQueryFn(),
     })
 
-    this.queryMap.set(FirstClassResource.project, {
+    this.queries.queryMap.set(FirstClassResource.project, {
       queryKey: this.projectsQueryKey,
       queryFn: () => this.projectsQueryFn(),
     })
 
-    this.queryMap.set(FirstClassResource.layer, {
+    this.queries.queryMap.set(FirstClassResource.layer, {
       queryKey: this.layersQueryKey,
       queryFn: () => this.layersQueryFn(),
     })
 
-    this.queryMap.set(FirstClassResource.feature, {
+    this.queries.queryMap.set(FirstClassResource.feature, {
       queryKey: this.featuresQueryKey,
       queryFn: () => this.featuresQueryFn(),
     })
 
     // ADMIN ONLY
-    this.queryMap.set(FirstClassResource.task, {
+    this.queries.queryMap.set(FirstClassResource.task, {
       queryKey: () => [FirstClassResource.task],
       queryFn: () => Promise.resolve([]),
     })
 
     // ADMIN ONLY
-    this.queryMap.set(FirstClassResource.hub, {
+    this.queries.queryMap.set(FirstClassResource.hub, {
       queryKey: () => [FirstClassResource.hub],
       queryFn: () => Promise.resolve([]),
     })
 
     // APP ONLY
-    this.queryMap.set('userFeatures', {
+    this.queries.queryMap.set('userFeatures', {
       queryKey: this.userFeaturesQueryKey,
       queryFn: () => this.userFeaturesQueryFn(),
     })
 
-    this.queryMap.set(FirstClassResource.user, {
+    this.queries.queryMap.set(FirstClassResource.user, {
       queryKey: this.userQueryKey,
       queryFn: () => this.userQueryFn(),
     })
 
     // PROPERTIES
-    this.queryMap.set(FirstClassResource.property, {
+    this.queries.queryMap.set(FirstClassResource.property, {
       queryKey: this.propertiesQueryKey,
       queryFn: () => this.propertiesQueryFn(),
     })
@@ -748,89 +700,6 @@ export class ResourceViewCtx {
   }
 
   /**
-   * Gives cached previews the same known hierarchy and user membership facts as the UI.
-   * @returns Nothing after configuring each independent feature collection.
-   */
-  private configureFeatureQueries = (): void => {
-    for (const query of Object.values(this.resources.featureQueries)) {
-      query.setMatchContext({
-        layerProjectId: id => this.cache.layer.get(id)?.projectId,
-        projectOrganisationId: id => this.cache.project.get(id)?.organisationId,
-        listMembership: (row, list) => {
-          if (list.userId && list.userId !== this.user?.id) return undefined
-          return this.account.collections.membership(row.id, list.listId)
-        },
-      })
-    }
-  }
-
-  /**
-   * Loads one page for an independently scoped feature view.
-   * @param channel - View whose page membership is being updated.
-   * @param input - Complete query identity; spatial scope is optional.
-   * @returns Completion of the first page, while fresh cached matches appear immediately.
-   */
-  loadFeatureQuery = async (
-    channel: FeatureQueryChannel,
-    input: FeatureQueryInput,
-  ): Promise<void> => {
-    const query = this.resources.featureQueries[channel]
-    this.configureFeatureQueries()
-    if (channel === 'map') this.featureLoadState = 'loading'
-    try {
-      await query.load(input)
-    } catch (error) {
-      if (channel === 'map' && query.isCurrent(input) && query.error === error)
-        this.featureLoadState = 'error'
-      throw error
-    }
-    // Superseded requests must not finish the newer view's loading indicator or retention.
-    if (
-      input.meta.scope !== this.filters.featureQueryInput().meta.scope ||
-      !query.isCurrent(input)
-    )
-      return
-    if (channel === 'map' && !query.loading) this.featureLoadState = 'complete'
-    this.retainFeatureQueryRows(channel)
-  }
-
-  /**
-   * Retains navigable feature records and current-user membership from fetched pages.
-   * @param channel - Query whose current pages have settled.
-   * @returns Nothing; map display membership remains independent of retained identities.
-   */
-  retainFeatureQueryRows = (channel: FeatureQueryChannel): void => {
-    const query = this.resources.featureQueries[channel]
-    for (const row of query.rows) this.cache.feature.set(row.id, row)
-    while (this.cache.feature.size > 2_000) {
-      const oldest = this.cache.feature.keys().next().value
-      if (!oldest) break
-      const row = this.cache.feature.get(oldest)
-      if (!row) break
-      this.cache.feature.delete(oldest)
-    }
-    for (const page of query.pages) {
-      if (!page.current?.userFeatures) continue
-      this.account.collections.mergePage(
-        page.current.data.map(row => row.id),
-        page.current.userFeatures,
-      )
-    }
-  }
-
-  /**
-   * Appends one server page to an active feature view.
-   * @param channel - Independent list/search collection to extend.
-   * @returns Completion after new IDs and membership state are retained.
-   */
-  loadMoreFeatureQuery = async (channel: FeatureQueryChannel): Promise<void> => {
-    const scope = this.filters.featureQueryInput().meta.scope
-    await this.resources.featureQueries[channel].next()
-    if (scope === this.filters.featureQueryInput().meta.scope)
-      this.retainFeatureQueryRows(channel)
-  }
-
-  /**
    * Loads one bounded map page instead of draining every selected layer's cursor.
    * @returns Current viewport features, with additional pages available explicitly.
    */
@@ -901,7 +770,7 @@ export class ResourceViewCtx {
     // Invalidate the query
     await this.invalidate(resource)
     // Refresh the resources
-    await this.refresh(resource)
+    await this.queries.refresh(resource)
   }
 
   /**
@@ -915,7 +784,7 @@ export class ResourceViewCtx {
     resourceId: Id,
   ): Promise<void> => {
     // Get the specific query key for this resource
-    const queryKey = this.queryMap.get(resource)?.queryKey()
+    const queryKey = this.queries.queryMap.get(resource)?.queryKey()
 
     if (!queryKey) {
       console.warn(`No query key found for resource: ${resource}`)
@@ -951,7 +820,7 @@ export class ResourceViewCtx {
         }
 
         // Update the resources array if the resource exists there
-        if (resource in this.state.resources) {
+        if (resource in this.queries.rows) {
           this.updateResourceInArray(
             resource as keyof FilteredResources,
             updatedResource as FilteredResources[keyof FilteredResources][number],
@@ -1013,23 +882,23 @@ export class ResourceViewCtx {
     entities: T[],
   ): void {
     if (resource === FirstClassResource.organisation) {
-      this.state.resources.organisation = entities as Organisation[]
+      this.queries.rows.organisation = entities as Organisation[]
       return
     }
 
     if (resource === FirstClassResource.project) {
-      this.state.resources.project = entities as Project[]
+      this.queries.rows.project = entities as Project[]
       return
     }
 
     if (resource === FirstClassResource.layer) {
-      this.state.resources.layer = entities as Layer[]
+      this.queries.rows.layer = entities as Layer[]
       return
     }
 
     if (resource === FirstClassResource.feature) {
       const features = entities as FeatureFromCollection[]
-      this.state.resources.feature = features
+      this.queries.rows.feature = features
       // Rebuild derived feature lookups after replacing the entire feature list.
       this.rebuildFeaturesMap()
       // Keep neighbourhood-specific derived state in sync with the sorted feature collection.
@@ -1040,12 +909,12 @@ export class ResourceViewCtx {
     }
 
     if (resource === FirstClassResource.task) {
-      this.state.resources.task = entities as Task[]
+      this.queries.rows.task = entities as Task[]
       return
     }
 
     if (resource === FirstClassResource.hub) {
-      this.state.resources.hub = entities as Hub[]
+      this.queries.rows.hub = entities as Hub[]
     }
   }
 
@@ -1058,7 +927,7 @@ export class ResourceViewCtx {
     resource: K,
     updatedResource: FilteredResources[K][number],
   ): void => {
-    const resourceArray = this.state.resources[resource]
+    const resourceArray = this.queries.rows[resource]
     const index = resourceArray.findIndex(
       resourceItem => resourceItem.id === updatedResource.id,
     )
@@ -1101,216 +970,18 @@ export class ResourceViewCtx {
 
     // Invalidate request generations; subsequent refreshes go directly to the server.
     for (const resourceType of resourcesToInvalidate) {
-      this.beginResourceRefresh(resourceType)
+      this.queries.beginResourceRefresh(resourceType)
     }
-  }
-
-  // Cascades refresh to the next resource in the hierarchy
-  refresh = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
-    // Refresh the resources
-    if (resource === 'organisation') {
-      await this.refreshOrganisations()
-    } else if (resource === 'project') {
-      await this.refreshProjects()
-    } else if (resource === 'layer') {
-      await this.refreshLayers()
-    } else if (resource === 'feature') {
-      await this.refreshFeatures()
-    } else if (resource === 'task') {
-      await this.refreshTasks()
-    } else if (resource === 'property') {
-      await this.refreshProperties()
-    } else if (resource === 'userFeatures') {
-      await this.refreshUserFeatures()
-    }
-  }
-
-  /**
-   * Refreshes organisations and reconciles their dependent filter scope.
-   *
-   * @param isCascading - Whether to refresh dependent projects.
-   * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns Nothing after the organisation state is reconciled.
-   */
-  refreshOrganisations = async (
-    isCascading: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const refreshSerial = this.beginResourceRefresh(FirstClassResource.organisation)
-    const query = this.getRequiredQueryConfig(FirstClassResource.organisation)
-    const organisations = await (query.queryFn() as Promise<Organisation[]>)
-    if (
-      !this.isCurrentResourceRefresh(FirstClassResource.organisation, refreshSerial)
-    ) {
-      return
-    }
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    this.state.resources.organisation = organisations
-    // Efficiently sync organization cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.organisation, this.state.resources.organisation)
-    // Efficiently sync organisation code-to-ID mapping
-    this.syncCodeToIdMap(this.organisationCodeToId, this.state.resources.organisation)
-    // Sync organisation prisms to remove any invalid organisation IDs
-    this.syncOrganisationPrisms()
-    if (isCascading) {
-      await this.refreshProjects(true, expectedRoleScope)
-    }
-  }
-
-  /**
-   * Refreshes projects and reconciles their dependent filter scope.
-   *
-   * @param isCascading - Whether to refresh dependent properties and layers.
-   * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns Nothing after the project state is reconciled.
-   */
-  refreshProjects = async (
-    isCascading: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const refreshSerial = this.beginResourceRefresh(FirstClassResource.project)
-    const query = this.getRequiredQueryConfig(FirstClassResource.project)
-    const projects = await (query.queryFn() as Promise<Project[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.project, refreshSerial)) {
-      return
-    }
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    this.state.resources.project = projects
-    // Efficiently sync project cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.project, this.state.resources.project)
-    // Efficiently sync project code-to-ID mapping
-    this.syncCodeToIdMap(this.projectCodeToId, this.state.resources.project)
-    // Sync project prisms to remove any invalid project IDs
-    this.syncProjectPrisms()
-    if (isCascading) {
-      await this.refreshProperties(true, expectedRoleScope)
-      await this.refreshLayers(true, true, expectedRoleScope)
-    }
-  }
-
-  /**
-   * Refreshes layers for the active hierarchy and reconciles layer filter state.
-   *
-   * @param isCascading - Whether dependent feature and profile data should refresh.
-   * @param shouldAutoSelectSingleLayer - Whether one available layer is activated automatically.
-   * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns A promise that resolves once the layer state has been reconciled.
-   */
-  refreshLayers = async (
-    isCascading: boolean = true,
-    shouldAutoSelectSingleLayer: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const refreshSerial = this.beginResourceRefresh(FirstClassResource.layer)
-    const query = this.getRequiredQueryConfig(FirstClassResource.layer)
-    const layers = await (query.queryFn() as Promise<Layer[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.layer, refreshSerial)) {
-      return
-    }
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    this.state.resources.layer = layers
-    // Efficiently sync layer cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.layer, this.state.resources.layer)
-    // Sync layer prisms to remove any layerIds which are no londer valid resources given the parent prism selection.
-    this.syncLayerPrisms()
-    // Also calls this.refreshFeatures()
-    await this.postLayerMutation(
-      isCascading,
-      shouldAutoSelectSingleLayer,
-      expectedRoleScope,
-    )
-  }
-
-  /**
-   * Refreshes the feature collection for the current hierarchy and user scope.
-   *
-   * @param _isCascading - Reserved for the resource refresh contract.
-   * @param expectedRoleScope - Optional scope captured before the request started.
-   * @returns Nothing after current-scope feature data has been committed.
-   * @remarks A background public-map request must not overwrite the image-bearing
-   * collection fetched after an anonymous or account session is established.
-   */
-  refreshFeatures = async (
-    _isCascading: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const refreshSerial = ++this.featureRefreshSerial
-    const selection = JSON.stringify(this.scope.prisms.layer)
-    const query = this.getRequiredQueryConfig(FirstClassResource.feature)
-    const features: FeatureFromCollection[] = await (query.queryFn() as Promise<
-      FeatureFromCollection[]
-    >)
-
-    if (
-      refreshSerial !== this.featureRefreshSerial ||
-      selection !== JSON.stringify(this.scope.prisms.layer)
-    ) {
-      logMarkerBootstrap('stale feature data ignored after a newer refresh started', {
-        refreshSerial,
-        currentRefreshSerial: this.featureRefreshSerial,
-        featureCount: features.length,
-      })
-      return
-    }
-
-    if (expectedRoleScope && expectedRoleScope !== this.getRoleScopeQueryKey()) {
-      logMarkerBootstrap('stale feature data ignored after identity change', {
-        expectedRoleScope,
-        currentRoleScope: this.getRoleScopeQueryKey(),
-        featureCount: features.length,
-      })
-      return
-    }
-
-    this.state.resources.feature = features
-    // Retain entities shared with search and list queries; viewport membership is independent.
-    for (const feature of features) this.cache.feature.set(feature.id, feature)
-
-    logMarkerBootstrap('feature data committed', {
-      featureCount: features.length,
-      imageBackedFeatureCount: features.filter(feature => Boolean(feature.image))
-        .length,
-      pointFeatureCount: features.filter(feature => feature.geometry?.type === 'Point')
-        .length,
-    })
-
-    // Pre-populate stats cache for this feature
-    features.forEach(feature => {
-      primeFeatureStatsCache(this, feature)
-    })
-
-    // Rebuild the featureId to feature map
-    this.rebuildFeaturesMap()
-
-    // Keep local neighbourhood membership useful for previews; totals come from server facets.
-    this.divisionCtx.setDivisionFeatures(
-      this.scope.getPrism(FirstClassResource.layer).length > 0 ? features : [],
-    )
-  }
-
-  refreshTasks = async (_isCascading: boolean = true): Promise<void> => {
-    const refreshSerial = this.beginResourceRefresh(FirstClassResource.task)
-    const query = this.getRequiredQueryConfig(FirstClassResource.task)
-    const tasks = await (query.queryFn() as Promise<Task[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.task, refreshSerial)) {
-      return
-    }
-    this.state.resources.task = tasks
-    // Efficiently sync task cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.task, this.state.resources.task)
   }
 
   setTaskResourceAndCache = (task: Task): void => {
-    const existingTask = this.state.resources.task.find(t => t.id === task.id)
+    const existingTask = this.queries.rows.task.find(t => t.id === task.id)
     if (existingTask) {
-      this.state.resources.task = this.state.resources.task.map(t =>
+      this.queries.rows.task = this.queries.rows.task.map(t =>
         t.id === task.id ? task : t,
       )
     } else {
-      this.state.resources.task = [...this.state.resources.task, task]
+      this.queries.rows.task = [...this.queries.rows.task, task]
     }
 
     if (task.organisation) {
@@ -1347,68 +1018,14 @@ export class ResourceViewCtx {
     this.cache.task.set(task.id, task)
   }
 
-  refreshHubs = async (_isCascading: boolean = true): Promise<void> => {
-    if (!this.isAdmin()) return
-    const refreshSerial = this.beginResourceRefresh(FirstClassResource.hub)
-    const query = this.getRequiredQueryConfig(FirstClassResource.hub)
-    const hubs = await (query.queryFn() as Promise<Hub[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.hub, refreshSerial)) {
-      return
-    }
-    this.state.resources.hub = hubs
-    // Efficiently sync hub cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.hub, this.state.resources.hub)
-    // Efficiently sync hub code-to-ID mapping
-    this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub)
-  }
-
-  /**
-   * Refreshes property definitions for the active hierarchy.
-   *
-   * @param _isCascading - Reserved for the resource refresh contract.
-   * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns Nothing after the property cache is reconciled.
-   */
-  refreshProperties = async (
-    _isCascading: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const refreshSerial = this.beginResourceRefresh(FirstClassResource.property)
-    const query = this.getRequiredQueryConfig(FirstClassResource.property)
-    const properties = await (query.queryFn() as Promise<Property[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.property, refreshSerial)) {
-      return
-    }
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    // Efficiently sync property cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.property, properties)
-  }
-
-  refreshUserFeatures = async (_isCascading: boolean = true): Promise<void> => {
-    const generation = this.account.collections.beginRefresh()
-    const refreshSerial = this.beginResourceRefresh('userFeatures')
-    const userId = this.user?.id ?? null
-    const query = this.getRequiredQueryConfig('userFeatures')
-    const userFeatures = await (query.queryFn() as Promise<UserFeature[]>)
-    if (
-      !this.isCurrentResourceRefresh('userFeatures', refreshSerial) ||
-      userId !== (this.user?.id ?? null)
-    ) {
-      return
-    }
-
-    this.account.collections.replace(userFeatures || [], generation)
-  }
-
   refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
-    const refreshSerial = this.beginResourceRefresh(FirstClassResource.user)
+    const refreshSerial = this.queries.beginResourceRefresh(FirstClassResource.user)
     const accountRevision = this.account.revision
     const userId = this.user?.id ?? null
-    const query = this.getRequiredQueryConfig(FirstClassResource.user)
+    const query = this.queries.getRequiredQueryConfig(FirstClassResource.user)
     const user = await (query.queryFn() as Promise<UserProfile | null>)
     if (
-      !this.isCurrentResourceRefresh(FirstClassResource.user, refreshSerial) ||
+      !this.queries.isCurrentResourceRefresh(FirstClassResource.user, refreshSerial) ||
       accountRevision !== this.account.revision ||
       userId !== (this.user?.id ?? null)
     ) {
@@ -1474,7 +1091,7 @@ export class ResourceViewCtx {
     // A page (or search result) cannot establish that only one layer exists.
     // Default selection is resolved from the independent default-layer metadata.
     void shouldAutoSelectSingleLayer
-    this.featureRefreshSerial++
+    this.queries.featureRefreshSerial++
     await this.loadPinnedLayers(expectedRoleScope)
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
@@ -1501,10 +1118,10 @@ export class ResourceViewCtx {
 
     if (isCascading) {
       // Public maps also need to follow active-layer changes.
-      await this.refreshFeatures()
+      await this.queries.refreshFeatures()
       if (this.user?.id) {
         if (this.isAdmin()) {
-          await this.refreshTasks()
+          await this.queries.refreshTasks()
         }
       }
       // Only refresh if we have a username in the profile context
@@ -1578,24 +1195,24 @@ export class ResourceViewCtx {
   // Filtered Helpers
   filteredOrganisations = $derived.by(() => {
     // Explicitly access reactive dependencies so Svelte tracks them
-    this.state.resources.organisation
+    this.queries.rows.organisation
     this.filters.values.organisation
     return this.filters.getFilteredResource<Organisation>(
       FirstClassResource.organisation,
     )
   })
   filteredProjects = $derived.by(() => {
-    this.state.resources.project
+    this.queries.rows.project
     this.filters.values.project
     return this.filters.getFilteredResource<Project>(FirstClassResource.project)
   })
   filteredLayers = $derived.by(() => {
-    this.state.resources.layer
+    this.queries.rows.layer
     this.filters.values.layer
     return this.filters.getFilteredResource<Layer>(FirstClassResource.layer)
   }) as Layer[]
   filteredFeatures = $derived.by(() => {
-    this.state.resources.feature
+    this.queries.rows.feature
     this.filters.values.feature
     return this.filters.getFilteredResource<Feature>(FirstClassResource.feature)
   })
@@ -2047,13 +1664,13 @@ export class ResourceViewCtx {
   // ================================================
 
   // COUNT METHODS
-  getOrganisationCount = (): number => this.state.resources.organisation.length
+  getOrganisationCount = (): number => this.queries.rows.organisation.length
 
   getOrganisationProjectCount = (organisationId: Id): number =>
-    this.state.resources.project.filter(p => p.organisationId === organisationId).length
+    this.queries.rows.project.filter(p => p.organisationId === organisationId).length
 
   getProjectLayerCount = (projectId: Id): number =>
-    this.state.resources.layer.filter(l => l.projectId === projectId).length
+    this.queries.rows.layer.filter(l => l.projectId === projectId).length
 
   // CONTEXTUAL NAME METHODS
   getContextualOrganisationName = (
@@ -2176,7 +1793,7 @@ export class ResourceViewCtx {
 
   // Efficiently update features map from current state.resources.feature
   private rebuildFeaturesMap = () => {
-    const newFeatures = this.state.resources.feature
+    const newFeatures = this.queries.rows.feature
     const newFeatureIds = new Set(newFeatures.map(f => f.id))
 
     // Remove features that are no longer in the result set
@@ -2262,8 +1879,8 @@ export class ResourceViewCtx {
     this.draft.resetMode()
 
     // Identity and role changes alter query scope and must supersede prior responses.
-    this.featureRefreshSerial += 1
-    this.invalidateResourceRefreshes()
+    this.queries.featureRefreshSerial += 1
+    this.queries.invalidateResourceRefreshes()
 
     // Identity-bound records must never survive guest/account or role transitions.
     this.cache.user.clear()
@@ -2281,7 +1898,7 @@ export class ResourceViewCtx {
     }
     this.scope.selectionLayers = []
     this.featuresMap.clear()
-    this.featureLoadState = 'idle'
+    this.queries.featureLoadState = 'idle'
     for (const resource of [
       'organisation',
       'project',
@@ -2290,7 +1907,7 @@ export class ResourceViewCtx {
       'task',
       'hub',
     ] as const)
-      this.state.resources[resource] = []
+      this.queries.rows[resource] = []
     this.postUserMutation()
   }
 
@@ -2387,9 +2004,7 @@ export class ResourceViewCtx {
     if (!this.user || revision !== this.account.revision) return
 
     const resolvedHubId = layers[0]?.hubId ?? hub.id ?? null
-    const currentHubLayerIds = new Set(
-      this.state.resources.layer.map(layer => layer.id),
-    )
+    const currentHubLayerIds = new Set(this.queries.rows.layer.map(layer => layer.id))
 
     // Replace only rows associated with this hub, including code-only bootstrap state.
     const retainedLayers = this.user.userLayers.filter(layer => {
@@ -2432,8 +2047,8 @@ export class ResourceViewCtx {
     this.interactions.dispose()
     this.panels.dispose()
     this.disposed = true
-    this.featureRefreshSerial++
-    this.invalidateResourceRefreshes()
+    this.queries.featureRefreshSerial++
+    this.queries.invalidateResourceRefreshes()
     this.resources.release()
     this.cacheCtx.releaseEntityStore(this.cache)
     this.isInitialised = false
@@ -2443,8 +2058,8 @@ export class ResourceViewCtx {
   clearAllCaches = (): void => {
     this.cacheCtx.clear()
     // Invalidate in-flight feature reads before removing their committed state.
-    this.featureRefreshSerial += 1
-    this.invalidateResourceRefreshes()
+    this.queries.featureRefreshSerial += 1
+    this.queries.invalidateResourceRefreshes()
     this.cache.organisation.clear()
     this.cache.project.clear()
     this.cache.layer.clear()
@@ -2525,14 +2140,6 @@ export class ResourceViewCtx {
         map.set(key, getValue ? getValue(item) : (item as unknown as V))
       }
     })
-  }
-
-  // Convenience methods using the generic syncMap
-  private syncCacheMap = <T extends { id: Id }>(
-    cache: Map<Id, T>,
-    newItems: T[],
-  ): void => {
-    for (const item of newItems) cache.set(item.id, { ...cache.get(item.id), ...item })
   }
 
   private syncCodeToIdMap = <T extends { id: Id; code: Code }>(

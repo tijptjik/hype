@@ -639,7 +639,7 @@ let settledFeatureRef = $state<string | null>(null)
 /********************
  *  SET NAVIGATION STATE
  ************/
-const featureList = $derived(adminCtx.view.state.resources.feature ?? [])
+const featureList = $derived(adminCtx.view.queries.rows.feature ?? [])
 
 const currentFeatureId = $derived(feature?.data?.id ?? null)
 const featureStepperRefs = $derived(
@@ -1253,13 +1253,13 @@ const featureImageProviderProps = $derived.by(() => {
   const featureData = feature?.data
   const organisation =
     selectedOrganisation ??
-    adminCtx.view.state.resources.organisation?.find(
+    adminCtx.view.queries.rows.organisation?.find(
       item => item.id === organisationIdValue,
     ) ??
     null
   const project =
     selectedProject ??
-    adminCtx.view.state.resources.project?.find(item => item.id === projectIdValue) ??
+    adminCtx.view.queries.rows.project?.find(item => item.id === projectIdValue) ??
     null
 
   return getFeatureImageProviderOptions({

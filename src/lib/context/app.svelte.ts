@@ -550,12 +550,12 @@ export class AppCtx extends ResourceViewCtx {
     const query = this.resources.featureQueries.map
     if (!this.scope.prisms.layer.length) {
       query.clear()
-      this.featureLoadState = 'complete'
+      this.queries.featureLoadState = 'complete'
       return []
     }
     // The map effect starts its first page once the camera provides a viewport.
     if (!this.featureViewport) return []
-    await this.loadFeatureQuery(
+    await this.queries.loadFeatureQuery(
       'map',
       this.filters.featureQueryInput({
         spatial: this.featureViewport,
@@ -570,23 +570,23 @@ export class AppCtx extends ResourceViewCtx {
     // Unauthenticated routes initialise without account data.
     if (!userId) {
       // Initialize empty data structures for unauthenticated users.
-      this.state.resources.organisation = []
-      this.state.resources.project = []
-      this.state.resources.layer = []
-      this.state.resources.feature = []
-      this.state.resources.task = []
-      this.state.resources.hub = []
+      this.queries.rows.organisation = []
+      this.queries.rows.project = []
+      this.queries.rows.layer = []
+      this.queries.rows.feature = []
+      this.queries.rows.task = []
+      this.queries.rows.hub = []
       this.isInitialised = true
       return
     }
     // Initialize stats cache
     this.initStatsCache()
     // Use parallel fetching for initial load
-    this.isLoadingResources = true
+    this.queries.isLoadingResources = true
     try {
       await this.initialFetch(true, loadFeatures)
     } finally {
-      this.isLoadingResources = false
+      this.queries.isLoadingResources = false
     }
     // Prevent init from running again, unless the user (re)authenticates
     // see reinitializeWithAuth()
@@ -606,11 +606,11 @@ export class AppCtx extends ResourceViewCtx {
 
     try {
       this.initStatsCache()
-      this.isLoadingResources = true
+      this.queries.isLoadingResources = true
       try {
         await this.initialFetch(false, loadFeatures, publicRoleScope)
       } finally {
-        this.isLoadingResources = false
+        this.queries.isLoadingResources = false
       }
     } catch (error) {
       console.error('[AppCtx] Public map bootstrap failed:', error)
@@ -638,7 +638,7 @@ export class AppCtx extends ResourceViewCtx {
     // contribution relation graph and is deferred until its panel needs it.
     const lightSteps = includeUserData
       ? ([
-          ['userFeatures', () => this.refreshUserFeatures(false)],
+          ['userFeatures', () => this.queries.refreshUserFeatures(false)],
           ['userLayers', () => this.hydrateCurrentUserLayers()],
         ] as const)
       : []
@@ -646,9 +646,9 @@ export class AppCtx extends ResourceViewCtx {
     // Independent compact lists and default identities start together; none waits for ancestors.
     const defaults = this.loadDefaultLayerResources(expectedRoleScope)
     const hierarchy = Promise.allSettled([
-      this.refreshOrganisations(false, expectedRoleScope),
-      this.refreshProjects(false, expectedRoleScope),
-      this.refreshLayers(false, false, expectedRoleScope),
+      this.queries.refreshOrganisations(false, expectedRoleScope),
+      this.queries.refreshProjects(false, expectedRoleScope),
+      this.queries.refreshLayers(false, false, expectedRoleScope),
     ])
     const results = await Promise.allSettled([
       defaults,
@@ -669,15 +669,19 @@ export class AppCtx extends ResourceViewCtx {
     const featureSteps = [
       ...(loadFeatures
         ? ([
-            ['features', () => this.refreshFeatures(false, expectedRoleScope)],
-            ['properties', () => this.refreshProperties(false, expectedRoleScope)],
+            ['features', () => this.queries.refreshFeatures(false, expectedRoleScope)],
+            [
+              'properties',
+              () => this.queries.refreshProperties(false, expectedRoleScope),
+            ],
           ] as const)
         : []),
       ...(includeUserData
         ? ([
             [
               'tasks',
-              () => (this.isAdmin() ? this.refreshTasks(false) : Promise.resolve()),
+              () =>
+                this.isAdmin() ? this.queries.refreshTasks(false) : Promise.resolve(),
             ],
           ] as const)
         : []),

@@ -57,7 +57,7 @@ function getHubMetricBreadcrumbs(
   const organisations =
     hubId == null
       ? []
-      : adminCtx.view.state.resources.organisation.filter(
+      : adminCtx.view.queries.rows.organisation.filter(
           organisation => organisation.hubId === hubId,
         )
   const organisationIds = new Set(
@@ -66,11 +66,11 @@ function getHubMetricBreadcrumbs(
       .filter((id): id is string => typeof id === 'string' && id.length > 0),
   )
   const projectIds = new Set(
-    adminCtx.view.state.resources.project
+    adminCtx.view.queries.rows.project
       .filter(project => organisationIds.has(project.organisationId))
       .map(project => project.id),
   )
-  const layerCount = adminCtx.view.state.resources.layer.filter(layer =>
+  const layerCount = adminCtx.view.queries.rows.layer.filter(layer =>
     organisationIds.has(layer.organisationId),
   ).length
 

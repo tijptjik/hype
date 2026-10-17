@@ -141,7 +141,7 @@ export class OmniCtx {
       if (!this.appCtx.isInitialised || this.appCtx.isAdmin()) return
       if (!this.state.isTrayOpen) return
       const timer = setTimeout(() => {
-        void this.appCtx.loadFeatureQuery('search', input).catch(console.error)
+        void this.appCtx.queries.loadFeatureQuery('search', input).catch(console.error)
         if (this.appCtx.user?.id) {
           void this.appCtx
             .loadFeatureQuery('searchWishlist', {
@@ -182,7 +182,9 @@ export class OmniCtx {
       const input = this.collectionQueryInput(descriptor)
 
       untrack(() => {
-        void this.appCtx.loadFeatureQuery('collection', input).catch(console.error)
+        void this.appCtx.queries
+          .loadFeatureQuery('collection', input)
+          .catch(console.error)
       })
     })
 
@@ -316,7 +318,7 @@ export class OmniCtx {
   async loadMoreSearch(): Promise<void> {
     const query = this.appCtx.resources.featureQueries.search
     if (this.searchFeatureLimit >= query.rows.length && query.hasMore) {
-      await this.appCtx.loadMoreFeatureQuery('search')
+      await this.appCtx.queries.loadMoreFeatureQuery('search')
     }
     this.searchFeatureLimit += 25
   }
@@ -818,7 +820,7 @@ export class OmniCtx {
   async loadMoreCollection(): Promise<void> {
     const descriptor = this.activeCollectionDescriptor
     if (!descriptor || !this.collectionHasMore) return
-    await this.appCtx.loadMoreFeatureQuery('collection')
+    await this.appCtx.queries.loadMoreFeatureQuery('collection')
     if (JSON.stringify(descriptor) !== JSON.stringify(this.activeCollectionDescriptor))
       return
     const collection = this.appCtx.selection.collection
@@ -868,7 +870,7 @@ export class OmniCtx {
     options: OmniSelectionOptions,
   ): void {
     const input = this.collectionQueryInput(descriptor)
-    const pending = this.appCtx.loadFeatureQuery('collection', input)
+    const pending = this.appCtx.queries.loadFeatureQuery('collection', input)
     const query = this.appCtx.resources.featureQueries.collection
     const initial =
       descriptor.kind === 'neighbourhood'
