@@ -290,7 +290,7 @@ type FeatureMembershipOverride = {
   updatedAt: number
 }
 
-export class AppCtx {
+export class ResourceViewCtx {
   // Remote queries own transport caching and refreshes.
   // Place Context
   divisionCtx!: DivisionCtx
@@ -399,7 +399,7 @@ export class AppCtx {
       hub: { text: '', properties: {} },
       property: { text: '', properties: {} },
     },
-    // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AppCtx.state.viewFilters)
+    // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., ResourceViewCtx.state.viewFilters)
     // Only affect the current route/view they are applied on, not the underlying data or map view
     // Resources -- The resources fetched from the database (post prism-filtering, pre filters-filtering)
     resources: {
@@ -1055,7 +1055,7 @@ export class AppCtx {
         this.isLoadingResources = false
       }
     } catch (error) {
-      console.error('[AppCtx] Public map bootstrap failed:', error)
+      console.error('[ResourceViewCtx] Public map bootstrap failed:', error)
     }
   }
 
@@ -1099,7 +1099,10 @@ export class AppCtx {
     ])
     for (const result of results)
       if (result.status === 'rejected')
-        console.error('[AppCtx] Initial resource loading failed', result.reason)
+        console.error(
+          '[ResourceViewCtx] Initial resource loading failed',
+          result.reason,
+        )
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     this.applyInitialLayerPrisms(expectedRoleScope)
@@ -1128,11 +1131,11 @@ export class AppCtx {
     for (const [label, load] of featureSteps) {
       try {
         void load().catch(error =>
-          console.error(`[AppCtx] ${label} loading failed`, error),
+          console.error(`[ResourceViewCtx] ${label} loading failed`, error),
         )
       } catch (error) {
         console.error(
-          `[AppCtx][initialFetch] Resource bootstrap failed (${label}):`,
+          `[ResourceViewCtx][initialFetch] Resource bootstrap failed (${label}):`,
           error,
         )
       }
@@ -4125,7 +4128,7 @@ export class AppCtx {
       !this.state.panels.profile.ctx.userData
     ) {
       void this.refreshUserProfile(false).catch(error => {
-        console.error('[AppCtx] Profile panel hydration failed:', error)
+        console.error('[ResourceViewCtx] Profile panel hydration failed:', error)
       })
     }
 
@@ -4601,7 +4604,7 @@ export class AppCtx {
    * Restores the shared query map to the default app-scoped resource loaders.
    *
    * @returns Nothing.
-   * @remarks Admin routes override `queryMap` on the shared `AppCtx`. When leaving
+   * @remarks Admin routes override `queryMap` on the shared `ResourceViewCtx`. When leaving
    * `/admin`, this must run before any app-side refresh so non-admin reads do not
    * keep using admin-scoped query functions.
    */
@@ -4614,7 +4617,7 @@ export class AppCtx {
    * between app and admin surfaces.
    *
    * @returns Nothing.
-   * @remarks App and admin share a single `AppCtx`, so resource entities loaded in one
+   * @remarks App and admin share a single `ResourceViewCtx`, so resource entities loaded in one
    * surface can otherwise leak into the other via in-memory maps or TanStack Query.
    */
   resetSharedResourceCachesForSurfaceSwitch = (): void => {
@@ -4952,30 +4955,4 @@ export class AppCtx {
         return this.cache.hub.get(this.getHubIdByCode(ref as Code) ?? (ref as Id))
     }
   }
-}
-export const APPCTX_KEY = Symbol('mapContext')
-let appCtxSingleton: AppCtx | null = null
-
-export const setAppCtx = (
-  divisionCtx: DivisionCtx,
-  user: SessionUser | null,
-  responsiveCtx: ResponsiveCtx,
-) => {
-  const context = new AppCtx(divisionCtx, user, responsiveCtx)
-  appCtxSingleton = context
-  // Don't initialize immediately - let the session watcher handle it after mount
-  return setContext(APPCTX_KEY, context)
-}
-
-export const getAppCtx = (): ReturnType<typeof setAppCtx> => {
-  const ctx = getContext<ReturnType<typeof setAppCtx> | undefined>(APPCTX_KEY)
-  if (ctx) return ctx
-
-  if (appCtxSingleton) {
-    return appCtxSingleton as ReturnType<typeof setAppCtx>
-  }
-
-  throw new Error(
-    'AppCtx context is missing. Ensure setAppCtx() is called in the root layout before using getAppCtx().',
-  )
 }
