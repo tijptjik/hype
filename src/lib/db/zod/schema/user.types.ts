@@ -160,3 +160,9 @@ export type UserFeatureWithHierarchy = UserFeature & {
 
 export type UserGetResponse = EntityResponse<User>
 export type UserGetState = UserGetResponse | null
+
+/** Read-only admin profile; private directory fields are omitted without permission. */
+export type AdminUserProfile = {
+  profile: UserProfile
+  details: z.infer<typeof import('./user').UserDirectoryProfileAPI> | null
+}

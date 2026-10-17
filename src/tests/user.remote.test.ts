@@ -25,6 +25,7 @@ const {
 }))
 
 const mockUpdateUser = vi.hoisted(() => vi.fn())
+const mockReadAdminUserProfile = vi.hoisted(() => vi.fn())
 
 vi.mock('$app/server', () => ({
   getRequestEvent: mockGetRequestEvent,
@@ -43,6 +44,10 @@ vi.mock('@sveltejs/kit', () => ({
 
 vi.mock('#lib/api/index.js', () => ({
   setupRequestHandler: mockSetupRequestHandler,
+}))
+
+vi.mock('#lib/api/services/adminUser.js', () => ({
+  readAdminUserProfile: mockReadAdminUserProfile,
 }))
 
 vi.mock('#lib/types.js', () => ({}))
@@ -345,6 +350,31 @@ describe('user.remote', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it('loads admin profiles using only server-resolved actor and hub context', async () => {
+    const hub = { id: 'active-hub' }
+    mockGetRequestEvent.mockReturnValue({
+      locals: { hub },
+      platform: { env: {} },
+      request: { method: 'POST' },
+      url: new URL('https://example.com/admin/users/KindRunner01'),
+    })
+    mockReadAdminUserProfile.mockResolvedValue({
+      profile: { username: 'kindrunner01' },
+      details: null,
+    })
+    const result = await remote.getAdminUserProfile({ username: 'KindRunner01' })
+    expect(mockReadAdminUserProfile).toHaveBeenCalledWith(
+      {},
+      {
+        username: 'KindRunner01',
+        actor: { id: 'u-1', isAnonymous: false, superAdmin: false },
+        userRoles: [],
+        hub,
+      },
+    )
+    expect(result).toEqual({ profile: { username: 'kindrunner01' }, details: null })
   })
 
   it('getUserForAttribution returns null for archived users', async () => {

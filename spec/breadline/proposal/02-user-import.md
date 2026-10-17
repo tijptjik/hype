@@ -211,3 +211,24 @@ The shared admin header and control bar provide server-side sorting by name, ema
 join date or update date, plus a tri-state archived filter. The initial view
 excludes archived users.
 No account identifiers, tokens or legacy import metadata are returned.
+
+### Admin user profiles
+
+`/admin/users/{username}` resolves canonical usernames case-insensitively. The
+user directory and admin attribution cards link to it. Profile reads reuse the
+user-search entitlement: authenticated hub administrators and organisation/project
+owners may open profiles; ordinary members and guests cannot.
+
+The `getAdminUserProfile` remote chooses fields on the server. Active-hub/core
+administrators and super administrators receive the directory's name, email,
+telephone, locale, verification, archive state and join date. Other eligible admins
+receive only username/display username, avatar, attribution and contribution
+summaries; they cannot read archived profiles. No provider accounts, tokens,
+preferences or experimental settings are returned. This is a read-only view and
+introduces no additional profile-editing or role-assignment permissions.
+
+Contributions reuse the existing hub-scoped public profile query and shared feature
+and photo sections, with links into admin feature pages. They cover published map
+features/photos and associated submission/report counters, not Breadline run history,
+which remains a later event-import stage. See `src/tests/admin-user-profile.test.ts`
+for field-projection, role, archive-filter and username-lookup checks.

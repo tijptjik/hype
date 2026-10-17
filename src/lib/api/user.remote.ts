@@ -2,6 +2,7 @@
 import { requested } from '$app/server'
 import { error } from '@sveltejs/kit'
 // ZOD
+import { z } from 'zod'
 import {
   AddUserFeatureToListSchema,
   GetUserFeaturesParamsSchema,
@@ -39,6 +40,7 @@ import {
   canUpdateUserProfile,
   toAuthMessage,
 } from '#lib/api/services/authz/index.js'
+import { readAdminUserProfile } from '#lib/api/services/adminUser.js'
 import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
 // DB
 import { hub, user } from '#lib/db/schema/index.js'
@@ -67,6 +69,7 @@ import type { UserHydrationResult, UserRaw } from '#lib/db/zod/schema/user.types
 // - searchUsers
 // - getUserForAttribution
 // - getUser
+// - getAdminUserProfile
 // - getUserLayers
 // - getUserFeatures
 //
@@ -204,6 +207,24 @@ export const getUserForAttribution = guardedBatchByIdQuery<
     return toEntityResponseShape(row, profile)
   }
 })
+
+/**
+ * Loads a read-only admin profile with server-enforced field visibility.
+ * @param params Username to look up, matched case-insensitively.
+ * @returns Public contributions and authorized profile details, or null.
+ */
+export const getAdminUserProfile = guardedQuery(
+  z.object({ username: z.string().trim().min(1).max(32) }),
+  async (params, ctx) => {
+    if (!ctx.user) error(401, 'AUTH_REQUIRED')
+    return readAdminUserProfile(ctx.db, {
+      username: params.username,
+      actor: ctx.user,
+      userRoles: ctx.userRoles,
+      hub: ctx.event.locals.hub,
+    })
+  },
+)
 
 /**
  * Returns a role-aware user record for guarded remote callers.

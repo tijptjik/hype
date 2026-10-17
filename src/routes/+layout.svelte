@@ -72,7 +72,10 @@ let upgradeReturnTo = $state('/')
  * The user directory also has no feature collection to render.
  */
 function shouldLoadInitialFeatures(): boolean {
-  return page.url.pathname !== '/screensaver' && page.url.pathname !== '/admin/users'
+  return (
+    page.url.pathname !== '/screensaver' &&
+    !/^\/admin\/users(?:\/|$)/.test(page.url.pathname)
+  )
 }
 
 /**

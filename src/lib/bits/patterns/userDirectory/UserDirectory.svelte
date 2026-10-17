@@ -100,9 +100,15 @@ let {
                 {user.name || user.displayUsername || user.username || 'Unnamed user'}
               </p>
               <p class="truncate text-sm text-base-content/65">
-                {user.displayUsername || user.username
-                  ? `@${user.displayUsername || user.username}`
-                  : 'No username'}
+                {#if user.username}
+                  <a
+                    class="rounded-sm underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-primary"
+                    href={`/admin/users/${encodeURIComponent(user.username)}`}
+                    >@{user.displayUsername || user.username}</a
+                  >
+                {:else}
+                  No username
+                {/if}
               </p>
             </div>
             <p

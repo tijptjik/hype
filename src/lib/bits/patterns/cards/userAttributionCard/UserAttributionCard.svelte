@@ -109,6 +109,13 @@ const getDisplayName = (user: UserHydrationResult): string => {
     {@const displayName = getDisplayName(attribution.user)}
     <div class="bits-feature-attribution__body">
       <span class="bits-feature-attribution__title">{displayName}</span>
+      {#if appCtx.isAdmin() && attribution.user?.username}
+        <a
+          class="text-xs underline-offset-4 hover:underline"
+          href={`/admin/users/${encodeURIComponent(attribution.user.username)}`}
+          >@{attribution.user.displayUsername || attribution.user.username}</a
+        >
+      {/if}
       <span class="bits-feature-attribution__subtitle" style="line-height:1.15">
         <RelativeDate date={attribution.date} friendly={attribution.friendlyDate} />
       </span>
