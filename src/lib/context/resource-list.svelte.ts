@@ -26,7 +26,8 @@ export class ResourceList {
   get scope(): string | undefined {
     return this.input?.meta.scope
   }
-  private input: ResourcePageInput | undefined
+  // Scope-gated consumers must react when their first traversal becomes active.
+  private input: ResourcePageInput | undefined = $state.raw()
   private history = new Map<
     string,
     { pages: RemoteQuery<ResourcePage>[]; fetchedAt: number }
