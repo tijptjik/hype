@@ -61,6 +61,14 @@ must stay out of Git and public issue bodies.
 }
 ```
 
+A local application was rehearsed against a database copy and then performed in one
+SQLite transaction, with a fresh backup and destination-identity comparison under a
+write lock. This operator-run local application is not a registered general apply
+stage and does not enable remote writes. Replanning after import recognizes users
+created from the same durable per-target seed, including unverified and missing-email
+legacy identities, without marking their email verified. Foreign-key/integrity checks
+and a zero-insert, zero-exception replan verified the local application (Refs #194).
+
 Rules are normalized and validated before use. Overlapping rules, chains, cycles,
 and exclusions of merge members are rejected. Merges preserve every source user
 and volunteer ID in `mapping`, with one canonical destination for subsequent run,
@@ -114,7 +122,7 @@ Artifacts under `.local/breadline/users/<target>/` are ignored by Git and privat
 - `<run>/plan.json`: proposed inserts, source user/volunteer crosswalk, warnings,
   unresolved cases, counts, source checkpoint and target identity fingerprint.
 - `<run>/target-identities.json`: destination matching evidence; no tokens/sessions.
-- `<run>/review.sql`: proposed user/account INSERTs for review only.
+- `<run>/review.sql`: proposed user/account INSERTs and guarded blank-phone UPDATEs for review only.
 
 The command deliberately does not accept `--apply`. Review SQL must not be executed
 blindly: the apply stage still needs a fresh identity check, backup, atomic batches,
@@ -159,7 +167,7 @@ Phones are parsed with the pinned full metadata package. Hong Kong national numb
 not guessed; the original stays in the source backup and the plan records a review
 warning. Structurally possible numbers are preserved even when the library does not
 recognize their assigned range, with a separate offline warning. Neither validation
-mode proves reachability or ownership; suspected placeholders need human review. Existing Hype profiles remain unchanged.
+mode proves reachability or ownership; suspected placeholders need human review. Existing nonblank Hype profile fields remain unchanged.
 
 Same normalized email groups become one Hype user. For new users, profile fields come
 from the most recently updated Google row, otherwise the latest source row. Creation
@@ -167,8 +175,12 @@ and modification dates span the entire group. Every contributing source user and
 volunteer remains in the offline crosswalk, preserving the ability to attach all runs.
 
 Destination matches consider both email and Google subject. They must identify one
-Hype user. Existing profiles, verification state, names, usernames, phone numbers and
-preferences are not overwritten. New Google accounts may be added to an existing
+Hype user. Existing verification state, names, usernames, nonblank phone numbers and
+preferences are not overwritten. Blank destination phones are proposed in
+`phoneUpdates` only when every supplied source phone normalizes successfully to
+the same E.164 number. Conflicting or invalid values require review. Destination
+snapshots without a telephone field are skipped, and generated SQL guards against
+overwriting a phone filled after planning. New Google accounts may be added to an existing
 verified-email match. Matching an already attached Google subject also preserves its
 current target user even when the legacy email is stale.
 

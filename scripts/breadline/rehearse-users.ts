@@ -59,6 +59,10 @@ async function main(): Promise<void> {
         insert('account', { ...row, createdAt: 0, updatedAt: 0 })
       for (const row of plan.users) insert('user', { ...row })
       for (const row of plan.accounts) insert('account', { ...row })
+      for (const update of plan.phoneUpdates ?? [])
+        db.query(
+          `UPDATE user SET telephone = ? WHERE id = ? AND (telephone IS NULL OR trim(telephone) = '')`,
+        ).run(update.telephone, update.id)
     })()
     const foreignKeys = db.query('PRAGMA foreign_key_check').all()
     const integrity = db.query('PRAGMA integrity_check').get() as {
@@ -82,6 +86,7 @@ async function main(): Promise<void> {
       schema: 'current Drizzle user/account',
       importedUsers: plan.users.length,
       importedAccounts: plan.accounts.length,
+      phoneUpdates: plan.phoneUpdates?.length ?? 0,
       foreignKeyViolations: 0,
       integrity: 'ok',
       unresolvedSourceRows: plan.counts.exceptions,

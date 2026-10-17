@@ -31,6 +31,7 @@ export interface LegacyUser {
   last_updated_at: string | null
 }
 export interface TargetUser {
+  telephone?: string | null
   id: string
   email: string | null
   username: string | null
@@ -74,6 +75,7 @@ export interface ImportedAccount {
 export interface UserImportPlan {
   users: ImportedUser[]
   accounts: ImportedAccount[]
+  phoneUpdates: Array<{ id: string; telephone: string }>
   mapping: Array<{
     sourceUserId: number
     sourceVolunteerId: number | null
@@ -164,7 +166,7 @@ export function normalizeTelephone(value: string | null): string | null {
  * @param seed Durable per-target offline seed; never regenerate it between rehearsals.
  * @param decisions Optional reviewed cross-email merges and exclusions; retained in the private manifest.
  * @returns Proposed inserts, crosswalk and explicit unresolved groups; performs no writes.
- * @remarks Existing profiles are never overwritten. Unknown or old Facebook IDs never
+ * @remarks Existing nonblank profile fields are never overwritten; unambiguous source phones fill blank phones. Unknown or old Facebook IDs never
  * become Hype provider accounts. No email is marked verified without verification evidence.
  */
 export function planUsers(
@@ -189,6 +191,7 @@ export function planUsers(
   const plan: UserImportPlan = {
     users: [],
     accounts: [],
+    phoneUpdates: [],
     mapping: [],
     excluded: [],
     targetChanges: [],
@@ -325,7 +328,11 @@ export function planUsers(
       reject('conflicting_target_identities')
       continue
     }
+    const seededTarget = targetUsers.get(assignedId(seed, `user:${key}`))
     const candidates = new Set([
+      ...(seededTarget && normalizedEmail(seededTarget.email) === email
+        ? [seededTarget.id]
+        : []),
       ...emailMatches.map(user => user.id),
       ...accountMatches
         .filter(account => !allowedSourceTargets.has(account.userId))
@@ -353,8 +360,11 @@ export function planUsers(
       reject('target_archived_or_anonymous')
       continue
     }
+    // The durable per-target seed identifies our prior imports without asserting email ownership.
+    const previouslyImported = existing?.id === assignedId(seed, `user:${key}`)
     if (
       existing &&
+      !previouslyImported &&
       !existing.emailVerified &&
       !accountMatches.some(account => account.userId === existing.id)
     ) {
@@ -449,7 +459,24 @@ export function planUsers(
       })
       usedIds.add(id)
       usedUsernames.add(username)
-    } else plan.counts.matchedGroups++
+    } else {
+      plan.counts.matchedGroups++
+      // Fill only known blank destination phones when all supplied source numbers agree.
+      if (existing.telephone !== undefined && !existing.telephone?.trim()) {
+        const supplied = rows
+          .map(row => row.telephone)
+          .filter((phone): phone is string => Boolean(phone?.trim()))
+        const phones = supplied.map(normalizeTelephone)
+        const unique = new Set(phones)
+        if (unique.size === 1 && phones[0])
+          plan.phoneUpdates.push({ id, telephone: phones[0] })
+        else if (supplied.length)
+          plan.warnings.push({
+            sourceUserIds,
+            reason: 'phone_backfill_requires_review',
+          })
+      }
+    }
     if (rows.length > 1)
       plan.warnings.push({
         sourceUserIds,
@@ -510,7 +537,7 @@ function literal(value: string | number | null): string {
 /**
  * Render proposed inserts for review, requiring fresh target validation before execution.
  * @param plan User mapping plan.
- * @returns SQL containing only normal user/account inserts, without migration metadata.
+ * @returns User/account inserts and guarded blank-phone updates, without migration metadata.
  * @remarks Never uses INSERT OR IGNORE/REPLACE: conflicts must not silently drop history.
  */
 export function userPlanSql(plan: UserImportPlan): string {
@@ -531,6 +558,11 @@ export function userPlanSql(plan: UserImportPlan): string {
         `INSERT INTO "${table}" (${entries.map(([key]) => `"${key}"`).join(', ')}) VALUES (${entries.map(([, value]) => literal(value)).join(', ')});`,
       )
     }
+  }
+  for (const update of plan.phoneUpdates) {
+    statements.push(
+      `UPDATE "user" SET "telephone" = ${literal(update.telephone)} WHERE "id" = ${literal(update.id)} AND ("telephone" IS NULL OR trim("telephone") = '');`,
+    )
   }
   return `${statements.join('\n')}\n`
 }

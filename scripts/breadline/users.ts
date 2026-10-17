@@ -29,7 +29,7 @@ interface D1Config {
  */
 async function readTarget(target: ImportTarget): Promise<TargetIdentitySnapshot> {
   const command =
-    'SELECT id,email,username,emailVerified,isArchived,isAnonymous FROM user; SELECT id,userId,providerId,accountId FROM account;'
+    'SELECT id,email,username,emailVerified,isArchived,isAnonymous,telephone FROM user; SELECT id,userId,providerId,accountId FROM account;'
   const child = Bun.spawn(
     [
       'bun',
@@ -123,7 +123,7 @@ async function main(): Promise<void> {
       destination = db.transaction(() => ({
         users: db
           .query(
-            'SELECT id,email,username,emailVerified,isArchived,isAnonymous FROM user',
+            'SELECT id,email,username,emailVerified,isArchived,isAnonymous,telephone FROM user',
           )
           .all(),
         accounts: db.query('SELECT id,userId,providerId,accountId FROM account').all(),
@@ -191,7 +191,11 @@ async function main(): Promise<void> {
   )
   console.log(
     JSON.stringify(
-      { ...plan.counts, pendingTargetChanges: plan.targetChanges.length },
+      {
+        ...plan.counts,
+        phoneUpdates: plan.phoneUpdates.length,
+        pendingTargetChanges: plan.targetChanges.length,
+      },
       null,
       2,
     ),

@@ -182,3 +182,44 @@ describe('reviewed user decisions', () => {
     )
   })
 })
+
+describe('matched profile phone backfill', () => {
+  it('fills a blank phone from agreeing aliases, preserves nonblank values and replans without updates', () => {
+    const destination = target('primary@example.com')
+    destination.users[0].telephone = null
+    const rows = [
+      { ...source(1, 'primary@example.com'), telephone: '9123 4567' },
+      { ...source(2, 'old@example.com'), telephone: '+85291234567' },
+    ]
+    const plan = planUsers(rows, destination, 'seed', decisions)
+    expect(plan.phoneUpdates).toEqual([
+      { id: 'primary@example.com', telephone: '+85291234567' },
+    ])
+    expect(userPlanSql(plan)).toContain(
+      'AND ("telephone" IS NULL OR trim("telephone") = \'\')',
+    )
+    for (const phone of ['+85291234567', '+85298765432']) {
+      destination.users[0].telephone = phone
+      expect(planUsers(rows, destination, 'seed', decisions).phoneUpdates).toEqual([])
+    }
+  })
+  it('requires review for conflicts or invalid phones and skips snapshots with unknown phone state', () => {
+    const rows = [
+      { ...source(1, 'primary@example.com'), telephone: '+85291234567' },
+      { ...source(2, 'old@example.com'), telephone: '+85298765432' },
+    ]
+    const destination = target('primary@example.com')
+    expect(planUsers(rows, destination, 'seed', decisions).phoneUpdates).toEqual([])
+    destination.users[0].telephone = ''
+    for (const phone of ['+85298765432', 'invalid']) {
+      rows[1].telephone = phone
+      const plan = planUsers(rows, destination, 'seed', decisions)
+      expect(plan.phoneUpdates).toEqual([])
+      expect(
+        plan.warnings.some(
+          warning => warning.reason === 'phone_backfill_requires_review',
+        ),
+      ).toBe(true)
+    }
+  })
+})

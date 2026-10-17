@@ -62,6 +62,27 @@ describe('Breadline user mapping', () => {
       plan.users[0].id,
     )
   })
+  it('recognizes prior unverified imports by the durable target seed without verifying their emails', () => {
+    for (const email of ['legacy@example.com', null]) {
+      const legacy = row({ email, uid: 'legacy-facebook-id' })
+      const first = planUsers([legacy], empty, 'seed')
+      const destination: TargetIdentitySnapshot = {
+        users: first.users,
+        accounts: first.accounts,
+      }
+      const next = planUsers([legacy], destination, 'seed')
+      expect(next.users).toEqual([])
+      expect(next.accounts).toEqual([])
+      expect(next.exceptions).toEqual([])
+      expect(next.mapping[0].targetUserId).toBe(first.users[0].id)
+      expect(destination.users[0].emailVerified).toBe(0)
+      if (email) {
+        expect(
+          planUsers([legacy], destination, 'different-seed').exceptions[0].reason,
+        ).toBe('target_email_ownership_unverified')
+      }
+    }
+  })
   it('normalizes phones and retains invalid numbers only as offline warnings', () => {
     for (const phone of [
       '9123 4567',
