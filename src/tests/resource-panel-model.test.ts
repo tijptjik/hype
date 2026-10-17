@@ -12,6 +12,9 @@ const route = vi.hoisted(() => ({
 }))
 vi.mock('$app/state', () => ({ page: route }))
 
+const notifications = vi.hoisted(() => ({ error: vi.fn() }))
+vi.mock('svelte-sonner', () => ({ toast: notifications }))
+
 const navigation = vi.hoisted(() => ({ navigate: vi.fn() }))
 vi.mock('#lib/navigation/index.js', () => ({
   navigateOnAdminById: navigation.navigate,
@@ -35,7 +38,10 @@ afterEach(() => {
  * @returns The adapter and observable navigation/prism actions.
  */
 function setup(selected: string[] = [], active = 'b') {
-  const resources = ['a', 'b', 'c'].map(id => ({ id, name: `Organisation ${id}` }))
+  const resources = ['a', 'b', 'c'].map(id => ({
+    id,
+    name: `Organisation ${id}`,
+  }))
   const toggleOrganisation = vi.fn()
   const list = {
     rows: resources,
@@ -80,7 +86,11 @@ function setup(selected: string[] = [], active = 'b') {
       model = value
     },
   })
-  return { rows: model.sections[0].rows, sections: model.sections, toggleOrganisation }
+  return {
+    rows: model.sections[0].rows,
+    sections: model.sections,
+    toggleOrganisation,
+  }
 }
 
 it('keeps navigation-only active rows in page order and their dots unselected', async () => {
@@ -101,7 +111,11 @@ it('keeps navigation-only active rows in page order and their dots unselected', 
 it('promotes only prism selections and keeps the direct prism action separate', async () => {
   const { rows, toggleOrganisation } = setup(['c'])
   expect(rows.map(row => row.id)).toEqual(['c', 'a', 'b'])
-  expect(rows[0]).toMatchObject({ selected: true, enabled: true, active: false })
+  expect(rows[0]).toMatchObject({
+    selected: true,
+    enabled: true,
+    active: false,
+  })
   await rows[1].onToggle()
   expect(toggleOrganisation).toHaveBeenCalledWith('a')
   expect(navigation.navigate).not.toHaveBeenCalled()
@@ -129,3 +143,21 @@ it('recognises only the matching resource index for compact section toggling', (
     expect(sections.map(section => section.isIndexActive)).toEqual(expected)
   }
 })
+
+it.each(['onPrimary', 'onToggle'] as const)(
+  'handles a rejected %s action without replaying the selection',
+  async action => {
+    const { rows, toggleOrganisation } = setup()
+    const failure = { status: 500, body: { message: 'Internal Error' } }
+    toggleOrganisation.mockRejectedValueOnce(failure)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await expect(rows.find(row => row.id === 'b')![action]()).resolves.toBeUndefined()
+      expect(toggleOrganisation).toHaveBeenCalledExactlyOnceWith('b')
+      expect(notifications.error).toHaveBeenCalledOnce()
+      expect(log).toHaveBeenCalledWith('[Resource panel] Action failed:', failure)
+    } finally {
+      log.mockRestore()
+    }
+  },
+)

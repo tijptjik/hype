@@ -1252,6 +1252,7 @@
   "import_coming_soon": "即将推出",
   "import_data_events": "活动",
   "resource_loading": "正在加载资源",
+  "resource_action_failed": "无法更新选择，请重试。",
   "resource_retry": "重新加载",
   "resource_no_results": "没有结果",
   "resource_load_more": "加载更多",

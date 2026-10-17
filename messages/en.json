@@ -1252,6 +1252,7 @@
   "import_coming_soon": "Coming Soon",
   "import_data_events": "Events",
   "resource_loading": "Loading resources",
+  "resource_action_failed": "Unable to update the selection. Please try again.",
   "resource_retry": "Retry loading",
   "resource_no_results": "No results",
   "resource_load_more": "Load more",

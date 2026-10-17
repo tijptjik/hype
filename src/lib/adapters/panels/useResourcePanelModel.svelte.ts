@@ -1,8 +1,8 @@
-// CONTEXT
-import { getSurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 // SVELTE
 import { onMount } from 'svelte'
 import { page } from '$app/state'
+// UI
+import { toast } from 'svelte-sonner'
 // LIB
 import { ADMIN_PATH } from '#lib/constants.js'
 // I18N
@@ -10,6 +10,7 @@ import { getI18n, m } from '#lib/i18n.js'
 // LABELS
 import { getResourcePanelShortName } from './resourcePanelLabels'
 // CONTEXT
+import { getSurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 // NAVIGATION
 import {
@@ -56,6 +57,22 @@ export function useResourcePanelModel(
   })
   const types = ['organisation', 'project', 'layer'] as const
   const lists = types.map(type => usePanelResources(app, type, () => search[type]))
+
+  /**
+   * Handles rejected UI actions while preserving the query's error and retry state.
+   * @param action - Selection, refresh or navigation requested by a panel control.
+   * @returns Completion after success or visible failure feedback.
+   * @remarks Selection may already have changed before a dependent query fails;
+   * do not replay the toggle or roll back newer user selections.
+   */
+  async function runAction(action: () => void | Promise<void>): Promise<void> {
+    try {
+      await action()
+    } catch (error) {
+      console.error('[Resource panel] Action failed:', error)
+      toast.error(m.resource_action_failed())
+    }
+  }
 
   /** Keeps feature-card navigation consistent after disabling or isolating its layer. */
   function closeExcludedFeature(): void {
@@ -184,14 +201,15 @@ export function useResourcePanelModel(
                 ? m.panel__deactivate_layer({ name })
                 : m.panel__activate_layer({ name }),
           toggleLabel: pinned ? m.panel__unpin({ name }) : m.panel__pin({ name }),
-          onPrimary: () => primary(type, resource.id),
-          onToggle: () => toggle(type, resource.id),
+          onPrimary: () => runAction(() => primary(type, resource.id)),
+          onToggle: () => runAction(() => toggle(type, resource.id)),
           ...(mode === 'prisms' && type === 'layer'
             ? {
-                onIsolate: async () => {
-                  await app.scope.isolateLayer(resource.id)
-                  closeExcludedFeature()
-                },
+                onIsolate: () =>
+                  runAction(async () => {
+                    await app.scope.isolateLayer(resource.id)
+                    closeExcludedFeature()
+                  }),
               }
             : {}),
         }
@@ -241,9 +259,12 @@ export function useResourcePanelModel(
     },
     onReset: () => {
       if (!app.scope.prisms[type].length) app.panels.closePanel(panelType)
-      else if (type === 'organisation') app.scope.resetOrganisations()
-      else if (type === 'project') app.scope.resetProjects()
-      else app.scope.resetLayers()
+      else
+        void runAction(() => {
+          if (type === 'organisation') return app.scope.resetOrganisations()
+          if (type === 'project') return app.scope.resetProjects()
+          return app.scope.resetLayers()
+        })
     },
     onNext: () => lists[index].list.next(),
     onRetry: lists[index].retry,
