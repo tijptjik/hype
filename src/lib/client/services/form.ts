@@ -750,7 +750,7 @@ export function createResourceFormConfig<Input>({
     data,
     onsubmitupdates: async ctx => {
       const updates = (await submitUpdates(ctx)) ?? []
-      const mutation = adminCtx.appCtx.cacheCtx.beginMutation(
+      const mutation = adminCtx.view.resources.beginMutation(
         resourceType,
         ctx.data as import('#lib/context/featureQuery.types.js').ResourceOptimisticInput,
       )
@@ -768,7 +768,7 @@ export function createResourceFormConfig<Input>({
       refreshResource: async ctx => {
         await refreshResource(ctx)
 
-        if (ctx.success) await adminCtx.appCtx.cacheCtx.reconcile(resourceType)
+        if (ctx.success) await adminCtx.view.resources.reconcile(resourceType)
       },
     },
   }

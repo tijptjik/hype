@@ -11,8 +11,14 @@ vi.mock('#lib/api/resources.remote.js', () => ({
   getResourcePage: withRemoteMeta(vi.fn(), 'query'),
   getPinnedResource: withRemoteMeta(vi.fn(), 'query'),
 }))
+import { mapResourceProviders as resourceProviders } from '#lib/resources/mapProviders.js'
+import { ResourceClient } from '#lib/resources/resourceClient.svelte.js'
+import { lazyRegistry } from '#lib/resources/lazyRegistry.js'
 import { CacheCtx } from '#lib/context/cache.svelte.js'
-import { FeatureQuery } from '#lib/context/feature-query.svelte.js'
+import {
+  FeatureQuery,
+  FeatureQueryRetention,
+} from '#lib/context/feature-query.svelte.js'
 import { createResourceFormConfig } from '#lib/client/services/form.js'
 
 function page(data: PanelResource[]) {
@@ -37,7 +43,12 @@ const row = (id: string) => ({
 
 describe('native collection optimistic projections', () => {
   it('projects images into inactive index pages retained for back navigation', async () => {
-    const cache = new CacheCtx()
+    const cache = new CacheCtx(resourceProviders)
+    const resources = new ResourceClient(cache, () => 'test')
+    const indexLists = lazyRegistry<
+      'organisation' | 'project' | 'layer',
+      import('#lib/context/resource-list.svelte.js').ResourceList
+    >(type => cache.createList(type))
     const first = page([
       {
         ...row('org'),
@@ -53,8 +64,8 @@ describe('native collection optimistic projections', () => {
       type: 'organisation' as const,
       meta: { isAdminRequest: true, scope: 'admin' },
     }
-    await cache.indexLists.organisation.load(input)
-    await cache.indexLists.organisation.load({ ...input, q: 'other' })
+    await indexLists.organisation.load(input)
+    await indexLists.organisation.load({ ...input, q: 'other' })
     cache.optimisticUpdates('image', {
       meta: { id: 'image' },
       data: { presentationMode: 'cover' },
@@ -68,7 +79,12 @@ describe('native collection optimistic projections', () => {
   it.each([true, false])(
     'settles retained form edits alongside native updates (success=%s)',
     async success => {
-      const cache = new CacheCtx()
+      const cache = new CacheCtx(resourceProviders)
+      const resources = new ResourceClient(cache, () => 'test')
+      const indexLists = lazyRegistry<
+        'organisation' | 'project' | 'layer',
+        import('#lib/context/resource-list.svelte.js').ResourceList
+      >(type => cache.createList(type))
       cache.entities.organisation.set('org', { ...row('org'), code: 'before' } as never)
       const config = createResourceFormConfig({
         formEl: undefined,
@@ -76,7 +92,7 @@ describe('native collection optimistic projections', () => {
         schema: {} as never,
         data: {},
         submitUpdates: async () => [],
-        adminCtx: { appCtx: { cacheCtx: cache } } as never,
+        adminCtx: { view: { resources } } as never,
         headerCtrl: {} as never,
         resourceType: 'organisation' as never,
         getEntity: () => null,
@@ -93,7 +109,12 @@ describe('native collection optimistic projections', () => {
     },
   )
   it('updates shared image metadata in index, panel, feature, pin and detail queries', async () => {
-    const cache = new CacheCtx()
+    const cache = new CacheCtx(resourceProviders)
+    const resources = new ResourceClient(cache, () => 'test')
+    const indexLists = lazyRegistry<
+      'organisation' | 'project' | 'layer',
+      import('#lib/context/resource-list.svelte.js').ResourceList
+    >(type => cache.createList(type))
     const image = { id: 'image', presentationMode: 'contain', version: 1 }
     const panel = page([{ ...row('org'), image } as PanelResource])
     const index = page([
@@ -102,8 +123,8 @@ describe('native collection optimistic projections', () => {
     const feature = page([
       { ...row('feature'), images: [{ image }] } as unknown as PanelResource,
     ])
-    cache.lists.organisation.pages = [panel.query]
-    cache.indexLists.organisation.pages = [index.query]
+    resources.lists.organisation.pages = [panel.query]
+    indexLists.organisation.pages = [index.query]
     cache.featureCollection =
       feature.query as unknown as import('#lib/context/featureQuery.types.js').FeatureCollectionHandle
     cache.entities.organisation.set('org', { ...row('org'), image: { image } } as never)
@@ -163,9 +184,14 @@ describe('native collection optimistic projections', () => {
     expect(image.presentationMode).toBe('contain')
   })
   it('patches retained pages past page six without mutating server snapshots', () => {
-    const cache = new CacheCtx()
+    const cache = new CacheCtx(resourceProviders)
+    const resources = new ResourceClient(cache, () => 'test')
+    const indexLists = lazyRegistry<
+      'organisation' | 'project' | 'layer',
+      import('#lib/context/resource-list.svelte.js').ResourceList
+    >(type => cache.createList(type))
     const pages = Array.from({ length: 9 }, (_, i) => page([row(String(i))]))
-    cache.lists.organisation.pages = pages.map(page => page.query)
+    resources.lists.organisation.pages = pages.map(page => page.query)
     cache.optimisticUpdates('organisation', {
       meta: { id: '8' },
       data: { code: 'renamed' },
@@ -178,7 +204,12 @@ describe('native collection optimistic projections', () => {
     expect(pages[4].transforms).toHaveLength(0)
   })
   it('updates a visible descendant breadcrumb from its directly joined identity', () => {
-    const cache = new CacheCtx()
+    const cache = new CacheCtx(resourceProviders)
+    const resources = new ResourceClient(cache, () => 'test')
+    const indexLists = lazyRegistry<
+      'organisation' | 'project' | 'layer',
+      import('#lib/context/resource-list.svelte.js').ResourceList
+    >(type => cache.createList(type))
     const descendant = page([
       {
         ...row('p'),
@@ -186,7 +217,7 @@ describe('native collection optimistic projections', () => {
         ancestors: { organisation: { id: 'o', code: 'old' } },
       } as PanelResource,
     ])
-    cache.lists.project.pages = [descendant.query]
+    resources.lists.project.pages = [descendant.query]
     cache.optimisticUpdates('organisation', {
       meta: { id: 'o' },
       data: { code: 'new' },
@@ -203,7 +234,12 @@ describe('native collection optimistic projections', () => {
     })
   })
   it('updates the active native feature collection during form submission', () => {
-    const cache = new CacheCtx()
+    const cache = new CacheCtx(resourceProviders)
+    const resources = new ResourceClient(cache, () => 'test')
+    const indexLists = lazyRegistry<
+      'organisation' | 'project' | 'layer',
+      import('#lib/context/resource-list.svelte.js').ResourceList
+    >(type => cache.createList(type))
     const collection = page([row('feature')])
     cache.featureCollection =
       collection.query as unknown as import('#lib/context/featureQuery.types.js').FeatureCollectionHandle
@@ -216,7 +252,12 @@ describe('native collection optimistic projections', () => {
   })
 
   it('hides accumulated map snapshots during a native override and restores them on rollback', async () => {
-    const cache = new CacheCtx()
+    const cache = new CacheCtx(resourceProviders)
+    const resources = new ResourceClient(cache, () => 'test')
+    const indexLists = lazyRegistry<
+      'organisation' | 'project' | 'layer',
+      import('#lib/context/resource-list.svelte.js').ResourceList
+    >(type => cache.createList(type))
     const original: FeatureQueryPage = {
       data: [row('feature') as unknown as FeatureFromCollection],
       totalCount: null,
@@ -233,30 +274,41 @@ describe('native collection optimistic projections', () => {
         return { query, transform }
       }),
     }) as unknown as RemoteQuery<FeatureQueryPage>
-    cache.featureQueries.map = new FeatureQuery(() => query, undefined, undefined, true)
-    await cache.featureQueries.map.load({
+    cache.installProviders({
+      ...resourceProviders,
+      createFeatureMechanics: () => ({
+        retention: new FeatureQueryRetention(),
+        create: () => new FeatureQuery(() => query, undefined, undefined, true),
+      }),
+    })
+    await resources.featureQueries.map.load({
       meta: { isAdminRequest: false, scope: 'public' },
     })
-    expect(cache.featureQueries.map.rows).toHaveLength(1)
+    expect(resources.featureQueries.map.rows).toHaveLength(1)
 
     cache.optimisticUpdates('feature', {
       meta: { id: 'feature' },
       data: { isPublished: false },
     })
     Object.assign(query, { current: transforms[0](original) })
-    expect(cache.featureQueries.map.rows).toEqual([])
+    expect(resources.featureQueries.map.rows).toEqual([])
 
     // Native rollback restores visibility without mutating the accumulated server snapshot.
     Object.assign(query, { current: original })
-    expect(cache.featureQueries.map.rows.map(feature => feature.id)).toEqual([
+    expect(resources.featureQueries.map.rows.map(feature => feature.id)).toEqual([
       'feature',
     ])
   })
 
   it('does not add a pending organisation to descendant collections', () => {
-    const cache = new CacheCtx()
+    const cache = new CacheCtx(resourceProviders)
+    const resources = new ResourceClient(cache, () => 'test')
+    const indexLists = lazyRegistry<
+      'organisation' | 'project' | 'layer',
+      import('#lib/context/resource-list.svelte.js').ResourceList
+    >(type => cache.createList(type))
     const descendant = page([row('p')])
-    cache.lists.project.pages = [descendant.query]
+    resources.lists.project.pages = [descendant.query]
     cache.optimisticUpdates('organisation', {
       meta: { mode: 'create' },
       data: { code: 'new' },
@@ -267,7 +319,12 @@ describe('native collection optimistic projections', () => {
 
 describe('profile-specific detail retention', () => {
   it('retains a compatible snapshot on transient refresh failure and discards it on denial', async () => {
-    const cache = new CacheCtx()
+    const cache = new CacheCtx(resourceProviders)
+    const resources = new ResourceClient(cache, () => 'test')
+    const indexLists = lazyRegistry<
+      'organisation' | 'project' | 'layer',
+      import('#lib/context/resource-list.svelte.js').ResourceList
+    >(type => cache.createList(type))
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000)
     const data = { id: 'detail', name: 'retained' }
     const handle = Object.assign(Promise.resolve({ data }), {
