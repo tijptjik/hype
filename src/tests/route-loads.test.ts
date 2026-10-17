@@ -28,7 +28,7 @@ describe('route loads', () => {
       },
     }))
 
-    const route = await import('../routes/(app)/users/[username]/+page')
+    const route = await import('../routes/(public)/(app)/users/[username]/+page')
 
     await expect(
       route.load({
