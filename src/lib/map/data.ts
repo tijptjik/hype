@@ -6,7 +6,7 @@ import { filterDivisions, getDivisionName } from '#lib/client/services/geospatia
 /// ENUMS
 import { OmniCollection } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { SearchResult } from '#lib/context/omni.types.js'
 import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type { FeatureExtended } from '#lib/db/zod/schema/feature.types.js'
@@ -26,7 +26,7 @@ import type { FeatureExtended } from '#lib/db/zod/schema/feature.types.js'
  * @returns Wishlisted features enriched with hierarchy display labels.
  */
 export async function getWishlistedFeaturesAsync(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
 ): Promise<FeatureExtended[]> {
   const wishlistedFeatures = appCtx.getWishlistedFeatures()
 
@@ -69,7 +69,7 @@ export async function getWishlistedFeaturesAsync(
  */
 export async function searchAllAsync(
   term: string,
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
 ): Promise<SearchResult[]> {
   const results: SearchResult[] = []
   // Search labels must remain visible when the only matching title is a generated
@@ -80,7 +80,7 @@ export async function searchAllAsync(
   }
 
   // Source 1 - Walks: the matching count comes from the user's filtered list query.
-  const wishlistQuery = appCtx.cacheCtx.featureQueries.searchWishlist
+  const wishlistQuery = appCtx.resources.featureQueries.searchWishlist
   const wishlistCount =
     wishlistQuery.search === term.trim() ? wishlistQuery.totalCount : null
   if (wishlistCount !== null && wishlistCount > 0) {
@@ -110,7 +110,7 @@ export async function searchAllAsync(
   })
 
   // Source 3 - Features: fresh cached previews are merged with bounded server pages.
-  const featureQuery = appCtx.cacheCtx.featureQueries.search
+  const featureQuery = appCtx.resources.featureQueries.search
   const features = featureQuery.search === term.trim() ? featureQuery.rows : []
   features.forEach(feature => {
     results.push({

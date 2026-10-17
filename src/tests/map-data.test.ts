@@ -43,7 +43,7 @@ describe('map search data', () => {
     ])
     const app = {
       getUserPreferences: () => ({}),
-      cacheCtx: {
+      resources: {
         featureQueries: { searchWishlist: { totalCount: null }, search: { rows: [] } },
       },
       divisionCtx: {
@@ -66,7 +66,7 @@ describe('map search data', () => {
         preferFallbackInCurrentLocale: false,
         isTranslateButtonVisible: true,
       }),
-      cacheCtx: {
+      resources: {
         featureQueries: {
           searchWishlist: { search: 'mong', totalCount: null },
           search: {
