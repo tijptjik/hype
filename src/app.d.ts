@@ -12,6 +12,9 @@ import 'unplugin-icons/types/svelte'
 // ENHANCEMENT: Add Logging - https://jeffmcmorris.medium.com/awesome-logging-in-sveltekit-6afa29c5892c
 
 declare global {
+  interface ImportMetaEnv {
+    readonly HYPE_DEV_PERSONA: 'admin' | 'user' | null
+  }
   namespace App {
     // interface Error {}
     interface Locals {
@@ -21,6 +24,7 @@ declare global {
       db: DrizzleD1Database<typeof import('#lib/db/schema/index.js')>
       hub: HubOptsExtended
       auth: Auth
+      devPersona?: 'admin' | 'user'
       session?: SessionSession
       user?: SessionUser
     }

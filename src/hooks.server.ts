@@ -17,6 +17,7 @@ import { autochunk } from '#lib/utils/batch-query.js'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '#lib/auth.js'
+import { DEV_PERSONAS, isDevPersona, isDevPersonaHost } from '#lib/auth/dev-personas.js'
 import {
   isAuthEntryPath,
   isPublicUnauthenticatedPath,
@@ -166,6 +167,7 @@ const handle_hub: Handle = async ({ event, resolve }) => {
   if (!isAuthEntryPath(event.url.pathname) && isAdminRequest(event.request)) {
     try {
       const auth = getAuthForRequest(event.request.headers, {
+        ENVIRONMENT: event.locals.platform.env.ENVIRONMENT,
         DB: event.locals.platform?.env?.DB as MiniflareD1Database,
         AUTH_SECRET: event.locals.platform?.env?.AUTH_SECRET ?? '',
         AUTH_GOOGLE_ID: event.locals.platform?.env?.AUTH_GOOGLE_ID ?? '',
@@ -291,6 +293,7 @@ const handle_auth: Handle = async ({ event, resolve }) => {
     const auth = getAuthForRequest(
       event.request.headers,
       {
+        ENVIRONMENT: event.locals.platform.env.ENVIRONMENT,
         DB: event.locals.platform.env.DB,
         AUTH_SECRET: event.locals.platform.env.AUTH_SECRET,
         AUTH_GOOGLE_ID: event.locals.platform.env.AUTH_GOOGLE_ID,
@@ -333,6 +336,16 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
     if (sessionData?.session && sessionData.user) {
       event.locals.session = sessionData.session as Session
       event.locals.user = sessionData.user as SessionUser
+      const persona = import.meta.env.HYPE_DEV_PERSONA
+      if (
+        import.meta.env.DEV &&
+        isDevPersona(persona) &&
+        event.locals.platform.env.ENVIRONMENT === 'local' &&
+        isDevPersonaHost(event.url, event.request.headers) &&
+        sessionData.user.id === DEV_PERSONAS[persona].id
+      ) {
+        event.locals.devPersona = persona
+      }
     }
   } catch (error) {
     console.error('🔴 Session auth error:', error)
@@ -466,12 +479,67 @@ const handle_worker_bindings: Handle = async ({ event, resolve }) => {
 }
 
 /**
+ * Establishes the local persona cookie before hub resolution reads the session.
+ * @param input - SvelteKit request and resolver.
+ * @returns A cookie-bearing retry redirect, or the ordinary request response.
+ * @remarks Only document navigations auto-sign in; auth APIs retain their normal behavior.
+ */
+const handle_dev_persona: Handle = async ({ event, resolve }) => {
+  const persona = import.meta.env.HYPE_DEV_PERSONA
+  const env = event.locals.platform?.env
+  if (
+    !import.meta.env.DEV ||
+    !isDevPersona(persona) ||
+    env?.ENVIRONMENT !== 'local' ||
+    !env.DB ||
+    !isDevPersonaHost(event.url, event.request.headers) ||
+    event.request.method !== 'GET' ||
+    !event.request.headers.get('accept')?.includes('text/html')
+  ) {
+    return resolve(event)
+  }
+  // Do not let cross-site navigation automatically create a privileged session.
+  const fetchSite = event.request.headers.get('sec-fetch-site')
+  if (
+    fetchSite === 'cross-site' ||
+    (event.request.headers.has('origin') &&
+      event.request.headers.get('origin') !== event.url.origin)
+  ) {
+    return new Response('Local development origin required', { status: 403 })
+  }
+  const auth = getAuthForRequest(event.request.headers, env)
+  const current = await auth.api.getSession({ headers: event.request.headers })
+  if (current?.user.id === DEV_PERSONAS[persona].id) event.locals.devPersona = persona
+  if (current?.user.id === DEV_PERSONAS[persona].id) {
+    return resolve(event)
+  }
+  // A browser retry sends the real signed cookie to the early hub hook and all later consumers.
+  const headers = new Headers(event.request.headers)
+  headers.set('origin', event.url.origin)
+  const signedIn = await auth.handler(
+    new Request(new URL('/api/auth/dev-persona', event.url), {
+      method: 'POST',
+      headers,
+    }),
+  )
+  if (!signedIn.ok) return signedIn
+  const responseHeaders = new Headers({
+    location: event.url.pathname + event.url.search,
+    'cache-control': 'no-store',
+  })
+  for (const cookie of signedIn.headers.getSetCookie())
+    responseHeaders.append('set-cookie', cookie)
+  return new Response(null, { status: 303, headers: responseHeaders })
+}
+
+/**
  * This is the main hook that is used to sequence the other hooks.
  */
 const handle = sequence(
   handle_worker_bindings,
   handle_scanner_probe,
   handle_cors,
+  handle_dev_persona,
   handle_hub,
   handle_auth,
   handle_session_auth,

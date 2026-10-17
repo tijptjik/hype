@@ -12,6 +12,7 @@ import { toast } from 'svelte-sonner'
 import { cx } from '#lib/bits/utils.js'
 // AUTH
 import { signIn, useSession } from '#lib/auth/client.js'
+import { DEV_PERSONAS } from '#lib/auth/dev-personas.js'
 import {
   bootstrapAnonymousSession,
   consumeSignOutIntent,
@@ -397,3 +398,13 @@ watch(
   returnTo={upgradeReturnTo}
   onAccountReady={confirmAccountUpgrade}
 />
+
+{#if data.devPersona &&
+  ($session.isPending || $session.data?.user?.id === DEV_PERSONAS[data.devPersona].id)}
+  <div
+    role="status"
+    class="fixed bottom-2 left-2 z-[1200] rounded-md border border-amber-900 bg-amber-200 px-3 py-1 text-xs font-semibold text-amber-950 shadow-lg"
+  >
+    Local development: {data.devPersona === 'admin' ? 'Admin' : 'Ordinary user'}
+  </div>
+{/if}

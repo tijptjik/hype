@@ -30,6 +30,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   }
 
   return {
+    devPersona: locals.devPersona ?? null,
     hub: locals.hub,
     hubUserState,
     titleEnvironmentLabel: getTitleEnvironmentLabel(platform?.env?.ENVIRONMENT),

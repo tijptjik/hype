@@ -9,6 +9,11 @@ export const prerender = false
 // See https://khromov.se/the-missing-guide-to-understanding-adapter-static-in-sveltekit/
 export const trailingSlash = 'never'
 
+/**
+ * Builds localized root layout metadata while preserving the server persona indicator.
+ * @param event - Universal layout event with server-provided data.
+ * @returns Localized hub metadata and the active local development persona.
+ */
 export async function load({ data }) {
   const hub = data.hub as HubOptsExtended
   const hubUserState = data.hubUserState ?? null
@@ -21,6 +26,7 @@ export async function load({ data }) {
     getTitleEnvironmentLabel(undefined)
 
   return {
+    devPersona: data.devPersona ?? null,
     hub,
     hubUserState,
     title: resolveTitle(rawTitle, titleEnvironmentLabel),

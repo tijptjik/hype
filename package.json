@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "vite dev",
+    "dev:agent": "bun run scripts/dev/agent.ts",
     "dev:cf:preview": "CLOUDFLARE_ENV=preview vite dev",
     "dev:cf:prod": "CLOUDFLARE_ENV=production vite dev",
     "dev:local": "HYPE_LOCAL_R2=1 vite dev",

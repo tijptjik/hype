@@ -9,6 +9,8 @@ import Icons from 'unplugin-icons/vite'
 import tailwindcss from '@tailwindcss/vite'
 // TRANSLATION
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
+// LOCAL DEVELOPMENT
+import { getDevPersona } from './scripts/dev/config.ts'
 // DATA
 // import seed from './src/lib/db/seed';
 // TYPES
@@ -70,7 +72,12 @@ const selectAdapter = () => {
       // through Wrangler. Preserve local R2 and named environment selection here.
       config:
         process.env.HYPE_LOCAL_R2 === '1' ? './wrangler.local.toml' : './wrangler.toml',
-      platformProxy: { environment: process.env.CLOUDFLARE_ENV },
+      platformProxy: {
+        environment: process.env.CLOUDFLARE_ENV,
+        ...(getDevPersona(process.env) && process.env.HYPE_DEV_STATE
+          ? { persist: { path: process.env.HYPE_DEV_STATE } }
+          : {}),
+      },
       // Cloudflare Pages routes policy. Keep this in config rather than a checked-in
       // static `_routes.json`, because the adapter generates that file from here.
       routes: {
@@ -352,6 +359,9 @@ const selectAdapter = () => {
 export default defineConfig(async ({ command }) => ({
   define: {
     'import.meta.env.HYPE_STATIC_BUILD': process.env.SVELTE_ADAPTER === 'static',
+    'import.meta.env.HYPE_DEV_PERSONA': JSON.stringify(
+      command === 'serve' ? getDevPersona(process.env) : null,
+    ),
   },
   envPrefix: ['VITE_', 'PUBLIC_'],
   environments: {

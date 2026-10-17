@@ -14,6 +14,8 @@ import { isAuthProviderEnabled } from './auth/providers'
 import { parseSessionSettings } from './auth/session-settings'
 import { requireAvailableAuthUser } from './auth/account-state.server'
 import { passwordSetup } from './auth/password-setup.server'
+import { devPersonaPlugin } from './auth/dev-persona.server'
+import { isDevPersona, isDevPersonaHost } from './auth/dev-personas'
 // DB SCHEMA
 import * as schema from '#lib/db/schema/index.js'
 // TYPES
@@ -98,6 +100,7 @@ export function getBaseUrlFromRequestHeaders(headers: Headers): string {
 function createAuthInstance(
   env: {
     DB: MiniflareD1Database
+    ENVIRONMENT?: string
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
@@ -110,12 +113,23 @@ function createAuthInstance(
   hub?: HubOptsExtended,
 ) {
   const db = drizzle(env.DB, { schema })
+  const persona = import.meta.env.HYPE_DEV_PERSONA
+  const localPersona =
+    import.meta.env.DEV &&
+    isDevPersona(persona) &&
+    env.ENVIRONMENT === 'local' &&
+    isDevPersonaHost(new URL(baseURL), new Headers({ host: new URL(baseURL).host }))
+      ? persona
+      : null
 
   return betterAuth({
     // COMMON CONFIG
     ...authConfig,
     // BASE URL (dynamic per domain)
     baseURL,
+    ...(localPersona
+      ? { trustedOrigins: [...authConfig.trustedOrigins, baseURL] }
+      : {}),
     // OAuth callbacks can lose their short-lived state cookie after a browser
     // restart or a local dev reload. Send that failure back to a usable HYPE
     // entry point instead of Better Auth's internal error route.
@@ -133,6 +147,18 @@ function createAuthInstance(
     advanced: {
       // Preserve shared cookie attributes required for secure embedded sessions.
       ...authConfig.advanced,
+      // Local personas use isolated cookies that also work over loopback HTTP.
+      ...(localPersona
+        ? {
+            cookiePrefix: `hype-dev-agent-${localPersona}`,
+            useSecureCookies: baseURL.startsWith('https:'),
+            defaultCookieAttributes: {
+              sameSite: 'lax' as const,
+              secure: baseURL.startsWith('https:'),
+              partitioned: false,
+            },
+          }
+        : {}),
       ipAddress: {
         ipAddressHeaders: ['cf-connecting-ip'],
       },
@@ -280,6 +306,7 @@ function createAuthInstance(
     },
     // PLUGINS
     plugins: [
+      ...(localPersona ? [devPersonaPlugin(localPersona)] : []),
       passwordSetup(),
       passkey({
         rpID: new URL(baseURL).hostname,
@@ -393,6 +420,7 @@ export const getAuthForRequest = (
   headers: Headers,
   env: {
     DB: MiniflareD1Database
+    ENVIRONMENT?: string
     AUTH_SECRET: string
     AUTH_GOOGLE_ID: string
     AUTH_GOOGLE_SECRET: string
@@ -404,7 +432,7 @@ export const getAuthForRequest = (
   hub?: HubOptsExtended,
 ): Auth => {
   const baseURL = getBaseUrlFromRequestHeaders(headers)
-  const cacheKey = `${baseURL}:${hub?.code ?? 'core'}`
+  const cacheKey = `${baseURL}:${hub?.code ?? 'core'}:${env.ENVIRONMENT ?? ''}:${import.meta.env.HYPE_DEV_PERSONA ?? ''}`
 
   // Return cached instance if available
   const cachedAuth = authInstances.get(cacheKey)
