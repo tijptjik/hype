@@ -217,6 +217,7 @@ describe('map styles', () => {
         type?: string
         'source-layer'?: string
         filter?: unknown[]
+        layout?: Record<string, unknown>
         paint?: Record<string, unknown>
       }>
     }
