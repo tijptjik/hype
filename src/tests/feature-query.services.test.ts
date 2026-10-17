@@ -27,7 +27,6 @@ import type { FeatureQueryInput } from '#lib/api/services/featureQuery.types.js'
 
 vi.mock('#lib/api/services/feature.js', () => ({
   getFeatureWithRelations: () => ({
-    division: { with: { i18n: true } },
     divisionMemberships: { columns: { divisionId: true, selected: true } },
   }),
   toListResponseShape: async (result: unknown) => result,
@@ -53,7 +52,10 @@ function setup(withOrphan = false) {
   stores.push(sqlite)
   const columns = Object.values(getTableColumns(feature))
     .filter(
-      column => !/^division(?:LeafId|Level[1-6]Id)$|^landformLeafId$/.test(column.name),
+      column =>
+        !/^(country|area|district|town|ruralArea|macrohood|neighbourhood|village|microhood|hamlet|island)Id$|^divisionResolution$/.test(
+          column.name,
+        ),
     )
     .map(
       column =>
@@ -83,6 +85,7 @@ function setup(withOrphan = false) {
   sqlite.exec(readFileSync('migrations/0082_feature_division_refresh.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0083_feature_division_registry.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0084_division_facets.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0088_feature_division_roles.sql', 'utf8'))
   const statements: string[] = []
   const prepare = (query: string, bindings: unknown[] = []) => ({
     bind: (...params: unknown[]) => prepare(query, params),
@@ -133,7 +136,7 @@ function setup(withOrphan = false) {
           }),
         )
       sqlite
-        .prepare('UPDATE feature SET divisionLeafId=?,divisionLevel5Id=? WHERE id=?')
+        .prepare('UPDATE feature SET neighbourhoodId=?,macrohoodId=? WHERE id=?')
         .run(neighbourhood, neighbourhood, id)
       sqlite
         .prepare('INSERT INTO featureDivisionMembership VALUES(?,?,1)')
@@ -212,12 +215,7 @@ describe('indexed feature queries', () => {
     )
     expect(page.data.map(row => row.id)).toEqual(['a', 'b'])
     expect(page.totalCount).toBe(2)
-    expect(page.data[0].division?.i18n).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ locale: 'en', name: 'Central' }),
-      ]),
-    )
-    expect(page.data[0].divisionLeafId).toBe('Central')
+    expect(page.data[0].neighbourhoodId).toBe('Central')
   })
 
   it('counts a micro-neighbourhood feature in its selected neighbourhood ancestor', async () => {
@@ -233,7 +231,7 @@ describe('indexed feature queries', () => {
       }),
     )
     sqlite
-      .prepare('UPDATE feature SET divisionLeafId=?,divisionLevel6Id=? WHERE id=?')
+      .prepare('UPDATE feature SET microhoodId=?,neighbourhoodId=? WHERE id=?')
       .run('micro-central', 'micro-central', 'a')
     sqlite
       .prepare('INSERT INTO featureDivisionMembership VALUES(?,?,1)')

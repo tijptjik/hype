@@ -85,14 +85,23 @@ import type { GeometryObject } from 'geojson'
 export const FeatureBase = createSelectSchema(feature)
   .omit({ spatialIndex: true })
   .extend({
-    divisionLeafId: z.string().nullish(),
-    divisionLevel1Id: z.string().nullish(),
-    divisionLevel2Id: z.string().nullish(),
-    divisionLevel3Id: z.string().nullish(),
-    divisionLevel4Id: z.string().nullish(),
-    divisionLevel5Id: z.string().nullish(),
-    divisionLevel6Id: z.string().nullish(),
-    landformLeafId: z.string().nullish(),
+    countryId: z.string().nullish(),
+    areaId: z.string().nullish(),
+    districtId: z.string().nullish(),
+    townId: z.string().nullish(),
+    ruralAreaId: z.string().nullish(),
+    macrohoodId: z.string().nullish(),
+    neighbourhoodId: z.string().nullish(),
+    villageId: z.string().nullish(),
+    microhoodId: z.string().nullish(),
+    hamletId: z.string().nullish(),
+    islandId: z.string().nullish(),
+    divisionResolution: z
+      .object({
+        status: z.string(),
+        branches: z.record(z.string(), z.array(z.array(z.string()))),
+      })
+      .nullish(),
 
     geometry: z.custom<GeometryObject>(),
     addressMeta: z.custom<AddressMeta>().default({}),
@@ -101,14 +110,18 @@ export const FeatureBase = createSelectSchema(feature)
 export const FeatureInsert = createInsertSchema(feature)
   .omit({
     spatialIndex: true,
-    divisionLeafId: true,
-    divisionLevel1Id: true,
-    divisionLevel2Id: true,
-    divisionLevel3Id: true,
-    divisionLevel4Id: true,
-    divisionLevel5Id: true,
-    divisionLevel6Id: true,
-    landformLeafId: true,
+    countryId: true,
+    areaId: true,
+    districtId: true,
+    townId: true,
+    ruralAreaId: true,
+    macrohoodId: true,
+    neighbourhoodId: true,
+    villageId: true,
+    microhoodId: true,
+    hamletId: true,
+    islandId: true,
+    divisionResolution: true,
   })
   .extend({
     geometry: z.custom<GeometryObject>().prefault({
@@ -127,14 +140,18 @@ export const FeatureInsert = createInsertSchema(feature)
 export const FeatureUpdate = createUpdateSchema(feature)
   .omit({
     spatialIndex: true,
-    divisionLeafId: true,
-    divisionLevel1Id: true,
-    divisionLevel2Id: true,
-    divisionLevel3Id: true,
-    divisionLevel4Id: true,
-    divisionLevel5Id: true,
-    divisionLevel6Id: true,
-    landformLeafId: true,
+    countryId: true,
+    areaId: true,
+    districtId: true,
+    townId: true,
+    ruralAreaId: true,
+    macrohoodId: true,
+    neighbourhoodId: true,
+    villageId: true,
+    microhoodId: true,
+    hamletId: true,
+    islandId: true,
+    divisionResolution: true,
   })
   .extend({
     geometry: z.custom<GeometryObject>().optional(),
@@ -236,12 +253,6 @@ export const FeatureListRow = FeatureBase.extend({
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
-  division: z
-    .object({
-      id: z.string(),
-      i18n: z.array(z.object({ locale: z.string(), name: z.string().nullable() })),
-    })
-    .nullish(),
   i18n: z.array(FeatureI18nBase).nullish(),
   properties: z
     .array(
@@ -460,14 +471,18 @@ export const FeaturePropertyAPI = FeaturePropertyBase.extend({
 })
 
 const FeatureListFields = FeatureBase.pick({
-  divisionLeafId: true,
-  divisionLevel1Id: true,
-  divisionLevel2Id: true,
-  divisionLevel3Id: true,
-  divisionLevel4Id: true,
-  divisionLevel5Id: true,
-  divisionLevel6Id: true,
-  landformLeafId: true,
+  countryId: true,
+  areaId: true,
+  districtId: true,
+  townId: true,
+  ruralAreaId: true,
+  macrohoodId: true,
+  neighbourhoodId: true,
+  villageId: true,
+  microhoodId: true,
+  hamletId: true,
+  islandId: true,
+  divisionResolution: true,
 
   id: true,
   organisationId: true,
@@ -489,12 +504,6 @@ export const FeatureListProfileAPI = FeatureListFields.extend({
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
-  division: z
-    .object({
-      id: z.string(),
-      i18n: z.array(z.object({ locale: z.string(), name: z.string().nullable() })),
-    })
-    .nullish(),
   i18n: getLocales(FeatureI18nBase),
   properties: z.array(FeaturePropertyCollectionAPI).default([]),
   image: ImageContextEnvelopeAPI.nullish(),

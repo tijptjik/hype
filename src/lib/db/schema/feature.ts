@@ -75,15 +75,23 @@ export const feature = sqliteTable(
     geometry: text('geometry', { mode: 'json' }).notNull().$type<GeometryObject>(),
     // Derived H3 membership is persisted with geometry and materialized by SQL triggers.
     spatialIndex: text('spatialIndex', { mode: 'json' }).$type<FeatureSpatialIndex>(),
-    // Canonical SaanSeoi selections; level 1 prefers the administrative branch.
-    divisionLeafId: text('divisionLeafId').references(() => divisionDefinition.id),
-    divisionLevel1Id: text('divisionLevel1Id').references(() => divisionDefinition.id),
-    divisionLevel2Id: text('divisionLevel2Id').references(() => divisionDefinition.id),
-    divisionLevel3Id: text('divisionLevel3Id').references(() => divisionDefinition.id),
-    divisionLevel4Id: text('divisionLevel4Id').references(() => divisionDefinition.id),
-    divisionLevel5Id: text('divisionLevel5Id').references(() => divisionDefinition.id),
-    divisionLevel6Id: text('divisionLevel6Id').references(() => divisionDefinition.id),
-    landformLeafId: text('landformLeafId').references(() => divisionDefinition.id),
+    // Canonical SaanSeoi roles; ambiguous selections remain null.
+    countryId: text('countryId').references(() => divisionDefinition.id),
+    areaId: text('areaId').references(() => divisionDefinition.id),
+    districtId: text('districtId').references(() => divisionDefinition.id),
+    townId: text('townId').references(() => divisionDefinition.id),
+    ruralAreaId: text('ruralAreaId').references(() => divisionDefinition.id),
+    macrohoodId: text('macrohoodId').references(() => divisionDefinition.id),
+    neighbourhoodId: text('neighbourhoodId').references(() => divisionDefinition.id),
+    villageId: text('villageId').references(() => divisionDefinition.id),
+    microhoodId: text('microhoodId').references(() => divisionDefinition.id),
+    hamletId: text('hamletId').references(() => divisionDefinition.id),
+    islandId: text('islandId').references(() => divisionDefinition.id),
+    // Per-query branches retain alternatives independently of scalar role projections.
+    divisionResolution: text('divisionResolution', { mode: 'json' }).$type<{
+      status: string
+      branches: Record<string, string[][]>
+    }>(),
     // Address Metadata
     addressMeta: text('addressMeta', {
       mode: 'json',
@@ -124,14 +132,17 @@ export const feature = sqliteTable(
       .notNull(),
   },
   table => [
-    index('feature_divisionLeafId').on(table.divisionLeafId, table.id),
-    index('feature_divisionLevel1Id').on(table.divisionLevel1Id, table.id),
-    index('feature_divisionLevel2Id').on(table.divisionLevel2Id, table.id),
-    index('feature_divisionLevel3Id').on(table.divisionLevel3Id, table.id),
-    index('feature_divisionLevel4Id').on(table.divisionLevel4Id, table.id),
-    index('feature_divisionLevel5Id').on(table.divisionLevel5Id, table.id),
-    index('feature_divisionLevel6Id').on(table.divisionLevel6Id, table.id),
-    index('feature_landformLeafId').on(table.landformLeafId, table.id),
+    index('feature_countryId').on(table.countryId, table.id),
+    index('feature_areaId').on(table.areaId, table.id),
+    index('feature_districtId').on(table.districtId, table.id),
+    index('feature_townId').on(table.townId, table.id),
+    index('feature_ruralAreaId').on(table.ruralAreaId, table.id),
+    index('feature_macrohoodId').on(table.macrohoodId, table.id),
+    index('feature_neighbourhoodId').on(table.neighbourhoodId, table.id),
+    index('feature_villageId').on(table.villageId, table.id),
+    index('feature_microhoodId').on(table.microhoodId, table.id),
+    index('feature_hamletId').on(table.hamletId, table.id),
+    index('feature_islandId').on(table.islandId, table.id),
     index('feature_query_visibility_idx').on(
       table.isDraft,
       table.isPublished,

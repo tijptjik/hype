@@ -105,6 +105,7 @@ function setup() {
     '0082_feature_division_refresh',
     '0083_feature_division_registry',
     '0084_division_facets',
+    '0088_feature_division_roles',
   ])
     sqlite.exec(readFileSync(`migrations/${migration}.sql`, 'utf8'))
   const prepare = (sql: string, values: unknown[] = []) => ({
@@ -457,7 +458,7 @@ describe('division refresh', () => {
     expect(
       s.sqlite
         .prepare(
-          "SELECT count(*) AS n FROM featureCountRollup WHERE divisionLeafId != ''",
+          "SELECT count(*) AS n FROM featureCountRollup WHERE neighbourhoodId != ''",
         )
         .get()?.n,
     ).toBe(0)
@@ -477,9 +478,18 @@ describe('division refresh', () => {
     )
     expect(s.count('featureDivisionMembership')).toBe(2)
     expect(
+      JSON.parse(
+        s.sqlite.prepare('SELECT divisionResolution FROM feature').get()
+          ?.divisionResolution as string,
+      ),
+    ).toEqual({
+      status: 'ambiguous',
+      branches: { hood: [['one', 'two']] },
+    })
+    expect(
       s.sqlite
         .prepare(
-          "SELECT count(*) AS n FROM featureCountRollup WHERE divisionLeafId != ''",
+          "SELECT count(*) AS n FROM featureCountRollup WHERE neighbourhoodId != ''",
         )
         .get()?.n,
     ).toBe(0)
@@ -529,15 +539,15 @@ describe('division refresh', () => {
     expect(
       s.sqlite
         .prepare(
-          'SELECT divisionLeafId,divisionLevel1Id,divisionLevel2Id,divisionLevel6Id,landformLeafId FROM feature',
+          'SELECT neighbourhoodId,areaId,districtId,microhoodId,islandId FROM feature',
         )
         .get(),
     ).toMatchObject({
-      divisionLeafId: 'micro',
-      divisionLevel1Id: null,
-      divisionLevel2Id: 'district',
-      divisionLevel6Id: 'micro',
-      landformLeafId: 'island',
+      neighbourhoodId: 'hood',
+      areaId: 'area',
+      districtId: 'district',
+      microhoodId: 'micro',
+      islandId: 'island',
     })
     expect(s.count('featureDivisionMembership')).toBe(10)
     expect(
@@ -563,12 +573,12 @@ describe('division refresh', () => {
     )
     expect(
       s.sqlite
-        .prepare('SELECT divisionLeafId,divisionLevel6Id,landformLeafId FROM feature')
+        .prepare('SELECT neighbourhoodId,microhoodId,islandId FROM feature')
         .get(),
     ).toMatchObject({
-      divisionLeafId: null,
-      divisionLevel6Id: null,
-      landformLeafId: null,
+      neighbourhoodId: null,
+      microhoodId: null,
+      islandId: null,
     })
     expect(s.count('featureDivisionMembership')).toBe(0)
   })

@@ -1,3 +1,4 @@
+import { divisionRoles, projectDivisionRoles } from './roles'
 // API
 import {
   apiRead,
@@ -416,42 +417,11 @@ async function geocodeJobs(
           ),
         )
       }
-      // Project only canonical selections; non-canonical branches remain for invalidation.
-      const unique = (ids: string[]): string | null =>
-        ids.length === 1 ? ids[0] : null
-      const levels = Array.from({ length: 6 }, (_, index) =>
-        unique(
-          chosen
-            .filter(
-              member => member.level === index + 1 && member.category !== 'landform',
-            )
-            .map(member => member.id),
-        ),
-      )
-      const deepest = Math.max(
-        -1,
-        ...chosen
-          .filter(member => member.category !== 'landform')
-          .map(member => member.level ?? -1),
-      )
-      const divisionLeafId = unique(
-        chosen
-          .filter(member => member.category !== 'landform' && member.level === deepest)
-          .map(member => member.id),
-      )
-      const landformLeafId = unique([
-        ...new Set(
-          (result?.landform.paths ?? [])
-            .map(path =>
-              [...path]
-                .reverse()
-                .find(
-                  id => members.get(id)?.class !== 'island_group' && selected.has(id),
-                ),
-            )
-            .filter((id): id is string => !!id),
-        ),
-      ])
+      // Named roles are unique projections; preserve all query branches alongside membership IDs.
+      const roles = projectDivisionRoles(chosen)
+      const resolution = result
+        ? JSON.stringify({ status: result.status, branches: result.branches })
+        : null
       writes.push(
         guarded(
           `UPDATE featureCountRevision SET revision=revision+1 WHERE id=1 AND ${guard}`,
@@ -459,9 +429,10 @@ async function geocodeJobs(
       )
       writes.push(
         guarded(
-          `UPDATE feature SET divisionLeafId=?,divisionLevel1Id=?,divisionLevel2Id=?,divisionLevel3Id=?,
-        divisionLevel4Id=?,divisionLevel5Id=?,divisionLevel6Id=?,landformLeafId=? WHERE id=? AND ${guard}`,
-          [divisionLeafId, ...levels, landformLeafId, job.id],
+          `UPDATE feature SET ${Object.keys(divisionRoles)
+            .map(role => `${role}=?`)
+            .join(',')},divisionResolution=? WHERE id=? AND ${guard}`,
+          [...roles, resolution, job.id],
         ),
       )
       writes.push(
