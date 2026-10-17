@@ -5,6 +5,10 @@ import { tick } from 'svelte'
 import { clickOutside } from '#lib/actions.js'
 // CONTEXT
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // LOCAL
 import { getFeatureCardLayout, getFeatureCardLayoutVars } from '../featureCard.layout'
@@ -31,9 +35,12 @@ let {
 
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
-const horizontalOffset = $derived(responsiveCtx.getAppMainOffsetX())
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const horizontalOffset = $derived(surfaceLayout.getAppMainOffsetX())
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,

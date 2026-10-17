@@ -3,6 +3,10 @@
 import { getFeatureCardDisplayProperties } from '#lib/client/services/property.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // I18N
 import { getFPI18n, getI18n, m } from '#lib/i18n.js'
@@ -25,8 +29,11 @@ let {
 
 const appCtx = getSurfaceCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const userPreferences = $derived(appCtx.getUserPreferences())
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,

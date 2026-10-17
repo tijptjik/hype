@@ -4,6 +4,10 @@ import { fade } from 'svelte/transition'
 // I18N
 import { m } from '#lib/i18n.js'
 // CONTEXT
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
 import { Button, Icon, OverlayBar } from '#lib/bits/index.js'
@@ -27,8 +31,9 @@ let {
 }: MapOverlayBarProps = $props()
 
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const centerBottomOffset = $derived(
-  Math.max(24, responsiveCtx.menuClearanceHeight - bottomOffset + 24),
+  Math.max(24, surfaceLayout.menuClearanceHeight - bottomOffset + 24),
 )
 const hasVisibleControls = $derived(hasCardToggleTarget)
 </script>

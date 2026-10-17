@@ -4,6 +4,10 @@ import { Button, SimpleTooltip } from '#lib/bits/core/index.js'
 import { Icon } from '#lib/bits/custom/icon/index.js'
 import { cx } from '#lib/bits/utils.js'
 // CONTEXT
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // STYLES
 import {
@@ -29,14 +33,15 @@ let {
 
 // CONTEXT
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
 // RESPONSIVENESS
 const availableWidth = $derived(responsiveCtx.visibleWindowWidth)
 const availableHeight = $derived(responsiveCtx.visibleWindowHeight)
 const responsiveWidth = $derived(
-  responsiveCtx.getEffectiveAppMainWidth() || availableWidth,
+  surfaceLayout.getEffectiveAppMainWidth() || availableWidth,
 )
-const resolvedOffsetX = $derived(offsetX ?? responsiveCtx.getAppMainOffsetX())
+const resolvedOffsetX = $derived(offsetX ?? surfaceLayout.getAppMainOffsetX())
 const viewportState = $derived(
   getAppMenuViewportState(availableWidth, availableHeight, responsiveWidth),
 )

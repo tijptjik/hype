@@ -314,7 +314,7 @@ export const updatePanelUrlParams = (
 
   // Build expected username based on profile panel state
   const expectedUsername = panelState.profile
-    ? currentUsername || appCtx?.state?.panels?.profile?.ctx?.username || null
+    ? currentUsername || appCtx?.panels.state?.profile?.ctx?.username || null
     : null
 
   // Compare current vs expected
@@ -332,7 +332,7 @@ export const updatePanelUrlParams = (
   // Preserve username parameter ONLY if profile panel is actually open
   if (panelState.profile) {
     const currentUsername =
-      searchParams.get('username') || appCtx?.state?.panels?.profile?.ctx?.username
+      searchParams.get('username') || appCtx?.panels.state?.profile?.ctx?.username
     if (currentUsername) {
       statefulParams.username = currentUsername
     }

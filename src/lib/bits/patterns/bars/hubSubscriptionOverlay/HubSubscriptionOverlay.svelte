@@ -2,6 +2,10 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // CONTEXT
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
 import * as HubSubscriptionOverlayPrimitive from './components'
@@ -39,7 +43,8 @@ let {
 }: HubSubscriptionOverlayProps = $props()
 
 const responsiveCtx = getResponsiveCtx()
-const effectiveBarWidth = $derived(responsiveCtx.getEffectiveAppMainWidth())
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
+const effectiveBarWidth = $derived(surfaceLayout.getEffectiveAppMainWidth())
 let areDecorativeImagesExpanded = $state(false)
 let isCardSurfaceExpanded = $state(false)
 let decorativeImageShuffleSeed = $state(Math.random())

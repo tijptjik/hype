@@ -24,9 +24,7 @@ const adminCtx = getAdminCtx()
 
 let { entities }: CompletionFooterProps = $props()
 
-const overallStats = $derived(
-  calculateOverallStats(adminCtx.appCtx, entities, adminCtx),
-)
+const overallStats = $derived(calculateOverallStats(adminCtx.view, entities, adminCtx))
 
 const sectionMeta: Record<
   CompletionFooterSectionKey,

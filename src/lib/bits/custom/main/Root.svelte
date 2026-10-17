@@ -1,17 +1,14 @@
 <script lang="ts">
-// CONTEXT
-import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // TYPES
 import type { MainRootProps } from './main.types'
 
-let { children, class: className = '' }: MainRootProps = $props()
+let { children, class: className = '', onDimensionsChange }: MainRootProps = $props()
 const rootClass = $derived(['bits-main relative', className].filter(Boolean).join(' '))
-const responsiveCtx = getResponsiveCtx()
 let mainWidth = $state(0)
 let mainHeight = $state(0)
 
 $effect(() => {
-  responsiveCtx.setMainDimensions(mainWidth, mainHeight)
+  onDimensionsChange?.(mainWidth, mainHeight)
 })
 </script>
 

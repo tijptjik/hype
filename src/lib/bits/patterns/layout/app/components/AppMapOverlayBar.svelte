@@ -2,6 +2,10 @@
 // CONTEXT
 import { getAppCtx } from '#lib/context/app.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
 import { MapOverlayBar } from '#lib/bits/patterns/bars/mapOverlayBar/index.js'
@@ -9,6 +13,7 @@ import { MapOverlayBar } from '#lib/bits/patterns/bars/mapOverlayBar/index.js'
 const appCtx = getAppCtx()
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
 const isCardToggleVisible = $derived(
   Boolean(
@@ -23,7 +28,7 @@ const hasCardToggleTarget = $derived(
     !omniCtx.isCardOpen && appCtx.getActiveFeature() && !omniCtx.isNewFeatureMode,
   ),
 )
-const offsetX = $derived(responsiveCtx.getAppMainOffsetX())
+const offsetX = $derived(surfaceLayout.getAppMainOffsetX())
 const bottomOffset = 0
 
 function handleOpenCard(event: Event): void {

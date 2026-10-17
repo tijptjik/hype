@@ -2,6 +2,10 @@
 // BITS
 import { cx } from '#lib/bits/utils.js'
 // CONTEXT
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // LOCAL
 import { getFeatureCardLayout } from '../featureCard.layout'
@@ -26,7 +30,10 @@ let {
 }: Props = $props()
 
 const responsiveCtx = getResponsiveCtx()
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,

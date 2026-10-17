@@ -20,6 +20,10 @@ import ImageProvider from '#lib/providers/ImageProvider.svelte'
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx, setCardCtx } from '#lib/context/card.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx, setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
 import { FeatureCardMode, ImageContextResource, NewFeatureMode } from '#lib/enums.js'
@@ -50,8 +54,11 @@ const responsiveCtx = (() => {
     return setResponsiveCtx()
   }
 })()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const mode = $derived(cardCtx.state.mode)
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,

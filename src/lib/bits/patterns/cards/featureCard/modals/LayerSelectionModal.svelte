@@ -12,6 +12,10 @@ import { upsertNewFeatureDraft } from '#lib/client/services/task.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
 import { Icon } from '#lib/bits/index.js'
@@ -35,13 +39,14 @@ import type { Point } from 'geojson'
 const appCtx = getSurfaceCtx()
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
 let searchQuery = $state('')
 let isSaving = $state(false)
 let isFindOtherOpen = $state(false)
 
 const newFeature = $derived(appCtx.getNewFeature())
-const appMainOffsetX = $derived(responsiveCtx.getAppMainOffsetX())
+const appMainOffsetX = $derived(surfaceLayout.getAppMainOffsetX())
 const activeLayers = $derived.by(() =>
   // Prefer the reactive list data: caches can hold narrower payloads from prior lookups.
   appCtx.state.prisms.layer
