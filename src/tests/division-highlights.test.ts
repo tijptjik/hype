@@ -62,7 +62,7 @@ describe('division map highlights', () => {
     expect(map.setPaintProperty).toHaveBeenCalledWith(
       'hype-division-highlights-outline',
       'line-color',
-      '#9d174d',
+      '#7c3aed',
     )
     sources.clear()
     layers.clear()

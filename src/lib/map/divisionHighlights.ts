@@ -6,12 +6,13 @@ import type { DivisionGeometry } from '#lib/divisions/geometry.js'
 
 /** Contrasting overlay accents follow the basemap palette, independently of the UI theme. */
 export const divisionHighlightColors: Record<MapMarkerTheme, string> = {
-  light: '#9d174d',
-  dark: '#fde047',
-  ghostery: '#5eead4',
-  hyperpop: '#67e8f9',
-  neon: '#fef08a',
-  rosepunk: '#bef264',
+  light: '#7c3aed',
+  dark: '#60a5fa',
+  // Match Ghostery's hot-pink building outlines.
+  ghostery: '#f04d7f',
+  hyperpop: '#a78bfa',
+  neon: '#22d3ee',
+  rosepunk: '#FF53A6',
 }
 
 const sourceId = 'hype-division-highlights'
@@ -68,6 +69,8 @@ export function createDivisionHighlights(map: MapLibreMap): {
           paint: {
             'line-color': color,
             'line-width': ['case', ['get', 'hovered'], 3, 2],
+            // Distinguish division boundaries from solid roads and building outlines.
+            'line-dasharray': [3, 2],
             'line-opacity': 0.9,
           },
         },
