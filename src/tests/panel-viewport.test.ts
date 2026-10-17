@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
+import { PanelController } from '#lib/context/panels.svelte.js'
 import { DUAL_PANEL_MIN_WIDTH } from '#lib/constants.js'
 import { Panel } from '#lib/enums.js'
 
@@ -8,7 +8,7 @@ describe('panel viewport guard', () => {
     [Panel.prisms, Panel.filters],
     [Panel.filters, Panel.prisms],
   ])('closes %s and preserves the later opening %s', (older, newer) => {
-    const ctx = new ResponsiveCtx()
+    const ctx = new PanelController()
     ctx.setPanelOpen(older, true)
     ctx.setPanelOpen(newer, true)
     expect(ctx.getPanelsToCloseForViewport(DUAL_PANEL_MIN_WIDTH)).toEqual([])
@@ -21,7 +21,7 @@ describe('panel viewport guard', () => {
   })
 
   it('does not let repeated open-state synchronization change recency', () => {
-    const ctx = new ResponsiveCtx()
+    const ctx = new PanelController()
     ctx.setPanelOpen(Panel.prisms, true)
     ctx.setPanelOpen(Panel.settings, true)
     ctx.setPanelOpen(Panel.prisms, true)
@@ -32,7 +32,7 @@ describe('panel viewport guard', () => {
   })
 
   it('ignores an unmeasured viewport and visual-only panel openings', () => {
-    const ctx = new ResponsiveCtx()
+    const ctx = new PanelController()
     ctx.setPanelOpen(Panel.prisms, true)
     ctx.setPanelOpenVisually(Panel.filters, true)
     expect(ctx.getPanelsToCloseForViewport(800)).toEqual([])
