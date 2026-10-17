@@ -40,6 +40,79 @@ metadata, while `CacheCtx` retains compatible native handles. SvelteKit remains
 the owner of remote payloads and transport deduplication. Dispose view controllers
 on unmount; keep public map mechanics out of root and admin imports.
 
+## Account and Map Ownership
+
+`RootCTX.account` owns `AccountState`. Its authoritative session identity and roles
+are separate from self-profile enrichment (preferences, display fields and saved
+layers). Surfaces receive that same account instance and expose a read-only `user`
+snapshot. Profile responses are restricted to presentation fields; another user's
+profile stays in its resource cache or profile panel. Async saves capture the account
+revision so responses and rollbacks cannot cross identity or role changes.
+
+Only the root publishes session changes. Surface layouts call `syncAccount()` to
+clear their own identity-bound data after a change; resource views never replace
+the session. `isInitialised` means the resource view's initialization is complete,
+not that a map has loaded.
+
+Native MapLibre instances and marker DOM elements belong to the renderer.
+`AppCtx.mapController` holds only the public map's camera capability, supplied by
+`MapCanvas.onMapReady` and cleared on teardown. Other map renderers, such as the
+screensaver, have their own controllers. Shared creation flows receive a
+`getMapCenter` callback; marker transitions receive the clicked element directly.
+`ResourceViewCtx` and admin views require neither a map instance nor a DOM registry.
+
+## Navigation, Selection and Resource Presentation
+
+`ResourceViewCtx` owns resource queries, filters, sorting and retained data. It has
+no navigation, selected feature, header state or list-presentation preferences.
+The public `AppCtx` and `AdminCtx` each own a `SurfaceNavigation`, provided beside
+the resource view through `getSurfaceNavigation()`. Their layouts project the
+current SvelteKit URL on initial render and subsequent navigation, including
+shallow facet changes and browser history. Navigation commands update the URL;
+page configuration can supply supported facet defaults without maintaining a
+second route store. Resource references resolve against the owning view's cache.
+
+`AppCtx.selection` owns the selected feature identity and active collection.
+Cards resolve fresh data for that identity; the selection retains a preview if
+its query page is evicted. Map markers derive their selected ID and highlighted
+collection IDs from this same model. There is no separate selected-marker store.
+Collection context survives feature stepping and feature-only dismissal; returning
+home, clearing the collection, account changes and disposal clear selection.
+Public card timers, navigation intent and camera commands belong to `AppCtx` and
+its adapters. Shared filter services only mutate filter data.
+
+`AdminCtx.listUi` retains per-resource layout mode and control-bar visibility
+within that surface. `HeaderCtrl` owns transient search focus, page metadata and
+action visibility; the header adapter combines those with navigation and list
+preferences. Search focus resets on route navigation. The unused legacy header
+store has been removed rather than extracted into another context.
+
+## Responsive and Surface Layout Ownership
+
+`ResponsiveCtx` is root-owned browser measurement state: layout viewport, visual
+viewport, offsets, and keyboard inset. It does not own panels or main-element
+measurements. Shared chrome breakpoint policy lives in `src/lib/layout/chrome.ts`
+and has no Svelte/context dependency. Viewer-specific breakpoints stay with the viewer.
+
+Each `ResourceViewCtx` (including `AppCtx`) owns a `PanelController` at `panels`
+and a `SurfaceLayout` at `layout`. `panels.state` is the canonical logical and
+visual panel state, including panel metadata; no root mirror is maintained.
+Use controller mutation methods to preserve opening recency. URL synchronization,
+focus and profile loading remain surface orchestration. Visual-only openings do
+not reserve content width or affect resize arbitration.
+
+`setSurfaceCtx` provides that surface's layout through a lightweight layout context.
+Patterns can read geometry without importing resource orchestration. Standalone
+patterns use local, unmeasured layout models; they never publish surface state at
+root scope. `Main.Root` reports dimensions through `onDimensionsChange`, wired by
+its owning route. The app shell measures its own main region. A surface's measured
+width and panel state must never affect another surface.
+
+Keep layout viewport width (panel arbitration), visual viewport dimensions
+(keyboard/visible content), and effective main width (space after logical panels)
+distinct. Menu reservation intentionally uses layout viewport height and effective
+main width; shared chrome policy accepts explicit dimensions from its caller.
+
 ## Layering
 
 1. `src/lib/bits/custom/{componentType}/src/*`
@@ -106,7 +179,7 @@ on unmount; keep public map mechanics out of root and admin imports.
 - Enforce separation:
   - Automatic wiring (adapter): derive structural defaults from app/admin state (`activeResource`, `activeRef`, UI mode state).
   - Manual wiring (page): set programmatic header metadata (`title`, `icon`, `facets`) and per-page visibility intent via `HeaderCtrl`.
-- Do not use `appCtx.state.header` as the source of truth for Bits header rendering.
+- Header metadata lives in `HeaderCtrl`; do not add a parallel header store to resource contexts.
 - Recommended merge precedence:
   1. app/admin derived defaults
   2. adapter-level mode mapping (`auto` / `view` / `form` / `none`)
