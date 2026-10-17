@@ -194,7 +194,12 @@ describe('Breadline user mapping', () => {
         },
       ],
       accounts: [
-        { id: 'a', userId: 'provider', providerId: 'google', accountId: row().uid! },
+        {
+          id: 'a',
+          userId: 'provider',
+          providerId: 'google',
+          accountId: '123456789012345678901',
+        },
       ],
     }
     const plan = planUsers([row()], target, 'seed')

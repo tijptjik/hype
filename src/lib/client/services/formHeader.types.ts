@@ -1,20 +1,7 @@
-// TYPES
-import type {
-  HeaderButtonActionConfig,
-  HeaderLayoutRegionConfig,
-} from '#lib/bits/patterns/layout/header/header.types.js'
 import type {
   HeaderFormActionsState,
   HeaderFacetItem,
 } from '#lib/context/headerState.types.js'
-
-type HeaderTaskActionsController = {
-  setTaskActions: (actions: HeaderButtonActionConfig[]) => void
-  setTaskActionContent: (
-    component: HeaderLayoutRegionConfig['component'],
-    props?: HeaderLayoutRegionConfig['props'],
-  ) => void
-}
 
 export type HeaderTransitionSnapshot = Pick<
   HeaderFormActionsState,
@@ -27,5 +14,3 @@ export type HeaderTransitionSnapshot = Pick<
 > & {
   facets: HeaderFacetItem[]
 }
-
-type OrganisationToggleField = 'isPublished' | 'isArchived'

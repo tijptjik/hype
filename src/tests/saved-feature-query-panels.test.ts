@@ -34,7 +34,7 @@ const mocks = vi.hoisted(() => {
   return {
     app: {
       user: { id: 'user-a' },
-      cacheCtx: { featureQueries: { wishlist: query(), visited: query() } },
+      resources: { featureQueries: { wishlist: query(), visited: query() } },
       state: {
         resources: { feature: [] },
         userFeatures: { wishlisted: [], visited: [] },

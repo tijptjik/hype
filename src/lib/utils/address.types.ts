@@ -97,5 +97,3 @@ export type AddressMeta = {
   addressReverseGen?: boolean
   addressForwardGen?: boolean
 }
-
-type AddressPropertiesExtended = AddressProperties & AddressMeta

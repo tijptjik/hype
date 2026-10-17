@@ -7,7 +7,6 @@ import type { Task } from '#lib/db/zod/index.js'
 import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 import type { Id } from '#lib/types.js'
 import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
-import type { FirstClassResource } from '#lib/enums.js'
 
 export type ResourceSortItemConfig = {
   value: string
@@ -49,8 +48,6 @@ export type FilterState = {
   hub: ResourceFilterState
   property: ResourceFilterState
 }
-
-type AdminFilterStates = Record<FirstClassResource, FilterState>
 
 export type ResourceSortState = {
   sortBy: string

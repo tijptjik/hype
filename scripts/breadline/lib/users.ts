@@ -249,10 +249,10 @@ export function planUsers(
       keys.add(key)
       volunteerGroups.set(row.volunteer_id, keys)
     }
-    if (/^\d{21}$/.test(row.uid || '')) {
-      const keys = providerGroups.get(row.uid!) ?? new Set<string>()
+    if (row.uid && /^\d{21}$/.test(row.uid)) {
+      const keys = providerGroups.get(row.uid) ?? new Set<string>()
       keys.add(key)
-      providerGroups.set(row.uid!, keys)
+      providerGroups.set(row.uid, keys)
     }
   }
   for (const [key, unsorted] of [...groups].sort(([a], [b]) => a.localeCompare(b))) {
@@ -277,7 +277,8 @@ export function planUsers(
     if (
       rows.some(
         row =>
-          row.volunteer_id !== null && volunteerGroups.get(row.volunteer_id)!.size > 1,
+          row.volunteer_id !== null &&
+          (volunteerGroups.get(row.volunteer_id)?.size ?? 0) > 1,
       )
     ) {
       reject('volunteer_spans_multiple_emails')
@@ -407,8 +408,8 @@ export function planUsers(
           Number(normalizedEmail(b.email) === email) -
             Number(normalizedEmail(a.email) === email) ||
           Number(/^\d{21}$/.test(b.uid || '')) - Number(/^\d{21}$/.test(a.uid || '')) ||
-          Date.parse(b.last_updated_at || b.created_at!) -
-            Date.parse(a.last_updated_at || a.created_at!) ||
+          Date.parse(b.last_updated_at || b.created_at || '') -
+            Date.parse(a.last_updated_at || a.created_at || '') ||
           a.id - b.id,
       )[0]
       const telephone = normalizeTelephone(profile.telephone)
@@ -531,5 +532,5 @@ export function userPlanSql(plan: UserImportPlan): string {
       )
     }
   }
-  return statements.join('\n') + '\n'
+  return `${statements.join('\n')}\n`
 }

@@ -85,7 +85,8 @@ describe('named division roles', () => {
       const roleNames = Object.keys(divisionRoles)
       expect(
         Object.values(
-          db.prepare(`SELECT ${roleNames.join(',')} FROM feature WHERE id='a'`).get()!,
+          db.prepare(`SELECT ${roleNames.join(',')} FROM feature WHERE id='a'`).get() ??
+            {},
         ),
       ).toEqual(projectDivisionRoles(rows))
       expect(db.prepare('SELECT count(*) n FROM featureDivisionJob').get()?.n).toBe(
@@ -108,7 +109,7 @@ describe('named division roles', () => {
             .prepare(
               `SELECT ${roleNames.join(',')},divisionResolution FROM feature WHERE id='a'`,
             )
-            .get()!,
+            .get() ?? {},
         ),
       ).toEqual(Array(12).fill(null))
       db.exec("DELETE FROM feature WHERE id='a'")

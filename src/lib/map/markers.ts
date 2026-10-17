@@ -468,7 +468,8 @@ export function createMarkerRenderer(
       } else if (retention && positions.has(id)) {
         // Preserve the exact image node; nearby parked markers avoid MapLibre reattachment.
         cancelMarkerRemoval(marker)
-        const coordinates = positions.get(id)!
+        const coordinates = positions.get(id)
+        if (!coordinates) continue
         const attached = isWithinMarkerRetentionPerimeter(map, coordinates)
         // Map clipping hides offscreen elements; keeping them rendered prevents zoom pop-in.
         marker.getElement().hidden = false

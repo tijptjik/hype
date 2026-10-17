@@ -69,7 +69,8 @@ describe('map markers', () => {
     const retention = { scope: 'public:layers-a', budget: 1000 }
     const row = feature('nearby', [1, 1])
     renderer.sync([row], { retention })
-    const original = renderer.getElement(row.id)!
+    const original = renderer.getElement(row.id)
+    if (!original) throw new Error('Expected a rendered marker')
     const image = original.querySelector('img')
     renderer.sync([], { retention })
     expect(renderer.getElement(row.id)).toBe(original)
@@ -108,7 +109,8 @@ describe('map markers', () => {
     const retention = { scope: 'public', budget: 1000 }
     const row = feature('approaching')
     renderer.sync([row], { retention })
-    const element = renderer.getElement(row.id)!
+    const element = renderer.getElement(row.id)
+    if (!element) throw new Error('Expected a rendered marker')
     const image = element.querySelector('img')
     renderer.sync([], { retention })
     expect(renderer.getElement(row.id)).toBeNull()

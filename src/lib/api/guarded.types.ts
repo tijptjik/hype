@@ -23,5 +23,3 @@ export type GuardedFormContext = GuardedBaseContext & {
 }
 
 export type GuardedCommandContext = GuardedBaseContext
-
-type GuardedContextResolver = (payload?: unknown) => Promise<GuardedBaseContext>

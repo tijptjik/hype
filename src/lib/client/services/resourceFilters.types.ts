@@ -4,94 +4,14 @@ import type { FirstClassResource } from '#lib/enums.js'
 import type { Component } from 'svelte'
 
 // Organisation filter keys
-type OrganisationStatusFilterKey = 'isPublished' | 'isArchived'
-
-type OrganisationTranslationFilterKey =
-  | 'isNameTranslated'
-  | 'isContextualNameTranslated'
-  | 'isDescriptionTranslated'
-
-type OrganisationAuthorshipFilterKey =
-  | 'hasName'
-  | 'hasContextualName'
-  | 'hasDescription'
-
-type OrganisationImageFilterKey = 'hasImage'
 
 // Project filter keys
-type ProjectStatusFilterKey = 'isPublished' | 'isArchived'
-
-type ProjectTranslationFilterKey =
-  | 'isNameTranslated'
-  | 'isContextualNameTranslated'
-  | 'isDescriptionTranslated'
-
-type ProjectAuthorshipFilterKey =
-  | 'hasName'
-  | 'hasContextualName'
-  | 'hasDescription'
-  | 'isAllRightsReserved'
-  | 'isPublicDomain'
-  | 'hasLicenseBy'
-  | 'hasLicenseSa'
-  | 'hasLicenseNc'
-  | 'hasLicenseNd'
-
-type ProjectImageFilterKey = 'hasImage'
 
 // Layer filter keys (no image filters)
-type LayerStatusFilterKey = 'isPublished' | 'isArchived'
-
-type LayerTranslationFilterKey =
-  | 'isNameTranslated'
-  | 'isContextualNameTranslated'
-  | 'isDescriptionTranslated'
-
-type LayerAuthorshipFilterKey =
-  | 'hasName'
-  | 'hasContextualName'
-  | 'hasDescription'
-  | 'isAllRightsReserved'
-  | 'isPublicDomain'
-  | 'hasLicenseBy'
-  | 'hasLicenseSa'
-  | 'hasLicenseNc'
-  | 'hasLicenseNd'
-
-type FeatureStatusFilterKey =
-  | 'isPublished'
-  | 'isPendingReview'
-  | 'isArchived'
-  | 'isIntangible'
-  | 'isVisitable'
-
-type FeatureAuthorshipFilterKey =
-  | 'hasTitle'
-  | 'hasDescription'
-  | 'hasDisplayAddress'
-  | 'isAllRightsReserved'
-  | 'isPublicDomain'
-  | 'hasLicenseBy'
-  | 'hasLicenseSa'
-  | 'hasLicenseNc'
-  | 'hasLicenseNd'
-
-type FeatureImageFilterKey = 'hasImage' | 'isOneImagePublished' | 'isAllImagePublished'
 
 // Task filter keys
-type TaskStatusFilterKey = 'isReviewed' | 'reviewOutcome' | 'reviewAction' | 'type'
 
 // Hub filter keys (only archived status)
-type HubStatusFilterKey = 'isArchived'
-
-type HubTranslationFilterKey =
-  | 'isNameTranslated'
-  | 'isContextualNameTranslated'
-  | 'isDescriptionTranslated'
-
-type HubAuthorshipFilterKey = 'hasName' | 'hasContextualName' | 'hasDescription'
-
-type HubImageFilterKey = 'hasImage'
 
 export type ViewFilterResource = keyof ViewFilters
 

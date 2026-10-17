@@ -59,7 +59,7 @@ describe('division map highlights', () => {
     expect(layers.size).toBe(2)
     sources.clear()
     layers.clear()
-    events.get('style.load')!()
+    events.get('style.load')?.()
     expect(sources.size).toBe(1)
     expect(layers.size).toBe(2)
     renderer.update([], null)
@@ -70,7 +70,7 @@ describe('division map highlights', () => {
     ready = false
     renderer.update([definition], null)
     ready = true
-    events.get('idle')!()
+    events.get('idle')?.()
     const setData = [...sources.values()][0].setData
     expect(setData).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -82,7 +82,7 @@ describe('division map highlights', () => {
       }),
     )
     const writes = setData.mock.calls.length
-    events.get('idle')!()
+    events.get('idle')?.()
     expect(setData).toHaveBeenCalledTimes(writes)
     renderer.destroy()
     expect(sources.size + layers.size + events.size).toBe(0)

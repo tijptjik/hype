@@ -17,9 +17,8 @@ import {
   UserSearchQueryParamsSchema,
 } from '#lib/db/zod/index.js'
 // DRIZZLE
-import { eq, or, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 // API
-import { getPrisms } from '#lib/api/index.js'
 import {
   guardedBatchByIdQuery,
   guardedCommand,
@@ -350,7 +349,7 @@ export const updateUserProfile = guardedCommand(
       }
       // Reserve IDs and check normalized names before the database uniqueness backstop.
       const conflict = await loadUser(db, {}, [
-        or(eq(user.id, username), sql`lower(${user.username}) = ${username}`)!,
+        sql`(${user.id} = ${username} OR lower(${user.username}) = ${username})`,
       ])
       if (username === 'admin' || (conflict && conflict.id !== existing.id)) {
         throw error(409, 'USERNAME_IS_ALREADY_TAKEN')

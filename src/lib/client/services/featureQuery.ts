@@ -168,7 +168,7 @@ export function matchesFeatureQuery(
   if (
     filters?.divisionIds?.length &&
     !row.divisionMemberships?.some(
-      member => member.selected && filters.divisionIds!.includes(member.divisionId),
+      member => member.selected && filters.divisionIds?.includes(member.divisionId),
     )
   )
     return false
@@ -176,7 +176,7 @@ export function matchesFeatureQuery(
     filters?.excludeDivisionIds?.length &&
     row.divisionMemberships?.some(
       member =>
-        member.selected && filters.excludeDivisionIds!.includes(member.divisionId),
+        member.selected && filters.excludeDivisionIds?.includes(member.divisionId),
     )
   )
     return false

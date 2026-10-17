@@ -19,10 +19,7 @@ import { getLocale } from '#lib/i18n.js'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 // API
-import {
-  getPrisms,
-  getValidQueryParams as validateQueryParams,
-} from '#lib/api/index.js'
+import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
   getDuplicateValues,
   hasRoleMembershipChanged,

@@ -88,7 +88,7 @@ async function main(): Promise<void> {
     }
     writeFileSync(
       resolve(directory, 'rehearsal.json'),
-      JSON.stringify(receipt, null, 2) + '\n',
+      `${JSON.stringify(receipt, null, 2)}\n`,
       { mode: 0o600 },
     )
     console.log(JSON.stringify(receipt, null, 2))

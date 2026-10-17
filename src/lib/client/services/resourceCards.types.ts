@@ -1,11 +1,3 @@
-// TYPES
-import type { Task } from '#lib/db/zod/index.js'
-import type {
-  ImageContextEnvelope,
-  ImageCtxEnvelope,
-} from '#lib/db/zod/schema/image.types.js'
-import type { Resource } from '#lib/types.js'
-
 /* ----------------- */
 // ENTITY CARDS
 /* -------- */
@@ -25,8 +17,4 @@ export type KeyMap = {
     falseText?: string
     superAdminOnly?: boolean
   }>
-}
-
-type EntityWithOptionalImage = Exclude<Resource, Task> & {
-  image?: ImageContextEnvelope | ImageCtxEnvelope | string | null
 }

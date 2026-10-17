@@ -15,7 +15,9 @@ const mocks = vi.hoisted(() => ({
   updates: vi.fn(),
 }))
 
-vi.mock('#lib/context/app.svelte.js', () => ({ getAppCtx: () => mocks.app }))
+vi.mock('#lib/context/resourceView.svelte.js', () => ({
+  getSurfaceCtx: () => mocks.app,
+}))
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }))
 vi.mock('#lib/i18n.js', () => ({
   m: new Proxy({}, { get: (_target, key) => () => String(key) }),

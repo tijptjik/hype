@@ -1,12 +1,5 @@
 // DRIZZLE
-import {
-  foreignKey,
-  index,
-  integer,
-  sqliteTable,
-  text,
-  unique,
-} from 'drizzle-orm/sqlite-core'
+import { foreignKey, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
 // SCHEMA
 import { feature, featureI18n } from './feature'
 

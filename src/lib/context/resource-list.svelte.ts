@@ -135,8 +135,11 @@ export class ResourceList {
       this.validatedAt = Date.now()
       this.history.set(key, { pages: this.pages, fetchedAt: this.validatedAt })
       // Keep back-navigation retention bounded independently of the active traversal.
-      while (this.history.size > 12)
-        this.history.delete(this.history.keys().next().value!)
+      while (this.history.size > 12) {
+        const oldest = this.history.keys().next()
+        if (oldest.done) break
+        this.history.delete(oldest.value)
+      }
     } catch (error) {
       if (generation === this.generation) {
         if ([401, 403, 404].includes((error as { status?: number })?.status ?? 0)) {

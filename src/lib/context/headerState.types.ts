@@ -11,8 +11,6 @@ import type {
 // NAVIGATION :: ADMIN :: ACTIVE RESOURCE
 /* -------- */
 
-type SidebarState = 'closed' | 'narrow' | 'open'
-
 export type HeaderControlsMode = 'auto' | 'view' | 'form' | 'none'
 
 export interface HeaderVisibilityOverrides {

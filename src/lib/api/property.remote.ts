@@ -4,10 +4,7 @@ import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { and, eq, inArray } from 'drizzle-orm'
 // API
-import {
-  getPrisms,
-  getValidQueryParams as validateQueryParams,
-} from '#lib/api/index.js'
+import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
   getPropertyQueryContext,
   propertyCollectionWithRelations,
@@ -742,7 +739,7 @@ export const appendPropertyValues = guardedCommand(
 export const getProjectProperties = guardedQuery(
   ProjectPropertiesQuery,
   async (params, ctx) => {
-    const { db, user, userRoles, event } = ctx
+    const { db, user, userRoles } = ctx
 
     const readDecision = await toProjectReadDecision({
       db,

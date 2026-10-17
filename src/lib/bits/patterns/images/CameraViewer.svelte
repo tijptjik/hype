@@ -65,7 +65,9 @@ const pendingIndex = $derived.by(() => {
   if (activeIndex < 0 || loadedIndex === activeIndex) return -1
   return activeIndex
 })
-const showCounterTotal = $derived(responsiveCtx.visibleWindowWidth > COMPACT_COUNTER_MAX_WIDTH_PX)
+const showCounterTotal = $derived(
+  responsiveCtx.visibleWindowWidth > COMPACT_COUNTER_MAX_WIDTH_PX,
+)
 
 $effect(() => {
   if (!activeId) {

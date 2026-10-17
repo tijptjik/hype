@@ -44,5 +44,3 @@ export type FormField = Record<Field, FormFieldDefinition>
 export type FormFieldArray = Record<Field, FormFieldArrayDefinition>
 
 export type FormFieldNested = Record<Field, FormFieldNestedDefinition>
-
-type FormFieldConfig = Record<Key, FormField | FormFieldArray | FormFieldNested>

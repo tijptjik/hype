@@ -784,7 +784,6 @@ export function getAddressForQuery(
 ): ParsedAddressQueryComponents {
   const trimmedAddress = rawAddress.trim()
   const isLargeToSmall = isAddressLargeToSmall(trimmedAddress)
-  const isSmallToLarge = !isLargeToSmall
 
   let cleanedAddress = removeCountryForQuery(trimmedAddress, isLargeToSmall)
   // Resolve the area after removing the country: "Hong Kong" is also an island alias.

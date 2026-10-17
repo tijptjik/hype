@@ -1,37 +1,15 @@
 // TYPES
-import type {
-  OrganisationForm,
-  ProjectForm,
-  LayerForm,
-  FeatureForm,
-  Form,
-} from '#lib/client/services/form.types.js'
-import type {
-  Resource,
-  FieldDiscriminator,
-  LocaleExtended,
-  Field,
-  Id,
-  Locale,
-} from '#lib/types.js'
+import type { Form } from '#lib/client/services/form.types.js'
+import type { FieldDiscriminator, LocaleExtended, Field } from '#lib/types.js'
 import type {
   FormField,
   FormFieldArray,
   FormFieldExtendedDefinition,
 } from '#lib/client/services/formFields.types.js'
-import type { IntermediateValue } from '#lib/client/services/propertyFilters.types.js'
 
 /* ----------------- */
 // SVELTE : PROPS
 /* -------- */
-
-type FormProps = OrganisationForm | ProjectForm | LayerForm | FeatureForm
-
-type PageProps<T extends Resource> = {
-  data: {
-    [key: string]: T
-  }
-}
 
 export type SectionProps = {
   form: Form
@@ -57,32 +35,3 @@ export type FieldProps = SectionProps &
     values?: string[]
     actions?: Record<string, (...args: never[]) => void>
   }
-
-type UserFieldProps = SectionProps & {
-  fieldRoot: Field
-  joinConfig: {
-    discriminator: string // e.g. 'role'
-    uncheckedValue: string // e.g. 'member'
-    checkedValue: string // e.g. 'owner'
-  }
-  searchMode: boolean
-  removeMode: boolean
-}
-
-type FieldPropsExtended = FieldProps & ExtendedParams
-
-type ListFieldProps = FieldPropsExtended & {
-  values: IntermediateValue[]
-  actions: {
-    add: (e: Event) => void
-    remove: (e: Event, valueId: Id) => void
-    update: (e: Event, valueId: Id, locale: Locale) => void
-    syncUp: () => void
-  }
-  actionProps: {
-    dragMode: boolean
-    removeMode: boolean
-    removeModeLocale?: string
-    confirmingId?: string
-  }
-}

@@ -5,18 +5,8 @@
 /* -------- */
 
 // Used to distriminate between Organisation and Project roles
-type UserJoinConfig = {
-  discriminator: 'role'
-  checkedValue: 'owner' | 'maintainer'
-  uncheckedValue: 'member'
-}
 
 // Used to manage organisation core inclusion in hubs
-type OrganisationJoinConfig = {
-  discriminator: 'isCoreInclusive'
-  checkedValue: true
-  uncheckedValue: false
-}
 
 export type QueryWithOverride<TCurrent = unknown, TResult = unknown> = {
   withOverride(update: (current: TCurrent) => TCurrent): TResult

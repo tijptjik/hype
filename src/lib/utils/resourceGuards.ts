@@ -19,7 +19,7 @@ import type { Task } from '#lib/db/zod/index.js'
  * @returns Whether the resource matches the narrowed resource type.
  * @remarks Uses the existing structural field checks; does not validate a payload.
  */
-function isOrganisationOrProject(
+export function isOrganisationOrProject(
   resource: Resource,
 ): resource is Organisation | Project {
   return 'code' in resource
@@ -33,7 +33,7 @@ function isOrganisationOrProject(
  * @returns Whether the resource matches the narrowed resource type.
  * @remarks Uses the existing structural field checks; does not validate a payload.
  */
-function isOrganisation(resource: Resource): resource is Organisation {
+export function isOrganisation(resource: Resource): resource is Organisation {
   return (
     !('organisationId' in resource) &&
     !('layerId' in resource) &&
@@ -50,7 +50,7 @@ function isOrganisation(resource: Resource): resource is Organisation {
  * @returns Whether the resource matches the narrowed resource type.
  * @remarks Uses the existing structural field checks; does not validate a payload.
  */
-function isProject(resource: Resource): resource is Project {
+export function isProject(resource: Resource): resource is Project {
   return (
     'organisationId' in resource &&
     !('projectId' in resource) &&
@@ -65,7 +65,7 @@ function isProject(resource: Resource): resource is Project {
  * @returns Whether the resource matches the narrowed resource type.
  * @remarks Uses the existing structural field checks; does not validate a payload.
  */
-function isLayer(resource: Resource): resource is Layer {
+export function isLayer(resource: Resource): resource is Layer {
   return 'projectId' in resource && !('layerId' in resource)
 }
 
@@ -87,7 +87,7 @@ export function isFeature(resource: Resource): resource is Feature {
  * @returns Whether the resource matches the narrowed resource type.
  * @remarks Uses the existing structural field checks; does not validate a payload.
  */
-function isHub(resource: Resource): resource is Hub {
+export function isHub(resource: Resource): resource is Hub {
   return 'organisation' in resource && 'domain' in resource
 }
 
