@@ -15,47 +15,56 @@ type BenchmarkWindow = Window & {
 const root = resolve(import.meta.dir, '../..')
 const temporary = await mkdtemp(join(tmpdir(), 'hype-marker-benchmark-'))
 const entry = join(temporary, 'entry.ts')
-// Compare uncommitted changes with HEAD without changing the working tree.
-const baseline = process.argv.includes('--baseline')
-/** Reads one committed benchmark dependency. @param path Repository-relative path. @returns Source at HEAD. */
+// Compare with HEAD or a fixed revision without changing the working tree.
+const baselineRef = process.argv
+  .find(argument => argument.startsWith('--baseline-ref='))
+  ?.slice('--baseline-ref='.length)
+const baseline = process.argv.includes('--baseline') || Boolean(baselineRef)
+/** Reads one committed benchmark dependency. @param path Repository-relative path. @returns Source at the selected revision. */
 function readBaseline(path: string): string {
-  const result = Bun.spawnSync(['git', 'show', `HEAD:${path}`], { cwd: root })
+  const result = Bun.spawnSync(['git', 'show', `${baselineRef ?? 'HEAD'}:${path}`], {
+    cwd: root,
+  })
   if (result.exitCode !== 0) throw new Error(`Cannot read baseline ${path}`)
   return result.stdout.toString()
 }
 const spacing = process.argv.includes('--spread') ? 0.004 : 0.001
 const repeats = process.argv.includes('--repeat') ? 3 : 1
-await Bun.write(
-  entry,
-  `import { createMarkerRenderer } from '${root}/src/lib/map/markers.ts'; window.createMarkerRenderer = createMarkerRenderer;`,
-)
-const built = await Bun.build({
-  entrypoints: [entry],
-  target: 'browser',
-  plugins: [
-    {
-      name: 'fixture-images',
-      setup(build) {
-        if (baseline) {
-          for (const name of ['markers', 'markerRetention']) {
-            build.onLoad({ filter: new RegExp(`/map/${name}\\.ts$`) }, () => ({
-              contents: readBaseline(`src/lib/map/${name}.ts`),
-              loader: 'ts',
-            }))
+let bundle: string
+try {
+  await Bun.write(
+    entry,
+    `import { createMarkerRenderer } from '${root}/src/lib/map/markers.ts'; window.createMarkerRenderer = createMarkerRenderer;`,
+  )
+  const built = await Bun.build({
+    entrypoints: [entry],
+    target: 'browser',
+    plugins: [
+      {
+        name: 'fixture-images',
+        setup(build) {
+          if (baseline) {
+            for (const name of ['markers', 'markerRetention']) {
+              build.onLoad({ filter: new RegExp(`/map/${name}\\.ts$`) }, () => ({
+                contents: readBaseline(`src/lib/map/${name}.ts`),
+                loader: 'ts',
+              }))
+            }
           }
-        }
-        build.onLoad({ filter: /client\/services\/image\.ts$/ }, () => ({
-          contents: 'export const getImageSrc = (image) => image',
-          loader: 'js',
-        }))
-        build.onLoad({ filter: /\.css$/ }, () => ({ contents: '', loader: 'js' }))
+          build.onLoad({ filter: /client\/services\/image\.ts$/ }, () => ({
+            contents: 'export const getImageSrc = (image) => image',
+            loader: 'js',
+          }))
+          build.onLoad({ filter: /\.css$/ }, () => ({ contents: '', loader: 'js' }))
+        },
       },
-    },
-  ],
-})
-if (!built.success) throw new Error(String(built.logs))
-const bundle = await built.outputs[0].text()
-await rm(temporary, { recursive: true })
+    ],
+  })
+  if (!built.success) throw new Error(String(built.logs))
+  bundle = await built.outputs[0].text()
+} finally {
+  await rm(temporary, { recursive: true, force: true })
+}
 const browser = await chromium.launch({
   headless: true,
   executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -80,7 +89,9 @@ try {
             'utf8',
           )) +
           '\n' +
-          (baseline ? readBaseline('src/lib/styles/map-markers.css') : await readFile(`${root}/src/lib/styles/map-markers.css`, 'utf8')),
+          (baseline
+            ? readBaseline('src/lib/styles/map-markers.css')
+            : await readFile(`${root}/src/lib/styles/map-markers.css`, 'utf8')),
       })
       await page.route('**/maplibre-dist/*', async r =>
         r.fulfill({
