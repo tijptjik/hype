@@ -20,12 +20,14 @@ validates and normalizes that response at its API boundary.
 The mirror contains referenced divisions, including ancestors and ambiguous
 candidates. Metadata changes update existing mirror entries; they do not import
 the entire upstream catalogue. Unreferenced definitions are pruned after refresh
-work completes. No upstream membership polygons are retained after their change
-scan finishes.
+work completes. Authoritative upstream membership polygons are retained in definition attributes
+for geometry eligibility and subsequent on-demand map highlighting. Facets carry
+only polygon availability, never the polygon payload.
 
-SaanSeoi defines levels **0–6**. The six feature projections represent levels 1–6;
-level 0 remains in the membership index. HYPE uses the administrative branch when
-an equivalent locality and administrative division coexist at level 1. An ambiguous
+SaanSeoi supplies nullable display levels and separate administrative, locality,
+landform and full hierarchy paths. The six historical feature projections represent
+levels 1–6; level 0 remains in the membership index. Hype preserves simultaneous
+administrative and locality memberships; a level collision leaves that scalar null. An ambiguous
 resolution keeps memberships but selects none. Never choose a branch by array order.
 
 The membership index is authoritative for arbitrary division queries. Use
@@ -89,7 +91,8 @@ response-size bound.
 
 ## Local migration and backfill
 
-In the verified local SaanSeoi setup, Atlas listens on port 8787; port 8788 is Harbour.
+Use `http://api.atlas.localhost` for development. The September evidence below used
+port 8787 and does not establish current publication or local database readiness.
 
 The local command calls the same refresh implementation as the scheduled Worker.
 It validates authentication and the API contract before changing the database.
@@ -98,7 +101,7 @@ Supply an explicit database path; it never guesses among old local SQLite files.
 ```sh
 bun --env-file=/path/to/server-credential.env run scripts/backfill-feature-divisions.ts \
   --database .wrangler/state/v3/d1/miniflare-D1DatabaseObject/LOCAL_DATABASE.sqlite \
-  --base-url http://localhost:8787
+  --base-url http://api.atlas.localhost
 ```
 
 The default is an API/database inspection. Add `--apply` to back up the database,
