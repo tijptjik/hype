@@ -10,7 +10,7 @@ Each component manages its own state and passes data/calls to the next component
 
 ---
 
-## 1. Feature Page (`src/routes/(app)/features/[id]/+page.svelte`)
+## 1. Feature Page (`src/routes/(public)/(app)/features/[id]/+page.svelte`)
 
 ### **Responsibilities:**
 

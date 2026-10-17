@@ -10,6 +10,7 @@ require a monorepo or separate frontend deployments.
 | Context | Owner | Responsibility |
 | --- | --- | --- |
 | `RootCTX` | Root layout, shared by all routes | Shared session, locale, theme, responsive state and resolved hub identity |
+| `CacheCtx` | Root layout instance, coordinated by `RootCTX` | Scoped resource retention, invalidation and optimistic reconciliation, accessed through typed resource clients |
 | `AppCtx` | Public Hype app layout | User-facing app state, including the map, feature collections, filters, panels and app navigation |
 | `AdminCtx` | `/admin` layout | Admin resource views, editing, filters and admin navigation |
 | `{Hub}DashCtx` | The corresponding hub dashboard layout | Hub-specific operational workflows; use `BreadlineDashCtx` for Breadline |
@@ -26,11 +27,18 @@ services, contracts and reusable UI through their owning modules rather than
 coupling one surface context to another. Context state supports the UI;
 server-side services remain responsible for authorisation and domain invariants.
 
-This is the target ownership model. The current root layout still creates
-`AppCtx`, and `AdminCtx` still consumes it. Migrating that wiring requires moving
-shared responsibilities to `RootCTX` and surface responsibilities to their
-respective layouts; renaming the existing shared context alone does not establish
-these boundaries.
+The root layout creates `RootCTX`. The `(public)` layout creates `AppCtx`;
+`/admin` creates `AdminCtx` with its own `ResourceViewCtx` exposed as `adminCtx.view`.
+`ResourceViewCtx` is reusable surface-local implementation, not a root singleton.
+Reusable UI resolves that view through `getSurfaceCtx()` or receives explicit
+adapter props. Only public map code should require `getAppCtx()`.
+
+Resource query ownership and the standard internal API are defined in
+[Context boundaries and resource queries](refactor-guides/Refactor-Guide-Context-Boundaries.md).
+Surface contexts own query intent and traversal. `ResourceClient` binds access
+metadata, while `CacheCtx` retains compatible native handles. SvelteKit remains
+the owner of remote payloads and transport deduplication. Dispose view controllers
+on unmount; keep public map mechanics out of root and admin imports.
 
 ## Layering
 
