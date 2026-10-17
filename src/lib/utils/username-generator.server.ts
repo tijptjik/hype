@@ -1,15 +1,15 @@
 // NODE
 import { createHash } from 'node:crypto'
 // LIBRARIES
-import {
-  uniqueNamesGenerator,
-  adjectives,
-  colors,
-  animals,
-} from 'unique-names-generator'
+import { uniqueNamesGenerator, colors, animals } from 'unique-names-generator'
+// USERNAMES
+import { normalizeUsername } from './username'
+import { USERNAME_ADJECTIVES } from './username-adjectives'
+// TYPES
 import type { Config } from 'unique-names-generator'
 
-import { normalizeUsername } from './username'
+// Both generators use the same reviewed vocabulary, without an upstream fallback.
+const adjectives = [...USERNAME_ADJECTIVES]
 
 const usernameConfig: Config = {
   dictionaries: [adjectives, colors, animals],
@@ -20,6 +20,7 @@ const usernameConfig: Config = {
 
 /**
  * Generates a random username in the format: adjective + color + animal.
+ * @returns A canonical username beginning with a whitelisted adjective.
  */
 export function generateRandomUsername(): string {
   return normalizeUsername(uniqueNamesGenerator(usernameConfig))
@@ -27,6 +28,9 @@ export function generateRandomUsername(): string {
 
 /**
  * Generates a deterministic username from a stable user id.
+ * @param userId Stable identity used as the generation seed.
+ * @returns A canonical username beginning with a whitelisted adjective.
+ * @remarks Repeatability depends on keeping the dictionary and its order unchanged.
  */
 export function generateUsernameFromId(userId: string): string {
   return normalizeUsername(
@@ -38,17 +42,16 @@ export function generateUsernameFromId(userId: string): string {
 }
 
 /**
- * Generate a stable runner username using the shared random-name dictionaries.
+ * Generate a stable runner username using the shared adjective whitelist.
  * @param userId Opaque generated user ID used as the random seed.
  * @param attempt Collision retry number; the same inputs reproduce the same name.
  * @returns A TitleCase adjective, Runner, and exactly two digits.
  */
 export function generateRunnerUsernameFromId(userId: string, attempt = 0): string {
-  // Keep generated display names within the username length limit.
-  const term = (value: string): boolean => /^[a-z]{1,12}$/i.test(value)
+  // The whitelist's length bound keeps generated display names within the limit.
   return uniqueNamesGenerator({
     dictionaries: [
-      adjectives.filter(term),
+      adjectives,
       ['Runner'],
       Array.from({ length: 100 }, (_, index) => String(index).padStart(2, '0')),
     ],

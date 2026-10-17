@@ -18,7 +18,13 @@ username and `(providerId, accountId)` constraints. No new identity, checkpoint 
 legacy-ID columns/tables are needed. Migration `0086_username_display_case.sql` adds `displayUsername` and a unique
 index on `lower(username)`. User-provided capitalization is preserved for display;
 canonical usernames and URLs are lowercase. Breadline names use `AdjectiveRunner00`
-for display and its lowercase equivalent for matching. Existing case collisions
+for display and its lowercase equivalent for matching. Both Breadline runner names
+and Hype generated usernames use the explicit 1,064-entry neutral-to-positive
+whitelist in `src/lib/utils/username-adjectives.ts`, not the upstream package
+adjectives. Changes to the whitelist affect new generation only; existing imported
+users and user-chosen usernames are not renamed. Seeded output depends on the
+whitelist order, so regenerate any unexecuted import plan after changing it.
+Existing case collisions
 block the migration for review rather than merging users.
 
 The broader event/schedule/property/leaderboard proposal is retained under `drafts/`
