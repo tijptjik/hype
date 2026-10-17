@@ -62,7 +62,7 @@ const getNextAdvancedPreferences = (
   icon={Language}
   position="right"
   iconColorClass="text-base-content"
-  defaultOpen={!panelProps.isAdmin}
+  defaultOpen={false}
   iconVerticalPaddingClass="py-3 pr-4.5"
 >
   <div class="flex flex-col gap-4 px-6 pt-2 pb-6 caret-transparent">

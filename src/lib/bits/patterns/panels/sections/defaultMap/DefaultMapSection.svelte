@@ -8,6 +8,8 @@ import { m } from '#lib/i18n.js'
 import type { useDefaultMapSettingsModel } from '#lib/adapters/panels/useDefaultMapSettingsModel.svelte.js'
 // BITS
 import { Switch, cx } from '#lib/bits/index.js'
+// ICONS
+import World from 'virtual:icons/tabler/world'
 // COMPONENTS
 import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 // TYPES
@@ -58,12 +60,10 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
   {...panelProps}
   title={m.settings_default_map_title()}
   iconGraphicClass="scale-125 origin-bottom-right mr-1"
-  icon="/globe.svg"
+  icon={World}
   position="right"
 >
-  <div
-    class="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-lg pl-6 pr-3 pb-[60px]"
-  >
+  <div class="flex min-w-0 flex-col gap-4 px-6 pt-2 pb-6">
     {#each orderedLayers as layer (layer.id)}
       {@const { organisation, project } = model.getHierarchy(layer)}
       {@const organisationName = getI18n(organisation, 'nameShort', userPreferences)}
@@ -73,9 +73,7 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
         Boolean(description && description !== '-') &&
         description.length > DESCRIPTION_PREVIEW_THRESHOLD}
       {@const isExpanded = isDescriptionExpanded(layer.id)}
-      <div
-        class="flex w-full flex-row items-start justify-between gap-3 px-4 py-2 pl-2"
-      >
+      <div class="flex w-full flex-row items-start justify-between gap-3 py-2">
         <div class="flex min-w-0 grow flex-col gap-0.5">
           {#if organisation && project}
             <div class="flex flex-row items-center gap-3">
@@ -96,7 +94,7 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
                   {#if description && description !== '-'}
                     <p
                       class={cx(
-                        'mt-0.5 block max-h-96 overflow-hidden text-sm leading-5 text-neutral-content transition-[max-height] duration-300 ease-in-out',
+                        'mt-0.5 block max-h-96 overflow-hidden text-sm leading-5 text-muted-foreground transition-[max-height] duration-300 ease-in-out',
                         !isExpanded && 'max-h-15',
                       )}
                     >

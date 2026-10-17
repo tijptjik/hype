@@ -7,7 +7,6 @@ import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 import { ThemePicker } from '#lib/bits/patterns/themePicker/index.js'
 // ICONS
 import Palette from 'virtual:icons/tabler/palette'
-import ThemeIllustration from './components/ThemeIllustration.svelte'
 // MAP STYLES
 import { REGISTERED_MAP_STYLE_CATALOG } from '#lib/map/styles/catalog.js'
 import { getMapStyleCatalogCopy } from '#lib/map/styles/i18n.js'
@@ -29,7 +28,7 @@ const name = $props.id()
 <Section
   {...panelProps}
   title={m.theme_title()}
-  icon={panelProps.isAdmin ? Palette : ThemeIllustration}
+  icon={Palette}
   iconGraphicClass="!size-12 scale-125 origin-bottom-right mr-1"
   iconColorClass="text-base-content"
 >

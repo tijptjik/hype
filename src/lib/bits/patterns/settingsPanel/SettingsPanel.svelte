@@ -50,12 +50,7 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
 }
 </script>
 
-<Panel
-  isOpen={model.open}
-  bind:panelContainer
-  preserveContentWidth={panelProps.isAdmin}
-  {...panelProps}
->
+<Panel isOpen={model.open} bind:panelContainer preserveContentWidth {...panelProps}>
   <Header
     onClose={model.onClose}
     title={m.menu_settings()}

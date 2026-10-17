@@ -6,6 +6,8 @@ import { m } from '#lib/i18n.js'
 // SERVICES
 // BITS
 import { Switch } from '#lib/bits/index.js'
+// ICONS
+import Flask from 'virtual:icons/tabler/flask'
 // COMPONENTS
 import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 // CONTEXT
@@ -37,20 +39,18 @@ const toggleExperimental = (...args: Parameters<typeof model.toggleExperimental>
   {...panelProps}
   title={m.settings_experimental_title()}
   iconGraphicClass="scale-125 origin-bottom-left -mr-1"
-  icon="/experiment.svg"
+  icon={Flask}
   defaultOpen={false}
   iconVerticalPaddingClass="py-3 pr-5"
   position="right"
 >
-  <div class="flex min-h-0 w-full flex-col gap-2 overflow-y-auto pb-16 pl-4">
+  <div class="flex min-w-0 flex-col gap-4 px-6 pt-2 pb-6">
     {#each featuresConfig as feature}
-      <div
-        class="flex w-full flex-row items-start justify-between gap-3 px-4 py-2 pr-6.75"
-      >
+      <div class="flex w-full flex-row items-start justify-between gap-3 py-2">
         <div class="min-w-0 grow flex flex-col gap-0.5">
           <p class="font-normal text-base-content">{feature.name}</p>
           {#if feature.description}
-            <p class="text-sm text-neutral-content">{feature.description}</p>
+            <p class="text-sm text-muted-foreground">{feature.description}</p>
           {/if}
         </div>
         <Switch

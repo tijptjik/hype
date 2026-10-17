@@ -68,22 +68,22 @@ const handleKeydown = () => {
 <Section
   title={m.settings_contributor_title()}
   iconGraphicClass="scale-125 origin-bottom-right mr-1"
-  icon="/contributor.svg"
+  icon={Trophy}
   {...panelProps}
 >
   <div
-    class="my-2 ml-5 flex flex-row items-center gap-2 rounded-l-md rounded-r-none bg-base-200"
+    class="mx-6 mt-2 mb-6 flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface"
   >
     <input
       name="attribution"
       type="text"
-      class="input m-0 h-12 w-full rounded-l-md rounded-r-none border-0 bg-base-200 pl-6.5 pr-10 text-sm placeholder:text-base-content/40 focus:border-none focus:outline-none"
+      class="m-0 h-12 min-w-0 flex-1 rounded-lg bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-focus"
       placeholder={m.settings_contributor_placeholder()}
       value={attribution}
       oninput={({ target }) => handleAttributionChange(target as HTMLInputElement)}
       onkeydown={handleKeydown}
     >
-    <div class="relative mr-8 grid h-6 w-6 place-items-center stroke-1">
+    <div class="relative mr-3 grid h-6 w-6 shrink-0 place-items-center stroke-1">
       {#if showSuccessIndicator}
         <div
           class="col-start-1 row-start-1 text-success"

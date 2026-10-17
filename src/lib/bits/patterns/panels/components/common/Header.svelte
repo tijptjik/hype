@@ -15,27 +15,21 @@ let {
   onToggleInfo,
   onClose,
   isAdmin = false,
-} = $props<{
+}: {
   isAdmin?: boolean
   onClose: () => void
   panelType: Panel
   title: string
   onToggleInfo?: (e: MouseEvent | TouchEvent) => void
-}>()
+} = $props()
 </script>
 
 <header
-  class="sticky top-0 z-30 flex shrink-0 select-none flex-row items-center justify-between {isAdmin
-    ? 'h-[calc(4.5rem+1px)] border-b border-border px-6'
-    : 'h-18.75 border-b-3 border-base-300 px-4'} bg-panel py-2 caret-transparent focus:outline-none"
-  style:box-shadow={isAdmin ? 'var(--shadow-lg)' : undefined}
+  class="sticky top-0 z-30 flex h-[calc(4.5rem+1px)] shrink-0 select-none flex-row items-center justify-between border-b border-border bg-panel px-6 py-2 caret-transparent focus:outline-none"
+  style:box-shadow="var(--shadow-lg)"
 >
   <div class="flex flex-row items-center gap-2">
-    <h2
-      class={isAdmin
-        ? 'text-sm font-medium uppercase tracking-[0.1em] text-base-content'
-        : 'text-lg font-semibold uppercase tracking-widest text-primary'}
-    >
+    <h2 class="text-sm font-medium uppercase tracking-[0.1em] text-base-content">
       {title}
     </h2>
   </div>
@@ -44,7 +38,7 @@ let {
       <Button
         text="?"
         style="transparent"
-        class="m-0 h-auto flex-none border-transparent p-0 text-base-50 shadow-none [--btn-size:auto] [--btn-padding-x:0]"
+        class="m-0 h-auto flex-none border-transparent p-0 text-base-content shadow-none [--btn-size:auto] [--btn-padding-x:0]"
         labelClasses="text-2xl"
         onClick={onToggleInfo}
       />

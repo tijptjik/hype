@@ -44,9 +44,7 @@ let {
   managedContent?: Snippet<[boolean]>
 } & PanelProps = $props()
 
-const adminSettings = $derived(
-  panelProps.isAdmin && panelProps.panelType === 'settings',
-)
+const isSettings = $derived(panelProps.panelType === 'settings')
 const contentId = $props.id()
 
 // STATE
@@ -79,7 +77,7 @@ const onNavigate = (e: MouseEvent) => {
 </script>
 
 <section
-  class="bits-theme flex min-h-0 {adminSettings
+  class="bits-theme flex min-h-0 {isSettings
     ? 'border-b border-border'
     : 'pt-3'} flex-col overflow-hidden bg-panel caret-transparent {isOpen
     ? 'grow-0'
@@ -87,7 +85,7 @@ const onNavigate = (e: MouseEvent) => {
     ? 'pr-4'
     : ''} {rootClass}"
 >
-  {#if adminSettings}
+  {#if isSettings}
     <button
       type="button"
       class="flex h-14 w-full shrink-0 items-center gap-4 px-6 text-left text-base-content outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
@@ -95,7 +93,9 @@ const onNavigate = (e: MouseEvent) => {
       aria-controls={contentId}
       onclick={onToggle}
     >
-      {#if typeof icon !== 'string'}
+      {#if typeof icon === 'string'}
+        <img src={icon} alt="" class="size-5 shrink-0 object-contain">
+      {:else}
         {@const SectionIcon = icon}
         <SectionIcon class="size-5 shrink-0" aria-hidden="true" />
       {/if}
