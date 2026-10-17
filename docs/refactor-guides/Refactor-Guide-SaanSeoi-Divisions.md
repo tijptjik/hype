@@ -81,7 +81,7 @@ separately as `https://api.saanseoi.hk`.
   `geometry=saanseoi`. Polygon and MultiPolygon data are retained under
   `divisionDefinition.attributes.membershipGeometry`; label points do not qualify.
 - Live geocoding omits codes, identifiers and stored hierarchies. The worker enriches
-  missing metadata through `/divisions/v0.1/{id}?releaseSet=...&profile=full&include=hierarchy`,
+  missing metadata through `/divisions/v0.2/{id}?releaseSet=...&profile=full&include=hierarchy`,
   validating ID, release and schema version. Same-release mirrored metadata is reused.
 - Both write paths retain `names`, classification, optional `divisionCode`,
   `identifiers`, `hierarchies` and `membershipGeometry`. Geocoding merges into richer
@@ -95,17 +95,37 @@ separately as `https://api.saanseoi.hk`.
   The panel displays class icons and sorts by supplied display level, using class order
   where levels are missing. Display order does not assert ancestry.
 
-Read-only local inspection found zero definitions and memberships, and 1,828 pending
-jobs in the main local Hype SQLite database (the `d3080fe...` file, not its backup).
-The refresh checkpoint was idle with no applied release. This explains the empty UI.
+The 17 October investigation confirmed that the initial empty mirror came from
+1,828 unattempted jobs and an inactive local refresh worker, with no lease or job
+errors. The app uses the main `d3080fe...sqlite` file, not its repair backup.
+See the operations guide for the backed-up local rehearsal and completion evidence.
 
-Live Atlas currently selects `data-hk-divisions-2026-09-23.0`, with 140 of 1,818
-divisions covered by membership geometry. Current/current changes validate successfully.
-The v0.1 metadata endpoint works; `include=areas:saanseoi` returns
-`409 variant_unavailable`. v0.2 returns `503 snapshot_not_ready`. Geocoding reports
-coverage geometry `overture`, even with the explicit selector. These observations
-must be resolved with upstream publication before claiming canonical-area backfill
-or full local selector acceptance. Do not silently select a different publication.
+The initial v1 geocoder resolved the v0.1 publication,
+`data-hk-divisions-2026-09-23.0`: 140 of 1,818 divisions have membership geometry.
+Its composition publishes Overture areas, not `areas:saanseoi`, so that explicit
+definition include correctly returns `409 variant_unavailable`. It does not block
+the worker: definition enrichment requests only `include=hierarchy`.
+
+The geocoder's `geometry=saanseoi` enables polygon output; membership geometry is
+selected from the release independently. `loadGeocodingDivisions` prefers the
+SaanSeoi area snapshot and explicitly falls back to Overture when absent. Returned
+polygons come from that same resolver index. `coverage.geometry=overture` accurately
+identifies the persisted source. The changes feed's `membershipGeometry=saanseoi`
+is a contract label, not proof that a literal SaanSeoi area variant was selected.
+The geocoder must return all published area parts for each division: containment
+checks every area row, so returning only the first row loses detached polygons.
+The local fix combines those parts as a MultiPolygon without changing membership
+selection, coordinates, provenance or publication readiness.
+
+October's curated `data-hk-divisions-2026-10-01.0` belongs to v0.2, with prepared
+division and area receipts and 590 stored SaanSeoi areas. Its correctly pinned
+definition request succeeds with `areas:saanseoi`; pinning September to v0.2 has no
+matching publication and returns `503 snapshot_not_ready`. This is not evidence of
+failed October publication. Do not silently substitute October: migrating the worker
+requires coordinated geocode, changes and definition version selection. The v0.2 geocode route is now registered before division-detail routing, with
+a router-level regression test. Hype uses v0.2 consistently for geocoding, changes
+and definition enrichment. The explicit `--rebuild` migration selects the latest
+curated edition (October); see the operations guide for verification.
 
 ## Hierarchy integration design
 
@@ -242,9 +262,13 @@ public/admin division-state isolation. External basemap tiles returned HTTP 401
 at the review origin; this does not establish background-tile availability.
 Repository-wide checking remains non-clean (966 errors and 21 warnings).
 
-The shared database was not migrated while its October refresh remained active.
-Apply 0088 with the refresh writer stopped and restart the matching application
-and Worker together. See the operations guide for evidence and environment limits.
+The user-applied migration 0088 is verified on the shared local database. October
+`data-hk-divisions-2026-10-01.0` is now applied with an idle checkpoint and zero
+pending jobs. All 184 mirrored definitions have polygons; feature/count totals
+remain 1,828. Three repeated loads of the actual local app passed filter/Omnibar
+name/code search and geometry loading with no page or remote-response errors.
+Read retries now also handle the specific workerd commit-token failure wrapper.
+See the operations guide for full evidence and environment limits.
 
 Run the focused checks appropriate to each change:
 
