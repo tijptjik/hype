@@ -1,3 +1,6 @@
+import { buildMidnightStyle } from './definitions/midnight'
+import { buildBreadlineDarkStyle } from './definitions/breadlineDark'
+import { buildBreadlineLightStyle } from './definitions/breadlineLight'
 import { buildBreadlineStyle } from './definitions/breadline'
 import { buildGhosteryStyle } from './definitions/ghostery'
 import { buildGhosteryLegacyStyle } from './definitions/ghostery-legacy'
@@ -32,6 +35,9 @@ export type MapStyleCatalogKey =
   | 'sin'
   | 'rosepunk'
   | 'breadline'
+  | 'breadline-light'
+  | 'breadline-dark'
+  | 'midnight'
   | 'protomaps-light'
   | 'protomaps-dark'
   | 'protomaps-white'
@@ -202,6 +208,33 @@ export const MAP_STYLE_CATALOG = [
     markerTheme: 'light',
     showSymbols: true,
   },
+  {
+    key: 'breadline-light',
+    name: getMapStyleCatalogCopy('breadline-light', 'en').name,
+    description: getMapStyleCatalogCopy('breadline-light', 'en').description,
+    buildStyle: buildBreadlineLightStyle,
+    hubCode: 'breadline',
+    basemapVariant: 'light',
+    markerTheme: 'light',
+    showSymbols: true,
+  },
+  {
+    key: 'breadline-dark',
+    ...getMapStyleCatalogCopy('breadline-dark', 'en'),
+    buildStyle: buildBreadlineDarkStyle,
+    hubCode: 'breadline',
+    basemapVariant: 'dark',
+    markerTheme: 'dark',
+    showSymbols: true,
+  },
+  {
+    key: 'midnight',
+    ...getMapStyleCatalogCopy('midnight', 'en'),
+    buildStyle: buildMidnightStyle,
+    basemapVariant: 'dark',
+    markerTheme: 'dark',
+    showSymbols: true,
+  },
   ...PROTOMAPS_FLAVOR_ENTRIES,
   {
     key: 'hyperAdmin',
@@ -231,3 +264,13 @@ export const getDefaultMapStyleCatalogEntry =
   (): MapStyleCatalogEntry<MapStyleCatalogKey> =>
     REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.default) ??
     REGISTERED_MAP_STYLE_CATALOG[0]
+
+/** Default map choices in the settings panel, in presentation order. */
+export const FEATURED_MAP_STYLE_KEYS = [
+  'hyper',
+  'hyperLight',
+  'breadline-light',
+  'breadline-dark',
+  'hyperpop',
+  'midnight',
+] as const satisfies readonly MapStyleCatalogKey[]

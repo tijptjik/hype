@@ -229,7 +229,7 @@
   "map_style__sin_description": "更平静的夜间地图：梅子色地面、樱桃粉道路、钴蓝水域和柔和的电光细节。",
   "map_style__rosepunk_name": "Rosé Punk",
   "map_style__rosepunk_description": "梅黑色街景配玫瑰粉道路、青绿色水域和亮粉色城市光晕。",
-  "map_style__breadline_name": "Breadline",
+  "map_style__breadline_name": "Breadline 经典",
   "map_style__breadline_description": "适合城市导航的明亮底图。",
   "map_style__protomaps_light_name": "Protomaps Light",
   "map_style__protomaps_light_description": "官方 Protomaps 浅色底图风格。",
@@ -1262,5 +1262,13 @@
   "theme_dark": "深色",
   "theme_description": "选择让你感到自在的配色。",
   "theme_map_title": "地图",
-  "theme_map_automatic": "使用当前地图的样式"
+  "theme_map_automatic": "使用当前地图的样式",
+  "map_style__breadline_light_name": "Day Runner",
+  "map_style__breadline_light_description": "Milque 米白及蜜桃色地图，突出港铁出入口，衬托面包店及收集点标记。",
+  "map_style__midnight_name": "午夜",
+  "map_style__midnight_description": "山水午夜配色：青绿陆地、青色道路与紫色建筑。",
+  "map_style__breadline_dark_name": "Night Runner",
+  "map_style__breadline_dark_description": "深青色 Breadline 地图，配以暖色标签和清晰港铁出口。",
+  "theme_map_show_more": "显示更多",
+  "theme_map_show_less": "显示较少"
 }

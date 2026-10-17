@@ -82,6 +82,21 @@ export const getMapStyleCatalogCopy = (
         name: m.map_style__rosepunk_name({}, { locale }),
         description: m.map_style__rosepunk_description({}, { locale }),
       }
+    case 'midnight':
+      return {
+        name: m.map_style__midnight_name({}, { locale }),
+        description: m.map_style__midnight_description({}, { locale }),
+      }
+    case 'breadline-dark':
+      return {
+        name: m.map_style__breadline_dark_name({}, { locale }),
+        description: m.map_style__breadline_dark_description({}, { locale }),
+      }
+    case 'breadline-light':
+      return {
+        name: m.map_style__breadline_light_name({}, { locale }),
+        description: m.map_style__breadline_light_description({}, { locale }),
+      }
     case 'breadline':
       return {
         name: m.map_style__breadline_name({}, { locale }),
