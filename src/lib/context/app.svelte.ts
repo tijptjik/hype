@@ -576,10 +576,6 @@ export class AppCtx extends ResourceViewCtx {
       this.state.resources.feature = []
       this.state.resources.task = []
       this.state.resources.hub = []
-      this.state.userFeatures = {
-        wishlisted: [],
-        visited: [],
-      }
       this.isInitialised = true
       return
     }

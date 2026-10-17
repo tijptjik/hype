@@ -151,7 +151,7 @@ describe('AppCtx user updates', () => {
     ] as UserFeature[])
     await refresh
 
-    expect(appCtx.state.userFeatures).toEqual({ wishlisted: [], visited: [] })
+    expect(appCtx.account.collections.state).toEqual({ wishlisted: [], visited: [] })
   })
 
   it('does not commit a profile response after the user identity changes', async () => {

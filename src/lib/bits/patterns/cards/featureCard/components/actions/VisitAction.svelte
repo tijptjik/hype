@@ -45,12 +45,14 @@ let visitErrorMessage = $state('')
 
 const wishlistedFeature = $derived(
   'id' in feature
-    ? appCtx.getWishlistUserFeatures().find(uf => uf.featureId === feature.id)
+    ? appCtx.account.collections.state.wishlisted.find(
+        uf => uf.featureId === feature.id,
+      )
     : undefined,
 )
 const visitedFeature = $derived(
   'id' in feature
-    ? appCtx.getVisitedUserFeatures().find(uf => uf.featureId === feature.id)
+    ? appCtx.account.collections.state.visited.find(uf => uf.featureId === feature.id)
     : undefined,
 )
 const isVisited = $derived(Boolean(visitedFeature))
@@ -160,7 +162,7 @@ async function toggleVisited(): Promise<void> {
   isSubmitting = true
   clearVisitError()
   optimisticVisitState = { isVisited: nextIsVisited, visitedAt }
-  appCtx.applyUserFeatureState(featureId, optimistic)
+  appCtx.account.collections.apply(featureId, optimistic)
 
   try {
     const mutation = nextIsVisited
@@ -186,7 +188,7 @@ async function toggleVisited(): Promise<void> {
     // A response from a previous account must not populate the current account's cache.
     if (appCtx.user?.id !== userId) return
     const settled = (response?.data as UserFeature | null) ?? null
-    appCtx.applyUserFeatureState(featureId, settled)
+    appCtx.account.collections.apply(featureId, settled)
     // Successful list edits revalidate active query pages and their authoritative totals.
     void appCtx.cacheCtx.reconcile('feature')
     if (!('id' in feature) || feature.id !== featureId) return
@@ -196,7 +198,7 @@ async function toggleVisited(): Promise<void> {
     }
   } catch (error) {
     if (appCtx.user?.id !== userId) return
-    appCtx.applyUserFeatureState(featureId, previous)
+    appCtx.account.collections.apply(featureId, previous)
     if (!('id' in feature) || feature.id !== featureId) return
     console.error('Error updating visited status:', error)
     const previousVisitState = {

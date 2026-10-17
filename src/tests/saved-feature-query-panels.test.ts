@@ -34,10 +34,10 @@ const mocks = vi.hoisted(() => {
   return {
     app: {
       user: { id: 'user-a' },
+      account: { collections: { state: { wishlisted: [], visited: [] } } },
       resources: { featureQueries: { wishlist: query(), visited: query() } },
       state: {
         resources: { feature: [] },
-        userFeatures: { wishlisted: [], visited: [] },
       },
       isAdmin: () => false,
       filters: {

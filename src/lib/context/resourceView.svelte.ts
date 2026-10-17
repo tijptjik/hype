@@ -123,10 +123,6 @@ import type {
 
 type ResourceViewState = {
   resources: FilteredResources
-  userFeatures: {
-    wishlisted: UserFeature[]
-    visited: UserFeature[]
-  }
   userLocation: {
     coords: {
       accuracy: number
@@ -203,13 +199,8 @@ type RemoteMapEntryByResource = {
 
 type RemoteMap = { [Key in FirstClassResource]: RemoteMapEntryByResource[Key] }
 
-/** Explicit recent list edits distinguish an optimistic removal from unknown membership. */
-type FeatureMembershipOverride = {
-  row: import('#lib/db/zod/schema/user.types.js').UserFeature | null
-  updatedAt: number
-}
-
 export class ResourceViewCtx {
+  private releaseMembership: () => void = () => {}
   readonly filters: ResourceFilters
   readonly scope = new ResourceScope({
     account: () => this.account,
@@ -297,7 +288,6 @@ export class ResourceViewCtx {
   readonly hierarchy: ReturnType<typeof createHierarchyClient>
   cache: Cache
   featureViewport: FeatureSpatialQuery | undefined = $state.raw()
-  private featureMembershipOverrides = new SvelteMap<Id, FeatureMembershipOverride>()
 
   hub: HubOptsExtended | null = $state(null)
 
@@ -320,11 +310,6 @@ export class ResourceViewCtx {
       feature: [],
       task: [],
       hub: [],
-    },
-    // User Features -- The user's wishlist and visited features
-    userFeatures: {
-      wishlisted: [],
-      visited: [],
     },
     // User Location -- The user's location
     userLocation: null,
@@ -524,6 +509,9 @@ export class ResourceViewCtx {
     this.responsiveCtx = responsiveCtx
     this.layout = new SurfaceLayout(responsiveCtx, this.panels)
     this.syncAccount()
+    this.releaseMembership = this.account.collections.subscribe(() =>
+      this.onUserFeaturesChanged(),
+    )
     this.initializeRemoteMap()
     this.initializeQueryMap()
     this.interactions = new SurfaceInteractions(
@@ -770,7 +758,7 @@ export class ResourceViewCtx {
         projectOrganisationId: id => this.cache.project.get(id)?.organisationId,
         listMembership: (row, list) => {
           if (list.userId && list.userId !== this.user?.id) return undefined
-          return this.getFeatureListMembership(row.id, list.listId)
+          return this.account.collections.membership(row.id, list.listId)
         },
       })
     }
@@ -821,24 +809,12 @@ export class ResourceViewCtx {
       if (!row) break
       this.cache.feature.delete(oldest)
     }
-    const known = new Map<string, UserFeature>(
-      [...this.state.userFeatures.wishlisted, ...this.state.userFeatures.visited].map(
-        row => [row.featureId, row],
-      ),
-    )
     for (const page of query.pages) {
       if (!page.current?.userFeatures) continue
-      for (const row of page.current.data) {
-        if (!this.hasRecentFeatureMembershipOverride(row.id)) known.delete(row.id)
-      }
-      for (const row of page.current.userFeatures) {
-        if (!this.hasRecentFeatureMembershipOverride(row.featureId))
-          known.set(row.featureId, row)
-      }
-    }
-    this.state.userFeatures = {
-      wishlisted: [...known.values()].filter(row => row.isWishlisted),
-      visited: [...known.values()].filter(row => row.isVisited),
+      this.account.collections.mergePage(
+        page.current.data.map(row => row.id),
+        page.current.userFeatures,
+      )
     }
   }
 
@@ -1410,6 +1386,7 @@ export class ResourceViewCtx {
   }
 
   refreshUserFeatures = async (_isCascading: boolean = true): Promise<void> => {
+    const generation = this.account.collections.beginRefresh()
     const refreshSerial = this.beginResourceRefresh('userFeatures')
     const userId = this.user?.id ?? null
     const query = this.getRequiredQueryConfig('userFeatures')
@@ -1421,80 +1398,7 @@ export class ResourceViewCtx {
       return
     }
 
-    this.state.userFeatures = {
-      wishlisted: (userFeatures || []).filter((f: UserFeature) => f.isWishlisted),
-      visited: (userFeatures || []).filter((f: UserFeature) => f.isVisited),
-    }
-
-    // Notify the owning surface after membership reconciliation.
-    this.onUserFeaturesChanged()
-  }
-
-  /**
-   * Reconciles one wishlist or visit mutation into the local user-feature cache.
-   *
-   * @param featureId - The feature whose saved state changed.
-   * @param updated - The remaining server state, or `null` when no saved state remains.
-   * @returns Nothing.
-   * @remarks
-   * This is used for optimistic actions as well as their server confirmations, keeping every
-   * visible feature card in sync without waiting for a full user-feature refetch.
-   */
-  applyUserFeatureState = (featureId: Id, updated: UserFeature | null): void => {
-    this.featureMembershipOverrides.set(featureId, {
-      row: updated,
-      updatedAt: Date.now(),
-    })
-    const current = [
-      ...this.state.userFeatures.wishlisted,
-      ...this.state.userFeatures.visited.filter(
-        visited =>
-          !this.state.userFeatures.wishlisted.some(
-            wishlisted => wishlisted.featureId === visited.featureId,
-          ),
-      ),
-    ]
-    const next = current.filter(item => item.featureId !== featureId)
-
-    if (updated) next.unshift(updated)
-
-    this.state.userFeatures = {
-      wishlisted: next.filter(item => item.isWishlisted),
-      visited: next.filter(item => item.isVisited),
-    }
-    this.configureFeatureQueries()
-    this.onUserFeaturesChanged()
-  }
-
-  /**
-   * Tests whether a recent explicit mutation supplies authoritative optimistic membership.
-   * @param featureId - Feature whose membership is being read.
-   * @returns Whether the override remains within normal collection staleness.
-   */
-  private hasRecentFeatureMembershipOverride = (featureId: Id): boolean => {
-    const override = this.featureMembershipOverrides.get(featureId)
-    return Boolean(override && Date.now() - override.updatedAt < 60_000)
-  }
-
-  /**
-   * Resolves known list membership without treating an unhydrated row as a negative match.
-   * @param featureId - Feature whose membership is being read.
-   * @param listId - Current user's built-in list.
-   * @returns Known membership, or undefined when the cache has no answer.
-   */
-  getFeatureListMembership = (
-    featureId: Id,
-    listId: 'wishlist' | 'visited',
-  ): boolean | undefined => {
-    if (this.hasRecentFeatureMembershipOverride(featureId)) {
-      const row = this.featureMembershipOverrides.get(featureId)?.row
-      return Boolean(listId === 'wishlist' ? row?.isWishlisted : row?.isVisited)
-    }
-    const entries =
-      listId === 'wishlist'
-        ? this.state.userFeatures.wishlisted
-        : this.state.userFeatures.visited
-    return entries.some(row => row.featureId === featureId) || undefined
+    this.account.collections.replace(userFeatures || [], generation)
   }
 
   refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
@@ -2254,24 +2158,16 @@ export class ResourceViewCtx {
 
   // Features (for Active Layers) that are on the user's wishlist
   getWishlistedFeatureIds = (): Id[] => {
-    return (this.state.userFeatures?.wishlisted ?? [])
+    return (this.account.collections.state?.wishlisted ?? [])
       .map(wl => wl.featureId)
       .filter((featureId): featureId is Id => Boolean(featureId))
   }
 
   // Features (for Active Layers) that the user has visited
   getVisitedFeatureIds = (): Id[] => {
-    return (this.state.userFeatures?.visited ?? [])
+    return (this.account.collections.state?.visited ?? [])
       .map(wl => wl.featureId)
       .filter((featureId): featureId is Id => Boolean(featureId))
-  }
-
-  getWishlistUserFeatures = (): UserFeature[] => {
-    return this.state.userFeatures?.wishlisted || []
-  }
-
-  getVisitedUserFeatures = (): UserFeature[] => {
-    return this.state.userFeatures?.visited || []
   }
 
   // ═══════════════════════
@@ -2371,7 +2267,6 @@ export class ResourceViewCtx {
 
     // Identity-bound records must never survive guest/account or role transitions.
     this.cache.user.clear()
-    this.state.userFeatures = { wishlisted: [], visited: [] }
     this.onAccountScopeChanged()
     if (this.panels.state.profile.ctx) {
       this.panels.state.profile.ctx.userData = null
@@ -2384,7 +2279,6 @@ export class ResourceViewCtx {
       for (const list of Object.values(this.resources.lists)) list.clear()
       for (const query of Object.values(this.resources.featureQueries)) query.clear()
     }
-    this.featureMembershipOverrides.clear()
     this.scope.selectionLayers = []
     this.featuresMap.clear()
     this.featureLoadState = 'idle'
@@ -2534,6 +2428,7 @@ export class ResourceViewCtx {
       this.cacheCtx.featureCollection = undefined
       this.cacheCtx.featureCollectionScope = undefined
     }
+    this.releaseMembership()
     this.interactions.dispose()
     this.panels.dispose()
     this.disposed = true
@@ -2547,7 +2442,6 @@ export class ResourceViewCtx {
   // Clear all cache maps (for actual data reset scenarios)
   clearAllCaches = (): void => {
     this.cacheCtx.clear()
-    this.featureMembershipOverrides.clear()
     // Invalidate in-flight feature reads before removing their committed state.
     this.featureRefreshSerial += 1
     this.invalidateResourceRefreshes()

@@ -8,9 +8,9 @@ import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 const mocks = vi.hoisted(() => ({
   app: {
     user: { id: 'old-user' },
-    getWishlistUserFeatures: () => [],
-    getVisitedUserFeatures: () => [],
-    applyUserFeatureState: vi.fn(),
+    account: {
+      collections: { state: { wishlisted: [], visited: [] }, apply: vi.fn() },
+    },
   },
   updates: vi.fn(),
 }))
@@ -48,7 +48,7 @@ describe.each([
     'does not write to a new account on %s',
     async outcome => {
       mocks.app.user = { id: 'old-user' }
-      mocks.app.applyUserFeatureState.mockClear()
+      mocks.app.account.collections.apply.mockClear()
       let resolve!: (value: unknown) => void
       let reject!: (reason: Error) => void
       mocks.updates.mockReturnValue(
@@ -59,18 +59,18 @@ describe.each([
       )
       render(Component, { feature: { id: 'old-feature' } as Feature })
       await fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-      expect(mocks.app.applyUserFeatureState).toHaveBeenCalledTimes(1)
+      expect(mocks.app.account.collections.apply).toHaveBeenCalledTimes(1)
       mocks.app.user = { id: 'new-user' }
       if (outcome === 'success') resolve({ data: null })
       else reject(new Error('Save failed'))
       await new Promise(res => setTimeout(res, 0))
-      expect(mocks.app.applyUserFeatureState).toHaveBeenCalledTimes(1)
+      expect(mocks.app.account.collections.apply).toHaveBeenCalledTimes(1)
     },
   )
 
   it('reconciles the original feature after the card changes', async () => {
     mocks.app.user = { id: 'old-user' }
-    mocks.app.applyUserFeatureState.mockClear()
+    mocks.app.account.collections.apply.mockClear()
     let resolve!: (value: unknown) => void
     mocks.updates.mockReturnValue(
       new Promise(res => {
@@ -82,7 +82,7 @@ describe.each([
     await view.rerender({ feature: { id: 'new-feature' } as Feature })
     resolve({ data: null })
     await vi.waitFor(() => {
-      expect(mocks.app.applyUserFeatureState).toHaveBeenLastCalledWith(
+      expect(mocks.app.account.collections.apply).toHaveBeenLastCalledWith(
         'old-feature',
         null,
       )

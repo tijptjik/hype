@@ -62,7 +62,7 @@ export function useSavedFeatureListModel(
         .flatMap(page => page.current?.userFeatures ?? [])
         .map(row => [row.featureId, row]),
     )
-    for (const row of app.state.userFeatures[
+    for (const row of app.account.collections.state[
       kind === 'wishlist' ? 'wishlisted' : 'visited'
     ])
       memberships.set(row.featureId, row)

@@ -1,3 +1,5 @@
+// CONTEXT
+import { UserFeatureCollections } from './userFeatureCollections.svelte.js'
 // TYPES
 import type { SessionUser } from '#lib/types.js'
 import type {
@@ -35,6 +37,7 @@ export type AccountUser = Readonly<
 
 /** Root-owned session identity and separately loaded self-profile data. */
 export class AccountState {
+  readonly collections = new UserFeatureCollections()
   private sessionState: SessionUser | null = $state.raw(null)
   private profile: ProfileData = $state({})
   private scope = ''
@@ -78,6 +81,7 @@ export class AccountState {
       [...(session?.roles ?? [])].map(role => JSON.stringify(role)).sort(),
     ])
     if (scope !== this.scope) {
+      this.collections.reset()
       this.profile = {}
       this.revisionState += 1
       this.scope = scope
