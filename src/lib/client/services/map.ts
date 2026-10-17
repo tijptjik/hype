@@ -30,54 +30,42 @@ import type { AppCtx } from '#lib/context/app.svelte.js'
 export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   const activeResourceType = appCtx.navigation.getActiveResourceType()
   const activeResourceId = appCtx.navigation.getActiveResourceId()
-  const projects = appCtx.view.queries.rows.project
-  const layers = appCtx.view.queries.rows.layer
-  const features = appCtx.view.queries.rows.feature
+  // Pinned resources may be outside the current list page but remain in the cache.
+  const projects = appCtx.view.cache.project
+  const layers = appCtx.view.cache.layer
+  const features = appCtx.view.cache.feature
 
   const firstPrismProjectId = appCtx.view.scope.prisms.project[0]
   if (firstPrismProjectId) {
     // Project prism order is the user's active selection order, so it must take
     // precedence over a stale active-resource reference after a project is removed.
-    return (
-      projects.find(project => project.id === firstPrismProjectId)?.mapStyle?.code ??
-      null
-    )
+    return projects.get(firstPrismProjectId)?.mapStyle?.code ?? null
+  }
+
+  // Selected layers take precedence over navigation left on a different resource.
+  const firstPrismLayerId = appCtx.view.scope.prisms.layer[0]
+  if (firstPrismLayerId) {
+    const firstPrismLayer = layers.get(firstPrismLayerId)
+    if (firstPrismLayer) {
+      return projects.get(firstPrismLayer.projectId)?.mapStyle?.code ?? null
+    }
   }
 
   if (activeResourceType === 'layer' && activeResourceId) {
-    const activeLayer = layers.find(layer => layer.id === activeResourceId)
+    const activeLayer = layers.get(activeResourceId)
     if (activeLayer) {
-      return (
-        projects.find(project => project.id === activeLayer.projectId)?.mapStyle
-          ?.code ?? null
-      )
+      return projects.get(activeLayer.projectId)?.mapStyle?.code ?? null
     }
   }
 
   if (activeResourceType === 'project' && activeResourceId) {
-    return (
-      projects.find(project => project.id === activeResourceId)?.mapStyle?.code ?? null
-    )
+    return projects.get(activeResourceId)?.mapStyle?.code ?? null
   }
 
   if (activeResourceType === 'feature' && activeResourceId) {
-    const activeFeature = features.find(feature => feature.id === activeResourceId)
+    const activeFeature = features.get(activeResourceId)
     if (activeFeature) {
-      return (
-        projects.find(project => project.id === activeFeature.projectId)?.mapStyle
-          ?.code ?? null
-      )
-    }
-  }
-
-  const firstPrismLayerId = appCtx.view.scope.prisms.layer[0]
-  if (firstPrismLayerId) {
-    const firstPrismLayer = layers.find(layer => layer.id === firstPrismLayerId)
-    if (firstPrismLayer) {
-      return (
-        projects.find(project => project.id === firstPrismLayer.projectId)?.mapStyle
-          ?.code ?? null
-      )
+      return projects.get(activeFeature.projectId)?.mapStyle?.code ?? null
     }
   }
 
