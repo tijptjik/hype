@@ -113,7 +113,7 @@ import type {
 } from '#lib/db/zod/schema/user.types.js'
 import type { Map as MaplibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
-import type { PlaceCtx } from './place.svelte'
+import type { DivisionCtx } from './division.svelte'
 import type { ResponsiveCtx } from './responsive.svelte'
 import type {
   Feature,
@@ -293,7 +293,7 @@ type FeatureMembershipOverride = {
 export class AppCtx {
   // Remote queries own transport caching and refreshes.
   // Place Context
-  placeCtx!: PlaceCtx
+  divisionCtx!: DivisionCtx
   // Responsive Context
   responsiveCtx!: ResponsiveCtx
   // Maplibre Map instance
@@ -887,11 +887,11 @@ export class AppCtx {
 
   // Constructor
   constructor(
-    placeCtx: PlaceCtx,
+    divisionCtx: DivisionCtx,
     user: SessionUser | null,
     responsiveCtx: ResponsiveCtx,
   ) {
-    this.placeCtx = placeCtx
+    this.divisionCtx = divisionCtx
     this.responsiveCtx = responsiveCtx
     this.initializeNavigationFromUrl()
     this.setUser(user)
@@ -1366,9 +1366,9 @@ export class AppCtx {
       properties: JSON.parse(
         JSON.stringify(this.state.filters.feature.properties ?? {}),
       ),
-      divisionIds: [...this.placeCtx.state.filters.feature.neighbourhood.include],
+      divisionIds: [...this.divisionCtx.state.filters.feature.neighbourhood.include],
       excludeDivisionIds: [
-        ...this.placeCtx.state.filters.feature.neighbourhood.exclude,
+        ...this.divisionCtx.state.filters.feature.neighbourhood.exclude,
       ],
       ...overrides.filters,
     },
@@ -1791,7 +1791,7 @@ export class AppCtx {
       // Rebuild derived feature lookups after replacing the entire feature list.
       this.rebuildFeaturesMap()
       // Keep neighbourhood-specific derived state in sync with the sorted feature collection.
-      this.placeCtx.setNeighbourhoodFeatures(
+      this.divisionCtx.setDivisionFeatures(
         this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
       )
       return
@@ -2382,7 +2382,7 @@ export class AppCtx {
     this.rebuildFeaturesMap()
 
     // Keep local neighbourhood membership useful for previews; totals come from server facets.
-    this.placeCtx.setNeighbourhoodFeatures(
+    this.divisionCtx.setDivisionFeatures(
       this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
     )
   }
@@ -2832,7 +2832,7 @@ export class AppCtx {
 
   getFilterCount = (): { neighbourhoods: number; properties: number } => {
     return {
-      neighbourhoods: this.placeCtx.neighbourhoodFilterCount,
+      neighbourhoods: this.divisionCtx.divisionFilterCount,
       properties: Object.entries(this.state.filters.feature.properties || {}).reduce(
         (total, [_, layerFilters]) => {
           // For each layer, count its active property filters
@@ -2870,7 +2870,7 @@ export class AppCtx {
       hub: { text: '', properties: {} },
       property: { text: '', properties: {} },
     }
-    this.placeCtx.resetNeighbourhoods()
+    this.divisionCtx.resetDivisions()
     // Re-initialize property filters for active layers
     this.state.prisms.layer.forEach(layerId => {
       this.initialiseCategoricalPropertyFilters(layerId)
@@ -3490,10 +3490,10 @@ export class AppCtx {
 
   // Features, given the selected Neighbourhoods (or all if none)
   getFeatureIdsForNeighbourhoods = (): Id[] => {
-    if (this.placeCtx.neighbourhoodFilterCount === 0) {
+    if (this.divisionCtx.divisionFilterCount === 0) {
       return Array.from(this.features.keys())
     }
-    return this.placeCtx.getFeaturesForFilteredNeighbourhoods()
+    return this.divisionCtx.getFeaturesForFilteredDivisions()
   }
 
   getFeatureIdsForProperties = (): Id[] => {
@@ -3889,8 +3889,8 @@ export class AppCtx {
 
   // FeatureIds for Selected Neighbourhoods
   featuresForNeighbourhoods: Id[] = $derived(
-    (this.placeCtx.state.contains.feature.neighbourhood &&
-      this.placeCtx.state.filters.feature.neighbourhood.include &&
+    (this.divisionCtx.state.contains.feature.neighbourhood &&
+      this.divisionCtx.state.filters.feature.neighbourhood.include &&
       this.getFeatureIdsForNeighbourhoods()) ||
       [],
   ) as Id[]
@@ -4627,7 +4627,7 @@ export class AppCtx {
     this.state.resources.feature = []
     this.state.resources.task = []
     this.state.resources.hub = []
-    this.placeCtx.setNeighbourhoodFeatures([])
+    this.divisionCtx.setDivisionFeatures([])
 
     this.invalidateResourceRefreshes()
   }
@@ -4957,11 +4957,11 @@ export const APPCTX_KEY = Symbol('mapContext')
 let appCtxSingleton: AppCtx | null = null
 
 export const setAppCtx = (
-  placeCtx: PlaceCtx,
+  divisionCtx: DivisionCtx,
   user: SessionUser | null,
   responsiveCtx: ResponsiveCtx,
 ) => {
-  const context = new AppCtx(placeCtx, user, responsiveCtx)
+  const context = new AppCtx(divisionCtx, user, responsiveCtx)
   appCtxSingleton = context
   // Don't initialize immediately - let the session watcher handle it after mount
   return setContext(APPCTX_KEY, context)

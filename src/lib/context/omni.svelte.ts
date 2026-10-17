@@ -161,7 +161,7 @@ export class OmniCtx {
 
       this.appCtx.cacheCtx.featureQueries.search.rows
       this.appCtx.cacheCtx.featureQueries.searchWishlist.totalCount
-      this.appCtx.placeCtx.neighbourhoodFeatureCounts.size
+      this.appCtx.divisionCtx.divisionFeatureCounts.size
 
       const timer = setTimeout(() => this.updateSearchResults(searchTerm), 0)
 
@@ -1281,7 +1281,7 @@ export class OmniCtx {
   ): ActiveCollection {
     const selectedNeighbourhood =
       this.appCtx.cacheCtx.featureQueries.collection.facets?.divisions[neighbourhood] ??
-      this.appCtx.placeCtx.divisions.get(neighbourhood)
+      this.appCtx.divisionCtx.divisions.get(neighbourhood)
 
     return {
       id: neighbourhood,

@@ -29,13 +29,16 @@ export function getDivisionName(
  * @param term Localized search text.
  * @returns Stable IDs with classification and translated names, ordered by level and name.
  */
-export function filterPlaces(appCtx: AppCtx, term: string): [string, DivisionFacet][] {
+export function filterDivisions(
+  appCtx: AppCtx,
+  term: string,
+): [string, DivisionFacet][] {
   const preferences = appCtx.getUserPreferences()
   const label = (division: DivisionFacet) => getDivisionName(division, preferences)
-  return [...appCtx.placeCtx.divisions.entries()]
+  return [...appCtx.divisionCtx.divisions.entries()]
     .filter(
       ([id, division]) =>
-        (appCtx.placeCtx.neighbourhoodFeatureCounts.get(id) ?? 0) > 0 &&
+        (appCtx.divisionCtx.divisionFeatureCounts.get(id) ?? 0) > 0 &&
         label(division).toLocaleLowerCase().includes(term.toLocaleLowerCase()),
     )
     .sort(

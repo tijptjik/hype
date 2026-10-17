@@ -12,7 +12,7 @@ import {
   setRangePropertyFilter,
   toggleCategoricalPropertyValue,
 } from '#lib/client/services/property.js'
-import { filterPlaces, getDivisionName } from '#lib/client/services/geospatial.js'
+import { filterDivisions, getDivisionName } from '#lib/client/services/geospatial.js'
 // ENUMS
 import { FirstClassResource, OmniMode } from '#lib/enums.js'
 // TYPES
@@ -57,9 +57,9 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
     })
   })
 
-  const selectedNeighbourhoodRefs = $derived(app.placeCtx.getFilteredNeighbourhoods())
+  const selectedNeighbourhoodRefs = $derived(app.divisionCtx.getFilteredDivisions())
   const visibleNeighbourhoodCount = $derived(
-    [...app.placeCtx.neighbourhoodFeatureCounts.values()].filter(count => count > 0)
+    [...app.divisionCtx.divisionFeatureCounts.values()].filter(count => count > 0)
       .length,
   )
 
@@ -122,9 +122,9 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
       return visibleNeighbourhoodCount
     },
     get neighbourhoods() {
-      const counts = app.placeCtx.neighbourhoodFeatureCounts
+      const counts = app.divisionCtx.divisionFeatureCounts
       const preferences = app.getUserPreferences()
-      return filterPlaces(app, searchTerm).map(([id, i18n]) => ({
+      return filterDivisions(app, searchTerm).map(([id, i18n]) => ({
         id,
         i18n,
         count: counts.get(id) ?? 0,
@@ -137,7 +137,7 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
     get selectedNeighbourhoods() {
       const preferences = app.getUserPreferences()
       return selectedNeighbourhoodRefs.map(id => {
-        const division = app.placeCtx.divisions.get(id)
+        const division = app.divisionCtx.divisions.get(id)
         return { id, name: division ? getDivisionName(division, preferences) : id }
       })
     },
@@ -172,9 +172,9 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
       return m.filters__reset()
     },
     reset: () => app.resetFilters(),
-    resetNeighbourhoods: () => app.placeCtx.resetNeighbourhoods(),
-    toggleNeighbourhood: (id: string) => {
-      app.placeCtx.toggleNeighbourhood(id)
+    resetDivisions: () => app.divisionCtx.resetDivisions(),
+    toggleDivision: (id: string) => {
+      app.divisionCtx.toggleDivision(id)
       app.zoomToAllVisibleFeatures()
       omni.setMode(OmniMode.search)
     },

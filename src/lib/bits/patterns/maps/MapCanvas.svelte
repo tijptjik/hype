@@ -713,7 +713,7 @@ $effect(() => {
 $effect(() => {
   const counts = appCtx.cacheCtx.featureQueries.facets.facets?.divisions ?? null
 
-  untrack(() => appCtx.placeCtx.setNeighbourhoodCounts(counts))
+  untrack(() => appCtx.divisionCtx.setDivisionCounts(counts))
 })
 
 // Reuse the normal collection freshness window when returning to the map tab.

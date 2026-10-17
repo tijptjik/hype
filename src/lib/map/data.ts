@@ -2,7 +2,7 @@
 import { getI18n } from '#lib/i18n.js'
 import { m } from '#lib/i18n.js'
 // SERVICES
-import { filterPlaces, getDivisionName } from '#lib/client/services/geospatial.js'
+import { filterDivisions, getDivisionName } from '#lib/client/services/geospatial.js'
 /// ENUMS
 import { OmniCollection } from '#lib/enums.js'
 // TYPES
@@ -93,9 +93,9 @@ export async function searchAllAsync(
   }
 
   // Source 2 - Neighbourhoods
-  const neighbourhoodResults = filterPlaces(appCtx, term)
+  const neighbourhoodResults = filterDivisions(appCtx, term)
   neighbourhoodResults.forEach(([neighbourhoodRef, data]) => {
-    const count = appCtx.placeCtx.neighbourhoodFeatureCounts.get(neighbourhoodRef) ?? 0
+    const count = appCtx.divisionCtx.divisionFeatureCounts.get(neighbourhoodRef) ?? 0
     if (count > 0) {
       results.push({
         name: getDivisionName(data, appCtx.getUserPreferences()),

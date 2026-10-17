@@ -7,7 +7,7 @@ import { FirstClassResource, Panel } from '#lib/enums.js'
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type { CurrentUser } from '#lib/db/zod/schema/user.types.js'
-import type { PlaceCtx } from '#lib/context/place.svelte.js'
+import type { DivisionCtx } from '#lib/context/division.svelte.js'
 import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
@@ -37,7 +37,7 @@ describe('AppCtx user updates', () => {
       roles: [{ type: 'organisation', organisationId: 'org', role: 'admin' }],
     } as unknown as CurrentUser
     const app = new AppCtx(
-      {} as PlaceCtx,
+      {} as DivisionCtx,
       user as unknown as SessionUser,
       {} as ResponsiveCtx,
     )
@@ -53,7 +53,7 @@ describe('AppCtx user updates', () => {
     const second = createDeferred<FeatureFromCollection[]>()
     let queryCount = 0
     const appCtx = new AppCtx(
-      { setNeighbourhoodFeatures: vi.fn() } as unknown as PlaceCtx,
+      { setDivisionFeatures: vi.fn() } as unknown as DivisionCtx,
       null,
       {} as ResponsiveCtx,
     )
@@ -85,7 +85,7 @@ describe('AppCtx user updates', () => {
   it('ignores a feature response when selected layers change before another refresh starts', async () => {
     const pending = createDeferred<FeatureFromCollection[]>()
     const appCtx = new AppCtx(
-      { setNeighbourhoodFeatures: vi.fn() } as unknown as PlaceCtx,
+      { setDivisionFeatures: vi.fn() } as unknown as DivisionCtx,
       null,
       {} as ResponsiveCtx,
     )
@@ -107,7 +107,7 @@ describe('AppCtx user updates', () => {
   it('does not restore feature data after the user identity changes', async () => {
     const pendingFeatures = createDeferred<FeatureFromCollection[]>()
     const appCtx = new AppCtx(
-      { setNeighbourhoodFeatures: vi.fn() } as unknown as PlaceCtx,
+      { setDivisionFeatures: vi.fn() } as unknown as DivisionCtx,
       { id: 'old-user' } as CurrentUser,
       {} as ResponsiveCtx,
     )
@@ -130,7 +130,7 @@ describe('AppCtx user updates', () => {
   it('does not restore saved feature state after the user identity changes', async () => {
     const pendingUserFeatures = createDeferred<UserFeature[]>()
     const appCtx = new AppCtx(
-      {} as PlaceCtx,
+      {} as DivisionCtx,
       { id: 'old-user' } as CurrentUser,
       {} as ResponsiveCtx,
     )
@@ -153,7 +153,7 @@ describe('AppCtx user updates', () => {
   it('does not commit a profile response after the user identity changes', async () => {
     const pendingProfile = createDeferred<UserProfile | null>()
     const appCtx = new AppCtx(
-      {} as PlaceCtx,
+      {} as DivisionCtx,
       { id: 'old-user', username: 'old-user' } as CurrentUser,
       {} as ResponsiveCtx,
     )
@@ -177,7 +177,7 @@ describe('AppCtx user updates', () => {
     const first = createDeferred<Project[]>()
     const second = createDeferred<Project[]>()
     let queryCount = 0
-    const appCtx = new AppCtx({} as PlaceCtx, null, {} as ResponsiveCtx)
+    const appCtx = new AppCtx({} as DivisionCtx, null, {} as ResponsiveCtx)
     appCtx.queryMap.set(FirstClassResource.project, {
       queryKey: () => [FirstClassResource.project],
       queryFn: () => (queryCount++ === 0 ? first.promise : second.promise),
@@ -195,7 +195,7 @@ describe('AppCtx user updates', () => {
   })
 
   it('invalidates dependent resource caches before the next explicit refresh', async () => {
-    const appCtx = new AppCtx({} as PlaceCtx, null, {} as ResponsiveCtx)
+    const appCtx = new AppCtx({} as DivisionCtx, null, {} as ResponsiveCtx)
     appCtx.cache.project.set('p', { id: 'p' } as Project)
     appCtx.cache.property.set('v', { id: 'v' } as Property)
     await appCtx.invalidate(FirstClassResource.project)
@@ -205,7 +205,7 @@ describe('AppCtx user updates', () => {
 
   it('loads profile data only when the profile panel opens', async () => {
     const appCtx = new AppCtx(
-      {} as PlaceCtx,
+      {} as DivisionCtx,
       { id: 'user-1' } as CurrentUser,
       { setPanelOpen: vi.fn() } as ResponsiveCtx,
     )
@@ -235,7 +235,7 @@ describe('AppCtx user updates', () => {
         },
       ],
     } as CurrentUser
-    const appCtx = new AppCtx({} as PlaceCtx, user, {} as ResponsiveCtx)
+    const appCtx = new AppCtx({} as DivisionCtx, user, {} as ResponsiveCtx)
 
     appCtx.hub = { id: 'hub-1', code: 'test-hub' } as HubOptsExtended
     appCtx.state.resources.layer = [{ id: 'saved-layer' }] as Layer[]
@@ -253,8 +253,8 @@ describe('AppCtx user updates', () => {
           contains: { feature: { neighbourhood: new Map() } },
           filters: { feature: { neighbourhood: { include: new Set() } } },
         },
-        neighbourhoodFilterCount: 0,
-      } as PlaceCtx,
+        divisionFilterCount: 0,
+      } as DivisionCtx,
       null,
       {} as ResponsiveCtx,
     )
@@ -286,7 +286,7 @@ describe('AppCtx user updates', () => {
       if (queryKey[0] === 'project') return projects.promise
       throw new Error(`Unexpected public bootstrap query: ${String(queryKey[0])}`)
     })
-    const appCtx = new AppCtx({} as PlaceCtx, null, {} as ResponsiveCtx)
+    const appCtx = new AppCtx({} as DivisionCtx, null, {} as ResponsiveCtx)
 
     appCtx.queryMap.set(FirstClassResource.organisation, {
       queryKey: () => ['organisation'],
@@ -327,7 +327,7 @@ describe('AppCtx user updates', () => {
       if (queryKey[0] === 'property') return properties.promise
       throw new Error(`Unexpected public bootstrap query: ${String(queryKey[0])}`)
     })
-    const appCtx = new AppCtx({} as PlaceCtx, null, {} as ResponsiveCtx)
+    const appCtx = new AppCtx({} as DivisionCtx, null, {} as ResponsiveCtx)
 
     appCtx.queryMap.set(FirstClassResource.layer, {
       queryKey: () => ['layer'],

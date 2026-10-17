@@ -33,7 +33,7 @@ import { getLocaleKey, m } from '#lib/i18n.js'
 import { getMapResourceDeepLinkLayerIds } from '#lib/client/services/mapResourceDeepLink.js'
 // CONTEXT
 import { setAppCtx } from '#lib/context/app.svelte.js'
-import { setPlaceCtx } from '#lib/context/place.svelte.js'
+import { setDivisionCtx } from '#lib/context/division.svelte.js'
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
 import App from '#lib/bits/patterns/layout/app/App.svelte'
@@ -137,7 +137,7 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
 setThemeModel()
 
 const appCtx = setAppCtx(
-  setPlaceCtx(),
+  setDivisionCtx(),
   $session.data?.user as SessionUser | null,
   responsive,
 )

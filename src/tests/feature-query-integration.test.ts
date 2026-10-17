@@ -9,7 +9,7 @@ import type { RemoteQuery } from '$app/server'
 import { withRemoteMeta } from './remote-function-mock'
 import { AppCtx } from '#lib/context/app.svelte.js'
 import { OmniCtx } from '#lib/context/omni.svelte.js'
-import { PlaceCtx } from '#lib/context/place.svelte.js'
+import { DivisionCtx } from '#lib/context/division.svelte.js'
 import { getFeaturePage } from '#lib/api/featureQueries.remote.js'
 import { getFeatureViewportQuery } from '#lib/map/featureSpatial.js'
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
@@ -132,7 +132,7 @@ function controlledPage() {
 }
 
 function createApp(): AppCtx {
-  const app = new AppCtx(new PlaceCtx(), null, {} as ResponsiveCtx)
+  const app = new AppCtx(new DivisionCtx(), null, {} as ResponsiveCtx)
   app.state.prisms.layer = ['layer-a']
   return app
 }

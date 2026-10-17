@@ -22,7 +22,7 @@ let {
       <button
         type="button"
         class="rounded-full bg-primary/15 px-3 py-1 text-xs text-primary"
-        onclick={() => model.toggleNeighbourhood(neighbourhood.id)}
+        onclick={() => model.toggleDivision(neighbourhood.id)}
       >
         {neighbourhood.name}
         ×
@@ -46,12 +46,12 @@ let {
     <FilterBar
       bind:searchTerm={() => model.searchTerm, model.setSearchTerm}
       position="right"
-      onReset={model.resetNeighbourhoods}
+      onReset={model.resetDivisions}
     />
   {/if}
   <ResourceContainer>
     {#each model.neighbourhoods as row (row.id)}
-      <FilteredNeighbourhood {row} onToggle={model.toggleNeighbourhood} />
+      <FilteredNeighbourhood {row} onToggle={model.toggleDivision} />
     {/each}
   </ResourceContainer>
 </Section>

@@ -8,10 +8,10 @@ import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 // TYPES
 
 /* ----------------- */
-// PLACECTX
+// DIVISIONCTX
 /* -------- */
 
-type PlaceState = {
+type DivisionState = {
   filters: {
     feature: {
       neighbourhood: {
@@ -36,45 +36,45 @@ type PlaceState = {
 }
 
 /**
- * PlaceCtx - Manages neighbourhood and place-related state and operations
+ * DivisionCtx - Manages surface-local division memberships, counts and filter selections
  *
  * TABLE OF CONTENTS:
  *
  * 1. GETTERS
- *    - getFeaturesForNeighbourhood(neighbourhood: string): Id[]
+ *    - getFeaturesForDivision(neighbourhood: string): Id[]
  *      Gets all feature IDs for a neighbourhood and its subdivisions
  *
- *    - getFilteredNeighbourhoods(): string[]
+ *    - getFilteredDivisions(): string[]
  *      Get all neighbourhoods that are currently selected for filtering
  *
- *    - getFeaturesForFilteredNeighbourhoods(): Id[]
+ *    - getFeaturesForFilteredDivisions(): Id[]
  *      Get all feature IDs for all neighbourhoods and their subdivisions
  *
- *    - get neighbourhoodFeatureCounts(): SvelteMap<Ref, number>
+ *    - get divisionFeatureCounts(): SvelteMap<Ref, number>
  *      Gets the counts of features for each neighbourhood
  *
- *    - get neighbourhoodFilterCount(): number
+ *    - get divisionFilterCount(): number
  *      Gets the count of currently filtered neighbourhoods
  *
  * 2. SETTERS
- *    - setNeighbourhoodFeatures(features: FeatureFromCollection[]): void
+ *    - setDivisionFeatures(features: FeatureFromCollection[]): void
  *      Sets neighbourhood features and recalculates stats
  *
- *    - toggleNeighbourhood(neighbourhood: string): void
+ *    - toggleDivision(neighbourhood: string): void
  *      Toggles a neighbourhood in the filter include set
  *
- *    - resetNeighbourhoods(): void
+ *    - resetDivisions(): void
  *      Clears all neighbourhood filters
  *
  * 3. COUNTS
- *    - setNeighbourhoodCounts: applies exact counts for every selected division level.
+ *    - setDivisionCounts: applies exact counts for every selected division level.
  *
  */
-export class PlaceCtx {
+export class DivisionCtx {
   /** Registry metadata stays available when a filtered response has no matching members. */
   divisions = new SvelteMap<string, DivisionFacet>()
 
-  state: PlaceState = $state({
+  state: DivisionState = $state({
     filters: {
       feature: {
         neighbourhood: {
@@ -105,7 +105,7 @@ export class PlaceCtx {
    * @param neighbourhood - The main division ID
    * @returns Array of feature IDs from the main neighbourhood and all subdivisions
    */
-  getFeaturesForNeighbourhood(neighbourhood: string): Id[] {
+  getFeaturesForDivision(neighbourhood: string): Id[] {
     return [...(this.state.contains.feature.neighbourhood.get(neighbourhood) ?? [])]
   }
 
@@ -113,7 +113,7 @@ export class PlaceCtx {
    * Get all neighbourhoods that are currently selected for
    * @returns Array of division IDs
    */
-  getFilteredNeighbourhoods(): string[] {
+  getFilteredDivisions(): string[] {
     return Array.from(this.state.filters.feature.neighbourhood.include)
   }
 
@@ -121,10 +121,10 @@ export class PlaceCtx {
    * Get all feature IDs for all neighbourhoods and their subdivisions
    * @returns Array of feature IDs from all neighbourhoods and their subdivisions
    */
-  getFeaturesForFilteredNeighbourhoods(): Id[] {
+  getFeaturesForFilteredDivisions(): Id[] {
     const allFeatureIds: Set<Id> = new Set()
-    for (const neighbourhood of this.getFilteredNeighbourhoods()) {
-      this.getFeaturesForNeighbourhood(neighbourhood).forEach(featureId => {
+    for (const neighbourhood of this.getFilteredDivisions()) {
+      this.getFeaturesForDivision(neighbourhood).forEach(featureId => {
         allFeatureIds.add(featureId)
       })
     }
@@ -135,11 +135,11 @@ export class PlaceCtx {
    * Gets the counts of features for each neighbourhood
    * @returns Map of division ID to feature count
    */
-  get neighbourhoodFeatureCounts(): SvelteMap<Ref, number> {
+  get divisionFeatureCounts(): SvelteMap<Ref, number> {
     return this.state.counts.feature.neighbourhood
   }
 
-  get neighbourhoodFilterCount() {
+  get divisionFilterCount() {
     return this.state.filters.feature.neighbourhood.include.size
   }
 
@@ -152,7 +152,7 @@ export class PlaceCtx {
    * @param features Locally retained feature rows and their memberships.
    * @returns Nothing; authoritative server counts remain independent of retained rows.
    */
-  setNeighbourhoodFeatures(features: FeatureFromCollection[]): void {
+  setDivisionFeatures(features: FeatureFromCollection[]): void {
     // Build new neighbourhood mappings
     const newNeighbourhoodMap = new SvelteMap<string, SvelteSet<Id>>()
 
@@ -178,7 +178,7 @@ export class PlaceCtx {
    * @param neighbourhood Division ID at any hierarchy level.
    * @returns Nothing.
    */
-  toggleNeighbourhood(neighbourhood: string): void {
+  toggleDivision(neighbourhood: string): void {
     if (this.state.filters.feature.neighbourhood.include.has(neighbourhood)) {
       this.state.filters.feature.neighbourhood.include.delete(neighbourhood)
     } else {
@@ -187,7 +187,7 @@ export class PlaceCtx {
   }
 
   /** Clears all division selections. @returns Nothing. */
-  resetNeighbourhoods(): void {
+  resetDivisions(): void {
     this.state.filters.feature.neighbourhood.include.clear()
     this.state.filters.feature.neighbourhood.exclude.clear()
   }
@@ -201,7 +201,7 @@ export class PlaceCtx {
    * @param counts - Counts per selected division for the complete filtered query.
    * @returns Nothing after division totals are updated.
    */
-  setNeighbourhoodCounts(counts: Record<string, DivisionFacet> | null): void {
+  setDivisionCounts(counts: Record<string, DivisionFacet> | null): void {
     // Each membership already includes contained children; retain its exact server count.
     this.state.counts.feature.neighbourhood.clear()
     if (!counts) return
@@ -212,15 +212,15 @@ export class PlaceCtx {
   }
 }
 
-export const PLACE_CONTEXT_KEY = Symbol('placeContext')
+export const DIVISION_CONTEXT_KEY = Symbol('divisionContext')
 
-export const setPlaceCtx = () => setContext(PLACE_CONTEXT_KEY, new PlaceCtx())
+export const setDivisionCtx = () => setContext(DIVISION_CONTEXT_KEY, new DivisionCtx())
 
-export const getPlaceCtx = (): PlaceCtx => {
-  const ctx = getContext<PlaceCtx | undefined>(PLACE_CONTEXT_KEY)
+export const getDivisionCtx = (): DivisionCtx => {
+  const ctx = getContext<DivisionCtx | undefined>(DIVISION_CONTEXT_KEY)
   if (!ctx) {
     throw new Error(
-      'PlaceCtx context is missing. Ensure setPlaceCtx() is called before using getPlaceCtx().',
+      'DivisionCtx context is missing. Ensure setDivisionCtx() is called before using getDivisionCtx().',
     )
   }
   return ctx
