@@ -1,9 +1,6 @@
 <script lang="ts">
 // I18N
 import { m } from '#lib/i18n.js'
-// CONTEXT
-
-import { Panel as PanelType } from '#lib/enums.js'
 // BITS
 import { PanelRoot as Panel } from '#lib/bits/index.js'
 // COMPONENTS
@@ -13,7 +10,6 @@ import WantToVisit from '#lib/bits/patterns/panels/sections/wantToVisit/WantToVi
 import HaveVisited from '#lib/bits/patterns/panels/sections/haveVisited/HaveVisitedSection.svelte'
 import GuestAccountReminder from '#lib/bits/custom/GuestAccountReminder.svelte'
 // TYPES
-import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 import type { usePanelShellModel } from '#lib/adapters/panels/usePanelShellModel.svelte.js'
 import type { useSavedFeatureListModel } from '#lib/adapters/panels/useSavedFeatureListModel.svelte.js'
 
@@ -46,22 +42,10 @@ let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
   }
 }
 
-let isVisitedOpen = $state(false)
-let handleToggleVisited = (e: MouseEvent | TouchEvent) => {
-  e.stopPropagation()
-  isVisitedOpen = !isVisitedOpen
-}
-
-let isWantToVisitOpen = $state(false)
-let handleToggleWantToVisit = (e: MouseEvent | TouchEvent) => {
-  e.stopPropagation()
-  isWantToVisitOpen = !isWantToVisitOpen
-}
-
 const panelProps = $derived(shell.panel)
 </script>
 
-<Panel isOpen={shell.open} bind:panelContainer {...panelProps}>
+<Panel isOpen={shell.open} bind:panelContainer preserveContentWidth {...panelProps}>
   <Header
     onClose={shell.onClose}
     {...panelProps}
@@ -74,10 +58,8 @@ const panelProps = $derived(shell.panel)
   {#if model.isGuestAccount}
     <GuestAccountReminder />
   {/if}
-  <div class="flex h-full overflow-hidden">
-    <div class="flex h-[calc(100dvh-140px)] w-full flex-col overflow-hidden">
-      <WantToVisit model={model.wishlist} panel={panelProps} />
-      <HaveVisited model={model.visited} panel={panelProps} />
-    </div>
+  <div class="flex flex-col pb-6">
+    <WantToVisit model={model.wishlist} panel={panelProps} />
+    <HaveVisited model={model.visited} panel={panelProps} />
   </div>
 </Panel>

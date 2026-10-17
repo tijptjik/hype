@@ -45,7 +45,9 @@ let {
 } & PanelProps = $props()
 
 const usesCompactHeader = $derived(
-  panelProps.panelType === 'settings' || panelProps.panelType === 'filters',
+  panelProps.panelType === 'settings' ||
+    panelProps.panelType === 'filters' ||
+    panelProps.panelType === 'stars',
 )
 const contentId = $props.id()
 
