@@ -1,16 +1,16 @@
 <script lang="ts">
-import { setResponsiveCtx } from '#lib/context/responsive.svelte'
+import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 import Form from '#lib/bits/custom/main/Form.svelte'
-import { FormProfileSkeleton } from '#lib/bits/patterns/forms/formSkeleton'
+import { FormProfileSkeleton } from '#lib/bits/patterns/forms/formSkeleton/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
-import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles'
+import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 import FormI18nSection from '#lib/bits/patterns/forms/formI18nSection/FormI18nSection.svelte'
 import FormUserRolesSection from '#lib/bits/patterns/forms/formUserRolesSection/FormUserRolesSection.svelte'
 import FormSpecifiersFields from '#lib/bits/patterns/forms/formI18nSection/components/FormSpecifiersFields.svelte'
-import { TextInput, TextArea } from '#lib/bits/custom/form'
+import { TextInput, TextArea } from '#lib/bits/custom/form/index.js'
 import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
 import Type from 'virtual:icons/proicons/text'
-import type { OrganisationRoleUser } from '#lib/db/zod/schema/organisation.types'
+import type { OrganisationRoleUser } from '#lib/db/zod/schema/organisation.types.js'
 let { ready = false }: { ready?: boolean } = $props()
 setResponsiveCtx()
 let localReady = $state(false)

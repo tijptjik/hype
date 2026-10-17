@@ -171,7 +171,7 @@ describe('task contribution account guard', () => {
 
   it('rejects an incomplete session rather than treating it as an account', async () => {
     await expect(
-      beginNewPhotosDraft({}, incompleteSessionContext),
+      Reflect.apply(beginNewPhotosDraft, undefined, [{}, incompleteSessionContext]),
     ).rejects.toMatchObject({
       status: 403,
       message: 'ACCOUNT_REQUIRED',

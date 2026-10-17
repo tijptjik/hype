@@ -1,6 +1,6 @@
 <script lang="ts">
 // CONTEXT
-import { setResponsiveCtx } from '#lib/context/responsive.svelte'
+import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
 import HeaderFacets from '#lib/bits/patterns/layout/header/components/HeaderFacets.svelte'
 // ICONS

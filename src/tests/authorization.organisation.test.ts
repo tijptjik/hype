@@ -162,7 +162,7 @@ describe('organisation authorization policy matrix', () => {
 
     for (const stateCase of states) {
       for (const actor of Object.values(ACTORS)) {
-        const expected = stateCase.allowedActors.includes(
+        const expected = (stateCase.allowedActors as readonly string[]).includes(
           actor === ACTORS.coreAdmin
             ? 'coreAdmin'
             : actor === ACTORS.hubAdminSame

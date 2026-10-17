@@ -1,14 +1,14 @@
 <script lang="ts">
 // CONTEXT
-import { setResponsiveCtx } from '#lib/context/responsive.svelte'
+import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import OrganisationCapabilities from '#lib/bits/patterns/capabilities/organisationCapabilities/OrganisationCapabilities.svelte'
 import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
-import { SectionHeader } from '#lib/bits/custom/form'
+import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import ImageIcon from 'virtual:icons/proicons/photo'
-import type { Property } from '#lib/db/zod/schema/property.types'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 import Type from 'virtual:icons/proicons/text'
 setResponsiveCtx()
 let editing = $state(false)
@@ -95,6 +95,7 @@ const callbacks = {
           items={[property]}
           card={{
             ...callbacks,
+            onSortValuesAlphabetically: () => {},
             locales: [...locales],
             classifierComponents: [],
             specifierComponents: ['TextInput'],

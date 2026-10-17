@@ -87,7 +87,8 @@ describe('compact resource page boundary', () => {
       meta,
     }))
     inputs.push({ type: 'layer', id: 'admin', meta: { ...meta, isAdminRequest: true } })
-    const resolve = await mocks.batch(inputs)
+    if (!mocks.batch) throw new Error('Batch handler was not registered')
+    const resolve = (await mocks.batch(inputs)) as (input: unknown) => { id: string }
     expect(mocks.layers).toHaveBeenCalledTimes(4)
     for (const [params] of mocks.layers.mock.calls)
       expect(params.conditions.id.length).toBeLessThanOrEqual(25)

@@ -3,13 +3,13 @@ import { describe, expect, it, vi } from 'vitest'
 // Exercise real dictionary selection rather than the application-wide name stub.
 vi.unmock('unique-names-generator')
 // USERNAMES
-import { USERNAME_ADJECTIVES } from '#lib/utils/username-adjectives'
+import { USERNAME_ADJECTIVES } from '#lib/utils/username-adjectives.js'
 import {
   generateRandomUsername,
   generateRunnerUsernameFromId,
   generateUsernameFromId,
-} from '#lib/utils/username-generator.server'
-import { validateUsername } from '#lib/utils/username'
+} from '#lib/utils/username-generator.server.js'
+import { validateUsername } from '#lib/utils/username.js'
 
 const approved = new Set(USERNAME_ADJECTIVES)
 
@@ -94,7 +94,7 @@ describe('generated username adjective whitelist', () => {
 describe('HYPE adjective-animal-number usernames', () => {
   it('keeps the two digit suffix and dictionary boundaries within the length limit', async () => {
     const { generateDisplayUsernameFromId } = await import(
-      '#lib/utils/username-generator.server'
+      '#lib/utils/username-generator.server.js'
     )
     for (let index = 0; index < 2048; index++) {
       const name = generateDisplayUsernameFromId(`hype-${index}`)

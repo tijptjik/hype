@@ -36,7 +36,9 @@ vi.mock('#lib', () => ({
   ADMIN_PATH: '/admin',
   NEW_REF: 'new',
 }))
-vi.mock('#lib/map/data.js', () => ({ searchAllAsync: vi.fn(async () => []) }))
+vi.mock('#lib/map/data.js', () => ({
+  searchAllAsync: vi.fn(async (): Promise<unknown[]> => []),
+}))
 vi.mock('#lib/map/markers.js', () => ({
   addMarkerClass: vi.fn(),
   removeMarkerClass: vi.fn(),
@@ -74,7 +76,7 @@ function row(id: string, isVisitable = true): FeatureFromCollection {
       { divisionId: 'bowrington', selected: true },
     ],
     i18n: { en: { title: id, addressProperties: { neighbourhood: 'Bowrington' } } },
-  } as FeatureFromCollection
+  } as unknown as FeatureFromCollection
 }
 
 function controlledPage() {
@@ -216,7 +218,7 @@ describe('map query integration', () => {
     const feature = row('a')
     feature.properties = [
       { propertyId: 'category', propertyValueId: 'tea' },
-    ] as FeatureFromCollection['properties']
+    ] as unknown as FeatureFromCollection['properties']
     first.resolve([feature], null, true)
     await pending
     expect(getFeaturePage).toHaveBeenCalledOnce()

@@ -57,13 +57,11 @@ it('requires explicit self-removal confirmation and keeps cancellation inert', a
   await fireEvent.click(buttons[0])
   expect(await screen.findByRole('dialog', { name: 'Remove yourself?' })).toBeTruthy()
   expect(onRemoveUser).not.toHaveBeenCalled()
-  await fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   expect(onRemoveUser).not.toHaveBeenCalled()
   await fireEvent.click(buttons[0])
-  await fireEvent.click(
-    await screen.findByRole('button', { name: 'Remove myself', exact: true }),
-  )
+  await fireEvent.click(await screen.findByRole('button', { name: 'Remove myself' }))
   expect(onRemoveUser).toHaveBeenCalledExactlyOnceWith('self')
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 })
@@ -91,9 +89,7 @@ it('dismisses only the modal on Escape without removing anyone', async () => {
   const dialog = await screen.findByRole('dialog')
   await fireEvent.keyDown(dialog, { key: 'Escape' })
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  expect(
-    screen.getByRole('button', { name: 'Remove Alex Self', exact: true }),
-  ).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Remove Alex Self' })).toBeTruthy()
   expect(onRemoveUser).not.toHaveBeenCalled()
 })
 
@@ -101,7 +97,7 @@ it('shows search in edit mode without opening results on mount', async () => {
   const view = render(Fixture)
   expect(screen.getByPlaceholderText('Add users')).toBeTruthy()
   expect(document.querySelector('.bits-search__results')).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Remove User', exact: true })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Remove User' })).toBeNull()
   await view.rerender({ isEditing: false })
   expect(screen.queryByPlaceholderText('Add users')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Remove Alex Self' })).toBeNull()

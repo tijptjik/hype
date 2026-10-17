@@ -154,7 +154,7 @@ describe('form helpers', () => {
   })
 
   it('maps data.layers issues onto the layers facet', () => {
-    const facets = new Map([
+    const facets = new Map<'core' | 'layers' | 'fields', { label: string }>([
       ['core', { label: 'Core' }],
       ['layers', { label: 'Layers' }],
       ['fields', { label: 'Fields' }],

@@ -80,8 +80,8 @@ describe('route loads', () => {
       hubId: 'hub-1',
       userId: 'user-1',
     })
-    expect(result.hubUserState).toBe(null)
-    expect(result.titleEnvironmentLabel).toBe('Preview')
+    expect(result?.hubUserState).toBe(null)
+    expect(result?.titleEnvironmentLabel).toBe('Preview')
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Failed to fetch hub user subscription state:',
       expect.any(Error),

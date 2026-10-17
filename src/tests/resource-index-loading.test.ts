@@ -1,3 +1,4 @@
+import { FirstClassResource } from '#lib/enums.js'
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -7,7 +8,7 @@ vi.mock('#lib/context/admin.svelte.js', () => ({
   getAdminCtx: () => ({
     listUi: { state: { layoutMode: { organisation: 'card' } } },
     view: {
-      isPanelOpenOrVisual: () => false,
+      panels: { isPanelOpenOrVisual: () => false },
     },
   }),
 }))
@@ -37,7 +38,7 @@ afterEach(() => {
 
 it('shows skeletons until the initial query finishes, then permits an empty result', async () => {
   const view = render(ResourceIndex, {
-    resource: 'organisation',
+    resource: FirstClassResource.organisation,
     entities: [],
     isInitialised: false,
   })
@@ -45,7 +46,11 @@ it('shows skeletons until the initial query finishes, then permits an empty resu
     screen.getByRole('status', { name: 'Loading' }).getAttribute('aria-busy'),
   ).toBe('true')
   expect(screen.queryByText('No results')).toBeNull()
-  await view.rerender({ resource: 'organisation', entities: [], isInitialised: true })
+  await view.rerender({
+    resource: FirstClassResource.organisation,
+    entities: [],
+    isInitialised: true,
+  })
   expect(screen.queryByRole('status')).toBeNull()
   expect(screen.getByText('No results')).toBeTruthy()
 })

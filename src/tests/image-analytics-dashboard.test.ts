@@ -71,6 +71,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'preview',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -174,6 +175,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -244,6 +246,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -308,6 +311,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -389,6 +393,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -457,6 +462,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,

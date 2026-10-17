@@ -42,7 +42,9 @@ function setup() {
     sqlite.exec('BEGIN')
     try {
       const result = queries.map(query => {
-        const { sql, params } = query.toSQL()
+        if (!('toSQL' in query) || typeof query.toSQL !== 'function')
+          throw new Error('Expected SQL builder in batch fixture')
+        const { sql, params } = query.toSQL() as { sql: string; params: unknown[] }
         return sqlite.prepare(sql).all(...(params as never[]))
       })
       sqlite.exec('COMMIT')

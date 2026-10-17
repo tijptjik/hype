@@ -225,7 +225,9 @@ describe('project authorization policy matrix', () => {
             action,
             scenario: stateCase.name,
             actor: actor.name,
-            expected: stateCase.allowedActors.includes(actorKey(actor)),
+            expected: (stateCase.allowedActors as readonly string[]).includes(
+              actorKey(actor),
+            ),
             actual: decision.allowed,
             code: decision.code,
           })

@@ -9,7 +9,7 @@ import {
   updateImage,
   getImagesForContext,
 } from '#lib/api/image.remote.js'
-import { ImageContextResource } from '#lib/enums.js'
+import { ImageContextResource, ImageContextResourceExtended } from '#lib/enums.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 import { ResourceClient } from '#lib/resources/resourceClient.svelte.js'
@@ -121,7 +121,9 @@ describe('image refresh ownership', () => {
   })
   it('submits canonical replacement without first clearing the existing canonical image', async () => {
     const ctx = new ImageCtx({}, createImageResources())
-    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'feature' } })
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'feature' },
+    })
     vi.spyOn(ctx, 'getImages').mockReturnValue([
       { image: { id: 'old' }, intent: 'canonical' } as ImageCtxEnvelope,
     ])
@@ -162,7 +164,9 @@ describe('image refresh ownership', () => {
     'invalidates the original feature after %s without refreshing a new context',
     async action => {
       const ctx = new ImageCtx({}, createImageResources())
-      await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'old' } })
+      await ctx.setContext({
+        context: { ctxType: ImageContextResource.feature, ctxId: 'old' },
+      })
       ctx.appCtx.cache.feature.set('old', { id: 'old', images: [] } as never)
       ctx.appCtx.cache.feature.set('new', { id: 'new', images: [] } as never)
       let resolve!: () => void
@@ -180,14 +184,16 @@ describe('image refresh ownership', () => {
         action === 'rotate'
           ? ctx.handleRotate(90, 'old-image')
           : ctx.handleSetIntent('old-image', 'general')
-      await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'new' } })
+      await ctx.setContext({
+        context: { ctxType: ImageContextResource.feature, ctxId: 'new' },
+      })
       const update = vi.spyOn(ctx, 'setForImage')
       resolve()
       await pending
       expect(refresh).not.toHaveBeenCalled()
       expect(update).not.toHaveBeenCalled()
-      expect(ctx.appCtx.cache.feature.get('old')?.images).toBeUndefined()
-      expect(ctx.appCtx.cache.feature.get('new')?.images).toEqual([])
+      expect(ctx.appCtx.cache.feature.get('old')).toMatchObject({ images: undefined })
+      expect(ctx.appCtx.cache.feature.get('new')).toMatchObject({ images: [] })
     },
   )
 
@@ -195,7 +201,9 @@ describe('image refresh ownership', () => {
     'keeps a publish response scoped when context changes: %s',
     async changeContext => {
       const ctx = new ImageCtx({}, createImageResources())
-      await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'old' } })
+      await ctx.setContext({
+        context: { ctxType: ImageContextResource.feature, ctxId: 'old' },
+      })
       ctx.state.activeImage = {
         image: { id: 'original' },
         isPublished: false,
@@ -211,7 +219,9 @@ describe('image refresh ownership', () => {
       const toggle = vi.spyOn(ctx, 'toggleForActiveImage')
       const pending = ctx.handlePublishToggle()
       if (changeContext) {
-        await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'new' } })
+        await ctx.setContext({
+          context: { ctxType: ImageContextResource.feature, ctxId: 'new' },
+        })
       }
       ctx.state.activeImage = {
         image: { id: 'next' },
@@ -234,15 +244,22 @@ describe('image refresh ownership', () => {
 
   it('does not restore a failed deletion into a different context', async () => {
     const ctx = new ImageCtx({}, createImageResources())
-    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'old' } })
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'old' },
+    })
     let reject!: (error: Error) => void
     vi.mocked(deleteImage).mockReturnValue(
       new Promise((_resolve, rej) => {
         reject = rej
       }) as ReturnType<typeof deleteImage>,
     )
-    const pending = ctx.delete('old-image', { ctxType: 'feature', ctxId: 'old' })
-    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'new' } })
+    const pending = ctx.delete('old-image', {
+      ctxType: ImageContextResource.feature,
+      ctxId: 'old',
+    })
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'new' },
+    })
     const restore = vi.spyOn(ctx, 'setImages')
     const reset = vi.spyOn(ctx, 'resetThumbnailLoadStatus')
     reject(new Error('Delete failed'))
@@ -263,8 +280,12 @@ describe('image refresh ownership', () => {
         }),
       )
       .mockResolvedValue(undefined)
-    const older = ctx.setContext({ context: { ctxType: 'feature', ctxId: 'old' } })
-    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'new' } })
+    const older = ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'old' },
+    })
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'new' },
+    })
     const reset = vi.spyOn(ctx, 'resetActiveImage')
     resolve()
     await older
@@ -273,7 +294,9 @@ describe('image refresh ownership', () => {
 
   it('clears fetching state when the current request fails', async () => {
     const ctx = new ImageCtx({}, createImageResources())
-    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'feature' } })
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'feature' },
+    })
     vi.spyOn(ctx, 'imagesQueryFn').mockRejectedValue(new Error('Read failed'))
 
     await expect(ctx.refreshImages()).rejects.toThrow('Read failed')
@@ -282,7 +305,9 @@ describe('image refresh ownership', () => {
 
   it('ignores an older response without clearing the newer request loading state', async () => {
     const ctx = new ImageCtx({}, createImageResources())
-    await ctx.setContext({ context: { ctxType: 'feature', ctxId: 'feature' } })
+    await ctx.setContext({
+      context: { ctxType: ImageContextResource.feature, ctxId: 'feature' },
+    })
     let resolveFirst!: (value: []) => void
     let resolveSecond!: (value: []) => void
     vi.spyOn(ctx, 'imagesQueryFn')
@@ -315,9 +340,9 @@ describe('image refresh ownership', () => {
     const ctx = new ImageCtx({}, createImageResources())
     await ctx.setContext({
       context: {
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature',
-        ctxTypeSecondary: 'task',
+        ctxTypeSecondary: ImageContextResourceExtended.task,
         ctxIdSecondary: 'old-task',
       },
     })
@@ -331,9 +356,9 @@ describe('image refresh ownership', () => {
     const pending = ctx.refreshImages()
     await ctx.setContext({
       context: {
-        ctxType: 'feature',
+        ctxType: ImageContextResource.feature,
         ctxId: 'feature',
-        ctxTypeSecondary: 'task',
+        ctxTypeSecondary: ImageContextResourceExtended.task,
         ctxIdSecondary: 'new-task',
       },
     })

@@ -34,6 +34,8 @@ describe('direct upload image identity', () => {
       } as never) as Database
       const data = {
         publicId: 'h/features/feature/upload',
+        cdn: 'r2',
+        contributorId: 'user-1',
         env: 'local',
         version: 1,
       } as const

@@ -1,3 +1,4 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
@@ -26,21 +27,31 @@ const {
   mockGetPrisms: vi.fn(() => ({ organisation: [], project: [], layer: [] })),
   mockGetPropertyQueryContext: vi.fn(() => ({ conditions: [] })),
   mockToPropertyPrismConditions: vi.fn(async ({ conditions }) => conditions),
-  mockListProperties: vi.fn(async () => []),
-  mockLoadProperty: vi.fn(async () => null),
-  mockListResolvedProjectProperties: vi.fn(async () => []),
+  mockListProperties: vi.fn(async (): Promise<unknown[]> => []),
+  mockLoadProperty: vi.fn(async (): Promise<unknown> => null),
+  mockListResolvedProjectProperties: vi.fn(async (): Promise<unknown[]> => []),
   mockCreateBaseProperty: vi.fn(async () => ({ id: 'property-created' })),
   mockCreateI18n: vi.fn(async () => undefined),
-  mockCreatePropertyValues: vi.fn(async () => []),
+  mockCreatePropertyValues: vi.fn(async (): Promise<unknown[]> => []),
   mockCreatePropertyValueI18n: vi.fn(async () => undefined),
-  mockProbeProjectQuery: vi.fn(async () => null),
-  mockAuthorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeOrganisationUpdateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeHubUpdateForSubmission: vi.fn(() => ({ allowed: true })),
+  mockProbeProjectQuery: vi.fn(async (): Promise<unknown> => null),
+  mockAuthorizeProjectReadForProbe: vi.fn(
+    (_params: { probe: { id: string } }): { allowed: boolean; code?: string } => ({
+      allowed: true,
+    }),
+  ),
+  mockAuthorizeProjectUpdateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeOrganisationUpdateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeHubUpdateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
   mockGuardedContext: vi.fn(),
-  mockProjectProbeRows: vi.fn(async () => []),
-  mockPropertyScopeRows: vi.fn(async () => []),
+  mockProjectProbeRows: vi.fn(async (): Promise<unknown[]> => []),
+  mockPropertyScopeRows: vi.fn(async (): Promise<unknown[]> => []),
   mockRetryBusyRead: vi.fn(async (operation: () => Promise<unknown>) => operation()),
 }))
 
@@ -119,12 +130,12 @@ vi.mock('#lib/db/zod/index.js', () => ({
   ProjectPropertyValueFormData: {},
 }))
 
-let remote: Awaited<typeof import('#lib/api/property.remote.js')>
+let remote: MockedRemoteModule<typeof import('#lib/api/property.remote.js')>
 
 describe('property.remote', () => {
   // Hoisted factories are stable; reset request mocks without reloading dependencies.
   beforeAll(async () => {
-    remote = await import('#lib/api/property.remote.js')
+    remote = mockedRemoteModule(await import('#lib/api/property.remote.js'))
   })
 
   beforeEach(() => {
@@ -218,8 +229,8 @@ describe('property.remote', () => {
         isArchived: false,
       },
     ])
-    mockToPropertyResponseShape.mockImplementation((row: { id: string }) => {
-      if (row.id === 'prop-2') {
+    mockToPropertyResponseShape.mockImplementation((row: unknown) => {
+      if ((row as { id: string }).id === 'prop-2') {
         throw new Error('bad property payload')
       }
       return { row }

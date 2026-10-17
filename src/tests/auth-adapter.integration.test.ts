@@ -12,7 +12,9 @@ import { getAuthForRequest } from '#lib/auth.js'
 import { toLinkedAccountSelector } from '#lib/auth/account-selector.js'
 
 // Role enrichment is unrelated to account storage; all auth persistence uses Drizzle/D1.
-vi.mock('#lib/db/services/user.js', () => ({ getUserRoles: vi.fn(async () => []) }))
+vi.mock('#lib/db/services/user.js', () => ({
+  getUserRoles: vi.fn(async (): Promise<unknown[]> => []),
+}))
 
 const previousMigration = readFileSync(
   'migrations/0076_better_auth_1_7_account_issuer.sql',
@@ -136,7 +138,7 @@ describe('Better Auth production Drizzle adapter', () => {
     expect(registered.user.email).toBe(body.email)
     // Preserve chosen spelling alongside the canonical lookup value.
     expect(registered.user.username).toBe('mixedcaseuser')
-    expect(registered.user.displayUsername).toBe('MixedCaseUser')
+    expect(registered.user).toMatchObject({ displayUsername: 'MixedCaseUser' })
     expect(
       sqlite.prepare('SELECT username FROM user WHERE id = ?').get(registered.user.id),
     ).toMatchObject({ username: 'mixedcaseuser' })
@@ -148,10 +150,12 @@ describe('Better Auth production Drizzle adapter', () => {
     await expect(
       auth.api.signUpEmail({
         body: {
-          ...body,
-          email: 'mismatch@example.com',
-          username: 'Different',
-          displayUsername: 'Impersonated',
+          ...{
+            ...body,
+            email: 'mismatch@example.com',
+            username: 'Different',
+            displayUsername: 'Impersonated',
+          },
         },
       }),
     ).rejects.toThrow()

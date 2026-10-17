@@ -223,7 +223,7 @@ describe('layer authorization policy matrix', () => {
             action: 'listLayers',
             scenario: stateCase.name,
             actor: actor.name,
-            expected: stateCase.allowed.includes(key),
+            expected: (stateCase.allowed as readonly string[]).includes(key),
             actual: decision.allowed,
             code: decision.code,
           })
@@ -242,7 +242,7 @@ describe('layer authorization policy matrix', () => {
             action: 'readLayer',
             scenario: stateCase.name,
             actor: actor.name,
-            expected: stateCase.allowed.includes(key),
+            expected: (stateCase.allowed as readonly string[]).includes(key),
             actual: decision.allowed,
             code: decision.code,
           })

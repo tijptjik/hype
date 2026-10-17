@@ -46,7 +46,7 @@ describe('I18N Message Validation', () => {
 
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         // Nested object - recurse
-        keys.push(...getAllKeys(value, fullKey))
+        keys.push(...getAllKeys(value as Record<string, unknown>, fullKey))
       } else {
         // Leaf value
         keys.push(fullKey)
@@ -64,7 +64,7 @@ describe('I18N Message Validation', () => {
 
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         // Nested object - recurse
-        emptyKeys.push(...getEmptyKeys(value, fullKey))
+        emptyKeys.push(...getEmptyKeys(value as Record<string, unknown>, fullKey))
       } else {
         // Check if leaf value is empty
         if (value === '' || value === null || value === undefined) {
@@ -110,7 +110,6 @@ describe('I18N Message Validation', () => {
       ).toHaveLength(0)
     })
   })
-
 })
 
 describe('getI18n', () => {
@@ -318,6 +317,14 @@ describe('getFPI18n', () => {
     i18n: null,
     property: {
       id: 'property-1',
+      scope: 'project',
+      organisationId: null,
+      hubId: null,
+      min: null,
+      max: null,
+      isEnabled: true,
+      isDefaultEnabled: false,
+      isUserContributable: false,
       projectId: 'project-1',
       type: 'classifier',
       rank: 1,
@@ -349,6 +356,14 @@ describe('getFPI18n', () => {
         value: '',
         property: {
           id: 'property-2',
+          scope: 'project',
+          organisationId: null,
+          hubId: null,
+          min: null,
+          max: null,
+          isEnabled: true,
+          isDefaultEnabled: false,
+          isUserContributable: false,
           projectId: 'project-1',
           type: 'specifier',
           rank: 2,

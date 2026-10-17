@@ -42,7 +42,7 @@ const row = (id: string, title = id): FeatureFromCollection =>
     isIntangible: false,
     geometry: { type: 'Point', coordinates: [114.173, 22.278] },
     properties: [],
-  }) as FeatureFromCollection
+  }) as unknown as FeatureFromCollection
 
 function page(
   data: FeatureFromCollection[],
@@ -185,7 +185,7 @@ describe('composed cached feature matching', () => {
       { propertyId: 'category', propertyValueId: 'tea' },
       { propertyId: 'range', value: '5' },
       { propertyId: 'flag', value: '1' },
-    ] as FeatureFromCollection['properties']
+    ] as unknown as FeatureFromCollection['properties']
     const query: FeatureQueryInput = {
       ...input,
       filters: {

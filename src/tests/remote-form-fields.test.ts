@@ -57,36 +57,37 @@ describe('SvelteKit 3 custom property controls', () => {
         get_touched: () => ({}),
         get_dirty: () => ({}),
       })
-      const { container } = render(
-        presentation === 'body' ? FormFieldCardBody : FormFieldCard,
-        {
-          ...(presentation === 'body' ? {} : { presentation }),
-          totalItems: 1,
-          removeMode: false,
-          onIncreaseRank: vi.fn(),
-          onDecreaseRank: vi.fn(),
-          onRemove: vi.fn(),
-          property,
-          propertyIndex: 0,
-          sectionRank: 0,
-          propertyFields: fields.data.properties[0],
-          locales: ['en'],
-          classifierComponents: ['SelectField'],
-          specifierComponents: [],
-          isRequiredInPreflight: () => false,
-          isEditing: false,
-          onUpdateBase: vi.fn(),
-          onUpdateI18n: vi.fn(),
-          onAddValue: vi.fn(),
-          onSortValuesAlphabetically: vi.fn(),
-          onRemoveValue: vi.fn(),
-          onMoveValue: vi.fn(),
-          onUpdateValue: vi.fn(),
-          onUpdateValueI18n: vi.fn(),
-          onTranslateLocale: vi.fn(),
-          onResetLocale: vi.fn(),
-        },
-      )
+      const props = {
+        presentation: presentation === 'body' ? ('full' as const) : presentation,
+        totalItems: 1,
+        removeMode: false,
+        onIncreaseRank: vi.fn(),
+        onDecreaseRank: vi.fn(),
+        onRemove: vi.fn(),
+        property,
+        propertyIndex: 0,
+        sectionRank: 0,
+        propertyFields: fields.data.properties[0],
+        locales: ['en' as const],
+        classifierComponents: ['SelectField'],
+        specifierComponents: [],
+        isRequiredInPreflight: () => false,
+        isEditing: false,
+        onUpdateBase: vi.fn(),
+        onUpdateI18n: vi.fn(),
+        onAddValue: vi.fn(),
+        onSortValuesAlphabetically: vi.fn(),
+        onRemoveValue: vi.fn(),
+        onMoveValue: vi.fn(),
+        onUpdateValue: vi.fn(),
+        onUpdateValueI18n: vi.fn(),
+        onTranslateLocale: vi.fn(),
+        onResetLocale: vi.fn(),
+      }
+      const { container } =
+        presentation === 'body'
+          ? render(FormFieldCardBody, props)
+          : render(FormFieldCard, props)
       const formData = new FormData()
       for (const control of container.querySelectorAll<HTMLInputElement>(
         'input[type="hidden"]',

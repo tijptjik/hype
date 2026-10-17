@@ -1,3 +1,4 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
@@ -39,8 +40,12 @@ const {
   mockVerifyUploadToken,
   mockWaitUntil,
 } = vi.hoisted(() => ({
-  mockAuthorizeImageList: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeImageRead: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeImageList: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
+  mockAuthorizeImageRead: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
   mockAssertPermissionsToCreateImage: vi.fn(async () => undefined),
   mockAssertPermissionsToDeleteImage: vi.fn(async () => undefined),
   mockAssertPermissionsToUpdateImage: vi.fn(async () => undefined),
@@ -55,9 +60,12 @@ const {
   mockToResponseShapeProjectOrOrganisation: vi.fn(async (image: unknown) => image),
   mockUpdateImageForContext: vi.fn(async () => ({ data: { id: 'img-1' } })),
   mockCreateFeatureImage: vi.fn(async () => ({ id: 'fi-1' })),
-  mockCreateImageRecord: vi.fn(async () => ({ id: 'img-1', publicId: null })),
+  mockCreateImageRecord: vi.fn(async () => ({
+    id: 'img-1',
+    publicId: null as string | null,
+  })),
   mockLoadFeatureCanonicalImageOccupancy: vi.fn(async () => ['feature-1']),
-  mockLoadImageById: vi.fn(async () => null),
+  mockLoadImageById: vi.fn(async (): Promise<unknown> => null),
   mockToImageEnvelope: vi.fn(
     (data: unknown, _profile: string, ctxType: string, ctxId: string) => ({
       data,
@@ -72,7 +80,7 @@ const {
       >
     ) => [],
   ),
-  mockGetImagesByIds: vi.fn(async () => []),
+  mockGetImagesByIds: vi.fn(async (): Promise<unknown[]> => []),
   mockToImageEntityResponseShape: vi.fn((data: unknown, ctx: unknown) => ({
     data,
     ctx,
@@ -86,12 +94,18 @@ const {
     async () => 'https://upload.example.test/object',
   ),
   mockGetOriginalsBucketNameForStage: vi.fn(() => 'hype-assets-raw-dev'),
-  mockReadMetadataDocument: vi.fn(async () => ({
-    document: null,
-    resolvedEnv: 'local',
-    resolvedVersion: undefined,
-  })),
-  mockVerifyUploadToken: vi.fn(async () => null),
+  mockReadMetadataDocument: vi.fn(
+    async (): Promise<{
+      document: Record<string, unknown> | null
+      resolvedEnv: string
+      resolvedVersion: number | undefined
+    }> => ({
+      document: null,
+      resolvedEnv: 'local',
+      resolvedVersion: undefined,
+    }),
+  ),
+  mockVerifyUploadToken: vi.fn(async (): Promise<unknown> => null),
   mockWaitUntil: vi.fn(),
 }))
 
@@ -217,7 +231,7 @@ vi.mock('#lib/db/zod/index.js', () => ({
   UpdateImageSchema: {},
 }))
 
-let remote: Awaited<typeof import('#lib/api/image.remote.js')>
+let remote: MockedRemoteModule<typeof import('#lib/api/image.remote.js')>
 
 const buildDbWithContextRow = (row: Record<string, unknown>) => ({
   select: vi.fn(() => ({
@@ -255,13 +269,16 @@ const buildDbWithContextRow = (row: Record<string, unknown>) => ({
 describe('image.remote', () => {
   // Hoisted factories are stable; reset request mocks without reloading dependencies.
   beforeAll(async () => {
-    remote = await import('#lib/api/image.remote.js')
+    remote = mockedRemoteModule(await import('#lib/api/image.remote.js'))
   })
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockCreateImageRecord.mockReset()
-    mockCreateImageRecord.mockResolvedValue({ id: 'img-1', publicId: null })
+    mockCreateImageRecord.mockResolvedValue({
+      id: 'img-1',
+      publicId: null as string | null,
+    })
     mockGetImagesByIds.mockReset()
     mockGetImagesByIds.mockResolvedValue([])
     mockLoadFeatureCanonicalImageOccupancy.mockReset()
@@ -295,15 +312,15 @@ describe('image.remote', () => {
               R2_S3_ACCESS_KEY_ID: 'access-key',
               R2_S3_SECRET_ACCESS_KEY: 'secret-key',
               ASSET_RAW_DEV: {
-                head: vi.fn(async () => null),
+                head: vi.fn(async (): Promise<unknown> => null),
                 put: vi.fn(async () => undefined),
               },
               ASSET_RAW_PREVIEW: {
-                head: vi.fn(async () => null),
+                head: vi.fn(async (): Promise<unknown> => null),
                 put: vi.fn(async () => undefined),
               },
               ASSET_RAW_PRODUCTION: {
-                head: vi.fn(async () => null),
+                head: vi.fn(async (): Promise<unknown> => null),
                 put: vi.fn(async () => undefined),
               },
               ASSET_PUBLIC_DEV: { put: vi.fn(async () => undefined), get: vi.fn() },
@@ -383,7 +400,7 @@ describe('image.remote', () => {
     const db = buildDbWithContextRow({ isPublished: true, isArchived: false })
     db.select.mockReturnValueOnce(db.select()).mockReturnValueOnce({
       from: vi.fn(() => ({
-        where: vi.fn(() => ({ limit: vi.fn(async () => []) })),
+        where: vi.fn(() => ({ limit: vi.fn(async (): Promise<unknown[]> => []) })),
       })),
     } as never)
     mockGuardedContext.mockResolvedValue({ ...ctx, db })
@@ -557,7 +574,7 @@ describe('image.remote', () => {
         id: 'img-1',
         ctxType: 'project',
         ctxId: 'project-1',
-        intent: 'gallery',
+        intent: 'gallery' as never, // Deliberately invalid input exercises server validation.
       }),
     ).rejects.toMatchObject({ status: 400 })
   })
@@ -623,7 +640,7 @@ describe('image.remote', () => {
       const chain = {
         innerJoin: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
-        limit: vi.fn(async () => []),
+        limit: vi.fn(async (): Promise<unknown[]> => []),
       }
       if (scenario === 'database-error')
         chain.limit.mockRejectedValue(new Error('database failed'))
@@ -704,7 +721,9 @@ describe('image.remote', () => {
           sqlite.exec('BEGIN')
           try {
             for (const statement of statements) {
-              const query = statement.toSQL()
+              if (!('toSQL' in statement) || typeof statement.toSQL !== 'function')
+                throw new Error('Expected SQL builder in batch fixture')
+              const query = statement.toSQL() as { sql: string; params: unknown[] }
               sqlite.prepare(query.sql).run(...(query.params as never[]))
             }
             sqlite.exec('COMMIT')
@@ -804,9 +823,9 @@ describe('image.remote', () => {
               CLOUDFLARE_ACCOUNT_ID: 'account-id',
               R2_S3_ACCESS_KEY_ID: 'access-key',
               R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-              ASSET_RAW_DEV: { head: vi.fn(async () => null) },
-              ASSET_RAW_PREVIEW: { head: vi.fn(async () => null) },
-              ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null) },
+              ASSET_RAW_DEV: { head: vi.fn(async (): Promise<unknown> => null) },
+              ASSET_RAW_PREVIEW: { head: vi.fn(async (): Promise<unknown> => null) },
+              ASSET_RAW_PRODUCTION: { head: vi.fn(async (): Promise<unknown> => null) },
               ASSET_PUBLIC_DEV: { put: vi.fn(), get: vi.fn() },
               ASSET_PUBLIC_PREVIEW: { put: vi.fn(), get: vi.fn() },
               ASSET_PUBLIC_PRODUCTION: { put: vi.fn(), get: vi.fn() },
@@ -873,8 +892,14 @@ describe('image.remote', () => {
                 R2_S3_SECRET_ACCESS_KEY: 'secret-key',
                 PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
                 ASSET_RAW_DEV: { head, put },
-                ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
-                ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
+                ASSET_RAW_PREVIEW: {
+                  head: vi.fn(async (): Promise<unknown> => null),
+                  put,
+                },
+                ASSET_RAW_PRODUCTION: {
+                  head: vi.fn(async (): Promise<unknown> => null),
+                  put,
+                },
                 ASSET_PUBLIC_DEV: { put, get: vi.fn() },
                 ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
                 ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
@@ -1077,8 +1102,14 @@ describe('image.remote', () => {
                     throw new Error('list: Unspecified error (0)')
                   }),
                 },
-                ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
-                ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
+                ASSET_RAW_PREVIEW: {
+                  head: vi.fn(async (): Promise<unknown> => null),
+                  put,
+                },
+                ASSET_RAW_PRODUCTION: {
+                  head: vi.fn(async (): Promise<unknown> => null),
+                  put,
+                },
                 ASSET_PUBLIC_DEV: {
                   put,
                   get: vi.fn(),
@@ -1407,8 +1438,8 @@ describe('image.remote', () => {
       .fn()
       .mockRejectedValueOnce(new Error('binding write unavailable'))
       .mockResolvedValue(undefined)
-    const originalGet = vi.fn(async () => null)
-    const previewGet = vi.fn(async () => null)
+    const originalGet = vi.fn(async (): Promise<unknown> => null)
+    const previewGet = vi.fn(async (): Promise<unknown> => null)
     const rotatedSource = await sharp({
       create: {
         width: 120,

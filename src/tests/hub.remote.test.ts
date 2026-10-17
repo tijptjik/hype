@@ -1,3 +1,4 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
@@ -34,7 +35,7 @@ const {
 } = vi.hoisted(() => ({
   mockHubFormDataParse: vi.fn((input: unknown) => input),
   mockToLocaleRecordFromOrganisationFormI18n: vi.fn(() => ({})),
-  mockCreateHub: vi.fn(async (_db: unknown, payload: unknown) => ({
+  mockCreateHub: vi.fn(async (_db: unknown, payload: Record<string, unknown>) => ({
     id: 'hub-1',
     modifiedAt: '2026-02-23T00:00:00.000Z',
     ...payload,
@@ -45,23 +46,35 @@ const {
   mockSyncHubLayerDefaults: vi.fn(async () => undefined),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockSyncHubUserRoles: vi.fn(async () => undefined),
-  mockListHubRoleAssignments: vi.fn(async () => []),
-  mockProbeExistingHub: vi.fn(async () => null),
-  mockProbeHubForUpdate: vi.fn(async () => null),
-  mockUpdateHubByIdWithConcurrency: vi.fn(async () => null),
-  mockAuthorizeHubCreateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeHubUpdateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeHubManageRolesForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeHubPublishForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeHubDeleteForSubmission: vi.fn(() => ({ allowed: true })),
+  mockListHubRoleAssignments: vi.fn(async (): Promise<unknown[]> => []),
+  mockProbeExistingHub: vi.fn(async (): Promise<unknown> => null),
+  mockProbeHubForUpdate: vi.fn(async (): Promise<unknown> => null),
+  mockUpdateHubByIdWithConcurrency: vi.fn(
+    async (_db: unknown, _input: { data: unknown }): Promise<unknown> => null,
+  ),
+  mockAuthorizeHubCreateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeHubUpdateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeHubManageRolesForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeHubPublishForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeHubDeleteForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
   mockValidateUniqueNonReservedCode: vi.fn(async () => undefined),
   mockResolveHubCommandProbe: vi.fn(async () => ({ id: 'hub-1' })),
-  mockUpdateHubPublishedStateById: vi.fn(async () => null),
-  mockUpdateHubArchivedStateById: vi.fn(async () => null),
+  mockUpdateHubPublishedStateById: vi.fn(async (): Promise<unknown> => null),
+  mockUpdateHubArchivedStateById: vi.fn(async (): Promise<unknown> => null),
   mockHasInvalidHubOrganisationAssignmentsForSubmission: vi.fn(async () => false),
-  mockGetHubSubscriptionTarget: vi.fn(async () => null),
+  mockGetHubSubscriptionTarget: vi.fn(async (): Promise<unknown> => null),
   mockUpsertHubUserState: vi.fn(async () => undefined),
-  mockListOrganisations: vi.fn(async () => []),
+  mockListOrganisations: vi.fn(async (): Promise<unknown[]> => []),
   mockGuardedContext: vi.fn(),
 }))
 
@@ -202,7 +215,7 @@ vi.mock('#lib/db/services/hub.js', () => ({
   probeHubForUpdate: mockProbeHubForUpdate,
   resolveHubCommandProbe: mockResolveHubCommandProbe,
   updateHubByIdWithConcurrency: mockUpdateHubByIdWithConcurrency,
-  probeHubForCommand: vi.fn(async () => null),
+  probeHubForCommand: vi.fn(async (): Promise<unknown> => null),
   updateHubPublishedStateById: mockUpdateHubPublishedStateById,
   updateHubArchivedStateById: mockUpdateHubArchivedStateById,
   updateI18n: mockUpdateI18n,
@@ -214,14 +227,21 @@ vi.mock('#lib/db/services/hub.js', () => ({
   listOrganisations: mockListOrganisations,
   listUserRoles: mockListHubRoleAssignments,
   listHubRoleAssignments: mockListHubRoleAssignments,
-  listHubOrganisationLookups: vi.fn(async () => []),
+  listHubOrganisationLookups: vi.fn(async (): Promise<unknown[]> => []),
   listHubs: vi.fn(),
   getHub: vi.fn(),
   syncHubOrganisations: mockSyncHubOrganisations,
   syncHubLayerDefaults: mockSyncHubLayerDefaults,
 }))
 
-const mockSubscribeToSubstack = vi.fn(async () => ({ ok: true }))
+const mockSubscribeToSubstack = vi.fn(
+  async (): Promise<{
+    ok?: boolean
+    error?: string
+    details?: string
+    status?: number
+  }> => ({ ok: true }),
+)
 
 vi.mock('#lib/api/external/substack.js', () => ({
   subscribeToSubstack: mockSubscribeToSubstack,
@@ -288,14 +308,14 @@ vi.mock('#lib/db/schema/index.js', () => ({
   },
 }))
 
-let remote: Awaited<typeof import('#lib/api/hub.remote.js')>
+let remote: MockedRemoteModule<typeof import('#lib/api/hub.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('hub.remote')
 
 const buildDbForCreate = () => ({
   select: vi.fn(() => ({
     from: vi.fn(() => ({
       where: vi.fn(() => ({
-        limit: vi.fn(async () => []),
+        limit: vi.fn(async (): Promise<unknown[]> => []),
       })),
     })),
   })),
@@ -313,7 +333,7 @@ const buildDbForUpdate = (params: {
             where: vi.fn(async () => params.existingRoles),
           }
         }
-        return { where: vi.fn(async () => []) }
+        return { where: vi.fn(async (): Promise<unknown[]> => []) }
       }),
     })),
   }
@@ -323,7 +343,7 @@ const buildDbForUpdate = (params: {
 describe('hub.remote form image handling', () => {
   // Hoisted factories are stable; reset request mocks without reloading dependencies.
   beforeAll(async () => {
-    remote = await import('#lib/api/hub.remote.js')
+    remote = mockedRemoteModule(await import('#lib/api/hub.remote.js'))
   })
 
   beforeEach(() => {

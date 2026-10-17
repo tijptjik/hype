@@ -4,5 +4,5 @@ let { feature }: { feature: Feature } = $props()
 </script>
 
 <article data-testid="selected-feature" data-feature-id={feature.id}>
-  {feature.i18n.en?.title}
+  {feature.i18n?.en?.title}
 </article>

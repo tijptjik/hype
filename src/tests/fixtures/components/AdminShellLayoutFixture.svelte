@@ -1,6 +1,7 @@
 <script lang="ts">
+import { Panel } from '#lib/enums.js'
 // CONTEXT
-import { setResponsiveCtx } from '#lib/context/responsive.svelte'
+import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
 import AdminShell from '#lib/bits/patterns/layout/app/components/AdminShell.svelte'
 import PanelRoot from '#lib/bits/patterns/panels/components/PanelRoot.svelte'
@@ -23,7 +24,15 @@ export function toggleSettings() {
       <aside class="h-full w-64 shrink-0 bg-panel" data-test-sidebar>Resources</aside>
     {/snippet}
     {#snippet settings()}
-      <PanelRoot isOpen={open} inline isAdmin position="right">
+      <PanelRoot
+        panelType={Panel.settings}
+        scrollable={true}
+        isNarrow={false}
+        isOpen={open}
+        inline
+        isAdmin
+        position="right"
+      >
         <div class="p-6">
           <button type="button" onclick={() => (open = false)}>Close settings</button>
           <div class="h-[1500px]">Settings content</div>

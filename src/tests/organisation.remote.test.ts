@@ -1,5 +1,15 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 
 // Panel and feature query registration is isolated from this resource's authorization fixtures.
 vi.mock('#lib/api/resources.remote.js', () => ({}))
@@ -65,35 +75,31 @@ const {
   mockCascadeOrganisationArchivedStateToDescendants: vi.fn(async () => undefined),
 }))
 
-vi.mock(
-  '$app/server',
-  () => ({
-    requested: () => ({ refreshAll: async () => {} }),
-    getRequestEvent: mockGetRequestEvent,
-    query: (_schema: unknown, handler: unknown) =>
-      withRemoteMeta(handler as (...args: never[]) => unknown, 'query'),
-    form: (_schema: unknown, handler: unknown) =>
-      withRemoteMeta(async (input: unknown) => {
-        const issue = (() => {
-          const issueBuilder = (message: string) => message
-          issueBuilder.data = new Proxy(
-            {},
-            {
-              get: () => (message: string) => message,
-            },
-          )
-          return issueBuilder
-        })()
-        return (handler as (payload: unknown, issue: unknown) => Promise<unknown>)(
-          input,
-          issue,
+vi.mock('$app/server', () => ({
+  requested: () => ({ refreshAll: async () => {} }),
+  getRequestEvent: mockGetRequestEvent,
+  query: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(handler as (...args: never[]) => unknown, 'query'),
+  form: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(async (input: unknown) => {
+      const issue = (() => {
+        const issueBuilder = (message: string) => message
+        issueBuilder.data = new Proxy(
+          {},
+          {
+            get: () => (message: string) => message,
+          },
         )
-      }, 'form'),
-    command: (_schema: unknown, handler: unknown) =>
-      withRemoteMeta(handler as (...args: never[]) => unknown, 'command'),
-  }),
-  { virtual: true },
-)
+        return issueBuilder
+      })()
+      return (handler as (payload: unknown, issue: unknown) => Promise<unknown>)(
+        input,
+        issue,
+      )
+    }, 'form'),
+  command: (_schema: unknown, handler: unknown) =>
+    withRemoteMeta(handler as (...args: never[]) => unknown, 'command'),
+}))
 
 vi.mock('@sveltejs/kit', () => ({
   isRedirect: () => false,
@@ -214,17 +220,17 @@ vi.mock('#lib/db/services/organisation.js', () => ({
   createI18n: vi.fn(),
   createOrganisation: vi.fn(),
   createUserRoles: vi.fn(),
-  listUserRoleAssignments: vi.fn(async () => []),
-  listOrganisationRoleAssignments: vi.fn(async () => []),
+  listUserRoleAssignments: vi.fn(async (): Promise<unknown[]> => []),
+  listOrganisationRoleAssignments: vi.fn(async (): Promise<unknown[]> => []),
   listOrganisations: mockListOrganisations,
-  probeExistingOrganisation: vi.fn(async () => null),
-  probeOrganisationForUpdate: vi.fn(async () => null),
+  probeExistingOrganisation: vi.fn(async (): Promise<unknown> => null),
+  probeOrganisationForUpdate: vi.fn(async (): Promise<unknown> => null),
   probeOrganisationForCommand: mockProbeOrganisationForCommand,
   resolveOrganisationCommandProbe: mockResolveOrganisationCommandProbe,
   probeOrganisationQuery: mockProbeOrganisationQuery,
   getOrganisation: mockLoadOrganisation,
   updateI18n: vi.fn(),
-  updateOrganisationByIdWithConcurrency: vi.fn(async () => null),
+  updateOrganisationByIdWithConcurrency: vi.fn(async (): Promise<unknown> => null),
   updateOrganisationPublishedStateById: mockUpdateOrganisationPublishedStateById,
   updateOrganisationArchivedStateById: mockUpdateOrganisationArchivedStateById,
   cascadeOrganisationPublishedStateToDescendants:
@@ -273,13 +279,13 @@ vi.mock('#lib/i18n.js', () => ({
   toLocaleRecordFromOrganisationFormI18n: vi.fn(),
 }))
 
-let remote: Awaited<typeof import('#lib/api/organisation.remote.js')>
+let remote: MockedRemoteModule<typeof import('#lib/api/organisation.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('organisation.remote')
 
 describe('organisation.remote authz', () => {
   // Hoisted factories are stable; reset request mocks without reloading dependencies.
   beforeAll(async () => {
-    remote = await import('#lib/api/organisation.remote.js')
+    remote = mockedRemoteModule(await import('#lib/api/organisation.remote.js'))
   })
 
   beforeEach(() => {

@@ -1,7 +1,7 @@
 <script lang="ts">
-import { setResponsiveCtx } from '#lib/context/responsive.svelte'
+import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 import FormUserRolesSection from '#lib/bits/patterns/forms/formUserRolesSection/FormUserRolesSection.svelte'
-import type { OrganisationRoleUser } from '#lib/db/zod/schema/organisation.types'
+import type { OrganisationRoleUser } from '#lib/db/zod/schema/organisation.types.js'
 
 let {
   onRemoveUser = (_id: string) => {},

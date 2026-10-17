@@ -1,3 +1,4 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -51,30 +52,48 @@ const {
 } = vi.hoisted(() => ({
   mockProjectFormDataParse: vi.fn((input: unknown) => input),
   mockToLocaleRecordFromOrganisationFormI18n: vi.fn(() => ({})),
-  mockProbeProjectForUpdate: vi.fn(async () => null),
-  mockLoadProject: vi.fn(async () => null),
-  mockProbeOrganisationHubForProject: vi.fn(async () => null),
-  mockListProjectRoleAssignments: vi.fn(async () => []),
+  mockProbeProjectForUpdate: vi.fn(async (): Promise<unknown> => null),
+  mockLoadProject: vi.fn(async (): Promise<unknown> => null),
+  mockProbeOrganisationHubForProject: vi.fn(async (): Promise<unknown> => null),
+  mockListProjectRoleAssignments: vi.fn(async (): Promise<unknown[]> => []),
   mockMergeOrganisationCapabilities: vi.fn(
     async (_db: unknown, _organisationId: string, projectCapabilities: unknown) =>
       projectCapabilities ?? {},
   ),
-  mockUpdateProjectByIdWithConcurrency: vi.fn(async () => null),
+  mockUpdateProjectByIdWithConcurrency: vi.fn(async (): Promise<unknown> => null),
   mockCascadeProjectOrganisationToDescendants: vi.fn(async () => undefined),
-  mockUpdatePropertiesWithRelated: vi.fn(async () => []),
-  mockListResolvedProjectProperties: vi.fn(async () => []),
+  mockUpdatePropertiesWithRelated: vi.fn(async (): Promise<unknown[]> => []),
+  mockListResolvedProjectProperties: vi.fn(async (): Promise<unknown[]> => []),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockSyncProjectUserRoles: vi.fn(async () => undefined),
   mockSyncProjectLayerPresentation: vi.fn(async () => undefined),
-  mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectCreateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectDeleteForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectPublishForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeOrganisationReadForProbe: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectManageRolesForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectAssignCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectManageCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeProjectUpdateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectCreateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectDeleteForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectPublishForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectReadForProbe: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
+  mockAuthorizeOrganisationReadForProbe: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectManageRolesForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectAssignCapabilitiesForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectManageCapabilitiesForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
   mockValidateUniqueNonReservedCode: vi.fn(async () => undefined),
   mockResolveProjectCommandProbe: vi.fn(async () => ({
     id: 'project-1',
@@ -88,8 +107,8 @@ const {
     isPublished: true,
     isArchived: false,
   })),
-  mockUpdateProjectPublishedStateById: vi.fn(async () => null),
-  mockUpdateProjectArchivedStateById: vi.fn(async () => null),
+  mockUpdateProjectPublishedStateById: vi.fn(async (): Promise<unknown> => null),
+  mockUpdateProjectArchivedStateById: vi.fn(async (): Promise<unknown> => null),
   mockSetProjectMapStyleByCode: vi.fn(async () => undefined),
   mockCascadeProjectArchivedStateToDescendants: vi.fn(async () => undefined),
   mockCascadeProjectPublishedStateToDescendants: vi.fn(async () => undefined),
@@ -317,7 +336,9 @@ vi.mock('#lib/api/services/authz/index.js', () => ({
     mockAuthorizeProjectAssignCapabilitiesForSubmission,
   authorizeProjectCreateForSubmission: mockAuthorizeProjectCreateForSubmission,
   authorizeProjectDeleteForSubmission: mockAuthorizeProjectDeleteForSubmission,
-  authorizeProjectListForContext: vi.fn(() => ({ allowed: true })),
+  authorizeProjectListForContext: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
   authorizeProjectManageCapabilitiesForSubmission:
     mockAuthorizeProjectManageCapabilitiesForSubmission,
   authorizeProjectManageRolesForSubmission:
@@ -358,7 +379,7 @@ vi.mock('#lib/api/services/authz/index.js', () => ({
 vi.mock('#lib/db/services/project.js', () => ({
   createI18n: vi.fn(async () => undefined),
   createUserRoles: vi.fn(async () => undefined),
-  createProject: vi.fn(async () => null),
+  createProject: vi.fn(async (): Promise<unknown> => null),
   getProject: mockLoadProject,
   listUserRoleAssignments: mockListProjectRoleAssignments,
   mergeOrganisationCapabilities: mockMergeOrganisationCapabilities,
@@ -371,7 +392,7 @@ vi.mock('#lib/db/services/project.js', () => ({
     nextOffset: null,
   })),
   probeOrganisationHubForProject: mockProbeOrganisationHubForProject,
-  probeExistingProject: vi.fn(async () => null),
+  probeExistingProject: vi.fn(async (): Promise<unknown> => null),
   probeProjectQuery: mockProbeProjectQuery,
   probeProjectForUpdate: mockProbeProjectForUpdate,
   resolveProjectCommandProbe: mockResolveProjectCommandProbe,
@@ -404,9 +425,9 @@ vi.mock('#lib/db/services/layer.js', () => ({
 }))
 
 vi.mock('#lib/db/services/map.js', () => ({
-  listMapStylesForProject: vi.fn(async () => []),
-  getOrganisationMapStyleScope: vi.fn(async () => null),
-  listMapStylesForScope: vi.fn(async () => []),
+  listMapStylesForProject: vi.fn(async (): Promise<unknown[]> => []),
+  getOrganisationMapStyleScope: vi.fn(async (): Promise<unknown> => null),
+  listMapStylesForScope: vi.fn(async (): Promise<unknown[]> => []),
   syncMapStyleCatalog: vi.fn(async () => undefined),
   setProjectMapStyleByCode: mockSetProjectMapStyleByCode,
 }))
@@ -435,7 +456,7 @@ vi.mock('#lib/db/zod/index.js', async importOriginal => {
 
 vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-let remote: Awaited<typeof import('#lib/api/project.remote.js')>
+let remote: MockedRemoteModule<typeof import('#lib/api/project.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('project.remote')
 
 const buildUpdatePayload = (organisationId: string) => ({
@@ -451,8 +472,8 @@ const buildUpdatePayload = (organisationId: string) => ({
     i18n: { en: {}, zhHans: {}, zhHant: {} },
     capabilities: {},
     userRoles: [{ userId: 'u-1', role: 'owner', capabilities: {} }],
-    properties: [],
-    layers: [],
+    properties: [] as Array<import('$app/server').RemoteFormInput>,
+    layers: [] as Array<import('$app/server').RemoteFormInput>,
   },
 })
 
@@ -462,7 +483,7 @@ const throwingInvalid = (message: string): never => {
 
 describe('project.remote form organisation move authz', () => {
   beforeAll(async () => {
-    remote = await import('#lib/api/project.remote.js')
+    remote = mockedRemoteModule(await import('#lib/api/project.remote.js'))
   }, 15_000)
 
   beforeEach(async () => {
@@ -529,7 +550,7 @@ describe('project.remote form organisation move authz', () => {
             ]),
           },
           projectProperty: {
-            findMany: vi.fn(async () => []),
+            findMany: vi.fn(async (): Promise<unknown[]> => []),
           },
         },
       },

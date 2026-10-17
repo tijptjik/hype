@@ -151,15 +151,18 @@ describe('remote guard wrappers', () => {
   })
 
   it('guardedForm(schema, fn) forwards invalid helper and context', async () => {
-    const handler = guardedForm(z.object({}).passthrough(), async (output, ctx) => {
-      expect(output).toEqual({ data: { code: 'abc' } })
-      expect(typeof ctx.invalid).toBe('function')
-      expect(ctx.user.id).toBe('u-1')
-      return { ok: true }
-    })
+    const handler = guardedForm(
+      z.object({ data: z.object({ code: z.string() }) }),
+      async (output, ctx) => {
+        expect(output).toEqual({ data: { code: 'abc' } })
+        expect(typeof ctx.invalid).toBe('function')
+        expect(ctx.user.id).toBe('u-1')
+        return { ok: true }
+      },
+    )
 
     const result = await (
-      handler as (input: unknown, invalid: unknown) => Promise<unknown>
+      handler as unknown as (input: unknown, invalid: unknown) => Promise<unknown>
     )({ data: { code: 'abc' } }, () => ({ status: 400 }))
 
     expect(result).toEqual({ ok: true })
@@ -173,7 +176,7 @@ describe('remote guard wrappers', () => {
     })
 
     const result = await (
-      handler as (input: unknown, invalid: unknown) => Promise<unknown>
+      handler as unknown as (input: unknown, invalid: unknown) => Promise<unknown>
     )({ freeform: 'x' }, () => ({ status: 400 }))
 
     expect(result).toEqual({ ok: true })
@@ -185,9 +188,11 @@ describe('remote guard wrappers', () => {
       return { ok: true }
     })
 
-    const result = await (handler as (invalid: unknown) => Promise<unknown>)(() => ({
-      status: 400,
-    }))
+    const result = await (handler as unknown as (invalid: unknown) => Promise<unknown>)(
+      () => ({
+        status: 400,
+      }),
+    )
 
     expect(result).toEqual({ ok: true })
   })
@@ -221,9 +226,15 @@ describe('remote guard wrappers', () => {
   })
 
   it('throws Invalid arguments for unsupported signatures', () => {
-    expect(() => guardedQuery({})).toThrow('Invalid arguments')
-    expect(() => guardedForm('unchecked')).toThrow('Invalid arguments')
-    expect(() => guardedCommand({})).toThrow('Invalid arguments')
+    expect(() => Reflect.apply(guardedQuery, undefined, [{}])).toThrow(
+      'Invalid arguments',
+    )
+    expect(() => Reflect.apply(guardedForm, undefined, ['unchecked'])).toThrow(
+      'Invalid arguments',
+    )
+    expect(() => Reflect.apply(guardedCommand, undefined, [{}])).toThrow(
+      'Invalid arguments',
+    )
   })
   it('accepts bounded requested refreshes after a successful mutation', async () => {
     const read = guardedQuery(z.object({}).passthrough(), async () => ({ data: [] }))
@@ -260,10 +271,14 @@ describe('remote guard wrappers', () => {
           await pending
         },
       }))
-      const create = kind === 'command' ? guardedCommand : guardedForm
-      const write = create(z.object({}), async () => ({ saved: true }))
+      const write =
+        kind === 'command'
+          ? guardedCommand(z.object({}), async () => ({ saved: true }))
+          : guardedForm(z.object({}), async () => ({ saved: true }))
       let completed = false
-      const result = (write as (input: unknown) => Promise<unknown>)({}).then(value => {
+      const result = (write as unknown as (input: unknown) => Promise<unknown>)(
+        {},
+      ).then(value => {
         completed = true
         return value
       })

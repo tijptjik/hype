@@ -38,7 +38,7 @@ describe('completePasskeyAccountUpgrade', () => {
   })
 
   it('refetches the session atom after promoting the account', async () => {
-    await completePasskeyAccountUpgrade({})
+    await completePasskeyAccountUpgrade({ emailCallbackUrl: 'http://localhost/' })
 
     expect(fetch).toHaveBeenCalledWith('/api/account/passkey', { method: 'POST' })
     expect(authMocks.refetch).toHaveBeenCalledOnce()
@@ -52,6 +52,7 @@ describe('completePasskeyAccountUpgrade', () => {
     })
 
     await completePasskeyAccountUpgrade({
+      emailCallbackUrl: 'http://localhost/',
       name: 'HYPE user',
       onPasskeyReady: () => steps.push('passkey'),
     })
@@ -73,7 +74,10 @@ describe('completePasskeyAccountUpgrade', () => {
       return {}
     })
 
-    await completePasskeyAccountUpgrade({ name: 'HYPE user' })
+    await completePasskeyAccountUpgrade({
+      emailCallbackUrl: 'http://localhost/',
+      name: 'HYPE user',
+    })
 
     expect(steps).toEqual(['session', 'profile'])
   })
@@ -81,9 +85,9 @@ describe('completePasskeyAccountUpgrade', () => {
   it('reports a saved passkey whose session cache could not refresh', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
 
-    await expect(completePasskeyAccountUpgrade({})).rejects.toBeInstanceOf(
-      PasskeySessionRefreshError,
-    )
+    await expect(
+      completePasskeyAccountUpgrade({ emailCallbackUrl: 'http://localhost/' }),
+    ).rejects.toBeInstanceOf(PasskeySessionRefreshError)
     expect(authMocks.refetch).not.toHaveBeenCalled()
   })
 })

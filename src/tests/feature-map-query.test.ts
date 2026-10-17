@@ -51,7 +51,7 @@ function rows(start: number, count: number, point = pointA): FeatureFromCollecti
         geometry: { type: 'Point', coordinates: point },
         properties: [],
         i18n: { en: { title: String(start + offset) } },
-      }) as FeatureFromCollection,
+      }) as unknown as FeatureFromCollection,
   )
 }
 
@@ -242,7 +242,7 @@ describe('incremental map markers', () => {
     for (const page of initialHandles) expect(page.refresh).toHaveBeenCalledOnce()
     expect(nativePages[5].query.refresh).not.toHaveBeenCalled()
     expect(map.rows.map(row => row.id)).toEqual(expectedIds)
-    expect(map.rows[0].i18n.en?.title).toBe('Refreshed feature')
+    expect(map.rows[0].i18n?.en?.title).toBe('Refreshed feature')
     expect(map.pages).toEqual(initialHandles)
     expect(fetch).toHaveBeenCalledTimes(6)
   })

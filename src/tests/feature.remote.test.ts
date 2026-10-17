@@ -5,9 +5,10 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('#lib/api/resources.remote.js', () => ({}))
 import { z } from 'zod'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
-import { withRemoteMeta } from './remote-function-mock'
+import { mockedRemoteModule, withRemoteMeta } from './remote-function-mock'
 // API
-import * as remote from '#lib/api/feature.remote.js'
+import * as remoteModule from '#lib/api/feature.remote.js'
+const remote = mockedRemoteModule(remoteModule)
 import { authorizeFeatureUpdateForSubmission } from '#lib/api/services/authz/feature.js'
 
 const {
@@ -43,33 +44,47 @@ const {
   mockToComparableFeatureProperties,
   mockGuardedContext,
 } = vi.hoisted(() => ({
-  mockAuthorizeFeatureListForContext: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeatureReadForProbe: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeatureAdminReadForProbe: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeatureCreateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeatureUpdateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeaturePublishForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeatureDeleteForSubmission: vi.fn(() => ({ allowed: true })),
-  mockProbeFeatureQuery: vi.fn(async () => null),
+  mockAuthorizeFeatureListForContext: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeFeatureReadForProbe: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
+  mockAuthorizeFeatureAdminReadForProbe: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeFeatureCreateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeFeatureUpdateForSubmission: vi.fn<
+    typeof authorizeFeatureUpdateForSubmission
+  >(() => ({ allowed: true })),
+  mockAuthorizeFeaturePublishForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeFeatureDeleteForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockProbeFeatureQuery: vi.fn(async (): Promise<unknown> => null),
   mockResolveFeatureCommandProbe: vi.fn(),
-  mockProbeFeatureForUpdate: vi.fn(async () => null),
-  mockProbeLayerForUpdate: vi.fn(async () => null),
+  mockProbeFeatureForUpdate: vi.fn(async (): Promise<unknown> => null),
+  mockProbeLayerForUpdate: vi.fn(async (): Promise<unknown> => null),
   mockListFeatures: vi.fn(async () => ({
     data: [],
     limit: 20,
     offset: 0,
     totalCount: 0,
   })),
-  mockLoadFeature: vi.fn(async () => null),
+  mockLoadFeature: vi.fn(async (): Promise<unknown> => null),
   mockCreateFeature: vi.fn(async () => ({
     id: 'feature-1',
     modifiedAt: '2026-03-18T00:00:01.000Z',
   })),
   mockCreateI18n: vi.fn(async () => undefined),
   mockCreateProperties: vi.fn(async () => undefined),
-  mockUpdateFeatureByIdWithConcurrency: vi.fn(async () => null),
-  mockUpdateFeaturePublishedStateById: vi.fn(async () => null),
-  mockUpdateFeatureArchivedStateById: vi.fn(async () => null),
+  mockUpdateFeatureByIdWithConcurrency: vi.fn(async (): Promise<unknown> => null),
+  mockUpdateFeaturePublishedStateById: vi.fn(async (): Promise<unknown> => null),
+  mockUpdateFeatureArchivedStateById: vi.fn(async (): Promise<unknown> => null),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockUpdateProperties: vi.fn(async () => undefined),
   mockPublishAllImagesWithPublicIntent: vi.fn(async () => undefined),

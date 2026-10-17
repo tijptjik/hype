@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { translateCapabilityLabels } from '#lib/client/services/capabilityTranslation'
+import { translateCapabilityLabels } from '#lib/client/services/capabilityTranslation.js'
 
 describe('capability label translation', () => {
   it('translates only populated sources with empty destinations without mutating the input', async () => {

@@ -29,7 +29,10 @@ const fakeRemoteForm = {
 }
 
 const configured = configureForm(() => ({
-  form: fakeRemoteForm,
+  form: fakeRemoteForm as unknown as import('$app/server').RemoteForm<
+    Record<string, string>,
+    unknown
+  >,
   formEl,
   key: 'submit-attempt-harness',
   data: currentValue,

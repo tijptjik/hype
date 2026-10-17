@@ -1,3 +1,4 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
@@ -31,12 +32,12 @@ vi.mock('#lib/api/external/translation.js', () => ({
   translateText: mockTranslateWithAzure,
 }))
 
-let remote: Awaited<typeof import('#lib/api/translation.remote.js')>
+let remote: MockedRemoteModule<typeof import('#lib/api/translation.remote.js')>
 
 describe('translation.remote', () => {
   // Hoisted factories are stable; reset request mocks without reloading dependencies.
   beforeAll(async () => {
-    remote = await import('#lib/api/translation.remote.js')
+    remote = mockedRemoteModule(await import('#lib/api/translation.remote.js'))
   })
 
   beforeEach(() => {
@@ -73,7 +74,7 @@ describe('translation.remote', () => {
     await expect(
       remote.translateText({
         source: 'en',
-        target: 'zh-hant',
+        target: 'zhHant',
         texts: ['hello'],
       }),
     ).rejects.toMatchObject({ status: 500 })
@@ -82,14 +83,14 @@ describe('translation.remote', () => {
   it('forwards params to azure translation service', async () => {
     const result = await remote.translateText({
       source: 'en',
-      target: 'zh-hant',
+      target: 'zhHant',
       texts: ['hello', 'world'],
     })
 
     expect(mockTranslateWithAzure).toHaveBeenCalledWith(
       ['hello', 'world'],
       'en',
-      'zh-hant',
+      'zhHant',
       'eastasia',
       'key-1',
     )

@@ -71,7 +71,7 @@ describe('AppCtx user updates', () => {
 
     second.resolve([
       { id: 'new-feature', layerId: 'new-layer', properties: [] },
-    ] as FeatureFromCollection[])
+    ] as unknown as FeatureFromCollection[])
     await newerRefresh
     expect(appCtx.view.queries.rows.feature.map(feature => feature.id)).toEqual([
       'new-feature',
@@ -79,7 +79,7 @@ describe('AppCtx user updates', () => {
 
     first.resolve([
       { id: 'old-feature', layerId: 'old-layer', properties: [] },
-    ] as FeatureFromCollection[])
+    ] as unknown as FeatureFromCollection[])
     await olderRefresh
     expect(appCtx.view.queries.rows.feature.map(feature => feature.id)).toEqual([
       'new-feature',
@@ -102,7 +102,7 @@ describe('AppCtx user updates', () => {
     appCtx.view.scope.prisms.layer = ['new-layer']
     pending.resolve([
       { id: 'obsolete', layerId: 'old-layer', properties: [] },
-    ] as unknown as FeatureFromCollection[])
+    ] as unknown as unknown as FeatureFromCollection[])
     await refresh
     expect(appCtx.view.queries.rows.feature).toEqual([])
     expect(appCtx.view.cache.feature.has('obsolete')).toBe(false)
@@ -126,7 +126,7 @@ describe('AppCtx user updates', () => {
 
     pendingFeatures.resolve([
       { id: 'old-feature', layerId: 'old-layer', properties: [] },
-    ] as FeatureFromCollection[])
+    ] as unknown as FeatureFromCollection[])
     await refresh
 
     expect(appCtx.view.queries.rows.feature).toEqual([])
@@ -290,7 +290,7 @@ describe('AppCtx user updates', () => {
     const features = [
       { id: 'bookshop-feature', layerId: 'bookshops', properties: [] },
       { id: 'neon-feature', layerId: 'neon-signs', properties: [] },
-    ] as unknown as FeatureFromCollection[]
+    ] as unknown as unknown as FeatureFromCollection[]
 
     vi.spyOn(appCtx.view.resources.featureQueries.map, 'rows', 'get').mockReturnValue(
       features,
@@ -334,7 +334,7 @@ describe('AppCtx user updates', () => {
         layerId: 'overlay',
         divisionMemberships: [{ divisionId: 'district', selected: false }],
       },
-    ] as FeatureFromCollection[]
+    ] as unknown as FeatureFromCollection[]
     vi.spyOn(app.view.resources.featureQueries.map, 'rows', 'get').mockReturnValue(rows)
     expect(app.getVisibleFeatures()).toHaveLength(3)
     include.add('district')
