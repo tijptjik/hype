@@ -231,6 +231,10 @@ export class FeatureQuery {
   }
   loading = $state(false)
   error: unknown = $state(null)
+  /** Complete access identity of the active traversal. */
+  get scope(): string | undefined {
+    return this.input?.meta.scope
+  }
   private input: FeatureQueryInput | undefined = $state.raw()
   private preview: FeatureQueryCachedEntity[] = $state.raw([])
   private validatedAt = 0

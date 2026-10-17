@@ -19,15 +19,36 @@ export class ResourceList {
   error: unknown = $state(null)
   visibleIds = new Set<string>()
   private generation = 0
+  private released = false
   private fallback: PanelResource[] = []
   private validatedAt = 0
+  /** Complete access identity of the active traversal. */
+  get scope(): string | undefined {
+    return this.input?.meta.scope
+  }
   private input: ResourcePageInput | undefined
   private history = new Map<
     string,
     { pages: RemoteQuery<ResourcePage>[]; fetchedAt: number }
   >()
 
-  constructor(private readonly query: ResourcePageFactory) {}
+  constructor(
+    private readonly query: ResourcePageFactory,
+    private readonly onRelease: () => void = () => {},
+  ) {}
+
+  /** Refreshes the current traversal. @returns Completion of its first page. */
+  async refresh(): Promise<void> {
+    if (this.input) await this.load(this.input, true)
+  }
+
+  /** Releases this consumer and supersedes pending reads. @returns Nothing. */
+  release(): void {
+    if (this.released) return
+    this.released = true
+    this.clear()
+    this.onRelease()
+  }
 
   /** All retained native pages, including inactive index queries. @returns Unique handles. */
   get retainedPages(): RemoteQuery<ResourcePage>[] {
@@ -74,6 +95,7 @@ export class ResourceList {
    * @returns Completion of the current first page; obsolete completions are ignored.
    */
   async load(input: ResourcePageInput, force = false): Promise<void> {
+    if (this.released) throw new Error('Resource list has been released')
     const key = JSON.stringify(input)
     if (
       !force &&
@@ -111,6 +133,9 @@ export class ResourceList {
       if (generation !== this.generation) return
       this.validatedAt = Date.now()
       this.history.set(key, { pages: this.pages, fetchedAt: this.validatedAt })
+      // Keep back-navigation retention bounded independently of the active traversal.
+      while (this.history.size > 12)
+        this.history.delete(this.history.keys().next().value!)
     } catch (error) {
       if (generation === this.generation) {
         if ([401, 403, 404].includes((error as { status?: number })?.status ?? 0)) {

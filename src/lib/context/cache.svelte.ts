@@ -1,11 +1,11 @@
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
 // REMOTE
-import { getResourcePage, getPinnedResource } from '#lib/api/resources.remote.js'
-import { getFeaturePage } from '#lib/api/featureQueries.remote.js'
+import type { getResourcePage, getPinnedResource } from '#lib/api/resources.remote.js'
+import type { getFeaturePage } from '#lib/api/featureQueries.remote.js'
 // CONTEXT
 import { ResourceList } from './resource-list.svelte'
-import { FeatureQuery, FeatureQueryRetention } from './feature-query.svelte'
+import type { FeatureQuery, FeatureQueryRetention } from './feature-query.svelte'
 // SERVICES
 import {
   OptimisticRecords,
@@ -24,11 +24,9 @@ import type {
   FeatureCollectionHandle,
 } from '#lib/context/featureQuery.types.js'
 
-/** Session-local domain retention. SvelteKit owns active page payloads and request deduplication. */
-export class CacheCtx {
-  private readonly optimisticRecords = new OptimisticRecords()
-  featureCollection: FeatureCollectionHandle | undefined = $state.raw()
-  readonly entities: Cache = {
+/** Creates isolated raw view records. @returns Empty maps for each resource family. */
+function createEntityStore(): Cache {
+  return {
     organisation: new SvelteMap(),
     project: new SvelteMap(),
     layer: new SvelteMap(),
@@ -40,27 +38,118 @@ export class CacheCtx {
     user: new SvelteMap(),
     stats: new SvelteMap(),
   }
-  readonly lists = {
-    organisation: new ResourceList(getResourcePage),
-    project: new ResourceList(getResourcePage),
-    layer: new ResourceList(getResourcePage),
+}
+
+/** Session-local domain retention. SvelteKit owns active page payloads and request deduplication. */
+export class CacheCtx {
+  private readonly optimisticRecords = new OptimisticRecords()
+  featureCollection: FeatureCollectionHandle | undefined = $state.raw()
+  featureCollectionScope: string | undefined
+  readonly entities: Cache = createEntityStore()
+  private readonly viewStores = new Set<Cache>()
+
+  /** Registers isolated surface records. @returns A fresh view-owned entity store. */
+  createEntityStore(): Cache {
+    const store = createEntityStore()
+    this.viewStores.add(store)
+    return store
   }
 
-  readonly indexLists = {
-    organisation: new ResourceList(getResourcePage),
-    project: new ResourceList(getResourcePage),
-    layer: new ResourceList(getResourcePage),
+  /** Releases a view's records. @param store View-owned entity store. @returns Nothing. */
+  releaseEntityStore(store: Cache): void {
+    for (const entries of Object.values(store)) entries.clear()
+    this.viewStores.delete(store)
   }
 
-  private readonly featureRetention = new FeatureQueryRetention()
-  readonly featureQueries = {
-    map: new FeatureQuery(getFeaturePage, this.featureRetention, undefined, true),
-    search: new FeatureQuery(getFeaturePage, this.featureRetention),
-    searchWishlist: new FeatureQuery(getFeaturePage, this.featureRetention),
-    collection: new FeatureQuery(getFeaturePage, this.featureRetention),
-    facets: new FeatureQuery(getFeaturePage, this.featureRetention),
-    wishlist: new FeatureQuery(getFeaturePage, this.featureRetention),
-    visited: new FeatureQuery(getFeaturePage, this.featureRetention),
+  private readonly registeredLists = new Map<ResourceList, PanelResourceType>()
+  private readonly registeredFeatures = new Map<FeatureQuery, boolean>()
+  private featureMechanics:
+    | { retention: FeatureQueryRetention; create: (bounded: boolean) => FeatureQuery }
+    | undefined
+
+  /**
+   * Creates inert shared retention with route-supplied remote factories.
+   * @param providers Query factories imported by the consuming surface.
+   */
+  constructor(
+    private providers: {
+      page: typeof getResourcePage
+      pin: typeof getPinnedResource
+      feature: typeof getFeaturePage
+      createFeatureMechanics?: () => {
+        retention: FeatureQueryRetention
+        create: (bounded: boolean) => FeatureQuery
+      }
+    } = {
+      page: () => {
+        throw new Error('Resource page provider is not installed')
+      },
+      pin: () => {
+        throw new Error('Resource pin provider is not installed')
+      },
+      feature: () => {
+        throw new Error('Feature provider is not installed')
+      },
+    },
+    readonly managedByRoot = false,
+  ) {}
+
+  /** Installs route-owned factories without fetching data. @param providers Native query factories. @returns Nothing. */
+  installProviders(providers: {
+    page: typeof getResourcePage
+    pin: typeof getPinnedResource
+    feature: typeof getFeaturePage
+    createFeatureMechanics?: () => {
+      retention: FeatureQueryRetention
+      create: (bounded: boolean) => FeatureQuery
+    }
+  }): void {
+    this.providers = providers
+  }
+
+  /**
+   * Creates traversal for a feature consumer that installed spatial mechanics.
+   * @param bounded Whether the consumer requires bounded map accumulation.
+   * @returns An independently registered feature controller.
+   */
+  createFeatureQuery(bounded = false): FeatureQuery {
+    this.featureMechanics ??= this.providers.createFeatureMechanics?.()
+    if (!this.featureMechanics)
+      throw new Error('This surface has not installed feature traversal mechanics')
+    const query = this.featureMechanics.create(bounded)
+    this.registeredFeatures.set(query, bounded)
+    return query
+  }
+
+  /** Releases a feature consumer. @param query Consumer-owned traversal. @returns Nothing. */
+  releaseFeatureQuery(query: FeatureQuery): void {
+    query.clear()
+    this.registeredFeatures.delete(query)
+  }
+
+  /**
+   * Allocates independent traversal and registers it for mutation reconciliation.
+   * @param type Resource family for membership invalidation.
+   * @returns An inert controller; release it when its consumer is destroyed.
+   */
+  createList(type: PanelResourceType, onRelease: () => void = () => {}): ResourceList {
+    const list = new ResourceList(this.providers.page, () => {
+      this.registeredLists.delete(list)
+      onRelease()
+    })
+    this.registeredLists.set(list, type)
+    return list
+  }
+
+  /**
+   * Finds active traversal owners affected by a resource mutation.
+   * @param types Resource families to match.
+   * @returns Registered list controllers without creating inactive surface slots.
+   */
+  private listsFor(types: PanelResourceType[]): ResourceList[] {
+    return [...this.registeredLists]
+      .filter(([, type]) => types.includes(type))
+      .map(([list]) => list)
   }
 
   private pins = new Map<
@@ -77,14 +166,61 @@ export class CacheCtx {
     const key = JSON.stringify([type, id, meta])
     let entry = this.pins.get(key)
     if (!entry) {
-      entry = { type, query: getPinnedResource({ type, id, meta }) }
+      entry = { type, query: this.providers.pin({ type, id, meta }) }
       this.pins.set(key, entry)
     }
     return entry.query
   }
 
-  private epoch = 0
+  private epoch = $state(0)
+
+  /** Scope generation observed by consumers before exposing retained native data. */
+  get generation(): number {
+    return this.epoch
+  }
   private details = new Map<string, ResourceDetailHandle>()
+  private readonly detailConsumers = new Map<string, number>()
+
+  /**
+   * Protects a live detail handle from inactive-retention eviction.
+   * @param key Complete query identity.
+   * @returns Idempotent release callback.
+   */
+  retainDetail(key: string): () => void {
+    this.detailConsumers.set(key, (this.detailConsumers.get(key) ?? 0) + 1)
+    let active = true
+    return () => {
+      if (!active) return
+      active = false
+      const count = (this.detailConsumers.get(key) ?? 1) - 1
+      if (count > 0) this.detailConsumers.set(key, count)
+      else this.detailConsumers.delete(key)
+      // Active consumers stay pinned; only inactive detail retention is bounded.
+      const inactive = [...this.details.keys()].filter(
+        identity => !this.detailConsumers.has(identity),
+      )
+      for (const identity of inactive.slice(0, Math.max(0, inactive.length - 128)))
+        this.details.delete(identity)
+    }
+  }
+
+  /**
+   * Retains a typed native query under a complete scope/profile identity.
+   * @param key Canonical resource and access identity.
+   * @param factory Lazy native query factory.
+   * @returns The existing compatible handle or a newly created one.
+   */
+  detailQuery<T>(
+    key: string,
+    factory: () => RemoteQuery<import('#lib/types.js').EntityResponse<T>>,
+  ): RemoteQuery<import('#lib/types.js').EntityResponse<T>> {
+    let entry = this.details.get(key)
+    if (!entry) {
+      entry = { query: factory(), fetchedAt: 0 }
+      this.details.set(key, entry)
+    }
+    return entry.query as RemoteQuery<import('#lib/types.js').EntityResponse<T>>
+  }
 
   /**
    * Starts a shared mutation across retained identities and native query projections.
@@ -98,16 +234,21 @@ export class CacheCtx {
     type: string,
     input: ResourceOptimisticInput,
     stores: Array<[string, Map<string, unknown>]> = [],
+    scope?: string,
   ): { updates: RemoteQueryOverride[]; settle: (success: boolean) => void } {
     const settle = this.optimisticRecords.begin(
       [
-        ...Object.entries(this.entities).filter(([key]) => key !== 'stats'),
+        ...(!scope
+          ? [this.entities, ...this.viewStores].flatMap(store =>
+              Object.entries(store).filter(([key]) => key !== 'stats'),
+            )
+          : []),
         ...stores,
       ] as Array<[string, Map<string, unknown>]>,
       (value, ownerType) => projectResourcePatch(value, type, input, ownerType),
     )
     try {
-      return { updates: this.optimisticUpdates(type, input), settle }
+      return { updates: this.optimisticUpdates(type, input, scope), settle }
     } catch (error) {
       settle(false)
       throw error
@@ -173,8 +314,15 @@ export class CacheCtx {
   optimisticUpdates(
     type: string,
     input: ResourceOptimisticInput,
+    scope?: string,
   ): RemoteQueryOverride[] {
+    const featureCollection =
+      !scope || this.featureCollectionScope === scope
+        ? this.featureCollection
+        : undefined
+
     const detailUpdates = [...this.details.entries()].flatMap(([key, entry]) => {
+      if (scope && (!key.startsWith('[') || JSON.parse(key).at(-1) !== scope)) return []
       const ownerType = key.startsWith('[')
         ? (JSON.parse(key)[0] as string)
         : key.split(':')[0]
@@ -190,11 +338,14 @@ export class CacheCtx {
     if (type === 'image') {
       // Image metadata is shared by flat compact rows and nested detail/gallery envelopes.
       const pages = new Set<RemoteQuery<{ data: unknown }>>([
-        ...Object.values(this.lists).flatMap(list => list.retainedPages),
-        ...Object.values(this.indexLists).flatMap(list => list.retainedPages),
-        ...Object.values(this.featureQueries).flatMap(query => query.retainedPages),
-        ...this.featureRetention.retainedPages,
-        ...(this.featureCollection ? [this.featureCollection] : []),
+        ...[...this.registeredLists.keys()]
+          .filter(list => !scope || list.scope === scope)
+          .flatMap(list => list.retainedPages),
+        ...[...this.registeredFeatures.keys()]
+          .filter(query => !scope || query.scope === scope)
+          .flatMap(query => query.retainedPages),
+        ...(!scope ? (this.featureMechanics?.retention.retainedPages ?? []) : []),
+        ...(featureCollection ? [featureCollection] : []),
       ] as RemoteQuery<{ data: unknown }>[])
       return [
         ...detailUpdates,
@@ -211,18 +362,21 @@ export class CacheCtx {
             })),
           ]
         }),
-        ...[...this.pins.values()].flatMap(({ query }) => {
-          if (
-            projectResourcePatch(query.current, type, input, 'resource') ===
-            query.current
-          )
-            return []
-          return [
-            query.withOverride(current =>
-              projectResourcePatch(current, type, input, 'resource'),
-            ),
-          ]
-        }),
+        ...[...this.pins.entries()]
+          .filter(([key]) => !scope || JSON.parse(key)[2].scope === scope)
+          .map(([, entry]) => entry)
+          .flatMap(({ query }) => {
+            if (
+              projectResourcePatch(query.current, type, input, 'resource') ===
+              query.current
+            )
+              return []
+            return [
+              query.withOverride(current =>
+                projectResourcePatch(current, type, input, 'resource'),
+              ),
+            ]
+          }),
       ]
     }
     if (type === 'feature') {
@@ -231,9 +385,9 @@ export class CacheCtx {
       const temporaryId = `pending:${crypto.randomUUID()}`
       return [
         ...detailUpdates,
-        ...(this.featureCollection
+        ...(featureCollection
           ? [
-              this.featureCollection.withOverride(current => {
+              featureCollection.withOverride(current => {
                 if (!current) return current
                 const data = current.data.map(row =>
                   row.id === id ? { ...row, ...patch, id: row.id } : row,
@@ -244,25 +398,27 @@ export class CacheCtx {
               }),
             ]
           : []),
-        ...Object.entries(this.featureQueries).flatMap(([channel, query]) =>
-          query.pages.map(page =>
-            page.withOverride(current => {
-              if (!current) return current
-              return {
-                ...current,
-                data: current.data.flatMap(row => {
-                  if (row.id !== id) return [row]
-                  const updated = { ...row, ...patch, id: row.id }
-                  // Map snapshots need the patched record to hide it and support native rollback.
-                  return channel === 'map' || query.matches(updated) ? [updated] : []
-                }),
-              }
-            }),
+        ...[...this.registeredFeatures]
+          .filter(([query]) => !scope || query.scope === scope)
+          .flatMap(([query, isMap]) =>
+            query.pages.map(page =>
+              page.withOverride(current => {
+                if (!current) return current
+                return {
+                  ...current,
+                  data: current.data.flatMap(row => {
+                    if (row.id !== id) return [row]
+                    const updated = { ...row, ...patch, id: row.id }
+                    // Map snapshots need the patched record to hide it and support native rollback.
+                    return isMap || query.matches(updated) ? [updated] : []
+                  }),
+                }
+              }),
+            ),
           ),
-        ),
       ]
     }
-    if (!(type in this.lists)) return detailUpdates
+    if (!['organisation', 'project', 'layer'].includes(type)) return detailUpdates
     const resourceType = type as PanelResourceType
     const affected: PanelResourceType[] =
       resourceType === 'organisation'
@@ -270,13 +426,15 @@ export class CacheCtx {
         : resourceType === 'project'
           ? ['project', 'layer']
           : ['layer']
-    const lists = affected.flatMap(key => [this.lists[key], this.indexLists[key]])
+    const lists = this.listsFor(affected).filter(list => !scope || list.scope === scope)
     for (const list of lists) list.invalidate()
     this.details.clear()
     const patch = input.data ?? {}
     const id = input.meta?.id
     const temporaryId = `pending:${crypto.randomUUID()}`
-    const pinOverrides = [...this.pins.values()]
+    const pinOverrides = [...this.pins.entries()]
+      .filter(([key]) => !scope || JSON.parse(key)[2].scope === scope)
+      .map(([, entry]) => entry)
       .filter(entry => entry.type === type && entry.query.current?.id === id)
       .map(entry =>
         entry.query.withOverride(current => {
@@ -364,17 +522,17 @@ export class CacheCtx {
     const featureRefreshes: Promise<void>[] = []
     if (type === 'image') {
       // Native updates already refreshed affected pages; discard detached previews only.
-      this.featureRetention.clear()
-      for (const query of Object.values(this.featureQueries)) query.invalidate()
+      this.featureMechanics?.retention.clear()
+      for (const query of [...this.registeredFeatures.keys()]) query.invalidate()
       this.details.clear()
       return
     }
     // Mutations invalidate shared previews and authoritative query counts together.
     if (['feature', 'organisation', 'project', 'layer'].includes(type)) {
-      this.featureRetention.clear()
-      for (const query of Object.values(this.featureQueries)) query.invalidate()
+      this.featureMechanics?.retention.clear()
+      for (const query of [...this.registeredFeatures.keys()]) query.invalidate()
       featureRefreshes.push(
-        ...Object.values(this.featureQueries).map(query => query.revalidate()),
+        ...[...this.registeredFeatures.keys()].map(query => query.revalidate()),
       )
     }
     const affected: PanelResourceType[] =
@@ -388,9 +546,7 @@ export class CacheCtx {
     this.details.clear()
     await Promise.all([
       ...featureRefreshes,
-      ...affected
-        .flatMap(key => [this.lists[key], this.indexLists[key]])
-        .map(list => list.reconcile().catch(() => {})),
+      ...this.listsFor(affected).map(list => list.reconcile().catch(() => {})),
     ])
   }
 
@@ -400,7 +556,7 @@ export class CacheCtx {
    * @returns Nothing.
    */
   invalidate(type: PanelResourceType): void {
-    this.lists[type].invalidate()
+    for (const list of this.listsFor([type])) list.invalidate()
   }
 
   /** Clears every retained scope-sensitive record and page before an identity transition. */
@@ -408,15 +564,12 @@ export class CacheCtx {
     this.epoch++
     this.optimisticRecords.clear()
     this.featureCollection = undefined
-    this.featureRetention.clear()
-    for (const query of Object.values(this.featureQueries)) query.clear()
+    this.featureMechanics?.retention.clear()
+    for (const query of [...this.registeredFeatures.keys()]) query.clear()
     this.details.clear()
     this.pins.clear()
-    for (const store of Object.values(this.entities)) store.clear()
-    for (const list of [
-      ...Object.values(this.lists),
-      ...Object.values(this.indexLists),
-    ])
-      list.clear()
+    for (const entities of [this.entities, ...this.viewStores])
+      for (const store of Object.values(entities)) store.clear()
+    for (const list of this.registeredLists.keys()) list.clear()
   }
 }
