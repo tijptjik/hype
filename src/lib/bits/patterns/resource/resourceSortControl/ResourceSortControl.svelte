@@ -17,6 +17,8 @@ import type { ResourceSortControlProps } from './resourceSortControl.types'
 
 let {
   resource,
+  sorting: controlledSorting,
+  onSortingChange,
   sortables,
   onOpenChange,
   isOpen = $bindable(false),
@@ -28,7 +30,12 @@ let isOpening = $state(false)
 let openingTimeout: ReturnType<typeof setTimeout> | null = null
 let lastReportedOpenState = $state(isOpen)
 
-let sorting = $derived(adminCtx.appCtx.state.viewSorting[resource])
+let sorting = $derived(
+  controlledSorting ??
+    (resource
+      ? adminCtx.appCtx.state.viewSorting[resource]
+      : { sortBy: 'name', sortOrder: 'asc' as const }),
+)
 let sortDirectionIcon = $derived(
   sorting.sortOrder === 'desc' ? ArrowDownIcon : ArrowUpIcon,
 )
@@ -68,14 +75,24 @@ function toggleMenu(): void {
   isOpening = false
 }
 
+/**
+ * Updates the controlled sort or the current resource's stored sort.
+ * @param sortBy Selected field.
+ * @returns Nothing.
+ */
 function handleSortByChange(sortBy: string): void {
-  void adminCtx.setViewSorting(resource, { sortBy })
+  if (onSortingChange) onSortingChange({ ...sorting, sortBy })
+  else if (resource) void adminCtx.setViewSorting(resource, { sortBy })
 }
 
+/**
+ * Toggles direction for either a controlled list or the current resource.
+ * @returns Nothing.
+ */
 function handleSortOrderToggle(): void {
-  void adminCtx.setViewSorting(resource, {
-    sortOrder: sorting.sortOrder === 'desc' ? 'asc' : 'desc',
-  })
+  const sortOrder = sorting.sortOrder === 'desc' ? 'asc' : 'desc'
+  if (onSortingChange) onSortingChange({ ...sorting, sortOrder })
+  else if (resource) void adminCtx.setViewSorting(resource, { sortOrder })
 }
 
 $effect(() => {

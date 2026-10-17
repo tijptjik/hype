@@ -179,3 +179,20 @@ Legacy auth code explicitly uses user 6 for donor tokens and user 6828 for group
 link tokens, carrying the actual donor/leader in token claims. The other accounts
 are identified by their assigned role, not by hard-coded service use. No account
 has been excluded or merged as a result of this TODO.
+
+## Hype user directory
+
+Related account work: [#189](https://github.com/tijptjik/hype/issues/189).
+
+The `/admin/users` directory and its sidebar link are available to administrators of the
+active hub and core administrators. Both the server page guard and the directory
+variant of `searchUsers` enforce this policy. Organisation/project owners retain
+the existing member-picker search without access to the extra directory fields.
+
+The list loads 25 users per page, with server-side search across name, username,
+email and attribution. Rows show avatar, name, case-preserving username, email,
+attribution, telephone, locale, verification, archive status and join date.
+The shared admin header and control bar provide server-side sorting by name, email,
+join date or update date, plus a tri-state archived filter. The initial view
+excludes archived users.
+No account identifiers, tokens or legacy import metadata are returned.

@@ -69,9 +69,10 @@ let upgradeReturnTo = $state('/')
  * @returns Whether the initial feature collection should be requested.
  * @remarks Screensaver resolves an explicit layer target after the hierarchy is ready,
  * so it must never briefly fetch or render the hub's default datasets.
+ * The user directory also has no feature collection to render.
  */
 function shouldLoadInitialFeatures(): boolean {
-  return page.url.pathname !== '/screensaver'
+  return page.url.pathname !== '/screensaver' && page.url.pathname !== '/admin/users'
 }
 
 /**

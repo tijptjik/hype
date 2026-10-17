@@ -68,6 +68,12 @@ export type HeaderFormActionsState = {
 }
 
 export type HeaderCtrlState = {
+  search: {
+    query: string
+    placeholder?: string
+    onFilter: (query: string) => void
+  } | null
+
   controlsMode: HeaderControlsMode
   isEditing: boolean
   visibility: HeaderVisibilityOverrides

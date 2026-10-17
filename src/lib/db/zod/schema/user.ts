@@ -166,6 +166,16 @@ export const UserAdminListProfileAPI = UserBase.pick({
   attribution: true,
 } as const)
 
+export const UserDirectoryProfileAPI = UserAdminListProfileAPI.extend(
+  UserBase.pick({
+    telephone: true,
+    locale: true,
+    emailVerified: true,
+    isArchived: true,
+    createdAt: true,
+  }).shape,
+)
+
 export const UserCardProfileAPI = UserBase.pick({
   id: true,
   username: true,
@@ -281,6 +291,7 @@ export const UserParentChainRoleFilterSchema = z
   )
 
 export const UserSearchQueryParamsSchema = z.object({
+  directory: z.boolean().optional(),
   q: z.string().trim().optional(),
   conditions: z
     .object({

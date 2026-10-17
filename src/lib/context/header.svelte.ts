@@ -77,6 +77,7 @@ export const getEntityVisibility = (
 export class HeaderCtrl {
   /** Reactive header state consumed by the header adapter/components. */
   state: HeaderCtrlState = $state({
+    search: null,
     controlsMode: 'auto',
     isEditing: false,
     visibility: {},
@@ -374,12 +375,19 @@ export class HeaderCtrl {
    * @param props - Props passed to the control bar component.
    * @returns void
    */
-  setControlBar(
-    component: HeaderLayoutRegionConfig['component'],
-    props: HeaderLayoutRegionConfig['props'] = {},
+  setControlBar<Props extends Record<string, unknown>>(
+    component: Component<Props> | null,
+    props: Props,
     options: Pick<HeaderLayoutRegionConfig, 'height' | 'isVisible'> = {},
   ): void {
-    const next = component ? { component, props, ...options } : null
+    // Validate component props at the call boundary, then erase them for dynamic rendering.
+    const next: HeaderLayoutRegionConfig | null = component
+      ? {
+          component: component as unknown as Component<Record<string, unknown>>,
+          props,
+          ...options,
+        }
+      : null
     if (untrack(() => isSameLayoutRegionConfig(this.state.layout.controlBar, next)))
       return
     this.state.layout.controlBar = next
@@ -419,10 +427,20 @@ export class HeaderCtrl {
   }
 
   /**
+   * Overrides resource search for a standalone admin directory.
+   * @param search Controlled search state, or null to restore resource search.
+   * @returns Nothing.
+   */
+  setSearch(search: HeaderCtrlState['search']): void {
+    this.state.search = search
+  }
+
+  /**
    * Fully reset header controls, visibility, and metadata.
    * @returns void
    */
   reset(): void {
+    this.state.search = null
     this.state.controlsMode = 'auto'
     this.state.isEditing = false
     this.state.visibility = {}

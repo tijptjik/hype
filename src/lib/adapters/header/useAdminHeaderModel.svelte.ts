@@ -822,7 +822,7 @@ export function useAdminHeaderModel(
 
   // Materialize the final prop object expected by the stateless header pattern.
   const headerProps = $derived<HeaderProps>({
-    query,
+    query: headerCtrl.state.search?.query ?? query,
     title: titleConfig,
     newAction: {
       isCreatable: resolvedVisibility.showNew,
@@ -830,9 +830,9 @@ export function useAdminHeaderModel(
     },
     filter: {
       isFilterable: resolvedVisibility.showFilter,
-      placeholder: 'Filter resources',
+      placeholder: headerCtrl.state.search?.placeholder ?? 'Filter resources',
       debounceMs: 150,
-      onFilter: handleFilterChange,
+      onFilter: headerCtrl.state.search?.onFilter ?? handleFilterChange,
       onFocusChange: handleFilterFocusChange,
       onAdvanceFromSearch: handleAdvanceFromSearch,
     },

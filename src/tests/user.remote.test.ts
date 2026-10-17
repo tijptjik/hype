@@ -247,6 +247,7 @@ vi.mock('#lib/db/zod/index.js', () => ({
   RemoveUserFeatureFromListSchema: {},
   SetUserLayerDefaultsSchema: {},
   UpdateUserParamsSchema: {},
+  UserDirectoryProfileAPI: { parse: (value: unknown) => value },
   UserAdminListProfileAPI: {
     parse: (value: unknown) => value,
   },
@@ -468,6 +469,36 @@ describe('user.remote', () => {
       remote.updateUserProfile({ id: 'u-1', data: { username: 'TaKeN' } }),
     ).rejects.toMatchObject({ status: 409, message: 'USERNAME_IS_ALREADY_TAKEN' })
     expect(mockUpdateUser).not.toHaveBeenCalled()
+  })
+
+  it('denies directory fields to organisation owners who can use member search', async () => {
+    mockSetupRequestHandler.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false, superAdmin: false },
+      userRoles: [{ type: 'organisation', role: 'owner' }],
+    })
+    await expect(remote.searchUsers({ q: '', directory: true })).rejects.toMatchObject({
+      status: 403,
+      message: 'INSUFFICIENT_ROLE',
+    })
+    expect(mockSearchUsersByConditions).not.toHaveBeenCalled()
+  })
+
+  it('loads a 25-user directory page for a core administrator', async () => {
+    mockSetupRequestHandler.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+    await remote.searchUsers({
+      q: 'Runner',
+      directory: true,
+      pagination: { limit: 25, offset: 25 },
+    })
+    expect(mockSearchUsersByConditions).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ limit: 25, offset: 25 }),
+    )
   })
 
   it('searchUsers caps limit at 100 and parses count rows', async () => {

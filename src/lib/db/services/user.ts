@@ -183,6 +183,11 @@ export const searchUsersByConditions = async (
     displayUsername: string | null
     email: string | null
     image: unknown
+    telephone: string | null
+    locale: string
+    emailVerified: boolean | null
+    isArchived: boolean
+    createdAt: Date
     attribution: string | null
   }>
   totalCount: number
@@ -206,10 +211,15 @@ export const searchUsersByConditions = async (
       email: user.email,
       image: user.image,
       attribution: user.attribution,
+      telephone: user.telephone,
+      locale: user.locale,
+      emailVerified: user.emailVerified,
+      isArchived: user.isArchived,
+      createdAt: user.createdAt,
     })
     .from(user)
     .where(and(...params.conditions))
-    .orderBy(orderBy)
+    .orderBy(orderBy, asc(user.id))
     .limit(params.limit)
     .offset(params.offset)
 

@@ -7,11 +7,13 @@ import { Button } from '#lib/bits/core/index.js'
 import { ADMIN_PATH } from '#lib/index.js'
 // AUTH
 import { canViewAnalytics, hasControlPanelAccess } from '#lib/client/services/auth.js'
+import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
 // NAVIGATION
 import { navigateOnAdmin } from '#lib/navigation/index.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // ICONS
+import UsersIcon from 'virtual:icons/proicons/person-multiple'
 import ChartColumnIncreasing from 'virtual:icons/proicons/bar-chart'
 import CloudArrowUp from 'virtual:icons/proicons/cloud-arrow-up'
 import BuildingLibrary from 'virtual:icons/proicons/bank'
@@ -39,12 +41,16 @@ const notificationCount = $derived(adminCtx.filteredTasks.length)
 const featureCount = $derived(adminCtx.filteredFeatures.length)
 
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {
-  if (
-    !adminCtx.appCtx.user ||
-    !hasControlPanelAccess(adminCtx.appCtx.user as SessionUser)
-  ) {
-    return []
-  }
+  const actor = adminCtx.appCtx.user as SessionUser | null
+  const directoryAllowed =
+    actor &&
+    canBrowseUsers({
+      isAnonymous: actor.isAnonymous,
+      superAdmin: actor.superAdmin,
+      userRoles: actor.roles ?? [],
+      hubId: adminCtx.appCtx.hub?.id,
+    })
+  if (!actor || (!hasControlPanelAccess(actor) && !directoryAllowed)) return []
 
   const items: AdminMenuItem[] = [
     {
@@ -62,6 +68,10 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       notificationCount,
     },
   ]
+
+  if (directoryAllowed) {
+    items.push({ href: '/admin/users', label: 'Users', icon: UsersIcon })
+  }
 
   if (canViewAnalytics(adminCtx.appCtx.user as SessionUser)) {
     items.push({

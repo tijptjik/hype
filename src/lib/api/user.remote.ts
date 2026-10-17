@@ -11,6 +11,7 @@ import {
   SetUserLayerDefaultsSchema,
   UpdateUserParamsSchema,
   UserAdminListProfileAPI,
+  UserDirectoryProfileAPI,
   UserHydrationSchema,
   UserSearchQueryParamsSchema,
 } from '#lib/db/zod/index.js'
@@ -38,6 +39,7 @@ import {
   canUpdateUserProfile,
   toAuthMessage,
 } from '#lib/api/services/authz/index.js'
+import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
 // DB
 import { hub, user } from '#lib/db/schema/index.js'
 import {
@@ -97,6 +99,7 @@ const resolveTargetUserId = (
  *
  * @param params - Search params validated by `UserSearchQueryParamsSchema`.
  * @param params.q - Optional free-text user search query.
+ * @param params.directory - Include basic directory fields for active-hub administrators.
  * @param params.conditions - Optional list-state filters, including archived visibility.
  * @param params.roleOnEntity - Optional direct role filter scoped to one entity.
  * @param params.roleUpParentChain - Optional inherited role filter resolved up the parent chain.
@@ -109,6 +112,7 @@ const resolveTargetUserId = (
  * Uses guarded query context so request-scoped auth/session state is resolved once and
  * `meta.isAdminRequest` semantics stay aligned with the rest of the remote layer.
  * Archived-user search is additionally protected behind a privileged policy gate.
+ * Directory fields require active-hub administrator access; member-picker payloads stay unchanged.
  */
 export const searchUsers = guardedQuery(
   UserSearchQueryParamsSchema,
@@ -119,6 +123,19 @@ export const searchUsers = guardedQuery(
 
     // Apply role-based authorization.
     if (!canSearchUsers({ superAdmin: user.superAdmin, userRoles })) {
+      throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
+    }
+
+    // The directory exposes additional profile fields only to active-hub admins.
+    if (
+      params.directory &&
+      !canBrowseUsers({
+        isAnonymous: user.isAnonymous,
+        superAdmin: user.superAdmin,
+        userRoles,
+        hubId: ctx.event.locals.hub?.id,
+      })
+    ) {
       throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
     }
 
@@ -146,7 +163,11 @@ export const searchUsers = guardedQuery(
 
     // Return loaded records and list metadata.
     return {
-      data: result.data.map(row => UserAdminListProfileAPI.parse(row)),
+      data: result.data.map(row =>
+        params.directory
+          ? UserDirectoryProfileAPI.parse(row)
+          : UserAdminListProfileAPI.parse(row),
+      ),
       limit: queryPlan.limit,
       offset: queryPlan.offset,
       totalCount: result.totalCount,
