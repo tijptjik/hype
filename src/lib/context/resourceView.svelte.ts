@@ -1,3 +1,8 @@
+// SVELTE
+import { getContext, setContext } from 'svelte'
+import { ResourceClient } from '#lib/resources/resourceClient.svelte.js'
+import { createHierarchyClient } from '#lib/resources/hierarchyClient.js'
+import { resourceProviders } from '#lib/resources/providers.js'
 import { CacheCtx } from './cache.svelte'
 import {
   getDefaultLayerResources,
@@ -10,13 +15,12 @@ import type {
 } from '#lib/api/services/resourcePage.types.js'
 // DATA
 // NAVIGATION
-import { getUrlParam, navigate, updatePanelUrlParams } from '#lib/navigation/index.js'
+import { getUrlParam, updatePanelUrlParams } from '#lib/navigation/index.js'
 // GEO
-import { bbox } from '@turf/bbox'
 // I18N
 import { getFallbackLocales, getLocale, getLocaleKey, getI18n } from '#lib/i18n.js'
 // LIB
-import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '#lib/constants.js'
+import { DUAL_PANEL_MIN_WIDTH, isMobile } from '#lib/constants.js'
 import {
   getOrganisation,
   getOrganisationsWhichHaveLayers,
@@ -49,40 +53,32 @@ import {
 // DEBUG
 import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 // CONTEXT
-import { getContext, setContext, untrack } from 'svelte'
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
 // MARKERS
-import { isFeaturePointWithinBounds } from '#lib/map/featureSpatial.js'
 // ENUMS
 import {
   FirstClassResource,
   type HierarchicalResource,
   Panel,
-  ResourcePath,
   type NewFeatureMode,
   supportedLocaleKeys,
 } from '#lib/enums.js'
 // GUARDS
 import { isTask } from '#lib/utils/resourceGuards.js'
 // TYPES
-import type { ActiveCollection } from '#lib/context/resourceCollection.types.js'
 import type { Cache } from '#lib/context/cache.types.js'
-import type { CollectionNavOptions } from '#lib/client/services/form.types.js'
 import type {
   Code,
   DeepPartial,
   Id,
   Locale,
   LocaleKey,
-  NavigableResource,
   Resource,
   ResourceContext,
-  SessionUser,
   ListResponse,
   UserRoleDisco,
 } from '#lib/types.js'
-import type { FacetType } from '#lib/context/facets.js'
 import type {
   FilterState,
   FilteredResources,
@@ -111,9 +107,11 @@ import type {
   UserPreferences,
   UserProfile,
 } from '#lib/db/zod/schema/user.types.js'
-import type { Map as MaplibreMap } from 'maplibre-gl'
-import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
 import type { DivisionCtx } from './division.svelte'
+// CONTEXT
+import type { AccountState, AccountUser } from './account.svelte.js'
+import { PanelController } from './panels.svelte.js'
+import { SurfaceLayout, setSurfaceLayoutCtx } from './surfaceLayout.svelte.js'
 import type { ResponsiveCtx } from './responsive.svelte'
 import type {
   Feature,
@@ -122,7 +120,6 @@ import type {
 import type { FeatureI18nFieldKeys } from '#lib/db/zod/schema/feature.js'
 // TYPES
 import type { HierarchicalResourceType, Prisms, EntityResponse } from '#lib/types.js'
-import type { Component } from 'svelte'
 import type { ViewFilters } from '#lib/client/services/viewFilters.types.js'
 import type {
   OrganisationProfile,
@@ -148,22 +145,13 @@ import type {
 
 type ResourceTypeWithChildren = Exclude<HierarchicalResourceType, 'feature' | 'task'>
 
-/* ----------------- */
-// ADMIN CONTROLS
-/* -------- */
-type LayoutMode = 'table' | 'list' | 'card'
-
 type ViewSortingState = Record<FirstClassResource, ResourceSortState>
 
 /* ----------------- */
-// CTX STATE :: APP
+// CTX STATE :: RESOURCE VIEW
 /* -------- */
 
-type AppContextState = {
-  active: {
-    feature: FeatureFromCollection | Feature | null
-    collection: ActiveCollection | null
-  }
+type ResourceViewState = {
   filters: FilterState
   prisms: Prisms
   resources: FilteredResources
@@ -184,41 +172,6 @@ type AppContextState = {
     timestamp: number
   } | null
   distancesFromUser: Record<Id, number>
-  nav: {
-    resourceType: NavigableResource | false
-    resourceRef: Id | false
-    facet: FacetType | false
-  }
-  panels: {
-    [key in Panel]: {
-      isOpen: boolean
-      isOpenVisually?: boolean
-      ctx?: {
-        username?: string | null
-        userData?: UserProfile | null
-        observePrisms?: boolean
-      }
-    }
-  }
-  // Header state for unified header system
-  header: {
-    icon: Component<Record<string, unknown>> | null
-    title: string
-    facetTabs: Map<FacetType, string>
-    actions: {
-      showAddButton: boolean
-      showSearch: boolean
-      showLayoutModes: boolean
-      showControlBarToggle: boolean
-      showFormActions: boolean
-    }
-  }
-  // UI state for each resource type
-  ui: {
-    isControlBarVisible: Record<NavigableResource, boolean>
-    layoutMode: Record<NavigableResource, LayoutMode>
-    isSearchFocused: Record<NavigableResource, boolean>
-  }
   // TIER 3: VIEW FILTERS - Only affect current route/view
   viewFilters: ViewFilters
   viewSorting: ViewSortingState
@@ -292,21 +245,30 @@ type FeatureMembershipOverride = {
 
 export class ResourceViewCtx {
   // Remote queries own transport caching and refreshes.
-  // Place Context
+  // Division context
   divisionCtx!: DivisionCtx
-  // Responsive Context
+  // Surface-owned panel state and geometry
+  readonly panels = new PanelController()
+  /**
+   * Geometry for one route-owned application area (a "surface"): for example,
+   * the public map experience owned by AppCtx, or /admin owned by AdminCtx.view.
+   * Routes within that area share its main-region measurements and panel offsets;
+   * another surface has its own layout while sharing root viewport measurements.
+   */
+  readonly layout: SurfaceLayout
+  // Root browser measurements
   responsiveCtx!: ResponsiveCtx
-  // Maplibre Map instance
-  map: MaplibreMap | undefined = $state()
-  /** DOM handoff for map marker transitions; native marker objects remain renderer-owned. */
-  markerElements = new Map<Id, HTMLElement>()
-  // User data (reactive)
-  user: UserProfile | CurrentUser | SessionUser | null = $state(null)
-  // Whether the map has been initialised
+  // Root-owned identity and self-profile enrichment; standalone views can supply their own store.
+  readonly account: AccountState
+  private appliedAccountRevision = -1
+
+  /** Reads presentation data without owning or mutating session identity. @returns The account snapshot. */
+  get user(): AccountUser | null {
+    return this.account.user
+  }
+  // Whether this resource view has completed its initialization
   isInitialised: boolean = $state(false)
   isLoadingResources = $state(false)
-  // Whether the app is transitioning between states
-  isTransitioning: boolean = $state(false)
   // Whether the app is in mobile mode
   isMobile: boolean = $state(false)
 
@@ -338,8 +300,10 @@ export class ResourceViewCtx {
   featureLoadState = $state<'idle' | 'loading' | 'partial' | 'complete' | 'error'>(
     'idle',
   )
-  readonly cacheCtx = new CacheCtx()
-  cache: Cache = this.cacheCtx.entities
+  readonly cacheCtx: CacheCtx
+  readonly resources: ResourceClient
+  readonly hierarchy: ReturnType<typeof createHierarchyClient>
+  cache: Cache
   featureViewport: FeatureSpatialQuery | undefined = $state.raw()
   /** Optional membership/flag filters compose with viewport, properties and neighbourhoods. */
   featureQueryFilters: FeatureQueryFilters = $state({})
@@ -376,12 +340,7 @@ export class ResourceViewCtx {
       this.sortableResources.map(resource => [resource, { ...this.defaultSortState }]),
     ) as Record<FirstClassResource, ResourceSortState>
 
-  state: AppContextState = $state({
-    // Active -- Which feature or collection is in focus on the map
-    active: {
-      feature: null,
-      collection: null,
-    },
+  state: ResourceViewState = $state({
     // ═══════════════════════
     // 3-TIER FILTER SYSTEM
     // ═══════════════════════
@@ -399,7 +358,7 @@ export class ResourceViewCtx {
       hub: { text: '', properties: {} },
       property: { text: '', properties: {} },
     },
-    // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., ResourceViewCtx.state.viewFilters)
+    // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AppCtx.state.viewFilters)
     // Only affect the current route/view they are applied on, not the underlying data or map view
     // Resources -- The resources fetched from the database (post prism-filtering, pre filters-filtering)
     resources: {
@@ -420,101 +379,6 @@ export class ResourceViewCtx {
     // ENHANCEMENT: Implement distancesFromUser
     // Distances from user -- The distances from the user to the features
     distancesFromUser: {},
-    nav: {
-      resourceType: false,
-      resourceRef: false,
-      facet: false,
-    },
-    panels: {
-      admin: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      profile: {
-        isOpen: false,
-        isOpenVisually: false,
-        ctx: {
-          username: null,
-          userData: null,
-          observePrisms: true,
-        },
-      },
-      filters: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      prisms: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      stars: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      plan: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      passport: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      eventCompanion: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      settings: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      hub: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-    },
-    // Header state for unified header system
-    header: {
-      icon: null,
-      title: '',
-      facetTabs: new Map(),
-      actions: {
-        showAddButton: false,
-        showSearch: false,
-        showLayoutModes: false,
-        showControlBarToggle: false,
-        showFormActions: false,
-      },
-    },
-    // UI state for each resource type
-    ui: {
-      isControlBarVisible: {
-        organisation: false,
-        project: false,
-        layer: false,
-        feature: true,
-        task: true,
-        hub: false,
-        user: false,
-      },
-      isSearchFocused: {
-        organisation: false,
-        project: false,
-        layer: false,
-        feature: false,
-        task: false,
-        hub: false,
-        user: false,
-      },
-      layoutMode: {
-        organisation: 'card',
-        project: 'card',
-        layer: 'card',
-        feature: 'table',
-        task: 'table',
-        hub: 'card',
-        user: 'table',
-      },
-    },
     // TIER 3: VIEW FILTERS - Only affect current route/view
     viewFilters: {
       organisation: {
@@ -733,14 +597,15 @@ export class ResourceViewCtx {
   newFeature: DeepPartial<NewFeatureTask> | null = $state(null)
   newFeatureMode: NewFeatureMode | null = $state(null)
 
-  // Silly state to track if the map has been zoomed to a marker
-
   // ═══════════════════════
   // QUERY KEYS
   // ═══════════════════════
 
-  private getRoleScopeQueryKey = (): string => {
-    const userId = this.user?.id ?? 'anonymous'
+  private disposed = false
+
+  protected getRoleScopeQueryKey = (): string => {
+    if (this.disposed) return 'disposed'
+    const userId = this.account.session?.id ?? 'anonymous'
     const roles = this.getUserRoles()
 
     const roleSignature = roles
@@ -756,7 +621,9 @@ export class ResourceViewCtx {
       .sort((left: string, right: string) => left.localeCompare(right))
       .join('|')
 
-    return `${userId}::${roleSignature}`
+    const anonymous = this.account.session?.isAnonymous
+    const superAdmin = this.account.session?.superAdmin
+    return `${userId}::${Boolean(anonymous)}::${Boolean(superAdmin)}::${roleSignature}`
   }
 
   /**
@@ -767,7 +634,7 @@ export class ResourceViewCtx {
    * @remarks Public-map bootstrap runs in the background on authentication routes. Its
    * responses must not update the account-scoped hierarchy after sign-in completes.
    */
-  private isExpectedRoleScopeCurrent = (expectedRoleScope?: string): boolean =>
+  protected isExpectedRoleScopeCurrent = (expectedRoleScope?: string): boolean =>
     !expectedRoleScope || expectedRoleScope === this.getRoleScopeQueryKey()
 
   /**
@@ -805,12 +672,12 @@ export class ResourceViewCtx {
 
   /**
    * Reads roles without depending on unrelated profile hydration.
-   * @returns Session or profile roles used to distinguish authorized query scopes.
+   * @returns Authoritative session roles used to distinguish authorized query scopes.
    */
   private getUserRoles = (): UserRoleDisco[] => {
     // Session roles are authoritative before preference and user-layer hydration.
     // Requiring those unrelated fields changes the scope during parallel bootstrap.
-    const roles = this.user && 'roles' in this.user ? this.user.roles : []
+    const roles = this.account.session?.roles ?? []
     return Array.isArray(roles) ? roles : []
   }
 
@@ -875,8 +742,8 @@ export class ResourceViewCtx {
   userQueryKey = () => [
     FirstClassResource.user,
     this.getRoleScopeQueryKey(),
-    this.state.panels.profile.ctx?.username || this.user?.id,
-    ...(this.state.panels.profile.ctx?.observePrisms
+    this.panels.state.profile.ctx?.username || this.user?.id,
+    ...(this.panels.state.profile.ctx?.observePrisms
       ? [
           this.state.prisms.organisation,
           this.state.prisms.project,
@@ -888,36 +755,31 @@ export class ResourceViewCtx {
   // Constructor
   constructor(
     divisionCtx: DivisionCtx,
-    user: SessionUser | null,
+    account: AccountState,
     responsiveCtx: ResponsiveCtx,
+    cacheCtx: CacheCtx = new CacheCtx(resourceProviders),
+    readonly surface: 'app' | 'admin' = 'app',
   ) {
+    this.account = account
+    this.cacheCtx = cacheCtx
+    this.cache = cacheCtx.managedByRoot
+      ? cacheCtx.createEntityStore()
+      : cacheCtx.entities
+    this.resources = new ResourceClient(
+      cacheCtx,
+      () =>
+        `${this.getRoleScopeQueryKey()}:${this.hub?.id ?? this.hub?.code ?? ''}:${getLocaleKey()}:${this.surface}`,
+      this.cache,
+      () => this.isAdmin(),
+    )
+    this.hierarchy = createHierarchyClient(this.resources)
     this.divisionCtx = divisionCtx
     this.responsiveCtx = responsiveCtx
-    this.initializeNavigationFromUrl()
-    this.setUser(user)
+    this.layout = new SurfaceLayout(responsiveCtx, this.panels)
+    this.syncAccount()
     this.initializeRemoteMap()
     this.initializeQueryMap()
     // Note: keydown handlers are managed dynamically by the root layout
-  }
-
-  private initializeNavigationFromUrl = (): void => {
-    if (typeof window === 'undefined') return
-
-    const url = new URL(window.location.href)
-    const pathParts = url.pathname.split('/').filter(Boolean)
-    if (pathParts[0] !== 'admin') return
-
-    const resourcePath = pathParts[1]
-    const resourceRef = pathParts[2] ?? false
-    const resourceType =
-      Object.entries(ResourcePath).find(
-        ([_resource, path]) => path === resourcePath,
-      )?.[0] ?? false
-
-    this.state.nav.resourceType =
-      typeof resourceType === 'string' ? (resourceType as NavigableResource) : false
-    this.state.nav.resourceRef = typeof resourceRef === 'string' ? resourceRef : false
-    this.state.nav.facet = (url.hash.slice(1) as FacetType) || false
   }
 
   private initializeRemoteMap = (): void => {
@@ -1004,142 +866,10 @@ export class ResourceViewCtx {
     })
   }
 
-  init = async (userId: Id | null, loadFeatures: boolean = true): Promise<void> => {
-    // Unauthenticated routes initialise without account data.
-    if (!userId) {
-      // Initialize empty data structures for unauthenticated users.
-      this.state.resources.organisation = []
-      this.state.resources.project = []
-      this.state.resources.layer = []
-      this.state.resources.feature = []
-      this.state.resources.task = []
-      this.state.resources.hub = []
-      this.state.userFeatures = {
-        wishlisted: [],
-        visited: [],
-      }
-      this.isInitialised = true
-      return
-    }
-    // Initialize stats cache
+  /** Initialises shared view bookkeeping without loading another surface's resources. */
+  init = async (_userId: Id | null, _loadFeatures: boolean = false): Promise<void> => {
     this.initStatsCache()
-    // Use parallel fetching for initial load
-    this.isLoadingResources = true
-    try {
-      await this.initialFetch(true, loadFeatures)
-    } finally {
-      this.isLoadingResources = false
-    }
-    // Prevent init from running again, unless the user (re)authenticates
-    // see reinitializeWithAuth()
     this.isInitialised = true
-  }
-
-  /**
-   * Hydrates map resources that are safe to show before a user authenticates.
-   *
-   * @param loadFeatures - Whether to request the public feature collection.
-   * @returns Nothing after the public hierarchy and optional feature collection settle.
-   * @remarks Errors are logged here because the login dialog and base map must remain
-   * usable even when a non-essential public resource request fails.
-   */
-  bootstrapPublicMapResources = async (loadFeatures: boolean = true): Promise<void> => {
-    const publicRoleScope = this.getRoleScopeQueryKey()
-
-    try {
-      this.initStatsCache()
-      this.isLoadingResources = true
-      try {
-        await this.initialFetch(false, loadFeatures, publicRoleScope)
-      } finally {
-        this.isLoadingResources = false
-      }
-    } catch (error) {
-      console.error('[ResourceViewCtx] Public map bootstrap failed:', error)
-    }
-  }
-
-  /**
-   * Loads application resources in dependency order.
-   *
-   * @param includeUserData - Whether to request identity-bound profile and preference data.
-   * @param loadFeatures - Whether to request the initial feature collection.
-   * @param expectedRoleScope - Optional identity scope that must still be current before
-   * public-bootstrap data is committed.
-   * @returns Nothing after the requested resource stages settle.
-   */
-  initialFetch = async (
-    includeUserData: boolean = true,
-    loadFeatures: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    expectedRoleScope ??= this.getRoleScopeQueryKey()
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    // Bootstrap only map-relevant user state first. Self-profile hydration includes a
-    // contribution relation graph and is deferred until its panel needs it.
-    const lightSteps = includeUserData
-      ? ([
-          ['userFeatures', () => this.refreshUserFeatures(false)],
-          ['userLayers', () => this.hydrateCurrentUserLayers()],
-        ] as const)
-      : []
-
-    // Independent compact lists and default identities start together; none waits for ancestors.
-    const defaults = this.loadDefaultLayerResources(expectedRoleScope)
-    const hierarchy = Promise.allSettled([
-      this.refreshOrganisations(false, expectedRoleScope),
-      this.refreshProjects(false, expectedRoleScope),
-      this.refreshLayers(false, false, expectedRoleScope),
-    ])
-    const results = await Promise.allSettled([
-      defaults,
-      hierarchy,
-      ...lightSteps.map(([, load]) => load()),
-    ])
-    for (const result of results)
-      if (result.status === 'rejected')
-        console.error(
-          '[ResourceViewCtx] Initial resource loading failed',
-          result.reason,
-        )
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    this.applyInitialLayerPrisms(expectedRoleScope)
-    await this.loadPinnedLayers(expectedRoleScope)
-    await this.postLayerMutation(false, false, expectedRoleScope)
-
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    const featureSteps = [
-      ...(loadFeatures
-        ? ([
-            ['features', () => this.refreshFeatures(false, expectedRoleScope)],
-            ['properties', () => this.refreshProperties(false, expectedRoleScope)],
-          ] as const)
-        : []),
-      ...(includeUserData
-        ? ([
-            [
-              'tasks',
-              () => (this.isAdmin() ? this.refreshTasks(false) : Promise.resolve()),
-            ],
-          ] as const)
-        : []),
-    ] as const
-
-    for (const [label, load] of featureSteps) {
-      try {
-        void load().catch(error =>
-          console.error(`[ResourceViewCtx] ${label} loading failed`, error),
-        )
-      } catch (error) {
-        console.error(
-          `[ResourceViewCtx][initialFetch] Resource bootstrap failed (${label}):`,
-          error,
-        )
-      }
-    }
   }
 
   private getCurrentHubId = (): Id | null =>
@@ -1149,28 +879,27 @@ export class ResourceViewCtx {
   private getUserLayersForCurrentHub = (): UserLayer[] => {
     const hubId = this.getCurrentHubId()
     const hubCode = this.hub?.code ?? null
-    if ((!hubId && !hubCode) || !this.user || !('userLayers' in this.user)) {
+    if ((!hubId && !hubCode) || !this.user) {
       return []
     }
     const currentHubLayerIds = new Set(
       this.state.resources.layer.map(layer => layer.id),
     )
-    const hubUserLayers = ((this.user as CurrentUser).userLayers ?? []).filter(
-      layer => {
-        if (hubId && layer.hubId === hubId) return true
-        if (hubCode && layer.hubCode === hubCode) return true
+    const hubUserLayers = this.user.userLayers.filter(layer => {
+      if (hubId && layer.hubId === hubId) return true
+      if (hubCode && layer.hubCode === hubCode) return true
 
-        // Fallback to the loaded hub-scoped layer list when persisted preferences only
-        // carry one hub identifier and the app has only resolved the other on bootstrap.
-        return currentHubLayerIds.has(layer.layerId)
-      },
-    )
+      // Fallback to the loaded hub-scoped layer list when persisted preferences only
+      // carry one hub identifier and the app has only resolved the other on bootstrap.
+      return currentHubLayerIds.has(layer.layerId)
+    })
     return hubUserLayers
   }
 
   // Hydrate persisted layer defaults once during app bootstrap so hub prism setup
   // can resolve the initial active layers without coupling to profile panel refreshes.
-  private hydrateCurrentUserLayers = async (): Promise<void> => {
+  protected hydrateCurrentUserLayers = async (): Promise<void> => {
+    const accountRevision = this.account.revision
     const userId = this.user?.id
     const roleScope = this.getRoleScopeQueryKey()
     if (!userId) {
@@ -1183,14 +912,22 @@ export class ResourceViewCtx {
       }),
     )) as { data?: UserLayer[] | null }
 
-    if (userId !== this.user?.id || roleScope !== this.getRoleScopeQueryKey()) {
+    if (
+      accountRevision !== this.account.revision ||
+      userId !== this.user?.id ||
+      roleScope !== this.getRoleScopeQueryKey()
+    ) {
       return
     }
 
-    this.user = {
-      ...(this.user ?? {}),
-      userLayers: Array.isArray(userLayersResponse.data) ? userLayersResponse.data : [],
-    } as CurrentUser | SessionUser
+    this.account.applyProfile(
+      {
+        userLayers: Array.isArray(userLayersResponse.data)
+          ? userLayersResponse.data
+          : [],
+      },
+      accountRevision,
+    )
 
     this.postUserMutation()
   }
@@ -1207,7 +944,7 @@ export class ResourceViewCtx {
     )
   }
 
-  private applyInitialLayerPrisms = (expectedRoleScope?: string): void => {
+  protected applyInitialLayerPrisms = (expectedRoleScope?: string): void => {
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     const hubId = this.getCurrentHubId()
@@ -1245,17 +982,12 @@ export class ResourceViewCtx {
 
   // ASSERT :: User is SuperAdmin
   isSuperAdmin(): boolean {
-    return Boolean(
-      this.user && 'superAdmin' in this.user && this.user.superAdmin === true,
-    )
+    return Boolean(this.account.session?.superAdmin === true)
   }
 
   // ASSERT :: App is in admin dashboard
   isAdmin(): boolean {
-    // Check if we're in admin interface - can be determined by URL path
-    return (
-      typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
-    )
+    return this.surface === 'admin'
   }
 
   /** Loads the complete default selection metadata without loading the complete panel lists. */
@@ -1318,13 +1050,13 @@ export class ResourceViewCtx {
     },
     meta: {
       isAdminRequest: this.isAdmin(),
-      scope: `${this.getRoleScopeQueryKey()}:${this.hub?.id ?? this.hub?.code ?? ''}:${getLocaleKey()}`,
+      scope: this.resources.scopeKey,
     },
   })
 
   /** Loads a first compact page independently of other hierarchy collections. */
   loadPanelResource = async (type: PanelResourceType): Promise<PanelResource[]> => {
-    const list = this.cacheCtx.lists[type]
+    const list = this.resources.lists[type]
     await list.load(this.panelResourceInput(type, list.search), true)
     return list.rows
   }
@@ -1377,7 +1109,7 @@ export class ResourceViewCtx {
     },
     meta: {
       isAdminRequest: false,
-      scope: `${this.getRoleScopeQueryKey()}:${this.hub?.id ?? this.hub?.code ?? ''}:${getLocaleKey()}`,
+      scope: this.resources.scopeKey,
     },
   })
 
@@ -1386,7 +1118,7 @@ export class ResourceViewCtx {
    * @returns Nothing after configuring each independent feature collection.
    */
   private configureFeatureQueries = (): void => {
-    for (const query of Object.values(this.cacheCtx.featureQueries)) {
+    for (const query of Object.values(this.resources.featureQueries)) {
       query.setMatchContext({
         layerProjectId: id => this.cache.layer.get(id)?.projectId,
         projectOrganisationId: id => this.cache.project.get(id)?.organisationId,
@@ -1408,8 +1140,8 @@ export class ResourceViewCtx {
     channel: FeatureQueryChannel,
     input: FeatureQueryInput,
   ): Promise<void> => {
+    const query = this.resources.featureQueries[channel]
     this.configureFeatureQueries()
-    const query = this.cacheCtx.featureQueries[channel]
     if (channel === 'map') this.featureLoadState = 'loading'
     try {
       await query.load(input)
@@ -1434,7 +1166,7 @@ export class ResourceViewCtx {
    * @returns Nothing; map display membership remains independent of retained identities.
    */
   retainFeatureQueryRows = (channel: FeatureQueryChannel): void => {
-    const query = this.cacheCtx.featureQueries[channel]
+    const query = this.resources.featureQueries[channel]
     for (const row of query.rows) this.cache.feature.set(row.id, row)
     while (this.cache.feature.size > 2_000) {
       const oldest = this.cache.feature.keys().next().value
@@ -1442,7 +1174,6 @@ export class ResourceViewCtx {
       const row = this.cache.feature.get(oldest)
       if (!row) break
       this.cache.feature.delete(oldest)
-      if (oldest === this.state.active.feature?.id) this.cache.feature.set(oldest, row)
     }
     const known = new Map<string, UserFeature>(
       [...this.state.userFeatures.wishlisted, ...this.state.userFeatures.visited].map(
@@ -1472,7 +1203,7 @@ export class ResourceViewCtx {
    */
   loadMoreFeatureQuery = async (channel: FeatureQueryChannel): Promise<void> => {
     const scope = this.featureQueryInput().meta.scope
-    await this.cacheCtx.featureQueries[channel].next()
+    await this.resources.featureQueries[channel].next()
     if (scope === this.featureQueryInput().meta.scope)
       this.retainFeatureQueryRows(channel)
   }
@@ -1481,25 +1212,8 @@ export class ResourceViewCtx {
    * Loads one bounded map page instead of draining every selected layer's cursor.
    * @returns Current viewport features, with additional pages available explicitly.
    */
-  featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
-    const query = this.cacheCtx.featureQueries.map
-    if (!this.state.prisms.layer.length) {
-      query.clear()
-      this.featureLoadState = 'complete'
-      return []
-    }
-    // The map effect starts its first page once the camera provides a viewport.
-    if (!this.featureViewport) return []
-    await this.loadFeatureQuery(
-      'map',
-      this.featureQueryInput({
-        spatial: this.featureViewport,
-        includeCounts: false,
-      }),
-    )
-    // Native pages allow visible progress without automatically requesting the entire dataset.
-    return query.rows
-  }
+  /** Surface-specific feature loading is supplied by public or admin orchestration. @returns No implicit map query. */
+  featuresQueryFn = async (): Promise<FeatureFromCollection[]> => []
 
   propertiesQueryFn = async (): Promise<Property[]> => {
     const remoteList = this.remoteMap[FirstClassResource.property].list
@@ -1534,7 +1248,7 @@ export class ResourceViewCtx {
   }
 
   userQueryFn = async (): Promise<UserProfile | null> => {
-    const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
+    const requestedUsername = this.panels.state.profile.ctx?.username?.trim() || null
     const isSelfProfile =
       !requestedUsername || requestedUsername === (this.user?.username ?? null)
     const userRef = isSelfProfile ? this.user?.id : requestedUsername
@@ -1547,7 +1261,7 @@ export class ResourceViewCtx {
       getUser({
         ref: userRef,
         refKey,
-        ...(this.state.panels.profile.ctx?.observePrisms
+        ...(this.panels.state.profile.ctx?.observePrisms
           ? { prisms: this.state.prisms }
           : {}),
         meta: {
@@ -1889,7 +1603,7 @@ export class ResourceViewCtx {
         }
       }
       // Only refresh if we have a username in the profile context
-      if (this.state.panels.profile.ctx?.username) {
+      if (this.panels.state.profile.ctx?.username) {
         await this.refreshUserProfile()
       }
     }
@@ -2501,8 +2215,8 @@ export class ResourceViewCtx {
       visited: (userFeatures || []).filter((f: UserFeature) => f.isVisited),
     }
 
-    // If active collection is a walk, refresh it and handle navigation
-    this.postUserFeaturesMutation()
+    // Notify the owning surface after membership reconciliation.
+    this.onUserFeaturesChanged()
   }
 
   /**
@@ -2538,7 +2252,7 @@ export class ResourceViewCtx {
       visited: next.filter(item => item.isVisited),
     }
     this.configureFeatureQueries()
-    this.postUserFeaturesMutation()
+    this.onUserFeaturesChanged()
   }
 
   /**
@@ -2574,113 +2288,30 @@ export class ResourceViewCtx {
 
   refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.user)
+    const accountRevision = this.account.revision
     const userId = this.user?.id ?? null
     const query = this.getRequiredQueryConfig(FirstClassResource.user)
     const user = await (query.queryFn() as Promise<UserProfile | null>)
     if (
       !this.isCurrentResourceRefresh(FirstClassResource.user, refreshSerial) ||
+      accountRevision !== this.account.revision ||
       userId !== (this.user?.id ?? null)
     ) {
       return
     }
     const currentUsername = this.user?.username?.trim() || null
-    const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
+    const requestedUsername = this.panels.state.profile.ctx?.username?.trim() || null
     const isSelfProfile =
       !requestedUsername ||
       (currentUsername !== null && requestedUsername === currentUsername)
 
     if (isSelfProfile && user) {
-      this.user = {
-        ...(this.user ?? {}),
-        ...user,
-      } as UserProfile | CurrentUser | SessionUser
+      this.account.applyProfile(user, accountRevision)
       this.postUserMutation()
     }
 
-    if (this.state.panels.profile.ctx) {
-      this.state.panels.profile.ctx.userData = user
-    }
-  }
-
-  /*
-   * Handles user features mutation and refreshes the active walk collection
-   * If a user has their stars selected as an ActiveCollection (Walk), then we
-   * ensure that the collection count is updated and the card navigates to
-   * the next item on the list, or returns home if the list is empty.
-   */
-  postUserFeaturesMutation = (): void => {
-    const activeCollection = this.getActiveCollection()
-    if (activeCollection?.type !== 'walk') {
-      return
-    }
-
-    // Paged user lists keep their query predicates, ordering and server totals after an edit.
-    if (activeCollection.totalCount !== undefined) {
-      const query = this.cacheCtx.featureQueries.collection
-      this.state.active.collection = {
-        ...activeCollection,
-        items: query.rows,
-        totalCount: query.totalCount,
-      }
-      return
-    }
-
-    const currentActiveFeature = this.getActiveFeature()
-    let updatedItems: (FeatureFromCollection | Feature)[] = []
-
-    // Get updated items based on walk type
-    if (activeCollection.id === 'stars') {
-      updatedItems = this.getWishlistedFeatures()
-    } else if (activeCollection.id === 'visited') {
-      updatedItems = this.getVisitedFeatures()
-    }
-    // TODO: Add other walk types when implemented
-
-    // If the collection is now empty, reset and navigate to home
-    if (updatedItems.length === 0) {
-      this.resetActiveCollection()
-      navigate('/')
-      return
-    }
-
-    // Update the collection with new items
-    this.setActiveCollection(
-      {
-        ...activeCollection,
-        items: updatedItems,
-      },
-      {
-        highlight: false,
-        focus: false,
-      },
-    )
-
-    // Handle navigation if current feature is no longer in the collection
-    if (currentActiveFeature) {
-      const isCurrentFeatureStillInCollection = updatedItems.some(
-        f => f.id === currentActiveFeature.id,
-      )
-
-      if (!isCurrentFeatureStillInCollection) {
-        // Find the next feature to navigate to
-        const currentIndex = activeCollection.items.findIndex(
-          f => f.id === currentActiveFeature.id,
-        )
-
-        let nextFeature: FeatureFromCollection | Feature | null = null
-
-        // Try to get the next feature in the original list
-        if (currentIndex >= 0 && currentIndex < updatedItems.length) {
-          nextFeature = updatedItems[currentIndex]
-        } else if (updatedItems.length > 0) {
-          // If current index is out of bounds, get the last item
-          nextFeature = updatedItems[updatedItems.length - 1]
-        }
-
-        if (nextFeature) {
-          this.setActiveFeature(nextFeature.id, { focus: true, openCard: true })
-        }
-      }
+    if (this.panels.state.profile.ctx) {
+      this.panels.state.profile.ctx.userData = user
     }
   }
 
@@ -2762,7 +2393,7 @@ export class ResourceViewCtx {
         }
       }
       // Only refresh if we have a username in the profile context
-      if (this.state.panels.profile.ctx?.username) {
+      if (this.panels.state.profile.ctx?.username) {
         await this.refreshUserProfile()
       }
     }
@@ -2772,7 +2403,7 @@ export class ResourceViewCtx {
     // Set admin panel state based on user preferences
     if (this.isAdmin() && this.user && 'preferences' in this.user) {
       const isPrimaryPanelCollapsed =
-        (this.user as CurrentUser).preferences?.admin?.isPrimaryPanelCollapsed ?? false
+        this.user.preferences?.admin?.isPrimaryPanelCollapsed ?? false
       if (!isPrimaryPanelCollapsed) {
         this.openPanel(Panel.admin, false)
       }
@@ -2961,27 +2592,38 @@ export class ResourceViewCtx {
       | undefined
     if (!remoteGet) return undefined
     const scope = this.getRoleScopeQueryKey()
-    const key = JSON.stringify([
-      resource,
+    const input = {
       ref,
-      'default',
-      scope,
-      this.hub?.id,
-      this.isAdmin(),
-    ])
-    return this.cacheCtx.ensureResource(
-      key,
-      () =>
-        remoteGet({
-          ref,
-          refKey: 'id',
-          meta: { isAdminRequest: this.isAdmin(), profile: 'default', scope },
-        }),
-      data => {
-        if (data && scope === this.getRoleScopeQueryKey())
-          (this.cache[resource] as Map<string, unknown>).set(ref, data)
-      },
-    )
+      refKey: 'id' as const,
+      meta: { isAdminRequest: this.isAdmin(), profile: 'default' as const },
+    }
+    // Typed hierarchy providers retain profile inference at the standard client boundary.
+    const detail =
+      resource === FirstClassResource.organisation
+        ? this.hierarchy.organisations.detail(input)
+        : resource === FirstClassResource.project
+          ? this.hierarchy.projects.detail(input)
+          : resource === FirstClassResource.layer
+            ? this.hierarchy.layers.detail(input)
+            : this.resources.detail(
+                resource,
+                input,
+                () =>
+                  remoteGet({
+                    ...input,
+                    meta: { ...input.meta, scope: this.resources.scopeKey },
+                  }) as import('$app/server').RemoteQuery<
+                    import('#lib/types.js').EntityResponse<unknown>
+                  >,
+              )
+    try {
+      const data = await detail.load()
+      if (data && scope === this.getRoleScopeQueryKey())
+        (this.cache[resource] as Map<string, unknown>).set(ref, data)
+      return data
+    } finally {
+      detail.release()
+    }
   }
 
   getOrganisationById = async (
@@ -3235,37 +2877,6 @@ export class ResourceViewCtx {
         this.hubCodeToId.set(remote.data.code, remote.data.id)
         return remote.data
       }
-    }
-  }
-
-  // ================================================
-  // MODE METHODS
-  // ================================================
-
-  setLayoutMode = (mode: LayoutMode) => {
-    const resourceType = this.getActiveResourceType()
-    if (resourceType) {
-      this.state.ui.layoutMode[resourceType] = mode
-    }
-  }
-
-  setControlBarVisible = (isVisible: boolean) => {
-    const resourceType = this.getActiveResourceType()
-    if (resourceType) {
-      this.state.ui.isControlBarVisible[resourceType] = isVisible
-    }
-  }
-
-  /**
-   * Stores whether the search UI is focused for the current active resource view.
-   *
-   * @param isFocused - Focus state to persist.
-   * @returns Nothing.
-   */
-  setSearchFocused = (isFocused: boolean) => {
-    const resourceType = this.getActiveResourceType()
-    if (resourceType) {
-      this.state.ui.isSearchFocused[resourceType] = isFocused
     }
   }
 
@@ -3546,317 +3157,6 @@ export class ResourceViewCtx {
     return this.state.userFeatures?.visited || []
   }
 
-  // Features Collection -- Subsets
-
-  getActiveCollection = (): ActiveCollection => this.state.active.collection
-
-  setActiveCollection = (
-    collection: ActiveCollection,
-    options: {
-      activeFeatureId?: string
-      focus?: boolean
-      focusFeature?: boolean
-      highlight?: boolean
-      openCard?: boolean
-      openCardDelay?: number
-      isCardOpen?: boolean
-      updateUrl?: boolean
-      navOptions?: CollectionNavOptions['navOptions']
-    },
-  ) => {
-    const optionsWithDefaults = {
-      highlight: true,
-      focus: true,
-      focusFeature: true,
-      openCard: true,
-      openCardDelay: 0,
-      ...options,
-    }
-    this.state.active.collection = collection
-
-    // Handle feature activation
-    this.postActiveCollectionMutation(optionsWithDefaults)
-  }
-
-  private postActiveCollectionMutation = (options: {
-    activeFeatureId?: string
-    highlight?: boolean
-    focus?: boolean
-    focusFeature?: boolean
-    openCard?: boolean
-    openCardDelay?: number
-    isCardOpen?: boolean
-    updateUrl?: boolean
-    navOptions?: CollectionNavOptions['navOptions']
-  }) => {
-    const optionsWithDefaults = {
-      highlight: true,
-      focus: true,
-      focusFeature: true,
-      openCard: true,
-      openCardDelay: 0,
-      ...options,
-    }
-    const collection = this.state.active.collection
-    if (!collection?.items.length) return
-
-    if (options.highlight) {
-      this.highlightActiveCollection({ focus: optionsWithDefaults.focus })
-    }
-
-    // Determine which feature to activate, default to first
-    let featureIdToActivate: string | null = collection.items[0].id
-
-    if (options.activeFeatureId) {
-      // Check if the specific feature exists in the collection
-      const featureExists = collection.items.some(
-        item => item.id === optionsWithDefaults.activeFeatureId,
-      )
-      if (featureExists) {
-        featureIdToActivate = optionsWithDefaults.activeFeatureId || null
-      } else {
-        console.error(
-          'Feature not found in collection',
-          optionsWithDefaults.activeFeatureId,
-        )
-      }
-    }
-
-    if (featureIdToActivate) {
-      this.setActiveFeature(featureIdToActivate, {
-        focus: optionsWithDefaults.focusFeature,
-        openCard: optionsWithDefaults.openCard,
-        openCardDelay: optionsWithDefaults.openCardDelay,
-        isCardOpen: optionsWithDefaults.isCardOpen,
-        updateUrl: optionsWithDefaults.updateUrl,
-        navOptions: optionsWithDefaults.navOptions,
-      })
-    }
-  }
-
-  resetActiveCollection = (): void => {
-    // Remove "highlighted" class from all features
-    this.unhighlightAllFeatures()
-    // Reset active collection
-    this.state.active.collection = null
-    // Reset active feature
-    this.state.active.feature = null
-  }
-
-  getActiveFeature = (): FeatureFromCollection | Feature | null =>
-    this.state.active.feature
-
-  pendingOpenCardTimeout: ReturnType<typeof setTimeout> | null = null
-
-  /**
-   * Cancels any deferred feature-card open scheduled from active-feature mutations.
-   */
-  cancelPendingOpenCard = (): void => {
-    if (this.pendingOpenCardTimeout !== null) {
-      clearTimeout(this.pendingOpenCardTimeout)
-      this.pendingOpenCardTimeout = null
-    }
-  }
-
-  /**
-   * Clears the active feature while preserving the active collection context.
-   */
-  resetActiveFeature = (): void => {
-    this.state.active.feature = null
-  }
-
-  setActiveFeature = (
-    featureId: Id,
-    options: {
-      focus?: boolean
-      openCard?: boolean | null
-      openCardDelay?: number
-      isCardOpen?: boolean
-      updateUrl?: boolean
-      navOptions?: CollectionNavOptions['navOptions']
-    },
-  ) => {
-    const optionsWithDefaults = {
-      focus: true,
-      openCard: true,
-      openCardDelay: 0,
-      updateUrl: true,
-      ...options,
-    }
-
-    // Pre-mutation: cleanup from previous feature
-    this.preActiveFeatureMutation()
-
-    // Set active state to new feature
-    const nextFeature =
-      this.cache.feature.get(featureId) ??
-      this.state.active.collection?.items.find(row => row.id === featureId) ??
-      this.features.get(featureId)
-    if (!nextFeature) {
-      this.isTransitioning = false
-      return
-    }
-
-    this.state.active.feature = nextFeature
-
-    // Post-mutation: setup new feature
-    this.postActiveFeatureMutation(featureId, optionsWithDefaults)
-  }
-
-  private preActiveFeatureMutation = () => {
-    // Remove active state from previous feature
-    this.isTransitioning = true
-    // Marker presentation is derived by the map renderer from active state.
-  }
-
-  private postActiveFeatureMutation = (
-    featureId: Id,
-    options: {
-      focus?: boolean
-      openCard?: boolean | null
-      openCardDelay?: number
-      isCardOpen?: boolean
-      updateUrl?: boolean
-      navOptions?: CollectionNavOptions['navOptions']
-    },
-  ) => {
-    const optionsWithDefaults = {
-      focus: true,
-      openCard: true,
-      openCardDelay: 0,
-      ...options,
-    }
-    if (optionsWithDefaults.focus || optionsWithDefaults.openCard) {
-      if (!optionsWithDefaults.isCardOpen && optionsWithDefaults.openCard) {
-        this.cancelPendingOpenCard()
-        this.pendingOpenCardTimeout = setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('OmniCtx.openCard'))
-          this.pendingOpenCardTimeout = null
-        }, optionsWithDefaults.openCardDelay)
-      } else {
-        this.cancelPendingOpenCard()
-      }
-      if (optionsWithDefaults.updateUrl) {
-        navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions)
-      }
-    }
-    // Reset transition state
-    setTimeout(() => {
-      this.isTransitioning = false
-    }, 2000)
-  }
-
-  highlightActiveCollection = (options: { focus: boolean } = { focus: false }) => {
-    // Marker presentation is derived by the map renderer from this collection.
-    if (options.focus) {
-      this.zoomToActiveCollection()
-    }
-  }
-
-  unhighlightAllFeatures = (): void => {
-    // Marker presentation is derived by the map renderer from active collection state.
-  }
-
-  // MAP OPERATIONS -- REBOUNDING
-
-  zoomToActiveCollection = (): void => {
-    const features = this.getActiveCollection()?.items || []
-    this.zoomToFeatures(features)
-  }
-
-  zoomToActiveFeature = (): void => {
-    const feature = this.getActiveFeature()
-    if (!feature) return
-    this.zoomToFeatures([feature])
-  }
-
-  zoomToFeatures = (features?: (FeatureFromCollection | Feature)[]): void => {
-    if (!this.map) return
-
-    // Use provided features or current state features
-    const featuresToZoom = features || this.getFeaturesByIds(this.featuresVisible)
-    if (!featuresToZoom.length) return
-
-    // Create a FeatureCollection
-    const featureCollection: FeatureCollection = {
-      type: 'FeatureCollection',
-      features: featuresToZoom.map(f => ({
-        type: 'Feature',
-        geometry: f.geometry,
-        properties: f.properties,
-      })) as GeoJSONFeature[],
-    }
-    const padding = isMobile()
-      ? {
-          top: 48,
-          bottom: 50,
-          right: 50,
-          left: 50,
-        }
-      : {
-          top: 150,
-          bottom: 50,
-          right: 50 + (this.responsiveCtx.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
-          left: 50 + (this.responsiveCtx.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
-        }
-    try {
-      // Convert to WGS84 and get bounds
-      const bounds = bbox(featureCollection)
-
-      this.map.fitBounds(
-        [
-          [bounds[0], bounds[1]], // southwestern corner
-          [bounds[2], bounds[3]], // northeastern corner
-        ],
-        {
-          center: [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2],
-          padding,
-          maxZoom: 18,
-          duration: 2500,
-        },
-      )
-    } catch (error) {
-      console.error('Error zooming to features:', error)
-    }
-  }
-
-  zoomToCoordinates = (coordinates: [number, number][]): void => {
-    if (!this.map) return
-
-    // Create a FeatureCollection
-    const featureCollection: FeatureCollection = {
-      type: 'FeatureCollection',
-      features: coordinates.map(c => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: c,
-        },
-        properties: {},
-      })) as GeoJSONFeature[],
-    }
-
-    const bounds = bbox(featureCollection)
-
-    this.map.fitBounds(
-      [
-        [bounds[0], bounds[1]], // southwestern corner
-        [bounds[2], bounds[3]], // northeastern corner
-      ],
-      {
-        center: { lon: (bounds[0] + bounds[2]) / 2, lat: (bounds[1] + bounds[3]) / 2 },
-        padding: {
-          top: 150,
-          bottom: 150,
-          right: 50,
-          left: 50,
-        },
-        maxZoom: 20,
-        duration: 2500,
-      },
-    )
-  }
-
   // ═══════════════════════
   // REACTIVE FEATURE COLLECTIONS
   // ═══════════════════════
@@ -3919,19 +3219,9 @@ export class ResourceViewCtx {
 
   // FEATURE COLLECTIONS -- Convenience Methods
 
-  getVisibleFeatures = (): (FeatureFromCollection | Feature)[] => {
-    if (!this.isAdmin()) {
-      // Remove offscreen points and disabled layers before the debounced page has settled.
-      return this.cacheCtx.featureQueries.map.rows
-        .filter(row => this.state.prisms.layer.includes(row.layerId))
-        .filter(
-          row =>
-            !this.featureViewport?.bounds ||
-            isFeaturePointWithinBounds(row.geometry, this.featureViewport.bounds),
-        )
-    }
-    return this.getFeaturesByIds(this.featuresVisible)
-  }
+  /** Returns the current resource view's visible rows. @returns Visible feature records. */
+  getVisibleFeatures = (): (FeatureFromCollection | Feature)[] =>
+    this.getFeaturesByIds(this.featuresVisible)
 
   getWishlistedFeatures = (): (FeatureFromCollection | Feature)[] => {
     return this.getFeaturesByIds(this.featuresWishlisted)
@@ -3941,102 +3231,20 @@ export class ResourceViewCtx {
     return this.getFeaturesByIds(this.featuresVisited)
   }
 
-  // Active Navigation State Methods
-
-  /**
-   * Sets the active navigable resource type.
-   *
-   * @param resourceType - Resource type to activate, or `false` to clear it.
-   * @returns Nothing.
-   */
-  setActiveResourceType = (resourceType: NavigableResource | false): void => {
-    // Avoid redundant writes so reactive consumers do not re-run on no-op navigation changes.
-    if (untrack(() => this.state.nav.resourceType) === resourceType) return
-    this.state.nav.resourceType = resourceType
-  }
-
-  /**
-   * Sets the active resource reference and optionally updates the active resource type.
-   *
-   * @param resourceRef - Active resource identifier, or `false` to clear it.
-   * @param resourceType - Optional resource type to activate alongside the ref.
-   * @returns Nothing.
-   */
-  setActiveResourceRef = (
-    resourceRef: Id | false,
-    resourceType?: NavigableResource | false,
-  ): void => {
-    if (resourceType !== undefined) {
-      this.setActiveResourceType(resourceType)
-    }
-    // Skip no-op ref updates to prevent extra navigation-driven effects.
-    if (untrack(() => this.state.nav.resourceRef) === resourceRef) return
-    this.state.nav.resourceRef = resourceRef
-  }
-
-  /**
-   * Sets the active facet and optionally updates the active resource ref and type first.
-   *
-   * @param facet - Facet to activate, or `false` to clear it.
-   * @param resourceRef - Optional resource ref to set before the facet.
-   * @param resourceType - Optional resource type to set before the facet.
-   * @returns Nothing.
-   */
-  setActiveFacet = (
-    facet: FacetType | false,
-    resourceRef?: Id | false,
-    resourceType?: NavigableResource | false,
-  ): void => {
-    if (resourceRef !== undefined) {
-      this.setActiveResourceRef(resourceRef, resourceType)
-    }
-    // Keep facet writes idempotent for callers that repeatedly sync URL and state.
-    if (untrack(() => this.state.nav.facet) === facet) return
-    this.state.nav.facet = facet
-  }
-
-  getActiveResourceType = (): NavigableResource | false => {
-    return this.state.nav.resourceType
-  }
-  getActiveResourceRef = (): Id | false => {
-    return this.state.nav.resourceRef
-  }
-  getActiveResourceId = (): Id | null => {
-    const activeResourceType = this.getActiveResourceType()
-    const resourceRef = this.getActiveResourceRef()
-    if (typeof resourceRef === 'string') {
-      if (activeResourceType === FirstClassResource.organisation) {
-        return this.getOrganisationIdByCode(resourceRef as Code) ?? null
-      } else if (activeResourceType === FirstClassResource.project) {
-        return this.getProjectIdByCode(resourceRef as Code) ?? null
-      } else if (activeResourceType === FirstClassResource.hub) {
-        return this.getHubIdByCode(resourceRef as Code) ?? null
-      } else {
-        return resourceRef
-      }
-    }
-    return null
-  }
-  getActiveFacet = (): FacetType | false => {
-    return this.state.nav.facet
-  }
-
   // Panel methods
   togglePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    const currentState = this.responsiveCtx.isPanelOpen(panel)
+    const currentState = this.panels.isPanelOpen(panel)
 
     // Close other panels on the same side first (without updating URL individually)
-    if (this.responsiveCtx.isPanelOnLeft(panel)) {
-      const openLeftPanels =
-        this.responsiveCtx.getOpenLeftPanels() as unknown as Panel[]
+    if (this.panels.isPanelOnLeft(panel)) {
+      const openLeftPanels = this.panels.getOpenLeftPanels()
       openLeftPanels
         .filter(openPanel => openPanel !== panel)
         .forEach(openPanel => {
           this.closePanel(openPanel, false)
         })
-    } else if (this.responsiveCtx.isPanelOnRight(panel)) {
-      const openRightPanels =
-        this.responsiveCtx.getOpenRightPanels() as unknown as Panel[]
+    } else if (this.panels.isPanelOnRight(panel)) {
+      const openRightPanels = this.panels.getOpenRightPanels()
       openRightPanels
         .filter(openPanel => openPanel !== panel)
         .forEach(openPanel => {
@@ -4051,7 +3259,7 @@ export class ResourceViewCtx {
         // Panel was closed, so open it
         this.openPanel(panel, false)
         if (!isMobile()) {
-          this.focusPanel(this.responsiveCtx.isPanelOnLeft(panel) ? 'left' : 'right')
+          this.focusPanel(this.panels.isPanelOnLeft(panel) ? 'left' : 'right')
         }
       }
       // If panel was open, leave it closed (toggle behavior)
@@ -4062,7 +3270,7 @@ export class ResourceViewCtx {
       } else {
         this.openPanel(panel, false)
         if (!isMobile()) {
-          this.focusPanel(this.responsiveCtx.isPanelOnLeft(panel) ? 'left' : 'right')
+          this.focusPanel(this.panels.isPanelOnLeft(panel) ? 'left' : 'right')
         }
       }
     }
@@ -4070,7 +3278,7 @@ export class ResourceViewCtx {
     // Update URL once at the end with the final panel state (only if updateUrl is true)
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
+        Object.entries(this.panels.state).map(([key, value]) => [key, value.isOpen]),
       )
       updatePanelUrlParams(panelState, this)
     }
@@ -4090,93 +3298,85 @@ export class ResourceViewCtx {
   }
 
   closeLeftPanel = (): void => {
-    ;(this.responsiveCtx.getOpenLeftPanels() as unknown as Panel[]).forEach(
-      (openPanel: Panel) => {
-        this.closePanel(openPanel, false)
-      },
-    )
+    this.panels.getOpenLeftPanels().forEach((openPanel: Panel) => {
+      this.closePanel(openPanel, false)
+    })
   }
 
   closeRightPanel = (): void => {
-    ;(this.responsiveCtx.getOpenRightPanels() as unknown as Panel[]).forEach(
-      (openPanel: Panel) => {
-        this.closePanel(openPanel, false)
-      },
-    )
+    this.panels.getOpenRightPanels().forEach((openPanel: Panel) => {
+      this.closePanel(openPanel, false)
+    })
   }
 
   closeAllPanels = (updateUrl: boolean = true): void => {
-    Object.keys(this.state.panels).forEach(panel => {
+    Object.keys(this.panels.state).forEach(panel => {
       this.closePanel(panel as unknown as Panel, false)
     })
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
+        Object.entries(this.panels.state).map(([key, value]) => [key, value.isOpen]),
       )
       updatePanelUrlParams(panelState, this)
     }
   }
 
   openPanel = (panel: Panel, updateUrl: boolean = true): void => {
-    this.state.panels[panel].isOpen = true
-    this.responsiveCtx.setPanelOpen(panel, true)
+    this.panels.setPanelOpen(panel, true)
 
     // Contribution data is relation-heavy, so only load it when the profile panel needs it.
     if (
       panel === Panel.profile &&
-      this.state.panels.profile.ctx?.username &&
-      !this.state.panels.profile.ctx.userData
+      this.panels.state.profile.ctx?.username &&
+      !this.panels.state.profile.ctx.userData
     ) {
       void this.refreshUserProfile(false).catch(error => {
-        console.error('[ResourceViewCtx] Profile panel hydration failed:', error)
+        console.error('[AppCtx] Profile panel hydration failed:', error)
       })
     }
 
     // Handle stateful parameters for specific panels
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
+        Object.entries(this.panels.state).map(([key, value]) => [key, value.isOpen]),
       )
       updatePanelUrlParams(panelState, this)
     }
   }
 
   closePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    this.state.panels[panel].isOpen = false
-    this.responsiveCtx.setPanelOpen(panel, false)
+    this.panels.setPanelOpen(panel, false)
     if (updateUrl && typeof window !== 'undefined') {
       const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
+        Object.entries(this.panels.state).map(([key, value]) => [key, value.isOpen]),
       )
       updatePanelUrlParams(panelState, this)
     }
   }
 
   isPanelOpen = (panel: Panel): boolean => {
-    return this.responsiveCtx.isPanelOpen(panel)
+    return this.panels.isPanelOpen(panel)
   }
 
   isPanelNarrow = (panel: Panel): boolean => {
-    return this.responsiveCtx.isPanelNarrow(panel)
+    return this.panels.isPanelNarrow(panel)
   }
 
   // Visual-only panel methods for auto-hide behavior
   openPanelVisually = (panel: Panel): void => {
-    this.state.panels[panel].isOpenVisually = true
-    this.responsiveCtx.setPanelOpenVisually(panel, true)
+    this.panels.setPanelOpenVisually(panel, true)
   }
 
   closePanelVisually = (panel: Panel): void => {
-    this.state.panels[panel].isOpenVisually = false
-    this.responsiveCtx.setPanelOpenVisually(panel, false)
+    this.panels.setPanelOpenVisually(panel, false)
   }
 
   isPanelOpenVisually = (panel: Panel): boolean => {
-    return this.responsiveCtx.isPanelOpenVisually(panel)
+    return this.panels.isPanelOpenVisually(panel)
   }
 
   isPanelOpenOrVisual = (panel: Panel): boolean => {
-    return this.responsiveCtx.isPanelOpenOrVisual(panel)
+    return this.panels.isPanelOpenOrVisual(panel)
   }
 
   // Helper method to open profile panel with username context
@@ -4186,7 +3386,7 @@ export class ResourceViewCtx {
     value: string | undefined | null,
   ): void => {
     // Set username context if provided
-    const context = this.state.panels[panel].ctx
+    const context = this.panels.state[panel].ctx
     if (value && context) {
       if (context[key] !== value) {
         // Do not display the previous profile while the new profile is loading.
@@ -4197,21 +3397,15 @@ export class ResourceViewCtx {
     }
   }
 
-  // Refocus map on currently visible features
-  zoomToAllVisibleFeatures = (): void => {
-    const visibleFeatures = this.getVisibleFeatures()
-    if (visibleFeatures.length > 0) {
-      this.zoomToFeatures(visibleFeatures)
-    }
-  }
-
   // KEYDOWN HANDLERS
   registerKeydownHandlers = (): void => {
-    document.addEventListener('keydown', this.handleKeydown)
+    if (typeof document !== 'undefined')
+      document.addEventListener('keydown', this.handleKeydown)
   }
 
   unregisterKeydownHandlers = (): void => {
-    document.removeEventListener('keydown', this.handleKeydown)
+    if (typeof document !== 'undefined')
+      document.removeEventListener('keydown', this.handleKeydown)
   }
 
   handleKeydown = (event: KeyboardEvent): void => {
@@ -4224,7 +3418,7 @@ export class ResourceViewCtx {
     if (
       consumeEscapeForOpenPanels(
         event,
-        Object.values(this.state.panels).some(panel => panel.isOpen),
+        Object.values(this.panels.state).some(panel => panel.isOpen),
       )
     ) {
       this.closeAllPanels()
@@ -4363,145 +3557,110 @@ export class ResourceViewCtx {
     this.newFeature = null
   }
 
+  /** Notifies the owning surface after user-feature membership changes. @returns Nothing. */
+  protected onUserFeaturesChanged(): void {}
+
+  /** Notifies the owning surface when identity-bound projections must be cleared. @returns Nothing. */
+  protected onAccountScopeChanged(): void {}
+
   // USER DATA
-  setUser = async (user: CurrentUser | SessionUser | null) => {
-    const previousUserId = this.user?.id ?? null
-    const previousRoleScope = this.getRoleScopeQueryKey()
-    const nextUserId = user?.id ?? null
-    const previousAnonymous = this.user
-      ? 'isAnonymous' in this.user
-        ? Boolean(this.user.isAnonymous)
-        : false
-      : null
-    const nextAnonymous = user
-      ? 'isAnonymous' in user
-        ? Boolean(user.isAnonymous)
-        : false
-      : null
-    const identityChanged =
-      previousUserId !== nextUserId || previousAnonymous !== nextAnonymous
+  /** Reconciles this view after the root account changes. @returns Nothing. */
+  syncAccount = (): void => {
+    if (this.appliedAccountRevision === this.account.revision) {
+      this.postUserMutation()
+      return
+    }
+    this.appliedAccountRevision = this.account.revision
 
-    if (identityChanged) {
-      // Prevent an in-flight response from the previous identity from being committed.
-      this.featureRefreshSerial += 1
-      this.invalidateResourceRefreshes()
+    // Identity and role changes alter query scope and must supersede prior responses.
+    this.featureRefreshSerial += 1
+    this.invalidateResourceRefreshes()
+
+    // Identity-bound records must never survive guest/account or role transitions.
+    this.cache.user.clear()
+    this.state.userFeatures = { wishlisted: [], visited: [] }
+    this.onAccountScopeChanged()
+    if (this.panels.state.profile.ctx) {
+      this.panels.state.profile.ctx.userData = null
     }
 
-    if (previousUserId !== nextUserId) {
-      // Identity-bound records must never survive guest/account transitions.
-      this.cache.user.clear()
-      this.state.userFeatures = { wishlisted: [], visited: [] }
-      this.resetActiveCollection()
-      if (this.state.panels.profile.ctx) {
-        this.state.panels.profile.ctx.userData = null
-      }
+    // Root invalidates shared retention; each surface clears only its own projections.
+    if (!this.cacheCtx.managedByRoot) this.cacheCtx.clear()
+    else {
+      for (const store of Object.values(this.cache)) store.clear()
+      for (const list of Object.values(this.resources.lists)) list.clear()
+      for (const query of Object.values(this.resources.featureQueries)) query.clear()
     }
-
-    this.user = user
-    if (identityChanged || previousRoleScope !== this.getRoleScopeQueryKey()) {
-      this.cacheCtx.clear()
-      this.featureMembershipOverrides.clear()
-      this.selectionLayers = []
-      this.featuresMap.clear()
-      this.featureLoadState = 'idle'
-      for (const resource of [
-        'organisation',
-        'project',
-        'layer',
-        'feature',
-        'task',
-        'hub',
-      ] as const)
-        this.state.resources[resource] = []
-    }
-    if (!identityChanged && previousRoleScope !== this.getRoleScopeQueryKey()) {
-      // Role changes also alter query scope and must supersede prior responses.
-      this.featureRefreshSerial += 1
-      this.invalidateResourceRefreshes()
-    }
+    this.featureMembershipOverrides.clear()
+    this.selectionLayers = []
+    this.featuresMap.clear()
+    this.featureLoadState = 'idle'
+    for (const resource of [
+      'organisation',
+      'project',
+      'layer',
+      'feature',
+      'task',
+      'hub',
+    ] as const)
+      this.state.resources[resource] = []
     this.postUserMutation()
   }
 
-  getUser = (): UserProfile | CurrentUser | SessionUser | null => {
+  /** Reads the shared account presentation snapshot. @returns Current user, or null. */
+  getUser = (): AccountUser | null => {
     return this.user
   }
 
   /**
-   * Merges freshly saved self-profile fields into the reactive application user.
+   * Applies saved self-profile fields to the shared account presentation data.
    *
    * @param profile - Persisted self-profile fields returned by a remote mutation.
-   * @returns Nothing after updating the local user snapshot.
+   * @param revision Account revision captured before the save.
+   * @returns Whether the update still belongs to the current account.
    */
   applyUserProfile = (
-    profile: Partial<
-      Pick<CurrentUser, 'attribution' | 'experimental' | 'locale' | 'preferences'>
-    >,
-  ): void => {
-    if (!this.user) return
-
-    this.user = {
-      ...this.user,
-      ...profile,
-    } as CurrentUser | SessionUser | UserProfile
+    profile: Partial<CurrentUser> | UserProfile,
+    revision: number = this.account.revision,
+  ): boolean => {
+    if (!this.account.applyProfile(profile, revision)) return false
     this.postUserMutation()
+    return true
   }
 
-  resetUser = () => {
-    this.user = null
-  }
-
+  /** Reads saved preferences with optional defaults. @param withDefaults Whether to fill absent values. @returns View preferences. */
   getUserPreferences = (withDefaults: boolean = true): UserPreferences => {
-    // If no user, return default preferences
-    if (!this.user) {
-      return {
-        fallbackLocales: getFallbackLocales(getLocale()) as Locale[],
-        allowMachineTranslation: false,
-        preferFallbackInCurrentLocale: false,
-        isTranslateButtonVisible: true,
-        admin: {
-          isAdminMapCollapsed: false,
-          isPrimaryPanelCollapsed: false,
-          isPrimaryPanelAutoHide: false,
-        },
-      }
-    }
-
-    return withDefaults
-      ? {
-          fallbackLocales:
-            ((this.user as CurrentUser).preferences.fallbackLocales as Locale[]) ??
-            (getFallbackLocales(getLocale()) as Locale[]),
-          allowMachineTranslation:
-            (this.user as CurrentUser).preferences.allowMachineTranslation ?? false,
-          preferFallbackInCurrentLocale:
-            (this.user as CurrentUser).preferences.preferFallbackInCurrentLocale ??
-            false,
-          isTranslateButtonVisible:
-            (this.user as CurrentUser).preferences.isTranslateButtonVisible ?? true,
-          admin: {
-            isAdminMapCollapsed:
-              (this.user as CurrentUser).preferences.admin?.isAdminMapCollapsed ??
-              false,
-            isPrimaryPanelCollapsed:
-              (this.user as CurrentUser).preferences.admin?.isPrimaryPanelCollapsed ??
-              false,
-            isPrimaryPanelAutoHide:
-              (this.user as CurrentUser).preferences.admin?.isPrimaryPanelAutoHide ??
-              false,
-          },
-        }
-      : ((this.user as CurrentUser).preferences as UserPreferences)
-  }
-
-  updateUserPreferences = (preferences: UserPreferences) => {
-    ;(this.user as CurrentUser).preferences = {
-      ...(this.user as CurrentUser).preferences,
-      ...preferences,
+    const preferences = this.user?.preferences
+    if (!withDefaults && preferences) return preferences as UserPreferences
+    // If no user or preference payload exists, provide the same locale-aware defaults.
+    return {
+      fallbackLocales:
+        (preferences?.fallbackLocales as Locale[] | null) ??
+        (getFallbackLocales(getLocale()) as Locale[]),
+      allowMachineTranslation: preferences?.allowMachineTranslation ?? false,
+      preferFallbackInCurrentLocale:
+        preferences?.preferFallbackInCurrentLocale ?? false,
+      isTranslateButtonVisible: preferences?.isTranslateButtonVisible ?? true,
       admin: {
-        ...(this.user as CurrentUser).preferences.admin,
-        ...preferences.admin,
+        isAdminMapCollapsed: preferences?.admin?.isAdminMapCollapsed ?? false,
+        isPrimaryPanelCollapsed: preferences?.admin?.isPrimaryPanelCollapsed ?? false,
+        isPrimaryPanelAutoHide: preferences?.admin?.isPrimaryPanelAutoHide ?? false,
       },
     }
+  }
+
+  /** Updates shared preferences without altering the session. @param preferences Saved preference fields. @returns Nothing. */
+  updateUserPreferences = (preferences: UserPreferences): void => {
+    this.account.applyProfile({
+      preferences: {
+        ...this.getUserPreferences(),
+        ...preferences,
+        admin: {
+          ...this.getUserPreferences().admin,
+          ...preferences.admin,
+        },
+      },
+    })
   }
 
   setUserAttribution = async (
@@ -4509,13 +3668,10 @@ export class ResourceViewCtx {
     onSuccess?: (attribution: string) => void,
     onError?: (error: unknown) => void,
   ) => {
-    ;(this.user as CurrentUser).attribution = attribution
-    await debouncedUpdateUserAttribution(
-      (this.user as CurrentUser).id,
-      attribution,
-      onSuccess,
-      onError,
-    )
+    const userId = this.account.session?.id
+    if (!userId) return
+    this.account.applyProfile({ attribution })
+    await debouncedUpdateUserAttribution(userId, attribution, onSuccess, onError)
   }
 
   getUserLayers = (): UserLayer[] => {
@@ -4531,13 +3687,15 @@ export class ResourceViewCtx {
    *
    * @param layers - Persisted default-visible layer rows returned by the remote mutation.
    * @param hub - The hub identity used for the mutation, including code-only startup state.
+   * @param revision - Account lifetime that initiated the save.
    * @returns Nothing after replacing the current hub's saved layer defaults.
    */
   applyUserLayerDefaults = (
     layers: UserLayer[],
     hub: { id?: Id | null; code?: string | null },
+    revision: number = this.account.revision,
   ): void => {
-    if (!this.user || !('userLayers' in this.user)) return
+    if (!this.user || revision !== this.account.revision) return
 
     const resolvedHubId = layers[0]?.hubId ?? hub.id ?? null
     const currentHubLayerIds = new Set(
@@ -4558,10 +3716,7 @@ export class ResourceViewCtx {
       this.hub = { ...this.hub, id: resolvedHubId }
     }
 
-    this.user = {
-      ...this.user,
-      userLayers: [...retainedLayers, ...layers],
-    } as CurrentUser | SessionUser
+    this.account.applyProfile({ userLayers: [...retainedLayers, ...layers] })
     this.setLayers(layers.map(layer => layer.layerId))
   }
 
@@ -4576,6 +3731,20 @@ export class ResourceViewCtx {
         feature.images = undefined
       }
     }
+  }
+
+  /** Releases this surface without invalidating compatible native details. @returns Nothing. */
+  dispose(): void {
+    if (this.cacheCtx.featureCollectionScope === this.resources.scopeKey) {
+      this.cacheCtx.featureCollection = undefined
+      this.cacheCtx.featureCollectionScope = undefined
+    }
+    this.disposed = true
+    this.featureRefreshSerial++
+    this.invalidateResourceRefreshes()
+    this.resources.release()
+    this.cacheCtx.releaseEntityStore(this.cache)
+    this.isInitialised = false
   }
 
   // Clear all cache maps (for actual data reset scenarios)
@@ -4598,52 +3767,6 @@ export class ResourceViewCtx {
     this.organisationCodeToId.clear()
     this.projectCodeToId.clear()
     this.hubCodeToId.clear()
-  }
-
-  /**
-   * Restores the shared query map to the default app-scoped resource loaders.
-   *
-   * @returns Nothing.
-   * @remarks Admin routes override `queryMap` on the shared `ResourceViewCtx`. When leaving
-   * `/admin`, this must run before any app-side refresh so non-admin reads do not
-   * keep using admin-scoped query functions.
-   */
-  restoreDefaultQueryMap = (): void => {
-    this.initializeQueryMap()
-  }
-
-  /**
-   * Clears shared resource caches, list metadata, and query results when switching
-   * between app and admin surfaces.
-   *
-   * @returns Nothing.
-   * @remarks App and admin share a single `ResourceViewCtx`, so resource entities loaded in one
-   * surface can otherwise leak into the other via in-memory maps or TanStack Query.
-   */
-  resetSharedResourceCachesForSurfaceSwitch = (): void => {
-    this.clearAllCaches()
-    this.listQueryMeta.clear()
-
-    this.state.resources.organisation = []
-    this.state.resources.project = []
-    this.state.resources.layer = []
-    this.state.resources.feature = []
-    this.state.resources.task = []
-    this.state.resources.hub = []
-    this.divisionCtx.setDivisionFeatures([])
-
-    this.invalidateResourceRefreshes()
-  }
-
-  /**
-   * Reloads the shared app resource tree after leaving the admin surface.
-   *
-   * @returns A promise that resolves when the public app hierarchy has been refetched.
-   * @remarks This intentionally preserves the current prism state while forcing fresh
-   * non-admin reads so unpublished admin records cannot persist in shared state.
-   */
-  reloadAppSurfaceResources = async (): Promise<void> => {
-    await this.refreshOrganisations()
   }
 
   // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
@@ -4902,16 +4025,6 @@ export class ResourceViewCtx {
     cache.set(id, item)
   }
 
-  // Header management methods
-  setHeaderState = (headerState: Partial<typeof this.state.header>): void => {
-    this.state.header = { ...this.state.header, ...headerState }
-  }
-
-  // Derived values for header
-  isIndex = $derived(this.state.nav.resourceRef === false)
-  headerResourceType = $derived(this.state.nav.resourceType)
-  headerResourceRef = $derived(this.state.nav.resourceRef)
-
   getResourceByIdSync = (
     resource: FirstClassResource,
     id: Id,
@@ -4955,4 +4068,20 @@ export class ResourceViewCtx {
         return this.cache.hub.get(this.getHubIdByCode(ref as Code) ?? (ref as Id))
     }
   }
+}
+
+const SURFACE_CONTEXT_KEY = Symbol('resource-view-context')
+
+/** Provides the current route's resource view. @param context Surface-owned instance. @returns The supplied instance. */
+export function setSurfaceCtx<T extends ResourceViewCtx>(context: T): T {
+  setSurfaceLayoutCtx(context.layout)
+  return setContext(SURFACE_CONTEXT_KEY, context)
+}
+
+/** Resolves the current surface without a process-global fallback. @returns The current resource view. */
+export function getSurfaceCtx(): ResourceViewCtx {
+  const context = getContext<ResourceViewCtx | undefined>(SURFACE_CONTEXT_KEY)
+  if (!context)
+    throw new Error('Resource view context is missing from this route layout')
+  return context
 }
