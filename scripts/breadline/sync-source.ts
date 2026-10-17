@@ -1,3 +1,7 @@
+// NODE
+import { existsSync } from 'node:fs'
+// BACKUP
+import { backupMirror } from './lib/backup'
 // CONFIG
 import {
   createBreadlineSource,
@@ -15,6 +19,10 @@ import { syncBreadlineMirror } from './lib/mirror'
  */
 async function main(): Promise<void> {
   const options = parseSyncArgs(process.argv.slice(2))
+  process.umask(0o077)
+  if (existsSync(options.mirrorPath)) {
+    console.log(`Verified pre-refresh backup: ${backupMirror(options.mirrorPath)}`)
+  }
   const config = loadBreadlineDatabaseConfig()
   const source = createBreadlineSource(config)
 

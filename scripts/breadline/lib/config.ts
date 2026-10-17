@@ -120,7 +120,7 @@ export function formatBreadlineError(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
   let message = error instanceof Error ? error.message : String(error)
-  for (const name of ['BREADLINE_PASSWORD'] as const) {
+  for (const name of Object.keys(env).filter(name => name.startsWith('BREADLINE_'))) {
     const secret = env[name]
     if (secret) message = message.replaceAll(secret, '<redacted>')
   }

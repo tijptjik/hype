@@ -105,7 +105,9 @@
     "i18n:translate": "bunx @inlang/cli machine translate --project project.inlang",
     "i18n:build": "bunx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --output-structure locale-modules",
     "db:generate:dbml": "bunx tsx scripts/generate-dbml.ts",
-    "commit": "git-cz"
+    "commit": "git-cz",
+    "breadline:db:backup": "bun run scripts/breadline/backup.ts",
+    "breadline:db:import": "bun --env-file=.dev.vars run scripts/breadline/import.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
