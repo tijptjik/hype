@@ -234,15 +234,19 @@ export const getGroupedClassifierProperties = async (
       const properties = await appCtx.getClassifierPropertiesForLayer(layer)
       if (properties.length === 0) return null
 
-      // Construct hierarchy info
+      // Construct hierarchy info without hiding single-child names: each filter group needs its own identity.
       const hierarchy = {
-        organisation: appCtx.getContextualOrganisationName(organisation),
-        project: appCtx.getContextualProjectName(project),
-        layer: appCtx.getContextualLayerName(layer),
+        organisation: appCtx.getContextualOrganisationName(organisation, false),
+        // Use the full project name; its short name may be a contextual label such as 'All'.
+        project:
+          getI18n(project, 'name', appCtx.getUserPreferences()) ||
+          appCtx.getContextualProjectName(project, false),
+        layer: appCtx.getContextualLayerName(layer, false),
         layerId: layer.id, // Pass layerId for direct filter access
       }
 
       return {
+        projectId: project.id,
         hierarchy,
         properties,
       }
@@ -250,7 +254,28 @@ export const getGroupedClassifierProperties = async (
   )
 
   // Filter out nulls and empty groups
-  return results.filter((group): group is NonNullable<typeof group> => group !== null)
+  const groups = results.filter(
+    (group): group is NonNullable<typeof group> => group !== null,
+  )
+  // Multiple layers in one project are not a name collision; distinct projects are.
+  const projectsByName = new Map<string, Set<string>>()
+  for (const group of groups) {
+    const name = group.hierarchy.project?.trim().toLocaleLowerCase() ?? ''
+    const projects = projectsByName.get(name) ?? new Set<string>()
+    projects.add(group.projectId)
+    projectsByName.set(name, projects)
+  }
+  return groups.map(({ hierarchy, properties }) => ({
+    hierarchy: {
+      ...hierarchy,
+      organisation:
+        (projectsByName.get(hierarchy.project?.trim().toLocaleLowerCase() ?? '')
+          ?.size ?? 0) > 1
+          ? hierarchy.organisation
+          : null,
+    },
+    properties,
+  }))
 }
 
 // ═══════════════════════
@@ -1333,7 +1358,7 @@ export function displaySelectedFilters(
   properties: Property[] | undefined, // Property definitions for the layer's project
 ): string {
   if (!layerFilters || !properties || Object.keys(layerFilters).length === 0) {
-    return m.filters__none()
+    return ''
   }
 
   // Create a map for efficient property lookup by ID
@@ -1377,7 +1402,7 @@ export function displaySelectedFilters(
   }
 
   if (activeFilterLabels.length === 0) {
-    return m.filters__none()
+    return ''
   }
 
   // Format the summary string based on the count

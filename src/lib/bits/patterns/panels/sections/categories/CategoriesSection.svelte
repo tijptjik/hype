@@ -1,4 +1,8 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition'
+import { cubicOut } from 'svelte/easing'
+import { prefersReducedMotion } from 'svelte/motion'
 // ICONS
 import GridIcon from 'virtual:icons/proicons/grid'
 // I18N
@@ -20,23 +24,33 @@ let {
 </script>
 
 {#each model.categories as group, index (group.hierarchy.layerId)}
-  <CategorySection
-    {panelProps}
-    title={m.filters__categories()}
-    icon={GridIcon}
-    isOpen={index === 0}
-    selectedSummary={group.selectedSummary}
-    hierarchy={group.hierarchy}
+  <!-- Animate the whole keyed layer group as its selection enters or leaves. -->
+  <div
+    class="shrink-0"
+    transition:slide={{
+      axis: 'y',
+      duration: prefersReducedMotion.current ? 0 : 240,
+      easing: cubicOut,
+    }}
   >
-    <div class="space-y-2">
-      {#each group.properties as property (property.id)}
-        {@const filter = model.propertyFilter(property, group.hierarchy.layerId)}
-        {#if property.component === 'RangeField'}
-          <RangeFilter {filter} defaultOpen={property.key === 'grade'} />
-        {:else}
-          <CategoryFilter {property} {filter} />
-        {/if}
-      {/each}
-    </div>
-  </CategorySection>
+    <CategorySection
+      {panelProps}
+      title={m.filters__categories()}
+      icon={GridIcon}
+      isOpen={index === 0}
+      selectedSummary={group.selectedSummary}
+      hierarchy={group.hierarchy}
+    >
+      <div class="space-y-2">
+        {#each group.properties as property (property.id)}
+          {@const filter = model.propertyFilter(property, group.hierarchy.layerId)}
+          {#if property.component === 'RangeField'}
+            <RangeFilter {filter} defaultOpen={property.key === 'grade'} />
+          {:else}
+            <CategoryFilter {property} {filter} />
+          {/if}
+        {/each}
+      </div>
+    </CategorySection>
+  </div>
 {/each}

@@ -1,6 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+import { slide } from 'svelte/transition'
+import { cubicOut } from 'svelte/easing'
+import { prefersReducedMotion } from 'svelte/motion'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import Check from 'virtual:icons/proicons/checkmark'
@@ -36,7 +39,9 @@ let displayText = $derived(filter.displayText)
 const optionsId = $props.id()
 </script>
 
-<div class="mx-6 shrink-0 border-b border-base-content/10 text-base-content">
+<div
+  class="mx-6 shrink-0 border-b border-base-content/10 text-base-content last:border-b-0"
+>
   <button
     type="button"
     class="flex w-full cursor-pointer items-center justify-between gap-4 rounded-md py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -65,6 +70,10 @@ const optionsId = $props.id()
   <!-- Options -->
   {#if isOpen}
     <div
+      transition:slide={{
+        duration: prefersReducedMotion.current ? 0 : 200,
+        easing: cubicOut,
+      }}
       id={optionsId}
       class="flex max-h-72 flex-col gap-1 overflow-y-auto overscroll-contain pb-3"
     >

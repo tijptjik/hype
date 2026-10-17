@@ -24,10 +24,20 @@ const model = {
   categories: [
     {
       hierarchy: {
-        organisation: 'HKGhostSigns',
-        project: 'All',
+        organisation: null,
+        project: 'Sign Archive',
         layer: 'Ghost Signs',
         layerId: 'ghosts',
+      },
+      properties,
+      selectedSummary: '',
+    },
+    {
+      hierarchy: {
+        organisation: null,
+        project: 'Breadline',
+        layer: 'Current',
+        layerId: 'breadline',
       },
       properties,
       selectedSummary: '',

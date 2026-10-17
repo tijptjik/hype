@@ -1,8 +1,10 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+import { slide } from 'svelte/transition'
+import { cubicOut } from 'svelte/easing'
+import { prefersReducedMotion } from 'svelte/motion'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
-import ChevronUp from 'virtual:icons/proicons/chevron-up'
 import { Icon } from '#lib/bits/index.js'
 import RangeSlider from 'svelte-range-slider-pips'
 // ADAPTERS
@@ -30,7 +32,9 @@ $effect(() => {
 let displayText = $derived(filter.displayText)
 </script>
 
-<div class="mx-6 min-h-10 shrink-0 border-b border-base-content/10 text-base-content">
+<div
+  class="mx-6 min-h-10 shrink-0 border-b border-base-content/10 text-base-content last:border-b-0"
+>
   <button
     type="button"
     class="flex w-full shrink-0 items-center justify-between gap-4 rounded-md py-3 outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -44,13 +48,21 @@ let displayText = $derived(filter.displayText)
       <p class="break-words text-sm leading-5 text-base-content/60">{displayText}</p>
     </div>
     <Icon
-      src={isOpen ? ChevronUp : ChevronDown}
-      class="size-4 shrink-0 text-base-content/60"
+      src={ChevronDown}
+      class="size-4 shrink-0 text-base-content/60 transition-transform duration-200 motion-reduce:transition-none {isOpen
+        ? 'rotate-180'
+        : ''}"
     />
   </button>
   <!-- Options -->
   {#if isOpen}
-    <div class="flex max-h-65 flex-col overflow-y-auto overscroll-contain px-1">
+    <div
+      transition:slide={{
+        duration: prefersReducedMotion.current ? 0 : 200,
+        easing: cubicOut,
+      }}
+      class="flex max-h-65 flex-col overflow-y-auto overscroll-contain px-1"
+    >
       <div class="pb-4 pl-2 pr-4 pt-8">
         <RangeSlider
           {min}

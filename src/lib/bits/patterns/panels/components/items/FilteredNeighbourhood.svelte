@@ -58,6 +58,10 @@ let {
 } = $props()
 onDestroy(() => onPreview?.(row.id, false))
 const Icon = $derived(icons[row.class as keyof typeof icons] ?? MapIcon)
+// The class label already identifies districts; shorten only the English name suffix.
+const displayName = $derived(
+  row.class === 'district' ? row.name.replace(/\s+District$/, '') : row.name,
+)
 </script>
 
 {#if row.count > 0}
@@ -91,7 +95,7 @@ const Icon = $derived(icons[row.class as keyof typeof icons] ?? MapIcon)
         <span class="text-xs text-base-content/60"
           >{divisionClassLabel(row.class)}</span
         >
-        <span class="font-normal text-base-content">{row.name}</span>
+        <span class="font-normal text-base-content">{displayName}</span>
       </span>
     </span>
     <span

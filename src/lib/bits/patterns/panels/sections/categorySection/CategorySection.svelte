@@ -33,26 +33,35 @@ let {
 </script>
 
 {#snippet hierarchyPath()}
-  <!-- Hierarchy path -->
-  <div class="flex flex-wrap gap-1 px-6 pb-3 text-xs text-muted-foreground">
-    {#if hierarchy.organisation}
-      <span>{hierarchy.organisation}</span>
-    {/if}
-    {#if hierarchy.project}
-      <span aria-hidden="true">›</span><span>{hierarchy.project}</span>
-    {/if}
-    {#if hierarchy.layer}
-      <span aria-hidden="true">›</span><span>{hierarchy.layer}</span>
-    {/if}
+  <!-- Hierarchy path stays visible so each layer's filters remain identifiable. -->
+  <div
+    class="flex flex-wrap items-baseline gap-x-1 gap-y-0.5 px-6 pb-3 text-xs text-muted-foreground [overflow-wrap:anywhere]"
+  >
+    {#each [
+      { name: hierarchy.organisation, color: 'text-primary' },
+      { name: hierarchy.project, color: 'text-tertiary' },
+      { name: hierarchy.layer, color: 'text-secondary' },
+    ].filter(part => part.name) as part, index}
+      {#if index > 0}
+        <span aria-hidden="true">›</span>
+      {/if}
+      <span class={part.color}>{part.name}</span>
+    {/each}
   </div>
 {/snippet}
 
-<Section {title} {icon} defaultOpen={isOpen} {...panelProps}>
-  {@render hierarchyPath()}
+<Section
+  {title}
+  {icon}
+  defaultOpen={isOpen}
+  persistentContent={hierarchyPath}
+  {...panelProps}
+>
   <!-- Title row is provided by the shared panel section header. -->
   <div class="space-y-2 pb-4">{@render children()}</div>
   {#snippet collapsedContent()}
-    {@render hierarchyPath()}
-    <SelectedFilter text={selectedSummary} />
+    {#if selectedSummary}
+      <SelectedFilter text={selectedSummary} />
+    {/if}
   {/snippet}
 </Section>
