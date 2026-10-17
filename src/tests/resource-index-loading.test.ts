@@ -5,8 +5,8 @@ import ResourceIndex from '#lib/bits/patterns/resource/resourceIndex/ResourceInd
 
 vi.mock('#lib/context/admin.svelte.js', () => ({
   getAdminCtx: () => ({
-    appCtx: {
-      state: { ui: { layoutMode: { organisation: 'card' } } },
+    listUi: { state: { layoutMode: { organisation: 'card' } } },
+    view: {
       isPanelOpenOrVisual: () => false,
     },
   }),
