@@ -52,8 +52,9 @@ export function createUserContributionsModel(
     getOrganisationName: (
       organisation: Parameters<ResourceViewCtx['getContextualOrganisationName']>[0],
     ) => app.getContextualOrganisationName(organisation, false),
-    getProjectName: (project: Parameters<AppCtx['getContextualProjectName']>[0]) =>
-      app.getContextualProjectName(project),
+    getProjectName: (
+      project: Parameters<ResourceViewCtx['getContextualProjectName']>[0],
+    ) => app.getContextualProjectName(project),
     getFeatureName: (feature: FeatureFromCollection): string =>
       app.getContextualFeatureName(feature) ?? '',
     getFeatureAddress: (feature: FeatureFromCollection) =>

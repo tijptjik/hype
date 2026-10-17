@@ -84,9 +84,7 @@ async function resolvePrismScopePrefixes(): Promise<string[]> {
 
     if (!projectCode || !project?.organisationId) continue
 
-    const organisation = await adminCtx.appCtx.getOrganisationById(
-      project.organisationId,
-    )
+    const organisation = await adminCtx.view.getOrganisationById(project.organisationId)
     const organisationCode = organisation?.code?.trim()
 
     if (!organisationCode) continue

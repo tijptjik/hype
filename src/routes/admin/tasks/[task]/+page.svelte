@@ -116,7 +116,7 @@ function getEditorRequest() {
   return getTask({
     id: page.params.task ?? '',
     meta: {
-      isAdminRequest: true,
+      ...adminCtx.view.resources.queryMeta,
       profile: 'admin',
     },
   })

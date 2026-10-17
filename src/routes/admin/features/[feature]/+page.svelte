@@ -708,7 +708,7 @@ $effect(() => {
       projectIds: [projectIdValue],
     }),
     conditions: { isArchived: false, isPublished: null },
-    meta: { isAdminRequest: true, profile: 'admin' as const },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
   }).then(result => {
     if (cancelled || layerIdValue) return
 
@@ -758,8 +758,8 @@ const configuredFeatureForm = configureForm(() => ({
           conditions: adminCtx.view.isSuperAdmin()
             ? { isArchived: null, isPublished: null }
             : { isArchived: false, isPublished: null },
-          prisms: adminCtx.appCtx.state.prisms,
-          meta: { isAdminRequest: true, profile: 'card' },
+          prisms: adminCtx.view.state.prisms,
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
       ]
 
@@ -768,7 +768,7 @@ const configuredFeatureForm = configureForm(() => ({
           getFeature({
             ref: featureRef,
             refKey: 'id',
-            meta: { isAdminRequest: true, profile: 'admin' },
+            meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
           }),
         )
       }
@@ -933,7 +933,7 @@ async function handleFeatureStateToggle(
       getFeature({
         ref: current.id,
         refKey: 'id',
-        meta: { isAdminRequest: true, profile: 'admin' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }).withOverride(overrideResourceEntityBoolean(field, nextState)),
     )
     mutation.settle(true)
@@ -1460,7 +1460,7 @@ async function syncLayerBackedProperties(
     const result = await getLayer({
       ref: resolvedLayerId,
       refKey: 'id',
-      meta: { isAdminRequest: true, profile: 'admin' },
+      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
     })
     const layer = (result?.data ?? null) as Layer | null
     syncSelectedLayer(toParentLayerItem(layer as never))
@@ -1595,7 +1595,7 @@ async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState
   const result = (await getFeature({
     ref,
     refKey: 'id',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).catch(() => null)) as FeatureGetState
 
   commitSettledFeatureState(result)
@@ -1776,7 +1776,7 @@ const featureParentSectionCtrl = createFeatureParentSectionController({
           isArchived: false,
           isPublished: null,
         },
-        meta: { isAdminRequest: true, profile: 'admin' as const },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
       })
     ).data ?? [],
   searchParentLayers: async ({ query, organisationIds = [], projectIds = [] }) =>
@@ -1788,7 +1788,7 @@ const featureParentSectionCtrl = createFeatureParentSectionController({
           projectIds,
         }),
         conditions: { isArchived: false, isPublished: null },
-        meta: { isAdminRequest: true, profile: 'admin' as const },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
       })
     ).data ?? [],
   syncSelectedOrganisation,
@@ -1847,7 +1847,7 @@ async function getCreatableProjectRecords(
       organisationIds: params.organisationIds ?? [],
     }),
     conditions: { isArchived: false, isPublished: null },
-    meta: { isAdminRequest: true, profile: 'admin' as const },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' as const },
   })
 
   // Projects carry their organisation ID; resolve the owning hub from that resource.
@@ -1916,7 +1916,11 @@ $effect(() => {
 })
 </script>
 
-<Main.Root class={FEATURE_EDITOR_ROOT_CLASS}>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+  class={FEATURE_EDITOR_ROOT_CLASS}
+>
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}

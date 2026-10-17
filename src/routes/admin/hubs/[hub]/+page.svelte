@@ -198,9 +198,7 @@ const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
 const cachedHubForRef = $derived(
-  adminCtx.appCtx.getResourceByRefSync(FirstClassResource.hub, hubRef) as
-    | Hub
-    | undefined,
+  adminCtx.view.getResourceByRefSync(FirstClassResource.hub, hubRef) as Hub | undefined,
 )
 const cachedHubState = $derived(
   cachedHubForRef ? ({ data: cachedHubForRef } as HubGetState) : null,
@@ -360,13 +358,13 @@ const configuredHubForm = configureForm<HubFormInput>(() => ({
         entityQuery: getHub({
           ref: hubRef,
           refKey: 'code',
-          meta: { isAdminRequest: true, profile: 'admin' },
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
         }),
         listQuery: getHubs({
           conditions: adminCtx.view.isSuperAdmin()
             ? { isArchived: null, isPublished: null }
             : { isArchived: false, isPublished: null },
-          meta: { isAdminRequest: true, profile: 'card' },
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
       }),
     adminCtx,
@@ -867,7 +865,7 @@ $effect(() => {
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
       prisms: isCoreHub ? undefined : { organisation: organisationIds },
-      meta: { isAdminRequest: true, profile: 'card' },
+      meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
     })
       .then(result => {
         if (currentRequestId !== hubLayerRequestId) return
@@ -1321,8 +1319,8 @@ async function onSearchOrganisations(query: string): Promise<HubOrganisationItem
           id: allowedOrganisationIds,
           isArchived: false,
         },
-    prisms: adminCtx.appCtx.state.prisms,
-    meta: { isAdminRequest: true, profile: 'admin' },
+    prisms: adminCtx.view.state.prisms,
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   })
 
   const currentHubId = hub?.data?.id ?? null
@@ -1348,7 +1346,7 @@ async function refreshHub(ref: string = hubRef): Promise<HubGetState> {
     return await getHub({
       ref,
       refKey: 'code',
-      meta: { isAdminRequest: true, profile: 'admin' },
+      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
     })
   } catch {
     return hub ?? committedHub ?? null
@@ -1383,13 +1381,13 @@ async function handleHubStateToggle({
       getHub({
         ref: hubRef,
         refKey: 'code',
-        meta: { isAdminRequest: true, profile: 'detail' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'detail' },
       }).withOverride(overrideHubEntityBoolean(field, nextState)),
       getHubs({
         conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
-        meta: { isAdminRequest: true, profile: 'card' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }).withOverride(overrideHubListItemBoolean(hubData.id, field, nextState)),
     )
 
@@ -1621,7 +1619,10 @@ $effect(() => {
 })
 </script>
 
-<Main.Root>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}

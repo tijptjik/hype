@@ -572,27 +572,27 @@ const configuredProjectForm = configureForm(() => ({
         entityQuery: getProject({
           ref: projectRef,
           refKey: 'code',
-          meta: { isAdminRequest: true, profile: 'admin' },
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
         }),
         listQuery: getProjects({
-          conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
-          prisms: adminCtx.appCtx.state.prisms,
-          meta: { isAdminRequest: true, profile: 'card' },
+          conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
+          prisms: adminCtx.view.state.prisms,
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
         extraQueries: [
           getLayers({
             conditions: adminCtx.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },
-            prisms: adminCtx.appCtx.state.prisms,
-            meta: { isAdminRequest: true, profile: 'card' },
+            prisms: adminCtx.view.state.prisms,
+            meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
           }),
           getFeatures({
             conditions: adminCtx.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },
-            prisms: adminCtx.appCtx.state.prisms,
-            meta: { isAdminRequest: true, profile: 'card' },
+            prisms: adminCtx.view.state.prisms,
+            meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
           }),
         ],
       }) as never,
@@ -1586,7 +1586,7 @@ $effect(() => {
   void getOrganisation({
     ref: organisationId,
     refKey: 'id',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).then(result => {
     if (cancelled) return
     if (!result?.data) return
@@ -2016,7 +2016,10 @@ async function onSearchParentOrganisations(
 ): Promise<ParentSectionOrganisationItem[]> {
   if (!canSetParentOrganisation) return []
 
-  const profileMeta = { isAdminRequest: true, profile: 'admin' as const }
+  const profileMeta = {
+    ...adminCtx.view.resources.queryMeta,
+    profile: 'admin' as const,
+  }
   const baseParams = {
     q: query,
     prisms: adminCtx.view.state.prisms,
@@ -2082,7 +2085,7 @@ async function refreshProject(ref: string = projectRef): Promise<ProjectGetState
   const result = (await getProject({
     ref,
     refKey: 'code',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).catch(() => null)) as ProjectGetState
   return result
 }
@@ -2120,12 +2123,12 @@ async function handleProjectStateToggle({
       getProject({
         ref: projectRef,
         refKey: 'code',
-        meta: { isAdminRequest: true, profile: 'admin' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }).withOverride(overrideProjectEntityBoolean(field, nextState)),
       getProjects({
-        conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
-        prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true, profile: 'card' },
+        conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
+        prisms: adminCtx.view.state.prisms,
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }).withOverride(overrideProjectListItemBoolean(projectData.id, field, nextState)),
     )
     mutation.settle(true)
@@ -2468,7 +2471,7 @@ $effect(() => {
   void getOrganisation({
     ref: defaultOrganisationId,
     refKey: 'id',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).then(result => {
     if (!result?.data) return
     if (parentOrganisationIdValue) return
@@ -2503,7 +2506,7 @@ $effect(() => {
       (await getOrganisation({
         ref: targetOrganisationId,
         refKey: 'id',
-        meta: { isAdminRequest: true, profile: 'admin' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       })) as ProjectOwnerRoleSeedOrganisation,
   }).then(seed => {
     ownerRoleSeedAttempt = seed.nextOwnerRoleSeedAttempt
@@ -2576,7 +2579,10 @@ $effect(() => {
 })
 </script>
 
-<Main.Root>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}

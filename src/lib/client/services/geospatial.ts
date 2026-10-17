@@ -108,7 +108,9 @@ export function getCoordinates(lngLat: LngLatLike | null): [number, number] | nu
  * @param appCtx Application context containing the current geolocation state.
  * @returns The current user coordinates or `null` when location is unavailable.
  */
-export function getUserLocationCoordinates(appCtx: AppCtx): [number, number] | null {
+export function getUserLocationCoordinates(
+  appCtx: ResourceViewCtx,
+): [number, number] | null {
   const userLocation = appCtx.state.userLocation
   if (!userLocation) return null
 

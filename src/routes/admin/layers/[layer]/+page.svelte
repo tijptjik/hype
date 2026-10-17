@@ -427,14 +427,14 @@ const configuredLayerForm = configureForm<LayerRemoteFormInput>(() => ({
       const entityQuery = getLayer({
         ref: layerRef,
         refKey: 'id',
-        meta: { isAdminRequest: true, profile: 'admin' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       })
       const listQuery = getLayers({
         conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
-        prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true, profile: 'card' },
+        prisms: adminCtx.view.state.prisms,
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       })
 
       const layerId = layer?.data?.id
@@ -742,8 +742,8 @@ async function onSearchParentProjects(
 
   const baseParams = {
     q: query,
-    prisms: adminCtx.appCtx.state.prisms,
-    meta: { isAdminRequest: true, profile: 'card' as const },
+    prisms: adminCtx.view.state.prisms,
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' as const },
   }
 
   const queryPlan = toLayerParentProjectSearchQueries({ scope, baseParams })
@@ -801,7 +801,7 @@ async function refreshLayer(refOverride?: string): Promise<LayerGetState> {
   const layerQuery = getLayer({
     ref,
     refKey: 'id',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   })
   const projectPropertiesPromise = knownProjectId
     ? loadProjectProperties(knownProjectId).catch(() => null)
@@ -867,7 +867,7 @@ async function handleLayerStateToggle({
       getLayer({
         ref: layerRef,
         refKey: 'id',
-        meta: { isAdminRequest: true, profile: 'admin' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }).withOverride(overrideLayerEntityBoolean(field, nextState)),
     )
     mutation.settle(true)
@@ -1140,7 +1140,10 @@ $effect(() => {
 })
 </script>
 
-<Main.Root>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}

@@ -82,7 +82,10 @@ function resetPending(): void {
 }
 </script>
 
-<Main.Root>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   <Main.Content>
     {#if importResourceType === 'features'}
       <ImportFeatureFlow

@@ -316,12 +316,12 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
         entityQuery: getOrganisation({
           ref: organisationRef,
           refKey: 'code',
-          meta: { isAdminRequest: true, profile: 'admin' },
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
         }),
         listQuery: getOrganisations({
-          conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
-          prisms: adminCtx.appCtx.state.prisms,
-          meta: { isAdminRequest: true, profile: 'card' },
+          conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
+          prisms: adminCtx.view.state.prisms,
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
       }),
     adminCtx,
@@ -1014,7 +1014,7 @@ async function refreshOrganisation(
   return await getOrganisation<'admin'>({
     ref,
     refKey: 'code',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).catch(() => null)
 }
 
@@ -1066,13 +1066,13 @@ async function handleOrganisationStateToggle({
       getOrganisation({
         ref: organisationRef,
         refKey: 'code',
-        meta: { isAdminRequest: true, profile: 'admin' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }).withOverride(overrideOrganisationEntityBoolean(field, nextState)),
       // TODO Invalidate cache
       getOrganisations({
-        conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
-        prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true, profile: 'card' },
+        conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
+        prisms: adminCtx.view.state.prisms,
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }).withOverride(
         overrideOrganisationListItemBoolean(organisationData.id, field, nextState),
       ),
@@ -1352,7 +1352,10 @@ $effect(() => {
 })
 </script>
 
-<Main.Root>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}
