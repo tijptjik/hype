@@ -111,6 +111,7 @@ export class OmniCtx {
   pageState: PageState = $state(PageState.NoTransition)
   isIntentionallyClosing: boolean = $state(false)
   activeCollectionDescriptor: OmniCollectionDescriptor | null = $state(null)
+  private selectionRequestSerial = 0
   private pendingCollectionDescriptor: OmniCollectionDescriptor | null = null
   private pendingCollectionOptions: OmniSelectionOptions | null = null
 
@@ -668,15 +669,11 @@ export class OmniCtx {
   /**
    * Records a feature marker as the next card-open origin.
    *
-   * @param featureId Active feature id associated with the marker.
    * @param element Marker element captured from the click target, when available.
    * @returns Nothing.
    */
-  prepareCardTransitionFromMarker(featureId: Id, element?: HTMLElement | null): void {
-    const sourceElement =
-      element ??
-      (this.appCtx.markerElements.get(featureId) as HTMLElement | undefined) ??
-      null
+  prepareCardTransitionFromMarker(element?: HTMLElement | null): void {
+    const sourceElement = element ?? null
 
     this.cardTransition.phase = 'idle'
     this.cardTransition.sourceRect = this.getCardTransitionRect(sourceElement)
@@ -956,6 +953,7 @@ export class OmniCtx {
    * Initialize a collection - sets active collection, activates a feature, and sets mode to navigation
    */
   initSelection(updateUrl: boolean = true) {
+    this.selectionRequestSerial++
     // If we are on mobile, close all panels
     // otherwise the selected feature will be hidden behind the panel
     if (isMobile()) {
@@ -1093,11 +1091,22 @@ export class OmniCtx {
 
     // Run the default selection initialization
     this.initSelection()
+    const requestSerial = this.selectionRequestSerial
+    const selectionRevision = this.appCtx.selection.revision
+    const accountRevision = this.appCtx.account.revision
 
     // Map and collection selections already retain a card-capable feature row, so
     // activate it without putting the first card open behind a detail refresh.
     const cachedFeature = await this.appCtx.getFeatureById(featureId, false)
     const feature = cachedFeature ?? (await this.appCtx.getFeatureById(featureId))
+    // A later route, dismissal, account change or disposal supersedes this opening.
+    if (
+      requestSerial !== this.selectionRequestSerial ||
+      selectionRevision !== this.appCtx.selection.revision ||
+      accountRevision !== this.appCtx.account.revision ||
+      this.isIntentionallyClosing
+    )
+      return
     if (!feature) {
       console.error('Feature not found:', featureId)
       return

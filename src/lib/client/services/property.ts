@@ -307,7 +307,6 @@ export function setCategoricalPropertyFilter(
     ...(propertyFilters[layerId] || {}),
     [propertyId]: values,
   }
-  appCtx.zoomToAllVisibleFeatures()
 }
 
 /**
@@ -321,7 +320,6 @@ export function resetCategoricalPropertyFilter(
   const propertyFilters = appCtx.state.filters.feature.properties
   if (!propertyFilters?.[layerId]) return
   delete propertyFilters[layerId]?.[propertyId]
-  appCtx.zoomToAllVisibleFeatures()
 }
 
 /**
@@ -371,7 +369,6 @@ export function setRangePropertyFilter(
       rangeMin: nextRangeMin,
       rangeMax: nextRangeMax,
     }
-    appCtx.zoomToAllVisibleFeatures()
   }
 }
 

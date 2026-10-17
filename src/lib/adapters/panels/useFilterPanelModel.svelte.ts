@@ -98,10 +98,14 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
       },
       min: property.min ?? 0,
       max: property.max ?? 100,
-      toggle: (valueId: Id) =>
-        toggleCategoricalPropertyValue(app, layerId, property.id, valueId),
-      setRange: (range: [number, number]) =>
-        setRangePropertyFilter(app, layerId, property.id, range),
+      toggle: (valueId: Id) => {
+        toggleCategoricalPropertyValue(app, layerId, property.id, valueId)
+        app.zoomToAllVisibleFeatures()
+      },
+      setRange: (range: [number, number]) => {
+        setRangePropertyFilter(app, layerId, property.id, range)
+        app.zoomToAllVisibleFeatures()
+      },
     }
   }
 

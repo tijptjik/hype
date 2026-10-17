@@ -103,6 +103,7 @@ const starsShell = usePanelShellModel(appCtx, Panel.stars)
 const hubShell = usePanelShellModel(appCtx, Panel.hub)
 const profileShell = usePanelShellModel(appCtx, Panel.profile)
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = appCtx.layout
 
 type SettingsPanelComponent =
   typeof import('#lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
@@ -167,7 +168,7 @@ $effect(() => {
 $effect(() => {
   const width = responsiveCtx.window.width
   untrack(() => {
-    for (const panel of responsiveCtx.getPanelsToCloseForViewport(width)) {
+    for (const panel of appCtx.panels.getPanelsToCloseForViewport(width)) {
       appCtx.closePanel(panel)
     }
   })
@@ -180,6 +181,11 @@ $effect(() => {
 
 // CONTEXT :: OMNI
 const omniCtx = setOmniCtx(appCtx)
+
+// Returning home (including browser history) clears public selection without navigating again.
+$effect(() => {
+  if (page.url.pathname === '/') untrack(() => omniCtx.resetToSearch(false))
+})
 const profileModel = useProfilePanelModel(appCtx, omniCtx)
 const starsModel = {
   wishlist: useSavedFeatureListModel(appCtx, omniCtx, 'wishlist'),
@@ -191,8 +197,13 @@ const starsModel = {
 
 const filtersModel = useFilterPanelModel(appCtx, omniCtx)
 const prismsModel = useResourcePanelModel(appCtx, 'prisms', undefined, omniCtx)
-const omnibarModel = useOmnibarModel(appCtx, omniCtx, responsiveCtx)
-const subscriptionOffsetX = $derived(responsiveCtx.getAppMainOffsetX())
+const omnibarModel = useOmnibarModel(
+  appCtx,
+  omniCtx,
+  responsiveCtx,
+  appCtx.getMapCenter,
+)
+const subscriptionOffsetX = $derived(surfaceLayout.getAppMainOffsetX())
 
 let hubUserState = $state<HubUserStateFlags>({
   subscriptionPromptDismissed: false,
@@ -272,8 +283,8 @@ let profilePanelContainer: HTMLDivElement | undefined = $state()
 // EFFECT: Store scroll position when profile panel closes, restore when it opens
 $effect(() => {
   const isProfileOpen = appCtx.isPanelOpen(Panel.profile)
-  const profileCtx = appCtx.state.panels.profile.ctx as
-    | ({ savedScrollPosition?: number } & typeof appCtx.state.panels.profile.ctx)
+  const profileCtx = appCtx.panels.state.profile.ctx as
+    | ({ savedScrollPosition?: number } & typeof appCtx.panels.state.profile.ctx)
     | undefined
 
   if (!isProfileOpen && profilePanelContainer) {
@@ -363,7 +374,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
     return
   }
 
-  if (Object.values(appCtx.state.panels).some(panel => panel.isOpen)) {
+  if (Object.values(appCtx.panels.state).some(panel => panel.isOpen)) {
     return
   }
 
@@ -566,7 +577,12 @@ $effect(() => {
 <AppShell>
   {#if !$session.isPending && $session.data && appCtx.isInitialised}
     <AppSurface>
-      <MapCanvas mapStyleCode={activeMapStyleCode} />
+      <MapCanvas
+        mapStyleCode={activeMapStyleCode}
+        onMapReady={controller => {
+          appCtx.mapController = controller
+        }}
+      />
       <!-- Panels -->
       <ResourcePanel model={prismsModel} />
       <Stars shell={starsShell} model={starsModel} />
@@ -652,6 +668,7 @@ $effect(() => {
         <AppMapOverlayBar />
         <AppNav
           {hub}
+          getMapCenter={appCtx.getMapCenter}
           subscriptionItem={{
             isVisible: subscriptionVisibility.showAppMenuSubscriptionItem,
             label: appMenuSubscriptionItemProps.label ?? 'Subscribe',

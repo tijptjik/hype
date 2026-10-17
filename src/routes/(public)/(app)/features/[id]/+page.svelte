@@ -134,11 +134,15 @@ const loadFeatureAndSetContext = async (
 
   const isColdStart = omniCtx.isColdStart(id)
 
+  // Clear the previous marker while this route resolves; retain collection navigation context.
+  if (appCtx.selection.featureId !== id) appCtx.resetActiveFeature()
+
   // 1. Set featureId for consistency
   featureId = id
   // 2. Mount retained map or collection data immediately; direct routes still
   // wait for their first authoritative read because they have no cached row.
   const cachedFeature = await appCtx.getFeatureById(id, false)
+  if (page.params.id !== id || omniCtx.isIntentionallyClosing) return
   if (cachedFeature) {
     feature = cachedFeature as Feature
     refreshFeatureSnapshot(id)

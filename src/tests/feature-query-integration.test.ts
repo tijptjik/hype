@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { AccountState } from '#lib/context/account.svelte.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushSync } from 'svelte'
 import {
@@ -132,7 +133,7 @@ function controlledPage() {
 }
 
 function createApp(): AppCtx {
-  const app = new AppCtx(new DivisionCtx(), null, {} as ResponsiveCtx)
+  const app = new AppCtx(new DivisionCtx(), new AccountState(null), {} as ResponsiveCtx)
   app.state.prisms.layer = ['layer-a']
   return app
 }
@@ -165,6 +166,25 @@ afterEach(() => {
 })
 
 describe('map query integration', () => {
+  it('uses the clicked marker element without a resource-view DOM registry', () => {
+    const app = createApp()
+    const omni = createOmni(app)
+    const element = document.createElement('div')
+    element.getBoundingClientRect = () =>
+      ({ left: 10, top: 20, width: 30, height: 40 }) as DOMRect
+    omni.prepareCardTransitionFromMarker(element)
+    expect(omni.cardTransition.sourceRect).toEqual({
+      left: 10,
+      top: 20,
+      width: 30,
+      height: 40,
+    })
+    expect(omni.cardTransition.sourceKind).toBe('marker')
+    expect('markerElements' in app).toBe(false)
+    omni.prepareCardTransitionFromMarker(null)
+    expect(omni.cardTransition.sourceRect).toBeNull()
+  })
+
   it('waits for viewport coverage before loading the initial markers', async () => {
     const app = createApp()
     expect(await app.featuresQueryFn()).toEqual([])
@@ -366,6 +386,38 @@ describe('paginated collection activation', () => {
     expect(navigateMock).toHaveBeenCalledOnce()
   })
 
+  it('discards a late feature opening after a newer selection', async () => {
+    const app = createApp()
+    const omni = createOmni(app)
+    const pending = Promise.withResolvers<FeatureFromCollection>()
+    vi.spyOn(app, 'getFeatureById').mockImplementation(async id =>
+      id === 'slow' ? pending.promise : row(id),
+    )
+    const slow = omni.initFeature('slow', { updateUrl: false, openCard: false })
+    await omni.initFeature('newer', { updateUrl: false, openCard: false })
+    pending.resolve(row('slow'))
+    await slow
+    expect(app.selection.featureId).toBe('newer')
+  })
+
+  it.each(['dismiss', 'dispose'] as const)(
+    'does not reopen a feature after %s',
+    async action => {
+      const app = createApp()
+      const omni = createOmni(app)
+      const pending = Promise.withResolvers<FeatureFromCollection>()
+      vi.spyOn(app, 'getFeatureById').mockReturnValue(pending.promise)
+      const opening = omni.initFeature('slow', { updateUrl: false })
+      if (action === 'dispose') app.dispose()
+      else omni.resetToSearch(false)
+      pending.resolve(row('slow'))
+      await opening
+      await vi.advanceTimersByTimeAsync(2500)
+      expect(app.selection.featureId).toBeNull()
+      expect(omni.state.isCardOpen).toBe(false)
+    },
+  )
+
   it('activates a freshly retained feature outside the displayed map immediately', async () => {
     const app = createApp()
     const seed = controlledPage(),
@@ -382,16 +434,16 @@ describe('paginated collection activation', () => {
     expect(app.state.resources.feature).toEqual([])
     const omni = createOmni(app)
     omni.initNeighbourhood('causeway-bay', selectionOptions)
-    expect(app.state.active.collection?.items.map(feature => feature.id)).toEqual([
+    expect(app.selection.collection?.items.map(feature => feature.id)).toEqual([
       'cached',
     ])
-    expect(app.state.active.feature?.id).toBe('cached')
-    expect(app.state.active.collection?.totalCount).toBeNull()
+    expect(app.selection.feature?.id).toBe('cached')
+    expect(app.selection.collection?.totalCount).toBeNull()
     collection.resolve([row('cached'), row('server')], 200, true)
     await settle()
-    expect(app.state.active.feature?.id).toBe('cached')
-    expect(app.state.active.collection?.totalCount).toBe(200)
-    expect(app.state.active.collection?.i18n.zhHant.name).toBe('銅鑼灣')
+    expect(app.selection.feature?.id).toBe('cached')
+    expect(app.selection.collection?.totalCount).toBe(200)
+    expect(app.selection.collection?.i18n.zhHant.name).toBe('銅鑼灣')
     expect(getFeaturePage).toHaveBeenCalledTimes(2)
   })
 
@@ -401,14 +453,14 @@ describe('paginated collection activation', () => {
     vi.mocked(getFeaturePage).mockReturnValue(first.query)
     const omni = createOmni(app)
     omni.initNeighbourhood('causeway-bay', selectionOptions)
-    expect(app.state.active.collection?.items).toEqual([])
+    expect(app.selection.collection?.items).toEqual([])
     first.resolve([row('server')], 200, true)
     await settle()
-    expect(app.state.active.collection?.items.map(feature => feature.id)).toEqual([
+    expect(app.selection.collection?.items.map(feature => feature.id)).toEqual([
       'server',
     ])
-    expect(app.state.active.feature?.id).toBe('server')
-    expect(app.state.active.collection?.totalCount).toBe(200)
+    expect(app.selection.feature?.id).toBe('server')
+    expect(app.selection.collection?.totalCount).toBe(200)
     expect(getFeaturePage).toHaveBeenCalledOnce()
   })
 
@@ -437,10 +489,10 @@ describe('paginated collection activation', () => {
     expect(vi.mocked(getFeaturePage).mock.calls.at(-1)?.[0].spatial).toBeUndefined()
     filtered.resolve([row('filtered', false)], 50)
     await settle()
-    expect(app.state.active.collection?.items.map(feature => feature.id)).toEqual([
+    expect(app.selection.collection?.items.map(feature => feature.id)).toEqual([
       'filtered',
     ])
-    expect(app.state.active.collection?.totalCount).toBe(50)
+    expect(app.selection.collection?.totalCount).toBe(50)
     expect(getFeaturePage).toHaveBeenCalledTimes(2)
   })
 
@@ -460,9 +512,9 @@ describe('paginated collection activation', () => {
     await settle()
     filtered.resolve([row('filtered', false)], 50)
     await settle()
-    expect(app.state.active.collection?.items.map(feature => feature.id)).toEqual([
+    expect(app.selection.collection?.items.map(feature => feature.id)).toEqual([
       'filtered',
     ])
-    expect(app.state.active.feature?.id).toBe('filtered')
+    expect(app.selection.feature?.id).toBe('filtered')
   })
 })
