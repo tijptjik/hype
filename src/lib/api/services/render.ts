@@ -1,3 +1,5 @@
+// TYPES
+import type { Queue, R2ObjectBody } from '@cloudflare/workers-types'
 import { error, redirect } from '@sveltejs/kit'
 
 import { buildMapRenderJob } from '#lib/map/renders/jobs.server.js'
@@ -138,7 +140,7 @@ export const serveMapRenderAsset = async (params: {
     throw error(404, params.notFoundMessage)
   }
 
-  return new Response(object.body, {
+  return new Response(object.body as unknown as ReadableStream<Uint8Array>, {
     headers: {
       'cache-control': 'no-store',
       'content-type': object.httpMetadata?.contentType ?? 'image/png',

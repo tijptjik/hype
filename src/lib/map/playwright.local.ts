@@ -1,4 +1,5 @@
 import process from 'node:process'
+import type { Browser, BrowserType } from '@playwright/test'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -15,20 +16,16 @@ import process from 'node:process'
  *
  * @returns Playwright Chromium browser type.
  */
-export const loadChromium = async () => {
+export const loadChromium = async (): Promise<BrowserType> => {
   const loadModule = new Function('moduleId', 'return import(moduleId)') as (
     moduleId: string,
-  ) => Promise<{ chromium: unknown }>
+  ) => Promise<{ chromium: BrowserType }>
   const playwright = await loadModule(['@play', 'wright/test'].join(''))
 
-  return playwright.chromium as {
-    launch: (options: { headless: boolean; channel?: string }) => Promise<unknown>
-  }
+  return playwright.chromium
 }
 
-export type LocalChromiumBrowser = Awaited<
-  ReturnType<Awaited<ReturnType<typeof loadChromium>>['launch']>
->
+export type LocalChromiumBrowser = Browser
 
 /**
  * Launches installed Chrome headlessly for local renders without downloading browsers.

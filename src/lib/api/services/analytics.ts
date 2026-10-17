@@ -355,7 +355,7 @@ export async function fetchAssetAnalyticsSummary(params: {
   scopePrefixes?: string[]
   organisationIds?: string[]
   projectIds?: string[]
-  fetcher?: typeof fetch
+  fetcher?: (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
 }): Promise<AssetAnalyticsSummaryResult> {
   const baseUrl = params.baseUrl?.trim()
   const readToken = params.readToken?.trim()

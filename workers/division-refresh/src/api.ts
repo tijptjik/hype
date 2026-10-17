@@ -184,7 +184,11 @@ export type DivisionMetadata = z.infer<typeof divisionMetadataSchema>
 export type Change = z.infer<typeof changeSchema>
 export type GeocodeResponse = z.infer<typeof geocodeSchema>
 export type Polygon = z.infer<typeof polygonSchema>
-export type ApiOptions = { baseUrl: string; token?: string; fetcher?: typeof fetch }
+export type ApiOptions = {
+  baseUrl: string
+  token?: string
+  fetcher?: (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+}
 
 /**
  * Reads a validated SaanSeoi response with a deadline and bounded body.

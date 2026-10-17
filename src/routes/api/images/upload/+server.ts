@@ -1,3 +1,5 @@
+// TYPES
+import type { R2HTTPMetadata, R2PutOptions } from '@cloudflare/workers-types'
 // SVELTE
 import { error, type RequestHandler } from '@sveltejs/kit'
 // API

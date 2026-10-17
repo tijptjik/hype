@@ -19,7 +19,7 @@ import { isDevPersona, isDevPersonaHost } from './auth/dev-personas'
 // DB SCHEMA
 import * as schema from '#lib/db/schema/index.js'
 // TYPES
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { D1Database as MiniflareD1Database } from '@cloudflare/workers-types'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { UserRoleDisco, Locale } from '#lib/types.js'
 import type {

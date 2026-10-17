@@ -3,7 +3,16 @@ import type { ParaglideLocals } from '@inlang/paraglide-sveltekit'
 import type { Auth, SessionSession, SessionUser } from '#lib/auth.js'
 import type { AssetRenderJob, MapRenderJob } from '#lib/map/renders/render.types.js'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import type { MiniflareD1Database } from 'miniflare'
+import type {
+  D1Database,
+  Fetcher,
+  Queue,
+  R2Bucket,
+  SendEmail,
+  ExecutionContext,
+  CacheStorage,
+  Cache,
+} from '@cloudflare/workers-types'
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import 'unplugin-icons/types/svelte'
 // See https://kit.svelte.dev/docs/types#app
@@ -34,7 +43,7 @@ declare global {
         ENVIRONMENT: string
         NODE_ENV: string
         // CLOUDFLARE BINDINGS
-        DB: MiniflareD1Database
+        DB: D1Database
         ASSETS: Fetcher
         MAP_RENDER_QUEUE: Queue<MapRenderJob>
         ASSET_RENDER_QUEUE: Queue<AssetRenderJob>
@@ -73,7 +82,7 @@ declare global {
         PUBLIC_ASSET_BASE_URL: string
         PUBLIC_PREVIEW_ASSET_BASE_URL: string
       }
-      context: ExecutionContext
+      context: Pick<ExecutionContext, 'waitUntil'>
       caches: CacheStorage & { default: Cache }
     }
   }

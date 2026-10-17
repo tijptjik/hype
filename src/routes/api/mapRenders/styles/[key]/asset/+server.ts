@@ -1,3 +1,5 @@
+// TYPES
+import type { R2Bucket } from '@cloudflare/workers-types'
 import { error, redirect, type RequestHandler } from '@sveltejs/kit'
 
 import { getMapStyleAssetRecord, isMapStyleKey } from '#lib/map/styles/index.js'
@@ -51,7 +53,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
     throw error(404, 'Map style render not found')
   }
 
-  return new Response(object.body, {
+  return new Response(object.body as unknown as ReadableStream<Uint8Array>, {
     headers: {
       'cache-control': 'no-store',
       'content-type': object.httpMetadata?.contentType ?? 'image/png',

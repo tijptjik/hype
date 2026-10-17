@@ -1,3 +1,5 @@
+// TYPES
+import type { Queue } from '@cloudflare/workers-types'
 // DRIZZLE
 import { and, eq, isNull, or, sql, type SQL } from 'drizzle-orm'
 // LIB

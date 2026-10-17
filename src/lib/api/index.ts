@@ -12,7 +12,7 @@ import { chunkedInArray } from '#lib/utils/batch-query.js'
 import { RESERVED_PARAMETERS } from '#lib/enums.js'
 // TYPES
 import type { SQL, Table } from 'drizzle-orm'
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { D1Database as MiniflareD1Database } from '@cloudflare/workers-types'
 import type {
   Id,
   Prisms,

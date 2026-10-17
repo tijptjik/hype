@@ -1,3 +1,5 @@
+// TYPES
+import type { D1Database } from '@cloudflare/workers-types'
 // @vitest-environment node
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'

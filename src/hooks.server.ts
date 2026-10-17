@@ -26,7 +26,7 @@ import {
 import type { LocaleKey, Session, SessionUser, UserRoleDisco } from '#lib/types.js'
 
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { D1Database as MiniflareD1Database } from '@cloudflare/workers-types'
 import { isAdminRequest } from '#lib/api/index.js'
 
 type HubShapeResult = { data: unknown }
@@ -473,7 +473,7 @@ const handle_worker_bindings: Handle = async ({ event, resolve }) => {
   event.locals.platform = {
     env,
     context: { waitUntil },
-    caches: globalThis.caches,
+    caches: globalThis.caches as unknown as App.Platform['caches'],
   } as App.Platform
   return resolve(event)
 }

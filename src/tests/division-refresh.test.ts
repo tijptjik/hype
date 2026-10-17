@@ -143,8 +143,9 @@ function setup() {
         "INSERT INTO feature(id,geometry,organisationId,projectId,layerId) VALUES(?,?,'org-1','project-1','layer-1')",
       )
       .run(id, JSON.stringify({ type: 'Point', coordinates: [x, y] }))
-  const tick = (fetcher: typeof fetch) =>
-    refreshDivisions(db, { baseUrl: 'https://api.saanseoi.hk', fetcher }, now)
+  const tick = (
+    fetcher: (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>,
+  ) => refreshDivisions(db, { baseUrl: 'https://api.saanseoi.hk', fetcher }, now)
   const count = (table: string) =>
     Number(sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n)
   return { sqlite, db, add, tick, count }
@@ -178,7 +179,9 @@ describe('division refresh', () => {
     s.add('b')
     const response = geocoded()
     Reflect.deleteProperty(response.included[0].attributes, 'hierarchies')
-    const fetcher = vi.fn<typeof fetch>(async input => {
+    const fetcher = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async input => {
       const url = new URL(String(input))
       // An unavailable display-area variant must not block geocoder polygon enrichment.
       if (url.searchParams.get('include')?.includes('areas:'))
@@ -240,7 +243,9 @@ describe('division refresh', () => {
   })
 
   it('uses the actual public API key header and pins the geocoding release', async () => {
-    const fetcher = vi.fn<typeof fetch>(async () => Response.json(geocoded()))
+    const fetcher = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async () => Response.json(geocoded()))
     await apiRead(
       { baseUrl: 'https://api.saanseoi.hk', token: 'test-key', fetcher },
       '/divisions/v0.2/geocode',
@@ -287,9 +292,9 @@ describe('division refresh', () => {
     s.sqlite.exec(
       "DELETE FROM featureDivisionJob; UPDATE divisionRefresh SET appliedRelease='r1',phase='changes'",
     )
-    const fetcher = vi.fn<typeof fetch>(async () =>
-      Response.json(page([change({ type: 'addition', before: null })])),
-    )
+    const fetcher = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async () => Response.json(page([change({ type: 'addition', before: null })])))
     await s.tick(fetcher)
     await s.tick(fetcher)
     expect(s.count('featureDivisionJob')).toBe(100)
@@ -304,7 +309,9 @@ describe('division refresh', () => {
     const s = setup()
     s.add('a')
     s.add('b')
-    const fetcher = vi.fn<typeof fetch>(async () => Response.json(geocoded()))
+    const fetcher = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async () => Response.json(geocoded()))
     await s.tick(fetcher)
     await s.tick(fetcher)
     expect(
@@ -328,7 +335,9 @@ describe('division refresh', () => {
     s.add('old', 20, 20)
     s.add('new')
     s.add('outside', 30, 30)
-    const first = vi.fn<typeof fetch>(async (url: URL | RequestInfo) =>
+    const first = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async (url: URL | RequestInfo) =>
       Response.json(
         geocoded(
           new URL(String(url)).searchParams.get('lng') === '20'
@@ -341,7 +350,9 @@ describe('division refresh', () => {
     await s.tick(first)
     await s.tick(first)
     s.sqlite.exec("UPDATE divisionRefresh SET checkedMonth='2026-08'")
-    const fetcher = vi.fn<typeof fetch>(async (url: URL | RequestInfo) =>
+    const fetcher = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async (url: URL | RequestInfo) =>
       Response.json(String(url).includes('/changes') ? page() : geocoded()),
     )
     await s.tick(fetcher)
@@ -368,7 +379,9 @@ describe('division refresh', () => {
     await s.tick(async () => Response.json(geocoded(['child'], 'r1')))
     await s.tick(async () => Response.json(geocoded(['child'], 'r1')))
     s.sqlite.exec("UPDATE divisionRefresh SET checkedMonth='2026-08'")
-    const fetcher = vi.fn<typeof fetch>(async () =>
+    const fetcher = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async () =>
       Response.json(
         page([
           change({
@@ -391,7 +404,9 @@ describe('division refresh', () => {
     await s.tick(async () => Response.json(geocoded(['village'], 'r1')))
     await s.tick(async () => Response.json(geocoded(['village'], 'r1')))
     s.sqlite.exec("UPDATE divisionRefresh SET appliedRelease='r1',phase='changes'")
-    const fetcher = vi.fn<typeof fetch>(async () =>
+    const fetcher = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async () =>
       Response.json(page([change({ canAffectGeocodingMembership: false })], 'next')),
     )
     await s.tick(fetcher)
@@ -617,9 +632,9 @@ describe('division refresh', () => {
       divisionId: 'unused',
       canAffectGeocodingMembership: false,
     })
-    const fetcher = vi.fn<typeof fetch>(async () =>
-      Response.json(page([renamed, unused])),
-    )
+    const fetcher = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async () => Response.json(page([renamed, unused])))
     await s.tick(fetcher)
     for (let index = 0; index < 4; index++) await s.tick(fetcher)
     expect(fetcher).toHaveBeenCalledTimes(1)

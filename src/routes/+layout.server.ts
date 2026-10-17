@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import * as schema from '#lib/db/schema/index.js'
 import { getHubUserSubscriptionState } from '#lib/db/services/hub.js'
 import { getTitleEnvironmentLabel } from '#lib/navigation/title.js'
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { D1Database as MiniflareD1Database } from '@cloudflare/workers-types'
 import type { LayoutServerLoad } from './$types'
 
 /**

@@ -5,7 +5,7 @@ import { parseUserInput, parseUserOutput } from 'better-auth/db'
 import { getAuthForRequest } from '#lib/auth.js'
 import { authConfig } from '#lib/auth/config.js'
 import { account, user } from '#lib/db/schema/user.js'
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { D1Database as MiniflareD1Database } from '@cloudflare/workers-types'
 
 describe('authConfig user.additionalFields', () => {
   it('only persists fields that exist on the user table', () => {

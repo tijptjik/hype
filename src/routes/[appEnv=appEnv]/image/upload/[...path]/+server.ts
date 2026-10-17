@@ -42,7 +42,7 @@ export const GET = async ({ params, locals }) => {
   const object = await bucket.get(publicId)
   if (!object) throw error(404, 'Image not found')
 
-  return new Response(object.body, {
+  return new Response(object.body as unknown as ReadableStream<Uint8Array>, {
     headers: {
       'content-type': object.httpMetadata?.contentType ?? 'application/octet-stream',
       'cache-control': resolvedVersion

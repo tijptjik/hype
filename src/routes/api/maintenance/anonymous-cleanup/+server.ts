@@ -6,7 +6,7 @@ import client from '#lib/db/index.js'
 import { cleanupExpiredAnonymousUsers } from '#lib/auth/anonymous.server.js'
 // TYPES
 import type { RequestHandler } from './$types'
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { D1Database as MiniflareD1Database } from '@cloudflare/workers-types'
 
 /**
  * Compares secret strings without an early-returning character comparison.
