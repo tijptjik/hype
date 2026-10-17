@@ -1,12 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
-// BITS COMPONENTS
-import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
-import ChevronUp from 'virtual:icons/proicons/chevron-up'
-import { Icon } from '#lib/bits/index.js'
+import Check from 'virtual:icons/proicons/checkmark'
 // ADAPTERS
 import type { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
 // TYPES
@@ -31,55 +28,68 @@ let selectedPropertyValueIds = $derived(filter.selectedIds)
 // Apply the default once so user toggles remain independent of prop updates.
 let isOpen = $state(untrack(() => defaultOpen))
 
+/** Toggles one category value. @param value Option to update. @returns Nothing. */
 function toggleValue(value: PropertyValue): void {
   filter.toggle(value.id)
 }
 let displayText = $derived(filter.displayText)
+const optionsId = $props.id()
 </script>
 
-<div class="mx-6 min-h-10 shrink-0 rounded-lg border border-border bg-surface">
+<div class="mx-6 shrink-0 border-b border-base-content/10 text-base-content">
   <button
     type="button"
-    class="flex w-full shrink-0 items-center justify-between rounded-none py-2 px-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+    class="flex w-full cursor-pointer items-center justify-between gap-4 rounded-md py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-focus"
     aria-expanded={isOpen}
+    aria-controls={optionsId}
     onclick={() => (isOpen = !isOpen)}
   >
-    <div class="flex flex-col justify-start gap-0 text-left">
-      <p class="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-        {label}
-      </p>
-      <p class="font-medium">{displayText}</p>
-    </div>
-    <Icon src={isOpen ? ChevronUp : ChevronDown} class="h-5 w-5 shrink-0" />
+    <span class="flex min-w-0 flex-col gap-1">
+      <span class="text-xs font-medium uppercase tracking-widest text-base-content/60"
+        >{label}</span
+      >
+      <span
+        class="break-words text-sm leading-5 {selectedPropertyValueIds.length
+          ? 'text-base-content'
+          : 'text-base-content/60'}"
+        >{displayText}</span
+      >
+    </span>
+    <ChevronDown
+      class="size-4 shrink-0 text-base-content/60 transition-transform duration-200 motion-reduce:transition-none {isOpen
+        ? 'rotate-180'
+        : ''}"
+      aria-hidden="true"
+    />
   </button>
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-65 flex-col overflow-y-auto gap-3 overscroll-auto rounded-b-lg bg-surface"
-      tabindex="-1"
+      id={optionsId}
+      class="flex max-h-72 flex-col gap-1 overflow-y-auto overscroll-contain pb-3"
     >
       {#each propertyValues as value (value.id)}
         {@const optionLabel = localisedOptions.get(value.id) || '?'}
+        {@const selected = selectedPropertyValueIds.includes(value.id)}
         <button
           type="button"
-          aria-label={optionLabel}
-          aria-pressed={selectedPropertyValueIds.includes(value.id)}
-          class="group label flex w-full cursor-pointer items-center justify-start gap-3 px-3 first:pt-4 last:pb-4 focus:outline-none focus:ring-0"
+          aria-pressed={selected}
+          class="flex w-full cursor-pointer items-start gap-3 rounded-md px-2 py-2 text-left text-sm leading-5 outline-none hover:bg-base-content/5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus {selected
+            ? 'bg-base-content/5'
+            : ''}"
           onclick={() => toggleValue(value)}
         >
-          <div
-            class="h-2 w-2 shrink-0 rounded-full group-hover:bg-base-content/60 group-focus:outline-none group-focus:ring-0 group-focus-visible:bg-base-content/60 {selectedPropertyValueIds.includes(
-              value.id,
-            )
-              ? 'bg-primary group-hover:bg-primary/60 group-focus-visible:bg-primary/60'
-              : 'border-1 border-border bg-transparent'}"
-          ></div>
-          <ScrollableText
-            text={optionLabel}
-            class="min-w-0 flex-1 text-left"
-            containerClass="label-text block w-full"
-            textClass="text-md font-medium"
-          />
+          <span
+            class="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border {selected
+              ? 'border-base-content bg-base-content text-panel'
+              : 'border-base-content/30'}"
+            aria-hidden="true"
+          >
+            {#if selected}
+              <Check class="size-3" />
+            {/if}
+          </span>
+          <span class="min-w-0 flex-1 break-words font-normal">{optionLabel}</span>
         </button>
       {/each}
     </div>

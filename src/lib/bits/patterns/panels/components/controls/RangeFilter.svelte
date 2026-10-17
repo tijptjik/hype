@@ -30,26 +30,27 @@ $effect(() => {
 let displayText = $derived(filter.displayText)
 </script>
 
-<div class="mx-6 min-h-10 shrink-0 rounded-lg border border-border bg-surface">
+<div class="mx-6 min-h-10 shrink-0 border-b border-base-content/10 text-base-content">
   <button
     type="button"
-    class="flex w-full shrink-0 items-center justify-between rounded-none py-2 px-3 focus:outline-none focus:ring-0 focus-visible:text-primary"
+    class="flex w-full shrink-0 items-center justify-between gap-4 rounded-md py-3 outline-none focus-visible:ring-2 focus-visible:ring-focus"
     aria-expanded={isOpen}
     onclick={() => (isOpen = !isOpen)}
   >
-    <div class="flex flex-col justify-start gap-0 text-left">
-      <p class="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+    <div class="flex flex-col min-w-0 justify-start gap-1 text-left">
+      <p class="text-xs font-medium uppercase tracking-widest text-base-content/60">
         {label}
       </p>
-      <p class="font-medium">{displayText}</p>
+      <p class="break-words text-sm leading-5 text-base-content/60">{displayText}</p>
     </div>
-    <Icon src={isOpen ? ChevronUp : ChevronDown} class="h-5 w-5 shrink-0" />
+    <Icon
+      src={isOpen ? ChevronUp : ChevronDown}
+      class="size-4 shrink-0 text-base-content/60"
+    />
   </button>
   <!-- Options -->
   {#if isOpen}
-    <div
-      class="flex max-h-65 flex-col overflow-y-auto overscroll-contain rounded-b-lg bg-surface px-3"
-    >
+    <div class="flex max-h-65 flex-col overflow-y-auto overscroll-contain px-1">
       <div class="pb-4 pl-2 pr-4 pt-8">
         <RangeSlider
           {min}

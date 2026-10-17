@@ -1,6 +1,6 @@
 <script lang="ts">
 // ICONS
-import Pencil from 'virtual:icons/lucide/pencil'
+import SettingsIcon from 'virtual:icons/proicons/settings'
 // BITS
 import { Popover } from '#lib/bits/core/popover/index.js'
 // DOMAIN
@@ -16,7 +16,7 @@ let {
 </script>
 
 <Popover
-  triggerProps={{ 'aria-label': 'Edit visible division classes' }}
+  triggerProps={{ 'aria-label': 'Division visibility settings' }}
   triggerClass="shrink-0"
   contentProps={{ align: 'end', collisionPadding: 12 }}
   contentClass="z-[100] max-h-[70dvh] w-60 overflow-y-auto rounded-lg border border-border bg-panel p-3 text-base-content shadow-xl"
@@ -24,10 +24,10 @@ let {
   {#snippet trigger()}
     <button
       type="button"
-      aria-label="Edit visible division classes"
+      aria-label="Division visibility settings"
       class="flex size-8 cursor-pointer items-center justify-center rounded-md text-base-content/60 hover:bg-base-content/10 hover:text-base-content focus-visible:outline-2 focus-visible:outline-focus"
     >
-      <Pencil class="size-4" aria-hidden="true" />
+      <SettingsIcon class="size-4" aria-hidden="true" />
     </button>
   {/snippet}
   <fieldset>

@@ -2,7 +2,8 @@
 // SVELTE
 import { onDestroy } from 'svelte'
 // TRANSITIONS
-import { slide } from 'svelte/transition'
+import { fade, slide } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 // ICONS
 import MapIcon from 'virtual:icons/hype-divisions/area'
 import SarIcon from 'virtual:icons/hype-divisions/sar'
@@ -46,10 +47,12 @@ type NeighbourhoodRow = {
 }
 let {
   row,
+  loading = false,
   onToggle,
   onPreview,
 }: {
   row: NeighbourhoodRow
+  loading?: boolean
   onToggle: (id: string) => void
   onPreview?: (id: string, active: boolean) => void
 } = $props()
@@ -92,8 +95,16 @@ const Icon = $derived(icons[row.class as keyof typeof icons] ?? MapIcon)
       </span>
     </span>
     <span
-      class="badge flex size-8 items-center justify-center border-2 border-base-200 bg-transparent font-mono font-bold text-base-content/60"
-      >{row.count}</span
+      class="badge flex size-8 shrink-0 items-center justify-center border-2 border-base-200 font-mono font-bold text-base-content/60 {loading
+        ? 'motion-safe:animate-pulse bg-base-content/10'
+        : 'bg-transparent'}"
+      aria-busy={loading}
     >
+      {#if !loading}
+        <span in:fade={{ duration: prefersReducedMotion.current ? 0 : 200 }}
+          >{row.count}</span
+        >
+      {/if}
+    </span>
   </button>
 {/if}

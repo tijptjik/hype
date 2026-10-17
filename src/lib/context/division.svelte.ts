@@ -74,6 +74,9 @@ export class DivisionCtx {
   /** Registry metadata stays available when a filtered response has no matching members. */
   divisions = new SvelteMap<string, DivisionFacet>()
 
+  /** Retained counts remain visible while the next facet query settles. */
+  countsLoading = $state(false)
+
   /** Surface-local class visibility shared by the panel and Omnibar; selection is independent. */
   hiddenClasses = new SvelteSet<string>()
 

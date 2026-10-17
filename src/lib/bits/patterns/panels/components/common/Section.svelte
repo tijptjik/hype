@@ -25,6 +25,7 @@ let {
   defaultOpen = true,
   children,
   headerActions = undefined,
+  persistentContent = undefined,
   collapsedContent = undefined,
   managedContent = undefined,
   ...panelProps
@@ -40,6 +41,8 @@ let {
   defaultOpen?: boolean
   headerActions?: Snippet
   children?: Snippet
+  /** Content that stays mounted above the collapsible options. */
+  persistentContent?: Snippet
   collapsedContent?: Snippet
   managedContent?: Snippet<[boolean]>
 } & PanelProps = $props()
@@ -90,10 +93,12 @@ const onNavigate = (e: MouseEvent) => {
     : ''} {rootClass}"
 >
   {#if usesCompactHeader}
-    <div class="flex shrink-0 items-center pr-6">
+    <div
+      class="flex shrink-0 items-center pr-6 hover:bg-surface focus-within:bg-surface"
+    >
       <button
         type="button"
-        class="flex h-14 min-w-0 flex-1 items-center gap-4 pl-6 pr-0 text-left text-base-content outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+        class="flex h-14 min-w-0 flex-1 items-center gap-4 pl-6 pr-0 text-left text-base-content outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
         aria-expanded={isOpen}
         aria-controls={contentId}
         onclick={onToggle}
@@ -131,6 +136,9 @@ const onNavigate = (e: MouseEvent) => {
       {onNavigate}
       {...panelProps}
     />
+  {/if}
+  {#if persistentContent}
+    <div class="shrink-0">{@render persistentContent()}</div>
   {/if}
   <div id={contentId} class="contents">
     <Panel.Section.Content

@@ -198,7 +198,7 @@ const starsModel = {
 const filtersModel = useFilterPanelModel(
   appCtx.view,
   omniCtx,
-  appCtx.zoomToAllVisibleFeatures,
+  appCtx.zoomToFilteredFeatures,
 )
 const prismsModel = useResourcePanelModel(appCtx.view, 'prisms', undefined, omniCtx)
 const omnibarModel = useOmnibarModel(

@@ -710,9 +710,21 @@ $effect(() => {
 })
 
 $effect(() => {
-  const counts = appCtx.view.resources.featureQueries.facets.facets?.divisions ?? null
+  const input = appCtx.view.filters.featureQueryInput({
+    limit: 1,
+    filters: { divisionIds: [], excludeDivisionIds: [] },
+  })
+  const query = appCtx.view.resources.featureQueries.facets
+  const hasLayers = Boolean(input.prisms?.layer?.length)
+  const pending = hasLayers && (!query.isCurrent(input) || query.loading)
+  const counts = query.facets?.divisions ?? null
 
-  untrack(() => appCtx.view.divisionCtx.setDivisionCounts(counts))
+  // Retain rows through the debounce and request; publish only the settled counts.
+  untrack(() => {
+    appCtx.view.divisionCtx.countsLoading = pending
+    if (!hasLayers) appCtx.view.divisionCtx.setDivisionCounts(null)
+    else if (!pending) appCtx.view.divisionCtx.setDivisionCounts(counts)
+  })
 })
 
 // Reuse the normal collection freshness window when returning to the map tab.

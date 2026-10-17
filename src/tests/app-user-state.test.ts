@@ -468,3 +468,84 @@ describe('AppCtx user updates', () => {
     expect(appCtx.view.cache.property.has('account-property')).toBe(true)
   })
 })
+
+it('fits all pages of the combined filtered collection without viewport constraints', async () => {
+  const app = new AppCtx({} as DivisionCtx, new AccountState(null), {} as ResponsiveCtx)
+  const input = {
+    prisms: { layer: ['one', 'two'] },
+    filters: { divisionIds: ['island', 'district'] },
+    includeCounts: false,
+    meta: { isAdminRequest: false, scope: 'public' },
+  }
+  vi.spyOn(app.view.filters, 'featureQueryInput').mockReturnValue(input)
+  app.mapController = {} as NonNullable<typeof app.mapController>
+  const rows = [{ id: 'near' }, { id: 'offscreen' }] as FeatureFromCollection[]
+  const query = {
+    load: vi.fn().mockResolvedValue(undefined),
+    hasMore: true,
+    error: null,
+    rows,
+    next: vi.fn(async () => {
+      query.hasMore = false
+    }),
+    clear: vi.fn(),
+  }
+  vi.spyOn(app.view.cacheCtx, 'createFeatureQuery').mockReturnValue(query as never)
+  const fit = vi.spyOn(app, 'zoomToFeatures').mockImplementation(() => {})
+  await app.zoomToFilteredFeatures()
+  expect(query.load).toHaveBeenCalledWith(input)
+  expect(query.next).toHaveBeenCalledOnce()
+  expect(fit).toHaveBeenCalledWith(rows)
+  expect(query.clear).toHaveBeenCalledOnce()
+})
+
+it('ignores a collection fit that settles after the filters change', async () => {
+  const app = new AppCtx({} as DivisionCtx, new AccountState(null), {} as ResponsiveCtx)
+  let divisions = ['first']
+  vi.spyOn(app.view.filters, 'featureQueryInput').mockImplementation(() => ({
+    prisms: { layer: ['one'] },
+    filters: { divisionIds: divisions },
+    meta: { isAdminRequest: false, scope: 'public' },
+  }))
+  app.mapController = {} as NonNullable<typeof app.mapController>
+  const pending = createDeferred<void>()
+  const query = {
+    load: vi.fn(() => pending.promise),
+    hasMore: true,
+    error: null,
+    rows: [],
+    next: vi.fn(),
+    clear: vi.fn(),
+  }
+  vi.spyOn(app.view.cacheCtx, 'createFeatureQuery').mockReturnValue(query as never)
+  const fit = vi.spyOn(app, 'zoomToFeatures').mockImplementation(() => {})
+  const result = app.zoomToFilteredFeatures()
+  divisions = ['second']
+  pending.resolve()
+  await result
+  expect(query.next).not.toHaveBeenCalled()
+  expect(fit).not.toHaveBeenCalled()
+  expect(query.clear).toHaveBeenCalledOnce()
+})
+
+it('fits feature bounds with full open-panel clearance and no forced center', () => {
+  const app = new AppCtx({} as DivisionCtx, new AccountState(null), {} as ResponsiveCtx)
+  const fitBounds = vi.fn()
+  app.mapController = { fitBounds } as unknown as NonNullable<typeof app.mapController>
+  vi.spyOn(app.view.panels, 'isRightPanelOpen').mockReturnValue(true)
+  vi.spyOn(app.view.panels, 'isLeftPanelOpen').mockReturnValue(false)
+  app.zoomToFeatures([
+    { geometry: { type: 'Point', coordinates: [114, 22] }, properties: {} },
+    { geometry: { type: 'Point', coordinates: [115, 23] }, properties: {} },
+  ] as FeatureFromCollection[])
+  expect(fitBounds).toHaveBeenCalledWith(
+    [
+      [114, 22],
+      [115, 23],
+    ],
+    expect.objectContaining({
+      padding: { top: 150, bottom: 50, right: 430, left: 50 },
+    }),
+  )
+  expect(fitBounds.mock.calls[0][1]).not.toHaveProperty('center')
+})

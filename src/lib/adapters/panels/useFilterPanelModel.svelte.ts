@@ -165,6 +165,9 @@ export function useFilterPanelModel(
     get visibleNeighbourhoodCount() {
       return visibleNeighbourhoodCount
     },
+    get divisionCountsLoading() {
+      return app.divisionCtx.countsLoading
+    },
     get neighbourhoods() {
       const counts = app.divisionCtx.divisionFeatureCounts
       const preferences = app.getUserPreferences()
@@ -216,8 +219,14 @@ export function useFilterPanelModel(
         return `${m.filters__clear()} ${m.filters__reset_count_properties({ properties: count.properties })}`
       return m.filters__reset()
     },
-    reset: () => app.filters.resetFilters(),
-    resetDivisions: () => app.divisionCtx.resetDivisions(),
+    reset: () => {
+      app.filters.resetFilters()
+      zoomToVisible()
+    },
+    resetDivisions: () => {
+      app.divisionCtx.resetDivisions()
+      zoomToVisible()
+    },
     toggleDivision: (id: string) => {
       app.divisionCtx.toggleDivision(id)
       zoomToVisible()

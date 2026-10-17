@@ -1,4 +1,9 @@
 <script lang="ts">
+// SVELTE
+import { flip } from 'svelte/animate'
+import { prefersReducedMotion } from 'svelte/motion'
+// ICONS
+import MapIcon from 'virtual:icons/proicons/map'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
@@ -25,32 +30,29 @@ let {
 {/snippet}
 
 {#snippet selectedNeighbourhoods()}
-  <div class="flex flex-wrap gap-2 px-4 pb-3">
-    {#each model.selectedNeighbourhoods as neighbourhood (neighbourhood.id)}
-      <button
-        type="button"
-        class="rounded-full bg-primary/15 px-3 py-1 text-xs text-primary"
-        onclick={() => model.toggleDivision(neighbourhood.id)}
-      >
-        {neighbourhood.name}
-        ×
-      </button>
-    {/each}
-  </div>
+  {#if model.selectedNeighbourhoods.length > 0}
+    <div class="flex flex-wrap gap-2 px-6 py-4">
+      {#each model.selectedNeighbourhoods as neighbourhood (neighbourhood.id)}
+        <button
+          type="button"
+          class="rounded-full bg-primary/15 px-3 py-1 text-xs text-primary"
+          onclick={() => model.toggleDivision(neighbourhood.id)}
+        >
+          {neighbourhood.name}
+          ×
+        </button>
+      {/each}
+    </div>
+  {/if}
 {/snippet}
 
 <Section
   title={m.filters__divisions()}
-  icon="/neighbourhood.svg"
-  iconGraphicClass="scale-125 origin-bottom-right"
-  iconVerticalPaddingClass="pt-0"
+  icon={MapIcon}
   {headerActions}
-  collapsedContent={selectedNeighbourhoods}
+  persistentContent={selectedNeighbourhoods}
   {...panelProps}
 >
-  {#if model.selectedNeighbourhoods.length > 0}
-    {@render selectedNeighbourhoods()}
-  {/if}
   {#if model.visibleNeighbourhoodCount > 4}
     <FilterBar
       bind:searchTerm={() => model.searchTerm, model.setSearchTerm}
@@ -60,11 +62,14 @@ let {
   {/if}
   <ResourceContainer>
     {#each model.neighbourhoods as row (row.id)}
-      <FilteredNeighbourhood
-        {row}
-        onToggle={model.toggleDivision}
-        onPreview={model.previewDivision}
-      />
+      <div animate:flip={{ duration: prefersReducedMotion.current ? 0 : 250 }}>
+        <FilteredNeighbourhood
+          {row}
+          loading={model.divisionCountsLoading}
+          onToggle={model.toggleDivision}
+          onPreview={model.previewDivision}
+        />
+      </div>
     {/each}
   </ResourceContainer>
 </Section>

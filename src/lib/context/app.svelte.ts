@@ -430,6 +430,37 @@ export class AppCtx {
     }
   }
 
+  private filterFitRevision = 0
+
+  /**
+   * Flies to every matching feature across the selected divisions and layers.
+   * @returns Completion of the fit; empty or superseded collections leave the camera alone.
+   * @remarks Traversal is independent of viewport marker loading and stops after selection changes.
+   */
+  zoomToFilteredFeatures = async (): Promise<void> => {
+    const revision = ++this.filterFitRevision
+    const input = this.view.filters.featureQueryInput({ includeCounts: false })
+    if (!this.mapController || !input.prisms?.layer?.length) return
+    const signature = JSON.stringify(input)
+    /** @returns Whether this fit still matches the active filters and mounted camera. */
+    const isCurrent = (): boolean =>
+      revision === this.filterFitRevision &&
+      this.mapController !== null &&
+      signature ===
+        JSON.stringify(this.view.filters.featureQueryInput({ includeCounts: false }))
+    const query = this.view.cacheCtx.createFeatureQuery()
+    try {
+      // Traverse the complete filtered collection, including points outside the current viewport.
+      await query.load(input)
+      while (isCurrent() && query.hasMore && !query.error) await query.next()
+      if (isCurrent() && !query.error) this.zoomToFeatures(query.rows)
+    } catch (error) {
+      if (isCurrent()) console.error('Error fitting filtered features:', error)
+    } finally {
+      this.view.cacheCtx.releaseFeatureQuery(query)
+    }
+  }
+
   // Refocus map on currently visible features
   zoomToAllVisibleFeatures = (): void => {
     const visibleFeatures = this.getVisibleFeatures()
@@ -490,8 +521,8 @@ export class AppCtx {
       : {
           top: 150,
           bottom: 50,
-          right: 50 + (this.view.panels.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
-          left: 50 + (this.view.panels.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
+          right: 50 + (this.view.panels.isRightPanelOpen() ? PANEL_WIDTH : 0),
+          left: 50 + (this.view.panels.isLeftPanelOpen() ? PANEL_WIDTH : 0),
         }
     try {
       // Convert to WGS84 and get bounds
@@ -503,7 +534,6 @@ export class AppCtx {
           [bounds[2], bounds[3]], // northeastern corner
         ],
         {
-          center: [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2],
           padding,
           maxZoom: 18,
           duration: 2500,
