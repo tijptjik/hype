@@ -302,6 +302,46 @@ describe('AppCtx user updates', () => {
     expect(appCtx.getVisibleFeatures()).toEqual([])
   })
 
+  it('removes stale map rows immediately when division selection changes', () => {
+    const include = new Set<string>()
+    const exclude = new Set<string>()
+    const app = new AppCtx(
+      {
+        state: { filters: { feature: { neighbourhood: { include, exclude } } } },
+      } as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
+    app.state.prisms.layer = ['overlay']
+    const rows = [
+      {
+        id: 'inside',
+        layerId: 'overlay',
+        divisionMemberships: [{ divisionId: 'district', selected: true }],
+      },
+      {
+        id: 'outside',
+        layerId: 'overlay',
+        divisionMemberships: [{ divisionId: 'other', selected: true }],
+      },
+      {
+        id: 'ambiguous',
+        layerId: 'overlay',
+        divisionMemberships: [{ divisionId: 'district', selected: false }],
+      },
+    ] as FeatureFromCollection[]
+    vi.spyOn(app.resources.featureQueries.map, 'rows', 'get').mockReturnValue(rows)
+    expect(app.getVisibleFeatures()).toHaveLength(3)
+    include.add('district')
+    expect(app.getVisibleFeatures().map(row => row.id)).toEqual(['inside'])
+    include.clear()
+    exclude.add('district')
+    expect(app.getVisibleFeatures().map(row => row.id)).toEqual([
+      'outside',
+      'ambiguous',
+    ])
+  })
+
   it('does not commit the anonymous hierarchy after the session identity changes', async () => {
     const organisations = createDeferred<Organisation[]>()
     const projects = createDeferred<Project[]>()

@@ -435,9 +435,19 @@ export class AppCtx extends ResourceViewCtx {
 
   getVisibleFeatures = (): (FeatureFromCollection | Feature)[] => {
     if (!this.isAdmin()) {
-      // Remove offscreen points and disabled layers before the debounced page has settled.
+      // Remove offscreen points, disabled layers and excluded divisions before the debounced page has settled.
+      const { include, exclude } = this.divisionCtx.state.filters.feature.neighbourhood
       return this.resources.featureQueries.map.rows
         .filter(row => this.state.prisms.layer.includes(row.layerId))
+        .filter(row => {
+          const selected =
+            row.divisionMemberships?.filter(member => member.selected) ?? []
+          return (
+            (!include.size ||
+              selected.some(member => include.has(member.divisionId))) &&
+            !selected.some(member => exclude?.has(member.divisionId))
+          )
+        })
         .filter(
           row =>
             !this.featureViewport?.bounds ||
