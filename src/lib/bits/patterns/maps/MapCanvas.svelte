@@ -39,7 +39,6 @@ import Square3Stack3d from 'virtual:icons/proicons/layers'
 // CONTEXT
 import { getAppCtx } from '#lib/context/app.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
-import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
 // TYPES
@@ -68,7 +67,6 @@ type MapCanvasProps = {
   interactive?: boolean
   showControls?: boolean
   onMapReady?: (controller: MapController | null) => void
-  bindAppMap?: boolean
 }
 
 type GeolocateControlWithPrivateFields = import('maplibre-gl').GeolocateControl & {
@@ -92,7 +90,6 @@ let {
   interactive = true,
   showControls = true,
   onMapReady,
-  bindAppMap = true,
 }: MapCanvasProps = $props()
 
 // ELEMENTS
@@ -102,7 +99,7 @@ let mapContainer: HTMLDivElement
 const appCtx = getAppCtx()
 
 const omniCtx = getOmniCtx()
-const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = appCtx.layout
 
 // STATE
 let lastHorizontalOffset = $state(0)
@@ -383,14 +380,10 @@ let mapClickHandler: ((event: MapMouseEvent) => void) | null = null
 
 const setupMap = (map: MaplibreMap): void => {
   activeMapInstance = map
-  if (bindAppMap) appCtx.map = map
   if (initialStyle) applyMapCanvasBackground(mapContainer, initialStyle, map)
   if (!markerRenderer || markerRendererMap !== map) {
     markerRenderer?.clear()
-    markerRenderer = createMarkerRenderer(map, maplibregl, (featureId, element) => {
-      if (element) appCtx.markerElements.set(featureId, element)
-      else appCtx.markerElements.delete(featureId)
-    })
+    markerRenderer = createMarkerRenderer(map, maplibregl)
     markerRendererMap = map
   }
   updateMapUrlTracking()
@@ -406,7 +399,6 @@ const setupMap = (map: MaplibreMap): void => {
       const isCardAlreadyOpen = omniCtx.state.isCardOpen
       if (!isCardAlreadyOpen) {
         omniCtx.prepareCardTransitionFromMarker(
-          featureId,
           target.closest('[data-feature-id]') as HTMLElement | null,
         )
       }
@@ -421,7 +413,10 @@ const setupMap = (map: MaplibreMap): void => {
     if (omniCtx.state.isCardOpen) omniCtx.close()
     else if (omniCtx.state.mode === 'search' && omniCtx.state.isTrayOpen)
       omniCtx.closeTray()
-    else if (responsiveCtx.isLeftPanelOpen() || responsiveCtx.isRightPanelOpen()) {
+    else if (
+      surfaceLayout.panels.isLeftPanelOpen() ||
+      surfaceLayout.panels.isRightPanelOpen()
+    ) {
       appCtx.closeAllPanels()
     }
   }
@@ -464,7 +459,7 @@ const setupMap = (map: MaplibreMap): void => {
           const isViewingFeature = window.location.pathname.includes('/features/')
           if (!hasReceivedFirstFix && !isViewingFeature && !isTrackingMapUrl) {
             hasReceivedFirstFix = true
-            const offset = responsiveCtx.getAppMainOffsetX()
+            const offset = surfaceLayout.getAppMainOffsetX()
             if (offset !== 0) {
               const point = map.project({ lng: longitude, lat: latitude })
               const adjustment = offset * -0.0215
@@ -590,10 +585,6 @@ onDestroy(() => {
   markerRenderer?.clear()
   markerRenderer = null
   markerRendererMap = undefined
-  appCtx.markerElements.clear()
-  if (bindAppMap && activeMapInstance && appCtx.map === activeMapInstance) {
-    appCtx.map = undefined
-  }
   activeMapInstance = undefined
   geolocateControl = undefined
   geolocationFixStarted = false
@@ -739,7 +730,7 @@ watch(
     activeMapInstance,
     userMarkerStyleVariant,
     projectMarkerThemes,
-    appCtx.selection.feature?.id ?? null,
+    appCtx.selection.featureId,
     appCtx.selection.collection?.items.map(item => item.id).join(','),
     isAnimating,
   ],
@@ -754,7 +745,7 @@ watch(
             },
         markerStyle: userMarkerStyleVariant,
         markerThemesByProjectId: projectMarkerThemes,
-        selectedId: appCtx.selection.feature?.id ?? null,
+        selectedId: appCtx.selection.featureId,
         highlightedIds: new Set(
           appCtx.selection.collection?.items.map(item => item.id) ?? [],
         ),
@@ -808,7 +799,7 @@ $effect(() => {
 })
 
 // STATE : DERIVED
-let horizontalOffset = $derived(responsiveCtx.getAppMainOffsetX())
+let horizontalOffset = $derived(surfaceLayout.getAppMainOffsetX())
 
 // Ensure that the center of the map is in the center of the viewport,
 // even after a panel is triggered.

@@ -43,7 +43,10 @@ import type { SessionUser, UserRoleDisco } from '#lib/types.js'
 export const DEFAULT_NEW_FEATURE_COORDINATES: [number, number] = [
   114.1693671540923, 22.319307515052614,
 ]
-type InitAddNewFeatureOptions = { navigateToRoute?: boolean }
+type InitAddNewFeatureOptions = {
+  navigateToRoute?: boolean
+  getMapCenter?: () => [number, number] | null
+}
 
 function sanitizeFeaturePropertyValueId(
   propertyValueId: string | null | undefined,
@@ -77,7 +80,9 @@ function stopNewFeatureTriggerEvent(event?: Event | null): void {
  * @param newFeature Current in-memory draft payload.
  * @returns The modal or card state that should be shown next.
  */
-function getNewFeatureEntryMode(newFeature: AppCtx['newFeature']): NewFeatureMode {
+function getNewFeatureEntryMode(
+  newFeature: ResourceViewCtx['newFeature'],
+): NewFeatureMode {
   if (!newFeature?.layerId) {
     return NewFeatureMode.parents
   }
@@ -149,9 +154,7 @@ export const initAddNewFeature = async (
           layerId: hierarchy.layer?.id,
           geometry: {
             type: 'Point',
-            coordinates: appCtx.map
-              ? [appCtx.map.getCenter().lng, appCtx.map.getCenter().lat]
-              : DEFAULT_NEW_FEATURE_COORDINATES,
+            coordinates: options.getMapCenter?.() ?? DEFAULT_NEW_FEATURE_COORDINATES,
           },
         },
       })

@@ -37,7 +37,6 @@ $effect(() => {
   antialias={false}
   interactive={false}
   showControls={false}
-  bindAppMap={false}
   onMapReady={handleMapReady}
 >
   {#if children}

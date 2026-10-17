@@ -6,6 +6,10 @@ import { Icon } from '#lib/bits/index.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // SERVICES
 import { reverseGeocode } from '#lib/api/external/geocoding.js'
@@ -21,12 +25,15 @@ import X from 'virtual:icons/proicons/cancel'
 import type { LocaleKey } from '#lib/types.js'
 import type { Point } from 'geojson'
 
-const appCtx = getAppCtx()
+let { getMapCenter }: { getMapCenter?: () => [number, number] | null } = $props()
+
+const appCtx = getSurfaceCtx()
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
 const newFeature = $derived(appCtx.getNewFeature())
-const appMainOffsetX = $derived(responsiveCtx.getAppMainOffsetX())
+const appMainOffsetX = $derived(surfaceLayout.getAppMainOffsetX())
 const currentLocaleKey = $derived(getLocaleKey())
 const locationHeading = $derived.by(() =>
   responsiveCtx.visibleWindowWidth < 430
@@ -133,11 +140,11 @@ function handleCancelEditing(): void {
 }
 
 async function handleSetLocation(): Promise<void> {
-  const center = appCtx.map?.getCenter()
+  const center = getMapCenter?.()
   if (center) {
     appCtx.updateNewFeatureValue('geometry', {
       type: 'Point',
-      coordinates: [center.lng, center.lat],
+      coordinates: center,
     })
   }
 

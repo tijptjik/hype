@@ -29,12 +29,14 @@ const COLLECTION_OPEN_DELAY_MS = 2000
  * @param appCtx Shared app context for active resources and i18n labels.
  * @param omniCtx Omni domain context for search/navigation actions.
  * @param responsiveCtx Responsive context for elevated chrome and layout offsets.
+ * @param getMapCenter Optional camera capability supplied by the public route.
  * @returns Omnibar model exposing `getOmnibarProps()` for `<Omnibar />`.
  */
 export function useOmnibarModel(
   appCtx: AppCtx,
   omniCtx: OmniCtx,
   responsiveCtx: ResponsiveCtx,
+  getMapCenter?: () => [number, number] | null,
 ): {
   getOmnibarProps: () => OmnibarProps
 } {
@@ -254,14 +256,14 @@ export function useOmnibarModel(
       return {
         mode: omniCtx.state.mode,
         hasElevatedChrome: hasElevatedChrome(
-          responsiveCtx.getEffectiveAppMainWidth(),
+          appCtx.layout.getEffectiveAppMainWidth(),
           responsiveCtx.visibleWindowHeight,
         ),
-        horizontalOffset: responsiveCtx.getAppMainOffsetX(),
-        effectiveAppMainWidth: responsiveCtx.getEffectiveAppMainWidth(),
+        horizontalOffset: appCtx.layout.getAppMainOffsetX(),
+        effectiveAppMainWidth: appCtx.layout.getEffectiveAppMainWidth(),
         availableViewportHeight: getOmnibarAvailableViewportHeight(
           responsiveCtx.visibleWindowHeight,
-          responsiveCtx.menuClearanceHeight,
+          appCtx.layout.menuClearanceHeight,
         ),
         search: {
           term: omniCtx.state.searchTerm,
@@ -272,7 +274,8 @@ export function useOmnibarModel(
           onCloseTray: () => omniCtx.closeTray(),
           onSelectFirstResult: () => omniCtx.selectFirstResult(),
           onClearSearchOrCloseTray: () => omniCtx.clearSearchOrCloseTray(),
-          onCreateFeature: event => void initAddNewFeature(appCtx, omniCtx, event),
+          onCreateFeature: event =>
+            void initAddNewFeature(appCtx, omniCtx, event, { getMapCenter }),
         },
         navigation: {
           isTrayOpen: omniCtx.state.isTrayOpen,

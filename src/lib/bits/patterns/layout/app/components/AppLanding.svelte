@@ -13,7 +13,6 @@ type AppLandingProps = {
   interactive?: boolean
   showControls?: boolean
   onMapReady?: (controller: MapController | null) => void
-  bindAppMap?: boolean
   class?: string
   style?: string
 }
@@ -26,7 +25,6 @@ let {
   interactive,
   showControls,
   onMapReady,
-  bindAppMap,
   class: className = '',
   style = '',
 }: AppLandingProps = $props()
@@ -44,6 +42,5 @@ let {
     {interactive}
     {showControls}
     {onMapReady}
-    {bindAppMap}
   />
 </main>

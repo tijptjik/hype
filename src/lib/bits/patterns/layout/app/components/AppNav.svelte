@@ -13,6 +13,10 @@ import { m } from '#lib/i18n.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
@@ -31,6 +35,7 @@ import type { AppMenuItem } from '#lib/bits/patterns/bars/appMenu/index.js'
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 
 type AppNavProps = {
+  getMapCenter?: () => [number, number] | null
   hub: HubOptsExtended
   subscriptionItem?: {
     isVisible: boolean
@@ -39,11 +44,12 @@ type AppNavProps = {
   }
 }
 
-let { hub, subscriptionItem }: AppNavProps = $props()
+let { hub, subscriptionItem, getMapCenter }: AppNavProps = $props()
 
 const appCtx = getSurfaceCtx()
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const session = useSession()
 const ADD_FEATURE_MENU_VALUE = 'addFeature'
 const SUBSCRIPTION_MENU_VALUE = 'subscribe'
@@ -114,7 +120,7 @@ const trailingItems = $derived<AppMenuItem<AppNavMenuValue>[]>([
       ]
     : []),
 ])
-const offsetX = $derived(responsiveCtx.getAppMainOffsetX())
+const offsetX = $derived(surfaceLayout.getAppMainOffsetX())
 
 async function handleSelect(
   item: AppMenuItem<AppNavMenuValue>,
@@ -125,7 +131,7 @@ async function handleSelect(
       requestAccountUpgrade('contribution', page.url.href)
       return
     }
-    await initAddNewFeature(appCtx, omniCtx, event)
+    await initAddNewFeature(appCtx, omniCtx, event, { getMapCenter })
     return
   }
 

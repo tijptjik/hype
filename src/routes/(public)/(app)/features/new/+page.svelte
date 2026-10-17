@@ -15,10 +15,11 @@ const omniCtx = getOmniCtx()
 onMount(() => {
   void initAddNewFeature(appCtx, omniCtx, null, {
     navigateToRoute: false,
+    getMapCenter: appCtx.getMapCenter,
   })
 })
 </script>
 
 <LayerSelectionModal />
-<GeoLocationModal />
+<GeoLocationModal getMapCenter={appCtx.getMapCenter} />
 <NewFeatureCard />
