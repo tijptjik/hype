@@ -70,6 +70,7 @@ export function filterDivisions(
       ([id, division]) =>
         (appCtx.divisionCtx.divisionFeatureCounts.get(id) ?? 0) > 0 &&
         division.hasGeometry === true &&
+        division.class !== 'sar' &&
         [
           division.divisionCode ?? '',
           ...Object.values(division.i18n).map(value => value?.name ?? ''),

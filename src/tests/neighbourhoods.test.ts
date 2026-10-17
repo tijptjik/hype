@@ -31,6 +31,28 @@ const child: DivisionFacet = {
 }
 
 describe('registry neighbourhoods', () => {
+  it('excludes the SAR from both initial options and explicit name/code searches', () => {
+    const place = new DivisionCtx()
+    place.setDivisionCounts({
+      parent,
+      sar: {
+        ...parent,
+        id: 'sar',
+        class: 'sar',
+        divisionCode: 'HKSAR',
+        i18n: { en: { name: 'Hong Kong' } },
+      },
+    })
+    const app = {
+      divisionCtx: place,
+      getUserPreferences: () => ({}),
+    } as unknown as AppCtx
+    expect(filterDivisions(app, '').map(([id]) => id)).toEqual(['parent'])
+    expect(filterDivisions(app, 'Hong Kong')).toEqual([])
+    expect(filterDivisions(app, 'HKSAR')).toEqual([])
+    expect(place.divisions.has('sar')).toBe(true)
+  })
+
   it('keeps exact parent and child counts and indexes every selected membership', () => {
     const place = new DivisionCtx()
     place.setDivisionCounts({ parent, child })
