@@ -286,7 +286,12 @@ updated: 2025-12-01T22:50
       - `id` → `account.id` - a randomly generated NanoID
       - `uid` → `account.accountId`
         - **??** The `uid` is not purely google AccountIDs, what are the other values ? E.g. `Facebook_10156780847508310` and `ea3245b8-0a90-4f13-983b-75f0a91c2dd8`.
-          - Drop the Facebook users
+          - Superseded (2026-10-16): retain all Facebook users and their complete history.
+          - Pre-create or match Hype users independently of login provider. Link subsequent
+            supported-provider logins to the same user using an established email identity.
+          - Old Facebook app-scoped IDs remain offline migration references only; a different
+            Facebook app requires a new login identity or a verified provider mapping.
+          - See [identity migration requirements](proposal/03-migration.md#confirmed-identity-and-quantity-requirements).
           - Maybe keep the users that haven't completed the welcome
       - `-` → `account.providerId = google`
       - `-` → `account.accessToken` - betterAuth schema

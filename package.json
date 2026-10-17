@@ -107,7 +107,9 @@
     "db:generate:dbml": "bunx tsx scripts/generate-dbml.ts",
     "commit": "git-cz",
     "breadline:db:backup": "bun run scripts/breadline/backup.ts",
-    "breadline:db:import": "bun --env-file=.dev.vars run scripts/breadline/import.ts"
+    "breadline:db:import": "bun --env-file=.dev.vars run scripts/breadline/import.ts",
+    "breadline:users:plan": "bun --env-file=.dev.vars run scripts/breadline/users.ts",
+    "breadline:users:test": "bun run scripts/breadline/rehearse-users.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
@@ -201,6 +203,7 @@
     "h3-js": "^4.5.0",
     "heic2any": "^0.0.4",
     "kysely": "^0.28.17",
+    "libphonenumber-js": "1.13.13",
     "maplibre-gl": "^6.14.0",
     "papaparse": "^5.7.0",
     "proj4": "^2.22.0",
