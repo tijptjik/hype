@@ -25,7 +25,10 @@ import {
 import { runRemoteQuery } from '#lib/remote/index.js'
 import { projectResourcePatch } from '#lib/client/services/optimisticRecords.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import {
+  getSurfaceCtx,
+  type ResourceViewCtx,
+} from '#lib/context/resourceView.svelte.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // TYPES
@@ -251,7 +254,10 @@ type SingleImageResourceCacheEntry = {
  */
 export class ImageCtx {
   isAdminMode: boolean = false
-  appCtx = getAppCtx()
+  readonly appCtx: Pick<
+    ResourceViewCtx,
+    'cache' | 'resources' | 'getTaskById' | 'invalidateResourceTargeted' | 'isAdmin'
+  >
 
   // Track refresh order as well as context transitions to prevent stale image commits.
   private imageRefreshSerial = 0
@@ -259,7 +265,14 @@ export class ImageCtx {
   // ═══════════════════════
   // 1. CONSTRUCTOR & SETUP
   // ═══════════════════════
-  constructor(options: ImageCtxConstructorOptions = {}) {
+  constructor(
+    options: ImageCtxConstructorOptions,
+    resources: Pick<
+      ResourceViewCtx,
+      'cache' | 'resources' | 'getTaskById' | 'invalidateResourceTargeted' | 'isAdmin'
+    >,
+  ) {
+    this.appCtx = resources
     const {
       isAdminMode = false,
       context,
@@ -283,10 +296,15 @@ export class ImageCtx {
 
   private setupEventListeners() {
     // Listen for refresh images events (e.g., when a feature is published)
-    window.addEventListener(
-      'refreshImages',
-      this.handleRefreshImagesEvent.bind(this) as EventListener,
-    )
+    if (typeof window === 'undefined') return
+    window.addEventListener('refreshImages', this.handleRefreshImagesEvent)
+  }
+
+  /** Removes view-owned listeners and supersedes pending reads. @returns Nothing. */
+  dispose(): void {
+    this.imageRefreshSerial++
+    if (typeof window !== 'undefined')
+      window.removeEventListener('refreshImages', this.handleRefreshImagesEvent)
   }
 
   private handleRefreshImagesEvent = (event: Event) => {
@@ -1184,7 +1202,7 @@ export class ImageCtx {
   ): Promise<void> {
     const ctx = this.getCtx()
     const contextAtStart = this.state.context
-    const mutation = this.appCtx.cacheCtx.beginMutation(
+    const mutation = this.appCtx.resources.beginMutation(
       'image',
       { meta: { id: imageId }, data },
       [['image', this.state.images as Map<string, unknown>]],
@@ -1227,7 +1245,7 @@ export class ImageCtx {
     } finally {
       syncActive()
     }
-    await this.appCtx.cacheCtx.reconcile('image')
+    await this.appCtx.resources.reconcile('image')
   }
 
   // ═══════════════════════
@@ -1764,7 +1782,7 @@ export class ImageCtx {
       return this.fetchImagesFromAPI(ctxType, ctxId, includeSingleImage)
     }
 
-    // Try to get images from AppCtx cache first
+    // Try to get images from ResourceViewCtx cache first
     if (ctxType === 'feature') {
       const feature = this.appCtx.cache.feature.get(ctxId) as Feature | undefined
 
@@ -2829,7 +2847,7 @@ const IMAGE_STATE_KEY = Symbol('IMAGE_STATE_KEY')
  * @returns The registered `ImageCtx` instance.
  */
 export const setImageCtx = (options: ImageCtxConstructorOptions) =>
-  setContext(IMAGE_STATE_KEY, new ImageCtx(options))
+  setContext(IMAGE_STATE_KEY, new ImageCtx(options, getSurfaceCtx()))
 
 /**
  * Reads the current `ImageCtx` from Svelte context.
