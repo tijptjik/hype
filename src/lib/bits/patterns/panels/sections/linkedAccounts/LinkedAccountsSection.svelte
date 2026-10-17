@@ -423,6 +423,38 @@ async function handleGuestSocial(providerId: SocialProvider): Promise<void> {
   }
 }
 
+/**
+ * Requests a password-reset email for the address entered in the sign-in form.
+ * @returns A promise that resolves after displaying request feedback.
+ * @remarks Uses generic feedback without revealing whether an account exists.
+ */
+async function handlePasswordResetRequest(): Promise<void> {
+  if (isBusy) return
+  errorMessage = ''
+  statusMessage = ''
+  if (!email.trim()) {
+    errorMessage = m.guest__email_required()
+    return
+  }
+
+  isBusy = true
+  try {
+    const result = await authClient.requestPasswordReset({
+      email: email.trim(),
+      redirectTo: `${window.location.origin}/account/reset-password`,
+    })
+    if (result.error) {
+      errorMessage = m.guest__auth_generic_error()
+      return
+    }
+    statusMessage = m.guest__password_reset_requested()
+  } catch {
+    errorMessage = m.guest__auth_generic_error()
+  } finally {
+    isBusy = false
+  }
+}
+
 /** Creates an account or signs in, preserving the current guest session's state. */
 async function handleGuestEmailSubmit(event: SubmitEvent): Promise<void> {
   event.preventDefault()
@@ -655,6 +687,16 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             >
               {isGuestSignIn ? m.guest__sign_in() : m.guest__create_account()}
             </button>
+            {#if isGuestSignIn}
+              <button
+                class="self-center text-sm text-base-content/70 underline disabled:opacity-50"
+                type="button"
+                disabled={isBusy}
+                onclick={handlePasswordResetRequest}
+              >
+                {m.guest__forgot_password()}
+              </button>
+            {/if}
           </form>
         {/if}
         {#if showPasskeySetup}
