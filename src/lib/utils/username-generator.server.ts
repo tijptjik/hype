@@ -1,7 +1,7 @@
 // NODE
 import { createHash } from 'node:crypto'
 // LIBRARIES
-import { uniqueNamesGenerator, colors, animals } from 'unique-names-generator'
+import { uniqueNamesGenerator, animals } from 'unique-names-generator'
 // USERNAMES
 import { normalizeUsername } from './username'
 import { USERNAME_ADJECTIVES } from './username-adjectives'
@@ -12,14 +12,18 @@ import type { Config } from 'unique-names-generator'
 const adjectives = [...USERNAME_ADJECTIVES]
 
 const usernameConfig: Config = {
-  dictionaries: [adjectives, colors, animals],
+  dictionaries: [
+    adjectives.filter(term => term.length <= 18),
+    animals.filter(term => /^[a-z]{1,12}$/i.test(term)),
+    Array.from({ length: 100 }, (_, index) => String(index).padStart(2, '0')),
+  ],
   separator: '',
   length: 3,
   style: 'capital',
 }
 
 /**
- * Generates a random username in the format: adjective + color + animal.
+ * Generates a random username in the format: positive adjective + animal + two digits.
  * @returns A canonical username beginning with a whitelisted adjective.
  */
 export function generateRandomUsername(): string {
@@ -29,16 +33,26 @@ export function generateRandomUsername(): string {
 /**
  * Generates a deterministic username from a stable user id.
  * @param userId Stable identity used as the generation seed.
+ * @param attempt Collision retry number.
  * @returns A canonical username beginning with a whitelisted adjective.
  * @remarks Repeatability depends on keeping the dictionary and its order unchanged.
  */
-export function generateUsernameFromId(userId: string): string {
-  return normalizeUsername(
-    uniqueNamesGenerator({
-      ...usernameConfig,
-      seed: userId,
-    }),
-  )
+export function generateUsernameFromId(userId: string, attempt = 0): string {
+  return normalizeUsername(generateDisplayUsernameFromId(userId, attempt))
+}
+
+/**
+ * Generate the display spelling of a stable HYPE username.
+ * @param userId Stable identity used as the generation seed.
+ * @param attempt Collision retry number.
+ * @returns An approved adjective, animal, and exactly two digits, at most 32 characters.
+ * @remarks Hash the seed to avoid the upstream library's character-sum collisions.
+ */
+export function generateDisplayUsernameFromId(userId: string, attempt = 0): string {
+  return uniqueNamesGenerator({
+    ...usernameConfig,
+    seed: createHash('sha256').update(`${userId}:${attempt}`).digest().readUInt32BE(0),
+  })
 }
 
 /**

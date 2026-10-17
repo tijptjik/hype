@@ -21,8 +21,17 @@ canonical usernames and URLs are lowercase. Breadline names use `AdjectiveRunner
 for display and its lowercase equivalent for matching. Both Breadline runner names
 and Hype generated usernames use the explicit 1,064-entry neutral-to-positive
 whitelist in `src/lib/utils/username-adjectives.ts`, not the upstream package
-adjectives. Changes to the whitelist affect new generation only; existing imported
-users and user-chosen usernames are not renamed. Seeded output depends on the
+adjectives. HYPE names use `PositiveAdjectiveAnimal00`; dictionary filtering keeps
+the full name, including both digits, within 32 characters. Migration
+`0087_refresh_generated_usernames_merge_user.sql` freezes the reviewed legacy HYPE
+cohort by ID and old spelling, preserves unmatched custom names and guests, applies
+three requested display-name overrides, and consolidates one duplicate identity.
+Legacy random-name provenance is inferred from exact old dictionary membership;
+there is no historical user-choice flag. Subsequent custom edits skip the guarded
+renames. The merge transfers login accounts, sessions, contributions and roles,
+combines saved-state flags, keeps primary layer preferences, and invalidates count
+caches. Unexpected overlapping roles or a missing destination abort the migration.
+Existing imported runner names and other user-chosen usernames are not renamed. Seeded output depends on the
 whitelist order, so regenerate any unexecuted import plan after changing it.
 Existing case collisions
 block the migration for review rather than merging users.

@@ -90,3 +90,24 @@ describe('generated username adjective whitelist', () => {
     }
   })
 })
+
+describe('HYPE adjective-animal-number usernames', () => {
+  it('keeps the two digit suffix and dictionary boundaries within the length limit', async () => {
+    const { generateDisplayUsernameFromId } = await import(
+      '#lib/utils/username-generator.server'
+    )
+    for (let index = 0; index < 2048; index++) {
+      const name = generateDisplayUsernameFromId(`hype-${index}`)
+      const match = /^([A-Z][a-z]+)([A-Z][a-z]+)(\d{2})$/.exec(name)
+      expect(match).not.toBeNull()
+      expect(approved.has(match?.[1].toLowerCase() ?? '')).toBe(true)
+      expect(name.length).toBeLessThanOrEqual(32)
+      expect(generateUsernameFromId(`hype-${index}`)).toBe(name.toLowerCase())
+      expect(generateDisplayUsernameFromId(`hype-${index}`, 1)).not.toBe(name)
+    }
+  })
+
+  it('does not collapse seeds with the same character sum', () => {
+    expect(generateUsernameFromId('abc')).not.toBe(generateUsernameFromId('cba'))
+  })
+})

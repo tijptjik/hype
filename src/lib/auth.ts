@@ -188,15 +188,16 @@ function createAuthInstance(
             // Generate username if not provided
             const dbUser = user as Partial<typeof userSchema.$inferSelect>
             if (!dbUser.username && dbUser.isAnonymous !== true) {
-              const { generateUsernameFromId } = await import(
+              const { generateDisplayUsernameFromId } = await import(
                 '#lib/utils/username-generator.server.js'
               )
-              const username = generateUsernameFromId(user.id)
+              const displayUsername = generateDisplayUsernameFromId(user.id)
+              const username = displayUsername.toLowerCase()
               return {
                 data: {
                   ...user,
                   username,
-                  displayUsername: username,
+                  displayUsername,
                 },
               }
             }
