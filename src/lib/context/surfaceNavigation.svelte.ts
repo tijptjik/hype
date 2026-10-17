@@ -130,7 +130,8 @@ export class SurfaceNavigation {
   }
 }
 
-const NAVIGATION_CONTEXT_KEY = Symbol('surface-navigation')
+// Keep providers and consumers on the same key across development module reloads.
+const NAVIGATION_CONTEXT_KEY = Symbol.for('hype.context.surface-navigation')
 
 /** Provides navigation beside a surface's resource context. @param navigation Surface-owned navigation. @returns The supplied model. */
 export function setSurfaceNavigation(navigation: SurfaceNavigation): SurfaceNavigation {

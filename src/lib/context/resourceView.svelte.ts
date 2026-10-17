@@ -2710,7 +2710,8 @@ export class ResourceViewCtx {
   }
 }
 
-const SURFACE_CONTEXT_KEY = Symbol('resource-view-context')
+// Keep providers and consumers on the same key across development module reloads.
+const SURFACE_CONTEXT_KEY = Symbol.for('hype.context.resource-view')
 
 /** Provides the current route's resource view. @param context Surface-owned instance. @returns The supplied instance. */
 export function setSurfaceCtx<T extends ResourceViewCtx>(context: T): T {

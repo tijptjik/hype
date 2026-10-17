@@ -702,7 +702,8 @@ export class AppCtx extends ResourceViewCtx {
   }
 }
 
-export const APPCTX_KEY = Symbol('public-app-context')
+// Keep providers and consumers on the same key across development module reloads.
+export const APPCTX_KEY = Symbol.for('hype.context.public-app')
 
 /**
  * Provides a public app instance under its layout.
