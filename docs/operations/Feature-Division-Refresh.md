@@ -113,6 +113,16 @@ response-size bound.
 
 ## Local migration and backfill
 
+`bun run db:mirror:prod:to:local` now includes division backfill in its
+`db:mirror:post:local` step. Run the post-command directly to prepare an existing
+mirror without resetting it. It uses the validated local D1 binding and this
+Worker's refresh implementation, preserves checkpoints and memberships, and
+requires an idle current-month checkpoint with no queued jobs before reporting
+success. Pending work needs server-side `SAANSEOI_API_KEY` in `.dev.vars` or the
+environment; optional `SAANSEOI_BASE_URL` defaults to `http://api.atlas.localhost`.
+The hook does not force a cross-edition rebuild. Missing credentials, failed jobs,
+future retries or a competing lease stop preparation for an explicit retry.
+
 Use `http://api.atlas.localhost` for development. The September evidence below used
 port 8787 and does not establish current publication or local database readiness.
 

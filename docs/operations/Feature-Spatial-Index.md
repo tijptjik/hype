@@ -38,7 +38,9 @@ The first unseen detailed query, or the first query after a relevant change, sti
 
 ## Populate existing features
 
-Apply pending migrations (0078 through 0081), then run a bounded local backfill:
+The production-to-local mirror workflow now performs this through `bun run db:mirror:post:local`, together with local migrations, map-style synchronization and agent-user initialization. Run that post-command directly to repair an existing local mirror without resetting it. The automatic local backfill remains until production mirrors include populated H3 cells. Preparation fails if pending point geometries remain after its bounded backfill.
+
+For a manual bounded backfill, apply pending migrations (0078 through 0081), then run:
 
 ```sh
 bunx wrangler d1 migrations apply hype-db-local --local

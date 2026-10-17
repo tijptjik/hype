@@ -12,7 +12,11 @@ Open `http://127.0.0.1:4173/`. The launcher idempotently seeds both reserved acc
 
 The first document navigation issues a session through Better Auth's internal adapter and cookie writer, then redirects to the requested path. The retry reaches the early hub hook with a real signed session cookie; SSR, remote functions, and client session queries use ordinary authentication and role enrichment. An amber indicator shows `Local development: Admin` or `Local development: Ordinary user`. Signing out clears the session; the next document navigation signs the configured persona in again. Restart with `user` or `admin` to switch personas.
 
-The launcher does not restore, reset, or migrate the database. Rerun it after each mirror restore. No passwords or provider accounts are seeded, and the reserved email addresses use `.invalid`.
+The launcher does not restore, reset, or migrate the database. `bun run db:mirror:prod:to:local` now runs `db:mirror:post:local` after restoring: it applies local migrations, syncs map styles, backfills missing H3 cells, and initializes both reserved agent users. The spatial backfill is temporary until production mirrors include populated cells; it remains idempotent when cells already exist. `db:prepare:local` uses the same complete mirror workflow.
+
+For an already restored database, run `bun run db:mirror:post:local` without downloading or resetting the mirror. It also drains the division backfill through the refresh worker, retaining its release checkpoint, leases and retries. Pending division work requires server-side `SAANSEOI_API_KEY` in `.dev.vars` or the environment; `SAANSEOI_BASE_URL` defaults to `http://api.atlas.localhost`. Missing credentials, failed jobs and future retries fail the post-command rather than report an incomplete mirror as ready. An already complete current-month division checkpoint needs no API calls.
+
+This command uses default local D1 and rejects `HYPE_DEV_STATE`; the agent launcher still supports isolated states. No passwords or provider accounts are seeded, and the reserved email addresses use `.invalid`.
 
 ## Guards and cookies
 
