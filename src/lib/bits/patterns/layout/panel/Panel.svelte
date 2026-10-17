@@ -28,15 +28,15 @@ let {
 // Panel visibility logic
 let shouldShowInline = $derived(
   inline &&
-    (appCtx.isPanelOpen(panelProps.panelType) ||
-      appCtx.isPanelOpenVisually(panelProps.panelType) ||
+    (appCtx.panels.isPanelOpen(panelProps.panelType) ||
+      appCtx.panels.isPanelOpenVisually(panelProps.panelType) ||
       isNarrow),
 )
 
 let shouldShowOverlay = $derived(
   !inline &&
-    (appCtx.isPanelOpen(panelProps.panelType) ||
-      appCtx.isPanelOpenVisually(panelProps.panelType)),
+    (appCtx.panels.isPanelOpen(panelProps.panelType) ||
+      appCtx.panels.isPanelOpenVisually(panelProps.panelType)),
 )
 </script>
 

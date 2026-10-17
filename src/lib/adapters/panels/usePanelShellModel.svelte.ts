@@ -33,8 +33,10 @@ export function usePanelShellModel(app: ResourceViewCtx, panelType: Panel) {
       }
     },
     get open() {
-      return app.isPanelOpen(panelType) || app.isPanelOpenVisually(panelType)
+      return (
+        app.panels.isPanelOpen(panelType) || app.panels.isPanelOpenVisually(panelType)
+      )
     },
-    onClose: () => app.closePanel(panelType),
+    onClose: () => app.panels.closePanel(panelType),
   }
 }

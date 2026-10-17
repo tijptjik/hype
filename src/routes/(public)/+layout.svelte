@@ -115,13 +115,13 @@ $effect(() => {
 })
 
 $effect(() => {
-  appCtx.registerKeydownHandlers()
-  return () => appCtx.unregisterKeydownHandlers()
+  appCtx.interactions.registerKeydownHandlers()
+  return () => appCtx.interactions.unregisterKeydownHandlers()
 })
 
 onDestroy(() => {
   bootstrapGeneration++
-  appCtx.unregisterKeydownHandlers()
+  appCtx.interactions.unregisterKeydownHandlers()
   appCtx.dispose()
 })
 </script>

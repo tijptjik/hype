@@ -164,7 +164,7 @@ describe('AppCtx user updates', () => {
       } as unknown as SessionUser),
       {} as ResponsiveCtx,
     )
-    appCtx.setPanelCtx(Panel.profile, 'username', 'old-user')
+    appCtx.panels.setPanelCtx(Panel.profile, 'username', 'old-user')
     appCtx.queryMap.set(FirstClassResource.user, {
       queryKey: () => [FirstClassResource.user, 'old-user'],
       queryFn: () => pendingProfile.promise,
@@ -236,7 +236,7 @@ describe('AppCtx user updates', () => {
       observePrisms: true,
     }
 
-    appCtx.openPanel(Panel.profile, false)
+    appCtx.panels.openPanel(Panel.profile, false)
 
     await vi.waitFor(() => expect(refreshUserProfile).toHaveBeenCalledWith(false))
   })

@@ -868,7 +868,7 @@ export function useAdminHeaderModel(
       src: currentUserImage,
       alt: currentUserName ?? 'Current user',
       transitionDirection: 'right',
-      onClick: () => appCtx.togglePanel(Panel.settings),
+      onClick: () => appCtx.panels.togglePanel(Panel.settings),
     },
     controlBar: renderedControlBar,
     footer: headerCtrl.state.layout.footer,

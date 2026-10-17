@@ -219,8 +219,8 @@ export function useProfileSectionModel(
       requestProfileUpgrade(window.location.href)
       return
     }
-    appCtx.setPanelCtx(Panel.profile, 'username', user?.username)
-    appCtx.togglePanel(Panel.profile)
+    appCtx.panels.setPanelCtx(Panel.profile, 'username', user?.username)
+    appCtx.panels.togglePanel(Panel.profile)
   }
 
   async function handleLogout(): Promise<void> {

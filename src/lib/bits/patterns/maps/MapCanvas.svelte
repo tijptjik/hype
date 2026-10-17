@@ -418,7 +418,7 @@ const setupMap = (map: MaplibreMap): void => {
       surfaceLayout.panels.isLeftPanelOpen() ||
       surfaceLayout.panels.isRightPanelOpen()
     ) {
-      appCtx.closeAllPanels()
+      appCtx.panels.closeAllPanels()
     }
   }
   if (!mapListenersAttached) {
@@ -921,7 +921,7 @@ $effect(() => {
     activeMapInstance &&
     appCtx.state.resources.layer.length > 0 &&
     !appCtx.state.prisms.layer.length &&
-    !appCtx.isPanelOpen(Panel.prisms)}
+    !appCtx.panels.isPanelOpen(Panel.prisms)}
     <!-- biome-ignore lint/a11y/useSemanticElements: composite prompt contains a nested button, so this cannot be a native button. -->
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
@@ -929,11 +929,11 @@ $effect(() => {
       out:fade={{ duration: 300, easing: cubicInOut }}
       role="button"
       tabindex="0"
-      onclick={() => appCtx.openPanel(Panel.prisms, false)}
+      onclick={() => appCtx.panels.openPanel(Panel.prisms, false)}
       onkeydown={event => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault()
-          appCtx.openPanel(Panel.prisms, false)
+          appCtx.panels.openPanel(Panel.prisms, false)
         }
       }}
     >

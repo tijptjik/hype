@@ -169,7 +169,7 @@ $effect(() => {
   const width = responsiveCtx.window.width
   untrack(() => {
     for (const panel of appCtx.panels.getPanelsToCloseForViewport(width)) {
-      appCtx.closePanel(panel)
+      appCtx.panels.closePanel(panel)
     }
   })
 })
@@ -282,7 +282,7 @@ let profilePanelContainer: HTMLDivElement | undefined = $state()
 
 // EFFECT: Store scroll position when profile panel closes, restore when it opens
 $effect(() => {
-  const isProfileOpen = appCtx.isPanelOpen(Panel.profile)
+  const isProfileOpen = appCtx.panels.isPanelOpen(Panel.profile)
   const profileCtx = appCtx.panels.state.profile.ctx as
     | ({ savedScrollPosition?: number } & typeof appCtx.panels.state.profile.ctx)
     | undefined
@@ -337,7 +337,7 @@ $effect(() => {
   }
 
   // Handle panel parameters from initial URL
-  handlePanelParams(appCtx, page.url.searchParams)
+  handlePanelParams(appCtx.panels, page.url.searchParams)
 
   hasRunInitialSync = true // Prevent future runs
 })
@@ -351,10 +351,10 @@ $effect(() => {
     const searchParams = new URLSearchParams(window.location.search)
 
     // Close all current panels first (don't update URL - we're responding to URL change)
-    appCtx.closeAllPanels(false)
+    appCtx.panels.closeAllPanels(false)
 
     // Handle panel parameters from URL
-    handlePanelParams(appCtx, searchParams)
+    handlePanelParams(appCtx.panels, searchParams)
   }
 
   // Listen specifically for browser back/forward navigation

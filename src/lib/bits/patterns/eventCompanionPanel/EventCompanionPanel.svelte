@@ -368,12 +368,12 @@ onMount(() => {
 </script>
 
 <Panel
-  isOpen={appCtx.isPanelOpen(panelProps.panelType) ||
-    appCtx.isPanelOpenVisually(panelProps.panelType)}
+  isOpen={appCtx.panels.isPanelOpen(panelProps.panelType) ||
+    appCtx.panels.isPanelOpenVisually(panelProps.panelType)}
   {...panelProps}
 >
   <Header
-    onClose={() => appCtx.closePanel(panelProps.panelType)}
+    onClose={() => appCtx.panels.closePanel(panelProps.panelType)}
     {...panelProps}
     title={headerTitle}
   />

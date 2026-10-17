@@ -44,7 +44,7 @@ let gridWidth = $state(0)
 let stableColumnCount = $state(1)
 let lastKnownPanelOpenState = $state(
   adminCtx.view && typeof adminCtx.view.isPanelOpenOrVisual === 'function'
-    ? adminCtx.view.isPanelOpenOrVisual(Panel.admin)
+    ? adminCtx.view.panels.isPanelOpenOrVisual(Panel.admin)
     : false,
 )
 
@@ -110,7 +110,7 @@ $effect(() => {
   gridWidth
   layoutMode
 
-  const currentPanelState = adminCtx.view.isPanelOpenOrVisual(Panel.admin)
+  const currentPanelState = adminCtx.view.panels.isPanelOpenOrVisual(Panel.admin)
   const nextColumnCount = getColumnCount(gridWidth, layoutMode)
 
   if (currentPanelState === lastKnownPanelOpenState) {

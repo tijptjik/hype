@@ -957,7 +957,7 @@ export class OmniCtx {
     // If we are on mobile, close all panels
     // otherwise the selected feature will be hidden behind the panel
     if (isMobile()) {
-      this.appCtx.closeAllPanels(updateUrl)
+      this.appCtx.panels.closeAllPanels(updateUrl)
     }
   }
 

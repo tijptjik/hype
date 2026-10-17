@@ -156,7 +156,7 @@ async function handleSelect(
     return
   }
 
-  appCtx.togglePanel(item.value)
+  appCtx.panels.togglePanel(item.value)
 }
 </script>
 

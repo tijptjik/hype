@@ -285,10 +285,7 @@ const imageProviderModel = useImageProviderModel(
 )
 </script>
 
-{#if appCtx.draft.mode === NewFeatureMode.card &&
-  feature &&
-  organisation &&
-  project}
+{#if appCtx.draft.mode === NewFeatureMode.card && feature && organisation && project}
   <ImageProvider model={imageProviderModel}>
     <FeatureCardRoot onContentVisibilityChange={handleRootContentVisibilityChange}>
       <div class="pointer-events-none flex min-h-0 flex-1 flex-col">

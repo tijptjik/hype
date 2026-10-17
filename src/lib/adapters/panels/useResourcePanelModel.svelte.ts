@@ -239,7 +239,7 @@ export function useResourcePanelModel(
       search[type] = value
     },
     onReset: () => {
-      if (!app.state.prisms[type].length) app.closePanel(panelType)
+      if (!app.state.prisms[type].length) app.panels.closePanel(panelType)
       else if (type === 'organisation') app.resetOrganisations()
       else if (type === 'project') app.resetProjects()
       else app.resetLayers()
@@ -261,14 +261,14 @@ export function useResourcePanelModel(
         inline: mode === 'admin' || app.isAdmin(),
         scrollable: false,
         isAdmin: mode === 'admin',
-        isNarrow: mode === 'admin' && app.isPanelNarrow(Panel.admin),
+        isNarrow: mode === 'admin' && app.panels.isPanelNarrow(Panel.admin),
       }
     },
     get open() {
       return (
-        app.isPanelOpen(panelType) ||
-        app.isPanelOpenVisually(panelType) ||
-        (mode === 'admin' && app.isPanelNarrow(Panel.admin))
+        app.panels.isPanelOpen(panelType) ||
+        app.panels.isPanelOpenVisually(panelType) ||
+        (mode === 'admin' && app.panels.isPanelNarrow(Panel.admin))
       )
     },
     get title() {
@@ -277,9 +277,9 @@ export function useResourcePanelModel(
     sections,
     onClose: () => {
       if (mode === 'admin') {
-        app.closePanelVisually(panelType)
-        app.togglePanel(panelType)
-      } else app.closePanel(panelType)
+        app.panels.closePanelVisually(panelType)
+        app.panels.togglePanel(panelType)
+      } else app.panels.closePanel(panelType)
     },
     // Map pages refresh silently while the user explores; only failures need panel feedback.
     get loadError() {

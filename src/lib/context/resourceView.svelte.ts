@@ -15,12 +15,10 @@ import type {
 } from '#lib/api/services/resourcePage.types.js'
 // DATA
 // NAVIGATION
-import { getUrlParam, updatePanelUrlParams } from '#lib/navigation/index.js'
 // GEO
 // I18N
 import { getFallbackLocales, getLocale, getLocaleKey, getI18n } from '#lib/i18n.js'
 // LIB
-import { DUAL_PANEL_MIN_WIDTH, isMobile } from '#lib/constants.js'
 import {
   getOrganisation,
   getOrganisationsWhichHaveLayers,
@@ -33,13 +31,8 @@ import { getProperties, getProperty } from '#lib/api/property.remote.js'
 import { getUser, getUserFeatures, getUserLayers } from '#lib/api/user.remote.js'
 // SERVICES
 import { debouncedUpdateUserAttribution } from '#lib/client/services/user.js'
-import {
-  consumeEscapeForOpenPanels,
-  shouldSkipGlobalKeydown,
-} from '#lib/client/keybindings.js'
 import { getInitialHubLayerDefaultIds } from '#lib/client/services/layerDefaults.js'
 // AUTH
-import { isGuestUser, requestProfileUpgrade } from '#lib/auth/upgrade.js'
 import {
   getFeatureIdsForProperties,
   sortProperties,
@@ -57,11 +50,7 @@ import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 import { SvelteMap } from 'svelte/reactivity'
 // MARKERS
 // ENUMS
-import {
-  FirstClassResource,
-  type HierarchicalResource,
-  Panel,
-} from '#lib/enums.js'
+import { FirstClassResource, type HierarchicalResource, Panel } from '#lib/enums.js'
 // GUARDS
 import { isTask } from '#lib/utils/resourceGuards.js'
 // TYPES
@@ -106,6 +95,7 @@ import type { DivisionCtx } from './division.svelte'
 // CONTEXT
 import type { AccountState, AccountUser } from './account.svelte.js'
 import { FeatureDraft } from './featureDraft.svelte.js'
+import { SurfaceInteractions } from './surfaceInteractions.svelte.js'
 import { PanelController } from './panels.svelte.js'
 import { SurfaceLayout, setSurfaceLayoutCtx } from './surfaceLayout.svelte.js'
 import type { ResponsiveCtx } from './responsive.svelte'
@@ -243,7 +233,12 @@ export class ResourceViewCtx {
   // Division context
   divisionCtx!: DivisionCtx
   // Surface-owned panel state and geometry
-  readonly panels = new PanelController()
+  readonly panels = new PanelController({
+    loadProfile: () => this.refreshUserProfile(false),
+    invalidateProfile: () => {
+      this.beginResourceRefresh(FirstClassResource.user)
+    },
+  })
   /**
    * Geometry for one route-owned application area (a "surface"): for example,
    * the public map experience owned by AppCtx, or /admin owned by AdminCtx.view.
@@ -589,6 +584,7 @@ export class ResourceViewCtx {
   })
 
   readonly draft = new FeatureDraft()
+  readonly interactions: SurfaceInteractions
 
   // ═══════════════════════
   // QUERY KEYS
@@ -772,7 +768,13 @@ export class ResourceViewCtx {
     this.syncAccount()
     this.initializeRemoteMap()
     this.initializeQueryMap()
-    // Note: keydown handlers are managed dynamically by the root layout
+    this.interactions = new SurfaceInteractions(
+      this.panels,
+      this.account,
+      () => this.isAdmin(),
+      () => Boolean(this.hub?.isCore),
+    )
+    // Note: keydown handlers are managed dynamically by the surface layout
   }
 
   private initializeRemoteMap = (): void => {
@@ -2398,7 +2400,7 @@ export class ResourceViewCtx {
       const isPrimaryPanelCollapsed =
         this.user.preferences?.admin?.isPrimaryPanelCollapsed ?? false
       if (!isPrimaryPanelCollapsed) {
-        this.openPanel(Panel.admin, false)
+        this.panels.openPanel(Panel.admin, false)
       }
     }
   }
@@ -3224,250 +3226,6 @@ export class ResourceViewCtx {
     return this.getFeaturesByIds(this.featuresVisited)
   }
 
-  // Panel methods
-  togglePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    const currentState = this.panels.isPanelOpen(panel)
-
-    // Close other panels on the same side first (without updating URL individually)
-    if (this.panels.isPanelOnLeft(panel)) {
-      const openLeftPanels = this.panels.getOpenLeftPanels()
-      openLeftPanels
-        .filter(openPanel => openPanel !== panel)
-        .forEach(openPanel => {
-          this.closePanel(openPanel, false)
-        })
-    } else if (this.panels.isPanelOnRight(panel)) {
-      const openRightPanels = this.panels.getOpenRightPanels()
-      openRightPanels
-        .filter(openPanel => openPanel !== panel)
-        .forEach(openPanel => {
-          this.closePanel(openPanel, false)
-        })
-    }
-
-    if (window.innerWidth < DUAL_PANEL_MIN_WIDTH) {
-      // Close all panels first, then toggle the target panel based on original state
-      this.closeAllPanels(false)
-      if (!currentState) {
-        // Panel was closed, so open it
-        this.openPanel(panel, false)
-        if (!isMobile()) {
-          this.focusPanel(this.panels.isPanelOnLeft(panel) ? 'left' : 'right')
-        }
-      }
-      // If panel was open, leave it closed (toggle behavior)
-    } else {
-      // Toggle the current panel
-      if (currentState) {
-        this.closePanel(panel, false)
-      } else {
-        this.openPanel(panel, false)
-        if (!isMobile()) {
-          this.focusPanel(this.panels.isPanelOnLeft(panel) ? 'left' : 'right')
-        }
-      }
-    }
-
-    // Update URL once at the end with the final panel state (only if updateUrl is true)
-    if (updateUrl && typeof window !== 'undefined') {
-      const panelState = Object.fromEntries(
-        Object.entries(this.panels.state).map(([key, value]) => [key, value.isOpen]),
-      )
-      updatePanelUrlParams(panelState, this)
-    }
-  }
-
-  focusPanel = (position: 'left' | 'right'): void => {
-    let panelElement = null
-    setTimeout(() => {
-      panelElement = document.getElementById(`${position}-panel`)
-      const inputElement = panelElement?.querySelector('input')
-      if (inputElement) {
-        inputElement.focus()
-      } else {
-        panelElement?.focus()
-      }
-    }, 250)
-  }
-
-  closeLeftPanel = (): void => {
-    this.panels.getOpenLeftPanels().forEach((openPanel: Panel) => {
-      this.closePanel(openPanel, false)
-    })
-  }
-
-  closeRightPanel = (): void => {
-    this.panels.getOpenRightPanels().forEach((openPanel: Panel) => {
-      this.closePanel(openPanel, false)
-    })
-  }
-
-  closeAllPanels = (updateUrl: boolean = true): void => {
-    Object.keys(this.panels.state).forEach(panel => {
-      this.closePanel(panel as unknown as Panel, false)
-    })
-    if (updateUrl && typeof window !== 'undefined') {
-      const panelState = Object.fromEntries(
-        Object.entries(this.panels.state).map(([key, value]) => [key, value.isOpen]),
-      )
-      updatePanelUrlParams(panelState, this)
-    }
-  }
-
-  openPanel = (panel: Panel, updateUrl: boolean = true): void => {
-    this.panels.setPanelOpen(panel, true)
-
-    // Contribution data is relation-heavy, so only load it when the profile panel needs it.
-    if (
-      panel === Panel.profile &&
-      this.panels.state.profile.ctx?.username &&
-      !this.panels.state.profile.ctx.userData
-    ) {
-      void this.refreshUserProfile(false).catch(error => {
-        console.error('[AppCtx] Profile panel hydration failed:', error)
-      })
-    }
-
-    // Handle stateful parameters for specific panels
-    if (updateUrl && typeof window !== 'undefined') {
-      const panelState = Object.fromEntries(
-        Object.entries(this.panels.state).map(([key, value]) => [key, value.isOpen]),
-      )
-      updatePanelUrlParams(panelState, this)
-    }
-  }
-
-  closePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    this.panels.setPanelOpen(panel, false)
-    if (updateUrl && typeof window !== 'undefined') {
-      const panelState = Object.fromEntries(
-        Object.entries(this.panels.state).map(([key, value]) => [key, value.isOpen]),
-      )
-      updatePanelUrlParams(panelState, this)
-    }
-  }
-
-  isPanelOpen = (panel: Panel): boolean => {
-    return this.panels.isPanelOpen(panel)
-  }
-
-  isPanelNarrow = (panel: Panel): boolean => {
-    return this.panels.isPanelNarrow(panel)
-  }
-
-  // Visual-only panel methods for auto-hide behavior
-  openPanelVisually = (panel: Panel): void => {
-    this.panels.setPanelOpenVisually(panel, true)
-  }
-
-  closePanelVisually = (panel: Panel): void => {
-    this.panels.setPanelOpenVisually(panel, false)
-  }
-
-  isPanelOpenVisually = (panel: Panel): boolean => {
-    return this.panels.isPanelOpenVisually(panel)
-  }
-
-  isPanelOpenOrVisual = (panel: Panel): boolean => {
-    return this.panels.isPanelOpenOrVisual(panel)
-  }
-
-  // Helper method to open profile panel with username context
-  setPanelCtx = (
-    panel: Panel,
-    key: 'username',
-    value: string | undefined | null,
-  ): void => {
-    // Set username context if provided
-    const context = this.panels.state[panel].ctx
-    if (value && context) {
-      if (context[key] !== value) {
-        // Do not display the previous profile while the new profile is loading.
-        context.userData = null
-        this.beginResourceRefresh(FirstClassResource.user)
-      }
-      context[key] = value
-    }
-  }
-
-  // KEYDOWN HANDLERS
-  registerKeydownHandlers = (): void => {
-    if (typeof document !== 'undefined')
-      document.addEventListener('keydown', this.handleKeydown)
-  }
-
-  unregisterKeydownHandlers = (): void => {
-    if (typeof document !== 'undefined')
-      document.removeEventListener('keydown', this.handleKeydown)
-  }
-
-  handleKeydown = (event: KeyboardEvent): void => {
-    // Skip global keyboard shortcuts when any input element is focused
-    const activeElement = document.activeElement
-    if (shouldSkipGlobalKeydown(activeElement)) {
-      return
-    }
-
-    if (
-      consumeEscapeForOpenPanels(
-        event,
-        Object.values(this.panels.state).some(panel => panel.isOpen),
-      )
-    ) {
-      this.closeAllPanels()
-      return
-    }
-
-    let keyMatched = false
-
-    if (event.key === '1') {
-      if (this.isAdmin()) {
-        this.togglePanel(Panel.admin)
-      } else {
-        if (this.hub?.isCore) {
-          this.togglePanel(Panel.prisms)
-        } else {
-          this.togglePanel(Panel.hub)
-        }
-      }
-      keyMatched = true
-    } else if (event.key === '2') {
-      if (this.isAdmin()) {
-        this.togglePanel(Panel.settings)
-      } else {
-        this.togglePanel(Panel.filters)
-      }
-      keyMatched = true
-    } else if (event.key === '3') {
-      this.togglePanel(Panel.stars)
-      keyMatched = true
-    } else if (event.key === '4') {
-      this.togglePanel(Panel.settings)
-      keyMatched = true
-    } else if (event.key === '5') {
-      const user = this.getUser()
-      if (isGuestUser(user)) {
-        requestProfileUpgrade(window.location.href)
-        event.preventDefault()
-        event.stopPropagation()
-        return
-      }
-      // If no username param is set, use the user's username
-      this.setPanelCtx(
-        Panel.profile,
-        'username',
-        getUrlParam('username') || this.getUser()?.username,
-      )
-      this.togglePanel(Panel.profile)
-      keyMatched = true
-    }
-
-    if (keyMatched) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-  }
-
   /** Notifies the owning surface after user-feature membership changes. @returns Nothing. */
   protected onUserFeaturesChanged(): void {}
 
@@ -3652,6 +3410,8 @@ export class ResourceViewCtx {
       this.cacheCtx.featureCollection = undefined
       this.cacheCtx.featureCollectionScope = undefined
     }
+    this.interactions.dispose()
+    this.panels.dispose()
     this.disposed = true
     this.featureRefreshSerial++
     this.invalidateResourceRefreshes()

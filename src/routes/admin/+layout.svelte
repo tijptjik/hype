@@ -197,9 +197,9 @@ afterNavigate(({ shallow }) => {
   icon={MonitorIcon}
   isReady={adminCtx.isInitialised && view.isInitialised}
   {isPrimaryPanelAutoHide}
-  isAdminPanelOpen={view.isPanelOpen(Panel.admin)}
-  onOpenVisual={() => view.openPanelVisually(Panel.admin)}
-  onCloseVisual={() => view.closePanelVisually(Panel.admin)}
+  isAdminPanelOpen={view.panels.isPanelOpen(Panel.admin)}
+  onOpenVisual={() => view.panels.openPanelVisually(Panel.admin)}
+  onCloseVisual={() => view.panels.closePanelVisually(Panel.admin)}
   {headerProps}
 >
   {#snippet sidebar()}

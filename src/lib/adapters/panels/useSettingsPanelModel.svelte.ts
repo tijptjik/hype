@@ -61,7 +61,10 @@ export function useSettingsPanelModel(
       }
     },
     get open() {
-      return app.isPanelOpen(Panel.settings) || app.isPanelOpenVisually(Panel.settings)
+      return (
+        app.panels.isPanelOpen(Panel.settings) ||
+        app.panels.isPanelOpenVisually(Panel.settings)
+      )
     },
     get isGuestAccount() {
       return guest
@@ -77,6 +80,6 @@ export function useSettingsPanelModel(
       return theme.mapSelected
     },
     onMapTheme: theme.selectMap,
-    onClose: () => app.closePanel(Panel.settings),
+    onClose: () => app.panels.closePanel(Panel.settings),
   }
 }
