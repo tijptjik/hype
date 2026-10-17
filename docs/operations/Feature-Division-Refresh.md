@@ -11,9 +11,8 @@ validates and normalizes that response at its API boundary.
 | --- | --- |
 | `divisionDefinition` | Stable SaanSeoi identity, imported release and source classification/names |
 | `divisionI18n` | Locale, display name and complete supplied named values, including variants and aliases |
-| `feature.divisionLeafId` | Unique deepest canonical non-landform division |
-| `feature.divisionLevel1Id` … `divisionLevel6Id` | Canonical projections for fast level-specific filters/counts; level 1 prefers administrative over locality |
-| `feature.landformLeafId` | Unique selected landform leaf, excluding `island_group` |
+| Feature named role IDs | Unique selected `countryId`, `areaId`, `districtId`, `townId`, `ruralAreaId`, `macrohoodId`, `neighbourhoodId`, `villageId`, `microhoodId`, `hamletId` and `islandId` |
+| `feature.divisionResolution` | Per-query status and every upstream branch path; null for pre-migration queries whose paths were not retained |
 | `featureDivisionMembership` | Canonical and non-canonical IDs, indexed by division for targeted changes and hierarchy filters |
 | `divisionRefresh`, `divisionRefreshChange`, `featureDivisionJob` | Checkpoint/lease, resumable change scans and retryable feature work |
 
@@ -25,30 +24,40 @@ for geometry eligibility and subsequent on-demand map highlighting. Facets carry
 only polygon availability, never the polygon payload.
 
 SaanSeoi supplies nullable display levels and separate administrative, locality,
-landform and full hierarchy paths. The six historical feature projections represent
-levels 1–6; level 0 remains in the membership index. Hype preserves simultaneous
-administrative and locality memberships; a level collision leaves that scalar null. An ambiguous
-resolution keeps memberships but selects none. Never choose a branch by array order.
+landform and full hierarchy paths. Migration 0088 replaces the fixed-level columns
+with named roles. Each role is populated only when its selected ID is unique;
+ambiguous responses retain candidates and paths without selecting them. `countryId`
+maps the upstream `country` class, not `sar`. SAR membership remains in the index,
+but SAR is excluded from the shared filter/Omnibar options.
+
+`islandId` accepts `major_island`, `minor_island` and `islet`, excluding island groups.
+An ancestor island is removed only when every full path of another selected island
+contains it, matching SaanSeoi's membership projection. Never choose a branch by order.
+The migration backfills roles from selected memberships and mirrored hierarchies,
+rebuilds the count tables, and invalidates count caches without re-geocoding features.
+Coordinate changes clear all roles and the query resolution atomically.
 
 The membership index is authoritative for arbitrary division queries. Use
 `filters.divisionIds` on the feature query API: it matches any supplied selected
 ID, including ancestors or landforms, and counts each feature once. Responses
-include the scalar projections, `division` with localized names and
-`divisionMemberships` with selected/candidate flags. Client create/update schemas
+include named role IDs, `divisionResolution` and `divisionMemberships` with
+selected/candidate flags. Localized labels belong to division facets/definitions;
+there is no arbitrary single-leaf `division` relation. Client create/update schemas
 exclude worker-owned division columns.
 
 ## One count system
 
 Migration 0083 removes `featureDivisionCountRollup`, membership JSON scope bins,
 and their count triggers. `featureCountEntry` and `featureCountRollup` instead
-store the ordinary scope/status fields plus the eight division projections. Empty
+store the ordinary scope/status fields plus the eleven named role projections
+introduced by migration 0088. Empty
 strings represent null dimensions inside compound count keys; feature columns
 remain nullable. One feature contributes exactly once to the canonical count
 rollup, even when it has several selected ancestors.
 
-Count by a specific projected level with `GROUP BY divisionLevelNId`, applying the
+Count by a specific role with `GROUP BY districtId` (for example), applying the
 same authorization predicates as feature reads. For unions of memberships or
-levels with multiple selections, use the membership index and distinct feature
+roles with multiple selections, use the membership index and distinct feature
 selection. The server's division-ID filter takes this latter path and uses the
 revision-checked detailed count cache.
 
@@ -58,6 +67,19 @@ revision. Saved-list count caches must match both this revision and the global
 `featureCountRevision`. Editing one user's list does not invalidate public counts
 or another user's list counts. Its missing user FK is deliberate: cascade deletion
 can still increment the final revision.
+
+## On-demand map highlighting
+
+`getDivisionGeometry` returns only one mirrored definition's validated membership
+polygons and imported release. `divisionGeometryDetail` uses the existing scoped
+`ResourceClient` and native query retention. Facets never contain polygon payloads.
+
+`DivisionCtx` keeps preview state surface-local. Filter and Omnibar pointer/focus
+callbacks preview an ID; selected filters and the active division collection retain
+the highlight. `DivisionHighlightLayer` owns active detail handles and releases them
+when IDs, access scope or surface lifetime change. `MapCanvas` owns the renderer;
+fill/outline layers are restored after style changes and removed on teardown.
+Admin and dashboard resource views do not construct a public map.
 
 ## Monthly refresh and geometry changes
 
@@ -188,3 +210,38 @@ Local verification and unresolved-feature details are retained in
 `.local/division-refresh/unresolved.json`. The unresolved features retain upstream
 candidate evidence instead of an invented selected division. These artifacts and
 backups are ignored by Git. Remote migrations and Worker deployment were not run.
+
+### Named roles and map overlay verification — 17 October 2026
+
+Migration 0088 was applied to a disposable SQLite copy of the explicitly identified
+local Hype database. Integrity checking passed, and feature rows, count entries and
+rollup totals each remained 1,828. Regression coverage verifies unique-role
+backfill parity with the refresh writer, conflicting districts, alternative island
+paths, coordinate invalidation, count updates/deletes and retained ambiguous paths.
+
+The populated copy ran on `127.0.0.1:4173` in Chromium. Browser checks verified:
+
+- The division filter is populated, includes neighbourhoods, and excludes SAR.
+- Both filter and Omnibar match `CW` and `Central`; the initial Omnibar division
+  preview matches the three highest eligible counts while skipping area, district
+  and major-island classes.
+- No geometry request occurs before preview/selection. The tested hover, focus,
+  filter selection and Omnibar collection reuse one geometry request. Polygon
+  fill/outline survives pointer leave for selected divisions and style replacement.
+- Light/dark screenshots show the selected division and polygon overlay. The external
+  basemap returned HTTP 401 at this review origin, so background-tile rendering was
+  not accepted as part of this check.
+- A temporary administrator was provisioned only in the disposable copy using a core
+  hub role. Client navigation to admin created a distinct division context with empty
+  selection/preview and no map canvas. No browser page errors occurred.
+
+Worker compilation, 135 focused tests across eleven files and the production build
+passed. Independent commit-checkout checks passed 74 role/refresh/query tests and
+seven highlight/shared-option tests. Repository-wide checking still reports 966
+errors and 21 warnings; no diagnostics refer to the new geometry/role modules.
+
+The shared local database still had an active October refresh and pending jobs
+when reviewed. It was not migrated by this work. Stop its refresh writer before
+applying 0088, then run the matching application and Worker code together: the
+migration removes fixed-level columns, and old/new writers cannot be mixed across
+that boundary. No production migration, backfill, deployment or schedule changed.

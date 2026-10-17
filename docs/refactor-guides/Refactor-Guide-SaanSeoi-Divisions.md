@@ -10,8 +10,10 @@ a new geographic ingestion system.
 
 Review and implementation date: 17 October 2026. The adapter, metadata enrichment,
 geometry retention, shared selector search and context identity have been updated.
-No database, upstream publication or deployment was changed. Named feature columns
-and on-demand map highlighting remain follow-up work; see the integration design below.
+The initial handoff did not change the database, upstream publication or deployment;
+the subsequent local refresh verification is recorded in the operations guide.
+Migration 0088 and on-demand map highlighting implement the integration design below;
+local migration/browser evidence is recorded in the operations guide.
 
 ## Working alongside the context refactor
 
@@ -54,10 +56,9 @@ Hype already has:
   This is separate from workers/maintenance-scheduler.
 - src/lib/db/schema/division.ts: divisionDefinition and divisionI18n mirrors.
 - src/lib/db/schema/featureDivision.ts: membership and refresh/job persistence.
-- Historical feature divisionLeafId, divisionLevel1Id through divisionLevel6Id and
-  landformLeafId projections still exist physically. They are not the hierarchy
-  contract: arbitrary membership queries use the membership index. Separate
-  administrative, locality, landform and full paths are retained in definition metadata.
+- Named administrative/locality/island feature roles and per-query divisionResolution
+  replace fixed-level projections in migration 0088. The membership index remains
+  authoritative for arbitrary filtering; definition metadata retains full source paths.
 - src/lib/api/services/featureQuery.types.ts: DivisionFacet and ID-based filters.
 - src/lib/db/services/featureCounts.ts: localized registry facets and counts.
 - scripts/backfill-feature-divisions.ts: explicit-database inspection/backfill.
@@ -113,20 +114,22 @@ as independent arrays of root-to-leaf ancestor paths. Preserve alternatives,
 `fullContainment` and the owning ID separately (paths exclude the owner). Numeric
 levels are nullable display metadata and cannot establish parentage or a deepest leaf.
 
-For the next schema migration, replace level-specific projections with SaanSeoi's
-named roles: `countryId`, `areaId`, `districtId`, `townId`, `ruralAreaId`,
-`macrohoodId`, `neighbourhoodId`, `microhoodId`, `villageId`, `hamletId` and `islandId`.
-Index roles used for filtering/matching. Populate a scalar only when the selected
-membership evidence yields a unique ID for that role. Define `islandId` using
-SaanSeoi's native island-role projection rather than selecting the first landform.
-Retain all alternative memberships in the indexed relation; never force ambiguous
-paths into scalar columns. The existing level columns remain compatibility output
-until schema, write triggers, count rollups and response projections migrate together.
+Migration 0088 replaces level-specific projections with SaanSeoi's named roles:
+`countryId`, `areaId`, `districtId`, `townId`, `ruralAreaId`, `macrohoodId`,
+`neighbourhoodId`, `microhoodId`, `villageId`, `hamletId` and `islandId`.
+Only unique selected role IDs become scalars. The island projection removes an
+ancestor only when every full path of another selected island contains it.
+All alternative memberships remain indexed; query status and branch paths are
+stored in `divisionResolution`. Existing query paths that were never persisted
+remain null rather than being fabricated during the metadata-only migration.
+Schema, refresh writes, coordinate invalidation, count rollups and response fields
+migrate together. `DivisionFacet` remains the counted localized option contract.
 
-Polygon storage is per division and release, not per feature. A future map geometry
-query should load only hovered/selected IDs through the ordinary scoped resource
-capability, validate the stored geometry, and render fill/outline layers. Do not add
-all polygons to every facet response or make dashboards bootstrap the public map.
+Polygon storage is per division and release, not per feature. The geometry remote
+query validates stored polygons and uses scoped resource detail handles on demand.
+`MapCanvas` renders fill/outline layers for hovered/focused options, selected filters
+and the active Omnibar division collection, with style-reload and teardown handling.
+Facets and dashboard initialization do not fetch the polygon catalogue.
 A metadata-only backfill can enrich referenced definitions without re-geocoding every
 feature; geometry availability and changed membership still require independent proof.
 
@@ -230,14 +233,18 @@ jobs and clear obsolete membership.
 
 ## Verification and acceptance
 
-Implementation verification on 17 October: Worker typecheck and production build pass;
-123 focused tests across nine files pass, including refresh, feature queries, shared
-search, surface boundaries and collection reactivity. The actual row component was
-checked in Chromium at 390px with all twelve class icons, working selected state,
-no horizontal overflow, and Breadline light/dark screenshots. This is component
-fixture evidence, not populated live selector or authenticated admin acceptance.
-Repository-wide type checking remains non-clean amid concurrent context work.
+Implementation verification on 17 October: Worker compilation, production build
+and 135 focused tests across eleven files pass. Migration 0088 preserves all 1,828
+feature contributions in a disposable populated database copy. Chromium verifies
+shared filter/Omnibar search, highest-three previews, lazy geometry loading,
+selected/hovered fill and outline, style replacement, light/dark presentation and
+public/admin division-state isolation. External basemap tiles returned HTTP 401
+at the review origin; this does not establish background-tile availability.
+Repository-wide checking remains non-clean (966 errors and 21 warnings).
 
+The shared database was not migrated while its October refresh remained active.
+Apply 0088 with the refresh writer stopped and restart the matching application
+and Worker together. See the operations guide for evidence and environment limits.
 
 Run the focused checks appropriate to each change:
 
