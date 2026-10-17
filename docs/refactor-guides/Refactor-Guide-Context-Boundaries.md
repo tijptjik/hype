@@ -226,3 +226,18 @@ missing generated route `$types` diagnostics in that checkout. The working-tree
 check reported 977 errors before correcting two optional-field assertions in the
 new tests. Neither check is clean; the successful production build is separate
 evidence from TypeScript diagnostics.
+
+A subsequent authenticated save check updated the Neon Signs project's English
+description in a disposable WAL-safe local D1 snapshot. A fresh authenticated
+browser session and a direct SQLite read both confirmed the saved value. The
+server was stopped and the snapshot removed afterward. This verifies the project
+profile save path in the working tree used for that check; it does not verify
+feature creation, every admin form, or production writes.
+
+The earlier tile authorization failure was reproduced with an explicit Origin
+header: `http://127.0.0.1:4174` returns HTTP 401, while
+`http://127.0.0.1:5174` and `http://hype.localhost` return HTTP 200 for
+`https://tiles.saanseoi.hk/hongkong-latest.json` without an API key. The tile
+service's development allowlist matches exact origins, including ports. Use an
+allowed origin for subsequent browser map checks; these HTTP checks alone do not
+establish full map-rendering acceptance.
