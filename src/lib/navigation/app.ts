@@ -17,6 +17,7 @@ import {
 } from '#lib/enums.js'
 // TYPES
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+import type { PanelController } from '#lib/context/panels.svelte.js'
 
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type { Code, Id, NavigableResource, Locale, LocaleKey } from '#lib/types.js'
@@ -246,20 +247,21 @@ export const getLastPanelParam = (
 }
 
 /**
- * Handle panel parameters from URL and update ResourceViewCtx accordingly
- * @param appCtx - Application context
+ * Apply panel parameters from the URL to the surface panel owner
+ * @param panels - Surface panel owner
  * @param searchParams - URL search params
+ * @returns Nothing.
  */
 export const handlePanelParams = (
-  appCtx: ResourceViewCtx,
+  panels: PanelController,
   searchParams: ReadonlyURLSearchParams,
-) => {
+): void => {
   if (isMobile()) {
     // On mobile, only one panel can be active - use the last panel parameter
     const lastPanel = getLastPanelParam(searchParams)
 
     if (lastPanel && isValidPanelType(lastPanel)) {
-      handleStatefulPanelParams(appCtx, lastPanel, searchParams, false)
+      handleStatefulPanelParams(panels, lastPanel, searchParams, false)
     }
   } else {
     // On desktop, both left and right panels can be active
@@ -269,11 +271,11 @@ export const handlePanelParams = (
 
     if (leftPanel && isValidPanelType(leftPanel)) {
       // Don't update URL when syncing FROM URL to prevent infinite loops
-      appCtx.openPanel(leftPanel, false)
+      panels.openPanel(leftPanel, false)
     }
 
     if (rightPanel && isValidPanelType(rightPanel)) {
-      handleStatefulPanelParams(appCtx, rightPanel, searchParams, false)
+      handleStatefulPanelParams(panels, rightPanel, searchParams, false)
     }
   }
 }
@@ -289,13 +291,14 @@ const isValidPanelType = (panel: string): panel is Panel => {
 
 /**
  * Update URL to reflect current panel state
- * @param panelState - Current panel state from ResourceViewCtx (Record of panel name to boolean)
- * @param appCtx - Optional ResourceViewCtx to preserve stateful parameters
+ * @param panelState - Current panel visibility (Record of panel name to boolean)
+ * @param panels - Optional panel owner to preserve stateful parameters
+ * @returns Nothing.
  */
 export const updatePanelUrlParams = (
   panelState: Record<string, boolean>,
-  appCtx?: ResourceViewCtx,
-) => {
+  panels?: Pick<PanelController, 'state'>,
+): void => {
   if (typeof window === 'undefined') return
 
   const url = new URL(window.location.href)
@@ -314,7 +317,7 @@ export const updatePanelUrlParams = (
 
   // Build expected username based on profile panel state
   const expectedUsername = panelState.profile
-    ? currentUsername || appCtx?.panels.state?.profile?.ctx?.username || null
+    ? currentUsername || panels?.state?.profile?.ctx?.username || null
     : null
 
   // Compare current vs expected
@@ -332,7 +335,7 @@ export const updatePanelUrlParams = (
   // Preserve username parameter ONLY if profile panel is actually open
   if (panelState.profile) {
     const currentUsername =
-      searchParams.get('username') || appCtx?.panels.state?.profile?.ctx?.username
+      searchParams.get('username') || panels?.state?.profile?.ctx?.username
     if (currentUsername) {
       statefulParams.username = currentUsername
     }
@@ -365,25 +368,25 @@ export const updatePanelUrlParams = (
 
 /**
  * Handle stateful panel parameters (like profile with username)
- * @param appCtx - Application context
+ * @param panels - Surface panel owner
  * @param panelType - Panel type to handle
  * @param searchParams - URL search parameters
  * @param updateUrl - Whether to update URL
  */
 const handleStatefulPanelParams = (
-  appCtx: ResourceViewCtx,
+  panels: PanelController,
   panelType: string,
   searchParams: ReadonlyURLSearchParams,
   updateUrl: boolean = false,
 ): void => {
   if (panelType === 'profile') {
     const username = searchParams.get('username')
-    appCtx.setPanelCtx(Panel.profile, 'username', username)
+    panels.setPanelCtx(Panel.profile, 'username', username)
   }
 
   // Don't update URL when syncing FROM URL to prevent infinite loops
   if (isValidPanelType(panelType)) {
-    appCtx.openPanel(panelType, updateUrl)
+    panels.openPanel(panelType, updateUrl)
   }
 }
 

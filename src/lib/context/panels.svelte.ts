@@ -1,5 +1,7 @@
+// NAVIGATION
+import { updatePanelUrlParams } from '#lib/navigation/index.js'
 // LIB
-import { DUAL_PANEL_MIN_WIDTH } from '#lib/constants.js'
+import { DUAL_PANEL_MIN_WIDTH, isMobile } from '#lib/constants.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
 // TYPES
@@ -25,6 +27,11 @@ type PanelState = {
       observePrisms?: boolean
     }
   }
+}
+
+type PanelEffects = {
+  loadProfile: () => Promise<void>
+  invalidateProfile: () => void
 }
 
 /** Canonical panel visibility and arbitration for one route surface. */
@@ -76,6 +83,22 @@ export class PanelController {
       isOpenVisually: false,
     },
   })
+  private focusTimeout: ReturnType<typeof setTimeout> | null = null
+
+  /** Creates panel commands with explicit profile effects. @param effects Profile loading and invalidation capabilities. */
+  constructor(
+    private readonly effects: PanelEffects = {
+      loadProfile: async () => {},
+      invalidateProfile: () => {},
+    },
+  ) {}
+
+  /** Cancels deferred focus work. @returns Nothing. */
+  dispose(): void {
+    if (this.focusTimeout !== null) clearTimeout(this.focusTimeout)
+    this.focusTimeout = null
+  }
+
   private lastOpenedPanel: Panel | null = null
 
   /** Reads logical visibility. @param panel Target panel. @returns Whether it is open. */
@@ -161,6 +184,156 @@ export class PanelController {
   setPanelOpenVisually(panel: Panel, isOpen: boolean): void {
     if (this.state[panel].isOpenVisually !== isOpen) {
       this.state[panel].isOpenVisually = isOpen
+    }
+  }
+
+  /** Synchronizes logical visibility and profile parameters once per command. @returns Nothing. */
+  private syncUrl(): void {
+    if (typeof window === 'undefined') return
+    const panelState = Object.fromEntries(
+      Object.entries(this.state).map(([key, value]) => [key, value.isOpen]),
+    )
+    updatePanelUrlParams(panelState, this)
+  }
+
+  // Panel methods
+  /** Toggles visibility and arbitrates panels on either side. @param panel Target panel. @param updateUrl Whether to synchronize URL state. @returns Nothing. */
+  togglePanel = (panel: Panel, updateUrl: boolean = true): void => {
+    const currentState = this.isPanelOpen(panel)
+
+    // Close other panels on the same side first (without updating URL individually)
+    if (this.isPanelOnLeft(panel)) {
+      const openLeftPanels = this.getOpenLeftPanels()
+      openLeftPanels
+        .filter(openPanel => openPanel !== panel)
+        .forEach(openPanel => {
+          this.closePanel(openPanel, false)
+        })
+    } else if (this.isPanelOnRight(panel)) {
+      const openRightPanels = this.getOpenRightPanels()
+      openRightPanels
+        .filter(openPanel => openPanel !== panel)
+        .forEach(openPanel => {
+          this.closePanel(openPanel, false)
+        })
+    }
+
+    if (window.innerWidth < DUAL_PANEL_MIN_WIDTH) {
+      // Close all panels first, then toggle the target panel based on original state
+      this.closeAllPanels(false)
+      if (!currentState) {
+        // Panel was closed, so open it
+        this.openPanel(panel, false)
+        if (!isMobile()) {
+          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right')
+        }
+      }
+      // If panel was open, leave it closed (toggle behavior)
+    } else {
+      // Toggle the current panel
+      if (currentState) {
+        this.closePanel(panel, false)
+      } else {
+        this.openPanel(panel, false)
+        if (!isMobile()) {
+          this.focusPanel(this.isPanelOnLeft(panel) ? 'left' : 'right')
+        }
+      }
+    }
+
+    // Update URL once at the end with the final panel state (only if updateUrl is true)
+    if (updateUrl) this.syncUrl()
+  }
+
+  /** Schedules focus after panel layout has settled. @param position Side whose first input should receive focus. @returns Nothing. */
+  focusPanel = (position: 'left' | 'right'): void => {
+    if (this.focusTimeout !== null) clearTimeout(this.focusTimeout)
+    this.focusTimeout = setTimeout(() => {
+      this.focusTimeout = null
+      const panelElement = document.getElementById(`${position}-panel`)
+      const inputElement = panelElement?.querySelector('input')
+      if (inputElement) {
+        inputElement.focus()
+      } else {
+        panelElement?.focus()
+      }
+    }, 250)
+  }
+
+  /** Closes the left side without changing the URL. @returns Nothing. */
+  closeLeftPanel = (): void => {
+    this.getOpenLeftPanels().forEach((openPanel: Panel) => {
+      this.closePanel(openPanel, false)
+    })
+  }
+
+  /** Closes the right side without changing the URL. @returns Nothing. */
+  closeRightPanel = (): void => {
+    this.getOpenRightPanels().forEach((openPanel: Panel) => {
+      this.closePanel(openPanel, false)
+    })
+  }
+
+  /** Closes every panel and optionally synchronizes the URL. @param updateUrl Whether to synchronize URL state. @returns Nothing. */
+  closeAllPanels = (updateUrl: boolean = true): void => {
+    Object.keys(this.state).forEach(panel => {
+      this.closePanel(panel as unknown as Panel, false)
+    })
+    if (updateUrl) this.syncUrl()
+  }
+
+  /** Opens a panel and lazily hydrates profile data. @param panel Target panel. @param updateUrl Whether to synchronize URL state. @returns Nothing. */
+  openPanel = (panel: Panel, updateUrl: boolean = true): void => {
+    this.setPanelOpen(panel, true)
+
+    // Contribution data is relation-heavy, so only load it when the profile panel needs it.
+    if (
+      panel === Panel.profile &&
+      this.state.profile.ctx?.username &&
+      !this.state.profile.ctx.userData
+    ) {
+      void this.effects.loadProfile().catch(error => {
+        console.error('[PanelController] Profile panel hydration failed:', error)
+      })
+    }
+
+    // Handle stateful parameters for specific panels
+    if (updateUrl) this.syncUrl()
+  }
+
+  /** Closes a panel and optionally synchronizes the URL. @param panel Target panel. @param updateUrl Whether to synchronize URL state. @returns Nothing. */
+  closePanel = (panel: Panel, updateUrl: boolean = true): void => {
+    this.setPanelOpen(panel, false)
+    if (updateUrl) this.syncUrl()
+  }
+
+  // Visual-only panel methods for auto-hide behavior
+  /** Shows a panel transiently for auto-hide behavior. @param panel Target panel. @returns Nothing. */
+  openPanelVisually = (panel: Panel): void => {
+    this.setPanelOpenVisually(panel, true)
+  }
+
+  /** Clears transient auto-hide visibility. @param panel Target panel. @returns Nothing. */
+  closePanelVisually = (panel: Panel): void => {
+    this.setPanelOpenVisually(panel, false)
+  }
+
+  // Helper method to open profile panel with username context
+  /** Updates profile context and invalidates previous hydration. @param panel Target panel. @param key Context field. @param value Requested username. @returns Nothing. */
+  setPanelCtx = (
+    panel: Panel,
+    key: 'username',
+    value: string | undefined | null,
+  ): void => {
+    // Set username context if provided
+    const context = this.state[panel].ctx
+    if (value && context) {
+      if (context[key] !== value) {
+        // Do not display the previous profile while the new profile is loading.
+        context.userData = null
+        this.effects.invalidateProfile()
+      }
+      context[key] = value
     }
   }
 }
