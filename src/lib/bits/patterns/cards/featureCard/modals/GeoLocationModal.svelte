@@ -4,7 +4,7 @@ import { getLocaleKey, m, toFormLocaleRecord } from '#lib/i18n.js'
 // COMPONENTS
 import { Icon } from '#lib/bits/index.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // SERVICES

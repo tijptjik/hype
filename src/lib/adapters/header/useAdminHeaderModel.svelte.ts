@@ -28,7 +28,7 @@ import X from 'virtual:icons/proicons/cancel'
 // ENUMS
 import { FirstClassResource, Panel, ResourcePath } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { AdminCtx } from '#lib/context/admin.svelte.js'
 import type {
   HeaderActionConfig,
@@ -90,7 +90,7 @@ import type { HeaderTitleMenuItemConfig } from '#lib/bits/patterns/layout/header
  * derived visibility rules, and action handlers in one place.
  */
 export function useAdminHeaderModel(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   adminCtx: AdminCtx,
 ): { getHeaderProps: () => HeaderProps } {
   // ---

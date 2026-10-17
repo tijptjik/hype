@@ -5,14 +5,14 @@ import { getI18n } from '#lib/i18n.js'
 // API
 import { getUserLayers, setUserLayerDefaults } from '#lib/api/user.remote.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 
 /**
  * Owns default layer selection and optimistic mutation reconciliation.
  * @param appCtx - Application context owned by the route.
  * @returns Controlled section state and callbacks.
  */
-export function useDefaultMapSettingsModel(appCtx: AppCtx) {
+export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
   let optimisticUserLayerIds = $state<Set<string> | null>(null)
   let isSavingLayers = $state(false)
 
@@ -115,7 +115,7 @@ export function useDefaultMapSettingsModel(appCtx: AppCtx) {
       return isSavingLayers
     },
     toggleUserLayer,
-    getHierarchy: (layer: Parameters<AppCtx['getHierarchySync']>[0]) =>
+    getHierarchy: (layer: Parameters<ResourceViewCtx['getHierarchySync']>[0]) =>
       appCtx.getHierarchySync(layer),
     getProjectName: (project: Parameters<AppCtx['getContextualProjectName']>[0]) =>
       appCtx.getContextualProjectName(project, false),

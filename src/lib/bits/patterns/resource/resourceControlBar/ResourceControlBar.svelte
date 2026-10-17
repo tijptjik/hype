@@ -77,9 +77,9 @@ let singleSectionConfig = $derived(
 )
 let isSuperAdmin = $derived(
   Boolean(
-    adminCtx.appCtx.user &&
-      'superAdmin' in adminCtx.appCtx.user &&
-      adminCtx.appCtx.user.superAdmin,
+    adminCtx.view.user &&
+      'superAdmin' in adminCtx.view.user &&
+      adminCtx.view.user.superAdmin,
   ),
 )
 let activeSectionConfig = $derived(

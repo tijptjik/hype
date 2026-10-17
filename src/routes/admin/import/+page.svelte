@@ -1,7 +1,7 @@
 <script lang="ts">
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 import { getImportCtx, setImportCtx } from '#lib/context/import.svelte.js'
 // BITS COMPONENTS
@@ -24,7 +24,7 @@ import type {
 setImportCtx()
 
 const adminCtx = getAdminCtx()
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const headerCtrl = getHeaderCtrl()
 const importCtx = getImportCtx()
 

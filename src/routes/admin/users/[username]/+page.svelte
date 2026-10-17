@@ -31,7 +31,7 @@ let profile = $state<ProfileData | null>(null)
 let loading = $state(true)
 let failed = $state(false)
 let reload = $state(0)
-const contributions = createUserContributionsModel(adminCtx.appCtx, {
+const contributions = createUserContributionsModel(adminCtx.view, {
   onContributedFeature: featureId =>
     goto(`/admin/features/${encodeURIComponent(featureId)}`),
   onContributedImage: (featureId, _projectId, imageId) =>

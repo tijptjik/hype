@@ -41,14 +41,14 @@ const notificationCount = $derived(adminCtx.filteredTasks.length)
 const featureCount = $derived(adminCtx.filteredFeatures.length)
 
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {
-  const actor = adminCtx.appCtx.user as SessionUser | null
+  const actor = adminCtx.view.user as SessionUser | null
   const directoryAllowed =
     actor &&
     canBrowseUsers({
       isAnonymous: actor.isAnonymous,
       superAdmin: actor.superAdmin,
       userRoles: actor.roles ?? [],
-      hubId: adminCtx.appCtx.hub?.id,
+      hubId: adminCtx.view.hub?.id,
     })
   if (!actor || (!hasControlPanelAccess(actor) && !directoryAllowed)) return []
 
@@ -73,7 +73,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     items.push({ href: '/admin/users', label: 'Users', icon: UsersIcon })
   }
 
-  if (canViewAnalytics(adminCtx.appCtx.user as SessionUser)) {
+  if (canViewAnalytics(adminCtx.view.user as SessionUser)) {
     items.push({
       href: `${ADMIN_PATH}/analytics`,
       label: 'Analytics',
@@ -81,7 +81,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     })
   }
 
-  if (adminCtx.appCtx.isSuperAdmin()) {
+  if (adminCtx.view.isSuperAdmin()) {
     items.push({
       href: `${ADMIN_PATH}/hubs`,
       label: 'Hubs',
@@ -90,7 +90,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     })
   }
 
-  if (adminCtx.appCtx.isSuperAdmin()) {
+  if (adminCtx.view.isSuperAdmin()) {
     items.push({
       href: `${ADMIN_PATH}/import`,
       label: 'Uploads',

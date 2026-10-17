@@ -1,7 +1,7 @@
 <script lang="ts">
 // CONTEXT
 import { getCardCtx } from '#lib/context/card.svelte.js'
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // AUTH
 import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // ENUMS
@@ -12,7 +12,7 @@ import { m } from '#lib/i18n.js'
 import CameraIcon from 'virtual:icons/proicons/camera'
 
 const cardCtx = getCardCtx()
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 function handleAddPhoto(): void {
   const user = appCtx.getUser()

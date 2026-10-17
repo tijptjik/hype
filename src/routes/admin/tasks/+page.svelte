@@ -115,7 +115,7 @@ let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
     ),
   )
     .map(([projectId, projectTasks]) => {
-      const project = adminCtx.appCtx.getResourceByIdSync(
+      const project = adminCtx.view.getResourceByIdSync(
         FirstClassResource.project,
         projectId,
       ) as Project

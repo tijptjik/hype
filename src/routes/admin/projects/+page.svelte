@@ -197,8 +197,8 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.project)
 
-const currentUser = $derived(adminCtx.appCtx.getUser())
-const currentHub = $derived(adminCtx.appCtx.hub)
+const currentUser = $derived(adminCtx.view.getUser())
+const currentHub = $derived(adminCtx.view.hub)
 const currentActor = $derived(toProjectAuthActor(currentUser))
 
 const canCreateProject = $derived.by(() =>
@@ -230,9 +230,9 @@ $effect(() => {
 
 // STATE
 const resourceList = usePanelResources(
-  adminCtx.appCtx,
+  adminCtx.view,
   'project',
-  () => adminCtx.appCtx.state.filters.project.text ?? '',
+  () => adminCtx.view.state.filters.project.text ?? '',
   'index',
 )
 let entities: Project[] = $derived(

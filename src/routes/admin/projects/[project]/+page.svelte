@@ -243,7 +243,7 @@ const activeFacet = $derived(
 )
 const parentOrganisationId = $derived(page.url.searchParams.get('parentId') ?? '')
 const cachedProjectForRef = $derived(
-  adminCtx.appCtx.getResourceByRefSync(FirstClassResource.project, projectRef) as
+  adminCtx.view.getResourceByRefSync(FirstClassResource.project, projectRef) as
     | ProjectGetResponse['data']
     | undefined,
 )
@@ -399,7 +399,7 @@ const optimisticProjectData = $derived.by(() =>
 const optimisticProjectHierarchy = $derived.by(() => {
   const projectData = optimisticProjectData
   if (!projectData) return null
-  return adminCtx.appCtx.getHierarchySync(projectData)
+  return adminCtx.view.getHierarchySync(projectData)
 })
 const effectiveProjectResourceHubId = $derived.by(() => {
   const liveHubId = hierarchy?.organisation?.hubId
@@ -581,14 +581,14 @@ const configuredProjectForm = configureForm(() => ({
         }),
         extraQueries: [
           getLayers({
-            conditions: adminCtx.appCtx.isSuperAdmin()
+            conditions: adminCtx.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },
             prisms: adminCtx.appCtx.state.prisms,
             meta: { isAdminRequest: true, profile: 'card' },
           }),
           getFeatures({
-            conditions: adminCtx.appCtx.isSuperAdmin()
+            conditions: adminCtx.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },
             prisms: adminCtx.appCtx.state.prisms,
@@ -655,7 +655,7 @@ const projectLayersInSection = $derived.by(() => {
 })
 const currentProjectShortName = $derived(
   activeProjectData
-    ? getI18n(activeProjectData, 'nameShort', adminCtx.appCtx.getUserPreferences())
+    ? getI18n(activeProjectData, 'nameShort', adminCtx.view.getUserPreferences())
     : '',
 )
 
@@ -1049,7 +1049,7 @@ function resolveProjectPropertyTitleHref(property: Property): string | null {
 
   if (property.scope === 'organisation' && property.organisationId) {
     const organisationCode =
-      adminCtx.appCtx.cache.organisation.get(property.organisationId)?.code ??
+      adminCtx.view.cache.organisation.get(property.organisationId)?.code ??
       property.organisationId
     return `/admin/organisations/${organisationCode}#fields`
   }
@@ -1060,7 +1060,7 @@ function resolveProjectPropertyTitleHref(property: Property): string | null {
     ).hub?.code
     const hubCode = property.hubId
       ? (hubCodeFromProperty ??
-        adminCtx.appCtx.cache.hub.get(property.hubId)?.code ??
+        adminCtx.view.cache.hub.get(property.hubId)?.code ??
         'core')
       : 'core'
     return `/admin/hubs/${hubCode}#fields`
@@ -1096,7 +1096,7 @@ function resolveProjectPropertySourceTag(property: Property): {
 
   if (property.scope === 'hub') {
     if (property.hubId) {
-      const hubCode = adminCtx.appCtx.cache.hub.get(property.hubId)?.code ?? null
+      const hubCode = adminCtx.view.cache.hub.get(property.hubId)?.code ?? null
       if (hubCode && hubCode !== 'core')
         return {
           label: m.hub__title().replace(/s$/iu, '').toLowerCase(),
@@ -1642,8 +1642,8 @@ const imageProviderModel = useImageProviderModel(
 
 // § Auth
 
-const currentUser = $derived(adminCtx.appCtx.getUser())
-const currentHub = $derived(adminCtx.appCtx.hub)
+const currentUser = $derived(adminCtx.view.getUser())
+const currentHub = $derived(adminCtx.view.hub)
 const authActor = $derived.by(() => toProjectAuthActor(currentUser))
 const createContextHubId = $derived.by(() =>
   currentHub?.isCore ? null : (currentHub?.id ?? null),
@@ -2019,7 +2019,7 @@ async function onSearchParentOrganisations(
   const profileMeta = { isAdminRequest: true, profile: 'admin' as const }
   const baseParams = {
     q: query,
-    prisms: adminCtx.appCtx.state.prisms,
+    prisms: adminCtx.view.state.prisms,
     meta: profileMeta,
   }
 
@@ -2106,7 +2106,7 @@ async function handleProjectStateToggle({
   const nextState = !projectData[field]
   setBusy(true)
 
-  const mutation = adminCtx.appCtx.cacheCtx.beginMutation('project', {
+  const mutation = adminCtx.view.cacheCtx.beginMutation('project', {
     meta: { id: projectData.id },
     data: { [field]: nextState },
   })
@@ -2131,7 +2131,7 @@ async function handleProjectStateToggle({
     mutation.settle(true)
 
     commitSettledProjectState(await refreshProject())
-    await adminCtx.appCtx.cacheCtx.reconcile('project')
+    await adminCtx.view.cacheCtx.reconcile('project')
     toast.success(
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(project, 'nameShort')}`,
     )
@@ -2403,7 +2403,7 @@ $effect(() => {
   }
 
   let cancelled = false
-  void adminCtx.appCtx.getHierarchy(currentProject).then(result => {
+  void adminCtx.view.getHierarchy(currentProject).then(result => {
     if (cancelled) return
     hierarchy = result
   })
@@ -2772,7 +2772,7 @@ $effect(() => {
             layerName: getI18n(
               layer,
               'name',
-              adminCtx.appCtx.getUserPreferences(),
+              adminCtx.view.getUserPreferences(),
               layer.id,
               true,
             ),

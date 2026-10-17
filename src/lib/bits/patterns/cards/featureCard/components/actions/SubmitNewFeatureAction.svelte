@@ -4,7 +4,7 @@ import { toast } from 'svelte-sonner'
 // I18N
 import { getLocale, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 import { getImageCtx } from '#lib/context/image.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
@@ -18,7 +18,7 @@ import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
 // LOCAL
 import FeatureCardSubmitButton from './FeatureCardSubmitButton.svelte'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 const omniCtx = getOmniCtx()
 const imageCtx = getImageCtx()

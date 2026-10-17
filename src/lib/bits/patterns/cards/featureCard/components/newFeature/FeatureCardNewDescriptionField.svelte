@@ -4,12 +4,12 @@ import { Icon } from '#lib/bits/index.js'
 // I18N
 import { getLocale, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // ICONS
 import Check from 'virtual:icons/proicons/checkmark'
 import PencilSquare from 'virtual:icons/proicons/compose'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let isEditing = $state(false)
 let draftDescription = $state('')

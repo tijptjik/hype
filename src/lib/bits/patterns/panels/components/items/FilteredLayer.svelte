@@ -7,7 +7,7 @@ import { Icon } from '#lib/bits/index.js'
 // I18N
 import { getI18n, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // COMPONENTS
 import ResourceHierarchyPath from '#lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'
 // TYPES
@@ -17,7 +17,7 @@ import type { Project } from '#lib/db/zod/schema/project.types.js'
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 // CONTEXT
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 interface FilteredLayerProps {
   layer: Layer

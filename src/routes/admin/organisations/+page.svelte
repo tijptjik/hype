@@ -154,8 +154,8 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, RESOURCE)
 
-const currentUser = $derived(adminCtx.appCtx.getUser())
-const currentHub = $derived(adminCtx.appCtx.hub)
+const currentUser = $derived(adminCtx.view.getUser())
+const currentHub = $derived(adminCtx.view.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
 
 const canCreateOrganisation = $derived.by(() => {
@@ -192,9 +192,9 @@ $effect(() => {
 })
 // STATE
 const resourceList = usePanelResources(
-  adminCtx.appCtx,
+  adminCtx.view,
   'organisation',
-  () => adminCtx.appCtx.state.filters.organisation.text ?? '',
+  () => adminCtx.view.state.filters.organisation.text ?? '',
   'index',
 )
 let entities: Organisation[] = $derived(

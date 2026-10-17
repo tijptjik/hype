@@ -6,7 +6,7 @@ import { Popover } from 'bits-ui'
 import { getImageSrc } from '#lib/client/services/image.js'
 import { m } from '#lib/i18n.js'
 import { getUserForAttribution } from '#lib/api/user.remote.js'
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getImageCtx } from '#lib/context/image.svelte.js'
 import FeatureCardViewerAttributionAvatar from './FeatureCardViewerAttributionAvatar.svelte'
 import InfoIcon from 'virtual:icons/proicons/info'
@@ -17,7 +17,7 @@ import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type { UserHydrationResult } from '#lib/db/zod/schema/user.types.js'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const imageCtx = getImageCtx()
 const imageModel = useImageEditorGalleryModel(imageCtx)
 

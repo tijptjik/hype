@@ -16,7 +16,7 @@ import {
   Panel,
 } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type { Code, Id, NavigableResource, Locale, LocaleKey } from '#lib/types.js'
@@ -246,12 +246,12 @@ export const getLastPanelParam = (
 }
 
 /**
- * Handle panel parameters from URL and update AppCtx accordingly
+ * Handle panel parameters from URL and update ResourceViewCtx accordingly
  * @param appCtx - Application context
  * @param searchParams - URL search params
  */
 export const handlePanelParams = (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   searchParams: ReadonlyURLSearchParams,
 ) => {
   if (isMobile()) {
@@ -289,12 +289,12 @@ const isValidPanelType = (panel: string): panel is Panel => {
 
 /**
  * Update URL to reflect current panel state
- * @param panelState - Current panel state from AppCtx (Record of panel name to boolean)
- * @param appCtx - Optional AppCtx to preserve stateful parameters
+ * @param panelState - Current panel state from ResourceViewCtx (Record of panel name to boolean)
+ * @param appCtx - Optional ResourceViewCtx to preserve stateful parameters
  */
 export const updatePanelUrlParams = (
   panelState: Record<string, boolean>,
-  appCtx?: AppCtx,
+  appCtx?: ResourceViewCtx,
 ) => {
   if (typeof window === 'undefined') return
 
@@ -371,7 +371,7 @@ export const updatePanelUrlParams = (
  * @param updateUrl - Whether to update URL
  */
 const handleStatefulPanelParams = (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   panelType: string,
   searchParams: ReadonlyURLSearchParams,
   updateUrl: boolean = false,
@@ -498,7 +498,7 @@ export const removeParamFromUrl = (
  * Navigate to a contributed feature with collection context
  */
 export const navigateToContributedFeature = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   featureId: string,
   projectId: Id,
@@ -537,7 +537,7 @@ export const navigateToContributedFeature = async (
  * Navigate to a contributed image with collection context
  */
 export const navigateToContributedImage = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   featureId: string,
   projectId: Id,
@@ -592,7 +592,7 @@ export const navigateToContributedImage = async (
  * Navigate to a starred feature with collection context
  */
 export const navigateToStarred = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   featureId: string,
   wishlistedFeatures: UserFeatureWithHierarchy[],
@@ -626,7 +626,7 @@ export const navigateToStarred = async (
  * Navigate to a visited feature with collection context
  */
 export const navigateToVisited = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   featureId: string,
   visitedFeatures: UserFeatureWithHierarchy[],
@@ -657,7 +657,7 @@ export const navigateToVisited = async (
 }
 
 export const getFeaturesFromImages = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   images: Array<Pick<Image, 'featureId'>>,
 ): Promise<(FeatureFromCollection | Feature)[]> => {
   const featureIds = [
@@ -681,7 +681,7 @@ export const getFeaturesFromImages = async (
  * @param features - Features to extract layer IDs from
  */
 const activateLayersForFeatures = (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[],
 ): void => {
   const layerIds = Array.from(
@@ -785,7 +785,7 @@ const handleUrlParamChange = (
  */
 const initializeCollectionNavigation = (
   omniCtx: OmniCtx,
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[],
 ): void => {
   omniCtx.initSelection(false)

@@ -7,7 +7,7 @@
 // I18N
 import { getI18n, m } from '#lib/i18n.js'
 // CONTEXT
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 // BITS
 import {
   HubPanelSubscription,
@@ -37,7 +37,7 @@ let {
   termsOfServiceDialogProps,
 }: {
   shell: ReturnType<typeof usePanelShellModel>
-  preferences: ReturnType<AppCtx['getUserPreferences']>
+  preferences: ReturnType<ResourceViewCtx['getUserPreferences']>
   hub: HubOptsExtended
   subscriptionProps?: HubPanelSubscriptionProps
   showSubscription?: boolean

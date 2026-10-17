@@ -17,7 +17,7 @@ import * as FeatureCardNewPrimitive from './components/newFeature'
 // PROVIDERS
 import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx, setCardCtx } from '#lib/context/card.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
 import { getResponsiveCtx, setResponsiveCtx } from '#lib/context/responsive.svelte.js'
@@ -34,7 +34,7 @@ import type { Project, ProjectDB } from '#lib/db/zod/schema/project.types.js'
 import { getFeatureCardLayout } from './featureCard.layout'
 import { getFeatureCardResponsiveWidth } from './featureCard.utils'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const omniCtx = getOmniCtx()
 const cardCtx = (() => {
   try {

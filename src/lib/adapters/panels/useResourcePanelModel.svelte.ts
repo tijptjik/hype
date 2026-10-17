@@ -19,7 +19,7 @@ import {
 // ENUMS
 import { FirstClassResource, OmniMode, Panel, ResourcePath } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { AdminCtx } from '#lib/context/admin.svelte.js'
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type {
@@ -40,7 +40,7 @@ import type { PanelResourceType } from '#lib/api/services/resourcePage.types.js'
  * @remarks Native queries stay in this adapter so panel and index mutations share cache handles.
  */
 export function useResourcePanelModel(
-  app: AppCtx,
+  app: ResourceViewCtx,
   mode: 'admin' | 'prisms',
   admin?: AdminCtx,
   omni?: OmniCtx,
@@ -128,7 +128,7 @@ export function useResourcePanelModel(
         const record = resource as unknown as Resource
         const name = getI18n(record, 'name', app.getUserPreferences())
         const hierarchy = app.getHierarchySync(
-          record as Parameters<AppCtx['getHierarchySync']>[0],
+          record as Parameters<ResourceViewCtx['getHierarchySync']>[0],
         )
         const breadcrumbs = [
           type !== 'organisation' ? hierarchy.organisation : undefined,

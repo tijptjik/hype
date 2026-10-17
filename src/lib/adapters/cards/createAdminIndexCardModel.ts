@@ -57,7 +57,7 @@ function getHubMetricBreadcrumbs(
   const organisations =
     hubId == null
       ? []
-      : adminCtx.appCtx.state.resources.organisation.filter(
+      : adminCtx.view.state.resources.organisation.filter(
           organisation => organisation.hubId === hubId,
         )
   const organisationIds = new Set(
@@ -66,11 +66,11 @@ function getHubMetricBreadcrumbs(
       .filter((id): id is string => typeof id === 'string' && id.length > 0),
   )
   const projectIds = new Set(
-    adminCtx.appCtx.state.resources.project
+    adminCtx.view.state.resources.project
       .filter(project => organisationIds.has(project.organisationId))
       .map(project => project.id),
   )
-  const layerCount = adminCtx.appCtx.state.resources.layer.filter(layer =>
+  const layerCount = adminCtx.view.state.resources.layer.filter(layer =>
     organisationIds.has(layer.organisationId),
   ).length
 
@@ -205,7 +205,7 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
     onImageClick,
   } = params
   const localeKey = getLocaleKey()
-  const appCtx = adminCtx.appCtx
+  const appCtx = adminCtx.view
   const preferences = appCtx.getUserPreferences()
 
   const previewImageSrc = getPreviewImageSrc(resourceType, entity)

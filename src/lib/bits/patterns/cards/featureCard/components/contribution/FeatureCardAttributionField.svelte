@@ -6,13 +6,13 @@ import { updateUserProfile } from '#lib/api/user.remote.js'
 // BITS
 import { Icon } from '#lib/bits/index.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 // ICONS
 import Check from 'virtual:icons/proicons/checkmark'
 import PencilSquare from 'virtual:icons/proicons/compose'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 
 let editedAttribution = $state(appCtx.getUser()?.attribution || '')

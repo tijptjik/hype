@@ -4,7 +4,7 @@ import { onMount } from 'svelte'
 // I18N
 import { getFPI18n, getI18n, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // REMOTE
 import { getFeature, getFeatures } from '#lib/api/feature.remote.js'
 import { getLayer } from '#lib/api/layer.remote.js'
@@ -48,7 +48,7 @@ type PlanScheduleStop = {
   distanceLabel: string
 }
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let panelProps: PanelProps = $derived({
   panelType: PanelType.plan,

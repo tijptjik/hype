@@ -3,7 +3,7 @@
 import { untrack } from 'svelte'
 // CONTEXT
 import { getImportCtx } from '#lib/context/import.svelte.js'
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // API
 import { createProjectProperty } from '#lib/api/property.remote.js'
 import { translateText } from '#lib/api/translation.remote.js'
@@ -62,7 +62,7 @@ let {
 }: Props = $props()
 
 const importCtx = getImportCtx()
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let propertyKey = $state('')
 let englishLabel = $state('')

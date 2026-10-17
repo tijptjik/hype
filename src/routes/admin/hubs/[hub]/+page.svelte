@@ -363,7 +363,7 @@ const configuredHubForm = configureForm<HubFormInput>(() => ({
           meta: { isAdminRequest: true, profile: 'admin' },
         }),
         listQuery: getHubs({
-          conditions: adminCtx.appCtx.isSuperAdmin()
+          conditions: adminCtx.view.isSuperAdmin()
             ? { isArchived: null, isPublished: null }
             : { isArchived: false, isPublished: null },
           meta: { isAdminRequest: true, profile: 'card' },
@@ -809,11 +809,11 @@ const hubLayerItems = $derived.by(() => {
         (isCoreHub || selectedOrganisationIds.has(layer.organisationId)),
     )
     .map(layer => {
-      const project = adminCtx.appCtx.getResourceByIdSync(
+      const project = adminCtx.view.getResourceByIdSync(
         FirstClassResource.project,
         layer.projectId,
       )
-      const organisation = adminCtx.appCtx.getResourceByIdSync(
+      const organisation = adminCtx.view.getResourceByIdSync(
         FirstClassResource.organisation,
         layer.organisationId,
       )
@@ -821,7 +821,7 @@ const hubLayerItems = $derived.by(() => {
         id: layer.id,
         organisationId: layer.organisationId,
         organisationName:
-          getI18n(organisation, 'name', adminCtx.appCtx.getUserPreferences()) ??
+          getI18n(organisation, 'name', adminCtx.view.getUserPreferences()) ??
           organisation?.code ??
           layer.organisationId,
         projectNameShort: project?.i18n?.[localeKey]?.nameShort ?? project?.code ?? '-',
@@ -845,7 +845,7 @@ $effect(() => {
         ),
       ).sort()
   const organisationKey = organisationIds.join('|')
-  const isSuperAdmin = adminCtx.appCtx.isSuperAdmin()
+  const isSuperAdmin = adminCtx.view.isSuperAdmin()
   const requestKey = `${isCoreHub ? 'core' : 'scoped'}:${isSuperAdmin ? 'super' : 'admin'}:${organisationKey}`
 
   if (lastHubLayerOrganisationKey === requestKey) return
@@ -909,7 +909,7 @@ const imageProviderModel = useImageProviderModel(
 
 // § Auth
 
-const currentUser = $derived(adminCtx.appCtx.getUser())
+const currentUser = $derived(adminCtx.view.getUser())
 const currentActor = $derived(toHubAuthActor(currentUser))
 const hubPermissions = $derived.by(() =>
   resolveHubActionPermissions(
@@ -939,8 +939,8 @@ const canEditImageDropzone = $derived(
 )
 const canSetCoreInclusive = $derived(canSubmitHub)
 const allowedOrganisationIds = $derived.by(() => {
-  if (adminCtx.appCtx.isSuperAdmin()) return null
-  const user = adminCtx.appCtx.getUser()
+  if (adminCtx.view.isSuperAdmin()) return null
+  const user = adminCtx.view.getUser()
   const roles =
     user && typeof user === 'object' && 'roles' in user && Array.isArray(user.roles)
       ? (user.roles as UserRoleDisco[])
@@ -1198,7 +1198,7 @@ function onRemoveOrganisation(organisationId: string): void {
     )
     data.layerDefaults = (data.layerDefaults ?? []).filter(
       (item: HubLayerDefaultSelection) => {
-        const layer = adminCtx.appCtx.getResourceByIdSync(
+        const layer = adminCtx.view.getResourceByIdSync(
           FirstClassResource.layer,
           item.layerId,
         )
@@ -1313,7 +1313,7 @@ async function onSearchOrganisations(query: string): Promise<HubOrganisationItem
   }
   const result = await getOrganisations({
     q: query,
-    conditions: adminCtx.appCtx.isSuperAdmin()
+    conditions: adminCtx.view.isSuperAdmin()
       ? {
           isArchived: false,
         }
@@ -1386,7 +1386,7 @@ async function handleHubStateToggle({
         meta: { isAdminRequest: true, profile: 'detail' },
       }).withOverride(overrideHubEntityBoolean(field, nextState)),
       getHubs({
-        conditions: adminCtx.appCtx.isSuperAdmin()
+        conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
         meta: { isAdminRequest: true, profile: 'card' },

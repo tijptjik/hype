@@ -12,7 +12,7 @@ import { Panel, PanelSide } from '#lib/enums.js'
 // TYPES
 import type { AdminCtx } from '#lib/context/admin.svelte.js'
 import type { AdminPreferenceCode } from '#lib/db/zod/schema/user.types.js'
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { ThemeModel } from '#lib/themes/theme.svelte.js'
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
@@ -23,7 +23,7 @@ import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
  * @returns Controlled settings state and callbacks.
  */
 export function useSettingsPanelModel(
-  app: AppCtx,
+  app: ResourceViewCtx,
   theme: ThemeModel,
   admin?: AdminCtx,
 ) {
@@ -43,7 +43,7 @@ export function useSettingsPanelModel(
     get attribution() {
       return app.getUser()?.attribution
     },
-    onAttribution: (...args: Parameters<AppCtx['setUserAttribution']>) =>
+    onAttribution: (...args: Parameters<ResourceViewCtx['setUserAttribution']>) =>
       app.setUserAttribution(...args),
     get adminPreferences() {
       return app.getUserPreferences().admin ?? {}

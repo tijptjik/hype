@@ -131,7 +131,7 @@ const resolvedFeature = $derived.by((): Feature | null =>
   task
     ? (mergeResolvedTaskFeature(
         task as Pick<Task, 'featureId' | 'feature'>,
-        adminCtx.appCtx.cache.feature as Map<Id, Feature>,
+        adminCtx.view.cache.feature as Map<Id, Feature>,
       ) as Feature | null)
     : null,
 )
@@ -152,7 +152,7 @@ $effect(() => {
   if (!task?.id) return
 
   if (lastSyncedTaskSignature !== taskSyncSignature) {
-    adminCtx.appCtx.setTaskResourceAndCache(task)
+    adminCtx.view.setTaskResourceAndCache(task)
     lastSyncedTaskSignature = taskSyncSignature
   }
 
@@ -161,7 +161,7 @@ $effect(() => {
       layerId: effectiveLayerId,
       assignableLayers,
       task,
-      layerCache: adminCtx.appCtx.cache.layer,
+      layerCache: adminCtx.view.cache.layer,
     })
   }
 
@@ -317,11 +317,11 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
     return []
   }
 
-  const preferences = adminCtx.appCtx.getUserPreferences()
+  const preferences = adminCtx.view.getUserPreferences()
   const selectedLayer = getSelectedTaskLayer(
     assignableLayers,
     effectiveLayerId,
-    adminCtx.appCtx.cache.layer,
+    adminCtx.view.cache.layer,
   )
   const organisationName =
     getI18n(task.organisation as never, 'nameShort', preferences) ||
@@ -344,7 +344,7 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
         getI18n(selectedLayer, 'name', preferences)
       : null) ||
     (selectedLayer && 'id' in selectedLayer && 'projectId' in selectedLayer
-      ? adminCtx.appCtx.getContextualLayerName(selectedLayer as Layer, false, false)
+      ? adminCtx.view.getContextualLayerName(selectedLayer as Layer, false, false)
       : null) ||
     (selectedLayer && 'code' in selectedLayer ? selectedLayer.code : null) ||
     ''
@@ -389,7 +389,7 @@ function showReviewToast(action: TaskReviewUiAction): void {
   if (!task) return
 
   const featureTitle =
-    getI18n(task.feature as never, 'title', adminCtx.appCtx.getUserPreferences()) ??
+    getI18n(task.feature as never, 'title', adminCtx.view.getUserPreferences()) ??
     task.id
 
   toast.success(`${featureTitle} ${getTaskReviewActionToastLabel(action)}`)
@@ -466,7 +466,7 @@ async function handleReview(
     if (!updatedTask) return
 
     taskState = updatedTask
-    adminCtx.appCtx.setTaskResourceAndCache(updatedTask)
+    adminCtx.view.setTaskResourceAndCache(updatedTask)
     showReviewToast(action)
 
     if (action === 'accept' && updatedTask.featureId) {
@@ -524,9 +524,9 @@ async function handleReassignLayer(layerId: string): Promise<void> {
       layerId,
       assignableLayers,
       task: updatedTask,
-      layerCache: adminCtx.appCtx.cache.layer,
+      layerCache: adminCtx.view.cache.layer,
     })
-    adminCtx.appCtx.setTaskResourceAndCache(updatedTask)
+    adminCtx.view.setTaskResourceAndCache(updatedTask)
   } catch (error) {
     console.error('Failed to reassign task layer:', error)
     toast.error('Failed to reassign layer')
@@ -556,7 +556,7 @@ const imageProviderProps = $derived.by(() => {
       : undefined,
     highlightedIds: task?.images?.map(taskImage => taskImage.imageId as Id) ?? [],
     ...(hierarchySource
-      ? adminCtx.appCtx.getHierarchySync(hierarchySource as Feature | Task)
+      ? adminCtx.view.getHierarchySync(hierarchySource as Feature | Task)
       : {}),
     context:
       isValid && task?.featureId

@@ -4,7 +4,7 @@ import { Icon } from '#lib/bits/index.js'
 // I18N
 import { getLocale, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // ENUMS
 import { NewFeatureMode } from '#lib/enums.js'
 // ICONS
@@ -12,7 +12,7 @@ import Check from 'virtual:icons/proicons/checkmark'
 import GlobeAlt from 'virtual:icons/proicons/globe'
 import PencilSquare from 'virtual:icons/proicons/compose'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let isEditing = $state(false)
 let draftAddress = $state('')

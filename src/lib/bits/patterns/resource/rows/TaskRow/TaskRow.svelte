@@ -22,7 +22,7 @@ let {
   isSelected = false,
 }: TaskRowProps = $props()
 
-let appCtx = $derived(adminCtx.appCtx)
+let appCtx = $derived(adminCtx.view)
 const taskTypeColors = {
   reportedMissing: 'error',
   newPhoto: 'info',

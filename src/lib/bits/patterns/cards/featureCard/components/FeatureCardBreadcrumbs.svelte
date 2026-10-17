@@ -4,7 +4,7 @@ import { Dropdown, Icon } from '#lib/bits/index.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 // AUTH
 import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
@@ -29,7 +29,7 @@ let {
   onEditSelection?: (() => void) | null
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 let resolvedHierarchy = $state<ResourceContext | null>(null)
 let resolvedHierarchyFeatureId = $state<string | null>(null)

@@ -11,7 +11,7 @@ import { initAddNewFeature } from '#lib/client/services/feature.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
@@ -41,7 +41,7 @@ type AppNavProps = {
 
 let { hub, subscriptionItem }: AppNavProps = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
 const session = useSession()

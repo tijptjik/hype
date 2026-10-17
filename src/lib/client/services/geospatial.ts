@@ -2,7 +2,7 @@
 import { getI18n } from '#lib/i18n.js'
 // TYPES
 import type { LngLatLike } from 'maplibre-gl'
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { DivisionFacet } from '#lib/api/services/featureQuery.types.js'
 import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 
@@ -60,7 +60,7 @@ function divisionDisplayOrder(division: DivisionFacet): number {
  * @returns Stable IDs with classification and translated names, ordered by level and name.
  */
 export function filterDivisions(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   term: string,
 ): [string, DivisionFacet][] {
   const preferences = appCtx.getUserPreferences()

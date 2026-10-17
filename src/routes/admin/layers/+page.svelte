@@ -180,9 +180,9 @@ adminCtx.setFacet(false, false, FirstClassResource.layer)
 
 // STATE
 const resourceList = usePanelResources(
-  adminCtx.appCtx,
+  adminCtx.view,
   'layer',
-  () => adminCtx.appCtx.state.filters.layer.text ?? '',
+  () => adminCtx.view.state.filters.layer.text ?? '',
   'index',
 )
 let entities: Layer[] = $derived(

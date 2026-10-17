@@ -3,7 +3,7 @@
 import { goto } from '$app/navigation'
 import { fade } from 'svelte/transition'
 // CONTEXT
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -62,7 +62,7 @@ import type {
 } from '#lib/client/services/import/types.js'
 
 type Props = {
-  appCtx: AppCtx
+  appCtx: ResourceViewCtx
   importCtx: ImportCtx
   pendingDrop: {
     acceptedFiles: File[]

@@ -3,7 +3,7 @@ import { getFeature } from '#lib/api/feature.remote.js'
 // I18N
 import { getI18n } from '#lib/i18n.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { Id, ResourceContext } from '#lib/types.js'
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type {
@@ -30,7 +30,7 @@ export type ContributionNavigation = {
  * @returns A context-independent rendering model for contribution sections.
  */
 export function createUserContributionsModel(
-  app: AppCtx,
+  app: ResourceViewCtx,
   navigation: ContributionNavigation,
 ) {
   return {
@@ -43,14 +43,14 @@ export function createUserContributionsModel(
       })
       return result.data ?? undefined
     },
-    getHierarchy: (resource: Parameters<AppCtx['getHierarchy']>[0]) =>
+    getHierarchy: (resource: Parameters<ResourceViewCtx['getHierarchy']>[0]) =>
       app.getHierarchy(resource),
     getProjectHierarchy: async (id: Id): Promise<ResourceContext> => {
       const project = await app.getProjectById(id)
       return project ? app.getHierarchy(project) : {}
     },
     getOrganisationName: (
-      organisation: Parameters<AppCtx['getContextualOrganisationName']>[0],
+      organisation: Parameters<ResourceViewCtx['getContextualOrganisationName']>[0],
     ) => app.getContextualOrganisationName(organisation, false),
     getProjectName: (project: Parameters<AppCtx['getContextualProjectName']>[0]) =>
       app.getContextualProjectName(project),
@@ -62,7 +62,7 @@ export function createUserContributionsModel(
         allowMachineTranslation: true,
       }),
     getProjectTitle: (
-      project: Parameters<AppCtx['getContextualProjectName']>[0],
+      project: Parameters<ResourceViewCtx['getContextualProjectName']>[0],
     ): string => getI18n(project, 'name', { allowMachineTranslation: true }) ?? '',
     ...navigation,
   }

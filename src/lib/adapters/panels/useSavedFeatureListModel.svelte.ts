@@ -7,7 +7,7 @@ import { getI18n, toDateFnsLocale, m } from '#lib/i18n.js'
 // NAVIGATION
 import { navigateToStarred, navigateToVisited } from '#lib/navigation/index.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type { UserFeatureWithHierarchy } from '#lib/db/zod/schema/user.types.js'
 
@@ -28,11 +28,11 @@ export type SavedFeatureRow = {
  * @returns Search, paging, row and navigation state for a render-only section.
  */
 export function useSavedFeatureListModel(
-  app: AppCtx,
+  app: ResourceViewCtx,
   omni: OmniCtx,
   kind: 'wishlist' | 'visited',
 ) {
-  const query = app.cacheCtx.featureQueries[kind]
+  const query = app.resources.featureQueries[kind]
   let searchTerm = $state('')
 
   /** Builds deterministic query input from the current search and saved list. */
@@ -46,7 +46,7 @@ export function useSavedFeatureListModel(
     })
   }
 
-  // Keep the shared feature query current without coupling the section to AppCtx.
+  // Keep the shared feature query current without coupling the section to ResourceViewCtx.
   $effect(() => {
     const userId = app.user?.id
     const input = queryInput()

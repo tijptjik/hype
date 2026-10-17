@@ -14,7 +14,7 @@ import {
 // SERVICES
 import { getFeatureCardDisplayProperties } from '#lib/client/services/property.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // I18N
 import { getFPI18n, getI18n, m } from '#lib/i18n.js'
@@ -82,7 +82,7 @@ let {
   onToggleVisibility?: (visible: boolean) => void
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const responsiveCtx = getResponsiveCtx()
 const userPreferences = $derived(appCtx.getUserPreferences())
 const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))

@@ -14,7 +14,7 @@ import {
   handleSpecifierChange,
 } from '#lib/client/services/property.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 // ICONS
 import Check from 'virtual:icons/proicons/checkmark'
@@ -33,7 +33,7 @@ type FeatureCardNewPropertiesFieldProps = {
 
 let { feature }: FeatureCardNewPropertiesFieldProps = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 const userPreferences = $derived(appCtx.getUserPreferences())
 const availableFeatureProperties = $derived(

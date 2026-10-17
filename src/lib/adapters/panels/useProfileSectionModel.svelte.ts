@@ -22,7 +22,7 @@ import {
 import { Panel } from '#lib/enums.js'
 // CONTEXT
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { ProfileSectionProps } from '#lib/bits/patterns/panels/sections/index.js'
 import type { CurrentUser } from '#lib/db/zod/schema/user.types.js'
 
@@ -38,7 +38,7 @@ type UseProfileSectionModelOptions = {
  * @returns Profile section model exposing `getProfileProps()` for `<ProfileSection />`.
  */
 export function useProfileSectionModel(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   getOptions: () => UseProfileSectionModelOptions,
 ): { getProfileProps: () => ProfileSectionProps } {
   let isEditingUsername = $state(false)

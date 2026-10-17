@@ -5,7 +5,7 @@ import type { Component } from 'svelte'
 // I18N
 import { getFPI18n, getI18n } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // REMOTE
 import { getFeature, getFeatures } from '#lib/api/feature.remote.js'
 import { getLayer } from '#lib/api/layer.remote.js'
@@ -59,7 +59,7 @@ type PassportStamp = {
   imageUrl: string | null
 }
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const passportLayerIds = ['vli8hfmD-XEZ', '0bf1RYWdpaAt', 'lvWu_dCwiVZt'] as const
 
 type PassportSection = {

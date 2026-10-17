@@ -200,8 +200,8 @@ describe('map query integration', () => {
     first.resolve([feature], null, true)
     await pending
     expect(getFeaturePage).toHaveBeenCalledOnce()
-    expect(app.cacheCtx.featureQueries.map.totalCount).toBeNull()
-    expect(app.cacheCtx.featureQueries.map.hasMore).toBe(true)
+    expect(app.resources.featureQueries.map.totalCount).toBeNull()
+    expect(app.resources.featureQueries.map.hasMore).toBe(true)
   })
 
   it('keeps more than 100 visible markers and drops offscreen rows before the next page loads', async () => {
@@ -241,7 +241,7 @@ describe('map query integration', () => {
     const current = app.loadFeatureQuery('map', app.featureQueryInput({ q: 'new' }))
     older.resolve([row('old')])
     await previous
-    expect(app.cacheCtx.featureQueries.map.loading).toBe(true)
+    expect(app.resources.featureQueries.map.loading).toBe(true)
     expect(app.featureLoadState).toBe('loading')
     newer.resolve([row('new')])
     await current
@@ -262,7 +262,7 @@ describe('map query integration', () => {
     expect(getFeaturePage).toHaveBeenCalledOnce()
     first.resolve([row('search')], 5_000, true)
     await settle()
-    expect(app.cacheCtx.featureQueries.search.totalCount).toBe(5_000)
+    expect(app.resources.featureQueries.search.totalCount).toBe(5_000)
     expect(getFeaturePage).toHaveBeenCalledOnce()
   })
 

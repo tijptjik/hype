@@ -7,7 +7,7 @@ import { getUser, updateUserProfile } from '#lib/api/user.remote.js'
 // SERVICES
 import { refreshUserSession } from '#lib/client/services/user.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { Locale } from '#lib/types.js'
 import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 
@@ -16,7 +16,7 @@ import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
  * @param appCtx - Route-owned application context.
  * @returns Reactive values and preference callbacks for the section.
  */
-export function useLanguageSettingsModel(appCtx: AppCtx) {
+export function useLanguageSettingsModel(appCtx: ResourceViewCtx) {
   // Ensure user preferences object exists and is reactive
   const userPreferences: UserPreferences = $derived(appCtx.getUserPreferences())
   const currentLocale = $derived(getLocale())

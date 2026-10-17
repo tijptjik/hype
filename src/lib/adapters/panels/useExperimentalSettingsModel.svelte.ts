@@ -7,7 +7,7 @@ import { getUser, updateUserProfile } from '#lib/api/user.remote.js'
 // SERVICES
 import { refreshUserSession } from '#lib/client/services/user.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type {
   ExperimentalFeatureConfig,
   UserExperimental,
@@ -18,7 +18,7 @@ import type {
  * @param appCtx - Route-owned application context.
  * @returns Reactive values and preference callbacks for the section.
  */
-export function useExperimentalSettingsModel(appCtx: AppCtx) {
+export function useExperimentalSettingsModel(appCtx: ResourceViewCtx) {
   // Get experimental features from appCtx
   const experimentalFeatures = $derived.by(() => {
     const user = appCtx.getUser()

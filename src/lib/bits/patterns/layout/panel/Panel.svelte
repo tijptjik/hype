@@ -4,9 +4,9 @@ import { cubicInOut } from 'svelte/easing'
 // CONSTANTS
 import { PANEL_WIDTH } from '#lib/constants.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 // TYPES
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'

@@ -4,7 +4,7 @@ import { onMount } from 'svelte'
 // I18N
 import { getFPI18n, getI18n } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // REMOTE
 import { getFeature, getFeatures } from '#lib/api/feature.remote.js'
 import { getLayer } from '#lib/api/layer.remote.js'
@@ -35,7 +35,7 @@ import type {
 } from '#lib/context/companion.types.js'
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const eventCompanionLayerIds = ['vli8hfmD-XEZ', '0bf1RYWdpaAt', 'lvWu_dCwiVZt'] as const
 const companionRoles: EventCompanionRole[] = ['host', 'author', 'performer']
 const platformSequence: EventCompanionPlatform[] = [

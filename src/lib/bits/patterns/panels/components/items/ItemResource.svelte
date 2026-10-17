@@ -14,7 +14,7 @@ import { Icon } from '#lib/bits/index.js'
 // COMPONENTS
 import ResourceHierarchyPath from '#lib/bits/patterns/panels/components/common/ResourceHierarchyPath.svelte'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // ENUMS
 import type { FirstClassResource } from '#lib/enums.js'
 // TYPES
@@ -24,7 +24,7 @@ import type { DivisionFacet } from '#lib/api/services/featureQuery.types.js'
 import type { Resource, ResourceContext } from '#lib/types.js'
 
 let pendingFocusRestoreKey: string | null = null
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 type Props = {
   resourceType: FirstClassResource | 'neighbourhood'

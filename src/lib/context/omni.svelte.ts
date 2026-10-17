@@ -159,8 +159,8 @@ export class OmniCtx {
     $effect(() => {
       const searchTerm = this.state.searchTerm
 
-      this.appCtx.cacheCtx.featureQueries.search.rows
-      this.appCtx.cacheCtx.featureQueries.searchWishlist.totalCount
+      this.appCtx.resources.featureQueries.search.rows
+      this.appCtx.resources.featureQueries.searchWishlist.totalCount
       this.appCtx.divisionCtx.divisionFeatureCounts.size
 
       const timer = setTimeout(() => this.updateSearchResults(searchTerm), 0)
@@ -188,7 +188,7 @@ export class OmniCtx {
     // Native pages complete cold-start selection once; later refreshes preserve the camera.
     $effect(() => {
       const descriptor = this.activeCollectionDescriptor
-      const query = this.appCtx.cacheCtx.featureQueries.collection
+      const query = this.appCtx.resources.featureQueries.collection
       const rows = query.rows
       const totalCount = query.totalCount
       untrack(() => {
@@ -313,7 +313,7 @@ export class OmniCtx {
    * @returns Completion after the next visible group of search results is available.
    */
   async loadMoreSearch(): Promise<void> {
-    const query = this.appCtx.cacheCtx.featureQueries.search
+    const query = this.appCtx.resources.featureQueries.search
     if (this.searchFeatureLimit >= query.rows.length && query.hasMore) {
       await this.appCtx.loadMoreFeatureQuery('search')
     }
@@ -457,7 +457,7 @@ export class OmniCtx {
         const refreshImagesEvent = new CustomEvent('refreshImages', {
           detail: {
             resourceType: 'feature',
-            resourceId: this.appCtx.state.active.feature?.id,
+            resourceId: this.appCtx.selection.feature?.id,
           },
         })
         if (browser) {
@@ -774,17 +774,17 @@ export class OmniCtx {
   // NAVIGATION
   // ═══════════════════════
   navIndex = $derived(
-    this.appCtx.state.active.collection?.items.findIndex(
-      item => item.id === this.appCtx.state.active.feature?.id,
+    this.appCtx.selection.collection?.items.findIndex(
+      item => item.id === this.appCtx.selection.feature?.id,
     ) ?? -1,
   )
 
   navTitle = $derived(
     this.state.mode === 'search'
       ? `Search Results: ${this.state.searchTerm}`
-      : this.appCtx.state.active.collection
+      : this.appCtx.selection.collection
         ? getI18n(
-            this.appCtx.state.active.collection.i18n as Record<
+            this.appCtx.selection.collection.i18n as Record<
               Locale | LocaleKey,
               { name: string }
             >,
@@ -809,8 +809,8 @@ export class OmniCtx {
   /** Whether the active built-in collection has another server page. */
   get collectionHasMore(): boolean {
     return (
-      this.appCtx.state.active.collection?.totalCount !== undefined &&
-      this.appCtx.cacheCtx.featureQueries.collection.hasMore
+      this.appCtx.selection.collection?.totalCount !== undefined &&
+      this.appCtx.resources.featureQueries.collection.hasMore
     )
   }
 
@@ -824,10 +824,10 @@ export class OmniCtx {
     await this.appCtx.loadMoreFeatureQuery('collection')
     if (JSON.stringify(descriptor) !== JSON.stringify(this.activeCollectionDescriptor))
       return
-    const collection = this.appCtx.state.active.collection
-    const query = this.appCtx.cacheCtx.featureQueries.collection
+    const collection = this.appCtx.selection.collection
+    const query = this.appCtx.resources.featureQueries.collection
     if (collection)
-      this.appCtx.state.active.collection = {
+      this.appCtx.selection.collection = {
         ...collection,
         items: query.rows,
         totalCount: query.totalCount,
@@ -872,7 +872,7 @@ export class OmniCtx {
   ): void {
     const input = this.collectionQueryInput(descriptor)
     const pending = this.appCtx.loadFeatureQuery('collection', input)
-    const query = this.appCtx.cacheCtx.featureQueries.collection
+    const query = this.appCtx.resources.featureQueries.collection
     const initial =
       descriptor.kind === 'neighbourhood'
         ? this.toNeighbourhoodCollection(descriptor.ref, query.rows)
@@ -908,8 +908,8 @@ export class OmniCtx {
     rows: FeatureFromCollection[],
     totalCount: number | null,
   ): void {
-    const current = this.appCtx.state.active.collection
-    const query = this.appCtx.cacheCtx.featureQueries.collection
+    const current = this.appCtx.selection.collection
+    const query = this.appCtx.resources.featureQueries.collection
     if (
       !current ||
       current.totalCount === undefined ||
@@ -937,7 +937,7 @@ export class OmniCtx {
       this.pendingCollectionDescriptor = null
       this.pendingCollectionOptions = null
       this.appCtx.setActiveCollection(updated, options)
-    } else this.appCtx.state.active.collection = updated
+    } else this.appCtx.selection.collection = updated
   }
 
   navPrevious() {
@@ -1284,8 +1284,9 @@ export class OmniCtx {
     features: (FeatureFromCollection | Feature)[],
   ): ActiveCollection {
     const selectedNeighbourhood =
-      this.appCtx.cacheCtx.featureQueries.collection.facets?.divisions[neighbourhood] ??
-      this.appCtx.divisionCtx.divisions.get(neighbourhood)
+      this.appCtx.resources.featureQueries.collection.facets?.divisions[
+        neighbourhood
+      ] ?? this.appCtx.divisionCtx.divisions.get(neighbourhood)
 
     return {
       id: neighbourhood,
@@ -1496,7 +1497,7 @@ const navigateCollection = (
   omniCtx: OmniCtx,
   direction: 'next' | 'previous' | number,
 ): boolean => {
-  const collection = omniCtx.appCtx.state.active.collection
+  const collection = omniCtx.appCtx.selection.collection
 
   if (!collection) return false
 

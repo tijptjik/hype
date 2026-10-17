@@ -14,7 +14,7 @@ import {
   navigateToContributedImage,
 } from '#lib/navigation/index.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type { Id } from '#lib/types.js'
 import type {
@@ -30,7 +30,7 @@ import type { Hub } from '#lib/db/zod/schema/hub.types.js'
  * @param omni - Route-owned collection navigation context.
  * @returns Reactive profile data and controlled profile-section props.
  */
-export function useProfilePanelModel(app: AppCtx, omni: OmniCtx) {
+export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
   const session = fromStore(useSession())
   const initializedProfileContexts = new WeakSet<object>()
   const profile = useProfileSectionModel(app, () => ({

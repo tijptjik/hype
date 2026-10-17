@@ -219,7 +219,7 @@ const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
 const cachedLayerForRef = $derived(
-  adminCtx.appCtx.getResourceByRefSync(FirstClassResource.layer, layerRef) as
+  adminCtx.view.getResourceByRefSync(FirstClassResource.layer, layerRef) as
     | Layer
     | undefined,
 )
@@ -278,7 +278,7 @@ async function loadProjectProperties(projectId: string): Promise<Property[]> {
 function cacheProjectProperties(projectProperties: Property[]): void {
   for (const projectProperty of projectProperties) {
     if (!projectProperty?.id) continue
-    adminCtx.appCtx.cache.property.set(projectProperty.id, projectProperty)
+    adminCtx.view.cache.property.set(projectProperty.id, projectProperty)
   }
 }
 
@@ -304,7 +304,7 @@ function resolveKnownProjectIdForLayerRef(ref: string): string {
     ).trim()
   }
 
-  const cachedLayer = adminCtx.appCtx.getResourceByRefSync(
+  const cachedLayer = adminCtx.view.getResourceByRefSync(
     FirstClassResource.layer,
     ref,
   ) as Layer | undefined
@@ -430,7 +430,7 @@ const configuredLayerForm = configureForm<LayerRemoteFormInput>(() => ({
         meta: { isAdminRequest: true, profile: 'admin' },
       })
       const listQuery = getLayers({
-        conditions: adminCtx.appCtx.isSuperAdmin()
+        conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
         prisms: adminCtx.appCtx.state.prisms,
@@ -513,7 +513,7 @@ const formLevelIssues = $derived.by((): string[] => {
 /********************
  *  PARENT PROJECT STATE
  ************/
-const currentUser = $derived(adminCtx.appCtx.getUser())
+const currentUser = $derived(adminCtx.view.getUser())
 
 const currentActor = $derived(toLayerAuthActor(currentUser ?? {}))
 let selectedParentProjectById = $state<Record<string, ParentSectionProjectItem>>({})
@@ -523,7 +523,7 @@ const selectedParentProject = $derived.by((): ParentSectionProjectItem | null =>
     form: formDataUpdater,
     layer,
     selectedParentProjectById,
-    projectCache: adminCtx.appCtx.cache.project,
+    projectCache: adminCtx.view.cache.project,
   })
 })
 
@@ -566,12 +566,12 @@ const layerPermissions = $derived.by(() => {
     currentUser,
     layer,
     form: formDataUpdater,
-    prismProjectId: adminCtx.appCtx.getPrism(FirstClassResource.project)[0] ?? null,
+    prismProjectId: adminCtx.view.getPrism(FirstClassResource.project)[0] ?? null,
     prismOrganisationId:
-      adminCtx.appCtx.getPrism(FirstClassResource.organisation)[0] ?? null,
-    resourceHubId: adminCtx.appCtx.hub?.id ?? null,
-    projectCache: adminCtx.appCtx.cache.project,
-    organisationCache: adminCtx.appCtx.cache.organisation,
+      adminCtx.view.getPrism(FirstClassResource.organisation)[0] ?? null,
+    resourceHubId: adminCtx.view.hub?.id ?? null,
+    projectCache: adminCtx.view.cache.project,
+    organisationCache: adminCtx.view.cache.organisation,
   })
 })
 
@@ -589,9 +589,9 @@ const layerPropertyRows = $derived.by(() => {
   return toLayerPropertyRows({
     form: formDataUpdater,
     layer,
-    propertyCache: adminCtx.appCtx.cache.property,
-    hubCodeById: hubId => adminCtx.appCtx.cache.hub.get(hubId)?.code ?? null,
-    userPreferences: adminCtx.appCtx.getUserPreferences(),
+    propertyCache: adminCtx.view.cache.property,
+    hubCodeById: hubId => adminCtx.view.cache.hub.get(hubId)?.code ?? null,
+    userPreferences: adminCtx.view.getUserPreferences(),
   })
 })
 
@@ -735,7 +735,7 @@ async function onSearchParentProjects(
 ): Promise<ParentSectionProjectItem[]> {
   const scope = resolveLayerProjectSelectionScope({
     actor: currentActor,
-    resourceHubId: adminCtx.appCtx.hub?.id ?? null,
+    resourceHubId: adminCtx.view.hub?.id ?? null,
   })
 
   if (!scope.canCreate) return []
@@ -853,7 +853,7 @@ async function handleLayerStateToggle({
   if (!current) return
   const nextState = !current[field]
   setBusy(true)
-  const mutation = adminCtx.appCtx.cacheCtx.beginMutation('layer', {
+  const mutation = adminCtx.view.cacheCtx.beginMutation('layer', {
     meta: { id: current.id },
     data: { [field]: nextState },
   })
@@ -872,7 +872,7 @@ async function handleLayerStateToggle({
     )
     mutation.settle(true)
     commitLayerState(await refreshLayer())
-    await adminCtx.appCtx.cacheCtx.reconcile('layer')
+    await adminCtx.view.cacheCtx.reconcile('layer')
     toast.success(nextState ? successWhenTrue : successWhenFalse)
   } catch {
     mutation.settle(false)

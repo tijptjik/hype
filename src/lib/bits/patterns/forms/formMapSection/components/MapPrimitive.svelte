@@ -26,7 +26,7 @@ let {
 // Keep admin preferences and navigation state at the application adapter boundary.
 const adminCtx = getAdminCtx()
 const initialCollapsed =
-  adminCtx.appCtx.getUserPreferences().admin?.isAdminMapCollapsed ?? false
+  adminCtx.view.getUserPreferences().admin?.isAdminMapCollapsed ?? false
 </script>
 
 <div class="bits-feature-map">

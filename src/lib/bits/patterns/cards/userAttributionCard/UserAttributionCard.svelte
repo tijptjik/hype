@@ -1,7 +1,7 @@
 <script lang="ts">
 import { getUserForAttribution } from '#lib/api/user.remote.js'
 import { TransitionStack } from '#lib/bits/custom/transition/index.js'
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 import RelativeDate from './components/RelativeDate.svelte'
 import type { UserAttributionCardProps } from './userAttributionCard.types'
@@ -28,7 +28,7 @@ type AttributionCardDisplay = {
   friendlyDate: boolean
 }
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 const userProfile = $derived(appCtx.isAdmin() ? 'card' : 'attribution')
 const persistenceKey = $derived(

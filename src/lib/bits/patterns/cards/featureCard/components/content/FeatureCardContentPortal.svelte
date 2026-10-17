@@ -2,7 +2,7 @@
 // I18N
 import { getI18n } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // CONSTANTS
 import { NEW_REF } from '#lib/constants.js'
 // TYPES
@@ -21,7 +21,7 @@ let {
   size?: number
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const userPreferences = $derived({
   ...appCtx.getUserPreferences(),
   allowMachineTranslation: true,

@@ -49,10 +49,10 @@ adminCtx.setResourceType(false)
 
 let activeFacet = $state<AnalyticsFacet>(DEFAULT_ANALYTICS_FACET)
 const prismOrganisationIds = $derived([
-  ...adminCtx.appCtx.getPrism(FirstClassResource.organisation),
+  ...adminCtx.view.getPrism(FirstClassResource.organisation),
 ])
 const prismProjectIds = $derived([
-  ...adminCtx.appCtx.getPrism(FirstClassResource.project),
+  ...adminCtx.view.getPrism(FirstClassResource.project),
 ])
 const prismSignature = $derived(
   `${prismOrganisationIds.join('|')}::${prismProjectIds.join('|')}`,
@@ -71,7 +71,7 @@ async function resolvePrismScopePrefixes(): Promise<string[]> {
   const prefixes = new Set<string>()
 
   for (const organisationId of prismOrganisationIds) {
-    const organisation = await adminCtx.appCtx.getOrganisationById(organisationId)
+    const organisation = await adminCtx.view.getOrganisationById(organisationId)
     const organisationCode = organisation?.code?.trim()
     if (organisationCode) {
       prefixes.add(`h/${organisationCode}/`)
@@ -79,7 +79,7 @@ async function resolvePrismScopePrefixes(): Promise<string[]> {
   }
 
   for (const projectId of prismProjectIds) {
-    const project = await adminCtx.appCtx.getProjectById(projectId)
+    const project = await adminCtx.view.getProjectById(projectId)
     const projectCode = project?.code?.trim()
 
     if (!projectCode || !project?.organisationId) continue

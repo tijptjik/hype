@@ -289,10 +289,10 @@ let debouncedRemoteQuery = $state('')
 let optimisticEntities = $state.raw<Feature[]>([])
 let entities = $state.raw<Feature[]>([])
 let footerEntities = $state.raw<Feature[]>([])
-const textQuery = $derived(adminCtx.appCtx.state.filters.feature.text ?? '')
+const textQuery = $derived(adminCtx.view.state.filters.feature.text ?? '')
 const normalizedTextQuery = $derived(textQuery.trim())
 const sortSignature = $derived.by(() => {
-  const sorting = adminCtx.appCtx.state.viewSorting.feature
+  const sorting = adminCtx.view.state.viewSorting.feature
   return `${sorting.sortBy}:${sorting.sortOrder}`
 })
 const displayEntities = $derived(
@@ -316,8 +316,7 @@ let bulkProgress = $state<ResourceBulkEditProgress | null>(null)
 const localeKey = $derived(getLocaleKey())
 const activeTranslationLocales = $derived.by(() => {
   const locales: LocaleKey[] = []
-  const translationLocales =
-    adminCtx.appCtx.state.viewFilters.feature.translationLocales
+  const translationLocales = adminCtx.view.state.viewFilters.feature.translationLocales
 
   for (const [locale, isActive] of Object.entries(translationLocales)) {
     if (isActive) locales.push(locale as LocaleKey)
@@ -327,9 +326,9 @@ const activeTranslationLocales = $derived.by(() => {
 })
 const isSuperAdmin = $derived(
   Boolean(
-    adminCtx.appCtx.user &&
-      'superAdmin' in adminCtx.appCtx.user &&
-      adminCtx.appCtx.user.superAdmin,
+    adminCtx.view.user &&
+      'superAdmin' in adminCtx.view.user &&
+      adminCtx.view.user.superAdmin,
   ),
 )
 const bulkFeatureEditOptions = $derived.by(() => {
@@ -419,7 +418,7 @@ const isBulkApplyDisabled = $derived(
 )
 const baseEntities = $derived(
   adminCtx.applyFeatureViewFilters(
-    adminCtx.appCtx.getFilteredResource<Feature>(FirstClassResource.feature, {
+    adminCtx.view.getFilteredResource<Feature>(FirstClassResource.feature, {
       text: false,
       state: true,
     }),
@@ -429,13 +428,13 @@ const baseEntitiesById = $derived.by(
   () => new Map(baseEntities.map(feature => [feature.id, feature])),
 )
 const rowModelsById = $derived.by(() => {
-  const userPreferences = adminCtx.appCtx.getUserPreferences()
+  const userPreferences = adminCtx.view.getUserPreferences()
   const entries = displayEntities.map(
     feature =>
       [
         feature.id,
         getCachedFeatureRowModel({
-          appCtx: adminCtx.appCtx,
+          appCtx: adminCtx.view,
           feature,
           localeKey,
           activeTranslationLocales,
@@ -634,7 +633,7 @@ function patchSuccessfulBulkUpdates(
   )
   if (successfulIds.size === 0) return
 
-  const nextFeatures = adminCtx.appCtx.state.resources.feature.map(feature =>
+  const nextFeatures = adminCtx.view.state.resources.feature.map(feature =>
     successfulIds.has(feature.id)
       ? {
           ...feature,
@@ -643,7 +642,7 @@ function patchSuccessfulBulkUpdates(
       : feature,
   )
 
-  adminCtx.appCtx.setSortedResourceState(FirstClassResource.feature, nextFeatures)
+  adminCtx.view.setSortedResourceState(FirstClassResource.feature, nextFeatures)
 
   if (remoteMatchedEntities) {
     remoteMatchedEntities = remoteMatchedEntities.map(feature =>
@@ -798,7 +797,7 @@ $effect(() => {
 
   if (!featureTextSearchWorker) {
     optimisticEntities = baseEntities.filter(feature =>
-      adminCtx.appCtx.textFilter(
+      adminCtx.view.textFilter(
         FirstClassResource.feature,
         feature,
         normalizedTextQuery,
@@ -862,11 +861,11 @@ $effect(() => {
   latestRemoteRequestId = nextRequestId
 
   void getFeatures({
-    conditions: adminCtx.appCtx.isSuperAdmin()
+    conditions: adminCtx.view.isSuperAdmin()
       ? { isArchived: null, isPublished: null }
       : { isArchived: false, isPublished: null },
-    prisms: adminCtx.appCtx.state.prisms,
-    sorting: adminCtx.appCtx.state.viewSorting.feature,
+    prisms: adminCtx.view.state.prisms,
+    sorting: adminCtx.view.state.viewSorting.feature,
     q: nextQuery,
     meta: { isAdminRequest: true, profile: 'admin' },
   })
@@ -902,7 +901,7 @@ $effect(() => {
   ) {
     entities = adminCtx.applyFeatureViewFilters(
       remoteMatchedEntities.filter(feature =>
-        adminCtx.appCtx.textFilter(
+        adminCtx.view.textFilter(
           FirstClassResource.feature,
           feature,
           normalizedTextQuery,

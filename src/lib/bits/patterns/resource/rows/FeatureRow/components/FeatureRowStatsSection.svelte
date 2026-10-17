@@ -9,7 +9,7 @@ let {
   grapheme,
 }: {
   feature: Feature
-  appCtx: AdminCtx['appCtx']
+  appCtx: AdminCtx['view']
   grapheme: string
 } = $props()
 </script>

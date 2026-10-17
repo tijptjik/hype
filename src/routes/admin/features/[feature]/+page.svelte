@@ -570,7 +570,7 @@ const isEditing = $derived(headerCtrl.state.isEditing)
 const showsVisualSection = $derived(isCoreFacet || isFieldsFacet)
 
 let isVisualSectionCollapsed = $state(
-  adminCtx.appCtx.getUserPreferences().admin?.isAdminMapCollapsed ?? false,
+  adminCtx.view.getUserPreferences().admin?.isAdminMapCollapsed ?? false,
 )
 let visualSectionReopenScrollStartAt: number | null = null
 let visualSectionReopenBufferTimeout: ReturnType<typeof setTimeout> | null = null
@@ -639,7 +639,7 @@ let settledFeatureRef = $state<string | null>(null)
 /********************
  *  SET NAVIGATION STATE
  ************/
-const featureList = $derived(adminCtx.appCtx.state.resources.feature ?? [])
+const featureList = $derived(adminCtx.view.state.resources.feature ?? [])
 
 const currentFeatureId = $derived(feature?.data?.id ?? null)
 const featureStepperRefs = $derived(
@@ -755,7 +755,7 @@ const configuredFeatureForm = configureForm(() => ({
       // Refresh the list after every submit and prepend the entity query when editing an existing feature.
       const updates: Array<RemoteQuery<unknown> | RemoteQueryOverride> = [
         getFeatures({
-          conditions: adminCtx.appCtx.isSuperAdmin()
+          conditions: adminCtx.view.isSuperAdmin()
             ? { isArchived: null, isPublished: null }
             : { isArchived: false, isPublished: null },
           prisms: adminCtx.appCtx.state.prisms,
@@ -919,7 +919,7 @@ async function handleFeatureStateToggle(
       ? (value: boolean) => headerCtrl.setPublishing(value)
       : (value: boolean) => headerCtrl.setDeleting(value)
   setBusy(true)
-  const mutation = adminCtx.appCtx.cacheCtx.beginMutation('feature', {
+  const mutation = adminCtx.view.cacheCtx.beginMutation('feature', {
     meta: { id: current.id },
     data: { [field]: nextState },
   })
@@ -1144,7 +1144,7 @@ const hiddenLayerInputAttrs = $derived.by(() => {
 /********************
  *  USER STATE
  ************/
-const currentUser = $derived(adminCtx.appCtx.user ?? null)
+const currentUser = $derived(adminCtx.view.user ?? null)
 
 const currentContributorUser = $derived(toCurrentContributorUser(currentUser))
 const currentAuthorizationUser = $derived(toCurrentAuthorizationUser(currentUser))
@@ -1153,7 +1153,7 @@ const currentAuthorizationUser = $derived(toCurrentAuthorizationUser(currentUser
  *  MAP STATE
  ************/
 
-const initialMapCenter = $derived(getUserLocationCoordinates(adminCtx.appCtx))
+const initialMapCenter = $derived(getUserLocationCoordinates(adminCtx.view))
 
 /********************
  *  MAP MUTATION
@@ -1253,13 +1253,13 @@ const featureImageProviderProps = $derived.by(() => {
   const featureData = feature?.data
   const organisation =
     selectedOrganisation ??
-    adminCtx.appCtx.state.resources.organisation?.find(
+    adminCtx.view.state.resources.organisation?.find(
       item => item.id === organisationIdValue,
     ) ??
     null
   const project =
     selectedProject ??
-    adminCtx.appCtx.state.resources.project?.find(item => item.id === projectIdValue) ??
+    adminCtx.view.state.resources.project?.find(item => item.id === projectIdValue) ??
     null
 
   return getFeatureImageProviderOptions({
@@ -1603,7 +1603,7 @@ async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState
     const nextFormSource = toFeatureFormInput(result.data)
     featureFormSource = nextFormSource
     hasProgrammaticDirtyChanges = false
-    adminCtx.appCtx.setFeatureById(result.data as never)
+    adminCtx.view.setFeatureById(result.data as never)
   }
   return result
 }
@@ -1681,7 +1681,7 @@ $effect(() => {
   const id = organisationIdValue
   if (!id || selectedOrganisationById[id]) return
   let cancelled = false
-  void adminCtx.appCtx.getOrganisationById(id).then(organisation => {
+  void adminCtx.view.getOrganisationById(id).then(organisation => {
     if (cancelled) return
     syncSelectedOrganisation(toParentOrganisationItem(organisation as never))
   })
@@ -1694,7 +1694,7 @@ $effect(() => {
   const id = projectIdValue
   if (!id || selectedProjectById[id]) return
   let cancelled = false
-  void adminCtx.appCtx.getProjectById(id).then(project => {
+  void adminCtx.view.getProjectById(id).then(project => {
     if (cancelled) return
     syncSelectedProject(toParentProjectItem(project as never))
   })
@@ -1707,7 +1707,7 @@ $effect(() => {
   const id = layerIdValue
   if (!id || selectedLayerById[id]) return
   let cancelled = false
-  void adminCtx.appCtx.getLayerById(id).then(layer => {
+  void adminCtx.view.getLayerById(id).then(layer => {
     if (cancelled) return
     syncSelectedLayer(toParentLayerItem(layer as never))
   })
@@ -1744,7 +1744,7 @@ $effect(() => {
 
     if (organisationIds.length !== 1) return
 
-    const organisation = await adminCtx.appCtx.getOrganisationById(organisationIds[0])
+    const organisation = await adminCtx.view.getOrganisationById(organisationIds[0])
 
     if (cancelled || organisationIdValue || projectIdValue) return
 
@@ -1853,7 +1853,7 @@ async function getCreatableProjectRecords(
   // Projects carry their organisation ID; resolve the owning hub from that resource.
   const ancestors = await Promise.all(
     [...new Set(result.data.map(project => project.organisationId))].map(
-      async id => [id, await adminCtx.appCtx.getOrganisationById(id)] as const,
+      async id => [id, await adminCtx.view.getOrganisationById(id)] as const,
     ),
   )
 

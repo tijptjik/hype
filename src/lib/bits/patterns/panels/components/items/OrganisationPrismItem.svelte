@@ -9,11 +9,11 @@ import { Icon } from '#lib/bits/index.js'
 // I18N
 import { getI18n } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // TYPES
 import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 type Props = {
   resource: Organisation

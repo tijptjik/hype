@@ -11,7 +11,7 @@ import {
   updateNewFeatureProperty,
 } from '#lib/client/services/property.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 // I18N
 import { getI18n, m } from '#lib/i18n.js'
@@ -38,7 +38,7 @@ let {
   onToggleDescription?: (expanded: boolean) => void
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 const userPreferences = $derived(appCtx.getUserPreferences())
 

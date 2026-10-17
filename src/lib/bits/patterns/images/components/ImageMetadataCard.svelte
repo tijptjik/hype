@@ -4,7 +4,7 @@ import type { Component } from 'svelte'
 // LIB
 import { Icon } from '#lib/bits/index.js'
 import { getMetadata } from '#lib/api/image.remote.js'
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { m } from '#lib/i18n.js'
 import { formatDate } from '#lib'
 // ICONS
@@ -39,7 +39,7 @@ let {
   enabled?: boolean
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let metadata = $state<ImageMetadataFull | null>(null)
 let isLoading = $state(false)

@@ -10,7 +10,7 @@ import { ResourceViewer } from '#lib/bits/index.js'
 import { calculateDistance } from '#lib/map/index.js'
 import { getMetadata } from '#lib/api/image.remote.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // TYPES
 import type { Point } from 'geojson'
 import type { TaskEditorProps, TaskFieldItem, TaskDescriptorItem } from './task.types'
@@ -24,7 +24,7 @@ let {
   onReassignLayer,
 }: TaskEditorProps = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 function formatRelativeDate(value: string | null | undefined): string {
   if (!value) return '-'

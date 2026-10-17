@@ -7,7 +7,7 @@ import {
   calculateStatusStatuses,
   calculateTranslationStatuses,
 } from '#lib/client/services/stats.js'
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 import type { FeatureRowModel } from '#lib/client/services/featureRows.types.js'
@@ -19,7 +19,7 @@ type FeatureRowModelCacheEntry = {
 }
 
 type BuildFeatureRowModelParams = {
-  appCtx: AppCtx
+  appCtx: ResourceViewCtx
   feature: Feature
   localeKey: LocaleKey
   activeTranslationLocales: LocaleKey[]

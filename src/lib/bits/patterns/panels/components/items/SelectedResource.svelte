@@ -6,7 +6,7 @@ import XMark from 'virtual:icons/proicons/cancel'
 import { getI18n } from '#lib/i18n.js'
 import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // SERVICES
 import { navigateOnAdminById } from '#lib/navigation/index.js'
 // ENUMS
@@ -17,7 +17,7 @@ import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 // COMPONENTS
 import ItemResource from './ItemResource.svelte'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 type Props = {
   resourceType: FirstClassResource | 'neighbourhood'

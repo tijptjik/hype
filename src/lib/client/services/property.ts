@@ -10,7 +10,7 @@ import { updateFormData } from '#lib/client/services/form.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { Locale, LocaleExtended, Id } from '#lib/types.js'
 import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
 import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
@@ -209,7 +209,7 @@ export function sortPropertiesByTypeAndRank<T extends { property?: Property }>(
  * @returns Array of grouped classifier properties
  */
 export const getGroupedClassifierProperties = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
 ): Promise<
   Array<{
     hierarchy: {
@@ -265,7 +265,7 @@ export const getGroupedClassifierProperties = async (
  * Toggles a categorical property filter value.
  */
 export function toggleCategoricalPropertyValue(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   propertyId: Id,
   propertyValueId: Id,
@@ -294,7 +294,7 @@ export function toggleCategoricalPropertyValue(
  * Sets a categorical property filter.
  */
 export function setCategoricalPropertyFilter(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   propertyId: Id,
   values: string[],
@@ -314,7 +314,7 @@ export function setCategoricalPropertyFilter(
  * Removes a categorical property filter.
  */
 export function resetCategoricalPropertyFilter(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   propertyId: Id,
 ): void {
@@ -328,7 +328,7 @@ export function resetCategoricalPropertyFilter(
  * Sets a range property filter.
  */
 export function setRangePropertyFilter(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   propertyId: Id,
   values: [number, number],
@@ -1278,7 +1278,7 @@ export function resetProjectPropertyLocale(
 // ═══════════════════════
 
 export function propertyValuesToLocalisedOptions(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyValues: PropertyValue[],
 ): Map<Id, string> {
   return new Map(
@@ -1326,7 +1326,7 @@ export function displaySelectedProperties(
  * Summarizes the *active* property filters for a given layer.
  */
 export function displaySelectedFilters(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerFilters: Record<Id, string[] | RangeFilterValue> | undefined, // Filters for the specific layer
   properties: Property[] | undefined, // Property definitions for the layer's project
 ): string {
@@ -1420,7 +1420,7 @@ export function displayRangeFilter(
  * Gets feature IDs filtered by property filters.
  * Returns all features if no property filters are active.
  */
-export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
+export function getFeatureIdsForProperties(appCtx: ResourceViewCtx): Id[] {
   // If there are no property filters at all, return all features
   if (Object.keys(appCtx.state.filters.feature.properties ?? {}).length === 0) {
     return Array.from(appCtx.features.keys())
@@ -1526,7 +1526,7 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
  * @returns The properties for the feature.
  */
 export function getFeatureCardDisplayProperties(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   feature: Feature,
 ): Omit<FeatureProperty, 'featureId'>[] {
@@ -1595,7 +1595,7 @@ export function getFeatureCardDisplayProperties(
  * of a newFeature flow.
  */
 export function getFeatureCardEditableProperties(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   isGradeProperty: boolean = false,
 ): Omit<FeatureProperty, 'featureId'>[] {
@@ -1645,7 +1645,7 @@ export function getFeatureCardEditableProperties(
  * @returns A map of property value IDs to their localised values.
  */
 export function getLocalisedPropertyValues(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
 ): Map<Id, string> {
   const property = appCtx.cache.property.get(propertyId)
@@ -1662,7 +1662,7 @@ export function getLocalisedPropertyValues(
  * If not provided, the property will be searched for in the new feature context.
  */
 export function getFeatureProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   featureId?: Id | null,
 ): FeatureProperty | null {
@@ -1687,7 +1687,7 @@ export function getFeatureProperty(
  * @returns The universal specifier value for the property.
  */
 export function getUniversalSpecifierValue(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
 ): string | undefined | null {
   const featureProperty = getFeatureProperty(appCtx, propertyId)
@@ -1703,7 +1703,7 @@ export function getUniversalSpecifierValue(
  * @returns The i18n specifier value for the property.
  */
 export function getI18nSpecifierValue(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
 ): string | undefined {
   const featureProperty = getFeatureProperty(appCtx, propertyId)
@@ -1728,7 +1728,7 @@ export function getI18nSpecifierValue(
  * @returns The classifier value ID for the property.
  */
 export function getClassifierValueId(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
 ): string | undefined {
   const featureProperty = getFeatureProperty(appCtx, propertyId)
@@ -1748,7 +1748,7 @@ export function getClassifierValueId(
  * @param updates - The updates to apply to the property.
  */
 export function updateFeatureProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   updates: Partial<FeatureProperty>,
 ): void {
@@ -1778,7 +1778,7 @@ export function updateFeatureProperty(
  * @param valueGen - Whether the value is generated.
  */
 export function updateFeatureI18nProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   locale: Locale,
   value: string,
@@ -1809,7 +1809,7 @@ export function updateFeatureI18nProperty(
  * @param object - The object to update the property with.
  */
 export function updateNewFeatureProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   object: Partial<FeatureProperty>,
 ): void {
@@ -1877,7 +1877,7 @@ export function updateNewFeatureProperty(
  * @param locale - The locale to update the property for.
  */
 export function updateNewFeatureI18nProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   object: Partial<FeaturePropertyI18nDB>,
   locale: Locale,
@@ -1913,7 +1913,7 @@ export function updateNewFeatureI18nProperty(
  * @param propertyValueId - The ID of the property value to update.
  */
 export function handleCategoricalChange(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   propertyValueId: Id,
 ): void {
@@ -1931,7 +1931,7 @@ export function handleCategoricalChange(
  * @param newValue - The new value to update the property to.
  */
 export function handleSpecifierChange(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   locale: LocaleExtended,
   newValue: string,

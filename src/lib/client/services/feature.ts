@@ -2,7 +2,7 @@ import { browser } from '$app/env'
 import { goto } from '$app/navigation'
 import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 import type { Point } from 'geojson'
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type { FeatureFieldSectionItem } from '#lib/bits/patterns/forms/formFeatureFieldsSection/index.js'
 import { sortFeatureProperties } from '#lib/client/services/property.js'
@@ -105,7 +105,7 @@ function getNewFeatureEntryMode(newFeature: AppCtx['newFeature']): NewFeatureMod
  * point keeps direct routes and all creation controls aligned with the server.
  */
 export const initAddNewFeature = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   event?: Event | null,
   options: InitAddNewFeatureOptions = {},

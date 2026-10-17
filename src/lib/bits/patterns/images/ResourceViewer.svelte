@@ -113,7 +113,7 @@ const hasActiveImage = $derived(Boolean(model.state.activeImage))
 const hasItems = $derived(model.state.items.length > 0)
 const canUseEditFacility = $derived(canEditPresentationMode || canEditDropzone)
 const canDeleteImage = $derived(
-  !isReadonly && adminCtx.appCtx.isSuperAdmin() && model.state.canDeleteActiveImage,
+  !isReadonly && adminCtx.view.isSuperAdmin() && model.state.canDeleteActiveImage,
 )
 const canChangePresentationMode = $derived(
   !isReadonly && canEditPresentationMode && hasActiveImage,
@@ -187,7 +187,7 @@ const displayedCanReplaceImage = $derived(
 const displayedCanDeleteImage = $derived(
   shouldShowRetainedSnapshot
     ? (retainedSnapshot?.canDeleteImage ?? false)
-    : !isReadonly && adminCtx.appCtx.isSuperAdmin() && displayedCanDeleteActiveImage,
+    : !isReadonly && adminCtx.view.isSuperAdmin() && displayedCanDeleteActiveImage,
 )
 const displayedIsEditBusy = $derived(
   shouldShowRetainedSnapshot

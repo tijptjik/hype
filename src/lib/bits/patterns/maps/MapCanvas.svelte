@@ -675,7 +675,7 @@ $effect(() => {
   })
   if (!activeMapInstance || appCtx.isAdmin() || !appCtx.isInitialised) return
   if (!input.prisms?.layer?.length) {
-    untrack(() => appCtx.cacheCtx.featureQueries.map.clear())
+    untrack(() => appCtx.resources.featureQueries.map.clear())
     appCtx.featureLoadState = 'complete'
     return
   }
@@ -697,7 +697,7 @@ $effect(() => {
   })
   if (appCtx.isAdmin() || !appCtx.isInitialised) return
   if (!input.prisms?.layer?.length) {
-    untrack(() => appCtx.cacheCtx.featureQueries.facets.clear())
+    untrack(() => appCtx.resources.featureQueries.facets.clear())
     return
   }
 
@@ -711,7 +711,7 @@ $effect(() => {
 })
 
 $effect(() => {
-  const counts = appCtx.cacheCtx.featureQueries.facets.facets?.divisions ?? null
+  const counts = appCtx.resources.featureQueries.facets.facets?.divisions ?? null
 
   untrack(() => appCtx.divisionCtx.setDivisionCounts(counts))
 })
@@ -719,7 +719,7 @@ $effect(() => {
 // Reuse the normal collection freshness window when returning to the map tab.
 $effect(() => {
   const onFocus = (): void => {
-    for (const [channel, query] of Object.entries(appCtx.cacheCtx.featureQueries)) {
+    for (const [channel, query] of Object.entries(appCtx.resources.featureQueries)) {
       void query
         .revalidate()
         .then(() => appCtx.retainFeatureQueryRows(channel as FeatureQueryChannel))
@@ -739,8 +739,8 @@ watch(
     activeMapInstance,
     userMarkerStyleVariant,
     projectMarkerThemes,
-    appCtx.state.active.feature?.id ?? null,
-    appCtx.state.active.collection?.items.map(item => item.id).join(','),
+    appCtx.selection.feature?.id ?? null,
+    appCtx.selection.collection?.items.map(item => item.id).join(','),
     isAnimating,
   ],
   () => {
@@ -754,9 +754,9 @@ watch(
             },
         markerStyle: userMarkerStyleVariant,
         markerThemesByProjectId: projectMarkerThemes,
-        selectedId: appCtx.state.active.feature?.id ?? null,
+        selectedId: appCtx.selection.feature?.id ?? null,
         highlightedIds: new Set(
-          appCtx.state.active.collection?.items.map(item => item.id) ?? [],
+          appCtx.selection.collection?.items.map(item => item.id) ?? [],
         ),
       })
     }

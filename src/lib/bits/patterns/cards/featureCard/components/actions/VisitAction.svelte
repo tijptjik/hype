@@ -11,7 +11,7 @@ import {
   removeUserFeatureFromList,
 } from '#lib/api/user.remote.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // TYPES
 import type {
   Feature,
@@ -35,7 +35,7 @@ interface Props {
 
 let { feature, isIconOnly }: Props = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let isSubmitting = $state(false)
 let optimisticVisitState = $state<FeatureCardVisitState | null>(null)

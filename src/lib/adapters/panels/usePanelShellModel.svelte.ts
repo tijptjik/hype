@@ -1,7 +1,7 @@
 // ENUMS
 import { Panel } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 /**

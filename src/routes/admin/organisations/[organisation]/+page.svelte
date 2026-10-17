@@ -199,7 +199,7 @@ const activeFacet = $derived(
 
 // A compact list row cannot initialize an administration editor.
 const cachedOrganisationForRef = $derived.by(() => {
-  const cached = adminCtx.appCtx.getResourceByRefSync(
+  const cached = adminCtx.view.getResourceByRefSync(
     FirstClassResource.organisation,
     organisationRef,
   )
@@ -832,9 +832,9 @@ const imageProviderModel = useImageProviderModel(
 )
 
 // § Auth
-const currentUser = $derived(adminCtx.appCtx.getUser())
+const currentUser = $derived(adminCtx.view.getUser())
 
-const currentHub = $derived(adminCtx.appCtx.hub)
+const currentHub = $derived(adminCtx.view.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
 
 const organisationPermissions = $derived.by(() => {
@@ -1052,7 +1052,7 @@ async function handleOrganisationStateToggle({
 
   setBusy(true)
 
-  const mutation = adminCtx.appCtx.cacheCtx.beginMutation('organisation', {
+  const mutation = adminCtx.view.cacheCtx.beginMutation('organisation', {
     meta: { id: organisationData.id },
     data: { [field]: nextState },
   })
@@ -1081,7 +1081,7 @@ async function handleOrganisationStateToggle({
     // TODO Invalidate cache
     commitSettledOrganisationState(await refreshOrganisation())
 
-    await adminCtx.appCtx.cacheCtx.reconcile('organisation')
+    await adminCtx.view.cacheCtx.reconcile('organisation')
     toast.success(
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(organisation, 'nameShort')}`,
     )

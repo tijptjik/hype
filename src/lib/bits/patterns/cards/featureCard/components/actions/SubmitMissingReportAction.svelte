@@ -6,7 +6,7 @@ import { toast } from 'svelte-sonner'
 // I18N
 import { getLocale, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
 import { getImageCtx } from '#lib/context/image.svelte.js'
 // SERVICES
@@ -20,7 +20,7 @@ import FeatureCardSubmitButton from './FeatureCardSubmitButton.svelte'
 
 let { feature }: { feature: Feature } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
 const featureTitle = $derived(

@@ -8,7 +8,7 @@ import type { HeaderCrumb } from '#lib/bits/custom/header/index.js'
 // TYPES
 import type { AdminCtx } from '#lib/context/admin.svelte.js'
 
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { Code, Id, NavigableResource, Resource } from '#lib/types.js'
 import type { FacetType } from '#lib/context/facets.js'
 import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
@@ -79,7 +79,7 @@ export const getResourceRef = (
   if (!resource) return false
 
   const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
-  const entity = adminCtx.appCtx.cache[resource].get(id)
+  const entity = adminCtx.view.cache[resource].get(id)
 
   if (!entity) return false
 
@@ -203,7 +203,7 @@ export async function navigateOnAdminById(
     resourceType === FirstClassResource.project ||
     resourceType === FirstClassResource.hub
   ) {
-    const resource = await adminCtx.appCtx.getResourceById(resourceType, id)
+    const resource = await adminCtx.view.getResourceById(resourceType, id)
     if (resource) {
       ref = (resource as Organisation | Project | Hub).code
     }
@@ -212,7 +212,7 @@ export async function navigateOnAdminById(
 }
 
 export async function getBreadcrumbs(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   resourceType: FirstClassResource,
   resourceRef: Id | Code,
 ): Promise<HeaderCrumb[]> {

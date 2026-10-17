@@ -3,7 +3,7 @@
 import { onDestroy } from 'svelte'
 // CONTEXT
 import { getImportCtx } from '#lib/context/import.svelte.js'
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // API
 import { getProperties } from '#lib/api/property.remote.js'
 // I18N
@@ -61,7 +61,7 @@ let {
 }: Props = $props()
 
 const importCtx = getImportCtx()
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let existingProperty = $state<Property | null>(null)
 let validation = $state<ValidationResult | null>(null)

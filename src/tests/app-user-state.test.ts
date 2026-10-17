@@ -263,7 +263,7 @@ describe('AppCtx user updates', () => {
       { id: 'neon-feature', layerId: 'neon-signs', properties: [] },
     ] as unknown as FeatureFromCollection[]
 
-    vi.spyOn(appCtx.cacheCtx.featureQueries.map, 'rows', 'get').mockReturnValue(
+    vi.spyOn(appCtx.resources.featureQueries.map, 'rows', 'get').mockReturnValue(
       features,
     )
     appCtx.state.prisms.layer = ['neon-signs']

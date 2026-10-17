@@ -11,7 +11,7 @@ import {
   StatsTranslation,
 } from '#lib/bits/custom/index.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 let {
@@ -20,7 +20,7 @@ let {
   grapheme = '',
 }: {
   feature: Feature
-  appCtx: AppCtx
+  appCtx: ResourceViewCtx
   grapheme?: string
 } = $props()
 </script>

@@ -10,7 +10,7 @@ import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // SERVICES
 import { upsertNewFeatureDraft } from '#lib/client/services/task.js'
 // CONTEXT
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
@@ -32,7 +32,7 @@ import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
 import type { Project } from '#lib/db/zod/schema/project.types.js'
 import type { Point } from 'geojson'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
 
