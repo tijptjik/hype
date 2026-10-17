@@ -277,7 +277,6 @@ updated: 2025-12-01T22:50
       - `ngo_id` → dropped
       - `family_name` → dropped
       - `given_name` → dropped
-      - `name` → dropped
       - `gender` → dropped
       - `welcome_completed` → dropped - instead of this flag, we can use the role `volunteer` as a sign they have completed the welcome, as every breadline user has at least a volunteer role, and they must complete the onboarding to become a user.
         - **??** Is this acceptable? There are currently 2600+ accounts which have not completed the welcome.
