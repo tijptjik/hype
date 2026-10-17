@@ -60,13 +60,13 @@ export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
       return app.panels.state.profile.ctx?.userData
     },
     get isOwnProfile() {
-      return app.panels.state.profile.ctx?.userData?.id === app.getUser()?.id
+      return app.panels.state.profile.ctx?.userData?.id === app.account.user?.id
     },
     get isGuestAccount() {
       return isGuestUser(session.current.data?.user)
     },
     get accountUsername() {
-      return app.getUser()?.username ?? undefined
+      return app.account.user?.username ?? undefined
     },
     get profileProps() {
       return profile.getProfileProps()

@@ -28,7 +28,8 @@ coupling one surface context to another. Context state supports the UI;
 server-side services remain responsible for authorisation and domain invariants.
 
 The root layout creates `RootCTX`. The `(public)` layout creates `AppCtx`;
-`/admin` creates `AdminCtx` with its own `ResourceViewCtx` exposed as `adminCtx.view`.
+`/admin` creates `AdminCtx`. Both surfaces compose a `ResourceViewCtx`, exposed as
+`appCtx.view` and `adminCtx.view`; neither inherits resource behavior.
 `ResourceViewCtx` is reusable surface-local implementation, not a root singleton.
 Reusable UI resolves that view through `getSurfaceCtx()` or receives explicit
 adapter props. Only public map code should require `getAppCtx()`.
@@ -46,6 +47,12 @@ state use `PanelController` (`view.panels`); keyboard registration belongs to
 capabilities rather than the entire resource view. Use them directly instead of
 adding forwarding methods to the view. View disposal releases keyboard listeners
 and pending panel focus, and account changes discard creation drafts.
+
+Hierarchy selection belongs to `view.scope`, filters and query inputs to
+`view.filters`, and loading/result projections to `view.queries`. Wishlist and
+visited membership belong to the root account's `collections`, shared across
+surfaces. Use these owners directly rather than adding forwarding APIs. Public
+map visibility, selection and camera orchestration remain on `AppCtx`.
 
 ## Account and Map Ownership
 

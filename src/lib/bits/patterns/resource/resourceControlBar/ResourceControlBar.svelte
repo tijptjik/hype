@@ -108,7 +108,7 @@ function selectSection(sectionKey: string): void {
 }
 
 function resetFilters(): void {
-  adminCtx.resetViewFilters()
+  adminCtx.view.filters.resetViewFilters()
 }
 
 function pageFilterCarousel(direction: 'prev' | 'next', totalItems: number): void {

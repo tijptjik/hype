@@ -12,13 +12,13 @@ describe('default map settings choices', () => {
       const app = {
         account: { revision: 0 },
         scope: {
+          getUserLayersForCurrentHub: () => [{ layerId: 'outside-page' }],
           selectionLayers: [
             { id: 'outside-page', rank: 1, i18n: { en: { name: 'Outside page' } } },
             { id: 'first', rank: 0, i18n: { en: { name: 'First' } } },
           ],
         },
         state: { resources: { layer: [] } },
-        getUserLayerIds: () => ['outside-page'],
         getUserPreferences: () => ({}),
         hub: { code: 'core' },
       } as unknown as ResourceViewCtx

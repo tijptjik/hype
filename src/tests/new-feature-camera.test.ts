@@ -25,7 +25,7 @@ describe('new-feature camera capability', () => {
     async ({ center, expected }) => {
       const setNewFeature = vi.fn()
       const app = {
-        getUser: () => ({ id: 'user', isAnonymous: false }),
+        account: { user: { id: 'user', isAnonymous: false } },
         scope: { prisms: { layer: ['layer'] } },
         cache: { layer: new Map([['layer', { id: 'layer' }]]) },
         getHierarchy: async () => ({ layer: { id: 'layer' } }),

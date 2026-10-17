@@ -186,7 +186,9 @@ const resourceList = usePanelResources(
   'index',
 )
 let entities: Layer[] = $derived(
-  adminCtx.applyLayerViewFilters(resourceList.rows as unknown as Layer[]) as Layer[],
+  adminCtx.view.filters.applyLayerViewFilters(
+    resourceList.rows as unknown as Layer[],
+  ) as Layer[],
 )
 
 function getIndexModel(entity: Layer) {

@@ -13,13 +13,17 @@ fallback.
 | SvelteKit native queries | Active payloads, request deduplication, refresh and optimistic overrides |
 | `CacheCtx` | Scoped native-handle retention, active-controller registration, freshness, invalidation and optimistic reconciliation |
 | `ResourceClient` and typed providers | Standard detail/collection APIs, bound access metadata and profile inference |
-| `ResourceViewCtx` | Surface-local resource queries, hierarchy/filter intent and retained result projections |
+| `ResourceViewCtx` | Composes surface-local scope, filters, query results and interaction capabilities |
+| `ResourceScope` | Hierarchy prisms, descendant cascades and default-layer selection |
+| `ResourceFilters` | Text/property/admin filter state, sorting and serializable query inputs |
+| `AccountState.collections` | Shared wishlist/visited facts, recent optimistic overrides and account-lifetime resets |
+| `ResourceQueryCoordinator` | Loading, pagination, refresh generations, dependency ordering and retained result projections |
 | `AppCtx` | Public map bootstrap, viewport queries, map rebounding and public application orchestration |
 | `AdminCtx` | Admin queries and editing/navigation state, using its own `view: ResourceViewCtx` |
 | `{Hub}DashCtx` | Future hub workflow state, using injected resource capabilities; Breadline uses `BreadlineDashCtx` when needed |
 
 `ResourceViewCtx` is shared implementation, not a shared singleton or another
-application. `AppCtx` extends it; admin constructs its own instance. A dashboard
+application. Both `AppCtx` and `AdminCtx` compose their own `view` instance. A dashboard
 can use `ResourceClient` directly without constructing either existing surface.
 
 The `(public)` route group owns the public app, sign-in/sign-up map landing,
@@ -28,6 +32,34 @@ own view and does not construct `AppCtx`. Its initialisation loads only the
 selected resource; hierarchy panels load their own independent pages. App and
 admin filters and selection are independent. Leaving a surface releases its view
 state rather than carrying its selection into the next surface.
+
+## Scope, filters and query coordination
+
+Consumers address owners directly: `view.scope.prisms`, `view.filters.values`,
+`view.filters.viewFilters`, `view.filters.sorting` and `view.queries.rows`.
+Scope reads existing hierarchy metadata and issues explicit refresh commands;
+it does not own another entity cache. Default-layer metadata remains independent
+of paginated hierarchy lists, and absence from a page never removes a prism.
+
+`ResourceFilters` constructs panel and feature inputs without fetching data.
+Division filters remain with `DivisionCtx`; filter dependencies expose that
+existing owner rather than duplicating its state. Admin-specific predicates and reset defaults live beside their state in
+`ResourceFilters`; admin routes invoke that owner directly.
+
+`AccountState` owns feature memberships shared by every surface. Collection
+refresh generations reject older cross-surface reads; account changes invalidate
+pending reads and discard optimistic overrides. Recent explicit removals take
+precedence over both page membership facts and full-list responses. Resource
+entities and transport retention remain with `ResourceClient` and `CacheCtx`.
+Surface projection subscriptions are released when their view is disposed.
+
+The query coordinator owns result projections, loading flags and request
+lifetimes. It uses the existing resource client and cache, with explicit callbacks
+for hierarchy-code indexes, property-filter reconciliation and surface projections.
+It does not receive a `ResourceViewCtx`. Public map visibility and camera behavior
+belong to `AppCtx`; resource adapters receive `app.view`, and camera actions use
+separate callbacks. Public feature-query loading is registered explicitly rather
+than dispatched through an inherited override.
 
 ## Draft and interaction capabilities
 
@@ -171,3 +203,12 @@ Repository-wide `svelte-check` remains failing; the extraction's first check
 reported 971 errors and 21 warnings in 187 files. Do not treat focused tests or
 browser verification as proof that the global type-check or a new production
 build passes.
+
+The scope/filter/account/query/composition stages pass 126 tests across 24 files.
+They cover shared membership resets, cross-surface request generations, optimistic
+removal precedence, hierarchy cascades, detached query inputs, admin filter
+resets and composed public selection. Authenticated browser checks cover project
+search and filter controls plus the feature-draft layer chooser after composition.
+Global type checking remains failing; existing admin predicate diagnostics move
+with those predicates into `ResourceFilters`. This does not establish a clean
+repository-wide type check or authenticated mutation/save acceptance.

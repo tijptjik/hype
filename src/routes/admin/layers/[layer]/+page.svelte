@@ -513,7 +513,7 @@ const formLevelIssues = $derived.by((): string[] => {
 /********************
  *  PARENT PROJECT STATE
  ************/
-const currentUser = $derived(adminCtx.view.getUser())
+const currentUser = $derived(adminCtx.view.account.user)
 
 const currentActor = $derived(toLayerAuthActor(currentUser ?? {}))
 let selectedParentProjectById = $state<Record<string, ParentSectionProjectItem>>({})

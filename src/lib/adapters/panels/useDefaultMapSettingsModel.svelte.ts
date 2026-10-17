@@ -17,7 +17,9 @@ export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
   let optimisticAccountRevision = $state<number | null>(null)
   let isSavingLayers = $state(false)
 
-  const persistedUserLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
+  const persistedUserLayerIds = $derived(
+    new Set(appCtx.scope.getUserLayersForCurrentHub().map(layer => layer.layerId)),
+  )
   const userLayerIds = $derived(
     optimisticAccountRevision === appCtx.account.revision
       ? (optimisticUserLayerIds ?? persistedUserLayerIds)
@@ -61,7 +63,7 @@ export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
   const toggleUserLayer = async (layerId: string, checked: boolean): Promise<void> => {
     if (isSavingLayers) return
 
-    const user = appCtx.getUser()
+    const user = appCtx.account.user
     const hub = appCtx.hub
     if (!user || !hub || (!hub.id && !hub.code)) return
 

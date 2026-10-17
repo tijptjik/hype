@@ -117,7 +117,7 @@ export const initAddNewFeature = async (
 ): Promise<void> => {
   stopNewFeatureTriggerEvent(event)
 
-  if (!hasDurableAccount(appCtx.getUser())) {
+  if (!hasDurableAccount(appCtx.account.user)) {
     requestAccountUpgrade('contribution', browser ? window.location.href : undefined)
     return
   }

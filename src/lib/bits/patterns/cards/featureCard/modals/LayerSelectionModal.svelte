@@ -396,7 +396,7 @@ function handleOpenFindOther(): void {
 async function handleAccept(): Promise<void> {
   if (!isValid || isSaving) return
 
-  if (!hasDurableAccount(appCtx.getUser())) {
+  if (!hasDurableAccount(appCtx.account.user)) {
     requestAccountUpgrade('contribution', window.location.href)
     return
   }

@@ -75,7 +75,7 @@ export function useProfileSectionModel(
     previousDisplayUsername: CurrentUser['displayUsername'],
     accountRevision: number,
   ): void {
-    const currentUser = appCtx.getUser()
+    const currentUser = appCtx.account.user
 
     if (!currentUser || currentUser.id !== userId) return
     if (
@@ -115,7 +115,7 @@ export function useProfileSectionModel(
   }
 
   function getUserDisplayName(): string {
-    const user = appCtx.getUser()
+    const user = appCtx.account.user
 
     if (!user) {
       return m.anonymous()
@@ -131,7 +131,7 @@ export function useProfileSectionModel(
 
   /** Returns whether the current session belongs to an anonymous guest. */
   function isGuestUser(): boolean {
-    return isGuestUserSession(appCtx.getUser())
+    return isGuestUserSession(appCtx.account.user)
   }
 
   $effect(() => {
@@ -145,7 +145,7 @@ export function useProfileSectionModel(
   })
 
   function handleStartEditingUsername(): void {
-    const user = appCtx.getUser()
+    const user = appCtx.account.user
     if (!user) return
 
     editedUsername = user.displayUsername || user.username || ''
@@ -153,7 +153,7 @@ export function useProfileSectionModel(
   }
 
   async function handleSaveUsername(): Promise<void> {
-    const user = appCtx.getUser()
+    const user = appCtx.account.user
     if (!user || !editedUsername.trim()) return
 
     const { normalizedUsername, issues } = validateUsernameIssues(editedUsername.trim())
@@ -214,7 +214,7 @@ export function useProfileSectionModel(
   }
 
   function handleOpenProfile(): void {
-    const user = appCtx.getUser()
+    const user = appCtx.account.user
     if (isGuestUserSession(user)) {
       requestProfileUpgrade(window.location.href)
       return
@@ -242,9 +242,9 @@ export function useProfileSectionModel(
   return {
     getProfileProps: () => ({
       ...getOptions(),
-      avatarSrc: appCtx.getUser()?.image ?? null,
+      avatarSrc: appCtx.account.user?.image ?? null,
       userDisplayName: getUserDisplayName(),
-      userAttribution: appCtx.getUser()?.attribution ?? null,
+      userAttribution: appCtx.account.user?.attribution ?? null,
       isGuest: isGuestUser(),
       isEditingUsername,
       isLoadingUsername,

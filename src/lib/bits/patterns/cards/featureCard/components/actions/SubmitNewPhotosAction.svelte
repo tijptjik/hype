@@ -24,7 +24,7 @@ const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
 
-const attribution = $derived(appCtx.getUser()?.attribution || m.anonymous())
+const attribution = $derived(appCtx.account.user?.attribution || m.anonymous())
 const featureTitle = $derived(
   feature.i18n?.[getLocale()]?.title ?? feature.i18n?.en?.title ?? feature.id,
 )

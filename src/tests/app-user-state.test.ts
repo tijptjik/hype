@@ -185,7 +185,7 @@ describe('AppCtx user updates', () => {
     pendingProfile.resolve({ id: 'old-user', username: 'old-user' } as UserProfile)
     await refresh
 
-    expect(appCtx.view.getUser()?.id).toBe('new-user')
+    expect(appCtx.view.account.user?.id).toBe('new-user')
     expect(appCtx.view.panels.state.profile.ctx?.userData).toBeNull()
   })
 

@@ -41,7 +41,7 @@ export function useSettingsPanelModel(
     experimental,
     defaultMap,
     get attribution() {
-      return app.getUser()?.attribution
+      return app.account.user?.attribution
     },
     onAttribution: (...args: Parameters<ResourceViewCtx['setUserAttribution']>) =>
       app.setUserAttribution(...args),

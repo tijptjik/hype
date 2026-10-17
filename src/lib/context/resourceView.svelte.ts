@@ -35,7 +35,11 @@ import {
   getFeatureIdsForProperties,
   sortProperties,
 } from '#lib/client/services/property.js'
-import { primeFeatureStatsCache } from '#lib/client/services/stats.js'
+import {
+  getCachedFeatureSpecifierTranslation,
+  calculateSpecifierTranslation,
+  primeFeatureStatsCache,
+} from '#lib/client/services/stats.js'
 import {
   refreshRemoteQuery as runRemoteQuery,
   toSafeListResponse,
@@ -451,6 +455,12 @@ export class ResourceViewCtx {
     this.hierarchy = createHierarchyClient(this.resources)
     this.divisionCtx = divisionCtx
     this.filters = new ResourceFilters({
+      cache: this.cache,
+      isSuperAdmin: () => this.isSuperAdmin(),
+      specifierTranslation: feature =>
+        getCachedFeatureSpecifierTranslation(this, feature, f =>
+          calculateSpecifierTranslation(f),
+        ),
       prisms: () => this.scope.prisms,
       rows: () => this.queries.rows,
       scopeKey: () => this.resources.scopeKey,
@@ -1045,32 +1055,6 @@ export class ResourceViewCtx {
     if (this.panels.state.profile.ctx) {
       this.panels.state.profile.ctx.userData = user
     }
-  }
-
-  // ═══════════════════════
-  // PRISMS
-  // ═══════════════════════
-
-  //* Removes organisation from prisms if they are no longer in the resources.
-  // This should rarely happen as we always fetch all organisations. But it could happen in cases where an organisation is unpublished or deleted.
-  syncOrganisationPrisms = (): void => {
-    // A selected identity may be outside the loaded page; absence is not a deletion.
-  }
-
-  //* Removes project from prisms if they are no longer in the resources.
-  // This typically is required when an organisation prism is set, and a
-  // previously active prism is no longer valid given that the related
-  // organisation is not selected as a prism.
-  syncProjectPrisms = (): void => {
-    // A selected identity may be outside the loaded page; absence is not a deletion.
-  }
-
-  //* Removes layer from prisms if they are no longer in the resources.
-  // This typically is required when a organisation or project prism is set,
-  // and a previously active prism is no longer valid given that the related
-  // project or organisation is not selected as a prism.
-  syncLayerPrisms = (): void => {
-    // A selected identity may be outside the loaded page; absence is not a deletion.
   }
 
   /**
@@ -1908,11 +1892,6 @@ export class ResourceViewCtx {
     this.postUserMutation()
   }
 
-  /** Reads the shared account presentation snapshot. @returns Current user, or null. */
-  getUser = (): AccountUser | null => {
-    return this.user
-  }
-
   /**
    * Applies saved self-profile fields to the shared account presentation data.
    *
@@ -1973,16 +1952,6 @@ export class ResourceViewCtx {
     if (!userId) return
     this.account.applyProfile({ attribution })
     await debouncedUpdateUserAttribution(userId, attribution, onSuccess, onError)
-  }
-
-  getUserLayers = (): UserLayer[] => {
-    return this.scope.getUserLayersForCurrentHub()
-  }
-
-  getUserLayerIds = (): string[] => {
-    return this.scope
-      .getUserLayersForCurrentHub()
-      .map((layer: UserLayer) => layer.layerId)
   }
 
   /**

@@ -197,7 +197,7 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.project)
 
-const currentUser = $derived(adminCtx.view.getUser())
+const currentUser = $derived(adminCtx.view.account.user)
 const currentHub = $derived(adminCtx.view.hub)
 const currentActor = $derived(toProjectAuthActor(currentUser))
 
@@ -235,7 +235,7 @@ const resourceList = usePanelResources(
   'index',
 )
 let entities: Project[] = $derived(
-  adminCtx.applyProjectViewFilters(
+  adminCtx.view.filters.applyProjectViewFilters(
     resourceList.rows as unknown as Project[],
   ) as Project[],
 )

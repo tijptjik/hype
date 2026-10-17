@@ -21,7 +21,7 @@ import type {
 export function useExperimentalSettingsModel(appCtx: ResourceViewCtx) {
   // Get experimental features from appCtx
   const experimentalFeatures = $derived.by(() => {
-    const user = appCtx.getUser()
+    const user = appCtx.account.user
     return user && 'experimental' in user ? user.experimental : {}
   })
   let isSavingExperimental = $state(false)
@@ -44,7 +44,7 @@ export function useExperimentalSettingsModel(appCtx: ResourceViewCtx) {
   ): Promise<void> => {
     if (isSavingExperimental) return
 
-    const user = appCtx.getUser()
+    const user = appCtx.account.user
     if (!user || !('experimental' in user)) return
 
     const accountRevision = appCtx.account.revision

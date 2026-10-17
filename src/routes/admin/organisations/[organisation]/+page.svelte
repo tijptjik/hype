@@ -832,7 +832,7 @@ const imageProviderModel = useImageProviderModel(
 )
 
 // § Auth
-const currentUser = $derived(adminCtx.view.getUser())
+const currentUser = $derived(adminCtx.view.account.user)
 
 const currentHub = $derived(adminCtx.view.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))

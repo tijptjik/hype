@@ -57,7 +57,7 @@ export function useLanguageSettingsModel(appCtx: ResourceViewCtx) {
   async function handleLocaleChange(locale: Locale): Promise<void> {
     if (pendingLocale || locale === currentLocale) return
 
-    const user = appCtx.getUser()
+    const user = appCtx.account.user
     if (!user) return
 
     const accountRevision = appCtx.account.revision
@@ -108,7 +108,7 @@ export function useLanguageSettingsModel(appCtx: ResourceViewCtx) {
   async function updatePreferences(nextPreferences: UserPreferences): Promise<void> {
     if (isSavingPreferences) return
 
-    const user = appCtx.getUser()
+    const user = appCtx.account.user
     if (!user) return
 
     const accountRevision = appCtx.account.revision

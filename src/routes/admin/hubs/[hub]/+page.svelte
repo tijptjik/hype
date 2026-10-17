@@ -907,7 +907,7 @@ const imageProviderModel = useImageProviderModel(
 
 // § Auth
 
-const currentUser = $derived(adminCtx.view.getUser())
+const currentUser = $derived(adminCtx.view.account.user)
 const currentActor = $derived(toHubAuthActor(currentUser))
 const hubPermissions = $derived.by(() =>
   resolveHubActionPermissions(
@@ -938,7 +938,7 @@ const canEditImageDropzone = $derived(
 const canSetCoreInclusive = $derived(canSubmitHub)
 const allowedOrganisationIds = $derived.by(() => {
   if (adminCtx.view.isSuperAdmin()) return null
-  const user = adminCtx.view.getUser()
+  const user = adminCtx.view.account.user
   const roles =
     user && typeof user === 'object' && 'roles' in user && Array.isArray(user.roles)
       ? (user.roles as UserRoleDisco[])

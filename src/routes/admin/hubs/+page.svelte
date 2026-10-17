@@ -115,7 +115,7 @@ adminCtx.setFacet(false, false, FirstClassResource.hub)
 
 // STATE
 let entities: Hub[] = $derived(
-  adminCtx.getViewFilteredResource<Hub>(FirstClassResource.hub),
+  adminCtx.view.filters.getViewFilteredResource<Hub>(FirstClassResource.hub),
 )
 
 function getIndexModel(entity: Hub) {

@@ -416,7 +416,7 @@ const isBulkApplyDisabled = $derived(
     Boolean(bulkProgress?.isApplying),
 )
 const baseEntities = $derived(
-  adminCtx.applyFeatureViewFilters(
+  adminCtx.view.filters.applyFeatureViewFilters(
     adminCtx.view.filters.getFilteredResource<Feature>(FirstClassResource.feature, {
       text: false,
       state: true,
@@ -898,7 +898,7 @@ $effect(() => {
     remoteHasMore === false &&
     remoteSortSignature === sortSignature
   ) {
-    entities = adminCtx.applyFeatureViewFilters(
+    entities = adminCtx.view.filters.applyFeatureViewFilters(
       remoteMatchedEntities.filter(feature =>
         adminCtx.view.filters.textFilter(
           FirstClassResource.feature,
@@ -915,7 +915,7 @@ $effect(() => {
     remoteMatchedEntities != null &&
     remoteSortSignature === sortSignature
   ) {
-    entities = adminCtx.applyFeatureViewFilters(
+    entities = adminCtx.view.filters.applyFeatureViewFilters(
       remoteMatchedEntities as Resource[],
     ) as Feature[]
     return

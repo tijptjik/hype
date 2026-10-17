@@ -154,7 +154,7 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, RESOURCE)
 
-const currentUser = $derived(adminCtx.view.getUser())
+const currentUser = $derived(adminCtx.view.account.user)
 const currentHub = $derived(adminCtx.view.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
 
@@ -198,7 +198,7 @@ const resourceList = usePanelResources(
   'index',
 )
 let entities: Organisation[] = $derived(
-  adminCtx.applyOrganisationViewFilters(
+  adminCtx.view.filters.applyOrganisationViewFilters(
     resourceList.rows as unknown as Organisation[],
   ) as Organisation[],
 )

@@ -67,7 +67,7 @@ $effect(() => {
 })
 
 function openContributionMode(mode: FeatureCardMode): void {
-  const user = appCtx.getUser()
+  const user = appCtx.account.user
   if (!hasDurableAccount(user)) {
     requestAccountUpgrade('contribution', window.location.href)
     return

@@ -15,9 +15,9 @@ import PencilSquare from 'virtual:icons/proicons/compose'
 const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 
-let editedAttribution = $state(appCtx.getUser()?.attribution || '')
-let originalAttribution = $state(appCtx.getUser()?.attribution || '')
-let editing = $state(!(appCtx.getUser()?.attribution || '').trim())
+let editedAttribution = $state(appCtx.account.user?.attribution || '')
+let originalAttribution = $state(appCtx.account.user?.attribution || '')
+let editing = $state(!(appCtx.account.user?.attribution || '').trim())
 let isSaveSuccess = $state(false)
 
 async function saveAttribution(): Promise<void> {

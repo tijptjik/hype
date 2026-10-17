@@ -95,7 +95,7 @@ let selectedTaskIndex = $state<number>(-1)
 
 let entities: Task[] = $derived(
   adminCtx.isInitialised
-    ? adminCtx.getViewFilteredResource<Task>(FirstClassResource.task)
+    ? adminCtx.view.filters.getViewFilteredResource<Task>(FirstClassResource.task)
     : [],
 )
 

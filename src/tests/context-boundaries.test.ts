@@ -124,7 +124,7 @@ describe('surface context boundaries', () => {
     )
     const before = admin.organisationsQueryKey()
     app.view.applyUserProfile({ username: 'updated', attribution: 'Alice' })
-    expect(admin.getUser()?.username).toBe('updated')
+    expect(admin.account.user?.username).toBe('updated')
     expect(root.user?.username).toBe('alice')
     expect(admin.organisationsQueryKey()).toEqual(before)
     admin.updateUserPreferences({
