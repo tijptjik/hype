@@ -1,69 +1,42 @@
 <script lang="ts">
-import { Icon } from '#lib/bits/index.js'
-import MagnifyingGlass from 'virtual:icons/proicons/search'
-import XMark from 'virtual:icons/proicons/cancel'
-import { slide } from 'svelte/transition'
+// ICONS
+import Search from 'virtual:icons/proicons/search'
+// I18N
 import { m } from '#lib/i18n.js'
+
 let {
   searchTerm = $bindable(''),
-  position = 'left',
+  label = m.legal_clear_panther_soar(),
   onReset,
 }: {
   searchTerm: string
-  position?: 'left' | 'right'
+  label?: string
   onReset?: () => void
 } = $props()
-
-// Reset input and clear filter
-const resetInput = async (e: Event) => {
-  e.preventDefault()
-  searchTerm = ''
-  document.getElementById(`search`)?.focus()
-}
 </script>
 
-<div
-  class="relative shrink-0 grow-0 py-1 {position === 'right' ? 'pl-4' : ''} "
-  transition:slide={{ duration: 200 }}
+<label
+  class="mx-3 mb-2 flex shrink-0 items-center gap-2 overflow-hidden rounded-xl border border-border bg-surface px-3 text-muted-foreground focus-within:border-focus"
 >
+  <Search class="size-4 shrink-0" aria-hidden="true" />
   <input
-    id="search"
-    type="text"
+    class="focus-override h-10 min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none"
+    type="search"
     autocomplete="off"
+    aria-label={label}
+    placeholder={label}
     bind:value={searchTerm}
-    onkeydown={e => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        e.stopPropagation()
+    onkeydown={event => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
         if (searchTerm) {
-          resetInput(e)
+          searchTerm = ''
         } else {
-          // Clear selection
+          // Clear selection when the search is already empty.
           onReset?.()
         }
       }
     }}
-    placeholder={m.legal_clear_panther_soar()}
-    class="input m-0 h-12 w-full rounded-none bg-base-200 {position === 'right'
-      ? 'rounded-l-md pl-[26px] pr-10'
-      : 'rounded-r-md pl-10 pr-[26px]'} text-sm focus:border-none focus:outline-none"
   >
-  <div
-    class="absolute inset-y-0 {position === 'left'
-      ? 'right-1.5'
-      : 'right-[22px]'} flex items-center pr-3"
-  >
-    {#if !searchTerm}
-      <Icon src={MagnifyingGlass} class="h-6 w-6 text-base-content/60" />
-    {:else}
-      <button
-        type="button"
-        onclick={resetInput}
-        class="focus:outline-none"
-        tabindex="-1"
-      >
-        <Icon src={XMark} class="h-6 w-6 text-base-content/60" />
-      </button>
-    {/if}
-  </div>
-</div>
+</label>

@@ -2,10 +2,10 @@
 // ICONS
 import Star from 'virtual:icons/proicons/star'
 import MapPin from 'virtual:icons/proicons/location'
-import Search from 'virtual:icons/proicons/search'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
+import FilterBar from '#lib/bits/patterns/panels/components/common/FilterBar.svelte'
 import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 // TYPES
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
@@ -23,29 +23,13 @@ let {
 </script>
 
 <Section title={model.title} icon={kind === 'visited' ? MapPin : Star} {...panel}>
+  <FilterBar
+    bind:searchTerm={() => model.search, model.setSearch}
+    label={m.panel__search({
+      name: kind === 'visited' ? m.stars__have_visited() : m.stars__want_to_visit(),
+    })}
+  />
   <div class="px-6 pb-4">
-    <label class="relative mb-3 block">
-      <span class="sr-only">{model.title}: {m.legal_clear_panther_soar()}</span>
-      <Search
-        class="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
-        aria-hidden="true"
-      />
-      <input
-        type="search"
-        autocomplete="off"
-        value={model.search}
-        oninput={event => model.setSearch(event.currentTarget.value)}
-        onkeydown={event => {
-          if (event.key === 'Escape' && model.search) {
-            event.preventDefault()
-            event.stopPropagation()
-            model.setSearch('')
-          }
-        }}
-        placeholder={m.legal_clear_panther_soar()}
-        class="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-base-content placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-focus"
-      >
-    </label>
     {#if model.loading && model.rows.length === 0}
       <p role="status" class="py-3 text-sm text-muted-foreground">
         {m.resource_loading()}
@@ -60,7 +44,7 @@ let {
           <li>
             <button
               type="button"
-              class="flex w-full cursor-pointer flex-col gap-1 rounded-sm py-3 text-left text-base-content outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+              class="-mx-3 flex w-[calc(100%+1.5rem)] cursor-pointer flex-col gap-1 rounded-md px-3 py-3 text-left text-base-content outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
               aria-label={row.title}
               onclick={() => model.onOpen(row.id)}
             >

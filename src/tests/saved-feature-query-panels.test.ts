@@ -112,14 +112,16 @@ describe.each([
     renderPanel()
     expect(screen.getByText('Server-only feature')).toBeTruthy()
     // A single local row must not hide search when the server reports 23 matches.
-    expect(screen.getByRole('textbox')).toBeTruthy()
+    expect(screen.getByRole('searchbox')).toBeTruthy()
     await fireEvent.click(screen.getByRole('button', { name: 'resource_load_more' }))
     expect(mocks.app.queries.loadMoreFeatureQuery).toHaveBeenCalledWith(channel)
   })
 
   it('sends search and list selectors to the server query without requiring map rows', async () => {
     renderPanel()
-    await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'new tea' } })
+    await fireEvent.input(screen.getByRole('searchbox'), {
+      target: { value: 'new tea' },
+    })
     await vi.waitFor(() =>
       expect(mocks.app.queries.loadFeatureQuery).toHaveBeenLastCalledWith(
         channel,

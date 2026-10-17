@@ -6,12 +6,12 @@ import { onDestroy, tick, untrack } from 'svelte'
 import { prefersReducedMotion } from 'svelte/motion'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
-import X from 'virtual:icons/proicons/cancel'
-import Search from 'virtual:icons/proicons/search'
 import Users from 'virtual:icons/proicons/person-multiple'
 import Grid from 'virtual:icons/proicons/grid'
 import Layers from 'virtual:icons/proicons/layers'
 // COMPONENTS
+import SelectionChip from '#lib/bits/patterns/panels/components/common/SelectionChip.svelte'
+import FilterBar from '#lib/bits/patterns/panels/components/common/FilterBar.svelte'
 import VirtualResourceList from '#lib/bits/custom/resources/VirtualResourceList.svelte'
 import ResourceRow from './ResourceRow.svelte'
 // TYPES
@@ -212,28 +212,11 @@ const items = $derived(
         aria-hidden={narrow}
       >
         <div class="min-h-0 overflow-hidden">
-          <label
-            class="mx-3 mb-2 flex shrink-0 items-center gap-2 overflow-hidden rounded-xl border border-border bg-surface px-3 text-muted-foreground transition-opacity duration-500 focus-within:border-focus motion-reduce:transition-none"
-            style:opacity={narrow ? 0 : 1}
-            inert={narrow}
-            aria-hidden={narrow}
-          >
-            <Search class="size-4" aria-hidden="true" />
-            <input
-              class="focus-override h-10 min-w-0 flex-1 bg-transparent text-sm text-base-content outline-none"
-              type="search"
-              aria-label={m.panel__search({ name: section.title })}
-              placeholder={m.panel__search({ name: section.title })}
-              value={section.search}
-              oninput={event => section.onSearch(event.currentTarget.value)}
-              onkeydown={event => {
-                if (event.key === 'Escape') {
-                  event.stopPropagation()
-                  section.search ? section.onSearch('') : section.onReset()
-                }
-              }}
-            >
-          </label>
+          <FilterBar
+            bind:searchTerm={() => section.search, section.onSearch}
+            label={m.panel__search({ name: section.title })}
+            onReset={section.onReset}
+          />
         </div>
       </div>
     {/if}
@@ -263,17 +246,14 @@ const items = $derived(
         {/each}
       </div>
     {:else if items.length}
-      <div class="flex max-h-32 shrink-0 flex-wrap gap-2 overflow-y-auto px-8 pb-3">
+      <div class="flex max-h-32 shrink-0 flex-wrap gap-2 overflow-y-auto px-6 py-4">
         {#each items as row (row.id)}
-          <button
-            type="button"
-            class="focus-override outline-none focus-visible:text-primary focus-visible:border-primary inline-flex min-h-10 items-center gap-2 rounded-full border border-current/30 px-3 py-1 text-sm {color}"
-            title={row.toggleLabel}
-            onclick={row.onToggle}
-          >
-            {row.shortName || row.name}
-            <X class="size-5" aria-hidden="true" />
-          </button>
+          <SelectionChip
+            label={row.name}
+            removeLabel={row.toggleLabel}
+            onRemove={row.onToggle}
+            {tone}
+          />
         {/each}
       </div>
     {/if}

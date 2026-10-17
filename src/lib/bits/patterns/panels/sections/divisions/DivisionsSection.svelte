@@ -7,6 +7,7 @@ import MapIcon from 'virtual:icons/proicons/map'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
+import SelectionChip from '#lib/bits/patterns/panels/components/common/SelectionChip.svelte'
 import DivisionClassMenu from './DivisionClassMenu.svelte'
 import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 import FilterBar from '#lib/bits/patterns/panels/components/common/FilterBar.svelte'
@@ -33,14 +34,10 @@ let {
   {#if model.selectedNeighbourhoods.length > 0}
     <div class="flex flex-wrap gap-2 px-6 py-4">
       {#each model.selectedNeighbourhoods as neighbourhood (neighbourhood.id)}
-        <button
-          type="button"
-          class="rounded-full bg-primary/15 px-3 py-1 text-xs text-primary"
-          onclick={() => model.toggleDivision(neighbourhood.id)}
-        >
-          {neighbourhood.name}
-          ×
-        </button>
+        <SelectionChip
+          label={neighbourhood.name}
+          onRemove={() => model.toggleDivision(neighbourhood.id)}
+        />
       {/each}
     </div>
   {/if}
@@ -53,10 +50,10 @@ let {
   persistentContent={selectedNeighbourhoods}
   {...panelProps}
 >
-  {#if model.visibleNeighbourhoodCount > 4}
+  {#if model.visibleNeighbourhoodCount > 4 || model.searchTerm}
     <FilterBar
       bind:searchTerm={() => model.searchTerm, model.setSearchTerm}
-      position="right"
+      label={m.panel__search({ name: m.filters__divisions() })}
       onReset={model.resetDivisions}
     />
   {/if}

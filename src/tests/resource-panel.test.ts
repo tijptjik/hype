@@ -92,18 +92,20 @@ it('keeps layer additive, exclusive and collapsed-chip actions separate', async 
   expect(model.rows[0].onIsolate).toHaveBeenCalledOnce()
   expect(model.rows[0].onToggle).not.toHaveBeenCalled()
   await fireEvent.click(screen.getByRole('button', { name: 'Collapse Layers' }))
-  await fireEvent.click(screen.getByRole('button', { name: 'Layer 0' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Unpin layer 0' }))
   expect(model.rows[0].onToggle).toHaveBeenCalledOnce()
 })
 
-it('uses compact names in collapsed tags while preserving full row names', async () => {
+it('keeps full names in collapsed selection chips instead of contextual aliases', async () => {
   const model = section(1)
   model.rows[0].shortName = 'All'
   render(ResourceSection, { section: model })
   expect(screen.getByText('Layer 0')).toBeTruthy()
   await fireEvent.click(screen.getByRole('button', { name: 'Collapse Layers' }))
-  expect(screen.getByRole('button', { name: 'All' })).toBeTruthy()
-  expect(screen.queryByText('Layer 0')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Unpin layer 0' }).textContent).toContain(
+    'Layer 0',
+  )
+  expect(screen.queryByText('All')).toBeNull()
 })
 
 it('preserves organisation names and primary actions across rail collapse and expansion', async () => {
