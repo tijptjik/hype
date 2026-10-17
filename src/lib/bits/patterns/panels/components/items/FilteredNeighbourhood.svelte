@@ -1,25 +1,27 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy } from 'svelte'
-// DOMAIN
-import { divisionClassLabel } from '#lib/divisions/classes.js'
 // TRANSITIONS
 import { slide } from 'svelte/transition'
 // ICONS
-import MapIcon from 'virtual:icons/lucide/map'
-import DistrictIcon from 'virtual:icons/lucide/landmark'
-import IslandIcon from 'virtual:icons/lucide/mountain'
-import MacrohoodIcon from 'virtual:icons/lucide/blocks'
-import TownIcon from 'virtual:icons/lucide/building'
-import HoodIcon from 'virtual:icons/lucide/house'
-import RuralIcon from 'virtual:icons/lucide/trees'
-import MinorIslandIcon from 'virtual:icons/lucide/waves'
-import VillageIcon from 'virtual:icons/lucide/church'
-import MicrohoodIcon from 'virtual:icons/lucide/door-open'
-import HamletIcon from 'virtual:icons/lucide/tent'
-import IsletIcon from 'virtual:icons/lucide/shell'
+import MapIcon from 'virtual:icons/hype-divisions/area'
+import SarIcon from 'virtual:icons/hype-divisions/sar'
+import DistrictIcon from 'virtual:icons/hype-divisions/district'
+import IslandIcon from 'virtual:icons/hype-divisions/major_island'
+import MacrohoodIcon from 'virtual:icons/hype-divisions/macrohood'
+import TownIcon from 'virtual:icons/hype-divisions/town'
+import HoodIcon from 'virtual:icons/hype-divisions/neighbourhood'
+import RuralIcon from 'virtual:icons/hype-divisions/rural_area'
+import MinorIslandIcon from 'virtual:icons/hype-divisions/minor_island'
+import VillageIcon from 'virtual:icons/hype-divisions/village'
+import MicrohoodIcon from 'virtual:icons/hype-divisions/microhood'
+import HamletIcon from 'virtual:icons/hype-divisions/hamlet'
+import IsletIcon from 'virtual:icons/hype-divisions/islet'
+// DOMAIN
+import { divisionClassLabel } from '#lib/divisions/classes.js'
 
 const icons = {
+  sar: SarIcon,
   area: MapIcon,
   district: DistrictIcon,
   major_island: IslandIcon,

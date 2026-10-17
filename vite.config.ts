@@ -6,6 +6,7 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte'
 import { defineConfig } from 'vite'
 import { sveltekit } from '@sveltejs/kit/vite'
 import Icons from 'unplugin-icons/vite'
+import { FileSystemIconLoader } from 'unplugin-icons/loaders'
 import tailwindcss from '@tailwindcss/vite'
 // TRANSLATION
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
@@ -406,7 +407,13 @@ export default defineConfig(async ({ command }) => ({
       csrf: { trustedOrigins: ['*'] },
       experimental: { remoteFunctions: true },
     }),
-    Icons({ compiler: 'svelte' }),
+    Icons({
+      compiler: 'svelte',
+      customCollections: {
+        // Compile the reviewed division SVGs into inline, theme-aware components.
+        'hype-divisions': FileSystemIconLoader('./static/icons/divisions'),
+      },
+    }),
     tailwindcss(),
   ],
   optimizeDeps: {
