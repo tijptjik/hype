@@ -14,10 +14,15 @@ import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
  */
 export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
   let optimisticUserLayerIds = $state<Set<string> | null>(null)
+  let optimisticAccountRevision = $state<number | null>(null)
   let isSavingLayers = $state(false)
 
   const persistedUserLayerIds = $derived(new Set(appCtx.getUserLayerIds()))
-  const userLayerIds = $derived(optimisticUserLayerIds ?? persistedUserLayerIds)
+  const userLayerIds = $derived(
+    optimisticAccountRevision === appCtx.account.revision
+      ? (optimisticUserLayerIds ?? persistedUserLayerIds)
+      : persistedUserLayerIds,
+  )
   const canSaveUserLayers = $derived(Boolean(appCtx.hub?.id || appCtx.hub?.code))
   const userPreferences = $derived(appCtx.getUserPreferences())
   const orderedLayers = $derived.by(() =>
@@ -60,6 +65,7 @@ export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
     const hub = appCtx.hub
     if (!user || !hub || (!hub.id && !hub.code)) return
 
+    const accountRevision = appCtx.account.revision
     const previousUserLayerIds = new Set(userLayerIds)
     const nextUserLayerIds = new Set(userLayerIds)
 
@@ -69,6 +75,7 @@ export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
       nextUserLayerIds.delete(layerId)
     }
 
+    optimisticAccountRevision = accountRevision
     optimisticUserLayerIds = nextUserLayerIds
     isSavingLayers = true
 
@@ -88,8 +95,12 @@ export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
         }),
       )
 
-      appCtx.applyUserLayerDefaults(response?.data ?? [], hub)
+      appCtx.applyUserLayerDefaults(response?.data ?? [], hub, accountRevision)
     } catch (error) {
+      if (accountRevision !== appCtx.account.revision) {
+        optimisticUserLayerIds = null
+        return
+      }
       console.error('Error updating default map layers:', error)
       optimisticUserLayerIds = previousUserLayerIds
       toast.error('Failed to update default map layers')
@@ -117,7 +128,8 @@ export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
     toggleUserLayer,
     getHierarchy: (layer: Parameters<ResourceViewCtx['getHierarchySync']>[0]) =>
       appCtx.getHierarchySync(layer),
-    getProjectName: (project: Parameters<AppCtx['getContextualProjectName']>[0]) =>
-      appCtx.getContextualProjectName(project, false),
+    getProjectName: (
+      project: Parameters<ResourceViewCtx['getContextualProjectName']>[0],
+    ) => appCtx.getContextualProjectName(project, false),
   }
 }

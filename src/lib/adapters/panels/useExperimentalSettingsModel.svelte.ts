@@ -47,6 +47,7 @@ export function useExperimentalSettingsModel(appCtx: ResourceViewCtx) {
     const user = appCtx.getUser()
     if (!user || !('experimental' in user)) return
 
+    const accountRevision = appCtx.account.revision
     const previousExperimental: UserExperimental = {
       contributorMode: user.experimental?.contributorMode ?? false,
       noLabelsMode: user.experimental?.noLabelsMode ?? false,
@@ -57,7 +58,7 @@ export function useExperimentalSettingsModel(appCtx: ResourceViewCtx) {
     }
 
     isSavingExperimental = true
-    appCtx.applyUserProfile({ experimental: nextExperimental })
+    appCtx.applyUserProfile({ experimental: nextExperimental }, accountRevision)
 
     try {
       const response = await updateUserProfile({
@@ -71,13 +72,21 @@ export function useExperimentalSettingsModel(appCtx: ResourceViewCtx) {
         }),
       )
 
-      appCtx.applyUserProfile(response?.data ?? { experimental: nextExperimental })
+      if (accountRevision !== appCtx.account.revision) return
+      appCtx.applyUserProfile(
+        response?.data ?? { experimental: nextExperimental },
+        accountRevision,
+      )
       await refreshUserSession()
     } catch (error) {
+      if (accountRevision !== appCtx.account.revision) return
       console.error('Error updating experimental setting:', error)
-      appCtx.applyUserProfile({
-        experimental: previousExperimental as UserExperimental,
-      })
+      appCtx.applyUserProfile(
+        {
+          experimental: previousExperimental as UserExperimental,
+        },
+        accountRevision,
+      )
       toast.error('Failed to update experimental setting')
     } finally {
       isSavingExperimental = false

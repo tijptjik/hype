@@ -60,9 +60,10 @@ export function useLanguageSettingsModel(appCtx: ResourceViewCtx) {
     const user = appCtx.getUser()
     if (!user) return
 
+    const accountRevision = appCtx.account.revision
     const previousLocale = currentLocale
     pendingLocale = locale
-    appCtx.applyUserProfile({ locale })
+    appCtx.applyUserProfile({ locale }, accountRevision)
     await setRuntimeLocale(locale, { reload: false })
 
     try {
@@ -77,15 +78,20 @@ export function useLanguageSettingsModel(appCtx: ResourceViewCtx) {
         }),
       )
 
-      appCtx.applyUserProfile(response?.data ?? { locale })
+      if (accountRevision !== appCtx.account.revision) return
+      appCtx.applyUserProfile(response?.data ?? { locale }, accountRevision)
       await refreshUserSession()
 
-      if (typeof window !== 'undefined') {
+      if (
+        accountRevision === appCtx.account.revision &&
+        typeof window !== 'undefined'
+      ) {
         window.location.reload()
       }
     } catch (error) {
+      if (accountRevision !== appCtx.account.revision) return
       console.error('Error updating preferred language:', error)
-      appCtx.applyUserProfile({ locale: previousLocale })
+      appCtx.applyUserProfile({ locale: previousLocale }, accountRevision)
       await setRuntimeLocale(previousLocale, { reload: false })
       toast.error('Failed to update preferred language')
     } finally {
@@ -105,9 +111,10 @@ export function useLanguageSettingsModel(appCtx: ResourceViewCtx) {
     const user = appCtx.getUser()
     if (!user) return
 
+    const accountRevision = appCtx.account.revision
     const previousPreferences = appCtx.getUserPreferences(false)
     isSavingPreferences = true
-    appCtx.applyUserProfile({ preferences: nextPreferences })
+    appCtx.applyUserProfile({ preferences: nextPreferences }, accountRevision)
 
     try {
       const response = await updateUserProfile({
@@ -121,11 +128,16 @@ export function useLanguageSettingsModel(appCtx: ResourceViewCtx) {
         }),
       )
 
-      appCtx.applyUserProfile(response?.data ?? { preferences: nextPreferences })
+      if (accountRevision !== appCtx.account.revision) return
+      appCtx.applyUserProfile(
+        response?.data ?? { preferences: nextPreferences },
+        accountRevision,
+      )
       await refreshUserSession()
     } catch (error) {
+      if (accountRevision !== appCtx.account.revision) return
       console.error('Error updating language preferences:', error)
-      appCtx.applyUserProfile({ preferences: previousPreferences })
+      appCtx.applyUserProfile({ preferences: previousPreferences }, accountRevision)
       toast.error('Failed to update language preferences')
     } finally {
       isSavingPreferences = false

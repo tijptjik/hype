@@ -40,7 +40,7 @@ export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
 
   // Apply the default once for each profile context so user toggles survive rerenders.
   $effect(() => {
-    const profileContext = app.state.panels.profile.ctx
+    const profileContext = app.panels.state.profile.ctx
     const hub = app.hub as Hub | undefined
     if (!profileContext || !hub || initializedProfileContexts.has(profileContext))
       return
@@ -54,13 +54,13 @@ export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
   return {
     // Get the username and profile loaded from URL navigation.
     get username() {
-      return app.state.panels.profile.ctx?.username
+      return app.panels.state.profile.ctx?.username
     },
     get userData() {
-      return app.state.panels.profile.ctx?.userData
+      return app.panels.state.profile.ctx?.userData
     },
     get isOwnProfile() {
-      return app.state.panels.profile.ctx?.userData?.id === app.getUser()?.id
+      return app.panels.state.profile.ctx?.userData?.id === app.getUser()?.id
     },
     get isGuestAccount() {
       return isGuestUser(session.current.data?.user)
@@ -75,10 +75,10 @@ export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
       return (app.hub as Hub | undefined)?.organisations?.length === 1
     },
     get observePrisms() {
-      return app.state.panels.profile.ctx?.observePrisms ?? false
+      return app.panels.state.profile.ctx?.observePrisms ?? false
     },
     onToggleObservePrisms: () => {
-      const profileContext = app.state.panels.profile.ctx
+      const profileContext = app.panels.state.profile.ctx
       if (!profileContext) return
       profileContext.observePrisms = !profileContext.observePrisms
       void app.refreshUserProfile()

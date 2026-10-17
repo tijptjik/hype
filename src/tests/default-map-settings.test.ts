@@ -10,6 +10,7 @@ describe('default map settings choices', () => {
   it('keeps the complete selection independent of an empty or filtered panel page', () => {
     const dispose = createFeatureQueryEffectRoot(() => {
       const app = {
+        account: { revision: 0 },
         selectionLayers: [
           { id: 'outside-page', rank: 1, i18n: { en: { name: 'Outside page' } } },
           { id: 'first', rank: 0, i18n: { en: { name: 'First' } } },

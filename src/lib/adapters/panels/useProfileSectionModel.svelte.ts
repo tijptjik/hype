@@ -65,6 +65,7 @@ export function useProfileSectionModel(
    * @param previousUsername - The username value to restore on failure.
    * @param optimisticDisplayUsername - Casing applied by this save.
    * @param previousDisplayUsername - Previous casing to restore.
+   * @param accountRevision - Account lifetime that initiated the save.
    */
   function restoreOptimisticUsername(
     userId: string,
@@ -72,6 +73,7 @@ export function useProfileSectionModel(
     previousUsername: CurrentUser['username'],
     optimisticDisplayUsername: string,
     previousDisplayUsername: CurrentUser['displayUsername'],
+    accountRevision: number,
   ): void {
     const currentUser = appCtx.getUser()
 
@@ -82,11 +84,13 @@ export function useProfileSectionModel(
     )
       return
 
-    appCtx.setUser({
-      ...currentUser,
-      username: previousUsername,
-      displayUsername: previousDisplayUsername,
-    } as CurrentUser)
+    appCtx.applyUserProfile(
+      {
+        username: previousUsername,
+        displayUsername: previousDisplayUsername,
+      },
+      accountRevision,
+    )
   }
 
   onDestroy(() => {
@@ -153,6 +157,7 @@ export function useProfileSectionModel(
     if (!user || !editedUsername.trim()) return
 
     const { normalizedUsername, issues } = validateUsernameIssues(editedUsername.trim())
+    const accountRevision = appCtx.account.revision
     const previousUsername = user.username ?? null
     const previousDisplayUsername = user.displayUsername ?? null
     const displayUsername = editedUsername.trim()
@@ -164,11 +169,10 @@ export function useProfileSectionModel(
 
     isLoadingUsername = true
 
-    appCtx.setUser({
-      ...user,
+    appCtx.applyUserProfile({
       username: normalizedUsername,
       displayUsername,
-    } as CurrentUser)
+    })
 
     await debouncedUpdateUsername((user as CurrentUser).id, displayUsername, {
       onSuccess: () => {
@@ -183,6 +187,7 @@ export function useProfileSectionModel(
           previousUsername,
           displayUsername,
           previousDisplayUsername,
+          accountRevision,
         )
         isLoadingUsername = false
         showTransientError()
@@ -195,6 +200,7 @@ export function useProfileSectionModel(
           previousUsername,
           displayUsername,
           previousDisplayUsername,
+          accountRevision,
         )
         isLoadingUsername = false
         showTransientError()

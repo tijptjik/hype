@@ -30,6 +30,7 @@ async function saveAttribution(): Promise<void> {
     return
   }
 
+  const accountRevision = appCtx.account.revision
   try {
     const response = await updateUserProfile({
       id: appCtx.user.id,
@@ -37,7 +38,8 @@ async function saveAttribution(): Promise<void> {
     })
 
     if (response?.data && appCtx.user) {
-      appCtx.user.attribution = editedAttribution
+      if (!appCtx.applyUserProfile({ attribution: editedAttribution }, accountRevision))
+        return
       cardCtx.setAttribution(editedAttribution)
       originalAttribution = editedAttribution
       isSaveSuccess = true
