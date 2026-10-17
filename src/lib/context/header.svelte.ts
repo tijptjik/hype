@@ -75,6 +75,9 @@ export const getEntityVisibility = (
  * Private methods are internal composition helpers.
  */
 export class HeaderCtrl {
+  /** Transient focus of the header search field, shared with its current page. */
+  isSearchFocused = $state(false)
+
   /** Reactive header state consumed by the header adapter/components. */
   state: HeaderCtrlState = $state({
     search: null,
@@ -440,6 +443,7 @@ export class HeaderCtrl {
    * @returns void
    */
   reset(): void {
+    this.isSearchFocused = false
     this.state.search = null
     this.state.controlsMode = 'auto'
     this.state.isEditing = false
