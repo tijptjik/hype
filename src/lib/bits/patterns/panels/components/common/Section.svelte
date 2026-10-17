@@ -24,6 +24,7 @@ let {
   description = undefined,
   defaultOpen = true,
   children,
+  headerActions = undefined,
   collapsedContent = undefined,
   managedContent = undefined,
   ...panelProps
@@ -37,6 +38,7 @@ let {
   iconColorClass?: string
   description?: string
   defaultOpen?: boolean
+  headerActions?: Snippet
   children?: Snippet
   collapsedContent?: Snippet
   managedContent?: Snippet<[boolean]>
@@ -114,6 +116,7 @@ const onNavigate = (e: MouseEvent) => {
       {iconVerticalPaddingClass}
       {iconColorClass}
       {description}
+      {headerActions}
       {isOpen}
       {onToggle}
       {onNavigate}

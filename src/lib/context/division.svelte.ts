@@ -74,6 +74,9 @@ export class DivisionCtx {
   /** Registry metadata stays available when a filtered response has no matching members. */
   divisions = new SvelteMap<string, DivisionFacet>()
 
+  /** Surface-local class visibility shared by the panel and Omnibar; selection is independent. */
+  hiddenClasses = new SvelteSet<string>()
+
   /** Transient preview belongs to this surface, independently of selection. */
   hoveredId: string | null = $state(null)
 

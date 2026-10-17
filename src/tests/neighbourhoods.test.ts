@@ -53,6 +53,23 @@ describe('registry neighbourhoods', () => {
     expect(place.divisions.has('sar')).toBe(true)
   })
 
+  it('shares class visibility without clearing an active division selection', () => {
+    const place = new DivisionCtx()
+    place.setDivisionCounts({ parent, child })
+    place.toggleDivision(parent.id)
+    place.hiddenClasses.add('neighbourhood')
+    const app = {
+      divisionCtx: place,
+      getUserPreferences: () => ({}),
+    } as unknown as AppCtx
+    expect(filterDivisions(app, '').map(([id]) => id)).toEqual(['child'])
+    expect(filterDivisions(app, 'Central', true).map(([id]) => id)).toEqual([
+      'parent',
+      'child',
+    ])
+    expect(place.getFilteredDivisions()).toEqual(['parent'])
+  })
+
   it('keeps exact parent and child counts and indexes every selected membership', () => {
     const place = new DivisionCtx()
     place.setDivisionCounts({ parent, child })

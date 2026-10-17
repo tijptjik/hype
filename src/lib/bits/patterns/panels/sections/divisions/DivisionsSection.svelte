@@ -2,6 +2,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
+import DivisionClassMenu from './DivisionClassMenu.svelte'
 import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 import FilterBar from '#lib/bits/patterns/panels/components/common/FilterBar.svelte'
 import FilteredNeighbourhood from '#lib/bits/patterns/panels/components/items/FilteredNeighbourhood.svelte'
@@ -15,6 +16,13 @@ let {
   ...panelProps
 }: PanelProps & { model: ReturnType<typeof useFilterPanelModel> } = $props()
 </script>
+
+{#snippet headerActions()}
+  <DivisionClassMenu
+    options={model.divisionClasses}
+    onToggle={model.toggleDivisionClass}
+  />
+{/snippet}
 
 {#snippet selectedNeighbourhoods()}
   <div class="flex flex-wrap gap-2 px-4 pb-3">
@@ -36,10 +44,11 @@ let {
   icon="/neighbourhood.svg"
   iconGraphicClass="scale-125 origin-bottom-right"
   iconVerticalPaddingClass="pt-0"
+  {headerActions}
   collapsedContent={selectedNeighbourhoods}
   {...panelProps}
 >
-  {#if model.visibleNeighbourhoodCount === 0}
+  {#if model.selectedNeighbourhoods.length > 0}
     {@render selectedNeighbourhoods()}
   {/if}
   {#if model.visibleNeighbourhoodCount > 4}

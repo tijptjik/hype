@@ -57,11 +57,13 @@ function divisionDisplayOrder(division: DivisionFacet): number {
  * Searches the registry divisions available to the current authorized collection.
  * @param appCtx Active application and division facet state.
  * @param term Localized search text.
+ * @param includeHiddenClasses Whether to include classes hidden by the display preferences.
  * @returns Stable IDs with classification and translated names, ordered by level and name.
  */
 export function filterDivisions(
   appCtx: ResourceViewCtx,
   term: string,
+  includeHiddenClasses = false,
 ): [string, DivisionFacet][] {
   const preferences = appCtx.getUserPreferences()
   const label = (division: DivisionFacet) => getDivisionName(division, preferences)
@@ -71,6 +73,9 @@ export function filterDivisions(
         (appCtx.divisionCtx.divisionFeatureCounts.get(id) ?? 0) > 0 &&
         division.hasGeometry === true &&
         division.class !== 'sar' &&
+        division.class !== 'city' &&
+        (includeHiddenClasses ||
+          !appCtx.divisionCtx.hiddenClasses?.has(division.class ?? 'division')) &&
         [
           division.divisionCode ?? '',
           ...Object.values(division.i18n).map(value => value?.name ?? ''),

@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy } from 'svelte'
+// DOMAIN
+import { divisionClassLabel } from '#lib/divisions/classes.js'
 // TRANSITIONS
 import { slide } from 'svelte/transition'
 // ICONS
@@ -81,9 +83,9 @@ const Icon = $derived(icons[row.class as keyof typeof icons] ?? MapIcon)
       ></span>
       <Icon class="size-5 shrink-0 text-base-content/60" aria-hidden="true" />
       <span class="flex min-w-0 flex-col">
-        {#if row.level !== null}
-          <span class="font-mono text-xs text-base-content/60">L{row.level}</span>
-        {/if}
+        <span class="text-xs text-base-content/60"
+          >{divisionClassLabel(row.class)}</span
+        >
         <span class="font-normal text-base-content">{row.name}</span>
       </span>
     </span>

@@ -110,6 +110,22 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
   }
 
   return {
+    get divisionClasses() {
+      return [
+        ...new Set(
+          filterDivisions(app, '', true).map(
+            ([, division]) => division.class ?? 'division',
+          ),
+        ),
+      ]
+        .sort()
+        .map(value => ({ value, visible: !app.divisionCtx.hiddenClasses.has(value) }))
+    },
+    toggleDivisionClass: (value: string) => {
+      if (app.divisionCtx.hiddenClasses.has(value))
+        app.divisionCtx.hiddenClasses.delete(value)
+      else app.divisionCtx.hiddenClasses.add(value)
+    },
     get searchTerm() {
       return searchTerm
     },

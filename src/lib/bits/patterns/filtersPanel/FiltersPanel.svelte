@@ -7,7 +7,7 @@ import { PanelRoot as Panel } from '#lib/bits/index.js'
 import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
 import Info from '#lib/bits/patterns/panels/components/info/Filters.svelte'
 import Reset from '#lib/bits/patterns/panels/components/controls/Reset.svelte'
-import Neighbourhoods from '#lib/bits/patterns/panels/sections/neighbourhoods/NeighbourhoodsSection.svelte'
+import Divisions from '#lib/bits/patterns/panels/sections/divisions/DivisionsSection.svelte'
 import Categories from '#lib/bits/patterns/panels/sections/categories/CategoriesSection.svelte'
 // CONTEXT
 
@@ -61,7 +61,7 @@ const panelProps = $derived(shell.panel)
   <Info isOpen={isInfoOpen} />
   <div class="flex flex-col">
     <div class="grow flex max-h-[40vh] min-h-0 shrink-0 flex-col">
-      <Neighbourhoods {model} {...panelProps} />
+      <Divisions {model} {...panelProps} />
     </div>
     <div class="grow flex max-h-[calc(100vh-206px)] min-h-0 shrink-0 flex-col">
       <Categories {model} {...panelProps} />

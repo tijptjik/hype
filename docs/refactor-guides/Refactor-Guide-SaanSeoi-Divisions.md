@@ -215,7 +215,7 @@ behavior before designing URL references.
 
 6. Audit consumers: ResourceViewCtx and AppCtx constructors, public/admin layouts,
    client/services/geospatial.ts, adapters/panels/useFilterPanelModel.svelte.ts,
-   panels/sections/neighbourhoods/NeighbourhoodsSection.svelte, search/navigation,
+   panels/sections/divisions/DivisionsSection.svelte, search/navigation,
    feature forms/cards, map filters, saved views, admin lists and dashboard needs.
    Retain existing source addresses as authored/imported text; canonical geographic
    identity comes from SaanSeoi membership.
