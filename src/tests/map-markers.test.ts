@@ -15,6 +15,8 @@ class TestMarker {
   removed = false
   coordinates: [number, number] | undefined
   removals = 0
+  attachments = 0
+  positionUpdates = 0
 
   constructor({ element }: { element: HTMLElement }) {
     this.element = element
@@ -22,11 +24,13 @@ class TestMarker {
   }
 
   setLngLat(coordinates: [number, number]): this {
+    this.positionUpdates++
     this.coordinates = coordinates
     return this
   }
 
   addTo(): this {
+    this.attachments++
     return this
   }
 
@@ -88,11 +92,12 @@ describe('map markers', () => {
     const retention = { scope: 'public', budget: 1000 }
     const row = feature('distant', [50, 1])
     renderer.sync([row], { retention })
-    const original = renderer.getElement(row.id)
+    const original = TestMarker.instances[0].getElement()
     renderer.sync([], { retention })
-    expect(TestMarker.instances[0].removals).toBe(1)
+    expect(TestMarker.instances[0].attachments).toBe(0)
+    expect(TestMarker.instances[0].removals).toBe(0)
     renderer.sync([row], { retention })
-    expect(renderer.getElement(row.id)).toBe(original)
+    expect(TestMarker.instances[0].getElement()).toBe(original)
     expect(TestMarker.instances).toHaveLength(1)
     renderer.sync([], { retention })
     renderer.clear()
@@ -109,22 +114,87 @@ describe('map markers', () => {
     const retention = { scope: 'public', budget: 1000 }
     const row = feature('approaching')
     renderer.sync([row], { retention })
-    const element = renderer.getElement(row.id)
+    const element = TestMarker.instances[0].getElement()
     if (!element) throw new Error('Expected a rendered marker')
     const image = element.querySelector('img')
     renderer.sync([], { retention })
     expect(renderer.getElement(row.id)).toBeNull()
     x = 900
-    renderer.updateCamera()
+    renderer.updateCamera(true)
     expect(renderer.getElement(row.id)).toBe(element)
     expect(element.hidden).toBe(false)
     expect(element.querySelector('img')).toBe(image)
     x = 400
-    renderer.updateCamera()
+    renderer.updateCamera(true)
     expect(TestMarker.instances).toHaveLength(1)
     renderer.clear()
-    renderer.updateCamera()
+    renderer.updateCamera(true)
     expect(renderer.getElement(row.id)).toBeNull()
+  })
+
+  it('detaches active rows outside overscan and reuses their image when the camera returns', () => {
+    let x = 100
+    const camera = {
+      ...retentionMap,
+      project: () => ({ x, y: 100 }),
+    } as unknown as MapLibreMap
+    const renderer = createMarkerRenderer(camera, markerFactory)
+    const row = feature('active')
+    renderer.sync([row], { retention: { scope: 'public', budget: 1000 } })
+    const original = renderer.getElement(row.id)
+    x = 5000
+    renderer.updateCamera(true)
+    expect(renderer.getElement(row.id)).toBeNull()
+    x = 100
+    renderer.updateCamera(true)
+    expect(renderer.getElement(row.id)).toBe(original)
+    expect(TestMarker.instances).toHaveLength(1)
+    renderer.clear()
+  })
+
+  it('bounds camera scans during movement and forces the final camera position', () => {
+    const project = vi.fn(() => ({ x: 100, y: 100 }))
+    const camera = { ...retentionMap, project } as unknown as MapLibreMap
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0)
+    const renderer = createMarkerRenderer(camera, markerFactory)
+    renderer.sync([feature('row')], { retention: { scope: 'public', budget: 1000 } })
+    project.mockClear()
+    now.mockReturnValue(40)
+    renderer.updateCamera()
+    expect(project).not.toHaveBeenCalled()
+    now.mockReturnValue(80)
+    renderer.updateCamera()
+    expect(project).toHaveBeenCalledTimes(1)
+    renderer.updateCamera(true)
+    expect(project).toHaveBeenCalledTimes(2)
+    renderer.clear()
+    now.mockRestore()
+  })
+
+  it('does not reposition unchanged markers during selection updates', () => {
+    const renderer = createMarkerRenderer(map, markerFactory)
+    const row = feature('unchanged')
+    renderer.sync([row])
+    renderer.sync([row], { selectedId: row.id })
+    expect(TestMarker.instances[0].positionUpdates).toBe(1)
+    expect(renderer.getElement(row.id)).toHaveClass('active')
+    renderer.clear()
+  })
+
+  it('bounds live cached markers separately from warm images and protects active rows', () => {
+    const renderer = createMarkerRenderer(retentionMap, markerFactory)
+    const retention = { scope: 'public', budget: 1500 }
+    const rows = Array.from({ length: 600 }, (_, i) => feature(`dense-${i}`, [1, 1]))
+    renderer.sync(rows.slice(0, 500), { retention })
+    renderer.sync(rows.slice(500), { retention })
+    const attached = rows.filter(row => renderer.getElement(row.id))
+    expect(attached).toHaveLength(164)
+    for (const row of rows.slice(500))
+      expect(renderer.getElement(row.id)).not.toBeNull()
+    renderer.sync(rows.slice(0, 500), { retention })
+    expect(rows.filter(row => renderer.getElement(row.id))).toHaveLength(500)
+    expect(TestMarker.instances).toHaveLength(600)
+    renderer.clear()
   })
 
   it('removes cached presentation immediately when its style changes', () => {
@@ -134,7 +204,7 @@ describe('map markers', () => {
     renderer.sync([row], { retention })
     renderer.sync([], { retention })
     renderer.sync([], { retention, markerStyle: 'dot' })
-    renderer.updateCamera()
+    renderer.updateCamera(true)
     expect(renderer.getElement(row.id)).toBeNull()
   })
 
@@ -146,13 +216,13 @@ describe('map markers', () => {
     renderer.sync([near], { retention, markerStyle: 'dot' })
     const nearElement = renderer.getElement(near.id)
     renderer.sync([far], { retention, markerStyle: 'dot' })
-    const farElement = renderer.getElement(far.id)
+    const farElement = TestMarker.instances.at(-1)?.getElement()
     const active = Array.from({ length: 499 }, (_, i) => feature(`active-${i}`, [1, 1]))
     renderer.sync(active, { retention, markerStyle: 'dot' })
     renderer.sync([near], { retention, markerStyle: 'dot' })
     expect(renderer.getElement(near.id)).toBe(nearElement)
     renderer.sync([far], { retention, markerStyle: 'dot' })
-    expect(renderer.getElement(far.id)).not.toBe(farElement)
+    expect(TestMarker.instances.at(-1)?.getElement()).not.toBe(farElement)
   })
 
   it('discards parked markers when filters or authorization scope changes', () => {
@@ -272,10 +342,10 @@ describe('marker retention policy', () => {
     )
   })
 
-  it('uses two tile widths at each edge and accounts for wrapped longitudes', () => {
-    expect(isWithinMarkerRetentionPerimeter(retentionMap, [18.24, 1])).toBe(true)
-    expect(isWithinMarkerRetentionPerimeter(retentionMap, [18.25, 1])).toBe(false)
+  it('uses bounded screen overscan and accounts for wrapped longitudes', () => {
+    expect(isWithinMarkerRetentionPerimeter(retentionMap, [9.92, 1])).toBe(true)
+    expect(isWithinMarkerRetentionPerimeter(retentionMap, [9.93, 1])).toBe(false)
     expect(isWithinMarkerRetentionPerimeter(retentionMap, [361, 1])).toBe(true)
-    expect(isWithinMarkerRetentionPerimeter(retentionMap, [1, -1025])).toBe(false)
+    expect(isWithinMarkerRetentionPerimeter(retentionMap, [1, -193])).toBe(false)
   })
 })

@@ -631,6 +631,9 @@ $effect(() => {
       map.getZoom(),
     )
   }
+  const onMoveStart = (): void => {
+    map.getContainer().dataset.markerMotion = 'moving'
+  }
   let movementTimer: ReturnType<typeof setTimeout> | undefined
   const onMove = (): void => {
     markerRenderer?.updateCamera()
@@ -641,17 +644,21 @@ $effect(() => {
     }, 300)
   }
   const onMoveEnd = (): void => {
+    delete map.getContainer().dataset.markerMotion
     clearTimeout(movementTimer)
     movementTimer = undefined
-    markerRenderer?.updateCamera()
+    markerRenderer?.updateCamera(true)
     updateViewport()
   }
+  map.on('movestart', onMoveStart)
   map.on('move', onMove)
   map.on('moveend', onMoveEnd)
   map.on('resize', updateViewport)
   updateViewport()
   return () => {
     clearTimeout(movementTimer)
+    delete map.getContainer().dataset.markerMotion
+    map.off('movestart', onMoveStart)
     map.off('move', onMove)
     map.off('moveend', onMoveEnd)
     map.off('resize', updateViewport)

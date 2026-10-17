@@ -28,30 +28,47 @@ export function getMarkerRetentionBudget(hints: MarkerDeviceHints = {}): number 
 }
 
 /**
- * Tests the viewport plus two MapLibre tile widths on every edge in screen space.
- * @param map - Owning map, including its current bearing, pitch, and world wrap.
+ * Captures camera dimensions once for a batch of marker visibility checks.
+ * @param map - Owning map, including bearing, pitch, and world wrap.
+ * @returns A predicate for the viewport plus a small screen-relative overscan.
+ * @remarks Detached markers keep their decoded image nodes. This perimeter controls
+ * live MapLibre work only; it does not expand network queries or evict the cache.
+ */
+export function createMarkerVisibilityTest(
+  map: MapLibreMap,
+): (coordinates: [number, number]) => boolean {
+  const container = map.getContainer()
+  const width = container.clientWidth
+  const height = container.clientHeight
+  const margin = Math.max(96, Math.min(192, width / 4))
+  const centerLongitude = map.getCenter().lng
+  return coordinates => {
+    const longitude =
+      coordinates[0] + Math.round((centerLongitude - coordinates[0]) / 360) * 360
+    // Try the nearest world first; ordinary views need only one projection.
+    return [0, -360, 360].some(offset => {
+      const point = map.project([longitude + offset, coordinates[1]])
+      return (
+        Number.isFinite(point.x) &&
+        Number.isFinite(point.y) &&
+        point.x >= -margin &&
+        point.x <= width + margin &&
+        point.y >= -margin &&
+        point.y <= height + margin
+      )
+    })
+  }
+}
+
+/**
+ * Tests whether a marker needs live positioning near the viewport.
+ * @param map - Owning map.
  * @param coordinates - Marker longitude and latitude.
- * @returns Whether the closest wrapped copy is inside the 1,024 CSS pixel perimeter.
- * @remarks The perimeter prioritizes retention of already loaded markers; it never
- * expands the API query or prefetches features outside the visible viewport.
+ * @returns Whether a wrapped copy is within the visible area and overscan.
  */
 export function isWithinMarkerRetentionPerimeter(
   map: MapLibreMap,
   coordinates: [number, number],
 ): boolean {
-  const container = map.getContainer()
-  const margin = 2 * 512
-  const longitude =
-    coordinates[0] + Math.round((map.getCenter().lng - coordinates[0]) / 360) * 360
-  return [-360, 0, 360].some(offset => {
-    const point = map.project([longitude + offset, coordinates[1]])
-    return (
-      Number.isFinite(point.x) &&
-      Number.isFinite(point.y) &&
-      point.x >= -margin &&
-      point.x <= container.clientWidth + margin &&
-      point.y >= -margin &&
-      point.y <= container.clientHeight + margin
-    )
-  })
+  return createMarkerVisibilityTest(map)(coordinates)
 }

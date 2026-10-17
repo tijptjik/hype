@@ -16,7 +16,7 @@
 }
 
 .marker-container {
-  opacity: 0;
+  opacity: 1;
   cursor: pointer;
 }
 
@@ -168,7 +168,8 @@
 }
 
 .marker-fade-in {
-  animation: markerFadeIn 0.3s ease-in-out forwards;
+  /* Release animation layers after entry instead of retaining one per thumbnail. */
+  animation: markerFadeIn 0.3s ease-in-out;
 }
 
 .marker-fade-out {
@@ -195,7 +196,7 @@
 
 /* Move scale transform to inner container */
 .marker-fade-in .marker-inner {
-  animation: markerScaleIn 0.3s ease-in-out forwards;
+  animation: markerScaleIn 0.3s ease-in-out;
 }
 
 .marker-fade-out .marker-inner {
@@ -391,4 +392,31 @@
 
 .marker-container--feature:hover .marker-image-frame {
   border-color: #ffffff;
+}
+
+/* Keep image identity and selection rings during gestures, then restore decorative
+   glows at rest. Painting hundreds of blurred shadows competes with map dragging. */
+[data-marker-motion="moving"] .marker-inner--feature,
+[data-marker-motion="moving"] .marker-inner--feature::before {
+  box-shadow: none;
+  filter: none;
+}
+
+[data-marker-motion="moving"] .marker-container .marker-image-frame {
+  background: none;
+  padding: 0;
+  inset: 0;
+  border: 2px solid rgba(255, 245, 250, 0.88);
+  mask: none;
+  -webkit-mask: none;
+  box-shadow: none;
+  transition: none;
+}
+
+[data-marker-motion="moving"] .active .marker-image-frame {
+  border-color: #ffdaf3;
+}
+
+[data-marker-motion="moving"] .highlighted .marker-image-frame {
+  border-color: #daffdb;
 }
