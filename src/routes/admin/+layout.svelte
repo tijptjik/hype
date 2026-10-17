@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { onDestroy, untrack } from 'svelte'
 import { afterNavigate, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
 // TANSTACK
@@ -22,7 +23,10 @@ import {
 } from '#lib/navigation/index.js'
 // CONTEXT
 import { setAdminCtx } from '#lib/context/admin.svelte.js'
-import { getAppCtx } from '#lib/context/app.svelte.js'
+import { ResourceViewCtx, setSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import { getRootCTX } from '#lib/context/root.svelte.js'
+import { setDivisionCtx } from '#lib/context/division.svelte.js'
+import { resourceProviders } from '#lib/resources/providers.js'
 import { setHeaderCtrl } from '#lib/context/header.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
@@ -39,14 +43,48 @@ type AdminRootProps = LayoutProps & {
 let { children, data }: AdminRootProps = $props()
 
 // CONTEXT :: APP
-// Get the shared AppCtx from root layout
-const appCtx = getAppCtx()
+// Admin owns its resource view; it never constructs the public AppCtx.
+const root = getRootCTX()
+root.cacheCtx.installProviders(resourceProviders)
+const view = setSurfaceCtx(
+  new ResourceViewCtx(
+    setDivisionCtx(),
+    root.account,
+    root.responsive,
+    root.cacheCtx,
+    'admin',
+  ),
+)
+
+$effect(() => {
+  const user = root.user
+  const hub = root.hub
+  if (!root.ready) return
+  untrack(() => {
+    if (hub) view.setHub(hub)
+    view.syncAccount()
+    adminCtx.isInitialised = false
+    void view.init(user?.id ?? null)
+  })
+})
+
+// Native admin feature payloads remain reactive during optimistic edits.
+$effect(() => {
+  const current = root.cacheCtx.featureCollection?.current
+  if (current) view.state.resources.feature = current.data
+})
+
+onDestroy(() => {
+  view.dispose()
+})
 
 // CONTEXT :: ADMIN
 // svelte-ignore state_referenced_locally
-const adminCtx = setAdminCtx(appCtx)
+const adminCtx = setAdminCtx(view)
+adminCtx.navigation.syncUrl(page.url, 'admin')
+$effect(() => adminCtx.navigation.syncUrl(page.url, 'admin'))
 
-const settingsModel = useSettingsPanelModel(appCtx, getThemeModel(), adminCtx)
+const settingsModel = useSettingsPanelModel(view, getThemeModel(), adminCtx)
 
 type SettingsPanelComponent =
   typeof import('#lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
@@ -87,7 +125,7 @@ $effect(() => {
 
 // Preload settings after admin initialization without blocking the initial render.
 $effect(() => {
-  if (!appCtx.isInitialised || !adminCtx.isInitialised) return
+  if (!view.isInitialised || !adminCtx.isInitialised) return
 
   const preload = (): void => {
     void loadSettingsPanel().catch(() => {})
@@ -102,11 +140,11 @@ $effect(() => {
   return () => window.clearTimeout(timeout)
 })
 
-const sidebarModel = useResourcePanelModel(appCtx, 'admin', adminCtx)
+const sidebarModel = useResourcePanelModel(view, 'admin', adminCtx)
 
-setHeaderCtrl()
+const headerCtrl = setHeaderCtrl()
 
-const headerModel = useAdminHeaderModel(appCtx, adminCtx)
+const headerModel = useAdminHeaderModel(view, adminCtx)
 const headerProps = $derived({
   ...headerModel.getHeaderProps(),
   brand: {
@@ -117,15 +155,15 @@ const headerProps = $derived({
     label: 'HYPE — Back to map',
   },
 })
-const adminPreferences = $derived(appCtx.getUserPreferences().admin)
+const adminPreferences = $derived(view.getUserPreferences().admin)
 const isPrimaryPanelAutoHide = $derived(
-  appCtx.isAdmin() && (adminPreferences?.isPrimaryPanelAutoHide ?? false),
+  view.isAdmin() && (adminPreferences?.isPrimaryPanelAutoHide ?? false),
 )
 
 // Initialize AdminCtx if AppCtx is ready
 $effect(() => {
-  appCtx.isInitialised
-  if (appCtx.isInitialised && !adminCtx.isInitialised && !adminCtx.isInitializing) {
+  view.isInitialised
+  if (view.isInitialised && !adminCtx.isInitialised && !adminCtx.isInitializing) {
     void adminCtx.init().catch(error => {
       console.error('[AdminLayout] Failed to initialize admin context', error)
     })
@@ -137,12 +175,13 @@ beforeNavigate(({ from, to, shallow }) => {
   if (shallow) return
 
   if (shouldClearAdminFeatureCacheOnNavigate(from?.route.id, to?.route.id)) {
-    appCtx.clearFeatureCacheImages()
+    view.clearFeatureCacheImages()
   }
 })
 
 // NAVIGATION :: Reset activeResourceRef when navigating to index pages
 afterNavigate(({ shallow }) => {
+  if (!shallow) headerCtrl.isSearchFocused = false
   if (shallow) return
   if (!adminCtx.isInitialised) return
 
@@ -156,11 +195,11 @@ afterNavigate(({ shallow }) => {
   description={m.admin__desktop_only_window_too_small_explainer()}
   widthLabel={m.admin__desktop_only_current_width()}
   icon={MonitorIcon}
-  isReady={adminCtx.isInitialised && appCtx.isInitialised}
+  isReady={adminCtx.isInitialised && view.isInitialised}
   {isPrimaryPanelAutoHide}
-  isAdminPanelOpen={appCtx.isPanelOpen(Panel.admin)}
-  onOpenVisual={() => appCtx.openPanelVisually(Panel.admin)}
-  onCloseVisual={() => appCtx.closePanelVisually(Panel.admin)}
+  isAdminPanelOpen={view.isPanelOpen(Panel.admin)}
+  onOpenVisual={() => view.openPanelVisually(Panel.admin)}
+  onCloseVisual={() => view.closePanelVisually(Panel.admin)}
   {headerProps}
 >
   {#snippet sidebar()}

@@ -1,3 +1,4 @@
+import { AccountState } from '#lib/context/account.svelte.js'
 import { describe, expect, it, vi } from 'vitest'
 // CONTEXT
 import { AppCtx } from '#lib/context/app.svelte.js'
@@ -38,12 +39,13 @@ describe('AppCtx user updates', () => {
     } as unknown as CurrentUser
     const app = new AppCtx(
       {} as DivisionCtx,
-      user as unknown as SessionUser,
+      new AccountState(user as unknown as SessionUser),
       {} as ResponsiveCtx,
     )
     const scopeBefore = app.organisationsQueryKey()
     app.selectionLayers = [{ id: 'default-layer' }] as Layer[]
-    await app.setUser({ ...user, userLayers: [] })
+    app.account.applyProfile({ userLayers: [] })
+    app.syncAccount()
     expect(app.organisationsQueryKey()).toEqual(scopeBefore)
     expect(app.selectionLayers.map(layer => layer.id)).toEqual(['default-layer'])
   })
@@ -54,7 +56,7 @@ describe('AppCtx user updates', () => {
     let queryCount = 0
     const appCtx = new AppCtx(
       { setDivisionFeatures: vi.fn() } as unknown as DivisionCtx,
-      null,
+      new AccountState(null),
       {} as ResponsiveCtx,
     )
     appCtx.queryMap.set(FirstClassResource.feature, {
@@ -86,7 +88,7 @@ describe('AppCtx user updates', () => {
     const pending = createDeferred<FeatureFromCollection[]>()
     const appCtx = new AppCtx(
       { setDivisionFeatures: vi.fn() } as unknown as DivisionCtx,
-      null,
+      new AccountState(null),
       {} as ResponsiveCtx,
     )
     appCtx.state.prisms.layer = ['old-layer']
@@ -108,7 +110,7 @@ describe('AppCtx user updates', () => {
     const pendingFeatures = createDeferred<FeatureFromCollection[]>()
     const appCtx = new AppCtx(
       { setDivisionFeatures: vi.fn() } as unknown as DivisionCtx,
-      { id: 'old-user' } as CurrentUser,
+      new AccountState({ id: 'old-user' } as unknown as SessionUser),
       {} as ResponsiveCtx,
     )
     appCtx.queryMap.set(FirstClassResource.feature, {
@@ -117,7 +119,8 @@ describe('AppCtx user updates', () => {
     })
 
     const refresh = appCtx.refreshFeatures()
-    await appCtx.setUser({ id: 'new-user' } as CurrentUser)
+    appCtx.account.syncSession({ id: 'new-user' } as unknown as SessionUser)
+    appCtx.syncAccount()
 
     pendingFeatures.resolve([
       { id: 'old-feature', layerId: 'old-layer', properties: [] },
@@ -131,7 +134,7 @@ describe('AppCtx user updates', () => {
     const pendingUserFeatures = createDeferred<UserFeature[]>()
     const appCtx = new AppCtx(
       {} as DivisionCtx,
-      { id: 'old-user' } as CurrentUser,
+      new AccountState({ id: 'old-user' } as unknown as SessionUser),
       {} as ResponsiveCtx,
     )
     appCtx.queryMap.set('userFeatures', {
@@ -140,7 +143,8 @@ describe('AppCtx user updates', () => {
     })
 
     const refresh = appCtx.refreshUserFeatures()
-    await appCtx.setUser({ id: 'new-user' } as CurrentUser)
+    appCtx.account.syncSession({ id: 'new-user' } as unknown as SessionUser)
+    appCtx.syncAccount()
 
     pendingUserFeatures.resolve([
       { featureId: 'old-feature', isWishlisted: true, isVisited: false },
@@ -154,7 +158,10 @@ describe('AppCtx user updates', () => {
     const pendingProfile = createDeferred<UserProfile | null>()
     const appCtx = new AppCtx(
       {} as DivisionCtx,
-      { id: 'old-user', username: 'old-user' } as CurrentUser,
+      new AccountState({
+        id: 'old-user',
+        username: 'old-user',
+      } as unknown as SessionUser),
       {} as ResponsiveCtx,
     )
     appCtx.setPanelCtx(Panel.profile, 'username', 'old-user')
@@ -164,20 +171,28 @@ describe('AppCtx user updates', () => {
     })
 
     const refresh = appCtx.refreshUserProfile()
-    await appCtx.setUser({ id: 'new-user', username: 'new-user' } as CurrentUser)
+    appCtx.account.syncSession({
+      id: 'new-user',
+      username: 'new-user',
+    } as unknown as SessionUser)
+    appCtx.syncAccount()
 
     pendingProfile.resolve({ id: 'old-user', username: 'old-user' } as UserProfile)
     await refresh
 
     expect(appCtx.getUser()?.id).toBe('new-user')
-    expect(appCtx.state.panels.profile.ctx?.userData).toBeNull()
+    expect(appCtx.panels.state.profile.ctx?.userData).toBeNull()
   })
 
   it('does not let an older hierarchy refresh overwrite a newer one', async () => {
     const first = createDeferred<Project[]>()
     const second = createDeferred<Project[]>()
     let queryCount = 0
-    const appCtx = new AppCtx({} as DivisionCtx, null, {} as ResponsiveCtx)
+    const appCtx = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
     appCtx.queryMap.set(FirstClassResource.project, {
       queryKey: () => [FirstClassResource.project],
       queryFn: () => (queryCount++ === 0 ? first.promise : second.promise),
@@ -195,7 +210,11 @@ describe('AppCtx user updates', () => {
   })
 
   it('invalidates dependent resource caches before the next explicit refresh', async () => {
-    const appCtx = new AppCtx({} as DivisionCtx, null, {} as ResponsiveCtx)
+    const appCtx = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
     appCtx.cache.project.set('p', { id: 'p' } as Project)
     appCtx.cache.property.set('v', { id: 'v' } as Property)
     await appCtx.invalidate(FirstClassResource.project)
@@ -206,12 +225,12 @@ describe('AppCtx user updates', () => {
   it('loads profile data only when the profile panel opens', async () => {
     const appCtx = new AppCtx(
       {} as DivisionCtx,
-      { id: 'user-1' } as CurrentUser,
-      { setPanelOpen: vi.fn() } as ResponsiveCtx,
+      new AccountState({ id: 'user-1' } as unknown as SessionUser),
+      {} as ResponsiveCtx,
     )
     const refreshUserProfile = vi.fn().mockResolvedValue(undefined)
     appCtx.refreshUserProfile = refreshUserProfile
-    appCtx.state.panels.profile.ctx = {
+    appCtx.panels.state.profile.ctx = {
       username: 'user-1',
       userData: null,
       observePrisms: true,
@@ -235,13 +254,18 @@ describe('AppCtx user updates', () => {
         },
       ],
     } as CurrentUser
-    const appCtx = new AppCtx({} as DivisionCtx, user, {} as ResponsiveCtx)
+    const appCtx = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(user as unknown as SessionUser),
+      {} as ResponsiveCtx,
+    )
 
     appCtx.hub = { id: 'hub-1', code: 'test-hub' } as HubOptsExtended
     appCtx.state.resources.layer = [{ id: 'saved-layer' }] as Layer[]
     appCtx.state.prisms.layer = ['temporary-layer']
 
-    await appCtx.setUser({ ...user, username: 'after' })
+    appCtx.applyUserProfile({ username: 'after' })
+    appCtx.syncAccount()
 
     expect(appCtx.state.prisms.layer).toEqual(['temporary-layer'])
   })
@@ -255,7 +279,7 @@ describe('AppCtx user updates', () => {
         },
         divisionFilterCount: 0,
       } as DivisionCtx,
-      null,
+      new AccountState(null),
       {} as ResponsiveCtx,
     )
     const features = [
@@ -286,7 +310,11 @@ describe('AppCtx user updates', () => {
       if (queryKey[0] === 'project') return projects.promise
       throw new Error(`Unexpected public bootstrap query: ${String(queryKey[0])}`)
     })
-    const appCtx = new AppCtx({} as DivisionCtx, null, {} as ResponsiveCtx)
+    const appCtx = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
 
     appCtx.queryMap.set(FirstClassResource.organisation, {
       queryKey: () => ['organisation'],
@@ -299,7 +327,8 @@ describe('AppCtx user updates', () => {
     const bootstrap = appCtx.bootstrapPublicMapResources(false)
     await vi.waitFor(() => expect(fetchQuery).toHaveBeenCalledTimes(2))
 
-    await appCtx.setUser({ id: 'account-user' } as CurrentUser)
+    appCtx.account.syncSession({ id: 'account-user' } as unknown as SessionUser)
+    appCtx.syncAccount()
     appCtx.state.resources.organisation = [
       { id: 'account-organisation' },
     ] as Organisation[]
@@ -327,7 +356,11 @@ describe('AppCtx user updates', () => {
       if (queryKey[0] === 'property') return properties.promise
       throw new Error(`Unexpected public bootstrap query: ${String(queryKey[0])}`)
     })
-    const appCtx = new AppCtx({} as DivisionCtx, null, {} as ResponsiveCtx)
+    const appCtx = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
 
     appCtx.queryMap.set(FirstClassResource.layer, {
       queryKey: () => ['layer'],
@@ -341,7 +374,8 @@ describe('AppCtx user updates', () => {
     const refreshProperties = appCtx.refreshProperties(false, 'anonymous::')
     await vi.waitFor(() => expect(fetchQuery).toHaveBeenCalledTimes(2))
 
-    await appCtx.setUser({ id: 'account-user' } as CurrentUser)
+    appCtx.account.syncSession({ id: 'account-user' } as unknown as SessionUser)
+    appCtx.syncAccount()
     appCtx.state.resources.layer = [{ id: 'account-layer' }] as Layer[]
     appCtx.state.prisms.layer = ['account-layer']
     appCtx.cache.property.set('account-property', {
