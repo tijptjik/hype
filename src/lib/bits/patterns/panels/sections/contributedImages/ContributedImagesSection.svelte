@@ -17,7 +17,7 @@ import { getURLfromImage } from '#lib/client/services/image.js'
 import type { Id, ResourceContext } from '#lib/types.js'
 import type { ImageContextEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type { UserProfile } from '#lib/db/zod/schema/user.types.js'
-import type { useProfilePanelModel } from '#lib/adapters/panels/useProfilePanelModel.svelte.js'
+import type { UserContributionsModel } from '#lib/adapters/panels/userContributions.js'
 import { untrack } from 'svelte'
 
 // MAGICAL CONSTANTS
@@ -29,7 +29,7 @@ const TRIGGER_POSITION = 12 // Load next batch when 12th image becomes visible
 // PROPS
 type Props = {
   userData: UserProfile
-  model: ReturnType<typeof useProfilePanelModel>
+  model: UserContributionsModel
 }
 
 let { userData, model }: Props = $props()

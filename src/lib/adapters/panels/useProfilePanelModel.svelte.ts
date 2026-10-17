@@ -4,8 +4,8 @@ import { fromStore } from 'svelte/store'
 // AUTH
 import { useSession } from '#lib/auth/client.js'
 import { isGuestUser } from '#lib/auth/upgrade.js'
-// I18N
-import { getI18n } from '#lib/i18n.js'
+// SHARED CONTRIBUTIONS
+import { createUserContributionsModel } from './userContributions'
 // ADAPTERS
 import { useProfileSectionModel } from './useProfileSectionModel.svelte'
 // NAVIGATION
@@ -16,7 +16,7 @@ import {
 // TYPES
 import type { AppCtx } from '#lib/context/app.svelte.js'
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
-import type { Id, ResourceContext } from '#lib/types.js'
+import type { Id } from '#lib/types.js'
 import type {
   Feature,
   FeatureFromCollection,
@@ -83,63 +83,43 @@ export function useProfilePanelModel(app: AppCtx, omni: OmniCtx) {
       profileContext.observePrisms = !profileContext.observePrisms
       void app.refreshUserProfile()
     },
-    getFeatureById: (id: string) => app.getFeatureById(id),
-    getHierarchy: (resource: Parameters<AppCtx['getHierarchy']>[0]) =>
-      app.getHierarchy(resource),
-    getProjectHierarchy: async (id: Id): Promise<ResourceContext> => {
-      const project = await app.getProjectById(id)
-      return project ? app.getHierarchy(project) : {}
-    },
-    getOrganisationName: (
-      organisation: Parameters<AppCtx['getContextualOrganisationName']>[0],
-    ) => app.getContextualOrganisationName(organisation, false),
-    getProjectName: (project: Parameters<AppCtx['getContextualProjectName']>[0]) =>
-      app.getContextualProjectName(project),
-    getFeatureName: (feature: FeatureFromCollection): string =>
-      app.getContextualFeatureName(feature) ?? '',
-    getFeatureAddress: (feature: FeatureFromCollection) =>
-      getI18n(feature, 'displayAddress', {
-        ...app.getUserPreferences(),
-        allowMachineTranslation: true,
-      }),
-    getProjectTitle: (
-      project: Parameters<AppCtx['getContextualProjectName']>[0],
-    ): string => getI18n(project, 'name', { allowMachineTranslation: true }) ?? '',
-    onContributedFeature: (
-      featureId: string,
-      projectId: Id,
-      features: (FeatureFromCollection | Feature)[],
-      projectName: string,
-      username: string,
-    ) =>
-      navigateToContributedFeature(
-        app,
-        omni,
-        featureId,
-        projectId,
-        features,
-        projectName,
-        username,
-      ),
-    onContributedImage: (
-      featureId: string,
-      projectId: Id,
-      imageId: string,
-      projectName: string,
-      username: string,
-      loadedImages: Map<string, Pick<Image, 'featureId'>>,
-      projectImageIds: Record<Id, Id[]>,
-    ) =>
-      navigateToContributedImage(
-        app,
-        omni,
-        featureId,
-        projectId,
-        imageId,
-        projectName,
-        username,
-        loadedImages,
-        projectImageIds,
-      ),
+    ...createUserContributionsModel(app, {
+      onContributedFeature: (
+        featureId: string,
+        projectId: Id,
+        features: (FeatureFromCollection | Feature)[],
+        projectName: string,
+        username: string,
+      ) =>
+        navigateToContributedFeature(
+          app,
+          omni,
+          featureId,
+          projectId,
+          features,
+          projectName,
+          username,
+        ),
+      onContributedImage: (
+        featureId: string,
+        projectId: Id,
+        imageId: string,
+        projectName: string,
+        username: string,
+        loadedImages: Map<string, Pick<Image, 'featureId'>>,
+        projectImageIds: Record<Id, Id[]>,
+      ) =>
+        navigateToContributedImage(
+          app,
+          omni,
+          featureId,
+          projectId,
+          imageId,
+          projectName,
+          username,
+          loadedImages,
+          projectImageIds,
+        ),
+    }),
   }
 }

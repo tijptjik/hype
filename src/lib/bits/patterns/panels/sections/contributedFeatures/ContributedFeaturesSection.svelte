@@ -15,14 +15,14 @@ import ChevronDown from 'virtual:icons/proicons/chevron-down'
 // TYPES
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type { UserProfile } from '#lib/db/zod/schema/user.types.js'
-import type { useProfilePanelModel } from '#lib/adapters/panels/useProfilePanelModel.svelte.js'
+import type { UserContributionsModel } from '#lib/adapters/panels/userContributions.js'
 // PROPS
 let {
   userData,
   model,
 }: {
   userData?: UserProfile
-  model: ReturnType<typeof useProfilePanelModel>
+  model: UserContributionsModel
 } = $props()
 
 // SCROLLBAR
