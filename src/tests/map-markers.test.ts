@@ -236,6 +236,44 @@ describe('map markers', () => {
     expect(renderer.getElement(row.id)).not.toBe(original)
   })
 
+  it('keeps marker images hidden behind a skeleton until decoding finishes', async () => {
+    const renderer = createMarkerRenderer(map, markerFactory)
+    renderer.sync([feature('loading')])
+    const marker = renderer.getElement('loading')!
+    const inner = marker.querySelector<HTMLElement>('.marker-inner')!
+    const image = marker.querySelector<HTMLImageElement>('img')!
+    const decoded = Promise.withResolvers<void>()
+    image.decode = vi.fn(() => decoded.promise)
+    expect(inner.dataset.imageState).toBe('loading')
+    expect(image).toHaveClass('opacity-0')
+    expect(inner.querySelector('.animate-pulse')).not.toBeNull()
+    expect(marker.dataset.featureId).toBe('loading')
+    image.dispatchEvent(new Event('load'))
+    await Promise.resolve()
+    expect(image).toHaveClass('opacity-0')
+    decoded.resolve()
+    await Promise.resolve()
+    expect(inner.dataset.imageState).toBe('ready')
+    expect(image).toHaveClass('opacity-100')
+    expect(inner.querySelector('.animate-pulse')).toBeNull()
+    renderer.clear()
+  })
+
+  it('keeps a static placeholder and marker target when an image fails', () => {
+    const renderer = createMarkerRenderer(map, markerFactory)
+    renderer.sync([feature('failed')])
+    const marker = renderer.getElement('failed')!
+    const inner = marker.querySelector<HTMLElement>('.marker-inner')!
+    const image = marker.querySelector<HTMLImageElement>('img')!
+    image.dispatchEvent(new Event('error'))
+    expect(inner.dataset.imageState).toBe('error')
+    expect(image).toHaveClass('opacity-0')
+    expect(inner.querySelector('.bg-base-300')).not.toBeNull()
+    expect(inner.querySelector('.animate-pulse')).toBeNull()
+    expect(marker.dataset.featureId).toBe('failed')
+    renderer.clear()
+  })
+
   it('eagerly loads image-backed markers on their first map render', () => {
     const renderer = createMarkerRenderer(map, markerFactory)
     renderer.sync([feature('feature-1')])

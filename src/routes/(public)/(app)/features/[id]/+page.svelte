@@ -31,9 +31,22 @@ setCardCtx()
 const cardCtx = getCardCtx()
 omniCtx.setCardCtx(cardCtx)
 
-// Resolve card content from the shared selection so marker changes and resource
-// refreshes update the mounted card without recreating its component hierarchy.
-const feature = $derived(appCtx.getActiveFeature())
+// Retain presentation through temporary selection gaps so ImageProvider and the
+// viewer's outgoing scene survive until the next selected resource can crossfade.
+let feature = $state.raw<ReturnType<typeof appCtx.getActiveFeature>>(null)
+let presentedAccountRevision = untrack(() => appCtx.view.account.revision)
+$effect(() => {
+  const selectedFeature = appCtx.getActiveFeature()
+  const accountRevision = appCtx.view.account.revision
+  if (accountRevision !== presentedAccountRevision) {
+    // Never retain the previous account's presentation across an identity change.
+    feature = selectedFeature
+    presentedAccountRevision = accountRevision
+  } else if (selectedFeature) {
+    // Shared selection remains authoritative for replacements and fresh resource data.
+    feature = selectedFeature
+  }
+})
 // Surface navigation projects committed URLs, including shallow and history changes.
 const routeFeatureId = $derived(
   appCtx.navigation.state.resourceType === 'feature'

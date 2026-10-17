@@ -291,7 +291,8 @@ function createFeatureMarkerElement(
   innerContainer.dataset.type = 'marker'
 
   const image = document.createElement('img')
-  image.className = 'marker-image'
+  image.className =
+    'marker-image opacity-0 transition-opacity duration-200 motion-reduce:transition-none'
   image.alt = ''
   // MapLibre positions markers outside normal document flow, so native lazy loading
   // can indefinitely defer their first uncached image request.
@@ -300,31 +301,54 @@ function createFeatureMarkerElement(
   image.draggable = false
   image.dataset.type = 'marker'
 
-  if (diagnostics) {
-    diagnostics.created += 1
-    image.addEventListener('load', () => {
-      diagnostics.loaded += 1
-      void image.decode().then(
-        () => {
-          diagnostics.decoded += 1
-        },
-        () => {
+  // Keep progressive image bytes hidden until decoding finishes; the marker hit
+  // target and frame remain available throughout loading and on request failure.
+  const skeleton = document.createElement('div')
+  skeleton.className =
+    'pointer-events-none absolute inset-0 rounded-full bg-base-300 animate-pulse motion-reduce:animate-none'
+  skeleton.setAttribute('aria-hidden', 'true')
+  innerContainer.dataset.imageState = 'loading'
+  if (diagnostics) diagnostics.created += 1
+
+  image.addEventListener(
+    'load',
+    async () => {
+      if (diagnostics) diagnostics.loaded += 1
+      try {
+        if (typeof image.decode === 'function') await image.decode()
+        if (diagnostics) diagnostics.decoded += 1
+      } catch {
+        // Some browsers reject decode for an otherwise paintable, fully loaded image.
+        if (diagnostics) {
           diagnostics.decodeFailed += 1
           logMarkerBootstrap('marker image decode failed', {
             featureId: feature.id,
             imageSrc,
           })
-        },
-      )
-    })
-    image.addEventListener('error', () => {
-      diagnostics.failed += 1
-      logMarkerBootstrap('marker image request failed', {
-        featureId: feature.id,
-        imageSrc,
-      })
-    })
-  }
+        }
+        if (!image.complete || image.naturalWidth === 0) return
+      }
+      innerContainer.dataset.imageState = 'ready'
+      image.classList.replace('opacity-0', 'opacity-100')
+      skeleton.remove()
+    },
+    { once: true },
+  )
+  image.addEventListener(
+    'error',
+    () => {
+      innerContainer.dataset.imageState = 'error'
+      skeleton.classList.remove('animate-pulse')
+      if (diagnostics) {
+        diagnostics.failed += 1
+        logMarkerBootstrap('marker image request failed', {
+          featureId: feature.id,
+          imageSrc,
+        })
+      }
+    },
+    { once: true },
+  )
 
   image.src = imageSrc
 
@@ -332,6 +356,7 @@ function createFeatureMarkerElement(
   frame.className = 'marker-image-frame'
   frame.dataset.type = 'marker'
 
+  innerContainer.appendChild(skeleton)
   innerContainer.appendChild(image)
   innerContainer.appendChild(frame)
   container.appendChild(innerContainer)

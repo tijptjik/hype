@@ -189,7 +189,8 @@ export class AppCtx {
         openCard: optionsWithDefaults.openCard,
         openCardDelay: optionsWithDefaults.openCardDelay,
         isCardOpen: optionsWithDefaults.isCardOpen,
-        updateUrl: optionsWithDefaults.updateUrl,
+        // Omitted collection intent must preserve feature navigation on the first click.
+        updateUrl: optionsWithDefaults.updateUrl ?? true,
         navOptions: optionsWithDefaults.navOptions,
       })
     }

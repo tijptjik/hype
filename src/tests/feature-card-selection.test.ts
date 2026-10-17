@@ -69,6 +69,7 @@ describe('mounted public feature card', () => {
       getActiveFeature: () => selection.feature,
       getActiveCollection: () => null,
       view: {
+        account: { revision: 0 },
         getHierarchySync: () => ({}),
         getFeatureById: vi.fn(async (id: string) => records.get(id)),
       },
@@ -102,13 +103,28 @@ describe('mounted public feature card', () => {
       expect(mocks.app.view.getFeatureById).toHaveBeenCalledWith('b', false),
     )
     expect(selection.featureId).toBe('b')
+    // A slow route clears selection while fetching. Keep the same card/provider
+    // alive so the image stage can crossfade, including gaps longer than its timer.
+    const pending = Promise.withResolvers<Feature>()
+    mocks.app.view.getFeatureById.mockImplementation((id: string, fetch = true) => {
+      if (id === 'a') return fetch ? pending.promise : Promise.resolve(undefined)
+      return Promise.resolve(records.get(id))
+    })
     navigation.syncUrl(new URL('http://localhost/features/a'), 'app')
     flushSync()
+    await vi.waitFor(() => expect(selection.featureId).toBeNull())
+    await vi.advanceTimersByTimeAsync(400)
+    expect(screen.getByTestId('selected-feature')).toBe(card)
+    expect(card.textContent).toContain('Updated second feature')
+    expect(mocks.imageOptions().context.ctxId).toBe('b')
+    expect(mocks.imageOptions().isValid).toBe(true)
+    pending.resolve(a)
     await vi.waitFor(() =>
       expect(screen.getByTestId('selected-feature').textContent).toContain(
         'First feature',
       ),
     )
+    expect(screen.getByTestId('selected-feature')).toBe(card)
     expect(mocks.imageOptions().context.ctxId).toBe('a')
   })
 })

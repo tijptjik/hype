@@ -321,6 +321,21 @@ describe('map query integration', () => {
 })
 
 describe('paginated collection activation', () => {
+  it('navigates and opens the card on the first marker selection', async () => {
+    const app = createApp()
+    const feature = row('first-marker')
+    app.view.cache.feature.set(feature.id, feature)
+    const omni = createOmni(app)
+
+    // Markers omit updateUrl; the initial collection must preserve navigation defaults.
+    await omni.initFeature(feature.id, { focus: false, openCardDelay: 0 })
+
+    expect(navigateMock).toHaveBeenCalledWith('feature', feature.id, expect.any(Object))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(app.selection.featureId).toBe(feature.id)
+    expect(omni.state.isCardOpen).toBe(true)
+  })
+
   it('preserves an explicitly delayed card opening across a mode change', async () => {
     const app = createApp()
     const feature = row('delayed-feature')

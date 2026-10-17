@@ -217,15 +217,21 @@ $effect(() => {
     fit,
   }
 
-  // Seed the viewer immediately on first render without preloading/crossfading.
-  if (!currentDisplayedScene) {
-    displayedScene = nextScene
-    clearPendingScene()
+  // Preload the first scene too: progressive image bytes must stay behind the
+  // skeleton until the same decode gate used by subsequent crossfades completes.
+  if (!currentDisplayedScene && !currentIncomingScene) {
+    pendingScene = nextScene
+    const nextUrls = buildGallerySceneAssetUrls(nextScene.item, nextScene.fit)
+    pendingSceneAssetUrls = nextUrls
+    loadedSceneAssetUrls =
+      currentPendingScene?.key === nextScene.key
+        ? currentLoadedSceneAssetUrls.filter(url => nextUrls.includes(url))
+        : []
     return
   }
 
   // Refresh the live scene payload in place when the scene identity is unchanged.
-  if (currentDisplayedScene.key === nextScene.key) {
+  if (currentDisplayedScene?.key === nextScene.key) {
     displayedScene = nextScene
 
     if (currentPendingScene?.key === nextScene.key) {
@@ -284,6 +290,13 @@ onDestroy(() => {
 <div
   class={`relative h-full w-full overflow-hidden bg-black/5 ${rounded} ${className}`}
 >
+  {#if currentItem && !displayedScene && !previousScene}
+    <div
+      aria-hidden="true"
+      data-image-skeleton
+      class="pointer-events-none absolute inset-0 animate-pulse bg-base-300 motion-reduce:animate-none"
+    ></div>
+  {/if}
   {#if pendingScene}
     {#each pendingSceneAssetUrls as url (url)}
       <img
