@@ -32,6 +32,25 @@ describe('runtime map styles', () => {
     expect(resolved.layers?.[1]).toMatchObject({ layout: { visibility: 'none' } })
   })
 
+  it('resolves local sprite URLs for inline styles', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          version: 8,
+          sources: {},
+          layers: [],
+          sprite: [{ id: 'breadline', url: '/mapSprites/breadline-light/exit' }],
+        }),
+      ),
+    )
+    const resolved = await resolveRuntimeMapStyle('breadline-light')
+    const origin =
+      typeof window === 'undefined' ? 'http://localhost' : window.location.origin
+    expect(resolved.sprite).toEqual([
+      { id: 'breadline', url: `${origin}/mapSprites/breadline-light/exit` },
+    ])
+  })
+
   it('retries transient failures and stops at the configured bound', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')

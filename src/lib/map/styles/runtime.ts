@@ -85,6 +85,13 @@ export const resolveRuntimeMapStyle = async (
         throw new Error(`Failed to load map style (${response.status})`)
       }
       const style = (await response.json()) as StyleSpecification
+      // Inline styles have no document URL for MapLibre to resolve local sprites.
+      if (Array.isArray(style.sprite)) {
+        style.sprite = style.sprite.map(sprite => ({
+          ...sprite,
+          url: new URL(sprite.url, url.origin).toString(),
+        }))
+      }
       const resolvedStyle = applyRuntimeBasemapSource(
         style,
         getConfiguredBasemapAccessToken(),

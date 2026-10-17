@@ -243,7 +243,7 @@ export const applySpriteVariant = (
     return style
   }
 
-  style.sprite = `https://protomaps.github.io/basemaps-assets/sprites/v4/${options.basemapVariant}`
+  style.sprite ??= `https://protomaps.github.io/basemaps-assets/sprites/v4/${options.basemapVariant}`
   return style
 }
 
