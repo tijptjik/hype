@@ -576,7 +576,7 @@ const configuredProjectForm = configureForm(() => ({
         }),
         listQuery: getProjects({
           conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
-          prisms: adminCtx.view.state.prisms,
+          prisms: adminCtx.view.scope.prisms,
           meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
         extraQueries: [
@@ -584,14 +584,14 @@ const configuredProjectForm = configureForm(() => ({
             conditions: adminCtx.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },
-            prisms: adminCtx.view.state.prisms,
+            prisms: adminCtx.view.scope.prisms,
             meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
           }),
           getFeatures({
             conditions: adminCtx.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },
-            prisms: adminCtx.view.state.prisms,
+            prisms: adminCtx.view.scope.prisms,
             meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
           }),
         ],
@@ -2022,7 +2022,7 @@ async function onSearchParentOrganisations(
   }
   const baseParams = {
     q: query,
-    prisms: adminCtx.view.state.prisms,
+    prisms: adminCtx.view.scope.prisms,
     meta: profileMeta,
   }
 
@@ -2127,7 +2127,7 @@ async function handleProjectStateToggle({
       }).withOverride(overrideProjectEntityBoolean(field, nextState)),
       getProjects({
         conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
-        prisms: adminCtx.view.state.prisms,
+        prisms: adminCtx.view.scope.prisms,
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }).withOverride(overrideProjectListItemBoolean(projectData.id, field, nextState)),
     )

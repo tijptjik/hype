@@ -31,7 +31,6 @@ import { getProperties, getProperty } from '#lib/api/property.remote.js'
 import { getUser, getUserFeatures, getUserLayers } from '#lib/api/user.remote.js'
 // SERVICES
 import { debouncedUpdateUserAttribution } from '#lib/client/services/user.js'
-import { getInitialHubLayerDefaultIds } from '#lib/client/services/layerDefaults.js'
 // AUTH
 import {
   getFeatureIdsForProperties,
@@ -94,6 +93,7 @@ import type {
 import type { DivisionCtx } from './division.svelte'
 // CONTEXT
 import type { AccountState, AccountUser } from './account.svelte.js'
+import { ResourceScope } from './resourceScope.svelte.js'
 import { FeatureDraft } from './featureDraft.svelte.js'
 import { SurfaceInteractions } from './surfaceInteractions.svelte.js'
 import { PanelController } from './panels.svelte.js'
@@ -104,7 +104,7 @@ import type {
   FeatureFromCollection,
 } from '#lib/db/zod/schema/feature.types.js'
 // TYPES
-import type { HierarchicalResourceType, Prisms, EntityResponse } from '#lib/types.js'
+import type { EntityResponse } from '#lib/types.js'
 import type { ViewFilters } from '#lib/client/services/viewFilters.types.js'
 import type {
   OrganisationProfile,
@@ -128,8 +128,6 @@ import type {
   LayerEntityByProfile,
 } from '#lib/db/zod/schema/layer.types.js'
 
-type ResourceTypeWithChildren = Exclude<HierarchicalResourceType, 'feature' | 'task'>
-
 type ViewSortingState = Record<FirstClassResource, ResourceSortState>
 
 /* ----------------- */
@@ -138,7 +136,6 @@ type ViewSortingState = Record<FirstClassResource, ResourceSortState>
 
 type ResourceViewState = {
   filters: FilterState
-  prisms: Prisms
   resources: FilteredResources
   userFeatures: {
     wishlisted: UserFeature[]
@@ -229,6 +226,27 @@ type FeatureMembershipOverride = {
 }
 
 export class ResourceViewCtx {
+  readonly scope = new ResourceScope({
+    account: () => this.account,
+    hub: () => this.hub,
+    loadedLayers: () => this.state.resources.layer,
+    projects: () => this.cache.project.values(),
+    layers: () => this.cache.layer.values(),
+    getHubIdByCode: code => this.getHubIdByCode(code),
+    isExpectedRoleScopeCurrent: scope => this.isExpectedRoleScopeCurrent(scope),
+    refreshOrganisations: () => this.refreshOrganisations(),
+    refreshProjects: cascade => this.refreshProjects(cascade),
+    refreshProperties: () => this.refreshProperties(),
+    refreshLayers: (cascade, autoSelect) => this.refreshLayers(cascade, autoSelect),
+    refreshLayerDependents: async () => {
+      await this.refreshFeatures()
+      if (this.user?.id && this.isAdmin()) await this.refreshTasks()
+      if (this.panels.state.profile.ctx?.username) await this.refreshUserProfile()
+    },
+    postLayerMutation: (cascade, autoSelect) =>
+      this.postLayerMutation(cascade, autoSelect),
+    invalidateAndRefresh: resource => this.invalidateAndRefresh(resource),
+  })
   // Remote queries own transport caching and refreshes.
   // Division context
   divisionCtx!: DivisionCtx
@@ -286,7 +304,6 @@ export class ResourceViewCtx {
   }
 
   // Cache for all resources
-  selectionLayers: Layer[] = $state.raw([])
   featureLoadState = $state<'idle' | 'loading' | 'partial' | 'complete' | 'error'>(
     'idle',
   )
@@ -336,7 +353,6 @@ export class ResourceViewCtx {
     // ═══════════════════════
     // TIER 1: PRISMS -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
     // Applied at the server level to constrain the result set of first-class resources available
-    prisms: { organisation: [], project: [], layer: [] },
     // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
     // Sent to feature queries for every view, with cached matches providing immediate previews.
     filters: {
@@ -697,7 +713,7 @@ export class ResourceViewCtx {
   projectsQueryKey = () => [
     FirstClassResource.project,
     this.getRoleScopeQueryKey(),
-    this.state.prisms.organisation,
+    this.scope.prisms.organisation,
     this.isAdmin(),
     this.state.viewSorting.project.sortBy,
     this.state.viewSorting.project.sortOrder,
@@ -705,8 +721,8 @@ export class ResourceViewCtx {
   layersQueryKey = () => [
     FirstClassResource.layer,
     this.getRoleScopeQueryKey(),
-    this.state.prisms.organisation,
-    this.state.prisms.project,
+    this.scope.prisms.organisation,
+    this.scope.prisms.project,
     this.isAdmin(),
     this.state.viewSorting.layer.sortBy,
     this.state.viewSorting.layer.sortOrder,
@@ -714,9 +730,9 @@ export class ResourceViewCtx {
   featuresQueryKey = () => [
     FirstClassResource.feature,
     this.getRoleScopeQueryKey(),
-    this.state.prisms.organisation,
-    this.state.prisms.project,
-    this.state.prisms.layer,
+    this.scope.prisms.organisation,
+    this.scope.prisms.project,
+    this.scope.prisms.layer,
     this.isAdmin(),
     this.state.viewSorting.feature.sortBy,
     this.state.viewSorting.feature.sortOrder,
@@ -724,8 +740,8 @@ export class ResourceViewCtx {
   propertiesQueryKey = () => [
     'property',
     this.getRoleScopeQueryKey(),
-    this.state.prisms.organisation,
-    this.state.prisms.project,
+    this.scope.prisms.organisation,
+    this.scope.prisms.project,
   ]
   userFeaturesQueryKey = () => ['userFeatures', this.user?.id ?? 'no-user']
   userQueryKey = () => [
@@ -734,9 +750,9 @@ export class ResourceViewCtx {
     this.panels.state.profile.ctx?.username || this.user?.id,
     ...(this.panels.state.profile.ctx?.observePrisms
       ? [
-          this.state.prisms.organisation,
-          this.state.prisms.project,
-          this.state.prisms.layer,
+          this.scope.prisms.organisation,
+          this.scope.prisms.project,
+          this.scope.prisms.layer,
         ]
       : []),
   ]
@@ -867,30 +883,6 @@ export class ResourceViewCtx {
     this.isInitialised = true
   }
 
-  private getCurrentHubId = (): Id | null =>
-    this.hub?.id ??
-    (this.hub?.code ? (this.getHubIdByCode(this.hub.code) ?? null) : null)
-
-  private getUserLayersForCurrentHub = (): UserLayer[] => {
-    const hubId = this.getCurrentHubId()
-    const hubCode = this.hub?.code ?? null
-    if ((!hubId && !hubCode) || !this.user) {
-      return []
-    }
-    const currentHubLayerIds = new Set(
-      this.state.resources.layer.map(layer => layer.id),
-    )
-    const hubUserLayers = this.user.userLayers.filter(layer => {
-      if (hubId && layer.hubId === hubId) return true
-      if (hubCode && layer.hubCode === hubCode) return true
-
-      // Fallback to the loaded hub-scoped layer list when persisted preferences only
-      // carry one hub identifier and the app has only resolved the other on bootstrap.
-      return currentHubLayerIds.has(layer.layerId)
-    })
-    return hubUserLayers
-  }
-
   // Hydrate persisted layer defaults once during app bootstrap so hub prism setup
   // can resolve the initial active layers without coupling to profile panel refreshes.
   protected hydrateCurrentUserLayers = async (): Promise<void> => {
@@ -927,41 +919,6 @@ export class ResourceViewCtx {
     this.postUserMutation()
   }
 
-  private getHubDefaultLayerIds = (): Id[] => {
-    return getInitialHubLayerDefaultIds(
-      this.hub,
-      this.selectionLayers,
-      this.selectionLayers.flatMap(layer => {
-        const ancestors = (layer as unknown as { ancestors?: { project?: Project } })
-          .ancestors
-        return ancestors?.project ? [ancestors.project] : []
-      }),
-    )
-  }
-
-  protected applyInitialLayerPrisms = (expectedRoleScope?: string): void => {
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    const hubId = this.getCurrentHubId()
-    const hubCode = this.hub?.code ?? null
-    if (!hubId && !hubCode) {
-      return
-    }
-
-    const userLayerIds = this.getUserLayersForCurrentHub().map(layer => layer.layerId)
-    const defaultLayerIds = this.getHubDefaultLayerIds()
-    const nextLayerIds = userLayerIds.length > 0 ? userLayerIds : defaultLayerIds
-    const dedupedLayerIds = [...new Set(nextLayerIds)]
-    const currentLayerIds = this.state.prisms.layer
-    const isUnchanged =
-      currentLayerIds.length === dedupedLayerIds.length &&
-      currentLayerIds.every((layerId, index) => layerId === dedupedLayerIds[index])
-
-    if (isUnchanged) return
-
-    this.state.prisms.layer = dedupedLayerIds
-  }
-
   initStatsCache = (): void => {
     Object.values(FirstClassResource).forEach(resourceType => {
       this.cache.stats.set(resourceType, new SvelteMap())
@@ -992,7 +949,7 @@ export class ResourceViewCtx {
       getDefaultLayerResources({ meta: this.panelResourceInput('layer').meta }),
     )
     if (!this.isExpectedRoleScopeCurrent(expected)) return
-    this.selectionLayers = rows as unknown as Layer[]
+    this.scope.selectionLayers = rows as unknown as Layer[]
     this.retainPanelRows('layer', rows)
   }
 
@@ -1000,15 +957,15 @@ export class ResourceViewCtx {
   loadPinnedLayers = async (scope?: string): Promise<void> => {
     const expected = scope ?? this.getRoleScopeQueryKey()
     const meta = this.panelResourceInput('layer').meta
-    const selection = JSON.stringify(this.state.prisms.layer)
+    const selection = JSON.stringify(this.scope.prisms.layer)
     const rows = await Promise.all(
-      this.state.prisms.layer.map(id =>
+      this.scope.prisms.layer.map(id =>
         getPinnedResource({ type: 'layer', id, profile: 'default', meta }),
       ),
     )
     if (
       !this.isExpectedRoleScopeCurrent(expected) ||
-      selection !== JSON.stringify(this.state.prisms.layer)
+      selection !== JSON.stringify(this.scope.prisms.layer)
     )
       return
     const available = rows.filter((row): row is PanelResource => row !== null)
@@ -1023,7 +980,7 @@ export class ResourceViewCtx {
     )
     if (
       !this.isExpectedRoleScopeCurrent(expected) ||
-      selection !== JSON.stringify(this.state.prisms.layer)
+      selection !== JSON.stringify(this.scope.prisms.layer)
     )
       return
     this.retainPanelRows(
@@ -1031,7 +988,7 @@ export class ResourceViewCtx {
       projects.filter((row): row is PanelResource => row !== null),
     )
     const ids = new Set(available.map(row => row.id))
-    this.state.prisms.layer = this.state.prisms.layer.filter(id => ids.has(id))
+    this.scope.prisms.layer = this.scope.prisms.layer.filter(id => ids.has(id))
   }
 
   /** Builds the complete identity of a compact panel view. */
@@ -1040,8 +997,8 @@ export class ResourceViewCtx {
     conditions: { isArchived: false, isPublished: this.isAdmin() ? null : true },
     q: q.trim(),
     prisms: {
-      organisation: [...this.state.prisms.organisation],
-      project: [...this.state.prisms.project],
+      organisation: [...this.scope.prisms.organisation],
+      project: [...this.scope.prisms.project],
     },
     meta: {
       isAdminRequest: this.isAdmin(),
@@ -1084,9 +1041,9 @@ export class ResourceViewCtx {
     overrides: Partial<FeatureQueryInput> = {},
   ): FeatureQueryInput => ({
     prisms: {
-      organisation: [...this.state.prisms.organisation],
-      project: [...this.state.prisms.project],
-      layer: [...this.state.prisms.layer],
+      organisation: [...this.scope.prisms.organisation],
+      project: [...this.scope.prisms.project],
+      layer: [...this.scope.prisms.layer],
     },
     limit: 100,
     ...overrides,
@@ -1219,7 +1176,7 @@ export class ResourceViewCtx {
       (await runRemoteQuery(
         remoteList({
           conditions: {},
-          prisms: this.state.prisms,
+          prisms: this.scope.prisms,
         }),
       )) as ListResponse<Property> | undefined,
     )
@@ -1257,7 +1214,7 @@ export class ResourceViewCtx {
         ref: userRef,
         refKey,
         ...(this.panels.state.profile.ctx?.observePrisms
-          ? { prisms: this.state.prisms }
+          ? { prisms: this.scope.prisms }
           : {}),
         meta: {
           profile,
@@ -1504,7 +1461,7 @@ export class ResourceViewCtx {
       this.rebuildFeaturesMap()
       // Keep neighbourhood-specific derived state in sync with the sorted feature collection.
       this.divisionCtx.setDivisionFeatures(
-        this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
+        this.scope.getPrism(FirstClassResource.layer).length > 0 ? features : [],
       )
       return
     }
@@ -1573,344 +1530,6 @@ export class ResourceViewCtx {
     for (const resourceType of resourcesToInvalidate) {
       this.beginResourceRefresh(resourceType)
     }
-  }
-
-  togglePrism = async (resource: FirstClassResource, id: Id): Promise<void> => {
-    const prisms = this.state.prisms[resource as ResourceTypeWithChildren]
-    const index = prisms.indexOf(id)
-    if (index === -1) {
-      prisms.push(id)
-    } else {
-      prisms.splice(index, 1)
-    }
-    // Refresh all the dependent resources
-    if (resource === FirstClassResource.organisation) {
-      await this.refreshProjects()
-    } else if (resource === FirstClassResource.project) {
-      await this.refreshProperties()
-      await this.refreshLayers()
-    } else if (resource === FirstClassResource.layer) {
-      // Public maps also need to follow active-layer changes.
-      await this.refreshFeatures()
-      if (this.user?.id) {
-        if (this.isAdmin()) {
-          await this.refreshTasks()
-        }
-      }
-      // Only refresh if we have a username in the profile context
-      if (this.panels.state.profile.ctx?.username) {
-        await this.refreshUserProfile()
-      }
-    }
-  }
-
-  // Toggle methods for hierarchical filters
-  toggleOrganisation = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.organisation, id)
-  }
-
-  /**
-   * Returns the IDs of an organisation's layers that should be visible by default.
-   *
-   * @param organisationId - The organisation whose default layer IDs are required.
-   * @returns The organisation's default-visible layer IDs.
-   */
-  getOrganisationDefaultVisibleLayerIds = (organisationId: Id): Id[] =>
-    this.selectionLayers
-      .filter(
-        layer => layer.organisationId === organisationId && layer.isDefaultVisible,
-      )
-      .map(layer => layer.id)
-
-  /**
-   * Determines whether every default-visible layer for an organisation is active.
-   *
-   * @param organisationId - The organisation whose default layers are checked.
-   * @returns Whether the organisation has default layers and every one is active.
-   */
-  isOrganisationDefaultLayersActive = (organisationId: Id): boolean => {
-    const defaultLayerIds = this.getOrganisationDefaultVisibleLayerIds(organisationId)
-    return (
-      defaultLayerIds.length > 0 &&
-      defaultLayerIds.every(layerId => this.state.prisms.layer.includes(layerId))
-    )
-  }
-
-  /**
-   * Activates an organisation's default-visible layers without changing prism scope.
-   *
-   * @param organisationId - The organisation whose default layers should be activated.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  addOrganisationDefaultLayers = async (organisationId: Id): Promise<void> => {
-    const defaultLayerIds = this.getOrganisationDefaultVisibleLayerIds(organisationId)
-    if (defaultLayerIds.length === 0) return
-
-    this.state.prisms.layer = Array.from(
-      new Set([...this.state.prisms.layer, ...defaultLayerIds]),
-    )
-    await this.postLayerMutation(true)
-  }
-
-  /**
-   * Activates an organisation's defaults and joins its prism when organisation scope is active.
-   *
-   * @param organisationId - The organisation whose default layers should be activated.
-   * @returns A promise that resolves after organisation and layer state are updated.
-   */
-  activateOrganisationWithDefaultLayers = async (organisationId: Id): Promise<void> => {
-    if (this.state.prisms.organisation.length > 0) {
-      await this.activateOrganisationPrismWithDefaultLayers(organisationId)
-      return
-    }
-
-    await this.addOrganisationDefaultLayers(organisationId)
-  }
-
-  /**
-   * Activates an organisation prism and enables the organisation's default-visible layers.
-   *
-   * @param organisationId - The organisation prism and default layers to activate.
-   * @returns A promise that resolves after organisation and layer state are updated.
-   */
-  activateOrganisationPrismWithDefaultLayers = async (
-    organisationId: Id,
-  ): Promise<void> => {
-    this.state.prisms.organisation = Array.from(
-      new Set([...this.state.prisms.organisation, organisationId]),
-    )
-
-    // Load the newly scoped organisation's descendants before selecting its defaults.
-    await this.refreshProjects(false)
-    await this.refreshProperties()
-    await this.refreshLayers(false)
-    await this.addOrganisationDefaultLayers(organisationId)
-  }
-
-  /**
-   * Removes an organisation prism and every active descendant prism and layer.
-   *
-   * @param organisationId - The organisation to deactivate.
-   * @returns A promise that resolves after the expanded organisation scope is loaded.
-   */
-  deactivateOrganisation = async (organisationId: Id): Promise<void> => {
-    const projectIds = new Set(
-      [...this.cache.project.values()]
-        .filter(project => project.organisationId === organisationId)
-        .map(project => project.id),
-    )
-    const layerIds = new Set(
-      [...this.cache.layer.values()]
-        .filter(layer => layer.organisationId === organisationId)
-        .map(layer => layer.id),
-    )
-
-    // Remove the organisation and all of its descendants before expanding the scope.
-    this.state.prisms.organisation = this.state.prisms.organisation.filter(
-      id => id !== organisationId,
-    )
-    this.state.prisms.project = this.state.prisms.project.filter(
-      projectId => !projectIds.has(projectId),
-    )
-    this.state.prisms.layer = this.state.prisms.layer.filter(
-      layerId => !layerIds.has(layerId),
-    )
-
-    await this.refreshProjects(false)
-    await this.refreshProperties()
-    await this.refreshLayers(true, false)
-  }
-
-  /**
-   * Deactivates every active layer that belongs to an organisation without changing prism scope.
-   *
-   * @param organisationId - The organisation whose active layers should be disabled.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  deactivateOrganisationLayers = async (organisationId: Id): Promise<void> => {
-    const organisationLayerIds = new Set(
-      [...this.cache.layer.values()]
-        .filter(layer => layer.organisationId === organisationId)
-        .map(layer => layer.id),
-    )
-
-    this.state.prisms.layer = this.state.prisms.layer.filter(
-      layerId => !organisationLayerIds.has(layerId),
-    )
-    await this.postLayerMutation(true, false)
-  }
-
-  toggleProject = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.project, id)
-  }
-
-  /**
-   * Returns the IDs of a project's layers that should be visible by default.
-   *
-   * @param projectId - The project whose default layer IDs are required.
-   * @returns The project's default-visible layer IDs.
-   */
-  getProjectDefaultVisibleLayerIds = (projectId: Id): Id[] =>
-    this.selectionLayers
-      .filter(layer => layer.projectId === projectId && layer.isDefaultVisible)
-      .map(layer => layer.id)
-
-  /**
-   * Determines whether every default-visible layer for a project is active.
-   *
-   * @param projectId - The project whose default layers are checked.
-   * @returns Whether the project has default layers and every one is active.
-   */
-  isProjectDefaultLayersActive = (projectId: Id): boolean => {
-    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
-    return (
-      defaultLayerIds.length > 0 &&
-      defaultLayerIds.every(layerId => this.state.prisms.layer.includes(layerId))
-    )
-  }
-
-  /**
-   * Activates a project's default-visible layers without changing its prism scope.
-   *
-   * @param projectId - The project whose default layers should be activated.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  addProjectDefaultLayers = async (projectId: Id): Promise<void> => {
-    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
-    if (defaultLayerIds.length === 0) return
-
-    this.state.prisms.layer = Array.from(
-      new Set([...this.state.prisms.layer, ...defaultLayerIds]),
-    )
-    await this.postLayerMutation(true)
-  }
-
-  /**
-   * Activates a project's defaults and joins its prism when project scope is active.
-   *
-   * @param projectId - The project whose default layers should be activated.
-   * @returns A promise that resolves after project and layer state are updated.
-   */
-  activateProjectWithDefaultLayers = async (projectId: Id): Promise<void> => {
-    const isProjectScopeActive = this.state.prisms.project.length > 0
-
-    if (isProjectScopeActive) {
-      await this.activateProjectPrismWithDefaultLayers(projectId)
-      return
-    }
-
-    await this.addProjectDefaultLayers(projectId)
-  }
-
-  /**
-   * Activates a project prism and enables the project's default-visible layers.
-   *
-   * @param projectId - The project prism and default layers to activate.
-   * @returns A promise that resolves after project and layer state are updated.
-   */
-  activateProjectPrismWithDefaultLayers = async (projectId: Id): Promise<void> => {
-    this.state.prisms.project = Array.from(
-      new Set([...this.state.prisms.project, projectId]),
-    )
-
-    // Load the newly scoped project's layers before selecting its defaults.
-    await this.refreshProperties()
-    await this.refreshLayers(false)
-    await this.addProjectDefaultLayers(projectId)
-  }
-
-  /**
-   * Isolates a project prism and replaces the active layers with its defaults.
-   *
-   * @param projectId - The project to make the sole active prism.
-   * @returns A promise that resolves after the project scope and layer state update.
-   */
-  isolateProject = async (projectId: Id): Promise<void> => {
-    this.state.prisms.project = [projectId]
-
-    // Load the isolated project's resources before deriving its default layers.
-    await this.refreshProperties()
-    await this.refreshLayers(false)
-
-    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
-    this.state.prisms.layer = [...defaultLayerIds]
-    await this.postLayerMutation(true)
-  }
-
-  /**
-   * Removes a project prism and every active layer that belongs to it.
-   *
-   * @param projectId - The project to deactivate.
-   * @returns A promise that resolves after the expanded project scope is loaded.
-   */
-  deactivateProject = async (projectId: Id): Promise<void> => {
-    const projectLayerIds = new Set(
-      [...this.cache.layer.values()]
-        .filter(layer => layer.projectId === projectId)
-        .map(layer => layer.id),
-    )
-
-    // Remove both project-level and visible-layer state before expanding the scope.
-    this.state.prisms.project = this.state.prisms.project.filter(id => id !== projectId)
-    this.state.prisms.layer = this.state.prisms.layer.filter(
-      layerId => !projectLayerIds.has(layerId),
-    )
-
-    await this.refreshProperties()
-    await this.refreshLayers(true, false)
-  }
-
-  /**
-   * Deactivates every active layer that belongs to a project without changing prism scope.
-   *
-   * @param projectId - The project whose active layers should be disabled.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  deactivateProjectLayers = async (projectId: Id): Promise<void> => {
-    const projectLayerIds = new Set(
-      [...this.cache.layer.values()]
-        .filter(layer => layer.projectId === projectId)
-        .map(layer => layer.id),
-    )
-
-    this.state.prisms.layer = this.state.prisms.layer.filter(
-      layerId => !projectLayerIds.has(layerId),
-    )
-    await this.postLayerMutation(true, false)
-  }
-
-  /**
-   * Toggles a layer's visible state and reconciles its dependent filters.
-   *
-   * @param id - The layer to toggle.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  toggleLayer = async (id: Id): Promise<void> => {
-    const layerIds = this.state.prisms.layer
-    const layerIndex = layerIds.indexOf(id)
-
-    if (layerIndex === -1) {
-      layerIds.push(id)
-    } else {
-      layerIds.splice(layerIndex, 1)
-    }
-
-    await this.postLayerMutation(true)
-  }
-
-  /**
-   * Makes a layer the sole active layer.
-   *
-   * @param id - The layer to isolate.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  isolateLayer = async (id: Id): Promise<void> => {
-    this.state.prisms.layer = [id]
-    await this.postLayerMutation(true)
-  }
-
-  toggleFeature = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.feature, id)
   }
 
   // Cascades refresh to the next resource in the hierarchy
@@ -2046,7 +1665,7 @@ export class ResourceViewCtx {
     expectedRoleScope?: string,
   ): Promise<void> => {
     const refreshSerial = ++this.featureRefreshSerial
-    const selection = JSON.stringify(this.state.prisms.layer)
+    const selection = JSON.stringify(this.scope.prisms.layer)
     const query = this.getRequiredQueryConfig(FirstClassResource.feature)
     const features: FeatureFromCollection[] = await (query.queryFn() as Promise<
       FeatureFromCollection[]
@@ -2054,7 +1673,7 @@ export class ResourceViewCtx {
 
     if (
       refreshSerial !== this.featureRefreshSerial ||
-      selection !== JSON.stringify(this.state.prisms.layer)
+      selection !== JSON.stringify(this.scope.prisms.layer)
     ) {
       logMarkerBootstrap('stale feature data ignored after a newer refresh started', {
         refreshSerial,
@@ -2095,7 +1714,7 @@ export class ResourceViewCtx {
 
     // Keep local neighbourhood membership useful for previews; totals come from server facets.
     this.divisionCtx.setDivisionFeatures(
-      this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
+      this.scope.getPrism(FirstClassResource.layer).length > 0 ? features : [],
     )
   }
 
@@ -2358,7 +1977,7 @@ export class ResourceViewCtx {
     await this.loadPinnedLayers(expectedRoleScope)
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-    const currentLayerIds = new Set(this.state.prisms.layer)
+    const currentLayerIds = new Set(this.scope.prisms.layer)
     const existingFilterLayerIds = new Set(
       Object.keys(this.state.filters.feature.properties || {}),
     )
@@ -2501,7 +2120,7 @@ export class ResourceViewCtx {
     }
     this.divisionCtx.resetDivisions()
     // Re-initialize property filters for active layers
-    this.state.prisms.layer.forEach(layerId => {
+    this.scope.prisms.layer.forEach(layerId => {
       this.initialiseCategoricalPropertyFilters(layerId)
       this.initialiseRangePropertyFilter(layerId)
     })
@@ -2563,16 +2182,6 @@ export class ResourceViewCtx {
     this.state.filters.feature
     return this.getFilteredResource<Feature>(FirstClassResource.feature)
   })
-
-  // PRISM RELATIONS
-
-  getPrism = (resource: FirstClassResource): Id[] => {
-    return this.state.prisms[resource as ResourceTypeWithChildren]
-  }
-
-  isPrism = (resource: FirstClassResource, id: Id): boolean => {
-    return this.state.prisms[resource as ResourceTypeWithChildren]?.includes(id)
-  }
 
   // Helper method to fetch resource by ID with cache miss handling
   private fetchResourceById = async (
@@ -3115,11 +2724,11 @@ export class ResourceViewCtx {
       return this.getVisibleFeatures().map(row => row.id)
     }
     // Avoid showing stale markers while an active-layer feature refresh is in flight.
-    if (this.state.prisms.layer.length === 0) {
+    if (this.scope.prisms.layer.length === 0) {
       return []
     }
 
-    const activeLayerIds = new Set(this.state.prisms.layer)
+    const activeLayerIds = new Set(this.scope.prisms.layer)
     return Array.from(
       new Set(this.featuresForNeighbourhoods).intersection(
         new Set(this.featuresForProperties),
@@ -3263,7 +2872,7 @@ export class ResourceViewCtx {
       for (const query of Object.values(this.resources.featureQueries)) query.clear()
     }
     this.featureMembershipOverrides.clear()
-    this.selectionLayers = []
+    this.scope.selectionLayers = []
     this.featuresMap.clear()
     this.featureLoadState = 'idle'
     for (const resource of [
@@ -3346,11 +2955,13 @@ export class ResourceViewCtx {
   }
 
   getUserLayers = (): UserLayer[] => {
-    return this.getUserLayersForCurrentHub()
+    return this.scope.getUserLayersForCurrentHub()
   }
 
   getUserLayerIds = (): string[] => {
-    return this.getUserLayersForCurrentHub().map((layer: UserLayer) => layer.layerId)
+    return this.scope
+      .getUserLayersForCurrentHub()
+      .map((layer: UserLayer) => layer.layerId)
   }
 
   /**
@@ -3388,7 +2999,7 @@ export class ResourceViewCtx {
     }
 
     this.account.applyProfile({ userLayers: [...retainedLayers, ...layers] })
-    this.setLayers(layers.map(layer => layer.layerId))
+    this.scope.setLayers(layers.map(layer => layer.layerId))
   }
 
   /**
@@ -3440,50 +3051,6 @@ export class ResourceViewCtx {
     this.organisationCodeToId.clear()
     this.projectCodeToId.clear()
     this.hubCodeToId.clear()
-  }
-
-  // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
-  resetOrganisations = async () => {
-    this.state.prisms.organisation = []
-    await this.refreshOrganisations()
-  }
-
-  // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
-  resetProjects = async () => {
-    this.state.prisms.project = []
-    await this.refreshProjects()
-  }
-
-  // Force refresh methods for when you actually need to invalidate and fetch fresh data
-  forceRefreshOrganisations = async () => {
-    this.state.prisms.organisation = []
-    await this.invalidateAndRefresh(FirstClassResource.organisation)
-  }
-
-  forceRefreshProjects = async () => {
-    this.state.prisms.project = []
-    await this.invalidateAndRefresh(FirstClassResource.project)
-  }
-
-  // TODO : Clear the Omnibar when a layer is toggled
-  addLayer = (id: Id) => {
-    this.state.prisms.layer.push(id)
-    this.postLayerMutation()
-  }
-
-  removeLayer = (id: Id) => {
-    this.state.prisms.layer = this.state.prisms.layer.filter(l => l !== id)
-    this.postLayerMutation()
-  }
-
-  setLayers = (layers: Id[]) => {
-    this.state.prisms.layer = layers
-    this.postLayerMutation()
-  }
-
-  resetLayers = () => {
-    this.state.prisms.layer = []
-    this.postLayerMutation()
   }
 
   initialiseCategoricalPropertyFilters = (layerId: Id) => {
@@ -3610,7 +3177,7 @@ export class ResourceViewCtx {
     const currentHub = this.hub
     if (!currentHub) {
       this.hub = hub
-      this.applyInitialLayerPrisms()
+      this.scope.applyInitialLayerPrisms()
       return
     }
 
@@ -3620,7 +3187,7 @@ export class ResourceViewCtx {
 
     if (!isSameHub) {
       this.hub = hub
-      this.applyInitialLayerPrisms()
+      this.scope.applyInitialLayerPrisms()
       return
     }
 
@@ -3629,7 +3196,7 @@ export class ResourceViewCtx {
         ...currentHub,
         ...hub,
       }
-      this.applyInitialLayerPrisms()
+      this.scope.applyInitialLayerPrisms()
     }
   }
 

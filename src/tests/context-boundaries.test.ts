@@ -209,10 +209,10 @@ describe('surface context boundaries', () => {
       'admin',
     )
     new AdminCtx(view)
-    view.state.prisms.project = ['private-project']
+    view.scope.prisms.project = ['private-project']
     view.cache.project.set('private-project', { id: 'private-project' } as never)
     expect(app.queryMap.get(FirstClassResource.project)).toBe(publicQuery)
-    expect(app.state.prisms.project).toEqual([])
+    expect(app.scope.prisms.project).toEqual([])
     expect(app.cache.project.has('private-project')).toBe(false)
     expect(app.cacheCtx).toBe(view.cacheCtx)
     app.dispose()

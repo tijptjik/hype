@@ -60,7 +60,7 @@ export function useResourcePanelModel(
   /** Keeps feature-card navigation consistent after disabling or isolating its layer. */
   function closeExcludedFeature(): void {
     const active = omni?.appCtx.getActiveFeature()
-    if (active && !app.state.prisms.layer.includes(active.layerId)) {
+    if (active && !app.scope.prisms.layer.includes(active.layerId)) {
       navigate('/')
       omni?.setMode(OmniMode.search)
     }
@@ -93,14 +93,15 @@ export function useResourcePanelModel(
       return
     }
     if (type === 'organisation') {
-      if (app.isOrganisationDefaultLayersActive(id))
-        await app.deactivateOrganisationLayers(id)
-      else await app.addOrganisationDefaultLayers(id)
+      if (app.scope.isOrganisationDefaultLayersActive(id))
+        await app.scope.deactivateOrganisationLayers(id)
+      else await app.scope.addOrganisationDefaultLayers(id)
     } else if (type === 'project') {
-      if (app.isProjectDefaultLayersActive(id)) await app.deactivateProjectLayers(id)
-      else await app.addProjectDefaultLayers(id)
+      if (app.scope.isProjectDefaultLayersActive(id))
+        await app.scope.deactivateProjectLayers(id)
+      else await app.scope.addProjectDefaultLayers(id)
     } else {
-      await app.toggleLayer(id)
+      await app.scope.toggleLayer(id)
       closeExcludedFeature()
     }
   }
@@ -114,11 +115,11 @@ export function useResourcePanelModel(
    */
   async function toggle(type: PanelResourceType, id: string): Promise<void> {
     if (type === 'organisation') {
-      await app.toggleOrganisation(id)
+      await app.scope.toggleOrganisation(id)
     } else if (type === 'project') {
-      await app.toggleProject(id)
+      await app.scope.toggleProject(id)
     } else {
-      await app.toggleLayer(id)
+      await app.scope.toggleLayer(id)
       closeExcludedFeature()
     }
   }
@@ -130,7 +131,7 @@ export function useResourcePanelModel(
    * @returns Rows sorted with prism selections first in admin, or selections and enabled layers first on maps.
    */
   function rows(type: PanelResourceType, index: number): ResourcePanelRow[] {
-    const selected = app.state.prisms[type]
+    const selected = app.scope.prisms[type]
     return lists[index].rows
       .filter(row => !row.isArchived)
       .map(resource => {
@@ -160,9 +161,9 @@ export function useResourcePanelModel(
           mode === 'admin'
             ? pinned
             : type === 'organisation'
-              ? app.isOrganisationDefaultLayersActive(resource.id)
+              ? app.scope.isOrganisationDefaultLayersActive(resource.id)
               : type === 'project'
-                ? app.isProjectDefaultLayersActive(resource.id)
+                ? app.scope.isProjectDefaultLayersActive(resource.id)
                 : pinned
         return {
           id: resource.id,
@@ -188,7 +189,7 @@ export function useResourcePanelModel(
           ...(mode === 'prisms' && type === 'layer'
             ? {
                 onIsolate: async () => {
-                  await app.isolateLayer(resource.id)
+                  await app.scope.isolateLayer(resource.id)
                   closeExcludedFeature()
                 },
               }
@@ -239,10 +240,10 @@ export function useResourcePanelModel(
       search[type] = value
     },
     onReset: () => {
-      if (!app.state.prisms[type].length) app.panels.closePanel(panelType)
-      else if (type === 'organisation') app.resetOrganisations()
-      else if (type === 'project') app.resetProjects()
-      else app.resetLayers()
+      if (!app.scope.prisms[type].length) app.panels.closePanel(panelType)
+      else if (type === 'organisation') app.scope.resetOrganisations()
+      else if (type === 'project') app.scope.resetProjects()
+      else app.scope.resetLayers()
     },
     onNext: () => lists[index].list.next(),
     onRetry: lists[index].retry,

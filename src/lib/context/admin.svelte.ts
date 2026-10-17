@@ -67,7 +67,7 @@ type LocalizedRecord = Record<string, unknown>
 // TIER 1: PRISMS -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
 // Applied at the server level to constrain the result set of first-class resources available
 
-// See ResourceViewCtx.state.prisms
+// See ResourceViewCtx.scope.prisms
 
 // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
 // Applied in the app regardless of view - affects all features displayed on the map and in collections
@@ -489,8 +489,8 @@ export class AdminCtx {
    * @returns Active prisms, or role-derived fallback prisms when the current admin scope is empty.
    */
   private getTaskListPrisms(): { organisation: string[]; project: string[] } {
-    const activeOrganisationPrisms = this.view.state.prisms.organisation
-    const activeProjectPrisms = this.view.state.prisms.project
+    const activeOrganisationPrisms = this.view.scope.prisms.organisation
+    const activeProjectPrisms = this.view.scope.prisms.project
 
     if (activeOrganisationPrisms.length > 0 || activeProjectPrisms.length > 0) {
       return {
@@ -554,7 +554,7 @@ export class AdminCtx {
       conditions: this.view.isSuperAdmin()
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
-      prisms: this.view.state.prisms,
+      prisms: this.view.scope.prisms,
       sorting: this.view.state.viewSorting.feature,
       meta: { ...this.view.resources.queryMeta, profile: 'card' },
     })
@@ -616,7 +616,7 @@ export class AdminCtx {
       (await runRemoteQuery(
         remoteList({
           conditions: {},
-          prisms: this.view.state.prisms,
+          prisms: this.view.scope.prisms,
           meta: { ...this.view.resources.queryMeta },
         }),
       )) as ListResponse<Property> | undefined,

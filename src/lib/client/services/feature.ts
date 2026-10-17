@@ -122,7 +122,7 @@ export const initAddNewFeature = async (
     return
   }
 
-  const activeLayers = appCtx.state.prisms.layer
+  const activeLayers = appCtx.scope.prisms.layer
   const singleActiveLayer =
     activeLayers.length === 1 ? appCtx.cache.layer.get(activeLayers[0]) : null
   const { navigateToRoute = true } = options

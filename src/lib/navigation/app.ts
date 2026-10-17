@@ -699,11 +699,11 @@ const activateLayersForFeatures = (
           return (f as FeatureFromCollection | Feature).layerId
         })
         .filter(Boolean),
-      ...appCtx.getPrism(FirstClassResource.layer),
+      ...appCtx.scope.getPrism(FirstClassResource.layer),
     ]),
   )
 
-  appCtx.setLayers(layerIds)
+  appCtx.scope.setLayers(layerIds)
 }
 
 /**

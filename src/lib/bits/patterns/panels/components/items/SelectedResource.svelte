@@ -84,7 +84,7 @@ let selectedClass = $derived(
 
 function handleToggle(id: Id): void {
   if (props.resourceType !== 'neighbourhood') {
-    appCtx.togglePrism(props.resourceType as FirstClassResource, id)
+    appCtx.scope.togglePrism(props.resourceType as FirstClassResource, id)
   }
 }
 
@@ -97,7 +97,7 @@ const handleClickOnNarrow = async (id: string, event: MouseEvent): Promise<void>
   const isInPrism = props.selectedIds.includes(id)
 
   if (isInPrism && isCurrentActive) {
-    appCtx.togglePrism(props.resourceType as FirstClassResource, id)
+    appCtx.scope.togglePrism(props.resourceType as FirstClassResource, id)
     return
   }
 
@@ -117,17 +117,17 @@ function getNoneSelectedMessage(currentProps: Props): string {
 
   if (
     currentProps.resourceType === 'project' &&
-    appCtx.state.prisms.organisation.length === 0
+    appCtx.scope.prisms.organisation.length === 0
   ) {
     return m.maps__projects_none()
   }
 
   if (
     currentProps.resourceType === 'project' &&
-    appCtx.state.prisms.organisation.length > 0
+    appCtx.scope.prisms.organisation.length > 0
   ) {
     return m.maps__projects_none_with_n_organisations({
-      n: appCtx.state.prisms.organisation.length.toString(),
+      n: appCtx.scope.prisms.organisation.length.toString(),
     })
   }
 

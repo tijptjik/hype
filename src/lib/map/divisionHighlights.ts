@@ -47,7 +47,7 @@ export function createDivisionHighlights(map: MapLibreMap): {
     // Place territory beneath labels while retaining its outline above the fill.
     const before = map.getStyle().layers?.find(layer => layer.type === 'symbol')?.id
     if (!map.getLayer(fillId))
-      map.addLayer(
+      map.scope.addLayer(
         {
           id: fillId,
           type: 'fill',
@@ -60,7 +60,7 @@ export function createDivisionHighlights(map: MapLibreMap): {
         before,
       )
     if (!map.getLayer(outlineId))
-      map.addLayer(
+      map.scope.addLayer(
         {
           id: outlineId,
           type: 'line',
@@ -104,7 +104,8 @@ export function createDivisionHighlights(map: MapLibreMap): {
       disposed = true
       map.off('style.load', restore)
       map.off('idle', render)
-      for (const id of [outlineId, fillId]) if (map.getLayer(id)) map.removeLayer(id)
+      for (const id of [outlineId, fillId])
+        if (map.getLayer(id)) map.scope.removeLayer(id)
       if (map.getSource(sourceId)) map.removeSource(sourceId)
     },
   }

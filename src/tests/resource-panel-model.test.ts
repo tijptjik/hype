@@ -46,7 +46,13 @@ function setup(selected: string[] = [], active = 'b') {
     revalidate: vi.fn(),
   }
   const app = {
-    state: { prisms: { organisation: selected, project: [], layer: [] } },
+    scope: {
+      prisms: { organisation: selected, project: [], layer: [] },
+      // Map defaults deliberately differ from prism selections.
+      isOrganisationDefaultLayersActive: () => true,
+      isProjectDefaultLayersActive: () => true,
+      toggleOrganisation,
+    },
     cacheCtx: {
       pin: (_type: string, id: string) => ({
         current: resources.find(row => row.id === id) ?? { id, name: id },
@@ -63,10 +69,6 @@ function setup(selected: string[] = [], active = 'b') {
     retainPanelRows: vi.fn(),
     getUserPreferences: () => ({}),
     getHierarchySync: () => ({}),
-    // Map defaults deliberately differ from prism selections.
-    isOrganisationDefaultLayersActive: () => true,
-    isProjectDefaultLayersActive: () => true,
-    toggleOrganisation,
   } as unknown as AppCtx
   const routeNavigation = new SurfaceNavigation(() => active)
   routeNavigation.setActiveFacet('core', active, 'organisation' as never)

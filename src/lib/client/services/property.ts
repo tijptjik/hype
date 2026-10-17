@@ -222,7 +222,7 @@ export const getGroupedClassifierProperties = async (
   }>
 > => {
   const results = await Promise.all(
-    appCtx.getPrism(FirstClassResource.layer).map(async layerId => {
+    appCtx.scope.getPrism(FirstClassResource.layer).map(async layerId => {
       // Get layer
       const layer = await appCtx.getLayerById(layerId)
       if (!layer) return null

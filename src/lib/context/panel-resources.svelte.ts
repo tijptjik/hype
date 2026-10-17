@@ -46,7 +46,7 @@ export function usePanelResources(
       ? []
       : [
           ...new Set([
-            ...app.state.prisms[type],
+            ...app.scope.prisms[type],
             ...(navigation.getActiveResourceType() === type && activeResourceId
               ? [activeResourceId]
               : []),
@@ -80,7 +80,7 @@ export function usePanelResources(
     const pageRows = new Map(list.rows.map(row => [row.id, row]))
     // Only prism selections lead the list; navigation keeps paged rows in their existing order.
     for (const pin of pins)
-      if (pin.current && app.state.prisms[type].includes(pin.current.id))
+      if (pin.current && app.scope.prisms[type].includes(pin.current.id))
         byId.set(pin.current.id, pageRows.get(pin.current.id) ?? pin.current)
     for (const row of list.rows) if (!byId.has(row.id)) byId.set(row.id, row)
     // Retain an off-page active resource without promoting it above the current page.

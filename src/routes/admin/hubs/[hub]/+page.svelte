@@ -1319,7 +1319,7 @@ async function onSearchOrganisations(query: string): Promise<HubOrganisationItem
           id: allowedOrganisationIds,
           isArchived: false,
         },
-    prisms: adminCtx.view.state.prisms,
+    prisms: adminCtx.view.scope.prisms,
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   })
 

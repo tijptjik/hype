@@ -928,7 +928,7 @@ $effect(() => {
     appCtx.user &&
     activeMapInstance &&
     appCtx.state.resources.layer.length > 0 &&
-    !appCtx.state.prisms.layer.length &&
+    !appCtx.scope.prisms.layer.length &&
     !appCtx.panels.isPanelOpen(Panel.prisms)}
     <!-- biome-ignore lint/a11y/useSemanticElements: composite prompt contains a nested button, so this cannot be a native button. -->
     <div

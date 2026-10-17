@@ -43,11 +43,11 @@ describe('AppCtx user updates', () => {
       {} as ResponsiveCtx,
     )
     const scopeBefore = app.organisationsQueryKey()
-    app.selectionLayers = [{ id: 'default-layer' }] as Layer[]
+    app.scope.selectionLayers = [{ id: 'default-layer' }] as Layer[]
     app.account.applyProfile({ userLayers: [] })
     app.syncAccount()
     expect(app.organisationsQueryKey()).toEqual(scopeBefore)
-    expect(app.selectionLayers.map(layer => layer.id)).toEqual(['default-layer'])
+    expect(app.scope.selectionLayers.map(layer => layer.id)).toEqual(['default-layer'])
   })
 
   it('does not let an older feature refresh overwrite a newer one', async () => {
@@ -91,13 +91,13 @@ describe('AppCtx user updates', () => {
       new AccountState(null),
       {} as ResponsiveCtx,
     )
-    appCtx.state.prisms.layer = ['old-layer']
+    appCtx.scope.prisms.layer = ['old-layer']
     appCtx.queryMap.set(FirstClassResource.feature, {
       queryKey: () => [FirstClassResource.feature],
       queryFn: () => pending.promise,
     })
     const refresh = appCtx.refreshFeatures()
-    appCtx.state.prisms.layer = ['new-layer']
+    appCtx.scope.prisms.layer = ['new-layer']
     pending.resolve([
       { id: 'obsolete', layerId: 'old-layer', properties: [] },
     ] as unknown as FeatureFromCollection[])
@@ -262,12 +262,12 @@ describe('AppCtx user updates', () => {
 
     appCtx.hub = { id: 'hub-1', code: 'test-hub' } as HubOptsExtended
     appCtx.state.resources.layer = [{ id: 'saved-layer' }] as Layer[]
-    appCtx.state.prisms.layer = ['temporary-layer']
+    appCtx.scope.prisms.layer = ['temporary-layer']
 
     appCtx.applyUserProfile({ username: 'after' })
     appCtx.syncAccount()
 
-    expect(appCtx.state.prisms.layer).toEqual(['temporary-layer'])
+    expect(appCtx.scope.prisms.layer).toEqual(['temporary-layer'])
   })
 
   it('switches visible markers when active layers change before their feature refresh completes', () => {
@@ -290,15 +290,15 @@ describe('AppCtx user updates', () => {
     vi.spyOn(appCtx.resources.featureQueries.map, 'rows', 'get').mockReturnValue(
       features,
     )
-    appCtx.state.prisms.layer = ['neon-signs']
+    appCtx.scope.prisms.layer = ['neon-signs']
     expect(appCtx.featuresVisible).toEqual(['neon-feature'])
 
-    appCtx.state.prisms.layer = ['bookshops']
+    appCtx.scope.prisms.layer = ['bookshops']
     expect(appCtx.featuresVisible).toEqual(['bookshop-feature'])
     expect(appCtx.getVisibleFeatures().map(feature => feature.id)).toEqual([
       'bookshop-feature',
     ])
-    appCtx.state.prisms.layer = []
+    appCtx.scope.prisms.layer = []
     expect(appCtx.getVisibleFeatures()).toEqual([])
   })
 
@@ -312,7 +312,7 @@ describe('AppCtx user updates', () => {
       new AccountState(null),
       {} as ResponsiveCtx,
     )
-    app.state.prisms.layer = ['overlay']
+    app.scope.prisms.layer = ['overlay']
     const rows = [
       {
         id: 'inside',
@@ -373,8 +373,8 @@ describe('AppCtx user updates', () => {
       { id: 'account-organisation' },
     ] as Organisation[]
     appCtx.state.resources.project = [{ id: 'account-project' }] as Project[]
-    appCtx.state.prisms.organisation = ['account-organisation']
-    appCtx.state.prisms.project = ['account-project']
+    appCtx.scope.prisms.organisation = ['account-organisation']
+    appCtx.scope.prisms.project = ['account-project']
 
     organisations.resolve([{ id: 'public-organisation' }] as Organisation[])
     projects.resolve([{ id: 'public-project' }] as Project[])
@@ -384,8 +384,8 @@ describe('AppCtx user updates', () => {
       { id: 'account-organisation' },
     ])
     expect(appCtx.state.resources.project).toEqual([{ id: 'account-project' }])
-    expect(appCtx.state.prisms.organisation).toEqual(['account-organisation'])
-    expect(appCtx.state.prisms.project).toEqual(['account-project'])
+    expect(appCtx.scope.prisms.organisation).toEqual(['account-organisation'])
+    expect(appCtx.scope.prisms.project).toEqual(['account-project'])
   })
 
   it('does not commit anonymous layers, properties, or layer prisms after sign-in', async () => {
@@ -417,7 +417,7 @@ describe('AppCtx user updates', () => {
     appCtx.account.syncSession({ id: 'account-user' } as unknown as SessionUser)
     appCtx.syncAccount()
     appCtx.state.resources.layer = [{ id: 'account-layer' }] as Layer[]
-    appCtx.state.prisms.layer = ['account-layer']
+    appCtx.scope.prisms.layer = ['account-layer']
     appCtx.cache.property.set('account-property', {
       id: 'account-property',
     } as Property)
@@ -427,7 +427,7 @@ describe('AppCtx user updates', () => {
     await Promise.all([refreshLayers, refreshProperties])
 
     expect(appCtx.state.resources.layer).toEqual([{ id: 'account-layer' }])
-    expect(appCtx.state.prisms.layer).toEqual(['account-layer'])
+    expect(appCtx.scope.prisms.layer).toEqual(['account-layer'])
     expect(appCtx.cache.property.has('public-property')).toBe(false)
     expect(appCtx.cache.property.has('account-property')).toBe(true)
   })

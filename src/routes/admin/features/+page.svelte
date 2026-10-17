@@ -862,7 +862,7 @@ $effect(() => {
     conditions: adminCtx.view.isSuperAdmin()
       ? { isArchived: null, isPublished: null }
       : { isArchived: false, isPublished: null },
-    prisms: adminCtx.view.state.prisms,
+    prisms: adminCtx.view.scope.prisms,
     sorting: adminCtx.view.state.viewSorting.feature,
     q: nextQuery,
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },

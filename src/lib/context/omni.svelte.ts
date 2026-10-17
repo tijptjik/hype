@@ -1113,8 +1113,8 @@ export class OmniCtx {
     }
 
     // Ensure that the layer is active on the map
-    if (!this.appCtx.isPrism(FirstClassResource.layer, feature.layerId)) {
-      this.appCtx.addLayer(feature.layerId)
+    if (!this.appCtx.scope.isPrism(FirstClassResource.layer, feature.layerId)) {
+      this.appCtx.scope.addLayer(feature.layerId)
     }
 
     this.appCtx.setActiveCollection(

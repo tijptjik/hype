@@ -134,7 +134,7 @@ function controlledPage() {
 
 function createApp(): AppCtx {
   const app = new AppCtx(new DivisionCtx(), new AccountState(null), {} as ResponsiveCtx)
-  app.state.prisms.layer = ['layer-a']
+  app.scope.prisms.layer = ['layer-a']
   return app
 }
 
@@ -288,7 +288,7 @@ describe('map query integration', () => {
 
   it('keeps search available when no layer prism is active', async () => {
     const app = createApp()
-    app.state.prisms.layer = []
+    app.scope.prisms.layer = []
     app.isInitialised = true
     const first = controlledPage()
     vi.mocked(getFeaturePage).mockReturnValue(first.query)

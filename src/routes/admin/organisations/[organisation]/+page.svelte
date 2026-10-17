@@ -320,7 +320,7 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
         }),
         listQuery: getOrganisations({
           conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
-          prisms: adminCtx.view.state.prisms,
+          prisms: adminCtx.view.scope.prisms,
           meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
       }),
@@ -1071,7 +1071,7 @@ async function handleOrganisationStateToggle({
       // TODO Invalidate cache
       getOrganisations({
         conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
-        prisms: adminCtx.view.state.prisms,
+        prisms: adminCtx.view.scope.prisms,
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }).withOverride(
         overrideOrganisationListItemBoolean(organisationData.id, field, nextState),

@@ -433,7 +433,7 @@ const configuredLayerForm = configureForm<LayerRemoteFormInput>(() => ({
         conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
-        prisms: adminCtx.view.state.prisms,
+        prisms: adminCtx.view.scope.prisms,
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       })
 
@@ -566,9 +566,9 @@ const layerPermissions = $derived.by(() => {
     currentUser,
     layer,
     form: formDataUpdater,
-    prismProjectId: adminCtx.view.getPrism(FirstClassResource.project)[0] ?? null,
+    prismProjectId: adminCtx.view.scope.getPrism(FirstClassResource.project)[0] ?? null,
     prismOrganisationId:
-      adminCtx.view.getPrism(FirstClassResource.organisation)[0] ?? null,
+      adminCtx.view.scope.getPrism(FirstClassResource.organisation)[0] ?? null,
     resourceHubId: adminCtx.view.hub?.id ?? null,
     projectCache: adminCtx.view.cache.project,
     organisationCache: adminCtx.view.cache.organisation,
@@ -742,7 +742,7 @@ async function onSearchParentProjects(
 
   const baseParams = {
     q: query,
-    prisms: adminCtx.view.state.prisms,
+    prisms: adminCtx.view.scope.prisms,
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' as const },
   }
 

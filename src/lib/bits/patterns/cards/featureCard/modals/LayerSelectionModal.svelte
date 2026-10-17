@@ -49,7 +49,7 @@ const newFeature = $derived(appCtx.draft.current)
 const appMainOffsetX = $derived(surfaceLayout.getAppMainOffsetX())
 const activeLayers = $derived.by(() =>
   // Prefer the reactive list data: caches can hold narrower payloads from prior lookups.
-  appCtx.state.prisms.layer
+  appCtx.scope.prisms.layer
     .map(
       layerId =>
         appCtx.state.resources.layer.find(layer => layer.id === layerId) ??

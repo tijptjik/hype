@@ -438,7 +438,7 @@ export class AppCtx extends ResourceViewCtx {
       // Remove offscreen points, disabled layers and excluded divisions before the debounced page has settled.
       const { include, exclude } = this.divisionCtx.state.filters.feature.neighbourhood
       return this.resources.featureQueries.map.rows
-        .filter(row => this.state.prisms.layer.includes(row.layerId))
+        .filter(row => this.scope.prisms.layer.includes(row.layerId))
         .filter(row => {
           const selected =
             row.divisionMemberships?.filter(member => member.selected) ?? []
@@ -548,7 +548,7 @@ export class AppCtx extends ResourceViewCtx {
 
   featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
     const query = this.resources.featureQueries.map
-    if (!this.state.prisms.layer.length) {
+    if (!this.scope.prisms.layer.length) {
       query.clear()
       this.featureLoadState = 'complete'
       return []
@@ -664,7 +664,7 @@ export class AppCtx extends ResourceViewCtx {
         console.error('[AppCtx] Initial resource loading failed', result.reason)
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-    this.applyInitialLayerPrisms(expectedRoleScope)
+    this.scope.applyInitialLayerPrisms(expectedRoleScope)
     await this.loadPinnedLayers(expectedRoleScope)
     await this.postLayerMutation(false, false, expectedRoleScope)
 

@@ -48,10 +48,10 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
 
   // Refresh classifier groups when the active layer selection changes.
   $effect(() => {
-    const prismSignature = app.getPrism(FirstClassResource.layer).join('|')
+    const prismSignature = app.scope.getPrism(FirstClassResource.layer).join('|')
     untrack(() => {
       void getGroupedClassifierProperties(app).then(nextGroups => {
-        if (prismSignature === app.getPrism(FirstClassResource.layer).join('|'))
+        if (prismSignature === app.scope.getPrism(FirstClassResource.layer).join('|'))
           groups = nextGroups
       })
     })

@@ -49,10 +49,10 @@ adminCtx.setResourceType(false)
 
 let activeFacet = $state<AnalyticsFacet>(DEFAULT_ANALYTICS_FACET)
 const prismOrganisationIds = $derived([
-  ...adminCtx.view.getPrism(FirstClassResource.organisation),
+  ...adminCtx.view.scope.getPrism(FirstClassResource.organisation),
 ])
 const prismProjectIds = $derived([
-  ...adminCtx.view.getPrism(FirstClassResource.project),
+  ...adminCtx.view.scope.getPrism(FirstClassResource.project),
 ])
 const prismSignature = $derived(
   `${prismOrganisationIds.join('|')}::${prismProjectIds.join('|')}`,

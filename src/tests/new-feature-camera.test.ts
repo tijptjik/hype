@@ -26,7 +26,7 @@ describe('new-feature camera capability', () => {
       const setNewFeature = vi.fn()
       const app = {
         getUser: () => ({ id: 'user', isAnonymous: false }),
-        state: { prisms: { layer: ['layer'] } },
+        scope: { prisms: { layer: ['layer'] } },
         cache: { layer: new Map([['layer', { id: 'layer' }]]) },
         getHierarchy: async () => ({ layer: { id: 'layer' } }),
         draft: { current: null, set: setNewFeature, update: vi.fn(), setMode: vi.fn() },

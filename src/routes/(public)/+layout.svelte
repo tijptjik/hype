@@ -52,7 +52,7 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
   if (selectedLayerIds === null) return
 
   // Replace the initial hub selection with the explicit map resource target.
-  appCtx.state.prisms.layer = selectedLayerIds
+  appCtx.scope.prisms.layer = selectedLayerIds
 
   try {
     if (selectedLayerIds.length === 0) {

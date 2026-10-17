@@ -47,7 +47,7 @@ $effect(() => {
   appliedTarget = targetKey
 
   // Keep the base map empty until a valid explicit screensaver target resolves.
-  appCtx.state.prisms.layer = selectedLayerIds
+  appCtx.scope.prisms.layer = selectedLayerIds
   if (selectedLayerIds.length === 0) return
 
   // Select the requested layers before refreshing so the feature query is scoped to them.

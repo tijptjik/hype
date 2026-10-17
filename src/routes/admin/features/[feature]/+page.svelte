@@ -758,7 +758,7 @@ const configuredFeatureForm = configureForm(() => ({
           conditions: adminCtx.view.isSuperAdmin()
             ? { isArchived: null, isPublished: null }
             : { isArchived: false, isPublished: null },
-          prisms: adminCtx.view.state.prisms,
+          prisms: adminCtx.view.scope.prisms,
           meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
       ]

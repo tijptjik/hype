@@ -26,7 +26,7 @@ export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
   const canSaveUserLayers = $derived(Boolean(appCtx.hub?.id || appCtx.hub?.code))
   const userPreferences = $derived(appCtx.getUserPreferences())
   const orderedLayers = $derived.by(() =>
-    [...appCtx.selectionLayers].sort((left, right) => {
+    [...appCtx.scope.selectionLayers].sort((left, right) => {
       const rankDiff =
         (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)
       if (rankDiff !== 0) return rankDiff
