@@ -138,8 +138,9 @@ export default defineConfig({
     pool: 'forks',
     execArgv: ['--expose-gc'],
     isolate: true,
-    maxWorkers: 1,
-    fileParallelism: false,
+    // Bound concurrency to avoid multiplying the Svelte/DOM worker memory footprint.
+    maxWorkers: 2,
+    fileParallelism: true,
     testTimeout: 10000,
     hookTimeout: 5000,
     teardownTimeout: 1000,
@@ -164,6 +165,7 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/.local/**', // Machine-specific manual probes are not the portable test suite.
       '**/libs/**',
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
 
 const {
@@ -122,9 +122,12 @@ vi.mock('#lib/db/zod/index.js', () => ({
 let remote: Awaited<typeof import('#lib/api/property.remote.js')>
 
 describe('property.remote', () => {
-  beforeEach(async () => {
-    vi.resetModules()
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
+  beforeAll(async () => {
     remote = await import('#lib/api/property.remote.js')
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
     mockToPropertyResponseShape.mockImplementation((row: unknown) => ({ row }))
     mockGuardedContext.mockResolvedValue({

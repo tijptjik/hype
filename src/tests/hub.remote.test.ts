@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -321,9 +321,12 @@ const buildDbForUpdate = (params: {
 }
 
 describe('hub.remote form image handling', () => {
-  beforeEach(async () => {
-    vi.resetModules()
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
+  beforeAll(async () => {
     remote = await import('#lib/api/hub.remote.js')
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
     mockAuthorizeHubCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeHubUpdateForSubmission.mockReturnValue({ allowed: true })

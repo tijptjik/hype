@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
 import { drizzle } from 'drizzle-orm/d1'
 import sharp from 'sharp'
@@ -253,9 +253,12 @@ const buildDbWithContextRow = (row: Record<string, unknown>) => ({
 })
 
 describe('image.remote', () => {
-  beforeEach(async () => {
-    vi.resetModules()
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
+  beforeAll(async () => {
     remote = await import('#lib/api/image.remote.js')
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
     mockCreateImageRecord.mockReset()
     mockCreateImageRecord.mockResolvedValue({ id: 'img-1', publicId: null })

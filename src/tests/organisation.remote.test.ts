@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Panel and feature query registration is isolated from this resource's authorization fixtures.
 vi.mock('#lib/api/resources.remote.js', () => ({}))
@@ -277,9 +277,12 @@ let remote: Awaited<typeof import('#lib/api/organisation.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('organisation.remote')
 
 describe('organisation.remote authz', () => {
-  beforeEach(async () => {
-    vi.resetModules()
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
+  beforeAll(async () => {
     remote = await import('#lib/api/organisation.remote.js')
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => {})
 

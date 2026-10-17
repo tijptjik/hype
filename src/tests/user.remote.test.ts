@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
 
 const {
@@ -314,9 +314,12 @@ vi.mock('drizzle-orm', () => ({
 let remote: Awaited<typeof import('#lib/api/user.remote.js')>
 
 describe('user.remote', () => {
-  beforeEach(async () => {
-    vi.resetModules()
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
+  beforeAll(async () => {
     remote = await import('#lib/api/user.remote.js')
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
 
     mockGetRequestEvent.mockReturnValue({
