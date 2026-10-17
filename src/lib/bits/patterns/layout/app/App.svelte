@@ -1,5 +1,5 @@
 <script lang="ts">
-import * as AppPrimitive from './components'
+import RootShell from './components/RootShell.svelte'
 import * as Head from './head/components'
 import type { AppProps } from './app.types'
 
@@ -18,6 +18,6 @@ let {
 
 <Head.Root {title} {siteName} {siteDescription} {socialImage} {localeKey} />
 
-<AppPrimitive.RootShell {localeKey} {isReady} {pendingColor} {pendingSurface}>
+<RootShell {localeKey} {isReady} {pendingColor} {pendingSurface}>
   {@render children()}
-</AppPrimitive.RootShell>
+</RootShell>

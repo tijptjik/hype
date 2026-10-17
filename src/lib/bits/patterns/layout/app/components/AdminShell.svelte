@@ -1,6 +1,6 @@
 <script lang="ts">
 // CUSTOM
-import { LoadScreen } from '#lib/bits/custom/index.js'
+import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
 // LAYOUT
 import { AutoHide } from '../../autoHide'
 import { Header, HeaderControlBar } from '../../header'

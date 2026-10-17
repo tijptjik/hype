@@ -4,7 +4,7 @@ import { onDestroy, tick } from 'svelte'
 // PATTERN PRIMITIVES
 import * as ResourcePanelPrimitive from './components'
 // BITS
-import { PanelRoot } from '#lib/bits/patterns/panels/index.js'
+import PanelRoot from '#lib/bits/patterns/panels/components/PanelRoot.svelte'
 import Info from '#lib/bits/patterns/panels/components/info/Maps.svelte'
 import X from 'virtual:icons/proicons/cancel-circle'
 import ChevronLeft from 'virtual:icons/proicons/chevron-left'

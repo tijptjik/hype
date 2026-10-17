@@ -6,11 +6,11 @@ import { page } from '$app/state'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
-import { ResourcePanel } from '#lib/bits/patterns/resourcePanel/index.js'
+import ResourcePanel from '#lib/bits/patterns/resourcePanel/ResourcePanel.svelte'
 import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
-import { AdminMenu } from '#lib/bits/index.js'
+import AdminMenu from '#lib/bits/patterns/bars/adminMenu/AdminMenu.svelte'
 // BITS
-import { AdminShell } from '#lib/bits/index.js'
+import AdminShell from '#lib/bits/patterns/layout/app/components/AdminShell.svelte'
 // ADAPTERS
 import { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPanelModel.svelte.js'
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
