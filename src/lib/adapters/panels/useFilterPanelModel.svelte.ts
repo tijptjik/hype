@@ -16,7 +16,7 @@ import { filterDivisions, getDivisionName } from '#lib/client/services/geospatia
 // ENUMS
 import { FirstClassResource, OmniMode } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type { Id } from '#lib/types.js'
 import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
@@ -29,7 +29,7 @@ type SelectedPropertyFilter = string[] | RangeFilterValue
 
 /** Reads nested property filters through their intended layer/property shape. */
 function getPropertyFilterMap(
-  app: AppCtx,
+  app: ResourceViewCtx,
 ): Record<string, Record<string, SelectedPropertyFilter>> | undefined {
   return app.filters.values.feature.properties as unknown as
     | Record<string, Record<string, SelectedPropertyFilter>>
@@ -42,7 +42,11 @@ function getPropertyFilterMap(
  * @param omni - Route-owned search/map presentation context.
  * @returns Filter panel data and callbacks for controlled Bits patterns.
  */
-export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
+export function useFilterPanelModel(
+  app: ResourceViewCtx,
+  omni: OmniCtx,
+  zoomToVisible: () => void,
+) {
   let searchTerm = $state('')
   let groups = $state<ClassifierGroup[]>([])
 
@@ -100,11 +104,11 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
       max: property.max ?? 100,
       toggle: (valueId: Id) => {
         toggleCategoricalPropertyValue(app, layerId, property.id, valueId)
-        app.zoomToAllVisibleFeatures()
+        zoomToVisible()
       },
       setRange: (range: [number, number]) => {
         setRangePropertyFilter(app, layerId, property.id, range)
-        app.zoomToAllVisibleFeatures()
+        zoomToVisible()
       },
     }
   }
@@ -195,7 +199,7 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
     resetDivisions: () => app.divisionCtx.resetDivisions(),
     toggleDivision: (id: string) => {
       app.divisionCtx.toggleDivision(id)
-      app.zoomToAllVisibleFeatures()
+      zoomToVisible()
       omni.setMode(OmniMode.search)
     },
   }

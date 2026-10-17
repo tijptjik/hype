@@ -178,7 +178,7 @@ export function useOmnibarModel(
     const collectionTitle = getI18n(
       collection.i18n as Record<Locale | LocaleKey, { name: string }>,
       'name',
-      appCtx.getUserPreferences(),
+      appCtx.view.getUserPreferences(),
       m.place(),
     )
 
@@ -198,7 +198,7 @@ export function useOmnibarModel(
   function getFeatureTitle(): string {
     if (omniCtx.isNewFeatureMode) {
       return getFeatureNavigationText(
-        appCtx.draft.current?.feature,
+        appCtx.view.draft.current?.feature,
         'title',
         m.red_arable_herring_trust(),
         true,
@@ -216,7 +216,7 @@ export function useOmnibarModel(
   function getCollectionItems(): Array<{ id: string; label: string }> {
     return (appCtx.getActiveCollection()?.items ?? []).map(item => ({
       id: item.id,
-      label: getI18n(item, 'title', appCtx.getUserPreferences()),
+      label: getI18n(item, 'title', appCtx.view.getUserPreferences()),
     }))
   }
 
@@ -226,9 +226,9 @@ export function useOmnibarModel(
         collectionType: OmniCollection.feature,
         results: omniCtx.searchResults.feature ?? [],
         limit: Math.max(omniCtx.limits.feature ?? 0, omniCtx.searchFeatureLimit),
-        totalCount: appCtx.resources.featureQueries.search.totalCount,
-        hasMore: appCtx.resources.featureQueries.search.hasMore,
-        loading: appCtx.resources.featureQueries.search.loading,
+        totalCount: appCtx.view.resources.featureQueries.search.totalCount,
+        hasMore: appCtx.view.resources.featureQueries.search.hasMore,
+        loading: appCtx.view.resources.featureQueries.search.loading,
         onLoadMore: () => void omniCtx.loadMoreSearch(),
         onSelection: omniCtx.searchHandlers.feature,
       },
@@ -237,7 +237,7 @@ export function useOmnibarModel(
         results: omniCtx.searchResults.neighbourhood ?? [],
         limit: omniCtx.limits.neighbourhood ?? 0,
         onSelection: omniCtx.searchHandlers.neighbourhood,
-        onPreview: (id, active) => appCtx.divisionCtx.previewDivision(id, active),
+        onPreview: (id, active) => appCtx.view.divisionCtx.previewDivision(id, active),
       },
       {
         collectionType: OmniCollection.walk,
@@ -257,14 +257,14 @@ export function useOmnibarModel(
       return {
         mode: omniCtx.state.mode,
         hasElevatedChrome: hasElevatedChrome(
-          appCtx.layout.getEffectiveAppMainWidth(),
+          appCtx.view.layout.getEffectiveAppMainWidth(),
           responsiveCtx.visibleWindowHeight,
         ),
-        horizontalOffset: appCtx.layout.getAppMainOffsetX(),
-        effectiveAppMainWidth: appCtx.layout.getEffectiveAppMainWidth(),
+        horizontalOffset: appCtx.view.layout.getAppMainOffsetX(),
+        effectiveAppMainWidth: appCtx.view.layout.getEffectiveAppMainWidth(),
         availableViewportHeight: getOmnibarAvailableViewportHeight(
           responsiveCtx.visibleWindowHeight,
-          appCtx.layout.menuClearanceHeight,
+          appCtx.view.layout.menuClearanceHeight,
         ),
         search: {
           term: omniCtx.state.searchTerm,
@@ -276,7 +276,7 @@ export function useOmnibarModel(
           onSelectFirstResult: () => omniCtx.selectFirstResult(),
           onClearSearchOrCloseTray: () => omniCtx.clearSearchOrCloseTray(),
           onCreateFeature: event =>
-            void initAddNewFeature(appCtx, omniCtx, event, { getMapCenter }),
+            void initAddNewFeature(appCtx.view, omniCtx, event, { getMapCenter }),
         },
         navigation: {
           isTrayOpen: omniCtx.state.isTrayOpen,
@@ -293,7 +293,7 @@ export function useOmnibarModel(
             collectionLength === 0 ||
             (currentIndex >= collectionLength - 1 && !omniCtx.collectionHasMore),
           hasMore: omniCtx.collectionHasMore,
-          loading: appCtx.resources.featureQueries.collection.loading,
+          loading: appCtx.view.resources.featureQueries.collection.loading,
           onLoadMore: () => void omniCtx.loadMoreCollection(),
           collectionMetaText: getCollectionMetaText(),
           featureTitle: getFeatureTitle(),

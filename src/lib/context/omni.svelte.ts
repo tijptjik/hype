@@ -137,13 +137,17 @@ export class OmniCtx {
 
     // Each search activates an independent cached query; changing text never drains all pages.
     $effect(() => {
-      const input = this.appCtx.filters.featureQueryInput({ q: this.state.searchTerm })
-      if (!this.appCtx.isInitialised || this.appCtx.isAdmin()) return
+      const input = this.appCtx.view.filters.featureQueryInput({
+        q: this.state.searchTerm,
+      })
+      if (!this.appCtx.view.isInitialised || this.appCtx.view.isAdmin()) return
       if (!this.state.isTrayOpen) return
       const timer = setTimeout(() => {
-        void this.appCtx.queries.loadFeatureQuery('search', input).catch(console.error)
-        if (this.appCtx.user?.id) {
-          void this.appCtx
+        void this.appCtx.view.queries
+          .loadFeatureQuery('search', input)
+          .catch(console.error)
+        if (this.appCtx.view.user?.id) {
+          void this.appCtx.view.queries
             .loadFeatureQuery('searchWishlist', {
               ...input,
               limit: 1,
@@ -160,9 +164,9 @@ export class OmniCtx {
     $effect(() => {
       const searchTerm = this.state.searchTerm
 
-      this.appCtx.resources.featureQueries.search.rows
-      this.appCtx.resources.featureQueries.searchWishlist.totalCount
-      this.appCtx.divisionCtx.divisionFeatureCounts.size
+      this.appCtx.view.resources.featureQueries.search.rows
+      this.appCtx.view.resources.featureQueries.searchWishlist.totalCount
+      this.appCtx.view.divisionCtx.divisionFeatureCounts.size
 
       const timer = setTimeout(() => this.updateSearchResults(searchTerm), 0)
 
@@ -182,7 +186,7 @@ export class OmniCtx {
       const input = this.collectionQueryInput(descriptor)
 
       untrack(() => {
-        void this.appCtx.queries
+        void this.appCtx.view.queries
           .loadFeatureQuery('collection', input)
           .catch(console.error)
       })
@@ -191,7 +195,7 @@ export class OmniCtx {
     // Native pages complete cold-start selection once; later refreshes preserve the camera.
     $effect(() => {
       const descriptor = this.activeCollectionDescriptor
-      const query = this.appCtx.resources.featureQueries.collection
+      const query = this.appCtx.view.resources.featureQueries.collection
       const rows = query.rows
       const totalCount = query.totalCount
       untrack(() => {
@@ -282,8 +286,8 @@ export class OmniCtx {
   // Cancel new-feature mode with full reset
   cancelNewFeature() {
     this.resetToSearch(false)
-    this.appCtx.draft.resetMode()
-    this.appCtx.draft.reset()
+    this.appCtx.view.draft.resetMode()
+    this.appCtx.view.draft.reset()
     this.appCtx.resetActiveCollection()
     navigate('/', undefined, {
       paramsToDrop: [COLLECTION_QUERY_PARAM],
@@ -316,9 +320,9 @@ export class OmniCtx {
    * @returns Completion after the next visible group of search results is available.
    */
   async loadMoreSearch(): Promise<void> {
-    const query = this.appCtx.resources.featureQueries.search
+    const query = this.appCtx.view.resources.featureQueries.search
     if (this.searchFeatureLimit >= query.rows.length && query.hasMore) {
-      await this.appCtx.queries.loadMoreFeatureQuery('search')
+      await this.appCtx.view.queries.loadMoreFeatureQuery('search')
     }
     this.searchFeatureLimit += 25
   }
@@ -356,7 +360,7 @@ export class OmniCtx {
   // Async method to update search results
   private async updateSearchResults(searchTerm: string): Promise<void> {
     try {
-      const results = await searchAllAsync(searchTerm, this.appCtx)
+      const results = await searchAllAsync(searchTerm, this.appCtx.view)
       if (searchTerm === this.state.searchTerm)
         this.searchResults = this.toGroups(results)
     } catch (error) {
@@ -441,11 +445,11 @@ export class OmniCtx {
       if (this.cardCtx?.isNewMode) {
         this.closeCard()
         this.resetToSearch()
-        this.appCtx.draft.setMode(null)
+        this.appCtx.view.draft.setMode(null)
         // Delay the reset to allow the DOM to update and remove the card component
         tick().then(() => {
           this.isIntentionallyClosing = true
-          this.appCtx.draft.reset()
+          this.appCtx.view.draft.reset()
           this.appCtx.resetActiveCollection()
           // this.focusSearchBar();
           // Reset the flag after reactive effects have had a chance to run
@@ -490,8 +494,8 @@ export class OmniCtx {
       // i.e. if we are showing the LayerSelctionModal or GeoLocationModal.
     } else if (this.state.mode === OmniMode.newFeature) {
       this.setMode(OmniMode.search)
-      this.appCtx.draft.reset()
-      this.appCtx.draft.setMode(null)
+      this.appCtx.view.draft.reset()
+      this.appCtx.view.draft.setMode(null)
       // If we are in search mode, close the tray
     } else if (this.state.mode === OmniMode.search && this.state.isTrayOpen) {
       this.closeTray()
@@ -788,7 +792,7 @@ export class OmniCtx {
               { name: string }
             >,
             'name',
-            this.appCtx.getUserPreferences(),
+            this.appCtx.view.getUserPreferences(),
           )
         : '',
   )
@@ -809,7 +813,7 @@ export class OmniCtx {
   get collectionHasMore(): boolean {
     return (
       this.appCtx.selection.collection?.totalCount !== undefined &&
-      this.appCtx.resources.featureQueries.collection.hasMore
+      this.appCtx.view.resources.featureQueries.collection.hasMore
     )
   }
 
@@ -820,11 +824,11 @@ export class OmniCtx {
   async loadMoreCollection(): Promise<void> {
     const descriptor = this.activeCollectionDescriptor
     if (!descriptor || !this.collectionHasMore) return
-    await this.appCtx.queries.loadMoreFeatureQuery('collection')
+    await this.appCtx.view.queries.loadMoreFeatureQuery('collection')
     if (JSON.stringify(descriptor) !== JSON.stringify(this.activeCollectionDescriptor))
       return
     const collection = this.appCtx.selection.collection
-    const query = this.appCtx.resources.featureQueries.collection
+    const query = this.appCtx.view.resources.featureQueries.collection
     if (collection)
       this.appCtx.selection.collection = {
         ...collection,
@@ -841,7 +845,7 @@ export class OmniCtx {
   private collectionQueryInput(
     descriptor: OmniCollectionDescriptor,
   ): FeatureQueryInput {
-    return this.appCtx.filters.featureQueryInput({
+    return this.appCtx.view.filters.featureQueryInput({
       filters:
         descriptor.kind === 'neighbourhood'
           ? { divisionIds: [descriptor.ref] }
@@ -870,8 +874,8 @@ export class OmniCtx {
     options: OmniSelectionOptions,
   ): void {
     const input = this.collectionQueryInput(descriptor)
-    const pending = this.appCtx.queries.loadFeatureQuery('collection', input)
-    const query = this.appCtx.resources.featureQueries.collection
+    const pending = this.appCtx.view.queries.loadFeatureQuery('collection', input)
+    const query = this.appCtx.view.resources.featureQueries.collection
     const initial =
       descriptor.kind === 'neighbourhood'
         ? this.toNeighbourhoodCollection(descriptor.ref, query.rows)
@@ -908,7 +912,7 @@ export class OmniCtx {
     totalCount: number | null,
   ): void {
     const current = this.appCtx.selection.collection
-    const query = this.appCtx.resources.featureQueries.collection
+    const query = this.appCtx.view.resources.featureQueries.collection
     if (
       !current ||
       current.totalCount === undefined ||
@@ -959,7 +963,7 @@ export class OmniCtx {
     // If we are on mobile, close all panels
     // otherwise the selected feature will be hidden behind the panel
     if (isMobile()) {
-      this.appCtx.panels.closeAllPanels(updateUrl)
+      this.appCtx.view.panels.closeAllPanels(updateUrl)
     }
   }
 
@@ -1024,9 +1028,12 @@ export class OmniCtx {
     this.initSelection(false)
     let collection = null
     if (walkRef === 'stars') {
-      collection = this.toWalkCollection(walkRef, this.appCtx.getWishlistedFeatures())
+      collection = this.toWalkCollection(
+        walkRef,
+        this.appCtx.view.getWishlistedFeatures(),
+      )
     } else if (walkRef === 'visited') {
-      collection = this.toWalkCollection(walkRef, this.appCtx.getVisitedFeatures())
+      collection = this.toWalkCollection(walkRef, this.appCtx.view.getVisitedFeatures())
     } else if (walkRef.endsWith('Features') && items && customI18n) {
       collection = this.toWalkCollection(walkRef, items, customI18n)
     } else if (walkRef.endsWith('Images') && items && customI18n) {
@@ -1095,17 +1102,17 @@ export class OmniCtx {
     this.initSelection()
     const requestSerial = this.selectionRequestSerial
     const selectionRevision = this.appCtx.selection.revision
-    const accountRevision = this.appCtx.account.revision
+    const accountRevision = this.appCtx.view.account.revision
 
     // Map and collection selections already retain a card-capable feature row, so
     // activate it without putting the first card open behind a detail refresh.
-    const cachedFeature = await this.appCtx.getFeatureById(featureId, false)
-    const feature = cachedFeature ?? (await this.appCtx.getFeatureById(featureId))
+    const cachedFeature = await this.appCtx.view.getFeatureById(featureId, false)
+    const feature = cachedFeature ?? (await this.appCtx.view.getFeatureById(featureId))
     // A later route, dismissal, account change or disposal supersedes this opening.
     if (
       requestSerial !== this.selectionRequestSerial ||
       selectionRevision !== this.appCtx.selection.revision ||
-      accountRevision !== this.appCtx.account.revision ||
+      accountRevision !== this.appCtx.view.account.revision ||
       this.isIntentionallyClosing
     )
       return
@@ -1115,8 +1122,8 @@ export class OmniCtx {
     }
 
     // Ensure that the layer is active on the map
-    if (!this.appCtx.scope.isPrism(FirstClassResource.layer, feature.layerId)) {
-      this.appCtx.scope.addLayer(feature.layerId)
+    if (!this.appCtx.view.scope.isPrism(FirstClassResource.layer, feature.layerId)) {
+      this.appCtx.view.scope.addLayer(feature.layerId)
     }
 
     this.appCtx.setActiveCollection(
@@ -1215,7 +1222,7 @@ export class OmniCtx {
   toFeatureCollection(feature: FeatureFromCollection | Feature): ActiveCollection {
     // Get user preferences for i18n, with fallback for static usage
     const userPreferences = {
-      ...this.appCtx.getUserPreferences(),
+      ...this.appCtx.view.getUserPreferences(),
       fallbackLocales: ['en'] as Locale[],
       preferFallbackInCurrentLocale: false,
       allowMachineTranslation: true,
@@ -1295,9 +1302,9 @@ export class OmniCtx {
     features: (FeatureFromCollection | Feature)[],
   ): ActiveCollection {
     const selectedNeighbourhood =
-      this.appCtx.resources.featureQueries.collection.facets?.divisions[
+      this.appCtx.view.resources.featureQueries.collection.facets?.divisions[
         neighbourhood
-      ] ?? this.appCtx.divisionCtx.divisions.get(neighbourhood)
+      ] ?? this.appCtx.view.divisionCtx.divisions.get(neighbourhood)
 
     return {
       id: neighbourhood,

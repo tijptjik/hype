@@ -24,7 +24,7 @@ const getFlightTimeMs = (): number => {
 const flightTimeMs = $derived(getFlightTimeMs())
 
 $effect(() => {
-  if (!appCtx.isInitialised || !appCtx.user) return
+  if (!appCtx.view.isInitialised || !appCtx.view.user) return
 
   const layerId = page.url.searchParams.get('layerId')?.trim() ?? ''
   const projectId = page.url.searchParams.get('projectId')?.trim() ?? ''
@@ -32,7 +32,8 @@ $effect(() => {
 
   const resolvedProjectId =
     projectId ||
-    appCtx.queries.rows.project.find(project => project.code === projectCode)?.id ||
+    appCtx.view.queries.rows.project.find(project => project.code === projectCode)
+      ?.id ||
     ''
   const targetKey = `${layerId}:${resolvedProjectId}:${projectCode}`
   if (untrack(() => appliedTarget) === targetKey) return
@@ -40,20 +41,20 @@ $effect(() => {
   const selectedLayerIds =
     getMapResourceDeepLinkLayerIds(
       page.url.searchParams,
-      appCtx.queries.rows.layer,
-      appCtx.queries.rows.project,
+      appCtx.view.queries.rows.layer,
+      appCtx.view.queries.rows.project,
     ) ?? []
 
   appliedTarget = targetKey
 
   // Keep the base map empty until a valid explicit screensaver target resolves.
-  appCtx.scope.prisms.layer = selectedLayerIds
+  appCtx.view.scope.prisms.layer = selectedLayerIds
   if (selectedLayerIds.length === 0) return
 
   // Select the requested layers before refreshing so the feature query is scoped to them.
-  void appCtx
+  void appCtx.view
     .postLayerMutation(false)
-    .then(() => appCtx.queries.refreshFeatures())
+    .then(() => appCtx.view.queries.refreshFeatures())
     .catch(error => {
       console.error('[Screensaver] Failed to apply screensaver layers:', error)
       appliedTarget = null

@@ -22,18 +22,20 @@ describe('surface context boundaries', () => {
       root.cacheCtx,
       'admin',
     )
-    app.layout.setMainDimensions(1400, 800)
+    expect(app).not.toBeInstanceOf(ResourceViewCtx)
+    expect(app.view).toBeInstanceOf(ResourceViewCtx)
+    app.view.layout.setMainDimensions(1400, 800)
     admin.layout.setMainDimensions(1000, 700)
-    app.panels.openPanel(Panel.prisms, false)
-    app.panels.openPanelVisually(Panel.filters)
-    expect(app.layout.panels).toBe(app.panels)
-    expect(app.panels.state.prisms.isOpen).toBe(true)
-    expect(app.panels.isPanelOpen(Panel.prisms)).toBe(true)
+    app.view.panels.openPanel(Panel.prisms, false)
+    app.view.panels.openPanelVisually(Panel.filters)
+    expect(app.view.layout.panels).toBe(app.view.panels)
+    expect(app.view.panels.state.prisms.isOpen).toBe(true)
+    expect(app.view.panels.isPanelOpen(Panel.prisms)).toBe(true)
     expect(admin.panels.isPanelOpen(Panel.prisms)).toBe(false)
     expect(admin.panels.isPanelOpenVisually(Panel.filters)).toBe(false)
     expect(admin.layout.main.width).toBe(1000)
-    app.panels.closePanel(Panel.prisms, false)
-    expect(app.layout.getEffectiveAppMainWidth()).toBe(1400)
+    app.view.panels.closePanel(Panel.prisms, false)
+    expect(app.view.layout.getEffectiveAppMainWidth()).toBe(1400)
     app.dispose()
     admin.dispose()
   })
@@ -121,7 +123,7 @@ describe('surface context boundaries', () => {
       'admin',
     )
     const before = admin.organisationsQueryKey()
-    app.applyUserProfile({ username: 'updated', attribution: 'Alice' })
+    app.view.applyUserProfile({ username: 'updated', attribution: 'Alice' })
     expect(admin.getUser()?.username).toBe('updated')
     expect(root.user?.username).toBe('alice')
     expect(admin.organisationsQueryKey()).toEqual(before)
@@ -129,7 +131,7 @@ describe('surface context boundaries', () => {
       ...admin.getUserPreferences(),
       admin: { isPrimaryPanelCollapsed: true },
     })
-    expect(app.getUserPreferences().admin?.isPrimaryPanelCollapsed).toBe(true)
+    expect(app.view.getUserPreferences().admin?.isPrimaryPanelCollapsed).toBe(true)
     expect(root.user?.preferences).toEqual({})
     expect('map' in admin).toBe(false)
     expect('markerElements' in admin).toBe(false)
@@ -158,16 +160,16 @@ describe('surface context boundaries', () => {
       'admin',
     )
     const revision = root.account.revision
-    app.queries.rows.project = [{ id: 'private-project' }] as never
+    app.view.queries.rows.project = [{ id: 'private-project' }] as never
     admin.queries.rows.project = [{ id: 'private-project' }] as never
     root.sync(
       { id: 'bob', roles: [], superAdmin: false } as unknown as SessionUser,
       null,
     )
-    expect(app.applyUserProfile({ attribution: 'Old save' }, revision)).toBe(false)
-    app.syncAccount()
+    expect(app.view.applyUserProfile({ attribution: 'Old save' }, revision)).toBe(false)
+    app.view.syncAccount()
     admin.syncAccount()
-    expect(app.queries.rows.project).toEqual([])
+    expect(app.view.queries.rows.project).toEqual([])
     expect(admin.queries.rows.project).toEqual([])
     app.dispose()
     admin.dispose()
@@ -200,7 +202,7 @@ describe('surface context boundaries', () => {
       root.responsive,
       root.cacheCtx,
     )
-    const publicQuery = app.queries.queryMap.get(FirstClassResource.project)
+    const publicQuery = app.view.queries.queryMap.get(FirstClassResource.project)
     const view = new ResourceViewCtx(
       new DivisionCtx(),
       root.account,
@@ -211,10 +213,10 @@ describe('surface context boundaries', () => {
     new AdminCtx(view)
     view.scope.prisms.project = ['private-project']
     view.cache.project.set('private-project', { id: 'private-project' } as never)
-    expect(app.queries.queryMap.get(FirstClassResource.project)).toBe(publicQuery)
-    expect(app.scope.prisms.project).toEqual([])
-    expect(app.cache.project.has('private-project')).toBe(false)
-    expect(app.cacheCtx).toBe(view.cacheCtx)
+    expect(app.view.queries.queryMap.get(FirstClassResource.project)).toBe(publicQuery)
+    expect(app.view.scope.prisms.project).toEqual([])
+    expect(app.view.cache.project.has('private-project')).toBe(false)
+    expect(app.view.cacheCtx).toBe(view.cacheCtx)
     app.dispose()
     view.dispose()
   })

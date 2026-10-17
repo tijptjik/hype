@@ -134,7 +134,7 @@ function controlledPage() {
 
 function createApp(): AppCtx {
   const app = new AppCtx(new DivisionCtx(), new AccountState(null), {} as ResponsiveCtx)
-  app.scope.prisms.layer = ['layer-a']
+  app.view.scope.prisms.layer = ['layer-a']
   return app
 }
 
@@ -193,12 +193,12 @@ describe('map query integration', () => {
 
   it('composes filters with viewport cells and fetches one page even when more results exist', async () => {
     const app = createApp()
-    expect(app.filters.featureQueryInput({ q: ' tea ' }).q).toBe('tea')
-    app.featureViewport = getFeatureViewportQuery([114.16, 22.26, 114.2, 22.3], 14)
-    app.filters.featureQueryFilters.isVisitable = true
-    app.filters.values.feature.properties = {
+    expect(app.view.filters.featureQueryInput({ q: ' tea ' }).q).toBe('tea')
+    app.view.featureViewport = getFeatureViewportQuery([114.16, 22.26, 114.2, 22.3], 14)
+    app.view.filters.featureQueryFilters.isVisitable = true
+    app.view.filters.values.feature.properties = {
       'layer-a': { category: ['tea'] },
-    } as unknown as typeof app.filters.values.feature.properties
+    } as unknown as typeof app.view.filters.values.feature.properties
     const first = controlledPage()
     vi.mocked(getFeaturePage).mockReturnValue(first.query)
     const pending = app.featuresQueryFn()
@@ -206,7 +206,7 @@ describe('map query integration', () => {
       expect.objectContaining({
         limit: 100,
         includeCounts: false,
-        spatial: app.featureViewport,
+        spatial: app.view.featureViewport,
         filters: expect.objectContaining({
           isVisitable: true,
           properties: { 'layer-a': { category: ['tea'] } },
@@ -220,8 +220,8 @@ describe('map query integration', () => {
     first.resolve([feature], null, true)
     await pending
     expect(getFeaturePage).toHaveBeenCalledOnce()
-    expect(app.resources.featureQueries.map.totalCount).toBeNull()
-    expect(app.resources.featureQueries.map.hasMore).toBe(true)
+    expect(app.view.resources.featureQueries.map.totalCount).toBeNull()
+    expect(app.view.resources.featureQueries.map.hasMore).toBe(true)
   })
 
   it('keeps more than 100 visible markers and drops offscreen rows before the next page loads', async () => {
@@ -233,12 +233,15 @@ describe('map query integration', () => {
       .mockReturnValueOnce(second.query)
     const initialRows = Array.from({ length: 100 }, (_, index) => row(`a-${index}`))
     const additionalRows = Array.from({ length: 100 }, (_, index) => row(`b-${index}`))
-    app.featureViewport = getFeatureViewportQuery([114.16, 22.26, 114.2, 22.3], 14)
+    app.view.featureViewport = getFeatureViewportQuery([114.16, 22.26, 114.2, 22.3], 14)
     const initial = app.featuresQueryFn()
     first.resolve(initialRows, null, true)
     await initial
 
-    app.featureViewport = getFeatureViewportQuery([114.15, 22.25, 114.21, 22.31], 13)
+    app.view.featureViewport = getFeatureViewportQuery(
+      [114.15, 22.25, 114.21, 22.31],
+      13,
+    )
     const extra = app.featuresQueryFn()
     expect(app.getVisibleFeatures()).toHaveLength(100)
     second.resolve(additionalRows, null, true)
@@ -246,7 +249,7 @@ describe('map query integration', () => {
     expect(app.getVisibleFeatures()).toHaveLength(200)
     expect(new Set(app.getVisibleFeatureIds()).size).toBe(200)
 
-    app.featureViewport = getFeatureViewportQuery([114.4, 22.4, 114.41, 22.41], 14)
+    app.view.featureViewport = getFeatureViewportQuery([114.4, 22.4, 114.41, 22.41], 14)
     expect(app.getVisibleFeatures()).toEqual([])
   })
 
@@ -257,26 +260,26 @@ describe('map query integration', () => {
     vi.mocked(getFeaturePage)
       .mockReturnValueOnce(older.query)
       .mockReturnValueOnce(newer.query)
-    const previous = app.queries.loadFeatureQuery(
+    const previous = app.view.queries.loadFeatureQuery(
       'map',
-      app.filters.featureQueryInput({ q: 'old' }),
+      app.view.filters.featureQueryInput({ q: 'old' }),
     )
-    const current = app.queries.loadFeatureQuery(
+    const current = app.view.queries.loadFeatureQuery(
       'map',
-      app.filters.featureQueryInput({ q: 'new' }),
+      app.view.filters.featureQueryInput({ q: 'new' }),
     )
     older.resolve([row('old')])
     await previous
-    expect(app.resources.featureQueries.map.loading).toBe(true)
-    expect(app.queries.featureLoadState).toBe('loading')
+    expect(app.view.resources.featureQueries.map.loading).toBe(true)
+    expect(app.view.queries.featureLoadState).toBe('loading')
     newer.resolve([row('new')])
     await current
-    expect(app.queries.featureLoadState).toBe('complete')
+    expect(app.view.queries.featureLoadState).toBe('complete')
   })
 
   it('keeps a closed search tray idle and loads one page when the user opens it', async () => {
     const app = createApp()
-    app.isInitialised = true
+    app.view.isInitialised = true
     const first = controlledPage()
     vi.mocked(getFeaturePage).mockReturnValue(first.query)
     const omni = createOmni(app)
@@ -288,14 +291,14 @@ describe('map query integration', () => {
     expect(getFeaturePage).toHaveBeenCalledOnce()
     first.resolve([row('search')], 5_000, true)
     await settle()
-    expect(app.resources.featureQueries.search.totalCount).toBe(5_000)
+    expect(app.view.resources.featureQueries.search.totalCount).toBe(5_000)
     expect(getFeaturePage).toHaveBeenCalledOnce()
   })
 
   it('keeps search available when no layer prism is active', async () => {
     const app = createApp()
-    app.scope.prisms.layer = []
-    app.isInitialised = true
+    app.view.scope.prisms.layer = []
+    app.view.isInitialised = true
     const first = controlledPage()
     vi.mocked(getFeaturePage).mockReturnValue(first.query)
     const omni = createOmni(app)
@@ -321,7 +324,7 @@ describe('paginated collection activation', () => {
   it('preserves an explicitly delayed card opening across a mode change', async () => {
     const app = createApp()
     const feature = row('delayed-feature')
-    app.cache.feature.set(feature.id, feature)
+    app.view.cache.feature.set(feature.id, feature)
     const omni = createOmni(app)
 
     await omni.initFeature(feature.id, {
@@ -340,7 +343,7 @@ describe('paginated collection activation', () => {
   it('keeps the card closed when selection disables opening', async () => {
     const app = createApp()
     const feature = row('closed-feature')
-    app.cache.feature.set(feature.id, feature)
+    app.view.cache.feature.set(feature.id, feature)
     const omni = createOmni(app)
 
     await omni.initFeature(feature.id, {
@@ -356,8 +359,8 @@ describe('paginated collection activation', () => {
   it('activates a retained feature without waiting for a remote detail read', async () => {
     const app = createApp()
     const feature = row('cached-feature')
-    app.cache.feature.set(feature.id, feature)
-    const getFeatureById = vi.spyOn(app, 'getFeatureById')
+    app.view.cache.feature.set(feature.id, feature)
+    const getFeatureById = vi.spyOn(app.view, 'getFeatureById')
     const omni = createOmni(app)
 
     await omni.initFeature(feature.id, {
@@ -376,7 +379,7 @@ describe('paginated collection activation', () => {
   it('opens a route-hydrated feature without scheduling another URL update', async () => {
     const app = createApp()
     const feature = row('route-feature')
-    vi.spyOn(app, 'getFeatureById').mockResolvedValue(feature)
+    vi.spyOn(app.view, 'getFeatureById').mockResolvedValue(feature)
     const omni = createOmni(app)
 
     await omni.initFeature(feature.id, {
@@ -396,7 +399,7 @@ describe('paginated collection activation', () => {
     const app = createApp()
     const omni = createOmni(app)
     const pending = Promise.withResolvers<FeatureFromCollection>()
-    vi.spyOn(app, 'getFeatureById').mockImplementation(async id =>
+    vi.spyOn(app.view, 'getFeatureById').mockImplementation(async id =>
       id === 'slow' ? pending.promise : row(id),
     )
     const slow = omni.initFeature('slow', { updateUrl: false, openCard: false })
@@ -412,7 +415,7 @@ describe('paginated collection activation', () => {
       const app = createApp()
       const omni = createOmni(app)
       const pending = Promise.withResolvers<FeatureFromCollection>()
-      vi.spyOn(app, 'getFeatureById').mockReturnValue(pending.promise)
+      vi.spyOn(app.view, 'getFeatureById').mockReturnValue(pending.promise)
       const opening = omni.initFeature('slow', { updateUrl: false })
       if (action === 'dispose') app.dispose()
       else omni.resetToSearch(false)
@@ -431,13 +434,13 @@ describe('paginated collection activation', () => {
     vi.mocked(getFeaturePage)
       .mockReturnValueOnce(seed.query)
       .mockReturnValueOnce(collection.query)
-    const seedRequest = app.queries.loadFeatureQuery(
+    const seedRequest = app.view.queries.loadFeatureQuery(
       'search',
-      app.filters.featureQueryInput({ q: 'cached' }),
+      app.view.filters.featureQueryInput({ q: 'cached' }),
     )
     seed.resolve([row('cached')], 1)
     await seedRequest
-    expect(app.queries.rows.feature).toEqual([])
+    expect(app.view.queries.rows.feature).toEqual([])
     const omni = createOmni(app)
     omni.initNeighbourhood('causeway-bay', selectionOptions)
     expect(app.selection.collection?.items.map(feature => feature.id)).toEqual([
@@ -481,8 +484,8 @@ describe('paginated collection activation', () => {
     omni.initNeighbourhood('causeway-bay', selectionOptions)
     first.resolve([row('first')], 100)
     await settle()
-    app.featureViewport = getFeatureViewportQuery([114.16, 22.26, 114.2, 22.3], 14)
-    app.filters.featureQueryFilters.isVisitable = false
+    app.view.featureViewport = getFeatureViewportQuery([114.16, 22.26, 114.2, 22.3], 14)
+    app.view.filters.featureQueryFilters.isVisitable = false
     flushSync()
     expect(getFeaturePage).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -512,7 +515,7 @@ describe('paginated collection activation', () => {
     const omni = createOmni(app)
     omni.initNeighbourhood('causeway-bay', selectionOptions)
     flushSync()
-    app.filters.featureQueryFilters.isVisitable = false
+    app.view.filters.featureQueryFilters.isVisitable = false
     flushSync()
     first.resolve([row('obsolete')], 100)
     await settle()

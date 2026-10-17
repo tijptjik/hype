@@ -34,8 +34,8 @@ function setup() {
   )
   const a = feature('a')
   const b = feature('b')
-  app.cache.feature.set(a.id, a)
-  app.cache.feature.set(b.id, b)
+  app.view.cache.feature.set(a.id, a)
+  app.view.cache.feature.set(b.id, b)
   return { root, app, a, b }
 }
 
@@ -44,10 +44,10 @@ describe('public selection ownership', () => {
     const { app, a } = setup()
     app.setActiveFeature(a.id, { focus: false, openCard: false, updateUrl: false })
     expect(app.selection.featureId).toBe(a.id)
-    app.cache.feature.set(a.id, feature(a.id, 'updated'))
+    app.view.cache.feature.set(a.id, feature(a.id, 'updated'))
     expect(app.getActiveFeature()).toMatchObject({ i18n: { en: { title: 'updated' } } })
     expect(app.selection.feature?.id).toBe(app.selection.featureId)
-    app.cache.feature.delete(a.id)
+    app.view.cache.feature.delete(a.id)
     expect(app.getActiveFeature()?.id).toBe(a.id)
     app.dispose()
   })
@@ -111,7 +111,7 @@ describe('public selection ownership', () => {
       { id: 'next', roles: [], superAdmin: false } as unknown as SessionUser,
       null,
     )
-    app.syncAccount()
+    app.view.syncAccount()
     expect(app.selection.featureId).toBeNull()
     const admin = new ResourceViewCtx(
       new DivisionCtx(),

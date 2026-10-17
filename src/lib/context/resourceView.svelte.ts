@@ -298,7 +298,7 @@ export class ResourceViewCtx {
 
   private disposed = false
 
-  protected getRoleScopeQueryKey = (): string => {
+  getRoleScopeQueryKey = (): string => {
     if (this.disposed) return 'disposed'
     const userId = this.account.session?.id ?? 'anonymous'
     const roles = this.getUserRoles()
@@ -329,7 +329,7 @@ export class ResourceViewCtx {
    * @remarks Public-map bootstrap runs in the background on authentication routes. Its
    * responses must not update the account-scoped hierarchy after sign-in completes.
    */
-  protected isExpectedRoleScopeCurrent = (expectedRoleScope?: string): boolean =>
+  isExpectedRoleScopeCurrent = (expectedRoleScope?: string): boolean =>
     !expectedRoleScope || expectedRoleScope === this.getRoleScopeQueryKey()
 
   /**
@@ -567,7 +567,7 @@ export class ResourceViewCtx {
 
   // Hydrate persisted layer defaults once during app bootstrap so hub prism setup
   // can resolve the initial active layers without coupling to profile panel refreshes.
-  protected hydrateCurrentUserLayers = async (): Promise<void> => {
+  hydrateCurrentUserLayers = async (): Promise<void> => {
     const accountRevision = this.account.revision
     const userId = this.user?.id
     const roleScope = this.getRoleScopeQueryKey()
@@ -1754,9 +1754,6 @@ export class ResourceViewCtx {
 
   // Features for active layers, given the selected Neighbourhoods and Properties.
   getVisibleFeatureIds = (): Id[] => {
-    if (!this.isAdmin()) {
-      return this.getVisibleFeatures().map(row => row.id)
-    }
     // Avoid showing stale markers while an active-layer feature refresh is in flight.
     if (this.scope.prisms.layer.length === 0) {
       return []
@@ -1862,10 +1859,10 @@ export class ResourceViewCtx {
   }
 
   /** Notifies the owning surface after user-feature membership changes. @returns Nothing. */
-  protected onUserFeaturesChanged(): void {}
+  onUserFeaturesChanged: () => void = () => {}
 
   /** Notifies the owning surface when identity-bound projections must be cleared. @returns Nothing. */
-  protected onAccountScopeChanged(): void {}
+  onAccountScopeChanged: () => void = () => {}
 
   // USER DATA
   /** Reconciles this view after the root account changes. @returns Nothing. */

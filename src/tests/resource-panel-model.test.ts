@@ -3,7 +3,7 @@ import { cleanup, render } from '@testing-library/svelte/pure'
 import { afterEach, expect, it, vi } from 'vitest'
 import { SurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 import Fixture from './fixtures/components/ResourcePanelModelFixture.svelte'
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { AdminCtx } from '#lib/context/admin.svelte.js'
 import type { ResourcePanelModel } from '#lib/bits/patterns/resourcePanel/resourcePanel.types.js'
 
@@ -69,7 +69,7 @@ function setup(selected: string[] = [], active = 'b') {
     retainPanelRows: vi.fn(),
     getUserPreferences: () => ({}),
     getHierarchySync: () => ({}),
-  } as unknown as AppCtx
+  } as unknown as ResourceViewCtx
   const routeNavigation = new SurfaceNavigation(() => active)
   routeNavigation.setActiveFacet('core', active, 'organisation' as never)
   let model!: ResourcePanelModel

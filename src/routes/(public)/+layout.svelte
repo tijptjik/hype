@@ -46,23 +46,23 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
 
   const selectedLayerIds = getMapResourceDeepLinkLayerIds(
     page.url.searchParams,
-    appCtx.queries.rows.layer,
-    appCtx.queries.rows.project,
+    appCtx.view.queries.rows.layer,
+    appCtx.view.queries.rows.project,
   )
   if (selectedLayerIds === null) return
 
   // Replace the initial hub selection with the explicit map resource target.
-  appCtx.scope.prisms.layer = selectedLayerIds
+  appCtx.view.scope.prisms.layer = selectedLayerIds
 
   try {
     if (selectedLayerIds.length === 0) {
       // Reconcile filters without replacing the explicit empty selection.
-      await appCtx.postLayerMutation(false, false)
+      await appCtx.view.postLayerMutation(false, false)
       // Remove bootstrap features when an explicit target could not resolve.
-      appCtx.setSortedResourceState(FirstClassResource.feature, [])
+      appCtx.view.setSortedResourceState(FirstClassResource.feature, [])
     } else {
-      await appCtx.postLayerMutation(false)
-      await appCtx.queries.refreshFeatures(false)
+      await appCtx.view.postLayerMutation(false)
+      await appCtx.view.queries.refreshFeatures(false)
     }
   } catch (error) {
     console.error('[Map deep link] Failed to apply map resource target:', error)
@@ -91,9 +91,9 @@ $effect(() => {
   if (!ready) return
   const generation = ++bootstrapGeneration
   untrack(() => {
-    if (hub) appCtx.setHub(hub)
-    appCtx.syncAccount()
-    appCtx.isInitialised = false
+    if (hub) appCtx.view.setHub(hub)
+    appCtx.view.syncAccount()
+    appCtx.view.isInitialised = false
     error = null
     // Screensaver resolves its own layer after hierarchy loading, avoiding a flash of default features.
     void appCtx
@@ -111,17 +111,17 @@ $effect(() => {
 })
 
 $effect(() => {
-  appCtx.isMobile = root.responsive.window.width < 768
+  appCtx.view.isMobile = root.responsive.window.width < 768
 })
 
 $effect(() => {
-  appCtx.interactions.registerKeydownHandlers()
-  return () => appCtx.interactions.unregisterKeydownHandlers()
+  appCtx.view.interactions.registerKeydownHandlers()
+  return () => appCtx.view.interactions.unregisterKeydownHandlers()
 })
 
 onDestroy(() => {
   bootstrapGeneration++
-  appCtx.interactions.unregisterKeydownHandlers()
+  appCtx.view.interactions.unregisterKeydownHandlers()
   appCtx.dispose()
 })
 </script>

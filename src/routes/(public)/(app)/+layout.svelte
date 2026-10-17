@@ -97,13 +97,13 @@ let navDest = $state('')
 // Get the shared AppCtx from root layout
 const appCtx = getAppCtx()
 
-const settingsModel = useSettingsPanelModel(appCtx, getThemeModel())
-const filtersShell = usePanelShellModel(appCtx, Panel.filters)
-const starsShell = usePanelShellModel(appCtx, Panel.stars)
-const hubShell = usePanelShellModel(appCtx, Panel.hub)
-const profileShell = usePanelShellModel(appCtx, Panel.profile)
+const settingsModel = useSettingsPanelModel(appCtx.view, getThemeModel())
+const filtersShell = usePanelShellModel(appCtx.view, Panel.filters)
+const starsShell = usePanelShellModel(appCtx.view, Panel.stars)
+const hubShell = usePanelShellModel(appCtx.view, Panel.hub)
+const profileShell = usePanelShellModel(appCtx.view, Panel.profile)
 const responsiveCtx = getResponsiveCtx()
-const surfaceLayout = appCtx.layout
+const surfaceLayout = appCtx.view.layout
 
 type SettingsPanelComponent =
   typeof import('#lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
@@ -168,15 +168,15 @@ $effect(() => {
 $effect(() => {
   const width = responsiveCtx.window.width
   untrack(() => {
-    for (const panel of appCtx.panels.getPanelsToCloseForViewport(width)) {
-      appCtx.panels.closePanel(panel)
+    for (const panel of appCtx.view.panels.getPanelsToCloseForViewport(width)) {
+      appCtx.view.panels.closePanel(panel)
     }
   })
 })
 
 // Set Hub context in AppCtx
 $effect(() => {
-  appCtx.setHub(hub)
+  appCtx.view.setHub(hub)
 })
 
 // CONTEXT :: OMNI
@@ -186,17 +186,21 @@ const omniCtx = setOmniCtx(appCtx)
 $effect(() => {
   if (page.url.pathname === '/') untrack(() => omniCtx.resetToSearch(false))
 })
-const profileModel = useProfilePanelModel(appCtx, omniCtx)
+const profileModel = useProfilePanelModel(appCtx.view, omniCtx)
 const starsModel = {
-  wishlist: useSavedFeatureListModel(appCtx, omniCtx, 'wishlist'),
-  visited: useSavedFeatureListModel(appCtx, omniCtx, 'visited'),
+  wishlist: useSavedFeatureListModel(appCtx.view, omniCtx, 'wishlist'),
+  visited: useSavedFeatureListModel(appCtx.view, omniCtx, 'visited'),
   get isGuestAccount() {
     return $session.data?.user?.isAnonymous === true
   },
 }
 
-const filtersModel = useFilterPanelModel(appCtx, omniCtx)
-const prismsModel = useResourcePanelModel(appCtx, 'prisms', undefined, omniCtx)
+const filtersModel = useFilterPanelModel(
+  appCtx.view,
+  omniCtx,
+  appCtx.zoomToAllVisibleFeatures,
+)
+const prismsModel = useResourcePanelModel(appCtx.view, 'prisms', undefined, omniCtx)
 const omnibarModel = useOmnibarModel(
   appCtx,
   omniCtx,
@@ -232,7 +236,7 @@ const subscriptionModel = useHubSubscriptionModel(() => ({
     subscriptionPlacement: hub?.subscriptionPlacement,
     userState: hubUserState,
     features: appCtx.getVisibleFeatures(),
-    userPreferences: appCtx.getUserPreferences(),
+    userPreferences: appCtx.view.getUserPreferences(),
     isLoading: isSubscriptionBusy,
     onSelect: handleOpenHubSubscriptionOverlay,
     onJoin: handleJoinSubscription,
@@ -268,7 +272,7 @@ beforeNavigate(({ from, to, shallow }) => {
 
   // Clear feature cache images when switching between admin and user apps
   if (fromIsAdmin !== toIsAdmin) {
-    appCtx.clearFeatureCacheImages()
+    appCtx.view.clearFeatureCacheImages()
   }
 })
 
@@ -282,9 +286,9 @@ let profilePanelContainer: HTMLDivElement | undefined = $state()
 
 // EFFECT: Store scroll position when profile panel closes, restore when it opens
 $effect(() => {
-  const isProfileOpen = appCtx.panels.isPanelOpen(Panel.profile)
-  const profileCtx = appCtx.panels.state.profile.ctx as
-    | ({ savedScrollPosition?: number } & typeof appCtx.panels.state.profile.ctx)
+  const isProfileOpen = appCtx.view.panels.isPanelOpen(Panel.profile)
+  const profileCtx = appCtx.view.panels.state.profile.ctx as
+    | ({ savedScrollPosition?: number } & typeof appCtx.view.panels.state.profile.ctx)
     | undefined
 
   if (!isProfileOpen && profilePanelContainer) {
@@ -332,12 +336,12 @@ $effect(() => {
 let hasRunInitialSync = $state(false)
 
 $effect(() => {
-  if (!browser || !appCtx.isInitialised || hasRunInitialSync) {
+  if (!browser || !appCtx.view.isInitialised || hasRunInitialSync) {
     return
   }
 
   // Handle panel parameters from initial URL
-  handlePanelParams(appCtx.panels, page.url.searchParams)
+  handlePanelParams(appCtx.view.panels, page.url.searchParams)
 
   hasRunInitialSync = true // Prevent future runs
 })
@@ -351,10 +355,10 @@ $effect(() => {
     const searchParams = new URLSearchParams(window.location.search)
 
     // Close all current panels first (don't update URL - we're responding to URL change)
-    appCtx.panels.closeAllPanels(false)
+    appCtx.view.panels.closeAllPanels(false)
 
     // Handle panel parameters from URL
-    handlePanelParams(appCtx.panels, searchParams)
+    handlePanelParams(appCtx.view.panels, searchParams)
   }
 
   // Listen specifically for browser back/forward navigation
@@ -374,7 +378,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
     return
   }
 
-  if (Object.values(appCtx.panels.state).some(panel => panel.isOpen)) {
+  if (Object.values(appCtx.view.panels.state).some(panel => panel.isOpen)) {
     return
   }
 
@@ -575,7 +579,7 @@ $effect(() => {
 <svelte:window onkeydown={handleWindowKeydown}></svelte:window>
 
 <AppShell>
-  {#if !$session.isPending && $session.data && appCtx.isInitialised}
+  {#if !$session.isPending && $session.data && appCtx.view.isInitialised}
     <AppSurface>
       <MapCanvas
         mapStyleCode={activeMapStyleCode}
@@ -588,7 +592,7 @@ $effect(() => {
       <Stars shell={starsShell} model={starsModel} />
       <Hub
         shell={hubShell}
-        preferences={appCtx.getUserPreferences()}
+        preferences={appCtx.view.getUserPreferences()}
         {hub}
         showSubscription={subscriptionVisibility.showHubPanelSubscription}
         subscriptionProps={hubPanelSubscriptionProps}

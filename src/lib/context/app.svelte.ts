@@ -31,9 +31,10 @@ import type { ResponsiveCtx } from './responsive.svelte.js'
 import type { Id } from '#lib/types.js'
 
 /** Public map application orchestration. Admin and dashboard routes do not construct it. */
-export class AppCtx extends ResourceViewCtx {
+export class AppCtx {
+  readonly view: ResourceViewCtx
   readonly selection = new AppSelection(
-    id => this.cache.feature.get(id) ?? this.features.get(id),
+    id => this.view.cache.feature.get(id) ?? this.view.features.get(id),
   )
   // Whether the public app is transitioning between feature presentations.
   isTransitioning = $state(false)
@@ -46,20 +47,9 @@ export class AppCtx extends ResourceViewCtx {
     this.isTransitioning = false
   }
 
-  /** Updates the selected walk after resource membership is reconciled. @returns Nothing. */
-  protected override onUserFeaturesChanged(): void {
-    this.postUserFeaturesMutation()
-  }
-
-  /** Clears public selection when the shared account scope changes. @returns Nothing. */
-  protected override onAccountScopeChanged(): void {
-    // The base constructor also reconciles account scope, before app fields exist.
-    if (this.selection) this.resetActiveCollection()
-  }
-
   readonly navigation = new SurfaceNavigation((type, ref) => {
     if (type === 'organisation' || type === 'project' || type === 'hub')
-      return this.getResourceByRefSync(type, ref)?.id ?? null
+      return this.view.getResourceByRefSync(type, ref)?.id ?? null
     return ref
   })
 
@@ -83,16 +73,28 @@ export class AppCtx extends ResourceViewCtx {
     responsiveCtx: ResponsiveCtx,
     cacheCtx = new CacheCtx(mapResourceProviders),
   ) {
-    super(divisionCtx, account, responsiveCtx, cacheCtx)
+    this.view = new ResourceViewCtx(divisionCtx, account, responsiveCtx, cacheCtx)
+    this.view.onUserFeaturesChanged = () => this.postUserFeaturesMutation()
+    this.view.onAccountScopeChanged = () => this.resetActiveCollection()
+    this.view.queries.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => this.view.featuresQueryKey(),
+      queryFn: () => this.featuresQueryFn(),
+    })
     cacheCtx.installProviders(mapResourceProviders)
   }
 
   /** Drops the camera capability and releases the resource view. @returns Nothing. */
-  override dispose(): void {
+  dispose(): void {
     this.resetActiveCollection()
     this.mapController = null
-    super.dispose()
+    this.view.dispose()
   }
+
+  // Public map visibility is a surface projection of resource query results.
+  featuresVisible: Id[] = $derived(this.getVisibleFeatures().map(row => row.id))
+
+  /** @returns IDs visible in the current public map viewport. */
+  getVisibleFeatureIds = (): Id[] => this.featuresVisible
 
   // Features Collection -- Subsets
 
@@ -262,9 +264,9 @@ export class AppCtx extends ResourceViewCtx {
 
     // Set active state to new feature
     const nextFeature =
-      this.cache.feature.get(featureId) ??
+      this.view.cache.feature.get(featureId) ??
       this.selection.collection?.items.find(row => row.id === featureId) ??
-      this.features.get(featureId)
+      this.view.features.get(featureId)
     if (!nextFeature) {
       this.isTransitioning = false
       return
@@ -356,7 +358,7 @@ export class AppCtx extends ResourceViewCtx {
 
     // Paged user lists keep their query predicates, ordering and server totals after an edit.
     if (activeCollection.totalCount !== undefined) {
-      const query = this.resources.featureQueries.collection
+      const query = this.view.resources.featureQueries.collection
       this.selection.collection = {
         ...activeCollection,
         items: query.rows,
@@ -370,9 +372,9 @@ export class AppCtx extends ResourceViewCtx {
 
     // Get updated items based on walk type
     if (activeCollection.id === 'stars') {
-      updatedItems = this.getWishlistedFeatures()
+      updatedItems = this.view.getWishlistedFeatures()
     } else if (activeCollection.id === 'visited') {
-      updatedItems = this.getVisitedFeatures()
+      updatedItems = this.view.getVisitedFeatures()
     }
     // TODO: Add other walk types when implemented
 
@@ -434,11 +436,12 @@ export class AppCtx extends ResourceViewCtx {
   }
 
   getVisibleFeatures = (): (FeatureFromCollection | Feature)[] => {
-    if (!this.isAdmin()) {
+    if (!this.view.isAdmin()) {
       // Remove offscreen points, disabled layers and excluded divisions before the debounced page has settled.
-      const { include, exclude } = this.divisionCtx.state.filters.feature.neighbourhood
-      return this.resources.featureQueries.map.rows
-        .filter(row => this.scope.prisms.layer.includes(row.layerId))
+      const { include, exclude } =
+        this.view.divisionCtx.state.filters.feature.neighbourhood
+      return this.view.resources.featureQueries.map.rows
+        .filter(row => this.view.scope.prisms.layer.includes(row.layerId))
         .filter(row => {
           const selected =
             row.divisionMemberships?.filter(member => member.selected) ?? []
@@ -450,11 +453,11 @@ export class AppCtx extends ResourceViewCtx {
         })
         .filter(
           row =>
-            !this.featureViewport?.bounds ||
-            isFeaturePointWithinBounds(row.geometry, this.featureViewport.bounds),
+            !this.view.featureViewport?.bounds ||
+            isFeaturePointWithinBounds(row.geometry, this.view.featureViewport.bounds),
         )
     }
-    return this.getFeaturesByIds(this.featuresVisible)
+    return this.view.getFeaturesByIds(this.view.featuresVisible)
   }
 
   /** Fits the public camera to feature bounds. @param features Optional feature subset. @returns Nothing. */
@@ -462,7 +465,7 @@ export class AppCtx extends ResourceViewCtx {
     if (!this.mapController) return
 
     // Use provided features or current state features
-    const featuresToZoom = features || this.getFeaturesByIds(this.featuresVisible)
+    const featuresToZoom = features || this.getVisibleFeatures()
     if (!featuresToZoom.length) return
 
     // Create a FeatureCollection
@@ -484,8 +487,8 @@ export class AppCtx extends ResourceViewCtx {
       : {
           top: 150,
           bottom: 50,
-          right: 50 + (this.panels.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
-          left: 50 + (this.panels.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
+          right: 50 + (this.view.panels.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
+          left: 50 + (this.view.panels.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
         }
     try {
       // Convert to WGS84 and get bounds
@@ -547,18 +550,18 @@ export class AppCtx extends ResourceViewCtx {
   }
 
   featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
-    const query = this.resources.featureQueries.map
-    if (!this.scope.prisms.layer.length) {
+    const query = this.view.resources.featureQueries.map
+    if (!this.view.scope.prisms.layer.length) {
       query.clear()
-      this.queries.featureLoadState = 'complete'
+      this.view.queries.featureLoadState = 'complete'
       return []
     }
     // The map effect starts its first page once the camera provides a viewport.
-    if (!this.featureViewport) return []
-    await this.queries.loadFeatureQuery(
+    if (!this.view.featureViewport) return []
+    await this.view.queries.loadFeatureQuery(
       'map',
-      this.filters.featureQueryInput({
-        spatial: this.featureViewport,
+      this.view.filters.featureQueryInput({
+        spatial: this.view.featureViewport,
         includeCounts: false,
       }),
     )
@@ -566,31 +569,39 @@ export class AppCtx extends ResourceViewCtx {
     return query.rows
   }
 
+  /** Restarts public initialization after authentication. @returns Completion of authenticated bootstrap. */
+  reinitializeWithAuth = async (): Promise<void> => {
+    if (this.view.user?.id) {
+      this.view.isInitialised = false
+      await this.init(this.view.user.id)
+    }
+  }
+
   init = async (userId: Id | null, loadFeatures: boolean = true): Promise<void> => {
     // Unauthenticated routes initialise without account data.
     if (!userId) {
       // Initialize empty data structures for unauthenticated users.
-      this.queries.rows.organisation = []
-      this.queries.rows.project = []
-      this.queries.rows.layer = []
-      this.queries.rows.feature = []
-      this.queries.rows.task = []
-      this.queries.rows.hub = []
-      this.isInitialised = true
+      this.view.queries.rows.organisation = []
+      this.view.queries.rows.project = []
+      this.view.queries.rows.layer = []
+      this.view.queries.rows.feature = []
+      this.view.queries.rows.task = []
+      this.view.queries.rows.hub = []
+      this.view.isInitialised = true
       return
     }
     // Initialize stats cache
-    this.initStatsCache()
+    this.view.initStatsCache()
     // Use parallel fetching for initial load
-    this.queries.isLoadingResources = true
+    this.view.queries.isLoadingResources = true
     try {
       await this.initialFetch(true, loadFeatures)
     } finally {
-      this.queries.isLoadingResources = false
+      this.view.queries.isLoadingResources = false
     }
     // Prevent init from running again, unless the user (re)authenticates
     // see reinitializeWithAuth()
-    this.isInitialised = true
+    this.view.isInitialised = true
   }
 
   /**
@@ -602,15 +613,15 @@ export class AppCtx extends ResourceViewCtx {
    * usable even when a non-essential public resource request fails.
    */
   bootstrapPublicMapResources = async (loadFeatures: boolean = true): Promise<void> => {
-    const publicRoleScope = this.getRoleScopeQueryKey()
+    const publicRoleScope = this.view.getRoleScopeQueryKey()
 
     try {
-      this.initStatsCache()
-      this.queries.isLoadingResources = true
+      this.view.initStatsCache()
+      this.view.queries.isLoadingResources = true
       try {
         await this.initialFetch(false, loadFeatures, publicRoleScope)
       } finally {
-        this.queries.isLoadingResources = false
+        this.view.queries.isLoadingResources = false
       }
     } catch (error) {
       console.error('[AppCtx] Public map bootstrap failed:', error)
@@ -631,24 +642,24 @@ export class AppCtx extends ResourceViewCtx {
     loadFeatures: boolean = true,
     expectedRoleScope?: string,
   ): Promise<void> => {
-    expectedRoleScope ??= this.getRoleScopeQueryKey()
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+    expectedRoleScope ??= this.view.getRoleScopeQueryKey()
+    if (!this.view.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     // Bootstrap only map-relevant user state first. Self-profile hydration includes a
     // contribution relation graph and is deferred until its panel needs it.
     const lightSteps = includeUserData
       ? ([
-          ['userFeatures', () => this.queries.refreshUserFeatures(false)],
-          ['userLayers', () => this.hydrateCurrentUserLayers()],
+          ['userFeatures', () => this.view.queries.refreshUserFeatures(false)],
+          ['userLayers', () => this.view.hydrateCurrentUserLayers()],
         ] as const)
       : []
 
     // Independent compact lists and default identities start together; none waits for ancestors.
-    const defaults = this.loadDefaultLayerResources(expectedRoleScope)
+    const defaults = this.view.loadDefaultLayerResources(expectedRoleScope)
     const hierarchy = Promise.allSettled([
-      this.queries.refreshOrganisations(false, expectedRoleScope),
-      this.queries.refreshProjects(false, expectedRoleScope),
-      this.queries.refreshLayers(false, false, expectedRoleScope),
+      this.view.queries.refreshOrganisations(false, expectedRoleScope),
+      this.view.queries.refreshProjects(false, expectedRoleScope),
+      this.view.queries.refreshLayers(false, false, expectedRoleScope),
     ])
     const results = await Promise.allSettled([
       defaults,
@@ -658,21 +669,24 @@ export class AppCtx extends ResourceViewCtx {
     for (const result of results)
       if (result.status === 'rejected')
         console.error('[AppCtx] Initial resource loading failed', result.reason)
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+    if (!this.view.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-    this.scope.applyInitialLayerPrisms(expectedRoleScope)
-    await this.loadPinnedLayers(expectedRoleScope)
-    await this.postLayerMutation(false, false, expectedRoleScope)
+    this.view.scope.applyInitialLayerPrisms(expectedRoleScope)
+    await this.view.loadPinnedLayers(expectedRoleScope)
+    await this.view.postLayerMutation(false, false, expectedRoleScope)
 
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
+    if (!this.view.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
     const featureSteps = [
       ...(loadFeatures
         ? ([
-            ['features', () => this.queries.refreshFeatures(false, expectedRoleScope)],
+            [
+              'features',
+              () => this.view.queries.refreshFeatures(false, expectedRoleScope),
+            ],
             [
               'properties',
-              () => this.queries.refreshProperties(false, expectedRoleScope),
+              () => this.view.queries.refreshProperties(false, expectedRoleScope),
             ],
           ] as const)
         : []),
@@ -681,7 +695,9 @@ export class AppCtx extends ResourceViewCtx {
             [
               'tasks',
               () =>
-                this.isAdmin() ? this.queries.refreshTasks(false) : Promise.resolve(),
+                this.view.isAdmin()
+                  ? this.view.queries.refreshTasks(false)
+                  : Promise.resolve(),
             ],
           ] as const)
         : []),
@@ -721,7 +737,7 @@ export function setAppCtx(
 ): AppCtx {
   const context = new AppCtx(divisionCtx, account, responsiveCtx, cacheCtx)
   setSurfaceNavigation(context.navigation)
-  setSurfaceCtx(context)
+  setSurfaceCtx(context.view)
   return setContext(APPCTX_KEY, context)
 }
 

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { filterDivisions, getDivisionName } from '#lib/client/services/geospatial.js'
 import { DivisionCtx } from '#lib/context/division.svelte.js'
 import { getI18n, setLocale } from '#lib/i18n.js'
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { DivisionFacet } from '#lib/api/services/featureQuery.types.js'
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 
@@ -46,7 +46,7 @@ describe('registry neighbourhoods', () => {
     const app = {
       divisionCtx: place,
       getUserPreferences: () => ({}),
-    } as unknown as AppCtx
+    } as unknown as ResourceViewCtx
     expect(filterDivisions(app, '').map(([id]) => id)).toEqual(['parent'])
     expect(filterDivisions(app, 'Hong Kong')).toEqual([])
     expect(filterDivisions(app, 'HKSAR')).toEqual([])
@@ -61,7 +61,7 @@ describe('registry neighbourhoods', () => {
     const app = {
       divisionCtx: place,
       getUserPreferences: () => ({}),
-    } as unknown as AppCtx
+    } as unknown as ResourceViewCtx
     expect(filterDivisions(app, '').map(([id]) => id)).toEqual(['child'])
     expect(filterDivisions(app, 'Central', true).map(([id]) => id)).toEqual([
       'parent',
@@ -99,7 +99,7 @@ describe('registry neighbourhoods', () => {
     const app = {
       divisionCtx: place,
       getUserPreferences: () => ({ fallbackLocales: ['en'] }),
-    } as unknown as AppCtx
+    } as unknown as ResourceViewCtx
     await setLocale('zh-hant', { reload: false })
     expect(filterDivisions(app, '中環').map(([id]) => id)).toEqual(['parent'])
     expect(getI18n(parent, 'name', app.getUserPreferences())).toBe('中環')

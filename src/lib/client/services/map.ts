@@ -30,11 +30,11 @@ import type { AppCtx } from '#lib/context/app.svelte.js'
 export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   const activeResourceType = appCtx.navigation.getActiveResourceType()
   const activeResourceId = appCtx.navigation.getActiveResourceId()
-  const projects = appCtx.queries.rows.project
-  const layers = appCtx.queries.rows.layer
-  const features = appCtx.queries.rows.feature
+  const projects = appCtx.view.queries.rows.project
+  const layers = appCtx.view.queries.rows.layer
+  const features = appCtx.view.queries.rows.feature
 
-  const firstPrismProjectId = appCtx.scope.prisms.project[0]
+  const firstPrismProjectId = appCtx.view.scope.prisms.project[0]
   if (firstPrismProjectId) {
     // Project prism order is the user's active selection order, so it must take
     // precedence over a stale active-resource reference after a project is removed.
@@ -70,7 +70,7 @@ export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
     }
   }
 
-  const firstPrismLayerId = appCtx.scope.prisms.layer[0]
+  const firstPrismLayerId = appCtx.view.scope.prisms.layer[0]
   if (firstPrismLayerId) {
     const firstPrismLayer = layers.find(layer => layer.id === firstPrismLayerId)
     if (firstPrismLayer) {

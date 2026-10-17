@@ -5,7 +5,7 @@ import WantToVisitSection from '#lib/bits/patterns/panels/sections/wantToVisit/W
 import HaveVisitedSection from '#lib/bits/patterns/panels/sections/haveVisited/HaveVisitedSection.svelte'
 import { useSavedFeatureListModel } from '#lib/adapters/panels/useSavedFeatureListModel.svelte.js'
 import { createFeatureQueryEffectRoot } from './fixtures/featureQueryHarness.svelte'
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { OmniCtx } from '#lib/context/omni.svelte.js'
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
@@ -99,7 +99,7 @@ describe.each([
     let model: ReturnType<typeof useSavedFeatureListModel> | undefined
     disposeModel = createFeatureQueryEffectRoot(() => {
       model = useSavedFeatureListModel(
-        mocks.app as unknown as AppCtx,
+        mocks.app as unknown as ResourceViewCtx,
         {} as OmniCtx,
         channel,
       )

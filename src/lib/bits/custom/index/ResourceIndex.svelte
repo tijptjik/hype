@@ -43,7 +43,7 @@ const adminCtx = getAdminCtx()
 let gridWidth = $state(0)
 let stableColumnCount = $state(1)
 let lastKnownPanelOpenState = $state(
-  adminCtx.view && typeof adminCtx.view.isPanelOpenOrVisual === 'function'
+  adminCtx.view && typeof adminCtx.view.panels.isPanelOpenOrVisual === 'function'
     ? adminCtx.view.panels.isPanelOpenOrVisual(Panel.admin)
     : false,
 )

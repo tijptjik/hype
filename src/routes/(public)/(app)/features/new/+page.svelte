@@ -13,7 +13,7 @@ const appCtx = getAppCtx()
 const omniCtx = getOmniCtx()
 
 onMount(() => {
-  void initAddNewFeature(appCtx, omniCtx, null, {
+  void initAddNewFeature(appCtx.view, omniCtx, null, {
     navigateToRoute: false,
     getMapCenter: appCtx.getMapCenter,
   })

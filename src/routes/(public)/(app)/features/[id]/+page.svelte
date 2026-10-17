@@ -22,9 +22,6 @@ import { ImageContextResource, OmniMode } from '#lib/enums.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
-// PARAMS
-let featureId = $state(page.params.id ?? '')
-
 // CONTEXT
 const appCtx = getAppCtx()
 const omniCtx = getOmniCtx()
@@ -34,8 +31,15 @@ setCardCtx()
 const cardCtx = getCardCtx()
 omniCtx.setCardCtx(cardCtx)
 
-// Use state instead of async derived to prevent component destruction
-let feature: Feature | undefined = $state()
+// Resolve card content from the shared selection so marker changes and resource
+// refreshes update the mounted card without recreating its component hierarchy.
+const feature = $derived(appCtx.getActiveFeature())
+// Surface navigation projects committed URLs, including shallow and history changes.
+const routeFeatureId = $derived(
+  appCtx.navigation.state.resourceType === 'feature'
+    ? appCtx.navigation.getActiveResourceId()
+    : null,
+)
 
 // ═══════════════════════
 // 1. LOADING
@@ -96,29 +100,6 @@ const getCollectionDescriptorFromActiveCollection = (): ReturnType<
 }
 
 /**
- * Refreshes a card mounted from retained collection data.
- * @param id - Feature id whose authoritative snapshot should replace the preview.
- * @returns Nothing; stale results are discarded when route selection changes.
- */
-function refreshFeatureSnapshot(id: string): void {
-  void appCtx
-    .getFeatureById(id)
-    .then(refreshedFeature => {
-      if (
-        !refreshedFeature ||
-        page.params.id !== id ||
-        featureId !== id ||
-        omniCtx.isIntentionallyClosing
-      ) {
-        return
-      }
-
-      feature = refreshedFeature as Feature
-    })
-    .catch(console.error)
-}
-
-/**
  * Loads one route snapshot and aligns feature selection without rewriting that route.
  * @param id - Feature id captured by the route effect.
  * @param routeCollection - Collection descriptor captured from the same URL snapshot.
@@ -137,19 +118,16 @@ const loadFeatureAndSetContext = async (
   // Clear the previous marker while this route resolves; retain collection navigation context.
   if (appCtx.selection.featureId !== id) appCtx.resetActiveFeature()
 
-  // 1. Set featureId for consistency
-  featureId = id
-  // 2. Mount retained map or collection data immediately; direct routes still
+  // Mount retained map or collection data immediately; direct routes still
   // wait for their first authoritative read because they have no cached row.
-  const cachedFeature = await appCtx.getFeatureById(id, false)
-  if (page.params.id !== id || omniCtx.isIntentionallyClosing) return
+  const cachedFeature = await appCtx.view.getFeatureById(id, false)
+  if (routeFeatureId !== id || omniCtx.isIntentionallyClosing) return
   if (cachedFeature) {
-    feature = cachedFeature as Feature
-    refreshFeatureSnapshot(id)
+    // Refresh the resource projection; selection resolves the new data reactively.
+    void appCtx.view.getFeatureById(id).catch(console.error)
   } else {
-    const loadedFeature = await appCtx.getFeatureById(id)
-    if (page.params.id !== id || omniCtx.isIntentionallyClosing) return
-    feature = loadedFeature as Feature
+    await appCtx.view.getFeatureById(id)
+    if (routeFeatureId !== id || omniCtx.isIntentionallyClosing) return
   }
 
   // Rehydrate collection-backed feature routes from the URL so collection
@@ -202,7 +180,7 @@ const loadFeatureAndSetContext = async (
 
 // Load feature in effect to avoid component hierarchy destruction
 $effect(() => {
-  const id = page.params.id
+  const id = routeFeatureId
   if (!id) return
 
   const routeCollection = getCollectionDescriptorFromSearchParams(page.url.searchParams)
@@ -213,41 +191,33 @@ $effect(() => {
 
 const imageProviderProps = $derived({
   isAdminMode: false,
-  // Only provide valid props when feature and featureId match
-  // This prevents intermediate mismatched state during navigation
-  isValid: feature?.id === featureId,
-  image:
-    feature?.id === featureId
-      ? ((feature.image as ImageCtxEnvelope | null) ?? null)
-      : undefined,
-  images:
-    feature?.id === featureId
-      ? ((feature.images as ImageCtxEnvelope[] | null) ?? null)
-      : undefined,
-  context:
-    feature?.id === featureId && feature
-      ? (() => {
-          const hierarchy = appCtx.getHierarchySync(feature)
+  // Content and image context resolve the same selected identity during navigation.
+  isValid: Boolean(feature),
+  image: feature ? ((feature.image as ImageCtxEnvelope | null) ?? null) : undefined,
+  images: feature ? ((feature.images as ImageCtxEnvelope[] | null) ?? null) : undefined,
+  context: feature
+    ? (() => {
+        const hierarchy = appCtx.view.getHierarchySync(feature)
 
-          return {
-            ctxType: ImageContextResource.feature,
-            ctxId: featureId,
-            organisation: hierarchy.organisation
-              ? {
-                  id: hierarchy.organisation.id,
-                  code: hierarchy.organisation.code,
-                }
-              : undefined,
-            project: hierarchy.project
-              ? {
-                  id: hierarchy.project.id,
-                  organisationId: hierarchy.project.organisationId,
-                  code: hierarchy.project.code,
-                }
-              : undefined,
-          }
-        })()
-      : undefined, // Don't provide mismatched context during transitions
+        return {
+          ctxType: ImageContextResource.feature,
+          ctxId: feature.id,
+          organisation: hierarchy.organisation
+            ? {
+                id: hierarchy.organisation.id,
+                code: hierarchy.organisation.code,
+              }
+            : undefined,
+          project: hierarchy.project
+            ? {
+                id: hierarchy.project.id,
+                organisationId: hierarchy.project.organisationId,
+                code: hierarchy.project.code,
+              }
+            : undefined,
+        }
+      })()
+    : undefined, // Don't provide mismatched context during transitions
 })
 const imageProviderModel = useImageProviderModel(
   () => page,

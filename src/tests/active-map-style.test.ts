@@ -20,15 +20,19 @@ const createAppContext = (params: {
       getActiveResourceType: () => (params.activeProjectId ? 'project' : false),
       getActiveResourceId: () => params.activeProjectId ?? null,
     },
-    state: {
-      prisms: {
-        project: params.selectedProjectIds,
-        layer: [],
+    view: {
+      scope: {
+        prisms: {
+          project: params.selectedProjectIds,
+          layer: [],
+        },
       },
-      resources: {
-        project: params.projects,
-        layer: [],
-        feature: [],
+      queries: {
+        rows: {
+          project: params.projects,
+          layer: [],
+          feature: [],
+        },
       },
     },
   }) as unknown as AppCtx

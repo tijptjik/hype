@@ -100,7 +100,7 @@ let mapContainer: HTMLDivElement
 const appCtx = getAppCtx()
 
 const omniCtx = getOmniCtx()
-const surfaceLayout = appCtx.layout
+const surfaceLayout = appCtx.view.layout
 
 // STATE
 let lastHorizontalOffset = $state(0)
@@ -362,7 +362,7 @@ const projectMarkerThemes = $derived.by(() => {
   const fallbackTheme = getMapStyleDefinition(getDefaultMapStyleKey()).markerTheme
 
   return new Map(
-    appCtx.queries.rows.project.map(project => [
+    appCtx.view.queries.rows.project.map(project => [
       project.id,
       project.mapStyle?.code && isMapStyleKey(project.mapStyle.code)
         ? getMapStyleDefinition(project.mapStyle.code).markerTheme
@@ -418,7 +418,7 @@ const setupMap = (map: MaplibreMap): void => {
       surfaceLayout.panels.isLeftPanelOpen() ||
       surfaceLayout.panels.isRightPanelOpen()
     ) {
-      appCtx.panels.closeAllPanels()
+      appCtx.view.panels.closeAllPanels()
     }
   }
   if (!mapListenersAttached) {
@@ -427,7 +427,7 @@ const setupMap = (map: MaplibreMap): void => {
     map.on('click', onClick)
   }
 
-  if (appCtx.user && showControls && typeof navigator !== 'undefined') {
+  if (appCtx.view.user && showControls && typeof navigator !== 'undefined') {
     // Keep the established first-fix policy and private-control workaround intact.
     const configureGeolocation = (): void => {
       if (!geolocateControl || geolocationFixStarted) return
@@ -456,7 +456,7 @@ const setupMap = (map: MaplibreMap): void => {
             )
             return
           }
-          appCtx.state.userLocation = geoLocation
+          appCtx.view.state.userLocation = geoLocation
           const isViewingFeature = window.location.pathname.includes('/features/')
           if (!hasReceivedFirstFix && !isViewingFeature && !isTrackingMapUrl) {
             hasReceivedFirstFix = true
@@ -542,7 +542,7 @@ $effect(() => {
   void resolveRuntimeMapStyle(resolvedMapStyleCode, {
     locale: activeLocale,
     noLabels:
-      (appCtx.user as { experimental?: { noLabelsMode?: boolean } } | null)
+      (appCtx.view.user as { experimental?: { noLabelsMode?: boolean } } | null)
         ?.experimental?.noLabelsMode ?? false,
     signal: abortController.signal,
   })
@@ -626,7 +626,7 @@ $effect(() => {
   if (!map) return
   const updateViewport = (): void => {
     const bounds = map.getBounds()
-    appCtx.featureViewport = getFeatureViewportQuery(
+    appCtx.view.featureViewport = getFeatureViewportQuery(
       [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()],
       map.getZoom(),
     )
@@ -662,25 +662,25 @@ $effect(() => {
     map.off('move', onMove)
     map.off('moveend', onMoveEnd)
     map.off('resize', updateViewport)
-    appCtx.featureViewport = undefined
+    appCtx.view.featureViewport = undefined
   }
 })
 
 // The same property/list flags are composed with spatial scope before fetching a bounded map page.
 $effect(() => {
-  const input = appCtx.filters.featureQueryInput({
-    spatial: appCtx.featureViewport,
+  const input = appCtx.view.filters.featureQueryInput({
+    spatial: appCtx.view.featureViewport,
     includeCounts: false,
   })
-  if (!activeMapInstance || appCtx.isAdmin() || !appCtx.isInitialised) return
+  if (!activeMapInstance || appCtx.view.isAdmin() || !appCtx.view.isInitialised) return
   if (!input.prisms?.layer?.length) {
-    untrack(() => appCtx.resources.featureQueries.map.clear())
-    appCtx.queries.featureLoadState = 'complete'
+    untrack(() => appCtx.view.resources.featureQueries.map.clear())
+    appCtx.view.queries.featureLoadState = 'complete'
     return
   }
 
   const timer = setTimeout(() => {
-    void appCtx.queries.loadFeatureQuery('map', input).catch(error => {
+    void appCtx.view.queries.loadFeatureQuery('map', input).catch(error => {
       console.error('[Map features] Query failed:', error)
     })
   }, 120)
@@ -690,18 +690,18 @@ $effect(() => {
 
 // Neighbourhood counts describe the filtered collection independently of the current camera.
 $effect(() => {
-  const input = appCtx.filters.featureQueryInput({
+  const input = appCtx.view.filters.featureQueryInput({
     limit: 1,
     filters: { divisionIds: [], excludeDivisionIds: [] },
   })
-  if (appCtx.isAdmin() || !appCtx.isInitialised) return
+  if (appCtx.view.isAdmin() || !appCtx.view.isInitialised) return
   if (!input.prisms?.layer?.length) {
-    untrack(() => appCtx.resources.featureQueries.facets.clear())
+    untrack(() => appCtx.view.resources.featureQueries.facets.clear())
     return
   }
 
   const timer = setTimeout(() => {
-    void appCtx.queries.loadFeatureQuery('facets', input).catch(error => {
+    void appCtx.view.queries.loadFeatureQuery('facets', input).catch(error => {
       console.error('[Feature counts] Query failed:', error)
     })
   }, 120)
@@ -710,19 +710,21 @@ $effect(() => {
 })
 
 $effect(() => {
-  const counts = appCtx.resources.featureQueries.facets.facets?.divisions ?? null
+  const counts = appCtx.view.resources.featureQueries.facets.facets?.divisions ?? null
 
-  untrack(() => appCtx.divisionCtx.setDivisionCounts(counts))
+  untrack(() => appCtx.view.divisionCtx.setDivisionCounts(counts))
 })
 
 // Reuse the normal collection freshness window when returning to the map tab.
 $effect(() => {
   const onFocus = (): void => {
-    for (const [channel, query] of Object.entries(appCtx.resources.featureQueries)) {
+    for (const [channel, query] of Object.entries(
+      appCtx.view.resources.featureQueries,
+    )) {
       void query
         .revalidate()
         .then(() =>
-          appCtx.queries.retainFeatureQueryRows(channel as FeatureQueryChannel),
+          appCtx.view.queries.retainFeatureQueryRows(channel as FeatureQueryChannel),
         )
     }
   }
@@ -735,8 +737,8 @@ $effect(() => {
 watch(
   () => [
     appCtx.featuresVisible,
-    appCtx.featureViewport,
-    featureQueryKey(appCtx.filters.featureQueryInput()),
+    appCtx.view.featureViewport,
+    featureQueryKey(appCtx.view.filters.featureQueryInput()),
     activeMapInstance,
     userMarkerStyleVariant,
     projectMarkerThemes,
@@ -747,10 +749,10 @@ watch(
   () => {
     if (markerRenderer) {
       markerRenderer.sync(appCtx.getVisibleFeatures() as FeatureFromCollection[], {
-        retention: appCtx.isAdmin()
+        retention: appCtx.view.isAdmin()
           ? undefined
           : {
-              scope: featureQueryKey(appCtx.filters.featureQueryInput()),
+              scope: featureQueryKey(appCtx.view.filters.featureQueryInput()),
               budget: getMarkerRetentionBudget(navigator),
             },
         markerStyle: userMarkerStyleVariant,
@@ -863,14 +865,14 @@ $effect(() => {
   {#if activeMapInstance}
     <DivisionHighlightLayer
       map={activeMapInstance}
-      client={appCtx.resources}
+      client={appCtx.view.resources}
       selectedIds={[
-        ...appCtx.divisionCtx.getFilteredDivisions(),
+        ...appCtx.view.divisionCtx.getFilteredDivisions(),
         ...(appCtx.selection.collection?.type === 'neighbourhood'
           ? [appCtx.selection.collection.id]
           : []),
       ]}
-      hoveredId={appCtx.divisionCtx.hoveredId}
+      hoveredId={appCtx.view.divisionCtx.hoveredId}
       theme={getMapStyleDefinition(resolvedMapStyleCode).markerTheme}
     />
   {/if}
@@ -902,7 +904,7 @@ $effect(() => {
       pixelRatio={pixelRatio ?? (browser ? window.devicePixelRatio : 1)}
       canvasContextAttributes={{ antialias }}
     >
-      {#if showControls && appCtx.user}
+      {#if showControls && appCtx.view.user}
         <GeolocateControl
           bind:control={geolocateControl}
           {...{
@@ -927,11 +929,11 @@ $effect(() => {
     </MapSurface>
   {/if}
   {#if showControls &&
-    appCtx.user &&
+    appCtx.view.user &&
     activeMapInstance &&
-    appCtx.queries.rows.layer.length > 0 &&
-    !appCtx.scope.prisms.layer.length &&
-    !appCtx.panels.isPanelOpen(Panel.prisms)}
+    appCtx.view.queries.rows.layer.length > 0 &&
+    !appCtx.view.scope.prisms.layer.length &&
+    !appCtx.view.panels.isPanelOpen(Panel.prisms)}
     <!-- biome-ignore lint/a11y/useSemanticElements: composite prompt contains a nested button, so this cannot be a native button. -->
     <div
       class="pointer-events-none absolute inset-0 z-50 mx-auto flex cursor-pointer items-center justify-center bg-black/70 text-center caret-transparent"
@@ -939,11 +941,11 @@ $effect(() => {
       out:fade={{ duration: 300, easing: cubicInOut }}
       role="button"
       tabindex="0"
-      onclick={() => appCtx.panels.openPanel(Panel.prisms, false)}
+      onclick={() => appCtx.view.panels.openPanel(Panel.prisms, false)}
       onkeydown={event => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault()
-          appCtx.panels.openPanel(Panel.prisms, false)
+          appCtx.view.panels.openPanel(Panel.prisms, false)
         }
       }}
     >

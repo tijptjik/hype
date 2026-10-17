@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { searchAllAsync } from '#lib/map/data.js'
-import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 
 describe('map search data', () => {
   it('shares polygon-backed options and hides broad classes only in the initial preview', async () => {
@@ -52,7 +52,7 @@ describe('map search data', () => {
           [...divisions].map(([id, division]) => [id, division.count]),
         ),
       },
-    } as unknown as AppCtx
+    } as unknown as ResourceViewCtx
     expect((await searchAllAsync('', app)).map(row => row.ref)).toEqual(['hood'])
     expect((await searchAllAsync('hki', app)).map(row => row.ref)).toEqual(['area'])
     expect(await searchAllAsync('Point only', app)).toEqual([])
@@ -86,7 +86,7 @@ describe('map search data', () => {
         },
       },
       divisionCtx: { divisionFeatureCounts: new Map(), divisions: new Map() },
-    } as unknown as AppCtx
+    } as unknown as ResourceViewCtx
 
     await expect(searchAllAsync('mong', appCtx)).resolves.toEqual([
       {
