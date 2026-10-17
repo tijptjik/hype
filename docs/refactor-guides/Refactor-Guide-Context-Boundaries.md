@@ -212,3 +212,17 @@ search and filter controls plus the feature-draft layer chooser after compositio
 Global type checking remains failing; existing admin predicate diagnostics move
 with those predicates into `ResourceFilters`. This does not establish a clean
 repository-wide type check or authenticated mutation/save acceptance.
+
+The final committed snapshot also passes a production build and the same 126-test
+suite in an isolated checkout. Final authenticated browser checks cover project
+text search, changing a status filter and resetting it, feature-draft layer
+selection, and public keyboard panel opening/closing. No page exceptions were
+observed. The verification server used a private WAL-safe SQLite snapshot and
+was stopped afterward. Authenticated saves and external basemap authorization
+remain outside this verification.
+
+The final isolated `svelte-check` reports 1,032 errors and 21 warnings, including
+missing generated route `$types` diagnostics in that checkout. The working-tree
+check reported 977 errors before correcting two optional-field assertions in the
+new tests. Neither check is clean; the successful production build is separate
+evidence from TypeScript diagnostics.

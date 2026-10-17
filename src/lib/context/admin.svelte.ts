@@ -38,8 +38,6 @@ import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 import type { AdminPreferences } from '#lib/db/zod/schema/user.types.js'
 import type { UserRoleDisco } from '#lib/types.js'
 
-type LocalizedRecord = Record<string, unknown>
-
 export class AdminCtx {
   readonly navigation = new SurfaceNavigation((type, ref) => {
     if (type === 'organisation' || type === 'project' || type === 'hub')
