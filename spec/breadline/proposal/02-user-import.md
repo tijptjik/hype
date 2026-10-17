@@ -41,6 +41,49 @@ as reference material. It is excluded from the active Drizzle schema and migrati
 `bun run scripts/breadline/generate-migration.ts` now generates only the nullable
 telephone addition, without connecting to a database or reading credentials.
 
+## Reviewed merge and exclusion decisions
+
+Refs #189, #194. The user planner supports explicitly reviewed cross-email merges
+and exclusions through a private JSON file. By default it reads
+`.local/breadline/user-decisions.json` when present; `--decisions path` selects an
+explicit file and fails if it is missing. Copy this file alongside the private
+identity seed when moving the import workflow to another machine. Real addresses
+must stay out of Git and public issue bodies.
+
+```json
+{
+  "version": 1,
+  "merges": [{
+    "targetEmail": "primary@example.invalid",
+    "sourceEmails": ["previous@example.invalid"]
+  }],
+  "excludeEmails": ["discard@example.invalid"]
+}
+```
+
+Rules are normalized and validated before use. Overlapping rules, chains, cycles,
+and exclusions of merge members are rejected. Merges preserve every source user
+and volunteer ID in `mapping`, with one canonical destination for subsequent run,
+drop-off and other history imports. Existing canonical profiles are retained;
+new profiles prefer the canonical source identity. A missing canonical identity
+or an unrelated provider owner blocks the group. An alias's provider account does
+not verify an otherwise unverified canonical destination.
+
+Exclusions create explicit `excluded` entries containing source user and volunteer
+IDs and `reviewed_exclusion`; they create no users, login accounts or history
+mappings. Future history stages must honor these exclusions. Shared volunteers
+between excluded and retained identities block the retained group for review.
+The source database and mirror are never edited by these decisions.
+
+The private plan embeds the exact decisions and lists `targetChanges` for existing
+Hype identities needing consolidation or removal, including Hype-only aliases.
+The planner does not execute those changes. While any remain, `review.sql` contains
+only a blocking comment and rehearsal refuses to claim success. Reconcile the
+selected destination explicitly and replan before rendering executable insert SQL.
+Tests in `scripts/breadline/user-decisions.test.ts` cover crosswalk preservation,
+profile selection, exclusion, destination conflicts and replanning after a merge.
+This supports review planning; the event/history apply stages remain unimplemented.
+
 ## Prepare a review plan
 
 ```sh

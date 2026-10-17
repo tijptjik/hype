@@ -43,6 +43,7 @@ describe('Breadline user mapping', () => {
       matchedGroups: 0,
       accountsCreated: 1,
       exceptions: 0,
+      excludedSourceRows: 0,
       mappedSourceRows: 1,
     })
     expect(plan.users[0]).toMatchObject({

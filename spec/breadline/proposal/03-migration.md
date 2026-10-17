@@ -5,6 +5,14 @@ planner is usable now; the broader conversion/apply framework below remains defe
 User import uses `0085_breadline_users.sql` and `0086_username_display_case.sql`;
 the broader event schema is inactive.
 
+Reviewed cross-email merges and exclusions are supported by the user planner's
+private decisions file; see [decision rules and reconciliation boundaries](02-user-import.md#reviewed-merge-and-exclusion-decisions).
+The plan retains source user/volunteer crosswalks and explicit exclusions. Existing
+Hype identities requiring consolidation block insert SQL and rehearsal until a
+separate destination reconciliation is complete. Future history stages must consume
+both the crosswalk and exclusions; live account reconciliation is not implemented
+by this planning command. Refs #194.
+
 Tracking: [migration parent #180](https://github.com/tijptjik/hype/issues/180),
 [source inventory #191](https://github.com/tijptjik/hype/issues/191), and
 [repeatable importer #194](https://github.com/tijptjik/hype/issues/194).

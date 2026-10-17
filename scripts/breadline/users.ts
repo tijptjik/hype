@@ -1,10 +1,11 @@
 // NODE
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 // BUN
 import { Database } from 'bun:sqlite'
 // PIPELINE
+import { parseUserDecisions } from './lib/user-decisions'
 import { backupMirror } from './lib/backup'
 import { targetArguments, type ImportTarget } from './lib/pipeline'
 import {
@@ -67,6 +68,8 @@ async function main(): Promise<void> {
   let target: ImportTarget | undefined
   let mirror = '.local/breadline/mirror.sqlite'
   let targetSnapshot: string | undefined
+  let decisionsPath = '.local/breadline/user-decisions.json'
+  let explicitDecisions = false
   const args = process.argv.slice(2)
   for (let i = 0; i < args.length; i++) {
     const option = args[i]
@@ -76,7 +79,10 @@ async function main(): Promise<void> {
       target = value
     else if (option === '--mirror') mirror = value
     else if (option === '--target-snapshot') targetSnapshot = value
-    else throw new Error('Unknown option; this command does not accept --apply')
+    else if (option === '--decisions') {
+      decisionsPath = value
+      explicitDecisions = true
+    } else throw new Error('Unknown option; this command does not accept --apply')
   }
   if (!target) throw new Error('Explicit target required')
   const configPath = target === 'local' ? 'wrangler.local.toml' : 'wrangler.toml'
@@ -144,7 +150,11 @@ async function main(): Promise<void> {
   } finally {
     source.close()
   }
-  const plan = planUsers(rows, destination, state.seed)
+  const decisions =
+    existsSync(decisionsPath) || explicitDecisions
+      ? parseUserDecisions(JSON.parse(readFileSync(decisionsPath, 'utf8')))
+      : parseUserDecisions({ version: 1, merges: [], excludeEmails: [] })
+  const plan = planUsers(rows, destination, state.seed, decisions)
   const runPath = resolve(directory, randomUUID())
   mkdirSync(runPath, { mode: 0o700 })
   // Crosswalks and identity snapshots stay outside Git and outside the Hype database.
@@ -156,6 +166,8 @@ async function main(): Promise<void> {
     sourcePath,
     checkpoints,
     plannedAt: new Date().toISOString(),
+    decisions,
+    decisionsPath: existsSync(decisionsPath) ? resolve(decisionsPath) : null,
     ...plan,
   }
   writeFileSync(resolve(runPath, 'plan.json'), JSON.stringify(manifest, null, 2), {
@@ -167,11 +179,23 @@ async function main(): Promise<void> {
     JSON.stringify(destination),
     { mode: 0o600, flag: 'wx' },
   )
-  writeFileSync(resolve(runPath, 'review.sql'), userPlanSql(plan), {
-    mode: 0o600,
-    flag: 'wx',
-  })
-  console.log(JSON.stringify(plan.counts, null, 2))
+  writeFileSync(
+    resolve(runPath, 'review.sql'),
+    plan.targetChanges.length
+      ? '-- BLOCKED: reconcile targetChanges in plan.json, then replan before generating insert SQL.\n'
+      : userPlanSql(plan),
+    {
+      mode: 0o600,
+      flag: 'wx',
+    },
+  )
+  console.log(
+    JSON.stringify(
+      { ...plan.counts, pendingTargetChanges: plan.targetChanges.length },
+      null,
+      2,
+    ),
+  )
   console.log(`Private user-import review: ${runPath}`)
   console.log(
     'No database writes performed. Source snapshot dates are recorded in plan.json.',
@@ -180,7 +204,7 @@ async function main(): Promise<void> {
 
 main().catch(() => {
   console.error(
-    'User planning failed. Use --target local|production [--mirror path] [--target-snapshot path]. No import was applied; error details suppressed to protect identity data.',
+    'User planning failed. Use --target local|production [--mirror path] [--target-snapshot path] [--decisions path]. No import was applied; error details suppressed to protect identity data.',
   )
   process.exitCode = 1
 })

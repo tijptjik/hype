@@ -5,6 +5,9 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js/max'
 // USERNAMES
 import { generateRunnerUsernameFromId } from '../../../src/lib/utils/username-generator.server'
 
+// REVIEWED DECISIONS
+import { parseUserDecisions, type UserDecisions } from './user-decisions'
+
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -77,6 +80,20 @@ export interface UserImportPlan {
     targetUserId: string
     disposition: 'create' | 'match'
   }>
+  excluded: Array<{
+    sourceUserId: number
+    sourceVolunteerId: number | null
+    reason: 'reviewed_exclusion'
+  }>
+  targetChanges: Array<
+    | {
+        action: 'merge'
+        sourceUserId: string
+        targetEmail: string
+        targetUserId: string | null
+      }
+    | { action: 'exclude'; sourceUserId: string }
+  >
   exceptions: Array<{ sourceUserIds: number[]; reason: string }>
   warnings: Array<{ sourceUserIds: number[]; reason: string }>
   counts: {
@@ -85,6 +102,7 @@ export interface UserImportPlan {
     matchedGroups: number
     accountsCreated: number
     exceptions: number
+    excludedSourceRows: number
     mappedSourceRows: number
   }
 }
@@ -144,6 +162,7 @@ export function normalizeTelephone(value: string | null): string | null {
  * @param source Legacy users from an immutable local mirror.
  * @param target Read-only destination identity snapshot.
  * @param seed Durable per-target offline seed; never regenerate it between rehearsals.
+ * @param decisions Optional reviewed cross-email merges and exclusions; retained in the private manifest.
  * @returns Proposed inserts, crosswalk and explicit unresolved groups; performs no writes.
  * @remarks Existing profiles are never overwritten. Unknown or old Facebook IDs never
  * become Hype provider accounts. No email is marked verified without verification evidence.
@@ -152,11 +171,27 @@ export function planUsers(
   source: LegacyUser[],
   target: TargetIdentitySnapshot,
   seed: string,
+  decisions?: UserDecisions,
 ): UserImportPlan {
+  const reviewed = parseUserDecisions(
+    decisions ?? { version: 1, merges: [], excludeEmails: [] },
+  )
+  const aliases = new Map(
+    reviewed.merges.flatMap(rule =>
+      rule.sourceEmails.map(email => [email, rule.targetEmail] as const),
+    ),
+  )
+  const excludedEmails = new Set(reviewed.excludeEmails)
+  const canonicalEmail = (email: string | null): string | null => {
+    const normalized = normalizedEmail(email)
+    return normalized ? (aliases.get(normalized) ?? normalized) : null
+  }
   const plan: UserImportPlan = {
     users: [],
     accounts: [],
     mapping: [],
+    excluded: [],
+    targetChanges: [],
     exceptions: [],
     warnings: [],
     counts: {
@@ -165,6 +200,7 @@ export function planUsers(
       matchedGroups: 0,
       accountsCreated: 0,
       exceptions: 0,
+      excludedSourceRows: 0,
       mappedSourceRows: 0,
     },
   }
@@ -178,9 +214,35 @@ export function planUsers(
     target.users.flatMap(user => (user.username ? [user.username.toLowerCase()] : [])),
   )
 
+  // Surface existing destination accounts separately; insert-only SQL never deletes or moves them.
+  for (const user of target.users) {
+    const email = normalizedEmail(user.email)
+    if (email && excludedEmails.has(email))
+      plan.targetChanges.push({ action: 'exclude', sourceUserId: user.id })
+    const targetEmail = email ? aliases.get(email) : undefined
+    if (targetEmail)
+      plan.targetChanges.push({
+        action: 'merge',
+        sourceUserId: user.id,
+        targetEmail,
+        targetUserId:
+          target.users.find(
+            candidate => normalizedEmail(candidate.email) === targetEmail,
+          )?.id ?? null,
+      })
+  }
+
   // Group same-email source rows so Facebook-to-Google transitions retain one history owner.
   for (const row of source) {
-    const key = normalizedEmail(row.email) ?? `source:${row.id}`
+    if (excludedEmails.has(normalizedEmail(row.email) ?? '')) {
+      plan.excluded.push({
+        sourceUserId: row.id,
+        sourceVolunteerId: row.volunteer_id,
+        reason: 'reviewed_exclusion',
+      })
+      continue
+    }
+    const key = canonicalEmail(row.email) ?? `source:${row.id}`
     groups.set(key, [...(groups.get(key) ?? []), row])
     if (row.volunteer_id !== null) {
       const keys = volunteerGroups.get(row.volunteer_id) ?? new Set<string>()
@@ -199,7 +261,15 @@ export function planUsers(
     const reject = (reason: string): void => {
       plan.exceptions.push({ sourceUserIds, reason })
     }
-    const email = normalizedEmail(rows[0].email)
+    const email = canonicalEmail(rows[0].email)
+    const mergeRule = reviewed.merges.find(rule => rule.targetEmail === email)
+    const allowedSourceTargets = new Set(
+      target.users
+        .filter(user =>
+          mergeRule?.sourceEmails.includes(normalizedEmail(user.email) ?? ''),
+        )
+        .map(user => user.id),
+    )
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       reject('invalid_email')
       continue
@@ -217,6 +287,18 @@ export function planUsers(
       reject('google_identity_spans_multiple_emails')
       continue
     }
+    if (
+      rows.some(
+        row =>
+          row.volunteer_id !== null &&
+          plan.excluded.some(
+            excluded => excluded.sourceVolunteerId === row.volunteer_id,
+          ),
+      )
+    ) {
+      reject('excluded_volunteer_shared_with_retained_user')
+      continue
+    }
     const googleIds = [
       ...new Set(
         rows
@@ -231,12 +313,33 @@ export function planUsers(
       account =>
         account.providerId === 'google' && googleIds.includes(account.accountId),
     )
+    if (
+      mergeRule &&
+      accountMatches.some(
+        account =>
+          !allowedSourceTargets.has(account.userId) &&
+          !emailMatches.some(user => user.id === account.userId),
+      )
+    ) {
+      reject('conflicting_target_identities')
+      continue
+    }
     const candidates = new Set([
       ...emailMatches.map(user => user.id),
-      ...accountMatches.map(account => account.userId),
+      ...accountMatches
+        .filter(account => !allowedSourceTargets.has(account.userId))
+        .map(account => account.userId),
     ])
     if (emailMatches.length > 1 || candidates.size > 1) {
       reject('conflicting_target_identities')
+      continue
+    }
+    if (
+      mergeRule &&
+      !emailMatches.length &&
+      !rows.some(row => normalizedEmail(row.email) === email)
+    ) {
+      reject('reviewed_merge_destination_missing')
       continue
     }
     const matchedId = [...candidates][0]
@@ -249,7 +352,11 @@ export function planUsers(
       reject('target_archived_or_anonymous')
       continue
     }
-    if (existing && !existing.emailVerified && accountMatches.length === 0) {
+    if (
+      existing &&
+      !existing.emailVerified &&
+      !accountMatches.some(account => account.userId === existing.id)
+    ) {
       reject('target_email_ownership_unverified')
       continue
     }
@@ -297,6 +404,8 @@ export function planUsers(
       // Prefer the most recently updated Google profile, then the latest other profile.
       const profile = [...rows].sort(
         (a, b) =>
+          Number(normalizedEmail(b.email) === email) -
+            Number(normalizedEmail(a.email) === email) ||
           Number(/^\d{21}$/.test(b.uid || '')) - Number(/^\d{21}$/.test(a.uid || '')) ||
           Date.parse(b.last_updated_at || b.created_at!) -
             Date.parse(a.last_updated_at || a.created_at!) ||
@@ -341,7 +450,12 @@ export function planUsers(
       usedUsernames.add(username)
     } else plan.counts.matchedGroups++
     if (rows.length > 1)
-      plan.warnings.push({ sourceUserIds, reason: 'same_email_source_rows_combined' })
+      plan.warnings.push({
+        sourceUserIds,
+        reason: mergeRule
+          ? 'reviewed_cross_email_merge'
+          : 'same_email_source_rows_combined',
+      })
     if (googleIds.length === 0)
       plan.warnings.push({
         sourceUserIds,
@@ -361,6 +475,12 @@ export function planUsers(
         disposition: existing ? 'match' : 'create',
       })
   }
+  for (const change of plan.targetChanges) {
+    if (change.action === 'merge' && !change.targetUserId)
+      change.targetUserId =
+        plan.users.find(user => user.email === change.targetEmail)?.id ?? null
+  }
+  plan.counts.excludedSourceRows = plan.excluded.length
   plan.counts.created = plan.users.length
   plan.counts.accountsCreated = plan.accounts.length
   plan.counts.exceptions = plan.exceptions.reduce(
@@ -393,6 +513,10 @@ function literal(value: string | number | null): string {
  * @remarks Never uses INSERT OR IGNORE/REPLACE: conflicts must not silently drop history.
  */
 export function userPlanSql(plan: UserImportPlan): string {
+  if (plan.targetChanges.length)
+    throw new Error(
+      'Existing destination accounts require reconciliation before insert SQL can be rendered',
+    )
   const statements = [
     '-- REVIEW ONLY: revalidate target identities before applying. Refs #189, #194.',
   ]

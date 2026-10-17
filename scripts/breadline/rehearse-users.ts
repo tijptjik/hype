@@ -23,6 +23,10 @@ async function main(): Promise<void> {
   const plan = JSON.parse(
     readFileSync(resolve(directory, 'plan.json'), 'utf8'),
   ) as UserImportPlan
+  if (plan.targetChanges?.length)
+    throw new Error(
+      'Reconcile existing destination identities and replan before rehearsal',
+    )
   const target = JSON.parse(
     readFileSync(resolve(directory, 'target-identities.json'), 'utf8'),
   ) as TargetIdentitySnapshot
