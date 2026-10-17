@@ -417,7 +417,11 @@ export class OmniCtx {
     return {
       walk: groups.walk.length > 0 ? baseLimit + (remainder > 0 ? 1 : 0) : 0,
       neighbourhood:
-        groups.neighbourhood.length > 0 ? baseLimit + (remainder > 1 ? 1 : 0) : 0,
+        groups.neighbourhood.length > 0
+          ? this.state.searchTerm.trim()
+            ? baseLimit + (remainder > 1 ? 1 : 0)
+            : Math.min(3, groups.neighbourhood.length)
+          : 0,
       feature: groups.feature.length > 0 ? baseLimit + (remainder > 2 ? 1 : 0) : 0,
     }
   }

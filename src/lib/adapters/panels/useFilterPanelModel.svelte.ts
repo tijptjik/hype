@@ -58,10 +58,7 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
   })
 
   const selectedNeighbourhoodRefs = $derived(app.divisionCtx.getFilteredDivisions())
-  const visibleNeighbourhoodCount = $derived(
-    [...app.divisionCtx.divisionFeatureCounts.values()].filter(count => count > 0)
-      .length,
-  )
+  const visibleNeighbourhoodCount = $derived(filterDivisions(app, '').length)
 
   /** Builds label, selection and mutation data for one classifier control. */
   function propertyFilter(property: Property, layerId: Id) {
@@ -132,6 +129,7 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
         name: getDivisionName(i18n, preferences),
         level: i18n.level,
         category: i18n.category,
+        class: i18n.class,
       }))
     },
     get selectedNeighbourhoods() {

@@ -22,7 +22,7 @@ const collectionIcons = {
 
 const collectionTitles: Record<OmniCollection, string> = {
   walk: m.omni__title_walks(),
-  neighbourhood: m.omni__title_neighbourhoods(),
+  neighbourhood: m.filters__divisions(),
   feature: m.omni__title_features(),
 }
 </script>

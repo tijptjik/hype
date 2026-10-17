@@ -1,6 +1,34 @@
 <script lang="ts">
 // TRANSITIONS
 import { slide } from 'svelte/transition'
+// ICONS
+import MapIcon from 'virtual:icons/lucide/map'
+import DistrictIcon from 'virtual:icons/lucide/landmark'
+import IslandIcon from 'virtual:icons/lucide/mountain'
+import MacrohoodIcon from 'virtual:icons/lucide/blocks'
+import TownIcon from 'virtual:icons/lucide/building'
+import HoodIcon from 'virtual:icons/lucide/house'
+import RuralIcon from 'virtual:icons/lucide/trees'
+import MinorIslandIcon from 'virtual:icons/lucide/waves'
+import VillageIcon from 'virtual:icons/lucide/church'
+import MicrohoodIcon from 'virtual:icons/lucide/door-open'
+import HamletIcon from 'virtual:icons/lucide/tent'
+import IsletIcon from 'virtual:icons/lucide/shell'
+
+const icons = {
+  area: MapIcon,
+  district: DistrictIcon,
+  major_island: IslandIcon,
+  macrohood: MacrohoodIcon,
+  town: TownIcon,
+  neighbourhood: HoodIcon,
+  rural_area: RuralIcon,
+  minor_island: MinorIslandIcon,
+  village: VillageIcon,
+  microhood: MicrohoodIcon,
+  hamlet: HamletIcon,
+  islet: IsletIcon,
+}
 
 type NeighbourhoodRow = {
   id: string
@@ -8,9 +36,11 @@ type NeighbourhoodRow = {
   selected: boolean
   name: string
   level: number | null
+  class: string | null
 }
 let { row, onToggle }: { row: NeighbourhoodRow; onToggle: (id: string) => void } =
   $props()
+const Icon = $derived(icons[row.class as keyof typeof icons] ?? MapIcon)
 </script>
 
 {#if row.count > 0}
@@ -35,6 +65,7 @@ let { row, onToggle }: { row: NeighbourhoodRow; onToggle: (id: string) => void }
           ? 'bg-primary'
           : 'bg-transparent group-hover:bg-base-content/30'}"
       ></span>
+      <Icon class="size-5 shrink-0 text-base-content/60" aria-hidden="true" />
       <span class="flex min-w-0 flex-col">
         {#if row.level !== null}
           <span class="font-mono text-xs text-base-content/60">L{row.level}</span>

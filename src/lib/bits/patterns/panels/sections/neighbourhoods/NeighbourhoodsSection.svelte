@@ -32,7 +32,7 @@ let {
 {/snippet}
 
 <Section
-  title={m.filters__neighbourhoods()}
+  title={m.filters__divisions()}
   icon="/neighbourhood.svg"
   iconGraphicClass="scale-125 origin-bottom-right"
   iconVerticalPaddingClass="pt-0"

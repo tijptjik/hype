@@ -23,6 +23,36 @@ export function getDivisionName(
   return getI18n(division, 'name', preferences, fallback)
 }
 
+// Presentation order is not ancestry; unknown classes remain visible after known classes.
+const divisionClassOrder = [
+  'area',
+  'district',
+  'major_island',
+  'macrohood',
+  'town',
+  'neighbourhood',
+  'rural_area',
+  'minor_island',
+  'village',
+  'microhood',
+  'hamlet',
+  'islet',
+]
+
+/**
+ * Orders divisions using supplied display levels and a stable class fallback.
+ * @param division Registry classification.
+ * @returns Numeric presentation rank, independent of hierarchy paths.
+ */
+function divisionDisplayOrder(division: DivisionFacet): number {
+  const rank = divisionClassOrder.indexOf(division.class ?? '')
+  return division.level !== null && division.level > 0
+    ? division.level
+    : rank < 0
+      ? 99
+      : rank + 1
+}
+
 /**
  * Searches the registry divisions available to the current authorized collection.
  * @param appCtx Active application and division facet state.
@@ -39,11 +69,18 @@ export function filterDivisions(
     .filter(
       ([id, division]) =>
         (appCtx.divisionCtx.divisionFeatureCounts.get(id) ?? 0) > 0 &&
-        label(division).toLocaleLowerCase().includes(term.toLocaleLowerCase()),
+        division.hasGeometry === true &&
+        [
+          division.divisionCode ?? '',
+          ...Object.values(division.i18n).map(value => value?.name ?? ''),
+        ].some(value =>
+          value.toLocaleLowerCase().includes(term.trim().toLocaleLowerCase()),
+        ),
     )
     .sort(
       ([, a], [, b]) =>
-        (a.level ?? 99) - (b.level ?? 99) || label(a).localeCompare(label(b)),
+        divisionDisplayOrder(a) - divisionDisplayOrder(b) ||
+        label(a).localeCompare(label(b)),
     )
 }
 

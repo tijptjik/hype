@@ -3,6 +3,61 @@ import { searchAllAsync } from '#lib/map/data.js'
 import type { AppCtx } from '#lib/context/app.svelte.js'
 
 describe('map search data', () => {
+  it('shares polygon-backed options and hides broad classes only in the initial preview', async () => {
+    const divisions = new Map([
+      [
+        'area',
+        {
+          id: 'area',
+          class: 'area',
+          level: 1,
+          divisionCode: 'HKI',
+          hasGeometry: true,
+          count: 20,
+          i18n: { en: { name: 'Hong Kong Island' } },
+        },
+      ],
+      [
+        'hood',
+        {
+          id: 'hood',
+          class: 'neighbourhood',
+          level: null,
+          divisionCode: 'SOHO',
+          hasGeometry: true,
+          count: 5,
+          i18n: { en: { name: 'Soho' } },
+        },
+      ],
+      [
+        'point',
+        {
+          id: 'point',
+          class: 'village',
+          level: null,
+          hasGeometry: false,
+          count: 10,
+          i18n: { en: { name: 'Point only' } },
+        },
+      ],
+    ])
+    const app = {
+      getUserPreferences: () => ({}),
+      cacheCtx: {
+        featureQueries: { searchWishlist: { totalCount: null }, search: { rows: [] } },
+      },
+      divisionCtx: {
+        divisions,
+        divisionFeatureCounts: new Map(
+          [...divisions].map(([id, division]) => [id, division.count]),
+        ),
+      },
+    } as unknown as AppCtx
+    expect((await searchAllAsync('', app)).map(row => row.ref)).toEqual(['hood'])
+    expect((await searchAllAsync('hki', app)).map(row => row.ref)).toEqual(['area'])
+    expect(await searchAllAsync('Point only', app)).toEqual([])
+  })
+
   it('keeps generated feature titles visible in search results', async () => {
     const appCtx = {
       getUserPreferences: () => ({

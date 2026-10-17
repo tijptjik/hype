@@ -107,6 +107,7 @@
   "profile__logout": "登出",
   "filters__reset": "重設篩選",
   "filters__reset_count": "清除已選的{neighbourhoods}個地區及{properties}個分類",
+  "filters__divisions": "地區",
   "filters__neighbourhoods": "地區",
   "filters__categories": "類別",
   "filters__all": "全部",

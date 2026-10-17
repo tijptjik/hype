@@ -95,6 +95,9 @@ export async function searchAllAsync(
   // Source 2 - Neighbourhoods
   const neighbourhoodResults = filterDivisions(appCtx, term)
   neighbourhoodResults.forEach(([neighbourhoodRef, data]) => {
+    // Broad regions remain searchable but do not crowd out the initial local preview.
+    if (!term.trim() && ['area', 'district', 'major_island'].includes(data.class ?? ''))
+      return
     const count = appCtx.divisionCtx.divisionFeatureCounts.get(neighbourhoodRef) ?? 0
     if (count > 0) {
       results.push({

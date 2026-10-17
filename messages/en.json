@@ -107,6 +107,7 @@
   "profile__logout": "Sign out",
   "filters__reset": "Reset filters",
   "filters__reset_count": "Clear {neighbourhoods} neighbourhoods and {properties} properties",
+  "filters__divisions": "Divisions",
   "filters__neighbourhoods": "neighbourhoods",
   "filters__categories": "categories",
   "filters__all": "All",

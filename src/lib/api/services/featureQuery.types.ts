@@ -53,6 +53,10 @@ export type DivisionFacet = {
   level: number | null
   category: string | null
   class: string | null
+  /** Readable upstream code; persisted identity remains id. */
+  divisionCode?: string | null
+  /** Only polygon-backed definitions are offered as geographic filters. */
+  hasGeometry?: boolean
   count: number
   i18n: Partial<Record<LocaleKey, { name: string }>>
 }

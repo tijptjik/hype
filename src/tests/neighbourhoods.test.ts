@@ -12,6 +12,8 @@ afterEach(async () => {
 
 const parent: DivisionFacet = {
   id: 'parent',
+  hasGeometry: true,
+  divisionCode: 'CENTRAL',
   level: 5,
   category: 'hood',
   class: 'neighbourhood',
@@ -20,6 +22,7 @@ const parent: DivisionFacet = {
 }
 const child: DivisionFacet = {
   id: 'child',
+  hasGeometry: true,
   level: 6,
   category: 'hood',
   class: 'microhood',
@@ -66,6 +69,15 @@ describe('registry neighbourhoods', () => {
     await setLocale('zh-hans', { reload: false })
     expect(filterDivisions(app, '中环').map(([id]) => id)).toEqual(['parent'])
     expect(place.getFilteredDivisions()).toEqual(['parent'])
+    expect(filterDivisions(app, 'central').map(([id]) => id)).toEqual([
+      'parent',
+      'child',
+    ])
+    place.setDivisionCounts({
+      parent,
+      child,
+      missing: { ...child, id: 'missing', hasGeometry: false },
+    })
     expect(filterDivisions(app, '').map(([id]) => id)).toEqual(['parent', 'child'])
   })
 })

@@ -71,7 +71,7 @@ async function fingerprintFeatureCountQuery(statement: {
   sql: string
   params: unknown[]
 }): Promise<string> {
-  const bytes = new TextEncoder().encode(JSON.stringify({ version: 3, ...statement }))
+  const bytes = new TextEncoder().encode(JSON.stringify({ version: 4, ...statement }))
   const digest = await crypto.subtle.digest('SHA-256', bytes)
   return [...new Uint8Array(digest)]
     .map(value => value.toString(16).padStart(2, '0'))
@@ -107,6 +107,13 @@ export async function getFeatureQueryCounts(
   const aggregate = db
     .select({
       id: divisionDefinition.id,
+      divisionCode: sql<
+        string | null
+      >`json_extract(${divisionDefinition.attributes}, '$.divisionCode')`,
+      hasGeometry:
+        sql<number>`coalesce(json_array_length(json_extract(${divisionDefinition.attributes}, '$.membershipGeometry')), 0) > 0`.mapWith(
+          Boolean,
+        ),
       level: sql<
         number | null
       >`json_extract(${divisionDefinition.attributes}, '$.level')`,
