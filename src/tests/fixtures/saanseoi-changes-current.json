@@ -2,35 +2,43 @@
   "data": [],
   "meta": {
     "fromApiReleaseSet": {
-      "id": "cd8dd53f-755a-55a6-b0a2-cea22a37a198",
-      "code": "data-hk-divisions-2026-09-23.0",
-      "cohortKey": "2026-09-23.0",
+      "id": "6ab846cb-18a2-5235-aefb-9e215c588df4",
+      "code": "data-hk-divisions-2026-10-01.0",
+      "cohortKey": "2026-10-01.0",
       "domainCode": "geographic",
       "schemaVersion": "sv-division-v1",
-      "rulesetVersion": "rs-division-merge-v1"
+      "rulesetVersion": "rs-division-merge-v2",
+      "inventory": "saanseoi"
     },
     "toApiReleaseSet": {
-      "id": "cd8dd53f-755a-55a6-b0a2-cea22a37a198",
-      "code": "data-hk-divisions-2026-09-23.0",
-      "cohortKey": "2026-09-23.0",
+      "id": "6ab846cb-18a2-5235-aefb-9e215c588df4",
+      "code": "data-hk-divisions-2026-10-01.0",
+      "cohortKey": "2026-10-01.0",
       "domainCode": "geographic",
       "schemaVersion": "sv-division-v1",
-      "rulesetVersion": "rs-division-merge-v1"
+      "rulesetVersion": "rs-division-merge-v2",
+      "inventory": "saanseoi"
     },
-    "comparisonId": "6d6647ec4bff88b80b57fd7feb14f0175318b29445d102d579021ef07aed80d8",
+    "comparisonId": "3cf10d628b71906765322887a433db41f092ab278351c5b4fabcc537bafd6296",
     "total": 0,
-    "limit": 1,
+    "limit": 25,
     "nextCursor": null,
     "membershipGeometry": "saanseoi",
     "dependencies": "transitive-before-and-after",
     "coverage": {
-      "before": { "divisions": 1818, "withMembershipGeometry": 140 },
-      "after": { "divisions": 1818, "withMembershipGeometry": 140 }
+      "before": {
+        "divisions": 2000,
+        "withMembershipGeometry": 562
+      },
+      "after": {
+        "divisions": 2000,
+        "withMembershipGeometry": 562
+      }
     }
   },
   "links": {
-    "self": "http://api.atlas.localhost/divisions/v1/changes?fromReleaseSet=cd8dd53f-755a-55a6-b0a2-cea22a37a198&toReleaseSet=cd8dd53f-755a-55a6-b0a2-cea22a37a198&page%5Blimit%5D=1&page%5Bcursor%5D=eyJ2ZXJzaW9uIjoxLCJmcm9tIjoiY2Q4ZGQ1M2YtNzU1YS01NWE2LWIwYTItY2VhMjJhMzdhMTk4IiwidG8iOiJjZDhkZDUzZi03NTVhLTU1YTYtYjBhMi1jZWEyMmEzN2ExOTgiLCJjb21wYXJpc29uIjoiNmQ2NjQ3ZWM0YmZmODhiODBiNTdmZDdmZWIxNGYwMTc1MzE4YjI5NDQ1ZDEwMmQ1NzkwMjFlZjA3YWVkODBkOCIsImFmdGVyIjpudWxsfQ&include=geometry",
-    "first": "http://api.atlas.localhost/divisions/v1/changes?fromReleaseSet=cd8dd53f-755a-55a6-b0a2-cea22a37a198&toReleaseSet=cd8dd53f-755a-55a6-b0a2-cea22a37a198&page%5Blimit%5D=1&page%5Bcursor%5D=eyJ2ZXJzaW9uIjoxLCJmcm9tIjoiY2Q4ZGQ1M2YtNzU1YS01NWE2LWIwYTItY2VhMjJhMzdhMTk4IiwidG8iOiJjZDhkZDUzZi03NTVhLTU1YTYtYjBhMi1jZWEyMmEzN2ExOTgiLCJjb21wYXJpc29uIjoiNmQ2NjQ3ZWM0YmZmODhiODBiNTdmZDdmZWIxNGYwMTc1MzE4YjI5NDQ1ZDEwMmQ1NzkwMjFlZjA3YWVkODBkOCIsImFmdGVyIjpudWxsfQ&include=geometry",
+    "self": "http://api.atlas.localhost/divisions/v1/changes?fromReleaseSet=6ab846cb-18a2-5235-aefb-9e215c588df4&toReleaseSet=6ab846cb-18a2-5235-aefb-9e215c588df4&page%5Blimit%5D=25&page%5Bcursor%5D=eyJ2ZXJzaW9uIjoxLCJpbnZlbnRvcnkiOiJzYWFuc2VvaSIsImZyb20iOiI2YWI4NDZjYi0xOGEyLTUyMzUtYWVmYi05ZTIxNWM1ODhkZjQiLCJ0byI6IjZhYjg0NmNiLTE4YTItNTIzNS1hZWZiLTllMjE1YzU4OGRmNCIsImNvbXBhcmlzb24iOiIzY2YxMGQ2MjhiNzE5MDY3NjUzMjI4ODdhNDMzZGI0MWYwOTJhYjI3ODM1MWM1YjRmYWJjYzUzN2JhZmQ2Mjk2IiwiYWZ0ZXIiOm51bGx9",
+    "first": "http://api.atlas.localhost/divisions/v1/changes?fromReleaseSet=6ab846cb-18a2-5235-aefb-9e215c588df4&toReleaseSet=6ab846cb-18a2-5235-aefb-9e215c588df4&page%5Blimit%5D=25&page%5Bcursor%5D=eyJ2ZXJzaW9uIjoxLCJpbnZlbnRvcnkiOiJzYWFuc2VvaSIsImZyb20iOiI2YWI4NDZjYi0xOGEyLTUyMzUtYWVmYi05ZTIxNWM1ODhkZjQiLCJ0byI6IjZhYjg0NmNiLTE4YTItNTIzNS1hZWZiLTllMjE1YzU4OGRmNCIsImNvbXBhcmlzb24iOiIzY2YxMGQ2MjhiNzE5MDY3NjUzMjI4ODdhNDMzZGI0MWYwOTJhYjI3ODM1MWM1YjRmYWJjYzUzN2JhZmQ2Mjk2IiwiYWZ0ZXIiOm51bGx9",
     "next": null
   }
 }

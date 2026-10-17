@@ -158,12 +158,14 @@ describe('division refresh', () => {
       ),
     )
     expect(changes.meta.membershipGeometry).toBe('saanseoi')
+    expect(changes.meta.toApiReleaseSet.code).toBe('data-hk-divisions-2026-10-01.0')
     const metadata = divisionMetadataSchema.parse(
       JSON.parse(
         readFileSync('src/tests/fixtures/saanseoi-division-metadata.json', 'utf8'),
       ),
     )
     expect(metadata.data.attributes.divisionCode).toBe('CW')
+    expect(metadata.meta.apiReleaseSet).toBe('data-hk-divisions-2026-10-01.0')
     expect(metadata.data.attributes.identifiers?.wikidata.id).toBe('Q312485')
     expect(metadata.data.attributes.hierarchies.administrative?.[0][0].class).toBe(
       'sar',
@@ -178,8 +180,12 @@ describe('division refresh', () => {
     Reflect.deleteProperty(response.included[0].attributes, 'hierarchies')
     const fetcher = vi.fn<typeof fetch>(async input => {
       const url = new URL(String(input))
-      if (url.pathname === '/divisions/v0.1/village') {
+      // An unavailable display-area variant must not block geocoder polygon enrichment.
+      if (url.searchParams.get('include')?.includes('areas:'))
+        return Response.json({ error: 'variant_unavailable' }, { status: 409 })
+      if (url.pathname === '/divisions/v0.2/village') {
         expect(url.searchParams.get('releaseSet')).toBe('r2')
+        expect(url.searchParams.get('include')).toBe('hierarchy')
         return Response.json({
           data: {
             type: 'divisions',
@@ -193,6 +199,8 @@ describe('division refresh', () => {
           meta: { apiReleaseSet: 'r2', schemaVersion: 'sv-division-v1' },
         })
       }
+      expect(url.pathname).toBe('/divisions/v0.2/geocode')
+      expect(url.searchParams.get('geometry')).toBe('saanseoi')
       return Response.json(response)
     })
     await s.tick(fetcher)
@@ -210,7 +218,9 @@ describe('division refresh', () => {
       membershipGeometry: [{ geometry: polygon }],
     })
     expect(
-      fetcher.mock.calls.filter(([url]) => String(url).includes('/divisions/v0.1/')),
+      fetcher.mock.calls.filter(
+        ([url]) => new URL(String(url)).pathname === '/divisions/v0.2/village',
+      ),
     ).toHaveLength(1)
   })
 
@@ -233,7 +243,7 @@ describe('division refresh', () => {
     const fetcher = vi.fn<typeof fetch>(async () => Response.json(geocoded()))
     await apiRead(
       { baseUrl: 'https://api.saanseoi.hk', token: 'test-key', fetcher },
-      '/divisions/v1/geocode',
+      '/divisions/v0.2/geocode',
       { lat: '5', lng: '5', releaseSet: 'r2' },
       geocodeSchema,
     )

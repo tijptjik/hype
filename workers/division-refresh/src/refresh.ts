@@ -72,7 +72,7 @@ export async function refreshDivisions(
         // Resolve one concrete publication before bootstrapping all queued features.
         const result = await apiRead(
           api,
-          '/divisions/v1/geocode',
+          '/divisions/v0.2/geocode',
           {
             lat: '22.3',
             lng: '114.2',
@@ -142,7 +142,7 @@ async function loadChanges(
   }
   if (state.targetRelease) params.toReleaseSet = state.targetRelease
   if (state.cursor) params['page[cursor]'] = state.cursor
-  const page = await apiRead(api, '/divisions/v1/changes', params, changesSchema)
+  const page = await apiRead(api, '/divisions/v0.2/changes', params, changesSchema)
   const meta = page.meta
   if (
     ![meta.fromApiReleaseSet.code, meta.fromApiReleaseSet.id].includes(
@@ -324,7 +324,7 @@ async function geocodeJobs(
       const response: GeocodeResponse | null = point
         ? await apiRead(
             api,
-            '/divisions/v1/geocode',
+            '/divisions/v0.2/geocode',
             {
               lat: String(point[1]),
               lng: String(point[0]),
@@ -366,7 +366,7 @@ async function geocodeJobs(
         }
         const definition: DivisionMetadata = await apiRead(
           api,
-          `/divisions/v0.1/${encodeURIComponent(member.id)}`,
+          `/divisions/v0.2/${encodeURIComponent(member.id)}`,
           {
             releaseSet: release,
             profile: 'full',
