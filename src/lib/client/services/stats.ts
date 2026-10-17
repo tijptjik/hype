@@ -25,7 +25,7 @@ type StatisticRecord = {
 }
 type AdminStatsCtx = {
   view?: {
-    state?: {
+    filters?: {
       viewFilters?: {
         feature?: {
           translationLocales?: Record<LocaleKey, boolean>
@@ -1101,9 +1101,9 @@ export function calculateOverallStats(
   // Get active locales from admin context if available
   let activeLocales = supportedLocaleKeys // Default to all locales
 
-  if (adminCtx?.view?.state?.viewFilters?.feature?.translationLocales) {
+  if (adminCtx?.view?.filters?.viewFilters?.feature?.translationLocales) {
     const translationLocales =
-      adminCtx.view.state.viewFilters.feature.translationLocales
+      adminCtx.view.filters.viewFilters.feature.translationLocales
     activeLocales = supportedLocaleKeys.filter(locale => translationLocales[locale])
     if (activeLocales.length === 0) {
       activeLocales = supportedLocaleKeys // Fallback if no locales selected

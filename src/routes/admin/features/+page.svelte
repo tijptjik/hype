@@ -287,10 +287,10 @@ let debouncedRemoteQuery = $state('')
 let optimisticEntities = $state.raw<Feature[]>([])
 let entities = $state.raw<Feature[]>([])
 let footerEntities = $state.raw<Feature[]>([])
-const textQuery = $derived(adminCtx.view.state.filters.feature.text ?? '')
+const textQuery = $derived(adminCtx.view.filters.values.feature.text ?? '')
 const normalizedTextQuery = $derived(textQuery.trim())
 const sortSignature = $derived.by(() => {
-  const sorting = adminCtx.view.state.viewSorting.feature
+  const sorting = adminCtx.view.filters.sorting.feature
   return `${sorting.sortBy}:${sorting.sortOrder}`
 })
 const displayEntities = $derived(
@@ -314,7 +314,8 @@ let bulkProgress = $state<ResourceBulkEditProgress | null>(null)
 const localeKey = $derived(getLocaleKey())
 const activeTranslationLocales = $derived.by(() => {
   const locales: LocaleKey[] = []
-  const translationLocales = adminCtx.view.state.viewFilters.feature.translationLocales
+  const translationLocales =
+    adminCtx.view.filters.viewFilters.feature.translationLocales
 
   for (const [locale, isActive] of Object.entries(translationLocales)) {
     if (isActive) locales.push(locale as LocaleKey)
@@ -416,7 +417,7 @@ const isBulkApplyDisabled = $derived(
 )
 const baseEntities = $derived(
   adminCtx.applyFeatureViewFilters(
-    adminCtx.view.getFilteredResource<Feature>(FirstClassResource.feature, {
+    adminCtx.view.filters.getFilteredResource<Feature>(FirstClassResource.feature, {
       text: false,
       state: true,
     }),
@@ -795,7 +796,7 @@ $effect(() => {
 
   if (!featureTextSearchWorker) {
     optimisticEntities = baseEntities.filter(feature =>
-      adminCtx.view.textFilter(
+      adminCtx.view.filters.textFilter(
         FirstClassResource.feature,
         feature,
         normalizedTextQuery,
@@ -863,7 +864,7 @@ $effect(() => {
       ? { isArchived: null, isPublished: null }
       : { isArchived: false, isPublished: null },
     prisms: adminCtx.view.scope.prisms,
-    sorting: adminCtx.view.state.viewSorting.feature,
+    sorting: adminCtx.view.filters.sorting.feature,
     q: nextQuery,
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   })
@@ -899,7 +900,7 @@ $effect(() => {
   ) {
     entities = adminCtx.applyFeatureViewFilters(
       remoteMatchedEntities.filter(feature =>
-        adminCtx.view.textFilter(
+        adminCtx.view.filters.textFilter(
           FirstClassResource.feature,
           feature,
           normalizedTextQuery,

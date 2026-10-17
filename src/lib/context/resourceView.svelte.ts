@@ -11,7 +11,6 @@ import {
 import type {
   PanelResourceType,
   PanelResource,
-  ResourcePageInput,
 } from '#lib/api/services/resourcePage.types.js'
 // DATA
 // NAVIGATION
@@ -36,7 +35,6 @@ import {
   getFeatureIdsForProperties,
   sortProperties,
 } from '#lib/client/services/property.js'
-import { matchesResourceTextQuery } from '#lib/client/services/filters.js'
 import { primeFeatureStatsCache } from '#lib/client/services/stats.js'
 import {
   refreshRemoteQuery as runRemoteQuery,
@@ -49,9 +47,7 @@ import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 import { SvelteMap } from 'svelte/reactivity'
 // MARKERS
 // ENUMS
-import { FirstClassResource, type HierarchicalResource, Panel } from '#lib/enums.js'
-// GUARDS
-import { isTask } from '#lib/utils/resourceGuards.js'
+import { FirstClassResource, Panel } from '#lib/enums.js'
 // TYPES
 import type { Cache } from '#lib/context/cache.types.js'
 import type {
@@ -63,19 +59,12 @@ import type {
   ListResponse,
   UserRoleDisco,
 } from '#lib/types.js'
-import type {
-  FilterState,
-  FilteredResources,
-  ResourceSortState,
-} from '#lib/client/services/filters.types.js'
-import type { FilterTriState } from '#lib/client/services/viewFilters.types.js'
+import type { FilteredResources } from '#lib/client/services/filters.types.js'
 import type { FeatureQueryChannel } from '#lib/context/featureQuery.types.js'
 import type {
-  FeatureQueryFilters,
   FeatureQueryInput,
   FeatureSpatialQuery,
 } from '#lib/api/services/featureQuery.types.js'
-import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
 import type { Task } from '#lib/db/zod/schema/task.types.js'
 import type { Image } from '#lib/db/zod/schema/image.types.js'
 import type { Property } from '#lib/db/zod/schema/property.types.js'
@@ -93,6 +82,7 @@ import type {
 import type { DivisionCtx } from './division.svelte'
 // CONTEXT
 import type { AccountState, AccountUser } from './account.svelte.js'
+import { ResourceFilters } from './resourceFilters.svelte.js'
 import { ResourceScope } from './resourceScope.svelte.js'
 import { FeatureDraft } from './featureDraft.svelte.js'
 import { SurfaceInteractions } from './surfaceInteractions.svelte.js'
@@ -105,7 +95,6 @@ import type {
 } from '#lib/db/zod/schema/feature.types.js'
 // TYPES
 import type { EntityResponse } from '#lib/types.js'
-import type { ViewFilters } from '#lib/client/services/viewFilters.types.js'
 import type {
   OrganisationProfile,
   OrganisationListParamsByProfile,
@@ -128,14 +117,11 @@ import type {
   LayerEntityByProfile,
 } from '#lib/db/zod/schema/layer.types.js'
 
-type ViewSortingState = Record<FirstClassResource, ResourceSortState>
-
 /* ----------------- */
 // CTX STATE :: RESOURCE VIEW
 /* -------- */
 
 type ResourceViewState = {
-  filters: FilterState
   resources: FilteredResources
   userFeatures: {
     wishlisted: UserFeature[]
@@ -155,8 +141,6 @@ type ResourceViewState = {
   } | null
   distancesFromUser: Record<Id, number>
   // TIER 3: VIEW FILTERS - Only affect current route/view
-  viewFilters: ViewFilters
-  viewSorting: ViewSortingState
 }
 
 type RemoteListFn<Params, Result> = (params: Params) => Promise<ListResponse<Result>>
@@ -226,6 +210,7 @@ type FeatureMembershipOverride = {
 }
 
 export class ResourceViewCtx {
+  readonly filters: ResourceFilters
   readonly scope = new ResourceScope({
     account: () => this.account,
     hub: () => this.hub,
@@ -312,8 +297,6 @@ export class ResourceViewCtx {
   readonly hierarchy: ReturnType<typeof createHierarchyClient>
   cache: Cache
   featureViewport: FeatureSpatialQuery | undefined = $state.raw()
-  /** Optional membership/flag filters compose with viewport, properties and neighbourhoods. */
-  featureQueryFilters: FeatureQueryFilters = $state({})
   private featureMembershipOverrides = new SvelteMap<Id, FeatureMembershipOverride>()
 
   hub: HubOptsExtended | null = $state(null)
@@ -326,44 +309,7 @@ export class ResourceViewCtx {
   private projectCodeToId = new Map<Code, Id>()
   private hubCodeToId = new Map<Code, Id>()
 
-  private defaultSortState: ResourceSortState = {
-    sortBy: 'modifiedAt',
-    sortOrder: 'desc',
-  }
-
-  private sortableResources: FirstClassResource[] = [
-    FirstClassResource.organisation,
-    FirstClassResource.project,
-    FirstClassResource.layer,
-    FirstClassResource.feature,
-    FirstClassResource.task,
-    FirstClassResource.hub,
-    FirstClassResource.property,
-    FirstClassResource.user,
-  ]
-
-  private defaultViewSorting = (): Record<FirstClassResource, ResourceSortState> =>
-    Object.fromEntries(
-      this.sortableResources.map(resource => [resource, { ...this.defaultSortState }]),
-    ) as Record<FirstClassResource, ResourceSortState>
-
   state: ResourceViewState = $state({
-    // ═══════════════════════
-    // 3-TIER FILTER SYSTEM
-    // ═══════════════════════
-    // TIER 1: PRISMS -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
-    // Applied at the server level to constrain the result set of first-class resources available
-    // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
-    // Sent to feature queries for every view, with cached matches providing immediate previews.
-    filters: {
-      organisation: { text: '', properties: {} },
-      project: { text: '', properties: {} },
-      layer: { text: '', properties: {} },
-      feature: { text: '', properties: {} },
-      task: { text: '', properties: {} },
-      hub: { text: '', properties: {} },
-      property: { text: '', properties: {} },
-    },
     // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AppCtx.state.viewFilters)
     // Only affect the current route/view they are applied on, not the underlying data or map view
     // Resources -- The resources fetched from the database (post prism-filtering, pre filters-filtering)
@@ -385,218 +331,6 @@ export class ResourceViewCtx {
     // ENHANCEMENT: Implement distancesFromUser
     // Distances from user -- The distances from the user to the features
     distancesFromUser: {},
-    // TIER 3: VIEW FILTERS - Only affect current route/view
-    viewFilters: {
-      organisation: {
-        // Status related
-        isPublished: null,
-        isArchived: false,
-
-        // Image related
-        hasImage: null,
-
-        // Authorship related
-        hasName: null,
-        hasContextualName: null,
-        hasDescription: null,
-
-        // Translation related
-        translationLocales: {
-          en: false, // Default: English not selected
-          zhHant: true,
-          zhHans: true,
-        },
-        isNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isContextualNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-      },
-      project: {
-        // Status related
-        isPublished: null,
-        isArchived: false,
-
-        // Image related
-        hasImage: null,
-
-        // Authorship related
-        hasName: null,
-        hasContextualName: null,
-        hasDescription: null,
-        isAllRightsReserved: null,
-        isPublicDomain: null,
-        hasLicenseBy: null,
-        hasLicenseSa: null,
-        hasLicenseNc: null,
-        hasLicenseNd: null,
-
-        // Translation related
-        translationLocales: {
-          en: false,
-          zhHant: true,
-          zhHans: true,
-        },
-        isNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isContextualNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-      },
-      layer: {
-        // Status related
-        isPublished: null,
-        isArchived: false,
-
-        // Authorship related
-        hasName: null,
-        hasContextualName: null,
-        hasDescription: null,
-        isAllRightsReserved: null,
-        isPublicDomain: null,
-        hasLicenseBy: null,
-        hasLicenseSa: null,
-        hasLicenseNc: null,
-        hasLicenseNd: null,
-
-        // Translation related
-        translationLocales: {
-          en: false,
-          zhHant: true,
-          zhHans: true,
-        },
-        isNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isContextualNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-      },
-      feature: {
-        // Status related
-        isPublished: null,
-        isPendingReview: null,
-        isArchived: false,
-        isIntangible: null,
-        isVisitable: null,
-
-        // Image related
-        hasImage: null,
-        isOneImagePublished: null,
-        isAllImagePublished: null,
-
-        // Authorship related
-        hasTitle: null,
-        hasDescription: null,
-        hasDisplayAddress: null,
-        isAllRightsReserved: null,
-        isPublicDomain: null,
-        hasLicenseBy: null,
-        hasLicenseSa: null,
-        hasLicenseNc: null,
-        hasLicenseNd: null,
-
-        // Translation related
-        translationLocales: {
-          en: false, // Default: English not selected
-          zhHant: true,
-          zhHans: true,
-        },
-        isTitleTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isSpecifierTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isAddressTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        // Property related
-        properties: {} as Record<Id, FilterTriState>,
-      },
-      task: {
-        // Status related
-        isReviewed: false,
-        reviewOutcome: null,
-        reviewAction: null,
-        type: null,
-      },
-      hub: {
-        // Status related
-        isArchived: false,
-
-        // Image related
-        hasImage: null,
-
-        // Authorship related
-        hasName: null,
-        hasContextualName: null,
-        hasDescription: null,
-
-        // Translation related
-        translationLocales: {
-          en: false,
-          zhHant: true,
-          zhHans: true,
-        },
-        isNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isContextualNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-      },
-    },
-    viewSorting: this.defaultViewSorting(),
   })
 
   readonly draft = new FeatureDraft()
@@ -707,16 +441,16 @@ export class ResourceViewCtx {
     FirstClassResource.organisation,
     this.getRoleScopeQueryKey(),
     this.isAdmin(),
-    this.state.viewSorting.organisation.sortBy,
-    this.state.viewSorting.organisation.sortOrder,
+    this.filters.sorting.organisation.sortBy,
+    this.filters.sorting.organisation.sortOrder,
   ]
   projectsQueryKey = () => [
     FirstClassResource.project,
     this.getRoleScopeQueryKey(),
     this.scope.prisms.organisation,
     this.isAdmin(),
-    this.state.viewSorting.project.sortBy,
-    this.state.viewSorting.project.sortOrder,
+    this.filters.sorting.project.sortBy,
+    this.filters.sorting.project.sortOrder,
   ]
   layersQueryKey = () => [
     FirstClassResource.layer,
@@ -724,8 +458,8 @@ export class ResourceViewCtx {
     this.scope.prisms.organisation,
     this.scope.prisms.project,
     this.isAdmin(),
-    this.state.viewSorting.layer.sortBy,
-    this.state.viewSorting.layer.sortOrder,
+    this.filters.sorting.layer.sortBy,
+    this.filters.sorting.layer.sortOrder,
   ]
   featuresQueryKey = () => [
     FirstClassResource.feature,
@@ -734,8 +468,8 @@ export class ResourceViewCtx {
     this.scope.prisms.project,
     this.scope.prisms.layer,
     this.isAdmin(),
-    this.state.viewSorting.feature.sortBy,
-    this.state.viewSorting.feature.sortOrder,
+    this.filters.sorting.feature.sortBy,
+    this.filters.sorting.feature.sortOrder,
   ]
   propertiesQueryKey = () => [
     'property',
@@ -779,6 +513,14 @@ export class ResourceViewCtx {
     )
     this.hierarchy = createHierarchyClient(this.resources)
     this.divisionCtx = divisionCtx
+    this.filters = new ResourceFilters({
+      prisms: () => this.scope.prisms,
+      rows: () => this.state.resources,
+      scopeKey: () => this.resources.scopeKey,
+      isAdmin: () => this.isAdmin(),
+      preferences: () => this.getUserPreferences(),
+      divisions: divisionCtx,
+    })
     this.responsiveCtx = responsiveCtx
     this.layout = new SurfaceLayout(responsiveCtx, this.panels)
     this.syncAccount()
@@ -946,7 +688,7 @@ export class ResourceViewCtx {
   loadDefaultLayerResources = async (scope?: string): Promise<void> => {
     const expected = scope ?? this.getRoleScopeQueryKey()
     const rows = await runRemoteQuery(
-      getDefaultLayerResources({ meta: this.panelResourceInput('layer').meta }),
+      getDefaultLayerResources({ meta: this.filters.panelResourceInput('layer').meta }),
     )
     if (!this.isExpectedRoleScopeCurrent(expected)) return
     this.scope.selectionLayers = rows as unknown as Layer[]
@@ -956,7 +698,7 @@ export class ResourceViewCtx {
   /** Resolves selected layers outside page one through the shared native batch query. */
   loadPinnedLayers = async (scope?: string): Promise<void> => {
     const expected = scope ?? this.getRoleScopeQueryKey()
-    const meta = this.panelResourceInput('layer').meta
+    const meta = this.filters.panelResourceInput('layer').meta
     const selection = JSON.stringify(this.scope.prisms.layer)
     const rows = await Promise.all(
       this.scope.prisms.layer.map(id =>
@@ -991,25 +733,10 @@ export class ResourceViewCtx {
     this.scope.prisms.layer = this.scope.prisms.layer.filter(id => ids.has(id))
   }
 
-  /** Builds the complete identity of a compact panel view. */
-  panelResourceInput = (type: PanelResourceType, q = ''): ResourcePageInput => ({
-    type,
-    conditions: { isArchived: false, isPublished: this.isAdmin() ? null : true },
-    q: q.trim(),
-    prisms: {
-      organisation: [...this.scope.prisms.organisation],
-      project: [...this.scope.prisms.project],
-    },
-    meta: {
-      isAdminRequest: this.isAdmin(),
-      scope: this.resources.scopeKey,
-    },
-  })
-
   /** Loads a first compact page independently of other hierarchy collections. */
   loadPanelResource = async (type: PanelResourceType): Promise<PanelResource[]> => {
     const list = this.resources.lists[type]
-    await list.load(this.panelResourceInput(type, list.search), true)
+    await list.load(this.filters.panelResourceInput(type, list.search), true)
     return list.rows
   }
 
@@ -1031,39 +758,6 @@ export class ResourceViewCtx {
   layersQueryFn = async (): Promise<Layer[]> => {
     return (await this.loadPanelResource('layer')) as unknown as Layer[]
   }
-
-  /**
-   * Builds the complete feature query for a view, optionally constrained to visible cells.
-   * @param overrides - Search, membership, spatial or page options for an independent view.
-   * @returns Serializable arguments shared by server reads and immediate cache previews.
-   */
-  featureQueryInput = (
-    overrides: Partial<FeatureQueryInput> = {},
-  ): FeatureQueryInput => ({
-    prisms: {
-      organisation: [...this.scope.prisms.organisation],
-      project: [...this.scope.prisms.project],
-      layer: [...this.scope.prisms.layer],
-    },
-    limit: 100,
-    ...overrides,
-    q: (overrides.q ?? this.state.filters.feature.text ?? '').trim(),
-    filters: {
-      ...this.featureQueryFilters,
-      properties: JSON.parse(
-        JSON.stringify(this.state.filters.feature.properties ?? {}),
-      ),
-      divisionIds: [...this.divisionCtx.state.filters.feature.neighbourhood.include],
-      excludeDivisionIds: [
-        ...this.divisionCtx.state.filters.feature.neighbourhood.exclude,
-      ],
-      ...overrides.filters,
-    },
-    meta: {
-      isAdminRequest: false,
-      scope: this.resources.scopeKey,
-    },
-  })
 
   /**
    * Gives cached previews the same known hierarchy and user membership facts as the UI.
@@ -1104,7 +798,7 @@ export class ResourceViewCtx {
     }
     // Superseded requests must not finish the newer view's loading indicator or retention.
     if (
-      input.meta.scope !== this.featureQueryInput().meta.scope ||
+      input.meta.scope !== this.filters.featureQueryInput().meta.scope ||
       !query.isCurrent(input)
     )
       return
@@ -1154,9 +848,9 @@ export class ResourceViewCtx {
    * @returns Completion after new IDs and membership state are retained.
    */
   loadMoreFeatureQuery = async (channel: FeatureQueryChannel): Promise<void> => {
-    const scope = this.featureQueryInput().meta.scope
+    const scope = this.filters.featureQueryInput().meta.scope
     await this.resources.featureQueries[channel].next()
-    if (scope === this.featureQueryInput().meta.scope)
+    if (scope === this.filters.featureQueryInput().meta.scope)
       this.retainFeatureQueryRows(channel)
   }
 
@@ -1327,103 +1021,6 @@ export class ResourceViewCtx {
    */
   getListQueryMeta(queryKey: unknown[]): Omit<ListResponse<unknown>, 'data'> | null {
     return this.listQueryMeta.get(this.toQueryMetaKey(queryKey)) ?? null
-  }
-
-  /**
-   * Resolves the comparable value used to sort a resource in memory.
-   *
-   * @param resource - Resource type being sorted.
-   * @param entity - Resource instance to read from.
-   * @param sortBy - Active sort field.
-   * @param userPreferences - I18n preferences used when sorting translated fields.
-   * @returns Normalized string or numeric value suitable for comparison.
-   * @remarks Translated text fields are resolved using the current user locale preferences so
-   * client-side sorting matches the strings users actually see in the UI.
-   */
-  private getResourceSortValue(
-    resource: FirstClassResource,
-    entity: Resource,
-    sortBy: string,
-    userPreferences = this.getUserPreferences(),
-  ): string | number {
-    if (sortBy === 'createdAt' || sortBy === 'modifiedAt') {
-      const rawValue = (entity as Record<string, unknown>)[sortBy]
-      // Convert timestamps once so in-memory sorting behaves like a numeric date sort.
-      return typeof rawValue === 'string' ? Date.parse(rawValue) || 0 : 0
-    }
-
-    if (resource === FirstClassResource.feature) {
-      const feature = entity as FeatureFromCollection
-      const translatedValue =
-        sortBy === 'title' || sortBy === 'description' || sortBy === 'displayAddress'
-          ? getI18n(feature, sortBy, userPreferences, '') || ''
-          : null
-
-      if (typeof translatedValue === 'string') {
-        return translatedValue.toLocaleLowerCase()
-      }
-    }
-
-    if (sortBy === 'name' || sortBy === 'nameShort' || sortBy === 'description') {
-      const translatedValue = getI18n(entity as never, sortBy, userPreferences, '')
-
-      if (typeof translatedValue === 'string') {
-        return translatedValue.toLocaleLowerCase()
-      }
-    }
-
-    const rawValue = (entity as Record<string, unknown>)[sortBy]
-
-    if (typeof rawValue === 'string') {
-      return rawValue.toLocaleLowerCase()
-    }
-
-    if (typeof rawValue === 'number') {
-      return rawValue
-    }
-
-    return ''
-  }
-
-  /**
-   * Sorts an already-loaded resource collection without issuing another server request.
-   *
-   * @param resource - Resource type being sorted.
-   * @param entities - Loaded entities to sort.
-   * @param sorting - Requested sort state.
-   * @returns A new array ordered according to the requested sort.
-   * @remarks The sort falls back to `id` as a stable tiebreaker so repeated renders produce
-   * deterministic ordering when primary sort values are equal.
-   */
-  sortLoadedResources<T extends Resource>(
-    resource: FirstClassResource,
-    entities: T[],
-    sorting: ResourceSortState,
-  ): T[] {
-    const direction = sorting.sortOrder === 'asc' ? 1 : -1
-    const userPreferences = this.getUserPreferences()
-    const sortableEntities = entities.map(entity => ({
-      entity,
-      sortValue: this.getResourceSortValue(
-        resource,
-        entity,
-        sorting.sortBy,
-        userPreferences,
-      ),
-    }))
-
-    sortableEntities.sort((left, right) => {
-      const leftValue = left.sortValue
-      const rightValue = right.sortValue
-
-      if (leftValue < rightValue) return -1 * direction
-      if (leftValue > rightValue) return 1 * direction
-
-      // Use a stable secondary key to avoid order flicker when values are identical.
-      return left.entity.id.localeCompare(right.entity.id)
-    })
-
-    return sortableEntities.map(item => item.entity)
   }
 
   /**
@@ -1979,22 +1576,22 @@ export class ResourceViewCtx {
 
     const currentLayerIds = new Set(this.scope.prisms.layer)
     const existingFilterLayerIds = new Set(
-      Object.keys(this.state.filters.feature.properties || {}),
+      Object.keys(this.filters.values.feature.properties || {}),
     )
 
     // Initialise filters for newly added layers
     currentLayerIds.forEach(layerId => {
       if (!existingFilterLayerIds.has(layerId)) {
         // Call initialization functions for the new layer
-        this.initialiseCategoricalPropertyFilters(layerId)
-        this.initialiseRangePropertyFilter(layerId)
+        this.filters.initialiseCategoricalPropertyFilters(layerId)
+        this.filters.initialiseRangePropertyFilter(layerId)
       }
     })
 
     // Remove filters for layers that are no longer active
     existingFilterLayerIds.forEach(layerId => {
       if (!currentLayerIds.has(layerId)) {
-        delete this.state.filters.feature.properties?.[layerId]
+        delete this.filters.values.feature.properties?.[layerId]
       }
     })
 
@@ -2074,113 +1671,29 @@ export class ResourceViewCtx {
     return undefined
   }
 
-  // FILTERS
-
-  // FILTERS - GENERIC
-
-  getFilterCount = (): { neighbourhoods: number; properties: number } => {
-    return {
-      neighbourhoods: this.divisionCtx.divisionFilterCount,
-      properties: Object.entries(this.state.filters.feature.properties || {}).reduce(
-        (total, [_, layerFilters]) => {
-          // For each layer, count its active property filters
-          return (
-            total +
-            Object.entries(layerFilters).filter(
-              ([_, values]) =>
-                // Count arrays with values
-                (Array.isArray(values) && values.length > 0) ||
-                // Count range objects only if they differ from their global limits
-                (typeof values === 'object' &&
-                  values !== null &&
-                  !Array.isArray(values) &&
-                  'rangeMin' in values &&
-                  'rangeMax' in values &&
-                  'globalMin' in values &&
-                  'globalMax' in values &&
-                  (values.rangeMin !== values.globalMin ||
-                    values.rangeMax !== values.globalMax)),
-            ).length
-          )
-        },
-        0,
-      ),
-    }
-  }
-
-  resetFilters = (): void => {
-    this.state.filters = {
-      organisation: { text: '', properties: {} },
-      project: { text: '', properties: {} },
-      layer: { text: '', properties: {} },
-      feature: { text: '', properties: {} },
-      task: { text: '', properties: {} },
-      hub: { text: '', properties: {} },
-      property: { text: '', properties: {} },
-    }
-    this.divisionCtx.resetDivisions()
-    // Re-initialize property filters for active layers
-    this.scope.prisms.layer.forEach(layerId => {
-      this.initialiseCategoricalPropertyFilters(layerId)
-      this.initialiseRangePropertyFilter(layerId)
-    })
-  }
-
-  getFilteredResource = <
-    T extends Organisation | Project | Layer | Feature | Hub | Task,
-  >(
-    resource: FirstClassResource | HierarchicalResource,
-    filters = { text: true, state: true },
-  ): T[] => {
-    const query = this.state.filters[resource as keyof FilterState].text || ''
-    // FULL SET
-    let result = this.state.resources[resource as keyof FilteredResources] as T[]
-    // TIER 2 FILTERS :: Boolean State :: (App Wide)
-    // TODO Implement these filters if the data responses get too large.
-    // TIER 2 FILTERS :: Text :: (App Wide)
-    if (filters.text && resource !== FirstClassResource.hub) {
-      result = result.filter((entity: T) => {
-        if (!isTask(entity)) {
-          return this.textFilter(resource as FirstClassResource, entity, query)
-        }
-        return true
-      })
-    }
-
-    return result
-  }
-
-  textFilter = <
-    T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection,
-  >(
-    _resource: FirstClassResource,
-    entity: T,
-    query: string,
-  ) => {
-    return matchesResourceTextQuery(entity, query, getLocaleKey())
-  }
-
   // Filtered Helpers
   filteredOrganisations = $derived.by(() => {
     // Explicitly access reactive dependencies so Svelte tracks them
     this.state.resources.organisation
-    this.state.filters.organisation
-    return this.getFilteredResource<Organisation>(FirstClassResource.organisation)
+    this.filters.values.organisation
+    return this.filters.getFilteredResource<Organisation>(
+      FirstClassResource.organisation,
+    )
   })
   filteredProjects = $derived.by(() => {
     this.state.resources.project
-    this.state.filters.project
-    return this.getFilteredResource<Project>(FirstClassResource.project)
+    this.filters.values.project
+    return this.filters.getFilteredResource<Project>(FirstClassResource.project)
   })
   filteredLayers = $derived.by(() => {
     this.state.resources.layer
-    this.state.filters.layer
-    return this.getFilteredResource<Layer>(FirstClassResource.layer)
+    this.filters.values.layer
+    return this.filters.getFilteredResource<Layer>(FirstClassResource.layer)
   }) as Layer[]
   filteredFeatures = $derived.by(() => {
     this.state.resources.feature
-    this.state.filters.feature
-    return this.getFilteredResource<Feature>(FirstClassResource.feature)
+    this.filters.values.feature
+    return this.filters.getFilteredResource<Feature>(FirstClassResource.feature)
   })
 
   // Helper method to fetch resource by ID with cache miss handling
@@ -3051,119 +2564,6 @@ export class ResourceViewCtx {
     this.organisationCodeToId.clear()
     this.projectCodeToId.clear()
     this.hubCodeToId.clear()
-  }
-
-  initialiseCategoricalPropertyFilters = (layerId: Id) => {
-    const layer = this.state.resources.layer.find(l => l.id === layerId)
-    if (!layer) {
-      return
-    }
-
-    const project = this.state.resources.project.find(p => p.id === layer.projectId)
-    if (!project) {
-      return
-    }
-
-    // Filter properties based on visibility in layer (similar logic to Categories.svelte)
-    const classifierProperties =
-      project.properties
-        ?.filter(p => p.type === 'classifier')
-        .filter(prop => {
-          const layerProperty = layer.properties?.find(lp => lp.propertyId === prop.id)
-          // Only consider properties visible in the layer AND not range fields
-          return layerProperty?.isVisible !== false && prop.component !== 'RangeField'
-        })
-        // Ensure uniqueness by key within the project's properties relevant to this layer
-        .filter(
-          (prop, index, self) => index === self.findIndex(p => p.key === prop.key),
-        ) || []
-
-    // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties) {
-      this.state.filters.feature.properties = {}
-    }
-
-    const featurePropertyFilters = this.state.filters.feature
-      .properties as unknown as Record<Id, Record<string, string[] | RangeFilterValue>>
-    if (!featurePropertyFilters[layerId]) {
-      featurePropertyFilters[layerId] = {}
-    }
-
-    const layerFilters = featurePropertyFilters[layerId] as Record<
-      string,
-      string[] | RangeFilterValue
-    >
-
-    // Initialize each classifier property with an empty array if not already set
-    classifierProperties.forEach((property: Property) => {
-      if (!(property.key in layerFilters)) {
-        layerFilters[property.key] = []
-      }
-    })
-  }
-
-  initialiseRangePropertyFilter = (layerId: Id) => {
-    const layer = this.state.resources.layer.find(l => l.id === layerId)
-    if (!layer) {
-      return
-    }
-
-    const project = this.state.resources.project.find(p => p.id === layer.projectId)
-    if (!project) {
-      return
-    }
-
-    // Find properties that are RangeFields and visible for this layer
-    const rangeProperties =
-      project.properties
-        ?.filter(p => p.component === 'RangeField') // Identify range properties
-        .filter(prop => {
-          const layerProperty = layer.properties?.find(lp => lp.propertyId === prop.id)
-          // Only consider properties visible in the layer
-          return layerProperty?.isVisible !== false
-        })
-        // Ensure uniqueness by key
-        .filter(
-          (prop, index, self) => index === self.findIndex(p => p.key === prop.key),
-        ) || []
-
-    // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties) {
-      this.state.filters.feature.properties = {}
-    }
-
-    const featurePropertyFilters = this.state.filters.feature
-      .properties as unknown as Record<Id, Record<string, string[] | RangeFilterValue>>
-    if (!featurePropertyFilters[layerId]) {
-      featurePropertyFilters[layerId] = {}
-    }
-
-    const layerFilters = featurePropertyFilters[layerId] as Record<
-      string,
-      string[] | RangeFilterValue
-    >
-
-    // Initialize each range property using its min/max if not already set
-    rangeProperties.forEach((property: Property) => {
-      // Validate that min and max exist and are numbers
-      const min = property.min
-      const max = property.max
-
-      if (
-        !(property.key in layerFilters) &&
-        typeof min === 'number' &&
-        typeof max === 'number'
-      ) {
-        const filterConfig = {
-          globalMin: min,
-          globalMax: max,
-          rangeMin: min, // Default rangeMin to globalMin
-          rangeMax: max, // Default rangeMax to globalMax
-        }
-
-        layerFilters[property.key] = filterConfig
-      }
-    })
   }
 
   // ═══════════════════════

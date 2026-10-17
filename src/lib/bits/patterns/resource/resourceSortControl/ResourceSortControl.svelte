@@ -33,7 +33,7 @@ let lastReportedOpenState = $state(isOpen)
 let sorting = $derived(
   controlledSorting ??
     (resource
-      ? adminCtx.view.state.viewSorting[resource]
+      ? adminCtx.view.filters.sorting[resource]
       : { sortBy: 'name', sortOrder: 'asc' as const }),
 )
 let sortDirectionIcon = $derived(

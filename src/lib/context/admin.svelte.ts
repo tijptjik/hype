@@ -464,18 +464,18 @@ export class AdminCtx {
       FirstClassResource.task,
       this.getTaskListPrisms().organisation,
       this.getTaskListPrisms().project,
-      this.view.state.viewFilters[FirstClassResource.task].isReviewed,
-      this.view.state.viewFilters[FirstClassResource.task].type,
-      this.view.state.viewSorting.task.sortBy,
-      this.view.state.viewSorting.task.sortOrder,
+      this.view.filters.viewFilters[FirstClassResource.task].isReviewed,
+      this.view.filters.viewFilters[FirstClassResource.task].type,
+      this.view.filters.sorting.task.sortBy,
+      this.view.filters.sorting.task.sortOrder,
     ]
   }
 
   get hubsQueryKey() {
     return [
       'hub',
-      this.view.state.viewSorting.hub.sortBy,
-      this.view.state.viewSorting.hub.sortOrder,
+      this.view.filters.sorting.hub.sortBy,
+      this.view.filters.sorting.hub.sortOrder,
     ]
   }
 
@@ -555,7 +555,7 @@ export class AdminCtx {
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
       prisms: this.view.scope.prisms,
-      sorting: this.view.state.viewSorting.feature,
+      sorting: this.view.filters.sorting.feature,
       meta: { ...this.view.resources.queryMeta, profile: 'card' },
     })
     this.view.cacheCtx.featureCollectionScope = this.view.resources.scopeKey
@@ -576,11 +576,11 @@ export class AdminCtx {
           getTasks({
             conditions: {
               isReviewed:
-                this.view.state.viewFilters[FirstClassResource.task].isReviewed,
-              type: this.view.state.viewFilters[FirstClassResource.task].type,
+                this.view.filters.viewFilters[FirstClassResource.task].isReviewed,
+              type: this.view.filters.viewFilters[FirstClassResource.task].type,
             },
             prisms: taskPrisms,
-            sorting: this.view.state.viewSorting.task,
+            sorting: this.view.filters.sorting.task,
             meta: { ...this.view.resources.queryMeta },
           }),
         )) as ListResponse<Task> | undefined,
@@ -638,7 +638,7 @@ export class AdminCtx {
             conditions: this.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },
-            sorting: this.view.state.viewSorting.hub,
+            sorting: this.view.filters.sorting.hub,
             meta: { ...this.view.resources.queryMeta, profile: 'card' },
           }),
         )) as ListResponse<Hub> | undefined,
@@ -724,7 +724,7 @@ export class AdminCtx {
     resource: FirstClassResource | HierarchicalResource,
     filters = { text: true, state: true },
   ): T[] => {
-    const query = this.view.state.filters[resource as keyof FilterState].text || ''
+    const query = this.view.filters.values[resource as keyof FilterState].text || ''
     // FULL SET
     let result = this.view.state.resources[resource as keyof FilteredResources] as T[]
     // TIER 2 FILTERS :: Boolean State :: (App Wide)
@@ -733,7 +733,11 @@ export class AdminCtx {
     if (filters.text && resource !== FirstClassResource.hub) {
       result = result.filter((entity: T) => {
         if (!isTask(entity)) {
-          return this.view.textFilter(resource as FirstClassResource, entity, query)
+          return this.view.filters.textFilter(
+            resource as FirstClassResource,
+            entity,
+            query,
+          )
         }
         return true
       })
@@ -754,7 +758,7 @@ export class AdminCtx {
       return this.applyTaskViewFilters(entities) as T[]
     }
     // HIERARCHICAL RESOURCES
-    const entities = this.view.getFilteredResource(resource)
+    const entities = this.view.filters.getFilteredResource(resource)
 
     if (resource === FirstClassResource.feature) {
       return this.applyFeatureViewFilters(entities) as T[]
@@ -770,7 +774,7 @@ export class AdminCtx {
 
   applyFeatureViewFilters = (entities: Resource[]): Resource[] => {
     const features = entities as Feature[]
-    const filters = this.view.state.viewFilters.feature
+    const filters = this.view.filters.viewFilters.feature
     if (!filters) return features
 
     // Determine active locales from filter state
@@ -1133,7 +1137,7 @@ export class AdminCtx {
 
   applyOrganisationViewFilters = (entities: Resource[]): Resource[] => {
     const organisations = entities as Organisation[]
-    const filters = this.view.state.viewFilters.organisation
+    const filters = this.view.filters.viewFilters.organisation
     if (!filters) return organisations
 
     // Determine active locales from filter state
@@ -1371,7 +1375,7 @@ export class AdminCtx {
 
   applyProjectViewFilters = (entities: Resource[]): Resource[] => {
     const projects = entities as Project[]
-    const filters = this.view.state.viewFilters.project
+    const filters = this.view.filters.viewFilters.project
     if (!filters) return projects
 
     // Determine active locales from filter state
@@ -1558,7 +1562,7 @@ export class AdminCtx {
 
   applyLayerViewFilters = (entities: Resource[]): Resource[] => {
     const layers = entities as Layer[]
-    const filters = this.view.state.viewFilters.layer
+    const filters = this.view.filters.viewFilters.layer
     if (!filters) return layers
 
     // Determine active locales from filter state
@@ -1731,7 +1735,7 @@ export class AdminCtx {
 
   applyTaskViewFilters = (entities: Resource[]): Resource[] => {
     const tasks = entities as Task[]
-    const filters = this.view.state.viewFilters.task
+    const filters = this.view.filters.viewFilters.task
     if (!filters) return tasks
 
     return tasks.filter(task => {
@@ -1819,12 +1823,20 @@ export class AdminCtx {
 
     return (
       (feature &&
-        (this.view.textFilter(FirstClassResource.feature, feature, normalizedQuery) ||
+        (this.view.filters.textFilter(
+          FirstClassResource.feature,
+          feature,
+          normalizedQuery,
+        ) ||
           localizedFeatureTitle.toLowerCase().includes(normalizedQuery))) ||
       (project &&
-        this.view.textFilter(FirstClassResource.project, project, normalizedQuery)) ||
+        this.view.filters.textFilter(
+          FirstClassResource.project,
+          project,
+          normalizedQuery,
+        )) ||
       (organisation &&
-        this.view.textFilter(
+        this.view.filters.textFilter(
           FirstClassResource.organisation,
           organisation,
           normalizedQuery,
@@ -1839,7 +1851,7 @@ export class AdminCtx {
 
   applyHubViewFilters = (entities: Resource[]): Resource[] => {
     const hubs = entities as Hub[]
-    const filters = this.view.state.viewFilters.hub
+    const filters = this.view.filters.viewFilters.hub
     if (!filters) return hubs
 
     // Determine active locales from filter state
@@ -2071,7 +2083,7 @@ export class AdminCtx {
   }
 
   getFilteredTask = () => {
-    const query = this.view.state.filters.task.text || ''
+    const query = this.view.filters.values.task.text || ''
     // FULL SET
     let result: Task[] = this.view.state.resources.task
 
@@ -2085,7 +2097,7 @@ export class AdminCtx {
 
   getFilteredHub = () => {
     if (!this.view.isSuperAdmin()) return []
-    const query = this.view.state.filters.hub.text || ''
+    const query = this.view.filters.values.hub.text || ''
     // FULL SET
     let result: Hub[] = this.view.state.resources.hub
 
@@ -2134,13 +2146,13 @@ export class AdminCtx {
 
   filteredTasks = $derived.by(() => {
     this.view.state.resources.task
-    this.view.state.filters.task
+    this.view.filters.values.task
     return this.getFilteredTask()
   })
   filteredHubs = $derived.by(() => {
     if (!this.view.isSuperAdmin()) return []
     this.view.state.resources.hub
-    this.view.state.filters.hub
+    this.view.filters.values.hub
     return this.getFilteredHub()
   })
 
@@ -2149,7 +2161,7 @@ export class AdminCtx {
   // ═══════════════════════
 
   resetViewFilters = () => {
-    this.view.state.viewFilters = structuredClone(viewFilters)
+    this.view.filters.viewFilters = structuredClone(viewFilters)
   }
 
   /**
@@ -2165,7 +2177,7 @@ export class AdminCtx {
     resource: FirstClassResource,
     next: Partial<ResourceSortState>,
   ): Promise<void> => {
-    const current = this.view.state.viewSorting[resource]
+    const current = this.view.filters.sorting[resource]
     const queryEntry = this.view.queryMap.get(resource)
     const currentQueryKey = queryEntry?.queryKey() ?? []
     const currentQueryMeta = this.view.getListQueryMeta(currentQueryKey)
@@ -2181,7 +2193,7 @@ export class AdminCtx {
       return
     }
 
-    this.view.state.viewSorting[resource] = nextSorting
+    this.view.filters.sorting[resource] = nextSorting
 
     if (
       queryEntry &&
@@ -2193,7 +2205,7 @@ export class AdminCtx {
       const nextQueryKey = queryEntry.queryKey()
       const currentEntities = this.view.state.resources[resource] as Resource[]
       // Re-sort locally when the full collection is already loaded to avoid an unnecessary request.
-      const sortedEntities = this.view.sortLoadedResources(
+      const sortedEntities = this.view.filters.sortLoadedResources(
         resource,
         currentEntities,
         nextSorting,

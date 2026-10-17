@@ -557,7 +557,7 @@ export class AppCtx extends ResourceViewCtx {
     if (!this.featureViewport) return []
     await this.loadFeatureQuery(
       'map',
-      this.featureQueryInput({
+      this.filters.featureQueryInput({
         spatial: this.featureViewport,
         includeCounts: false,
       }),

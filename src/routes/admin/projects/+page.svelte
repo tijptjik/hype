@@ -231,7 +231,7 @@ $effect(() => {
 const resourceList = usePanelResources(
   adminCtx.view,
   'project',
-  () => adminCtx.view.state.filters.project.text ?? '',
+  () => adminCtx.view.filters.values.project.text ?? '',
   'index',
 )
 let entities: Project[] = $derived(

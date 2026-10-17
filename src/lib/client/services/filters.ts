@@ -340,7 +340,7 @@ export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
       supportedLocale === currentLocaleKey ? false : normalizedLocales[supportedLocale]
   }
 
-  adminCtx.view.state.viewFilters[resource] = {
+  adminCtx.view.filters.viewFilters[resource] = {
     ...resourceFilters,
     translationLocales: nextTranslationLocales,
   } as ViewFilters[T]
@@ -487,7 +487,7 @@ function getResourceFilters<T extends ViewFilterResource>(
   adminCtx: AdminCtx,
   resource: T,
 ): ViewFilters[T] | null {
-  const resourceFilters = adminCtx.view.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return null
   return resourceFilters
 }
@@ -544,7 +544,7 @@ function isTranslationFilterConfig(
 function getPropertyFilters(
   adminCtx: AdminCtx,
 ): FeatureViewFilters['properties'] | null {
-  const propertyFilters = adminCtx.view.state?.viewFilters?.feature?.properties
+  const propertyFilters = adminCtx.view.filters?.viewFilters?.feature?.properties
   if (!propertyFilters || typeof propertyFilters !== 'object') return null
   return propertyFilters
 }
@@ -835,7 +835,7 @@ export function getResourceFilterState<
   filterKey: K,
   activeLocales?: Set<LocaleKey>,
 ): ResourceFilterValue {
-  const resourceFilters = adminCtx.view.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return null
   const resourceFilterRecord = resourceFilters as Record<string, unknown>
 
@@ -873,7 +873,7 @@ export function getGenericTranslationFilterState<T extends keyof ViewFilters>(
   filterKey: string,
   activeLocales: Set<LocaleKey>,
 ): FilterTriState {
-  const resourceFilters = adminCtx.view.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return null
   const sectionFilters = (resourceFilters as Record<string, unknown>)[filterKey]
   if (!sectionFilters || typeof sectionFilters !== 'object') {
@@ -928,7 +928,7 @@ export function setResourceFilterState<
   newValue: ResourceFilterValue,
   activeLocales?: Set<LocaleKey>,
 ) {
-  const resourceFilters = adminCtx.view.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return
 
   // Handle translation filters
@@ -947,7 +947,7 @@ export function setResourceFilterState<
   } else {
     // Handle simple filters
     const resourceFilterRecord = resourceFilters as Record<string, unknown>
-    adminCtx.view.state.viewFilters[resource] = {
+    adminCtx.view.filters.viewFilters[resource] = {
       ...resourceFilterRecord,
       [filterKey]: newValue,
     } as ViewFilters[T]
@@ -970,7 +970,7 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
   activeLocales: Set<LocaleKey>,
   value: FilterTriState,
 ) {
-  const resourceFilters = adminCtx.view.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return
 
   const resourceFilterRecord = resourceFilters as Record<string, unknown>
@@ -996,7 +996,7 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
     }
   }
 
-  adminCtx.view.state.viewFilters[resource] = {
+  adminCtx.view.filters.viewFilters[resource] = {
     ...resourceFilterRecord,
     [filterKey]: sectionFilters,
   } as ViewFilters[T]
@@ -1153,7 +1153,7 @@ export function setSimpleFilterState<K extends keyof FeatureViewFilters>(
 
   const sectionFilters = featureFilters[filterKey]
   if (sectionFilters && typeof sectionFilters === 'object') {
-    adminCtx.view.state.viewFilters.feature = {
+    adminCtx.view.filters.viewFilters.feature = {
       ...featureFilters,
       [filterKey]: {
         ...(sectionFilters as Record<string, FilterTriState>),

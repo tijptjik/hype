@@ -40,10 +40,12 @@ const mocks = vi.hoisted(() => {
         userFeatures: { wishlisted: [], visited: [] },
       },
       isAdmin: () => false,
-      featureQueryInput: (overrides: object) => ({
-        meta: { isAdminRequest: false, scope: 'user-a' },
-        ...overrides,
-      }),
+      filters: {
+        featureQueryInput: (overrides: object) => ({
+          meta: { isAdminRequest: false, scope: 'user-a' },
+          ...overrides,
+        }),
+      },
       loadFeatureQuery: vi.fn(async () => {}),
       loadMoreFeatureQuery: vi.fn(async () => {}),
       getHierarchySync: () => ({}),

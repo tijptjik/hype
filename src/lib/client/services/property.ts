@@ -271,7 +271,7 @@ export function toggleCategoricalPropertyValue(
   propertyValueId: Id,
 ): void {
   const currentSelection =
-    appCtx.state.filters.feature.properties?.[layerId]?.[propertyId] ?? []
+    appCtx.filters.values.feature.properties?.[layerId]?.[propertyId] ?? []
   const index = currentSelection.indexOf(propertyValueId)
   let newSelection: string[]
 
@@ -299,10 +299,10 @@ export function setCategoricalPropertyFilter(
   propertyId: Id,
   values: string[],
 ): void {
-  if (!appCtx.state.filters.feature.properties) {
-    appCtx.state.filters.feature.properties = {}
+  if (!appCtx.filters.values.feature.properties) {
+    appCtx.filters.values.feature.properties = {}
   }
-  const propertyFilters = appCtx.state.filters.feature.properties
+  const propertyFilters = appCtx.filters.values.feature.properties
   propertyFilters[layerId] = {
     ...(propertyFilters[layerId] || {}),
     [propertyId]: values,
@@ -317,7 +317,7 @@ export function resetCategoricalPropertyFilter(
   layerId: Id,
   propertyId: Id,
 ): void {
-  const propertyFilters = appCtx.state.filters.feature.properties
+  const propertyFilters = appCtx.filters.values.feature.properties
   if (!propertyFilters?.[layerId]) return
   delete propertyFilters[layerId]?.[propertyId]
 }
@@ -331,10 +331,10 @@ export function setRangePropertyFilter(
   propertyId: Id,
   values: [number, number],
 ): void {
-  if (!appCtx.state.filters.feature.properties) {
-    appCtx.state.filters.feature.properties = {}
+  if (!appCtx.filters.values.feature.properties) {
+    appCtx.filters.values.feature.properties = {}
   }
-  const propertyFilters = appCtx.state.filters.feature.properties
+  const propertyFilters = appCtx.filters.values.feature.properties
   const layerPropertyFilters = propertyFilters[layerId]
   const nextRangeMin = Math.min(...values)
   const nextRangeMax = Math.max(...values)
@@ -1419,7 +1419,7 @@ export function displayRangeFilter(
  */
 export function getFeatureIdsForProperties(appCtx: ResourceViewCtx): Id[] {
   // If there are no property filters at all, return all features
-  if (Object.keys(appCtx.state.filters.feature.properties ?? {}).length === 0) {
+  if (Object.keys(appCtx.filters.values.feature.properties ?? {}).length === 0) {
     return Array.from(appCtx.features.keys())
   }
 
@@ -1428,7 +1428,7 @@ export function getFeatureIdsForProperties(appCtx: ResourceViewCtx): Id[] {
   const filteredIds = featureList
     .filter((feature: Feature | FeatureFromCollection) => {
       // Get filters specific to this feature's layer
-      const layerFilters = appCtx.state.filters.feature.properties?.[feature.layerId]
+      const layerFilters = appCtx.filters.values.feature.properties?.[feature.layerId]
 
       // If no filters for this layer, feature passes
       if (!layerFilters || Object.keys(layerFilters).length === 0) {

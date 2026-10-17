@@ -31,7 +31,7 @@ type SelectedPropertyFilter = string[] | RangeFilterValue
 function getPropertyFilterMap(
   app: AppCtx,
 ): Record<string, Record<string, SelectedPropertyFilter>> | undefined {
-  return app.state.filters.feature.properties as unknown as
+  return app.filters.values.feature.properties as unknown as
     | Record<string, Record<string, SelectedPropertyFilter>>
     | undefined
 }
@@ -174,14 +174,14 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
     },
     propertyFilter,
     get filterCount() {
-      return app.getFilterCount()
+      return app.filters.getFilterCount()
     },
     get hasActiveFilters() {
-      const count = app.getFilterCount()
+      const count = app.filters.getFilterCount()
       return count.neighbourhoods > 0 || count.properties > 0
     },
     get resetText() {
-      const count = app.getFilterCount()
+      const count = app.filters.getFilterCount()
       if (count.neighbourhoods && count.properties) {
         return `${m.filters__clear()} ${m.filters__reset_count_neighbourhoods({ neighbourhoods: count.neighbourhoods })} & ${m.filters__reset_count_properties({ properties: count.properties })}`
       }
@@ -191,7 +191,7 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
         return `${m.filters__clear()} ${m.filters__reset_count_properties({ properties: count.properties })}`
       return m.filters__reset()
     },
-    reset: () => app.resetFilters(),
+    reset: () => app.filters.resetFilters(),
     resetDivisions: () => app.divisionCtx.resetDivisions(),
     toggleDivision: (id: string) => {
       app.divisionCtx.toggleDivision(id)

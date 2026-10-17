@@ -668,7 +668,7 @@ $effect(() => {
 
 // The same property/list flags are composed with spatial scope before fetching a bounded map page.
 $effect(() => {
-  const input = appCtx.featureQueryInput({
+  const input = appCtx.filters.featureQueryInput({
     spatial: appCtx.featureViewport,
     includeCounts: false,
   })
@@ -690,7 +690,7 @@ $effect(() => {
 
 // Neighbourhood counts describe the filtered collection independently of the current camera.
 $effect(() => {
-  const input = appCtx.featureQueryInput({
+  const input = appCtx.filters.featureQueryInput({
     limit: 1,
     filters: { divisionIds: [], excludeDivisionIds: [] },
   })
@@ -734,7 +734,7 @@ watch(
   () => [
     appCtx.featuresVisible,
     appCtx.featureViewport,
-    featureQueryKey(appCtx.featureQueryInput()),
+    featureQueryKey(appCtx.filters.featureQueryInput()),
     activeMapInstance,
     userMarkerStyleVariant,
     projectMarkerThemes,
@@ -748,7 +748,7 @@ watch(
         retention: appCtx.isAdmin()
           ? undefined
           : {
-              scope: featureQueryKey(appCtx.featureQueryInput()),
+              scope: featureQueryKey(appCtx.filters.featureQueryInput()),
               budget: getMarkerRetentionBudget(navigator),
             },
         markerStyle: userMarkerStyleVariant,

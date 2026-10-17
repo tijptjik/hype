@@ -121,10 +121,10 @@ let featureResolutionFooterStatus = $state('')
 // STATE :: RESOURCE HIERACHY
 
 const selectableProjects = $derived(
-  appCtx.getFilteredResource<Project>(FirstClassResource.project),
+  appCtx.filters.getFilteredResource<Project>(FirstClassResource.project),
 )
 const selectableOrganisations = $derived(
-  appCtx.getFilteredResource<Organisation>(FirstClassResource.organisation),
+  appCtx.filters.getFilteredResource<Organisation>(FirstClassResource.organisation),
 )
 const selectedParentOrganisation = $derived(
   (importCtx.getSelectedOrganisation() as ParentSectionOrganisationItem | null) ?? null,

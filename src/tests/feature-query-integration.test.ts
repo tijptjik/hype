@@ -193,12 +193,12 @@ describe('map query integration', () => {
 
   it('composes filters with viewport cells and fetches one page even when more results exist', async () => {
     const app = createApp()
-    expect(app.featureQueryInput({ q: ' tea ' }).q).toBe('tea')
+    expect(app.filters.featureQueryInput({ q: ' tea ' }).q).toBe('tea')
     app.featureViewport = getFeatureViewportQuery([114.16, 22.26, 114.2, 22.3], 14)
-    app.featureQueryFilters.isVisitable = true
-    app.state.filters.feature.properties = {
+    app.filters.featureQueryFilters.isVisitable = true
+    app.filters.values.feature.properties = {
       'layer-a': { category: ['tea'] },
-    } as unknown as typeof app.state.filters.feature.properties
+    } as unknown as typeof app.filters.values.feature.properties
     const first = controlledPage()
     vi.mocked(getFeaturePage).mockReturnValue(first.query)
     const pending = app.featuresQueryFn()
@@ -257,8 +257,14 @@ describe('map query integration', () => {
     vi.mocked(getFeaturePage)
       .mockReturnValueOnce(older.query)
       .mockReturnValueOnce(newer.query)
-    const previous = app.loadFeatureQuery('map', app.featureQueryInput({ q: 'old' }))
-    const current = app.loadFeatureQuery('map', app.featureQueryInput({ q: 'new' }))
+    const previous = app.loadFeatureQuery(
+      'map',
+      app.filters.featureQueryInput({ q: 'old' }),
+    )
+    const current = app.loadFeatureQuery(
+      'map',
+      app.filters.featureQueryInput({ q: 'new' }),
+    )
     older.resolve([row('old')])
     await previous
     expect(app.resources.featureQueries.map.loading).toBe(true)
@@ -427,7 +433,7 @@ describe('paginated collection activation', () => {
       .mockReturnValueOnce(collection.query)
     const seedRequest = app.loadFeatureQuery(
       'search',
-      app.featureQueryInput({ q: 'cached' }),
+      app.filters.featureQueryInput({ q: 'cached' }),
     )
     seed.resolve([row('cached')], 1)
     await seedRequest
@@ -476,7 +482,7 @@ describe('paginated collection activation', () => {
     first.resolve([row('first')], 100)
     await settle()
     app.featureViewport = getFeatureViewportQuery([114.16, 22.26, 114.2, 22.3], 14)
-    app.featureQueryFilters.isVisitable = false
+    app.filters.featureQueryFilters.isVisitable = false
     flushSync()
     expect(getFeaturePage).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -506,7 +512,7 @@ describe('paginated collection activation', () => {
     const omni = createOmni(app)
     omni.initNeighbourhood('causeway-bay', selectionOptions)
     flushSync()
-    app.featureQueryFilters.isVisitable = false
+    app.filters.featureQueryFilters.isVisitable = false
     flushSync()
     first.resolve([row('obsolete')], 100)
     await settle()

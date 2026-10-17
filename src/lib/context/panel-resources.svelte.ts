@@ -27,14 +27,14 @@ export function usePanelResources(
   const list = app.resources.createCollection(type)
   onDestroy(() => list.release())
   const input = $derived({
-    ...app.panelResourceInput(type, search()),
+    ...app.filters.panelResourceInput(type, search()),
     ...(slot === 'index'
       ? {
           profile: 'default' as const,
-          sorting: app.state.viewSorting[type],
+          sorting: app.filters.sorting[type],
           conditions: {
-            isPublished: app.state.viewFilters[type].isPublished,
-            isArchived: app.state.viewFilters[type].isArchived,
+            isPublished: app.filters.viewFilters[type].isPublished,
+            isArchived: app.filters.viewFilters[type].isArchived,
           },
         }
       : {}),

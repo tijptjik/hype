@@ -137,7 +137,7 @@ export class OmniCtx {
 
     // Each search activates an independent cached query; changing text never drains all pages.
     $effect(() => {
-      const input = this.appCtx.featureQueryInput({ q: this.state.searchTerm })
+      const input = this.appCtx.filters.featureQueryInput({ q: this.state.searchTerm })
       if (!this.appCtx.isInitialised || this.appCtx.isAdmin()) return
       if (!this.state.isTrayOpen) return
       const timer = setTimeout(() => {
@@ -839,7 +839,7 @@ export class OmniCtx {
   private collectionQueryInput(
     descriptor: OmniCollectionDescriptor,
   ): FeatureQueryInput {
-    return this.appCtx.featureQueryInput({
+    return this.appCtx.filters.featureQueryInput({
       filters:
         descriptor.kind === 'neighbourhood'
           ? { divisionIds: [descriptor.ref] }

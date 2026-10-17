@@ -65,7 +65,7 @@ function setup(selected: string[] = [], active = 'b') {
         release: vi.fn(),
       }),
     },
-    panelResourceInput: () => ({ meta: {} }),
+    filters: { panelResourceInput: () => ({ meta: {} }) },
     retainPanelRows: vi.fn(),
     getUserPreferences: () => ({}),
     getHierarchySync: () => ({}),

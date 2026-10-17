@@ -102,7 +102,7 @@ export function useAdminHeaderModel(
 
   // Narrow unknown resource keys to the subset that supports filter state.
   function isFilterResource(value: unknown): value is keyof FilterState {
-    return typeof value === 'string' && value in appCtx.state.filters
+    return typeof value === 'string' && value in appCtx.filters.values
   }
 
   // Resolve the best cached display label for a resource across localized names and refs.
@@ -357,7 +357,7 @@ export function useAdminHeaderModel(
     if (!resourceType || !isFilterResource(resourceType)) {
       return ''
     }
-    return appCtx.state.filters[resourceType].text || ''
+    return appCtx.filters.values[resourceType].text || ''
   })
 
   // DERIVED :: RESOURCE / ROUTE
@@ -516,7 +516,7 @@ export function useAdminHeaderModel(
   function handleFilterChange(nextFilterText: string): void {
     const resourceType = adminCtx.activeResourceType
     if (!resourceType || !isFilterResource(resourceType)) return
-    appCtx.state.filters[resourceType].text = nextFilterText
+    appCtx.filters.values[resourceType].text = nextFilterText
   }
 
   function handleFilterFocusChange(isFocused: boolean): void {

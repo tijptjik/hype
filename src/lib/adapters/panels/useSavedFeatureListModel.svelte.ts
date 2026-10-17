@@ -37,7 +37,7 @@ export function useSavedFeatureListModel(
 
   /** Builds deterministic query input from the current search and saved list. */
   function queryInput() {
-    return app.featureQueryInput({
+    return app.filters.featureQueryInput({
       q: searchTerm,
       filters: { list: { listId: kind } },
       ...(kind === 'visited'

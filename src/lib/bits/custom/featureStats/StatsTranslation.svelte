@@ -22,7 +22,8 @@ const adminCtx = getAdminCtx()
 
 const activeTranslationLocales = $derived.by(() => {
   const locales: LocaleKey[] = []
-  const translationLocales = adminCtx.view.state.viewFilters.feature.translationLocales
+  const translationLocales =
+    adminCtx.view.filters.viewFilters.feature.translationLocales
   for (const [locale, isActive] of Object.entries(translationLocales)) {
     if (isActive) locales.push(locale as LocaleKey)
   }
