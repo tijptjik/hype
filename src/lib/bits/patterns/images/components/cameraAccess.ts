@@ -1,4 +1,3 @@
-
 // TYPES
 
 type CameraPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied'

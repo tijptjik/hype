@@ -268,7 +268,9 @@ const oldTertiary = originalColours[1].value
           <article
             data-variant={variant.name}
             class={`overflow-hidden rounded-3xl border bg-panel ${
-              variant.isCurrent ? 'border-primary/40 shadow-lg shadow-primary/5' : 'border-border'
+              variant.isCurrent
+                ? 'border-primary/40 shadow-lg shadow-primary/5'
+                : 'border-border'
             }`}
           >
             <div

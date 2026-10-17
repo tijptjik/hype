@@ -31,7 +31,9 @@ let { row, onToggle }: { row: NeighbourhoodRow; onToggle: (id: string) => void }
   >
     <span class="flex min-w-0 -translate-x-5 items-center gap-3">
       <span
-        class="size-2 shrink-0 rounded-full {row.selected ? 'bg-primary' : 'bg-transparent group-hover:bg-base-content/30'}"
+        class="size-2 shrink-0 rounded-full {row.selected
+          ? 'bg-primary'
+          : 'bg-transparent group-hover:bg-base-content/30'}"
       ></span>
       <span class="flex min-w-0 flex-col">
         {#if row.level !== null}
