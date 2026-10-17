@@ -353,7 +353,7 @@ export function useAdminHeaderModel(
 
   // Mirror the active resource filter text into the header search input value.
   const query = $derived.by(() => {
-    const resourceType = appCtx.headerResourceType
+    const resourceType = adminCtx.activeResourceType
     if (!resourceType || !isFilterResource(resourceType)) {
       return ''
     }
@@ -361,7 +361,7 @@ export function useAdminHeaderModel(
   })
 
   // DERIVED :: RESOURCE / ROUTE
-  const headerResourceType = $derived(appCtx.headerResourceType)
+  const headerResourceType = $derived(adminCtx.activeResourceType)
   const isIndex = $derived(adminCtx.activeResourceRef === false)
   const layoutModes = $derived.by((): HeaderLayoutMode[] => {
     if (!headerResourceType) return []
@@ -392,14 +392,14 @@ export function useAdminHeaderModel(
       adminCtx.activeResourceType === FirstClassResource.task,
   )
   const layoutMode = $derived(
-    headerResourceType ? appCtx.state.ui.layoutMode[headerResourceType] : 'card',
+    headerResourceType ? adminCtx.listUi.state.layoutMode[headerResourceType] : 'card',
   )
   const isControlBarVisible = $derived(
     headerResourceType
-      ? appCtx.state.ui.isControlBarVisible[headerResourceType]
+      ? adminCtx.listUi.state.isControlBarVisible[headerResourceType]
       : false,
   )
-  const showAvatar = $derived(!appCtx.state.panels.settings.isOpen)
+  const showAvatar = $derived(!appCtx.panels.state.settings.isOpen)
   const currentUser = $derived(appCtx.user ?? null)
   const currentUserName = $derived(
     currentUser?.displayUsername ??
@@ -514,13 +514,13 @@ export function useAdminHeaderModel(
 
   // Apply free-text search changes by updating the active resource filter source of truth.
   function handleFilterChange(nextFilterText: string): void {
-    const resourceType = appCtx.headerResourceType
+    const resourceType = adminCtx.activeResourceType
     if (!resourceType || !isFilterResource(resourceType)) return
     appCtx.state.filters[resourceType].text = nextFilterText
   }
 
   function handleFilterFocusChange(isFocused: boolean): void {
-    appCtx.setSearchFocused(isFocused)
+    headerCtrl.isSearchFocused = isFocused
   }
 
   // Focus the first visible resource row from the header search field.
@@ -534,7 +534,7 @@ export function useAdminHeaderModel(
 
   // Cycle through the supported layout modes for the active resource index view.
   function handleAdvanceLayout(): void {
-    const resourceType = appCtx.headerResourceType
+    const resourceType = adminCtx.activeResourceType
 
     if (!resourceType) return
 
@@ -542,26 +542,27 @@ export function useAdminHeaderModel(
 
     if (supportedModes.length <= 1) return
 
-    const currentMode = appCtx.state.ui.layoutMode[resourceType] as HeaderLayoutMode
+    const currentMode = adminCtx.listUi.state.layoutMode[
+      resourceType
+    ] as HeaderLayoutMode
     const currentIndex = Math.max(0, supportedModes.indexOf(currentMode))
     const nextMode = supportedModes[(currentIndex + 1) % supportedModes.length]
 
-    appCtx.setLayoutMode(nextMode)
+    adminCtx.listUi.state.layoutMode[resourceType] = nextMode
   }
 
   // Toggle the resource control bar beneath the header.
   function handleControlsToggle(): void {
-    const resourceType = appCtx.headerResourceType
+    const resourceType = adminCtx.activeResourceType
 
     if (!resourceType || !isFilterResource(resourceType)) return
 
-    appCtx.setControlBarVisible(!appCtx.state.ui.isControlBarVisible[resourceType])
+    adminCtx.listUi.state.isControlBarVisible[resourceType] =
+      !adminCtx.listUi.state.isControlBarVisible[resourceType]
   }
 
-  // Forward facet tab changes into the admin context.
+  // Commit facet intent to the URL; the surface projection follows route changes.
   function handleFacetChange(ref: string): void {
-    adminCtx.setFacet(ref as Parameters<typeof adminCtx.setFacet>[0])
-
     if (typeof window === 'undefined') return
 
     const url = new URL(window.location.href)

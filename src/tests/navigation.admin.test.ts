@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getBreadcrumbs } from '#lib/navigation/admin.js'
+import { goto } from '$app/navigation'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import { getBreadcrumbs, navigateOnAdmin } from '#lib/navigation/admin.js'
 import { FirstClassResource, ResourcePath } from '#lib/enums.js'
 import type { AppCtx } from '#lib/context/app.svelte.js'
+
+vi.mock('$app/navigation', () => ({ goto: vi.fn().mockResolvedValue(undefined) }))
 
 type Breadcrumb = { name: string; href: string }
 
@@ -204,5 +208,28 @@ describe('getBreadcrumbs', () => {
     )
 
     expect(result).toEqual([])
+  })
+})
+
+describe('admin navigation intent', () => {
+  it('waits for the committed URL projection instead of preemptively mutating navigation state', () => {
+    const admin = {
+      setResourceType: vi.fn(),
+      setResourceRef: vi.fn(),
+      setFacet: vi.fn(),
+    }
+    navigateOnAdmin(
+      admin as unknown as AdminCtx,
+      FirstClassResource.feature,
+      'feature-id',
+      'images',
+    )
+    expect(goto).toHaveBeenCalledWith('/admin/features/feature-id#images', {
+      reset: false,
+      replace: false,
+    })
+    expect(admin.setResourceType).not.toHaveBeenCalled()
+    expect(admin.setResourceRef).not.toHaveBeenCalled()
+    expect(admin.setFacet).not.toHaveBeenCalled()
   })
 })

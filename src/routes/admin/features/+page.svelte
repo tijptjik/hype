@@ -266,11 +266,9 @@ const sortables = createSortables([
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.feature)
-const isSearchFocused = $derived(
-  adminCtx.appCtx.state.ui.isSearchFocused[FirstClassResource.feature],
-)
+const isSearchFocused = $derived(headerCtrl.isSearchFocused)
 const featureLayoutMode = $derived(
-  adminCtx.appCtx.state.ui.layoutMode[FirstClassResource.feature],
+  adminCtx.listUi.state.layoutMode[FirstClassResource.feature],
 )
 const activeSearchResultCap = $derived(featureLayoutMode === 'card' ? 12 : 20)
 
@@ -867,7 +865,7 @@ $effect(() => {
     prisms: adminCtx.view.state.prisms,
     sorting: adminCtx.view.state.viewSorting.feature,
     q: nextQuery,
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   })
     .then(result => {
       if (latestRemoteRequestId !== nextRequestId) return
@@ -956,8 +954,7 @@ $effect(() => {
             },
     },
     {
-      isVisible:
-        adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.feature],
+      isVisible: adminCtx.listUi.state.isControlBarVisible[FirstClassResource.feature],
     },
   )
   headerCtrl.setFooter(CompletionFooter, { entities: footerEntities })

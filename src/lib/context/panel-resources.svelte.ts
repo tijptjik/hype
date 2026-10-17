@@ -1,8 +1,10 @@
+// CONTEXT
+import { getSurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 // SVELTE
-import { untrack, onMount } from 'svelte'
+import { untrack, onMount, onDestroy } from 'svelte'
 // REMOTE
 // TYPES
-import type { AppCtx } from './app.svelte'
+import type { ResourceViewCtx } from './resourceView.svelte'
 import type {
   PanelResource,
   PanelResourceType,
@@ -16,13 +18,14 @@ import type {
  * @returns Reactive rows, traversal state and retry action.
  */
 export function usePanelResources(
-  app: AppCtx,
+  app: ResourceViewCtx,
   type: PanelResourceType,
   search: () => string,
   slot: 'panel' | 'index' = 'panel',
 ) {
-  const list =
-    slot === 'index' ? app.cacheCtx.indexLists[type] : app.cacheCtx.lists[type]
+  const navigation = getSurfaceNavigation()
+  const list = app.resources.createCollection(type)
+  onDestroy(() => list.release())
   const input = $derived({
     ...app.panelResourceInput(type, search()),
     ...(slot === 'index'
@@ -37,14 +40,14 @@ export function usePanelResources(
       : {}),
   })
   const viewKey = $derived(JSON.stringify(input))
-  const activeResourceId = $derived(app.getActiveResourceId())
+  const activeResourceId = $derived(navigation.getActiveResourceId())
   const selected = $derived(
     slot === 'index'
       ? []
       : [
           ...new Set([
             ...app.state.prisms[type],
-            ...(app.getActiveResourceType() === type && activeResourceId
+            ...(navigation.getActiveResourceType() === type && activeResourceId
               ? [activeResourceId]
               : []),
           ]),

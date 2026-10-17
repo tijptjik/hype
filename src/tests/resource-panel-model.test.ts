@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, render } from '@testing-library/svelte/pure'
 import { afterEach, expect, it, vi } from 'vitest'
+import { SurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 import Fixture from './fixtures/components/ResourcePanelModelFixture.svelte'
-import type { AppCtx } from '#lib/context/app.svelte'
-import type { AdminCtx } from '#lib/context/admin.svelte'
-import type { ResourcePanelModel } from '#lib/bits/patterns/resourcePanel/resourcePanel.types'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { ResourcePanelModel } from '#lib/bits/patterns/resourcePanel/resourcePanel.types.js'
 
 const route = vi.hoisted(() => ({
   url: new URL('http://localhost/admin/organisations'),
@@ -47,20 +48,19 @@ function setup(selected: string[] = [], active = 'b') {
   const app = {
     state: { prisms: { organisation: selected, project: [], layer: [] } },
     cacheCtx: {
-      lists: {
-        organisation: list,
-        project: { ...list, rows: [] },
-        layer: { ...list, rows: [] },
-      },
       pin: (_type: string, id: string) => ({
         current: resources.find(row => row.id === id) ?? { id, name: id },
       }),
     },
+    resources: {
+      createCollection: (type: string) => ({
+        ...list,
+        rows: type === 'organisation' ? resources : [],
+        release: vi.fn(),
+      }),
+    },
     panelResourceInput: () => ({ meta: {} }),
     retainPanelRows: vi.fn(),
-    getActiveResourceId: () => active,
-    getActiveResourceType: () => 'organisation',
-    getActiveFacet: () => 'settings',
     getUserPreferences: () => ({}),
     getHierarchySync: () => ({}),
     // Map defaults deliberately differ from prism selections.
@@ -68,10 +68,12 @@ function setup(selected: string[] = [], active = 'b') {
     isProjectDefaultLayersActive: () => true,
     toggleOrganisation,
   } as unknown as AppCtx
+  const routeNavigation = new SurfaceNavigation(() => active)
+  routeNavigation.setActiveFacet('core', active, 'organisation' as never)
   let model!: ResourcePanelModel
   render(Fixture, {
     app,
-    admin: {} as AdminCtx,
+    admin: { navigation: routeNavigation } as AdminCtx,
     onModel: value => {
       model = value
     },

@@ -140,7 +140,7 @@ $effect(() => {
       sortables,
     },
     {
-      isVisible: adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.task],
+      isVisible: adminCtx.listUi.state.isControlBarVisible[FirstClassResource.task],
     },
   )
   headerCtrl.clearFooter()

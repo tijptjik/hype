@@ -48,7 +48,7 @@ let lastKnownPanelOpenState = $state(
     : false,
 )
 
-const layoutMode = $derived(adminCtx.appCtx.state.ui.layoutMode[resource])
+const layoutMode = $derived(adminCtx.listUi.state.layoutMode[resource])
 const isRowLayout = $derived(layoutMode === 'table' || layoutMode === 'list')
 const itemHeight = $derived(
   isRowLayout

@@ -1,3 +1,5 @@
+// CONTEXT
+import { getSurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 // SVELTE
 import { onMount } from 'svelte'
 import { page } from '$app/state'
@@ -45,6 +47,7 @@ export function useResourcePanelModel(
   admin?: AdminCtx,
   omni?: OmniCtx,
 ): ResourcePanelModel {
+  const navigation = admin?.navigation ?? getSurfaceNavigation()
   const panelType = mode === 'admin' ? Panel.admin : Panel.prisms
   let search = $state({ organisation: '', project: '', layer: '' })
   let tall = $state(false)
@@ -56,7 +59,7 @@ export function useResourcePanelModel(
 
   /** Keeps feature-card navigation consistent after disabling or isolating its layer. */
   function closeExcludedFeature(): void {
-    const active = app.getActiveFeature()
+    const active = omni?.appCtx.getActiveFeature()
     if (active && !app.state.prisms.layer.includes(active.layerId)) {
       navigate('/')
       omni?.setMode(OmniMode.search)
@@ -72,14 +75,20 @@ export function useResourcePanelModel(
    */
   async function primary(type: PanelResourceType, id: string): Promise<void> {
     if (mode === 'admin') {
-      if (app.getActiveResourceType() === type && app.getActiveResourceId() === id)
+      if (
+        navigation.getActiveResourceType() === type &&
+        navigation.getActiveResourceId() === id
+      )
         await toggle(type, id)
       else if (admin)
         await navigateOnAdminById(
           admin,
           FirstClassResource[type],
           id,
-          getSupportedFacetForResource(FirstClassResource[type], app.getActiveFacet()),
+          getSupportedFacetForResource(
+            FirstClassResource[type],
+            navigation.getActiveFacet(),
+          ),
         )
       return
     }
@@ -145,8 +154,8 @@ export function useResourcePanelModel(
           .filter(label => label.length > 0)
         const pinned = selected.includes(resource.id)
         const active =
-          app.getActiveResourceType() === type &&
-          app.getActiveResourceId() === resource.id
+          navigation.getActiveResourceType() === type &&
+          navigation.getActiveResourceId() === resource.id
         const enabled =
           mode === 'admin'
             ? pinned

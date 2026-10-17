@@ -69,9 +69,7 @@ const FILTER_SECTION_BUTTON_CLASSES = cx(
   'data-[has-indicator=true]:after:shadow-[0_0_0_2px_var(--color-base-200)]',
 )
 
-let isControlBarVisible = $derived(
-  adminCtx.appCtx.state.ui.isControlBarVisible[resource],
-)
+let isControlBarVisible = $derived(adminCtx.listUi.state.isControlBarVisible[resource])
 let singleSectionConfig = $derived(
   filters.sections.length === 1 ? filters.sections[0] : null,
 )

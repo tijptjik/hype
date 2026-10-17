@@ -28,8 +28,8 @@ import type { AppCtx } from '#lib/context/app.svelte.js'
  * @returns Project-backed map-style code for the active resource, or `null`.
  */
 export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
-  const activeResourceType = appCtx.getActiveResourceType()
-  const activeResourceId = appCtx.getActiveResourceId()
+  const activeResourceType = appCtx.navigation.getActiveResourceType()
+  const activeResourceId = appCtx.navigation.getActiveResourceId()
   const projects = appCtx.state.resources.project
   const layers = appCtx.state.resources.layer
   const features = appCtx.state.resources.feature

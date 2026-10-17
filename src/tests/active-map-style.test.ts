@@ -16,8 +16,10 @@ const createAppContext = (params: {
   projects: MapStyleProject[]
 }): AppCtx =>
   ({
-    getActiveResourceType: () => (params.activeProjectId ? 'project' : null),
-    getActiveResourceId: () => params.activeProjectId ?? null,
+    navigation: {
+      getActiveResourceType: () => (params.activeProjectId ? 'project' : false),
+      getActiveResourceId: () => params.activeProjectId ?? null,
+    },
     state: {
       prisms: {
         project: params.selectedProjectIds,

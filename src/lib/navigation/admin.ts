@@ -138,8 +138,18 @@ export const getUrlForResource = (
   return `${ADMIN_PATH}/${getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`
 }
 
+/**
+ * Requests an admin URL change; committed routes publish the active target.
+ * @param _adminCtx Owning admin surface, retained for the navigation call contract.
+ * @param resource Resource index or detail type.
+ * @param entityRef Optional entity reference.
+ * @param facet Optional detail facet.
+ * @param queryParams Optional URL query parameters.
+ * @returns Nothing; SvelteKit owns navigation completion.
+ * @remarks A blocked navigation must not preemptively change resource selection.
+ */
 export const navigateOnAdmin = (
-  adminCtx: AdminCtx,
+  _adminCtx: AdminCtx,
   resource: FirstClassResource | false,
   entityRef?: Id | Code,
   facet?: FacetType,
@@ -148,9 +158,7 @@ export const navigateOnAdmin = (
   let url = `${ADMIN_PATH}`
   if (resource && isNavigable(resource)) {
     url += `/${ResourcePath[resource]}`
-    adminCtx.setResourceType(resource)
   } else {
-    adminCtx.setResourceType(false)
     if (resource) {
       console.warn(`Attempted to navigate to a non-navigable resource: ${resource}`)
       return
@@ -159,17 +167,11 @@ export const navigateOnAdmin = (
 
   if (entityRef) {
     url += `/${entityRef}`
-    adminCtx.setResourceRef(entityRef)
-  } else {
-    adminCtx.setResourceRef(false)
   }
 
   if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`
   if (facet) {
     url += `#${facet}`
-    adminCtx.setFacet(facet)
-  } else {
-    adminCtx.setFacet(false)
   }
 
   const currentUrl =

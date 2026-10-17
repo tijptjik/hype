@@ -185,7 +185,7 @@ $effect(() => {
     },
     {
       isVisible:
-        adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.organisation],
+        adminCtx.listUi.state.isControlBarVisible[FirstClassResource.organisation],
     },
   )
   headerCtrl.clearFooter()

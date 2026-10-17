@@ -1,3 +1,5 @@
+// CONTEXT
+import { getSurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
 // TYPES
@@ -10,7 +12,8 @@ import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
  * @param panelType - Panel whose visibility is being rendered.
  * @returns Reactive panel props and close intent.
  */
-export function usePanelShellModel(app: AppCtx, panelType: Panel) {
+export function usePanelShellModel(app: ResourceViewCtx, panelType: Panel) {
+  const navigation = getSurfaceNavigation()
   return {
     get panel(): PanelProps {
       return {
@@ -22,10 +25,10 @@ export function usePanelShellModel(app: AppCtx, panelType: Panel) {
         isNarrow: false,
         isAdmin: panelType === Panel.profile && app.isAdmin(),
         active: {
-          resourceType: app.getActiveResourceType(),
-          resourceRef: app.getActiveResourceRef(),
-          resourceId: app.getActiveResourceId(),
-          facet: app.getActiveFacet(),
+          resourceType: navigation.getActiveResourceType(),
+          resourceRef: navigation.getActiveResourceRef(),
+          resourceId: navigation.getActiveResourceId(),
+          facet: navigation.getActiveFacet(),
         },
       }
     },
