@@ -2,6 +2,36 @@
 
 This document defines the UI layering model for Bits components and how logic should be distributed.
 
+## Route Context Ownership
+
+Hype remains a single SvelteKit application. Hub mini-apps and dashboards do not
+require a monorepo or separate frontend deployments.
+
+| Context | Owner | Responsibility |
+| --- | --- | --- |
+| `RootCTX` | Root layout, shared by all routes | Shared session, locale, theme, responsive state and resolved hub identity |
+| `AppCtx` | Public Hype app layout | User-facing app state, including the map, feature collections, filters, panels and app navigation |
+| `AdminCtx` | `/admin` layout | Admin resource views, editing, filters and admin navigation |
+| `{Hub}DashCtx` | The corresponding hub dashboard layout | Hub-specific operational workflows; use `BreadlineDashCtx` for Breadline |
+
+Keep the exact `RootCTX` spelling. Dashboard context names use the hub name in
+PascalCase followed by `DashCtx`. Introduce a dashboard context only when its
+routes need shared state or orchestration; individual views can keep local state.
+The public app includes the hub-branded map experience described in the
+[Breadline mini-app specification](../spec/breadline/breadline.v4.spec.md#mini-apps).
+
+Surface contexts consume shared state from `RootCTX`. Admin and hub dashboards
+must not require `AppCtx` or the map bootstrap to initialise. Share domain
+services, contracts and reusable UI through their owning modules rather than
+coupling one surface context to another. Context state supports the UI;
+server-side services remain responsible for authorisation and domain invariants.
+
+This is the target ownership model. The current root layout still creates
+`AppCtx`, and `AdminCtx` still consumes it. Migrating that wiring requires moving
+shared responsibilities to `RootCTX` and surface responsibilities to their
+respective layouts; renaming the existing shared context alone does not establish
+these boundaries.
+
 ## Layering
 
 1. `src/lib/bits/custom/{componentType}/src/*`
