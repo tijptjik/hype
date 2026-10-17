@@ -1,4 +1,6 @@
 <script lang="ts">
+// ICONS
+import GridIcon from 'virtual:icons/proicons/grid'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
@@ -7,18 +9,23 @@ import CategoryFilter from '#lib/bits/patterns/panels/components/controls/Catego
 import RangeFilter from '#lib/bits/patterns/panels/components/controls/RangeFilter.svelte'
 // ADAPTERS
 import type { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
-let { model }: { model: ReturnType<typeof useFilterPanelModel> } = $props()
+// TYPES
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+let {
+  model,
+  ...panelProps
+}: PanelProps & {
+  model: ReturnType<typeof useFilterPanelModel>
+} = $props()
 </script>
 
 {#each model.categories as group, index (group.hierarchy.layerId)}
   <CategorySection
+    {panelProps}
     title={m.filters__categories()}
-    icon="/flowchart.svg"
-    iconVerticalPaddingClass="pt-2"
-    iconColorClass="text-blue-500"
+    icon={GridIcon}
     isOpen={index === 0}
     selectedSummary={group.selectedSummary}
-    hasActiveFilters={model.hasActiveFilters}
     hierarchy={group.hierarchy}
   >
     <div class="space-y-2">
@@ -33,4 +40,3 @@ let { model }: { model: ReturnType<typeof useFilterPanelModel> } = $props()
     </div>
   </CategorySection>
 {/each}
-<div class="grow h-21 w-full shrink-0"></div>

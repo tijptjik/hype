@@ -4,9 +4,11 @@ import { slide } from 'svelte/transition'
 // TYPES
 import type { Snippet } from 'svelte'
 
-let { children } = $props<{
+let {
+  children,
+}: {
   children: Snippet
-}>()
+} = $props()
 </script>
 
 <div

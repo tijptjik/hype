@@ -44,7 +44,9 @@ let {
   managedContent?: Snippet<[boolean]>
 } & PanelProps = $props()
 
-const isSettings = $derived(panelProps.panelType === 'settings')
+const usesCompactHeader = $derived(
+  panelProps.panelType === 'settings' || panelProps.panelType === 'filters',
+)
 const contentId = $props.id()
 
 // STATE
@@ -77,7 +79,7 @@ const onNavigate = (e: MouseEvent) => {
 </script>
 
 <section
-  class="bits-theme flex min-h-0 {isSettings
+  class="bits-theme flex min-h-0 {usesCompactHeader
     ? 'border-b border-border'
     : 'pt-3'} flex-col overflow-hidden bg-panel caret-transparent {isOpen
     ? 'grow-0'
@@ -85,29 +87,34 @@ const onNavigate = (e: MouseEvent) => {
     ? 'pr-4'
     : ''} {rootClass}"
 >
-  {#if isSettings}
-    <button
-      type="button"
-      class="flex h-14 w-full shrink-0 items-center gap-4 px-6 text-left text-base-content outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
-      aria-expanded={isOpen}
-      aria-controls={contentId}
-      onclick={onToggle}
-    >
-      {#if typeof icon === 'string'}
-        <img src={icon} alt="" class="size-5 shrink-0 object-contain">
-      {:else}
-        {@const SectionIcon = icon}
-        <SectionIcon class="size-5 shrink-0" aria-hidden="true" />
-      {/if}
-      <span class="min-w-0 flex-1 text-sm font-normal uppercase tracking-[0.1em]"
-        >{title}</span
+  {#if usesCompactHeader}
+    <div class="flex shrink-0 items-center pr-6">
+      <button
+        type="button"
+        class="flex h-14 min-w-0 flex-1 items-center gap-4 pl-6 pr-0 text-left text-base-content outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+        aria-expanded={isOpen}
+        aria-controls={contentId}
+        onclick={onToggle}
       >
-      <ChevronDown
-        class="size-4 text-muted-foreground transition-transform duration-250 motion-reduce:transition-none {isOpen
-          ? ''
-          : '-rotate-90'}"
-      />
-    </button>
+        {#if typeof icon === 'string'}
+          <img src={icon} alt="" class="size-5 shrink-0 object-contain">
+        {:else}
+          {@const SectionIcon = icon}
+          <SectionIcon class="size-5 shrink-0" aria-hidden="true" />
+        {/if}
+        <span class="min-w-0 flex-1 text-sm font-normal uppercase tracking-[0.1em]"
+          >{title}</span
+        >
+        <ChevronDown
+          class="size-4 text-muted-foreground transition-transform duration-250 motion-reduce:transition-none {isOpen
+            ? ''
+            : '-rotate-90'}"
+        />
+      </button>
+      {#if headerActions}
+        <div class="ml-3 shrink-0">{@render headerActions()}</div>
+      {/if}
+    </div>
   {:else}
     <Panel.Section.Header
       {title}

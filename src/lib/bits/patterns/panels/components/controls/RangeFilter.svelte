@@ -30,14 +30,15 @@ $effect(() => {
 let displayText = $derived(filter.displayText)
 </script>
 
-<div class="ml-4 min-h-10 shrink-0 rounded-l-md bg-[#0a0a0a]">
+<div class="mx-6 min-h-10 shrink-0 rounded-lg border border-border bg-surface">
   <button
     type="button"
-    class="flex w-full shrink-0 items-center justify-between rounded-none py-2 pl-6 pr-9 focus:outline-none focus:ring-0 focus-visible:text-primary"
+    class="flex w-full shrink-0 items-center justify-between rounded-none py-2 px-3 focus:outline-none focus:ring-0 focus-visible:text-primary"
+    aria-expanded={isOpen}
     onclick={() => (isOpen = !isOpen)}
   >
     <div class="flex flex-col justify-start gap-0 text-left">
-      <p class="text-xs font-thin uppercase tracking-widest text-base-content/60">
+      <p class="text-xs font-medium uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
       <p class="font-medium">{displayText}</p>
@@ -47,7 +48,7 @@ let displayText = $derived(filter.displayText)
   <!-- Options -->
   {#if isOpen}
     <div
-      class="flex max-h-65 flex-col overflow-y-auto overscroll-contain rounded-l-md bg-base-300 px-3"
+      class="flex max-h-65 flex-col overflow-y-auto overscroll-contain rounded-b-lg bg-surface px-3"
     >
       <div class="pb-4 pl-2 pr-4 pt-8">
         <RangeSlider
@@ -74,13 +75,9 @@ let displayText = $derived(filter.displayText)
 :global(.rangeSlider) {
   /* Slider main elements */
   --range-slider: var(--color-base-100);
-  --range-handle-inactive: color-mix(
-    in srgb,
-    var(--color-base-content) 30%,
-    transparent
-  );
-  --range-handle: var(--color-sky-600);
-  --range-handle-focus: var(--color-sky-600);
+  --range-handle-inactive: var(--color-muted-foreground);
+  --range-handle: var(--color-primary);
+  --range-handle-focus: var(--color-primary);
   --range-handle-border: var(--range-handle);
   --range-range-inactive: var(--range-handle-inactive);
   --range-range: var(--range-handle-focus);
@@ -91,16 +88,18 @@ let displayText = $derived(filter.displayText)
 
   /* Float elements */
   --range-float-inactive: var(--range-handle-inactive);
-  --range-float: var(--color-sky-600);
+  --range-float: var(--color-primary);
   --range-float-text: var(--color-white);
   --range-float-background: var(--color-base-content);
   --range-float-border: var(--color-base-300);
   --range-float-width: 32px;
 
   /* Pips and labels */
-  --range-pip: lightslategray; /* color of the base pips */
+  --range-pip: var(--color-muted-foreground); /* color of the base pips */
   --range-pip-text: var(--range-pip); /* color of the base labels */
-  --range-pip-active: #a1a1aa; /* active pips (when handle is on a slider-stop) */
+  --range-pip-active: var(
+    --color-base-content
+  ); /* active pips (when handle is on a slider-stop) */
   --range-pip-active-text: var(--range-pip-active);
   --range-pip-hover: var(--color-base-50); /* when a slider-stop is hovered */
   --range-pip-hover-text: var(--range-pip-hover); /* when a slider-stop is hovered */

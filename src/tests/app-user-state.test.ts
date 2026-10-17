@@ -31,6 +31,34 @@ function createDeferred<T>(): {
 }
 
 describe('AppCtx user updates', () => {
+  it('loads classifier definitions before initializing filters after layer changes', async () => {
+    const app = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
+    app.view.scope.prisms.layer = ['ghosts']
+    vi.spyOn(app.view, 'loadPinnedLayers').mockResolvedValue()
+    const definitions = createDeferred<void>()
+    const refresh = vi
+      .spyOn(app.view.queries, 'refreshProperties')
+      .mockReturnValue(definitions.promise)
+    const categorical = vi
+      .spyOn(app.view.filters, 'initialiseCategoricalPropertyFilters')
+      .mockImplementation(() => {})
+    const range = vi
+      .spyOn(app.view.filters, 'initialiseRangePropertyFilter')
+      .mockImplementation(() => {})
+    const pending = app.view.postLayerMutation(false)
+    await Promise.resolve()
+    expect(refresh).toHaveBeenCalled()
+    expect(categorical).not.toHaveBeenCalled()
+    definitions.resolve()
+    await pending
+    expect(categorical).toHaveBeenCalledWith('ghosts')
+    expect(range).toHaveBeenCalledWith('ghosts')
+  })
+
   it('keeps session role scope stable while user-layer preferences hydrate', async () => {
     const user = {
       id: 'member',

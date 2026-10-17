@@ -49,7 +49,7 @@ const panelProps = $derived(shell.panel)
 <!-- Filter changes are applied to the already-loaded feature collection so marker updates
      and viewport fitting stay synchronous with the selected filter state. -->
 
-<Panel isOpen={shell.open} bind:panelContainer {...panelProps}>
+<Panel isOpen={shell.open} bind:panelContainer preserveContentWidth {...panelProps}>
   <Header
     onClose={shell.onClose}
     {...panelProps}
@@ -59,11 +59,11 @@ const panelProps = $derived(shell.panel)
     }}
   />
   <Info isOpen={isInfoOpen} />
-  <div class="flex flex-col">
+  <div class="flex flex-col pb-24">
     <div class="grow flex max-h-[40vh] min-h-0 shrink-0 flex-col">
       <Divisions {model} {...panelProps} />
     </div>
-    <div class="grow flex max-h-[calc(100vh-206px)] min-h-0 shrink-0 flex-col">
+    <div class="flex min-h-0 shrink-0 flex-col">
       <Categories {model} {...panelProps} />
     </div>
   </div>

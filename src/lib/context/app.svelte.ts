@@ -687,10 +687,6 @@ export class AppCtx {
               'features',
               () => this.view.queries.refreshFeatures(false, expectedRoleScope),
             ],
-            [
-              'properties',
-              () => this.view.queries.refreshProperties(false, expectedRoleScope),
-            ],
           ] as const)
         : []),
       ...(includeUserData

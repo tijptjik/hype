@@ -58,7 +58,7 @@ function divisionDisplayOrder(division: DivisionFacet): number {
  * @param appCtx Active application and division facet state.
  * @param term Localized search text.
  * @param includeHiddenClasses Whether to include classes hidden by the display preferences.
- * @returns Stable IDs with classification and translated names, ordered by level and name.
+ * @returns Stable IDs with classification and translated names, ordered by descending feature count, then level and name.
  */
 export function filterDivisions(
   appCtx: ResourceViewCtx,
@@ -66,11 +66,12 @@ export function filterDivisions(
   includeHiddenClasses = false,
 ): [string, DivisionFacet][] {
   const preferences = appCtx.getUserPreferences()
+  const counts = appCtx.divisionCtx.divisionFeatureCounts
   const label = (division: DivisionFacet) => getDivisionName(division, preferences)
   return [...appCtx.divisionCtx.divisions.entries()]
     .filter(
       ([id, division]) =>
-        (appCtx.divisionCtx.divisionFeatureCounts.get(id) ?? 0) > 0 &&
+        (counts.get(id) ?? 0) > 0 &&
         division.hasGeometry === true &&
         division.class !== 'sar' &&
         division.class !== 'city' &&
@@ -84,7 +85,8 @@ export function filterDivisions(
         ),
     )
     .sort(
-      ([, a], [, b]) =>
+      ([aId, a], [bId, b]) =>
+        (counts.get(bId) ?? 0) - (counts.get(aId) ?? 0) ||
         divisionDisplayOrder(a) - divisionDisplayOrder(b) ||
         label(a).localeCompare(label(b)),
     )

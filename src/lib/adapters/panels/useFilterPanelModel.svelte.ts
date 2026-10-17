@@ -40,6 +40,7 @@ function getPropertyFilterMap(
  * Owns filter data, summaries and map/filter mutations for the route.
  * @param app - Route-owned resource and filter context.
  * @param omni - Route-owned search/map presentation context.
+ * @param zoomToVisible - Fits the map after filter changes.
  * @returns Filter panel data and callbacks for controlled Bits patterns.
  */
 export function useFilterPanelModel(
@@ -50,15 +51,33 @@ export function useFilterPanelModel(
   let searchTerm = $state('')
   let groups = $state<ClassifierGroup[]>([])
 
-  // Refresh classifier groups when the active layer selection changes.
+  // Refresh after definitions arrive as well as when the active selection changes.
   $effect(() => {
     const prismSignature = app.scope.getPrism(FirstClassResource.layer).join('|')
+    // SvelteMap reads must happen before the async boundary to track hydration.
+    Array.from(app.cache.property.values())
+    app.getUserPreferences()
+    let cancelled = false
     untrack(() => {
-      void getGroupedClassifierProperties(app).then(nextGroups => {
-        if (prismSignature === app.scope.getPrism(FirstClassResource.layer).join('|'))
-          groups = nextGroups
-      })
+      groups = groups.filter(group =>
+        app.scope.getPrism(FirstClassResource.layer).includes(group.hierarchy.layerId),
+      )
+      void getGroupedClassifierProperties(app)
+        .then(nextGroups => {
+          if (
+            !cancelled &&
+            prismSignature === app.scope.getPrism(FirstClassResource.layer).join('|')
+          )
+            groups = nextGroups
+        })
+        .catch(error => {
+          if (!cancelled)
+            console.error('[FiltersPanel] Could not load categories', error)
+        })
     })
+    return () => {
+      cancelled = true
+    }
   })
 
   const selectedNeighbourhoodRefs = $derived(app.divisionCtx.getFilteredDivisions())
@@ -67,14 +86,13 @@ export function useFilterPanelModel(
   /** Builds label, selection and mutation data for one classifier control. */
   function propertyFilter(property: Property, layerId: Id) {
     const values = (property.values as PropertyValue[]) || []
-    const options = propertyValuesToLocalisedOptions(app, values)
     const getSelection = () => getPropertyFilterMap(app)?.[layerId]?.[property.id]
     return {
       get label() {
         return getI18n(property, 'label', app.getUserPreferences(), property.key)
       },
       get options() {
-        return options
+        return propertyValuesToLocalisedOptions(app, values)
       },
       get selectedIds() {
         const selected = getSelection()
@@ -83,7 +101,10 @@ export function useFilterPanelModel(
       get displayText() {
         const selected = getSelection() ?? []
         return Array.isArray(selected)
-          ? displaySelectedProperties(selected, options)
+          ? displaySelectedProperties(
+              selected,
+              propertyValuesToLocalisedOptions(app, values),
+            )
           : displayRangeFilter(property.min ?? 0, property.max ?? 100, [
               selected.rangeMin ?? property.min ?? 0,
               selected.rangeMax ?? property.max ?? 100,

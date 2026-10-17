@@ -31,6 +31,43 @@ const child: DivisionFacet = {
 }
 
 describe('registry neighbourhoods', () => {
+  it('ranks divisions by current collection counts and reorders after layers change', () => {
+    const place = new DivisionCtx()
+    const other = {
+      ...child,
+      id: 'other',
+      i18n: { en: { name: 'Another neighbourhood' } },
+    }
+    place.setDivisionCounts({ parent, child: { ...child, count: 8 }, other })
+    const app = {
+      divisionCtx: place,
+      getUserPreferences: () => ({}),
+    } as unknown as ResourceViewCtx
+    expect(filterDivisions(app, '').map(([id]) => id)).toEqual([
+      'child',
+      'parent',
+      'other',
+    ])
+
+    // A new active-layer facet response changes rank; ties keep level/name ordering.
+    place.setDivisionCounts({
+      parent: { ...parent, count: 4 },
+      child: { ...child, count: 4 },
+      other: { ...other, count: 4 },
+    })
+    expect(filterDivisions(app, '').map(([id]) => id)).toEqual([
+      'parent',
+      'other',
+      'child',
+    ])
+    expect(filterDivisions(app, 'Central').map(([id]) => id)).toEqual([
+      'parent',
+      'child',
+    ])
+    place.setDivisionCounts({ parent: { ...parent, count: 0 }, child })
+    expect(filterDivisions(app, '').map(([id]) => id)).toEqual(['child'])
+  })
+
   it('excludes the SAR from both initial options and explicit name/code searches', () => {
     const place = new DivisionCtx()
     place.setDivisionCounts({

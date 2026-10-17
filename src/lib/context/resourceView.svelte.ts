@@ -1101,6 +1101,15 @@ export class ResourceViewCtx {
     await this.loadPinnedLayers(expectedRoleScope)
     if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
+    // Load definitions before creating filter defaults for newly selected layers.
+    const layerSignature = this.scope.prisms.layer.join('|')
+    await this.queries.refreshProperties(false, expectedRoleScope)
+    if (
+      !this.isExpectedRoleScopeCurrent(expectedRoleScope) ||
+      layerSignature !== this.scope.prisms.layer.join('|')
+    )
+      return
+
     const currentLayerIds = new Set(this.scope.prisms.layer)
     const existingFilterLayerIds = new Set(
       Object.keys(this.filters.values.feature.properties || {}),
