@@ -1,7 +1,18 @@
 // TYPES
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson'
 import type { Map as MapLibreMap, GeoJSONSource } from 'maplibre-gl'
+import type { MapMarkerTheme } from '#lib/map/styles/catalog.js'
 import type { DivisionGeometry } from '#lib/divisions/geometry.js'
+
+/** Contrasting overlay accents follow the basemap palette, independently of the UI theme. */
+export const divisionHighlightColors: Record<MapMarkerTheme, string> = {
+  light: '#9d174d',
+  dark: '#fde047',
+  ghostery: '#5eead4',
+  hyperpop: '#67e8f9',
+  neon: '#fef08a',
+  rosepunk: '#bef264',
+}
 
 const sourceId = 'hype-division-highlights'
 const fillId = `${sourceId}-fill`
@@ -13,13 +24,18 @@ const outlineId = `${sourceId}-outline`
  * @returns Update and teardown operations; no payload cache or map ownership escapes.
  */
 export function createDivisionHighlights(map: MapLibreMap): {
-  update: (divisions: DivisionGeometry[], hoveredId: string | null) => void
+  update: (
+    divisions: DivisionGeometry[],
+    hoveredId: string | null,
+    theme?: MapMarkerTheme,
+  ) => void
   destroy: () => void
 } {
   let data: FeatureCollection<Polygon | MultiPolygon> = {
     type: 'FeatureCollection',
     features: [],
   }
+  let color = divisionHighlightColors.dark
   let disposed = false
   let dirty = true
   /** Restores layers after a style replacement. @returns Nothing. */
@@ -37,7 +53,7 @@ export function createDivisionHighlights(map: MapLibreMap): {
           type: 'fill',
           source: sourceId,
           paint: {
-            'fill-color': '#4987e2',
+            'fill-color': color,
             'fill-opacity': ['case', ['get', 'hovered'], 0.24, 0.12],
           },
         },
@@ -50,13 +66,15 @@ export function createDivisionHighlights(map: MapLibreMap): {
           type: 'line',
           source: sourceId,
           paint: {
-            'line-color': '#4987e2',
+            'line-color': color,
             'line-width': ['case', ['get', 'hovered'], 3, 2],
             'line-opacity': 0.9,
           },
         },
         before,
       )
+    map.setPaintProperty(fillId, 'fill-color', color)
+    map.setPaintProperty(outlineId, 'line-color', color)
   }
   const restore = (): void => {
     dirty = true
@@ -66,7 +84,8 @@ export function createDivisionHighlights(map: MapLibreMap): {
   // Source loading can temporarily make a style unready; render the latest update once idle.
   map.on('idle', render)
   return {
-    update(divisions, hoveredId) {
+    update(divisions, hoveredId, theme = 'dark') {
+      color = divisionHighlightColors[theme]
       dirty = true
       data = {
         type: 'FeatureCollection',

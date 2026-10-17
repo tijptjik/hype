@@ -6,6 +6,7 @@ import { SvelteMap } from 'svelte/reactivity'
 import { createDivisionHighlights } from '#lib/map/divisionHighlights.js'
 import { divisionGeometryDetail } from '#lib/resources/divisionClient.js'
 // TYPES
+import type { MapMarkerTheme } from '#lib/map/styles/catalog.js'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { DivisionGeometry } from '#lib/divisions/geometry.js'
 import type {
@@ -19,11 +20,13 @@ let {
   client,
   selectedIds,
   hoveredId,
+  theme,
 }: {
   map: MapLibreMap
   client: ResourceClient
   selectedIds: string[]
   hoveredId: string | null
+  theme: MapMarkerTheme
 } = $props()
 
 let renderer = $state.raw<ReturnType<typeof createDivisionHighlights> | null>(null)
@@ -69,10 +72,11 @@ $effect(() => {
 $effect(() => {
   const overlay = renderer
   const hovered = hoveredId
+  const palette = theme
   const geometries = [...details.values()].flatMap(detail =>
     detail.data ? [detail.data] : [],
   )
-  untrack(() => overlay?.update(geometries, hovered))
+  untrack(() => overlay?.update(geometries, hovered, palette))
 })
 
 onDestroy(() => {

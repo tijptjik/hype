@@ -46,6 +46,7 @@ describe('division map highlights', () => {
       removeSource: (id: string) => sources.delete(id),
       getLayer: (id: string) => layers.get(id),
       addLayer: vi.fn((layer: { id: string }) => layers.set(layer.id, layer)),
+      setPaintProperty: vi.fn(),
       removeLayer: (id: string) => layers.delete(id),
       on: (event: string, handler: () => void) => events.set(event, handler),
       off: (event: string) => events.delete(event),
@@ -57,6 +58,12 @@ describe('division map highlights', () => {
       data: { features: [{ properties: { divisionId: 'island', hovered: true } }] },
     })
     expect(layers.size).toBe(2)
+    renderer.update([definition], 'island', 'light')
+    expect(map.setPaintProperty).toHaveBeenCalledWith(
+      'hype-division-highlights-outline',
+      'line-color',
+      '#9d174d',
+    )
     sources.clear()
     layers.clear()
     events.get('style.load')?.()

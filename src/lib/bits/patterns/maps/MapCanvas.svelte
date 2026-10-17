@@ -862,6 +862,7 @@ $effect(() => {
           : []),
       ]}
       hoveredId={appCtx.divisionCtx.hoveredId}
+      theme={getMapStyleDefinition(resolvedMapStyleCode).markerTheme}
     />
   {/if}
   {#if initialStyle}
