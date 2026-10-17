@@ -435,6 +435,8 @@ export async function normalizeUploadFileForAssetPipeline(
 
   if (
     canResize &&
+    typeof uploadDimensions.width === 'number' &&
+    typeof uploadDimensions.height === 'number' &&
     Math.max(uploadDimensions.width, uploadDimensions.height) > MAX_UPLOAD_DIMENSION
   ) {
     const resized = await resizeRasterUpload(

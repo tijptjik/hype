@@ -288,7 +288,7 @@ const updateFeatureImageFields = async (params: {
   ctxId: Id
   featureId?: Id
   data: {
-    intent?: 'canonical' | 'closeUp' | 'context' | 'general' | 'undefined'
+    intent?: 'canonical' | 'closeUp' | 'context' | 'general' | 'research' | 'undefined'
     isPublished?: boolean
   }
 }) => {
@@ -860,7 +860,7 @@ const putOriginalObjectViaBindingsOrApi = async (params: {
       ...credentials,
       bucket: getOriginalsBucketNameForStage(params.stage),
       objectKey: params.key,
-      body: params.body,
+      body: new Uint8Array(params.body),
       contentType: params.contentType,
       fetchFn: params.event.fetch,
     })
@@ -1309,7 +1309,7 @@ const buildReplacementMetadataDocument = (params: {
     ? { ...params.incomingDocument.metadata }
     : {}
 
-  const mergedMetadataEntries = {
+  const mergedMetadataEntries: Record<string, string> = {
     ...existingMetadataEntries,
     ...incomingMetadataEntries,
     replacementEditedAt: params.timestamp,
@@ -1899,7 +1899,7 @@ export const finalizeImageUpload = guardedCommand(
       modifiedAt: timestamp,
     }
     const editorUser = await getUserById(db, user.id as Id)
-    let metadataDocument = baseMetadataDocument
+    let metadataDocument: ImageMetadataDocument = baseMetadataDocument
     const manifestDocument = {
       publicId: payload.publicId,
       version,
@@ -2248,10 +2248,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
   const sourceRotation = normalizeRotation(targetRotation - currentRotation)
 
   const rotatedIntermediate = await rotateStoredImageObject({
-    body: originalObject.body.buffer.slice(
-      originalObject.body.byteOffset,
-      originalObject.body.byteOffset + originalObject.body.byteLength,
-    ),
+    body: new Uint8Array(originalObject.body).buffer,
     contentType: originalObject.contentType,
     rotation: sourceRotation,
   })

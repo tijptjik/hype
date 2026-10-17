@@ -59,7 +59,7 @@ const featureDescription = $derived(
 const featureAddress = $derived(
   getI18n(task.feature, 'displayAddress', appCtx.getUserPreferences()) || '-',
 )
-const effectiveLayerId = $derived(task.feature?.layerId ?? task.layerId ?? null)
+const effectiveLayerId = $derived(task.feature?.layerId ?? null)
 const selectedAssignableLayer = $derived(
   assignableLayers.find(layer => layer.id === effectiveLayerId) ??
     (effectiveLayerId ? appCtx.cache.layer.get(effectiveLayerId) : null) ??
@@ -72,7 +72,9 @@ const mapStyleCode = $derived(
       task.projectId ??
       '',
   )?.mapStyle?.code ??
-    task.project?.mapStyle?.code ??
+    (task.project && 'mapStyle' in task.project
+      ? (task.project.mapStyle as { code?: string } | null)?.code
+      : null) ??
     null,
 )
 const featureCoordinates = $derived(

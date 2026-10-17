@@ -95,7 +95,9 @@ type FeatureImportAppContext = {
   getResourceByIdSync: (
     resourceType: FirstClassResource,
     id: string,
-  ) => Resource | undefined
+  ) =>
+    | import('#lib/context/cache.types.js').CachedEntity<FirstClassResource>
+    | undefined
 }
 
 export type FeatureResolutionStatusCounts = {

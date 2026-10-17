@@ -57,7 +57,7 @@ type HeaderFormActionsController = {
 
 type ResourceEditorHeaderController = FormHeaderController &
   HeaderFormActionsController & {
-    setHeaderForEntity: (...args: never[]) => void
+    setHeaderForEntity: import('#lib/context/header.svelte.js').HeaderCtrl['setHeaderForEntity']
     clearFormActions: () => void
   }
 
@@ -209,9 +209,9 @@ type TranslateLocaleIntoEmptyFieldsParams<
     i18n?: Record<
       string,
       {
-        name?: string
-        nameShort?: string
-        description?: string
+        name?: string | null
+        nameShort?: string | null
+        description?: string | null
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
@@ -220,8 +220,8 @@ type TranslateLocaleIntoEmptyFieldsParams<
   },
 > = {
   form: FormDataUpdaterForm<TFormData>
-  sourceLocale: Locale
-  targetLocale: Locale
+  sourceLocale: Locale | LocaleKey
+  targetLocale: Locale | LocaleKey
   fields?: I18nTranslatableField[]
 }
 
@@ -230,9 +230,9 @@ type ResetLocaleFieldsParams<
     i18n?: Record<
       string,
       {
-        name?: string
-        nameShort?: string
-        description?: string
+        name?: string | null
+        nameShort?: string | null
+        description?: string | null
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
@@ -241,7 +241,7 @@ type ResetLocaleFieldsParams<
   },
 > = {
   form: FormDataUpdaterForm<TFormData>
-  targetLocale: Locale
+  targetLocale: Locale | LocaleKey
   fields?: I18nTranslatableField[]
 }
 
@@ -627,7 +627,7 @@ export function syncAdminFacetFromHash<TFacet extends string>({
   activeFacet: TFacet | false
   facetOrder: readonly TFacet[]
   adminCtx: AdminCtx
-  resourceType: FirstClassResource
+  resourceType: import('#lib/types.js').NavigableResource
   resourceRef: string
 }): void {
   const hashFacet = hash.slice(1) as TFacet | ''
@@ -652,7 +652,7 @@ export function bindAdminFacetHistorySync<TFacet extends string>({
   getFacetOrder: () => readonly TFacet[]
   getActiveFacet: () => TFacet | false
   adminCtx: AdminCtx
-  resourceType: FirstClassResource
+  resourceType: import('#lib/types.js').NavigableResource
   getResourceRef: () => string
 }): void {
   onMount(() => {
@@ -793,7 +793,7 @@ export function getEditorCtrl({
   facetTabs,
 }: {
   headerCtrl: ResourceEditorHeaderController
-  icon: unknown
+  icon: Component
   facetTabs: ReadonlyMap<FacetType, string | { label: string; icon?: Component | null }>
 }): {
   syncRouteAndLoad: <T>(params: {
@@ -1027,8 +1027,8 @@ export function applyChangedRelationField<
  * @returns `true` when both entity snapshots still align with the route.
  */
 export function guardRefDesync(
-  organisationState: OrganisationGetState,
-  committedOrganisationState: OrganisationGetState,
+  organisationState: { data?: { code?: string } | null } | null,
+  committedOrganisationState: { data?: { code?: string } | null } | null,
   ref: string,
 ): boolean {
   const entityCode = organisationState?.data?.code
@@ -1730,17 +1730,17 @@ export async function translateLocaleIntoEmptyFields<
     i18n?: Record<
       string,
       {
-        name?: string
-        nameShort?: string
-        description?: string
+        name?: string | null
+        nameShort?: string | null
+        description?: string | null
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
-        subscriptionBenefits?: string
+        subscriptionBenefits?: string | null
         subscriptionBenefitsGen?: FormBooleanValue
-        privacyPolicy?: string
+        privacyPolicy?: string | null
         privacyPolicyGen?: FormBooleanValue
-        termsOfService?: string
+        termsOfService?: string | null
         termsOfServiceGen?: FormBooleanValue
       }
     >
@@ -1831,17 +1831,17 @@ export function resetLocaleFields<
     i18n?: Record<
       string,
       {
-        name?: string
-        nameShort?: string
-        description?: string
+        name?: string | null
+        nameShort?: string | null
+        description?: string | null
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
-        subscriptionBenefits?: string
+        subscriptionBenefits?: string | null
         subscriptionBenefitsGen?: FormBooleanValue
-        privacyPolicy?: string
+        privacyPolicy?: string | null
         privacyPolicyGen?: FormBooleanValue
-        termsOfService?: string
+        termsOfService?: string | null
         termsOfServiceGen?: FormBooleanValue
       }
     >
@@ -1950,6 +1950,7 @@ export function guardUserRolesDesync({
       id: formUserRole.userId,
       name: formUserRole.userId,
       username: formUserRole.userId,
+      displayUsername: formUserRole.userId,
       email: '',
       image: null,
       attribution: '',

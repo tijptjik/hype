@@ -48,7 +48,7 @@ function handleClick(event: Event): void {
   tabindex="-1"
 >
   {#if resolvedSrc}
-    <img src={resolvedSrc} alt class={rowThumbnailImageClass}>
+    <img src={resolvedSrc} alt="" class={rowThumbnailImageClass}>
   {:else}
     <div class={rowThumbnailFallbackClass}>
       <span class={rowThumbnailFallbackTextClass}></span>

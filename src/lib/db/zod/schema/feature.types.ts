@@ -171,7 +171,7 @@ export type FeaturePropertyI18nPartial = z.infer<typeof FeaturePropertyI18nUpdat
 export type UserFeatureDB = z.infer<typeof UserFeatureBase>
 export type UserFeatureNew = z.infer<typeof UserFeatureInsert>
 export type UserFeaturePartial = z.infer<typeof UserFeatureUpdate>
-export type FeatureExtended = FeatureFromCollection & {
+export type FeatureExtended = (FeatureFromCollection | Feature) & {
   hierarchy: {
     organisation: string | null
     project: string | null
@@ -196,9 +196,14 @@ export type NewFeatureWithLocationAndParents = PartialExcept<
 export type UserContributedFeatureProperty = {
   property: Property
   propertyId: Id
-  propertyValueId?: Id
-  value?: string
-  i18n?: Partial<Record<Locale, { locale: Locale; value: string; valueGen: boolean }>>
+  propertyValueId?: Id | null
+  value?: string | null
+  i18n?: Partial<
+    Record<
+      Locale | LocaleKey,
+      { locale: string; value: string | null; valueGen?: boolean }
+    >
+  > | null
 }
 
 export type UserContributedFeature = {

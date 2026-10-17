@@ -90,13 +90,20 @@ function formatCoordinatePair(
 }
 
 function hasFiniteCoordinates(
-  latitude: number | null | undefined,
-  longitude: number | null | undefined,
-): latitude is number {
-  return Number.isFinite(latitude) && Number.isFinite(longitude)
+  latitude: string | number | null | undefined,
+  longitude: string | number | null | undefined,
+): boolean {
+  return (
+    latitude != null &&
+    longitude != null &&
+    latitude !== '' &&
+    longitude !== '' &&
+    Number.isFinite(Number(latitude)) &&
+    Number.isFinite(Number(longitude))
+  )
 }
 
-const resolvedMetadata = $derived(metadataProp ?? metadata)
+const resolvedMetadata = $derived<ImageMetadataFull | null>(metadataProp ?? metadata)
 const resolvedLoading = $derived(loadingProp ?? isLoading)
 const originalMetadataSnapshot = $derived(
   resolvedMetadata && 'metadata' in resolvedMetadata
@@ -139,7 +146,7 @@ const replacementEditedWith = $derived(
 const metadataRows = $derived.by<MetadataRow[]>(() => {
   if (!resolvedMetadata) return []
 
-  return [
+  const rows: Array<MetadataRow | null> = [
     resolvedMetadata.cameraModel
       ? {
           icon: Camera,
@@ -166,8 +173,8 @@ const metadataRows = $derived.by<MetadataRow[]>(() => {
           icon: MapPinned,
           label: 'Coordinates',
           value: formatCoordinatePair(
-            resolvedMetadata.latitude,
-            resolvedMetadata.longitude,
+            Number(resolvedMetadata.latitude),
+            Number(resolvedMetadata.longitude),
           ),
         }
       : null,
@@ -213,7 +220,8 @@ const metadataRows = $derived.by<MetadataRow[]>(() => {
           value: replacementEditedWith,
         }
       : null,
-  ].filter((row): row is MetadataRow => row !== null)
+  ]
+  return rows.filter((row): row is MetadataRow => row !== null)
 })
 
 $effect(() => {

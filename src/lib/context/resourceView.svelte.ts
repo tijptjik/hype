@@ -51,7 +51,7 @@ import { SvelteMap } from 'svelte/reactivity'
 // ENUMS
 import { FirstClassResource, Panel } from '#lib/enums.js'
 // TYPES
-import type { Cache } from '#lib/context/cache.types.js'
+import type { Cache, CachedEntity } from '#lib/context/cache.types.js'
 import type {
   Code,
   Id,
@@ -435,10 +435,29 @@ export class ResourceViewCtx {
             ...row,
           } as never)
         if (resource === 'organisation')
-          this.syncCodeToIdMap(this.organisationCodeToId, rows as Organisation[])
+          this.syncCodeToIdMap(
+            this.organisationCodeToId,
+            rows.filter(
+              (row): row is typeof row & { id: Id; code: Code } =>
+                'code' in row && typeof row.code === 'string',
+            ),
+          )
         if (resource === 'project')
-          this.syncCodeToIdMap(this.projectCodeToId, rows as Project[])
-        if (resource === 'hub') this.syncCodeToIdMap(this.hubCodeToId, rows as Hub[])
+          this.syncCodeToIdMap(
+            this.projectCodeToId,
+            rows.filter(
+              (row): row is typeof row & { id: Id; code: Code } =>
+                'code' in row && typeof row.code === 'string',
+            ),
+          )
+        if (resource === 'hub')
+          this.syncCodeToIdMap(
+            this.hubCodeToId,
+            rows.filter(
+              (row): row is typeof row & { id: Id; code: Code } =>
+                'code' in row && typeof row.code === 'string',
+            ),
+          )
       },
       featuresChanged: features => {
         features.forEach(feature => {
@@ -822,7 +841,10 @@ export class ResourceViewCtx {
 
       if (updatedResource) {
         // Update the cache with the new resource data
-        this.cache[resource].set(resourceId, updatedResource)
+        ;(this.cache[resource] as Map<Id, CachedEntity<typeof resource>>).set(
+          resourceId,
+          updatedResource,
+        )
 
         // For features, also update the featuresMap
         if (resource === FirstClassResource.feature) {
@@ -1202,10 +1224,10 @@ export class ResourceViewCtx {
   })
 
   // Helper method to fetch resource by ID with cache miss handling
-  private fetchResourceById = async (
-    resource: FirstClassResource,
+  private fetchResourceById = async <K extends FirstClassResource>(
+    resource: K,
     ref: Id,
-  ): Promise<unknown> => {
+  ): Promise<CachedEntity<K> | undefined> => {
     if (!ref || ref === 'undefined') return undefined
     const remoteGet = this.remoteMap[resource]?.get as
       | ((
@@ -1242,7 +1264,7 @@ export class ResourceViewCtx {
       const data = await detail.load()
       if (data && scope === this.getRoleScopeQueryKey())
         (this.cache[resource] as Map<string, unknown>).set(ref, data)
-      return data
+      return data as CachedEntity<K> | undefined
     } finally {
       detail.release()
     }
@@ -1593,6 +1615,7 @@ export class ResourceViewCtx {
       | Project
       | Organisation
       | Task
+      | Hub
       | Image,
   ): Promise<ResourceContext> => {
     const featurePromise =
@@ -2132,24 +2155,14 @@ export class ResourceViewCtx {
     cache.set(id, item)
   }
 
-  getResourceByIdSync = (
-    resource: FirstClassResource,
+  getResourceByIdSync = <K extends FirstClassResource>(
+    resource: K,
     id: Id,
-  ): Resource | undefined => {
-    switch (resource) {
-      case FirstClassResource.organisation:
-        return this.cache.organisation.get(id)
-      case FirstClassResource.project:
-        return this.cache.project.get(id)
-      case FirstClassResource.layer:
-        return this.cache.layer.get(id)
-      case FirstClassResource.feature:
-        return this.cache.feature.get(id) ?? this.features.get(id)
-      case FirstClassResource.task:
-        return this.cache.task.get(id)
-      case FirstClassResource.hub:
-        return this.cache.hub.get(id)
-    }
+  ): CachedEntity<K> | undefined => {
+    const entity =
+      this.cache[resource].get(id) ??
+      (resource === FirstClassResource.feature ? this.features.get(id) : undefined)
+    return entity as CachedEntity<K> | undefined
   }
 
   getResourceByRefSync = (

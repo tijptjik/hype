@@ -46,7 +46,7 @@ function handleMouseLeave(): void {
 function handleFocusOut(event: FocusEvent): void {
   const nextFocusTarget = event.relatedTarget
 
-  if (!(nextFocusTarget instanceof Node) || !event.currentTarget) {
+  if (!(nextFocusTarget instanceof Node) || !(event.currentTarget instanceof Node)) {
     open = false
     return
   }

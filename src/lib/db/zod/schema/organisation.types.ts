@@ -102,9 +102,9 @@ export type OrganisationListParamsByProfile<P extends OrganisationProfile> = Omi
 export type OrganisationFormInput = z.input<typeof OrganisationFormData>
 export type OrganisationFormLocaleInput = FormLocaleInput<OrganisationFormInput>
 export type OrganisationFormLocaleSource = FormLocaleSource<OrganisationFormInput>
-export type OrganisationPropertySource = NonNullable<
-  OrganisationFormInput['data']['properties']
->[number]
+export type OrganisationPropertySource =
+  | import('./property.types.js').Property
+  | NonNullable<OrganisationFormInput['data']['properties']>[number]
 export type OrganisationFormSource = {
   id?: string
   modifiedAt?: string

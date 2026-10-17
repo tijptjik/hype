@@ -23,7 +23,10 @@ type StatsCache = SvelteMap<
   FirstClassResource,
   SvelteMap<
     Id,
-    SvelteMap<Key, { value: unknown; type: 'boolean' | 'count' | 'mean' | 'sum' }>
+    SvelteMap<
+      Key,
+      { value: boolean | number | null; type: 'boolean' | 'count' | 'mean' | 'sum' }
+    >
   >
 >
 
@@ -40,3 +43,8 @@ export type Cache = {
   user: Map<Id, UserProfile>
   stats: StatsCache
 }
+
+/** Entity retained for a resource key; aggregate statistics are not entities. */
+export type CachedEntity<K extends Exclude<keyof Cache, 'stats'>> = NonNullable<
+  ReturnType<Cache[K]['get']>
+>

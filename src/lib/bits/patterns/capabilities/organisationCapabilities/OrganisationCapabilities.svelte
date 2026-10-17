@@ -1,7 +1,7 @@
 <script lang="ts">
 import { fade } from 'svelte/transition'
 import LanguagesIcon from 'virtual:icons/tabler/language'
-import { formSearchHeaderStyles } from '#lib/bits/patterns/forms/formSurface/formSearchHeader.styles'
+import { formSearchHeaderStyles } from '#lib/bits/patterns/forms/formSurface/formSearchHeader.styles.js'
 import { m } from '#lib/i18n.js'
 import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import {
@@ -13,7 +13,7 @@ import OrganisationCapabilitiesEmpty from './components/OrganisationCapabilities
 import OrganisationCapabilitiesSearch from './components/OrganisationCapabilitiesSearch.svelte'
 import OrganisationCapabilitiesList from './components/OrganisationCapabilitiesList.svelte'
 import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
-import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles'
+import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 
 let {
   selectedCapabilityKeys,

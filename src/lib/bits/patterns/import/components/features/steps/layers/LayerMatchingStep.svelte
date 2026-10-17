@@ -35,15 +35,7 @@ import type { LayerFormInput } from '#lib/db/zod/schema/layer.types.js'
 import type { Locale } from '#lib/types.js'
 import type { ImportSearchBoxItem } from '../../../shared/importSearch.types'
 
-type LayerLike = {
-  id?: string
-  i18n?: {
-    en?: {
-      name?: string | null
-      description?: string | null
-    } | null
-  } | null
-}
+type LayerLike = import('#lib/client/services/import/types.js').Layer
 
 type Props = {
   importCtx: ImportCtx

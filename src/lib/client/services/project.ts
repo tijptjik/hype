@@ -59,7 +59,14 @@ import type {
 //    - toUserRolesForCapabilityToggle
 
 function normalizeProjectFormLocale(
-  locale: Partial<ProjectFormInput['data']['i18n']['en']> | null | undefined,
+  locale:
+    | {
+        [K in keyof ProjectFormInput['data']['i18n']['en']]?:
+          | ProjectFormInput['data']['i18n']['en'][K]
+          | null
+      }
+    | null
+    | undefined,
 ): ProjectFormInput['data']['i18n']['en'] {
   return {
     name: locale?.name ?? '',

@@ -222,7 +222,11 @@ function updateRowFocus(index: number) {
   const rowSelector = `[data-entity-id="${targetEntity.id}"][role="button"]`
 
   // Use the virtual list's scrollToIndex method
-  const virtualList = listContainer?.querySelector('svelte-virtual-list-viewport')
+  const virtualList = listContainer?.querySelector<
+    HTMLElement & {
+      scrollToIndex?: (index: number, smooth: boolean, align: boolean) => void
+    }
+  >('svelte-virtual-list-viewport')
 
   if (virtualList?.scrollToIndex && scrollIndex != null) {
     // Scroll to the index using the virtual list's built-in method

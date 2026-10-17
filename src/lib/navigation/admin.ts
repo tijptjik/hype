@@ -83,7 +83,7 @@ export const getResourceRef = (
 
   if (!entity) return false
 
-  return entity[refKey as keyof Resource]
+  return refKey in entity ? (entity as Record<string, unknown>)[refKey] : false
 }
 
 /**
@@ -224,7 +224,10 @@ export async function getBreadcrumbs(
       return []
     }
 
-    const hierarchy = await appCtx.getHierarchy(currentResource)
+    if (resourceType === 'property' || resourceType === 'user') return []
+    const hierarchy = await appCtx.getHierarchy(
+      currentResource as Parameters<ResourceViewCtx['getHierarchy']>[0],
+    )
     const hierarchyHub = (hierarchy as { hub?: unknown }).hub
     const breadcrumbs: HeaderCrumb[] = []
 

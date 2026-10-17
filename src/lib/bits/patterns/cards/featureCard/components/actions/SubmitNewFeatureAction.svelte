@@ -2,7 +2,7 @@
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { getLocale, m } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
@@ -26,7 +26,7 @@ const imageCtx = getImageCtx()
 async function submitNewFeature(): Promise<void> {
   const newFeature = appCtx.draft.current as NewFeatureTask
   const title =
-    newFeature?.feature?.i18n?.[getLocale()]?.title ??
+    newFeature?.feature?.i18n?.[getLocaleKey()]?.title ??
     newFeature?.feature?.i18n?.en?.title ??
     'Untitled feature'
   const layer = newFeature?.layerId ? appCtx.cache.layer.get(newFeature.layerId) : null
@@ -39,7 +39,7 @@ async function submitNewFeature(): Promise<void> {
     return
   }
 
-  if (!newFeature?.feature?.i18n?.[getLocale()]?.title) {
+  if (!newFeature?.feature?.i18n?.[getLocaleKey()]?.title) {
     cardCtx.validationError = m.validation__title_required()
     return
   }

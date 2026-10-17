@@ -1,5 +1,6 @@
 import type {
   RemoteForm,
+  RemoteFormFields,
   RemoteFormInput,
   RemoteFormIssue,
   RemoteQuery,
@@ -279,6 +280,15 @@ export function use<T>(
 
 export type GenericFormConfig<T = RemoteFormInput> = ReturnType<typeof configureForm<T>>
 export type GenericForm<T = RemoteFormInput> = ReturnType<GenericFormConfig<T>>
+
+// Preserve explicit editor fields when a remote-form input also has an index signature.
+type EditorFormInput<Input> = {
+  [K in keyof Input as string extends K
+    ? never
+    : number extends K
+      ? never
+      : K]: Input[K]
+}
 
 type FormId<Input> = Input extends { id: infer Id }
   ? Id extends string | number
@@ -610,12 +620,7 @@ export function configureForm<Input = RemoteFormInput>(
   const debouncedValidate = debounce(() => validate({ preflightOnly: false }), 300)
 
   function runDebouncedValidate(): void {
-    if (typeof debouncedValidate === 'function') {
-      debouncedValidate()
-      return
-    }
-    const maybeWithCall = debouncedValidate as { call?: () => unknown }
-    maybeWithCall.call?.()
+    void debouncedValidate.call()
   }
 
   async function validate(
@@ -692,7 +697,10 @@ export function configureForm<Input = RemoteFormInput>(
   })
 
   return () => ({
-    form,
+    // Preserve the editor field shape instead of the transport index signature.
+    form: form as unknown as Omit<typeof form, 'fields'> & {
+      fields: RemoteFormFields<EditorFormInput<Input>>
+    },
     attributes,
     initial,
     touched,

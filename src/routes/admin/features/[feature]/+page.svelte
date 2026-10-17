@@ -1941,7 +1941,8 @@ $effect(() => {
         createdAt={feature?.data?.createdAt ?? null}
         {isEditing}
         isIntangible={Boolean(currentFeatureData.isIntangible)}
-        isVisitable={currentFeatureData.isVisitable}
+        isVisitable={currentFeatureData.isVisitable === true ||
+          currentFeatureData.isVisitable === 'true'}
         hasPrevious={Boolean(previousFeatureRef)}
         hasNext={Boolean(nextFeatureRef)}
         onIntangibleChange={value =>

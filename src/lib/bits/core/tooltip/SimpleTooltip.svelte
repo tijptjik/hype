@@ -47,7 +47,7 @@ const arrowClasses = $derived(
         class={contentClasses}
         sideOffset={contentProps.sideOffset ?? 8}
       >
-        {@render children()}
+        {@render children?.()}
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   </TooltipPrimitive.Root>

@@ -98,12 +98,12 @@ export type ImportState = {
       string,
       {
         propertyId?: Id
-        propertyType?: 'classifier' | 'specifier'
+        propertyType?: 'classifier' | 'specifier' | 'display'
         propertyValueId?: Id
         propertyValueMapping?: Record<string, string>
         resolvedData?: Record<string, string | null | undefined>
         translatedValues?: Record<Locale, string>
-        enrichedData?: Map<number, Record<Locale, string>>
+        enrichedData?: Map<number, Partial<Record<Locale | LocaleKey, string>>>
         resolvedValues?: Record<string, string | null | undefined>
       }
     >
@@ -111,7 +111,7 @@ export type ImportState = {
     currentPropertyIndex: number
     translationChoices: Map<
       string,
-      { mode: 'translate' | 'copy'; sourceLocale?: Locale }
+      { mode: 'translate' | 'copy'; sourceLocale?: Locale | LocaleKey }
     >
     isProcessing: boolean
   }
@@ -552,12 +552,12 @@ export class ImportCtx {
     key: string,
     data: {
       propertyId?: Id
-      propertyType?: 'classifier' | 'specifier'
+      propertyType?: 'classifier' | 'specifier' | 'display'
       propertyValueId?: Id
       propertyValueMapping?: Record<string, string>
       resolvedData?: Record<string, string | null | undefined>
       translatedValues?: Record<Locale, string>
-      enrichedData?: Map<number, Record<Locale, string>>
+      enrichedData?: Map<number, Partial<Record<Locale | LocaleKey, string>>>
       resolvedValues?: Record<string, string | null | undefined>
     },
   ) {

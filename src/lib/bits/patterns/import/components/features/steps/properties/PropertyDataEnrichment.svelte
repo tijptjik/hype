@@ -32,7 +32,7 @@ type Props = {
 
 type TranslationChoice = {
   mode: 'translate' | 'copy'
-  sourceLocale?: Locale
+  sourceLocale?: Locale | LocaleKey
 }
 
 type EnrichedRowData = Partial<Record<Locale, string>> & {
@@ -221,7 +221,13 @@ async function enrichData(): Promise<void> {
     importCtx.setPropertyEnrichedData(property.key, {
       ...existingData,
       propertyId: existingData.propertyId || matchedProperty?.id,
-      propertyType: existingData.propertyType || matchedProperty?.type || 'specifier',
+      propertyType:
+        existingData.propertyType ||
+        (matchedProperty?.type === 'classifier'
+          ? 'classifier'
+          : matchedProperty?.type === 'display'
+            ? 'display'
+            : 'specifier'),
       enrichedData: enrichedRows,
       translatedValues: getFallbackTranslatedValues(enrichedRows),
     })
@@ -351,12 +357,14 @@ async function processTranslations(
     if (!rowData._needsTranslation || !rowData._sourceValue || !rowData._sourceLocale)
       return
 
+    const sourceLocale = rowData._sourceLocale
+    const sourceValue = rowData._sourceValue
     rowData._needsTranslation.forEach(targetLocale => {
       const batchKey = `${rowData._sourceLocale}->${targetLocale}`
 
       if (!translationBatches.has(batchKey)) {
         translationBatches.set(batchKey, {
-          sourceLocale: rowData._sourceLocale,
+          sourceLocale,
           targetLocale,
           texts: [],
           rowIndices: [],
@@ -365,7 +373,7 @@ async function processTranslations(
 
       const batch = translationBatches.get(batchKey)
       if (!batch) return
-      batch.texts.push(rowData._sourceValue)
+      batch.texts.push(sourceValue)
       batch.rowIndices.push(rowIndex)
     })
   })

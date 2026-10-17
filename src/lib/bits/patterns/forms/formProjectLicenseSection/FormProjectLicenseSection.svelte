@@ -489,9 +489,7 @@ function setDraftIntent(intent: ProjectLicenseIntent): void {
     return
   }
 
-  if (intent !== 'conditional') {
-    draftUseCustomLicenseLabels = false
-  }
+  draftUseCustomLicenseLabels = false
 }
 
 /**

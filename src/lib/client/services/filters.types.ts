@@ -33,10 +33,7 @@ export type FilteredResources = {
 
 type ResourceFilterState = {
   text?: string
-  properties?: Record<
-    Id,
-    string[] | RangeFilterValue | Record<Id, Record<Id, string[] | RangeFilterValue>>
-  >
+  properties?: Record<Id, Record<Id, string[] | RangeFilterValue>>
 }
 
 export type FilterState = {

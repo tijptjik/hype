@@ -37,13 +37,15 @@ const DEFAULT_RESOURCE_COLOR_CLASSES = {
   selectedClass: 'bg-base-content/60',
 } as const
 
-const RESOURCE_COLOR_CLASSES: Record<
-  Props['resourceType'],
-  {
-    colorClass: string
-    hoverColorClass: string
-    selectedClass: string
-  }
+const RESOURCE_COLOR_CLASSES: Partial<
+  Record<
+    Props['resourceType'],
+    {
+      colorClass: string
+      hoverColorClass: string
+      selectedClass: string
+    }
+  >
 > = {
   organisation: {
     colorClass: 'text-primary',

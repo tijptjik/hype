@@ -517,7 +517,7 @@ onDestroy(() => {
           // Firefox can reject decode() even when an already-loaded image is paintable.
         }
 
-        startDisplayedSourceTransition(pendingSrc, rotationDegrees ?? 0)
+        if (pendingSrc) startDisplayedSourceTransition(pendingSrc, rotationDegrees ?? 0)
       }}
       onerror={() => {
         pendingSrc = null

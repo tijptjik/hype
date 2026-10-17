@@ -13,10 +13,10 @@ export type ImportSearchBoxItem<TValue = unknown> = {
   value: TValue
 }
 
-export type ImportSearchBoxProps = {
+export type ImportSearchBoxProps<TValue = unknown> = {
   id: string
   value?: string
-  results?: ImportSearchBoxItem[]
+  results?: ImportSearchBoxItem<TValue>[]
   label?: string
   ariaLabel: string
   placeholder: string
@@ -27,11 +27,11 @@ export type ImportSearchBoxProps = {
   tone?: ImportSearchBoxTone
   onInput?: (value: string, event: Event) => void | Promise<void>
   onFocus?: (event: FocusEvent) => void
-  onSelect: (item: ImportSearchBoxItem, event: MouseEvent) => void
+  onSelect: (item: ImportSearchBoxItem<TValue>, event: MouseEvent) => void
   onInputKeydown?: (event: KeyboardEvent) => void
   onResultKeydown?: (
     event: KeyboardEvent,
-    item: ImportSearchBoxItem,
+    item: ImportSearchBoxItem<TValue>,
     index: number,
   ) => void
 }

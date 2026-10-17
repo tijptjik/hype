@@ -1174,7 +1174,9 @@ const hiddenProjectCapabilityInputAttrs = $derived.by(() => {
  * @remarks The schema accepts serialized JSON and normalizes it into the license object.
  */
 function getHiddenProjectLicenseAttrs(): Record<string, unknown> {
-  const as = formCtx.form.fields.data.license.as
+  const { as } = formCtx.form.fields.data.license as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }
   if (typeof as !== 'function') return {}
   return as('hidden', JSON.stringify(formProjectLicense)) as Record<string, unknown>
 }

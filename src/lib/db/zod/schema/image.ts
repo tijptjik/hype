@@ -109,7 +109,7 @@ export const FeatureImageInsert = createInsertSchema(featureImage).extend({
     .enum(Object.values(ImageIntent) as [string, ...string[]])
     .prefault(ImageIntent.undefined),
   isPublished: z.boolean().prefault(false),
-  publishedAt: z.string().optional(),
+  publishedAt: z.string().nullish(),
 })
 
 export const FeatureImageUpdate = createUpdateSchema(featureImage)
@@ -370,7 +370,14 @@ export const SetImageIntentSchema = z.object({
   id: z.string().min(1),
   ctxType: ImageContextTypeExtendedSchema,
   ctxId: z.string().min(1),
-  intent: z.string().min(1),
+  intent: z.enum([
+    'canonical',
+    'closeUp',
+    'context',
+    'general',
+    'research',
+    'undefined',
+  ]),
   featureId: z.string().optional(),
   isPublished: z.boolean().optional(),
   meta: ImageRequestMetaSchema,

@@ -7,6 +7,7 @@ import {
 } from '#lib/bits/patterns/forms/formFeatureSectionHeader/index.js'
 import { FormParentSection } from '#lib/bits/patterns/forms/formParentSection/index.js'
 import EraserIcon from 'virtual:icons/proicons/eraser'
+import type { FormParentSectionHeaderContext } from '../formParentSection/formParentSection.types'
 import type { FormFeatureParentSectionProps } from './formFeatureParentSection.types'
 
 let {
@@ -55,7 +56,7 @@ let {
       isSubmitting,
       isResultsVisible,
       onToggleAdding,
-    })}
+    }: FormParentSectionHeaderContext)}
       <FormFeatureSubSectionHeader
         {title}
         {subtitle}

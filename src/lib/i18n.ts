@@ -108,7 +108,7 @@ export function getLocaleOrder(localeKey: LocaleKey): LocaleKey[] {
   return ['zhHans', 'zhHant', 'en']
 }
 
-export function toLocaleKey(locale: Locale | LocaleKey): LocaleKey {
+export function toLocaleKey(locale: string): LocaleKey {
   if (locale === 'en' || locale === 'zhHans' || locale === 'zhHant') return locale
   if (locale === 'zh-hans') return 'zhHans'
   if (locale === 'zh-hant') return 'zhHant'

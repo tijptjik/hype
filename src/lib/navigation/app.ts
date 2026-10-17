@@ -722,7 +722,7 @@ const handleCollectionNavigation = (
   featureId: string,
   baseNavOptions: CollectionNavOptions,
   features: (FeatureFromCollection | Feature)[],
-  collectionTitle: Record<Locale, string>,
+  collectionTitle: Record<LocaleKey, string>,
   additionalNavOptions: CollectionNavOptions = {},
 ): void => {
   // Check if we can switch within the current collection

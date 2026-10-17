@@ -102,8 +102,14 @@ export const getDefaultConstraints = (
 // UTILITY FUNCTIONS
 /* -------- */
 
+/**
+ * Builds a record schema requiring every key in the supplied enum.
+ * @param keysSchema Allowed and required record keys.
+ * @param valueSchema Schema applied to each value.
+ * @returns The required record schema.
+ */
 export function createRequiredObjSchema<K extends string, V extends z.ZodType>(
-  keysSchema: z.ZodEnum<[K, ...K[]]>,
+  keysSchema: z.ZodEnum<Record<K, K>>,
   valueSchema: V,
 ) {
   return z
@@ -115,8 +121,14 @@ export function createRequiredObjSchema<K extends string, V extends z.ZodType>(
 
 // TODO - It looks like this is stripping the validation messages for the default values
 // e.g. organisaiton.name should render as m.admin__validation_name_is_required() but instead renders "required".
-export const getLocales = (
-  model: z.ZodType,
+/**
+ * Builds an optional locale map while preserving each locale model's inferred fields.
+ * @param model Schema for one locale.
+ * @param requiredStringKeys Present string fields that must not be blank.
+ * @returns A nullable map of supported locales to the supplied model.
+ */
+export const getLocales = <T extends z.ZodType>(
+  model: T,
   requiredStringKeys: string[] = ['value', 'label'],
 ) =>
   z

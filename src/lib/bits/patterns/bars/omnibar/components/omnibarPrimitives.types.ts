@@ -82,14 +82,13 @@ export type OmnibarNavigationHeaderProps = Pick<
   OmnibarNavigationProps,
   | 'collectionMetaText'
   | 'featureTitle'
-  | 'hasElevatedChrome'
   | 'isCardOpen'
   | 'isCardOpeningPending'
   | 'showCollectionSwitcher'
   | 'onToggleTray'
   | 'onToggleCard'
   | 'onClose'
->
+> & { hasElevatedChrome: boolean }
 
 export type OmnibarNavigationArrowProps = {
   direction: 'left' | 'right'

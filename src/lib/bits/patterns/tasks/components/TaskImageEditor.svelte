@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '#lib/i18n.js'
 // ADAPTERS
 import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS

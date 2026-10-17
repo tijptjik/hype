@@ -654,7 +654,7 @@ const decompressDeflate = async (bytes: Uint8Array): Promise<Uint8Array | null> 
   }
 
   try {
-    const stream = new Blob([bytes])
+    const stream = new Blob([new Uint8Array(bytes)])
       .stream()
       .pipeThrough(new DecompressionStream('deflate'))
     const buffer = await new Response(stream).arrayBuffer()
@@ -1073,7 +1073,7 @@ const toNormalizedExtractedMetadata = (
     cameraModel: getCameraFromMetadata(parsed.metadata) ?? null,
     capturedAt:
       Object.keys(parsed.metadata).length > 0
-        ? getCapturedAtFromMetadata(parsed.metadata)
+        ? (getCapturedAtFromMetadata(parsed.metadata) ?? null)
         : null,
     credit: getCreditFromMetadata(parsed.metadata) ?? null,
     latitude: coordinates.latitude ?? null,

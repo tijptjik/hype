@@ -656,7 +656,7 @@ export function useImageEditorGalleryModel(
       }) ??
       null
 
-    const uploadStatus = activeItem.status?.uploadStatus
+    const uploadStatus = activeItem?.status?.uploadStatus
     const isBlockedByUpload =
       uploadStatus === 'uploading' || uploadStatus === 'finalizing'
     const isBeingReplaced = imageCtx.isImageBeingReplaced(resolvedImageId)

@@ -46,7 +46,7 @@ export const filterUserFeaturesByHierarchy = (
       if (!localeRecord) return false
 
       return properties.some(prop => {
-        const value = (localeRecord as Record<string, string | null | undefined>)[prop]
+        const value = (localeRecord as Record<string, unknown>)[prop]
         return typeof value === 'string' && value.toLowerCase().includes(searchLower)
       })
     }

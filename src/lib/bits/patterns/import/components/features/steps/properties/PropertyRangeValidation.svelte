@@ -434,10 +434,18 @@ function getIssueText(issue: RangeIssue): string {
   if (issue.reason === 'non-numeric') {
     return 'Not a number'
   }
-  if (issue.reason === 'below-min' && validation?.currentRange.min !== null) {
+  if (
+    issue.reason === 'below-min' &&
+    validation &&
+    validation.currentRange.min !== null
+  ) {
     return m.below_minimum({ min: validation.currentRange.min })
   }
-  if (issue.reason === 'above-max' && validation?.currentRange.max !== null) {
+  if (
+    issue.reason === 'above-max' &&
+    validation &&
+    validation.currentRange.max !== null
+  ) {
     return m.above_maximum({ max: validation.currentRange.max })
   }
   return m.validation_failed()

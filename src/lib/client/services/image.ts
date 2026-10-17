@@ -770,7 +770,13 @@ export function getURLfromImage(opts: {
   }
 
   if (image.cdn === 'cloudflareR2') {
-    const imageBaseUrl = resolveImageAssetBaseUrl(image.env)
+    const imageBaseUrl = resolveImageAssetBaseUrl(
+      image.env === 'production'
+        ? 'production'
+        : image.env === 'preview'
+          ? 'preview'
+          : 'local',
+    )
 
     return `${imageBaseUrl}${toCloudflareImageWorkerPath({
       publicId: image.publicId,
@@ -1170,7 +1176,7 @@ export async function updateImagePresentationMode(options: {
 export function setEntityImagePresentationMode<
   TState extends {
     data?: {
-      image?: { image?: { presentationMode?: 'cover' | 'contain' } | null } | null
+      image?: { image?: { presentationMode?: string | null } | null } | null
     } | null
   } | null,
 >(state: TState, mode: 'cover' | 'contain'): boolean {

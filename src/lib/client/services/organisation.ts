@@ -25,20 +25,58 @@ import type {
   OrganisationSubmitUpdatesParams,
 } from '#lib/db/zod/schema/organisation.types.js'
 
+/**
+ * Converts persisted property locales and nullable values to editable form fields.
+ * @param properties Stored or already editable organisation properties.
+ * @returns Property inputs with all supported locale buckets initialized.
+ */
 function cloneOrganisationProperties(
   properties: OrganisationPropertySource[] | null | undefined,
 ): OrganisationFormInput['data']['properties'] {
-  if (!properties) return []
-  return properties.map((property: OrganisationPropertySource) => ({
-    ...property,
-    i18n: toFormLocaleRecord(property.i18n) as typeof property.i18n,
-    values: Array.isArray(property.values)
-      ? property.values.map(value => ({
+  return (properties ?? []).map(property => {
+    const locales = toFormLocaleRecord<{
+      label: string
+      labelGen?: boolean | 'true' | 'false'
+      placeholder?: string | null
+      placeholderGen?: boolean | 'true' | 'false'
+    }>(property.i18n)
+    // Initialize all editable labels while retaining stored generation flags.
+    const locale = (key: 'en' | 'zhHans' | 'zhHant') => ({
+      label: locales?.[key]?.label ?? '',
+      labelGen: locales?.[key]?.labelGen ?? false,
+      placeholder: locales?.[key]?.placeholder ?? '',
+      placeholderGen: locales?.[key]?.placeholderGen ?? false,
+    })
+    return {
+      ...property,
+      scope:
+        property.scope === 'hub' || property.scope === 'organisation'
+          ? property.scope
+          : 'project',
+      projectId: property.projectId ?? undefined,
+      i18n: { en: locale('en'), zhHans: locale('zhHans'), zhHant: locale('zhHant') },
+      values: property.values?.map(value => {
+        const valueLocales = toFormLocaleRecord<{
+          value: string
+          valueGen?: boolean | 'true' | 'false'
+        }>(value.i18n)
+        // Normalize nullable stored values into editable text.
+        const valueLocale = (key: 'en' | 'zhHans' | 'zhHant') => ({
+          value: valueLocales?.[key]?.value ?? '',
+          valueGen: valueLocales?.[key]?.valueGen ?? false,
+        })
+        return {
           ...value,
-          i18n: toFormLocaleRecord(value.i18n) as typeof value.i18n,
-        }))
-      : property.values,
-  }))
+          value: value.value ?? '',
+          i18n: {
+            en: valueLocale('en'),
+            zhHans: valueLocale('zhHans'),
+            zhHant: valueLocale('zhHant'),
+          },
+        }
+      }),
+    }
+  })
 }
 
 function normalizeOrganisationFormLocale(

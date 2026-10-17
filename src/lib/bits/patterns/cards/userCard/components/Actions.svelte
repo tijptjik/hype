@@ -3,7 +3,6 @@ import { Button, Select } from '#lib/bits/core/index.js'
 import { Card } from '#lib/bits/custom/index.js'
 import { m } from '#lib/i18n.js'
 import Trash2Icon from 'virtual:icons/proicons/delete'
-import type { OrganisationRoleType } from '#lib/enums.js'
 import type { UserCardActionsProps } from '../userCard.types'
 
 let {
@@ -30,7 +29,7 @@ const slotClass = $derived(
 )
 
 function handleRoleChange(nextValue: string): void {
-  onRoleChange?.(nextValue as OrganisationRoleType)
+  onRoleChange?.(nextValue)
 }
 </script>
 

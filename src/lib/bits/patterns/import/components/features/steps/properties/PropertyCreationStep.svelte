@@ -125,7 +125,10 @@ $effect(() => {
 
   const existingData = importCtx.getPropertyEnrichedData(property.key)
   const persistedPropertyId = existingData?.propertyId?.trim()
-  const nextPropertyKind = getInitialPropertyKind(property, existingData?.propertyType)
+  const nextPropertyKind = getInitialPropertyKind(
+    property,
+    existingData?.propertyType === 'display' ? undefined : existingData?.propertyType,
+  )
 
   initialisedPropertyKey = property.key
   propertyId = persistedPropertyId || nanoid()

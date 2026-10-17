@@ -126,7 +126,7 @@ export interface HubOpts {
   id?: string
 }
 
-export interface HubOptsExtended extends Partial<Hub> {
+export interface HubOptsExtended extends Partial<Omit<Hub, 'i18n'>> {
   id?: string
   code?: string
   domain?: string | null

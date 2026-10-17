@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="Role extends string = OrganisationRoleType">
 import { fade } from 'svelte/transition'
 import {
   formSearchHeaderStyles,
@@ -13,13 +13,15 @@ import { OrganisationRoleType } from '#lib/enums.js'
 import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 import TrashIcon from 'virtual:icons/proicons/delete'
 import { UserCard } from '#lib/bits/patterns/cards/userCard/index.js'
-import type { FormUserRolesSectionProps } from './formUserRolesSection.types'
-import type { OrganisationRoleUser } from '#lib/db/zod/schema/organisation.types.js'
+import type {
+  FormUserRolesSectionProps,
+  FormUserRole,
+} from './formUserRolesSection.types'
 import type { User } from '#lib/db/zod/schema/user.types.js'
 
 type UserRoleCardViewModel = {
   userId: string
-  role: OrganisationRoleType
+  role: Role
   name: string | null
   attribution: string | null
   image: string | null
@@ -41,22 +43,25 @@ let {
   isEditing = true,
   isSubmitting = false,
   availableRoles = [
-    { value: OrganisationRoleType.member, label: m.profile__role_type__member() },
-    { value: OrganisationRoleType.owner, label: m.profile__role_type__owner() },
+    {
+      value: OrganisationRoleType.member as Role,
+      label: m.profile__role_type__member(),
+    },
+    { value: OrganisationRoleType.owner as Role, label: m.profile__role_type__owner() },
   ],
   userQueryParams,
   onAddUser,
   onRemoveUser,
   onRoleChange,
   class: className = '',
-}: FormUserRolesSectionProps = $props()
+}: FormUserRolesSectionProps<Role> = $props()
 
 let isConfirmingSelfRemoval = $state(false)
 let pendingSelfRemovalId = $state<string | null>(null)
-let stableRoles = $state<OrganisationRoleUser[]>([])
+let stableRoles = $state<FormUserRole[]>([])
 let displayRoleCards = $state<UserRoleCardViewModel[]>([])
 
-function getUserName(userRole: OrganisationRoleUser): string {
+function getUserName(userRole: FormUserRole): string {
   return userRole.user?.name ?? ''
 }
 
@@ -74,19 +79,17 @@ function toImageSrc(value: unknown): string | null {
   return null
 }
 
-function toUserRoleCardViewModel(
-  userRole: OrganisationRoleUser,
-): UserRoleCardViewModel {
+function toUserRoleCardViewModel(userRole: FormUserRole): UserRoleCardViewModel {
   return {
     userId: userRole.userId,
-    role: userRole.role as OrganisationRoleType,
+    role: userRole.role as Role,
     name: userRole.user?.name ?? null,
     attribution: userRole.user?.attribution ?? null,
     image: toImageSrc(userRole.user?.image),
   }
 }
 
-function isDisplayReadyUserRole(userRole: OrganisationRoleUser): boolean {
+function isDisplayReadyUserRole(userRole: FormUserRole): boolean {
   const name = userRole.user?.name
   if (typeof name !== 'string') return false
 
@@ -256,7 +259,7 @@ $effect(() => {
               roleOptions={availableRoles}
               roleFieldName={roleFieldNameByUserId[userRole.userId]}
               isEditing={isEditing && !isSubmitting}
-              onRoleChange={role => onRoleChange(userRole.userId, role)}
+              onRoleChange={role => onRoleChange(userRole.userId, role as Role)}
               onRemove={() => requestRemoveUser(userRole.userId)}
             />
             <div class="flex size-10 shrink-0 items-center justify-center">

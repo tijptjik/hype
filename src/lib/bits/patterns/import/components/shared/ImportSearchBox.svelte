@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="TValue">
 // BITS
 import { cx } from '#lib/bits/utils.js'
 // COMPONENTS
@@ -24,7 +24,7 @@ let {
   onSelect,
   onInputKeydown,
   onResultKeydown,
-}: ImportSearchBoxProps = $props()
+}: ImportSearchBoxProps<TValue> = $props()
 
 const inputRootClass = $derived(
   cx('input input-bordered w-full pr-10', size === 'sm' ? 'input-sm' : '', inputClass),
@@ -52,7 +52,7 @@ function handleInput(event: Event): void {
   void onInput?.(target.value, event)
 }
 
-function handleSelect(item: ImportSearchBoxItem, event: MouseEvent): void {
+function handleSelect(item: ImportSearchBoxItem<TValue>, event: MouseEvent): void {
   event.preventDefault()
   event.stopPropagation()
   onSelect(item, event)

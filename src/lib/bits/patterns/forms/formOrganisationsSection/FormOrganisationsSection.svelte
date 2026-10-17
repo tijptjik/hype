@@ -1,6 +1,10 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
-import { Search, SectionHeader } from '#lib/bits/custom/index.js'
+import {
+  Search,
+  SectionHeader,
+  SectionHeaderPrimitive,
+} from '#lib/bits/custom/index.js'
 import { getURLfromImage } from '#lib/client/services/image.js'
 import { m } from '#lib/i18n.js'
 import * as FormOrganisationsSectionPrimitive from './components'
@@ -19,6 +23,7 @@ import type {
 let {
   title,
   subtitle,
+  issues = [],
   organisations,
   selections,
   hiddenOrganisationInputAttrs = [],
@@ -162,6 +167,9 @@ $effect(() => {
     description={subtitle}
     class="bits-form__parent-resource-header"
   >
+    {#snippet center()}
+      <SectionHeaderPrimitive.Issues {issues} />
+    {/snippet}
     {#snippet right()}
       <FormOrganisationsSectionPrimitive.Actions
         {isAdding}

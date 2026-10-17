@@ -138,7 +138,14 @@ async function loadValueAppendAccess(propertyId: string): Promise<void> {
       id: propertyId,
       meta: { isAdminRequest: true },
     })
-    valueAppendAccess = result.data || null
+    const access = result.data
+    valueAppendAccess =
+      access &&
+      (access.scope === 'project' ||
+        access.scope === 'organisation' ||
+        access.scope === 'hub')
+        ? { allowed: access.allowed, scope: access.scope }
+        : null
   } catch (error) {
     console.error('ValueMatching: Error loading property value append access:', error)
     valueAppendAccess = null

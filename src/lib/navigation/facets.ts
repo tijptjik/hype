@@ -172,7 +172,7 @@ export const getAdminFacetOrderForResource = (
   if (!visibleFacets) return [...supported]
 
   const isVisible = (facet: FacetType): boolean => {
-    if (visibleFacets instanceof Map || visibleFacets instanceof Set) {
+    if ('has' in visibleFacets) {
       return visibleFacets.has(facet)
     }
     return visibleFacets.includes(facet)

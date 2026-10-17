@@ -2,7 +2,7 @@
 // BITS
 import { Icon } from '#lib/bits/index.js'
 // I18N
-import { getLocale, m } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // ICONS
@@ -17,7 +17,7 @@ let titleInput = $state<HTMLInputElement | null>(null)
 let originalTitle = $state('')
 
 const currentTitle = $derived(
-  appCtx.draft.current?.feature?.i18n?.[getLocale()]?.title?.trim() ?? '',
+  appCtx.draft.current?.feature?.i18n?.[getLocaleKey()]?.title?.trim() ?? '',
 )
 
 $effect(() => {

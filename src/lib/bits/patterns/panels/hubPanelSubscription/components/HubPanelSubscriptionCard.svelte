@@ -51,7 +51,7 @@ let {
     <Button
       text={isMember ? memberText : `${ctaText}${isLoading ? '…' : ''}`}
       color={isMember ? 'success' : 'primary'}
-      style={isMember ? 'soft' : 'solid'}
+      style={isMember ? 'soft' : 'none'}
       modifier="block"
       disabled={isDisabled || isLoading || isMember}
       onClick={() => onJoin?.()}

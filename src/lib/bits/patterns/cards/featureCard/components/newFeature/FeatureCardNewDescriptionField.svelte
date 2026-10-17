@@ -2,7 +2,7 @@
 // BITS
 import { Icon } from '#lib/bits/index.js'
 // I18N
-import { getLocale, m } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // ICONS
@@ -16,7 +16,7 @@ let draftDescription = $state('')
 let descriptionInput = $state<HTMLTextAreaElement | null>(null)
 
 const currentDescription = $derived(
-  appCtx.draft.current?.feature?.i18n?.[getLocale()]?.description?.trim() ?? '',
+  appCtx.draft.current?.feature?.i18n?.[getLocaleKey()]?.description?.trim() ?? '',
 )
 
 $effect(() => {

@@ -27,15 +27,19 @@ import type {
 type SetupRequestEvent = Parameters<typeof setupRequestHandler>[0]
 
 // Only query definitions are shared here; results and authorization remain request-local.
-const refreshableQueries = new Set<RemoteQueryFunction<unknown, unknown>>()
+const refreshableQueries = new Map<unknown, () => Promise<void>>()
 
 /**
  * Registers a native query family for bounded client-requested mutation refreshes.
  * @param remote - Native query function, including batched query families.
  * @returns The unchanged query function.
  */
-function registerQuery<T extends RemoteQueryFunction<unknown, unknown>>(remote: T): T {
-  refreshableQueries.add(remote)
+function registerQuery<Input, Output>(
+  remote: RemoteQueryFunction<Input, Output>,
+): RemoteQueryFunction<Input, Output> {
+  refreshableQueries.set(remote, async () => {
+    await requested(remote, 32).refreshAll()
+  })
   return remote
 }
 
@@ -60,9 +64,7 @@ async function withRequestedRefreshes<T>(write: () => Promise<T>): Promise<T> {
       // Only client-requested active pages refresh, including map filters and saved lists.
       await import('../featureQueries.remote.js')
       // Await async argument validation and refresh registration before Kit collects updates.
-      await Promise.all(
-        Array.from(refreshableQueries, remote => requested(remote, 32).refreshAll()),
-      )
+      await Promise.all(Array.from(refreshableQueries.values(), refresh => refresh()))
     }
   }
 }
@@ -317,7 +319,12 @@ export function guardedForm(
     typeof schemaOrFn !== 'function' &&
     schemaOrFn !== 'unchecked'
   ) {
-    return form(schemaOrFn, async (output, issue) => {
+    // Concrete overloads retain schema input types; this implementation only handles validated output.
+    const schema = schemaOrFn as StandardSchemaV1<
+      Record<string, string>,
+      Record<string, unknown>
+    >
+    return form(schema, async (output, issue) => {
       const ctx = await resolveGuardedContext(output)
       return withRequestedRefreshes(() =>
         maybeFn(output, {

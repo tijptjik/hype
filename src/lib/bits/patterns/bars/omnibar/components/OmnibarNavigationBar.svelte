@@ -48,6 +48,7 @@ const surfaceClasses = $derived(
               featureTitle={navigation.featureTitle}
               {hasElevatedChrome}
               isCardOpen={navigation.isCardOpen}
+              isCardOpeningPending={navigation.isCardOpeningPending}
               showCollectionSwitcher={navigation.showCollectionSwitcher}
               onToggleTray={navigation.onToggleTray}
               onToggleCard={navigation.onToggleCard}
@@ -69,6 +70,7 @@ const surfaceClasses = $derived(
             featureTitle={navigation.featureTitle}
             {hasElevatedChrome}
             isCardOpen={navigation.isCardOpen}
+            isCardOpeningPending={navigation.isCardOpeningPending}
             showCollectionSwitcher={navigation.showCollectionSwitcher}
             onToggleTray={navigation.onToggleTray}
             onToggleCard={navigation.onToggleCard}

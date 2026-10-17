@@ -7,6 +7,7 @@ type SchemaLike = {
   shape?: Record<string, SchemaLike> | (() => Record<string, SchemaLike>)
   element?: SchemaLike
   options?: SchemaLike[]
+  def?: Record<string, unknown>
   _def?: Record<string, unknown>
   [key: string]: unknown
 }

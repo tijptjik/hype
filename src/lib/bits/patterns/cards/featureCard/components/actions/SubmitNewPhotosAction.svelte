@@ -4,7 +4,7 @@ import { tick } from 'svelte'
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { getLocale, m } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
@@ -26,7 +26,7 @@ const imageCtx = getImageCtx()
 
 const attribution = $derived(appCtx.account.user?.attribution || m.anonymous())
 const featureTitle = $derived(
-  feature.i18n?.[getLocale()]?.title ?? feature.i18n?.en?.title ?? feature.id,
+  feature.i18n?.[getLocaleKey()]?.title ?? feature.i18n?.en?.title ?? feature.id,
 )
 
 async function submitNewPhotos(): Promise<void> {

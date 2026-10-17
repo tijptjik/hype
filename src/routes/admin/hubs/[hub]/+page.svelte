@@ -256,7 +256,7 @@ const isPoliciesFacet = $derived(activeFacet === 'policies')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewHubRef = $derived(hubRef === NEW_REF)
-const isCoreHub = $derived(Boolean(hub?.data?.isCore) || hubRef === 'core')
+const isCoreHub = $derived.by(() => hub?.data?.code === 'core' || hubRef === 'core')
 
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewHubRef) return true
@@ -765,7 +765,7 @@ const hubOrganisations = $derived.by(() => {
     (hub?.data?.organisations ?? []).map(org => [org.id, org] as const),
   )
 
-  return formOrganisationValues.flatMap(selection => {
+  return formOrganisationValues.flatMap<HubOrganisationItem>(selection => {
     const baseOrganisation = baseById.get(selection.organisationId)
     if (baseOrganisation) {
       return [
@@ -788,7 +788,7 @@ const hubOrganisations = $derived.by(() => {
         isHubExclusive: selection.isHubExclusive,
       },
     ]
-  }) as Array<Record<string, unknown>>
+  })
 })
 
 const hubLayerItems = $derived.by(() => {
@@ -895,7 +895,7 @@ const imageProviderProps = $derived.by(() => {
       ? {
           ctxType: ImageContextResource.hub,
           ctxId: hubData?.id,
-          hub: hubData,
+          hub: hubData ?? undefined,
         }
       : undefined,
   }
@@ -929,11 +929,11 @@ const canEditHub = $derived(hubPermissions.canEdit)
 const canPublishHub = $derived(hubPermissions.canPublish)
 const canDeleteHub = $derived(hubPermissions.canDelete)
 const canSubmitHub = $derived(isNewHubRef ? canCreateHub : canEditHub)
-const canEditImagePresentationMode = $derived(
-  canSubmitHub && isCurrentRefLoaded && !hub?.data?.isArchived,
+const canEditImagePresentationMode = $derived.by(
+  () => canSubmitHub && isCurrentRefLoaded && !hub?.data?.isArchived,
 )
-const canEditImageDropzone = $derived(
-  canEditHub && isCurrentRefLoaded && !hub?.data?.isArchived,
+const canEditImageDropzone = $derived.by(
+  () => canEditHub && isCurrentRefLoaded && !hub?.data?.isArchived,
 )
 const canSetCoreInclusive = $derived(canSubmitHub)
 const allowedOrganisationIds = $derived.by(() => {
@@ -989,8 +989,8 @@ function revalidateAfterProgrammaticChange(): void {
 }
 
 async function onTranslate(
-  sourceLocale: LocaleKey,
-  targetLocale: LocaleKey,
+  sourceLocale: Locale,
+  targetLocale: Locale,
   sectionKey?: string,
 ): Promise<boolean> {
   const fields =
@@ -1007,7 +1007,7 @@ async function onTranslate(
   return translated
 }
 
-function onResetLocale(targetLocale: LocaleKey, sectionKey?: string): void {
+function onResetLocale(targetLocale: Locale, sectionKey?: string): void {
   const fields =
     sectionKey === 'policies'
       ? translatableI18nFieldsBySection.policies
@@ -1022,7 +1022,8 @@ function onResetLocale(targetLocale: LocaleKey, sectionKey?: string): void {
 
 function onRegeneratePolicies(): void {
   updateFormData(hubEntityUpdaterForm, data => {
-    const legalContactAddress = data.legalContactAddress ?? ''
+    const legalContactAddress =
+      typeof data.legalContactAddress === 'string' ? data.legalContactAddress : ''
     const localesToUpdate: Array<'en' | 'zhHans' | 'zhHant'> = [
       'en',
       'zhHans',
@@ -1343,11 +1344,11 @@ async function onSearchOrganisations(query: string): Promise<HubOrganisationItem
 async function refreshHub(ref: string = hubRef): Promise<HubGetState> {
   if (ref === NEW_REF) return null
   try {
-    return await getHub({
+    return (await getHub({
       ref,
       refKey: 'code',
       meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-    })
+    })) as HubGetState
   } catch {
     return hub ?? committedHub ?? null
   }

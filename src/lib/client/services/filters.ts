@@ -165,11 +165,11 @@ export function matchesResourceTextQuery(
   const candidates = [
     'code' in entity ? entity.code : '',
     'id' in entity ? entity.id : '',
-    textObject?.name,
-    textObject?.title,
-    textObject?.nameShort,
+    textObject && 'name' in textObject ? textObject.name : '',
+    textObject && 'title' in textObject ? textObject.title : '',
+    textObject && 'nameShort' in textObject ? textObject.nameShort : '',
     textObject?.description,
-    textObject?.displayAddress,
+    textObject && 'displayAddress' in textObject ? textObject.displayAddress : '',
     contributor,
   ]
 
@@ -1033,7 +1033,8 @@ function getFilterState<K extends keyof FeatureViewFilters>(
   }
 
   if (filterKey === 'properties' && propertyId) {
-    return getSimpleFilterState(adminCtx, 'properties', propertyId)
+    const value = getSimpleFilterState(adminCtx, 'properties', propertyId)
+    return typeof value === 'boolean' ? value : null
   }
 
   return getResourceFilterState(

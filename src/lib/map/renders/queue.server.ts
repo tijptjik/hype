@@ -16,7 +16,7 @@ import type { MapRenderJob } from '#lib/map/renders/render.types.js'
  * @returns Promise that resolves when the message has been accepted by the queue.
  */
 export const enqueueMapRenderJob = async (
-  queue: { send: (job: MapRenderJob) => Promise<void> },
+  queue: { send: (job: MapRenderJob) => Promise<unknown> },
   job: MapRenderJob,
 ): Promise<void> => {
   await queue.send(job)

@@ -207,7 +207,10 @@ const imageProviderProps = $derived({
   // Content and image context resolve the same selected identity during navigation.
   isValid: Boolean(feature),
   image: feature ? ((feature.image as ImageCtxEnvelope | null) ?? null) : undefined,
-  images: feature ? ((feature.images as ImageCtxEnvelope[] | null) ?? null) : undefined,
+  images:
+    feature && 'images' in feature
+      ? ((feature.images as ImageCtxEnvelope[] | null) ?? null)
+      : undefined,
   context: feature
     ? (() => {
         const hierarchy = appCtx.view.getHierarchySync(feature)

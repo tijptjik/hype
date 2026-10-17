@@ -54,7 +54,7 @@ function toFeatureRowModelSignature({
     .join('|')
 
   const imageSignature = (feature.images ?? [])
-    .map(image => `${image.image?.id ?? ''}:${image.image?.isPublished ?? ''}`)
+    .map(image => `${image.image?.id ?? ''}:${image.isPublished ?? ''}`)
     .join('|')
 
   return [

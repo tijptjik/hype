@@ -1537,7 +1537,8 @@ export class ResourceFilters {
           normalizedQuery,
         )) ||
       task.message?.toLowerCase().includes(normalizedQuery) ||
-      task.contributor?.name?.toLowerCase().includes(normalizedQuery)
+      task.contributor?.name?.toLowerCase().includes(normalizedQuery) ||
+      false
     )
   }
 

@@ -2,7 +2,6 @@ import { cx } from '#lib/bits/utils.js'
 import { getElevatedChromeXGutter, getOmnibarTopGutter } from './Omnibar.layout'
 
 type OmnibarResponsiveLayout = {
-  availableViewportHeight: number
   effectiveAppMainWidth: number
   hasElevatedChrome: boolean
 }
@@ -44,7 +43,7 @@ export function getOmnibarRootClasses({
   availableViewportHeight,
   effectiveAppMainWidth,
   hasElevatedChrome,
-}: OmnibarResponsiveLayout): string {
+}: OmnibarResponsiveLayout & { availableViewportHeight: number }): string {
   const xGutterPx = getElevatedChromeXGutter(effectiveAppMainWidth)
   const topGutterPx = getOmnibarTopGutter(
     effectiveAppMainWidth,

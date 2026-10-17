@@ -386,7 +386,7 @@ const isCurrentRefSettled = $derived(isNewLayerRef || settledLayerRef === layerR
 const translatableI18nFields = ['name', 'nameShort', 'description'] as const
 
 type LayerEditorFormInput = ReturnType<typeof toLayerFormInput>
-type LayerRemoteFormInput = RemoteFormInput & LayerEditorFormInput
+type LayerRemoteFormInput = LayerEditorFormInput
 type LayerFormPayload = LayerRemoteFormInput['data']
 
 /********************

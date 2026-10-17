@@ -14,18 +14,32 @@ type DescriptorFieldConfig = {
 type FormFieldControl = {
   as(type: 'text'): Record<string, unknown>
   as(type: 'hidden', value: string): Record<string, unknown>
-  issues: () => unknown
+  issues: () => import('$app/server').RemoteFormIssue[] | undefined
 }
 
-type DescriptorFormFields = Record<string, FormFieldControl>
+type DescriptorFormFields = Partial<
+  Record<GenAiField | `${GenAiField}Gen`, FormFieldControl>
+>
 type DescriptorForm = {
   fields: {
     value: () => {
       data?: {
-        i18n?: Record<string, Record<string, FormBooleanValue>>
+        i18n?: Record<
+          string,
+          Partial<Record<GenAiField, string | null>> &
+            Partial<Record<`${GenAiField}Gen`, FormBooleanValue>>
+        >
       }
     }
-    set: (value: { i18n?: Record<string, Record<string, FormBooleanValue>> }) => void
+    set: (value: {
+      data?: {
+        i18n?: Record<
+          string,
+          Partial<Record<GenAiField, string | null>> &
+            Partial<Record<`${GenAiField}Gen`, FormBooleanValue>>
+        >
+      }
+    }) => void
   }
 }
 
@@ -54,43 +68,45 @@ let {
 
 {#each fieldConfigs as config (config.key)}
   {@const field = fields[config.key]}
-  {@const genField = fields[`${config.key}Gen`]}
-  {@const attrs = field.as('text')}
-  {@const genValue = getGenAiState(form, locale, config.key)}
-  {@const genAttrs = genField?.as('hidden', genValue ? 'true' : 'false')}
-  {@const required = isRequiredInPreflight(['data', 'i18n', locale, config.key])}
-  {@const issues = field.issues()}
+  {#if field}
+    {@const genField = fields[`${config.key}Gen`]}
+    {@const attrs = field.as('text')}
+    {@const genValue = getGenAiState(form, locale, config.key)}
+    {@const genAttrs = genField?.as('hidden', genValue ? 'true' : 'false')}
+    {@const required = isRequiredInPreflight(['data', 'i18n', locale, config.key])}
+    {@const issues = field.issues()}
 
-  {#if genAttrs}
-    <input {...genAttrs}>
-  {/if}
+    {#if genAttrs}
+      <input {...genAttrs}>
+    {/if}
 
-  {#if config.kind === 'textarea'}
-    <TextArea
-      renderHtml={config.key === 'description'}
-      label={config.label}
-      {locale}
-      isTranslated={true}
-      {required}
-      {isEditing}
-      isGenAI={genValue}
-      onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
-      value={(attrs as { value?: string }).value ?? ''}
-      {issues}
-      textareaAttrs={attrs as Record<string, unknown>}
-    />
-  {:else}
-    <TextInput
-      label={config.label}
-      {locale}
-      isTranslated={true}
-      {required}
-      {isEditing}
-      isGenAI={genValue}
-      onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
-      value={(attrs as { value?: string }).value ?? ''}
-      {issues}
-      inputAttrs={attrs as Record<string, unknown>}
-    />
+    {#if config.kind === 'textarea'}
+      <TextArea
+        renderHtml={config.key === 'description'}
+        label={config.label}
+        {locale}
+        isTranslated={true}
+        {required}
+        {isEditing}
+        isGenAI={genValue}
+        onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
+        value={(attrs as { value?: string }).value ?? ''}
+        {issues}
+        textareaAttrs={attrs as Record<string, unknown>}
+      />
+    {:else}
+      <TextInput
+        label={config.label}
+        {locale}
+        isTranslated={true}
+        {required}
+        {isEditing}
+        isGenAI={genValue}
+        onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
+        value={(attrs as { value?: string }).value ?? ''}
+        {issues}
+        inputAttrs={attrs as Record<string, unknown>}
+      />
+    {/if}
   {/if}
 {/each}

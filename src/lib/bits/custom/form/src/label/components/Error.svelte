@@ -5,7 +5,9 @@ let { issues, class: className = '' }: FormLabelIssuesProps = $props()
 
 const messages = $derived.by(() => {
   if (!issues) return []
-  return issues.map(issue => issue.message).filter(Boolean)
+  return issues
+    .map(issue => (typeof issue === 'string' ? issue : issue.message))
+    .filter(Boolean)
 })
 </script>
 

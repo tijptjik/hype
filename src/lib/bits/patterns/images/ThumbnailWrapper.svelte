@@ -43,7 +43,7 @@ let {
   footer,
 }: ThumbnailWrapperProps = $props()
 
-let trackEl = $state<HTMLDivElement>()
+let trackEl = $state<HTMLElement>()
 let previousItemsLength = $state(0)
 let lastHandledFollowActiveIdRequestKey = $state(0)
 let skipNextActiveScroll = false

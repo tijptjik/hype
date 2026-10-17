@@ -100,6 +100,6 @@ export type FormDataUpdaterForm<T> = {
     value: () => {
       data?: T
     }
-    set: (value: T) => void
+    set: (value: { data?: T }) => void
   }
 }

@@ -29,17 +29,20 @@ type HubOrganisationHiddenInputAttrs = Record<string, unknown>
 type HubLayerDefaultFieldNameResolverForm = {
   fields: {
     data?: {
-      layerDefaults?: Array<{
-        hubId?: {
-          as: (type: 'hidden', value: string) => Record<string, unknown>
+      layerDefaults?: Record<
+        number,
+        {
+          hubId?: {
+            as: (type: 'hidden', value: string) => Record<string, unknown>
+          }
+          layerId?: {
+            as: (type: 'hidden', value: string) => Record<string, unknown>
+          }
+          isDefaultVisible?: {
+            as: (type: 'hidden', value: string) => Record<string, unknown>
+          }
         }
-        layerId?: {
-          as: (type: 'hidden', value: string) => Record<string, unknown>
-        }
-        isDefaultVisible?: {
-          as: (type: 'hidden', value: string) => Record<string, unknown>
-        }
-      }>
+      >
     }
   }
 }
@@ -61,7 +64,7 @@ function normalizeHubSubscriptionService(
 
 function normalizeHubFormLocale(
   root: HubFormRootForDefaults | null | undefined,
-  locale: Partial<HubFormLocale> | null | undefined,
+  locale: { [K in keyof HubFormLocale]?: HubFormLocale[K] | null } | null | undefined,
   localeKey: 'en' | 'zhHans' | 'zhHant',
 ): HubFormLocale {
   return {

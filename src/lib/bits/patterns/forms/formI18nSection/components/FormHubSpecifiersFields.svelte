@@ -5,7 +5,7 @@ import FormSection from './FormSection.svelte'
 
 type HubSpecifiersField = {
   as: (type: 'text') => Record<string, unknown>
-  issues: () => string[]
+  issues: () => import('$app/server').RemoteFormIssue[] | undefined
 }
 
 type HubSpecifiersForm = {

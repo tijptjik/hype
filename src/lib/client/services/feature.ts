@@ -443,7 +443,12 @@ export function getProgrammaticFeatureInputEntries(
  * @returns Contributor-facing user fields or `null` when no user is present.
  */
 export function toCurrentContributorUser(
-  user: CurrentUser | UserProfile | SessionUser | null | undefined,
+  user:
+    | Partial<CurrentUser>
+    | Partial<UserProfile>
+    | Partial<SessionUser>
+    | null
+    | undefined,
 ): {
   id: string | null
   name: string | null
@@ -466,7 +471,12 @@ export function toCurrentContributorUser(
  * @returns Authorization-facing user fields or `null` when no user is present.
  */
 export function toCurrentAuthorizationUser(
-  user: CurrentUser | UserProfile | SessionUser | null | undefined,
+  user:
+    | Partial<CurrentUser>
+    | Partial<UserProfile>
+    | Partial<SessionUser>
+    | null
+    | undefined,
 ): {
   id: string | null
   isAnonymous: boolean | null
@@ -608,7 +618,10 @@ export function getNonTranslatableFeatureFieldItems({
         property.property.values?.map((option: FeaturePropertyValueOption) => ({
           value: option.id,
           label:
-            option.i18n?.[localeKey]?.value ?? option.i18n?.en?.value ?? option.value,
+            option.i18n?.[localeKey]?.value ??
+            option.i18n?.en?.value ??
+            option.value ??
+            option.id,
         })) ?? [],
       onChange: (nextValue: string | boolean) => {
         onChange(property.propertyId, nextValue)

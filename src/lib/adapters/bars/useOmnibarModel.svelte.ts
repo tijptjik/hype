@@ -42,6 +42,7 @@ export function useOmnibarModel(
 } {
   type FeatureNavigationSource =
     | Feature
+    | import('#lib/db/zod/schema/feature.types.js').FeatureFromCollection
     | DeepPartial<NewFeatureTask>['feature']
     | null
     | undefined

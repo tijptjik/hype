@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Header } from '#lib/bits/index.js'
+import { CustomHeader as Header } from '#lib/bits/index.js'
 // ICONS
 import Anchor from 'virtual:icons/proicons/anchor'
 import Cpu from 'virtual:icons/proicons/motherboard'
@@ -16,7 +16,7 @@ import Trophy from 'virtual:icons/proicons/trophy'
 import Wrench from 'virtual:icons/proicons/wrench'
 import Zap from 'virtual:icons/proicons/bolt'
 // TYPES
-import type { HeaderSize } from '#lib/bits/index.js'
+import type { HeaderSize } from '#lib/bits/custom/header/header.types.js'
 
 const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
 </script>

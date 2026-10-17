@@ -1,6 +1,8 @@
 import type { ImageContextEnvelope } from '#lib/db/zod/schema/image.types.js'
 
-export interface HubOrganisationItem {
+export interface HubOrganisationItem extends Record<string, unknown> {
+  assignedHubCode?: string | null
+  isAssignedToOtherHub?: boolean | null
   id: string
   code: string
   i18n?: {
@@ -22,6 +24,7 @@ export interface HubOrganisationSelection {
 export interface FormOrganisationsSectionProps {
   title: string
   subtitle?: string
+  issues?: string[]
   organisations: HubOrganisationItem[]
   selections: HubOrganisationSelection[]
   hiddenOrganisationInputAttrs?: Array<Record<string, unknown>>

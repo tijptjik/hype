@@ -25,7 +25,10 @@ export type ButtonStyle =
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
 export type ButtonModifier = 'wide' | 'block' | 'square' | 'circle'
-export type ButtonTransitionFn = (node: Element, params?: unknown) => TransitionConfig
+export type ButtonTransitionFn = (
+  node: Element,
+  params?: import('svelte/transition').FadeParams,
+) => TransitionConfig
 export type ButtonTransition = 'none' | 'fade' | ButtonTransitionFn
 export type ButtonCssVars = Partial<Record<`--btn-${string}`, string>>
 

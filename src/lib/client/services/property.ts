@@ -270,8 +270,8 @@ export function toggleCategoricalPropertyValue(
   propertyId: Id,
   propertyValueId: Id,
 ): void {
-  const currentSelection =
-    appCtx.filters.values.feature.properties?.[layerId]?.[propertyId] ?? []
+  const filter = appCtx.filters.values.feature.properties?.[layerId]?.[propertyId]
+  const currentSelection = Array.isArray(filter) ? filter : []
   const index = currentSelection.indexOf(propertyValueId)
   let newSelection: string[]
 
@@ -336,36 +336,38 @@ export function setRangePropertyFilter(
   }
   const propertyFilters = appCtx.filters.values.feature.properties
   const layerPropertyFilters = propertyFilters[layerId]
+  const filter = layerPropertyFilters?.[propertyId]
+  const rangeFilter = filter && !Array.isArray(filter) ? filter : undefined
   const nextRangeMin = Math.min(...values)
   const nextRangeMax = Math.max(...values)
 
   // Only update if the values have actually changed to prevent unnecessary reactivity triggers
   if (
-    layerPropertyFilters?.[propertyId]?.rangeMin !== nextRangeMin ||
-    layerPropertyFilters?.[propertyId]?.rangeMax !== nextRangeMax
+    rangeFilter?.rangeMin !== nextRangeMin ||
+    rangeFilter?.rangeMax !== nextRangeMax
   ) {
     // Ensure the layer object exists
     propertyFilters[layerId] ??= {}
 
     // Get the existing range filter or find the property definition to get global min/max
-    const existingRangeFilter = propertyFilters[layerId]?.[propertyId] || {}
+    const existingRangeFilter = rangeFilter
 
     // If globalMin/globalMax are missing, find them from the property definition
-    let globalMin = existingRangeFilter.globalMin
-    let globalMax = existingRangeFilter.globalMax
+    let globalMin = existingRangeFilter?.globalMin
+    let globalMax = existingRangeFilter?.globalMax
 
     if (globalMin === undefined || globalMax === undefined) {
       // Find the property definition to get the global min/max
       const property = appCtx.cache.property.get(propertyId)
       if (property) {
-        globalMin = property.min
-        globalMax = property.max
+        globalMin = property.min ?? undefined
+        globalMax = property.max ?? undefined
       }
     }
 
     propertyFilters[layerId][propertyId] = {
-      globalMin,
-      globalMax,
+      globalMin: globalMin ?? nextRangeMin,
+      globalMax: globalMax ?? nextRangeMax,
       rangeMin: nextRangeMin,
       rangeMax: nextRangeMax,
     }
@@ -400,7 +402,7 @@ function rerankPropertiesByType(
   const propsOfType = properties.filter(
     property => property.type === fieldDiscriminator,
   )
-  propsOfType.sort((a, b) => a.rank - b.rank)
+  propsOfType.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
   propsOfType.forEach((property, index) => {
     property.rank = index
   })
@@ -519,15 +521,15 @@ function getFirstAvailablePropertyValueText(
   const fallback = Object.values(
     (value.i18n as WritableI18nRecord | undefined) ?? {},
   ).find(entry => typeof entry?.value === 'string' && entry.value.trim().length > 0)
-  return fallback?.value ?? ''
+  return typeof fallback?.value === 'string' ? fallback.value : ''
 }
 
-function reorderRankedItems<T extends { id: Id; rank: number }>(
+function reorderRankedItems<T extends { id: Id; rank?: number }>(
   items: T[],
   itemId: Id,
   targetIndex: number,
 ): T[] | null {
-  const sorted = [...items].sort((a, b) => a.rank - b.rank)
+  const sorted = [...items].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
   const currentIndex = sorted.findIndex(item => item.id === itemId)
   if (currentIndex < 0 || targetIndex < 0 || targetIndex >= sorted.length) return null
   if (currentIndex === targetIndex) return null
@@ -660,7 +662,7 @@ export function getPropertiesByType(
 ): Property[] {
   return (properties || [])
     .filter(property => property.type === fieldDiscriminator)
-    .sort((a, b) => a.rank - b.rank)
+    .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
 }
 
 export function getCurrentProjectProperties(
@@ -846,6 +848,9 @@ export function addProjectPropertyForType(
     hubId: options?.hubId ?? null,
     scope,
     isDefaultEnabled: options?.isDefaultEnabled ?? false,
+    isUserContributable: false,
+    createdAt: new Date().toISOString(),
+    modifiedAt: new Date().toISOString(),
     isEnabled: true,
     type: fieldDiscriminator,
     key: createPropertyKey(),
@@ -892,7 +897,7 @@ export function removeProjectProperty(
     )
     if (propertyIndex < 0) return
     currentProperties.splice(propertyIndex, 1)
-    const ordered = [...currentProperties].sort((a, b) => a.rank - b.rank)
+    const ordered = [...currentProperties].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
     ordered.forEach((property, index) => {
       property.rank = index
     })
@@ -909,7 +914,7 @@ export function changeProjectPropertyRank(
     const relevantProps = allProperties.filter(
       property => property.type === fieldDiscriminator,
     )
-    const ordered = [...relevantProps].sort((a, b) => a.rank - b.rank)
+    const ordered = [...relevantProps].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
     const currentIndex = ordered.findIndex(property => property.id === propertyIdToMove)
     if (currentIndex < 0) return
     const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
@@ -930,7 +935,7 @@ export function changeProjectPropertyRankUnified(
   direction: 'up' | 'down',
 ): void {
   mutatePropertyFormData(form, allProperties => {
-    const ordered = [...allProperties].sort((a, b) => a.rank - b.rank)
+    const ordered = [...allProperties].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
     const currentIndex = ordered.findIndex(property => property.id === propertyIdToMove)
     if (currentIndex < 0) return
     const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
@@ -1471,6 +1476,7 @@ export function getFeatureIdsForProperties(appCtx: ResourceViewCtx): Id[] {
           property.type === 'classifier' &&
           property.component === 'RangeField'
         ) {
+          if (Array.isArray(filterValue)) return false
           // If the range filter is set in the globalMin/Max range we should not fail any features
           if (
             filterValue.rangeMin === filterValue.globalMin &&
@@ -1541,7 +1547,7 @@ export function getFeatureCardDisplayProperties(
   const layerProperties =
     layer.properties
       ?.filter(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId)
+        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
         return (
           property &&
           (property.type === 'classifier' || property.type === 'specifier') &&
@@ -1550,7 +1556,7 @@ export function getFeatureCardDisplayProperties(
         )
       })
       .map(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId)
+        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
         return {
           property,
           propertyId: layerProp.propertyId,
@@ -1610,7 +1616,7 @@ export function getFeatureCardEditableProperties(
   const layerProperties =
     layer.properties
       ?.filter(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId)
+        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
         return (
           property &&
           (property.type === 'classifier' || property.type === 'specifier') &&
@@ -1620,7 +1626,7 @@ export function getFeatureCardEditableProperties(
         )
       })
       .map(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId)
+        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
         return {
           property,
           propertyId: layerProp.propertyId,
@@ -1788,7 +1794,13 @@ export function updateFeatureI18nProperty(
     if (!existingProperty.i18n) {
       existingProperty.i18n = {}
     }
-    existingProperty.i18n[locale] = { locale, value, valueGen }
+    existingProperty.i18n[toLocaleKey(locale)] = {
+      featureId: existingProperty.featureId ?? '',
+      propertyId,
+      locale,
+      value,
+      valueGen,
+    }
   } else {
     // Create new property with i18n
     updateNewFeatureProperty(appCtx, propertyId, {
@@ -1820,9 +1832,9 @@ export function updateNewFeatureProperty(
   }
 
   const currentProperties = appCtx.draft.current.feature.properties
-  const propIndex = currentProperties.findIndex(p => p.propertyId === propertyId)
+  const propIndex = currentProperties.findIndex(p => p?.propertyId === propertyId)
 
-  let updatedProperties: UserContributedFeatureProperty[]
+  let updatedProperties: typeof currentProperties
 
   if (propIndex >= 0) {
     // Update existing property
@@ -1876,7 +1888,7 @@ export function updateNewFeatureI18nProperty(
   const properties = appCtx.draft.current?.feature?.properties
   if (!properties) return
 
-  const propIndex = properties.findIndex(p => p.propertyId === propertyId)
+  const propIndex = properties.findIndex(p => p?.propertyId === propertyId)
   if (propIndex < 0) return
 
   const targetProperty = properties[propIndex]

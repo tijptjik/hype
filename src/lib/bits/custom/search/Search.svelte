@@ -112,7 +112,7 @@ async function handleQuery(
                 }
               : { q: trimmedQuery },
           )
-        ).data as T[])
+        ).data as unknown as T[])
     if (currentRequestId !== requestId) return
     const nextResults = normalizeItems(response)
     if (trimmedQuery.length === 0) {

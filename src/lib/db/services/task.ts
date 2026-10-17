@@ -979,12 +979,18 @@ export const processTaskImagesDB = async (
 
 /**
  * Extracts files from FormData object.
+ * @param formData Submitted photo fields.
+ * @returns File entries whose field names start with photo_.
+ * @remarks Text values are ignored even when they use a photo field name.
  */
 export function getImagesFromFormData(formData: FormData): File[] {
   const photoEntries = Array.from(formData.entries()).filter(([key]) =>
     key.startsWith('photo_'),
   )
-  return photoEntries.map(([_, fileValue]) => fileValue as File)
+  return photoEntries.flatMap(([, fileValue]) => {
+    const value: unknown = fileValue
+    return value instanceof File ? [value] : []
+  })
 }
 
 /**

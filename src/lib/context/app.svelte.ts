@@ -91,7 +91,9 @@ export class AppCtx {
   }
 
   // Public map visibility is a surface projection of resource query results.
-  featuresVisible: Id[] = $derived(this.getVisibleFeatures().map(row => row.id))
+  featuresVisible: Id[] = $derived.by(() =>
+    this.getVisibleFeatures().map(row => row.id),
+  )
 
   /** @returns IDs visible in the current public map viewport. */
   getVisibleFeatureIds = (): Id[] => this.featuresVisible

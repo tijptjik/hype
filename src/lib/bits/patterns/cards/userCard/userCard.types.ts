@@ -1,5 +1,3 @@
-import type { OrganisationRoleType } from '#lib/enums.js'
-
 export interface UserCardWrapperProps {
   class?: string
   isAnimated?: boolean
@@ -22,17 +20,17 @@ export interface UserCardBodyProps {
 }
 
 export interface UserCardActionsRoleOption {
-  value: OrganisationRoleType
+  value: string
   label: string
 }
 
 export interface UserCardActionsProps {
-  selectedRole: OrganisationRoleType
+  selectedRole: string
   roleOptions: UserCardActionsRoleOption[]
   roleFieldName?: string
   isRemoving?: boolean
   isEditing?: boolean
-  onRoleChange?: (nextRole: OrganisationRoleType) => void
+  onRoleChange?: (nextRole: string) => void
   onRemove?: () => void
   class?: string
 }

@@ -26,6 +26,8 @@ export type ThumbnailButtonProps = {
   size?: number | string
   rounded?: string
   isActive?: boolean
+  isHighlighted?: boolean
+  highlightClass?: string
   isLoading?: boolean
   isBlurred?: boolean
   isGreyscale?: boolean

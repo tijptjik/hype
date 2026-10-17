@@ -81,7 +81,7 @@ function handleLayerResolutionSearchInput(query: string): void {
   importCtx.setLayerResolutionSearchResults(new Map(nextSearchResults))
 }
 
-function handleLayerResolutionSelect(item: ImportSearchBoxItem): void {
+function handleLayerResolutionSelect(item: ImportSearchBoxItem<LayerLike>): void {
   const layerResolution = importCtx.getLayerResolution()
   const nextResolutions = selectLayerForResolution(
     invalidValue,

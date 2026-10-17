@@ -4,7 +4,7 @@ import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 // TYPES
 import type { Prisms } from '#lib/types.js'
 import type { FilteredResources } from '#lib/client/services/filters.types.js'
-import type { Cache } from './cache.types.js'
+import type { Cache, CachedEntity } from './cache.types.js'
 import type { ResourceClient } from '#lib/resources/resourceClient.svelte.js'
 import type { AccountState } from './account.svelte.js'
 import type { FeatureQueryChannel } from './featureQuery.types.js'
@@ -26,9 +26,9 @@ export interface ResourceQueryDependencies {
   prisms: () => Prisms
   roleScope: () => string
   isAdmin: () => boolean
-  retain: <K extends keyof Cache>(
+  retain: <K extends Exclude<keyof Cache, 'stats'>>(
     resource: K,
-    rows: Array<Cache[K] extends Map<string, infer T> ? T : never>,
+    rows: Array<CachedEntity<K>>,
   ) => void
   featuresChanged: (rows: FeatureFromCollection[]) => void
   afterLayers: (cascade: boolean, autoSelect: boolean, scope?: string) => Promise<void>

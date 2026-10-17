@@ -46,7 +46,10 @@ type LayerTranslatableField = 'name' | 'nameShort' | 'description'
 type LayerLike = {
   id?: string
   code?: string
-  i18n?: Record<string, { name?: string | null; description?: string | null }> | null
+  i18n?: Record<
+    string,
+    { name?: string | null; description?: string | null } | null | undefined
+  > | null
 }
 
 type DynamicRecord = Record<string, unknown>
@@ -198,7 +201,7 @@ export async function validateLayerById(
 ): Promise<boolean> {
   try {
     const layers = await preloadLayers(projectId)
-    return layers.some(layer => layer.id === layerId || layer.code === layerId)
+    return layers.some(layer => layer.id === layerId)
   } catch (error) {
     console.error('Error validating layer by ID:', error)
     return false
@@ -215,7 +218,7 @@ export async function validateLayerByName(
 
     // Search through the layers to find one with matching name in the specified locale
     for (const layer of layers) {
-      const layerName_i18n = layer.i18n?.[locale]?.name
+      const layerName_i18n = layer.i18n?.[toLocaleKey(locale as Locale)]?.name
       if (layerName_i18n && layerName_i18n.toLowerCase() === layerName.toLowerCase()) {
         return { isValid: true, layerId: layer.id }
       }
@@ -237,7 +240,14 @@ export function handleLayerSearchFocus(allLayers: Layer[]): Layer[] {
   return allLayers
 }
 
-export function selectLayer(layer: LayerLike): { layer: LayerLike; layerId: string } {
+/**
+ * Selects an identified layer without erasing its loaded fields.
+ * @param layer Layer selected from search results.
+ * @returns The original layer and its required identifier.
+ */
+export function selectLayer<T extends LayerLike>(
+  layer: T,
+): { layer: T; layerId: string } {
   if (!layer.id) throw new Error('Cannot select a layer without an id')
   return { layer, layerId: layer.id }
 }
@@ -366,9 +376,9 @@ function toLayerFormI18n(i18n: unknown): {
     'Imported Layer'
 
   return {
-    en: normalizeLayerFormLocale(localeMap.en, fallbackName),
-    zhHant: normalizeLayerFormLocale(localeMap.zhHant, fallbackName),
-    zhHans: normalizeLayerFormLocale(localeMap.zhHans, fallbackName),
+    en: normalizeLayerFormLocale(localeMap.en, String(fallbackName)),
+    zhHant: normalizeLayerFormLocale(localeMap.zhHant, String(fallbackName)),
+    zhHans: normalizeLayerFormLocale(localeMap.zhHans, String(fallbackName)),
   }
 }
 
@@ -443,7 +453,7 @@ function getLayerReferences(
 
     for (const col of layerColumnRefs) {
       const value = row[col.index]?.trim()
-      if (!value) continue
+      if (!value || !col.field) continue
       parts.push({
         field: col.field,
         value,
@@ -508,7 +518,7 @@ function getLayerReferenceForRow(
 
   for (const col of layerColumnIndices) {
     const value = row[col.index]?.trim()
-    if (!value) continue
+    if (!value || !col.field) continue
     parts.push({
       field: col.field,
       value,

@@ -419,7 +419,7 @@ $effect(() => {
       reviewReason: task.reviewReason ?? null,
     })
   } else {
-    headerCtrl.setTaskActionContent(null)
+    headerCtrl.setTaskActionContent(null, {})
   }
 
   headerCtrl.clearControlBar()
@@ -587,12 +587,14 @@ const imageProviderModel = useImageProviderModel(
 />
 
 <ImageProvider model={imageProviderModel}>
-  <TaskEditor
-    {task}
-    {assignableLayers}
-    {canReassignLayer}
-    {isLayerBusy}
-    onReview={handleReview}
-    onReassignLayer={handleReassignLayer}
-  />
+  {#if task}
+    <TaskEditor
+      {task}
+      {assignableLayers}
+      {canReassignLayer}
+      {isLayerBusy}
+      onReview={handleReview}
+      onReassignLayer={handleReassignLayer}
+    />
+  {/if}
 </ImageProvider>

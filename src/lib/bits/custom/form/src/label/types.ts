@@ -1,5 +1,5 @@
 export type FormIssueValue =
-  | Array<{ message: string; path?: Array<string | number> }>
+  | Array<string | { message: string; path?: Array<string | number> }>
   | null
   | undefined
 

@@ -171,7 +171,10 @@ import type {
   OrganisationRoleUser,
 } from '#lib/db/zod/schema/organisation.types.js'
 
-import type { CapabilityFormFields, CapabilitySearchOption } from '#lib/bits/index.js'
+import type {
+  CapabilityFormFields,
+  CapabilitySearchOption,
+} from '#lib/bits/patterns/capabilities/organisationCapabilities/index.js'
 
 // § Context
 const adminCtx = getAdminCtx()
@@ -925,10 +928,7 @@ const canEditImageDropzone = $derived(
   canEditOrganisation && isCurrentRefLoaded && !optimisticOrganisationData?.isArchived,
 )
 const isFormReady = $derived(
-  Boolean(
-    formCtx.form?.fields &&
-      (isNewOrganisationRef || (isCurrentRefLoaded && organisation?.data)),
-  ),
+  Boolean(formCtx.form?.fields && (isNewOrganisationRef || isCurrentRefLoaded)),
 )
 
 const hasProfileLoadFailed = $derived(
@@ -1219,7 +1219,10 @@ $effect(() => {
         .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
         .join('|')
     : Array.from(displayFacets.entries())
-        .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
+        .map(
+          ([facet, config]) =>
+            `${facet}:${typeof config !== 'string' && config.hasIssues ? '1' : '0'}`,
+        )
         .join('|')
 
   const headerKey = `${organisationRef}:${title}:${facetKey}`
@@ -1506,10 +1509,11 @@ $effect(() => {
           {capabilityLabelsByKey}
           formCapabilityFields={formCtx.form.fields.data
             .capabilities as CapabilityFormFields}
-          emptyCapabilitiesInputAttrs={formCtx.form.fields.data.capabilities.as(
-            'hidden',
-            '{}',
-          )}
+          emptyCapabilitiesInputAttrs={(
+            formCtx.form.fields.data.capabilities as unknown as {
+              as(type: 'hidden', value: string): Record<string, unknown>
+            }
+          ).as('hidden', '{}')}
           {shouldSubmitEmptyCapabilities}
           {capabilityIssues}
           {isRequiredInPreflight}

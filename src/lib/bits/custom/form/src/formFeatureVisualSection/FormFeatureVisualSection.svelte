@@ -88,7 +88,7 @@ const rootClass = $derived(
     {:else}
       <UserAttributionCard
         userId={contributorId}
-        date={createdAt}
+        date={createdAt ?? undefined}
         type="contributor"
         isOpen={true}
       />

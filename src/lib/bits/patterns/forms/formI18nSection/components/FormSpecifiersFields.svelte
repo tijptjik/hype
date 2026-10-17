@@ -5,15 +5,15 @@ import { TextInput, SectionHeader } from '#lib/bits/custom/form/index.js'
 import FormSection from './FormSection.svelte'
 
 type FormFieldControl = {
-  as: (type: string) => Record<string, unknown>
-  issues: () => unknown
+  as: (type: 'text' | 'url') => Record<string, unknown>
+  issues: () => import('$app/server').RemoteFormIssue[] | undefined
 }
 
 type SpecifiersForm = {
   fields: {
     data: {
       code: FormFieldControl
-      url: FormFieldControl
+      url?: FormFieldControl
     }
   }
 }
@@ -42,10 +42,10 @@ const codeRequired = $derived(isRequiredInPreflight(['data', 'code']))
 const codeIssues = $derived(form.fields.data.code.issues())
 
 const urlInputAttrs = $derived(
-  showUrl ? form.fields.data.url.as('url') : ({} as Record<string, unknown>),
+  showUrl ? form.fields.data.url?.as('url') : ({} as Record<string, unknown>),
 )
 const urlRequired = $derived(showUrl ? isRequiredInPreflight(['data', 'url']) : false)
-const urlIssues = $derived(showUrl ? form.fields.data.url.issues() : undefined)
+const urlIssues = $derived(showUrl ? form.fields.data.url?.issues() : undefined)
 </script>
 
 <section class="bits-form__section">

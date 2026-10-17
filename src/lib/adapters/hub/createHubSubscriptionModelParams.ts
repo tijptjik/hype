@@ -75,9 +75,10 @@ export function getSubscriptionFeatureImages(
 
   for (const feature of features) {
     const primaryImage = (feature.image as ImageCtxEnvelope | null | undefined) ?? null
-    const galleryImages = Array.isArray(feature.images)
-      ? (feature.images as ImageCtxEnvelope[])
-      : []
+    const galleryImages =
+      'images' in feature && Array.isArray(feature.images)
+        ? (feature.images as ImageCtxEnvelope[])
+        : []
 
     if (primaryImage) {
       images.push(primaryImage)

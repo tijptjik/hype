@@ -238,7 +238,8 @@ export const HubEntityFormData = z
     domain: z.union([z.literal(''), z.string().min(3).max(255)]),
     legalContactAddress: z
       .preprocess(
-        value => (typeof value === 'string' ? value.trim() : value),
+        (value: string | undefined) =>
+          typeof value === 'string' ? value.trim() : value,
         z.union([z.literal(''), z.string().email().max(512)]),
       )
       .optional()

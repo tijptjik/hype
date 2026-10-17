@@ -12,7 +12,6 @@ import type {
 } from '#lib/types.js'
 import type { PreviewStage } from '#lib/map/renders/render.types.js'
 import type { FormFieldDefinition } from '#lib/client/services/formFields.types.js'
-import type { Form, FeatureForm } from '#lib/client/services/form.types.js'
 import type { Task } from '#lib/db/zod/schema/task.types.js'
 
 export {
@@ -126,7 +125,7 @@ export const isNotLocale = (maybeLocale: LocaleExtended) => {
 export const genField = (fieldRoot: Field) => `${fieldRoot}Gen` as Field
 
 export const getValues = (
-  form: Form['form'],
+  form: Record<string, unknown>,
   field: FormFieldDefinition,
   locale: LocaleExtended,
   fieldRoot: Field,
@@ -141,13 +140,19 @@ export const getValues = (
     ref = form
     key = fieldRoot
   } else if (field.isArray && !field.isNested) {
-    ref = form[fieldRoot][fieldIndex]
+    const values = form[fieldRoot]
+    if (!Array.isArray(values)) return
+    ref = values[fieldIndex]
     key = fieldKey
   } else if (field.isNested && !field.isTranslated) {
-    ref = form[fieldRoot][fieldIndex]
+    const values = form[fieldRoot]
+    if (!Array.isArray(values)) return
+    ref = values[fieldIndex]
     key = fieldKey
   } else if (field.isNested && field.isTranslated) {
-    const baseRef = form[fieldRoot][fieldIndex]
+    const values = form[fieldRoot]
+    if (!Array.isArray(values)) return
+    const baseRef = values[fieldIndex]
     // Initialize i18n structure if it doesn't exist
     if (!baseRef.i18n) {
       baseRef.i18n = {}
@@ -161,15 +166,16 @@ export const getValues = (
     key = fieldKey
   } else if (field.isTranslated) {
     // Initialize i18n structure if it doesn't exist
-    if (!form.i18n) {
+    if (!form.i18n || typeof form.i18n !== 'object') {
       form.i18n = {}
     }
-    if (!form.i18n[locale as Locale]) {
-      form.i18n[locale as Locale] = {
+    const translations = form.i18n as Record<string, Record<string, unknown>>
+    if (!translations[locale as Locale]) {
+      translations[locale as Locale] = {
         locale: locale as Locale, // Ensure locale field is set
       }
     }
-    ref = form.i18n[locale as Locale]
+    ref = translations[locale as Locale]
     key = fieldRoot
   } else {
     console.error('NO FIELD REFERENCE FOUND', field)
@@ -186,7 +192,7 @@ export const getValues = (
 }
 
 export const updateFeaturePropertyValue = (
-  form: FeatureForm['form'],
+  form: Writable<Exclude<Resource, Task>>,
   fieldRoot: Field,
   fieldIndex: number,
   value: string | null,
@@ -204,7 +210,7 @@ export const updateFeaturePropertyValue = (
 }
 
 export const getFeaturePropertyComplexValue = (
-  form: FeatureForm['form'],
+  form: Writable<Exclude<Resource, Task>>,
   fieldRoot: Field,
   fieldIndex: number,
   value: string | null,

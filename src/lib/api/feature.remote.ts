@@ -88,6 +88,7 @@ import type {
 import type {
   FeatureCommandProbe,
   FeatureDB,
+  FeatureQueryRowByProfile,
   FeatureEntityByProfile,
   FeatureGetParamsByProfile,
   FeatureListByProfile,
@@ -587,9 +588,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   const currentWithRelations = requireValue(
-    await loadFeature(
+    await loadFeature<FeatureQueryRowByProfile<'admin'>>(
       db,
-      getFeatureWithRelations('admin') as never,
+      getFeatureWithRelations('admin'),
       [eq(feature.id, current.id)],
       {
         ...ctx.event.locals.hub,

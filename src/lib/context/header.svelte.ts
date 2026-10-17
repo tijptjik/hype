@@ -146,7 +146,7 @@ export class HeaderCtrl {
    */
   setFacets(
     facets:
-      | Map<
+      | ReadonlyMap<
           string,
           | string
           | {
@@ -203,11 +203,14 @@ export class HeaderCtrl {
    * @param props - Props passed to the inline content component.
    * @returns void
    */
-  setTaskActionContent(
-    component: HeaderLayoutRegionConfig['component'],
-    props: HeaderLayoutRegionConfig['props'] = {},
+  setTaskActionContent<Props extends Record<string, unknown>>(
+    component: Component<Props> | null,
+    props: Props,
   ): void {
-    const next = component ? { component, props } : null
+    // Validate props before erasing their type for dynamic rendering.
+    const next = component
+      ? { component: component as unknown as Component<Record<string, unknown>>, props }
+      : null
     if (
       untrack(() => isSameLayoutRegionConfig(this.state.meta.taskActionContent, next))
     )
@@ -282,7 +285,7 @@ export class HeaderCtrl {
   setHeaderForEntity(
     title: string,
     icon: Component,
-    facets: Map<
+    facets: ReadonlyMap<
       string,
       | string
       | {
@@ -411,11 +414,14 @@ export class HeaderCtrl {
    * @param props - Props passed to the footer component.
    * @returns void
    */
-  setFooter(
-    component: HeaderLayoutRegionConfig['component'],
-    props: HeaderLayoutRegionConfig['props'] = {},
+  setFooter<Props extends Record<string, unknown>>(
+    component: Component<Props> | null,
+    props: Props,
   ): void {
-    const next = component ? { component, props } : null
+    // Validate props at registration, then erase their type for dynamic rendering.
+    const next = component
+      ? { component: component as unknown as Component<Record<string, unknown>>, props }
+      : null
     if (untrack(() => isSameLayoutRegionConfig(this.state.layout.footer, next))) return
     this.state.layout.footer = next
   }
@@ -499,7 +505,7 @@ export class HeaderCtrl {
   private applyEntityMeta(
     title: string,
     icon: Component,
-    facets: Map<
+    facets: ReadonlyMap<
       string,
       | string
       | {
@@ -547,7 +553,7 @@ export class HeaderCtrl {
    */
   private normalizeFacetItems(
     facets:
-      | Map<
+      | ReadonlyMap<
           string,
           | string
           | {

@@ -18,6 +18,6 @@ export type FormLocaleInput<TForm extends I18nFormInputShape> =
   TForm['data']['i18n'][FormLocaleKey<TForm>]
 
 export type FormLocaleSource<TForm extends I18nFormInputShape> =
-  | Partial<FormLocaleInput<TForm>>
+  | { [K in keyof FormLocaleInput<TForm>]?: FormLocaleInput<TForm>[K] | null }
   | null
   | undefined

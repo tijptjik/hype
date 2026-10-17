@@ -2,7 +2,7 @@
 // BITS
 import { Icon } from '#lib/bits/index.js'
 // I18N
-import { getLocale, m } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // ENUMS
@@ -19,7 +19,7 @@ let draftAddress = $state('')
 let addressInput = $state<HTMLInputElement | null>(null)
 
 const currentAddress = $derived(
-  appCtx.draft.current?.feature?.i18n?.[getLocale()]?.displayAddress?.trim() ?? '',
+  appCtx.draft.current?.feature?.i18n?.[getLocaleKey()]?.displayAddress?.trim() ?? '',
 )
 
 $effect(() => {

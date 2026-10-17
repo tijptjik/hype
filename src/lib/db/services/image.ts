@@ -198,7 +198,7 @@ export const createFeatureImage = async (
  */
 export const updateFeatureImage = async (
   db: Database,
-  modifiedFeatureImage: ImageDBFlatUpdate,
+  modifiedFeatureImage: Omit<ImageDBFlatUpdate, 'imageId'>,
   imageId: string,
 ): Promise<FeatureImageDB> => {
   // Extract only the featureImage-specific fields

@@ -1,4 +1,4 @@
-import type { ParentSectionProjectItem } from '#lib/bits/index.js'
+import type { ParentSectionProjectItem } from '#lib/bits/patterns/forms/formParentSection/formParentSection.types.js'
 import { getI18n, m, normalizeI18nLocaleRecord, toFormLocaleRecord } from '#lib/i18n.js'
 import {
   resolveLayerActionPermissions,

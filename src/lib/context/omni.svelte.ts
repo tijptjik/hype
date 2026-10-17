@@ -925,7 +925,9 @@ export class OmniCtx {
       ...current,
       ...(descriptor.kind === 'neighbourhood'
         ? {
-            i18n: this.toNeighbourhoodCollection(descriptor.ref, rows).i18n,
+            i18n:
+              this.toNeighbourhoodCollection(descriptor.ref, rows)?.i18n ??
+              current.i18n,
           }
         : {}),
       items: rows,

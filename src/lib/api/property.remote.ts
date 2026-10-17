@@ -581,6 +581,7 @@ export const createProjectProperty = guardedCommand(
       throw error(403, toAuthMessage(writeDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
 
+    const projectId = data.projectId
     const existingPropertyWithKey = await retryBusyRead(() =>
       db
         .select({ id: property.id })
@@ -588,7 +589,7 @@ export const createProjectProperty = guardedCommand(
         .where(
           and(
             eq(property.scope, 'project'),
-            eq(property.projectId, data.projectId),
+            eq(property.projectId, projectId),
             eq(property.key, data.key),
           ),
         )

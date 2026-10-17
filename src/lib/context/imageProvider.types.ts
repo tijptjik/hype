@@ -20,9 +20,9 @@ export type NormalizedImageUploadAsset = {
 export interface ImageContextConfig {
   ctxType?: ImageContextResource
   ctxId?: Id
-  hub?: HubDB
-  organisation?: OrganisationDB
-  project?: ProjectDB
+  hub?: Pick<HubDB, 'id' | 'code'>
+  organisation?: Pick<OrganisationDB, 'id' | 'code'>
+  project?: Pick<ProjectDB, 'id' | 'code' | 'organisationId'> | null
   ctxTypeSecondary?: ImageContextResourceExtended
   ctxIdSecondary?: Id
 }

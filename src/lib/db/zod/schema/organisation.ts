@@ -220,7 +220,8 @@ export const OrganisationI18nByLocaleFormData = z.object({
 })
 
 export const OrganisationUserRolesFormData = z.preprocess(
-  value => (value === undefined || value === null ? [] : value),
+  (value: z.input<typeof OrganisationRoleFormData>[] | undefined) =>
+    value === undefined || value === null ? [] : value,
   z
     .array(OrganisationRoleFormData)
     .refine(schema => schema.length > 0, m.admin__validation_user_roles_add_user())

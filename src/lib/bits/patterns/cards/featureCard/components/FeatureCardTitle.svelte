@@ -46,7 +46,7 @@ const gradePropertyId: Id = $derived(
   appCtx.cache.layer
     .get(feature.layerId)
     ?.properties?.find((property: LayerPropertyAdminProfile) => {
-      const resolved = appCtx.cache.property.get(property.propertyId)
+      const resolved = appCtx.cache.property.get(property.propertyId ?? '')
       return resolved?.key === 'grade'
     })?.propertyId as Id,
 )
