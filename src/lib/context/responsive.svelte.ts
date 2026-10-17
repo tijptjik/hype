@@ -1,6 +1,7 @@
 // SVELTE
 import { getContext, hasContext, setContext } from 'svelte'
 // LIB
+import { hasElevatedChrome } from '#lib/layout/chrome.js'
 import {
   getMenuClearanceHeight,
   getMenuReservedHeight,
@@ -10,14 +11,6 @@ import { DUAL_PANEL_MIN_WIDTH, MOBILE_MAX_WIDTH, PANEL_WIDTH } from '#lib/consta
 import { Panel, PanelLeft, PanelRight } from '#lib/enums.js'
 
 const RESPONSIVE_CONTEXT_KEY = Symbol('responsive-context')
-const ELEVATED_CHROME_MIN_WIDTH_PX = 480
-const ELEVATED_CHROME_WIDE_VIEWPORT_MIN_WIDTH_PX = 768
-const ELEVATED_CHROME_MIN_HEIGHT_PX = 800
-const ELEVATED_CHROME_EXTRA_REQUIRED_HEIGHT_PX = 40
-const ELEVATED_CHROME_DESKTOP_WIDE_EXTRA_REQUIRED_HEIGHT_PX = 48
-const ELEVATED_CHROME_DESKTOP_WIDE_MIN_WIDTH_PX = 1280
-const COMPACT_IMAGE_VIEWER_COUNTER_MAX_WIDTH_PX = 399
-
 export type ResponsiveDimensions = {
   width: number
   height: number
@@ -34,27 +27,6 @@ const createPanelOpenState = (): PanelOpenState =>
   Object.fromEntries(
     Object.values(Panel).map(panel => [panel, false]),
   ) as PanelOpenState
-
-/**
- * Returns the minimum viewport height required before elevated chrome is safe.
- *
- * @param width Current viewport width in pixels.
- * @returns Minimum height in pixels needed for elevated chrome.
- */
-export function getElevatedChromeMinHeight(width: number): number {
-  return width >= ELEVATED_CHROME_DESKTOP_WIDE_MIN_WIDTH_PX
-    ? ELEVATED_CHROME_MIN_HEIGHT_PX +
-        ELEVATED_CHROME_DESKTOP_WIDE_EXTRA_REQUIRED_HEIGHT_PX
-    : ELEVATED_CHROME_MIN_HEIGHT_PX + ELEVATED_CHROME_EXTRA_REQUIRED_HEIGHT_PX
-}
-
-export function hasElevatedChrome(width: number, height: number): boolean {
-  return (
-    width >= ELEVATED_CHROME_WIDE_VIEWPORT_MIN_WIDTH_PX ||
-    (width >= ELEVATED_CHROME_MIN_WIDTH_PX &&
-      height >= getElevatedChromeMinHeight(width))
-  )
-}
 
 export class ResponsiveCtx {
   window = $state({
@@ -105,10 +77,6 @@ export class ResponsiveCtx {
 
   get hasElevatedChrome(): boolean {
     return hasElevatedChrome(this.visibleWindowWidth, this.visibleWindowHeight)
-  }
-
-  get hasCompactImageViewerCounter(): boolean {
-    return this.visibleWindowWidth <= COMPACT_IMAGE_VIEWER_COUNTER_MAX_WIDTH_PX
   }
 
   get keyboardInsetHeight(): number {

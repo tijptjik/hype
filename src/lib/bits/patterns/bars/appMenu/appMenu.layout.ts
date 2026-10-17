@@ -1,4 +1,4 @@
-import { hasElevatedChrome as getHasElevatedChrome } from '#lib/context/responsive.svelte.js'
+import { hasElevatedChrome as getHasElevatedChrome } from '#lib/layout/chrome.js'
 import { getElevatedChromeXGutter } from '#lib/bits/patterns/bars/omnibar/Omnibar.layout.js'
 import { MOBILE_MAX_WIDTH } from '#lib/constants.js'
 

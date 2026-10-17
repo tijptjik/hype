@@ -12,7 +12,7 @@ import {
   getOmnibarClearanceHeight,
 } from '#lib/bits/patterns/bars/omnibar/Omnibar.layout.js'
 // CONTEXT
-import { hasElevatedChrome } from '#lib/context/responsive.svelte.js'
+import { hasElevatedChrome } from '#lib/layout/chrome.js'
 // TYPES
 import type {
   FeatureCardLayout,

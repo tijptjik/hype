@@ -8,7 +8,7 @@ import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
 import { OmniCollection, OmniMode } from '#lib/enums.js'
 // CONTEXT
-import { hasElevatedChrome } from '#lib/context/responsive.svelte.js'
+import { hasElevatedChrome } from '#lib/layout/chrome.js'
 // I18N
 import { getI18n, getLocaleKey, getLocaleOrder, m } from '#lib/i18n.js'
 // TYPES
