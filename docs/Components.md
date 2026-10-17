@@ -40,6 +40,13 @@ metadata, while `CacheCtx` retains compatible native handles. SvelteKit remains
 the owner of remote payloads and transport deduplication. Dispose view controllers
 on unmount; keep public map mechanics out of root and admin imports.
 
+Draft creation lives in `FeatureDraft` (`view.draft`). Panel commands and URL
+state use `PanelController` (`view.panels`); keyboard registration belongs to
+`SurfaceInteractions` (`view.interactions`). These owners receive explicit
+capabilities rather than the entire resource view. Use them directly instead of
+adding forwarding methods to the view. View disposal releases keyboard listeners
+and pending panel focus, and account changes discard creation drafts.
+
 ## Account and Map Ownership
 
 `RootCTX.account` owns `AccountState`. Its authoritative session identity and roles

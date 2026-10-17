@@ -13,7 +13,7 @@ fallback.
 | SvelteKit native queries | Active payloads, request deduplication, refresh and optimistic overrides |
 | `CacheCtx` | Scoped native-handle retention, active-controller registration, freshness, invalidation and optimistic reconciliation |
 | `ResourceClient` and typed providers | Standard detail/collection APIs, bound access metadata and profile inference |
-| `ResourceViewCtx` | A surface-local resource view, including existing selection, navigation, presentation projections and adapters |
+| `ResourceViewCtx` | Surface-local resource queries, hierarchy/filter intent and retained result projections |
 | `AppCtx` | Public map bootstrap, viewport queries, map rebounding and public application orchestration |
 | `AdminCtx` | Admin queries and editing/navigation state, using its own `view: ResourceViewCtx` |
 | `{Hub}DashCtx` | Future hub workflow state, using injected resource capabilities; Breadline uses `BreadlineDashCtx` when needed |
@@ -28,6 +28,30 @@ own view and does not construct `AppCtx`. Its initialisation loads only the
 selected resource; hierarchy panels load their own independent pages. App and
 admin filters and selection are independent. Leaving a surface releases its view
 state rather than carrying its selection into the next surface.
+
+## Draft and interaction capabilities
+
+`FeatureDraft` owns the in-memory creation payload, creation stage, locale/field
+updates and explicit resets. Creation controls use `view.draft` directly. A view
+clears both payload and stage when the root account revision changes, so another
+identity cannot resume the previous account's draft.
+
+`PanelController` owns panel commands as well as visibility and arbitration.
+It receives only profile loading and invalidation callbacks; URL synchronization
+and hydration receive the panel owner rather than a resource view. Deferred
+focus belongs to this controller and is canceled on disposal.
+
+`SurfaceInteractions` owns keyboard registration and cleanup. Its inputs are the
+existing panel controller, root account and two surface/hub policy getters. It
+cannot read resource queries or caches. The public layout registers shortcuts;
+view disposal unregisters them defensively. Callers invoke these owners directly,
+without draft or panel forwarding methods on `ResourceViewCtx`.
+
+The remaining ownership boundaries are hierarchy scope/default-layer policy,
+filter/query-input construction, account feature collections and resource query
+coordination. Keep traversal and retention on `ResourceClient`/`CacheCtx` while
+extracting these responsibilities. Revisit public `AppCtx` inheritance after those
+capabilities have narrow interfaces; admin already composes its own view.
 
 ## Standard internal API
 
@@ -121,7 +145,8 @@ query maps/filters/record stores, scope and profile isolation, stale responses,
 controller release, access-bound collection inputs, native cache reuse, optimistic
 rollback, image lifecycle behavior and public/admin mutation isolation.
 
-A production build passes. Static dependency traversal of its manifest finds no
+The initial context/cache refactor passed a production build. Static dependency
+traversal of that manifest found no
 `MapCanvas`, MapLibre, or public `AppCtx` chunk in the root or admin layout
 closures; the public layout includes its map dependencies. Browser checks confirm
 the privacy route loads without map-module requests and the sign-in map landing
@@ -129,12 +154,20 @@ renders without page errors in the initial smoke run. A final repeat timed out
 while the development server was handling regenerated build files; it did not
 provide additional browser acceptance evidence.
 
-Authenticated admin browser acceptance remains unverified: a fresh browser is
-redirected to public sign-in by the existing access guard. Context tests and
-production dependency evidence do not substitute for that signed-in workflow.
-Repository-wide `svelte-check` retains its pre-existing diagnostics; compare
-against the saved baseline rather than treating this repository as globally clean.
+The initial context/cache validation passed 90 tests across 11 files and a
+production build. Normalising moved source paths, that type-check added no
+diagnostics to its baseline of 984 errors and 20 warnings in 184 files.
 
-Final focused validation: 90 tests across 11 files pass, and the production build
-passes. Normalising moved source paths, the full type-check adds no diagnostics
-to the existing baseline of 984 errors and 20 warnings in 184 files.
+The draft/interaction extraction passes 72 focused tests across 12 files.
+Authenticated local admin checks now cover project loading, filter controls,
+text search and panel commands using the local persona launcher. Public browser
+checks cover the creation chooser, layer selection, closing the chooser and
+keyboard panel opening/Escape behavior, with no page exceptions. These checks use
+a separate WAL-safe local D1 snapshot; they do not submit a feature or verify an
+authenticated admin save. External basemap requests still return HTTP 401 in this
+local setup, so this is not map-tile acceptance evidence.
+
+Repository-wide `svelte-check` remains failing; the extraction's first check
+reported 971 errors and 21 warnings in 187 files. Do not treat focused tests or
+browser verification as proof that the global type-check or a new production
+build passes.
