@@ -9,6 +9,7 @@ import {
 import type { RemoteQuery } from '$app/server'
 import { withRemoteMeta } from './remote-function-mock'
 import { AppCtx } from '#lib/context/app.svelte.js'
+import { OmniCollection } from '#lib/enums.js'
 import { OmniCtx } from '#lib/context/omni.svelte.js'
 import { DivisionCtx } from '#lib/context/division.svelte.js'
 import { getFeaturePage } from '#lib/api/featureQueries.remote.js'
@@ -168,6 +169,26 @@ afterEach(() => {
 })
 
 describe('map query integration', () => {
+  it('expands one search section at a time and resets when searching or closing', async () => {
+    const omni = createOmni(createApp())
+    await omni.expandSearchSection(OmniCollection.neighbourhood)
+    expect(omni.searchSection).toBe(OmniCollection.neighbourhood)
+    expect(omni.searchSectionLimit).toBe(25)
+    await omni.expandSearchSection(OmniCollection.neighbourhood)
+    expect(omni.searchSectionLimit).toBe(50)
+    await omni.expandSearchSection(OmniCollection.walk)
+    expect(omni.searchSection).toBe(OmniCollection.walk)
+    expect(omni.searchSectionLimit).toBe(25)
+    omni.setSearchTerm('tea')
+    expect(omni.searchSection).toBeNull()
+    await omni.expandSearchSection(OmniCollection.feature)
+    expect(omni.searchSection).toBe(OmniCollection.feature)
+    expect(omni.searchFeatureLimit).toBe(30)
+    omni.closeTray()
+    expect(omni.searchSection).toBeNull()
+    expect(omni.searchFeatureLimit).toBe(5)
+  })
+
   it('uses the clicked marker element without a resource-view DOM registry', () => {
     const app = createApp()
     const omni = createOmni(app)

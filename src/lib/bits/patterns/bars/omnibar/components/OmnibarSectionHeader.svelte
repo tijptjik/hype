@@ -12,7 +12,8 @@ import MapPin from 'virtual:icons/proicons/location'
 // TYPES
 import type { OmnibarSectionHeaderProps } from './omnibarPrimitives.types'
 
-let { collectionType, totalCount }: OmnibarSectionHeaderProps = $props()
+let { collectionType, totalCount, loading, onclick }: OmnibarSectionHeaderProps =
+  $props()
 
 const collectionIcons = {
   walk: MapIcon,
@@ -27,7 +28,13 @@ const collectionTitles: Record<OmniCollection, string> = {
 }
 </script>
 
-<div class="flex items-center justify-between px-4 py-2">
+<button
+  type="button"
+  class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-base-content/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
+  disabled={loading}
+  aria-busy={loading}
+  {onclick}
+>
   <span class="text-xs uppercase tracking-widest text-base-content/60">
     {collectionTitles[collectionType]}{totalCount == null ? '' : ` (${totalCount})`}
   </span>
@@ -36,4 +43,4 @@ const collectionTitles: Record<OmniCollection, string> = {
     class="h-4 w-4 text-base-content/60"
     theme="solid"
   />
-</div>
+</button>

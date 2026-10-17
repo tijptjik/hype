@@ -222,7 +222,7 @@ export function useOmnibarModel(
   }
 
   function getSearchSections(): OmnibarResultSection[] {
-    return [
+    const sections: OmnibarResultSection[] = [
       {
         collectionType: OmniCollection.feature,
         results: omniCtx.searchResults.feature ?? [],
@@ -230,13 +230,15 @@ export function useOmnibarModel(
         totalCount: appCtx.view.resources.featureQueries.search.totalCount,
         hasMore: appCtx.view.resources.featureQueries.search.hasMore,
         loading: appCtx.view.resources.featureQueries.search.loading,
-        onLoadMore: () => void omniCtx.loadMoreSearch(),
+        onLoadMore: () => void omniCtx.expandSearchSection(OmniCollection.feature),
         onSelection: omniCtx.searchHandlers.feature,
       },
       {
         collectionType: OmniCollection.neighbourhood,
         results: omniCtx.searchResults.neighbourhood ?? [],
         limit: omniCtx.limits.neighbourhood ?? 0,
+        onLoadMore: () =>
+          void omniCtx.expandSearchSection(OmniCollection.neighbourhood),
         onSelection: omniCtx.searchHandlers.neighbourhood,
         onPreview: (id, active) => appCtx.view.divisionCtx.previewDivision(id, active),
       },
@@ -244,9 +246,21 @@ export function useOmnibarModel(
         collectionType: OmniCollection.walk,
         results: omniCtx.searchResults.walk ?? [],
         limit: omniCtx.limits.walk ?? 0,
+        onLoadMore: () => void omniCtx.expandSearchSection(OmniCollection.walk),
         onSelection: omniCtx.searchHandlers.walk,
       },
     ]
+    return sections
+      .filter(
+        section =>
+          !omniCtx.searchSection || section.collectionType === omniCtx.searchSection,
+      )
+      .map(section => ({
+        ...section,
+        limit: omniCtx.searchSection
+          ? Math.max(section.limit, omniCtx.searchSectionLimit)
+          : section.limit,
+      }))
   }
 
   return {

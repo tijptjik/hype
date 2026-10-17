@@ -314,6 +314,22 @@ export class OmniCtx {
   )
 
   searchFeatureLimit = $state(5)
+  searchSection: OmniCollection | null = $state(null)
+  searchSectionLimit = $state(25)
+
+  /**
+   * Focuses a result section and reveals its next batch of matches.
+   * @param collectionType Section to expand.
+   * @returns Completion after any required feature page has loaded.
+   */
+  async expandSearchSection(collectionType: OmniCollection): Promise<void> {
+    this.searchSectionLimit =
+      this.searchSection === collectionType ? this.searchSectionLimit + 25 : 25
+    this.searchSection = collectionType
+    if (collectionType === OmniCollection.feature) {
+      await this.loadMoreSearch()
+    }
+  }
 
   /**
    * Appends a server page when necessary, then reveals more matching search results.
@@ -321,19 +337,21 @@ export class OmniCtx {
    */
   async loadMoreSearch(): Promise<void> {
     const query = this.appCtx.view.resources.featureQueries.search
-    if (this.searchFeatureLimit >= query.rows.length && query.hasMore) {
+    if (this.searchFeatureLimit + 25 > query.rows.length && query.hasMore) {
       await this.appCtx.view.queries.loadMoreFeatureQuery('search')
     }
     this.searchFeatureLimit += 25
   }
 
   setSearchTerm(term: string) {
+    this.searchSection = null
+    this.searchSectionLimit = 25
     this.searchFeatureLimit = 5
     this.state.searchTerm = term
   }
 
   clearSearch() {
-    this.state.searchTerm = ''
+    this.setSearchTerm('')
   }
 
   focusSearchBar() {
@@ -503,6 +521,11 @@ export class OmniCtx {
   }
 
   selectFirstResult() {
+    if (this.searchSection) {
+      const first = this.searchResults[this.searchSection][0]
+      if (first) this.searchHandlers[this.searchSection](first.ref)
+      return
+    }
     if (this.searchResults.feature.length > 0) {
       this.handleFeatureSelection(this.searchResults.feature[0].ref)
     } else if (this.searchResults.neighbourhood.length > 0) {

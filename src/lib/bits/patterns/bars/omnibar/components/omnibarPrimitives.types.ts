@@ -37,6 +37,8 @@ export type OmnibarSectionProps = {
 }
 
 export type OmnibarSectionHeaderProps = {
+  onclick?: () => void
+  loading?: boolean
   collectionType: OmniCollection
   totalCount?: number | null
 }
