@@ -1,0 +1,116 @@
+{
+  "jsonapi": {
+    "version": "1.1"
+  },
+  "meta": {
+    "requestedApiVersion": "0.1",
+    "requestedApiFamily": "divisions",
+    "resolvedApiVersion": "api-divisions-v0.1",
+    "apiReleaseSet": "data-hk-divisions-2026-09-23.0",
+    "schemaVersion": "sv-division-v1",
+    "rulesetVersion": "rs-division-merge-v1",
+    "profile": "full",
+    "apiCatalogRevision": "catalog-hk-divisions-v0.1-2026-10-17.0",
+    "catalogPublishedAt": "2026-10-17T07:55:58.081Z",
+    "cohort": "2026-09-23.0",
+    "domain": "geographic",
+    "locales": ["*"]
+  },
+  "data": {
+    "type": "divisions",
+    "id": "8d17afe0-5631-49c5-b86d-d53c5d4b2f9d",
+    "attributes": {
+      "divisionCode": "CW",
+      "category": "administrative",
+      "class": "district",
+      "level": 2,
+      "i18n": {
+        "en": {
+          "meta": {
+            "fields": {
+              "name": {
+                "origin": "provided"
+              }
+            }
+          },
+          "name": "Central and Western District",
+          "nameAlts": null,
+          "nameRules": null
+        },
+        "zh-hant": {
+          "meta": {
+            "fields": {
+              "name": {
+                "origin": "provided"
+              }
+            }
+          },
+          "name": "中西區",
+          "nameAlts": null,
+          "nameRules": null
+        }
+      },
+      "hierarchies": {
+        "administrative": [
+          [
+            {
+              "id": "b4f09a9f-4cba-4a7c-bf58-2e63bc2e913d",
+              "name": "香港 Hong Kong",
+              "class": "sar"
+            }
+          ]
+        ],
+        "full": [
+          [
+            {
+              "id": "b4f09a9f-4cba-4a7c-bf58-2e63bc2e913d",
+              "name": "香港 Hong Kong",
+              "class": "sar"
+            }
+          ]
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [114.14873730393252, 22.2748365]
+      },
+      "cartography": {
+        "minZoom": 10,
+        "maxZoom": 14,
+        "prominence": 85
+      },
+      "identifiers": {
+        "wikidata": {
+          "id": "Q312485"
+        }
+      },
+      "sources": [
+        {
+          "property": "",
+          "publisher": "openstreetmap",
+          "upstreamOf": "overture",
+          "dataset": "openstreetmap",
+          "recordId": "r2558879@24",
+          "updateTime": "2026-06-19T19:16:50Z",
+          "license": "ODbL-1.0"
+        },
+        {
+          "properties": ["cartography", "category", "class", "hierarchies", "level"],
+          "publisher": "saanseoi",
+          "dataset": "ds-hk-saanseoi-division",
+          "recordId": "8d17afe0-5631-49c5-b86d-d53c5d4b2f9d"
+        }
+      ],
+      "snapshotId": "875f86ba-a5b9-5cb9-98f7-13e90d1278e8",
+      "createdAt": "2026-10-17T07:23:06.664Z"
+    },
+    "relationships": {},
+    "links": {
+      "self": "http://api.atlas.localhost/divisions/v0.1/8d17afe0-5631-49c5-b86d-d53c5d4b2f9d"
+    }
+  },
+  "links": {
+    "self": "http://api.atlas.localhost/divisions/v0.1/8d17afe0-5631-49c5-b86d-d53c5d4b2f9d?profile=full&include=hierarchy&releaseSet=data-hk-divisions-2026-09-23.0",
+    "permalink": "http://api.atlas.localhost/divisions/v0.1/8d17afe0-5631-49c5-b86d-d53c5d4b2f9d?catalogRevision=catalog-hk-divisions-v0.1-2026-10-17.0&cohort=2026-09-23.0&domain=geographic&include=hierarchy&knownAt=2026-10-17T07%3A55%3A58.081Z&locales=*&profile=full&releaseSet=data-hk-divisions-2026-09-23.0"
+  }
+}

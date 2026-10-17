@@ -10,6 +10,25 @@ export const polygonSchema = z.discriminatedUnion('type', [
     coordinates: z.array(z.array(ring).min(1)).min(1),
   }),
 ])
+const hierarchyEntry = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  class: z.string(),
+  fullContainment: z.boolean().nullable().optional(),
+})
+const hierarchies = z.object({
+  administrative: z.array(z.array(hierarchyEntry)).optional(),
+  locality: z.array(z.array(hierarchyEntry)).optional(),
+  landform: z.array(z.array(hierarchyEntry)).optional(),
+  full: z.array(z.array(hierarchyEntry)),
+})
+const identifiers = z.record(
+  z.string(),
+  z.record(
+    z.string(),
+    z.union([z.string(), z.number(), z.array(z.union([z.string(), z.number()]))]),
+  ),
+)
 const definition = z.object({
   divisionId: z.string(),
   apiReleaseSet: z.string(),
@@ -35,7 +54,7 @@ export const changesSchema = z.object({
     toApiReleaseSet: z.object({ id: z.string(), code: z.string() }),
     comparisonId: z.string(),
     nextCursor: z.string().nullable(),
-    membershipGeometry: z.literal('stub'),
+    membershipGeometry: z.literal('saanseoi'),
   }),
 })
 const identifier = z.object({ type: z.literal('divisions'), id: z.string() })
@@ -52,6 +71,22 @@ const names = z.record(
     nameRules: z.array(z.unknown()).nullable().optional(),
   }),
 )
+/** Release-pinned definition metadata; display points are not membership polygons. */
+export const divisionMetadataSchema = z.object({
+  data: z.object({
+    type: z.literal('divisions'),
+    id: z.string(),
+    attributes: z.object({
+      divisionCode: z.string().nullable().optional(),
+      identifiers: identifiers.nullable().optional(),
+      hierarchies,
+    }),
+  }),
+  meta: z.object({
+    apiReleaseSet: z.string(),
+    schemaVersion: z.literal('sv-division-v1'),
+  }),
+})
 /** Public JSON:API contract; normalize once at the API boundary for refresh consumers. */
 export const geocodeSchema = z
   .object({
@@ -75,7 +110,17 @@ export const geocodeSchema = z
         attributes: z.object({
           category: z.string().nullable().optional(),
           class: z.string().nullable().optional(),
-          level: z.number().int().min(0).max(6).nullable(),
+          level: z.number().int().nullable(),
+          divisionCode: z.string().nullable().optional(),
+          identifiers: identifiers.nullable().optional(),
+          hierarchies: hierarchies.optional(),
+          geometry: z
+            .union([
+              polygonSchema,
+              z.object({ type: z.literal('Point'), coordinates: position }),
+            ])
+            .nullable()
+            .optional(),
           i18n: names,
         }),
       }),
@@ -90,6 +135,13 @@ export const geocodeSchema = z
       class: resource.attributes.class ?? null,
       level: resource.attributes.level,
       names: resource.attributes.i18n,
+      divisionCode: resource.attributes.divisionCode,
+      identifiers: resource.attributes.identifiers,
+      hierarchies: resource.attributes.hierarchies,
+      membershipGeometry:
+        resource.attributes.geometry && resource.attributes.geometry.type !== 'Point'
+          ? [{ geometry: resource.attributes.geometry }]
+          : [],
     }))
     const referenced = new Set(
       Object.values(result.relationships).flatMap(value =>
@@ -128,6 +180,7 @@ export const geocodeSchema = z
       meta: response.meta,
     }
   })
+export type DivisionMetadata = z.infer<typeof divisionMetadataSchema>
 export type Change = z.infer<typeof changeSchema>
 export type GeocodeResponse = z.infer<typeof geocodeSchema>
 export type Polygon = z.infer<typeof polygonSchema>
@@ -185,7 +238,7 @@ export async function apiRead<T>(
 /**
  * Tests polygon coverage, including boundaries and excluding hole interiors.
  * @param point WGS84 longitude and latitude.
- * @param geometry Authoritative stub geometry.
+ * @param geometry Authoritative SaanSeoi geometry.
  * @returns Whether any polygon covers the point.
  */
 export function covers(point: number[], geometry: Polygon): boolean {

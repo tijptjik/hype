@@ -10,6 +10,8 @@ import {
   apiRead,
   covers,
   geocodeSchema,
+  changesSchema,
+  divisionMetadataSchema,
   polygonSchema,
 } from '../../workers/division-refresh/src/api'
 // TYPES
@@ -57,6 +59,8 @@ const geocoded = (ids = ['village'], release = 'r2') => ({
       class: 'neighbourhood',
       level: 5,
       i18n: { en: { name: id } },
+      hierarchies: { full: [] },
+      geometry: polygon,
     },
   })),
   meta: { release: { apiReleaseSet: release } },
@@ -84,7 +88,7 @@ const page = (data = [change()], nextCursor: string | null = null) => ({
     toApiReleaseSet: { id: 'id2', code: 'r2' },
     comparisonId: 'comparison',
     nextCursor,
-    membershipGeometry: 'stub',
+    membershipGeometry: 'saanseoi',
   },
 })
 
@@ -146,6 +150,69 @@ function setup() {
 }
 
 describe('division refresh', () => {
+  it('accepts current live changes and definition metadata independently of worker mocks', () => {
+    const changes = changesSchema.parse(
+      JSON.parse(
+        readFileSync('src/tests/fixtures/saanseoi-changes-current.json', 'utf8'),
+      ),
+    )
+    expect(changes.meta.membershipGeometry).toBe('saanseoi')
+    const metadata = divisionMetadataSchema.parse(
+      JSON.parse(
+        readFileSync('src/tests/fixtures/saanseoi-division-metadata.json', 'utf8'),
+      ),
+    )
+    expect(metadata.data.attributes.divisionCode).toBe('CW')
+    expect(metadata.data.attributes.identifiers?.wikidata.id).toBe('Q312485')
+    expect(metadata.data.attributes.hierarchies.administrative?.[0][0].class).toBe(
+      'sar',
+    )
+  })
+
+  it('enriches geocoding metadata once per mirrored release and retains polygon geometry', async () => {
+    const s = setup()
+    s.add('a')
+    s.add('b')
+    const response = geocoded()
+    Reflect.deleteProperty(response.included[0].attributes, 'hierarchies')
+    const fetcher = vi.fn<typeof fetch>(async input => {
+      const url = new URL(String(input))
+      if (url.pathname === '/divisions/v0.1/village') {
+        expect(url.searchParams.get('releaseSet')).toBe('r2')
+        return Response.json({
+          data: {
+            type: 'divisions',
+            id: 'village',
+            attributes: {
+              divisionCode: 'VIL',
+              identifiers: { saanseoi: { sourceId: 'village-source' } },
+              hierarchies: { full: [] },
+            },
+          },
+          meta: { apiReleaseSet: 'r2', schemaVersion: 'sv-division-v1' },
+        })
+      }
+      return Response.json(response)
+    })
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    const stored = JSON.parse(
+      String(
+        s.sqlite
+          .prepare("SELECT attributes FROM divisionDefinition WHERE id='village'")
+          .get()?.attributes,
+      ),
+    )
+    expect(stored).toMatchObject({
+      divisionCode: 'VIL',
+      hierarchies: { full: [] },
+      membershipGeometry: [{ geometry: polygon }],
+    })
+    expect(
+      fetcher.mock.calls.filter(([url]) => String(url).includes('/divisions/v0.1/')),
+    ).toHaveLength(1)
+  })
+
   it('accepts the retained live Atlas response and preserves separate hierarchy branches', () => {
     const result = geocodeSchema.parse(
       JSON.parse(
@@ -166,7 +233,7 @@ describe('division refresh', () => {
     await apiRead(
       { baseUrl: 'https://api.saanseoi.hk', token: 'test-key', fetcher },
       '/divisions/v1/geocode',
-      { lat: '5', lng: '5', apiReleaseSet: 'r2' },
+      { lat: '5', lng: '5', releaseSet: 'r2' },
       geocodeSchema,
     )
     expect(fetcher.mock.calls[0][1]).toMatchObject({
@@ -174,7 +241,7 @@ describe('division refresh', () => {
       redirect: 'error',
     })
     expect(
-      new URL(String(fetcher.mock.calls[0][0])).searchParams.get('apiReleaseSet'),
+      new URL(String(fetcher.mock.calls[0][0])).searchParams.get('releaseSet'),
     ).toBe('r2')
   })
 
@@ -323,7 +390,7 @@ describe('division refresh', () => {
     await s.tick(fetcher)
     await s.tick(fetcher)
     const url = new URL(String(fetcher.mock.calls[1][0]))
-    expect(url.searchParams.get('toApiReleaseSet')).toBe('r2')
+    expect(url.searchParams.get('toReleaseSet')).toBe('r2')
     expect(url.searchParams.get('page[cursor]')).toBe('next')
     expect(s.count('divisionDefinition')).toBe(1)
     expect(
@@ -419,7 +486,7 @@ describe('division refresh', () => {
     expect(s.count('featureDivisionJob')).toBe(0)
   })
 
-  it('prefers the administrative level-one branch while retaining every membership', async () => {
+  it('preserves administrative and locality memberships at the same display level', async () => {
     const s = setup()
     s.add('a')
     const response = geocoded([
@@ -467,7 +534,7 @@ describe('division refresh', () => {
         .get(),
     ).toMatchObject({
       divisionLeafId: 'micro',
-      divisionLevel1Id: 'area',
+      divisionLevel1Id: null,
       divisionLevel2Id: 'district',
       divisionLevel6Id: 'micro',
       landformLeafId: 'island',
@@ -486,7 +553,7 @@ describe('division refresh', () => {
           "SELECT selected FROM featureDivisionMembership WHERE featureId='a' AND divisionId='city'",
         )
         .get()?.selected,
-    ).toBe(0)
+    ).toBe(1)
     expect(s.count('divisionI18n')).toBe(10)
     expect(
       s.sqlite.prepare('SELECT sum(totalCount) AS n FROM featureCountRollup').get()?.n,

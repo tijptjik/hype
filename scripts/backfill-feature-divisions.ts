@@ -23,7 +23,7 @@ const databasePath = option('--database')
 if (!databasePath) throw new Error('Supply --database with the local HYPE SQLite path.')
 const apply = process.argv.includes('--apply')
 const api = {
-  baseUrl: option('--base-url') ?? 'http://localhost:8787',
+  baseUrl: option('--base-url') ?? 'http://api.atlas.localhost',
   token: process.env[option('--key-env') ?? 'SAANSEOI_API_KEY'],
 }
 if (!api.token) throw new Error('Missing SaanSeoi API credential. Load a credential file with bun --env-file or supply --key-env.')

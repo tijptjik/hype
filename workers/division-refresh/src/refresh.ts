@@ -6,10 +6,11 @@ import {
   changesSchema,
   covers,
   geocodeSchema,
+  divisionMetadataSchema,
 } from './api'
 // TYPES
 import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types'
-import type { ApiOptions, GeocodeResponse } from './api'
+import type { ApiOptions, DivisionMetadata, GeocodeResponse } from './api'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -71,7 +72,13 @@ export async function refreshDivisions(
         const result = await apiRead(
           api,
           '/divisions/v1/geocode',
-          { lat: '22.3', lng: '114.2', locales: 'en,zh-hant', profile: 'full' },
+          {
+            lat: '22.3',
+            lng: '114.2',
+            locales: 'en,zh-hant',
+            profile: 'full',
+            geometry: 'saanseoi',
+          },
           geocodeSchema,
         )
         await statement(
@@ -128,11 +135,11 @@ async function loadChanges(
 ): Promise<void> {
   if (!state.appliedRelease) throw new Error('DIVISION_REFRESH_SOURCE_MISSING')
   const params: Record<string, string> = {
-    fromApiReleaseSet: state.appliedRelease,
+    fromReleaseSet: state.appliedRelease,
     include: 'geometry',
     'page[limit]': '1',
   }
-  if (state.targetRelease) params.toApiReleaseSet = state.targetRelease
+  if (state.targetRelease) params.toReleaseSet = state.targetRelease
   if (state.cursor) params['page[cursor]'] = state.cursor
   const page = await apiRead(api, '/divisions/v1/changes', params, changesSchema)
   const meta = page.meta
@@ -163,7 +170,12 @@ async function loadChanges(
           [
             change.divisionId,
             meta.toApiReleaseSet.code,
-            JSON.stringify(change.after.attributes),
+            JSON.stringify({
+              ...change.after.attributes,
+              names:
+                change.after.attributes.names ?? change.after.attributes.i18n ?? {},
+              membershipGeometry: change.after.membershipGeometry,
+            }),
             change.divisionId,
           ],
         ),
@@ -315,41 +327,67 @@ async function geocodeJobs(
             {
               lat: String(point[1]),
               lng: String(point[0]),
-              apiReleaseSet: release,
+              releaseSet: release,
               locales: 'en,zh-hant',
               profile: 'full',
+              geometry: 'saanseoi',
             },
             geocodeSchema,
           )
         : null
       if (response && response.meta.release.apiReleaseSet !== release)
         throw new Error('DIVISION_GEOCODE_RELEASE_MISMATCH')
-      const result = response?.data
+      const result: GeocodeResponse['data'] | undefined = response?.data
       const selected = new Set(result?.selectedAncestryIds ?? [])
-      const members = new Map(
-        [...(result?.memberships ?? []), ...(result?.landform.memberships ?? [])].map(
-          member => [member.id, member],
-        ),
-      )
+      const members: Map<string, GeocodeResponse['data']['memberships'][number]> =
+        new Map(
+          [...(result?.memberships ?? []), ...(result?.landform.memberships ?? [])].map(
+            member => [member.id, member],
+          ),
+        )
+      // Geocoding omits definition metadata; enrich once per mirrored ID and release.
+      for (const member of members.values()) {
+        if (member.hierarchies) continue
+        const cached = await db
+          .prepare(
+            'SELECT attributes FROM divisionDefinition WHERE id=? AND apiReleaseSet=?',
+          )
+          .bind(member.id, release)
+          .first<{ attributes: string }>()
+        const metadata = cached ? JSON.parse(cached.attributes) : null
+        if (metadata?.hierarchies) {
+          Object.assign(member, {
+            divisionCode: metadata.divisionCode,
+            identifiers: metadata.identifiers,
+            hierarchies: metadata.hierarchies,
+          })
+          continue
+        }
+        const definition: DivisionMetadata = await apiRead(
+          api,
+          `/divisions/v0.1/${encodeURIComponent(member.id)}`,
+          {
+            releaseSet: release,
+            profile: 'full',
+            include: 'hierarchy',
+            locales: 'en,zh-hant',
+          },
+          divisionMetadataSchema,
+        )
+        if (
+          definition.data.id !== member.id ||
+          definition.meta.apiReleaseSet !== release
+        )
+          throw new Error('DIVISION_DEFINITION_RELEASE_MISMATCH')
+        Object.assign(member, definition.data.attributes, {
+          divisionCode: definition.data.attributes.divisionCode ?? null,
+          identifiers: definition.data.attributes.identifiers ?? null,
+        })
+      }
       if ([...selected].some(id => !members.has(id)))
         throw new Error('DIVISION_GEOCODE_MISSING_MEMBERSHIP')
-      // Equivalent level-one locality and administrative branches resolve to the
-      // administrative division for HYPE's canonical hierarchy.
-      const hasAdministrativeLevelOne = [...members.values()].some(
-        member =>
-          selected.has(member.id) &&
-          member.level === 1 &&
-          member.category === 'administrative',
-      )
-      const chosen = [...members.values()].filter(
-        member =>
-          selected.has(member.id) &&
-          !(
-            hasAdministrativeLevelOne &&
-            member.level === 1 &&
-            member.category === 'locality'
-          ),
-      )
+      // Every evidenced branch remains selected; display levels never override membership.
+      const chosen = [...members.values()].filter(member => selected.has(member.id))
       const chosenIds = new Set(chosen.map(member => member.id))
       // Every mutation rechecks coordinates, job generation and worker ownership in one D1 batch.
       const guard = `EXISTS(SELECT 1 FROM feature f JOIN featureDivisionJob j ON j.featureId=f.id
@@ -366,7 +404,7 @@ async function geocodeJobs(
         writes.push(
           guarded(
             `INSERT INTO divisionDefinition SELECT ?,?,? WHERE ${guard}
-          ON CONFLICT(id) DO UPDATE SET apiReleaseSet=excluded.apiReleaseSet,attributes=excluded.attributes`,
+          ON CONFLICT(id) DO UPDATE SET apiReleaseSet=excluded.apiReleaseSet,attributes=json_patch(divisionDefinition.attributes,excluded.attributes)`,
             [member.id, release, JSON.stringify(member)],
           ),
         )
