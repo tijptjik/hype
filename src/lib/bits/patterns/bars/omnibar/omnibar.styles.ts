@@ -202,5 +202,5 @@ export const OMNIBAR_COLLECTION_ITEM_TITLE_CLASSES =
   'select-none pl-2 text-[0.92rem] font-light tracking-[0.01em] text-base-content/80'
 
 export const OMNIBAR_COLLECTION_FOOTER_CLASSES = cx(
-  'pointer-events-auto flex h-12 items-center justify-between border-t border-base-200/70 bg-panel px-4',
+  'pointer-events-auto flex h-12 items-center justify-between border-t border-base-200/70 bg-panel pl-12 pr-4',
 )
