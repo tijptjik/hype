@@ -184,18 +184,18 @@ function handleKeydown(event: KeyboardEvent): void {
 <svelte:window onkeydown={handleKeydown} />
 
 {#if appCtx.draft.mode === NewFeatureMode.location}
-  <div class="bits-theme pointer-events-none fixed inset-0 z-[961] text-white">
+  <div class="bits-theme pointer-events-none fixed inset-0 z-[961] text-base-content">
     <div
       class="absolute left-1/2 top-1/2 flex h-56 w-56 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
       style={`margin-left: ${appMainOffsetX}px;`}
     >
       <div
-        class="pointer-events-auto absolute bottom-full left-1/2 mb-6 w-[min(34rem,calc(100vw-2rem))] max-w-[420px] -translate-x-1/2 rounded-[2rem] border border-white/10 bg-black px-6 py-2 shadow-2xl"
+        class="pointer-events-auto absolute bottom-full left-1/2 mb-6 w-[min(34rem,calc(100vw-2rem))] max-w-[420px] -translate-x-1/2 rounded-[2rem] border border-border bg-panel px-6 py-2 shadow-2xl"
       >
         <div class="flex w-full items-center justify-between gap-4">
           <div class="min-w-0">
             <p
-              class="flex items-center gap-3 overflow-hidden text-ellipsis whitespace-nowrap text-lg font-semibold uppercase tracking-[0.18em] text-white"
+              class="flex items-center gap-3 overflow-hidden text-ellipsis whitespace-nowrap text-lg font-semibold uppercase tracking-[0.18em] text-base-content"
             >
               <Icon src={MapPin} class="h-5 w-5 text-primary" />
               <span class="overflow-hidden text-ellipsis whitespace-nowrap"
@@ -205,7 +205,7 @@ function handleKeydown(event: KeyboardEvent): void {
           </div>
           <button
             type="button"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/6 text-white/72 transition hover:bg-white/12 hover:text-white"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground transition hover:bg-raised hover:text-base-content"
             onclick={handleCloseModal}
           >
             <Icon src={X} class="h-5 w-5" />
@@ -214,11 +214,11 @@ function handleKeydown(event: KeyboardEvent): void {
       </div>
 
       <div
-        class="relative flex h-56 w-56 items-center justify-center rounded-full border-4 border-[#4987E2]/90 bg-[#4987E2]/10 shadow-[0_0_60px_rgba(73,135,226,0.16)]"
+        class="relative flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary/90 bg-primary/10 shadow-[0_0_60px_color-mix(in_oklab,var(--color-primary)_16%,transparent)]"
       >
-        <div class="absolute h-3 w-3 rounded-full bg-white"></div>
-        <div class="absolute inset-5 rounded-full border border-white/12"></div>
-        <div class="absolute inset-10 rounded-full border border-white/8"></div>
+        <div class="absolute h-3 w-3 rounded-full bg-primary"></div>
+        <div class="absolute inset-5 rounded-full border border-primary/20"></div>
+        <div class="absolute inset-10 rounded-full border border-primary/15"></div>
       </div>
 
       <div
@@ -226,19 +226,19 @@ function handleKeydown(event: KeyboardEvent): void {
       >
         {#if isLoading}
           <div
-            class="inline-flex min-h-14 items-center justify-center rounded-full bg-black px-7 py-4 text-center font-mono text-[11px] uppercase tracking-[0.28em] text-white/72 transition-[padding,width] duration-200"
+            class="inline-flex min-h-14 items-center justify-center rounded-full bg-panel px-7 py-4 text-center font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground transition-[padding,width] duration-200"
           >
             {m.new_feature__looking_up_address()}
           </div>
         {:else if isValid}
           <div
-            class="w-full max-w-[360px] rounded-[1.75rem] border border-white/10 bg-black px-4 py-2 shadow-2xl"
+            class="w-full max-w-[360px] rounded-[1.75rem] border border-border bg-panel px-4 py-2 shadow-2xl"
           >
             <div class="flex items-center gap-3">
               <input
                 bind:value={displayAddress[currentLocaleKey]}
                 type="text"
-                class="h-11 min-w-0 grow rounded-full bg-black/35 px-4 text-sm text-white caret-white placeholder:text-white/34 focus:outline-none disabled:opacity-100"
+                class="h-11 min-w-0 grow rounded-full bg-surface px-4 text-sm text-base-content caret-primary placeholder:text-muted-foreground focus:outline-none disabled:opacity-100"
                 placeholder={m.less_quaint_clownfish_succeed()}
                 disabled={!isEditingAddress}
                 onkeydown={event => {
@@ -251,7 +251,7 @@ function handleKeydown(event: KeyboardEvent): void {
               {#if isEditingAddress}
                 <button
                   type="button"
-                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/10 text-white transition hover:bg-white/16"
+                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-base-content transition hover:bg-raised"
                   onclick={() => {
                     isEditingAddress = false
                   }}
@@ -261,7 +261,7 @@ function handleKeydown(event: KeyboardEvent): void {
               {:else}
                 <button
                   type="button"
-                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/10 text-white transition hover:bg-white/16"
+                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-base-content transition hover:bg-raised"
                   onclick={handleStartEditing}
                 >
                   <Icon src={PencilSquare} class="h-5 w-5" />
@@ -273,7 +273,7 @@ function handleKeydown(event: KeyboardEvent): void {
           <div class="flex w-full flex-wrap items-center justify-center gap-3">
             <button
               type="button"
-              class="min-h-12 rounded-full border border-white/10 bg-black px-5 py-3 text-sm font-semibold text-white transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              class="min-h-12 rounded-full border border-border bg-panel px-5 py-3 text-sm font-semibold text-base-content transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               onclick={handleSetLocation}
               disabled={isLoading}
             >
@@ -281,7 +281,7 @@ function handleKeydown(event: KeyboardEvent): void {
             </button>
             <button
               type="button"
-              class="min-h-12 rounded-full border border-white/10 bg-black px-5 py-3 text-sm font-semibold text-white transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              class="min-h-12 rounded-full border border-border bg-panel px-5 py-3 text-sm font-semibold text-base-content transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               onclick={handleAccept}
               disabled={!isValid || isLoading}
             >
@@ -291,7 +291,7 @@ function handleKeydown(event: KeyboardEvent): void {
         {:else}
           <button
             type="button"
-            class="inline-flex min-h-14 items-center justify-center gap-3 rounded-full border border-white/10 bg-black px-8 py-4 text-base font-semibold text-white transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+            class="inline-flex min-h-14 items-center justify-center gap-3 rounded-full border border-border bg-panel px-8 py-4 text-base font-semibold text-base-content transition hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
             onclick={handleSetLocation}
             disabled={isLoading}
           >
