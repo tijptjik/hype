@@ -24,7 +24,7 @@ const omniCtx = getOmniCtx()
 const imageCtx = getImageCtx()
 
 async function submitNewFeature(): Promise<void> {
-  const newFeature = appCtx.getNewFeature() as NewFeatureTask
+  const newFeature = appCtx.draft.current as NewFeatureTask
   const title =
     newFeature?.feature?.i18n?.[getLocale()]?.title ??
     newFeature?.feature?.i18n?.en?.title ??
@@ -64,7 +64,7 @@ async function submitNewFeature(): Promise<void> {
     cardCtx.setMode(FeatureCardMode.Display)
     imageCtx.resetImages()
     cardCtx.userData.photos = []
-    appCtx.resetNewFeature()
+    appCtx.draft.reset()
     cardCtx.resetError()
   } catch (error) {
     console.error('Error submitting new feature:', error)

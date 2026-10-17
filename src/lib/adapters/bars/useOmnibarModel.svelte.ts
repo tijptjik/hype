@@ -198,7 +198,7 @@ export function useOmnibarModel(
   function getFeatureTitle(): string {
     if (omniCtx.isNewFeatureMode) {
       return getFeatureNavigationText(
-        appCtx.getNewFeature()?.feature,
+        appCtx.draft.current?.feature,
         'title',
         m.red_arable_herring_trust(),
         true,

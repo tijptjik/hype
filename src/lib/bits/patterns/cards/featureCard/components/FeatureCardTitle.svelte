@@ -99,7 +99,7 @@ function handleTitleSubmit(): void {
   isEditing = false
 
   if (cardCtx.isNewMode) {
-    appCtx.updateNewFeatureValueI18n('title', title)
+    appCtx.draft.updateI18n('title', title)
   }
 }
 

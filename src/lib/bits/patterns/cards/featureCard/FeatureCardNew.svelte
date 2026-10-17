@@ -92,7 +92,7 @@ function getNewFeatureHeightCompensationPx(): number {
 
 // Build the draft feature card payload from the active new-feature task.
 function syncFeatureCardState(): boolean {
-  const newFeature = appCtx.getNewFeature()
+  const newFeature = appCtx.draft.current
   if (!newFeature?.feature) {
     feature = null
     organisation = null
@@ -188,7 +188,7 @@ function updateViewerBudget(): void {
 }
 
 function handleEditSelection(): void {
-  appCtx.setNewFeatureMode(NewFeatureMode.parents)
+  appCtx.draft.setMode(NewFeatureMode.parents)
 }
 
 /** Cancels the draft and returns the card to its normal map state. */
@@ -212,7 +212,7 @@ function handleRootContentVisibilityChange(visible: boolean): void {
 }
 
 $effect(() => {
-  const currentMode = appCtx.newFeatureMode
+  const currentMode = appCtx.draft.mode
   const isEnteringCard =
     currentMode === NewFeatureMode.card && previousMode !== NewFeatureMode.card
   const isLeavingCard =
@@ -277,7 +277,7 @@ const imageProviderModel = useImageProviderModel(
     isAdminMode: false,
     context: {
       ctxType: ImageContextResource.feature,
-      ctxId: (appCtx.getNewFeature()?.featureId ?? NEW_REF) as string,
+      ctxId: (appCtx.draft.current?.featureId ?? NEW_REF) as string,
       organisation: organisation as unknown as Omit<OrganisationDB, 'isCoreInclusive'>,
       project: project as unknown as Omit<ProjectDB, 'isCoreInclusive'>,
     },
@@ -285,7 +285,7 @@ const imageProviderModel = useImageProviderModel(
 )
 </script>
 
-{#if appCtx.newFeatureMode === NewFeatureMode.card &&
+{#if appCtx.draft.mode === NewFeatureMode.card &&
   feature &&
   organisation &&
   project}

@@ -61,8 +61,6 @@ import {
   FirstClassResource,
   type HierarchicalResource,
   Panel,
-  type NewFeatureMode,
-  supportedLocaleKeys,
 } from '#lib/enums.js'
 // GUARDS
 import { isTask } from '#lib/utils/resourceGuards.js'
@@ -70,10 +68,8 @@ import { isTask } from '#lib/utils/resourceGuards.js'
 import type { Cache } from '#lib/context/cache.types.js'
 import type {
   Code,
-  DeepPartial,
   Id,
   Locale,
-  LocaleKey,
   Resource,
   ResourceContext,
   ListResponse,
@@ -91,7 +87,6 @@ import type {
   FeatureQueryInput,
   FeatureSpatialQuery,
 } from '#lib/api/services/featureQuery.types.js'
-import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
 import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
 import type { Task } from '#lib/db/zod/schema/task.types.js'
 import type { Image } from '#lib/db/zod/schema/image.types.js'
@@ -110,6 +105,7 @@ import type {
 import type { DivisionCtx } from './division.svelte'
 // CONTEXT
 import type { AccountState, AccountUser } from './account.svelte.js'
+import { FeatureDraft } from './featureDraft.svelte.js'
 import { PanelController } from './panels.svelte.js'
 import { SurfaceLayout, setSurfaceLayoutCtx } from './surfaceLayout.svelte.js'
 import type { ResponsiveCtx } from './responsive.svelte'
@@ -117,7 +113,6 @@ import type {
   Feature,
   FeatureFromCollection,
 } from '#lib/db/zod/schema/feature.types.js'
-import type { FeatureI18nFieldKeys } from '#lib/db/zod/schema/feature.js'
 // TYPES
 import type { HierarchicalResourceType, Prisms, EntityResponse } from '#lib/types.js'
 import type { ViewFilters } from '#lib/client/services/viewFilters.types.js'
@@ -593,9 +588,7 @@ export class ResourceViewCtx {
     viewSorting: this.defaultViewSorting(),
   })
 
-  // New Feature -- The new feature to be created
-  newFeature: DeepPartial<NewFeatureTask> | null = $state(null)
-  newFeatureMode: NewFeatureMode | null = $state(null)
+  readonly draft = new FeatureDraft()
 
   // ═══════════════════════
   // QUERY KEYS
@@ -3475,88 +3468,6 @@ export class ResourceViewCtx {
     }
   }
 
-  // NEW FEATURE
-
-  setNewFeatureMode = (mode: NewFeatureMode | null): void => {
-    this.newFeatureMode = mode
-  }
-
-  resetNewFeatureMode = (): void => {
-    this.newFeatureMode = null
-  }
-
-  getNewFeatureMode = (): NewFeatureMode | null => {
-    return this.newFeatureMode
-  }
-
-  setNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
-    // Initialize with proper locale structure for all required locales
-    if (newFeature.feature && !newFeature.feature.i18n) {
-      const feature = newFeature.feature
-      const featureI18n: NonNullable<typeof feature.i18n> = {}
-      feature.i18n = featureI18n
-      supportedLocaleKeys.forEach(locale => {
-        featureI18n[locale as LocaleKey] = {
-          ...featureI18n[locale as LocaleKey],
-          title: undefined,
-          description: undefined,
-          displayAddress: '',
-          displayAddressGen: false,
-        }
-      })
-    }
-    this.newFeature = newFeature
-  }
-
-  updateNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
-    this.newFeature = {
-      ...this.newFeature,
-      ...newFeature,
-      feature: {
-        ...this.newFeature?.feature,
-        ...newFeature.feature,
-      },
-    }
-  }
-
-  updateNewFeatureValue = (
-    key: keyof NewFeatureTask['feature'],
-    value: unknown,
-  ): void => {
-    this.newFeature = {
-      ...this.newFeature,
-      feature: { ...this.newFeature?.feature, [key]: value },
-    }
-  }
-
-  updateNewFeatureValueI18n = (
-    key: FeatureI18nFieldKeys,
-    value: unknown,
-    locale = getLocaleKey(),
-  ): void => {
-    this.newFeature = {
-      ...this.newFeature,
-      feature: {
-        ...this.newFeature?.feature,
-        i18n: {
-          ...this.newFeature?.feature?.i18n,
-          [locale]: {
-            ...this.newFeature?.feature?.i18n?.[locale],
-            [key]: value,
-          },
-        },
-      },
-    }
-  }
-
-  getNewFeature = (): DeepPartial<NewFeatureTask> | null => {
-    return this.newFeature
-  }
-
-  resetNewFeature = () => {
-    this.newFeature = null
-  }
-
   /** Notifies the owning surface after user-feature membership changes. @returns Nothing. */
   protected onUserFeaturesChanged(): void {}
 
@@ -3571,6 +3482,8 @@ export class ResourceViewCtx {
       return
     }
     this.appliedAccountRevision = this.account.revision
+    this.draft.reset()
+    this.draft.resetMode()
 
     // Identity and role changes alter query scope and must supersede prior responses.
     this.featureRefreshSerial += 1

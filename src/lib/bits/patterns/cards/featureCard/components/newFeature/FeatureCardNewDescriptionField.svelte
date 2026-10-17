@@ -16,7 +16,7 @@ let draftDescription = $state('')
 let descriptionInput = $state<HTMLTextAreaElement | null>(null)
 
 const currentDescription = $derived(
-  appCtx.getNewFeature()?.feature?.i18n?.[getLocale()]?.description?.trim() ?? '',
+  appCtx.draft.current?.feature?.i18n?.[getLocale()]?.description?.trim() ?? '',
 )
 
 $effect(() => {
@@ -34,12 +34,12 @@ function startEditing(): void {
 function saveDescription(): void {
   if (!draftDescription.trim()) return
 
-  appCtx.updateNewFeatureValueI18n('description', draftDescription.trim())
+  appCtx.draft.updateI18n('description', draftDescription.trim())
   isEditing = false
 }
 
 function cancelEditing(): void {
-  appCtx.updateNewFeatureValueI18n('description', currentDescription)
+  appCtx.draft.updateI18n('description', currentDescription)
   draftDescription = currentDescription
   isEditing = false
 }

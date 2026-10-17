@@ -28,11 +28,8 @@ describe('new-feature camera capability', () => {
         getUser: () => ({ id: 'user', isAnonymous: false }),
         state: { prisms: { layer: ['layer'] } },
         cache: { layer: new Map([['layer', { id: 'layer' }]]) },
-        getNewFeature: () => null,
         getHierarchy: async () => ({ layer: { id: 'layer' } }),
-        setNewFeature,
-        updateNewFeature: vi.fn(),
-        setNewFeatureMode: vi.fn(),
+        draft: { current: null, set: setNewFeature, update: vi.fn(), setMode: vi.fn() },
       } as unknown as ResourceViewCtx
       await initAddNewFeature(app, { setMode: vi.fn() } as unknown as OmniCtx, null, {
         navigateToRoute: false,

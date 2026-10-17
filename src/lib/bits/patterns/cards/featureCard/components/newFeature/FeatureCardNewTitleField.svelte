@@ -17,7 +17,7 @@ let titleInput = $state<HTMLInputElement | null>(null)
 let originalTitle = $state('')
 
 const currentTitle = $derived(
-  appCtx.getNewFeature()?.feature?.i18n?.[getLocale()]?.title?.trim() ?? '',
+  appCtx.draft.current?.feature?.i18n?.[getLocale()]?.title?.trim() ?? '',
 )
 
 $effect(() => {
@@ -35,18 +35,18 @@ function startEditing(): void {
 
 function saveTitle(): void {
   if (!draftTitle.trim()) {
-    appCtx.updateNewFeatureValueI18n('title', originalTitle)
+    appCtx.draft.updateI18n('title', originalTitle)
     draftTitle = originalTitle
     isEditing = false
     return
   }
 
-  appCtx.updateNewFeatureValueI18n('title', draftTitle.trim())
+  appCtx.draft.updateI18n('title', draftTitle.trim())
   isEditing = false
 }
 
 function cancelEditing(): void {
-  appCtx.updateNewFeatureValueI18n('title', originalTitle)
+  appCtx.draft.updateI18n('title', originalTitle)
   draftTitle = originalTitle
   isEditing = false
 }
@@ -64,7 +64,7 @@ function cancelEditing(): void {
         class="h-11 min-w-0 w-full rounded-full border border-white/14 bg-black/35 px-4 text-left text-base font-semibold text-white caret-white placeholder:text-white/34 focus:border-white/28 focus:outline-none"
         placeholder={m.fluffy_wide_ladybug_file()}
         oninput={() => {
-          appCtx.updateNewFeatureValueI18n('title', draftTitle)
+          appCtx.draft.updateI18n('title', draftTitle)
         }}
         onkeydown={event => {
           event.stopPropagation()

@@ -1665,8 +1665,8 @@ export function getFeatureProperty(
 ): FeatureProperty | null {
   if (!featureId) {
     // ASSERT : newFeature exists
-    if (!appCtx.newFeature?.feature?.properties) return null
-    return appCtx.newFeature.feature.properties.find(
+    if (!appCtx.draft.current?.feature?.properties) return null
+    return appCtx.draft.current.feature.properties.find(
       p => p && p.propertyId === propertyId,
     ) as FeatureProperty | null
   } else {
@@ -1810,16 +1810,16 @@ export function updateNewFeatureProperty(
   propertyId: Id,
   object: Partial<FeatureProperty>,
 ): void {
-  if (!appCtx.newFeature?.feature) {
+  if (!appCtx.draft.current?.feature) {
     return
   }
 
   // Initialize properties array if it doesn't exist
-  if (!appCtx.newFeature.feature.properties) {
-    appCtx.newFeature.feature.properties = []
+  if (!appCtx.draft.current.feature.properties) {
+    appCtx.draft.current.feature.properties = []
   }
 
-  const currentProperties = appCtx.newFeature.feature.properties
+  const currentProperties = appCtx.draft.current.feature.properties
   const propIndex = currentProperties.findIndex(p => p.propertyId === propertyId)
 
   let updatedProperties: UserContributedFeatureProperty[]
@@ -1852,17 +1852,11 @@ export function updateNewFeatureProperty(
       newProperty.i18n = object.i18n
     }
 
-    updatedProperties = [...appCtx.newFeature.feature.properties, newProperty]
+    updatedProperties = [...appCtx.draft.current.feature.properties, newProperty]
   }
 
   // Create a new newFeature object to ensure reactivity
-  appCtx.newFeature = {
-    ...appCtx.newFeature,
-    feature: {
-      ...appCtx.newFeature.feature,
-      properties: updatedProperties,
-    },
-  }
+  appCtx.draft.updateField('properties', updatedProperties)
 }
 
 /**
@@ -1879,7 +1873,7 @@ export function updateNewFeatureI18nProperty(
   object: Partial<FeaturePropertyI18nDB>,
   locale: Locale,
 ): void {
-  const properties = appCtx.newFeature?.feature?.properties
+  const properties = appCtx.draft.current?.feature?.properties
   if (!properties) return
 
   const propIndex = properties.findIndex(p => p.propertyId === propertyId)

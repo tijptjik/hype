@@ -45,7 +45,7 @@ let searchQuery = $state('')
 let isSaving = $state(false)
 let isFindOtherOpen = $state(false)
 
-const newFeature = $derived(appCtx.getNewFeature())
+const newFeature = $derived(appCtx.draft.current)
 const appMainOffsetX = $derived(surfaceLayout.getAppMainOffsetX())
 const activeLayers = $derived.by(() =>
   // Prefer the reactive list data: caches can hold narrower payloads from prior lookups.
@@ -251,14 +251,14 @@ const isValid = $derived(
 )
 
 $effect(() => {
-  if (appCtx.newFeatureMode !== NewFeatureMode.parents) {
+  if (appCtx.draft.mode !== NewFeatureMode.parents) {
     isFindOtherOpen = false
     searchQuery = ''
   }
 })
 
 $effect(() => {
-  if (appCtx.newFeatureMode !== NewFeatureMode.parents) return
+  if (appCtx.draft.mode !== NewFeatureMode.parents) return
   if (isFindOtherOpen) return
   if (activeLayers.length !== 1) return
   if (selectedOrganisation || selectedProject || selectedLayer) return
@@ -267,7 +267,7 @@ $effect(() => {
   const project = appCtx.cache.project.get(layer.projectId)
   const organisation = appCtx.cache.organisation.get(layer.organisationId)
 
-  appCtx.updateNewFeature({
+  appCtx.draft.update({
     organisationId: organisation?.id,
     projectId: project?.id,
     layerId: layer.id,
@@ -284,17 +284,17 @@ function handleCloseModal(): void {
   isFindOtherOpen = false
 
   if (newFeature?.taskId) {
-    appCtx.setNewFeatureMode(NewFeatureMode.card)
+    appCtx.draft.setMode(NewFeatureMode.card)
     return
   }
 
-  appCtx.setNewFeatureMode(null)
+  appCtx.draft.setMode(null)
   omniCtx.cancelNewFeature()
 }
 
 function handleResourceSelect(resource: Organisation | Project | Layer): void {
   if ('projectId' in resource && 'organisationId' in resource) {
-    appCtx.updateNewFeature({
+    appCtx.draft.update({
       organisationId: resource.organisationId,
       projectId: resource.projectId,
       layerId: resource.id,
@@ -308,7 +308,7 @@ function handleResourceSelect(resource: Organisation | Project | Layer): void {
   }
 
   if ('organisationId' in resource) {
-    appCtx.updateNewFeature({
+    appCtx.draft.update({
       organisationId: resource.organisationId,
       projectId: resource.id,
       layerId: undefined,
@@ -321,7 +321,7 @@ function handleResourceSelect(resource: Organisation | Project | Layer): void {
     return
   }
 
-  appCtx.updateNewFeature({
+  appCtx.draft.update({
     organisationId: resource.id,
     projectId: undefined,
     layerId: undefined,
@@ -365,7 +365,7 @@ function clearSelection(level: 'organisation' | 'project' | 'layer'): void {
     })
   }
 
-  appCtx.updateNewFeature(updates)
+  appCtx.draft.update(updates)
   searchQuery = ''
 }
 
@@ -373,7 +373,7 @@ function handleOpenFindOther(): void {
   const nextValue = !isFindOtherOpen
   isFindOtherOpen = nextValue
   if (nextValue) {
-    appCtx.updateNewFeature({
+    appCtx.draft.update({
       organisationId: undefined,
       projectId: undefined,
       layerId: undefined,
@@ -406,10 +406,10 @@ async function handleAccept(): Promise<void> {
 
   try {
     const shouldGoToLocation = !(
-      appCtx.getNewFeature()?.feature?.geometry as Point | undefined
+      appCtx.draft.current?.feature?.geometry as Point | undefined
     )?.coordinates
-    const draft = await upsertNewFeatureDraft(appCtx.getNewFeature() ?? {})
-    appCtx.updateNewFeature({
+    const draft = await upsertNewFeatureDraft(appCtx.draft.current ?? {})
+    appCtx.draft.update({
       taskId: draft.task.id,
       featureId: draft.featureId,
       organisationId: draft.organisationId,
@@ -425,11 +425,11 @@ async function handleAccept(): Promise<void> {
     searchQuery = ''
 
     if (shouldGoToLocation) {
-      appCtx.setNewFeatureMode(NewFeatureMode.location)
+      appCtx.draft.setMode(NewFeatureMode.location)
       return
     }
 
-    appCtx.setNewFeatureMode(NewFeatureMode.card)
+    appCtx.draft.setMode(NewFeatureMode.card)
   } catch (error) {
     console.error('Error saving new-feature draft:', error)
     toast.error(m.long_crazy_peacock_care())
@@ -439,7 +439,7 @@ async function handleAccept(): Promise<void> {
 }
 </script>
 
-{#if appCtx.newFeatureMode === NewFeatureMode.parents}
+{#if appCtx.draft.mode === NewFeatureMode.parents}
   <Dialog.Root open={true}>
     <Dialog.Portal>
       <Dialog.Content

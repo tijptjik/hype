@@ -7,7 +7,7 @@ import { DivisionCtx } from '#lib/context/division.svelte.js'
 import { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
 import type { MapController } from '#lib/map/controller.js'
 import type { SessionUser } from '#lib/types.js'
-import { FirstClassResource, Panel } from '#lib/enums.js'
+import { FirstClassResource, Panel, NewFeatureMode } from '#lib/enums.js'
 
 describe('surface context boundaries', () => {
   it('owns canonical panel state and geometry independently on each surface', () => {
@@ -36,6 +36,26 @@ describe('surface context boundaries', () => {
     expect(app.layout.getEffectiveAppMainWidth()).toBe(1400)
     app.dispose()
     admin.dispose()
+  })
+
+  it('discards creation payload and stage when the account changes', () => {
+    const root = new RootCTX(new ResponsiveCtx())
+    root.sync({ id: 'alice', roles: [] } as unknown as SessionUser, null)
+    const view = new ResourceViewCtx(
+      new DivisionCtx(),
+      root.account,
+      root.responsive,
+      root.cacheCtx,
+    )
+    view.draft.set({ taskId: 'alice-task', feature: {} })
+    view.draft.setMode(NewFeatureMode.parents)
+    view.syncAccount()
+    expect(view.draft.current?.taskId).toBe('alice-task')
+    root.sync({ id: 'bob', roles: [] } as unknown as SessionUser, null)
+    view.syncAccount()
+    expect(view.draft.current).toBeNull()
+    expect(view.draft.mode).toBeNull()
+    view.dispose()
   })
 
   it('keeps public camera commands optional and independent of resource readiness', async () => {

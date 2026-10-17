@@ -280,8 +280,8 @@ export class OmniCtx {
   // Cancel new-feature mode with full reset
   cancelNewFeature() {
     this.resetToSearch(false)
-    this.appCtx.resetNewFeatureMode()
-    this.appCtx.resetNewFeature()
+    this.appCtx.draft.resetMode()
+    this.appCtx.draft.reset()
     this.appCtx.resetActiveCollection()
     navigate('/', undefined, {
       paramsToDrop: [COLLECTION_QUERY_PARAM],
@@ -439,11 +439,11 @@ export class OmniCtx {
       if (this.cardCtx?.isNewMode) {
         this.closeCard()
         this.resetToSearch()
-        this.appCtx.setNewFeatureMode(null)
+        this.appCtx.draft.setMode(null)
         // Delay the reset to allow the DOM to update and remove the card component
         tick().then(() => {
           this.isIntentionallyClosing = true
-          this.appCtx.resetNewFeature()
+          this.appCtx.draft.reset()
           this.appCtx.resetActiveCollection()
           // this.focusSearchBar();
           // Reset the flag after reactive effects have had a chance to run
@@ -488,8 +488,8 @@ export class OmniCtx {
       // i.e. if we are showing the LayerSelctionModal or GeoLocationModal.
     } else if (this.state.mode === OmniMode.newFeature) {
       this.setMode(OmniMode.search)
-      this.appCtx.resetNewFeature()
-      this.appCtx.setNewFeatureMode(null)
+      this.appCtx.draft.reset()
+      this.appCtx.draft.setMode(null)
       // If we are in search mode, close the tray
     } else if (this.state.mode === OmniMode.search && this.state.isTrayOpen) {
       this.closeTray()

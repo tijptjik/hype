@@ -19,7 +19,7 @@ let draftAddress = $state('')
 let addressInput = $state<HTMLInputElement | null>(null)
 
 const currentAddress = $derived(
-  appCtx.getNewFeature()?.feature?.i18n?.[getLocale()]?.displayAddress?.trim() ?? '',
+  appCtx.draft.current?.feature?.i18n?.[getLocale()]?.displayAddress?.trim() ?? '',
 )
 
 $effect(() => {
@@ -37,19 +37,19 @@ function startEditing(): void {
 function saveAddress(): void {
   if (!draftAddress.trim()) return
 
-  appCtx.updateNewFeatureValueI18n('displayAddress', draftAddress.trim())
-  appCtx.updateNewFeatureValueI18n('displayAddressGen', false)
+  appCtx.draft.updateI18n('displayAddress', draftAddress.trim())
+  appCtx.draft.updateI18n('displayAddressGen', false)
   isEditing = false
 }
 
 function cancelEditing(): void {
-  appCtx.updateNewFeatureValueI18n('displayAddress', currentAddress)
+  appCtx.draft.updateI18n('displayAddress', currentAddress)
   draftAddress = currentAddress
   isEditing = false
 }
 
 function reopenLocationPicker(): void {
-  appCtx.setNewFeatureMode(NewFeatureMode.location)
+  appCtx.draft.setMode(NewFeatureMode.location)
 }
 </script>
 

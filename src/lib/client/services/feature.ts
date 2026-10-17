@@ -81,7 +81,7 @@ function stopNewFeatureTriggerEvent(event?: Event | null): void {
  * @returns The modal or card state that should be shown next.
  */
 function getNewFeatureEntryMode(
-  newFeature: ResourceViewCtx['newFeature'],
+  newFeature: ResourceViewCtx['draft']['current'],
 ): NewFeatureMode {
   if (!newFeature?.layerId) {
     return NewFeatureMode.parents
@@ -129,9 +129,9 @@ export const initAddNewFeature = async (
 
   omniCtx.setMode(OmniMode.newFeature)
 
-  if (appCtx.getNewFeature()) {
-    if (!appCtx.getNewFeatureMode()) {
-      appCtx.setNewFeatureMode(getNewFeatureEntryMode(appCtx.getNewFeature()))
+  if (appCtx.draft.current) {
+    if (!appCtx.draft.mode) {
+      appCtx.draft.setMode(getNewFeatureEntryMode(appCtx.draft.current))
     }
 
     if (navigateToRoute) {
@@ -144,7 +144,7 @@ export const initAddNewFeature = async (
   if (activeLayers.length === 1) {
     if (singleActiveLayer) {
       const hierarchy = await appCtx.getHierarchy(singleActiveLayer)
-      appCtx.setNewFeature({
+      appCtx.draft.set({
         organisationId: hierarchy.organisation?.id,
         projectId: hierarchy.project?.id,
         layerId: hierarchy.layer?.id,
@@ -158,8 +158,8 @@ export const initAddNewFeature = async (
           },
         },
       })
-      const draft = await upsertNewFeatureDraft(appCtx.getNewFeature() ?? {})
-      appCtx.updateNewFeature({
+      const draft = await upsertNewFeatureDraft(appCtx.draft.current ?? {})
+      appCtx.draft.update({
         taskId: draft.task.id,
         featureId: draft.featureId,
         organisationId: draft.organisationId,
@@ -172,11 +172,11 @@ export const initAddNewFeature = async (
         },
       })
       // Trigger the GeoLocation modal directly.
-      appCtx.setNewFeatureMode(NewFeatureMode.location)
+      appCtx.draft.setMode(NewFeatureMode.location)
     }
   } else {
     // If multiple layers are active, dispatch event to show the layer selection modal.
-    appCtx.setNewFeatureMode(NewFeatureMode.parents)
+    appCtx.draft.setMode(NewFeatureMode.parents)
   }
 
   if (navigateToRoute) {

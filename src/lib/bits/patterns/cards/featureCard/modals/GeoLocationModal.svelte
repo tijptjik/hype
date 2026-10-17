@@ -32,7 +32,7 @@ const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
 const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
-const newFeature = $derived(appCtx.getNewFeature())
+const newFeature = $derived(appCtx.draft.current)
 const appMainOffsetX = $derived(surfaceLayout.getAppMainOffsetX())
 const currentLocaleKey = $derived(getLocaleKey())
 const locationHeading = $derived.by(() =>
@@ -96,7 +96,7 @@ function syncDisplayAddress(
 }
 
 $effect(() => {
-  const currentMode = appCtx.newFeatureMode
+  const currentMode = appCtx.draft.mode
   const isEnteringLocation =
     currentMode === NewFeatureMode.location && previousMode !== NewFeatureMode.location
 
@@ -119,11 +119,11 @@ function handleCloseModal(): void {
 }
 
 function handleAccept(): void {
-  if (appCtx.newFeatureMode !== NewFeatureMode.location || !isValid || isLoading) return
-  appCtx.updateNewFeatureValueI18n('displayAddress', currentDisplayAddress.trim())
-  appCtx.updateNewFeatureValueI18n('displayAddressGen', isDisplayAddressGen)
+  if (appCtx.draft.mode !== NewFeatureMode.location || !isValid || isLoading) return
+  appCtx.draft.updateI18n('displayAddress', currentDisplayAddress.trim())
+  appCtx.draft.updateI18n('displayAddressGen', isDisplayAddressGen)
   reset()
-  appCtx.setNewFeatureMode(NewFeatureMode.card)
+  appCtx.draft.setMode(NewFeatureMode.card)
 }
 
 function handleStartEditing(): void {
@@ -142,13 +142,13 @@ function handleCancelEditing(): void {
 async function handleSetLocation(): Promise<void> {
   const center = getMapCenter?.()
   if (center) {
-    appCtx.updateNewFeatureValue('geometry', {
+    appCtx.draft.updateField('geometry', {
       type: 'Point',
       coordinates: center,
     })
   }
 
-  const coordinates = (appCtx.getNewFeature()?.feature?.geometry as Point | undefined)
+  const coordinates = (appCtx.draft.current?.feature?.geometry as Point | undefined)
     ?.coordinates
   if (!coordinates) return
 
@@ -167,7 +167,7 @@ async function handleSetLocation(): Promise<void> {
 }
 
 function handleKeydown(event: KeyboardEvent): void {
-  if (appCtx.newFeatureMode !== NewFeatureMode.location) return
+  if (appCtx.draft.mode !== NewFeatureMode.location) return
 
   if (event.key === 'Escape') {
     event.preventDefault()
@@ -183,7 +183,7 @@ function handleKeydown(event: KeyboardEvent): void {
 
 <svelte:window onkeydown={handleKeydown} />
 
-{#if appCtx.newFeatureMode === NewFeatureMode.location}
+{#if appCtx.draft.mode === NewFeatureMode.location}
   <div class="bits-theme pointer-events-none fixed inset-0 z-[961] text-white">
     <div
       class="absolute left-1/2 top-1/2 flex h-56 w-56 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
