@@ -452,3 +452,63 @@ responses. There were zero page errors or failed remote responses. This verifies
 the actual migrated local app; the original transient lock was not deliberately
 reproduced against the shared database. Another 44 division/role/highlight/query
 tests passed. Earlier copy-based admin-isolation evidence remains separate.
+
+### Point-supported hierarchy resolution — 17 October 2026
+
+Prince Edward had 52 candidate-only memberships despite all 52 points being inside
+its published polygon. The SaanSeoi resolver retained partial branches after
+removing contradicted ancestors and treated redundant locality/full paths as
+unresolved alternatives. The final path could therefore be unique while the
+response still reported ambiguity.
+
+The resolver now walks complete branches supported by the point first and removes
+duplicate or subsumed paths only when the additional ancestors have direct
+containment evidence. Partial ancestry is retained when a containing division
+crosses every stored parent. True boundary/overlap alternatives and missing-area
+uncertainty remain ambiguous; neither display levels nor label points establish
+containment. The focused resolver/presentation suite passes 24 tests and 84
+assertions, including opposite district points, reversed record order, a shared
+boundary, missing ancestor geometry and forward lookup without a point.
+
+The existing local database was backed up to
+`.local/division-refresh/backups/2026-10-17T14-15-05-point-paths.sqlite` before
+requeuing the 924 candidate-only features. The database is
+`.wrangler/state/v3/d1/miniflare-D1DatabaseObject/d3080fe932e72db09a66987b4bc33e3301f57365daef263894a0551146999c8f.sqlite`.
+A bounded 30-job rehearsal preceded completion through the real refresh worker.
+All requests retained the v0.2 October release pin and the local SaanSeoi API;
+transient 503 responses were retried without bypassing readiness.
+
+Final read-only verification after completion:
+
+- Applied release remains `data-hk-divisions-2026-10-01.0`; the worker is idle,
+  with zero jobs and no target, lease or error.
+- 9,825 selected memberships cover 1,824 features. Every selected membership
+  passes exact stored-polygon coverage: zero missing areas and zero uncovered
+  points. Four features retain unsupported coordinates.
+- All 4,456 previously selected memberships remain; 5,369 memberships became
+  selected. Prince Edward has 52 selected memberships, of which 44 satisfy
+  published/non-archived/non-draft predicates. Overlay and authorization filters
+  can further reduce that displayed count.
+- All 184 definitions retain equivalent metadata and polygons, including 184
+  hierarchies, 131 populated codes, 172 populated identifiers and 184 names in
+  each of English and Traditional Chinese. Optional null-key omission is the
+  only structural metadata difference.
+- Feature coordinates and authored translations are unchanged. All 1,828 role
+  projections agree with selected memberships; exact rollup-bin and feature
+  projection differences are zero, with no foreign-key violations.
+- The production facet service returns 1,067 public-status features and 131
+  geometry-backed options. All 361 name/code comparisons yield identical IDs
+  through the filter-panel and Omnibar search pipelines.
+
+This was a point-path resolution defect, independent of the earlier unavailable
+`areas:saanseoi` variant. Hype obtains membership polygons from geocoding and
+metadata from `include=hierarchy`; that missing standalone variant was not its
+worker dependency. No deployment, remote schedule or production data changed.
+
+The final browser attempt found the rendered Prince Edward row, but its click
+check timed out: the root HTML element intercepted pointer events and navigation
+replaced the row. This attempt used a browser-only empty basemap tile fixture.
+It does not establish successful Prince Edward selection or marker filtering in
+the rendered UI. The remaining UI acceptance action is to repeat that interaction
+once the concurrently edited app is stable; the database, containment and shared
+search-service checks above passed independently.
