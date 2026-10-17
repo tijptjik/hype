@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { onDestroy } from 'svelte'
 // TRANSITIONS
 import { slide } from 'svelte/transition'
 // ICONS
@@ -38,8 +40,16 @@ type NeighbourhoodRow = {
   level: number | null
   class: string | null
 }
-let { row, onToggle }: { row: NeighbourhoodRow; onToggle: (id: string) => void } =
-  $props()
+let {
+  row,
+  onToggle,
+  onPreview,
+}: {
+  row: NeighbourhoodRow
+  onToggle: (id: string) => void
+  onPreview?: (id: string, active: boolean) => void
+} = $props()
+onDestroy(() => onPreview?.(row.id, false))
 const Icon = $derived(icons[row.class as keyof typeof icons] ?? MapIcon)
 </script>
 
@@ -49,6 +59,10 @@ const Icon = $derived(icons[row.class as keyof typeof icons] ?? MapIcon)
     class="group ml-4 flex w-[calc(100%-1rem)] cursor-pointer items-center justify-between gap-4 rounded-l-md bg-panel py-2 pl-4 pr-7 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-focus"
     aria-pressed={row.selected}
     onclick={() => onToggle(row.id)}
+    onpointerenter={() => onPreview?.(row.id, true)}
+    onpointerleave={() => onPreview?.(row.id, false)}
+    onfocus={() => onPreview?.(row.id, true)}
+    onblur={() => onPreview?.(row.id, false)}
     onkeydown={event => {
       if (event.key === 'Escape') {
         event.preventDefault()

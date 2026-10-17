@@ -28,6 +28,7 @@ let { sections }: OmnibarResultsProps = $props()
           results={section.results}
           limit={section.limit}
           onSelection={section.onSelection}
+          onPreview={section.onPreview}
           totalCount={section.totalCount}
           hasMore={section.hasMore}
           loading={section.loading}

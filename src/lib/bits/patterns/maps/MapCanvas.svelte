@@ -32,6 +32,7 @@ import {
   resolveRuntimeMapStyle,
 } from '#lib/map/styles/runtime.js'
 import { createMapController, type MapController } from '#lib/map/controller.js'
+import DivisionHighlightLayer from './DivisionHighlightLayer.svelte'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 import { GeolocateControl, NavigationControl } from 'svelte-maplibre-gl'
 // ICONS
@@ -850,6 +851,19 @@ $effect(() => {
   data-testid="map"
   bind:this={mapContainer}
 >
+  {#if activeMapInstance}
+    <DivisionHighlightLayer
+      map={activeMapInstance}
+      client={appCtx.resources}
+      selectedIds={[
+        ...appCtx.divisionCtx.getFilteredDivisions(),
+        ...(appCtx.selection.collection?.type === 'neighbourhood'
+          ? [appCtx.selection.collection.id]
+          : []),
+      ]}
+      hoveredId={appCtx.divisionCtx.hoveredId}
+    />
+  {/if}
   {#if initialStyle}
     <MapSurface
       bind:map={activeMapInstance}

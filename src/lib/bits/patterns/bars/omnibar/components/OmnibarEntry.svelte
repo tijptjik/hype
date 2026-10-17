@@ -1,10 +1,14 @@
 <script lang="ts">
+// SVELTE
+import { onDestroy } from 'svelte'
 // ENUMS
 import { OmniCollection } from '#lib/enums.js'
 // TYPES
 import type { OmnibarEntryProps } from './omnibarPrimitives.types'
 
-let { result, onSelection }: OmnibarEntryProps = $props()
+let { result, onSelection, onPreview }: OmnibarEntryProps = $props()
+
+onDestroy(() => onPreview?.(result.ref, false))
 
 function selectResult(): void {
   onSelection?.(result.ref)
@@ -30,6 +34,10 @@ function handleKeyDown(event: KeyboardEvent): void {
   tabindex="0"
   role="option"
   onclick={handleClick}
+  onpointerenter={() => onPreview?.(result.ref, true)}
+  onpointerleave={() => onPreview?.(result.ref, false)}
+  onfocus={() => onPreview?.(result.ref, true)}
+  onblur={() => onPreview?.(result.ref, false)}
   onkeydown={handleKeyDown}
 >
   <div class="h-1.5 w-1.5 select-none rounded-full bg-base-content/60"></div>

@@ -12,6 +12,7 @@ let {
   results,
   limit,
   onSelection,
+  onPreview,
   totalCount,
   hasMore,
   loading,
@@ -21,7 +22,7 @@ let {
 
 <div class="flex shrink-0 select-none flex-col pb-2 pt-2">
   <OmnibarSectionHeader {collectionType} {totalCount} />
-  <OmnibarSectionEntries {collectionType} {results} {limit} {onSelection} />
+  <OmnibarSectionEntries {collectionType} {results} {limit} {onSelection} {onPreview} />
   {#if onLoadMore && (hasMore || results.length > limit)}
     <button
       type="button"

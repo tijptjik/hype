@@ -74,6 +74,20 @@ export class DivisionCtx {
   /** Registry metadata stays available when a filtered response has no matching members. */
   divisions = new SvelteMap<string, DivisionFacet>()
 
+  /** Transient preview belongs to this surface, independently of selection. */
+  hoveredId: string | null = $state(null)
+
+  /**
+   * Updates pointer or keyboard preview without changing membership filters.
+   * @param id Division being entered or left.
+   * @param active Whether this row is being previewed.
+   * @returns Nothing.
+   */
+  previewDivision(id: string, active: boolean): void {
+    if (active) this.hoveredId = id
+    else if (this.hoveredId === id) this.hoveredId = null
+  }
+
   state: DivisionState = $state({
     filters: {
       feature: {

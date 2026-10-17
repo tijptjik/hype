@@ -113,6 +113,8 @@ export function useFilterPanelModel(app: AppCtx, omni: OmniCtx) {
     get searchTerm() {
       return searchTerm
     },
+    previewDivision: (id: string, active: boolean) =>
+      app.divisionCtx.previewDivision(id, active),
     setSearchTerm: (value: string) => {
       searchTerm = value
     },

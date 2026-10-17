@@ -51,7 +51,11 @@ let {
   {/if}
   <ResourceContainer>
     {#each model.neighbourhoods as row (row.id)}
-      <FilteredNeighbourhood {row} onToggle={model.toggleDivision} />
+      <FilteredNeighbourhood
+        {row}
+        onToggle={model.toggleDivision}
+        onPreview={model.previewDivision}
+      />
     {/each}
   </ResourceContainer>
 </Section>

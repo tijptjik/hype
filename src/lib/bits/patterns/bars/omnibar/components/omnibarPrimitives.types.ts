@@ -32,6 +32,7 @@ export type OmnibarSectionProps = {
   hasMore?: boolean
   loading?: boolean
   onLoadMore?: () => void
+  onPreview?: (ref: string, active: boolean) => void
   onSelection: (ref: string) => void
 }
 
@@ -42,6 +43,7 @@ export type OmnibarSectionHeaderProps = {
 
 export type OmnibarEntryProps = {
   result: SearchResult
+  onPreview?: (ref: string, active: boolean) => void
   onSelection?: (ref: string) => void
 }
 

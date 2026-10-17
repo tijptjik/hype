@@ -237,6 +237,7 @@ export function useOmnibarModel(
         results: omniCtx.searchResults.neighbourhood ?? [],
         limit: omniCtx.limits.neighbourhood ?? 0,
         onSelection: omniCtx.searchHandlers.neighbourhood,
+        onPreview: (id, active) => appCtx.divisionCtx.previewDivision(id, active),
       },
       {
         collectionType: OmniCollection.walk,

@@ -9,6 +9,7 @@ export type OmnibarResultSection = {
   hasMore?: boolean
   loading?: boolean
   onLoadMore?: () => void
+  onPreview?: (ref: string, active: boolean) => void
   onSelection: (ref: string) => void
 }
 
