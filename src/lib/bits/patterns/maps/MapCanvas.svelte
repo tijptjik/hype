@@ -33,6 +33,7 @@ import {
 } from '#lib/map/styles/runtime.js'
 import { createMapController, type MapController } from '#lib/map/controller.js'
 import DivisionHighlightLayer from './DivisionHighlightLayer.svelte'
+import NavigationRouteLayer from './NavigationRouteLayer.svelte'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 import { GeolocateControl, NavigationControl } from 'svelte-maplibre-gl'
 // ICONS
@@ -42,7 +43,9 @@ import { getAppCtx } from '#lib/context/app.svelte.js'
 import { getOmniCtx } from '#lib/context/omni.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
+import { PANEL_WIDTH } from '#lib/constants.js'
 // TYPES
+import type { Journey } from '#lib/routing/routing.types.js'
 import type {
   LngLatLike,
   Map as MaplibreMap,
@@ -62,6 +65,8 @@ import type { FeatureQueryChannel } from '#lib/context/featureQuery.types.js'
  * `MapSurface` remains a context-free rendering primitive.
  */
 type MapCanvasProps = {
+  highlightedSegment?: number | null
+  journey?: Journey | null
   mapStyleCode?: string | null
   pixelRatio?: number
   antialias?: boolean
@@ -85,6 +90,8 @@ type GeolocateControlProps = {
 }
 
 let {
+  highlightedSegment = null,
+  journey = null,
   mapStyleCode = null,
   pixelRatio,
   antialias = true,
@@ -329,6 +336,7 @@ function recenterActiveFeatureToPortal(
 
     if (
       !map ||
+      journey ||
       !omniCtx.state.isCardOpen ||
       featureCardDescriptionExpanded ||
       !activeFeature ||
@@ -830,6 +838,11 @@ let horizontalOffset = $derived(surfaceLayout.getAppMainOffsetX())
 $effect(() => {
   const map = activeMapInstance
 
+  // The route fit accounts for panel padding; do not also pan the camera for it.
+  if (journey) {
+    lastHorizontalOffset = horizontalOffset
+    return
+  }
   if (horizontalOffset !== lastHorizontalOffset && map && !isAnimating) {
     isAnimating = true
     const coordinates = map.getCenter()
@@ -872,9 +885,32 @@ $effect(() => {
   class="map absolute! inset-0 overflow-hidden caret-transparent"
   data-map-gesture-surface="true"
   data-testid="map"
+  data-navigation-active={journey ? 'true' : undefined}
   bind:this={mapContainer}
 >
   {#if activeMapInstance}
+    {#if journey}
+      <NavigationRouteLayer
+        map={activeMapInstance}
+        geometry={journey.geometry}
+        highlightedGeometry={highlightedSegment === null
+          ? null
+          : (journey.segments[highlightedSegment]?.geometry ?? null)}
+        theme={getMapStyleDefinition(resolvedMapStyleCode).markerTheme}
+        padding={{
+          top: 100,
+          bottom: 120,
+          left:
+            !surfaceLayout.responsive.isMobile && appCtx.view.panels.isLeftPanelOpen()
+              ? PANEL_WIDTH + 48
+              : 48,
+          right:
+            !surfaceLayout.responsive.isMobile && appCtx.view.panels.isRightPanelOpen()
+              ? PANEL_WIDTH + 48
+              : 48,
+        }}
+      />
+    {/if}
     <DivisionHighlightLayer
       map={activeMapInstance}
       client={appCtx.view.resources}

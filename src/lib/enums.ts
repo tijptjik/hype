@@ -309,6 +309,7 @@ export const RESERVED_PARAMETERS = [
 /* -------- */
 
 export enum Panel {
+  navigation = 'navigation',
   filters = 'filters',
   prisms = 'prisms',
   stars = 'stars',
@@ -336,6 +337,7 @@ export enum PanelLeft {
 }
 
 export enum PanelRight {
+  navigation = 'navigation',
   filters = 'filters',
   settings = 'settings',
   profile = 'profile',

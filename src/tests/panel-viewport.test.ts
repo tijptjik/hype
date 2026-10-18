@@ -7,6 +7,7 @@ describe('panel viewport guard', () => {
   it.each([
     [Panel.prisms, Panel.filters],
     [Panel.filters, Panel.prisms],
+    [Panel.stars, Panel.navigation],
   ])('closes %s and preserves the later opening %s', (older, newer) => {
     const ctx = new PanelController()
     ctx.setPanelOpen(older, true)

@@ -5,6 +5,7 @@ import { useSavedFeatureListModel } from '#lib/adapters/panels/useSavedFeatureLi
 import { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
 import { usePanelShellModel } from '#lib/adapters/panels/usePanelShellModel.svelte.js'
 import { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPanelModel.svelte.js'
+import { useNavigationPanelModel } from '#lib/adapters/panels/useNavigationPanelModel.svelte.js'
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
 // SVELTE
 import { browser } from '$app/env'
@@ -45,6 +46,7 @@ import Filters from '#lib/bits/patterns/filtersPanel/FiltersPanel.svelte'
 import { ResourcePanel } from '#lib/bits/patterns/resourcePanel/index.js'
 import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
 import Stars from '#lib/bits/patterns/starsPanel/StarsPanel.svelte'
+import NavigationPanel from '#lib/bits/patterns/navigationPanel/NavigationPanel.svelte'
 import Hub from '#lib/bits/patterns/hubPanel/HubPanel.svelte'
 // import Plan from '#lib/bits/patterns/planPanel/PlanPanel.svelte'
 // import Passport from '#lib/bits/patterns/passportPanel/PassportPanel.svelte'
@@ -102,6 +104,8 @@ const filtersShell = usePanelShellModel(appCtx.view, Panel.filters)
 const starsShell = usePanelShellModel(appCtx.view, Panel.stars)
 const hubShell = usePanelShellModel(appCtx.view, Panel.hub)
 const profileShell = usePanelShellModel(appCtx.view, Panel.profile)
+const navigationShell = usePanelShellModel(appCtx.view, Panel.navigation)
+const navigationModel = useNavigationPanelModel(appCtx, () => omniCtx.closeCard())
 const responsiveCtx = getResponsiveCtx()
 const surfaceLayout = appCtx.view.layout
 
@@ -582,6 +586,10 @@ $effect(() => {
   {#if !$session.isPending && $session.data && appCtx.view.isInitialised}
     <AppSurface>
       <MapCanvas
+        highlightedSegment={navigationModel.highlightedSegment}
+        journey={navigationModel.state.phase === 'ready'
+          ? navigationModel.state.journey
+          : null}
         mapStyleCode={activeMapStyleCode}
         onMapReady={controller => {
           appCtx.mapController = controller
@@ -600,6 +608,7 @@ $effect(() => {
         {termsOfServiceDialogProps}
       />
       <Filters shell={filtersShell} model={filtersModel} />
+      <NavigationPanel shell={navigationShell} model={navigationModel} />
       <!-- <Plan /> -->
       <!-- <Passport /> -->
       <!-- <EventCompanion /> -->
@@ -658,6 +667,26 @@ $effect(() => {
         </div>
       {/if}
       <AppMain>
+        {#if navigationModel.showingMap && navigationModel.state.phase === 'ready'}
+          <div
+            class="pointer-events-auto absolute bottom-40 left-1/2 z-40 flex -translate-x-1/2 gap-2 rounded-xl border border-border bg-panel p-2 shadow-lg"
+          >
+            <button
+              type="button"
+              class="whitespace-nowrap rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-content"
+              onclick={() => navigationModel.showDirections()}
+            >
+              Show directions
+            </button>
+            <button
+              type="button"
+              class="whitespace-nowrap rounded-lg px-3 py-3 text-sm hover:bg-base-content/10"
+              onclick={() => navigationModel.close()}
+            >
+              End route
+            </button>
+          </div>
+        {/if}
         <AppHubSubscriptionOverlay
           class="z-50"
           isVisible={subscriptionVisibility.showHubSubscriptionOverlay ||

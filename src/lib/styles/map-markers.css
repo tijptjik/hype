@@ -6,6 +6,15 @@
    FEATURE MARKERS
    ═══════════════════════ */
 
+@layer components {
+  /* Keep the native route visible beneath photo markers while preserving the destination. */
+  #map[data-navigation-active="true"]
+    .marker-container--feature:not(.active)
+    > .marker-inner {
+    opacity: 0.18;
+  }
+}
+
 .marker-address {
   width: 124px;
   height: 124px;

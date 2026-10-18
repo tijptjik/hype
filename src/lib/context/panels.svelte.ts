@@ -15,7 +15,12 @@ const LEFT_PANELS: readonly Panel[] = [
   Panel.eventCompanion,
   Panel.hub,
 ]
-const RIGHT_PANELS: readonly Panel[] = [Panel.filters, Panel.settings, Panel.profile]
+const RIGHT_PANELS: readonly Panel[] = [
+  Panel.filters,
+  Panel.settings,
+  Panel.profile,
+  Panel.navigation,
+]
 
 type PanelState = {
   [key in Panel]: {
@@ -37,6 +42,10 @@ type PanelEffects = {
 /** Canonical panel visibility and arbitration for one route surface. */
 export class PanelController {
   readonly state = $state<PanelState>({
+    navigation: {
+      isOpen: false,
+      isOpenVisually: false,
+    },
     admin: {
       isOpen: false,
       isOpenVisually: false,
