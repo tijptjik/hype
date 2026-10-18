@@ -3,6 +3,8 @@
 
 Usage: python3 scripts/routing/wrangler.py <wrangler arguments>
 Reads only the two Cloudflare values from the Git-ignored local token file.
+ROUTING_CLOUDFLARE_ENV_FILE selects another operator-provided credential file;
+without a local file, existing Cloudflare environment credentials are retained.
 """
 import os
 from pathlib import Path
@@ -11,7 +13,10 @@ import sys
 
 root = Path(__file__).resolve().parents[2]
 env = dict(os.environ)
-for line in (root / '.env.routing-benchmark.local').read_text().splitlines():
+credential_file = Path(os.environ.get('ROUTING_CLOUDFLARE_ENV_FILE',
+                                     root / '.env.routing-benchmark.local'))
+credential_lines = credential_file.read_text().splitlines() if credential_file.exists() else []
+for line in credential_lines:
     if not line.strip() or line.lstrip().startswith('#'):
         continue
     key, value = line.split('=', 1)

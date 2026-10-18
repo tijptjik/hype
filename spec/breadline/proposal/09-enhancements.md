@@ -90,11 +90,26 @@ and survives basemap replacements with the route.
 
 The [integration verification notes](../../../docs/benchmarks/navigation-2026-10-18.md)
 record real browser-to-app-to-deployed-engine checks, mobile/error handling and
-focused tests. Local credentials are configured. Production/preview secret
-configuration and application deployment are still pending; the native Worker
-itself was already deployed by the runtime experiment. Graph update/rollback,
-cache/uncertainty and shared volunteer/operations consumers remain incomplete,
+focused tests. Local credentials are configured. Dedicated production/preview infrastructure
+and secrets are now provisioned as described below; main application publication
+remains pending. Automated graph refresh, cache/uncertainty and shared
+volunteer/operations consumers remain incomplete,
 so #213 and its existing acceptance checkboxes remain open.
+
+## Shared SaanSeoi routing
+
+SaanSeoi owns regional PBF/Valhalla/GraphHopper publication, graph retention and the
+private `ss-routing-prod` / `ss-routing-preview` services. Each service has a separate
+container namespace and app-token registry. Hype uses a private service binding,
+`X-Routing-Client: hype` and its server-only routing credential; guest/session and
+per-user/IP checks remain in Hype. Local experiments remain isolated.
+
+The shared engine loads a pinned compatible GBA Valhalla release, covering all three
+regions with one named engine per environment, eight admitted calculations and a
+120-second idle shutdown. Hype still constrains initial UI endpoints to Hong Kong.
+Public graph downloads do not grant access to private compute. See
+[shared operations](../../../docs/operations/Feature-Routing.md) and SaanSeoi's
+`docs/datasets/families/routing.md` for source manifests, downloads and rollback.
 
 ## Modes and future contract
 
@@ -120,7 +135,7 @@ so #213 and its existing acceptance checkboxes remain open.
 
 ## Production acceptance still outstanding
 
-Graph/admin/timezone preparation and update/rollback policy, route quality,
+Graph/admin/timezone preparation and an automated refresh pipeline, route quality,
 broader native cold/warm/concurrent capacity, cache keys and
 invalidation, shared volunteer/operations consumption and broader UI integration remain
 implementation work under #213. Distinguish cached estimates from fresh routes;

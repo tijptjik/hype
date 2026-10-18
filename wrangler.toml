@@ -122,7 +122,7 @@ region = "azure:eastasia"
 
 [[env.production.services]]
 binding = "ROUTING_SERVICE"
-service = "hype-routing-native-benchmark"
+service = "ss-routing-prod"
 
 [[env.production.ratelimits]]
 name = "ROUTING_LIMITER"
@@ -219,7 +219,7 @@ region = "azure:eastasia"
 
 [[env.preview.services]]
 binding = "ROUTING_SERVICE"
-service = "hype-routing-native-benchmark"
+service = "ss-routing-preview"
 
 [[env.preview.ratelimits]]
 name = "ROUTING_LIMITER"

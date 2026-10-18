@@ -121,7 +121,10 @@ describe('routing service contract', () => {
     })
     const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('https://routing.internal/route')
-    expect(init.headers).toMatchObject({ Authorization: 'Bearer test-only-secret' })
+    expect(init.headers).toMatchObject({
+      Authorization: 'Bearer test-only-secret',
+      'X-Routing-Client': 'hype',
+    })
     expect(JSON.parse(init.body as string)).toEqual({
       locations: [
         { lat: 22.28, lon: 114.15 },

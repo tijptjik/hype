@@ -136,6 +136,7 @@ export async function requestRouting(
       headers: {
         Authorization: `Bearer ${env.ROUTING_TOKEN}`,
         'Content-Type': 'application/json',
+        'X-Routing-Client': 'hype',
       },
       body: route
         ? JSON.stringify({

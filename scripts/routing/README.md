@@ -133,3 +133,14 @@ stop the deployed native benchmark when finished. The dedicated token has now
 enabled the paired deployed comparison. Dedicated HK/mobile clients and container
 placement tuning remain follow-up work; a configured APAC location is not proof
 of the executing region.
+
+## Shared application routing
+
+Production and preview now consume SaanSeoi's private `ss-routing-prod` and
+`ss-routing-preview` services. Graph generation, release downloads, two-edition
+retention and container deployments belong to the SaanSeoi repository. This directory
+retains only isolated runtime experiments and Hype's credential setup adapter.
+
+See [shared routing operations](../../docs/operations/Feature-Routing.md).
+Use `bun run routing:configure:prod` or `bun run routing:configure:preview` to install
+the Hype app credential after the corresponding SaanSeoi service is deployed.
