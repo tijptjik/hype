@@ -114,7 +114,8 @@
     "breadline:db:backup": "bun run scripts/breadline/backup.ts",
     "breadline:db:import": "bun --env-file=.dev.vars run scripts/breadline/import.ts",
     "breadline:users:plan": "bun --env-file=.dev.vars run scripts/breadline/users.ts",
-    "breadline:users:test": "bun run scripts/breadline/rehearse-users.ts"
+    "breadline:users:test": "bun run scripts/breadline/rehearse-users.ts",
+    "breadline:local:prepare": "bun run scripts/breadline/prepare-local.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

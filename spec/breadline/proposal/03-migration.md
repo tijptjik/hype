@@ -1,17 +1,50 @@
 # Breadline migration and reconciliation
 
-Current implementation scope: [isolated user import](02-user-import.md). The user
-planner is usable now; the broader conversion/apply framework below remains deferred.
-User import uses `0085_breadline_users.sql` and `0086_username_display_case.sql`;
-the broader event schema is inactive.
+Current identity stage: [phone-based users, auto-claims and latent identities](02-user-import.md#phone-based-latent-users-replacement-design-18-october-2026).
+Refs #189, #194. The destination will be reset; reconciliation of old HYPE accounts
+is outside this import. Migration `0089_breadline_phone_identity.sql` enforces unique
+phones and adds private ownership/source-crosswalk tables. The planner groups by
+normalized phone (falling back to exact/reviewed email with NULL phone), auto-claims single-email/name identities, and leaves ambiguous
+groups without a primary email or login credentials. It preserves reviewed exclusions
+and all mapped source user/volunteer IDs. Regenerate old email-based plans.
 
-Reviewed cross-email merges and exclusions are supported by the user planner's
-private decisions file; see [decision rules and reconciliation boundaries](02-user-import.md#reviewed-merge-and-exclusion-decisions).
-The plan retains source user/volunteer crosswalks and explicit exclusions. Existing
-Hype identities requiring consolidation block insert SQL and rehearsal until a
-separate destination reconciliation is complete. Future history stages must consume
-both the crosswalk and exclusions; live account reconciliation is not implemented
-by this planning command. Refs #194.
+The identity planner and disposable rehearsal are implemented; the broader event
+schema and conversion/apply framework below remain deferred. First-login claiming
+is implemented for verified social profiles and one-time email links, retaining the
+imported user ID. Migration `0090_breadline_claim_audit.sql` supplies runtime audit
+fields; see the identity specification for atomicity and verification evidence.
+
+Fresh local preparation is implemented by `scripts/breadline/prepare-local.ts`: a
+versioned schema baseline, all current migrations, minimal application setup, shared
+map-style catalog, Breadline source identity import and separate private local fixtures.
+See [local rebuild and corrected source audit](02-user-import.md#phone-audit-correction-and-local-rebuild-19-october-2026).
+The local apply requires an explicit reviewed `--application-snapshot` so identity
+work cannot replace application content with migration seed rows. It uses a backup
+and SQLite online backup installation; it has no remote target. Missing phones may inherit one known phone from an exact-email/reviewed identity
+family; the old ten cross-phone exceptions were NULL-key misclassification, now fixed.
+
+The 19 October completion update adds migration `0091_breadline_email_identity.sql`
+for nullable imported phone provenance. Whitespace is removed before structural
+validation and HK numbers must have eight national digits. Invalid phones no longer
+exclude email identities or their history mappings. The updated local plan maps all
+14,179 retained source rows to 13,386 users, with seven reviewed exclusions and no
+exceptions. Local incremental application clears four malformed phones while
+preserving accepted IDs and sessions; 2,723 imported users need phone completion.
+Authenticated Breadline access is blocked until a structurally valid unique phone is
+saved. See [completion and evidence](02-user-import.md#email-fallback-and-mandatory-phone-completion-19-october-2026).
+
+Private reviewed telephone overrides can clear an explicitly rejected source number
+or supply its canonical correction, guarded by the expected original value. They
+preserve email/history mappings and do not modify the source. See
+[reviewed overrides](02-user-import.md#reviewed-telephone-overrides).
+
+Local application recovery after the minimal-bootstrap regression is implemented by
+`scripts/breadline/restore-local-application.py`. The pre-rebuild snapshot restores
+resource IDs, translations, publication/archive flags, original hub scopes and content,
+while preserving all existing authentication and import tables. Rehearsals without
+application snapshots remain allowed; minimal installation is blocked. Historical
+author references are inert profiles, not restored credentials. Invalid orphan
+translations remain private recovery evidence. See the [preservation contract](02-user-import.md#reproducible-fresh-local-preparation).
 
 Tracking: [migration parent #180](https://github.com/tijptjik/hype/issues/180),
 [source inventory #191](https://github.com/tijptjik/hype/issues/191), and
@@ -117,10 +150,13 @@ Persist assigned IDs and the intended batch before submitting writes; reconcile 
 rows after success or an interrupted run before advancing the offline checkpoint.
 Local records and remote D1 cannot share a transaction, so safe replay must be tested.
 
-Hype stores only the normal user, supported-provider account and domain records needed
-to serve migrated users and their history. Do not add migration identity/checkpoint
-tables, old Facebook app IDs, source row payloads or audit logs to Hype. The old source
-IDs and all reconciliation evidence remain offline. No old tokens or sessions migrate.
+Hype stores normal users, supported-provider accounts and domain records, plus the
+private `breadlineImportUser` and `breadlineImportIdentity` evidence needed for
+latent ownership and source-history resolution. The phone-based import supersedes
+the earlier offline-only identity-map restriction. Keep checkpoints, raw source row
+payloads and operational audit logs offline; legacy subjects in the private identity
+crosswalk are provenance and must not become guessed provider credentials. No old
+tokens or sessions migrate.
 
 Before cutover, stop Breadline writes, run one final source sync, verify table counts and
 foreign-key coverage, ingest the remaining checkpoint range, and then switch traffic.
@@ -132,8 +168,9 @@ pass.
 Related work: [event model #195](https://github.com/tijptjik/hype/issues/195),
 [account support #189](https://github.com/tijptjik/hype/issues/189), and
 [daily operations #202](https://github.com/tijptjik/hype/issues/202).
-The active Drizzle change is `user.telephone`; migration
-`0085_breadline_users.sql` contains no Breadline rows. Broader schema proposals
+Active identity changes are `user.telephone`, phone uniqueness and the private
+ownership/source-crosswalk tables; migrations `0085_breadline_users.sql` and
+`0089_breadline_phone_identity.sql` contain no Breadline rows. Broader schema proposals
 are retained as inactive files under `drafts/`.
 See [schedule/event decisions](04-schedules-events.md) before applying it.
 
