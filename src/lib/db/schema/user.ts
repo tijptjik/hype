@@ -5,6 +5,7 @@ import {
   sqliteTable,
   text,
   uniqueIndex,
+  check,
 } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -69,8 +70,52 @@ export const user = sqliteTable(
       .$defaultFn(() => new Date())
       .$onUpdateFn(() => new Date()),
   },
-  table => [uniqueIndex('user_username_nocase_uidx').on(sql`lower(${table.username})`)],
+  table => [
+    uniqueIndex('user_username_nocase_uidx').on(sql`lower(${table.username})`),
+    uniqueIndex('user_telephone_uidx').on(table.telephone),
+  ],
 )
+
+/** Private Breadline import ownership; unclaimed users have no login credentials. */
+export const breadlineImportUser = sqliteTable(
+  'breadlineImportUser',
+  {
+    userId: text('userId')
+      .primaryKey()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    // Email-only imports retain ownership and history before phone completion.
+    telephone: text('telephone').unique(),
+    state: text('state', { enum: ['unclaimed', 'claimed'] }).notNull(),
+    // Auto-claim assigns an unambiguous identity; it does not verify its mailbox.
+    claimedEmail: text('claimedEmail'),
+    claimedAt: integer('claimedAt', { mode: 'timestamp_ms' }),
+    // A request nonce guards the profile and credential writes in the atomic claim batch.
+    claimKey: text('claimKey'),
+  },
+  table => [
+    check(
+      'breadline_import_state_check',
+      sql`${table.state} IN ('unclaimed', 'claimed')`,
+    ),
+    check(
+      'breadline_import_owner_check',
+      sql`(${table.state} = 'unclaimed' AND ${table.claimedEmail} IS NULL) OR (${table.state} = 'claimed' AND ${table.claimedEmail} IS NOT NULL)`,
+    ),
+  ],
+)
+
+/** Private source crosswalk and email eligibility evidence, never public profile data. */
+export const breadlineImportIdentity = sqliteTable('breadlineImportIdentity', {
+  sourceUserId: integer('sourceUserId').primaryKey(),
+  sourceVolunteerId: integer('sourceVolunteerId'),
+  userId: text('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  email: text('email'),
+  name: text('name'),
+  // Legacy subjects are evidence; only auto-claimed portable Google IDs become accounts.
+  sourceUid: text('sourceUid'),
+})
 
 /**
  * User activity tracking

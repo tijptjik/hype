@@ -2,6 +2,8 @@
 import { createHmac } from 'node:crypto'
 // LIBRARIES
 import { parsePhoneNumberFromString } from 'libphonenumber-js/max'
+import { normalizeTelephone } from '../../../src/lib/utils/telephone'
+export { normalizeTelephone } from '../../../src/lib/utils/telephone'
 // USERNAMES
 import { generateRunnerUsernameFromId } from '../../../src/lib/utils/username-generator.server'
 
@@ -48,6 +50,8 @@ export interface TargetAccount {
 export interface TargetIdentitySnapshot {
   users: TargetUser[]
   accounts: TargetAccount[]
+  importUsers?: ImportOwnership[]
+  identities?: ImportIdentity[]
 }
 export interface ImportedUser {
   id: string
@@ -72,7 +76,24 @@ export interface ImportedAccount {
   createdAt: number
   updatedAt: number
 }
+export interface ImportOwnership {
+  userId: string
+  telephone: string | null
+  state: 'unclaimed' | 'claimed'
+  claimedEmail: string | null
+}
+export interface ImportIdentity {
+  sourceUserId: number
+  sourceVolunteerId: number | null
+  userId: string
+  email: string | null
+  name: string | null
+  sourceUid: string | null
+}
 export interface UserImportPlan {
+  model: 'phone-v2'
+  importUsers: ImportOwnership[]
+  identities: ImportIdentity[]
   users: ImportedUser[]
   accounts: ImportedAccount[]
   phoneUpdates: Array<{ id: string; telephone: string }>
@@ -141,33 +162,16 @@ function locale(value: string | null): ImportedUser['locale'] {
 }
 
 /**
- * Parse legacy contact numbers into E.164 using Hong Kong for national numbers.
- * @param value Legacy phone text; international numbers may use + or 00 prefixes.
- * @returns Canonical number or null if empty, impossible in length, unparseable or extension-bearing.
- */
-export function normalizeTelephone(value: string | null): string | null {
-  if (!value?.trim()) return null
-  let input = value.trim()
-  if (input.startsWith('00')) input = `+${input.slice(2)}`
-  // Legacy users also entered the Hong Kong country code without a plus sign.
-  const digits = input.replace(/[\s().-]/g, '')
-  if (/^852\d{8}$/.test(digits)) input = `+${digits}`
-  const phone = parsePhoneNumberFromString(input, {
-    defaultCountry: 'HK',
-    extract: false,
-  })
-  return phone?.isPossible() && !phone.ext ? phone.number : null
-}
-
-/**
- * Plan user/account inserts while retaining every source identity offline.
+ * Plan phone-based users for a reset destination, retaining all source history owners.
  * @param source Legacy users from an immutable local mirror.
- * @param target Read-only destination identity snapshot.
- * @param seed Durable per-target offline seed; never regenerate it between rehearsals.
- * @param decisions Optional reviewed cross-email merges and exclusions; retained in the private manifest.
- * @returns Proposed inserts, crosswalk and explicit unresolved groups; performs no writes.
- * @remarks Existing nonblank profile fields are never overwritten; unambiguous source phones fill blank phones. Unknown or old Facebook IDs never
- * become Hype provider accounts. No email is marked verified without verification evidence.
+ * @param target Read-only destination identity and import-ownership snapshot.
+ * @param seed Durable per-target offline seed; retain it across retries.
+ * @param decisions Reviewed exclusions and merges, which must agree with phone grouping.
+ * @returns Proposed inserts, private provenance and explicit unresolved groups; no writes.
+ * @remarks Single-email/name identities are auto-claimed without inventing email verification.
+ * Missing/invalid phones fall back to exact or reviewed email identities with a null phone.
+ * Ambiguous identities have no primary email, name or credential. Existing non-imported
+ * users are never merged or modified; this importer targets a fresh database.
  */
 export function planUsers(
   source: LegacyUser[],
@@ -178,19 +182,13 @@ export function planUsers(
   const reviewed = parseUserDecisions(
     decisions ?? { version: 1, merges: [], excludeEmails: [] },
   )
-  const aliases = new Map(
-    reviewed.merges.flatMap(rule =>
-      rule.sourceEmails.map(email => [email, rule.targetEmail] as const),
-    ),
-  )
   const excludedEmails = new Set(reviewed.excludeEmails)
-  const canonicalEmail = (email: string | null): string | null => {
-    const normalized = normalizedEmail(email)
-    return normalized ? (aliases.get(normalized) ?? normalized) : null
-  }
   const plan: UserImportPlan = {
+    model: 'phone-v2',
     users: [],
     accounts: [],
+    importUsers: [],
+    identities: [],
     phoneUpdates: [],
     mapping: [],
     excluded: [],
@@ -208,35 +206,54 @@ export function planUsers(
     },
   }
   const groups = new Map<string, LegacyUser[]>()
-  const volunteerGroups = new Map<number, Set<string>>()
-  const providerGroups = new Map<string, Set<string>>()
-  const targetUsers = new Map(target.users.map(user => [user.id, user]))
-  const usedIds = new Set(target.users.map(user => user.id))
-  const usedAccountIds = new Set(target.accounts.map(account => account.id))
-  const usedUsernames = new Set(
-    target.users.flatMap(user => (user.username ? [user.username.toLowerCase()] : [])),
+  const emailPhones = new Map<string, Set<string>>()
+  const volunteerPhones = new Map<number, Set<string>>()
+  const providerPhones = new Map<string, Set<string>>()
+  const sourceIds = new Set<number>()
+  const reviewedAliases = new Map(
+    reviewed.merges.flatMap(rule =>
+      rule.sourceEmails.map(email => [email, rule.targetEmail] as const),
+    ),
   )
-
-  // Surface existing destination accounts separately; insert-only SQL never deletes or moves them.
-  for (const user of target.users) {
-    const email = normalizedEmail(user.email)
-    if (email && excludedEmails.has(email))
-      plan.targetChanges.push({ action: 'exclude', sourceUserId: user.id })
-    const targetEmail = email ? aliases.get(email) : undefined
-    if (targetEmail)
-      plan.targetChanges.push({
-        action: 'merge',
-        sourceUserId: user.id,
-        targetEmail,
-        targetUserId:
-          target.users.find(
-            candidate => normalizedEmail(candidate.email) === targetEmail,
-          )?.id ?? null,
-      })
+  const telephoneOverrides = new Map(
+    reviewed.telephoneOverrides?.map(rule => [rule.sourceUserId, rule]),
+  )
+  const reviewedNullPhones = new Set<number>()
+  // Apply only explicitly reviewed source corrections; a changed source value needs renewed review.
+  const effectiveSource = source.map(row => {
+    const correction = telephoneOverrides.get(row.id)
+    if (!correction) return row
+    if (
+      row.telephone?.replace(/\s/g, '') !==
+      correction.expectedTelephone.replace(/\s/g, '')
+    )
+      throw new Error('Reviewed telephone source changed')
+    if (correction.telephone === null) reviewedNullPhones.add(row.id)
+    plan.warnings.push({
+      sourceUserIds: [row.id],
+      reason:
+        correction.telephone === null
+          ? 'reviewed_phone_cleared_requires_completion'
+          : 'reviewed_phone_corrected',
+    })
+    return { ...row, telephone: correction.telephone }
+  })
+  const knownPhonesByIdentity = new Map<string, Set<string>>()
+  // Missing contacts do not constitute another phone; borrow only one unambiguous identity phone.
+  for (const row of effectiveSource) {
+    const email = normalizedEmail(row.email)
+    if (!email || excludedEmails.has(email)) continue
+    const phone = normalizeTelephone(row.telephone)
+    if (!phone) continue
+    const identity = reviewedAliases.get(email) ?? email
+    const phones = knownPhonesByIdentity.get(identity) ?? new Set<string>()
+    phones.add(phone)
+    knownPhonesByIdentity.set(identity, phones)
   }
-
-  // Group same-email source rows so Facebook-to-Google transitions retain one history owner.
-  for (const row of source) {
+  // Preserve exclusions; retain users without a usable phone through their email identity.
+  for (const row of effectiveSource) {
+    if (sourceIds.has(row.id)) throw new Error('Duplicate source user ID')
+    sourceIds.add(row.id)
     if (excludedEmails.has(normalizedEmail(row.email) ?? '')) {
       plan.excluded.push({
         sourceUserId: row.id,
@@ -245,50 +262,148 @@ export function planUsers(
       })
       continue
     }
-    const key = canonicalEmail(row.email) ?? `source:${row.id}`
+    let phone = normalizeTelephone(row.telephone)
+    const email = normalizedEmail(row.email)
+    if (!phone && email && !reviewedNullPhones.has(row.id)) {
+      const known = knownPhonesByIdentity.get(reviewedAliases.get(email) ?? email)
+      if (known?.size === 1) {
+        phone = [...known][0]
+        plan.warnings.push({
+          sourceUserIds: [row.id],
+          reason: row.telephone?.trim()
+            ? 'invalid_phone_from_unambiguous_identity'
+            : 'missing_phone_from_unambiguous_identity',
+        })
+      }
+    }
+    const key =
+      phone ??
+      (email ? `email:${reviewedAliases.get(email) ?? email}` : `invalid:${row.id}`)
+    if (!phone)
+      plan.warnings.push({
+        sourceUserIds: [row.id],
+        reason: row.telephone?.trim()
+          ? 'invalid_phone_requires_completion'
+          : 'missing_phone_requires_completion',
+      })
     groups.set(key, [...(groups.get(key) ?? []), row])
+    if (email) {
+      const phones = emailPhones.get(email) ?? new Set<string>()
+      phones.add(key)
+      emailPhones.set(email, phones)
+    }
     if (row.volunteer_id !== null) {
-      const keys = volunteerGroups.get(row.volunteer_id) ?? new Set<string>()
-      keys.add(key)
-      volunteerGroups.set(row.volunteer_id, keys)
+      const phones = volunteerPhones.get(row.volunteer_id) ?? new Set<string>()
+      phones.add(key)
+      volunteerPhones.set(row.volunteer_id, phones)
     }
     if (row.uid && /^\d{21}$/.test(row.uid)) {
-      const keys = providerGroups.get(row.uid) ?? new Set<string>()
-      keys.add(key)
-      providerGroups.set(row.uid, keys)
+      const phones = providerPhones.get(row.uid) ?? new Set<string>()
+      phones.add(key)
+      providerPhones.set(row.uid, phones)
     }
   }
-  for (const [key, unsorted] of [...groups].sort(([a], [b]) => a.localeCompare(b))) {
+  const conflictingReviewedEmails = new Set<string>()
+  // Explicit old email merges cannot override the new one-phone identity boundary.
+  for (const rule of reviewed.merges) {
+    const emails = [rule.targetEmail, ...rule.sourceEmails]
+    const phones = new Set(emails.flatMap(email => [...(emailPhones.get(email) ?? [])]))
+    if (phones.size > 1)
+      for (const email of emails) conflictingReviewedEmails.add(email)
+  }
+  const usedIds = new Set(target.users.map(user => user.id))
+  const usedAccountIds = new Set(target.accounts.map(account => account.id))
+  const usedUsernames = new Set(
+    target.users.flatMap(user => (user.username ? [user.username.toLowerCase()] : [])),
+  )
+  // Index destination evidence once; repeat planning must not parse every target phone per group.
+  const targetUsers = new Map(target.users.map(user => [user.id, user]))
+  const ownershipByUser = new Map(
+    target.importUsers?.map(owner => [owner.userId, owner]),
+  )
+  const phoneOwners = new Map<string, Set<string>>()
+  const emailOwners = new Map<string, Set<string>>()
+  for (const user of target.users) {
+    for (const [owners, key] of [
+      [phoneOwners, normalizeTelephone(user.telephone ?? null)],
+      [emailOwners, normalizedEmail(user.email)],
+    ] as const) {
+      if (!key) continue
+      const ids = owners.get(key) ?? new Set<string>()
+      ids.add(user.id)
+      owners.set(key, ids)
+    }
+  }
+  const googleOwners = new Map<string, Set<string>>()
+  for (const account of target.accounts) {
+    if (account.providerId !== 'google') continue
+    const ids = googleOwners.get(account.accountId) ?? new Set<string>()
+    ids.add(account.userId)
+    googleOwners.set(account.accountId, ids)
+  }
+  const identitiesByUser = new Map<string, ImportIdentity[]>()
+  const priorOwnerBySourceId = new Map(
+    target.identities?.map(identity => [identity.sourceUserId, identity.userId]),
+  )
+  const priorSourceIds = new Set(
+    target.identities?.map(identity => identity.sourceUserId),
+  )
+  for (const identity of target.identities ?? []) {
+    const identities = identitiesByUser.get(identity.userId) ?? []
+    identities.push(identity)
+    identitiesByUser.set(identity.userId, identities)
+  }
+  for (const [groupKey, unsorted] of [...groups].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    const phone = groupKey.startsWith('+') ? groupKey : null
     const rows = [...unsorted].sort((a, b) => a.id - b.id)
     const sourceUserIds = rows.map(row => row.id)
     const reject = (reason: string): void => {
       plan.exceptions.push({ sourceUserIds, reason })
     }
-    const email = canonicalEmail(rows[0].email)
-    const mergeRule = reviewed.merges.find(rule => rule.targetEmail === email)
-    const allowedSourceTargets = new Set(
-      target.users
-        .filter(user =>
-          mergeRule?.sourceEmails.includes(normalizedEmail(user.email) ?? ''),
-        )
-        .map(user => user.id),
-    )
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const emails = [
+      ...new Set(
+        rows
+          .map(row => normalizedEmail(row.email))
+          .filter((email): email is string => email !== null),
+      ),
+    ]
+    const names = [
+      ...new Set(
+        rows
+          .map(row => row.name?.trim() || null)
+          .filter((name): name is string => name !== null),
+      ),
+    ]
+    if (groupKey.startsWith('invalid:')) {
+      reject('missing_or_invalid_phone_requires_review')
+      continue
+    }
+    if (emails.some(email => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
       reject('invalid_email')
+      continue
+    }
+    if (emails.some(email => conflictingReviewedEmails.has(email))) {
+      reject('reviewed_merge_spans_multiple_phones')
+      continue
+    }
+    if (emails.some(email => (emailPhones.get(email)?.size ?? 0) > 1)) {
+      reject('email_spans_multiple_phones')
       continue
     }
     if (
       rows.some(
         row =>
           row.volunteer_id !== null &&
-          (volunteerGroups.get(row.volunteer_id)?.size ?? 0) > 1,
+          (volunteerPhones.get(row.volunteer_id)?.size ?? 0) > 1,
       )
     ) {
-      reject('volunteer_spans_multiple_emails')
+      reject('volunteer_spans_multiple_phones')
       continue
     }
-    if (rows.some(row => (providerGroups.get(row.uid || '')?.size ?? 0) > 1)) {
-      reject('google_identity_spans_multiple_emails')
+    if (rows.some(row => (providerPhones.get(row.uid ?? '')?.size ?? 0) > 1)) {
+      reject('google_identity_spans_multiple_phones')
       continue
     }
     if (
@@ -303,74 +418,6 @@ export function planUsers(
       reject('excluded_volunteer_shared_with_retained_user')
       continue
     }
-    const googleIds = [
-      ...new Set(
-        rows
-          .map(row => row.uid)
-          .filter((uid): uid is string => /^\d{21}$/.test(uid || '')),
-      ),
-    ]
-    const emailMatches = target.users.filter(
-      user => email && normalizedEmail(user.email) === email,
-    )
-    const accountMatches = target.accounts.filter(
-      account =>
-        account.providerId === 'google' && googleIds.includes(account.accountId),
-    )
-    if (
-      mergeRule &&
-      accountMatches.some(
-        account =>
-          !allowedSourceTargets.has(account.userId) &&
-          !emailMatches.some(user => user.id === account.userId),
-      )
-    ) {
-      reject('conflicting_target_identities')
-      continue
-    }
-    const seededTarget = targetUsers.get(assignedId(seed, `user:${key}`))
-    const candidates = new Set([
-      ...(seededTarget && normalizedEmail(seededTarget.email) === email
-        ? [seededTarget.id]
-        : []),
-      ...emailMatches.map(user => user.id),
-      ...accountMatches
-        .filter(account => !allowedSourceTargets.has(account.userId))
-        .map(account => account.userId),
-    ])
-    if (emailMatches.length > 1 || candidates.size > 1) {
-      reject('conflicting_target_identities')
-      continue
-    }
-    if (
-      mergeRule &&
-      !emailMatches.length &&
-      !rows.some(row => normalizedEmail(row.email) === email)
-    ) {
-      reject('reviewed_merge_destination_missing')
-      continue
-    }
-    const matchedId = [...candidates][0]
-    const existing = matchedId ? targetUsers.get(matchedId) : undefined
-    if (matchedId && !existing) {
-      reject('orphan_target_account')
-      continue
-    }
-    if (existing && (existing.isArchived || existing.isAnonymous)) {
-      reject('target_archived_or_anonymous')
-      continue
-    }
-    // The durable per-target seed identifies our prior imports without asserting email ownership.
-    const previouslyImported = existing?.id === assignedId(seed, `user:${key}`)
-    if (
-      existing &&
-      !previouslyImported &&
-      !existing.emailVerified &&
-      !accountMatches.some(account => account.userId === existing.id)
-    ) {
-      reject('target_email_ownership_unverified')
-      continue
-    }
     const created = rows.map(row => Date.parse(row.created_at || ''))
     const updated = rows.map(row =>
       Date.parse(row.last_updated_at || row.created_at || ''),
@@ -382,56 +429,130 @@ export function planUsers(
       reject('invalid_source_timestamps')
       continue
     }
-    const id = existing?.id ?? assignedId(seed, `user:${key}`)
-    let displayUsername = generateRunnerUsernameFromId(id)
-    let username = displayUsername.toLowerCase()
-    for (
-      let attempt = 1;
-      !existing && usedUsernames.has(username) && attempt <= 1000;
-      attempt++
+    // A repaired phone-less cohort keeps its persisted history owner; exact crosswalk equality is checked below.
+    const persistedOwners = new Set(
+      rows.flatMap(row => {
+        const owner = priorOwnerBySourceId.get(row.id)
+        return owner ? [owner] : []
+      }),
+    )
+    const id =
+      !phone && persistedOwners.size === 1
+        ? [...persistedOwners][0]
+        : assignedId(
+            seed,
+            phone ? `phone-user:${phone}` : `email-user:${groupKey.slice(6)}`,
+          )
+    const existing = targetUsers.get(id)
+    const ownership = ownershipByUser.get(id)
+    // Only our persisted phone ownership record establishes a repeat import, not an email match.
+    if (existing && (!ownership || ownership.telephone !== phone)) {
+      reject('target_requires_fresh_database')
+      continue
+    }
+    if (!existing && ownership) {
+      reject('orphan_import_ownership')
+      continue
+    }
+    if (existing && (existing.isArchived || existing.isAnonymous)) {
+      reject('target_archived_or_anonymous')
+      continue
+    }
+    const googleIds = [
+      ...new Set(
+        rows
+          .map(row => row.uid)
+          .filter((uid): uid is string => /^\d{21}$/.test(uid || '')),
+      ),
+    ]
+    if (
+      [...(phoneOwners.get(phone) ?? [])].some(owner => owner !== id) ||
+      emails.some(email =>
+        [...(emailOwners.get(email) ?? [])].some(owner => owner !== id),
+      ) ||
+      googleIds.some(uid =>
+        [...(googleOwners.get(uid) ?? [])].some(owner => owner !== id),
+      )
     ) {
-      displayUsername = generateRunnerUsernameFromId(id, attempt)
-      username = displayUsername.toLowerCase()
-    }
-    if (!existing && (usedIds.has(id) || usedUsernames.has(username))) {
-      reject('generated_identity_collision')
+      reject('conflicting_target_identities')
       continue
     }
-    const newAccounts = googleIds
-      .filter(uid => !accountMatches.some(account => account.accountId === uid))
-      .map(uid => ({
-        id: assignedId(seed, `google:${uid}`),
-        userId: id,
-        providerId: 'google' as const,
-        accountId: uid,
-        createdAt: Math.min(...created),
-        updatedAt: Math.max(...updated),
-      }))
-    if (newAccounts.some(account => usedAccountIds.has(account.id))) {
-      reject('generated_account_collision')
-      continue
-    }
-    if (!existing) {
+    // A changed source cohort must be reviewed, never reopen ownership or add losing credentials.
+    const identities: ImportIdentity[] = rows.map(row => ({
+      sourceUserId: row.id,
+      sourceVolunteerId: row.volunteer_id,
+      userId: id,
+      email: normalizedEmail(row.email),
+      name: row.name?.trim() || null,
+      sourceUid: row.uid,
+    }))
+    if (existing) {
+      const prior = [...(identitiesByUser.get(id) ?? [])].sort(
+        (a, b) => a.sourceUserId - b.sourceUserId,
+      )
+      if (
+        JSON.stringify(
+          prior.map(identity => [
+            identity.sourceUserId,
+            identity.sourceVolunteerId,
+            identity.email,
+            identity.name,
+            identity.sourceUid,
+          ]),
+        ) !==
+        JSON.stringify(
+          identities.map(identity => [
+            identity.sourceUserId,
+            identity.sourceVolunteerId,
+            identity.email,
+            identity.name,
+            identity.sourceUid,
+          ]),
+        )
+      ) {
+        reject('import_source_identity_changed')
+        continue
+      }
+      plan.counts.matchedGroups++
+    } else {
+      const claimed = emails.length === 1 && names.length <= 1
+      const email = claimed ? emails[0] : null
+      let displayUsername = generateRunnerUsernameFromId(id)
+      let username = displayUsername.toLowerCase()
+      for (let attempt = 1; usedUsernames.has(username) && attempt <= 1000; attempt++) {
+        displayUsername = generateRunnerUsernameFromId(id, attempt)
+        username = displayUsername.toLowerCase()
+      }
+      if (usedIds.has(id) || usedUsernames.has(username)) {
+        reject('generated_identity_collision')
+        continue
+      }
+      const newAccounts: ImportedAccount[] = claimed
+        ? googleIds.map(uid => ({
+            id: assignedId(seed, `google:${uid}`),
+            userId: id,
+            providerId: 'google',
+            accountId: uid,
+            createdAt: Math.min(...created),
+            updatedAt: Math.max(...updated),
+          }))
+        : []
+      if (newAccounts.some(account => usedAccountIds.has(account.id))) {
+        reject('generated_account_collision')
+        continue
+      }
+      if (identities.some(identity => priorSourceIds.has(identity.sourceUserId))) {
+        reject('source_identity_already_imported')
+        continue
+      }
       // Prefer the most recently updated Google profile, then the latest other profile.
       const profile = [...rows].sort(
         (a, b) =>
-          Number(normalizedEmail(b.email) === email) -
-            Number(normalizedEmail(a.email) === email) ||
           Number(/^\d{21}$/.test(b.uid || '')) - Number(/^\d{21}$/.test(a.uid || '')) ||
           Date.parse(b.last_updated_at || b.created_at || '') -
             Date.parse(a.last_updated_at || a.created_at || '') ||
           a.id - b.id,
       )[0]
-      const telephone = normalizeTelephone(profile.telephone)
-      if (profile.telephone?.trim() && !telephone) {
-        plan.warnings.push({ sourceUserIds, reason: 'invalid_phone_requires_review' })
-      }
-      if (telephone && !parsePhoneNumberFromString(telephone)?.isValid()) {
-        plan.warnings.push({
-          sourceUserIds,
-          reason: 'phone_range_unrecognized_preserved',
-        })
-      }
       // Breadline auth.py accepts only verified Google emails before db.py creates
       // the user from sub/email. UUID placeholders and old Facebook records do not
       // establish that evidence; neither welcome completion nor runs are proxies.
@@ -447,54 +568,46 @@ export function planUsers(
         username,
         displayUsername,
         email,
-        name: profile.name?.trim() || null,
-        telephone,
+        name: claimed ? (names[0] ?? null) : null,
+        telephone: phone,
         locale: locale(profile.locale),
-        image: profile.picture?.trim() || null,
+        image: claimed ? profile.picture?.trim() || null : null,
         emailVerified: Number(emailVerified),
         isAnonymous: 0,
         isArchived: 0,
         createdAt: Math.min(...created),
         updatedAt: Math.max(...updated),
       })
+      plan.importUsers.push({
+        userId: id,
+        telephone: phone,
+        state: claimed ? 'claimed' : 'unclaimed',
+        claimedEmail: email,
+      })
+      plan.identities.push(...identities)
+      plan.accounts.push(...newAccounts)
       usedIds.add(id)
       usedUsernames.add(username)
-    } else {
-      plan.counts.matchedGroups++
-      // Fill only known blank destination phones when all supplied source numbers agree.
-      if (existing.telephone !== undefined && !existing.telephone?.trim()) {
-        const supplied = rows
-          .map(row => row.telephone)
-          .filter((phone): phone is string => Boolean(phone?.trim()))
-        const phones = supplied.map(normalizeTelephone)
-        const unique = new Set(phones)
-        if (unique.size === 1 && phones[0])
-          plan.phoneUpdates.push({ id, telephone: phones[0] })
-        else if (supplied.length)
-          plan.warnings.push({
-            sourceUserIds,
-            reason: 'phone_backfill_requires_review',
-          })
-      }
+      for (const account of newAccounts) usedAccountIds.add(account.id)
+      if (claimed && !googleIds.length)
+        plan.warnings.push({
+          sourceUserIds,
+          reason: 'auto_claimed_without_portable_google_identity',
+        })
     }
+    // Allocation metadata warnings do not override the structural phone policy.
+    if (phone && !parsePhoneNumberFromString(phone)?.isValid())
+      plan.warnings.push({
+        sourceUserIds,
+        reason: 'phone_range_unrecognized_preserved',
+      })
     if (rows.length > 1)
       plan.warnings.push({
         sourceUserIds,
-        reason: mergeRule
-          ? 'reviewed_cross_email_merge'
+        reason: phone
+          ? 'same_phone_source_rows_combined'
           : 'same_email_source_rows_combined',
       })
-    if (googleIds.length === 0)
-      plan.warnings.push({
-        sourceUserIds,
-        reason: 'email_claim_required_no_portable_google_identity',
-      })
-    if (!email)
-      plan.warnings.push({ sourceUserIds, reason: 'missing_email_requires_recovery' })
-    for (const account of newAccounts) {
-      plan.accounts.push(account)
-      usedAccountIds.add(account.id)
-    }
     for (const row of rows)
       plan.mapping.push({
         sourceUserId: row.id,
@@ -502,11 +615,6 @@ export function planUsers(
         targetUserId: id,
         disposition: existing ? 'match' : 'create',
       })
-  }
-  for (const change of plan.targetChanges) {
-    if (change.action === 'merge' && !change.targetUserId)
-      change.targetUserId =
-        plan.users.find(user => user.email === change.targetEmail)?.id ?? null
   }
   plan.counts.excludedSourceRows = plan.excluded.length
   plan.counts.created = plan.users.length
@@ -537,10 +645,12 @@ function literal(value: string | number | null): string {
 /**
  * Render proposed inserts for review, requiring fresh target validation before execution.
  * @param plan User mapping plan.
- * @returns User/account inserts and guarded blank-phone updates, without migration metadata.
+ * @returns User/account, ownership and source-crosswalk inserts for the current schema.
  * @remarks Never uses INSERT OR IGNORE/REPLACE: conflicts must not silently drop history.
  */
 export function userPlanSql(plan: UserImportPlan): string {
+  if (plan.model !== 'phone-v2')
+    throw new Error('Regenerate the legacy email-based plan')
   if (plan.targetChanges.length)
     throw new Error(
       'Existing destination accounts require reconciliation before insert SQL can be rendered',
@@ -551,6 +661,8 @@ export function userPlanSql(plan: UserImportPlan): string {
   for (const [table, rows] of [
     ['user', plan.users],
     ['account', plan.accounts],
+    ['breadlineImportUser', plan.importUsers],
+    ['breadlineImportIdentity', plan.identities],
   ] as const) {
     for (const row of rows) {
       const entries = Object.entries(row)

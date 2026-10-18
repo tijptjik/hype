@@ -82,94 +82,50 @@ describe('reviewed user decisions', () => {
     ])
       expect(() => parseUserDecisions(invalid)).toThrow()
   })
-  it('retains every source/volunteer crosswalk and prefers the canonical profile', () => {
-    const primary = source(1, 'primary@example.com')
-    const old = { ...source(2, 'old@example.com'), last_updated_at: '2025-01-01' }
-    const plan = planUsers([old, primary], target(), 'seed', decisions)
+  it('preserves same-phone source identities without choosing the old canonical email', () => {
+    const rows = [source(1, 'primary@example.com'), source(2, 'old@example.com')].map(
+      row => ({ ...row, telephone: '+85291234567' }),
+    )
+    const plan = planUsers(rows, target(), 'seed', decisions)
     expect(plan.users).toHaveLength(1)
-    expect(plan.users[0].email).toBe(primary.email)
-    expect(plan.users[0].name).toBe(primary.name)
+    expect(plan.users[0].email).toBeNull()
+    expect(plan.importUsers[0].state).toBe('unclaimed')
+    expect(plan.accounts).toEqual([])
     expect(plan.mapping.map(row => row.sourceVolunteerId)).toEqual([10, 20])
-    expect(new Set(plan.mapping.map(row => row.targetUserId)).size).toBe(1)
-    expect(plan.accounts).toHaveLength(2)
-    expect(planUsers([primary, old], target(), 'seed', decisions)).toEqual(plan)
   })
-  it('records exclusions without creating users, accounts or history mappings', () => {
+  it('does not let reviewed email merges override different phone identities', () => {
+    const rows = [
+      { ...source(1, 'primary@example.com'), telephone: '+85291234567' },
+      { ...source(2, 'old@example.com'), telephone: '+85298765432' },
+    ]
+    const plan = planUsers(rows, target(), 'seed', decisions)
+    expect(plan.mapping).toEqual([])
+    expect(
+      plan.exceptions.every(
+        exception => exception.reason === 'reviewed_merge_spans_multiple_phones',
+      ),
+    ).toBe(true)
+  })
+  it('records reviewed exclusions without creating users, credentials or history mappings', () => {
     const plan = planUsers(
       [source(3, 'delete@example.com')],
-      target('delete@example.com'),
+      target(),
       'seed',
       decisions,
     )
-    expect(plan.mapping).toEqual([])
     expect(plan.users).toEqual([])
     expect(plan.accounts).toEqual([])
+    expect(plan.mapping).toEqual([])
+    expect(plan.identities).toEqual([])
     expect(plan.excluded).toEqual([
       { sourceUserId: 3, sourceVolunteerId: 30, reason: 'reviewed_exclusion' },
     ])
-    expect(plan.counts.excludedSourceRows).toBe(1)
-    expect(plan.targetChanges).toEqual([
-      { action: 'exclude', sourceUserId: 'delete@example.com' },
-    ])
-    expect(() => userPlanSql(plan)).toThrow()
-  })
-  it('maps history to the canonical target and blocks SQL until existing aliases are reconciled', () => {
-    const old = source(2, 'old@example.com')
-    const destination = target(
-      'primary@example.com',
-      'old@example.com',
-      'hype-only@example.com',
-    )
-    destination.accounts.push({
-      id: 'login',
-      userId: 'old@example.com',
-      providerId: 'google',
-      accountId: old.uid,
-    })
-    const plan = planUsers([old], destination, 'seed', decisions)
-    expect(plan.exceptions).toEqual([])
-    expect(plan.mapping[0].targetUserId).toBe('primary@example.com')
-    expect(plan.accounts).toEqual([])
-    expect(plan.targetChanges).toHaveLength(2)
-    expect(() => userPlanSql(plan)).toThrow()
-    destination.users = destination.users.slice(0, 1)
-    destination.accounts[0].userId = 'primary@example.com'
-    const replay = planUsers([old], destination, 'seed', decisions)
-    expect(replay.targetChanges).toEqual([])
-    expect(replay.mapping).toEqual(plan.mapping)
-    expect(userPlanSql(replay)).not.toContain('INSERT')
-  })
-  it('fails closed for missing destinations, unrelated providers and unverified primary accounts', () => {
-    const old = source(2, 'old@example.com')
-    expect(planUsers([old], target(), 'seed', decisions).exceptions[0].reason).toBe(
-      'reviewed_merge_destination_missing',
-    )
-    const unrelated = target('primary@example.com', 'unrelated@example.com')
-    unrelated.accounts.push({
-      id: 'login',
-      userId: 'unrelated@example.com',
-      providerId: 'google',
-      accountId: old.uid,
-    })
-    expect(planUsers([old], unrelated, 'seed', decisions).exceptions[0].reason).toBe(
-      'conflicting_target_identities',
-    )
-    const unverified = target('primary@example.com', 'old@example.com')
-    unverified.users[0].emailVerified = 0
-    unverified.accounts.push({
-      id: 'login',
-      userId: 'old@example.com',
-      providerId: 'google',
-      accountId: old.uid,
-    })
-    expect(planUsers([old], unverified, 'seed', decisions).exceptions[0].reason).toBe(
-      'target_email_ownership_unverified',
-    )
+    expect(userPlanSql(plan)).not.toContain('INSERT')
   })
   it('rejects shared volunteers across excluded and retained identities', () => {
     const plan = planUsers(
       [
-        source(1, 'primary@example.com'),
+        { ...source(1, 'primary@example.com'), telephone: '+85291234567' },
         { ...source(2, 'delete@example.com'), volunteer_id: 10 },
       ],
       target(),
@@ -183,43 +139,76 @@ describe('reviewed user decisions', () => {
   })
 })
 
-describe('matched profile phone backfill', () => {
-  it('fills a blank phone from agreeing aliases, preserves nonblank values and replans without updates', () => {
-    const destination = target('primary@example.com')
-    destination.users[0].telephone = null
+describe('reviewed telephone corrections', () => {
+  const reviewed = {
+    version: 1 as const,
+    merges: [],
+    excludeEmails: [],
+    telephoneOverrides: [
+      { sourceUserId: 1, expectedTelephone: '+601211909179', telephone: null },
+    ],
+  }
+  it('clears the reviewed phone, retains the sole email/history and leaves other phones alone', () => {
     const rows = [
-      { ...source(1, 'primary@example.com'), telephone: '9123 4567' },
-      { ...source(2, 'old@example.com'), telephone: '+85291234567' },
+      { ...source(1, 'first@example.com'), telephone: '+60 12 1190 9179' },
+      { ...source(2, 'second@example.com'), telephone: '+85250621990' },
     ]
-    const plan = planUsers(rows, destination, 'seed', decisions)
-    expect(plan.phoneUpdates).toEqual([
-      { id: 'primary@example.com', telephone: '+85291234567' },
-    ])
-    expect(userPlanSql(plan)).toContain(
-      'AND ("telephone" IS NULL OR trim("telephone") = \'\')',
+    const plan = planUsers(rows, { users: [], accounts: [] }, 'seed', reviewed)
+    expect(plan.exceptions).toEqual([])
+    const cleared = plan.users.find(user => user.email === 'first@example.com')
+    expect(cleared?.telephone).toBeNull()
+    expect(plan.identities.find(identity => identity.sourceUserId === 1)).toMatchObject(
+      { userId: cleared?.id, email: 'first@example.com', sourceVolunteerId: 10 },
     )
-    for (const phone of ['+85291234567', '+85298765432']) {
-      destination.users[0].telephone = phone
-      expect(planUsers(rows, destination, 'seed', decisions).phoneUpdates).toEqual([])
-    }
+    expect(
+      plan.users.find(user => user.email === 'second@example.com')?.telephone,
+    ).toBe('+85250621990')
+    expect(
+      planUsers(
+        rows,
+        {
+          users: plan.users,
+          accounts: plan.accounts,
+          importUsers: plan.importUsers,
+          identities: plan.identities,
+        },
+        'seed',
+        reviewed,
+      ).users,
+    ).toEqual([])
   })
-  it('requires review for conflicts or invalid phones and skips snapshots with unknown phone state', () => {
-    const rows = [
-      { ...source(1, 'primary@example.com'), telephone: '+85291234567' },
-      { ...source(2, 'old@example.com'), telephone: '+85298765432' },
-    ]
-    const destination = target('primary@example.com')
-    expect(planUsers(rows, destination, 'seed', decisions).phoneUpdates).toEqual([])
-    destination.users[0].telephone = ''
-    for (const phone of ['+85298765432', 'invalid']) {
-      rows[1].telephone = phone
-      const plan = planUsers(rows, destination, 'seed', decisions)
-      expect(plan.phoneUpdates).toEqual([])
-      expect(
-        plan.warnings.some(
-          warning => warning.reason === 'phone_backfill_requires_review',
-        ),
-      ).toBe(true)
+  it('accepts a later canonical correction but refuses to discard a changed source number', () => {
+    const rows = [{ ...source(1, 'first@example.com'), telephone: '+601211909179' }]
+    const corrected = {
+      ...reviewed,
+      telephoneOverrides: [
+        { ...reviewed.telephoneOverrides[0], telephone: '+60121190917' },
+      ],
     }
+    expect(
+      planUsers(rows, { users: [], accounts: [] }, 'seed', corrected).users[0]
+        .telephone,
+    ).toBe('+60121190917')
+    expect(() =>
+      planUsers(
+        [{ ...rows[0], telephone: '+60121190917' }],
+        { users: [], accounts: [] },
+        'seed',
+        reviewed,
+      ),
+    ).toThrow('Reviewed telephone source changed')
+  })
+  it('rejects duplicate IDs, invalid corrections and malformed override rules', () => {
+    for (const telephoneOverrides of [
+      'invalid',
+      [reviewed.telephoneOverrides[0], reviewed.telephoneOverrides[0]],
+      [{ ...reviewed.telephoneOverrides[0], sourceUserId: 0 }],
+      [{ ...reviewed.telephoneOverrides[0], expectedTelephone: '' }],
+      [{ ...reviewed.telephoneOverrides[0], telephone: '+852983261' }],
+      [{ ...reviewed.telephoneOverrides[0], telephone: ' +85291234567 ' }],
+    ])
+      expect(() => parseUserDecisions({ ...reviewed, telephoneOverrides })).toThrow(
+        'Invalid user decisions',
+      )
   })
 })

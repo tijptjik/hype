@@ -1,3 +1,6 @@
+// VALIDATION
+import { normalizeTelephone } from '../../../src/lib/utils/telephone'
+
 // +++ Table Of Contents
 // 1. REVIEWED DECISIONS
 // 2. VALIDATION
@@ -7,6 +10,11 @@ export interface UserDecisions {
   version: 1
   merges: Array<{ targetEmail: string; sourceEmails: string[] }>
   excludeEmails: string[]
+  telephoneOverrides?: Array<{
+    sourceUserId: number
+    expectedTelephone: string
+    telephone: string | null
+  }>
 }
 
 /**
@@ -48,5 +56,40 @@ export function parseUserDecisions(value: unknown): UserDecisions {
       sourceEmails: rule.sourceEmails.map(unique),
     }
   })
-  return { version: 1, merges, excludeEmails: input.excludeEmails.map(unique) }
+  const overrideIds = new Set<number>()
+  if (
+    input.telephoneOverrides !== undefined &&
+    !Array.isArray(input.telephoneOverrides)
+  )
+    return fail()
+  const telephoneOverrides = ((input.telephoneOverrides ?? []) as unknown[]).map(
+    value => {
+      if (!value || typeof value !== 'object') return fail()
+      const rule = value as Record<string, unknown>
+      if (
+        typeof rule.sourceUserId !== 'number' ||
+        !Number.isSafeInteger(rule.sourceUserId) ||
+        rule.sourceUserId <= 0 ||
+        overrideIds.has(rule.sourceUserId) ||
+        typeof rule.expectedTelephone !== 'string' ||
+        !rule.expectedTelephone.trim() ||
+        (rule.telephone !== null &&
+          (typeof rule.telephone !== 'string' ||
+            normalizeTelephone(rule.telephone) !== rule.telephone))
+      )
+        return fail()
+      overrideIds.add(rule.sourceUserId)
+      return {
+        sourceUserId: rule.sourceUserId,
+        expectedTelephone: rule.expectedTelephone.trim(),
+        telephone: rule.telephone as string | null,
+      }
+    },
+  )
+  return {
+    version: 1,
+    merges,
+    excludeEmails: input.excludeEmails.map(unique),
+    ...(telephoneOverrides.length ? { telephoneOverrides } : {}),
+  }
 }

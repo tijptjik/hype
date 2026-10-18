@@ -1,217 +1,328 @@
-# Breadline user import: isolated first stage
+# Breadline user import: phone-based identities
 
 Tracking: [account support #189](https://github.com/tijptjik/hype/issues/189),
 [migration importer #194](https://github.com/tijptjik/hype/issues/194),
 [identity parent #179](https://github.com/tijptjik/hype/issues/179), and
 [migration parent #180](https://github.com/tijptjik/hype/issues/180).
 
-## Scope and schema
+## Phone-based latent users: replacement design (18 October 2026)
 
-The Breadline telephone migration is `migrations/0085_breadline_users.sql`:
+Refs #189, #194. The user planner now groups by normalized phone and supports
+single-identity auto-claiming. The destination will be reset: reconciliation of
+previously imported HYPE users is outside this implementation. Local preparation and the phone-completion update have been applied only to local D1;
+production and the source mirror are unchanged. Old email-based plans must be regenerated.
+The first-login claim workflow is now integrated with verified social sign-in and
+one-time email sign-in links; apply migration 0090 with the reset schema.
 
-```sql
-ALTER TABLE user ADD telephone text;
-```
+### Identity and ownership
 
-Hype already has the required `user` and `account` tables, including unique email,
-username and `(providerId, accountId)` constraints. No new identity, checkpoint or
-legacy-ID columns/tables are needed. Migration `0086_username_display_case.sql` adds `displayUsername` and a unique
-index on `lower(username)`. User-provided capitalization is preserved for display;
-canonical usernames and URLs are lowercase. Breadline names use `AdjectiveRunner00`
-for display and its lowercase equivalent for matching. Both Breadline runner names
-and Hype generated usernames use the explicit 1,064-entry neutral-to-positive
-whitelist in `src/lib/utils/username-adjectives.ts`, not the upstream package
-adjectives. HYPE names use `PositiveAdjectiveAnimal00`; dictionary filtering keeps
-the full name, including both digits, within 32 characters. Migration
-`0087_refresh_generated_usernames_merge_user.sql` freezes the reviewed legacy HYPE
-cohort by ID and old spelling, preserves unmatched custom names and guests, applies
-three requested display-name overrides, and consolidates one duplicate identity.
-Legacy random-name provenance is inferred from exact old dictionary membership;
-there is no historical user-choice flag. Subsequent custom edits skip the guarded
-renames. The merge transfers login accounts, sessions, contributions and roles,
-combines saved-state flags, keeps primary layer preferences, and invalidates count
-caches. Unexpected overlapping roles or a missing destination abort the migration.
-Existing imported runner names and other user-chosen usernames are not renamed. Seeded output depends on the
-whitelist order, so regenerate any unexecuted import plan after changing it.
-Existing case collisions
-block the migration for review rather than merging users.
+A HYPE `user` is the persistent person/history identity. An `account` is a linked
+authentication credential. One user can have several explicitly linked credentials.
+Import one user per structurally valid normalized E.164 phone. Without a usable
+phone, group by exact normalized email or a reviewed email family instead, storing
+NULL telephone and preserving all user/volunteer mappings. Both grouping paths have
+these two outcomes:
 
-The broader event/schedule/property/leaderboard proposal is retained under `drafts/`
-as reference material. It is excluded from the active Drizzle schema and migrations.
-`bun run scripts/breadline/generate-migration.ts` now generates only the nullable
-telephone addition, without connecting to a database or reading credentials.
+| Source identities within a phone group | Import result |
+| --- | --- |
+| Exactly one distinct normalized email and at most one distinct nonblank trimmed name | Auto-claimed: retain that email/name and import portable Google credentials |
+| Multiple emails, multiple names, or no email | Latent: NULL primary email/name/image, false email verification, no login credentials |
 
-## Reviewed merge and exclusion decisions
+Repeated rows and casing/whitespace variants of the same email do not create
+additional identities. Names are trimmed but otherwise compared exactly; missing
+names do not introduce another identity. A name alone cannot establish a claim.
+Auto-claiming assigns the unambiguous legacy identity; it does not itself prove
+mailbox ownership. `emailVerified` retains the previous verified-Google evidence
+rule. Facebook/unknown subjects are retained as private source evidence, not turned
+into invented provider accounts. Auto-claimed users without portable credentials
+need the normal verified-email recovery/sign-in flow.
 
-Refs #189, #194. The user planner supports explicitly reviewed cross-email merges
-and exclusions through a private JSON file. By default it reads
-`.local/breadline/user-decisions.json` when present; `--decisions path` selects an
-explicit file and fails if it is missing. Copy this file alongside the private
-identity seed when moving the import workflow to another machine. Real addresses
-must stay out of Git and public issue bodies.
+Both classes use `isAnonymous=false` and `isArchived=false`. Do not reuse the guest
+marker: guests can have usable sessions, whereas latent users have no credential
+or session created by the import. No placeholder email is generated.
 
-```json
-{
-  "version": 1,
-  "merges": [{
-    "targetEmail": "primary@example.invalid",
-    "sourceEmails": ["previous@example.invalid"]
-  }],
-  "excludeEmails": ["discard@example.invalid"]
-}
-```
+### Schema and private provenance
 
-A local application was rehearsed against a database copy and then performed in one
-SQLite transaction, with a fresh backup and destination-identity comparison under a
-write lock. This operator-run local application is not a registered general apply
-stage and does not enable remote writes. Replanning after import recognizes users
-created from the same durable per-target seed, including unverified and missing-email
-legacy identities, without marking their email verified. Foreign-key/integrity checks
-and a zero-insert, zero-exception replan verified the local application (Refs #194).
+`migrations/0085_breadline_users.sql` adds nullable `user.telephone`.
+`0086_username_display_case.sql` adds display casing and case-insensitive username
+uniqueness. `0089_breadline_phone_identity.sql` adds:
 
-Rules are normalized and validated before use. Overlapping rules, chains, cycles,
-and exclusions of merge members are rejected. Merges preserve every source user
-and volunteer ID in `mapping`, with one canonical destination for subsequent run,
-drop-off and other history imports. Existing canonical profiles are retained;
-new profiles prefer the canonical source identity. A missing canonical identity
-or an unrelated provider owner blocks the group. An alias's provider account does
-not verify an otherwise unverified canonical destination.
+- A unique index on `user.telephone`; multiple NULLs remain possible for users awaiting phone completion.
+- `breadlineImportUser`: unique user and imported phone, `claimed`/`unclaimed` state,
+  and `claimedEmail` (NULL while unclaimed). Import auto-claims are distinguishable
+  from verified-email state on `user`; no login timestamp is invented.
+- `breadlineImportIdentity`: every retained source user/volunteer ID, normalized
+  source email, trimmed name and original provider subject, mapped to its HYPE user.
+  These records supply history ownership and first-login eligibility.
 
-Exclusions create explicit `excluded` entries containing source user and volunteer
-IDs and `reviewed_exclusion`; they create no users, login accounts or history
-mappings. Future history stages must honor these exclusions. Shared volunteers
-between excluded and retained identities block the retained group for review.
-The source database and mirror are never edited by these decisions.
+These tables are private migration evidence, not public profile or session fields.
+Migration `0091_breadline_email_identity.sql` makes the imported phone nullable
+without changing user IDs, source mappings or claim audit fields. The Drizzle
+definitions and rehearsal include it. The migration intentionally
+fails on duplicate existing phones rather than merging or deleting existing users;
+apply it as part of the planned database reset. Phone uniqueness constrains users,
+not the number of credentials on `account`.
 
-The private plan embeds the exact decisions and lists `targetChanges` for existing
-Hype identities needing consolidation or removal, including Hype-only aliases.
-The planner does not execute those changes. While any remain, `review.sql` contains
-only a blocking comment and rehearsal refuses to claim success. Reconcile the
-selected destination explicitly and replan before rendering executable insert SQL.
-Tests in `scripts/breadline/user-decisions.test.ts` cover crosswalk preservation,
-profile selection, exclusion, destination conflicts and replanning after a merge.
-This supports review planning; the event/history apply stages remain unimplemented.
+### Normalization and review boundaries
 
-## Prepare a review plan
+The shared `src/lib/utils/telephone.ts` normalizer strips whitespace before parsing
+HK national numbers, `+852`, bare `852`, international `00` prefixes and other
+international numbers into E.164. All HK numbers require exactly eight national
+digits; other countries use the library's structural length checks. Extensions and
+unparseable inputs fail validation. Allocation-range warnings remain separate from
+structural validity and do not establish reachability or phone ownership.
+
+Missing or malformed phones can inherit the sole known valid phone for an exact
+normalized email or explicitly reviewed email family. Otherwise a usable email
+preserves the user with NULL telephone; unrelated NULL phones never form a shared
+identity. Missing both a valid phone and usable email still requires review. Existing
+crosswalks retain their history owner when a malformed imported phone is cleared.
+
+Emails are trimmed and lowercased without rewriting dots, plus-addresses or provider
+aliases. Invalid emails/timestamps, one email or Google subject spanning multiple
+phones, and one volunteer spanning multiple phones are quarantined with every source
+ID retained. Existing destination identities colliding by phone, email or Google
+subject block the group; this importer does not consolidate established HYPE users.
+
+Reviewed exclusions still come from private `.local/breadline/user-decisions.json`
+(or `--decisions path`) and preserve explicit excluded source user/volunteer entries.
+A volunteer shared by an excluded and retained source identity blocks the retained
+group. Prior explicit email-merge rules must agree with phone grouping; they cannot
+choose a winning email in an ambiguous group or combine different phones.
+Real addresses and private decisions must remain outside Git and public issue bodies.
+
+### Stable IDs, profiles and history
+
+User IDs are opaque 12-character HMAC-derived IDs keyed by normalized phone and a
+private durable per-target seed. Keep `.local/breadline/users/<target>/identity-seed.json`
+across retries. Plan model `phone-v2` rejects legacy plan artifacts at SQL rendering
+and rehearsal. Username generation still uses the shared positive-adjective whitelist
+and `AdjectiveRunner00` display spelling, with a lowercase canonical username and
+case-insensitive collision retries. Existing username migrations and reviewed HYPE
+renames remain independent of this import.
+
+For auto-claimed groups, choose the latest Google profile, otherwise latest source
+profile, for locale/image. Creation/modification dates span the group. Default
+preferences remain database defaults. Old tokens, sessions, passwords and NGO links
+are not imported.
+
+Every contributing source user and volunteer maps to the same HYPE user. Future
+claims, runs and collection imports must use that crosswalk and exclusions, preserve
+source event IDs, and deduplicate repeated extraction/join rows rather than distinct
+source events. Do not sum legacy counters into reconciled event totals. The broader
+event/schedule/property schema remains inactive under `drafts/`; this stage imports
+identity/provenance, not run or collection event records.
+
+Repeat planning recognizes only an existing seeded user with its persisted import
+ownership and identical source identity cohort. It creates no new rows, never
+reopens a claim or attaches losing credentials, and permits the owner's primary
+email to have changed after claiming. A changed source cohort is quarantined for
+review rather than silently altering accepted eligibility. Target IDs and history
+crosswalks remain stable while the source grouping and seed are unchanged.
+
+### First verified login for latent users
+
+`src/lib/auth/breadline-claim.server.ts` integrates with Better Auth's validated
+user-creation flow and the production Drizzle adapter. Verified OAuth profiles resolve
+private email eligibility and retain the latent user ID. User creation is deferred;
+a single guarded D1 batch assigns ownership, fills the primary verified email/profile,
+and inserts only the proven provider credential. The batch's request nonce gates
+every write. Constraint failures roll back the entire claim. A losing stale request
+cannot update the profile or attach an account; a retry by the winning provider uses
+Better Auth's ordinary persisted account lookup. Sessions are issued after commit.
+
+The sign-in panel also offers **Email me a sign-in link**. Better Auth stores a hashed,
+15-minute, single-use token and verifies mailbox control before claiming the latent
+user. This supports providers without a verified-email assertion. An unverified
+social login cannot claim and receives instructions to use the email link. A typed
+password signup for an eligible email sends a sign-in link while returning Better
+Auth's opaque signup response, so it neither reserves the email nor strands the user.
+Normal sign-in-link requests do not disclose private candidate names or eligibility.
+
+Migration `0090_breadline_claim_audit.sql` adds `claimedAt` and a private batch nonce
+`claimKey`. Import auto-claims retain NULL audit timestamps until any future separate
+login-activity tracking; they are not fabricated login events. Pending proof lives
+only in request-local context, never a cross-request identity map or client field.
+
+Remaining candidate emails cannot access the imported user after claiming. They may
+create separate ordinary HYPE accounts without its history. The claimed owner can
+explicitly link another social identity using the existing authenticated linking
+flow. Email/phone edits, unlinking and repeat imports do not reopen eligibility.
+Profile email changes cannot reserve an unclaimed import's email.
+
+Session creation and cached-session/authenticated-request checks deny unclaimed and
+archived users. The claim batch checks archive state again to reject stale proofs.
+Existing history rows and source crosswalks retain their user ID throughout claiming.
+Consolidation of a separately established HYPE user remains outside the reset/import
+scope; the claim flow does not transfer another user's credentials, roles or activity.
+
+`src/tests/breadline-claim.integration.test.ts` exercises the production auth factory,
+Drizzle adapter and actual SQLite constraints behind a D1-compatible atomic batch.
+It covers verified/unverified social login, first-winner concurrency, rollback/retry,
+losing aliases, explicit owner linking, email-link redemption/replay/expiry, profile
+reservation, archive state and cached-session denial. Provider verification and email
+transport are stubbed only at the external boundaries; no live OAuth or email delivery
+acceptance is claimed by these tests.
+
+## Prepare and rehearse a review plan
+
+After the reset schema includes migrations 0089 and 0090:
 
 ```sh
 bun run breadline:users:plan --target local
 bun run breadline:users:plan --target production
 ```
 
-The command reads only destination identity columns through explicitly targeted
-Wrangler SELECTs, backs up the existing local Breadline mirror, and writes a private
-plan. It does not refresh the source, apply the schema, or insert any users. The source
-snapshot checkpoints are recorded in the manifest so an old mirror is not mistaken
-for a current extraction. `--mirror path` selects another mirror.
+The planner reads only explicitly targeted identity/ownership columns, backs up the
+local source mirror, records source checkpoints, and writes private artifacts under
+`.local/breadline/users/<target>/<run>/`. It does not refresh the source, apply schema,
+or insert users. For an offline destination use `--target-snapshot /private/hype.sqlite`;
+that snapshot must contain the current ownership/crosswalk tables.
 
-For a fully offline rehearsal, supply a SQLite copy of the destination:
-
-```sh
-bun run breadline:users:plan --target local --target-snapshot /private/hype.sqlite
-```
-
-An offline snapshot is operator-selected and is recorded as such, not asserted to be
-a verified current copy of that target. Local and production state is separated by
-configured D1 database ID and target name.
-
-Artifacts under `.local/breadline/users/<target>/` are ignored by Git and private:
-
-- `identity-seed.json`: durable random seed for stable opaque generated IDs. Back it
-  up and retain it across retries; changing it can change IDs for unimported users.
-- `<run>/plan.json`: proposed inserts, source user/volunteer crosswalk, warnings,
-  unresolved cases, counts, source checkpoint and target identity fingerprint.
-- `<run>/target-identities.json`: destination matching evidence; no tokens/sessions.
-- `<run>/review.sql`: proposed user/account INSERTs and guarded blank-phone UPDATEs for review only.
-
-The command deliberately does not accept `--apply`. Review SQL must not be executed
-blindly: the apply stage still needs a fresh identity check, backup, atomic batches,
-post-write reconciliation and a reviewed first-login recovery path. Replanning after
-successful inserts recognizes existing users/accounts; replaying a stale SQL file is
-not the retry mechanism. No acceptance claim of production import is made here.
-
-## Mapping
-
-| Source | Hype mapping |
-| --- | --- |
-| `users.id`, `volunteer_id` | Offline crosswalk to the canonical Hype user; needed for later history import |
-| `email` | Trim and lowercase; do not rewrite dots, plus-addresses or provider aliases |
-| 21-digit `uid` | Legacy Google subject → `account(providerId='google', accountId=uid)` |
-| `Facebook_*` or unclassified `uid` | Keep source evidence offline; no unusable Facebook or guessed provider account |
-| `name` | Trim into `user.name`; blank becomes NULL |
-| `telephone` | Parse with libphonenumber-js into E.164; HK default for national numbers, international prefixes retained canonically; impossible/unparseable or extension-bearing numbers become NULL with offline warnings; possible numbers in unrecognized ranges are preserved and flagged |
-| `locale` | Normalize `zh`, HK/TW/Hant forms to `zh-hant`; CN/SG/Hans forms to `zh-hans`; otherwise `en` |
-| `picture` | `user.image`, blank becomes NULL; no asset download in this stage |
-| `created_at` | UTC milliseconds in `createdAt`; earliest timestamp in a same-email group |
-| `last_updated_at` | UTC milliseconds in `updatedAt`; latest in the group, falling back to creation when absent |
-| New user/account IDs | Stable opaque 12-character IDs derived from the private per-target seed |
-| Username | `AdjectiveRunner00` display spelling from the shared adjective dictionary; lowercase canonical username, seeded for repeatability, retry on case-insensitive collision |
-| Verification/lifecycle | Trust the legacy verified-Google login path for `emailVerified`; no evidence means false. `isAnonymous=false`, `isArchived=false` |
-| Preferences/experimental fields | Existing database defaults |
-| Old tokens, sessions, passwords, welcome flag, NGO links | Not imported |
-
-The archived Breadline code at commit `61f6499` establishes the Google creation
-path: `app/api/auth.py:post_callback` accepts only `userinfo.email_verified`, then
-`app/db.py:User.create_or_get_user` stores Google's `sub` and `email`. That source
-creation path provides verified-email evidence for Google users, including users
-who never completed welcome. There is no persisted last-login field or login-history
-table in the export. The importer classifies 21-digit subjects as the legacy Google
-identities under this source contract; it does not infer verification from completed
-runs, welcome flags or email presence alone. A same-email group is verified when
-at least one contributing Google identity supplies that evidence. Facebook/unknown
-identities without this evidence remain unverified, and missing email is never verified.
-Live OAuth compatibility still needs testing before applying.
-
-Phones are parsed with the pinned full metadata package. Hong Kong national numbers,
-`+852`, bare `852` and international `00` prefixes normalize to E.164. Numbers that cannot be parsed, have impossible lengths or include extensions are
-not guessed; the original stays in the source backup and the plan records a review
-warning. Structurally possible numbers are preserved even when the library does not
-recognize their assigned range, with a separate offline warning. Neither validation
-mode proves reachability or ownership; suspected placeholders need human review. Existing nonblank Hype profile fields remain unchanged.
-
-Same normalized email groups become one Hype user. For new users, profile fields come
-from the most recently updated Google row, otherwise the latest source row. Creation
-and modification dates span the entire group. Every contributing source user and
-volunteer remains in the offline crosswalk, preserving the ability to attach all runs.
-
-Destination matches consider both email and Google subject. They must identify one
-Hype user. Existing verification state, names, usernames, nonblank phone numbers and
-preferences are not overwritten. Blank destination phones are proposed in
-`phoneUpdates` only when every supplied source phone normalizes successfully to
-the same E.164 number. Conflicting or invalid values require review. Destination
-snapshots without a telephone field are skipped, and generated SQL guards against
-overwriting a phone filled after planning. New Google accounts may be added to an existing
-verified-email match. Matching an already attached Google subject also preserves its
-current target user even when the legacy email is stale.
-
-Explicit unresolved cases include conflicting target matches, duplicate target emails,
-a source volunteer or Google subject spanning different source emails, archived/guest
-target users, an unverified email-only target match, invalid email/timestamps and
-identity collisions. Their source IDs remain in the offline exception report; they
-are never silently dropped. Missing email and nonportable login IDs are recovery
-warnings, not reasons to discard a user.
-
-Project volunteer-role assignment, onboarding/phone validation, first-login recovery,
-run history, schedules and quantities are separate stages. This stage prepares only
-user/account records and the crosswalk needed by those later stages.
-
-## Verification
-
-`bun run breadline:db:test` covers stable IDs, same-email Facebook/Google grouping,
-Facebook-only/unknown users, destination matches, conflicts, invalid timestamps,
-SQLite insert quoting and foreign keys, and recognition of already imported rows.
-The migration test proves existing rows survive and no extra tables are created.
-Live OAuth and production writes remain unverified and pending review.
-
-To rehearse all planned rows against the actual Drizzle user/account schema in an
-in-memory SQLite database, without touching Hype:
+Artifacts are `plan.json`, `target-identities.json`, and `review.sql` containing
+user/account/ownership/crosswalk inserts. Rehearse with:
 
 ```sh
 bun run breadline:users:test --plan .local/breadline/users/local/<run>
+bun run breadline:db:test
 ```
 
-The receipt checks insert counts, foreign keys and SQLite integrity. This validates
-the proposed rows and constraints; it does not simulate OAuth or production D1 writes.
+Rehearsal executes the actual review SQL against the real Drizzle schema in disposable
+memory and checks all four table counts, foreign keys and SQLite integrity. The command does not accept `--apply`.
+Execute no stale SQL: applying still needs a fresh destination check, backup,
+atomic batches and post-write reconciliation. The general conversion stage registry
+remains empty; this change does not enable remote imports or prove live OAuth.
+
+## Phone audit correction and local rebuild (19 October 2026)
+
+Refs #189, #194. The source is exclusively `breadline__public__users` from the private
+Breadline mirror, checkpoint 2026-10-16 15:18:18 UTC. Source rows total 14,186.
+There are 2,746 NULL phones, including seven reviewed exclusions: the earlier
+“2,739 missing/invalid” count was entirely missing phones. No supplied nonblank phone
+is unparseable under the existing possible-number policy. Fifteen supplied numbers
+fail full `isValid()` validation and remain explicit private warnings; these are
+separate from the missing-phone count and are not claims of reachability/ownership.
+
+The earlier ten “cross-phone conflict” rows were a planner bug: NULL identity phones
+had been inserted into phone sets as synthetic distinct keys. Six groups had only one
+real phone. Exact-email/reviewed-merge recovery now maps eleven additional missing-phone
+rows and admits the ten falsely blocked valid-phone rows. Genuine multiple-number
+conflicts still fail closed. The completion policy below supersedes the former
+quarantine of missing/invalid phones.
+
+The initial corrected local import created 10,667 Breadline users (9,965 auto-claimed and
+702 latent), persists 11,451 source-user mappings, retains seven reviewed exclusions,
+and initially quarantined 2,728 rows with no resolvable phone (superseded below). A repeat plan against the installed
+database produces zero new users/accounts/crosswalk inserts and identical exceptions.
+These counts exclude local fixtures and development personas.
+
+### Email fallback and mandatory phone completion (19 October 2026)
+
+Refs #189, #194. Of the fifteen allocation-validation warnings, four HK values have
+six, seven or nine national digits after whitespace removal. They are now rejected
+as phones. Eleven other values remain structurally possible allocation warnings.
+Five of these fifteen source identities have eight run rows and 88 recorded collected
+pieces in total; source user/volunteer mappings are preserved independently of phone
+acceptance. Historical event application remains deferred.
+
+The updated source plan maps all 14,179 retained rows to 13,386 Breadline users
+(12,678 auto-claimed, 708 latent), with seven reviewed exclusions and zero exceptions.
+There are 2,723 imported users awaiting a phone, including formerly missing-phone
+email identities. Fresh preparation and incremental local application both prove
+repeatability; the incremental update preserves existing user IDs, credentials and
+sessions while clearing only four malformed phones. Source totals exclude fixtures,
+reserved dev personas and anonymous browsing sessions.
+
+After any durable-account login on the Breadline hub, `handleBreadlinePhone` reads
+the current persisted phone before page/data/API/remote access. Missing/invalid phones
+redirect navigation and SvelteKit data loads to `/account/phone`; direct API and
+remote calls receive `403 BREADLINE_PHONE_REQUIRED`. Auth/sign-out, policies, static
+assets and completion remain reachable. Guests and other hubs keep their existing
+access policy. Client-side sign-in also navigates to completion. Neither cookie
+caches nor a stale valid session phone bypass the server check.
+
+The same-origin completion action accepts only the session owner's phone, applies
+the shared normalizer and preserves the user's identity/history. The unique phone
+index arbitrates collisions: a phone on another account returns recoverable feedback,
+never an automatic merge or history transfer. This is a structural contact check;
+SMS verification is not introduced. Auth profile updates cannot write telephone
+through Better Auth's additional-fields input. The form is localized in all three
+supported languages.
+
+### Reviewed telephone overrides
+
+Refs #189, #194. Private `user-decisions.json` accepts optional `telephoneOverrides`
+entries with `sourceUserId`, `expectedTelephone` and `telephone` (NULL or a canonical
+corrected number). A NULL override suppresses phone inference for that source row,
+retains its normalized email and all source/volunteer mappings, and requires phone
+completion after login. The original source remains unchanged. An expected-source
+comparison ignores whitespace but fails closed if the stored number changes, so a
+later source correction cannot be silently erased by an obsolete decision. Invalid
+correction formats and duplicate source IDs are rejected before planning.
+
+The reviewed correction set covers four single-email identities from the five-user
+run-history audit. The explicitly retained fifth phone is not overridden. Personal
+names, contacts and the exact correction set stay in the private decision file. A
+later supplied correction can replace NULL with a validated canonical number.
+
+### Reproducible fresh local preparation
+
+`scripts/breadline/prepare-local.ts` builds a disposable database from the versioned
+pre-0003 schema in `scripts/breadline/bootstrap/`, replays all 93 current migrations
+with input hashes and a real migration ledger, and seeds minimal core/HK Ghost Signs/
+Breadline configuration. It uses the existing reserved development personas for local
+administration, then removes the temporary user required by historical seed migrations.
+Old SQL sample users, tokens, passwords and content are not restored. The shared map
+catalog sync supplies current styles and the Breadline project selects Day Runner.
+
+Local installation now requires `--application-snapshot <reviewed-local.sqlite>`.
+Without it, minimal bootstrap seeds are available only for disposable rehearsals;
+`--apply` fails before installation. After identity import, the application snapshot
+restores organisations, projects, layers, their translations, publication/archive
+states, hub links, features, images, properties and tasks. Existing imported users,
+credentials, sessions and private crosswalks are proven unchanged. Current map styles
+are retained with their scopes reconciled to the restored hub IDs.
+
+The original 19 October minimal install incorrectly replaced the pre-existing local
+application dataset and used mismatched hub IDs. Local recovery restored eight
+organisations, seven projects, sixteen layers and 1,830 features from the verified
+pre-rebuild backup. Twenty-nine missing historical publisher/contributor references
+were retained as archived, credential-free profiles with NULL email/phone; original
+credentials were not restored or linked to imported accounts. Thirty-one pre-existing
+orphan translation rows cannot satisfy the current schema's feature FK and remain
+preserved in the private recovery receipt/source backup instead of inventing features.
+The repair transaction proves unchanged pre-existing identities and exact application
+row restoration, apart from those isolated orphan translations. Foreign keys and
+integrity pass. See `scripts/breadline/restore-local-application.py` and its regression
+tests; no remote database or source mirror was modified.
+
+The source identity plan and optional private `.local/breadline/local-users.json`
+fixture plan are imported separately. Local fixtures contain a canonical phone and
+at least one distinct eligible email. Stable negative source keys, NULL volunteer
+IDs and the `local-fixture` subject marker distinguish them from real Breadline rows;
+fixture rows never contribute to source counts or history mappings. An email named
+“admin” does not grant an admin role. Fixtures remain unclaimed without credentials.
+
+```sh
+# Build/rehearse privately without touching the active database.
+bun run breadline:local:prepare
+# Install only to the explicitly selected local Miniflare SQLite file.
+bun run breadline:local:prepare --apply --database-file /absolute/path/to/local-state/<id>.sqlite
+```
+
+The command validates the local D1 binding and destination namespace, backs up the
+source mirror, retains the durable local ID seed, and writes private source/fixture
+plans, review SQL, input hashes, checkpoints and receipts under
+`.local/breadline/local-rebuilds/`. It checks coverage, both import replans, SQLite
+integrity and foreign keys before applying. SQLite's online-backup API backs up the
+previous local database and installs the prepared database while preserving Miniflare
+engine metadata; it never deletes live WAL/SHM files. There is no remote target or
+source refresh. A local installation was completed and verified through Wrangler;
+production and live OAuth/email delivery are not acceptance claims of this workflow.
+
+Tests: `scripts/breadline/users.test.ts`, `scripts/breadline/local-users.test.ts`, and
+`scripts/breadline/local-bootstrap.test.ts` cover phone recovery/conflicts, local fixture
+isolation/idempotence and the complete source/migration/bootstrap chain.
 
 ## TODO: donor and group account treatment
 
@@ -222,9 +333,10 @@ Tracking: [user import #194](https://github.com/tijptjik/hype/issues/194),
   Distinguish shared service identities from individual users assigned the `group`
   role; do not exclude all users with that role. Preserve history and selection
   ownership, and record decisions in the offline crosswalk before applying imports.
-- [ ] Review the four accounts sharing pseudonym Person A without automatically
-  merging them by name or phone. Two share a phone number; their emails and Google
-  subjects differ. Resolve any merges using confirmed ownership.
+- [ ] Review the four accounts sharing pseudonym Person A under the phone-group
+  policy. Two share a phone number; their emails and Google
+  subjects differ, so they form a latent group rather than an automatically claimed
+  user. Confirm shared/service-number exceptions before applying.
 - [ ] Add import tests for the agreed treatment of shared identities, individual
   group accounts, and associated history/drop-off selections.
 

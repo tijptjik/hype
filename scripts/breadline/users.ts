@@ -29,7 +29,7 @@ interface D1Config {
  */
 async function readTarget(target: ImportTarget): Promise<TargetIdentitySnapshot> {
   const command =
-    'SELECT id,email,username,emailVerified,isArchived,isAnonymous,telephone FROM user; SELECT id,userId,providerId,accountId FROM account;'
+    'SELECT id,email,username,emailVerified,isArchived,isAnonymous,telephone FROM user; SELECT id,userId,providerId,accountId FROM account; SELECT userId,telephone,state,claimedEmail FROM breadlineImportUser; SELECT sourceUserId,sourceVolunteerId,userId,email,name,sourceUid FROM breadlineImportIdentity;'
   const child = Bun.spawn(
     [
       'bun',
@@ -49,13 +49,15 @@ async function readTarget(target: ImportTarget): Promise<TargetIdentitySnapshot>
     throw new Error('Unable to read destination identities')
   const response = JSON.parse(output) as Array<{ success: boolean; results: unknown[] }>
   if (
-    response.length !== 2 ||
+    response.length !== 4 ||
     response.some(result => result.success !== true || !Array.isArray(result.results))
   )
     throw new Error('Unexpected destination response')
   return {
     users: response[0].results,
     accounts: response[1].results,
+    importUsers: response[2].results,
+    identities: response[3].results,
   } as TargetIdentitySnapshot
 }
 
@@ -127,6 +129,14 @@ async function main(): Promise<void> {
           )
           .all(),
         accounts: db.query('SELECT id,userId,providerId,accountId FROM account').all(),
+        importUsers: db
+          .query('SELECT userId,telephone,state,claimedEmail FROM breadlineImportUser')
+          .all(),
+        identities: db
+          .query(
+            'SELECT sourceUserId,sourceVolunteerId,userId,email,name,sourceUid FROM breadlineImportIdentity',
+          )
+          .all(),
       }))() as TargetIdentitySnapshot
     } finally {
       db.close()
@@ -157,9 +167,9 @@ async function main(): Promise<void> {
   const plan = planUsers(rows, destination, state.seed, decisions)
   const runPath = resolve(directory, randomUUID())
   mkdirSync(runPath, { mode: 0o700 })
-  // Crosswalks and identity snapshots stay outside Git and outside the Hype database.
+  // Private review artifacts stay outside Git; the applied crosswalk is private database evidence.
   const manifest = {
-    version: 1,
+    version: 2,
     targetIdentity,
     targetSnapshot: targetSnapshot ? resolve(targetSnapshot) : 'live-d1-read',
     targetHash: createHash('sha256').update(JSON.stringify(destination)).digest('hex'),
@@ -194,6 +204,9 @@ async function main(): Promise<void> {
       {
         ...plan.counts,
         phoneUpdates: plan.phoneUpdates.length,
+        autoClaimed: plan.importUsers.filter(owner => owner.state === 'claimed').length,
+        latent: plan.importUsers.filter(owner => owner.state === 'unclaimed').length,
+        importedSourceIdentities: plan.identities.length,
         pendingTargetChanges: plan.targetChanges.length,
       },
       null,
