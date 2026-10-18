@@ -1,0 +1,100 @@
+<script lang="ts">
+import { m } from '#lib/i18n.js'
+// ICONS
+import Adjustments from 'virtual:icons/tabler/adjustments-horizontal'
+// BITS
+import { Switch } from '#lib/bits/index.js'
+// COMPONENTS
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
+// CONTEXT
+
+// TYPES
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
+import type {
+  AdminPreferenceCode,
+  AdminPreferences,
+} from '#lib/db/zod/schema/user.types.js'
+
+// CONTEXT
+
+// PROPS
+let {
+  preferences,
+  onPreference,
+  ...panelProps
+}: PanelProps & {
+  preferences: AdminPreferences
+  onPreference: (code: AdminPreferenceCode, checked: boolean) => void
+} = $props()
+
+const preferenceId = $props.id()
+
+// Get admin preferences from appCtx
+const adminPreferences: AdminPreferences = $derived(preferences)
+
+// Helper function to safely get preference state
+const getPreferenceState = (code: AdminPreferenceCode): boolean => {
+  return adminPreferences[code] || false
+}
+
+// Admin preferences configuration
+const preferencesConfig: {
+  name: string
+  description: string
+  code: AdminPreferenceCode
+}[] = [
+  {
+    name: m.settings_admin_map_collapsed(),
+    description: m.settings_admin_map_collapsed_description(),
+    code: 'isAdminMapCollapsed' as keyof AdminPreferences,
+  },
+  {
+    name: m.settings_admin_panel_collapsed(),
+    description: m.settings_admin_panel_collapsed_description(),
+    code: 'isPrimaryPanelCollapsed' as keyof AdminPreferences,
+  },
+  {
+    name: m.settings_admin_panel_auto_hide(),
+    description: m.settings_admin_panel_auto_hide_description(),
+    code: 'isPrimaryPanelAutoHide' as keyof AdminPreferences,
+  },
+]
+</script>
+
+{#if panelProps.isAdmin}
+  <Section
+    title={m.menu_admin()}
+    icon={Adjustments}
+    defaultOpen={true}
+    iconVerticalPaddingClass="py-2 pr-4"
+    {...panelProps}
+  >
+    <div class="flex min-h-0 w-full flex-col gap-1 px-6 pb-5">
+      {#each preferencesConfig as preference}
+        <div class="flex w-full flex-row items-start justify-between gap-4 py-3">
+          <div class="min-w-0 grow flex flex-col gap-0.5">
+            <label
+              for={`${preferenceId}-${preference.code}`}
+              class="cursor-pointer text-sm font-medium text-base-content"
+              >{preference.name}</label
+            >
+            {#if preference.description}
+              <p class="text-sm leading-relaxed text-muted-foreground">
+                {preference.description}
+              </p>
+            {/if}
+          </div>
+          <Switch
+            name={preference.code}
+            id={`${preferenceId}-${preference.code}`}
+            class="mt-0.5 shrink-0"
+            size="sm"
+            color="primary"
+            checked={getPreferenceState(preference.code)}
+            onCheckedChange={checked => onPreference(preference.code, checked === true)}
+          />
+        </div>
+      {/each}
+    </div>
+  </Section>
+{/if}

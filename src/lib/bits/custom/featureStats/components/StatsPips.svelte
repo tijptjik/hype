@@ -1,28 +1,28 @@
 <script lang="ts">
-import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import type { FeatureStatPipsProps } from '../featureStats.types'
 
 let { title, icon, statuses, showTitle = true }: FeatureStatPipsProps = $props()
 </script>
 
 <div class="bits-theme bits-feature-stat">
-  <span class="bits-feature-stat__title">
+  <span class="text-xs leading-4 text-base-content/60">
     {#if showTitle}
       <span class="bits-feature-stat__title-text">{title}</span>
       {#if icon}
         {@const IconComponent = icon}
         <span class="bits-feature-stat__title-icon">
-          <IconComponent class="bits-feature-stat__icon-svg" />
+          <IconComponent class="w-4 h-4" />
         </span>
       {/if}
     {:else if icon}
       {@const IconComponent = icon}
-      <IconComponent class="bits-feature-stat__icon-svg" />
+      <IconComponent class="w-4 h-4" />
     {/if}
   </span>
 
-  <div class="bits-feature-stat__pips">
-    {#each Object.entries(statuses) as [ label, status ]}
+  <div class="flex gap-1.5">
+    {#each Object.entries(statuses) as [label, status]}
       <SimpleTooltip>
         {#snippet trigger()}
           <div

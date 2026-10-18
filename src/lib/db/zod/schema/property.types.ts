@@ -1,5 +1,6 @@
 import type { z } from 'zod'
-import type { FormIssueLike, Id, Locale, LocaleKey } from '$lib/types'
+import type { FormIssueLike } from '#lib/client/services/form.types.js'
+import type { Id, Locale, LocaleKey } from '#lib/types.js'
 import type {
   ProjectPropertyFormData,
   PropertyAdminProfileAPI,
@@ -20,7 +21,7 @@ import type {
   PropertyValueRecord,
   PropertyValueRecordCreate,
   PropertyValueRecordUpdate,
-} from '$lib/db/zod/schema/property'
+} from '#lib/db/zod/schema/property.js'
 
 export type PropertyDB = z.infer<typeof PropertyRecord>
 export type PropertyDBNew = z.infer<typeof PropertyRecordCreate>

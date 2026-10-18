@@ -2,13 +2,14 @@ import type { z } from 'zod'
 import type {
   ApplyChangedRelationFieldParams,
   ChangedRelationResolution,
-  EntityResponse,
   ResolveChangedRelationParams,
   ResourceSubmitDraft,
   ResourceSubmitMode,
-} from '$lib/types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+} from '#lib/client/services/formRelations.types.js'
+import type { EntityResponse } from '#lib/types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
+  ProjectCompactProfileAPI,
   ProjectAdminProfileAPI,
   ProjectAdminRow,
   ProjectBase,
@@ -35,8 +36,8 @@ import type {
   ProjectUpdate,
   PublishProjectSchema,
   RemoveProjectSchema,
-} from '$lib/db/zod/schema/project'
-import type { User } from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/project.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
 
 export type ProjectDB = z.infer<typeof ProjectBase>
 export type ProjectDBNew = z.infer<typeof ProjectInsert>
@@ -57,25 +58,29 @@ export type ProjectCardDBRaw = z.infer<typeof ProjectCardRow>
 export type ProjectAdminDBRaw = z.infer<typeof ProjectAdminRow>
 export type ProjectQueryRowByProfile<P extends ProjectProfile> = P extends 'admin'
   ? ProjectAdminDBRaw
-  : P extends 'card' | 'detail'
+  : P extends 'card' | 'default' | 'map' | 'detail'
     ? ProjectCardDBRaw
     : ProjectListDBRaw
 
-export type ProjectEntityByProfile<P extends ProjectProfile> = P extends 'list'
-  ? ProjectListProfile
-  : P extends 'card'
-    ? ProjectCardProfile
-    : P extends 'detail'
-      ? ProjectDetailProfile
-      : Project
+export type ProjectEntityByProfile<P extends ProjectProfile> = P extends 'compact'
+  ? z.infer<typeof ProjectCompactProfileAPI>
+  : P extends 'list'
+    ? ProjectListProfile
+    : P extends 'card' | 'default' | 'map'
+      ? ProjectCardProfile
+      : P extends 'detail' | 'full'
+        ? ProjectDetailProfile
+        : Project
 
-export type ProjectListByProfile<P extends ProjectProfile> = P extends 'list'
-  ? ProjectListProfile
-  : P extends 'card'
-    ? ProjectCardProfile
-    : P extends 'detail'
-      ? ProjectDetailProfile
-      : Project
+export type ProjectListByProfile<P extends ProjectProfile> = P extends 'compact'
+  ? z.infer<typeof ProjectCompactProfileAPI>
+  : P extends 'list'
+    ? ProjectListProfile
+    : P extends 'card' | 'default' | 'map'
+      ? ProjectCardProfile
+      : P extends 'detail' | 'full'
+        ? ProjectDetailProfile
+        : Project
 
 export type ProjectGetParamsByProfile<P extends ProjectProfile> = Omit<
   ProjectGetParams,

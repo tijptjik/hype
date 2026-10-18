@@ -1,6 +1,6 @@
-import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
+import { and, eq, or, type SQL } from 'drizzle-orm'
 import { error } from '@sveltejs/kit'
-import { removeExcludedColumns, toTriStateBoolean } from '$lib/api'
+import { removeExcludedColumns, toTriStateBoolean } from '#lib/api/index.js'
 import {
   shouldLogAuthzDeny,
   toAccountRequirementCode,
@@ -8,19 +8,20 @@ import {
   toAuthMessage,
 } from '.'
 import { isCoreHubAdmin, isRelevantHubAdmin } from './hub'
-import { applyPrismConstraints } from '$lib/db'
-import { applyTriStateBooleanCondition } from '$lib/db/query'
-import { layer } from '$lib/db/schema'
-import { HierarchicalResource } from '$lib/enums'
+import { applyPrismConstraints } from '#lib/db/index.js'
+import { applyTriStateBooleanCondition } from '#lib/db/query.js'
+import { layer } from '#lib/db/schema/index.js'
+import { HierarchicalResource } from '#lib/enums.js'
+import type { AuthorizationDecision } from '#lib/api/services/authz/authorization.types.js'
 import type {
-  AuthorizationDecision,
   Database,
   Id,
   Prisms,
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
+} from '#lib/types.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 
 type LayerPolicyCode =
   | 'UNAUTHENTICATED'
@@ -509,10 +510,10 @@ export const buildLayerVisibilityAndOwnershipConditions = (
   ): SQL<unknown> | undefined => {
     const scopeConditions: SQL<unknown>[] = []
     if (organisationIds.length > 0) {
-      scopeConditions.push(inArray(layer.organisationId, organisationIds as Id[]))
+      scopeConditions.push(chunkedInArray(layer.organisationId, organisationIds))
     }
     if (projectIds.length > 0) {
-      scopeConditions.push(inArray(layer.projectId, projectIds as Id[]))
+      scopeConditions.push(chunkedInArray(layer.projectId, projectIds))
     }
     if (scopeConditions.length === 0) return undefined
     if (scopeConditions.length === 1) return scopeConditions[0]

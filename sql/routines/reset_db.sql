@@ -13,6 +13,12 @@ DROP TABLE IF EXISTS taskImage;
 DROP TABLE IF EXISTS task;
 
 -- Feature + layer children
+-- Search documents are derived from translations; remove them before their owners.
+DROP VIEW IF EXISTS featureSearchContent;
+DROP TABLE IF EXISTS featureSearchDocument;
+DROP TABLE IF EXISTS featureSearchFts;
+DROP TABLE IF EXISTS featureSearchGram;
+DROP TABLE IF EXISTS featureNeighbourhood;
 DROP TABLE IF EXISTS layerI18n;
 DROP TABLE IF EXISTS layerProperty;
 DROP TABLE IF EXISTS featureI18n;

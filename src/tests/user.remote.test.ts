@@ -1,5 +1,6 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
 
 const {
@@ -24,8 +25,12 @@ const {
   mockToAuthMessage: vi.fn((code: string) => code),
 }))
 
+const mockUpdateUser = vi.hoisted(() => vi.fn())
+const mockReadAdminUserProfile = vi.hoisted(() => vi.fn())
+
 vi.mock('$app/server', () => ({
   getRequestEvent: mockGetRequestEvent,
+  requested: vi.fn(() => ({ refreshAll: vi.fn() })),
   query: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(handler as (...args: unknown[]) => unknown, 'query'),
 }))
@@ -38,23 +43,27 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   setupRequestHandler: mockSetupRequestHandler,
 }))
 
-vi.mock('$lib/types', () => ({}))
+vi.mock('#lib/api/services/adminUser.js', () => ({
+  readAdminUserProfile: mockReadAdminUserProfile,
+}))
 
-vi.mock('$lib/enums', () => ({
+vi.mock('#lib/types.js', () => ({}))
+
+vi.mock('#lib/enums.js', () => ({
   HierarchicalResource: {
     feature: 'feature',
   },
 }))
 
-vi.mock('$lib/db', () => ({
+vi.mock('#lib/db/index.js', () => ({
   applyPrismConstraints: vi.fn(() => []),
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   toAuthMessage: mockToAuthMessage,
   canSearchUsers: (params: {
     superAdmin?: boolean | null
@@ -89,11 +98,12 @@ vi.mock('$lib/api/services/authz', () => ({
   },
 }))
 
-vi.mock('$lib/api/services/user', () => ({
+vi.mock('#lib/api/services/user.js', () => ({
   getUserQueryContext: vi.fn(() => ({ conditions: [] })),
   isPrivilegedArchivedSearchRequested: (state: { isArchived: boolean | null }) =>
     state.isArchived === true || state.isArchived === null,
   toEntityResponseShape: mockToEntityResponseShape,
+  toUserProfileResponseShape: vi.fn(value => value),
   toUserReadQueryPlan: mockToUserReadQueryPlan,
   toEntityRoleExistsCondition: vi.fn(() => ({ fn: 'exists' })),
   toParentChainCondition: vi.fn(async () => ({ fn: 'parent-chain' })),
@@ -162,7 +172,7 @@ vi.mock('$lib/api/services/user', () => ({
   userEntityWithRelations: {},
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (arg?: { meta?: { isAdminRequest?: boolean } }) => {
       const event = mockGetRequestEvent()
@@ -217,7 +227,7 @@ vi.mock('$lib/api/server/remote', () => ({
     }, 'query'),
 }))
 
-vi.mock('$lib/db/services/user', () => ({
+vi.mock('#lib/db/services/user.js', () => ({
   getUsersForHydration: mockGetUsersForHydration,
   searchUsersByConditions: mockSearchUsersByConditions,
   toUserSearchTextCondition: mockToUserSearchTextCondition,
@@ -226,16 +236,16 @@ vi.mock('$lib/db/services/user', () => ({
   getUserFeaturesByUserId: vi.fn(),
   getUserLayersByUserId: vi.fn(),
   removeUserFeatureListState: vi.fn(),
-  updateUser: vi.fn(),
+  updateUser: mockUpdateUser,
   updateUserLayers: vi.fn(),
   upsertUserFeatureState: vi.fn(),
 }))
 
-vi.mock('$lib/db/services/hub', () => ({
+vi.mock('#lib/db/services/hub.js', () => ({
   getFeatureHubFilter: vi.fn(() => undefined),
 }))
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   AddUserFeatureToListSchema: {},
   GetUserFeaturesParamsSchema: {},
   GetUserLayersParamsSchema: {},
@@ -243,6 +253,7 @@ vi.mock('$lib/db/zod', () => ({
   RemoveUserFeatureFromListSchema: {},
   SetUserLayerDefaultsSchema: {},
   UpdateUserParamsSchema: {},
+  UserDirectoryProfileAPI: { parse: (value: unknown) => value },
   UserAdminListProfileAPI: {
     parse: (value: unknown) => value,
   },
@@ -250,7 +261,7 @@ vi.mock('$lib/db/zod', () => ({
   UserSearchQueryParamsSchema: {},
 }))
 
-vi.mock('$lib/db/schema/index', () => ({
+vi.mock('#lib/db/schema/index.js', () => ({
   feature: {
     id: 'feature.id',
     organisationId: 'feature.organisationId',
@@ -301,12 +312,15 @@ vi.mock('drizzle-orm', () => ({
   }),
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/user.remote')>
+let remote: MockedRemoteModule<typeof import('#lib/api/user.remote.js')>
 
 describe('user.remote', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-    remote = await import('$lib/api/server/user.remote')
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
+  beforeAll(async () => {
+    remote = mockedRemoteModule(await import('#lib/api/user.remote.js'))
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
 
     mockGetRequestEvent.mockReturnValue({
@@ -340,6 +354,31 @@ describe('user.remote', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it('loads admin profiles using only server-resolved actor and hub context', async () => {
+    const hub = { id: 'active-hub' }
+    mockGetRequestEvent.mockReturnValue({
+      locals: { hub },
+      platform: { env: {} },
+      request: { method: 'POST' },
+      url: new URL('https://example.com/admin/users/KindRunner01'),
+    })
+    mockReadAdminUserProfile.mockResolvedValue({
+      profile: { username: 'kindrunner01' },
+      details: null,
+    })
+    const result = await remote.getAdminUserProfile({ username: 'KindRunner01' })
+    expect(mockReadAdminUserProfile).toHaveBeenCalledWith(
+      {},
+      {
+        username: 'KindRunner01',
+        actor: { id: 'u-1', isAnonymous: false, superAdmin: false },
+        userRoles: [],
+        hub,
+      },
+    )
+    expect(result).toEqual({ profile: { username: 'kindrunner01' }, details: null })
   })
 
   it('getUserForAttribution returns null for archived users', async () => {
@@ -417,6 +456,82 @@ describe('user.remote', () => {
           layer: ['layer-1'],
         },
       }),
+    )
+  })
+
+  it('rejects arbitrary user reads without the user-search capability', async () => {
+    await expect(
+      remote.getUser({ ref: 'u-2', refKey: 'id', meta: { profile: 'detail' } }),
+    ).rejects.toMatchObject({ status: 403, message: 'INSUFFICIENT_ROLE' })
+    expect(mockToUserReadQueryPlan).not.toHaveBeenCalled()
+    expect(mockLoadUser).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-self profile updates before loading the target user', async () => {
+    await expect(
+      remote.updateUserProfile({
+        id: 'u-2',
+        data: { locale: 'en' },
+      }),
+    ).rejects.toMatchObject({ status: 403, message: 'INSUFFICIENT_ROLE' })
+
+    expect(mockLoadUser).not.toHaveBeenCalled()
+  })
+
+  it('preserves casing for a self username edit while storing a canonical value', async () => {
+    mockLoadUser
+      .mockResolvedValueOnce({ id: 'u-1', username: 'mixedcase' })
+      .mockResolvedValueOnce({ id: 'u-1', username: 'mixedcase' })
+      .mockResolvedValueOnce({
+        id: 'u-1',
+        username: 'mixedcase',
+        displayUsername: 'MixedCase',
+      })
+    await remote.updateUserProfile({ id: 'u-1', data: { username: 'MixedCase' } })
+    expect(mockUpdateUser).toHaveBeenCalledWith(
+      expect.anything(),
+      { username: 'mixedcase', displayUsername: 'MixedCase' },
+      'u-1',
+    )
+  })
+
+  it('rejects a username owned by another user regardless of casing', async () => {
+    mockLoadUser
+      .mockResolvedValueOnce({ id: 'u-1' })
+      .mockResolvedValueOnce({ id: 'u-2', username: 'taken' })
+    await expect(
+      remote.updateUserProfile({ id: 'u-1', data: { username: 'TaKeN' } }),
+    ).rejects.toMatchObject({ status: 409, message: 'USERNAME_IS_ALREADY_TAKEN' })
+    expect(mockUpdateUser).not.toHaveBeenCalled()
+  })
+
+  it('denies directory fields to organisation owners who can use member search', async () => {
+    mockSetupRequestHandler.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false, superAdmin: false },
+      userRoles: [{ type: 'organisation', role: 'owner' }],
+    })
+    await expect(remote.searchUsers({ q: '', directory: true })).rejects.toMatchObject({
+      status: 403,
+      message: 'INSUFFICIENT_ROLE',
+    })
+    expect(mockSearchUsersByConditions).not.toHaveBeenCalled()
+  })
+
+  it('loads a 25-user directory page for a core administrator', async () => {
+    mockSetupRequestHandler.mockResolvedValue({
+      db: {},
+      user: { id: 'u-1', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+    await remote.searchUsers({
+      q: 'Runner',
+      directory: true,
+      pagination: { limit: 25, offset: 25 },
+    })
+    expect(mockSearchUsersByConditions).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ limit: 25, offset: 25 }),
     )
   })
 

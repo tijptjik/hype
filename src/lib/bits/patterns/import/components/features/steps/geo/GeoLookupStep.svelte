@@ -2,18 +2,23 @@
 // SVELTE
 import { onMount } from 'svelte'
 // BITS COMPONENTS
-import Badge from '$lib/bits/custom/badge/Badge.svelte'
+import Badge from '#lib/bits/custom/badge/Badge.svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // SERVICES
 import {
   fetchALSResultFromAddress,
   processForwardGeocodeResult,
-} from '$lib/api/external/geocoding'
-import { getAddressForQuery, toLocalParseResult } from '$lib/utils/geocoding'
+} from '#lib/api/external/geocoding.js'
+import { getAddressForQuery, toLocalParseResult } from '#lib/utils/geocoding.js'
 // TYPES
-import type { GeoLookupStatusCounts } from '$lib/client/services/import/features'
-import type { ALSResult, LocaleKey } from '$lib/types'
+import type { GeoLookupStatusCounts } from '#lib/client/services/import/features.js'
+import type {
+  ALSResult,
+  ParsedReverseGeocodeResultI18n,
+} from '#lib/utils/geocoding.types.js'
+import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
+import type { LocaleKey } from '#lib/types.js'
 
 type Props = {
   startProcessing?: () => void
@@ -65,14 +70,14 @@ let currentRowData = $state<{
     displayAddress?: string
     latitude?: number
     longitude?: number
-    structuredAddress?: Record<string, any>
+    structuredAddress?: Record<string, unknown>
   }
   processed?: {
     latitude?: number
     longitude?: number
     displayAddress?: Record<string, string>
-    addressProperties?: Record<string, any>
-    addressMeta?: Record<string, any>
+    addressProperties?: Record<string, Partial<AddressProperties>>
+    addressMeta?: AddressMeta
   }
 } | null>(null)
 
@@ -189,13 +194,13 @@ function analyzeStructuredAddressCoverage() {
   // Create a map of address column indices by locale
   const structuredAddressIndicesByLocale = new Map<string, number[]>()
   structuredAddressColumns.forEach(col => {
-    const columnIndex = headers.findIndex(h => h === col.header)
+    const columnIndex = headers.indexOf(col.header)
     if (columnIndex !== -1 && col.locale) {
       const locale = col.locale
       if (!structuredAddressIndicesByLocale.has(locale)) {
         structuredAddressIndicesByLocale.set(locale, [])
       }
-      structuredAddressIndicesByLocale.get(locale)!.push(columnIndex)
+      structuredAddressIndicesByLocale.get(locale)?.push(columnIndex)
     }
   })
 
@@ -248,14 +253,14 @@ function analyzeGeocodingNeeds() {
   const displayAddressLocaleToColumnIndex = new Map<LocaleKey, number>()
 
   rawAddressColumns.forEach(col => {
-    const columnIndex = headers.findIndex(h => h === col.header)
+    const columnIndex = headers.indexOf(col.header)
     if (columnIndex !== -1 && col.locale) {
       rawAddressLocaleToColumnIndex.set(col.locale as LocaleKey, columnIndex)
     }
   })
 
   displayAddressColumns.forEach(col => {
-    const columnIndex = headers.findIndex(h => h === col.header)
+    const columnIndex = headers.indexOf(col.header)
     if (columnIndex !== -1 && col.locale) {
       displayAddressLocaleToColumnIndex.set(col.locale as LocaleKey, columnIndex)
     }
@@ -263,11 +268,11 @@ function analyzeGeocodingNeeds() {
 
   const latColumnIndex =
     coordinateColumns.latitude.length > 0
-      ? headers.findIndex(h => h === coordinateColumns.latitude[0].header)
+      ? headers.indexOf(coordinateColumns.latitude[0].header)
       : -1
   const lngColumnIndex =
     coordinateColumns.longitude.length > 0
-      ? headers.findIndex(h => h === coordinateColumns.longitude[0].header)
+      ? headers.indexOf(coordinateColumns.longitude[0].header)
       : -1
 
   // Categorize all rows by scenario
@@ -280,14 +285,16 @@ function analyzeGeocodingNeeds() {
   function getAddressForLocale(row: string[], locale: LocaleKey): string | null {
     // Priority: If both rawAddress and displayAddress exist, use displayAddress for lookup
     // but store rawAddress separately
-    if (displayAddressLocaleToColumnIndex.has(locale)) {
-      const displayValue = row[displayAddressLocaleToColumnIndex.get(locale)!]?.trim()
+    const displayColumnIndex = displayAddressLocaleToColumnIndex.get(locale)
+    if (displayColumnIndex !== undefined) {
+      const displayValue = row[displayColumnIndex]?.trim()
       if (displayValue) return displayValue
     }
 
     // Fallback to rawAddress if no displayAddress
-    if (rawAddressLocaleToColumnIndex.has(locale)) {
-      const rawValue = row[rawAddressLocaleToColumnIndex.get(locale)!]?.trim()
+    const rawColumnIndex = rawAddressLocaleToColumnIndex.get(locale)
+    if (rawColumnIndex !== undefined) {
+      const rawValue = row[rawColumnIndex]?.trim()
       if (rawValue) return rawValue
     }
 
@@ -365,11 +372,11 @@ function prepareExistingRowData(
   // Get existing coordinates
   const latColumnIndex =
     coordinateColumns.latitude.length > 0
-      ? headers.findIndex(h => h === coordinateColumns.latitude[0].header)
+      ? headers.indexOf(coordinateColumns.latitude[0].header)
       : -1
   const lngColumnIndex =
     coordinateColumns.longitude.length > 0
-      ? headers.findIndex(h => h === coordinateColumns.longitude[0].header)
+      ? headers.indexOf(coordinateColumns.longitude[0].header)
       : -1
 
   let latitude =
@@ -381,8 +388,8 @@ function prepareExistingRowData(
   if (
     latitude !== undefined &&
     longitude !== undefined &&
-    !isNaN(latitude) &&
-    !isNaN(longitude)
+    !Number.isNaN(latitude) &&
+    !Number.isNaN(longitude)
   ) {
     // Check if coordinates might be swapped (common data error)
     if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
@@ -419,7 +426,7 @@ function prepareExistingRowData(
 
   // Get first available raw and display addresses
   for (const col of rawAddressColumns) {
-    const colIndex = headers.findIndex(h => h === col.header)
+    const colIndex = headers.indexOf(col.header)
     if (colIndex !== -1 && row[colIndex]?.trim()) {
       rawAddress = row[colIndex].trim()
       break
@@ -427,7 +434,7 @@ function prepareExistingRowData(
   }
 
   for (const col of displayAddressColumns) {
-    const colIndex = headers.findIndex(h => h === col.header)
+    const colIndex = headers.indexOf(col.header)
     if (colIndex !== -1 && row[colIndex]?.trim()) {
       displayAddress = row[colIndex].trim()
       break
@@ -435,9 +442,9 @@ function prepareExistingRowData(
   }
 
   // Get structured address data if available
-  const structuredAddress: Record<string, any> = {}
+  const structuredAddress: Record<string, string> = {}
   structuredAddressColumns.forEach(col => {
-    const colIndex = headers.findIndex(h => h === col.header)
+    const colIndex = headers.indexOf(col.header)
     if (colIndex !== -1 && row[colIndex]?.trim()) {
       const key = `${col.field}_${col.locale || 'unknown'}`
       structuredAddress[key] = row[colIndex].trim()
@@ -447,8 +454,9 @@ function prepareExistingRowData(
   return {
     rawAddress,
     displayAddress,
-    latitude: !isNaN(latitude!) ? latitude : undefined,
-    longitude: !isNaN(longitude!) ? longitude : undefined,
+    latitude: latitude !== undefined && !Number.isNaN(latitude) ? latitude : undefined,
+    longitude:
+      longitude !== undefined && !Number.isNaN(longitude) ? longitude : undefined,
     structuredAddress:
       Object.keys(structuredAddress).length > 0 ? structuredAddress : undefined,
   }
@@ -549,14 +557,14 @@ async function startGeocoding() {
   )
 
   rawAddressColumns.forEach(col => {
-    const columnIndex = headers.findIndex(h => h === col.header)
+    const columnIndex = headers.indexOf(col.header)
     if (columnIndex !== -1 && col.locale) {
       rawAddressLocaleToColumnIndex.set(col.locale as LocaleKey, columnIndex)
     }
   })
 
   displayAddressColumns.forEach(col => {
-    const columnIndex = headers.findIndex(h => h === col.header)
+    const columnIndex = headers.indexOf(col.header)
     if (columnIndex !== -1 && col.locale) {
       displayAddressLocaleToColumnIndex.set(col.locale as LocaleKey, columnIndex)
     }
@@ -571,12 +579,12 @@ async function startGeocoding() {
     rawAddressValue: string | null
     displayAddressValue: string | null
   } {
-    const rawAddressValue = rawAddressLocaleToColumnIndex.has(locale)
-      ? row[rawAddressLocaleToColumnIndex.get(locale)!]?.trim() || null
-      : null
-    const displayAddressValue = displayAddressLocaleToColumnIndex.has(locale)
-      ? row[displayAddressLocaleToColumnIndex.get(locale)!]?.trim() || null
-      : null
+    const rawColumnIndex = rawAddressLocaleToColumnIndex.get(locale)
+    const rawAddressValue =
+      rawColumnIndex !== undefined ? row[rawColumnIndex]?.trim() || null : null
+    const displayColumnIndex = displayAddressLocaleToColumnIndex.get(locale)
+    const displayAddressValue =
+      displayColumnIndex !== undefined ? row[displayColumnIndex]?.trim() || null : null
 
     // Prioritization logic:
     // - If both exist: use displayAddress for geocoding, don't override it
@@ -594,11 +602,11 @@ async function startGeocoding() {
 
   const latColumnIndex =
     coordinateColumns.latitude.length > 0
-      ? headers.findIndex(h => h === coordinateColumns.latitude[0].header)
+      ? headers.indexOf(coordinateColumns.latitude[0].header)
       : -1
   const lngColumnIndex =
     coordinateColumns.longitude.length > 0
-      ? headers.findIndex(h => h === coordinateColumns.longitude[0].header)
+      ? headers.indexOf(coordinateColumns.longitude[0].header)
       : -1
 
   for (let i = 0; i < sampledRowIndices.length; i++) {
@@ -674,8 +682,7 @@ async function startGeocoding() {
 
         if (geocodingResult) {
           // Check if result came from API (has valid addressForwardGeocoder, not "invalid")
-          const forwardGeocoder = (geocodingResult.addressMeta as any)
-            ?.addressForwardGeocoder
+          const forwardGeocoder = geocodingResult.addressMeta.addressForwardGeocoder
           const hasApiResult = forwardGeocoder && forwardGeocoder !== 'invalid'
 
           // Store enriched data for the original row index
@@ -691,8 +698,8 @@ async function startGeocoding() {
           if (
             rawLatitude !== undefined &&
             rawLongitude !== undefined &&
-            !isNaN(rawLatitude) &&
-            !isNaN(rawLongitude)
+            !Number.isNaN(rawLatitude) &&
+            !Number.isNaN(rawLongitude)
           ) {
             // Check if coordinates might be swapped (common data error)
             // Longitude should be -180 to 180, Latitude should be -90 to 90
@@ -724,27 +731,29 @@ async function startGeocoding() {
           // for later reconciliation when features are stored
           const enhancedAddressMeta = {
             ...geocodingResult.addressMeta,
-            ...(rawLatitude !== undefined && !isNaN(rawLatitude) && { rawLatitude }),
-            ...(rawLongitude !== undefined && !isNaN(rawLongitude) && { rawLongitude }),
+            ...(rawLatitude !== undefined &&
+              !Number.isNaN(rawLatitude) && { rawLatitude }),
+            ...(rawLongitude !== undefined &&
+              !Number.isNaN(rawLongitude) && { rawLongitude }),
           }
 
           const featureData = {
             addressMeta: enhancedAddressMeta,
             geometry: {
               coordinates: [
-                (geocodingResult.addressMeta as any).longitude,
-                (geocodingResult.addressMeta as any).latitude,
+                geocodingResult.addressMeta.longitude,
+                geocodingResult.addressMeta.latitude,
               ],
             },
-            i18n: {} as Record<string, any>,
+            i18n: {} as Record<string, ParsedReverseGeocodeResultI18n>,
           }
 
           // Store i18n data for each locale with proper address handling
           Object.entries(geocodingResult.i18n).forEach(([geocodedLocale, data]) => {
             featureData.i18n[geocodedLocale] = {
-              displayAddress: (data as any)?.displayAddress,
-              displayAddressGen: (data as any)?.displayAddressGen,
-              addressProperties: (data as any)?.addressProperties,
+              displayAddress: data.displayAddress,
+              displayAddressGen: data.displayAddressGen,
+              addressProperties: data.addressProperties,
             }
 
             // Handle rawAddress storage - always store if it exists
@@ -784,17 +793,17 @@ async function startGeocoding() {
           // Update dashboard with processed data
           if (currentRowData) {
             currentRowData.processed = {
-              latitude: (geocodingResult.addressMeta as any).latitude,
-              longitude: (geocodingResult.addressMeta as any).longitude,
+              latitude: geocodingResult.addressMeta.latitude,
+              longitude: geocodingResult.addressMeta.longitude,
               displayAddress: Object.fromEntries(
                 Object.entries(geocodingResult.i18n)
-                  .map(([locale, data]) => [locale, (data as any)?.displayAddress])
+                  .map(([locale, data]) => [locale, data.displayAddress])
                   .filter(([_, address]) => address != null),
               ) as Record<string, string>,
               addressProperties: Object.fromEntries(
                 Object.entries(geocodingResult.i18n).map(([locale, data]) => [
                   locale,
-                  (data as any)?.addressProperties,
+                  data.addressProperties,
                 ]),
               ),
               addressMeta: geocodingResult.addressMeta,
@@ -942,7 +951,7 @@ $effect(() => {
         <div class="flex min-h-0 flex-1 gap-4 overflow-hidden p-4">
           <!-- Left Panel - Existing Values -->
           <div
-            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
           >
             <div class="mb-4 flex-none">
               <h5 class="text-sm font-semibold text-base-content/80">
@@ -958,7 +967,8 @@ $effect(() => {
                   Coordinates
                 </div>
                 <div class="font-mono text-sm">
-                  {#if currentRowData.existing.latitude !== undefined && currentRowData.existing.longitude !== undefined}
+                  {#if currentRowData.existing.latitude !== undefined &&
+                    currentRowData.existing.longitude !== undefined}
                     <div class="ml-2">Lat: {currentRowData.existing.latitude}</div>
                     <div class="ml-2">Lng: {currentRowData.existing.longitude}</div>
                   {:else}
@@ -991,7 +1001,8 @@ $effect(() => {
                       </div>
                     </div>
                   {/if}
-                  {#if !currentRowData.existing.rawAddress && !currentRowData.existing.displayAddress}
+                  {#if !currentRowData.existing.rawAddress &&
+                    !currentRowData.existing.displayAddress}
                     <div class="ml-2 text-base-content/50">No addresses</div>
                   {/if}
                 </div>
@@ -1006,7 +1017,9 @@ $effect(() => {
                     Structured Address
                   </div>
                   <div class="space-y-2 font-mono text-sm">
-                    {#each Object.entries(currentRowData.existing.structuredAddress) as [ key, value ]}
+                    {#each Object.entries(
+                      currentRowData.existing.structuredAddress,
+                    ) as [key, value]}
                       <div class="ml-2">
                         <div class="mb-1 font-medium text-base-content/80">{key}:</div>
                         <div class="ml-2 break-words text-base-content/70">{value}</div>
@@ -1020,7 +1033,7 @@ $effect(() => {
 
           <!-- Right Panel - Enriched Data -->
           <div
-            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-success/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+            class="flex flex-1 flex-col overflow-hidden rounded-3xl border border-success/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
           >
             <div class="mb-4 flex-none">
               <h5 class="text-sm font-semibold text-base-content/80">
@@ -1051,7 +1064,9 @@ $effect(() => {
                     Display Addresses
                   </div>
                   <div class="space-y-2 font-mono text-sm">
-                    {#each Object.entries(currentRowData.processed.displayAddress || {}) as [ locale, address ]}
+                    {#each Object.entries(
+                      currentRowData.processed.displayAddress || {},
+                    ) as [locale, address]}
                       <div class="ml-2">
                         <div class="mb-1 font-medium text-base-content/80">
                           {locale}:
@@ -1072,13 +1087,15 @@ $effect(() => {
                     Address Properties
                   </div>
                   <div class="space-y-3 font-mono text-sm">
-                    {#each Object.entries(currentRowData.processed.addressProperties || {}) as [ locale, properties ]}
+                    {#each Object.entries(
+                      currentRowData.processed.addressProperties || {},
+                    ) as [locale, properties]}
                       <div class="ml-2">
                         <div class="mb-1 font-medium text-base-content/80">
                           {locale}:
                         </div>
                         <div class="ml-2 space-y-2">
-                          {#each Object.entries(properties || {}) as [ key, value ]}
+                          {#each Object.entries(properties || {}) as [key, value]}
                             <div>
                               <div class="mb-1 text-xs text-base-content/60">
                                 {key}:
@@ -1103,7 +1120,9 @@ $effect(() => {
                       Address Meta
                     </div>
                     <div class="space-y-2 font-mono text-sm">
-                      {#each Object.entries(currentRowData.processed.addressMeta) as [ key, value ]}
+                      {#each Object.entries(
+                        currentRowData.processed.addressMeta,
+                      ) as [key, value]}
                         <div class="ml-2">
                           <div class="mb-1 text-xs text-base-content/60">{key}:</div>
                           <div class="ml-2 break-words text-base-content/70">
@@ -1132,7 +1151,7 @@ $effect(() => {
         <div class="flex flex-1 items-center p-4">
           <div class="grid w-full grid-cols-1 gap-4 lg:grid-cols-3">
             <section
-              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
               <div
                 class="font-black text-7xl leading-none tracking-[-0.08em] text-info"
@@ -1158,7 +1177,7 @@ $effect(() => {
             </section>
 
             <section
-              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
               <div
                 class="font-black text-7xl leading-none tracking-[-0.08em] text-warning"
@@ -1178,7 +1197,8 @@ $effect(() => {
                   {#if coordinateColumns.longitude.length > 0}
                     <Badge text="longitude" tone="neutral" />
                   {/if}
-                  {#if coordinateColumns.latitude.length === 0 && coordinateColumns.longitude.length === 0}
+                  {#if coordinateColumns.latitude.length === 0 &&
+                    coordinateColumns.longitude.length === 0}
                     <span class="text-sm text-base-content/50">None</span>
                   {/if}
                 </div>
@@ -1186,7 +1206,7 @@ $effect(() => {
             </section>
 
             <section
-              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-success/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
+              class="flex max-h-[420px] min-h-48 flex-col justify-between rounded-3xl border border-success/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl"
             >
               <div
                 class="font-black text-7xl leading-none tracking-[-0.08em] text-success"

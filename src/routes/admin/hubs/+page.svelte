@@ -1,30 +1,36 @@
 <script lang="ts">
 import { page } from '$app/state'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
-import { createAdminIndexCardModel } from '$lib/adapters/cards/createAdminIndexCardModel'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
+import { createAdminIndexCardModel } from '#lib/adapters/cards/createAdminIndexCardModel.js'
 // SERVICES
 import {
   createSortable,
   createSortables,
   createToggleFilter,
   createTranslationFilter,
-} from '$lib/client/services/filters'
+} from '#lib/client/services/filters.js'
 // BITS PATTERNS
-import { IndexCard, ResourceControlBar, ResourceIndex, ResourceRow } from '$lib/bits'
+import {
+  IndexCard,
+  ResourceControlBar,
+  ResourceIndex,
+  ResourceRow,
+} from '#lib/bits/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // ICONS
-import HubIcon from 'virtual:icons/lucide/building-2'
-import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
+import HubIcon from 'virtual:icons/proicons/building-multiple'
+import StatusIcon from 'virtual:icons/proicons/target'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import LanguagesIcon from 'virtual:icons/tabler/language'
 // TYPES
-import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
+import type { KeyMap } from '#lib/client/services/resourceCards.types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -109,7 +115,7 @@ adminCtx.setFacet(false, false, FirstClassResource.hub)
 
 // STATE
 let entities: Hub[] = $derived(
-  adminCtx.getViewFilteredResource<Hub>(FirstClassResource.hub),
+  adminCtx.view.filters.getViewFilteredResource<Hub>(FirstClassResource.hub),
 )
 
 function getIndexModel(entity: Hub) {
@@ -133,7 +139,7 @@ $effect(() => {
       sortables,
     },
     {
-      isVisible: adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.hub],
+      isVisible: adminCtx.listUi.state.isControlBarVisible[FirstClassResource.hub],
     },
   )
   headerCtrl.clearFooter()
@@ -141,10 +147,15 @@ $effect(() => {
 </script>
 
 <ResourceIndex resource={FirstClassResource.hub} {entities}>
-  {#snippet card(entity: Hub)}
+  {#snippet card(
+    entity: Hub,
+  )}
     <IndexCard {...getIndexModel(entity)} />
   {/snippet}
-  {#snippet row(entity: Hub, index)}
+  {#snippet row(
+    entity: Hub,
+    index,
+  )}
     <ResourceRow
       {index}
       breadcrumbColumnCount={3}

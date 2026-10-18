@@ -6,11 +6,11 @@ import ResourceEmptyState from './src/ResourceEmptyState.svelte'
 import ResourceLoadingState from './src/ResourceLoadingState.svelte'
 import ResourceTableRow from './src/ResourceTableRow.svelte'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // TYPES
-import type { Resource } from '$lib/types'
+import type { Resource } from '#lib/types.js'
 import type {
   ResourceIndexGridRow,
   ResourceIndexItem,
@@ -43,12 +43,12 @@ const adminCtx = getAdminCtx()
 let gridWidth = $state(0)
 let stableColumnCount = $state(1)
 let lastKnownPanelOpenState = $state(
-  adminCtx.appCtx && typeof adminCtx.appCtx.isPanelOpenOrVisual === 'function'
-    ? adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin)
+  adminCtx.view && typeof adminCtx.view.panels.isPanelOpenOrVisual === 'function'
+    ? adminCtx.view.panels.isPanelOpenOrVisual(Panel.admin)
     : false,
 )
 
-const layoutMode = $derived(adminCtx.appCtx.state.ui.layoutMode[resource])
+const layoutMode = $derived(adminCtx.listUi.state.layoutMode[resource])
 const isRowLayout = $derived(layoutMode === 'table' || layoutMode === 'list')
 const itemHeight = $derived(
   isRowLayout
@@ -110,7 +110,7 @@ $effect(() => {
   gridWidth
   layoutMode
 
-  const currentPanelState = adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin)
+  const currentPanelState = adminCtx.view.panels.isPanelOpenOrVisual(Panel.admin)
   const nextColumnCount = getColumnCount(gridWidth, layoutMode)
 
   if (currentPanelState === lastKnownPanelOpenState) {
@@ -130,7 +130,10 @@ $effect(() => {
 })
 </script>
 
-{#snippet children(item: ResourceIndexItem<T>, index: number)}
+{#snippet children(
+  item: ResourceIndexItem<T>,
+  index: number,
+)}
   {#if layoutMode === 'card'}
     {@const cardRow = item as ResourceIndexGridRow<T>}
     <ResourceCardRow

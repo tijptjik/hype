@@ -1,10 +1,22 @@
-import { env as publicEnv } from '$env/dynamic/public'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+const publicEnv = vi.hoisted(() => ({
+  PUBLIC_ASSET_BASE_URL: '',
+  PUBLIC_PREVIEW_ASSET_BASE_URL: '',
+}))
+vi.mock('$app/env/public', () => ({
+  get PUBLIC_ASSET_BASE_URL() {
+    return publicEnv.PUBLIC_ASSET_BASE_URL
+  },
+  get PUBLIC_PREVIEW_ASSET_BASE_URL() {
+    return publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL
+  },
+}))
 
 import {
   resolveImageAssetBaseUrl,
   resolveImageUploadEnv,
-} from '$lib/client/services/image'
+} from '#lib/client/services/image.js'
 
 describe('resolveImageUploadEnv', () => {
   it('uses the asset base URL for local app development', () => {
@@ -72,12 +84,12 @@ describe('resolveImageAssetBaseUrl', () => {
     )
   })
 
-  it('falls back to the local asset worker when a local app session is missing public asset env', () => {
+  it('falls back to the local asset domain when a local app session is missing public asset env', () => {
     publicEnv.PUBLIC_ASSET_BASE_URL = ''
     publicEnv.PUBLIC_PREVIEW_ASSET_BASE_URL = ''
 
     expect(resolveImageAssetBaseUrl('local', 'http://localhost:5173')).toBe(
-      'http://localhost:8788',
+      'http://assets.hype.localhost',
     )
   })
 })

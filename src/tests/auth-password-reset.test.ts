@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { markEmailVerifiedAfterPasswordReset } from '$lib/auth'
-import { user } from '$lib/db/schema/user'
+import { markEmailVerifiedAfterPasswordReset } from '#lib/auth.js'
+import { user } from '#lib/db/schema/user.js'
 
 describe('password-reset email verification', () => {
   it('marks the reset-token owner email as verified', async () => {

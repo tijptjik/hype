@@ -1,9 +1,9 @@
 <script lang="ts">
 // ADAPTERS
-import { useImageEditorGalleryModel } from '$lib/adapters/image'
+import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS
-import { ThumbnailWrapper } from '$lib/bits'
-import { getImageCtx } from '$lib/context/image.svelte'
+import { ThumbnailWrapper } from '#lib/bits/index.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 import type { Snippet } from 'svelte'
 import type { TaskFooterProps } from '../task.types'
 
@@ -16,7 +16,7 @@ let {
 const model = useImageEditorGalleryModel(getImageCtx())
 </script>
 
-<section class={['bg-black', className].filter(Boolean).join(' ')}>
+<section class={['bg-panel', className].filter(Boolean).join(' ')}>
   <ThumbnailWrapper
     items={model.state.items}
     activeId={model.state.activeId}

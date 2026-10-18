@@ -1,14 +1,14 @@
 import { error, type RequestHandler } from '@sveltejs/kit'
 
 // API
-import { getDatabaseWithoutAuth } from '$lib/api'
+import { getDatabaseWithoutAuth } from '#lib/api/index.js'
 // HELPERS
-import { buildMapRenderObjectKey } from '$lib/map/renders/storage.shared'
+import { buildMapRenderObjectKey } from '#lib/map/renders/storage.shared.js'
 import {
   buildLayerMapRenderHash,
   getLayerMapRenderData,
-} from '$lib/map/renders/render.server'
-import { serveMapRenderAsset } from '$lib/api/services/render'
+} from '#lib/map/renders/render.server.js'
+import { serveMapRenderAsset } from '#lib/api/services/render.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -24,7 +24,8 @@ import { serveMapRenderAsset } from '$lib/api/services/render'
  * @param event Request event carrying the layer id.
  * @returns PNG response in local development, or a redirect to the immutable asset URL.
  */
-export const GET: RequestHandler = async ({ params, platform }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
+  const { platform } = locals
   const layerId = params.layer
 
   if (!layerId) {

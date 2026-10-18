@@ -1,19 +1,19 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import StatsPips from './components/StatsPips.svelte'
 // SERVICES
 import {
   calculateTranslationStatuses,
   clearCachedFeatureTranslationStats,
-} from '$lib/client/services/stats'
+} from '#lib/client/services/stats.js'
 // ICONS
-import LanguagesIcon from 'virtual:icons/lucide/languages'
+import LanguagesIcon from 'virtual:icons/tabler/language'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey } from '#lib/types.js'
 import type { FeatureStatsProps } from './featureStats.types'
 
 let { feature, appCtx, showTitle = true }: FeatureStatsProps = $props()
@@ -23,7 +23,7 @@ const adminCtx = getAdminCtx()
 const activeTranslationLocales = $derived.by(() => {
   const locales: LocaleKey[] = []
   const translationLocales =
-    adminCtx.appCtx.state.viewFilters.feature.translationLocales
+    adminCtx.view.filters.viewFilters.feature.translationLocales
   for (const [locale, isActive] of Object.entries(translationLocales)) {
     if (isActive) locales.push(locale as LocaleKey)
   }

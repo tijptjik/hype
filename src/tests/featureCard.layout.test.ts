@@ -1,5 +1,5 @@
-import { getFeatureCardLayout } from '$lib/bits/patterns/cards/featureCard/featureCard.layout'
-import { getFeatureCardRootVars } from '$lib/bits/patterns/cards/featureCard/featureCard.styles'
+import { getFeatureCardLayout } from '#lib/bits/patterns/cards/featureCard/featureCard.layout.js'
+import { getFeatureCardRootVars } from '#lib/bits/patterns/cards/featureCard/featureCard.styles.js'
 import { describe, expect, it } from 'vitest'
 
 describe('feature card layout', () => {

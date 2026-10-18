@@ -1,9 +1,9 @@
 // SVELTE
 import { setContext, getContext } from 'svelte'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums'
+import { FeatureCardMode } from '#lib/enums.js'
 // TYPES
-import type { UploadedPhoto } from '$lib/db/zod/schema/image.types'
+import type { UploadedPhoto } from '#lib/db/zod/schema/image.types.js'
 
 export class CardCtx {
   state = $state({

@@ -1,0 +1,511 @@
+// DRIZZLE
+import { sql } from 'drizzle-orm'
+import {
+  check,
+  index,
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
+// LIBRARIES
+import { nanoid } from 'nanoid'
+// SCHEMA
+import { feature } from './feature'
+import { project } from './project'
+import { layer } from './layer'
+import { property } from './property'
+import { user } from './user'
+// ENUM
+import { supportedLocales } from '../../enums'
+
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. SCHEDULES, EXCEPTIONS AND TRANSLATIONS
+// 2. EVENTS, ATTENDANCE AND MEASUREMENTS
+// 3. DAILY RESPONSIBILITIES AND ROUTE ESTIMATES
+// 4. LEADERBOARDS
+// ---
+
+/** schedule records. */
+export const schedule = sqliteTable(
+  'schedule',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    ownerType: text('ownerType').notNull(),
+    ownerId: text('ownerId').notNull(),
+    // Polymorphic owner follows the spec; place IDs are external to Hype.
+    purpose: text('purpose', {
+      enum: ['openingHours', 'pickupWindow', 'dropoffWindow'],
+    })
+      .notNull()
+      .default('openingHours'),
+    osmOpeningHours: text('osmOpeningHours'),
+    timezone: text('timezone').notNull().default('Asia/Hong_Kong'),
+    isActive: integer('isActive', { mode: 'boolean' }).notNull().default(true),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    index('schedule_owner_idx').on(table.ownerType, table.ownerId),
+    check('schedule_owner_type', sql`${table.ownerType} IN ('feature','place')`),
+  ],
+)
+
+/** scheduleRule records. */
+export const scheduleRule = sqliteTable(
+  'scheduleRule',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    scheduleId: text('scheduleId')
+      .notNull()
+      .references(() => schedule.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    ruleType: text('ruleType', {
+      enum: ['weekly', 'nthDoWly', 'publicHoliday'],
+    }).notNull(),
+    dayOfWeek: integer('dayOfWeek'),
+    nth: integer('nth'),
+    priority: integer('priority').notNull().default(0),
+    validFromDay: integer('validFromDay'),
+    validFromMonth: integer('validFromMonth'),
+    validFromYear: integer('validFromYear'),
+    validUntilDay: integer('validUntilDay'),
+    validUntilMonth: integer('validUntilMonth'),
+    validUntilYear: integer('validUntilYear'),
+    isClosed: integer('isClosed', { mode: 'boolean' }).notNull().default(false),
+    is24Hours: integer('is24Hours', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    index('scheduleRule_schedule_idx').on(table.scheduleId),
+    check(
+      'scheduleRule_kind',
+      sql`${table.ruleType} IN ('weekly','nthDoWly','publicHoliday')`,
+    ),
+    check(
+      'scheduleRule_shape',
+      sql`(${table.ruleType} = 'publicHoliday' AND ${table.dayOfWeek} IS NULL AND ${table.nth} IS NULL) OR (${table.ruleType} = 'weekly' AND ${table.dayOfWeek} IS NOT NULL AND ${table.nth} IS NULL) OR (${table.ruleType} = 'nthDoWly' AND ${table.dayOfWeek} IS NOT NULL AND ${table.nth} IS NOT NULL)`,
+    ),
+    check(
+      'scheduleRule_months',
+      sql`(${table.validFromMonth} IS NULL OR ${table.validFromMonth} BETWEEN 1 AND 12) AND (${table.validUntilMonth} IS NULL OR ${table.validUntilMonth} BETWEEN 1 AND 12)`,
+    ),
+    check(
+      'scheduleRule_days',
+      sql`(${table.validFromDay} IS NULL OR ${table.validFromDay} BETWEEN 1 AND 31) AND (${table.validUntilDay} IS NULL OR ${table.validUntilDay} BETWEEN 1 AND 31)`,
+    ),
+    check(
+      'scheduleRule_open_state',
+      sql`NOT (${table.isClosed} AND ${table.is24Hours})`,
+    ),
+    check('scheduleRule_day', sql`${table.dayOfWeek} BETWEEN 1 AND 7`),
+    check('scheduleRule_nth', sql`${table.nth} IN (-1,1,2,3,4,5)`),
+  ],
+)
+
+/** scheduleException records. */
+export const scheduleException = sqliteTable(
+  'scheduleException',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    scheduleId: text('scheduleId')
+      .notNull()
+      .references(() => schedule.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    exceptionDate: text('exceptionDate').notNull(),
+    exceptionType: text('exceptionType', {
+      enum: ['holiday', 'event', 'closure', 'specialHours'],
+    }).notNull(),
+    isClosed: integer('isClosed', { mode: 'boolean' }).notNull().default(false),
+    is24Hours: integer('is24Hours', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    uniqueIndex('scheduleException_date_idx').on(table.scheduleId, table.exceptionDate),
+  ],
+)
+
+/** scheduleRuleTimeSegment records. */
+export const scheduleRuleTimeSegment = sqliteTable(
+  'scheduleRuleTimeSegment',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    scheduleRuleId: text('scheduleRuleId')
+      .notNull()
+      .references(() => scheduleRule.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    fromTime: text('fromTime').notNull(),
+    untilTime: text('untilTime').notNull(), // End day offset makes overnight windows explicit.
+    untilDayOffset: integer('untilDayOffset').notNull().default(0),
+    rank: integer('rank').notNull().default(0),
+  },
+  table => [
+    uniqueIndex('scheduleRuleTimeSegment_rank_idx').on(
+      table.scheduleRuleId,
+      table.rank,
+    ),
+    check('scheduleRuleTimeSegment_offset', sql`${table.untilDayOffset} IN (0,1)`),
+  ],
+)
+
+/** scheduleRuleI18n records. */
+export const scheduleRuleI18n = sqliteTable(
+  'scheduleRuleI18n',
+  {
+    scheduleRuleId: text('scheduleRuleId')
+      .notNull()
+      .references(() => scheduleRule.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    locale: text('locale', {
+      enum: supportedLocales as [string, ...string[]],
+    }).notNull(),
+    name: text('name').notNull(),
+    nameShort: text('nameShort'),
+    nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(false),
+    nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
+  },
+  table => [primaryKey({ columns: [table.scheduleRuleId, table.locale] })],
+)
+
+/** scheduleExceptionTimeSegment records. */
+export const scheduleExceptionTimeSegment = sqliteTable(
+  'scheduleExceptionTimeSegment',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    scheduleExceptionId: text('scheduleExceptionId')
+      .notNull()
+      .references(() => scheduleException.id, {
+        onDelete: 'restrict',
+        onUpdate: 'cascade',
+      }),
+    fromTime: text('fromTime').notNull(),
+    untilTime: text('untilTime').notNull(), // End day offset makes overnight windows explicit.
+    untilDayOffset: integer('untilDayOffset').notNull().default(0),
+    rank: integer('rank').notNull().default(0),
+  },
+  table => [
+    uniqueIndex('scheduleExceptionTimeSegment_rank_idx').on(
+      table.scheduleExceptionId,
+      table.rank,
+    ),
+    check('scheduleExceptionTimeSegment_offset', sql`${table.untilDayOffset} IN (0,1)`),
+  ],
+)
+
+/** scheduleExceptionI18n records. */
+export const scheduleExceptionI18n = sqliteTable(
+  'scheduleExceptionI18n',
+  {
+    scheduleExceptionId: text('scheduleExceptionId')
+      .notNull()
+      .references(() => scheduleException.id, {
+        onDelete: 'restrict',
+        onUpdate: 'cascade',
+      }),
+    locale: text('locale', {
+      enum: supportedLocales as [string, ...string[]],
+    }).notNull(),
+    name: text('name').notNull(),
+    nameShort: text('nameShort'),
+    nameGen: integer('nameGen', { mode: 'boolean' }).notNull().default(false),
+    nameShortGen: integer('nameShortGen', { mode: 'boolean' }).notNull().default(false),
+  },
+  table => [primaryKey({ columns: [table.scheduleExceptionId, table.locale] })],
+)
+
+/** event records. */
+export const event = sqliteTable(
+  'event',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    featureId: text('featureId')
+      .notNull()
+      .references(() => feature.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    scheduleId: text('scheduleId').references(() => schedule.id, {
+      onDelete: 'restrict',
+      onUpdate: 'cascade',
+    }),
+    type: text('type', {
+      enum: ['pickupWindow', 'dropoffWindow', 'programme', 'programmeSlot'],
+    }).notNull(),
+    fromDate: text('fromDate').notNull(),
+    untilDate: text('untilDate').notNull(),
+    fromTime: text('fromTime'),
+    untilTime: text('untilTime'),
+    timezone: text('timezone').notNull().default('Asia/Hong_Kong'),
+    // NULL means unlimited; pickup writers explicitly use capacity 1.
+    capacity: integer('capacity'),
+    atCapacity: integer('atCapacity', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    index('event_feature_date_idx').on(table.featureId, table.fromDate),
+    index('event_date_type_idx').on(table.fromDate, table.type),
+    check('event_capacity', sql`${table.capacity} IS NULL OR ${table.capacity} > 0`),
+    check('event_dates', sql`${table.untilDate} >= ${table.fromDate}`),
+    check(
+      'event_kind',
+      sql`${table.type} IN ('pickupWindow','dropoffWindow','programme','programmeSlot')`,
+    ),
+  ],
+)
+
+/** eventAttendance records. */
+export const eventAttendance = sqliteTable(
+  'eventAttendance',
+  {
+    eventId: text('eventId')
+      .notNull()
+      .references(() => event.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    hasAttended: integer('hasAttended', { mode: 'boolean' }),
+    rank: integer('rank').notNull().default(0),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    primaryKey({ columns: [table.eventId, table.userId] }),
+    index('eventAttendance_user_idx').on(table.userId),
+    check(
+      'eventAttendance_attended',
+      sql`${table.hasAttended} IS NULL OR ${table.hasAttended} IN (0,1)`,
+    ),
+  ],
+)
+
+/** Numeric event measurements; drop-off totals are calculated from confirmed attendance. */
+export const eventProperty = sqliteTable(
+  'eventProperty',
+  {
+    eventId: text('eventId')
+      .notNull()
+      .references(() => event.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    propertyId: text('propertyId')
+      .notNull()
+      .references(() => property.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    value: real('value').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [primaryKey({ columns: [table.eventId, table.propertyId] })],
+)
+
+/** projectDailyRole records. */
+export const projectDailyRole = sqliteTable(
+  'projectDailyRole',
+  {
+    projectId: text('projectId')
+      .notNull()
+      .references(() => project.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    date: text('date').notNull(),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    role: text('role', { enum: ['whatsappContact', 'shopCaller'] }).notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    primaryKey({ columns: [table.projectId, table.date, table.userId, table.role] }),
+    uniqueIndex('projectDailyRole_whatsapp_idx')
+      .on(table.projectId, table.date)
+      .where(sql`${table.role} = 'whatsappContact'`),
+    check(
+      'projectDailyRole_kind',
+      sql`${table.role} IN ('whatsappContact','shopCaller')`,
+    ),
+  ],
+)
+
+/** projectDailyParticipation records. */
+export const projectDailyParticipation = sqliteTable(
+  'projectDailyParticipation',
+  {
+    projectId: text('projectId')
+      .notNull()
+      .references(() => project.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    date: text('date').notNull(),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    status: text('status', {
+      enum: ['unconfirmed', 'prompted', 'confirmed', 'resultShared'],
+    })
+      .notNull()
+      .default('unconfirmed'),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    primaryKey({ columns: [table.projectId, table.date, table.userId] }),
+    check(
+      'projectDailyParticipation_status',
+      sql`${table.status} IN ('unconfirmed','prompted','confirmed','resultShared')`,
+    ),
+  ],
+)
+
+/** Cached route estimates; recompute when event coordinates or order change. */
+export const eventTravelLeg = sqliteTable(
+  'eventTravelLeg',
+  {
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    fromEventId: text('fromEventId')
+      .notNull()
+      .references(() => event.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    untilEventId: text('untilEventId')
+      .notNull()
+      .references(() => event.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    travelMethod: text('travelMethod').notNull(),
+    distanceMetres: real('distanceMetres').notNull(),
+    durationSeconds: integer('durationSeconds').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    primaryKey({
+      columns: [
+        table.userId,
+        table.fromEventId,
+        table.untilEventId,
+        table.travelMethod,
+      ],
+    }),
+    check(
+      'eventTravelLeg_metrics',
+      sql`${table.distanceMetres} >= 0 AND ${table.durationSeconds} >= 0`,
+    ),
+  ],
+)
+
+/** leaderboard records. */
+export const leaderboard = sqliteTable(
+  'leaderboard',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    projectId: text('projectId')
+      .notNull()
+      .references(() => project.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    layerId: text('layerId')
+      .notNull()
+      .references(() => layer.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    propertyId: text('propertyId').references(() => property.id, {
+      onDelete: 'restrict',
+      onUpdate: 'cascade',
+    }),
+    resourceType: text('resourceType', {
+      enum: ['event', 'eventAttendance', 'feature'],
+    }).notNull(),
+    aggregationField: text('aggregationField').notNull().default('value'),
+    aggregation: text('aggregation', {
+      enum: ['sum', 'count', 'mean', 'countTrue'],
+    }).notNull(),
+    timeFrame: text('timeFrame', { enum: ['year', 'month', 'date'] }),
+    period: text('period'),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    index('leaderboard_project_idx').on(table.projectId, table.timeFrame, table.period),
+  ],
+)
+
+/** leaderboardRanking records. */
+export const leaderboardRanking = sqliteTable(
+  'leaderboardRanking',
+  {
+    leaderboardId: text('leaderboardId')
+      .notNull()
+      .references(() => leaderboard.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    userId: text('userId')
+      .notNull()
+      .references(() => user.id, { onDelete: 'restrict', onUpdate: 'cascade' }),
+    value: real('value').notNull(),
+    rank: integer('rank').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    modifiedAt: text('modifiedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+      .$onUpdate(() => new Date().toISOString()),
+  },
+  table => [
+    primaryKey({ columns: [table.leaderboardId, table.userId] }),
+    index('leaderboardRanking_rank_idx').on(table.leaderboardId, table.rank),
+    check('leaderboardRanking_rank', sql`${table.rank} > 0`),
+  ],
+)

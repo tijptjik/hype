@@ -1,14 +1,14 @@
 <script lang="ts">
-import { getUserForAttribution } from '$lib/api/server/user.remote'
-import { TransitionStack } from '$lib/bits/custom/transition'
-import { getAppCtx } from '$lib/context/app.svelte'
-import { resolveAvatarImageSrc } from '$lib/utils/avatar'
+import { getUserForAttribution } from '#lib/api/user.remote.js'
+import { TransitionStack } from '#lib/bits/custom/transition/index.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 import RelativeDate from './components/RelativeDate.svelte'
 import type { UserAttributionCardProps } from './userAttributionCard.types'
 import type {
   UserHydrationAdminProfile,
   UserHydrationResult,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 
 let {
   userId,
@@ -28,7 +28,7 @@ type AttributionCardDisplay = {
   friendlyDate: boolean
 }
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 const userProfile = $derived(appCtx.isAdmin() ? 'card' : 'attribution')
 const persistenceKey = $derived(
@@ -102,18 +102,29 @@ const getDisplayName = (user: UserHydrationResult): string => {
 </script>
 
 {#if userId && resolvedAttribution}
-  {#snippet AttributionContent(attribution: AttributionCardDisplay)}
+  {#snippet AttributionContent(
+    attribution: AttributionCardDisplay,
+  )}
     {@const adminUser = isAdminUser(attribution.user) ? attribution.user : null}
     {@const displayName = getDisplayName(attribution.user)}
     <div class="bits-feature-attribution__body">
       <span class="bits-feature-attribution__title">{displayName}</span>
+      {#if appCtx.isAdmin() && attribution.user?.username}
+        <a
+          class="text-xs underline-offset-4 hover:underline"
+          href={`/admin/users/${encodeURIComponent(attribution.user.username)}`}
+          >@{attribution.user.displayUsername || attribution.user.username}</a
+        >
+      {/if}
       <span class="bits-feature-attribution__subtitle" style="line-height:1.15">
         <RelativeDate date={attribution.date} friendly={attribution.friendlyDate} />
       </span>
     </div>
   {/snippet}
 
-  {@const adminUser = isAdminUser(resolvedAttribution.user) ? resolvedAttribution.user : null}
+  {@const adminUser = isAdminUser(resolvedAttribution.user)
+    ? resolvedAttribution.user
+    : null}
   {@const displayName = getDisplayName(resolvedAttribution.user)}
   {#if isOpen}
     <article
@@ -153,7 +164,9 @@ const getDisplayName = (user: UserHydrationResult): string => {
               duration={180}
               {persistenceKey}
             >
-              {#snippet children(attribution: AttributionCardDisplay)}
+              {#snippet children(
+                attribution: AttributionCardDisplay,
+              )}
                 {@render AttributionContent(attribution)}
               {/snippet}
             </TransitionStack>

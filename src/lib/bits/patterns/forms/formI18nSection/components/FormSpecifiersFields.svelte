@@ -1,16 +1,33 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
-import { TextInput, SectionHeader } from '$lib/bits/custom/form'
+import type { Component } from 'svelte'
+import { m } from '#lib/i18n.js'
+import { TextInput, SectionHeader } from '#lib/bits/custom/form/index.js'
 import FormSection from './FormSection.svelte'
+
+type FormFieldControl = {
+  as: (type: 'text' | 'url') => Record<string, unknown>
+  issues: () => import('$app/server').RemoteFormIssue[] | undefined
+}
+
+type SpecifiersForm = {
+  fields: {
+    data: {
+      code: FormFieldControl
+      url?: FormFieldControl
+    }
+  }
+}
 
 let {
   form,
+  icon,
   isEditing = false,
   isRequiredInPreflight,
   fields = ['code', 'url'],
   title = m.admin__forms_common_specifiers(),
 }: {
-  form: any
+  icon?: Component
+  form: SpecifiersForm
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
   fields?: Array<'code' | 'url'>
@@ -25,14 +42,14 @@ const codeRequired = $derived(isRequiredInPreflight(['data', 'code']))
 const codeIssues = $derived(form.fields.data.code.issues())
 
 const urlInputAttrs = $derived(
-  showUrl ? form.fields.data.url.as('url') : ({} as Record<string, unknown>),
+  showUrl ? form.fields.data.url?.as('url') : ({} as Record<string, unknown>),
 )
 const urlRequired = $derived(showUrl ? isRequiredInPreflight(['data', 'url']) : false)
-const urlIssues = $derived(showUrl ? form.fields.data.url.issues() : undefined)
+const urlIssues = $derived(showUrl ? form.fields.data.url?.issues() : undefined)
 </script>
 
 <section class="bits-form__section">
-  <SectionHeader {title} />
+  <SectionHeader {title} {icon} />
   <FormSection cardClass="bits-form__i18n-card no-i18n">
     {#if showCode}
       <TextInput

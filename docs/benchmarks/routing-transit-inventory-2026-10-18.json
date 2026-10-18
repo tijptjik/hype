@@ -1,0 +1,133 @@
+{
+  "retrievedAt": "2026-10-18",
+  "source": "https://static.data.gov.hk/td/pt-headway-en/gtfs.zip",
+  "sha256": "8c9b9eb649441302ce284ba8f1f7ce2b49b92c89b69efe1cbcc5207fe0ffd222",
+  "files": [
+    "agency.txt",
+    "calendar.txt",
+    "calendar_dates.txt",
+    "fare_attributes.txt",
+    "fare_rules.txt",
+    "frequencies.txt",
+    "routes.txt",
+    "stops.txt",
+    "stop_times.txt",
+    "trips.txt"
+  ],
+  "agencies": [
+    {
+      "agency_id": "PI",
+      "agency_name": "Ma Wan Residents' Services",
+      "agency_url": "https://www.hkemobility.gov.hk/en/public-transport/bus/PI",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "DB",
+      "agency_name": "Discovery Bay Residents' Services",
+      "agency_url": "https://www.hkemobility.gov.hk/en/public-transport/bus/DB",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "XB",
+      "agency_name": "Huanggang Crossing-boundary Coach Services",
+      "agency_url": "https://www.td.gov.hk/en/transport_in_hong_kong/land_based_cross_boundary_transport/athp/index.html",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "LWB",
+      "agency_name": "Long Win Bus",
+      "agency_url": "http://www.lwb.hk",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "KMB",
+      "agency_name": "Kowloon Motor Bus",
+      "agency_url": "https://www.kmb.hk",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "KMB+CTB",
+      "agency_name": "Kowloon Motor Bus|Citybus",
+      "agency_url": "https://www.kmb.hk|https://www.citybus.com.hk",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "LWB+CTB",
+      "agency_name": "Long Win Bus|Citybus",
+      "agency_url": "http://www.lwb.hk|https://www.citybus.com.hk",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "CTB",
+      "agency_name": "Citybus",
+      "agency_url": "https://www.citybus.com.hk",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "LRTFeeder",
+      "agency_name": "MTR Bus",
+      "agency_url": "https://www.mtr.com.hk",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "NLB",
+      "agency_name": "New Lantao Bus",
+      "agency_url": "https://www.nlb.com.hk",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "EN"
+    },
+    {
+      "agency_id": "GMB",
+      "agency_name": "Green Minibus Services",
+      "agency_url": "https://www.td.gov.hk/en/transport_in_hong_kong/public_transport/minibuses",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "en"
+    },
+    {
+      "agency_id": "FERRY",
+      "agency_name": "Ferry Services",
+      "agency_url": "https://www.td.gov.hk/en/transport_in_hong_kong/public_transport/ferries",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "en"
+    },
+    {
+      "agency_id": "PTRAM",
+      "agency_name": "Peak Tram",
+      "agency_url": "https://www.thepeak.com.hk/en/the-peak-experience/the-peak-tram-upgrade-project",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "en"
+    },
+    {
+      "agency_id": "TRAM",
+      "agency_name": "HK Tramways",
+      "agency_url": "https://www.hktramways.com",
+      "agency_timezone": "Asia/Hong_Kong",
+      "agency_lang": "en"
+    }
+  ],
+  "routeTypes": {
+    "3": 2402,
+    "4": 59,
+    "7": 1,
+    "0": 6
+  },
+  "mtrRailIncluded": false,
+  "note": "MTR Bus agency is included; no subway or heavy-rail route types. OSM relation counts include directions and variants.",
+  "osmRouteRelations": {
+    "subway": 54,
+    "light_rail": 31,
+    "tram": 12,
+    "ferry": 53,
+    "bus": 1788,
+    "train": 1
+  }
+}

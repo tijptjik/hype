@@ -1,13 +1,15 @@
+// TYPES
+import type { R2HTTPMetadata, R2PutOptions } from '@cloudflare/workers-types'
 // SVELTE
-import { error, json, type RequestHandler } from '@sveltejs/kit'
+import { error, type RequestHandler } from '@sveltejs/kit'
 // API
-import { verifyUploadToken } from '$lib/images/auth'
+import { verifyUploadToken } from '#lib/images/auth.js'
 import {
   getOriginalsBucketForStage,
   toImageStage,
   toManifestObjectKey,
   toMetadataObjectKey,
-} from '$lib/images/storage'
+} from '#lib/images/storage.js'
 
 type UploadMetadataInput = {
   originalFilename?: string | null
@@ -106,7 +108,7 @@ const isUploadedObjectSnapshot = (
  * @param bucket Originals bucket bound for the current stage.
  * @param keys Object keys that may be overwritten by the upload.
  * @returns Existing object snapshots keyed by object key; `null` means absent.
- * @remarks Replacement uploads intentionally reuse the current public id, so
+ * @remarks Replacement uploads and retries reuse the current public id, so
  * rollback needs the previous bytes instead of blindly deleting written keys.
  */
 const readExistingObjectSnapshots = async (
@@ -227,19 +229,16 @@ const persistUploadedObjects = async (params: {
   bucket: OriginalsBucket
   publicId: string
   writes: UploadWrite[]
-  snapshotExistingObjects: boolean
 }): Promise<void> => {
   const writtenKeys: string[] = []
   let existingSnapshots: Map<string, UploadedObjectSnapshot | null> | null = null
 
   try {
-    if (params.snapshotExistingObjects) {
-      // Capture replacement targets before writes so rollback can restore them.
-      existingSnapshots = await readExistingObjectSnapshots(
-        params.bucket,
-        params.writes.map(write => write.key),
-      )
-    }
+    // Capture replacement and retry targets before writes so rollback can restore them.
+    existingSnapshots = await readExistingObjectSnapshots(
+      params.bucket,
+      params.writes.map(write => write.key),
+    )
 
     for (const write of params.writes) {
       await params.bucket.put(write.key, write.body, {
@@ -271,7 +270,8 @@ const persistUploadedObjects = async (params: {
  * @param event Incoming SvelteKit request event.
  * @returns Upload persistence result for the client.
  */
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+  const { platform } = locals
   const formData = await request.formData()
   const file = formData.get('file')
   const token = formData.get('token') ?? request.headers.get('x-image-upload-token')
@@ -342,10 +342,9 @@ export const POST: RequestHandler = async ({ request, platform }) => {
     bucket: originalsBucket,
     publicId: payload.publicId,
     writes,
-    snapshotExistingObjects: Boolean(payload.replaceImageId),
   })
 
-  return json({
+  return Response.json({
     cdn: 'cloudflareR2',
     env: stage,
     cdnId: null,

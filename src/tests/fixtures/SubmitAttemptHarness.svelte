@@ -1,5 +1,5 @@
 <script lang="ts">
-import { configureForm } from '$lib/factories.svelte'
+import { configureForm } from '#lib/factories.svelte.js'
 
 let formEl: HTMLFormElement | undefined = $state()
 let revalidateCalls = $state(0)
@@ -29,7 +29,10 @@ const fakeRemoteForm = {
 }
 
 const configured = configureForm(() => ({
-  form: fakeRemoteForm,
+  form: fakeRemoteForm as unknown as import('$app/server').RemoteForm<
+    Record<string, string>,
+    unknown
+  >,
   formEl,
   key: 'submit-attempt-harness',
   data: currentValue,

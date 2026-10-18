@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
-import { cx } from '$lib/bits/utils'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
+import { cx } from '#lib/bits/utils.js'
 // ICONS
-import InfoIcon from 'virtual:icons/lucide/info'
+import InfoIcon from 'virtual:icons/proicons/info'
 // TYPES
 import type { AnalyticsCardHeaderProps } from '../analyticsCard.types'
 
@@ -40,7 +40,10 @@ const hasRails = $derived(Boolean(leftLabel || rightLabel || right))
 
     <div class={cx('min-w-0', hasRails ? 'sm:justify-self-center sm:text-center' : '')}>
       <div
-        class={cx('flex items-center gap-2', hasRails ? 'sm:justify-center' : 'justify-start')}
+        class={cx(
+          'flex items-center gap-2',
+          hasRails ? 'sm:justify-center' : 'justify-start',
+        )}
       >
         <h2
           class="text-2xl font-semibold uppercase tracking-[0.08em] text-foreground sm:text-3xl"

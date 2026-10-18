@@ -1,20 +1,23 @@
 // I18N
-import { getLocaleKey } from '$lib/i18n'
+import { getLocaleKey } from '#lib/i18n.js'
 // API
 import {
   addUserFeatureToList,
   removeUserFeatureFromList,
-} from '$lib/api/server/user.remote'
+} from '#lib/api/user.remote.js'
 // TYPES
-import type { Id } from '$lib/types'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Id } from '#lib/types.js'
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type {
   UserFeatureListItem as UserFeature,
   UserFeatureWithHierarchy,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 
 type SearchableFeatureResource = Pick<Feature | FeatureFromCollection, 'i18n'>
 type SearchableHierarchyResource = Pick<Organisation | Project | Layer, 'i18n'>
@@ -43,7 +46,7 @@ export const filterUserFeaturesByHierarchy = (
       if (!localeRecord) return false
 
       return properties.some(prop => {
-        const value = (localeRecord as Record<string, string | null | undefined>)[prop]
+        const value = (localeRecord as Record<string, unknown>)[prop]
         return typeof value === 'string' && value.toLowerCase().includes(searchLower)
       })
     }
@@ -65,6 +68,17 @@ export const filterUserFeaturesByHierarchy = (
   })
 }
 
+/**
+ * Updates both saved-list flags and returns the final persisted state.
+ *
+ * @param userId - User whose saved lists are updated.
+ * @param featureId - Feature whose wishlist and visit flags are updated.
+ * @param isWishlisted - Desired wishlist membership.
+ * @param isVisited - Desired visited membership.
+ * @param visitedAt - Optional visit timestamp.
+ * @returns The remaining saved row, or `null` after its final flag is removed.
+ * @remarks A null response represents deletion and must supersede intermediate rows.
+ */
 export const updateUserFeature = async (
   userId: Id,
   featureId: Id,
@@ -80,14 +94,14 @@ export const updateUserFeature = async (
       featureId,
       list: 'wishlist',
     })
-    result = (response?.data as UserFeature | null) ?? result
+    result = (response?.data as UserFeature | null) ?? null
   } else {
     const response = await removeUserFeatureFromList({
       userId,
       featureId,
       list: 'wishlist',
     })
-    result = (response?.data as UserFeature | null) ?? result
+    result = (response?.data as UserFeature | null) ?? null
   }
 
   if (isVisited) {
@@ -97,14 +111,15 @@ export const updateUserFeature = async (
       list: 'visited',
       visitedAt: visitedAt ?? new Date().toISOString(),
     })
-    result = (response?.data as UserFeature | null) ?? result
+    result = (response?.data as UserFeature | null) ?? null
   } else {
     const response = await removeUserFeatureFromList({
       userId,
       featureId,
       list: 'visited',
     })
-    result = (response?.data as UserFeature | null) ?? result
+    // The final removal can delete the row returned by the wishlist update above.
+    result = (response?.data as UserFeature | null) ?? null
   }
 
   return result

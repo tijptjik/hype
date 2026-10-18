@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { canAccessAdminPanel, canAccessAnalytics } from '$lib/api/services/authz/user'
-import type { UserRoleDisco } from '$lib/types'
+import {
+  canAccessAdminPanel,
+  canAccessAnalytics,
+} from '#lib/api/services/authz/user.js'
+import type { UserRoleDisco } from '#lib/types.js'
 
 const coreAdminRole = (): UserRoleDisco =>
   ({
@@ -8,7 +11,7 @@ const coreAdminRole = (): UserRoleDisco =>
     role: 'admin',
     hubId: 'hub-core',
     hub: { code: 'core' },
-  }) as UserRoleDisco
+  }) as unknown as UserRoleDisco
 
 const scopedHubAdminRole = (): UserRoleDisco =>
   ({
@@ -16,49 +19,49 @@ const scopedHubAdminRole = (): UserRoleDisco =>
     role: 'admin',
     hubId: 'hub-scope',
     hub: { code: 'hub-scope' },
-  }) as UserRoleDisco
+  }) as unknown as UserRoleDisco
 
 const organisationOwnerRole = (): UserRoleDisco =>
   ({
     type: 'organisation',
     role: 'owner',
     organisationId: 'org-1',
-  }) as UserRoleDisco
+  }) as unknown as UserRoleDisco
 
 const projectOwnerRole = (): UserRoleDisco =>
   ({
     type: 'project',
     role: 'owner',
     projectId: 'project-1',
-  }) as UserRoleDisco
+  }) as unknown as UserRoleDisco
 
 const projectMaintainerRole = (): UserRoleDisco =>
   ({
     type: 'project',
     role: 'maintainer',
     projectId: 'project-1',
-  }) as UserRoleDisco
+  }) as unknown as UserRoleDisco
 
 const projectMemberRole = (): UserRoleDisco =>
   ({
     type: 'project',
     role: 'member',
     projectId: 'project-1',
-  }) as UserRoleDisco
+  }) as unknown as UserRoleDisco
 
 const projectUserRole = (): UserRoleDisco =>
   ({
     type: 'project',
     role: 'user',
     projectId: 'project-1',
-  }) as UserRoleDisco
+  }) as unknown as UserRoleDisco
 
 const organisationMemberRole = (): UserRoleDisco =>
   ({
     type: 'organisation',
     role: 'member',
     organisationId: 'org-1',
-  }) as UserRoleDisco
+  }) as unknown as UserRoleDisco
 
 describe('canAccessAdminPanel', () => {
   it('allows super admins', () => {

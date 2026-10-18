@@ -1,11 +1,22 @@
-import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, vi } from 'vitest'
+
+// Only DOM suites need the testing-library matcher dependency graph.
+if (typeof document !== 'undefined') {
+  await import('@testing-library/jest-dom/vitest')
+}
 
 vi.mock('unique-names-generator', () => ({
   uniqueNamesGenerator: vi.fn(() => 'stubuser'),
   adjectives: [],
   colors: [],
   animals: [],
+}))
+
+// Explicit public env modules are generated at runtime in SvelteKit 3.
+vi.mock('$app/env/public', () => ({
+  PUBLIC_ASSET_BASE_URL: '',
+  PUBLIC_PREVIEW_ASSET_BASE_URL: '',
+  PUBLIC_RAW_ASSET_BASE_URL: '',
 }))
 
 // Mock requestAnimationFrame and related timing functions

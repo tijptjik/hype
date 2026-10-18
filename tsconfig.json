@@ -1,15 +1,30 @@
 {
-  "extends": "./.svelte-kit/tsconfig.json",
+  "extends": "$app/tsconfig",
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
     "sourceMap": true,
-    "strict": true,
-    "moduleResolution": "bundler"
+    "strict": true
   },
-  "exclude": ["src/lib/paraglide/**/*"]
+  // The Svelte TypeScript plugin also scans these paths for component files.
+  // Keep cached workspaces, dependencies and generated output out of the project.
+  "exclude": [
+    "src/lib/paraglide/**/*",
+    "**/.git/**",
+    "**/.delta/**",
+    "**/node_modules/**",
+    "**/.cache/**",
+    "**/.svelte-kit/**",
+    "**/.wrangler/**",
+    "**/.turbo/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "output/**",
+    "tmp/**"
+  ],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }

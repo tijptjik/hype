@@ -1,8 +1,8 @@
 <script lang="ts">
 import { tick } from 'svelte'
-import SearchIcon from 'virtual:icons/lucide/search'
-import XIcon from 'virtual:icons/lucide/x'
-import LoaderCircleIcon from 'virtual:icons/lucide/loader-circle'
+import SearchIcon from 'virtual:icons/proicons/search'
+import XIcon from 'virtual:icons/proicons/cancel'
+import LoaderCircleIcon from 'virtual:icons/proicons/spinner'
 import type { SearchBarProps } from '../../search.types'
 
 let {
@@ -59,17 +59,19 @@ $effect(() => {
     value={query}
     {placeholder}
     {disabled}
-    class="bits-search-bar__input"
+    class="h-12 w-full rounded-lg border border-[var(--form-control-border)] bg-[var(--search-control-fill)] px-4 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
     autocomplete="off"
     oninput={handleInput}
     onfocus={handleFocus}
     onkeydown={handleKeydown}
   >
-  <div class="bits-search-bar__icons">
+  <div
+    class="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center"
+  >
     {#if query}
       <button
         type="button"
-        class="bits-search-bar__clear"
+        class="pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md leading-none hover:bg-base-300/60"
         onclick={clear}
         tabindex="-1"
         aria-label="Clear search"

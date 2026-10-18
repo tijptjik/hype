@@ -1,13 +1,15 @@
 // SVELTE
 import type { Component, Snippet } from 'svelte'
 // QUERY
-import type { QueryClient } from '@tanstack/svelte-query'
 // CUSTOM
-import type { LoadScreenColor, LoadScreenSurface } from '$lib/bits/custom/loading'
+import type {
+  LoadScreenColor,
+  LoadScreenSurface,
+} from '#lib/bits/custom/loading/index.js'
 // LAYOUT
 import type { HeaderProps } from '../header'
 // TYPES
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey } from '#lib/types.js'
 
 export interface AppSocialImage {
   image: string
@@ -29,7 +31,6 @@ export interface AppHeadFontsProps {
 export interface AppHeadRootProps extends AppHeadMetaProps, AppHeadFontsProps {}
 
 export interface AppShellProps {
-  queryClient: QueryClient
   localeKey: LocaleKey
   isReady: boolean
   pendingColor?: LoadScreenColor

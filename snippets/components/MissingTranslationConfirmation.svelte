@@ -1,14 +1,15 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import Icon from '$lib/components/common/Icon.svelte'
+import Icon from '#lib/components/common/Icon.svelte'
 import { Language, CheckCircle } from '@steeze-ui/heroicons'
 // LIB
-import { translateText } from '$lib/i18n'
-import { supportedLocales } from '$lib/enums'
+import { translateText } from '#lib/i18n.js'
+import { supportedLocales } from '#lib/enums.js'
 // TYPES
-import type { Locale, Resource, Form } from '$lib/types'
+import type { Locale, Resource } from '#lib/types.js'
+import type { Form } from '#lib/client/services/form.types.js'
 
 interface Props {
   form: Form

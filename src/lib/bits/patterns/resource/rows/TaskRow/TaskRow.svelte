@@ -1,17 +1,17 @@
 <script lang="ts">
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // SERVICES
-import { getTaskReviewActionLabel } from '$lib/client/services/task'
+import { getTaskReviewActionLabel } from '#lib/client/services/task.js'
 // BITS
-import { Row } from '$lib/bits/custom'
+import { Row } from '#lib/bits/custom/index.js'
 import * as TaskRowPrimitive from './components'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation'
+import { navigateOnAdmin } from '#lib/navigation/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type { TaskRowProps } from './taskRow.types'
 
 let {
@@ -22,7 +22,7 @@ let {
   isSelected = false,
 }: TaskRowProps = $props()
 
-let appCtx = $derived(adminCtx.appCtx)
+let appCtx = $derived(adminCtx.view)
 const taskTypeColors = {
   reportedMissing: 'error',
   newPhoto: 'info',
@@ -83,21 +83,15 @@ function handleTitleClick(): void {
   onkeydown={handleRowKeyDown}
   image={entity.feature ? entity.images?.[0] : undefined}
   alt={`Task image for feature ${entity?.feature?.id || 'unknown'}`}
-  onImageClick={entity.images?.[0] ? (handleImageClick as (image: unknown) => void) : undefined}
+  onImageClick={entity.images?.[0]
+    ? (handleImageClick as (image: unknown) => void)
+    : undefined}
   title={entity.feature
-    ? (getI18n(
-        entity.feature,
-        'title',
-        appCtx.getUserPreferences(),
-      ) as string)
+    ? (getI18n(entity.feature, 'title', appCtx.getUserPreferences()) as string)
     : ''}
   onTitleClick={entity.feature ? handleTitleClick : undefined}
   description={entity.feature
-    ? (getI18n(
-        entity.feature,
-        'displayAddress',
-        appCtx.getUserPreferences(),
-      ) as string)
+    ? (getI18n(entity.feature, 'displayAddress', appCtx.getUserPreferences()) as string)
     : ''}
 >
   <TaskRowPrimitive.Watermark

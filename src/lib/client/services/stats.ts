@@ -1,21 +1,21 @@
 // SVELTE
 import { SvelteMap } from 'svelte/reactivity'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { m, supportedLocaleKeys } from '$lib/i18n'
+import { m, supportedLocaleKeys } from '#lib/i18n.js'
 // SERVICES
-import { sortProperties } from '$lib/client/services/property'
+import { sortProperties } from '#lib/client/services/property.js'
 // TYPES
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type {
   Feature,
   FeatureFromCollection,
   FeatureI18nDB,
   UserContributedFeature,
-} from '$lib/db/zod/schema/feature.types'
-import type { Id, LocaleKey } from '$lib/types'
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Id, LocaleKey } from '#lib/types.js'
 
 type StatisticType = 'boolean' | 'count' | 'mean' | 'sum'
 type StatisticValue = boolean | number | null
@@ -24,8 +24,8 @@ type StatisticRecord = {
   type: StatisticType
 }
 type AdminStatsCtx = {
-  appCtx?: {
-    state?: {
+  view?: {
+    filters?: {
       viewFilters?: {
         feature?: {
           translationLocales?: Record<LocaleKey, boolean>
@@ -99,7 +99,7 @@ type FeatureWithImageStats =
 // +++ Cache Primitives
 
 export function getStatistic(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   resourceType: FirstClassResource,
   id: string,
   statistic: string,
@@ -108,7 +108,7 @@ export function getStatistic(
 }
 
 export function setStatistic(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   resourceType: FirstClassResource,
   id: string,
   statistic: string,
@@ -139,7 +139,7 @@ export function setStatistic(
 
 // Helper method to get cached boolean statistics for features (read-only)
 export function getCachedFeatureBoolean(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature | UserContributedFeature,
   statistic: string,
   calculator: (
@@ -154,7 +154,7 @@ export function getCachedFeatureBoolean(
       featureId,
       statistic,
     )
-    if (cached && cached.type === 'boolean') {
+    if (cached && cached.type === 'boolean' && typeof cached.value === 'boolean') {
       return cached.value
     }
   }
@@ -165,8 +165,8 @@ export function getCachedFeatureBoolean(
 
 // Helper method to set cached boolean statistics for features (separate from reading)
 export function setCachedFeatureBoolean(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
   statistic: string,
   value: boolean,
 ): void {
@@ -182,13 +182,17 @@ export function setCachedFeatureBoolean(
 
 // Helper methods for tri-state caching (boolean | null)
 export function getCachedFeatureTriState(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature,
   statistic: string,
   calculator: (feature: FeatureFromCollection | Feature) => boolean | null,
 ): boolean | null {
   const cached = getStatistic(appCtx, FirstClassResource.feature, feature.id, statistic)
-  if (cached && cached.type === 'boolean') {
+  if (
+    cached &&
+    cached.type === 'boolean' &&
+    (cached.value === null || typeof cached.value === 'boolean')
+  ) {
     return cached.value // Can be boolean or null
   }
 
@@ -197,8 +201,8 @@ export function getCachedFeatureTriState(
 }
 
 export function setCachedFeatureTriState(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
   statistic: string,
   value: boolean | null,
 ): void {
@@ -214,11 +218,11 @@ export function setCachedFeatureTriState(
 
 // Helper methods for per-locale translation caching
 export function getCachedFeatureTranslationBoolean(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
   statistic: string,
   locale: string,
-  calculator: (feature: FeatureFromCollection, locale: string) => boolean,
+  calculator: (feature: FeatureFromCollection | Feature, locale: string) => boolean,
 ): boolean {
   const localeStatistic = `${statistic}.${locale}`
   const cached = getStatistic(
@@ -227,7 +231,7 @@ export function getCachedFeatureTranslationBoolean(
     feature.id,
     localeStatistic,
   )
-  if (cached && cached.type === 'boolean') {
+  if (cached && cached.type === 'boolean' && typeof cached.value === 'boolean') {
     return cached.value
   }
 
@@ -236,7 +240,7 @@ export function getCachedFeatureTranslationBoolean(
 }
 
 export function setCachedFeatureTranslationBoolean(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   feature: Feature,
   statistic: string,
   locale: string,
@@ -255,11 +259,14 @@ export function setCachedFeatureTranslationBoolean(
 
 // Helper methods for per-locale translation tri-state caching (boolean | null)
 export function getCachedFeatureTranslationTriState(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
   statistic: string,
   locale: LocaleKey,
-  calculator: (feature: FeatureFromCollection, locale: LocaleKey) => boolean | null,
+  calculator: (
+    feature: FeatureFromCollection | Feature,
+    locale: LocaleKey,
+  ) => boolean | null,
 ): boolean | null {
   const localeStatistic = `${statistic}.${locale}`
   const cached = getStatistic(
@@ -268,7 +275,11 @@ export function getCachedFeatureTranslationTriState(
     feature.id,
     localeStatistic,
   )
-  if (cached && cached.type === 'boolean') {
+  if (
+    cached &&
+    cached.type === 'boolean' &&
+    (cached.value === null || typeof cached.value === 'boolean')
+  ) {
     return cached.value // Can be boolean or null
   }
 
@@ -277,8 +288,8 @@ export function getCachedFeatureTranslationTriState(
 }
 
 export function setCachedFeatureTranslationTriState(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
   statistic: string,
   locale: LocaleKey,
   value: boolean | null,
@@ -296,13 +307,13 @@ export function setCachedFeatureTranslationTriState(
 
 // Helper methods for property-based caching (categories/specifiers)
 export function getCachedFeaturePropertyBoolean(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
   propertyId: string,
   calculator: (
-    feature: FeatureFromCollection,
+    feature: FeatureFromCollection | Feature,
     propertyId: string,
-    appCtx?: AppCtx,
+    appCtx?: ResourceViewCtx,
   ) => boolean,
 ): boolean {
   const propertyStatistic = `properties.${propertyId}`
@@ -312,7 +323,7 @@ export function getCachedFeaturePropertyBoolean(
     feature.id,
     propertyStatistic,
   )
-  if (cached && cached.type === 'boolean') {
+  if (cached && cached.type === 'boolean' && typeof cached.value === 'boolean') {
     return cached.value
   }
 
@@ -321,8 +332,8 @@ export function getCachedFeaturePropertyBoolean(
 }
 
 export function setCachedFeaturePropertyBoolean(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
   propertyId: string,
   value: boolean,
 ): void {
@@ -339,7 +350,7 @@ export function setCachedFeaturePropertyBoolean(
 
 // Helper function for tri-state specifier translation caching
 export function getCachedFeatureSpecifierTranslation(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   feature: Feature | FeatureFromCollection,
   calculator: (feature: Feature | FeatureFromCollection) => boolean | null,
 ): boolean | null {
@@ -349,7 +360,11 @@ export function getCachedFeatureSpecifierTranslation(
     feature.id,
     'isSpecifierTranslated',
   )
-  if (cached && cached.type === 'boolean') {
+  if (
+    cached &&
+    cached.type === 'boolean' &&
+    (cached.value === null || typeof cached.value === 'boolean')
+  ) {
     return cached.value // Can be boolean or null
   }
 
@@ -364,8 +379,8 @@ export function getCachedFeatureSpecifierTranslation(
 // +++ Completion Calculators
 
 export function calculateContentCompletion(
-  _appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  _appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
 ): { title: boolean; description: boolean } {
   return {
     title: (Object.values(feature?.i18n ?? {}) as FeatureI18nDB[]).some(
@@ -379,8 +394,8 @@ export function calculateContentCompletion(
 }
 
 export function calculateTranslationCompletion(
-  _appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  _appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
   locale?: LocaleKey,
 ): Record<string, boolean> {
   const i18nEntries = feature?.i18n ?? {}
@@ -436,8 +451,8 @@ export function calculateTranslationCompletion(
 
 // New tri-state translation completion function
 export function calculateTranslationCompletionTriState(
-  _appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  _appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
   locale: LocaleKey,
 ): Record<string, boolean | null> {
   const i18nEntries = feature?.i18n ?? {}
@@ -560,8 +575,8 @@ export function calculateSpecifierTranslation(
 
 // Pre-populate stats cache for a feature (called during feature refresh)
 export function primeFeatureStatsCache(
-  appCtx: AppCtx,
-  feature: FeatureFromCollection,
+  appCtx: ResourceViewCtx,
+  feature: FeatureFromCollection | Feature,
 ): void {
   // Clear existing cache for this feature to ensure fresh calculation with correct image logic
   const resourceStats = appCtx.cache.stats.get(FirstClassResource.feature)
@@ -684,7 +699,7 @@ export function primeFeatureStatsCache(
 // +++ Status Map Builders
 
 export function calculateStatusStatuses(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature | UserContributedFeature,
 ): Record<string, boolean> {
   const isPendingReview = getCachedFeatureBoolean(
@@ -719,7 +734,7 @@ export function calculateStatusStatuses(
 }
 
 export function calculateContentStatuses(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   feature: FeatureFromCollection | Feature | UserContributedFeature,
 ): Record<string, boolean> {
   const result: Record<string, boolean> = {}
@@ -779,7 +794,7 @@ export function calculateContentStatuses(
 }
 
 export function calculateImageStatuses(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   feature: Feature,
 ): Record<string, boolean | null> {
   return {
@@ -806,7 +821,7 @@ export function calculateImageStatuses(
 }
 
 export function clearCachedFeatureTranslationStats(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   featureId: string,
 ): void {
   const featureStats = appCtx.cache.stats.get(FirstClassResource.feature)
@@ -832,7 +847,7 @@ function getTranslationTooltip(fieldName: string, status: boolean | null): strin
 }
 
 export function calculateTranslationStatuses(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   feature: Feature,
   activeTranslationLocales: LocaleKey[],
   isSuperAdmin: boolean,
@@ -899,9 +914,9 @@ export function calculateTranslationStatuses(
 
 // Property presence calculators that match filter logic exactly
 export function calculateClassifierPresence(
-  feature: FeatureFromCollection,
+  feature: FeatureFromCollection | Feature,
   propertyId: string,
-  appCtx?: AppCtx,
+  appCtx?: ResourceViewCtx,
 ): boolean {
   const featureProp = feature.properties?.find(fp => fp.propertyId === propertyId)
   if (!featureProp) return false
@@ -926,7 +941,7 @@ export function calculateClassifierPresence(
 }
 
 function getAvailableFeatureStatProperties(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   type: Property['type'],
 ): Property[] {
@@ -959,7 +974,7 @@ function getAvailableFeatureStatProperties(
 
 export function calculateCategoricalStatuses(
   feature: Feature,
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   localeKey: LocaleKey,
 ): Record<string, boolean> {
   const result: Record<string, boolean> = {}
@@ -1003,7 +1018,7 @@ export function calculateCategoricalStatuses(
 
 export function calculateFreeformStatuses(
   feature: Feature,
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   localeKey: LocaleKey,
 ): Record<string, boolean> {
   const result: Record<string, boolean> = {}
@@ -1042,7 +1057,7 @@ export function calculateFreeformStatuses(
 }
 
 export function calculateSpecifierPresence(
-  feature: FeatureFromCollection,
+  feature: FeatureFromCollection | Feature,
   propertyId: string,
 ): boolean {
   const featureProp = feature.properties?.find(fp => fp.propertyId === propertyId)
@@ -1068,8 +1083,8 @@ export function calculateSpecifierPresence(
 // +++ Aggregate Statistics
 
 export function calculateOverallStats(
-  appCtx: AppCtx,
-  entities: FeatureFromCollection[],
+  appCtx: ResourceViewCtx,
+  entities: (FeatureFromCollection | Feature)[],
   adminCtx?: AdminStatsCtx, // Optional admin context for translation locale filtering
 ): {
   content: number
@@ -1101,9 +1116,9 @@ export function calculateOverallStats(
   // Get active locales from admin context if available
   let activeLocales = supportedLocaleKeys // Default to all locales
 
-  if (adminCtx?.appCtx?.state?.viewFilters?.feature?.translationLocales) {
+  if (adminCtx?.view?.filters?.viewFilters?.feature?.translationLocales) {
     const translationLocales =
-      adminCtx.appCtx.state.viewFilters.feature.translationLocales
+      adminCtx.view.filters.viewFilters.feature.translationLocales
     activeLocales = supportedLocaleKeys.filter(locale => translationLocales[locale])
     if (activeLocales.length === 0) {
       activeLocales = supportedLocaleKeys // Fallback if no locales selected

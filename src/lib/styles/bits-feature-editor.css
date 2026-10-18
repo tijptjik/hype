@@ -10,8 +10,16 @@
   }
 
   .bits-feature-editor__facet-nav-button {
-    --btn-hover-fg: color-mix(in oklab, var(--color-light) 84%, white);
-    --btn-active-fg: color-mix(in oklab, var(--color-light) 72%, white);
+    --btn-hover-fg: color-mix(
+      in oklab,
+      var(--color-light) 84%,
+      var(--color-foreground)
+    );
+    --btn-active-fg: color-mix(
+      in oklab,
+      var(--color-light) 72%,
+      var(--color-foreground)
+    );
     flex: 0 0 auto;
     min-width: max-content;
     white-space: nowrap;
@@ -21,10 +29,6 @@
   .bits-feature-editor__facet-nav-button--next {
     margin-left: auto;
     flex-direction: row-reverse;
-  }
-
-  .bits-feature-editor__collections-reset {
-    flex: 0 0 auto;
   }
 
   .bits-feature-parent-section__grid {
@@ -135,15 +139,6 @@
     justify-content: flex-end;
   }
 
-  .bits-feature-section-header__content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    gap: 0rem;
-  }
-
   .bits-feature-section-header__title {
     font-size: 1.5rem;
     font-weight: 700;
@@ -187,16 +182,6 @@
     justify-content: flex-end;
   }
 
-  .bits-feature-sub-section-header__content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-width: 0;
-    text-align: center;
-  }
-
   .bits-theme .bits-feature-sub-section-header__title {
     font-size: 1.25rem;
     font-weight: 400;
@@ -214,22 +199,12 @@
     color: color-mix(in oklab, var(--color-foreground) 68%, transparent);
   }
 
-  .bits-feature-sub-section-header__issues {
-    width: 100%;
-  }
-
-  .bits-feature-sub-section-header__action-btn {
-    min-height: 2rem;
-    padding-inline: 0.5rem;
-    align-self: center;
-  }
-
   .bits-feature-editor__visual {
     margin-bottom: 0;
     border-top: 0;
     border-inline: 0;
     border-radius: 0;
-    background: black;
+    background: var(--color-panel);
     overflow: visible;
   }
 
@@ -239,7 +214,7 @@
     height: var(--bits-feature-visual-expanded-height, 520px);
     border-radius: 0;
     overflow: visible;
-    background: black;
+    background: var(--color-panel);
     border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
     transition: height 180ms ease;
   }
@@ -353,7 +328,11 @@
     padding: 0.25rem 0.625rem;
     border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
     border-radius: 999px;
-    background: color-mix(in oklab, black 84%, var(--color-glass-result) 16%);
+    background: color-mix(
+      in oklab,
+      var(--color-panel) 84%,
+      var(--color-glass-result) 16%
+    );
     backdrop-filter: blur(14px);
   }
 
@@ -400,7 +379,7 @@
 
   .bits-feature-visual__icon-button:hover,
   .bits-feature-visual :global(.bits-dialog__trigger button:hover) {
-    background: color-mix(in oklab, var(--color-glass-result) 96%, black);
+    background: color-mix(in oklab, var(--color-glass-result) 96%, var(--color-panel));
   }
 
   .bits-feature-visual__icon-button:disabled {
@@ -567,7 +546,7 @@
     min-height: 28rem;
     overflow: hidden;
     border-radius: 1rem;
-    background: color-mix(in oklab, var(--color-base-300) 92%, black);
+    background: color-mix(in oklab, var(--color-base-300) 92%, var(--color-panel));
     border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
   }
 
@@ -591,7 +570,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in oklab, var(--color-base-300) 88%, black);
+    background: color-mix(in oklab, var(--color-base-300) 88%, var(--color-panel));
     z-index: 5;
   }
 
@@ -708,8 +687,16 @@
       calc(0.5rem + var(--bits-feature-attribution-underlap));
     margin-left: calc(-1 * var(--bits-feature-attribution-underlap));
     border-radius: 999px;
-    background: color-mix(in oklab, black 82%, var(--color-glass-result) 18%);
-    border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+    background: var(
+      --bits-feature-attribution-body-bg,
+      color-mix(in oklab, var(--color-panel) 82%, var(--color-glass-result) 18%)
+    );
+    border: 1px solid
+      var(
+        --bits-feature-attribution-body-border,
+        color-mix(in oklab, var(--color-base-content) 12%, transparent)
+      );
+    box-shadow: var(--bits-feature-attribution-body-shadow, none);
     backdrop-filter: blur(14px);
   }
 
@@ -753,12 +740,6 @@
     line-height: 1;
     white-space: nowrap;
     color: color-mix(in oklab, var(--color-base-content) 65%, transparent);
-  }
-
-  .bits-feature-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
   }
 
   .bits-feature-fields__grid {
@@ -814,14 +795,6 @@
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .bits-feature-field__label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    max-width: 8rem;
-    min-width: 0;
-  }
-
   .bits-feature-field__title {
     display: block;
     min-width: 0;
@@ -831,7 +804,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: color-mix(in oklab, white 94%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 94%, transparent);
   }
 
   .bits-feature-field__subtitle {
@@ -842,7 +815,7 @@
     font-size: 0.75rem;
     line-height: 1;
     text-transform: lowercase;
-    color: color-mix(in oklab, white 48%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 48%, transparent);
   }
 
   .bits-feature-field__control {
@@ -861,8 +834,8 @@
     width: 8px;
     height: 8px;
     border-radius: 999px;
-    background: color-mix(in oklab, white 72%, transparent);
-    box-shadow: 0 0 14px color-mix(in oklab, white 22%, transparent);
+    background: color-mix(in oklab, var(--color-foreground) 72%, transparent);
+    box-shadow: 0 0 14px color-mix(in oklab, var(--color-foreground) 22%, transparent);
     opacity: 1;
     transform: translateY(-50%);
     transition: opacity 160ms ease;
@@ -903,7 +876,7 @@
   .bits-feature-field .bits-form__control-wrap:not(.bits-form__control-wrap--skeleton),
   .bits-feature-field .bits-form__select-display-wrap {
     border: 2px solid transparent;
-    background-color: #c3729080;
+    background-color: var(--form-control-edit-fill);
     border-radius: 0.55rem;
   }
 
@@ -914,22 +887,22 @@
     ),
   .bits-feature-field .bits-form__select-display-wrap {
     align-items: center;
-    background-color: color-mix(in oklab, #7d4f63 32%, transparent);
-    border-color: color-mix(in oklab, #2f282b 22%, transparent);
+    background-color: var(--form-control-fill);
+    border-color: var(--form-control-border);
     box-shadow:
-      inset 0 0 0 color-mix(in oklab, #1a1517 20%, transparent),
-      inset 0 1px 0 color-mix(in oklab, #f6e8ef 8%, transparent);
-    color: color-mix(in oklab, white 90%, transparent);
+      inset 0 0 0 color-mix(in oklab, var(--color-canvas) 20%, transparent),
+      inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 8%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 90%, transparent);
     display: flex;
     padding-inline: 0.5rem;
   }
 
   .bits-feature-field .bits-form__control-wrap:not(.bits-form__control-wrap--editing) {
-    background-color: color-mix(in oklab, #7d4f63 32%, transparent);
+    background-color: var(--form-control-fill);
   }
 
   .bits-feature-field .bits-form__select-display-wrap {
-    background-color: color-mix(in oklab, #7d4f63 32%, transparent);
+    background-color: var(--form-control-fill);
   }
 
   .bits-feature-field .bits-form__select-display {
@@ -941,26 +914,26 @@
   .bits-feature-field .bits-form__control--display,
   .bits-feature-field .bits-form__control--textarea[readonly] {
     background: transparent;
-    color: color-mix(in oklab, white 92%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 92%, transparent);
   }
 
   .bits-feature-field .bits-form__control-wrap input,
   .bits-feature-field .bits-form__control-wrap textarea,
   .bits-feature-field .bits-form__select-label {
-    color: color-mix(in oklab, white 92%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 92%, transparent);
   }
 
   .bits-feature-field .bits-form__control--display.bits-form__control--placeholder,
   .bits-feature-field
     .bits-form__control--textarea[readonly].bits-form__control--placeholder,
   .bits-feature-field .bits-form__select-display .bits-form__select-label {
-    color: color-mix(in oklab, white 82%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 82%, transparent);
     font-style: normal;
   }
 
   .bits-feature-field .bits-form__control-wrap input::placeholder,
   .bits-feature-field .bits-form__control-wrap textarea::placeholder {
-    color: color-mix(in oklab, white 56%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 56%, transparent);
     font-style: italic;
   }
 
@@ -970,8 +943,8 @@
     border: none;
     box-shadow: none;
     outline: none;
-    background-color: #c3729080;
-    color: color-mix(in oklab, white 90%, transparent);
+    background-color: var(--form-control-edit-fill);
+    color: color-mix(in oklab, var(--color-foreground) 90%, transparent);
   }
 
   .bits-feature-field
@@ -988,7 +961,7 @@
   }
 
   .bits-feature-field .bits-form__select-trigger [data-placeholder] {
-    color: color-mix(in oklab, white 56%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 56%, transparent);
     font-style: italic;
   }
 
@@ -1019,7 +992,7 @@
     justify-content: center;
     width: 1.25rem;
     height: 1.25rem;
-    color: color-mix(in oklab, white 74%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 74%, transparent);
     cursor: pointer;
     transition:
       color 160ms ease,
@@ -1033,7 +1006,7 @@
 
   .bits-feature-field__range-unset:hover:not(:disabled),
   .bits-feature-field__range-unset:focus-visible:not(:disabled) {
-    color: color-mix(in oklab, white 92%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 92%, transparent);
     outline: none;
   }
 
@@ -1047,32 +1020,56 @@
   }
 
   .bits-feature-field__range .rangeSlider {
-    --range-slider: color-mix(in oklab, white 14%, transparent);
-    --range-handle-inactive: color-mix(in oklab, white 26%, transparent);
+    --range-slider: color-mix(in oklab, var(--color-foreground) 14%, transparent);
+    --range-handle-inactive: color-mix(
+      in oklab,
+      var(--color-foreground) 26%,
+      transparent
+    );
     --range-handle: var(--color-primary);
     --range-handle-focus: var(--color-primary);
     --range-handle-border: var(--range-handle);
-    --range-range-inactive: color-mix(in oklab, white 14%, transparent);
+    --range-range-inactive: color-mix(
+      in oklab,
+      var(--color-foreground) 14%,
+      transparent
+    );
     --range-range: var(--color-primary);
-    --range-float-inactive: color-mix(in oklab, white 20%, transparent);
+    --range-float-inactive: color-mix(
+      in oklab,
+      var(--color-foreground) 20%,
+      transparent
+    );
     --range-float: var(--color-primary);
-    --range-float-text: white;
+    --range-float-text: var(--color-foreground);
     --range-float-background: color-mix(
       in oklab,
-      black 82%,
+      var(--color-panel) 82%,
       var(--color-glass-result) 18%
     );
-    --range-float-border: color-mix(in oklab, white 12%, transparent);
+    --range-float-border: color-mix(in oklab, var(--color-foreground) 12%, transparent);
     --range-float-width: 2rem;
-    --range-pip: color-mix(in oklab, white 34%, transparent);
-    --range-pip-text: color-mix(in oklab, white 68%, transparent);
-    --range-pip-active: color-mix(in oklab, white 78%, transparent);
-    --range-pip-active-text: color-mix(in oklab, white 88%, transparent);
-    --range-pip-hover: color-mix(in oklab, white 88%, transparent);
-    --range-pip-hover-text: color-mix(in oklab, white 92%, transparent);
-    --range-pip-in-range: color-mix(in oklab, white 78%, transparent);
-    --range-pip-in-range-text: color-mix(in oklab, white 88%, transparent);
-    --range-track: color-mix(in oklab, white 14%, transparent);
+    --range-pip: color-mix(in oklab, var(--color-foreground) 34%, transparent);
+    --range-pip-text: color-mix(in oklab, var(--color-foreground) 68%, transparent);
+    --range-pip-active: color-mix(in oklab, var(--color-foreground) 78%, transparent);
+    --range-pip-active-text: color-mix(
+      in oklab,
+      var(--color-foreground) 88%,
+      transparent
+    );
+    --range-pip-hover: color-mix(in oklab, var(--color-foreground) 88%, transparent);
+    --range-pip-hover-text: color-mix(
+      in oklab,
+      var(--color-foreground) 92%,
+      transparent
+    );
+    --range-pip-in-range: color-mix(in oklab, var(--color-foreground) 78%, transparent);
+    --range-pip-in-range-text: color-mix(
+      in oklab,
+      var(--color-foreground) 88%,
+      transparent
+    );
+    --range-track: color-mix(in oklab, var(--color-foreground) 14%, transparent);
     margin: 0.45rem 0.4rem 1.15rem;
     font-size: 0.72rem;
     transition: opacity 160ms ease;
@@ -1086,7 +1083,7 @@
     display: flex;
     justify-content: space-between;
     font-size: 0.75rem;
-    color: color-mix(in oklab, white 72%, transparent);
+    color: color-mix(in oklab, var(--color-foreground) 72%, transparent);
   }
 
   .bits-feature-field__range-values span:not(:first-child):not(:last-child) {
@@ -1124,6 +1121,8 @@
     color: color-mix(in oklab, var(--color-base-content) 68%, transparent);
   }
 
+  /* This standalone media placeholder has no overlap with the control icon rules above. */
+  /* biome-ignore lint/style/noDescendingSpecificity: Keep the placeholder icon sizing next to its media state. */
   .bits-feature-visual-media__empty svg {
     width: 2rem;
     height: 2rem;

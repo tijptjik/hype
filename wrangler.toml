@@ -80,6 +80,17 @@ binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
 remote = true
 
+# Local development uses the shared preview router with a server-only ROUTING_TOKEN.
+[[services]]
+binding = "ROUTING_SERVICE"
+service = "ss-routing-preview"
+remote = true
+
+[[ratelimits]]
+name = "ROUTING_LIMITER"
+namespace_id = "21301"
+simple = { limit = 30, period = 60 }
+
 [vars]
 ENVIRONMENT = "local"
 
@@ -90,9 +101,9 @@ PUBLIC_HUB_CODE = "core"
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"
 
 PUBLIC_GIPHY_KEY = "tM0RJBEwovwI9i6NZMbyLxqVVnAPdcVz"
-PUBLIC_ORIGIN = "http://localhost:5173"
-PUBLIC_ASSET_BASE_URL = "http://localhost:8788"
-PUBLIC_PREVIEW_ASSET_BASE_URL = "http://localhost:5173"
+PUBLIC_ORIGIN = "http://hype.localhost"
+PUBLIC_ASSET_BASE_URL = "http://assets.hype.localhost"
+PUBLIC_PREVIEW_ASSET_BASE_URL = "http://hype.localhost"
 AUTH_EMAIL_FROM = "accounts@hype.hk"
 
 ########
@@ -108,6 +119,15 @@ name = "hype-prod"
 # to ORD (Chicago) and added ~150-200ms RTT to every D1 round trip.
 [env.production.placement]
 region = "azure:eastasia"
+
+[[env.production.services]]
+binding = "ROUTING_SERVICE"
+service = "ss-routing-prod"
+
+[[env.production.ratelimits]]
+name = "ROUTING_LIMITER"
+namespace_id = "21302"
+simple = { limit = 30, period = 60 }
 
 [env.production.vars]
 ENVIRONMENT = "production"
@@ -197,6 +217,15 @@ name = "hype-preview"
 [env.preview.placement]
 region = "azure:eastasia"
 
+[[env.preview.services]]
+binding = "ROUTING_SERVICE"
+service = "ss-routing-preview"
+
+[[env.preview.ratelimits]]
+name = "ROUTING_LIMITER"
+namespace_id = "21303"
+simple = { limit = 30, period = 60 }
+
 [env.preview.vars]
 ENVIRONMENT = "preview"
 
@@ -284,7 +313,7 @@ custom_domain = true
 
 [dev]
 ip = "localhost"
-port = 5173
+port = 5175
 local_protocol = "http"
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare's global network

@@ -1,34 +1,37 @@
+import { compactAncestorRelations, toCompactAncestors } from './resource-profiles'
+import type { CompactAncestorRow } from '#lib/api/services/resourcePage.types.js'
 // DRIZZLE
 import type { SQL } from 'drizzle-orm'
 // UTILS
 import { nanoid } from 'nanoid'
 // API
-import { applyQueryFilters } from '$lib/api'
+import { applyQueryFilters } from '#lib/api/index.js'
 import {
   getDuplicateValues,
   requireValue,
   toBooleanOrUndefined,
-} from '$lib/api/services'
+} from '#lib/api/services/index.js'
 import {
   authorizeLayerCreateForSubmission,
   buildLayerVisibilityAndOwnershipConditions,
-} from '$lib/api/services/authz/layer'
+} from '#lib/api/services/authz/layer.js'
 // DB
-import { transformI18nSafely } from '$lib/db'
-import { layer } from '$lib/db/schema'
+import { transformI18nSafely } from '#lib/db/index.js'
+import { layer } from '#lib/db/schema/index.js'
 import {
   createI18n,
   createLayer as insertLayer,
   updateProperties,
-} from '$lib/db/services/layer'
-import { probeProjectForUpdate } from '$lib/db/services/project'
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+} from '#lib/db/services/layer.js'
+import { probeProjectForUpdate } from '#lib/db/services/project.js'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 import {
+  LayerCompactProfileAPI,
   LayerAdminProfileAPI,
   LayerCardProfileAPI,
   LayerDetailProfileAPI,
   LayerListProfileAPI,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // ENUMS
 // TYPES
 import type {
@@ -40,7 +43,7 @@ import type {
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
+} from '#lib/types.js'
 import type {
   Layer,
   LayerDB,
@@ -49,7 +52,7 @@ import type {
   LayerListByProfile,
   LayerNew,
   LayerProfile,
-} from '$lib/db/zod/schema/layer.types'
+} from '#lib/db/zod/schema/layer.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -128,11 +131,25 @@ export const getLayerWithRelations = (
   profile: LayerProfile,
   isAdminUser: boolean,
 ): Record<string, boolean | object> => {
-  if (profile === 'admin') return layerEntityWithRelations
-
-  if (profile === 'detail' || profile === 'card') {
+  if (profile === 'compact')
     return {
       i18n: true,
+      organisation: compactAncestorRelations,
+      project: compactAncestorRelations,
+    }
+  if (profile === 'admin') return layerEntityWithRelations
+
+  if (
+    profile === 'detail' ||
+    profile === 'full' ||
+    profile === 'card' ||
+    profile === 'default' ||
+    profile === 'map'
+  ) {
+    return {
+      i18n: true,
+      organisation: compactAncestorRelations,
+      project: compactAncestorRelations,
       properties: true,
       ...(isAdminUser
         ? {
@@ -150,7 +167,16 @@ export const getLayerWithRelations = (
 /********************
  *  PROFILE SHAPING
  ************/
-const layerProfiles = ['list', 'card', 'detail', 'admin'] as const
+const layerProfiles = [
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+] as const
 
 /**
  * Normalizes arbitrary profile input into a supported layer profile.
@@ -227,14 +253,22 @@ const toProfileResponseShape = async (
   profile: LayerProfile,
 ): Promise<Layer> => {
   const data = {
+    ancestors: toCompactAncestors(row as unknown as CompactAncestorRow),
     ...row,
     i18n: transformI18nSafely(row.i18n),
     properties: normalizeLayerPropertiesForProfile(row.properties),
   }
 
+  if (profile === 'compact')
+    return LayerCompactProfileAPI.parse({
+      ...data,
+      ancestors: toCompactAncestors(row as unknown as CompactAncestorRow),
+    }) as unknown as Layer
   if (profile === 'list') return LayerListProfileAPI.parse(data) as Layer
-  if (profile === 'card') return LayerCardProfileAPI.parse(data) as Layer
-  if (profile === 'detail') return LayerDetailProfileAPI.parse(data) as Layer
+  if (profile === 'card' || profile === 'default' || profile === 'map')
+    return LayerCardProfileAPI.parse(data) as Layer
+  if (profile === 'detail' || profile === 'full')
+    return LayerDetailProfileAPI.parse(data) as Layer
   return LayerAdminProfileAPI.parse(data) as Layer
 }
 

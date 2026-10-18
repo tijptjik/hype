@@ -1,6 +1,7 @@
 // ZOD
 import { z } from 'zod'
 import { ListQueryParamsSchema } from './api'
+import { FormBoolean } from '../form'
 // DRIZZLE
 import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
@@ -10,7 +11,7 @@ import {
   projectRole,
   user,
   userFeature,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -104,7 +105,7 @@ export const UsernameSchema = z
   .trim()
   .min(1)
   .max(32)
-  .regex(/^[a-z0-9_]+$/)
+  .regex(/^[a-zA-Z0-9_]+$/)
 
 const HubRoleBase = createSelectSchema(hubRole)
 const OrganisationRoleBase = createSelectSchema(organisationRole)
@@ -151,6 +152,7 @@ const UserContributionSummaryFields = z.object({
 export const UserAttributionProfileAPI = UserBase.pick({
   id: true,
   username: true,
+  displayUsername: true,
   attribution: true,
 } as const)
 
@@ -158,14 +160,26 @@ export const UserAdminListProfileAPI = UserBase.pick({
   id: true,
   name: true,
   username: true,
+  displayUsername: true,
   email: true,
   image: true,
   attribution: true,
 } as const)
 
+export const UserDirectoryProfileAPI = UserAdminListProfileAPI.extend(
+  UserBase.pick({
+    telephone: true,
+    locale: true,
+    emailVerified: true,
+    isArchived: true,
+    createdAt: true,
+  }).shape,
+)
+
 export const UserCardProfileAPI = UserBase.pick({
   id: true,
   username: true,
+  displayUsername: true,
   image: true,
   attribution: true,
 } as const)
@@ -173,6 +187,7 @@ export const UserCardProfileAPI = UserBase.pick({
 export const UserLeaderboardProfileAPI = UserBase.pick({
   id: true,
   username: true,
+  displayUsername: true,
 } as const).extend({
   reportedMissingCount: z.number(),
   newPhotoCount: z.number(),
@@ -191,6 +206,7 @@ export const UserSelfProfileAPI = UserBase.pick({
   id: true,
   name: true,
   username: true,
+  displayUsername: true,
   image: true,
   attribution: true,
   locale: true,
@@ -240,7 +256,7 @@ export const UserUpdate = createUpdateSchema(user).omit({
   updatedAt: true,
 })
 
-export const UserUpdateAPI = UserUpdate.extend({
+export const UserUpdateAPI = UserUpdate.omit({ displayUsername: true }).extend({
   username: UsernameSchema.optional(),
 })
 
@@ -275,6 +291,7 @@ export const UserParentChainRoleFilterSchema = z
   )
 
 export const UserSearchQueryParamsSchema = z.object({
+  directory: z.boolean().optional(),
   q: z.string().trim().optional(),
   conditions: z
     .object({
@@ -325,7 +342,7 @@ export const UserHydrationCardProfileAPI = UserCardProfileAPI.extend({
 
 const UserRemoteMetaSchema = z
   .object({
-    isAdminRequest: z.coerce.boolean<boolean>().optional(),
+    isAdminRequest: FormBoolean.optional(),
     profile: UserProfile.optional(),
   })
   .optional()
@@ -348,7 +365,7 @@ export const GetUserLayersParamsSchema = z.object({
   hubId: z.string().min(1).optional(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -367,7 +384,7 @@ export const SetUserLayerDefaultsSchema = z
     layers: z.array(UserLayerDefaultsItemSchema).default([]),
     meta: z
       .object({
-        isAdminRequest: z.coerce.boolean<boolean>().optional(),
+        isAdminRequest: FormBoolean.optional(),
       })
       .optional(),
   })
@@ -398,7 +415,7 @@ export const GetUserFeaturesParamsSchema = z.object({
     .optional(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -417,7 +434,7 @@ export const AddUserFeatureToListSchema = z.object({
   visitedAt: z.string().optional().nullable(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -428,7 +445,7 @@ export const RemoveUserFeatureFromListSchema = z.object({
   list: z.enum(['wishlist', 'visited']),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })

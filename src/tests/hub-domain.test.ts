@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
-import { getHubFromDomain } from '$lib/api/services/hub'
+import { getHubFromDomain } from '#lib/api/services/hub.js'
 
 describe('getHubFromDomain', () => {
+  it('loads the default Core hub on the local Hype origin', () => {
+    expect(getHubFromDomain('hype.localhost:4173')).toMatchObject({
+      code: 'core',
+      domain: 'hype.hk',
+      isCore: true,
+    })
+    expect(getHubFromDomain('hype.localhost', 'breadline')).toEqual({
+      code: 'breadline',
+    })
+  })
+
   it('treats core preview hosts as core', () => {
     expect(getHubFromDomain('preview.hype.hk')).toMatchObject({
       code: 'core',

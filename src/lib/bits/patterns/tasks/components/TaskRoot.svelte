@@ -1,5 +1,5 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import type { Snippet } from 'svelte'
 import type { TaskRootProps } from '../task.types'
 
@@ -12,7 +12,7 @@ let {
 
 <div
   class={cx(
-    'grid h-full min-h-0 w-full gap-0 bg-black text-white',
+    'grid h-full min-h-0 w-full gap-0 bg-panel text-foreground',
     hasAside ? 'grid-cols-[minmax(0,1fr)_28rem]' : 'grid-cols-1',
     className,
   )}

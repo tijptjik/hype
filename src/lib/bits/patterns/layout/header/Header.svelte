@@ -1,17 +1,20 @@
 <script lang="ts">
-import { fly } from 'svelte/transition'
-import { tick } from 'svelte'
+import { fade, fly } from 'svelte/transition'
 // COMPONENTS
 import * as HeaderPrimitive from './components'
+import HeaderControlBar from './HeaderControlBar.svelte'
+// STYLES
+import { HEADER_ALIGNED_NAVIGATION_CLASSES } from './components/headerPrimitives.styles'
 // TYPES
 import type { HeaderProps } from './header.types'
 
 const DEFAULT_CLASS =
-  'bg-black py-4 pl-6 navbar flex h-18 w-full justify-between caret-transparent transition-all duration-300'
-const CONTROL_BAR_TRANSITION_MS = 180
+  'bg-panel py-4 navbar flex h-18 w-full justify-between caret-transparent transition-all duration-300'
 
 let {
+  contentStart,
   query = $bindable(''),
+  brand,
   title = {},
   newAction = {},
   filter = {},
@@ -39,66 +42,70 @@ const showTaskActions = $derived(
     (taskActions.isVisible ?? true),
 )
 const showFormActions = $derived(formActions.isVisible ?? false)
-const showControlBar = $derived(
-  Boolean(controlBar?.component) && (controlBar?.isVisible ?? true),
-)
-
-let renderedControlBar = $state<HeaderProps['controlBar'] | null>(controlBar)
-let isControlBarExpanded = $state(false)
-let wasControlBarVisible = $state(false)
-const controlBarHeight = $derived(
-  renderedControlBar?.height ?? controlBar?.height ?? '4rem',
-)
 const wrapperClass = $derived(
   ['bits-theme bits-pattern-header-stack', className].filter(Boolean).join(' '),
 )
 
-function handleControlBarTransitionEnd(event: TransitionEvent): void {
-  if (
-    event.target !== event.currentTarget ||
-    event.propertyName !== 'max-height' ||
-    showControlBar
-  )
-    return
-
-  renderedControlBar = null
-}
-
-$effect(() => {
-  if (showControlBar && !wasControlBarVisible) {
-    renderedControlBar = controlBar
-    isControlBarExpanded = false
-    void tick().then(() => {
-      if (showControlBar && renderedControlBar === controlBar) {
-        isControlBarExpanded = true
-      }
-    })
-  } else {
-    if (controlBar?.component) {
-      renderedControlBar = controlBar
-    }
-    isControlBarExpanded = showControlBar
-  }
-
-  wasControlBarVisible = showControlBar
-
-  if (!controlBar?.component) {
-    isControlBarExpanded = false
-  }
-})
-
 const rootClass = $derived(
-  [DEFAULT_CLASS, showAvatar ? 'pr-6' : 'pr-0'].filter(Boolean).join(' '),
+  [
+    DEFAULT_CLASS,
+    brand ? 'pl-3' : 'pl-6',
+    showAvatar ? 'pr-6' : 'pr-0',
+    showFacets && contentStart !== undefined ? HEADER_ALIGNED_NAVIGATION_CLASSES : '',
+  ]
+    .filter(Boolean)
+    .join(' '),
 )
 </script>
 
 <HeaderPrimitive.Wrapper class={wrapperClass} {...restProps}>
-  <HeaderPrimitive.Root class={rootClass}>
-    {#snippet left({ showButtonText, isMeasuring })}
+  <HeaderPrimitive.Root
+    class={rootClass}
+    style={contentStart !== undefined
+      ? `--header-identity-width: ${contentStart + 12}px`
+      : undefined}
+  >
+    {#snippet left({
+      showButtonText,
+      isMeasuring,
+    })}
+      {#if brand}
+        <svelte:element
+          this={brand.href ? 'a' : 'div'}
+          href={brand.href}
+          aria-label={brand.href ? (brand.label ?? brand.alt) : undefined}
+          tabindex={isMeasuring && brand.href ? -1 : undefined}
+          class="flex size-10 shrink-0 items-center justify-center p-0.5 focus-visible:outline-2 focus-visible:outline-focus"
+        >
+          {#if brand.monochrome}
+            <span
+              role="img"
+              aria-label={isMeasuring ? undefined : brand.alt}
+              aria-hidden={isMeasuring}
+              class="size-full bg-panel text-base-content"
+            >
+              <span
+                class="block size-full bg-current"
+                style:mask-image={`url('${brand.src}')`}
+                style:mask-size="contain"
+                style:mask-repeat="no-repeat"
+                style:mask-position="center"
+              ></span>
+            </span>
+          {:else}
+            <img
+              src={brand.src}
+              alt={isMeasuring ? '' : brand.alt}
+              width="36"
+              height="36"
+              class="size-full object-cover"
+            >
+          {/if}
+        </svelte:element>
+      {/if}
       <HeaderPrimitive.Title
         text={title.text}
         description={title.description}
-        icon={title.icon}
         href={title.href}
         crumbs={title.crumbs}
         menuAction={title.menuAction}
@@ -112,13 +119,15 @@ const rootClass = $derived(
       />
     {/snippet}
 
-    {#snippet right({ showButtonText })}
-      <div class="bits-pattern-header__right-slot">
+    {#snippet right({
+      showButtonText,
+    })}
+      <div class="flex flex-1 items-center justify-end gap-0 mr-4 min-w-0">
         {#if showFacets || showTaskActions || showFormActions}
           <div
-            class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
-            in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
-            out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
+            class="flex flex-1 items-center gap-4 min-w-0"
+            in:fade={{ duration: 140 }}
+            out:fade={{ duration: 140 }}
           >
             {#if showFacets}
               <HeaderPrimitive.Facets
@@ -151,7 +160,7 @@ const rootClass = $derived(
 
         {#if showFilter || showViewActions}
           <div
-            class="bits-pattern-header__right-slot-item bits-pattern-header__right-cluster"
+            class="flex items-center gap-0 w-max max-w-full flex-none flex items-center gap-0"
             in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
             out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
           >
@@ -188,18 +197,5 @@ const rootClass = $derived(
     {/snippet}
   </HeaderPrimitive.Root>
 
-  {#if renderedControlBar?.component}
-    {@const ControlBar = renderedControlBar.component}
-    {@const controlBarProps = renderedControlBar?.props ?? {}}
-    <HeaderPrimitive.BarRoot
-      height={controlBarHeight}
-      isExpanded={isControlBarExpanded}
-      transitionDurationMs={CONTROL_BAR_TRANSITION_MS}
-      ontransitionend={handleControlBarTransitionEnd}
-    >
-      {#snippet children()}
-        <ControlBar {...controlBarProps} />
-      {/snippet}
-    </HeaderPrimitive.BarRoot>
-  {/if}
+  <HeaderControlBar {controlBar} />
 </HeaderPrimitive.Wrapper>

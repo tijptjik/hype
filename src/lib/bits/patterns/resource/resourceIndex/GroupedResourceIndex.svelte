@@ -7,13 +7,13 @@ import ResourceCardRow from './components/ResourceCardRow.svelte'
 import ResourceEmptyState from './components/ResourceEmptyState.svelte'
 import ResourceTableRow from './components/ResourceTableRow.svelte'
 // BITS
-import { VirtualList } from '$lib/bits/custom/index/src'
+import { VirtualList } from '#lib/bits/custom/index/src/index.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // TYPES
-import type { Resource } from '$lib/types'
+import type { Resource } from '#lib/types.js'
 import type { GroupedResourceIndexProps } from './resourceIndex.types'
 import {
   RESOURCE_INDEX_LIST_HORIZONTAL_PADDING_PX,
@@ -64,12 +64,12 @@ const adminCtx = getAdminCtx()
 let gridWidth = $state(0)
 let stableColumnCount = $state(1)
 let lastKnownPanelOpenState = $state(
-  adminCtx.appCtx && typeof adminCtx.appCtx.isPanelOpenOrVisual === 'function'
-    ? adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin)
+  adminCtx.view && typeof adminCtx.view.panels.isPanelOpenOrVisual === 'function'
+    ? adminCtx.view.panels.isPanelOpenOrVisual(Panel.admin)
     : false,
 )
 
-const layoutMode = $derived(adminCtx.appCtx.state.ui.layoutMode[resource])
+const layoutMode = $derived(adminCtx.listUi.state.layoutMode[resource])
 const isRowLayout = $derived(layoutMode === 'table' || layoutMode === 'list')
 const itemHeight = $derived(
   isRowLayout
@@ -145,7 +145,7 @@ $effect(() => {
   gridWidth
   layoutMode
 
-  const currentPanelState = adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin)
+  const currentPanelState = adminCtx.view.panels.isPanelOpenOrVisual(Panel.admin)
   const nextColumnCount = getColumnCount(gridWidth, layoutMode)
 
   if (currentPanelState === lastKnownPanelOpenState) {
@@ -260,7 +260,10 @@ function getGroupId(group: Record<string, unknown>): string {
 }
 </script>
 
-{#snippet children(item: GroupedResourceIndexItem<T, G>, _index: number)}
+{#snippet children(
+  item: GroupedResourceIndexItem<T, G>,
+  _index: number,
+)}
   {#if item.kind === 'header'}
     <div class="pt-4 pb-2">
       <GroupHeader

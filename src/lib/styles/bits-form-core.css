@@ -22,17 +22,9 @@
     @apply flex flex-col gap-0.5;
   }
 
-  .bits-theme .bits-form__label-row {
-    @apply flex items-start gap-1;
-  }
-
-  .bits-theme .bits-form__label-title {
-    @apply inline-flex items-start gap-0.5;
-  }
-
   .bits-theme .bits-form__label-text {
     @apply text-sm font-bold;
-    color: color-mix(in oklab, #fcc 66%, transparent);
+    color: var(--form-label);
   }
 
   .bits-theme .bits-form__label-required {
@@ -75,6 +67,8 @@
   /* ----------------- */
   /* Controls */
   /* --------- */
+  /* The error state above intentionally relies on its higher specificity for the border. */
+  /* biome-ignore lint/style/noDescendingSpecificity: Base control styles follow the error state and must remain reusable. */
   .bits-theme .bits-form__control-wrap {
     @apply relative rounded-lg px-2;
     border: 1px solid color-mix(in oklab, var(--color-border-input) 90%, transparent);
@@ -131,7 +125,7 @@
   }
 
   .bits-theme .bits-form__control--textarea {
-    @apply min-h-32 max-h-128 resize-none px-2 py-3.5;
+    @apply min-h-32 max-h-96 resize-none px-2 py-3.5;
     box-sizing: border-box;
     display: block;
     field-sizing: content;
@@ -208,25 +202,29 @@
   }
 
   .bits-theme .bits-form__gen-ai:hover:not(:disabled):not([aria-disabled="true"]) {
-    color: color-mix(in oklab, var(--color-primary) 80%, white);
+    color: color-mix(in oklab, var(--color-primary) 80%, var(--color-foreground));
     border-color: transparent;
-    background-color: color-mix(in oklab, var(--color-background-alt) 78%, black);
+    background-color: color-mix(
+      in oklab,
+      var(--color-background-alt) 78%,
+      var(--color-panel)
+    );
   }
 
   .bits-theme
     .bits-form__gen-ai:focus-visible:not(:disabled):not([aria-disabled="true"]) {
-    color: color-mix(in oklab, var(--color-primary) 80%, white);
+    color: color-mix(in oklab, var(--color-primary) 80%, var(--color-foreground));
     border-color: transparent;
     outline: none;
     box-shadow: none;
   }
 
   .bits-theme .bits-form__gen-ai:active:not(:disabled) {
-    background-color: color-mix(in oklab, var(--color-background-alt) 70%, black);
-  }
-
-  .bits-theme .bits-form__gen-ai-icon {
-    @apply mt-1 h-6 w-6;
+    background-color: color-mix(
+      in oklab,
+      var(--color-background-alt) 70%,
+      var(--color-panel)
+    );
   }
 
   .bits-theme .bits-form__gen-ai:disabled {

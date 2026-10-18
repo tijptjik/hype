@@ -2,26 +2,27 @@
 // SVELTE
 import { page } from '$app/state'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // LIB
-import { ADMIN_PATH } from '$lib/index'
+import { ADMIN_PATH } from '#lib/index.js'
 // AUTH
-import { canViewAnalytics, hasControlPanelAccess } from '$lib/client/services/auth'
+import { canViewAnalytics, hasControlPanelAccess } from '#lib/client/services/auth.js'
+import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation'
+import { navigateOnAdmin } from '#lib/navigation/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // ICONS
-import ChartColumnIncreasing from 'virtual:icons/lucide/chart-column-increasing'
-import CloudArrowUp from 'virtual:icons/lucide/cloud-upload'
-import BuildingLibrary from 'virtual:icons/lucide/landmark'
-import InboxArrowDown from 'virtual:icons/lucide/mailbox'
-import MapIcon from 'virtual:icons/lucide/map'
-import MapPin from 'virtual:icons/lucide/map-pin'
+import UsersIcon from 'virtual:icons/proicons/person-multiple'
+import ChartColumnIncreasing from 'virtual:icons/proicons/bar-chart'
+import CloudArrowUp from 'virtual:icons/proicons/cloud-arrow-up'
+import BuildingLibrary from 'virtual:icons/proicons/bank'
+import InboxArrowDown from 'virtual:icons/proicons/mail-open'
+import MapPin from 'virtual:icons/proicons/location'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
-import type { SessionUser } from '$lib/types'
+import type { SessionUser } from '#lib/types.js'
 import type { AdminMenuItem, AdminMenuProps } from './adminMenu.types'
 
 const adminCtx = getAdminCtx()
@@ -40,12 +41,16 @@ const notificationCount = $derived(adminCtx.filteredTasks.length)
 const featureCount = $derived(adminCtx.filteredFeatures.length)
 
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {
-  if (
-    !adminCtx.appCtx.user ||
-    !hasControlPanelAccess(adminCtx.appCtx.user as SessionUser)
-  ) {
-    return []
-  }
+  const actor = adminCtx.view.user as SessionUser | null
+  const directoryAllowed =
+    actor &&
+    canBrowseUsers({
+      isAnonymous: actor.isAnonymous,
+      superAdmin: actor.superAdmin,
+      userRoles: actor.roles ?? [],
+      hubId: adminCtx.view.hub?.id,
+    })
+  if (!actor || (!hasControlPanelAccess(actor) && !directoryAllowed)) return []
 
   const items: AdminMenuItem[] = [
     {
@@ -64,7 +69,11 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     },
   ]
 
-  if (canViewAnalytics(adminCtx.appCtx.user as SessionUser)) {
+  if (directoryAllowed) {
+    items.push({ href: '/admin/users', label: 'Users', icon: UsersIcon })
+  }
+
+  if (canViewAnalytics(adminCtx.view.user as SessionUser)) {
     items.push({
       href: `${ADMIN_PATH}/analytics`,
       label: 'Analytics',
@@ -72,7 +81,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     })
   }
 
-  if (adminCtx.appCtx.isSuperAdmin()) {
+  if (adminCtx.view.isSuperAdmin()) {
     items.push({
       href: `${ADMIN_PATH}/hubs`,
       label: 'Hubs',
@@ -81,16 +90,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     })
   }
 
-  items.push({
-    href:
-      adminCtx.activeResourceType === 'feature' && adminCtx.activeResourceRef
-        ? `/features/${adminCtx.activeResourceRef}`
-        : '/',
-    label: 'Map',
-    icon: MapIcon,
-  })
-
-  if (adminCtx.appCtx.isSuperAdmin()) {
+  if (adminCtx.view.isSuperAdmin()) {
     items.push({
       href: `${ADMIN_PATH}/import`,
       label: 'Uploads',
@@ -318,7 +318,8 @@ $effect(() => {
                   {#if count > 0}
                     <span
                       class="bits-admin-menu__badge"
-                      class:bits-admin-menu__badge--accent={entry.item.tone === 'accent'}
+                      class:bits-admin-menu__badge--accent={entry.item.tone ===
+                        'accent'}
                       class:bits-admin-menu__badge--overflow={count > 99}
                     >
                       {count > 99 ? '∞' : count}

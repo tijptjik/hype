@@ -1,11 +1,12 @@
+import { CompactAncestorsSchema } from './api'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { layer, layerI18n, layerProperty, userLayer } from '$lib/db/schema/index'
+import { layer, layerI18n, layerProperty, userLayer } from '#lib/db/schema/index.js'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints'
 import { FormBoolean } from '../form'
@@ -13,7 +14,7 @@ import { FormBoolean } from '../form'
 import { PropertyAdminProfileAPI } from './property'
 import { UserBasic } from './user'
 // TYPES
-import type { LayerMetadata } from '$lib/types'
+import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -153,7 +154,7 @@ export const LayerFormMeta = z.object({
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
-  isAdminRequest: z.coerce.boolean<boolean>().optional(),
+  isAdminRequest: FormBoolean.optional(),
 })
 
 export const LayerFormData = z.object({
@@ -172,7 +173,7 @@ export const PublishLayerSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -182,7 +183,7 @@ export const RemoveLayerSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -191,7 +192,17 @@ export const RemoveLayerSchema = z.object({
 // 4. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const LayerProfile = z.enum(['list', 'card', 'detail', 'admin'])
+// Legacy selectors remain compatible while callers migrate to resource payload profiles.
+export const LayerProfile = z.enum([
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+])
 
 const LayerListFields = LayerRecord.pick({
   id: true,
@@ -226,6 +237,7 @@ export const LayerListProfileAPI = LayerListFields.extend({
 })
 
 export const LayerCardProfileAPI = LayerListProfileAPI.extend({
+  ancestors: CompactAncestorsSchema.optional(),
   ...LayerCardFields.shape,
 })
 
@@ -243,4 +255,19 @@ export const LayerRaw = LayerRecord.extend({
   properties: z.array(LayerPropertyAdminProfileAPI).nullish(),
   publisher: UserBasic.nullish(),
   image: z.unknown().nullish(),
+})
+
+/** Minimal identity and action state for paged resource lists. */
+export const LayerCompactProfileAPI = LayerRecord.pick({
+  id: true,
+  isPublished: true,
+  isArchived: true,
+  modifiedAt: true,
+  organisationId: true,
+  projectId: true,
+  rank: true,
+  isDefaultVisible: true,
+}).extend({
+  ancestors: CompactAncestorsSchema.optional(),
+  i18n: getLocales(LayerI18nRecord.pick({ name: true, nameShort: true })),
 })

@@ -1,3 +1,5 @@
+import { compactAncestorRelations, toCompactAncestors } from './resource-profiles'
+import type { CompactAncestorRow } from '#lib/api/services/resourcePage.types.js'
 // DRIZZLE
 import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
 // CAPABILITIES
@@ -5,30 +7,35 @@ import {
   isProjectCapabilityKey,
   type normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
-} from '$lib/capabilities'
+} from '#lib/capabilities.js'
 // API
-import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
+import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
 import {
   inferPropertyDiscriminatorFromComponent,
   toBooleanOrUndefined,
-} from '$lib/api/services'
-import { isRelevantHubAdmin } from '$lib/api/services/authz'
+} from '#lib/api/services/index.js'
+import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
 // DB
-import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
-import { applyTriStateBooleanCondition } from '$lib/db/query'
-import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
+import { applyTriStateBooleanCondition } from '#lib/db/query.js'
+import { toImageEnvelope, toNormalizedImageRecord } from '#lib/db/services/image.js'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 import {
   ProjectAdminProfileAPI,
   ProjectCardProfileAPI,
   ProjectDetailProfileAPI,
   ProjectListProfileAPI,
-} from '$lib/db/zod/schema/project'
-import { isSuperAdmin } from '$lib/client/services/auth'
+} from '#lib/db/zod/schema/project.js'
+import { isSuperAdmin } from '#lib/client/services/auth.js'
+import { autochunk, chunkedInArray } from '#lib/utils/batch-query.js'
 // SCHEMA
-import { project, property as propertyTable } from '$lib/db/schema/index'
+import { project, property as propertyTable } from '#lib/db/schema/index.js'
 // ENUMS
-import { HierarchicalResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
+import {
+  HierarchicalResource,
+  ImageContextResource,
+  ProjectRoleType,
+} from '#lib/enums.js'
 // TYPES
 import type {
   Database,
@@ -39,8 +46,8 @@ import type {
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
-import type { Image } from '$lib/db/zod/schema/image.types'
+} from '#lib/types.js'
+import type { Image } from '#lib/db/zod/schema/image.types.js'
 import type {
   ProjectAdminDBRaw,
   ProjectCardDBRaw,
@@ -55,7 +62,7 @@ import type {
   ProjectRoleCapabilities,
   PersistedProjectLocalPropertyCandidate,
   SubmittedPropertyScopeCandidate,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -101,6 +108,7 @@ import type {
  * Keeps common fetches small while preserving the fields needed for UI rendering.
  */
 const projectCollectionWithRelations = {
+  organisation: compactAncestorRelations,
   i18n: true,
   image: true,
   mapStyleAssignment: {
@@ -184,11 +192,22 @@ type ProjectRelationsByProfile<P extends ProjectProfile> = P extends 'admin'
 export const getProjectWithRelations = <P extends ProjectProfile>(
   profile: P,
 ): ProjectRelationsByProfile<P> => {
+  if (profile === 'compact')
+    return {
+      i18n: true,
+      organisation: compactAncestorRelations,
+    } as unknown as ProjectRelationsByProfile<P>
   if (profile === 'admin') {
     return projectEntityWithRelations as ProjectRelationsByProfile<P>
   }
 
-  if (profile === 'card' || profile === 'detail') {
+  if (
+    profile === 'card' ||
+    profile === 'default' ||
+    profile === 'map' ||
+    profile === 'detail' ||
+    profile === 'full'
+  ) {
     return projectCollectionWithRelations as ProjectRelationsByProfile<P>
   }
 
@@ -198,7 +217,16 @@ export const getProjectWithRelations = <P extends ProjectProfile>(
 /********************
  *  PROFILE SHAPING
  ************/
-const projectProfiles = ['list', 'card', 'detail', 'admin'] as const
+const projectProfiles = [
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+] as const
 
 type ProjectResponseRow = ProjectDB & {
   i18n?: ProjectListDBRaw['i18n']
@@ -244,13 +272,21 @@ const toProfileResponseShape = async (
   properties: NonNullable<ProjectResponseRow['properties']> = [],
   profile: ProjectProfile = 'detail',
 ): Promise<ProjectEntityByProfile<ProjectProfile>> => {
-  const imageProfile = profile === 'admin' ? 'admin' : profile
+  const imageProfile =
+    profile === 'default' || profile === 'map'
+      ? 'card'
+      : profile === 'full'
+        ? 'detail'
+        : profile === 'compact'
+          ? 'list'
+          : profile
   const normalizedUserRoles = (userRoles ?? []).map(userRole => ({
     ...userRole,
     capabilities: userRole.capabilities ?? {},
   }))
 
   const data = {
+    ancestors: toCompactAncestors(row as unknown as CompactAncestorRow),
     ...row,
     i18n: transformI18nSafely(i18n ?? []),
     userRoles: normalizedUserRoles,
@@ -301,10 +337,10 @@ const toProfileResponseShape = async (
   if (profile === 'admin') {
     return ProjectAdminProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
   }
-  if (profile === 'detail') {
+  if (profile === 'detail' || profile === 'full') {
     return ProjectDetailProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
   }
-  if (profile === 'card') {
+  if (profile === 'card' || profile === 'default' || profile === 'map') {
     return ProjectCardProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
   }
   return ProjectListProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
@@ -555,10 +591,14 @@ export const resolveCanonicalScopeByPropertyId = async <
     return canonicalScopeByPropertyId
   }
 
-  const scopeRows = await db.query.property.findMany({
-    columns: { id: true, scope: true },
-    where: inArray(propertyTable.id, submittedPropertyIds),
-  })
+  const scopeRows = await autochunk(
+    { items: submittedPropertyIds },
+    async propertyIdChunk =>
+      await db.query.property.findMany({
+        columns: { id: true, scope: true },
+        where: inArray(propertyTable.id, propertyIdChunk),
+      }),
+  )
 
   for (const scopeRow of scopeRows) {
     canonicalScopeByPropertyId.set(scopeRow.id, scopeRow.scope)
@@ -869,10 +909,10 @@ const buildVisibilityAndOwnershipConditions = (
     const scopeConditions: SQL<unknown>[] = []
 
     if (projectIds.length > 0) {
-      scopeConditions.push(inArray(project.id, projectIds))
+      scopeConditions.push(chunkedInArray(project.id, projectIds))
     }
     if (organisationIds.length > 0) {
-      scopeConditions.push(inArray(project.organisationId, organisationIds))
+      scopeConditions.push(chunkedInArray(project.organisationId, organisationIds))
     }
 
     if (scopeConditions.length === 0) return undefined

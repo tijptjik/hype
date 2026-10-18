@@ -1,10 +1,6 @@
 @layer components {
-  .bits-theme .bits-layout-autohide {
-    @apply h-full;
-  }
-
   .bits-theme .bits-panel-root {
-    @apply flex h-full select-none flex-col bg-black caret-transparent shadow-xl;
+    @apply flex h-full select-none flex-col bg-panel caret-transparent shadow-xl;
   }
 
   .bits-theme .bits-panel-root--inline {
@@ -28,7 +24,7 @@
   }
 
   .bits-panel-section-header-root {
-    @apply flex w-full shrink-0 items-center justify-between bg-black text-base-content focus:outline-none focus:ring-0;
+    @apply flex w-full shrink-0 items-center justify-between bg-panel text-base-content focus:outline-none focus:ring-0;
   }
 
   .bits-panel-section-header {
@@ -41,38 +37,6 @@
 
   .bits-panel-section-header-root--narrow .bits-panel-section-header {
     @apply justify-center pr-0;
-  }
-
-  .bits-panel-section-header-title {
-    @apply flex flex-1 items-start;
-  }
-
-  .bits-panel-section-header-title__stack {
-    @apply w-full space-y-0.5;
-  }
-
-  .bits-panel-section-header-title__row {
-    @apply flex w-full items-center;
-  }
-
-  .bits-panel-section-header-title__chevron-button {
-    @apply flex shrink-0 items-center justify-center pl-4 pr-3 focus:outline-none focus:ring-0;
-  }
-
-  .bits-panel-section-header-title__chevron {
-    @apply h-[1.125rem] w-[1.125rem];
-  }
-
-  .bits-panel-section-header-title__action {
-    @apply w-full text-left focus:outline-none focus:ring-0;
-  }
-
-  .bits-panel-section-header-title__heading {
-    @apply text-sm uppercase tracking-widest;
-  }
-
-  .bits-panel-section-header-title__description {
-    @apply text-left text-sm text-base-content/60;
   }
 
   .bits-panel-section-header-icon {
@@ -96,7 +60,7 @@
   }
 
   .bits-panel-section-content {
-    @apply flex min-h-0 grow flex-col overflow-hidden bg-black caret-white;
+    @apply flex min-h-0 grow flex-col overflow-hidden bg-panel caret-base-content;
   }
 
   .bits-panel-section-content--collapsed {
@@ -107,24 +71,12 @@
     @apply shrink-0 overflow-visible;
   }
 
-  .bits-theme .bits-panel-selected-filter {
-    @apply flex flex-wrap justify-start gap-2 px-8.5 pt-2;
-  }
-
-  .bits-theme .bits-panel-selected-filter__text {
-    @apply pb-2 text-sm text-base-content/60;
-  }
-
   .bits-theme .bits-panel-selected-resource {
     @apply px-2 pt-2 pb-4;
   }
 
   .bits-theme .bits-panel-selected-resource--narrow {
     @apply w-full px-0 py-1;
-  }
-
-  .bits-theme .bits-panel-selected-resource__stack {
-    @apply grid;
   }
 
   .bits-theme .bits-panel-selected-resource__state {
@@ -155,10 +107,6 @@
     @apply translate-x-6;
   }
 
-  .bits-theme .bits-panel-selected-resource__wide-list {
-    @apply mb-0 flex max-h-[33vh] flex-wrap content-start items-start gap-x-0 gap-y-2 overflow-y-auto overscroll-contain px-6 pt-0;
-  }
-
   .bits-theme .bits-panel-selected-resource__wide-chip {
     @apply inline-grid h-auto w-fit max-w-full cursor-pointer grid-cols-[minmax(0,max-content)_auto] items-center gap-x-2 rounded-full border border-current/35 bg-transparent px-3 py-1.5 text-left leading-tight transition-[border-color,box-shadow,background-color,color] duration-150;
   }
@@ -173,28 +121,8 @@
     @apply border-emerald-400/80 bg-emerald-500/10 shadow-[0_0_0_1px_rgb(52_211_153_/_0.18),0_0_22px_rgb(16_185_129_/_0.2)];
   }
 
-  .bits-theme .bits-panel-selected-resource__wide-chip-label {
-    @apply min-w-0 justify-self-start whitespace-normal wrap-break-word leading-tight text-sm;
-  }
-
-  .bits-theme .bits-panel-selected-resource__wide-chip-icon {
-    @apply h-3 w-3 shrink-0 self-center -ml-1;
-  }
-
-  .bits-theme .bits-panel-selected-resource__empty {
-    @apply flex flex-wrap justify-start gap-2 px-[1.625rem];
-  }
-
-  .bits-theme .bits-panel-selected-resource__empty-text {
-    @apply pb-2 text-sm text-base-content/60;
-  }
-
-  .bits-theme .bits-panel-selected-resource__narrow-list {
-    @apply flex w-auto min-w-12 flex-col items-center justify-start gap-[1px];
-  }
-
   .bits-panel-item-resource {
-    @apply flex cursor-pointer flex-row items-center justify-between gap-4 bg-black py-2 text-base-content caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0;
+    @apply flex cursor-pointer flex-row items-center justify-between gap-4 bg-panel py-2 text-base-content caret-transparent transition-colors duration-200 focus:outline-none focus:ring-0;
   }
 
   .bits-panel-item-resource--narrow {
@@ -221,24 +149,12 @@
     @apply h-2 w-2 shrink-0 rounded-full bg-base-content/30 transition-all;
   }
 
-  .bits-panel-item-resource__copy {
-    @apply flex min-w-0 overflow-visible flex-col items-start gap-0;
-  }
-
   .bits-panel-item-resource__name {
     @apply min-w-0 whitespace-normal break-words font-light leading-tight;
   }
 
   .bits-panel-item-resource__name--active {
     color: var(--bits-panel-item-tone-text, var(--color-base-content));
-  }
-
-  .bits-panel-item-resource__action {
-    @apply shrink-0 text-sm text-base-content/20 group-hover:text-base-content/40 group-focus-visible:text-base-content/40;
-  }
-
-  .bits-panel-item-resource__action-icon {
-    @apply h-6 w-6;
   }
 
   .bits-panel-item-resource__narrow-close {
@@ -265,6 +181,10 @@
     background-color: var(--bits-panel-item-tone-bg, var(--color-base-content));
   }
 
+  .bits-panel-item-resource[data-active="true"] .bits-panel-item-resource__dot {
+    background-color: var(--bits-panel-item-tone-bg-hover, var(--color-base-content));
+  }
+
   .bits-panel-item-resource[data-selected="false"]:hover .bits-panel-item-resource__dot,
   .bits-panel-item-resource[data-selected="false"]:focus-visible
     .bits-panel-item-resource__dot {
@@ -274,7 +194,6 @@
   .bits-panel-item-resource[data-selected="true"]:hover .bits-panel-item-resource__dot,
   .bits-panel-item-resource[data-selected="true"]:focus-visible
     .bits-panel-item-resource__dot,
-  .bits-panel-item-resource[data-active="true"] .bits-panel-item-resource__dot,
   .bits-panel-item-resource[data-active="true"]:hover .bits-panel-item-resource__dot,
   .bits-panel-item-resource[data-active="true"]:focus-visible
     .bits-panel-item-resource__dot {
@@ -327,26 +246,6 @@
       var(--color-base-content) 60%,
       transparent
     );
-  }
-
-  .bits-panel-item-resource__tooltip {
-    @apply pointer-events-auto fixed z-50 min-h-4 min-w-10 whitespace-nowrap rounded-r-md bg-black px-3 py-2 text-center text-sm text-base-content;
-  }
-
-  .bits-panel-header-admin {
-    @apply flex h-18 shrink-0 flex-row items-center justify-between bg-black p-4;
-  }
-
-  .bits-panel-header-admin__title {
-    @apply text-lg font-semibold uppercase text-white pl-2;
-  }
-
-  .bits-panel-header-admin__actions {
-    @apply flex gap-2;
-  }
-
-  .bits-panel-header-admin__button {
-    @apply m-0;
   }
 
   .bits-panel-header-admin__narrow-trigger {
@@ -403,7 +302,7 @@
   }
 
   .bits-theme .bits-admin-menu--narrow .bits-admin-menu__list {
-    @apply h-full w-full flex-col items-end justify-end;
+    @apply h-full w-full flex-col items-center justify-end;
     gap: var(--bits-admin-menu-slot-gap);
   }
 
@@ -509,8 +408,52 @@
   }
 
   .bits-theme .bits-admin-shell__main {
-    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-linear-to-bl from-rose-500 to-fuchsia-800 bg-fixed;
+    /* Solid form surfaces remain legible over each theme's signature canvas. */
+    --form-control-fill: var(--color-surface);
+    --form-control-edit-fill: var(--color-canvas);
+    --form-control-border: var(--color-border);
+    --form-label: var(--color-muted-foreground);
+    background-color: var(--color-canvas);
+    background-image: var(--admin-background);
+    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-fixed;
     container-type: inline-size;
     container-name: bits-admin-shell-main;
+  }
+
+  /* Form navigation shares the content inset even when the facet reaches the sidebar. */
+  .bits-theme .bits-admin-shell__main:has([data-form-surface]) [data-facet-nav] {
+    padding-inline: 1.5rem;
+  }
+
+  /* A stationary gradient edge delineates the workspace along the top and both sides. */
+  .bits-theme .bits-admin-shell__main:has([data-form-surface]) {
+    --search-control-fill: var(
+      --admin-form-search-fill,
+      color-mix(in oklab, var(--theme-surface) 88%, black)
+    );
+    --form-workspace: var(
+      --admin-form-workspace,
+      color-mix(in oklab, var(--color-primary) 3%, var(--color-surface))
+    );
+    --form-control-edit-fill: var(
+      --admin-form-control-fill,
+      color-mix(in oklab, var(--form-workspace) 50%, var(--color-raised))
+    );
+    --form-control-border: color-mix(
+      in oklab,
+      var(--color-foreground) 20%,
+      var(--form-workspace)
+    );
+    background-color: var(--form-workspace);
+    border: var(--admin-form-edge-width, 3px) solid var(--color-border);
+    border-bottom-width: 0;
+    border-image: var(
+      --admin-form-edge,
+      linear-gradient(145deg, var(--color-primary), var(--color-secondary)) 1
+    );
+    background-image: none;
+    background-size: auto;
+    background-repeat: no-repeat;
+    background-attachment: local;
   }
 }

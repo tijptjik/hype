@@ -1,10 +1,14 @@
 <script lang="ts">
 // CORE
-import Button from '$lib/bits/core/button/Button.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // TYPES
 import type { Snippet } from 'svelte'
 // LOCAL
@@ -51,7 +55,10 @@ let {
 }: Props = $props()
 
 const responsiveCtx = getResponsiveCtx()
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 function getVariantClasses(resolvedVariant: FeatureCardActionVariant): string {
   if (resolvedVariant === 'ghost') {
     return cx(

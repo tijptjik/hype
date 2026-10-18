@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS CUSTOM
 import {
   StatsCategorical,
@@ -9,10 +9,10 @@ import {
   StatsImage,
   StatsStatus,
   StatsTranslation,
-} from '$lib/bits/custom'
+} from '#lib/bits/custom/index.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 let {
   feature,
@@ -20,7 +20,7 @@ let {
   grapheme = '',
 }: {
   feature: Feature
-  appCtx: AppCtx
+  appCtx: ResourceViewCtx
   grapheme?: string
 } = $props()
 </script>

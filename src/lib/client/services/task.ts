@@ -1,30 +1,32 @@
 // API
-import { updateFeatureState } from '$lib/api/server/feature.remote'
+import { updateFeatureState } from '#lib/api/feature.remote.js'
 import {
   beginMissingReportDraft as beginMissingReportDraftRemote,
   beginNewFeatureDraft as beginNewFeatureDraftRemote,
   beginNewPhotosDraft as beginNewPhotosDraftRemote,
   finalizeTaskDraft as finalizeTaskDraftRemote,
   reviewTask as reviewTaskRemote,
-} from '$lib/api/server/tasks.remote'
+} from '#lib/api/tasks.remote.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
-import type { DeepPartial, Id, NewFeatureTask, Task } from '$lib/types'
-import type { TaskReviewUiAction } from '$lib/bits/patterns/tasks'
-import type { ViewerRenderable } from '$lib/bits/patterns/images/images.types'
+import type { DeepPartial, Id } from '#lib/types.js'
+import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
+import type { TaskReviewUiAction } from '#lib/bits/patterns/tasks/index.js'
+import type { ViewerRenderable } from '#lib/bits/patterns/images/images.types.js'
 import type {
   ReviewTaskInput,
   TaskEditorLayerOption,
-} from '$lib/db/zod/schema/task.types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { ImageUpload, Intent } from '$lib/db/zod/schema/image.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+} from '#lib/db/zod/schema/task.types.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { ImageUpload, Intent } from '#lib/db/zod/schema/image.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type {
   Organisation,
   OrganisationDB,
-} from '$lib/db/zod/schema/organisation.types'
-import type { Project, ProjectDB } from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/organisation.types.js'
+import type { Project, ProjectDB } from '#lib/db/zod/schema/project.types.js'
 import type { Geometry } from 'geojson'
 // IMAGE
 import {
@@ -32,9 +34,9 @@ import {
   getGalleryItemTargetImageId,
   prepareImageUpload,
   uploadPreparedImageObject,
-} from '$lib/client/services/image'
+} from '#lib/client/services/image.js'
 // ENUMS
-import { ImageContextResource } from '$lib/enums'
+import { ImageContextResource } from '#lib/enums.js'
 
 // +++ Table Of Contents
 // ═══════════════════════

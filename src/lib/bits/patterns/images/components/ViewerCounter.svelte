@@ -100,7 +100,7 @@ onDestroy(() => {
 
 {#if totalCount > 1}
   <div
-    class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-black/55 px-3 py-1.5 font-mono text-xs leading-none text-white/92 backdrop-blur-sm"
+    class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-base-100 px-3 py-1.5 font-mono text-xs leading-none text-muted-foreground backdrop-blur-sm"
   >
     <div
       class="relative h-[1rem] w-[0.9rem] overflow-hidden tabular-nums"
@@ -122,8 +122,8 @@ onDestroy(() => {
       </div>
     </div>
     {#if showTotalCount}
-      <span class="flex h-[1rem] items-center text-white/55">/</span>
-      <span class="flex h-[1rem] items-center tabular-nums text-white/88"
+      <span class="flex h-[1rem] items-center text-muted-foreground">/</span>
+      <span class="flex h-[1rem] items-center tabular-nums text-muted-foreground"
         >{totalCount}</span
       >
     {/if}

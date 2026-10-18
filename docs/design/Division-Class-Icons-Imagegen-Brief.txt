@@ -1,0 +1,86 @@
+HYPE — division class icon generation brief
+
+REFERENCE IMAGES
+Attach rendered copies of static/neighbourhood.svg, static/map.svg,
+static/globe.svg, static/sanPan.svg and static/walkingTours.svg. A rendered
+reference sheet is available at output/playwright/divisions/icon-references.png.
+Use neighbourhood.svg as the primary reference for the new division family.
+The other assets establish the same pale monochrome colour, crisp geometry,
+Hong Kong character and restrained illustrative detail. Do not use the temporary
+Lucide icons currently shown beside division rows as the style reference.
+
+MASTER PROMPT — paste into OpenAI imagegen with the reference images attached
+
+Create a coherent family of twelve geographic division icons for HYPE, a Hong
+Kong map application. Match the attached existing icons closely, especially the
+solid, angular, lightly isometric building cluster in the neighbourhood icon.
+Use one opaque colour (#F7E7EF) with transparent negative-space cutouts and a
+fully transparent background. These are flat vector-like UI pictograms with
+crisp edges, not rendered 3D objects. Match the reference's restrained oblique
+perspective, straight-sided architecture and generous negative space. Architectural
+icons should use filled silhouettes and a few cutout windows; landscape icons
+should use equally bold, simple silhouettes and sparse contour cutouts. Use the
+same visual weight, baseline, perspective and optical size throughout the family.
+
+Each icon must be identifiable at 20–24 px. Prefer a strong silhouette and two or
+three major shapes over tiny decoration. Leave generous gaps between elements.
+Keep each icon centred within a square canvas with 12% clear padding. No letters,
+labels, numerals, borders, badges, map pins, drop shadows, gradients, textures,
+photographic detail, glow, background scenery or mockup frames. Do not bake a
+checkerboard into the image. Do not add a generic circle around the subject.
+Do not simply resize the same icon for different classes: distinguish classes
+through composition and shape. Do not reproduce real administrative boundaries;
+these are class pictograms, not geographic maps.
+
+Generate a 4-column by 3-row concept sheet in the following exact order, with
+wide transparent gutters and no labels in the image:
+
+1. Area — three broad adjoining land parcels, with one simple internal boundary;
+   a territory larger than one district, with no buildings dominating the shape.
+2. District — a bounded compact urban district with three varied building blocks
+   and one broad street cutout; distinct from the larger area and residential hood.
+3. Town — a compact settlement with one mid-rise and two lower buildings around
+   a small open centre, visibly less dense than the neighbourhood cluster.
+4. Rural area — broad cultivated land bands, one low roof and a simple tree;
+   landscape dominates the composition.
+5. Macrohood — three small groups of buildings separated by two wide streets,
+   suggesting a collection of neighbourhoods within one continuous silhouette.
+6. Neighbourhood — a tight cluster of three residential buildings, directly
+   related to the attached neighbourhood.svg but simplified for a 24 px row icon.
+7. Microhood — one compact residential block with a small shared courtyard;
+   narrower in scope than a neighbourhood, without being merely a front door.
+8. Village — three low pitched-roof houses grouped along a short lane, with one
+   small tree; Hong Kong village character without religious architecture.
+9. Hamlet — two simple low houses with more open ground between them; no tents.
+10. Major island — a broad asymmetric island silhouette, two modest hill masses
+    and two short water cutouts, with land occupying most of the icon footprint.
+11. Minor island — a compact island with one hill and more visible water around
+    it; distinguish its composition from the major island, not just its scale.
+12. Islet — a low rocky landform with two irregular rock peaks and surrounding
+    water marks; clearly a small piece of land, not a shell or mountain icon.
+
+All twelve icons must look like siblings of the supplied HYPE illustrations.
+Prioritise recognisable silhouettes, clear class distinctions and consistent
+weight over detail. Return the image only.
+
+INDIVIDUAL EXPORT PROMPT — use after reviewing the concept sheet
+
+Using the approved concept sheet and the original HYPE reference icons, produce
+only the [CLASS NAME] icon, preserving its approved silhouette, perspective,
+negative-space cuts and visual weight. Centre it on a 1024×1024 transparent canvas
+with 12% padding. Use only opaque #F7E7EF and transparency. No caption or additional
+objects. Keep it legible when reduced to 20 px. Return one transparent PNG.
+
+DELIVERY AND REVIEW
+- Set transparent_background=true when calling the image-generation tool.
+- Export each approved icon individually. Use stable class filenames:
+  area, district, town, rural_area, macrohood, neighbourhood, microhood, village,
+  hamlet, major_island, minor_island, islet.
+- Review every icon at 20, 24 and 48 px, on both near-black and pale backgrounds.
+  For the pale-background check, tint the foreground dark; do not add a backdrop.
+- Compare all twelve together for optical size and ensure each remains distinct.
+- City and SAR are intentionally excluded from the current selectable list.
+- Imagegen produces raster concepts. Rebuild/trace approved art into clean SVG
+  paths with currentColor before shipping; do not embed raster images in SVG.
+  Remove redundant nodes, retain transparent cutouts, and check small-size legibility
+  again after conversion. This brief does not replace the current icons automatically.

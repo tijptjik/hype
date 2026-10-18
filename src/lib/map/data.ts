@@ -1,18 +1,15 @@
 // I18N
-import { getI18n } from '$lib/i18n'
-import { m } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
 // SERVICES
-import { filterPlaces } from '$lib/client/services/geospatial'
+import { filterDivisions, getDivisionName } from '#lib/client/services/geospatial.js'
 /// ENUMS
-import { OmniCollection } from '$lib/enums'
+import { OmniCollection } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { SearchResult } from '$lib/types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type {
-  FeatureExtended,
-  FeatureFromCollection,
-} from '$lib/db/zod/schema/feature.types'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+import type { SearchResult } from '#lib/context/omni.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { FeatureExtended } from '#lib/db/zod/schema/feature.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -29,7 +26,7 @@ import type {
  * @returns Wishlisted features enriched with hierarchy display labels.
  */
 export async function getWishlistedFeaturesAsync(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
 ): Promise<FeatureExtended[]> {
   const wishlistedFeatures = appCtx.getWishlistedFeatures()
 
@@ -38,7 +35,7 @@ export async function getWishlistedFeaturesAsync(
       const { layer, project, organisation } = await appCtx.getHierarchy(feature)
 
       const projectLayerCount = project
-        ? appCtx.state.resources.layer.filter((l: Layer) => l.projectId === project.id)
+        ? appCtx.queries.rows.layer.filter((l: Layer) => l.projectId === project.id)
             .length
         : 0
 
@@ -64,39 +61,47 @@ export async function getWishlistedFeaturesAsync(
 }
 
 /**
- * Searches wishlisted features, neighbourhoods, and loaded features for one term.
+ * Projects query-backed search results and authoritative neighbourhood/list counts.
  *
  * @param term - Raw search term.
- * @param appCtx - App context containing search sources and locale helpers.
+ * @param appCtx - App context containing cached query pages and locale helpers.
  * @returns Search result groups matching the provided term.
  */
 export async function searchAllAsync(
   term: string,
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
 ): Promise<SearchResult[]> {
   const results: SearchResult[] = []
+  // Search labels must remain visible when the only matching title is a generated
+  // translation; the feature card uses the same policy for navigation chrome.
+  const searchPreferences = {
+    ...appCtx.getUserPreferences(),
+    allowMachineTranslation: true,
+  }
 
-  // Source 1 - Walks
-  const wishlistResults = await getWishlistedFeaturesAsync(appCtx)
-  const filteredWishlistResults = wishlistResults.filter((feature: FeatureExtended) =>
-    feature?.hierarchy.feature?.toLowerCase().includes(term.toLowerCase()),
-  )
-  if (filteredWishlistResults.length > 0) {
+  // Source 1 - Walks: the matching count comes from the user's filtered list query.
+  const wishlistQuery = appCtx.resources.featureQueries.searchWishlist
+  const wishlistCount =
+    wishlistQuery.search === term.trim() ? wishlistQuery.totalCount : null
+  if (wishlistCount !== null && wishlistCount > 0) {
     results.push({
       name: m.omni__title_star_walks(),
-      count: filteredWishlistResults.length,
+      count: wishlistCount,
       collectionType: OmniCollection.walk,
       ref: 'stars',
     })
   }
 
   // Source 2 - Neighbourhoods
-  const neighbourhoodResults = filterPlaces(appCtx, term)
+  const neighbourhoodResults = filterDivisions(appCtx, term)
   neighbourhoodResults.forEach(([neighbourhoodRef, data]) => {
-    const count = appCtx.placeCtx.neighbourhoodFeatureCounts.get(neighbourhoodRef) ?? 0
+    // Broad regions remain searchable but do not crowd out the initial local preview.
+    if (!term.trim() && ['area', 'district', 'major_island'].includes(data.class ?? ''))
+      return
+    const count = appCtx.divisionCtx.divisionFeatureCounts.get(neighbourhoodRef) ?? 0
     if (count > 0) {
       results.push({
-        name: getI18n(data, 'name', appCtx.getUserPreferences()),
+        name: getDivisionName(data, appCtx.getUserPreferences()),
         count,
         collectionType: OmniCollection.neighbourhood,
         ref: neighbourhoodRef,
@@ -104,34 +109,17 @@ export async function searchAllAsync(
     }
   })
 
-  // Source 3 - Features
-  Array.from(appCtx.features.values())
-    .filter((feature): feature is FeatureFromCollection => {
-      // Search against the same locale-aware strings the user sees in the UI.
-      const title = getI18n(feature, 'title', appCtx.getUserPreferences())
-      const description = getI18n(feature, 'description', appCtx.getUserPreferences())
-      const displayAddress = getI18n(
-        feature,
-        'displayAddress',
-        appCtx.getUserPreferences(),
-      )
-      const lowerTerm = term.toLowerCase()
-      return (
-        (typeof title === 'string' && title.toLowerCase().includes(lowerTerm)) ||
-        (typeof description === 'string' &&
-          description.toLowerCase().includes(lowerTerm)) ||
-        (typeof displayAddress === 'string' &&
-          displayAddress.toLowerCase().includes(lowerTerm))
-      )
+  // Source 3 - Features: fresh cached previews are merged with bounded server pages.
+  const featureQuery = appCtx.resources.featureQueries.search
+  const features = featureQuery.search === term.trim() ? featureQuery.rows : []
+  features.forEach(feature => {
+    results.push({
+      name: getI18n(feature, 'title', searchPreferences),
+      count: 1,
+      collectionType: OmniCollection.feature,
+      ref: feature.id,
     })
-    .forEach(feature => {
-      results.push({
-        name: getI18n(feature, 'title', appCtx.getUserPreferences()),
-        count: 1,
-        collectionType: OmniCollection.feature,
-        ref: feature.id,
-      })
-    })
+  })
 
   return results
 }

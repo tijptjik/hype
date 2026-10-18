@@ -12,13 +12,17 @@ import FeatureCardViewerContent from './components/FeatureCardViewerContent.svel
 import * as FeatureCardActionPrimitive from './components/actions'
 import * as FeatureCardNewPrimitive from './components/newFeature'
 // CONTEXT
-import { getCardCtx } from '$lib/context/card.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx, setResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getCardCtx } from '#lib/context/card.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx, setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums'
+import { FeatureCardMode } from '#lib/enums.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 // LOCAL
 import { getFeatureCardLayout } from './featureCard.layout'
 import { getFeatureCardResponsiveWidth } from './featureCard.utils'
@@ -40,10 +44,13 @@ const responsiveCtx = (() => {
     return setResponsiveCtx()
   }
 })()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const mode = $derived(cardCtx.state.mode)
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 // The action row must fit the current app-main space, including any open panels.
-const isFeatureActionIconOnly = $derived(responsiveCtx.getEffectiveAppMainWidth() < 620)
+const isFeatureActionIconOnly = $derived(surfaceLayout.getEffectiveAppMainWidth() < 620)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
@@ -371,7 +378,7 @@ $effect(() => {
       <div
         bind:this={bottomSpacerElement}
         aria-hidden="true"
-        class="shrink-0 bg-black"
+        class="shrink-0 bg-(--theme-panel)"
         style={`height: ${layout.bottomSpacerPx}px;`}
       ></div>
     {/if}

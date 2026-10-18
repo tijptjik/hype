@@ -1,0 +1,556 @@
+import type { RemoteQuery } from '$app/server'
+import { error } from '@sveltejs/kit'
+
+// Register panel query families for bounded single-flight mutation refreshes.
+import './resources.remote'
+// REMOTE
+import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
+
+// I18N
+import { getLocale } from '#lib/i18n.js'
+// DRIZZLE
+import { eq } from 'drizzle-orm'
+// AUTHORIZATION
+import {
+  authorizeLayerDeleteForSubmission,
+  authorizeLayerListForContext,
+  authorizeLayerPublishForSubmission,
+  authorizeLayerReadForProbe,
+  authorizeLayerUpdateForSubmission,
+  ensureLayerCommandAllowed,
+  toAuthMessage,
+  toIssueDetailMessage,
+} from '#lib/api/services/authz/index.js'
+// SERVICES
+import {
+  getDuplicateValues,
+  requireValue,
+  toStableSignature,
+  toBooleanStateResponseShape,
+  toCreatedResponseShape,
+} from '#lib/api/services/index.js'
+import {
+  getLayerWithRelations,
+  createLayerFromSubmission,
+  toComparableLayerProperties,
+  toEntityResponseShape,
+  toListResponseShape,
+  toLayerProfile,
+  toLayerPrisms,
+  toLookupConditions,
+  toQueryConditions,
+  toRequestedListState,
+} from '#lib/api/services/layer.js'
+// DB
+import {
+  getLayer as loadLayer,
+  listLayers,
+  probeLayerForUpdate,
+  probeLayerQuery,
+  resolveLayerCommandProbe,
+  updateProperties,
+  updateI18n,
+  updateLayerArchivedStateById,
+  updateLayerByIdWithConcurrency,
+  updateLayerPublishedStateById,
+  cascadeLayerArchivedStateToDescendants,
+  cascadeLayerPublishedStateToDescendants,
+} from '#lib/db/services/layer.js'
+// SCHEMA
+import { layer } from '#lib/db/schema/index.js'
+import {
+  GetQueryParamsSchema,
+  LayerFormData,
+  ListQueryParamsSchema,
+  PublishLayerSchema,
+  RemoveLayerSchema,
+} from '#lib/db/zod/index.js'
+import type { EntityResponse, Id, ListResponse, RelationShape } from '#lib/types.js'
+import type {
+  LayerCommandProbe,
+  LayerDB,
+  LayerEntityByProfile,
+  LayerGetParamsByProfile,
+  LayerListByProfile,
+  LayerListParamsByProfile,
+  LayerProfile,
+} from '#lib/db/zod/schema/layer.types.js'
+
+import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// GET
+// - getLayers
+// - getLayer
+//
+// FORM
+// - layerForm
+//
+// COMMAND
+// - createLayer
+// - publishLayer
+// - archiveLayer
+
+/**
+ * Returns a role-aware layer collection for guarded remote callers.
+ *
+ * @param params - List query params validated by `ListQueryParamsSchema`.
+ * @param params.conditions - Optional typed filters for layer columns.
+ * @param params.prisms - Optional prism scope filters (`organisation`, `project`, `layer`).
+ * @param params.pagination - Optional pagination controls (`limit`, `offset`).
+ * @param params.sorting - Optional sorting controls.
+ * @param params.q - Optional text query applied by the DB list service.
+ * @param params.meta - Optional request metadata.
+ * @param params.meta.profile - Optional response profile (`list`, `card`, `detail`, `admin`).
+ * @returns A promise resolving to list response `{ data, limit, offset, totalCount }`.
+ * @remarks
+ * Authorization is evaluated against requested visibility state before query conditions
+ * are built. Prism filters and hub scope are then applied to keep list reads policy-safe.
+ */
+const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => {
+  const { db, user, userRoles, isAdminRequest, event } = ctx
+  const profile = toLayerProfile(params.meta?.profile, 'list')
+
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+
+  const queryParams = validateQueryParams<LayerDB>(
+    layer,
+    params.conditions as Partial<LayerDB> | undefined,
+  )
+  const requestedListState = toRequestedListState(queryParams as Partial<LayerDB>)
+  const normalizedPrisms = toLayerPrisms(params.prisms as never)
+
+  const listDecision = authorizeLayerListForContext({
+    user,
+    userRoles,
+    requestedListState,
+    resourceHubId: event.locals.hub.id ?? null,
+    isAdminRequest,
+  })
+  if (!listDecision.allowed) {
+    throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
+  }
+
+  const { conditions, filtersToApply } = toQueryConditions(
+    db,
+    user,
+    isAdminRequest,
+    queryParams,
+    userRoles,
+    normalizedPrisms,
+    event.locals.hub.id ?? null,
+  )
+  const result = await listLayers(
+    db,
+    getLayerWithRelations(profile, Boolean(user.superAdmin)) as RelationShape,
+    conditions,
+    event.locals.hub,
+    params.pagination,
+    params.sorting,
+    { q: params.q, filtersToApply, locale: getLocale() },
+  )
+
+  return toListResponseShape(result, profile)
+})
+
+export const getLayers = getLayersQuery as unknown as <P extends LayerProfile = 'list'>(
+  params: LayerListParamsByProfile<P>,
+) => RemoteQuery<ListResponse<LayerListByProfile<P>>>
+
+/**
+ * Returns a single role-aware layer record for guarded remote callers.
+ *
+ * @param params - Lookup params validated by `GetQueryParamsSchema`.
+ * @param params.ref - Layer identifier value.
+ * @param params.refKey - Ignored for this resource; layer reads are id-scoped.
+ * @param params.meta - Optional request metadata.
+ * @param params.meta.profile - Optional response profile (`list`, `card`, `detail`, `admin`).
+ * @returns A promise resolving to `{ data }`, where `data` is the matched layer or `null`.
+ * @remarks
+ * Performs a minimal probe first (`id`, `organisationId`, `projectId`, `hubId`,
+ * `isPublished`, `isArchived`) so authorization can run on persisted state before loading
+ * the full relation shape.
+ */
+const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
+  const { db, user, userRoles, isAdminRequest, event } = ctx
+  const profile = toLayerProfile(params.meta?.profile, 'detail')
+
+  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+
+  const normalizedParams = { ...params, refKey: 'id' as const }
+  const probe = await probeLayerQuery(db, normalizedParams)
+
+  if (!probe) {
+    return toEntityResponseShape(null, profile)
+  }
+
+  const readDecision = authorizeLayerReadForProbe({
+    user,
+    userRoles,
+    isAdminRequest,
+    probe,
+  })
+  if (!readDecision.allowed) {
+    throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
+  }
+
+  const queryParams = validateQueryParams<LayerDB>(
+    layer,
+    toLookupConditions(normalizedParams),
+    {
+      isPublished: probe.isPublished,
+      isArchived: probe.isArchived,
+    } as Partial<LayerDB>,
+  )
+  const { conditions } = toQueryConditions(
+    db,
+    user,
+    isAdminRequest,
+    queryParams,
+    userRoles,
+    undefined,
+    event.locals.hub.id ?? null,
+  )
+  const result = await loadLayer(
+    db,
+    getLayerWithRelations(profile, Boolean(user.superAdmin)) as RelationShape,
+    conditions,
+    event.locals.hub,
+  )
+
+  return toEntityResponseShape(result ?? null, profile)
+})
+
+export const getLayer = getLayerQuery as unknown as <P extends LayerProfile = 'detail'>(
+  params: LayerGetParamsByProfile<P>,
+) => RemoteQuery<EntityResponse<LayerEntityByProfile<P>>>
+
+/**
+ * Creates or updates a layer and related records from remote form payload.
+ *
+ * @param input - Raw form payload parsed by `LayerFormData`.
+ * @returns A promise resolving to `{ data: { id, modifiedAt } }`.
+ * @remarks
+ * - `mode` must be explicitly `create` or `update`.
+ * - `create` submissions cannot include `meta.id`.
+ * - `update` submissions must include `meta.id` and pass optimistic concurrency via
+ *   `meta.updatedAt`.
+ * - Field-level authorization is evaluated against a computed changed-field subset to
+ *   avoid requiring unrelated permissions.
+ */
+export const layerForm = guardedForm('unchecked', async (input, ctx) => {
+  const params = LayerFormData.parse(input)
+  const { db, user, userRoles, invalid } = ctx
+  const issue = ctx.issue
+  const { meta, data } = params
+  const layerId = meta?.id?.trim()
+  const mode = meta?.mode
+  const isSupportedMode = mode === 'create' || mode === 'update'
+
+  if (!isSupportedMode) {
+    invalid(issue(toIssueDetailMessage('INVALID_MODE')))
+  }
+
+  const submittedProperties = (
+    Array.isArray(data.properties) ? data.properties : []
+  ) as Array<{
+    propertyId: string
+    isVisible?: boolean
+    isUserContributable?: boolean
+  }>
+
+  const hasSubmittedProperties = submittedProperties.length > 0
+  const duplicateSubmittedPropertyIds = getDuplicateValues(
+    submittedProperties
+      .map(property => property?.propertyId)
+      .filter(
+        (propertyId): propertyId is string =>
+          typeof propertyId === 'string' && propertyId.trim().length > 0,
+      ),
+  )
+
+  if (duplicateSubmittedPropertyIds.length > 0) {
+    invalid(
+      issue.data.properties(
+        `INVALID: Duplicate properties submitted (${Array.from(new Set(duplicateSubmittedPropertyIds)).join(', ')})`,
+      ),
+    )
+  }
+
+  if (mode === 'create' && layerId) {
+    invalid(issue('CREATE_MODE_CANNOT_INCLUDE_ID'))
+  }
+  if (mode === 'update' && !layerId) {
+    invalid(issue('MISSING_LAYER_ID'))
+  }
+
+  if (mode === 'create') {
+    const created = await createLayerFromSubmission({
+      db,
+      user,
+      userRoles,
+      submittedData: data,
+      submittedProperties,
+      onInvalid: message => invalid(issue(toIssueDetailMessage(message))),
+      onNotFound: message => invalid(issue(message)),
+      onForbidden: message => invalid(issue(toIssueDetailMessage(message))),
+      onInvalidProperties: message => invalid(issue.data.properties(message)),
+    })
+
+    return toCreatedResponseShape(created)
+  }
+
+  const targetLayerId = requireValue(layerId, () =>
+    invalid(issue('MISSING_LAYER_ID')),
+  ) as Id
+  const current = requireValue(await probeLayerForUpdate(db, targetLayerId), () =>
+    invalid(issue('LAYER_NOT_FOUND')),
+  )
+
+  // Layer updates do not support reparenting; reject a caller-controlled scope change.
+  if (
+    data.projectId !== current.projectId ||
+    (data.organisationId && data.organisationId !== current.organisationId)
+  ) {
+    invalid(issue(toIssueDetailMessage('FIELD_FORBIDDEN')))
+  }
+
+  const resolvedOrganisationId = current.organisationId
+
+  // Authorize from the scalar probe before loading the relation-heavy admin shape.
+  const submittedDataForUpdate: Record<string, unknown> = { i18n: data.i18n }
+  // Property snapshots require the persisted relation comparison below; unchanged
+  // properties must not turn a translation edit into a restricted field update.
+  if (
+    toStableSignature(data.metadata ?? {}) !== toStableSignature(current.metadata ?? {})
+  ) {
+    submittedDataForUpdate.metadata = data.metadata
+  }
+  if (Boolean(data.isDefaultVisible) !== Boolean(current.isDefaultVisible)) {
+    submittedDataForUpdate.isDefaultVisible = data.isDefaultVisible
+  }
+  const updateDecision = authorizeLayerUpdateForSubmission({
+    user,
+    userRoles,
+    resource: {
+      id: current.id,
+      organisationId: current.organisationId,
+      projectId: current.projectId,
+      hubId: current.hubId,
+    },
+    submittedData: submittedDataForUpdate,
+  })
+  if (!updateDecision.allowed) {
+    invalid(issue(toIssueDetailMessage(updateDecision.code ?? 'INSUFFICIENT_ROLE')))
+  }
+
+  const currentWithRelations = requireValue(
+    await loadLayer(
+      db,
+      getLayerWithRelations('admin', Boolean(user.superAdmin)) as RelationShape,
+      [eq(layer.id, current.id)],
+      {
+        ...ctx.event.locals.hub,
+        isSuperAdmin: user.superAdmin || false,
+        isAdminRequest: ctx.isAdminRequest,
+      },
+    ),
+    () => invalid(issue('LAYER_NOT_FOUND')),
+  )
+
+  const currentEntity = requireValue(
+    (await toEntityResponseShape(currentWithRelations, 'admin')).data,
+    () => invalid(issue('LAYER_NOT_FOUND')),
+  )
+  const propertiesChanged =
+    hasSubmittedProperties &&
+    toStableSignature(toComparableLayerProperties(submittedProperties)) !==
+      toStableSignature(toComparableLayerProperties(currentEntity.properties ?? []))
+
+  // Authorize changed relation fields before any part of the submission is written.
+  if (propertiesChanged) {
+    const propertyDecision = authorizeLayerUpdateForSubmission({
+      user,
+      userRoles,
+      resource: {
+        id: current.id,
+        organisationId: current.organisationId,
+        projectId: current.projectId,
+        hubId: current.hubId,
+      },
+      submittedData: { ...submittedDataForUpdate, properties: submittedProperties },
+    })
+    if (!propertyDecision.allowed) {
+      invalid(issue(toIssueDetailMessage(propertyDecision.code ?? 'INSUFFICIENT_ROLE')))
+    }
+  }
+
+  const updatedAt = requireValue(meta?.updatedAt, () =>
+    invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
+  )
+  if (updatedAt !== current.modifiedAt) {
+    invalid(issue(toIssueDetailMessage('STALE_WRITE')))
+  }
+
+  const persisted = requireValue(
+    await updateLayerByIdWithConcurrency(db, {
+      id: current.id as Id,
+      updatedAt,
+      data: {
+        organisationId: resolvedOrganisationId,
+        projectId: data.projectId,
+        metadata: data.metadata,
+        isDefaultVisible: data.isDefaultVisible,
+      },
+    }),
+    () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
+  )
+
+  await updateI18n(db, data.i18n, current.id)
+
+  if (propertiesChanged) {
+    await updateProperties(db, current.id, submittedProperties)
+  }
+
+  return toCreatedResponseShape(persisted)
+})
+
+/**
+ * Toggles layer publish state after role-based authorization.
+ *
+ * @param params - Command payload validated by `PublishLayerSchema`.
+ * @param params.id - Target layer id.
+ * @param params.state - Next publish state.
+ * @returns A promise resolving to `{ data: { id, isPublished } }`.
+ */
+export const publishLayer = guardedCommand(PublishLayerSchema, async (params, ctx) => {
+  const { db, user, userRoles } = ctx
+  const layerId = params.id as Id
+
+  const probed = await resolveLayerCommandProbe(db, layerId, () => {
+    throw error(404, 'LAYER_NOT_FOUND')
+  })
+
+  ensureLayerCommandAllowed(
+    authorizeLayerPublishForSubmission({
+      user,
+      userRoles,
+      resource: {
+        id: probed.id,
+        organisationId: probed.organisationId,
+        projectId: probed.projectId,
+        hubId: probed.hubId,
+      },
+    }),
+    toIssueDetailMessage,
+  )
+
+  const persisted = requireValue(
+    await updateLayerPublishedStateById(db, {
+      id: layerId,
+      state: params.state,
+      publisherId: user.id,
+    }),
+    () => {
+      throw error(404, 'LAYER_NOT_FOUND')
+    },
+  )
+
+  await cascadeLayerPublishedStateToDescendants(db, { layerId, state: params.state })
+
+  return toBooleanStateResponseShape(persisted, 'isPublished')
+})
+
+/**
+ * Toggles layer archived state after role-based authorization.
+ *
+ * @param params - Command payload validated by `RemoveLayerSchema`.
+ * @param params.id - Target layer id.
+ * @param params.state - Next archived state.
+ * @returns A promise resolving to `{ data: { id, isArchived } }`.
+ */
+export const archiveLayer = guardedCommand(RemoveLayerSchema, async (params, ctx) => {
+  const { db, user, userRoles } = ctx
+  const layerId = params.id as Id
+
+  const probed = (await resolveLayerCommandProbe(db, layerId, () => {
+    throw error(404, 'LAYER_NOT_FOUND')
+  })) as LayerCommandProbe
+
+  ensureLayerCommandAllowed(
+    authorizeLayerDeleteForSubmission({
+      user,
+      userRoles,
+      resource: {
+        id: probed.id,
+        organisationId: probed.organisationId,
+        projectId: probed.projectId,
+        hubId: probed.hubId,
+      },
+    }),
+    toIssueDetailMessage,
+  )
+
+  const persisted = requireValue(
+    await updateLayerArchivedStateById(db, { id: layerId, state: params.state }),
+    () => {
+      throw error(404, 'LAYER_NOT_FOUND')
+    },
+  )
+
+  await cascadeLayerArchivedStateToDescendants(db, { layerId, state: params.state })
+
+  return toBooleanStateResponseShape(persisted, 'isArchived')
+})
+
+/**
+ * Creates a layer from a programmatic remote command payload.
+ *
+ * @param input - Layer form-compatible create payload parsed by `LayerFormData`.
+ * @returns A promise resolving to `{ data: { id, modifiedAt } }`.
+ * @remarks
+ * This mirrors the create branch of `layerForm`, but is callable from non-form import
+ * flows that build object payloads directly rather than submitting an attached DOM form.
+ */
+export const createLayer = guardedCommand(LayerFormData, async (params, ctx) => {
+  const { db, user, userRoles } = ctx
+  const { meta, data } = params
+
+  if (meta?.mode !== 'create') {
+    throw error(400, toIssueDetailMessage('INVALID_MODE'))
+  }
+  if (meta?.id?.trim()) {
+    throw error(400, 'CREATE_MODE_CANNOT_INCLUDE_ID')
+  }
+
+  const submittedProperties = (
+    Array.isArray(data.properties) ? data.properties : []
+  ) as Array<{
+    propertyId: string
+    isVisible?: boolean
+    isUserContributable?: boolean
+  }>
+
+  const created = await createLayerFromSubmission({
+    db,
+    user,
+    userRoles,
+    submittedData: data,
+    submittedProperties,
+    onInvalid: message => {
+      throw error(400, toIssueDetailMessage(message))
+    },
+    onNotFound: message => {
+      throw error(404, message)
+    },
+
+    onForbidden: message => {
+      throw error(403, toAuthMessage(message))
+    },
+  })
+
+  return toCreatedResponseShape(created)
+})

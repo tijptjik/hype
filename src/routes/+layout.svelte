@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { onMount, untrack } from 'svelte'
+import { setThemeModel } from '#lib/themes/theme.svelte.js'
 // SVELTEKIT
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -8,143 +9,60 @@ import { page } from '$app/state'
 import { watch } from 'runed'
 import { toast } from 'svelte-sonner'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // AUTH
-import { signIn, useSession } from '$lib/auth/client'
+import { signIn, useSession } from '#lib/auth/client.js'
+import { normalizeTelephone } from '#lib/utils/telephone.js'
+import { DEV_PERSONAS } from '#lib/auth/dev-personas.js'
 import {
   bootstrapAnonymousSession,
   consumeSignOutIntent,
   isAuthEntryPath,
   shouldBootstrapAnonymous,
-} from '$lib/auth/bootstrap'
+} from '#lib/auth/bootstrap.js'
 // DEBUG
-import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
+import { logMarkerBootstrap } from '#lib/debug/markerBootstrap.js'
 import {
   UPGRADE_ACCOUNT_EVENT,
   isGuestUser,
   type UpgradeReason,
   toSafeReturnPath,
-} from '$lib/auth/upgrade'
+} from '#lib/auth/upgrade.js'
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // API
-import { getMapResourceDeepLinkLayerIds } from '$lib/client/services/mapResourceDeepLink'
 // CONTEXT
-import { setAppCtx } from '$lib/context/app.svelte'
-import { setPlaceCtx } from '$lib/context/place.svelte'
-import { setResponsiveCtx } from '$lib/context/responsive.svelte'
+import { setRootCTX } from '#lib/context/root.svelte.js'
+import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
-import App from '$lib/bits/patterns/layout/app/App.svelte'
-import UpgradeAccountDialog from '$lib/bits/patterns/auth/UpgradeAccountDialog.svelte'
-// MAPLIBRE
-import { ensureMapLibreStyles, loadMapLibre } from '$lib/map/maplibreAssets'
-import { monkeyPatchMapLibre } from '$lib/map/maplibrePreload'
+import App from '#lib/bits/patterns/layout/app/App.svelte'
+import UpgradeAccountDialog from '#lib/bits/patterns/auth/UpgradeAccountDialog.svelte'
 // STYLES
-import '$lib/styles/app.css'
+import '#lib/styles/app.css'
 // CONSTANTS
-import { FirstClassResource } from '$lib/enums'
-import { MOBILE_MAX_WIDTH } from '$lib/constants'
 // TYPES
-import type { QueryClient } from '@tanstack/svelte-query'
 import type { LayoutData, LayoutProps } from './$types'
-import type { SessionUser } from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+import type { SessionUser } from '#lib/types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 
 // PROPS
 let { children, data }: LayoutProps = $props()
 
 // CONTEXT
-const queryClient = $derived(
-  (
-    data as LayoutData & {
-      queryClient: QueryClient
-    }
-  ).queryClient,
-)
 
 const session = useSession()
 const responsive = setResponsiveCtx()
 let hasMounted = false
+let isBootstrapping = false
 let pendingAuthReinit: number | null = null
 let bootstrapError = $state<string | null>(null)
 let isUpgradeOpen = $state(false)
 let upgradeReason = $state<UpgradeReason>('account')
 let upgradeReturnTo = $state('/')
 
-/**
- * Determines whether the current surface should fetch feature data during bootstrap.
- *
- * @returns Whether the initial feature collection should be requested.
- * @remarks Screensaver resolves an explicit layer target after the hierarchy is ready,
- * so it must never briefly fetch or render the hub's default datasets.
- */
-function shouldLoadInitialFeatures(): boolean {
-  return page.url.pathname !== '/screensaver'
-}
-
-/**
- * Determines whether the current route can apply a map project or layer deep link.
- *
- * @returns Whether the route renders the public map shell.
- */
-function canApplyMapResourceDeepLink(): boolean {
-  return page.url.pathname === '/' || page.url.pathname.startsWith('/features/')
-}
-
-/**
- * Applies an initial map resource target and removes the consumed query parameters.
- *
- * @returns Nothing after the target selection and feature refresh settle.
- * @remarks This intentionally runs only at bootstrap. Subsequent prism changes do
- * not update the URL, so shared links establish an initial map state without
- * turning prism selection into continuously synchronized navigation state.
- */
-async function applyInitialMapResourceDeepLink(): Promise<void> {
-  if (!canApplyMapResourceDeepLink()) return
-
-  const selectedLayerIds = getMapResourceDeepLinkLayerIds(
-    page.url.searchParams,
-    appCtx.state.resources.layer,
-    appCtx.state.resources.project,
-  )
-  if (selectedLayerIds === null) return
-
-  // Replace the initial hub selection with the explicit map resource target.
-  appCtx.state.prisms.layer = selectedLayerIds
-
-  try {
-    if (selectedLayerIds.length === 0) {
-      // Reconcile filters without replacing the explicit empty selection.
-      await appCtx.postLayerMutation(false, false)
-      // Remove bootstrap features when an explicit target could not resolve.
-      appCtx.setSortedResourceState(FirstClassResource.feature, [])
-    } else {
-      await appCtx.postLayerMutation(false)
-      await appCtx.refreshFeatures(false)
-    }
-  } catch (error) {
-    console.error('[Map deep link] Failed to apply map resource target:', error)
-  } finally {
-    // Consume targeting parameters even if an optional feature refresh fails.
-    const cleanUrl = new URL(page.url)
-    cleanUrl.searchParams.delete('layerId')
-    cleanUrl.searchParams.delete('projectId')
-    cleanUrl.searchParams.delete('project')
-    await goto(`${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`, {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
-    })
-  }
-}
-
-// Set AppCtx in context
-const appCtx = setAppCtx(
-  queryClient,
-  setPlaceCtx(),
-  $session.data?.user as SessionUser | null,
-  responsive,
-)
+// Shared foundations are created once; surface layouts own resource mechanics.
+setThemeModel()
+const root = setRootCTX(responsive)
 
 function clearPendingAuthReinit(): void {
   if (pendingAuthReinit !== null) {
@@ -156,9 +74,7 @@ function clearPendingAuthReinit(): void {
 /** Rebuilds user-scoped application data after a confirmed authentication change. */
 async function refreshAppForSessionUser(user: SessionUser): Promise<void> {
   clearPendingAuthReinit()
-  appCtx.setUser(user)
-  appCtx.isInitialised = false
-  await appCtx.init(user.id, shouldLoadInitialFeatures())
+  root.sync(user, root.hub)
 }
 
 // Reinitialize the app context after an auth identity change, including logout.
@@ -190,7 +106,7 @@ async function confirmAccountUpgrade(): Promise<void> {
 $effect(() => {
   const rootHub = (data as LayoutData).hub as HubOptsExtended | undefined
   if (rootHub) {
-    appCtx.setHub(rootHub)
+    untrack(() => root.sync(root.user, rootHub))
   }
 })
 
@@ -228,8 +144,6 @@ const scheduleResponsiveSync = (): void => {
 
 // Update mobile state when window width changes
 $effect(() => {
-  appCtx.isMobile = windowWidth < MOBILE_MAX_WIDTH
-
   if (typeof window === 'undefined') {
     return
   }
@@ -237,14 +151,22 @@ $effect(() => {
   scheduleResponsiveSync()
 })
 
-// Load maplibre globally
 async function initializeAuthenticatedApp(): Promise<void> {
   logMarkerBootstrap('application bootstrap started', {
     pathname: page.url.pathname,
     hasSessionUser: Boolean($session.data?.user),
     isSessionPending: $session.isPending,
   })
-  if (shouldBootstrapAnonymous(page.url.pathname)) {
+
+  // Publish the server-resolved hub before surfaces start their own resource passes.
+  const rootHub = (data as LayoutData).hub as HubOptsExtended | undefined
+  if (rootHub)
+    root.sync(($session.data?.user as SessionUser | undefined) ?? null, rootHub)
+
+  // Component previews share identity foundations but do not need a guest account.
+  const isStudio =
+    page.url.pathname === '/themes' || page.url.pathname.startsWith('/themes/')
+  if (!isStudio && shouldBootstrapAnonymous(page.url.pathname)) {
     await bootstrapAnonymousSession({
       getSession: () => ({
         isPending: $session.isPending,
@@ -259,25 +181,20 @@ async function initializeAuthenticatedApp(): Promise<void> {
   }
 
   const currentUser = $session.data?.user
-  appCtx.setUser((currentUser as SessionUser | undefined) ?? null)
-  await appCtx.init(currentUser?.id ?? null, shouldLoadInitialFeatures())
-  if (!currentUser && isAuthEntryPath(page.url.pathname)) {
-    void appCtx.bootstrapPublicMapResources(shouldLoadInitialFeatures())
-  }
-  await applyInitialMapResourceDeepLink()
-  logMarkerBootstrap('application bootstrap finished', {
-    hasSessionUser: Boolean(currentUser),
-    isAnonymous: currentUser?.isAnonymous ?? null,
-    appInitialised: appCtx.isInitialised,
-  })
+  root.sync((currentUser as SessionUser | undefined) ?? null, rootHub ?? null)
+  root.ready = true
 }
 
 async function retryBootstrap(): Promise<void> {
+  if (isBootstrapping) return
+  isBootstrapping = true
   bootstrapError = null
   try {
     await initializeAuthenticatedApp()
   } catch (error) {
     bootstrapError = error instanceof Error ? error.message : 'Guest session failed'
+  } finally {
+    isBootstrapping = false
   }
 }
 
@@ -290,18 +207,19 @@ async function handleRequestedUpgrade(): Promise<void> {
   upgradeReturnTo = toSafeReturnPath(page.url.searchParams.get('returnTo'))
   isUpgradeOpen = true
 
-  const cleanUrl = new URL(page.url)
+  const cleanUrl = new URL(page.url.href)
   cleanUrl.searchParams.delete('upgrade')
   cleanUrl.searchParams.delete('returnTo')
   await goto(`${cleanUrl.pathname}${cleanUrl.search}`, {
-    replaceState: true,
-    keepFocus: true,
-    noScroll: true,
+    replace: true,
+    reset: false,
   })
 }
 
 onMount(() => {
+  // Shared lifecycle runs on every entry route; only the public surface loads map resources.
   hasMounted = true
+  let disposed = false
 
   const handleUpgradeRequest = (event: Event): void => {
     const detail = (event as CustomEvent<{ reason?: UpgradeReason; returnTo?: string }>)
@@ -313,34 +231,20 @@ onMount(() => {
   window.addEventListener(UPGRADE_ACCOUNT_EVENT, handleUpgradeRequest)
 
   void (async () => {
-    if (!appCtx.isInitialised) {
+    if (!root.ready) {
       await retryBootstrap()
     }
 
     await handleRequestedUpgrade()
+    if (disposed) return
 
     scheduleResponsiveSync()
     window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
     window.visualViewport?.addEventListener('scroll', scheduleResponsiveSync)
-
-    try {
-      // To minimize the payload in Cloudflare, mapping dependencies load client-side.
-      const [, maplibreSource] = await Promise.all([
-        ensureMapLibreStyles(),
-        loadMapLibre(),
-      ])
-      const maplibre = monkeyPatchMapLibre(maplibreSource)
-      ;(globalThis as typeof globalThis & { maplibregl: typeof maplibre }).maplibregl =
-        maplibre
-
-      appCtx.maplibre = maplibre
-      appCtx.isMaplibreLoaded = true
-    } catch (error) {
-      console.error('Failed to load maplibre', error)
-    }
   })()
 
   return () => {
+    disposed = true
     clearPendingAuthReinit()
 
     if (responsiveSyncFrame !== 0) {
@@ -354,61 +258,37 @@ onMount(() => {
   }
 })
 
-// Determine if we're in admin mode based on the route
-const isAdminMode = $derived(page.route.id?.startsWith('/admin') ?? false)
 const localeKey = $derived(getLocaleKey())
 const isShelllessRoute = $derived(
   Boolean(
-    page.route.id?.startsWith('/policy') || page.route.id?.startsWith('/account'),
+    page.url.pathname === '/themes' ||
+      page.url.pathname.startsWith('/themes/') ||
+      page.route.id?.startsWith('/policy') ||
+      page.route.id?.startsWith('/account'),
   ),
 )
-// Sign-in and sign-up provide a map-backed landing surface of their own. Render it
-// immediately instead of waiting for account or public map resources to finish loading.
-const isAuthEntryRoute = $derived(isAuthEntryPath(page.url.pathname))
-const isAppReady = $derived(isAuthEntryRoute || appCtx.isInitialised)
+// Each surface renders its own pending state; shared metadata never waits for resource loading.
+const isAppReady = true
 const shelllessClass = $derived(
   cx(
-    'bits-theme min-h-screen w-full overflow-y-auto bg-black',
+    'bits-theme min-h-screen w-full overflow-y-auto bg-canvas text-base-content',
     localeKey === 'zhHant' ? 'font-(--font-hant)' : '',
     localeKey === 'zhHans' ? 'font-(--font-hans)' : '',
   ),
 )
-let lastIsAdminMode = $state<boolean | null>(null)
-
-// Handle keydown listeners based on admin mode
+// A root mounted on policy/studio routes may later enter the public application.
 watch(
-  () => isAdminMode,
-  newIsAdminMode => {
-    newIsAdminMode
-      ? appCtx.unregisterKeydownHandlers()
-      : appCtx.registerKeydownHandlers()
-  },
-)
-
-// Reset shared resource state whenever navigation crosses the app/admin boundary.
-watch(
-  () => isAdminMode,
-  newIsAdminMode => {
-    if (!hasMounted) {
-      lastIsAdminMode = newIsAdminMode
-      return
-    }
-
-    if (lastIsAdminMode === null) {
-      lastIsAdminMode = newIsAdminMode
-      return
-    }
-
-    if (lastIsAdminMode === newIsAdminMode) {
-      return
-    }
-
-    lastIsAdminMode = newIsAdminMode
-    appCtx.resetSharedResourceCachesForSurfaceSwitch()
-
-    if (!newIsAdminMode) {
-      appCtx.restoreDefaultQueryMap()
-      void appCtx.reloadAppSurfaceResources()
+  () => page.url.pathname,
+  pathname => {
+    const isStudio = pathname === '/themes' || pathname.startsWith('/themes/')
+    if (
+      hasMounted &&
+      !isBootstrapping &&
+      !root.user &&
+      !isStudio &&
+      shouldBootstrapAnonymous(pathname)
+    ) {
+      void retryBootstrap()
     }
   },
 )
@@ -422,15 +302,32 @@ watch(
       isAnonymous: newUser?.isAnonymous ?? null,
       hasMounted,
     })
-    if (!hasMounted) {
+    if (!hasMounted || isBootstrapping) {
+      return
+    }
+
+    // Client-side sign-in must reach the same server-enforced completion gate as OAuth navigation.
+    if (
+      newUser &&
+      newUser.isAnonymous !== true &&
+      root.hub?.code === 'breadline' &&
+      page.url.pathname !== '/account/phone' &&
+      !page.url.pathname.startsWith('/policy/') &&
+      !normalizeTelephone(newUser.telephone ?? null)
+    ) {
+      const completion = new URL('/account/phone', window.location.origin)
+      completion.searchParams.set('returnTo', `${page.url.pathname}${page.url.search}`)
+      if (import.meta.env.DEV && page.url.searchParams.get('hub') === 'breadline')
+        completion.searchParams.set('hub', 'breadline')
+      window.location.assign(completion.pathname + completion.search)
       return
     }
 
     // Only reinitialize if user actually changed (not just session refresh)
-    const currentUserId = appCtx.user?.id
+    const currentUserId = root.user?.id
     const newUserId = newUser?.id
 
-    const previousUser = appCtx.user
+    const previousUser = root.user
     const isGuestPromotion =
       Boolean(previousUser && isGuestUser(previousUser)) &&
       newUser?.isAnonymous !== true
@@ -444,14 +341,17 @@ watch(
     } else if (!newUser && currentUserId) {
       if (consumeSignOutIntent()) {
         // Let an explicit sign-out reach the sign-in page before another guest is created.
-        void appCtx.setUser(null)
-        appCtx.isInitialised = false
+        root.sync(null, root.hub)
         logMarkerBootstrap('intentional sign-out suppressed automatic guest bootstrap')
         return
       }
 
       // Session expiry and other passive logout paths converge on a fresh guest session.
+      root.sync(null, root.hub)
       void retryBootstrap()
+    } else if (newUser) {
+      // Role changes on the same account still invalidate incompatible resource scopes.
+      root.sync(newUser as SessionUser, root.hub)
     }
   },
 )
@@ -482,7 +382,6 @@ watch(
   <div class={shelllessClass}>{@render children()}</div>
 {:else}
   <App
-    {queryClient}
     isReady={isAppReady}
     {localeKey}
     {title}
@@ -517,3 +416,13 @@ watch(
   returnTo={upgradeReturnTo}
   onAccountReady={confirmAccountUpgrade}
 />
+
+{#if data.devPersona &&
+  ($session.isPending || $session.data?.user?.id === DEV_PERSONAS[data.devPersona].id)}
+  <div
+    role="status"
+    class="fixed bottom-2 left-2 z-[1200] rounded-md border border-amber-900 bg-amber-200 px-3 py-1 text-xs font-semibold text-amber-950 shadow-lg"
+  >
+    Local development: {data.devPersona === 'admin' ? 'Admin' : 'Ordinary user'}
+  </div>
+{/if}

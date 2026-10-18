@@ -1,7 +1,25 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('$lib/api/server/remote', () => {
+const reviewMocks = vi.hoisted(() => ({
+  loadTask: vi.fn(),
+  probeTaskQuery: vi.fn(),
+  authorizeTaskReadForProbe: vi.fn(),
+  updateTask: vi.fn(),
+  archiveImages: vi.fn(),
+  publishImages: vi.fn(),
+  commitTaskImageReview: vi.fn(),
+  commitTaskFeatureReview: vi.fn(),
+  commitTaskFeatureDraftFinalization: vi.fn(),
+  probeFeatureForUpdate: vi.fn(),
+  probeLayerForUpdate: vi.fn(),
+  updateFeatureByIdWithConcurrency: vi.fn(),
+  assertUserContributedFeatureDraftIsSubmittable: vi.fn(),
+  updateUserContributedFeatureDraft: vi.fn(),
+  createTaskWithDependencies: vi.fn(),
+}))
+
+vi.mock('#lib/api/server/guarded.js', () => {
   const withRemoteMetadata = (handler: unknown, type: 'command' | 'form' | 'query') =>
     Object.assign(handler as object, {
       __: { type, id: '', name: '' },
@@ -25,12 +43,12 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/i18n', () => ({ getLocale: vi.fn() }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
-vi.mock('$lib/api', () => ({ getValidQueryParams: vi.fn() }))
-vi.mock('$lib/api/services/authz', () => ({}))
-vi.mock('$lib/db/schema', () => ({ task: {} }))
-vi.mock('$lib/db/zod/schema/task', () => ({
+vi.mock('#lib/i18n.js', () => ({ getLocale: vi.fn() }))
+vi.mock('#lib/api/index.js', () => ({ getValidQueryParams: vi.fn() }))
+vi.mock('#lib/api/services/authz/index.js', () => ({
+  authorizeTaskReadForProbe: reviewMocks.authorizeTaskReadForProbe,
+}))
+vi.mock('#lib/db/zod/schema/task.js', () => ({
   BeginMissingReportDraftSchema: {},
   BeginNewFeatureDraftSchema: {},
   BeginNewPhotosDraftSchema: {},
@@ -43,11 +61,14 @@ vi.mock('$lib/db/zod/schema/task', () => ({
   SubmitNewFeatureSchema: {},
   SubmitNewPhotosSchema: {},
 }))
-vi.mock('$lib/db/services/task', () => ({}))
-vi.mock('$lib/db/services/feature', () => ({}))
-vi.mock('$lib/db/services/layer', () => ({}))
-vi.mock('$lib/api/services/feature', () => ({}))
-vi.mock('$lib/api/services/task', () => ({}))
+vi.mock('#lib/db/services/task.js', () => reviewMocks)
+vi.mock('#lib/db/services/feature.js', () => reviewMocks)
+vi.mock('#lib/db/services/layer.js', () => reviewMocks)
+vi.mock('#lib/api/services/feature.js', () => reviewMocks)
+vi.mock('#lib/api/services/task.js', () => ({
+  getTaskWithRelations: vi.fn(),
+  toEntityResponseShape: vi.fn(task => task),
+}))
 
 import {
   beginMissingReportDraft,
@@ -57,10 +78,36 @@ import {
   submitMissingReport,
   submitNewFeature,
   submitNewPhotos,
-} from '$lib/api/server/tasks.remote'
+  reviewTask,
+  reassignTaskLayer,
+} from '#lib/api/tasks.remote.js'
 
 const guestContext = { user: { isAnonymous: true } }
 const incompleteSessionContext = { user: {} }
+const editDraftHandler = beginNewFeatureDraft as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
+const finalizeHandler = finalizeTaskDraft as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
+const reviewHandler = reviewTask as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
+const reassignHandler = reassignTaskLayer as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
+const submitNewPhotosHandler = submitNewPhotos as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
+const submitNewFeatureHandler = submitNewFeature as unknown as (
+  input: unknown,
+  ctx: unknown,
+) => Promise<unknown>
 const contributionHandlers = [
   beginMissingReportDraft,
   beginNewFeatureDraft,
@@ -70,6 +117,47 @@ const contributionHandlers = [
   submitNewFeature,
   submitNewPhotos,
 ] as Array<(input: unknown, ctx: unknown) => Promise<unknown>>
+
+const publicContributionScope = {
+  featureId: 'feature',
+  featureLayerId: 'layer',
+  featureIsPublished: true,
+  featureIsArchived: false,
+  featureIsDraft: false,
+  layerId: 'layer',
+  layerProjectId: 'project',
+  layerOrganisationId: 'org',
+  layerIsPublished: true,
+  layerIsArchived: false,
+  projectId: 'project',
+  projectOrganisationId: 'org',
+  projectIsPublished: true,
+  projectIsArchived: false,
+  organisationId: 'org',
+  organisationIsPublished: true,
+  organisationIsArchived: false,
+}
+
+const createPublicScopeDb = (task: unknown) => {
+  const scopeQuery = {
+    from: vi.fn(),
+    innerJoin: vi.fn(),
+    where: vi.fn(),
+    limit: vi.fn().mockResolvedValue([publicContributionScope]),
+  }
+  scopeQuery.from.mockReturnValue(scopeQuery)
+  scopeQuery.innerJoin.mockReturnValue(scopeQuery)
+  scopeQuery.where.mockReturnValue(scopeQuery)
+
+  return {
+    select: vi.fn().mockReturnValue(scopeQuery),
+    query: {
+      task: {
+        findFirst: vi.fn().mockResolvedValue(task),
+      },
+    },
+  }
+}
 
 describe('task contribution account guard', () => {
   it('rejects every contribution path for an anonymous guest', async () => {
@@ -83,10 +171,439 @@ describe('task contribution account guard', () => {
 
   it('rejects an incomplete session rather than treating it as an account', async () => {
     await expect(
-      beginNewPhotosDraft({}, incompleteSessionContext),
+      Reflect.apply(beginNewPhotosDraft, undefined, [{}, incompleteSessionContext]),
     ).rejects.toMatchObject({
       status: 403,
       message: 'ACCOUNT_REQUIRED',
     })
+  })
+})
+
+describe('completed task write guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    reviewMocks.probeTaskQuery.mockResolvedValue({
+      id: 'task',
+      projectId: 'project',
+      organisationId: 'org',
+      resourceHubId: 'hub',
+    })
+    reviewMocks.commitTaskImageReview.mockResolvedValue(true)
+    reviewMocks.commitTaskFeatureReview.mockResolvedValue(true)
+    reviewMocks.authorizeTaskReadForProbe.mockReturnValue({ allowed: true })
+  })
+
+  it.each(['newFeature', 'newPhoto', 'reportedMissing'])(
+    'rejects another review of a completed %s task before side effects',
+    async type => {
+      reviewMocks.loadTask.mockResolvedValue({ id: 'task', type, isReviewed: true })
+      await expect(
+        reviewHandler(
+          { id: 'task', action: 'reject' } as never,
+          {
+            user: {},
+            event: { locals: { hub: {} } },
+          } as never,
+        ),
+      ).rejects.toMatchObject({ status: 409, message: 'TASK_ALREADY_REVIEWED' })
+      expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+      expect(reviewMocks.archiveImages).not.toHaveBeenCalled()
+      expect(reviewMocks.publishImages).not.toHaveBeenCalled()
+      expect(reviewMocks.probeFeatureForUpdate).not.toHaveBeenCalled()
+    },
+  )
+
+  it('rejects layer reassignment of a completed task before changing the feature', async () => {
+    reviewMocks.loadTask.mockResolvedValue({
+      id: 'task',
+      type: 'newFeature',
+      isReviewed: true,
+    })
+    await expect(
+      reassignHandler(
+        { id: 'task', layerId: 'layer' } as never,
+        {
+          user: {},
+          event: { locals: { hub: {} } },
+        } as never,
+      ),
+    ).rejects.toMatchObject({ status: 409, message: 'TASK_ALREADY_REVIEWED' })
+    expect(reviewMocks.probeLayerForUpdate).not.toHaveBeenCalled()
+    expect(reviewMocks.probeFeatureForUpdate).not.toHaveBeenCalled()
+  })
+
+  it('still publishes images and records a review for a pending task', async () => {
+    const pendingTask = { id: 'task', type: 'newPhoto', isReviewed: false }
+    reviewMocks.loadTask.mockResolvedValue(pendingTask)
+    await reviewHandler(
+      { id: 'task', action: 'acceptAll' },
+      { db: 'db', user: {}, userId: 'reviewer', event: { locals: { hub: {} } } },
+    )
+    expect(reviewMocks.commitTaskImageReview).toHaveBeenCalledWith('db', {
+      task: pendingTask,
+      resourceHubId: 'hub',
+      action: 'acceptAll',
+      reviewerId: 'reviewer',
+      reason: undefined,
+    })
+    expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+    expect(reviewMocks.publishImages).not.toHaveBeenCalled()
+  })
+
+  it.each(['newFeature', 'reportedMissing'] as const)(
+    'commits %s feature changes without separate task/feature writes',
+    async type => {
+      const pending = {
+        id: 'task',
+        featureId: 'feature',
+        type,
+        isDraft: false,
+        isReviewed: false,
+      }
+      const feature = { id: 'feature', modifiedAt: 'feature-v1' }
+      reviewMocks.loadTask.mockResolvedValue(pending)
+      reviewMocks.probeFeatureForUpdate.mockResolvedValue(feature)
+      const action = type === 'newFeature' ? 'accept' : 'setArchived'
+      await reviewHandler(
+        { id: 'task', action },
+        {
+          db: 'db',
+          user: {},
+          userId: 'reviewer',
+          event: { locals: { hub: {} } },
+        },
+      )
+      expect(reviewMocks.commitTaskFeatureReview).toHaveBeenCalledWith('db', {
+        task: pending,
+        feature,
+        resourceHubId: 'hub',
+        action,
+        reviewerId: 'reviewer',
+        reason: undefined,
+      })
+      expect(reviewMocks.updateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
+      expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+    },
+  )
+
+  it('reports a stale image review without a second task update', async () => {
+    reviewMocks.loadTask.mockResolvedValue({
+      id: 'task',
+      type: 'newPhoto',
+      isDraft: false,
+      isReviewed: false,
+    })
+    reviewMocks.commitTaskImageReview.mockResolvedValueOnce(false)
+    await expect(
+      reviewHandler(
+        { id: 'task', action: 'acceptClassified' },
+        { db: 'db', user: {}, userId: 'reviewer', event: { locals: { hub: {} } } },
+      ),
+    ).rejects.toMatchObject({ status: 409, message: 'STALE_TASK_REVIEW' })
+    expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+    expect(reviewMocks.archiveImages).not.toHaveBeenCalled()
+  })
+
+  it.each(['newFeature', 'newPhoto', 'reportedMissing'])(
+    'rejects review of an unfinished %s draft before side effects',
+    async type => {
+      reviewMocks.loadTask.mockResolvedValue({
+        id: 'task',
+        type,
+        isDraft: true,
+        isReviewed: false,
+      })
+      await expect(
+        reviewHandler(
+          { id: 'task', action: 'reject' },
+          { user: {}, event: { locals: { hub: {} } } },
+        ),
+      ).rejects.toMatchObject({ status: 409, message: 'TASK_NOT_SUBMITTED' })
+      expect(reviewMocks.archiveImages).not.toHaveBeenCalled()
+      expect(reviewMocks.publishImages).not.toHaveBeenCalled()
+      expect(reviewMocks.probeFeatureForUpdate).not.toHaveBeenCalled()
+      expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+    },
+  )
+})
+
+describe('task draft finalization recovery', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it.each(['conflict', 'failure', 'missing'])(
+    'keeps a task retryable after a feature %s',
+    async failure => {
+      const draft = {
+        id: 'task',
+        contributorId: 'contributor',
+        type: 'newFeature',
+        featureId: 'feature',
+        isDraft: true,
+        images: [{ imageId: 'image' }],
+      }
+      const ctx = {
+        user: { id: 'contributor', isAnonymous: false },
+        userId: 'contributor',
+        event: { locals: { hub: {} } },
+        db: { query: { task: { findFirst: vi.fn(async () => ({ ...draft })) } } },
+      }
+      reviewMocks.updateTask.mockImplementation(async (_db, patch) => {
+        Object.assign(draft, patch)
+        return { ...draft }
+      })
+      reviewMocks.probeFeatureForUpdate.mockResolvedValue(
+        failure === 'missing' ? null : { id: 'feature', modifiedAt: 'version' },
+      )
+      if (failure === 'failure') {
+        reviewMocks.commitTaskFeatureDraftFinalization.mockRejectedValue(
+          new Error('write failed'),
+        )
+      } else {
+        reviewMocks.commitTaskFeatureDraftFinalization.mockResolvedValue(false)
+      }
+
+      await expect(finalizeHandler({ id: 'task' }, ctx)).rejects.toThrow()
+      expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+      expect(draft.isDraft).toBe(true)
+
+      // A fresh request must retry the feature write rather than return early.
+      reviewMocks.probeFeatureForUpdate.mockResolvedValue({
+        id: 'feature',
+        modifiedAt: 'fresh',
+      })
+      reviewMocks.commitTaskFeatureDraftFinalization.mockImplementation(async () => {
+        draft.isDraft = false
+        return true
+      })
+      reviewMocks.loadTask.mockResolvedValue({ ...draft, isDraft: false })
+      await expect(finalizeHandler({ id: 'task' }, ctx)).resolves.toMatchObject({
+        isDraft: false,
+      })
+      expect(reviewMocks.commitTaskFeatureDraftFinalization).toHaveBeenLastCalledWith(
+        ctx.db,
+        {
+          task: expect.objectContaining({ id: 'task', featureId: 'feature' }),
+          feature: { id: 'feature', modifiedAt: 'fresh' },
+        },
+      )
+      expect(draft.isDraft).toBe(false)
+    },
+  )
+})
+
+describe('submitted contribution edit guard', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  it.each([
+    { isDraft: false, isReviewed: false },
+    { isDraft: false, isReviewed: true },
+    { isDraft: true, isReviewed: true },
+  ])('rejects editing a submitted or reviewed task: %j', async state => {
+    const ctx = {
+      user: { id: 'contributor', isAnonymous: false },
+      userId: 'contributor',
+      event: { locals: {} },
+      db: createPublicScopeDb({
+        id: 'task',
+        contributorId: 'contributor',
+        type: 'newFeature',
+        featureId: 'feature',
+        ...state,
+      }),
+    }
+    await expect(
+      editDraftHandler(
+        {
+          task: {
+            taskId: 'task',
+            layerId: 'layer',
+            organisationId: 'org',
+            projectId: 'project',
+            feature: {},
+          },
+        },
+        ctx,
+      ),
+    ).rejects.toMatchObject({ status: 409, message: 'TASK_DRAFT_ALREADY_SUBMITTED' })
+    expect(reviewMocks.updateUserContributedFeatureDraft).not.toHaveBeenCalled()
+    expect(reviewMocks.updateTask).not.toHaveBeenCalled()
+  })
+
+  it('allows the contributor to continue editing an unreviewed draft', async () => {
+    const ctx = {
+      user: { id: 'contributor', isAnonymous: false },
+      userId: 'contributor',
+      event: { locals: {} },
+      db: createPublicScopeDb({
+        id: 'task',
+        contributorId: 'contributor',
+        type: 'newFeature',
+        featureId: 'feature',
+        isDraft: true,
+        isReviewed: false,
+      }),
+    }
+    reviewMocks.updateUserContributedFeatureDraft.mockResolvedValue({
+      id: 'feature',
+      organisationId: 'organisation',
+      projectId: 'project',
+      layerId: 'layer',
+    })
+    await expect(
+      editDraftHandler(
+        {
+          task: {
+            taskId: 'task',
+            layerId: 'layer',
+            organisationId: 'org',
+            projectId: 'project',
+            feature: {},
+          },
+        },
+        ctx,
+      ),
+    ).resolves.toMatchObject({ data: { featureId: 'feature' } })
+    expect(reviewMocks.updateUserContributedFeatureDraft).toHaveBeenCalledWith(
+      ctx.db,
+      'feature',
+      { contributorId: 'contributor', isDraft: true },
+      '',
+      '',
+    )
+    expect(reviewMocks.updateTask).toHaveBeenCalledOnce()
+  })
+})
+
+describe('public contribution target guard', () => {
+  const publicScope = {
+    featureId: 'feature',
+    featureLayerId: 'layer',
+    featureIsPublished: true,
+    featureIsArchived: false,
+    featureIsDraft: false,
+    layerIsPublished: true,
+    layerIsArchived: false,
+    projectIsPublished: true,
+    projectIsArchived: false,
+    organisationIsPublished: true,
+    organisationIsArchived: false,
+  }
+
+  const dbForScope = (scope: unknown[]) => {
+    const query = {
+      from: vi.fn(),
+      innerJoin: vi.fn(),
+      where: vi.fn(),
+      limit: vi.fn().mockResolvedValue(scope),
+    }
+    query.from.mockReturnValue(query)
+    query.innerJoin.mockReturnValue(query)
+    query.where.mockReturnValue(query)
+    return { select: vi.fn().mockReturnValue(query) }
+  }
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    reviewMocks.createTaskWithDependencies.mockResolvedValue({ id: 'task' })
+  })
+
+  it('keeps new-feature submissions on their separate creation path', async () => {
+    await expect(
+      submitNewFeatureHandler(
+        {
+          task: {
+            layerId: 'layer',
+            organisationId: 'org',
+            projectId: 'project',
+            contributorId: 'spoofed',
+            type: 'newFeature',
+            feature: {},
+          },
+          photos: [{}],
+        },
+        {
+          db: dbForScope([publicScope]),
+          user: { id: 'contributor', isAnonymous: false },
+          userId: 'contributor',
+          event: { locals: {} },
+        },
+      ),
+    ).resolves.toEqual({ data: { id: 'task' } })
+    expect(reviewMocks.createTaskWithDependencies).toHaveBeenCalledOnce()
+  })
+
+  it('rejects new-feature submissions whose parent scope is not public', async () => {
+    await expect(
+      submitNewFeatureHandler(
+        {
+          task: {
+            layerId: 'layer',
+            organisationId: 'org',
+            projectId: 'project',
+            contributorId: 'spoofed',
+            type: 'newFeature',
+            feature: {},
+          },
+          photos: [{}],
+        },
+        {
+          db: dbForScope([]),
+          user: { id: 'contributor', isAnonymous: false },
+          userId: 'contributor',
+          event: { locals: {} },
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'TASK_FEATURE_SCOPE_MISMATCH',
+    })
+    expect(reviewMocks.createTaskWithDependencies).not.toHaveBeenCalled()
+  })
+
+  it('rejects new-photo submissions whose persisted feature scope is not public', async () => {
+    await expect(
+      submitNewPhotosHandler(
+        {
+          featureId: 'feature',
+          layerId: 'layer',
+          projectId: 'project',
+          organisationId: 'org',
+          photos: [{}],
+        },
+        {
+          db: dbForScope([]),
+          user: { id: 'contributor', isAnonymous: false },
+          userId: 'contributor',
+          event: { locals: {} },
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'TASK_FEATURE_SCOPE_MISMATCH',
+    })
+    expect(reviewMocks.createTaskWithDependencies).not.toHaveBeenCalled()
+  })
+
+  it('allows new-photo submissions only for the persisted public scope', async () => {
+    await expect(
+      submitNewPhotosHandler(
+        {
+          featureId: 'feature',
+          layerId: 'layer',
+          projectId: 'project',
+          organisationId: 'org',
+          photos: [{}],
+        },
+        {
+          db: dbForScope([publicScope]),
+          user: { id: 'contributor', isAnonymous: false },
+          userId: 'contributor',
+          event: { locals: {} },
+        },
+      ),
+    ).resolves.toEqual({ data: { id: 'task' } })
+    expect(reviewMocks.createTaskWithDependencies).toHaveBeenCalledOnce()
   })
 })

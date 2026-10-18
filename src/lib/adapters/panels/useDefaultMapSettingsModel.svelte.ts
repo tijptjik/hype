@@ -1,0 +1,137 @@
+// THIRD PARTY
+import { toast } from 'svelte-sonner'
+// I18N
+import { getI18n } from '#lib/i18n.js'
+// API
+import { getUserLayers, setUserLayerDefaults } from '#lib/api/user.remote.js'
+// TYPES
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+
+/**
+ * Owns default layer selection and optimistic mutation reconciliation.
+ * @param appCtx - Application context owned by the route.
+ * @returns Controlled section state and callbacks.
+ */
+export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
+  let optimisticUserLayerIds = $state<Set<string> | null>(null)
+  let optimisticAccountRevision = $state<number | null>(null)
+  let isSavingLayers = $state(false)
+
+  const persistedUserLayerIds = $derived(
+    new Set(appCtx.scope.getUserLayersForCurrentHub().map(layer => layer.layerId)),
+  )
+  const userLayerIds = $derived(
+    optimisticAccountRevision === appCtx.account.revision
+      ? (optimisticUserLayerIds ?? persistedUserLayerIds)
+      : persistedUserLayerIds,
+  )
+  const canSaveUserLayers = $derived(Boolean(appCtx.hub?.id || appCtx.hub?.code))
+  const userPreferences = $derived(appCtx.getUserPreferences())
+  const orderedLayers = $derived.by(() =>
+    [...appCtx.scope.selectionLayers].sort((left, right) => {
+      const rankDiff =
+        (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)
+      if (rankDiff !== 0) return rankDiff
+
+      return getI18n(left, 'name', userPreferences).localeCompare(
+        getI18n(right, 'name', userPreferences),
+      )
+    }),
+  )
+
+  $effect(() => {
+    const nextPersistedUserLayerIds = persistedUserLayerIds
+
+    if (!optimisticUserLayerIds) {
+      return
+    }
+
+    const isInSync =
+      optimisticUserLayerIds.size === nextPersistedUserLayerIds.size &&
+      [...optimisticUserLayerIds].every(layerId =>
+        nextPersistedUserLayerIds.has(layerId),
+      )
+
+    if (isInSync) {
+      optimisticUserLayerIds = null
+    }
+  })
+
+  /**
+   * Optimistically saves this hub's default-visible layers through a remote command.
+   */
+  const toggleUserLayer = async (layerId: string, checked: boolean): Promise<void> => {
+    if (isSavingLayers) return
+
+    const user = appCtx.account.user
+    const hub = appCtx.hub
+    if (!user || !hub || (!hub.id && !hub.code)) return
+
+    const accountRevision = appCtx.account.revision
+    const previousUserLayerIds = new Set(userLayerIds)
+    const nextUserLayerIds = new Set(userLayerIds)
+
+    if (checked) {
+      nextUserLayerIds.add(layerId)
+    } else {
+      nextUserLayerIds.delete(layerId)
+    }
+
+    optimisticAccountRevision = accountRevision
+    optimisticUserLayerIds = nextUserLayerIds
+    isSavingLayers = true
+
+    try {
+      const response = await setUserLayerDefaults({
+        userId: user.id,
+        hubId: hub.id ?? undefined,
+        hubCode: hub.code ?? undefined,
+        layers: [...nextUserLayerIds].map(layerId => ({
+          layerId,
+          isDefaultVisible: true,
+        })),
+      }).updates(
+        getUserLayers({
+          userId: user.id,
+          hubId: hub.id ?? undefined,
+        }),
+      )
+
+      appCtx.applyUserLayerDefaults(response?.data ?? [], hub, accountRevision)
+    } catch (error) {
+      if (accountRevision !== appCtx.account.revision) {
+        optimisticUserLayerIds = null
+        return
+      }
+      console.error('Error updating default map layers:', error)
+      optimisticUserLayerIds = previousUserLayerIds
+      toast.error('Failed to update default map layers')
+    } finally {
+      isSavingLayers = false
+    }
+  }
+
+  return {
+    get userLayerIds() {
+      return userLayerIds
+    },
+    get canSaveUserLayers() {
+      return canSaveUserLayers
+    },
+    get userPreferences() {
+      return userPreferences
+    },
+    get orderedLayers() {
+      return orderedLayers
+    },
+    get isSavingLayers() {
+      return isSavingLayers
+    },
+    toggleUserLayer,
+    getHierarchy: (layer: Parameters<ResourceViewCtx['getHierarchySync']>[0]) =>
+      appCtx.getHierarchySync(layer),
+    getProjectName: (
+      project: Parameters<ResourceViewCtx['getContextualProjectName']>[0],
+    ) => appCtx.getContextualProjectName(project, false),
+  }
+}

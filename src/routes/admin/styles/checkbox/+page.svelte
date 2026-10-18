@@ -1,7 +1,7 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Checkbox } from '$lib/bits/custom'
-import type { ButtonColor, ButtonSize } from '$lib/bits/core/button/button.types'
+import { Checkbox } from '#lib/bits/custom/index.js'
+import type { ButtonColor, ButtonSize } from '#lib/bits/core/button/button.types.js'
 
 const sizes: ButtonSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
 const colors: ButtonColor[] = [

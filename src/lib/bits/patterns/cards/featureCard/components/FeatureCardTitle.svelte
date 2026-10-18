@@ -1,28 +1,28 @@
 <script lang="ts">
 // ICONS
-import { Icon } from '$lib/bits'
-import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
-import Check from 'virtual:icons/lucide/check'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
-import Star from 'virtual:icons/lucide/star'
+import { Icon } from '#lib/bits/index.js'
+import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
+import Check from 'virtual:icons/proicons/checkmark'
+import PencilSquare from 'virtual:icons/proicons/compose'
+import Star from 'virtual:icons/proicons/star'
 // SERVICES
 import {
   getFeatureCardEditableProperties,
   updateNewFeatureProperty,
-} from '$lib/client/services/property'
+} from '#lib/client/services/property.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import { getCardCtx } from '#lib/context/card.svelte.js'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // TYPES
 import type {
   Feature,
   FeatureProperty,
   UserContributedFeature,
-} from '$lib/db/zod/schema/feature.types'
-import type { LayerPropertyAdminProfile } from '$lib/db/zod/schema/layer.types'
-import type { Id } from '$lib/types'
+} from '#lib/db/zod/schema/feature.types.js'
+import type { LayerPropertyAdminProfile } from '#lib/db/zod/schema/layer.types.js'
+import type { Id } from '#lib/types.js'
 
 let titleInput = $state<HTMLInputElement | undefined>()
 
@@ -38,7 +38,7 @@ let {
   onToggleDescription?: (expanded: boolean) => void
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 const userPreferences = $derived(appCtx.getUserPreferences())
 
@@ -46,7 +46,7 @@ const gradePropertyId: Id = $derived(
   appCtx.cache.layer
     .get(feature.layerId)
     ?.properties?.find((property: LayerPropertyAdminProfile) => {
-      const resolved = appCtx.cache.property.get(property.propertyId)
+      const resolved = appCtx.cache.property.get(property.propertyId ?? '')
       return resolved?.key === 'grade'
     })?.propertyId as Id,
 )
@@ -99,7 +99,7 @@ function handleTitleSubmit(): void {
   isEditing = false
 
   if (cardCtx.isNewMode) {
-    appCtx.updateNewFeatureValueI18n('title', title)
+    appCtx.draft.updateI18n('title', title)
   }
 }
 
@@ -136,14 +136,14 @@ function handleDescriptionToggle(event: Event): void {
 </script>
 
 <div
-  class="pointer-events-auto flex min-h-0 shrink-0 items-start justify-between bg-black px-(--feature-card-breadcrumbs-padding) pb-[2px]"
+  class="pointer-events-auto flex min-h-0 shrink-0 items-start justify-between bg-(--theme-panel) px-(--feature-card-breadcrumbs-padding) pb-[2px]"
 >
   {#if cardCtx.isNewMode}
     {#if isEditing}
       <div class="flex w-full items-center gap-2">
         <input
           type="text"
-          class="input input-bordered w-full bg-black caret-white focus:outline-none"
+          class="input input-bordered w-full bg-(--theme-panel) caret-base-content focus:outline-none"
           bind:value={title}
           bind:this={titleInput}
           placeholder={m.fluffy_wide_ladybug_file()}
@@ -165,21 +165,24 @@ function handleDescriptionToggle(event: Event): void {
         </button>
       </div>
     {:else}
-      <div class="flex h-12 w-full items-center gap-2" onclick={handleEditMode}>
-        <h2
-          class="w-full overflow-visible text-lg text-white"
-          class:text-gray-500={!title.trim()}
+      <button
+        type="button"
+        class="flex h-12 w-full appearance-none items-center gap-2 border-0 bg-transparent p-0 text-left"
+        onclick={handleEditMode}
+      >
+        <span
+          class="w-full overflow-visible text-lg text-base-content"
+          class:text-muted-foreground={!title.trim()}
           class:font-bold={!title.trim()}
         >
           {title || m.empty_lofty_meerkat_support()}
-        </h2>
-        <button
-          type="button"
+        </span>
+        <span
           class="btn btn-ghost btn-sm rounded-none rounded-l-lg px-3 py-1 hover:bg-base-300 active:scale-100 active:bg-base-200"
         >
           <Icon src={PencilSquare} class="h-5 w-5" />
-        </button>
-      </div>
+        </span>
+      </button>
     {/if}
   {:else}
     <ScrollableText
@@ -187,7 +190,7 @@ function handleDescriptionToggle(event: Event): void {
       padding={16}
       class="block h-full min-w-0 flex-1"
       containerClass="block w-full"
-      textClass="text-lg text-white"
+      textClass="text-lg text-base-content"
     />
   {/if}
 
@@ -197,7 +200,7 @@ function handleDescriptionToggle(event: Event): void {
         <div class="sticky top-0 z-40 self-start">
           <button
             type="button"
-            class="inline-flex h-6 items-start justify-end whitespace-nowrap bg-black pl-3 pr-0 pt-0 font-mono text-right text-xs uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-80"
+            class="inline-flex h-6 items-start justify-end whitespace-nowrap bg-(--theme-panel) pl-3 pr-0 pt-0 font-mono text-right text-xs uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-80"
             onclick={handleDescriptionToggle}
           >
             {m.common__read_less()}
@@ -216,11 +219,9 @@ function handleDescriptionToggle(event: Event): void {
           >
             <Icon
               src={Star}
-              class={`h-6 w-6 group-hover:text-primary group-focus:text-primary ${Number(
-                grade,
-              ) > index
-                ? 'text-primary'
-                : 'text-neutral-content'}`}
+              class={`h-6 w-6 group-hover:text-primary group-focus:text-primary ${
+                Number(grade) > index ? 'text-primary' : 'text-neutral-content'
+              }`}
               theme="solid"
             />
           </button>

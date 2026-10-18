@@ -1,16 +1,21 @@
+import adapterStatic from '@sveltejs/adapter-static'
+import adapterCloudflare from '@sveltejs/adapter-cloudflare'
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte'
+
 // VITE
 import { defineConfig } from 'vite'
 import { sveltekit } from '@sveltejs/kit/vite'
 import Icons from 'unplugin-icons/vite'
+import { FileSystemIconLoader } from 'unplugin-icons/loaders'
 import tailwindcss from '@tailwindcss/vite'
-// CLOUDFLARE
-import { cloudflare } from '@cloudflare/vite-plugin'
 // TRANSLATION
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
+// LOCAL DEVELOPMENT
+import { getDevPersona } from './scripts/dev/config.ts'
 // DATA
 // import seed from './src/lib/db/seed';
 // TYPES
-import type { ConfigEnv, Plugin } from 'vite'
+import type { Plugin } from 'vite'
 
 // Load env file based on `mode` in the current working directory.
 // Set the third parameter to '' to load all env regardless of the
@@ -35,31 +40,6 @@ import type { ConfigEnv, Plugin } from 'vite'
 //   }
 // };
 
-const localCloudflare = async (command: ConfigEnv['command']): Promise<Plugin[]> => {
-  // Only load Cloudflare plugin when explicitly requested, because the default local
-  // app dev flow runs the asset worker as a separate Wrangler process.
-  const isServe = command === 'serve'
-  const isCI = process.env.CI === 'true'
-  const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST
-  const useLocalR2 = process.env.HYPE_LOCAL_R2 === '1'
-
-  if (isServe && !isCI && !isTest) {
-    return cloudflare({
-      configPath: useLocalR2 ? './wrangler.local.toml' : './wrangler.toml',
-    })
-  } else {
-    return [
-      {
-        name: 'skip-cloudflare-plugin',
-        apply: 'build',
-        buildStart() {
-          console.log('Skipping Cloudflare plugin on CI and TEST')
-        },
-      },
-    ]
-  }
-}
-
 const suppressOptimizedKyselyMigrationWarning = (): Plugin => ({
   name: 'suppress-optimized-kysely-migration-warning',
   enforce: 'pre',
@@ -79,8 +59,311 @@ const suppressOptimizedKyselyMigrationWarning = (): Plugin => ({
   },
 })
 
+// Build an SSR version of the app for Cloudflare, or a static web version when explicitly selected.
+const selectAdapter = () => {
+  if (process.env.SVELTE_ADAPTER === 'static') {
+    return adapterStatic({
+      fallback: 'index.html',
+      pages: 'build-static',
+      assets: 'build-static',
+    })
+  } else {
+    return adapterCloudflare({
+      // Adapter 8 owns the dev binding proxy; the separate asset worker still runs
+      // through Wrangler. Preserve local R2 and named environment selection here.
+      config:
+        process.env.HYPE_LOCAL_R2 === '1' ? './wrangler.local.toml' : './wrangler.toml',
+      platformProxy: {
+        environment: process.env.CLOUDFLARE_ENV,
+        ...(getDevPersona(process.env) && process.env.HYPE_DEV_STATE
+          ? { persist: { path: process.env.HYPE_DEV_STATE } }
+          : {}),
+      },
+      // Cloudflare Pages routes policy. Keep this in config rather than a checked-in
+      // static `_routes.json`, because the adapter generates that file from here.
+      routes: {
+        include: ['/*'],
+        exclude: [
+          '/*.php',
+          '/.aws/*',
+          '/.env',
+          '/.ftpconfig',
+          '/.idea/*',
+          '/.vscode/*',
+          '/.well-known/ALFA_DATA/alfacgiapi/',
+          '//contact',
+          '/012/index.html',
+          '/035/index.html',
+          '/040/index.html',
+          '/055/index.html',
+          '/1.html',
+          '/2018/wp-includes/wlwmanifest.xml',
+          '/2019/wp-includes/wlwmanifest.xml',
+          '/3/favicon.ico',
+          '/360.html',
+          '/7/',
+          '/8/',
+          '/a/',
+          '/acca/api/site/getInfou.do',
+          '/addons/fastim/',
+          '/admin/appContent/staticImagePosition',
+          '/administrator/*',
+          '/ajax/allcoin_a/id/0',
+          '/ALFA_DATA/alfacgiapi',
+          '/alfacgiapi/',
+          '/almemar/',
+          '/AnMjSjfe87/policy/getVersion',
+          '/api/.env',
+          '/api/api/exchangerateuserconfig!get.action',
+          '/api/app/indexList',
+          '/api/apps/config',
+          '/api/appVersion',
+          '/api/bank/index',
+          '/api/banner',
+          '/api/c/a',
+          '/api/client/app/config.do',
+          '/api/common/*',
+          '/api/config',
+          '/api/Config/getShowConfig',
+          '/api/currency/quotation_new',
+          '/api/dict/getServiceConfig',
+          '/api/Event/basic',
+          '/api/front/index',
+          '/api/get_workerman_url',
+          '/api/getWebSiteConfig',
+          '/api/Home/videoNew',
+          '/api/index/*',
+          '/api/init',
+          '/api/latestSdkConfig',
+          '/api/link-submit',
+          '/api/message/webInfo',
+          '/api/notice',
+          '/api/ping',
+          '/api/platform/getSundryData',
+          '/api/product/getPointStore',
+          '/api/product/list',
+          '/api/public/',
+          '/api/room/join',
+          '/api/ServerMember/getChatList',
+          '/api/shares/hqStrList',
+          '/api/shop/getKF',
+          '/api/site/getInfo.do',
+          '/api/system/notice/find',
+          '/api/system/systemConfigs/getCustomerServiceLink',
+          '/api/unSecurity/app/listAppVersionInfo',
+          '/api/uploads/apimap',
+          '/api/user/getconfig',
+          '/api/user/ismustmobile',
+          '/api/v/index/queryOfficePage',
+          '/api/v1/*',
+          '/api/v2/*',
+          '/api/vue/transaction/config',
+          '/api/wanlshop/common/init',
+          '/API/Web/chat.ashx',
+          '/apis/globals',
+          '/apix/tongchengyue/tags',
+          '/app/api/app/get_index',
+          '/app/js/base.js',
+          '/app/static/js/download.js',
+          '/app/static/picture/star.png',
+          '/appxz/index.html',
+          '/assets/app-manifest.json',
+          '/assets/images/rw.png',
+          '/assets/js/main.js',
+          '/assets/mstock/newimg/kaihu-1.png',
+          '/assets/res/mods/room.js',
+          '/assets/upload/ALFA_DATA/alfacgiapi/',
+          '/ay-1.html',
+          '/backend/.env',
+          '/backup/*',
+          '/backups/*',
+          '/banner.do',
+          '/banner/lunbo1.png',
+          '/bg.png',
+          '/bilibili/bilibili.html',
+          '/biz/server/config',
+          '/blog/ALFA_DATA/alfacgiapi/',
+          '/blog/wp-includes/wlwmanifest.xml',
+          '/categories',
+          '/cgi-bin/*',
+          '/cgi-bin/ALFA_DATA/alfacgiapi/',
+          '/checkout-dashboard',
+          '/ciod/cnfig/setinf',
+          '/client/api/findConfigByKey',
+          '/cms/wp-includes/wlwmanifest.xml',
+          '/code1.html',
+          '/common/init',
+          '/common/member/js/user.util.js',
+          '/common/template/lottery/lecai/css/style.css',
+          '/components/ALFA_DATA/alfacgiapi/',
+          '/conf.js',
+          '/config',
+          '/config.js',
+          '/config.json',
+          '/config/.env',
+          '/Content/css/wzwstylel.css',
+          '/Content/favicon.ico',
+          '/core/.env',
+          '/css/*',
+          '/cx_platform/conf.json',
+          '/data/json/config.json',
+          '/database/*',
+          '/ddoo_im/',
+          '/deployment-config.json',
+          '/dist/*',
+          '/dock/system/config/get',
+          '/douyin/douyin.html',
+          '/dwcc/cnfig/setinf',
+          '/dwcc/configxLxn/inxfx',
+          '/eids.js',
+          '/f/user/index',
+          '/facebook/facebook.html',
+          '/fePublicInfo/',
+          '/files/ALFA_DATA/alfacgiapi/',
+          '/files/pub_rem.js',
+          '/forerest/user/custSrv/findOne',
+          '/friendGroup/list',
+          '/geapi/webConfig',
+          '/getConfig/getArticle.do',
+          '/getConfig/listPopFrame.do',
+          '/getDownloadUrl',
+          '/getLocale',
+          '/h5',
+          '/h5/',
+          '/h5/img/icon/rj.png',
+          '/h5/static/tabbar/txl.png',
+          '/home/*',
+          '/homes/',
+          '/html/noroom.html',
+          '/iexchange/webtrader/',
+          '/im-a/a/domain/cdn/v2',
+          '/im/',
+          '/im/App/config',
+          '/im/h5/',
+          '/images/*',
+          '/imei/',
+          '/img/l*',
+          '/index.php/*',
+          '/index/*',
+          '/index_files/*',
+          '/infe/rest/fig/advertise/common.json',
+          '/install.inc/vipsignInstall.css',
+          '/instatll',
+          '/join_room',
+          '/joomla/*',
+          '/js/*',
+          '/jym-wn/',
+          '/kefu/css/style.css',
+          '/kfcvwo50',
+          '/kline/1m/1',
+          '/km.asmx/getPlatParam',
+          '/lang.js',
+          '/login.html',
+          '/m/allticker/1',
+          '/main/config/getkefuData',
+          '/mall/toget/banner',
+          '/market/market-ws/iframe.html',
+          '/masterControl/getSystemSetting',
+          '/media/wp-includes/wlwmanifest.xml',
+          '/melody/api/v1/pageconfig/list',
+          '/member/js/lang_zh_CN.js',
+          '/mfzbs/config/base',
+          '/mindex.html',
+          '/mms-api/coins/hot/tickers',
+          '/mobile',
+          '/mobile/*',
+          '/my/zijin.png',
+          '/myConfig.js',
+          '/mytio/config/base',
+          '/news/wp-includes/wlwmanifest.xml',
+          '/nyyh/chkjs.js',
+          '/nyyh/game.css',
+          '/option.bin',
+          '/other/getTopQuestion',
+          '/page/',
+          '/pages/console/js/common.js',
+          '/Pay_Index.html',
+          '/pc.html',
+          '/phone/images/icon_01.png',
+          '/phpmyadmin/*',
+          '/portal/index/protocol.html',
+          '/procoin/config/all.do',
+          '/prod-api/app/getNotice',
+          '/public/*',
+          '/resource/home/js/common.js',
+          '/resources/css/headernav.css',
+          '/resources/main/common.js',
+          '/room/getRoomBangFans',
+          '/s_api/basic/download/info',
+          '/saconfig/secure/yunwei.js',
+          '/scheduler',
+          '/script.js',
+          '/service/business/api/customer/list',
+          '/setting/global',
+          '/sftp-config.json',
+          '/sftp.json',
+          '/share/init_data',
+          '/shell/*',
+          '/shop/wp-includes/wlwmanifest.xml',
+          '/site.js',
+          '/site/*',
+          '/skin/js/common.js',
+          '/skin/main/onload.js',
+          '/sql/*',
+          '/static/*',
+          '/static/1.jpg',
+          '/style.css',
+          '/syn/',
+          '/system/common',
+          '/Telerik.Web.UI.WebResource.axd',
+          '/temp/*',
+          '/template/*',
+          '/test/wp-includes/wlwmanifest.xml',
+          '/thriveGame.css',
+          '/TikTok/TikTok.html',
+          '/tmp/*',
+          '/tmp_images/alfacgiapi/',
+          '/unSecurity/app/config',
+          '/upload/ALFA_DATA/alfacgiapi/',
+          '/uploads/*',
+          '/uploads/ALFA_DATA/alfacgiapi/',
+          '/urlapi/api/Index/getConfig',
+          '/v2',
+          '/verification.asp',
+          '/views/commData/commonSite.js',
+          '/vip/',
+          '/vv/getset',
+          '/wap',
+          '/wap/',
+          '/wap/api/exchangerateuserconfig!get.action',
+          '/wap/api/syspara!getSyspara.action',
+          '/Web/js/v1/phone.js',
+          '/web/wp-includes/wlwmanifest.xml',
+          '/webConfig',
+          '/website/wp-includes/wlwmanifest.xml',
+          '/wordpress/*',
+          '/wp-admin/*',
+          '/wp-content/*',
+          '/wp-includes/*',
+          '/wp/*',
+          '/wx/static/css/style.css',
+          '/xy/',
+          '/xy/image/jiantou.png',
+          '/yongxing/',
+        ],
+      },
+    })
+  }
+}
+
 // CONFIG
 export default defineConfig(async ({ command }) => ({
+  define: {
+    'import.meta.env.HYPE_STATIC_BUILD': process.env.SVELTE_ADAPTER === 'static',
+    'import.meta.env.HYPE_DEV_PERSONA': JSON.stringify(
+      command === 'serve' ? getDevPersona(process.env) : null,
+    ),
+  },
   envPrefix: ['VITE_', 'PUBLIC_'],
   environments: {
     hype_prod: {},
@@ -91,21 +374,57 @@ export default defineConfig(async ({ command }) => ({
     paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/lib/paraglide',
-      outputStructure: 'message-modules',
-      strategy: ['cookie', 'preferredLanguage', 'baseLocale'],
-      cookieName: 'lang',
+      // Group dev translations by locale to avoid Firefox linking a module per message.
+      outputStructure: command === 'serve' ? 'locale-modules' : 'message-modules',
     }),
     // seedDrizzle(),
-    sveltekit(),
+    sveltekit({
+      // Consult https://kit.svelte.dev/docs/integrations#preprocessors
+      // for more information about preprocessors
+      compilerOptions: {
+        experimental: { async: true },
+        runes: true,
+        // disable all warnings coming from node_modules and all accessibility warnings
+        warningFilter: warning =>
+          !warning.filename?.includes('node_modules') &&
+          !warning.code.startsWith('a11y') &&
+          !warning.message.startsWith('State referenced in its own') &&
+          !warning.message.startsWith('Unused CSS selector') &&
+          !warning.message.startsWith('You are using Svelte 5.0.0') &&
+          warning.code !== 'css-unused-selector',
+      },
+      preprocess: vitePreprocess(),
+      // Svelte plugin options are top-level in SvelteKit 3.
+
+      // Required to avoid runes mode being enforce for all node_modules
+      // https://github.com/sveltejs/svelte/issues/9632#issuecomment-1825498213
+      dynamicCompileOptions({ filename }) {
+        if (filename.includes('node_modules')) {
+          return { runes: undefined } /* or false, check what works */
+        }
+      },
+      adapter: selectAdapter(),
+      csrf: { trustedOrigins: ['*'] },
+      experimental: { remoteFunctions: true },
+    }),
     Icons({
       compiler: 'svelte',
+      customCollections: {
+        // Compile the reviewed division SVGs into inline, theme-aware components.
+        'hype-divisions': FileSystemIconLoader('./static/icons/divisions'),
+      },
     }),
     tailwindcss(),
-    ...(await localCloudflare(command)),
   ],
   optimizeDeps: {
-    // MapLibre's worker is emitted as a Vite worker asset, not a JavaScript dependency.
-    exclude: ['maplibre-gl/dist/maplibre-gl-worker.mjs'],
+    // Keep MapLibre and its worker query out of dependency optimization.
+    exclude: ['maplibre-gl'],
+  },
+  ssr: {
+    // Keep the dev SSR context singleton outside Vite's reloadable module graph.
+    // Production still bundles Svelte for the Cloudflare runtime.
+    external: command === 'serve' ? ['svelte'] : [],
+    optimizeDeps: { exclude: ['svelte'] },
   },
   build: {
     target: 'es2020',
@@ -113,14 +432,16 @@ export default defineConfig(async ({ command }) => ({
   // Enable build caching for CI environments
   cacheDir: '.svelte-kit/vite',
   server: {
-    port: 5173,
+    // Local binding storage is runtime data, not an input to HMR or translations.
+    watch: { ignored: ['**/.wrangler/**'] },
+    port: 5175,
     strictPort: true,
-    hmr: {
-      port: 5173,
-    },
+    // Vite derives the websocket port from the browser origin, including local proxies.
+    hmr: {},
     allowedHosts: [
       'localhost',
       '127.0.0.1',
+      'hype.localhost',
       '0.0.0.0',
       '192.168.1.100',
       '192.168.1.100.traefik.me',

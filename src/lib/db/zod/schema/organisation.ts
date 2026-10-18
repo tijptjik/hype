@@ -1,17 +1,21 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import type {
   CapabilityDefinition,
   CapabilityDefinitions,
   CapabilityKey,
-} from '$lib/types'
+} from '#lib/capabilities.types.js'
 import type { ProjectRoleCapabilities } from './project.types'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { organisation, organisationI18n, organisationRole } from '$lib/db/schema/index'
+import {
+  organisation,
+  organisationI18n,
+  organisationRole,
+} from '#lib/db/schema/index.js'
 // ZOD SCHEMAS
 import { FormBoolean } from '../form'
 import { FormI18nRoot, getLocales } from '../constraints'
@@ -216,7 +220,8 @@ export const OrganisationI18nByLocaleFormData = z.object({
 })
 
 export const OrganisationUserRolesFormData = z.preprocess(
-  value => (value === undefined || value === null ? [] : value),
+  (value: z.input<typeof OrganisationRoleFormData>[] | undefined) =>
+    value === undefined || value === null ? [] : value,
   z
     .array(OrganisationRoleFormData)
     .refine(schema => schema.length > 0, m.admin__validation_user_roles_add_user())
@@ -246,7 +251,7 @@ export const OrganisationFormMeta = z.object({
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
-  isAdminRequest: z.coerce.boolean<boolean>().optional(),
+  isAdminRequest: FormBoolean.optional(),
 })
 
 export const OrganisationFormData = z.object({
@@ -287,7 +292,7 @@ export const PublishOrganisationSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -297,7 +302,7 @@ export const RemoveOrganisationSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -306,7 +311,17 @@ export const RemoveOrganisationSchema = z.object({
 // 5. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const OrganisationProfile = z.enum(['list', 'card', 'detail', 'admin'])
+// Legacy selectors remain compatible while callers migrate to resource payload profiles.
+export const OrganisationProfile = z.enum([
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+])
 
 const OrganisationListFields = OrganisationBase.pick({
   id: true,
@@ -341,10 +356,22 @@ export const OrganisationDetailProfileAPI = OrganisationCardProfileAPI.extend({
 })
 
 export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI.extend({
+  hub: z.object({ id: z.string(), code: z.string() }).nullish(),
   userRoles: z
     .array(OrganisationRoleBase.extend({ user: UserBasic.nullish() }))
     .default([]),
   capabilities: CapabilityBase,
   properties: z.array(PropertyAdminProfileAPI).default([]),
   publisher: UserBasic.nullish(),
+})
+
+/** Minimal identity and action state for paged resource lists. */
+export const OrganisationCompactProfileAPI = OrganisationBase.pick({
+  id: true,
+  isPublished: true,
+  isArchived: true,
+  modifiedAt: true,
+  code: true,
+}).extend({
+  i18n: getLocales(OrganisationI18nBase.pick({ name: true, nameShort: true })),
 })

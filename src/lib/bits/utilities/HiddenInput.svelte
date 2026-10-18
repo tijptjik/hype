@@ -13,7 +13,7 @@ const mergedProps = $derived(
 )
 </script>
 
-{#if mergedProps.type === "checkbox"}
+{#if mergedProps.type === 'checkbox'}
   <input {...mergedProps} {value}>
 {:else}
   <input bind:value {...mergedProps}>

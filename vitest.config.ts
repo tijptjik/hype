@@ -11,7 +11,12 @@ const suppressedVitestConsoleLogPatterns = [
 
 export default defineConfig({
   logLevel: 'error',
-  plugins: [sveltekit()],
+  plugins: [
+    sveltekit({
+      experimental: { remoteFunctions: true },
+      compilerOptions: { experimental: { async: true } },
+    }),
+  ],
   define: {
     __SVELTEKIT_PATHS_BASE__: '""',
     __SVELTEKIT_PATHS_ASSETS__: '""',
@@ -21,11 +26,11 @@ export default defineConfig({
     conditions: ['browser'],
     alias: [
       {
-        find: /^\$lib$/,
+        find: /^#lib$/,
         replacement: resolve(configDirectory, 'src/tests/mocks/lib-root.ts'),
       },
       {
-        find: /^\$lib\/(.*)$/,
+        find: /^#lib\/(.*)$/,
         replacement: `${resolve(configDirectory, 'src/lib')}/$1`,
       },
       {
@@ -44,15 +49,11 @@ export default defineConfig({
         ),
       },
       {
-        find: '$env/static/public',
+        find: '$app/env/public',
         replacement: resolve(configDirectory, 'src/tests/mocks/env-static-public.ts'),
       },
       {
-        find: '$env/dynamic/public',
-        replacement: resolve(configDirectory, 'src/tests/mocks/env-dynamic-public.ts'),
-      },
-      {
-        find: '$lib/context/form.svelte',
+        find: '#lib/context/form.svelte.js',
         replacement: resolve(configDirectory, 'src/tests/mocks/form-context.ts'),
       },
       {
@@ -63,80 +64,59 @@ export default defineConfig({
         ),
       },
       {
-        find: '$lib/components/forms/fields/Property.svelte',
+        find: '#lib/components/forms/fields/Property.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Input.svelte',
+        find: '#lib/components/forms/fields/Input.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Textarea.svelte',
+        find: '#lib/components/forms/fields/Textarea.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Select.svelte',
+        find: '#lib/components/forms/fields/Select.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Range.svelte',
+        find: '#lib/components/forms/fields/Range.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Users.svelte',
+        find: '#lib/components/forms/fields/Users.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Toggle.svelte',
+        find: '#lib/components/forms/fields/Toggle.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
         ),
       },
       {
-        find: '$lib/components/forms/fields/Display.svelte',
+        find: '#lib/components/forms/fields/Display.svelte',
         replacement: resolve(
           configDirectory,
           'src/tests/mocks/svelte-component.svelte',
-        ),
-      },
-      {
-        find: /^sveltekit-superforms\/adapters$/,
-        replacement: resolve(
-          configDirectory,
-          'src/tests/mocks/sveltekit-superforms-adapters.ts',
-        ),
-      },
-      {
-        find: /^sveltekit-superforms\/client$/,
-        replacement: resolve(
-          configDirectory,
-          'src/tests/mocks/sveltekit-superforms-client.ts',
-        ),
-      },
-      {
-        find: /^sveltekit-superforms$/,
-        replacement: resolve(
-          configDirectory,
-          'src/tests/mocks/sveltekit-superforms.ts',
         ),
       },
       {
@@ -146,13 +126,8 @@ export default defineConfig({
     ],
   },
   test: {
-    environment: 'jsdom',
-    environmentMatchGlobs: [
-      ['src/tests/*.remote.test.ts', 'node'],
-      ['src/tests/authorization*.test.ts', 'node'],
-      ['src/tests/*.services.test.ts', 'node'],
-      ['src/tests/image-analytics.server.test.ts', 'node'],
-    ],
+    // Most tests exercise services and pure utilities; DOM tests opt in per file.
+    environment: 'node',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     coverage: {
@@ -163,9 +138,9 @@ export default defineConfig({
     pool: 'forks',
     execArgv: ['--expose-gc'],
     isolate: true,
-    maxWorkers: 1,
-    vmMemoryLimit: '300Mb',
-    fileParallelism: false,
+    // Bound concurrency to avoid multiplying the Svelte/DOM worker memory footprint.
+    maxWorkers: 2,
+    fileParallelism: true,
     testTimeout: 10000,
     hookTimeout: 5000,
     teardownTimeout: 1000,
@@ -180,7 +155,7 @@ export default defineConfig({
     typecheck: {
       tsconfig: './tsconfig.test.json',
     },
-    // Disable server completely for tests
+    // Transform dependencies through Vite so repeated imports share its cache.
     server: {
       deps: {
         inline: true,
@@ -190,12 +165,15 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/.local/**', // Machine-specific manual probes are not the portable test suite.
       '**/libs/**',
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
       '**/src/lib/db/**', // Exclude database files that might keep connections open
       '**/src/hooks.server.ts', // Exclude server hooks
       '**/src/app.html',
+      '**/scripts/breadline/**/*.test.ts', // Bun-only SQLite tests run through breadline:db:test.
+      '**/scripts/geocoding/**/*.test.ts', // Bun-only benchmark tests run directly with bun test.
     ],
   },
 })

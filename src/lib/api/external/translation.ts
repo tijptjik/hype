@@ -1,7 +1,7 @@
 // THIRD PARTY
 import { error } from '@sveltejs/kit'
 // TYPES
-import type { LocaleKey } from '$lib/types'
+import type { LocaleKey } from '#lib/types.js'
 
 /**
  * Translates text using Azure Cognitive Services Translator

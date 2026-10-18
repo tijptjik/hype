@@ -13,15 +13,15 @@ import {
   projectMapStyles,
 } from '../schema'
 // MAP
-import { REGISTERED_MAP_STYLE_CATALOG } from '$lib/map/styles/catalog'
-import { getMapStyleCatalogI18n } from '$lib/map/styles/i18n'
+import { REGISTERED_MAP_STYLE_CATALOG } from '#lib/map/styles/catalog.js'
+import { getMapStyleCatalogI18n } from '#lib/map/styles/i18n.js'
 // TYPES
-import type { Database } from '$lib/types'
+import type { Database } from '#lib/types.js'
 import type {
   MapStyleResolvedDB,
   MapStyleRowDB,
   ProjectMapStyleDB,
-} from '$lib/db/zod/schema/map.types'
+} from '#lib/db/zod/schema/map.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -248,8 +248,9 @@ export const syncMapStyleCatalog = async (db: Database): Promise<void> => {
  * @param params - Project scope and optional catalog code.
  * @returns Nothing.
  * @remarks
- * This treats the assignment row as replace-only: delete any previous mapping first,
- * then insert the requested visible style if one was supplied.
+ * This treats the assignment row as replace-only: delete the previous mapping and
+ * insert the requested visible style in one transaction. Invalid or failed replacements
+ * preserve the previous assignment; an empty code explicitly clears it.
  */
 export const setProjectMapStyleByCode = async (
   db: Database,
@@ -262,11 +263,12 @@ export const setProjectMapStyleByCode = async (
 ): Promise<void> => {
   const normalizedCode = params.mapStyleCode?.trim() || null
 
-  await db
+  const deletion = db
     .delete(projectMapStyles)
     .where(eq(projectMapStyles.projectId, params.projectId))
 
   if (!normalizedCode) {
+    await deletion
     return
   }
 
@@ -283,10 +285,26 @@ export const setProjectMapStyleByCode = async (
     throw new Error(`Unknown or unavailable map style: ${normalizedCode}`)
   }
 
-  await db.insert(projectMapStyles).values({
-    projectId: params.projectId,
-    mapStyleId,
-  })
+  // Recheck identity, code and visibility at write time, not only in the preflight lookup.
+  // An unavailable style yields NULL and the required mapStyleId aborts the whole batch.
+  const visibleStyle = db
+    .select({ id: mapStyles.id })
+    .from(mapStyles)
+    .where(
+      and(
+        eq(mapStyles.id, mapStyleId),
+        eq(mapStyles.code, normalizedCode),
+        isVisibleToScope(params),
+      ),
+    )
+    .limit(1)
+  await db.batch([
+    deletion,
+    db.insert(projectMapStyles).values({
+      projectId: params.projectId,
+      mapStyleId: sql`(${visibleStyle})`,
+    }),
+  ])
 }
 
 /********************

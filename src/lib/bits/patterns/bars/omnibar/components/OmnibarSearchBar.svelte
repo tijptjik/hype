@@ -1,16 +1,21 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
 // ACTIONS
-import { clickOutside, focusOnSlash, handleEscape, selectOnEnter } from '$lib/actions'
+import {
+  clickOutside,
+  focusOnSlash,
+  handleEscape,
+  selectOnEnter,
+} from '#lib/actions.js'
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // COMPONENTS
 import OmnibarNewFeature from './OmnibarNewFeature.svelte'
 import OmnibarResults from './OmnibarResults.svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import MagnifyingGlass from 'virtual:icons/lucide/search'
+import MagnifyingGlass from 'virtual:icons/proicons/search'
 // STYLES
 import {
   getOmnibarResultsClasses,
@@ -51,13 +56,13 @@ const surfaceClasses = $derived(
         oninput={event =>
           search.onSearchTermChange((event.currentTarget as HTMLInputElement).value)}
         onfocus={search.onOpenTray}
-        class="h-12 min-w-0 w-full appearance-none rounded-lg border-0 bg-black pl-6 pr-10 text-sm caret-current focus:outline-none"
+        class="h-12 min-w-0 w-full appearance-none rounded-lg border-0 bg-panel pl-6 pr-10 text-sm text-base-content caret-current placeholder:text-muted-foreground focus:outline-none"
         use:focusOnSlash={() => void null}
         use:selectOnEnter={search.onSelectFirstResult}
         use:handleEscape={search.onClearSearchOrCloseTray}
       >
       <div class="absolute inset-y-0 right-2 flex items-center pr-3">
-        <Icon src={MagnifyingGlass} class="h-6 w-6" />
+        <Icon src={MagnifyingGlass} tone="base" class="h-6 w-6" />
       </div>
     </div>
   </div>

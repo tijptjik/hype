@@ -2,19 +2,19 @@
 // SVELTE
 import { page } from '$app/state'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // BITS
-import { TaskEditor } from '$lib/bits'
+import { TaskEditor } from '#lib/bits/index.js'
 import type {
   HeaderButtonActionConfig,
   HeaderCrumb,
-} from '$lib/bits/patterns/layout/header'
-import type { TaskReviewUiAction } from '$lib/bits/patterns/tasks'
+} from '#lib/bits/patterns/layout/header/index.js'
+import type { TaskReviewUiAction } from '#lib/bits/patterns/tasks/index.js'
 import {
   TaskInfoDialog,
   TaskRejectDialog,
   TaskReviewStatusBar,
-} from '$lib/bits/patterns/tasks/components'
+} from '#lib/bits/patterns/tasks/components/index.js'
 // CLIENT SERVICES
 import {
   getEffectiveTaskLayerId,
@@ -23,40 +23,42 @@ import {
   getTaskSyncSignature,
   mergeResolvedTaskFeature,
   syncAssignedTaskLayerCache,
-} from '$lib/client/services/task'
+} from '#lib/client/services/task.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // ENUMS
 import {
   FirstClassResource,
   ImageContextResource,
   ImageContextResourceExtended,
   ResourcePath,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 import { toast } from 'svelte-sonner'
 // ICONS
-import CheckBadgeIcon from 'virtual:icons/lucide/badge-check'
-import CheckIcon from 'virtual:icons/lucide/circle-check'
-import EyeOffIcon from 'virtual:icons/lucide/eye-off'
+import CheckBadgeIcon from 'virtual:icons/proicons/checkmark-starburst'
+import CheckIcon from 'virtual:icons/proicons/checkmark-circle'
+import EyeOffIcon from 'virtual:icons/proicons/eye-off'
 import GhostIcon from 'virtual:icons/lucide/ghost'
-import InfoIcon from 'virtual:icons/lucide/info'
-import TaskIcon from 'virtual:icons/lucide/inbox'
-import TrashIcon from 'virtual:icons/lucide/trash-2'
-import XCircleIcon from 'virtual:icons/lucide/circle-x'
+import InfoIcon from 'virtual:icons/proicons/info'
+import TaskIcon from 'virtual:icons/proicons/archive'
+import TrashIcon from 'virtual:icons/proicons/delete'
+import XCircleIcon from 'virtual:icons/proicons/cancel-circle'
 // NAVIGATION
-import { goToNextTask, navigateOnAdmin } from '$lib/navigation'
+import { goToNextTask, navigateOnAdmin } from '#lib/navigation/index.js'
 // PROVIDERS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // REMOTE
-import { getTask, reassignTaskLayer, reviewTask } from '$lib/api/server/tasks.remote'
+import { getTask, reassignTaskLayer, reviewTask } from '#lib/api/tasks.remote.js'
 // TYPES
-import type { Id, Task, TaskType } from '$lib/types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Id } from '#lib/types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
+import type { TaskType } from '#lib/api/services/taskReview.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -114,7 +116,7 @@ function getEditorRequest() {
   return getTask({
     id: page.params.task ?? '',
     meta: {
-      isAdminRequest: true,
+      ...adminCtx.view.resources.queryMeta,
       profile: 'admin',
     },
   })
@@ -129,7 +131,7 @@ const resolvedFeature = $derived.by((): Feature | null =>
   task
     ? (mergeResolvedTaskFeature(
         task as Pick<Task, 'featureId' | 'feature'>,
-        adminCtx.appCtx.cache.feature as Map<Id, Feature>,
+        adminCtx.view.cache.feature as Map<Id, Feature>,
       ) as Feature | null)
     : null,
 )
@@ -150,7 +152,7 @@ $effect(() => {
   if (!task?.id) return
 
   if (lastSyncedTaskSignature !== taskSyncSignature) {
-    adminCtx.appCtx.setTaskResourceAndCache(task)
+    adminCtx.view.setTaskResourceAndCache(task)
     lastSyncedTaskSignature = taskSyncSignature
   }
 
@@ -159,7 +161,7 @@ $effect(() => {
       layerId: effectiveLayerId,
       assignableLayers,
       task,
-      layerCache: adminCtx.appCtx.cache.layer,
+      layerCache: adminCtx.view.cache.layer,
     })
   }
 
@@ -315,11 +317,11 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
     return []
   }
 
-  const preferences = adminCtx.appCtx.getUserPreferences()
+  const preferences = adminCtx.view.getUserPreferences()
   const selectedLayer = getSelectedTaskLayer(
     assignableLayers,
     effectiveLayerId,
-    adminCtx.appCtx.cache.layer,
+    adminCtx.view.cache.layer,
   )
   const organisationName =
     getI18n(task.organisation as never, 'nameShort', preferences) ||
@@ -342,7 +344,7 @@ function getTaskBreadcrumbs(): HeaderCrumb[] {
         getI18n(selectedLayer, 'name', preferences)
       : null) ||
     (selectedLayer && 'id' in selectedLayer && 'projectId' in selectedLayer
-      ? adminCtx.appCtx.getContextualLayerName(selectedLayer as Layer, false, false)
+      ? adminCtx.view.getContextualLayerName(selectedLayer as Layer, false, false)
       : null) ||
     (selectedLayer && 'code' in selectedLayer ? selectedLayer.code : null) ||
     ''
@@ -387,7 +389,7 @@ function showReviewToast(action: TaskReviewUiAction): void {
   if (!task) return
 
   const featureTitle =
-    getI18n(task.feature as never, 'title', adminCtx.appCtx.getUserPreferences()) ??
+    getI18n(task.feature as never, 'title', adminCtx.view.getUserPreferences()) ??
     task.id
 
   toast.success(`${featureTitle} ${getTaskReviewActionToastLabel(action)}`)
@@ -417,7 +419,7 @@ $effect(() => {
       reviewReason: task.reviewReason ?? null,
     })
   } else {
-    headerCtrl.setTaskActionContent(null)
+    headerCtrl.setTaskActionContent(null, {})
   }
 
   headerCtrl.clearControlBar()
@@ -464,7 +466,7 @@ async function handleReview(
     if (!updatedTask) return
 
     taskState = updatedTask
-    adminCtx.appCtx.setTaskResourceAndCache(updatedTask)
+    adminCtx.view.setTaskResourceAndCache(updatedTask)
     showReviewToast(action)
 
     if (action === 'accept' && updatedTask.featureId) {
@@ -522,9 +524,9 @@ async function handleReassignLayer(layerId: string): Promise<void> {
       layerId,
       assignableLayers,
       task: updatedTask,
-      layerCache: adminCtx.appCtx.cache.layer,
+      layerCache: adminCtx.view.cache.layer,
     })
-    adminCtx.appCtx.setTaskResourceAndCache(updatedTask)
+    adminCtx.view.setTaskResourceAndCache(updatedTask)
   } catch (error) {
     console.error('Failed to reassign task layer:', error)
     toast.error('Failed to reassign layer')
@@ -554,7 +556,7 @@ const imageProviderProps = $derived.by(() => {
       : undefined,
     highlightedIds: task?.images?.map(taskImage => taskImage.imageId as Id) ?? [],
     ...(hierarchySource
-      ? adminCtx.appCtx.getHierarchySync(hierarchySource as Feature | Task)
+      ? adminCtx.view.getHierarchySync(hierarchySource as Feature | Task)
       : {}),
     context:
       isValid && task?.featureId
@@ -585,12 +587,14 @@ const imageProviderModel = useImageProviderModel(
 />
 
 <ImageProvider model={imageProviderModel}>
-  <TaskEditor
-    {task}
-    {assignableLayers}
-    {canReassignLayer}
-    {isLayerBusy}
-    onReview={handleReview}
-    onReassignLayer={handleReassignLayer}
-  />
+  {#if task}
+    <TaskEditor
+      {task}
+      {assignableLayers}
+      {canReassignLayer}
+      {isLayerBusy}
+      onReview={handleReview}
+      onReassignLayer={handleReassignLayer}
+    />
+  {/if}
 </ImageProvider>

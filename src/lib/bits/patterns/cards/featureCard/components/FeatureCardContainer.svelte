@@ -1,7 +1,7 @@
 <script lang="ts">
 // BITS
-import { Scrollbar } from '$lib/bits'
-import { cx } from '$lib/bits/utils'
+import { Scrollbar } from '#lib/bits/index.js'
+import { cx } from '#lib/bits/utils.js'
 type ContainerProps = {
   children: import('svelte').Snippet
   viewport?: HTMLElement
@@ -68,7 +68,7 @@ $effect(() => {
         viewBox="0 0 16 16"
         preserveAspectRatio="none"
       >
-        <path d="M0 0H16A16 16 0 0 0 0 16Z" fill="black"></path>
+        <path d="M0 0H16A16 16 0 0 0 0 16Z" fill="var(--theme-panel)"></path>
       </svg>
       <svg
         id="right-cap"
@@ -78,7 +78,7 @@ $effect(() => {
         viewBox="0 0 16 16"
         preserveAspectRatio="none"
       >
-        <path d="M16 0H0A16 16 0 0 1 16 16Z" fill="black"></path>
+        <path d="M16 0H0A16 16 0 0 1 16 16Z" fill="var(--theme-panel)"></path>
       </svg>
     </div>
     <div

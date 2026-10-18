@@ -1,5 +1,5 @@
 // TYPES
-import type { TitleEnvironmentLabel } from '$lib/types'
+import type { TitleEnvironmentLabel } from '#lib/bits/patterns/panels/panel.types.js'
 
 const ENV_TITLE_PREFIX_PATTERN = /^\[(?:DEV|PREVIEW)\]\s*/
 

@@ -1,8 +1,12 @@
 <script lang="ts">
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // LOCAL
 import { getFeatureCardLayout } from '../featureCard.layout'
 import { getFeatureCardResponsiveWidth } from '../featureCard.utils'
@@ -26,7 +30,10 @@ let {
 }: Props = $props()
 
 const responsiveCtx = getResponsiveCtx()
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
@@ -37,7 +44,7 @@ const layout = $derived(
 )
 </script>
 
-<div class="pointer-events-auto shrink-0 bg-black">
+<div class="pointer-events-auto shrink-0 bg-(--theme-panel)">
   {#if topActions}
     <div class="flex justify-center px-[var(--feature-card-content-padding)] pt-2">
       {@render topActions()}
@@ -66,7 +73,9 @@ const layout = $derived(
         {@render leftActions()}
       {/if}
     </div>
-    {#if responsiveCtx.isMobile && !centerRightActionsOnMobile && !leftActionsFillAvailableWidth}
+    {#if responsiveCtx.isMobile &&
+      !centerRightActionsOnMobile &&
+      !leftActionsFillAvailableWidth}
       <div
         class="pointer-events-none flex min-w-0 items-center justify-center self-center"
       ></div>
@@ -83,7 +92,8 @@ const layout = $derived(
         {@render rightActions()}
       {/if}
     </div>
-    {#if (!responsiveCtx.isMobile || centerRightActionsOnMobile) && !leftActionsFillAvailableWidth}
+    {#if (!responsiveCtx.isMobile || centerRightActionsOnMobile) &&
+      !leftActionsFillAvailableWidth}
       <div
         class="pointer-events-none flex min-w-0 items-center justify-end self-center"
       ></div>

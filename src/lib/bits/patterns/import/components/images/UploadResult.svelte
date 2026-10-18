@@ -2,16 +2,16 @@
 // SVELTE
 import { scale } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import Button from '$lib/bits/core/button/Button.svelte'
-import { Badge } from '$lib/bits/custom'
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import CheckCircle from 'virtual:icons/lucide/circle-check'
-import CircleAlert from 'virtual:icons/lucide/circle-alert'
+import Button from '#lib/bits/core/button/Button.svelte'
+import { Badge } from '#lib/bits/custom/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
+import CircleAlert from 'virtual:icons/proicons/alert-circle'
 import CopyX from 'virtual:icons/lucide/copy-x'
-import Photo from 'virtual:icons/lucide/image'
-import Replace from 'virtual:icons/lucide/replace'
+import Photo from 'virtual:icons/proicons/photo'
+import Replace from 'virtual:icons/proicons/arrow-swap'
 // PATTERN COMPONENTS
 import ImportRow from '../shared/ImportRow.svelte'
 import ImportImagePreview from './ImportImagePreview.svelte'
@@ -20,9 +20,9 @@ import {
   formatImportFileSize,
   getUploadStatusBadgeText,
   getUploadStatusBadgeTone,
-} from '$lib/client/services/import/shared'
+} from '#lib/client/services/import/shared.js'
 // TYPES
-import type { BatchUploadResult } from '$lib/client/services/import/types'
+import type { BatchUploadResult } from '#lib/client/services/import/types.js'
 
 type Props = {
   result: BatchUploadResult
@@ -72,7 +72,9 @@ let shouldShowError = $derived(Boolean(result.error && result.status !== 'upload
         </div>
         {#if shouldShowError}
           <div
-            class={result.status === 'conflict' ? 'text-sm text-warning' : 'text-sm text-error'}
+            class={result.status === 'conflict'
+              ? 'text-sm text-warning'
+              : 'text-sm text-error'}
           >
             {result.error}
           </div>
@@ -86,10 +88,10 @@ let shouldShowError = $derived(Boolean(result.error && result.status !== 'upload
                 rel="noreferrer"
                 class="hover:underline"
               >
-                <code class="text-white">{result.featureId}</code>
+                <code class="text-foreground">{result.featureId}</code>
               </a>
             {:else}
-              <code class="text-white">{m.batch_upload__feature_not_found()}</code>
+              <code class="text-foreground">{m.batch_upload__feature_not_found()}</code>
             {/if}
           </div>
         {/if}

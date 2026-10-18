@@ -4,7 +4,7 @@ import {
   createDefaultHubPrivacyPolicy,
   createDefaultHubTermsOfService,
   renderPolicyMarkdown,
-} from '$lib/services/policy'
+} from '#lib/services/policy.js'
 
 describe('policy defaults', () => {
   it('substitutes hub name and a human-readable date into the privacy template', () => {

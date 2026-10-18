@@ -4,27 +4,28 @@ import { tick } from 'svelte'
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { getLocale, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
-import { getImageCtx } from '$lib/context/image.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import { getCardCtx } from '#lib/context/card.svelte.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 // SERVICES
-import { submitMissingReport as submitMissingReportAPI } from '$lib/client/services/task'
+import { submitMissingReport as submitMissingReportAPI } from '#lib/client/services/task.js'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums'
+import { FeatureCardMode } from '#lib/enums.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 // LOCAL
 import FeatureCardSubmitButton from './FeatureCardSubmitButton.svelte'
 
 let { feature }: { feature: Feature } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
-const featureTitle =
-  feature.i18n?.[getLocale()]?.title ?? feature.i18n?.en?.title ?? feature.id
+const featureTitle = $derived(
+  feature.i18n?.[getLocaleKey()]?.title ?? feature.i18n?.en?.title ?? feature.id,
+)
 
 async function handleSubmitMissingReport(): Promise<void> {
   if (imageCtx.getStagedQueue().length === 0) {

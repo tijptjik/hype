@@ -1,0 +1,420 @@
+/* Runtime palettes: semantic tokens feed Tailwind utilities and existing Bits tokens. */
+:root,
+[data-theme="hype-dark"] {
+  color-scheme: dark;
+  --theme-canvas: #08090e;
+  --theme-panel: #10121b;
+  --theme-surface: #191c29;
+  --theme-raised: #262b3d;
+  --theme-text: #f4f0fa;
+  --theme-muted: #b6b6c8;
+  --theme-border: #363b52;
+  --theme-primary: #fa659b;
+  --theme-on-primary: #200a15;
+  --theme-secondary: #9d9bff;
+  --theme-on-secondary: #171335;
+  --theme-tertiary: #72d8cf;
+  --theme-on-tertiary: #092622;
+  --theme-info: #82c4ff;
+  --theme-success: #76d9ad;
+  --theme-warning: #f2cc83;
+  --theme-error: #ff888a;
+}
+
+[data-theme="hype-black"] {
+  color-scheme: dark;
+  --theme-canvas: #000000;
+  --theme-panel: #000000;
+  --theme-surface: #0d0d0d;
+  --theme-raised: #1c1c1c;
+  --theme-text: #f7e7ef;
+  --theme-muted: #b6b6c8;
+  --theme-border: #333333;
+  --theme-primary: #f04d7f;
+  --theme-on-primary: #200a15;
+  --theme-secondary: #6666ff;
+  --theme-on-secondary: #000000;
+  --theme-tertiary: #8659e8;
+  --theme-on-tertiary: #000000;
+  --theme-info: #82c4ff;
+  --theme-success: #76d9ad;
+  --theme-warning: #f2cc83;
+  --theme-error: #ff888a;
+}
+
+[data-theme="hype-light"] {
+  color-scheme: light;
+  --theme-canvas: #f5f3fa;
+  --theme-panel: #fffefe;
+  --theme-surface: #efecf7;
+  --theme-raised: #e5e0f0;
+  --theme-text: #292338;
+  --theme-muted: #696077;
+  --theme-switch-neutral: var(--theme-muted);
+  --theme-switch-on-track: #e5f3ef;
+  --theme-switch-off-track: #f9e8ec;
+  --theme-border: #d7cde4;
+  --theme-primary: #af245a;
+  --theme-on-primary: #ffffff;
+  --theme-secondary: #5d46ae;
+  --theme-on-secondary: #ffffff;
+  --theme-tertiary: #08776f;
+  --theme-on-tertiary: #ffffff;
+  --theme-info: #2066a7;
+  --theme-success: #19724c;
+  --theme-warning: #8a6007;
+  --theme-error: #b22b3b;
+}
+
+[data-theme="breadline-light"] {
+  color-scheme: light;
+  --theme-canvas: #f8f4ed;
+  --theme-panel: #fffdfa;
+  --theme-surface: #f8ece2;
+  --theme-raised: #efddd0;
+  --theme-text: #173f4a;
+  --theme-muted: #5d777b;
+  --theme-switch-neutral: var(--theme-muted);
+  --theme-switch-on-track: #e5f3ef;
+  --theme-switch-off-track: #f9e8ec;
+  --theme-border: #d5c8bc;
+  --theme-primary: #155e75;
+  --theme-on-primary: #ffffff;
+  --theme-secondary: #267a7a;
+  --theme-on-secondary: #ffffff;
+  --theme-tertiary: #c0543d;
+  --theme-on-tertiary: #ffffff;
+  --theme-info: #155e75;
+  --theme-success: #28786a;
+  --theme-warning: #846009;
+  --theme-error: #b54b60;
+}
+
+[data-theme="breadline-dark"] {
+  color-scheme: dark;
+  --theme-canvas: #12252e;
+  --theme-panel: #173542;
+  --theme-surface: #1e4652;
+  --theme-raised: #285a63;
+  --theme-text: #f8f1e7;
+  --theme-muted: #b6ced0;
+  --theme-border: #47717a;
+  --theme-primary: #8bc8ca;
+  --theme-on-primary: #0a3f60;
+  --theme-secondary: #ff9275;
+  --theme-on-secondary: #32170d;
+  --theme-tertiary: #a6cbe0;
+  --theme-on-tertiary: #0a3f60;
+  --theme-info: #9bd0df;
+  --theme-success: #a5d0a6;
+  --theme-warning: #ecc778;
+  --theme-error: #ff9390;
+}
+
+/* Re-declare aliases at each theme boundary so nested previews remain independent. */
+:root,
+[data-theme] {
+  /* Palette-derived fallback; the named themes below compose their own admin canvas. */
+  --admin-background: linear-gradient(
+    to bottom left,
+    color-mix(in oklab, var(--theme-primary) 9%, var(--theme-canvas)),
+    color-mix(in oklab, var(--theme-secondary) 7%, var(--theme-canvas))
+  );
+
+  /* Shared form roles allow translucent fields without changing the global surfaces. */
+  --form-control-fill: color-mix(in oklab, var(--theme-surface) 65%, transparent);
+  --form-control-edit-fill: color-mix(in oklab, var(--theme-text) 12%, transparent);
+  /* Search keeps the palette's surface hue with a darker, recessed fill. */
+  --search-control-fill: color-mix(in oklab, var(--theme-surface) 88%, black);
+  --resource-row-active-fill: var(--theme-raised);
+  --form-label: var(--theme-muted);
+  --form-control-border: var(--border-input);
+  --theme-glass-field: var(--theme-surface);
+  --theme-glass-panel: color-mix(in oklab, var(--theme-panel) 55%, transparent);
+
+  /* Compatibility tokens inherit the active palette, including nested theme previews. */
+  --background: transparent;
+  --background-alt: var(--color-base-200);
+  --foreground: var(--color-base-content);
+  --foreground-alt: var(--theme-muted);
+  --muted: var(--color-base-300);
+  --muted-foreground: var(--theme-muted);
+  --border: var(--color-base-content);
+  --border-input: color-mix(in oklab, var(--color-base-content) 17%, transparent);
+  --border-input-hover: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  --border-card: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  --dark: var(--color-base-content);
+  --dark-10: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  --dark-40: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  --dark-04: color-mix(in oklab, var(--color-base-content) 4%, transparent);
+  --accent: var(--theme-tertiary);
+  --accent-foreground: var(--theme-on-tertiary);
+  --destructive: var(--color-error);
+  --tertiary: var(--theme-tertiary);
+  --line: var(--color-base-300);
+  --light: var(--theme-tertiary);
+
+  /* black */
+  --contrast: hsl(0 0% 0%);
+
+  /* Shadows */
+  --shadow-mini: 0px 1px 0px 1px rgba(0, 0, 0, 0.04);
+  --shadow-mini-inset: 0px 1px 0px 0px rgba(0, 0, 0, 0.04) inset;
+  --shadow-popover: 0px 7px 12px 3px var(--dark-10);
+  --shadow-kbd: 0px 2px 0px 0px rgba(0, 0, 0, 0.07);
+  --shadow-btn: 0px 1px 0px 1px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0px 2px 0px 1px rgba(0, 0, 0, 0.04);
+  --shadow-date-field-focus: 0px 0px 0px 3px rgba(24, 24, 27, 0.17);
+
+  /* Legacy surface and status utilities follow the active theme. */
+  --color-glass-100: var(--theme-glass-field);
+  --color-glass-200: color-mix(in oklab, var(--theme-muted) 51%, transparent);
+  --color-glass-300: var(--theme-glass-panel);
+  --color-glass-300-solid: var(--theme-panel);
+  --color-glass-warning: var(--theme-warning);
+  --color-glass-result: color-mix(in oklab, var(--theme-surface) 90%, transparent);
+  --color-glass-neutral: color-mix(in oklab, var(--theme-raised) 78%, transparent);
+  --color-glass-rejected: var(--theme-error);
+  --color-glass-accepted: var(--theme-success);
+  --color-glass-salmon: var(--theme-tertiary);
+  --color-glass-salmon-dark: color-mix(
+    in oklab,
+    var(--theme-tertiary) 15%,
+    var(--theme-panel)
+  );
+  --color-glass-base: color-mix(in oklab, var(--theme-raised) 71%, transparent);
+  --color-light: var(--theme-tertiary);
+  --color-ok: var(--theme-success);
+  --color-pending: var(--theme-warning);
+
+  --color-canvas: var(--theme-canvas);
+  --color-panel: var(--theme-panel);
+  --color-surface: var(--theme-surface);
+  --color-raised: var(--theme-raised);
+  --color-foreground: var(--theme-text);
+  --color-muted-foreground: var(--theme-muted);
+  --color-border: var(--theme-border);
+  --color-focus: var(--theme-primary);
+  --color-primary: var(--theme-primary);
+  --color-primary-content: var(--theme-on-primary);
+  --color-secondary: var(--theme-secondary);
+  --color-secondary-content: var(--theme-on-secondary);
+  --color-tertiary: var(--theme-tertiary);
+  --color-tertiary-content: var(--theme-on-tertiary);
+  --color-accent: var(--theme-tertiary);
+  --color-accent-content: var(--theme-on-tertiary);
+  --color-base-50: var(--theme-muted);
+  --color-base-100: var(--theme-raised);
+  --color-base-200: var(--theme-surface);
+  --color-base-300: var(--theme-raised);
+  --color-base-350: var(--theme-panel);
+  --color-base-400: var(--theme-canvas);
+  --color-base-content: var(--theme-text);
+  --color-neutral: var(--theme-raised);
+  --color-neutral-content: var(--theme-text);
+  --color-info: var(--theme-info);
+  --color-info-content: var(--theme-canvas);
+  --color-success: var(--theme-success);
+  --color-success-content: var(--theme-canvas);
+  --color-warning: var(--theme-warning);
+  --color-warning-content: var(--theme-canvas);
+  --color-error: var(--theme-error);
+  --color-error-content: var(--theme-canvas);
+
+  /* Shared component color aliases. */
+  --color-background: var(--background);
+  --color-background-alt: var(--background-alt);
+  --color-foreground-alt: var(--foreground-alt);
+  --color-muted: var(--muted);
+  --color-border-input: var(--border-input);
+  --color-border-input-hover: var(--border-input-hover);
+  --color-border-card: var(--border-card);
+  --color-dark: var(--contrast);
+  --color-dark-10: var(--dark-10);
+  --color-dark-40: var(--dark-40);
+  --color-dark-04: var(--dark-04);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-line: var(--line);
+  --color-contrast: var(--contrast);
+}
+
+@theme inline {
+  /* Legacy surface and status utilities follow the active theme. */
+  --color-glass-100: var(--theme-glass-field);
+  --color-glass-200: color-mix(in oklab, var(--theme-muted) 51%, transparent);
+  --color-glass-300: var(--theme-glass-panel);
+  --color-glass-300-solid: var(--theme-panel);
+  --color-glass-warning: var(--theme-warning);
+  --color-glass-result: color-mix(in oklab, var(--theme-surface) 90%, transparent);
+  --color-glass-neutral: color-mix(in oklab, var(--theme-raised) 78%, transparent);
+  --color-glass-rejected: var(--theme-error);
+  --color-glass-accepted: var(--theme-success);
+  --color-glass-salmon: var(--theme-tertiary);
+  --color-glass-salmon-dark: color-mix(
+    in oklab,
+    var(--theme-tertiary) 15%,
+    var(--theme-panel)
+  );
+  --color-glass-base: color-mix(in oklab, var(--theme-raised) 71%, transparent);
+  --color-light: var(--theme-tertiary);
+  --color-ok: var(--theme-success);
+  --color-pending: var(--theme-warning);
+
+  --color-canvas: var(--theme-canvas);
+  --color-panel: var(--theme-panel);
+  --color-surface: var(--theme-surface);
+  --color-raised: var(--theme-raised);
+  --color-foreground: var(--theme-text);
+  --color-muted-foreground: var(--theme-muted);
+  --color-border: var(--theme-border);
+  --color-focus: var(--theme-primary);
+  --color-primary: var(--theme-primary);
+  --color-primary-content: var(--theme-on-primary);
+  --color-secondary: var(--theme-secondary);
+  --color-secondary-content: var(--theme-on-secondary);
+  --color-tertiary: var(--theme-tertiary);
+  --color-tertiary-content: var(--theme-on-tertiary);
+  --color-accent: var(--theme-tertiary);
+  --color-accent-content: var(--theme-on-tertiary);
+  --color-base-50: var(--theme-muted);
+  --color-base-100: var(--theme-raised);
+  --color-base-200: var(--theme-surface);
+  --color-base-300: var(--theme-raised);
+  --color-base-350: var(--theme-panel);
+  --color-base-400: var(--theme-canvas);
+  --color-base-content: var(--theme-text);
+  --color-neutral: var(--theme-raised);
+  --color-neutral-content: var(--theme-text);
+  --color-info: var(--theme-info);
+  --color-info-content: var(--theme-canvas);
+  --color-success: var(--theme-success);
+  --color-success-content: var(--theme-canvas);
+  --color-warning: var(--theme-warning);
+  --color-warning-content: var(--theme-canvas);
+  --color-error: var(--theme-error);
+  --color-error-content: var(--theme-canvas);
+
+  /* Shared component color aliases. */
+  --color-background: var(--background);
+  --color-background-alt: var(--background-alt);
+  --color-foreground-alt: var(--foreground-alt);
+  --color-muted: var(--muted);
+  --color-border-input: var(--border-input);
+  --color-border-input-hover: var(--border-input-hover);
+  --color-border-card: var(--border-card);
+  --color-dark: var(--contrast);
+  --color-dark-10: var(--dark-10);
+  --color-dark-40: var(--dark-40);
+  --color-dark-04: var(--dark-04);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-line: var(--line);
+  --color-contrast: var(--contrast);
+}
+
+[data-theme="hype-black"] {
+  /* Original warm glass fields and creamy labels over the saturated admin canvas. */
+  --form-control-fill: color-mix(in oklab, #7d4f63 32%, transparent);
+  --form-control-edit-fill: #c3729080;
+  --form-control-border: color-mix(in oklab, #2f282b 22%, transparent);
+  --theme-glass-panel: #20191e8c;
+  --theme-glass-field: #7d475f;
+  --form-label: color-mix(in oklab, #fcc 66%, transparent);
+  --admin-background: linear-gradient(
+    to bottom left in oklab,
+    var(--color-rose-500),
+    var(--color-fuchsia-800)
+  );
+}
+
+/* Nebula: a turquoise glow over a deep violet-to-rose sky. */
+:root:not([data-theme]),
+[data-theme="hype-dark"] {
+  --admin-background:
+    radial-gradient(
+      ellipse at 90% 5%,
+      color-mix(in oklab, var(--theme-tertiary) 22%, transparent),
+      transparent 65%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--theme-secondary) 38%, var(--theme-canvas)),
+      color-mix(in oklab, var(--theme-primary) 28%, var(--theme-canvas))
+    );
+}
+
+/* Oblivion: rose and lilac with a cool mint edge, keeping the canvas luminous. */
+[data-theme="hype-light"] {
+  /* Paper-white workspaces and a single lilac tint keep field surfaces clear. */
+  --admin-form-workspace: var(--theme-panel);
+  --admin-form-control-fill: #f8f6fc;
+  --admin-form-search-fill: #f8f6fc;
+  --admin-form-heading: color-mix(
+    in oklab,
+    var(--theme-primary) 10%,
+    var(--theme-panel)
+  );
+  --admin-form-edge-width: 1px;
+  --admin-form-divider-width: 1px;
+  --admin-background:
+    radial-gradient(
+      ellipse at 100% 100%,
+      color-mix(in oklab, var(--theme-tertiary) 20%, transparent),
+      transparent 65%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--theme-primary) 27%, var(--theme-canvas)),
+      color-mix(in oklab, var(--theme-secondary) 30%, var(--theme-canvas))
+    );
+}
+
+/* Milque: cool frosting blue and teal separate the canvas from warm peach cards. */
+[data-theme="breadline-light"] {
+  /* Quiet paper surfaces keep peach on editable fields and teal on actions. */
+  --admin-form-workspace: var(--theme-panel);
+  --admin-form-control-fill: #fcf5ef;
+  --search-control-fill: var(--theme-surface);
+  --admin-form-search-fill: var(--theme-surface);
+  --resource-row-active-fill: color-mix(
+    in oklab,
+    var(--theme-raised) 55%,
+    var(--theme-panel)
+  );
+  --admin-form-heading: color-mix(
+    in oklab,
+    var(--theme-primary) 10%,
+    var(--theme-panel)
+  );
+  --admin-form-edge-width: 1px;
+  --admin-form-edge: none;
+  --admin-form-divider-width: 1px;
+  --admin-form-divider: none;
+  --admin-background:
+    radial-gradient(
+      ellipse at 0% 0%,
+      color-mix(in oklab, var(--theme-primary) 12%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--theme-primary) 18%, var(--theme-panel)) 10%,
+      color-mix(in oklab, var(--theme-secondary) 28%, var(--theme-panel)) 100%
+    );
+}
+
+/* Rye: deep ocean blue and teal, warmed by a restrained coral glow. */
+[data-theme="breadline-dark"] {
+  --admin-background:
+    radial-gradient(
+      ellipse at 100% 0%,
+      color-mix(in oklab, var(--theme-secondary) 22%, transparent),
+      transparent 65%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--theme-tertiary) 18%, var(--theme-canvas)),
+      color-mix(in oklab, var(--theme-primary) 32%, var(--theme-canvas))
+    );
+}

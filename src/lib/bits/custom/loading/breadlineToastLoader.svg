@@ -1,0 +1,765 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="240"
+  height="260"
+  viewBox="20 -15 560 620"
+  role="img"
+  aria-labelledby="loader-title loader-desc"
+>
+  <title id="loader-title">Toastie loading</title>
+  <desc id="loader-desc">
+    Toastie jumps for joy. Eyebrows lift, the smile opens wider, and rosy cheeks rise
+    with the jump before relaxing on landing. Reduced motion shows a still character.
+  </desc>
+  <style>
+  .toastie {
+    transform-origin: 300px 533px;
+    animation: joy-jump 2.6s infinite;
+  }
+  .arm-left {
+    transform-origin: 134px 342px;
+    animation: joy-left 2.6s infinite;
+  }
+  .arm-right {
+    transform-origin: 428px 344px;
+    animation: joy-right 2.6s infinite;
+  }
+  .leg-left {
+    transform-origin: 231px 491px;
+    animation: joy-leg-left 2.6s infinite;
+  }
+  .leg-right {
+    transform-origin: 357px 491px;
+    animation: joy-leg-right 2.6s infinite;
+  }
+  .shadow {
+    transform-origin: 300px 541px;
+    animation: joy-shadow 2.6s infinite;
+  }
+  .eye {
+    animation: toastie-blink 4.8s linear infinite;
+  }
+  .dot {
+    animation: toastie-dot 1.2s ease-in-out infinite;
+  }
+  .dot-2 {
+    animation-delay: 0.16s;
+  }
+  .dot-3 {
+    animation-delay: 0.32s;
+  }
+  /* Anticipation, takeoff, apex, landing, settle. The final pause keeps the loop gentle. */
+  @keyframes joy-jump {
+    0%,
+    8%,
+    76%,
+    100% {
+      transform: translateY(0) scale(1);
+    }
+    18% {
+      transform: translateY(0) scale(1.045, 0.93);
+      animation-timing-function: cubic-bezier(0.16, 0.7, 0.3, 1);
+    }
+    40%,
+    46% {
+      transform: translateY(-62px) scale(0.98, 1.02);
+      animation-timing-function: cubic-bezier(0.55, 0, 0.8, 0.4);
+    }
+    64% {
+      transform: translateY(0) scale(1.05, 0.92);
+      animation-timing-function: ease-out;
+    }
+    70% {
+      transform: translateY(-3px) scale(0.99, 1.015);
+    }
+  }
+  @keyframes joy-left {
+    0%,
+    12%,
+    76%,
+    100% {
+      transform: rotate(0);
+    }
+    36%,
+    48% {
+      transform: rotate(58deg);
+    }
+    64% {
+      transform: rotate(12deg);
+    }
+  }
+  @keyframes joy-right {
+    0%,
+    12%,
+    76%,
+    100% {
+      transform: rotate(0);
+    }
+    36%,
+    48% {
+      transform: rotate(-58deg);
+    }
+    64% {
+      transform: rotate(-12deg);
+    }
+  }
+  @keyframes joy-leg-left {
+    0%,
+    18%,
+    64%,
+    100% {
+      transform: rotate(0);
+    }
+    36%,
+    48% {
+      transform: rotate(14deg);
+    }
+  }
+  @keyframes joy-leg-right {
+    0%,
+    18%,
+    64%,
+    100% {
+      transform: rotate(0);
+    }
+    36%,
+    48% {
+      transform: rotate(-14deg);
+    }
+  }
+  @keyframes joy-shadow {
+    0%,
+    18%,
+    64%,
+    100% {
+      transform: scaleX(1);
+      opacity: 0.12;
+    }
+    40%,
+    46% {
+      transform: scaleX(0.65);
+      opacity: 0.05;
+    }
+  }
+  @keyframes toastie-blink {
+    0%,
+    39%,
+    43%,
+    100% {
+      transform: scaleY(1);
+    }
+    40.5%,
+    41.5% {
+      transform: scaleY(0.12);
+    }
+  }
+  @keyframes toastie-dot {
+    0%,
+    65%,
+    100% {
+      opacity: 0.28;
+    }
+    30% {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toastie,
+    .joy-arm,
+    .leg-left,
+    .leg-right,
+    .shadow,
+    .eye,
+    .dot {
+      animation: none;
+      transform: none;
+    }
+    .dot {
+      opacity: 0.65;
+    }
+  }
+
+  .joy-brows {
+    transform-origin: 298px 258px;
+    animation: joy-brows 2.6s infinite;
+  }
+  .joy-mouth {
+    transform-origin: 300px 308px;
+    animation: joy-mouth 2.6s infinite;
+  }
+  .joy-cheek {
+    animation: joy-cheeks 2.6s infinite;
+  }
+  @keyframes joy-brows {
+    0%,
+    8%,
+    76%,
+    100% {
+      transform: translateY(0);
+    }
+    18% {
+      transform: translateY(3px) scaleX(0.98);
+    }
+    36%,
+    48% {
+      transform: translateY(-9px) scaleX(1.04);
+    }
+    64% {
+      transform: translateY(2px);
+    }
+    70% {
+      transform: translateY(-2px);
+    }
+  }
+  @keyframes joy-mouth {
+    0%,
+    8%,
+    76%,
+    100% {
+      transform: scale(0.9, 0.72);
+    }
+    18% {
+      transform: scale(0.82, 0.55);
+    }
+    36%,
+    48% {
+      transform: scale(1.18, 1.14);
+    }
+    64% {
+      transform: scale(1.06, 0.65);
+    }
+    70% {
+      transform: scale(1, 0.9);
+    }
+  }
+  @keyframes joy-cheeks {
+    0%,
+    8%,
+    76%,
+    100% {
+      transform: translateY(0) scale(1);
+      fill: #e09a6b;
+      opacity: 0.8;
+    }
+    18% {
+      transform: translateY(1px) scale(1.03, 0.9);
+    }
+    36%,
+    48% {
+      transform: translateY(-5px) scale(1.2, 1.12);
+      fill: #ec8669;
+      opacity: 1;
+    }
+    64% {
+      transform: translateY(1px) scale(1.12, 0.85);
+      fill: #e9936d;
+      opacity: 0.9;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .joy-brows,
+    .joy-mouth,
+    .joy-cheek {
+      animation: none;
+      transform: none;
+    }
+  }
+
+  /* Clearly different resting and airborne expressions, readable at loader size. */
+  .rest-smile {
+    animation: rest-face 2.6s infinite;
+  }
+  .air-grin,
+  .happy-eyes {
+    animation: air-face 2.6s infinite;
+  }
+  .eye {
+    animation: open-face 2.6s infinite;
+  }
+  .joy-brows {
+    animation: big-brows 2.6s infinite;
+  }
+  .joy-cheek {
+    animation: big-cheeks 2.6s infinite;
+  }
+  @keyframes rest-face {
+    0%,
+    18%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    28%,
+    60% {
+      opacity: 0;
+    }
+  }
+  @keyframes air-face {
+    0%,
+    18%,
+    70%,
+    100% {
+      opacity: 0;
+    }
+    28%,
+    60% {
+      opacity: 1;
+    }
+  }
+  @keyframes open-face {
+    0%,
+    18%,
+    70%,
+    100% {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+    28%,
+    60% {
+      opacity: 0;
+      transform: scaleY(0.2);
+    }
+  }
+  @keyframes big-brows {
+    0%,
+    8%,
+    76%,
+    100% {
+      transform: translateY(0) scaleX(1);
+    }
+    18% {
+      transform: translateY(6px) scaleX(0.92);
+    }
+    30%,
+    55% {
+      transform: translateY(-22px) scaleX(1.12);
+    }
+    64% {
+      transform: translateY(5px) scaleX(0.96);
+    }
+  }
+  @keyframes big-cheeks {
+    0%,
+    8%,
+    76%,
+    100% {
+      transform: translateY(0) scale(1);
+      fill: #e09a6b;
+      opacity: 0.7;
+    }
+    18% {
+      transform: translateY(2px) scale(1.1, 0.8);
+    }
+    30%,
+    55% {
+      transform: translateY(-10px) scale(1.7, 1.5);
+      fill: #f17c64;
+      opacity: 1;
+    }
+    64% {
+      transform: translateY(3px) scale(1.35, 0.85);
+      fill: #ea9070;
+      opacity: 0.9;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rest-smile,
+    .air-grin,
+    .happy-eyes,
+    .eye,
+    .joy-brows,
+    .joy-cheek {
+      animation: none;
+      transform: none;
+    }
+    .rest-smile,
+    .eye {
+      opacity: 1;
+    }
+    .air-grin,
+    .happy-eyes {
+      opacity: 0;
+    }
+  }
+
+  /* Smooth mouth opening, with a smaller celebratory range. */
+  .air-grin {
+    transform-origin: 300px 308px;
+    animation: gentle-grin 2.6s infinite;
+  }
+  .rest-smile {
+    animation: gentle-rest 2.6s infinite;
+  }
+  @keyframes gentle-grin {
+    0%,
+    18%,
+    76%,
+    100% {
+      opacity: 0;
+      transform: scale(0.75, 0.12);
+    }
+    30%,
+    55% {
+      opacity: 1;
+      transform: scale(0.87, 0.8);
+    }
+    64% {
+      opacity: 0.5;
+      transform: scale(0.8, 0.35);
+    }
+  }
+  @keyframes gentle-rest {
+    0%,
+    18%,
+    76%,
+    100% {
+      opacity: 1;
+    }
+    30%,
+    55% {
+      opacity: 0;
+    }
+    64% {
+      opacity: 0.5;
+    }
+  }
+  @keyframes big-brows {
+    0%,
+    8%,
+    76%,
+    100% {
+      transform: translateY(0);
+    }
+    18% {
+      transform: translateY(3px);
+    }
+    30%,
+    55% {
+      transform: translateY(-11px);
+    }
+    64% {
+      transform: translateY(2px);
+    }
+  }
+  @keyframes big-cheeks {
+    0%,
+    8%,
+    76%,
+    100% {
+      transform: translateY(0) scale(1);
+      fill: #e09a6b;
+      opacity: 0.8;
+    }
+    30%,
+    55% {
+      transform: translateY(-5px) scale(1.25, 1.15);
+      fill: #e98d70;
+      opacity: 1;
+    }
+    64% {
+      transform: translateY(1px) scale(1.1, 0.95);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .air-grin,
+    .rest-smile {
+      animation: none;
+      transform: none;
+    }
+    .air-grin {
+      opacity: 0;
+    }
+    .rest-smile {
+      opacity: 1;
+    }
+  }
+
+  /* Landing follow-through decays gently; a wink adds a quiet beat before the next jump. */
+  @keyframes joy-left {
+    0%,
+    12%,
+    100% {
+      transform: rotate(0);
+    }
+    36%,
+    48% {
+      transform: rotate(58deg);
+    }
+    64% {
+      transform: rotate(12deg);
+    }
+    73% {
+      transform: rotate(-14deg);
+    }
+    83% {
+      transform: rotate(7deg);
+    }
+    93% {
+      transform: rotate(-3deg);
+    }
+  }
+  @keyframes joy-right {
+    0%,
+    12%,
+    100% {
+      transform: rotate(0);
+    }
+    36%,
+    48% {
+      transform: rotate(-58deg);
+    }
+    64% {
+      transform: rotate(-12deg);
+    }
+    75% {
+      transform: rotate(12deg);
+    }
+    85% {
+      transform: rotate(-6deg);
+    }
+    94% {
+      transform: rotate(2deg);
+    }
+  }
+  .landing-wink {
+    transform-origin: 344px 285px;
+    animation: landing-wink 2.6s linear infinite;
+  }
+  .landing-smile {
+    transform-origin: 300px 310px;
+    animation: landing-smirk 2.6s ease-in-out infinite;
+  }
+  .landing-brow {
+    transform-origin: 346px 254px;
+    animation: landing-brow 2.6s ease-in-out infinite;
+  }
+  @keyframes landing-wink {
+    0%,
+    85%,
+    95%,
+    100% {
+      transform: scaleY(1);
+    }
+    89%,
+    92% {
+      transform: scaleY(0.12);
+    }
+  }
+  @keyframes landing-smirk {
+    0%,
+    81%,
+    100% {
+      transform: rotate(0) translateY(0);
+    }
+    88%,
+    94% {
+      transform: rotate(-7deg) translateY(-1px);
+    }
+    98% {
+      transform: rotate(1deg);
+    }
+  }
+  @keyframes landing-brow {
+    0%,
+    82%,
+    100% {
+      transform: translateY(0);
+    }
+    88%,
+    94% {
+      transform: translateY(-5px) rotate(-5deg);
+    }
+    98% {
+      transform: translateY(1px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .landing-wink,
+    .landing-smile,
+    .landing-brow {
+      animation: none;
+      transform: none;
+    }
+  }
+  </style>
+  <ellipse
+    class="shadow"
+    cx="300"
+    cy="541"
+    rx="109"
+    ry="9"
+    fill="#573C25"
+    opacity=".1"
+  />
+  <g class="toastie">
+    <g class="legs">
+      <g class="leg leg-left">
+        <path
+          d="M231 491 C230 503 222 517 215 529 Q204 535 196 528"
+          fill="none"
+          stroke="#29231F"
+          stroke-width="7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </g>
+      <g class="leg leg-right">
+        <path
+          d="M357 491 C360 505 369 520 377 529 Q388 535 397 528"
+          fill="none"
+          stroke="#29231F"
+          stroke-width="7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </g>
+    </g>
+    <g class="joy-arm arm-right">
+      <path
+        d="M428 344 C467 355 492 348 501 327"
+        fill="none"
+        stroke="#29231F"
+        stroke-width="7"
+        stroke-linecap="round"
+      />
+      <g transform="translate(501 327) rotate(20)">
+        <path
+          d="M0 0 L0 -10 M0 -10 Q-5 -11 -9 -18 M0 -10 L0 -23 M0 -10 Q5 -11 9 -18"
+          fill="none"
+          stroke="#29231F"
+          stroke-width="4.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </g>
+    </g>
+    <g class="joy-arm arm-left">
+      <path
+        d="M134 342 C102 356 83 347 79 328"
+        fill="none"
+        stroke="#29231F"
+        stroke-width="7"
+        stroke-linecap="round"
+      />
+      <g transform="translate(79 328) rotate(-20)">
+        <path
+          d="M0 0 L0 -10 M0 -10 Q-5 -11 -9 -18 M0 -10 L0 -23 M0 -10 Q5 -11 9 -18"
+          fill="none"
+          stroke="#29231F"
+          stroke-width="4.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </g>
+    </g>
+    <path
+      d="M172 100 C218 78 355 80 405 106 C474 142 471 209 435 254 C413 281 416 296 426 330 C442 384 459 445 421 478 C383 513 229 510 179 492 C110 468 112 409 130 350 L151 282 C158 264 147 250 133 228 C95 168 121 124 172 100Z"
+      fill="#CE8424"
+      stroke="#29231F"
+      stroke-width="9"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M185 127 C231 104 346 106 393 129 C448 156 442 203 413 239 C388 270 389 290 401 332 C415 380 433 427 402 453 C367 482 238 483 191 464 C141 444 140 410 157 354 L179 284 C188 254 170 232 158 211 C132 166 150 143 185 127Z"
+      fill="#FFD17C"
+      stroke="#E4A03C"
+      stroke-width="6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M158 166 Q164 137 197 124 M226 113 Q313 98 375 120 M187 478 Q268 494 370 486"
+      fill="none"
+      stroke="#B97624"
+      stroke-width="4"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <ellipse
+      cx="242"
+      cy="310"
+      rx="12"
+      ry="6"
+      fill="#E09A6B"
+      class="joy-cheek"
+      style="transform-origin:242px 310px"
+    />
+    <ellipse
+      cx="351"
+      cy="310"
+      rx="12"
+      ry="6"
+      fill="#E09A6B"
+      class="joy-cheek"
+      style="transform-origin:351px 310px"
+    />
+    <circle cx="215" cy="180" r="5" fill="#ECAF50" />
+    <circle cx="362" cy="194" r="6" fill="#ECAF50" />
+    <circle cx="203" cy="228" r="3" fill="#ECAF50" />
+    <circle cx="380" cy="374" r="4" fill="#ECAF50" />
+    <circle cx="220" cy="402" r="5" fill="#ECAF50" />
+    <circle cx="343" cy="436" r="3" fill="#ECAF50" />
+    <g class="eye" style="transform-origin:249px 285px">
+      <ellipse cx="249" cy="285" rx="10" ry="11" fill="#29231F" />
+    </g>
+    <g class="eye" style="transform-origin:344px 285px">
+      <g class="landing-wink">
+        <ellipse cx="344" cy="285" rx="10" ry="11" fill="#29231F" />
+      </g>
+    </g>
+    <g class="joy-brows">
+      <path
+        d="M234 259 Q248 255 261 259"
+        fill="none"
+        stroke="#29231F"
+        stroke-width="4.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <g class="landing-brow">
+        <path
+          d="M332 255 Q346 247 358 253"
+          fill="none"
+          stroke="#29231F"
+          stroke-width="4.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </g>
+    </g>
+    <g class="rest-smile">
+      <g class="landing-smile">
+        <path
+          d="M280 308 Q300 327 320 306"
+          fill="none"
+          stroke="#29231F"
+          stroke-width="5"
+          stroke-linecap="round"
+        />
+      </g>
+    </g>
+    <g class="air-grin">
+      <path
+        d="M266 301 Q300 320 334 301 C331 331 318 347 300 347 C282 347 269 331 266 301Z"
+        fill="#704233"
+        stroke="#29231F"
+        stroke-width="5"
+        stroke-linejoin="round"
+      />
+      <path d="M284 337 Q300 324 316 337 Q300 350 284 337Z" fill="#EE9B86" />
+    </g>
+    <g class="happy-eyes">
+      <path
+        d="M235 283 Q249 257 263 283 M330 283 Q344 257 358 283"
+        fill="none"
+        stroke="#29231F"
+        stroke-width="7"
+        stroke-linecap="round"
+      />
+    </g>
+  </g>
+  <circle class="dot dot-1" cx="277" cy="574" r="5" fill="#AC7027" />
+  <circle class="dot dot-2" cx="300" cy="574" r="5" fill="#AC7027" />
+  <circle class="dot dot-3" cx="323" cy="574" r="5" fill="#AC7027" />
+</svg>

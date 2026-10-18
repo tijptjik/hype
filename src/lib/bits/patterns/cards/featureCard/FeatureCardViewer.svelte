@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { ImageProviderModel } from '$lib/types'
+import type { ImageProviderModel } from '#lib/context/imageProvider.types.js'
 import FeatureCardViewerContent from './components/FeatureCardViewerContent.svelte'
 import * as ViewerPrimitive from './components/images'
 

@@ -46,7 +46,7 @@ jobs:
           path: |
             .svelte-kit
             node_modules/.vite
-          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'svelte.config.js', 'vite.config.ts') }}
+          key: ${{ runner.os }}-build-${{ hashFiles('src/**', 'package.json', 'bun.lock', 'patches/**', 'vite.config.ts') }}
 
       - name: 'FIX :: Create temporary tsconfig for CI'
         run: |
@@ -69,8 +69,8 @@ jobs:
               "strict": true,
               "baseUrl": ".",
               "paths": {
-                "$lib": ["./src/lib"],
-                "$lib/*": ["./src/lib/*"]
+                "#lib": ["./src/lib"],
+                "#lib/*": ["./src/lib/*"]
               }
             },
             "include": [

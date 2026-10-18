@@ -9,10 +9,8 @@ let {
 }: IndexCardRootProps = $props()
 </script>
 
-<div
+<article
   draggable="false"
-  role="article"
-  tabindex="0"
   class={`bits-theme bits-index-card ${className}`.trim()}
   {onclick}
   {onkeydown}
@@ -20,4 +18,4 @@ let {
   {#if children}
     {@render children()}
   {/if}
-</div>
+</article>

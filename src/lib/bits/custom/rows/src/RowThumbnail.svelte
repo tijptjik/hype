@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getURLfromImage } from '$lib/client/services/image'
+import { getURLfromImage } from '#lib/client/services/image.js'
 import {
   getRowThumbnailClass,
   rowThumbnailFallbackClass,
@@ -41,17 +41,17 @@ function handleClick(event: Event): void {
 }
 </script>
 
-<div
+<button
+  type="button"
   class={getRowThumbnailClass({ isClickable: !!onClick })}
   onclick={handleClick}
   tabindex="-1"
-  role="button"
 >
   {#if resolvedSrc}
-    <img src={resolvedSrc} alt class={rowThumbnailImageClass}>
+    <img src={resolvedSrc} alt="" class={rowThumbnailImageClass}>
   {:else}
     <div class={rowThumbnailFallbackClass}>
       <span class={rowThumbnailFallbackTextClass}></span>
     </div>
   {/if}
-</div>
+</button>

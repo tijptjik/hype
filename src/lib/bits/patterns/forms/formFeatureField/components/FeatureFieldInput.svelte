@@ -1,5 +1,5 @@
 <script lang="ts">
-import { TextInput } from '$lib/bits/custom'
+import { TextInput } from '#lib/bits/custom/index.js'
 
 type Props = {
   id: string

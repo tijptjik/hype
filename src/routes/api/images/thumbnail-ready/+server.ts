@@ -1,6 +1,6 @@
-import { env as publicEnv } from '$env/dynamic/public'
+import { PUBLIC_RAW_ASSET_BASE_URL, PUBLIC_ASSET_BASE_URL } from '$app/env/public'
 import type { RequestHandler } from './$types'
-import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
+import { toCloudflareImageWorkerPath } from '#lib/images/delivery.js'
 
 const SSE_POLL_INTERVAL_MS = 400
 const SSE_TIMEOUT_MS = 20_000
@@ -33,12 +33,12 @@ function resolveAssetBaseUrl(params: {
     return platformAssetBaseUrl
   }
 
-  const runtimeRawAssetBaseUrl = publicEnv.PUBLIC_RAW_ASSET_BASE_URL?.trim()
+  const runtimeRawAssetBaseUrl = PUBLIC_RAW_ASSET_BASE_URL?.trim()
   if (runtimeRawAssetBaseUrl) {
     return runtimeRawAssetBaseUrl
   }
 
-  const runtimeAssetBaseUrl = publicEnv.PUBLIC_ASSET_BASE_URL?.trim()
+  const runtimeAssetBaseUrl = PUBLIC_ASSET_BASE_URL?.trim()
   if (runtimeAssetBaseUrl) {
     return runtimeAssetBaseUrl
   }
@@ -56,7 +56,8 @@ function resolveAssetBaseUrl(params: {
 /**
  * Streams a one-shot SSE notification once the warmed admin thumbnail exists.
  */
-export const GET: RequestHandler = ({ url, platform, request, fetch }) => {
+export const GET: RequestHandler = ({ url, request, fetch, locals }) => {
+  const { platform } = locals
   const publicId = url.searchParams.get('publicId')?.trim()
   const version = parseVersion(url.searchParams.get('version'))
   const assetBaseUrl = resolveAssetBaseUrl({
@@ -80,6 +81,7 @@ export const GET: RequestHandler = ({ url, platform, request, fetch }) => {
     quality: 'auto',
     format: THUMBNAIL_FORMAT,
   })
+
   const thumbnailUrl = new URL(thumbnailPath, assetBaseUrl).toString()
 
   const stream = new ReadableStream<Uint8Array>({
@@ -98,6 +100,7 @@ export const GET: RequestHandler = ({ url, platform, request, fetch }) => {
       }
       const close = (): void => {
         if (isClosed) return
+
         isClosed = true
 
         try {

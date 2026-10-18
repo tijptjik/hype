@@ -1,6 +1,6 @@
 <script lang="ts">
 import { Dialog } from 'bits-ui'
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 import type { Snippet } from 'svelte'
 import type { Component } from 'svelte'
 import type { WithoutChild } from 'bits-ui'

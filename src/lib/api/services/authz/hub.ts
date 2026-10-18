@@ -7,22 +7,21 @@ import {
   toUserRoleSignature,
 } from '.'
 // DRIZZLE
-import { eq, inArray } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 // SCHEMA
-import { hub, organisation } from '$lib/db/schema'
+import { hub, organisation } from '#lib/db/schema/index.js'
 import { hasAuthenticatedSession } from './user'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type {
   AuthorizationDecision,
-  Database,
   HubAuthorizationAction,
   HubAuthorizationField,
   HubAuthorizeParams,
-  HubProfile,
-  Id,
-  UserRoleDisco,
-} from '$lib/types'
+} from '#lib/api/services/authz/authorization.types.js'
+import type { Database, Id, UserRoleDisco } from '#lib/types.js'
+import type { HubProfile } from '#lib/db/zod/schema/hub.types.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -270,7 +269,9 @@ export const toHubListConditions = (
   const scopedHubIds = Array.from(getScopedHubAdminIds(roles))
 
   return [
-    ...(!isCoreAdmin && scopedHubIds.length > 0 ? [inArray(hub.id, scopedHubIds)] : []),
+    ...(!isCoreAdmin && scopedHubIds.length > 0
+      ? [chunkedInArray(hub.id, scopedHubIds)]
+      : []),
     ...(!allowPublic && !isCoreAdmin && scopedHubIds.length === 0
       ? [eq(hub.id, '__none__' as Id)]
       : []),

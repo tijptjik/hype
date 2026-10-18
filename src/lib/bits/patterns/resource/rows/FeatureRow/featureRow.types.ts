@@ -1,7 +1,8 @@
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { FeatureRowModel, ResourceIndexRowSelectionState } from '$lib/types'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { FeatureRowModel } from '#lib/client/services/featureRows.types.js'
+import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEdit.types.js'
 
 export type FeatureRowProps = {
   adminCtx: AdminCtx

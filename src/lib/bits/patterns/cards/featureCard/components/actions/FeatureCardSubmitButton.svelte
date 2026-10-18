@@ -1,10 +1,10 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // CONTEXT
-import { getCardCtx } from '$lib/context/card.svelte'
+import { getCardCtx } from '#lib/context/card.svelte.js'
 
 interface Props {
   onSubmit: () => void
@@ -28,11 +28,11 @@ const buttonClasses = $derived(
     'pointer-events-auto inline-flex min-w-[8.75rem] items-center justify-center gap-2 rounded-full border px-5',
     'h-11 text-[0.8125rem] font-medium uppercase tracking-[0.16em] leading-none',
     'transition-[background-color,border-color,color,transform,opacity] duration-150 ease-out',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
     'active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40',
     variant === 'secondary'
-      ? 'border-white/18 bg-transparent text-white/88 hover:border-white/30 hover:bg-white/6 hover:text-white'
-      : 'border-[#2f78ff] bg-[#2f78ff1f] text-[#e0eeff] hover:border-[#5a9dff] hover:bg-[#2f78ff2e] hover:text-white',
+      ? 'border-border-input bg-transparent text-muted-foreground hover:border-border-input-hover hover:bg-base-content/12 hover:text-base-content'
+      : 'border-primary bg-primary/12 text-primary hover:border-primary hover:bg-primary/20 hover:text-primary',
     className,
   ),
 )

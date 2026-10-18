@@ -1,7 +1,11 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { DatabaseSync } from 'node:sqlite'
+import { drizzle } from 'drizzle-orm/d1'
 import sharp from 'sharp'
 import { withRemoteMeta } from './remote-function-mock'
+import { createUploadedImage } from '#lib/db/services/image.js'
 
 const {
   mockAuthorizeImageList,
@@ -19,6 +23,7 @@ const {
   mockUpdateImageForContext,
   mockCreateFeatureImage,
   mockCreateImageRecord,
+  mockLoadFeatureCanonicalImageOccupancy,
   mockLoadImageById,
   mockToImageEnvelope,
   mockGetImageForContextType,
@@ -35,8 +40,12 @@ const {
   mockVerifyUploadToken,
   mockWaitUntil,
 } = vi.hoisted(() => ({
-  mockAuthorizeImageList: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeImageRead: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeImageList: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
+  mockAuthorizeImageRead: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
   mockAssertPermissionsToCreateImage: vi.fn(async () => undefined),
   mockAssertPermissionsToDeleteImage: vi.fn(async () => undefined),
   mockAssertPermissionsToUpdateImage: vi.fn(async () => undefined),
@@ -51,8 +60,12 @@ const {
   mockToResponseShapeProjectOrOrganisation: vi.fn(async (image: unknown) => image),
   mockUpdateImageForContext: vi.fn(async () => ({ data: { id: 'img-1' } })),
   mockCreateFeatureImage: vi.fn(async () => ({ id: 'fi-1' })),
-  mockCreateImageRecord: vi.fn(async () => ({ id: 'img-1', publicId: null })),
-  mockLoadImageById: vi.fn(async () => null),
+  mockCreateImageRecord: vi.fn(async () => ({
+    id: 'img-1',
+    publicId: null as string | null,
+  })),
+  mockLoadFeatureCanonicalImageOccupancy: vi.fn(async () => ['feature-1']),
+  mockLoadImageById: vi.fn(async (): Promise<unknown> => null),
   mockToImageEnvelope: vi.fn(
     (data: unknown, _profile: string, ctxType: string, ctxId: string) => ({
       data,
@@ -60,8 +73,14 @@ const {
       ctxId,
     }),
   ),
-  mockGetImageForContextType: vi.fn(async () => []),
-  mockGetImagesByIds: vi.fn(async () => []),
+  mockGetImageForContextType: vi.fn(
+    async (
+      ..._args: Parameters<
+        typeof import('#lib/db/services/image.js').getImageForContextType
+      >
+    ) => [],
+  ),
+  mockGetImagesByIds: vi.fn(async (): Promise<unknown[]> => []),
   mockToImageEntityResponseShape: vi.fn((data: unknown, ctx: unknown) => ({
     data,
     ctx,
@@ -75,16 +94,22 @@ const {
     async () => 'https://upload.example.test/object',
   ),
   mockGetOriginalsBucketNameForStage: vi.fn(() => 'hype-assets-raw-dev'),
-  mockReadMetadataDocument: vi.fn(async () => ({
-    document: null,
-    resolvedEnv: 'local',
-    resolvedVersion: undefined,
-  })),
-  mockVerifyUploadToken: vi.fn(async () => null),
+  mockReadMetadataDocument: vi.fn(
+    async (): Promise<{
+      document: Record<string, unknown> | null
+      resolvedEnv: string
+      resolvedVersion: number | undefined
+    }> => ({
+      document: null,
+      resolvedEnv: 'local',
+      resolvedVersion: undefined,
+    }),
+  ),
+  mockVerifyUploadToken: vi.fn(async (): Promise<unknown> => null),
   mockWaitUntil: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -103,21 +128,13 @@ vi.mock('$lib/api/server/remote', () => ({
   },
 }))
 
-vi.mock('@sveltejs/kit', () => ({
-  error: (status: number, message: string) => {
-    const err = new Error(message) as Error & { status: number }
-    err.status = status
-    throw err
-  },
-}))
-
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeImageList: mockAuthorizeImageList,
   authorizeImageRead: mockAuthorizeImageRead,
   toAuthMessage: (code: string) => code,
 }))
 
-vi.mock('$lib/api/services/image', () => ({
+vi.mock('#lib/api/services/image.js', () => ({
   assertPermissionsToCreateImage: mockAssertPermissionsToCreateImage,
   assertPermissionsToDeleteImage: mockAssertPermissionsToDeleteImage,
   assertPermissionsToUpdateImage: mockAssertPermissionsToUpdateImage,
@@ -131,9 +148,11 @@ vi.mock('$lib/api/services/image', () => ({
   updateImageForContext: mockUpdateImageForContext,
 }))
 
-vi.mock('$lib/db/services/image', () => ({
+vi.mock('#lib/db/services/image.js', () => ({
   createFeatureImage: mockCreateFeatureImage,
   createImage: mockCreateImageRecord,
+  createUploadedImage: vi.fn(async () => mockCreateImageRecord()),
+  getFeatureCanonicalImageOccupancy: mockLoadFeatureCanonicalImageOccupancy,
   getImageById: mockLoadImageById,
   toImageEnvelope: mockToImageEnvelope,
   getImageForContextType: mockGetImageForContextType,
@@ -142,15 +161,15 @@ vi.mock('$lib/db/services/image', () => ({
   toImageListResponseShape: mockToImageListResponseShape,
 }))
 
-vi.mock('$lib/db/services/organisation', () => ({
+vi.mock('#lib/db/services/organisation.js', () => ({
   updateOrganisationById: mockUpdateOrganisationById,
 }))
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   updateProjectById: mockUpdateProjectById,
 }))
 
-vi.mock('$lib/db/services/user', () => ({
+vi.mock('#lib/db/services/user.js', () => ({
   getUserById: mockGetUserById,
 }))
 
@@ -166,12 +185,12 @@ vi.mock('coordinate-parser', () => ({
   },
 }))
 
-vi.mock('$lib/images/auth', () => ({
+vi.mock('#lib/images/auth.js', () => ({
   createUploadToken: vi.fn(async () => 'signed-upload-token'),
   verifyUploadToken: mockVerifyUploadToken,
 }))
 
-vi.mock('$lib/images/delivery', () => ({
+vi.mock('#lib/images/delivery.js', () => ({
   toImageRawIntermediateWorkerPath: vi.fn(
     ({ publicId, version }) => `/image/raw/h_2048,w_2048/v${version}/${publicId}`,
   ),
@@ -182,8 +201,8 @@ vi.mock('$lib/images/delivery', () => ({
   ]),
 }))
 
-vi.mock('$lib/images/storage', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/images/storage')>()
+vi.mock('#lib/images/storage.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/images/storage.js')>()
 
   return {
     ...actual,
@@ -193,9 +212,9 @@ vi.mock('$lib/images/storage', async importOriginal => {
   }
 })
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   AuthImageUploadSchema: {},
   DeleteImageSchema: {},
   FinalizeImageUploadSchema: {},
@@ -212,13 +231,18 @@ vi.mock('$lib/db/zod', () => ({
   UpdateImageSchema: {},
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/image.remote')>
+let remote: MockedRemoteModule<typeof import('#lib/api/image.remote.js')>
 
 const buildDbWithContextRow = (row: Record<string, unknown>) => ({
   select: vi.fn(() => ({
     from: vi.fn(() => ({
       innerJoin: vi.fn(() => ({
         innerJoin: vi.fn(() => ({
+          innerJoin: vi.fn(() => ({
+            where: vi.fn(() => ({
+              limit: vi.fn(async () => [row]),
+            })),
+          })),
           where: vi.fn(() => ({
             limit: vi.fn(async () => [row]),
           })),
@@ -243,12 +267,22 @@ const buildDbWithContextRow = (row: Record<string, unknown>) => ({
 })
 
 describe('image.remote', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-    remote = await import('$lib/api/server/image.remote')
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
+  beforeAll(async () => {
+    remote = mockedRemoteModule(await import('#lib/api/image.remote.js'))
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
     mockCreateImageRecord.mockReset()
-    mockCreateImageRecord.mockResolvedValue({ id: 'img-1', publicId: null })
+    mockCreateImageRecord.mockResolvedValue({
+      id: 'img-1',
+      publicId: null as string | null,
+    })
+    mockGetImagesByIds.mockReset()
+    mockGetImagesByIds.mockResolvedValue([])
+    mockLoadFeatureCanonicalImageOccupancy.mockReset()
+    mockLoadFeatureCanonicalImageOccupancy.mockResolvedValue(['feature-1'])
     mockLoadImageById.mockReset()
     mockLoadImageById.mockResolvedValue(null)
     mockWaitUntil.mockReset()
@@ -270,35 +304,37 @@ describe('image.remote', () => {
       isAdminRequest: true,
       event: {
         request: new Request('https://example.test'),
-        locals: { hub: null },
-        platform: {
-          env: {
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            ASSET_RAW_DEV: {
-              head: vi.fn(async () => null),
-              put: vi.fn(async () => undefined),
+        locals: {
+          platform: {
+            env: {
+              AUTH_SECRET: 'secret',
+              CLOUDFLARE_ACCOUNT_ID: 'account-id',
+              R2_S3_ACCESS_KEY_ID: 'access-key',
+              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+              ASSET_RAW_DEV: {
+                head: vi.fn(async (): Promise<unknown> => null),
+                put: vi.fn(async () => undefined),
+              },
+              ASSET_RAW_PREVIEW: {
+                head: vi.fn(async (): Promise<unknown> => null),
+                put: vi.fn(async () => undefined),
+              },
+              ASSET_RAW_PRODUCTION: {
+                head: vi.fn(async (): Promise<unknown> => null),
+                put: vi.fn(async () => undefined),
+              },
+              ASSET_PUBLIC_DEV: { put: vi.fn(async () => undefined), get: vi.fn() },
+              ASSET_PUBLIC_PREVIEW: { put: vi.fn(async () => undefined), get: vi.fn() },
+              ASSET_PUBLIC_PRODUCTION: {
+                put: vi.fn(async () => undefined),
+                get: vi.fn(),
+              },
             },
-            ASSET_RAW_PREVIEW: {
-              head: vi.fn(async () => null),
-              put: vi.fn(async () => undefined),
-            },
-            ASSET_RAW_PRODUCTION: {
-              head: vi.fn(async () => null),
-              put: vi.fn(async () => undefined),
-            },
-            ASSET_PUBLIC_DEV: { put: vi.fn(async () => undefined), get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put: vi.fn(async () => undefined), get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: {
-              put: vi.fn(async () => undefined),
-              get: vi.fn(),
+            context: {
+              waitUntil: mockWaitUntil,
             },
           },
-          context: {
-            waitUntil: mockWaitUntil,
-          },
+          hub: null,
         },
       },
     })
@@ -320,12 +356,152 @@ describe('image.remote', () => {
     ).rejects.toMatchObject({ status: 403 })
   })
 
-  it('denies getImageById when image read authz denies', async () => {
-    mockLoadImageById.mockResolvedValue({
-      id: 'img-1',
-      featureId: 'feature-1',
-      contributorId: 'u-1',
+  it.each(['other-feature', null, undefined])(
+    'rejects task narrowing outside the authorized feature (%s)',
+    async featureId => {
+      const ctx = await mockGuardedContext()
+      mockGuardedContext.mockResolvedValue({
+        ...ctx,
+        db: buildDbWithContextRow({
+          isPublished: true,
+          isArchived: false,
+          featureId,
+        }),
+      })
+      await expect(
+        remote.getImagesForContext({
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+          ctxNarrowingType: 'task',
+          ctxNarrowingId: 'task-1',
+        }),
+      ).rejects.toMatchObject({ status: 403 })
+      expect(mockGetImageForContextType).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['project', 'organisation', 'hub', 'user', 'task'])(
+    'rejects replacing a primary %s context with task narrowing',
+    async ctxType => {
+      await expect(
+        remote.getImagesForContext({
+          ctxType,
+          ctxId: 'parent-1',
+          ctxNarrowingType: 'task',
+          ctxNarrowingId: 'other-task',
+        }),
+      ).rejects.toMatchObject({ status: 400 })
+      expect(mockGetImageForContextType).not.toHaveBeenCalled()
+    },
+  )
+
+  it('rejects narrowing to a deleted task before fetching images', async () => {
+    const ctx = await mockGuardedContext()
+    const db = buildDbWithContextRow({ isPublished: true, isArchived: false })
+    db.select.mockReturnValueOnce(db.select()).mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({ limit: vi.fn(async (): Promise<unknown[]> => []) })),
+      })),
+    } as never)
+    mockGuardedContext.mockResolvedValue({ ...ctx, db })
+    await expect(
+      remote.getImagesForContext({
+        ctxType: 'feature',
+        ctxId: 'feature-1',
+        ctxNarrowingType: 'task',
+        ctxNarrowingId: 'deleted-task',
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockGetImageForContextType).not.toHaveBeenCalled()
+  })
+
+  it.each([{ ctxNarrowingType: 'task' }, { ctxNarrowingId: 'task-1' }])(
+    'rejects incomplete narrowing (%j)',
+    async narrowing => {
+      await expect(
+        remote.getImagesForContext({
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+          ...narrowing,
+        }),
+      ).rejects.toMatchObject({ status: 400 })
+      expect(mockGetImageForContextType).not.toHaveBeenCalled()
+    },
+  )
+
+  it('keeps valid task narrowing bound to its feature in the final query', async () => {
+    const ctx = await mockGuardedContext()
+    mockGuardedContext.mockResolvedValue({
+      ...ctx,
+      db: buildDbWithContextRow({
+        isPublished: true,
+        isArchived: false,
+        featureId: 'feature-1',
+      }),
     })
+    await remote.getImagesForContext({
+      ctxType: 'feature',
+      ctxId: 'feature-1',
+      ctxNarrowingType: 'task',
+      ctxNarrowingId: 'task-1',
+    })
+    expect(mockGetImageQueryContext).toHaveBeenCalledWith(
+      expect.anything(),
+      true,
+      {},
+      'task-1',
+      'task',
+    )
+    const conditions = mockGetImageForContextType.mock.calls[0][2]
+    const { task } = await import('#lib/db/schema/index.js')
+    const { and } = await import('drizzle-orm')
+    const query = drizzle({} as never)
+      .select({ id: task.id })
+      .from(task)
+      .where(and(...conditions))
+      .toSQL()
+    expect(query.sql).toContain('"task"."featureId" = ?')
+    expect(query.params).toEqual(['feature-1'])
+    const sqlite = new DatabaseSync(':memory:')
+    try {
+      sqlite.exec(`CREATE TABLE task (id TEXT, featureId TEXT);
+        INSERT INTO task VALUES ('task-1', 'feature-1');`)
+      expect(sqlite.prepare(query.sql).all(...(query.params as never[]))).toHaveLength(
+        1,
+      )
+      // The final condition excludes a task reparented after the authorization probe.
+      sqlite.exec("UPDATE task SET featureId = 'other-feature'")
+      expect(sqlite.prepare(query.sql).all(...(query.params as never[]))).toHaveLength(
+        0,
+      )
+    } finally {
+      sqlite.close()
+    }
+  })
+
+  it.each(['feature', 'task'])(
+    'preserves primary %s reads without narrowing',
+    async ctxType => {
+      await remote.getImagesForContext({ ctxType, ctxId: 'context-1' })
+      expect(mockGetImageQueryContext).toHaveBeenCalledWith(
+        expect.anything(),
+        true,
+        {},
+        'context-1',
+        ctxType,
+      )
+      expect(mockGetImageForContextType).toHaveBeenCalled()
+    },
+  )
+
+  it('denies getImageById when image read authz denies', async () => {
+    mockGetImagesByIds.mockResolvedValueOnce([
+      {
+        id: 'img-1',
+        featureId: 'feature-1',
+        contributorId: 'u-1',
+      },
+    ] as never)
     mockAuthorizeImageRead.mockReturnValue({
       allowed: false,
       code: 'INSUFFICIENT_ROLE',
@@ -338,6 +514,31 @@ describe('image.remote', () => {
 
   it('createImage rejects missing image payload', async () => {
     await expect(remote.createImage({})).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('returns the readable assignment when the first shared-image assignment is denied', async () => {
+    const denied = {
+      id: 'image',
+      featureId: 'restricted',
+      intent: 'canonical',
+      isPublished: false,
+    }
+    const allowed = {
+      id: 'image',
+      featureId: 'readable',
+      intent: 'general',
+      isPublished: true,
+    }
+    mockGetImagesByIds.mockResolvedValueOnce([denied, allowed] as never)
+    mockAuthorizeImageRead
+      .mockReturnValueOnce({ allowed: false } as never)
+      .mockReturnValueOnce({ allowed: true })
+    await remote.getImageById({ id: 'image' })
+    expect(mockToImageEntityResponseShape).toHaveBeenCalledWith(
+      allowed,
+      { ctxType: 'feature', ctxId: 'readable' },
+      expect.anything(),
+    )
   })
 
   it('createImage rejects missing ctxType/ctxId', async () => {
@@ -373,7 +574,7 @@ describe('image.remote', () => {
         id: 'img-1',
         ctxType: 'project',
         ctxId: 'project-1',
-        intent: 'gallery',
+        intent: 'gallery' as never, // Deliberately invalid input exercises server validation.
       }),
     ).rejects.toMatchObject({ status: 400 })
   })
@@ -389,6 +590,178 @@ describe('image.remote', () => {
       }),
     ).rejects.toMatchObject({ status: 404 })
   })
+
+  it('authorizes each ID-based result using its persisted resource chain', async () => {
+    const ctx = await mockGuardedContext()
+    mockGuardedContext.mockResolvedValue({
+      ...ctx,
+      db: buildDbWithContextRow({
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub',
+        projectId: 'project',
+        organisationId: 'organisation',
+      }),
+    })
+    const denied = { id: 'denied', featureId: 'feature-a', isPublished: false }
+    const allowed = { id: 'allowed', featureId: 'feature-b', isPublished: false }
+    mockGetImagesByIds.mockResolvedValueOnce([denied, allowed] as never)
+    mockAuthorizeImageRead
+      .mockReturnValueOnce({ allowed: false } as never)
+      .mockReturnValueOnce({ allowed: true })
+    await remote.getImagesForIds({ ids: ['denied', 'allowed'] })
+    expect(mockToImageListResponseShape).toHaveBeenCalledWith(
+      [allowed],
+      expect.any(Function),
+      expect.anything(),
+    )
+    expect(mockAuthorizeImageRead).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        ctxType: 'feature',
+        ctxId: 'feature-a',
+        projectId: 'project',
+        organisationId: 'organisation',
+        resourceHubId: 'hub',
+      }),
+      expect.objectContaining({ isPublished: false }),
+      { isAdminRequest: true },
+    )
+  })
+
+  it.each(['missing-parent', 'database-error'])(
+    'isolates stale batch rows without swallowing failures (%s)',
+    async scenario => {
+      const db = buildDbWithContextRow({
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub',
+      })
+      const chain = {
+        innerJoin: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn(async (): Promise<unknown[]> => []),
+      }
+      if (scenario === 'database-error')
+        chain.limit.mockRejectedValue(new Error('database failed'))
+      db.select.mockReturnValueOnce({ from: vi.fn(() => chain) } as never)
+      const ctx = await mockGuardedContext()
+      mockGuardedContext.mockResolvedValue({ ...ctx, db })
+      const stale = { id: 'stale', featureId: 'removed' }
+      const valid = { id: 'valid', featureId: 'present' }
+      mockGetImagesByIds.mockResolvedValueOnce([stale, valid] as never)
+      const result = remote.getImagesForIds({ ids: ['stale', 'valid'] })
+      if (scenario === 'database-error') {
+        await expect(result).rejects.toThrow('database failed')
+        expect(mockToImageListResponseShape).not.toHaveBeenCalled()
+      } else {
+        await result
+        expect(mockToImageListResponseShape).toHaveBeenCalledWith(
+          [valid],
+          expect.any(Function),
+          expect.anything(),
+        )
+      }
+    },
+  )
+
+  it('resolves a resource image from its parent link rather than treating it as the uploader collection', async () => {
+    const db = buildDbWithContextRow({
+      isPublished: false,
+      isArchived: false,
+      resourceHubId: 'hub',
+      projectId: 'project',
+      organisationId: 'organisation',
+    })
+    for (const parents of [[{ ctxId: 'project' }], [], []]) {
+      db.select.mockReturnValueOnce({
+        from: vi.fn(() => ({ where: vi.fn(async () => parents) })),
+      } as never)
+    }
+    const ctx = await mockGuardedContext()
+    mockGuardedContext.mockResolvedValue({ ...ctx, db })
+    mockGetImagesByIds.mockResolvedValueOnce([
+      {
+        id: 'image',
+        contributorId: 'another-user',
+      },
+    ] as never)
+    await remote.getImageById({ id: 'image' })
+    expect(mockAuthorizeImageRead).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        ctxType: 'project',
+        ctxId: 'project',
+        projectId: 'project',
+        organisationId: 'organisation',
+      }),
+      expect.objectContaining({ isPublished: false }),
+      { isAdminRequest: true },
+    )
+  })
+
+  it.each([false, true])(
+    'deletes image associations atomically (failure: %s)',
+    async fail => {
+      const sqlite = new DatabaseSync(':memory:')
+      try {
+        sqlite.exec(`CREATE TABLE image (id TEXT PRIMARY KEY);
+        CREATE TABLE taskImage (taskId TEXT, imageId TEXT);
+        CREATE TABLE featureImage (featureId TEXT, imageId TEXT);
+        INSERT INTO image VALUES ('img-1');
+        INSERT INTO taskImage VALUES ('task', 'img-1');
+        INSERT INTO featureImage VALUES ('feature', 'img-1');`)
+        if (fail) {
+          sqlite.exec(`CREATE TRIGGER reject_delete BEFORE DELETE ON image
+          BEGIN SELECT RAISE(ABORT, 'delete failed'); END;`)
+        }
+        const db = drizzle({} as never)
+        // Execute real generated SQL using D1's documented batch rollback semantics.
+        vi.spyOn(db, 'batch').mockImplementation(async statements => {
+          sqlite.exec('BEGIN')
+          try {
+            for (const statement of statements) {
+              if (!('toSQL' in statement) || typeof statement.toSQL !== 'function')
+                throw new Error('Expected SQL builder in batch fixture')
+              const query = statement.toSQL() as { sql: string; params: unknown[] }
+              sqlite.prepare(query.sql).run(...(query.params as never[]))
+            }
+            sqlite.exec('COMMIT')
+            return [] as never
+          } catch (error) {
+            sqlite.exec('ROLLBACK')
+            throw error
+          }
+        })
+        const ctx = await mockGuardedContext()
+        mockGuardedContext.mockResolvedValue({ ...ctx, db })
+        mockLoadImageById.mockResolvedValue({
+          id: 'img-1',
+          publicId: 'image-key',
+          env: 'local',
+        } as never)
+        const deletion = remote.deleteImage({
+          id: 'img-1',
+          ctxId: 'feature',
+          ctxType: 'feature',
+        })
+        if (fail) {
+          await expect(deletion).rejects.toThrow('delete failed')
+          expect(mockWaitUntil).not.toHaveBeenCalled()
+        } else {
+          await expect(deletion).resolves.toMatchObject({ type: 'success' })
+          expect(mockWaitUntil).toHaveBeenCalledOnce()
+        }
+        for (const table of ['image', 'taskImage', 'featureImage']) {
+          expect(
+            sqlite.prepare(`SELECT count(*) AS count FROM ${table}`).get(),
+          ).toEqual({ count: fail ? 1 : 0 })
+        }
+      } finally {
+        sqlite.close()
+      }
+    },
+  )
 
   it('authImageUpload returns a direct R2 upload session', async () => {
     const result = await remote.authImageUpload({
@@ -442,24 +815,26 @@ describe('image.remote', () => {
       isAdminRequest: true,
       event: {
         request: new Request('https://example.test'),
-        locals: { hub: null },
-        platform: {
-          env: {
-            ENVIRONMENT: 'local',
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            ASSET_RAW_DEV: { head: vi.fn(async () => null) },
-            ASSET_RAW_PREVIEW: { head: vi.fn(async () => null) },
-            ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null) },
-            ASSET_PUBLIC_DEV: { put: vi.fn(), get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put: vi.fn(), get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: { put: vi.fn(), get: vi.fn() },
+        locals: {
+          platform: {
+            env: {
+              ENVIRONMENT: 'local',
+              AUTH_SECRET: 'secret',
+              CLOUDFLARE_ACCOUNT_ID: 'account-id',
+              R2_S3_ACCESS_KEY_ID: 'access-key',
+              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+              ASSET_RAW_DEV: { head: vi.fn(async (): Promise<unknown> => null) },
+              ASSET_RAW_PREVIEW: { head: vi.fn(async (): Promise<unknown> => null) },
+              ASSET_RAW_PRODUCTION: { head: vi.fn(async (): Promise<unknown> => null) },
+              ASSET_PUBLIC_DEV: { put: vi.fn(), get: vi.fn() },
+              ASSET_PUBLIC_PREVIEW: { put: vi.fn(), get: vi.fn() },
+              ASSET_PUBLIC_PRODUCTION: { put: vi.fn(), get: vi.fn() },
+            },
+            context: {
+              waitUntil: mockWaitUntil,
+            },
           },
-          context: {
-            waitUntil: mockWaitUntil,
-          },
+          hub: null,
         },
       },
     })
@@ -483,197 +858,105 @@ describe('image.remote', () => {
     )
   })
 
-  it('finalizeImageUpload writes metadata sidecars after a confirmed upload', async () => {
-    const put = vi.fn(async () => undefined)
-    const head = vi.fn(async () => ({
-      size: 1234,
-      httpMetadata: { contentType: 'image/jpeg' },
-    }))
-    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1768)
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(null, { status: 200 }))
+  it.each(['new', 'retry-missing', 'retry-existing', 'failure', 'draft-contribution'])(
+    'finalizeImageUpload keeps sidecars aligned with persisted state (%s)',
+    async scenario => {
+      const put = vi.fn(async () => undefined)
+      const head = vi.fn(async () => ({
+        size: 1234,
+        httpMetadata: { contentType: 'image/jpeg' },
+      }))
+      const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(1768)
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(new Response(null, { status: 200 }))
 
-    mockGuardedContext.mockResolvedValue({
-      db: buildDbWithContextRow({
-        isPublished: true,
-        isArchived: false,
-        resourceHubId: 'hub-a',
-      }),
-      user: { id: 'u-1', isAnonymous: false },
-      userId: 'u-1',
-      userRoles: [],
-      isAdminRequest: true,
-      event: {
-        request: new Request('https://example.test'),
-        locals: { hub: null },
-        platform: {
-          env: {
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-            ASSET_RAW_DEV: { head, put },
-            ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
-            ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
-            ASSET_PUBLIC_DEV: { put, get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
-          },
-          context: {
-            waitUntil: mockWaitUntil,
+      mockGuardedContext.mockResolvedValue({
+        db: buildDbWithContextRow({
+          isPublished: true,
+          isArchived: false,
+          resourceHubId: 'hub-a',
+        }),
+        user: { id: 'u-1', isAnonymous: false },
+        userId: 'u-1',
+        userRoles: [],
+        isAdminRequest: true,
+        event: {
+          request: new Request('https://example.test'),
+          locals: {
+            platform: {
+              env: {
+                AUTH_SECRET: 'secret',
+                CLOUDFLARE_ACCOUNT_ID: 'account-id',
+                R2_S3_ACCESS_KEY_ID: 'access-key',
+                R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+                PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+                ASSET_RAW_DEV: { head, put },
+                ASSET_RAW_PREVIEW: {
+                  head: vi.fn(async (): Promise<unknown> => null),
+                  put,
+                },
+                ASSET_RAW_PRODUCTION: {
+                  head: vi.fn(async (): Promise<unknown> => null),
+                  put,
+                },
+                ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+                ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+                ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+              },
+              context: {
+                waitUntil: mockWaitUntil,
+              },
+            },
+            hub: null,
           },
         },
-      },
-    })
-    mockVerifyUploadToken.mockResolvedValue({
-      publicId: 'h/features/feature-1/image-a',
-      env: 'local',
-      ctxType: 'feature',
-      ctxId: 'feature-1',
-      filename: 'image.jpg',
-      contentType: 'image/jpeg',
-      size: 1234,
-      uploaderUserId: 'u-1',
-      exp: Date.now() + 1000,
-    })
-
-    const result = await remote.finalizeImageUpload({
-      token: 'signed-upload-token',
-      metadata: {
-        originalFilename: 'image.jpg',
-        originalExtension: 'jpg',
-        originalWidth: 100,
-        originalHeight: 200,
-        cameraModel: null,
-        capturedAt: null,
-        credit: null,
-        latitude: null,
-        longitude: null,
-        metadata: null,
-      },
-    })
-
-    expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
-    expect(put).toHaveBeenCalledTimes(3)
-    expect(mockWaitUntil).toHaveBeenCalledTimes(2)
-    expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
-      event: expect.objectContaining({
-        request: expect.any(Request),
-      }),
-      env: 'local',
-      publicId: 'h/features/feature-1/image-a',
-      version: 1768,
-    })
-    expect(fetchSpy).not.toHaveBeenCalled()
-    expect(result).toMatchObject({
-      data: {
+      })
+      mockVerifyUploadToken.mockResolvedValue({
+        publicId: 'h/features/feature-1/image-a',
+        env: 'local',
         ctxType: 'feature',
         ctxId: 'feature-1',
-      },
-    })
+        filename: 'image.jpg',
+        contentType: 'image/jpeg',
+        size: 1234,
+        uploaderUserId: 'u-1',
+        exp: Date.now() + 1000,
+      })
 
-    fetchSpy.mockRestore()
-    dateNowSpy.mockRestore()
-  })
-
-  it('finalizeImageUpload keeps detached cleanup best-effort when bucket listing fails', async () => {
-    const waitUntilPromises: Promise<unknown>[] = []
-    const consoleErrorSpy = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => undefined)
-    const dbDeleteWhere = vi.fn(async () => undefined)
-    const db = {
-      ...buildDbWithContextRow({
-        imageId: 'img-old',
-        isPublished: true,
-        isArchived: false,
-        resourceHubId: 'hub-a',
-      }),
-      delete: vi.fn(() => ({
-        where: dbDeleteWhere,
-      })),
-    }
-    const put = vi.fn(async () => undefined)
-    const head = vi.fn(async () => ({
-      size: 1234,
-      httpMetadata: { contentType: 'image/jpeg' },
-    }))
-
-    mockGuardedContext.mockResolvedValue({
-      db,
-      user: { id: 'u-1', isAnonymous: false },
-      userId: 'u-1',
-      userRoles: [],
-      isAdminRequest: true,
-      event: {
-        request: new Request('https://example.test'),
-        fetch: globalThis.fetch,
-        locals: { hub: null },
-        platform: {
-          env: {
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-            ASSET_RAW_DEV: {
-              head,
-              put,
-              delete: vi.fn(async () => undefined),
-              list: vi.fn(async () => {
-                throw new Error('list: Unspecified error (0)')
-              }),
-            },
-            ASSET_RAW_PREVIEW: { head: vi.fn(async () => null), put },
-            ASSET_RAW_PRODUCTION: { head: vi.fn(async () => null), put },
-            ASSET_PUBLIC_DEV: {
-              put,
-              get: vi.fn(),
-              delete: vi.fn(async () => undefined),
-              list: vi.fn(async () => {
-                throw new Error('list: Unspecified error (0)')
-              }),
-            },
-            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
-          },
-          context: {
-            waitUntil: vi.fn((promise: Promise<unknown>) => {
-              waitUntilPromises.push(promise)
-            }),
+      const isRetry = scenario.startsWith('retry')
+      if (isRetry) {
+        mockToImageEnvelope.mockReturnValueOnce({
+          image: { id: 'img-1', version: 1000 },
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+        } as never)
+        mockReadMetadataDocument.mockResolvedValue({
+          document: scenario === 'retry-existing' ? { sourceVersion: 1000 } : null,
+          resolvedEnv: 'local',
+          resolvedVersion: 1000,
+        } as never)
+      }
+      if (scenario === 'failure')
+        mockCreateImageRecord.mockRejectedValueOnce(new Error('insert failed'))
+      if (scenario === 'draft-contribution') {
+        mockAssertPermissionsToCreateImage.mockResolvedValueOnce(
+          'draft-contribution' as never,
+        )
+      }
+      const confirmation = remote.finalizeImageUpload({
+        token: 'signed-upload-token',
+        persist: {
+          contributorId: 'other-account',
+          featureImage: {
+            featureId: 'feature-1',
+            intent: 'canonical',
+            isPublished: true,
+            localIsPublished: true,
+            publisherId: 'other-account',
+            publishedAt: '2026-01-01T00:00:00Z',
           },
         },
-      },
-    })
-    mockVerifyUploadToken.mockResolvedValue({
-      publicId: 'h/projects/project-1/image-a',
-      env: 'local',
-      ctxType: 'project',
-      ctxId: 'project-1',
-      filename: 'image.jpg',
-      contentType: 'image/jpeg',
-      size: 1234,
-      uploaderUserId: 'u-1',
-      exp: Date.now() + 1000,
-    })
-    mockLoadImageById
-      .mockResolvedValueOnce({
-        id: 'img-old',
-        publicId: 'h/projects/project-1/image-old',
-        env: 'local',
-        version: 12,
-      })
-      .mockResolvedValueOnce(null)
-    mockCreateImageRecord.mockResolvedValueOnce({
-      id: 'img-new',
-      publicId: 'h/projects/project-1/image-a',
-    })
-
-    await expect(
-      remote.finalizeImageUpload({
-        token: 'signed-upload-token',
         metadata: {
           originalFilename: 'image.jpg',
           originalExtension: 'jpg',
@@ -686,22 +969,263 @@ describe('image.remote', () => {
           longitude: null,
           metadata: null,
         },
-      }),
-    ).resolves.toMatchObject({
-      data: {
+      })
+
+      if (scenario === 'failure') {
+        await expect(confirmation).rejects.toThrow('insert failed')
+        expect(put).not.toHaveBeenCalled()
+        expect(mockWaitUntil).not.toHaveBeenCalled()
+        fetchSpy.mockRestore()
+        dateNowSpy.mockRestore()
+        return
+      }
+      const result = await confirmation
+      if (scenario === 'draft-contribution') {
+        expect(createUploadedImage).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            contributorId: 'u-1',
+            featureImage: expect.objectContaining({
+              intent: 'undefined',
+              isPublished: false,
+              localIsPublished: null,
+              publisherId: null,
+              publishedAt: null,
+            }),
+          }),
+        )
+      } else if (scenario === 'new') {
+        expect(createUploadedImage).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            contributorId: 'other-account',
+            featureImage: expect.objectContaining({
+              intent: 'canonical',
+              isPublished: true,
+            }),
+          }),
+        )
+      }
+
+      expect(head).toHaveBeenCalledWith('h/features/feature-1/image-a')
+      expect(createUploadedImage).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          publicId: 'h/features/feature-1/image-a',
+          env: 'local',
+        }),
+      )
+      expect(put).toHaveBeenCalledTimes(scenario === 'retry-existing' ? 0 : 3)
+      if (scenario === 'retry-missing') {
+        expect(put).toHaveBeenCalledWith(
+          expect.stringContaining('.v1000'),
+          expect.stringContaining('"sourceVersion":1000'),
+          expect.anything(),
+        )
+      }
+      expect(mockWaitUntil).toHaveBeenCalledTimes(scenario === 'retry-existing' ? 1 : 2)
+      expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
+        event: expect.objectContaining({
+          request: expect.any(Request),
+        }),
+        env: 'local',
+        publicId: 'h/features/feature-1/image-a',
+        version: isRetry ? 1000 : 1768,
+      })
+      expect(fetchSpy).not.toHaveBeenCalled()
+      expect(result).toMatchObject({
+        data: {
+          ctxType: 'feature',
+          ctxId: 'feature-1',
+        },
+      })
+
+      fetchSpy.mockRestore()
+      dateNowSpy.mockRestore()
+    },
+  )
+
+  it.each([
+    { failDatabase: false, sameAsset: false },
+    { failDatabase: true, sameAsset: false },
+    { failDatabase: false, sameAsset: true },
+  ])(
+    'finalizeImageUpload safely cleans detached images (%j)',
+    async ({ failDatabase, sameAsset }) => {
+      const waitUntilPromises: Promise<unknown>[] = []
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => undefined)
+      const dbDeleteWhere = vi.fn(async () => undefined)
+      if (failDatabase)
+        dbDeleteWhere.mockRejectedValue(new Error('database delete failed'))
+      const deleteAssets = vi.fn(async () => undefined)
+      const db = {
+        ...buildDbWithContextRow({
+          imageId: 'img-old',
+          isPublished: true,
+          isArchived: false,
+          resourceHubId: 'hub-a',
+        }),
+        delete: vi.fn(() => ({
+          where: dbDeleteWhere,
+        })),
+      }
+      const put = vi.fn(async () => undefined)
+      const head = vi.fn(async () => ({
+        size: 1234,
+        httpMetadata: { contentType: 'image/jpeg' },
+      }))
+
+      mockGuardedContext.mockResolvedValue({
+        db,
+        user: { id: 'u-1', isAnonymous: false },
+        userId: 'u-1',
+        userRoles: [],
+        isAdminRequest: true,
+        event: {
+          request: new Request('https://example.test'),
+          fetch: globalThis.fetch,
+          locals: {
+            platform: {
+              env: {
+                AUTH_SECRET: 'secret',
+                CLOUDFLARE_ACCOUNT_ID: 'account-id',
+                R2_S3_ACCESS_KEY_ID: 'access-key',
+                R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+                PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+                ASSET_RAW_DEV: {
+                  head,
+                  put,
+                  delete: deleteAssets,
+                  list: vi.fn(async () => {
+                    throw new Error('list: Unspecified error (0)')
+                  }),
+                },
+                ASSET_RAW_PREVIEW: {
+                  head: vi.fn(async (): Promise<unknown> => null),
+                  put,
+                },
+                ASSET_RAW_PRODUCTION: {
+                  head: vi.fn(async (): Promise<unknown> => null),
+                  put,
+                },
+                ASSET_PUBLIC_DEV: {
+                  put,
+                  get: vi.fn(),
+                  delete: deleteAssets,
+                  list: vi.fn(async () => {
+                    throw new Error('list: Unspecified error (0)')
+                  }),
+                },
+                ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+                ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+              },
+              context: {
+                waitUntil: vi.fn((promise: Promise<unknown>) => {
+                  waitUntilPromises.push(promise)
+                }),
+              },
+            },
+            hub: null,
+          },
+        },
+      })
+      mockVerifyUploadToken.mockResolvedValue({
+        publicId: 'h/projects/project-1/image-a',
+        env: 'local',
         ctxType: 'project',
         ctxId: 'project-1',
-      },
-    })
+        filename: 'image.jpg',
+        contentType: 'image/jpeg',
+        size: 1234,
+        uploaderUserId: 'u-1',
+        exp: Date.now() + 1000,
+      })
+      mockLoadImageById
+        .mockResolvedValueOnce({
+          id: 'img-old',
+          publicId: sameAsset
+            ? 'h/projects/project-1/image-a'
+            : 'h/projects/project-1/image-old',
+          env: 'local',
+          version: 12,
+        })
+        .mockResolvedValueOnce(null)
+      mockCreateImageRecord.mockResolvedValueOnce({
+        id: 'img-new',
+        publicId: 'h/projects/project-1/image-a',
+      })
 
-    await expect(Promise.all(waitUntilPromises)).resolves.toBeDefined()
-    expect(db.delete).toHaveBeenCalledTimes(1)
-    expect(dbDeleteWhere).toHaveBeenCalledTimes(1)
+      await expect(
+        remote.finalizeImageUpload({
+          token: 'signed-upload-token',
+          metadata: {
+            originalFilename: 'image.jpg',
+            originalExtension: 'jpg',
+            originalWidth: 100,
+            originalHeight: 200,
+            cameraModel: null,
+            capturedAt: null,
+            credit: null,
+            latitude: null,
+            longitude: null,
+            metadata: null,
+          },
+        }),
+      ).resolves.toMatchObject({
+        data: {
+          ctxType: 'project',
+          ctxId: 'project-1',
+        },
+      })
 
-    consoleErrorSpy.mockRestore()
-  })
+      if (failDatabase) {
+        await expect(Promise.all(waitUntilPromises)).rejects.toThrow(
+          'database delete failed',
+        )
+        expect(deleteAssets).not.toHaveBeenCalled()
+      } else if (sameAsset) {
+        await expect(Promise.all(waitUntilPromises)).resolves.toBeDefined()
+        expect(deleteAssets).not.toHaveBeenCalled()
+      } else {
+        // Storage-listing errors remain best-effort after the row has been removed.
+        await expect(Promise.all(waitUntilPromises)).resolves.toBeDefined()
+        expect(deleteAssets).toHaveBeenCalled()
+        expect(dbDeleteWhere.mock.invocationCallOrder[0]).toBeLessThan(
+          deleteAssets.mock.invocationCallOrder[0],
+        )
+      }
+      expect(db.delete).toHaveBeenCalledTimes(1)
+      expect(dbDeleteWhere).toHaveBeenCalledTimes(1)
+
+      consoleErrorSpy.mockRestore()
+    },
+  )
 
   it('getMetadata reads the metadata sidecar for the requested public id and env', async () => {
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      db: buildDbWithContextRow({
+        id: 'img-1',
+        isPublished: true,
+        isArchived: false,
+        resourceHubId: 'hub-a',
+        projectId: 'project-1',
+        organisationId: 'org-1',
+      }),
+      userRoles: [{ type: 'organisation', organisationId: 'org-1', role: 'owner' }],
+    })
+    mockGetImagesByIds.mockResolvedValue([
+      {
+        id: 'img-1',
+        publicId: 'h/hkghostsigns/example-id',
+        env: 'production',
+        featureId: 'feature-1',
+        isPublished: true,
+        isArchived: false,
+      } as never,
+    ])
     mockReadMetadataDocument.mockResolvedValue({
       document: {
         originalFilename: 'sample',
@@ -742,6 +1266,33 @@ describe('image.remote', () => {
       latitude: null,
       longitude: null,
     })
+  })
+
+  it('does not expose full metadata without explicit admin intent', async () => {
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      isAdminRequest: false,
+    })
+
+    await expect(
+      remote.getMetadata({
+        publicId: 'h/hkghostsigns/example-id',
+        profile: 'full',
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockReadMetadataDocument).not.toHaveBeenCalled()
+  })
+
+  it('requires admin intent before checking canonical image occupancy', async () => {
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      isAdminRequest: false,
+    })
+
+    await expect(
+      remote.getFeatureCanonicalImageOccupancy({ featureIds: ['feature-1'] }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockLoadFeatureCanonicalImageOccupancy).not.toHaveBeenCalled()
   })
 
   it('rotateImage rewrites stored objects, bumps version, and warms fresh variants', async () => {
@@ -791,25 +1342,27 @@ describe('image.remote', () => {
       isAdminRequest: true,
       event: {
         request: new Request('https://example.test'),
-        locals: { hub: null },
-        platform: {
-          env: {
-            ENVIRONMENT: 'local',
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-            ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
-            ASSET_RAW_PREVIEW: { get: vi.fn(), head: vi.fn(), put },
-            ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
-            ASSET_PUBLIC_DEV: { put, get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+        locals: {
+          platform: {
+            env: {
+              ENVIRONMENT: 'local',
+              AUTH_SECRET: 'secret',
+              CLOUDFLARE_ACCOUNT_ID: 'account-id',
+              R2_S3_ACCESS_KEY_ID: 'access-key',
+              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+              PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+              ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
+              ASSET_RAW_PREVIEW: { get: vi.fn(), head: vi.fn(), put },
+              ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
+              ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+              ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+              ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+            },
+            context: {
+              waitUntil: mockWaitUntil,
+            },
           },
-          context: {
-            waitUntil: mockWaitUntil,
-          },
+          hub: null,
         },
       },
     })
@@ -885,8 +1438,8 @@ describe('image.remote', () => {
       .fn()
       .mockRejectedValueOnce(new Error('binding write unavailable'))
       .mockResolvedValue(undefined)
-    const originalGet = vi.fn(async () => null)
-    const previewGet = vi.fn(async () => null)
+    const originalGet = vi.fn(async (): Promise<unknown> => null)
+    const previewGet = vi.fn(async (): Promise<unknown> => null)
     const rotatedSource = await sharp({
       create: {
         width: 120,
@@ -938,25 +1491,27 @@ describe('image.remote', () => {
       event: {
         request: new Request('https://example.test'),
         fetch: globalThis.fetch,
-        locals: { hub: null },
-        platform: {
-          env: {
-            ENVIRONMENT: 'local',
-            AUTH_SECRET: 'secret',
-            CLOUDFLARE_ACCOUNT_ID: 'account-id',
-            R2_S3_ACCESS_KEY_ID: 'access-key',
-            R2_S3_SECRET_ACCESS_KEY: 'secret-key',
-            PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-            ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
-            ASSET_RAW_PREVIEW: { get: previewGet, head: vi.fn(), put },
-            ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
-            ASSET_PUBLIC_DEV: { put, get: vi.fn() },
-            ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
-            ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+        locals: {
+          platform: {
+            env: {
+              ENVIRONMENT: 'local',
+              AUTH_SECRET: 'secret',
+              CLOUDFLARE_ACCOUNT_ID: 'account-id',
+              R2_S3_ACCESS_KEY_ID: 'access-key',
+              R2_S3_SECRET_ACCESS_KEY: 'secret-key',
+              PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
+              ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
+              ASSET_RAW_PREVIEW: { get: previewGet, head: vi.fn(), put },
+              ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
+              ASSET_PUBLIC_DEV: { put, get: vi.fn() },
+              ASSET_PUBLIC_PREVIEW: { put, get: vi.fn() },
+              ASSET_PUBLIC_PRODUCTION: { put, get: vi.fn() },
+            },
+            context: {
+              waitUntil: mockWaitUntil,
+            },
           },
-          context: {
-            waitUntil: mockWaitUntil,
-          },
+          hub: null,
         },
       },
     })

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { toQueryConditions } from '$lib/api/services/project'
-import type { SessionUser, UserRoleDisco } from '$lib/types'
+import { toQueryConditions } from '#lib/api/services/project.js'
+import type { SessionUser, UserRoleDisco } from '#lib/types.js'
 
 describe('project query visibility', () => {
   const superAdminUser = {

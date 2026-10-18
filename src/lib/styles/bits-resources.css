@@ -1,4 +1,10 @@
 @layer components {
+  /* Lift the whole active section: dropdown z-index cannot escape header stacking contexts. */
+  .bits-theme .bits-form__section:has(.bits-search__results) {
+    position: relative;
+    z-index: 210;
+  }
+
   .bits-theme .bits-form__section.bits-form__parent-resource {
     display: flex;
     flex-direction: column;

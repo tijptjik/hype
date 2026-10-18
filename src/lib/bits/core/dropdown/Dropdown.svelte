@@ -2,7 +2,7 @@
 // BITS-UI
 import { DropdownMenu } from 'bits-ui'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { DropdownProps } from './dropdown.types'
 
@@ -22,7 +22,7 @@ let {
 
 const resolvedTriggerClass = $derived(
   cx(
-    'inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/78 transition hover:bg-white/[0.06] hover:text-white',
+    'inline-flex h-11 w-11 items-center justify-center rounded-full border border-border-input bg-base-content/3 text-muted-foreground transition hover:bg-base-content/6 hover:text-base-content',
     triggerClass,
   ),
 )
@@ -30,13 +30,13 @@ const resolvedTriggerClass = $derived(
 const resolvedTriggerIconClass = $derived(cx('h-5 w-5', triggerIconClass))
 const resolvedContentClass = $derived(
   cx(
-    'z-[1200] min-w-[12rem] rounded-2xl border border-white/10 bg-neutral-950/98 p-2 text-white shadow-2xl backdrop-blur-xl',
+    'z-[1200] min-w-[12rem] rounded-2xl border border-border-input bg-(--theme-panel) p-2 text-base-content shadow-2xl backdrop-blur-xl',
     contentClass,
   ),
 )
 const resolvedItemClass = $derived(
   cx(
-    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/82 outline-none transition hover:bg-white/[0.06] hover:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-35',
+    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-base-content outline-none transition hover:bg-base-200 data-[highlighted]:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-35',
     itemClass,
   ),
 )

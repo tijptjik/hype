@@ -1,10 +1,8 @@
 <script lang="ts">
 // SVELTE
 import type { Snippet } from 'svelte'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
 // MAP
-import { startCircularFlight } from '$lib/client/services/geospatial'
+import type { MapController } from '#lib/map/controller.js'
 // COMPONENTS
 import AppLanding from './AppLanding.svelte'
 
@@ -18,11 +16,18 @@ let {
   flightTimeMs?: number
 } = $props()
 
-const appCtx = getAppCtx()
+let flightController = $state<MapController | null>(null)
+const handleMapReady = (controller: MapController | null): void => {
+  flightController = controller
+}
 
 $effect(() => {
-  if (!appCtx.map) return
-  return startCircularFlight(appCtx, [114.17276, 22.29191], 5, flightTimeMs)
+  if (!flightController) return
+  return flightController.startOrbit({
+    center: [114.17276, 22.29191],
+    radiusKm: 5,
+    durationMs: flightTimeMs,
+  })
 })
 </script>
 
@@ -32,6 +37,7 @@ $effect(() => {
   antialias={false}
   interactive={false}
   showControls={false}
+  onMapReady={handleMapReady}
 >
   {#if children}
     {@render children()}

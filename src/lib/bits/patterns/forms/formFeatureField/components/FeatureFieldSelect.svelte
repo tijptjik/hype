@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SelectField } from '$lib/bits/custom'
+import { SelectField } from '#lib/bits/custom/index.js'
 
 type Props = {
   id: string

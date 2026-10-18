@@ -1,12 +1,12 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import StatsPips from './components/StatsPips.svelte'
 // SERVICES
-import { calculateContentStatuses } from '$lib/client/services/stats'
+import { calculateContentStatuses } from '#lib/client/services/stats.js'
 // ICONS
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
 // TYPES
 import type { FeatureStatsProps } from './featureStats.types'
 

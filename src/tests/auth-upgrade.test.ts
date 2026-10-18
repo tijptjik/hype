@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hasDurableAccount, isGuestUser } from '$lib/auth/upgrade'
+import { hasDurableAccount, isGuestUser } from '#lib/auth/upgrade.js'
 
 describe('account upgrade session guards', () => {
   it('accepts only an explicit non-anonymous marker as a durable account', () => {

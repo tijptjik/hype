@@ -1,13 +1,15 @@
-import { error, json, redirect } from '@sveltejs/kit'
+// TYPES
+import type { Queue, R2ObjectBody } from '@cloudflare/workers-types'
+import { error, redirect } from '@sveltejs/kit'
 
-import { buildMapRenderJob } from '$lib/map/renders/jobs.server'
-import { enqueueMapRenderJob } from '$lib/map/renders/queue.server'
-import { resolveMapRenderAssetUrl } from '$lib/map/renders/storage.shared'
+import { buildMapRenderJob } from '#lib/map/renders/jobs.server.js'
+import { enqueueMapRenderJob } from '#lib/map/renders/queue.server.js'
+import { resolveMapRenderAssetUrl } from '#lib/map/renders/storage.shared.js'
 import type {
   MapRenderAssetKind,
   MapRenderJob,
   MapRenderRemoteConfig,
-} from '$lib/types'
+} from '#lib/map/renders/render.types.js'
 
 type RemoteStage = 'preview' | 'production'
 
@@ -19,7 +21,7 @@ type MapRenderPayloadSource = {
 }
 
 const loadLocalMapRenderRuntime = async () =>
-  await import('$lib/map/renders/local.server')
+  await import('#lib/map/renders/local.server.js')
 
 /**
  * Returns the R2 credentials used to persist local and remote map renders.
@@ -89,11 +91,12 @@ export const toMapRenderPayload = (renderData: MapRenderPayloadSource) => ({
 })
 
 /**
- * Redirects remote requests to immutable asset URLs or streams the dev-bucket object locally.
+ * Redirects remote requests to immutable asset URLs or streams a matching object locally.
  *
  * @param params Asset lookup parameters.
  * @returns PNG response in local development.
- * @remarks Throws a redirect for preview/production and a 404 when the object is missing.
+ * @remarks Local reads try dev, preview, then production for the exact content hash.
+ * Throws a redirect for preview/production and a 404 when the object is missing.
  */
 export const serveMapRenderAsset = async (params: {
   platform?: App.Platform
@@ -105,6 +108,7 @@ export const serveMapRenderAsset = async (params: {
   notFoundMessage: string
 }): Promise<Response> => {
   if (isRemoteRenderStage(params.stage)) {
+    // Immutable renders live on the asset CDN; v3 requires explicit external redirects.
     throw redirect(
       307,
       resolveMapRenderAssetUrl(
@@ -116,16 +120,27 @@ export const serveMapRenderAsset = async (params: {
         },
         `/${params.objectKey}`,
       ),
+      { external: true },
     )
   }
 
-  const object = await params.platform?.env.ASSET_PUBLIC_DEV.get(params.objectKey)
+  // Imported databases can reference renders that exist only in a remote-stage bucket.
+  const env = params.platform?.env
+  let object: R2ObjectBody | null = null
+  for (const bucket of [
+    env?.ASSET_PUBLIC_DEV,
+    env?.ASSET_PUBLIC_PREVIEW,
+    env?.ASSET_PUBLIC_PRODUCTION,
+  ]) {
+    object = (await bucket?.get(params.objectKey)) ?? null
+    if (object) break
+  }
 
   if (!object) {
     throw error(404, params.notFoundMessage)
   }
 
-  return new Response(object.body, {
+  return new Response(object.body as unknown as ReadableStream<Uint8Array>, {
     headers: {
       'cache-control': 'no-store',
       'content-type': object.httpMetadata?.contentType ?? 'image/png',
@@ -160,7 +175,7 @@ export const runSingleMapRenderRefresh = async (params: {
   if (isRemoteRenderStage(params.stage)) {
     await enqueueMapRenderJob(getMapRenderQueue(params.platform), job)
 
-    return json({
+    return Response.json({
       ok: true,
       mode: 'enqueue',
       assetUrl,
@@ -175,7 +190,7 @@ export const runSingleMapRenderRefresh = async (params: {
     remoteConfig: getMapRenderRemoteConfig(params.platform),
   })
 
-  return json({
+  return Response.json({
     ok: true,
     mode: 'local-generate',
     assetUrl,

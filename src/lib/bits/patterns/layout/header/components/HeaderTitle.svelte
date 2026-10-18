@@ -1,15 +1,15 @@
 <script lang="ts">
 // BITS COMPONENTS
-import BitsHeader from '$lib/bits/custom/header/Header.svelte'
-import { Dropdown } from '$lib/bits/core'
+import BitsHeader from '#lib/bits/custom/header/Header.svelte'
+import { Dropdown } from '#lib/bits/core/index.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // SVELTE
 import { slide } from 'svelte/transition'
 // TYPES
 import type { HeaderTitleProps } from './headerPrimitives.types'
 // ICONS
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
 // STYLES
 import {
   HEADER_TITLE_MENU_CONTENT_CLASSES,
@@ -38,9 +38,10 @@ const resolvedCrumbs = $derived(
 )
 </script>
 
-<div class="bits-pattern-header__title-group">
+<div class="bits-pattern-header__title-group w-max! shrink-0! min-w-max! gap-2!">
   <BitsHeader
     size="md"
+    class={String.raw`w-auto! max-w-none! flex-none! min-w-max! [&_.bits-header\_\_title]:overflow-visible [&_.bits-header\_\_title]:text-clip`}
     {icon}
     {href}
     crumbs={resolvedCrumbs}

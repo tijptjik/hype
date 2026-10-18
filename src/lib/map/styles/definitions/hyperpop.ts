@@ -1,4 +1,9 @@
-import type { StyleSpecification } from 'maplibre-gl'
+import type {
+  StyleSpecification,
+  LayerSpecification,
+  FilterSpecification,
+  DataDrivenPropertyValueSpecification,
+} from 'maplibre-gl'
 
 import type { StyleBuildOptions } from './common'
 import { buildGhosteryStyle } from './ghostery'
@@ -28,7 +33,7 @@ const BASE_EARTH_FILTER = [
   ['==', '$type', 'Polygon'],
   ['==', 'kind', 'earth'],
   ['==', 'saanseoi:base', true],
-] as const
+] satisfies FilterSpecification
 
 const BASE_OCEAN_FILTER = [
   'all',
@@ -36,14 +41,14 @@ const BASE_OCEAN_FILTER = [
   ['==', 'kind', 'ocean'],
   ['==', 'sort_rank', 200],
   ['==', 'saanseoi:base', true],
-] as const
+] satisfies FilterSpecification
 
 const COASTLINE_FILTER = [
   'all',
   ['==', '$type', 'LineString'],
   ['==', 'kind', 'coastline'],
   ['==', 'saanseoi:base', true],
-] as const
+] satisfies FilterSpecification
 
 const REGIONAL_BORDER_FILTER = [
   'all',
@@ -51,7 +56,7 @@ const REGIONAL_BORDER_FILTER = [
   ['==', 'kind', 'region'],
   ['==', 'kind_detail', 4],
   ['==', 'saanseoi:region_border', true],
-] as const
+] satisfies FilterSpecification
 
 /**
  * Creates the subtle casing behind source coastline geometry in the water layer.
@@ -132,7 +137,9 @@ const createRegionalBorderLayer = (): StyleLayer => ({
  * @param layerId - Protomaps road casing layer ID.
  * @returns Genesis gap-width expression for the casing layer.
  */
-const getGenesisRoadOutlineGap = (layerId: string) => {
+const getGenesisRoadOutlineGap = (
+  layerId: string,
+): DataDrivenPropertyValueSpecification<number> => {
   switch (layerId) {
     case 'roads_minor_service_casing':
       return ['interpolate', ['exponential', 1.6], ['zoom'], 13, 0, 18, 8]
@@ -199,16 +206,15 @@ const applyHyperpopPalette = (style: StyleSpecification): StyleSpecification => 
   if (!style.layers) return style
 
   // Preserve Ghostery's layer visibility and zoom thresholds while replacing its visual treatment.
-  style.layers = style.layers.map(layer => {
-    const paint = layer.paint ?? {}
+  style.layers = style.layers.map((layer): LayerSpecification => {
     const isRoadLabelGlow =
       layer.id.startsWith('roads_labels_') && layer.id.endsWith('__glow')
 
-    if (layer.id.endsWith('__glow')) {
+    if (layer.type === 'symbol' && layer.id.endsWith('__glow')) {
       return {
         ...layer,
         paint: {
-          ...paint,
+          ...(layer.paint ?? {}),
           'text-color': isRoadLabelGlow
             ? 'rgba(255, 255, 255, 0.46)'
             : 'rgba(255, 255, 255, 0.36)',
@@ -219,13 +225,13 @@ const applyHyperpopPalette = (style: StyleSpecification): StyleSpecification => 
       }
     }
 
-    if (layer.id.includes('_casing')) {
+    if (layer.type === 'line' && layer.id.includes('_casing')) {
       const isMinorRoad = layer.id.includes('minor')
 
       return {
         ...layer,
         paint: {
-          ...paint,
+          ...(layer.paint ?? {}),
           'line-color': HYPERPOP_ACCENT,
           'line-opacity': isMinorRoad ? 0.12 : 0.22,
           'line-blur': layer.id.includes('highway') ? 4.6 : 3.8,
@@ -237,11 +243,11 @@ const applyHyperpopPalette = (style: StyleSpecification): StyleSpecification => 
       }
     }
 
-    if (layer.id === 'buildings_outline') {
+    if (layer.type === 'line' && layer.id === 'buildings_outline') {
       return {
         ...layer,
         paint: {
-          ...paint,
+          ...(layer.paint ?? {}),
           'line-color': [
             'interpolate',
             ['linear'],
@@ -284,6 +290,7 @@ const applyHyperpopPalette = (style: StyleSpecification): StyleSpecification => 
       layer.id === 'roads_bridges_major' ||
       layer.id === 'roads_bridges_highway'
     ) {
+      if (layer.type !== 'line') return layer
       const isMinorRoad =
         layer.id.includes('minor') || layer.id === 'roads_minor_service'
       const isHighway = layer.id.includes('highway')
@@ -298,7 +305,7 @@ const applyHyperpopPalette = (style: StyleSpecification): StyleSpecification => 
       return {
         ...layer,
         paint: {
-          ...paint,
+          ...(layer.paint ?? {}),
           'line-color': roadColor,
           'line-opacity': layer.id === 'roads_other' ? 0.5 : isMinorRoad ? 0.76 : 1,
           'line-blur': layer.id === 'roads_other' ? 0.45 : isHighway ? 0.34 : 0.2,
@@ -312,37 +319,41 @@ const applyHyperpopPalette = (style: StyleSpecification): StyleSpecification => 
       }
     }
 
-    if (layer.id === 'background') {
+    if (layer.type === 'background' && layer.id === 'background') {
       return {
         ...layer,
-        paint: { ...paint, 'background-color': HYPERPOP_BASE_400 },
+        paint: { ...(layer.paint ?? {}), 'background-color': HYPERPOP_BASE_400 },
       }
     }
 
-    if (layer.id === 'earth') {
+    if (layer.type === 'fill' && layer.id === 'earth') {
       return {
         ...layer,
         filter: BASE_EARTH_FILTER,
         paint: {
-          ...paint,
+          ...(layer.paint ?? {}),
           'fill-color': HYPERPOP_BASE_100,
           'fill-outline-color': 'transparent',
         },
       }
     }
 
-    if (layer.id === 'water') {
+    if (layer.type === 'fill' && layer.id === 'water') {
       return {
         ...layer,
         filter: BASE_OCEAN_FILTER,
-        paint: { ...paint, 'fill-color': HYPERPOP_BASE_200 },
+        paint: { ...(layer.paint ?? {}), 'fill-color': HYPERPOP_BASE_200 },
       }
     }
 
-    if (layer.id === 'buildings') {
+    if (layer.type === 'fill' && layer.id === 'buildings') {
       return {
         ...layer,
-        paint: { ...paint, 'fill-color': HYPERPOP_BASE_350, 'fill-opacity': 0.9 },
+        paint: {
+          ...(layer.paint ?? {}),
+          'fill-color': HYPERPOP_BASE_350,
+          'fill-opacity': 0.9,
+        },
       }
     }
 
@@ -350,7 +361,7 @@ const applyHyperpopPalette = (style: StyleSpecification): StyleSpecification => 
       return {
         ...layer,
         paint: {
-          ...paint,
+          ...(layer.paint ?? {}),
           'text-color': HYPERPOP_PRIMARY_CONTENT,
           'text-halo-color': 'rgba(8, 5, 17, 0.92)',
           'text-halo-width': 0.55,
@@ -367,7 +378,7 @@ const applyHyperpopPalette = (style: StyleSpecification): StyleSpecification => 
   for (const layer of style.layers) {
     layersWithCoastline.push(layer)
 
-    if (layer.id === 'water') {
+    if (layer.type === 'fill' && layer.id === 'water') {
       layersWithCoastline.push(
         createCoastlineGutterLayer(),
         createCoastlineLayer(),

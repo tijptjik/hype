@@ -2,15 +2,15 @@
 // SVELTE
 import { onMount } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core/button'
+import { Button } from '#lib/bits/core/button/index.js'
 // LIB
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
-import FolderOpenIcon from 'virtual:icons/lucide/folder-open'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
+import CameraIcon from 'virtual:icons/proicons/camera'
+import FolderOpenIcon from 'virtual:icons/proicons/folder-open'
+import Trash2Icon from 'virtual:icons/proicons/delete'
 // LOCAL
 import { detectCameraAccess, requestCameraAccess } from '../cameraAccess'
 
@@ -91,14 +91,14 @@ onMount(() => {
 >
 
 <div
-  class="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black px-2 py-2 text-white shadow-[0_12px_32px_rgba(0,0,0,0.28)]"
+  class="inline-flex items-center gap-2 rounded-full border border-border bg-base-100 px-2 py-2 text-base-content shadow-[0_12px_32px_rgba(0,0,0,0.28)]"
 >
   <Button
     text={m.forms__delete()}
     style="transparent"
     modifier="circle"
     hideLabel={true}
-    class="h-10 w-10 rounded-full border border-white/12 bg-black text-white hover:bg-white/10"
+    class="h-10 w-10 rounded-full border border-border bg-base-100 text-base-content hover:bg-base-content/10"
     onClick={() => {
       void onDelete?.()
     }}
@@ -106,21 +106,21 @@ onMount(() => {
     iconClasses="h-[18px] w-[18px]"
   />
 
-  <div class="h-6 w-px bg-white/18" aria-hidden="true"></div>
+  <div class="h-6 w-px bg-base-content/10" aria-hidden="true"></div>
 
-  <div class="px-1.5 font-mono text-[11px] uppercase tracking-[0.28em] text-white/58">
+  <div
+    class="px-1.5 font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground"
+  >
     {m.wacky_home_sawfish_accept()}
   </div>
 
   {#if hasCameraDevice}
     <Button
-      text={cameraPermissionStatus === 'granted'
-        ? m.camera()
-        : m.camera__permission()}
+      text={cameraPermissionStatus === 'granted' ? m.camera() : m.camera__permission()}
       style="transparent"
       modifier="circle"
       hideLabel={true}
-      class="h-10 w-10 rounded-full border border-white/12 bg-black text-white hover:bg-white/10"
+      class="h-10 w-10 rounded-full border border-border bg-base-100 text-base-content hover:bg-base-content/10"
       onClick={() => {
         void handleCameraClick()
       }}
@@ -134,7 +134,7 @@ onMount(() => {
     style="transparent"
     modifier="circle"
     hideLabel={true}
-    class="h-10 w-10 rounded-full border border-white/12 bg-black text-white hover:bg-white/10"
+    class="h-10 w-10 rounded-full border border-border bg-base-100 text-base-content hover:bg-base-content/10"
     onClick={() => galleryInput?.click()}
     iconComponent={FolderOpenIcon}
     iconClasses="h-[18px] w-[18px]"

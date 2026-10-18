@@ -46,9 +46,9 @@ import {
   FieldDiscriminator,
   FirstClassResource,
   type SupportedLocales,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type {
   Organisation,
@@ -57,12 +57,12 @@ import type {
   FeatureImportStep,
   FeatureCSVColumn,
   Resource,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 import type {
   ImportFooterProps,
   ImportHeaderStatItem,
-} from '$lib/bits/patterns/import/components/shared/importLayout.types'
-import type { ImportCtx, ImportState } from '$lib/context/import.svelte'
+} from '#lib/bits/patterns/import/components/shared/importLayout.types.js'
+import type { ImportCtx, ImportState } from '#lib/context/import.svelte.js'
 
 /********************
  *  0. IMPORT TYPES
@@ -95,7 +95,9 @@ type FeatureImportAppContext = {
   getResourceByIdSync: (
     resourceType: FirstClassResource,
     id: string,
-  ) => Resource | undefined
+  ) =>
+    | import('#lib/context/cache.types.js').CachedEntity<FirstClassResource>
+    | undefined
 }
 
 export type FeatureResolutionStatusCounts = {

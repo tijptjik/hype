@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import authorize from '$lib/api/services/authz'
-import type { AuthorizeParams, UserRoleDisco } from '$lib/types'
+import authorize from '#lib/api/services/authz/index.js'
+import type { AuthorizeParams } from '#lib/api/services/authz/authorization.types.js'
+import type { UserRoleDisco } from '#lib/types.js'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 
@@ -161,7 +162,7 @@ describe('organisation authorization policy matrix', () => {
 
     for (const stateCase of states) {
       for (const actor of Object.values(ACTORS)) {
-        const expected = stateCase.allowedActors.includes(
+        const expected = (stateCase.allowedActors as readonly string[]).includes(
           actor === ACTORS.coreAdmin
             ? 'coreAdmin'
             : actor === ACTORS.hubAdminSame

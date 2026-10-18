@@ -2,14 +2,14 @@
 // SVELTE
 import { slide } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CORE
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // CUSTOM
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ICONS
-import ReplaceIcon from 'virtual:icons/lucide/replace'
-import XIcon from 'virtual:icons/lucide/x'
+import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
+import XIcon from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { FormFeatureSubSectionHeaderProps } from './formFeatureSectionHeader.types'
 
@@ -50,7 +50,7 @@ function handleToggleAdding(): void {
     {/if}
   </div>
 
-  <div class="bits-feature-sub-section-header__content">
+  <div class="flex flex-col items-center justify-center w-full min-w-0 text-center">
     {#if shouldShowTitle}
       <h3 class="bits-feature-sub-section-header__title">{title}</h3>
       {#if subtitle}
@@ -59,10 +59,7 @@ function handleToggleAdding(): void {
     {/if}
 
     {#if issues.length > 0}
-      <div
-        transition:slide={{ duration: 180 }}
-        class="bits-feature-sub-section-header__issues"
-      >
+      <div transition:slide={{ duration: 180 }} class="w-full">
         <SectionHeaderPrimitive.Issues {issues} />
       </div>
     {/if}
@@ -84,7 +81,7 @@ function handleToggleAdding(): void {
         iconComponent={actionIcon}
         onClick={handleToggleAdding}
         disabled={isActionDisabled}
-        class="bits-feature-sub-section-header__action-btn"
+        class="min-h-8 px-2 self-center"
       />
     {/if}
   </div>

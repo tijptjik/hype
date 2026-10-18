@@ -6,8 +6,8 @@ import {
   authorizeFeaturePublishForSubmission,
   authorizeFeatureReadForProbe,
   authorizeFeatureUpdateForSubmission,
-} from '$lib/api/services/authz'
-import type { UserRoleDisco } from '$lib/types'
+} from '#lib/api/services/authz/index.js'
+import type { UserRoleDisco } from '#lib/types.js'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 
 const coreAdminRole = (): UserRoleDisco =>
@@ -187,7 +187,7 @@ describe('feature authorization policy matrix', () => {
             action: 'listFeatures',
             scenario: stateCase.name,
             actor: actor.name,
-            expected: stateCase.allowed.includes(key),
+            expected: (stateCase.allowed as readonly string[]).includes(key),
             actual: decision.allowed,
             code: decision.code,
           })
@@ -206,7 +206,7 @@ describe('feature authorization policy matrix', () => {
             action: 'readFeature',
             scenario: stateCase.name,
             actor: actor.name,
-            expected: stateCase.allowed.includes(key),
+            expected: (stateCase.allowed as readonly string[]).includes(key),
             actual: decision.allowed,
             code: decision.code,
           })

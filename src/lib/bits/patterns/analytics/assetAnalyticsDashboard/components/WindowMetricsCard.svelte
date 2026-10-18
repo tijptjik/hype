@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import * as AnalyticsCardPrimitive from '$lib/bits/custom/analyticsCard/components'
-import { cx } from '$lib/bits/utils'
+import * as AnalyticsCardPrimitive from '#lib/bits/custom/analyticsCard/components/index.js'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // LOCAL
 import {
   ASSET_ANALYTICS_SERIES,
@@ -16,10 +16,12 @@ import {
 // TYPES
 import type {
   AssetAnalyticsBreakdownItem,
-  AssetAnalyticsLatencyTier,
   AssetAnalyticsSeriesKey,
-} from '$lib/types'
+} from '#lib/api/services/assetAnalytics.types.js'
 import type { AssetAnalyticsWindowMetricsCardProps } from '../assetAnalyticsDashboard.types'
+// TYPES
+
+type AssetAnalyticsLatencyTier = 'p50Ms' | 'p95Ms' | 'p99Ms'
 
 type LatencyBar = {
   key: AssetAnalyticsSeriesKey
@@ -150,7 +152,9 @@ function getBreakdownItems(
 <section class="flex min-h-0 flex-col gap-4">
   {#if !windowData}
     <AnalyticsCardPrimitive.EmptyState
-      title={windowError ? 'Analytics window unavailable' : 'No analytics window available'}
+      title={windowError
+        ? 'Analytics window unavailable'
+        : 'No analytics window available'}
       description={windowError
         ? windowError
         : 'This time range has not been emitted by the analytics engine yet.'}
@@ -158,7 +162,7 @@ function getBreakdownItems(
   {:else}
     <div class="grid grid-cols-2 gap-3">
       {#each visibleKpiItems as item}
-        <article class="rounded-[1.2rem] border border-base-300 bg-[#121212] px-3 py-3">
+        <article class="rounded-[1.2rem] border border-base-300 bg-surface px-3 py-3">
           <p
             class="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-alt"
           >
@@ -171,9 +175,7 @@ function getBreakdownItems(
       {/each}
     </div>
 
-    <section
-      class="space-y-4 rounded-[1.25rem] border border-base-300 bg-[#121212] p-4"
-    >
+    <section class="space-y-4 rounded-[1.25rem] border border-base-300 bg-surface p-4">
       <AnalyticsCardPrimitive.SectionHeader
         title="Latency"
         tooltip="Percentile response times for the active request classes in this time window."
@@ -193,7 +195,7 @@ function getBreakdownItems(
             {#each bars as bar}
               <div class="grid grid-cols-[88px_1fr_auto] items-center gap-3">
                 <div class="text-xs text-foreground-alt">{bar.label}</div>
-                <div class="h-2.5 overflow-hidden rounded-full bg-white/6">
+                <div class="h-2.5 overflow-hidden rounded-full bg-foreground/6">
                   <div
                     class={cx('h-full rounded-full', bar.color)}
                     style={`width: ${getLatencyWidth(bar.value, maxValue)}`}
@@ -209,9 +211,7 @@ function getBreakdownItems(
       </div>
     </section>
 
-    <section
-      class="space-y-5 rounded-[1.25rem] border border-base-300 bg-[#121212] p-4"
-    >
+    <section class="space-y-5 rounded-[1.25rem] border border-base-300 bg-surface p-4">
       <AnalyticsCardPrimitive.SectionHeader
         title="Transformations"
         tooltip="Request-weighted shares for crop mode, format, dimensions, quality, and gravity in this time window."
@@ -255,7 +255,7 @@ function getBreakdownItems(
                     </div>
 
                     <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                      <div class="h-2 overflow-hidden rounded-full bg-white/6">
+                      <div class="h-2 overflow-hidden rounded-full bg-foreground/6">
                         <div
                           class="h-full rounded-full bg-primary"
                           style={`width: ${Math.max(item.percent, item.percent > 0 ? 4 : 0)}%`}

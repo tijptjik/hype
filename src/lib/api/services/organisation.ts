@@ -1,39 +1,40 @@
 // DRIZZLE
-import { asc, eq, inArray, type SQL } from 'drizzle-orm'
+import { asc, eq, type SQL } from 'drizzle-orm'
 // LIB
 import {
   applyQueryFilters,
   removeExcludedColumns,
   toStableSignature,
   toTriStateBoolean,
-} from '$lib/api'
-import { toBooleanOrUndefined } from '$lib/api/services'
+} from '#lib/api/index.js'
+import { toBooleanOrUndefined } from '#lib/api/services/index.js'
 // DB
-import { transformI18nSafely } from '$lib/db'
-import { applyTriStateBooleanCondition } from '$lib/db/query'
-import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { isSuperAdmin } from '$lib/client/services/auth'
+import { transformI18nSafely } from '#lib/db/index.js'
+import { applyTriStateBooleanCondition } from '#lib/db/query.js'
+import { toImageEnvelope, toNormalizedImageRecord } from '#lib/db/services/image.js'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
+import { isSuperAdmin } from '#lib/client/services/auth.js'
 import {
+  OrganisationCompactProfileAPI,
   OrganisationAdminProfileAPI,
   OrganisationCardProfileAPI,
   OrganisationDetailProfileAPI,
   OrganisationListProfileAPI,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // SCHEMA
-import { organisation, organisationProperty } from '$lib/db/schema/index'
+import { organisation, organisationProperty } from '#lib/db/schema/index.js'
 // ENUMS
-import { ImageContextResource } from '$lib/enums'
+import { ImageContextResource } from '#lib/enums.js'
 // TYPES
+import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
 import type {
-  CapabilityDefinitions,
   EntityResponse,
   Id,
   ListResponse,
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
+} from '#lib/types.js'
 import type {
   Organisation,
   OrganisationDB,
@@ -41,7 +42,8 @@ import type {
   OrganisationEntityByProfile,
   OrganisationListByProfile,
   OrganisationProfile,
-} from '$lib/db/zod/schema/organisation.types'
+} from '#lib/db/zod/schema/organisation.types.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -96,6 +98,7 @@ export const getOrganisationWithRelations = (
   profile: OrganisationProfile,
   isSuperAdmin: boolean,
 ) => {
+  if (profile === 'compact') return { i18n: true }
   if (profile === 'admin') {
     return {
       ...organisationWithRelations,
@@ -128,7 +131,13 @@ export const getOrganisationWithRelations = (
     }
   }
 
-  if (profile === 'card' || profile === 'detail') {
+  if (
+    profile === 'card' ||
+    profile === 'default' ||
+    profile === 'map' ||
+    profile === 'detail' ||
+    profile === 'full'
+  ) {
     return {
       i18n: true,
       image: true,
@@ -143,7 +152,16 @@ export const getOrganisationWithRelations = (
 /********************
  *  PROFILE SHAPING
  ************/
-const organisationProfiles = ['list', 'card', 'detail', 'admin'] as const
+const organisationProfiles = [
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+] as const
 
 /**
  * Normalizes unknown profile input to a supported organisation profile value.
@@ -210,16 +228,25 @@ const toProfileResponseShape = async (
     image: organisation.image
       ? toImageEnvelope(
           toNormalizedImageRecord(organisation.image),
-          profile,
+          profile === 'default' || profile === 'map'
+            ? 'card'
+            : profile === 'full'
+              ? 'detail'
+              : profile === 'compact'
+                ? 'list'
+                : profile,
           ImageContextResource.organisation,
           organisation.id,
         )
       : null,
   }
 
+  if (profile === 'compact') return OrganisationCompactProfileAPI.parse(data)
   if (profile === 'list') return OrganisationListProfileAPI.parse(data)
-  if (profile === 'card') return OrganisationCardProfileAPI.parse(data)
-  if (profile === 'detail') return OrganisationDetailProfileAPI.parse(data)
+  if (profile === 'card' || profile === 'default' || profile === 'map')
+    return OrganisationCardProfileAPI.parse(data)
+  if (profile === 'detail' || profile === 'full')
+    return OrganisationDetailProfileAPI.parse(data)
   return OrganisationAdminProfileAPI.parse(data) as unknown as Organisation
 }
 
@@ -373,7 +400,7 @@ const buildVisibilityAndOwnershipConditions = (
     conditions.push(eq(organisation.id, '__none__' as Id))
     return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
-  conditions.push(inArray(organisation.id, allowedOrganisationIds))
+  conditions.push(chunkedInArray(organisation.id, allowedOrganisationIds))
 
   // Apply tri-state visibility semantics for admin owner queries.
   const isPublished = toTriStateBoolean(params.isPublished)

@@ -4,9 +4,10 @@ import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
 import { fade, slide } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
+import EmptyState from '#lib/bits/custom/emptyState/EmptyState.svelte'
 import Item from './FormFieldsSectionItem.svelte'
 import Loading from './FormFieldsSectionLoading.svelte'
 // ICONS
@@ -43,7 +44,7 @@ const moveWindowSize = $derived(
 
 {#if isLoading}
   <section
-    class="bits-theme bits-form__section bits-project-fields__loading-shell"
+    class="bits-theme bits-form__section min-h-64"
     role="status"
     aria-live="polite"
     aria-busy="true"
@@ -53,37 +54,35 @@ const moveWindowSize = $derived(
     <Loading items={loadingItems} />
   </section>
 {:else if items.length === 0}
-  <section
-    class="bits-theme bits-form__section bits-project-fields__empty bits-form__empty-state"
+  <div
+    class="flex min-h-0 flex-1 flex-col"
     role="status"
     aria-live="polite"
     in:fade={{ duration: 140 }}
     out:fade={{ duration: 120 }}
   >
-    <div class="bits-form__empty-state-copy">
-      <h3 class="bits-project-fields__empty-title bits-form__empty-state-title">
-        {m.admin__forms_project_fields_empty_title()}
-      </h3>
-      <p
-        class="bits-project-fields__empty-description bits-form__empty-state-description"
-      >
-        {m.admin__forms_project_fields_empty_description()}
-      </p>
-    </div>
-    {#if canEdit}
+    <EmptyState
+      title={m.admin__forms_project_fields_empty_title()}
+      description={m.admin__forms_project_fields_empty_description()}
+      class="bits-theme bits-form__section bits-project-fields__empty"
+      titleClass="bits-project-fields__empty-title"
+      descriptionClass="bits-project-fields__empty-description"
+      actions={canEdit ? emptyActions : undefined}
+    />
+    {#snippet emptyActions()}
       <Button
         text={m.fun_away_bird_peek()}
         color="primary"
         iconComponent={ListPlus}
         disabled={disableEmptyAdd || !onAdd}
         onClick={event => onAdd?.(event)}
-        class="bits-project-fields__empty-add-btn bits-form__empty-state-cta"
+        class="bits-project-fields__empty-add-btn"
       />
-    {/if}
-  </section>
+    {/snippet}
+  </div>
 {:else}
   <div
-    class="bits-project-fields__list"
+    class="flex flex-col gap-3"
     in:fade={{ duration: 160 }}
     out:fade={{ duration: 120 }}
   >

@@ -4,50 +4,55 @@ import { toast } from 'svelte-sonner'
 // BITS UI
 import { Dialog } from 'bits-ui'
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // AUTH
-import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
+import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // SERVICES
-import { upsertNewFeatureDraft } from '$lib/client/services/task'
+import { upsertNewFeatureDraft } from '#lib/client/services/task.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // ENUMS
-import { NewFeatureMode } from '$lib/enums'
+import { NewFeatureMode } from '#lib/enums.js'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import ChevronRight from 'virtual:icons/lucide/chevron-right'
-import Layers3 from 'virtual:icons/lucide/layers-3'
-import LayoutGrid from 'virtual:icons/lucide/layout-grid'
-import MapPin from 'virtual:icons/lucide/map-pin'
-import Search from 'virtual:icons/lucide/search'
-import Users from 'virtual:icons/lucide/users'
-import X from 'virtual:icons/lucide/x'
+import Check from 'virtual:icons/proicons/checkmark'
+import ChevronRight from 'virtual:icons/proicons/chevron-right'
+import Layers3 from 'virtual:icons/proicons/layers'
+import LayoutGrid from 'virtual:icons/proicons/grid'
+import MapPin from 'virtual:icons/proicons/location'
+import Search from 'virtual:icons/proicons/search'
+import Users from 'virtual:icons/proicons/person-multiple'
+import X from 'virtual:icons/proicons/cancel'
 // TYPES
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 import type { Point } from 'geojson'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
 let searchQuery = $state('')
 let isSaving = $state(false)
 let isFindOtherOpen = $state(false)
 
-const newFeature = $derived(appCtx.getNewFeature())
-const appMainOffsetX = $derived(responsiveCtx.getAppMainOffsetX())
+const newFeature = $derived(appCtx.draft.current)
+const appMainOffsetX = $derived(surfaceLayout.getAppMainOffsetX())
 const activeLayers = $derived.by(() =>
   // Prefer the reactive list data: caches can hold narrower payloads from prior lookups.
-  appCtx.state.prisms.layer
+  appCtx.scope.prisms.layer
     .map(
       layerId =>
-        appCtx.state.resources.layer.find(layer => layer.id === layerId) ??
+        appCtx.queries.rows.layer.find(layer => layer.id === layerId) ??
         appCtx.cache.layer.get(layerId),
     )
     .filter((layer): layer is Layer => Boolean(layer)),
@@ -140,7 +145,6 @@ function getLayerLabel(layer: Layer | null | undefined): string {
   return (
     getI18n(layer, 'nameShort', appCtx.getUserPreferences(), '') ||
     getI18n(layer, 'name', appCtx.getUserPreferences(), '') ||
-    layer.code ||
     m.active_bold_cobra_grin()
   )
 }
@@ -150,11 +154,10 @@ const activeLayerItems = $derived.by(() =>
     .map(layer => {
       // Resolve the hierarchy from reactive list data before falling back to potentially partial caches.
       const project =
-        appCtx.state.resources.project.find(
-          project => project.id === layer.projectId,
-        ) ?? appCtx.cache.project.get(layer.projectId)
+        appCtx.queries.rows.project.find(project => project.id === layer.projectId) ??
+        appCtx.cache.project.get(layer.projectId)
       const organisation =
-        appCtx.state.resources.organisation.find(
+        appCtx.queries.rows.organisation.find(
           organisation => organisation.id === layer.organisationId,
         ) ?? appCtx.cache.organisation.get(layer.organisationId)
 
@@ -176,7 +179,7 @@ const searchableResources = $derived.by(() => {
   const matchesQuery = (value: string): boolean =>
     !query || value.toLowerCase().includes(query)
 
-  const organisations = appCtx.state.resources.organisation
+  const organisations = appCtx.queries.rows.organisation
     .filter(organisation =>
       selectedOrganisation ? organisation.id === selectedOrganisation.id : true,
     )
@@ -188,7 +191,7 @@ const searchableResources = $derived.by(() => {
       breadcrumb: '',
     }))
 
-  const projects = appCtx.state.resources.project
+  const projects = appCtx.queries.rows.project
     .filter(project =>
       selectedOrganisation ? project.organisationId === selectedOrganisation.id : true,
     )
@@ -205,7 +208,7 @@ const searchableResources = $derived.by(() => {
       }
     })
 
-  const layers = appCtx.state.resources.layer
+  const layers = appCtx.queries.rows.layer
     .filter(layer =>
       selectedOrganisation ? layer.organisationId === selectedOrganisation.id : true,
     )
@@ -247,14 +250,14 @@ const isValid = $derived(
 )
 
 $effect(() => {
-  if (appCtx.newFeatureMode !== NewFeatureMode.parents) {
+  if (appCtx.draft.mode !== NewFeatureMode.parents) {
     isFindOtherOpen = false
     searchQuery = ''
   }
 })
 
 $effect(() => {
-  if (appCtx.newFeatureMode !== NewFeatureMode.parents) return
+  if (appCtx.draft.mode !== NewFeatureMode.parents) return
   if (isFindOtherOpen) return
   if (activeLayers.length !== 1) return
   if (selectedOrganisation || selectedProject || selectedLayer) return
@@ -263,7 +266,7 @@ $effect(() => {
   const project = appCtx.cache.project.get(layer.projectId)
   const organisation = appCtx.cache.organisation.get(layer.organisationId)
 
-  appCtx.updateNewFeature({
+  appCtx.draft.update({
     organisationId: organisation?.id,
     projectId: project?.id,
     layerId: layer.id,
@@ -280,17 +283,17 @@ function handleCloseModal(): void {
   isFindOtherOpen = false
 
   if (newFeature?.taskId) {
-    appCtx.setNewFeatureMode(NewFeatureMode.card)
+    appCtx.draft.setMode(NewFeatureMode.card)
     return
   }
 
-  appCtx.setNewFeatureMode(null)
+  appCtx.draft.setMode(null)
   omniCtx.cancelNewFeature()
 }
 
 function handleResourceSelect(resource: Organisation | Project | Layer): void {
   if ('projectId' in resource && 'organisationId' in resource) {
-    appCtx.updateNewFeature({
+    appCtx.draft.update({
       organisationId: resource.organisationId,
       projectId: resource.projectId,
       layerId: resource.id,
@@ -304,7 +307,7 @@ function handleResourceSelect(resource: Organisation | Project | Layer): void {
   }
 
   if ('organisationId' in resource) {
-    appCtx.updateNewFeature({
+    appCtx.draft.update({
       organisationId: resource.organisationId,
       projectId: resource.id,
       layerId: undefined,
@@ -317,7 +320,7 @@ function handleResourceSelect(resource: Organisation | Project | Layer): void {
     return
   }
 
-  appCtx.updateNewFeature({
+  appCtx.draft.update({
     organisationId: resource.id,
     projectId: undefined,
     layerId: undefined,
@@ -361,7 +364,7 @@ function clearSelection(level: 'organisation' | 'project' | 'layer'): void {
     })
   }
 
-  appCtx.updateNewFeature(updates)
+  appCtx.draft.update(updates)
   searchQuery = ''
 }
 
@@ -369,7 +372,7 @@ function handleOpenFindOther(): void {
   const nextValue = !isFindOtherOpen
   isFindOtherOpen = nextValue
   if (nextValue) {
-    appCtx.updateNewFeature({
+    appCtx.draft.update({
       organisationId: undefined,
       projectId: undefined,
       layerId: undefined,
@@ -393,7 +396,7 @@ function handleOpenFindOther(): void {
 async function handleAccept(): Promise<void> {
   if (!isValid || isSaving) return
 
-  if (!hasDurableAccount(appCtx.getUser())) {
+  if (!hasDurableAccount(appCtx.account.user)) {
     requestAccountUpgrade('contribution', window.location.href)
     return
   }
@@ -402,10 +405,10 @@ async function handleAccept(): Promise<void> {
 
   try {
     const shouldGoToLocation = !(
-      appCtx.getNewFeature()?.feature?.geometry as Point | undefined
+      appCtx.draft.current?.feature?.geometry as Point | undefined
     )?.coordinates
-    const draft = await upsertNewFeatureDraft(appCtx.getNewFeature() ?? {})
-    appCtx.updateNewFeature({
+    const draft = await upsertNewFeatureDraft(appCtx.draft.current ?? {})
+    appCtx.draft.update({
       taskId: draft.task.id,
       featureId: draft.featureId,
       organisationId: draft.organisationId,
@@ -421,11 +424,11 @@ async function handleAccept(): Promise<void> {
     searchQuery = ''
 
     if (shouldGoToLocation) {
-      appCtx.setNewFeatureMode(NewFeatureMode.location)
+      appCtx.draft.setMode(NewFeatureMode.location)
       return
     }
 
-    appCtx.setNewFeatureMode(NewFeatureMode.card)
+    appCtx.draft.setMode(NewFeatureMode.card)
   } catch (error) {
     console.error('Error saving new-feature draft:', error)
     toast.error(m.long_crazy_peacock_care())
@@ -435,11 +438,11 @@ async function handleAccept(): Promise<void> {
 }
 </script>
 
-{#if appCtx.newFeatureMode === NewFeatureMode.parents}
+{#if appCtx.draft.mode === NewFeatureMode.parents}
   <Dialog.Root open={true}>
     <Dialog.Portal>
       <Dialog.Content
-        class="bits-theme fixed left-1/2 top-1/2 z-[951] flex max-h-[min(44rem,calc(100vh-2rem))] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black text-white shadow-2xl focus:outline-none"
+        class="bits-theme fixed left-1/2 top-1/2 z-[951] flex max-h-[min(44rem,calc(100vh-2rem))] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[2rem] border border-border bg-panel text-base-content shadow-2xl focus:outline-none"
         style={`margin-left: ${appMainOffsetX}px;`}
         onInteractOutside={event => {
           event.preventDefault()
@@ -449,22 +452,22 @@ async function handleAccept(): Promise<void> {
         }}
       >
         <div
-          class="flex items-start justify-between gap-4 border-b border-white/10 px-6 pb-5 pt-6"
+          class="flex items-start justify-between gap-4 border-b border-border px-6 pb-5 pt-6"
         >
           <div class="min-w-0">
             <Dialog.Title
-              class="flex items-center gap-3 text-lg font-semibold uppercase tracking-[0.18em] text-white"
+              class="flex items-center gap-3 text-lg font-semibold uppercase tracking-[0.18em] text-base-content"
             >
               <Icon src={MapPin} class="h-5 w-5 text-primary" />
               {m.each_gray_felix_catch()}
             </Dialog.Title>
-            <Dialog.Description class="mt-3 text-sm leading-6 text-white/68">
+            <Dialog.Description class="mt-3 text-sm leading-6 text-muted-foreground">
               {m.new_feature__select_map_desc()}
             </Dialog.Description>
           </div>
           <button
             type="button"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/6 text-white/72 transition hover:bg-white/12 hover:text-white"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground transition hover:bg-raised hover:text-base-content"
             onclick={handleCloseModal}
           >
             <Icon src={X} class="h-5 w-5" />
@@ -477,7 +480,7 @@ async function handleAccept(): Promise<void> {
           {#if isFindOtherOpen}
             <div>
               <div
-                class="sticky top-0 z-10 -mx-4 space-y-4 border-b border-white/10 bg-black px-4 py-4"
+                class="sticky top-0 z-10 -mx-4 space-y-4 border-b border-border bg-panel px-4 py-4"
               >
                 {#if selectedOrganisation || selectedProject || selectedLayer}
                   <div
@@ -486,10 +489,10 @@ async function handleAccept(): Promise<void> {
                     {#if selectedOrganisation}
                       <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-full border border-primary bg-primary px-3 py-2 text-sm text-white transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
+                        class="inline-flex items-center gap-2 rounded-full border border-primary bg-primary px-3 py-2 text-sm text-primary-content transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
                         onclick={() => clearSelection('organisation')}
                       >
-                        <Icon src={Users} class="h-4 w-4 text-white" />
+                        <Icon src={Users} class="h-4 w-4 text-primary-content" />
                         <span
                           class="!block overflow-hidden text-ellipsis whitespace-nowrap"
                           >{getOrganisationLabel(selectedOrganisation)}</span
@@ -499,10 +502,10 @@ async function handleAccept(): Promise<void> {
                     {#if selectedProject}
                       <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-full border border-accent bg-accent px-3 py-2 text-sm text-white transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
+                        class="inline-flex items-center gap-2 rounded-full border border-accent bg-accent px-3 py-2 text-sm text-accent-content transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
                         onclick={() => clearSelection('project')}
                       >
-                        <Icon src={LayoutGrid} class="h-4 w-4 text-white" />
+                        <Icon src={LayoutGrid} class="h-4 w-4 text-accent-content" />
                         <span
                           class="!block overflow-hidden text-ellipsis whitespace-nowrap"
                           >{getProjectLabel(selectedProject)}</span
@@ -512,10 +515,10 @@ async function handleAccept(): Promise<void> {
                     {#if selectedLayer}
                       <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-full border border-secondary bg-secondary px-3 py-2 text-sm text-white transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
+                        class="inline-flex items-center gap-2 rounded-full border border-secondary bg-secondary px-3 py-2 text-sm text-secondary-content transition hover:opacity-90 max-[420px]:w-full max-[420px]:justify-start max-[420px]:py-[6px]"
                         onclick={() => clearSelection('layer')}
                       >
-                        <Icon src={Layers3} class="h-4 w-4 text-white" />
+                        <Icon src={Layers3} class="h-4 w-4 text-secondary-content" />
                         <span
                           class="!block overflow-hidden text-ellipsis whitespace-nowrap"
                           >{getLayerLabel(selectedLayer)}</span
@@ -528,12 +531,12 @@ async function handleAccept(): Promise<void> {
                   <div class="relative">
                     <Icon
                       src={Search}
-                      class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/34"
+                      class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                     />
                     <input
                       bind:value={searchQuery}
                       type="text"
-                      class="h-11 w-full rounded-full border border-white/10 bg-white/6 pl-11 pr-4 text-sm text-white caret-white placeholder:text-white/34 focus:border-white/24 focus:outline-none"
+                      class="h-11 w-full rounded-full border border-border bg-surface pl-11 pr-4 text-sm text-base-content caret-primary placeholder:text-muted-foreground focus:border-primary focus:outline-none"
                       placeholder={m.new_feature__search_resources_placeholder()}
                     >
                   </div>
@@ -544,7 +547,7 @@ async function handleAccept(): Promise<void> {
                 {#each searchableResources as item (`${item.kind}:${item.resource.id}`)}
                   <button
                     type="button"
-                    class="flex w-full items-center justify-between border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:border-white/18 hover:bg-white/8"
+                    class="flex w-full items-center justify-between border border-border bg-surface px-4 py-3 text-left transition hover:border-primary/40 hover:bg-raised"
                     onclick={() => handleResourceSelect(item.resource)}
                   >
                     <span class="flex min-w-0 items-center gap-3">
@@ -559,7 +562,7 @@ async function handleAccept(): Promise<void> {
                       <span class="min-w-0">
                         {#if item.breadcrumb}
                           <span
-                            class="!block overflow-hidden text-ellipsis whitespace-nowrap text-[11px] uppercase tracking-[0.18em] text-white/42"
+                            class="!block overflow-hidden text-ellipsis whitespace-nowrap text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
                           >
                             {item.breadcrumb}
                           </span>
@@ -570,7 +573,10 @@ async function handleAccept(): Promise<void> {
                         >
                       </span>
                     </span>
-                    <Icon src={ChevronRight} class="h-4 w-4 shrink-0 text-white/38" />
+                    <Icon
+                      src={ChevronRight}
+                      class="h-4 w-4 shrink-0 text-muted-foreground"
+                    />
                   </button>
                 {/each}
               </div>
@@ -578,19 +584,19 @@ async function handleAccept(): Promise<void> {
           {:else}
             <div class="space-y-2">
               <h3
-                class="px-2 pb-1 text-center font-mono text-[11px] uppercase tracking-[0.28em] text-white/48"
+                class="px-2 pb-1 text-center font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground"
               >
                 {m.new_feature__active_layers()}
               </h3>
               {#each activeLayerItems as item (item.layer.id)}
                 <button
                   type="button"
-                  class={`flex w-full items-center justify-between border px-4 py-3 text-left transition ${selectedLayer?.id === item.layer.id ? 'border-secondary bg-secondary/20 text-white' : 'border-white/10 bg-white/4 hover:border-white/18 hover:bg-white/8'}`}
+                  class={`flex w-full items-center justify-between border px-4 py-3 text-left transition ${selectedLayer?.id === item.layer.id ? 'border-secondary bg-secondary/20 text-base-content' : 'border-border bg-surface hover:border-primary/40 hover:bg-raised'}`}
                   onclick={() => handleResourceSelect(item.layer)}
                 >
                   <span class="min-w-0 flex-1">
                     <span
-                      class="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-x-3 gap-y-1 text-xs uppercase tracking-[0.18em] text-white/58"
+                      class="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-x-3 gap-y-1 text-xs uppercase tracking-[0.18em] text-muted-foreground"
                     >
                       <span class="flex min-w-0 items-center gap-2">
                         <Icon src={Users} class="h-4 w-4 shrink-0 text-primary" />
@@ -618,7 +624,10 @@ async function handleAccept(): Promise<void> {
                   {#if selectedLayer?.id === item.layer.id}
                     <Icon src={Check} class="h-4 w-4 shrink-0 text-secondary" />
                   {:else}
-                    <Icon src={ChevronRight} class="h-4 w-4 shrink-0 text-white/38" />
+                    <Icon
+                      src={ChevronRight}
+                      class="h-4 w-4 shrink-0 text-muted-foreground"
+                    />
                   {/if}
                 </button>
               {/each}
@@ -627,11 +636,11 @@ async function handleAccept(): Promise<void> {
         </div>
 
         <div
-          class="flex items-center justify-between gap-3 border-t border-white/10 px-6 py-5"
+          class="flex items-center justify-between gap-3 border-t border-border px-6 py-5"
         >
           <button
             type="button"
-            class="rounded-full border border-white/10 px-4 py-2 text-sm text-white/72 transition hover:bg-white/8 hover:text-white"
+            class="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition hover:bg-raised hover:text-base-content"
             onclick={handleOpenFindOther}
           >
             {isFindOtherOpen
@@ -641,14 +650,14 @@ async function handleAccept(): Promise<void> {
           <div class="flex items-center gap-3">
             <button
               type="button"
-              class="rounded-full border border-white/10 px-4 py-2 text-sm text-white/72 transition hover:bg-white/8 hover:text-white"
+              class="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition hover:bg-raised hover:text-base-content"
               onclick={handleCloseModal}
             >
               {m.cancel()}
             </button>
             <button
               type="button"
-              class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              class="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-content transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               onclick={handleAccept}
               disabled={!isValid || isSaving}
             >

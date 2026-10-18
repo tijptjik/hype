@@ -1,6 +1,7 @@
 <script lang="ts">
-import LegacyMap from '$lib/bits/patterns/maps/Maplet.svelte'
-import type { AddressMeta } from '$lib/types'
+import LegacyMap from '#lib/bits/patterns/maps/Maplet.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import type { AddressMeta } from '#lib/utils/address.types.js'
 
 type Props = {
   coordinates: number[]
@@ -21,6 +22,11 @@ let {
   onToggleFullscreen,
   onToggleCollapsed,
 }: Props = $props()
+
+// Keep admin preferences and navigation state at the application adapter boundary.
+const adminCtx = getAdminCtx()
+const initialCollapsed =
+  adminCtx.view.getUserPreferences().admin?.isAdminMapCollapsed ?? false
 </script>
 
 <div class="bits-feature-map">
@@ -29,6 +35,8 @@ let {
     {initialCenter}
     {addressMeta}
     {draggable}
+    {initialCollapsed}
+    activeResourceRef={adminCtx.activeResourceRef}
     dragEndCallback={onCoordinateChange}
     toggleFullscreen={onToggleFullscreen}
     toggleCollapsed={onToggleCollapsed}

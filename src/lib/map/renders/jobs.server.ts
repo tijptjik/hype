@@ -1,5 +1,5 @@
 // TYPES
-import type { MapRenderAssetKind, MapRenderJob } from '../../types'
+import type { MapRenderAssetKind, MapRenderJob } from '#lib/map/renders/render.types.js'
 // HELPERS
 import { buildMapRenderObjectKey } from './storage.shared'
 
@@ -32,7 +32,7 @@ export const buildMapRenderUrl = (
 ): string => {
   const url = new URL(
     `/headless/map-${kind === 'projects' ? 'project' : 'layer'}-render/${identifier}`,
-    publicOrigin ?? 'http://localhost:5173',
+    publicOrigin ?? 'http://hype.localhost',
   )
 
   if (token) {

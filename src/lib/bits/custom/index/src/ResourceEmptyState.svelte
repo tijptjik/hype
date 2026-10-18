@@ -1,5 +1,5 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 </script>
 
 <div class="bits-resource-index__status bits-resource-index__status--empty">

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { TextArea } from '$lib/bits/custom'
+import { TextArea } from '#lib/bits/custom/index.js'
 
 type Props = {
   id: string

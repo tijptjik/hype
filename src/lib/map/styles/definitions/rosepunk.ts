@@ -1,4 +1,4 @@
-import type { StyleSpecification } from 'maplibre-gl'
+import type { StyleSpecification, LayerSpecification } from 'maplibre-gl'
 
 import type { StyleBuildOptions } from './common'
 import { buildGenesisStyle } from './genesis'
@@ -36,14 +36,12 @@ const applyRosepunkPalette = (style: StyleSpecification): StyleSpecification => 
   if (!style.layers) return style
 
   // Recolour broad surfaces first so the theme's road and label accents remain legible.
-  style.layers = style.layers.map(layer => {
-    const paint = layer.paint ?? {}
-
-    if (layer.id.includes('_casing')) {
+  style.layers = style.layers.map((layer): LayerSpecification => {
+    if (layer.type === 'line' && layer.id.includes('_casing')) {
       return {
         ...layer,
         paint: {
-          ...paint,
+          ...(layer.paint ?? {}),
           'line-color': ROSEPUNK_PINK,
           'line-opacity': layer.id.includes('minor') ? 0.08 : 0.17,
           'line-blur': layer.id.includes('highway') ? 4.2 : 3.5,
@@ -56,7 +54,11 @@ const applyRosepunkPalette = (style: StyleSpecification): StyleSpecification => 
       layer.id === 'roads_bridges_highway' ||
       layer.id === 'roads_tunnels_highway'
     ) {
-      return { ...layer, paint: { ...paint, 'line-color': ROSEPUNK_AMBER } }
+      if (layer.type !== 'line') return layer
+      return {
+        ...layer,
+        paint: { ...(layer.paint ?? {}), 'line-color': ROSEPUNK_AMBER },
+      }
     }
 
     if (
@@ -64,7 +66,11 @@ const applyRosepunkPalette = (style: StyleSpecification): StyleSpecification => 
       layer.id === 'roads_bridges_major' ||
       layer.id === 'roads_tunnels_major'
     ) {
-      return { ...layer, paint: { ...paint, 'line-color': ROSEPUNK_ROSE } }
+      if (layer.type !== 'line') return layer
+      return {
+        ...layer,
+        paint: { ...(layer.paint ?? {}), 'line-color': ROSEPUNK_ROSE },
+      }
     }
 
     if (
@@ -73,43 +79,67 @@ const applyRosepunkPalette = (style: StyleSpecification): StyleSpecification => 
       layer.id === 'roads_bridges_minor' ||
       layer.id === 'roads_tunnels_minor'
     ) {
-      return { ...layer, paint: { ...paint, 'line-color': ROSEPUNK_BLUE } }
+      if (layer.type !== 'line') return layer
+      return {
+        ...layer,
+        paint: { ...(layer.paint ?? {}), 'line-color': ROSEPUNK_BLUE },
+      }
     }
 
     switch (layer.id) {
       case 'background':
-        return { ...layer, paint: { ...paint, 'background-color': ROSEPUNK_VOID } }
+        if (layer.type !== 'background') return layer
+        return {
+          ...layer,
+          paint: { ...(layer.paint ?? {}), 'background-color': ROSEPUNK_VOID },
+        }
       case 'earth':
-        return { ...layer, paint: { ...paint, 'fill-color': ROSEPUNK_EARTH } }
+        if (layer.type !== 'fill') return layer
+        return {
+          ...layer,
+          paint: { ...(layer.paint ?? {}), 'fill-color': ROSEPUNK_EARTH },
+        }
       case 'water':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
-            ...paint,
+            ...(layer.paint ?? {}),
             'fill-color': ROSEPUNK_TEAL,
             'fill-outline-color': 'rgba(156, 207, 216, 0.2)',
           },
         }
       case 'water_stream':
       case 'water_river':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
-          paint: { ...paint, 'line-color': ROSEPUNK_CYAN, 'line-opacity': 0.42 },
+          paint: {
+            ...(layer.paint ?? {}),
+            'line-color': ROSEPUNK_CYAN,
+            'line-opacity': 0.42,
+          },
         }
       case 'landuse_park':
       case 'landuse_urban_green':
       case 'landuse_zoo':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
-          paint: { ...paint, 'fill-color': ROSEPUNK_TEAL, 'fill-opacity': 0.32 },
+          paint: {
+            ...(layer.paint ?? {}),
+            'fill-color': ROSEPUNK_TEAL,
+            'fill-opacity': 0.32,
+          },
         }
       case 'landuse_school':
       case 'landuse_hospital':
       case 'landuse_industrial':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
-            ...paint,
+            ...(layer.paint ?? {}),
             'fill-color': ROSEPUNK_SELECTION,
             'fill-opacity': 0.54,
           },
@@ -117,20 +147,31 @@ const applyRosepunkPalette = (style: StyleSpecification): StyleSpecification => 
       case 'landuse_beach':
       case 'landuse_pedestrian':
       case 'landuse_pier':
-        return {
-          ...layer,
-          paint: { ...paint, 'fill-color': ROSEPUNK_BLUSH, 'fill-opacity': 0.19 },
-        }
-      case 'buildings':
-        return {
-          ...layer,
-          paint: { ...paint, 'fill-color': ROSEPUNK_SURFACE, 'fill-opacity': 0.84 },
-        }
-      case 'buildings_outline':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
-            ...paint,
+            ...(layer.paint ?? {}),
+            'fill-color': ROSEPUNK_BLUSH,
+            'fill-opacity': 0.19,
+          },
+        }
+      case 'buildings':
+        if (layer.type !== 'fill') return layer
+        return {
+          ...layer,
+          paint: {
+            ...(layer.paint ?? {}),
+            'fill-color': ROSEPUNK_SURFACE,
+            'fill-opacity': 0.84,
+          },
+        }
+      case 'buildings_outline':
+        if (layer.type !== 'line') return layer
+        return {
+          ...layer,
+          paint: {
+            ...(layer.paint ?? {}),
             'line-color': [
               'interpolate',
               ['linear'],
@@ -146,23 +187,34 @@ const applyRosepunkPalette = (style: StyleSpecification): StyleSpecification => 
           },
         }
       case 'roads_rail':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
-          paint: { ...paint, 'line-color': ROSEPUNK_BRIGHT_PINK, 'line-opacity': 0.72 },
+          paint: {
+            ...(layer.paint ?? {}),
+            'line-color': ROSEPUNK_BRIGHT_PINK,
+            'line-opacity': 0.72,
+          },
         }
       case 'roads_other':
       case 'roads_runway':
       case 'roads_taxiway':
-        return {
-          ...layer,
-          paint: { ...paint, 'line-color': ROSEPUNK_MUTED, 'line-opacity': 0.48 },
-        }
-      case 'roads_labels_major':
-      case 'roads_labels_minor':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
           paint: {
-            ...paint,
+            ...(layer.paint ?? {}),
+            'line-color': ROSEPUNK_MUTED,
+            'line-opacity': 0.48,
+          },
+        }
+      case 'roads_labels_major':
+      case 'roads_labels_minor':
+        if (layer.type !== 'symbol') return layer
+        return {
+          ...layer,
+          paint: {
+            ...(layer.paint ?? {}),
             'text-color': ROSEPUNK_TEXT,
             'text-halo-color': 'rgba(25, 23, 36, 0.92)',
             'text-halo-width': 0.55,
@@ -170,10 +222,11 @@ const applyRosepunkPalette = (style: StyleSpecification): StyleSpecification => 
         }
       case 'roads_labels_major__glow':
       case 'roads_labels_minor__glow':
+        if (layer.type !== 'symbol') return layer
         return {
           ...layer,
           paint: {
-            ...paint,
+            ...(layer.paint ?? {}),
             'text-color': 'rgba(255, 83, 166, 0.18)',
             'text-halo-color': 'rgba(235, 111, 146, 0.52)',
             'text-halo-width': 1.35,
@@ -184,21 +237,22 @@ const applyRosepunkPalette = (style: StyleSpecification): StyleSpecification => 
       case 'places_region':
       case 'places_subplace':
       case 'places_country':
+        if (layer.type !== 'symbol') return layer
         return {
           ...layer,
           paint: {
-            ...paint,
+            ...(layer.paint ?? {}),
             'text-color': ROSEPUNK_BLUSH,
             'text-halo-color': 'rgba(25, 23, 36, 0.94)',
             'text-halo-width': 0.6,
           },
         }
       default:
-        if (layer.id.endsWith('__glow')) {
+        if (layer.type === 'symbol' && layer.id.endsWith('__glow')) {
           return {
             ...layer,
             paint: {
-              ...paint,
+              ...(layer.paint ?? {}),
               'text-color': 'rgba(229, 110, 161, 0.16)',
               'text-halo-color': 'rgba(255, 83, 166, 0.44)',
               'text-halo-width': 1.3,

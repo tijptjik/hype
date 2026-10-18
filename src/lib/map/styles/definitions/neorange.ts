@@ -1,6 +1,10 @@
-import type { StyleSpecification } from 'maplibre-gl'
+import type {
+  StyleSpecification,
+  LayerSpecification,
+  SymbolLayerSpecification,
+} from 'maplibre-gl'
 
-import type { LocaleKey } from '../../../types'
+import type { LocaleKey } from '#lib/types.js'
 
 import {
   buildNamedProtomapsStyle,
@@ -47,8 +51,8 @@ const GLOW_LABEL_LAYER_IDS = new Set([
 ])
 
 const createGlowLabelLayer = (
-  layer: NonNullable<StyleSpecification['layers']>[number],
-): NonNullable<StyleSpecification['layers']>[number] => ({
+  layer: SymbolLayerSpecification,
+): SymbolLayerSpecification => ({
   ...structuredClone(layer),
   id: `${layer.id}__glow`,
   paint: {
@@ -64,8 +68,8 @@ const createGlowLabelLayer = (
 })
 
 const createMinorLocalityLayer = (
-  layer: NonNullable<StyleSpecification['layers']>[number],
-): NonNullable<StyleSpecification['layers']>[number] => ({
+  layer: SymbolLayerSpecification,
+): SymbolLayerSpecification => ({
   ...structuredClone(layer),
   id: 'places_locality_minor',
   minzoom: 12,
@@ -96,8 +100,8 @@ const createMinorLocalityLayer = (
 })
 
 const createDetailLocalityLayer = (
-  layer: NonNullable<StyleSpecification['layers']>[number],
-): NonNullable<StyleSpecification['layers']>[number] => ({
+  layer: SymbolLayerSpecification,
+): SymbolLayerSpecification => ({
   ...structuredClone(layer),
   id: 'places_locality_detail',
   minzoom: 13,
@@ -151,7 +155,7 @@ const applyneorangeThemeToProtomaps = (
     return style
   }
 
-  style.layers = style.layers.map(layer => {
+  style.layers = style.layers.map((layer): LayerSpecification => {
     const localizedTextField =
       layer.type === 'symbol' ? getLocaleTextField(layer.id, locale) : undefined
 
@@ -167,6 +171,7 @@ const applyneorangeThemeToProtomaps = (
 
     switch (layer.id) {
       case 'background':
+        if (layer.type !== 'background') return layer
         return {
           ...layer,
           paint: {
@@ -175,6 +180,7 @@ const applyneorangeThemeToProtomaps = (
           },
         }
       case 'earth':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
@@ -185,6 +191,7 @@ const applyneorangeThemeToProtomaps = (
           },
         }
       case 'water':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
@@ -205,6 +212,7 @@ const applyneorangeThemeToProtomaps = (
       case 'landuse_runway':
       case 'landuse_pedestrian':
       case 'landuse_pier':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
@@ -215,6 +223,7 @@ const applyneorangeThemeToProtomaps = (
         }
       case 'water_stream':
       case 'water_river':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
           paint: {
@@ -224,6 +233,7 @@ const applyneorangeThemeToProtomaps = (
           },
         }
       case 'buildings':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           minzoom: 17,
@@ -236,6 +246,7 @@ const applyneorangeThemeToProtomaps = (
           },
         }
       case 'buildings_outline':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
           minzoom: 17,
@@ -281,6 +292,7 @@ const applyneorangeThemeToProtomaps = (
       case 'roads_bridges_minor':
       case 'roads_bridges_major':
       case 'roads_bridges_highway':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
           minzoom:
@@ -325,6 +337,7 @@ const applyneorangeThemeToProtomaps = (
       case 'roads_bridges_minor_casing':
       case 'roads_bridges_major_casing':
       case 'roads_bridges_highway_casing':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
           minzoom: layer.id.includes('minor')
@@ -343,6 +356,7 @@ const applyneorangeThemeToProtomaps = (
           },
         }
       case 'roads_pier':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
           paint: {
@@ -359,6 +373,7 @@ const applyneorangeThemeToProtomaps = (
           },
         }
       case 'address_label':
+        if (layer.type !== 'symbol') return layer
         return {
           ...layer,
           minzoom: 19,
@@ -377,6 +392,7 @@ const applyneorangeThemeToProtomaps = (
           },
         }
       case 'water_waterway_label':
+        if (layer.type !== 'symbol') return layer
         return {
           ...layer,
           layout: {
@@ -393,6 +409,7 @@ const applyneorangeThemeToProtomaps = (
         }
       case 'roads_labels_minor':
       case 'roads_labels_major':
+        if (layer.type !== 'symbol') return layer
         return {
           ...layer,
           minzoom: layer.id === 'roads_labels_major' ? 12 : 15,
@@ -414,6 +431,7 @@ const applyneorangeThemeToProtomaps = (
           },
         }
       case 'places_subplace':
+        if (layer.type !== 'symbol') return layer
         if (noLabels) return layer
         return {
           ...layer,
@@ -445,6 +463,7 @@ const applyneorangeThemeToProtomaps = (
           },
         }
       case 'places_region':
+        if (layer.type !== 'symbol') return layer
         if (noLabels) return layer
         return {
           ...layer,
@@ -468,6 +487,7 @@ const applyneorangeThemeToProtomaps = (
       case 'places_locality':
       case 'places_country':
       case 'pois':
+        if (layer.type !== 'symbol') return layer
         if (noLabels) return layer
         if (layer.id === 'pois') {
           return {

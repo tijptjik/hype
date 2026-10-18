@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import type { UserSearchQueryOptions } from '$lib/db/zod/schema/user.types'
+import type { UserSearchQueryOptions } from '#lib/db/zod/schema/user.types.js'
 
 export interface SearchResultMap<T> {
   image: (item: T) => string | null | undefined
@@ -44,6 +44,8 @@ export interface LocalSearchProps<T> {
   onSelect: (item: T) => void
   resultMap: SearchResultMap<T>
   resultItemClass?: string
+  /** Layout classes for the scrollable results list. */
+  resultListClass?: string
   visualResultItemClass?: string
   visualPreviewClass?: string
   class?: string

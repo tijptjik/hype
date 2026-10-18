@@ -1,29 +1,31 @@
 <script lang="ts">
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // SERVICES
 import {
   createSelectFilter,
   createSortable,
   createSortables,
   createToggleFilter,
-} from '$lib/client/services/filters'
-import { getTaskReviewActionLabel } from '$lib/client/services/task'
+} from '#lib/client/services/filters.js'
+import { getTaskReviewActionLabel } from '#lib/client/services/task.js'
 // BITS PATTERNS
-import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '$lib/bits'
+import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '#lib/bits/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import FunnelIcon from 'virtual:icons/lucide/funnel'
-import TaskIcon from 'virtual:icons/lucide/inbox'
+import FunnelIcon from 'virtual:icons/proicons/filter'
+import TaskIcon from 'virtual:icons/proicons/archive'
 // TYPES
-import { reviewActions } from '$lib/types'
-import type { Id, ResourceControlBarConfig, Task } from '$lib/types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import { reviewActions } from '#lib/api/services/taskReview.js'
+import type { Id } from '#lib/types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 
 const filters = {
   resource: FirstClassResource.task,
@@ -93,7 +95,7 @@ let selectedTaskIndex = $state<number>(-1)
 
 let entities: Task[] = $derived(
   adminCtx.isInitialised
-    ? adminCtx.getViewFilteredResource<Task>(FirstClassResource.task)
+    ? adminCtx.view.filters.getViewFilteredResource<Task>(FirstClassResource.task)
     : [],
 )
 
@@ -113,7 +115,7 @@ let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
     ),
   )
     .map(([projectId, projectTasks]) => {
-      const project = adminCtx.appCtx.getResourceByIdSync(
+      const project = adminCtx.view.getResourceByIdSync(
         FirstClassResource.project,
         projectId,
       ) as Project
@@ -138,7 +140,7 @@ $effect(() => {
       sortables,
     },
     {
-      isVisible: adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.task],
+      isVisible: adminCtx.listUi.state.isControlBarVisible[FirstClassResource.task],
     },
   )
   headerCtrl.clearFooter()
@@ -220,7 +222,11 @@ function updateRowFocus(index: number) {
   const rowSelector = `[data-entity-id="${targetEntity.id}"][role="button"]`
 
   // Use the virtual list's scrollToIndex method
-  const virtualList = listContainer?.querySelector('svelte-virtual-list-viewport')
+  const virtualList = listContainer?.querySelector<
+    HTMLElement & {
+      scrollToIndex?: (index: number, smooth: boolean, align: boolean) => void
+    }
+  >('svelte-virtual-list-viewport')
 
   if (virtualList?.scrollToIndex && scrollIndex != null) {
     // Scroll to the index using the virtual list's built-in method
@@ -254,7 +260,10 @@ function updateRowFocus(index: number) {
     bind:listContainer
     bind:scrollIndexByEntityId
   >
-    {#snippet row(entity, index)}
+    {#snippet row(
+      entity,
+      index,
+    )}
       <TaskRow
         {entity}
         {index}

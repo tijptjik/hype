@@ -1,5 +1,5 @@
 // CONTEXT
-import { hasElevatedChrome } from '$lib/context/responsive.svelte'
+import { hasElevatedChrome } from '#lib/layout/chrome.js'
 
 const OMNIBAR_STANDARD_BAR_HEIGHT_PX = 56
 const ELEVATED_CHROME_NARROW_X_GUTTER_PX = 16

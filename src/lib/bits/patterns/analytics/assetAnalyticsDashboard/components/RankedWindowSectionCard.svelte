@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import * as AnalyticsCardPrimitive from '$lib/bits/custom/analyticsCard/components'
-import { cx } from '$lib/bits/utils'
+import * as AnalyticsCardPrimitive from '#lib/bits/custom/analyticsCard/components/index.js'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // LOCAL
 import ImagePopoverCell from './ImagePopoverCell.svelte'
 import {
@@ -15,7 +15,7 @@ import {
 import type {
   AssetAnalyticsRankedImage,
   AssetAnalyticsRankedTransformation,
-} from '$lib/types'
+} from '#lib/api/services/assetAnalytics.types.js'
 import type {
   AssetAnalyticsDashboardWindowSectionKind,
   AssetAnalyticsRankedWindowSectionCardProps,
@@ -70,7 +70,7 @@ function getBadgeClass(category: AnalyticsTransformationBadge['category']): stri
   if (category === 'format') return 'border-info/35 bg-info/15 text-info'
   if (category === 'dimensions') return 'border-warning/35 bg-warning/15 text-warning'
 
-  return 'border-base-300 bg-[#121212] text-foreground'
+  return 'border-base-300 bg-surface text-foreground'
 }
 
 function getItems():
@@ -87,7 +87,7 @@ const items = $derived(getItems())
 </script>
 
 <section
-  class="min-h-0 rounded-[1.4rem] border border-base-300 bg-[#121212] px-4 pt-4 pb-6"
+  class="min-h-0 rounded-[1.4rem] border border-base-300 bg-surface px-4 pt-4 pb-6"
 >
   <div class="mb-3 flex items-start justify-between gap-3">
     <AnalyticsCardPrimitive.SectionHeader
@@ -102,7 +102,9 @@ const items = $derived(getItems())
 
   {#if !windowData}
     <AnalyticsCardPrimitive.EmptyState
-      title={windowError ? 'Analytics window unavailable' : 'No analytics window available'}
+      title={windowError
+        ? 'Analytics window unavailable'
+        : 'No analytics window available'}
       description={windowError
         ? windowError
         : 'This time range has not been emitted by the analytics engine yet.'}
@@ -122,7 +124,7 @@ const items = $derived(getItems())
         </thead>
         <tbody>
           {#each (items as AssetAnalyticsRankedTransformation[]).slice(0, 25) as item}
-            <tr class="border-t border-white/8 align-top">
+            <tr class="border-t border-foreground/8 align-top">
               <td class="py-2 pr-3">
                 <div class="flex max-w-full flex-wrap gap-1.5">
                   {#each getTransformationBadges(item.transformKey) as badge}
@@ -154,13 +156,17 @@ const items = $derived(getItems())
           <tr>
             <th class="pb-2 pr-3 font-medium">{m.analytics__public_id()}</th>
             <th class="pb-2 text-right font-medium">
-              {kind === 'missingImages' ? '404s' : kind === 'serverErrorImages' ? '5xx' : 'Requests'}
+              {kind === 'missingImages'
+                ? '404s'
+                : kind === 'serverErrorImages'
+                  ? '5xx'
+                  : 'Requests'}
             </th>
           </tr>
         </thead>
         <tbody>
           {#each (items as AssetAnalyticsRankedImage[]).slice(0, 25) as item}
-            <tr class="border-t border-white/8 align-top">
+            <tr class="border-t border-foreground/8 align-top">
               <td class="py-2 pr-3">
                 <ImagePopoverCell
                   publicId={item.publicId}

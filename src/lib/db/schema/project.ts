@@ -7,12 +7,12 @@ import { image } from './image'
 import { user } from './user'
 // ENUM
 import { ProjectRoleType, supportedLocales } from '../../enums'
-import type { ProjectLicense } from '../../types'
+import type { ProjectLicense } from '#lib/db/zod/schema/projectLicense.types.js'
 import type {
   ProjectCapabilities,
   ProjectRoleCapabilities,
 } from '../zod/schema/project.types'
-import { createDefaultProjectLicense } from '$lib/db/services/licence'
+import { createDefaultProjectLicense } from '#lib/db/services/licence.js'
 
 /* ============================================================================
  * PROJECT MANAGEMENT

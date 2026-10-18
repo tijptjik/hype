@@ -1,4 +1,4 @@
-import type { ButtonColor, ButtonSize } from '$lib/bits/core/button/button.types'
+import type { ButtonColor, ButtonSize } from '#lib/bits/core/button/button.types.js'
 
 export interface CheckboxProps {
   checked?: boolean

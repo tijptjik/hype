@@ -2,23 +2,26 @@
   lang="ts"
   generics="TItem extends import('../formParentSection.types').ParentSectionItemBase"
 >
+// SVELTE
+import { untrack } from 'svelte'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
-import { Card, Search, SectionHeader } from '$lib/bits/custom'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import { Button } from '#lib/bits/core/index.js'
+import { Card, Search, SectionHeader } from '#lib/bits/custom/index.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 
 // PATTERNS
-import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
+import { formSelectionSearchHeaderStyles } from '../../formSurface/formSearchHeader.styles.js'
+import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 
 // SERVICES
-import { getImageSrc, getImageSrcOrHashicon } from '$lib/client/services/image'
+import { getImageSrc, getImageSrcOrHashicon } from '#lib/client/services/image.js'
 
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 // ICONS
-import ReplaceIcon from 'virtual:icons/lucide/replace'
-import XIcon from 'virtual:icons/lucide/x'
+import ReplaceIcon from 'virtual:icons/proicons/arrow-swap'
+import XIcon from 'virtual:icons/proicons/cancel'
 
 // TYPES
 import type { FormParentResourceSectionProps } from './formParentResourceSection.types'
@@ -52,7 +55,8 @@ let isResultsVisible = $state(false)
 let hasPendingRemoval = $state(false)
 let shouldFocusSearchOnOpen = $state(false)
 let previousParentId = $state('')
-let previousSearchScopeKey = $state(searchScopeKey)
+// Establish the initial scope without treating it as a scope change.
+let previousSearchScopeKey = $state(untrack(() => searchScopeKey))
 
 const showModeUi = $derived(isEditing && !isSubmitting)
 const currentParentId = $derived(parent?.id ?? '')
@@ -199,53 +203,14 @@ $effect(() => {
 })
 </script>
 
-<section
-  class={`bits-form__section bits-form__parent-resource ${isSearchActive ? 'bits-form__parent-resource--search-open' : ''} ${className}`}
->
-  {#if subHeader}
-    <div class={headerClass}>
-      {@render subHeader({
-        title,
-        subtitle,
-        issues,
-        isEditing,
-        isSearchActive,
-        isSubmitting,
-        isResultsVisible,
-        onToggleAdding: toggleAdding,
-      })}
-    </div>
-  {:else}
-    <SectionHeader {title} description={subtitle} class={headerClass}>
-      {#snippet center()}
-        <SectionHeaderPrimitive.Issues {issues} />
-      {/snippet}
-      {#snippet right()}
-        {#if isEditing}
-          <div
-            class="bits-form__parent-resource-header-actions flex flex-row items-center justify-end gap-0"
-          >
-            <Button
-              text={isSearchActive ? m.cancel() : m.replace()}
-              style="ghost"
-              color="light"
-              size="sm"
-              hideLabel={true}
-              hideLabelInstantly={true}
-              iconComponent={isSearchActive ? XIcon : ReplaceIcon}
-              onClick={toggleAdding}
-              disabled={isSubmitting || (isSearchActive && !isResultsVisible)}
-              class="bits-form__parent-resource-replace-btn whitespace-nowrap h-10"
-            />
-          </div>
-        {/if}
-      {/snippet}
-    </SectionHeader>
-  {/if}
-
+{#snippet parentSearch()}
   {#if isSearchActive}
     {#key searchResetKey}
-      <div class="bits-form__parent-resource-search">
+      <div
+        class={subHeader
+          ? 'bits-form__parent-resource-search'
+          : 'w-[clamp(7rem,16vw,12rem)] min-w-0'}
+      >
         <Search
           placeholder={m.forms__search_placeholder()}
           focusOnMount={shouldFocusSearchOnOpen}
@@ -268,6 +233,60 @@ $effect(() => {
         />
       </div>
     {/key}
+  {/if}
+{/snippet}
+
+<section
+  class={`bits-form__section bits-form__parent-resource ${isSearchActive ? 'bits-form__parent-resource--search-open' : ''} ${className}`}
+>
+  {#if subHeader}
+    <div class={headerClass}>
+      {@render subHeader({
+        title,
+        subtitle,
+        issues,
+        isEditing,
+        isSearchActive,
+        isSubmitting,
+        isResultsVisible,
+        onToggleAdding: toggleAdding,
+      })}
+    </div>
+  {:else}
+    <SectionHeader
+      {title}
+      description={subtitle}
+      class={`${headerClass} ${formSelectionSearchHeaderStyles}`}
+    >
+      {#snippet center()}
+        <SectionHeaderPrimitive.Issues {issues} />
+      {/snippet}
+      {#snippet right()}
+        {@render parentSearch()}
+        {#if isEditing}
+          <div
+            class="bits-form__parent-resource-header-actions flex flex-row items-center justify-end gap-0"
+          >
+            <Button
+              text={isSearchActive ? m.cancel() : m.replace()}
+              style="ghost"
+              color="light"
+              size="sm"
+              hideLabel={true}
+              hideLabelInstantly={true}
+              iconComponent={isSearchActive ? XIcon : ReplaceIcon}
+              onClick={toggleAdding}
+              disabled={isSubmitting || (isSearchActive && !isResultsVisible)}
+              class="bits-form__parent-resource-replace-btn whitespace-nowrap h-10"
+            />
+          </div>
+        {/if}
+      {/snippet}
+    </SectionHeader>
+  {/if}
+
+  {#if subHeader}
+    {@render parentSearch()}
   {/if}
 
   <div class="bits-form__parent-resource-list">
@@ -297,7 +316,7 @@ $effect(() => {
             iconComponent={XIcon}
             onClick={handleRemoveParent}
             disabled={isSubmitting}
-            class="bits-form__parent-resource-card-remove-btn"
+            class="w-10 h-10"
           />
         </Card.Actions>
       {/if}

@@ -2,7 +2,7 @@
 import type { LayoutCursor } from '@chenglou/pretext'
 
 // TYPES
-import type { FeatureCardPortalObstacle } from '$lib/types'
+import type { FeatureCardPortalObstacle } from '#lib/context/featureCard.types.js'
 import type { PropertyLayoutResult } from '../featureCard.types'
 
 export type RoutedDescriptionLayout = {

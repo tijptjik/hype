@@ -1,7 +1,7 @@
 <script lang="ts">
 import { format, formatDistanceToNow } from 'date-fns'
-import { formatDate } from '$lib'
-import { getLocale } from '$lib/i18n'
+import { formatDate } from '#lib'
+import { getLocale } from '#lib/i18n.js'
 
 type Props = {
   date?: string

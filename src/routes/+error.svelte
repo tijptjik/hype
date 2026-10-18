@@ -2,7 +2,7 @@
 // SVELTE
 import { page } from '$app/state'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 </script>
 
 <div class="flex h-screen w-full flex-col items-center justify-center">

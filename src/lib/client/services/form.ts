@@ -1,54 +1,249 @@
+import type { RemoteQuery, RemoteQueryOverride, RemoteFormIssue } from '$app/server'
 import { toast } from 'svelte-sonner'
 import { onMount, untrack } from 'svelte'
-import { getLocale, toLocaleKey, translateI18nFields } from '$lib/i18n'
-import { m } from '$lib/i18n'
+import { getLocale, toLocaleKey, translateI18nFields } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
 import type { Component } from 'svelte'
-import type { FormFacetNavAction } from '$lib/bits/patterns/forms/formFacetNav'
-import type { FirstClassResource } from '$lib/enums'
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import { getAdminFacetActionLabel } from '$lib/navigation/facets'
+import type { FormFacetNavAction } from '#lib/bits/patterns/forms/formFacetNav/index.js'
+import type { FirstClassResource } from '#lib/enums.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import { getAdminFacetActionLabel } from '#lib/navigation/facets.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { RemoteQuery, RemoteQueryOverride } from '@sveltejs/kit'
 import type {
-  AddUserRoleSelectionParams,
-  FormHeaderController,
-  FormTrimmedTextControlBlurParams,
   GenAiField,
-  GenAiStateResolverForm,
-  HeaderFormActionStatus,
   FormDataUpdaterForm,
-  FormSubmissionResultHandlerParams,
-  I18nTranslatableField,
-  RemoveUserRoleSelectionParams,
-  ResetLocaleFieldsParams,
-  ResolveDisplayUserRolesParams,
-  ResourceFormSubmissionResultParams,
-  SyncHeaderFormActionStatusParams,
-  TranslateLocaleIntoEmptyFieldsParams,
-  UserRoleHiddenInputAttrs,
-  UpdateUserRoleSelectionParams,
   UserRoleFieldNameResolverForm,
-  WireHeaderFormActionHandlersParams,
-  ResourceEditorHeaderController,
-  Locale,
-  LocaleKey,
-  FacetType,
   FormBooleanValue,
+} from '#lib/client/services/form.types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
+import type { FacetType } from '#lib/context/facets.js'
+import type {
   ResolveChangedRelationParams,
   ChangedRelationResolution,
   ApplyChangedRelationFieldParams,
   ResourceSubmitDraft,
   ResourceSubmitMode,
+} from '#lib/client/services/formRelations.types.js'
+import type {
   HeaderCtrlState,
-  HeaderTransitionSnapshot,
   HeaderFacetItem,
-  ResolveOptimisticHeaderStatusParams,
-} from '$lib/types'
-import type { User } from '$lib/db/zod/schema/user.types'
+} from '#lib/context/headerState.types.js'
+import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
 import type {
   OrganisationGetState,
   OrganisationRoleUser,
-} from '$lib/db/zod/schema/organisation.types'
+} from '#lib/db/zod/schema/organisation.types.js'
+// TYPES
+import type { HeaderFormActionsState } from '#lib/context/headerState.types.js'
+
+type FormSubmissionResultHandlerParams = {
+  success: boolean
+  issues?: RemoteFormIssue[]
+  error?: string
+  onSuccess: () => void | Promise<void>
+  onError: (error: string) => void | Promise<void>
+  onInvalid: (issues: RemoteFormIssue[]) => void | Promise<void>
+  onFallback: () => void | Promise<void>
+}
+
+type FormHeaderController = {
+  setEditing: (isEditing: boolean) => void
+}
+
+type HeaderFormActionsController = {
+  setFormActions: (formActions: Partial<HeaderFormActionsState>) => void
+}
+
+type ResourceEditorHeaderController = FormHeaderController &
+  HeaderFormActionsController & {
+    setHeaderForEntity: import('#lib/context/header.svelte.js').HeaderCtrl['setHeaderForEntity']
+    clearFormActions: () => void
+  }
+
+type HeaderFormActionHandlers = Pick<
+  HeaderFormActionsState,
+  'reset' | 'submit' | 'togglePublish' | 'toggleDelete'
+>
+
+type HeaderFormActionStatus = Pick<
+  HeaderFormActionsState,
+  | 'dirty'
+  | 'isSubmitting'
+  | 'hasIssues'
+  | 'isPublished'
+  | 'isDeleted'
+  | 'canEdit'
+  | 'disableEdit'
+  | 'canPublish'
+  | 'showDeleteAction'
+  | 'showPublishAction'
+>
+
+type WireHeaderFormActionHandlersParams = {
+  headerCtrl: HeaderFormActionsController
+  handlers: HeaderFormActionHandlers
+}
+
+type SyncHeaderFormActionStatusParams = {
+  headerCtrl: HeaderFormActionsController
+  status: HeaderFormActionStatus
+  lastSignature: string
+}
+
+type ResolveOptimisticHeaderStatusParams = {
+  isSettled: boolean
+  isImageFacetActive?: boolean
+  isNewRef?: boolean
+  dirty: boolean
+  isSubmitting: boolean
+  hasIssues: boolean
+  isPublished: boolean
+  isDeleted: boolean
+  canEdit: boolean
+  canPublish: boolean
+  showDeleteAction: boolean
+  showPublishAction: boolean
+  snapshot: HeaderTransitionSnapshot
+}
+
+type ResourceFormSubmissionResultParams = {
+  success: boolean
+  issues?: RemoteFormIssue[]
+  error?: string
+  nameKey: string
+  onSuccess?: () => void | Promise<void>
+  refreshResource: () => Promise<void>
+  locale?: Locale
+  formLocaleKey?: string
+  formLocaleValues?: Record<string, unknown>
+  resourceLocaleValues?: Record<string, unknown>
+  submittedValues?: Record<string, unknown>
+  invalidMessage?: string
+  fallbackErrorMessage?: string
+  successPrefix?: string
+}
+
+type UserRoleHiddenInputAttrs = Record<string, unknown>
+
+type I18nTranslatableField =
+  | 'name'
+  | 'nameShort'
+  | 'description'
+  | 'subscriptionBenefits'
+  | 'privacyPolicy'
+  | 'termsOfService'
+
+type GenAiStateResolverForm = {
+  fields: {
+    value: () => {
+      data?: {
+        i18n?: Record<
+          string,
+          {
+            titleGen?: FormBooleanValue
+            nameGen?: FormBooleanValue
+            nameShortGen?: FormBooleanValue
+            descriptionGen?: FormBooleanValue
+            subscriptionBenefitsGen?: FormBooleanValue
+            privacyPolicyGen?: FormBooleanValue
+            termsOfServiceGen?: FormBooleanValue
+          }
+        >
+      }
+    }
+  }
+}
+
+type FormTrimmedTextControlBlurParams = {
+  event: FocusEvent
+  value: string
+  setValue: (value: string) => void
+  onValueChange?: (value: string) => void
+  afterSync?: () => void
+}
+
+type AddUserRoleSelectionParams<
+  TEntity extends { data?: Record<string, unknown> | null } | null,
+  TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  entity: TEntity
+  user: {
+    id: string
+    name?: string | null
+    image?: unknown
+    attribution?: string | null
+  }
+  defaultRole: string
+  foreignKey: string
+}
+
+type RemoveUserRoleSelectionParams<
+  TEntity extends { data?: Record<string, unknown> | null } | null,
+  TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  entity: TEntity
+  userId: string
+}
+
+type UpdateUserRoleSelectionParams<
+  TEntity extends { data?: Record<string, unknown> | null } | null,
+  TFormData extends { userRoles?: Array<{ userId: string; role: string }> },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  entity: TEntity
+  userId: string
+  role: string
+}
+
+type ResolveDisplayUserRolesParams<TUserRole extends { userId: string; role: string }> =
+  {
+    baseRoles: TUserRole[]
+    formUserRoles: Array<{ userId: string; role: string }>
+  }
+
+type TranslateLocaleIntoEmptyFieldsParams<
+  TFormData extends {
+    i18n?: Record<
+      string,
+      {
+        name?: string | null
+        nameShort?: string | null
+        description?: string | null
+        nameGen?: FormBooleanValue
+        nameShortGen?: FormBooleanValue
+        descriptionGen?: FormBooleanValue
+      }
+    >
+  },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  sourceLocale: Locale | LocaleKey
+  targetLocale: Locale | LocaleKey
+  fields?: I18nTranslatableField[]
+}
+
+type ResetLocaleFieldsParams<
+  TFormData extends {
+    i18n?: Record<
+      string,
+      {
+        name?: string | null
+        nameShort?: string | null
+        description?: string | null
+        nameGen?: FormBooleanValue
+        nameShortGen?: FormBooleanValue
+        descriptionGen?: FormBooleanValue
+      }
+    >
+  },
+> = {
+  form: FormDataUpdaterForm<TFormData>
+  targetLocale: Locale | LocaleKey
+  fields?: I18nTranslatableField[]
+}
 
 // +++ TOC
 // ═══════════════════════
@@ -166,9 +361,11 @@ export async function handleResourceBooleanStateToggle<TState>(params: {
   onError?: () => void
 }): Promise<void> {
   const current = params.current
+
   if (!current) return
 
   const nextState = !current[params.field]
+
   try {
     params.setBusy(true)
     await params.mutate({ id: current.id, state: nextState })
@@ -222,6 +419,7 @@ export function handleTrimmedTextControlBlur({
   afterSync,
 }: FormTrimmedTextControlBlurParams): void {
   const trimmedValue = value.trim()
+
   if (trimmedValue === value) return
 
   setValue(trimmedValue)
@@ -249,6 +447,7 @@ export function handleTrimmedTextControlBlur({
  */
 const toSubmittedCode = (data: unknown): string => {
   const code = (data as { data?: { code?: unknown } })?.data?.code
+
   return typeof code === 'string' ? code.trim() : ''
 }
 
@@ -271,8 +470,10 @@ const shouldRedirectToSubmittedCode = ({
   isRefCode?: boolean
 }): boolean => {
   if (!success || !isRefCode) return false
+
   const submittedCode = toSubmittedCode(data)
   const currentRef = adminCtx.activeResourceRef
+
   return (
     submittedCode.length > 0 &&
     typeof currentRef === 'string' &&
@@ -297,7 +498,7 @@ const navigateToSubmittedCode = ({
 }): void => {
   const submittedCode = toSubmittedCode(data)
   if (!submittedCode) return
-  void import('$lib/navigation/admin').then(({ navigateOnAdmin }) => {
+  void import('#lib/navigation/admin.js').then(({ navigateOnAdmin }) => {
     navigateOnAdmin(
       adminCtx,
       resourceType,
@@ -354,9 +555,11 @@ function getAdjacentFacet<TFacet extends string>({
   facetOrder: readonly TFacet[]
 }): TFacet | null {
   const currentIndex = facetOrder.indexOf(facet)
+
   if (currentIndex === -1) return null
 
   const adjacentIndex = direction === 'previous' ? currentIndex - 1 : currentIndex + 1
+
   return facetOrder[adjacentIndex] ?? null
 }
 
@@ -387,6 +590,7 @@ export function createFacetNavActionBuilder<TFacet extends string>({
       direction,
       facetOrder: getFacetOrder(),
     })
+
     if (!adjacentFacet) return null
 
     const disabled = isFacetDisabled?.(adjacentFacet) ?? false
@@ -423,7 +627,7 @@ export function syncAdminFacetFromHash<TFacet extends string>({
   activeFacet: TFacet | false
   facetOrder: readonly TFacet[]
   adminCtx: AdminCtx
-  resourceType: FirstClassResource
+  resourceType: import('#lib/types.js').NavigableResource
   resourceRef: string
 }): void {
   const hashFacet = hash.slice(1) as TFacet | ''
@@ -448,7 +652,7 @@ export function bindAdminFacetHistorySync<TFacet extends string>({
   getFacetOrder: () => readonly TFacet[]
   getActiveFacet: () => TFacet | false
   adminCtx: AdminCtx
-  resourceType: FirstClassResource
+  resourceType: import('#lib/types.js').NavigableResource
   getResourceRef: () => string
 }): void {
   onMount(() => {
@@ -544,7 +748,16 @@ export function createResourceFormConfig<Input>({
     key,
     schema,
     data,
-    onsubmitupdates: submitUpdates,
+    onsubmitupdates: async ctx => {
+      const updates = (await submitUpdates(ctx)) ?? []
+      const mutation = adminCtx.view.resources.beginMutation(
+        resourceType,
+        ctx.data as import('#lib/context/featureQuery.types.js').ResourceOptimisticInput,
+      )
+      return Object.assign([...updates, ...mutation.updates], {
+        settle: mutation.settle,
+      })
+    },
     resourceResult: {
       ...createCodeRefResourceResult({
         adminCtx,
@@ -552,7 +765,11 @@ export function createResourceFormConfig<Input>({
         resourceType,
       }),
       getEntity,
-      refreshResource,
+      refreshResource: async ctx => {
+        await refreshResource(ctx)
+
+        if (ctx.success) await adminCtx.view.resources.reconcile(resourceType)
+      },
     },
   }
 }
@@ -576,7 +793,7 @@ export function getEditorCtrl({
   facetTabs,
 }: {
   headerCtrl: ResourceEditorHeaderController
-  icon: unknown
+  icon: Component
   facetTabs: ReadonlyMap<FacetType, string | { label: string; icon?: Component | null }>
 }): {
   syncRouteAndLoad: <T>(params: {
@@ -611,12 +828,16 @@ export function getEditorCtrl({
       commit: (value: T) => void
     }) => {
       let cancelled = false
+
       resetFormActionsSignature()
       setFacetForRef(ref)
+
       void load(ref).then(result => {
         if (cancelled) return
+
         commit(result)
       })
+
       return () => {
         cancelled = true
       }
@@ -662,6 +883,7 @@ export function focusFacetFromHash(
   if (typeof window === 'undefined' || !container || !facet) return
 
   const activeHash = window.location.hash.slice(1)
+
   if (activeHash !== facet) return
 
   const selectorFacet = typeof CSS !== 'undefined' ? CSS.escape(facet) : facet
@@ -712,6 +934,7 @@ export function prepareSubmitPayloadMeta<TData extends Record<string, unknown>>(
     currentMode === 'create' || currentMode === 'replace' || currentMode === 'update'
       ? currentMode
       : params.defaultMode
+
   payload.meta.mode = inferredMode
 
   if (inferredMode === 'create') {
@@ -785,6 +1008,7 @@ export function applyChangedRelationField<
   TEffective
 >): ChangedRelationResolution<TEffective> {
   const result = resolveChangedRelation(params)
+
   if (result.changed) {
     data[key] = result.effective as TData[TKey]
   } else {
@@ -803,12 +1027,13 @@ export function applyChangedRelationField<
  * @returns `true` when both entity snapshots still align with the route.
  */
 export function guardRefDesync(
-  organisationState: OrganisationGetState,
-  committedOrganisationState: OrganisationGetState,
+  organisationState: { data?: { code?: string } | null } | null,
+  committedOrganisationState: { data?: { code?: string } | null } | null,
   ref: string,
 ): boolean {
   const entityCode = organisationState?.data?.code
   const committedCode = committedOrganisationState?.data?.code
+
   return (
     typeof entityCode === 'string' &&
     typeof committedCode === 'string' &&
@@ -876,17 +1101,22 @@ export async function handleResourceFormSubmissionResult({
   // Normalize unknown result payloads once so downstream parsing stays defensive.
   const asTrimmedString = (value: unknown): string =>
     typeof value === 'string' ? value.trim() : ''
+
   const asRecord = (value: unknown): Record<string, unknown> | undefined =>
     value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined
+
   // Split machine-style `CODE: detail` errors into toast title and description parts.
   const toIssueParts = (message: string): { code: string; detail: string } => {
     const [rawCode, ...rest] = message.split(':')
     const code = (rawCode ?? '').trim()
     const detail = rest.join(':').trim()
+
     if (!code) return { code: invalidMessage, detail: message }
     if (!detail) return { code, detail: invalidMessage }
+
     return { code, detail }
   }
+
   const firstIssueMessage = (issues ?? [])
     .map(issue =>
       issue && typeof issue === 'object' && 'message' in issue
@@ -901,8 +1131,10 @@ export async function handleResourceFormSubmissionResult({
   const getSubmittedNameAtLocale = (localeKey: string, field: string): string => {
     const i18nByLocale = asRecord(submittedData?.i18n)
     const localeValues = asRecord(i18nByLocale?.[localeKey])
+
     return asTrimmedString(localeValues?.[field])
   }
+
   const getSubmittedName = (field: string): string =>
     getSubmittedNameAtLocale(toLocaleKey(getLocale()), field) ||
     asTrimmedString(submittedData?.[field]) ||
@@ -914,7 +1146,13 @@ export async function handleResourceFormSubmissionResult({
     error,
     onSuccess: async () => {
       const name = getSubmittedName(nameKey)
-      toast.success(`${successPrefix}${name ? ` ${name}` : ''}`)
+      // Show the local confirmation time once the save has succeeded.
+      toast.success(`${successPrefix}${name ? ` “${name}”` : ''}`, {
+        description: new Intl.DateTimeFormat(getLocale(), {
+          dateStyle: 'medium',
+          timeStyle: 'medium',
+        }).format(new Date()),
+      })
       await refreshResource()
       await onSuccess?.()
     },
@@ -1039,6 +1277,7 @@ export function resolveOptimisticHeaderFacets(
   | HeaderFacetItem[] {
   if (isSettled) return resolvedFacets
   if (snapshot.facets.length === 0) return resolvedFacets
+
   return snapshot.facets
 }
 
@@ -1111,6 +1350,7 @@ export function toIssueMessage(issue: unknown): string | null {
  */
 export function toUniqueIssueMessages(issues: unknown[] | undefined | null): string[] {
   if (!Array.isArray(issues)) return []
+
   const messages = issues
     .map(toIssueMessage)
     .filter((message): message is string => Boolean(message))
@@ -1175,8 +1415,11 @@ export function toIssueChipParts(message: string): { code: string; detail: strin
  */
 const toIssuePathSegments = (issue: unknown): string[] => {
   if (!issue || typeof issue !== 'object' || !('path' in issue)) return []
+
   const path = (issue as { path?: unknown }).path
+
   if (!Array.isArray(path)) return []
+
   return path.map(segment => String(segment))
 }
 
@@ -1189,12 +1432,15 @@ const toIssuePathSegments = (issue: unknown): string[] => {
  */
 const toIssueFieldNameCandidates = (issue: unknown): string[] => {
   const segments = toIssuePathSegments(issue)
+
   if (segments.length === 0) return []
 
   const dot = segments.join('.')
+
   // Mirror browser form-name syntax so array paths can match DOM control names.
   const bracket = segments.reduce((acc, segment, index) => {
     if (index === 0) return segment
+
     return /^\d+$/u.test(segment) ? `${acc}[${segment}]` : `${acc}.${segment}`
   }, '')
 
@@ -1271,6 +1517,7 @@ const toFacetFromIssuePath = (
   if (candidates.length > 0) {
     for (const [facet, names] of Array.from(facetFieldNames.entries())) {
       if (!supportedFacets.has(facet)) continue
+
       const hasMatch = candidates.some(candidate =>
         Array.from(names).some(
           name =>
@@ -1279,6 +1526,7 @@ const toFacetFromIssuePath = (
             name.startsWith(`${candidate}[`),
         ),
       )
+
       if (hasMatch) return facet
     }
   }
@@ -1308,6 +1556,7 @@ function resolveFacetIssueSummary(params: {
     params.formEl != null
       ? collectFacetFieldNames(params.formEl, supportedFacets)
       : new Map<FacetType, Set<string>>()
+
   const facetsWithIssues = new Set<FacetType>()
   let firstFacetWithIssues: FacetType | null = null
 
@@ -1433,7 +1682,9 @@ export function toggleGenAiField<
 >(form: FormDataUpdaterForm<T>, locale: Locale | LocaleKey, field: GenAiField): void {
   updateFormData(form, data => {
     const localeKey = toLocaleKey(locale)
+
     if (!data.i18n?.[localeKey]) return data
+
     const fieldName = `${field}Gen` as
       | 'titleGen'
       | 'nameGen'
@@ -1479,17 +1730,17 @@ export async function translateLocaleIntoEmptyFields<
     i18n?: Record<
       string,
       {
-        name?: string
-        nameShort?: string
-        description?: string
+        name?: string | null
+        nameShort?: string | null
+        description?: string | null
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
-        subscriptionBenefits?: string
+        subscriptionBenefits?: string | null
         subscriptionBenefitsGen?: FormBooleanValue
-        privacyPolicy?: string
+        privacyPolicy?: string | null
         privacyPolicyGen?: FormBooleanValue
-        termsOfService?: string
+        termsOfService?: string | null
         termsOfServiceGen?: FormBooleanValue
       }
     >
@@ -1501,18 +1752,22 @@ export async function translateLocaleIntoEmptyFields<
   fields = DEFAULT_TRANSLATABLE_FIELDS,
 }: TranslateLocaleIntoEmptyFieldsParams<TFormData>): Promise<boolean> {
   const currentFormData = form.fields.value().data
+
   if (!currentFormData?.i18n) return false
 
   const sourceLocaleKey = toLocaleKey(sourceLocale)
   const targetLocaleKey = toLocaleKey(targetLocale)
   const targetLocaleData = currentFormData.i18n?.[targetLocaleKey]
+
   if (!targetLocaleData) return false
 
   // Only send blank targets so machine translation never overwrites user-authored content.
   const fieldsToTranslate = fields.filter(field => {
     const currentValue = targetLocaleData[field]
+
     return !(typeof currentValue === 'string' && currentValue.trim().length > 0)
   })
+
   if (fieldsToTranslate.length === 0) return false
 
   /**
@@ -1545,6 +1800,7 @@ export async function translateLocaleIntoEmptyFields<
 
   updateFormData(form, data => {
     const targetLocaleData = data.i18n?.[targetLocaleKey]
+
     if (!targetLocaleData) return data
 
     // Mark translated fields as generated so later UI can distinguish seeded content.
@@ -1557,6 +1813,7 @@ export async function translateLocaleIntoEmptyFields<
         targetLocaleData[toGenField(field)] = true
       }
     }
+
     return data
   })
 
@@ -1574,17 +1831,17 @@ export function resetLocaleFields<
     i18n?: Record<
       string,
       {
-        name?: string
-        nameShort?: string
-        description?: string
+        name?: string | null
+        nameShort?: string | null
+        description?: string | null
         nameGen?: FormBooleanValue
         nameShortGen?: FormBooleanValue
         descriptionGen?: FormBooleanValue
-        subscriptionBenefits?: string
+        subscriptionBenefits?: string | null
         subscriptionBenefitsGen?: FormBooleanValue
-        privacyPolicy?: string
+        privacyPolicy?: string | null
         privacyPolicyGen?: FormBooleanValue
-        termsOfService?: string
+        termsOfService?: string | null
         termsOfServiceGen?: FormBooleanValue
       }
     >
@@ -1597,6 +1854,7 @@ export function resetLocaleFields<
   updateFormData(form, data => {
     const targetLocaleKey = toLocaleKey(targetLocale)
     const targetLocaleData = data.i18n?.[targetLocaleKey]
+
     if (!targetLocaleData) return data
 
     for (const field of fields) {
@@ -1692,6 +1950,7 @@ export function guardUserRolesDesync({
       id: formUserRole.userId,
       name: formUserRole.userId,
       username: formUserRole.userId,
+      displayUsername: formUserRole.userId,
       email: '',
       image: null,
       attribution: '',
@@ -1714,6 +1973,7 @@ export function guardUserRolesDesync({
       createdAt: new Date(0),
       modifiedAt: new Date(0),
     }
+
     const resolvedUser = selectedUser ?? fallbackUser
 
     return [
@@ -1769,15 +2029,20 @@ export function addUserRoleSelection<
 }: AddUserRoleSelectionParams<TEntity, TFormData>): TEntity {
   updateFormData(form, data => {
     const existing = data.userRoles ?? []
+
     if (existing.some(userRole => userRole.userId === user.id)) return data
+
     data.userRoles = [...existing, { userId: user.id, role: defaultRole }]
+
     return data
   })
 
   if (!entity?.data) return entity
+
   const entityData = entity.data
   const existingEntityRoles =
     (entityData.userRoles as Array<Record<string, unknown>>) ?? []
+
   if (existingEntityRoles.some(userRole => userRole.userId === user.id)) return entity
 
   return {
@@ -1821,10 +2086,12 @@ export function removeUserRoleSelection<
     data.userRoles = (data.userRoles ?? []).filter(
       userRole => userRole.userId !== userId,
     )
+
     return data
   })
 
   if (!entity?.data) return entity
+
   return {
     ...entity,
     data: {
@@ -1856,10 +2123,12 @@ export function updateUserRoleSelection<
     data.userRoles = (data.userRoles ?? []).map(userRole =>
       userRole.userId === userId ? { ...userRole, role } : userRole,
     )
+
     return data
   })
 
   if (!entity?.data) return entity
+
   return {
     ...entity,
     data: {

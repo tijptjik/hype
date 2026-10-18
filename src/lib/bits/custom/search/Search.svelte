@@ -1,8 +1,8 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
 import { tick, untrack } from 'svelte'
-import { slide } from 'svelte/transition'
+import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { SearchProps } from './search.types'
 // UTILS
@@ -10,7 +10,7 @@ import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.ut
 // COMPONENTS
 import * as SearchPrimitive from './src/components'
 // API
-import { searchUsers as searchUsersRemote } from '$lib/api/server/user.remote'
+import { searchUsers as searchUsersRemote } from '#lib/api/user.remote.js'
 
 let {
   placeholder = 'Search',
@@ -112,7 +112,7 @@ async function handleQuery(
                 }
               : { q: trimmedQuery },
           )
-        ).data as T[])
+        ).data as unknown as T[])
     if (currentRequestId !== requestId) return
     const nextResults = normalizeItems(response)
     if (trimmedQuery.length === 0) {
@@ -251,7 +251,7 @@ $effect(() => {
 
 <div
   bind:this={rootEl}
-  transition:slide={{ axis: 'y', duration: mountTransitionDuration }}
+  transition:fade={{ duration: mountTransitionDuration }}
   class={`bits-search ${className}`}
   onfocusin={handleRootFocusIn}
   onintroend={handleIntroEnd}
@@ -271,11 +271,10 @@ $effect(() => {
     <SearchPrimitive.ResultWrapper class="bits-search__results mx-[5%]">
       <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
-          <div
-            class="bits-search__results-list max-h-80 overflow-y-auto overscroll-contain"
-          >
+          <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
             {#each results as item, index (index)}
-              {#if resultMap.variant?.(item) === 'visual' || resultMap.previewImage?.(item)}
+              {#if resultMap.variant?.(item) === 'visual' ||
+                resultMap.previewImage?.(item)}
                 <SearchPrimitive.VisualResultItem
                   title={resultMap.title(item)}
                   descriminator={resultMap.descriminator?.(item)}
@@ -306,11 +305,9 @@ $effect(() => {
     <SearchPrimitive.ResultWrapper class="bits-search__results mx-[5%]">
       <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
-          <div
-            class="bits-search__results-list max-h-80 overflow-y-auto overscroll-contain"
-          >
+          <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
             <div
-              class="flex min-h-[60px] w-full items-center justify-center rounded-md bg-[#242424] px-3 py-3 text-center text-sm font-medium tracking-[0.08em] text-neutral-content/80"
+              class="flex min-h-[60px] w-full items-center justify-center rounded-md bg-panel px-3 py-3 text-center text-sm font-medium tracking-[0.08em] text-muted-foreground"
               aria-live="polite"
             >
               {noResultsText}

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import * as FormFacetNavPrimitive from './components'
 import type { FormFacetNavProps } from './formFacetNav.types'
 

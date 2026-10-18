@@ -1,17 +1,17 @@
 <script lang="ts">
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import ImportRowCol from '../../../shared/ImportRowCol.svelte'
 // SERVICES
-import { getAvailableFields } from '$lib/client/services/import/features'
-import { getPropertyType } from '$lib/client/services/import/features/property'
+import { getAvailableFields } from '#lib/client/services/import/features.js'
+import { getPropertyType } from '#lib/client/services/import/features/property.js'
 // ENUMS
-import { SupportedLocales } from '$lib/enums'
+import { SupportedLocales } from '#lib/enums.js'
 // TYPES
-import type { FeatureCSVColumn } from '$lib/client/services/import/types'
+import type { FeatureCSVColumn } from '#lib/client/services/import/types.js'
 
 type Props = {
   importCtx: ImportCtx
@@ -149,8 +149,8 @@ function handleFieldChange(event: Event): void {
       class={`select select-bordered select-sm w-full ${disabledSelectClass}`}
       value={column.locale}
       disabled={column.modelType === 'SKIP' ||
-      column.modelType === 'User' ||
-      column.modelType === 'AddressMeta'}
+        column.modelType === 'User' ||
+        column.modelType === 'AddressMeta'}
       onchange={handleLocaleChange}
     >
       <option value="None">{m.feature_import__column_locale_none()}</option>
@@ -176,9 +176,7 @@ function handleFieldChange(event: Event): void {
       >
         <option value="NEW">
           {m.feature_import__column_property_new()}
-          {column.extractedPropertyKey
-          ? ` (${column.extractedPropertyKey})`
-          : ''}
+          {column.extractedPropertyKey ? ` (${column.extractedPropertyKey})` : ''}
         </option>
         {#if importCtx.getIsFetchingProperties()}
           <option disabled>{m.feature_import__column_properties_loading()}</option>
@@ -237,7 +235,11 @@ function handleFieldChange(event: Event): void {
       onchange={handleFieldChange}
     >
       <option value="">{m.feature_import__column_field_select()}</option>
-      {#each getAvailableFields(column.modelType, column.locale, column.propertyKey) as field}
+      {#each getAvailableFields(
+        column.modelType,
+        column.locale,
+        column.propertyKey,
+      ) as field}
         <option value={field}>{field}</option>
       {/each}
     </select>

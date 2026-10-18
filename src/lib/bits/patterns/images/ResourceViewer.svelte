@@ -1,7 +1,7 @@
 <script module lang="ts">
-import type { ImageMetadataBasic } from '$lib/db/zod/schema/image.types'
+import type { ImageMetadataBasic } from '#lib/db/zod/schema/image.types.js'
 import type { ViewerRenderable } from './images.types'
-import type { ImageCtx } from '$lib/context/image.svelte'
+import type { ImageCtx } from '#lib/context/image.svelte.js'
 
 const RESOURCE_VIEWER_RETAIN_MS = 1500
 
@@ -66,26 +66,31 @@ function setRetainedViewerSnapshot(snapshot: ResourceViewerSnapshot | null): voi
 <script lang="ts">
 import { onDestroy, untrack } from 'svelte'
 // ADAPTERS
-import { useEntityImageViewerModel } from '$lib/adapters/image'
+import { useEntityImageViewerModel } from '#lib/adapters/image/index.js'
 // BITS COMPONENTS
-import { UserAttributionCard } from '$lib/bits'
-import { AdminViewer, Dropzone } from '$lib/bits/patterns/images'
-import ImageMetadataCard from '$lib/bits/patterns/images/components/ImageMetadataCard.svelte'
-import ViewerControls from '$lib/bits/patterns/images/components/controls/ViewerControls.svelte'
+import { UserAttributionCard } from '#lib/bits/index.js'
+import { AdminViewer, Dropzone } from '#lib/bits/patterns/images/index.js'
+import ImageMetadataCard from '#lib/bits/patterns/images/components/ImageMetadataCard.svelte'
+import ViewerControls from '#lib/bits/patterns/images/components/controls/ViewerControls.svelte'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
+import {
+  IMAGE_ATTRIBUTION_CLASSES,
+  IMAGE_METADATA_BUTTON_CLASSES,
+} from './components/imageChrome.styles'
 // CONTEXT
-import { getImageCtx } from '$lib/context/image.svelte'
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getImageCtx } from '#lib/context/image.svelte.js'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
-import { m } from '$lib/i18n'
+import CameraIcon from 'virtual:icons/proicons/camera'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
+import { m } from '#lib/i18n.js'
 
 let {
   canEditPresentationMode = true,
   canEditDropzone = false,
   hasBottomPadding = false,
+  workspace = false,
   isReadonly = false,
   prefetchMetadata = false,
   onPresentationModeCommitted,
@@ -93,6 +98,7 @@ let {
   canEditPresentationMode?: boolean
   canEditDropzone?: boolean
   hasBottomPadding?: boolean
+  workspace?: boolean
   isReadonly?: boolean
   prefetchMetadata?: boolean
   onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
@@ -107,7 +113,7 @@ const hasActiveImage = $derived(Boolean(model.state.activeImage))
 const hasItems = $derived(model.state.items.length > 0)
 const canUseEditFacility = $derived(canEditPresentationMode || canEditDropzone)
 const canDeleteImage = $derived(
-  !isReadonly && adminCtx.appCtx.isSuperAdmin() && model.state.canDeleteActiveImage,
+  !isReadonly && adminCtx.view.isSuperAdmin() && model.state.canDeleteActiveImage,
 )
 const canChangePresentationMode = $derived(
   !isReadonly && canEditPresentationMode && hasActiveImage,
@@ -181,7 +187,7 @@ const displayedCanReplaceImage = $derived(
 const displayedCanDeleteImage = $derived(
   shouldShowRetainedSnapshot
     ? (retainedSnapshot?.canDeleteImage ?? false)
-    : !isReadonly && adminCtx.appCtx.isSuperAdmin() && displayedCanDeleteActiveImage,
+    : !isReadonly && adminCtx.view.isSuperAdmin() && displayedCanDeleteActiveImage,
 )
 const displayedIsEditBusy = $derived(
   shouldShowRetainedSnapshot
@@ -312,9 +318,11 @@ onDestroy(() => {
 </script>
 
 <div
-  class={hasBottomPadding
-    ? 'h-full w-full select-none bg-black pb-4 pr-4 pt-1'
-    : 'h-full w-full select-none bg-black pr-4 pt-1'}
+  class={workspace
+    ? 'h-full min-h-0 w-full select-none bg-transparent p-6'
+    : hasBottomPadding
+      ? 'h-full w-full select-none bg-base-100 pb-4 pr-4 pt-1'
+      : 'h-full w-full select-none bg-base-100 pr-4 pt-1'}
 >
   <Dropzone
     disabled={!hasItems || isDropzoneDisabled}
@@ -341,7 +349,9 @@ onDestroy(() => {
       onActiveIdChange={model.actions.select}
       onCurrentItemLoad={handleCurrentItemLoad}
     >
-      {#snippet leftRail(_item)}
+      {#snippet leftRail(
+        _item,
+      )}
         {#if displayedActiveImage}
           <UserAttributionCard
             userId={displayedActiveImage.image.contributorId}
@@ -349,12 +359,14 @@ onDestroy(() => {
             type="imageContributor"
             openDirection="right"
             isOpen={true}
-            class="[&_.bits-feature-attribution__avatar]:h-9 [&_.bits-feature-attribution__avatar]:w-9"
+            class={`${IMAGE_ATTRIBUTION_CLASSES} [&_.bits-feature-attribution__avatar]:h-9 [&_.bits-feature-attribution__avatar]:w-9`}
           />
         {/if}
       {/snippet}
 
-      {#snippet centerRail(_item)}
+      {#snippet centerRail(
+        _item,
+      )}
         <ViewerControls
           presentationMode={displayedPresentationMode}
           canMutate={displayedCanChangePresentationMode}
@@ -383,8 +395,11 @@ onDestroy(() => {
         />
       {/snippet}
 
-      {#snippet rightRail(_item)}
+      {#snippet rightRail(
+        _item,
+      )}
         {#if displayedActiveImage}
+          <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
           <div
             class="group/metadata relative"
             onmouseleave={() => {
@@ -406,7 +421,7 @@ onDestroy(() => {
           >
             <button
               type="button"
-              class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/85 disabled:cursor-default disabled:opacity-45"
+              class={`${IMAGE_METADATA_BUTTON_CLASSES} disabled:cursor-default disabled:opacity-45`}
               disabled={shouldShowRetainedSnapshot}
               aria-label="Open image metadata"
               onclick={() => {

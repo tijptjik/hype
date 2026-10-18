@@ -3,7 +3,7 @@ import { z } from 'zod'
 // DRIZZLE
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod'
 // SCHEMA
-import { task, taskImage } from '$lib/db/schema/index'
+import { task, taskImage } from '#lib/db/schema/index.js'
 // ZOD SCHEMAS
 import { ListQueryParamsSchema } from './api'
 import { UserBasic } from './user'
@@ -24,7 +24,7 @@ import {
   PropertyValueRecord,
 } from './property'
 // ENUMS
-import { TaskType, TaskReviewOutcome, TaskReviewAction } from '$lib/enums'
+import { TaskType, TaskReviewOutcome, TaskReviewAction } from '#lib/enums.js'
 import { getLocales } from '..'
 
 // ═══════════════════════

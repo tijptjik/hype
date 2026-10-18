@@ -3,7 +3,7 @@
 import * as ImagePrimitive from './components'
 import Viewer from './components/Viewer.svelte'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // TYPES
 import type { CameraViewerProps, ViewerRenderable } from './images.types'
 
@@ -39,6 +39,8 @@ let {
 
 let loadedActiveId = $state<string | null>(null)
 
+// Counter presentation belongs to the viewer, independent of shell layout.
+const COMPACT_COUNTER_MAX_WIDTH_PX = 399
 const responsiveCtx = getResponsiveCtx()
 
 const activeIndex = $derived.by(() => {
@@ -63,7 +65,9 @@ const pendingIndex = $derived.by(() => {
   if (activeIndex < 0 || loadedIndex === activeIndex) return -1
   return activeIndex
 })
-const showCounterTotal = $derived(!responsiveCtx.hasCompactImageViewerCounter)
+const showCounterTotal = $derived(
+  responsiveCtx.visibleWindowWidth > COMPACT_COUNTER_MAX_WIDTH_PX,
+)
 
 $effect(() => {
   if (!activeId) {

@@ -1,16 +1,8 @@
+import { gt } from 'drizzle-orm'
 // NANOID
 import { nanoid } from 'nanoid'
 // DRIZZLE
-import {
-  and,
-  eq,
-  exists,
-  inArray,
-  or,
-  sql,
-  type InferInsertModel,
-  type SQL,
-} from 'drizzle-orm'
+import { and, eq, exists, or, sql, type InferInsertModel, type SQL } from 'drizzle-orm'
 // DB
 import {
   firstOrNull,
@@ -19,7 +11,7 @@ import {
   toRelatedRecords,
   transformI18nSafely,
 } from '..'
-import { insert, insertManyRelated, replaceManyRelated } from '../crud'
+import { delManyRelated, insert, insertManyRelated, replaceManyRelated } from '../crud'
 import {
   feature,
   featureI18n,
@@ -29,8 +21,10 @@ import {
 } from '../schema'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
+// MAP
+import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // I18N
-import { normalizeI18nLocaleRecord, toLocaleKebab } from '$lib/i18n'
+import { normalizeI18nLocaleRecord, toLocaleKebab } from '#lib/i18n.js'
 // TYPES
 import type {
   Database,
@@ -39,9 +33,9 @@ import type {
   Locale,
   LocaleKey,
   QueryParams,
-} from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+} from '#lib/types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type {
   Feature,
   FeatureDB,
@@ -51,7 +45,7 @@ import type {
   FeatureI18nPartial,
   FeatureProperty,
   NewFeatureProperty,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -108,6 +102,7 @@ export const createFeature = async (
 ): Promise<FeatureDB> =>
   (await insert(db, feature, {
     ...data,
+    spatialIndex: createFeatureSpatialIndex(data.geometry),
     addressMeta: data.addressMeta ?? {},
     isPublished: data.isPublished ?? false,
   })) as FeatureDB
@@ -339,7 +334,12 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number | null; offset?: number | null },
+  pagination?: {
+    limit?: number | null
+    offset?: number | null
+    afterId?: string
+    afterValue?: string | number | null
+  },
   sorting?: { sortBy?: string | null; sortOrder?: 'asc' | 'desc' | null },
   query?: {
     q?: string | null
@@ -377,7 +377,16 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
 
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
+  // Keep cursor predicates page-local so totals always describe the complete query.
+  const pageConditions = [...allConditions]
+  if (pagination?.afterId && pagination.afterValue === undefined)
+    pageConditions.push(gt(feature.id, pagination.afterId))
   const orderBy = toOrderByWithLocalizedFields({
+    conditions: pageConditions,
+    cursor:
+      pagination?.afterId && pagination.afterValue !== undefined
+        ? { id: pagination.afterId, value: pagination.afterValue }
+        : undefined,
     db,
     locale: query?.locale,
     sortBy,
@@ -394,24 +403,27 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
     foreignKeyColumn: featureI18n.featureId,
     localeColumn: featureI18n.locale,
   })
-  const whereClause = allConditions.length > 0 ? and(...allConditions) : undefined
+  const whereClause = pageConditions.length > 0 ? and(...pageConditions) : undefined
+  const countWhereClause = allConditions.length > 0 ? and(...allConditions) : undefined
+  const pageLimit = pagination?.limit ?? undefined
 
-  const data = (await retryBusyRead(() =>
+  const pageRows = (await retryBusyRead(() =>
     db.query.feature.findMany({
       with: withRelations,
       where: whereClause,
-      limit: pagination?.limit ?? undefined,
+      limit: pageLimit === undefined ? undefined : pageLimit + 1,
       offset: pagination?.offset ?? undefined,
       orderBy,
     }),
   )) as unknown as TRow[]
+  const data = pageLimit === undefined ? pageRows : pageRows.slice(0, pageLimit)
   const countQuery = db.select({ count: sql<number>`count(*)` }).from(feature)
   const totalRows = await retryBusyRead(() =>
-    whereClause ? countQuery.where(whereClause) : countQuery,
+    countWhereClause ? countQuery.where(countWhereClause) : countQuery,
   )
   const totalCount = Number(totalRows[0]?.count || 0)
   const offset = pagination?.offset ?? 0
-  const hasMore = offset + data.length < totalCount
+  const hasMore = pageLimit === undefined ? false : pageRows.length > pageLimit
 
   return {
     data,
@@ -525,6 +537,7 @@ export const probeFeatureForUpdate = async (db: Database, featureId: Id) => {
           isArchived: feature.isArchived,
           isIntangible: feature.isIntangible,
           isVisitable: feature.isVisitable,
+          isPendingReview: feature.isPendingReview,
           modifiedAt: feature.modifiedAt,
           resourceHubId: organisation.hubId,
         })
@@ -656,7 +669,13 @@ export const updateFeatureByIdWithConcurrency = async (
 ): Promise<FeatureDB | undefined> => {
   const [updated] = await db
     .update(feature)
-    .set(params.data)
+    // Persist geometry and its derived memberships together; triggers update lookup rows.
+    .set({
+      ...params.data,
+      ...(params.data.geometry === undefined
+        ? {}
+        : { spatialIndex: createFeatureSpatialIndex(params.data.geometry) }),
+    })
     .where(and(eq(feature.id, params.id), eq(feature.modifiedAt, params.updatedAt)))
     .returning()
 
@@ -783,23 +802,23 @@ export const updateProperties = async (
   )
 
   if (propertyIdsToDelete.length > 0) {
-    await db
-      .delete(featurePropertyI18n)
-      .where(
-        and(
-          eq(featurePropertyI18n.featureId, featureId),
-          inArray(featurePropertyI18n.propertyId, propertyIdsToDelete),
-        ),
-      )
+    await delManyRelated(
+      db,
+      featurePropertyI18n,
+      featurePropertyI18n.featureId,
+      featureId,
+      featurePropertyI18n.propertyId,
+      propertyIdsToDelete,
+    )
 
-    await db
-      .delete(featureProperty)
-      .where(
-        and(
-          eq(featureProperty.featureId, featureId),
-          inArray(featureProperty.propertyId, propertyIdsToDelete),
-        ),
-      )
+    await delManyRelated(
+      db,
+      featureProperty,
+      featureProperty.featureId,
+      featureId,
+      featureProperty.propertyId,
+      propertyIdsToDelete,
+    )
   }
 
   for (const propertyRow of properties) {

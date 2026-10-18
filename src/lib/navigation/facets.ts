@@ -1,18 +1,18 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import FormInputIcon from 'virtual:icons/lucide/form-input'
-import FileTextIcon from 'virtual:icons/lucide/file-text'
-import ImageIcon from 'virtual:icons/lucide/image'
-import Layers3Icon from 'virtual:icons/lucide/layers-3'
-import MapPinIcon from 'virtual:icons/lucide/map-pin'
-import ShieldCheckIcon from 'virtual:icons/lucide/shield-check'
-import TagIcon from 'virtual:icons/lucide/tag'
+import FormInputIcon from 'virtual:icons/proicons/button'
+import FileTextIcon from 'virtual:icons/proicons/file-text'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import Layers3Icon from 'virtual:icons/proicons/layers'
+import MapPinIcon from 'virtual:icons/proicons/location'
+import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
+import TagIcon from 'virtual:icons/proicons/tag'
 import type { Component } from 'svelte'
 // ENUMS
-import type { FirstClassResource } from '$lib/enums'
+import type { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { FacetType } from '$lib/types'
+import type { FacetType } from '#lib/context/facets.js'
 
 export const ADMIN_FACETS = {
   core: 'core',
@@ -172,7 +172,7 @@ export const getAdminFacetOrderForResource = (
   if (!visibleFacets) return [...supported]
 
   const isVisible = (facet: FacetType): boolean => {
-    if (visibleFacets instanceof Map || visibleFacets instanceof Set) {
+    if ('has' in visibleFacets) {
       return visibleFacets.has(facet)
     }
     return visibleFacets.includes(facet)

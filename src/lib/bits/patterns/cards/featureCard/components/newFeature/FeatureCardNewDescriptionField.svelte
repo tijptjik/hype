@@ -1,22 +1,22 @@
 <script lang="ts">
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // I18N
-import { getLocale, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
+import Check from 'virtual:icons/proicons/checkmark'
+import PencilSquare from 'virtual:icons/proicons/compose'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let isEditing = $state(false)
 let draftDescription = $state('')
 let descriptionInput = $state<HTMLTextAreaElement | null>(null)
 
 const currentDescription = $derived(
-  appCtx.getNewFeature()?.feature?.i18n?.[getLocale()]?.description?.trim() ?? '',
+  appCtx.draft.current?.feature?.i18n?.[getLocaleKey()]?.description?.trim() ?? '',
 )
 
 $effect(() => {
@@ -34,19 +34,19 @@ function startEditing(): void {
 function saveDescription(): void {
   if (!draftDescription.trim()) return
 
-  appCtx.updateNewFeatureValueI18n('description', draftDescription.trim())
+  appCtx.draft.updateI18n('description', draftDescription.trim())
   isEditing = false
 }
 
 function cancelEditing(): void {
-  appCtx.updateNewFeatureValueI18n('description', currentDescription)
+  appCtx.draft.updateI18n('description', currentDescription)
   draftDescription = currentDescription
   isEditing = false
 }
 </script>
 
 <div class="space-y-2">
-  <p class="font-mono text-[11px] uppercase tracking-[0.28em] text-white/48">
+  <p class="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
     Description
   </p>
 
@@ -55,7 +55,7 @@ function cancelEditing(): void {
       <textarea
         bind:this={descriptionInput}
         bind:value={draftDescription}
-        class="min-h-28 min-w-0 w-full rounded-[1.5rem] border border-white/14 bg-black/35 px-4 py-3 text-left text-sm leading-6 text-white caret-white placeholder:text-white/34 focus:border-white/28 focus:outline-none"
+        class="min-h-28 min-w-0 w-full rounded-[1.5rem] border border-border-input bg-base-200 px-4 py-3 text-left text-sm leading-6 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
         placeholder={m.zany_merry_seahorse_treasure()}
         onkeydown={event => {
           event.stopPropagation()
@@ -68,7 +68,7 @@ function cancelEditing(): void {
       ></textarea>
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/10 text-white transition hover:bg-white/16"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-content/8 text-base-content transition hover:bg-base-content/12"
         onclick={saveDescription}
         disabled={!draftDescription.trim()}
       >
@@ -77,18 +77,18 @@ function cancelEditing(): void {
     {:else}
       <button
         type="button"
-        class="flex min-h-28 min-w-0 w-full items-start rounded-[1.5rem] border border-white/10 bg-black/25 px-4 py-3 text-left transition hover:bg-black/35"
+        class="flex min-h-28 min-w-0 w-full items-start rounded-[1.5rem] border border-border-input bg-base-200 px-4 py-3 text-left transition hover:bg-base-300"
         onclick={startEditing}
       >
         <p
-          class={`text-sm leading-6 ${currentDescription ? 'text-white/82' : 'font-semibold text-white/45'}`}
+          class={`text-sm leading-6 ${currentDescription ? 'text-muted-foreground' : 'font-semibold text-muted-foreground'}`}
         >
           {currentDescription || m.zany_merry_seahorse_treasure()}
         </p>
       </button>
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-black/30 text-white transition hover:bg-black/45"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-200 text-base-content transition hover:bg-base-300"
         onclick={startEditing}
         aria-label="Edit description"
       >

@@ -3,10 +3,13 @@
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
 // ENUMS
-import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
+import {
+  classifierComponentTypes,
+  specifierComponentTypes,
+} from '#lib/client/services/fieldComponents.js'
 // I18N
-import { m } from '$lib/i18n'
-import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
+import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -18,7 +21,7 @@ import {
   normalizeProjectLicense as normalizeSharedProjectLicense,
   projectLicenseLeafMediaTypes,
   type ProjectLicenseIntent,
-} from '$lib/client/services/licence'
+} from '#lib/client/services/licence.js'
 import {
   addUserRoleSelection,
   applyChangedRelationField,
@@ -42,18 +45,18 @@ import {
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
-} from '$lib/client/services/form'
+} from '#lib/client/services/form.js'
 import {
   createMapRenderTitleMenuItem,
   refreshMapRender,
-} from '$lib/client/services/map'
-import { getNameForToast } from '$lib/client/services/resource'
+} from '#lib/client/services/map.js'
+import { getNameForToast } from '#lib/client/services/resource.js'
 import {
   getCapabilityKeysFromDefinitions,
   getCapabilityLabel,
   normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
-} from '$lib/capabilities'
+} from '#lib/capabilities.js'
 import {
   getProjectSubmitUpdates,
   normalizeProjectCapabilitiesForSubmit,
@@ -72,7 +75,7 @@ import {
   toUserRolesForCapabilityToggle,
   toUserRolesWithRoleChange,
   toProjectFormInput,
-} from '$lib/client/services/project'
+} from '#lib/client/services/project.js'
 import {
   addProjectPropertyForType,
   changeProjectPropertyRankUnified,
@@ -92,11 +95,11 @@ import {
   addProjectPropertyValue,
   removeProjectPropertyValue,
   reorderProjectPropertyValue,
-} from '$lib/client/services/property'
-import { setProjectImagePresentationMode } from '$lib/client/services/image'
+} from '#lib/client/services/property.js'
+import { setProjectImagePresentationMode } from '#lib/client/services/image.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import {
   archiveProject,
@@ -105,15 +108,21 @@ import {
   getProjects,
   projectForm,
   publishProject,
-} from '$lib/api/server/project.remote'
-import { getLayers } from '$lib/api/server/layer.remote'
-import { getFeatures } from '$lib/api/server/feature.remote'
-import { getOrganisation, getOrganisations } from '$lib/api/server/organisation.remote'
+} from '#lib/api/project.remote.js'
+import { getLayers } from '#lib/api/layer.remote.js'
+import { getFeatures } from '#lib/api/feature.remote.js'
+import { getOrganisation, getOrganisations } from '#lib/api/organisation.remote.js'
 // SCHEMA
-import { ProjectPreflightFormData } from '$lib/db/zod/schema/project'
+import { ProjectPreflightFormData } from '#lib/db/zod/schema/project.js'
 // CONFIG
-import { NEW_REF, NEW_TITLE } from '$lib/constants'
+import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import {
+  formSectionDividerStyles,
+  formSelectionSectionStyles,
+} from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
+import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import {
   FormFieldsSection,
   FormI18nDescriptorFields,
@@ -124,29 +133,31 @@ import {
   FormProjectLicenseSection,
   FormSpecifiersFields,
   FormUserRolesSection,
-  GridSpacer,
   Main,
   ProjectCapabilities,
   ResourceViewer,
-} from '$lib/bits'
+} from '#lib/bits/index.js'
 
-import type { ParentSectionOrganisationItem } from '$lib/bits/patterns/forms/formParentSection'
-import type { MapStyleSelectionItem } from '$lib/bits/patterns/forms/formMapStyleSection'
-import type { UserCapabilityMatrixRow } from '$lib/bits/patterns/capabilities/userCapabilityMatrix'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import type { ParentSectionOrganisationItem } from '#lib/bits/patterns/forms/formParentSection/index.js'
+import type { MapStyleSelectionItem } from '#lib/bits/patterns/forms/formMapStyleSection/index.js'
+import type { UserCapabilityMatrixRow } from '#lib/bits/patterns/capabilities/userCapabilityMatrix/index.js'
+import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+// ICONS
+import ImageIcon from 'virtual:icons/proicons/photo'
+import MembersIcon from 'virtual:icons/proicons/person-multiple'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // FACTORIES
-import { configureForm } from '$lib/factories.svelte'
+import { configureForm } from '#lib/factories.svelte.js'
 // COMPONENTS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
   getAdminFacetTabsForResource,
   navigateOnAdmin,
-} from '$lib/navigation'
-import type { ProjectFacet } from '$lib/navigation'
+} from '#lib/navigation/index.js'
+import type { ProjectFacet } from '#lib/navigation/index.js'
 // AUTHZ
 import {
   authorizeProjectDelete,
@@ -156,33 +167,36 @@ import {
   canSetProjectParentOrganisation,
   resolveProjectParentOrganisationScope,
   toProjectAuthActor,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // UTILS
-import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
+import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
-import Blend from 'virtual:icons/lucide/blend'
-import ProjectIcon from 'virtual:icons/lucide/layout-grid'
-import Type from 'virtual:icons/lucide/type'
+import Blend from 'virtual:icons/proicons/shape-intersect'
+import ProjectIcon from 'virtual:icons/proicons/grid'
+import Type from 'virtual:icons/proicons/text'
 // ENUMS
-import { FirstClassResource, ImageContextResource, ProjectRoleType } from '$lib/enums'
+import {
+  FirstClassResource,
+  ImageContextResource,
+  ProjectRoleType,
+} from '#lib/enums.js'
 // TYPES
+import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
 import type {
-  CapabilityDefinitions,
-  CapabilityKey,
   FormDataUpdaterForm,
-  HeaderTransitionSnapshot,
-  Locale,
-  ResourceContext,
   UserRoleFieldNameResolverForm,
-  Id,
+} from '#lib/client/services/form.types.js'
+import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
+import type { Locale, ResourceContext, Id } from '#lib/types.js'
+import type {
   ProjectLicense,
   ProjectLicenseRights,
   ProjectLicenseMediaType,
-} from '$lib/types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { User } from '$lib/db/zod/schema/user.types'
-import type { OrganisationGetState } from '$lib/db/zod/schema/organisation.types'
+} from '#lib/db/zod/schema/projectLicense.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
+import type { OrganisationGetState } from '#lib/db/zod/schema/organisation.types.js'
 import type {
   ProjectBooleanField,
   ProjectCurrentFormDraft,
@@ -193,7 +207,7 @@ import type {
   ProjectRoleUser,
   ProjectSubmitBaselineRelations,
   ProjectSubmitDraft,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 
 // § Context
 
@@ -229,7 +243,7 @@ const activeFacet = $derived(
 )
 const parentOrganisationId = $derived(page.url.searchParams.get('parentId') ?? '')
 const cachedProjectForRef = $derived(
-  adminCtx.appCtx.getResourceByRefSync(FirstClassResource.project, projectRef) as
+  adminCtx.view.getResourceByRefSync(FirstClassResource.project, projectRef) as
     | ProjectGetResponse['data']
     | undefined,
 )
@@ -385,7 +399,7 @@ const optimisticProjectData = $derived.by(() =>
 const optimisticProjectHierarchy = $derived.by(() => {
   const projectData = optimisticProjectData
   if (!projectData) return null
-  return adminCtx.appCtx.getHierarchySync(projectData)
+  return adminCtx.view.getHierarchySync(projectData)
 })
 const effectiveProjectResourceHubId = $derived.by(() => {
   const liveHubId = hierarchy?.organisation?.hubId
@@ -558,27 +572,27 @@ const configuredProjectForm = configureForm(() => ({
         entityQuery: getProject({
           ref: projectRef,
           refKey: 'code',
-          meta: { isAdminRequest: true, profile: 'admin' },
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
         }),
         listQuery: getProjects({
-          conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
-          prisms: adminCtx.appCtx.state.prisms,
-          meta: { isAdminRequest: true, profile: 'card' },
+          conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
+          prisms: adminCtx.view.scope.prisms,
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
         extraQueries: [
           getLayers({
-            conditions: adminCtx.appCtx.isSuperAdmin()
+            conditions: adminCtx.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },
-            prisms: adminCtx.appCtx.state.prisms,
-            meta: { isAdminRequest: true, profile: 'card' },
+            prisms: adminCtx.view.scope.prisms,
+            meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
           }),
           getFeatures({
-            conditions: adminCtx.appCtx.isSuperAdmin()
+            conditions: adminCtx.view.isSuperAdmin()
               ? { isArchived: null, isPublished: null }
               : { isArchived: false, isPublished: null },
-            prisms: adminCtx.appCtx.state.prisms,
-            meta: { isAdminRequest: true, profile: 'card' },
+            prisms: adminCtx.view.scope.prisms,
+            meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
           }),
         ],
       }) as never,
@@ -641,7 +655,7 @@ const projectLayersInSection = $derived.by(() => {
 })
 const currentProjectShortName = $derived(
   activeProjectData
-    ? getI18n(activeProjectData, 'nameShort', adminCtx.appCtx.getUserPreferences())
+    ? getI18n(activeProjectData, 'nameShort', adminCtx.view.getUserPreferences())
     : '',
 )
 
@@ -1035,7 +1049,7 @@ function resolveProjectPropertyTitleHref(property: Property): string | null {
 
   if (property.scope === 'organisation' && property.organisationId) {
     const organisationCode =
-      adminCtx.appCtx.cache.organisation.get(property.organisationId)?.code ??
+      adminCtx.view.cache.organisation.get(property.organisationId)?.code ??
       property.organisationId
     return `/admin/organisations/${organisationCode}#fields`
   }
@@ -1046,7 +1060,7 @@ function resolveProjectPropertyTitleHref(property: Property): string | null {
     ).hub?.code
     const hubCode = property.hubId
       ? (hubCodeFromProperty ??
-        adminCtx.appCtx.cache.hub.get(property.hubId)?.code ??
+        adminCtx.view.cache.hub.get(property.hubId)?.code ??
         'core')
       : 'core'
     return `/admin/hubs/${hubCode}#fields`
@@ -1082,7 +1096,7 @@ function resolveProjectPropertySourceTag(property: Property): {
 
   if (property.scope === 'hub') {
     if (property.hubId) {
-      const hubCode = adminCtx.appCtx.cache.hub.get(property.hubId)?.code ?? null
+      const hubCode = adminCtx.view.cache.hub.get(property.hubId)?.code ?? null
       if (hubCode && hubCode !== 'core')
         return {
           label: m.hub__title().replace(/s$/iu, '').toLowerCase(),
@@ -1154,6 +1168,19 @@ const hiddenProjectCapabilityInputAttrs = $derived.by(() => {
     })
     .filter(Boolean) as Array<Record<string, unknown>>
 })
+/**
+ * Registers the JSON license input handled by the project's preprocessing schema.
+ * @returns Hidden attributes from this form's dynamically typed license field.
+ * @remarks The schema accepts serialized JSON and normalizes it into the license object.
+ */
+function getHiddenProjectLicenseAttrs(): Record<string, unknown> {
+  const { as } = formCtx.form.fields.data.license as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }
+  if (typeof as !== 'function') return {}
+  return as('hidden', JSON.stringify(formProjectLicense)) as Record<string, unknown>
+}
+
 const hiddenProjectLayerInputAttrs = $derived.by(() => {
   const layerValues = getProjectLayerSubmitValues() ?? []
 
@@ -1161,22 +1188,11 @@ const hiddenProjectLayerInputAttrs = $derived.by(() => {
     const layerId = typeof layer.id === 'string' ? layer.id : ''
     if (!layerId) return []
 
+    const fields = formCtx.form.fields.data.layers[index]
     return [
-      {
-        type: 'hidden',
-        name: `data.layers[${index}].id`,
-        value: layerId,
-      },
-      {
-        type: 'hidden',
-        name: `data.layers[${index}].rank`,
-        value: String(layer.rank ?? index),
-      },
-      {
-        type: 'hidden',
-        name: `data.layers[${index}].isDefaultVisible`,
-        value: layer.isDefaultVisible ? 'true' : 'false',
-      },
+      fields.id.as('hidden', layerId),
+      fields.rank.as('hidden', layer.rank ?? index),
+      fields.isDefaultVisible.as('hidden', layer.isDefaultVisible ? 'true' : 'false'),
     ]
   })
 })
@@ -1572,7 +1588,7 @@ $effect(() => {
   void getOrganisation({
     ref: organisationId,
     refKey: 'id',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).then(result => {
     if (cancelled) return
     if (!result?.data) return
@@ -1628,8 +1644,8 @@ const imageProviderModel = useImageProviderModel(
 
 // § Auth
 
-const currentUser = $derived(adminCtx.appCtx.getUser())
-const currentHub = $derived(adminCtx.appCtx.hub)
+const currentUser = $derived(adminCtx.view.account.user)
+const currentHub = $derived(adminCtx.view.hub)
 const authActor = $derived.by(() => toProjectAuthActor(currentUser))
 const createContextHubId = $derived.by(() =>
   currentHub?.isCore ? null : (currentHub?.id ?? null),
@@ -1846,10 +1862,14 @@ $effect(() => {
 
 // i18N CARDS
 
+/**
+ * Rechecks server issues after edits once validation has been shown.
+ * @returns Nothing.
+ */
 function revalidateAfterProgrammaticChange(): void {
   revalidateAfterSubmitAttempt({
     wasSubmitAttempted: formCtx.wasSubmitAttempted,
-    validate: formCtx.validate,
+    validate: () => formCtx.validate({ preflightOnly: false }),
   })
 }
 
@@ -1998,10 +2018,13 @@ async function onSearchParentOrganisations(
 ): Promise<ParentSectionOrganisationItem[]> {
   if (!canSetParentOrganisation) return []
 
-  const profileMeta = { isAdminRequest: true, profile: 'admin' as const }
+  const profileMeta = {
+    ...adminCtx.view.resources.queryMeta,
+    profile: 'admin' as const,
+  }
   const baseParams = {
     q: query,
-    prisms: adminCtx.appCtx.state.prisms,
+    prisms: adminCtx.view.scope.prisms,
     meta: profileMeta,
   }
 
@@ -2064,7 +2087,7 @@ async function refreshProject(ref: string = projectRef): Promise<ProjectGetState
   const result = (await getProject({
     ref,
     refKey: 'code',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).catch(() => null)) as ProjectGetState
   return result
 }
@@ -2088,29 +2111,37 @@ async function handleProjectStateToggle({
   const nextState = !projectData[field]
   setBusy(true)
 
+  const mutation = adminCtx.view.cacheCtx.beginMutation('project', {
+    meta: { id: projectData.id },
+    data: { [field]: nextState },
+  })
   try {
     await mutate({
       id: projectData.id,
       state: nextState,
       meta: { isAdminRequest: true },
     }).updates(
+      ...mutation.updates,
       getProject({
         ref: projectRef,
         refKey: 'code',
-        meta: { isAdminRequest: true, profile: 'admin' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       }).withOverride(overrideProjectEntityBoolean(field, nextState)),
       getProjects({
-        conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
-        prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true, profile: 'card' },
+        conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
+        prisms: adminCtx.view.scope.prisms,
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }).withOverride(overrideProjectListItemBoolean(projectData.id, field, nextState)),
     )
+    mutation.settle(true)
 
     commitSettledProjectState(await refreshProject())
+    await adminCtx.view.cacheCtx.reconcile('project')
     toast.success(
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(project, 'nameShort')}`,
     )
   } catch {
+    mutation.settle(false)
     toast.error(m.long_crazy_peacock_care())
   } finally {
     setBusy(false)
@@ -2147,7 +2178,7 @@ async function onReset(): Promise<void> {
   formCtx.clearSubmitAttemptState()
   if (activeCommittedProjectData && activeCommittedProject) {
     project = activeCommittedProject
-    formCtx.form.fields.set(toProjectFormInput(activeCommittedProjectData))
+    formCtx.reset(toProjectFormInput(activeCommittedProjectData))
     syncLicenseEditorStateFromForm()
   } else {
     autoSeededOwnerOrganisationIds = new Set()
@@ -2377,7 +2408,7 @@ $effect(() => {
   }
 
   let cancelled = false
-  void adminCtx.appCtx.getHierarchy(currentProject).then(result => {
+  void adminCtx.view.getHierarchy(currentProject).then(result => {
     if (cancelled) return
     hierarchy = result
   })
@@ -2442,7 +2473,7 @@ $effect(() => {
   void getOrganisation({
     ref: defaultOrganisationId,
     refKey: 'id',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).then(result => {
     if (!result?.data) return
     if (parentOrganisationIdValue) return
@@ -2477,7 +2508,7 @@ $effect(() => {
       (await getOrganisation({
         ref: targetOrganisationId,
         refKey: 'id',
-        meta: { isAdminRequest: true, profile: 'admin' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       })) as ProjectOwnerRoleSeedOrganisation,
   }).then(seed => {
     ownerRoleSeedAttempt = seed.nextOwnerRoleSeedAttempt
@@ -2550,7 +2581,10 @@ $effect(() => {
 })
 </script>
 
-<Main.Root>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}
@@ -2562,80 +2596,46 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <FormI18nSection
-        title={m.admin__forms_common_descriptors()}
-        {locales}
-        {onTranslate}
-        {onResetLocale}
-        sectionKey="descriptor"
-        {isEditing}
-      >
-        {#snippet center()}
-          <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-        {/snippet}
+      <FormSurface>
+        <FormI18nSection
+          title="Profile"
+          {locales}
+          {onTranslate}
+          {onResetLocale}
+          sectionKey="descriptor"
+          {isEditing}
+        >
+          {#snippet left()}
+            <div class="flex items-center gap-3">
+              <ProjectIcon class="size-6 text-primary" aria-hidden="true" />
+              <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
+            </div>
+          {/snippet}
+          {#snippet center()}
+            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+          {/snippet}
 
-        <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
-        {#snippet children(locale)}
-          <FormI18nDescriptorFields
-            form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[locale]}
-            {locale}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </FormI18nSection>
-
-      <GridSpacer cols={3} leftCols={1} centerCols={1} rightCols={1}>
-        {#snippet left()}
-          {#if canSetParentOrganisation}
-            <FormParentSection
-              title="Parent Organisation"
-              subtitle="This project belongs to"
-              issues={parentOrganisationIssues}
-              parent={selectedParentOrganisation}
-              hiddenInputAttrs={hiddenParentOrganisationInputAttrs}
+          {#snippet children(
+            locale,
+          )}
+            <FormI18nDescriptorFields
+              form={formCtx.form}
+              fields={formCtx.form.fields.data.i18n[locale]}
+              {locale}
               {isEditing}
-              isSubmitting={formCtx.submitting}
-              isSubmitRequested={formCtx.isSubmitRequested}
-              startInAddingMode={isNewProjectRef}
-              onSearch={onSearchParentOrganisations}
-              onReplaceParent={onReplaceParentOrganisation}
+              {isRequiredInPreflight}
             />
-          {/if}
-        {/snippet}
+          {/snippet}
+        </FormI18nSection>
 
-        {#snippet center()}
-          <FormMapStyleSection
-            title="Map style"
-            subtitle="Choose the basemap assigned to this project."
-            {availableMapStyles}
-            {selectedMapStyle}
-            {hiddenMapStyleInputAttrs}
-            {isEditing}
-            isSubmitting={formCtx.submitting}
-            isSubmitRequested={formCtx.isSubmitRequested}
-            startInAddingMode={isNewProjectRef}
-            {onSelectMapStyle}
-          />
-        {/snippet}
-
-        {#snippet right()}
-          <FormSpecifiersFields
-            title={m.admin__project_identifiers_title()}
-            form={formCtx.form}
-            fields={['code']}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </GridSpacer>
-
-      <GridSpacer cols={3} leftCols={2} rightCols={1}>
-        {#snippet left()}
+        <div class={formSectionDividerStyles}>
           <FormUserRolesSection
+            icon={MembersIcon}
+            layout="list"
+            currentUserId={authActor.userId}
             title={m.admin__forms_project_members_title()}
             subtitle={m.admin__forms_project_members_subtitle()}
             transitionEntityKey={activeProjectData?.id ?? projectRef}
@@ -2659,27 +2659,83 @@ $effect(() => {
             {onRemoveUser}
             {onRoleChange}
           />
-        {/snippet}
+        </div>
 
-        {#snippet right()}
-          <FormProjectLicenseSection
-            title={m.field_license()}
-            subtitle={m.admin__project_license_section_subtitle()}
-            attributionPlaceholder={organisationAttributionFallback || m.admin__project_license_attribution_placeholder()}
-            license={formProjectLicense}
-            choiceCards={licenseWizardChoiceCards}
-            rightRows={licenseRightRows}
-            leafMediaTypes={[...projectLicenseLeafMediaTypes]}
-            {useCustomLicenseLabels}
-            {customLicenseLabels}
-            {isEditing}
-            isSubmitting={formCtx.submitting}
-            onApplyLicense={onApplyProjectLicense}
-          />
-        {/snippet}
-      </GridSpacer>
+        <div
+          class={`${formSectionDividerStyles} grid grid-cols-1 ${canSetParentOrganisation ? 'md:grid-cols-2' : ''}`}
+        >
+          {#if canSetParentOrganisation}
+            <div class="min-w-0">
+              <FormParentSection
+                class={formSelectionSectionStyles}
+                title="Parent Organisation"
+                subtitle="This project belongs to"
+                issues={parentOrganisationIssues}
+                parent={selectedParentOrganisation}
+                hiddenInputAttrs={hiddenParentOrganisationInputAttrs}
+                {isEditing}
+                isSubmitting={formCtx.submitting}
+                isSubmitRequested={formCtx.isSubmitRequested}
+                startInAddingMode={isNewProjectRef}
+                onSearch={onSearchParentOrganisations}
+                onReplaceParent={onReplaceParentOrganisation}
+              />
+            </div>
+          {/if}
 
-      <div class="h-16 shrink-0" aria-hidden="true"></div>
+          <div
+            class={canSetParentOrganisation
+              ? 'min-w-0 border-t border-border md:border-l md:border-t-0'
+              : 'min-w-0'}
+          >
+            <FormMapStyleSection
+              class={formSelectionSectionStyles}
+              title="Map style"
+              subtitle="Choose the basemap assigned to this project."
+              {availableMapStyles}
+              {selectedMapStyle}
+              {hiddenMapStyleInputAttrs}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewProjectRef}
+              {onSelectMapStyle}
+            />
+          </div>
+        </div>
+
+        <div class={`${formSectionDividerStyles} grid grid-cols-1 md:grid-cols-2`}>
+          <div class="min-w-0">
+            <FormProjectLicenseSection
+              title={m.field_license()}
+              subtitle={m.admin__project_license_section_subtitle()}
+              attributionPlaceholder={organisationAttributionFallback ||
+                m.admin__project_license_attribution_placeholder()}
+              license={formProjectLicense}
+              choiceCards={licenseWizardChoiceCards}
+              rightRows={licenseRightRows}
+              leafMediaTypes={[...projectLicenseLeafMediaTypes]}
+              {useCustomLicenseLabels}
+              {customLicenseLabels}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              onApplyLicense={onApplyProjectLicense}
+            />
+          </div>
+
+          <div
+            class="min-w-0 border-t border-border md:border-l md:border-t-0 [&_.no-i18n>div:first-child]:grid-cols-1!"
+          >
+            <FormSpecifiersFields
+              title={m.admin__project_identifiers_title()}
+              form={formCtx.form}
+              fields={['code']}
+              {isEditing}
+              {isRequiredInPreflight}
+            />
+          </div>
+        </div>
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isCapabilitiesFacet && hasAnyProjectCapabilitiesConfigured}
@@ -2687,123 +2743,136 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
-      <ProjectCapabilities
-        class={!isCurrentRefSettled ? 'bits-project-capabilities--transitioning' : ''}
-        {capabilityIssues}
-        availableCapabilityKeys={availableProjectCapabilityKeys}
-        enabledCapabilityKeys={stableEnabledProjectCapabilityKeys}
-        capabilityLabelByKey={stableProjectCapabilityLabelByKey}
-        matrixRows={stableCapabilityMatrixRows}
-        {isEditing}
-        onToggleCapability={onToggleProjectCapability}
-        onToggleCell={onToggleUserCapability}
-      />
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <ProjectCapabilities
+          class={!isCurrentRefSettled ? 'bits-project-capabilities--transitioning' : ''}
+          {capabilityIssues}
+          availableCapabilityKeys={availableProjectCapabilityKeys}
+          enabledCapabilityKeys={stableEnabledProjectCapabilityKeys}
+          capabilityLabelByKey={stableProjectCapabilityLabelByKey}
+          matrixRows={stableCapabilityMatrixRows}
+          {isEditing}
+          onToggleCapability={onToggleProjectCapability}
+          onToggleCell={onToggleUserCapability}
+        />
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isLayersFacet}
       transition="fade"
       fillHeight={true}
-      class="bits-theme flex gap-4 min-h-0 flex-col"
+      class="bits-theme min-h-0 left-0! right-0!"
       previousAction={buildFacetNavAction('layers', 'previous')}
       nextAction={buildFacetNavAction('layers', 'next')}
       attrs={{ 'data-facet-id': 'layers' }}
     >
-      <FormProjectLayersSection
-        title="Layer Order"
-        subtitle="Drag layers to control project order and choose which ones appear when the project is added to the map."
-        items={projectLayersInSection.map(layer => ({
-          id: layer.id,
-          projectNameShort: currentProjectShortName,
-          layerName: getI18n(layer, 'name', adminCtx.appCtx.getUserPreferences()),
-          isDefaultVisible: Boolean(layer.isDefaultVisible),
-        }))}
-        issues={projectLayerSectionIssues}
-        {isEditing}
-        isSubmitting={formCtx.submitting}
-        onToggleDefault={onToggleProjectLayerDefault}
-        onMove={onMoveProjectLayer}
-      />
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormProjectLayersSection
+          title="Layer Order"
+          subtitle="Drag layers to control project order and choose which ones appear when the project is added to the map."
+          items={projectLayersInSection.map(layer => ({
+            id: layer.id,
+            projectNameShort: currentProjectShortName,
+            // Admin ordering must identify layers even when generated labels are hidden publicly.
+            layerName: getI18n(
+              layer,
+              'name',
+              adminCtx.view.getUserPreferences(),
+              layer.id,
+              true,
+            ),
+            isDefaultVisible: Boolean(layer.isDefaultVisible),
+          }))}
+          issues={projectLayerSectionIssues}
+          {isEditing}
+          isSubmitting={formCtx.submitting}
+          onToggleDefault={onToggleProjectLayerDefault}
+          onMove={onMoveProjectLayer}
+        />
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
-      class="bits-theme flex gap-4 min-h-0 flex-col"
+      class="bits-theme min-h-0 left-0! right-0!"
       fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormFieldsSection
-        items={projectFieldsInSection}
-        isLoading={isProjectFieldsLoading}
-        title={m.admin__forms_common_fields()}
-        description={m.admin__forms_common_fields_subtitle()}
-        issues={fieldSectionIssues}
-        actions={fieldActions}
-        issueItemIds={fieldSectionIssueItemIds}
-        layoutMutationVersion={fieldsLayoutMutationVersion}
-        forceFlipDisabled={isProjectFieldResetInProgress}
-        canEdit={canSubmitProject && isCurrentRefLoaded}
-        {isEditing}
-        removeMode={fieldRemoveMode}
-        isVisibilityOn={showDisabledFields}
-        onVisibilityToggle={nextVisible => {
-          fieldsLayoutMutationVersion += 1
-          showDisabledFields = nextVisible
-        }}
-        isItemVisible={property => isPropertyVisible(property)}
-        onRemoveModeChange={value => {
-          fieldRemoveMode = value
-        }}
-        card={{
-          removeMode: fieldRemoveMode,
-          locales,
-          isEditing,
-          isRequiredInPreflight,
-          allIssues: visibleAllIssues as Array<{
-            message: string
-            path?: Array<string | number>
-          }>,
-          classifierComponents: classifierComponentTypes,
-          specifierComponents: specifierComponentTypes,
-          onIncreaseRank: fieldActions.increaseRank,
-          onDecreaseRank: fieldActions.decreaseRank,
-          onRemove: fieldActions.remove,
-          onUpdateBase: updatePropertyBase,
-          onUpdateI18n: updatePropertyI18n,
-          onAddValue: addPropertyValue,
-          onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
-          onRemoveValue: removePropertyValue,
-          onMoveValue: movePropertyValue,
-          onUpdateValue: updatePropertyValue,
-          onUpdateValueI18n: updatePropertyValueI18n,
-          onTranslateLocale: onTranslatePropertyLocale,
-          onResetLocale: onResetPropertyLocale,
-          getPropertyIndex: (propertyId, _sectionIndex) =>
-            currentProjectProperties.findIndex(candidate => candidate.id === propertyId),
-          getPropertyFields: (_propertyId, propertyIndex) =>
-            getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-          resolveCardPresentation: resolveProjectPropertyCardPresentation,
-          resolveTitleHref: resolveProjectPropertyTitleHref,
-          getMoveWindowSize: () => enabledProjectFieldWindowSize,
-          isMoveLocked: property =>
-            property.scope !== 'project' && !isPropertyEnabled(property),
-          resolveSourceTag: resolveProjectPropertySourceTag,
-        }}
-      />
-      <div class="w-full min-h-20 flex-none"></div>
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormFieldsSection
+          icon={Type}
+          keepHeader
+          items={projectFieldsInSection}
+          isLoading={isProjectFieldsLoading}
+          title={m.admin__forms_common_fields()}
+          description={m.admin__forms_common_fields_subtitle()}
+          issues={fieldSectionIssues}
+          actions={fieldActions}
+          issueItemIds={fieldSectionIssueItemIds}
+          layoutMutationVersion={fieldsLayoutMutationVersion}
+          forceFlipDisabled={isProjectFieldResetInProgress}
+          canEdit={canSubmitProject && isCurrentRefLoaded}
+          {isEditing}
+          removeMode={fieldRemoveMode}
+          isVisibilityOn={showDisabledFields}
+          onVisibilityToggle={nextVisible => {
+            fieldsLayoutMutationVersion += 1
+            showDisabledFields = nextVisible
+          }}
+          isItemVisible={property => isPropertyVisible(property)}
+          onRemoveModeChange={value => {
+            fieldRemoveMode = value
+          }}
+          card={{
+            removeMode: fieldRemoveMode,
+            locales,
+            isEditing,
+            isRequiredInPreflight,
+            allIssues: visibleAllIssues as Array<{
+              message: string
+              path?: Array<string | number>
+            }>,
+            classifierComponents: classifierComponentTypes,
+            specifierComponents: specifierComponentTypes,
+            onIncreaseRank: fieldActions.increaseRank,
+            onDecreaseRank: fieldActions.decreaseRank,
+            onRemove: fieldActions.remove,
+            onUpdateBase: updatePropertyBase,
+            onUpdateI18n: updatePropertyI18n,
+            onAddValue: addPropertyValue,
+            onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
+            onRemoveValue: removePropertyValue,
+            onMoveValue: movePropertyValue,
+            onUpdateValue: updatePropertyValue,
+            onUpdateValueI18n: updatePropertyValueI18n,
+            onTranslateLocale: onTranslatePropertyLocale,
+            onResetLocale: onResetPropertyLocale,
+            getPropertyIndex: (propertyId, _sectionIndex) =>
+              currentProjectProperties.findIndex(
+                candidate => candidate.id === propertyId,
+              ),
+            getPropertyFields: (_propertyId, propertyIndex) =>
+              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+            resolveCardPresentation: resolveProjectPropertyCardPresentation,
+            resolveTitleHref: resolveProjectPropertyTitleHref,
+            getMoveWindowSize: () => enabledProjectFieldWindowSize,
+            isMoveLocked: property =>
+              property.scope !== 'project' && !isPropertyEnabled(property),
+            resolveSourceTag: resolveProjectPropertySourceTag,
+          }}
+        />
+      </FormSurface>
     </Main.Facet>
 
     <div class="hidden" aria-hidden="true">
       {#if hasLicenseChanges}
-        <input
-          type="hidden"
-          name="data.license"
-          value={JSON.stringify(formProjectLicense)}
-        >
-        <input type="hidden" name="meta.licenseTouched" value="true">
+        <input {...getHiddenProjectLicenseAttrs()}>
+        <input {...formCtx.form.fields.meta.licenseTouched.as('hidden', true)}>
       {/if}
       {#each hiddenProjectLayerInputAttrs as inputAttrs, index (index)}
         <input {...inputAttrs}>
@@ -2821,22 +2890,33 @@ $effect(() => {
     transition="fade"
     fillHeight={true}
     edgeToEdge={true}
+    contentClass="h-full overflow-hidden"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    {#if imageProviderProps.isValid}
-      <ImageProvider model={imageProviderModel}>
-        <ResourceViewer
-          canEditPresentationMode={canEditImagePresentationMode}
-          canEditDropzone={canEditImageDropzone}
-          {onPresentationModeCommitted}
-        />
-      </ImageProvider>
-    {:else}
-      <div
-        class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
-      >
-        {m.admin__forms_project_image_save_hint()}
+    <FormSurface class="mb-0! flex h-full min-h-0 flex-col">
+      <SectionHeader
+        icon={ImageIcon}
+        title={m.admin__forms_project_image_title()}
+        class="shrink-0"
+      />
+      <div class="min-h-0 flex-1">
+        {#if imageProviderProps.isValid}
+          <ImageProvider model={imageProviderModel}>
+            <ResourceViewer
+              workspace
+              canEditPresentationMode={canEditImagePresentationMode}
+              canEditDropzone={canEditImageDropzone}
+              {onPresentationModeCommitted}
+            />
+          </ImageProvider>
+        {:else}
+          <div
+            class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
+          >
+            {m.admin__forms_project_image_save_hint()}
+          </div>
+        {/if}
       </div>
-    {/if}
+    </FormSurface>
   </Main.Facet>
 </Main.Root>

@@ -1,7 +1,16 @@
 // AUTH
-import { authClient, useSession } from '$lib/auth/client'
+import { authClient, useSession } from '#lib/auth/client.js'
 // TYPES
-import type { PasskeyAccountUpgradeInput } from '$lib/types'
+
+type PasskeyAccountUpgradeInput = {
+  name?: string
+  username?: string
+  email?: string
+  emailCallbackUrl: string
+  onPasskeyReady?: () => void
+}
+
+// TYPES
 
 /** Error raised when registering a new passkey fails. */
 export class PasskeyRegistrationError extends Error {}

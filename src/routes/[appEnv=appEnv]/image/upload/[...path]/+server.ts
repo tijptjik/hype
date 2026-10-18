@@ -3,9 +3,10 @@ import {
   getOriginalsBucketForStage,
   readManifestVersion,
   toImageStage,
-} from '$lib/images/storage'
+} from '#lib/images/storage.js'
 
-export const GET = async ({ params, platform }) => {
+export const GET = async ({ params, locals }) => {
+  const { platform } = locals
   const segments = (params.path ?? '').split('/').filter(Boolean)
   if (segments.length === 0) throw error(400, 'Invalid image path')
 
@@ -41,7 +42,7 @@ export const GET = async ({ params, platform }) => {
   const object = await bucket.get(publicId)
   if (!object) throw error(404, 'Image not found')
 
-  return new Response(object.body, {
+  return new Response(object.body as unknown as ReadableStream<Uint8Array>, {
     headers: {
       'content-type': object.httpMetadata?.contentType ?? 'application/octet-stream',
       'cache-control': resolvedVersion

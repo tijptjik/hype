@@ -2,17 +2,20 @@ import type { z } from 'zod'
 import type {
   ApplyChangedRelationFieldParams,
   ChangedRelationResolution,
+  ResolveChangedRelationParams,
+  ResourceSubmitMode,
+} from '#lib/client/services/formRelations.types.js'
+import type {
   EntityResponse,
   Id,
   Locale,
   LocaleKey,
-  NewFeatureTask,
   PartialExcept,
-  ResolveChangedRelationParams,
-  ResourceSubmitMode,
-} from '$lib/types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+} from '#lib/types.js'
+import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
+  FeatureCompactProfileAPI,
   FeatureAdminProfileAPI,
   FeatureAdminRow,
   FeatureBase,
@@ -44,8 +47,8 @@ import type {
   UserFeatureUpdate,
   PublishFeatureSchema,
   RemoveFeatureSchema,
-} from '$lib/db/zod/schema/feature'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/db/zod/schema/feature.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type { Geometry } from 'geojson'
 
 export type FeatureListParams = ListQueryParams
@@ -56,21 +59,25 @@ export type FeatureCardProfile = z.infer<typeof FeatureCardProfileAPI>
 export type FeatureDetailProfile = z.infer<typeof FeatureDetailProfileAPI>
 export type FeatureAdminProfile = z.infer<typeof FeatureAdminProfileAPI>
 
-export type FeatureEntityByProfile<P extends FeatureProfile> = P extends 'list'
-  ? FeatureListProfile
-  : P extends 'card'
-    ? FeatureCardProfile
-    : P extends 'detail'
-      ? FeatureDetailProfile
-      : FeatureAdminProfile
+export type FeatureEntityByProfile<P extends FeatureProfile> = P extends 'compact'
+  ? z.infer<typeof FeatureCompactProfileAPI>
+  : P extends 'list' | 'default' | 'map'
+    ? FeatureListProfile
+    : P extends 'card'
+      ? FeatureCardProfile
+      : P extends 'detail' | 'full'
+        ? FeatureDetailProfile
+        : FeatureAdminProfile
 
-export type FeatureListByProfile<P extends FeatureProfile> = P extends 'list'
-  ? FeatureListProfile
-  : P extends 'card'
-    ? FeatureCardProfile
-    : P extends 'detail'
-      ? FeatureDetailProfile
-      : FeatureAdminProfile
+export type FeatureListByProfile<P extends FeatureProfile> = P extends 'compact'
+  ? z.infer<typeof FeatureCompactProfileAPI>
+  : P extends 'list' | 'default' | 'map'
+    ? FeatureListProfile
+    : P extends 'card'
+      ? FeatureCardProfile
+      : P extends 'detail' | 'full'
+        ? FeatureDetailProfile
+        : FeatureAdminProfile
 
 export type FeatureGetParamsByProfile<P extends FeatureProfile> = Omit<
   FeatureGetParams,
@@ -164,7 +171,7 @@ export type FeaturePropertyI18nPartial = z.infer<typeof FeaturePropertyI18nUpdat
 export type UserFeatureDB = z.infer<typeof UserFeatureBase>
 export type UserFeatureNew = z.infer<typeof UserFeatureInsert>
 export type UserFeaturePartial = z.infer<typeof UserFeatureUpdate>
-export type FeatureExtended = FeatureFromCollection & {
+export type FeatureExtended = (FeatureFromCollection | Feature) & {
   hierarchy: {
     organisation: string | null
     project: string | null
@@ -189,9 +196,14 @@ export type NewFeatureWithLocationAndParents = PartialExcept<
 export type UserContributedFeatureProperty = {
   property: Property
   propertyId: Id
-  propertyValueId?: Id
-  value?: string
-  i18n?: Partial<Record<Locale, { locale: Locale; value: string; valueGen: boolean }>>
+  propertyValueId?: Id | null
+  value?: string | null
+  i18n?: Partial<
+    Record<
+      Locale | LocaleKey,
+      { locale: string; value: string | null; valueGen?: boolean }
+    >
+  > | null
 }
 
 export type UserContributedFeature = {

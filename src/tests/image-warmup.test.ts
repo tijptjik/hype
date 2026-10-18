@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getImageWarmupPlan, normalizeWarmupExtension } from '$lib/images/warmup'
+import { getImageWarmupPlan, normalizeWarmupExtension } from '#lib/images/warmup.js'
 
 describe('image warmup planning', () => {
   it('skips all warmup targets for gif uploads', () => {

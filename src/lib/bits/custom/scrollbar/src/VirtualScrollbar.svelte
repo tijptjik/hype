@@ -296,7 +296,9 @@ $effect(() => {
           bind:this={vThumb}
           class="v-thumb"
           style:top="{thumbTop}px"
-          style:width="{thumbHovered || thumbDragging ? width.thumbActive : width.thumb}px"
+          style:width="{thumbHovered || thumbDragging
+            ? width.thumbActive
+            : width.thumb}px"
           style:height="{thumbHeight}px"
           style:opacity={thumbHovered || thumbDragging
             ? opacity.thumbActive

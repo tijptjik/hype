@@ -1,16 +1,6 @@
 @layer components {
-  .bits-theme .bits-user-capability-matrix {
-    @apply flex flex-col gap-2;
-  }
-
-  .bits-theme .bits-user-capability-matrix__header {
-    @apply min-h-8 items-center pt-0 pb-0;
-  }
-
   .bits-theme .bits-user-capability-matrix__table-wrap {
-    @apply inline-block w-auto max-w-full overflow-x-auto rounded-xl border-3 border-primary bg-glass-300 p-2 shadow-xl;
-    width: fit-content;
-    align-self: flex-start;
+    @apply block w-full min-w-0 max-w-full overflow-x-auto border-b border-border/40;
     max-height: calc((2.95rem * 20) + 3.5rem);
     overflow-y: auto;
   }
@@ -18,48 +8,29 @@
   .bits-theme .bits-user-capability-matrix__table {
     @apply border-separate;
     border-spacing: 0;
-    width: max-content;
-    max-width: none;
+    width: 100%;
+    min-width: calc(14rem + var(--bits-user-capability-column-count) * 10rem);
+    table-layout: fixed;
   }
 
   .bits-theme .bits-user-capability-matrix__head-cell {
     @apply text-left text-xs font-semibold uppercase text-primary/90;
-    @apply sticky top-0;
+    @apply sticky top-0 border-b border-r border-border/40 px-6 py-4;
+    background: var(--form-workspace, var(--color-background));
     z-index: 20;
   }
 
   .bits-theme .bits-user-capability-matrix__head-cell--user {
-    @apply px-2 pb-2 align-bottom;
-    width: auto;
+    @apply align-middle;
+    width: 14rem;
     white-space: nowrap;
     @apply sticky left-0;
     z-index: 30;
   }
 
   .bits-theme .bits-user-capability-matrix__head-cell--capability {
-    @apply px-1 py-1 align-bottom text-center;
-    width: max-content;
-    min-width: max-content;
-    max-width: none;
-    min-height: 3.25rem;
-    height: auto;
-  }
-
-  .bits-theme .bits-user-capability-matrix__head-user-wrap {
-    @apply flex items-end justify-between gap-2;
-  }
-
-  .bits-theme .bits-user-capability-matrix__head-user-label {
-    @apply text-xs font-semibold uppercase tracking-wide text-primary/90;
-  }
-
-  .bits-theme .bits-user-capability-matrix__head-capability-wrap {
-    @apply flex h-full w-full flex-col items-center justify-end gap-1;
-  }
-
-  .bits-theme .bits-user-capability-matrix__head-label {
-    @apply block w-full text-center text-xxs tracking-wide normal-case;
-    white-space: nowrap;
+    @apply align-middle text-center;
+    height: 5rem;
   }
 
   .bits-theme .bits-user-capability-matrix__sort-buttons {
@@ -75,7 +46,7 @@
   }
 
   .bits-theme .bits-user-capability-matrix__sort-btn--active {
-    @apply text-white/70;
+    @apply text-foreground/70;
   }
 
   .bits-theme .bits-user-capability-matrix__sort-btn svg {
@@ -87,27 +58,18 @@
     @apply w-full justify-center;
   }
 
-  .bits-theme .bits-user-capability-matrix__row {
-    @apply border-t border-primary/25;
-  }
-
   .bits-theme .bits-user-capability-matrix__user-cell {
-    @apply px-2 py-2 text-left;
+    @apply border-r border-b border-border/40 px-6 py-4 text-left;
+    background: var(--form-workspace, var(--color-background));
     @apply sticky left-0;
     z-index: 10;
   }
 
-  .bits-theme .bits-user-capability-matrix__user-name {
-    @apply block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold;
-    max-width: 20rem;
-  }
-
-  .bits-theme .bits-user-capability-matrix__user-role {
-    @apply block text-xxs uppercase tracking-wide text-neutral-content/80;
-  }
-
   .bits-theme .bits-user-capability-matrix__cell {
-    @apply px-1 py-2 text-center;
+    @apply relative border-r border-b border-border/40 px-4 py-4 text-center;
+    &:has([data-state="checked"]) {
+      @apply bg-primary/8;
+    }
   }
 
   .bits-theme .bits-user-capability-matrix__cell .bits-checkbox-field {

@@ -1,6 +1,6 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
-import { m } from '$lib/i18n'
+import { cx } from '#lib/bits/utils.js'
+import { m } from '#lib/i18n.js'
 import type { ThumbnailButtonProps } from './imagePrimitives.types'
 import ImageSurface from './ImageSurface.svelte'
 

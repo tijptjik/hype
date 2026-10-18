@@ -2,12 +2,12 @@
 import {
   dismissSubscriptionPrompt as dismissSubscriptionPromptRemote,
   joinSubscription as joinSubscriptionRemote,
-} from '$lib/api/server/hub.remote'
+} from '#lib/api/hub.remote.js'
 // TYPES
 import type {
   DismissHubSubscriptionPromptInput,
   JoinHubSubscriptionInput,
-} from '$lib/db/zod/schema/hub.types'
+} from '#lib/db/zod/schema/hub.types.js'
 
 /**
  * Persist dismissal of the current hub subscription prompt.

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 import type { SectionHeaderAction } from './types'
 
 let props: SectionHeaderAction = $props()

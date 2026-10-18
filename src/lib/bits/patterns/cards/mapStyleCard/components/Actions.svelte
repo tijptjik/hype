@@ -1,7 +1,7 @@
 <script lang="ts">
-import { Button } from '$lib/bits/core'
-import { Card } from '$lib/bits/custom'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
+import { Button } from '#lib/bits/core/index.js'
+import { Card } from '#lib/bits/custom/index.js'
+import Trash2Icon from 'virtual:icons/proicons/delete'
 
 import type { MapStyleCardActionsProps } from '../mapStyleCard.types'
 
@@ -18,7 +18,7 @@ const isDisabled = $derived(!isEditing || isSubmitting)
 
 <Card.Actions padding="md" class={`bits-map-style-card__actions ${className}`}>
   {#if isRemoving}
-    <div class="bits-form__parent-resource-item-remove">
+    <div class="flex items-center">
       <Button
         text="Clear style"
         style="ghost"

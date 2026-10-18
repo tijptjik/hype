@@ -1,7 +1,9 @@
+// SVELTE
+import type { ReadonlyURLSearchParams } from '$app/state'
 // TYPES
-import type { Id } from '$lib/types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import type { Id } from '#lib/types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 
 /**
  * Resolves the layers selected by a project or layer map deep link.
@@ -14,7 +16,7 @@ import type { Project } from '$lib/db/zod/schema/project.types'
  * IDs take precedence over project codes to match screensaver URL behavior.
  */
 export function getMapResourceDeepLinkLayerIds(
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
   layers: ReadonlyArray<Pick<Layer, 'id' | 'projectId'>>,
   projects: ReadonlyArray<Pick<Project, 'id' | 'code'>>,
 ): Id[] | null {

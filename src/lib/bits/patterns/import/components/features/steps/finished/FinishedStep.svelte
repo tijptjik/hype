@@ -1,9 +1,9 @@
 <script lang="ts">
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import ArrowDownTray from 'virtual:icons/lucide/download'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import ArrowDownTray from 'virtual:icons/proicons/arrow-download'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // PATTERN COMPONENTS
 import ImportCanvas from '../../../shared/ImportCanvas.svelte'
 

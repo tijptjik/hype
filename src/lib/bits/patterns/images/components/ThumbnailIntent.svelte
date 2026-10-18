@@ -1,10 +1,10 @@
 <script lang="ts">
 import { Popover } from 'bits-ui'
-import { cx } from '$lib/bits/utils'
-import { m } from '$lib/i18n'
-import { adminIntentOrder } from '$lib/api/services/image'
-import { intentDisplay } from '$lib/client/services/image'
-import type { Intent } from '$lib/db/zod/schema/image.types'
+import { cx } from '#lib/bits/utils.js'
+import { m } from '#lib/i18n.js'
+import { adminIntentOrder } from '#lib/api/services/image.js'
+import { intentDisplay } from '#lib/client/services/image.js'
+import type { Intent } from '#lib/db/zod/schema/image.types.js'
 import type { ThumbnailIntentSelectorProps } from './imagePrimitives.types'
 
 let {

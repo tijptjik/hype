@@ -6,8 +6,8 @@ import {
   authorizeLayerPublishForSubmission,
   authorizeLayerReadForProbe,
   authorizeLayerUpdateForSubmission,
-} from '$lib/api/services/authz'
-import type { UserRoleDisco } from '$lib/types'
+} from '#lib/api/services/authz/index.js'
+import type { UserRoleDisco } from '#lib/types.js'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 
 const coreAdminRole = (): UserRoleDisco =>
@@ -223,7 +223,7 @@ describe('layer authorization policy matrix', () => {
             action: 'listLayers',
             scenario: stateCase.name,
             actor: actor.name,
-            expected: stateCase.allowed.includes(key),
+            expected: (stateCase.allowed as readonly string[]).includes(key),
             actual: decision.allowed,
             code: decision.code,
           })
@@ -242,7 +242,7 @@ describe('layer authorization policy matrix', () => {
             action: 'readLayer',
             scenario: stateCase.name,
             actor: actor.name,
-            expected: stateCase.allowed.includes(key),
+            expected: (stateCase.allowed as readonly string[]).includes(key),
             actual: decision.allowed,
             code: decision.code,
           })

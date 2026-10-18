@@ -1,8 +1,8 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
-import type { FeatureCSVColumn } from '$lib/client/services/import/types'
+import type { FeatureCSVColumn } from '#lib/client/services/import/types.js'
 
 type Props = {
   column: FeatureCSVColumn

@@ -1,10 +1,16 @@
 // I18N
-import { getI18n, m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
 // TYPES
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { HubSubscriptionModelParams } from '$lib/adapters/hub/useHubSubscriptionModel.svelte'
-import type { HubSubscriptionPlacement, HubUserStateFlags } from '$lib/types'
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { HubSubscriptionModelParams } from '#lib/adapters/hub/useHubSubscriptionModel.svelte.js'
+import type {
+  HubSubscriptionPlacement,
+  HubUserStateFlags,
+} from '#lib/api/services/hub.types.js'
 
 type HubSubscriptionI18n = Record<string, Record<string, string | null | undefined>>
 
@@ -69,9 +75,10 @@ export function getSubscriptionFeatureImages(
 
   for (const feature of features) {
     const primaryImage = (feature.image as ImageCtxEnvelope | null | undefined) ?? null
-    const galleryImages = Array.isArray(feature.images)
-      ? (feature.images as ImageCtxEnvelope[])
-      : []
+    const galleryImages =
+      'images' in feature && Array.isArray(feature.images)
+        ? (feature.images as ImageCtxEnvelope[])
+        : []
 
     if (primaryImage) {
       images.push(primaryImage)

@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import * as ImagePrimitive from './components'
 import type { AdminThumbnailProps } from './images.types'
 
@@ -75,7 +75,11 @@ async function handleDelete(): Promise<void> {
       {onError}
     />
 
-    {#if onIntentChange && !isDeleteMode && !isConfirmingDelete && !isUploading && !isUploadError}
+    {#if onIntentChange &&
+      !isDeleteMode &&
+      !isConfirmingDelete &&
+      !isUploading &&
+      !isUploadError}
       <ImagePrimitive.ThumbnailIntent
         {item}
         disabled={isIntentDisabled}
@@ -88,7 +92,6 @@ async function handleDelete(): Promise<void> {
     {#if badgeLabel || isHighlighted}
       <div
         class={`pointer-events-none absolute right-2 top-2 z-20 inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.32)] ${badgeClass || 'bg-[#2A6FEC]'}`}
-        aria-label={badgeLabel ?? m.gallery__highlighted_task_image()}
       >
         <span>{badgeLabel ?? m.gallery__new_badge()}</span>
       </div>

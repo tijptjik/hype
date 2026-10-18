@@ -1,25 +1,29 @@
 // ENV
-import { and, asc, desc, type SQL, eq, inArray, like, sql, or } from 'drizzle-orm'
 import {
-  hub,
-  hubRole,
-  organisationRole,
-  projectRole,
-  user,
-  userFeature,
-  userLayer,
-} from '../schema'
+  and,
+  asc,
+  desc,
+  type SQL,
+  eq,
+  inArray,
+  like,
+  sql,
+  or,
+  getTableColumns,
+} from 'drizzle-orm'
+import { hub, hubRole, user, userFeature, userLayer } from '../schema'
 import { isSqliteMissingSchemaError, retryBusyRead } from './sqlite'
 // TYPES
-import type { Id, UserRoleDisco, Database } from '$lib/types'
+import type { Id, UserRoleDisco, Database } from '#lib/types.js'
 import type {
   UserDB,
   UserFeatureDB,
   UserLayerDB,
   UserLayerNew,
   UserPartial,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 import { update } from '../crud'
+import { autochunk, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -117,23 +121,37 @@ export const getUsersForHydration = async (
   ids: Id[],
 ): Promise<
   Array<
-    Pick<UserDB, 'id' | 'name' | 'image' | 'attribution' | 'username' | 'isArchived'>
+    Pick<
+      UserDB,
+      | 'id'
+      | 'name'
+      | 'image'
+      | 'attribution'
+      | 'username'
+      | 'displayUsername'
+      | 'isArchived'
+    >
   >
 > => {
   if (ids.length === 0) return []
 
-  return await retryBusyRead(() =>
-    db
-      .select({
-        id: user.id,
-        name: user.name,
-        image: user.image,
-        attribution: user.attribution,
-        username: user.username,
-        isArchived: user.isArchived,
-      })
-      .from(user)
-      .where(inArray(user.id, ids)),
+  return await autochunk(
+    { items: [...new Set(ids)] },
+    async idChunk =>
+      await retryBusyRead(() =>
+        db
+          .select({
+            id: user.id,
+            name: user.name,
+            image: user.image,
+            attribution: user.attribution,
+            username: user.username,
+            displayUsername: user.displayUsername,
+            isArchived: user.isArchived,
+          })
+          .from(user)
+          .where(inArray(user.id, idChunk)),
+      ),
   )
 }
 
@@ -162,8 +180,14 @@ export const searchUsersByConditions = async (
     id: string
     name: string | null
     username: string | null
+    displayUsername: string | null
     email: string | null
     image: unknown
+    telephone: string | null
+    locale: string
+    emailVerified: boolean | null
+    isArchived: boolean
+    createdAt: Date
     attribution: string | null
   }>
   totalCount: number
@@ -183,13 +207,19 @@ export const searchUsersByConditions = async (
       id: user.id,
       name: user.name,
       username: user.username,
+      displayUsername: user.displayUsername,
       email: user.email,
       image: user.image,
       attribution: user.attribution,
+      telephone: user.telephone,
+      locale: user.locale,
+      emailVerified: user.emailVerified,
+      isArchived: user.isArchived,
+      createdAt: user.createdAt,
     })
     .from(user)
     .where(and(...params.conditions))
-    .orderBy(orderBy)
+    .orderBy(orderBy, asc(user.id))
     .limit(params.limit)
     .offset(params.offset)
 
@@ -416,7 +446,10 @@ export const updateUser = async (
  * @param db - Database handle.
  * @param userLayers - Layer preference rows to persist.
  * @param userId - Target user id.
+ * @param hubId - Target hub id.
  * @returns Persisted user-layer rows.
+ * @remarks Replacement is atomic across every insert chunk; supplied ownership fields
+ * are normalized to the target user and hub before writing.
  */
 export const updateUserLayers = async (
   db: Database,
@@ -424,16 +457,37 @@ export const updateUserLayers = async (
   userId: Id,
   hubId: Id,
 ): Promise<UserLayerDB[]> => {
-  // Delete existing layer preferences
-  await db
+  // Delete existing layer preferences only in the same atomic batch as their replacements.
+  const deletion = db
     .delete(userLayer)
     .where(and(eq(userLayer.userId, userId), eq(userLayer.hubId, hubId)))
 
-  // If no new preferences, we're done
-  if (!userLayers?.length) return []
+  // If no new preferences, the single deletion is already atomic.
+  if (!userLayers?.length) {
+    await deletion
+    return []
+  }
 
-  // Insert new layer preferences
-  return await db.insert(userLayer).values(userLayers).returning()
+  // Insert new layer preferences in parameter-safe chunks without splitting the transaction.
+  const rowsPerInsert = Math.max(
+    1,
+    Math.floor(SQL_BATCH_SIZE / Object.keys(getTableColumns(userLayer)).length),
+  )
+  const inserts = []
+  for (let index = 0; index < userLayers.length; index += rowsPerInsert) {
+    inserts.push(
+      db
+        .insert(userLayer)
+        .values(
+          userLayers
+            .slice(index, index + rowsPerInsert)
+            .map(row => ({ ...row, userId, hubId })),
+        )
+        .returning(),
+    )
+  }
+  const [, ...inserted] = await db.batch([deletion, ...inserts])
+  return inserted.flat() as UserLayerDB[]
 }
 
 /**
@@ -453,38 +507,8 @@ export const upsertUserFeatureState = async (
     visitedAt?: string | null
   },
 ): Promise<UserFeatureDB> => {
-  const [existing] = await db
-    .select()
-    .from(userFeature)
-    .where(
-      and(
-        eq(userFeature.userId, params.userId),
-        eq(userFeature.featureId, params.featureId),
-      ),
-    )
-    .limit(1)
-
-  if (existing) {
-    const [updated] = await db
-      .update(userFeature)
-      .set({
-        isVisited: params.isVisited ?? existing.isVisited,
-        isWishlisted: params.isWishlisted ?? existing.isWishlisted,
-        visitedAt:
-          params.visitedAt !== undefined ? params.visitedAt : existing.visitedAt,
-      })
-      .where(
-        and(
-          eq(userFeature.userId, params.userId),
-          eq(userFeature.featureId, params.featureId),
-        ),
-      )
-      .returning()
-
-    return updated as UserFeatureDB
-  }
-
-  const [created] = await db
+  // Merge only submitted fields in SQL so concurrent list actions cannot overwrite each other.
+  const [updated] = await db
     .insert(userFeature)
     .values({
       userId: params.userId,
@@ -493,9 +517,20 @@ export const upsertUserFeatureState = async (
       isWishlisted: params.isWishlisted ?? false,
       visitedAt: params.visitedAt ?? null,
     })
+    .onConflictDoUpdate({
+      target: [userFeature.userId, userFeature.featureId],
+      set: {
+        isVisited: params.isVisited ?? sql`${userFeature.isVisited}`,
+        isWishlisted: params.isWishlisted ?? sql`${userFeature.isWishlisted}`,
+        visitedAt:
+          params.visitedAt !== undefined
+            ? params.visitedAt
+            : sql`${userFeature.visitedAt}`,
+      },
+    })
     .returning()
 
-  return created as UserFeatureDB
+  return updated as UserFeatureDB
 }
 
 /**
@@ -505,6 +540,7 @@ export const upsertUserFeatureState = async (
  * @param db - Database handle.
  * @param params - User/feature ids and list flag to clear.
  * @returns Updated row, or `null` when deleted/missing.
+ * @remarks The targeted flag update and empty-row deletion share one atomic D1 batch.
  */
 export const removeUserFeatureListState = async (
   db: Database,
@@ -514,54 +550,35 @@ export const removeUserFeatureListState = async (
     list: 'wishlist' | 'visited'
   },
 ): Promise<UserFeatureDB | null> => {
-  const [existing] = await db
-    .select()
-    .from(userFeature)
-    .where(
-      and(
-        eq(userFeature.userId, params.userId),
-        eq(userFeature.featureId, params.featureId),
-      ),
-    )
-    .limit(1)
+  const target = and(
+    eq(userFeature.userId, params.userId),
+    eq(userFeature.featureId, params.featureId),
+  )
 
-  if (!existing) return null
-
-  const nextState =
-    params.list === 'wishlist'
-      ? {
-          isWishlisted: false,
-          isVisited: existing.isVisited,
-          visitedAt: existing.visitedAt,
-        }
-      : {
-          isWishlisted: existing.isWishlisted,
-          isVisited: false,
-          visitedAt: null,
-        }
-
-  if (!nextState.isWishlisted && !nextState.isVisited) {
-    await db
+  // Preserve the other flag at write time and prevent an add between update and cleanup.
+  const [updatedRows] = await db.batch([
+    db
+      .update(userFeature)
+      .set(
+        params.list === 'wishlist'
+          ? { isWishlisted: false }
+          : { isVisited: false, visitedAt: null },
+      )
+      .where(target)
+      .returning(),
+    db
       .delete(userFeature)
       .where(
         and(
-          eq(userFeature.userId, params.userId),
-          eq(userFeature.featureId, params.featureId),
+          target,
+          eq(userFeature.isWishlisted, false),
+          eq(userFeature.isVisited, false),
         ),
-      )
-    return null
-  }
-
-  const [updated] = await db
-    .update(userFeature)
-    .set(nextState)
-    .where(
-      and(
-        eq(userFeature.userId, params.userId),
-        eq(userFeature.featureId, params.featureId),
       ),
-    )
-    .returning()
+  ])
 
-  return updated as UserFeatureDB
+  const updated = updatedRows[0]
+  return updated && (updated.isWishlisted || updated.isVisited)
+    ? (updated as UserFeatureDB)
+    : null
 }

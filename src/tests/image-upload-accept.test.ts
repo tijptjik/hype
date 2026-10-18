@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { AuthImageUploadSchema } from '$lib/db/zod/schema/image'
+import { AuthImageUploadSchema } from '#lib/db/zod/schema/image.js'
 import {
   SUPPORTED_UPLOAD_IMAGE_ACCEPT,
   SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE,
   isSupportedUploadImageContentType,
-} from '$lib/images/accept'
+} from '#lib/images/accept.js'
 
 describe('image upload accept rules', () => {
   it('excludes gif and svg from upload accept values', () => {

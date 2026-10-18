@@ -15,7 +15,7 @@ import { property } from './property'
 // ENUM
 import { supportedLocales } from '../../enums'
 // TYPES
-import type { LayerMetadata } from '../../types'
+import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
 
 /* ============================================================================
  * LAYER MANAGEMENT

@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
+import type { ImageContextEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 export interface ParentSectionItemBase extends Record<string, unknown> {
   id: string
@@ -7,6 +7,7 @@ export interface ParentSectionItemBase extends Record<string, unknown> {
   i18n?: {
     en?: {
       name?: string
+      nameShort?: string
     }
   } | null
   image?: ImageContextEnvelope | null

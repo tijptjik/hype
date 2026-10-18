@@ -1,5 +1,5 @@
 import type { Snippet } from 'svelte'
-import type { Intent, UploadStatus } from '$lib/db/zod/schema/image.types'
+import type { Intent, UploadStatus } from '#lib/db/zod/schema/image.types.js'
 
 export type GalleryObjectFit = 'fit' | 'cover'
 export type GalleryCenterAction = 'none' | 'fullscreen' | 'custom'

@@ -1,0 +1,30 @@
+# Loopback-only local router. Caddy forwards WebSocket upgrades for Vite HMR.
+http://hype.localhost {
+	bind 127.0.0.1 ::1
+	reverse_proxy localhost:5175
+}
+
+http://assets.hype.localhost {
+	bind 127.0.0.1 ::1
+	reverse_proxy localhost:8790
+}
+
+http://atlas.localhost {
+	bind 127.0.0.1 ::1
+	reverse_proxy localhost:5173
+}
+
+http://api.atlas.localhost {
+	bind 127.0.0.1 ::1
+	reverse_proxy localhost:8787
+}
+
+http://harbour.localhost {
+	bind 127.0.0.1 ::1
+	reverse_proxy localhost:8788
+}
+
+http://basemaps.localhost {
+	bind 127.0.0.1 ::1
+	reverse_proxy localhost:5174
+}

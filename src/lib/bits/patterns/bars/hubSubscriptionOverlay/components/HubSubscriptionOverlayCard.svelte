@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import HubSubscriptionOverlayActions from './HubSubscriptionOverlayActions.svelte'
 import HubSubscriptionOverlayLegalLinks from './HubSubscriptionOverlayLegalLinks.svelte'

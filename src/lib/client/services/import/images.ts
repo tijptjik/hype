@@ -32,17 +32,17 @@
 // - handleImageDrop
 // ---
 
-import { getFeatureForImport } from '$lib/api/server/feature.remote'
-import { getFeatureCanonicalImageOccupancy } from '$lib/api/server/image.remote'
-import { getOrganisation } from '$lib/api/server/organisation.remote'
-import { getProject } from '$lib/api/server/project.remote'
+import { getFeatureForImport } from '#lib/api/feature.remote.js'
+import { getFeatureCanonicalImageOccupancy } from '#lib/api/image.remote.js'
+import { getOrganisation } from '#lib/api/organisation.remote.js'
+import { getProject } from '#lib/api/project.remote.js'
 import {
   calculateImageContentHash,
   uploadAndProcessImage,
-} from '$lib/client/services/image'
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import { FirstClassResource, ImageContextResource } from '$lib/enums'
-import { normalizeUploadFileForAssetPipeline } from '$lib/images/upload'
+} from '#lib/client/services/image.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import { FirstClassResource, ImageContextResource } from '#lib/enums.js'
+import { normalizeUploadFileForAssetPipeline } from '#lib/images/upload.js'
 import type {
   Feature,
   BatchUploadResult,
@@ -51,9 +51,12 @@ import type {
   ImageDropEvent,
   ParsedImageFilename,
   FeatureContext,
-} from '$lib/client/services/import/types'
-import type { ImageCtxEnvelope, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
-import type { Intent } from '$lib/db/zod/schema/image.types'
+} from '#lib/client/services/import/types.js'
+import type {
+  ImageCtxEnvelope,
+  ImageUploadCtx,
+} from '#lib/db/zod/schema/image.types.js'
+import type { Intent } from '#lib/db/zod/schema/image.types.js'
 
 /********************
  *  0. QUEUE RESULT FACTORIES
@@ -651,46 +654,47 @@ export async function processSingleUpload(
     return
   }
 
-  const resolvedIntent = options.replaceExisting
-    ? {
-        intent: 'canonical' as Intent,
-        isPublished: true,
-        isConflict: false,
-      }
-    : await resolveUploadIntent(result, context)
-
-  if (resolvedIntent.isConflict && !options.replaceExisting) {
-    uploadResults[index] = {
-      ...result,
-      status: 'conflict',
-      error: resolvedIntent.error,
-      existingCanonicalImage: context.existingCanonicalImage,
-      existingDuplicateImage: resolvedIntent.existingDuplicateImage ?? null,
-    }
-    emitUploadResults(uploadResults, updateResults)
-    return
-  }
-
-  const replacementTarget =
-    result.existingDuplicateImage ?? context.existingCanonicalImage ?? undefined
-
-  const uploadCtx = await createUploadContextForFeature(
-    result.featureId,
-    context,
-    options.replaceExisting ? replacementTarget : undefined,
-  )
-  if (!uploadCtx) {
-    uploadResults[index] = {
-      ...result,
-      status: 'error',
-      error: 'Could not create upload context',
-    }
-    console.error(`Error for ${result.file.name}:`, 'Could not create upload context')
-    emitUploadResults(uploadResults, updateResults)
-    return
-  }
-
+  // Decode/hash failures belong to this row and must not abort the remaining batches.
   try {
+    const resolvedIntent = options.replaceExisting
+      ? {
+          intent: 'canonical' as Intent,
+          isPublished: true,
+          isConflict: false,
+        }
+      : await resolveUploadIntent(result, context)
+
+    if (resolvedIntent.isConflict && !options.replaceExisting) {
+      uploadResults[index] = {
+        ...result,
+        status: 'conflict',
+        error: resolvedIntent.error,
+        existingCanonicalImage: context.existingCanonicalImage,
+        existingDuplicateImage: resolvedIntent.existingDuplicateImage ?? null,
+      }
+      emitUploadResults(uploadResults, updateResults)
+      return
+    }
+
+    const replacementTarget =
+      result.existingDuplicateImage ?? context.existingCanonicalImage ?? undefined
+
+    const uploadCtx = await createUploadContextForFeature(
+      result.featureId,
+      context,
+      options.replaceExisting ? replacementTarget : undefined,
+    )
+    if (!uploadCtx) {
+      uploadResults[index] = {
+        ...result,
+        status: 'error',
+        error: 'Could not create upload context',
+      }
+      console.error(`Error for ${result.file.name}:`, 'Could not create upload context')
+      emitUploadResults(uploadResults, updateResults)
+      return
+    }
+
     uploadResults[index] = {
       ...result,
       status: 'uploading',
@@ -778,7 +782,6 @@ export function handleImageDropEvent(
       setUploading(false)
 
       const successful = results.filter(r => r.status === 'success').length
-      const failed = results.filter(r => r.status === 'error').length
 
       if (successful > 0) {
         adminCtx.invalidateAndRefresh(FirstClassResource.feature)
@@ -820,19 +823,22 @@ export async function handleImageDrop(
   const initialUploadResults = assignIntendedIntents(
     acceptedFiles.map((file, index) => createPendingUploadResult(file, index)),
   )
-  const featureContexts = await getContextsForFeatures(
-    initialUploadResults
-      .map(result => result.featureId)
-      .filter((featureId): featureId is string => Boolean(featureId)),
-  )
-  const uploadResults = enrichUploadResultsWithContexts(
-    initialUploadResults,
-    featureContexts,
-  )
+  let uploadResults = initialUploadResults
 
-  onUpdateResults(uploadResults)
-
+  // Include hierarchy prefetch in batch failure handling so the UI always leaves uploading.
   try {
+    const featureContexts = await getContextsForFeatures(
+      initialUploadResults
+        .map(result => result.featureId)
+        .filter((featureId): featureId is string => Boolean(featureId)),
+    )
+    uploadResults = enrichUploadResultsWithContexts(
+      initialUploadResults,
+      featureContexts,
+    )
+
+    onUpdateResults(uploadResults)
+
     for (let i = 0; i < totalBatches; i++) {
       const start = i * batchSize
       const end = Math.min(start + batchSize, acceptedFiles.length)
@@ -862,7 +868,15 @@ export async function handleImageDrop(
 
     onComplete([...uploadResults])
   } catch (error) {
-    onError(error instanceof Error ? error : new Error('Upload failed'))
+    const failure = error instanceof Error ? error : new Error('Upload failed')
+    // Preserve completed rows while making unprocessed files explicitly retryable.
+    uploadResults = uploadResults.map(result =>
+      result.status === 'pending' || result.status === 'uploading'
+        ? { ...result, status: 'error', error: failure.message }
+        : result,
+    )
+    emitUploadResults(uploadResults, onUpdateResults)
+    onError(failure)
   }
 }
 

@@ -1,16 +1,27 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 
 // DB
-import { feature, layer, mapStyles, project, projectMapStyles } from '$lib/db/schema'
-import { getFeatureWithRelations, toListResponseShape } from '$lib/api/services/feature'
-import { listFeatures } from '$lib/db/services/feature'
+import {
+  feature,
+  layer,
+  mapStyles,
+  organisation,
+  project,
+  projectMapStyles,
+} from '#lib/db/schema/index.js'
+import {
+  getFeatureWithRelations,
+  toListResponseShape,
+} from '#lib/api/services/feature.js'
+import { listFeatures } from '#lib/db/services/feature.js'
+import { autochunk } from '#lib/utils/batch-query.js'
 // TYPES
-import type { Database } from '$lib/types'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+import type { Database } from '#lib/types.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type { FeatureCollection, GeometryObject } from 'geojson'
 // HELPERS
 import { buildMapRenderJob } from './jobs.server'
-import type { MapRenderJob } from '../../types'
+import type { MapRenderJob } from '#lib/map/renders/render.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -112,22 +123,26 @@ const getLayerFeatures = async (
     return []
   }
 
-  const conditions = [eq(feature.isArchived, false), inArray(feature.layerId, layerIds)]
-
-  if (!options.includeUnpublished) {
-    conditions.unshift(eq(feature.isPublished, true))
-  }
-
-  return await db
-    .select({
-      id: feature.id,
-      layerId: feature.layerId,
-      modifiedAt: feature.modifiedAt,
-      geometry: feature.geometry,
-    })
-    .from(feature)
-    .where(and(...conditions))
-    .orderBy(feature.layerId, feature.id)
+  return await autochunk(
+    { items: layerIds, otherParametersCount: options.includeUnpublished ? 1 : 2 },
+    async layerIdChunk =>
+      await db
+        .select({
+          id: feature.id,
+          layerId: feature.layerId,
+          modifiedAt: feature.modifiedAt,
+          geometry: feature.geometry,
+        })
+        .from(feature)
+        .where(
+          and(
+            eq(feature.isArchived, false),
+            ...(options.includeUnpublished ? [] : [eq(feature.isPublished, true)]),
+            inArray(feature.layerId, layerIdChunk),
+          ),
+        )
+        .orderBy(feature.layerId, feature.id),
+  )
 }
 
 const getMapRenderFeatureRecords = async (
@@ -141,30 +156,34 @@ const getMapRenderFeatureRecords = async (
     return []
   }
 
-  const conditions = [eq(feature.isArchived, false), inArray(feature.layerId, layerIds)]
-
-  if (!options.includeUnpublished) {
-    conditions.unshift(eq(feature.isPublished, true))
-  }
-
-  const result = await listFeatures(
-    db,
-    getFeatureWithRelations('list'),
-    conditions,
-    {
-      id: null,
-      code: 'preview',
-      isCore: true,
-    } as never,
-    undefined,
-    {
-      sortBy: 'modifiedAt',
-      sortOrder: 'desc',
+  const rows = await autochunk(
+    { items: layerIds, otherParametersCount: options.includeUnpublished ? 1 : 2 },
+    async layerIdChunk => {
+      const conditions = [
+        eq(feature.isArchived, false),
+        ...(options.includeUnpublished ? [] : [eq(feature.isPublished, true)]),
+        inArray(feature.layerId, layerIdChunk),
+      ]
+      const result = await listFeatures(
+        db,
+        getFeatureWithRelations('list'),
+        conditions,
+        {
+          id: null,
+          code: 'preview',
+          isCore: true,
+        } as never,
+        undefined,
+        {
+          sortBy: 'modifiedAt',
+          sortOrder: 'desc',
+        },
+      )
+      const shaped = await toListResponseShape(result as never, 'list')
+      return shaped.data
     },
   )
-
-  const shaped = await toListResponseShape(result as never, 'list')
-  return shaped.data
+  return rows
 }
 
 /**
@@ -173,6 +192,7 @@ const getMapRenderFeatureRecords = async (
  * @param db Database connection.
  * @param layerId Target layer id.
  * @returns Render payload or `null` when the layer should not produce a preview.
+ * @remarks Includes unpublished layers and parents; archived resources remain excluded.
  */
 export const getLayerMapRenderData = async (
   db: Database,
@@ -186,7 +206,18 @@ export const getLayerMapRenderData = async (
       rank: layer.rank,
     })
     .from(layer)
-    .where(and(eq(layer.id, layerId), eq(layer.isArchived, false)))
+    .innerJoin(project, eq(layer.projectId, project.id))
+    .innerJoin(organisation, eq(project.organisationId, organisation.id))
+    // Admin previews include unpublished layers and parents; archived resources
+    // remain excluded, and feature publication filtering still applies.
+    .where(
+      and(
+        eq(layer.id, layerId),
+        eq(layer.isArchived, false),
+        eq(project.isArchived, false),
+        eq(organisation.isArchived, false),
+      ),
+    )
     .limit(1)
 
   const targetLayer = rows[0]
@@ -195,12 +226,8 @@ export const getLayerMapRenderData = async (
   }
 
   const styleCode = await getProjectMapStyleCode(db, targetLayer.projectId)
-  const features = await getLayerFeatures(db, [layerId], {
-    includeUnpublished: true,
-  })
-  const featureRecords = await getMapRenderFeatureRecords(db, [layerId], {
-    includeUnpublished: true,
-  })
+  const features = await getLayerFeatures(db, [layerId])
+  const featureRecords = await getMapRenderFeatureRecords(db, [layerId])
 
   return {
     styleCode,
@@ -225,6 +252,7 @@ export const getLayerMapRenderData = async (
  * @param db Database connection.
  * @param projectId Target project id.
  * @returns Render payload or `null` when the project should not produce a preview.
+ * @remarks Includes unpublished projects and default-visible layers, excluding archived rows.
  */
 export const getProjectMapRenderData = async (
   db: Database,
@@ -236,7 +264,7 @@ export const getProjectMapRenderData = async (
       modifiedAt: project.modifiedAt,
     })
     .from(project)
-    .where(eq(project.id, projectId))
+    .where(and(eq(project.id, projectId), eq(project.isArchived, false)))
     .limit(1)
 
   const targetProject = projectRows[0]
@@ -255,7 +283,6 @@ export const getProjectMapRenderData = async (
       and(
         eq(layer.projectId, projectId),
         eq(layer.isDefaultVisible, true),
-        eq(layer.isPublished, true),
         eq(layer.isArchived, false),
       ),
     )
@@ -381,7 +408,6 @@ const buildProjectMapRenderRefreshCandidates = async (
           FROM "layer"
           WHERE "layer"."projectId" = ${project.id}
             AND "layer"."isDefaultVisible" = 1
-            AND "layer"."isPublished" = 1
             AND "layer"."isArchived" = 0
             AND "layer"."modifiedAt" >= ${cutoffIso}
         )
@@ -392,7 +418,6 @@ const buildProjectMapRenderRefreshCandidates = async (
             ON "defaultLayer"."id" = "feature"."layerId"
           WHERE "defaultLayer"."projectId" = ${project.id}
             AND "defaultLayer"."isDefaultVisible" = 1
-            AND "defaultLayer"."isPublished" = 1
             AND "defaultLayer"."isArchived" = 0
             AND "feature"."isPublished" = 1
             AND "feature"."isArchived" = 0

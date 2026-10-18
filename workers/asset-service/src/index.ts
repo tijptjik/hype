@@ -27,7 +27,7 @@ import {
   IMAGE_WARMUP_ACCEPT_HEADER,
 } from '../../../src/lib/images/warmup'
 import { toCloudflareImagesTransformDimensions } from '../../../src/lib/images/cloudflare'
-import type { ImageWarmupJob } from '../../../src/lib/types'
+type ImageWarmupJob = Parameters<typeof getImageWarmupPlan>[0]['job']
 
 type ImageStage = 'local' | 'preview' | 'production'
 type CropMode = 'c_fill' | 'c_fit' | 'c_thumb'
@@ -3511,7 +3511,7 @@ const applyTransforms = async (
 const maybeDownscaleForLowMemoryPath = async (
   image: ImageData,
   target: { width: number; height: number },
-  request: TransformRequest,
+  _request: TransformRequest,
   debug?: TransformDebugContext,
 ): Promise<ImageData> => {
   const shouldUseLowMemoryPath = toPixelCount(image) > MAX_LOW_MEMORY_SOURCE_PIXELS

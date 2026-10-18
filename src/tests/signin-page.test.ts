@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { load } from '../routes/signin/+page.server'
-import { load as signUpLoad } from '../routes/signup/+page.server'
+import { load } from '../routes/(public)/signin/+page.server'
+import { load as signUpLoad } from '../routes/(public)/signup/+page.server'
 
 /** Creates the minimum sign-in load event needed to exercise session redirects. */
 function createEvent(options: { returnTo?: string; hasSession?: boolean } = {}) {

@@ -1,10 +1,10 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
-import { m } from '$lib/i18n'
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '$lib/images/accept'
-import { Icon } from '$lib/bits'
-import PhotoIcon from 'virtual:icons/lucide/image'
-import UploadIcon from 'virtual:icons/lucide/upload'
+import { cx } from '#lib/bits/utils.js'
+import { m } from '#lib/i18n.js'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT } from '#lib/images/accept.js'
+import { Icon } from '#lib/bits/index.js'
+import PhotoIcon from 'virtual:icons/proicons/photo'
+import UploadIcon from 'virtual:icons/proicons/arrow-upload'
 import DropzonePrimitive from 'svelte-file-dropzone'
 import type { Snippet } from 'svelte'
 
@@ -89,10 +89,10 @@ async function handleFiles(event: CustomEvent): Promise<void> {
         'pointer-events-none absolute inset-4 z-70 border-2 border-dashed transition-[background-color,border-color] duration-200',
         rounded,
         disabled
-          ? 'border-black/10 bg-transparent'
+          ? 'border-border bg-transparent'
           : isDragActive
-          ? 'border-white/45'
-          : 'border-transparent group-hover/gallery-dropzone:border-white/20',
+            ? 'border-primary'
+            : 'border-transparent group-hover/gallery-dropzone:border-border',
       )}
     ></div>
 
@@ -105,19 +105,21 @@ async function handleFiles(event: CustomEvent): Promise<void> {
       >
         <div class="flex max-w-80 flex-col items-center gap-8">
           <div class="space-y-3">
-            <p class="text-xl font-semibold uppercase tracking-[0.18em] text-white/75">
+            <p
+              class="text-xl font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+            >
               {emptyTitle}
             </p>
           </div>
 
           <div
             class={cx(
-              'min-w-52 rounded-full px-6 py-3 text-base bg-accent/80 font-medium shadow-[0_14px_30px_rgba(0,0,0,0.18)] transition-all duration-200',
+              'min-w-52 rounded-full px-6 py-3 text-base bg-accent font-medium shadow-[0_14px_30px_rgba(0,0,0,0.18)] transition-all duration-200',
               disabled
-                ? 'bg-base-200 text-white/45'
+                ? 'bg-base-200 text-muted-foreground'
                 : isDragActive
-                  ? 'bg-accent text-white/85'
-                  : 'text-white/75 group-hover/gallery-dropzone:bg-accent/80 group-hover/gallery-dropzone:text-white/85',
+                  ? 'bg-accent text-accent-content'
+                  : 'text-accent-content group-hover/gallery-dropzone:bg-accent/90',
             )}
           >
             {isDragActive ? m.dropzone__drop_images() : idleLabel}
@@ -137,25 +139,23 @@ async function handleFiles(event: CustomEvent): Promise<void> {
           class={cx(
             'rounded-2xl border px-4 py-3 backdrop-blur-md shadow-[0_18px_40px_rgba(0,0,0,0.24)] transition-[background-color,border-color,color,transform] duration-200',
             isDragActive
-              ? 'border-white/16 bg-white/6 text-white/88'
-              : 'border-white/10 bg-white/3 text-white/78 group-hover/gallery-dropzone:border-white/14 group-hover/gallery-dropzone:bg-black/80 group-hover/gallery-dropzone:text-white/88',
+              ? 'border-primary bg-base-100 text-base-content'
+              : 'border-border bg-base-100 text-base-content',
           )}
         >
           <div class="flex items-center gap-3 text-left">
             <div
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-white/72"
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-surface text-base-content"
             >
               <Icon src={isDragActive ? UploadIcon : PhotoIcon} class="h-5.5 w-5.5" />
             </div>
             <div class="space-y-1 leading-none">
               <p
-                class="font-mono text-[11px] uppercase tracking-[0.22em] text-white/45"
+                class="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground"
               >
                 {isDragActive ? m.dropzone__drop_images() : promptTitle}
               </p>
-              <p
-                class="text-sm leading-6 text-white/84 group-hover/gallery-dropzone:text-white/88"
-              >
+              <p class="text-sm leading-6 text-base-content">
                 {promptDescription}
               </p>
             </div>

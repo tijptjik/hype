@@ -1,5 +1,5 @@
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 export const FORM_FEATURE_FIELDS_ROOT_CLASS =
   'flex flex-col items-stretch px-6 [&>*]:w-full'

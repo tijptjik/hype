@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import authorize from '$lib/api/services/authz'
-import type { AuthorizeParams, UserRoleDisco } from '$lib/types'
+import authorize from '#lib/api/services/authz/index.js'
+import type { AuthorizeParams } from '#lib/api/services/authz/authorization.types.js'
+import type { UserRoleDisco } from '#lib/types.js'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 
@@ -224,7 +225,9 @@ describe('project authorization policy matrix', () => {
             action,
             scenario: stateCase.name,
             actor: actor.name,
-            expected: stateCase.allowedActors.includes(actorKey(actor)),
+            expected: (stateCase.allowedActors as readonly string[]).includes(
+              actorKey(actor),
+            ),
             actual: decision.allowed,
             code: decision.code,
           })

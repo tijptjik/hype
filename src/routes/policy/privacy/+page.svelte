@@ -2,19 +2,19 @@
 // SVELTE
 import { page } from '$app/state'
 // I18N
-import * as m from '$lib/paraglide/messages'
-import { getLocaleKey } from '$lib/i18n'
+import * as m from '#lib/paraglide/messages.js'
+import { getLocaleKey } from '#lib/i18n.js'
 // NAVIGATION
-import { resolveTitle } from '$lib/navigation/title'
+import { resolveTitle } from '#lib/navigation/title.js'
 // COMPONENTS
-import HubPolicyDocumentBody from '$lib/bits/patterns/policies/hubPolicyDialog/components/HubPolicyDocumentBody.svelte'
+import HubPolicyDocumentBody from '#lib/bits/patterns/policies/hubPolicyDialog/components/HubPolicyDocumentBody.svelte'
 // SERVICES
 import {
   createDefaultHubPrivacyPolicy,
   renderPolicyMarkdown,
-} from '$lib/services/policy'
+} from '#lib/services/policy.js'
 // TYPES
-import type { TitleEnvironmentLabel } from '$lib/types'
+import type { TitleEnvironmentLabel } from '#lib/bits/patterns/panels/panel.types.js'
 import type { PageProps } from './$types'
 
 let { data }: PageProps = $props()

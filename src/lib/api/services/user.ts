@@ -15,9 +15,10 @@ import {
   isAdminRequest,
   removeExcludedColumns,
   toTriStateBoolean,
-} from '$lib/api'
-import { isSuperAdmin } from '$lib/client/services/auth'
-import { applyPrismConstraints } from '$lib/db'
+} from '#lib/api/index.js'
+import { isSuperAdmin } from '#lib/client/services/auth.js'
+import { applyPrismConstraints } from '#lib/db/index.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // SCHEMA
 import {
   feature,
@@ -30,9 +31,9 @@ import {
   organisationRole,
   project,
   projectRole,
-} from '$lib/db/schema/index'
-import { getFeatureHubFilter } from '$lib/db/services/hub'
-import { toSearchCondition } from '$lib/db/services/user'
+} from '#lib/db/schema/index.js'
+import { getFeatureHubFilter } from '#lib/db/services/hub.js'
+import { toSearchCondition } from '#lib/db/services/user.js'
 // ZOD
 import {
   UserAdminListProfileAPI,
@@ -45,7 +46,7 @@ import {
   UserHydrationCardProfileAPI,
   UserLeaderboardProfileAPI,
   UserSelfProfileAPI,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // TYPES
 import type {
   Database,
@@ -54,8 +55,8 @@ import type {
   RelationShape,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+} from '#lib/types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type {
   UserDB,
   UserEntityByProfile,
@@ -67,9 +68,9 @@ import type {
   UserRaw,
   UserRoleEntityType,
   UserRoleFilter,
-} from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/user.types.js'
 import type { z } from 'zod'
-import { HierarchicalResource } from '$lib/enums'
+import { HierarchicalResource } from '#lib/enums.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -192,7 +193,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  */
 export const toEntityResponseShape = <P extends UserHydrationProfile = 'attribution'>(
   userEntity:
-    | Pick<UserDB, 'id' | 'attribution' | 'name' | 'image' | 'username'>
+    | Pick<
+        UserDB,
+        'id' | 'attribution' | 'name' | 'image' | 'username' | 'displayUsername'
+      >
     | null
     | undefined,
   profile: P = 'attribution' as P,
@@ -373,12 +377,14 @@ const toProfileData = (
   const baseAttribution = {
     id: user.id,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     attribution: user.attribution,
   }
   const adminList = {
     id: user.id,
     name: user.name,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     email: user.email,
     image: user.image,
     attribution: user.attribution,
@@ -386,12 +392,14 @@ const toProfileData = (
   const card = {
     id: user.id,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     image: user.image,
     attribution: user.attribution,
   }
   const leaderboard = {
     id: user.id,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     reportedMissingCount: contributionSummary.reportedMissingCount,
     newPhotoCount: contributionSummary.newPhotoCount,
     newFeatureCount: contributionSummary.newFeatureCount,
@@ -404,6 +412,7 @@ const toProfileData = (
     id: user.id,
     name: user.name,
     username: user.username,
+    displayUsername: user.displayUsername ?? user.username,
     image: user.image,
     attribution: user.attribution,
     locale: user.locale,
@@ -469,8 +478,8 @@ export const toRequestedSearchState = (conditions: { isArchived?: unknown }) => 
  */
 export const toUserLookupCondition = (params: UserLookupParams): SQL<unknown> =>
   params.refKey === 'username'
-    ? eq(user.username, params.ref)
-    : (or(eq(user.id, params.ref), eq(user.username, params.ref)) ??
+    ? eq(user.username, params.ref.toLowerCase())
+    : (or(eq(user.id, params.ref), eq(user.username, params.ref.toLowerCase())) ??
       eq(user.id, params.ref))
 
 /**
@@ -500,7 +509,8 @@ export const resolveUserProfile = (
   }
 
   const isSelf =
-    (params.refKey === 'username' && params.ref === sessionUser.username) ||
+    (params.refKey === 'username' &&
+      params.ref.toLowerCase() === sessionUser.username?.toLowerCase()) ||
     params.ref === sessionUser.id
 
   return isSelf ? 'self' : 'detail'
@@ -556,7 +566,7 @@ const toRoleConditions = (
   if (filter.anyRole) return []
   if (filter.role) return [eq(roleColumn, filter.role)]
   if ((filter.roles?.length ?? 0) > 0) {
-    return [inArray(roleColumn, filter.roles as [string, ...string[]])]
+    return [chunkedInArray(roleColumn, filter.roles ?? [])]
   }
   return []
 }
@@ -823,7 +833,7 @@ export const toUserRelationsWithContributionConstraints = (
         : scopedOrganisations.map(organisationRow => organisationRow.id)
 
       if (organisationIds.length > 0) {
-        featureConstraints.push(inArray(feature.organisationId, organisationIds))
+        featureConstraints.push(chunkedInArray(feature.organisationId, organisationIds))
       }
     } else {
       const featureHubFilter = getFeatureHubFilter(db, {
@@ -916,7 +926,7 @@ export const toUserReadQueryPlan = (
 } => {
   const { conditions } = getUserQueryContext(
     params.sessionUser,
-    params.request,
+    params.isAdminRequest,
     {},
     params.userRoles,
     false,
@@ -943,7 +953,7 @@ export const toUserReadQueryPlan = (
  * Non-super-admin callers are restricted from seeing archived users, and most callers are scoped to self-only visibility.
  *
  * @param currentUser - Current session user.
- * @param request - Request object used to distinguish admin from public flows.
+ * @param requestOrIntent - Legacy request or resolved guarded-remote admin intent.
  * @param params - Raw query parameters.
  * @param userRoles - Resolved role disco rows for the current user.
  * @param isCollection - Whether the query targets a collection rather than a single entity.
@@ -951,7 +961,7 @@ export const toUserReadQueryPlan = (
  */
 export const getUserQueryContext = (
   currentUser: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
   isCollection: boolean = true,
@@ -981,8 +991,13 @@ export const getUserQueryContext = (
     return userRoles.some(role => role.type === 'project' && role.role === 'maintainer')
   }
 
+  const adminRequest =
+    typeof requestOrIntent === 'boolean'
+      ? requestOrIntent
+      : isAdminRequest(requestOrIntent)
+
   // PUBLIC : public requests can only see their own user
-  if (!isAdminRequest(request)) {
+  if (!adminRequest) {
     params = removeExcludedColumns(params, excludeColumns)
     // Other roles can only see their own user
     conditions.push(eq(user.id, currentUser.id))

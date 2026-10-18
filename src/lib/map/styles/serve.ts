@@ -1,11 +1,13 @@
 import { error } from '@sveltejs/kit'
 
 import {
+  buildMapStyle,
   getDefaultMapStyleKey,
   getMapStyleAssetRecord,
   isMapStyleKey,
   type MapStyleKey,
 } from './registry'
+import { toLocaleKey } from '#lib/i18n.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -46,11 +48,29 @@ export const serveMapStyleByKey = async (
   const url = new URL(request.url)
 
   // Default to the hashed static asset so browser/CDN caches key off the immutable filename.
-  if (url.searchParams.get('inline') !== '1') {
+  // Locale and no-label variants must stay inline because they are runtime transforms.
+  if (
+    url.searchParams.get('inline') !== '1' &&
+    !url.searchParams.has('locale') &&
+    url.searchParams.get('noLabels') !== '1'
+  ) {
     return redirectToAsset(asset.publicPath, request)
   }
 
-  const etag = `"${asset.hash}"`
+  const locale = toLocaleKey(url.searchParams.get('locale') ?? 'en')
+  const noLabels = url.searchParams.get('noLabels') === '1'
+  const inlineStyle =
+    locale === 'en' && !noLabels
+      ? asset
+      : {
+          ...asset,
+          style: buildMapStyle(key, { locale, noLabels }),
+        }
+  const json =
+    inlineStyle === asset
+      ? asset.json
+      : `${JSON.stringify(inlineStyle.style, null, 2)}\n`
+  const etag = `"${asset.hash}:${locale}:${noLabels ? 'nolabels' : 'labels'}"`
   if (request.headers.get('if-none-match') === etag) {
     return new Response(null, {
       status: 304,
@@ -60,7 +80,7 @@ export const serveMapStyleByKey = async (
     })
   }
 
-  return new Response(asset.json, {
+  return new Response(json, {
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'public, max-age=0, must-revalidate',

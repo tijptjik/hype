@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import Button from '$lib/bits/core/button/Button.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
 
 type Props = {
   isGuest?: boolean
@@ -51,14 +51,14 @@ function handleSignIn(): void {
       text={upgradeText}
       color="primary"
       size="sm"
-      class="min-w-43 uppercase shadow-[0_0_22px_rgb(240_77_127_/_0.35)]"
+      class="min-w-43 uppercase shadow-md"
       onClick={handleUpgrade}
     />
     <Button
       text={signInText}
       color="primary"
       size="sm"
-      class="uppercase shadow-[0_0_22px_rgb(240_77_127_/_0.35)]"
+      class="uppercase shadow-md"
       onClick={handleSignIn}
     />
   </div>

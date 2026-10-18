@@ -3,24 +3,24 @@ import { describe, expect, it, vi } from 'vitest'
 // `images.ts` imports SvelteKit remote modules that require SSR runtime
 // globals not available under vitest. Mock them so the pure
 // `parseImageFilename` function can be tested in isolation.
-vi.mock('$lib/api/server/feature.remote', () => ({
+vi.mock('#lib/api/feature.remote.js', () => ({
   getFeatureForImport: vi.fn(),
 }))
-vi.mock('$lib/api/server/image.remote', () => ({
+vi.mock('#lib/api/image.remote.js', () => ({
   getFeatureCanonicalImageOccupancy: vi.fn(),
 }))
-vi.mock('$lib/api/server/organisation.remote', () => ({
+vi.mock('#lib/api/organisation.remote.js', () => ({
   getOrganisation: vi.fn(),
 }))
-vi.mock('$lib/api/server/project.remote', () => ({
+vi.mock('#lib/api/project.remote.js', () => ({
   getProject: vi.fn(),
 }))
-vi.mock('$lib/client/services/image', () => ({
+vi.mock('#lib/client/services/image.js', () => ({
   calculateImageContentHash: vi.fn(),
   uploadAndProcessImage: vi.fn(),
 }))
 
-import { parseImageFilename } from '$lib/client/services/import/images'
+import { parseImageFilename } from '#lib/client/services/import/images.js'
 
 // A real nanoid(12) feature ID used across cases.
 const FEATURE_ID = '0Gd7fU4rEvRM'

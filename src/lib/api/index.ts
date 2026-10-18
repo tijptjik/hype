@@ -1,17 +1,18 @@
 // SVELTE
-import { error, json } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { eq, inArray } from 'drizzle-orm'
+import { eq, type AnyColumn } from 'drizzle-orm'
 // LIB
-import { ADMIN_PATH } from '$lib'
+import { ADMIN_PATH } from '#lib'
 // DB
-import client, { createJsonPathCondition, validateTableColumns } from '$lib/db'
-import { getUserRoles } from '$lib/db/services/user'
+import client, { createJsonPathCondition, validateTableColumns } from '#lib/db/index.js'
+import { getUserRoles } from '#lib/db/services/user.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // ENUMS
-import { RESERVED_PARAMETERS } from '$lib/enums'
+import { RESERVED_PARAMETERS } from '#lib/enums.js'
 // TYPES
 import type { SQL, Table } from 'drizzle-orm'
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { D1Database as MiniflareD1Database } from '@cloudflare/workers-types'
 import type {
   Id,
   Prisms,
@@ -20,16 +21,20 @@ import type {
   DbTable,
   Session,
   SessionUser,
-} from '$lib/types'
+} from '#lib/types.js'
 
+/**
+ * Requires both parts of the request's authenticated session context.
+ *
+ * @param locals - Session and user resolved by the authentication hook.
+ * @returns The complete session context, including valid guest sessions.
+ * @remarks Account-only restrictions belong to the operation's authorization policy.
+ */
 export const getSessionOrError = async (
   locals: App.Locals,
 ): Promise<{ user: SessionUser; session: Session }> => {
-  if (!locals.session) {
-    return error(401, 'Authentication not available')
-  }
-  if (!locals.user) {
-    return error(401, 'No nice, no rice')
+  if (!locals.session || !locals.user) {
+    return error(401, 'UNAUTHENTICATED')
   }
   return { user: locals.user, session: locals.session }
 }
@@ -38,7 +43,7 @@ export const JSONResponseOrError = async (result: unknown): Promise<Response> =>
   if (!result) {
     return error(404, "These aren't the signs you're looking for")
   }
-  return json(result)
+  return Response.json(result)
 }
 
 /**
@@ -343,7 +348,7 @@ export const applyQueryFilters = <T extends Table>(
       }
 
       // Type assertion to ensure column exists on table and is a Drizzle column
-      const tableColumn = table[column as keyof T] as unknownColumn
+      const tableColumn = table[column as keyof T] as AnyColumn
 
       // TODO Deprecated - Backward compatibility for deprecated URL-based string booleans.
       if (value === 'true' || value === 'false') {
@@ -365,7 +370,7 @@ export const applyQueryFilters = <T extends Table>(
           return eq(tableColumn, normalizedArray[0])
         }
 
-        return inArray(tableColumn, normalizedArray)
+        return chunkedInArray(tableColumn, normalizedArray)
       }
 
       // Handle non-array values

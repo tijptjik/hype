@@ -2,13 +2,17 @@ import {
   getOmnibarRootClasses,
   getOmnibarSurfaceClasses,
   getOmnibarWidthContainerClasses,
-} from '$lib/bits/patterns/bars/omnibar/omnibar.styles'
+} from '#lib/bits/patterns/bars/omnibar/omnibar.styles.js'
 import { describe, expect, it } from 'vitest'
 
 describe('omnibar styles', () => {
   it('allows the root layout stack to shrink with the app main width', () => {
     expect(
-      getOmnibarRootClasses({ hasElevatedChrome: false, effectiveAppMainWidth: 320 }),
+      getOmnibarRootClasses({
+        availableViewportHeight: 800,
+        hasElevatedChrome: false,
+        effectiveAppMainWidth: 320,
+      }),
     ).toContain('min-w-0')
     expect(getOmnibarWidthContainerClasses(false)).toContain('min-w-0')
   })
@@ -34,6 +38,7 @@ describe('omnibar styles', () => {
 
   it('drops wide-layout classes when the effective main width falls below the threshold', () => {
     const rootClasses = getOmnibarRootClasses({
+      availableViewportHeight: 800,
       hasElevatedChrome: true,
       effectiveAppMainWidth: 479,
     })

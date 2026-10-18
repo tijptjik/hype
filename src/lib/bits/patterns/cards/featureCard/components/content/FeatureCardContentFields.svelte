@@ -1,13 +1,17 @@
 <script lang="ts">
 // SERVICES
-import { getFeatureCardDisplayProperties } from '$lib/client/services/property'
+import { getFeatureCardDisplayProperties } from '#lib/client/services/property.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // I18N
-import { getFPI18n, getI18n, m } from '$lib/i18n'
+import { getFPI18n, getI18n, m } from '#lib/i18n.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 // LOCAL
 import {
   getFeatureCardLayout,
@@ -23,10 +27,13 @@ let {
   items?: Array<{ id: string; label: string; value: string }>
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const userPreferences = $derived(appCtx.getUserPreferences())
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
@@ -87,7 +94,7 @@ $effect(() => {
         style={`grid-column: ${(cell?.column ?? 0) + 1} / span ${cell?.colSpan ?? 1}; grid-row: ${(cell?.row ?? 0) + 1};`}
       >
         <span
-          class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400"
+          class="font-mono text-xs font-normal uppercase tracking-wide text-muted-foreground"
         >
           {property.label}
         </span>

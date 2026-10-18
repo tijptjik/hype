@@ -2,10 +2,14 @@
 // SVELTE
 import { tick } from 'svelte'
 // ACTIONS
-import { clickOutside } from '$lib/actions'
+import { clickOutside } from '#lib/actions.js'
 // CONTEXT
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // LOCAL
 import { getFeatureCardLayout, getFeatureCardLayoutVars } from '../featureCard.layout'
 import { getFeatureCardRootVars } from '../featureCard.styles'
@@ -31,9 +35,12 @@ let {
 
 const omniCtx = getOmniCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
-const horizontalOffset = $derived(responsiveCtx.getAppMainOffsetX())
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const horizontalOffset = $derived(surfaceLayout.getAppMainOffsetX())
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
@@ -312,22 +319,24 @@ function handleClickOutside(event: MouseEvent): void {
 }
 </script>
 
-{#snippet cardChrome(cardStyle: string)}
+{#snippet cardChrome(
+  cardStyle: string,
+)}
   <div
     bind:this={shellElement}
     id="feature-card-shell"
-    class="feature-card-chrome relative mx-auto flex w-full flex-col motion-reduce:transition-none"
+    class="feature-card-chrome text-base-content relative mx-auto flex w-full flex-col motion-reduce:transition-none"
     style={cardStyle}
   >
     <!-- Border chrome and inner fill live on the outer shell; the surface handles
          pointer events, transitions, and outside-click detection. -->
     <div
       id="feature-card"
-      class={`feature-card-surface pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col ${isCardContentVisible ? 'bg-transparent' : 'bg-black'}`}
+      class={`feature-card-surface pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col ${isCardContentVisible ? 'bg-transparent' : 'bg-(--theme-panel)'}`}
     >
       <div
         aria-hidden={isCardContentVisible}
-        class={`pointer-events-none absolute inset-0 z-0 bg-black transition-opacity duration-180 ease-out motion-reduce:transition-none ${isCardContentVisible ? 'opacity-0' : 'opacity-100'}`}
+        class={`pointer-events-none absolute inset-0 z-0 bg-(--theme-panel) transition-opacity duration-180 ease-out motion-reduce:transition-none ${isCardContentVisible ? 'opacity-0' : 'opacity-100'}`}
       ></div>
       <div
         aria-hidden={!isCardContentVisible}
@@ -353,7 +362,7 @@ function handleClickOutside(event: MouseEvent): void {
 .feature-card-chrome {
   box-sizing: border-box;
   position: relative;
-  border: var(--feature-card-border-width) solid black;
+  border: var(--feature-card-border-width) solid var(--theme-panel);
   border-radius: var(--feature-card-chrome-radius);
   overflow: hidden;
   isolation: isolate;

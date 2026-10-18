@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import { Icon, ScrollableText } from '$lib/bits'
+import { Icon, ScrollableText } from '#lib/bits/index.js'
 // ICONS
-import XCircle from 'virtual:icons/lucide/circle-x'
-import QueueList from 'virtual:icons/lucide/panel-top-bottom-dashed'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
+import QueueList from 'virtual:icons/proicons/bullet-list-square'
 // TYPES
 import type { OmnibarNavigationHeaderProps } from './omnibarPrimitives.types'
 
@@ -45,10 +45,7 @@ function handleCloseClick(event: MouseEvent): void {
       ? 'pl-8 pr-6'
       : 'px-6'}"
 >
-  <div
-    class="min-w-0 flex-1 overflow-hidden transition-[height]"
-    onclick={handleTitleClick}
-  >
+  <div class="min-w-0 flex-1 overflow-hidden transition-[height]">
     <div class="flex items-start gap-3">
       {#if showCollectionSwitcher}
         <button
@@ -59,8 +56,10 @@ function handleCloseClick(event: MouseEvent): void {
           <Icon src={QueueList} class="h-6 w-6 stroke-2" />
         </button>
       {/if}
-      <div
-        class="flex min-w-0 flex-1 -translate-y-0.5 flex-col overflow-hidden transition-[height] duration-300"
+      <button
+        type="button"
+        class="flex min-w-0 flex-1 -translate-y-0.5 flex-col overflow-hidden text-left transition-[height] duration-300"
+        onclick={handleTitleClick}
       >
         <ScrollableText
           text={collectionMetaText}
@@ -76,7 +75,7 @@ function handleCloseClick(event: MouseEvent): void {
           separator="•"
           padding={20}
         />
-      </div>
+      </button>
     </div>
   </div>
 

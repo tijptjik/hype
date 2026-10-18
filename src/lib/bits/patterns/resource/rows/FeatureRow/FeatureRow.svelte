@@ -1,27 +1,27 @@
 <script lang="ts">
 // BITS
-import { Row } from '$lib/bits/custom'
-import * as VirtualListPrimitive from '$lib/bits/custom/index/src'
-import StatsPips from '$lib/bits/custom/featureStats/components/StatsPips.svelte'
+import { Row } from '#lib/bits/custom/index.js'
+import * as VirtualListPrimitive from '#lib/bits/custom/index/src/index.js'
+import StatsPips from '#lib/bits/custom/featureStats/components/StatsPips.svelte'
 import * as FeatureRowPrimitive from './components'
 // NAVIGATION
-import { navigateOnAdmin } from '$lib/navigation'
+import { navigateOnAdmin } from '#lib/navigation/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // ICONS
-import DatabaseIcon from 'virtual:icons/lucide/database'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import ImageIcon from 'virtual:icons/lucide/image'
-import TagsIcon from 'virtual:icons/lucide/tags'
-import PenIcon from 'virtual:icons/lucide/pen'
+import DatabaseIcon from 'virtual:icons/proicons/database'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import TagsIcon from 'virtual:icons/proicons/tag-multiple'
+import PenIcon from 'virtual:icons/proicons/pencil'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
-import { getFeatureIdenticonUrl } from '$lib/client/services/image'
+import { getFeatureIdenticonUrl } from '#lib/client/services/image.js'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { FeatureRowStatMap } from '$lib/types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { FeatureRowStatMap } from '#lib/client/services/featureRows.types.js'
 import type { FeatureRowProps } from './featureRow.types'
 
 let {
@@ -133,13 +133,15 @@ function handleDescriptionClick(): void {
   image={entity.image}
   imageSrc={fallbackImageSrc}
   alt={model.imageAlt}
-  onImageClick={entity.image ? (handleImageClick as (image: unknown) => void) : undefined}
+  onImageClick={entity.image
+    ? (handleImageClick as (image: unknown) => void)
+    : undefined}
   title={model.title || m.deft_dry_chipmunk_blink()}
   onTitleClick={handleTitleClick}
   description={model.description}
   onDescriptionClick={handleDescriptionClick}
 >
-  <div class="bits-resource-row__stats">
+  <div class="flex items-center justify-center min-w-0">
     <VirtualListPrimitive.Secondary>
       {#snippet children()}
         <div class="bits-resource-row-stats">
@@ -166,10 +168,10 @@ function handleDescriptionClick(): void {
               class={`${section.className} bits-resource-row-stats__placeholder-column`}
             >
               <div class="bits-theme bits-feature-stat bits-feature-stat--placeholder">
-                <span class="bits-feature-stat__title">
-                  <PlaceholderIcon class="bits-feature-stat__icon-svg" />
+                <span class="text-xs leading-4 text-base-content/60">
+                  <PlaceholderIcon class="w-4 h-4" />
                 </span>
-                <div class="bits-feature-stat__pips">
+                <div class="flex gap-1.5">
                   {#each toPlaceholderStatuses(section.statuses) as pipKey (pipKey)}
                     <span
                       class="bits-feature-stat__pip bits-feature-stat__pip--pending"

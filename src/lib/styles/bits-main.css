@@ -89,12 +89,8 @@
   }
 
   .bits-main__section--footer-nav .bits-main__section-body {
-    min-height: 0 !important;
-    height: auto !important;
-  }
-
-  .bits-main__section-tail-spacer {
-    flex: 0 0 auto;
+    min-height: 0;
+    height: auto;
   }
 
   .bits-main__section--fade {

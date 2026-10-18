@@ -1,5 +1,5 @@
 <script lang="ts">
-import Switch from '$lib/bits/custom/switch/Switch.svelte'
+import Switch from '#lib/bits/custom/switch/Switch.svelte'
 import type { SectionHeaderFlag } from './types'
 
 let {

@@ -1,12 +1,13 @@
 <script lang="ts">
-import { Button } from '$lib/bits/core'
-import { m } from '$lib/i18n'
+import { Button } from '#lib/bits/core/index.js'
+import { m } from '#lib/i18n.js'
 import {
   FormFeatureSectionHeader,
   FormFeatureSubSectionHeader,
-} from '$lib/bits/patterns/forms/formFeatureSectionHeader'
-import { FormParentSection } from '$lib/bits/patterns/forms/formParentSection'
-import EraserIcon from 'virtual:icons/lucide/eraser'
+} from '#lib/bits/patterns/forms/formFeatureSectionHeader/index.js'
+import { FormParentSection } from '#lib/bits/patterns/forms/formParentSection/index.js'
+import EraserIcon from 'virtual:icons/proicons/eraser'
+import type { FormParentSectionHeaderContext } from '../formParentSection/formParentSection.types'
 import type { FormFeatureParentSectionProps } from './formFeatureParentSection.types'
 
 let {
@@ -22,7 +23,9 @@ let {
 </script>
 
 <section
-  class={['bits-form__section', 'bits-feature-parent-section', className].filter(Boolean).join(' ')}
+  class={['bits-form__section', 'bits-feature-parent-section', className]
+    .filter(Boolean)
+    .join(' ')}
 >
   <FormFeatureSectionHeader
     title={m.admin__forms_feature_collections_title()}
@@ -36,7 +39,7 @@ let {
           style="ghost"
           size="sm"
           iconComponent={EraserIcon}
-          class="bits-feature-editor__collections-reset"
+          class="flex-none"
           onClick={onClearAll}
         />
       {/if}
@@ -53,7 +56,7 @@ let {
       isSubmitting,
       isResultsVisible,
       onToggleAdding,
-    })}
+    }: FormParentSectionHeaderContext)}
       <FormFeatureSubSectionHeader
         {title}
         {subtitle}

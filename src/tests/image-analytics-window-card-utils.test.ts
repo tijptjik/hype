@@ -3,7 +3,7 @@ import {
   buildAssetAnalyticsPreviewUrl,
   normalizeAssetAnalyticsPublicId,
   toAnalyticsTransformationBadges,
-} from '$lib/bits/patterns/analytics/assetAnalyticsDashboard/assetAnalyticsDashboard.utils'
+} from '#lib/bits/patterns/analytics/assetAnalyticsDashboard/assetAnalyticsDashboard.utils.js'
 
 describe('analytics window card utils', () => {
   it('normalizes analytics public ids for asset delivery urls', () => {

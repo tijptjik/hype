@@ -1,10 +1,11 @@
+// @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import AssetAnalyticsDashboard from '$lib/bits/patterns/analytics/assetAnalyticsDashboard/AssetAnalyticsDashboard.svelte'
+import AssetAnalyticsDashboard from '#lib/bits/patterns/analytics/assetAnalyticsDashboard/AssetAnalyticsDashboard.svelte'
 import type {
   AssetAnalyticsSummaryResult,
   AssetAnalyticsSummaryWindow,
-} from '$lib/types'
+} from '#lib/api/services/assetAnalytics.types.js'
 
 const getWindowToggleButtons = (label: string): HTMLButtonElement[] =>
   screen.getAllByRole('button', { name: `Last ${label}` }) as HTMLButtonElement[]
@@ -70,6 +71,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'preview',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -173,6 +175,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -243,6 +246,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -307,6 +311,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -388,6 +393,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,
@@ -456,6 +462,7 @@ describe('AssetAnalyticsDashboard', () => {
       status: 'success',
       data: {
         environment: 'production',
+        scope: { organisationIds: [], projectIds: [] },
         generatedAt: '2026-03-24T12:00:00.000Z',
         windows: {
           '1h': null,

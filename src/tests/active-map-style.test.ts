@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { getActiveMapStyleCode } from '$lib/client/services/map'
-import type { AppCtx } from '$lib/context/app.svelte'
+import { getActiveMapStyleCode } from '#lib/client/services/map.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 
 type MapStyleProject = {
   id: string
@@ -14,19 +14,32 @@ const createAppContext = (params: {
   activeProjectId?: string | null
   selectedProjectIds: string[]
   projects: MapStyleProject[]
+  selectedLayerIds?: string[]
+  layers?: { id: string; projectId: string }[]
 }): AppCtx =>
   ({
-    getActiveResourceType: () => (params.activeProjectId ? 'project' : null),
-    getActiveResourceId: () => params.activeProjectId ?? null,
-    state: {
-      prisms: {
-        project: params.selectedProjectIds,
-        layer: [],
+    navigation: {
+      getActiveResourceType: () => (params.activeProjectId ? 'project' : false),
+      getActiveResourceId: () => params.activeProjectId ?? null,
+    },
+    view: {
+      cache: {
+        project: new Map(params.projects.map(row => [row.id, row])),
+        layer: new Map((params.layers ?? []).map(row => [row.id, row])),
+        feature: new Map(),
       },
-      resources: {
-        project: params.projects,
-        layer: [],
-        feature: [],
+      scope: {
+        prisms: {
+          project: params.selectedProjectIds,
+          layer: params.selectedLayerIds ?? [],
+        },
+      },
+      queries: {
+        rows: {
+          project: [],
+          layer: [],
+          feature: [],
+        },
       },
     },
   }) as unknown as AppCtx
@@ -52,5 +65,51 @@ describe('active map style', () => {
 
     expect(getActiveMapStyleCode(beforeRemoval)).toBe('ghostery')
     expect(getActiveMapStyleCode(afterRemoval)).toBe('rosepunk')
+  })
+})
+
+// Pinned selections are retained independently of paginated panel query rows.
+describe('pinned layer map style', () => {
+  it('uses the selected layer project even when neither is on the current list page', () => {
+    const context = createAppContext({
+      selectedProjectIds: [],
+      selectedLayerIds: ['bookshops'],
+      layers: [{ id: 'bookshops', projectId: 'books' }],
+      projects: [{ id: 'books', mapStyle: { code: 'rosepunk' } }],
+    })
+    expect(getActiveMapStyleCode(context)).toBe('rosepunk')
+  })
+
+  it('resolves the style when the pinned project finishes loading', () => {
+    const context = createAppContext({
+      selectedProjectIds: [],
+      selectedLayerIds: ['bookshops'],
+      layers: [{ id: 'bookshops', projectId: 'books' }],
+      projects: [],
+    })
+    expect(getActiveMapStyleCode(context)).toBeNull()
+    const loaded = createAppContext({
+      selectedProjectIds: [],
+      projects: [{ id: 'books', mapStyle: { code: 'rosepunk' } }],
+    }).view.cache.project.get('books')
+    if (!loaded) throw new Error('Missing project fixture')
+    context.view.cache.project.set('books', loaded)
+    expect(getActiveMapStyleCode(context)).toBe('rosepunk')
+  })
+
+  it('follows the remaining selected layer instead of a stale active project', () => {
+    const context = createAppContext({
+      activeProjectId: 'old',
+      selectedProjectIds: [],
+      selectedLayerIds: ['bookshops'],
+      layers: [{ id: 'bookshops', projectId: 'books' }],
+      projects: [
+        { id: 'old', mapStyle: { code: 'ghostery' } },
+        { id: 'books', mapStyle: { code: 'rosepunk' } },
+      ],
+    })
+    expect(getActiveMapStyleCode(context)).toBe('rosepunk')
+    context.view.scope.prisms.layer = []
+    expect(getActiveMapStyleCode(context)).toBe('ghostery')
   })
 })

@@ -1,5 +1,6 @@
+import { gt } from 'drizzle-orm'
 // DRIZZLE
-import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm'
+import { and, eq, inArray, not, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   feature,
@@ -19,23 +20,23 @@ import {
   toOrderByWithLocalizedFields,
   toRelatedRecords,
 } from '..'
-import { insert, insertManyRelated, replaceManyRelated } from '../crud'
+import { insert, insertMany, insertManyRelated, replaceManyRelated } from '../crud'
 import { retryBusyRead } from './sqlite'
+import { autochunk, chunkedInArray } from '#lib/utils/batch-query.js'
 // I18N
-import { normalizeI18nLocaleRecord } from '$lib/i18n'
+import { normalizeI18nLocaleRecord } from '#lib/i18n.js'
 // TYPES
-import type { SQLiteInsertValue } from 'drizzle-orm/sqlite-core'
 import type {
   Database,
   Id,
   LocaleKey,
   Locale,
-  LayerMetadata,
   ListResponse,
   QueryParams,
-} from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/types.js'
+import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type {
   LayerCommandProbe,
   LayerDB,
@@ -46,8 +47,8 @@ import type {
   LayerI18nPartial,
   LayerPropertyDBRaw,
   LayerPropertyNew,
-} from '$lib/db/zod/schema/layer.types'
-import type { TaskEditorLayerOption } from '$lib/db/zod/schema/task.types'
+} from '#lib/db/zod/schema/layer.types.js'
+import type { TaskEditorLayerOption } from '#lib/db/zod/schema/task.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -59,6 +60,7 @@ import type { TaskEditorLayerOption } from '$lib/db/zod/schema/task.types'
 //    - createProperties
 //
 // 2.1 CRUD :: READ
+//    - listLayerPropertyLinks (internal)
 //    - listLayers
 //    - getLayer
 //    - listAssignableTaskLayers
@@ -84,7 +86,6 @@ import type { TaskEditorLayerOption } from '$lib/db/zod/schema/task.types'
 //    - updateProperties
 //
 // 3.2 CRUD :: UPDATE (SYNC)
-//    - upsertLayerProperties (internal)
 //    - syncProperties
 //
 // 4. CRUD :: DELETE
@@ -128,6 +129,10 @@ export const createI18n = async (
 /**
  * Creates layer-property link rows and returns hydrated link records.
  * Used when establishing property visibility/contributable configuration for a layer.
+ * @param db - Database used by the authorized layer workflow.
+ * @param layerId - Authoritative target layer for every submitted link.
+ * @param properties - Property links to insert.
+ * @returns Links hydrated with properties, translations, and values.
  */
 export const createProperties = async (
   db: Database,
@@ -135,14 +140,33 @@ export const createProperties = async (
   properties: LayerPropertyNew[],
 ): Promise<LayerPropertyDBRaw[]> => {
   if (properties.length > 0) {
-    await db.insert(layerProperty).values(
+    await insertMany(
+      db,
+      layerProperty,
       properties.map(prop => ({
-        layerId,
         ...prop,
+        layerId,
       })),
     )
   }
 
+  return await listLayerPropertyLinks(db, layerId)
+}
+
+// ═══════════════════════
+// 2.1 CRUD :: READ
+// ═══════════════════════
+
+/**
+ * Reads layer links with the shared nested property graph after creation or replacement.
+ * @param db - Database used for the committed-state readback.
+ * @param layerId - Layer whose links should be hydrated.
+ * @returns Property links including property and value translations.
+ */
+async function listLayerPropertyLinks(
+  db: Database,
+  layerId: string,
+): Promise<LayerPropertyDBRaw[]> {
   const rows = await db.query.layerProperty.findMany({
     where: eq(layerProperty.layerId, layerId),
     with: {
@@ -162,10 +186,6 @@ export const createProperties = async (
   return rows as LayerPropertyDBRaw[]
 }
 
-// ═══════════════════════
-// 2.1 CRUD :: READ
-// ═══════════════════════
-
 /**
  * Lists layers with optional role/hub filters, search, sorting, and pagination.
  * Used by admin/public list endpoints to return hydrated list envelopes plus metadata.
@@ -175,7 +195,12 @@ export const listLayers = async (
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number; offset?: number },
+  pagination?: {
+    limit?: number
+    offset?: number
+    afterId?: string
+    afterValue?: string | number | null
+  },
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
@@ -186,6 +211,9 @@ export const listLayers = async (
   },
 ): Promise<ListResponse<LayerDBRaw>> => {
   const startedAt = Date.now()
+  // Keyset pages advance using a unique immutable ID, independently of row offsets.
+  if (pagination?.afterId && pagination.afterValue === undefined)
+    conditions.push(gt(layer.id, pagination.afterId))
 
   if (!query?.ignoreHubFilter) {
     const hubFilter = getLayerHubFilter(db, opts)
@@ -246,6 +274,11 @@ export const listLayers = async (
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
   const orderBy = toOrderByWithLocalizedFields({
+    conditions,
+    cursor:
+      pagination?.afterId && pagination.afterValue !== undefined
+        ? { id: pagination.afterId, value: pagination.afterValue }
+        : undefined,
     db,
     locale: query?.locale,
     sortBy,
@@ -396,6 +429,7 @@ export const probeLayerForUpdate = async (
   organisationId: string
   projectId: string
   metadata: LayerMetadata | null
+  isDefaultVisible: boolean
   hubId: string | null
   modifiedAt: string
 } | null> => {
@@ -406,6 +440,7 @@ export const probeLayerForUpdate = async (
         organisationId: layer.organisationId,
         projectId: layer.projectId,
         metadata: layer.metadata,
+        isDefaultVisible: layer.isDefaultVisible,
         hubId: organisation.hubId,
         modifiedAt: layer.modifiedAt,
       })
@@ -520,18 +555,16 @@ export const syncProjectLayerPresentation = async (
 ): Promise<void> => {
   if (rows.length === 0) return
 
-  const existingRows = await db.query.layer.findMany({
-    where: and(
-      eq(layer.projectId, projectId),
-      inArray(
-        layer.id,
-        rows.map(row => row.id),
-      ),
-    ),
-    columns: {
-      id: true,
-    },
-  })
+  const existingRows = await autochunk(
+    { items: rows.map(row => row.id), otherParametersCount: 1 },
+    async rowIds =>
+      await db.query.layer.findMany({
+        where: and(eq(layer.projectId, projectId), inArray(layer.id, rowIds)),
+        columns: {
+          id: true,
+        },
+      }),
+  )
   const existingIds = new Set(existingRows.map(row => row.id))
 
   await Promise.all(
@@ -733,14 +766,26 @@ export const updateI18n = async (
 /**
  * Replaces all layer-property links for a layer.
  * Used by full replacement update flows.
+ * @param db - Database used by the authorized layer workflow.
+ * @param layerId - Authoritative target layer.
+ * @param properties - Complete replacement set of links.
+ * @returns Committed links hydrated with properties, translations, and values.
+ * @remarks Deletion and all insert chunks commit atomically; a failed insert preserves existing links.
  */
 export const updateProperties = async (
   db: Database,
   layerId: string,
   properties: LayerPropertyNew[],
 ): Promise<LayerPropertyDBRaw[]> => {
-  await db.delete(layerProperty).where(eq(layerProperty.layerId, layerId))
-  return await createProperties(db, layerId, properties)
+  // Keep SQL parameter chunks inside one transaction before hydrating the committed graph.
+  await replaceManyRelated(
+    db,
+    layerProperty,
+    properties.map(prop => ({ ...prop, layerId })),
+    layerProperty.layerId,
+    layerId,
+  )
+  return await listLayerPropertyLinks(db, layerId)
 }
 
 // ═══════════════════════
@@ -748,168 +793,82 @@ export const updateProperties = async (
 // ═══════════════════════
 
 /**
- * Diffs and upserts layer-property links with minimal DB operations.
- * Used by sync flows to avoid destructive full rewrites.
- */
-const upsertLayerProperties = async (
-  db: Database,
-  layerId: string,
-  propertyLinks: Array<{
-    propertyId: string
-    isVisible?: boolean
-    isUserContributable?: boolean
-  }>,
-): Promise<void> => {
-  const currentLinks = await db.query.layerProperty.findMany({
-    where: eq(layerProperty.layerId, layerId),
-    columns: {
-      propertyId: true,
-      isVisible: true,
-      isUserContributable: true,
-    },
-  })
-
-  const currentLinkMap = new Map(
-    currentLinks.map(link => [
-      link.propertyId,
-      {
-        isVisible: link.isVisible,
-        isUserContributable: link.isUserContributable,
-      },
-    ]),
-  )
-  const newLinkMap = new Map(
-    propertyLinks.map(link => [
-      link.propertyId,
-      {
-        isVisible: link.isVisible,
-        isUserContributable: link.isUserContributable,
-      },
-    ]),
-  )
-
-  const toDelete: string[] = []
-  const toInsert: SQLiteInsertValue<typeof layerProperty>[] = []
-  const toUpdate: Array<{
-    propertyId: string
-    isVisible?: boolean
-    isUserContributable?: boolean
-  }> = []
-
-  for (const currentPropertyId of currentLinkMap.keys()) {
-    if (!newLinkMap.has(currentPropertyId)) {
-      toDelete.push(currentPropertyId)
-    }
-  }
-
-  for (const [newPropertyId, newState] of newLinkMap.entries()) {
-    const currentState = currentLinkMap.get(newPropertyId)
-    if (!currentState) {
-      toInsert.push({
-        layerId,
-        propertyId: newPropertyId,
-        isVisible: newState.isVisible ?? false,
-        isUserContributable: newState.isUserContributable ?? false,
-      })
-      continue
-    }
-
-    if (
-      (newState.isVisible !== undefined &&
-        newState.isVisible !== currentState.isVisible) ||
-      (newState.isUserContributable !== undefined &&
-        newState.isUserContributable !== currentState.isUserContributable)
-    ) {
-      toUpdate.push({
-        propertyId: newPropertyId,
-        isVisible: newState.isVisible,
-        isUserContributable: newState.isUserContributable,
-      })
-    }
-  }
-
-  if (toDelete.length > 0) {
-    await db
-      .delete(layerProperty)
-      .where(
-        and(
-          eq(layerProperty.layerId, layerId),
-          inArray(layerProperty.propertyId, toDelete),
-        ),
-      )
-  }
-
-  if (toInsert.length > 0) {
-    await db.insert(layerProperty).values(toInsert)
-  }
-
-  for (const updateOp of toUpdate) {
-    const payload: Partial<typeof layerProperty.$inferInsert> = {}
-    if (updateOp.isVisible !== undefined) payload.isVisible = updateOp.isVisible
-    if (updateOp.isUserContributable !== undefined) {
-      payload.isUserContributable = updateOp.isUserContributable
-    }
-
-    await db
-      .update(layerProperty)
-      .set(payload)
-      .where(
-        and(
-          eq(layerProperty.layerId, layerId),
-          eq(layerProperty.propertyId, updateOp.propertyId),
-        ),
-      )
-  }
-}
-
-/**
  * Synchronizes each layer's property links against current project property state.
  * Used when project property assignments change and child layers must follow.
+ * @param db - Database used by the authorized project workflow.
+ * @param projectId - Project whose current layers must follow the submitted properties.
+ * @param newProjectProperties - Resolved project property state.
+ * @returns Nothing after all child-layer changes commit.
+ * @remarks Diffs and inserts links without destructive full rewrites. Existing link
+ * flags are preserved at write time; failures roll back every affected layer.
  */
 export const syncProperties = async (
   db: Database,
   projectId: string,
   newProjectProperties: Property[],
 ): Promise<void> => {
-  const projectLayers = await db.query.layer.findMany({
-    where: eq(layer.projectId, projectId),
-    columns: {
-      id: true,
-    },
-  })
-
-  if (projectLayers.length === 0) return
-
-  const isProjectPropertyEnabled = (propertyRow: Property): boolean => {
-    if (propertyRow.scope === 'project') return true
-    return typeof (propertyRow as Property & { isEnabled?: boolean }).isEnabled ===
-      'boolean'
-      ? Boolean((propertyRow as Property & { isEnabled?: boolean }).isEnabled)
-      : Boolean(propertyRow.isDefaultEnabled)
-  }
-
   const targetProperties = newProjectProperties.filter(propertyRow => {
     if (!propertyRow?.id || typeof propertyRow.id !== 'string') return false
-    return isProjectPropertyEnabled(propertyRow)
+    if (propertyRow.scope === 'project') return true
+    const enabled = (propertyRow as Property & { isEnabled?: boolean }).isEnabled
+    return typeof enabled === 'boolean'
+      ? enabled
+      : Boolean(propertyRow.isDefaultEnabled)
   })
+  const projectLayerIds = db
+    .select({ id: layer.id })
+    .from(layer)
+    .where(eq(layer.projectId, projectId))
 
-  for (const row of projectLayers) {
-    const currentLinks = await db.query.layerProperty.findMany({
-      where: eq(layerProperty.layerId, row.id),
-      columns: { propertyId: true },
-    })
-    const currentIds = new Set(currentLinks.map(link => link.propertyId))
-    const targetPropertyLinks = targetProperties.map(propertyRow => ({
-      propertyId: propertyRow.id,
-      isVisible: currentIds.has(propertyRow.id)
-        ? undefined
-        : Boolean(propertyRow.isDefaultEnabled),
-      isUserContributable: currentIds.has(propertyRow.id)
-        ? undefined
-        : Boolean(propertyRow.isDefaultEnabled),
-    }))
-    await upsertLayerProperties(db, row.id, targetPropertyLinks)
+  // Resolve layer membership and obsolete links inside the transaction, without stale reads.
+  const detach = db.delete(layerProperty).where(
+    and(
+      inArray(layerProperty.layerId, projectLayerIds),
+      not(
+        chunkedInArray(
+          layerProperty.propertyId,
+          targetProperties.map(row => row.id),
+        ),
+      ),
+    ),
+  )
+  if (targetProperties.length === 0) {
+    await db.batch([detach])
+    return
   }
+
+  // A bound JSON table keeps the parameter count fixed across all properties and layers.
+  const incoming = JSON.stringify(
+    targetProperties.map(row => ({
+      id: row.id,
+      enabled: Number(Boolean(row.isDefaultEnabled)),
+    })),
+  )
+  const assignments = db
+    .insert(layerProperty)
+    .select(
+      db
+        .select({
+          layerId: layer.id,
+          propertyId: sql<string>`json_extract(incoming.value, '$.id')`.as(
+            'propertyId',
+          ),
+          isVisible: sql<boolean>`json_extract(incoming.value, '$.enabled')`.as(
+            'isVisible',
+          ),
+          isUserContributable:
+            sql<boolean>`json_extract(incoming.value, '$.enabled')`.as(
+              'isUserContributable',
+            ),
+        })
+        .from(layer)
+        .innerJoin(sql`json_each(${incoming}) as incoming`, sql`true`)
+        .where(eq(layer.projectId, projectId)),
+    )
+    .onConflictDoNothing({ target: [layerProperty.layerId, layerProperty.propertyId] })
+
+  // Conflicting links retain their live flags; a later failure also restores all detachments.
+  await db.batch([detach, assignments])
 }
 
 // ═══════════════════════

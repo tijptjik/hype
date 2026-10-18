@@ -1,12 +1,12 @@
 <script lang="ts">
-import { useImageEditorGalleryModel } from '$lib/adapters/image'
-import { getURLfromImage } from '$lib/client/services/image'
-import { CameraViewer } from '$lib/bits/patterns/images'
-import Viewer from '$lib/bits/patterns/images/components/Viewer.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
-import { getImageCtx } from '$lib/context/image.svelte'
+import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
+import { getURLfromImage } from '#lib/client/services/image.js'
+import { CameraViewer } from '#lib/bits/patterns/images/index.js'
+import Viewer from '#lib/bits/patterns/images/components/Viewer.svelte'
+import { getCardCtx } from '#lib/context/card.svelte.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 import * as ViewerPrimitive from './images'
-import type { ViewerRenderable } from '$lib/bits/patterns/images'
+import type { ViewerRenderable } from '#lib/bits/patterns/images/index.js'
 
 const cardCtx = getCardCtx()
 const imageCtx = getImageCtx()
@@ -138,7 +138,9 @@ const viewerStyle = $derived.by(() => {
 })
 </script>
 
-{#snippet rightRail(_item: ViewerRenderable)}
+{#snippet rightRail(
+  _item: ViewerRenderable,
+)}
   <ViewerPrimitive.Counter
     requestedIndex={activeIndex}
     {loadedIndex}
@@ -151,11 +153,13 @@ const viewerStyle = $derived.by(() => {
   <ViewerPrimitive.EmptyState />
 {/snippet}
 
+<!-- biome-ignore lint/a11y/noStaticElementInteractions: The viewer shell stops bubbling pointer events from activating the enclosing card. -->
 <div
   bind:this={viewerRoot}
-  class={`pointer-events-auto w-full select-none bg-black/95 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) transition-[height,min-height,max-height,flex-basis] duration-[240ms] ease-out motion-reduce:transition-none [touch-action:manipulation] ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
+  class={`pointer-events-auto w-full select-none bg-base-200 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) transition-[height,min-height,max-height,flex-basis] duration-[240ms] ease-out motion-reduce:transition-none [touch-action:manipulation] ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
   style={`${viewerStyle ?? ''}${viewerStyle ? ' ' : ''}min-height: ${viewerBlockMinHeightPx}px;`}
   onclick={stopViewerEvent}
+  onkeydown={stopViewerEvent}
   onpointerdown={stopViewerEvent}
   onpointermove={stopViewerEvent}
   onpointerup={stopViewerEvent}

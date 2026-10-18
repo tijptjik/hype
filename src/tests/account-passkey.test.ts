@@ -43,11 +43,11 @@ function createEvent(options: PasskeyRouteOptions = {}) {
     }),
     url: new URL('https://hype.example/api/account/passkey'),
     locals: {
+      platform: { env: { DB: {} } },
       session: { id: 'session-1' },
       user: { id: 'user-1', isAnonymous: options.isAnonymous ?? true },
       auth: { api: { getSession: authMocks.getSession } },
     },
-    platform: { env: { DB: {} } },
   }
 }
 

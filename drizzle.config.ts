@@ -9,13 +9,19 @@ config({ path: '.dev.vars' })
 const crawledDbHelper = D1Helper.get('DB')
 const isProd = () => process.env.NODE_ENV === 'production'
 
+function getRequiredEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) throw new Error(`Missing required environment variable: ${name}`)
+  return value
+}
+
 const getCredentials = () => {
   const prod = {
     driver: 'd1-http',
     dbCredentials: {
-      accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+      accountId: getRequiredEnv('CLOUDFLARE_ACCOUNT_ID'),
       databaseId: process.env.CLOUDFLARE_DATABASE_ID,
-      token: process.env.CLOUDFLARE_D1_TOKEN!,
+      token: getRequiredEnv('CLOUDFLARE_D1_TOKEN'),
       // ...crawledDbHelper.withCfCredentials(
       //   process.env.CLOUDFLARE_ACCOUNT_ID,
       //   process.env.CLOUDFLARE_D1_TOKEN

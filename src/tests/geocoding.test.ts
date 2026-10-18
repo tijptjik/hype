@@ -2,13 +2,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // TYPES
-import type { ALSResult } from '$lib/types'
+import type { ALSResult } from '#lib/utils/geocoding.types.js'
 
 const { mockTranslateText } = vi.hoisted(() => ({
   mockTranslateText: vi.fn(),
 }))
 
-vi.mock('$lib/api/external/translation', () => ({
+vi.mock('#lib/api/external/translation.js', () => ({
   translateText: mockTranslateText,
 }))
 
@@ -34,7 +34,9 @@ describe('processForwardGeocodeResult', () => {
   it('maps translated chinese address properties back by key and preserves missing values', async () => {
     mockTranslateText.mockResolvedValue(['简体展示地址', '简体楼名', '简体门牌'])
 
-    const { processForwardGeocodeResult } = await import('$lib/api/external/geocoding')
+    const { processForwardGeocodeResult } = await import(
+      '#lib/api/external/geocoding.js'
+    )
     const alsResult: ALSResult = {
       RequestAddress: {
         AddressLine: ['原始地址'],

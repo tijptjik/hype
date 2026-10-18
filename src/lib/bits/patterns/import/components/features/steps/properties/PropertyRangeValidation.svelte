@@ -2,20 +2,20 @@
 // SVELTE
 import { onDestroy } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // API
-import { getProperties } from '$lib/api/server/property.remote'
+import { getProperties } from '#lib/api/property.remote.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
 import type {
   FeatureCSVColumn,
   Locale,
   Property,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 type PropertyData = {
   key: string
@@ -61,7 +61,7 @@ let {
 }: Props = $props()
 
 const importCtx = getImportCtx()
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let existingProperty = $state<Property | null>(null)
 let validation = $state<ValidationResult | null>(null)
@@ -434,10 +434,18 @@ function getIssueText(issue: RangeIssue): string {
   if (issue.reason === 'non-numeric') {
     return 'Not a number'
   }
-  if (issue.reason === 'below-min' && validation?.currentRange.min !== null) {
+  if (
+    issue.reason === 'below-min' &&
+    validation &&
+    validation.currentRange.min !== null
+  ) {
     return m.below_minimum({ min: validation.currentRange.min })
   }
-  if (issue.reason === 'above-max' && validation?.currentRange.max !== null) {
+  if (
+    issue.reason === 'above-max' &&
+    validation &&
+    validation.currentRange.max !== null
+  ) {
     return m.above_maximum({ max: validation.currentRange.max })
   }
   return m.validation_failed()
@@ -450,7 +458,7 @@ function getSampleValues(limit = 10): string[] {
 
 <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
   >
     {#if isLoading}
       <div class="flex min-h-full flex-1 items-center justify-center">
@@ -491,7 +499,7 @@ function getSampleValues(limit = 10): string[] {
         </div>
 
         <div
-          class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-4 md:grid-cols-2"
+          class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-2"
         >
           <div>
             <div
@@ -538,7 +546,9 @@ function getSampleValues(limit = 10): string[] {
         </div>
 
         <div class="grid gap-3 md:grid-cols-2">
-          <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+          <div
+            class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4"
+          >
             <div
               class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
             >
@@ -551,7 +561,9 @@ function getSampleValues(limit = 10): string[] {
             <p class="mt-2 text-sm text-base-content/65">{m.existing_constraints()}</p>
           </div>
 
-          <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+          <div
+            class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4"
+          >
             <div
               class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
             >
@@ -583,7 +595,7 @@ function getSampleValues(limit = 10): string[] {
           <div class="space-y-3">
             {#each valuesNeedingResolution as issue}
               <div
-                class="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-4 md:grid-cols-[minmax(0,1fr)_10rem]"
+                class="grid gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[minmax(0,1fr)_10rem]"
               >
                 <div class="min-w-0">
                   <div
@@ -608,7 +620,7 @@ function getSampleValues(limit = 10): string[] {
                   {#if usesDiscreteAssignments}
                     <div class="p-2">
                       <select
-                        class="select select-bordered w-full bg-black/30 px-2 text-center font-mono text-sm"
+                        class="select select-bordered w-full bg-panel/30 px-2 text-center font-mono text-sm"
                         value={assignments[issue.value] ?? ''}
                         onchange={event => {
                           assignments[issue.value] = (
@@ -626,7 +638,7 @@ function getSampleValues(limit = 10): string[] {
                   {:else}
                     <div class="flex gap-2 p-2">
                       <input
-                        class="input input-bordered w-full bg-black/30 px-2 text-center font-mono text-sm"
+                        class="input input-bordered w-full bg-panel/30 px-2 text-center font-mono text-sm"
                         type="number"
                         step="any"
                         value={assignments[issue.value] === DROP_VALUE
@@ -665,7 +677,7 @@ function getSampleValues(limit = 10): string[] {
   </section>
 
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
   >
     <div class="mb-5">
       <div
@@ -677,11 +689,11 @@ function getSampleValues(limit = 10): string[] {
     </div>
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04]"
+      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-foreground/10 bg-foreground/[0.04]"
     >
       {#each getSampleValues() as value}
         <div
-          class="border-b border-white/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+          class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
         >
           {value}
         </div>
@@ -689,7 +701,9 @@ function getSampleValues(limit = 10): string[] {
     </div>
 
     {#if validation && !validation.isValid}
-      <div class="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+      <div
+        class="mt-4 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4"
+      >
         <div
           class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
         >

@@ -3,9 +3,9 @@
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 // AUTH
-import { authClient } from '$lib/auth/client'
+import { authClient } from '#lib/auth/client.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 let password = $state('')
 let isBusy = $state(false)

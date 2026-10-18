@@ -1,4 +1,4 @@
-import { isAuthEntryPath } from '$lib/auth/redirectGuard'
+import { isAuthEntryPath } from '#lib/auth/redirectGuard.js'
 
 export const ANONYMOUS_BOOTSTRAP_ATTEMPTS = 3
 export const ANONYMOUS_BOOTSTRAP_TIMEOUT_MS = 8_000

@@ -4,6 +4,7 @@
       "id": "browser-direct-upload",
       "allowed": {
         "origins": [
+          "http://hype.localhost",
           "http://localhost:5173",
           "https://preview.hype.hk",
           "https://hype.hk",

@@ -1,10 +1,10 @@
 <script lang="ts">
 // BITS
-import { HubPolicyDialog, HubSubscriptionOverlay } from '$lib/bits'
-import { cx } from '$lib/bits/utils'
+import { HubPolicyDialog, HubSubscriptionOverlay } from '#lib/bits/index.js'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
-import type { HubSubscriptionOverlayProps } from '$lib/bits/patterns/bars'
-import type { HubPolicyDialogProps } from '$lib/bits/patterns/policies'
+import type { HubSubscriptionOverlayProps } from '#lib/bits/patterns/bars/index.js'
+import type { HubPolicyDialogProps } from '#lib/bits/patterns/policies/index.js'
 
 type AppHubSubscriptionOverlayProps = {
   isVisible?: boolean

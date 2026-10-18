@@ -2,22 +2,22 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { SimpleTooltip } from '$lib/bits/core/tooltip'
+import { SimpleTooltip } from '#lib/bits/core/tooltip/index.js'
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import CheckCircle from 'virtual:icons/lucide/circle-check'
-import ClipboardDocument from 'virtual:icons/lucide/clipboard'
-import ChevronsDownUp from 'virtual:icons/lucide/chevrons-down-up'
-import ChevronsUpDown from 'virtual:icons/lucide/chevrons-up-down'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
+import ClipboardDocument from 'virtual:icons/proicons/clipboard'
+import ChevronsDownUp from 'virtual:icons/proicons/contract-down'
+import ChevronsUpDown from 'virtual:icons/proicons/arrow-up-down'
 // SERVICES
 import {
   isFeatureResolutionCreateResult,
   renderFeatureResolutionDiff,
   toFeatureResolutionPreview,
   type FeatureResolutionData,
-} from '$lib/client/services/import/features/resolution'
+} from '#lib/client/services/import/features/resolution.js'
 
 type Props = {
   result: FeatureResolutionData

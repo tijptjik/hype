@@ -2,7 +2,7 @@
 // SVELTE
 import type { Snippet } from 'svelte'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 type Props = {
   class?: string

@@ -1,4 +1,9 @@
-/// <reference types="@cloudflare/workers-types" />
+// TYPES
+import type {
+  ScheduledController,
+  ExportedHandler,
+  Request as WorkerRequest,
+} from '@cloudflare/workers-types'
 
 type Env = {
   APP_BASE_URL: string
@@ -19,7 +24,10 @@ const ANONYMOUS_CLEANUP_CRON = '15 3 * * *'
  * @param expected - Configured scheduler secret, if the binding is available.
  * @returns Whether both credentials are present and match in constant time.
  */
-const hasValidSchedulerCredential = (request: Request, expected?: string): boolean => {
+const hasValidSchedulerCredential = (
+  request: Request | WorkerRequest,
+  expected?: string,
+): boolean => {
   const credential = request.headers.get('authorization')
   if (!expected || !credential) {
     return false
@@ -88,7 +96,7 @@ export default {
    * @param env Worker environment bindings and secrets.
    * @returns Health response or manual trigger result.
    */
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request | WorkerRequest, env: Env): Promise<Response> {
     const url = new URL(request.url)
 
     if (request.method === 'GET' && url.pathname === '/health') {
@@ -157,4 +165,7 @@ export default {
       }),
     )
   },
-} satisfies ExportedHandler<Env>
+  // Fetch uses the host's standard Response type in both Worker and Node test runtimes.
+} satisfies Pick<ExportedHandler<Env>, 'scheduled'> & {
+  fetch(request: Request | WorkerRequest, env: Env): Promise<Response>
+}

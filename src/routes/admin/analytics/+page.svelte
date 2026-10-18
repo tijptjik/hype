@@ -1,29 +1,32 @@
 <script lang="ts">
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import { fade } from 'svelte/transition'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
-import { runRemoteQuery } from '$lib/remote'
+import { runRemoteQuery } from '#lib/remote/index.js'
 // API
-import { getAssetAnalyticsSummary } from '$lib/api/server/analytics.remote'
+import { getAssetAnalyticsSummary } from '#lib/api/analytics.remote.js'
 // I18N
-import { getLocale, m } from '$lib/i18n'
+import { getLocale, m } from '#lib/i18n.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // BITS
-import { AssetAnalyticsDashboard, AssetAnalyticsDashboardSkeleton } from '$lib/bits'
+import {
+  AssetAnalyticsDashboard,
+  AssetAnalyticsDashboardSkeleton,
+} from '#lib/bits/index.js'
 // ICONS
-import ChartColumnIncreasing from 'virtual:icons/lucide/chart-column-increasing'
-import Database from 'virtual:icons/lucide/database'
-import Globe from 'virtual:icons/lucide/globe'
-import Image from 'virtual:icons/lucide/image'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
-import RefreshCw from 'virtual:icons/lucide/refresh-cw'
-import Users from 'virtual:icons/lucide/users'
+import ChartColumnIncreasing from 'virtual:icons/proicons/bar-chart'
+import Database from 'virtual:icons/proicons/database'
+import Globe from 'virtual:icons/proicons/globe'
+import Image from 'virtual:icons/proicons/photo'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
+import RefreshCw from 'virtual:icons/proicons/arrow-sync'
+import Users from 'virtual:icons/proicons/person-multiple'
 // TYPES
-import type { AssetAnalyticsSummaryResult } from '$lib/types'
+import type { AssetAnalyticsSummaryResult } from '#lib/api/services/assetAnalytics.types.js'
 
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
@@ -43,17 +46,17 @@ const ANALYTICS_FACETS = [
 }>
 
 adminCtx.setResourceType(false)
+
 let activeFacet = $state<AnalyticsFacet>(DEFAULT_ANALYTICS_FACET)
 const prismOrganisationIds = $derived([
-  ...adminCtx.appCtx.getPrism(FirstClassResource.organisation),
+  ...adminCtx.view.scope.getPrism(FirstClassResource.organisation),
 ])
 const prismProjectIds = $derived([
-  ...adminCtx.appCtx.getPrism(FirstClassResource.project),
+  ...adminCtx.view.scope.getPrism(FirstClassResource.project),
 ])
 const prismSignature = $derived(
   `${prismOrganisationIds.join('|')}::${prismProjectIds.join('|')}`,
 )
-
 let analyticsState = $state<AssetAnalyticsSummaryResult | null>(null)
 let analyticsPreviewState = $state<AssetAnalyticsSummaryResult | null>(null)
 let isRefreshing = $state(false)
@@ -68,7 +71,7 @@ async function resolvePrismScopePrefixes(): Promise<string[]> {
   const prefixes = new Set<string>()
 
   for (const organisationId of prismOrganisationIds) {
-    const organisation = await adminCtx.appCtx.getOrganisationById(organisationId)
+    const organisation = await adminCtx.view.getOrganisationById(organisationId)
     const organisationCode = organisation?.code?.trim()
     if (organisationCode) {
       prefixes.add(`h/${organisationCode}/`)
@@ -76,14 +79,14 @@ async function resolvePrismScopePrefixes(): Promise<string[]> {
   }
 
   for (const projectId of prismProjectIds) {
-    const project = await adminCtx.appCtx.getProjectById(projectId)
+    const project = await adminCtx.view.getProjectById(projectId)
     const projectCode = project?.code?.trim()
+
     if (!projectCode || !project?.organisationId) continue
 
-    const organisation = await adminCtx.appCtx.getOrganisationById(
-      project.organisationId,
-    )
+    const organisation = await adminCtx.view.getOrganisationById(project.organisationId)
     const organisationCode = organisation?.code?.trim()
+
     if (!organisationCode) continue
 
     prefixes.add(`h/${organisationCode}/${projectCode}/`)
@@ -116,9 +119,7 @@ async function buildAnalyticsQueryParams(): Promise<{
     scopePrefixes,
     organisationIds: prismOrganisationIds,
     projectIds: prismProjectIds,
-    meta: {
-      isAdminRequest: true,
-    },
+    meta: { isAdminRequest: true },
   }
 }
 
@@ -192,6 +193,7 @@ async function loadAnalytics(): Promise<AssetAnalyticsSummaryResult> {
           }
         : null,
   })
+
   return result
 }
 
@@ -213,18 +215,17 @@ async function runAnalyticsLoad(options?: {
 
   try {
     const result = await loadAnalytics()
+
     if (requestVersion !== analyticsRequestVersion) return
 
     analyticsState = result
     analyticsPreviewState = result
   } catch (cause) {
     console.error('Asset analytics remote query failed', cause)
+
     if (requestVersion !== analyticsRequestVersion) return
 
-    analyticsState = {
-      status: 'error',
-      message: 'Failed to load analytics.',
-    }
+    analyticsState = { status: 'error', message: 'Failed to load analytics.' }
   }
 
   if (requestVersion === analyticsRequestVersion) {
@@ -241,6 +242,7 @@ function formatGeneratedAt(value: string | null | undefined): string {
   if (!value) return '—'
 
   const date = new Date(value)
+
   if (Number.isNaN(date.getTime())) return value
 
   return new Intl.DateTimeFormat(getLocale(), {
@@ -266,13 +268,12 @@ $effect(() => {
     showLayoutToggle: false,
     showControlBarToggle: false,
   })
+
   headerCtrl.setFacets(
     ANALYTICS_FACETS.map(facet => ({ ...facet })),
-    {
-      active: activeFacet,
-      onFacetChange: handleFacetChange,
-    },
+    { active: activeFacet, onFacetChange: handleFacetChange },
   )
+
   headerCtrl.setViewActions([
     {
       text: isRefreshing ? 'Refreshing…' : 'Refresh',
@@ -292,6 +293,7 @@ $effect(() => {
       onClick: refreshAnalytics,
     },
   ])
+
   headerCtrl.clearFooter()
 })
 
@@ -369,6 +371,7 @@ $effect(() => {
           >
             {m.analytics__next_steps()}
           </h3>
+
           <ul class="mt-4 space-y-3 text-sm leading-6 text-foreground">
             {#if activeFacet === 'views'}
               <li>{m.analytics__views_next_step_1()}</li>

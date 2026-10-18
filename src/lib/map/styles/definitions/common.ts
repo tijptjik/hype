@@ -1,8 +1,9 @@
 import { layers, namedFlavor } from '@protomaps/basemaps'
-import type { StyleSpecification } from 'maplibre-gl'
+import type { StyleSpecification, ExpressionSpecification } from 'maplibre-gl'
 
-import { toProtomapLocale } from '$lib/i18n'
-import type { LocaleKey, MapMarkerTheme } from '../../../types'
+import { toProtomapLocale } from '#lib/i18n.js'
+import type { LocaleKey } from '#lib/types.js'
+import type { MapMarkerTheme } from '../catalog'
 
 export type StyleBuildOptions = {
   noLabels?: boolean
@@ -120,7 +121,7 @@ export const hideSymbolLayers = (style: StyleSpecification): StyleSpecification 
 export const getLocaleTextField = (
   layerId: string,
   locale: LocaleKey,
-): unknown[] | undefined => {
+): ExpressionSpecification | undefined => {
   if (layerId === 'address_label') {
     return ['get', 'addr_housenumber']
   }
@@ -134,13 +135,13 @@ export const getLocaleTextField = (
     return undefined
   }
 
-  const currentNameExpression: unknown[] = [
+  const currentNameExpression: ExpressionSpecification = [
     'coalesce',
     ['get', 'name'],
     ['get', 'pgf:name'],
   ]
 
-  const englishNameExpression: unknown[] =
+  const englishNameExpression: ExpressionSpecification =
     locale === 'en'
       ? [
           'coalesce',
@@ -157,7 +158,7 @@ export const getLocaleTextField = (
           ['get', 'pgf:name2'],
         ]
 
-  const localNameExpression: unknown[] = [
+  const localNameExpression: ExpressionSpecification = [
     'coalesce',
     currentNameExpression,
     ['get', 'pgf:name'],
@@ -242,7 +243,7 @@ export const applySpriteVariant = (
     return style
   }
 
-  style.sprite = `https://protomaps.github.io/basemaps-assets/sprites/v4/${options.basemapVariant}`
+  style.sprite ??= `https://protomaps.github.io/basemaps-assets/sprites/v4/${options.basemapVariant}`
   return style
 }
 
@@ -267,7 +268,7 @@ export const applyWaterColorToBackground = (
 
   // Keep MapLibre's opaque background layer consistent with the visible sea.
   style.layers = style.layers.map(layer =>
-    layer.id === 'background'
+    layer.id === 'background' && layer.type === 'background'
       ? {
           ...layer,
           paint: { ...(layer.paint ?? {}), 'background-color': waterColor },

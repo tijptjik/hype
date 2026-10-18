@@ -6,21 +6,21 @@ import { onMount, untrack } from 'svelte'
 import { debounce } from '@sillvva/utils'
 import { toast } from 'svelte-sonner'
 // ADAPTERS
-import { createAdminIndexCardModel } from '$lib/adapters/cards/createAdminIndexCardModel'
+import { createAdminIndexCardModel } from '#lib/adapters/cards/createAdminIndexCardModel.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
-import { getFeatures, updateFeatureBulkState } from '$lib/api/server/feature.remote'
+import { getFeatures, updateFeatureBulkState } from '#lib/api/feature.remote.js'
 // SERVICES
-import { getCachedFeatureRowModel } from '$lib/client/services/featureRow'
+import { getCachedFeatureRowModel } from '#lib/client/services/featureRow.js'
 import {
   createPropertyFilterSection,
   createSortable,
   createSortables,
   createToggleFilter,
   createTranslationFilter,
-} from '$lib/client/services/filters'
+} from '#lib/client/services/filters.js'
 // BITS PATTERNS
 import {
   CompletionFooter,
@@ -28,36 +28,50 @@ import {
   IndexCard,
   ResourceControlBar,
   ResourceIndex,
-} from '$lib/bits'
+} from '#lib/bits/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
-import FeatureIcon from 'virtual:icons/lucide/map-pin'
-import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import ImageIcon from 'virtual:icons/lucide/image'
-import TagsIcon from 'virtual:icons/lucide/tags'
-import PenLineIcon from 'virtual:icons/lucide/pen-line'
-import CopyrightIcon from 'virtual:icons/lucide/copyright'
+import FeatureIcon from 'virtual:icons/proicons/location'
+import StatusIcon from 'virtual:icons/proicons/target'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import TagsIcon from 'virtual:icons/proicons/tag-multiple'
+import PenLineIcon from 'virtual:icons/proicons/compose'
+import CopyrightIcon from 'virtual:icons/proicons/copyright'
 // TYPES
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { FeatureRowModel } from '#lib/client/services/featureRows.types.js'
 import type {
-  FeatureRowModel,
   FeatureTextSearchWorkerRequest,
   FeatureTextSearchWorkerResponse,
-  FeatureBulkEditOption,
+} from '#lib/client/services/featureTextSearch.types.js'
+import type {
   FeatureBulkStateResult,
-  KeyMap,
-  ResourceControlBarConfig,
   ResourceIndexRowSelectionState,
   ResourceBulkEditProgress,
-  Resource,
-  LocaleKey,
-} from '$lib/types'
+} from '#lib/client/services/bulkEdit.types.js'
+import type { KeyMap } from '#lib/client/services/resourceCards.types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { Resource, LocaleKey } from '#lib/types.js'
+// TYPES
+import type { ResourceBulkEditOption } from '#lib/client/services/bulkEdit.types.js'
+
+type FeatureBulkStateField =
+  | 'isPublished'
+  | 'isArchived'
+  | 'isIntangible'
+  | 'isVisitable'
+
+type FeatureBulkEditOption = ResourceBulkEditOption & {
+  field: FeatureBulkStateField
+  state: boolean
+  pastTense: string
+}
 
 const BULK_FEATURE_UPDATE_CHUNK_SIZE = 100
 
@@ -252,11 +266,9 @@ const sortables = createSortables([
 const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.feature)
-const isSearchFocused = $derived(
-  adminCtx.appCtx.state.ui.isSearchFocused[FirstClassResource.feature],
-)
+const isSearchFocused = $derived(headerCtrl.isSearchFocused)
 const featureLayoutMode = $derived(
-  adminCtx.appCtx.state.ui.layoutMode[FirstClassResource.feature],
+  adminCtx.listUi.state.layoutMode[FirstClassResource.feature],
 )
 const activeSearchResultCap = $derived(featureLayoutMode === 'card' ? 12 : 20)
 
@@ -275,10 +287,10 @@ let debouncedRemoteQuery = $state('')
 let optimisticEntities = $state.raw<Feature[]>([])
 let entities = $state.raw<Feature[]>([])
 let footerEntities = $state.raw<Feature[]>([])
-const textQuery = $derived(adminCtx.appCtx.state.filters.feature.text ?? '')
+const textQuery = $derived(adminCtx.view.filters.values.feature.text ?? '')
 const normalizedTextQuery = $derived(textQuery.trim())
 const sortSignature = $derived.by(() => {
-  const sorting = adminCtx.appCtx.state.viewSorting.feature
+  const sorting = adminCtx.view.filters.sorting.feature
   return `${sorting.sortBy}:${sorting.sortOrder}`
 })
 const displayEntities = $derived(
@@ -303,7 +315,7 @@ const localeKey = $derived(getLocaleKey())
 const activeTranslationLocales = $derived.by(() => {
   const locales: LocaleKey[] = []
   const translationLocales =
-    adminCtx.appCtx.state.viewFilters.feature.translationLocales
+    adminCtx.view.filters.viewFilters.feature.translationLocales
 
   for (const [locale, isActive] of Object.entries(translationLocales)) {
     if (isActive) locales.push(locale as LocaleKey)
@@ -313,9 +325,9 @@ const activeTranslationLocales = $derived.by(() => {
 })
 const isSuperAdmin = $derived(
   Boolean(
-    adminCtx.appCtx.user &&
-      'superAdmin' in adminCtx.appCtx.user &&
-      adminCtx.appCtx.user.superAdmin,
+    adminCtx.view.user &&
+      'superAdmin' in adminCtx.view.user &&
+      adminCtx.view.user.superAdmin,
   ),
 )
 const bulkFeatureEditOptions = $derived.by(() => {
@@ -404,8 +416,8 @@ const isBulkApplyDisabled = $derived(
     Boolean(bulkProgress?.isApplying),
 )
 const baseEntities = $derived(
-  adminCtx.applyFeatureViewFilters(
-    adminCtx.appCtx.getFilteredResource<Feature>(FirstClassResource.feature, {
+  adminCtx.view.filters.applyFeatureViewFilters(
+    adminCtx.view.filters.getFilteredResource<Feature>(FirstClassResource.feature, {
       text: false,
       state: true,
     }),
@@ -415,13 +427,13 @@ const baseEntitiesById = $derived.by(
   () => new Map(baseEntities.map(feature => [feature.id, feature])),
 )
 const rowModelsById = $derived.by(() => {
-  const userPreferences = adminCtx.appCtx.getUserPreferences()
+  const userPreferences = adminCtx.view.getUserPreferences()
   const entries = displayEntities.map(
     feature =>
       [
         feature.id,
         getCachedFeatureRowModel({
-          appCtx: adminCtx.appCtx,
+          appCtx: adminCtx.view,
           feature,
           localeKey,
           activeTranslationLocales,
@@ -620,7 +632,7 @@ function patchSuccessfulBulkUpdates(
   )
   if (successfulIds.size === 0) return
 
-  const nextFeatures = adminCtx.appCtx.state.resources.feature.map(feature =>
+  const nextFeatures = adminCtx.view.queries.rows.feature.map(feature =>
     successfulIds.has(feature.id)
       ? {
           ...feature,
@@ -629,7 +641,7 @@ function patchSuccessfulBulkUpdates(
       : feature,
   )
 
-  adminCtx.appCtx.setSortedResourceState(FirstClassResource.feature, nextFeatures)
+  adminCtx.view.setSortedResourceState(FirstClassResource.feature, nextFeatures)
 
   if (remoteMatchedEntities) {
     remoteMatchedEntities = remoteMatchedEntities.map(feature =>
@@ -784,7 +796,7 @@ $effect(() => {
 
   if (!featureTextSearchWorker) {
     optimisticEntities = baseEntities.filter(feature =>
-      adminCtx.appCtx.textFilter(
+      adminCtx.view.filters.textFilter(
         FirstClassResource.feature,
         feature,
         normalizedTextQuery,
@@ -848,13 +860,13 @@ $effect(() => {
   latestRemoteRequestId = nextRequestId
 
   void getFeatures({
-    conditions: adminCtx.appCtx.isSuperAdmin()
+    conditions: adminCtx.view.isSuperAdmin()
       ? { isArchived: null, isPublished: null }
       : { isArchived: false, isPublished: null },
-    prisms: adminCtx.appCtx.state.prisms,
-    sorting: adminCtx.appCtx.state.viewSorting.feature,
+    prisms: adminCtx.view.scope.prisms,
+    sorting: adminCtx.view.filters.sorting.feature,
     q: nextQuery,
-    meta: { isAdminRequest: true, profile: 'card' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   })
     .then(result => {
       if (latestRemoteRequestId !== nextRequestId) return
@@ -886,9 +898,9 @@ $effect(() => {
     remoteHasMore === false &&
     remoteSortSignature === sortSignature
   ) {
-    entities = adminCtx.applyFeatureViewFilters(
+    entities = adminCtx.view.filters.applyFeatureViewFilters(
       remoteMatchedEntities.filter(feature =>
-        adminCtx.appCtx.textFilter(
+        adminCtx.view.filters.textFilter(
           FirstClassResource.feature,
           feature,
           normalizedTextQuery,
@@ -903,7 +915,7 @@ $effect(() => {
     remoteMatchedEntities != null &&
     remoteSortSignature === sortSignature
   ) {
-    entities = adminCtx.applyFeatureViewFilters(
+    entities = adminCtx.view.filters.applyFeatureViewFilters(
       remoteMatchedEntities as Resource[],
     ) as Feature[]
     return
@@ -943,8 +955,7 @@ $effect(() => {
             },
     },
     {
-      isVisible:
-        adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.feature],
+      isVisible: adminCtx.listUi.state.isControlBarVisible[FirstClassResource.feature],
     },
   )
   headerCtrl.setFooter(CompletionFooter, { entities: footerEntities })
@@ -1061,7 +1072,9 @@ function updateRowFocus(index: number) {
     ? toggleFeatureBulkSelection
     : undefined}
 >
-  {#snippet card(entity: Feature)}
+  {#snippet card(
+    entity: Feature,
+  )}
     <IndexCard
       {...createAdminIndexCardModel({
         adminCtx,
@@ -1072,7 +1085,12 @@ function updateRowFocus(index: number) {
       })}
     />
   {/snippet}
-  {#snippet row(entity, index, selectionState, isSelectionModeActive)}
+  {#snippet row(
+    entity,
+    index,
+    selectionState,
+    isSelectionModeActive,
+  )}
     {@const rowModel = rowModelsById.get(entity.id)}
     <FeatureRow
       {entity}

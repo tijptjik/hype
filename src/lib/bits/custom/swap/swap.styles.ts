@@ -1,7 +1,7 @@
 // BITS
-import { cssVars, cx } from '$lib/bits/utils'
+import { cssVars, cx } from '#lib/bits/utils.js'
 // TYPES
-import type { ButtonColor, ButtonSize } from '$lib/bits/core/button/button.types'
+import type { ButtonColor, ButtonSize } from '#lib/bits/core/button/button.types.js'
 import type { SwapVariant } from './swap.types'
 
 type SwapCssVars = {

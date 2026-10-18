@@ -1,5 +1,5 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -11,7 +11,7 @@ import {
   propertyI18n,
   propertyValue,
   propertyValueI18n,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints'
 import { FormBoolean } from '../form'
@@ -273,7 +273,7 @@ export const ProjectPropertiesQuery = z.object({
   projectId: z.string().min(1),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -281,7 +281,7 @@ export const ProjectPropertiesQuery = z.object({
 export const ProjectPropertiesFormMeta = z.object({
   projectId: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
-  isAdminRequest: z.coerce.boolean<boolean>().optional(),
+  isAdminRequest: FormBoolean.optional(),
 })
 
 export const ProjectPropertiesFormEntity = z.object({

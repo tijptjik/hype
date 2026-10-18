@@ -1,12 +1,12 @@
 <script lang="ts">
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // COMPONENTS
 import StatsPips from './components/StatsPips.svelte'
 // SERVICES
-import { calculateFreeformStatuses } from '$lib/client/services/stats'
+import { calculateFreeformStatuses } from '#lib/client/services/stats.js'
 // ICONS
-import PenIcon from 'virtual:icons/lucide/pen'
+import PenIcon from 'virtual:icons/proicons/pencil'
 // TYPES
 import type { FeatureStatsProps } from './featureStats.types'
 

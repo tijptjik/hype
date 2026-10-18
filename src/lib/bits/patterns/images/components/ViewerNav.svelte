@@ -1,7 +1,7 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
-import ChevronLeftIcon from 'virtual:icons/lucide/chevron-left'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
+import { m } from '#lib/i18n.js'
+import ChevronLeftIcon from 'virtual:icons/proicons/chevron-left'
+import ChevronRightIcon from 'virtual:icons/proicons/chevron-right'
 import type { ViewerControlsProps } from './imagePrimitives.types'
 import {
   VIEWER_NAV_BUTTON_CLASSES,

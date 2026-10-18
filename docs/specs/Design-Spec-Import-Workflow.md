@@ -105,7 +105,7 @@ Reason:
 
 Add an import domain with clear boundaries:
 
-- `src/lib/api/server/import.remote.ts`
+- `src/lib/api/import.remote.ts`
 - `src/lib/api/services/import/*.ts`
 - `src/lib/db/services/import.ts`
 - `src/lib/bits/patterns/import/*`

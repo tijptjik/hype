@@ -3,8 +3,8 @@ import {
   authorizeTaskListForContext,
   authorizeTaskReadForProbe,
   authorizeTaskReassignForProbe,
-} from '$lib/api/services/authz/task'
-import type { UserRoleDisco } from '$lib/types'
+} from '#lib/api/services/authz/task.js'
+import type { UserRoleDisco } from '#lib/types.js'
 
 const projectRole = (
   role: 'owner' | 'maintainer' | 'translator' | 'user',

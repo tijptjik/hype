@@ -1,22 +1,23 @@
 <script lang="ts">
 // ICONS
-import { Icon } from '$lib/bits'
-import XMark from 'virtual:icons/lucide/x'
+import { Icon } from '#lib/bits/index.js'
+import XMark from 'virtual:icons/proicons/cancel'
 // I18N
-import { getI18n } from '$lib/i18n'
-import { m } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // SERVICES
-import { navigateOnAdminById } from '$lib/navigation'
+import { navigateOnAdminById } from '#lib/navigation/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { Id, PanelProps } from '$lib/types'
+import type { Id } from '#lib/types.js'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 // COMPONENTS
 import ItemResource from './ItemResource.svelte'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 type Props = {
   resourceType: FirstClassResource | 'neighbourhood'
@@ -36,13 +37,15 @@ const DEFAULT_RESOURCE_COLOR_CLASSES = {
   selectedClass: 'bg-base-content/60',
 } as const
 
-const RESOURCE_COLOR_CLASSES: Record<
-  Props['resourceType'],
-  {
-    colorClass: string
-    hoverColorClass: string
-    selectedClass: string
-  }
+const RESOURCE_COLOR_CLASSES: Partial<
+  Record<
+    Props['resourceType'],
+    {
+      colorClass: string
+      hoverColorClass: string
+      selectedClass: string
+    }
+  >
 > = {
   organisation: {
     colorClass: 'text-primary',
@@ -83,7 +86,7 @@ let selectedClass = $derived(
 
 function handleToggle(id: Id): void {
   if (props.resourceType !== 'neighbourhood') {
-    appCtx.togglePrism(props.resourceType as FirstClassResource, id)
+    appCtx.scope.togglePrism(props.resourceType as FirstClassResource, id)
   }
 }
 
@@ -96,7 +99,7 @@ const handleClickOnNarrow = async (id: string, event: MouseEvent): Promise<void>
   const isInPrism = props.selectedIds.includes(id)
 
   if (isInPrism && isCurrentActive) {
-    appCtx.togglePrism(props.resourceType as FirstClassResource, id)
+    appCtx.scope.togglePrism(props.resourceType as FirstClassResource, id)
     return
   }
 
@@ -116,17 +119,17 @@ function getNoneSelectedMessage(currentProps: Props): string {
 
   if (
     currentProps.resourceType === 'project' &&
-    appCtx.state.prisms.organisation.length === 0
+    appCtx.scope.prisms.organisation.length === 0
   ) {
     return m.maps__projects_none()
   }
 
   if (
     currentProps.resourceType === 'project' &&
-    appCtx.state.prisms.organisation.length > 0
+    appCtx.scope.prisms.organisation.length > 0
   ) {
     return m.maps__projects_none_with_n_organisations({
-      n: appCtx.state.prisms.organisation.length.toString(),
+      n: appCtx.scope.prisms.organisation.length.toString(),
     })
   }
 
@@ -156,38 +159,41 @@ function getSelectedResourceName(
   class="bits-theme bits-panel-selected-resource"
   class:bits-panel-selected-resource--narrow={props.isNarrow}
 >
-  <div class="bits-panel-selected-resource__stack">
+  <div class="grid">
     <div
       class="bits-panel-selected-resource__state bits-panel-selected-resource__state--wide"
       data-active={!props.isNarrow}
       aria-hidden={props.isNarrow}
     >
-      <div class="bits-panel-selected-resource__wide-list">
+      <div
+        class="mb-0 flex max-h-[33vh] flex-wrap content-start items-start gap-x-0 gap-y-2 overflow-y-auto overscroll-contain px-6 pt-0"
+      >
         {#each resourcesToDisplay as id (id)}
-          {@const resource = props.resources.find((item) => item.id === id)}
-          {@const name = resource ? getSelectedResourceName(props.resourceType, resource) : id}
+          {@const resource = props.resources.find(item => item.id === id)}
+          {@const name = resource
+            ? getSelectedResourceName(props.resourceType, resource)
+            : id}
           <button
             type="button"
             class="bits-panel-selected-resource__wide-chip {colorClass} {hoverColorClass}"
             data-resource-type={props.resourceType}
-            onclick={(event) => {
+            onclick={event => {
               event.stopPropagation()
               handleToggle(id)
             }}
           >
-            <span class="bits-panel-selected-resource__wide-chip-label">{name}</span>
-            <Icon
-              size="lg"
-              src={XMark}
-              class="bits-panel-selected-resource__wide-chip-icon"
-            />
+            <span
+              class="min-w-0 justify-self-start whitespace-normal wrap-break-word leading-tight text-sm"
+              >{name}</span
+            >
+            <Icon size="lg" src={XMark} class="h-3 w-3 shrink-0 self-center -ml-1" />
           </button>
         {/each}
       </div>
 
       {#if shouldShowEmptyState}
-        <div class="bits-panel-selected-resource__empty">
-          <p class="bits-panel-selected-resource__empty-text">
+        <div class="flex flex-wrap justify-start gap-2 px-[1.625rem]">
+          <p class="pb-2 text-sm text-base-content/60">
             {@html getNoneSelectedMessage(props)}
           </p>
         </div>
@@ -199,9 +205,9 @@ function getSelectedResourceName(
       data-active={props.isNarrow}
       aria-hidden={!props.isNarrow}
     >
-      <div class="bits-panel-selected-resource__narrow-list">
+      <div class="flex w-auto min-w-12 flex-col items-center justify-start gap-[1px]">
         {#each resourcesToDisplay as id (id)}
-          {@const resource = props.resources.find((item) => item.id === id)}
+          {@const resource = props.resources.find(item => item.id === id)}
           {#if resource}
             <ItemResource
               panelType={props.panelType}
@@ -216,12 +222,12 @@ function getSelectedResourceName(
               {resource}
               {selectedClass}
               isSelected={props.selectedIds.includes(id)}
-              onNavigate={(event) => {
+              onNavigate={event => {
                 if (event instanceof MouseEvent) {
                   handleClickOnNarrow(id, event)
                 }
               }}
-              onToggle={(event) => {
+              onToggle={event => {
                 event.stopPropagation()
                 handleToggle(id as Id)
               }}

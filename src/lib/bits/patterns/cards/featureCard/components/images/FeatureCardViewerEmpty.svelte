@@ -1,21 +1,21 @@
 <script lang="ts">
 // CONTEXT
-import { getCardCtx } from '$lib/context/card.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getCardCtx } from '#lib/context/card.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // AUTH
-import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
+import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums'
+import { FeatureCardMode } from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
+import CameraIcon from 'virtual:icons/proicons/camera'
 
 const cardCtx = getCardCtx()
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 function handleAddPhoto(): void {
-  const user = appCtx.getUser()
+  const user = appCtx.account.user
   if (!hasDurableAccount(user)) {
     requestAccountUpgrade('contribution', window.location.href)
     return
@@ -25,18 +25,20 @@ function handleAddPhoto(): void {
 </script>
 
 <div
-  class="flex h-full w-full flex-col items-center justify-center gap-4 rounded-[1.75rem] border border-dashed border-white/15 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),rgba(0,0,0,0.04)_48%),linear-gradient(180deg,rgba(16,17,20,0.84),rgba(8,9,11,0.94))] px-6 text-center text-white"
+  class="flex h-full w-full flex-col items-center justify-center gap-4 rounded-[1.75rem] border border-dashed border-border-input bg-base-200 px-6 text-center text-base-content"
 >
   <div class="space-y-2">
-    <p class="font-mono text-[11px] uppercase tracking-[0.32em] text-white/55">
+    <p class="font-mono text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
       Missing Image
     </p>
-    <h3 class="text-2xl font-semibold tracking-[-0.03em] text-white">Add yours?</h3>
+    <h3 class="text-2xl font-semibold tracking-[-0.03em] text-base-content">
+      Add yours?
+    </h3>
   </div>
 
   <button
     type="button"
-    class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium text-white/92 backdrop-blur-sm"
+    class="inline-flex items-center gap-2 rounded-full border border-border-input bg-base-content/8 px-4 py-2 text-sm font-medium text-base-content backdrop-blur-sm"
     onclick={handleAddPhoto}
   >
     <CameraIcon class="h-4 w-4" />

@@ -10,7 +10,7 @@ import { layer } from './layer'
 // ENUMS
 import { supportedLocales, HubRoleType, HubSubscriptionService } from '../../enums'
 // TYPES
-import type { HubSubscriptionPlacement } from '../../types'
+import type { HubSubscriptionPlacement } from '#lib/api/services/hub.types.js'
 
 /* ============================================================================
  * HUB MANAGEMENT

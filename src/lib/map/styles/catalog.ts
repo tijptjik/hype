@@ -1,3 +1,6 @@
+import { buildMidnightStyle } from './definitions/midnight'
+import { buildBreadlineDarkStyle } from './definitions/breadlineDark'
+import { buildBreadlineLightStyle } from './definitions/breadlineLight'
 import { buildBreadlineStyle } from './definitions/breadline'
 import { buildGhosteryStyle } from './definitions/ghostery'
 import { buildGhosteryLegacyStyle } from './definitions/ghostery-legacy'
@@ -18,7 +21,38 @@ import {
 } from './definitions/common'
 import { buildProtomapsFlavorStyle } from './definitions/protomaps'
 import { getMapStyleCatalogCopy } from './i18n'
-import type { MapMarkerTheme, MapStyleCatalogKey } from '$lib/types'
+
+/** Keys available in the map-style catalog, including the internal admin style. */
+export type MapStyleCatalogKey =
+  | 'hyper'
+  | 'hyperLight'
+  | 'hyperpop'
+  | 'ghostery'
+  | 'ghostery-legacy'
+  | 'neonmaster'
+  | 'neorange'
+  | 'genesis'
+  | 'sin'
+  | 'rosepunk'
+  | 'breadline'
+  | 'breadline-light'
+  | 'breadline-dark'
+  | 'midnight'
+  | 'protomaps-light'
+  | 'protomaps-dark'
+  | 'protomaps-white'
+  | 'protomaps-grayscale'
+  | 'protomaps-black'
+  | 'hyperAdmin'
+
+/** Visual treatment applied to image or dot markers for a map palette. */
+export type MapMarkerTheme =
+  | 'light'
+  | 'dark'
+  | 'ghostery'
+  | 'hyperpop'
+  | 'neon'
+  | 'rosepunk'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -48,8 +82,10 @@ export type MapStyleCatalogEntry<TCode extends string = string> = Omit<
 }
 
 // Derive the Protomaps family from one flavor list so metadata stays consistent across entries.
-const PROTOMAPS_FLAVOR_ENTRIES = NAMED_PROTOMAPS_FLAVORS.map(flavorName => ({
-  key: `protomaps-${flavorName}`,
+const PROTOMAPS_FLAVOR_ENTRIES: ReadonlyArray<
+  MapStyleCatalogEntry<MapStyleCatalogKey>
+> = NAMED_PROTOMAPS_FLAVORS.map(flavorName => ({
+  key: `protomaps-${flavorName}` as MapStyleCatalogKey,
   name: getMapStyleCatalogCopy(`protomaps-${flavorName}` as MapStyleCatalogKey, 'en')
     .name,
   description: getMapStyleCatalogCopy(
@@ -66,7 +102,7 @@ const PROTOMAPS_FLAVOR_ENTRIES = NAMED_PROTOMAPS_FLAVORS.map(flavorName => ({
         ? 'dark'
         : 'ghostery',
   showSymbols: flavorName === 'light' || flavorName === 'dark',
-})) satisfies ReadonlyArray<MapStyleCatalogEntry>
+}))
 
 export const MAP_STYLE_CATALOG = [
   {
@@ -172,6 +208,33 @@ export const MAP_STYLE_CATALOG = [
     markerTheme: 'light',
     showSymbols: true,
   },
+  {
+    key: 'breadline-light',
+    name: getMapStyleCatalogCopy('breadline-light', 'en').name,
+    description: getMapStyleCatalogCopy('breadline-light', 'en').description,
+    buildStyle: buildBreadlineLightStyle,
+    hubCode: 'breadline',
+    basemapVariant: 'light',
+    markerTheme: 'light',
+    showSymbols: true,
+  },
+  {
+    key: 'breadline-dark',
+    ...getMapStyleCatalogCopy('breadline-dark', 'en'),
+    buildStyle: buildBreadlineDarkStyle,
+    hubCode: 'breadline',
+    basemapVariant: 'dark',
+    markerTheme: 'dark',
+    showSymbols: true,
+  },
+  {
+    key: 'midnight',
+    ...getMapStyleCatalogCopy('midnight', 'en'),
+    buildStyle: buildMidnightStyle,
+    basemapVariant: 'dark',
+    markerTheme: 'dark',
+    showSymbols: true,
+  },
   ...PROTOMAPS_FLAVOR_ENTRIES,
   {
     key: 'hyperAdmin',
@@ -184,8 +247,6 @@ export const MAP_STYLE_CATALOG = [
     showSymbols: true,
   },
 ] as const satisfies ReadonlyArray<MapStyleCatalogEntry>
-
-export type { MapStyleCatalogKey } from '$lib/types'
 
 export const REGISTERED_MAP_STYLE_CATALOG = MAP_STYLE_CATALOG.filter(
   (
@@ -203,3 +264,13 @@ export const getDefaultMapStyleCatalogEntry =
   (): MapStyleCatalogEntry<MapStyleCatalogKey> =>
     REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.default) ??
     REGISTERED_MAP_STYLE_CATALOG[0]
+
+/** Default map choices in the settings panel, in presentation order. */
+export const FEATURED_MAP_STYLE_KEYS = [
+  'hyper',
+  'hyperLight',
+  'breadline-light',
+  'breadline-dark',
+  'hyperpop',
+  'midnight',
+] as const satisfies readonly MapStyleCatalogKey[]

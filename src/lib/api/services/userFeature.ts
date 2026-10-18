@@ -2,15 +2,19 @@
 import { eq, type SQL } from 'drizzle-orm'
 // API
 
-import type { Id, SessionUser } from '$lib/types'
-import type { UserFeature } from '$lib/db/zod/schema/user.types'
+import type { Id, SessionUser } from '#lib/types.js'
+import type { UserFeature } from '#lib/db/zod/schema/user.types.js'
 
-import type { QueryParams } from '$lib/types'
+import type { QueryParams } from '#lib/types.js'
 
 import { applyQueryFilters, removeExcludedColumns } from '..'
 
-import { userFeature } from '$lib/db/schema/index'
-import { assertUserIsSelf, assertUserLoggedIn, runAssertions } from '$lib/auth/asserts'
+import { userFeature } from '#lib/db/schema/index.js'
+import {
+  assertUserIsSelf,
+  assertUserLoggedIn,
+  runAssertions,
+} from '#lib/auth/asserts.js'
 
 /**
  * Get the query context for the userFeature resource - filters the query based on the user's Id -- they should only ever obtain their own features, along with any other query parameters to filter on.

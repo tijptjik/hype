@@ -1,9 +1,9 @@
 // DRIZZLE
 import { and, eq, lt, sql } from 'drizzle-orm'
 // DB SCHEMA
-import { session, user, userFeature, userLayer } from '$lib/db/schema'
+import { session, user, userFeature, userLayer } from '#lib/db/schema/index.js'
 // TYPES
-import type { Database } from '$lib/types'
+import type { Database } from '#lib/types.js'
 
 export const ANONYMOUS_RETENTION_DAYS = 45
 

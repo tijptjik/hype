@@ -1,44 +1,96 @@
+// SVELTEKIT
+import { error } from '@sveltejs/kit'
 // DRIZZLE
 import { and, asc, desc, eq, ne, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   featureI18n,
+  feature,
   image,
   featureImage,
+  hub,
   organisation,
+  project,
   task,
   taskImage,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // CRUD
 import { insert, update, del } from '../crud'
 // SERVICES
 import { getProjectForFeatureId } from './project'
 import { getOrganisationForProjectId } from './organisation'
 import { getTaskHubFilter } from './hub'
-import { uploadAndProcessImage } from '$lib/client/services/image'
+import { assertTaskFeatureScope, taskFeatureScopeCondition } from './task-scope'
+import { uploadAndProcessImage } from '#lib/client/services/image.js'
 // FEATURE
 // ENUMS
-import { ImageContextResource } from '$lib/enums'
+import { ImageContextResource } from '#lib/enums.js'
 // DB
 import { firstOrNull, toOrderByWithLocalizedFields } from '..'
 // TYPES
+import type { Database, Id, ListResponse, Locale, QueryParams } from '#lib/types.js'
 import type {
-  Database,
-  Id,
-  ListResponse,
-  Locale,
-  QueryParams,
-  TaskCreation,
   TaskDB,
   TaskDBRaw,
   TaskDBPartial,
   TaskNew,
-} from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { Image, ImageUploadCtx } from '$lib/db/zod/schema/image.types'
+} from '#lib/db/zod/schema/task.types.js'
+import type {
+  TaskFeatureReviewCommit,
+  TaskReviewCommitContext,
+} from '#lib/db/services/taskReview.types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { Image, ImageUploadCtx } from '#lib/db/zod/schema/image.types.js'
 // API SERVICES
-import { createUserContributedFeature } from '$lib/api/services/feature'
-import type { UserContributedFeature } from '$lib/db/zod/schema/feature.types'
+import { createUserContributedFeature } from '#lib/api/services/feature.js'
+import type { UserContributedFeature } from '#lib/db/zod/schema/feature.types.js'
+// TYPES
+import type {
+  BaseTaskData,
+  NewFeatureTask,
+} from '#lib/api/services/taskCreation.types.js'
+import type { FeatureDB } from '#lib/db/zod/schema/feature.types.js'
+
+// Specific task types
+type ReportedMissingTask = BaseTaskData & {
+  type: 'reportedMissing'
+  featureId: Id
+  message?: string
+}
+
+type NewPhotoTask = BaseTaskData & {
+  type: 'newPhoto'
+  featureId: Id
+}
+
+// Union type for all task creation APIs
+type TaskCreation = NewFeatureTask | ReportedMissingTask | NewPhotoTask
+
+/* ----------------- */
+// TASKS
+/* -------- */
+
+type TaskImageReviewStatement = Parameters<Database['batch']>[0][number]
+
+type TaskImageReviewRow = {
+  imageId: string
+  intent: string | null
+  featureId: string | null
+}
+
+type TaskImageReviewPlan = {
+  statements: TaskImageReviewStatement[]
+  processedCount: number
+}
+
+type TaskImageReviewCommit = TaskReviewCommitContext & {
+  action: 'reject' | 'acceptAll' | 'acceptClassified'
+}
+
+type TaskFeatureDraftFinalizationCommit = {
+  task: Pick<TaskDB, 'id' | 'featureId' | 'contributorId' | 'modifiedAt'>
+  feature: Pick<FeatureDB, 'id' | 'modifiedAt'>
+}
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -54,6 +106,12 @@ import type { UserContributedFeature } from '$lib/db/zod/schema/feature.types'
 // 2. CRUD :: IMAGE HANDLING
 //    - archiveImages
 //    - publishImages
+//    - commitTaskImageReview
+//    - commitTaskFeatureReview
+//    - commitTaskFeatureDraftFinalization
+//    - taskReviewPendingCondition
+//    - prepareTaskImageArchives
+//    - prepareTaskImagePublications
 //
 // 3. CRUD :: ORCHESTRATION
 //    - createTaskWithDependencies
@@ -91,7 +149,8 @@ export const listTasks = async (
 ): Promise<ListResponse<TaskDBRaw>> => {
   const startedAt = Date.now()
 
-  const scopedConditions = [...conditions]
+  // Stored task scopes must agree with the feature before related data is hydrated.
+  const scopedConditions = [...conditions, taskFeatureScopeCondition()]
   const hubFilter = getTaskHubFilter(db, opts)
   if (hubFilter) {
     scopedConditions.push(hubFilter)
@@ -202,13 +261,16 @@ export const loadTask = async (
 
   return (await db.query.task.findFirst({
     with: withRelations,
-    where: conditions.length > 0 ? and(...conditions) : undefined,
+    where: and(...conditions, taskFeatureScopeCondition()),
   })) as TaskDBRaw | undefined
 }
 
 /**
  * Probes minimal task fields required for read authorization decisions.
  * Used to evaluate access before hydrating the full task relation graph.
+ * @param db Database handle.
+ * @param params Task identifier to probe.
+ * @returns Scope-consistent authorization fields, or null for missing/inconsistent tasks.
  */
 export const probeTaskQuery = async (
   db: Database,
@@ -231,7 +293,7 @@ export const probeTaskQuery = async (
       })
       .from(task)
       .innerJoin(organisation, eq(task.organisationId, organisation.id))
-      .where(eq(task.id, params.ref))
+      .where(and(eq(task.id, params.ref), taskFeatureScopeCondition()))
       .limit(1),
   )
 
@@ -242,8 +304,10 @@ export const probeTaskQuery = async (
  * @returns The created task
  * @throws {Error} If task creation fails
  */
-export const createTask = async (db: Database, data: TaskNew): Promise<TaskDB> =>
-  await insert(db, task, data)
+export const createTask = async (db: Database, data: TaskNew): Promise<TaskDB> => {
+  await assertTaskFeatureScope(db, data)
+  return await insert(db, task, data)
+}
 
 /**
  * Updates an existing task in the database
@@ -282,9 +346,7 @@ export const deleteTask = async (db: Database, ref: Id): Promise<TaskDB> =>
 const loadTaskImageReviewRows = async (
   db: Database,
   taskId: string,
-): Promise<
-  Array<{ imageId: string; intent: string | null; featureId: string | null }>
-> =>
+): Promise<TaskImageReviewRow[]> =>
   await db
     .select({
       imageId: taskImage.imageId,
@@ -303,19 +365,21 @@ const loadTaskImageReviewRows = async (
     .where(eq(taskImage.taskId, taskId))
 
 /**
- * Demotes any existing canonical image so a new canonical assignment can be published safely.
+ * Builds a demotion statement to batch with the new canonical assignment.
  * @param db - The database instance
  * @param featureId - The feature receiving the canonical image
  * @param nextCanonicalImageId - The image that should remain canonical
- * @returns void
+ * @param guard - Optional write-time review guard
+ * @returns An unexecuted update statement for an atomic publication batch.
  */
-const clearCompetingCanonicalIntent = async (
+const buildCompetingCanonicalDemotion = (
   db: Database,
   featureId: string,
   nextCanonicalImageId: string,
-): Promise<void> => {
+  guard?: SQL<unknown>,
+) => {
   // Canonical intent is exclusive per feature.
-  await db
+  return db
     .update(featureImage)
     .set({
       intent: 'undefined',
@@ -325,50 +389,82 @@ const clearCompetingCanonicalIntent = async (
         eq(featureImage.featureId, featureId),
         eq(featureImage.intent, 'canonical'),
         ne(featureImage.imageId, nextCanonicalImageId),
+        guard,
       ),
     )
 }
 
 /**
- * Archives images associated with a task, optionally only archiving images with undefined intent. This is used to archive (some) images of a task which was (partially) rejected.
+ * Prepares archival of images associated with a task, optionally only those with undefined intent.
+ * This is used to archive (some) images of a task which was (partially) rejected.
  * @param db - The database instance
  * @param taskId - The ID of the task
  * @param isUndefinedOnly - Whether to only archive images with undefined intent
- * @returns The result of the operation
+ * @param guard - Optional write-time review guard
+ * @param rows - Optional shared review snapshot
+ * @returns Unexecuted statements and the selected image count
+ * @remarks Shared uses remain intact; the caller owns the transaction.
  * @throws {Error} If archiving fails
  */
-export const archiveImages = async (
+const prepareTaskImageArchives = async (
   db: Database,
   taskId: string,
   isUndefinedOnly: boolean = false,
-): Promise<{ success: boolean; processedCount: number }> => {
+  guard?: SQL<unknown>,
+  rows?: TaskImageReviewRow[],
+): Promise<TaskImageReviewPlan> => {
   try {
-    const taskImages = await loadTaskImageReviewRows(db, taskId)
+    const taskImages = rows ?? (await loadTaskImageReviewRows(db, taskId))
 
-    // Filter images based on isUndefinedOnly parameter
+    // Missing feature assignments have null intent and are also unclassified.
+    // Filter images based on isUndefinedOnly parameter.
     const imagesToProcess = isUndefinedOnly
-      ? taskImages.filter(ti => ti.intent === 'undefined')
+      ? taskImages.filter(ti => (ti.intent ?? 'undefined') === 'undefined')
       : taskImages
 
-    // Process each image
-    for (const ti of imagesToProcess) {
-      // Delete feature image association
+    // Prepare every image change before committing the archival operation atomically.
+    const statements = imagesToProcess.flatMap(ti => {
+      // Prepare the image update so removal and archival can commit together;
+      // evaluate remaining references at write time, after the scoped removal.
+      const archival = db
+        .update(image)
+        .set({ isArchived: true })
+        .where(
+          and(
+            eq(image.id, ti.imageId),
+            guard,
+            sql`not exists (select 1 from ${featureImage} where ${featureImage.imageId} = ${image.id})`,
+            sql`not exists (select 1 from ${project} where ${project.imageId} = ${image.id})`,
+            sql`not exists (select 1 from ${organisation} where ${organisation.imageId} = ${image.id})`,
+            sql`not exists (select 1 from ${hub} where ${hub.imageId} = ${image.id})`,
+            sql`not exists (select 1 from ${taskImage} where ${taskImage.imageId} = ${image.id} and ${taskImage.taskId} <> ${taskId})`,
+          ),
+        )
+      // Delete the feature image association only if no other task shares it.
       if (ti.featureId) {
-        await db
-          .delete(featureImage)
-          .where(
+        return [
+          db.delete(featureImage).where(
             and(
               eq(featureImage.imageId, ti.imageId),
               eq(featureImage.featureId, ti.featureId),
+              guard,
+              sql`not exists (
+                  select 1 from ${taskImage}
+                  inner join ${task} on ${task.id} = ${taskImage.taskId}
+                  where ${taskImage.imageId} = ${featureImage.imageId}
+                    and ${task.featureId} = ${featureImage.featureId}
+                    and ${taskImage.taskId} <> ${taskId}
+                )`,
             ),
-          )
+          ),
+          archival,
+        ]
+      } else {
+        // Update image record when no feature association remains to remove.
+        return [archival]
       }
-
-      // Update image record
-      await db.update(image).set({ isArchived: true }).where(eq(image.id, ti.imageId))
-    }
-
-    return { success: true, processedCount: imagesToProcess.length }
+    })
+    return { statements, processedCount: imagesToProcess.length }
   } catch (error) {
     console.error('Failed to archive images:', error)
     throw error
@@ -376,12 +472,124 @@ export const archiveImages = async (
 }
 
 /**
- * Publishes images associated with a task. This is used to publish images of a task which was (partially) accepted. Optionally skipping images with undefined intent.
+ * Prepares publication of images associated with a task, optionally skipping undefined intent.
+ * This is used to publish images of a task which was (partially) accepted.
  * @param db - The database instance
  * @param taskId - The ID of the task
  * @param skipUndefined - Whether to skip images with undefined intent
- * @returns The result of the operation
+ * @param publisherId - Reviewer responsible for publishing the selected images
+ * @param guard - Optional write-time review guard
+ * @param rows - Optional shared review snapshot
+ * @returns Unexecuted statements and the selected image count
+ * @remarks The caller owns the publication and canonical-demotion transaction.
  * @throws {Error} If publishing fails
+ */
+const prepareTaskImagePublications = async (
+  db: Database,
+  taskId: string,
+  skipUndefined: boolean = false,
+  publisherId: Id,
+  guard?: SQL<unknown>,
+  rows?: TaskImageReviewRow[],
+): Promise<TaskImageReviewPlan> => {
+  try {
+    const taskImages = rows ?? (await loadTaskImageReviewRows(db, taskId))
+    const publishedAt = new Date().toISOString()
+
+    // Missing feature assignments have null intent and must not be accepted as classified.
+    // Filter images based on skipUndefined parameter.
+    const imagesToProcess = skipUndefined
+      ? taskImages.filter(ti => (ti.intent ?? 'undefined') !== 'undefined')
+      : taskImages
+
+    // Prepare every image change before committing the publication operation atomically.
+    const statements = imagesToProcess.flatMap(ti => {
+      if (!ti.featureId) {
+        console.warn(`Skipping image ${ti.imageId} - no featureId found`)
+        return []
+      }
+
+      // Update or create feature image association
+      const insertQuery = guard
+        ? db.insert(featureImage).select(
+            db
+              .select({
+                // Insert-select fields must follow the complete table column order.
+                featureId: sql<string>`${ti.featureId}`.as('featureId'),
+                imageId: sql<string>`${ti.imageId}`.as('imageId'),
+                intent: sql<string>`${ti.intent ?? 'undefined'}`.as('intent'),
+                isPublished: sql<boolean>`1`.as('isPublished'),
+                localIsPublished: sql<boolean | null>`null`.as('localIsPublished'),
+                publishedAt: sql<string>`${publishedAt}`.as('publishedAt'),
+                publisherId: sql<string>`${publisherId}`.as('publisherId'),
+              })
+              .from(task)
+              .where(and(eq(task.id, taskId), guard)),
+          )
+        : db.insert(featureImage).values({
+            imageId: ti.imageId,
+            featureId: ti.featureId,
+            intent: ti.intent ?? 'undefined',
+            isPublished: true,
+            publisherId,
+            publishedAt,
+          })
+      const publication = insertQuery.onConflictDoUpdate({
+        target: [featureImage.imageId, featureImage.featureId],
+        set: {
+          intent: ti.intent ?? 'undefined',
+          isPublished: true,
+          publisherId,
+          publishedAt,
+        },
+      })
+      // Keep canonical demotion and publication atomic if either statement fails.
+      if (ti.intent === 'canonical') {
+        return [
+          buildCompetingCanonicalDemotion(db, ti.featureId, ti.imageId, guard),
+          publication,
+        ]
+      } else {
+        return [publication]
+      }
+    })
+    return { statements, processedCount: imagesToProcess.length }
+  } catch (error) {
+    console.error('Failed to publish images:', error)
+    throw error
+  }
+}
+
+/**
+ * Archives selected task images in one transaction while preserving shared uses.
+ * @param db Database handle.
+ * @param taskId Task whose image assignments are being rejected.
+ * @param isUndefinedOnly Whether to select only unclassified images.
+ * @returns Selected image count and success state.
+ */
+export const archiveImages = async (
+  db: Database,
+  taskId: string,
+  isUndefinedOnly: boolean = false,
+): Promise<{ success: boolean; processedCount: number }> => {
+  const plan = await prepareTaskImageArchives(db, taskId, isUndefinedOnly)
+  const [first, ...rest] = plan.statements
+  try {
+    if (first) await db.batch([first, ...rest])
+  } catch (error) {
+    console.error('Failed to archive images:', error)
+    throw error
+  }
+  return { success: true, processedCount: plan.processedCount }
+}
+
+/**
+ * Publishes selected task images and canonical demotions in one transaction.
+ * @param db Database handle.
+ * @param taskId Task whose images are being accepted.
+ * @param skipUndefined Whether to select only classified images.
+ * @param publisherId Reviewer responsible for publication.
+ * @returns Selected image count and success state.
  */
 export const publishImages = async (
   db: Database,
@@ -389,53 +597,232 @@ export const publishImages = async (
   skipUndefined: boolean = false,
   publisherId: Id,
 ): Promise<{ success: boolean; processedCount: number }> => {
+  const plan = await prepareTaskImagePublications(
+    db,
+    taskId,
+    skipUndefined,
+    publisherId,
+  )
+  const [first, ...rest] = plan.statements
   try {
-    const taskImages = await loadTaskImageReviewRows(db, taskId)
-    const publishedAt = new Date().toISOString()
-
-    // Filter images based on skipUndefined parameter
-    const imagesToProcess = skipUndefined
-      ? taskImages.filter(ti => ti.intent !== 'undefined')
-      : taskImages
-
-    // Process each image
-    for (const ti of imagesToProcess) {
-      if (!ti.featureId) {
-        console.warn(`Skipping image ${ti.imageId} - no featureId found`)
-        continue
-      }
-
-      if (ti.intent === 'canonical') {
-        await clearCompetingCanonicalIntent(db, ti.featureId, ti.imageId)
-      }
-
-      // Update or create feature image association
-      await db
-        .insert(featureImage)
-        .values({
-          imageId: ti.imageId,
-          featureId: ti.featureId,
-          intent: ti.intent ?? 'undefined',
-          isPublished: true,
-          publisherId,
-          publishedAt,
-        })
-        .onConflictDoUpdate({
-          target: [featureImage.imageId, featureImage.featureId],
-          set: {
-            intent: ti.intent ?? 'undefined',
-            isPublished: true,
-            publisherId,
-            publishedAt,
-          },
-        })
-    }
-
-    return { success: true, processedCount: imagesToProcess.length }
+    if (first) await db.batch([first, ...rest])
   } catch (error) {
     console.error('Failed to publish images:', error)
     throw error
   }
+  return { success: true, processedCount: plan.processedCount }
+}
+
+/**
+ * Builds the shared optimistic and resource-scope guard for task review writes.
+ * @param input Authorized task snapshot and hub scope.
+ * @returns A condition matching only that pending task version and scope.
+ */
+const taskReviewPendingCondition = (input: TaskReviewCommitContext): SQL<unknown> => {
+  const expected = input.task
+  return sql`${and(
+    eq(task.id, expected.id),
+    eq(task.type, expected.type),
+    eq(task.featureId, expected.featureId),
+    eq(task.projectId, expected.projectId),
+    eq(task.organisationId, expected.organisationId),
+    eq(task.modifiedAt, expected.modifiedAt),
+    eq(task.isDraft, false),
+    eq(task.isReviewed, false),
+    taskFeatureScopeCondition(),
+    sql`exists (select 1 from ${organisation} where ${organisation.id} = ${expected.organisationId} and ${organisation.hubId} is ${input.resourceHubId})`,
+  )}`
+}
+
+/**
+ * Commits a feature-changing review and task completion in one transaction.
+ * @param db Database handle.
+ * @param input Authorized task/feature snapshots and reviewer decision.
+ * @returns True on commit, false if either snapshot or resource scope became stale.
+ * @remarks The adjacent feature update uses SQLite changes() to require a winning task write.
+ */
+export const commitTaskFeatureReview = async (
+  db: Database,
+  input: TaskFeatureReviewCommit,
+): Promise<boolean> => {
+  const isNewFeature = input.task.type === 'newFeature'
+  if (
+    input.feature.id !== input.task.featureId ||
+    (isNewFeature
+      ? input.action !== 'accept' && input.action !== 'reject'
+      : input.task.type !== 'reportedMissing' ||
+        (input.action !== 'setIntangible' &&
+          input.action !== 'setUnpublished' &&
+          input.action !== 'setArchived'))
+  ) {
+    throw error(400, 'INVALID_TASK_ACTION')
+  }
+  const featureData = isNewFeature
+    ? { isPendingReview: false, isArchived: input.action === 'reject' }
+    : input.action === 'setIntangible'
+      ? { isIntangible: true }
+      : input.action === 'setUnpublished'
+        ? { isPublished: false, isVisitable: false }
+        : { isArchived: true, isPublished: false, isVisitable: false }
+  const featureSnapshot = and(
+    eq(feature.id, input.feature.id),
+    eq(feature.modifiedAt, input.feature.modifiedAt),
+  )
+
+  // Claim completion only when both snapshots are current inside the same transaction.
+  const completion = db
+    .update(task)
+    .set({
+      isReviewed: true,
+      reviewerId: input.reviewerId,
+      reviewReason: input.reason?.trim() || null,
+      reviewOutcome: input.action === 'reject' ? 'rejected' : 'accepted',
+      reviewAction: isNewFeature
+        ? input.action === 'reject'
+          ? 'ignored'
+          : 'added-feature'
+        : input.action === 'setIntangible'
+          ? 'set-intangible'
+          : input.action === 'setUnpublished'
+            ? 'set-unpublished'
+            : 'set-archived',
+    })
+    .where(
+      and(
+        taskReviewPendingCondition(input),
+        sql`exists (select 1 from ${feature} where ${featureSnapshot})`,
+      ),
+    )
+    .returning({ id: task.id })
+  const mutation = db
+    .update(feature)
+    .set(featureData)
+    .where(and(featureSnapshot, sql`changes() = 1`))
+    .returning({ id: feature.id })
+
+  // Keep these statements adjacent: changes() must describe the task completion above.
+  const [completed, updated] = await db.batch([completion, mutation])
+  return completed.length === 1 && updated.length === 1
+}
+
+/**
+ * Finalizes a new-feature draft and its task together.
+ * @param db Database handle.
+ * @param input Current task and feature snapshots.
+ * @returns True on commit, false if either draft snapshot or scope became stale.
+ * @remarks The adjacent feature update uses SQLite changes() to require a winning task write.
+ */
+export const commitTaskFeatureDraftFinalization = async (
+  db: Database,
+  input: TaskFeatureDraftFinalizationCommit,
+): Promise<boolean> => {
+  if (input.task.featureId !== input.feature.id) {
+    throw error(400, 'TASK_FEATURE_REQUIRED')
+  }
+  const featureSnapshot = and(
+    eq(feature.id, input.feature.id),
+    eq(feature.modifiedAt, input.feature.modifiedAt),
+  )
+
+  // Claim task submission only while its linked feature remains the exact draft snapshot.
+  const completion = db
+    .update(task)
+    .set({ isDraft: false })
+    .where(
+      and(
+        eq(task.id, input.task.id),
+        eq(task.featureId, input.task.featureId),
+        eq(task.contributorId, input.task.contributorId),
+        eq(task.modifiedAt, input.task.modifiedAt),
+        eq(task.isDraft, true),
+        eq(task.isReviewed, false),
+        taskFeatureScopeCondition(),
+        sql`exists (select 1 from ${feature} where ${featureSnapshot})`,
+      ),
+    )
+    .returning({ id: task.id })
+  const featureFinalization = db
+    .update(feature)
+    .set({ isDraft: false })
+    .where(and(featureSnapshot, sql`changes() = 1`))
+    .returning({ id: feature.id })
+
+  // Keep these statements adjacent: changes() must describe task submission above.
+  const [completed, finalized] = await db.batch([completion, featureFinalization])
+  return completed.length === 1 && finalized.length === 1
+}
+
+/**
+ * Commits an image-only review and its task completion as one guarded transaction.
+ * @param db Database handle.
+ * @param input Authorized task snapshot and reviewer decision.
+ * @returns True for the winning review, false for a stale task snapshot.
+ * @remarks Every write checks the same pending task version and persisted resource scope.
+ */
+export const commitTaskImageReview = async (
+  db: Database,
+  input: TaskImageReviewCommit,
+): Promise<boolean> => {
+  const expected = input.task
+  if (
+    expected.type !== 'newPhoto' &&
+    !(expected.type === 'reportedMissing' && input.action === 'reject')
+  ) {
+    throw error(400, 'INVALID_TASK_ACTION')
+  }
+  const pending = taskReviewPendingCondition(input)
+  const guard = sql`exists (select 1 from ${task} where ${pending})`
+
+  // Build both image phases without executing either; stale reviewers must write nothing.
+  const rows = await loadTaskImageReviewRows(db, expected.id)
+  const publications =
+    input.action === 'reject'
+      ? { statements: [], processedCount: 0 }
+      : await prepareTaskImagePublications(
+          db,
+          expected.id,
+          input.action === 'acceptClassified',
+          input.reviewerId,
+          guard,
+          rows,
+        )
+  const archives =
+    input.action === 'acceptAll'
+      ? { statements: [], processedCount: 0 }
+      : await prepareTaskImageArchives(
+          db,
+          expected.id,
+          input.action === 'acceptClassified',
+          guard,
+          rows,
+        )
+  const completion = db
+    .update(task)
+    .set({
+      isReviewed: true,
+      reviewerId: input.reviewerId,
+      reviewReason: input.reason?.trim() || null,
+      reviewOutcome: input.action === 'reject' ? 'rejected' : 'accepted',
+      reviewAction:
+        input.action === 'reject'
+          ? 'ignored'
+          : input.action === 'acceptAll'
+            ? 'added-all-photos'
+            : 'added-all-photos-with-intent',
+    })
+    .where(pending)
+    .returning({ id: task.id })
+
+  // Complete last so the pending-version guard stays true throughout the winning batch.
+  const [first, ...rest] = [
+    ...publications.statements,
+    ...archives.statements,
+    completion,
+  ]
+  if (!first) return false
+  const results = await db.batch([first, ...rest])
+  const completed = results.at(-1)
+  return Array.isArray(completed) && completed.length === 1
 }
 
 // ═══════════════════════
@@ -592,12 +979,18 @@ export const processTaskImagesDB = async (
 
 /**
  * Extracts files from FormData object.
+ * @param formData Submitted photo fields.
+ * @returns File entries whose field names start with photo_.
+ * @remarks Text values are ignored even when they use a photo field name.
  */
 export function getImagesFromFormData(formData: FormData): File[] {
   const photoEntries = Array.from(formData.entries()).filter(([key]) =>
     key.startsWith('photo_'),
   )
-  return photoEntries.map(([_, fileValue]) => fileValue as File)
+  return photoEntries.flatMap(([, fileValue]) => {
+    const value: unknown = fileValue
+    return value instanceof File ? [value] : []
+  })
 }
 
 /**

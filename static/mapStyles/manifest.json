@@ -54,6 +54,21 @@
     "publicPath": "/mapStyles/breadline.6ce4b770c2c5.json",
     "hash": "6ce4b770c2c50915885d82d4474d37e97029009511eb501e3db61de7e0718300"
   },
+  "breadline-light": {
+    "fileName": "breadline-light.1e2cb3ca3e28.json",
+    "publicPath": "/mapStyles/breadline-light.1e2cb3ca3e28.json",
+    "hash": "1e2cb3ca3e28127bf9d756e7e55825175cda34760bc34a432bbebfcae900be5f"
+  },
+  "breadline-dark": {
+    "fileName": "breadline-dark.d70a38838309.json",
+    "publicPath": "/mapStyles/breadline-dark.d70a38838309.json",
+    "hash": "d70a388383092d37789bb9d4581a7a09231df344af4630aaf81541fe95e2ce1b"
+  },
+  "midnight": {
+    "fileName": "midnight.1a633e0c0dfa.json",
+    "publicPath": "/mapStyles/midnight.1a633e0c0dfa.json",
+    "hash": "1a633e0c0dfabb889659d50cf6ba8b9e228e38ab745379dc08d68be8f8ec6689"
+  },
   "protomaps-light": {
     "fileName": "protomaps-light.816c0dc2c50e.json",
     "publicPath": "/mapStyles/protomaps-light.816c0dc2c50e.json",

@@ -3,8 +3,8 @@
 import { flip } from 'svelte/animate'
 import { onDestroy } from 'svelte'
 // LIB
-import { cx } from '$lib/bits/utils'
-import { buildGallerySceneAssetUrls } from '$lib/client/services/image'
+import { cx } from '#lib/bits/utils.js'
+import { buildGallerySceneAssetUrls } from '#lib/client/services/image.js'
 // BITS
 import Thumbnail from './Thumbnail.svelte'
 import AdminThumbnail from './AdminThumbnail.svelte'
@@ -43,7 +43,7 @@ let {
   footer,
 }: ThumbnailWrapperProps = $props()
 
-let trackEl = $state<HTMLDivElement>()
+let trackEl = $state<HTMLElement>()
 let previousItemsLength = $state(0)
 let lastHandledFollowActiveIdRequestKey = $state(0)
 let skipNextActiveScroll = false
@@ -417,7 +417,10 @@ onDestroy(() => {
 </script>
 
 <div
-  class={cx('flex h-full w-full min-h-0 flex-col overflow-hidden select-none', className)}
+  class={cx(
+    'flex h-full w-full min-h-0 flex-col overflow-hidden select-none',
+    className,
+  )}
 >
   {#each prefetchedSceneAssetUrls as url (url)}
     <img
@@ -428,8 +431,9 @@ onDestroy(() => {
     >
   {/each}
 
-  <div
+  <section
     bind:this={trackEl}
+    aria-label="Gallery thumbnails"
     onmouseenter={handleTrackPointerEnter}
     onmousemove={handleTrackPointerMove}
     onwheel={handleTrackWheel}
@@ -444,11 +448,12 @@ onDestroy(() => {
           ? 'flex-col overflow-x-hidden overflow-y-auto px-4 pb-3 pt-3 pr-2'
           : 'flex-col overflow-x-hidden overflow-y-auto pr-2'
         : variant === 'admin'
-          ? 'overflow-x-auto overflow-y-hidden bg-[#121212] p-3 mt-3 mr-3'
+          ? 'overflow-x-auto overflow-y-hidden bg-surface p-3 mt-3 mr-3'
           : 'overflow-x-auto overflow-y-hidden pb-4',
     )}
   >
     {#each items as item, index (item.renderKey ?? item.id)}
+      <!-- biome-ignore lint/a11y/noStaticElementInteractions: Thumbnail hover updates the visual preview without adding a separate control. -->
       <div
         data-gallery-thumb-id={item.id}
         data-gallery-thumb-index={index}
@@ -497,14 +502,12 @@ onDestroy(() => {
         {/if}
       </div>
     {/each}
-  </div>
+  </section>
 
   {#if footer}
     <div
       class={cx(
-        variant === 'admin'
-          ? 'border-t border-black/10 bg-base-300 px-3 py-3'
-          : 'pt-4',
+        variant === 'admin' ? 'border-t border-border bg-base-300 px-3 py-3' : 'pt-4',
       )}
     >
       {@render footer()}

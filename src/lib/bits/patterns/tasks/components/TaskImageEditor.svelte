@@ -1,20 +1,22 @@
 <script lang="ts">
+// I18N
+import { m } from '#lib/i18n.js'
 // ADAPTERS
-import { useImageEditorGalleryModel } from '$lib/adapters/image'
+import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS
-import { Icon, ImageEditor, UserAttributionCard } from '$lib/bits'
-import ImageMetadataCard from '$lib/bits/patterns/images/components/ImageMetadataCard.svelte'
+import { Icon, ImageEditor, UserAttributionCard } from '#lib/bits/index.js'
+import ImageMetadataCard from '#lib/bits/patterns/images/components/ImageMetadataCard.svelte'
 // IMAGE
 import {
   getTaskImageBadgeClass,
   getTaskImageBadgeLabel,
   isTaskImage,
-} from '$lib/client/services/task'
+} from '#lib/client/services/task.js'
 // CONTEXT
-import { getImageCtx } from '$lib/context/image.svelte'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import CameraIcon from 'virtual:icons/proicons/camera'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
 
 const imageCtx = getImageCtx()
 const model = useImageEditorGalleryModel(imageCtx)
@@ -50,21 +52,17 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
   getIsLoading={model.status.isLoading}
   getIsUploading={model.status.isUploading}
   getIsHighlighted={item =>
-    isTaskImage(item, model.state.items, imageId => imageCtx.isImageHighlighted(imageId))}
+    isTaskImage(item, model.state.items, imageId =>
+      imageCtx.isImageHighlighted(imageId),
+    )}
   highlightClass="ring-2 ring-accent shadow-[0_0_0_2px_rgba(20,184,166,0.75)]"
   getBadgeLabel={item =>
-    getTaskImageBadgeLabel(
-      item,
-      model.state.items,
-      isReviewed,
-      imageId => imageCtx.isImageHighlighted(imageId),
+    getTaskImageBadgeLabel(item, model.state.items, isReviewed, imageId =>
+      imageCtx.isImageHighlighted(imageId),
     )}
   getBadgeClass={item =>
-    getTaskImageBadgeClass(
-      item,
-      model.state.items,
-      isReviewed,
-      imageId => imageCtx.isImageHighlighted(imageId),
+    getTaskImageBadgeClass(item, model.state.items, isReviewed, imageId =>
+      imageCtx.isImageHighlighted(imageId),
     )}
   onThumbnailLoad={model.actions.markThumbnailLoaded}
   onThumbnailError={model.actions.markThumbnailErrored}
@@ -81,7 +79,9 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
   onIntentChange={model.actions.setIntent}
   onRetryUpload={model.actions.retryUpload}
 >
-  {#snippet leftRail(_item)}
+  {#snippet leftRail(
+    _item,
+  )}
     {#if model.state.activeImage}
       <UserAttributionCard
         userId={model.state.activeImage.image.contributorId}
@@ -94,8 +94,11 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
     {/if}
   {/snippet}
 
-  {#snippet rightRail(_item)}
+  {#snippet rightRail(
+    _item,
+  )}
     {#if model.state.activeImage}
+      <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
       <div
         class="group/metadata relative"
         onmouseleave={() => {
@@ -115,7 +118,7 @@ const canDeleteTaskImages = $derived(!readonly && model.state.canMutateActiveIma
       >
         <button
           type="button"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/85"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-panel/70 text-foreground transition hover:bg-panel/85"
           aria-label={m.image__metadata_open()}
           onclick={() => {
             isMetadataOpen = !isMetadataOpen

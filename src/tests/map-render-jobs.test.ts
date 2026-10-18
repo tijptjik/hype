@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildMapRenderJob, buildMapRenderUrl } from '$lib/map/renders/jobs.server'
+import { buildMapRenderJob, buildMapRenderUrl } from '#lib/map/renders/jobs.server.js'
 import {
   buildMapStyleMapRenderJob,
   buildMapStyleRenderUrl,
-} from '$lib/map/styles/render.jobs.server'
+} from '#lib/map/styles/render.jobs.server.js'
 
 describe('map render job helpers', () => {
   it('builds protected layer headless render URLs', () => {

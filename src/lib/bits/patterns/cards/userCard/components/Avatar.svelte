@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Card } from '$lib/bits/custom'
+import { Card } from '#lib/bits/custom/index.js'
 import type { UserCardAvatarProps } from '../userCard.types'
 
 let { name = null, image = null, class: className = '' }: UserCardAvatarProps = $props()

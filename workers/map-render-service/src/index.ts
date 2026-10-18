@@ -1,5 +1,5 @@
 // TYPES
-import type { MapRenderJob } from '../../../src/lib/types'
+import type { MapRenderJob } from '../../../src/lib/map/renders/render.types'
 
 type Env = {
   ENVIRONMENT: string

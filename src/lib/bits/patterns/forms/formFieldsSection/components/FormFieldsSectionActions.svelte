@@ -2,9 +2,9 @@
 import { fade } from 'svelte/transition'
 // ICONS
 import ListPlus from 'virtual:icons/lucide/list-plus'
-import X from 'virtual:icons/lucide/x'
-import { Button } from '$lib/bits/core'
-import { m } from '$lib/i18n'
+import X from 'virtual:icons/proicons/cancel'
+import { Button } from '#lib/bits/core/index.js'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type { FormFieldsSectionActionsProps } from '../formFieldsSection.types'
 
@@ -51,7 +51,7 @@ $effect(() => {
       iconComponent={ListPlus}
       disabled={removeMode}
       onClick={event => actions.add(event)}
-      class="bits-project-fields__action-btn"
+      class="inline-flex items-center gap-1.5"
     />
     <Button
       text={removeMode ? m.moving_each_orangutan_care() : m.upper_caring_falcon_boost()}
@@ -60,7 +60,7 @@ $effect(() => {
       color="light"
       iconComponent={X}
       onClick={event => toggleRemoveMode(event)}
-      class="bits-project-fields__action-btn"
+      class="inline-flex items-center gap-1.5"
     />
   </div>
 {/if}

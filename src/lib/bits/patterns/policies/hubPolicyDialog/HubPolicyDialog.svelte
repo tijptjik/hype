@@ -2,7 +2,7 @@
 // BITS-UI
 import { Dialog } from 'bits-ui'
 // SERVICES
-import { renderPolicyMarkdown } from '$lib/services/policy'
+import { renderPolicyMarkdown } from '#lib/services/policy.js'
 // COMPONENTS
 import * as HubPolicyDialogPrimitive from './components'
 // TYPES

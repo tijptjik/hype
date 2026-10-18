@@ -18,6 +18,7 @@ scripts/.venv
 .env.*.local
 .dev.vars
 .dev.vars.*
+.local/breadline/
 
 # Runners
 vite.config.js.timestamp-*
@@ -46,3 +47,8 @@ tmp/test.jpg
 
 # Dev assets
 static/mapPreviews/
+spec/breadline/Breadline v4 - Scope of Work.pdf
+output/playwright/
+
+# Local division migration rehearsals, backups and verification logs
+.local/division-refresh/

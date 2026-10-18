@@ -1,15 +1,15 @@
 <script lang="ts">
 // I18N
-import { getI18n } from '$lib/i18n'
+import { getI18n } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // CONSTANTS
-import { NEW_REF } from '$lib/constants'
+import { NEW_REF } from '#lib/constants.js'
 // TYPES
 import type {
   Feature,
   NewFeatureWithLocationAndParents,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 // LOCAL
 import FeatureCardContentAddress from './FeatureCardContentAddress.svelte'
 
@@ -21,7 +21,7 @@ let {
   size?: number
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const userPreferences = $derived({
   ...appCtx.getUserPreferences(),
   allowMachineTranslation: true,
@@ -51,13 +51,18 @@ const portalMaskId = $derived(`feature-card-portal-mask-${featureKey}`)
       </mask>
     </defs>
 
-    <rect width="100" height="100" fill="black" mask={`url(#${portalMaskId})`}></rect>
+    <rect
+      width="100"
+      height="100"
+      fill="var(--theme-panel)"
+      mask={`url(#${portalMaskId})`}
+    ></rect>
     <circle
       cx="50"
       cy="50"
       r="48"
       fill="none"
-      stroke="#4379CF"
+      stroke="var(--theme-primary)"
       stroke-width="2"
     ></circle>
   </svg>

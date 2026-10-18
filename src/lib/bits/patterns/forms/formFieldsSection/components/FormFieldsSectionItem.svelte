@@ -78,11 +78,7 @@ const resolvedCardContext = $derived.by(() => {
       {keepExpandedOnIntro}
       onCollapseToggle={onCardCollapseToggle}
       onCollapseChange={collapsed => {
-        onCollapseChange?.(
-          property.id,
-          collapsed,
-          resolvedCardContext.presentation,
-        )
+        onCollapseChange?.(property.id, collapsed, resolvedCardContext.presentation)
       }}
     />
   {/if}

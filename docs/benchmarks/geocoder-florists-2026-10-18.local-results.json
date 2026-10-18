@@ -1,0 +1,38 @@
+{
+  "runAt": "2026-10-17T18:14:05.736Z",
+  "base": "http://api.atlas.localhost",
+  "origin": "http://hype.localhost",
+  "fixture": "docs/benchmarks/geocoder-florists-2026-10-18.json",
+  "status": "blocked",
+  "plannedQueries": 75,
+  "attemptedQueries": 1,
+  "unattemptedQueries": 74,
+  "results": [
+    {
+      "id": "florist-01",
+      "mode": "reverse",
+      "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.15559359999999&lat=22.282631499999997&profile=default&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
+      "durationMs": 4803,
+      "httpStatus": 503,
+      "candidates": [],
+      "top1Within50m": null,
+      "top1Within100m": null,
+      "top5Within100m": null,
+      "outcome": "http_error",
+      "body": {
+        "jsonapi": {
+          "version": "1.1"
+        },
+        "errors": [
+          {
+            "status": "503",
+            "code": "service_unavailable",
+            "title": "The atlas API is temporarily unavailable."
+          }
+        ]
+      },
+      "addressIdentityReview": "pending"
+    }
+  ],
+  "keyProvided": false
+}

@@ -1,19 +1,20 @@
 // I18N
-import { m, toLocaleKey, translateI18nFields } from '$lib/i18n'
+import { m, toLocaleKey, translateI18nFields } from '#lib/i18n.js'
 // API
-import { createLayer, getLayer, getLayers } from '$lib/api/server/layer.remote'
-import { getProjectProperties as getProjectPropertiesRemote } from '$lib/api/server/property.remote'
+import { createLayer, getLayer, getLayers } from '#lib/api/layer.remote.js'
+import { getProjectProperties as getProjectPropertiesRemote } from '#lib/api/property.remote.js'
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // TYPES
 import type {
   Layer,
   Property,
   Id,
   LayerValidationResult,
-} from '$lib/client/services/import/types'
-import type { LayerFormInput } from '$lib/db/zod/schema/layer.types'
-import type { Locale, LocaleKey } from '$lib/types'
+  FeatureCSVColumn,
+} from '#lib/client/services/import/types.js'
+import type { LayerFormInput } from '#lib/db/zod/schema/layer.types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
 // Layer validation and resolution functions for CSV import
 
 type LayerReferencePart = {
@@ -41,6 +42,17 @@ type LayerFormLocale = {
 }
 
 type LayerTranslatableField = 'name' | 'nameShort' | 'description'
+
+type LayerLike = {
+  id?: string
+  code?: string
+  i18n?: Record<
+    string,
+    { name?: string | null; description?: string | null } | null | undefined
+  > | null
+}
+
+type DynamicRecord = Record<string, unknown>
 
 const LAYER_TRANSLATABLE_FIELDS = [
   'name',
@@ -74,19 +86,31 @@ export const LAYER_FIELDS = {
 }
 
 // Helper function to safely transform i18n data
-function transformI18nSafely(i18n: any): any {
-  if (typeof i18n === 'object' && i18n !== null) {
-    return i18n
+function transformI18nSafely(i18n: unknown): DynamicRecord {
+  if (i18n && typeof i18n === 'object' && !Array.isArray(i18n)) {
+    return i18n as DynamicRecord
   }
+  if (typeof i18n !== 'string') return {}
+
   try {
-    return JSON.parse(i18n)
+    const parsed: unknown = JSON.parse(i18n)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as DynamicRecord)
+      : {}
   } catch {
     return {}
   }
 }
 
+function addLocaleEntry(target: DynamicRecord, locale: string, data: unknown): void {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return
+  target[locale] = { ...(data as DynamicRecord), locale }
+}
+
 // Merge project properties into layer (copied from loadFormData logic)
-function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
+function _mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
+  if (!layer.id) throw new Error('Cannot merge properties into a layer without an id')
+
   // Get existing property IDs
   // Since it's a new layer, there are no existing property IDs
   const existingPropertyIds: Id[] = (layer.properties || [])
@@ -111,13 +135,13 @@ function mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
       }
 
       const layerProperty = {
-        layerId: layer.id!, // Assuming layer.id is defined; handle if new layer might not have id
+        layerId: layer.id,
         propertyId: conformedProjectProp.id,
         isVisible: false,
         property: conformedProjectProp,
       }
 
-      layer.properties.push(layerProperty as any) // Type assertion to avoid complex type issues
+      layer.properties.push(layerProperty as NonNullable<Layer['properties']>[number]) // Type assertion to avoid complex type issues
     }
   })
   return layer
@@ -138,7 +162,7 @@ async function getProjectProperties(projectId: string): Promise<Property[]> {
 }
 
 // Preload all layers for the project
-export async function preloadLayers(projectId: string): Promise<any[]> {
+export async function preloadLayers(projectId: string): Promise<Layer[]> {
   try {
     const result = await getLayers({
       conditions: {
@@ -149,7 +173,7 @@ export async function preloadLayers(projectId: string): Promise<any[]> {
       pagination: { limit: 500, offset: 0 },
       meta: { isAdminRequest: true, profile: 'admin' },
     })
-    return Array.isArray(result.data) ? result.data : []
+    return (Array.isArray(result.data) ? result.data : []) as Layer[]
   } catch (error) {
     console.error('Error preloading layers:', error)
     return []
@@ -157,7 +181,7 @@ export async function preloadLayers(projectId: string): Promise<any[]> {
 }
 
 // Search layers function (filters preloaded layers)
-export function searchLayers(query: string, allLayers: any[]): any[] {
+export function searchLayers(query: string, allLayers: Layer[]): Layer[] {
   if (!query.trim()) {
     return allLayers
   }
@@ -177,7 +201,7 @@ export async function validateLayerById(
 ): Promise<boolean> {
   try {
     const layers = await preloadLayers(projectId)
-    return layers.some(layer => layer.id === layerId || layer.code === layerId)
+    return layers.some(layer => layer.id === layerId)
   } catch (error) {
     console.error('Error validating layer by ID:', error)
     return false
@@ -194,7 +218,7 @@ export async function validateLayerByName(
 
     // Search through the layers to find one with matching name in the specified locale
     for (const layer of layers) {
-      const layerName_i18n = layer.i18n?.[locale]?.name
+      const layerName_i18n = layer.i18n?.[toLocaleKey(locale as Locale)]?.name
       if (layerName_i18n && layerName_i18n.toLowerCase() === layerName.toLowerCase()) {
         return { isValid: true, layerId: layer.id }
       }
@@ -208,20 +232,31 @@ export async function validateLayerByName(
 }
 
 // Layer selection functions
-export function handleLayerSearch(query: string, allLayers: any[]): any[] {
+export function handleLayerSearch(query: string, allLayers: Layer[]): Layer[] {
   return searchLayers(query, allLayers)
 }
 
-export function handleLayerSearchFocus(allLayers: any[]): any[] {
+export function handleLayerSearchFocus(allLayers: Layer[]): Layer[] {
   return allLayers
 }
 
-export function selectLayer(layer: any): { layer: any; layerId: string } {
+/**
+ * Selects an identified layer without erasing its loaded fields.
+ * @param layer Layer selected from search results.
+ * @returns The original layer and its required identifier.
+ */
+export function selectLayer<T extends LayerLike>(
+  layer: T,
+): { layer: T; layerId: string } {
+  if (!layer.id) throw new Error('Cannot select a layer without an id')
   return { layer, layerId: layer.id }
 }
 
 // Layer resolution search function
-export function handleLayerResolutionSearch(query: string, allLayers: any[]): any[] {
+export function handleLayerResolutionSearch(
+  query: string,
+  allLayers: Layer[],
+): Layer[] {
   return searchLayers(query, allLayers)
 }
 
@@ -229,39 +264,40 @@ export function handleLayerResolutionSearch(query: string, allLayers: any[]): an
 export function setLayerResolution(
   invalidValue: string,
   layerId: string,
-  layerData: any,
-  resolutions: Map<string, { layerId: string; layerData?: any }>,
-): Map<string, { layerId: string; layerData?: any }> {
+  layerData: unknown,
+  resolutions: Map<string, { layerId: string; layerData?: unknown }>,
+): Map<string, { layerId: string; layerData?: unknown }> {
   resolutions.set(invalidValue, { layerId, layerData })
   return new Map(resolutions)
 }
 
 export function removeLayerResolution(
   invalidValue: string,
-  resolutions: Map<string, { layerId: string; layerData?: any }>,
-): Map<string, { layerId: string; layerData?: any }> {
+  resolutions: Map<string, { layerId: string; layerData?: unknown }>,
+): Map<string, { layerId: string; layerData?: unknown }> {
   resolutions.delete(invalidValue)
   return new Map(resolutions)
 }
 
 export function selectLayerForResolution(
   invalidValue: string,
-  layer: any,
-  resolutions: Map<string, { layerId: string; layerData?: any }>,
-): Map<string, { layerId: string; layerData?: any }> {
+  layer: LayerLike,
+  resolutions: Map<string, { layerId: string; layerData?: unknown }>,
+): Map<string, { layerId: string; layerData?: unknown }> {
+  if (!layer.id) throw new Error('Cannot resolve a layer without an id')
   return setLayerResolution(invalidValue, layer.id, layer, resolutions)
 }
 
 export function resetLayerResolution(
   invalidValue: string,
-  resolutions: Map<string, { layerId: string; layerData?: any }>,
-): Map<string, { layerId: string; layerData?: any }> {
+  resolutions: Map<string, { layerId: string; layerData?: unknown }>,
+): Map<string, { layerId: string; layerData?: unknown }> {
   return removeLayerResolution(invalidValue, resolutions)
 }
 
 export function canCompleteLayerResolution(
   invalidValues: string[],
-  resolutions: Map<string, { layerId: string; layerData?: any }>,
+  resolutions: Map<string, { layerId: string; layerData?: unknown }>,
 ): boolean {
   return invalidValues.every(value => resolutions.has(value))
 }
@@ -299,43 +335,50 @@ export function getLayerResolutionParts(
     })
 }
 
-function getLayerDisplayName(layer: any): string {
+function getLayerDisplayName(layer: LayerLike): string {
   return layer?.i18n?.en?.name || layer?.code || layer?.id || 'Unknown Layer'
 }
 
-function getLayerNameForLocale(layer: any, locale: string): string {
+function getLayerNameForLocale(layer: LayerLike, locale: string): string {
   return layer?.i18n?.[locale]?.name || layer?.i18n?.en?.name || ''
 }
 
 function normalizeLayerFormLocale(
-  localeData: any,
+  localeData: unknown,
   fallbackName: string,
 ): LayerFormLocale {
-  const name = String(localeData?.name || fallbackName || '').trim()
-  const nameShort = String(localeData?.nameShort || name || fallbackName || '').trim()
+  const localeRecord =
+    localeData && typeof localeData === 'object' ? (localeData as DynamicRecord) : {}
+  const name = String(localeRecord.name || fallbackName || '').trim()
+  const nameShort = String(localeRecord.nameShort || name || fallbackName || '').trim()
 
   return {
     name,
     nameShort,
-    description: String(localeData?.description || ''),
-    nameGen: Boolean(localeData?.nameGen),
-    nameShortGen: Boolean(localeData?.nameShortGen),
-    descriptionGen: Boolean(localeData?.descriptionGen),
+    description: String(localeRecord.description || ''),
+    nameGen: Boolean(localeRecord.nameGen),
+    nameShortGen: Boolean(localeRecord.nameShortGen),
+    descriptionGen: Boolean(localeRecord.descriptionGen),
   }
 }
 
-function toLayerFormI18n(i18n: Record<string, any> | undefined): {
+function toLayerFormI18n(i18n: unknown): {
   en: LayerFormLocale
   zhHant: LayerFormLocale
   zhHans: LayerFormLocale
 } {
+  const localeMap =
+    i18n && typeof i18n === 'object' ? (i18n as Record<string, unknown>) : {}
   const fallbackName =
-    i18n?.en?.name || i18n?.zhHant?.name || i18n?.zhHans?.name || 'Imported Layer'
+    (localeMap.en as DynamicRecord | undefined)?.name ||
+    (localeMap.zhHant as DynamicRecord | undefined)?.name ||
+    (localeMap.zhHans as DynamicRecord | undefined)?.name ||
+    'Imported Layer'
 
   return {
-    en: normalizeLayerFormLocale(i18n?.en, fallbackName),
-    zhHant: normalizeLayerFormLocale(i18n?.zhHant, fallbackName),
-    zhHans: normalizeLayerFormLocale(i18n?.zhHans, fallbackName),
+    en: normalizeLayerFormLocale(localeMap.en, String(fallbackName)),
+    zhHant: normalizeLayerFormLocale(localeMap.zhHant, String(fallbackName)),
+    zhHans: normalizeLayerFormLocale(localeMap.zhHans, String(fallbackName)),
   }
 }
 
@@ -390,7 +433,7 @@ function toLayerReferenceLabel(parts: LayerReferencePart[]): string {
 }
 
 function getLayerReferences(
-  layerColumns: any[],
+  layerColumns: FeatureCSVColumn[],
   sampleData: string[][],
   headers: string[],
   fallbackLocale: string,
@@ -410,7 +453,7 @@ function getLayerReferences(
 
     for (const col of layerColumnRefs) {
       const value = row[col.index]?.trim()
-      if (!value) continue
+      if (!value || !col.field) continue
       parts.push({
         field: col.field,
         value,
@@ -438,7 +481,10 @@ function getLayerReferences(
   return Array.from(referencesByKey.values())
 }
 
-function findLayerByReference(reference: LayerReference, allLayers: any[]): any | null {
+function findLayerByReference(
+  reference: LayerReference,
+  allLayers: LayerLike[],
+): LayerLike | null {
   const byId = reference.id
     ? allLayers.find(layer => layer.id === reference.id || layer.code === reference.id)
     : null
@@ -458,7 +504,7 @@ function findLayerByReference(reference: LayerReference, allLayers: any[]): any 
   return (
     allLayers.find(layer => {
       const name = getLayerNameForLocale(layer, reference.locale)
-      return name && name.toLowerCase() === reference.name!.toLowerCase()
+      return name && name.toLowerCase() === reference.name?.toLowerCase()
     }) ?? null
   )
 }
@@ -472,7 +518,7 @@ function getLayerReferenceForRow(
 
   for (const col of layerColumnIndices) {
     const value = row[col.index]?.trim()
-    if (!value) continue
+    if (!value || !col.field) continue
     parts.push({
       field: col.field,
       value,
@@ -495,7 +541,7 @@ function getLayerReferenceForRow(
 
 // Layer validation orchestration
 export async function validateLayers(
-  layerColumns: any[],
+  layerColumns: FeatureCSVColumn[],
   sampleData: string[][],
   headers: string[],
   projectId: string,
@@ -578,7 +624,7 @@ export function enrichFeaturesWithLayerData(
 
   // Create a map of layer values to layer IDs and layer data
   const layerValueToId = new Map<string, string>()
-  const layerIdToData = new Map<string, any>()
+  const layerIdToData = new Map<string, LayerLike>()
 
   // Get all layers to build a mapping of ID to layer data
   const allLayers = importCtx.getAllLayers()
@@ -628,8 +674,11 @@ export function enrichFeaturesWithLayerData(
       importCtx.getSelectedLocale() || 'en',
     )
 
-    if (reference && layerValueToId.has(reference.label)) {
-      const layerId = layerValueToId.get(reference.label)!
+    const referencedLayerId = reference
+      ? layerValueToId.get(reference.label)
+      : undefined
+    if (reference && referencedLayerId) {
+      const layerId = referencedLayerId
       const layerData = layerIdToData.get(layerId)
       const enrichedLayer = {
         id: layerId,
@@ -645,8 +694,9 @@ export function enrichFeaturesWithLayerData(
     if (!enriched.layer) {
       for (const { index } of layerColumnIndices) {
         const layerValue = row[index]?.trim()
-        if (layerValue && layerValueToId.has(layerValue)) {
-          const layerId = layerValueToId.get(layerValue)!
+        if (layerValue) {
+          const layerId = layerValueToId.get(layerValue)
+          if (!layerId) continue
           const layerData = layerIdToData.get(layerId)
 
           enriched.layer = {
@@ -830,7 +880,8 @@ export async function submitLayerForm(importCtx: ImportCtx, event: Event) {
   try {
     const currentFormData = layerForm as LayerFormInput['data']
 
-    const selectedProject = importCtx.getSelectedProject()!
+    const selectedProject = importCtx.getSelectedProject()
+    if (!selectedProject) return
 
     // Fetch project properties and create layer properties for the new layer
     const projectProperties = await getProjectProperties(selectedProject.id)
@@ -842,38 +893,30 @@ export async function submitLayerForm(importCtx: ImportCtx, event: Event) {
       }
 
       // Transform property i18n from array to object format (keyed by locale)
-      const transformedPropertyI18n: Record<string, any> = {}
+      const transformedPropertyI18n: DynamicRecord = {}
       if (Array.isArray(projectProp.i18n)) {
-        projectProp.i18n.forEach((i18nItem: any) => {
-          if (i18nItem.locale) {
-            transformedPropertyI18n[i18nItem.locale] = i18nItem
-          }
+        projectProp.i18n.forEach(i18nItem => {
+          if (i18nItem.locale)
+            addLocaleEntry(transformedPropertyI18n, i18nItem.locale, i18nItem)
         })
       } else if (projectProp.i18n && typeof projectProp.i18n === 'object') {
         // Already in object format, just ensure locale field is present
-        Object.entries(projectProp.i18n).forEach(([locale, data]: [string, any]) => {
-          transformedPropertyI18n[locale] = {
-            ...data,
-            locale,
-          }
+        Object.entries(projectProp.i18n).forEach(([locale, data]) => {
+          addLocaleEntry(transformedPropertyI18n, locale, data)
         })
       }
 
       // Transform property values i18n from array to object format as well
-      const transformedValues = (projectProp.values || []).map((value: any) => {
-        const transformedValueI18n: Record<string, any> = {}
+      const transformedValues = (projectProp.values || []).map(value => {
+        const transformedValueI18n: DynamicRecord = {}
         if (Array.isArray(value.i18n)) {
-          value.i18n.forEach((i18nItem: any) => {
-            if (i18nItem.locale) {
-              transformedValueI18n[i18nItem.locale] = i18nItem
-            }
+          value.i18n.forEach(i18nItem => {
+            if (i18nItem.locale)
+              addLocaleEntry(transformedValueI18n, i18nItem.locale, i18nItem)
           })
         } else if (value.i18n && typeof value.i18n === 'object') {
-          Object.entries(value.i18n).forEach(([locale, data]: [string, any]) => {
-            transformedValueI18n[locale] = {
-              ...data,
-              locale,
-            }
+          Object.entries(value.i18n).forEach(([locale, data]) => {
+            addLocaleEntry(transformedValueI18n, locale, data)
           })
         }
 

@@ -1,9 +1,6 @@
 import type { Snippet } from 'svelte'
-import type {
-  NavigableResource,
-  Resource,
-  ResourceIndexRowSelectionState,
-} from '$lib/types'
+import type { NavigableResource, Resource } from '#lib/types.js'
+import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEdit.types.js'
 
 export type ResourceIndexProps<T extends Resource> = {
   resource: NavigableResource
@@ -12,6 +9,9 @@ export type ResourceIndexProps<T extends Resource> = {
   row?: Snippet<[T, number, ResourceIndexRowSelectionState | null, boolean]>
   listContainer?: HTMLElement | null
   isInitialised?: boolean
+  onNearEnd?: () => void
+  hasMore?: boolean
+  isLoadingMore?: boolean
   applyBottomOverflow?: boolean
   getRowSelectionState?: (entity: T) => ResourceIndexRowSelectionState | null
   onRowSelectionToggle?: (entity: T) => void

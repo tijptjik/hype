@@ -2,12 +2,12 @@
 import { onDestroy } from 'svelte'
 import { toast } from 'svelte-sonner'
 // REMOTE
-import { getMetadata } from '$lib/api/server/image.remote'
-import { runRemoteQuery } from '$lib/remote'
+import { getMetadata } from '#lib/api/image.remote.js'
+import { runRemoteQuery } from '#lib/remote/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // IMAGE
-import { IMAGE_RAW_INTERMEDIATE_TRANSFORMATION } from '$lib/images/delivery'
+import { IMAGE_RAW_INTERMEDIATE_TRANSFORMATION } from '#lib/images/delivery.js'
 import {
   extractVersionFromImageUrl,
   getGalleryItemTargetImageId,
@@ -17,20 +17,20 @@ import {
   sortGalleryItems,
   updateImagePresentationMode,
   waitForThumbnailReadyEvent,
-} from '$lib/client/services/image'
+} from '#lib/client/services/image.js'
 // TYPES
 import type {
   ViewerRenderable,
   ViewerRenderableStatus,
-} from '$lib/bits/patterns/images'
-import type { ImageCtx } from '$lib/context/image.svelte'
+} from '#lib/bits/patterns/images/index.js'
+import type { ImageCtx } from '#lib/context/image.svelte.js'
 import type {
   ImageCtxEnvelope,
   ImageMetadataFull,
   Intent,
   UploadStatus,
-} from '$lib/db/zod/schema/image.types'
-import type { Id } from '$lib/types'
+} from '#lib/db/zod/schema/image.types.js'
+import type { Id } from '#lib/types.js'
 
 type ImageEditorGalleryModel = {
   state: {
@@ -656,7 +656,7 @@ export function useImageEditorGalleryModel(
       }) ??
       null
 
-    const uploadStatus = activeItem.status?.uploadStatus
+    const uploadStatus = activeItem?.status?.uploadStatus
     const isBlockedByUpload =
       uploadStatus === 'uploading' || uploadStatus === 'finalizing'
     const isBeingReplaced = imageCtx.isImageBeingReplaced(resolvedImageId)
@@ -744,7 +744,7 @@ export function useImageEditorGalleryModel(
         publicId: currentImage.publicId,
         env: currentImage.env ?? undefined,
         version: currentImage.version ?? undefined,
-        profile: 'admin',
+        profile: imageCtx.appCtx.isAdmin() ? 'admin' : 'basic',
         meta: imageCtx.appCtx.isAdmin() ? { isAdminRequest: true } : undefined,
       }),
     ).then(response => (response?.data as ImageMetadataFull | null) ?? null)
@@ -902,9 +902,7 @@ export function useImageEditorGalleryModel(
         currentImage,
         nextMode,
         ctx,
-        onSuccess: mode => {
-          imageCtx.setForImage(currentImage.id, 'presentationMode', mode)
-        },
+        imageCtx,
         onFailure: error => {
           console.error('[ImageEditorGalleryModel] Presentation mode update error', {
             imageId: currentImage.id,

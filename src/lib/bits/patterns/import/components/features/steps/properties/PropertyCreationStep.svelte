@@ -2,19 +2,19 @@
 // SVELTE
 import { untrack } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // API
-import { createProjectProperty } from '$lib/api/server/property.remote'
-import { translateText } from '$lib/api/server/translation.remote'
+import { createProjectProperty } from '#lib/api/property.remote.js'
+import { translateText } from '#lib/api/translation.remote.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { Switch } from '$lib/bits/custom/switch'
-import { Swap } from '$lib/bits/custom/swap'
+import { Switch } from '#lib/bits/custom/switch/index.js'
+import { Swap } from '#lib/bits/custom/swap/index.js'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import Pencil from 'virtual:icons/lucide/pencil'
+import Check from 'virtual:icons/proicons/checkmark'
+import Pencil from 'virtual:icons/proicons/pencil'
 // COMPONENTS
 import PropertyEditableRow from './PropertyEditableRow.svelte'
 // LIB
@@ -26,10 +26,10 @@ import type {
   FieldDiscriminator,
   LocaleKey,
   Property,
-} from '$lib/client/services/import/types'
-import type { ProjectPropertyForm } from '$lib/db/zod/schema/property.types'
+} from '#lib/client/services/import/types.js'
+import type { ProjectPropertyForm } from '#lib/db/zod/schema/property.types.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 
 // NANOID
 const nanoid = customAlphabet(
@@ -62,7 +62,7 @@ let {
 }: Props = $props()
 
 const importCtx = getImportCtx()
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let propertyKey = $state('')
 let englishLabel = $state('')
@@ -125,7 +125,10 @@ $effect(() => {
 
   const existingData = importCtx.getPropertyEnrichedData(property.key)
   const persistedPropertyId = existingData?.propertyId?.trim()
-  const nextPropertyKind = getInitialPropertyKind(property, existingData?.propertyType)
+  const nextPropertyKind = getInitialPropertyKind(
+    property,
+    existingData?.propertyType === 'display' ? undefined : existingData?.propertyType,
+  )
 
   initialisedPropertyKey = property.key
   propertyId = persistedPropertyId || nanoid()
@@ -551,7 +554,7 @@ function setEditingField(
 
 <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
   >
     <div class="mb-5 flex items-start justify-between gap-4">
       <div>
@@ -630,7 +633,7 @@ function setEditingField(
       />
 
       <div
-        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
+        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
       >
         <div
           class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
@@ -639,7 +642,7 @@ function setEditingField(
         </div>
         {#if editingField === 'component'}
           <select
-            class="select select-bordered w-full bg-black/30 px-3 py-2 font-mono text-sm"
+            class="select select-bordered w-full bg-panel/30 px-3 py-2 font-mono text-sm"
             bind:value={componentType}
             onchange={() => {
               editingField = null
@@ -671,7 +674,7 @@ function setEditingField(
       </div>
 
       <div
-        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-white/10 bg-white/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
+        class="grid min-h-[4.35rem] gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 md:grid-cols-[12rem_minmax(0,1fr)_2.75rem] md:items-center"
       >
         <div
           class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
@@ -698,7 +701,7 @@ function setEditingField(
         <div>
           <h4 class="font-semibold">{m.form_errors()}</h4>
           <ul class="mt-2 text-sm">
-            {#each Object.entries(formErrors) as [ field, error ]}
+            {#each Object.entries(formErrors) as [field, error]}
               <li>{field}: {error}</li>
             {/each}
           </ul>
@@ -708,7 +711,7 @@ function setEditingField(
   </section>
 
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
   >
     <div class="mb-5">
       <div
@@ -731,12 +734,12 @@ function setEditingField(
     </div>
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04]"
+      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-foreground/10 bg-foreground/[0.04]"
     >
       {#if componentType === 'InputField' || componentType === 'TextareaField'}
         {#each property.columns[0]?.sampleValues.slice(0, 10) || [] as value}
           <div
-            class="border-b border-white/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+            class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
           >
             {value || m.empty_value()}
           </div>
@@ -744,7 +747,7 @@ function setEditingField(
       {:else}
         {#each visibleValues as value}
           <div
-            class="border-b border-white/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+            class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
           >
             {value || m.empty_value()}
           </div>

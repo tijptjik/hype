@@ -1,5 +1,6 @@
 <script lang="ts">
 import { fade } from 'svelte/transition'
+import BreadlineToastLoader from './BreadlineToastLoader.svelte'
 import type { LoadScreenProps } from './loading.types'
 
 let { color = 'primary', surface = 'transparent' }: LoadScreenProps = $props()
@@ -14,11 +15,12 @@ const classes = $derived(
 
 <div class={classes} in:fade={{ duration: 220 }} out:fade={{ duration: 260 }}>
   <div class="bits-load-screen__center">
-    <div class="bits-load-screen__spinner" aria-label="Loading" role="status">
+    <div class="bits-load-screen__spinner" aria-hidden="true">
       <span class="bits-load-screen__ring bits-load-screen__ring--outer"></span>
       <span class="bits-load-screen__ring bits-load-screen__ring--middle"></span>
       <span class="bits-load-screen__ring bits-load-screen__ring--inner"></span>
     </div>
+    <BreadlineToastLoader />
   </div>
 </div>
 
@@ -38,6 +40,10 @@ const classes = $derived(
   background: var(--color-base-300);
 }
 
+:global(html[data-theme^="breadline-"]) .bits-load-screen {
+  background: var(--color-surface);
+}
+
 .bits-load-screen__center {
   position: absolute;
   left: 50%;
@@ -51,6 +57,10 @@ const classes = $derived(
   height: 5.5rem;
   width: 5.5rem;
   color: var(--bits-load-screen-color, var(--color-primary));
+}
+
+:global(html[data-theme^="breadline-"]) .bits-load-screen__spinner {
+  display: none;
 }
 
 .bits-load-screen--color-primary {

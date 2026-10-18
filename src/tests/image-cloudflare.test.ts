@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { toCloudflareImagesTransformDimensions } from '$lib/images/cloudflare'
+import { toCloudflareImagesTransformDimensions } from '#lib/images/cloudflare.js'
 
 describe('Cloudflare Images transform dimensions', () => {
   it('preserves one-dimensional c_fit requests', () => {

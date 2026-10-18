@@ -4,11 +4,11 @@ import OmnibarEntry from './OmnibarEntry.svelte'
 // TYPES
 import type { OmnibarSectionProps } from './omnibarPrimitives.types'
 
-let { results, limit, onSelection }: OmnibarSectionProps = $props()
+let { results, limit, onSelection, onPreview }: OmnibarSectionProps = $props()
 </script>
 
-<div class="flex shrink-0 select-none flex-col" role="group">
+<section class="flex shrink-0 select-none flex-col">
   {#each results.slice(0, limit) as result}
-    <OmnibarEntry {result} {onSelection} />
+    <OmnibarEntry {result} {onSelection} {onPreview} />
   {/each}
-</div>
+</section>

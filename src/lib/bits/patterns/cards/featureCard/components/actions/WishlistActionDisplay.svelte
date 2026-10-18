@@ -3,12 +3,12 @@
 import { untrack } from 'svelte'
 import { fade } from 'svelte/transition'
 // BITS
-import { Icon } from '$lib/bits'
-import { cx } from '$lib/bits/utils'
+import { Icon } from '#lib/bits/index.js'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
-import type { FeatureCardWishlistActionDisplay } from '$lib/types'
+import type { FeatureCardWishlistActionDisplay } from '#lib/context/featureCard.types.js'
 // ICONS
-import Star from 'virtual:icons/lucide/star'
+import Star from 'virtual:icons/proicons/star'
 // LOCAL
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 
@@ -152,7 +152,9 @@ $effect(() => {
 })
 </script>
 
-{#snippet wishlistContent(isCollapsed: boolean)}
+{#snippet wishlistContent(
+  isCollapsed: boolean,
+)}
   <!-- Root: the fixed action slot owns hover colour and never moves the star icon. -->
   <div class="flex min-w-0 flex-1 items-center gap-2">
     <!-- Icon: it changes fill only; its position is independent of the label fade. -->

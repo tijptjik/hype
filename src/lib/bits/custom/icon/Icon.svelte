@@ -1,7 +1,7 @@
 <script lang="ts">
 import { fade } from 'svelte/transition'
 
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 import type { IconProps, IconTransition, IconTransitionFn } from './icon.types'
 

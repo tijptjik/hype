@@ -1,26 +1,26 @@
 // SERVICES
-import { initAddNewFeature } from '$lib/client/services/feature'
+import { initAddNewFeature } from '#lib/client/services/feature.js'
 // CONTEXT
-import type { AppCtx } from '$lib/context/app.svelte'
-import { dismissActiveFeatureNavigation } from '$lib/navigation'
-import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { ResponsiveCtx } from '$lib/context/responsive.svelte'
+import type { AppCtx } from '#lib/context/app.svelte.js'
+import { dismissActiveFeatureNavigation } from '#lib/navigation/index.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
-import { OmniCollection, OmniMode } from '$lib/enums'
+import { OmniCollection, OmniMode } from '#lib/enums.js'
 // CONTEXT
-import { hasElevatedChrome } from '$lib/context/responsive.svelte'
+import { hasElevatedChrome } from '#lib/layout/chrome.js'
 // I18N
-import { getI18n, getLocaleKey, getLocaleOrder, m } from '$lib/i18n'
+import { getI18n, getLocaleKey, getLocaleOrder, m } from '#lib/i18n.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type {
   OmnibarProps,
   OmnibarResultSection,
-} from '$lib/bits/patterns/bars/omnibar'
-import type { DeepPartial, Locale, LocaleKey } from '$lib/types'
-import type { NewFeatureTask } from '$lib/types'
+} from '#lib/bits/patterns/bars/omnibar/index.js'
+import type { DeepPartial, Locale, LocaleKey } from '#lib/types.js'
+import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
 // UTILS
-import { getOmnibarAvailableViewportHeight } from '$lib/bits/patterns/bars/omnibar/omnibar.utils'
+import { getOmnibarAvailableViewportHeight } from '#lib/bits/patterns/bars/omnibar/omnibar.utils.js'
 
 const COLLECTION_OPEN_DELAY_MS = 2000
 
@@ -29,17 +29,20 @@ const COLLECTION_OPEN_DELAY_MS = 2000
  * @param appCtx Shared app context for active resources and i18n labels.
  * @param omniCtx Omni domain context for search/navigation actions.
  * @param responsiveCtx Responsive context for elevated chrome and layout offsets.
+ * @param getMapCenter Optional camera capability supplied by the public route.
  * @returns Omnibar model exposing `getOmnibarProps()` for `<Omnibar />`.
  */
 export function useOmnibarModel(
   appCtx: AppCtx,
   omniCtx: OmniCtx,
   responsiveCtx: ResponsiveCtx,
+  getMapCenter?: () => [number, number] | null,
 ): {
   getOmnibarProps: () => OmnibarProps
 } {
   type FeatureNavigationSource =
     | Feature
+    | import('#lib/db/zod/schema/feature.types.js').FeatureFromCollection
     | DeepPartial<NewFeatureTask>['feature']
     | null
     | undefined
@@ -176,7 +179,7 @@ export function useOmnibarModel(
     const collectionTitle = getI18n(
       collection.i18n as Record<Locale | LocaleKey, { name: string }>,
       'name',
-      appCtx.getUserPreferences(),
+      appCtx.view.getUserPreferences(),
       m.place(),
     )
 
@@ -185,7 +188,10 @@ export function useOmnibarModel(
     }
 
     const collectionIndex = omniCtx.navIndex + 1
-    const collectionSize = collection.items.length
+    const collectionSize =
+      collection.totalCount === undefined
+        ? collection.items.length
+        : (collection.totalCount ?? '…')
 
     return `${collectionTitle} (${collectionIndex} of ${collectionSize})`
   }
@@ -193,7 +199,7 @@ export function useOmnibarModel(
   function getFeatureTitle(): string {
     if (omniCtx.isNewFeatureMode) {
       return getFeatureNavigationText(
-        appCtx.getNewFeature()?.feature,
+        appCtx.view.draft.current?.feature,
         'title',
         m.red_arable_herring_trust(),
         true,
@@ -211,31 +217,50 @@ export function useOmnibarModel(
   function getCollectionItems(): Array<{ id: string; label: string }> {
     return (appCtx.getActiveCollection()?.items ?? []).map(item => ({
       id: item.id,
-      label: getI18n(item, 'title', appCtx.getUserPreferences()),
+      label: getI18n(item, 'title', appCtx.view.getUserPreferences()),
     }))
   }
 
   function getSearchSections(): OmnibarResultSection[] {
-    return [
+    const sections: OmnibarResultSection[] = [
       {
         collectionType: OmniCollection.feature,
         results: omniCtx.searchResults.feature ?? [],
-        limit: omniCtx.limits.feature ?? 0,
+        limit: Math.max(omniCtx.limits.feature ?? 0, omniCtx.searchFeatureLimit),
+        totalCount: appCtx.view.resources.featureQueries.search.totalCount,
+        hasMore: appCtx.view.resources.featureQueries.search.hasMore,
+        loading: appCtx.view.resources.featureQueries.search.loading,
+        onLoadMore: () => void omniCtx.expandSearchSection(OmniCollection.feature),
         onSelection: omniCtx.searchHandlers.feature,
       },
       {
         collectionType: OmniCollection.neighbourhood,
         results: omniCtx.searchResults.neighbourhood ?? [],
         limit: omniCtx.limits.neighbourhood ?? 0,
+        onLoadMore: () =>
+          void omniCtx.expandSearchSection(OmniCollection.neighbourhood),
         onSelection: omniCtx.searchHandlers.neighbourhood,
+        onPreview: (id, active) => appCtx.view.divisionCtx.previewDivision(id, active),
       },
       {
         collectionType: OmniCollection.walk,
         results: omniCtx.searchResults.walk ?? [],
         limit: omniCtx.limits.walk ?? 0,
+        onLoadMore: () => void omniCtx.expandSearchSection(OmniCollection.walk),
         onSelection: omniCtx.searchHandlers.walk,
       },
     ]
+    return sections
+      .filter(
+        section =>
+          !omniCtx.searchSection || section.collectionType === omniCtx.searchSection,
+      )
+      .map(section => ({
+        ...section,
+        limit: omniCtx.searchSection
+          ? Math.max(section.limit, omniCtx.searchSectionLimit)
+          : section.limit,
+      }))
   }
 
   return {
@@ -247,14 +272,14 @@ export function useOmnibarModel(
       return {
         mode: omniCtx.state.mode,
         hasElevatedChrome: hasElevatedChrome(
-          responsiveCtx.getEffectiveAppMainWidth(),
+          appCtx.view.layout.getEffectiveAppMainWidth(),
           responsiveCtx.visibleWindowHeight,
         ),
-        horizontalOffset: responsiveCtx.getAppMainOffsetX(),
-        effectiveAppMainWidth: responsiveCtx.getEffectiveAppMainWidth(),
+        horizontalOffset: appCtx.view.layout.getAppMainOffsetX(),
+        effectiveAppMainWidth: appCtx.view.layout.getEffectiveAppMainWidth(),
         availableViewportHeight: getOmnibarAvailableViewportHeight(
           responsiveCtx.visibleWindowHeight,
-          responsiveCtx.menuClearanceHeight,
+          appCtx.view.layout.menuClearanceHeight,
         ),
         search: {
           term: omniCtx.state.searchTerm,
@@ -265,7 +290,8 @@ export function useOmnibarModel(
           onCloseTray: () => omniCtx.closeTray(),
           onSelectFirstResult: () => omniCtx.selectFirstResult(),
           onClearSearchOrCloseTray: () => omniCtx.clearSearchOrCloseTray(),
-          onCreateFeature: event => void initAddNewFeature(appCtx, omniCtx, event),
+          onCreateFeature: event =>
+            void initAddNewFeature(appCtx.view, omniCtx, event, { getMapCenter }),
         },
         navigation: {
           isTrayOpen: omniCtx.state.isTrayOpen,
@@ -278,7 +304,12 @@ export function useOmnibarModel(
           showCollectionSwitcher:
             omniCtx.state.mode !== OmniMode.feature && !omniCtx.isNewFeatureMode,
           leftDisabled: currentIndex <= 0,
-          rightDisabled: collectionLength === 0 || currentIndex >= collectionLength - 1,
+          rightDisabled:
+            collectionLength === 0 ||
+            (currentIndex >= collectionLength - 1 && !omniCtx.collectionHasMore),
+          hasMore: omniCtx.collectionHasMore,
+          loading: appCtx.view.resources.featureQueries.collection.loading,
+          onLoadMore: () => void omniCtx.loadMoreCollection(),
           collectionMetaText: getCollectionMetaText(),
           featureTitle: getFeatureTitle(),
           navTitle: omniCtx.navTitle,

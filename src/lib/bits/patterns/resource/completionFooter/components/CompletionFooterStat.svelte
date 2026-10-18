@@ -1,7 +1,7 @@
 <script lang="ts">
 // BITS
-import SimpleMeter from '$lib/bits/core/meter/SimpleMeter.svelte'
-import SimpleTooltip from '$lib/bits/core/tooltip/SimpleTooltip.svelte'
+import SimpleMeter from '#lib/bits/core/meter/SimpleMeter.svelte'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // TYPES
 import type { CompletionFooterStatProps } from '../completionFooter.types'
 
@@ -13,7 +13,7 @@ let { icon, title, tooltip, percentage }: CompletionFooterStatProps = $props()
     <div class="bits-completion-footer__stat">
       {#if icon}
         {@const IconComponent = icon}
-        <IconComponent class="bits-completion-footer__icon" />
+        <IconComponent class="w-4 h-4 shrink-0" />
       {/if}
       <span class="bits-completion-footer__label">{title}</span>
       <SimpleMeter
@@ -24,7 +24,9 @@ let { icon, title, tooltip, percentage }: CompletionFooterStatProps = $props()
         class="bits-completion-footer__progress"
         indicatorClass="bits-completion-footer__progress-indicator"
       />
-      <span class="bits-completion-footer__value">{Math.round(percentage)}%</span>
+      <span class="text-xs leading-4 font-medium shrink-0 whitespace-nowrap"
+        >{Math.round(percentage)}%</span
+      >
     </div>
   {/snippet}
   {tooltip}

@@ -1,25 +1,25 @@
 <script lang="ts">
 // BITS
-import { Dropdown, Icon } from '$lib/bits'
+import { Dropdown, Icon } from '#lib/bits/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import { getCardCtx } from '#lib/context/card.svelte.js'
 // AUTH
-import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
+import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums'
+import { FeatureCardMode } from '#lib/enums.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { ResourceContext } from '$lib/types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { ResourceContext } from '#lib/types.js'
 // ICONS
-import Camera from 'virtual:icons/lucide/camera'
-import ChevronRight from 'virtual:icons/lucide/chevron-right'
-import MoreHorizontal from 'virtual:icons/lucide/ellipsis'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
-import Squares2x2 from 'virtual:icons/lucide/layout-grid'
-import TriangleAlert from 'virtual:icons/lucide/triangle-alert'
+import Camera from 'virtual:icons/proicons/camera'
+import ChevronRight from 'virtual:icons/proicons/chevron-right'
+import MoreHorizontal from 'virtual:icons/proicons/more'
+import PencilSquare from 'virtual:icons/proicons/compose'
+import Squares2x2 from 'virtual:icons/proicons/grid'
+import TriangleAlert from 'virtual:icons/proicons/alert-triangle'
 
 let {
   feature,
@@ -29,7 +29,7 @@ let {
   onEditSelection?: (() => void) | null
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 let resolvedHierarchy = $state<ResourceContext | null>(null)
 let resolvedHierarchyFeatureId = $state<string | null>(null)
@@ -67,7 +67,7 @@ $effect(() => {
 })
 
 function openContributionMode(mode: FeatureCardMode): void {
-  const user = appCtx.getUser()
+  const user = appCtx.account.user
   if (!hasDurableAccount(user)) {
     requestAccountUpgrade('contribution', window.location.href)
     return
@@ -129,7 +129,7 @@ const actionItems = [
       Boolean(organisationName || projectName),
     )}
     <div
-      class="pointer-events-auto flex w-full items-center justify-between bg-black px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
+      class="pointer-events-auto flex w-full items-center justify-between bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
     >
       <div
         class="flex min-w-0 items-center gap-2 font-mono text-xs uppercase text-neutral-content"
@@ -165,7 +165,7 @@ const actionItems = [
       {#if cardCtx.isNewMode && onEditSelection}
         <button
           type="button"
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-white/6 hover:text-neutral-content"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-base-content/12 hover:text-neutral-content"
           aria-label="Edit map selection"
           onclick={onEditSelection}
         >
@@ -186,7 +186,7 @@ const actionItems = [
     </div>
   {:else}
     <div
-      class="pointer-events-auto flex w-full items-center justify-between bg-black px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
+      class="pointer-events-auto flex w-full items-center justify-between bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
     >
       <div
         class="flex min-w-0 items-center gap-2 font-mono text-xs uppercase text-neutral-content"
@@ -197,7 +197,7 @@ const actionItems = [
       {#if cardCtx.isNewMode && onEditSelection}
         <button
           type="button"
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-white/6 hover:text-neutral-content"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-base-content/12 hover:text-neutral-content"
           aria-label="Edit map selection"
           onclick={onEditSelection}
         >

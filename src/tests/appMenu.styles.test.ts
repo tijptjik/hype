@@ -1,4 +1,4 @@
-import { getAppMenuNavStyles } from '$lib/bits/patterns/bars/appMenu/appMenu.styles'
+import { getAppMenuNavStyles } from '#lib/bits/patterns/bars/appMenu/appMenu.styles.js'
 import { describe, expect, it } from 'vitest'
 
 describe('app menu styles', () => {

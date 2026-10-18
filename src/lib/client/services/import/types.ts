@@ -1,30 +1,26 @@
 // Compatibility types copied from old $lib/types import section on feat/data-import.
 // Keep these local while the import feature is reviewed against the current schema.
+import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
+import type { FieldComponentType } from '#lib/client/services/fieldComponents.js'
+import type { FieldDiscriminator, Id, Locale, LocaleKey, Resource } from '#lib/types.js'
 import type {
-  AddressMeta,
-  AddressProperties,
-  FieldComponentType,
-  FieldDiscriminator,
-  Id,
-  Locale,
-  LocaleKey,
-  Resource,
-} from '$lib/types'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
 import type {
   Image,
   ImageCtxEnvelope,
   ImageUploadCtx,
   Intent,
-} from '$lib/db/zod/schema/image.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/image.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 import type {
   Property,
   PropertyValue,
   PropertyValueI18nDB,
-} from '$lib/db/zod/schema/property.types'
+} from '#lib/db/zod/schema/property.types.js'
 
 export type {
   AddressMeta,

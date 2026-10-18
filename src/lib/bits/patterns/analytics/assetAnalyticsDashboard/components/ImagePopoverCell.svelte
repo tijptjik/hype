@@ -1,22 +1,22 @@
 <script lang="ts">
 import type { Component } from 'svelte'
 import { onDestroy } from 'svelte'
-import { formatDate } from '$lib'
-import { m } from '$lib/i18n'
-import { runRemoteQuery } from '$lib/remote'
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import Popover from '$lib/bits/core/popover/Popover.svelte'
+import { formatDate } from '#lib'
+import { m } from '#lib/i18n.js'
+import { runRemoteQuery } from '#lib/remote/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import Popover from '#lib/bits/core/popover/Popover.svelte'
 // LOCAL
 import {
   buildAssetAnalyticsPreviewUrl,
   normalizeAssetAnalyticsPublicId,
 } from '../assetAnalyticsDashboard.utils'
 // ICONS
-import Camera from 'virtual:icons/lucide/camera'
-import Square2Stack from 'virtual:icons/lucide/copy'
-import Document from 'virtual:icons/lucide/file-text'
-import AtSymbol from 'virtual:icons/lucide/at-sign'
-import Calendar from 'virtual:icons/lucide/calendar'
+import Camera from 'virtual:icons/proicons/camera'
+import Square2Stack from 'virtual:icons/proicons/copy'
+import Document from 'virtual:icons/proicons/file-text'
+import AtSymbol from 'virtual:icons/proicons/mention'
+import Calendar from 'virtual:icons/proicons/calendar'
 
 let {
   publicId,
@@ -111,7 +111,7 @@ async function loadMetadata(): Promise<void> {
   isMetadataLoading = true
 
   try {
-    const { getMetadata } = await import('$lib/api/server/image.remote')
+    const { getMetadata } = await import('#lib/api/image.remote.js')
     const response = await runRemoteQuery(
       getMetadata({
         publicId,
@@ -153,7 +153,7 @@ onDestroy(() => {
 <Popover
   bind:open
   contentProps={{ side: 'left', align: 'start', sideOffset: 12 }}
-  contentClass="z-50 w-[18rem] rounded-[1.25rem] border border-white/10 bg-[rgb(9,11,14)] p-3 shadow-2xl"
+  contentClass="z-50 w-[18rem] rounded-[1.25rem] border border-foreground/10 bg-panel p-3 shadow-2xl"
 >
   {#snippet trigger()}
     <button
@@ -168,10 +168,11 @@ onDestroy(() => {
     </button>
   {/snippet}
 
+  <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hovering the popover content keeps it open while the pointer moves from its trigger. -->
   <div class="space-y-3" onmouseenter={openPopover} onmouseleave={closePopoverSoon}>
     {#if previewFailed}
       <div
-        class="flex h-44 items-center justify-center rounded-[1rem] border border-dashed border-base-300 bg-[#121212] px-4 text-center text-sm text-foreground-alt"
+        class="flex h-44 items-center justify-center rounded-[1rem] border border-dashed border-base-300 bg-surface px-4 text-center text-sm text-foreground-alt"
       >
         {m.image__metadata_preview_unavailable()}
       </div>
@@ -179,7 +180,7 @@ onDestroy(() => {
       <img
         src={previewUrl}
         alt={normalizedPublicId}
-        class="h-44 w-full rounded-[1rem] border border-base-300 bg-[#121212] object-cover"
+        class="h-44 w-full rounded-[1rem] border border-base-300 bg-surface object-cover"
         loading="lazy"
         onerror={() => {
           previewFailed = true
@@ -198,7 +199,7 @@ onDestroy(() => {
       </div>
     </div>
 
-    <div class="rounded-[1rem] border border-base-300 bg-[#121212] px-3 py-3">
+    <div class="rounded-[1rem] border border-base-300 bg-surface px-3 py-3">
       {#if metadataEntries.length > 0}
         <div class="flex flex-col gap-2">
           {#each metadataEntries as entry}

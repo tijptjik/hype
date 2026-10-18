@@ -1,8 +1,9 @@
-import { toLocaleKebab } from '$lib/i18n'
+import { toLocaleKebab } from '#lib/i18n.js'
 import { supportedLocaleKeys } from '../../enums'
 import * as m from '../../paraglide/messages.js'
 
-import type { Locale, LocaleKey, MapStyleCatalogKey } from '../../types'
+import type { Locale, LocaleKey } from '#lib/types.js'
+import type { MapStyleCatalogKey } from './catalog'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -80,6 +81,21 @@ export const getMapStyleCatalogCopy = (
       return {
         name: m.map_style__rosepunk_name({}, { locale }),
         description: m.map_style__rosepunk_description({}, { locale }),
+      }
+    case 'midnight':
+      return {
+        name: m.map_style__midnight_name({}, { locale }),
+        description: m.map_style__midnight_description({}, { locale }),
+      }
+    case 'breadline-dark':
+      return {
+        name: m.map_style__breadline_dark_name({}, { locale }),
+        description: m.map_style__breadline_dark_description({}, { locale }),
+      }
+    case 'breadline-light':
+      return {
+        name: m.map_style__breadline_light_name({}, { locale }),
+        description: m.map_style__breadline_light_description({}, { locale }),
       }
     case 'breadline':
       return {

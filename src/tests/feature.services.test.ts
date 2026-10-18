@@ -4,13 +4,13 @@ import {
   getNonTranslatableFeatureFieldItems,
   getTranslatableSpecifierProperties,
   toFeatureFormInput,
-} from '$lib/client/services/feature'
-import { normalizeFeaturePropertiesForLayer } from '$lib/api/services/feature'
-import { FeatureAdminProfileAPI } from '$lib/db/zod/schema/feature'
+} from '#lib/client/services/feature.js'
+import { normalizeFeaturePropertiesForLayer } from '#lib/api/services/feature.js'
+import { FeatureAdminProfileAPI } from '#lib/db/zod/schema/feature.js'
 
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 
-vi.mock('$lib/client/services/task', () => ({
+vi.mock('#lib/client/services/task.js', () => ({
   upsertNewFeatureDraft: vi.fn(),
 }))
 
@@ -117,17 +117,46 @@ describe('feature service property normalization', () => {
           i18n: {},
           property: {
             id: 'property-country',
+            projectId: 'project-1',
+            organisationId: null,
+            hubId: null,
+            scope: 'project',
+            rank: 1,
+            min: null,
+            max: null,
+            isEnabled: true,
+            isDefaultEnabled: false,
+            isUserContributable: false,
+            isTranslatable: false,
+            createdAt: '',
+            modifiedAt: '',
             key: 'country',
             type: 'classifier',
             component: 'SelectField',
-            i18n: { en: { label: 'Country' } },
+            i18n: {
+              en: {
+                propertyId: 'property-country',
+                locale: 'en',
+                label: 'Country',
+                labelGen: false,
+                placeholder: null,
+                placeholderGen: false,
+              },
+            },
             values: [
               {
                 id: 'value-taiwan',
                 propertyId: 'property-country',
                 rank: 1,
                 value: 'Taiwan',
-                i18n: { en: { value: 'Taiwan' } },
+                i18n: {
+                  en: {
+                    propertyValueId: 'value-taiwan',
+                    locale: 'en',
+                    value: 'Taiwan',
+                    valueGen: false,
+                  },
+                },
               },
             ],
           },
@@ -136,7 +165,14 @@ describe('feature service property normalization', () => {
             propertyId: 'property-country',
             rank: 1,
             value: 'Taiwan',
-            i18n: { en: { value: 'Taiwan' } },
+            i18n: {
+              en: {
+                propertyValueId: 'value-taiwan',
+                locale: 'en',
+                value: 'Taiwan',
+                valueGen: false,
+              },
+            },
           },
         },
       ],
@@ -186,7 +222,7 @@ describe('feature service property normalization', () => {
       ],
     } as never)
 
-    expect(formInput.data.properties[0].i18n).toMatchObject({
+    expect(formInput.data.properties?.[0].i18n).toMatchObject({
       en: { value: 'Final synopsis sample', valueGen: false },
       zhHans: { value: '现有自由文字栏位摘要四', valueGen: false },
       zhHant: { value: '現有自由文字欄位摘要四', valueGen: false },

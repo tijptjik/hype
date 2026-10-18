@@ -6,13 +6,13 @@ import type {
   HeaderFacetItem,
   HeaderFormActionsState,
   HeaderVisibilityOverrides,
-} from '$lib/types'
+} from '#lib/context/headerState.types.js'
 import type {
   HeaderButtonActionConfig,
   HeaderCrumb,
   HeaderLayoutRegionConfig,
   HeaderTitleMenuItemConfig,
-} from '$lib/bits/patterns/layout/header/header.types'
+} from '#lib/bits/patterns/layout/header/header.types.js'
 
 const DEFAULT_HEADER_FORM_ACTIONS: HeaderFormActionsState = {
   dirty: false,
@@ -75,8 +75,12 @@ export const getEntityVisibility = (
  * Private methods are internal composition helpers.
  */
 export class HeaderCtrl {
+  /** Transient focus of the header search field, shared with its current page. */
+  isSearchFocused = $state(false)
+
   /** Reactive header state consumed by the header adapter/components. */
   state: HeaderCtrlState = $state({
+    search: null,
     controlsMode: 'auto',
     isEditing: false,
     visibility: {},
@@ -142,7 +146,7 @@ export class HeaderCtrl {
    */
   setFacets(
     facets:
-      | Map<
+      | ReadonlyMap<
           string,
           | string
           | {
@@ -199,11 +203,14 @@ export class HeaderCtrl {
    * @param props - Props passed to the inline content component.
    * @returns void
    */
-  setTaskActionContent(
-    component: HeaderLayoutRegionConfig['component'],
-    props: HeaderLayoutRegionConfig['props'] = {},
+  setTaskActionContent<Props extends Record<string, unknown>>(
+    component: Component<Props> | null,
+    props: Props,
   ): void {
-    const next = component ? { component, props } : null
+    // Validate props before erasing their type for dynamic rendering.
+    const next = component
+      ? { component: component as unknown as Component<Record<string, unknown>>, props }
+      : null
     if (
       untrack(() => isSameLayoutRegionConfig(this.state.meta.taskActionContent, next))
     )
@@ -278,7 +285,7 @@ export class HeaderCtrl {
   setHeaderForEntity(
     title: string,
     icon: Component,
-    facets: Map<
+    facets: ReadonlyMap<
       string,
       | string
       | {
@@ -374,12 +381,19 @@ export class HeaderCtrl {
    * @param props - Props passed to the control bar component.
    * @returns void
    */
-  setControlBar(
-    component: HeaderLayoutRegionConfig['component'],
-    props: HeaderLayoutRegionConfig['props'] = {},
+  setControlBar<Props extends Record<string, unknown>>(
+    component: Component<Props> | null,
+    props: Props,
     options: Pick<HeaderLayoutRegionConfig, 'height' | 'isVisible'> = {},
   ): void {
-    const next = component ? { component, props, ...options } : null
+    // Validate component props at the call boundary, then erase them for dynamic rendering.
+    const next: HeaderLayoutRegionConfig | null = component
+      ? {
+          component: component as unknown as Component<Record<string, unknown>>,
+          props,
+          ...options,
+        }
+      : null
     if (untrack(() => isSameLayoutRegionConfig(this.state.layout.controlBar, next)))
       return
     this.state.layout.controlBar = next
@@ -400,11 +414,14 @@ export class HeaderCtrl {
    * @param props - Props passed to the footer component.
    * @returns void
    */
-  setFooter(
-    component: HeaderLayoutRegionConfig['component'],
-    props: HeaderLayoutRegionConfig['props'] = {},
+  setFooter<Props extends Record<string, unknown>>(
+    component: Component<Props> | null,
+    props: Props,
   ): void {
-    const next = component ? { component, props } : null
+    // Validate props at registration, then erase their type for dynamic rendering.
+    const next = component
+      ? { component: component as unknown as Component<Record<string, unknown>>, props }
+      : null
     if (untrack(() => isSameLayoutRegionConfig(this.state.layout.footer, next))) return
     this.state.layout.footer = next
   }
@@ -419,10 +436,21 @@ export class HeaderCtrl {
   }
 
   /**
+   * Overrides resource search for a standalone admin directory.
+   * @param search Controlled search state, or null to restore resource search.
+   * @returns Nothing.
+   */
+  setSearch(search: HeaderCtrlState['search']): void {
+    this.state.search = search
+  }
+
+  /**
    * Fully reset header controls, visibility, and metadata.
    * @returns void
    */
   reset(): void {
+    this.isSearchFocused = false
+    this.state.search = null
     this.state.controlsMode = 'auto'
     this.state.isEditing = false
     this.state.visibility = {}
@@ -477,7 +505,7 @@ export class HeaderCtrl {
   private applyEntityMeta(
     title: string,
     icon: Component,
-    facets: Map<
+    facets: ReadonlyMap<
       string,
       | string
       | {
@@ -525,7 +553,7 @@ export class HeaderCtrl {
    */
   private normalizeFacetItems(
     facets:
-      | Map<
+      | ReadonlyMap<
           string,
           | string
           | {

@@ -52,11 +52,6 @@
     box-shadow: none;
   }
 
-  .bits-theme .bits-resource-sort__select-trigger {
-    min-width: 100px;
-    width: auto;
-  }
-
   .bits-resource-sort__select-content {
     min-width: 100px;
     border-color: black;
@@ -143,11 +138,6 @@
     border-radius: 0.75rem;
     border-color: color-mix(in oklab, var(--color-base-300) 70%, white 30%);
     box-shadow: none;
-  }
-
-  .bits-theme .bits-resource-bulk-edit__select-trigger {
-    min-width: 9.25rem;
-    width: max-content;
   }
 
   .bits-resource-bulk-edit__select-content {

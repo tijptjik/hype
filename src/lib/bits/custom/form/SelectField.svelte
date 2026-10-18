@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Select } from '$lib/bits/core'
+import { Select } from '#lib/bits/core/index.js'
 import Label from './src/label/Label.svelte'
 import type { SelectFieldProps } from './selectField.types'
 
@@ -38,7 +38,7 @@ const wrapperClass = $derived(
 )
 </script>
 
-<label {...wrapperAttrs} class={wrapperClass} for={id}>
+<div {...wrapperAttrs} class={wrapperClass}>
   <Label
     for={id}
     text={label}
@@ -63,4 +63,4 @@ const wrapperClass = $derived(
     {contentClass}
     {onValueChange}
   />
-</label>
+</div>

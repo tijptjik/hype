@@ -2,9 +2,9 @@
 // SVELTE
 import { page } from '$app/state'
 // CONSTANTS
-import { NEW_REF } from '$lib'
+import { NEW_REF } from '#lib'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // BITS
 import FeatureCardActions from './components/FeatureCardActions.svelte'
 import FeatureCardBreadcrumbs from './components/FeatureCardBreadcrumbs.svelte'
@@ -15,26 +15,30 @@ import FeatureCardViewerContent from './components/FeatureCardViewerContent.svel
 import * as FeatureCardActionPrimitive from './components/actions'
 import * as FeatureCardNewPrimitive from './components/newFeature'
 // PROVIDERS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx, setCardCtx } from '$lib/context/card.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
-import { getResponsiveCtx, setResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import { getCardCtx, setCardCtx } from '#lib/context/card.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx, setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
-import { FeatureCardMode, ImageContextResource, NewFeatureMode } from '$lib/enums'
+import { FeatureCardMode, ImageContextResource, NewFeatureMode } from '#lib/enums.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type {
   Organisation,
   OrganisationDB,
-} from '$lib/db/zod/schema/organisation.types'
-import type { Project, ProjectDB } from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/organisation.types.js'
+import type { Project, ProjectDB } from '#lib/db/zod/schema/project.types.js'
 // LOCAL
 import { getFeatureCardLayout } from './featureCard.layout'
 import { getFeatureCardResponsiveWidth } from './featureCard.utils'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const omniCtx = getOmniCtx()
 const cardCtx = (() => {
   try {
@@ -50,8 +54,11 @@ const responsiveCtx = (() => {
     return setResponsiveCtx()
   }
 })()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const mode = $derived(cardCtx.state.mode)
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
@@ -85,7 +92,7 @@ function getNewFeatureHeightCompensationPx(): number {
 
 // Build the draft feature card payload from the active new-feature task.
 function syncFeatureCardState(): boolean {
-  const newFeature = appCtx.getNewFeature()
+  const newFeature = appCtx.draft.current
   if (!newFeature?.feature) {
     feature = null
     organisation = null
@@ -181,7 +188,7 @@ function updateViewerBudget(): void {
 }
 
 function handleEditSelection(): void {
-  appCtx.setNewFeatureMode(NewFeatureMode.parents)
+  appCtx.draft.setMode(NewFeatureMode.parents)
 }
 
 /** Cancels the draft and returns the card to its normal map state. */
@@ -205,7 +212,7 @@ function handleRootContentVisibilityChange(visible: boolean): void {
 }
 
 $effect(() => {
-  const currentMode = appCtx.newFeatureMode
+  const currentMode = appCtx.draft.mode
   const isEnteringCard =
     currentMode === NewFeatureMode.card && previousMode !== NewFeatureMode.card
   const isLeavingCard =
@@ -270,7 +277,7 @@ const imageProviderModel = useImageProviderModel(
     isAdminMode: false,
     context: {
       ctxType: ImageContextResource.feature,
-      ctxId: (appCtx.getNewFeature()?.featureId ?? NEW_REF) as string,
+      ctxId: (appCtx.draft.current?.featureId ?? NEW_REF) as string,
       organisation: organisation as unknown as Omit<OrganisationDB, 'isCoreInclusive'>,
       project: project as unknown as Omit<ProjectDB, 'isCoreInclusive'>,
     },
@@ -278,7 +285,7 @@ const imageProviderModel = useImageProviderModel(
 )
 </script>
 
-{#if appCtx.newFeatureMode === NewFeatureMode.card && feature && organisation && project}
+{#if appCtx.draft.mode === NewFeatureMode.card && feature && organisation && project}
   <ImageProvider model={imageProviderModel}>
     <FeatureCardRoot onContentVisibilityChange={handleRootContentVisibilityChange}>
       <div class="pointer-events-none flex min-h-0 flex-1 flex-col">
@@ -332,7 +339,7 @@ const imageProviderModel = useImageProviderModel(
           <div
             bind:this={bottomSpacerElement}
             aria-hidden="true"
-            class="shrink-0 bg-black"
+            class="shrink-0 bg-panel"
             style={`height: ${layout.bottomSpacerPx}px;`}
           ></div>
         {/if}

@@ -1,62 +1,40 @@
 import type { AvailableLanguageTag } from '../../lib/paraglide/runtime'
 import type { ParaglideLocals } from '@inlang/paraglide-sveltekit'
-import type { Auth, SessionSession, SessionUser } from '$lib/auth'
-import type { AssetRenderJob, MapRenderJob } from '$lib/types'
+import type { Auth, SessionSession, SessionUser } from '#lib/auth.js'
+import type { AssetRenderJob, MapRenderJob } from '#lib/map/renders/render.types.js'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import type { MiniflareD1Database } from 'miniflare'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import 'unplugin-icons/types/svelte'
 import type {
-  LngLatLike,
-  CameraOptions,
-  AnimationOptions,
-  FitBoundsOptions,
-} from 'maplibre-gl'
+  D1Database,
+  Fetcher,
+  RateLimit,
+  Queue,
+  R2Bucket,
+  SendEmail,
+  ExecutionContext,
+  CacheStorage,
+  Cache,
+} from '@cloudflare/workers-types'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import 'unplugin-icons/types/svelte'
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 
 // ENHANCEMENT: Add Logging - https://jeffmcmorris.medium.com/awesome-logging-in-sveltekit-6afa29c5892c
 
-// Custom options for cached navigation methods
-interface CachedMapOptions {
-  run?: boolean
-  debug?: boolean
-  offset?: [number, number]
-  curve?: number
-  minZoom?: number
-  type?: 'pan' | 'zoom' | 'jump' | 'ease' | 'fly' | 'fitBounds'
-  [key: string]: unknown
-}
-
-// Extend Map interface with cached navigation methods
-declare module 'maplibre-gl' {
-  interface Map {
-    cachedPanTo(
-      lnglat: LngLatLike,
-      options?: CameraOptions & AnimationOptions & CachedMapOptions,
-    ): void
-    cachedZoomTo(
-      zoom: number,
-      options?: CameraOptions & AnimationOptions & CachedMapOptions,
-    ): void
-    cachedJumpTo(options?: CameraOptions & AnimationOptions & CachedMapOptions): void
-    cachedEaseTo(options?: CameraOptions & AnimationOptions & CachedMapOptions): void
-    cachedFlyTo(options?: CameraOptions & AnimationOptions & CachedMapOptions): void
-    cachedFitBounds(
-      bounds: [[number, number], [number, number]],
-      options?: FitBoundsOptions & AnimationOptions & CachedMapOptions,
-    ): void
-  }
-}
-
 declare global {
+  interface ImportMetaEnv {
+    readonly HYPE_DEV_PERSONA: 'admin' | 'user' | null
+  }
   namespace App {
     // interface Error {}
     interface Locals {
+      /** Cloudflare bindings and lifetime API resolved by the server hook. */
+      platform: Platform
       paraglide: ParaglideLocals<AvailableLanguageTag>
-      db: DrizzleD1Database<typeof import('$lib/db/schema/index')>
+      db: DrizzleD1Database<typeof import('#lib/db/schema/index.js')>
       hub: HubOptsExtended
       auth: Auth
+      devPersona?: 'admin' | 'user'
       session?: SessionSession
       user?: SessionUser
     }
@@ -66,8 +44,11 @@ declare global {
         ENVIRONMENT: string
         NODE_ENV: string
         // CLOUDFLARE BINDINGS
-        DB: MiniflareD1Database
+        DB: D1Database
         ASSETS: Fetcher
+        ROUTING_SERVICE?: Fetcher
+        ROUTING_LIMITER?: RateLimit
+        ROUTING_TOKEN?: string
         MAP_RENDER_QUEUE: Queue<MapRenderJob>
         ASSET_RENDER_QUEUE: Queue<AssetRenderJob>
         ASSET_RAW_DEV: R2Bucket
@@ -83,6 +64,7 @@ declare global {
         MAP_REFRESH_TOKEN: string
         MAP_RENDER_TOKEN: string
         ASSET_ANALYTICS_READ_TOKEN: string
+        IMAGE_ANALYTICS_READ_TOKEN?: string
         // AUTH
         AUTH_SECRET: string
         AUTH_GOOGLE_ID: string
@@ -99,12 +81,18 @@ declare global {
         PUBLIC_DRIZZLE_LOGGER: string
         PUBLIC_HUB_CODE: string
         PUBLIC_GIPHY_KEY: string
+        PUBLIC_SAANSEOI_API_KEY?: string
         PUBLIC_ORIGIN: string
         PUBLIC_ASSET_BASE_URL: string
         PUBLIC_PREVIEW_ASSET_BASE_URL: string
       }
-      context: ExecutionContext
+      context: Pick<ExecutionContext, 'waitUntil'>
       caches: CacheStorage & { default: Cache }
     }
   }
+}
+
+// Cloudflare exposes bindings through its native module in SvelteKit 3.
+declare namespace Cloudflare {
+  type Env = App.Platform['env']
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
 import RangeSlider from 'svelte-range-slider-pips'
-import RotateCcwIcon from 'virtual:icons/lucide/rotate-ccw'
+import RotateCcwIcon from 'virtual:icons/proicons/arrow-counterclockwise'
 
 type Props = {
   value?: string | null

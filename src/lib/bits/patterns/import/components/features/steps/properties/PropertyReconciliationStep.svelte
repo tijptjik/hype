@@ -2,9 +2,9 @@
 // SVELTE
 import { onMount, untrack } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import PropertyCreationStep from './PropertyCreationStep.svelte'
 import PropertyTranslationPrompt from './PropertyTranslationPrompt.svelte'
@@ -12,15 +12,15 @@ import PropertyDataEnrichment from './PropertyDataEnrichment.svelte'
 import PropertyValueMatching from './PropertyValueMatching.svelte'
 import PropertyRangeValidation from './PropertyRangeValidation.svelte'
 // SERVICES
-import { enrichFeaturesWithPropertyData } from '$lib/client/services/import/features/property'
+import { enrichFeaturesWithPropertyData } from '#lib/client/services/import/features/property.js'
 // ENUMS
-import { supportedLocaleKeys } from '$lib/enums'
+import { supportedLocaleKeys } from '#lib/enums.js'
 // TYPES
 import type {
   FeatureCSVColumn,
   FieldDiscriminator,
   Locale,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 type Props = {
   autoAdvance?: boolean
@@ -454,7 +454,7 @@ function getScenarioForKey(key: string): number {
   {:else if currentProperty}
     <div class="mx-auto w-full max-w-5xl">
       <div
-        class="grid gap-3 rounded-3xl border border-info/25 bg-black/[0.45] p-4 shadow-[var(--shadow-mini)] backdrop-blur-xl md:grid-cols-[auto_minmax(0,1fr)] md:items-center"
+        class="grid gap-3 rounded-3xl border border-info/25 bg-panel/[0.45] p-4 shadow-[var(--shadow-mini)] backdrop-blur-xl md:grid-cols-[auto_minmax(0,1fr)] md:items-center"
       >
         <div
           class="flex h-16 w-16 items-center justify-center rounded-2xl border border-info/25 bg-info/10 font-mono text-2xl font-black text-info"

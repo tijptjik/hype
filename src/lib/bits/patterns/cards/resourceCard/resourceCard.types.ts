@@ -1,4 +1,4 @@
-import type { Card } from '$lib/bits/custom'
+import type { Card } from '#lib/bits/custom/index.js'
 
 export interface ResourceCardRootProps {
   class?: string

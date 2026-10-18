@@ -1,10 +1,14 @@
 <script lang="ts" generics="T = string">
 // COMPONENTS
-import { Button, SimpleTooltip } from '$lib/bits/core'
-import { Icon } from '$lib/bits/custom/icon'
-import { cx } from '$lib/bits/utils'
+import { Button, SimpleTooltip } from '#lib/bits/core/index.js'
+import { Icon } from '#lib/bits/custom/icon/index.js'
+import { cx } from '#lib/bits/utils.js'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // STYLES
 import {
   getAppMenuItemButtonClasses,
@@ -17,7 +21,7 @@ import {
 // TYPES
 import type { AppMenuItem, AppMenuProps } from './appMenu.types'
 import { getAppMenuBottomGutter, getAppMenuViewportState } from './appMenu.layout'
-import { getElevatedChromeXGutter } from '$lib/bits/patterns/bars/omnibar'
+import { getElevatedChromeXGutter } from '#lib/bits/patterns/bars/omnibar/index.js'
 
 let {
   items,
@@ -29,14 +33,15 @@ let {
 
 // CONTEXT
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
 // RESPONSIVENESS
 const availableWidth = $derived(responsiveCtx.visibleWindowWidth)
 const availableHeight = $derived(responsiveCtx.visibleWindowHeight)
 const responsiveWidth = $derived(
-  responsiveCtx.getEffectiveAppMainWidth() || availableWidth,
+  surfaceLayout.getEffectiveAppMainWidth() || availableWidth,
 )
-const resolvedOffsetX = $derived(offsetX ?? responsiveCtx.getAppMainOffsetX())
+const resolvedOffsetX = $derived(offsetX ?? surfaceLayout.getAppMainOffsetX())
 const viewportState = $derived(
   getAppMenuViewportState(availableWidth, availableHeight, responsiveWidth),
 )
@@ -93,23 +98,23 @@ function handleSelect(item: AppMenuItem<T>, event: MouseEvent): void {
   void onSelect?.(item, event)
 }
 
-function getItemIconTone(item: AppMenuItem<T>): 'primary' | 'white' | 'secondary' {
+function getItemIconTone(item: AppMenuItem<T>): 'primary' | 'base' | 'secondary' {
   if (!isPillMenu) return 'primary'
-  return trailingItems.includes(item) ? 'secondary' : 'white'
+  return trailingItems.includes(item) ? 'secondary' : 'base'
 }
 
 function getItemIconClasses(item: AppMenuItem<T>): string {
   const baseIconClass =
-    isPillMenu && trailingItems.includes(item) ? 'text-secondary' : 'text-white'
-  return `${isPillMenu ? `${baseIconClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.55rem_rgba(255,255,255,0.62)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.55rem_rgba(255,255,255,0.62)]` : 'text-primary'} ${item.iconClasses ?? ''}`.trim()
+    isPillMenu && trailingItems.includes(item) ? 'text-secondary' : 'text-base-content'
+  return `${isPillMenu ? `${baseIconClass} transition-[filter,color] duration-150 ease-[ease]` : 'text-primary'} ${item.iconClasses ?? ''}`.trim()
 }
 
 function getItemButtonClasses(): string {
   return cx(
     menuButtonClasses,
     isPillMenu && 'group/app-menu-pill',
-    isPillMenu && 'hover:[--btn-transparent-hover-fg:var(--color-white)]',
-    isPillMenu && 'focus-visible:[--btn-transparent-hover-fg:var(--color-white)]',
+    isPillMenu && 'hover:[--btn-transparent-hover-fg:var(--color-primary)]',
+    isPillMenu && 'focus-visible:[--btn-transparent-hover-fg:var(--color-primary)]',
   )
 }
 
@@ -119,16 +124,20 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
   }
 
   if (!isPillMenu) {
-    return 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider text-white'
+    return 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider text-base-content'
   }
 
-  const toneClass = trailingItems.includes(item) ? 'text-secondary' : 'text-white'
+  const toneClass = trailingItems.includes(item)
+    ? 'text-secondary'
+    : 'text-base-content'
 
-  return `min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider ${toneClass} transition-[filter,color] duration-150 ease-[ease] group-hover/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)] group-focus-visible/app-menu-pill:drop-shadow-[0_0_0.45rem_rgba(255,255,255,0.52)]`
+  return `min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-wider ${toneClass} transition-[filter,color] duration-150 ease-[ease]`
 }
 </script>
 
-{#snippet menuButton(item: AppMenuItem<T>)}
+{#snippet menuButton(
+  item: AppMenuItem<T>,
+)}
   {#snippet itemIcon()}
     <Icon
       src={item.icon}
@@ -144,7 +153,8 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
         text={item.label}
         icon={itemIcon}
         style="transparent"
-        color={item.color ?? (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
+        color={item.color ??
+          (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
         size="md"
         hideLabel={item.hideLabel || viewportState.isIconOnlyMenu}
         class={getItemButtonClasses()}

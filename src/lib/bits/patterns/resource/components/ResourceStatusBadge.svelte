@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SimpleTooltip } from '$lib/bits/core/tooltip'
+import { SimpleTooltip } from '#lib/bits/core/tooltip/index.js'
 import type { ResourceStatusBadgeProps } from './resourceStatusBadge.types'
 
 let {
@@ -20,7 +20,7 @@ const badgeClasses = $derived(
 <SimpleTooltip
   disabled={!tooltipText}
   triggerProps={{ tabindex: -1 }}
-  triggerClass="bits-resource-status-badge__trigger"
+  triggerClass="inline-flex"
   contentClass="bits-resource-status-badge__tooltip"
 >
   {#snippet trigger()}

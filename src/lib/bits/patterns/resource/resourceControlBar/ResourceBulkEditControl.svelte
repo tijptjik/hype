@@ -1,12 +1,12 @@
 <script lang="ts">
 // BITS
-import Button from '$lib/bits/core/button/Button.svelte'
-import Select from '$lib/bits/core/select/Select.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
+import Select from '#lib/bits/core/select/Select.svelte'
 // ICONS
-import CheckIcon from 'virtual:icons/lucide/check'
-import ListChecksIcon from 'virtual:icons/lucide/list-checks'
-import ShuffleIcon from 'virtual:icons/lucide/shuffle'
-import XIcon from 'virtual:icons/lucide/x'
+import CheckIcon from 'virtual:icons/proicons/checkmark'
+import ListChecksIcon from 'virtual:icons/proicons/task-list'
+import ShuffleIcon from 'virtual:icons/proicons/arrow-left-right'
+import XIcon from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { ResourceBulkEditControlProps } from './components/resourceControlBarPrimitives.types'
 
@@ -114,9 +114,7 @@ $effect(() => {
 
 <div class="bits-theme bits-resource-bulk-edit">
   <Button
-    text={config.isActive
-      ? `Bulk edit (${config.selectedCount})`
-      : 'Bulk edit'}
+    text={config.isActive ? `Bulk edit (${config.selectedCount})` : 'Bulk edit'}
     iconComponent={ListChecksIcon}
     style="outline"
     color="light"
@@ -157,8 +155,8 @@ $effect(() => {
           placeholder="Action"
           variant="default"
           class="bits-resource-bulk-edit__select text-sm"
-          triggerClass="bits-resource-bulk-edit__select-trigger h-9 px-2 text-sm"
-          contentClass="bits-resource-bulk-edit__select-content text-white"
+          triggerClass="min-w-37 w-max h-9 px-2 text-sm"
+          contentClass="bits-resource-bulk-edit__select-content text-foreground"
           onValueChange={config.onOptionChange}
         />
         <Button

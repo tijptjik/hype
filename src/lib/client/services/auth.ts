@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
-import { hub, userLayer } from '$lib/db/schema/index'
-import { canAccessAnalytics } from '$lib/api/services/authz/user'
+import { hub, userLayer } from '#lib/db/schema/index.js'
+import { canAccessAnalytics } from '#lib/api/services/authz/user.js'
 // TYPES
-import type { Database, UserRoleDisco, SessionUser, Id } from '$lib/types'
-import type { UserLayer } from '$lib/db/zod/schema/user.types'
+import type { Database, UserRoleDisco, SessionUser, Id } from '#lib/types.js'
+import type { UserLayer } from '#lib/db/zod/schema/user.types.js'
 
 /**
  * Fetches and constructs user layers from the database.

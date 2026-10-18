@@ -11,11 +11,18 @@ import { hasAuthenticatedSession } from './user'
 import type {
   AuthorizationDecision,
   OrganisationAuthorizeParams,
-  OrganisationActionPermissions,
   OrganisationAuthorizationAction,
   OrganisationAuthorizationField,
-  UserRoleDisco,
-} from '$lib/types'
+} from '#lib/api/services/authz/authorization.types.js'
+import type { UserRoleDisco } from '#lib/types.js'
+// TYPES
+
+type OrganisationActionPermissions = {
+  canCreate: boolean
+  canEdit: boolean
+  canPublish: boolean
+  canDelete: boolean
+}
 
 // ═══════════════════════
 // TABLE OF CONTENTS

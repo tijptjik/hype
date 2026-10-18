@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import * as AnalyticsCardPrimitive from '$lib/bits/custom/analyticsCard/components'
-import { cx } from '$lib/bits/utils'
+import * as AnalyticsCardPrimitive from '#lib/bits/custom/analyticsCard/components/index.js'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // LOCAL
 import * as AssetAnalyticsDashboardPrimitive from './components'
 import {
@@ -14,7 +14,10 @@ import {
   TOP_WINDOW_SECTION_ORDER,
 } from './assetAnalyticsDashboard.utils'
 // TYPES
-import type { AssetAnalyticsSeriesKey, AssetAnalyticsWindowKey } from '$lib/types'
+import type {
+  AssetAnalyticsSeriesKey,
+  AssetAnalyticsWindowKey,
+} from '#lib/api/services/assetAnalytics.types.js'
 import type { AssetAnalyticsDashboardProps } from './assetAnalyticsDashboard.types'
 
 let { state: analyticsState }: AssetAnalyticsDashboardProps = $props()
@@ -104,7 +107,7 @@ function toggleSeries(seriesKey: AssetAnalyticsSeriesKey): void {
         'inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition',
         isSelected
           ? 'border-primary bg-primary text-primary-content'
-          : 'border-white/12 bg-transparent text-foreground-alt hover:border-base-100 hover:text-foreground',
+          : 'border-foreground/12 bg-transparent text-foreground-alt hover:border-base-100 hover:text-foreground',
       )}
     >
       {windowConfig.label}
@@ -112,7 +115,9 @@ function toggleSeries(seriesKey: AssetAnalyticsSeriesKey): void {
   {/each}
 {/snippet}
 
-{#snippet analyticsWindowColumnHeaders(leftLabel: string)}
+{#snippet analyticsWindowColumnHeaders(
+  leftLabel: string,
+)}
   <div class={cx('grid min-w-[min(100%,1240px)] gap-4', visibleWindowGridClass)}>
     {#each visibleWindows as windowConfig}
       <AnalyticsCardPrimitive.WindowHeader
@@ -141,7 +146,9 @@ function toggleSeries(seriesKey: AssetAnalyticsSeriesKey): void {
         <AnalyticsCardPrimitive.EmptyState
           tone="warning"
           title={m.analytics__state_partial_title()}
-          description={windowErrors.map(windowError => `${windowError.label}: ${windowError.message}`).join(' ')}
+          description={windowErrors
+            .map(windowError => `${windowError.label}: ${windowError.message}`)
+            .join(' ')}
         />
       {/if}
 
@@ -176,7 +183,8 @@ function toggleSeries(seriesKey: AssetAnalyticsSeriesKey): void {
               {#each visibleWindows as windowConfig}
                 <AssetAnalyticsDashboardPrimitive.WindowMetricsCard
                   windowData={analyticsState.data.windows[windowConfig.key]}
-                  windowError={analyticsState.data.windowErrors[windowConfig.key] ?? null}
+                  windowError={analyticsState.data.windowErrors[windowConfig.key] ??
+                    null}
                   {activeSeriesKeys}
                 />
               {/each}
@@ -206,13 +214,17 @@ function toggleSeries(seriesKey: AssetAnalyticsSeriesKey): void {
 
             {#each TOP_WINDOW_SECTION_ORDER as sectionKind}
               <div
-                class={cx('grid min-w-[min(100%,1240px)] gap-4', visibleWindowGridClass)}
+                class={cx(
+                  'grid min-w-[min(100%,1240px)] gap-4',
+                  visibleWindowGridClass,
+                )}
               >
                 {#each visibleWindows as windowConfig}
                   <AssetAnalyticsDashboardPrimitive.RankedWindowSectionCard
                     kind={sectionKind}
                     windowData={analyticsState.data.windows[windowConfig.key]}
-                    windowError={analyticsState.data.windowErrors[windowConfig.key] ?? null}
+                    windowError={analyticsState.data.windowErrors[windowConfig.key] ??
+                      null}
                     assetEnvironment={analyticsState.data.environment}
                   />
                 {/each}
@@ -243,13 +255,17 @@ function toggleSeries(seriesKey: AssetAnalyticsSeriesKey): void {
 
             {#each FAILURE_WINDOW_SECTION_ORDER as sectionKind}
               <div
-                class={cx('grid min-w-[min(100%,1240px)] gap-4', visibleWindowGridClass)}
+                class={cx(
+                  'grid min-w-[min(100%,1240px)] gap-4',
+                  visibleWindowGridClass,
+                )}
               >
                 {#each visibleWindows as windowConfig}
                   <AssetAnalyticsDashboardPrimitive.RankedWindowSectionCard
                     kind={sectionKind}
                     windowData={analyticsState.data.windows[windowConfig.key]}
-                    windowError={analyticsState.data.windowErrors[windowConfig.key] ?? null}
+                    windowError={analyticsState.data.windowErrors[windowConfig.key] ??
+                      null}
                     assetEnvironment={analyticsState.data.environment}
                   />
                 {/each}

@@ -1,10 +1,10 @@
 // API
-import { isAdminRequest } from '$lib/api'
+import { isAdminRequest } from '#lib/api/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
-import type { Code, Id, SessionUser, UserRoleDisco } from '$lib/types'
-import type { OrganisationPartial } from '$lib/db/zod/schema/organisation.types'
+import type { Code, Id, SessionUser, UserRoleDisco } from '#lib/types.js'
+import type { OrganisationPartial } from '#lib/db/zod/schema/organisation.types.js'
 import { error } from '@sveltejs/kit'
 
 /**
@@ -39,11 +39,19 @@ export const assertUserLoggedIn = (user: SessionUser): void | Response => {
 
 /**
  * Assert that the request is from the admin dashboard
- * @param request - The request object
+ * @param requestOrIntent - The request object for legacy callers, or the
+ *   already-resolved admin intent from a guarded remote handler.
  * @throws {Response} 401 error if not an admin request
  */
-export const assertAdminRequest = (request: Request): void | Response => {
-  if (!isAdminRequest(request)) {
+export const assertAdminRequest = (
+  requestOrIntent: Request | boolean,
+): void | Response => {
+  const adminRequest =
+    typeof requestOrIntent === 'boolean'
+      ? requestOrIntent
+      : isAdminRequest(requestOrIntent)
+
+  if (!adminRequest) {
     return error(401, m.lucky_dark_larva_express())
   }
 }
@@ -70,7 +78,7 @@ export const assertOrganisationOwner = (
 }
 
 /**
- * Assert that the user has a maintainer role for the specified project
+ * Assert that the user has maintainer-or-owner authority for the specified project
  * @param userRoles - Array of user roles
  * @param projectId - The project ID to check access for
  * @throws {Response} 403 error if user doesn't have access to the project
@@ -79,11 +87,12 @@ export const assertProjectMaintainer = (
   userRoles: UserRoleDisco[],
   projectId: string,
 ): void | Response => {
+  // Project owners inherit maintainer capabilities, as defined in the role hierarchy.
   const hasRole = userRoles.some(
     role =>
       role.type === 'project' &&
       role.projectId === projectId &&
-      role.role === 'maintainer',
+      (role.role === 'maintainer' || role.role === 'owner'),
   )
   if (!hasRole) {
     return error(403, m.missing_permissions())
@@ -217,7 +226,10 @@ export const assertProjectMaintainerOrMemberOrSuperAdmin = (
  * @param key - The key name for error message (defaults to 'Id')
  * @throws {Response} 401 error if ID is missing
  */
-export const assertId = (formData: any, key: string = 'Id'): void | Response => {
+export const assertId = (
+  formData: Record<string, unknown>,
+  key: string = 'Id',
+): void | Response => {
   if (!formData.id) {
     return error(401, m.field_is_required({ field: key }))
   }
@@ -231,7 +243,7 @@ export const assertId = (formData: any, key: string = 'Id'): void | Response => 
  * @throws {Response} 400 error if identifiers don't match
  */
 export const assertParamIdentifierEqualsFormIdentifier = (
-  formData: any,
+  formData: Record<string, unknown>,
   refId: Id | Code,
   refType: 'id' | 'code',
 ): void | Response => {

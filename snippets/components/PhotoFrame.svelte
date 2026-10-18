@@ -2,14 +2,14 @@
 // SVELTE
 import { untrack, onDestroy } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
-import { getImageCtx } from '$lib/context/image.svelte'
-import { getURLfromImage } from '$lib/client/services/image'
+import { getImageCtx } from '#lib/context/image.svelte.js'
+import { getURLfromImage } from '#lib/client/services/image.js'
 // COMPONENTS
 // TYPES
 import { type Snippet } from 'svelte'
-import type { Image, ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
+import type { Image, ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 type DisplayImage = {
   id: string

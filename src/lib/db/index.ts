@@ -1,10 +1,13 @@
 // ORM
 import { drizzle } from 'drizzle-orm/d1'
 import {
+  getTableColumns,
   and,
   asc,
   desc,
   eq,
+  gt,
+  lt,
   exists,
   inArray,
   not,
@@ -15,7 +18,8 @@ import {
   type Table,
 } from 'drizzle-orm'
 // I18N
-import { toLocaleKey, toLocaleKebab } from '$lib/i18n'
+import { toLocaleKey, toLocaleKebab } from '#lib/i18n.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // SCHEMA
 import * as schema from './schema'
 // ENUMS
@@ -24,18 +28,42 @@ import { supportedLocaleKeys, HierarchicalResource } from '../enums'
 import type {
   Field,
   Resource,
-  ResourceDB,
   ResourceType,
   Locale,
   LocaleKey,
   Database,
-  ResourceConfig,
-  ResourceHierarchy,
-  LocaleBundle,
-} from '../types'
-import type { SQLiteTableWithColumns } from 'drizzle-orm/sqlite-core'
+  Prisms,
+} from '#lib/types.js'
+import type { AnySQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { D1Database as MiniflareD1Database } from '@cloudflare/workers-types'
+// TYPES
+import type { OrganisationDB } from '#lib/db/zod/schema/organisation.types.js'
+import type { ProjectDB } from '#lib/db/zod/schema/project.types.js'
+import type { LayerDB } from '#lib/db/zod/schema/layer.types.js'
+import type { FeatureDB } from '#lib/db/zod/schema/feature.types.js'
+import type { TaskDB } from '#lib/db/zod/index.js'
+import type { HubDB } from '#lib/db/zod/schema/hub.types.js'
+
+type ResourceConfig = {
+  name: `${HierarchicalResource}`
+  table: AnySQLiteTable
+  parentName: string | null
+  parentTable: AnySQLiteTable | null
+  keyToParent: string | null
+  keyToSelf: string
+  depth: number
+}
+
+type ResourceHierarchy = ResourceConfig[]
+
+// Define the shape of a translation object
+interface LocaleBundle {
+  locale?: string
+  [key: string]: unknown
+}
+
+type ResourceDB = OrganisationDB | ProjectDB | LayerDB | FeatureDB | TaskDB | HubDB
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -192,10 +220,8 @@ export const getSlicedHierarchy = (
 // ═══════════════════════
 
 // Update getTable function
-const getTable = <T extends SQLiteTableWithColumns<any>>(
-  slicedHierarchy: ResourceConfig[],
-  index: number,
-): T => slicedHierarchy[index].table as T
+const getTable = (slicedHierarchy: ResourceConfig[], index: number): AnySQLiteTable =>
+  slicedHierarchy[index].table
 
 // Update getForeignKey function
 const getForeignKey = (slicedHierarchy: ResourceConfig[], index: number): string =>
@@ -216,21 +242,21 @@ const getForeignKey = (slicedHierarchy: ResourceConfig[], index: number): string
  * @returns A Drizzle subquery.
  */
 const createLevelQuery = (
-  db: any,
+  db: Database,
   slicedHierarchy: ResourceHierarchy,
   levelUp: number,
-  prisms: any,
+  prisms: Partial<Prisms>,
 ) => {
-  const conditions = []
+  const conditions: SQL<unknown>[] = []
   const baseQuery = db
-    .select({ id: getTable(slicedHierarchy, levelUp).id })
+    .select({ id: getTableColumns(getTable(slicedHierarchy, levelUp)).id })
     .from(getTable(slicedHierarchy, levelUp))
 
   if (levelUp > 0) {
     conditions.push(
-      inArray(
-        getTable(slicedHierarchy, levelUp).id,
-        prisms[slicedHierarchy[levelUp].name] || [],
+      chunkedInArray(
+        getTableColumns(getTable(slicedHierarchy, levelUp)).id,
+        prisms[slicedHierarchy[levelUp].name as keyof Prisms] || [],
       ),
     )
   }
@@ -240,19 +266,19 @@ const createLevelQuery = (
       not(
         exists(
           db
-            .select({ id: getTable(slicedHierarchy, levelUp - 1).id })
+            .select({ id: getTableColumns(getTable(slicedHierarchy, levelUp - 1)).id })
             .from(getTable(slicedHierarchy, levelUp - 1))
             .where(
               and(
                 eq(
-                  getTable(slicedHierarchy, levelUp - 1)[
+                  getTableColumns(getTable(slicedHierarchy, levelUp - 1))[
                     getForeignKey(slicedHierarchy, levelUp - 1)
                   ],
-                  getTable(slicedHierarchy, levelUp).id,
+                  getTableColumns(getTable(slicedHierarchy, levelUp)).id,
                 ),
-                inArray(
-                  getTable(slicedHierarchy, levelUp - 1).id,
-                  prisms[slicedHierarchy[levelUp - 1].name] || [],
+                chunkedInArray(
+                  getTableColumns(getTable(slicedHierarchy, levelUp - 1)).id,
+                  prisms[slicedHierarchy[levelUp - 1].name as keyof Prisms] || [],
                 ),
               ),
             ),
@@ -267,29 +293,31 @@ const createLevelQuery = (
         exists(
           db
             .select({
-              id: sql<string>`${getTable(slicedHierarchy, levelUp - 2).id}`.as('id'),
+              id: sql<string>`${getTableColumns(getTable(slicedHierarchy, levelUp - 2)).id}`.as(
+                'id',
+              ),
             })
             .from(getTable(slicedHierarchy, levelUp - 1))
             .innerJoin(
               getTable(slicedHierarchy, levelUp - 2),
               eq(
-                getTable(slicedHierarchy, levelUp - 2)[
+                getTableColumns(getTable(slicedHierarchy, levelUp - 2))[
                   getForeignKey(slicedHierarchy, levelUp - 2)
                 ],
-                getTable(slicedHierarchy, levelUp - 1).id,
+                getTableColumns(getTable(slicedHierarchy, levelUp - 1)).id,
               ),
             )
             .where(
               and(
                 eq(
-                  getTable(slicedHierarchy, levelUp - 1)[
+                  getTableColumns(getTable(slicedHierarchy, levelUp - 1))[
                     getForeignKey(slicedHierarchy, levelUp - 1)
                   ],
-                  getTable(slicedHierarchy, levelUp).id,
+                  getTableColumns(getTable(slicedHierarchy, levelUp)).id,
                 ),
-                inArray(
-                  getTable(slicedHierarchy, levelUp - 2).id,
-                  prisms[slicedHierarchy[levelUp - 2].name] || [],
+                chunkedInArray(
+                  getTableColumns(getTable(slicedHierarchy, levelUp - 2)).id,
+                  prisms[slicedHierarchy[levelUp - 2].name as keyof Prisms] || [],
                 ),
               ),
             ),
@@ -313,9 +341,9 @@ const createLevelQuery = (
  * @returns An array of SQL conditions to be applied to the main query. Returns an empty array if no prisms are applicable or provided.
  */
 export const applyPrismConstraints = (
-  db: any,
+  db: Database,
   resource: HierarchicalResource,
-  prisms: any,
+  prisms: Partial<Prisms>,
 ) => {
   if (!Object.values(prisms).some(arr => Array.isArray(arr) && arr.length > 0))
     return []
@@ -331,10 +359,11 @@ export const applyPrismConstraints = (
     )
   }
 
-  let baseQuery = db.with(...subQueries)
-  baseQuery = baseQuery
-    .select({ id: getTable(slicedHierarchy, 0).id })
+  let baseQuery = db
+    .with(...subQueries)
+    .select({ id: getTableColumns(getTable(slicedHierarchy, 0)).id })
     .from(getTable(slicedHierarchy, 0))
+    .$dynamic()
 
   const subQueryConditions = []
 
@@ -342,19 +371,21 @@ export const applyPrismConstraints = (
     baseQuery = baseQuery.innerJoin(
       getTable(slicedHierarchy, i),
       eq(
-        getTable(slicedHierarchy, i - 1)[getForeignKey(slicedHierarchy, i - 1)],
-        getTable(slicedHierarchy, i).id,
+        getTableColumns(getTable(slicedHierarchy, i - 1))[
+          getForeignKey(slicedHierarchy, i - 1)
+        ],
+        getTableColumns(getTable(slicedHierarchy, i)).id,
       ),
     )
     // CTE names must be emitted as identifiers, not string literals.
     subQueryConditions.push(
-      sql`${getTable(slicedHierarchy, i).id} IN (SELECT id FROM ${sql.raw(`level_min_${i}`)})`.inlineParams(),
+      sql`${getTableColumns(getTable(slicedHierarchy, i)).id} IN (SELECT id FROM ${sql.raw(`level_min_${i}`)})`.inlineParams(),
     )
   }
 
   return [
     inArray(
-      getTable(slicedHierarchy, 0).id,
+      getTableColumns(getTable(slicedHierarchy, 0)).id,
       baseQuery.where(or(...subQueryConditions)),
     ),
   ]
@@ -377,10 +408,9 @@ export const createJsonPathCondition = (
 
   // Handle array of values
   if (Array.isArray(value)) {
-    return sql`json_extract(${table[baseColumn as keyof typeof table]}, ${jsonPathStr}) IN (${sql.join(
-      value.map(v => sql`${v}`),
-      sql`, `,
-    )})`
+    // Bind the complete list as one JSON value so attacker-controlled filter
+    // arrays cannot exceed D1's bound-parameter limit.
+    return sql`json_extract(${table[baseColumn as keyof typeof table]}, ${jsonPathStr}) IN (SELECT value FROM json_each(${JSON.stringify(value)}))`
   }
 
   // Backward compatibility for deprecated URL-based string booleans
@@ -433,25 +463,45 @@ function toFormLocaleRecord<T extends Record<string, unknown>>(
   )
 }
 
+/**
+ * Checks a translation bundle before normalizing untrusted query output.
+ * @param value Candidate translation row.
+ * @returns Whether the row contains an optional string locale.
+ */
+const isLocaleBundle = (value: unknown): value is LocaleBundle =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  (!('locale' in value) ||
+    value.locale === undefined ||
+    typeof value.locale === 'string')
+
 // Helper function to safely transform i18n data
 export const transformI18nSafely = (
-  i18n: any[] | Record<string, any> | null | undefined,
-  fallback: any = null,
-): Record<string, any> | null => {
+  i18n: unknown,
+  fallback: Record<string, LocaleBundle> | null = null,
+): Record<string, LocaleBundle> | null => {
   if (!i18n) return fallback
 
   if (Array.isArray(i18n)) {
-    return i18n.length > 0 ? toFormLocaleRecord(toLocaleMap(i18n)) : fallback
+    const bundles = i18n.filter(isLocaleBundle)
+    return bundles.length > 0 ? toFormLocaleRecord(toLocaleMap(bundles)) : fallback
   }
 
   // Already transformed or is a Record
-  const normalized = normalizeLocaleRecordEntries(i18n as Record<string, any>)
+  if (typeof i18n !== 'object') return fallback
+  const bundles = Object.fromEntries(
+    Object.entries(i18n).filter((entry): entry is [string, LocaleBundle] =>
+      isLocaleBundle(entry[1]),
+    ),
+  )
+  const normalized = normalizeLocaleRecordEntries(bundles)
   return toFormLocaleRecord(normalized)
 }
 
 // Helper function to check if an object is already a transformed locale map
 const isTransformedLocaleMap = <T extends LocaleBundle>(
-  value: any,
+  value: unknown,
 ): value is Record<Locale, T> => {
   // Check if it's an object (not array or null)
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -466,9 +516,16 @@ const isTransformedLocaleMap = <T extends LocaleBundle>(
   if (!allKeysAreLocales) return false
 
   // Check if all values have a 'locale' property matching their key
-  return keys.every(
-    key => value[key] && typeof value[key] === 'object' && value[key].locale === key,
-  )
+  const record = value as Record<string, unknown>
+  return keys.every(key => {
+    const entry = record[key]
+    return (
+      entry !== null &&
+      typeof entry === 'object' &&
+      'locale' in entry &&
+      (entry as { locale?: unknown }).locale === key
+    )
+  })
 }
 
 // T extends Translation ensures the generic type has the required lang property
@@ -525,10 +582,12 @@ type LocalizedOrderByParams = {
   fallbackColumn: AnyColumn
   baseTable: Table
   localizedSortColumns: Partial<Record<string, AnyColumn>>
-  i18nTable: SQLiteTableWithColumns<any>
+  i18nTable: AnySQLiteTable
   parentIdColumn: AnyColumn
   foreignKeyColumn: AnyColumn
   localeColumn: AnyColumn
+  cursor?: { id: string; value: string | number | null }
+  conditions?: SQL<unknown>[]
 }
 
 /**
@@ -548,10 +607,29 @@ export const toOrderByWithLocalizedFields = ({
   parentIdColumn,
   foreignKeyColumn,
   localeColumn,
+  cursor,
+  conditions,
 }: LocalizedOrderByParams): SQL<unknown>[] => {
   const resolvedSortBy = sortBy || fallbackSortBy
   const resolvedSortOrder = sortOrder || 'desc'
   const localizedSortColumn = localizedSortColumns[resolvedSortBy]
+
+  // Cursor comparisons use the same expression and unique ID tie-breaker as ordering.
+  const order = (raw: SQL | AnyColumn): SQL[] => {
+    const value = sql`coalesce(${raw}, '')`
+    if (cursor && conditions) {
+      const comparison = resolvedSortOrder === 'desc' ? lt : gt
+      const cursorCondition = or(
+        comparison(value, cursor.value ?? ''),
+        and(eq(value, cursor.value ?? ''), gt(parentIdColumn, cursor.id)),
+      )
+      if (cursorCondition) conditions.push(cursorCondition)
+    }
+    return [
+      resolvedSortOrder === 'desc' ? desc(value) : asc(value),
+      asc(parentIdColumn),
+    ]
+  }
 
   if (localizedSortColumn && locale) {
     const localizedValueQuery = db
@@ -562,23 +640,12 @@ export const toOrderByWithLocalizedFields = ({
 
     const localizedValue = sql<string>`coalesce((${localizedValueQuery}), '')`
 
-    return [
-      resolvedSortOrder === 'desc' ? desc(localizedValue) : asc(localizedValue),
-      desc(fallbackColumn),
-    ]
+    return order(localizedValue)
   }
 
-  const sortColumn = baseTable[resolvedSortBy as keyof typeof baseTable]
-  if (!sortColumn) {
-    throw new Error(`Invalid sort column: ${resolvedSortBy}`)
-  }
-
-  return [
-    resolvedSortOrder === 'desc'
-      ? desc(sortColumn as AnyColumn)
-      : asc(sortColumn as AnyColumn),
-    desc(fallbackColumn),
-  ]
+  const sortColumn =
+    baseTable[resolvedSortBy as keyof typeof baseTable] ?? fallbackColumn
+  return order(sortColumn as AnyColumn)
 }
 
 // ═══════════════════════
@@ -597,7 +664,7 @@ export const isFieldUnique = async <T extends Resource>(
     throw new Error(`Invalid resource type: ${resourceType}`)
   }
   const table = currentResourceConfig.table
-  const tableField = table[field]
+  const tableField = getTableColumns(table)[field]
   const dataValue = data[field as keyof T]
 
   if (tableField === undefined || dataValue === undefined) {
@@ -629,8 +696,8 @@ export const isFieldChanged = async <T extends ResourceDB>(
     throw new Error(`Invalid resource type: ${resourceType}`)
   }
   const table = currentResourceConfig.table
-  const tableIdField = table.id
-  const tableField = table[field]
+  const tableIdField = getTableColumns(table).id
+  const tableField = getTableColumns(table)[field]
 
   if (tableIdField === undefined || tableField === undefined) {
     // Or handle this case as an error
@@ -650,7 +717,7 @@ export const isFieldChanged = async <T extends ResourceDB>(
     return false // Organisation not found
   }
 
-  const existingValue = existingEntity[field as keyof T]
+  const existingValue = existingEntity[field]
   if (existingValue === undefined) {
     console.warn(
       `Field ${String(field)} is undefined in existing entity for resource ${resourceType}`,

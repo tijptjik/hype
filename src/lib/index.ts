@@ -8,13 +8,11 @@ import type {
   FieldDiscriminator,
   Locale,
   LocaleExtended,
-  PreviewStage,
   Resource,
-  FormFieldDefinition,
-  Form,
-  FeatureForm,
-  Task,
-} from './types'
+} from '#lib/types.js'
+import type { PreviewStage } from '#lib/map/renders/render.types.js'
+import type { FormFieldDefinition } from '#lib/client/services/formFields.types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
 
 export {
   ADMIN_PATH,
@@ -80,7 +78,7 @@ export function formatDate(dateString: string): string {
 
 export function formatDistanceToNow(
   date: Date,
-  options: { addSuffix?: boolean; locale?: any } = {},
+  options: { addSuffix?: boolean; locale?: unknown } = {},
 ): string {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -127,7 +125,7 @@ export const isNotLocale = (maybeLocale: LocaleExtended) => {
 export const genField = (fieldRoot: Field) => `${fieldRoot}Gen` as Field
 
 export const getValues = (
-  form: Form['form'],
+  form: Record<string, unknown>,
   field: FormFieldDefinition,
   locale: LocaleExtended,
   fieldRoot: Field,
@@ -135,20 +133,26 @@ export const getValues = (
   fieldKey: Field,
 ) => {
   // Get reference to the field
-  let ref: any
-  let key: Field
+  let ref: Record<string, unknown> | undefined
+  let key: Field | undefined
 
   if (!field.isArray && !field.isNested && !field.isTranslated) {
     ref = form
     key = fieldRoot
   } else if (field.isArray && !field.isNested) {
-    ref = form[fieldRoot][fieldIndex]
+    const values = form[fieldRoot]
+    if (!Array.isArray(values)) return
+    ref = values[fieldIndex]
     key = fieldKey
   } else if (field.isNested && !field.isTranslated) {
-    ref = form[fieldRoot][fieldIndex]
+    const values = form[fieldRoot]
+    if (!Array.isArray(values)) return
+    ref = values[fieldIndex]
     key = fieldKey
   } else if (field.isNested && field.isTranslated) {
-    const baseRef = form[fieldRoot][fieldIndex]
+    const values = form[fieldRoot]
+    if (!Array.isArray(values)) return
+    const baseRef = values[fieldIndex]
     // Initialize i18n structure if it doesn't exist
     if (!baseRef.i18n) {
       baseRef.i18n = {}
@@ -162,15 +166,16 @@ export const getValues = (
     key = fieldKey
   } else if (field.isTranslated) {
     // Initialize i18n structure if it doesn't exist
-    if (!form.i18n) {
+    if (!form.i18n || typeof form.i18n !== 'object') {
       form.i18n = {}
     }
-    if (!form.i18n[locale as Locale]) {
-      form.i18n[locale as Locale] = {
+    const translations = form.i18n as Record<string, Record<string, unknown>>
+    if (!translations[locale as Locale]) {
+      translations[locale as Locale] = {
         locale: locale as Locale, // Ensure locale field is set
       }
     }
-    ref = form.i18n[locale as Locale]
+    ref = translations[locale as Locale]
     key = fieldRoot
   } else {
     console.error('NO FIELD REFERENCE FOUND', field)
@@ -179,7 +184,7 @@ export const getValues = (
   if (!ref) {
     console.error('NO FIELD REFERENCE FOUND', field)
   }
-  if (key!) {
+  if (key) {
     const value = ref?.[key] ?? ('' as string)
     const isGenAI = ref?.[genField(key)] ?? (false as boolean)
     return { value, isGenAI }
@@ -187,27 +192,37 @@ export const getValues = (
 }
 
 export const updateFeaturePropertyValue = (
-  form: FeatureForm['form'],
+  form: Writable<Exclude<Resource, Task>>,
   fieldRoot: Field,
   fieldIndex: number,
   value: string | null,
   fieldKey: string = 'value',
 ) => {
-  form.update(($form: any) => {
-    $form[fieldRoot][fieldIndex][fieldKey] = value
+  form.update($form => {
+    const formRecord = $form as unknown as Record<string, unknown>
+    const fieldValues = formRecord[fieldRoot]
+    if (!Array.isArray(fieldValues)) return $form
+    const fieldValue = fieldValues[fieldIndex]
+    if (!fieldValue || typeof fieldValue !== 'object') return $form
+    ;(fieldValue as Record<string, unknown>)[fieldKey] = value
     return $form
   })
 }
 
 export const getFeaturePropertyComplexValue = (
-  form: FeatureForm['form'],
+  form: Writable<Exclude<Resource, Task>>,
   fieldRoot: Field,
   fieldIndex: number,
   value: string | null,
   fieldKey: string = 'value',
 ) => {
-  form.update(($form: any) => {
-    $form[fieldRoot][fieldIndex][fieldKey] = value
+  form.update($form => {
+    const formRecord = $form as unknown as Record<string, unknown>
+    const fieldValues = formRecord[fieldRoot]
+    if (!Array.isArray(fieldValues)) return $form
+    const fieldValue = fieldValues[fieldIndex]
+    if (!fieldValue || typeof fieldValue !== 'object') return $form
+    ;(fieldValue as Record<string, unknown>)[fieldKey] = value
     return $form
   })
 }
@@ -223,18 +238,21 @@ export const updateForm = (
   isGenAI?: boolean,
 ) => {
   form.update($form => {
-    let baseObject: any
+    const formRecord = $form as unknown as Record<string, unknown>
+    let baseObject: Record<string, unknown> | undefined
     let propertyKey: string
 
     if (!field.isArray && !field.isNested) {
-      baseObject = $form
+      baseObject = formRecord
       propertyKey = fieldRoot
     } else if (field.isArray || field.isNested) {
-      const array = ($form as Record<string, any>)[fieldRoot]
-      if (!array || array[fieldIndex] === undefined) {
+      const array = formRecord[fieldRoot]
+      if (!Array.isArray(array)) {
         return $form
       }
-      baseObject = array[fieldIndex]
+      const arrayItem = array[fieldIndex]
+      if (!arrayItem || typeof arrayItem !== 'object') return $form
+      baseObject = arrayItem as Record<string, unknown>
       propertyKey = fieldKey
     } else {
       return $form
@@ -244,21 +262,23 @@ export const updateForm = (
       return $form
     }
 
-    let targetObject: any
+    let targetObject: Record<string, unknown>
     if (field.isTranslated) {
       if (isNotLocale(locale)) {
         return $form
       }
 
-      if (!baseObject.i18n) {
+      const i18n = baseObject.i18n
+      if (!i18n || typeof i18n !== 'object' || Array.isArray(i18n)) {
         baseObject.i18n = {}
       }
-      if (!baseObject.i18n[locale as Locale]) {
-        baseObject.i18n[locale as Locale] = {
+      const i18nRecord = baseObject.i18n as Record<string, Record<string, unknown>>
+      if (!i18nRecord[locale as Locale]) {
+        i18nRecord[locale as Locale] = {
           locale: locale as Locale, // Ensure locale field is set
         }
       }
-      targetObject = baseObject.i18n[locale as Locale]
+      targetObject = i18nRecord[locale as Locale]
     } else {
       targetObject = baseObject
     }

@@ -1,7 +1,7 @@
 /* ----------------- */
 // I18N
 
-import type { Locale, LocaleKey } from './types'
+import type { Locale, LocaleKey } from '#lib/types.js'
 
 /* -------- */
 export enum SupportedLocales {
@@ -91,6 +91,8 @@ export enum HierarchicalResourceSeq {
 
 export enum ResourceRefKey {
   hub = 'code',
+  // Hubs and organisations both use their code as the public resource key.
+  // biome-ignore lint/suspicious/noDuplicateEnumValues: intentional alias for the shared code key
   organisation = 'code',
   project = 'code',
   layer = 'id',
@@ -307,6 +309,7 @@ export const RESERVED_PARAMETERS = [
 /* -------- */
 
 export enum Panel {
+  navigation = 'navigation',
   filters = 'filters',
   prisms = 'prisms',
   stars = 'stars',
@@ -334,6 +337,7 @@ export enum PanelLeft {
 }
 
 export enum PanelRight {
+  navigation = 'navigation',
   filters = 'filters',
   settings = 'settings',
   profile = 'profile',

@@ -1,11 +1,12 @@
+// @vitest-environment jsdom
 // TESTS
 import { describe, expect, it, vi } from 'vitest'
 // CONTEXT
 import {
   consumeEscapeForOpenPanels,
   shouldSkipGlobalKeydown,
-} from '$lib/client/keybindings'
-import { dismissActiveFeatureNavigation } from '$lib/navigation'
+} from '#lib/client/keybindings.js'
+import { dismissActiveFeatureNavigation } from '#lib/navigation/index.js'
 
 describe('shouldSkipGlobalKeydown', () => {
   it('returns true for focused form controls', () => {

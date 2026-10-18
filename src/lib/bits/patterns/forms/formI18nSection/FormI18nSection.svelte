@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getLocaleKey, getLocaleOrder } from '$lib/i18n'
+import { getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
 import type { FormI18nSectionProps } from './formI18nSection.types'
 import * as FormI18nSectionPrimitive from './components'
 
@@ -10,8 +10,9 @@ let {
   locales,
   class: className = '',
   gridClass = '',
+  contentClass,
   cardClass = 'bits-form__i18n-card',
-  localeCodeClass = 'bits-form__i18n-locale-code',
+  localeCodeClass = 'absolute right-5 top-4 text-xs font-semibold uppercase tracking-widest text-primary',
   onTranslate,
   onResetLocale,
   sectionKey,
@@ -56,6 +57,7 @@ const resolvedGridClass = $derived(
       <FormI18nSectionPrimitive.FormSection
         {locale}
         {cardClass}
+        {contentClass}
         {localeCodeClass}
         {onTranslate}
         {onResetLocale}

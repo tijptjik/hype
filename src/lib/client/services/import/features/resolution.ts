@@ -1,25 +1,29 @@
+import type { RemoteForm, RemoteFormInput } from '$app/server'
+
 // REMOTE
-import { featureForm, getFeatureForImport } from '$lib/api/server/feature.remote'
+import { featureForm, getFeatureForImport } from '#lib/api/feature.remote.js'
 // I18N
-import { toLocaleKey } from '$lib/i18n'
+import { toLocaleKey } from '#lib/i18n.js'
 // SERVICES
-import { toFeatureFormInput } from '$lib/client/services/feature'
+import { toFeatureFormInput } from '#lib/client/services/feature.js'
 // UTILS
 import { nanoid } from 'nanoid'
 // TYPES
-import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
-import type { ImportCtx } from '$lib/context/import.svelte'
-import type { Feature, AddressMeta } from '$lib/client/services/import/types'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 
-type FeaturePointGeometry = {
-  type: 'Point'
-  coordinates: [number, number]
-}
+import type {
+  AddressMeta,
+  Feature,
+  FeatureCSVColumn,
+} from '#lib/client/services/import/types.js'
+
+type FeaturePointGeometry = { type: 'Point'; coordinates: [number, number] }
 
 function normalizeToggleValue(value: unknown): 'true' | 'false' | null {
   if (typeof value !== 'string') return null
 
   const normalized = value.trim().toLowerCase()
+
   if (['true', '1', 'yes'].includes(normalized)) return 'true'
   if (['false', '0', 'no'].includes(normalized)) return 'false'
 
@@ -31,11 +35,91 @@ function isBooleanLikePropertyValueId(value: unknown): value is 'true' | 'false'
 }
 
 type DraftPropertyLocaleValue = {
+  [key: string]: unknown
   value?: string | null
   valueGen?: boolean | null
 }
 
 type DraftPropertyI18nMap = Record<string, DraftPropertyLocaleValue>
+type ImportRecord = Record<string, unknown>
+type ImportEntityRecord = ImportRecord & { id?: string }
+
+type ImportLocaleRecord = ImportRecord & {
+  addressProperties?: import('#lib/utils/address.types.js').AddressProperties | null
+  description?: string | null
+  descriptionGen?: boolean
+  displayAddress?: string | null
+  displayAddressGen?: boolean
+  featureId?: string
+  locale?: string
+  name?: string
+  nameGen?: boolean
+  nameShort?: string
+  nameShortGen?: boolean
+  title?: string
+  titleGen?: boolean
+}
+
+type ImportFeatureRecord = ImportEntityRecord & {
+  isPublished?: boolean | 'true' | 'false'
+  isArchived?: boolean
+  isIntangible?: boolean
+  isVisitable?: boolean
+  lastSeen?: string
+  geometry?: {
+    coordinates?: unknown[]
+  }
+  i18n?: Record<string, ImportLocaleRecord>
+  latitude?: string | number
+  longitude?: string | number
+}
+
+type ImportPropertyRelation = ImportRecord & {
+  component?: string
+  isTranslatable?: boolean
+  key?: string
+  type?: string
+}
+
+type ImportPropertyValue = ImportRecord & {
+  i18n?: Record<string, DraftPropertyLocaleValue> | null
+}
+
+type ImportPropertyRecord = ImportEntityRecord & {
+  i18n?: DraftPropertyI18nMap | null
+  property?: ImportPropertyRelation
+  propertyId?: string | null
+  propertyValueId?: string | null
+  propertyValue?: ImportPropertyValue | null
+  translatedValues?: unknown
+  value?: string | null
+  valueId?: string | null
+}
+
+type ImportData = ImportRecord & {
+  addressMeta?: ImportRecord
+  addressPropertiesTranslations?: Record<string, ImportRecord>
+  addressProperties?: Record<string, ImportRecord>
+  descriptionTranslations?: Record<string, string>
+  displayAddressTranslations?: Record<string, string>
+  feature?: ImportFeatureRecord
+  i18n?: Record<string, ImportLocaleRecord>
+  layer?: ImportEntityRecord
+  properties?: Record<string, ImportPropertyRecord>
+  rawAddressTranslations?: Record<string, string>
+  titleTranslations?: Record<string, string>
+  user?: ImportEntityRecord
+}
+
+type SubmittedImportData = ImportData & {
+  addressMeta: ImportRecord
+  addressProperties: Record<string, ImportRecord>
+  feature: ImportFeatureRecord
+  i18n: Record<string, ImportLocaleRecord>
+  layer: ImportEntityRecord
+  properties: Record<string, ImportPropertyRecord>
+  user: ImportEntityRecord
+}
 
 type ImportPropertyPayload = {
   propertyId?: string | null
@@ -56,7 +140,7 @@ function logImportPropertyDebug(stage: string, payload: Record<string, unknown>)
 }
 
 function getSubmittedPropertyRawValue(
-  property: Record<string, any> | null | undefined,
+  property: ImportPropertyRecord | null | undefined,
 ): string | null {
   const directValue = typeof property?.value === 'string' ? property.value.trim() : ''
   if (directValue) {
@@ -64,6 +148,7 @@ function getSubmittedPropertyRawValue(
   }
 
   const i18n = property?.i18n as Record<string, { value?: string | null }> | undefined
+
   if (!i18n) return null
 
   for (const entry of Object.values(i18n)) {
@@ -108,8 +193,8 @@ function shouldUseClassifierPropertyValueId(
 export interface FeatureResolutionData {
   rowIndex: number
   existing?: Feature
-  submitted: Record<string, any>
-  enriched: Record<string, any>
+  submitted: ImportData
+  enriched: ImportData
   merged: Feature
   saved?: Feature
   isNew: boolean
@@ -214,6 +299,7 @@ export async function processFeatureResolutionQueue(
   results: FeatureResolutionData[],
 ): Promise<void> {
   if (importCtx.getFeatureResolution().isProcessing) return
+
   importCtx.updateFeatureResolution({ isProcessing: true, currentIndex: 0 })
 
   for (let index = 0; index < results.length; index += 1) {
@@ -247,14 +333,17 @@ export function getFeatureResolutionDisplayName(result: FeatureResolutionData): 
     result.submitted?.i18n?.en?.title ||
     result.submitted?.i18n?.zhHant?.title ||
     result.submitted?.i18n?.zhHans?.title
+
   if (submittedTitle) return submittedTitle
 
   const mergedTitle =
     result.merged?.i18n?.en?.title || result.merged?.i18n?.zhHant?.title
+
   if (mergedTitle) return mergedTitle
 
   const existingTitle =
     result.existing?.i18n?.en?.title || result.existing?.i18n?.zhHant?.title
+
   if (existingTitle) return existingTitle
 
   return `Row ${result.rowIndex + 2}`
@@ -299,6 +388,7 @@ export function toFeatureResolutionPreview(value: unknown): unknown {
           ...(next.addressProperties as Record<string, unknown> | undefined),
           rawAddress: next.rawAddress,
         }
+
         delete next.rawAddress
       }
 
@@ -482,6 +572,7 @@ export function deepEqualFeatureResolutionPreview(
   const record2 = obj2 as Record<string, unknown>
   const keys1 = Object.keys(record1)
   const keys2 = Object.keys(record2)
+
   if (keys1.length !== keys2.length) return false
 
   for (const key of keys1) {
@@ -531,6 +622,7 @@ export function renderFeatureResolutionDiff(
           if (mergedRecord.featureId && mergedRecord.propertyId) {
             existingItem = existingArray.find(item => {
               const record = item as Record<string, unknown> | undefined
+
               return (
                 record?.featureId === mergedRecord.featureId &&
                 record?.propertyId === mergedRecord.propertyId
@@ -625,10 +717,12 @@ export function renderFeatureResolutionDiff(
           mergedRecord[objKey],
           indent + 1,
         )
+
         if (objResult) result += `${objResult},\n`
       })
 
       result += `${indentStr}<span class="${opacity}">}</span>`
+
       return result
     }
 
@@ -644,6 +738,7 @@ export function renderFeatureResolutionDiff(
       html += '\n'
     }
   })
+
   html += '}</pre>'
 
   return html
@@ -743,8 +838,10 @@ async function submitRemoteForm<Input extends RemoteFormInput, Output>(
   }
 
   const formInstance = remoteForm.for(instanceId as never) as RemoteForm<Input, Output>
+
   const attachmentSymbol = Object.getOwnPropertySymbols(formInstance).find(symbol => {
     const value = (formInstance as Record<PropertyKey, unknown>)[symbol]
+
     return typeof value === 'function'
   })
 
@@ -753,6 +850,7 @@ async function submitRemoteForm<Input extends RemoteFormInput, Output>(
   }
 
   const element = document.createElement('form')
+
   element.hidden = true
   document.body.appendChild(element)
 
@@ -779,38 +877,38 @@ async function submitRemoteForm<Input extends RemoteFormInput, Output>(
  */
 function deepCompareFeatures(existing: Feature, merged: Feature): boolean {
   // Create clean copies without timestamp fields
-  const cleanExisting = { ...existing } as Record<string, any>
-  const cleanMerged = { ...merged } as Record<string, any>
+  const cleanExisting: ImportRecord = { ...existing }
+
+  const cleanMerged: ImportRecord = { ...merged }
 
   // Remove timestamp fields
   delete cleanExisting.createdAt
+
   delete cleanExisting.modifiedAt
   delete cleanMerged.createdAt
   delete cleanMerged.modifiedAt
 
   // Remove read-only fields that might differ
-  delete (cleanExisting as any).contributor
-  delete (cleanExisting as any).publisher
-  delete (cleanExisting as any).image
-  delete (cleanExisting as any).images
-  delete (cleanMerged as any).contributor
-  delete (cleanMerged as any).publisher
-  delete (cleanMerged as any).image
-  delete (cleanMerged as any).images
+  delete cleanExisting.contributor
+
+  delete cleanExisting.publisher
+  delete cleanExisting.image
+  delete cleanExisting.images
+  delete cleanMerged.contributor
+  delete cleanMerged.publisher
+  delete cleanMerged.image
+  delete cleanMerged.images
 
   // Deep comparison function
-  function deepEqual(obj1: any, obj2: any): boolean {
+  function deepEqual(obj1: unknown, obj2: unknown): boolean {
     if (obj1 === obj2) return true
-
     if (obj1 == null || obj2 == null) return obj1 === obj2
-
     if (typeof obj1 !== typeof obj2) return false
-
     if (typeof obj1 !== 'object') return obj1 === obj2
-
     if (Array.isArray(obj1) !== Array.isArray(obj2)) return false
 
     if (Array.isArray(obj1)) {
+      if (!Array.isArray(obj2)) return false
       if (obj1.length !== obj2.length) return false
       for (let i = 0; i < obj1.length; i++) {
         if (!deepEqual(obj1[i], obj2[i])) return false
@@ -818,14 +916,16 @@ function deepCompareFeatures(existing: Feature, merged: Feature): boolean {
       return true
     }
 
-    const keys1 = Object.keys(obj1)
-    const keys2 = Object.keys(obj2)
+    const record1 = obj1 as ImportRecord
+    const record2 = obj2 as ImportRecord
+    const keys1 = Object.keys(record1)
+    const keys2 = Object.keys(record2)
 
     if (keys1.length !== keys2.length) return false
 
     for (const key of keys1) {
       if (!keys2.includes(key)) return false
-      if (!deepEqual(obj1[key], obj2[key])) return false
+      if (!deepEqual(record1[key], record2[key])) return false
     }
 
     return true
@@ -850,7 +950,6 @@ export async function initializeFeatureResolution(
   const featureIdColumn = columns.find(
     col => col.modelType === 'Feature' && col.field === 'id',
   )
-
   const results: FeatureResolutionData[] = []
 
   if (featureIdColumn) {
@@ -876,11 +975,12 @@ export async function initializeFeatureResolution(
     try {
       // For existing features, fetch the existing data and do deep comparison
       let status: 'pending' | 'unchanged' | 'skipped' = 'pending'
+
       let hasProvidedIdWithoutMatch = false
       let acceptProvidedIdAsCreate = false
 
       if (!isNew && submitted.feature?.id) {
-        const featureId = submitted.feature.id
+        const featureId = submitted.feature?.id
 
         try {
           existing = (await fetchExistingFeature(featureId)) ?? undefined
@@ -921,7 +1021,7 @@ export async function initializeFeatureResolution(
           hasProvidedIdWithoutMatch &&
           !acceptProvidedIdAsCreate &&
           submitted.feature?.id
-            ? getMissingFeatureIdMessage(submitted.feature.id)
+            ? getMissingFeatureIdMessage(submitted.feature?.id)
             : undefined,
       }
 
@@ -975,10 +1075,10 @@ export async function initializeFeatureResolution(
  */
 function extractSubmittedData(
   row: string[],
-  columns: any[],
+  columns: FeatureCSVColumn[],
   headers: string[],
-): Record<string, any> {
-  const submitted: Record<string, any> = {
+): SubmittedImportData {
+  const submitted: SubmittedImportData = {
     feature: {},
     i18n: {},
     properties: {},
@@ -990,10 +1090,19 @@ function extractSubmittedData(
 
   columns.forEach((column, index) => {
     const value = row[index]?.trim()
+
     if (!value || column.modelType === 'SKIP') return
 
     const headerIndex = headers.indexOf(column.header)
+
     if (headerIndex === -1) return
+
+    const field = column.field
+
+    if (!field) return
+
+    const propertyKey = column.extractedPropertyKey || column.propertyKey
+    if (!propertyKey) return
 
     switch (column.modelType) {
       case 'Feature':
@@ -1005,54 +1114,36 @@ function extractSubmittedData(
           if (!submitted.i18n[column.locale]) {
             submitted.i18n[column.locale] = {}
           }
-          submitted.i18n[column.locale][column.field] = value
+          submitted.i18n[column.locale][field] = value
         } else {
-          submitted.feature[column.field] = value
+          submitted.feature[field] = value
         }
         break
 
       case 'User':
-        submitted.user[column.field] = value
+        submitted.user[field] = value
         break
 
       case 'Layer':
-        submitted.layer[column.field] = value
+        submitted.layer[field] = value
         break
 
       case 'Property':
-        if (!submitted.properties[column.extractedPropertyKey || column.propertyKey]) {
-          submitted.properties[column.extractedPropertyKey || column.propertyKey] = {}
-        }
+        if (!propertyKey) return
+        if (!submitted.properties[propertyKey]) submitted.properties[propertyKey] = {}
         if (column.locale && column.locale !== 'None') {
           const localeKey = toLocaleKey(column.locale)
-          if (
-            !submitted.properties[column.extractedPropertyKey || column.propertyKey]
-              .i18n
-          ) {
-            submitted.properties[
-              column.extractedPropertyKey || column.propertyKey
-            ].i18n = {}
-          }
-          if (
-            !submitted.properties[column.extractedPropertyKey || column.propertyKey]
-              .i18n[localeKey]
-          ) {
-            submitted.properties[
-              column.extractedPropertyKey || column.propertyKey
-            ].i18n[localeKey] = {}
-          }
-          submitted.properties[column.extractedPropertyKey || column.propertyKey].i18n[
-            localeKey
-          ][column.field] = value
+          const property = submitted.properties[propertyKey]
+          property.i18n ??= {}
+          property.i18n[localeKey] ??= {}
+          property.i18n[localeKey][field] = value
         } else {
-          submitted.properties[column.extractedPropertyKey || column.propertyKey][
-            column.field
-          ] = value
+          submitted.properties[propertyKey][field] = value
         }
         break
 
       case 'AddressMeta':
-        submitted.addressMeta[column.field] = value
+        submitted.addressMeta[field] = value
         break
 
       case 'Address':
@@ -1060,7 +1151,7 @@ function extractSubmittedData(
           if (!submitted.addressProperties[column.locale]) {
             submitted.addressProperties[column.locale] = {}
           }
-          submitted.addressProperties[column.locale][column.field] = value
+          submitted.addressProperties[column.locale][field] = value
         }
         break
     }
@@ -1078,15 +1169,14 @@ export async function fetchExistingFeature(featureId: string): Promise<Feature |
       featureLookupCache.set(
         featureId,
         Promise.resolve(
-          getFeatureForImport({
-            id: featureId,
-            meta: { isAdminRequest: true },
-          }),
+          getFeatureForImport({ id: featureId, meta: { isAdminRequest: true } }),
         ).then(result => (result.data as Feature | null | undefined) ?? null),
       )
     }
 
-    return await featureLookupCache.get(featureId)!
+    const featurePromise = featureLookupCache.get(featureId)
+    if (!featurePromise) throw new Error(`Feature lookup was not cached: ${featureId}`)
+    return await featurePromise
   } catch (error) {
     console.error('Error fetching existing feature:', error)
     throw error
@@ -1098,8 +1188,8 @@ export async function fetchExistingFeature(featureId: string): Promise<Feature |
  */
 export function mergeFeatureData(
   existing: Feature | null,
-  submitted: Record<string, any>,
-  enriched: Record<string, any>,
+  submitted: ImportData,
+  enriched: ImportData,
   importCtx: ImportCtx,
 ): Feature {
   const merged: Feature = existing
@@ -1140,49 +1230,51 @@ export function mergeFeatureData(
   if (enriched.feature) {
     const booleanFields = ['isPublished', 'isArchived', 'isIntangible', 'isVisitable']
     const enrichedBooleans = booleanFields.filter(
-      field => enriched.feature[field] !== undefined,
+      field => enriched.feature?.[field] !== undefined,
     )
+
     if (enrichedBooleans.length > 0) {
     }
   }
 
   // isPublished
-  if (enriched.feature?.isPublished !== undefined) {
+  if (typeof enriched.feature?.isPublished === 'boolean') {
     merged.isPublished = enriched.feature.isPublished
-  } else if (submitted.feature.isPublished !== undefined) {
+  } else if (submitted.feature?.isPublished !== undefined) {
     merged.isPublished =
-      submitted.feature.isPublished === 'true' || submitted.feature.isPublished === true
-  } else if (submitted.feature.published !== undefined) {
+      submitted.feature?.isPublished === 'true' ||
+      submitted.feature?.isPublished === true
+  } else if (submitted.feature?.published !== undefined) {
     merged.isPublished =
-      submitted.feature.published === 'true' || submitted.feature.published === true
+      submitted.feature?.published === 'true' || submitted.feature?.published === true
   }
 
   // isArchived
   if (enriched.feature?.isArchived !== undefined) {
     merged.isArchived = enriched.feature.isArchived
-  } else if (submitted.feature.archived !== undefined) {
+  } else if (submitted.feature?.archived !== undefined) {
     merged.isArchived =
-      submitted.feature.archived === 'true' || submitted.feature.archived === true
+      submitted.feature?.archived === 'true' || submitted.feature?.archived === true
   }
 
   // isIntangible
   if (enriched.feature?.isIntangible !== undefined) {
     merged.isIntangible = enriched.feature.isIntangible
-  } else if (submitted.feature.intangible !== undefined) {
+  } else if (submitted.feature?.intangible !== undefined) {
     merged.isIntangible =
-      submitted.feature.intangible === 'true' || submitted.feature.intangible === true
+      submitted.feature?.intangible === 'true' || submitted.feature?.intangible === true
   }
 
   // isVisitable
   if (enriched.feature?.isVisitable !== undefined) {
     merged.isVisitable = enriched.feature.isVisitable
-  } else if (submitted.feature.visitable !== undefined) {
+  } else if (submitted.feature?.visitable !== undefined) {
     merged.isVisitable =
-      submitted.feature.visitable === 'true' || submitted.feature.visitable === true
+      submitted.feature?.visitable === 'true' || submitted.feature?.visitable === true
   }
 
-  if (submitted.feature.lastSeen) {
-    merged.visitableAsOf = submitted.feature.lastSeen
+  if (submitted.feature?.lastSeen) {
+    merged.visitableAsOf = submitted.feature?.lastSeen
   }
 
   // Merge addressMeta (priority: submitted > enriched > existing)
@@ -1194,6 +1286,7 @@ export function mergeFeatureData(
 
   // Update layer and contributor IDs
   merged.layerId = getLayerId(submitted, enriched, importCtx)
+
   merged.contributorId = getContributorId(submitted, enriched, importCtx)
 
   // Merge i18n data (including translations from translation step)
@@ -1222,17 +1315,17 @@ export function mergeFeatureData(
  * Returns [longitude, latitude] or null if not found
  */
 function getCoordinates(
-  submitted: Record<string, any>,
-  enriched: Record<string, any>,
+  submitted: ImportData,
+  enriched: ImportData,
 ): [number, number] | null {
   // 1. Check submitted feature fields
   if (
     submitted.feature?.longitude !== undefined &&
     submitted.feature?.latitude !== undefined
   ) {
-    const longitude = parseFloat(submitted.feature.longitude)
-    const latitude = parseFloat(submitted.feature.latitude)
-    if (!isNaN(longitude) && !isNaN(latitude)) {
+    const longitude = parseFloat(String(submitted.feature?.longitude))
+    const latitude = parseFloat(String(submitted.feature?.latitude))
+    if (!Number.isNaN(longitude) && !Number.isNaN(latitude)) {
       // Check if coordinates might be swapped (common data error)
       // Longitude should be -180 to 180, Latitude should be -90 to 90
       // Hong Kong: ~114°E, ~22°N
@@ -1263,9 +1356,9 @@ function getCoordinates(
     submitted.addressMeta?.longitude !== undefined &&
     submitted.addressMeta?.latitude !== undefined
   ) {
-    const longitude = parseFloat(submitted.addressMeta.longitude)
-    const latitude = parseFloat(submitted.addressMeta.latitude)
-    if (!isNaN(longitude) && !isNaN(latitude)) {
+    const longitude = parseFloat(String(submitted.addressMeta.longitude))
+    const latitude = parseFloat(String(submitted.addressMeta.latitude))
+    if (!Number.isNaN(longitude) && !Number.isNaN(latitude)) {
       // Check if coordinates might be swapped (common data error)
       if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
         console.warn(
@@ -1295,9 +1388,9 @@ function getCoordinates(
     Array.isArray(enriched.feature.geometry.coordinates) &&
     enriched.feature.geometry.coordinates.length >= 2
   ) {
-    const longitude = parseFloat(enriched.feature.geometry.coordinates[0])
-    const latitude = parseFloat(enriched.feature.geometry.coordinates[1])
-    if (!isNaN(longitude) && !isNaN(latitude)) {
+    const longitude = parseFloat(String(enriched.feature.geometry.coordinates[0]))
+    const latitude = parseFloat(String(enriched.feature.geometry.coordinates[1]))
+    if (!Number.isNaN(longitude) && !Number.isNaN(latitude)) {
       return [longitude, latitude] as [number, number]
     }
   }
@@ -1307,9 +1400,9 @@ function getCoordinates(
     enriched.addressMeta?.longitude !== undefined &&
     enriched.addressMeta?.latitude !== undefined
   ) {
-    const longitude = parseFloat(enriched.addressMeta.longitude)
-    const latitude = parseFloat(enriched.addressMeta.latitude)
-    if (!isNaN(longitude) && !isNaN(latitude)) {
+    const longitude = parseFloat(String(enriched.addressMeta.longitude))
+    const latitude = parseFloat(String(enriched.addressMeta.latitude))
+    if (!Number.isNaN(longitude) && !Number.isNaN(latitude)) {
       return [longitude, latitude] as [number, number]
     }
   }
@@ -1338,8 +1431,8 @@ function mergeAddressMeta(
  * Get layer ID from submitted data, enriched data, or fallback
  */
 function getLayerId(
-  submitted: Record<string, any>,
-  enriched: Record<string, any>,
+  submitted: ImportData,
+  enriched: ImportData,
   importCtx: ImportCtx,
 ): string {
   // Check enriched layer ID
@@ -1413,8 +1506,8 @@ function getLayerId(
  * Get contributor ID from submitted data, enriched data, or fallback
  */
 function getContributorId(
-  submitted: Record<string, any>,
-  enriched: Record<string, any>,
+  submitted: ImportData,
+  enriched: ImportData,
   importCtx: ImportCtx,
 ): string {
   // Check submitted user ID
@@ -1460,20 +1553,23 @@ function getContributorId(
  * Also integrates translation data from the translation step
  */
 function mergeI18nData(
-  existing: Record<string, any>,
-  enriched: Record<string, any>,
-  submitted: Record<string, any>,
-  enrichedFull: Record<string, any>,
+  existing: Record<string, ImportLocaleRecord>,
+  enriched: Record<string, ImportLocaleRecord>,
+  submitted: Record<string, ImportLocaleRecord>,
+  enrichedFull: ImportData,
   featureId: string,
-): Record<string, any> {
-  const merged: Record<string, any> = {}
+): Record<string, ImportLocaleRecord> {
+  const merged: Record<string, ImportLocaleRecord> = {}
 
   // Helper to ensure locale object has required fields
-  function ensureLocaleFields(localeObj: any, locale: string): any {
+  function ensureLocaleFields(
+    localeObj: ImportLocaleRecord,
+    locale: string,
+  ): ImportLocaleRecord {
     const localeKey = getCanonicalLocaleKey(locale)
     return {
       ...localeObj,
-      featureId: featureId,
+      featureId,
       locale: toFeatureI18nLocaleValue(localeKey),
     }
   }
@@ -1499,10 +1595,8 @@ function mergeI18nData(
   // Normalize any existing persisted locale keys before applying import updates.
   Object.keys(existing).forEach(locale => {
     const localeKey = ensureLocaleBucket(locale)
-    merged[localeKey] = {
-      ...merged[localeKey],
-      ...existing[locale],
-    }
+
+    merged[localeKey] = { ...merged[localeKey], ...existing[locale] }
   })
 
   // Merge enriched data
@@ -1541,6 +1635,7 @@ function mergeI18nData(
       if (field === 'addressProperties') {
         // Complete replacement for addressProperties if any non-empty values exist
         const submittedAddressProps = submitted[locale][field]
+
         if (
           submittedAddressProps &&
           Object.values(submittedAddressProps).some(val => val && String(val).trim())
@@ -1567,71 +1662,78 @@ function mergeI18nData(
   // Integrate translation data from translation step
   // Look for titleTranslations, descriptionTranslations, etc.
   if (enrichedFull.titleTranslations) {
-    Object.keys(enrichedFull.titleTranslations).forEach(locale => {
+    Object.entries(enrichedFull.titleTranslations).forEach(([locale, translation]) => {
       const localeKey = ensureLocaleBucket(locale)
-      merged[localeKey].title = enrichedFull.titleTranslations[locale]
+      merged[localeKey].title = translation
       merged[localeKey].titleGen = true // Generated from translation
     })
   }
 
   if (enrichedFull.descriptionTranslations) {
-    Object.keys(enrichedFull.descriptionTranslations).forEach(locale => {
-      const localeKey = ensureLocaleBucket(locale)
-      merged[localeKey].description = enrichedFull.descriptionTranslations[locale]
-      merged[localeKey].descriptionGen = true // Generated from translation
-    })
+    Object.entries(enrichedFull.descriptionTranslations).forEach(
+      ([locale, translation]) => {
+        const localeKey = ensureLocaleBucket(locale)
+        merged[localeKey].description = translation
+        merged[localeKey].descriptionGen = true // Generated from translation
+      },
+    )
   }
 
   if (enrichedFull.rawAddressTranslations) {
-    Object.keys(enrichedFull.rawAddressTranslations).forEach(locale => {
-      const localeKey = ensureLocaleBucket(locale)
-      merged[localeKey].rawAddress = enrichedFull.rawAddressTranslations[locale]
-    })
+    Object.entries(enrichedFull.rawAddressTranslations).forEach(
+      ([locale, translation]) => {
+        const localeKey = ensureLocaleBucket(locale)
+        merged[localeKey].rawAddress = translation
+      },
+    )
   }
 
   if (enrichedFull.addressPropertiesTranslations) {
-    Object.keys(enrichedFull.addressPropertiesTranslations).forEach(locale => {
-      const localeKey = ensureLocaleBucket(locale)
-      merged[localeKey].addressProperties =
-        enrichedFull.addressPropertiesTranslations[locale]
-    })
+    Object.entries(enrichedFull.addressPropertiesTranslations).forEach(
+      ([locale, translation]) => {
+        const localeKey = ensureLocaleBucket(locale)
+
+        merged[localeKey].addressProperties = translation
+      },
+    )
   }
 
   // Handle displayAddress translations with proper generation flags
   if (enrichedFull.displayAddressTranslations) {
-    Object.keys(enrichedFull.displayAddressTranslations).forEach(locale => {
-      const localeKey = ensureLocaleBucket(locale)
-      // Only set if not already set by submitted data (which has higher priority)
-      if (!merged[localeKey].displayAddress) {
-        merged[localeKey].displayAddress =
-          enrichedFull.displayAddressTranslations[locale]
-        merged[localeKey].displayAddressGen = true // Generated from translation
-      }
-    })
+    Object.entries(enrichedFull.displayAddressTranslations).forEach(
+      ([locale, translation]) => {
+        const localeKey = ensureLocaleBucket(locale)
+        // Only set if not already set by submitted data (which has higher priority)
+        if (!merged[localeKey].displayAddress) {
+          merged[localeKey].displayAddress = translation
+          merged[localeKey].displayAddressGen = true // Generated from translation
+        }
+      },
+    )
   }
 
   // Add addressProperties from enriched feature i18n data if missing
   if (enrichedFull.feature?.i18n) {
-    Object.keys(enrichedFull.feature.i18n).forEach(locale => {
-      const localeKey = ensureLocaleBucket(locale)
+    Object.entries(enrichedFull.feature.i18n).forEach(
+      ([locale, enrichedLocaleData]) => {
+        const localeKey = ensureLocaleBucket(locale)
 
-      const enrichedLocaleData = enrichedFull.feature.i18n[locale]
-
-      // Add addressProperties if missing
-      const enrichedAddressProps = enrichedLocaleData?.addressProperties
-      if (enrichedAddressProps && !merged[localeKey].addressProperties) {
-        merged[localeKey].addressProperties = enrichedAddressProps
-      }
-
-      // Add displayAddress and displayAddressGen if missing (but only if not set by translations or submitted)
-      if (enrichedLocaleData?.displayAddress && !merged[localeKey].displayAddress) {
-        merged[localeKey].displayAddress = enrichedLocaleData.displayAddress
-        if (merged[localeKey].displayAddressGen === undefined) {
-          merged[localeKey].displayAddressGen =
-            enrichedLocaleData.displayAddressGen ?? true
+        // Add addressProperties if missing
+        const enrichedAddressProps = enrichedLocaleData?.addressProperties
+        if (enrichedAddressProps && !merged[localeKey].addressProperties) {
+          merged[localeKey].addressProperties = enrichedAddressProps
         }
-      }
-    })
+
+        // Add displayAddress and displayAddressGen if missing (but only if not set by translations or submitted)
+        if (enrichedLocaleData?.displayAddress && !merged[localeKey].displayAddress) {
+          merged[localeKey].displayAddress = enrichedLocaleData.displayAddress
+          if (merged[localeKey].displayAddressGen === undefined) {
+            merged[localeKey].displayAddressGen =
+              enrichedLocaleData.displayAddressGen ?? true
+          }
+        }
+      },
+    )
   }
 
   // Ensure all locale objects have required fields
@@ -1647,14 +1749,14 @@ function mergeI18nData(
  * Uses validation results from property-matching step to get correct IDs
  */
 function mergeProperties(
-  existingProperties: any[],
-  enrichedProperties: Record<string, any>,
-  submittedProperties: Record<string, any>,
+  existingProperties: Feature['properties'],
+  enrichedProperties: Record<string, ImportPropertyRecord>,
+  submittedProperties: Record<string, ImportPropertyRecord>,
   featureId: string,
   importCtx: ImportCtx,
-): any[] {
-  const merged: any[] = []
-  const existingPropertyByKey = new Map<string, any>()
+): Feature['properties'] {
+  const merged: Feature['properties'] = []
+  const existingPropertyByKey = new Map<string, Feature['properties'][number]>()
   const propertyReconciliation = importCtx.getPropertyReconciliation()
   const fetchedProperties = importCtx.getFetchedProperties()
   const mergedByKey = new Set([
@@ -1672,7 +1774,8 @@ function mergeProperties(
     enrichedProperties,
   })
 
-  existingProperties.forEach(prop => {
+  existingProperties.forEach(rawProperty => {
+    const prop = rawProperty
     const propertyKey = prop.property?.key
     if (propertyKey) {
       existingPropertyByKey.set(propertyKey, prop)
@@ -1806,7 +1909,21 @@ function mergeProperties(
       propertyId,
       propertyValueId,
       value,
-      i18n: propertyI18n,
+      i18n: propertyI18n
+        ? Object.fromEntries(
+            Object.entries(propertyI18n).map(([locale, entry]) => [
+              toLocaleKey(locale),
+              {
+                ...entry,
+                featureId,
+                propertyId,
+                locale,
+                value: entry.value ?? null,
+                valueGen: entry.valueGen ?? false,
+              },
+            ]),
+          )
+        : null,
       property: matchedProperty || existingProperty?.property,
       propertyValue: existingProperty?.propertyValue,
     })
@@ -1831,8 +1948,8 @@ function mergeProperties(
 }
 
 function buildMergedFeaturePropertyI18n(params: {
-  existingProperty?: any
-  submittedProperty?: Record<string, any> | undefined
+  existingProperty?: ImportPropertyRecord
+  submittedProperty?: ImportPropertyRecord
   translatedValues?: unknown
   isTranslatableSpecifier: boolean
 }): DraftPropertyI18nMap | null {
@@ -1856,34 +1973,31 @@ function buildMergedFeaturePropertyI18n(params: {
 
   Object.entries(existingI18n ?? {}).forEach(([localeKey, entry]) => {
     const value = entry?.value?.trim()
+
     if (!value) return
-    mergedI18n[localeKey] = {
-      value,
-      valueGen: Boolean(entry?.valueGen),
-    }
+
+    mergedI18n[localeKey] = { value, valueGen: Boolean(entry?.valueGen) }
   })
 
   Object.entries(submittedI18n ?? {}).forEach(([localeKey, entry]) => {
     const value = entry?.value?.trim()
+
     if (!value) return
-    mergedI18n[localeKey] = {
-      value,
-      valueGen: Boolean(entry?.valueGen),
-    }
+
+    mergedI18n[localeKey] = { value, valueGen: Boolean(entry?.valueGen) }
   })
 
   if (translatedValues && typeof translatedValues === 'object') {
     Object.entries(translatedValues as Record<string, string>).forEach(
       ([locale, value]) => {
         const trimmedValue = value?.trim()
+
         if (!trimmedValue) return
+
         const localeKey = toLocaleKey(locale)
 
         if (!mergedI18n[localeKey]?.value) {
-          mergedI18n[localeKey] = {
-            value: trimmedValue,
-            valueGen: true,
-          }
+          mergedI18n[localeKey] = { value: trimmedValue, valueGen: true }
         }
       },
     )
@@ -1892,8 +2006,10 @@ function buildMergedFeaturePropertyI18n(params: {
   return Object.keys(mergedI18n).length > 0 ? mergedI18n : null
 }
 
-function dedupeMergedProperties(properties: any[]): any[] {
-  const mergedByPropertyId = new Map<string, any>()
+function dedupeMergedProperties(
+  properties: Feature['properties'],
+): Feature['properties'] {
+  const mergedByPropertyId = new Map<string, Feature['properties'][number]>()
 
   for (const property of properties) {
     if (!property?.propertyId) continue
@@ -1901,13 +2017,11 @@ function dedupeMergedProperties(properties: any[]): any[] {
     const existing = mergedByPropertyId.get(property.propertyId)
     if (!existing) {
       mergedByPropertyId.set(property.propertyId, property)
+
       continue
     }
 
-    const mergedI18n = {
-      ...(existing.i18n ?? {}),
-      ...(property.i18n ?? {}),
-    }
+    const mergedI18n = { ...(existing.i18n ?? {}), ...(property.i18n ?? {}) }
 
     mergedByPropertyId.set(property.propertyId, {
       ...existing,
@@ -1927,19 +2041,25 @@ function dedupeMergedProperties(properties: any[]): any[] {
 /**
  * Parse superform validation error response using the same approach as form.svelte.ts
  */
-function parseSuperformError(errorData: any): string {
+function parseSuperformError(errorData: unknown): string {
   try {
-    if (Array.isArray(errorData?.issues)) {
-      return `Validation errors:\n${errorData.issues.map((issue: { message: string; path?: Array<string | number> }) => `• ${issue.path?.length ? `${issue.path.join('.')}: ` : ''}${issue.message}`).join('\n')}`
+    const errorRecord = errorData as ImportRecord
+    if (Array.isArray(errorRecord.issues)) {
+      return `Validation errors:\n${errorRecord.issues.map((issue: { message: string; path?: Array<string | number> }) => `• ${issue.path?.length ? `${issue.path.join('.')}: ` : ''}${issue.message}`).join('\n')}`
     }
 
-    if (errorData.type === 'failure' && errorData.data?.errors) {
+    if (errorRecord.type === 'failure' && errorRecord.data) {
       // Handle superform validation errors similar to form.svelte.ts
-      const errors = errorData.data.errors
+      const data = errorRecord.data as ImportRecord
+
+      const errors = data.errors
+
+      if (!errors) return 'Validation failed'
+
       const errorMessages: string[] = []
 
       // Recursively extract error messages from the errors object
-      function extractErrors(obj: any, path: string = ''): void {
+      function extractErrors(obj: unknown, path: string = ''): void {
         if (typeof obj === 'object' && obj !== null) {
           if (Array.isArray(obj)) {
             obj.forEach((item, index) => {
@@ -1950,8 +2070,10 @@ function parseSuperformError(errorData: any): string {
               }
             })
           } else {
-            Object.keys(obj).forEach(key => {
-              const value = obj[key]
+            const record = obj as ImportRecord
+
+            Object.keys(record).forEach(key => {
+              const value = record[key]
               const currentPath = path ? `${path}.${key}` : key
 
               if (typeof value === 'string') {
@@ -1978,10 +2100,15 @@ function parseSuperformError(errorData: any): string {
     }
 
     // Fallback to original error message
-    return errorData.message || 'Validation failed'
+    return typeof errorRecord.message === 'string'
+      ? errorRecord.message
+      : 'Validation failed'
   } catch (parseError) {
     console.error('Error parsing superform validation:', parseError)
-    return errorData.message || 'Validation failed - unable to parse error details'
+    const message = (errorData as ImportRecord).message
+    return typeof message === 'string'
+      ? message
+      : 'Validation failed - unable to parse error details'
   }
 }
 
@@ -2094,7 +2221,7 @@ export async function processFeatureResolution(
   try {
     // Fetch existing feature if this row still resolves to an update.
     if (!isCreate && updated.submitted.feature?.id && !updated.existing) {
-      const existingFeature = await fetchExistingFeature(updated.submitted.feature.id)
+      const existingFeature = await fetchExistingFeature(updated.submitted.feature?.id)
       updated.existing = existingFeature || undefined
     }
 
@@ -2168,16 +2295,16 @@ export async function processFeatureResolution(
  */
 function flattenFeatureData(
   feature: Feature,
-  columns: any[],
-  enriched?: Record<string, any>,
-  submitted?: Record<string, any>,
-): Record<string, any> {
-  const flattened: Record<string, any> = {}
-  const featureI18n = feature.i18n as Record<string, any> | undefined
+  columns: FeatureCSVColumn[],
+  enriched?: ImportData,
+  submitted?: ImportData,
+): ImportRecord {
+  const flattened: ImportRecord = {}
+  const featureI18n = feature.i18n as Record<string, ImportLocaleRecord> | undefined
   const pointGeometry = feature.geometry as
     | { coordinates?: [number, number] }
     | undefined
-  const addressMeta = feature.addressMeta as Record<string, any> | undefined
+  const addressMeta = feature.addressMeta as ImportRecord | undefined
 
   // Helper function to get property value by key
   function getPropertyValue(propertyKey: string): string | null {
@@ -2186,7 +2313,7 @@ function flattenFeatureData(
   }
 
   // Helper function to get property ID by key
-  function getPropertyId(propertyKey: string): string | null {
+  function _getPropertyId(propertyKey: string): string | null {
     const property = feature.properties?.find(p => p.property?.key === propertyKey)
     return property?.propertyId || null
   }
@@ -2198,11 +2325,12 @@ function flattenFeatureData(
   }
 
   // Helper function to get property value i18n by key and locale
-  function getPropertyValueI18n(propertyKey: string, locale: string): string | null {
+  function _getPropertyValueI18n(propertyKey: string, locale: string): string | null {
     const property = feature.properties?.find(p => p.property?.key === propertyKey)
     const propertyValueI18n = property?.propertyValue?.i18n as
-      | Record<string, any>
+      | Record<string, DraftPropertyLocaleValue>
       | undefined
+
     if (propertyValueI18n?.[locale]) {
       return propertyValueI18n[locale].value || null
     }
@@ -2211,12 +2339,18 @@ function flattenFeatureData(
 
   // Helper function to get i18n value by locale and field
   function getI18nValue(locale: string, field: string): string | null {
-    return featureI18n?.[locale]?.[field] || null
+    const value = featureI18n?.[locale]?.[field]
+    return typeof value === 'string' ? value : null
   }
 
   // Helper function to get address property by locale and field
   function getAddressProperty(locale: string, field: string): string | null {
-    return featureI18n?.[locale]?.addressProperties?.[field] || null
+    const properties = featureI18n?.[locale]?.addressProperties
+    const value =
+      properties && field in properties
+        ? properties[field as keyof typeof properties]
+        : undefined
+    return typeof value === 'string' ? value : null
   }
 
   // Map of field names to canonical "is" prefixed version for boolean fields
@@ -2233,7 +2367,8 @@ function flattenFeatureData(
 
   // Process each column to create flattened keys
   columns.forEach(column => {
-    let value: any = null
+    if (!column.field) return
+    let value: unknown = null
     let key: string = ''
 
     switch (column.modelType) {
@@ -2284,6 +2419,7 @@ function flattenFeatureData(
       case 'Property': {
         // Use new format: property[layer@ALL].propertyKey instead of property[layer@propertyKey].value
         const propertyKey = column.extractedPropertyKey || column.propertyKey
+        if (!propertyKey) return
         if (column.field === 'value') {
           key = `property[layer@ALL].${propertyKey}`
           // First try to get from submitted data, then from feature data
@@ -2322,6 +2458,7 @@ function flattenFeatureData(
 
   // Always export boolean feature fields (regardless of column mapping)
   flattened['feature.isPublished'] = feature.isPublished ?? false
+
   flattened['feature.isArchived'] = feature.isArchived ?? false
   flattened['feature.isIntangible'] = feature.isIntangible ?? false
   flattened['feature.isVisitable'] = feature.isVisitable ?? true
@@ -2348,8 +2485,7 @@ function flattenFeatureData(
 
   // First, collect property keys from submitted data
   if (submitted?.properties) {
-    Object.keys(submitted.properties).forEach(key => {
-      const propData = submitted.properties[key]
+    Object.entries(submitted.properties).forEach(([key, propData]) => {
       if (propData?.id) {
         propertyIdToKey.set(propData.id, key)
       }
@@ -2358,7 +2494,7 @@ function flattenFeatureData(
 
   // Then from enriched data (may override submitted if more complete)
   if (enriched?.properties) {
-    Object.entries(enriched.properties).forEach(([key, propData]: [string, any]) => {
+    Object.entries(enriched.properties).forEach(([key, propData]) => {
       if (propData?.propertyId) {
         propertyIdToKey.set(propData.propertyId, key)
       }
@@ -2405,50 +2541,49 @@ function flattenFeatureData(
 
   // Also add property metadata from enriched data for properties that may not be in feature.properties
   if (enriched?.properties) {
-    Object.entries(enriched.properties).forEach(
-      ([propertyKey, propertyData]: [string, any]) => {
-        // Only add if not already processed above
-        const existingProperty = feature.properties?.find(
-          p => p.property?.key === propertyKey,
-        )
-        if (!existingProperty) {
-          // Add metadata for properties that have enriched data but aren't in the feature
-          if (propertyData.propertyId) {
-            flattened[`property[layer@ALL].${propertyKey}.id`] = propertyData.propertyId
-          }
-          if (propertyData.propertyValueId) {
-            flattened[`property[layer@ALL].${propertyKey}.valueId`] =
-              propertyData.propertyValueId
-          }
-          // Value might come from submitted data
-          const submittedValue = submitted?.properties?.[propertyKey]?.value
-          if (submittedValue !== undefined) {
-            flattened[`property[layer@ALL].${propertyKey}`] = submittedValue
-          }
-        } else {
-          // Even if property exists, make sure we have the metadata from enriched data
-          if (
-            propertyData.propertyId &&
-            !flattened[`property[layer@ALL].${propertyKey}.id`]
-          ) {
-            flattened[`property[layer@ALL].${propertyKey}.id`] = propertyData.propertyId
-          }
-          if (
-            propertyData.propertyValueId &&
-            !flattened[`property[layer@ALL].${propertyKey}.valueId`]
-          ) {
-            flattened[`property[layer@ALL].${propertyKey}.valueId`] =
-              propertyData.propertyValueId
-          }
+    Object.entries(enriched.properties).forEach(([propertyKey, propertyData]) => {
+      // Only add if not already processed above
+      const existingProperty = feature.properties?.find(
+        p => p.property?.key === propertyKey,
+      )
+
+      if (!existingProperty) {
+        // Add metadata for properties that have enriched data but aren't in the feature
+        if (propertyData.propertyId) {
+          flattened[`property[layer@ALL].${propertyKey}.id`] = propertyData.propertyId
         }
-      },
-    )
+        if (propertyData.propertyValueId) {
+          flattened[`property[layer@ALL].${propertyKey}.valueId`] =
+            propertyData.propertyValueId
+        }
+        // Value might come from submitted data
+        const submittedValue = submitted?.properties?.[propertyKey]?.value
+        if (submittedValue !== undefined) {
+          flattened[`property[layer@ALL].${propertyKey}`] = submittedValue
+        }
+      } else {
+        // Even if property exists, make sure we have the metadata from enriched data
+        if (
+          propertyData.propertyId &&
+          !flattened[`property[layer@ALL].${propertyKey}.id`]
+        ) {
+          flattened[`property[layer@ALL].${propertyKey}.id`] = propertyData.propertyId
+        }
+        if (
+          propertyData.propertyValueId &&
+          !flattened[`property[layer@ALL].${propertyKey}.valueId`]
+        ) {
+          flattened[`property[layer@ALL].${propertyKey}.valueId`] =
+            propertyData.propertyValueId
+        }
+      }
+    })
   }
 
   // Add all i18n data with proper locale formatting
   if (feature.i18n) {
     Object.entries(feature.i18n).forEach(([locale, localeData]) => {
-      Object.entries(localeData).forEach(([field, value]) => {
+      Object.entries(localeData ?? {}).forEach(([field, value]) => {
         if (field !== 'addressProperties') {
           flattened[`feature.i18n[locale=${locale}].${field}`] = value
         } else if (typeof value === 'object' && value !== null) {
@@ -2478,8 +2613,8 @@ function flattenFeatureData(
  */
 export function generateDownloadData(
   results: FeatureResolutionData[],
-  columns: any[],
-): any[] {
+  columns: FeatureCSVColumn[],
+): ImportRecord[] {
   return results.map(result => {
     const baseData = {
       status: result.status,
@@ -2565,12 +2700,12 @@ export function downloadFeatureResolutionResults(
     .replace(/\.\d{3}Z$/, '')
     .replace(':', '-')
   const filename = `hype.hk-batch-upload-results-${timestamp}.json`
-
   const blob = new Blob([JSON.stringify(downloadData, null, 2)], {
     type: 'application/json',
   })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
+
   anchor.href = url
   anchor.download = filename
   document.body.appendChild(anchor)

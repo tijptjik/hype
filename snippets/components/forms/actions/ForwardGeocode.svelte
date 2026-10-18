@@ -1,25 +1,25 @@
 <script lang="ts">
 import type { Component } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getAppCtx } from '#lib/context/app.svelte.js'
 // SERVICES
 import {
   fetchForwardGeocodeALSResult,
   processForwardGeocodeResult,
   extractNeighbourhoodFromAddress,
-} from '$lib/api/external/geocoding'
-import { removeCountry, removeArea, removeDistrict } from '$lib/utils/geocoding'
+} from '#lib/api/external/geocoding.js'
+import { removeCountry, removeArea, removeDistrict } from '#lib/utils/geocoding.js'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import Language from 'virtual:icons/lucide/languages'
 import MagnifyingGlass from 'virtual:icons/lucide/search'
 import MapPin from 'virtual:icons/lucide/map-pin'
 // TYPES
 import type { Point } from 'geojson'
-import type { FeatureForm } from '$lib/context/form.svelte'
-import type { Locale } from '$lib/types'
+import type { FeatureForm } from '#lib/context/form.svelte'
+import type { Locale } from '#lib/types.js'
 
 // CONTEXT
 let appCtx = getAppCtx()

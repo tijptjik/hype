@@ -1,25 +1,25 @@
 <script lang="ts">
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // I18N
-import { getLocale, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // ENUMS
-import { NewFeatureMode } from '$lib/enums'
+import { NewFeatureMode } from '#lib/enums.js'
 // ICONS
-import Check from 'virtual:icons/lucide/check'
-import GlobeAlt from 'virtual:icons/lucide/globe'
-import PencilSquare from 'virtual:icons/lucide/square-pen'
+import Check from 'virtual:icons/proicons/checkmark'
+import GlobeAlt from 'virtual:icons/proicons/globe'
+import PencilSquare from 'virtual:icons/proicons/compose'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let isEditing = $state(false)
 let draftAddress = $state('')
 let addressInput = $state<HTMLInputElement | null>(null)
 
 const currentAddress = $derived(
-  appCtx.getNewFeature()?.feature?.i18n?.[getLocale()]?.displayAddress?.trim() ?? '',
+  appCtx.draft.current?.feature?.i18n?.[getLocaleKey()]?.displayAddress?.trim() ?? '',
 )
 
 $effect(() => {
@@ -37,24 +37,26 @@ function startEditing(): void {
 function saveAddress(): void {
   if (!draftAddress.trim()) return
 
-  appCtx.updateNewFeatureValueI18n('displayAddress', draftAddress.trim())
-  appCtx.updateNewFeatureValueI18n('displayAddressGen', false)
+  appCtx.draft.updateI18n('displayAddress', draftAddress.trim())
+  appCtx.draft.updateI18n('displayAddressGen', false)
   isEditing = false
 }
 
 function cancelEditing(): void {
-  appCtx.updateNewFeatureValueI18n('displayAddress', currentAddress)
+  appCtx.draft.updateI18n('displayAddress', currentAddress)
   draftAddress = currentAddress
   isEditing = false
 }
 
 function reopenLocationPicker(): void {
-  appCtx.setNewFeatureMode(NewFeatureMode.location)
+  appCtx.draft.setMode(NewFeatureMode.location)
 }
 </script>
 
 <div class="space-y-2">
-  <p class="font-mono text-[11px] uppercase tracking-[0.28em] text-white/48">Address</p>
+  <p class="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
+    Address
+  </p>
 
   <div
     class="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3"
@@ -64,7 +66,7 @@ function reopenLocationPicker(): void {
         bind:this={addressInput}
         bind:value={draftAddress}
         type="text"
-        class="h-11 min-w-0 w-full rounded-full border border-white/14 bg-black/35 px-4 text-left text-base text-white caret-white placeholder:text-white/34 focus:border-white/28 focus:outline-none"
+        class="h-11 min-w-0 w-full rounded-full border border-border-input bg-base-200 px-4 text-left text-base text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
         placeholder={m.less_quaint_clownfish_succeed()}
         onkeydown={event => {
           event.stopPropagation()
@@ -75,7 +77,7 @@ function reopenLocationPicker(): void {
       >
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/10 text-white transition hover:bg-white/16"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-content/8 text-base-content transition hover:bg-base-content/12"
         onclick={saveAddress}
         disabled={!draftAddress.trim()}
       >
@@ -83,7 +85,7 @@ function reopenLocationPicker(): void {
       </button>
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-black/30 text-white transition hover:bg-black/45"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-200 text-base-content transition hover:bg-base-300"
         onclick={reopenLocationPicker}
         aria-label="Open location picker"
       >
@@ -92,18 +94,18 @@ function reopenLocationPicker(): void {
     {:else}
       <button
         type="button"
-        class="flex h-11 min-w-0 w-full items-center rounded-full border border-white/10 bg-black/25 px-4 text-left transition hover:bg-black/35"
+        class="flex h-11 min-w-0 w-full items-center rounded-full border border-border-input bg-base-200 px-4 text-left transition hover:bg-base-300"
         onclick={startEditing}
       >
         <p
-          class={`!block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-6 ${currentAddress ? 'text-white' : 'font-semibold text-white/45'}`}
+          class={`!block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-6 ${currentAddress ? 'text-base-content' : 'font-semibold text-muted-foreground'}`}
         >
           {currentAddress || 'Click to set address'}
         </p>
       </button>
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-black/30 text-white transition hover:bg-black/45"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-200 text-base-content transition hover:bg-base-300"
         onclick={startEditing}
         aria-label="Edit address"
       >
@@ -111,7 +113,7 @@ function reopenLocationPicker(): void {
       </button>
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-black/30 text-white transition hover:bg-black/45"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-200 text-base-content transition hover:bg-base-300"
         onclick={reopenLocationPicker}
         aria-label="Open location picker"
       >

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSqliteMissingSchemaError } from '$lib/db/services/sqlite'
+import { isSqliteMissingSchemaError } from '#lib/db/services/sqlite.js'
 
 describe('isSqliteMissingSchemaError', () => {
   it('matches missing table errors for the requested table', () => {

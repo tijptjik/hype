@@ -1,12 +1,16 @@
+import { gt } from 'drizzle-orm'
+// SVELTEKIT
+import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { and, eq, like, or, sql, type SQL } from 'drizzle-orm'
+import { and, eq, like, or, sql, getTableColumns, type SQL } from 'drizzle-orm'
+import { SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // CAPABILITIES
 import {
   getCapabilityKeysFromDefinitions,
   isProjectCapabilityKey,
   normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
-} from '$lib/capabilities'
+} from '#lib/capabilities.js'
 // SCHEMA
 import {
   feature,
@@ -30,16 +34,16 @@ import { retryBusyRead } from './sqlite'
 // ZOD
 import { getProjectHubFilter } from './hub'
 // TYPES
+import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
 import type {
-  CapabilityDefinitions,
   Id,
   Database,
   LocaleKey,
   Locale,
   ListResponse,
   QueryParams,
-} from '$lib/types'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
+} from '#lib/types.js'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 import type {
   ProjectAdminDBRaw,
   ProjectDB,
@@ -50,7 +54,7 @@ import type {
   ProjectI18nPartial,
   ProjectRoleDB,
   ProjectRoleNew,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -60,6 +64,7 @@ import type {
 //    - createProject
 //    - createI18n
 //    - createUserRoles
+//    - commitUserRoles
 //
 // 1.2 CRUD :: CREATE (SHAPING)
 //    - toUserRoles
@@ -92,6 +97,7 @@ import type {
 //    - cascadeProjectPublishedStateToDescendants
 //    - updateProjectArchivedStateById
 //    - cascadeProjectArchivedStateToDescendants
+//    - buildProjectArchivedDescendantUpdates
 //    - updateI18n
 //
 // 3.2 CRUD :: UPDATE (SYNC)
@@ -138,35 +144,96 @@ export const createI18n = async (
 }
 
 /**
- * Ensures users are added as members to the organisation if they're not already.
+ * Commits project roles and any required parent organisation memberships atomically.
  * @param db - The database instance.
  * @param userRoles - Array of project role rows.
+ * @param projectId - Authorized target project id.
  * @param organisationId - The ID of the organisation.
+ * @param replace - Whether to replace existing project roles rather than append.
+ * @returns Persisted project-role rows.
+ * @remarks Existing organisation roles are never downgraded. The live parent lookup
+ * and required organisationId column abort nonempty writes if the project moved.
  */
-const ensureOrganisationMembership = async (
+const commitUserRoles = async (
   db: Database,
   userRoles: ProjectRoleNew[],
+  projectId: string,
   organisationId: string,
-) => {
-  const orgRoles = await db
-    .select({ userId: organisationRole.userId })
-    .from(organisationRole)
-    .where(eq(organisationRole.organisationId, organisationId))
+  replace: boolean,
+): Promise<ProjectRoleDB[]> => {
+  const scope = and(
+    eq(project.id, projectId),
+    eq(project.organisationId, organisationId),
+  )
+  const probe = db.select({ id: project.id }).from(project).where(scope).limit(1)
+  const parentId = sql`(select ${project.organisationId} from ${project} where ${scope})`
 
-  const existingOrgUserIds = orgRoles.map(role => role.userId)
-  const newOrgUsers = userRoles
-    .map(role => role.userId)
-    .filter(userId => !existingOrgUserIds.includes(userId))
-
-  if (newOrgUsers.length > 0) {
-    await db.insert(organisationRole).values(
-      newOrgUsers.map(userId => ({
-        userId,
-        organisationId,
-        role: 'member' as const,
-      })),
+  // Provision missing membership without overwriting existing privileges or racing a prior read.
+  const userIds = [...new Set(userRoles.map(role => role.userId))]
+  // The parent lookup uses two bindings instead of the organisationId column's usual one.
+  const membersPerInsert = Math.max(
+    1,
+    Math.floor(
+      SQL_BATCH_SIZE / (Object.keys(getTableColumns(organisationRole)).length + 1),
+    ),
+  )
+  const memberships = []
+  for (let index = 0; index < userIds.length; index += membersPerInsert) {
+    memberships.push(
+      db
+        .insert(organisationRole)
+        .values(
+          userIds.slice(index, index + membersPerInsert).map(userId => ({
+            userId,
+            organisationId: parentId,
+            role: 'member' as const,
+          })),
+        )
+        .onConflictDoNothing({
+          target: [organisationRole.organisationId, organisationRole.userId],
+        }),
     )
   }
+
+  // Empty replacements must also respect the current project parent before deleting roles.
+  const deletions = replace
+    ? [
+        db
+          .delete(projectRole)
+          .where(
+            and(
+              eq(projectRole.projectId, projectId),
+              sql`exists (select 1 from ${project} where ${scope})`,
+            ),
+          ),
+      ]
+    : []
+
+  // Keep parameter-safe project inserts inside the same transaction as the parent grants.
+  const rolesPerInsert = Math.max(
+    1,
+    Math.floor(SQL_BATCH_SIZE / Object.keys(getTableColumns(projectRole)).length),
+  )
+  const assignments = []
+  for (let index = 0; index < userRoles.length; index += rolesPerInsert) {
+    assignments.push(
+      db
+        .insert(projectRole)
+        .values(
+          userRoles
+            .slice(index, index + rolesPerInsert)
+            .map(role => ({ ...role, projectId })),
+        )
+        .returning(),
+    )
+  }
+  const results = await db.batch([probe, ...memberships, ...deletions, ...assignments])
+  if (results[0].length === 0) {
+    throw error(404, 'PROJECT_NOT_FOUND')
+  }
+  return results
+    .slice(1 + memberships.length + deletions.length)
+    .flat() as ProjectRoleDB[]
 }
 
 /**
@@ -183,15 +250,7 @@ export const createUserRoles = async (
   projectId: string,
   organisationId: string,
 ): Promise<ProjectRoleNew[]> => {
-  await ensureOrganisationMembership(db, userRoles, organisationId)
-
-  return await insertManyRelated(
-    db,
-    projectRole,
-    userRoles as ProjectRoleDB[],
-    'projectId',
-    projectId,
-  )
+  return await commitUserRoles(db, userRoles, projectId, organisationId, false)
 }
 
 // ═══════════════════════
@@ -241,7 +300,12 @@ export async function listProjects<
   withRelations: Record<string, boolean | object> = {},
   conditions: SQL<unknown>[] = [],
   opts: HubOptsExtended,
-  pagination?: { limit?: number; offset?: number },
+  pagination?: {
+    limit?: number
+    offset?: number
+    afterId?: string
+    afterValue?: string | number | null
+  },
   sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' },
   query?: {
     q?: string
@@ -252,6 +316,9 @@ export async function listProjects<
   },
 ): Promise<ListResponse<TRow>> {
   const startedAt = Date.now()
+  // Keyset pages advance using a unique immutable ID, independently of row offsets.
+  if (pagination?.afterId && pagination.afterValue === undefined)
+    conditions.push(gt(project.id, pagination.afterId))
   if (!query?.ignoreHubFilter) {
     const hubFilter = getProjectHubFilter(db, opts)
     if (hubFilter) {
@@ -319,6 +386,11 @@ export async function listProjects<
   const sortBy = sorting?.sortBy || 'modifiedAt'
   const sortOrder = sorting?.sortOrder || 'desc'
   const orderBy = toOrderByWithLocalizedFields({
+    conditions,
+    cursor:
+      pagination?.afterId && pagination.afterValue !== undefined
+        ? { id: pagination.afterId, value: pagination.afterValue }
+        : undefined,
     db,
     locale: query?.locale,
     sortBy,
@@ -773,7 +845,7 @@ export const cascadeProjectPublishedStateToDescendants = async (
 }
 
 /**
- * Toggles archived state for a project.
+ * Atomically toggles archived state for a project and its descendants.
  * @param db - The database instance.
  * @param params - Target id and next archived state.
  * @returns Updated id/state pair or `null`.
@@ -782,7 +854,7 @@ export const updateProjectArchivedStateById = async (
   db: Database,
   params: { id: Id; state: boolean },
 ): Promise<{ id: string; isArchived: boolean } | null> => {
-  const [updated] = await db
+  const parentUpdate = db
     .update(project)
     .set({
       isArchived: params.state,
@@ -793,7 +865,15 @@ export const updateProjectArchivedStateById = async (
       isArchived: project.isArchived,
     })
 
-  return updated ?? null
+  // Commit the parent and descendants together so failed restoration cannot split state.
+  const [updated] = await db.batch([
+    parentUpdate,
+    ...buildProjectArchivedDescendantUpdates(db, {
+      projectId: params.id,
+      state: params.state,
+    }),
+  ])
+  return updated[0] ?? null
 }
 
 /**
@@ -817,8 +897,23 @@ export const cascadeProjectArchivedStateToDescendants = async (
     state: boolean
   },
 ): Promise<void> => {
+  const updates = buildProjectArchivedDescendantUpdates(db, params)
+  await updates[0]
+  await updates[1]
+}
+
+/**
+ * Builds descendant updates without executing them, allowing an atomic parent batch.
+ * @param db - The database instance.
+ * @param params - Project id and requested archive state.
+ * @returns Deferred layer and feature updates.
+ */
+function buildProjectArchivedDescendantUpdates(
+  db: Database,
+  params: { projectId: Id; state: boolean },
+) {
   // Preserve descendant archive snapshots until the organisation no longer hides them.
-  await db
+  const layers = db
     .update(layer)
     .set({
       localIsArchived: params.state
@@ -844,7 +939,7 @@ export const cascadeProjectArchivedStateToDescendants = async (
     })
     .where(eq(layer.projectId, params.projectId))
 
-  await db
+  const features = db
     .update(feature)
     .set({
       localIsArchived: params.state
@@ -869,6 +964,7 @@ export const cascadeProjectArchivedStateToDescendants = async (
           end`,
     })
     .where(eq(feature.projectId, params.projectId))
+  return [layers, features] as const
 }
 
 /**
@@ -898,7 +994,7 @@ export const updateI18n = async (
 // ═══════════════════════
 
 /**
- * Replaces all project role assignments after ensuring organisation membership.
+ * Atomically replaces project role assignments and ensures organisation membership.
  * @param db - The database instance.
  * @param userRoles - Persisted project role rows.
  * @param projectId - Target project id.
@@ -910,15 +1006,8 @@ export const syncUserRoles = async (
   userRoles: ProjectRoleNew[],
   projectId: Id,
   organisationId: Id,
-) => {
-  await ensureOrganisationMembership(db, userRoles, organisationId)
-  return await replaceManyRelated(
-    db,
-    projectRole,
-    userRoles as ProjectRoleDB[],
-    projectRole.projectId,
-    projectId,
-  )
+): Promise<ProjectRoleDB[]> => {
+  return await commitUserRoles(db, userRoles, projectId, organisationId, true)
 }
 
 /**

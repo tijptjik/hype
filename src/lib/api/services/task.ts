@@ -1,9 +1,9 @@
 // DRIZZLE
 import { eq, type SQL, sql } from 'drizzle-orm'
 // API
-import { applyQueryFilters } from '$lib/api'
-import { toBooleanOrUndefined } from '$lib/api/services'
-import { isRelevantHubAdmin } from '$lib/api/services/authz'
+import { applyQueryFilters } from '#lib/api/index.js'
+import { toBooleanOrUndefined } from '#lib/api/services/index.js'
+import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -11,24 +11,24 @@ import {
   runAssertions,
   assertProjectMaintainerOrMemberOrSuperAdmin,
   assertParamIdentifierEqualsFormIdentifier,
-} from '$lib/auth/asserts'
+} from '#lib/auth/asserts.js'
 
 // DB
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 // SCHEMA
-import { task } from '$lib/db/schema/index'
+import { task } from '#lib/db/schema/index.js'
 // DB
-import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
-import { toNormalizedImageRecord } from '$lib/db/services/image'
+import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
+import { toNormalizedImageRecord } from '#lib/db/services/image.js'
 // ZOD
 import {
   TaskAdminProfileAPI,
   TaskCardProfileAPI,
   TaskDetailProfileAPI,
   TaskListProfileAPI,
-} from '$lib/db/zod/schema/task'
+} from '#lib/db/zod/schema/task.js'
 // ENUMS
-import { HierarchicalResource } from '$lib/enums'
+import { HierarchicalResource } from '#lib/enums.js'
 // TYPES
 import type {
   Database,
@@ -38,16 +38,15 @@ import type {
   QueryParams,
   SessionUser,
   Id,
-  TaskDB,
-  TaskDBRaw,
   UserRoleDisco,
-} from '$lib/types'
+} from '#lib/types.js'
+import type { TaskDB, TaskDBRaw } from '#lib/db/zod/schema/task.types.js'
 import type {
   TaskEditorLayerOption,
   TaskEntityByProfile,
   TaskListByProfile,
   TaskProfile,
-} from '$lib/db/zod/schema/task.types'
+} from '#lib/db/zod/schema/task.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -382,7 +381,7 @@ export const assertPermissionsToCreateTask = async (user: SessionUser) => {
 export const assertPermissionsToUpdateTask = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
   refId: Id,
@@ -390,7 +389,7 @@ export const assertPermissionsToUpdateTask = async (
 ) => {
   const commonAssertions = [
     () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
+    () => assertAdminRequest(requestOrIntent),
     () => assertParamIdentifierEqualsFormIdentifier({ id: params.id }, refId, 'id'),
   ]
 
@@ -422,7 +421,7 @@ export const assertPermissionsToUpdateTask = async (
 export const assertPermissionsToDeleteTask = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   params: QueryParams,
   userRoles: UserRoleDisco[],
   refId: Id,
@@ -431,7 +430,7 @@ export const assertPermissionsToDeleteTask = async (
   return assertPermissionsToUpdateTask(
     db,
     user,
-    request,
+    requestOrIntent,
     params,
     userRoles,
     refId,

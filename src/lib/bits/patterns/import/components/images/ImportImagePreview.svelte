@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // PATTERN COMPONENTS
-import Image from '$lib/bits/patterns/images/Image.svelte'
+import Image from '#lib/bits/patterns/images/Image.svelte'
 
 type Props = {
   file: File

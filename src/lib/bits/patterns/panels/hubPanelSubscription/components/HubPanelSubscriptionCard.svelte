@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import { HubPanelSubscriptionLegalLinks } from './index'
 
@@ -51,7 +51,7 @@ let {
     <Button
       text={isMember ? memberText : `${ctaText}${isLoading ? '…' : ''}`}
       color={isMember ? 'success' : 'primary'}
-      style={isMember ? 'soft' : 'solid'}
+      style={isMember ? 'soft' : 'none'}
       modifier="block"
       disabled={isDisabled || isLoading || isMember}
       onClick={() => onJoin?.()}

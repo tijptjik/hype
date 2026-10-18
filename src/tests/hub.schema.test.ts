@@ -3,7 +3,7 @@ import {
   HubAdminProfileAPI,
   HubCardProfileAPI,
   HubDetailProfileAPI,
-} from '$lib/db/zod/schema/hub'
+} from '#lib/db/zod/schema/hub.js'
 
 describe('HubAdminProfileAPI', () => {
   it('preserves legalContactAddress in admin profile payloads', () => {
@@ -164,7 +164,7 @@ describe('hub subscription profiles', () => {
     expect(parsed.isSubscriptionAvailable).toBe(true)
     expect(parsed.subscriptionService).toBe('substack')
     expect(parsed.subscriptionId).toBe('hkghostsigns')
-    expect(parsed.i18n.en.subscriptionBenefits).toBe('Early access and event updates')
+    expect(parsed.i18n?.en?.subscriptionBenefits).toBe('Early access and event updates')
     expect(parsed.subscriptionPlacement).toEqual({
       hubPanel: true,
       topBar: false,
@@ -182,7 +182,7 @@ describe('hub subscription profiles', () => {
     })
 
     expect(parsed.isSubscriptionAvailable).toBe(true)
-    expect(parsed.i18n.en.subscriptionBenefits).toBe('Early access and event updates')
+    expect(parsed.i18n?.en?.subscriptionBenefits).toBe('Early access and event updates')
     expect(parsed.subscriptionPlacement).toEqual({
       hubPanel: true,
       topBar: false,

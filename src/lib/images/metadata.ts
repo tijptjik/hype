@@ -5,7 +5,7 @@ import {
   getCoordinatesFromMetadata,
   getCreditFromMetadata,
   type ImageMetadataMap,
-} from '$lib/utils/image-metadata'
+} from '#lib/utils/image-metadata.js'
 
 const JPEG_SOI_MARKER = 0xffd8
 const JPEG_APP1_MARKER = 0xffe1
@@ -358,6 +358,12 @@ const parseTiffPayload = (bytes: Uint8Array): ParsedMetadataPayload => {
       }
       if (tag === 0x9004 && typeof value === 'string') metadata.CreateDate = value
       if (tag === 0x0132 && typeof value === 'string') metadata.ModifyDate = value
+      // Retain EXIF timezone offsets alongside the timestamps they qualify.
+      if (tag === 0x9010 && typeof value === 'string') metadata.OffsetTime = value
+      if (tag === 0x9011 && typeof value === 'string')
+        metadata.OffsetTimeOriginal = value
+      if (tag === 0x9012 && typeof value === 'string')
+        metadata.OffsetTimeDigitized = value
       if (tag === 0x0001 && typeof value === 'string') metadata.GPSLatitudeRef = value
       if (tag === 0x0002 && Array.isArray(value)) {
         metadata.GPSLatitude = parseGpsCoordinate(value, metadata.GPSLatitudeRef) ?? ''
@@ -648,7 +654,7 @@ const decompressDeflate = async (bytes: Uint8Array): Promise<Uint8Array | null> 
   }
 
   try {
-    const stream = new Blob([bytes])
+    const stream = new Blob([new Uint8Array(bytes)])
       .stream()
       .pipeThrough(new DecompressionStream('deflate'))
     const buffer = await new Response(stream).arrayBuffer()
@@ -1067,7 +1073,7 @@ const toNormalizedExtractedMetadata = (
     cameraModel: getCameraFromMetadata(parsed.metadata) ?? null,
     capturedAt:
       Object.keys(parsed.metadata).length > 0
-        ? getCapturedAtFromMetadata(parsed.metadata)
+        ? (getCapturedAtFromMetadata(parsed.metadata) ?? null)
         : null,
     credit: getCreditFromMetadata(parsed.metadata) ?? null,
     latitude: coordinates.latitude ?? null,

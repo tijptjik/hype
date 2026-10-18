@@ -3,8 +3,8 @@ import {
   bootstrapAnonymousSession,
   isAuthEntryPath,
   shouldBootstrapAnonymous,
-} from '$lib/auth/bootstrap'
-import { AUTH_PROVIDER_REGISTRY } from '$lib/auth/providers'
+} from '#lib/auth/bootstrap.js'
+import { AUTH_PROVIDER_REGISTRY } from '#lib/auth/providers.js'
 
 describe('guest session bootstrap', () => {
   it('coalesces concurrent bootstrap calls into one anonymous sign-in', async () => {

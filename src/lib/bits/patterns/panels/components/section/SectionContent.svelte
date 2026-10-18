@@ -2,8 +2,10 @@
 // SVELTE
 import type { Snippet } from 'svelte'
 import { slide } from 'svelte/transition'
+import { cubicOut } from 'svelte/easing'
+import { prefersReducedMotion } from 'svelte/motion'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 type Props = {
   isOpen: boolean
@@ -29,7 +31,10 @@ let {
 {:else if isOpen && children}
   <div
     class="bits-theme bits-panel-section-content"
-    transition:slide={{ duration: 200 }}
+    transition:slide={{
+      duration: prefersReducedMotion.current ? 0 : 240,
+      easing: cubicOut,
+    }}
   >
     {@render children()}
   </div>

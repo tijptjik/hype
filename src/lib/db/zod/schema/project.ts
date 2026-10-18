@@ -1,21 +1,25 @@
+import { CompactAncestorsSchema } from './api'
 // I18N
-import { m } from '$lib/i18n'
-import type { ProjectLicense, ProjectLicenseRights } from '$lib/types'
+import { m } from '#lib/i18n.js'
+import type {
+  ProjectLicense,
+  ProjectLicenseRights,
+} from '#lib/db/zod/schema/projectLicense.types.js'
 import {
   createDefaultProjectLicense,
   normalizeProjectLicense,
   parseProjectLicense,
-} from '$lib/db/services/licence'
+} from '#lib/db/services/licence.js'
 import type {
   ProjectCapabilities,
   ProjectRoleCapabilities,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { project, projectI18n, projectRole } from '$lib/db/schema/index'
+import { project, projectI18n, projectRole } from '#lib/db/schema/index.js'
 // ZOD SCHEMAS
 import { FormBoolean } from '../form'
 import { getLocales } from '../constraints'
@@ -318,14 +322,22 @@ export const ProjectEntityFormData = z.object({
   capabilities: ProjectCapabilitiesBase,
   userRoles: ProjectUserRolesFormData.optional(),
   properties: ProjectPropertiesFormData,
-  layers: z.array(ProjectLayerFormData).optional(),
+  layers: z
+    .array(ProjectLayerFormData)
+    .refine(
+      layers => layers.length === 0 || layers.some(layer => layer.isDefaultVisible),
+      {
+        message: 'At least one layer must be visible by default.',
+      },
+    )
+    .optional(),
 })
 
 export const ProjectFormMeta = z.object({
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
-  isAdminRequest: z.coerce.boolean<boolean>().optional(),
+  isAdminRequest: FormBoolean.optional(),
   licenseTouched: z.coerce.boolean<boolean>().optional(),
 })
 
@@ -345,7 +357,7 @@ export const PublishProjectSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -355,7 +367,7 @@ export const RemoveProjectSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -369,7 +381,17 @@ export const GetProjectMapStylesSchema = z.object({
 // 5. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const ProjectProfile = z.enum(['list', 'card', 'detail', 'admin'])
+// Legacy selectors remain compatible while callers migrate to resource payload profiles.
+export const ProjectProfile = z.enum([
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+])
 
 const ProjectListFields = ProjectBase.pick({
   id: true,
@@ -392,6 +414,7 @@ export const ProjectListProfileAPI = ProjectListFields.extend({
 })
 
 export const ProjectCardProfileAPI = ProjectListProfileAPI.extend({
+  ancestors: CompactAncestorsSchema.optional(),
   ...ProjectCardFields.shape,
   image: ImageContextEnvelopeAPI.nullish(),
 })
@@ -409,4 +432,17 @@ export const ProjectAdminProfileAPI = ProjectBase.extend({
   image: ImageContextEnvelopeAPI.nullish(),
   publisher: UserBasic.nullish(),
   mapStyle: MapStyleResolved.nullish(),
+})
+
+/** Minimal identity and action state for paged resource lists. */
+export const ProjectCompactProfileAPI = ProjectBase.pick({
+  id: true,
+  isPublished: true,
+  isArchived: true,
+  modifiedAt: true,
+  code: true,
+  organisationId: true,
+}).extend({
+  ancestors: CompactAncestorsSchema.optional(),
+  i18n: getLocales(ProjectI18nBase.pick({ name: true, nameShort: true })),
 })

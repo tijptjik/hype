@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { isAuthEntryPath, isPublicUnauthenticatedPath } from '$lib/auth/redirectGuard'
+import {
+  isAuthEntryPath,
+  isPublicUnauthenticatedPath,
+} from '#lib/auth/redirectGuard.js'
 
 describe('isAuthEntryPath', () => {
   it('only identifies sign-in and sign-up routes', () => {

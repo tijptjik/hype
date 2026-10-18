@@ -9,7 +9,7 @@ import {
   hubRole,
   organisation,
   organisationI18n,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // ZOD SCHEMAS
 import { getDefaultConstraints, getLocales } from '../../constraints'
 import { UserBasic } from '../user'

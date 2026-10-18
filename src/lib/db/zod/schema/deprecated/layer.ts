@@ -2,7 +2,7 @@
 import { z } from 'zod'
 // DRIZZLE
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod'
-import { layer, layerI18n, layerProperty, userLayer } from '$lib/db/schema/index'
+import { layer, layerI18n, layerProperty, userLayer } from '#lib/db/schema/index.js'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../../constraints'
 // ZOD SCHEMAS
@@ -15,7 +15,7 @@ import {
 } from './property'
 import { UserBasic } from '../user'
 // TYPES
-import type { LayerMetadata } from '$lib/types'
+import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
 
 /* ----------------- */
 // LAYER CORESCHEMAS

@@ -1,24 +1,24 @@
-<script lang="ts">
-import { onDestroy, tick } from 'svelte'
+<script lang="ts" generics="T">
+import { onDestroy, tick, untrack } from 'svelte'
 import type { Snippet } from 'svelte'
 
 type CrossfadeItem = {
   id: number
   key: string
-  value: unknown
+  value: T
   isCurrent: boolean
 }
 
 type CrossfadeValueProps = {
   valueKey: string | number | null | undefined
-  value: unknown
+  value: T
   duration?: number
   layout?: 'inline' | 'block'
   tag?: keyof HTMLElementTagNameMap
   contentTag?: keyof HTMLElementTagNameMap
   class?: string
   contentClass?: string
-  children?: Snippet<[any]>
+  children?: Snippet<[T]>
 }
 
 let {
@@ -36,11 +36,12 @@ let {
 let nextItemId = 0
 let cleanupTimer: ReturnType<typeof setTimeout> | undefined
 let frameId: number | undefined
-let previousKey = String(valueKey ?? '')
+// Seed the outgoing snapshot once; the effect advances it on prop changes.
+let previousKey = untrack(() => String(valueKey ?? ''))
 let currentSnapshot: CrossfadeItem = {
   id: ++nextItemId,
   key: previousKey,
-  value,
+  value: untrack(() => value),
   isCurrent: true,
 }
 let currentItem = $state(currentSnapshot)

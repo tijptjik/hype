@@ -1,6 +1,6 @@
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Task } from '$lib/types'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
 
 export type TaskRowProps = {
   adminCtx: AdminCtx

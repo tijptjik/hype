@@ -3,7 +3,7 @@ import type {
   GetQueryParamsSchema,
   ListQueryParamsSchema,
   RequestMetaSchema,
-} from '$lib/db/zod/schema/api'
+} from '#lib/db/zod/schema/api.js'
 
 export type RequestMeta = z.infer<typeof RequestMetaSchema>
 export type ListQueryParams = z.infer<typeof ListQueryParamsSchema>

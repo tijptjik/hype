@@ -3,11 +3,11 @@
 import { slide } from 'svelte/transition'
 import type { Component, Snippet } from 'svelte'
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // ICONS
-import Heart from 'virtual:icons/lucide/heart'
-import Info from 'virtual:icons/lucide/info'
-import X from 'virtual:icons/lucide/x'
+import Heart from 'virtual:icons/proicons/heart'
+import Info from 'virtual:icons/proicons/info'
+import X from 'virtual:icons/proicons/cancel'
 
 let {
   viewport,
@@ -40,7 +40,7 @@ function measureInfoBoxHeight(): number {
 
   const originalWidth = panelElement.offsetWidth
   const tempContainer = document.createElement('div')
-  tempContainer.className = 'overflow-hidden bg-black'
+  tempContainer.className = 'overflow-hidden bg-(--theme-panel)'
   tempContainer.style.position = 'absolute'
   tempContainer.style.visibility = 'hidden'
   tempContainer.style.top = '-9999px'
@@ -51,7 +51,7 @@ function measureInfoBoxHeight(): number {
 
   const tempList = document.createElement('ul')
   tempList.className =
-    'grid gap-2 border-t border-white/10 bg-black px-5 py-4 text-left text-sm leading-6 text-white/76'
+    'grid gap-2 border-t border-border-input bg-(--theme-panel) px-5 py-4 text-left text-sm leading-6 text-muted-foreground'
 
   infoItems.forEach(text => {
     const item = document.createElement('li')
@@ -106,15 +106,20 @@ function handleSlideStart(): void {
 }
 </script>
 
-<div class="pointer-events-auto w-full shrink-0 bg-black px-3 pb-0 pt-0 w-100:px-6">
-  <div bind:this={panelElement} class="overflow-hidden bg-black text-white">
+<div
+  class="pointer-events-auto w-full shrink-0 bg-(--theme-panel) px-3 pb-0 pt-0 w-100:px-6"
+>
+  <div
+    bind:this={panelElement}
+    class="overflow-hidden bg-(--theme-panel) text-base-content"
+  >
     <button
       type="button"
-      class="flex w-full items-start justify-between gap-3 bg-black py-3 text-left"
+      class="flex w-full items-start justify-between gap-3 bg-(--theme-panel) py-3 text-left"
       onclick={toggleInfo}
     >
       <div
-        class="flex min-h-10 min-w-10 items-center justify-center rounded-full bg-white/8"
+        class="flex min-h-10 min-w-10 items-center justify-center rounded-full bg-base-content/8"
       >
         {#if titleIcon}
           <Icon src={titleIcon} size="sm" class={titleIconClass} />
@@ -124,38 +129,42 @@ function handleSlideStart(): void {
       <div class="min-w-0 flex-1 text-center">
         {#if eyebrowIcon}
           <div class="flex justify-center">
-            <Icon src={eyebrowIcon} size="sm" class="text-white/55" />
+            <Icon src={eyebrowIcon} size="sm" class="text-muted-foreground" />
           </div>
         {:else}
-          <p class="font-mono text-[11px] uppercase tracking-[0.32em] text-white/55">
+          <p
+            class="font-mono text-[11px] uppercase tracking-[0.32em] text-muted-foreground"
+          >
             {eyebrow}
           </p>
         {/if}
         <h3
-          class="mt-2 text-[1.05rem] font-semibold uppercase tracking-[0.16em] text-white"
+          class="mt-2 text-[1.05rem] font-semibold uppercase tracking-[0.16em] text-base-content"
         >
           {title}
         </h3>
         {#if helperText}
-          <p class="mx-auto mt-2 w-full max-w-80 text-sm leading-6 text-white/68">
+          <p
+            class="mx-auto mt-2 w-full max-w-80 text-sm leading-6 text-muted-foreground"
+          >
             {helperText}
           </p>
         {/if}
       </div>
 
       <div
-        class="flex min-h-10 min-w-10 items-center justify-center rounded-full bg-black/25"
+        class="flex min-h-10 min-w-10 items-center justify-center rounded-full bg-base-200"
       >
         <Icon
           src={isInfoExpanded ? X : Info}
-          class="h-6 w-6 text-white/68 transition-colors duration-300"
+          class="h-6 w-6 text-muted-foreground transition-colors duration-300"
         />
       </div>
     </button>
 
     {#if isInfoExpanded}
       <ul
-        class="grid gap-2 border-t border-white/10 bg-black px-4 py-2 text-left text-sm leading-6 text-white/76"
+        class="grid gap-2 border-t border-border-input bg-(--theme-panel) px-4 py-2 text-left text-sm leading-6 text-muted-foreground"
         transition:slide={{ duration: 400 }}
         onintrostart={handleSlideStart}
       >
@@ -165,6 +174,8 @@ function handleSlideStart(): void {
       </ul>
     {/if}
 
-    <div class="border-t border-white/10 bg-black">{@render children()}</div>
+    <div class="border-t border-border-input bg-(--theme-panel)">
+      {@render children()}
+    </div>
   </div>
 </div>

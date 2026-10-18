@@ -1,16 +1,20 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 import type {
   CapabilityDefinition,
   CapabilityDefinitions,
   CapabilityKey,
-} from '$lib/types'
+} from '#lib/capabilities.types.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
 import { createSelectSchema, createInsertSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { organisation, organisationI18n, organisationRole } from '$lib/db/schema/index'
+import {
+  organisation,
+  organisationI18n,
+  organisationRole,
+} from '#lib/db/schema/index.js'
 // ZOD SCHEMAS
 import {
   FormI18nRoot,

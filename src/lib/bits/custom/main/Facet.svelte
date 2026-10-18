@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte'
-import { cx } from '$lib/bits/utils'
-import { FormFacetNav } from '$lib/bits/patterns/forms/formFacetNav'
+import { cx } from '#lib/bits/utils.js'
+import { FormFacetNav } from '#lib/bits/patterns/forms/formFacetNav/index.js'
 import type { MainFacetProps } from './main.types'
 
 let {
@@ -80,7 +80,7 @@ const bodyStyle = $derived(
 )
 const tailSpacerStyle = $derived(`height: ${Math.max(0, tailSpacer)}px;`)
 const navShellClass = $derived(
-  cx('fixed z-[120] flex min-h-12 items-center px-0 pt-0 pointer-events-auto'),
+  cx('fixed z-[120] flex min-h-12 items-center pt-0 pointer-events-auto'),
 )
 const navContentClass = 'min-h-12 py-0'
 const isViewportConstrainedFacet = $derived(navMode === 'footer')
@@ -209,7 +209,8 @@ function measureLayout(): void {
   const remainingHeight = Math.max(0, availableHeight - contentHeight)
   const facetRect = facet.getBoundingClientRect()
   const bottomInset = Math.max(16, window.innerHeight - facetRect.bottom + 16)
-  const left = Math.max(24, Math.round(facetRect.left))
+  // Anchor to the facet itself; the navigation shell owns its content gutter.
+  const left = Math.max(0, Math.round(facetRect.left))
   const width = Math.max(0, Math.round(facetRect.width))
 
   navShellStyle =
@@ -310,16 +311,17 @@ onMount(() => {
         {@render children?.()}
       </div>
       {#if tailSpacer > 0}
-        <div
-          class="bits-main__section-tail-spacer"
-          aria-hidden="true"
-          style={tailSpacerStyle}
-        ></div>
+        <div class="flex-none" aria-hidden="true" style={tailSpacerStyle}></div>
       {/if}
     </div>
   </section>
   {#if hasFacetNav && isVisible}
-    <div bind:this={navElement} class={navShellClass} style={navShellStyle}>
+    <div
+      bind:this={navElement}
+      data-facet-nav
+      class={navShellClass}
+      style={navShellStyle}
+    >
       <FormFacetNav {previousAction} {nextAction} class={navContentClass} />
     </div>
   {/if}
@@ -336,16 +338,17 @@ onMount(() => {
         {@render children?.()}
       </div>
       {#if tailSpacer > 0}
-        <div
-          class="bits-main__section-tail-spacer"
-          aria-hidden="true"
-          style={tailSpacerStyle}
-        ></div>
+        <div class="flex-none" aria-hidden="true" style={tailSpacerStyle}></div>
       {/if}
     </div>
   </section>
   {#if hasFacetNav && isVisible}
-    <div bind:this={navElement} class={navShellClass} style={navShellStyle}>
+    <div
+      bind:this={navElement}
+      data-facet-nav
+      class={navShellClass}
+      style={navShellStyle}
+    >
       <FormFacetNav {previousAction} {nextAction} class={navContentClass} />
     </div>
   {/if}

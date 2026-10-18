@@ -1,22 +1,34 @@
 <script lang="ts">
 // SVELTE
 import { fade } from 'svelte/transition'
-import { onDestroy, onMount, tick } from 'svelte'
+import { onDestroy } from 'svelte'
 // MapLibre
-import { addAddressMarker } from '$lib/map/markers'
-import { getCoordinates } from '$lib/client/services/geospatial'
-import { getLocale } from '$lib/i18n'
-import { buildCatalogMapStyle, listMapStyleCatalog } from '$lib/map/styles'
+import { addAddressMarker } from '#lib/map/markers.js'
+import { getCoordinates } from '#lib/client/services/geospatial.js'
+import { getLocaleKey } from '#lib/i18n.js'
+import {
+  applyRuntimeBasemapSource,
+  buildCatalogMapStyle,
+  getConfiguredBasemapAccessToken,
+  listMapStyleCatalog,
+} from '#lib/map/styles/index.js'
+import { createMapController, type MapController } from '#lib/map/controller.js'
+import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 // ICONS
-import ArrowsPointingIn from 'virtual:icons/lucide/shrink'
-import ArrowsPointingOut from 'virtual:icons/lucide/expand'
-import { Icon } from '$lib/bits'
-// CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import ArrowsPointingIn from 'virtual:icons/proicons/full-screen-minimize'
+import ArrowsPointingOut from 'virtual:icons/proicons/full-screen-maximize'
+import { Icon } from '#lib/bits/index.js'
 // TYPES
-import type { LngLatLike, Map as MaplibreMap, Marker } from 'maplibre-gl'
-import type { Id, AddressMeta, MapStyleCatalogKey } from '$lib/types'
+import * as maplibregl from 'maplibre-gl'
+import type {
+  LngLatLike,
+  Map as MaplibreMap,
+  Marker,
+  MarkerDragEvent,
+} from 'maplibre-gl'
+import type { Id } from '#lib/types.js'
+import type { AddressMeta } from '#lib/utils/address.types.js'
+import type { MapStyleCatalogKey } from '#lib/map/styles/catalog.js'
 type MapProps = {
   coordinates: number[]
   initialCenter?: [number, number] | null
@@ -26,30 +38,45 @@ type MapProps = {
   toggleFullscreen?: (isFullscreen: boolean) => void
   toggleCollapsed?: (isCollapsed: boolean) => void
   dragEndCallback?: (lngLat: number[]) => void
+  onMapReady?: (controller: MapController | null) => void
+  initialCollapsed?: boolean
+  activeResourceRef?: Id | string | false | null
 }
-
-// CONTEXT
-let appCtx = getAppCtx()
-let adminCtx = getAdminCtx()
-
-let isMapCollapsed = $state(
-  adminCtx.appCtx.getUserPreferences().admin?.isAdminMapCollapsed ?? false,
-)
-
-let isFullscreen = $state(false)
-let isCollapsed = $state(isMapCollapsed)
 
 // STATE : PROPS
 let mapProps: MapProps = $props()
 
+/**
+ * Narrows editor coordinates to the tuple accepted by MapLibre camera APIs.
+ *
+ * @param coordinates - Candidate longitude/latitude values.
+ * @returns A finite coordinate tuple, or `null` for incomplete input.
+ */
+const getCoordinateTuple = (coordinates: number[]): [number, number] | null => {
+  const longitude = coordinates[0]
+  const latitude = coordinates[1]
+  return Number.isFinite(longitude) && Number.isFinite(latitude)
+    ? [longitude, latitude]
+    : null
+}
+
+let isFullscreen = $state(false)
+let isCollapsed = $state(false)
+let hasInitialisedCollapse = false
+
+$effect(() => {
+  if (hasInitialisedCollapse) return
+  hasInitialisedCollapse = true
+  isCollapsed = mapProps.initialCollapsed ?? false
+})
+
 // STATE : MAP
-let mapContainer: HTMLDivElement
-let feature = $state()
+let feature = $state<Marker | null>(null)
+let featureMap: MaplibreMap | undefined
 let isMapLoaded = $state(false)
 let hasSyncedViewport = $state(false)
 let lastCoordinateKey = $state('')
-let activeStyleToken = $state<string | null>(null)
-let activeMapInstance = $state<MaplibreMap | null>(null)
+let activeMapInstance = $state<MaplibreMap | undefined>(undefined)
 let map = $derived(activeMapInstance)
 
 // STATE : DERIVED
@@ -57,7 +84,8 @@ let markedAddressLngLat: [number, number] | null = $state(null)
 let addressLngLat: [number, number] | null = $derived(
   getCoordinates(mapProps.addressMeta as LngLatLike),
 )
-const activeLocale = $derived(getLocale())
+const coordinateTuple = $derived(getCoordinateTuple(mapProps.coordinates))
+const activeLocale = $derived(getLocaleKey())
 const resolvedMapStyleCode = $derived(mapProps.mapStyleCode?.trim() || 'hyperAdmin')
 const resolvedMapStyleKey = $derived.by(() => {
   const catalogEntry = listMapStyleCatalog().find(
@@ -67,86 +95,65 @@ const resolvedMapStyleKey = $derived.by(() => {
   return (catalogEntry?.key ?? 'hyperAdmin') as MapStyleCatalogKey
 })
 const resolvedMapStyle = $derived(
-  buildCatalogMapStyle(resolvedMapStyleKey, { locale: activeLocale }),
+  applyRuntimeBasemapSource(
+    buildCatalogMapStyle(resolvedMapStyleKey, { locale: activeLocale }),
+    getConfiguredBasemapAccessToken(),
+  ),
 )
-const activeStyleKey = $derived(`${resolvedMapStyleKey}:${activeLocale}`)
 
 // STATE : UI
-let addressMarker: Marker | null = $state(null)
+let addressMarker: ReturnType<typeof addAddressMarker> | null = $state(null)
+let addressMarkerMap: MaplibreMap | undefined
 let featureMarkerId: Id | null = $state(null)
 
-onMount(() => {
-  let isDisposed = false
+const handleMapLoad = (): void => {
+  isMapLoaded = true
+}
 
-  const initialiseMap = async (): Promise<void> => {
-    while (!isDisposed && (!appCtx.isMaplibreLoaded || !appCtx.maplibre)) {
-      await new Promise(resolve => setTimeout(resolve, 10))
-    }
+$effect(() => {
+  const mapInstance = map
+  isMapLoaded = mapInstance?.loaded() ?? false
+})
 
-    if (isDisposed) {
-      return
-    }
-
-    await tick()
-
-    if (isDisposed || !(mapContainer instanceof HTMLDivElement)) {
-      return
-    }
-
-    const mapInstance = new appCtx.maplibre.Map({
-      container: mapContainer,
-      style: resolvedMapStyle,
-      center: mapProps.initialCenter ?? mapProps.coordinates,
-      zoom: 20,
-      hash: false,
-      attributionControl: false,
-      canvasContextAttributes: {
-        antialias: true,
-      },
-    })
-
-    if (isDisposed) {
-      mapInstance.remove()
-      return
-    }
-
-    activeMapInstance = mapInstance
-    appCtx.map = mapInstance
-
-    mapInstance.on('load', () => {
-      if (activeMapInstance === mapInstance) {
-        isMapLoaded = true
-      }
-    })
-
-    mapInstance.on('remove', () => {
-      if (activeMapInstance === mapInstance) {
-        activeMapInstance = null
-      }
-      if (appCtx.map === mapInstance) {
-        appCtx.map = undefined
-      }
-    })
-
-    feature = new appCtx.maplibre.Marker({
-      color: '#F04D7F',
-      clickTolerance: 24,
-      draggable: mapProps.draggable ?? true,
-    })
-      .setLngLat(mapProps.coordinates)
-      .addTo(mapInstance)
-
-    // @ts-expect-error
-    feature.on('dragend', handleDragEnd)
-
-    activeStyleToken = activeStyleKey
-  }
-
-  void initialiseMap()
-
+$effect(() => {
+  const mapInstance = map
+  const controller = mapInstance
+    ? createMapController(() => activeMapInstance ?? null)
+    : null
+  mapProps.onMapReady?.(controller)
   return () => {
-    isDisposed = true
+    mapProps.onMapReady?.(null)
   }
+})
+
+$effect(() => {
+  if (!map) {
+    feature?.remove()
+    feature = null
+    featureMap = undefined
+    return
+  }
+  if (!coordinateTuple) {
+    feature?.remove()
+    feature = null
+    featureMap = undefined
+    return
+  }
+  if (feature && featureMap !== map) {
+    feature.remove()
+    feature = null
+    featureMap = undefined
+  }
+  if (feature) return
+  feature = new maplibregl.Marker({
+    color: '#F04D7F',
+    clickTolerance: 24,
+    draggable: mapProps.draggable ?? true,
+  })
+    .setLngLat(coordinateTuple)
+    .addTo(map)
+  featureMap = map
+  feature.on('dragend', handleDragEnd)
 })
 
 onDestroy(() => {
@@ -154,67 +161,53 @@ onDestroy(() => {
     addressMarker.remove()
     addressMarker = null
   }
+  addressMarkerMap = undefined
 
   if (feature) {
     feature.remove()
     feature = null
   }
+  featureMap = undefined
 
-  const mapInstance = activeMapInstance
-  activeMapInstance = null
-  if (mapInstance) {
-    if (appCtx.map === mapInstance) {
-      appCtx.map = undefined
-    }
-    mapInstance.remove()
-  }
+  activeMapInstance = undefined
 })
 
 // EFFECTS :: ON UPDATE
 $effect(() => {
-  if (map && mapProps.coordinates && feature) {
+  if (map && coordinateTuple && feature) {
     feature.setDraggable(mapProps.draggable ?? true)
-    const coordinateKey = mapProps.coordinates.join(',')
-    appCtx.zoomToMarkerOnly = true
+    const coordinateKey = coordinateTuple.join(',')
     if (!hasSyncedViewport) {
       hasSyncedViewport = true
       lastCoordinateKey = coordinateKey
       // Keep the initial viewport on the user's location when provided.
       if (mapProps.initialCenter) {
-        // @ts-expect-error
-        feature.setLngLat(mapProps.coordinates)
+        feature.setLngLat(coordinateTuple)
         return
       }
     }
     if (lastCoordinateKey === coordinateKey) {
-      // @ts-expect-error
-      feature.setLngLat(mapProps.coordinates)
+      feature.setLngLat(coordinateTuple)
       return
     }
     lastCoordinateKey = coordinateKey
-    if (mapProps.coordinates && addressLngLat && !appCtx.zoomToMarkerOnly) {
-      // @ts-expect-error
-      appCtx.zoomToCoordinates([mapProps.coordinates, addressLngLat])
-    } else {
-      map.cachedFlyTo({
-        center: mapProps.coordinates as [number, number],
-        zoom: 20,
-        run: true,
-      })
-    }
-    // @ts-expect-error
-    feature.setLngLat(mapProps.coordinates)
+    map.flyTo({
+      center: coordinateTuple,
+      zoom: 20,
+    })
+    feature.setLngLat(coordinateTuple)
   }
 })
 
 // EVENTS
-const handleDragEnd = (e: Event) => {
-  // @ts-expect-error
+const handleDragEnd = (e: MarkerDragEvent): void => {
   mapProps.dragEndCallback?.(e.target?.getLngLat().toArray())
-  appCtx.zoomToMarkerOnly = true
 }
 
-let isSameCoordinates = (lngLat1: LngLatLike | null, lngLat2: LngLatLike | null) => {
+const isSameCoordinates = (
+  lngLat1: LngLatLike | null,
+  lngLat2: LngLatLike | null,
+): boolean => {
   if (!lngLat1 || !lngLat2) return false
   if (Array.isArray(lngLat1) && Array.isArray(lngLat2)) {
     return lngLat1[0] === lngLat2[0] && lngLat1[1] === lngLat2[1]
@@ -229,30 +222,32 @@ let isSameCoordinates = (lngLat1: LngLatLike | null, lngLat2: LngLatLike | null)
 
 // Handle address marker updates
 $effect(() => {
+  if (addressMarker && addressMarkerMap !== map) {
+    addressMarker.remove()
+    addressMarker = null
+    addressMarkerMap = undefined
+    markedAddressLngLat = null
+  }
+
   if (map && addressLngLat && !isSameCoordinates(addressLngLat, markedAddressLngLat)) {
     // Remove existing marker if it exists
     if (addressMarker) {
       addressMarker.remove()
     }
     // Add new marker
-    addressMarker = addAddressMarker(appCtx.maplibre, map, addressLngLat)
+    addressMarker = addAddressMarker(maplibregl, map, addressLngLat)
+    addressMarkerMap = map
     markedAddressLngLat = addressLngLat
   }
-  if (adminCtx.activeResourceRef && adminCtx.activeResourceRef !== featureMarkerId) {
-    featureMarkerId = adminCtx.activeResourceRef
+  if (mapProps.activeResourceRef && mapProps.activeResourceRef !== featureMarkerId) {
+    featureMarkerId = mapProps.activeResourceRef
     if (addressMarker) {
       addressMarker.remove()
+      addressMarker = null
+      addressMarkerMap = undefined
+      markedAddressLngLat = null
     }
   }
-})
-
-$effect(() => {
-  if (!map || activeStyleToken === activeStyleKey) {
-    return
-  }
-
-  activeStyleToken = activeStyleKey
-  map.setStyle(resolvedMapStyle)
 })
 </script>
 
@@ -271,11 +266,11 @@ $effect(() => {
           ? 'hidden'
           : ''} "
         transition:fade={{ duration: 300 }}
-        onclick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          isCollapsed = !isCollapsed;
-          mapProps.toggleCollapsed?.(isCollapsed);
+        onclick={e => {
+          e.preventDefault()
+          e.stopPropagation()
+          isCollapsed = !isCollapsed
+          mapProps.toggleCollapsed?.(isCollapsed)
         }}
       >
         <div class="swap">
@@ -284,8 +279,8 @@ $effect(() => {
             type="checkbox"
             checked={isCollapsed}
             onchange={() => {
-              isCollapsed = !isCollapsed;
-              mapProps.toggleCollapsed?.(isCollapsed);
+              isCollapsed = !isCollapsed
+              mapProps.toggleCollapsed?.(isCollapsed)
             }}
           >
           <Icon src={ArrowsPointingOut} class="swap-on h-5 w-5" />
@@ -300,11 +295,11 @@ $effect(() => {
           ? 'hidden'
           : ''}"
         transition:fade={{ duration: 300 }}
-        onclick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          isFullscreen = !isFullscreen;
-          mapProps.toggleFullscreen?.(isFullscreen);
+        onclick={e => {
+          e.preventDefault()
+          e.stopPropagation()
+          isFullscreen = !isFullscreen
+          mapProps.toggleFullscreen?.(isFullscreen)
         }}
       >
         <div class="swap">
@@ -313,8 +308,8 @@ $effect(() => {
             type="checkbox"
             checked={isFullscreen}
             onchange={() => {
-              isFullscreen = !isFullscreen;
-              mapProps.toggleFullscreen?.(isFullscreen);
+              isFullscreen = !isFullscreen
+              mapProps.toggleFullscreen?.(isFullscreen)
             }}
           >
           <Icon src={ArrowsPointingIn} class="swap-on h-5 w-5" />
@@ -338,8 +333,19 @@ $effect(() => {
     class:opacity-0={!isMapLoaded}
     class:opacity-100={isMapLoaded}
     data-testid="map"
-    bind:this={mapContainer}
-  ></div>
+  >
+    <MapSurface
+      bind:map={activeMapInstance}
+      class="h-full w-full"
+      style={resolvedMapStyle}
+      center={mapProps.initialCenter ?? coordinateTuple ?? [0, 0]}
+      zoom={20}
+      attributionControl={false}
+      hash={false}
+      canvasContextAttributes={{ antialias: true }}
+      onload={handleMapLoad}
+    />
+  </div>
 </div>
 
 <style>
@@ -366,14 +372,5 @@ $effect(() => {
   flex-basis: 0%;
   opacity: 0;
   overflow: hidden;
-}
-
-.marker-address {
-  width: 124px;
-  height: 124px;
-  border-radius: 50%;
-  border: 2px solid #5769d3;
-  background-color: rgba(20, 9, 77, 0.2);
-  cursor: pointer;
 }
 </style>

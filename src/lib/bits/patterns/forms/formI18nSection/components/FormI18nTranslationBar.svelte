@@ -1,12 +1,12 @@
 <script lang="ts">
 import { fade } from 'svelte/transition'
-import { localeCodes, supportedLocales } from '$lib/enums'
-import type { Locale } from '$lib/types'
-import AlertCircle from 'virtual:icons/lucide/alert-circle'
-import Eraser from 'virtual:icons/lucide/eraser'
-import Languages from 'virtual:icons/lucide/languages'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
-import { toLocaleKey } from '$lib/i18n'
+import { localeCodes, supportedLocales } from '#lib/enums.js'
+import type { Locale } from '#lib/types.js'
+import AlertCircle from 'virtual:icons/proicons/alert-circle'
+import Eraser from 'virtual:icons/proicons/eraser'
+import Languages from 'virtual:icons/tabler/language'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
+import { toLocaleKey } from '#lib/i18n.js'
 import type { FormSectionProps } from '../formI18nSection.types'
 
 type Props = Pick<
@@ -21,7 +21,7 @@ type Props = Pick<
 
 let {
   targetLocale,
-  localeCodeClass = 'bits-form__i18n-locale-code',
+  localeCodeClass = 'absolute right-5.5 top-4 text-2xl font-bold uppercase text-muted-foreground',
   onTranslate,
   onResetLocale,
   sectionKey,
@@ -87,7 +87,7 @@ $effect(() => {
 </script>
 
 <div class="bits-form__i18n-translation" style={positionStyle}>
-  <div class={localeCodeClass}>
+  <div data-locale-code class={localeCodeClass}>
     {#key status}
       {#if status === 'loading'}
         <span in:fade={{ duration: 250 }} out:fade={{ duration: 250 }}>
@@ -111,11 +111,17 @@ $effect(() => {
     <div
       class={`bits-form__i18n-translation-bar ${isVisible ? 'bits-form__i18n-translation-bar--visible' : ''}`}
     >
-      <div class="bits-form__i18n-translation-icon"><Languages /></div>
+      <div
+        class="inline-flex h-8 w-8 items-center justify-center text-sm text-muted-foreground"
+      >
+        <Languages />
+      </div>
       {#each sourceLocales as sourceLocale (sourceLocale)}
         <button
           type="button"
-          class="bits-form__i18n-translation-source"
+          class="bits-form__i18n-translation-source focus-override focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          aria-label={`Translate from ${sourceLocale} to ${targetLocale}`}
+          title={`Translate from ${sourceLocale} to ${targetLocale}`}
           disabled={!onTranslate}
           tabindex={isVisible ? 0 : -1}
           onclick={event => handleTranslate(event, sourceLocale)}
@@ -125,7 +131,7 @@ $effect(() => {
       {/each}
       <button
         type="button"
-        class="bits-form__i18n-translation-source"
+        class="bits-form__i18n-translation-source focus-override focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
         disabled={!onResetLocale}
         tabindex={isVisible ? 0 : -1}
         onclick={handleResetLocale}

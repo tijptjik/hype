@@ -1,10 +1,10 @@
 // LIB
-import { toBooleanOrUndefined } from '$lib/api/services'
+import { toBooleanOrUndefined } from '#lib/api/services/index.js'
 // SCHEMA
-import { hub, hubProperty } from '$lib/db/schema/index'
+import { hub, hubProperty } from '#lib/db/schema/index.js'
 // DB
-import { transformI18nSafely } from '$lib/db'
-import { toImageEnvelope } from '$lib/db/services/image'
+import { transformI18nSafely } from '#lib/db/index.js'
+import { toImageEnvelope } from '#lib/db/services/image.js'
 // ZOD
 import {
   HubAdminProfileAPI,
@@ -12,12 +12,12 @@ import {
   HubDetailProfileAPI,
   HubListProfileAPI,
   HubProfile,
-} from '$lib/db/zod'
+} from '#lib/db/zod/index.js'
 // ENUMS
-import { ImageContextResource } from '$lib/enums'
+import { ImageContextResource } from '#lib/enums.js'
 // TYPES
 import { asc, sql, type SQL } from 'drizzle-orm'
-import type { EntityResponse, Id, ListResponse } from '$lib/types'
+import type { EntityResponse, Id, ListResponse } from '#lib/types.js'
 import type {
   Hub,
   HubDB,
@@ -26,7 +26,7 @@ import type {
   HubListByProfile,
   HubOptsExtended,
   HubProfile as HubProfileType,
-} from '$lib/db/zod/schema/hub.types'
+} from '#lib/db/zod/schema/hub.types.js'
 
 type UnknownRecord = Record<string, unknown>
 type ToImageArg = Parameters<typeof toImageEnvelope>[0]
@@ -376,6 +376,7 @@ export function getHubFromDomain(
 
   if (
     domain === 'localhost' ||
+    domain === 'hype.localhost' ||
     domain === '127.0.0.1' ||
     domain === '192.168.1.100' ||
     domain === '192.168.1.100.traefik.me' ||

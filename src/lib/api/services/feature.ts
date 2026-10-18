@@ -1,14 +1,15 @@
 // DRIZZLE
 import { eq, inArray, sql, type SQL } from 'drizzle-orm'
 // API
-import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
-import { toBooleanOrUndefined } from '$lib/api/services'
-import { isRelevantHubAdmin } from '$lib/api/services/authz'
+import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
+import { toBooleanOrUndefined } from '#lib/api/services/index.js'
+import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
 // DB
-import { applyPrismConstraints, transformI18nSafely } from '$lib/db'
-import { applyTriStateBooleanCondition } from '$lib/db/query'
-import { toImageEnvelope, toNormalizedImageRecord } from '$lib/db/services/image'
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
+import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
+import { applyTriStateBooleanCondition } from '#lib/db/query.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
+import { toImageEnvelope, toNormalizedImageRecord } from '#lib/db/services/image.js'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 import {
   createFeature,
   createI18n,
@@ -18,24 +19,24 @@ import {
   updateFeatureByIdWithConcurrency,
   updateI18n,
   updateProperties,
-} from '$lib/db/services/feature'
-import { probeLayerForUpdate } from '$lib/db/services/layer'
+} from '#lib/db/services/feature.js'
+import { probeLayerForUpdate } from '#lib/db/services/layer.js'
 // I18N
-import { supportedLocaleKeys, toFormLocaleRecord, toLocaleKey } from '$lib/i18n'
+import { supportedLocaleKeys, toFormLocaleRecord, toLocaleKey } from '#lib/i18n.js'
 // SCHEMA
-import { feature, layer } from '$lib/db/schema/index'
+import { feature, layer } from '#lib/db/schema/index.js'
 import {
+  FeatureCompactProfileAPI,
   FeatureAdminProfileAPI,
   FeatureCardProfileAPI,
   FeatureDraftEntityFormData,
   FeatureDetailProfileAPI,
   FeatureEntityFormData,
   FeatureListProfileAPI,
-} from '$lib/db/zod/schema/feature'
+} from '#lib/db/zod/schema/feature.js'
 // ENUMS
-import { HierarchicalResource, ImageContextResource } from '$lib/enums'
+import { HierarchicalResource, ImageContextResource } from '#lib/enums.js'
 // CLIENT
-import { buildNeighbourhoodSubdivisionMap } from '$lib/client/services/geospatial'
 // TYPES
 import type {
   Database,
@@ -47,9 +48,9 @@ import type {
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
-import type { ImageDB } from '$lib/db/zod/schema/image.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
+} from '#lib/types.js'
+import type { ImageDB } from '#lib/db/zod/schema/image.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type {
   Feature,
   FeatureAdminDBRaw,
@@ -60,7 +61,7 @@ import type {
   FeatureProfile,
   FeatureQueryRowByProfile,
   UserContributedFeature,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 
 const requiredLocaleKeys = supportedLocaleKeys
 
@@ -160,7 +161,6 @@ function parseFeatureProfileWithFallback<T>(
 // - toRequestedListState
 // - toFeaturePrisms
 // - toQueryConditions
-// - withExpandedNeighbourhoods
 //
 // FEATURE CREATION WITH ENRICHMENT
 // - createUserContributedFeature
@@ -170,6 +170,7 @@ function parseFeatureProfileWithFallback<T>(
  ************/
 
 const featureListRelations = {
+  divisionMemberships: { columns: { divisionId: true, selected: true } },
   i18n: true,
   properties: {
     with: {
@@ -241,10 +242,11 @@ type FeatureRelationsByProfile<P extends FeatureProfile> = P extends 'admin'
 export const getFeatureWithRelations = <P extends FeatureProfile>(
   profile: P,
 ): FeatureRelationsByProfile<P> => {
+  if (profile === 'compact') return { i18n: true } as FeatureRelationsByProfile<P>
   if (profile === 'admin') {
     return featureAdminRelations as FeatureRelationsByProfile<P>
   }
-  if (profile === 'card' || profile === 'detail') {
+  if (profile === 'card' || profile === 'detail' || profile === 'full') {
     return featureDetailRelations as FeatureRelationsByProfile<P>
   }
   return featureListRelations as FeatureRelationsByProfile<P>
@@ -254,7 +256,16 @@ export const getFeatureWithRelations = <P extends FeatureProfile>(
  *  PROFILE SHAPING
  ************/
 
-const featureProfiles = ['list', 'card', 'detail', 'admin'] as const
+const featureProfiles = [
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+] as const
 
 type FeatureImageRelation = {
   featureId?: string
@@ -394,30 +405,44 @@ const toProfileResponseShape = async (
   row: FeatureResponseRow,
   profile: FeatureProfile,
 ): Promise<FeatureEntityByProfile<FeatureProfile>> => {
+  if (profile === 'compact')
+    return FeatureCompactProfileAPI.parse({
+      ...row,
+      i18n: transformI18nSafely(row.i18n ?? []),
+    })
   const imageProfile =
-    profile === 'admin' ? 'admin' : profile === 'list' ? 'list' : 'detail'
+    profile === 'admin'
+      ? 'admin'
+      : ['list', 'default', 'map'].includes(profile)
+        ? 'list'
+        : 'detail'
   const filterUnpublished = profile !== 'admin'
   const imageState = toFeatureImageEnvelope(
     row.images as FeatureImageRelation[],
     row.id,
     imageProfile,
     {
-      includeAll: profile !== 'list' && profile !== 'card',
+      includeAll: ['full', 'detail', 'admin'].includes(profile),
       filterUnpublished,
     },
   )
 
   const base = {
     ...row,
+    geometry:
+      profile === 'default' && row.geometry?.type !== 'Point' ? null : row.geometry,
     i18n: transformI18nSafely(row.i18n as never),
     properties: toPropertyShape(row.properties),
     image:
-      profile === 'list' || profile === 'card'
+      profile === 'list' ||
+      profile === 'card' ||
+      profile === 'default' ||
+      profile === 'map'
         ? imageState
         : (imageState as { image: unknown }).image,
   }
 
-  if (profile === 'list') {
+  if (profile === 'list' || profile === 'default' || profile === 'map') {
     const listData = {
       ...base,
       image: imageState,
@@ -460,7 +485,7 @@ const toProfileResponseShape = async (
     ) as FeatureEntityByProfile<FeatureProfile>
   }
 
-  if (profile === 'detail') {
+  if (profile === 'detail' || profile === 'full') {
     const normalizedProperties = normalizeFeaturePropertiesForLayer(
       row.id,
       row.properties,
@@ -724,7 +749,7 @@ export const toQueryConditions = (
       const allowedLayerIds = db
         .select({ id: layer.id })
         .from(layer)
-        .where(inArray(layer.projectId, allowedProjectIds))
+        .where(chunkedInArray(layer.projectId, allowedProjectIds))
       conditions.push(inArray(feature.layerId, allowedLayerIds))
     }
   }
@@ -746,34 +771,6 @@ export const toQueryConditions = (
     conditions,
     filtersToApply,
   }
-}
-
-// TODO Remove this once neighbourhoods become first-class entities.
-/**
- * Expands neighbourhood filter values to include known subdivisions.
- */
-export function withExpandedNeighbourhoods(queryParams: QueryParams): QueryParams {
-  const params = { ...queryParams }
-  const neighbourhoodKey = 'addressProperties.neighbourhood'
-
-  if (!(neighbourhoodKey in params)) return params
-
-  const neighbourhoods = Array.isArray(params[neighbourhoodKey])
-    ? (params[neighbourhoodKey] as string[])
-    : [params[neighbourhoodKey] as string]
-
-  const expanded = new Set<string>()
-  const subdivisionMap = buildNeighbourhoodSubdivisionMap()
-
-  neighbourhoods.forEach(neighbourhood => {
-    expanded.add(neighbourhood)
-    subdivisionMap.get(neighbourhood)?.forEach(value => {
-      expanded.add(value)
-    })
-  })
-
-  params[neighbourhoodKey] = Array.from(expanded)
-  return params
 }
 
 /********************
@@ -862,7 +859,7 @@ const prepareUserContributedFeatureDraft = async (
 
       let translatedValues: string[] = []
       if (fieldsToTranslate.length > 0 && subscriptionKey) {
-        const { translateText } = await import('$lib/api/external/translation')
+        const { translateText } = await import('#lib/api/external/translation.js')
         try {
           translatedValues = await translateText(
             fieldsToTranslate,
@@ -942,7 +939,7 @@ const prepareUserContributedFeatureDraft = async (
         let translatedValue: string | null = null
         if (subscriptionKey) {
           try {
-            const { translateText } = await import('$lib/api/external/translation')
+            const { translateText } = await import('#lib/api/external/translation.js')
             translatedValue =
               (
                 await translateText(
@@ -985,19 +982,25 @@ const prepareUserContributedFeatureDraft = async (
 
   return {
     validatedFeature,
-    layerScope: layerScope!,
+    layerScope,
   }
 }
 
 /**
  * Creates a user-contributed feature with translated fallback locales.
+ * @param db Database handle.
+ * @param newFeature Contribution payload and optional draft stage.
+ * @param region Translation service region.
+ * @param subscriptionKey Translation service credential.
+ * @returns The persisted feature row.
+ * @remarks Final submissions leave draft state but remain unpublished pending review.
  */
 export const createUserContributedFeature = async (
   db: Database,
   newFeature: UserContributedFeature,
   region: string,
   subscriptionKey: string,
-) => {
+): Promise<FeatureDB> => {
   const stage: UserContributedFeatureDraftStage =
     newFeature.isDraft === true ? 'draft' : 'final'
   const { validatedFeature, layerScope } = await prepareUserContributedFeatureDraft(
@@ -1015,7 +1018,8 @@ export const createUserContributedFeature = async (
     addressMeta: validatedFeature.addressMeta ?? {},
     isPublished: false,
     isArchived: false,
-    isDraft: true,
+    // Explicit drafts stay editable; immediate submissions are ready for review.
+    isDraft: stage === 'draft',
   })
 
   await createI18n(db, validatedFeature.i18n, created.id)

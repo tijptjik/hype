@@ -1,15 +1,15 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import MapPin from 'virtual:icons/lucide/map-pin'
 import GlobeAsiaAustralia from 'virtual:icons/lucide/globe-2'
 
 // TRANSITIONS
 import { fade } from 'svelte/transition'
 // TYPES
-import type { FeatureForm } from '$lib/types'
+import type { FeatureForm } from '#lib/client/services/form.types.js'
 import type { Point } from 'geojson'
 
 // CONFIG

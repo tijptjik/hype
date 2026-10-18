@@ -1,4 +1,4 @@
-import { dismissActiveFeatureNavigation } from '$lib/navigation'
+import { dismissActiveFeatureNavigation } from '#lib/navigation/index.js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 describe('dismissActiveFeatureNavigation', () => {

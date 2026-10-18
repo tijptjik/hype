@@ -1,6 +1,6 @@
 <script lang="ts">
-import { intentDisplay } from '$lib/client/services/image'
-import type { ImageCtxEnvelope, Intent } from '$lib/db/zod/schema/image.types'
+import { intentDisplay } from '#lib/client/services/image.js'
+import type { ImageCtxEnvelope, Intent } from '#lib/db/zod/schema/image.types.js'
 
 let { currentImage }: { currentImage: ImageCtxEnvelope } = $props()
 

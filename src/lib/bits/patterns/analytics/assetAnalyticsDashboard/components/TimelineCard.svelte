@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import * as AnalyticsCardPrimitive from '$lib/bits/custom/analyticsCard/components'
-import { cx } from '$lib/bits/utils'
+import * as AnalyticsCardPrimitive from '#lib/bits/custom/analyticsCard/components/index.js'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // LOCAL
 import {
   ASSET_ANALYTICS_SERIES,
@@ -12,7 +12,10 @@ import {
   getAssetAnalyticsSeriesLabel,
 } from '../assetAnalyticsDashboard.utils'
 // TYPES
-import type { AssetAnalyticsSeriesKey, AssetAnalyticsTimeseriesPoint } from '$lib/types'
+import type {
+  AssetAnalyticsSeriesKey,
+  AssetAnalyticsTimeseriesPoint,
+} from '#lib/api/services/assetAnalytics.types.js'
 import type { AssetAnalyticsTimelineCardProps } from '../assetAnalyticsDashboard.types'
 
 type TimelineSegment = {
@@ -201,7 +204,7 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
         {/each}
       </div>
 
-      <div class="rounded-[1.4rem] border border-white/10 bg-[#151515] p-4 pt-8">
+      <div class="rounded-[1.4rem] border border-foreground/10 bg-surface p-4 pt-8">
         <div
           class="relative h-64 overflow-x-auto rounded-[1rem] "
           bind:this={timelineChartContainer}
@@ -227,19 +230,25 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
             {/each}
 
             {#each timeseriesPoints as point, index}
-              {@const x = timelinePlotOffsetX + index * timelineStepWidth + (timelineStepWidth - timelineBarWidth) / 2}
+              {@const x =
+                timelinePlotOffsetX +
+                index * timelineStepWidth +
+                (timelineStepWidth - timelineBarWidth) / 2}
               {@const timelineSegments = getTimelineSegments(point)}
               <g>
                 {#each [...timelineSegments].reverse() as segment}
                   {#if segment.height > 0}
+                    <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hovering a chart segment supplies its tooltip. -->
                     <rect
                       {x}
                       y={segment.y}
                       width={timelineBarWidth}
                       height={segment.height}
                       fill={segment.fill}
-                      onmouseenter={event => showTimelineTooltip(event, point, segment.key)}
-                      onmousemove={event => showTimelineTooltip(event, point, segment.key)}
+                      onmouseenter={event =>
+                        showTimelineTooltip(event, point, segment.key)}
+                      onmousemove={event =>
+                        showTimelineTooltip(event, point, segment.key)}
                       onmouseleave={hideTimelineTooltip}
                     />
                   {/if}
@@ -252,7 +261,10 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
                   font-weight="600"
                   letter-spacing="0.16em"
                   fill="var(--color-base-content)"
-                  fill-opacity={shouldRenderTimelineAxisLabel(index, timeseriesPoints.length)
+                  fill-opacity={shouldRenderTimelineAxisLabel(
+                    index,
+                    timeseriesPoints.length,
+                  )
                     ? '0.68'
                     : '0'}
                 >
@@ -266,7 +278,7 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
 
           {#if timelineTooltip}
             <div
-              class="pointer-events-none absolute z-10 min-w-36 -translate-x-1/2 -translate-y-full rounded-[1rem] border border-base-300 bg-black px-3 py-2 shadow-xl"
+              class="pointer-events-none absolute z-10 min-w-36 -translate-x-1/2 -translate-y-full rounded-[1rem] border border-base-300 bg-panel px-3 py-2 shadow-xl"
               style={`left: ${timelineTooltip.left}px; top: ${timelineTooltip.top}px;`}
             >
               <p

@@ -2,15 +2,15 @@
 // SVELTE
 import { onMount } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core/button'
+import { Button } from '#lib/bits/core/button/index.js'
 // LIB
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
-import FolderOpenIcon from 'virtual:icons/lucide/folder-open'
-import ImageIcon from 'virtual:icons/lucide/image'
+import CameraIcon from 'virtual:icons/proicons/camera'
+import FolderOpenIcon from 'virtual:icons/proicons/folder-open'
+import ImageIcon from 'virtual:icons/proicons/photo'
 // LOCAL
 import { detectCameraAccess, requestCameraAccess } from './cameraAccess'
 
@@ -103,15 +103,17 @@ onMount(() => {
 >
 
 <div
-  class="flex h-full w-full flex-col items-center justify-center gap-5 rounded-[1.75rem] border border-dashed border-white/15 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),rgba(0,0,0,0.04)_48%),linear-gradient(180deg,rgba(16,17,20,0.84),rgba(8,9,11,0.94))] px-6 py-8 text-center text-white"
+  class="flex h-full w-full flex-col items-center justify-center gap-5 rounded-[1.75rem] border border-dashed border-border bg-surface px-6 py-8 text-center text-base-content"
 >
   <div class="space-y-2">
-    <div class="flex justify-center"><ImageIcon class="h-6 w-6 text-white/55" /></div>
-    <h3 class="text-2xl font-semibold tracking-[-0.03em] text-white pb-2">
+    <div class="flex justify-center">
+      <ImageIcon class="h-6 w-6 text-muted-foreground" />
+    </div>
+    <h3 class="text-2xl font-semibold tracking-[-0.03em] text-base-content pb-2">
       {m.honest_fluffy_falcon_enjoy()}
     </h3>
     {#if cameraHelperText ?? emptyDescription}
-      <p class="max-w-[24rem] text-sm leading-6 text-white/68">
+      <p class="max-w-[24rem] text-sm leading-6 text-muted-foreground">
         {cameraHelperText ?? emptyDescription}
       </p>
     {/if}
@@ -125,7 +127,7 @@ onMount(() => {
       size="md"
       iconComponent={FolderOpenIcon}
       iconClasses="h-4.5 w-4.5"
-      class="rounded-full bg-white/10 text-white shadow-none hover:bg-white/16 hover:text-white"
+      class="rounded-full bg-base-content/10 text-base-content shadow-none hover:bg-base-content/10 hover:text-base-content"
       onClick={() => galleryInput?.click()}
     />
 
@@ -139,7 +141,7 @@ onMount(() => {
         size="md"
         iconComponent={CameraIcon}
         iconClasses="h-4.5 w-4.5"
-        class="rounded-full bg-black/60 text-white shadow-none hover:bg-black/75 hover:text-white"
+        class="rounded-full bg-base-100 text-base-content shadow-none hover:bg-surface hover:text-base-content"
         onClick={() => {
           void openCameraCapture()
         }}

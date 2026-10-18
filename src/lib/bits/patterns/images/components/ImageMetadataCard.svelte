@@ -2,24 +2,24 @@
 // SVELTE
 import type { Component } from 'svelte'
 // LIB
-import { Icon } from '$lib/bits'
-import { getMetadata } from '$lib/api/server/image.remote'
-import { getAppCtx } from '$lib/context/app.svelte'
-import { m } from '$lib/i18n'
-import { formatDate } from '$lib'
+import { Icon } from '#lib/bits/index.js'
+import { getMetadata } from '#lib/api/image.remote.js'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import { m } from '#lib/i18n.js'
+import { formatDate } from '#lib'
 // ICONS
-import AtSymbol from 'virtual:icons/lucide/at-sign'
-import Calendar from 'virtual:icons/lucide/calendar'
-import Camera from 'virtual:icons/lucide/camera'
-import MapPinned from 'virtual:icons/lucide/map-pinned'
-import Square2Stack from 'virtual:icons/lucide/copy'
-import Document from 'virtual:icons/lucide/file-text'
+import AtSymbol from 'virtual:icons/proicons/mention'
+import Calendar from 'virtual:icons/proicons/calendar'
+import Camera from 'virtual:icons/proicons/camera'
+import MapPinned from 'virtual:icons/proicons/location'
+import Square2Stack from 'virtual:icons/proicons/copy'
+import Document from 'virtual:icons/proicons/file-text'
 // TYPES
 import type {
   Image,
   ImageMetadataBasic,
   ImageMetadataFull,
-} from '$lib/db/zod/schema/image.types'
+} from '#lib/db/zod/schema/image.types.js'
 
 type MetadataRow = {
   icon: Component
@@ -39,7 +39,7 @@ let {
   enabled?: boolean
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let metadata = $state<ImageMetadataFull | null>(null)
 let isLoading = $state(false)
@@ -90,13 +90,20 @@ function formatCoordinatePair(
 }
 
 function hasFiniteCoordinates(
-  latitude: number | null | undefined,
-  longitude: number | null | undefined,
-): latitude is number {
-  return Number.isFinite(latitude) && Number.isFinite(longitude)
+  latitude: string | number | null | undefined,
+  longitude: string | number | null | undefined,
+): boolean {
+  return (
+    latitude != null &&
+    longitude != null &&
+    latitude !== '' &&
+    longitude !== '' &&
+    Number.isFinite(Number(latitude)) &&
+    Number.isFinite(Number(longitude))
+  )
 }
 
-const resolvedMetadata = $derived(metadataProp ?? metadata)
+const resolvedMetadata = $derived<ImageMetadataFull | null>(metadataProp ?? metadata)
 const resolvedLoading = $derived(loadingProp ?? isLoading)
 const originalMetadataSnapshot = $derived(
   resolvedMetadata && 'metadata' in resolvedMetadata
@@ -139,7 +146,7 @@ const replacementEditedWith = $derived(
 const metadataRows = $derived.by<MetadataRow[]>(() => {
   if (!resolvedMetadata) return []
 
-  return [
+  const rows: Array<MetadataRow | null> = [
     resolvedMetadata.cameraModel
       ? {
           icon: Camera,
@@ -166,8 +173,8 @@ const metadataRows = $derived.by<MetadataRow[]>(() => {
           icon: MapPinned,
           label: 'Coordinates',
           value: formatCoordinatePair(
-            resolvedMetadata.latitude,
-            resolvedMetadata.longitude,
+            Number(resolvedMetadata.latitude),
+            Number(resolvedMetadata.longitude),
           ),
         }
       : null,
@@ -213,7 +220,8 @@ const metadataRows = $derived.by<MetadataRow[]>(() => {
           value: replacementEditedWith,
         }
       : null,
-  ].filter((row): row is MetadataRow => row !== null)
+  ]
+  return rows.filter((row): row is MetadataRow => row !== null)
 })
 
 $effect(() => {
@@ -239,7 +247,7 @@ $effect(() => {
     publicId: image.publicId,
     env: image.env ?? undefined,
     version: image.version ?? undefined,
-    profile: 'admin',
+    profile: appCtx.isAdmin() ? 'admin' : 'basic',
     meta: appCtx.isAdmin() ? { isAdminRequest: true } : undefined,
   })
     .then(response => {
@@ -262,16 +270,18 @@ $effect(() => {
 </script>
 
 <div
-  class="flex min-w-50 items-center gap-3 rounded-xl border border-white/10 bg-black p-3 text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+  class="flex min-w-50 items-center gap-3 rounded-xl border border-border bg-base-100 p-3 text-base-content shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
 >
   <div class="flex flex-col gap-2">
     {#if metadataRows.length > 0}
       {#each metadataRows as row}
-        <div class="grid grid-cols-[1rem_1fr] gap-x-2 gap-y-1 text-sm text-white/80">
+        <div
+          class="grid grid-cols-[1rem_1fr] gap-x-2 gap-y-1 text-sm text-muted-foreground"
+        >
           <div class="flex items-center justify-center">
-            <Icon src={row.icon} class="h-4 w-4 grow-0 text-white" />
+            <Icon src={row.icon} class="h-4 w-4 grow-0 text-base-content" />
           </div>
-          <p class="font-medium text-white">{row.label}</p>
+          <p class="font-medium text-base-content">{row.label}</p>
           <div></div>
           {#if typeof row.value === 'string'}
             <span>{row.value}</span>
@@ -279,7 +289,7 @@ $effect(() => {
             <div class="flex flex-col gap-0.5">
               <span>
                 <span
-                  class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/55"
+                  class="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground"
                 >
                   LAT
                 </span>
@@ -288,7 +298,7 @@ $effect(() => {
               {#if row.value.secondary}
                 <span>
                   <span
-                    class="font-mono text-[10px] uppercase tracking-[0.18em] text-white/55"
+                    class="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground"
                   >
                     LNG
                   </span>
@@ -302,9 +312,9 @@ $effect(() => {
     {/if}
 
     {#if resolvedLoading}
-      <div class="text-sm text-white/65">{m.image__metadata_loading()}</div>
+      <div class="text-sm text-muted-foreground">{m.image__metadata_loading()}</div>
     {:else if metadataRows.length === 0}
-      <div class="text-sm text-white/65">{m.image__metadata_empty()}</div>
+      <div class="text-sm text-muted-foreground">{m.image__metadata_empty()}</div>
     {/if}
   </div>
 </div>

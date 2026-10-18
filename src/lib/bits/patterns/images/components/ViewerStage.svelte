@@ -9,7 +9,7 @@ import {
   getGalleryForegroundSrc,
   getGallerySceneKey,
   shouldUseDirectGalleryScene,
-} from '$lib/client/services/image'
+} from '#lib/client/services/image.js'
 // BITS
 import ImageSurface from './ImageSurface.svelte'
 // TYPES
@@ -217,15 +217,21 @@ $effect(() => {
     fit,
   }
 
-  // Seed the viewer immediately on first render without preloading/crossfading.
-  if (!currentDisplayedScene) {
-    displayedScene = nextScene
-    clearPendingScene()
+  // Preload the first scene too: progressive image bytes must stay behind the
+  // skeleton until the same decode gate used by subsequent crossfades completes.
+  if (!currentDisplayedScene && !currentIncomingScene) {
+    pendingScene = nextScene
+    const nextUrls = buildGallerySceneAssetUrls(nextScene.item, nextScene.fit)
+    pendingSceneAssetUrls = nextUrls
+    loadedSceneAssetUrls =
+      currentPendingScene?.key === nextScene.key
+        ? currentLoadedSceneAssetUrls.filter(url => nextUrls.includes(url))
+        : []
     return
   }
 
   // Refresh the live scene payload in place when the scene identity is unchanged.
-  if (currentDisplayedScene.key === nextScene.key) {
+  if (currentDisplayedScene?.key === nextScene.key) {
     displayedScene = nextScene
 
     if (currentPendingScene?.key === nextScene.key) {
@@ -284,6 +290,13 @@ onDestroy(() => {
 <div
   class={`relative h-full w-full overflow-hidden bg-black/5 ${rounded} ${className}`}
 >
+  {#if currentItem && !displayedScene && !previousScene}
+    <div
+      aria-hidden="true"
+      data-image-skeleton
+      class="pointer-events-none absolute inset-0 animate-pulse bg-base-300 motion-reduce:animate-none"
+    ></div>
+  {/if}
   {#if pendingScene}
     {#each pendingSceneAssetUrls as url (url)}
       <img
@@ -312,7 +325,9 @@ onDestroy(() => {
   {/if}
 
   {#if previousScene}
-    {#if showBackdrop && previousScene.fit === 'fit' && getGalleryBackgroundSrc(previousScene.item)}
+    {#if showBackdrop &&
+      previousScene.fit === 'fit' &&
+      getGalleryBackgroundSrc(previousScene.item)}
       <div
         class="viewer-backdrop absolute inset-0"
         style={`opacity: ${crossfadeActive ? '0' : '1'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
@@ -341,9 +356,9 @@ onDestroy(() => {
               src={getGalleryForegroundSrc(previousScene.item)}
               alt={previousScene.item.alt ?? ''}
               style={getGalleryForegroundRotationStyle(previousScene.item)}
-              class={`absolute inset-0 h-full w-full ${previousScene.fit === 'cover'
-                ? 'object-cover'
-                : 'object-contain'} ${getForegroundRotationClass(previousScene.item)}`}
+              class={`absolute inset-0 h-full w-full ${
+                previousScene.fit === 'cover' ? 'object-cover' : 'object-contain'
+              } ${getForegroundRotationClass(previousScene.item)}`}
             >
           </div>
         </div>
@@ -366,7 +381,9 @@ onDestroy(() => {
   {/if}
 
   {#if displayedScene && !previousScene && !incomingScene}
-    {#if showBackdrop && displayedScene.fit === 'fit' && getGalleryBackgroundSrc(displayedScene.item)}
+    {#if showBackdrop &&
+      displayedScene.fit === 'fit' &&
+      getGalleryBackgroundSrc(displayedScene.item)}
       <div class="viewer-backdrop absolute inset-0">
         <img
           src={getGalleryBackgroundSrc(displayedScene.item)}
@@ -392,9 +409,9 @@ onDestroy(() => {
               src={getGalleryForegroundSrc(displayedScene.item)}
               alt={displayedScene.item.alt ?? ''}
               style={getGalleryForegroundRotationStyle(displayedScene.item)}
-              class={`absolute inset-0 h-full w-full ${displayedScene.fit === 'cover'
-                ? 'object-cover'
-                : 'object-contain'} ${getForegroundRotationClass(displayedScene.item)}`}
+              class={`absolute inset-0 h-full w-full ${
+                displayedScene.fit === 'cover' ? 'object-cover' : 'object-contain'
+              } ${getForegroundRotationClass(displayedScene.item)}`}
               onload={() => {
                 if (displayedScene) {
                   onCurrentItemLoad?.(displayedScene.item)
@@ -426,7 +443,9 @@ onDestroy(() => {
   {/if}
 
   {#if incomingScene}
-    {#if showBackdrop && incomingScene.fit === 'fit' && getGalleryBackgroundSrc(incomingScene.item)}
+    {#if showBackdrop &&
+      incomingScene.fit === 'fit' &&
+      getGalleryBackgroundSrc(incomingScene.item)}
       <div
         class="viewer-backdrop absolute inset-0"
         style={`opacity: ${crossfadeActive ? '1' : '0'}; transition: opacity ${VIEWER_TRANSITION_MS}ms ease-out;`}
@@ -455,9 +474,9 @@ onDestroy(() => {
               src={getGalleryForegroundSrc(incomingScene.item)}
               alt={incomingScene.item.alt ?? ''}
               style={getGalleryForegroundRotationStyle(incomingScene.item)}
-              class={`absolute inset-0 h-full w-full ${incomingScene.fit === 'cover'
-                ? 'object-cover'
-                : 'object-contain'} ${getForegroundRotationClass(incomingScene.item)}`}
+              class={`absolute inset-0 h-full w-full ${
+                incomingScene.fit === 'cover' ? 'object-cover' : 'object-contain'
+              } ${getForegroundRotationClass(incomingScene.item)}`}
               onload={() => {
                 if (incomingScene) {
                   onCurrentItemLoad?.(incomingScene.item)

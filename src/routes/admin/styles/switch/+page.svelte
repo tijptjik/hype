@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Switch } from '$lib/bits/custom'
-import type { ButtonSize } from '$lib/bits/core/button/button.types'
-import type { SwitchColor } from '$lib/bits/custom/switch/switch.types'
+import { Switch } from '#lib/bits/custom/index.js'
+import type { ButtonSize } from '#lib/bits/core/button/button.types.js'
+import type { SwitchColor } from '#lib/bits/custom/switch/switch.types.js'
 
 const sizes: ButtonSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
 const colors: SwitchColor[] = [
@@ -41,14 +41,14 @@ let triHoverState = $state<boolean | null>(null)
         Interactive
       </h2>
       <div class="flex flex-wrap items-center gap-8">
-        <label class="flex items-center gap-3">
+        <div class="flex items-center gap-3">
           <Switch bind:checked={biState} name="enabled-switch" id="enabled-switch" />
           <span class="text-sm text-foreground"
             >Bi-state ({biState ? 'on' : 'off'})</span
           >
-        </label>
+        </div>
 
-        <label class="flex items-center gap-3">
+        <div class="flex items-center gap-3">
           <Switch
             bind:checked={triState}
             states={3}
@@ -60,7 +60,7 @@ let triHoverState = $state<boolean | null>(null)
           <span class="text-sm text-foreground">
             Tri-state ({triState === null ? 'unset' : triState ? 'on' : 'off'})
           </span>
-        </label>
+        </div>
       </div>
     </div>
 

@@ -2,8 +2,8 @@
 // BITS-UI
 import { Select as SelectPrimitive } from 'bits-ui'
 // ICONS
-import CheckIcon from 'virtual:icons/lucide/check'
-import ChevronsUpDownIcon from 'virtual:icons/lucide/chevrons-up-down'
+import CheckIcon from 'virtual:icons/proicons/checkmark'
+import ChevronsUpDownIcon from 'virtual:icons/proicons/arrow-up-down'
 // TYPES
 import type { SelectProps } from './select.types'
 
@@ -43,12 +43,12 @@ function handleValueChange(nextValue: string): void {
 
 {#if !isEditing}
   <div
-    class={`bits-form__control-wrap bits-form__select-display-wrap ${displayClass} ${className}`}
+    class={`bits-form__control-wrap bits-form__select-display-wrap ${variant === 'ghost' ? 'border-transparent bg-transparent shadow-none' : ''} ${displayClass} ${className}`}
   >
     <div
-      class={`bits-form__select-display bits-form__select-display--${variant} text-white`}
+      class={`bits-form__select-display bits-form__select-display--${variant} text-foreground`}
     >
-      <span class="bits-form__select-label text-white">{selectedLabel}</span>
+      <span class="bits-form__select-label text-foreground">{selectedLabel}</span>
     </div>
   </div>
 {:else}
@@ -63,15 +63,15 @@ function handleValueChange(nextValue: string): void {
   >
     <SelectPrimitive.Trigger
       {...triggerAttrs}
-      class={`bits-form__select-trigger bits-form__select-trigger--${variant} text-white ${triggerClass} ${className}`}
+      class={`bits-form__select-trigger bits-form__select-trigger--${variant} text-foreground ${triggerClass} ${className}`}
       aria-label={placeholder}
     >
-      <span class="bits-form__select-label text-white">{selectedLabel}</span>
-      <ChevronsUpDownIcon class="bits-form__select-trigger-icon text-white" />
+      <span class="bits-form__select-label text-foreground">{selectedLabel}</span>
+      <ChevronsUpDownIcon class="bits-form__select-trigger-icon text-foreground" />
     </SelectPrimitive.Trigger>
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
-        class={`bits-form__select-content text-white ${contentClass}`}
+        class={`bits-form__select-content text-foreground ${contentClass}`}
         sideOffset={8}
       >
         <SelectPrimitive.Viewport class="bits-form__select-viewport">
@@ -80,12 +80,16 @@ function handleValueChange(nextValue: string): void {
               value={item.value}
               label={item.label}
               disabled={item.disabled}
-              class="bits-form__select-item text-white"
+              class="bits-form__select-item text-foreground"
             >
-              {#snippet children({ selected })}
-                <span class="bits-form__select-label text-white">{item.label}</span>
+              {#snippet children({
+                selected,
+              })}
+                <span class="bits-form__select-label text-foreground"
+                  >{item.label}</span
+                >
                 {#if selected}
-                  <CheckIcon class="bits-form__select-item-check-icon text-white" />
+                  <CheckIcon class="ml-auto h-4 w-4 shrink-0 text-foreground" />
                 {/if}
               {/snippet}
             </SelectPrimitive.Item>

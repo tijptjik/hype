@@ -1,16 +1,17 @@
-import { error, json } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 import {
   readMetadataDocument,
   toImageStage,
   toMetadataProfilePayload,
-} from '$lib/images/storage'
-import { ImageMetadataProfileSchema } from '$lib/db/zod'
+} from '#lib/images/storage.js'
+import { ImageMetadataProfileSchema } from '#lib/db/zod/index.js'
 
 const isProfileSegment = (segment: string): boolean => segment.startsWith('p_')
 const isFormatSegment = (segment: string): boolean => segment.startsWith('f_')
 const isVersionSegment = (segment: string): boolean => /^v\d+$/.test(segment)
 
-export const GET = async ({ params, platform }) => {
+export const GET = async ({ params, locals }) => {
+  const { platform } = locals
   const segments = (params.path ?? '').split('/').filter(Boolean)
   if (segments.length === 0) throw error(400, 'Invalid metadata path')
 
@@ -37,6 +38,10 @@ export const GET = async ({ params, platform }) => {
   if (!publicId) throw error(400, 'Missing publicId')
 
   const normalizedProfile = ImageMetadataProfileSchema.parse(profile)
+  if (normalizedProfile !== 'basic') {
+    throw error(403, 'Only basic metadata is publicly available')
+  }
+
   const { document } = await readMetadataDocument({
     platform,
     env: toImageStage(params.appEnv),
@@ -46,5 +51,5 @@ export const GET = async ({ params, platform }) => {
 
   if (!document) throw error(404, 'Image metadata not found')
 
-  return json(toMetadataProfilePayload(document, normalizedProfile))
+  return Response.json(toMetadataProfilePayload(document, normalizedProfile))
 }

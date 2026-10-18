@@ -1,12 +1,12 @@
 <script lang="ts">
 // I18N
-import { getLocaleKey, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // BITS
-import { TextArea, TextInput } from '$lib/bits/custom/form'
-import * as FormI18nSectionPrimitive from '$lib/bits/patterns/forms/formI18nSection/components'
-import { FormFacetNav } from '$lib/bits/patterns/forms/formFacetNav'
-import { FormFeatureFieldsSection } from '$lib/bits/patterns/forms/formFeatureFieldsSection'
-import { FormFeatureSectionHeader } from '$lib/bits/patterns/forms/formFeatureSectionHeader'
+import { TextArea, TextInput } from '#lib/bits/custom/form/index.js'
+import * as FormI18nSectionPrimitive from '#lib/bits/patterns/forms/formI18nSection/components/index.js'
+import { FormFacetNav } from '#lib/bits/patterns/forms/formFacetNav/index.js'
+import { FormFeatureFieldsSection } from '#lib/bits/patterns/forms/formFeatureFieldsSection/index.js'
+import { FormFeatureSectionHeader } from '#lib/bits/patterns/forms/formFeatureSectionHeader/index.js'
 // STYLES
 import {
   FORM_FEATURE_FIELDS_NON_TRANSLATABLE_HEADER_CLASS,
@@ -82,7 +82,9 @@ function resolvePropertyLabel(
             {isEditing}
             showTranslationBar={true}
           >
-            {#snippet children(locale)}
+            {#snippet children(
+              locale,
+            )}
               <div class="flex flex-col gap-4">
                 {#each translatableSpecifierItems as property (property.propertyId)}
                   {@const label = resolvePropertyLabel(property, locale)}

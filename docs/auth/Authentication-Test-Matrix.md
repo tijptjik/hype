@@ -125,6 +125,27 @@ when the UI gives only a generic error.
 | S-03 | U/G/E          | Repeatedly submit guest bootstrap, password set, and auth forms rapidly.                                                                                                             | One guest creation is coalesced; rate-limited/safe failure behavior occurs without duplicate accounts or credential changes.                                                                         |        |
 | S-04 | G              | Leave a guest inactive beyond the 45-day retention window with no active session in a non-production test database.                                                                  | Cleanup removes only expired anonymous users; upgraded users and guests with unexpired sessions remain.                                                                                              |        |
 
+### Password setup request boundary
+
+`POST /api/account/password` delegates to `/api/auth/account-password` through
+Better Auth's HTTP handler. Both paths share the configured five-attempt,
+60-second IP bucket, including rejected and concurrent attempts. The default
+limiter is isolate-local, not a globally coordinated Cloudflare quota.
+
+Password setup requires a same-origin request, an upgraded account, and a fresh
+authoritative session. A revoked session or a session older than Better Auth's
+configured freshness window must be rejected even if its cookie cache says active.
+An older account session must sign in again before adding a password. Throttled
+responses retain Better Auth's `429` status and `X-Retry-After` header; they must
+not change email, send verification mail, or hash a password.
+
+When password setup includes a different email address, a successful email-change
+HTTP response is not proof that the address changed. Password creation must wait
+until that address is persisted on the current user. Pending verification and
+unchanged/conflicting addresses return the generic `PASSWORD_NOT_SET` failure;
+after completing verification, retry password setup. Invalid password lengths and
+existing password credentials must be rejected before attempting an email change.
+
 ## Roles and authorization follow-through
 
 Authentication proves who the person is; it does not grant resource access.

@@ -1,18 +1,18 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
 import * as CompletionFooterPrimitive from './components'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // SERVICES
-import { calculateOverallStats } from '$lib/client/services/stats'
+import { calculateOverallStats } from '#lib/client/services/stats.js'
 // ICONS
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import ImageIcon from 'virtual:icons/lucide/image'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import PenIcon from 'virtual:icons/lucide/pen'
-import TagsIcon from 'virtual:icons/lucide/tags'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import PenIcon from 'virtual:icons/proicons/pencil'
+import TagsIcon from 'virtual:icons/proicons/tag-multiple'
 // TYPES
 import type {
   CompletionFooterProps,
@@ -24,9 +24,7 @@ const adminCtx = getAdminCtx()
 
 let { entities }: CompletionFooterProps = $props()
 
-const overallStats = $derived(
-  calculateOverallStats(adminCtx.appCtx, entities, adminCtx),
-)
+const overallStats = $derived(calculateOverallStats(adminCtx.view, entities, adminCtx))
 
 const sectionMeta: Record<
   CompletionFooterSectionKey,

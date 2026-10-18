@@ -1,6 +1,6 @@
 <script lang="ts">
-import AlertTriangleIcon from 'virtual:icons/lucide/triangle-alert'
-import { m } from '$lib/i18n'
+import AlertTriangleIcon from 'virtual:icons/proicons/alert-triangle'
+import { m } from '#lib/i18n.js'
 </script>
 
 <div class="mx-2 flex w-full items-center gap-2 pb-4 caret-transparent">

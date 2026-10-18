@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getBreadcrumbs } from '$lib/navigation/admin'
-import { FirstClassResource, ResourcePath } from '$lib/enums'
-import type { AppCtx } from '$lib/context/app.svelte'
+import { goto } from '$app/navigation'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import { getBreadcrumbs, navigateOnAdmin } from '#lib/navigation/admin.js'
+import { FirstClassResource, ResourcePath } from '#lib/enums.js'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+
+vi.mock('$app/navigation', () => ({ goto: vi.fn().mockResolvedValue(undefined) }))
 
 type Breadcrumb = { name: string; href: string }
 
@@ -62,7 +66,7 @@ describe('getBreadcrumbs', () => {
     })
 
     const result = await getBreadcrumbs(
-      appCtx as unknown as AppCtx,
+      appCtx as unknown as ResourceViewCtx,
       FirstClassResource.organisation,
       'hkghostsigns',
     )
@@ -84,7 +88,7 @@ describe('getBreadcrumbs', () => {
     })
 
     const result = await getBreadcrumbs(
-      appCtx as unknown as AppCtx,
+      appCtx as unknown as ResourceViewCtx,
       FirstClassResource.project,
       'food-accessibility',
     )
@@ -114,7 +118,7 @@ describe('getBreadcrumbs', () => {
     })
 
     const result = await getBreadcrumbs(
-      appCtx as unknown as AppCtx,
+      appCtx as unknown as ResourceViewCtx,
       FirstClassResource.project,
       'project-self',
     )
@@ -142,7 +146,7 @@ describe('getBreadcrumbs', () => {
     })
 
     const result = await getBreadcrumbs(
-      appCtx as unknown as AppCtx,
+      appCtx as unknown as ResourceViewCtx,
       FirstClassResource.layer,
       'layer-2',
     )
@@ -174,7 +178,7 @@ describe('getBreadcrumbs', () => {
     })
 
     const result = await getBreadcrumbs(
-      appCtx as unknown as AppCtx,
+      appCtx as unknown as ResourceViewCtx,
       FirstClassResource.layer,
       'layer-1',
     )
@@ -198,11 +202,34 @@ describe('getBreadcrumbs', () => {
     })
 
     const result = await getBreadcrumbs(
-      appCtx as unknown as AppCtx,
+      appCtx as unknown as ResourceViewCtx,
       FirstClassResource.project,
       'missing',
     )
 
     expect(result).toEqual([])
+  })
+})
+
+describe('admin navigation intent', () => {
+  it('waits for the committed URL projection instead of preemptively mutating navigation state', () => {
+    const admin = {
+      setResourceType: vi.fn(),
+      setResourceRef: vi.fn(),
+      setFacet: vi.fn(),
+    }
+    navigateOnAdmin(
+      admin as unknown as AdminCtx,
+      FirstClassResource.feature,
+      'feature-id',
+      'images',
+    )
+    expect(goto).toHaveBeenCalledWith('/admin/features/feature-id#images', {
+      reset: false,
+      replace: false,
+    })
+    expect(admin.setResourceType).not.toHaveBeenCalled()
+    expect(admin.setResourceRef).not.toHaveBeenCalled()
+    expect(admin.setFacet).not.toHaveBeenCalled()
   })
 })

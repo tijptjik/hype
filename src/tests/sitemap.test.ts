@@ -1,12 +1,12 @@
 // THIRD-PARTY
 import { describe, expect, it } from 'vitest'
 // LIBRARY
-import { getSitemapPaths, renderSitemap, toSitemapPath } from '$lib/server/sitemap'
+import { getSitemapPaths, renderSitemap, toSitemapPath } from '#lib/server/sitemap.js'
 import { GET as getRobots } from '../routes/robots.txt/+server'
 
 describe('sitemap route discovery', () => {
   it('converts grouped static page modules to public paths', () => {
-    expect(toSitemapPath('/src/routes/(app)/+page.svelte')).toBe('/')
+    expect(toSitemapPath('/src/routes/(public)/(app)/+page.svelte')).toBe('/')
     expect(toSitemapPath('/src/routes/policy/privacy/+page.svelte')).toBe(
       '/policy/privacy',
     )
@@ -15,13 +15,13 @@ describe('sitemap route discovery', () => {
   it('excludes admin, parameterised, utility, and render routes', () => {
     expect(
       getSitemapPaths([
-        '/src/routes/(app)/+page.svelte',
-        '/src/routes/(app)/features/[id]/+page.svelte',
+        '/src/routes/(public)/(app)/+page.svelte',
+        '/src/routes/(public)/(app)/features/[id]/+page.svelte',
         '/src/routes/account/reset-password/+page.svelte',
         '/src/routes/admin/features/+page.svelte',
         '/src/routes/headless/map-style-render/[style]/+page.svelte',
         '/src/routes/policy/terms/+page.svelte',
-        '/src/routes/signin/+page.svelte',
+        '/src/routes/(public)/signin/+page.svelte',
       ]),
     ).toEqual(['/', '/policy/terms'])
   })

@@ -366,9 +366,9 @@ Primary integration points:
 - `src/hooks.server.ts`: remove the broad signed-out redirect; retain explicit protection
   for admin and other account-only server routes.
 - `src/routes/+layout.svelte`: own the one-time anonymous bootstrap and auth transition.
-- `src/routes/(app)/+layout.svelte`: render the application for anonymous and upgraded
+- `src/routes/(public)/(app)/+layout.svelte`: render the application for anonymous and upgraded
   sessions; remove the session-based landing-page branch.
-- `src/routes/(app)/+page.svelte`: remove the Google-only landing experience.
+- `src/routes/(public)/(app)/+page.svelte`: remove the Google-only landing experience.
 - `src/lib/context/app.svelte.ts`: initialize resources for anonymous user IDs and keep
   user state/caches isolated across anonymous-to-account transitions.
 - `src/lib/api/services/authz/*`: allow published reads and reject anonymous writes with

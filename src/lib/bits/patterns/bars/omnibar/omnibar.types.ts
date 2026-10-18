@@ -1,10 +1,15 @@
-import type { OmniCollection, OmniMode } from '$lib/enums'
-import type { SearchResult } from '$lib/types'
+import type { OmniCollection, OmniMode } from '#lib/enums.js'
+import type { SearchResult } from '#lib/context/omni.types.js'
 
 export type OmnibarResultSection = {
   collectionType: OmniCollection
   results: SearchResult[]
   limit: number
+  totalCount?: number | null
+  hasMore?: boolean
+  loading?: boolean
+  onLoadMore?: () => void
+  onPreview?: (ref: string, active: boolean) => void
   onSelection: (ref: string) => void
 }
 
@@ -45,6 +50,9 @@ export type OmnibarNavigationProps = {
   onClose: () => void
   onSelectIndex: (index: number) => void
   onCloseTray: () => void
+  hasMore?: boolean
+  loading?: boolean
+  onLoadMore?: () => void
 }
 
 export type OmnibarProps = {

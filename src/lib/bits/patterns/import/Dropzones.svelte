@@ -1,16 +1,16 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // PATTERN COMPONENTS
 import * as ImportPrimitive from './components'
-import CloudArrowUp from 'virtual:icons/lucide/cloud-upload'
-import UserGroup from 'virtual:icons/lucide/users'
-import CalendarDays from 'virtual:icons/lucide/calendar-days'
-import TableCells from 'virtual:icons/lucide/table-cells-split'
+import CloudArrowUp from 'virtual:icons/proicons/cloud-arrow-up'
+import UserGroup from 'virtual:icons/proicons/person-multiple'
+import CalendarDays from 'virtual:icons/proicons/calendar'
+import TableCells from 'virtual:icons/proicons/split-horizontal'
 // TYPES
 import type { DropzoneEvent } from './import.types'
-import Heading from '$lib/bits/custom/text/Heading.svelte'
-import Subheading from '$lib/bits/custom/text/Subheading.svelte'
+import Heading from '#lib/bits/custom/text/Heading.svelte'
+import Subheading from '#lib/bits/custom/text/Subheading.svelte'
 
 // TYPES
 type Props = {

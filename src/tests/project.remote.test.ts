@@ -1,7 +1,20 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Panel query registration is isolated from this resource's authorization fixtures.
+vi.mock('#lib/api/resources.remote.js', () => ({}))
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
+
+const { mockRequested, mockRefreshAll } = vi.hoisted(() => {
+  const mockRefreshAll = vi.fn(async () => undefined)
+  return {
+    mockRefreshAll,
+    mockRequested: vi.fn(() => ({ refreshAll: mockRefreshAll })),
+  }
+})
+vi.mock('$app/server', () => ({ requested: mockRequested }))
 
 const {
   mockProjectFormDataParse,
@@ -22,11 +35,14 @@ const {
   mockAuthorizeProjectCreateForSubmission,
   mockAuthorizeProjectDeleteForSubmission,
   mockAuthorizeProjectPublishForSubmission,
+  mockAuthorizeProjectReadForProbe,
+  mockAuthorizeOrganisationReadForProbe,
   mockAuthorizeProjectManageRolesForSubmission,
   mockAuthorizeProjectAssignCapabilitiesForSubmission,
   mockAuthorizeProjectManageCapabilitiesForSubmission,
   mockValidateUniqueNonReservedCode,
   mockResolveProjectCommandProbe,
+  mockProbeProjectQuery,
   mockUpdateProjectPublishedStateById,
   mockUpdateProjectArchivedStateById,
   mockSetProjectMapStyleByCode,
@@ -36,45 +52,77 @@ const {
 } = vi.hoisted(() => ({
   mockProjectFormDataParse: vi.fn((input: unknown) => input),
   mockToLocaleRecordFromOrganisationFormI18n: vi.fn(() => ({})),
-  mockProbeProjectForUpdate: vi.fn(async () => null),
-  mockLoadProject: vi.fn(async () => null),
-  mockProbeOrganisationHubForProject: vi.fn(async () => null),
-  mockListProjectRoleAssignments: vi.fn(async () => []),
+  mockProbeProjectForUpdate: vi.fn(async (): Promise<unknown> => null),
+  mockLoadProject: vi.fn(async (): Promise<unknown> => null),
+  mockProbeOrganisationHubForProject: vi.fn(async (): Promise<unknown> => null),
+  mockListProjectRoleAssignments: vi.fn(async (): Promise<unknown[]> => []),
   mockMergeOrganisationCapabilities: vi.fn(
     async (_db: unknown, _organisationId: string, projectCapabilities: unknown) =>
       projectCapabilities ?? {},
   ),
-  mockUpdateProjectByIdWithConcurrency: vi.fn(async () => null),
+  mockUpdateProjectByIdWithConcurrency: vi.fn(async (): Promise<unknown> => null),
   mockCascadeProjectOrganisationToDescendants: vi.fn(async () => undefined),
-  mockUpdatePropertiesWithRelated: vi.fn(async () => []),
-  mockListResolvedProjectProperties: vi.fn(async () => []),
+  mockUpdatePropertiesWithRelated: vi.fn(async (): Promise<unknown[]> => []),
+  mockListResolvedProjectProperties: vi.fn(async (): Promise<unknown[]> => []),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockSyncProjectUserRoles: vi.fn(async () => undefined),
   mockSyncProjectLayerPresentation: vi.fn(async () => undefined),
-  mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectCreateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectDeleteForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectPublishForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectManageRolesForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectAssignCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectManageCapabilitiesForSubmission: vi.fn(() => ({ allowed: true })),
+  mockAuthorizeProjectUpdateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectCreateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectDeleteForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectPublishForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectReadForProbe: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
+  mockAuthorizeOrganisationReadForProbe: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectManageRolesForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectAssignCapabilitiesForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeProjectManageCapabilitiesForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
   mockValidateUniqueNonReservedCode: vi.fn(async () => undefined),
   mockResolveProjectCommandProbe: vi.fn(async () => ({
     id: 'project-1',
     organisationId: 'org-1',
     hubId: 'hub-a',
   })),
-  mockUpdateProjectPublishedStateById: vi.fn(async () => null),
-  mockUpdateProjectArchivedStateById: vi.fn(async () => null),
+  mockProbeProjectQuery: vi.fn(async () => ({
+    id: 'project-1',
+    organisationId: 'org-1',
+    hubId: 'hub-a',
+    isPublished: true,
+    isArchived: false,
+  })),
+  mockUpdateProjectPublishedStateById: vi.fn(async (): Promise<unknown> => null),
+  mockUpdateProjectArchivedStateById: vi.fn(async (): Promise<unknown> => null),
   mockSetProjectMapStyleByCode: vi.fn(async () => undefined),
   mockCascadeProjectArchivedStateToDescendants: vi.fn(async () => undefined),
   mockCascadeProjectPublishedStateToDescendants: vi.fn(async () => undefined),
   mockGuardedContext: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
-    withRemoteMeta(handler as (...args: any[]) => unknown, 'query'),
+    withRemoteMeta(async (input: unknown) => {
+      return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
+        input,
+        await mockGuardedContext(),
+      )
+    }, 'query'),
   guardedCommand: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -116,12 +164,12 @@ vi.mock('$lib/api/server/remote', () => ({
     }, 'form'),
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   getPrisms: vi.fn(() => ({ organisation: [], project: [], layer: [] })),
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
-vi.mock('$lib/api/services', () => ({
+vi.mock('#lib/api/services/index.js', () => ({
   getDuplicateValues: (values: string[]) => {
     const seen = new Set<string>()
     const duplicates: string[] = []
@@ -158,7 +206,7 @@ vi.mock('$lib/api/services', () => ({
   validateUniqueNonReservedCode: mockValidateUniqueNonReservedCode,
 }))
 
-vi.mock('$lib/api/services/project', () => ({
+vi.mock('#lib/api/services/project.js', () => ({
   getProjectWithRelations: vi.fn(() => ({})),
   normalizeSubmittedPropertyRanks: <
     T extends { type?: unknown; rank?: unknown; values?: unknown },
@@ -283,18 +331,21 @@ vi.mock('$lib/api/services/project', () => ({
   toRequestedListState: vi.fn(() => ({ isPublished: true, isArchived: false })),
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeProjectAssignCapabilitiesForSubmission:
     mockAuthorizeProjectAssignCapabilitiesForSubmission,
   authorizeProjectCreateForSubmission: mockAuthorizeProjectCreateForSubmission,
   authorizeProjectDeleteForSubmission: mockAuthorizeProjectDeleteForSubmission,
-  authorizeProjectListForContext: vi.fn(() => ({ allowed: true })),
+  authorizeProjectListForContext: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
   authorizeProjectManageCapabilitiesForSubmission:
     mockAuthorizeProjectManageCapabilitiesForSubmission,
   authorizeProjectManageRolesForSubmission:
     mockAuthorizeProjectManageRolesForSubmission,
   authorizeProjectPublishForSubmission: mockAuthorizeProjectPublishForSubmission,
-  authorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
+  authorizeProjectReadForProbe: mockAuthorizeProjectReadForProbe,
+  authorizeOrganisationReadForProbe: mockAuthorizeOrganisationReadForProbe,
   authorizeProjectUpdateForSubmission: mockAuthorizeProjectUpdateForSubmission,
   ensureProjectCommandAllowed: (
     decision: { allowed: boolean; code?: string },
@@ -325,10 +376,10 @@ vi.mock('$lib/api/services/authz', () => ({
   normalizeProjectI18nForFormInput: (i18n: unknown) => i18n ?? {},
 }))
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   createI18n: vi.fn(async () => undefined),
   createUserRoles: vi.fn(async () => undefined),
-  createProject: vi.fn(async () => null),
+  createProject: vi.fn(async (): Promise<unknown> => null),
   getProject: mockLoadProject,
   listUserRoleAssignments: mockListProjectRoleAssignments,
   mergeOrganisationCapabilities: mockMergeOrganisationCapabilities,
@@ -341,8 +392,8 @@ vi.mock('$lib/db/services/project', () => ({
     nextOffset: null,
   })),
   probeOrganisationHubForProject: mockProbeOrganisationHubForProject,
-  probeExistingProject: vi.fn(async () => null),
-  probeProjectQuery: vi.fn(async () => null),
+  probeExistingProject: vi.fn(async (): Promise<unknown> => null),
+  probeProjectQuery: mockProbeProjectQuery,
   probeProjectForUpdate: mockProbeProjectForUpdate,
   resolveProjectCommandProbe: mockResolveProjectCommandProbe,
   syncUserRoles: mockSyncProjectUserRoles,
@@ -360,7 +411,7 @@ vi.mock('$lib/db/services/project', () => ({
   updateProjectPublishedStateById: mockUpdateProjectPublishedStateById,
 }))
 
-vi.mock('$lib/db/services/property', () => ({
+vi.mock('#lib/db/services/property.js', () => ({
   createPropertiesWithRelated: vi.fn(async () => undefined),
   listResolvedProjectProperties: mockListResolvedProjectProperties,
   seedDefaultInheritedPropertiesForProject: vi.fn(async () => undefined),
@@ -369,27 +420,28 @@ vi.mock('$lib/db/services/property', () => ({
   updatePropertiesWithRelated: mockUpdatePropertiesWithRelated,
 }))
 
-vi.mock('$lib/db/services/layer', () => ({
+vi.mock('#lib/db/services/layer.js', () => ({
   syncProjectLayerPresentation: mockSyncProjectLayerPresentation,
 }))
 
-vi.mock('$lib/db/services/map', () => ({
-  listMapStylesForProject: vi.fn(async () => []),
-  getOrganisationMapStyleScope: vi.fn(async () => null),
-  listMapStylesForScope: vi.fn(async () => []),
+vi.mock('#lib/db/services/map.js', () => ({
+  listMapStylesForProject: vi.fn(async (): Promise<unknown[]> => []),
+  getOrganisationMapStyleScope: vi.fn(async (): Promise<unknown> => null),
+  listMapStylesForScope: vi.fn(async (): Promise<unknown[]> => []),
+  syncMapStyleCatalog: vi.fn(async () => undefined),
   setProjectMapStyleByCode: mockSetProjectMapStyleByCode,
 }))
 
-vi.mock('$lib/i18n', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/i18n')>()
+vi.mock('#lib/i18n.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/i18n.js')>()
   return {
     ...actual,
     toLocaleRecordFromOrganisationFormI18n: mockToLocaleRecordFromOrganisationFormI18n,
   }
 })
 
-vi.mock('$lib/db/zod', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/db/zod')>()
+vi.mock('#lib/db/zod/index.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/db/zod/index.js')>()
   return {
     ...actual,
     GetQueryParamsSchema: {},
@@ -402,9 +454,9 @@ vi.mock('$lib/db/zod', async importOriginal => {
   }
 })
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-let remote: Awaited<typeof import('$lib/api/server/project.remote')>
+let remote: MockedRemoteModule<typeof import('#lib/api/project.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('project.remote')
 
 const buildUpdatePayload = (organisationId: string) => ({
@@ -420,8 +472,8 @@ const buildUpdatePayload = (organisationId: string) => ({
     i18n: { en: {}, zhHans: {}, zhHant: {} },
     capabilities: {},
     userRoles: [{ userId: 'u-1', role: 'owner', capabilities: {} }],
-    properties: [],
-    layers: [],
+    properties: [] as Array<import('$app/server').RemoteFormInput>,
+    layers: [] as Array<import('$app/server').RemoteFormInput>,
   },
 })
 
@@ -431,7 +483,7 @@ const throwingInvalid = (message: string): never => {
 
 describe('project.remote form organisation move authz', () => {
   beforeAll(async () => {
-    remote = await import('$lib/api/server/project.remote')
+    remote = mockedRemoteModule(await import('#lib/api/project.remote.js'))
   }, 15_000)
 
   beforeEach(async () => {
@@ -498,7 +550,7 @@ describe('project.remote form organisation move authz', () => {
             ]),
           },
           projectProperty: {
-            findMany: vi.fn(async () => []),
+            findMany: vi.fn(async (): Promise<unknown[]> => []),
           },
         },
       },
@@ -593,6 +645,28 @@ describe('project.remote form organisation move authz', () => {
     expect(mockAuthorizeProjectDeleteForSubmission).not.toHaveBeenCalled()
     expect(mockCascadeProjectOrganisationToDescendants).not.toHaveBeenCalled()
     expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledTimes(1)
+  })
+
+  it('authorizes scalar project changes before loading the relation graph', async () => {
+    mockAuthorizeProjectUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'FIELD_FORBIDDEN',
+    })
+
+    const payload = buildUpdatePayload('org-1')
+    payload.data.code = 'changed-code'
+
+    await expect(remote.projectForm(payload, throwingInvalid)).rejects.toThrow(
+      'FIELD_FORBIDDEN',
+    )
+
+    expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ code: 'changed-code' }),
+      }),
+    )
+    expect(mockLoadProject).not.toHaveBeenCalled()
+    expect(mockUpdateProjectByIdWithConcurrency).not.toHaveBeenCalled()
   })
 
   it('normalizes submitted property ranks per type before persistence', async () => {
@@ -884,6 +958,24 @@ describe('project.remote form organisation move authz', () => {
     })
   })
 
+  it('authorizes project map-style reads against the persisted project scope', async () => {
+    mockAuthorizeProjectReadForProbe.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.getProjectMapStyles({ projectId: 'project-1' }),
+    ).rejects.toMatchObject({
+      status: 403,
+      body: { message: 'INSUFFICIENT_ROLE' },
+    })
+    expect(mockProbeProjectQuery).toHaveBeenCalledWith(expect.anything(), {
+      ref: 'project-1',
+      refKey: 'id',
+    })
+  })
+
   it('cascades descendant publish state after a successful publish command', async () => {
     await remote.publishProject({ id: 'project-1', state: true })
 
@@ -896,15 +988,29 @@ describe('project.remote form organisation move authz', () => {
     )
   })
 
-  it('cascades descendant archive state after a successful archive command', async () => {
-    await remote.archiveProject({ id: 'project-1', state: true })
+  it.each([true, false])(
+    'settles archive state %s after the atomic update',
+    async state => {
+      await remote.archiveProject({ id: 'project-1', state })
 
-    expect(mockCascadeProjectArchivedStateToDescendants).toHaveBeenCalledWith(
-      expect.any(Object),
-      {
-        projectId: 'project-1',
-        state: true,
-      },
+      expect(mockUpdateProjectArchivedStateById).toHaveBeenCalledWith(
+        expect.any(Object),
+        { id: 'project-1', state },
+      )
+      expect(mockCascadeProjectArchivedStateToDescendants).not.toHaveBeenCalled()
+      expect(mockRequested).toHaveBeenCalledWith(remote.getProject, 1)
+      expect(mockRequested).toHaveBeenCalledWith(remote.getProjects, 1)
+      expect(mockRefreshAll).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it('does not refresh queries when the atomic archive update fails', async () => {
+    mockUpdateProjectArchivedStateById.mockRejectedValueOnce(
+      new Error('cascade failed'),
     )
+    await expect(
+      remote.archiveProject({ id: 'project-1', state: false }),
+    ).rejects.toThrow('cascade failed')
+    expect(mockRequested).not.toHaveBeenCalled()
   })
 })

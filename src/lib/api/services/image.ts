@@ -1,9 +1,11 @@
+// TYPES
+import type { Queue } from '@cloudflare/workers-types'
 // DRIZZLE
-import { eq, sql, type SQL } from 'drizzle-orm'
+import { and, eq, isNull, or, sql, type SQL } from 'drizzle-orm'
 // LIB
-import { isAdminRequest } from '$lib/api'
+import { isAdminRequest } from '#lib/api/index.js'
 // API
-import { applyQueryFilters, removeExcludedColumns } from '$lib/api'
+import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
 // AUTH
 import {
   assertUserLoggedIn,
@@ -13,10 +15,13 @@ import {
   assertOrganisationOwnerOrSuperAdmin,
   assertProjectMaintainerOrMemberOrSuperAdmin,
   assertParamIdentifierEqualsFormIdentifier,
-} from '$lib/auth/asserts'
+} from '#lib/auth/asserts.js'
 // DB
-import { userColumnsWithPrivacyProtected } from '$lib/db/services/user'
-import { isSuperAdmin } from '$lib/client/services/auth'
+import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
+import { taskFeatureScopeCondition } from '#lib/db/services/task-scope.js'
+import { isSuperAdmin } from '#lib/client/services/auth.js'
+import { isRelevantHubAdmin } from '#lib/api/services/authz/hub.js'
+import { authorizeTaskReadForProbe } from '#lib/api/services/authz/task.js'
 // SCHEMA
 import {
   image,
@@ -25,7 +30,8 @@ import {
   organisation,
   hub,
   task,
-} from '$lib/db/schema/index'
+  taskImage,
+} from '#lib/db/schema/index.js'
 import {
   getImageById as loadImageById,
   toImageEntityResponseShape,
@@ -33,16 +39,16 @@ import {
   toResponseShapeProjectOrOrganisation as toImageProjectOrOrganisationResponseShapeFromDb,
   updateFeatureImage,
   updateImage as updateImageRecord,
-} from '$lib/db/services/image'
+} from '#lib/db/services/image.js'
 // TYPES
 import type {
   UserRoleDisco,
   Database,
   Id,
-  AssetRenderJob,
   QueryParams,
   SessionUser,
-} from '$lib/types'
+} from '#lib/types.js'
+import type { AssetRenderJob } from '#lib/map/renders/render.types.js'
 import type {
   Image,
   ImageContextEnvelope,
@@ -50,13 +56,13 @@ import type {
   ImageDBFlat,
   FinalizeImageUploadLink,
   ImageProfile,
-} from '$lib/db/zod/schema/image.types'
-import { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
+} from '#lib/db/zod/schema/image.types.js'
+import { ImageContextResource, ImageContextResourceExtended } from '#lib/enums.js'
 import { error, type RequestEvent } from '@sveltejs/kit'
-import { applyResourceContextConstraints } from '$lib/db/services/image'
-import { getProjectForFeatureId } from '$lib/db/services/project'
-import { ImageFlatUpdate, ImageUpdate } from '$lib/db/zod/schema/image'
-import { getUserById } from '$lib/db/services/user'
+import { applyResourceContextConstraints } from '#lib/db/services/image.js'
+import { getProjectForFeatureId } from '#lib/db/services/project.js'
+import { ImageFlatUpdate, ImageUpdate } from '#lib/db/zod/schema/image.js'
+import { getUserById } from '#lib/db/services/user.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -169,6 +175,12 @@ export const imageEntityWithRelations = {
 /**
  * Get the query context for the image resource.
  * Filters the query based on user roles, context (featureId, projectId, etc.), and query parameters.
+ * @param user Current session user.
+ * @param adminContext Request or resolved admin-mode flag.
+ * @param params Requested filters.
+ * @param ctxId Parent resource identifier.
+ * @param ctxType Parent resource type.
+ * @returns Scoped query conditions and supported filters.
  */
 export const getImageQueryContext = (
   user: SessionUser,
@@ -207,8 +219,8 @@ export const getImageQueryContext = (
         sql`exists (select 1 from "user" where "user"."id" = ${image.contributorId} and "user"."isArchived" = false)`,
       )
     } else if (ctxType === ImageContextResourceExtended.task) {
-      // NO further restrictions on task images, as they are only accessible
-      // from the Admin view
+      // Task narrowing is also reachable from public queries; require reviewed publication.
+      conditions.push(eq(featureImage.isPublished, true))
     }
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
@@ -233,8 +245,12 @@ export const getImageQueryContext = (
 
 /**
  * Get the query context for a single image.
- * All images can be queried if their ID is known, except for images which have isArchived.
+ * Public feature assignments must be published; non-superadmins cannot read archived images.
  * This is used for the /images/[id] route.
+ * @param user Current session user.
+ * @param adminContext Request or resolved admin-mode flag.
+ * @param params Requested filters.
+ * @returns Query conditions and supported filters.
  */
 export const getImageEntityQueryContext = (
   user: SessionUser,
@@ -257,6 +273,12 @@ export const getImageEntityQueryContext = (
 
   if (!isAdmin) {
     params = removeExcludedColumns(params, excludeColumns)
+    // A single-image lookup must not choose an unpublished feature assignment.
+    const publishedAssignment = or(
+      isNull(featureImage.imageId),
+      eq(featureImage.isPublished, true),
+    )
+    if (publishedAssignment) conditions.push(publishedAssignment)
   } else {
     // Admin view: allow filtering by isPublished if not a superadmin
     if (!isSuperAdmin(user)) {
@@ -307,42 +329,55 @@ export const getImageByIdsQueryContext = (
 
 /**
  * Asserts permissions to create an image for a given context (feature, project, etc.). Images are a second-class resource, and are always created in the context of a first-class resource : organisation, project, or feature. Images are only created directly from the admin interface, and not from the API. From the front-end, images are created indirectly by creating a task (newFeature, MissingReport or newPhoto) which in turn creates an image.
+ * @param db Database handle.
+ * @param user Current account.
+ * @param requestOrIntent Legacy request or resolved guarded-remote admin intent.
+ * @param userRoles Persisted roles.
+ * @param ctxType Target resource type.
+ * @param ctxId Target resource ID.
+ * @param links Requested task associations.
+ * @returns A draft-contribution marker for restricted uploads, otherwise nothing on admin access.
  */
 export const assertPermissionsToCreateImage = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   userRoles: UserRoleDisco[],
   ctxType: ImageContextResource,
   ctxId: Id,
   links?: FinalizeImageUploadLink[],
 ) => {
-  const taskDraftLink = links?.find(
+  if (!user?.id || user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
+  const taskLinks = (links ?? []).filter(
     (link): link is Extract<FinalizeImageUploadLink, { type: 'taskImage' }> =>
       link.type === 'taskImage',
   )
 
-  if (taskDraftLink) {
+  let canContributeToDraft = taskLinks.length > 0
+  // Every requested link must belong to this feature, not just the first draft link.
+  for (const taskLink of taskLinks) {
     const draftTask = await db.query.task.findFirst({
-      where: eq(task.id, taskDraftLink.taskId as Id),
+      where: and(eq(task.id, taskLink.taskId as Id), taskFeatureScopeCondition()),
     })
-
     if (
-      draftTask &&
-      draftTask.isDraft &&
-      draftTask.contributorId === user.id &&
-      draftTask.featureId === ctxId
+      ctxType !== ImageContextResource.feature ||
+      !draftTask ||
+      draftTask.featureId !== ctxId ||
+      draftTask.isReviewed
     ) {
-      return
+      throw error(403, 'IMAGE_TASK_CONTEXT_MISMATCH')
     }
+    if (!draftTask.isDraft || draftTask.contributorId !== user.id)
+      canContributeToDraft = false
   }
+  if (canContributeToDraft) return 'draft-contribution' as const
 
   const commonAssertions = [
     () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
+    () => assertAdminRequest(requestOrIntent),
   ]
 
-  let contextAssertion = () => {} // Placeholder for context-specific assertion
+  let contextAssertion: () => void | Response
 
   switch (ctxType) {
     case ImageContextResource.feature: {
@@ -359,6 +394,15 @@ export const assertPermissionsToCreateImage = async (
       contextAssertion = () =>
         assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId)
       break
+    case ImageContextResource.hub:
+      contextAssertion = () => {
+        if (!isSuperAdmin(user) && !isRelevantHubAdmin(userRoles, ctxId)) {
+          throw error(403, 'INSUFFICIENT_ROLE')
+        }
+      }
+      break
+    default:
+      throw error(400, 'UNSUPPORTED_IMAGE_CONTEXT')
   }
 
   const assertionError = runAssertions(...commonAssertions, contextAssertion)
@@ -368,53 +412,123 @@ export const assertPermissionsToCreateImage = async (
 /**
  * Asserts permissions to update/delete an image.
  * This might depend on who uploaded it, or roles in the associated context.
+ * @param db Database handle.
+ * @param user Current account.
+ * @param requestOrIntent Legacy request or resolved guarded-remote admin intent.
+ * @param data Mutation payload.
+ * @param userRoles Persisted roles.
+ * @param refId Target image ID.
+ * @param ctxId Claimed resource ID.
+ * @param ctxType Claimed resource type.
+ * @returns Nothing when both role and resource membership checks pass.
  */
 export const assertPermissionsToUpdateImage = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   data: ImageDBFlat,
   userRoles: UserRoleDisco[],
   refId: Id,
   ctxId: Id,
   ctxType: ImageContextResource | ImageContextResourceExtended,
 ) => {
+  if (!user?.id || user.isAnonymous) throw error(403, 'ACCOUNT_REQUIRED')
   const commonAssertions = [
     () => assertUserLoggedIn(user),
-    () => assertAdminRequest(request),
+    () => assertAdminRequest(requestOrIntent),
     () => assertParamIdentifierEqualsFormIdentifier(data, refId, 'id'),
   ]
+  const commonError = runAssertions(...commonAssertions)
+  if (commonError) return commonError
 
   // Implement logic to determine who can update/delete.
   // 1. Users with specific roles in the context (feature's project members/maintainers, organisation's owners, project's maintainers).
   // 2. SuperAdmins.
-  let contextAssertion = () => {} // Placeholder
+  let contextAssertion: () => void | Response
+  let contextCondition: SQL
+  let allowedFeatureId: string | undefined
 
   switch (ctxType) {
     case ImageContextResource.feature: {
+      allowedFeatureId = ctxId
       const projectId = (await getProjectForFeatureId(db, ctxId as Id))?.id
       contextAssertion = () =>
         assertProjectMaintainerOrMemberOrSuperAdmin(user, userRoles, projectId ?? '')
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${featureImage} WHERE ${featureImage.featureId} = ${ctxId} AND ${featureImage.imageId} = ${image.id})`
       break
     }
     case ImageContextResource.project:
       contextAssertion = () =>
         assertProjectMaintainerOrSuperAdmin(user, userRoles, ctxId)
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${project} WHERE ${project.id} = ${ctxId} AND ${project.imageId} = ${image.id})`
       break
     case ImageContextResource.organisation:
       contextAssertion = () =>
         assertOrganisationOwnerOrSuperAdmin(user, userRoles, ctxId)
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${organisation} WHERE ${organisation.id} = ${ctxId} AND ${organisation.imageId} = ${image.id})`
       break
+    case ImageContextResource.hub:
+      contextAssertion = () => {
+        if (!isSuperAdmin(user) && !isRelevantHubAdmin(userRoles, ctxId)) {
+          throw error(403, 'INSUFFICIENT_ROLE')
+        }
+      }
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${hub} WHERE ${hub.id} = ${ctxId} AND ${hub.imageId} = ${image.id})`
+      break
+    case ImageContextResourceExtended.task: {
+      const [taskRow] = await db
+        .select({
+          id: task.id,
+          featureId: task.featureId,
+          projectId: task.projectId,
+          organisationId: task.organisationId,
+          resourceHubId: organisation.hubId,
+        })
+        .from(task)
+        .innerJoin(organisation, eq(organisation.id, task.organisationId))
+        .where(and(eq(task.id, ctxId), taskFeatureScopeCondition()))
+        .limit(1)
+      allowedFeatureId = taskRow?.featureId
+      contextAssertion = () => {
+        if (
+          !taskRow ||
+          !authorizeTaskReadForProbe({
+            user,
+            userRoles,
+            isAdminRequest: true,
+            probe: taskRow,
+          }).allowed
+        )
+          throw error(403, 'INSUFFICIENT_ROLE')
+      }
+      contextCondition = sql`EXISTS (SELECT 1 FROM ${taskImage} WHERE ${taskImage.taskId} = ${ctxId} AND ${taskImage.imageId} = ${image.id})`
+      break
+    }
+    default:
+      throw error(400, 'UNSUPPORTED_IMAGE_CONTEXT')
   }
 
-  const assertionError = runAssertions(...commonAssertions, contextAssertion)
+  const assertionError = runAssertions(contextAssertion)
   if (assertionError) return assertionError
+
+  // Shared images must not let a payload redirect an assignment edit to another feature.
+  if (data.featureId && data.featureId !== allowedFeatureId) {
+    throw error(403, 'IMAGE_FEATURE_CONTEXT_MISMATCH')
+  }
+
+  // A role in one resource never grants mutation rights over an unrelated image ID.
+  const [linkedImage] = await db
+    .select({ id: image.id })
+    .from(image)
+    .where(and(eq(image.id, refId), contextCondition))
+    .limit(1)
+  if (!linkedImage) throw error(403, 'IMAGE_CONTEXT_MISMATCH')
 }
 
 export const assertPermissionsToDeleteImage = async (
   db: Database,
   user: SessionUser,
-  request: Request,
+  requestOrIntent: Request | boolean,
   userRoles: UserRoleDisco[],
   refId: Id,
   ctxId: Id,
@@ -423,7 +537,7 @@ export const assertPermissionsToDeleteImage = async (
   return assertPermissionsToUpdateImage(
     db,
     user,
-    request,
+    requestOrIntent,
     { id: refId } as ImageDBFlat,
     userRoles,
     refId,
@@ -490,7 +604,7 @@ export const enqueueDerivedAssetWarmup = async (params: {
   publicId: string
   version?: number | null
 }): Promise<void> => {
-  const queue = getAssetRenderQueue(params.event.platform)
+  const queue = getAssetRenderQueue(params.event.locals.platform)
   if (!queue) return
 
   await queue.send({
@@ -509,13 +623,13 @@ export const updateImageForContext = async (args: {
   userId: Id
   userRoles: UserRoleDisco[]
   event: RequestEvent
+  isAdminRequest: boolean
   id: string
   ctxType: ImageContextType
   ctxId: string
   data: Record<string, unknown>
 }): Promise<{ data: ImageContextEnvelope<'detail'> }> => {
-  const { db, user, userId, userRoles, event, id, ctxType, ctxId, data } = args
-  const userWithAttribution = await getUserById(db, userId)
+  const { db, user, userId, userRoles, isAdminRequest, id, ctxType, ctxId, data } = args
 
   const payload = {
     ...data,
@@ -525,7 +639,7 @@ export const updateImageForContext = async (args: {
   await assertPermissionsToUpdateImage(
     db,
     user,
-    event.request,
+    isAdminRequest,
     payload,
     userRoles,
     id as Id,
@@ -533,6 +647,8 @@ export const updateImageForContext = async (args: {
     ctxType,
   )
 
+  // Read attribution only after the caller has passed the resource authorization check.
+  const userWithAttribution = await getUserById(db, userId)
   const imageToUpdate = ImageUpdate.parse(data)
   let updatedImage: ImageDBFlat | undefined
 

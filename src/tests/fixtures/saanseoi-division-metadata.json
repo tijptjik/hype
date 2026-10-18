@@ -1,0 +1,59 @@
+{
+  "data": {
+    "type": "divisions",
+    "id": "8d17afe0-5631-49c5-b86d-d53c5d4b2f9d",
+    "attributes": {
+      "divisionCode": "CW",
+      "identifiers": {
+        "overture": {
+          "divisionId": "8d17afe0-5631-49c5-b86d-d53c5d4b2f9d"
+        },
+        "wikidata": {
+          "id": "Q312485"
+        }
+      },
+      "hierarchies": {
+        "administrative": [
+          [
+            {
+              "id": "b4f09a9f-4cba-4a7c-bf58-2e63bc2e913d",
+              "name": "香港 Hong Kong",
+              "class": "sar",
+              "fullContainment": true
+            },
+            {
+              "id": "ss-25cec859-44f3-5e1d-a72b-952f804e56ab",
+              "name": "香港島 Hong Kong Island",
+              "class": "area",
+              "fullContainment": true
+            }
+          ]
+        ],
+        "full": [
+          [
+            {
+              "id": "b4f09a9f-4cba-4a7c-bf58-2e63bc2e913d",
+              "name": "香港 Hong Kong",
+              "class": "sar",
+              "fullContainment": true
+            },
+            {
+              "id": "ss-25cec859-44f3-5e1d-a72b-952f804e56ab",
+              "name": "香港島 Hong Kong Island",
+              "class": "area",
+              "fullContainment": true
+            }
+          ]
+        ],
+        "landform": [],
+        "locality": []
+      }
+    }
+  },
+  "meta": {
+    "requestedApiVersion": "0.2",
+    "apiReleaseSet": "data-hk-divisions-2026-10-01.0",
+    "schemaVersion": "sv-division-v1",
+    "inventory": "saanseoi"
+  }
+}

@@ -1,6 +1,6 @@
 import type { Component } from 'svelte'
 import type { HTMLAttributes } from 'svelte/elements'
-import type { ButtonColor, ButtonStyle } from '$lib/bits/core'
+import type { ButtonColor, ButtonStyle } from '#lib/bits/core/index.js'
 
 export type HeaderLayoutMode = 'card' | 'table' | 'list'
 
@@ -124,13 +124,22 @@ export interface HeaderAvatarConfig {
 }
 
 export interface HeaderLayoutRegionConfig {
-  component?: Component<any> | null
+  component?: Component<Record<string, unknown>> | null
   props?: Record<string, unknown>
   isVisible?: boolean
   height?: string
 }
 
 export interface HeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
+  /** Main-panel left edge, used to align desktop navigation with its content. */
+  contentStart?: number
+  brand?: {
+    src: string
+    alt: string
+    monochrome?: boolean
+    href?: string
+    label?: string
+  }
   query?: string
   title?: HeaderTitleConfig
   newAction?: HeaderNewConfig

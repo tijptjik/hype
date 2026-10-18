@@ -1,14 +1,14 @@
 import type { z } from 'zod'
+import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
+import type { EntityResponse, Locale } from '#lib/types.js'
 import type {
-  CapabilityDefinitions,
-  EntityResponse,
   FormLocaleInput,
   FormLocaleSource,
-  Locale,
-  QueryWithOverride,
-} from '$lib/types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+} from '#lib/client/services/formLocale.types.js'
+import type { QueryWithOverride } from '#lib/client/services/formRelations.types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
+  OrganisationCompactProfileAPI,
   OrganisationAdminProfileAPI,
   OrganisationBase,
   OrganisationCardProfileAPI,
@@ -32,7 +32,7 @@ import type {
   OrganisationUpdate,
   PublishOrganisationSchema,
   RemoveOrganisationSchema,
-} from '$lib/db/zod/schema/organisation'
+} from '#lib/db/zod/schema/organisation.js'
 
 export type OrganisationDB = Omit<z.infer<typeof OrganisationBase>, 'isCoreInclusive'>
 export type OrganisationDBSuperAdmin = z.infer<typeof OrganisationBase>
@@ -58,21 +58,26 @@ export type OrganisationDetailProfile = z.infer<typeof OrganisationDetailProfile
 export type OrganisationAdminProfile = z.infer<typeof OrganisationAdminProfileAPI>
 
 export type OrganisationEntityByProfile<P extends OrganisationProfile> =
-  P extends 'list'
-    ? OrganisationListProfile
-    : P extends 'card'
-      ? OrganisationCardProfile
-      : P extends 'detail'
-        ? OrganisationDetailProfile
-        : OrganisationAdminProfile
+  P extends 'compact'
+    ? z.infer<typeof OrganisationCompactProfileAPI>
+    : P extends 'list'
+      ? OrganisationListProfile
+      : P extends 'card' | 'default' | 'map'
+        ? OrganisationCardProfile
+        : P extends 'detail' | 'full'
+          ? OrganisationDetailProfile
+          : OrganisationAdminProfile
 
-export type OrganisationListByProfile<P extends OrganisationProfile> = P extends 'list'
-  ? OrganisationListProfile
-  : P extends 'card'
-    ? OrganisationCardProfile
-    : P extends 'detail'
-      ? OrganisationDetailProfile
-      : OrganisationAdminProfile
+export type OrganisationListByProfile<P extends OrganisationProfile> =
+  P extends 'compact'
+    ? z.infer<typeof OrganisationCompactProfileAPI>
+    : P extends 'list'
+      ? OrganisationListProfile
+      : P extends 'card' | 'default' | 'map'
+        ? OrganisationCardProfile
+        : P extends 'detail' | 'full'
+          ? OrganisationDetailProfile
+          : OrganisationAdminProfile
 
 export type OrganisationGetParamsByProfile<P extends OrganisationProfile> = Omit<
   OrganisationGetParams,
@@ -97,9 +102,9 @@ export type OrganisationListParamsByProfile<P extends OrganisationProfile> = Omi
 export type OrganisationFormInput = z.input<typeof OrganisationFormData>
 export type OrganisationFormLocaleInput = FormLocaleInput<OrganisationFormInput>
 export type OrganisationFormLocaleSource = FormLocaleSource<OrganisationFormInput>
-export type OrganisationPropertySource = NonNullable<
-  OrganisationFormInput['data']['properties']
->[number]
+export type OrganisationPropertySource =
+  | import('./property.types.js').Property
+  | NonNullable<OrganisationFormInput['data']['properties']>[number]
 export type OrganisationFormSource = {
   id?: string
   modifiedAt?: string

@@ -13,7 +13,7 @@ let {
 {#if href}
   <a {href} class={className} {...restProps}>
     {#if IconComponent}
-      <IconComponent class="bits-header__icon" />
+      <IconComponent class="w-full h-full block" />
     {:else}
       {@render children?.()}
     {/if}
@@ -21,7 +21,7 @@ let {
 {:else}
   <span class={className} {...restProps}>
     {#if IconComponent}
-      <IconComponent class="bits-header__icon" />
+      <IconComponent class="w-full h-full block" />
     {:else}
       {@render children?.()}
     {/if}

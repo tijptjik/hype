@@ -1,14 +1,14 @@
 import type { z } from 'zod'
-import type { EntityResponse, Id } from '$lib/types'
+import type { EntityResponse, Id } from '#lib/types.js'
 import type {
   ImageCDN,
   ImageContextResource,
   ImageContextResourceExtended,
   ImageEnv,
-} from '$lib/enums'
-import type { HubDB } from '$lib/db/zod/schema/hub.types'
-import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
-import type { ProjectDB } from '$lib/db/zod/schema/project.types'
+} from '#lib/enums.js'
+import type { HubDB } from '#lib/db/zod/schema/hub.types.js'
+import type { OrganisationDB } from '#lib/db/zod/schema/organisation.types.js'
+import type { ProjectDB } from '#lib/db/zod/schema/project.types.js'
 import type {
   FeatureImageBase,
   FeatureImageInsert,
@@ -37,7 +37,7 @@ import type {
   AuthImageUploadSchema,
   FinalizeImageUploadSchema,
   RotateImageSchema,
-} from '$lib/db/zod/schema/image'
+} from '#lib/db/zod/schema/image.js'
 
 export type ImageDB = z.infer<typeof ImageBase>
 export type ImageDBBasic = z.infer<typeof ImageBasic>

@@ -7,7 +7,7 @@ import { user } from './user'
 import { hub } from './hub'
 // ENUM
 import { OrganisationRoleType, supportedLocales } from '../../enums'
-import type { CapabilityDefinitions } from '../../types'
+import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
 
 /* ============================================================================
  * ORGANIZATION MANAGEMENT

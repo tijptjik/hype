@@ -6,8 +6,8 @@ export interface EventCSVDropEvent {
 }
 
 export async function handleEventCSVDrop(
-  event: EventCSVDropEvent,
-  onFileProcessed: (file: File, data: any) => void,
+  _event: EventCSVDropEvent,
+  _onFileProcessed: (file: File, data: unknown) => void,
 ) {
   console.warn('Event CSV import is not yet implemented')
   // TODO: Implement event CSV import logic

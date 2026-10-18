@@ -5,20 +5,26 @@ import { onMount } from 'svelte'
 import {
   layoutNextLine,
   layoutWithLines,
+  measureNaturalWidth,
+  prepare,
   prepareWithSegments,
   type LayoutCursor,
   type PreparedTextWithSegments,
 } from '@chenglou/pretext'
 // SERVICES
-import { getFeatureCardDisplayProperties } from '$lib/client/services/property'
+import { getFeatureCardDisplayProperties } from '#lib/client/services/property.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // I18N
-import { getFPI18n, getI18n, m } from '$lib/i18n'
+import { getFPI18n, getI18n, m } from '#lib/i18n.js'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
-import type { FeatureCardPortalObstacle } from '$lib/types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { FeatureCardPortalObstacle } from '#lib/context/featureCard.types.js'
 import type { PropertyLayoutResult } from '../featureCard.types'
 // LOCAL
 import {
@@ -80,10 +86,13 @@ let {
   onToggleVisibility?: (visible: boolean) => void
 } = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const userPreferences = $derived(appCtx.getUserPreferences())
-const responsiveWidth = $derived(getFeatureCardResponsiveWidth(responsiveCtx))
+const responsiveWidth = $derived(
+  getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
+)
 const layout = $derived(
   getFeatureCardLayout({
     width: responsiveCtx.visibleWindowWidth,
@@ -127,14 +136,14 @@ const descriptionContentWidth = $derived(
 )
 const featureProperties = $derived(
   getFeatureCardDisplayProperties(appCtx, feature.layerId, feature).filter(
-    (property: any) =>
+    property =>
       property.property?.key !== 'grade' &&
       getFPI18n(property, userPreferences) !== '-' &&
       getFPI18n(property, userPreferences) !== m.great_crazy_squid_promise(),
   ),
 )
 const featurePropertyItems = $derived.by((): FeaturePropertyItem[] =>
-  featureProperties.map((property: any) => ({
+  featureProperties.map(property => ({
     id: property.propertyId,
     label: getI18n(property.property, 'label', userPreferences),
     value: getFPI18n(property, userPreferences),
@@ -159,15 +168,11 @@ const expandedFullWidthLines = $derived.by(() => {
   ).lines
 })
 const truncationEllipsisWidth = $derived.by(() =>
-  prepareWithSegments(TRUNCATION_ELLIPSIS, DESCRIPTION_FONT, {
-    whiteSpace: 'pre-wrap',
-  }).widths.reduce((total, width) => total + width, 0),
+  measurePreparedTextWidth(TRUNCATION_ELLIPSIS, DESCRIPTION_FONT),
 )
 const collapsedMoreLabel = $derived('more')
 const collapsedMoreWidth = $derived.by(() =>
-  prepareWithSegments(collapsedMoreLabel, TOGGLE_FONT, {
-    whiteSpace: 'pre-wrap',
-  }).widths.reduce((total, width) => total + width, 0),
+  measurePreparedTextWidth(collapsedMoreLabel, TOGGLE_FONT),
 )
 const adjacentPropertyRegionWidth = $derived(
   Math.max(collapsedPortalGeometry.visualLeft - PORTAL_FIELD_GAP_PX, 0),
@@ -448,9 +453,7 @@ const visibleCollapsedDescriptionLines = $derived.by(() =>
 function measurePreparedTextWidth(text: string, font: string): number {
   if (!text) return 0
 
-  return prepareWithSegments(text, font, {
-    whiteSpace: 'pre-wrap',
-  }).widths.reduce((total, width) => total + width, 0)
+  return measureNaturalWidth(prepare(text, font, { whiteSpace: 'pre-wrap' }))
 }
 
 const collapsedMoreButtonPosition = $derived.by(() => {
@@ -651,7 +654,7 @@ function layoutRoutedDescriptionLines(params: {
       reservedRightWidth,
       reserveLineCount,
     )
-    const nextLine = layoutNextLine(prepared, cursor, lineWidth)
+    const nextLine = layoutNextLine(prepared, lineWidth, cursor)
 
     if (!nextLine) return { lines, hasMore: false }
 
@@ -671,7 +674,6 @@ function layoutRoutedDescriptionLines(params: {
     hasMore:
       layoutNextLine(
         prepared,
-        cursor,
         getRoutedLineWidth(
           lineTop,
           contentWidthPx,
@@ -679,6 +681,7 @@ function layoutRoutedDescriptionLines(params: {
           reservedRightWidth,
           reserveLineCount,
         ),
+        cursor,
       ) !== null,
   }
 }
@@ -702,7 +705,7 @@ function appendTruncationEllipsis(
       1,
       line.width - ellipsisWidth - trailingReservedWidth,
     )
-    const truncatedLine = layoutNextLine(prepared, line.start, truncatedLineWidth)
+    const truncatedLine = layoutNextLine(prepared, truncatedLineWidth, line.start)
     const truncatedText = truncatedLine?.text.trim() ?? ''
 
     if (!truncatedLine || truncatedText.length === 0) {
@@ -756,19 +759,19 @@ $effect(() => {
 >
   <div class="pointer-events-none relative h-full w-full overflow-hidden">
     <div
-      class="pointer-events-auto absolute inset-x-0 top-0 z-20 bg-black"
+      class="pointer-events-auto absolute inset-x-0 top-0 z-20 bg-(--theme-panel)"
       style={`height: ${CONTENT_TOP_PADDING_PX + activePortalGeometry.visualTop}px;`}
     ></div>
     <div
-      class="pointer-events-auto absolute right-0 top-0 z-20 bg-black"
+      class="pointer-events-auto absolute right-0 top-0 z-20 bg-(--theme-panel)"
       style={`width: ${contentSidePaddingPx + activePortalGeometry.visualRight}px; height: ${activeContentHeight}px;`}
     ></div>
     <div
-      class="pointer-events-auto absolute z-20 bg-black"
+      class="pointer-events-auto absolute z-20 bg-(--theme-panel)"
       style={`top: ${CONTENT_TOP_PADDING_PX + activePortalGeometry.visualTop}px; left: 0; width: ${contentSidePaddingPx + activePortalGeometry.visualLeft + PORTAL_LEFT_OCCLUSION_OVERDRAW_PX}px; height: ${activePortalGeometry.visualDiameter}px;`}
     ></div>
     <div
-      class="pointer-events-auto absolute inset-x-0 z-20 bg-black"
+      class="pointer-events-auto absolute inset-x-0 z-20 bg-(--theme-panel)"
       style={`top: ${CONTENT_TOP_PADDING_PX + activePortalGeometry.visualBottom - 1}px; height: ${Math.max(activeContentHeight - (CONTENT_TOP_PADDING_PX + activePortalGeometry.visualBottom) + 1, 0)}px;`}
     ></div>
 
@@ -783,7 +786,7 @@ $effect(() => {
       <div class="pointer-events-none absolute inset-x-0 top-0 z-30">
         {#each visibleCollapsedDescriptionLines as line, index (`collapsed-${index}-${line.top}`)}
           <div
-            class="absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-gray-300"
+            class="absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-muted-foreground"
             style={`top: ${CONTENT_TOP_PADDING_PX + line.top}px; left: ${contentSidePaddingPx + CONTENT_DESCRIPTION_LEFT_OFFSET_PX}px; width: ${line.width}px;`}
           >
             {line.text}
@@ -841,7 +844,7 @@ $effect(() => {
         >
           {#each expandedDescriptionLines as line, index (`expanded-${index}-${line.top}`)}
             <div
-              class="pointer-events-none absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-gray-300"
+              class="pointer-events-none absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-muted-foreground"
               style={`top: ${CONTENT_TOP_PADDING_PX + line.top}px; width: ${line.width}px;`}
             >
               {line.text}

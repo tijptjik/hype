@@ -1,7 +1,7 @@
 <script lang="ts">
 import type { Snippet } from 'svelte'
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
-import type { ImageProviderModel } from '$lib/types'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
+import type { ImageProviderModel } from '#lib/context/imageProvider.types.js'
 
 let {
   model,

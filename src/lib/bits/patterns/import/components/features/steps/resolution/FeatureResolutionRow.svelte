@@ -2,23 +2,23 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { Badge } from '$lib/bits/custom/badge'
+import { Badge } from '#lib/bits/custom/badge/index.js'
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
-import CheckCircle from 'virtual:icons/lucide/circle-check'
-import XCircle from 'virtual:icons/lucide/circle-x'
-import ArrowPath from 'virtual:icons/lucide/refresh-cw'
-import FileDiff from 'virtual:icons/lucide/file-diff'
-import MapPin from 'virtual:icons/lucide/map-pin'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import CheckCircle from 'virtual:icons/proicons/checkmark-circle'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
+import ArrowPath from 'virtual:icons/proicons/arrow-sync'
+import FileDiff from 'virtual:icons/proicons/diff'
+import MapPin from 'virtual:icons/proicons/location'
 import FeatureResolutionPreview from './FeatureResolutionPreview.svelte'
 // SERVICES
 import {
   getFeatureResolutionDisplayName,
   isFeatureResolutionCreateResult,
   type FeatureResolutionData,
-} from '$lib/client/services/import/features/resolution'
+} from '#lib/client/services/import/features/resolution.js'
 // TYPES
 import type { Component } from 'svelte'
 
@@ -91,7 +91,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
 
 <div
   data-feature-resolution-row={index}
-  class="relative rounded-2xl border border-base-content/15 bg-black/[0.28] p-4 shadow-[var(--shadow-mini)] transition-colors hover:border-base-content/25 hover:bg-black/[0.36]"
+  class="relative rounded-2xl border border-base-content/15 bg-panel/[0.28] p-4 shadow-[var(--shadow-mini)] transition-colors hover:border-base-content/25 hover:bg-panel/[0.36]"
   transition:fade={{ duration: 200 }}
 >
   <button

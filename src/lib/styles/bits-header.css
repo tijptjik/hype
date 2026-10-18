@@ -73,12 +73,6 @@
     grid-row: 1 / span 3;
   }
 
-  .bits-theme .bits-header__icon {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-
   .bits-theme .bits-header__title {
     grid-column: 1;
     grid-row: 1;
@@ -159,10 +153,6 @@
 
   .bits-theme .bits-header--with-icon .bits-header__breadcrumbs {
     grid-column: 2;
-  }
-
-  .bits-theme .bits-header__breadcrumb-item {
-    @apply inline-flex items-center gap-2;
   }
 
   .bits-theme .bits-header__breadcrumb-link {

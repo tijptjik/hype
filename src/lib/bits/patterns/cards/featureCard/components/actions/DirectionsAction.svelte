@@ -1,13 +1,20 @@
 <script lang="ts">
 // BITS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { getI18n, m } from '#lib/i18n.js'
+// ADAPTERS
+import { getNavigationPanelModel } from '#lib/adapters/panels/useNavigationPanelModel.svelte.js'
+// CONTEXT
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // TYPES
 import type { Point } from 'geojson'
-import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
+import type {
+  Feature,
+  UserContributedFeature,
+} from '#lib/db/zod/schema/feature.types.js'
 // ICONS
-import MapIcon from 'virtual:icons/lucide/map'
+import MapIcon from 'virtual:icons/proicons/map'
 // LOCAL
 import FeatureCardActionButton from './FeatureCardActionButton.svelte'
 
@@ -17,11 +24,17 @@ interface Props {
 }
 
 let { feature, isIconOnly }: Props = $props()
+const navigation = getNavigationPanelModel()
+const view = getSurfaceCtx()
 
+/** Opens the public navigation flow for the card's point. @returns Nothing. */
 function getDirections(): void {
   const [longitude, latitude] = (feature.geometry as Point).coordinates
-  const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`
-  window.open(url, '_blank')
+  void navigation?.open({
+    lon: longitude,
+    lat: latitude,
+    title: getI18n(feature, 'title', view.getUserPreferences(), 'Destination'),
+  })
 }
 </script>
 
@@ -34,6 +47,7 @@ function getDirections(): void {
   icon={directionsIcon}
   variant="primary"
   {isIconOnly}
+  disabled={!navigation || feature.geometry?.type !== 'Point'}
   expandedClass="min-w-[11.5rem] max-w-[11.5rem]"
   onClick={getDirections}
 />

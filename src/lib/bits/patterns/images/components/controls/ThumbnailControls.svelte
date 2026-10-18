@@ -1,15 +1,15 @@
 <script lang="ts">
 // LIB
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
-import { Button } from '$lib/bits/core/button'
-import { cx } from '$lib/bits/utils'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
+import { Button } from '#lib/bits/core/button/index.js'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import CloudUploadIcon from 'virtual:icons/lucide/cloud-upload'
-import LoaderCircleIcon from 'virtual:icons/lucide/loader-circle'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
-import XIcon from 'virtual:icons/lucide/x'
+import CloudUploadIcon from 'virtual:icons/proicons/cloud-arrow-up'
+import LoaderCircleIcon from 'virtual:icons/proicons/spinner'
+import Trash2Icon from 'virtual:icons/proicons/delete'
+import XIcon from 'virtual:icons/proicons/cancel'
 
 let {
   class: className = '',
@@ -58,7 +58,7 @@ const iconButtonClass = $derived(
   cx(
     variant === 'footer'
       ? 'bits-admin-menu__button disabled:cursor-default disabled:opacity-35'
-      : 'bits-admin-menu__button inline-flex h-11 w-11 items-center justify-center rounded-xl bg-black/60 text-white shadow-[0_10px_28px_rgba(0,0,0,0.28)] transition hover:bg-black/75 disabled:cursor-default disabled:opacity-35',
+      : 'bits-admin-menu__button inline-flex h-11 w-11 items-center justify-center rounded-xl bg-base-100 text-base-content shadow-[0_10px_28px_rgba(0,0,0,0.28)] transition hover:bg-surface disabled:cursor-default disabled:opacity-35',
   ),
 )
 
@@ -110,10 +110,10 @@ const deleteModeButtonLabel = $derived(
               hideLabelInstantly={true}
               disabled={disableDeleteMode}
               class={cx(
-                  'bits-admin-menu__button',
-                  iconButtonClass,
-                  isDeleteMode ? 'text-error hover:bg-error/12 hover:text-error' : '',
-                )}
+                'bits-admin-menu__button',
+                iconButtonClass,
+                isDeleteMode ? 'text-error hover:bg-error/12 hover:text-error' : '',
+              )}
               onClick={() => onToggleDeleteMode?.()}
             />
           </div>

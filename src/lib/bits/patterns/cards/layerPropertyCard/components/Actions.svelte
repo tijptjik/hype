@@ -1,11 +1,11 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
-import { Button, SimpleTooltip } from '$lib/bits/core'
-import { Card, Switch } from '$lib/bits/custom'
-import { m } from '$lib/i18n'
-import Inbox from 'virtual:icons/lucide/inbox'
-import Plus from 'virtual:icons/lucide/plus'
-import X from 'virtual:icons/lucide/x'
+import { Button, SimpleTooltip } from '#lib/bits/core/index.js'
+import { Card, Switch } from '#lib/bits/custom/index.js'
+import { m } from '#lib/i18n.js'
+import Inbox from 'virtual:icons/proicons/archive'
+import Plus from 'virtual:icons/proicons/add'
+import X from 'virtual:icons/proicons/cancel'
 import type { LayerPropertyCardActionsProps } from '../layerPropertyCard.types'
 
 let {
@@ -25,11 +25,14 @@ let {
   class={`bits-form__layer-card-actions-rail ${className}`}
 >
   <div class="bits-form__layer-card-actions">
-    <div class="bits-form__layer-card-flag">
+    <div class="flex items-center gap-2.5">
       <SimpleTooltip>
         {#snippet trigger()}
-          <span aria-label="User Contributable">
-            <Inbox class="bits-form__layer-card-flag-icon" aria-hidden="true" />
+          <span>
+            <Inbox
+              class="w-[1.15rem] h-[1.15rem] text-foreground/72"
+              aria-hidden="true"
+            />
           </span>
         {/snippet}
         User Contributable
@@ -54,7 +57,7 @@ let {
           size="sm"
           color={isVisible ? 'dark' : 'success'}
           iconComponent={isVisible ? X : Plus}
-          class="bits-form__layer-card-action-btn"
+          class="w-8 h-8 shrink-0"
           onClick={() => onVisibleChange?.(!isVisible)}
         />
       </div>

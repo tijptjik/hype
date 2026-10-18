@@ -1,19 +1,21 @@
+import { AccountState } from '#lib/context/account.svelte.js'
 import { describe, expect, it, vi } from 'vitest'
 // CONTEXT
-import { AppCtx } from '$lib/context/app.svelte'
+import { AppCtx } from '#lib/context/app.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { FirstClassResource, Panel } from '#lib/enums.js'
 // TYPES
-import type { QueryClient } from '@tanstack/svelte-query'
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { CurrentUser } from '$lib/db/zod/schema/user.types'
-import type { PlaceCtx } from '$lib/context/place.svelte'
-import type { ResponsiveCtx } from '$lib/context/responsive.svelte'
-import type { FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { CurrentUser } from '#lib/db/zod/schema/user.types.js'
+import type { DivisionCtx } from '#lib/context/division.svelte.js'
+import type { ResponsiveCtx } from '#lib/context/responsive.svelte.js'
+import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { SessionUser } from '#lib/types.js'
+import type { UserFeature, UserProfile } from '#lib/db/zod/schema/user.types.js'
 
 /** Creates a promise whose completion is controlled by the test. */
 function createDeferred<T>(): {
@@ -29,22 +31,245 @@ function createDeferred<T>(): {
 }
 
 describe('AppCtx user updates', () => {
+  it('loads classifier definitions before initializing filters after layer changes', async () => {
+    const app = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
+    app.view.scope.prisms.layer = ['ghosts']
+    vi.spyOn(app.view, 'loadPinnedLayers').mockResolvedValue()
+    const definitions = createDeferred<void>()
+    const refresh = vi
+      .spyOn(app.view.queries, 'refreshProperties')
+      .mockReturnValue(definitions.promise)
+    const categorical = vi
+      .spyOn(app.view.filters, 'initialiseCategoricalPropertyFilters')
+      .mockImplementation(() => {})
+    const range = vi
+      .spyOn(app.view.filters, 'initialiseRangePropertyFilter')
+      .mockImplementation(() => {})
+    const pending = app.view.postLayerMutation(false)
+    await Promise.resolve()
+    expect(refresh).toHaveBeenCalled()
+    expect(categorical).not.toHaveBeenCalled()
+    definitions.resolve()
+    await pending
+    expect(categorical).toHaveBeenCalledWith('ghosts')
+    expect(range).toHaveBeenCalledWith('ghosts')
+  })
+
+  it('keeps session role scope stable while user-layer preferences hydrate', async () => {
+    const user = {
+      id: 'member',
+      preferences: {},
+      roles: [{ type: 'organisation', organisationId: 'org', role: 'admin' }],
+    } as unknown as CurrentUser
+    const app = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(user as unknown as SessionUser),
+      {} as ResponsiveCtx,
+    )
+    const scopeBefore = app.view.organisationsQueryKey()
+    app.view.scope.selectionLayers = [{ id: 'default-layer' }] as Layer[]
+    app.view.account.applyProfile({ userLayers: [] })
+    app.view.syncAccount()
+    expect(app.view.organisationsQueryKey()).toEqual(scopeBefore)
+    expect(app.view.scope.selectionLayers.map(layer => layer.id)).toEqual([
+      'default-layer',
+    ])
+  })
+
+  it('does not let an older feature refresh overwrite a newer one', async () => {
+    const first = createDeferred<FeatureFromCollection[]>()
+    const second = createDeferred<FeatureFromCollection[]>()
+    let queryCount = 0
+    const appCtx = new AppCtx(
+      { setDivisionFeatures: vi.fn() } as unknown as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
+    appCtx.view.queries.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => [FirstClassResource.feature],
+      queryFn: () => (queryCount++ === 0 ? first.promise : second.promise),
+    })
+
+    const olderRefresh = appCtx.view.queries.refreshFeatures()
+    const newerRefresh = appCtx.view.queries.refreshFeatures()
+
+    second.resolve([
+      { id: 'new-feature', layerId: 'new-layer', properties: [] },
+    ] as unknown as FeatureFromCollection[])
+    await newerRefresh
+    expect(appCtx.view.queries.rows.feature.map(feature => feature.id)).toEqual([
+      'new-feature',
+    ])
+
+    first.resolve([
+      { id: 'old-feature', layerId: 'old-layer', properties: [] },
+    ] as unknown as FeatureFromCollection[])
+    await olderRefresh
+    expect(appCtx.view.queries.rows.feature.map(feature => feature.id)).toEqual([
+      'new-feature',
+    ])
+  })
+
+  it('ignores a feature response when selected layers change before another refresh starts', async () => {
+    const pending = createDeferred<FeatureFromCollection[]>()
+    const appCtx = new AppCtx(
+      { setDivisionFeatures: vi.fn() } as unknown as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
+    appCtx.view.scope.prisms.layer = ['old-layer']
+    appCtx.view.queries.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => [FirstClassResource.feature],
+      queryFn: () => pending.promise,
+    })
+    const refresh = appCtx.view.queries.refreshFeatures()
+    appCtx.view.scope.prisms.layer = ['new-layer']
+    pending.resolve([
+      { id: 'obsolete', layerId: 'old-layer', properties: [] },
+    ] as unknown as unknown as FeatureFromCollection[])
+    await refresh
+    expect(appCtx.view.queries.rows.feature).toEqual([])
+    expect(appCtx.view.cache.feature.has('obsolete')).toBe(false)
+  })
+
+  it('does not restore feature data after the user identity changes', async () => {
+    const pendingFeatures = createDeferred<FeatureFromCollection[]>()
+    const appCtx = new AppCtx(
+      { setDivisionFeatures: vi.fn() } as unknown as DivisionCtx,
+      new AccountState({ id: 'old-user' } as unknown as SessionUser),
+      {} as ResponsiveCtx,
+    )
+    appCtx.view.queries.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => [FirstClassResource.feature],
+      queryFn: () => pendingFeatures.promise,
+    })
+
+    const refresh = appCtx.view.queries.refreshFeatures()
+    appCtx.view.account.syncSession({ id: 'new-user' } as unknown as SessionUser)
+    appCtx.view.syncAccount()
+
+    pendingFeatures.resolve([
+      { id: 'old-feature', layerId: 'old-layer', properties: [] },
+    ] as unknown as FeatureFromCollection[])
+    await refresh
+
+    expect(appCtx.view.queries.rows.feature).toEqual([])
+  })
+
+  it('does not restore saved feature state after the user identity changes', async () => {
+    const pendingUserFeatures = createDeferred<UserFeature[]>()
+    const appCtx = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState({ id: 'old-user' } as unknown as SessionUser),
+      {} as ResponsiveCtx,
+    )
+    appCtx.view.queries.queryMap.set('userFeatures', {
+      queryKey: () => ['userFeatures', 'old-user'],
+      queryFn: () => pendingUserFeatures.promise,
+    })
+
+    const refresh = appCtx.view.queries.refreshUserFeatures()
+    appCtx.view.account.syncSession({ id: 'new-user' } as unknown as SessionUser)
+    appCtx.view.syncAccount()
+
+    pendingUserFeatures.resolve([
+      { featureId: 'old-feature', isWishlisted: true, isVisited: false },
+    ] as UserFeature[])
+    await refresh
+
+    expect(appCtx.view.account.collections.state).toEqual({
+      wishlisted: [],
+      visited: [],
+    })
+  })
+
+  it('does not commit a profile response after the user identity changes', async () => {
+    const pendingProfile = createDeferred<UserProfile | null>()
+    const appCtx = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState({
+        id: 'old-user',
+        username: 'old-user',
+      } as unknown as SessionUser),
+      {} as ResponsiveCtx,
+    )
+    appCtx.view.panels.setPanelCtx(Panel.profile, 'username', 'old-user')
+    appCtx.view.queries.queryMap.set(FirstClassResource.user, {
+      queryKey: () => [FirstClassResource.user, 'old-user'],
+      queryFn: () => pendingProfile.promise,
+    })
+
+    const refresh = appCtx.view.refreshUserProfile()
+    appCtx.view.account.syncSession({
+      id: 'new-user',
+      username: 'new-user',
+    } as unknown as SessionUser)
+    appCtx.view.syncAccount()
+
+    pendingProfile.resolve({ id: 'old-user', username: 'old-user' } as UserProfile)
+    await refresh
+
+    expect(appCtx.view.account.user?.id).toBe('new-user')
+    expect(appCtx.view.panels.state.profile.ctx?.userData).toBeNull()
+  })
+
+  it('does not let an older hierarchy refresh overwrite a newer one', async () => {
+    const first = createDeferred<Project[]>()
+    const second = createDeferred<Project[]>()
+    let queryCount = 0
+    const appCtx = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
+    appCtx.view.queries.queryMap.set(FirstClassResource.project, {
+      queryKey: () => [FirstClassResource.project],
+      queryFn: () => (queryCount++ === 0 ? first.promise : second.promise),
+    })
+
+    const olderRefresh = appCtx.view.queries.refreshProjects(false)
+    const newerRefresh = appCtx.view.queries.refreshProjects(false)
+
+    second.resolve([{ id: 'new-project' }] as Project[])
+    await newerRefresh
+    first.resolve([{ id: 'old-project' }] as Project[])
+    await olderRefresh
+
+    expect(appCtx.view.queries.rows.project).toEqual([{ id: 'new-project' }])
+  })
+
+  it('invalidates dependent resource caches before the next explicit refresh', async () => {
+    const appCtx = new AppCtx(
+      {} as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
+    appCtx.view.cache.project.set('p', { id: 'p' } as Project)
+    appCtx.view.cache.property.set('v', { id: 'v' } as Property)
+    await appCtx.view.invalidate(FirstClassResource.project)
+    expect(appCtx.view.cache.project.size).toBe(0)
+    expect(appCtx.view.cache.property.size).toBe(0)
+  })
+
   it('loads profile data only when the profile panel opens', async () => {
     const appCtx = new AppCtx(
-      { removeQueries: vi.fn() } as unknown as QueryClient,
-      {} as PlaceCtx,
-      { id: 'user-1' } as CurrentUser,
-      { setPanelOpen: vi.fn() } as ResponsiveCtx,
+      {} as DivisionCtx,
+      new AccountState({ id: 'user-1' } as unknown as SessionUser),
+      {} as ResponsiveCtx,
     )
     const refreshUserProfile = vi.fn().mockResolvedValue(undefined)
-    appCtx.refreshUserProfile = refreshUserProfile
-    appCtx.state.panels.profile.ctx = {
+    appCtx.view.refreshUserProfile = refreshUserProfile
+    appCtx.view.panels.state.profile.ctx = {
       username: 'user-1',
       userData: null,
       observePrisms: true,
     }
 
-    appCtx.openPanel(Panel.profile, false)
+    appCtx.view.panels.openPanel(Panel.profile, false)
 
     await vi.waitFor(() => expect(refreshUserProfile).toHaveBeenCalledWith(false))
   })
@@ -63,47 +288,91 @@ describe('AppCtx user updates', () => {
       ],
     } as CurrentUser
     const appCtx = new AppCtx(
-      { removeQueries: vi.fn() } as unknown as QueryClient,
-      {} as PlaceCtx,
-      user,
+      {} as DivisionCtx,
+      new AccountState(user as unknown as SessionUser),
       {} as ResponsiveCtx,
     )
 
-    appCtx.hub = { id: 'hub-1', code: 'test-hub' } as HubOptsExtended
-    appCtx.state.resources.layer = [{ id: 'saved-layer' }] as Layer[]
-    appCtx.state.prisms.layer = ['temporary-layer']
+    appCtx.view.hub = { id: 'hub-1', code: 'test-hub' } as HubOptsExtended
+    appCtx.view.queries.rows.layer = [{ id: 'saved-layer' }] as Layer[]
+    appCtx.view.scope.prisms.layer = ['temporary-layer']
 
-    await appCtx.setUser({ ...user, username: 'after' })
+    appCtx.view.applyUserProfile({ username: 'after' })
+    appCtx.view.syncAccount()
 
-    expect(appCtx.state.prisms.layer).toEqual(['temporary-layer'])
+    expect(appCtx.view.scope.prisms.layer).toEqual(['temporary-layer'])
   })
 
   it('switches visible markers when active layers change before their feature refresh completes', () => {
     const appCtx = new AppCtx(
-      { removeQueries: vi.fn() } as unknown as QueryClient,
       {
         state: {
           contains: { feature: { neighbourhood: new Map() } },
           filters: { feature: { neighbourhood: { include: new Set() } } },
         },
-        neighbourhoodFilterCount: 0,
-      } as PlaceCtx,
-      null,
+        divisionFilterCount: 0,
+      } as DivisionCtx,
+      new AccountState(null),
       {} as ResponsiveCtx,
     )
     const features = [
       { id: 'bookshop-feature', layerId: 'bookshops', properties: [] },
       { id: 'neon-feature', layerId: 'neon-signs', properties: [] },
-    ] as FeatureFromCollection[]
+    ] as unknown as unknown as FeatureFromCollection[]
 
-    features.forEach(feature => {
-      appCtx.addFeatureToMap(feature)
-    })
-    appCtx.state.prisms.layer = ['neon-signs']
+    vi.spyOn(appCtx.view.resources.featureQueries.map, 'rows', 'get').mockReturnValue(
+      features,
+    )
+    appCtx.view.scope.prisms.layer = ['neon-signs']
     expect(appCtx.featuresVisible).toEqual(['neon-feature'])
 
-    appCtx.state.prisms.layer = ['bookshops']
+    appCtx.view.scope.prisms.layer = ['bookshops']
     expect(appCtx.featuresVisible).toEqual(['bookshop-feature'])
+    expect(appCtx.getVisibleFeatures().map(feature => feature.id)).toEqual([
+      'bookshop-feature',
+    ])
+    appCtx.view.scope.prisms.layer = []
+    expect(appCtx.getVisibleFeatures()).toEqual([])
+  })
+
+  it('removes stale map rows immediately when division selection changes', () => {
+    const include = new Set<string>()
+    const exclude = new Set<string>()
+    const app = new AppCtx(
+      {
+        state: { filters: { feature: { neighbourhood: { include, exclude } } } },
+      } as DivisionCtx,
+      new AccountState(null),
+      {} as ResponsiveCtx,
+    )
+    app.view.scope.prisms.layer = ['overlay']
+    const rows = [
+      {
+        id: 'inside',
+        layerId: 'overlay',
+        divisionMemberships: [{ divisionId: 'district', selected: true }],
+      },
+      {
+        id: 'outside',
+        layerId: 'overlay',
+        divisionMemberships: [{ divisionId: 'other', selected: true }],
+      },
+      {
+        id: 'ambiguous',
+        layerId: 'overlay',
+        divisionMemberships: [{ divisionId: 'district', selected: false }],
+      },
+    ] as unknown as FeatureFromCollection[]
+    vi.spyOn(app.view.resources.featureQueries.map, 'rows', 'get').mockReturnValue(rows)
+    expect(app.getVisibleFeatures()).toHaveLength(3)
+    include.add('district')
+    expect(app.getVisibleFeatures().map(row => row.id)).toEqual(['inside'])
+    include.clear()
+    exclude.add('district')
+    expect(app.getVisibleFeatures().map(row => row.id)).toEqual([
+      'outside',
+      'ambiguous',
+    ])
   })
 
   it('does not commit the anonymous hierarchy after the session identity changes', async () => {
@@ -115,33 +384,41 @@ describe('AppCtx user updates', () => {
       throw new Error(`Unexpected public bootstrap query: ${String(queryKey[0])}`)
     })
     const appCtx = new AppCtx(
-      { fetchQuery, removeQueries: vi.fn() } as unknown as QueryClient,
-      {} as PlaceCtx,
-      null,
+      {} as DivisionCtx,
+      new AccountState(null),
       {} as ResponsiveCtx,
     )
 
+    appCtx.view.queries.queryMap.set(FirstClassResource.organisation, {
+      queryKey: () => ['organisation'],
+      queryFn: () => fetchQuery({ queryKey: ['organisation'] }),
+    })
+    appCtx.view.queries.queryMap.set(FirstClassResource.project, {
+      queryKey: () => ['project'],
+      queryFn: () => fetchQuery({ queryKey: ['project'] }),
+    })
     const bootstrap = appCtx.bootstrapPublicMapResources(false)
     await vi.waitFor(() => expect(fetchQuery).toHaveBeenCalledTimes(2))
 
-    await appCtx.setUser({ id: 'account-user' } as CurrentUser)
-    appCtx.state.resources.organisation = [
+    appCtx.view.account.syncSession({ id: 'account-user' } as unknown as SessionUser)
+    appCtx.view.syncAccount()
+    appCtx.view.queries.rows.organisation = [
       { id: 'account-organisation' },
     ] as Organisation[]
-    appCtx.state.resources.project = [{ id: 'account-project' }] as Project[]
-    appCtx.state.prisms.organisation = ['account-organisation']
-    appCtx.state.prisms.project = ['account-project']
+    appCtx.view.queries.rows.project = [{ id: 'account-project' }] as Project[]
+    appCtx.view.scope.prisms.organisation = ['account-organisation']
+    appCtx.view.scope.prisms.project = ['account-project']
 
     organisations.resolve([{ id: 'public-organisation' }] as Organisation[])
     projects.resolve([{ id: 'public-project' }] as Project[])
     await bootstrap
 
-    expect(appCtx.state.resources.organisation).toEqual([
+    expect(appCtx.view.queries.rows.organisation).toEqual([
       { id: 'account-organisation' },
     ])
-    expect(appCtx.state.resources.project).toEqual([{ id: 'account-project' }])
-    expect(appCtx.state.prisms.organisation).toEqual(['account-organisation'])
-    expect(appCtx.state.prisms.project).toEqual(['account-project'])
+    expect(appCtx.view.queries.rows.project).toEqual([{ id: 'account-project' }])
+    expect(appCtx.view.scope.prisms.organisation).toEqual(['account-organisation'])
+    expect(appCtx.view.scope.prisms.project).toEqual(['account-project'])
   })
 
   it('does not commit anonymous layers, properties, or layer prisms after sign-in', async () => {
@@ -153,20 +430,31 @@ describe('AppCtx user updates', () => {
       throw new Error(`Unexpected public bootstrap query: ${String(queryKey[0])}`)
     })
     const appCtx = new AppCtx(
-      { fetchQuery, removeQueries: vi.fn() } as unknown as QueryClient,
-      {} as PlaceCtx,
-      null,
+      {} as DivisionCtx,
+      new AccountState(null),
       {} as ResponsiveCtx,
     )
 
-    const refreshLayers = appCtx.refreshLayers(false, true, 'anonymous::')
-    const refreshProperties = appCtx.refreshProperties(false, 'anonymous::')
+    appCtx.view.queries.queryMap.set(FirstClassResource.layer, {
+      queryKey: () => ['layer'],
+      queryFn: () => fetchQuery({ queryKey: ['layer'] }),
+    })
+    appCtx.view.queries.queryMap.set(FirstClassResource.property, {
+      queryKey: () => ['property'],
+      queryFn: () => fetchQuery({ queryKey: ['property'] }),
+    })
+    const refreshLayers = appCtx.view.queries.refreshLayers(false, true, 'anonymous::')
+    const refreshProperties = appCtx.view.queries.refreshProperties(
+      false,
+      'anonymous::',
+    )
     await vi.waitFor(() => expect(fetchQuery).toHaveBeenCalledTimes(2))
 
-    await appCtx.setUser({ id: 'account-user' } as CurrentUser)
-    appCtx.state.resources.layer = [{ id: 'account-layer' }] as Layer[]
-    appCtx.state.prisms.layer = ['account-layer']
-    appCtx.cache.property.set('account-property', {
+    appCtx.view.account.syncSession({ id: 'account-user' } as unknown as SessionUser)
+    appCtx.view.syncAccount()
+    appCtx.view.queries.rows.layer = [{ id: 'account-layer' }] as Layer[]
+    appCtx.view.scope.prisms.layer = ['account-layer']
+    appCtx.view.cache.property.set('account-property', {
       id: 'account-property',
     } as Property)
 
@@ -174,9 +462,90 @@ describe('AppCtx user updates', () => {
     properties.resolve([{ id: 'public-property' }] as Property[])
     await Promise.all([refreshLayers, refreshProperties])
 
-    expect(appCtx.state.resources.layer).toEqual([{ id: 'account-layer' }])
-    expect(appCtx.state.prisms.layer).toEqual(['account-layer'])
-    expect(appCtx.cache.property.has('public-property')).toBe(false)
-    expect(appCtx.cache.property.has('account-property')).toBe(true)
+    expect(appCtx.view.queries.rows.layer).toEqual([{ id: 'account-layer' }])
+    expect(appCtx.view.scope.prisms.layer).toEqual(['account-layer'])
+    expect(appCtx.view.cache.property.has('public-property')).toBe(false)
+    expect(appCtx.view.cache.property.has('account-property')).toBe(true)
   })
+})
+
+it('fits all pages of the combined filtered collection without viewport constraints', async () => {
+  const app = new AppCtx({} as DivisionCtx, new AccountState(null), {} as ResponsiveCtx)
+  const input = {
+    prisms: { layer: ['one', 'two'] },
+    filters: { divisionIds: ['island', 'district'] },
+    includeCounts: false,
+    meta: { isAdminRequest: false, scope: 'public' },
+  }
+  vi.spyOn(app.view.filters, 'featureQueryInput').mockReturnValue(input)
+  app.mapController = {} as NonNullable<typeof app.mapController>
+  const rows = [{ id: 'near' }, { id: 'offscreen' }] as FeatureFromCollection[]
+  const query = {
+    load: vi.fn().mockResolvedValue(undefined),
+    hasMore: true,
+    error: null,
+    rows,
+    next: vi.fn(async () => {
+      query.hasMore = false
+    }),
+    clear: vi.fn(),
+  }
+  vi.spyOn(app.view.cacheCtx, 'createFeatureQuery').mockReturnValue(query as never)
+  const fit = vi.spyOn(app, 'zoomToFeatures').mockImplementation(() => {})
+  await app.zoomToFilteredFeatures()
+  expect(query.load).toHaveBeenCalledWith(input)
+  expect(query.next).toHaveBeenCalledOnce()
+  expect(fit).toHaveBeenCalledWith(rows)
+  expect(query.clear).toHaveBeenCalledOnce()
+})
+
+it('ignores a collection fit that settles after the filters change', async () => {
+  const app = new AppCtx({} as DivisionCtx, new AccountState(null), {} as ResponsiveCtx)
+  let divisions = ['first']
+  vi.spyOn(app.view.filters, 'featureQueryInput').mockImplementation(() => ({
+    prisms: { layer: ['one'] },
+    filters: { divisionIds: divisions },
+    meta: { isAdminRequest: false, scope: 'public' },
+  }))
+  app.mapController = {} as NonNullable<typeof app.mapController>
+  const pending = createDeferred<void>()
+  const query = {
+    load: vi.fn(() => pending.promise),
+    hasMore: true,
+    error: null,
+    rows: [],
+    next: vi.fn(),
+    clear: vi.fn(),
+  }
+  vi.spyOn(app.view.cacheCtx, 'createFeatureQuery').mockReturnValue(query as never)
+  const fit = vi.spyOn(app, 'zoomToFeatures').mockImplementation(() => {})
+  const result = app.zoomToFilteredFeatures()
+  divisions = ['second']
+  pending.resolve()
+  await result
+  expect(query.next).not.toHaveBeenCalled()
+  expect(fit).not.toHaveBeenCalled()
+  expect(query.clear).toHaveBeenCalledOnce()
+})
+
+it('fits feature bounds with full open-panel clearance and no forced center', () => {
+  const app = new AppCtx({} as DivisionCtx, new AccountState(null), {} as ResponsiveCtx)
+  const fitBounds = vi.fn()
+  app.mapController = { fitBounds } as unknown as NonNullable<typeof app.mapController>
+  vi.spyOn(app.view.panels, 'isRightPanelOpen').mockReturnValue(true)
+  vi.spyOn(app.view.panels, 'isLeftPanelOpen').mockReturnValue(false)
+  app.zoomToFeatures([
+    { geometry: { type: 'Point', coordinates: [114, 22] }, properties: {} },
+    { geometry: { type: 'Point', coordinates: [115, 23] }, properties: {} },
+  ] as FeatureFromCollection[])
+  expect(fitBounds).toHaveBeenCalledWith(
+    [
+      [114, 22],
+      [115, 23],
+    ],
+    expect.objectContaining({
+      padding: { top: 150, bottom: 50, right: 430, left: 50 },
+    }),
+  )
+  expect(fitBounds.mock.calls[0][1]).not.toHaveProperty('center')
 })

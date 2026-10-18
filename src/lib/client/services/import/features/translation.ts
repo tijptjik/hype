@@ -18,11 +18,11 @@
 // ---
 
 // I18N
-import { supportedLocaleKeys } from '$lib/i18n'
+import { supportedLocaleKeys } from '#lib/i18n.js'
 // TYPES
-import type { ImportCtx } from '$lib/context/import.svelte'
-import type { FeatureCSVColumn } from '$lib/client/services/import/types'
-import type { LocaleKey } from '$lib/types'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
+import type { FeatureCSVColumn } from '#lib/client/services/import/types.js'
+import type { LocaleKey } from '#lib/types.js'
 
 /********************
  *  0. TYPES

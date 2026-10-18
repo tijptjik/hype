@@ -1,18 +1,23 @@
 <script lang="ts" generics="T extends Resource">
+// SVELTE
 import type { Snippet } from 'svelte'
+import { page } from '$app/state'
+// I18N
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import ResourceCardRow from './components/ResourceCardRow.svelte'
 import ResourceEmptyState from './components/ResourceEmptyState.svelte'
 import ResourceLoadingState from './components/ResourceLoadingState.svelte'
 import ResourceTableRow from './components/ResourceTableRow.svelte'
 // BITS
-import { VirtualList } from '$lib/bits/custom/index/src'
+import { VirtualList } from '#lib/bits/custom/index/src/index.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
-import { Panel } from '$lib/enums'
+import { Panel } from '#lib/enums.js'
 // TYPES
-import type { Resource, ResourceIndexRowSelectionState } from '$lib/types'
+import type { Resource } from '#lib/types.js'
+import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEdit.types.js'
 import type {
   ResourceIndexGridRow,
   ResourceIndexItem,
@@ -38,6 +43,9 @@ let {
   row,
   listContainer = $bindable(),
   isInitialised = true,
+  onNearEnd,
+  hasMore = false,
+  isLoadingMore = false,
   applyBottomOverflow = true,
   getRowSelectionState,
   onRowSelectionToggle,
@@ -48,12 +56,12 @@ const adminCtx = getAdminCtx()
 let gridWidth = $state(0)
 let stableColumnCount = $state(1)
 let lastKnownPanelOpenState = $state(
-  adminCtx.appCtx && typeof adminCtx.appCtx.isPanelOpenOrVisual === 'function'
-    ? adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin)
+  adminCtx.view && typeof adminCtx.view.panels.isPanelOpenOrVisual === 'function'
+    ? adminCtx.view.panels.isPanelOpenOrVisual(Panel.admin)
     : false,
 )
 
-const layoutMode = $derived(adminCtx.appCtx.state.ui.layoutMode[resource])
+const layoutMode = $derived(adminCtx.listUi.state.layoutMode[resource])
 const isRowLayout = $derived(layoutMode === 'table' || layoutMode === 'list')
 const itemHeight = $derived(
   isRowLayout
@@ -94,7 +102,7 @@ function getColumnCount(nextGridWidth: number, nextLayoutMode: string): number {
 }
 
 function buildItems(): Array<ResourceIndexItem<T>> {
-  if (isRowLayout || columnCount <= 1) {
+  if (isRowLayout) {
     return entities
   }
 
@@ -121,7 +129,7 @@ $effect(() => {
   gridWidth
   layoutMode
 
-  const currentPanelState = adminCtx.appCtx.isPanelOpenOrVisual(Panel.admin)
+  const currentPanelState = adminCtx.view.panels.isPanelOpenOrVisual(Panel.admin)
   const nextColumnCount = getColumnCount(gridWidth, layoutMode)
 
   if (currentPanelState === lastKnownPanelOpenState) {
@@ -141,7 +149,10 @@ $effect(() => {
 })
 </script>
 
-{#snippet children(item: ResourceIndexItem<T>, index: number)}
+{#snippet children(
+  item: ResourceIndexItem<T>,
+  index: number,
+)}
   {#if layoutMode === 'card'}
     {@const cardRow = item as ResourceIndexGridRow<T>}
     <ResourceCardRow
@@ -164,6 +175,17 @@ $effect(() => {
   {/if}
 {/snippet}
 
+{#snippet cardCell(
+  entity: T,
+  index: number,
+)}
+  {#if card}
+    {@render card(entity, index)}
+  {:else}
+    <article class="rounded-lg p-4"><p>{entity.id}</p></article>
+  {/if}
+{/snippet}
+
 <div
   bind:clientWidth={gridWidth}
   bind:this={listContainer}
@@ -174,6 +196,13 @@ $effect(() => {
       <div class="bits-resource-index-wrapper relative min-h-0 flex-1">
         <VirtualList
           {items}
+          getCells={layoutMode === 'card'
+            ? item => (item as ResourceIndexGridRow<T>).entities
+            : undefined}
+          getCellKey={(entity: T) => `${page.url.pathname}:${resource}:${entity.id}`}
+          cell={cardCell}
+          {columnCount}
+          columnGap={GRID_COLUMN_GAP_PX}
           {children}
           getKey={item => item.id}
           height="100%"
@@ -183,6 +212,10 @@ $effect(() => {
           bufferAfter={10}
           padding={RESOURCE_INDEX_LIST_HORIZONTAL_PADDING_PX}
           {applyBottomOverflow}
+          onRangeChange={(_start, end) => {
+            if (hasMore && !isLoadingMore && entities.length - end * columnCount <= 10)
+              onNearEnd?.()
+          }}
         />
       </div>
     {:else}
@@ -192,8 +225,18 @@ $effect(() => {
         <ResourceEmptyState />
       </div>
     {/if}
+    {#if hasMore}
+      <button
+        type="button"
+        class="shrink-0 px-3 py-2 text-sm"
+        disabled={isLoadingMore}
+        onclick={onNearEnd}
+      >
+        {isLoadingMore ? m.resource_loading() : m.resource_load_more()}
+      </button>
+    {/if}
   {:else}
-    <ResourceLoadingState />
+    <ResourceLoadingState {isRowLayout} />
   {/if}
 </div>
 

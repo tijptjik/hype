@@ -1,6 +1,10 @@
-import type { StyleSpecification } from 'maplibre-gl'
+import type {
+  StyleSpecification,
+  LayerSpecification,
+  SymbolLayerSpecification,
+} from 'maplibre-gl'
 
-import type { LocaleKey } from '../../../types'
+import type { LocaleKey } from '#lib/types.js'
 
 import {
   buildNamedProtomapsStyle,
@@ -29,7 +33,7 @@ const SIN_FUCHSIA = '#F5006C'
 const SIN_ORANGE = '#FF6A00'
 const SIN_YELLOW = '#F6FF00'
 const SIN_CYAN = '#00D9FF'
-const SIN_COBALT = '#4561FF'
+const _SIN_COBALT = '#4561FF'
 const SIN_IVORY = '#FFE99A'
 
 const HIDDEN_PROTOMAPS_LAYER_IDS = new Set([
@@ -121,7 +125,9 @@ const createBuildingOutlineLayer = (): StyleLayer => ({
  * @param layer - Foreground symbol layer whose layout and placement are retained.
  * @returns A low-opacity glow layer.
  */
-const createGlowLabelLayer = (layer: StyleLayer): StyleLayer => ({
+const createGlowLabelLayer = (
+  layer: SymbolLayerSpecification,
+): SymbolLayerSpecification => ({
   ...structuredClone(layer),
   id: `${layer.id}__glow`,
   paint: {
@@ -153,7 +159,7 @@ const applyGenesisTheme = (
   if (!style.layers) return style
 
   // Transform land, harbour, transport and label layers into one cohesive night map.
-  style.layers = style.layers.map(layer => {
+  style.layers = style.layers.map((layer): LayerSpecification => {
     const localizedTextField =
       layer.type === 'symbol' ? getLocaleTextField(layer.id, locale) : undefined
 
@@ -164,7 +170,7 @@ const applyGenesisTheme = (
       }
     }
 
-    if (ROAD_LAYER_IDS.has(layer.id)) {
+    if (layer.type === 'line' && ROAD_LAYER_IDS.has(layer.id)) {
       const isMinorRoad =
         layer.id.includes('minor') || layer.id === 'roads_minor_service'
       const isHighway = layer.id.includes('highway')
@@ -188,7 +194,7 @@ const applyGenesisTheme = (
       }
     }
 
-    if (ROAD_CASING_LAYER_IDS.has(layer.id)) {
+    if (layer.type === 'line' && ROAD_CASING_LAYER_IDS.has(layer.id)) {
       const isMinorRoad = layer.id.includes('minor')
 
       return {
@@ -208,11 +214,13 @@ const applyGenesisTheme = (
 
     switch (layer.id) {
       case 'background':
+        if (layer.type !== 'background') return layer
         return {
           ...layer,
           paint: { ...(layer.paint ?? {}), 'background-color': SIN_VOID },
         }
       case 'earth':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
@@ -222,6 +230,7 @@ const applyGenesisTheme = (
           },
         }
       case 'water':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
@@ -232,6 +241,7 @@ const applyGenesisTheme = (
         }
       case 'water_stream':
       case 'water_river':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
           paint: {
@@ -243,6 +253,7 @@ const applyGenesisTheme = (
       case 'landuse_park':
       case 'landuse_urban_green':
       case 'landuse_zoo':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
@@ -254,6 +265,7 @@ const applyGenesisTheme = (
       case 'landuse_school':
       case 'landuse_hospital':
       case 'landuse_industrial':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
@@ -265,6 +277,7 @@ const applyGenesisTheme = (
       case 'landuse_beach':
       case 'landuse_pedestrian':
       case 'landuse_pier':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           paint: {
@@ -274,6 +287,7 @@ const applyGenesisTheme = (
           },
         }
       case 'buildings':
+        if (layer.type !== 'fill') return layer
         return {
           ...layer,
           minzoom: 16.5,
@@ -285,6 +299,7 @@ const applyGenesisTheme = (
           },
         }
       case 'roads_rail':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
           layout: { ...(layer.layout ?? {}), visibility: 'visible' },
@@ -307,6 +322,7 @@ const applyGenesisTheme = (
           },
         }
       case 'roads_pier':
+        if (layer.type !== 'line') return layer
         return {
           ...layer,
           paint: {
@@ -316,6 +332,7 @@ const applyGenesisTheme = (
           },
         }
       case 'address_label':
+        if (layer.type !== 'symbol') return layer
         return {
           ...layer,
           minzoom: 19,
@@ -332,6 +349,7 @@ const applyGenesisTheme = (
           },
         }
       case 'water_waterway_label':
+        if (layer.type !== 'symbol') return layer
         return {
           ...layer,
           layout: {
@@ -347,6 +365,7 @@ const applyGenesisTheme = (
         }
       case 'roads_labels_minor':
       case 'roads_labels_major':
+        if (layer.type !== 'symbol') return layer
         return {
           ...layer,
           minzoom: layer.id === 'roads_labels_major' ? 12 : 15,
@@ -369,6 +388,7 @@ const applyGenesisTheme = (
       case 'places_region':
       case 'places_locality':
       case 'places_country':
+        if (layer.type !== 'symbol') return layer
         if (noLabels) return layer
         return {
           ...layer,

@@ -1,4 +1,4 @@
-import type { Property } from '$lib/db/zod/schema/property.types'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 
 export type FeatureFieldSectionItem = {
   property: Property

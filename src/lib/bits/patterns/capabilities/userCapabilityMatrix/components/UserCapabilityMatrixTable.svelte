@@ -1,9 +1,10 @@
 <script lang="ts">
-import { Checkbox } from '$lib/bits/custom'
-import ChevronUpIcon from 'virtual:icons/lucide/chevron-up'
-import ChevronDownIcon from 'virtual:icons/lucide/chevron-down'
+import { useId } from 'bits-ui'
+import { Checkbox } from '#lib/bits/custom/index.js'
+import ChevronUpIcon from 'virtual:icons/proicons/chevron-up'
+import ChevronDownIcon from 'virtual:icons/proicons/chevron-down'
 import type { UserCapabilityMatrixProps } from '../userCapabilityMatrix.types'
-import type { CapabilityKey } from '$lib/types'
+import type { CapabilityKey } from '#lib/capabilities.types.js'
 
 let {
   capabilityKeys,
@@ -12,6 +13,8 @@ let {
   isEditing = false,
   onToggleCell,
 }: Omit<UserCapabilityMatrixProps, 'title' | 'subtitle'> = $props()
+
+const matrixId = useId()
 
 type SortKey = 'user' | CapabilityKey
 type SortDirection = 'asc' | 'desc'
@@ -56,16 +59,24 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
     <thead>
       <tr>
         <th
+          scope="col"
+          aria-sort={sortKey === 'user'
+            ? sortDirection === 'asc'
+              ? 'ascending'
+              : 'descending'
+            : 'none'}
           class="bits-user-capability-matrix__head-cell bits-user-capability-matrix__head-cell--user"
         >
-          <div class="bits-user-capability-matrix__head-user-wrap">
-            <span class="bits-user-capability-matrix__head-user-label">User</span>
+          <div class="flex items-end justify-between gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wide text-primary/90"
+              >User</span
+            >
             <span class="bits-user-capability-matrix__sort-buttons">
               <button
                 type="button"
                 class="bits-user-capability-matrix__sort-btn"
-                class:bits-user-capability-matrix__sort-btn--active={sortKey === 'user' &&
-                  sortDirection === 'asc'}
+                class:bits-user-capability-matrix__sort-btn--active={sortKey ===
+                  'user' && sortDirection === 'asc'}
                 aria-label="Sort users ascending"
                 onclick={() => setSort('user', 'asc')}
               >
@@ -74,8 +85,8 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
               <button
                 type="button"
                 class="bits-user-capability-matrix__sort-btn"
-                class:bits-user-capability-matrix__sort-btn--active={sortKey === 'user' &&
-                  sortDirection === 'desc'}
+                class:bits-user-capability-matrix__sort-btn--active={sortKey ===
+                  'user' && sortDirection === 'desc'}
                 aria-label="Sort users descending"
                 onclick={() => setSort('user', 'desc')}
               >
@@ -86,10 +97,17 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
         </th>
         {#each capabilityKeys as capabilityKey (capabilityKey)}
           <th
+            scope="col"
+            aria-sort={sortKey === capabilityKey
+              ? sortDirection === 'asc'
+                ? 'descending'
+                : 'ascending'
+              : 'none'}
             class="bits-user-capability-matrix__head-cell bits-user-capability-matrix__head-cell--capability"
           >
-            <div class="bits-user-capability-matrix__head-capability-wrap">
-              <span class="bits-user-capability-matrix__head-label"
+            <div class="flex h-full w-full flex-col items-center justify-end gap-1">
+              <span
+                class="block w-full text-center text-sm leading-snug normal-case whitespace-normal"
                 >{capabilityLabelByKey[capabilityKey] ?? capabilityKey}</span
               >
               <span
@@ -123,14 +141,24 @@ function setSort(nextSortKey: SortKey, nextSortDirection: SortDirection): void {
     </thead>
     <tbody>
       {#each sortedRows as row (row.userId)}
-        <tr class="bits-user-capability-matrix__row">
+        <tr class="border-t border-primary/25">
           <th class="bits-user-capability-matrix__user-cell" scope="row">
-            <span class="bits-user-capability-matrix__user-name">{row.name}</span>
-            <span class="bits-user-capability-matrix__user-role">{row.role}</span>
+            <span
+              class="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold max-w-80"
+              >{row.name}</span
+            >
+            <span class="block text-xxs uppercase tracking-wide text-muted-foreground"
+              >{row.role}</span
+            >
           </th>
           {#each capabilityKeys as capabilityKey (capabilityKey)}
             <td class="bits-user-capability-matrix__cell">
+              <label class="sr-only" for={`${matrixId}-${row.userId}-${capabilityKey}`}
+                >{row.name}:
+                {capabilityLabelByKey[capabilityKey] ?? capabilityKey}</label
+              >
               <Checkbox
+                id={`${matrixId}-${row.userId}-${capabilityKey}`}
                 checked={row.capabilities?.[capabilityKey] === true}
                 disabled={!isEditing}
                 onCheckedChange={value =>

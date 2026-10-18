@@ -21,7 +21,7 @@ let {
   data-reserve-drag-space={reserveDragSpace}
 >
   <span class="bits-card__drag-handle" aria-hidden="true">
-    <GripVerticalIcon class="bits-card__drag-icon" />
+    <GripVerticalIcon class="w-4 h-4" />
   </span>
   {@render children?.()}
 </article>

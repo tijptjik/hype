@@ -1,12 +1,12 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import MagnifyingGlass from 'virtual:icons/lucide/search'
 import GlobeAsiaAustralia from 'virtual:icons/lucide/globe-2'
 // TYPES
-import type { FeatureForm } from '$lib/types'
+import type { FeatureForm } from '#lib/client/services/form.types.js'
 import type { Point } from 'geojson'
 
 type AddressActionsProps = {

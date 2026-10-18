@@ -1,22 +1,25 @@
 // THIRD PARTY
 import type { Locale as DateFnsLocale } from 'date-fns'
-import { enGB, zhCN, zhHK } from 'date-fns/locale'
+import { enGB } from 'date-fns/locale/en-GB'
+import { zhCN } from 'date-fns/locale/zh-CN'
+import { zhHK } from 'date-fns/locale/zh-HK'
 // I18N
-import * as runtime from '$lib/paraglide/runtime'
-import * as m from '$lib/paraglide/messages'
+import * as runtime from '#lib/paraglide/runtime.js'
+import * as m from '#lib/paraglide/messages.js'
 // TYPES
-import type { Locale, LocaleKey, Neighbourhood } from '$lib/types'
-import type { Resource } from '$lib/types'
+import type { Locale, LocaleKey } from '#lib/types.js'
+import type { DivisionFacet } from '#lib/api/services/featureQuery.types.js'
+import type { Resource } from '#lib/types.js'
 import type {
   PropertyValueI18nDB,
   WritableI18nRecord,
-} from '$lib/db/zod/schema/property.types'
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
+} from '#lib/db/zod/schema/property.types.js'
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 import { supportedLocaleKeys, supportedLocales } from './enums'
 import type {
   FeatureProperty,
   FeaturePropertyI18nDB,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 
 export { supportedLocaleKeys }
 
@@ -105,7 +108,7 @@ export function getLocaleOrder(localeKey: LocaleKey): LocaleKey[] {
   return ['zhHans', 'zhHant', 'en']
 }
 
-export function toLocaleKey(locale: Locale | LocaleKey): LocaleKey {
+export function toLocaleKey(locale: string): LocaleKey {
   if (locale === 'en' || locale === 'zhHans' || locale === 'zhHant') return locale
   if (locale === 'zh-hans') return 'zhHans'
   if (locale === 'zh-hant') return 'zhHant'
@@ -344,8 +347,8 @@ function getLocaleEntry<T>(
 export function getI18n<T>(
   obj:
     | Resource
-    | Neighbourhood
-    | { i18n: Record<LocaleKey, T> | null }
+    | DivisionFacet
+    | { i18n?: Partial<Record<LocaleKey, T>> | null }
     | Record<LocaleKey, T>
     | undefined,
   field: string,
@@ -479,9 +482,9 @@ export { m, runtime }
  * module do not eagerly initialize the SvelteKit remote runtime.
  */
 async function loadTranslateTextRemote(): Promise<
-  typeof import('$lib/api/server/translation.remote').translateText
+  typeof import('#lib/api/translation.remote.js').translateText
 > {
-  const { translateText } = await import('$lib/api/server/translation.remote')
+  const { translateText } = await import('#lib/api/translation.remote.js')
   return translateText
 }
 
@@ -511,6 +514,7 @@ type TranslateI18nFieldsParams = {
  * Translate selected i18n fields from one locale to another.
  * @param params - Translation request payload and lifecycle callbacks.
  * @returns A field/value map for translated strings.
+ * @remarks Blank source fields are omitted; an entirely blank source makes no request.
  */
 export async function translateI18nFields({
   source,
@@ -521,13 +525,20 @@ export async function translateI18nFields({
   onFailure,
 }: TranslateI18nFieldsParams): Promise<Record<string, string>> {
   try {
-    const sourceTexts = fields.map(field => i18n[source]?.[field] ?? '')
-    const translatedTexts = await translateText(source, target, sourceTexts)
+    // Keep source fields aligned with their translations while skipping empty inputs.
+    const sourceFields = fields.filter(field => i18n[source]?.[field]?.trim())
+    const sourceTexts = sourceFields.map(field => i18n[source]?.[field] ?? '')
+    const translatedTexts = sourceTexts.length
+      ? await translateText(source, target, sourceTexts)
+      : []
 
-    const translated = fields.reduce<Record<string, string>>((acc, field, index) => {
-      acc[field] = translatedTexts[index] ?? ''
-      return acc
-    }, {})
+    const translated = sourceFields.reduce<Record<string, string>>(
+      (acc, field, index) => {
+        acc[field] = translatedTexts[index] ?? ''
+        return acc
+      },
+      {},
+    )
 
     onSuccess?.(translated)
     return translated

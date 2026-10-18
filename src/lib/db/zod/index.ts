@@ -46,6 +46,7 @@ export * from './schema/property'
 /* -------- */
 export * from './schema/task'
 export * from './schema/task.types'
+export { TaskProfile } from './schema/task'
 
 /* ----------------- */
 // IMAGE SCHEMAS

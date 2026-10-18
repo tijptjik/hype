@@ -3,7 +3,7 @@ import { getContext, setContext } from 'svelte'
 import { SvelteSet, SvelteMap } from 'svelte/reactivity'
 import { toast } from 'svelte-sonner'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
 import {
   finalizePreparedImageUpload,
@@ -12,23 +12,32 @@ import {
   prepareImageUpload,
   sortImages,
   uploadPreparedImageObject,
-} from '$lib/client/services/image'
-import { createPreviewableUploadFile } from '$lib/images/upload'
+} from '#lib/client/services/image.js'
+import { createPreviewableUploadFile } from '#lib/images/upload.js'
 import {
   deleteImage as deleteImageRemote,
   getImagesForContext,
   rotateImage as rotateImageRemote,
   setImageIntent,
   setImagePublished,
-} from '$lib/api/server/image.remote'
-import { runRemoteQuery } from '$lib/remote'
+  updateImage as updateImageRemote,
+} from '#lib/api/image.remote.js'
+import { runRemoteQuery } from '#lib/remote/index.js'
+import { projectResourcePatch } from '#lib/client/services/optimisticRecords.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import {
+  getSurfaceCtx,
+  type ResourceViewCtx,
+} from '#lib/context/resourceView.svelte.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { ImageContextResource, ImageContextResourceExtended } from '$lib/enums'
-import type { Id, ImageCtxConstructorOptions, ImageContextConfig } from '$lib/types'
+import type { ImageContextResource, ImageContextResourceExtended } from '#lib/enums.js'
+import type { Id } from '#lib/types.js'
+import type {
+  ImageCtxConstructorOptions,
+  ImageContextConfig,
+} from '#lib/context/imageProvider.types.js'
 import type {
   Image,
   ImageCtxEnvelope,
@@ -38,12 +47,12 @@ import type {
   Intent,
   LoadStatus,
   UploadStatus,
-} from '$lib/db/zod/schema/image.types'
-import type { HubDB } from '$lib/db/zod/schema/hub.types'
-import type { OrganisationDB } from '$lib/db/zod/schema/organisation.types'
-import type { ProjectDB } from '$lib/db/zod/schema/project.types'
-import { addParamToUrl } from '$lib/navigation'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/image.types.js'
+import type { HubDB } from '#lib/db/zod/schema/hub.types.js'
+import type { OrganisationDB } from '#lib/db/zod/schema/organisation.types.js'
+import type { ProjectDB } from '#lib/db/zod/schema/project.types.js'
+import { addParamToUrl } from '#lib/navigation/index.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 function isAbortedImageLoadError(error: unknown): boolean {
   if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
@@ -79,10 +88,15 @@ async function createOptimisticPreviewUrl(file: File): Promise<string> {
   }
 }
 
+/**
+ * Checks whether an entry has an image record with a usable identity.
+ * @param image Candidate envelope from preloaded or remote image data.
+ * @returns Whether the entry can participate in viewer image lookup and selection.
+ */
 function isValidImageEnvelope(
   image: ImageCtxEnvelope | null | undefined,
 ): image is ImageCtxEnvelope {
-  return image != null && image.image.id != null
+  return typeof image?.image?.id === 'string' && image.image.id.length > 0
 }
 
 function getErrorMessage(error: unknown): string | null {
@@ -240,15 +254,25 @@ type SingleImageResourceCacheEntry = {
  */
 export class ImageCtx {
   isAdminMode: boolean = false
-  appCtx = getAppCtx()
+  readonly appCtx: Pick<
+    ResourceViewCtx,
+    'cache' | 'resources' | 'getTaskById' | 'invalidateResourceTargeted' | 'isAdmin'
+  >
 
-  // Add context tracking to prevent race conditions
-  private currentContextId: string | null = null
+  // Track refresh order as well as context transitions to prevent stale image commits.
+  private imageRefreshSerial = 0
 
   // ═══════════════════════
   // 1. CONSTRUCTOR & SETUP
   // ═══════════════════════
-  constructor(options: ImageCtxConstructorOptions = {}) {
+  constructor(
+    options: ImageCtxConstructorOptions,
+    resources: Pick<
+      ResourceViewCtx,
+      'cache' | 'resources' | 'getTaskById' | 'invalidateResourceTargeted' | 'isAdmin'
+    >,
+  ) {
+    this.appCtx = resources
     const {
       isAdminMode = false,
       context,
@@ -272,10 +296,15 @@ export class ImageCtx {
 
   private setupEventListeners() {
     // Listen for refresh images events (e.g., when a feature is published)
-    window.addEventListener(
-      'refreshImages',
-      this.handleRefreshImagesEvent.bind(this) as EventListener,
-    )
+    if (typeof window === 'undefined') return
+    window.addEventListener('refreshImages', this.handleRefreshImagesEvent)
+  }
+
+  /** Removes view-owned listeners and supersedes pending reads. @returns Nothing. */
+  dispose(): void {
+    this.imageRefreshSerial++
+    if (typeof window !== 'undefined')
+      window.removeEventListener('refreshImages', this.handleRefreshImagesEvent)
   }
 
   private handleRefreshImagesEvent = (event: Event) => {
@@ -335,9 +364,9 @@ export class ImageCtx {
       this.state.context?.ctxTypeSecondary !== context?.ctxTypeSecondary ||
       this.state.context?.ctxIdSecondary !== context?.ctxIdSecondary
 
-    // Generate context ID
-    const newContextId = context ? `${context.ctxType}-${context.ctxId}` : null
-    this.currentContextId = newContextId
+    // Supersede pending reads even when only secondary or preloaded images change.
+    const contextSerial = ++this.imageRefreshSerial
+    this.state.isFetchingImages = false
 
     if (isContextChange) {
       // Reset context-bound transient state before new async loads can write into it.
@@ -362,11 +391,13 @@ export class ImageCtx {
     if (images && images.length > 0) {
       const validImages = images.filter(isValidImageEnvelope)
       await this.setImages(validImages)
+      if (this.imageRefreshSerial !== contextSerial) return
       // Set active image when we have preloaded images
       this.setActiveImageToTargetOrFirst()
       // CASE 2 : Images not preloaded except for the leading image
     } else if (image) {
       await this.setImages([image])
+      if (this.imageRefreshSerial !== contextSerial) return
       this.setActiveImageToTargetOrFirst()
       await this.refreshImages()
       // CASE 3 : Initial Context - we will have an async image set
@@ -375,6 +406,7 @@ export class ImageCtx {
     } else {
       // CASE 4 : Feature has no images, so just clear the image states.
       await this.setImages([])
+      if (this.imageRefreshSerial !== contextSerial) return
       this.resetTargetImage()
       this.resetActiveImage()
     }
@@ -1157,6 +1189,65 @@ export class ImageCtx {
     }
   }
 
+  /**
+   * Saves image metadata with shared optimistic projections and isolated rollback.
+   * @param imageId Image whose metadata changes.
+   * @param data Metadata fields accepted by the update command.
+   * @returns Resolves after persistence and affected collection reconciliation.
+   * @remarks Captures the initiating context so navigation cannot update another viewer.
+   */
+  async updateMetadata(
+    imageId: Id,
+    data: Parameters<typeof updateImageRemote>[0]['data'],
+  ): Promise<void> {
+    const ctx = this.getCtx()
+    const contextAtStart = this.state.context
+    const mutation = this.appCtx.resources.beginMutation(
+      'image',
+      { meta: { id: imageId }, data },
+      [['image', this.state.images as Map<string, unknown>]],
+    )
+    const syncActive = (): void => {
+      if (
+        this.state.context === contextAtStart &&
+        this.state.activeImage?.image.id === imageId
+      )
+        this.state.activeImage = this.getImage(imageId) ?? null
+    }
+    syncActive()
+    try {
+      await updateImageRemote({
+        id: imageId,
+        ctxType: ctx.ctxType,
+        ctxId: ctx.ctxId,
+        data,
+        meta: { isAdminRequest: true },
+      }).updates(
+        ...mutation.updates,
+        getImagesForContext({
+          ctxType: ctx.ctxType,
+          ctxId: ctx.ctxId,
+          meta: this.isAdminMode ? { isAdminRequest: true } : undefined,
+        }).withOverride(current => ({
+          ...current,
+          data: projectResourcePatch(
+            current.data,
+            'image',
+            { meta: { id: imageId }, data },
+            'image',
+          ),
+        })),
+      )
+      mutation.settle(true)
+    } catch (error) {
+      mutation.settle(false)
+      throw error
+    } finally {
+      syncActive()
+    }
+    await this.appCtx.resources.reconcile('image')
+  }
+
   // ═══════════════════════
   // 3.7 STATE MANAGEMENT :: LOAD STATUS
   // ═══════════════════════
@@ -1691,7 +1782,7 @@ export class ImageCtx {
       return this.fetchImagesFromAPI(ctxType, ctxId, includeSingleImage)
     }
 
-    // Try to get images from AppCtx cache first
+    // Try to get images from ResourceViewCtx cache first
     if (ctxType === 'feature') {
       const feature = this.appCtx.cache.feature.get(ctxId) as Feature | undefined
 
@@ -1749,96 +1840,98 @@ export class ImageCtx {
       return
     }
 
-    // Capture current context ID to validate later
-    const contextIdAtStart = this.currentContextId
+    // Capture this request's position so older reads cannot overwrite newer results.
+    const refreshSerial = ++this.imageRefreshSerial
     // Set fetching state to show loading immediately
     this.state.isFetchingImages = true
 
-    // Get the images for the primary resource
-    const images = await this.imagesQueryFn()
+    try {
+      // Get the images for the primary resource
+      const images = await this.imagesQueryFn()
 
-    // Validate context hasn't changed during async operation
-    if (this.currentContextId !== contextIdAtStart) {
-      this.state.isFetchingImages = false
-      return
-    }
-
-    // Filter out null/undefined images before processing
-    const validImages = images.filter(isValidImageEnvelope)
-    const imageIds = validImages.map((image: ImageCtxEnvelope) => image.image.id)
-
-    // Get the images for the secondary resource
-    if (this.state.context.ctxTypeSecondary) {
-      const extendedImages = await this.extendedImagesQueryFn()
-
-      // Validate context again after second async operation
-      if (this.currentContextId !== contextIdAtStart) {
-        this.state.isFetchingImages = false
+      // Validate context hasn't changed during async operation
+      if (this.imageRefreshSerial !== refreshSerial) {
         return
       }
 
-      // Filter out null/undefined extended images too
-      const validExtendedImages = extendedImages.filter(isValidImageEnvelope)
+      // Filter out null/undefined images before processing
+      const validImages = images.filter(isValidImageEnvelope)
+      const imageIds = validImages.map((image: ImageCtxEnvelope) => image.image.id)
 
-      // Merge only secondary-only images so the primary resource remains the canonical ordering source.
-      // Typically there will be an overlap of images between the primary and secondary resources, so we only add the images that are not already in the primary resource,
-      // A scenario where this is not true is when the secondary resource is a task and the images have been rejected (i.e. deleted from the primary resource). We would still want to show the rejected images in the task viewer. To give context for the decision.
-      validExtendedImages.forEach((image: ImageCtxEnvelope) => {
-        if (!imageIds.includes(image.image.id)) {
-          validImages.push(image)
+      // Get the images for the secondary resource
+      if (this.state.context.ctxTypeSecondary) {
+        const extendedImages = await this.extendedImagesQueryFn()
+
+        // Validate context again after second async operation
+        if (this.imageRefreshSerial !== refreshSerial) {
+          return
+        }
+
+        // Filter out null/undefined extended images too
+        const validExtendedImages = extendedImages.filter(isValidImageEnvelope)
+
+        // Merge only secondary-only images so the primary resource remains the canonical ordering source.
+        // Typically there will be an overlap of images between the primary and secondary resources, so we only add the images that are not already in the primary resource,
+        // A scenario where this is not true is when the secondary resource is a task and the images have been rejected (i.e. deleted from the primary resource). We would still want to show the rejected images in the task viewer. To give context for the decision.
+        validExtendedImages.forEach((image: ImageCtxEnvelope) => {
+          if (!imageIds.includes(image.image.id)) {
+            validImages.push(image)
+          }
+        })
+
+        if (
+          this.state.context.ctxTypeSecondary === 'task' &&
+          this.state.highlightedIds.length > 0
+        ) {
+          const secondaryTaskId = this.state.context.ctxIdSecondary
+          const secondaryTask = secondaryTaskId
+            ? await this.appCtx.getTaskById(secondaryTaskId)
+            : undefined
+
+          // Only new-feature review flows should collapse to task-highlighted images.
+          if (secondaryTask?.type === 'newFeature') {
+            const highlightedIds = new Set(this.state.highlightedIds)
+            const taskScopedImages = validImages.filter(image =>
+              highlightedIds.has(image.image.id),
+            )
+
+            validImages.length = 0
+            validImages.push(...taskScopedImages)
+          }
+        }
+      }
+
+      // Final context validation before applying results
+      if (this.imageRefreshSerial !== refreshSerial) {
+        return
+      }
+
+      await this.setImages(validImages)
+      if (this.imageRefreshSerial !== refreshSerial) return
+
+      // Set active image with loading state immediately to maintain loading display
+      if (validImages.length > 0 && !this.hasResolvedActiveImage() && !targetImageId) {
+        this.setActiveImageToTargetOrFirst()
+      } else if (targetImageId) {
+        this.target(targetImageId)
+      }
+
+      // Don't set loading status here - let Picture.svelte handle it via onLoad callbacks
+      // This prevents premature transitions before images are actually ready
+
+      // Set appropriate loading status based on mode
+      validImages.forEach((image: ImageCtxEnvelope) => {
+        const currentThumbnailStatus = this.getThumbnailLoadStatus(image.image.id)
+        if (currentThumbnailStatus !== 'loaded') {
+          this.setThumbnailLoadStatus(image.image.id, 'loading')
         }
       })
-
-      if (
-        this.state.context.ctxTypeSecondary === 'task' &&
-        this.state.highlightedIds.length > 0
-      ) {
-        const secondaryTaskId = this.state.context.ctxIdSecondary
-        const secondaryTask = secondaryTaskId
-          ? await this.appCtx.getTaskById(secondaryTaskId)
-          : undefined
-
-        // Only new-feature review flows should collapse to task-highlighted images.
-        if (secondaryTask?.type === 'newFeature') {
-          const highlightedIds = new Set(this.state.highlightedIds)
-          const taskScopedImages = validImages.filter(image =>
-            highlightedIds.has(image.image.id),
-          )
-
-          validImages.length = 0
-          validImages.push(...taskScopedImages)
-        }
+    } finally {
+      // Only the owning request may clear loading, including after a failed read.
+      if (this.imageRefreshSerial === refreshSerial) {
+        this.state.isFetchingImages = false
       }
     }
-
-    // Final context validation before applying results
-    if (this.currentContextId !== contextIdAtStart) {
-      this.state.isFetchingImages = false
-      return
-    }
-
-    await this.setImages(validImages)
-
-    // Set active image with loading state immediately to maintain loading display
-    if (validImages.length > 0 && !this.hasResolvedActiveImage() && !targetImageId) {
-      this.setActiveImageToTargetOrFirst()
-    } else if (targetImageId) {
-      this.target(targetImageId)
-    }
-
-    // Don't set loading status here - let Picture.svelte handle it via onLoad callbacks
-    // This prevents premature transitions before images are actually ready
-
-    // Set appropriate loading status based on mode
-    validImages.forEach((image: ImageCtxEnvelope) => {
-      const currentThumbnailStatus = this.getThumbnailLoadStatus(image.image.id)
-      if (currentThumbnailStatus !== 'loaded') {
-        this.setThumbnailLoadStatus(image.image.id, 'loading')
-      }
-    })
-
-    // Clear fetching state after successful completion
-    this.state.isFetchingImages = false
   }
 
   /**
@@ -2163,19 +2256,19 @@ export class ImageCtx {
    * Marks cached feature image collections stale after admin image mutations so future
    * feature payloads rehydrate relation fields from the server instead of replaying
    * pre-mutation image arrays.
+   * @param context Resource context whose cached images should be invalidated.
+   * @returns Nothing after marking the cached collection stale.
    */
-  private invalidateFeatureImageCache(): void {
-    if (this.state.context?.ctxType !== 'feature' || !this.state.context?.ctxId) {
+  private invalidateFeatureImageCache(context = this.state.context): void {
+    if (context?.ctxType !== 'feature' || !context?.ctxId) {
       return
     }
 
-    const feature = this.appCtx.cache.feature.get(this.state.context.ctxId) as
-      | Feature
-      | undefined
+    const feature = this.appCtx.cache.feature.get(context.ctxId) as Feature | undefined
 
     if (!feature) return
 
-    this.appCtx.cache.feature.set(this.state.context.ctxId, {
+    this.appCtx.cache.feature.set(context.ctxId, {
       ...feature,
       images: undefined,
     })
@@ -2337,30 +2430,11 @@ export class ImageCtx {
     )
     const ctx = this.getCtx()
     const featureId = ctx.ctxType === 'feature' ? ctx.ctxId : undefined
+    const contextAtStart = this.state.context
 
     try {
-      // Canonical is exclusive, so clear any competing canonical image before applying the new one.
-      // If trying to set as canonical, first check if another image is already canonical
-      if (newIntent === 'canonical') {
-        const images = this.getImages()
-        const currentCanonical = images.find(
-          (img: ImageCtxEnvelope) =>
-            img.image.id !== imageId && img.intent === 'canonical',
-        )
-
-        // If another image is already canonical, update its intent to undefined
-        if (currentCanonical) {
-          await setImageIntent({
-            id: currentCanonical.image.id,
-            ctxType: ctx.ctxType,
-            ctxId: ctx.ctxId,
-            intent: 'undefined',
-            featureId,
-            meta: { isAdminRequest: true },
-          })
-          this.setForImage(currentCanonical.image.id, 'intent', 'undefined')
-        }
-      }
+      // Canonical is exclusive: the server clears any competing assignment in the
+      // same transaction as promotion, so a failed save retains the previous image.
 
       // Update the intent of the image
       await setImageIntent({
@@ -2372,11 +2446,14 @@ export class ImageCtx {
         ...(isPublished !== undefined ? { isPublished } : {}),
         meta: { isAdminRequest: true },
       })
+      // Navigation must not redirect this mutation's refresh into another resource.
+      this.invalidateFeatureImageCache(contextAtStart)
+      if (this.state.context !== contextAtStart) return
       this.setForImage(imageId, 'intent', newIntent)
       this.setForImage(imageId, 'isPublished', isPublished)
-      await this.refreshImages(imageId)
+      await this.refreshImages()
+      if (this.state.context !== contextAtStart) return
       this.sortImagesInternal() // Calls the private sortImages method
-      this.invalidateFeatureImageCache()
     } catch (error) {
       console.error('[ImageCtx.handleSetIntent] failed to persist intent', {
         imageId,
@@ -2396,21 +2473,27 @@ export class ImageCtx {
   async handlePublishToggle() {
     if (!this.state.activeImage) return
     const ctx = this.getCtx()
+    const contextAtStart = this.state.context
+    const imageId = this.state.activeImage.image.id
+    const isPublished = !this.state.activeImage.isPublished
 
     const updatedImage = await setImagePublished({
-      id: this.state.activeImage.image.id,
+      id: imageId,
       ctxType: ctx.ctxType,
       ctxId: ctx.ctxId,
       featureId: ctx.ctxType === 'feature' ? ctx.ctxId : undefined,
-      isPublished: !this.state.activeImage.isPublished,
+      isPublished,
       meta: { isAdminRequest: true },
     })
     if (updatedImage?.data?.image?.id) {
-      this.toggleForActiveImage('isPublished')
-      await this.refreshImages(this.state.activeImage?.image.id)
+      // Invalidate the mutated resource before refetching its image collection.
+      this.invalidateFeatureImageCache(contextAtStart)
+      if (this.state.context !== contextAtStart) return
+      this.setForImage(imageId, 'isPublished', isPublished)
+      await this.refreshImages()
+      if (this.state.context !== contextAtStart) return
       // Re-sort images when publish status changes
       this.sortImagesInternal()
-      this.invalidateFeatureImageCache()
     }
   }
 
@@ -2428,6 +2511,7 @@ export class ImageCtx {
     if (!imageId) return
 
     const ctx = this.getCtx()
+    const contextAtStart = this.state.context
 
     try {
       await rotateImageRemote({
@@ -2438,8 +2522,10 @@ export class ImageCtx {
         meta: { isAdminRequest: true },
       })
 
-      await this.refreshImages(imageId)
-      this.invalidateFeatureImageCache()
+      // Refresh fresh metadata only in the viewer that initiated the rotation.
+      this.invalidateFeatureImageCache(contextAtStart)
+      if (this.state.context !== contextAtStart) return
+      await this.refreshImages()
     } catch (error) {
       toast.error('Failed to rotate image')
       throw error
@@ -2484,6 +2570,7 @@ export class ImageCtx {
    * @returns Resolves after deletion-side effects have settled.
    */
   async delete(imageId: Id, ctx: ImageEditCtx) {
+    const contextAtStart = this.state.context
     const imagesBeforeDelete = this.getImages()
     const uploadQueueBeforeDelete = [...this.state.uploadQueue]
     const activeImageBeforeDelete = this.state.activeImage
@@ -2531,7 +2618,10 @@ export class ImageCtx {
       })
     } catch (error: unknown) {
       rollbackSingleResourceImageCache?.()
+      // Navigation can replace the viewer while this deletion is pending.
+      if (this.state.context !== contextAtStart) return
       await this.setImages(imagesBeforeDelete)
+      if (this.state.context !== contextAtStart) return
       this.setUploadQueue(uploadQueueBeforeDelete)
 
       if (activeImageBeforeDelete) {
@@ -2560,12 +2650,14 @@ export class ImageCtx {
       // Show error message on the thumbnail for 5 seconds
       this.setErrorMessage(imageId, errorMessage)
     } finally {
-      // These state updates should always run
-      this.removeFromPendingConfirmation(imageId)
-      this.removeFromDeletionQueue(imageId)
-      this.resetLoadStatus(imageId)
-      this.resetUploadStatus(imageId)
-      this.resetThumbnailLoadStatus(imageId)
+      // Cleanup belongs only to the viewer that initiated the deletion.
+      if (this.state.context === contextAtStart) {
+        this.removeFromPendingConfirmation(imageId)
+        this.removeFromDeletionQueue(imageId)
+        this.resetLoadStatus(imageId)
+        this.resetUploadStatus(imageId)
+        this.resetThumbnailLoadStatus(imageId)
+      }
     }
   }
 
@@ -2755,7 +2847,7 @@ const IMAGE_STATE_KEY = Symbol('IMAGE_STATE_KEY')
  * @returns The registered `ImageCtx` instance.
  */
 export const setImageCtx = (options: ImageCtxConstructorOptions) =>
-  setContext(IMAGE_STATE_KEY, new ImageCtx(options))
+  setContext(IMAGE_STATE_KEY, new ImageCtx(options, getSurfaceCtx()))
 
 /**
  * Reads the current `ImageCtx` from Svelte context.

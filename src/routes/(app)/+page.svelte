@@ -1,1 +1,0 @@
-<!-- The root application route is intentionally empty; the app layout owns the map shell. -->

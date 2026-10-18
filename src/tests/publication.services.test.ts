@@ -1,19 +1,19 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SQL } from 'drizzle-orm'
-import { feature, layer, project } from '$lib/db/schema'
+import { feature, layer, project } from '#lib/db/schema/index.js'
 import {
   cascadeOrganisationArchivedStateToDescendants,
   cascadeOrganisationPublishedStateToDescendants,
-} from '$lib/db/services/organisation'
+} from '#lib/db/services/organisation.js'
 import {
   cascadeProjectArchivedStateToDescendants,
   cascadeProjectPublishedStateToDescendants,
-} from '$lib/db/services/project'
+} from '#lib/db/services/project.js'
 import {
   cascadeLayerArchivedStateToDescendants,
   cascadeLayerPublishedStateToDescendants,
-} from '$lib/db/services/layer'
-import type { Database } from '$lib/types'
+} from '#lib/db/services/layer.js'
+import type { Database } from '#lib/types.js'
 
 type UpdateCall = {
   table: unknown

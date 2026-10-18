@@ -1,8 +1,8 @@
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 import { z } from 'zod'
 
-import { mapStyleI18n, mapStyles, projectMapStyles } from '$lib/db/schema'
-import { getLocales } from '$lib/db/zod/constraints'
+import { mapStyleI18n, mapStyles, projectMapStyles } from '#lib/db/schema/index.js'
+import { getLocales } from '#lib/db/zod/constraints.js'
 
 export const MapStyleBase = createSelectSchema(mapStyles)
 export const MapStyleInsert = createInsertSchema(mapStyles)

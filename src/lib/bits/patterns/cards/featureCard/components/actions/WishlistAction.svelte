@@ -3,19 +3,22 @@
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // API
 import {
   addUserFeatureToList,
   getUserFeatures,
   removeUserFeatureFromList,
-} from '$lib/api/server/user.remote'
+} from '#lib/api/user.remote.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // TYPES
-import type { Feature, UserContributedFeature } from '$lib/db/zod/schema/feature.types'
-import type { UserFeature } from '$lib/db/zod/schema/user.types'
-import type { FeatureCardWishlistActionDisplay } from '$lib/types'
+import type {
+  Feature,
+  UserContributedFeature,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { UserFeature } from '#lib/db/zod/schema/user.types.js'
+import type { FeatureCardWishlistActionDisplay } from '#lib/context/featureCard.types.js'
 // LOCAL
 import WishlistActionDisplay from './WishlistActionDisplay.svelte'
 
@@ -26,7 +29,7 @@ interface Props {
 
 let { feature, isIconOnly }: Props = $props()
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 
 let isSubmitting = $state(false)
 let optimisticWishlisted = $state<boolean | null>(null)
@@ -36,12 +39,14 @@ let wishlistErrorMessage = $state('')
 
 const wishlistedFeature = $derived(
   'id' in feature
-    ? appCtx.getWishlistUserFeatures().find(uf => uf.featureId === feature.id)
+    ? appCtx.account.collections.state.wishlisted.find(
+        uf => uf.featureId === feature.id,
+      )
     : undefined,
 )
 const visitedFeature = $derived(
   'id' in feature
-    ? appCtx.getVisitedUserFeatures().find(uf => uf.featureId === feature.id)
+    ? appCtx.account.collections.state.visited.find(uf => uf.featureId === feature.id)
     : undefined,
 )
 const isWishlisted = $derived(Boolean(wishlistedFeature))
@@ -91,13 +96,20 @@ function showWishlistError(message: string): void {
   }, 3000)
 }
 
+/**
+ * Saves the list change for the feature and account that initiated the action.
+ *
+ * @returns Nothing after the save and local state reconciliation finish.
+ */
 async function toggleWishlisted(): Promise<void> {
   if (isSubmitting || !('id' in feature)) return
+  const featureId = feature.id
+  const userId = appCtx.user?.id
 
   const previous = wishlistedFeature ?? visitedFeature ?? null
   const nextIsWishlisted = !isWishlisted
   const optimistic = {
-    featureId: feature.id,
+    featureId,
     isWishlisted: nextIsWishlisted,
     isVisited: Boolean(visitedFeature),
     visitedAt: visitedFeature?.visitedAt ?? null,
@@ -106,33 +118,40 @@ async function toggleWishlisted(): Promise<void> {
   isSubmitting = true
   clearWishlistError()
   optimisticWishlisted = nextIsWishlisted
-  appCtx.applyUserFeatureState(feature.id, optimistic)
+  appCtx.account.collections.apply(featureId, optimistic)
 
   try {
     const mutation = nextIsWishlisted
-      ? addUserFeatureToList({ featureId: feature.id, list: 'wishlist' })
-      : removeUserFeatureFromList({ featureId: feature.id, list: 'wishlist' })
+      ? addUserFeatureToList({ featureId, list: 'wishlist' })
+      : removeUserFeatureFromList({ featureId, list: 'wishlist' })
     const response = await mutation.updates(
       getUserFeatures({
-        userId: appCtx.user?.id,
+        userId,
         sorting: { sortBy: 'modifiedAt', sortOrder: 'desc' },
       }).withOverride(current => ({
         ...current,
         data: [
           optimistic,
-          ...(current.data ?? []).filter(item => item.featureId !== feature.id),
+          ...(current.data ?? []).filter(item => item.featureId !== featureId),
         ],
       })),
     )
 
+    // A response from a previous account must not populate the current account's cache.
+    if (appCtx.user?.id !== userId) return
     const settled = (response?.data as UserFeature | null) ?? null
+    appCtx.account.collections.apply(featureId, settled)
+    // Successful list edits revalidate active query pages and their authoritative totals.
+    void appCtx.cacheCtx.reconcile('feature')
+    if (!('id' in feature) || feature.id !== featureId) return
     settledWishlisted = Boolean(settled?.isWishlisted)
-    appCtx.applyUserFeatureState(feature.id, settled)
   } catch (error) {
+    if (appCtx.user?.id !== userId) return
+    appCtx.account.collections.apply(featureId, previous)
+    if (!('id' in feature) || feature.id !== featureId) return
     console.error('Error updating wishlist status:', error)
     optimisticWishlisted = Boolean(previous?.isWishlisted)
     settledWishlisted = Boolean(previous?.isWishlisted)
-    appCtx.applyUserFeatureState(feature.id, previous)
     const message = 'Failed to update wishlist status'
     showWishlistError(message)
     toast.error(message)

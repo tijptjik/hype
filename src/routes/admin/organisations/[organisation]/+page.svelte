@@ -1,15 +1,25 @@
 <script lang="ts">
+import type { RemoteForm, RemoteFormInput } from '$app/server'
+
 // SVELTE
 import { page } from '$app/state'
+
 import { untrack } from 'svelte'
-import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
+
 // I18N
-import { m } from '$lib/i18n'
-import { getLocale, getLocaleKey, getLocaleOrder, toLocaleKey } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
+import {
+  getLocale,
+  getLocaleKey,
+  getLocaleOrder,
+  toLocaleKey,
+  translateText,
+} from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
+import { translateCapabilityLabels } from '#lib/client/services/capabilityTranslation.js'
 import {
   addUserRoleSelection,
   bindAdminFacetHistorySync,
@@ -34,14 +44,14 @@ import {
   translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
-} from '$lib/client/services/form'
-import { getNameForToast } from '$lib/client/services/resource'
+} from '#lib/client/services/form.js'
+import { getNameForToast } from '#lib/client/services/resource.js'
 import {
   getOrganisationSubmitUpdates,
   overrideOrganisationEntityBoolean,
   overrideOrganisationListItemBoolean,
   toOrganisationFormInput,
-} from '$lib/client/services/organisation'
+} from '#lib/client/services/organisation.js'
 import {
   addProjectPropertyForType,
   addProjectPropertyValue,
@@ -54,15 +64,16 @@ import {
   reorderProjectPropertyValue,
   resetProjectPropertyLocale,
   stopEvent,
+  sortProjectPropertyValuesAlphabetically,
   translateProjectPropertyLocale,
   updateProjectPropertyBase,
   updateProjectPropertyI18n,
   updateProjectPropertyValue,
   updateProjectPropertyValueI18n,
-} from '$lib/client/services/property'
+} from '#lib/client/services/property.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import {
   archiveOrganisation,
@@ -70,21 +81,31 @@ import {
   getOrganisations,
   organisationForm,
   publishOrganisation,
-} from '$lib/api/server/organisation.remote'
+} from '#lib/api/organisation.remote.js'
 import {
   toOrganisationAuthActor,
   resolveOrganisationActionPermissions,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // SCHEMA
-import { OrganisationPreflightFormData } from '$lib/db/zod/schema/organisation'
+import {
+  OrganisationPreflightFormData,
+  OrganisationAdminProfileAPI,
+} from '#lib/db/zod/schema/organisation.js'
 import {
   CAPABILITY_I18N_BY_KEY,
   CAPABILITY_KEYS,
   getCapabilityLabel,
-} from '$lib/capabilities'
+} from '#lib/capabilities.js'
 // CONFIG
-import { NEW_REF, NEW_TITLE } from '$lib/constants'
+import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
+import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
+import {
+  FormSectionSkeleton,
+  FormProfileSkeleton,
+} from '#lib/bits/patterns/forms/formSkeleton/index.js'
 import {
   FormI18nDescriptorFields,
   FormI18nSection,
@@ -92,63 +113,72 @@ import {
   OrganisationCapabilities,
   FormSpecifiersFields,
   FormUserRolesSection,
-  GridSpacer,
   Main,
   ResourceViewer,
-} from '$lib/bits'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+} from '#lib/bits/index.js'
+import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // CLIENT SERVICES
-import { setOrganisationImagePresentationMode } from '$lib/client/services/image'
+import { setOrganisationImagePresentationMode } from '#lib/client/services/image.js'
 // FACTORIES
-import { configureForm } from '$lib/factories.svelte'
+import { configureForm } from '#lib/factories.svelte.js'
 // COMPONENTS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
   getAdminFacetTabsForResource,
   navigateOnAdmin,
-} from '$lib/navigation'
-import type { OrganisationFacet } from '$lib/navigation'
+} from '#lib/navigation/index.js'
+import type { OrganisationFacet } from '#lib/navigation/index.js'
 // UTILS
-import { createSchemaRequiredInferer, toIssueMessages } from '$lib/utils/form-schema'
+import { createSchemaRequiredInferer, toIssueMessages } from '#lib/utils/form-schema.js'
 // ICONS
-import Blend from 'virtual:icons/lucide/blend'
-import OrganisationIcon from 'virtual:icons/lucide/users-round'
-import Type from 'virtual:icons/lucide/type'
+import Blend from 'virtual:icons/proicons/shape-intersect'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
+import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
+import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
+import Type from 'virtual:icons/proicons/text'
 // ENUMS
 import {
   FirstClassResource,
   ImageContextResource,
   OrganisationRoleType,
-} from '$lib/enums'
-import { classifierComponentTypes, specifierComponentTypes } from '$lib/types'
+} from '#lib/enums.js'
+import {
+  classifierComponentTypes,
+  specifierComponentTypes,
+} from '#lib/client/services/fieldComponents.js'
 // TYPES
+import type { Locale, Id } from '#lib/types.js'
+
+import type { User } from '#lib/db/zod/schema/user.types.js'
 import type {
-  Locale,
-  User,
   UserRoleFieldNameResolverForm,
   FormDataUpdaterForm,
-  Id,
-  CapabilityDefinitions,
-  CapabilityKey,
-  HeaderTransitionSnapshot,
-} from '$lib/types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/client/services/form.types.js'
+import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
+import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+
 import type {
   OrganisationBooleanField,
   OrganisationDB,
   OrganisationGetState,
   OrganisationRoleUser,
-} from '$lib/db/zod/schema/organisation.types'
-import type { CapabilityFormFields, CapabilitySearchOption } from '$lib/bits'
+} from '#lib/db/zod/schema/organisation.types.js'
+
+import type {
+  CapabilityFormFields,
+  CapabilitySearchOption,
+} from '#lib/bits/patterns/capabilities/organisationCapabilities/index.js'
 
 // § Context
-
 const adminCtx = getAdminCtx()
+
 const headerCtrl = getHeaderCtrl()
 
 // § Config
@@ -162,19 +192,29 @@ const editorCtrl = getEditorCtrl({
 })
 
 // § Config - Derived
-
 const organisationRef = $derived(page.params.organisation as string)
+
 const locales = $derived(getLocaleOrder(getLocaleKey()))
 const currentLocaleKey = $derived(getLocaleKey())
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
-const cachedOrganisationForRef = $derived(
-  adminCtx.appCtx.getResourceByRefSync(
+
+// A compact list row cannot initialize an administration editor.
+const cachedOrganisationForRef = $derived.by(() => {
+  const cached = adminCtx.view.getResourceByRefSync(
     FirstClassResource.organisation,
     organisationRef,
-  ) as OrganisationDB | undefined,
-)
+  )
+
+  if (!cached || !('capabilities' in cached) || !('userRoles' in cached))
+    return undefined
+
+  const parsed = OrganisationAdminProfileAPI.safeParse(cached)
+
+  return parsed.success ? parsed.data : undefined
+})
+
 const cachedOrganisationState = $derived(
   cachedOrganisationForRef
     ? ({ data: cachedOrganisationForRef } as OrganisationGetState)
@@ -182,13 +222,13 @@ const cachedOrganisationState = $derived(
 )
 
 // § State - Elements
-
 let contentsElement: HTMLFormElement | undefined = $state()
+
 let lastSyncedFacetHash = $state('')
 
 // § State - State
-
 let lastHeaderKey = $state('')
+
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
 let fieldsLayoutMutationVersion = $state(0)
@@ -196,6 +236,8 @@ let capabilityResetVersion = $state(0)
 let selectedUsersById = $state<Record<string, User>>({})
 let hasAutoEnteredEditForNew = $state(false)
 let settledOrganisationRef = $state<string | null>(null)
+let completedOrganisationLoadRef = $state<string | null>(null)
+
 let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   canEdit: true,
   canPublish: true,
@@ -207,8 +249,8 @@ let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
 })
 
 // § State - Data
-
 let organisation: OrganisationGetState = $state(null)
+
 let committedOrganisation: OrganisationGetState = $state(null)
 
 const commitOrganisationState = (value: OrganisationGetState): void => {
@@ -222,8 +264,8 @@ const commitSettledOrganisationState = (value: OrganisationGetState): void => {
 }
 
 // § Derived State - Flags
-
 const isCoreFacet = $derived(activeFacet === 'core')
+
 const isCapabilitiesFacet = $derived(activeFacet === 'capabilities')
 const isFieldsFacet = $derived(activeFacet === 'fields')
 const isImagesFacet = $derived(activeFacet === 'images')
@@ -234,8 +276,10 @@ const isNewOrganisationRef = $derived(organisationRef === NEW_REF)
 
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewOrganisationRef) return true
+
   return guardRefDesync(organisation, committedOrganisation, organisationRef)
 })
+
 const isCurrentRefSettled = $derived(
   isNewOrganisationRef || settledOrganisationRef === organisationRef,
 )
@@ -244,10 +288,11 @@ const optimisticOrganisationData = $derived.by(() =>
 )
 
 // § Form
-
 const translatableI18nFields = ['name', 'nameShort', 'description'] as const
+
 type OrganisationEditorFormInput = ReturnType<typeof toOrganisationFormInput>
 type OrganisationRemoteFormInput = RemoteFormInput & OrganisationEditorFormInput
+
 const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(() => ({
   form: organisationForm as unknown as RemoteForm<
     OrganisationRemoteFormInput,
@@ -274,12 +319,12 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
         entityQuery: getOrganisation({
           ref: organisationRef,
           refKey: 'code',
-          meta: { isAdminRequest: true, profile: 'admin' },
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
         }),
         listQuery: getOrganisations({
-          conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
-          prisms: adminCtx.appCtx.state.prisms,
-          meta: { isAdminRequest: true, profile: 'card' },
+          conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
+          prisms: adminCtx.view.scope.prisms,
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
       }),
     adminCtx,
@@ -291,6 +336,7 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
       const refreshed = await refreshOrganisation(
         shouldRedirect ? submittedCode : undefined,
       )
+
       commitSettledOrganisationState(refreshed)
     },
   }),
@@ -301,7 +347,6 @@ const isRequiredInPreflight = createSchemaRequiredInferer(OrganisationPreflightF
 const isDirty = $derived(Boolean(formCtx.dirty))
 
 // ISSUES
-
 const visibleAllIssues = $derived.by((): unknown[] =>
   suppressFormLevelIssues ? [] : (formCtx.allIssues ?? []),
 )
@@ -313,22 +358,29 @@ const userRoleSectionIssues = $derived.by((): string[] => {
   const messages = visibleAllIssues
     .filter(issue => {
       if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+
       const path = (issue as { path?: unknown }).path
+
       return Array.isArray(path) && path[0] === 'data' && path[1] === 'userRoles'
     })
     .map(toIssueMessage)
     .filter((message: string | null): message is string => Boolean(message))
+
   return Array.from(new Set(messages))
 })
+
 const capabilityIssues = $derived.by((): string[] => {
   const messages = visibleAllIssues
     .filter(issue => {
       if (!issue || typeof issue !== 'object' || !('path' in issue)) return false
+
       const path = (issue as { path?: unknown }).path
+
       return Array.isArray(path) && path[0] === 'data' && path[1] === 'capabilities'
     })
     .map(toIssueMessage)
     .filter((message: string | null): message is string => Boolean(message))
+
   return Array.from(new Set(messages))
 })
 
@@ -339,13 +391,12 @@ const facetIssueState = $derived.by(() =>
     formEl: contentsElement,
   }),
 )
+
 const facetIssueSummary = $derived(facetIssueState.facetIssueSummary)
 const resolvedFacetTabsWithIssues = $derived(facetIssueState.facetTabsWithIssues)
-
 const organisationPropertyFormAdapter = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{ properties?: Property[] }>,
 )
-
 let fieldRemoveMode = $state(false)
 
 function createPropertyActions(getCount: () => number) {
@@ -369,8 +420,10 @@ function createPropertyActions(getCount: () => number) {
           isDefaultEnabled: false,
         },
       )
+
       revalidateAfterProgrammaticChange()
     },
+
     remove: (event: Event, propertyId: Id): void => {
       stopEvent(event)
       removeProjectProperty(organisationPropertyFormAdapter, propertyId)
@@ -435,6 +488,21 @@ const addPropertyValue = (propertyId: Id): void => {
   revalidateAfterProgrammaticChange()
 }
 
+/**
+ * Sorts options by the selected locale and revalidates the current form.
+ * @param propertyId - Property whose options should be sorted.
+ * @param locale - Locale supplying the option labels.
+ * @returns Nothing; updates option ranks in the form.
+ */
+const sortPropertyValuesAlphabetically = (propertyId: Id, locale: Locale): void => {
+  sortProjectPropertyValuesAlphabetically(
+    organisationPropertyFormAdapter,
+    propertyId,
+    locale,
+  )
+  revalidateAfterProgrammaticChange()
+}
+
 const removePropertyValue = (propertyId: Id, valueId: Id): void => {
   removeProjectPropertyValue(organisationPropertyFormAdapter, propertyId, valueId)
   revalidateAfterProgrammaticChange()
@@ -495,7 +563,9 @@ const onTranslatePropertyLocale = async (
     sourceLocale,
     targetLocale,
   )
+
   if (translated) revalidateAfterProgrammaticChange()
+
   return translated
 }
 
@@ -511,7 +581,6 @@ const organisationFieldsInSection = $derived(
 )
 
 const fieldActions = createPropertyActions(() => organisationFieldsInSection.length)
-
 const propertyFormIssues = $derived.by(
   (): Array<{ message: string; path?: Array<string | number> }> =>
     getPropertyFormIssues(visibleAllIssues),
@@ -519,19 +588,25 @@ const propertyFormIssues = $derived.by(
 
 const fieldSectionIssues = $derived.by(() => {
   const messages = propertyFormIssues.map(issue => issue.message).filter(Boolean)
+
   return Array.from(new Set(messages))
 })
 
 const fieldSectionIssueItemIds = $derived.by(() => {
   const properties = getCurrentProjectProperties(organisationPropertyFormAdapter)
+
   return Array.from(
     new Set(
       propertyFormIssues
         .map(issue => {
           const path = issue.path
+
           if (!Array.isArray(path)) return null
+
           const index = path[2]
+
           if (typeof index !== 'number') return null
+
           return properties[index]?.id ?? null
         })
         .filter((id): id is Id => Boolean(id)),
@@ -559,13 +634,13 @@ function resolveOrganisationPropertyTypeTag(property: Property): {
 }
 
 // USER ROLES
-
 const formUserRoleValues = $derived(
   (formCtx.form.fields.value().data?.userRoles ?? []) as Array<{
     userId: string
     role: string
   }>,
 )
+
 const userRoleResolverForm = $derived(
   formCtx.form as unknown as UserRoleFieldNameResolverForm,
 )
@@ -577,6 +652,7 @@ const userRoleUpdaterForm = $derived(
 const hiddenUserIdInputAttrs = $derived(
   getUserRoleHiddenInputAttrs(userRoleResolverForm, formUserRoleValues),
 )
+
 const userRoles = $derived.by(() =>
   guardUserRolesDesync({
     baseRoles: (organisation?.data?.userRoles ?? []) as OrganisationRoleUser[],
@@ -587,12 +663,12 @@ const userRoles = $derived.by(() =>
 )
 
 // CAPABILITIES
-
 const capabilityFormUpdater = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{
     capabilities?: CapabilityDefinitions
   }>,
 )
+
 const formCapabilityDefinitions = $derived(
   (formCtx.form.fields.value().data?.capabilities ?? {}) as CapabilityDefinitions,
 )
@@ -616,7 +692,6 @@ const capabilitySearchOptions = $derived(
       }) satisfies CapabilitySearchOption,
   ),
 )
-
 const capabilityLabelsByKey = CAPABILITY_I18N_BY_KEY
 const shouldSubmitEmptyCapabilities = $derived(selectedCapabilityKeys.length === 0)
 
@@ -636,9 +711,12 @@ function onAddCapability(option: CapabilitySearchOption): void {
           option.key,
       },
     }
+
     data.capabilities = nextCapabilities
+
     return data
   })
+
   revalidateAfterProgrammaticChange()
 }
 
@@ -653,8 +731,75 @@ function onRemoveCapability(capabilityKey: CapabilityKey): void {
   revalidateAfterProgrammaticChange()
 }
 
+/**
+ * Fills empty capability labels without overwriting edits made during translation.
+ * @param sourceLocale - Locale to translate from.
+ * @param targetLocale - Locale to fill.
+ * @returns Whether any translated labels were applied.
+ */
+async function onTranslateCapabilities(
+  sourceLocale: Locale,
+  targetLocale: Locale,
+): Promise<boolean> {
+  const source = toLocaleKey(sourceLocale)
+  const target = toLocaleKey(targetLocale)
+  const ref = organisationRef
+  const resetVersion = capabilityResetVersion
+  const snapshot = Object.fromEntries(
+    selectedCapabilityKeys.map(key => [
+      key,
+      { i18n: { ...formCapabilityDefinitions[key]?.i18n } },
+    ]),
+  )
+  const translated = await translateCapabilityLabels(
+    snapshot,
+    source,
+    target,
+    translateText,
+  )
+  if (ref !== organisationRef || resetVersion !== capabilityResetVersion || !isEditing)
+    return false
+  let applied = false
+  // Recheck each field after the remote request so newer edits and removals win.
+  updateFormData(capabilityFormUpdater, data => {
+    for (const key of Object.keys(translated) as CapabilityKey[]) {
+      const capability = data.capabilities?.[key]
+      if (
+        !capability ||
+        capability.i18n?.[target]?.trim() ||
+        capability.i18n?.[source] !== snapshot[key]?.i18n?.[source]
+      )
+        continue
+      capability.i18n = { ...capability.i18n, [target]: translated[key] }
+      applied = true
+    }
+    return data
+  })
+  if (applied) revalidateAfterProgrammaticChange()
+  return applied
+}
+
+/**
+ * Clears one locale's capability labels, ready for translation or manual entry.
+ * @param targetLocale - Locale to clear.
+ * @returns Nothing.
+ */
+function onResetCapabilityLocale(targetLocale: Locale): void {
+  capabilityResetVersion += 1
+  const target = toLocaleKey(targetLocale)
+  updateFormData(capabilityFormUpdater, data => {
+    for (const key of selectedCapabilityKeys) {
+      const capability = data.capabilities?.[key]
+      if (capability) capability.i18n = { ...capability.i18n, [target]: '' }
+    }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
 function getCapabilityDisplayLabel(capabilityKey: CapabilityKey): string {
   const labels = formCapabilityDefinitions[capabilityKey]?.i18n
+
   return (
     labels?.[currentLocaleKey]?.trim() ||
     getCapabilityLabel(capabilityKey, currentLocaleKey)
@@ -683,16 +828,18 @@ const imageProviderProps = $derived.by(() => {
       : undefined,
   }
 })
+
 const imageProviderModel = useImageProviderModel(
   () => page,
   () => imageProviderProps,
 )
 
 // § Auth
+const currentUser = $derived(adminCtx.view.account.user)
 
-const currentUser = $derived(adminCtx.appCtx.getUser())
-const currentHub = $derived(adminCtx.appCtx.hub)
+const currentHub = $derived(adminCtx.view.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
+
 const organisationPermissions = $derived.by(() => {
   const organisationData = optimisticOrganisationData
   const newEntityHubId = currentHub?.isCore
@@ -721,9 +868,13 @@ const resolvedFacetTabs = $derived.by(() => {
       coreOnly: true,
     })
   }
+
   if (canEditOrganisation) return facetTabs
+
   const tabs = new Map(facetTabs)
+
   tabs.delete('capabilities')
+
   return tabs
 })
 
@@ -764,6 +915,7 @@ bindAdminFacetHistorySync({
   resourceType: FirstClassResource.organisation,
   getResourceRef: () => organisationRef,
 })
+
 const canSubmitOrganisation = $derived(
   isNewOrganisationRef ? canCreateOrganisation : canEditOrganisation,
 )
@@ -776,11 +928,16 @@ const canEditImageDropzone = $derived(
   canEditOrganisation && isCurrentRefLoaded && !optimisticOrganisationData?.isArchived,
 )
 const isFormReady = $derived(
-  Boolean(formCtx.form?.fields && (organisation?.data || isNewOrganisationRef)),
+  Boolean(formCtx.form?.fields && (isNewOrganisationRef || isCurrentRefLoaded)),
+)
+
+const hasProfileLoadFailed = $derived(
+  !isNewOrganisationRef &&
+    completedOrganisationLoadRef === organisationRef &&
+    !isCurrentRefLoaded,
 )
 
 // § Handlers
-
 // i18N CARDS
 
 function revalidateAfterProgrammaticChange(): void {
@@ -857,8 +1014,21 @@ async function refreshOrganisation(
   return await getOrganisation<'admin'>({
     ref,
     refKey: 'code',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).catch(() => null)
+}
+
+/**
+ * Retries a failed profile load without committing a response to a different route.
+ * @returns Resolves after the current request completes.
+ */
+async function retryOrganisationLoad(): Promise<void> {
+  const ref = organisationRef
+  completedOrganisationLoadRef = null
+  const result = await refreshOrganisation(ref)
+  if (ref !== organisationRef) return
+  commitSettledOrganisationState(result)
+  completedOrganisationLoadRef = ref
 }
 
 async function handleOrganisationStateToggle({
@@ -875,39 +1045,48 @@ async function handleOrganisationStateToggle({
   mutate: typeof publishOrganisation | typeof archiveOrganisation
 }): Promise<void> {
   const organisationData = organisation?.data
+
   if (!organisationData) return
 
   const nextState = !organisationData[field]
+
   setBusy(true)
 
+  const mutation = adminCtx.view.cacheCtx.beginMutation('organisation', {
+    meta: { id: organisationData.id },
+    data: { [field]: nextState },
+  })
   try {
     await mutate({
       id: organisationData.id,
       state: nextState,
       meta: { isAdminRequest: true },
     }).updates(
+      ...mutation.updates,
       getOrganisation({
         ref: organisationRef,
         refKey: 'code',
-        meta: { isAdminRequest: true, profile: 'admin' },
-      }).withOverride(
-        overrideOrganisationEntityBoolean(field, nextState),
-        // TODO Invalidate cache
-      ),
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+      }).withOverride(overrideOrganisationEntityBoolean(field, nextState)),
+      // TODO Invalidate cache
       getOrganisations({
-        conditions: adminCtx.appCtx.isSuperAdmin() ? {} : { isArchived: false },
-        prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true, profile: 'card' },
+        conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
+        prisms: adminCtx.view.scope.prisms,
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }).withOverride(
         overrideOrganisationListItemBoolean(organisationData.id, field, nextState),
-        // TODO Invalidate cache
       ),
     )
+    mutation.settle(true)
+    // TODO Invalidate cache
     commitSettledOrganisationState(await refreshOrganisation())
+
+    await adminCtx.view.cacheCtx.reconcile('organisation')
     toast.success(
       `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(organisation, 'nameShort')}`,
     )
   } catch {
+    mutation.settle(false)
     toast.error(m.long_crazy_peacock_care())
   } finally {
     setBusy(false)
@@ -976,9 +1155,12 @@ function onPresentationModeCommitted(nextMode: 'cover' | 'contain'): void {
 // Seed the next route with cached entity data when available.
 $effect(() => {
   organisationRef
+
   const cachedCode = cachedOrganisationState?.data?.code
+
   if (!cachedCode) return
   if (organisation?.data?.code === cachedCode) return
+
   commitOrganisationState(cachedOrganisationState)
 })
 
@@ -990,12 +1172,14 @@ $effect(() => {
 
 // Keep facet + entity data in sync with the current route ref.
 $effect(() => {
+  const ref = organisationRef
   return editorCtrl.syncRouteAndLoad({
-    ref: organisationRef,
+    ref,
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
       settledOrganisationRef = null
+      completedOrganisationLoadRef = null
     },
     setFacetForRef: nextRef => {
       untrack(() => {
@@ -1005,7 +1189,10 @@ $effect(() => {
       })
     },
     load: refreshOrganisation,
-    commit: commitSettledOrganisationState,
+    commit: result => {
+      commitSettledOrganisationState(result)
+      completedOrganisationLoadRef = ref
+    },
   })
 })
 
@@ -1032,11 +1219,18 @@ $effect(() => {
         .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
         .join('|')
     : Array.from(displayFacets.entries())
-        .map(([facet, config]) => `${facet}:${config.hasIssues ? '1' : '0'}`)
+        .map(
+          ([facet, config]) =>
+            `${facet}:${typeof config !== 'string' && config.hasIssues ? '1' : '0'}`,
+        )
         .join('|')
+
   const headerKey = `${organisationRef}:${title}:${facetKey}`
+
   if (headerKey === lastHeaderKey) return
+
   lastHeaderKey = headerKey
+
   if (Array.isArray(displayFacets)) {
     headerCtrl.setHeaderForEntity(title, OrganisationIcon, new Map())
     headerCtrl.setFacets(displayFacets)
@@ -1048,9 +1242,12 @@ $effect(() => {
 $effect(() => {
   if (!formCtx.wasSubmitAttempted) return
   if (visibleAllIssues.length === 0) return
+
   const targetFacet = facetIssueSummary.firstFacetWithIssues
+
   if (!targetFacet) return
   if (activeFacet === targetFacet) return
+
   adminCtx.setFacet(targetFacet, organisationRef, FirstClassResource.organisation)
 })
 
@@ -1058,6 +1255,7 @@ $effect(() => {
 $effect(() => {
   if (!optimisticOrganisationData?.isArchived) return
   if (!headerCtrl.state.isEditing) return
+
   headerCtrl.setEditing(false)
 })
 
@@ -1065,6 +1263,7 @@ $effect(() => {
 $effect(() => {
   if (!isNewOrganisationRef) return
   if (canCreateOrganisation) return
+
   navigateOnAdmin(adminCtx, FirstClassResource.organisation)
 })
 
@@ -1086,6 +1285,7 @@ $effect(() => {
   if (!isCurrentRefSettled && !isNewOrganisationRef) return
   if (canSubmitOrganisation) return
   if (!headerCtrl.state.isEditing) return
+
   headerCtrl.setEditing(false)
 })
 
@@ -1094,6 +1294,7 @@ $effect(() => {
   if (!isCurrentRefSettled) return
   if (activeFacet !== 'capabilities') return
   if (canEditOrganisation) return
+
   adminCtx.setFacet('core', organisationRef, FirstClassResource.organisation)
 })
 
@@ -1101,6 +1302,7 @@ $effect(() => {
 $effect(() => {
   if (!isCurrentRefSettled) return
   if (resolvedFacetTabs.has(activeFacet)) return
+
   adminCtx.setFacet('core', organisationRef, FirstClassResource.organisation)
 })
 
@@ -1153,47 +1355,110 @@ $effect(() => {
 })
 </script>
 
-<Main.Root>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}
     isReady={isFormReady}
   >
+    {#snippet fallback()}
+      <Main.Facet isVisible={!isImagesFacet} class="left-0! right-0!" fillHeight={true}>
+        {#if hasProfileLoadFailed}
+          <FormSurface>
+            <div role="alert" class="p-6">
+              <p class="text-sm text-muted-foreground">
+                {m.admin__forms_profile_load_failed()}
+              </p>
+              <button
+                type="button"
+                class="mt-4 rounded-lg border border-border px-4 py-2 text-sm hover:bg-raised"
+                onclick={retryOrganisationLoad}
+              >
+                {m.retry()}
+              </button>
+            </div>
+          </FormSurface>
+        {:else if !isCoreFacet}
+          <FormSurface>
+            <div role="status" aria-label={m.resource_loading()} aria-busy="true">
+              <FormSectionSkeleton
+                divided={false}
+                title={isCapabilitiesFacet
+                  ? m.resources__capabilities()
+                  : m.admin__forms_common_fields()}
+                icon={isCapabilitiesFacet ? ShieldIcon : Type}
+              >
+                <div class="space-y-4 p-6">
+                  {#each Array(3) as _}
+                    <Skeleton class="h-14 w-full rounded-md" />
+                  {/each}
+                </div>
+              </FormSectionSkeleton>
+            </div>
+          </FormSurface>
+        {:else}
+          <FormProfileSkeleton
+            {locales}
+            profileIcon={OrganisationIcon}
+            membersIcon={OrganisationIcon}
+            detailsIcon={Type}
+            membersTitle={m.admin__forms_organisation_members_title()}
+            membersSubtitle={m.admin__forms_organisation_members_subtitle()}
+          />
+        {/if}
+      </Main.Facet>
+    {/snippet}
     <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <FormI18nSection
-        title={m.admin__forms_common_descriptors()}
-        {locales}
-        {onTranslate}
-        {onResetLocale}
-        {isEditing}
-      >
-        {#snippet center()}
-          <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-        {/snippet}
+      <FormSurface>
+        <FormI18nSection
+          title="Profile"
+          localeCodeClass="absolute right-6 top-3 text-base font-medium uppercase text-muted-foreground"
+          {locales}
+          {onTranslate}
+          {onResetLocale}
+          {isEditing}
+        >
+          {#snippet left()}
+            <div class="flex items-center gap-3">
+              <OrganisationIcon class="size-6 text-primary" aria-hidden="true" />
+              <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
+            </div>
+          {/snippet}
 
-        <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
-        {#snippet children(locale)}
-          <FormI18nDescriptorFields
-            form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[locale]}
-            {locale}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </FormI18nSection>
+          {#snippet center()}
+            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+          {/snippet}
 
-      <GridSpacer>
-        {#snippet left()}
-          {@const roleFieldNameByUserId = getRoleFieldNameByUserId(userRoleResolverForm)}
+          {#snippet children(
+            locale,
+          )}
+            <FormI18nDescriptorFields
+              form={formCtx.form}
+              fields={formCtx.form.fields.data.i18n[locale]}
+              {locale}
+              {isEditing}
+              {isRequiredInPreflight}
+            />
+          {/snippet}
+        </FormI18nSection>
+
+        {@const roleFieldNameByUserId = getRoleFieldNameByUserId(userRoleResolverForm)}
+        <div class={formSectionDividerStyles}>
           <FormUserRolesSection
+            currentUserId={currentActor.userId}
+            icon={OrganisationIcon}
+            layout="list"
             title={m.admin__forms_organisation_members_title()}
             subtitle={m.admin__forms_organisation_members_subtitle()}
             transitionEntityKey={organisation?.data?.id ?? organisationRef}
@@ -1210,16 +1475,17 @@ $effect(() => {
             {onRemoveUser}
             {onRoleChange}
           />
-        {/snippet}
-
-        {#snippet right()}
+        </div>
+        <div class={formSectionDividerStyles}>
           <FormSpecifiersFields
+            icon={Type}
+            title="Details"
             form={formCtx.form}
             {isEditing}
             {isRequiredInPreflight}
           />
-        {/snippet}
-      </GridSpacer>
+        </div>
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isCapabilitiesFacet && canEditOrganisation}
@@ -1227,84 +1493,100 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
-      <OrganisationCapabilities
-        {selectedCapabilityKeys}
-        {capabilitySearchOptions}
-        {selectedCapabilityIds}
-        {currentLocaleKey}
-        {locales}
-        {isEditing}
-        isArchived={Boolean(optimisticOrganisationData?.isArchived)}
-        resetVersion={capabilityResetVersion}
-        {capabilityLabelsByKey}
-        formCapabilityFields={formCtx.form.fields.data.capabilities as CapabilityFormFields}
-        {shouldSubmitEmptyCapabilities}
-        {capabilityIssues}
-        {isRequiredInPreflight}
-        {getCapabilityDisplayLabel}
-        {onAddCapability}
-        {onRemoveCapability}
-        onEnterEditMode={() => headerCtrl.setEditing(true)}
-      />
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <OrganisationCapabilities
+          {selectedCapabilityKeys}
+          {capabilitySearchOptions}
+          {selectedCapabilityIds}
+          {currentLocaleKey}
+          {locales}
+          {isEditing}
+          isArchived={Boolean(optimisticOrganisationData?.isArchived)}
+          resetVersion={capabilityResetVersion}
+          {capabilityLabelsByKey}
+          formCapabilityFields={formCtx.form.fields.data
+            .capabilities as CapabilityFormFields}
+          emptyCapabilitiesInputAttrs={(
+            formCtx.form.fields.data.capabilities as unknown as {
+              as(type: 'hidden', value: string): Record<string, unknown>
+            }
+          ).as('hidden', '{}')}
+          {shouldSubmitEmptyCapabilities}
+          {capabilityIssues}
+          {isRequiredInPreflight}
+          {getCapabilityDisplayLabel}
+          {onAddCapability}
+          {onRemoveCapability}
+          onTranslate={onTranslateCapabilities}
+          onResetLocale={onResetCapabilityLocale}
+          onEnterEditMode={() => headerCtrl.setEditing(true)}
+        />
+      </FormSurface>
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
       fillHeight={true}
-      class="bits-theme min-h-0 pb-4"
+      class="bits-theme min-h-0 left-0! right-0!"
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormFieldsSection
-        items={organisationFieldsInSection}
-        title={m.admin__forms_common_fields()}
-        description={m.admin__forms_common_fields_subtitle()}
-        issues={fieldSectionIssues}
-        actions={fieldActions}
-        issueItemIds={fieldSectionIssueItemIds}
-        layoutMutationVersion={fieldsLayoutMutationVersion}
-        canEdit={canSubmitOrganisation || !isCurrentRefSettled}
-        disableEmptyAdd={Boolean(optimisticOrganisationData?.isArchived)}
-        {isEditing}
-        removeMode={fieldRemoveMode}
-        onRemoveModeChange={value => {
-          fieldRemoveMode = value
-        }}
-        card={{
-          removeMode: fieldRemoveMode,
-          locales,
-          isEditing,
-          isRequiredInPreflight,
-          allIssues: visibleAllIssues as Array<{
-            message: string
-            path?: Array<string | number>
-          }>,
-          classifierComponents: classifierComponentTypes,
-          specifierComponents: specifierComponentTypes,
-          onIncreaseRank: fieldActions.increaseRank,
-          onDecreaseRank: fieldActions.decreaseRank,
-          onRemove: fieldActions.remove,
-          onUpdateBase: updatePropertyBase,
-          onUpdateI18n: updatePropertyI18n,
-          onAddValue: addPropertyValue,
-          onRemoveValue: removePropertyValue,
-          onMoveValue: movePropertyValue,
-          onUpdateValue: updatePropertyValue,
-          onUpdateValueI18n: updatePropertyValueI18n,
-          onTranslateLocale: onTranslatePropertyLocale,
-          onResetLocale: onResetPropertyLocale,
-          getPropertyIndex: (propertyId, _sectionIndex) =>
-            getCurrentProjectProperties(organisationPropertyFormAdapter).findIndex(
-              candidate => candidate.id === propertyId,
-            ),
-          getPropertyFields: (_propertyId, propertyIndex) =>
-            getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
-          resolveSourceTag: resolveOrganisationPropertyTypeTag,
-        }}
-      />
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormFieldsSection
+          icon={Type}
+          keepHeader
+          items={organisationFieldsInSection}
+          title={m.admin__forms_common_fields()}
+          description={m.admin__forms_common_fields_subtitle()}
+          issues={fieldSectionIssues}
+          actions={fieldActions}
+          issueItemIds={fieldSectionIssueItemIds}
+          layoutMutationVersion={fieldsLayoutMutationVersion}
+          canEdit={canSubmitOrganisation || !isCurrentRefSettled}
+          disableEmptyAdd={Boolean(optimisticOrganisationData?.isArchived)}
+          {isEditing}
+          removeMode={fieldRemoveMode}
+          onRemoveModeChange={value => {
+            fieldRemoveMode = value
+          }}
+          card={{
+            removeMode: fieldRemoveMode,
+            locales,
+            isEditing,
+            isRequiredInPreflight,
+            allIssues: visibleAllIssues as Array<{
+              message: string
+              path?: Array<string | number>
+            }>,
+            classifierComponents: classifierComponentTypes,
+            specifierComponents: specifierComponentTypes,
+            onIncreaseRank: fieldActions.increaseRank,
+            onDecreaseRank: fieldActions.decreaseRank,
+            onRemove: fieldActions.remove,
+            onUpdateBase: updatePropertyBase,
+            onUpdateI18n: updatePropertyI18n,
+            onAddValue: addPropertyValue,
+            onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
+            onRemoveValue: removePropertyValue,
+            onMoveValue: movePropertyValue,
+            onUpdateValue: updatePropertyValue,
+            onUpdateValueI18n: updatePropertyValueI18n,
+            onTranslateLocale: onTranslatePropertyLocale,
+            onResetLocale: onResetPropertyLocale,
+            getPropertyIndex: (propertyId, _sectionIndex) =>
+              getCurrentProjectProperties(organisationPropertyFormAdapter).findIndex(
+                candidate => candidate.id === propertyId,
+              ),
+            getPropertyFields: (_propertyId, propertyIndex) =>
+              getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
+            resolveSourceTag: resolveOrganisationPropertyTypeTag,
+          }}
+        />
+      </FormSurface>
     </Main.Facet>
   </Main.Form>
   <Main.Facet
@@ -1315,20 +1597,50 @@ $effect(() => {
     contentClass="h-full overflow-hidden"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    {#if imageProviderProps.isValid}
-      <ImageProvider model={imageProviderModel}>
-        <ResourceViewer
-          canEditPresentationMode={canEditImagePresentationMode}
-          canEditDropzone={canEditImageDropzone}
-          {onPresentationModeCommitted}
-        />
-      </ImageProvider>
-    {:else}
-      <div
-        class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
-      >
-        {m.admin__forms_organisation_image_save_hint()}
+    <FormSurface class="mb-0! flex h-full min-h-0 flex-col">
+      <SectionHeader
+        icon={ImageIcon}
+        title={m.admin__forms_organisation_image_title()}
+        class="shrink-0"
+      />
+      <div class="min-h-0 flex-1">
+        {#if !isFormReady && !hasProfileLoadFailed}
+          <div
+            role="status"
+            aria-label={m.resource_loading()}
+            aria-busy="true"
+            class="h-full p-6"
+          >
+            <Skeleton class="h-full min-h-64 w-full rounded-xl" />
+          </div>
+        {:else if hasProfileLoadFailed}
+          <div role="alert" class="p-6 text-sm text-muted-foreground">
+            <p>{m.admin__forms_profile_load_failed()}</p>
+            <button
+              type="button"
+              class="mt-4 rounded-lg border border-border px-4 py-2 hover:bg-raised"
+              onclick={retryOrganisationLoad}
+            >
+              {m.retry()}
+            </button>
+          </div>
+        {:else if imageProviderProps.isValid}
+          <ImageProvider model={imageProviderModel}>
+            <ResourceViewer
+              workspace
+              canEditPresentationMode={canEditImagePresentationMode}
+              canEditDropzone={canEditImageDropzone}
+              {onPresentationModeCommitted}
+            />
+          </ImageProvider>
+        {:else}
+          <div
+            class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
+          >
+            {m.admin__forms_organisation_image_save_hint()}
+          </div>
+        {/if}
       </div>
-    {/if}
+    </FormSurface>
   </Main.Facet>
 </Main.Root>

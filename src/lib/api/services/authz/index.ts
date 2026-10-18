@@ -8,12 +8,12 @@ import type {
   OrganisationAuthorizationAction,
   ProjectAuthorizationAction,
   ProjectAuthorizeParams,
-  UserRoleDisco,
-} from '$lib/types'
+} from '#lib/api/services/authz/authorization.types.js'
+import type { UserRoleDisco } from '#lib/types.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ENUMS
-import { FirstClassResource, RESERVED_PARAMETERS, ResourcePath } from '$lib/enums'
+import { FirstClassResource, RESERVED_PARAMETERS, ResourcePath } from '#lib/enums.js'
 // POLICIES
 import { organisationPolicyMap } from './organisation'
 import { projectPolicyMap } from './project'
@@ -158,6 +158,7 @@ export {
   toFeatureSubmittedFields,
   authorizeFeatureListForContext,
   authorizeFeatureReadForProbe,
+  authorizeFeatureAdminReadForProbe,
   authorizeFeatureCreateForSubmission,
   authorizeFeatureUpdateForSubmission,
   authorizeFeaturePublishForSubmission,
@@ -192,6 +193,7 @@ export {
   canOverrideUserSearchArchivedFilter,
   canUpdateUserProfile,
 } from './user'
+export { resolveAnalyticsScope } from './analytics'
 
 const RESOURCE_CODE_SEGMENTS = [
   ...Object.values(FirstClassResource),

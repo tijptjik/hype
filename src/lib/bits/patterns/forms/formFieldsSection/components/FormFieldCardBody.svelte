@@ -3,19 +3,26 @@
 import { tick } from 'svelte'
 import { fade } from 'svelte/transition'
 // I18N
-import { m, toLocaleKebab, toLocaleKey } from '$lib/i18n'
+import { m, toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
 // ICONS
 import GripVertical from 'virtual:icons/lucide/grip-vertical'
+// SERVICES
+import { getDropIndex } from '#lib/client/services/dragDrop.js'
 // COMPONENTS
-import { SelectField, Skeleton, TextInput } from '$lib/bits/custom/form'
-import { FormI18nSection } from '$lib/bits/patterns/forms/formI18nSection'
+import { SelectField, TextInput } from '#lib/bits/custom/form/index.js'
+import { FormI18nSection } from '#lib/bits/patterns/forms/formI18nSection/index.js'
 import FormFieldPropertyValueItem from './FormFieldPropertyValueItem.svelte'
 import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelte'
 // TYPES
-import type { SelectItem } from '$lib/bits/core/select/select.types'
-import type { FormIssueLike, Locale, LocaleKey } from '$lib/types'
-import type { FormFieldCardBodyProps } from '$lib/db/zod/schema/property.types'
-import type { DragDropState } from '@thisux/sveltednd'
+import type { SelectItem } from '#lib/bits/core/select/select.types.js'
+import type { FormIssueLike } from '#lib/client/services/form.types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
+import type { FormFieldCardBodyProps } from '#lib/db/zod/schema/property.types.js'
+import type {
+  DragDropState,
+  DraggableOptions,
+  DragDropOptions,
+} from '@thisux/sveltednd'
 
 let {
   property,
@@ -49,6 +56,8 @@ const componentOptions = $derived<SelectItem[]>(
   ).map(component => ({ value: component, label: component })),
 )
 const canShowRange = $derived(property.component === 'RangeField')
+// Share intrinsic row heights across locales, including validation messages.
+const localeRowsClass = $derived(canShowRange ? 'md:row-span-7' : 'md:row-span-6')
 const rangeBoundsAreRequired = $derived(canShowRange)
 const canShowValues = $derived(
   property.type === 'classifier' && property.component === 'SelectField',
@@ -56,6 +65,9 @@ const canShowValues = $derived(
 const valuesAreTranslatable = $derived(
   property.type !== 'classifier' || Boolean(property.isTranslatable),
 )
+const valueListId = $props.id()
+const valueContainerGroup = `field-values-${valueListId}`
+
 const sortedValues = $derived(
   (property.values || []).slice().sort((a, b) => a.rank - b.rank),
 )
@@ -66,7 +78,7 @@ let pendingAddedValueFocus = $state<{
 } | null>(null)
 
 type FormFieldAccessor = {
-  as: (kind: string, value?: string) => Record<string, unknown>
+  as: (kind: string, value?: string | number | boolean) => Record<string, unknown>
   issues?: () => FormIssueLike[] | undefined
 }
 
@@ -140,18 +152,24 @@ function getPropertyField(pathSuffix: Array<string | number>): unknown {
   let current: unknown = propertyFields
   for (const segment of pathSuffix) {
     if (current == null) return undefined
-    if (typeof current !== 'object' || current === null) return undefined
+    if (typeof current !== 'object' && typeof current !== 'function') return undefined
     current = (current as Record<string | number, unknown>)[segment]
   }
   return current
 }
 
+/**
+ * Recognises lazy SvelteKit field proxies through their callable accessor.
+ * @param field - Candidate field at a property path.
+ * @returns Whether the candidate exposes remote form control attributes.
+ * @remarks Proxy fields do not enumerate keys or support `in` membership checks.
+ * A field named `value` also exposes the callable value method, so it can be a function.
+ */
 function isFormFieldAccessor(field: unknown): field is FormFieldAccessor {
   return Boolean(
     field &&
-      typeof field === 'object' &&
-      'as' in field &&
-      typeof field.as === 'function',
+      (typeof field === 'object' || typeof field === 'function') &&
+      typeof (field as { as?: unknown }).as === 'function',
   )
 }
 
@@ -205,23 +223,6 @@ function getFieldAttrs(
   const field = getPropertyField(pathSuffix)
   if (!isFormFieldAccessor(field)) return {}
   return field.as(kind) as Record<string, unknown>
-}
-
-function getFieldName(pathSuffix: Array<string | number>): string | undefined {
-  const field = getPropertyField(pathSuffix)
-  if (!isFormFieldAccessor(field)) return undefined
-  const attrs = field.as('text') as { name?: unknown }
-  return typeof attrs?.name === 'string' ? attrs.name : undefined
-}
-
-function withFallbackName(
-  attrs: Record<string, unknown>,
-  fallbackName: string,
-): Record<string, unknown> {
-  return {
-    ...attrs,
-    name: typeof attrs.name === 'string' ? attrs.name : fallbackName,
-  }
 }
 
 function withCoreFieldAttrs(
@@ -354,10 +355,17 @@ function onCoreFieldKeydown(
   }
 }
 
+/**
+ * Registers a control and its explicit value with the owning remote form.
+ * @param pathSuffix - Path within the current property row.
+ * @param kind - Native form control type.
+ * @param value - Value to serialize, retaining number and boolean types.
+ * @returns Form-specific attributes when a field accessor is available.
+ */
 function getFieldAttrsWithValue(
   pathSuffix: Array<string | number>,
   kind: string,
-  value: string,
+  value: string | number | boolean,
 ): Record<string, unknown> | undefined {
   const field = getPropertyField(pathSuffix)
   if (!isFormFieldAccessor(field)) return undefined
@@ -404,23 +412,16 @@ function isFieldRequired(pathSuffix: Array<string | number>): boolean {
 }
 
 const keyAttrs = $derived(getFieldAttrs(['key'], 'text'))
-const keyInputAttrs = $derived(
-  withFallbackName(keyAttrs, `data.properties[${propertyIndex}].key`),
-)
+const keyInputAttrs = $derived(keyAttrs)
 const keyIssues = $derived(getFieldIssues(['key']))
 const getPropertyLocaleFieldAttrs = $derived(
   (locale: LocaleKey, field: 'label' | 'placeholder') =>
-    withFallbackName(
-      getFieldAttrs(['i18n', locale, field], 'text'),
-      `data.properties[${propertyIndex}].i18n.${locale}.${field}`,
-    ),
+    getFieldAttrs(['i18n', locale, field], 'text'),
 )
 const componentAttrs = $derived(
   getFieldAttrs(['component'], 'select') as { name?: string; value?: string },
 )
-const componentName = $derived(
-  componentAttrs.name ?? `data.properties[${propertyIndex}].component`,
-)
+const componentName = $derived(componentAttrs.name ?? '')
 const componentIssues = $derived(getFieldIssues(['component']))
 const minAttrs = $derived(getFieldAttrs(['min'], 'number'))
 const minIssues = $derived(getFieldIssues(['min']))
@@ -473,21 +474,35 @@ function preventDropBeforeInput(event: InputEvent): void {
   preventDefaultAndPropagation(event)
 }
 
-function onValueDrop(state: DragDropState<{ id: string }>): void {
-  const valueId = state.draggedItem?.id
-  const nextIndex = Number(state.targetContainer)
-  if (!valueId || Number.isNaN(nextIndex)) return
-  onMoveValue(property.id, valueId, nextIndex)
+/**
+ * Reorder only values belonging to this field using the indicated drop edge.
+ * @param state - The active drag state.
+ * @param targetId - The option receiving the drop.
+ * @returns Nothing.
+ */
+function onValueDrop(state: DragDropState<{ id: string }>, targetId: string): void {
+  if (isValueDnDDisabled()) return
+  const nextIndex = getDropIndex(
+    state,
+    sortedValues.map(value => value.id),
+    targetId,
+    valueContainerGroup,
+  )
+  if (nextIndex === null) return
+  onLayoutMutationStart?.()
+  onMoveValue(property.id, state.draggedItem.id, nextIndex)
 }
 
 function isValueDnDDisabled(): boolean {
   return !isEditing || removeMode || optionRemoveMode
 }
 
-function getValueDraggableConfig(valueIndex: number, valueId: string) {
+function getValueDraggableConfig(valueId: string): DraggableOptions<{ id: string }> {
   return {
-    container: valueIndex.toString(),
+    container: `${valueContainerGroup}-${valueId}`,
+    containerGroup: valueContainerGroup,
     dragData: { id: valueId },
+    handle: '.bits-project-field-card__value-handle',
     disabled: isValueDnDDisabled(),
     interactive: [
       '.bits-project-field-card__value-editable',
@@ -499,12 +514,13 @@ function getValueDraggableConfig(valueIndex: number, valueId: string) {
   }
 }
 
-function getValueDroppableConfig(valueIndex: number) {
+function getValueDroppableConfig(valueId: string): DragDropOptions<{ id: string }> {
   return {
-    container: valueIndex.toString(),
+    container: `${valueContainerGroup}-${valueId}`,
+    containerGroup: valueContainerGroup,
     disabled: isValueDnDDisabled(),
     callbacks: {
-      onDrop: onValueDrop,
+      onDrop: state => onValueDrop(state, valueId),
     },
     attributes: {
       dragOverClass: 'bits-project-field-card__value-item--drag-over',
@@ -679,9 +695,10 @@ $effect(() => {
 
 <FormI18nSection
   title=""
-  class="bits-theme bits-project-field-card__i18n"
-  gridClass="bits-project-field-card__i18n-grid"
-  cardClass="bits-form__i18n-card bits-project-field-card__i18n-card"
+  class="bits-theme w-full"
+  gridClass="bits-project-field-card__i18n-grid grid-cols-1! md:grid-cols-3! gap-x-0! gap-y-3! border-0! bg-transparent!"
+  cardClass={`bits-form__i18n-card grid! gap-3! rounded-none! bg-transparent! shadow-none ${localeRowsClass} md:grid-rows-subgrid`}
+  contentClass={`grid gap-3 pb-2 pt-2 md:grid-rows-subgrid ${localeRowsClass}`}
   {locales}
   sectionKey={`property:${property.id}`}
   {isEditing}
@@ -692,77 +709,66 @@ $effect(() => {
     return onResetLocale(property.id, targetLocale)
   }}
 >
-  {#snippet children(locale)}
+  {#snippet children(
+    locale,
+  )}
     {@const showCoreFields = isPrimary(locale)}
     {@const labelGenValue = getPropertyGenState(locale, 'labelGen')}
     {@const placeholderGenValue = getPropertyGenState(locale, 'placeholderGen')}
-    {@const labelGenName = getFieldName(['i18n', locale, 'labelGen'])}
-    {@const placeholderGenName = getFieldName(['i18n', locale, 'placeholderGen'])}
+    {@const labelGenAttrs = getFieldAttrsWithValue(
+      ['i18n', locale, 'labelGen'],
+      'hidden',
+      labelGenValue,
+    )}
+    {@const placeholderGenAttrs = getFieldAttrsWithValue(
+      ['i18n', locale, 'placeholderGen'],
+      'hidden',
+      placeholderGenValue,
+    )}
 
-    <div class="bits-project-field-card__i18n-content">
-      {#if labelGenName}
-        <input
-          type="hidden"
-          name={labelGenName}
-          value={labelGenValue ? 'true' : 'false'}
-        >
+    <div class={`grid gap-3 md:grid-rows-subgrid ${localeRowsClass}`}>
+      {#if labelGenAttrs}
+        <input {...labelGenAttrs}>
       {/if}
-      {#if placeholderGenName}
-        <input
-          type="hidden"
-          name={placeholderGenName}
-          value={placeholderGenValue ? 'true' : 'false'}
-        >
+      {#if placeholderGenAttrs}
+        <input {...placeholderGenAttrs}>
       {/if}
 
       {#if showCoreFields}
+        <!-- Register custom hidden controls with this property row's remote fields. -->
+        <input {...getFieldAttrsWithValue(['id'], 'hidden', property.id ?? '')}>
+        <input {...getFieldAttrsWithValue(['type'], 'hidden', property.type ?? '')}>
         <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].id`}
-          value={property.id ?? ''}
+          {...getFieldAttrsWithValue(['scope'], 'hidden', property.scope ?? 'project')}
         >
-
+        <input {...getFieldAttrsWithValue(['hubId'], 'hidden', property.hubId ?? '')}>
         <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].type`}
-          value={property.type ?? ''}
+          {...getFieldAttrsWithValue(
+            ['isDefaultEnabled'],
+            'hidden',
+            Boolean(property.isDefaultEnabled),
+          )}
         >
-
         <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].scope`}
-          value={property.scope ?? 'project'}
-        >
-
-        <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].hubId`}
-          value={property.hubId ?? ''}
-        >
-
-        <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].isDefaultEnabled`}
-          value={property.isDefaultEnabled ? 'true' : 'false'}
-        >
-
-        <input
-          type="hidden"
-          name={`data.properties[${propertyIndex}].isTranslatable`}
-          value={property.isTranslatable ? 'true' : 'false'}
+          {...getFieldAttrsWithValue(
+            ['isTranslatable'],
+            'hidden',
+            Boolean(property.isTranslatable),
+          )}
         >
 
         <TextInput
           label={m.admin__forms_property_name_api()}
           required={isFieldRequired(['key'])}
-          value={(keyInputAttrs as { value?: string }).value ?? (property.key ?? '')}
+          value={(keyInputAttrs as { value?: string }).value ?? property.key ?? ''}
           issues={keyIssues}
           {isEditing}
           inputAttrs={withCoreFieldAttrs(keyInputAttrs, locale, 'key')}
           onValueChange={value => onUpdateBase(property.id, 'key', value)}
         />
       {:else}
-        <Skeleton isLabelCovered={false} />
+        <!-- Reserve the API row only while locales are displayed side by side. -->
+        <div class="hidden md:block" aria-hidden="true"></div>
       {/if}
 
       <TextInput
@@ -774,11 +780,12 @@ $effect(() => {
         onToggleGenAI={() =>
           onUpdateI18n(property.id, toLocaleKebab(locale), 'labelGen', !labelGenValue)}
         value={(getPropertyLocaleFieldAttrs(locale, 'label') as { value?: string })
-            .value ??
-          (getLocaleEntry(
+          .value ??
+          getLocaleEntry(
             property.i18n as Record<string, { label?: string }> | null | undefined,
             locale,
-          )?.label ?? '')}
+          )?.label ??
+          ''}
         issues={getFieldIssues(['i18n', locale, 'label'])}
         {isEditing}
         inputAttrs={withCoreFieldAttrs(
@@ -803,13 +810,19 @@ $effect(() => {
             'placeholderGen',
             !placeholderGenValue,
           )}
-        value={(getPropertyLocaleFieldAttrs(locale, 'placeholder') as {
+        value={(
+          getPropertyLocaleFieldAttrs(locale, 'placeholder') as {
             value?: string
-          }).value ??
-          (getLocaleEntry(
-            property.i18n as Record<string, { placeholder?: string }> | null | undefined,
+          }
+        ).value ??
+          getLocaleEntry(
+            property.i18n as
+              | Record<string, { placeholder?: string }>
+              | null
+              | undefined,
             locale,
-          )?.placeholder ?? '')}
+          )?.placeholder ??
+          ''}
         issues={getFieldIssues(['i18n', locale, 'placeholder'])}
         {isEditing}
         inputAttrs={withCoreFieldAttrs(
@@ -824,6 +837,7 @@ $effect(() => {
       {#if showCoreFields}
         <SelectField
           value={property.component}
+          displayClass="bg-foreground/4 border-foreground/10"
           items={componentOptions}
           label={m.admin__forms_property_component()}
           required={isFieldRequired(['component'])}
@@ -833,7 +847,8 @@ $effect(() => {
           name={componentName}
           wrapperAttrs={{
             'data-property-core-field': 'component',
-            onkeydown: (event: KeyboardEvent) => onCoreFieldKeydown(event, locale, 'component'),
+            onkeydown: (event: KeyboardEvent) =>
+              onCoreFieldKeydown(event, locale, 'component'),
           }}
           onValueChange={value => {
             onLayoutMutationStart?.()
@@ -844,7 +859,7 @@ $effect(() => {
           }}
         />
       {:else}
-        <Skeleton />
+        <div class="hidden md:block" aria-hidden="true"></div>
       {/if}
 
       {#if canShowRange}
@@ -853,7 +868,8 @@ $effect(() => {
             <TextInput
               label={m.admin__forms_property_minimum()}
               inputType="number"
-              value={(minAttrs as { value?: string }).value ?? (property.min == null ? '' : String(property.min))}
+              value={(minAttrs as { value?: string }).value ??
+                (property.min == null ? '' : String(property.min))}
               required={rangeBoundsAreRequired}
               issues={minIssues}
               {isEditing}
@@ -862,15 +878,16 @@ $effect(() => {
             <TextInput
               label={m.admin__forms_property_maximum()}
               inputType="number"
-              value={(maxAttrs as { value?: string }).value ?? (property.max == null ? '' : String(property.max))}
+              value={(maxAttrs as { value?: string }).value ??
+                (property.max == null ? '' : String(property.max))}
               required={rangeBoundsAreRequired}
               issues={maxIssues}
               {isEditing}
               inputAttrs={maxAttrs}
             />
           {:else}
-            <Skeleton />
-            <Skeleton />
+            <div class="hidden md:block" aria-hidden="true"></div>
+            <div class="hidden md:block" aria-hidden="true"></div>
           {/if}
         </div>
       {/if}
@@ -892,20 +909,21 @@ $effect(() => {
           {#snippet rows()}
             {#each sortedValues as value, valueIndex (value.id)}
               {@const formValueIndex = (property.values || []).findIndex(
-              candidate => candidate.id === value.id,
-            )}
-              {@const resolvedValueIndex = formValueIndex >= 0 ? formValueIndex : valueIndex}
+                candidate => candidate.id === value.id,
+              )}
+              {@const resolvedValueIndex =
+                formValueIndex >= 0 ? formValueIndex : valueIndex}
               {@const valueDisplayText = getValueDisplayText(value.id, locale)}
               {@const valueIdInputAttrs = getFieldAttrsWithValue(
-              ['values', resolvedValueIndex, 'id'],
-              'text',
-              value.id,
-            )}
+                ['values', resolvedValueIndex, 'id'],
+                'hidden',
+                value.id,
+              )}
               {@const valueRankInputAttrs = getFieldAttrsWithValue(
-              ['values', resolvedValueIndex, 'rank'],
-              'number',
-              String(valueIndex),
-            )}
+                ['values', resolvedValueIndex, 'rank'],
+                'hidden',
+                valueIndex,
+              )}
               <FormFieldPropertyValueItem
                 {isEditing}
                 {optionRemoveMode}
@@ -917,8 +935,8 @@ $effect(() => {
                   onLayoutMutationStart?.()
                   onRemoveValue(propertyId, valueId)
                 }}
-                draggableConfig={getValueDraggableConfig(valueIndex, value.id)}
-                droppableConfig={getValueDroppableConfig(valueIndex)}
+                draggableConfig={getValueDraggableConfig(value.id)}
+                droppableConfig={getValueDroppableConfig(value.id)}
               >
                 {#snippet content()}
                   {#if showCoreFields}
@@ -931,15 +949,19 @@ $effect(() => {
                   {/if}
                   {#if valuesAreTranslatable}
                     <input
-                      type="hidden"
-                      name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].i18n.${locale}.value`}
-                      value={valueDisplayText}
+                      {...getFieldAttrsWithValue(
+                        ['values', resolvedValueIndex, 'i18n', locale, 'value'],
+                        'hidden',
+                        valueDisplayText,
+                      )}
                     >
                   {:else if showCoreFields}
                     <input
-                      type="hidden"
-                      name={`data.properties[${propertyIndex}].values[${resolvedValueIndex}].value`}
-                      value={valueDisplayText}
+                      {...getFieldAttrsWithValue(
+                        ['values', resolvedValueIndex, 'value'],
+                        'hidden',
+                        valueDisplayText,
+                      )}
                     >
                   {/if}
 
@@ -955,9 +977,15 @@ $effect(() => {
                   {/if}
 
                   {#if valuesAreTranslatable || showCoreFields}
+                    <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
                     <div
-                      class={`bits-project-field-card__value-editable ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
-                      contenteditable={isEditing && (!showCoreFields || !valuesAreTranslatable) ? 'plaintext-only' : isEditing}
+                      class={`bits-project-field-card__value-editable focus-override ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                      role="textbox"
+                      aria-readonly={!isEditing}
+                      contenteditable={isEditing &&
+                      (!showCoreFields || !valuesAreTranslatable)
+                        ? 'plaintext-only'
+                        : isEditing}
                       tabindex={isEditing ? 0 : -1}
                       use:bindValueEditable={{
                         valueId: value.id,
@@ -984,7 +1012,9 @@ $effect(() => {
                   {/if}
                   {#if getValueIssues(value.id, locale)?.length}
                     <div class="bits-form__error">
-                      {getValueIssues(value.id, locale)?.map(issue => issue.message).join(' ')}
+                      {getValueIssues(value.id, locale)
+                        ?.map(issue => issue.message)
+                        .join(' ')}
                     </div>
                   {/if}
                 {/snippet}

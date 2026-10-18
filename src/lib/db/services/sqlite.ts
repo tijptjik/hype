@@ -89,6 +89,39 @@ export const isSqliteMissingSchemaError = (
 }
 
 /**
+ * Recognises workerd's commit-token transport failure for read-only retries.
+ * @param error - Unknown D1/Drizzle failure, possibly wrapped in a cause.
+ * @returns Whether a nested message is the specific internal commit-token failure.
+ * @remarks This wrapper can obscure SQLITE_BUSY_SNAPSHOT. It does not prove lock
+ * contention, so it is deliberately excluded from the write-side busy classifier.
+ */
+const isReadCommitTokenError = (error: unknown): boolean => {
+  const visited = new Set<unknown>()
+  const queue: unknown[] = [error]
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (!current || typeof current !== 'object' || visited.has(current)) continue
+    visited.add(current)
+    const wrapped = current as {
+      message?: unknown
+      cause?: unknown
+      error?: unknown
+      errors?: unknown
+    }
+    if (
+      typeof wrapped.message === 'string' &&
+      /^(?:D1_ERROR: )?Failed to get session commit token: internal error(?:; reference = [a-z0-9]+)?$/i.test(
+        wrapped.message,
+      )
+    )
+      return true
+    queue.push(wrapped.cause, wrapped.error)
+    if (Array.isArray(wrapped.errors)) queue.push(...wrapped.errors)
+  }
+  return false
+}
+
+/**
  * Retries a D1 read operation when local Miniflare/workerd hits transient SQLite locks.
  *
  * @param operation - Async DB read to execute.
@@ -102,7 +135,10 @@ export const retryBusyRead = async <T>(operation: () => Promise<T>): Promise<T> 
     try {
       return await operation()
     } catch (error) {
-      if (!isSqliteBusyError(error) || attempt === 5) {
+      if (
+        (!isSqliteBusyError(error) && !isReadCommitTokenError(error)) ||
+        attempt === 5
+      ) {
         throw error
       }
 

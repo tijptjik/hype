@@ -1,11 +1,11 @@
 <script lang="ts">
-import { SectionHeader, TextInput } from '$lib/bits/custom/form'
-import { m } from '$lib/i18n'
+import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
+import { m } from '#lib/i18n.js'
 import FormSection from './FormSection.svelte'
 
 type HubSpecifiersField = {
   as: (type: 'text') => Record<string, unknown>
-  issues: () => string[]
+  issues: () => import('$app/server').RemoteFormIssue[] | undefined
 }
 
 type HubSpecifiersForm = {
@@ -52,7 +52,7 @@ const legalContactAddressIssues = $derived(
     title={m.admin__forms_hub_routing_title()}
     description={m.admin__forms_hub_routing_subtitle()}
   />
-  <FormSection>
+  <FormSection contentClass="grid grid-cols-1 gap-6 pt-4 pb-2 md:grid-cols-3">
     <TextInput
       label={m.admin__forms_hub_subdomain_label()}
       required={codeRequired}

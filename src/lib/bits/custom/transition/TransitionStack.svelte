@@ -1,21 +1,21 @@
-<script lang="ts">
-import { onDestroy } from 'svelte'
+<script lang="ts" generics="T">
+import { onDestroy, untrack } from 'svelte'
 import { fade } from 'svelte/transition'
 import type { Snippet } from 'svelte'
 
-const persistedDisplayState = new Map<string, { key: string; value: unknown }>()
+const persistedDisplayState = new Map<string, { key: string; value: T }>()
 
 type TransitionStackProps = {
   valueKey: string | number | null | undefined
-  value: unknown
+  value: T
   isReady?: boolean
   persistenceKey?: string | null
   duration?: number
   class?: string
   currentClass?: string
   previousClass?: string
-  children?: Snippet<[any]>
-  previous?: Snippet<[any]>
+  children?: Snippet<[T]>
+  previous?: Snippet<[T]>
 }
 
 let {
@@ -31,18 +31,19 @@ let {
   previous,
 }: TransitionStackProps = $props()
 
-let previousValue = $state<unknown | null>(null)
-const initialPersistedState = persistenceKey
-  ? (persistedDisplayState.get(persistenceKey) ?? null)
-  : null
+let previousValue = $state<T | null>(null)
+// Seed display state once; readiness and transitions control subsequent updates.
+const initialPersistedState = untrack(() =>
+  persistenceKey ? (persistedDisplayState.get(persistenceKey) ?? null) : null,
+)
 
-let displayValue = $state(initialPersistedState?.value ?? value)
-let displayKey = $state(initialPersistedState?.key ?? String(valueKey ?? ''))
+let displayValue = $state(untrack(() => initialPersistedState?.value ?? value))
+let displayKey = $state(
+  untrack(() => initialPersistedState?.key ?? String(valueKey ?? '')),
+)
 let cleanupTimer: ReturnType<typeof setTimeout> | undefined
 
-const rootClass = $derived(
-  ['bits-transition-stack', className].filter(Boolean).join(' '),
-)
+const rootClass = $derived(['relative min-w-0', className].filter(Boolean).join(' '))
 const currentLayerClass = $derived(
   [
     'bits-transition-stack__layer',
@@ -68,7 +69,7 @@ function clearCleanupTimer(): void {
   cleanupTimer = undefined
 }
 
-function persistDisplayState(nextKey: string, nextValue: unknown): void {
+function persistDisplayState(nextKey: string, nextValue: T): void {
   if (!persistenceKey) return
   persistedDisplayState.set(persistenceKey, {
     key: nextKey,

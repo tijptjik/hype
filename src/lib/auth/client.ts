@@ -6,11 +6,12 @@ import { createAuthClient } from 'better-auth/svelte'
 import { passkeyClient } from '@better-auth/passkey/client'
 import {
   anonymousClient,
+  magicLinkClient,
   customSessionClient,
   usernameClient,
 } from 'better-auth/client/plugins'
 // TYPES
-import type { Auth } from '$lib/auth'
+import type { Auth } from '#lib/auth.js'
 
 export const authClient = createAuthClient({
   sessionOptions: {
@@ -20,6 +21,7 @@ export const authClient = createAuthClient({
   },
   plugins: [
     anonymousClient(),
+    magicLinkClient(),
     usernameClient(),
     passkeyClient(),
     customSessionClient<Auth>(),

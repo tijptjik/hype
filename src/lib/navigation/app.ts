@@ -1,9 +1,11 @@
-// I18N
-import { m } from '$lib/i18n'
 // SVELTE
-import { goto, pushState, replaceState } from '$app/navigation'
+import type { ReadonlyURLSearchParams } from '$app/state'
+// I18N
+import { m } from '#lib/i18n.js'
+// SVELTE
+import { goto } from '$app/navigation'
 // LIB
-import { isMobile } from '$lib/constants'
+import { isMobile } from '#lib/constants.js'
 // ENUMS
 import {
   FirstClassResource,
@@ -12,26 +14,25 @@ import {
   ResourcePath,
   PanelSide,
   Panel,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { OmniCtx } from '$lib/context/omni.svelte'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+import type { PanelController } from '#lib/context/panels.svelte.js'
+
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { Code, Id, NavigableResource, Locale, LocaleKey } from '#lib/types.js'
+import type { CollectionNavOptions } from '#lib/client/services/form.types.js'
+import type { OmniCollectionDescriptor } from '#lib/context/omni.types.js'
+import type { Image } from '#lib/db/zod/schema/image.types.js'
+import type { UserFeatureWithHierarchy } from '#lib/db/zod/schema/user.types.js'
 import type {
-  Code,
-  CollectionNavOptions,
-  Id,
-  NavigableResource,
-  Locale,
-  LocaleKey,
-  OmniCollectionDescriptor,
-} from '$lib/types'
-import type { Image } from '$lib/db/zod/schema/image.types'
-import type { UserFeatureWithHierarchy } from '$lib/db/zod/schema/user.types'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
 
 const loadImageRemote = async (): Promise<
-  Pick<typeof import('$lib/api/server/image.remote'), 'getImageById'>
-> => await import('$lib/api/server/image.remote')
+  Pick<typeof import('#lib/api/image.remote.js'), 'getImageById'>
+> => await import('#lib/api/image.remote.js')
 
 // ═══════════════════════
 // 1. CORE NAVIGATION
@@ -60,12 +61,9 @@ export const navigate = (
     paramsToAdd: {},
   },
 ) => {
-  const paramSets = {
-    panels: ['panel', 'username'],
-    image: ['imageId'],
-  }
-
+  const paramSets = { panels: ['panel', 'username'], image: ['imageId'] }
   let baseUrl = '/'
+
   if (resource !== '/') {
     baseUrl = `/${ResourcePath[resource]}/${entityRef}`
   }
@@ -138,7 +136,6 @@ export const getActiveResourceAndRefFromUrl = (): {
 } => {
   const urlObj = new URL(window.location.href)
   const pathParts = urlObj.pathname.split('/').filter(Boolean)
-
   const resourceType = reversePath.get(pathParts[0]) || false
   const resourceRef = pathParts[1] || false
 
@@ -197,7 +194,7 @@ export const parseCollectionDescriptor = (
  * @returns Parsed collection descriptor or `null`.
  */
 export const getCollectionDescriptorFromSearchParams = (
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
 ): OmniCollectionDescriptor | null => {
   return parseCollectionDescriptor(searchParams.get(COLLECTION_QUERY_PARAM))
 }
@@ -213,10 +210,11 @@ export const getCollectionDescriptorFromSearchParams = (
  * @returns The last panel parameter for the specified side, or overall last if no side specified
  */
 export const getLastPanelParam = (
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
   side: PanelSide | null = null,
 ): string | null => {
   const panels = searchParams.getAll('panel') as Panel[]
+
   if (panels.length === 0) return null
 
   if (side === null) {
@@ -226,6 +224,7 @@ export const getLastPanelParam = (
 
   // For sided panels, we need to determine which panels go to which side
   const leftPanels = Object.values(PanelLeft)
+
   const rightPanels = Object.values(PanelRight)
 
   if (side === 'left') {
@@ -248,30 +247,35 @@ export const getLastPanelParam = (
 }
 
 /**
- * Handle panel parameters from URL and update AppCtx accordingly
- * @param appCtx - Application context
+ * Apply panel parameters from the URL to the surface panel owner
+ * @param panels - Surface panel owner
  * @param searchParams - URL search params
+ * @returns Nothing.
  */
-export const handlePanelParams = (appCtx: AppCtx, searchParams: URLSearchParams) => {
+export const handlePanelParams = (
+  panels: PanelController,
+  searchParams: ReadonlyURLSearchParams,
+): void => {
   if (isMobile()) {
     // On mobile, only one panel can be active - use the last panel parameter
     const lastPanel = getLastPanelParam(searchParams)
 
     if (lastPanel && isValidPanelType(lastPanel)) {
-      handleStatefulPanelParams(appCtx, lastPanel, searchParams, false)
+      handleStatefulPanelParams(panels, lastPanel, searchParams, false)
     }
   } else {
     // On desktop, both left and right panels can be active
     const leftPanel = getLastPanelParam(searchParams, PanelSide.left)
+
     const rightPanel = getLastPanelParam(searchParams, PanelSide.right)
 
     if (leftPanel && isValidPanelType(leftPanel)) {
       // Don't update URL when syncing FROM URL to prevent infinite loops
-      appCtx.openPanel(leftPanel, false)
+      panels.openPanel(leftPanel, false)
     }
 
     if (rightPanel && isValidPanelType(rightPanel)) {
-      handleStatefulPanelParams(appCtx, rightPanel, searchParams, false)
+      handleStatefulPanelParams(panels, rightPanel, searchParams, false)
     }
   }
 }
@@ -287,13 +291,14 @@ const isValidPanelType = (panel: string): panel is Panel => {
 
 /**
  * Update URL to reflect current panel state
- * @param panelState - Current panel state from AppCtx (Record of panel name to boolean)
- * @param appCtx - Optional AppCtx to preserve stateful parameters
+ * @param panelState - Current panel visibility (Record of panel name to boolean)
+ * @param panels - Optional panel owner to preserve stateful parameters
+ * @returns Nothing.
  */
 export const updatePanelUrlParams = (
   panelState: Record<string, boolean>,
-  appCtx?: AppCtx,
-) => {
+  panels?: Pick<PanelController, 'state'>,
+): void => {
   if (typeof window === 'undefined') return
 
   const url = new URL(window.location.href)
@@ -301,6 +306,7 @@ export const updatePanelUrlParams = (
 
   // CONSISTENCY CHECK: If URL already matches the panel state, return early
   const currentPanels = searchParams.getAll('panel')
+
   const currentUsername = searchParams.get('username')
 
   // Build expected panel list from panelState
@@ -311,11 +317,12 @@ export const updatePanelUrlParams = (
 
   // Build expected username based on profile panel state
   const expectedUsername = panelState.profile
-    ? currentUsername || appCtx?.state?.panels?.profile?.ctx?.username || null
+    ? currentUsername || panels?.state?.profile?.ctx?.username || null
     : null
 
   // Compare current vs expected
   const panelsMatch = currentPanels.sort().join(',') === expectedPanels.join(',')
+
   const usernameMatch = currentUsername === expectedUsername
 
   if (panelsMatch && usernameMatch) {
@@ -328,7 +335,7 @@ export const updatePanelUrlParams = (
   // Preserve username parameter ONLY if profile panel is actually open
   if (panelState.profile) {
     const currentUsername =
-      searchParams.get('username') || appCtx?.state?.panels?.profile?.ctx?.username
+      searchParams.get('username') || panels?.state?.profile?.ctx?.username
     if (currentUsername) {
       statefulParams.username = currentUsername
     }
@@ -355,37 +362,37 @@ export const updatePanelUrlParams = (
 
   // Update URL and add to browser history for back/forward navigation
   const newUrl = `${url.pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}${url.hash}`
-  pushState(newUrl, {})
+
+  goto(newUrl, { shallow: true })
 }
 
 /**
  * Handle stateful panel parameters (like profile with username)
- * @param appCtx - Application context
+ * @param panels - Surface panel owner
  * @param panelType - Panel type to handle
  * @param searchParams - URL search parameters
  * @param updateUrl - Whether to update URL
  */
 const handleStatefulPanelParams = (
-  appCtx: AppCtx,
+  panels: PanelController,
   panelType: string,
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
   updateUrl: boolean = false,
 ): void => {
   if (panelType === 'profile') {
     const username = searchParams.get('username')
-    if (username && appCtx.state.panels.profile.ctx) {
-      appCtx.state.panels.profile.ctx.username = username
-    }
+    panels.setPanelCtx(Panel.profile, 'username', username)
   }
 
   // Don't update URL when syncing FROM URL to prevent infinite loops
   if (isValidPanelType(panelType)) {
-    appCtx.openPanel(panelType, updateUrl)
+    panels.openPanel(panelType, updateUrl)
   }
 }
 
 export const getUrlParam = (param: string): string | null => {
   const url = new URL(window.location.href)
+
   return url.searchParams.get(param)
 }
 
@@ -399,7 +406,7 @@ export const getUrlParam = (param: string): string | null => {
  * @returns Object containing imageId and fullscreen flag
  */
 export const getImageParams = (
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
 ): {
   imageId: string | null
   fullscreen: boolean
@@ -419,7 +426,7 @@ export const getImageParams = (
  * @returns Promise resolving to image configuration for ImageProvider
  */
 export const handleImageParams = async (
-  searchParams: URLSearchParams,
+  searchParams: ReadonlyURLSearchParams,
 ): Promise<{
   targetImageId?: string
   isFullScreen?: boolean
@@ -442,10 +449,8 @@ export const handleImageParams = async (
 
   try {
     const { getImageById } = await loadImageRemote()
-    const target = await getImageById({
-      id: imageId,
-      meta: { isAdminRequest: true },
-    })
+    const target = await getImageById({ id: imageId, meta: { isAdminRequest: true } })
+
     if (!target?.data?.image) return null
 
     return {
@@ -496,7 +501,7 @@ export const removeParamFromUrl = (
  * Navigate to a contributed feature with collection context
  */
 export const navigateToContributedFeature = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   featureId: string,
   projectId: Id,
@@ -535,7 +540,7 @@ export const navigateToContributedFeature = async (
  * Navigate to a contributed image with collection context
  */
 export const navigateToContributedImage = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   featureId: string,
   projectId: Id,
@@ -590,7 +595,7 @@ export const navigateToContributedImage = async (
  * Navigate to a starred feature with collection context
  */
 export const navigateToStarred = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   featureId: string,
   wishlistedFeatures: UserFeatureWithHierarchy[],
@@ -624,7 +629,7 @@ export const navigateToStarred = async (
  * Navigate to a visited feature with collection context
  */
 export const navigateToVisited = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   featureId: string,
   visitedFeatures: UserFeatureWithHierarchy[],
@@ -655,15 +660,17 @@ export const navigateToVisited = async (
 }
 
 export const getFeaturesFromImages = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   images: Array<Pick<Image, 'featureId'>>,
 ): Promise<(FeatureFromCollection | Feature)[]> => {
   const featureIds = [
     ...new Set(images.map(img => img.featureId).filter((f): f is string => !!f)),
   ]
+
   const features = await Promise.all(
     featureIds.map(featureId => appCtx.getFeatureById(featureId)),
   )
+
   return features.filter(Boolean) as (FeatureFromCollection | Feature)[]
 }
 
@@ -677,7 +684,7 @@ export const getFeaturesFromImages = async (
  * @param features - Features to extract layer IDs from
  */
 const activateLayersForFeatures = (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[],
 ): void => {
   const layerIds = Array.from(
@@ -692,10 +699,11 @@ const activateLayersForFeatures = (
           return (f as FeatureFromCollection | Feature).layerId
         })
         .filter(Boolean),
-      ...appCtx.getPrism(FirstClassResource.layer),
+      ...appCtx.scope.getPrism(FirstClassResource.layer),
     ]),
   )
-  appCtx.setLayers(layerIds)
+
+  appCtx.scope.setLayers(layerIds)
 }
 
 /**
@@ -714,7 +722,7 @@ const handleCollectionNavigation = (
   featureId: string,
   baseNavOptions: CollectionNavOptions,
   features: (FeatureFromCollection | Feature)[],
-  collectionTitle: Record<Locale, string>,
+  collectionTitle: Record<LocaleKey, string>,
   additionalNavOptions: CollectionNavOptions = {},
 ): void => {
   // Check if we can switch within the current collection
@@ -754,19 +762,20 @@ const handleUrlParamChange = (
   reload: boolean = true,
 ): void => {
   const urlObj = new URL(window.location.href)
+
   urlModifier(urlObj)
 
   if (replace) {
     if (reload) {
-      goto(urlObj.toString(), { noScroll: true, replaceState: true })
+      goto(urlObj.toString(), { reset: false, replace: true })
     } else {
-      replaceState(urlObj.toString(), pageState)
+      goto(urlObj.toString(), { shallow: true, replace: true, state: pageState })
     }
   } else {
     if (reload) {
-      goto(urlObj.toString(), { noScroll: true, replaceState: false })
+      goto(urlObj.toString(), { reset: false, replace: false })
     } else {
-      pushState(urlObj.toString(), pageState)
+      goto(urlObj.toString(), { shallow: true, state: pageState })
     }
   }
 }
@@ -779,7 +788,7 @@ const handleUrlParamChange = (
  */
 const initializeCollectionNavigation = (
   omniCtx: OmniCtx,
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   features: (FeatureFromCollection | Feature | UserFeatureWithHierarchy)[],
 ): void => {
   omniCtx.initSelection(false)

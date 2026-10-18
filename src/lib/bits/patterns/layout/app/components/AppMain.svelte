@@ -1,8 +1,12 @@
 <script lang="ts">
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 type AppMainProps = {
   children: import('svelte').Snippet
@@ -13,12 +17,13 @@ type AppMainProps = {
 let { children, class: className = '', style = '' }: AppMainProps = $props()
 
 const responsiveCtx = getResponsiveCtx()
-const menuReservedHeight = $derived(responsiveCtx.menuReservedHeight)
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
+const menuReservedHeight = $derived(surfaceLayout.menuReservedHeight)
 let mainWidth = $state(0)
 let mainHeight = $state(0)
 
 $effect(() => {
-  responsiveCtx.setMainDimensions(mainWidth, mainHeight)
+  surfaceLayout.setMainDimensions(mainWidth, mainHeight)
 })
 </script>
 

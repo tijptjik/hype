@@ -2,7 +2,7 @@
 // COMPONENTS
 import * as OmnibarPrimitive from './components'
 // ENUMS
-import { OmniMode } from '$lib/enums'
+import { OmniMode } from '#lib/enums.js'
 // STYLES
 import { getOmnibarRootClasses } from './omnibar.styles'
 // LAYOUT

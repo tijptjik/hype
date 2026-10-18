@@ -1,7 +1,8 @@
 import type { Snippet } from 'svelte'
-import type { FormFacetNavAction } from '$lib/bits/patterns/forms/formFacetNav'
+import type { FormFacetNavAction } from '#lib/bits/patterns/forms/formFacetNav/index.js'
 
 export interface MainRootProps {
+  onDimensionsChange?: (width: number, height: number) => void
   children?: Snippet
   class?: string
 }
@@ -22,6 +23,7 @@ export interface MainFacetProps {
 
 export interface MainFormProps {
   children?: Snippet
+  fallback?: Snippet
   class?: string
   attrs?: Record<string, unknown>
   formEl?: HTMLFormElement

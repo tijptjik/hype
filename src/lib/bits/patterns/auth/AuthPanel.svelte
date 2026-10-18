@@ -1,26 +1,27 @@
 <script lang="ts">
-import { goto } from '$app/navigation'
+// SVELTEKIT
 import { page } from '$app/state'
 // SVELTE
 import { fade } from 'svelte/transition'
 
 // ICONS
-import Mail from 'virtual:icons/lucide/mail'
-import KeyRound from 'virtual:icons/lucide/key-round'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import Mail from 'virtual:icons/proicons/mail'
+import KeyRound from 'virtual:icons/proicons/key'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
 // AUTH
-import { authClient, signIn, signUp } from '$lib/auth/client'
+import { authClient, signIn, signUp } from '#lib/auth/client.js'
 import {
   completePasskeyAccountUpgrade,
   PasskeySessionRefreshError,
-} from '$lib/auth/passkey-upgrade'
-import { toSafeReturnPath } from '$lib/auth/upgrade'
-import { isAuthProviderEnabled, type AuthProviderId } from '$lib/auth/providers'
+} from '#lib/auth/passkey-upgrade.js'
+import { toSafeReturnPath } from '#lib/auth/upgrade.js'
+import { navigateAfterAuth } from '#lib/auth/navigation.js'
+import { isAuthProviderEnabled, type AuthProviderId } from '#lib/auth/providers.js'
 // COMPONENTS
 import AuthSocialButtons from './AuthSocialButtons.svelte'
 import AuthTextField from './AuthTextField.svelte'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 let {
   title = m.guest__upgrade_title(),
@@ -88,11 +89,13 @@ const modeToggleLabel = $derived(
 )
 const oauthErrorCode = $derived(page.url.searchParams.get('error'))
 const oauthErrorMessage = $derived(
-  oauthErrorCode === 'account_not_linked'
-    ? m.account__social_account_not_linked()
-    : oauthErrorCode
-      ? m.guest__auth_generic_error()
-      : '',
+  oauthErrorCode === 'BREADLINE_EMAIL_VERIFICATION_REQUIRED'
+    ? m.guest__breadline_email_required()
+    : oauthErrorCode === 'account_not_linked'
+      ? m.account__social_account_not_linked()
+      : oauthErrorCode
+        ? m.guest__auth_generic_error()
+        : '',
 )
 
 $effect(() => {
@@ -175,6 +178,10 @@ async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
           })
 
     if (result.error) {
+      if (String(result.error.code) === 'BREADLINE_EMAIL_VERIFICATION_REQUIRED') {
+        errorMessage = m.guest__breadline_email_required()
+        return
+      }
       if (mode === 'sign-in' && result.error.code === 'EMAIL_NOT_VERIFIED') {
         verificationEmail = normalizedEmail
         isAwaitingVerification = true
@@ -196,7 +203,7 @@ async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
       return
     }
 
-    await goto(safeCallbackUrl)
+    await navigateAfterAuth(safeCallbackUrl)
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
@@ -228,7 +235,7 @@ async function handlePasskey(): Promise<void> {
       errorMessage = m.guest__auth_generic_error()
       return
     }
-    await goto(safeCallbackUrl)
+    await navigateAfterAuth(safeCallbackUrl)
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
@@ -305,7 +312,7 @@ async function handlePasskeySignUp(event: SubmitEvent): Promise<void> {
       return
     }
 
-    await goto(safeCallbackUrl)
+    await navigateAfterAuth(safeCallbackUrl)
   } catch (error) {
     statusMessage = ''
     errorMessage =
@@ -331,6 +338,36 @@ async function handleVerificationResend(): Promise<void> {
       callbackURL: safeCallbackUrl,
     })
     statusMessage = m.guest__verification_resent()
+  } catch {
+    errorMessage = m.guest__auth_generic_error()
+  } finally {
+    isBusy = false
+  }
+}
+
+/**
+ * Requests a one-time email login without disclosing imported-account eligibility.
+ * @returns Nothing after showing delivery feedback or an actionable failure.
+ */
+async function handleEmailLink(): Promise<void> {
+  if (isBusy) return
+  errorMessage = ''
+  statusMessage = ''
+  if (!email.trim()) {
+    errorMessage = m.guest__email_required()
+    return
+  }
+  isBusy = true
+  try {
+    const result = await signIn.magicLink({
+      email: email.trim(),
+      callbackURL: safeCallbackUrl,
+    })
+    if (result.error) {
+      errorMessage = m.guest__auth_generic_error()
+      return
+    }
+    statusMessage = m.guest__sign_in_link_sent()
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
@@ -504,6 +541,14 @@ async function handlePasswordResetRequest(): Promise<void> {
             required
             bind:value={email}
           />
+          <button
+            type="button"
+            disabled={isBusy}
+            onclick={handleEmailLink}
+            class="text-sm text-white/75 underline underline-offset-4 transition hover:text-white disabled:opacity-50"
+          >
+            {m.guest__email_sign_in_link()}
+          </button>
           <AuthTextField
             label={m.guest__password()}
             type="password"

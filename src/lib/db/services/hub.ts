@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, exists, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm'
+import { and, eq, exists, isNull, like, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import {
   organisation,
@@ -14,7 +14,7 @@ import {
   featureImage,
   image,
   hubLayer,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // DB
 import {
   firstOrNull,
@@ -22,20 +22,11 @@ import {
   toOrderByWithLocalizedFields,
   toRelatedRecords,
 } from '..'
-import { insertManyRelated, replaceManyRelated } from '../crud'
-import { updateOrganisationById } from './organisation'
+import { insertMany, insertManyRelated, replaceManyRelated } from '../crud'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
-import type {
-  Database,
-  ListResponse,
-  Locale,
-  LocaleKey,
-  HubProbe,
-  HubUpdateProbe,
-  HubCommandProbe,
-  Id,
-} from '$lib/types'
+import type { Database, ListResponse, Locale, LocaleKey, Id } from '#lib/types.js'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 import type {
   HubDB,
   HubDBNew,
@@ -44,8 +35,26 @@ import type {
   HubI18nNew,
   HubI18nPartial,
   HubOptsExtended,
-} from '$lib/db/zod/schema/hub.types'
-import { hubEntityWithRelations } from '$lib/api/services/hub'
+} from '#lib/db/zod/schema/hub.types.js'
+import { hubEntityWithRelations } from '#lib/api/services/hub.js'
+// TYPES
+
+type HubProbe = {
+  id: string
+  code: string
+  isPublished: boolean
+  isArchived: boolean
+}
+
+type HubUpdateProbe = {
+  id: string
+  code: string
+  modifiedAt: string
+}
+
+type HubCommandProbe = {
+  id: string
+}
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -149,7 +158,7 @@ export const createUserRoles = async (
   hubId: string,
 ): Promise<void> => {
   if (roles.length === 0) return
-  await db.insert(hubRole).values(toUserRoles(roles, hubId))
+  await insertMany(db, hubRole, toUserRoles(roles, hubId))
 }
 
 // ═══════════════════════
@@ -634,7 +643,7 @@ export const listOrganisations = async (
       isHubExclusive: organisation.isHubExclusive,
     })
     .from(organisation)
-    .where(inArray(organisation.id, organisationIds))
+    .where(chunkedInArray(organisation.id, organisationIds))
 }
 
 /**
@@ -764,17 +773,21 @@ export const updateI18n = async (
 // ═══════════════════════
 
 /**
- * syncUserRoles operation.
- * Used by hub DB workflows to keep persistence behavior centralized.
+ * Atomically replaces the administrators assigned to one hub.
+ * @param db - Database used by the authorized hub workflow.
+ * @param roles - Complete replacement assignment set.
+ * @param hubId - Hub whose assignments are being replaced.
+ * @returns Nothing after all replacement statements commit together.
+ * @remarks Any insertion failure preserves the previous assignments. Authorization
+ * and whether an empty assignment set is allowed remain caller responsibilities.
  */
 export const syncUserRoles = async (
   db: Parameters<typeof createHub>[0],
   roles: Array<{ userId: string; role: string }>,
   hubId: string,
 ): Promise<void> => {
-  await db.delete(hubRole).where(eq(hubRole.hubId, hubId))
-  if (roles.length === 0) return
-  await db.insert(hubRole).values(toUserRoles(roles, hubId))
+  // Chunk SQL bindings while keeping deletion and every insert in one D1 transaction.
+  await replaceManyRelated(db, hubRole, toUserRoles(roles, hubId), hubRole.hubId, hubId)
 }
 
 /**
@@ -830,8 +843,12 @@ export const upsertHubUserState = async (
 }
 
 /**
- * syncOrganisations operation.
- * Used by hub DB workflows to keep persistence behavior centralized.
+ * Atomically replaces a hub's organisation assignments and visibility flags.
+ * @param db - Database used by the authorized hub workflow.
+ * @param hubId - Hub whose assignment set is being replaced.
+ * @param nextRows - Complete authorized organisation assignment set.
+ * @returns Nothing after the entire assignment transaction commits.
+ * @remarks Missing targets or write failures roll back detachment and all assignments.
  */
 export const syncOrganisations = async (
   db: Parameters<typeof createHub>[0],
@@ -842,46 +859,43 @@ export const syncOrganisations = async (
     isHubExclusive: boolean
   }>,
 ): Promise<void> => {
-  const currentAssignments = await db
-    .select({ id: organisation.id })
+  const ids = [...new Set(nextRows.map(row => row.organisationId))]
+  // CASE short-circuits: invalid JSON deliberately aborts the batch only when a target is missing.
+  // Keep this existence check inside the transaction, not in a stale preflight read.
+  const targetCheck = db
+    .select({
+      valid: sql<number>`case when count(*) = ${ids.length} then 1
+      else json('HUB_ORGANISATION_NOT_FOUND') end`,
+    })
     .from(organisation)
+    .where(chunkedInArray(organisation.id, ids))
+  const detach = db
+    .update(organisation)
+    .set({ hubId: null, isCoreInclusive: true, isHubExclusive: false })
     .where(eq(organisation.hubId, hubId))
-
-  if (currentAssignments.length > 0) {
-    await Promise.all(
-      currentAssignments.map(row =>
-        updateOrganisationById(
-          db,
-          {
-            hubId: null,
-            isCoreInclusive: true,
-            isHubExclusive: false,
-          },
-          row.id,
-        ),
-      ),
-    )
-  }
-
-  if (nextRows.length === 0) return
-
-  await Promise.all(
-    nextRows.map(row =>
-      updateOrganisationById(
-        db,
-        {
-          hubId,
-          isCoreInclusive: row.isCoreInclusive,
-          isHubExclusive: row.isHubExclusive,
-        },
-        row.organisationId,
-      ),
-    ),
+  const assignments = nextRows.map(row =>
+    db
+      .update(organisation)
+      .set({
+        hubId,
+        isCoreInclusive: row.isCoreInclusive,
+        isHubExclusive: row.isHubExclusive,
+      })
+      .where(eq(organisation.id, row.organisationId)),
   )
+
+  // Each update has a bounded parameter count; do not split the transaction by statement count.
+  if (ids.length === 0) await db.batch([detach])
+  else await db.batch([targetCheck, detach, ...assignments])
 }
 
 /**
- * Replaces persisted hub-layer default rows for one hub.
+ * Atomically replaces persisted hub-layer default rows for one hub.
+ * @param db - Database used by the authorized hub workflow.
+ * @param hubId - Hub whose defaults are being replaced.
+ * @param nextRows - Complete replacement set of layer visibility defaults.
+ * @returns Nothing after the replacement commits.
+ * @remarks A failed insertion preserves all existing defaults for the hub.
  */
 export const syncHubLayerDefaults = async (
   db: Parameters<typeof createHub>[0],
@@ -891,16 +905,17 @@ export const syncHubLayerDefaults = async (
     isDefaultVisible: boolean
   }>,
 ): Promise<void> => {
-  await db.delete(hubLayer).where(eq(hubLayer.hubId, hubId))
-
-  if (nextRows.length === 0) return
-
-  await db.insert(hubLayer).values(
+  // Keep deletion and all parameter-safe inserts in the same transaction.
+  await replaceManyRelated(
+    db,
+    hubLayer,
     nextRows.map(row => ({
       hubId,
       layerId: row.layerId,
       isDefaultVisible: row.isDefaultVisible,
     })),
+    hubLayer.hubId,
+    hubId,
   )
 }
 

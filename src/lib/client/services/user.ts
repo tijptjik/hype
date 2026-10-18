@@ -1,11 +1,13 @@
-import { updateUserProfile } from '$lib/api/server/user.remote'
-import { useSession } from '$lib/auth/client'
-import { m } from '$lib/i18n'
-import { normalizeUsername, validateUsername } from '$lib/utils/username'
+import type { RemoteFormIssue } from '$app/server'
+import { updateUserProfile } from '#lib/api/user.remote.js'
+import { useSession } from '#lib/auth/client.js'
+import { m } from '#lib/i18n.js'
+import { normalizeUsername, validateUsername } from '#lib/utils/username.js'
+
 // TYPES
-import type { Id } from '$lib/types'
-import type { UserPreferences } from '$lib/db/zod/schema/user.types'
-import type { RemoteFormIssue } from '@sveltejs/kit'
+import type { Id } from '#lib/types.js'
+
+import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 
 /**
  * Refreshes the shared Better Auth session atom after a successful user-profile mutation.
@@ -30,14 +32,15 @@ export const validateUsernameIssues = (
   username: string,
 ): { normalizedUsername: string; issues: RemoteFormIssue[] } => {
   const normalizedUsername = normalizeUsername(username)
-  const issues = validateUsername(normalizedUsername)
-    ? []
-    : [
-        {
-          message: m.validation__username_invalid(),
-          path: ['username'],
-        } satisfies RemoteFormIssue,
-      ]
+  const issues =
+    /^[a-zA-Z0-9_]{1,32}$/.test(username.trim()) && validateUsername(normalizedUsername)
+      ? []
+      : [
+          {
+            message: m.validation__username_invalid(),
+            path: ['username'],
+          } satisfies RemoteFormIssue,
+        ]
 
   return {
     normalizedUsername,
@@ -153,7 +156,7 @@ export const debouncedUpdateUsername = async (
 
   await debouncedUpdateUser(
     userId,
-    { username: normalizedUsername },
+    { username: username.trim() },
     {
       delay: 300,
       timerKey: 'username',

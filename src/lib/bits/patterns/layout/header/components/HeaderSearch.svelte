@@ -3,8 +3,8 @@ import { onDestroy } from 'svelte'
 // BITS
 import { HEADER_SEARCH_CLEAR_CLASSES } from './headerPrimitives.styles'
 // ICONS
-import Search from 'virtual:icons/lucide/search'
-import X from 'virtual:icons/lucide/x'
+import Search from 'virtual:icons/proicons/search'
+import X from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { HeaderSearchProps } from './headerPrimitives.types'
 
@@ -101,7 +101,7 @@ onDestroy(() => {
 </script>
 
 {#if isFilterable}
-  <label class="bits-pattern-header__search" aria-label="Filter">
+  <label class="relative inline-flex min-w-44 items-center" aria-label="Filter">
     <input
       bind:this={inputElement}
       type="text"

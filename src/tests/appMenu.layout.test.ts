@@ -1,4 +1,4 @@
-import { getAppMenuViewportState } from '$lib/bits/patterns/bars/appMenu/appMenu.layout'
+import { getAppMenuViewportState } from '#lib/bits/patterns/bars/appMenu/appMenu.layout.js'
 import { describe, expect, it } from 'vitest'
 
 describe('app menu layout', () => {

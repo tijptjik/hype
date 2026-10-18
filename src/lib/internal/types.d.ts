@@ -9,7 +9,7 @@ import type {
 export type OnChangeFn<T> = (value: T) => void
 
 export type WithChild<
-  Props extends Record<PropertyKey, unknown> = {},
+  Props extends Record<PropertyKey, unknown> = Record<never, never>,
   SnippetProps extends Record<PropertyKey, unknown> = { _default: never },
   Ref = HTMLElement,
 > = Omit<Props, 'child' | 'children'> & {
@@ -25,7 +25,7 @@ export type WithChild<
 
 export type Without<T extends object, U extends object> = Omit<T, keyof U>
 
-export type WithRefOpts<T = {}> = T &
+export type WithRefOpts<T = object> = T &
   ReadableBoxedValues<{ id: string }> &
   WritableBoxedValues<{ ref: HTMLElement | null }>
 

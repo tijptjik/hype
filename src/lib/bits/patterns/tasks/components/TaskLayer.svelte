@@ -1,7 +1,7 @@
 <script lang="ts">
-import { Select } from '$lib/bits/core'
-import { cx } from '$lib/bits/utils'
-import { m, getI18n } from '$lib/i18n'
+import { Select } from '#lib/bits/core/index.js'
+import { cx } from '#lib/bits/utils.js'
+import { m, getI18n } from '#lib/i18n.js'
 import type { TaskLayerProps } from '../task.types'
 
 let {
@@ -24,13 +24,13 @@ const items = $derived(
 
 <section
   class={cx(
-    'rounded-2xl border border-white/10 bg-white/[0.03] py-4',
+    'rounded-2xl border border-foreground/10 bg-foreground/[0.03] py-4',
     className,
   )}
 >
   <div class="pb-1.5">
     {#if title}
-      <div class="font-mono text-sm uppercase tracking-[0.22em] text-white/45">
+      <div class="font-mono text-sm uppercase tracking-[0.22em] text-foreground/45">
         {title}
       </div>
     {/if}
@@ -41,11 +41,11 @@ const items = $derived(
     {items}
     placeholder={m.resource__layer_singular()}
     disabled={disabled || isBusy}
-    triggerClass="w-full border-white/12 bg-black/40 text-white"
-    contentClass="border-white/12 bg-neutral-950 text-white text-md"
+    triggerClass="w-full border-foreground/12 bg-panel/40 text-foreground"
+    contentClass="border-foreground/12 bg-panel text-foreground text-md"
     onValueChange={value => {
-        if (!value || value === currentLayerId) return
-        void onLayerChange?.(value)
-      }}
+      if (!value || value === currentLayerId) return
+      void onLayerChange?.(value)
+    }}
   />
 </section>

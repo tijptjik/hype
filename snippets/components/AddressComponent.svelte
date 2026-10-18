@@ -1,20 +1,17 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
-import ForwardGeocodeActions from '$lib/components/forms/actions/ForwardGeocode.svelte'
-import Header from '$lib/components/forms/extra/Header.svelte'
-import DisplayField from '$lib/components/forms/fields/Display.svelte'
+import ForwardGeocodeActions from '#lib/components/forms/actions/ForwardGeocode.svelte'
+import Header from '#lib/components/forms/extra/Header.svelte'
+import DisplayField from '#lib/components/forms/fields/Display.svelte'
 // ENUMS
-import { supportedLocales } from '$lib/enums'
+import { supportedLocales } from '#lib/enums.js'
 // TYPES
-import type {
-  Locale,
-  SectionProps,
-  FormField,
-  FormFieldNested,
-  FeatureForm,
-} from '$lib/types'
+import type { Locale } from '#lib/types.js'
+import type { SectionProps } from '#lib/client/services/formProps.types.js'
+import type { FormField, FormFieldNested } from '#lib/client/services/formFields.types.js'
+import type { FeatureForm } from '#lib/client/services/form.types.js'
 
 // CONFIG
 const columnHeaders: Record<Locale, string> = {

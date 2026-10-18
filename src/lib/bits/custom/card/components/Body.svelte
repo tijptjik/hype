@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { Snippet } from 'svelte'
-import ScrollableText from '$lib/bits/custom/text/ScrollableText.svelte'
+import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
 import type { CardBodyProps } from '../card.types'
 
 type Props = CardBodyProps & {
@@ -30,7 +30,7 @@ const descriptionStyle = $derived(
   <ScrollableText
     text={resolvedTitle}
     padding={0}
-    class="bits-card__title-wrap"
+    class="w-full min-w-0"
     textClass="bits-card__title-text"
   />
 
@@ -41,6 +41,6 @@ const descriptionStyle = $derived(
   {/if}
 
   {#if tags}
-    <div class="bits-card__tags">{@render tags()}</div>
+    <div class="inline-flex min-w-0 items-center gap-2 flex-wrap">{@render tags()}</div>
   {/if}
 </div>

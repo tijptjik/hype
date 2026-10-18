@@ -1,12 +1,13 @@
 <script lang="ts">
-import { FormGrid } from '$lib/bits/patterns/layout'
-import { SimpleTooltip } from '$lib/bits/core'
-import { Card, Icon, SectionHeader, Switch } from '$lib/bits/custom'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
-import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
-import { m } from '$lib/i18n'
-import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
-import EyeIcon from 'virtual:icons/lucide/eye'
+// I18N
+import { m } from '#lib/i18n.js'
+// BITS COMPONENTS
+import { SectionHeader, Switch } from '#lib/bits/custom/index.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import FormDisclosureGroup from '../formDisclosureGroup/FormDisclosureGroup.svelte'
+// ICONS
+import LayersIcon from 'virtual:icons/proicons/layers'
+// TYPES
 import type { FormHubLayersSectionProps } from './formHubLayersSection.types'
 
 let {
@@ -99,8 +100,9 @@ $effect(() => {
 })
 </script>
 
-<section class={`bits-form__section flex min-h-0 flex-col gap-4 ${className}`}>
+<section class={`bits-form__section flex min-h-0 flex-col ${className}`}>
   <SectionHeader
+    icon={LayersIcon}
     {title}
     description={subtitle}
     onCollapsableToggle={groupedItems.length > 0 ? handleCollapseAll : undefined}
@@ -113,87 +115,48 @@ $effect(() => {
     {/if}
   </SectionHeader>
 
-  <div class="flex min-h-0 flex-col gap-4">
+  <div class="flex min-h-0 flex-col">
     {#each groupedItems as group (group.id)}
-      <section class="flex min-h-0 flex-col gap-3">
-        <div
-          class="flex h-10 flex-row items-center justify-between gap-2 rounded-2xl px-3 @container"
-        >
-          <button
-            type="button"
-            class="flex h-12 cursor-pointer items-center gap-4 transition-opacity hover:opacity-80"
-            aria-expanded={!collapsedGroupIds[group.id]}
-            onclick={() => setGroupCollapsed(group.id, !collapsedGroupIds[group.id])}
-          >
-            <div
-              class="rotate-90 text-base-content transition-transform duration-200"
-              class:rotate-0={collapsedGroupIds[group.id]}
-              aria-hidden="true"
+      <FormDisclosureGroup
+        title={group.name}
+        count={`${group.items.length} ${m.maps__layers()}`}
+        collapsed={collapsedGroupIds[group.id] ?? false}
+        onCollapsedChange={collapsed => setGroupCollapsed(group.id, collapsed)}
+      >
+        <ul class="px-6">
+          {#each group.items as item (item.id)}
+            <li
+              class="flex min-h-16 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border/40 py-4 last:border-b-0"
             >
-              <Icon
-                src={ChevronRightIcon}
-                size="md"
-                strokeWidth={3.5}
-                class="h-5 w-5"
-              />
-            </div>
-            <h3 class="shrink text-xl font-bold uppercase text-base-content">
-              {group.name}
-            </h3>
-          </button>
-
-          <small class="hidden select-text pr-3 text-sm text-base-content/50 @sm:block">
-            {group.items.length} {m.maps__layers()}
-          </small>
-        </div>
-
-        {#if !collapsedGroupIds[group.id]}
-          <FormGrid minWidth={360}>
-            {#each group.items as item (item.id)}
-              <ResourceCard.Root>
-                <ResourceCard.Body code={item.projectNameShort} name={item.layerName} />
-                <Card.Actions
-                  padding="md"
-                  bg="panel"
-                  class="bits-form__parent-resource-actions-rail bits-form__hub-layer-actions-rail"
-                >
-                  <div
-                    class="bits-form__parent-resource-actions bits-form__hub-layer-actions"
-                  >
-                    <SimpleTooltip>
-                      {#snippet trigger()}
-                        <label
-                          class="bits-form__parent-resource-default bits-form__hub-layer-default"
-                        >
-                          <span
-                            class="bits-form__parent-resource-default-icon bits-form__hub-layer-default-icon"
-                          >
-                            <EyeIcon />
-                          </span>
-                          <span
-                            class="bits-form__parent-resource-default-label bits-form__hub-layer-default-label"
-                          >
-                            {m.default_enabled()}
-                          </span>
-                          <Switch
-                            checked={item.isDefaultVisible}
-                            disabled={isDisabled}
-                            size="md"
-                            class="bits-form__hub-layer-default-switch"
-                            onCheckedChange={value =>
-                              onToggleDefault(item.id, value === true)}
-                          />
-                        </label>
-                      {/snippet}
-                      {m.admin__forms_layer_visible_by_default()}
-                    </SimpleTooltip>
-                  </div>
-                </Card.Actions>
-              </ResourceCard.Root>
-            {/each}
-          </FormGrid>
-        {/if}
-      </section>
+              <div class="min-w-0 flex-1">
+                <p class="break-words text-sm font-medium text-foreground">
+                  {item.layerName}
+                </p>
+                <p class="break-words text-xs text-muted-foreground">
+                  {item.projectNameShort}
+                </p>
+              </div>
+              <div
+                class="flex shrink-0 items-center gap-3 [&_.bits-switch-label]:sr-only"
+                title={m.admin__forms_layer_visible_by_default()}
+              >
+                <span class="text-xs text-muted-foreground">{m.default_enabled()}</span>
+                <Switch
+                  checked={item.isDefaultVisible}
+                  disabled={isDisabled}
+                  rightText={`${item.layerName}: ${m.admin__forms_layer_visible_by_default()}`}
+                  size="sm"
+                  onCheckedChange={value => onToggleDefault(item.id, value === true)}
+                />
+              </div>
+            </li>
+          {/each}
+        </ul>
+      </FormDisclosureGroup>
+    {:else}
+      <p class="px-6 py-10 text-sm text-muted-foreground">
+        {m.resource_no_results()}
+      </p>
     {/each}
   </div>
 

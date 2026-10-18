@@ -1,4 +1,4 @@
-import { toStableSignature, toTriStateBoolean } from '$lib/api'
+import { toStableSignature, toTriStateBoolean } from '#lib/api/index.js'
 
 export const toBooleanOrUndefined = (value: unknown): boolean | undefined => {
   if (value === true || value === false) return value

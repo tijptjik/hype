@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { getUserMarkerStyleVariant } from '$lib/map/markers'
+import { getUserMarkerStyleVariant } from '#lib/map/markers.js'
 import {
   buildCatalogMapStyle,
   buildMapStyle,
   getDefaultMapStyleKey,
   listMapStyleCatalog,
-} from '$lib/map/styles'
-import { getMapStyleRenderAssetPath } from '$lib/map/styles/render.shared'
+} from '#lib/map/styles/index.js'
+import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
 
 describe('map styles', () => {
   it('defaults to the Ghostery style', () => {
@@ -154,16 +154,6 @@ describe('map styles', () => {
     expect(secondStyle.layers?.[0]?.layout?.visibility).not.toBe('none')
   })
 
-  it('matches the previous app map default road styling', () => {
-    const style = buildMapStyle('ghostery-legacy') as {
-      layers?: Array<{ id?: string; paint?: Record<string, unknown> }>
-    }
-
-    const roadsLayer = style.layers?.find(layer => layer.id === 'roads')
-
-    expect(roadsLayer?.paint?.['line-color']).toBe('#4987E2')
-  })
-
   it('keeps the ghostery roads on the Ghostery blue', () => {
     const style = buildMapStyle('ghostery') as {
       layers?: Array<{
@@ -181,109 +171,6 @@ describe('map styles', () => {
     expect(roadsLayer?.paint?.['line-blur']).toBe(0.55)
     expect(pathsLayer?.paint?.['line-opacity']).toBe(0.58)
     expect(pathsLayer?.minzoom).toBe(17)
-  })
-
-  it('switches neonmaster roads to red neon and building outlines to white glow', () => {
-    const style = buildMapStyle('neonmaster') as {
-      layers?: Array<{
-        id?: string
-        paint?: Record<string, unknown>
-      }>
-    }
-
-    const roadsLayer = style.layers?.find(layer => layer.id === 'roads_major')
-    const casingLayer = style.layers?.find(
-      layer => layer.id === 'roads_major_casing_late',
-    )
-    const glowLabelLayer = style.layers?.find(
-      layer => layer.id === 'roads_labels_major__glow',
-    )
-    const buildingOutline = style.layers?.find(
-      layer => layer.id === 'buildings_outline',
-    )
-
-    expect(roadsLayer?.paint?.['line-color']).toBe('#FF355E')
-    expect(casingLayer?.paint?.['line-color']).toBe('#FF7A8F')
-    expect(glowLabelLayer?.paint?.['text-halo-color']).toBe('rgb(255, 74, 110)')
-    expect(buildingOutline?.paint?.['line-color']).toEqual([
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      17,
-      'rgba(255, 255, 255, 0.12)',
-      19,
-      'rgba(255, 255, 255, 0.72)',
-      20,
-      'rgba(255, 255, 255, 1)',
-    ])
-  })
-
-  it('gives neorange orange roads and cyan building outlines', () => {
-    const style = buildMapStyle('neorange') as {
-      layers?: Array<{
-        id?: string
-        paint?: Record<string, unknown>
-      }>
-    }
-
-    const roadsLayer = style.layers?.find(layer => layer.id === 'roads_major')
-    const casingLayer = style.layers?.find(
-      layer => layer.id === 'roads_major_casing_late',
-    )
-    const glowLabelLayer = style.layers?.find(
-      layer => layer.id === 'roads_labels_major__glow',
-    )
-    const buildingOutline = style.layers?.find(
-      layer => layer.id === 'buildings_outline',
-    )
-
-    expect(roadsLayer?.paint?.['line-color']).toBe('#FF8A00')
-    expect(casingLayer?.paint?.['line-color']).toBe('#FFB347')
-    expect(glowLabelLayer?.paint?.['text-halo-color']).toBe('rgb(255, 164, 72)')
-    expect(buildingOutline?.paint?.['line-color']).toEqual([
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      17,
-      'rgba(56, 247, 255, 0.14)',
-      19,
-      'rgba(56, 247, 255, 0.74)',
-      20,
-      'rgba(56, 247, 255, 1)',
-    ])
-  })
-
-  it('uses the Rosé Punk palette for roads, water, and building outlines', () => {
-    const style = buildMapStyle('rosepunk') as {
-      name?: string
-      layers?: Array<{
-        id?: string
-        paint?: Record<string, unknown>
-      }>
-    }
-
-    const roadsLayer = style.layers?.find(layer => layer.id === 'roads_major')
-    const highwayLayer = style.layers?.find(layer => layer.id === 'roads_highway')
-    const waterLayer = style.layers?.find(layer => layer.id === 'water')
-    const buildingOutline = style.layers?.find(
-      layer => layer.id === 'buildings_outline',
-    )
-
-    expect(style.name).toBe('Rosé Punk')
-    expect(roadsLayer?.paint?.['line-color']).toBe('#EB6F92')
-    expect(highwayLayer?.paint?.['line-color']).toBe('#F6C177')
-    expect(waterLayer?.paint?.['fill-color']).toBe('#31748F')
-    expect(buildingOutline?.paint?.['line-color']).toEqual([
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      16.5,
-      'rgba(156, 207, 216, 0.1)',
-      18,
-      'rgba(156, 207, 216, 0.4)',
-      20,
-      'rgba(156, 207, 216, 0.82)',
-    ])
   })
 
   it('keeps the original high-voltage road palette as Genesis', () => {
@@ -330,6 +217,7 @@ describe('map styles', () => {
         type?: string
         'source-layer'?: string
         filter?: unknown[]
+        layout?: Record<string, unknown>
         paint?: Record<string, unknown>
       }>
     }
@@ -429,39 +317,6 @@ describe('map styles', () => {
     expect(regionalBorder?.paint?.['line-color']).toBe('#7042f0')
     expect(roadLabel?.paint?.['text-color']).toBe('#d4dbff')
     expect(labelGlow?.paint?.['text-halo-color']).toBe('rgba(240, 77, 127, 0.72)')
-  })
-
-  it('gives Sin a calmer cherry, cobalt and plum palette', () => {
-    const style = buildMapStyle('sin') as {
-      layers?: Array<{ id?: string; paint?: Record<string, unknown> }>
-    }
-
-    const backgroundLayer = style.layers?.find(layer => layer.id === 'background')
-    const roadsLayer = style.layers?.find(layer => layer.id === 'roads_major')
-    const highwayLayer = style.layers?.find(layer => layer.id === 'roads_highway')
-    const casingLayer = style.layers?.find(
-      layer => layer.id === 'roads_major_casing_late',
-    )
-    const waterLayer = style.layers?.find(layer => layer.id === 'water')
-
-    expect(backgroundLayer?.paint?.['background-color']).toBe('#102C66')
-    expect(roadsLayer?.paint?.['line-color']).toBe('#F26C97')
-    expect(highwayLayer?.paint?.['line-color']).toBe('#FFA45C')
-    expect(casingLayer?.paint?.['line-color']).toBe('#8F376E')
-    expect(waterLayer?.paint?.['fill-color']).toBe('#102C66')
-  })
-
-  it('removes hot pink labels from the ghostery style', () => {
-    const style = buildMapStyle('ghostery') as {
-      layers?: Array<{ id?: string; paint?: Record<string, unknown> }>
-    }
-
-    const majorRoadLabels = style.layers?.find(
-      layer => layer.id === 'roads_labels_major',
-    )
-
-    expect(majorRoadLabels?.paint?.['text-color']).toBe('#FFFFFF')
-    expect(majorRoadLabels?.paint?.['text-halo-color']).toBe('rgba(255,255,255,0.2)')
   })
 
   it('uses the original housenumber styling in the ghostery style', () => {

@@ -1,15 +1,15 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
 import type {
   CapabilityDefinitions,
   CapabilityI18nRoot,
   CapabilityKey,
-} from '$lib/types'
+} from '#lib/capabilities.types.js'
 import type {
   ProjectCapabilities,
   ProjectRoleCapabilities,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 
 export const CAPABILITY_KEYS = [
   'manageBakeries',

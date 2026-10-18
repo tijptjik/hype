@@ -2,9 +2,13 @@
 import { fade } from 'svelte/transition'
 import { Button } from 'bits-ui'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // STYLES
 import {
   BUTTON_ICON_CLASSES,
@@ -45,9 +49,10 @@ let {
 }: ButtonProps = $props()
 
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 
 const isIconOnly = $derived(modifier === 'square' || modifier === 'circle')
-const responsiveWidth = $derived(availableWidth ?? responsiveCtx.main.width)
+const responsiveWidth = $derived(availableWidth ?? surfaceLayout.main.width)
 const shouldAutoHideLabel = $derived(
   hideLabelBelow !== undefined &&
     responsiveWidth !== undefined &&

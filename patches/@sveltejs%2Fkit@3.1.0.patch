@@ -1,0 +1,8 @@
+diff --git a/src/runtime/client/remote-functions/query/index.js b/src/runtime/client/remote-functions/query/index.js
+--- a/src/runtime/client/remote-functions/query/index.js
++++ b/src/runtime/client/remote-functions/query/index.js
+@@ -33,0 +34 @@
++				return;
+@@ -34,0 +36,2 @@
++
++			return result._;

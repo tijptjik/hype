@@ -1,6 +1,9 @@
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { OmniCollection, OmniMode } from '$lib/enums'
-import type { SearchResult } from '$lib/types'
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { OmniCollection, OmniMode } from '#lib/enums.js'
+import type { SearchResult } from '#lib/context/omni.types.js'
 import type { Snippet } from 'svelte'
 import type {
   OmnibarNavigationProps,
@@ -25,15 +28,24 @@ export type OmnibarSectionProps = {
   collectionType: OmniCollection
   results: SearchResult[]
   limit: number
+  totalCount?: number | null
+  hasMore?: boolean
+  loading?: boolean
+  onLoadMore?: () => void
+  onPreview?: (ref: string, active: boolean) => void
   onSelection: (ref: string) => void
 }
 
 export type OmnibarSectionHeaderProps = {
+  onclick?: () => void
+  loading?: boolean
   collectionType: OmniCollection
+  totalCount?: number | null
 }
 
 export type OmnibarEntryProps = {
   result: SearchResult
+  onPreview?: (ref: string, active: boolean) => void
   onSelection?: (ref: string) => void
 }
 
@@ -46,6 +58,9 @@ export type OmnibarCollectionProps = {
   navTitle?: string
   onSelectIndex?: (index: number) => void
   onCloseTray?: () => void
+  hasMore?: boolean
+  loading?: boolean
+  onLoadMore?: () => void
 }
 
 export type OmnibarResultsProps = {
@@ -69,14 +84,13 @@ export type OmnibarNavigationHeaderProps = Pick<
   OmnibarNavigationProps,
   | 'collectionMetaText'
   | 'featureTitle'
-  | 'hasElevatedChrome'
   | 'isCardOpen'
   | 'isCardOpeningPending'
   | 'showCollectionSwitcher'
   | 'onToggleTray'
   | 'onToggleCard'
   | 'onClose'
->
+> & { hasElevatedChrome: boolean }
 
 export type OmnibarNavigationArrowProps = {
   direction: 'left' | 'right'

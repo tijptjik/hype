@@ -1,7 +1,10 @@
 import type { Component } from 'svelte'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
 
-export type CompletionFooterEntities = Feature[]
+export type CompletionFooterEntities = (FeatureFromCollection | Feature)[]
 
 export type CompletionFooterSectionKey =
   | 'content'

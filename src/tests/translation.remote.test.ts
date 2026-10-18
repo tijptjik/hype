@@ -1,5 +1,6 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
 
 const { mockTranslateWithAzure, mockGuardedContext } = vi.hoisted(() => ({
@@ -9,7 +10,7 @@ const { mockTranslateWithAzure, mockGuardedContext } = vi.hoisted(() => ({
   mockGuardedContext: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedCommand: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -27,23 +28,29 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api/external/translation', () => ({
+vi.mock('#lib/api/external/translation.js', () => ({
   translateText: mockTranslateWithAzure,
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/translation.remote')>
+let remote: MockedRemoteModule<typeof import('#lib/api/translation.remote.js')>
 
 describe('translation.remote', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-    remote = await import('$lib/api/server/translation.remote')
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
+  beforeAll(async () => {
+    remote = mockedRemoteModule(await import('#lib/api/translation.remote.js'))
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
     mockGuardedContext.mockResolvedValue({
+      user: { id: 'u-1', isAnonymous: false },
       event: {
-        platform: {
-          env: {
-            AZURE_TRANSLATION_KEY: 'key-1',
-            PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+        locals: {
+          platform: {
+            env: {
+              AZURE_TRANSLATION_KEY: 'key-1',
+              PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+            },
           },
         },
       },
@@ -52,10 +59,13 @@ describe('translation.remote', () => {
 
   it('throws when azure translation key is missing', async () => {
     mockGuardedContext.mockResolvedValue({
+      user: { id: 'u-1', isAnonymous: false },
       event: {
-        platform: {
-          env: {
-            PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+        locals: {
+          platform: {
+            env: {
+              PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+            },
           },
         },
       },
@@ -64,7 +74,7 @@ describe('translation.remote', () => {
     await expect(
       remote.translateText({
         source: 'en',
-        target: 'zh-hant',
+        target: 'zhHant',
         texts: ['hello'],
       }),
     ).rejects.toMatchObject({ status: 500 })
@@ -73,17 +83,42 @@ describe('translation.remote', () => {
   it('forwards params to azure translation service', async () => {
     const result = await remote.translateText({
       source: 'en',
-      target: 'zh-hant',
+      target: 'zhHant',
       texts: ['hello', 'world'],
     })
 
     expect(mockTranslateWithAzure).toHaveBeenCalledWith(
       ['hello', 'world'],
       'en',
-      'zh-hant',
+      'zhHant',
       'eastasia',
       'key-1',
     )
     expect(result).toEqual(['hello-x', 'world-x'])
+  })
+
+  it('requires an upgraded account before spending translation quota', async () => {
+    mockGuardedContext.mockResolvedValue({
+      user: { id: 'guest-1', isAnonymous: true },
+      event: {
+        locals: {
+          platform: {
+            env: {
+              AZURE_TRANSLATION_KEY: 'key-1',
+              PUBLIC_AZURE_TRANSLATION_REGION: 'eastasia',
+            },
+          },
+        },
+      },
+    })
+
+    await expect(
+      remote.translateText({
+        source: 'en',
+        target: 'zhHant',
+        texts: ['hello'],
+      }),
+    ).rejects.toMatchObject({ status: 403, message: 'ACCOUNT_REQUIRED' })
+    expect(mockTranslateWithAzure).not.toHaveBeenCalled()
   })
 })

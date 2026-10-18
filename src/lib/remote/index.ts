@@ -1,4 +1,4 @@
-import type { ListResponse } from '$lib/types'
+import type { ListResponse } from '#lib/types.js'
 
 /**
  * Await a remote query result.
@@ -15,8 +15,7 @@ export async function runRemoteQuery<T>(query: Promise<T>): Promise<T> {
 }
 
 /**
- * Normalizes list-style remote responses so query functions never hand TanStack
- * an `undefined` `data` array after transport/runtime edge cases.
+ * Normalizes list-style remote responses so query consumers never receive an `undefined` `data` array after transport/runtime edge cases.
  *
  * @param result Remote list envelope, which may be partial or absent.
  * @returns A list response with `data` guaranteed to be an array.
@@ -40,4 +39,17 @@ export function toSafeListResponse<T>(
     q: result?.q,
     durationMs: result?.durationMs,
   }
+}
+
+/**
+ * Fetches the latest remote result, bypassing the framework's cached value.
+ * @param query - Native query handle (plain promises are supported by test adapters).
+ * @returns The current payload after refresh completes.
+ */
+export async function refreshRemoteQuery<T>(query: Promise<T>): Promise<T> {
+  if ('refresh' in query && typeof query.refresh === 'function') {
+    await query.refresh()
+    if ('current' in query) return query.current as T
+  }
+  return await query
 }

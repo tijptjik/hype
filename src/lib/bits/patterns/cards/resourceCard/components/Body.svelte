@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Card } from '$lib/bits/custom'
+import { Card } from '#lib/bits/custom/index.js'
 import type { ResourceCardBodyProps } from '../resourceCard.types'
 
 let {

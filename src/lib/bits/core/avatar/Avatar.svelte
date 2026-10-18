@@ -1,6 +1,6 @@
 <script lang="ts">
 import { Avatar } from 'bits-ui'
-import { resolveAvatarImageSrc } from '$lib/utils/avatar'
+import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 // TYPES
 import type { AvatarProps } from './avatar.types'
 

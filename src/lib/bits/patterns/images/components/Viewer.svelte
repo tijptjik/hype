@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onDestroy, tick } from 'svelte'
-import { cx } from '$lib/bits/utils'
-import { m } from '$lib/i18n'
+import { cx } from '#lib/bits/utils.js'
+import { m } from '#lib/i18n.js'
 import ViewerEmpty from './ViewerEmpty.svelte'
 import ViewerFullScreen from './ViewerFullScreen.svelte'
 import ViewerNav from './ViewerNav.svelte'
@@ -340,8 +340,9 @@ onDestroy(() => {
       />
 
       {#if items.length > 1 || hasCenterAction}
-        <div
+        <fieldset
           class="absolute inset-0 z-10 grid grid-cols-4"
+          style="border: 0; margin: 0; padding: 0;"
           aria-label={m.gallery__viewer_tap_targets()}
         >
           <button
@@ -369,7 +370,7 @@ onDestroy(() => {
             disabled={!canGoNext}
             aria-label={m.gallery__next_image()}
           ></button>
-        </div>
+        </fieldset>
       {/if}
 
       {#if items.length > 1 && showNavButtons}

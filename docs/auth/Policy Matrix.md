@@ -11,9 +11,9 @@ Sources:
 - `src/lib/api/services/authz/organisation.ts`
 - `src/lib/api/services/authz/project.ts`
 - `src/lib/api/services/authz/hub.ts`
-- `src/lib/api/server/organisation.remote.ts`
-- `src/lib/api/server/project.remote.ts`
-- `src/lib/api/server/hub.remote.ts`
+- `src/lib/api/organisation.remote.ts`
+- `src/lib/api/project.remote.ts`
+- `src/lib/api/hub.remote.ts`
 - `src/tests/authorization.organisation.test.ts`
 - `src/tests/authorization.project.test.ts`
 - `src/tests/authorization.hub.test.ts`

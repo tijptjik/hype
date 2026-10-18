@@ -1,15 +1,15 @@
 <script lang="ts">
 // BITS CORE
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // BITS COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // ICONS
-import PencilSquare from 'virtual:icons/lucide/square-pen'
-import Check from 'virtual:icons/lucide/check'
-import ArrowPath from 'virtual:icons/lucide/refresh-cw'
-import XMark from 'virtual:icons/lucide/x'
+import PencilSquare from 'virtual:icons/proicons/compose'
+import Check from 'virtual:icons/proicons/checkmark'
+import ArrowPath from 'virtual:icons/proicons/arrow-sync'
+import XMark from 'virtual:icons/proicons/cancel'
 
 type Props = {
   userDisplayName?: string | null
@@ -43,7 +43,7 @@ let {
   onCancelEdit,
 }: Props = $props()
 
-let usernameInput: HTMLInputElement | undefined
+let usernameInput = $state<HTMLInputElement>()
 let wasEditingUsername = $state(false)
 let usernameValue = $state('')
 const usernameActionIconSize = 'sm'
@@ -134,11 +134,11 @@ function handleUsernameAction(): void {
   {/key}
 {/snippet}
 
-<div class="z-20 -mt-6 rounded-full bg-black/80 px-4 py-1">
+<div class="z-20 -mt-6 rounded-full bg-panel/80 px-4 py-1">
   <div class="relative flex min-w-0 items-center justify-center">
     {#if hideEditableFields}
       <span
-        class="tooltip font-medium text-white"
+        class="tooltip font-medium text-base-content"
         data-tip={userAttribution || 'No attribution set'}
       >
         {userDisplayName}
@@ -154,8 +154,8 @@ function handleUsernameAction(): void {
           autocorrect="off"
           spellcheck="false"
           class={cx(
-            'min-w-24 border-none bg-transparent px-2 text-center font-medium text-white outline-none transition-[width] duration-200 ease-[ease]',
-            'placeholder:text-center placeholder:text-white/60 focus:outline-none disabled:pointer-events-none',
+            'min-w-24 border-none bg-transparent px-2 text-center font-medium text-base-content outline-none transition-[width] duration-200 ease-[ease]',
+            'placeholder:text-center placeholder:text-base-content/60 focus:outline-none disabled:pointer-events-none',
           )}
           style={`width:calc(${usernameInputWidthCh}ch + ${USERNAME_INPUT_HORIZONTAL_PADDING});`}
           oninput={handleUsernameInput}
@@ -163,7 +163,7 @@ function handleUsernameAction(): void {
           placeholder={usernameInputPlaceholder}
         >
       {:else}
-        <span class="min-w-0 px-2 text-center font-medium text-white">
+        <span class="min-w-0 px-2 text-center font-medium text-base-content">
           {displayedUsername}
         </span>
       {/if}
@@ -178,7 +178,7 @@ function handleUsernameAction(): void {
         modifier="square"
         hideLabel={true}
         hideLabelInstantly={true}
-        class="min-h-0 h-4 w-4 rounded-none border-0 p-0 text-white/80 shadow-none [--btn-size:1rem] [--btn-icon-ratio:1] hover:text-white focus-visible:text-white"
+        class="min-h-0 h-4 w-4 rounded-none border-0 p-0 text-base-content/80 shadow-none [--btn-size:1rem] [--btn-icon-ratio:1] hover:text-base-content focus-visible:text-base-content"
         attrs={{
           title: isEditingUsername ? 'Save username' : 'Edit username',
         }}

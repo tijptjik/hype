@@ -1,9 +1,11 @@
 import {
   integer,
+  index,
   primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
+  check,
 } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -27,42 +29,92 @@ import { SupportedLocales } from '../../enums'
  * - Contains user preferences for language and experimental features
  * - Links to user activity and roles in organizations/projects
  */
-export const user = sqliteTable('user', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => nanoid(12)),
+export const user = sqliteTable(
+  'user',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => nanoid(12)),
+    name: text('name'),
+    username: text('username').unique(),
+    displayUsername: text('displayUsername'),
+    email: text('email').unique(),
+    emailVerified: integer('emailVerified', { mode: 'boolean' }).default(false),
+    image: text('image'),
+    locale: text('locale', { enum: ['en', 'zh-hant', 'zh-hans'] })
+      .notNull()
+      .default(SupportedLocales.en),
+    telephone: text('telephone'),
+    attribution: text('attribution'),
+    // Better Auth guest marker; guest preferences and saved-place state are stored by user ID.
+    isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
+    // If a user is archived, their account is effectively disabled, and they are not allowed to login
+    isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+    // Language features
+    preferences: text('preferences')
+      .$type<string>()
+      .default(
+        sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`,
+      )
+      .notNull(),
+    // Experimental features
+    experimental: text('experimental')
+      .$type<string>()
+      .default(sql`'{"contributorMode":false, "noLabelsMode":false}'`)
+      .notNull(),
+    createdAt: integer('createdAt', { mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date()),
+  },
+  table => [
+    uniqueIndex('user_username_nocase_uidx').on(sql`lower(${table.username})`),
+    uniqueIndex('user_telephone_uidx').on(table.telephone),
+  ],
+)
+
+/** Private Breadline import ownership; unclaimed users have no login credentials. */
+export const breadlineImportUser = sqliteTable(
+  'breadlineImportUser',
+  {
+    userId: text('userId')
+      .primaryKey()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    // Email-only imports retain ownership and history before phone completion.
+    telephone: text('telephone').unique(),
+    state: text('state', { enum: ['unclaimed', 'claimed'] }).notNull(),
+    // Auto-claim assigns an unambiguous identity; it does not verify its mailbox.
+    claimedEmail: text('claimedEmail'),
+    claimedAt: integer('claimedAt', { mode: 'timestamp_ms' }),
+    // A request nonce guards the profile and credential writes in the atomic claim batch.
+    claimKey: text('claimKey'),
+  },
+  table => [
+    check(
+      'breadline_import_state_check',
+      sql`${table.state} IN ('unclaimed', 'claimed')`,
+    ),
+    check(
+      'breadline_import_owner_check',
+      sql`(${table.state} = 'unclaimed' AND ${table.claimedEmail} IS NULL) OR (${table.state} = 'claimed' AND ${table.claimedEmail} IS NOT NULL)`,
+    ),
+  ],
+)
+
+/** Private source crosswalk and email eligibility evidence, never public profile data. */
+export const breadlineImportIdentity = sqliteTable('breadlineImportIdentity', {
+  sourceUserId: integer('sourceUserId').primaryKey(),
+  sourceVolunteerId: integer('sourceVolunteerId'),
+  userId: text('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  email: text('email'),
   name: text('name'),
-  username: text('username').unique(),
-  email: text('email').unique(),
-  emailVerified: integer('emailVerified', { mode: 'boolean' }).default(false),
-  image: text('image'),
-  locale: text('locale', { enum: ['en', 'zh-hant', 'zh-hans'] })
-    .notNull()
-    .default(SupportedLocales.en),
-  attribution: text('attribution'),
-  // Better Auth guest marker; guest preferences and saved-place state are stored by user ID.
-  isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
-  // If a user is archived, their account is effectively disabled, and they are not allowed to login
-  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
-  // Language features
-  preferences: text('preferences')
-    .$type<string>()
-    .default(
-      sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`,
-    )
-    .notNull(),
-  // Experimental features
-  experimental: text('experimental')
-    .$type<string>()
-    .default(sql`'{"contributorMode":false, "noLabelsMode":false}'`)
-    .notNull(),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' })
-    .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp_ms' })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date()),
+  // Legacy subjects are evidence; only auto-claimed portable Google IDs become accounts.
+  sourceUid: text('sourceUid'),
 })
 
 /**
@@ -103,8 +155,8 @@ export const account = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     accountId: text('accountId').notNull(),
-    // Better Auth 1.7 scopes external account identities by issuer and account ID.
-    issuer: text('issuer').notNull(),
+    // Preserve legacy 1.7.0–1.7.2 issuer values; 1.7.3 no longer writes this field.
+    issuer: text('issuer'),
     providerId: text('providerId').notNull(),
     accessToken: text('accessToken'),
     refreshToken: text('refreshToken'),
@@ -126,7 +178,10 @@ export const account = sqliteTable(
       .$onUpdateFn(() => new Date()),
   },
   table => [
-    uniqueIndex('account_issuer_accountId_uidx').on(table.issuer, table.accountId),
+    uniqueIndex('account_providerId_accountId_uidx').on(
+      table.providerId,
+      table.accountId,
+    ),
   ],
 )
 
@@ -239,7 +294,19 @@ export const userFeature = sqliteTable(
       .$onUpdate(() => new Date().toISOString())
       .notNull(),
   },
-  table => [primaryKey({ columns: [table.userId, table.featureId] })],
+  table => [
+    primaryKey({ columns: [table.userId, table.featureId] }),
+    index('user_feature_wishlist_idx').on(
+      table.userId,
+      table.isWishlisted,
+      table.featureId,
+    ),
+    index('user_feature_visited_idx').on(
+      table.userId,
+      table.isVisited,
+      table.featureId,
+    ),
+  ],
 )
 
 /**

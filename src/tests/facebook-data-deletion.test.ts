@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createFacebookDeletionConfirmationCode,
   parseFacebookSignedRequest,
-} from '$lib/auth/facebook-data-deletion'
+} from '#lib/auth/facebook-data-deletion.js'
 
 const toBase64Url = (bytes: Uint8Array): string =>
   btoa(String.fromCharCode(...bytes))

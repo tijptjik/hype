@@ -1,30 +1,26 @@
 import { customAlphabet } from 'nanoid'
 import { tick } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
-import { ensureLocaleEntryForWrite } from '$lib/i18n'
-import { getI18n } from '$lib/i18n'
-import { toLocaleKey } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
+import { ensureLocaleEntryForWrite } from '#lib/i18n.js'
+import { getI18n } from '#lib/i18n.js'
+import { toLocaleKey } from '#lib/i18n.js'
 // FORMS
-import { updateFormData } from '$lib/client/services/form'
+import { updateFormData } from '#lib/client/services/form.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { AppCtx } from '$lib/context/app.svelte'
-import type {
-  Locale,
-  LocaleExtended,
-  Id,
-  RangeFilterValue,
-  FormDataUpdaterForm,
-} from '$lib/types'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+import type { Locale, LocaleExtended, Id } from '#lib/types.js'
+import type { RangeFilterValue } from '#lib/client/services/propertyFilters.types.js'
+import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
 import type {
   Feature,
   FeatureFromCollection,
   FeatureProperty,
   FeaturePropertyI18nDB,
   UserContributedFeatureProperty,
-} from '$lib/db/zod/schema/feature.types'
+} from '#lib/db/zod/schema/feature.types.js'
 import type {
   Property,
   PropertyDiscriminator,
@@ -34,7 +30,7 @@ import type {
   PropertyValue,
   PropertyValueI18nDB,
   WritableI18nRecord,
-} from '$lib/db/zod/schema/property.types'
+} from '#lib/db/zod/schema/property.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -213,7 +209,7 @@ export function sortPropertiesByTypeAndRank<T extends { property?: Property }>(
  * @returns Array of grouped classifier properties
  */
 export const getGroupedClassifierProperties = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
 ): Promise<
   Array<{
     hierarchy: {
@@ -226,7 +222,7 @@ export const getGroupedClassifierProperties = async (
   }>
 > => {
   const results = await Promise.all(
-    appCtx.getPrism(FirstClassResource.layer).map(async layerId => {
+    appCtx.scope.getPrism(FirstClassResource.layer).map(async layerId => {
       // Get layer
       const layer = await appCtx.getLayerById(layerId)
       if (!layer) return null
@@ -238,15 +234,19 @@ export const getGroupedClassifierProperties = async (
       const properties = await appCtx.getClassifierPropertiesForLayer(layer)
       if (properties.length === 0) return null
 
-      // Construct hierarchy info
+      // Construct hierarchy info without hiding single-child names: each filter group needs its own identity.
       const hierarchy = {
-        organisation: appCtx.getContextualOrganisationName(organisation),
-        project: appCtx.getContextualProjectName(project),
-        layer: appCtx.getContextualLayerName(layer),
+        organisation: appCtx.getContextualOrganisationName(organisation, false),
+        // Use the full project name; its short name may be a contextual label such as 'All'.
+        project:
+          getI18n(project, 'name', appCtx.getUserPreferences()) ||
+          appCtx.getContextualProjectName(project, false),
+        layer: appCtx.getContextualLayerName(layer, false),
         layerId: layer.id, // Pass layerId for direct filter access
       }
 
       return {
+        projectId: project.id,
         hierarchy,
         properties,
       }
@@ -254,7 +254,28 @@ export const getGroupedClassifierProperties = async (
   )
 
   // Filter out nulls and empty groups
-  return results.filter((group): group is NonNullable<typeof group> => group !== null)
+  const groups = results.filter(
+    (group): group is NonNullable<typeof group> => group !== null,
+  )
+  // Multiple layers in one project are not a name collision; distinct projects are.
+  const projectsByName = new Map<string, Set<string>>()
+  for (const group of groups) {
+    const name = group.hierarchy.project?.trim().toLocaleLowerCase() ?? ''
+    const projects = projectsByName.get(name) ?? new Set<string>()
+    projects.add(group.projectId)
+    projectsByName.set(name, projects)
+  }
+  return groups.map(({ hierarchy, properties }) => ({
+    hierarchy: {
+      ...hierarchy,
+      organisation:
+        (projectsByName.get(hierarchy.project?.trim().toLocaleLowerCase() ?? '')
+          ?.size ?? 0) > 1
+          ? hierarchy.organisation
+          : null,
+    },
+    properties,
+  }))
 }
 
 // ═══════════════════════
@@ -269,13 +290,13 @@ export const getGroupedClassifierProperties = async (
  * Toggles a categorical property filter value.
  */
 export function toggleCategoricalPropertyValue(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   propertyId: Id,
   propertyValueId: Id,
 ): void {
-  const currentSelection =
-    appCtx.state.filters.feature.properties?.[layerId]?.[propertyId] ?? []
+  const filter = appCtx.filters.values.feature.properties?.[layerId]?.[propertyId]
+  const currentSelection = Array.isArray(filter) ? filter : []
   const index = currentSelection.indexOf(propertyValueId)
   let newSelection: string[]
 
@@ -298,84 +319,83 @@ export function toggleCategoricalPropertyValue(
  * Sets a categorical property filter.
  */
 export function setCategoricalPropertyFilter(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   propertyId: Id,
   values: string[],
 ): void {
-  if (!appCtx.state.filters.feature.properties) {
-    appCtx.state.filters.feature.properties = {}
+  if (!appCtx.filters.values.feature.properties) {
+    appCtx.filters.values.feature.properties = {}
   }
-  const propertyFilters = appCtx.state.filters.feature.properties
+  const propertyFilters = appCtx.filters.values.feature.properties
   propertyFilters[layerId] = {
     ...(propertyFilters[layerId] || {}),
     [propertyId]: values,
   }
-  appCtx.zoomToAllVisibleFeatures()
 }
 
 /**
  * Removes a categorical property filter.
  */
 export function resetCategoricalPropertyFilter(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   propertyId: Id,
 ): void {
-  const propertyFilters = appCtx.state.filters.feature.properties
+  const propertyFilters = appCtx.filters.values.feature.properties
   if (!propertyFilters?.[layerId]) return
   delete propertyFilters[layerId]?.[propertyId]
-  appCtx.zoomToAllVisibleFeatures()
 }
 
 /**
  * Sets a range property filter.
  */
 export function setRangePropertyFilter(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   propertyId: Id,
   values: [number, number],
 ): void {
-  if (!appCtx.state.filters.feature.properties) {
-    appCtx.state.filters.feature.properties = {}
+  if (!appCtx.filters.values.feature.properties) {
+    appCtx.filters.values.feature.properties = {}
   }
-  const propertyFilters = appCtx.state.filters.feature.properties
+  const propertyFilters = appCtx.filters.values.feature.properties
   const layerPropertyFilters = propertyFilters[layerId]
+  const filter = layerPropertyFilters?.[propertyId]
+  const rangeFilter = filter && !Array.isArray(filter) ? filter : undefined
   const nextRangeMin = Math.min(...values)
   const nextRangeMax = Math.max(...values)
 
   // Only update if the values have actually changed to prevent unnecessary reactivity triggers
   if (
-    layerPropertyFilters?.[propertyId]?.rangeMin !== nextRangeMin ||
-    layerPropertyFilters?.[propertyId]?.rangeMax !== nextRangeMax
+    rangeFilter?.rangeMin !== nextRangeMin ||
+    rangeFilter?.rangeMax !== nextRangeMax
   ) {
     // Ensure the layer object exists
     propertyFilters[layerId] ??= {}
 
     // Get the existing range filter or find the property definition to get global min/max
-    const existingRangeFilter = propertyFilters[layerId]?.[propertyId] || {}
+    const existingRangeFilter = rangeFilter
 
     // If globalMin/globalMax are missing, find them from the property definition
-    let globalMin = existingRangeFilter.globalMin
-    let globalMax = existingRangeFilter.globalMax
+    let globalMin = existingRangeFilter?.globalMin
+    let globalMax = existingRangeFilter?.globalMax
 
     if (globalMin === undefined || globalMax === undefined) {
       // Find the property definition to get the global min/max
       const property = appCtx.cache.property.get(propertyId)
       if (property) {
-        globalMin = property.min
-        globalMax = property.max
+        globalMin = property.min ?? undefined
+        globalMax = property.max ?? undefined
       }
     }
 
     propertyFilters[layerId][propertyId] = {
-      globalMin,
-      globalMax,
+      globalMin: globalMin ?? nextRangeMin,
+      globalMax: globalMax ?? nextRangeMax,
       rangeMin: nextRangeMin,
       rangeMax: nextRangeMax,
     }
-    appCtx.zoomToAllVisibleFeatures()
   }
 }
 
@@ -407,7 +427,7 @@ function rerankPropertiesByType(
   const propsOfType = properties.filter(
     property => property.type === fieldDiscriminator,
   )
-  propsOfType.sort((a, b) => a.rank - b.rank)
+  propsOfType.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
   propsOfType.forEach((property, index) => {
     property.rank = index
   })
@@ -526,15 +546,15 @@ function getFirstAvailablePropertyValueText(
   const fallback = Object.values(
     (value.i18n as WritableI18nRecord | undefined) ?? {},
   ).find(entry => typeof entry?.value === 'string' && entry.value.trim().length > 0)
-  return fallback?.value ?? ''
+  return typeof fallback?.value === 'string' ? fallback.value : ''
 }
 
-function reorderRankedItems<T extends { id: Id; rank: number }>(
+function reorderRankedItems<T extends { id: Id; rank?: number }>(
   items: T[],
   itemId: Id,
   targetIndex: number,
 ): T[] | null {
-  const sorted = [...items].sort((a, b) => a.rank - b.rank)
+  const sorted = [...items].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
   const currentIndex = sorted.findIndex(item => item.id === itemId)
   if (currentIndex < 0 || targetIndex < 0 || targetIndex >= sorted.length) return null
   if (currentIndex === targetIndex) return null
@@ -595,6 +615,13 @@ function collectMissingPropertyTranslations(
   return { texts, origins }
 }
 
+/**
+ * Requests translations using the remote API's canonical locale keys.
+ * @param sourceLocale - Source locale used by the form controls.
+ * @param targetLocale - Destination locale used by the form controls.
+ * @param texts - Nonempty source strings to translate.
+ * @returns Translated strings, or null when the request fails.
+ */
 async function requestPropertyTranslations(
   sourceLocale: Locale,
   targetLocale: Locale,
@@ -602,11 +629,11 @@ async function requestPropertyTranslations(
 ): Promise<string[] | null> {
   try {
     const { translateText: translateTextRemote } = await import(
-      '$lib/api/server/translation.remote'
+      '#lib/api/translation.remote.js'
     )
     const translatedTexts = await translateTextRemote({
-      source: sourceLocale,
-      target: targetLocale,
+      source: toLocaleKey(sourceLocale),
+      target: toLocaleKey(targetLocale),
       texts,
     })
     return Array.isArray(translatedTexts) ? translatedTexts : null
@@ -660,7 +687,7 @@ export function getPropertiesByType(
 ): Property[] {
   return (properties || [])
     .filter(property => property.type === fieldDiscriminator)
-    .sort((a, b) => a.rank - b.rank)
+    .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
 }
 
 export function getCurrentProjectProperties(
@@ -846,6 +873,9 @@ export function addProjectPropertyForType(
     hubId: options?.hubId ?? null,
     scope,
     isDefaultEnabled: options?.isDefaultEnabled ?? false,
+    isUserContributable: false,
+    createdAt: new Date().toISOString(),
+    modifiedAt: new Date().toISOString(),
     isEnabled: true,
     type: fieldDiscriminator,
     key: createPropertyKey(),
@@ -892,7 +922,7 @@ export function removeProjectProperty(
     )
     if (propertyIndex < 0) return
     currentProperties.splice(propertyIndex, 1)
-    const ordered = [...currentProperties].sort((a, b) => a.rank - b.rank)
+    const ordered = [...currentProperties].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
     ordered.forEach((property, index) => {
       property.rank = index
     })
@@ -909,7 +939,7 @@ export function changeProjectPropertyRank(
     const relevantProps = allProperties.filter(
       property => property.type === fieldDiscriminator,
     )
-    const ordered = [...relevantProps].sort((a, b) => a.rank - b.rank)
+    const ordered = [...relevantProps].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
     const currentIndex = ordered.findIndex(property => property.id === propertyIdToMove)
     if (currentIndex < 0) return
     const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
@@ -930,7 +960,7 @@ export function changeProjectPropertyRankUnified(
   direction: 'up' | 'down',
 ): void {
   mutatePropertyFormData(form, allProperties => {
-    const ordered = [...allProperties].sort((a, b) => a.rank - b.rank)
+    const ordered = [...allProperties].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
     const currentIndex = ordered.findIndex(property => property.id === propertyIdToMove)
     if (currentIndex < 0) return
     const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
@@ -1275,7 +1305,7 @@ export function resetProjectPropertyLocale(
 // ═══════════════════════
 
 export function propertyValuesToLocalisedOptions(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyValues: PropertyValue[],
 ): Map<Id, string> {
   return new Map(
@@ -1323,12 +1353,12 @@ export function displaySelectedProperties(
  * Summarizes the *active* property filters for a given layer.
  */
 export function displaySelectedFilters(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerFilters: Record<Id, string[] | RangeFilterValue> | undefined, // Filters for the specific layer
   properties: Property[] | undefined, // Property definitions for the layer's project
 ): string {
   if (!layerFilters || !properties || Object.keys(layerFilters).length === 0) {
-    return m.filters__none()
+    return ''
   }
 
   // Create a map for efficient property lookup by ID
@@ -1372,7 +1402,7 @@ export function displaySelectedFilters(
   }
 
   if (activeFilterLabels.length === 0) {
-    return m.filters__none()
+    return ''
   }
 
   // Format the summary string based on the count
@@ -1417,9 +1447,9 @@ export function displayRangeFilter(
  * Gets feature IDs filtered by property filters.
  * Returns all features if no property filters are active.
  */
-export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
+export function getFeatureIdsForProperties(appCtx: ResourceViewCtx): Id[] {
   // If there are no property filters at all, return all features
-  if (Object.keys(appCtx.state.filters.feature.properties ?? {}).length === 0) {
+  if (Object.keys(appCtx.filters.values.feature.properties ?? {}).length === 0) {
     return Array.from(appCtx.features.keys())
   }
 
@@ -1428,7 +1458,7 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
   const filteredIds = featureList
     .filter((feature: Feature | FeatureFromCollection) => {
       // Get filters specific to this feature's layer
-      const layerFilters = appCtx.state.filters.feature.properties?.[feature.layerId]
+      const layerFilters = appCtx.filters.values.feature.properties?.[feature.layerId]
 
       // If no filters for this layer, feature passes
       if (!layerFilters || Object.keys(layerFilters).length === 0) {
@@ -1471,6 +1501,7 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
           property.type === 'classifier' &&
           property.component === 'RangeField'
         ) {
+          if (Array.isArray(filterValue)) return false
           // If the range filter is set in the globalMin/Max range we should not fail any features
           if (
             filterValue.rangeMin === filterValue.globalMin &&
@@ -1523,7 +1554,7 @@ export function getFeatureIdsForProperties(appCtx: AppCtx): Id[] {
  * @returns The properties for the feature.
  */
 export function getFeatureCardDisplayProperties(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   feature: Feature,
 ): Omit<FeatureProperty, 'featureId'>[] {
@@ -1531,7 +1562,7 @@ export function getFeatureCardDisplayProperties(
     return []
   }
   // ASSERT : Layer exists
-  const layer = appCtx.state.resources.layer.find(l => l.id === layerId)
+  const layer = appCtx.queries.rows.layer.find(l => l.id === layerId)
   if (!layer) {
     console.warn(`Layer ${layerId} not found`)
     return []
@@ -1541,7 +1572,7 @@ export function getFeatureCardDisplayProperties(
   const layerProperties =
     layer.properties
       ?.filter(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId)
+        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
         return (
           property &&
           (property.type === 'classifier' || property.type === 'specifier') &&
@@ -1550,7 +1581,7 @@ export function getFeatureCardDisplayProperties(
         )
       })
       .map(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId)
+        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
         return {
           property,
           propertyId: layerProp.propertyId,
@@ -1592,7 +1623,7 @@ export function getFeatureCardDisplayProperties(
  * of a newFeature flow.
  */
 export function getFeatureCardEditableProperties(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   layerId: Id,
   isGradeProperty: boolean = false,
 ): Omit<FeatureProperty, 'featureId'>[] {
@@ -1610,7 +1641,7 @@ export function getFeatureCardEditableProperties(
   const layerProperties =
     layer.properties
       ?.filter(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId)
+        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
         return (
           property &&
           (property.type === 'classifier' || property.type === 'specifier') &&
@@ -1620,7 +1651,7 @@ export function getFeatureCardEditableProperties(
         )
       })
       .map(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId)
+        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
         return {
           property,
           propertyId: layerProp.propertyId,
@@ -1642,7 +1673,7 @@ export function getFeatureCardEditableProperties(
  * @returns A map of property value IDs to their localised values.
  */
 export function getLocalisedPropertyValues(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
 ): Map<Id, string> {
   const property = appCtx.cache.property.get(propertyId)
@@ -1659,14 +1690,14 @@ export function getLocalisedPropertyValues(
  * If not provided, the property will be searched for in the new feature context.
  */
 export function getFeatureProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   featureId?: Id | null,
 ): FeatureProperty | null {
   if (!featureId) {
     // ASSERT : newFeature exists
-    if (!appCtx.newFeature?.feature?.properties) return null
-    return appCtx.newFeature.feature.properties.find(
+    if (!appCtx.draft.current?.feature?.properties) return null
+    return appCtx.draft.current.feature.properties.find(
       p => p && p.propertyId === propertyId,
     ) as FeatureProperty | null
   } else {
@@ -1684,7 +1715,7 @@ export function getFeatureProperty(
  * @returns The universal specifier value for the property.
  */
 export function getUniversalSpecifierValue(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
 ): string | undefined | null {
   const featureProperty = getFeatureProperty(appCtx, propertyId)
@@ -1700,7 +1731,7 @@ export function getUniversalSpecifierValue(
  * @returns The i18n specifier value for the property.
  */
 export function getI18nSpecifierValue(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
 ): string | undefined {
   const featureProperty = getFeatureProperty(appCtx, propertyId)
@@ -1725,7 +1756,7 @@ export function getI18nSpecifierValue(
  * @returns The classifier value ID for the property.
  */
 export function getClassifierValueId(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
 ): string | undefined {
   const featureProperty = getFeatureProperty(appCtx, propertyId)
@@ -1745,7 +1776,7 @@ export function getClassifierValueId(
  * @param updates - The updates to apply to the property.
  */
 export function updateFeatureProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   updates: Partial<FeatureProperty>,
 ): void {
@@ -1775,7 +1806,7 @@ export function updateFeatureProperty(
  * @param valueGen - Whether the value is generated.
  */
 export function updateFeatureI18nProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   locale: Locale,
   value: string,
@@ -1788,7 +1819,13 @@ export function updateFeatureI18nProperty(
     if (!existingProperty.i18n) {
       existingProperty.i18n = {}
     }
-    existingProperty.i18n[locale] = { locale, value, valueGen }
+    existingProperty.i18n[toLocaleKey(locale)] = {
+      featureId: existingProperty.featureId ?? '',
+      propertyId,
+      locale,
+      value,
+      valueGen,
+    }
   } else {
     // Create new property with i18n
     updateNewFeatureProperty(appCtx, propertyId, {
@@ -1806,23 +1843,23 @@ export function updateFeatureI18nProperty(
  * @param object - The object to update the property with.
  */
 export function updateNewFeatureProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   object: Partial<FeatureProperty>,
 ): void {
-  if (!appCtx.newFeature?.feature) {
+  if (!appCtx.draft.current?.feature) {
     return
   }
 
   // Initialize properties array if it doesn't exist
-  if (!appCtx.newFeature.feature.properties) {
-    appCtx.newFeature.feature.properties = []
+  if (!appCtx.draft.current.feature.properties) {
+    appCtx.draft.current.feature.properties = []
   }
 
-  const currentProperties = appCtx.newFeature.feature.properties
-  const propIndex = currentProperties.findIndex(p => p.propertyId === propertyId)
+  const currentProperties = appCtx.draft.current.feature.properties
+  const propIndex = currentProperties.findIndex(p => p?.propertyId === propertyId)
 
-  let updatedProperties: UserContributedFeatureProperty[]
+  let updatedProperties: typeof currentProperties
 
   if (propIndex >= 0) {
     // Update existing property
@@ -1852,17 +1889,11 @@ export function updateNewFeatureProperty(
       newProperty.i18n = object.i18n
     }
 
-    updatedProperties = [...appCtx.newFeature.feature.properties, newProperty]
+    updatedProperties = [...appCtx.draft.current.feature.properties, newProperty]
   }
 
   // Create a new newFeature object to ensure reactivity
-  appCtx.newFeature = {
-    ...appCtx.newFeature,
-    feature: {
-      ...appCtx.newFeature.feature,
-      properties: updatedProperties,
-    },
-  }
+  appCtx.draft.updateField('properties', updatedProperties)
 }
 
 /**
@@ -1874,15 +1905,15 @@ export function updateNewFeatureProperty(
  * @param locale - The locale to update the property for.
  */
 export function updateNewFeatureI18nProperty(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   object: Partial<FeaturePropertyI18nDB>,
   locale: Locale,
 ): void {
-  const properties = appCtx.newFeature?.feature?.properties
+  const properties = appCtx.draft.current?.feature?.properties
   if (!properties) return
 
-  const propIndex = properties.findIndex(p => p.propertyId === propertyId)
+  const propIndex = properties.findIndex(p => p?.propertyId === propertyId)
   if (propIndex < 0) return
 
   const targetProperty = properties[propIndex]
@@ -1910,7 +1941,7 @@ export function updateNewFeatureI18nProperty(
  * @param propertyValueId - The ID of the property value to update.
  */
 export function handleCategoricalChange(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   propertyValueId: Id,
 ): void {
@@ -1928,7 +1959,7 @@ export function handleCategoricalChange(
  * @param newValue - The new value to update the property to.
  */
 export function handleSpecifierChange(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   propertyId: Id,
   locale: LocaleExtended,
   newValue: string,

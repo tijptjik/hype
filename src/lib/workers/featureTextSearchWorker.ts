@@ -2,7 +2,7 @@ import type {
   FeatureTextSearchIndexItem,
   FeatureTextSearchWorkerRequest,
   FeatureTextSearchWorkerResponse,
-} from '$lib/types'
+} from '#lib/client/services/featureTextSearch.types.js'
 
 let indexedItems: FeatureTextSearchIndexItem[] = []
 let indexedVersion = 0

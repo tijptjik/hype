@@ -1,7 +1,7 @@
 <script lang="ts">
-import { Button } from '$lib/bits/core'
-import { Card, Switch } from '$lib/bits/custom'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
+import { Button } from '#lib/bits/core/index.js'
+import { Card, Switch } from '#lib/bits/custom/index.js'
+import Trash2Icon from 'virtual:icons/proicons/delete'
 import type { ResourceCardHubActionsProps } from '../resourceCard.types'
 
 let {
@@ -53,7 +53,7 @@ const slotClass = $derived(
       class="bits-form__resource-card-hub-actions-slot-content bits-form__resource-card-hub-actions-slot-content--controls"
       aria-hidden={isRemoving && hasRemoveAction}
     >
-      <div class="bits-form__resource-card-hub-actions-controls">
+      <div class="flex flex-col items-center gap-2">
         <Switch
           topText="Hub Only"
           checked={isHubExclusive}

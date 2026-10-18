@@ -1,22 +1,22 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Header } from '$lib/bits'
+import { CustomHeader as Header } from '#lib/bits/index.js'
 // ICONS
-import Anchor from 'virtual:icons/lucide/anchor'
-import Cpu from 'virtual:icons/lucide/cpu'
-import Flame from 'virtual:icons/lucide/flame'
-import Globe from 'virtual:icons/lucide/globe'
-import Heart from 'virtual:icons/lucide/heart'
-import Leaf from 'virtual:icons/lucide/leaf'
-import Moon from 'virtual:icons/lucide/moon'
-import Shield from 'virtual:icons/lucide/shield'
-import Skull from 'virtual:icons/lucide/skull'
-import Telescope from 'virtual:icons/lucide/telescope'
-import Trophy from 'virtual:icons/lucide/trophy'
-import Wrench from 'virtual:icons/lucide/wrench'
-import Zap from 'virtual:icons/lucide/zap'
+import Anchor from 'virtual:icons/proicons/anchor'
+import Cpu from 'virtual:icons/proicons/motherboard'
+import Flame from 'virtual:icons/tabler/flame'
+import Globe from 'virtual:icons/proicons/globe'
+import Heart from 'virtual:icons/proicons/heart'
+import Leaf from 'virtual:icons/proicons/leaf'
+import Moon from 'virtual:icons/proicons/moon'
+import Shield from 'virtual:icons/proicons/shield'
+import Skull from 'virtual:icons/proicons/skull'
+import Telescope from 'virtual:icons/proicons/compass'
+import Trophy from 'virtual:icons/proicons/trophy'
+import Wrench from 'virtual:icons/proicons/wrench'
+import Zap from 'virtual:icons/proicons/bolt'
 // TYPES
-import type { HeaderSize } from '$lib/bits'
+import type { HeaderSize } from '#lib/bits/custom/header/header.types.js'
 
 const HEADER_SIZES: HeaderSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
 </script>

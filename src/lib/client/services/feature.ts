@@ -1,21 +1,21 @@
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import { goto } from '$app/navigation'
-import { hasDurableAccount, requestAccountUpgrade } from '$lib/auth/upgrade'
+import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 import type { Point } from 'geojson'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { OmniCtx } from '$lib/context/omni.svelte'
-import type { FeatureFieldSectionItem } from '$lib/bits/patterns/forms/formFeatureFieldsSection'
-import { sortFeatureProperties } from '$lib/client/services/property'
-import { upsertNewFeatureDraft } from '$lib/client/services/task'
-import { NewFeatureMode, OmniMode } from '$lib/enums'
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+import type { OmniCtx } from '#lib/context/omni.svelte.js'
+import type { FeatureFieldSectionItem } from '#lib/bits/patterns/forms/formFeatureFieldsSection/index.js'
+import { sortFeatureProperties } from '#lib/client/services/property.js'
+import { upsertNewFeatureDraft } from '#lib/client/services/task.js'
+import { NewFeatureMode, OmniMode } from '#lib/enums.js'
 import type {
   Feature,
   FeatureFormInput,
   FeatureProperty,
-} from '$lib/db/zod/schema/feature.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { CurrentUser, UserProfile } from '$lib/db/zod/schema/user.types'
-import type { SessionUser, UserRoleDisco } from '$lib/types'
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { CurrentUser, UserProfile } from '#lib/db/zod/schema/user.types.js'
+import type { SessionUser, UserRoleDisco } from '#lib/types.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -43,9 +43,9 @@ import type { SessionUser, UserRoleDisco } from '$lib/types'
 export const DEFAULT_NEW_FEATURE_COORDINATES: [number, number] = [
   114.1693671540923, 22.319307515052614,
 ]
-
 type InitAddNewFeatureOptions = {
   navigateToRoute?: boolean
+  getMapCenter?: () => [number, number] | null
 }
 
 function sanitizeFeaturePropertyValueId(
@@ -80,7 +80,9 @@ function stopNewFeatureTriggerEvent(event?: Event | null): void {
  * @param newFeature Current in-memory draft payload.
  * @returns The modal or card state that should be shown next.
  */
-function getNewFeatureEntryMode(newFeature: AppCtx['newFeature']): NewFeatureMode {
+function getNewFeatureEntryMode(
+  newFeature: ResourceViewCtx['draft']['current'],
+): NewFeatureMode {
   if (!newFeature?.layerId) {
     return NewFeatureMode.parents
   }
@@ -108,28 +110,28 @@ function getNewFeatureEntryMode(newFeature: AppCtx['newFeature']): NewFeatureMod
  * point keeps direct routes and all creation controls aligned with the server.
  */
 export const initAddNewFeature = async (
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   omniCtx: OmniCtx,
   event?: Event | null,
   options: InitAddNewFeatureOptions = {},
 ): Promise<void> => {
   stopNewFeatureTriggerEvent(event)
 
-  if (!hasDurableAccount(appCtx.getUser())) {
+  if (!hasDurableAccount(appCtx.account.user)) {
     requestAccountUpgrade('contribution', browser ? window.location.href : undefined)
     return
   }
 
-  const activeLayers = appCtx.state.prisms.layer
+  const activeLayers = appCtx.scope.prisms.layer
   const singleActiveLayer =
     activeLayers.length === 1 ? appCtx.cache.layer.get(activeLayers[0]) : null
   const { navigateToRoute = true } = options
 
   omniCtx.setMode(OmniMode.newFeature)
 
-  if (appCtx.getNewFeature()) {
-    if (!appCtx.getNewFeatureMode()) {
-      appCtx.setNewFeatureMode(getNewFeatureEntryMode(appCtx.getNewFeature()))
+  if (appCtx.draft.current) {
+    if (!appCtx.draft.mode) {
+      appCtx.draft.setMode(getNewFeatureEntryMode(appCtx.draft.current))
     }
 
     if (navigateToRoute) {
@@ -142,7 +144,7 @@ export const initAddNewFeature = async (
   if (activeLayers.length === 1) {
     if (singleActiveLayer) {
       const hierarchy = await appCtx.getHierarchy(singleActiveLayer)
-      appCtx.setNewFeature({
+      appCtx.draft.set({
         organisationId: hierarchy.organisation?.id,
         projectId: hierarchy.project?.id,
         layerId: hierarchy.layer?.id,
@@ -152,14 +154,12 @@ export const initAddNewFeature = async (
           layerId: hierarchy.layer?.id,
           geometry: {
             type: 'Point',
-            coordinates: appCtx.map
-              ? [appCtx.map.getCenter().lng, appCtx.map.getCenter().lat]
-              : DEFAULT_NEW_FEATURE_COORDINATES,
+            coordinates: options.getMapCenter?.() ?? DEFAULT_NEW_FEATURE_COORDINATES,
           },
         },
       })
-      const draft = await upsertNewFeatureDraft(appCtx.getNewFeature() ?? {})
-      appCtx.updateNewFeature({
+      const draft = await upsertNewFeatureDraft(appCtx.draft.current ?? {})
+      appCtx.draft.update({
         taskId: draft.task.id,
         featureId: draft.featureId,
         organisationId: draft.organisationId,
@@ -172,11 +172,11 @@ export const initAddNewFeature = async (
         },
       })
       // Trigger the GeoLocation modal directly.
-      appCtx.setNewFeatureMode(NewFeatureMode.location)
+      appCtx.draft.setMode(NewFeatureMode.location)
     }
   } else {
     // If multiple layers are active, dispatch event to show the layer selection modal.
-    appCtx.setNewFeatureMode(NewFeatureMode.parents)
+    appCtx.draft.setMode(NewFeatureMode.parents)
   }
 
   if (navigateToRoute) {
@@ -303,6 +303,7 @@ export function toFeatureFormInput(
           addressProperties: value.i18n?.zhHant?.addressProperties ?? {},
         },
       },
+
       properties:
         value.properties?.map(property => ({
           propertyId: property.propertyId,
@@ -388,8 +389,10 @@ export function getProgrammaticFeatureInputEntries(
   })
 
   appendNestedEntries('data.addressMeta', featureData?.addressMeta ?? {})
+
   ;(['en', 'zhHans', 'zhHant'] as const).forEach(locale => {
     const localeI18n = featureData?.i18n?.[locale]
+
     appendEntry(`data.i18n.${locale}.displayAddress`, localeI18n?.displayAddress ?? '')
     appendEntry(
       `data.i18n.${locale}.displayAddressGen`,
@@ -411,6 +414,7 @@ export function getProgrammaticFeatureInputEntries(
 
     if (property.property?.isTranslatable) {
       const propertyI18n = property.i18n ?? {}
+
       ;(['en', 'zhHans', 'zhHant'] as const).forEach(locale => {
         appendEntry(
           `data.properties[${index}].i18n.${locale}.value`,
@@ -439,7 +443,12 @@ export function getProgrammaticFeatureInputEntries(
  * @returns Contributor-facing user fields or `null` when no user is present.
  */
 export function toCurrentContributorUser(
-  user: CurrentUser | UserProfile | SessionUser | null | undefined,
+  user:
+    | Partial<CurrentUser>
+    | Partial<UserProfile>
+    | Partial<SessionUser>
+    | null
+    | undefined,
 ): {
   id: string | null
   name: string | null
@@ -462,7 +471,12 @@ export function toCurrentContributorUser(
  * @returns Authorization-facing user fields or `null` when no user is present.
  */
 export function toCurrentAuthorizationUser(
-  user: CurrentUser | UserProfile | SessionUser | null | undefined,
+  user:
+    | Partial<CurrentUser>
+    | Partial<UserProfile>
+    | Partial<SessionUser>
+    | null
+    | undefined,
 ): {
   id: string | null
   isAnonymous: boolean | null
@@ -484,12 +498,13 @@ export function toCurrentAuthorizationUser(
  *  3. PROPERTY PROJECTIONS
  ************/
 // +++ Property Projections
-
 type FeaturePropertyDefinition = NonNullable<FeatureProperty['property']>
+
 type FeaturePropertyValueOption = NonNullable<
   FeaturePropertyDefinition['values']
 >[number]
 type FeatureFormProperty = NonNullable<FeatureFormInput['data']['properties']>[number]
+
 type FeaturePropertyWithDefinition = FeatureFormProperty & {
   property: FeaturePropertyDefinition
 }
@@ -517,8 +532,11 @@ export function toLayerBackedFeatureProperties(
     .filter(layerProperty => {
       const property = layerProperty.property
       const propertyId = layerProperty.propertyId ?? ''
+
       if (!propertyId || seenPropertyIds.has(propertyId)) return false
+
       seenPropertyIds.add(propertyId)
+
       return (
         layerProperty.isVisible === true &&
         property &&
@@ -528,11 +546,9 @@ export function toLayerBackedFeatureProperties(
     .map(layerProperty => {
       const propertyId = layerProperty.propertyId ?? ''
       const current = currentByPropertyId.get(propertyId)
+
       if (current) {
-        return {
-          ...current,
-          property: layerProperty.property,
-        }
+        return { ...current, property: layerProperty.property }
       }
 
       return {
@@ -602,7 +618,10 @@ export function getNonTranslatableFeatureFieldItems({
         property.property.values?.map((option: FeaturePropertyValueOption) => ({
           value: option.id,
           label:
-            option.i18n?.[localeKey]?.value ?? option.i18n?.en?.value ?? option.value,
+            option.i18n?.[localeKey]?.value ??
+            option.i18n?.en?.value ??
+            option.value ??
+            option.id,
         })) ?? [],
       onChange: (nextValue: string | boolean) => {
         onChange(property.propertyId, nextValue)

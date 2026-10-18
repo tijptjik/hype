@@ -1,6 +1,6 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
-import { m } from '$lib/i18n'
+import { cx } from '#lib/bits/utils.js'
+import { m } from '#lib/i18n.js'
 import * as ImagePrimitive from './components'
 import AdminViewer from './AdminViewer.svelte'
 import ThumbnailWrapper from './ThumbnailWrapper.svelte'
@@ -86,7 +86,7 @@ $effect(() => {
 })
 </script>
 
-<div class={cx('h-full w-full select-none bg-black px-0')}>
+<div class={cx('h-full w-full select-none bg-base-100 px-0')}>
   <div class="flex h-full w-full min-h-0">
     <div class={cx('relative min-h-0 min-w-0 flex-1 pt-2', className)}>
       <AdminViewer
@@ -148,8 +148,8 @@ $effect(() => {
 
     <div
       class={cx(
-        'relative flex h-full shrink-0 flex-col overflow-hidden bg-base-400 transition-[width,transform,opacity] duration-220 ease-out',
-        'bg-[#121212]',
+        'relative flex h-full shrink-0 flex-col overflow-hidden transition-[width,transform,opacity] duration-220 ease-out',
+        'bg-surface',
         railVisibilityClass,
       )}
       style={`width: ${railWidth};`}
@@ -196,7 +196,7 @@ $effect(() => {
       </div>
 
       <div
-        class="pointer-events-none absolute inset-x-0 bottom-0 z-20 border-t border-black/10 bg-black"
+        class="pointer-events-none absolute inset-x-0 bottom-0 z-20 border-t border-border bg-base-100"
         style={`height: ${verticalRailBottomBarHeightPx}px;`}
       >
         <ImagePrimitive.ThumbnailControls

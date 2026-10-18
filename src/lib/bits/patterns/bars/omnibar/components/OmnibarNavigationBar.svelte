@@ -4,7 +4,7 @@ import OmnibarCollection from './OmnibarCollection.svelte'
 import OmnibarNavigationArrow from './OmnibarNavigationArrow.svelte'
 import OmnibarNavigationHeader from './OmnibarNavigationHeader.svelte'
 // ENUMS
-import { OmniMode } from '$lib/enums'
+import { OmniMode } from '#lib/enums.js'
 // STYLES
 import { getOmnibarNavBarClasses, getOmnibarSurfaceClasses } from '../omnibar.styles'
 // TYPES
@@ -48,6 +48,7 @@ const surfaceClasses = $derived(
               featureTitle={navigation.featureTitle}
               {hasElevatedChrome}
               isCardOpen={navigation.isCardOpen}
+              isCardOpeningPending={navigation.isCardOpeningPending}
               showCollectionSwitcher={navigation.showCollectionSwitcher}
               onToggleTray={navigation.onToggleTray}
               onToggleCard={navigation.onToggleCard}
@@ -69,6 +70,7 @@ const surfaceClasses = $derived(
             featureTitle={navigation.featureTitle}
             {hasElevatedChrome}
             isCardOpen={navigation.isCardOpen}
+            isCardOpeningPending={navigation.isCardOpeningPending}
             showCollectionSwitcher={navigation.showCollectionSwitcher}
             onToggleTray={navigation.onToggleTray}
             onToggleCard={navigation.onToggleCard}
@@ -91,6 +93,9 @@ const surfaceClasses = $derived(
         currentIndex={navigation.currentIndex}
         navTitle={navigation.navTitle}
         onSelectIndex={navigation.onSelectIndex}
+        hasMore={navigation.hasMore}
+        loading={navigation.loading}
+        onLoadMore={navigation.onLoadMore}
         onCloseTray={navigation.onCloseTray}
       />
     </div>

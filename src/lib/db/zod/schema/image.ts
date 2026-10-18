@@ -3,16 +3,16 @@ import { z } from 'zod'
 // DRIZZLE
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
-import { feature, featureImage, image } from '$lib/db/schema/index'
+import { feature, featureImage, image } from '#lib/db/schema/index.js'
 // IMAGE
-import { isSupportedUploadImageContentType } from '$lib/images/accept'
+import { isSupportedUploadImageContentType } from '#lib/images/accept.js'
 import {
   ImageCDN,
   ImageContextResource,
   ImageContextResourceExtended,
   ImageEnv,
   ImageIntent,
-} from '$lib/enums'
+} from '#lib/enums.js'
 import { UserBase } from './user'
 
 // ═══════════════════════
@@ -109,7 +109,7 @@ export const FeatureImageInsert = createInsertSchema(featureImage).extend({
     .enum(Object.values(ImageIntent) as [string, ...string[]])
     .prefault(ImageIntent.undefined),
   isPublished: z.boolean().prefault(false),
-  publishedAt: z.string().optional(),
+  publishedAt: z.string().nullish(),
 })
 
 export const FeatureImageUpdate = createUpdateSchema(featureImage)
@@ -140,10 +140,13 @@ export const ImageDetailProfileAPI = ImageCardProfileAPI
 export const ImageAdminProfileAPI = ImageDetailProfileAPI
 
 export const ImageContextEnvelopeAPI = z.object({
-  ctxType: z.string(),
+  ctxType: z.union([
+    z.enum(ImageContextResource),
+    z.enum(ImageContextResourceExtended),
+  ]),
   ctxId: z.string(),
   image: z.lazy(() => z.union([ImageListProfileAPI, ImageAdminProfileAPI])),
-  intent: z.enum(Object.values(ImageIntent) as [string, ...string[]]).nullish(),
+  intent: z.enum(ImageIntent).nullish(),
   isPublished: z.boolean().nullish(),
   publishedAt: z.string().nullish(),
 })
@@ -367,7 +370,14 @@ export const SetImageIntentSchema = z.object({
   id: z.string().min(1),
   ctxType: ImageContextTypeExtendedSchema,
   ctxId: z.string().min(1),
-  intent: z.string().min(1),
+  intent: z.enum([
+    'canonical',
+    'closeUp',
+    'context',
+    'general',
+    'research',
+    'undefined',
+  ]),
   featureId: z.string().optional(),
   isPublished: z.boolean().optional(),
   meta: ImageRequestMetaSchema,

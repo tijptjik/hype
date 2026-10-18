@@ -1,5 +1,5 @@
-import type { HeaderSize } from '$lib/bits/custom/header/header.types'
-import type { Snippet } from 'svelte'
+import type { HeaderSize } from '#lib/bits/custom/header/header.types.js'
+import type { Component, Snippet } from 'svelte'
 import type {
   SectionHeaderAction,
   SectionHeaderFlag,
@@ -9,6 +9,7 @@ import type {
 export type { SectionHeaderAction, SectionHeaderFlag, SectionHeaderTrigger }
 
 export interface SectionHeaderProps {
+  icon?: Component
   title?: string
   description?: string
   size?: HeaderSize

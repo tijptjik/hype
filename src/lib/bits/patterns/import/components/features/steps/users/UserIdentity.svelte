@@ -1,10 +1,10 @@
 <script lang="ts">
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // TYPES
-import type { UserValidationResult } from '$lib/client/services/import/types'
+import type { UserValidationResult } from '#lib/client/services/import/types.js'
 
 type Props = {
   user?: UserValidationResult | null

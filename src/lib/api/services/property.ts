@@ -1,13 +1,14 @@
 // DRIZZLE
-import { inArray, type SQL } from 'drizzle-orm'
+import type { SQL } from 'drizzle-orm'
 // API
 import { applyQueryFilters } from '..'
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // DB
-import { transformI18nSafely } from '$lib/db'
+import { transformI18nSafely } from '#lib/db/index.js'
 // SCHEMA
-import { property, project as projectTable } from '$lib/db/schema/index'
+import { property, project as projectTable } from '#lib/db/schema/index.js'
 // ZOD
-import { PropertyDetailProfileAPI } from '$lib/db/zod'
+import { PropertyDetailProfileAPI } from '#lib/db/zod/index.js'
 // TYPES
 import type {
   Database,
@@ -15,8 +16,8 @@ import type {
   QueryParams,
   SessionUser,
   UserRoleDisco,
-} from '$lib/types'
-import type { Property, PropertyDBRaw } from '$lib/db/zod/schema/property.types'
+} from '#lib/types.js'
+import type { Property, PropertyDBRaw } from '#lib/db/zod/schema/property.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -108,18 +109,18 @@ export const toPropertyPrismConditions = async (params: {
   const scopedConditions = [...(params.conditions ?? [])]
 
   if (params.prisms.project.length > 0) {
-    scopedConditions.push(inArray(property.projectId, params.prisms.project))
+    scopedConditions.push(chunkedInArray(property.projectId, params.prisms.project))
     return scopedConditions
   }
 
   if (params.prisms.organisation.length > 0) {
     const projectsInOrgs = await params.db.query.project.findMany({
-      where: inArray(projectTable.organisationId, params.prisms.organisation),
+      where: chunkedInArray(projectTable.organisationId, params.prisms.organisation),
       columns: { id: true },
     })
     const projectIds = projectsInOrgs.map(project => project.id)
     if (projectIds.length > 0) {
-      scopedConditions.push(inArray(property.projectId, projectIds))
+      scopedConditions.push(chunkedInArray(property.projectId, projectIds))
     }
   }
 

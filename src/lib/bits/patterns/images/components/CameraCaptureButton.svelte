@@ -1,12 +1,12 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core/button'
+import { Button } from '#lib/bits/core/button/index.js'
 // LIB
-import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '$lib/images/accept'
+import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
 // I18n
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
+import CameraIcon from 'virtual:icons/proicons/camera'
 
 let {
   onFiles,
@@ -40,6 +40,6 @@ function handleChange(event: Event): void {
   size="sm"
   iconComponent={CameraIcon}
   iconClasses="h-4 w-4"
-  class="rounded-full bg-black/60 text-white shadow-none hover:bg-black/75 hover:text-white"
+  class="rounded-full bg-base-100 text-base-content shadow-none hover:bg-surface hover:text-base-content"
   onClick={() => inputEl?.click()}
 />

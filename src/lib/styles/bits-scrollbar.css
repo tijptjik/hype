@@ -11,28 +11,22 @@
 
 @layer base {
   * {
-    -ms-overflow-style: none !important;
-    scrollbar-width: none !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   *::-webkit-scrollbar {
-    display: none !important;
+    display: none;
   }
 
   body.svrollbar-scrolling {
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
-    -webkit-user-drag: none !important;
-    -moz-user-drag: none !important;
-    user-drag: none !important;
-    pointer-events: none !important;
-  }
-
-  body.svrollbar-scrolling [data-svrollbar],
-  body.svrollbar-scrolling [data-svrollbar] * {
-    pointer-events: auto !important;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    -moz-user-drag: none;
+    pointer-events: none;
   }
 
   body.svrollbar-scrolling *,
@@ -51,19 +45,23 @@
   body.svrollbar-scrolling footer[class*="completion"],
   body.svrollbar-scrolling [data-testid*="completion"],
   body.svrollbar-scrolling .bg-base-300 {
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
-    -webkit-user-drag: none !important;
-    -moz-user-drag: none !important;
-    user-drag: none !important;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    -moz-user-drag: none;
   }
 
   body.svrollbar-scrolling img,
   body.svrollbar-scrolling svg,
   body.svrollbar-scrolling canvas,
   body.svrollbar-scrolling video {
-    pointer-events: none !important;
+    pointer-events: none;
+  }
+
+  body.svrollbar-scrolling [data-svrollbar],
+  body.svrollbar-scrolling [data-svrollbar] * {
+    pointer-events: auto;
   }
 }

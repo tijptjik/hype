@@ -1,6 +1,6 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import TriStateToggle from './ResourceControlBarTriStateToggle.svelte'
 // TYPES

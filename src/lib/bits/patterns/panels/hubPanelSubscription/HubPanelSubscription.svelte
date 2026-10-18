@@ -47,7 +47,7 @@ $effect(() => {
   >
     <div
       bind:this={cardContainer}
-      class="pointer-events-auto border-t border-base-content/10 bg-black/95 px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] shadow-[0_-18px_40px_rgba(0,0,0,0.45)] backdrop-blur supports-[backdrop-filter]:bg-black/80"
+      class="pointer-events-auto border-t border-base-content/10 bg-panel/95 px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] shadow-[0_-18px_40px_rgba(0,0,0,0.45)] backdrop-blur supports-[backdrop-filter]:bg-panel/80"
     >
       <HubPanelSubscriptionPrimitive.HubPanelSubscriptionCard {...props} />
     </div>

@@ -1,5 +1,5 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -11,7 +11,7 @@ import {
   featureProperty,
   featurePropertyI18n,
   userFeature,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // CONSTRAINTS
 import { getLocales } from '../constraints'
 import { FormBoolean } from '../form'
@@ -25,9 +25,9 @@ import {
 import { ImageContextEnvelopeAPI } from './image'
 import { UserBasic } from './user'
 // ENUMS
-import { supportedLocales } from '$lib/enums'
+import { supportedLocales } from '#lib/enums.js'
 // TYPES
-import type { AddressMeta, AddressProperties } from '$lib/types'
+import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
 import type { GeometryObject } from 'geojson'
 
 // ═══════════════════════
@@ -82,35 +82,87 @@ import type { GeometryObject } from 'geojson'
 // 1. DB / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
-export const FeatureBase = createSelectSchema(feature).extend({
-  geometry: z.custom<GeometryObject>(),
-  addressMeta: z.custom<AddressMeta>().default({}),
-})
+export const FeatureBase = createSelectSchema(feature)
+  .omit({ spatialIndex: true })
+  .extend({
+    countryId: z.string().nullish(),
+    areaId: z.string().nullish(),
+    districtId: z.string().nullish(),
+    townId: z.string().nullish(),
+    ruralAreaId: z.string().nullish(),
+    macrohoodId: z.string().nullish(),
+    neighbourhoodId: z.string().nullish(),
+    villageId: z.string().nullish(),
+    microhoodId: z.string().nullish(),
+    hamletId: z.string().nullish(),
+    islandId: z.string().nullish(),
+    divisionResolution: z
+      .object({
+        status: z.string(),
+        branches: z.record(z.string(), z.array(z.array(z.string()))),
+      })
+      .nullish(),
 
-export const FeatureInsert = createInsertSchema(feature).extend({
-  geometry: z.custom<GeometryObject>().prefault({
-    type: 'Point',
-    coordinates: [114.1693671540923, 22.319307515052614],
-  }),
-  addressMeta: z.custom<AddressMeta>().prefault({}),
-  isPublished: FormBoolean.default(false),
-  isPendingReview: FormBoolean.default(false),
-  isArchived: FormBoolean.default(false),
-  isDraft: FormBoolean.default(false),
-  isIntangible: FormBoolean.default(false),
-  isVisitable: FormBoolean.default(true),
-})
+    geometry: z.custom<GeometryObject>(),
+    addressMeta: z.custom<AddressMeta>().default({}),
+  })
 
-export const FeatureUpdate = createUpdateSchema(feature).extend({
-  geometry: z.custom<GeometryObject>().optional(),
-  addressMeta: z.custom<AddressMeta>().optional(),
-  isPublished: FormBoolean.optional(),
-  isPendingReview: FormBoolean.optional(),
-  isArchived: FormBoolean.optional(),
-  isDraft: FormBoolean.optional(),
-  isIntangible: FormBoolean.optional(),
-  isVisitable: FormBoolean.optional(),
-})
+export const FeatureInsert = createInsertSchema(feature)
+  .omit({
+    spatialIndex: true,
+    countryId: true,
+    areaId: true,
+    districtId: true,
+    townId: true,
+    ruralAreaId: true,
+    macrohoodId: true,
+    neighbourhoodId: true,
+    villageId: true,
+    microhoodId: true,
+    hamletId: true,
+    islandId: true,
+    divisionResolution: true,
+  })
+  .extend({
+    geometry: z.custom<GeometryObject>().prefault({
+      type: 'Point',
+      coordinates: [114.1693671540923, 22.319307515052614],
+    }),
+    addressMeta: z.custom<AddressMeta>().prefault({}),
+    isPublished: FormBoolean.default(false),
+    isPendingReview: FormBoolean.default(false),
+    isArchived: FormBoolean.default(false),
+    isDraft: FormBoolean.default(false),
+    isIntangible: FormBoolean.default(false),
+    isVisitable: FormBoolean.default(true),
+  })
+
+export const FeatureUpdate = createUpdateSchema(feature)
+  .omit({
+    spatialIndex: true,
+    countryId: true,
+    areaId: true,
+    districtId: true,
+    townId: true,
+    ruralAreaId: true,
+    macrohoodId: true,
+    neighbourhoodId: true,
+    villageId: true,
+    microhoodId: true,
+    hamletId: true,
+    islandId: true,
+    divisionResolution: true,
+  })
+  .extend({
+    geometry: z.custom<GeometryObject>().optional(),
+    addressMeta: z.custom<AddressMeta>().optional(),
+    isPublished: FormBoolean.optional(),
+    isPendingReview: FormBoolean.optional(),
+    isArchived: FormBoolean.optional(),
+    isDraft: FormBoolean.optional(),
+    isIntangible: FormBoolean.optional(),
+    isVisitable: FormBoolean.optional(),
+  })
 
 export const FeatureI18nBase = createSelectSchema(featureI18n).extend({
   locale: z.enum(Object.values(supportedLocales) as [string, ...string[]]),
@@ -198,6 +250,9 @@ export const UserFeatureInsert = createInsertSchema(userFeature)
 export const UserFeatureUpdate = createUpdateSchema(userFeature)
 
 export const FeatureListRow = FeatureBase.extend({
+  divisionMemberships: z
+    .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
+    .optional(),
   i18n: z.array(FeatureI18nBase).nullish(),
   properties: z
     .array(
@@ -353,7 +408,7 @@ export const FeatureFormMeta = z.object({
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
-  isAdminRequest: z.coerce.boolean<boolean>().optional(),
+  isAdminRequest: FormBoolean.optional(),
 })
 
 export const FeatureFormData = z.object({
@@ -372,7 +427,7 @@ export const PublishFeatureSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -382,7 +437,7 @@ export const RemoveFeatureSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -391,7 +446,17 @@ export const RemoveFeatureSchema = z.object({
 // 4. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
 
-export const FeatureProfile = z.enum(['list', 'card', 'detail', 'admin'])
+// Legacy selectors remain compatible while callers migrate to resource payload profiles.
+export const FeatureProfile = z.enum([
+  'compact',
+  'default',
+  'map',
+  'full',
+  'admin',
+  'list',
+  'card',
+  'detail',
+])
 
 export const FeaturePropertyCollectionAPI = FeaturePropertyBase.extend({
   i18n: getLocales(FeaturePropertyI18nBase, []).nullish(),
@@ -406,6 +471,19 @@ export const FeaturePropertyAPI = FeaturePropertyBase.extend({
 })
 
 const FeatureListFields = FeatureBase.pick({
+  countryId: true,
+  areaId: true,
+  districtId: true,
+  townId: true,
+  ruralAreaId: true,
+  macrohoodId: true,
+  neighbourhoodId: true,
+  villageId: true,
+  microhoodId: true,
+  hamletId: true,
+  islandId: true,
+  divisionResolution: true,
+
   id: true,
   organisationId: true,
   projectId: true,
@@ -423,6 +501,9 @@ const FeatureListFields = FeatureBase.pick({
 })
 
 export const FeatureListProfileAPI = FeatureListFields.extend({
+  divisionMemberships: z
+    .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
+    .optional(),
   i18n: getLocales(FeatureI18nBase),
   properties: z.array(FeaturePropertyCollectionAPI).default([]),
   image: ImageContextEnvelopeAPI.nullish(),
@@ -446,4 +527,17 @@ export const FeatureAdminProfileAPI = FeatureBase.extend({
   publisher: UserBasic.nullish(),
   image: ImageContextEnvelopeAPI.nullish(),
   images: z.array(ImageContextEnvelopeAPI).nullish(),
+})
+
+/** Minimal identity and action state for paged resource lists. */
+export const FeatureCompactProfileAPI = FeatureBase.pick({
+  id: true,
+  isPublished: true,
+  isArchived: true,
+  modifiedAt: true,
+  organisationId: true,
+  projectId: true,
+  layerId: true,
+}).extend({
+  i18n: getLocales(FeatureI18nBase.pick({ title: true })),
 })

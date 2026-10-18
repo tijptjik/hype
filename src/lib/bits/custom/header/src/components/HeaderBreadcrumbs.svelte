@@ -8,7 +8,7 @@ let { crumbs = [] }: HeaderBreadcrumbsProps = $props()
 {#if crumbs.length > 0}
   <nav class="bits-header__breadcrumbs" aria-label="Breadcrumb">
     {#each crumbs as crumb, index (`${crumb.href ?? 'nolink'}-${crumb.name}-${index}`)}
-      <span class="bits-header__breadcrumb-item">
+      <span class="inline-flex items-center gap-2">
         {#if crumb.href}
           <a href={crumb.href} draggable="false" class="bits-header__breadcrumb-link">
             {crumb.name}

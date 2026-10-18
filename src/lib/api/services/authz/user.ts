@@ -1,4 +1,4 @@
-import type { UserRoleDisco } from '$lib/types'
+import type { UserRoleDisco } from '#lib/types.js'
 
 export type AuthenticatedSessionActor = {
   isAuthenticated?: boolean

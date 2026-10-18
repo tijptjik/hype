@@ -1,12 +1,12 @@
 // SVELTEKIT
-import { error, json } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 // DB
-import client from '$lib/db'
+import client from '#lib/db/index.js'
 // AUTH
-import { cleanupExpiredAnonymousUsers } from '$lib/auth/anonymous.server'
+import { cleanupExpiredAnonymousUsers } from '#lib/auth/anonymous.server.js'
 // TYPES
 import type { RequestHandler } from './$types'
-import type { D1Database as MiniflareD1Database } from '@miniflare/d1'
+import type { D1Database as MiniflareD1Database } from '@cloudflare/workers-types'
 
 /**
  * Compares secret strings without an early-returning character comparison.
@@ -38,7 +38,8 @@ async function secretsMatch(supplied: string, expected: string): Promise<boolean
  * @returns Aggregate cleanup result without deleted identifiers.
  * @remarks The bearer token is a dedicated secret and must not reuse Better Auth keys.
  */
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+  const { platform } = locals
   const expectedToken = platform?.env?.ANONYMOUS_CLEANUP_TOKEN
   const suppliedToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
 
@@ -54,7 +55,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
   try {
     const db = client(platform.env.DB as unknown as MiniflareD1Database)
     const deletedCount = await cleanupExpiredAnonymousUsers(db)
-    return json({ deletedCount })
+    return Response.json({ deletedCount })
   } catch (cause) {
     console.error('[auth][anonymous-cleanup]', { outcome: 'failed', cause })
     throw error(500, 'Anonymous cleanup failed')

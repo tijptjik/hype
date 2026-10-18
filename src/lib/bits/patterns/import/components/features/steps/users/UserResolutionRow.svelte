@@ -1,24 +1,24 @@
 <script lang="ts">
 // CONTEXT
-import type { ImportCtx } from '$lib/context/import.svelte'
+import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
 import {
   clearResolutionSearch,
   resetImportUserResolution,
   selectImportUserForResolution,
   updateResolutionUserSearchResults,
-} from '$lib/client/services/import/users'
+} from '#lib/client/services/import/users.js'
 // COMPONENTS
-import Icon from '$lib/bits/custom/icon/Icon.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 import ImportMappingRow from '../../../shared/ImportMappingRow.svelte'
 import ResolvedTargetButton from '../../../shared/ResolvedTargetButton.svelte'
 import UserIdentity from './UserIdentity.svelte'
 import UserSearchBox from './UserSearchBox.svelte'
-import XCircle from 'virtual:icons/lucide/circle-x'
+import XCircle from 'virtual:icons/proicons/cancel-circle'
 // TYPES
-import type { UserValidationResult } from '$lib/client/services/import/types'
+import type { UserValidationResult } from '#lib/client/services/import/types.js'
 
 type Props = {
   importCtx: ImportCtx

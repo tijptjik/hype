@@ -1,11 +1,11 @@
 <script lang="ts">
-import type { Component } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 // SERVICES
-import { getUrlForResourceIndex } from '$lib/navigation'
+import { getUrlForResourceIndex } from '#lib/navigation/index.js'
 // ENUMS
-import type { FirstClassResource } from '$lib/enums'
+import type { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { PanelProps } from '$lib/types'
+import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 // COMPONENTS
 import SectionHeaderRoot from './SectionHeaderRoot.svelte'
 import SectionHeaderTitle from './SectionHeaderTitle.svelte'
@@ -19,6 +19,7 @@ type Props = {
   iconVerticalPaddingClass?: string
   iconColorClass?: string
   description?: string
+  headerActions?: Snippet
   isOpen: boolean
   onToggle: (event: MouseEvent) => void
   onNavigate?: (event: MouseEvent) => void
@@ -32,6 +33,7 @@ let {
   iconVerticalPaddingClass = 'py-3',
   iconColorClass = 'text-base-content/60',
   description = undefined,
+  headerActions,
   isOpen,
   onToggle,
   onNavigate,
@@ -122,6 +124,9 @@ let href = $derived(
         {onNavigate}
         {href}
       />
+    {/if}
+    {#if !panelProps.isNarrow}
+      <div class="mr-4 shrink-0">{@render headerActions?.()}</div>
     {/if}
     <SectionHeaderIcon
       {icon}

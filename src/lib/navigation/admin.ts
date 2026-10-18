@@ -1,17 +1,19 @@
 // SVELTE
-import { goto, pushState } from '$app/navigation'
+import { goto } from '$app/navigation'
 // LIB
-import { ADMIN_PATH } from '$lib/constants'
+import { ADMIN_PATH } from '#lib/constants.js'
 // ENUMS
-import { FirstClassResource, ResourcePath, ResourceRefKey } from '$lib/enums'
-import type { HeaderCrumb } from '$lib/bits/custom/header'
+import { FirstClassResource, ResourcePath, ResourceRefKey } from '#lib/enums.js'
+import type { HeaderCrumb } from '#lib/bits/custom/header/index.js'
 // TYPES
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { AppCtx } from '$lib/context/app.svelte'
-import type { Code, FacetType, Id, NavigableResource, Resource } from '$lib/types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+
+import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+import type { Code, Id, NavigableResource, Resource } from '#lib/types.js'
+import type { FacetType } from '#lib/context/facets.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 
 function isNavigable(resource: unknown): resource is NavigableResource {
   return (
@@ -22,6 +24,7 @@ function isNavigable(resource: unknown): resource is NavigableResource {
 
 export const getResourcePathPart = (resource?: FirstClassResource) => {
   if (!resource) return null
+
   return ResourcePath[resource]
 }
 
@@ -74,10 +77,13 @@ export const getResourceRef = (
   id: Id,
 ) => {
   if (!resource) return false
+
   const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
-  const entity = adminCtx.appCtx.cache[resource].get(id)
+  const entity = adminCtx.view.cache[resource].get(id)
+
   if (!entity) return false
-  return entity[refKey as keyof Resource]
+
+  return refKey in entity ? (entity as Record<string, unknown>)[refKey] : false
 }
 
 /**
@@ -126,12 +132,24 @@ export const getUrlForResource = (
   facet?: string,
 ) => {
   const ref = getResourceRef(adminCtx, resource, id)
+
   if (!ref) return null
+
   return `${ADMIN_PATH}/${getResourcePathPart(resource)}/${ref}${facet ? `#${facet}` : ''}`
 }
 
+/**
+ * Requests an admin URL change; committed routes publish the active target.
+ * @param _adminCtx Owning admin surface, retained for the navigation call contract.
+ * @param resource Resource index or detail type.
+ * @param entityRef Optional entity reference.
+ * @param facet Optional detail facet.
+ * @param queryParams Optional URL query parameters.
+ * @returns Nothing; SvelteKit owns navigation completion.
+ * @remarks A blocked navigation must not preemptively change resource selection.
+ */
 export const navigateOnAdmin = (
-  adminCtx: AdminCtx,
+  _adminCtx: AdminCtx,
   resource: FirstClassResource | false,
   entityRef?: Id | Code,
   facet?: FacetType,
@@ -140,9 +158,7 @@ export const navigateOnAdmin = (
   let url = `${ADMIN_PATH}`
   if (resource && isNavigable(resource)) {
     url += `/${ResourcePath[resource]}`
-    adminCtx.setResourceType(resource)
   } else {
-    adminCtx.setResourceType(false)
     if (resource) {
       console.warn(`Attempted to navigate to a non-navigable resource: ${resource}`)
       return
@@ -151,17 +167,11 @@ export const navigateOnAdmin = (
 
   if (entityRef) {
     url += `/${entityRef}`
-    adminCtx.setResourceRef(entityRef)
-  } else {
-    adminCtx.setResourceRef(false)
   }
 
   if (queryParams) url += `?${new URLSearchParams(queryParams).toString()}`
   if (facet) {
     url += `#${facet}`
-    adminCtx.setFacet(facet)
-  } else {
-    adminCtx.setFacet(false)
   }
 
   const currentUrl =
@@ -175,11 +185,11 @@ export const navigateOnAdmin = (
     currentUrl.hash !== targetUrl.hash
 
   if (isHashOnlyNavigation) {
-    pushState(targetUrl.toString(), {})
+    goto(targetUrl.toString(), { shallow: true })
     return
   }
 
-  void goto(url, { noScroll: true, keepFocus: true, replaceState: false })
+  void goto(url, { reset: false, replace: false })
 }
 
 export async function navigateOnAdminById(
@@ -195,7 +205,7 @@ export async function navigateOnAdminById(
     resourceType === FirstClassResource.project ||
     resourceType === FirstClassResource.hub
   ) {
-    const resource = await adminCtx.appCtx.getResourceById(resourceType, id)
+    const resource = await adminCtx.view.getResourceById(resourceType, id)
     if (resource) {
       ref = (resource as Organisation | Project | Hub).code
     }
@@ -204,7 +214,7 @@ export async function navigateOnAdminById(
 }
 
 export async function getBreadcrumbs(
-  appCtx: AppCtx,
+  appCtx: ResourceViewCtx,
   resourceType: FirstClassResource,
   resourceRef: Id | Code,
 ): Promise<HeaderCrumb[]> {
@@ -214,7 +224,10 @@ export async function getBreadcrumbs(
       return []
     }
 
-    const hierarchy = await appCtx.getHierarchy(currentResource)
+    if (resourceType === 'property' || resourceType === 'user') return []
+    const hierarchy = await appCtx.getHierarchy(
+      currentResource as Parameters<ResourceViewCtx['getHierarchy']>[0],
+    )
     const hierarchyHub = (hierarchy as { hub?: unknown }).hub
     const breadcrumbs: HeaderCrumb[] = []
 
@@ -231,6 +244,7 @@ export async function getBreadcrumbs(
         i18n?.zhHant?.nameShort ??
         ''
       ).trim()
+
       return code || shortName || 'Hub'
     }
 
@@ -244,6 +258,7 @@ export async function getBreadcrumbs(
 
     const projectOrganisationCode = async (): Promise<string | null> => {
       if (resourceType !== FirstClassResource.project) return null
+
       const projectResource = currentResource as {
         code?: unknown
         organisationId?: unknown
@@ -267,6 +282,7 @@ export async function getBreadcrumbs(
         const parentOrganisation = await appCtx.getOrganisationById(organisationId)
         if (parentOrganisation?.code) return parentOrganisation.code
       }
+
       return hierarchyOrgCode ?? null
     }
 

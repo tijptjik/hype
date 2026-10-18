@@ -4,6 +4,7 @@
 
 - [Overview](#overview)
 - [Build Promotion Strategy](#build-promotion-strategy)
+- [SvelteKit 3 Runtime](#sveltekit-3-runtime)
 - [Environment Variables](#environment-variables)
   - [Dynamic Runtime Variables](#dynamic-runtime-variables)
   - [Configuration Strategy](#configuration-strategy)
@@ -39,11 +40,71 @@ Instead of building separately for each environment, we build once for preview a
 - **Reduced Risk**: No build-time differences between environments
 - **Cost Efficiency**: Less compute time and resources
 
+## SvelteKit 3 Runtime
+
+SvelteKit and adapter configuration lives in `vite.config.ts`. The optional static
+web build (`SVELTE_ADAPTER=static`) removes native Worker imports through the
+`HYPE_STATIC_BUILD` build constant; its fallback still requires the hosted backend
+for server APIs. Application library
+imports use the package import map (`#lib/...`) with explicit file extensions.
+
+The Cloudflare adapter no longer provides `event.platform`. The first server hook
+reads native `env` and `waitUntil` from `cloudflare:workers` and exposes the existing
+service binding bundle through `event.locals.platform`. Adapter 8 owns the development
+binding proxy: `HYPE_LOCAL_R2=1` selects `wrangler.local.toml`, and `CLOUDFLARE_ENV`
+selects the named environment through `platformProxy.environment`. The separate
+Cloudflare Vite plugin is no longer used for this application. This bundle is app-owned;
+its `context.waitUntil` member preserves the service API. Remote queries receive
+route-dependent filters as validated arguments rather than reading `event.url`.
+Custom remote form controls must obtain their names from their owning field's
+`.as(...)` method, including generated hidden inputs.
+
+Bun applies `patches/@sveltejs%2Fkit@3.1.0.patch` to restore missing client-side
+remote-query return values. Remote entry points live in `src/lib/api/*.remote.ts`,
+outside directories named `server`, as required by
+[SvelteKit's remote-function rules](https://svelte.dev/docs/kit/remote-functions).
+Server-only helpers remain in `src/lib/api/server/`; the framework's import guard
+is unchanged. After installing or upgrading dependencies, run
+`bun run verify:sveltekit-patch` and the regression
+tests in `src/tests/sveltekit-patch.test.ts` and `src/tests/remote-form-fields.test.ts`.
+CI checks the installed patch and includes patch contents in dependency cache keys.
+Reassess the query fix before changing the pinned patch version. The verifier also
+rejects a stale installation that still contains the obsolete import-guard bypass.
+
+The manual migration findings have been reviewed against the
+[SvelteKit 3 guide](https://svelte.dev/docs/kit/migrating-to-sveltekit-3):
+
+- Auth and root-layout URL mutations operate on `new URL(page.url.href)` copies.
+- Navigation uses internal application routes. Post-auth return paths fall back to
+  `/` when Kit rejects a missing route; unresolved admin-card references have no
+  navigation action.
+- Navigation options use `reset`, `replace`, and `shallow`. No deprecated
+  `invalidateAll`, `noScroll`, or `keepFocus` usages remain. Preserving `page.state`
+  is consistent with the application's panel and collection routing.
+- Response helpers use native `Response` APIs; property-service SQL `json(...)`
+  expressions are SQLite functions and remain unchanged.
+- Remote queries receive validated prism filters and do not read request route
+  data. Project form controls use attributes from their submitted form fields.
+- The live adapter uses native Worker bindings rather than `platform.ctx`. The
+  application-owned `locals.platform.context` compatibility API remains intentional.
+- Static assets are requested from the app origin; map rendering navigates to an
+  app page and external tiles/assets use their own origins. No cross-origin access
+  to Vite's static assets was found, so Vite's default development CORS policy is
+  sufficient.
+
+`tsconfig.json` extends `$app/tsconfig` and inherits Kit 3's recommended defaults,
+including `allowJs`, `checkJs`, `esModuleInterop`,
+`forceConsistentCasingInFileNames`, `resolveJsonModule`, `skipLibCheck`, and
+`moduleResolution: "bundler"`. Only project overrides and file selection remain
+in the root config. Migration validation includes the full test suite, Cloudflare
+and static builds, and browser checks. The broad type checker still reports
+existing application type debt; it is not a clean validation gate yet.
+
 ## Environment Variables
 
 ### Dynamic Runtime Variables
 
-All environment-specific configuration is read at **runtime** from Cloudflare's `platform.env`, not baked into the build.
+All environment-specific configuration is read at **runtime** from the app's `locals.platform.env`, not baked into the build.
 
 #### Old Style (Static - Build Time)
 
@@ -55,9 +116,9 @@ import { PUBLIC_API_URL } from '$env/static/public';
 #### New Style (Dynamic - Runtime)
 
 ```javascript
-// ✅ Read at runtime from platform.env
-export const GET = async ({ platform }) => {
-  const apiUrl = platform?.env?.PUBLIC_API_URL;
+// ✅ Read native Worker bindings bridged by the server hook
+export const GET = async ({ locals }) => {
+  const apiUrl = locals.platform?.env?.PUBLIC_API_URL;
 };
 ```
 
@@ -89,6 +150,7 @@ Stored in `wrangler.toml` and accessible in both server and client contexts:
 - `PUBLIC_HUB_CODE` - Hub override for development
 - `PUBLIC_AZURE_TRANSLATION_REGION` - Azure translation region
 - `PUBLIC_GIPHY_KEY` - Giphy API key
+- `PUBLIC_SAANSEOI_API_KEY` - Optional SaanSeoi basemap key; when unset, maps use the legacy Hype TileJSON endpoint
 
 #### **Secret Variables** (Sensitive)
 
@@ -215,7 +277,7 @@ Enforced via `.github/settings.yml`:
 
 ```yaml
 path: node_modules
-key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lockb') }}
+key: ${{ runner.os }}-deps-${{ hashFiles('package.json', 'bun.lock', 'patches/**') }}
 ```
 
 #### **Build Artifacts Cache**

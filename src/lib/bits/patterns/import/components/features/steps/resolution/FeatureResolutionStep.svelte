@@ -2,9 +2,9 @@
 // SVELTE
 import { tick } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import FeatureResolutionRow from './FeatureResolutionRow.svelte'
 // SERVICES
@@ -20,7 +20,7 @@ import {
   toggleFeatureResolutionPreview,
   type FeatureResolutionData,
   type FeatureResolutionStatusCounts,
-} from '$lib/client/services/import/features/resolution'
+} from '#lib/client/services/import/features/resolution.js'
 
 type Props = {
   startProcessing?: () => void

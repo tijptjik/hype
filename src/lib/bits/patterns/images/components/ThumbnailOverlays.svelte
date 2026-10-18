@@ -1,12 +1,12 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core/button'
-import { m } from '$lib/i18n'
+import { Button } from '#lib/bits/core/button/index.js'
+import { m } from '#lib/i18n.js'
 import * as OverlayPrimitive from './thumbnailOverlays'
 // ICONS
-import EyeOffIcon from 'virtual:icons/lucide/eye-off'
-import RefreshCwIcon from 'virtual:icons/lucide/refresh-cw'
-import Trash2Icon from 'virtual:icons/lucide/trash-2'
+import EyeOffIcon from 'virtual:icons/proicons/eye-off'
+import RefreshCwIcon from 'virtual:icons/proicons/arrow-sync'
+import Trash2Icon from 'virtual:icons/proicons/delete'
 // TYPES
 import type { AdminStateOverlayProps } from './imagePrimitives.types'
 

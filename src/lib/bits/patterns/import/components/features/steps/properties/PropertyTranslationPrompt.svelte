@@ -2,17 +2,17 @@
 // SVELTE
 import { untrack } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // I18N
-import { m, toLocaleKey } from '$lib/i18n'
+import { m, toLocaleKey } from '#lib/i18n.js'
 // ENUMS
-import { supportedLocaleKeys } from '$lib/enums'
+import { supportedLocaleKeys } from '#lib/enums.js'
 // TYPES
 import type {
   FeatureCSVColumn,
   Locale,
   LocaleKey,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 type PropertyData = {
   key: string
@@ -228,7 +228,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
 
 <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
   >
     <div class="mb-5 flex items-start justify-between gap-4">
       <div>
@@ -247,7 +247,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
     </div>
 
     <div class="space-y-3">
-      <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+      <div class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
         <div
           class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
         >
@@ -255,7 +255,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
         </div>
         <div class="mt-3 grid gap-3 md:grid-cols-3">
           {#each localeCoverage as coverage}
-            <div class="rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div class="rounded-2xl border border-foreground/10 bg-panel/20 p-3">
               <div
                 class="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-base-content/45"
               >
@@ -284,7 +284,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
         {/if}
       </div>
 
-      <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+      <div class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
         <div
           class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
         >
@@ -296,7 +296,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
             class={`flex gap-3 rounded-2xl border p-4 transition ${
               translationChoice === 'translate'
                 ? 'border-success/30 bg-success/10'
-                : 'border-white/10 bg-black/20'
+                : 'border-foreground/10 bg-panel/20'
             }`}
           >
             <input
@@ -318,7 +318,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
             class={`flex gap-3 rounded-2xl border p-4 transition ${
               translationChoice === 'copy'
                 ? 'border-info/30 bg-info/10'
-                : 'border-white/10 bg-black/20'
+                : 'border-foreground/10 bg-panel/20'
             }`}
           >
             <input
@@ -338,7 +338,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
         </div>
       </div>
 
-      <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+      <div class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
         <div
           class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
         >
@@ -357,7 +357,7 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
   </section>
 
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
   >
     <div class="mb-5">
       <div
@@ -369,18 +369,18 @@ function inferTranslationPlan(localesPresent: LocaleKey[]): {
     </div>
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04]"
+      class="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-foreground/10 bg-foreground/[0.04]"
     >
       {#each sampleValues as value}
         <div
-          class="border-b border-white/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
+          class="border-b border-foreground/10 px-4 py-3 font-mono text-sm text-base-content/80 last:border-b-0"
         >
           {value}
         </div>
       {/each}
     </div>
 
-    <div class="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+    <div class="mt-4 rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
       <div
         class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
       >

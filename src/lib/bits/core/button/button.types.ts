@@ -25,7 +25,10 @@ export type ButtonStyle =
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
 export type ButtonModifier = 'wide' | 'block' | 'square' | 'circle'
-export type ButtonTransitionFn = (node: Element, params?: any) => TransitionConfig
+export type ButtonTransitionFn = (
+  node: Element,
+  params?: import('svelte/transition').FadeParams,
+) => TransitionConfig
 export type ButtonTransition = 'none' | 'fade' | ButtonTransitionFn
 export type ButtonCssVars = Partial<Record<`--btn-${string}`, string>>
 
@@ -51,7 +54,7 @@ export interface ButtonProps {
   size?: ButtonSize
   modifier?: ButtonModifier
   transition?: ButtonTransition
-  transitionOpts?: any
+  transitionOpts?: Record<string, unknown>
   iconClasses?: string
   labelClasses?: string
   class?: string

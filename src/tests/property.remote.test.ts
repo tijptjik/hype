@@ -1,5 +1,6 @@
+import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-mock'
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
 
 const {
@@ -16,29 +17,45 @@ const {
   mockProbeProjectQuery,
   mockAuthorizeProjectReadForProbe,
   mockAuthorizeProjectUpdateForSubmission,
+  mockAuthorizeOrganisationUpdateForSubmission,
+  mockAuthorizeHubUpdateForSubmission,
   mockGuardedContext,
   mockProjectProbeRows,
+  mockPropertyScopeRows,
   mockRetryBusyRead,
 } = vi.hoisted(() => ({
   mockGetPrisms: vi.fn(() => ({ organisation: [], project: [], layer: [] })),
   mockGetPropertyQueryContext: vi.fn(() => ({ conditions: [] })),
   mockToPropertyPrismConditions: vi.fn(async ({ conditions }) => conditions),
-  mockListProperties: vi.fn(async () => []),
-  mockLoadProperty: vi.fn(async () => null),
-  mockListResolvedProjectProperties: vi.fn(async () => []),
+  mockListProperties: vi.fn(async (): Promise<unknown[]> => []),
+  mockLoadProperty: vi.fn(async (): Promise<unknown> => null),
+  mockListResolvedProjectProperties: vi.fn(async (): Promise<unknown[]> => []),
   mockCreateBaseProperty: vi.fn(async () => ({ id: 'property-created' })),
   mockCreateI18n: vi.fn(async () => undefined),
-  mockCreatePropertyValues: vi.fn(async () => []),
+  mockCreatePropertyValues: vi.fn(async (): Promise<unknown[]> => []),
   mockCreatePropertyValueI18n: vi.fn(async () => undefined),
-  mockProbeProjectQuery: vi.fn(async () => null),
-  mockAuthorizeProjectReadForProbe: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeProjectUpdateForSubmission: vi.fn(() => ({ allowed: true })),
+  mockProbeProjectQuery: vi.fn(async (): Promise<unknown> => null),
+  mockAuthorizeProjectReadForProbe: vi.fn(
+    (_params: { probe: { id: string } }): { allowed: boolean; code?: string } => ({
+      allowed: true,
+    }),
+  ),
+  mockAuthorizeProjectUpdateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeOrganisationUpdateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeHubUpdateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
   mockGuardedContext: vi.fn(),
-  mockProjectProbeRows: vi.fn(async () => []),
+  mockProjectProbeRows: vi.fn(async (): Promise<unknown[]> => []),
+  mockPropertyScopeRows: vi.fn(async (): Promise<unknown[]> => []),
   mockRetryBusyRead: vi.fn(async (operation: () => Promise<unknown>) => operation()),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedCommand: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -63,27 +80,30 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   getPrisms: mockGetPrisms,
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
 const mockToPropertyResponseShape = vi.fn((row: unknown) => ({ row }))
 
-vi.mock('$lib/api/services/property', () => ({
+vi.mock('#lib/api/services/property.js', () => ({
   getPropertyQueryContext: mockGetPropertyQueryContext,
   propertyCollectionWithRelations: {},
   toPropertyPrismConditions: mockToPropertyPrismConditions,
   toPropertyResponseShape: mockToPropertyResponseShape,
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeProjectReadForProbe: mockAuthorizeProjectReadForProbe,
   authorizeProjectUpdateForSubmission: mockAuthorizeProjectUpdateForSubmission,
+  authorizeOrganisationUpdateForSubmission:
+    mockAuthorizeOrganisationUpdateForSubmission,
+  authorizeHubUpdateForSubmission: mockAuthorizeHubUpdateForSubmission,
   toAuthMessage: (code: string) => code,
 }))
 
-vi.mock('$lib/db/services/property', () => ({
+vi.mock('#lib/db/services/property.js', () => ({
   createBaseProperty: mockCreateBaseProperty,
   createI18n: mockCreateI18n,
   createPropertyValues: mockCreatePropertyValues,
@@ -93,35 +113,39 @@ vi.mock('$lib/db/services/property', () => ({
   getProperty: mockLoadProperty,
 }))
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   probeProjectQuery: mockProbeProjectQuery,
 }))
 
-vi.mock('$lib/db/services/sqlite', () => ({
+vi.mock('#lib/db/services/sqlite.js', () => ({
   retryBusyRead: mockRetryBusyRead,
 }))
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   ListQueryParamsSchema: {},
   ProjectPropertiesQuery: {},
   ProjectPropertyFormData: {},
   ProjectPropertyValueFormData: {},
 }))
 
-let remote: Awaited<typeof import('$lib/api/server/property.remote')>
+let remote: MockedRemoteModule<typeof import('#lib/api/property.remote.js')>
 
 describe('property.remote', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-    remote = await import('$lib/api/server/property.remote')
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
+  beforeAll(async () => {
+    remote = mockedRemoteModule(await import('#lib/api/property.remote.js'))
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
     mockToPropertyResponseShape.mockImplementation((row: unknown) => ({ row }))
     mockGuardedContext.mockResolvedValue({
       db: {
         select: vi.fn(() => ({
           from: vi.fn(() => ({
+            where: vi.fn(() => ({ limit: mockPropertyScopeRows })),
             innerJoin: vi.fn(() => ({
               where: mockProjectProbeRows,
             })),
@@ -137,6 +161,9 @@ describe('property.remote', () => {
       },
     })
     mockAuthorizeProjectReadForProbe.mockReturnValue({ allowed: true })
+    mockAuthorizeProjectUpdateForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeOrganisationUpdateForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeHubUpdateForSubmission.mockReturnValue({ allowed: true })
   })
 
   it('filters getProperties rows to projects the actor can read', async () => {
@@ -161,8 +188,9 @@ describe('property.remote', () => {
         isArchived: false,
       },
     ])
-    mockAuthorizeProjectReadForProbe.mockImplementation(({ probe }: any) =>
-      probe.id === 'project-1' ? { allowed: true } : { allowed: false },
+    mockAuthorizeProjectReadForProbe.mockImplementation(
+      ({ probe }: { probe: { id: string } }) =>
+        probe.id === 'project-1' ? { allowed: true } : { allowed: false },
     )
 
     const result = await remote.getProperties({ conditions: {} })
@@ -170,6 +198,21 @@ describe('property.remote', () => {
     expect(result).toEqual({
       data: [{ row: { id: 'prop-1', projectId: 'project-1' } }],
     })
+  })
+
+  it('chunks project probes for large property collections', async () => {
+    mockProjectProbeRows.mockResolvedValue([])
+    mockListProperties.mockResolvedValue(
+      Array.from({ length: 205 }, (_, index) => ({
+        id: `property-${index}`,
+        projectId: `project-${index}`,
+      })),
+    )
+
+    const result = await remote.getProperties({ conditions: {} })
+
+    expect(result).toEqual({ data: [] })
+    expect(mockProjectProbeRows).toHaveBeenCalledTimes(3)
   })
 
   it('skips malformed property rows instead of failing the whole list', async () => {
@@ -186,8 +229,8 @@ describe('property.remote', () => {
         isArchived: false,
       },
     ])
-    mockToPropertyResponseShape.mockImplementation((row: any) => {
-      if (row.id === 'prop-2') {
+    mockToPropertyResponseShape.mockImplementation((row: unknown) => {
+      if ((row as { id: string }).id === 'prop-2') {
         throw new Error('bad property payload')
       }
       return { row }
@@ -220,7 +263,15 @@ describe('property.remote', () => {
   })
 
   it('denies getProperty when linked project read authz denies', async () => {
-    mockLoadProperty.mockResolvedValue({ id: 'prop-1', projectId: 'project-1' })
+    mockPropertyScopeRows.mockResolvedValue([
+      {
+        id: 'prop-1',
+        scope: 'project',
+        projectId: 'project-1',
+        organisationId: null,
+        hubId: null,
+      },
+    ])
     mockProbeProjectQuery.mockResolvedValue({
       id: 'project-1',
       organisationId: 'org-1',
@@ -236,6 +287,109 @@ describe('property.remote', () => {
     await expect(remote.getProperty({ id: 'prop-1' })).rejects.toMatchObject({
       status: 403,
     })
+    expect(mockLoadProperty).not.toHaveBeenCalled()
+  })
+
+  it('checks append access from the property scope probe without loading relations', async () => {
+    mockPropertyScopeRows.mockResolvedValue([
+      {
+        id: 'prop-1',
+        scope: 'project',
+        projectId: 'project-1',
+        organisationId: null,
+        hubId: null,
+      },
+    ])
+    mockProbeProjectQuery.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      isPublished: true,
+      isArchived: false,
+    })
+    mockAuthorizeProjectUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.getPropertyValueAppendAccess({ id: 'prop-1' }),
+    ).resolves.toEqual({
+      data: { allowed: false, scope: 'project' },
+    })
+
+    expect(mockLoadProperty).not.toHaveBeenCalled()
+  })
+
+  it('denies append before hydrating property values', async () => {
+    mockPropertyScopeRows.mockResolvedValue([
+      {
+        id: 'prop-1',
+        scope: 'project',
+        projectId: 'project-1',
+        organisationId: null,
+        hubId: null,
+      },
+    ])
+    mockProbeProjectQuery.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      isPublished: true,
+      isArchived: false,
+    })
+    mockAuthorizeProjectUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.appendPropertyValues({
+        data: {
+          propertyId: 'prop-1',
+          values: [{ value: 'new-value' }],
+        },
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+
+    expect(mockLoadProperty).not.toHaveBeenCalled()
+    expect(mockCreatePropertyValues).not.toHaveBeenCalled()
+  })
+
+  it('hydrates and appends values after scope authorization succeeds', async () => {
+    mockPropertyScopeRows.mockResolvedValue([
+      {
+        id: 'prop-1',
+        scope: 'project',
+        projectId: 'project-1',
+        organisationId: null,
+        hubId: null,
+      },
+    ])
+    mockProbeProjectQuery.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      isPublished: true,
+      isArchived: false,
+    })
+    mockLoadProperty.mockResolvedValue({ id: 'prop-1', scope: 'project' })
+    mockCreatePropertyValues.mockResolvedValue([{ id: 'value-1' }])
+
+    const result = await remote.appendPropertyValues({
+      data: {
+        propertyId: 'prop-1',
+        values: [{ value: 'new-value' }],
+      },
+    })
+
+    expect(result).toEqual({ data: { row: { id: 'prop-1', scope: 'project' } } })
+    expect(mockLoadProperty).toHaveBeenCalledTimes(2)
+    expect(mockCreatePropertyValues).toHaveBeenCalledWith(
+      expect.anything(),
+      [{ value: 'new-value', propertyId: 'prop-1' }],
+      'prop-1',
+    )
   })
 
   it('returns [] for getProjectProperties when project is missing', async () => {
@@ -271,7 +425,6 @@ describe('property.remote', () => {
       meta: {
         isAdminRequest: true,
         projectId: 'project-1',
-        requestPath: '/admin/properties',
       },
     })
   })

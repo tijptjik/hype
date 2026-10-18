@@ -1,9 +1,9 @@
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
-export const HEADER_BUTTON_LABEL_CLASSES = 'whitespace-nowrap'
+export const HEADER_BUTTON_LABEL_CLASSES = 'shrink-0 whitespace-nowrap'
 
-export const HEADER_FORM_ACTIONS_CLASSES = 'ml-2 flex items-center gap-0'
+export const HEADER_FORM_ACTIONS_CLASSES = 'ml-auto flex items-center gap-2 pl-4'
 
 export const HEADER_VIEW_ACTIONS_CLASSES = 'flex ml-0 items-center gap-0'
 
@@ -12,7 +12,7 @@ export const HEADER_TASK_ACTIONS_CLASSES = 'ml-2 flex items-center gap-0'
 export const HEADER_FACETS_WRAP_CLASSES = 'flex items-center gap-2'
 
 export const HEADER_FACETS_LIST_CLASSES =
-  'flex h-11 items-stretch gap-1 overflow-clip rounded-full bg-[#181818]'
+  'flex h-11 items-stretch gap-0 border-b border-border/50 bg-transparent'
 
 export const HEADER_FACETS_LIST_STYLE = ''
 
@@ -37,20 +37,21 @@ export const HEADER_TITLE_MENU_TRIGGER_ICON_CLASSES = 'h-[1.15rem] w-[1.15rem]'
 export const HEADER_TITLE_MENU_SLOT_CLASSES = 'h-8 w-8 shrink-0'
 
 export const HEADER_TITLE_MENU_CONTENT_CLASSES =
-  'z-50 min-w-44 rounded-lg border border-[color:color-mix(in_oklab,white_16%,transparent)] bg-black p-1 shadow-none'
+  'z-50 min-w-44 rounded-lg border border-border bg-panel p-1 shadow-none'
 
 export const HEADER_TITLE_MENU_ITEM_CLASSES =
-  'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-[color:color-mix(in_oklab,var(--color-base-content)_92%,white_8%)] transition-colors duration-150 ease-[ease] hover:bg-[color:color-mix(in_oklab,var(--color-base-300)_88%,transparent)] data-[highlighted]:bg-[color:color-mix(in_oklab,var(--color-base-300)_88%,transparent)]'
+  'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-foreground transition-colors duration-150 ease-[ease] hover:bg-[color:color-mix(in_oklab,var(--color-base-300)_88%,transparent)] data-[highlighted]:bg-[color:color-mix(in_oklab,var(--color-base-300)_88%,transparent)]'
 
 export const HEADER_PUBLISH_STATUS_CLASSES =
   'inline-flex h-10 items-center gap-2 px-3 text-sm font-medium text-base-content'
 
 export const HEADER_PUBLISH_STATUS_LABEL_CLASSES = 'whitespace-nowrap'
 
-const HEADER_FORM_ACTION_MAIN_CLASSES = 'w-32.5 justify-center'
+const HEADER_FORM_ACTION_MAIN_CLASSES =
+  'h-9 w-28 shrink-0 justify-center rounded-md px-3 text-sm font-medium shadow-none'
 
 const HEADER_FORM_ACTION_PUBLISH_CLASSES =
-  'w-37.75 justify-center [--btn-padding-x:0.5rem]'
+  'h-9 w-32 shrink-0 justify-center rounded-md px-3 text-sm font-medium shadow-none'
 
 const HEADER_HIDE_LABEL_ACTION_CLASSES =
   '!w-[var(--btn-size)] shrink-0 px-0 [--btn-padding-x:0] [&>span:first-child]:mx-0'
@@ -63,7 +64,11 @@ const HEADER_AVATAR_SHELL_VISIBLE_CLASSES =
 const HEADER_AVATAR_SHELL_HIDDEN_CLASSES =
   'w-0 transition-[width] duration-260 delay-20 ease-[ease]'
 
-const HEADER_FACET_BUTTON_BASE_CLASSES = 'h-full rounded-full px-4'
+const HEADER_FACET_BUTTON_BASE_CLASSES = cx(
+  'relative h-full rounded-none border-0 px-3.5 text-sm font-medium shadow-none',
+  'after:pointer-events-none after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-current after:opacity-0 after:transition-opacity after:duration-150',
+  'focus-override focus-visible:outline-none focus-visible:bg-primary/10',
+)
 const HEADER_FACET_BUTTON_HIDE_LABEL_CLASSES = 'shrink-0 [&>span:first-child]:mx-0'
 const HEADER_FACET_BUTTON_ACTIVE_VARS = cx(
   '[--btn-hover-bg:var(--color-accent-soft-hover-bg)]',
@@ -78,29 +83,22 @@ const HEADER_FACET_BUTTON_NEUTRAL_VARS = cx(
   '[--btn-active-fg:var(--color-accent-ghost-active-fg)]',
 )
 
+// Invalid facets keep the navigation treatment, using error text and the active underline.
 const HEADER_FACET_BUTTON_ISSUE_VARS = cx(
-  '[--btn-bg:var(--color-danger-solid-bg)]',
-  '[--btn-fg:var(--color-danger-solid-fg)]',
-  '[--btn-border:var(--color-danger-solid-border)]',
-  '[--btn-hover-bg:var(--color-danger-solid-hover-bg)]',
-  '[--btn-hover-fg:var(--color-danger-solid-fg)]',
-  '[--btn-active-bg:var(--color-danger-solid-active-bg)]',
-  '[--btn-active-fg:var(--color-danger-solid-fg)]',
+  '[--btn-bg:transparent]',
+  '[--btn-fg:var(--color-error)]',
+  '[--btn-border:transparent]',
+  '[--btn-hover-bg:color-mix(in_oklab,var(--color-error)_10%,transparent)]',
+  '[--btn-hover-fg:var(--color-error)]',
+  '[--btn-active-bg:color-mix(in_oklab,var(--color-error)_15%,transparent)]',
+  '[--btn-active-fg:var(--color-error)]',
 )
 
 const HEADER_FACET_BUTTON_ISSUE_VISUAL_CLASSES = cx(
-  'bg-[var(--color-danger-solid-bg)]',
-  'text-[var(--color-danger-solid-fg)]',
-  'border-[color:var(--color-danger-solid-rest-border)]',
-  'hover:bg-[var(--color-danger-solid-hover-bg)]',
-  'hover:text-[var(--color-danger-solid-fg)]',
-  'hover:border-[color:var(--color-danger-solid-hover-border)]',
-  'focus-visible:bg-[var(--color-danger-solid-hover-bg)]',
-  'focus-visible:text-[var(--color-danger-solid-fg)]',
-  'focus-visible:border-[color:var(--color-danger-solid-hover-border)]',
-  'active:bg-[var(--color-danger-solid-active-bg)]',
-  'active:text-[var(--color-danger-solid-fg)]',
-  'active:border-[color:var(--color-danger-solid-active-border)]',
+  'bg-transparent text-error',
+  'hover:bg-error/10 hover:text-error',
+  'focus-visible:bg-error/10 focus-visible:text-error',
+  'active:bg-error/15 active:text-error',
 )
 
 function resolveHeaderActionVariantClasses(className?: string): string {
@@ -130,6 +128,11 @@ export function getHeaderAvatarShellClasses(isVisible: boolean): string {
   )
 }
 
+/**
+ * Builds the shared header navigation style while preserving validation states.
+ * @param args - Active, issue, and responsive presentation state.
+ * @returns Classes for the facet button and its active underline.
+ */
 export function getHeaderFacetButtonClasses(args: {
   isActive: boolean
   hasIssues: boolean
@@ -140,6 +143,9 @@ export function getHeaderFacetButtonClasses(args: {
   return cx(
     HEADER_FACET_BUTTON_BASE_CLASSES,
     args.hideLabel && HEADER_FACET_BUTTON_HIDE_LABEL_CLASSES,
+    args.isActive && 'after:opacity-100',
+    args.isActive && !args.hasIssues && 'bg-transparent text-primary',
+    !args.isActive && !args.hasIssues && 'text-muted-foreground hover:text-foreground',
     args.isActive && !args.hasIssues && HEADER_FACET_BUTTON_ACTIVE_VARS,
     args.color === 'neutral' &&
       !args.isActive &&
@@ -150,3 +156,20 @@ export function getHeaderFacetButtonClasses(args: {
     args.className,
   )
 }
+
+// Align visible desktop groups; measurement clones keep their natural widths.
+export const HEADER_ALIGNED_NAVIGATION_CLASSES = `min-[1200px]:[&>[data-adaptive-toolbar-left-group]]:flex-none [&>[data-adaptive-toolbar-left-group]]:min-w-max min-[1200px]:[&>[data-adaptive-toolbar-left-group]]:w-auto min-[1200px]:[&>[data-adaptive-toolbar-left-group]]:min-w-[max(16rem,var(--header-identity-width))] min-[1200px]:[&>[data-adaptive-toolbar-left-group]]:pr-6 min-[1200px]:[&>[data-adaptive-toolbar-right-group]]:flex-1 min-[1200px]:[&>[data-adaptive-toolbar-right-group]]:min-w-0 min-[1200px]:[&>[data-adaptive-toolbar-right-group]]:ml-0`
+
+// Action surfaces remain distinct from tabs, with explicit pointer and keyboard states.
+export const HEADER_EDIT_ACTION_CLASSES = cx(
+  'bg-foreground/10! border-foreground/20! text-foreground!',
+  'enabled:hover:bg-foreground/18! enabled:hover:border-foreground/35!',
+  'enabled:active:bg-foreground/25! enabled:active:translate-y-px',
+  'enabled:focus-visible:bg-foreground/18! enabled:focus-visible:border-primary/60!',
+)
+export const HEADER_PRIMARY_ACTION_CLASSES = cx(
+  'bg-primary! border-primary! text-white!',
+  'enabled:hover:bg-[color-mix(in_oklab,var(--color-primary)_85%,black)]! enabled:hover:border-[color-mix(in_oklab,var(--color-primary)_85%,black)]!',
+  'enabled:active:bg-[color-mix(in_oklab,var(--color-primary)_70%,black)]! enabled:active:translate-y-px',
+  'enabled:focus-visible:bg-[color-mix(in_oklab,var(--color-primary)_85%,black)]!',
+)

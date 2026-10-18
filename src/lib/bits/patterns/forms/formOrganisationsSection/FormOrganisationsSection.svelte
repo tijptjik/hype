@@ -1,10 +1,14 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
-import { Search, SectionHeader } from '$lib/bits/custom'
-import { getURLfromImage } from '$lib/client/services/image'
-import { m } from '$lib/i18n'
+import {
+  Search,
+  SectionHeader,
+  SectionHeaderPrimitive,
+} from '#lib/bits/custom/index.js'
+import { getURLfromImage } from '#lib/client/services/image.js'
+import { m } from '#lib/i18n.js'
 import * as FormOrganisationsSectionPrimitive from './components'
-import { ResourceCard } from '$lib/bits/patterns/cards/resourceCard'
+import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 import {
   isOrganisationSearchResultDisabled,
   toOrganisationSearchDisabledMeta,
@@ -19,6 +23,7 @@ import type {
 let {
   title,
   subtitle,
+  issues = [],
   organisations,
   selections,
   hiddenOrganisationInputAttrs = [],
@@ -162,6 +167,9 @@ $effect(() => {
     description={subtitle}
     class="bits-form__parent-resource-header"
   >
+    {#snippet center()}
+      <SectionHeaderPrimitive.Issues {issues} />
+    {/snippet}
     {#snippet right()}
       <FormOrganisationsSectionPrimitive.Actions
         {isAdding}
@@ -183,17 +191,17 @@ $effect(() => {
         mountTransitionDuration={showModeUi ? 80 : 0}
         onInput={onSearchOrganisations}
         excludeIds={Array.from(organisationIds)}
-        getItemId={(organisation: any) => organisation.id}
+        getItemId={(organisation: HubOrganisationItem) => organisation.id}
         onSelect={handleAddOrganisation}
         resultMap={{
-          image: (organisation: any) => toImageSrc(organisation as HubOrganisationItem),
-          title: (organisation: any) =>
+          image: (organisation: HubOrganisationItem) => toImageSrc(organisation),
+          title: (organisation: HubOrganisationItem) =>
             organisation.i18n?.en?.name || organisation.code,
-          descriminator: (organisation: any) =>
+          descriminator: (organisation: HubOrganisationItem) =>
             toOrganisationSearchDiscriminator(organisation),
-          disabled: (organisation: any) =>
+          disabled: (organisation: HubOrganisationItem) =>
             isOrganisationSearchResultDisabled(organisation),
-          disabledMeta: (organisation: any) =>
+          disabledMeta: (organisation: HubOrganisationItem) =>
             toOrganisationSearchDisabledMeta(organisation),
         }}
       />
@@ -226,7 +234,8 @@ $effect(() => {
           {canSetCoreInclusive}
           isHubExclusive={selection.isHubExclusive}
           isCoreInclusive={selection.isCoreInclusive}
-          onToggleHubExclusive={value => handleHubExclusiveToggle(organisation.id, value)}
+          onToggleHubExclusive={value =>
+            handleHubExclusiveToggle(organisation.id, value)}
           onToggleCoreInclusive={value =>
             handleCoreInclusiveToggle(organisation.id, value)}
           onRemove={() => onRemoveOrganisation(organisation.id)}

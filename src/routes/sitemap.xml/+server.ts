@@ -1,7 +1,7 @@
 // SVELTEKIT
 import type { RequestHandler } from '@sveltejs/kit'
 // SITEMAP
-import { getSitemapPaths, renderSitemap } from '$lib/server/sitemap'
+import { getSitemapPaths, renderSitemap } from '#lib/server/sitemap.js'
 
 const pageRoutes = import.meta.glob('/src/routes/**/+page.svelte')
 const sitemapPaths = getSitemapPaths(Object.keys(pageRoutes))

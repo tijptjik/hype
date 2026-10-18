@@ -1,17 +1,19 @@
 import { goto } from '$app/navigation'
-import { m, getI18n, getLocaleKey } from '$lib/i18n'
-import { getHashiconUrl, getURLfromImage } from '$lib/client/services/image'
-import { getUrlForResource } from '$lib/navigation'
-import { FirstClassResource } from '$lib/enums'
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { ImageContextEnvelope } from '$lib/db/zod/schema/image.types'
-import type { KeyMap, Resource, Task } from '$lib/types'
-import type { IndexCardProps } from '$lib/bits/patterns/cards/indexCard'
-import EyeIcon from 'virtual:icons/lucide/eye'
-import EyeOffIcon from 'virtual:icons/lucide/eye-off'
-import LayersIcon from 'virtual:icons/lucide/layers-3'
-import OrganisationIcon from 'virtual:icons/lucide/users-round'
-import ProjectIcon from 'virtual:icons/lucide/layout-grid'
+import { m, getI18n, getLocaleKey } from '#lib/i18n.js'
+import { getHashiconUrl, getURLfromImage } from '#lib/client/services/image.js'
+import { getUrlForResource } from '#lib/navigation/index.js'
+import { FirstClassResource } from '#lib/enums.js'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { ImageContextEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { KeyMap } from '#lib/client/services/resourceCards.types.js'
+import type { Resource } from '#lib/types.js'
+import type { Task } from '#lib/db/zod/schema/task.types.js'
+import type { IndexCardProps } from '#lib/bits/patterns/cards/indexCard/index.js'
+import EyeIcon from 'virtual:icons/proicons/eye'
+import EyeOffIcon from 'virtual:icons/proicons/eye-off'
+import LayersIcon from 'virtual:icons/proicons/layers'
+import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
+import ProjectIcon from 'virtual:icons/proicons/grid'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -55,7 +57,7 @@ function getHubMetricBreadcrumbs(
   const organisations =
     hubId == null
       ? []
-      : adminCtx.appCtx.state.resources.organisation.filter(
+      : adminCtx.view.queries.rows.organisation.filter(
           organisation => organisation.hubId === hubId,
         )
   const organisationIds = new Set(
@@ -64,11 +66,11 @@ function getHubMetricBreadcrumbs(
       .filter((id): id is string => typeof id === 'string' && id.length > 0),
   )
   const projectIds = new Set(
-    adminCtx.appCtx.state.resources.project
+    adminCtx.view.queries.rows.project
       .filter(project => organisationIds.has(project.organisationId))
       .map(project => project.id),
   )
-  const layerCount = adminCtx.appCtx.state.resources.layer.filter(layer =>
+  const layerCount = adminCtx.view.queries.rows.layer.filter(layer =>
     organisationIds.has(layer.organisationId),
   ).length
 
@@ -203,7 +205,7 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
     onImageClick,
   } = params
   const localeKey = getLocaleKey()
-  const appCtx = adminCtx.appCtx
+  const appCtx = adminCtx.view
   const preferences = appCtx.getUserPreferences()
 
   const previewImageSrc = getPreviewImageSrc(resourceType, entity)
@@ -337,10 +339,12 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
     }
   }
 
-  const href =
+  const resourceUrl =
     resourceType != null && resourceType !== false
-      ? `${getUrlForResource(adminCtx, resourceType, entity.id)}${search}`
+      ? getUrlForResource(adminCtx, resourceType, entity.id)
       : null
+  // Unresolved resource refs must not produce a relative "null" route in Kit 3.
+  const href = resourceUrl == null ? null : `${resourceUrl}${search}`
 
   return {
     title,

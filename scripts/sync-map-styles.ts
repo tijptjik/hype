@@ -48,7 +48,12 @@ const toStableMapStyleId = (key: string): string => {
 
 const shouldWrapInTransaction = (target: SyncTarget): boolean => target === 'local'
 
-const buildSyncSql = (target: SyncTarget): string => {
+/**
+ * Render the checked-in map-style catalog for a selected environment.
+ * @param target Explicit destination; local output includes an atomic transaction.
+ * @returns Escaped SQL reusable by the local bootstrap without invoking Wrangler.
+ */
+export const buildSyncSql = (target: SyncTarget): string => {
   const statements: string[] = []
 
   if (shouldWrapInTransaction(target)) {
@@ -143,4 +148,4 @@ const main = async (): Promise<void> => {
   }
 }
 
-await main()
+if (import.meta.main) await main()

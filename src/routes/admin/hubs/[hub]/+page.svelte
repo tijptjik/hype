@@ -3,8 +3,8 @@
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
 // I18N
-import { m } from '$lib/i18n'
-import { getI18n, getLocale, getLocaleKey, getLocaleOrder } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
+import { getI18n, getLocale, getLocaleKey, getLocaleOrder } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -35,7 +35,7 @@ import {
   updateFormData,
   updateUserRoleSelection,
   resetLocaleFields,
-} from '$lib/client/services/form'
+} from '#lib/client/services/form.js'
 import {
   getHubOrganisationHiddenInputAttrs,
   getHubLayerDefaultHiddenInputAttrs,
@@ -43,15 +43,15 @@ import {
   overrideHubEntityBoolean,
   overrideHubListItemBoolean,
   toHubFormInput,
-} from '$lib/client/services/hub'
+} from '#lib/client/services/hub.js'
 import {
   createDefaultHubPrivacyPolicy,
   createDefaultHubTermsOfService,
-} from '$lib/services/policy'
+} from '#lib/services/policy.js'
 import {
   normalizePropertiesForSubmit,
   toStableSignature,
-} from '$lib/client/services/project'
+} from '#lib/client/services/project.js'
 import {
   addProjectPropertyForType,
   addProjectPropertyValue,
@@ -65,16 +65,17 @@ import {
   resetProjectPropertyLocale,
   scrollWithMovedProperty,
   stopEvent,
+  sortProjectPropertyValuesAlphabetically,
   translateProjectPropertyLocale,
   updateProjectPropertyValue,
   updateProjectPropertyBase,
   updateProjectPropertyI18n,
   updateProjectPropertyValueI18n,
-} from '$lib/client/services/property'
-import { setHubImagePresentationMode } from '$lib/client/services/image'
+} from '#lib/client/services/property.js'
+import { setHubImagePresentationMode } from '#lib/client/services/image.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import {
   archiveHub,
@@ -82,14 +83,17 @@ import {
   getHubs,
   hubForm,
   publishHub,
-} from '$lib/api/server/hub.remote'
-import { getLayers } from '$lib/api/server/layer.remote'
-import { toHubAuthActor, resolveHubActionPermissions } from '$lib/api/services/authz'
-import { getOrganisations } from '$lib/api/server/organisation.remote'
+} from '#lib/api/hub.remote.js'
+import { getLayers } from '#lib/api/layer.remote.js'
+import {
+  toHubAuthActor,
+  resolveHubActionPermissions,
+} from '#lib/api/services/authz/index.js'
+import { getOrganisations } from '#lib/api/organisation.remote.js'
 // SCHEMA
-import { HubPreflightFormData } from '$lib/db/zod/schema/hub'
+import { HubPreflightFormData } from '#lib/db/zod/schema/hub.js'
 // CONFIG
-import { NEW_REF, NEW_TITLE } from '$lib/constants'
+import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import {
   FormFieldsSection,
@@ -100,33 +104,41 @@ import {
   FormI18nDescriptorFields,
   FormI18nSection,
   FormUserRolesSection,
-  GridSpacer,
   Main,
   ResourceViewer,
-  TextArea,
-} from '$lib/bits'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
-import type { HubOrganisationItem } from '$lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types'
+  SectionHeader,
+} from '#lib/bits/index.js'
+import FormPolicyField from '#lib/bits/patterns/forms/formPolicyField/FormPolicyField.svelte'
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import {
+  formSectionDividerStyles,
+  formSelectionSectionStyles,
+} from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
+import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+import type { HubOrganisationItem } from '#lib/bits/patterns/forms/formOrganisationsSection/formOrganisationsSection.types.js'
 // ADAPTERS
-import { useImageProviderModel } from '$lib/adapters/image'
+import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // FACTORIES
-import { configureForm } from '$lib/factories.svelte'
+import { configureForm } from '#lib/factories.svelte.js'
 // COMPONENTS
-import ImageProvider from '$lib/providers/ImageProvider.svelte'
+import ImageProvider from '#lib/providers/ImageProvider.svelte'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
   getAdminFacetTabsForResource,
   navigateOnAdmin,
-} from '$lib/navigation'
-import type { HubFacet } from '$lib/navigation'
+} from '#lib/navigation/index.js'
+import type { HubFacet } from '#lib/navigation/index.js'
 // UTILS
-import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
+import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
-import Blend from 'virtual:icons/lucide/blend'
-import HubIcon from 'virtual:icons/lucide/building-2'
-import RefreshCw from 'virtual:icons/lucide/refresh-cw'
-import Type from 'virtual:icons/lucide/type'
+import Blend from 'virtual:icons/proicons/shape-intersect'
+import MembersIcon from 'virtual:icons/proicons/person-multiple'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import HubIcon from 'virtual:icons/proicons/building-multiple'
+import RefreshCw from 'virtual:icons/proicons/arrow-sync'
+import Type from 'virtual:icons/proicons/text'
 // ENUMS
 import {
   classifierComponentTypes,
@@ -135,29 +147,26 @@ import {
   HubSubscriptionService,
   ImageContextResource,
   specifierComponentTypes,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // TYPES
+import type { Id, Locale, LocaleKey, UserRoleDisco } from '#lib/types.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
 import type {
-  Id,
-  Locale,
-  LocaleKey,
-  User,
-  UserRoleDisco,
   UserRoleFieldNameResolverForm,
   HubOrganisationFieldNameResolverForm,
   FormDataUpdaterForm,
-  HeaderTransitionSnapshot,
-  HubSubscriptionPlacement,
-} from '$lib/types'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+} from '#lib/client/services/form.types.js'
+import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
+import type { HubSubscriptionPlacement } from '#lib/api/services/hub.types.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type {
   Hub,
   HubFormInput,
   HubGetState,
   HubRoleUser,
-} from '$lib/db/zod/schema/hub.types'
-import type { LayerCardProfile } from '$lib/db/zod/schema/layer.types'
+} from '#lib/db/zod/schema/hub.types.js'
+import type { LayerCardProfile } from '#lib/db/zod/schema/layer.types.js'
 
 // § Context
 
@@ -189,9 +198,7 @@ const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
 const cachedHubForRef = $derived(
-  adminCtx.appCtx.getResourceByRefSync(FirstClassResource.hub, hubRef) as
-    | Hub
-    | undefined,
+  adminCtx.view.getResourceByRefSync(FirstClassResource.hub, hubRef) as Hub | undefined,
 )
 const cachedHubState = $derived(
   cachedHubForRef ? ({ data: cachedHubForRef } as HubGetState) : null,
@@ -249,7 +256,7 @@ const isPoliciesFacet = $derived(activeFacet === 'policies')
 const isImagesFacet = $derived(activeFacet === 'images')
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewHubRef = $derived(hubRef === NEW_REF)
-const isCoreHub = $derived(Boolean(hub?.data?.isCore) || hubRef === 'core')
+const isCoreHub = $derived.by(() => hub?.data?.code === 'core' || hubRef === 'core')
 
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewHubRef) return true
@@ -351,13 +358,13 @@ const configuredHubForm = configureForm<HubFormInput>(() => ({
         entityQuery: getHub({
           ref: hubRef,
           refKey: 'code',
-          meta: { isAdminRequest: true, profile: 'admin' },
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
         }),
         listQuery: getHubs({
-          conditions: adminCtx.appCtx.isSuperAdmin()
+          conditions: adminCtx.view.isSuperAdmin()
             ? { isArchived: null, isPublished: null }
             : { isArchived: false, isPublished: null },
-          meta: { isAdminRequest: true, profile: 'card' },
+          meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
         }),
       }),
     adminCtx,
@@ -535,6 +542,17 @@ const updatePropertyI18n = (
 
 const addPropertyValue = (propertyId: Id): void => {
   addProjectPropertyValue(hubPropertyFormAdapter, propertyId)
+  revalidateAfterProgrammaticChange()
+}
+
+/**
+ * Sorts options by the selected locale and revalidates the current form.
+ * @param propertyId - Property whose options should be sorted.
+ * @param locale - Locale supplying the option labels.
+ * @returns Nothing; updates option ranks in the form.
+ */
+const sortPropertyValuesAlphabetically = (propertyId: Id, locale: Locale): void => {
+  sortProjectPropertyValuesAlphabetically(hubPropertyFormAdapter, propertyId, locale)
   revalidateAfterProgrammaticChange()
 }
 
@@ -747,7 +765,7 @@ const hubOrganisations = $derived.by(() => {
     (hub?.data?.organisations ?? []).map(org => [org.id, org] as const),
   )
 
-  return formOrganisationValues.flatMap(selection => {
+  return formOrganisationValues.flatMap<HubOrganisationItem>(selection => {
     const baseOrganisation = baseById.get(selection.organisationId)
     if (baseOrganisation) {
       return [
@@ -770,7 +788,7 @@ const hubOrganisations = $derived.by(() => {
         isHubExclusive: selection.isHubExclusive,
       },
     ]
-  }) as Array<Record<string, unknown>>
+  })
 })
 
 const hubLayerItems = $derived.by(() => {
@@ -789,11 +807,11 @@ const hubLayerItems = $derived.by(() => {
         (isCoreHub || selectedOrganisationIds.has(layer.organisationId)),
     )
     .map(layer => {
-      const project = adminCtx.appCtx.getResourceByIdSync(
+      const project = adminCtx.view.getResourceByIdSync(
         FirstClassResource.project,
         layer.projectId,
       )
-      const organisation = adminCtx.appCtx.getResourceByIdSync(
+      const organisation = adminCtx.view.getResourceByIdSync(
         FirstClassResource.organisation,
         layer.organisationId,
       )
@@ -801,7 +819,7 @@ const hubLayerItems = $derived.by(() => {
         id: layer.id,
         organisationId: layer.organisationId,
         organisationName:
-          getI18n(organisation, 'name', adminCtx.appCtx.getUserPreferences()) ??
+          getI18n(organisation, 'name', adminCtx.view.getUserPreferences()) ??
           organisation?.code ??
           layer.organisationId,
         projectNameShort: project?.i18n?.[localeKey]?.nameShort ?? project?.code ?? '-',
@@ -825,7 +843,7 @@ $effect(() => {
         ),
       ).sort()
   const organisationKey = organisationIds.join('|')
-  const isSuperAdmin = adminCtx.appCtx.isSuperAdmin()
+  const isSuperAdmin = adminCtx.view.isSuperAdmin()
   const requestKey = `${isCoreHub ? 'core' : 'scoped'}:${isSuperAdmin ? 'super' : 'admin'}:${organisationKey}`
 
   if (lastHubLayerOrganisationKey === requestKey) return
@@ -847,7 +865,7 @@ $effect(() => {
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
       prisms: isCoreHub ? undefined : { organisation: organisationIds },
-      meta: { isAdminRequest: true, profile: 'card' },
+      meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
     })
       .then(result => {
         if (currentRequestId !== hubLayerRequestId) return
@@ -877,7 +895,7 @@ const imageProviderProps = $derived.by(() => {
       ? {
           ctxType: ImageContextResource.hub,
           ctxId: hubData?.id,
-          hub: hubData,
+          hub: hubData ?? undefined,
         }
       : undefined,
   }
@@ -889,7 +907,7 @@ const imageProviderModel = useImageProviderModel(
 
 // § Auth
 
-const currentUser = $derived(adminCtx.appCtx.getUser())
+const currentUser = $derived(adminCtx.view.account.user)
 const currentActor = $derived(toHubAuthActor(currentUser))
 const hubPermissions = $derived.by(() =>
   resolveHubActionPermissions(
@@ -911,16 +929,16 @@ const canEditHub = $derived(hubPermissions.canEdit)
 const canPublishHub = $derived(hubPermissions.canPublish)
 const canDeleteHub = $derived(hubPermissions.canDelete)
 const canSubmitHub = $derived(isNewHubRef ? canCreateHub : canEditHub)
-const canEditImagePresentationMode = $derived(
-  canSubmitHub && isCurrentRefLoaded && !hub?.data?.isArchived,
+const canEditImagePresentationMode = $derived.by(
+  () => canSubmitHub && isCurrentRefLoaded && !hub?.data?.isArchived,
 )
-const canEditImageDropzone = $derived(
-  canEditHub && isCurrentRefLoaded && !hub?.data?.isArchived,
+const canEditImageDropzone = $derived.by(
+  () => canEditHub && isCurrentRefLoaded && !hub?.data?.isArchived,
 )
 const canSetCoreInclusive = $derived(canSubmitHub)
 const allowedOrganisationIds = $derived.by(() => {
-  if (adminCtx.appCtx.isSuperAdmin()) return null
-  const user = adminCtx.appCtx.getUser()
+  if (adminCtx.view.isSuperAdmin()) return null
+  const user = adminCtx.view.account.user
   const roles =
     user && typeof user === 'object' && 'roles' in user && Array.isArray(user.roles)
       ? (user.roles as UserRoleDisco[])
@@ -942,7 +960,7 @@ function getPolicyTextareaAttrs(
   locale: LocaleKey,
   field: 'privacyPolicy' | 'termsOfService',
 ): Record<string, unknown> {
-  return getPolicyFields(locale)[field].as('textarea') as Record<string, unknown>
+  return getPolicyFields(locale)[field].as('text') as Record<string, unknown>
 }
 
 function getPolicyGenValue(
@@ -971,8 +989,8 @@ function revalidateAfterProgrammaticChange(): void {
 }
 
 async function onTranslate(
-  sourceLocale: LocaleKey,
-  targetLocale: LocaleKey,
+  sourceLocale: Locale,
+  targetLocale: Locale,
   sectionKey?: string,
 ): Promise<boolean> {
   const fields =
@@ -989,7 +1007,7 @@ async function onTranslate(
   return translated
 }
 
-function onResetLocale(targetLocale: LocaleKey, sectionKey?: string): void {
+function onResetLocale(targetLocale: Locale, sectionKey?: string): void {
   const fields =
     sectionKey === 'policies'
       ? translatableI18nFieldsBySection.policies
@@ -1004,7 +1022,8 @@ function onResetLocale(targetLocale: LocaleKey, sectionKey?: string): void {
 
 function onRegeneratePolicies(): void {
   updateFormData(hubEntityUpdaterForm, data => {
-    const legalContactAddress = data.legalContactAddress ?? ''
+    const legalContactAddress =
+      typeof data.legalContactAddress === 'string' ? data.legalContactAddress : ''
     const localesToUpdate: Array<'en' | 'zhHans' | 'zhHant'> = [
       'en',
       'zhHans',
@@ -1178,7 +1197,7 @@ function onRemoveOrganisation(organisationId: string): void {
     )
     data.layerDefaults = (data.layerDefaults ?? []).filter(
       (item: HubLayerDefaultSelection) => {
-        const layer = adminCtx.appCtx.getResourceByIdSync(
+        const layer = adminCtx.view.getResourceByIdSync(
           FirstClassResource.layer,
           item.layerId,
         )
@@ -1293,7 +1312,7 @@ async function onSearchOrganisations(query: string): Promise<HubOrganisationItem
   }
   const result = await getOrganisations({
     q: query,
-    conditions: adminCtx.appCtx.isSuperAdmin()
+    conditions: adminCtx.view.isSuperAdmin()
       ? {
           isArchived: false,
         }
@@ -1301,8 +1320,8 @@ async function onSearchOrganisations(query: string): Promise<HubOrganisationItem
           id: allowedOrganisationIds,
           isArchived: false,
         },
-    prisms: adminCtx.appCtx.state.prisms,
-    meta: { isAdminRequest: true, profile: 'admin' },
+    prisms: adminCtx.view.scope.prisms,
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   })
 
   const currentHubId = hub?.data?.id ?? null
@@ -1325,11 +1344,11 @@ async function onSearchOrganisations(query: string): Promise<HubOrganisationItem
 async function refreshHub(ref: string = hubRef): Promise<HubGetState> {
   if (ref === NEW_REF) return null
   try {
-    return await getHub({
+    return (await getHub({
       ref,
       refKey: 'code',
-      meta: { isAdminRequest: true, profile: 'admin' },
-    })
+      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+    })) as HubGetState
   } catch {
     return hub ?? committedHub ?? null
   }
@@ -1363,13 +1382,13 @@ async function handleHubStateToggle({
       getHub({
         ref: hubRef,
         refKey: 'code',
-        meta: { isAdminRequest: true, profile: 'detail' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'detail' },
       }).withOverride(overrideHubEntityBoolean(field, nextState)),
       getHubs({
-        conditions: adminCtx.appCtx.isSuperAdmin()
+        conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
-        meta: { isAdminRequest: true, profile: 'card' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       }).withOverride(overrideHubListItemBoolean(hubData.id, field, nextState)),
     )
 
@@ -1601,7 +1620,10 @@ $effect(() => {
 })
 </script>
 
-<Main.Root>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}
@@ -1613,34 +1635,40 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <FormI18nSection
-        title={m.admin__forms_common_descriptors()}
-        {locales}
-        {onTranslate}
-        {onResetLocale}
-        {isEditing}
-      >
-        {#snippet center()}
-          <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-        {/snippet}
+      <FormSurface>
+        <FormI18nSection
+          title={m.admin__forms_common_descriptors()}
+          sectionKey="descriptor"
+          {locales}
+          {onTranslate}
+          {onResetLocale}
+          {isEditing}
+        >
+          {#snippet center()}
+            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
+          {/snippet}
 
-        <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
-        {#snippet children(locale)}
-          <FormI18nDescriptorFields
-            form={formCtx.form}
-            fields={formCtx.form.fields.data.i18n[locale]}
-            {locale}
-            {isEditing}
-            {isRequiredInPreflight}
-          />
-        {/snippet}
-      </FormI18nSection>
+          {#snippet children(
+            locale,
+          )}
+            <FormI18nDescriptorFields
+              form={formCtx.form}
+              fields={formCtx.form.fields.data.i18n[locale]}
+              {locale}
+              {isEditing}
+              {isRequiredInPreflight}
+            />
+          {/snippet}
+        </FormI18nSection>
 
-      <GridSpacer cols={3} leftCols={1} centerCols={1} rightCols={1}>
-        {#snippet right()}
+        <div class={formSectionDividerStyles}>
           <FormUserRolesSection
+            icon={MembersIcon}
+            layout="list"
+            currentUserId={currentActor.userId}
             title={m.admin__forms_hub_admins_title()}
             subtitle={m.admin__forms_hub_admins_subtitle()}
             minCardWidth={250}
@@ -1656,54 +1684,17 @@ $effect(() => {
             startInAddingMode={isNewHubRef}
             availableRoles={[{ value: HubRoleType.admin, label: 'Admin' }]}
             userQueryParams={{
-                conditions: { isArchived: false },
-              }}
+              conditions: { isArchived: false },
+            }}
             {onAddUser}
             {onRemoveUser}
             {onRoleChange}
           />
-        {/snippet}
-
-        {#snippet center()}
-          <FormHubSubscriptionSection
-            form={formCtx.form}
-            {isEditing}
-            isSubscriptionAvailable={Boolean(
-                formCtx.form.fields.value().data?.isSubscriptionAvailable,
-              )}
-            subscriptionService={(formCtx.form.fields.value().data
-                ?.subscriptionService ??
-                HubSubscriptionService.substack) as HubSubscriptionService}
-            subscriptionId={String(formCtx.form.fields.value().data?.subscriptionId ?? '')}
-            subscriptionSessionCookie={String(
-                formCtx.form.fields.value().data?.subscriptionSessionCookie ?? '',
-              )}
-            subscriptionBenefitsByLocale={{
-                en: String(
-                  formCtx.form.fields.value().data?.i18n?.en?.subscriptionBenefits ?? '',
-                ),
-                zhHans: String(
-                  formCtx.form.fields.value().data?.i18n?.zhHans?.subscriptionBenefits ??
-                    '',
-                ),
-                zhHant: String(
-                  formCtx.form.fields.value().data?.i18n?.zhHant?.subscriptionBenefits ??
-                    '',
-                ),
-              }}
-            subscriptionPlacement={formSubscriptionPlacement}
-            onAvailabilityChange={onToggleSubscriptionAvailability}
-            onServiceChange={onSubscriptionServiceChange}
-            {onSubscriptionIdChange}
-            {onSubscriptionSessionCookieChange}
-            {onSubscriptionBenefitsChange}
-            onPlacementChange={onToggleSubscriptionPlacement}
-          />
-        {/snippet}
-
-        {#snippet left()}
-          {#if !isCoreHub}
+        </div>
+        {#if !isCoreHub}
+          <div class={formSectionDividerStyles}>
             <FormOrganisationsSection
+              class={formSelectionSectionStyles}
               title={m.maps__organisations()}
               subtitle={m.hub__organisations_note()}
               issues={organisationSectionIssues}
@@ -1721,14 +1712,54 @@ $effect(() => {
               {onToggleCoreInclusive}
               {onToggleHubExclusive}
             />
-          {/if}
+          </div>
+        {/if}
+        <div class={formSectionDividerStyles}>
           <FormHubSpecifiersFields
             form={formCtx.form}
             {isEditing}
             {isRequiredInPreflight}
           />
-        {/snippet}
-      </GridSpacer>
+        </div>
+        <div class={formSectionDividerStyles}>
+          <FormHubSubscriptionSection
+            form={formCtx.form}
+            {isEditing}
+            isSubscriptionAvailable={Boolean(
+              formCtx.form.fields.value().data?.isSubscriptionAvailable,
+            )}
+            subscriptionService={(formCtx.form.fields.value().data
+              ?.subscriptionService ??
+              HubSubscriptionService.substack) as HubSubscriptionService}
+            subscriptionId={String(
+              formCtx.form.fields.value().data?.subscriptionId ?? '',
+            )}
+            subscriptionSessionCookie={String(
+              formCtx.form.fields.value().data?.subscriptionSessionCookie ?? '',
+            )}
+            subscriptionBenefitsByLocale={{
+              en: String(
+                formCtx.form.fields.value().data?.i18n?.en?.subscriptionBenefits ?? '',
+              ),
+              zhHans: String(
+                formCtx.form.fields.value().data?.i18n?.zhHans?.subscriptionBenefits ??
+                  '',
+              ),
+              zhHant: String(
+                formCtx.form.fields.value().data?.i18n?.zhHant?.subscriptionBenefits ??
+                  '',
+              ),
+            }}
+            subscriptionPlacement={formSubscriptionPlacement}
+            onAvailabilityChange={onToggleSubscriptionAvailability}
+            onServiceChange={onSubscriptionServiceChange}
+            {onSubscriptionIdChange}
+            {onSubscriptionSessionCookieChange}
+            {onSubscriptionBenefitsChange}
+            onPlacementChange={onToggleSubscriptionPlacement}
+          />
+        </div>
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet
@@ -1737,45 +1768,51 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('layers', 'previous')}
       nextAction={buildFacetNavAction('layers', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'layers' }}
     >
-      <FormHubLayersSection
-        title={m.maps__layers()}
-        subtitle={m.admin__forms_hub_layers_subtitle()}
-        localeKey={getLocaleKey()}
-        items={hubLayerItems}
-        issues={hubLayerSectionIssues}
-        {hiddenLayerDefaultInputAttrs}
-        {isEditing}
-        isSubmitting={formCtx.submitting}
-        onToggleDefault={onToggleLayerDefault}
-      />
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormHubLayersSection
+          title={m.maps__layers()}
+          subtitle={m.admin__forms_hub_layers_subtitle()}
+          localeKey={getLocaleKey()}
+          items={hubLayerItems}
+          issues={hubLayerSectionIssues}
+          {hiddenLayerDefaultInputAttrs}
+          {isEditing}
+          isSubmitting={formCtx.submitting}
+          onToggleDefault={onToggleLayerDefault}
+        />
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
       fillHeight={true}
-      class="bits-theme flex gap-4 min-h-0 flex-col"
+      class="bits-theme left-0! right-0! flex gap-4 min-h-0 flex-col"
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormFieldsSection
-        items={hubFieldsInSection}
-        title={m.admin__forms_common_fields()}
-        description={m.admin__forms_common_fields_subtitle()}
-        issues={fieldSectionIssues}
-        actions={fieldActions}
-        issueItemIds={fieldSectionIssueItemIds}
-        layoutMutationVersion={fieldsLayoutMutationVersion}
-        canEdit={canSubmitHub && isCurrentRefLoaded}
-        {isEditing}
-        removeMode={fieldRemoveMode}
-        onRemoveModeChange={value => {
-          fieldRemoveMode = value
-        }}
-        card={{
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <FormFieldsSection
+          icon={Type}
+          keepHeader
+          items={hubFieldsInSection}
+          title={m.admin__forms_common_fields()}
+          description={m.admin__forms_common_fields_subtitle()}
+          issues={fieldSectionIssues}
+          actions={fieldActions}
+          issueItemIds={fieldSectionIssueItemIds}
+          layoutMutationVersion={fieldsLayoutMutationVersion}
+          canEdit={canSubmitHub && isCurrentRefLoaded}
+          {isEditing}
+          removeMode={fieldRemoveMode}
+          onRemoveModeChange={value => {
+            fieldRemoveMode = value
+          }}
+          card={{
             removeMode: fieldRemoveMode,
             locales,
             isEditing,
@@ -1792,6 +1829,7 @@ $effect(() => {
             onUpdateBase: updatePropertyBase,
             onUpdateI18n: updatePropertyI18n,
             onAddValue: addPropertyValue,
+            onSortValuesAlphabetically: sortPropertyValuesAlphabetically,
             onRemoveValue: removePropertyValue,
             onMoveValue: movePropertyValue,
             onUpdateValue: updatePropertyValue,
@@ -1806,7 +1844,8 @@ $effect(() => {
               getProjectPropertyFieldsForIndex(formCtx.form, propertyIndex),
             resolveSourceTag: resolveHubPropertyTypeTag,
           }}
-      />
+        />
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet
@@ -1815,77 +1854,85 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('policies', 'previous')}
       nextAction={buildFacetNavAction('policies', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'policies' }}
     >
-      <FormI18nSection
-        title="Policies"
-        subtitle="Configure the privacy policy and terms of service shown for this hub."
-        {locales}
-        {onTranslate}
-        {onResetLocale}
-        actions={[
-          {
-            text: 'Regenerate',
-            iconComponent: RefreshCw,
-            hideLabel: false,
-            hideLabelBelow: 0,
-            size: 'sm',
-            style: 'ghost',
-            onClick: () => {
-              onRegeneratePolicies()
+      <FormSurface>
+        <FormI18nSection
+          title="Policies"
+          subtitle="Configure the privacy policy and terms of service shown for this hub."
+          {locales}
+          {onTranslate}
+          {onResetLocale}
+          actions={[
+            {
+              text: 'Regenerate',
+              iconComponent: RefreshCw,
+              hideLabel: false,
+              hideLabelBelow: 0,
+              size: 'sm',
+              style: 'ghost',
+              onClick: () => {
+                onRegeneratePolicies()
+              },
+              disabled: !isEditing,
             },
-            disabled: !isEditing,
-          },
-        ]}
-        sectionKey="policies"
-        {isEditing}
-      >
-        <!-- biome-ignore lint/correctness/noUnusedFunctionParameters: Biome misreads Svelte snippet parameters used in markup. -->
-        {#snippet children(locale)}
-          <input
-            {...getPolicyGenAttrs(
-              locale,
-              'privacyPolicyGen',
-              getPolicyGenValue(locale, 'privacyPolicy'),
-            )}
-          >
-          <input
-            {...getPolicyGenAttrs(
-              locale,
-              'termsOfServiceGen',
-              getPolicyGenValue(locale, 'termsOfService'),
-            )}
-          >
+          ]}
+          sectionKey="policies"
+          {isEditing}
+        >
+          {#snippet children(
+            locale,
+          )}
+            <input
+              {...getPolicyGenAttrs(
+                locale,
+                'privacyPolicyGen',
+                getPolicyGenValue(locale, 'privacyPolicy'),
+              )}
+            >
+            <input
+              {...getPolicyGenAttrs(
+                locale,
+                'termsOfServiceGen',
+                getPolicyGenValue(locale, 'termsOfService'),
+              )}
+            >
 
-          <TextArea
-            label="Privacy Policy"
-            {locale}
-            isTranslated={true}
-            {isEditing}
-            isGenAI={getPolicyGenValue(locale, 'privacyPolicy')}
-            onToggleGenAI={() => toggleGenAiField(formCtx.form, locale, 'privacyPolicy')}
-            value={(getPolicyTextareaAttrs(locale, 'privacyPolicy') as { value?: string }).value ?? ''}
-            issues={getPolicyFields(locale).privacyPolicy.issues()}
-            rows={24}
-            textareaAttrs={getPolicyTextareaAttrs(locale, 'privacyPolicy')}
-          />
+            <FormPolicyField
+              label="Privacy Policy"
+              {locale}
+              isTranslated={true}
+              {isEditing}
+              isGenAI={getPolicyGenValue(locale, 'privacyPolicy')}
+              onToggleGenAI={() =>
+                toggleGenAiField(formCtx.form, locale, 'privacyPolicy')}
+              value={(
+                getPolicyTextareaAttrs(locale, 'privacyPolicy') as { value?: string }
+              ).value ?? ''}
+              issues={getPolicyFields(locale).privacyPolicy.issues()}
+              rows={24}
+              textareaAttrs={getPolicyTextareaAttrs(locale, 'privacyPolicy')}
+            />
 
-          <TextArea
-            label="Terms Of Service"
-            {locale}
-            isTranslated={true}
-            {isEditing}
-            isGenAI={getPolicyGenValue(locale, 'termsOfService')}
-            onToggleGenAI={() =>
-              toggleGenAiField(formCtx.form, locale, 'termsOfService')}
-            value={(getPolicyTextareaAttrs(locale, 'termsOfService') as { value?: string })
-                .value ?? ''}
-            issues={getPolicyFields(locale).termsOfService.issues()}
-            rows={20}
-            textareaAttrs={getPolicyTextareaAttrs(locale, 'termsOfService')}
-          />
-        {/snippet}
-      </FormI18nSection>
+            <FormPolicyField
+              label="Terms Of Service"
+              {locale}
+              isTranslated={true}
+              {isEditing}
+              isGenAI={getPolicyGenValue(locale, 'termsOfService')}
+              onToggleGenAI={() =>
+                toggleGenAiField(formCtx.form, locale, 'termsOfService')}
+              value={(
+                getPolicyTextareaAttrs(locale, 'termsOfService') as { value?: string }
+              ).value ?? ''}
+              issues={getPolicyFields(locale).termsOfService.issues()}
+              rows={20}
+              textareaAttrs={getPolicyTextareaAttrs(locale, 'termsOfService')}
+            />
+          {/snippet}
+        </FormI18nSection>
+      </FormSurface>
     </Main.Facet>
   </Main.Form>
 
@@ -1894,22 +1941,33 @@ $effect(() => {
     transition="fade"
     fillHeight={true}
     edgeToEdge={true}
+    contentClass="h-full overflow-hidden"
     attrs={{ 'data-facet-id': 'images' }}
   >
-    {#if imageProviderProps.isValid}
-      <ImageProvider model={imageProviderModel}>
-        <ResourceViewer
-          canEditPresentationMode={canEditImagePresentationMode}
-          canEditDropzone={canEditImageDropzone}
-          {onPresentationModeCommitted}
-        />
-      </ImageProvider>
-    {:else}
-      <div
-        class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
-      >
-        {m.admin__forms_hub_image_save_hint()}
+    <FormSurface class="mb-0! flex h-full min-h-0 flex-col">
+      <SectionHeader
+        icon={ImageIcon}
+        title={m.admin__forms_project_image_title()}
+        class="shrink-0"
+      />
+      <div class="min-h-0 flex-1">
+        {#if imageProviderProps.isValid}
+          <ImageProvider model={imageProviderModel}>
+            <ResourceViewer
+              workspace
+              canEditPresentationMode={canEditImagePresentationMode}
+              canEditDropzone={canEditImageDropzone}
+              {onPresentationModeCommitted}
+            />
+          </ImageProvider>
+        {:else}
+          <div
+            class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted-foreground"
+          >
+            {m.admin__forms_hub_image_save_hint()}
+          </div>
+        {/if}
       </div>
-    {/if}
+    </FormSurface>
   </Main.Facet>
 </Main.Root>

@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { HeadingLevel, HeadingProps } from './heading.types'
 

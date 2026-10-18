@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS COMPONENTS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // TYPES
 import type { HeaderViewActionsProps } from './headerPrimitives.types'
 // STYLES
@@ -23,7 +23,7 @@ let {
   {#if content?.component}
     {@const InlineContent = content.component}
     <div class="mr-2 flex items-center">
-      <InlineContent {...(content.props ?? {})} />
+      <InlineContent {...content.props ?? {}} />
     </div>
   {/if}
 
@@ -56,7 +56,8 @@ let {
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       iconComponent={controlsAction.icon}
       hideLabel={hideLabel || controlsAction.alwaysHideLabel}
-      hideLabelInstantly={controlsAction.hideLabelInstantly ?? controlsAction.alwaysHideLabel}
+      hideLabelInstantly={controlsAction.hideLabelInstantly ??
+        controlsAction.alwaysHideLabel}
       disabled={controlsAction.disabled}
       onClick={() => controlsAction.onClick?.()}
     />
@@ -75,7 +76,8 @@ let {
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       iconComponent={layoutAction.icon}
       hideLabel={hideLabel || layoutAction.alwaysHideLabel}
-      hideLabelInstantly={layoutAction.hideLabelInstantly ?? layoutAction.alwaysHideLabel}
+      hideLabelInstantly={layoutAction.hideLabelInstantly ??
+        layoutAction.alwaysHideLabel}
       disabled={layoutAction.disabled}
       onClick={() => layoutAction.onClick?.()}
     />

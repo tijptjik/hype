@@ -1,7 +1,7 @@
 <script lang="ts">
 import FeatureRowStats from './FeatureRowStats.svelte'
-import type { AdminCtx } from '$lib/context/admin.svelte'
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { AdminCtx } from '#lib/context/admin.svelte.js'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 let {
   feature,
@@ -9,11 +9,11 @@ let {
   grapheme,
 }: {
   feature: Feature
-  appCtx: AdminCtx['appCtx']
+  appCtx: AdminCtx['view']
   grapheme: string
 } = $props()
 </script>
 
-<div class="bits-resource-row__stats">
+<div class="flex items-center justify-center min-w-0">
   <FeatureRowStats {feature} {appCtx} {grapheme} />
 </div>

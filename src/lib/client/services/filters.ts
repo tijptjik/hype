@@ -1,39 +1,51 @@
 // GUARDS
-import { isFeature } from '$lib/types'
+import { isFeature } from '#lib/utils/resourceGuards.js'
 //I18N
-import { getLocaleKey, m, supportedLocaleKeys } from '$lib/i18n'
+import { getLocaleKey, m, supportedLocaleKeys } from '#lib/i18n.js'
 // ENUMS
-import { localeCodes } from '$lib/enums'
-import type { FirstClassResource } from '$lib/enums'
+import { localeCodes } from '#lib/enums.js'
+import type { FirstClassResource } from '#lib/enums.js'
 // CONTEXT
 import type { AdminCtx } from '../../context/admin.svelte'
 // SERVICES
-import { sortProperties } from '$lib/client/services/property'
+import { sortProperties } from '#lib/client/services/property.js'
 // TYPES
 import type {
   FilterTriState,
-  FeatureTranslationFilterKey,
   FeatureViewFilters,
+  ViewFilters,
+} from '#lib/client/services/viewFilters.types.js'
+import type {
   PropertyFilterType,
   ResourceControlBarConfig,
   ResourceFilterConfigBase,
   ResourceFilterEntryConfig,
   ResourcePropertyFilterSectionConfig,
   ResourceFilterSection,
+  ViewFilterResource,
+} from '#lib/client/services/resourceFilters.types.js'
+import type {
   ResourceSortConfig,
   ResourceSortItemConfig,
-  ViewFilterResource,
-  ViewFilters,
-  LocaleKey,
-  Id,
-} from '$lib/types'
-import type { ResourceControlBarLocaleToggleItem } from '$lib/bits/patterns/resource/resourceControlBar/components'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { Hub } from '$lib/db/zod/schema/hub.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+} from '#lib/client/services/filters.types.js'
+import type { LocaleKey, Id } from '#lib/types.js'
+import type { ResourceControlBarLocaleToggleItem } from '#lib/bits/patterns/resource/resourceControlBar/components/index.js'
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+import type { Hub } from '#lib/db/zod/schema/hub.types.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
+// TYPES
+
+type FeatureTranslationFilterKey =
+  | 'isTitleTranslated'
+  | 'isDescriptionTranslated'
+  | 'isAddressTranslated'
+  | 'isSpecifierTranslated'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -153,11 +165,11 @@ export function matchesResourceTextQuery(
   const candidates = [
     'code' in entity ? entity.code : '',
     'id' in entity ? entity.id : '',
-    textObject?.name,
-    textObject?.title,
-    textObject?.nameShort,
+    textObject && 'name' in textObject ? textObject.name : '',
+    textObject && 'title' in textObject ? textObject.title : '',
+    textObject && 'nameShort' in textObject ? textObject.nameShort : '',
     textObject?.description,
-    textObject?.displayAddress,
+    textObject && 'displayAddress' in textObject ? textObject.displayAddress : '',
     contributor,
   ]
 
@@ -328,7 +340,7 @@ export function toggleResourceTranslationLocale<T extends ViewFilterResource>(
       supportedLocale === currentLocaleKey ? false : normalizedLocales[supportedLocale]
   }
 
-  adminCtx.appCtx.state.viewFilters[resource] = {
+  adminCtx.view.filters.viewFilters[resource] = {
     ...resourceFilters,
     translationLocales: nextTranslationLocales,
   } as ViewFilters[T]
@@ -475,7 +487,7 @@ function getResourceFilters<T extends ViewFilterResource>(
   adminCtx: AdminCtx,
   resource: T,
 ): ViewFilters[T] | null {
-  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return null
   return resourceFilters
 }
@@ -532,7 +544,7 @@ function isTranslationFilterConfig(
 function getPropertyFilters(
   adminCtx: AdminCtx,
 ): FeatureViewFilters['properties'] | null {
-  const propertyFilters = adminCtx.appCtx.state?.viewFilters?.feature?.properties
+  const propertyFilters = adminCtx.view.filters?.viewFilters?.feature?.properties
   if (!propertyFilters || typeof propertyFilters !== 'object') return null
   return propertyFilters
 }
@@ -548,7 +560,7 @@ function getSortedPropertiesByType(
   propertyType: PropertyFilterType,
 ): Property[] {
   return sortProperties(
-    [...adminCtx.appCtx.cache.property.values()]
+    [...adminCtx.view.cache.property.values()]
       .filter((property: Property) => property.type === propertyType)
       .map(property => ({ property })),
   ).map(item => item.property)
@@ -603,14 +615,14 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
       toggleResourceFilterState(adminCtx, resource, filterKey, false, activeLocales)
 
       if (filterConfig.refreshResource) {
-        adminCtx.appCtx.refresh(filterConfig.refreshResource)
+        adminCtx.view.queries.refresh(filterConfig.refreshResource)
       }
     },
     onToggleTrue: () => {
       toggleResourceFilterState(adminCtx, resource, filterKey, true, activeLocales)
 
       if (filterConfig.refreshResource) {
-        adminCtx.appCtx.refresh(filterConfig.refreshResource)
+        adminCtx.view.queries.refresh(filterConfig.refreshResource)
       }
     },
     onToggleChange: () => {
@@ -618,7 +630,7 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
       setResourceFilterState(adminCtx, resource, filterKey, nextState, activeLocales)
 
       if (filterConfig.refreshResource) {
-        adminCtx.appCtx.refresh(filterConfig.refreshResource)
+        adminCtx.view.queries.refresh(filterConfig.refreshResource)
       }
     },
     onSelectChange:
@@ -633,7 +645,7 @@ function createResourceFilterRenderItem<T extends ViewFilterResource>(
             )
 
             if (filterConfig.refreshResource) {
-              adminCtx.appCtx.refresh(filterConfig.refreshResource)
+              adminCtx.view.queries.refresh(filterConfig.refreshResource)
             }
           }
         : undefined,
@@ -679,14 +691,14 @@ export function getFilterRenderItems(
           toggleFilterState(adminCtx, 'properties', false, property.id, undefined)
 
           if (section.refreshResource) {
-            adminCtx.appCtx.refresh(section.refreshResource)
+            adminCtx.view.queries.refresh(section.refreshResource)
           }
         },
         onToggleTrue: () => {
           toggleFilterState(adminCtx, 'properties', true, property.id, undefined)
 
           if (section.refreshResource) {
-            adminCtx.appCtx.refresh(section.refreshResource)
+            adminCtx.view.queries.refresh(section.refreshResource)
           }
         },
         onToggleChange: () => {
@@ -699,7 +711,7 @@ export function getFilterRenderItems(
           )
 
           if (section.refreshResource) {
-            adminCtx.appCtx.refresh(section.refreshResource)
+            adminCtx.view.queries.refresh(section.refreshResource)
           }
         },
       }
@@ -823,7 +835,7 @@ export function getResourceFilterState<
   filterKey: K,
   activeLocales?: Set<LocaleKey>,
 ): ResourceFilterValue {
-  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return null
   const resourceFilterRecord = resourceFilters as Record<string, unknown>
 
@@ -861,7 +873,7 @@ export function getGenericTranslationFilterState<T extends keyof ViewFilters>(
   filterKey: string,
   activeLocales: Set<LocaleKey>,
 ): FilterTriState {
-  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return null
   const sectionFilters = (resourceFilters as Record<string, unknown>)[filterKey]
   if (!sectionFilters || typeof sectionFilters !== 'object') {
@@ -916,7 +928,7 @@ export function setResourceFilterState<
   newValue: ResourceFilterValue,
   activeLocales?: Set<LocaleKey>,
 ) {
-  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return
 
   // Handle translation filters
@@ -935,7 +947,7 @@ export function setResourceFilterState<
   } else {
     // Handle simple filters
     const resourceFilterRecord = resourceFilters as Record<string, unknown>
-    adminCtx.appCtx.state.viewFilters[resource] = {
+    adminCtx.view.filters.viewFilters[resource] = {
       ...resourceFilterRecord,
       [filterKey]: newValue,
     } as ViewFilters[T]
@@ -958,7 +970,7 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
   activeLocales: Set<LocaleKey>,
   value: FilterTriState,
 ) {
-  const resourceFilters = adminCtx.appCtx.state?.viewFilters?.[resource]
+  const resourceFilters = adminCtx.view.filters?.viewFilters?.[resource]
   if (!resourceFilters || typeof resourceFilters !== 'object') return
 
   const resourceFilterRecord = resourceFilters as Record<string, unknown>
@@ -984,7 +996,7 @@ export function setGenericTranslationFilterState<T extends keyof ViewFilters>(
     }
   }
 
-  adminCtx.appCtx.state.viewFilters[resource] = {
+  adminCtx.view.filters.viewFilters[resource] = {
     ...resourceFilterRecord,
     [filterKey]: sectionFilters,
   } as ViewFilters[T]
@@ -1021,7 +1033,8 @@ function getFilterState<K extends keyof FeatureViewFilters>(
   }
 
   if (filterKey === 'properties' && propertyId) {
-    return getSimpleFilterState(adminCtx, 'properties', propertyId)
+    const value = getSimpleFilterState(adminCtx, 'properties', propertyId)
+    return typeof value === 'boolean' ? value : null
   }
 
   return getResourceFilterState(
@@ -1141,7 +1154,7 @@ export function setSimpleFilterState<K extends keyof FeatureViewFilters>(
 
   const sectionFilters = featureFilters[filterKey]
   if (sectionFilters && typeof sectionFilters === 'object') {
-    adminCtx.appCtx.state.viewFilters.feature = {
+    adminCtx.view.filters.viewFilters.feature = {
       ...featureFilters,
       [filterKey]: {
         ...(sectionFilters as Record<string, FilterTriState>),

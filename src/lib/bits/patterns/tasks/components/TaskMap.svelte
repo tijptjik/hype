@@ -1,11 +1,11 @@
 <script lang="ts">
 import { tick } from 'svelte'
-import { cx } from '$lib/bits/utils'
-import Maplet from '$lib/bits/patterns/maps/Maplet.svelte'
-import { getAppCtx } from '$lib/context/app.svelte'
+import { cx } from '#lib/bits/utils.js'
+import Maplet from '#lib/bits/patterns/maps/Maplet.svelte'
 import type { TaskMapProps } from '../task.types'
-import ExpandIcon from 'virtual:icons/lucide/expand'
-import ShrinkIcon from 'virtual:icons/lucide/shrink'
+import type { MapController } from '#lib/map/controller.js'
+import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
+import ShrinkIcon from 'virtual:icons/proicons/full-screen-minimize'
 
 type StartViewTransitionCapableDocument = Document & {
   startViewTransition?: (update: () => void | Promise<void>) => {
@@ -20,8 +20,11 @@ let {
   class: className = '',
 }: TaskMapProps = $props()
 
-const appCtx = getAppCtx()
 let isFullscreen = $state(false)
+let taskMapController = $state<MapController | null>(null)
+const handleTaskMapReady = (controller: MapController | null): void => {
+  taskMapController = controller
+}
 
 async function runViewTransition(update: () => void | Promise<void>): Promise<void> {
   if (typeof document === 'undefined') {
@@ -53,7 +56,7 @@ async function toggleFullscreen(): Promise<void> {
     isFullscreen = !isFullscreen
   })
   await tick()
-  appCtx.map?.resize()
+  taskMapController?.resize()
 }
 
 function handleWindowKeydown(event: KeyboardEvent): void {
@@ -68,17 +71,23 @@ function handleWindowKeydown(event: KeyboardEvent): void {
 
 <section
   class={cx(
-    'relative min-h-[18rem] flex-1 overflow-hidden rounded-2xl border border-white/10 bg-black',
+    'relative min-h-[18rem] flex-1 overflow-hidden rounded-2xl border border-foreground/10 bg-panel',
     isFullscreen && 'fixed inset-0 z-[999] rounded-none border-0',
     className,
   )}
   style={isFullscreen ? 'view-transition-name: task-map-stage;' : undefined}
 >
-  <Maplet {coordinates} draggable={false} {addressMeta} {mapStyleCode} />
+  <Maplet
+    {coordinates}
+    draggable={false}
+    {addressMeta}
+    {mapStyleCode}
+    onMapReady={handleTaskMapReady}
+  />
 
   <button
     type="button"
-    class="absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-black/70 text-white transition hover:bg-black/90"
+    class="absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-foreground/12 bg-panel/70 text-foreground transition hover:bg-panel/90"
     onclick={() => {
       void toggleFullscreen()
     }}

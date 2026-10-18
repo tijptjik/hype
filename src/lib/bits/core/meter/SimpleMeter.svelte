@@ -1,10 +1,12 @@
 <script lang="ts">
-// BITS-UI
-import { Meter as MeterPrimitive } from 'bits-ui'
 // SVELTE
 import { onMount } from 'svelte'
 import { cubicOut } from 'svelte/easing'
 import { Tween } from 'svelte/motion'
+// BITS-UI
+import { Meter as MeterPrimitive } from 'bits-ui'
+// STYLES
+import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { SimpleMeterProps } from './meter.types'
 
@@ -28,11 +30,11 @@ const tween = new Tween(0, {
 let hasMounted = $state(false)
 
 const rootClasses = $derived(
-  ['bits-theme', 'bits-meter', className].filter(Boolean).join(' '),
+  cx('bits-theme relative overflow-hidden rounded-full bg-dark-10', className),
 )
 
 const indicatorClasses = $derived(
-  ['bits-theme', 'bits-meter__indicator', indicatorClass].filter(Boolean).join(' '),
+  cx('bits-theme block w-full h-full rounded-[inherit] bg-foreground', indicatorClass),
 )
 
 const normalizedValue = $derived.by(() => {

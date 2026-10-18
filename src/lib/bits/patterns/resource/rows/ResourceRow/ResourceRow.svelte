@@ -1,8 +1,8 @@
 <script lang="ts">
 // BITS
-import { SimpleTooltip } from '$lib/bits/core'
-import { Row } from '$lib/bits/custom'
-import { ResourceStatusBadge } from '$lib/bits'
+import { SimpleTooltip } from '#lib/bits/core/index.js'
+import { Row } from '#lib/bits/custom/index.js'
+import { ResourceStatusBadge } from '#lib/bits/index.js'
 import {
   getResourceRowMetaGridClass,
   getResourceRowClass,
@@ -13,7 +13,7 @@ import {
   resourceRowMetaIconClass,
   resourceRowMetaIconSvgClass,
   resourceRowStatusRailClass,
-} from '$lib/bits/custom/rows/row.styles'
+} from '#lib/bits/custom/rows/row.styles.js'
 // TYPES
 import type { ResourceRowProps } from './resourceRow.types'
 
@@ -112,7 +112,10 @@ const statusTone = $derived.by(() => {
         breadcrumbVariant,
       })}
     >
-      {#each Array.from({ length: resolvedBreadcrumbColumnCount }, (_, index) => index) as columnIndex (columnIndex)}
+      {#each Array.from(
+        { length: resolvedBreadcrumbColumnCount },
+        (_, index) => index,
+      ) as columnIndex (columnIndex)}
         {@const breadcrumb = reversedBreadcrumbs[columnIndex]}
         <div class={resourceRowMetaCellClass}>
           {#if breadcrumb}

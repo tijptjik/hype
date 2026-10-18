@@ -1,36 +1,43 @@
 <script lang="ts">
+import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 import { page } from '$app/state'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
-import { createAdminIndexCardModel } from '$lib/adapters/cards/createAdminIndexCardModel'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
+import { createAdminIndexCardModel } from '#lib/adapters/cards/createAdminIndexCardModel.js'
 // SERVICES
 import {
   createSortable,
   createSortables,
   createToggleFilter,
   createTranslationFilter,
-} from '$lib/client/services/filters'
+} from '#lib/client/services/filters.js'
 // BITS PATTERNS
-import { IndexCard, ResourceControlBar, ResourceIndex, ResourceRow } from '$lib/bits'
+import {
+  IndexCard,
+  ResourceControlBar,
+  ResourceIndex,
+  ResourceRow,
+} from '#lib/bits/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // AUTHORIZATION
 import {
   authorizeOrganisationCreate,
   toOrganisationAuthActor,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // ICONS
-import OrganisationIcon from 'virtual:icons/lucide/users-round'
-import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import ImageIcon from 'virtual:icons/lucide/image'
+import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
+import StatusIcon from 'virtual:icons/proicons/target'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import ImageIcon from 'virtual:icons/proicons/photo'
 // TYPES
-import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
+import type { KeyMap } from '#lib/client/services/resourceCards.types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
 
 // CONFIG :: KEY MAP
 const RESOURCE = FirstClassResource.organisation
@@ -147,8 +154,8 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, RESOURCE)
 
-const currentUser = $derived(adminCtx.appCtx.getUser())
-const currentHub = $derived(adminCtx.appCtx.hub)
+const currentUser = $derived(adminCtx.view.account.user)
+const currentHub = $derived(adminCtx.view.hub)
 const currentActor = $derived(toOrganisationAuthActor(currentUser))
 
 const canCreateOrganisation = $derived.by(() => {
@@ -178,14 +185,22 @@ $effect(() => {
     },
     {
       isVisible:
-        adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.organisation],
+        adminCtx.listUi.state.isControlBarVisible[FirstClassResource.organisation],
     },
   )
   headerCtrl.clearFooter()
 })
 // STATE
+const resourceList = usePanelResources(
+  adminCtx.view,
+  'organisation',
+  () => adminCtx.view.filters.values.organisation.text ?? '',
+  'index',
+)
 let entities: Organisation[] = $derived(
-  adminCtx.getViewFilteredResource<Organisation>(FirstClassResource.organisation),
+  adminCtx.view.filters.applyOrganisationViewFilters(
+    resourceList.rows as unknown as Organisation[],
+  ) as Organisation[],
 )
 
 function getIndexModel(entity: Organisation) {
@@ -199,11 +214,23 @@ function getIndexModel(entity: Organisation) {
 }
 </script>
 
-<ResourceIndex resource={FirstClassResource.organisation} {entities}>
-  {#snippet card(entity: Organisation)}
+<ResourceIndex
+  isInitialised={resourceList.list.isInitialised}
+  onNearEnd={() => resourceList.list.next()}
+  hasMore={resourceList.list.hasMore}
+  isLoadingMore={resourceList.list.loading}
+  resource={FirstClassResource.organisation}
+  {entities}
+>
+  {#snippet card(
+    entity: Organisation,
+  )}
     <IndexCard {...getIndexModel(entity)} />
   {/snippet}
-  {#snippet row(entity: Organisation, index)}
+  {#snippet row(
+    entity: Organisation,
+    index,
+  )}
     <ResourceRow {index} breadcrumbColumnCount={0} {...getIndexModel(entity)} />
   {/snippet}
 </ResourceIndex>

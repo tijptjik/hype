@@ -1,4 +1,4 @@
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 
 export const textTitleClass = 'w-full text-left font-medium text-base-content'
 

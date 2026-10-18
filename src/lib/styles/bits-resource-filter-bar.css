@@ -1,24 +1,7 @@
 @layer components {
-  .bits-resource-filter-bar {
-    @apply relative flex h-16 w-full flex-row items-center justify-between gap-4 bg-base-200;
-  }
-
-  .bits-resource-filter-bar__left {
-    @apply flex min-w-0 items-center;
-  }
-
-  .bits-resource-filter-bar__right {
-    @apply flex items-center gap-4 pr-8 text-base-content/60;
-    white-space: nowrap;
-  }
-
   .bits-resource-filter-bar__filter {
     @apply mx-4 flex h-16 items-center gap-4;
     white-space: nowrap;
-  }
-
-  .bits-resource-filter-bar__filter-anchor {
-    @apply flex items-center justify-center opacity-70 transition-opacity duration-300 hover:opacity-100;
   }
 
   .bits-resource-filter-bar__filter-trigger {
@@ -33,15 +16,6 @@
     background-color: color-mix(in oklab, var(--color-base-300) 10%, transparent);
   }
 
-  .bits-resource-filter-bar__filter-content {
-    @apply relative flex flex-row items-center;
-  }
-
-  .bits-resource-filter-bar__filter-menu {
-    @apply absolute z-30 flex h-16 items-center gap-2 bg-base-200;
-    white-space: nowrap;
-  }
-
   .bits-resource-filter-bar__filter-active {
     @apply absolute z-20 flex w-auto flex-row justify-center gap-2 transition-opacity duration-300;
     white-space: nowrap;
@@ -49,14 +23,6 @@
 
   .bits-resource-filter-bar__filter-active--hidden {
     @apply opacity-0;
-  }
-
-  .bits-resource-filter-bar__active-strip {
-    @apply flex h-16 flex-row items-center justify-center gap-4;
-  }
-
-  .bits-resource-filter-bar__carousel-track {
-    @apply flex min-w-0 flex-row items-center justify-center gap-4 overflow-hidden;
   }
 
   .bits-resource-filter-bar__carousel-nav {
@@ -117,16 +83,16 @@
     display: inline-grid;
     justify-items: center;
     row-gap: 0.5rem;
-    padding-top: 1rem;
+    padding-top: calc(1rem + 2px);
     transform: translateX(var(--bits-resource-filter-bar-tri-toggle-offset, 0px));
   }
 
   .bits-resource-filter-bar__tri-toggle-label {
     @apply text-center text-xs uppercase leading-none text-base-content/70;
     position: absolute;
-    top: 0;
+    top: calc(-1rem - 2px);
     left: 50%;
-    max-width: calc(100% + 1.5rem);
+    width: max-content;
     white-space: nowrap;
     transform: translateX(-50%);
   }
@@ -177,14 +143,22 @@
     justify-self: center;
   }
 
-  .bits-resource-filter-bar__tri-toggle-control .bits-switch[data-state="unchecked"] {
+  .bits-resource-filter-bar__tri-toggle-control
+    .bits-switch.bits-switch--states-3[data-state="unchecked"] {
     --switch-current-color: var(--color-error);
-    background-color: color-mix(in oklab, var(--color-error) 18%, #313131cc);
+    background-color: var(
+      --theme-switch-off-track,
+      color-mix(in oklab, var(--color-error) 18%, var(--color-raised))
+    );
   }
 
-  .bits-resource-filter-bar__tri-toggle-control .bits-switch[data-state="checked"] {
+  .bits-resource-filter-bar__tri-toggle-control
+    .bits-switch.bits-switch--states-3[data-state="checked"] {
     --switch-current-color: var(--color-success);
-    background-color: color-mix(in oklab, var(--color-success) 24%, #313131cc);
+    background-color: var(
+      --theme-switch-on-track,
+      color-mix(in oklab, var(--color-success) 24%, var(--color-raised))
+    );
   }
 
   .bits-resource-filter-bar__tri-toggle-control
@@ -208,10 +182,6 @@
     background-color: color-mix(in oklab, var(--color-base-content) 18%, transparent);
   }
 
-  .bits-resource-filter-bar__locale-group-items {
-    @apply flex flex-row gap-2;
-  }
-
   .bits-resource-filter-bar__locale-group-button {
     @apply min-w-0 rounded-md px-2.5;
     border-color: transparent;
@@ -230,7 +200,7 @@
   .bits-resource-filter-bar__locale-group-button--active {
     background-color: var(--color-secondary);
     border-color: transparent;
-    color: white;
+    color: var(--color-secondary-content);
     font-weight: 700;
     box-shadow: none;
   }
@@ -243,6 +213,6 @@
   ):not([aria-disabled="true"]) {
     background-color: color-mix(in oklab, var(--color-secondary) 90%, white);
     border-color: transparent;
-    color: white;
+    color: var(--color-secondary-content);
   }
 }

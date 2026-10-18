@@ -1,6 +1,6 @@
 <script lang="ts">
-import { Card } from '$lib/bits/custom'
-import { SimpleTooltip } from '$lib/bits/core'
+import { Card } from '#lib/bits/custom/index.js'
+import { SimpleTooltip } from '#lib/bits/core/index.js'
 import type { LayerPropertyCardBodyProps } from '../layerPropertyCard.types'
 
 let {
@@ -17,13 +17,12 @@ const IconComponent = $derived(iconComponent)
 
 <Card.Body title={name || '-'} class={`bits-form__layer-card-body ${className}`}>
   {#snippet tags()}
-    <div class="bits-form__layer-card-meta">
+    <div class="inline-flex items-center gap-2 flex-wrap">
       {#if IconComponent}
         <SimpleTooltip disabled={!iconTitle}>
           {#snippet trigger()}
             <span
               class={`bits-form__layer-card-type-icon-wrap bits-form__layer-card-type-icon-wrap--${scopeTone}`}
-              aria-label={iconTitle ?? undefined}
             >
               <IconComponent class="bits-form__layer-card-type-icon" />
             </span>

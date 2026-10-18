@@ -52,7 +52,7 @@ const overflowAttach = createAdaptiveToolbarOverflowAttach({
 <header
   class={rootClass}
   {@attach overflowAttach}
-  {...(restProps as Record<string, unknown>)}
+  {...restProps as Record<string, unknown>}
 >
   <div class="bits-pattern-header__left" data-adaptive-toolbar-left-group>
     {@render left?.(renderState)}

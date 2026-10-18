@@ -1,7 +1,10 @@
 import type { z } from 'zod'
-import type { EntityResponse, FormLocaleInput, LayerMetadata } from '$lib/types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+import type { EntityResponse } from '#lib/types.js'
+import type { FormLocaleInput } from '#lib/client/services/formLocale.types.js'
+import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
+  LayerCompactProfileAPI,
   LayerAdminProfileAPI,
   LayerCardProfileAPI,
   LayerDetailProfileAPI,
@@ -26,7 +29,7 @@ import type {
   RemoveLayerSchema,
   UserLayerRecord,
   UserLayerRecordCreate,
-} from '$lib/db/zod/schema/layer'
+} from '#lib/db/zod/schema/layer.js'
 
 export type LayerListParams = ListQueryParams
 export type LayerGetParams = GetQueryParams
@@ -36,21 +39,25 @@ export type LayerCardProfile = z.infer<typeof LayerCardProfileAPI>
 export type LayerDetailProfile = z.infer<typeof LayerDetailProfileAPI>
 export type LayerAdminProfile = z.infer<typeof LayerAdminProfileAPI>
 
-export type LayerEntityByProfile<P extends LayerProfile> = P extends 'list'
-  ? LayerListProfile
-  : P extends 'card'
-    ? LayerCardProfile
-    : P extends 'detail'
-      ? LayerDetailProfile
-      : LayerAdminProfile
+export type LayerEntityByProfile<P extends LayerProfile> = P extends 'compact'
+  ? z.infer<typeof LayerCompactProfileAPI>
+  : P extends 'list'
+    ? LayerListProfile
+    : P extends 'card' | 'default' | 'map'
+      ? LayerCardProfile
+      : P extends 'detail' | 'full'
+        ? LayerDetailProfile
+        : LayerAdminProfile
 
-export type LayerListByProfile<P extends LayerProfile> = P extends 'list'
-  ? LayerListProfile
-  : P extends 'card'
-    ? LayerCardProfile
-    : P extends 'detail'
-      ? LayerDetailProfile
-      : LayerAdminProfile
+export type LayerListByProfile<P extends LayerProfile> = P extends 'compact'
+  ? z.infer<typeof LayerCompactProfileAPI>
+  : P extends 'list'
+    ? LayerListProfile
+    : P extends 'card' | 'default' | 'map'
+      ? LayerCardProfile
+      : P extends 'detail' | 'full'
+        ? LayerDetailProfile
+        : LayerAdminProfile
 
 export type LayerGetParamsByProfile<P extends LayerProfile> = Omit<
   LayerGetParams,

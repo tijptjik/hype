@@ -1,0 +1,1093 @@
+{
+  "runAt": "2026-10-17T18:20:54.375Z",
+  "base": "http://api.atlas.localhost",
+  "origin": "http://hype.localhost",
+  "fixture": "docs/benchmarks/geocoder-florists-2026-10-18.json",
+  "status": "blocked",
+  "plannedQueries": 75,
+  "attemptedQueries": 7,
+  "unattemptedQueries": 68,
+  "results": [
+    {
+      "id": "florist-01",
+      "mode": "reverse",
+      "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.15559359999999&lat=22.282631499999997&profile=default&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
+      "durationMs": 8772,
+      "httpStatus": 200,
+      "candidates": [
+        {
+          "status": "resolved",
+          "addressId": "ss-8cd5acc6-d107-5be6-869c-3ef7a3393b7a",
+          "addresses": {
+            "en": "CRAWFORD HOUSE, 70 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "卡佛大廈70皇后大道中中西區香港"
+          },
+          "distanceToGoogleMetres": 7.531211314776638
+        },
+        {
+          "status": "resolved",
+          "addressId": "ss-9b3ff1d0-dad0-5085-8def-da16bb7dc98f",
+          "addresses": {
+            "en": "PARKER HSE, 72 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "百佳大廈72皇后大道中中西區香港"
+          },
+          "distanceToGoogleMetres": 23.021851598342142
+        },
+        {
+          "status": "resolved",
+          "addressId": "ss-6e490e5e-b19f-5cf9-8a7e-1c35655c207a",
+          "addresses": {
+            "en": "THE POTTINGER HONG KONG, 74 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "中環‧石板街酒店74皇后大道中中西區香港"
+          },
+          "distanceToGoogleMetres": 26.927003744998657
+        },
+        {
+          "status": "resolved",
+          "addressId": "ss-318244cb-71ed-5f8b-bf70-5deb5ec4c3cc",
+          "addresses": {
+            "en": "THE POTTINGER HONG KONG, 21 STANLEY STREET, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "中環‧石板街酒店21士丹利街中西區香港"
+          },
+          "distanceToGoogleMetres": 30.385138151832457
+        },
+        {
+          "status": "resolved",
+          "addressId": "ss-027ab8c1-a021-5282-aeb3-4f355ebef53d",
+          "addresses": {
+            "en": "PETER BUILDING, 60 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "振邦大廈60皇后大道中中西區香港"
+          },
+          "distanceToGoogleMetres": 30.907922922838907
+        }
+      ],
+      "outcome": "results",
+      "top1Within50m": true,
+      "top1Within100m": true,
+      "top5Within100m": true,
+      "body": {
+        "jsonapi": {
+          "version": "1.1"
+        },
+        "data": [
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-8cd5acc6-d107-5be6-869c-3ef7a3393b7a",
+            "attributes": {
+              "status": "resolved",
+              "rank": 1,
+              "coordinates": [
+                114.15559359999999,
+                22.282631499999997
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 7.531211314776638
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-8cd5acc6-d107-5be6-869c-3ef7a3393b7a"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-9b3ff1d0-dad0-5085-8def-da16bb7dc98f",
+            "attributes": {
+              "status": "resolved",
+              "rank": 2,
+              "coordinates": [
+                114.15559359999999,
+                22.282631499999997
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 23.021851598342142
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-9b3ff1d0-dad0-5085-8def-da16bb7dc98f"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-6e490e5e-b19f-5cf9-8a7e-1c35655c207a",
+            "attributes": {
+              "status": "resolved",
+              "rank": 3,
+              "coordinates": [
+                114.15559359999999,
+                22.282631499999997
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 26.927003744998657
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-6e490e5e-b19f-5cf9-8a7e-1c35655c207a"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-318244cb-71ed-5f8b-bf70-5deb5ec4c3cc",
+            "attributes": {
+              "status": "resolved",
+              "rank": 4,
+              "coordinates": [
+                114.15559359999999,
+                22.282631499999997
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 30.385138151832457
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-318244cb-71ed-5f8b-bf70-5deb5ec4c3cc"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-027ab8c1-a021-5282-aeb3-4f355ebef53d",
+            "attributes": {
+              "status": "resolved",
+              "rank": 5,
+              "coordinates": [
+                114.15559359999999,
+                22.282631499999997
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 30.907922922838907
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-027ab8c1-a021-5282-aeb3-4f355ebef53d"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "included": [
+          {
+            "type": "addresses",
+            "id": "ss-8cd5acc6-d107-5be6-869c-3ef7a3393b7a",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "CRAWFORD HOUSE, 70 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "CRAWFORD HOUSE",
+                  "buildingNumberExpression": "70",
+                  "buildingNumberFrom": "70",
+                  "streetName": "QUEEN'S ROAD CENTRAL"
+                },
+                "zh-hant": {
+                  "formattedAddress": "卡佛大廈70皇后大道中中西區香港",
+                  "buildingName": "卡佛大廈",
+                  "buildingNumberExpression": "70",
+                  "buildingNumberFrom": "70",
+                  "streetName": "皇后大道中"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-9b3ff1d0-dad0-5085-8def-da16bb7dc98f",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "PARKER HSE, 72 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "PARKER HSE",
+                  "buildingNumberExpression": "72",
+                  "buildingNumberFrom": "72",
+                  "streetName": "QUEEN'S ROAD CENTRAL"
+                },
+                "zh-hant": {
+                  "formattedAddress": "百佳大廈72皇后大道中中西區香港",
+                  "buildingName": "百佳大廈",
+                  "buildingNumberExpression": "72",
+                  "buildingNumberFrom": "72",
+                  "streetName": "皇后大道中"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-6e490e5e-b19f-5cf9-8a7e-1c35655c207a",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "THE POTTINGER HONG KONG, 74 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "THE POTTINGER HONG KONG",
+                  "buildingNumberExpression": "74",
+                  "buildingNumberFrom": "74",
+                  "streetName": "QUEEN'S ROAD CENTRAL"
+                },
+                "zh-hant": {
+                  "formattedAddress": "中環‧石板街酒店74皇后大道中中西區香港",
+                  "buildingName": "中環‧石板街酒店",
+                  "buildingNumberExpression": "74",
+                  "buildingNumberFrom": "74",
+                  "streetName": "皇后大道中"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-318244cb-71ed-5f8b-bf70-5deb5ec4c3cc",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "THE POTTINGER HONG KONG, 21 STANLEY STREET, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "THE POTTINGER HONG KONG",
+                  "buildingNumberExpression": "21",
+                  "buildingNumberFrom": "21",
+                  "streetName": "STANLEY STREET"
+                },
+                "zh-hant": {
+                  "formattedAddress": "中環‧石板街酒店21士丹利街中西區香港",
+                  "buildingName": "中環‧石板街酒店",
+                  "buildingNumberExpression": "21",
+                  "buildingNumberFrom": "21",
+                  "streetName": "士丹利街"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-027ab8c1-a021-5282-aeb3-4f355ebef53d",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "PETER BUILDING, 60 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "PETER BUILDING",
+                  "buildingNumberExpression": "60",
+                  "buildingNumberFrom": "60",
+                  "streetName": "QUEEN'S ROAD CENTRAL"
+                },
+                "zh-hant": {
+                  "formattedAddress": "振邦大廈60皇后大道中中西區香港",
+                  "buildingName": "振邦大廈",
+                  "buildingNumberExpression": "60",
+                  "buildingNumberFrom": "60",
+                  "streetName": "皇后大道中"
+                }
+              }
+            }
+          }
+        ],
+        "meta": {
+          "profile": "default",
+          "direction": "reverse",
+          "release": {
+            "apiReleaseSet": "data-hk-addresses-2026-09-22.0"
+          },
+          "resolution": "resolved",
+          "total": 3359,
+          "truncated": true,
+          "maxDistance": 1000
+        }
+      },
+      "addressIdentityReview": {
+        "top1": "correct_building_and_street",
+        "notes": "Correct street and number; returned building is consistent with the listing. Shop/floor is absent."
+      }
+    },
+    {
+      "id": "florist-01",
+      "mode": "forward_raw",
+      "query": "http://api.atlas.localhost/addresses/v1/geocode?address=Room+1104%2C+11%2FF%2C+70+Queen%27s+Road+Central%2C+Central%2C+Hong+Kong+Island%2C+Hong+Kong&profile=default&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
+      "durationMs": 448,
+      "httpStatus": 200,
+      "candidates": [],
+      "top1Within50m": null,
+      "top1Within100m": null,
+      "top5Within100m": null,
+      "outcome": "no_match",
+      "body": {
+        "jsonapi": {
+          "version": "1.1"
+        },
+        "data": [],
+        "included": [],
+        "meta": {
+          "profile": "default",
+          "direction": "forward",
+          "release": {
+            "apiReleaseSet": "data-hk-addresses-2026-09-22.0"
+          },
+          "resolution": "not_found",
+          "total": 0,
+          "truncated": false
+        }
+      },
+      "addressIdentityReview": {
+        "top1": "no_match"
+      }
+    },
+    {
+      "id": "florist-01",
+      "mode": "forward_core",
+      "query": "http://api.atlas.localhost/addresses/v1/geocode?address=70+Queen%27s+Road+Central&profile=default&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
+      "durationMs": 364,
+      "httpStatus": 200,
+      "candidates": [
+        {
+          "status": "ambiguous",
+          "addressId": "ss-8a39e475-8146-59f4-9a08-538b667bddce",
+          "addresses": {
+            "en": "370 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "370皇后大道中中西區香港"
+          },
+          "distanceToGoogleMetres": null
+        },
+        {
+          "status": "ambiguous",
+          "addressId": "ss-8cd5acc6-d107-5be6-869c-3ef7a3393b7a",
+          "addresses": {
+            "en": "CRAWFORD HOUSE, 70 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "卡佛大廈70皇后大道中中西區香港"
+          },
+          "distanceToGoogleMetres": null
+        },
+        {
+          "status": "ambiguous",
+          "addressId": "ss-aaaba9a2-186c-55d0-b1e2-78bbe2c47983",
+          "addresses": {
+            "en": "CENTRAL MANSION, 270 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "中央大廈270皇后大道中中西區香港"
+          },
+          "distanceToGoogleMetres": null
+        }
+      ],
+      "outcome": "results",
+      "top1Within50m": null,
+      "top1Within100m": null,
+      "top5Within100m": null,
+      "body": {
+        "jsonapi": {
+          "version": "1.1"
+        },
+        "data": [
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-8a39e475-8146-59f4-9a08-538b667bddce",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 1,
+              "match": {
+                "type": "partial_text",
+                "score": 0.6
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-8a39e475-8146-59f4-9a08-538b667bddce"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-8cd5acc6-d107-5be6-869c-3ef7a3393b7a",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 2,
+              "match": {
+                "type": "partial_text",
+                "score": 0.6
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-8cd5acc6-d107-5be6-869c-3ef7a3393b7a"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-aaaba9a2-186c-55d0-b1e2-78bbe2c47983",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 3,
+              "match": {
+                "type": "partial_text",
+                "score": 0.6
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-aaaba9a2-186c-55d0-b1e2-78bbe2c47983"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "included": [
+          {
+            "type": "addresses",
+            "id": "ss-8a39e475-8146-59f4-9a08-538b667bddce",
+            "attributes": {
+              "granularity": "unknown",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "370 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingNumberExpression": "370",
+                  "buildingNumberFrom": "370",
+                  "streetName": "QUEEN'S ROAD CENTRAL"
+                },
+                "zh-hant": {
+                  "formattedAddress": "370皇后大道中中西區香港",
+                  "buildingNumberExpression": "370",
+                  "buildingNumberFrom": "370",
+                  "streetName": "皇后大道中"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-8cd5acc6-d107-5be6-869c-3ef7a3393b7a",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "CRAWFORD HOUSE, 70 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "CRAWFORD HOUSE",
+                  "buildingNumberExpression": "70",
+                  "buildingNumberFrom": "70",
+                  "streetName": "QUEEN'S ROAD CENTRAL"
+                },
+                "zh-hant": {
+                  "formattedAddress": "卡佛大廈70皇后大道中中西區香港",
+                  "buildingName": "卡佛大廈",
+                  "buildingNumberExpression": "70",
+                  "buildingNumberFrom": "70",
+                  "streetName": "皇后大道中"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-aaaba9a2-186c-55d0-b1e2-78bbe2c47983",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "CENTRAL MANSION, 270 QUEEN'S ROAD CENTRAL, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "CENTRAL MANSION",
+                  "buildingNumberExpression": "270",
+                  "buildingNumberFrom": "270",
+                  "streetName": "QUEEN'S ROAD CENTRAL"
+                },
+                "zh-hant": {
+                  "formattedAddress": "中央大廈270皇后大道中中西區香港",
+                  "buildingName": "中央大廈",
+                  "buildingNumberExpression": "270",
+                  "buildingNumberFrom": "270",
+                  "streetName": "皇后大道中"
+                }
+              }
+            }
+          }
+        ],
+        "meta": {
+          "profile": "default",
+          "direction": "forward",
+          "release": {
+            "apiReleaseSet": "data-hk-addresses-2026-09-22.0"
+          },
+          "resolution": "ambiguous",
+          "total": 3,
+          "truncated": false
+        }
+      },
+      "addressIdentityReview": {
+        "top1": "wrong_street_number",
+        "correctCandidateRank": 2,
+        "notes": "70 matched 370, or 29 matched 229, ahead of the exact street-number candidate."
+      }
+    },
+    {
+      "id": "florist-02",
+      "mode": "reverse",
+      "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.153786&lat=22.282127&profile=default&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
+      "durationMs": 7113,
+      "httpStatus": 200,
+      "candidates": [
+        {
+          "status": "ambiguous",
+          "addressId": "ss-a2f98898-14e5-5a7e-b469-684d586fb6cc",
+          "addresses": {
+            "en": "HOLLYWOOD HSE, 29 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "活麟大廈29荷李活道中西區香港"
+          },
+          "distanceToGoogleMetres": 2.695908173242253
+        },
+        {
+          "status": "ambiguous",
+          "addressId": "ss-a449c0ee-1c74-509f-b724-5918f020ee7d",
+          "addresses": {
+            "en": "HOLLYWOOD HSE, 27 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "活麟大廈27荷李活道中西區香港"
+          },
+          "distanceToGoogleMetres": 2.695908173242253
+        },
+        {
+          "status": "ambiguous",
+          "addressId": "ss-6abf0a4d-2bd4-55fc-9b4a-f3c84bc55602",
+          "addresses": {
+            "en": "31-33 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "3133荷李活道中西區香港"
+          },
+          "distanceToGoogleMetres": 12.857562687661595
+        },
+        {
+          "status": "ambiguous",
+          "addressId": "ss-1d0b733a-7f23-59f2-86da-7b7bd45b16e0",
+          "addresses": {
+            "en": "AMBER LODGE, 23 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "金珀苑23荷李活道中西區香港"
+          },
+          "distanceToGoogleMetres": 16.127274472328136
+        },
+        {
+          "status": "ambiguous",
+          "addressId": "ss-d6fbb72b-045c-5033-9c90-eda082dc955f",
+          "addresses": {
+            "en": "20 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "20荷李活道中西區香港"
+          },
+          "distanceToGoogleMetres": 16.76011903943976
+        }
+      ],
+      "outcome": "results",
+      "top1Within50m": true,
+      "top1Within100m": true,
+      "top5Within100m": true,
+      "body": {
+        "jsonapi": {
+          "version": "1.1"
+        },
+        "data": [
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-a2f98898-14e5-5a7e-b469-684d586fb6cc",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 1,
+              "coordinates": [
+                114.153786,
+                22.282127
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 2.695908173242253
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-a2f98898-14e5-5a7e-b469-684d586fb6cc"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-a449c0ee-1c74-509f-b724-5918f020ee7d",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 2,
+              "coordinates": [
+                114.153786,
+                22.282127
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 2.695908173242253
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-a449c0ee-1c74-509f-b724-5918f020ee7d"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-6abf0a4d-2bd4-55fc-9b4a-f3c84bc55602",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 3,
+              "coordinates": [
+                114.153786,
+                22.282127
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 12.857562687661595
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-6abf0a4d-2bd4-55fc-9b4a-f3c84bc55602"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-1d0b733a-7f23-59f2-86da-7b7bd45b16e0",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 4,
+              "coordinates": [
+                114.153786,
+                22.282127
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 16.127274472328136
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-1d0b733a-7f23-59f2-86da-7b7bd45b16e0"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-d6fbb72b-045c-5033-9c90-eda082dc955f",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 5,
+              "coordinates": [
+                114.153786,
+                22.282127
+              ],
+              "match": {
+                "type": "nearest",
+                "distanceMetres": 16.76011903943976
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-d6fbb72b-045c-5033-9c90-eda082dc955f"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "included": [
+          {
+            "type": "addresses",
+            "id": "ss-a2f98898-14e5-5a7e-b469-684d586fb6cc",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "HOLLYWOOD HSE, 29 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "HOLLYWOOD HSE",
+                  "buildingNumberExpression": "29",
+                  "buildingNumberFrom": "29",
+                  "streetName": "HOLLYWOOD ROAD"
+                },
+                "zh-hant": {
+                  "formattedAddress": "活麟大廈29荷李活道中西區香港",
+                  "buildingName": "活麟大廈",
+                  "buildingNumberExpression": "29",
+                  "buildingNumberFrom": "29",
+                  "streetName": "荷李活道"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-a449c0ee-1c74-509f-b724-5918f020ee7d",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "HOLLYWOOD HSE, 27 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "HOLLYWOOD HSE",
+                  "buildingNumberExpression": "27",
+                  "buildingNumberFrom": "27",
+                  "streetName": "HOLLYWOOD ROAD"
+                },
+                "zh-hant": {
+                  "formattedAddress": "活麟大廈27荷李活道中西區香港",
+                  "buildingName": "活麟大廈",
+                  "buildingNumberExpression": "27",
+                  "buildingNumberFrom": "27",
+                  "streetName": "荷李活道"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-6abf0a4d-2bd4-55fc-9b4a-f3c84bc55602",
+            "attributes": {
+              "granularity": "unknown",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "31-33 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingNumberFrom": "31",
+                  "buildingNumberTo": "33",
+                  "streetName": "HOLLYWOOD ROAD"
+                },
+                "zh-hant": {
+                  "formattedAddress": "3133荷李活道中西區香港",
+                  "buildingNumberFrom": "31",
+                  "buildingNumberTo": "33",
+                  "streetName": "荷李活道"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-1d0b733a-7f23-59f2-86da-7b7bd45b16e0",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "AMBER LODGE, 23 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "AMBER LODGE",
+                  "buildingNumberExpression": "23",
+                  "buildingNumberFrom": "23",
+                  "streetName": "HOLLYWOOD ROAD"
+                },
+                "zh-hant": {
+                  "formattedAddress": "金珀苑23荷李活道中西區香港",
+                  "buildingName": "金珀苑",
+                  "buildingNumberExpression": "23",
+                  "buildingNumberFrom": "23",
+                  "streetName": "荷李活道"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-d6fbb72b-045c-5033-9c90-eda082dc955f",
+            "attributes": {
+              "granularity": "unknown",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "20 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingNumberExpression": "20",
+                  "buildingNumberFrom": "20",
+                  "streetName": "HOLLYWOOD ROAD"
+                },
+                "zh-hant": {
+                  "formattedAddress": "20荷李活道中西區香港",
+                  "buildingNumberExpression": "20",
+                  "buildingNumberFrom": "20",
+                  "streetName": "荷李活道"
+                }
+              }
+            }
+          }
+        ],
+        "meta": {
+          "profile": "default",
+          "direction": "reverse",
+          "release": {
+            "apiReleaseSet": "data-hk-addresses-2026-09-22.0"
+          },
+          "resolution": "ambiguous",
+          "total": 3523,
+          "truncated": true,
+          "maxDistance": 1000
+        }
+      },
+      "addressIdentityReview": {
+        "top1": "correct_building_and_street",
+        "notes": "Correct street and number; returned building is consistent with the listing. Shop/floor is absent."
+      }
+    },
+    {
+      "id": "florist-02",
+      "mode": "forward_raw",
+      "query": "http://api.atlas.localhost/addresses/v1/geocode?address=2F%2C+Hollywood+House%2C+29+Hollywood+Rd%2C+Central%2C+Hong+Kong+Island%2C+Hong+Kong&profile=default&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
+      "durationMs": 278,
+      "httpStatus": 200,
+      "candidates": [],
+      "top1Within50m": null,
+      "top1Within100m": null,
+      "top5Within100m": null,
+      "outcome": "no_match",
+      "body": {
+        "jsonapi": {
+          "version": "1.1"
+        },
+        "data": [],
+        "included": [],
+        "meta": {
+          "profile": "default",
+          "direction": "forward",
+          "release": {
+            "apiReleaseSet": "data-hk-addresses-2026-09-22.0"
+          },
+          "resolution": "not_found",
+          "total": 0,
+          "truncated": false
+        }
+      },
+      "addressIdentityReview": {
+        "top1": "no_match"
+      }
+    },
+    {
+      "id": "florist-02",
+      "mode": "forward_core",
+      "query": "http://api.atlas.localhost/addresses/v1/geocode?address=29+Hollywood+Road&profile=default&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
+      "durationMs": 343,
+      "httpStatus": 200,
+      "candidates": [
+        {
+          "status": "ambiguous",
+          "addressId": "ss-8f973e3d-96f8-5f13-a253-d177673d5434",
+          "addresses": {
+            "en": "229 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "229荷李活道中西區香港"
+          },
+          "distanceToGoogleMetres": null
+        },
+        {
+          "status": "ambiguous",
+          "addressId": "ss-a2f98898-14e5-5a7e-b469-684d586fb6cc",
+          "addresses": {
+            "en": "HOLLYWOOD HSE, 29 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+            "zh-hant": "活麟大廈29荷李活道中西區香港"
+          },
+          "distanceToGoogleMetres": null
+        }
+      ],
+      "outcome": "results",
+      "top1Within50m": null,
+      "top1Within100m": null,
+      "top5Within100m": null,
+      "body": {
+        "jsonapi": {
+          "version": "1.1"
+        },
+        "data": [
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-8f973e3d-96f8-5f13-a253-d177673d5434",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 1,
+              "match": {
+                "type": "partial_text",
+                "score": 0.6
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-8f973e3d-96f8-5f13-a253-d177673d5434"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "geocoding-results",
+            "id": "data-hk-addresses-2026-09-22.0:ss-a2f98898-14e5-5a7e-b469-684d586fb6cc",
+            "attributes": {
+              "status": "ambiguous",
+              "rank": 2,
+              "match": {
+                "type": "partial_text",
+                "score": 0.6
+              }
+            },
+            "relationships": {
+              "address": {
+                "data": [
+                  {
+                    "type": "addresses",
+                    "id": "ss-a2f98898-14e5-5a7e-b469-684d586fb6cc"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "included": [
+          {
+            "type": "addresses",
+            "id": "ss-8f973e3d-96f8-5f13-a253-d177673d5434",
+            "attributes": {
+              "granularity": "unknown",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "229 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingNumberExpression": "229",
+                  "buildingNumberFrom": "229",
+                  "streetName": "HOLLYWOOD ROAD"
+                },
+                "zh-hant": {
+                  "formattedAddress": "229荷李活道中西區香港",
+                  "buildingNumberExpression": "229",
+                  "buildingNumberFrom": "229",
+                  "streetName": "荷李活道"
+                }
+              }
+            }
+          },
+          {
+            "type": "addresses",
+            "id": "ss-a2f98898-14e5-5a7e-b469-684d586fb6cc",
+            "attributes": {
+              "granularity": "building",
+              "i18n": {
+                "en": {
+                  "formattedAddress": "HOLLYWOOD HSE, 29 HOLLYWOOD ROAD, CENTRAL & WESTERN DISTRICT, HK",
+                  "buildingName": "HOLLYWOOD HSE",
+                  "buildingNumberExpression": "29",
+                  "buildingNumberFrom": "29",
+                  "streetName": "HOLLYWOOD ROAD"
+                },
+                "zh-hant": {
+                  "formattedAddress": "活麟大廈29荷李活道中西區香港",
+                  "buildingName": "活麟大廈",
+                  "buildingNumberExpression": "29",
+                  "buildingNumberFrom": "29",
+                  "streetName": "荷李活道"
+                }
+              }
+            }
+          }
+        ],
+        "meta": {
+          "profile": "default",
+          "direction": "forward",
+          "release": {
+            "apiReleaseSet": "data-hk-addresses-2026-09-22.0"
+          },
+          "resolution": "ambiguous",
+          "total": 2,
+          "truncated": false
+        }
+      },
+      "addressIdentityReview": {
+        "top1": "wrong_street_number",
+        "correctCandidateRank": 2,
+        "notes": "70 matched 370, or 29 matched 229, ahead of the exact street-number candidate."
+      }
+    },
+    {
+      "id": "florist-03",
+      "mode": "reverse",
+      "query": "http://api.atlas.localhost/addresses/v1/geocode?lng=114.156846&lat=22.284913&profile=default&locales=en%2Czh-hant%2Czh-hans&limit=5&maxDistance=1000",
+      "durationMs": 203,
+      "httpStatus": 503,
+      "candidates": [],
+      "top1Within50m": null,
+      "top1Within100m": null,
+      "top5Within100m": null,
+      "outcome": "http_error",
+      "body": {
+        "jsonapi": {
+          "version": "1.1"
+        },
+        "errors": [
+          {
+            "status": "503",
+            "code": "service_unavailable",
+            "title": "The atlas API is temporarily unavailable."
+          }
+        ]
+      },
+      "addressIdentityReview": "pending"
+    }
+  ],
+  "keyProvided": false,
+  "scoringCorrection": "The default profile echoes the query pin in result attributes.coordinates. Reverse distance below uses match.distanceMetres instead; forward coordinate accuracy is unavailable without address geometry. Supersedes the preliminary client-computed zero distances."
+}

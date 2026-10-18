@@ -1,9 +1,9 @@
-import { toSubstackPublicationUrl } from '$lib/api/external/substack.shared'
+import { toSubstackPublicationUrl } from '#lib/api/external/substack.shared.js'
 export {
   normalizeSubstackSessionCookie,
   normalizeSubstackSubscriptionId,
   toSubstackPublicationUrl,
-} from '$lib/api/external/substack.shared'
+} from '#lib/api/external/substack.shared.js'
 
 type SubstackProviderError = {
   error: string

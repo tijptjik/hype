@@ -1,6 +1,6 @@
 <script lang="ts">
-import { SectionHeader } from '$lib/bits/custom'
-import { FormFeatureField } from '$lib/bits/patterns/forms/formFeatureField'
+import { SectionHeader } from '#lib/bits/custom/index.js'
+import { FormFeatureField } from '#lib/bits/patterns/forms/formFeatureField/index.js'
 import type { FormFeatureFieldsSectionProps } from './formFeatureFieldsSection.types'
 
 let {
@@ -13,7 +13,7 @@ let {
   class: className = '',
 }: FormFeatureFieldsSectionProps = $props()
 
-const rootClass = $derived(['bits-feature-fields', className].filter(Boolean).join(' '))
+const rootClass = $derived(['flex flex-col gap-4', className].filter(Boolean).join(' '))
 const gridClass = $derived(
   [
     'bits-feature-fields__grid',

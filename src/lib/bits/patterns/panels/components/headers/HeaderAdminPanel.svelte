@@ -1,9 +1,9 @@
 <script lang="ts">
 // BITS
-import { Button } from '$lib/bits/core'
+import { Button } from '#lib/bits/core/index.js'
 // ICONS
-import Bolt from 'virtual:icons/lucide/zap'
-import Menu from 'virtual:icons/lucide/menu'
+import Bolt from 'virtual:icons/proicons/bolt'
+import Menu from 'virtual:icons/proicons/menu'
 
 type Props = {
   title: string
@@ -14,10 +14,12 @@ type Props = {
 let { title, isNarrow, onTogglePanel }: Props = $props()
 </script>
 
-<div class="bits-theme bits-panel-header-admin">
+<div
+  class="bits-theme flex h-18 shrink-0 flex-row items-center justify-between bg-panel p-4"
+>
   {#if !isNarrow}
-    <h1 class="bits-panel-header-admin__title">{title}</h1>
-    <div class="bits-panel-header-admin__actions">
+    <h1 class="text-lg font-semibold uppercase text-white pl-2">{title}</h1>
+    <div class="flex gap-2">
       <Button
         text="Toggle admin panel"
         size="lg"
@@ -27,7 +29,7 @@ let { title, isNarrow, onTogglePanel }: Props = $props()
         onClick={onTogglePanel}
         style="ghost"
         modifier="circle"
-        class="bits-panel-header-admin__button"
+        class="m-0"
       />
     </div>
   {:else}

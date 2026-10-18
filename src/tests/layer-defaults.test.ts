@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CORE_DEFAULT_PROJECT_CODE,
   getInitialHubLayerDefaultIds,
-} from '$lib/client/services/layerDefaults'
+} from '#lib/client/services/layerDefaults.js'
 
 describe('initial hub layer defaults', () => {
   const projects = [
@@ -36,6 +36,19 @@ describe('initial hub layer defaults', () => {
         projects,
       ),
     ).toEqual(['other-default'])
+  })
+
+  it('honors a hub default even when the layer is not default-visible', () => {
+    expect(
+      getInitialHubLayerDefaultIds(
+        {
+          code: 'custom',
+          layerDefaults: [{ layerId: 'neon-optional', isDefaultVisible: true }],
+        },
+        layers,
+        projects,
+      ),
+    ).toEqual(['neon-optional'])
   })
 
   it('does not apply the core fallback to named hubs', () => {

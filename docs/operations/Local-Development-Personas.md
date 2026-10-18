@@ -1,0 +1,34 @@
+# Local development personas
+
+After restoring the production mirror and applying local migrations, stop any Hype dev server using that local D1 state, then run:
+
+```sh
+bun run dev:agent --port 4173
+# Or use an ordinary account with no hub, organisation, or project roles:
+bun run dev:agent user --port 4173
+```
+
+Open `http://127.0.0.1:4173/`. The launcher idempotently seeds both reserved accounts into local D1 before starting Vite. The default `admin` account has a persisted admin assignment on the `core` hub, which the existing role model treats as super-admin. The `user` account has no role assignments. The seed refuses identity collisions and refuses an ordinary account that has acquired roles. Existing mirrored people are never used as development identities.
+
+The first document navigation issues a session through Better Auth's internal adapter and cookie writer, then redirects to the requested path. The retry reaches the early hub hook with a real signed session cookie; SSR, remote functions, and client session queries use ordinary authentication and role enrichment. An amber indicator shows `Local development: Admin` or `Local development: Ordinary user`. Signing out clears the session; the next document navigation signs the configured persona in again. Restart with `user` or `admin` to switch personas.
+
+The launcher does not restore, reset, or migrate the database. `bun run db:mirror:prod:to:local` now runs `db:mirror:post:local` after restoring: it applies local migrations, syncs map styles, backfills missing H3 cells, and initializes both reserved agent users. The spatial backfill is temporary until production mirrors include populated cells; it remains idempotent when cells already exist. `db:prepare:local` uses the same complete mirror workflow.
+
+For an already restored database, run `bun run db:mirror:post:local` without downloading or resetting the mirror. It also drains the division backfill through the refresh worker, retaining its release checkpoint, leases and retries. Pending division work requires server-side `SAANSEOI_API_KEY` in `.dev.vars` or the environment; `SAANSEOI_BASE_URL` defaults to `http://api.atlas.localhost`. Missing credentials, failed jobs and future retries fail the post-command rather than report an incomplete mirror as ready. An already complete current-month division checkpoint needs no API calls.
+
+This command uses default local D1 and rejects `HYPE_DEV_STATE`; the agent launcher still supports isolated states. No passwords or provider accounts are seeded, and the reserved email addresses use `.invalid`.
+
+## Guards and cookies
+
+- Explicit launcher mode is required. Ordinary `bun run dev` has no automatic login endpoint.
+- Vite validates `wrangler.local.toml`: `DB` must be the nonremote `hype-db-local` binding and the configured runtime environment must be `local`.
+- Named `CLOUDFLARE_ENV` values and static builds are rejected. Production builds compile the persona setting to `null`.
+- Runtime requests also require `ENVIRONMENT=local` and matching URL/Host authorities on `localhost`, `127.0.0.1`, `[::1]`, or `hype.localhost`. Foreign-origin sign-in and cross-site automatic bootstrap are rejected.
+- Sessions use isolated `hype-dev-agent-admin` and `hype-dev-agent-user` cookie prefixes, so an admin cookie is never accepted by the ordinary-persona server. Loopback HTTP uses HttpOnly, SameSite=Lax cookies; HTTPS keeps Secure. Ordinary embedded-session cookie settings remain in effect outside persona mode.
+- All R2 bindings use the local adapter configuration. The account preparation proxy explicitly disables remote bindings.
+
+Only one app server should use a persisted D1 state directory at a time. For independent verification, `HYPE_DEV_STATE=/absolute/path/to/state bun run dev:agent --port 4173` selects the same custom persistence root for seeding and the app adapter. Prepare a WAL-safe snapshot of the local mirror there first: the root contains `d1/miniflare-D1DatabaseObject/`, rather than an additional `v3/` directory. A fresh empty directory fails until the local schema and core hub exist. Treat snapshots of production mirrors as private data.
+
+## Validation
+
+`bunx vitest run src/tests/auth-dev-persona.test.ts src/tests/auth.config.test.ts src/tests/auth-origin.test.ts` covers persisted session issuance and role enrichment for both personas, idempotent seeding, identity collisions, ordinary-persona role contamination, runtime environment gating, exact local authorities, explicit mode, and foreign origins.

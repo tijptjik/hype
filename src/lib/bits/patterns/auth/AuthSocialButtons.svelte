@@ -4,9 +4,9 @@ import Facebook from 'virtual:icons/simple-icons/facebook'
 import Google from 'virtual:icons/logos/google-icon'
 import Wechat from 'virtual:icons/simple-icons/wechat'
 // AUTH
-import { AUTH_PROVIDER_REGISTRY, type AuthProviderId } from '$lib/auth/providers'
+import { AUTH_PROVIDER_REGISTRY, type AuthProviderId } from '#lib/auth/providers.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 
 let {
   compact = false,
@@ -25,7 +25,9 @@ function providerIcon(providerId: AuthProviderId) {
 }
 </script>
 
-{#each AUTH_PROVIDER_REGISTRY.filter(provider => provider.id !== 'email') as provider (provider.id)}
+{#each AUTH_PROVIDER_REGISTRY.filter(
+  provider => provider.id !== 'email',
+) as provider (provider.id)}
   {@const Icon = providerIcon(provider.id)}
   <button
     class={compact
@@ -35,7 +37,9 @@ function providerIcon(providerId: AuthProviderId) {
     class:text-black={!compact && provider.enabled}
     type="button"
     aria-label={provider.label}
-    title={provider.enabled ? provider.label : `${provider.label} · ${m.guest__coming_soon()}`}
+    title={provider.enabled
+      ? provider.label
+      : `${provider.label} · ${m.guest__coming_soon()}`}
     disabled={!provider.enabled || disabled}
     onclick={() => onSelect(provider.id)}
   >

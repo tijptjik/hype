@@ -1,32 +1,53 @@
 // I18N
-import { toLocaleKebab, toLocaleKey } from '$lib/i18n'
-import { toFormLocaleRecord } from '$lib/i18n'
+import { toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
+import { toFormLocaleRecord } from '#lib/i18n.js'
 // ENUMS
-import { HubSubscriptionService } from '$lib/enums'
+import { HubSubscriptionService } from '#lib/enums.js'
 // SERVICES
 import {
   createDefaultHubPrivacyPolicy,
   createDefaultHubTermsOfService,
-} from '$lib/services/policy'
+} from '#lib/services/policy.js'
 // SERVICES
 import {
   overrideResourceEntityBoolean,
   overrideResourceListItemBoolean,
-} from '$lib/client/services/resource'
+} from '#lib/client/services/resource.js'
 // TYPES
-import type {
-  HubOrganisationFieldNameResolverForm,
-  HubOrganisationHiddenInputAttrs,
-  HubLayerDefaultFieldNameResolverForm,
-  HubLayerDefaultHiddenInputAttrs,
-  Locale,
-} from '$lib/types'
+import type { HubOrganisationFieldNameResolverForm } from '#lib/client/services/form.types.js'
+import type { Locale } from '#lib/types.js'
 import type {
   Hub,
   HubBooleanField,
   HubFormInput,
   HubIdentityPatch,
-} from '$lib/db/zod/schema/hub.types'
+} from '#lib/db/zod/schema/hub.types.js'
+// TYPES
+
+type HubOrganisationHiddenInputAttrs = Record<string, unknown>
+
+type HubLayerDefaultFieldNameResolverForm = {
+  fields: {
+    data?: {
+      layerDefaults?: Record<
+        number,
+        {
+          hubId?: {
+            as: (type: 'hidden', value: string) => Record<string, unknown>
+          }
+          layerId?: {
+            as: (type: 'hidden', value: string) => Record<string, unknown>
+          }
+          isDefaultVisible?: {
+            as: (type: 'hidden', value: string) => Record<string, unknown>
+          }
+        }
+      >
+    }
+  }
+}
+
+type HubLayerDefaultHiddenInputAttrs = Record<string, unknown>
 
 type HubFormLocale = HubFormInput['data']['i18n']['en']
 type HubFormRootForDefaults = {
@@ -43,7 +64,7 @@ function normalizeHubSubscriptionService(
 
 function normalizeHubFormLocale(
   root: HubFormRootForDefaults | null | undefined,
-  locale: Partial<HubFormLocale> | null | undefined,
+  locale: { [K in keyof HubFormLocale]?: HubFormLocale[K] | null } | null | undefined,
   localeKey: 'en' | 'zhHans' | 'zhHant',
 ): HubFormLocale {
   return {

@@ -2,19 +2,19 @@
 // SVELTE
 import { onMount, untrack } from 'svelte'
 // CONTEXT
-import { getImportCtx } from '$lib/context/import.svelte'
+import { getImportCtx } from '#lib/context/import.svelte.js'
 // API
-import { translateText } from '$lib/api/server/translation.remote'
+import { translateText } from '#lib/api/translation.remote.js'
 // I18N
-import { m, toLocaleKebab, toLocaleKey } from '$lib/i18n'
+import { m, toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
 // ENUM
-import { supportedLocaleKeys } from '$lib/enums'
+import { supportedLocaleKeys } from '#lib/enums.js'
 // TYPES
 import type {
   FeatureCSVColumn,
   Locale,
   LocaleKey,
-} from '$lib/client/services/import/types'
+} from '#lib/client/services/import/types.js'
 
 type PropertyData = {
   key: string
@@ -32,7 +32,7 @@ type Props = {
 
 type TranslationChoice = {
   mode: 'translate' | 'copy'
-  sourceLocale?: Locale
+  sourceLocale?: Locale | LocaleKey
 }
 
 type EnrichedRowData = Partial<Record<Locale, string>> & {
@@ -221,7 +221,13 @@ async function enrichData(): Promise<void> {
     importCtx.setPropertyEnrichedData(property.key, {
       ...existingData,
       propertyId: existingData.propertyId || matchedProperty?.id,
-      propertyType: existingData.propertyType || matchedProperty?.type || 'specifier',
+      propertyType:
+        existingData.propertyType ||
+        (matchedProperty?.type === 'classifier'
+          ? 'classifier'
+          : matchedProperty?.type === 'display'
+            ? 'display'
+            : 'specifier'),
       enrichedData: enrichedRows,
       translatedValues: getFallbackTranslatedValues(enrichedRows),
     })
@@ -351,12 +357,14 @@ async function processTranslations(
     if (!rowData._needsTranslation || !rowData._sourceValue || !rowData._sourceLocale)
       return
 
+    const sourceLocale = rowData._sourceLocale
+    const sourceValue = rowData._sourceValue
     rowData._needsTranslation.forEach(targetLocale => {
       const batchKey = `${rowData._sourceLocale}->${targetLocale}`
 
       if (!translationBatches.has(batchKey)) {
         translationBatches.set(batchKey, {
-          sourceLocale: rowData._sourceLocale,
+          sourceLocale,
           targetLocale,
           texts: [],
           rowIndices: [],
@@ -365,7 +373,7 @@ async function processTranslations(
 
       const batch = translationBatches.get(batchKey)
       if (!batch) return
-      batch.texts.push(rowData._sourceValue)
+      batch.texts.push(sourceValue)
       batch.rowIndices.push(rowIndex)
     })
   })
@@ -443,7 +451,7 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
 
 <div class="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-4 lg:grid-cols-5">
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-warning/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-3"
   >
     <div class="mb-5">
       <div
@@ -477,7 +485,7 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
       </div>
     {:else if isProcessing}
       <div class="space-y-4">
-        <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+        <div class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
           <div class="mb-2 flex items-center justify-between text-sm">
             <span class="font-medium">{currentStep}</span>
             <span class="font-mono text-base-content/65">{Math.round(progress)}%</span>
@@ -494,7 +502,9 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
         </div>
 
         <div class="grid gap-3 md:grid-cols-3">
-          <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+          <div
+            class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4"
+          >
             <div
               class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
             >
@@ -504,7 +514,9 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
               {activeChoice?.sourceLocale || localeAnalysis.sourceLocale}
             </div>
           </div>
-          <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+          <div
+            class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4"
+          >
             <div
               class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
             >
@@ -514,7 +526,9 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
               {activeChoice?.mode || 'translate'}
             </div>
           </div>
-          <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+          <div
+            class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4"
+          >
             <div
               class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
             >
@@ -536,7 +550,7 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
       </div>
     {:else}
       <div
-        class="rounded-2xl border border-white/10 bg-white/[0.055] p-4 text-sm text-base-content/70"
+        class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4 text-sm text-base-content/70"
       >
         {m.processing_rows()}
       </div>
@@ -544,7 +558,7 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
   </section>
 
   <section
-    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
+    class="relative flex min-h-96 flex-col overflow-hidden rounded-3xl border border-info/25 bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl lg:col-span-2"
   >
     <div class="mb-5">
       <div
@@ -557,14 +571,14 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
 
     <div class="space-y-3">
       {#each localeCoverage as block}
-        <div class="rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+        <div class="rounded-2xl border border-foreground/10 bg-foreground/[0.055] p-4">
           <div class="flex items-center justify-between gap-3">
             <div class="font-mono text-sm text-base-content/85">{block.locale}</div>
             <div
               class={`rounded-full px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] ${
                 block.hasColumn
                   ? 'border border-info/25 bg-info/10 text-info'
-                  : 'border border-white/10 bg-white/5 text-base-content/45'
+                  : 'border border-foreground/10 bg-foreground/5 text-base-content/45'
               }`}
             >
               {block.count}
@@ -575,7 +589,7 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
       {/each}
     </div>
 
-    <div class="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+    <div class="mt-4 rounded-2xl border border-foreground/10 bg-foreground/[0.04] p-4">
       <div
         class="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50"
       >
@@ -584,7 +598,7 @@ function syncFooterAction(isComplete: boolean, hasError: boolean): void {
       <div class="mt-3 space-y-2">
         {#each sampleValues as value}
           <div
-            class="border-b border-white/10 pb-2 font-mono text-sm text-base-content/80 last:border-b-0 last:pb-0"
+            class="border-b border-foreground/10 pb-2 font-mono text-sm text-base-content/80 last:border-b-0 last:pb-0"
           >
             {value}
           </div>

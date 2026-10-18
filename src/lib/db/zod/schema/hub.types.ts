@@ -1,12 +1,10 @@
 import type { z } from 'zod'
+import type { EntityResponse, Locale, LocaleKey } from '#lib/types.js'
 import type {
-  EntityResponse,
   FormLocaleInput,
   FormLocaleSource,
-  Locale,
-  LocaleKey,
-} from '$lib/types'
-import type { GetQueryParams, ListQueryParams } from '$lib/db/zod/schema/api.types'
+} from '#lib/client/services/formLocale.types.js'
+import type { GetQueryParams, ListQueryParams } from '#lib/db/zod/schema/api.types.js'
 import type {
   HubAdminProfileAPI,
   HubBase,
@@ -34,7 +32,7 @@ import type {
   JoinHubSubscriptionSchema,
   PublishHubSchema,
   RemoveHubSchema,
-} from '$lib/db/zod/schema/hub'
+} from '#lib/db/zod/schema/hub.js'
 
 export type HubDB = z.infer<typeof HubBase>
 export type HubDBNew = z.infer<typeof HubInsert>
@@ -128,7 +126,7 @@ export interface HubOpts {
   id?: string
 }
 
-export interface HubOptsExtended extends Partial<Hub> {
+export interface HubOptsExtended extends Partial<Omit<Hub, 'i18n'>> {
   id?: string
   code?: string
   domain?: string | null

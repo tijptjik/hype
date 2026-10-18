@@ -1,16 +1,19 @@
-import { browser } from '$app/environment'
-import { getLocaleKey } from '$lib/i18n'
-import { getTitleEnvironmentLabel, resolveTitle } from '$lib/navigation/title'
-import { QueryClient } from '@tanstack/svelte-query'
+import { getLocaleKey } from '#lib/i18n.js'
+import { getTitleEnvironmentLabel, resolveTitle } from '#lib/navigation/title.js'
 // TYPES
-import type { HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type { TitleEnvironmentLabel } from '$lib/types'
+import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
+import type { TitleEnvironmentLabel } from '#lib/bits/patterns/panels/panel.types.js'
 
 export const ssr = true
 export const prerender = false
 // See https://khromov.se/the-missing-guide-to-understanding-adapter-static-in-sveltekit/
 export const trailingSlash = 'never'
 
+/**
+ * Builds localized root layout metadata while preserving the server persona indicator.
+ * @param event - Universal layout event with server-provided data.
+ * @returns Localized hub metadata and the active local development persona.
+ */
 export async function load({ data }) {
   const hub = data.hub as HubOptsExtended
   const hubUserState = data.hubUserState ?? null
@@ -22,24 +25,8 @@ export async function load({ data }) {
     (data.titleEnvironmentLabel as TitleEnvironmentLabel | undefined) ??
     getTitleEnvironmentLabel(undefined)
 
-  /**
-   * @deprecated Remove once we have fully moved to svelte remote functions
-   */
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        enabled: browser,
-        staleTime: 1000 * 60 * 5, // 5 minutes
-        gcTime: 1000 * 60 * 30, // 30 minutes
-        refetchOnWindowFocus: true,
-        refetchOnMount: true,
-        refetchOnReconnect: true,
-      },
-    },
-  })
-
   return {
-    queryClient,
+    devPersona: data.devPersona ?? null,
     hub,
     hubUserState,
     title: resolveTitle(rawTitle, titleEnvironmentLabel),

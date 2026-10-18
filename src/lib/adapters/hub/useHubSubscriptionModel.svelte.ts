@@ -1,9 +1,12 @@
 // TYPES
-import type { HubSubscriptionOverlayProps } from '$lib/bits/patterns/bars'
-import type { HubPanelSubscriptionProps } from '$lib/bits/patterns/panels/hubPanelSubscription'
-import type { HubPolicyDialogProps } from '$lib/bits/patterns/policies'
-import type { ImageCtxEnvelope } from '$lib/db/zod/schema/image.types'
-import type { HubSubscriptionPlacement, HubUserStateFlags } from '$lib/types'
+import type { HubSubscriptionOverlayProps } from '#lib/bits/patterns/bars/index.js'
+import type { HubPanelSubscriptionProps } from '#lib/bits/patterns/panels/hubPanelSubscription/index.js'
+import type { HubPolicyDialogProps } from '#lib/bits/patterns/policies/index.js'
+import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
+import type {
+  HubSubscriptionPlacement,
+  HubUserStateFlags,
+} from '#lib/api/services/hub.types.js'
 
 export interface AppMenuSubscriptionItemProps {
   label?: string

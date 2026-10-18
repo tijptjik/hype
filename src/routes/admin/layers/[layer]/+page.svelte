@@ -1,9 +1,11 @@
 <script lang="ts">
+import type { RemoteForm, RemoteFormInput } from '$app/server'
+
 // SVELTE
 import { page } from '$app/state'
 import { untrack } from 'svelte'
 // I18N
-import { getLocaleKey, getLocaleOrder, m } from '$lib/i18n'
+import { getLocaleKey, getLocaleOrder, m } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // SERVICES
@@ -25,11 +27,13 @@ import {
   toUniqueIssueMessages,
   translateLocaleIntoEmptyFields,
   updateFormData,
-} from '$lib/client/services/form'
+} from '#lib/client/services/form.js'
+
 import {
   createMapRenderTitleMenuItem,
   refreshMapRender,
-} from '$lib/client/services/map'
+} from '#lib/client/services/map.js'
+
 import {
   getLayerSubmitUpdates,
   mergeProjectPropertiesIntoLayerForm as applyProjectPropertiesToLayerForm,
@@ -44,10 +48,10 @@ import {
   toLayerParentProjectSearchQueries,
   toLayerPropertyRows,
   toSelectedParentProject,
-} from '$lib/client/services/layer'
+} from '#lib/client/services/layer.js'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import {
   archiveLayer,
@@ -55,17 +59,17 @@ import {
   getLayers,
   layerForm,
   publishLayer,
-} from '$lib/api/server/layer.remote'
-import { getProjects } from '$lib/api/server/project.remote'
-import { getProjectProperties } from '$lib/api/server/property.remote'
+} from '#lib/api/layer.remote.js'
+import { getProjects } from '#lib/api/project.remote.js'
+import { getProjectProperties } from '#lib/api/property.remote.js'
 import {
   resolveLayerProjectSelectionScope,
   toLayerAuthActor,
-} from '$lib/api/services/authz'
+} from '#lib/api/services/authz/index.js'
 // SCHEMA
-import { LayerPreflightFormData } from '$lib/db/zod'
+import { LayerPreflightFormData } from '#lib/db/zod/index.js'
 // CONFIG
-import { NEW_REF, NEW_TITLE } from '$lib/constants'
+import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import {
   FormI18nDescriptorFields,
@@ -74,36 +78,40 @@ import {
   GridSpacer,
   LayerPropertyCard,
   Main,
-} from '$lib/bits'
-import { SectionHeaderPrimitive } from '$lib/bits/custom/form'
+} from '#lib/bits/index.js'
+import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // FACTORIES
-import { configureForm } from '$lib/factories.svelte'
+import { configureForm } from '#lib/factories.svelte.js'
 // NAVIGATION
 import {
   getAdminFacetOrderForResource,
   getAdminFacetTabsForResource,
   navigateOnAdmin,
-} from '$lib/navigation'
+} from '#lib/navigation/index.js'
 // UTILS
-import { createSchemaRequiredInferer } from '$lib/utils/form-schema'
+import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
-import LayerIcon from 'virtual:icons/lucide/layers'
+import LayerIcon from 'virtual:icons/proicons/layers'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
-import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { RemoteFormOptions } from '$lib/factories.svelte'
-import type { LayerFacet } from '$lib/navigation'
-import type { ParentSectionProjectItem } from '$lib/bits/patterns/forms/formParentSection/formParentSection.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+
+import type { RemoteFormOptions } from '#lib/factories.svelte.js'
+import type { LayerFacet } from '#lib/navigation/index.js'
+import type { ParentSectionProjectItem } from '#lib/bits/patterns/forms/formParentSection/formParentSection.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+
 import type {
   Layer,
   LayerGetState,
   LayerPropertyPartialExtra,
   LayerSubmitData,
-} from '$lib/db/zod/schema/layer.types'
-import type { FormDataUpdaterForm, HeaderTransitionSnapshot, Locale } from '$lib/types'
+} from '#lib/db/zod/schema/layer.types.js'
+
+import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
+import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
+import type { Locale } from '#lib/types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -200,34 +208,26 @@ import type { FormDataUpdaterForm, HeaderTransitionSnapshot, Locale } from '$lib
 /********************
  *  PAGE SETUP
  ************/
-
 const adminCtx = getAdminCtx()
+
 const headerCtrl = getHeaderCtrl()
-
 const facetTabs = getAdminFacetTabsForResource(FirstClassResource.layer)
-const editorCtrl = getEditorCtrl({
-  headerCtrl,
-  icon: LayerIcon,
-  facetTabs,
-})
-
+const editorCtrl = getEditorCtrl({ headerCtrl, icon: LayerIcon, facetTabs })
 const layerRef = $derived(page.params.layer as string)
 const locales = $derived(getLocaleOrder(getLocaleKey()))
 const activeFacet = $derived(
   adminCtx.activeFacet === false ? 'core' : adminCtx.activeFacet,
 )
 const cachedLayerForRef = $derived(
-  adminCtx.appCtx.getResourceByRefSync(FirstClassResource.layer, layerRef) as
+  adminCtx.view.getResourceByRefSync(FirstClassResource.layer, layerRef) as
     | Layer
     | undefined,
 )
 const cachedLayerState = $derived(
   cachedLayerForRef ? ({ data: cachedLayerForRef } as LayerGetState) : null,
 )
-
 let contentsElement: HTMLFormElement | undefined = $state()
 let lastSyncedFacetHash = $state('')
-
 let lastHeaderKey = $state('')
 let lastFormActionsSignature = $state('')
 let suppressFormLevelIssues = $state(false)
@@ -236,6 +236,7 @@ let lastMergedProjectId = $state<string | null>(null)
 let prefetchedProjectPropertiesByProjectId = $state<Record<string, Property[]>>({})
 let settledLayerRef = $state<string | null>(null)
 let isRefreshingMapRender = $state(false)
+
 let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
   canEdit: true,
   canPublish: true,
@@ -250,6 +251,7 @@ let optimisticHeaderState = $state<HeaderTransitionSnapshot>({
  *  RESOURCE STATE
  ************/
 let layer: LayerGetState = $state(null)
+
 let committedLayer: LayerGetState = $state(null)
 
 const commitLayerState = (value: LayerGetState): void => {
@@ -276,7 +278,7 @@ async function loadProjectProperties(projectId: string): Promise<Property[]> {
 function cacheProjectProperties(projectProperties: Property[]): void {
   for (const projectProperty of projectProperties) {
     if (!projectProperty?.id) continue
-    adminCtx.appCtx.cache.property.set(projectProperty.id, projectProperty)
+    adminCtx.view.cache.property.set(projectProperty.id, projectProperty)
   }
 }
 
@@ -288,6 +290,7 @@ function rememberProjectProperties(
     ...prefetchedProjectPropertiesByProjectId,
     [projectId]: projectProperties,
   }
+
   cacheProjectProperties(projectProperties)
 }
 
@@ -301,7 +304,7 @@ function resolveKnownProjectIdForLayerRef(ref: string): string {
     ).trim()
   }
 
-  const cachedLayer = adminCtx.appCtx.getResourceByRefSync(
+  const cachedLayer = adminCtx.view.getResourceByRefSync(
     FirstClassResource.layer,
     ref,
   ) as Layer | undefined
@@ -361,13 +364,16 @@ bindAdminFacetHistorySync({
   resourceType: FirstClassResource.layer,
   getResourceRef: () => layerRef,
 })
+
 const isEditing = $derived(headerCtrl.state.isEditing)
 const isNewLayerRef = $derived(layerRef === NEW_REF)
 
 const isCurrentRefLoaded = $derived.by(() => {
   if (isNewLayerRef) return true
+
   const loadedId = layer?.data?.id
   const committedId = committedLayer?.data?.id
+
   return (
     typeof loadedId === 'string' &&
     typeof committedId === 'string' &&
@@ -375,11 +381,12 @@ const isCurrentRefLoaded = $derived.by(() => {
     committedId === layerRef
   )
 })
-const isCurrentRefSettled = $derived(isNewLayerRef || settledLayerRef === layerRef)
 
+const isCurrentRefSettled = $derived(isNewLayerRef || settledLayerRef === layerRef)
 const translatableI18nFields = ['name', 'nameShort', 'description'] as const
+
 type LayerEditorFormInput = ReturnType<typeof toLayerFormInput>
-type LayerRemoteFormInput = RemoteFormInput & LayerEditorFormInput
+type LayerRemoteFormInput = LayerEditorFormInput
 type LayerFormPayload = LayerRemoteFormInput['data']
 
 /********************
@@ -420,16 +427,18 @@ const configuredLayerForm = configureForm<LayerRemoteFormInput>(() => ({
       const entityQuery = getLayer({
         ref: layerRef,
         refKey: 'id',
-        meta: { isAdminRequest: true, profile: 'admin' },
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
       })
       const listQuery = getLayers({
-        conditions: adminCtx.appCtx.isSuperAdmin()
+        conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
           : { isArchived: false, isPublished: null },
-        prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true, profile: 'card' },
+        prisms: adminCtx.view.scope.prisms,
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       })
+
       const layerId = layer?.data?.id
+
       const submittedData =
         data && typeof data === 'object' && 'data' in data
           ? (((data as { data?: Record<string, unknown> }).data ??
@@ -504,7 +513,8 @@ const formLevelIssues = $derived.by((): string[] => {
 /********************
  *  PARENT PROJECT STATE
  ************/
-const currentUser = $derived(adminCtx.appCtx.getUser())
+const currentUser = $derived(adminCtx.view.account.user)
+
 const currentActor = $derived(toLayerAuthActor(currentUser ?? {}))
 let selectedParentProjectById = $state<Record<string, ParentSectionProjectItem>>({})
 
@@ -513,9 +523,10 @@ const selectedParentProject = $derived.by((): ParentSectionProjectItem | null =>
     form: formDataUpdater,
     layer,
     selectedParentProjectById,
-    projectCache: adminCtx.appCtx.cache.project,
+    projectCache: adminCtx.view.cache.project,
   })
 })
+
 const selectedParentProjectId = $derived(selectedParentProject?.id ?? '')
 const hasSelectedParentProject = $derived(selectedParentProjectId.length > 0)
 
@@ -535,6 +546,7 @@ const facetIssueState = $derived.by(() =>
     formEl: contentsElement,
   }),
 )
+
 const facetIssueSummary = $derived(facetIssueState.facetIssueSummary)
 const headerFacetTabsWithIssues = $derived(facetIssueState.facetTabsWithIssues)
 
@@ -554,12 +566,12 @@ const layerPermissions = $derived.by(() => {
     currentUser,
     layer,
     form: formDataUpdater,
-    prismProjectId: adminCtx.appCtx.getPrism(FirstClassResource.project)[0] ?? null,
+    prismProjectId: adminCtx.view.scope.getPrism(FirstClassResource.project)[0] ?? null,
     prismOrganisationId:
-      adminCtx.appCtx.getPrism(FirstClassResource.organisation)[0] ?? null,
-    resourceHubId: adminCtx.appCtx.hub?.id ?? null,
-    projectCache: adminCtx.appCtx.cache.project,
-    organisationCache: adminCtx.appCtx.cache.organisation,
+      adminCtx.view.scope.getPrism(FirstClassResource.organisation)[0] ?? null,
+    resourceHubId: adminCtx.view.hub?.id ?? null,
+    projectCache: adminCtx.view.cache.project,
+    organisationCache: adminCtx.view.cache.organisation,
   })
 })
 
@@ -577,18 +589,18 @@ const layerPropertyRows = $derived.by(() => {
   return toLayerPropertyRows({
     form: formDataUpdater,
     layer,
-    propertyCache: adminCtx.appCtx.cache.property,
-    hubCodeById: hubId => adminCtx.appCtx.cache.hub.get(hubId)?.code ?? null,
-    userPreferences: adminCtx.appCtx.getUserPreferences(),
+    propertyCache: adminCtx.view.cache.property,
+    hubCodeById: hubId => adminCtx.view.cache.hub.get(hubId)?.code ?? null,
+    userPreferences: adminCtx.view.getUserPreferences(),
   })
 })
 
 let isLayerPropertyMergeInProgress = $state(false)
 let isLayerRouteFlipDisabled = $state(false)
 let layerRouteFlipDisableTimer: ReturnType<typeof setTimeout> | null = null
-
 const usedRows = $derived(layerPropertyRows.filter(row => row.isVisible))
 const unusedRows = $derived(layerPropertyRows.filter(row => !row.isVisible))
+
 const propertyColumns = $derived([
   {
     key: 'active',
@@ -605,6 +617,7 @@ const propertyColumns = $derived([
     isContributableDisabled: true,
   },
 ] as const)
+
 const isLayerCardFlipDisabled = $derived(
   isLayerPropertyMergeInProgress || isLayerRouteFlipDisabled,
 )
@@ -688,12 +701,9 @@ async function syncProjectPropertiesIntoLayerForm(
       const projectProperties =
         prefetchedProjectPropertiesByProjectId[projectId] ??
         (await loadProjectProperties(projectId))
-      rememberProjectProperties(projectId, projectProperties)
 
-      applyProjectPropertiesToLayerForm({
-        form: formDataUpdater,
-        projectProperties,
-      })
+      rememberProjectProperties(projectId, projectProperties)
+      applyProjectPropertiesToLayerForm({ form: formDataUpdater, projectProperties })
     } catch {
       toast.error(m.long_crazy_peacock_care())
       return
@@ -710,10 +720,7 @@ async function syncProjectPropertiesIntoLayerForm(
         : []
       commitLayerState({
         ...(committedLayer ?? { data: null, durationMs: 0 }),
-        data: {
-          ...committedLayer.data,
-          properties: mergedProperties,
-        },
+        data: { ...committedLayer.data, properties: mergedProperties },
       })
     }
 
@@ -728,19 +735,19 @@ async function onSearchParentProjects(
 ): Promise<ParentSectionProjectItem[]> {
   const scope = resolveLayerProjectSelectionScope({
     actor: currentActor,
-    resourceHubId: adminCtx.appCtx.hub?.id ?? null,
+    resourceHubId: adminCtx.view.hub?.id ?? null,
   })
+
   if (!scope.canCreate) return []
 
   const baseParams = {
     q: query,
-    prisms: adminCtx.appCtx.state.prisms,
-    meta: { isAdminRequest: true, profile: 'card' as const },
+    prisms: adminCtx.view.scope.prisms,
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' as const },
   }
-  const queryPlan = toLayerParentProjectSearchQueries({
-    scope,
-    baseParams,
-  })
+
+  const queryPlan = toLayerParentProjectSearchQueries({ scope, baseParams })
+
   if (queryPlan.length === 0) return []
 
   const results = await Promise.all(
@@ -749,6 +756,7 @@ async function onSearchParentProjects(
     ),
   )
   const byId = new Map<string, ParentSectionProjectItem>()
+
   for (const result of results) {
     for (const project of result.data) {
       byId.set(project.id, project)
@@ -766,14 +774,16 @@ function updateLayerPropertyToggle(
 ): void {
   updateFormData(formDataUpdater, data => {
     if (!Array.isArray(data.properties)) return data
+
     const current = data.properties[index]
+
     if (!current) return data
-    data.properties[index] = {
-      ...current,
-      [field]: value,
-    }
+
+    data.properties[index] = { ...current, [field]: value }
+
     return data
   })
+
   revalidateAfterProgrammaticChange()
 }
 
@@ -784,17 +794,14 @@ async function refreshLayer(refOverride?: string): Promise<LayerGetState> {
   const ref = refOverride ?? layerRef
 
   if (ref === NEW_REF) {
-    return {
-      data: null,
-      durationMs: 0,
-    }
+    return { data: null, durationMs: 0 }
   }
 
   const knownProjectId = resolveKnownProjectIdForLayerRef(ref)
   const layerQuery = getLayer({
     ref,
     refKey: 'id',
-    meta: { isAdminRequest: true, profile: 'admin' },
+    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   })
   const projectPropertiesPromise = knownProjectId
     ? loadProjectProperties(knownProjectId).catch(() => null)
@@ -802,8 +809,8 @@ async function refreshLayer(refOverride?: string): Promise<LayerGetState> {
 
   const nextLayer = (await layerQuery) as LayerGetState
   const nextProjectId = (nextLayer?.data?.projectId ?? '').trim()
-
   let projectProperties = await projectPropertiesPromise
+
   if (nextProjectId && nextProjectId !== knownProjectId) {
     projectProperties = await loadProjectProperties(nextProjectId).catch(() => null)
   }
@@ -842,37 +849,37 @@ async function handleLayerStateToggle({
   setBusy: (value: boolean) => void
   mutate: (payload: { id: string; state: boolean }) => Promise<{ data: { id: string } }>
 }): Promise<void> {
-  await handleResourceBooleanStateToggle({
-    current: layer?.data,
-    field,
-    successWhenTrue,
-    successWhenFalse,
-    setBusy,
-    mutate,
-    applyOptimistic: nextState => {
-      const layerId = layer?.data?.id
-      if (!layerId) return
-
+  const current = layer?.data
+  if (!current) return
+  const nextState = !current[field]
+  setBusy(true)
+  const mutation = adminCtx.view.cacheCtx.beginMutation('layer', {
+    meta: { id: current.id },
+    data: { [field]: nextState },
+  })
+  try {
+    await (mutate as typeof publishLayer)({
+      id: current.id,
+      state: nextState,
+      meta: { isAdminRequest: true },
+    }).updates(
+      ...mutation.updates,
       getLayer({
         ref: layerRef,
         refKey: 'id',
-        meta: { isAdminRequest: true, profile: 'admin' },
-      }).withOverride(overrideLayerEntityBoolean(field, nextState))
-
-      getLayers({
-        conditions: adminCtx.appCtx.isSuperAdmin()
-          ? { isArchived: null, isPublished: null }
-          : { isArchived: false, isPublished: null },
-        prisms: adminCtx.appCtx.state.prisms,
-        meta: { isAdminRequest: true, profile: 'card' },
-      }).withOverride(overrideLayerListItemBoolean(layerId, field, nextState))
-    },
-    refresh: () => refreshLayer(),
-    commit: commitLayerState,
-    onError: () => {
-      toast.error(m.long_crazy_peacock_care())
-    },
-  })
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+      }).withOverride(overrideLayerEntityBoolean(field, nextState)),
+    )
+    mutation.settle(true)
+    commitLayerState(await refreshLayer())
+    await adminCtx.view.cacheCtx.reconcile('layer')
+    toast.success(nextState ? successWhenTrue : successWhenFalse)
+  } catch {
+    mutation.settle(false)
+    toast.error(m.long_crazy_peacock_care())
+  } finally {
+    setBusy(false)
+  }
 }
 
 async function onPublishToggle(): Promise<void> {
@@ -934,9 +941,12 @@ function onSubmit(): void {
 // Route sync
 $effect(() => {
   layerRef
+
   const cachedId = cachedLayerState?.data?.id
+
   if (!cachedId) return
   if (layer?.data?.id === cachedId) return
+
   commitLayerState(cachedLayerState)
 })
 
@@ -982,6 +992,7 @@ $effect(() => {
 $effect(() => {
   if (activeFacet !== 'fields') return
   if (hasSelectedParentProject) return
+
   adminCtx.setFacet('core', layerRef, FirstClassResource.layer)
 })
 
@@ -1018,9 +1029,13 @@ $effect(() => {
             `${facet}:${typeof config === 'string' ? '0' : config.hasIssues ? '1' : '0'}`,
         )
         .join('|')
+
   const headerKey = `${layerRef}:${title}:${facetKey}`
+
   if (headerKey === lastHeaderKey) return
+
   lastHeaderKey = headerKey
+
   if (Array.isArray(displayFacets)) {
     headerCtrl.setHeaderForEntity(title, LayerIcon, new Map())
     headerCtrl.setFacets(displayFacets)
@@ -1041,8 +1056,10 @@ $effect(() => {
   if (visibleAllIssues.length === 0) return
 
   const targetFacet = facetIssueSummary.firstFacetWithIssues
+
   if (!targetFacet) return
   if (activeFacet === targetFacet) return
+
   adminCtx.setFacet(targetFacet, layerRef, FirstClassResource.layer)
 })
 
@@ -1050,6 +1067,7 @@ $effect(() => {
 $effect(() => {
   if (!layer?.data?.isArchived) return
   if (!headerCtrl.state.isEditing) return
+
   headerCtrl.setEditing(false)
 })
 
@@ -1062,6 +1080,7 @@ $effect(() => {
   if (!canSubmitLayer) return
   if (hasAutoEnteredEditForNew) return
   if (headerCtrl.state.isEditing) return
+
   headerCtrl.setEditing(true)
   hasAutoEnteredEditForNew = true
 })
@@ -1070,6 +1089,7 @@ $effect(() => {
   if (!isCurrentRefSettled && !isNewLayerRef) return
   if (canSubmitLayer) return
   if (!headerCtrl.state.isEditing) return
+
   headerCtrl.setEditing(false)
 })
 
@@ -1120,7 +1140,10 @@ $effect(() => {
 })
 </script>
 
-<Main.Root>
+<Main.Root
+  onDimensionsChange={(width, height) =>
+    adminCtx.view.layout.setMainDimensions(width, height)}
+>
   <Main.Form
     bind:formEl={contentsElement}
     attrs={formCtx.attributes}
@@ -1146,7 +1169,9 @@ $effect(() => {
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
 
-          {#snippet children(locale)}
+          {#snippet children(
+            locale,
+          )}
             <FormI18nDescriptorFields
               form={formCtx.form}
               fields={formCtx.form.fields.data.i18n[locale]}

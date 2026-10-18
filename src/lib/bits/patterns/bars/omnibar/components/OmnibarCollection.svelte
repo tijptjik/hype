@@ -1,11 +1,11 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
 // BITS
-import { Button } from '$lib/bits'
+import { Button } from '#lib/bits/index.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import XMark from 'virtual:icons/lucide/x'
+import XMark from 'virtual:icons/proicons/cancel'
 // STYLES
 import {
   getOmnibarCollectionPanelClasses,
@@ -29,6 +29,9 @@ let {
   navTitle = '',
   onSelectIndex,
   onCloseTray,
+  hasMore,
+  loading,
+  onLoadMore,
 }: OmnibarCollectionProps = $props()
 
 const isNavigationMode = $derived(mode === 'navigation')
@@ -110,7 +113,7 @@ $effect(() => {
   transition:slide={{
     duration: COLLECTION_SLIDE_DURATION_MS,
     axis: 'y',
-    delay: panelSlideDelay
+    delay: panelSlideDelay,
   }}
 >
   <div
@@ -119,35 +122,52 @@ $effect(() => {
     style="max-height: {scrollAreaMaxHeight};"
   >
     {#if items.length === 0}
-      <div class="p-4 text-center text-base-content/60">{m.omni__no_results()}</div>
+      <div class="p-4 text-center text-base-content/60">
+        {loading ? m.resource_loading() : m.omni__no_results()}
+      </div>
     {:else}
       <ul class={OMNIBAR_COLLECTION_LIST_CLASSES} bind:this={listContainer}>
         {#each items as item, index}
-          {@const indicatorOpacities = getIndicatorOpacities(Math.abs(currentIndex - index))}
-          <li
-            class={OMNIBAR_COLLECTION_ITEM_CLASSES}
-            onclick={() => handleItemClick(index)}
-          >
-            {#if isNavigationMode}
-              <div class="relative h-2 w-2 rounded-full">
-                <div
-                  class="absolute left-0 top-0 h-2 w-2 rounded-full bg-primary group-hover:opacity-100"
-                  style="opacity: {indicatorOpacities.primaryOpacity}%"
-                ></div>
-                <div
-                  class="absolute right-0 top-0 h-2 w-2 rounded-full bg-white/90 group-hover:opacity-100"
-                  style="opacity: {indicatorOpacities.whiteOpacity}%"
-                ></div>
-              </div>
-            {/if}
-            <span class={OMNIBAR_COLLECTION_ITEM_TITLE_CLASSES}>
-              {'label' in item ? item.label : ''}
-            </span>
+          {@const indicatorOpacities = getIndicatorOpacities(
+            Math.abs(currentIndex - index),
+          )}
+          <li>
+            <button
+              type="button"
+              class={OMNIBAR_COLLECTION_ITEM_CLASSES}
+              onclick={() => handleItemClick(index)}
+            >
+              {#if isNavigationMode}
+                <div class="relative h-2 w-2 rounded-full">
+                  <div
+                    class="absolute left-0 top-0 h-2 w-2 rounded-full bg-primary group-hover:opacity-100"
+                    style="opacity: {indicatorOpacities.primaryOpacity}%"
+                  ></div>
+                  <div
+                    class="absolute right-0 top-0 h-2 w-2 rounded-full bg-white/90 group-hover:opacity-100"
+                    style="opacity: {indicatorOpacities.whiteOpacity}%"
+                  ></div>
+                </div>
+              {/if}
+              <span class={OMNIBAR_COLLECTION_ITEM_TITLE_CLASSES}>
+                {'label' in item ? item.label : ''}
+              </span>
+            </button>
           </li>
         {/each}
       </ul>
     {/if}
   </div>
+  {#if hasMore && onLoadMore}
+    <button
+      type="button"
+      class="px-4 py-2 text-left text-sm text-primary disabled:opacity-50"
+      disabled={loading}
+      onclick={onLoadMore}
+    >
+      {loading ? m.resource_loading() : m.resource_load_more()}
+    </button>
+  {/if}
   {#if isNavigationMode}
     <div class={OMNIBAR_COLLECTION_FOOTER_CLASSES}>
       <span class="text-xs uppercase tracking-wider text-base-content/60">

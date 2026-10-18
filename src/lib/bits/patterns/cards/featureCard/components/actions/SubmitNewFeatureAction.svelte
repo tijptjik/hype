@@ -2,31 +2,31 @@
 // THIRD PARTY
 import { toast } from 'svelte-sonner'
 // I18N
-import { getLocale, m } from '$lib/i18n'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // CONTEXT
-import { getAppCtx } from '$lib/context/app.svelte'
-import { getCardCtx } from '$lib/context/card.svelte'
-import { getImageCtx } from '$lib/context/image.svelte'
-import { getOmniCtx } from '$lib/context/omni.svelte'
+import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
+import { getCardCtx } from '#lib/context/card.svelte.js'
+import { getImageCtx } from '#lib/context/image.svelte.js'
+import { getOmniCtx } from '#lib/context/omni.svelte.js'
 // SERVICES
-import { submitNewFeature as submitNewFeatureAPI } from '$lib/client/services/task'
+import { submitNewFeature as submitNewFeatureAPI } from '#lib/client/services/task.js'
 // ENUMS
-import { FeatureCardMode } from '$lib/enums'
+import { FeatureCardMode } from '#lib/enums.js'
 // TYPES
-import type { ImageUpload } from '$lib/db/zod/schema/image.types'
-import type { NewFeatureTask } from '$lib/types'
+import type { ImageUpload } from '#lib/db/zod/schema/image.types.js'
+import type { NewFeatureTask } from '#lib/api/services/taskCreation.types.js'
 // LOCAL
 import FeatureCardSubmitButton from './FeatureCardSubmitButton.svelte'
 
-const appCtx = getAppCtx()
+const appCtx = getSurfaceCtx()
 const cardCtx = getCardCtx()
 const omniCtx = getOmniCtx()
 const imageCtx = getImageCtx()
 
 async function submitNewFeature(): Promise<void> {
-  const newFeature = appCtx.getNewFeature() as NewFeatureTask
+  const newFeature = appCtx.draft.current as NewFeatureTask
   const title =
-    newFeature?.feature?.i18n?.[getLocale()]?.title ??
+    newFeature?.feature?.i18n?.[getLocaleKey()]?.title ??
     newFeature?.feature?.i18n?.en?.title ??
     'Untitled feature'
   const layer = newFeature?.layerId ? appCtx.cache.layer.get(newFeature.layerId) : null
@@ -39,7 +39,7 @@ async function submitNewFeature(): Promise<void> {
     return
   }
 
-  if (!newFeature?.feature?.i18n?.[getLocale()]?.title) {
+  if (!newFeature?.feature?.i18n?.[getLocaleKey()]?.title) {
     cardCtx.validationError = m.validation__title_required()
     return
   }
@@ -64,7 +64,7 @@ async function submitNewFeature(): Promise<void> {
     cardCtx.setMode(FeatureCardMode.Display)
     imageCtx.resetImages()
     cardCtx.userData.photos = []
-    appCtx.resetNewFeature()
+    appCtx.draft.reset()
     cardCtx.resetError()
   } catch (error) {
     console.error('Error submitting new feature:', error)

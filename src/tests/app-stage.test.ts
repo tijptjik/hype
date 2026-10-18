@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveAppStage } from '$lib/index'
+import { resolveAppStage } from '#lib/index.js'
 
 describe('resolveAppStage', () => {
   it('classifies preview app and asset hosts as preview', () => {

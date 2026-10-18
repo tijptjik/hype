@@ -1,22 +1,28 @@
+// SVELTEKIT
+import { error } from '@sveltejs/kit'
+// IDENTITY
+import { nanoid } from 'nanoid'
 // DRIZZLE
-import { and, asc, eq, inArray, or } from 'drizzle-orm'
+import { and, asc, eq, inArray, or, not, sql, getTableColumns } from 'drizzle-orm'
+import { chunkedInArray, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // DB
-import { transformI18nSafely, toRelatedRecords } from '$lib/db'
-import { inferPropertyDiscriminatorFromComponent } from '$lib/api/services'
-import { toPropertyResponseFromRaw } from '$lib/api/services/property'
+import { transformI18nSafely, toRelatedRecords } from '#lib/db/index.js'
+import { inferPropertyDiscriminatorFromComponent } from '#lib/api/services/index.js'
+import { toPropertyResponseFromRaw } from '#lib/api/services/property.js'
 import {
   insert,
   update,
   insertMany,
   insertManyRelated,
   replaceManyRelated,
-  delMany,
 } from '../crud'
 // SCHEMA
 import {
   hub,
   organisation,
   project,
+  layer,
+  layerProperty,
   property,
   projectProperty,
   hubProperty,
@@ -28,10 +34,11 @@ import {
 // ZOD
 import { PropertyRecordCreate, PropertyRecordUpdate } from '../zod'
 // I18N
-import { normalizeI18nLocaleRecord } from '$lib/i18n'
+import { normalizeI18nLocaleRecord } from '#lib/i18n.js'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
-import type { Locale, Database } from '$lib/types'
+import type { BatchItem } from 'drizzle-orm/batch'
+import type { Locale, Database } from '#lib/types.js'
 import type {
   Property,
   PropertyDB,
@@ -47,9 +54,15 @@ import type {
   PropertyValueI18nPartial,
   PropertyValueNew,
   ProjectPropertyForm,
-} from '$lib/db/zod/schema/property.types'
-import { syncProperties } from './layer'
+} from '#lib/db/zod/schema/property.types.js'
 import { retryBusyRead } from './sqlite'
+// TYPES
+
+/** Server-owned parent scope for an atomic property catalog save. */
+type PropertyCatalogTarget = {
+  scope: 'project' | 'hub' | 'organisation'
+  id: string
+}
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -77,9 +90,11 @@ import { retryBusyRead } from './sqlite'
 //    - updateBaseProperty
 //    - updateI18n
 //    - syncPropertyValues
+//    - isMissingPropertyValueOwnership
 //    - updatePropertyValueI18n
 //
 // 3.2 CRUD :: UPDATE (SYNC)
+//    - savePropertyCatalog (internal)
 //    - upsertProjectProperties
 //    - seedDefaultInheritedPropertiesForProject
 //    - syncProjectInheritedProperties
@@ -88,6 +103,7 @@ import { retryBusyRead } from './sqlite'
 //
 // 4. COMMON
 //    - propertyWithRelations (const)
+//    - toCatalogRank
 //    - inferPropertyTypeFromComponent
 
 // ═══════════════════════
@@ -548,6 +564,9 @@ export const updateI18n = async (
  * @param incomingValues Array of current property value data from the form/API.
  * @param propertyId The ID of the parent property.
  * @returns Array of all current propertyValue records for the property from DB.
+ * @remarks Parent linkage is server-owned. Updates and deletions recheck the target
+ * property at write time rather than trusting the earlier ownership snapshot.
+ * Deletions, creates, guarded updates, and readback share one atomic D1 batch.
  */
 export const syncPropertyValues = async (
   db: Database,
@@ -559,45 +578,99 @@ export const syncPropertyValues = async (
   })
 
   const existingIds = new Set(existingValues.map(v => v.id))
-  const incomingMap = new Map(incomingValues.map(v => [v.id, v]))
-
-  const idsToDelete = existingValues
-    .filter(ev => !incomingMap.has(ev.id))
-    .map(ev => ev.id)
+  const incomingIds = incomingValues
+    .map(value => value.id)
+    .filter(id => typeof id === 'string')
   const valuesToUpdate = incomingValues.filter(iv => iv.id && existingIds.has(iv.id))
   const valuesToCreate = incomingValues.filter(iv => !iv.id || !existingIds.has(iv.id))
 
-  // Delete removed values
-  if (idsToDelete.length > 0) {
-    await delMany(db, propertyValue, propertyValue.id, idsToDelete)
-  }
+  // Delete removed values only while they still belong to the target property.
+  // Evaluate the replacement set at write time so concurrent submissions cannot combine sets.
+  const deletion = db
+    .delete(propertyValue)
+    .where(
+      and(
+        eq(propertyValue.propertyId, propertyId),
+        not(chunkedInArray(propertyValue.id, incomingIds)),
+      ),
+    )
 
-  // Create new values
-  if (valuesToCreate.length > 0) {
-    const dataToInsert = valuesToCreate.map(val => ({
-      ...val,
-      propertyId: propertyId,
-    })) as InferInsertModel<typeof propertyValue>[]
-    await insertMany(db, propertyValue, dataToInsert)
-  }
-
-  // Update existing values
-  await Promise.all(
-    valuesToUpdate.map(async val => {
-      const { i18n, ...baseValueData } = val // Exclude i18n for base propertyValue update
-      await update<typeof propertyValue>(
-        db,
-        propertyValue,
-        baseValueData,
-        propertyValue.id,
-        val.id,
-      )
-    }),
+  // Create new values in parameter-safe chunks within the same transaction.
+  const rowsPerInsert = Math.max(
+    1,
+    Math.floor(SQL_BATCH_SIZE / Object.keys(getTableColumns(propertyValue)).length),
   )
+  const creates = []
+  for (let index = 0; index < valuesToCreate.length; index += rowsPerInsert) {
+    creates.push(
+      db
+        .insert(propertyValue)
+        .values(
+          valuesToCreate
+            .slice(index, index + rowsPerInsert)
+            .map(value => ({ ...value, propertyId })),
+        ),
+    )
+  }
 
-  return db.query.propertyValue.findMany({
-    where: eq(propertyValue.propertyId, propertyId),
+  // Update existing values without accepting a submitted parent or crossing a changed scope.
+  const updates = valuesToUpdate.map(val => {
+    const { i18n, ...baseValueData } = val // Exclude i18n for base propertyValue update
+    return db
+      .insert(propertyValue)
+      .values({
+        ...baseValueData,
+        // The required parent lookup doubles as an in-transaction ownership assertion:
+        // a moved or deleted row yields NULL, so NOT NULL aborts the entire D1 batch.
+        propertyId: sql`(
+        select ${propertyValue.propertyId} from ${propertyValue}
+        where ${propertyValue.id} = ${val.id} and ${propertyValue.propertyId} = ${propertyId}
+      )`,
+      })
+      .onConflictDoUpdate({
+        target: propertyValue.id,
+        set: { ...baseValueData, propertyId },
+      })
   })
+
+  try {
+    // Keep deletion, creates, guarded updates, and readback in one atomic transaction.
+    const results = await db.batch([
+      deletion,
+      ...creates,
+      ...updates,
+      db.select().from(propertyValue).where(eq(propertyValue.propertyId, propertyId)),
+    ])
+    return results.at(-1) as PropertyValueDB[]
+  } catch (cause) {
+    if (isMissingPropertyValueOwnership(cause)) {
+      throw error(404, 'PROPERTY_VALUE_NOT_FOUND')
+    }
+    throw cause
+  }
+}
+
+/**
+ * Recognizes the required-parent constraint used by guarded value updates.
+ * @param cause - Error returned by SQLite, D1, or a Drizzle wrapper.
+ * @returns Whether an expected update target was missing from its authorized property.
+ * @remarks Match only this column's NOT NULL failure; other constraint failures retain
+ * their original error and all failures have already rolled back the batch.
+ */
+function isMissingPropertyValueOwnership(cause: unknown): boolean {
+  const visited = new Set<unknown>()
+  let current = cause
+  while (current && typeof current === 'object' && !visited.has(current)) {
+    visited.add(current)
+    if (
+      'message' in current &&
+      typeof current.message === 'string' &&
+      current.message.includes('NOT NULL constraint failed: propertyValue.propertyId')
+    )
+      return true
+    current = 'cause' in current ? current.cause : undefined
+  }
+  return false
 }
 
 /**
@@ -640,228 +713,275 @@ export const updatePropertyValueI18n = async (
  * @param properties Array of properties to upsert.
  * @param projectId The ID of the project to upsert properties for.
  * @returns Array of upserted properties.
+ * @remarks Base records, translations, values and stale-property deletions commit
+ * together. Retained identities are ownership-checked again inside the transaction.
  */
 export const upsertProjectProperties = async (
   db: Database,
   properties: Array<ProjectPropertyForm | Property>, // Can be a mix of submitted form rows and persisted properties
   projectId: string,
+): Promise<Property[]> =>
+  savePropertyCatalog(db, properties, { scope: 'project', id: projectId })
+
+/**
+ * Atomically saves one scoped catalog, its children, and hub/organisation rank links.
+ * @param db - Database used by the authorized resource workflow.
+ * @param properties - Complete submitted catalog for the target scope.
+ * @param target - Server-owned resource scope and identifier.
+ * @returns Hydrated persisted properties, in catalog rank order or local key order.
+ * @remarks Callers authorize the operation; ownership is rechecked within the batch.
+ */
+const savePropertyCatalog = async (
+  db: Database,
+  properties: Array<ProjectPropertyForm | Property | PropertyNew>,
+  target: PropertyCatalogTarget,
 ): Promise<Property[]> => {
+  const ownerColumn =
+    target.scope === 'project'
+      ? property.projectId
+      : target.scope === 'hub'
+        ? property.hubId
+        : property.organisationId
+  const scopeFilter = and(eq(property.scope, target.scope), eq(ownerColumn, target.id))
   const existingProperties = await db.query.property.findMany({
-    where: and(eq(property.scope, 'project'), eq(property.projectId, projectId)),
-    with: {
-      i18n: true,
-      values: {
-        with: {
-          i18n: true,
-        },
-      },
-    },
+    where: scopeFilter,
+    with: { values: true },
   })
+  const existingById = new Map(existingProperties.map(row => [row.id, row]))
 
-  const existingPropsMap = new Map(existingProperties.map(p => [p.id, p]))
-  const incomingPropsMap = new Map(
-    properties.filter(p => (p as Property).id).map(p => [(p as Property).id, p]),
-  )
-
-  const propsToDelete = existingProperties.filter(ep => !incomingPropsMap.has(ep.id))
-  const propsToCreate = properties.filter(
-    p => !(p as Property).id || !existingPropsMap.has((p as Property).id),
-  )
-  const propsToUpdate = properties.filter(
-    p => (p as Property).id && existingPropsMap.has((p as Property).id),
-  ) as Property[]
-
-  // Validate create payloads before mutating existing records.
-  // This prevents destructive deletes when incoming create rows are invalid.
-  const parsedCreateBasePayloads: Array<ReturnType<typeof PropertyRecordCreate.parse>> =
-    []
-  for (const propData of propsToCreate) {
-    const {
-      i18n: _i18nData,
-      values: _valuesData,
-      ...basePropData
-    } = propData as ProjectPropertyForm
-    const parsedBase = PropertyRecordCreate.parse({
-      ...basePropData,
-      projectId,
-      hubId: null,
-      scope: 'project',
-      type: inferPropertyTypeFromComponent(
-        (basePropData as ProjectPropertyForm).component,
-      ),
+  // Validate every create/update before mutating existing records, avoiding destructive
+  // deletes or partial saves when any submitted base payload is invalid.
+  const prepared = properties.map(input => {
+    const { i18n, values: submittedValues, ...base } = input
+    const values =
+      target.scope === 'project' ? submittedValues : (submittedValues ?? [])
+    const id = input.id || nanoid(12)
+    const existing = existingById.get(id)
+    const serverOwnedBase = {
+      ...base,
+      id,
+      projectId: target.scope === 'project' ? target.id : null,
+      hubId: target.scope === 'hub' ? target.id : null,
+      organisationId: target.scope === 'organisation' ? target.id : null,
+      scope: target.scope,
+      type: inferPropertyTypeFromComponent(input.component),
       isDefaultEnabled:
-        typeof (propData as ProjectPropertyForm).isDefaultEnabled === 'boolean'
-          ? (propData as ProjectPropertyForm).isDefaultEnabled
-          : false,
-    })
-    parsedCreateBasePayloads.push(parsedBase)
-  }
-
-  // Create
-  const createdResults: Property[] = []
-  for (const [index, propData] of propsToCreate.entries()) {
-    const {
-      i18n: i18nData,
-      values: valuesData,
-      ..._basePropData
-    } = propData as ProjectPropertyForm
-    const parsedBase = parsedCreateBasePayloads[index]
-    if (!parsedBase) {
-      throw new Error('FAILED_TO_RESOLVE_PARSED_PROPERTY_CREATE_PAYLOAD')
+        target.scope === 'project'
+          ? Boolean(input.isDefaultEnabled)
+          : input.isDefaultEnabled,
     }
-    const newBaseProp = await createBaseProperty(db, {
-      ...parsedBase,
-      projectId,
-      hubId: null,
-      scope: 'project',
-      type: inferPropertyTypeFromComponent((propData as ProjectPropertyForm).component),
-      isDefaultEnabled:
-        typeof (propData as ProjectPropertyForm).isDefaultEnabled === 'boolean'
-          ? (propData as ProjectPropertyForm).isDefaultEnabled
-          : false,
-    } as InferInsertModel<typeof property>)
-
-    const newTranslations = await createI18n(
-      db,
-      i18nData as Record<Locale, PropertyI18nNew>,
-      newBaseProp.id,
-    )
-
-    const newPropValuesWithTranslations: PropertyValue[] = []
-    if (valuesData) {
-      for (const valData of valuesData as PropertyValueNew[]) {
-        const { i18n: valI18nData, ...baseValData } = valData
-        const newPropVal = await insert<typeof propertyValue>(db, propertyValue, {
-          ...baseValData,
-          propertyId: newBaseProp.id,
-        } as PropertyValueNew)
-        const newValTranslations =
-          valI18nData && Object.keys(valI18nData).length > 0
-            ? await createPropertyValueI18n(
-                db,
-                valI18nData as Record<Locale, PropertyValueI18nNew>,
-                newPropVal.id,
-              )
-            : []
-        newPropValuesWithTranslations.push({
-          ...newPropVal,
-          i18n: transformI18nSafely(newValTranslations),
-        } as PropertyValue)
-      }
-    }
-    createdResults.push({
-      ...newBaseProp,
-      i18n: transformI18nSafely(newTranslations),
-      values: newPropValuesWithTranslations,
-    } as Property)
-  }
-
-  // Update
-  const updatedResults: Property[] = []
-  for (const propData of propsToUpdate) {
-    const { i18n: i18nData, values: valuesData, ...basePropData } = propData
-    const propertyId = propData.id
-    if (!propertyId) continue
-    const parsedBase = PropertyRecordUpdate.parse({
-      ...basePropData,
-      type: inferPropertyTypeFromComponent(basePropData.component),
-    }) // Validate
-    const updatedBaseProp = await updateBaseProperty(
-      db,
-      {
-        ...parsedBase,
-        projectId,
-        hubId: null,
-        scope: 'project',
-        type: inferPropertyTypeFromComponent(basePropData.component),
-        isDefaultEnabled:
-          typeof propData.isDefaultEnabled === 'boolean'
-            ? propData.isDefaultEnabled
-            : false,
-      } as InferInsertModel<typeof property>,
-      propertyId,
-    )
-    const normalizedPropertyI18n = normalizeI18nLocaleRecord(
-      (i18nData || {}) as Record<string, PropertyI18nPartial>,
-    )
-    const updatedTranslations = await updateI18n(
-      db,
-      normalizedPropertyI18n as Record<Locale, PropertyI18nPartial>,
-      propertyId,
-    )
-
-    const normalizedValuesData = Array.isArray(valuesData)
-      ? valuesData
+    const parsed = existing
+      ? PropertyRecordUpdate.parse(serverOwnedBase)
+      : PropertyRecordCreate.parse(serverOwnedBase)
+    const normalizedValues = Array.isArray(values)
+      ? values
           .map((value, index) => ({ value, index }))
           .sort((a, b) => {
-            const aRank =
+            const left =
               typeof a.value.rank === 'number' && Number.isFinite(a.value.rank)
                 ? a.value.rank
                 : Number.POSITIVE_INFINITY
-            const bRank =
+            const right =
               typeof b.value.rank === 'number' && Number.isFinite(b.value.rank)
                 ? b.value.rank
                 : Number.POSITIVE_INFINITY
-            if (aRank !== bRank) return aRank - bRank
-            return a.index - b.index
+            return left === right ? a.index - b.index : left - right
           })
-          .map(({ value }, rank) => ({ ...value, rank }))
-      : []
+          // Allocate identity before persistence so ID-less values retain their translations.
+          .map(({ value }, rank) => ({ ...value, id: value.id || nanoid(12), rank }))
+      : undefined
+    if (
+      normalizedValues &&
+      new Set(normalizedValues.map(value => value.id)).size !== normalizedValues.length
+    ) {
+      throw error(400, 'DUPLICATE_PROPERTY_VALUE_ID')
+    }
+    return {
+      id,
+      rank: toCatalogRank('rank' in input ? input.rank : undefined),
+      existing,
+      parsed,
+      values: normalizedValues,
+      i18n: normalizeI18nLocaleRecord(
+        (i18n ?? {}) as Record<string, PropertyI18nPartial>,
+      ),
+    }
+  })
+  const ids = prepared.map(row => row.id)
+  if (new Set(ids).size !== ids.length) throw error(400, 'DUPLICATE_PROPERTY_ID')
 
-    const syncedValues = valuesData
-      ? await syncPropertyValues(db, normalizedValuesData, propertyId)
-      : []
-
-    const updatedPropValuesWithTranslations: PropertyValue[] = []
-    for (const syncedVal of syncedValues) {
-      // syncedVal is PropertyValueDB
-      const incomingValData = valuesData?.find(v => v.id === syncedVal.id) // incomingValData is PropertyValue from input
-      let valTranslations: PropertyValueI18nDB[] = []
-      if (incomingValData?.i18n && Object.keys(incomingValData.i18n).length > 0) {
-        try {
-          valTranslations = await updatePropertyValueI18n(
-            db,
-            incomingValData.i18n as Record<Locale, PropertyValueI18nPartial>,
-            syncedVal.id,
-          )
-        } catch (_e) {
-          // Fallback: try to fetch existing translations if update failed
-          valTranslations = await db.query.propertyValueI18n.findMany({
-            where: eq(propertyValueI18n.propertyValueId, syncedVal.id),
-          })
-        }
-      } else {
-        await db
-          .delete(propertyValueI18n)
-          .where(eq(propertyValueI18n.propertyValueId, syncedVal.id))
-        valTranslations = []
-      }
-      updatedPropValuesWithTranslations.push({
-        ...syncedVal,
-        i18n: transformI18nSafely(valTranslations),
-      } as PropertyValue)
+  // Recheck ownership inside the batch before touching parents or their children.
+  // CASE short-circuits; malformed JSON aborts the transaction when a retained row moved.
+  const retainedIds = prepared.filter(row => row.existing).map(row => row.id)
+  const ownership = db
+    .select({
+      valid: sql<number>`case when count(*) = ${retainedIds.length} then 1
+      else json('PROPERTY_NOT_FOUND') end`,
+    })
+    .from(property)
+    .where(and(scopeFilter, chunkedInArray(property.id, retainedIds)))
+  const writes: BatchItem<'sqlite'>[] = []
+  for (const row of prepared) {
+    // Create or update the base record without replacing its identity or dependent links.
+    if (row.existing) {
+      // Identity and timestamps are server-owned, even when a hydrated record was submitted.
+      const {
+        id: _id,
+        createdAt: _createdAt,
+        modifiedAt: _modifiedAt,
+        ...updateData
+      } = row.parsed
+      writes.push(
+        db
+          .update(property)
+          .set(updateData)
+          .where(and(eq(property.id, row.id), scopeFilter)),
+      )
+    } else {
+      writes.push(
+        db.insert(property).values(row.parsed as InferInsertModel<typeof property>),
+      )
     }
 
-    updatedResults.push({
-      ...updatedBaseProp,
-      i18n: transformI18nSafely(updatedTranslations),
-      values: updatedPropValuesWithTranslations,
-    } as Property)
-  }
+    // Replace property translations in the same transaction as their base record.
+    writes.push(db.delete(propertyI18n).where(eq(propertyI18n.propertyId, row.id)))
+    for (const [locale, translation] of Object.entries(row.i18n)) {
+      if (typeof translation.label !== 'string')
+        throw error(400, 'PROPERTY_LABEL_REQUIRED')
+      writes.push(
+        db.insert(propertyI18n).values({
+          ...translation,
+          label: translation.label,
+          propertyId: row.id,
+          locale,
+        }),
+      )
+    }
+    if (!row.values) continue
 
-  // Delete stale properties after successful create/update processing.
-  if (propsToDelete.length > 0) {
-    await delMany(
-      db,
-      property,
-      property.id,
-      propsToDelete.map(p => p.id),
+    const existingValueIds = new Set(row.existing?.values.map(value => value.id) ?? [])
+    const retainedValueIds = row.values
+      .filter(value => existingValueIds.has(value.id))
+      .map(value => value.id)
+    writes.push(
+      db
+        .select({
+          valid: sql<number>`case when count(*) = ${retainedValueIds.length} then 1
+        else json('PROPERTY_VALUE_NOT_FOUND') end`,
+        })
+        .from(propertyValue)
+        .where(
+          and(
+            eq(propertyValue.propertyId, row.id),
+            chunkedInArray(propertyValue.id, retainedValueIds),
+          ),
+        ),
     )
+    // Removed values cascade to translations and feature links only if the entire save succeeds.
+    writes.push(
+      db.delete(propertyValue).where(
+        and(
+          eq(propertyValue.propertyId, row.id),
+          not(
+            chunkedInArray(
+              propertyValue.id,
+              row.values.map(value => value.id),
+            ),
+          ),
+        ),
+      ),
+    )
+    for (const value of row.values) {
+      const { i18n, ...baseValue } = value
+      if (existingValueIds.has(value.id)) {
+        writes.push(
+          db
+            .update(propertyValue)
+            .set({ ...baseValue, propertyId: row.id })
+            .where(
+              and(eq(propertyValue.id, value.id), eq(propertyValue.propertyId, row.id)),
+            ),
+        )
+      } else {
+        writes.push(
+          db.insert(propertyValue).values({ ...baseValue, propertyId: row.id }),
+        )
+      }
+      // Do not fall back to old translations on a failed write: fail and roll back the whole save.
+      writes.push(
+        db
+          .delete(propertyValueI18n)
+          .where(eq(propertyValueI18n.propertyValueId, value.id)),
+      )
+      const translations = normalizeI18nLocaleRecord(
+        (i18n ?? {}) as Record<string, PropertyValueI18nPartial>,
+      )
+      for (const [locale, translation] of Object.entries(translations)) {
+        if (typeof translation.value !== 'string')
+          throw error(400, 'PROPERTY_VALUE_TRANSLATION_REQUIRED')
+        writes.push(
+          db.insert(propertyValueI18n).values({
+            ...translation,
+            value: translation.value,
+            propertyValueId: value.id,
+            locale,
+          }),
+        )
+      }
+    }
   }
 
-  return [...createdResults, ...updatedResults].sort((a, b) =>
-    a.key.localeCompare(b.key),
-  )
+  // Rank-link replacement belongs to the same transaction as the catalog and its children.
+  const ordered = prepared
+    .map((row, index) => ({ id: row.id, rank: row.rank, index }))
+    .sort((a, b) => (a.rank === b.rank ? a.index - b.index : a.rank - b.rank))
+  const ranks = new Map(ordered.map((row, rank) => [row.id, rank]))
+  if (target.scope === 'hub') {
+    writes.push(db.delete(hubProperty).where(eq(hubProperty.hubId, target.id)))
+    for (const [propertyId, rank] of ranks) {
+      writes.push(db.insert(hubProperty).values({ hubId: target.id, propertyId, rank }))
+    }
+  } else if (target.scope === 'organisation') {
+    writes.push(
+      db
+        .delete(organisationProperty)
+        .where(eq(organisationProperty.organisationId, target.id)),
+    )
+    for (const [propertyId, rank] of ranks) {
+      writes.push(
+        db
+          .insert(organisationProperty)
+          .values({ organisationId: target.id, propertyId, rank }),
+      )
+    }
+  }
+
+  // Delete stale properties after successful create/update processing, within the same batch.
+  const deletion = db
+    .delete(property)
+    .where(and(scopeFilter, not(chunkedInArray(property.id, ids))))
+  const readback = db.query.property.findMany({
+    where: scopeFilter,
+    with: { i18n: true, values: { with: { i18n: true } } },
+    orderBy: [asc(property.key)],
+  })
+  // Each write is parameter-bounded, but all writes and hydrated readback share one transaction.
+  const results = await db.batch([ownership, ...writes, deletion, readback])
+  const rows = results.at(-1) as PropertyDBRaw[]
+  if (target.scope !== 'project') {
+    return rows
+      .map(row => toPropertyResponseFromRaw(row, ranks.get(row.id) ?? 0))
+      .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
+  }
+  return rows.map(row => ({
+    ...row,
+    i18n: transformI18nSafely(row.i18n),
+    values:
+      row.values?.map(value => ({
+        ...value,
+        i18n: transformI18nSafely(value.i18n),
+      })) ?? [],
+  })) as Property[]
 }
 
 /**
@@ -870,6 +990,9 @@ export const upsertProjectProperties = async (
  *
  * @param db - Database handle.
  * @param params - Project id, hub scope, and optional rank offset.
+ * @returns Nothing after all missing inherited assignments are inserted atomically.
+ * @remarks Existing assignments are preserved, including explicit disabled flags.
+ * New ranks follow both the requested offset and the last persisted assignment.
  */
 export const seedDefaultInheritedPropertiesForProject = async (
   db: Database,
@@ -879,41 +1002,63 @@ export const seedDefaultInheritedPropertiesForProject = async (
     startingRank?: number
   },
 ): Promise<void> => {
-  const organisationId = await getProjectOrganisationId(db, params.projectId)
-  const coreHubId = await getCoreHubId(db)
-  const scopedHubIds = Array.from(
-    new Set(
-      [params.hubId, coreHubId].filter((hubId): hubId is string => Boolean(hubId)),
-    ),
-  )
-  if (scopedHubIds.length === 0 && !organisationId) return
+  const organisationIds = db
+    .select({ id: project.organisationId })
+    .from(project)
+    .where(eq(project.id, params.projectId))
+  const coreHubId = db
+    .select({ id: hub.id })
+    .from(hub)
+    .where(eq(hub.code, 'core'))
+    .limit(1)
+  const assignedIds = db
+    .select({ id: projectProperty.propertyId })
+    .from(projectProperty)
+    .where(eq(projectProperty.projectId, params.projectId))
+  const nextRank = db
+    .select({
+      rank: sql<number>`coalesce(max(${projectProperty.rank}) + 1, 0)`,
+    })
+    .from(projectProperty)
+    .where(eq(projectProperty.projectId, params.projectId))
 
-  const defaultProperties = await db.query.property.findMany({
-    columns: { id: true, isDefaultEnabled: true },
-    where: and(
-      or(
-        and(eq(property.scope, 'hub'), inArray(property.hubId, scopedHubIds)),
-        organisationId
-          ? and(
-              eq(property.scope, 'organisation'),
-              eq(property.organisationId, organisationId),
-            )
-          : undefined,
-      ),
-    ),
-    orderBy: [asc(property.key)],
-  })
-  if (defaultProperties.length === 0) return
-
-  await db.insert(projectProperty).values(
-    defaultProperties.map((item, index) => ({
-      projectId: params.projectId,
-      propertyId: item.id,
-      isEnabled: Boolean(item.isDefaultEnabled),
-      isDefaultEnabled: Boolean(item.isDefaultEnabled),
-      rank: (params.startingRank ?? 0) + index,
-    })),
-  )
+  // Select only missing defaults at write time; explicit choices and ranks remain untouched.
+  // INSERT SELECT has a fixed parameter count regardless of the inherited catalog size.
+  await db
+    .insert(projectProperty)
+    .select(
+      db
+        .select({
+          projectId: sql<string>`${params.projectId}`.as('projectId'),
+          propertyId: property.id,
+          isEnabled: property.isDefaultEnabled,
+          isDefaultEnabled: property.isDefaultEnabled,
+          rank: sql<number>`max(${params.startingRank ?? 0}, (${nextRank})) +
+        row_number() over (order by ${property.key}, ${property.id}) - 1`.as('rank'),
+        })
+        .from(property)
+        .where(
+          and(
+            not(inArray(property.id, assignedIds)),
+            or(
+              and(
+                eq(property.scope, 'hub'),
+                or(
+                  params.hubId ? eq(property.hubId, params.hubId) : undefined,
+                  inArray(property.hubId, coreHubId),
+                ),
+              ),
+              and(
+                eq(property.scope, 'organisation'),
+                inArray(property.organisationId, organisationIds),
+              ),
+            ),
+          ),
+        ),
+    )
+    .onConflictDoNothing({
+      target: [projectProperty.projectId, projectProperty.propertyId],
+    })
 }
 
 /**
@@ -922,6 +1067,9 @@ export const seedDefaultInheritedPropertiesForProject = async (
  *
  * @param db - Database handle.
  * @param params - Project id and submitted inherited property rows.
+ * @returns Nothing after project assignments and child-layer links commit together.
+ * @remarks The caller authorizes the project and property selection. Omitted flags
+ * retain their live values; existing child-layer visibility is not overwritten.
  */
 export const syncProjectInheritedProperties = async (
   db: Database,
@@ -978,75 +1126,141 @@ export const syncProjectInheritedProperties = async (
       rank,
     }))
 
-  const currentRows = await db.query.projectProperty.findMany({
-    where: eq(projectProperty.projectId, params.projectId),
-  })
-  const currentByPropertyId = new Map(
-    currentRows.map(row => [row.propertyId, row] as const),
-  )
-  const currentIds = new Set(currentRows.map(row => row.propertyId))
-  const nextIds = new Set(submittedProjectProperties.map(row => row.id))
-
-  const idsToDelete = currentRows
-    .filter(row => !nextIds.has(row.propertyId))
-    .map(row => row.propertyId)
-
-  if (idsToDelete.length > 0) {
-    await db
-      .delete(projectProperty)
-      .where(
-        and(
-          eq(projectProperty.projectId, params.projectId),
-          inArray(projectProperty.propertyId, idsToDelete),
+  // Preserve omitted flags from live rows and keep every assignment write in the same batch.
+  const detachAssignments = db.delete(projectProperty).where(
+    and(
+      eq(projectProperty.projectId, params.projectId),
+      not(
+        chunkedInArray(
+          projectProperty.propertyId,
+          submittedProjectProperties.map(row => row.id),
         ),
-      )
-  }
-
-  const idsToCreate = submittedProjectProperties
-    .filter(row => !currentIds.has(row.id))
-    .map(row => row.id)
-
-  if (idsToCreate.length > 0) {
-    await db.insert(projectProperty).values(
-      submittedProjectProperties
-        .filter(row => idsToCreate.includes(row.id))
-        .map(row => ({
-          projectId: params.projectId,
-          propertyId: row.id,
-          isEnabled: row.isEnabled ?? true,
-          isDefaultEnabled: row.isDefaultEnabled ?? false,
-          rank: row.rank,
-        })),
-    )
-  }
-
-  await Promise.all(
-    submittedProjectProperties.map(row =>
-      db
-        .update(projectProperty)
-        .set({
-          rank: row.rank,
-          isEnabled:
-            row.isEnabled ?? currentByPropertyId.get(row.id)?.isEnabled ?? true,
-          isDefaultEnabled:
-            row.isDefaultEnabled ??
-            currentByPropertyId.get(row.id)?.isDefaultEnabled ??
-            false,
-        })
-        .where(
-          and(
-            eq(projectProperty.projectId, params.projectId),
-            eq(projectProperty.propertyId, row.id),
-          ),
-        ),
+      ),
     ),
   )
-
-  const resolvedProjectProperties = await listResolvedProjectProperties(
-    db,
-    params.projectId,
+  const assignments = submittedProjectProperties.map(row =>
+    db
+      .insert(projectProperty)
+      .values({
+        projectId: params.projectId,
+        propertyId: row.id,
+        isEnabled: row.isEnabled ?? true,
+        isDefaultEnabled: row.isDefaultEnabled ?? false,
+        rank: row.rank,
+      })
+      .onConflictDoUpdate({
+        target: [projectProperty.projectId, projectProperty.propertyId],
+        set: {
+          rank: row.rank,
+          isEnabled: row.isEnabled ?? sql`${projectProperty.isEnabled}`,
+          isDefaultEnabled:
+            row.isDefaultEnabled ?? sql`${projectProperty.isDefaultEnabled}`,
+        },
+      }),
   )
-  await syncProperties(db, params.projectId, resolvedProjectProperties)
+
+  // Match the read resolver's local, organisation, scoped-hub and core-hub catalogs.
+  // Resolve these scopes at execution time so the cascade uses the assignments just written.
+  const organisationIds = db
+    .select({ id: project.organisationId })
+    .from(project)
+    .where(eq(project.id, params.projectId))
+  const scopedHubIds = db
+    .select({ id: organisation.hubId })
+    .from(organisation)
+    .where(inArray(organisation.id, organisationIds))
+  const coreHubId = db
+    .select({ id: hub.id })
+    .from(hub)
+    .where(eq(hub.code, 'core'))
+    .limit(1)
+  const effectiveHubIds = db
+    .select({ id: hub.id })
+    .from(hub)
+    .where(or(inArray(hub.id, scopedHubIds), inArray(hub.id, coreHubId)))
+  const organisationCatalogIds = db
+    .select({ id: organisationProperty.propertyId })
+    .from(organisationProperty)
+    .where(inArray(organisationProperty.organisationId, organisationIds))
+  const hubCatalogIds = db
+    .select({ id: hubProperty.propertyId })
+    .from(hubProperty)
+    .where(inArray(hubProperty.hubId, effectiveHubIds))
+  const enabledProperties = db
+    .select({
+      id: property.id,
+      defaultEnabled:
+        sql<boolean>`coalesce(${projectProperty.isDefaultEnabled}, ${property.isDefaultEnabled}, 0)`.as(
+          'defaultEnabled',
+        ),
+    })
+    .from(property)
+    .leftJoin(
+      projectProperty,
+      and(
+        eq(projectProperty.propertyId, property.id),
+        eq(projectProperty.projectId, params.projectId),
+      ),
+    )
+    .where(
+      and(
+        or(
+          and(eq(property.scope, 'project'), eq(property.projectId, params.projectId)),
+          and(
+            eq(property.scope, 'organisation'),
+            inArray(property.organisationId, organisationIds),
+          ),
+          and(eq(property.scope, 'hub'), inArray(property.hubId, effectiveHubIds)),
+          inArray(property.id, organisationCatalogIds),
+          inArray(property.id, hubCatalogIds),
+        ),
+        or(
+          eq(property.scope, 'project'),
+          sql`coalesce(${projectProperty.isEnabled}, ${property.isDefaultEnabled}, 0) = 1`,
+        ),
+      ),
+    )
+    .as('enabledProjectProperties')
+  const layerIds = db
+    .select({ id: layer.id })
+    .from(layer)
+    .where(eq(layer.projectId, params.projectId))
+  const detachLayerLinks = db
+    .delete(layerProperty)
+    .where(
+      and(
+        inArray(layerProperty.layerId, layerIds),
+        not(
+          inArray(
+            layerProperty.propertyId,
+            db.select({ id: enabledProperties.id }).from(enabledProperties),
+          ),
+        ),
+      ),
+    )
+  const insertLayerLinks = db
+    .insert(layerProperty)
+    .select(
+      db
+        .select({
+          layerId: layer.id,
+          propertyId: enabledProperties.id,
+          isVisible: enabledProperties.defaultEnabled,
+          isUserContributable: enabledProperties.defaultEnabled,
+        })
+        .from(layer)
+        .innerJoin(enabledProperties, sql`true`)
+        .where(eq(layer.projectId, params.projectId)),
+    )
+    .onConflictDoNothing({ target: [layerProperty.layerId, layerProperty.propertyId] })
+
+  // Child-layer failures must also restore the parent assignments and their ordering.
+  await db.batch([
+    detachAssignments,
+    ...assignments,
+    detachLayerLinks,
+    insertLayerLinks,
+  ])
 }
 
 /**
@@ -1059,226 +1273,12 @@ export const syncProjectInheritedProperties = async (
  */
 export const syncHubProperties = async (
   db: Database,
-  params: {
-    hubId: string
-    properties: Array<Record<string, unknown>>
-  },
-): Promise<Property[]> => {
-  const toNullableId = (value: unknown): string | null =>
-    typeof value === 'string' && value.trim().length > 0 ? value : null
-  const toNumericRank = (value: unknown): number => {
-    if (typeof value === 'number' && Number.isFinite(value)) return value
-    if (
-      typeof value === 'string' &&
-      value.trim().length > 0 &&
-      !Number.isNaN(Number(value))
-    ) {
-      return Number(value)
-    }
-    return Number.POSITIVE_INFINITY
-  }
-  const submittedRankById = new Map<string, number>(
-    params.properties
-      .filter(
-        (item): item is Property =>
-          typeof (item as Property).id === 'string' && (item as Property).id.length > 0,
-      )
-      .map(item => [item.id, toNumericRank((item as { rank?: unknown }).rank)]),
-  )
-
-  const existingProperties = await db.query.property.findMany({
-    where: and(eq(property.scope, 'hub'), eq(property.hubId, params.hubId)),
-    with: propertyWithRelations,
+  params: { hubId: string; properties: Array<Record<string, unknown>> },
+): Promise<Property[]> =>
+  savePropertyCatalog(db, params.properties as Array<Property | PropertyNew>, {
+    scope: 'hub',
+    id: params.hubId,
   })
-
-  const existingById = new Map(existingProperties.map(item => [item.id, item]))
-  const incomingById = new Map(
-    params.properties
-      .filter(
-        (item): item is Property =>
-          typeof (item as Property).id === 'string' && (item as Property).id.length > 0,
-      )
-      .map(item => [(item as Property).id, item]),
-  )
-
-  const staleIds = existingProperties
-    .filter(item => !incomingById.has(item.id))
-    .map(item => item.id)
-
-  const localised = await Promise.all(
-    params.properties.map(async item => {
-      const isExisting =
-        typeof (item as Property).id === 'string' &&
-        existingById.has((item as Property).id)
-      if (!isExisting) {
-        const parsedCreate = PropertyRecordCreate.parse({
-          ...item,
-          projectId: null,
-          hubId: params.hubId,
-          scope: 'hub',
-          type: inferPropertyTypeFromComponent((item as PropertyNew).component),
-        }) as InferInsertModel<typeof property>
-        const created = await createBaseProperty(db, {
-          ...parsedCreate,
-          projectId: null,
-          hubId: toNullableId(params.hubId),
-          scope: 'hub',
-          type: inferPropertyTypeFromComponent((item as PropertyNew).component),
-        } as InferInsertModel<typeof property>)
-        await createI18n(
-          db,
-          (item as PropertyNew).i18n as Record<Locale, PropertyI18nNew>,
-          created.id,
-        )
-        for (const value of (item as PropertyNew).values ?? []) {
-          const { i18n: valueI18n, ...baseValue } = value
-          const createdValue = await insert<typeof propertyValue>(db, propertyValue, {
-            ...baseValue,
-            propertyId: created.id,
-          } as PropertyValueNew)
-          if (valueI18n && Object.keys(valueI18n).length > 0) {
-            await createPropertyValueI18n(
-              db,
-              valueI18n as Record<Locale, PropertyValueI18nNew>,
-              createdValue.id,
-            )
-          }
-        }
-        const reloaded = await db.query.property.findFirst({
-          with: propertyWithRelations,
-          where: eq(property.id, created.id),
-        })
-        if (!reloaded) throw new Error('GLOBAL_PROPERTY_CREATE_RELOAD_FAILED')
-        return toPropertyResponseFromRaw(reloaded)
-      }
-
-      const existing = item as Property
-      const parsedUpdate = PropertyRecordUpdate.parse({
-        ...existing,
-        projectId: null,
-        hubId: params.hubId,
-        scope: 'hub',
-        type: inferPropertyTypeFromComponent(existing.component),
-      }) as Partial<InferInsertModel<typeof property>>
-      const {
-        id: _id,
-        createdAt: _createdAt,
-        modifiedAt: _modifiedAt,
-        ...updateData
-      } = parsedUpdate as {
-        id?: string
-        createdAt?: string
-        modifiedAt?: string
-        [key: string]: unknown
-      }
-      await db
-        .update(property)
-        .set({
-          ...(updateData as Partial<InferInsertModel<typeof property>>),
-          projectId: null,
-          hubId: toNullableId(params.hubId),
-          scope: 'hub',
-          type: inferPropertyTypeFromComponent(existing.component),
-        })
-        .where(eq(property.id, existing.id))
-      await updateI18n(
-        db,
-        normalizeI18nLocaleRecord(
-          (existing.i18n ?? {}) as Record<string, PropertyI18nPartial>,
-        ) as Record<Locale, PropertyI18nPartial>,
-        existing.id,
-      )
-      await syncPropertyValues(db, existing.values ?? [], existing.id)
-      for (const value of existing.values ?? []) {
-        if (value.i18n && Object.keys(value.i18n).length > 0) {
-          await updatePropertyValueI18n(
-            db,
-            value.i18n as Record<Locale, PropertyValueI18nPartial>,
-            value.id,
-          )
-          continue
-        }
-        await db
-          .delete(propertyValueI18n)
-          .where(eq(propertyValueI18n.propertyValueId, value.id))
-      }
-      const reloaded = await db.query.property.findFirst({
-        with: propertyWithRelations,
-        where: eq(property.id, existing.id),
-      })
-      if (!reloaded) throw new Error('GLOBAL_PROPERTY_UPDATE_RELOAD_FAILED')
-      return toPropertyResponseFromRaw(reloaded)
-    }),
-  )
-
-  if (staleIds.length > 0) {
-    await delMany(db, property, property.id, staleIds)
-  }
-
-  const ordered = localised
-    .map((item, index) => ({
-      id: item.id,
-      rank: submittedRankById.get(item.id) ?? Number.POSITIVE_INFINITY,
-      index,
-    }))
-    .sort((left, right) => {
-      if (left.rank !== right.rank) return left.rank - right.rank
-      return left.index - right.index
-    })
-    .map(({ id }, rank) => ({ id, rank }))
-  const currentRows = await db.query.hubProperty.findMany({
-    where: eq(hubProperty.hubId, params.hubId),
-  })
-  const currentIds = new Set(currentRows.map(row => row.propertyId))
-  const nextIds = new Set(ordered.map(row => row.id))
-  const idsToDelete = currentRows
-    .filter(row => !nextIds.has(row.propertyId))
-    .map(row => row.propertyId)
-
-  if (idsToDelete.length > 0) {
-    await db
-      .delete(hubProperty)
-      .where(
-        and(
-          eq(hubProperty.hubId, params.hubId),
-          inArray(hubProperty.propertyId, idsToDelete),
-        ),
-      )
-  }
-
-  const idsToCreate = ordered.filter(row => !currentIds.has(row.id)).map(row => row.id)
-
-  if (idsToCreate.length > 0) {
-    await db.insert(hubProperty).values(
-      ordered
-        .filter(row => idsToCreate.includes(row.id))
-        .map(row => ({
-          hubId: params.hubId,
-          propertyId: row.id,
-          rank: row.rank,
-        })),
-    )
-  }
-
-  await Promise.all(
-    ordered.map(row =>
-      db
-        .update(hubProperty)
-        .set({ rank: row.rank })
-        .where(
-          and(eq(hubProperty.hubId, params.hubId), eq(hubProperty.propertyId, row.id)),
-        ),
-    ),
-  )
-
-  const persistedRankById = new Map(ordered.map(row => [row.id, row.rank]))
-  return localised
-    .map(item => ({
-      ...item,
-      rank: persistedRankById.get(item.id) ?? 0,
-    }))
-    .sort((left, right) => left.rank - right.rank)
-}
 
 /**
  * Synchronizes an organisation's scoped property catalog and assignment ranks.
@@ -1290,240 +1290,28 @@ export const syncHubProperties = async (
  */
 export const syncOrganisationProperties = async (
   db: Database,
-  params: {
-    organisationId: string
-    properties: Array<Record<string, unknown>>
-  },
-): Promise<Property[]> => {
-  const toNullableId = (value: unknown): string | null =>
-    typeof value === 'string' && value.trim().length > 0 ? value : null
-  const toNumericRank = (value: unknown): number => {
-    if (typeof value === 'number' && Number.isFinite(value)) return value
-    if (
-      typeof value === 'string' &&
-      value.trim().length > 0 &&
-      !Number.isNaN(Number(value))
-    ) {
-      return Number(value)
-    }
-    return Number.POSITIVE_INFINITY
-  }
-  const submittedRankById = new Map<string, number>(
-    params.properties
-      .filter(
-        (item): item is Property =>
-          typeof (item as Property).id === 'string' && (item as Property).id.length > 0,
-      )
-      .map(item => [item.id, toNumericRank((item as { rank?: unknown }).rank)]),
-  )
-
-  const existingProperties = await db.query.property.findMany({
-    where: and(
-      eq(property.scope, 'organisation'),
-      eq(property.organisationId, params.organisationId),
-    ),
-    with: propertyWithRelations,
+  params: { organisationId: string; properties: Array<Record<string, unknown>> },
+): Promise<Property[]> =>
+  savePropertyCatalog(db, params.properties as Array<Property | PropertyNew>, {
+    scope: 'organisation',
+    id: params.organisationId,
   })
-
-  const existingById = new Map(existingProperties.map(item => [item.id, item]))
-  const incomingById = new Map(
-    params.properties
-      .filter(
-        (item): item is Property =>
-          typeof (item as Property).id === 'string' && (item as Property).id.length > 0,
-      )
-      .map(item => [(item as Property).id, item]),
-  )
-
-  const staleIds = existingProperties
-    .filter(item => !incomingById.has(item.id))
-    .map(item => item.id)
-
-  const localised = await Promise.all(
-    params.properties.map(async item => {
-      const isExisting =
-        typeof (item as Property).id === 'string' &&
-        existingById.has((item as Property).id)
-      if (!isExisting) {
-        const parsedCreate = PropertyRecordCreate.parse({
-          ...item,
-          projectId: null,
-          organisationId: params.organisationId,
-          hubId: null,
-          scope: 'organisation',
-          type: inferPropertyTypeFromComponent((item as PropertyNew).component),
-        }) as InferInsertModel<typeof property>
-        const created = await createBaseProperty(db, {
-          ...parsedCreate,
-          projectId: null,
-          organisationId: toNullableId(params.organisationId),
-          hubId: null,
-          scope: 'organisation',
-          type: inferPropertyTypeFromComponent((item as PropertyNew).component),
-        } as InferInsertModel<typeof property>)
-        await createI18n(
-          db,
-          (item as PropertyNew).i18n as Record<Locale, PropertyI18nNew>,
-          created.id,
-        )
-        for (const value of (item as PropertyNew).values ?? []) {
-          const { i18n: valueI18n, ...baseValue } = value
-          const createdValue = await insert<typeof propertyValue>(db, propertyValue, {
-            ...baseValue,
-            propertyId: created.id,
-          } as PropertyValueNew)
-          if (valueI18n && Object.keys(valueI18n).length > 0) {
-            await createPropertyValueI18n(
-              db,
-              valueI18n as Record<Locale, PropertyValueI18nNew>,
-              createdValue.id,
-            )
-          }
-        }
-        const reloaded = await db.query.property.findFirst({
-          with: propertyWithRelations,
-          where: eq(property.id, created.id),
-        })
-        if (!reloaded) throw new Error('ORGANISATION_PROPERTY_CREATE_RELOAD_FAILED')
-        return toPropertyResponseFromRaw(reloaded)
-      }
-
-      const existing = item as Property
-      const parsedUpdate = PropertyRecordUpdate.parse({
-        ...existing,
-        projectId: null,
-        organisationId: params.organisationId,
-        hubId: null,
-        scope: 'organisation',
-        type: inferPropertyTypeFromComponent(existing.component),
-      }) as Partial<InferInsertModel<typeof property>>
-      const {
-        id: _id,
-        createdAt: _createdAt,
-        modifiedAt: _modifiedAt,
-        ...updateData
-      } = parsedUpdate as {
-        id?: string
-        createdAt?: string
-        modifiedAt?: string
-        [key: string]: unknown
-      }
-      await db
-        .update(property)
-        .set({
-          ...(updateData as Partial<InferInsertModel<typeof property>>),
-          projectId: null,
-          organisationId: toNullableId(params.organisationId),
-          hubId: null,
-          scope: 'organisation',
-          type: inferPropertyTypeFromComponent(existing.component),
-        })
-        .where(eq(property.id, existing.id))
-      await updateI18n(
-        db,
-        normalizeI18nLocaleRecord(
-          (existing.i18n ?? {}) as Record<string, PropertyI18nPartial>,
-        ) as Record<Locale, PropertyI18nPartial>,
-        existing.id,
-      )
-      await syncPropertyValues(db, existing.values ?? [], existing.id)
-      for (const value of existing.values ?? []) {
-        if (value.i18n && Object.keys(value.i18n).length > 0) {
-          await updatePropertyValueI18n(
-            db,
-            value.i18n as Record<Locale, PropertyValueI18nPartial>,
-            value.id,
-          )
-          continue
-        }
-        await db
-          .delete(propertyValueI18n)
-          .where(eq(propertyValueI18n.propertyValueId, value.id))
-      }
-      const reloaded = await db.query.property.findFirst({
-        with: propertyWithRelations,
-        where: eq(property.id, existing.id),
-      })
-      if (!reloaded) throw new Error('ORGANISATION_PROPERTY_UPDATE_RELOAD_FAILED')
-      return toPropertyResponseFromRaw(reloaded)
-    }),
-  )
-
-  if (staleIds.length > 0) {
-    await delMany(db, property, property.id, staleIds)
-  }
-
-  const ordered = localised
-    .map((item, index) => ({
-      id: item.id,
-      rank: submittedRankById.get(item.id) ?? Number.POSITIVE_INFINITY,
-      index,
-    }))
-    .sort((left, right) => {
-      if (left.rank !== right.rank) return left.rank - right.rank
-      return left.index - right.index
-    })
-    .map(({ id }, rank) => ({ id, rank }))
-  const currentRows = await db.query.organisationProperty.findMany({
-    where: eq(organisationProperty.organisationId, params.organisationId),
-  })
-  const currentIds = new Set(currentRows.map(row => row.propertyId))
-  const nextIds = new Set(ordered.map(row => row.id))
-  const idsToDelete = currentRows
-    .filter(row => !nextIds.has(row.propertyId))
-    .map(row => row.propertyId)
-
-  if (idsToDelete.length > 0) {
-    await db
-      .delete(organisationProperty)
-      .where(
-        and(
-          eq(organisationProperty.organisationId, params.organisationId),
-          inArray(organisationProperty.propertyId, idsToDelete),
-        ),
-      )
-  }
-
-  const idsToCreate = ordered.filter(row => !currentIds.has(row.id)).map(row => row.id)
-
-  if (idsToCreate.length > 0) {
-    await db.insert(organisationProperty).values(
-      ordered
-        .filter(row => idsToCreate.includes(row.id))
-        .map(row => ({
-          organisationId: params.organisationId,
-          propertyId: row.id,
-          rank: row.rank,
-        })),
-    )
-  }
-
-  await Promise.all(
-    ordered.map(row =>
-      db
-        .update(organisationProperty)
-        .set({ rank: row.rank })
-        .where(
-          and(
-            eq(organisationProperty.organisationId, params.organisationId),
-            eq(organisationProperty.propertyId, row.id),
-          ),
-        ),
-    ),
-  )
-
-  const persistedRankById = new Map(ordered.map(row => [row.id, row.rank]))
-  return localised
-    .map(item => ({
-      ...item,
-      rank: persistedRankById.get(item.id) ?? 0,
-    }))
-    .sort((left, right) => left.rank - right.rank)
-}
 
 // ═══════════════════════
 // 4. COMMON
 // ═══════════════════════
+
+/**
+ * Normalizes supplied catalog ranks, appending unranked rows in input order.
+ * @param value - Numeric or numeric-string rank from the submitted catalog.
+ * @returns Finite rank, or positive infinity for an unspecified/invalid rank.
+ */
+const toCatalogRank = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value)))
+    return Number(value)
+  return Number.POSITIVE_INFINITY
+}
 
 /**
  * Relation graph used when resolving property + value translations in one query.

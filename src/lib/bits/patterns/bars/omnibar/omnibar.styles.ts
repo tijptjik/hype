@@ -1,8 +1,7 @@
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import { getElevatedChromeXGutter, getOmnibarTopGutter } from './Omnibar.layout'
 
 type OmnibarResponsiveLayout = {
-  availableViewportHeight: number
   effectiveAppMainWidth: number
   hasElevatedChrome: boolean
 }
@@ -28,10 +27,10 @@ const OMNIBAR_COLLECTION_PANEL_TRANSITION_CLASSES =
 export const OMNIBAR_GLASS_BORDER_CLASSES =
   'border-[color-mix(in_oklab,var(--color-base-content)_12%,transparent)]'
 
-const OMNIBAR_GLASS_SURFACE_CLASSES = 'bg-black shadow-[0_18px_48px_rgb(0_0_0_/_0.34)]'
+const OMNIBAR_GLASS_SURFACE_CLASSES = 'bg-panel shadow-[0_18px_48px_rgb(0_0_0_/_0.34)]'
 
 export const OMNIBAR_GLASS_TRAY_CLASSES =
-  'bg-black shadow-[0_18px_48px_rgb(0_0_0_/_0.34)]'
+  'bg-panel shadow-[0_18px_48px_rgb(0_0_0_/_0.34)]'
 
 const OMNIBAR_TRAY_INSET_CLASSES = 'mx-[1.75rem]'
 
@@ -44,7 +43,7 @@ export function getOmnibarRootClasses({
   availableViewportHeight,
   effectiveAppMainWidth,
   hasElevatedChrome,
-}: OmnibarResponsiveLayout): string {
+}: OmnibarResponsiveLayout & { availableViewportHeight: number }): string {
   const xGutterPx = getElevatedChromeXGutter(effectiveAppMainWidth)
   const topGutterPx = getOmnibarTopGutter(
     effectiveAppMainWidth,
@@ -80,7 +79,7 @@ export function getOmnibarWidthContainerClasses(hasElevatedChrome: boolean): str
 }
 
 const OMNIBAR_SURFACE_SHARED_CLASSES =
-  'pointer-events-auto isolate relative min-w-0 w-full overflow-hidden rounded-none bg-black'
+  'pointer-events-auto isolate relative min-w-0 w-full overflow-hidden rounded-none bg-panel'
 
 const OMNIBAR_SURFACE_FLOATING_MOBILE_CLASSES = cx(
   'rounded-full border',
@@ -107,7 +106,7 @@ export function getOmnibarSurfaceClasses({
   )
 }
 
-const OMNIBAR_BAR_SHARED_CLASSES = 'relative z-30 flex w-full items-center bg-black'
+const OMNIBAR_BAR_SHARED_CLASSES = 'relative z-30 flex w-full items-center bg-panel'
 
 const OMNIBAR_BAR_NONFLOATING_MOBILE_CLASSES = cx(
   'border-b',
@@ -139,7 +138,7 @@ export function getOmnibarSearchBarClasses(layout: OmnibarResponsiveLayout): str
 }
 
 const OMNIBAR_RESULTS_SHARED_CLASSES =
-  'pointer-events-auto isolate mt-0 flex min-h-0 flex-col overflow-hidden rounded-b-[1.75rem] border border-t-0 border-base-300 bg-black bg-clip-padding'
+  'pointer-events-auto isolate mt-0 flex min-h-0 flex-col overflow-hidden rounded-b-[1.75rem] border border-t-0 border-base-300 bg-panel bg-clip-padding'
 
 const OMNIBAR_RESULTS_DEFAULT_MOBILE_CLASSES = 'mx-0 rounded-b-none border-x-0'
 
@@ -177,7 +176,7 @@ export function getOmnibarCollectionPanelClasses({
   const { hasWideLayout } = getOmnibarResponsiveFlags(effectiveAppMainWidth)
 
   return cx(
-    'pointer-events-auto isolate mt-0 flex w-auto select-none flex-col overflow-hidden rounded-b-[1.75rem] border border-t-0 border-base-300 bg-black bg-clip-padding',
+    'pointer-events-auto isolate mt-0 flex w-auto select-none flex-col overflow-hidden rounded-b-[1.75rem] border border-t-0 border-base-300 bg-panel bg-clip-padding',
     OMNIBAR_COLLECTION_PANEL_TRANSITION_CLASSES,
     hasElevatedChrome
       ? [
@@ -203,5 +202,5 @@ export const OMNIBAR_COLLECTION_ITEM_TITLE_CLASSES =
   'select-none pl-2 text-[0.92rem] font-light tracking-[0.01em] text-base-content/80'
 
 export const OMNIBAR_COLLECTION_FOOTER_CLASSES = cx(
-  'pointer-events-auto flex h-12 items-center justify-between border-t border-base-200/70 bg-black px-4',
+  'pointer-events-auto flex h-12 items-center justify-between border-t border-base-200/70 bg-panel pl-12 pr-4',
 )

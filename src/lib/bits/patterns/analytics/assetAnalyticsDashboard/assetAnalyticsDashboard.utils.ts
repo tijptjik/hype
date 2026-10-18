@@ -1,17 +1,24 @@
 // LIB
-import { toCloudflareLocale } from '$lib/i18n'
-import { toCloudflareImageWorkerPath } from '$lib/images/delivery'
+import { toCloudflareLocale } from '#lib/i18n.js'
+import { toCloudflareImageWorkerPath } from '#lib/images/delivery.js'
 // TYPES
 import type {
-  AssetAnalyticsPercentKey,
   AssetAnalyticsSeriesKey,
   AssetAnalyticsSummaryWindow,
   AssetAnalyticsTimeseriesPoint,
-} from '$lib/types'
+} from '#lib/api/services/assetAnalytics.types.js'
 import type {
   AssetAnalyticsDashboardWindowSectionKind,
   AssetAnalyticsWindowConfig,
 } from './assetAnalyticsDashboard.types'
+// TYPES
+
+type AssetAnalyticsPercentKey =
+  | 'cacheHitPercent'
+  | 'derivedHitPercent'
+  | 'derivedMissPercent'
+  | 'notFoundPercent'
+  | 'serverErrorPercent'
 
 const ASSET_ANALYTICS_PUBLIC_ID_PREFIX = 'h/'
 const PRODUCTION_ASSET_BASE_URL = 'https://assets.hype.hk'

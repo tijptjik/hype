@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { toSafeListResponse } from '$lib/remote'
+import { toSafeListResponse } from '#lib/remote/index.js'
 
 describe('toSafeListResponse', () => {
   it('normalizes a missing remote payload to an empty list response', () => {

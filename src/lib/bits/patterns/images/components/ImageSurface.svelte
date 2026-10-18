@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onDestroy } from 'svelte'
-import { getFeatureIdenticonUrl } from '$lib/client/services/image'
+import { getFeatureIdenticonUrl } from '#lib/client/services/image.js'
 import type { ImageSurfaceProps } from './imagePrimitives.types'
 import {
   backdropImageClass,
@@ -380,7 +380,9 @@ onDestroy(() => {
 </script>
 
 <div class={surfaceRootClass(rounded, className)}>
-  {#if shouldShowBackdrop && (!sourceFallbackSrc || (!incomingSrc && !pendingSrc && currentSrc !== sourceFallbackSrc))}
+  {#if shouldShowBackdrop &&
+    (!sourceFallbackSrc ||
+      (!incomingSrc && !pendingSrc && currentSrc !== sourceFallbackSrc))}
     <img src={backdropSrc} alt="" aria-hidden="true" class={backdropImageClass()}>
   {/if}
 
@@ -437,7 +439,7 @@ onDestroy(() => {
       onerror={handleImageError}
     >
 
-    {#if shouldPulseImage && !Boolean(rotationOverlaySrc && rotationOverlayVisible)}
+    {#if shouldPulseImage && !(rotationOverlaySrc && rotationOverlayVisible)}
       <img
         src={currentSrc ?? effectiveSrc}
         alt=""
@@ -488,11 +490,11 @@ onDestroy(() => {
           alt=""
           aria-hidden="true"
           class={loadingBreathLayerClass({
-              fit,
-              isBlurred,
-              isGreyscale,
-              isVisible: true,
-            })}
+            fit,
+            isBlurred,
+            isGreyscale,
+            isVisible: true,
+          })}
         >
       {/if}
     {/if}
@@ -515,7 +517,7 @@ onDestroy(() => {
           // Firefox can reject decode() even when an already-loaded image is paintable.
         }
 
-        startDisplayedSourceTransition(pendingSrc, rotationDegrees ?? 0)
+        if (pendingSrc) startDisplayedSourceTransition(pendingSrc, rotationDegrees ?? 0)
       }}
       onerror={() => {
         pendingSrc = null

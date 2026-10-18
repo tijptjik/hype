@@ -1,8 +1,8 @@
 <script lang="ts">
 // COMPONENTS
-import Badge from '$lib/bits/custom/badge/Badge.svelte'
+import Badge from '#lib/bits/custom/badge/Badge.svelte'
 // TYPES
-import type { FeatureTranslationScenarioSummary } from '$lib/client/services/import/features/translation'
+import type { FeatureTranslationScenarioSummary } from '#lib/client/services/import/features/translation.js'
 
 type Props = {
   summary: FeatureTranslationScenarioSummary
@@ -19,7 +19,7 @@ const accentClass = $derived.by(() => {
 </script>
 
 <section
-  class={`flex min-h-48 flex-col justify-between rounded-3xl border bg-black/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl ${accentClass}`}
+  class={`flex min-h-48 flex-col justify-between rounded-3xl border bg-panel/[0.45] p-5 shadow-[var(--shadow-mini)] backdrop-blur-xl ${accentClass}`}
 >
   <div class="space-y-3">
     <div class="flex items-start justify-between gap-4">

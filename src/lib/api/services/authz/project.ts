@@ -9,8 +9,8 @@ import type {
   ProjectAuthorizationAction,
   ProjectAuthorizeParams,
   ProjectAuthorizationField,
-  UserRoleDisco,
-} from '$lib/types'
+} from '#lib/api/services/authz/authorization.types.js'
+import type { UserRoleDisco } from '#lib/types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS

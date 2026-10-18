@@ -1,9 +1,16 @@
 // TYPES
-import type {
-  MapRenderAssetLocator,
-  PreviewStage,
-  MapRenderStorageMode,
-} from '../../types'
+import type { PreviewStage } from '#lib/map/renders/render.types.js'
+// TYPES
+import type { MapRenderAssetKind } from '#lib/map/renders/render.types.js'
+
+type MapRenderStorageMode = 'r2'
+
+type MapRenderAssetLocator = {
+  kind: MapRenderAssetKind
+  identifier: string
+  hash: string
+  extension?: 'png'
+}
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -45,7 +52,7 @@ export const getMapRenderStage = (environment?: string | null): PreviewStage => 
  * @param stage Preview stage returned by `getMapRenderStage`.
  * @returns Storage mode for the current environment.
  */
-export const getMapRenderStorageMode = (stage: PreviewStage): MapRenderStorageMode =>
+export const getMapRenderStorageMode = (_stage: PreviewStage): MapRenderStorageMode =>
   'r2'
 
 /**

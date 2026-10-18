@@ -1,14 +1,14 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import Heart from 'virtual:icons/lucide/heart'
+import Heart from 'virtual:icons/proicons/heart'
 // COMPONENTS
 import FeatureCardContributionPanel from './contribution/FeatureCardContributionPanel.svelte'
 import FeatureCardAttributionField from './contribution/FeatureCardAttributionField.svelte'
 import * as FeatureCardNewPrimitive from './newFeature'
 // TYPES
-import type { Feature } from '$lib/db/zod/schema/feature.types'
+import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
 let { viewport, feature }: { viewport: HTMLElement; feature: Feature } = $props()
 
@@ -33,7 +33,9 @@ const infoItems = [
       <FeatureCardNewPrimitive.AddressField />
       <FeatureCardNewPrimitive.DescriptionField />
       <FeatureCardNewPrimitive.PropertiesField {feature} />
-      <div class="border-t border-white/10 pt-4"><FeatureCardAttributionField /></div>
+      <div class="border-t border-border-input pt-4">
+        <FeatureCardAttributionField />
+      </div>
     </div>
   {/snippet}
 </FeatureCardContributionPanel>

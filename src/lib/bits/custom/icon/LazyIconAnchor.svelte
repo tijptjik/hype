@@ -1,5 +1,5 @@
 <script lang="ts">
-import { cx } from '$lib/bits/utils'
+import { cx } from '#lib/bits/utils.js'
 import Icon from './Icon.svelte'
 import type { LazyIconAnchorProps } from './iconAnchor.types'
 
@@ -46,7 +46,7 @@ function handleMouseLeave(): void {
 function handleFocusOut(event: FocusEvent): void {
   const nextFocusTarget = event.relatedTarget
 
-  if (!(nextFocusTarget instanceof Node) || !event.currentTarget) {
+  if (!(nextFocusTarget instanceof Node) || !(event.currentTarget instanceof Node)) {
     open = false
     return
   }
@@ -57,6 +57,7 @@ function handleFocusOut(event: FocusEvent): void {
 }
 </script>
 
+<!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the lazy popover open around its button. -->
 <div
   class={rootClasses}
   onmouseenter={handleOpenIntent}

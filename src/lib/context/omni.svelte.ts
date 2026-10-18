@@ -1,20 +1,18 @@
 // SVELTE
-import { browser } from '$app/environment'
-import { getContext, setContext, tick } from 'svelte'
+import { browser } from '$app/env'
+import { getContext, setContext, tick, untrack } from 'svelte'
 // LIB
-import { isMobile } from '$lib'
-import { searchAllAsync } from '$lib/map/data'
+import { isMobile } from '#lib'
+import { searchAllAsync } from '#lib/map/data.js'
 // I18N
-import { getI18n } from '$lib/i18n'
-import { m } from '$lib/i18n'
-// NEIGHBOURHOODS
-import neighbourhoods from '$lib/map/neighbourhoods.json'
+import { getI18n } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
 // NAVIGATION
 import {
   COLLECTION_QUERY_PARAM,
   navigate,
   serializeCollectionDescriptor,
-} from '$lib/navigation'
+} from '#lib/navigation/index.js'
 // ENUMS
 import {
   FeatureCardMode,
@@ -22,23 +20,57 @@ import {
   OmniCollection,
   OmniMode,
   PageState,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // TYPES
-import type {
-  SearchResult,
-  Id,
-  ActiveCollection,
-  FeatureCardTransitionRect,
-  FeatureCardTransitionState,
-  OmniState,
-  Locale,
-  LocaleKey,
-  OmniCollectionDescriptor,
-} from '$lib/types'
-import type { AppCtx } from '$lib/context/app.svelte'
+import type { SearchResult, OmniCollectionDescriptor } from '#lib/context/omni.types.js'
+import type { Id, Locale, LocaleKey } from '#lib/types.js'
+import type { ActiveCollection } from '#lib/context/resourceCollection.types.js'
+import type { FeatureQueryInput } from '#lib/api/services/featureQuery.types.js'
+import type { AppCtx } from '#lib/context/app.svelte.js'
 // TYPES
 import type { CardCtx } from './card.svelte'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
+
+import type {
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
+
+// TYPES
+type FeatureCardTransitionRect = {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+type FeatureCardTransitionSourceKind = 'marker' | 'toggle' | 'none'
+type FeatureCardTransitionPhase = 'idle' | 'opening' | 'closing'
+
+type FeatureCardTransitionState = {
+  phase: FeatureCardTransitionPhase
+  sourceRect: FeatureCardTransitionRect | null
+  targetRect: FeatureCardTransitionRect | null
+  sourceRadiusPx: number
+  targetRadiusPx: number
+  sourceKind: FeatureCardTransitionSourceKind
+}
+
+/* ----------------- */
+// APP :: OMNIBAR
+/* -------- */
+
+type OmniState = {
+  // Mode -- search, navigation, or feature
+  mode: OmniMode
+  // Whether the results are shown
+  isTrayOpen: boolean
+  // Whether the card is open
+  isCardOpen: boolean
+  // The value of the search input
+  searchTerm: string
+  // The index of the focused result
+  focusedIndex: number
+}
 
 // CONSTANTS
 const MAX_RESULTS = 9
@@ -56,6 +88,7 @@ type OmniSelectionOptions = {
   focus?: boolean
   focusFeature?: boolean
   highlight?: boolean
+  updateUrl?: boolean
   navOptions?: OmniNavOptions
 }
 
@@ -75,10 +108,13 @@ export class OmniCtx {
   cardCtx: CardCtx | null = null
   eventCleanup?: () => void
   pendingOpenCardTimeout: ReturnType<typeof setTimeout> | null = null
-
   pageState: PageState = $state(PageState.NoTransition)
   isIntentionallyClosing: boolean = $state(false)
   activeCollectionDescriptor: OmniCollectionDescriptor | null = $state(null)
+  private selectionRequestSerial = 0
+  private pendingCollectionDescriptor: OmniCollectionDescriptor | null = null
+  private pendingCollectionOptions: OmniSelectionOptions | null = null
+
   cardTransition: FeatureCardTransitionState = $state({
     phase: 'idle',
     sourceRect: null,
@@ -99,15 +135,72 @@ export class OmniCtx {
   constructor(appCtx: AppCtx) {
     this.appCtx = appCtx
 
-    // Effect to update search results when dependencies change
+    // Each search activates an independent cached query; changing text never drains all pages.
     $effect(() => {
-      // Explicitly track all reactive dependencies
-      const searchTerm = this.state.searchTerm
-      this.appCtx.features.size // Track feature changes
-      this.appCtx.state.userFeatures.wishlisted.length // Track wishlist changes
+      const input = this.appCtx.view.filters.featureQueryInput({
+        q: this.state.searchTerm,
+      })
+      if (!this.appCtx.view.isInitialised || this.appCtx.view.isAdmin()) return
+      if (!this.state.isTrayOpen) return
+      const timer = setTimeout(() => {
+        void this.appCtx.view.queries
+          .loadFeatureQuery('search', input)
+          .catch(console.error)
+        if (this.appCtx.view.user?.id) {
+          void this.appCtx.view.queries
+            .loadFeatureQuery('searchWishlist', {
+              ...input,
+              limit: 1,
+              filters: { ...input.filters, list: { listId: 'wishlist' } },
+            })
+            .catch(console.error)
+        }
+      }, 120)
 
-      // Schedule async update outside reactive context
-      setTimeout(() => this.updateSearchResults(searchTerm), 0)
+      return () => clearTimeout(timer)
+    })
+
+    // Explicitly track cached and returned pages so optimistic results appear before the network.
+    $effect(() => {
+      const searchTerm = this.state.searchTerm
+
+      this.appCtx.view.resources.featureQueries.search.rows
+      this.appCtx.view.resources.featureQueries.searchWishlist.totalCount
+      this.appCtx.view.divisionCtx.divisionFeatureCounts.size
+
+      const timer = setTimeout(() => this.updateSearchResults(searchTerm), 0)
+
+      return () => clearTimeout(timer)
+    })
+
+    // Active collections use current filters and retain query ordering across refreshes.
+    $effect(() => {
+      const descriptor = this.activeCollectionDescriptor
+
+      if (
+        !descriptor ||
+        (descriptor.kind === 'walk' && !['stars', 'visited'].includes(descriptor.ref))
+      )
+        return
+
+      const input = this.collectionQueryInput(descriptor)
+
+      untrack(() => {
+        void this.appCtx.view.queries
+          .loadFeatureQuery('collection', input)
+          .catch(console.error)
+      })
+    })
+
+    // Native pages complete cold-start selection once; later refreshes preserve the camera.
+    $effect(() => {
+      const descriptor = this.activeCollectionDescriptor
+      const query = this.appCtx.view.resources.featureQueries.collection
+      const rows = query.rows
+      const totalCount = query.totalCount
+      untrack(() => {
+        if (descriptor) this.syncFeatureCollection(descriptor, rows, totalCount)
+      })
     })
 
     // Register custom event handlers
@@ -136,6 +229,7 @@ export class OmniCtx {
 
     // Register event listeners with namespace
     window.addEventListener('OmniCtx.openCard', handleOpenCard as EventListener)
+
     window.addEventListener('OmniCtx.closeCard', handleCloseCard as EventListener)
 
     // Store cleanup function for potential future use
@@ -148,8 +242,8 @@ export class OmniCtx {
   // ═══════════════════════
   // MODE
   // ═══════════════════════
-
   isFeatureMode = $derived(this.state.mode === 'feature')
+
   isNewFeatureMode = $derived(this.state.mode === 'new-feature')
   isSearchMode = $derived(this.state.mode === 'search')
   isNavigationMode = $derived(this.state.mode === 'navigation')
@@ -192,8 +286,8 @@ export class OmniCtx {
   // Cancel new-feature mode with full reset
   cancelNewFeature() {
     this.resetToSearch(false)
-    this.appCtx.resetNewFeatureMode()
-    this.appCtx.resetNewFeature()
+    this.appCtx.view.draft.resetMode()
+    this.appCtx.view.draft.reset()
     this.appCtx.resetActiveCollection()
     navigate('/', undefined, {
       paramsToDrop: [COLLECTION_QUERY_PARAM],
@@ -219,12 +313,45 @@ export class OmniCtx {
       this.searchResults.walk.length,
   )
 
+  searchFeatureLimit = $state(5)
+  searchSection: OmniCollection | null = $state(null)
+  searchSectionLimit = $state(25)
+
+  /**
+   * Focuses a result section and reveals its next batch of matches.
+   * @param collectionType Section to expand.
+   * @returns Completion after any required feature page has loaded.
+   */
+  async expandSearchSection(collectionType: OmniCollection): Promise<void> {
+    this.searchSectionLimit =
+      this.searchSection === collectionType ? this.searchSectionLimit + 25 : 25
+    this.searchSection = collectionType
+    if (collectionType === OmniCollection.feature) {
+      await this.loadMoreSearch()
+    }
+  }
+
+  /**
+   * Appends a server page when necessary, then reveals more matching search results.
+   * @returns Completion after the next visible group of search results is available.
+   */
+  async loadMoreSearch(): Promise<void> {
+    const query = this.appCtx.view.resources.featureQueries.search
+    if (this.searchFeatureLimit + 25 > query.rows.length && query.hasMore) {
+      await this.appCtx.view.queries.loadMoreFeatureQuery('search')
+    }
+    this.searchFeatureLimit += 25
+  }
+
   setSearchTerm(term: string) {
+    this.searchSection = null
+    this.searchSectionLimit = 25
+    this.searchFeatureLimit = 5
     this.state.searchTerm = term
   }
 
   clearSearch() {
-    this.state.searchTerm = ''
+    this.setSearchTerm('')
   }
 
   focusSearchBar() {
@@ -249,10 +376,11 @@ export class OmniCtx {
   }
 
   // Async method to update search results
-  private async updateSearchResults(searchTerm: string) {
+  private async updateSearchResults(searchTerm: string): Promise<void> {
     try {
-      const results = await searchAllAsync(searchTerm, this.appCtx)
-      this.searchResults = this.toGroups(results)
+      const results = await searchAllAsync(searchTerm, this.appCtx.view)
+      if (searchTerm === this.state.searchTerm)
+        this.searchResults = this.toGroups(results)
     } catch (error) {
       console.error('Error updating search results:', error)
       this.searchResults = { feature: [], neighbourhood: [], walk: [] }
@@ -305,6 +433,7 @@ export class OmniCtx {
   // Calculate limits for each group
   getLimits(groups: Record<OmniCollection, SearchResult[]>) {
     const nonEmptyGroups = Object.values(groups).filter(g => g.length > 0).length
+
     if (nonEmptyGroups === 0) return { walk: 0, neighbourhood: 0, feature: 0 }
 
     const baseLimit = Math.floor(MAX_RESULTS / nonEmptyGroups)
@@ -313,7 +442,11 @@ export class OmniCtx {
     return {
       walk: groups.walk.length > 0 ? baseLimit + (remainder > 0 ? 1 : 0) : 0,
       neighbourhood:
-        groups.neighbourhood.length > 0 ? baseLimit + (remainder > 1 ? 1 : 0) : 0,
+        groups.neighbourhood.length > 0
+          ? this.state.searchTerm.trim()
+            ? baseLimit + (remainder > 1 ? 1 : 0)
+            : Math.min(3, groups.neighbourhood.length)
+          : 0,
       feature: groups.feature.length > 0 ? baseLimit + (remainder > 2 ? 1 : 0) : 0,
     }
   }
@@ -330,11 +463,11 @@ export class OmniCtx {
       if (this.cardCtx?.isNewMode) {
         this.closeCard()
         this.resetToSearch()
-        this.appCtx.setNewFeatureMode(null)
+        this.appCtx.view.draft.setMode(null)
         // Delay the reset to allow the DOM to update and remove the card component
         tick().then(() => {
           this.isIntentionallyClosing = true
-          this.appCtx.resetNewFeature()
+          this.appCtx.view.draft.reset()
           this.appCtx.resetActiveCollection()
           // this.focusSearchBar();
           // Reset the flag after reactive effects have had a chance to run
@@ -349,7 +482,7 @@ export class OmniCtx {
         const refreshImagesEvent = new CustomEvent('refreshImages', {
           detail: {
             resourceType: 'feature',
-            resourceId: this.appCtx.state.active.feature?.id,
+            resourceId: this.appCtx.selection.feature?.id,
           },
         })
         if (browser) {
@@ -379,8 +512,8 @@ export class OmniCtx {
       // i.e. if we are showing the LayerSelctionModal or GeoLocationModal.
     } else if (this.state.mode === OmniMode.newFeature) {
       this.setMode(OmniMode.search)
-      this.appCtx.resetNewFeature()
-      this.appCtx.setNewFeatureMode(null)
+      this.appCtx.view.draft.reset()
+      this.appCtx.view.draft.setMode(null)
       // If we are in search mode, close the tray
     } else if (this.state.mode === OmniMode.search && this.state.isTrayOpen) {
       this.closeTray()
@@ -388,6 +521,11 @@ export class OmniCtx {
   }
 
   selectFirstResult() {
+    if (this.searchSection) {
+      const first = this.searchResults[this.searchSection][0]
+      if (first) this.searchHandlers[this.searchSection](first.ref)
+      return
+    }
     if (this.searchResults.feature.length > 0) {
       this.handleFeatureSelection(this.searchResults.feature[0].ref)
     } else if (this.searchResults.neighbourhood.length > 0) {
@@ -560,14 +698,11 @@ export class OmniCtx {
   /**
    * Records a feature marker as the next card-open origin.
    *
-   * @param featureId Active feature id associated with the marker.
    * @param element Marker element captured from the click target, when available.
    * @returns Nothing.
    */
-  prepareCardTransitionFromMarker(featureId: Id, element?: HTMLElement | null): void {
-    const sourceElement =
-      element ??
-      (this.appCtx.state.markers.get(featureId)?.getElement() as HTMLElement | null)
+  prepareCardTransitionFromMarker(element?: HTMLElement | null): void {
+    const sourceElement = element ?? null
 
     this.cardTransition.phase = 'idle'
     this.cardTransition.sourceRect = this.getCardTransitionRect(sourceElement)
@@ -664,30 +799,173 @@ export class OmniCtx {
   // ═══════════════════════
   // NAVIGATION
   // ═══════════════════════
-
   navIndex = $derived(
-    this.appCtx.state.active.collection?.items.findIndex(
-      item => item.id === this.appCtx.state.active.feature?.id,
+    this.appCtx.selection.collection?.items.findIndex(
+      item => item.id === this.appCtx.selection.feature?.id,
     ) ?? -1,
   )
 
   navTitle = $derived(
     this.state.mode === 'search'
       ? `Search Results: ${this.state.searchTerm}`
-      : this.appCtx.state.active.collection
+      : this.appCtx.selection.collection
         ? getI18n(
-            this.appCtx.state.active.collection.i18n as Record<
+            this.appCtx.selection.collection.i18n as Record<
               Locale | LocaleKey,
               { name: string }
             >,
             'name',
-            this.appCtx.getUserPreferences(),
+            this.appCtx.view.getUserPreferences(),
           )
         : '',
   )
 
-  navNext() {
+  async navNext(): Promise<void> {
+    const collection = this.appCtx.getActiveCollection()
+    if (
+      collection &&
+      this.navIndex >= collection.items.length - 1 &&
+      this.collectionHasMore
+    ) {
+      await this.loadMoreCollection()
+    }
     navigateCollection(this, 'next')
+  }
+
+  /** Whether the active built-in collection has another server page. */
+  get collectionHasMore(): boolean {
+    return (
+      this.appCtx.selection.collection?.totalCount !== undefined &&
+      this.appCtx.view.resources.featureQueries.collection.hasMore
+    )
+  }
+
+  /**
+   * Appends a page without changing the selected feature or camera.
+   * @returns Completion after collection membership and its total are updated.
+   */
+  async loadMoreCollection(): Promise<void> {
+    const descriptor = this.activeCollectionDescriptor
+    if (!descriptor || !this.collectionHasMore) return
+    await this.appCtx.view.queries.loadMoreFeatureQuery('collection')
+    if (JSON.stringify(descriptor) !== JSON.stringify(this.activeCollectionDescriptor))
+      return
+    const collection = this.appCtx.selection.collection
+    const query = this.appCtx.view.resources.featureQueries.collection
+    if (collection)
+      this.appCtx.selection.collection = {
+        ...collection,
+        items: query.rows,
+        totalCount: query.totalCount,
+      }
+  }
+
+  /**
+   * Composes one built-in collection's membership with the current common filters.
+   * @param descriptor - Neighbourhood or saved list being browsed.
+   * @returns Complete query independent of the map viewport.
+   */
+  private collectionQueryInput(
+    descriptor: OmniCollectionDescriptor,
+  ): FeatureQueryInput {
+    return this.appCtx.view.filters.featureQueryInput({
+      filters:
+        descriptor.kind === 'neighbourhood'
+          ? { divisionIds: [descriptor.ref] }
+          : {
+              list: {
+                listId: descriptor.ref === 'visited' ? 'visited' : 'wishlist',
+              },
+            },
+
+      ...(descriptor.kind === 'walk' && descriptor.ref === 'visited'
+        ? {
+            sorting: { sortBy: 'visitedAt' as const, sortOrder: 'desc' as const },
+          }
+        : {}),
+    })
+  }
+
+  /**
+   * Initializes a paginated neighbourhood or saved-list collection using fresh cache previews.
+   * @param descriptor - Collection membership to request independently of viewport loading.
+   * @param options - Existing selection, camera and card behavior.
+   * @returns Nothing; server pages update the same active collection in the background.
+   */
+  private loadFeatureCollection(
+    descriptor: OmniCollectionDescriptor,
+    options: OmniSelectionOptions,
+  ): void {
+    const input = this.collectionQueryInput(descriptor)
+    const pending = this.appCtx.view.queries.loadFeatureQuery('collection', input)
+    const query = this.appCtx.view.resources.featureQueries.collection
+    const initial =
+      descriptor.kind === 'neighbourhood'
+        ? this.toNeighbourhoodCollection(descriptor.ref, query.rows)
+        : this.toWalkCollection(descriptor.ref, query.rows)
+    if (initial) initial.totalCount = query.totalCount
+    // Preserve cold-start selection intent across intervening filter requests for this collection.
+    this.pendingCollectionDescriptor = initial?.items.length ? null : descriptor
+
+    this.pendingCollectionOptions = initial?.items.length ? null : options
+    initializeCollection(this, initial, OmniMode.navigation, options)
+
+    void pending
+      .then(() => {
+        if (
+          JSON.stringify(descriptor) !== JSON.stringify(this.activeCollectionDescriptor)
+        )
+          return
+
+        this.syncFeatureCollection(descriptor, query.rows, query.totalCount)
+      })
+      .catch(error => console.error('[Feature collection] Query failed:', error))
+  }
+
+  /**
+   * Reconciles the current query page and completes a pending first selection once rows exist.
+   * @param descriptor - Collection whose current filtered query produced these rows.
+   * @param rows - Fresh cached preview or native server page membership.
+   * @param totalCount - Authoritative server total, or null before it is known.
+   * @returns Nothing; later page updates preserve the user's current selection and camera.
+   */
+  private syncFeatureCollection(
+    descriptor: OmniCollectionDescriptor,
+    rows: FeatureFromCollection[],
+    totalCount: number | null,
+  ): void {
+    const current = this.appCtx.selection.collection
+    const query = this.appCtx.view.resources.featureQueries.collection
+    if (
+      !current ||
+      current.totalCount === undefined ||
+      current.id !== descriptor.ref ||
+      !query.isCurrent(this.collectionQueryInput(descriptor))
+    )
+      return
+    // Cold deep links obtain their localized division metadata with the first query page.
+    const updated = {
+      ...current,
+      ...(descriptor.kind === 'neighbourhood'
+        ? {
+            i18n:
+              this.toNeighbourhoodCollection(descriptor.ref, rows)?.i18n ??
+              current.i18n,
+          }
+        : {}),
+      items: rows,
+      totalCount,
+    }
+    if (
+      rows.length &&
+      this.pendingCollectionOptions &&
+      JSON.stringify(this.pendingCollectionDescriptor) === JSON.stringify(descriptor)
+    ) {
+      const options = this.pendingCollectionOptions
+      this.pendingCollectionDescriptor = null
+      this.pendingCollectionOptions = null
+      this.appCtx.setActiveCollection(updated, options)
+    } else this.appCtx.selection.collection = updated
   }
 
   navPrevious() {
@@ -706,10 +984,11 @@ export class OmniCtx {
    * Initialize a collection - sets active collection, activates a feature, and sets mode to navigation
    */
   initSelection(updateUrl: boolean = true) {
+    this.selectionRequestSerial++
     // If we are on mobile, close all panels
     // otherwise the selected feature will be hidden behind the panel
     if (isMobile()) {
-      this.appCtx.closeAllPanels(updateUrl)
+      this.appCtx.view.panels.closeAllPanels(updateUrl)
     }
   }
 
@@ -731,14 +1010,11 @@ export class OmniCtx {
       ...options,
     })
 
-    const featuresIds =
-      this.appCtx.placeCtx.getFeaturesForNeighbourhood(neighbourhoodRef) ?? []
-    const features = featuresIds.map(id =>
-      this.appCtx.getResourceByIdSync(FirstClassResource.feature, id),
-    ) as (FeatureFromCollection | Feature)[]
-    const collection = this.toNeighbourhoodCollection(neighbourhoodRef, features)
-
-    initializeCollection(this, collection, OmniMode.navigation, optionsWithDefaults)
+    // Neighbourhood membership and totals are resolved across the complete filtered dataset.
+    this.loadFeatureCollection(
+      { kind: 'neighbourhood', ref: neighbourhoodRef },
+      optionsWithDefaults,
+    )
   }
 
   initWalk(
@@ -768,13 +1044,21 @@ export class OmniCtx {
       highlight: true,
       ...options,
     }
+    // Built-in user lists use the same paginated feature-query path as neighbourhoods.
+    if (walkRef === 'stars' || walkRef === 'visited') {
+      this.loadFeatureCollection({ kind: 'walk', ref: walkRef }, optionsWithDefaults)
+      return
+    }
     // Run the default selection initialization
     this.initSelection(false)
     let collection = null
     if (walkRef === 'stars') {
-      collection = this.toWalkCollection(walkRef, this.appCtx.getWishlistedFeatures())
+      collection = this.toWalkCollection(
+        walkRef,
+        this.appCtx.view.getWishlistedFeatures(),
+      )
     } else if (walkRef === 'visited') {
-      collection = this.toWalkCollection(walkRef, this.appCtx.getVisitedFeatures())
+      collection = this.toWalkCollection(walkRef, this.appCtx.view.getVisitedFeatures())
     } else if (walkRef.endsWith('Features') && items && customI18n) {
       collection = this.toWalkCollection(walkRef, items, customI18n)
     } else if (walkRef.endsWith('Images') && items && customI18n) {
@@ -838,19 +1122,33 @@ export class OmniCtx {
         ),
       },
     }
+
     // Run the default selection initialization
     this.initSelection()
+    const requestSerial = this.selectionRequestSerial
+    const selectionRevision = this.appCtx.selection.revision
+    const accountRevision = this.appCtx.view.account.revision
 
-    // Get the feature first
-    const feature = await this.appCtx.getFeatureById(featureId)
+    // Map and collection selections already retain a card-capable feature row, so
+    // activate it without putting the first card open behind a detail refresh.
+    const cachedFeature = await this.appCtx.view.getFeatureById(featureId, false)
+    const feature = cachedFeature ?? (await this.appCtx.view.getFeatureById(featureId))
+    // A later route, dismissal, account change or disposal supersedes this opening.
+    if (
+      requestSerial !== this.selectionRequestSerial ||
+      selectionRevision !== this.appCtx.selection.revision ||
+      accountRevision !== this.appCtx.view.account.revision ||
+      this.isIntentionallyClosing
+    )
+      return
     if (!feature) {
       console.error('Feature not found:', featureId)
       return
     }
 
     // Ensure that the layer is active on the map
-    if (!this.appCtx.isPrism(FirstClassResource.layer, feature.layerId)) {
-      this.appCtx.addLayer(feature.layerId)
+    if (!this.appCtx.view.scope.isPrism(FirstClassResource.layer, feature.layerId)) {
+      this.appCtx.view.scope.addLayer(feature.layerId)
     }
 
     this.appCtx.setActiveCollection(
@@ -858,8 +1156,11 @@ export class OmniCtx {
       optionsWithDefaults,
     )
 
-    // Set mode to feature
-    this.setMode(OmniMode.feature)
+    // Set mode to feature while preserving the selection's requested opening delay.
+    this.setMode(OmniMode.feature, {
+      openCard: optionsWithDefaults.openCard,
+      openCardDelay: optionsWithDefaults.openCardDelay,
+    })
   }
 
   /**
@@ -932,6 +1233,7 @@ export class OmniCtx {
     const featureInCollection = activeCollection.items.some(
       item => item.id === featureId,
     )
+
     return !featureInCollection
   }
 
@@ -945,7 +1247,7 @@ export class OmniCtx {
   toFeatureCollection(feature: FeatureFromCollection | Feature): ActiveCollection {
     // Get user preferences for i18n, with fallback for static usage
     const userPreferences = {
-      ...this.appCtx.getUserPreferences(),
+      ...this.appCtx.view.getUserPreferences(),
       fallbackLocales: ['en'] as Locale[],
       preferFallbackInCurrentLocale: false,
       allowMachineTranslation: true,
@@ -1015,26 +1317,29 @@ export class OmniCtx {
   }
 
   /**
-   * Creates a neighbourhood collection from neighbourhood name and features
+   * Creates a division collection from registry metadata and matching features.
+   * @param neighbourhood Stable division ID.
+   * @param features Contained feature rows.
+   * @returns Collection with localized names for every available UI language.
    */
   toNeighbourhoodCollection(
     neighbourhood: string,
     features: (FeatureFromCollection | Feature)[],
   ): ActiveCollection {
     const selectedNeighbourhood =
-      neighbourhoods[neighbourhood as keyof typeof neighbourhoods]
+      this.appCtx.view.resources.featureQueries.collection.facets?.divisions[
+        neighbourhood
+      ] ?? this.appCtx.view.divisionCtx.divisions.get(neighbourhood)
 
     return {
       id: neighbourhood,
       type: 'neighbourhood',
       i18n: {
-        en: { name: neighbourhood },
-        zhHant: {
-          name: selectedNeighbourhood?.i18n?.zhHant?.name || neighbourhood,
-        },
-        zhHans: {
-          name: selectedNeighbourhood?.i18n?.zhHans?.name || neighbourhood,
-        },
+        en: selectedNeighbourhood?.i18n.en ?? { name: neighbourhood },
+        zhHant: selectedNeighbourhood?.i18n.zhHant ??
+          selectedNeighbourhood?.i18n.en ?? { name: neighbourhood },
+        zhHans: selectedNeighbourhood?.i18n.zhHans ??
+          selectedNeighbourhood?.i18n.en ?? { name: neighbourhood },
       },
       items: features,
     }
@@ -1064,6 +1369,8 @@ export class OmniCtx {
 
   clearActiveCollectionDescriptor(): void {
     this.activeCollectionDescriptor = null
+    this.pendingCollectionDescriptor = null
+    this.pendingCollectionOptions = null
   }
 }
 
@@ -1144,6 +1451,7 @@ const getStandardNavOptions = (
       ...(additionalOptions.paramsToDrop ?? []),
     ]),
   )
+
   const paramsToAdd = { ...(additionalOptions.paramsToAdd ?? {}) }
   const collectionParamValue = getCollectionParamValue(descriptor)
 
@@ -1232,12 +1540,13 @@ const navigateCollection = (
   omniCtx: OmniCtx,
   direction: 'next' | 'previous' | number,
 ): boolean => {
-  const collection = omniCtx.appCtx.state.active.collection
+  const collection = omniCtx.appCtx.selection.collection
+
   if (!collection) return false
+
   const collectionDescriptor =
     omniCtx.activeCollectionDescriptor ??
     getCollectionDescriptorFromActiveCollection(collection)
-
   const currentIndex = omniCtx.navIndex
   let targetIndex: number
 
@@ -1288,7 +1597,6 @@ const initializeCollection = (
 }
 
 export const OMNI_CONTEXT_KEY = Symbol('omniContext')
-
 export const setOmniCtx = (appCtx: AppCtx) =>
   setContext(OMNI_CONTEXT_KEY, new OmniCtx(appCtx))
 

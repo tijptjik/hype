@@ -1,2186 +1,350 @@
-// DATA
-import type { QueryClient } from '@tanstack/svelte-query'
-// NAVIGATION
-import { getUrlParam, navigate, updatePanelUrlParams } from '$lib/navigation'
+// SVELTE
+import { getContext, setContext } from 'svelte'
 // GEO
 import { bbox } from '@turf/bbox'
-// I18N
-import { getFallbackLocales, getLocale, getLocaleKey, getI18n } from '$lib/i18n'
-// LIB
-import { DUAL_PANEL_MIN_WIDTH, isMobile, PANEL_WIDTH } from '$lib/constants'
-import {
-  getOrganisation,
-  getOrganisationsWhichHaveLayers,
-} from '$lib/api/server/organisation.remote'
-import { getHub, getHubs } from '$lib/api/server/hub.remote'
-import { getProject, getProjects } from '$lib/api/server/project.remote'
-import { getLayer, getLayers } from '$lib/api/server/layer.remote'
-import { getFeature, getFeatures } from '$lib/api/server/feature.remote'
-import { getProperties, getProperty } from '$lib/api/server/property.remote'
-import { getUser, getUserFeatures, getUserLayers } from '$lib/api/server/user.remote'
-// SERVICES
-import { debouncedUpdateUserAttribution } from '$lib/client/services/user'
-import {
-  consumeEscapeForOpenPanels,
-  shouldSkipGlobalKeydown,
-} from '$lib/client/keybindings'
-import { getInitialHubLayerDefaultIds } from '$lib/client/services/layerDefaults'
-// AUTH
-import { isGuestUser, requestProfileUpgrade } from '$lib/auth/upgrade'
-import {
-  getFeatureIdsForProperties,
-  sortProperties,
-} from '$lib/client/services/property'
-import { matchesResourceTextQuery } from '$lib/client/services/filters'
-import { primeFeatureStatsCache } from '$lib/client/services/stats'
-import { runRemoteQuery, toSafeListResponse } from '$lib/remote'
-// DEBUG
-import { logMarkerBootstrap } from '$lib/debug/markerBootstrap'
 // CONTEXT
-import { getContext, setContext, untrack } from 'svelte'
-// SVELTE
-import { SvelteMap } from 'svelte/reactivity'
-// MARKERS
-import { removeMarkerClass, addMarkerClass } from '$lib/map/markers'
+import { AppSelection } from './appSelection.svelte.js'
+import { SurfaceNavigation, setSurfaceNavigation } from './surfaceNavigation.svelte.js'
+import { ResourceViewCtx, setSurfaceCtx } from './resourceView.svelte.js'
+import { CacheCtx } from './cache.svelte.js'
+// RESOURCES
+import { mapResourceProviders } from '#lib/resources/mapProviders.js'
+// NAVIGATION
+import { navigate } from '#lib/navigation/index.js'
+// MAP
+import { isFeaturePointWithinBounds } from '#lib/map/featureSpatial.js'
+import { isMobile, PANEL_WIDTH } from '#lib/constants.js'
 // ENUMS
-import {
-  FirstClassResource,
-  type HierarchicalResource,
-  Panel,
-  ResourcePath,
-  ResourceRefKey,
-  type NewFeatureMode,
-  supportedLocaleKeys,
-} from '$lib/enums'
-// GUARDS
-import { isTask } from '$lib/types'
+import { FirstClassResource } from '#lib/enums.js'
 // TYPES
+import type { ActiveCollection } from './resourceCollection.types.js'
+import type { CollectionNavOptions } from '#lib/client/services/form.types.js'
+import type { AccountState } from './account.svelte.js'
+import type { MapController } from '#lib/map/controller.js'
 import type {
-  ActiveCollection,
-  AppContextState,
-  Cache,
-  CollectionNavOptions,
-  Code,
-  DeepPartial,
-  FacetType,
-  FilterState,
-  FilteredResources,
-  FilterTriState,
-  Id,
-  LayoutMode,
-  Locale,
-  LocaleKey,
-  NavigableResource,
-  NewFeatureTask,
-  RangeFilterValue,
-  Resource,
-  ResourceContext,
-  ResourceTypeWithChildren,
-  SessionUser,
-  Task,
-  ListResponse,
-  RemoteMap,
-  RemoteListFn,
-  RemoteGetFn,
-  ResourceSortState,
-  UserRoleDisco,
-} from '$lib/types'
-import type { Image } from '$lib/db/zod/schema/image.types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { Organisation } from '$lib/db/zod/schema/organisation.types'
-import type { Project } from '$lib/db/zod/schema/project.types'
-import type { Layer } from '$lib/db/zod/schema/layer.types'
-import type { Hub, HubOptsExtended } from '$lib/db/zod/schema/hub.types'
-import type {
-  CurrentUser,
-  UserFeature,
-  UserLayer,
-  UserPreferences,
-  UserProfile,
-} from '$lib/db/zod/schema/user.types'
-import type { Map as MaplibreMap } from 'maplibre-gl'
+  Feature,
+  FeatureFromCollection,
+} from '#lib/db/zod/schema/feature.types.js'
 import type { FeatureCollection, Feature as GeoJSONFeature } from 'geojson'
-import type { PlaceCtx } from './place.svelte'
-import type { ResponsiveCtx } from './responsive.svelte'
-import type { Feature, FeatureFromCollection } from '$lib/db/zod/schema/feature.types'
-import type { FeatureI18nFieldKeys } from '$lib/db/zod/schema/feature'
+import type { DivisionCtx } from './division.svelte.js'
+import type { ResponsiveCtx } from './responsive.svelte.js'
+import type { Id } from '#lib/types.js'
 
+/** Public map application orchestration. Admin and dashboard routes do not construct it. */
 export class AppCtx {
-  // Tanstack Query Client instance
-  queryClient!: QueryClient
-  // Place Context
-  placeCtx!: PlaceCtx
-  // Responsive Context
-  responsiveCtx!: ResponsiveCtx
-  // Maplibre Map instance
-  map: MaplibreMap | undefined = $state()
-  // Maplibre library instance (loaded globally)
-  maplibre: unknown = $state(null)
-  // Whether maplibre has been loaded
-  isMaplibreLoaded: boolean = $state(false)
-  // User data (reactive)
-  user: UserProfile | CurrentUser | SessionUser | null = $state(null)
-  // Whether the map has been initialised
-  isInitialised: boolean = $state(false)
-  // Whether the app is transitioning between states
-  isTransitioning: boolean = $state(false)
-  // Whether the app is in mobile mode
-  isMobile: boolean = $state(false)
+  readonly view: ResourceViewCtx
+  readonly selection = new AppSelection(
+    id => this.view.cache.feature.get(id) ?? this.view.features.get(id),
+  )
+  // Whether the public app is transitioning between feature presentations.
+  isTransitioning = $state(false)
+  private transitionTimeout: ReturnType<typeof setTimeout> | null = null
 
-  // Query map to store different query functions (can be overridden by AdminCtx)
-  queryMap = new Map<
-    FirstClassResource | 'userFeatures',
-    {
-      queryKey: () => unknown[]
-      queryFn: () => Promise<unknown>
-    }
-  >()
-
-  listQueryMeta = new Map<string, Omit<ListResponse<unknown>, 'data'>>()
-
-  // Remote function map for list/get queries (parallel to queryMap).
-  remoteMap: RemoteMap = {
-    [FirstClassResource.organisation]: {},
-    [FirstClassResource.project]: {},
-    [FirstClassResource.layer]: {},
-    [FirstClassResource.feature]: {},
-    [FirstClassResource.task]: {},
-    [FirstClassResource.hub]: {},
-    [FirstClassResource.property]: {},
-    [FirstClassResource.user]: {},
+  /** Cancels presentation timing when selection changes or the surface unmounts. @returns Nothing. */
+  private clearTransition(): void {
+    if (this.transitionTimeout !== null) clearTimeout(this.transitionTimeout)
+    this.transitionTimeout = null
+    this.isTransitioning = false
   }
 
-  // Cache for all resources
-  cache: Cache = {
-    organisation: new Map(),
-    project: new Map(),
-    layer: new Map(),
-    feature: new Map(),
-    task: new Map(),
-    hub: new Map(),
-    property: new SvelteMap(),
-    image: new SvelteMap(),
-    user: new SvelteMap(),
-    stats: new SvelteMap(),
-  }
-
-  hub: HubOptsExtended | null = $state(null)
-
-  // Features map for current state (rebuilt when state.resources.feature changes)
-  private featuresMap = new SvelteMap<Id, FeatureFromCollection | Feature>()
-  private organisationCodeToId = new Map<Code, Id>()
-  private projectCodeToId = new Map<Code, Id>()
-  private hubCodeToId = new Map<Code, Id>()
-
-  private defaultSortState: ResourceSortState = {
-    sortBy: 'modifiedAt',
-    sortOrder: 'desc',
-  }
-
-  private sortableResources: FirstClassResource[] = [
-    FirstClassResource.organisation,
-    FirstClassResource.project,
-    FirstClassResource.layer,
-    FirstClassResource.feature,
-    FirstClassResource.task,
-    FirstClassResource.hub,
-    FirstClassResource.property,
-    FirstClassResource.user,
-  ]
-
-  private defaultViewSorting = (): Record<FirstClassResource, ResourceSortState> =>
-    Object.fromEntries(
-      this.sortableResources.map(resource => [resource, { ...this.defaultSortState }]),
-    ) as Record<FirstClassResource, ResourceSortState>
-
-  state: AppContextState = $state({
-    // Markers -- Which features are shown on the map
-    markers: new Map(),
-    // Active -- Which feature or collection is in focus on the map
-    active: {
-      feature: null,
-      collection: null,
-    },
-    // ═══════════════════════
-    // 3-TIER FILTER SYSTEM
-    // ═══════════════════════
-    // TIER 1: PRISMS -- Which organisations, projects, and layers are pre-filtered when fetching features from the database
-    // Applied at the server level to constrain the result set of first-class resources available
-    prisms: { organisation: [], project: [], layer: [] },
-    // TIER 2: APP FILTERS -- Which neighbourhoods and properties being filtered for when showing features on the map
-    // Applied in the app regardless of view - affects all features displayed on the map and in collections
-    filters: {
-      organisation: { text: '', properties: {} },
-      project: { text: '', properties: {} },
-      layer: { text: '', properties: {} },
-      feature: { text: '', properties: {} },
-      task: { text: '', properties: {} },
-      hub: { text: '', properties: {} },
-      property: { text: '', properties: {} },
-    },
-    // TIER 3: VIEW FILTERS -- Handled by individual admin views (e.g., AppCtx.state.viewFilters)
-    // Only affect the current route/view they are applied on, not the underlying data or map view
-    // Resources -- The resources fetched from the database (post prism-filtering, pre filters-filtering)
-    resources: {
-      organisation: [],
-      project: [],
-      layer: [],
-      feature: [],
-      task: [],
-      hub: [],
-    },
-    // User Features -- The user's wishlist and visited features
-    userFeatures: {
-      wishlisted: [],
-      visited: [],
-    },
-    // User Location -- The user's location
-    userLocation: null,
-    // ENHANCEMENT: Implement distancesFromUser
-    // Distances from user -- The distances from the user to the features
-    distancesFromUser: {},
-    nav: {
-      resourceType: false,
-      resourceRef: false,
-      facet: false,
-    },
-    panels: {
-      admin: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      profile: {
-        isOpen: false,
-        isOpenVisually: false,
-        ctx: {
-          username: null,
-          userData: null,
-          observePrisms: true,
-        },
-      },
-      filters: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      prisms: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      stars: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      plan: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      passport: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      eventCompanion: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      settings: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-      hub: {
-        isOpen: false,
-        isOpenVisually: false,
-      },
-    },
-    // Header state for unified header system
-    header: {
-      icon: null,
-      title: '',
-      facetTabs: new Map(),
-      actions: {
-        showAddButton: false,
-        showSearch: false,
-        showLayoutModes: false,
-        showControlBarToggle: false,
-        showFormActions: false,
-      },
-    },
-    // UI state for each resource type
-    ui: {
-      isControlBarVisible: {
-        organisation: false,
-        project: false,
-        layer: false,
-        feature: true,
-        task: true,
-        hub: false,
-        user: false,
-      },
-      isSearchFocused: {
-        organisation: false,
-        project: false,
-        layer: false,
-        feature: false,
-        task: false,
-        hub: false,
-        user: false,
-      },
-      layoutMode: {
-        organisation: 'card',
-        project: 'card',
-        layer: 'card',
-        feature: 'table',
-        task: 'table',
-        hub: 'card',
-        user: 'table',
-      },
-    },
-    // TIER 3: VIEW FILTERS - Only affect current route/view
-    viewFilters: {
-      organisation: {
-        // Status related
-        isPublished: null,
-        isArchived: false,
-
-        // Image related
-        hasImage: null,
-
-        // Authorship related
-        hasName: null,
-        hasContextualName: null,
-        hasDescription: null,
-
-        // Translation related
-        translationLocales: {
-          en: false, // Default: English not selected
-          zhHant: true,
-          zhHans: true,
-        },
-        isNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isContextualNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-      },
-      project: {
-        // Status related
-        isPublished: null,
-        isArchived: false,
-
-        // Image related
-        hasImage: null,
-
-        // Authorship related
-        hasName: null,
-        hasContextualName: null,
-        hasDescription: null,
-        isAllRightsReserved: null,
-        isPublicDomain: null,
-        hasLicenseBy: null,
-        hasLicenseSa: null,
-        hasLicenseNc: null,
-        hasLicenseNd: null,
-
-        // Translation related
-        translationLocales: {
-          en: false,
-          zhHant: true,
-          zhHans: true,
-        },
-        isNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isContextualNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-      },
-      layer: {
-        // Status related
-        isPublished: null,
-        isArchived: false,
-
-        // Authorship related
-        hasName: null,
-        hasContextualName: null,
-        hasDescription: null,
-        isAllRightsReserved: null,
-        isPublicDomain: null,
-        hasLicenseBy: null,
-        hasLicenseSa: null,
-        hasLicenseNc: null,
-        hasLicenseNd: null,
-
-        // Translation related
-        translationLocales: {
-          en: false,
-          zhHant: true,
-          zhHans: true,
-        },
-        isNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isContextualNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-      },
-      feature: {
-        // Status related
-        isPublished: null,
-        isPendingReview: null,
-        isArchived: false,
-        isIntangible: null,
-        isVisitable: null,
-
-        // Image related
-        hasImage: null,
-        isOneImagePublished: null,
-        isAllImagePublished: null,
-
-        // Authorship related
-        hasTitle: null,
-        hasDescription: null,
-        hasDisplayAddress: null,
-        isAllRightsReserved: null,
-        isPublicDomain: null,
-        hasLicenseBy: null,
-        hasLicenseSa: null,
-        hasLicenseNc: null,
-        hasLicenseNd: null,
-
-        // Translation related
-        translationLocales: {
-          en: false, // Default: English not selected
-          zhHant: true,
-          zhHans: true,
-        },
-        isTitleTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isSpecifierTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isAddressTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        // Property related
-        properties: {} as Record<Id, FilterTriState>,
-      },
-      task: {
-        // Status related
-        isReviewed: false,
-        reviewOutcome: null,
-        reviewAction: null,
-        type: null,
-      },
-      hub: {
-        // Status related
-        isArchived: false,
-
-        // Image related
-        hasImage: null,
-
-        // Authorship related
-        hasName: null,
-        hasContextualName: null,
-        hasDescription: null,
-
-        // Translation related
-        translationLocales: {
-          en: false,
-          zhHant: true,
-          zhHans: true,
-        },
-        isNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isContextualNameTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-        isDescriptionTranslated: {
-          en: null,
-          zhHant: null,
-          zhHans: null,
-        },
-      },
-    },
-    viewSorting: this.defaultViewSorting(),
+  readonly navigation = new SurfaceNavigation((type, ref) => {
+    if (type === 'organisation' || type === 'project' || type === 'hub')
+      return this.view.getResourceByRefSync(type, ref)?.id ?? null
+    return ref
   })
 
-  // New Feature -- The new feature to be created
-  newFeature: DeepPartial<NewFeatureTask> | null = $state(null)
-  newFeatureMode: NewFeatureMode | null = $state(null)
+  /** Camera capability supplied by the public map renderer; native map ownership stays there. */
+  mapController: MapController | null = $state.raw(null)
 
-  // Silly state to track if the map has been zoomed to a marker
-  zoomToMarkerOnly: boolean = $state(false)
-
-  // ═══════════════════════
-  // QUERY KEYS
-  // ═══════════════════════
-
-  private getRoleScopeQueryKey = (): string => {
-    const userId = this.user?.id ?? 'anonymous'
-    const roles = this.getUserRoles()
-
-    const roleSignature = roles
-      .map((role: UserRoleDisco) => {
-        if (role.type === 'organisation') {
-          return `organisation:${role.organisationId}:${role.role}`
-        }
-        if (role.type === 'project') {
-          return `project:${role.projectId}:${role.role}`
-        }
-        return `hub:${role.hubId}:${role.role}`
-      })
-      .sort((left: string, right: string) => left.localeCompare(right))
-      .join('|')
-
-    return `${userId}::${roleSignature}`
-  }
+  /** Reads the current public map center. @returns Coordinates, or null before mount/after teardown. */
+  getMapCenter = (): [number, number] | null =>
+    this.mapController?.getCamera()?.center ?? null
 
   /**
-   * Determines whether work started for an identity scope can still update state.
-   *
-   * @param expectedRoleScope - Identity scope captured before an asynchronous request.
-   * @returns Whether the scope is unchanged, or no scope was supplied.
-   * @remarks Public-map bootstrap runs in the background on authentication routes. Its
-   * responses must not update the account-scoped hierarchy after sign-in completes.
+   * Creates only the public application's resource and map orchestration.
+   * @param divisionCtx Public division filters.
+   * @param account Root-owned identity and self-profile data.
+   * @param responsiveCtx Root viewport state.
+   * @param cacheCtx Root-owned cache.
    */
-  private isExpectedRoleScopeCurrent = (expectedRoleScope?: string): boolean =>
-    !expectedRoleScope || expectedRoleScope === this.getRoleScopeQueryKey()
-
-  private isCurrentUser = (
-    user: UserProfile | CurrentUser | SessionUser | null,
-  ): user is CurrentUser => {
-    return Boolean(user && 'preferences' in user && 'userLayers' in user)
-  }
-
-  private getUserRoles = (): UserRoleDisco[] => {
-    const currentUser = this.isCurrentUser(this.user)
-      ? (this.user as CurrentUser)
-      : null
-    if (!currentUser) {
-      return []
-    }
-
-    const roles = currentUser.roles
-    return Array.isArray(roles) ? roles : []
-  }
-
-  private getRequiredQueryConfig = (
-    resource: FirstClassResource | 'userFeatures',
-  ): {
-    queryKey: unknown[]
-    queryFn: () => Promise<unknown>
-  } => {
-    const config = this.queryMap.get(resource)
-    if (!config) {
-      throw new Error(`Missing query config for ${resource}`)
-    }
-
-    return {
-      queryKey: config.queryKey(),
-      queryFn: config.queryFn,
-    }
-  }
-
-  organisationsQueryKey = () => [
-    FirstClassResource.organisation,
-    this.getRoleScopeQueryKey(),
-    this.isAdmin(),
-    this.state.viewSorting.organisation.sortBy,
-    this.state.viewSorting.organisation.sortOrder,
-  ]
-  projectsQueryKey = () => [
-    FirstClassResource.project,
-    this.getRoleScopeQueryKey(),
-    this.state.prisms.organisation,
-    this.isAdmin(),
-    this.state.viewSorting.project.sortBy,
-    this.state.viewSorting.project.sortOrder,
-  ]
-  layersQueryKey = () => [
-    FirstClassResource.layer,
-    this.getRoleScopeQueryKey(),
-    this.state.prisms.organisation,
-    this.state.prisms.project,
-    this.isAdmin(),
-    this.state.viewSorting.layer.sortBy,
-    this.state.viewSorting.layer.sortOrder,
-  ]
-  featuresQueryKey = () => [
-    FirstClassResource.feature,
-    this.getRoleScopeQueryKey(),
-    this.state.prisms.organisation,
-    this.state.prisms.project,
-    this.state.prisms.layer,
-    this.isAdmin(),
-    this.state.viewSorting.feature.sortBy,
-    this.state.viewSorting.feature.sortOrder,
-  ]
-  propertiesQueryKey = () => [
-    'property',
-    this.getRoleScopeQueryKey(),
-    this.state.prisms.organisation,
-    this.state.prisms.project,
-  ]
-  userFeaturesQueryKey = () => ['userFeatures', this.user?.id ?? 'no-user']
-  userQueryKey = () => [
-    FirstClassResource.user,
-    this.getRoleScopeQueryKey(),
-    this.state.panels.profile.ctx?.username || this.user?.id,
-    ...(this.state.panels.profile.ctx?.observePrisms
-      ? [
-          this.state.prisms.organisation,
-          this.state.prisms.project,
-          this.state.prisms.layer,
-        ]
-      : []),
-  ]
-
-  // Constructor
   constructor(
-    queryClient: QueryClient,
-    placeCtx: PlaceCtx,
-    user: SessionUser | null,
+    divisionCtx: DivisionCtx,
+    account: AccountState,
     responsiveCtx: ResponsiveCtx,
+    cacheCtx = new CacheCtx(mapResourceProviders),
   ) {
-    this.queryClient = queryClient
-    this.placeCtx = placeCtx
-    this.responsiveCtx = responsiveCtx
-    this.initializeNavigationFromUrl()
-    this.setUser(user)
-    this.initializeRemoteMap()
-    this.initializeQueryMap()
-    // Note: keydown handlers are managed dynamically by the root layout
-  }
-
-  private initializeNavigationFromUrl = (): void => {
-    if (typeof window === 'undefined') return
-
-    const url = new URL(window.location.href)
-    const pathParts = url.pathname.split('/').filter(Boolean)
-    if (pathParts[0] !== 'admin') return
-
-    const resourcePath = pathParts[1]
-    const resourceRef = pathParts[2] ?? false
-    const resourceType =
-      Object.entries(ResourcePath).find(
-        ([_resource, path]) => path === resourcePath,
-      )?.[0] ?? false
-
-    this.state.nav.resourceType =
-      typeof resourceType === 'string' ? (resourceType as NavigableResource) : false
-    this.state.nav.resourceRef = typeof resourceRef === 'string' ? resourceRef : false
-    this.state.nav.facet = (url.hash.slice(1) as FacetType) || false
-  }
-
-  private initializeRemoteMap = (): void => {
-    this.remoteMap[FirstClassResource.organisation] = {
-      list: getOrganisationsWhichHaveLayers,
-      get: getOrganisation,
-    }
-    this.remoteMap[FirstClassResource.project] = {
-      list: getProjects as unknown as RemoteListFn<unknown, unknown>,
-      get: getProject as unknown as RemoteGetFn<unknown, unknown>,
-    }
-    this.remoteMap[FirstClassResource.layer] = {
-      list: getLayers,
-      get: getLayer,
-    }
-    this.remoteMap[FirstClassResource.feature] = {
-      list: getFeatures as unknown as RemoteListFn<unknown, unknown>,
-      get: getFeature as unknown as RemoteGetFn<unknown, unknown>,
-    }
-    this.remoteMap[FirstClassResource.hub] = {
-      list: getHubs,
-      get: getHub,
-    }
-    this.remoteMap[FirstClassResource.property] = {
-      list: getProperties as unknown as RemoteListFn<unknown, unknown>,
-      get: getProperty as unknown as RemoteGetFn<unknown, unknown>,
-    }
-    this.remoteMap[FirstClassResource.user] = {
-      get: getUser as unknown as RemoteGetFn<unknown, unknown>,
-    }
-  }
-
-  // Initialize default query map (can be overridden by AdminCtx)
-  private initializeQueryMap = (): void => {
-    this.queryMap.clear()
-
-    this.queryMap.set(FirstClassResource.organisation, {
-      queryKey: this.organisationsQueryKey,
-      queryFn: () => this.organisationsQueryFn(),
-    })
-
-    this.queryMap.set(FirstClassResource.project, {
-      queryKey: this.projectsQueryKey,
-      queryFn: () => this.projectsQueryFn(),
-    })
-
-    this.queryMap.set(FirstClassResource.layer, {
-      queryKey: this.layersQueryKey,
-      queryFn: () => this.layersQueryFn(),
-    })
-
-    this.queryMap.set(FirstClassResource.feature, {
-      queryKey: this.featuresQueryKey,
+    this.view = new ResourceViewCtx(divisionCtx, account, responsiveCtx, cacheCtx)
+    this.view.onUserFeaturesChanged = () => this.postUserFeaturesMutation()
+    this.view.onAccountScopeChanged = () => this.resetActiveCollection()
+    this.view.queries.queryMap.set(FirstClassResource.feature, {
+      queryKey: () => this.view.featuresQueryKey(),
       queryFn: () => this.featuresQueryFn(),
     })
-
-    // ADMIN ONLY
-    this.queryMap.set(FirstClassResource.task, {
-      queryKey: () => [FirstClassResource.task],
-      queryFn: () => Promise.resolve([]),
-    })
-
-    // ADMIN ONLY
-    this.queryMap.set(FirstClassResource.hub, {
-      queryKey: () => [FirstClassResource.hub],
-      queryFn: () => Promise.resolve([]),
-    })
-
-    // APP ONLY
-    this.queryMap.set('userFeatures', {
-      queryKey: this.userFeaturesQueryKey,
-      queryFn: () => this.userFeaturesQueryFn(),
-    })
-
-    this.queryMap.set(FirstClassResource.user, {
-      queryKey: this.userQueryKey,
-      queryFn: () => this.userQueryFn(),
-    })
-
-    // PROPERTIES
-    this.queryMap.set(FirstClassResource.property, {
-      queryKey: this.propertiesQueryKey,
-      queryFn: () => this.propertiesQueryFn(),
-    })
+    cacheCtx.installProviders(mapResourceProviders)
   }
 
-  init = async (userId: Id | null, loadFeatures: boolean = true): Promise<void> => {
-    // Unauthenticated routes initialise without account data.
-    if (!userId) {
-      // Initialize empty data structures for unauthenticated users.
-      this.state.resources.organisation = []
-      this.state.resources.project = []
-      this.state.resources.layer = []
-      this.state.resources.feature = []
-      this.state.resources.task = []
-      this.state.resources.hub = []
-      this.state.userFeatures = {
-        wishlisted: [],
-        visited: [],
-      }
-      this.isInitialised = true
-      return
-    }
-    // Initialize stats cache
-    this.initStatsCache()
-    // Use parallel fetching for initial load
-    await this.initialFetch(true, loadFeatures)
-    // Prevent init from running again, unless the user (re)authenticates
-    // see reinitializeWithAuth()
-    this.isInitialised = true
+  /** Drops the camera capability and releases the resource view. @returns Nothing. */
+  dispose(): void {
+    this.resetActiveCollection()
+    this.mapController = null
+    this.view.dispose()
   }
+
+  // Public map visibility is a surface projection of resource query results.
+  featuresVisible: Id[] = $derived.by(() =>
+    this.getVisibleFeatures().map(row => row.id),
+  )
+
+  /** @returns IDs visible in the current public map viewport. */
+  getVisibleFeatureIds = (): Id[] => this.featuresVisible
+
+  // Features Collection -- Subsets
+
+  /** Reads the collection context used for public feature stepping. @returns The active collection, if any. */
+  getActiveCollection = (): ActiveCollection => this.selection.collection
 
   /**
-   * Hydrates map resources that are safe to show before a user authenticates.
-   *
-   * @param loadFeatures - Whether to request the public feature collection.
-   * @returns Nothing after the public hierarchy and optional feature collection settle.
-   * @remarks Errors are logged here because the login dialog and base map must remain
-   * usable even when a non-essential public resource request fails.
-   */
-  bootstrapPublicMapResources = async (loadFeatures: boolean = true): Promise<void> => {
-    const publicRoleScope = this.getRoleScopeQueryKey()
-
-    try {
-      this.initStatsCache()
-      await this.initialFetch(false, loadFeatures, publicRoleScope)
-    } catch (error) {
-      console.error('[AppCtx] Public map bootstrap failed:', error)
-    }
-  }
-
-  /**
-   * Loads application resources in dependency order.
-   *
-   * @param includeUserData - Whether to request identity-bound profile and preference data.
-   * @param loadFeatures - Whether to request the initial feature collection.
-   * @param expectedRoleScope - Optional identity scope that must still be current before
-   * public-bootstrap data is committed.
-   * @returns Nothing after the requested resource stages settle.
-   */
-  initialFetch = async (
-    includeUserData: boolean = true,
-    loadFeatures: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    // Bootstrap only map-relevant user state first. Self-profile hydration includes a
-    // contribution relation graph and is deferred until its panel needs it.
-    const lightSteps = includeUserData
-      ? ([
-          ['userFeatures', () => this.refreshUserFeatures(false)],
-          ['userLayers', () => this.hydrateCurrentUserLayers()],
-        ] as const)
-      : []
-
-    const lightResults = await Promise.allSettled(lightSteps.map(([, load]) => load()))
-    for (const [index, result] of lightResults.entries()) {
-      if (result.status === 'fulfilled') continue
-
-      console.error(
-        `[AppCtx][initialFetch] Resource bootstrap failed (${lightSteps[index][0]}):`,
-        result.reason,
-      )
-    }
-
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    // Bootstrap hierarchy second. Keep this stage narrower than the old fan-out because
-    // local workerd D1 is sensitive to bursts of concurrent reads during app startup.
-    const hierarchyPhases = [
-      [
-        ['organisations', () => this.refreshOrganisations(false, expectedRoleScope)],
-        ['projects', () => this.refreshProjects(false, expectedRoleScope)],
-      ],
-      [
-        ['layers', () => this.refreshLayers(false, true, expectedRoleScope)],
-        ['properties', () => this.refreshProperties(false, expectedRoleScope)],
-      ],
-    ] as const
-
-    for (const phase of hierarchyPhases) {
-      const phaseResults = await Promise.allSettled(phase.map(([, load]) => load()))
-      for (const [index, result] of phaseResults.entries()) {
-        if (result.status === 'fulfilled') continue
-
-        console.error(
-          `[AppCtx][initialFetch] Resource bootstrap failed (${phase[index][0]}):`,
-          result.reason,
-        )
-      }
-
-      if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-    }
-
-    this.applyInitialLayerPrisms(expectedRoleScope)
-    await this.postLayerMutation(false, true, expectedRoleScope)
-
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    const featureSteps = [
-      ...(loadFeatures
-        ? ([
-            ['features', () => this.refreshFeatures(false, expectedRoleScope)],
-          ] as const)
-        : []),
-      ...(includeUserData
-        ? ([
-            [
-              'tasks',
-              () => (this.isAdmin() ? this.refreshTasks(false) : Promise.resolve()),
-            ],
-          ] as const)
-        : []),
-    ] as const
-
-    for (const [label, load] of featureSteps) {
-      try {
-        await load()
-      } catch (error) {
-        console.error(
-          `[AppCtx][initialFetch] Resource bootstrap failed (${label}):`,
-          error,
-        )
-      }
-    }
-  }
-
-  private getCurrentHubId = (): Id | null =>
-    this.hub?.id ??
-    (this.hub?.code ? (this.getHubIdByCode(this.hub.code) ?? null) : null)
-
-  private getUserLayersForCurrentHub = (): UserLayer[] => {
-    const hubId = this.getCurrentHubId()
-    const hubCode = this.hub?.code ?? null
-    if ((!hubId && !hubCode) || !this.user || !('userLayers' in this.user)) {
-      return []
-    }
-    const currentHubLayerIds = new Set(
-      this.state.resources.layer.map(layer => layer.id),
-    )
-    const hubUserLayers = ((this.user as CurrentUser).userLayers ?? []).filter(
-      layer => {
-        if (hubId && layer.hubId === hubId) return true
-        if (hubCode && layer.hubCode === hubCode) return true
-
-        // Fallback to the loaded hub-scoped layer list when persisted preferences only
-        // carry one hub identifier and the app has only resolved the other on bootstrap.
-        return currentHubLayerIds.has(layer.layerId)
-      },
-    )
-    return hubUserLayers
-  }
-
-  // Hydrate persisted layer defaults once during app bootstrap so hub prism setup
-  // can resolve the initial active layers without coupling to profile panel refreshes.
-  private hydrateCurrentUserLayers = async (): Promise<void> => {
-    if (!this.user?.id) {
-      return
-    }
-
-    const userLayersResponse = (await runRemoteQuery(
-      getUserLayers({
-        userId: this.user.id,
-      }),
-    )) as { data?: UserLayer[] | null }
-
-    this.user = {
-      ...(this.user ?? {}),
-      userLayers: Array.isArray(userLayersResponse.data) ? userLayersResponse.data : [],
-    } as CurrentUser | SessionUser
-
-    this.postUserMutation()
-  }
-
-  private getHubDefaultLayerIds = (): Id[] => {
-    return getInitialHubLayerDefaultIds(
-      this.hub,
-      this.state.resources.layer,
-      this.state.resources.project,
-    )
-  }
-
-  private applyInitialLayerPrisms = (expectedRoleScope?: string): void => {
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    const hubId = this.getCurrentHubId()
-    const hubCode = this.hub?.code ?? null
-    if (!hubId && !hubCode) {
-      return
-    }
-
-    const userLayerIds = this.getUserLayersForCurrentHub().map(layer => layer.layerId)
-    const defaultLayerIds = this.getHubDefaultLayerIds()
-    const nextLayerIds = userLayerIds.length > 0 ? userLayerIds : defaultLayerIds
-    const dedupedLayerIds = [...new Set(nextLayerIds)]
-    const currentLayerIds = this.state.prisms.layer
-    const isUnchanged =
-      currentLayerIds.length === dedupedLayerIds.length &&
-      currentLayerIds.every((layerId, index) => layerId === dedupedLayerIds[index])
-
-    if (isUnchanged) return
-
-    this.state.prisms.layer = dedupedLayerIds
-  }
-
-  initStatsCache = (): void => {
-    Object.values(FirstClassResource).forEach(resourceType => {
-      this.cache.stats.set(resourceType, new SvelteMap())
-    })
-  }
-
-  reinitializeWithAuth = async (): Promise<void> => {
-    if (this.user?.id) {
-      this.isInitialised = false
-      await this.init(this.user.id)
-    }
-  }
-
-  // ASSERT :: User is SuperAdmin
-  isSuperAdmin(): boolean {
-    return Boolean(
-      this.user && 'superAdmin' in this.user && this.user.superAdmin === true,
-    )
-  }
-
-  // ASSERT :: App is in admin dashboard
-  isAdmin(): boolean {
-    // Check if we're in admin interface - can be determined by URL path
-    return (
-      typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
-    )
-  }
-
-  organisationsQueryFn = async (): Promise<Organisation[]> => {
-    const remoteList = this.remoteMap[FirstClassResource.organisation].list
-    if (!remoteList) {
-      throw new Error('Organisation remote list function is not configured.')
-    }
-    const result = toSafeListResponse<Organisation>(
-      (await runRemoteQuery(
-        remoteList({
-          conditions: {
-            isArchived: false,
-            isPublished: true,
-          },
-          prisms: this.state.prisms,
-          sorting: this.state.viewSorting.organisation,
-          meta: { isAdminRequest: false, profile: 'card' },
-        }),
-      )) as ListResponse<Organisation> | undefined,
-    )
-    this.setListQueryMeta(this.organisationsQueryKey(), result)
-    return result.data
-  }
-  projectsQueryFn = async (): Promise<Project[]> => {
-    const remoteList = this.remoteMap[FirstClassResource.project].list
-    if (!remoteList) {
-      throw new Error('Project remote list function is not configured.')
-    }
-    const requestParams = {
-      conditions: {
-        isArchived: false,
-        isPublished: true,
-      },
-      prisms: this.state.prisms,
-      sorting: this.state.viewSorting.project,
-      meta: { isAdminRequest: false, profile: 'card' },
-    }
-
-    const result = toSafeListResponse<Project>(
-      (await runRemoteQuery(remoteList(requestParams))) as
-        | ListResponse<Project>
-        | undefined,
-    )
-
-    this.setListQueryMeta(this.projectsQueryKey(), result)
-    return result.data
-  }
-
-  layersQueryFn = async (): Promise<Layer[]> => {
-    const remoteList = this.remoteMap[FirstClassResource.layer].list
-    if (!remoteList) {
-      throw new Error('Layer remote list function is not configured.')
-    }
-    const result = toSafeListResponse<Layer>(
-      (await runRemoteQuery(
-        remoteList({
-          conditions: {
-            isArchived: false,
-            isPublished: true,
-          },
-          prisms: this.state.prisms,
-          sorting: this.state.viewSorting.layer,
-          meta: { isAdminRequest: false, profile: 'card' },
-        }),
-      )) as ListResponse<Layer> | undefined,
-    )
-    this.setListQueryMeta(this.layersQueryKey(), result)
-    return result.data
-  }
-
-  featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
-    const remoteList = this.remoteMap[FirstClassResource.feature].list
-    if (!remoteList) {
-      throw new Error('Feature remote list function is not configured.')
-    }
-    const result = toSafeListResponse<FeatureFromCollection>(
-      (await runRemoteQuery(
-        remoteList({
-          conditions: {
-            isArchived: false,
-            isPublished: true,
-          },
-          prisms: this.state.prisms,
-          sorting: this.state.viewSorting.feature,
-          meta: { isAdminRequest: false, profile: 'list' },
-        }),
-      )) as ListResponse<FeatureFromCollection> | undefined,
-    )
-    this.setListQueryMeta(this.featuresQueryKey(), result)
-    return result.data
-  }
-
-  propertiesQueryFn = async (): Promise<Property[]> => {
-    const remoteList = this.remoteMap[FirstClassResource.property].list
-    if (!remoteList) {
-      throw new Error('Property remote list function is not configured.')
-    }
-    const result = toSafeListResponse<Property>(
-      (await runRemoteQuery(
-        remoteList({
-          conditions: {},
-          prisms: this.state.prisms,
-        }),
-      )) as ListResponse<Property> | undefined,
-    )
-    return result.data
-  }
-
-  userFeaturesQueryFn = async (): Promise<UserFeature[]> => {
-    if (!this.user?.id) {
-      return []
-    }
-    const response = (await runRemoteQuery(
-      getUserFeatures({
-        userId: this.user.id,
-        sorting: {
-          sortBy: 'modifiedAt',
-          sortOrder: 'desc',
-        },
-      }),
-    )) as unknown as { data?: UserFeature[] | null }
-    return Array.isArray(response.data) ? response.data : []
-  }
-
-  userQueryFn = async (): Promise<UserProfile | null> => {
-    const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
-    const isSelfProfile =
-      !requestedUsername || requestedUsername === (this.user?.username ?? null)
-    const userRef = isSelfProfile ? this.user?.id : requestedUsername
-    if (!userRef) return null
-
-    const refKey = isSelfProfile ? 'id' : 'username'
-    const profile = isSelfProfile ? 'self' : 'detail'
-
-    const response = (await runRemoteQuery(
-      getUser({
-        ref: userRef,
-        refKey,
-        ...(this.state.panels.profile.ctx?.observePrisms
-          ? { prisms: this.state.prisms }
-          : {}),
-        meta: {
-          profile,
-        },
-      }),
-    )) as { data?: UserProfile | null }
-
-    return response.data ?? null
-  }
-
-  invalidateAndRefresh = async (
-    resource: FirstClassResource | 'userFeatures',
-  ): Promise<void> => {
-    // Invalidate the query
-    await this.invalidate(resource)
-    // Refresh the resources
-    await this.refresh(resource)
-  }
-
-  /**
-   * Targeted invalidation for image uploads - only invalidates and refreshes the specific resource
-   * without triggering cascading refreshes. Updates the cache for that resource.
-   * @param resource - The resource type to invalidate
-   * @param resourceId - The ID of the specific resource to invalidate
-   */
-  invalidateResourceTargeted = async (
-    resource: FirstClassResource,
-    resourceId: Id,
-  ): Promise<void> => {
-    // Get the specific query key for this resource
-    const queryKey = this.queryMap.get(resource)?.queryKey()
-
-    if (!queryKey) {
-      console.warn(`No query key found for resource: ${resource}`)
-      return
-    }
-
-    // Invalidate queries for this resource type
-    await this.queryClient.invalidateQueries({
-      queryKey,
-      refetchType: 'active',
-      exact: true,
-    })
-
-    // Refresh only the specific resource without cascading
-    await this.refreshResourceTargeted(resource, resourceId)
-  }
-
-  /**
-   * Refresh a specific resource without triggering cascades
-   * @param resource - The resource type to refresh
-   * @param resourceId - The ID of the specific resource to refresh
-   */
-  private refreshResourceTargeted = async (
-    resource: FirstClassResource,
-    resourceId: Id,
-  ): Promise<void> => {
-    try {
-      // Fetch the updated resource data
-      const updatedResource = await this.fetchResourceById(resource, resourceId)
-
-      if (updatedResource) {
-        // Update the cache with the new resource data
-        this.cache[resource].set(resourceId, updatedResource)
-
-        // For features, also update the featuresMap
-        if (resource === FirstClassResource.feature) {
-          this.addFeatureToMap(updatedResource as Feature)
-        }
-
-        // Update the resources array if the resource exists there
-        if (resource in this.state.resources) {
-          this.updateResourceInArray(
-            resource as keyof FilteredResources,
-            updatedResource as FilteredResources[keyof FilteredResources][number],
-          )
-        }
-      }
-    } catch (error) {
-      console.error(`Failed to refresh resource ${resource}:${resourceId}`, error)
-    }
-  }
-
-  /**
-   * Converts a query key into a stable map key for storing list response metadata.
-   *
-   * @param queryKey - TanStack query key for a resource list.
-   * @returns Serialized key suitable for `listQueryMeta`.
-   * @remarks Metadata is tracked separately from cached list data so UI logic can read
-   * pagination and sort state without duplicating full query responses in app state.
-   */
-  private toQueryMetaKey(queryKey: unknown[]): string {
-    return JSON.stringify(queryKey)
-  }
-
-  /**
-   * Stores list response metadata for a query while excluding the entity array payload.
-   *
-   * @param queryKey - TanStack query key for the fetched list.
-   * @param response - Full list response returned by the remote API.
+   * Selects a collection and coordinates its first or requested feature.
+   * @param collection Ordered feature context.
+   * @param options Card, camera and URL intent for this action.
    * @returns Nothing.
-   * @remarks The data array stays in TanStack Query and resource state; only the metadata is
-   * retained here for pagination-aware admin and collection interactions.
    */
-  setListQueryMeta<T>(queryKey: unknown[], response: ListResponse<T>): void {
-    const { data: _data, ...meta } = response
-    this.listQueryMeta.set(this.toQueryMetaKey(queryKey), meta)
-  }
-
-  /**
-   * Returns cached list metadata for a previously fetched query key.
-   *
-   * @param queryKey - TanStack query key for the list.
-   * @returns The stored response metadata, or `null` when nothing has been cached yet.
-   */
-  getListQueryMeta(queryKey: unknown[]): Omit<ListResponse<unknown>, 'data'> | null {
-    return this.listQueryMeta.get(this.toQueryMetaKey(queryKey)) ?? null
-  }
-
-  /**
-   * Resolves the comparable value used to sort a resource in memory.
-   *
-   * @param resource - Resource type being sorted.
-   * @param entity - Resource instance to read from.
-   * @param sortBy - Active sort field.
-   * @param userPreferences - I18n preferences used when sorting translated fields.
-   * @returns Normalized string or numeric value suitable for comparison.
-   * @remarks Translated text fields are resolved using the current user locale preferences so
-   * client-side sorting matches the strings users actually see in the UI.
-   */
-  private getResourceSortValue(
-    resource: FirstClassResource,
-    entity: Resource,
-    sortBy: string,
-    userPreferences = this.getUserPreferences(),
-  ): string | number {
-    if (sortBy === 'createdAt' || sortBy === 'modifiedAt') {
-      const rawValue = (entity as Record<string, unknown>)[sortBy]
-      // Convert timestamps once so in-memory sorting behaves like a numeric date sort.
-      return typeof rawValue === 'string' ? Date.parse(rawValue) || 0 : 0
-    }
-
-    if (resource === FirstClassResource.feature) {
-      const feature = entity as FeatureFromCollection
-      const translatedValue =
-        sortBy === 'title' || sortBy === 'description' || sortBy === 'displayAddress'
-          ? getI18n(feature, sortBy, userPreferences, '') || ''
-          : null
-
-      if (typeof translatedValue === 'string') {
-        return translatedValue.toLocaleLowerCase()
-      }
-    }
-
-    if (sortBy === 'name' || sortBy === 'nameShort' || sortBy === 'description') {
-      const translatedValue = getI18n(entity as never, sortBy, userPreferences, '')
-
-      if (typeof translatedValue === 'string') {
-        return translatedValue.toLocaleLowerCase()
-      }
-    }
-
-    const rawValue = (entity as Record<string, unknown>)[sortBy]
-
-    if (typeof rawValue === 'string') {
-      return rawValue.toLocaleLowerCase()
-    }
-
-    if (typeof rawValue === 'number') {
-      return rawValue
-    }
-
-    return ''
-  }
-
-  /**
-   * Sorts an already-loaded resource collection without issuing another server request.
-   *
-   * @param resource - Resource type being sorted.
-   * @param entities - Loaded entities to sort.
-   * @param sorting - Requested sort state.
-   * @returns A new array ordered according to the requested sort.
-   * @remarks The sort falls back to `id` as a stable tiebreaker so repeated renders produce
-   * deterministic ordering when primary sort values are equal.
-   */
-  sortLoadedResources<T extends Resource>(
-    resource: FirstClassResource,
-    entities: T[],
-    sorting: ResourceSortState,
-  ): T[] {
-    const direction = sorting.sortOrder === 'asc' ? 1 : -1
-    const userPreferences = this.getUserPreferences()
-    const sortableEntities = entities.map(entity => ({
-      entity,
-      sortValue: this.getResourceSortValue(
-        resource,
-        entity,
-        sorting.sortBy,
-        userPreferences,
-      ),
-    }))
-
-    sortableEntities.sort((left, right) => {
-      const leftValue = left.sortValue
-      const rightValue = right.sortValue
-
-      if (leftValue < rightValue) return -1 * direction
-      if (leftValue > rightValue) return 1 * direction
-
-      // Use a stable secondary key to avoid order flicker when values are identical.
-      return left.entity.id.localeCompare(right.entity.id)
-    })
-
-    return sortableEntities.map(item => item.entity)
-  }
-
-  /**
-   * Writes a sorted entity list back into the resource state for the matching resource type.
-   *
-   * @param resource - Resource type whose state should be updated.
-   * @param entities - Sorted entity array to persist into app state.
-   * @returns Nothing.
-   * @remarks Feature updates also rebuild dependent caches so map and neighbourhood views stay
-   * aligned with the reordered feature collection.
-   */
-  setSortedResourceState<T extends Resource>(
-    resource: FirstClassResource,
-    entities: T[],
-  ): void {
-    if (resource === FirstClassResource.organisation) {
-      this.state.resources.organisation = entities as Organisation[]
-      return
-    }
-
-    if (resource === FirstClassResource.project) {
-      this.state.resources.project = entities as Project[]
-      return
-    }
-
-    if (resource === FirstClassResource.layer) {
-      this.state.resources.layer = entities as Layer[]
-      return
-    }
-
-    if (resource === FirstClassResource.feature) {
-      const features = entities as FeatureFromCollection[]
-      this.state.resources.feature = features
-      // Rebuild derived feature lookups after replacing the entire feature list.
-      this.rebuildFeaturesMap()
-      // Keep neighbourhood-specific derived state in sync with the sorted feature collection.
-      this.placeCtx.setNeighbourhoodFeatures(
-        this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
-      )
-      return
-    }
-
-    if (resource === FirstClassResource.task) {
-      this.state.resources.task = entities as Task[]
-      return
-    }
-
-    if (resource === FirstClassResource.hub) {
-      this.state.resources.hub = entities as Hub[]
-    }
-  }
-
-  /**
-   * Update a resource in the appropriate resources array
-   * @param resource - The resource type
-   * @param updatedResource - The updated resource data
-   */
-  private updateResourceInArray = <K extends keyof FilteredResources>(
-    resource: K,
-    updatedResource: FilteredResources[K][number],
+  setActiveCollection = (
+    collection: ActiveCollection,
+    options: {
+      activeFeatureId?: string
+      focus?: boolean
+      focusFeature?: boolean
+      highlight?: boolean
+      openCard?: boolean
+      openCardDelay?: number
+      isCardOpen?: boolean
+      updateUrl?: boolean
+      navOptions?: CollectionNavOptions['navOptions']
+    },
   ): void => {
-    const resourceArray = this.state.resources[resource]
-    const index = resourceArray.findIndex(
-      resourceItem => resourceItem.id === updatedResource.id,
-    )
-    if (index !== -1) {
-      resourceArray[index] = updatedResource
+    const optionsWithDefaults = {
+      highlight: true,
+      focus: true,
+      focusFeature: true,
+      openCard: true,
+      openCardDelay: 0,
+      ...options,
     }
-  }
-
-  invalidate = async (
-    resource: FirstClassResource | 'userFeatures' | 'user',
-  ): Promise<void> => {
-    const resourcesToInvalidate = [resource]
-    // Clear relevant caches when invalidating (forces fresh data)
-    if (resource === FirstClassResource.organisation) {
-      this.cache.organisation.clear()
-      this.organisationCodeToId.clear()
-    } else if (resource === FirstClassResource.project) {
-      this.cache.project.clear()
-      this.projectCodeToId.clear()
-      this.cache.property.clear()
-      resourcesToInvalidate.push(FirstClassResource.property)
-    } else if (resource === FirstClassResource.layer) {
-      this.cache.layer.clear()
-    } else if (resource === FirstClassResource.feature) {
-      this.cache.feature.clear()
-      this.featuresMap.clear()
-    } else if (resource === FirstClassResource.task) {
-      this.cache.task.clear()
-    } else if (resource === FirstClassResource.hub) {
-      this.cache.hub.clear()
-      this.hubCodeToId.clear()
-      this.cache.organisation.clear()
-      resourcesToInvalidate.push(FirstClassResource.organisation)
-    } else if (resource === FirstClassResource.property) {
-      this.cache.property.clear()
-    } else if (resource === 'user') {
-      // TODO Should we clear the profile panel too?
-      this.cache.user.clear()
-    }
-
-    resourcesToInvalidate.forEach(async resource => {
-      await this.queryClient.invalidateQueries({
-        queryKey:
-          resource === 'userFeatures'
-            ? this.userFeaturesQueryKey()
-            : [FirstClassResource[resource]],
-        refetchType: 'all',
-        exact: false,
-      })
-    })
-  }
-
-  togglePrism = async (resource: FirstClassResource, id: Id): Promise<void> => {
-    const prisms = this.state.prisms[resource as ResourceTypeWithChildren]
-    const index = prisms.indexOf(id)
-    if (index === -1) {
-      prisms.push(id)
-    } else {
-      prisms.splice(index, 1)
-    }
-    // Refresh all the dependent resources
-    if (resource === FirstClassResource.organisation) {
-      await this.refreshProjects()
-    } else if (resource === FirstClassResource.project) {
-      await this.refreshProperties()
-      await this.refreshLayers()
-    } else if (resource === FirstClassResource.layer) {
-      // Only refresh features if user is authenticated
-      if (this.user?.id) {
-        await this.refreshFeatures()
-        if (this.isAdmin()) {
-          await this.refreshTasks()
-        }
-      }
-      // Only refresh if we have a username in the profile context
-      if (this.state.panels.profile.ctx?.username) {
-        await this.refreshUserProfile()
-      }
-    }
-  }
-
-  // Toggle methods for hierarchical filters
-  toggleOrganisation = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.organisation, id)
-  }
-
-  /**
-   * Returns the IDs of an organisation's layers that should be visible by default.
-   *
-   * @param organisationId - The organisation whose default layer IDs are required.
-   * @returns The organisation's default-visible layer IDs.
-   */
-  getOrganisationDefaultVisibleLayerIds = (organisationId: Id): Id[] =>
-    this.state.resources.layer
-      .filter(
-        layer => layer.organisationId === organisationId && layer.isDefaultVisible,
-      )
-      .map(layer => layer.id)
-
-  /**
-   * Determines whether every default-visible layer for an organisation is active.
-   *
-   * @param organisationId - The organisation whose default layers are checked.
-   * @returns Whether the organisation has default layers and every one is active.
-   */
-  isOrganisationDefaultLayersActive = (organisationId: Id): boolean => {
-    const defaultLayerIds = this.getOrganisationDefaultVisibleLayerIds(organisationId)
-    return (
-      defaultLayerIds.length > 0 &&
-      defaultLayerIds.every(layerId => this.state.prisms.layer.includes(layerId))
-    )
-  }
-
-  /**
-   * Activates an organisation's default-visible layers without changing prism scope.
-   *
-   * @param organisationId - The organisation whose default layers should be activated.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  addOrganisationDefaultLayers = async (organisationId: Id): Promise<void> => {
-    const defaultLayerIds = this.getOrganisationDefaultVisibleLayerIds(organisationId)
-    if (defaultLayerIds.length === 0) return
-
-    this.state.prisms.layer = Array.from(
-      new Set([...this.state.prisms.layer, ...defaultLayerIds]),
-    )
-    await this.postLayerMutation(true)
-  }
-
-  /**
-   * Activates an organisation's defaults and joins its prism when organisation scope is active.
-   *
-   * @param organisationId - The organisation whose default layers should be activated.
-   * @returns A promise that resolves after organisation and layer state are updated.
-   */
-  activateOrganisationWithDefaultLayers = async (organisationId: Id): Promise<void> => {
-    if (this.state.prisms.organisation.length > 0) {
-      await this.activateOrganisationPrismWithDefaultLayers(organisationId)
+    this.selection.collection = collection
+    if (!collection?.items.length) {
+      this.resetActiveFeature()
       return
     }
 
-    await this.addOrganisationDefaultLayers(organisationId)
+    // Handle feature activation
+    this.postActiveCollectionMutation(optionsWithDefaults)
   }
 
-  /**
-   * Activates an organisation prism and enables the organisation's default-visible layers.
-   *
-   * @param organisationId - The organisation prism and default layers to activate.
-   * @returns A promise that resolves after organisation and layer state are updated.
-   */
-  activateOrganisationPrismWithDefaultLayers = async (
-    organisationId: Id,
-  ): Promise<void> => {
-    this.state.prisms.organisation = Array.from(
-      new Set([...this.state.prisms.organisation, organisationId]),
-    )
+  private postActiveCollectionMutation = (options: {
+    activeFeatureId?: string
+    highlight?: boolean
+    focus?: boolean
+    focusFeature?: boolean
+    openCard?: boolean
+    openCardDelay?: number
+    isCardOpen?: boolean
+    updateUrl?: boolean
+    navOptions?: CollectionNavOptions['navOptions']
+  }): void => {
+    const optionsWithDefaults = {
+      highlight: true,
+      focus: true,
+      focusFeature: true,
+      openCard: true,
+      openCardDelay: 0,
+      ...options,
+    }
+    const collection = this.selection.collection
+    if (!collection?.items.length) return
 
-    // Load the newly scoped organisation's descendants before selecting its defaults.
-    await this.refreshProjects(false)
-    await this.refreshProperties()
-    await this.refreshLayers(false)
-    await this.addOrganisationDefaultLayers(organisationId)
-  }
-
-  /**
-   * Removes an organisation prism and every active descendant prism and layer.
-   *
-   * @param organisationId - The organisation to deactivate.
-   * @returns A promise that resolves after the expanded organisation scope is loaded.
-   */
-  deactivateOrganisation = async (organisationId: Id): Promise<void> => {
-    const projectIds = new Set(
-      this.state.resources.project
-        .filter(project => project.organisationId === organisationId)
-        .map(project => project.id),
-    )
-    const layerIds = new Set(
-      this.state.resources.layer
-        .filter(layer => layer.organisationId === organisationId)
-        .map(layer => layer.id),
-    )
-
-    // Remove the organisation and all of its descendants before expanding the scope.
-    this.state.prisms.organisation = this.state.prisms.organisation.filter(
-      id => id !== organisationId,
-    )
-    this.state.prisms.project = this.state.prisms.project.filter(
-      projectId => !projectIds.has(projectId),
-    )
-    this.state.prisms.layer = this.state.prisms.layer.filter(
-      layerId => !layerIds.has(layerId),
-    )
-
-    await this.refreshProjects(false)
-    await this.refreshProperties()
-    await this.refreshLayers(true, false)
-  }
-
-  /**
-   * Deactivates every active layer that belongs to an organisation without changing prism scope.
-   *
-   * @param organisationId - The organisation whose active layers should be disabled.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  deactivateOrganisationLayers = async (organisationId: Id): Promise<void> => {
-    const organisationLayerIds = new Set(
-      this.state.resources.layer
-        .filter(layer => layer.organisationId === organisationId)
-        .map(layer => layer.id),
-    )
-
-    this.state.prisms.layer = this.state.prisms.layer.filter(
-      layerId => !organisationLayerIds.has(layerId),
-    )
-    await this.postLayerMutation(true, false)
-  }
-
-  toggleProject = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.project, id)
-  }
-
-  /**
-   * Returns the IDs of a project's layers that should be visible by default.
-   *
-   * @param projectId - The project whose default layer IDs are required.
-   * @returns The project's default-visible layer IDs.
-   */
-  getProjectDefaultVisibleLayerIds = (projectId: Id): Id[] =>
-    this.state.resources.layer
-      .filter(layer => layer.projectId === projectId && layer.isDefaultVisible)
-      .map(layer => layer.id)
-
-  /**
-   * Determines whether every default-visible layer for a project is active.
-   *
-   * @param projectId - The project whose default layers are checked.
-   * @returns Whether the project has default layers and every one is active.
-   */
-  isProjectDefaultLayersActive = (projectId: Id): boolean => {
-    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
-    return (
-      defaultLayerIds.length > 0 &&
-      defaultLayerIds.every(layerId => this.state.prisms.layer.includes(layerId))
-    )
-  }
-
-  /**
-   * Activates a project's default-visible layers without changing its prism scope.
-   *
-   * @param projectId - The project whose default layers should be activated.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  addProjectDefaultLayers = async (projectId: Id): Promise<void> => {
-    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
-    if (defaultLayerIds.length === 0) return
-
-    this.state.prisms.layer = Array.from(
-      new Set([...this.state.prisms.layer, ...defaultLayerIds]),
-    )
-    await this.postLayerMutation(true)
-  }
-
-  /**
-   * Activates a project's defaults and joins its prism when project scope is active.
-   *
-   * @param projectId - The project whose default layers should be activated.
-   * @returns A promise that resolves after project and layer state are updated.
-   */
-  activateProjectWithDefaultLayers = async (projectId: Id): Promise<void> => {
-    const isProjectScopeActive = this.state.prisms.project.length > 0
-
-    if (isProjectScopeActive) {
-      await this.activateProjectPrismWithDefaultLayers(projectId)
-      return
+    if (options.highlight) {
+      this.highlightActiveCollection({ focus: optionsWithDefaults.focus })
     }
 
-    await this.addProjectDefaultLayers(projectId)
-  }
+    // Determine which feature to activate, default to first
+    let featureIdToActivate: string | null = collection.items[0].id
 
-  /**
-   * Activates a project prism and enables the project's default-visible layers.
-   *
-   * @param projectId - The project prism and default layers to activate.
-   * @returns A promise that resolves after project and layer state are updated.
-   */
-  activateProjectPrismWithDefaultLayers = async (projectId: Id): Promise<void> => {
-    this.state.prisms.project = Array.from(
-      new Set([...this.state.prisms.project, projectId]),
-    )
-
-    // Load the newly scoped project's layers before selecting its defaults.
-    await this.refreshProperties()
-    await this.refreshLayers(false)
-    await this.addProjectDefaultLayers(projectId)
-  }
-
-  /**
-   * Isolates a project prism and replaces the active layers with its defaults.
-   *
-   * @param projectId - The project to make the sole active prism.
-   * @returns A promise that resolves after the project scope and layer state update.
-   */
-  isolateProject = async (projectId: Id): Promise<void> => {
-    this.state.prisms.project = [projectId]
-
-    // Load the isolated project's resources before deriving its default layers.
-    await this.refreshProperties()
-    await this.refreshLayers(false)
-
-    const defaultLayerIds = this.getProjectDefaultVisibleLayerIds(projectId)
-    this.state.prisms.layer = [...defaultLayerIds]
-    await this.postLayerMutation(true)
-  }
-
-  /**
-   * Removes a project prism and every active layer that belongs to it.
-   *
-   * @param projectId - The project to deactivate.
-   * @returns A promise that resolves after the expanded project scope is loaded.
-   */
-  deactivateProject = async (projectId: Id): Promise<void> => {
-    const projectLayerIds = new Set(
-      this.state.resources.layer
-        .filter(layer => layer.projectId === projectId)
-        .map(layer => layer.id),
-    )
-
-    // Remove both project-level and visible-layer state before expanding the scope.
-    this.state.prisms.project = this.state.prisms.project.filter(id => id !== projectId)
-    this.state.prisms.layer = this.state.prisms.layer.filter(
-      layerId => !projectLayerIds.has(layerId),
-    )
-
-    await this.refreshProperties()
-    await this.refreshLayers(true, false)
-  }
-
-  /**
-   * Deactivates every active layer that belongs to a project without changing prism scope.
-   *
-   * @param projectId - The project whose active layers should be disabled.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  deactivateProjectLayers = async (projectId: Id): Promise<void> => {
-    const projectLayerIds = new Set(
-      this.state.resources.layer
-        .filter(layer => layer.projectId === projectId)
-        .map(layer => layer.id),
-    )
-
-    this.state.prisms.layer = this.state.prisms.layer.filter(
-      layerId => !projectLayerIds.has(layerId),
-    )
-    await this.postLayerMutation(true, false)
-  }
-
-  /**
-   * Toggles a layer's visible state and reconciles its dependent filters.
-   *
-   * @param id - The layer to toggle.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  toggleLayer = async (id: Id): Promise<void> => {
-    const layerIds = this.state.prisms.layer
-    const layerIndex = layerIds.indexOf(id)
-
-    if (layerIndex === -1) {
-      layerIds.push(id)
-    } else {
-      layerIds.splice(layerIndex, 1)
-    }
-
-    await this.postLayerMutation(true)
-  }
-
-  /**
-   * Makes a layer the sole active layer.
-   *
-   * @param id - The layer to isolate.
-   * @returns A promise that resolves after dependent layer state is updated.
-   */
-  isolateLayer = async (id: Id): Promise<void> => {
-    this.state.prisms.layer = [id]
-    await this.postLayerMutation(true)
-  }
-
-  toggleFeature = async (id: Id): Promise<void> => {
-    await this.togglePrism(FirstClassResource.feature, id)
-  }
-
-  // Cascades refresh to the next resource in the hierarchy
-  refresh = async (resource: FirstClassResource | 'userFeatures'): Promise<void> => {
-    // Refresh the resources
-    if (resource === 'organisation') {
-      await this.refreshOrganisations()
-    } else if (resource === 'project') {
-      await this.refreshProjects()
-    } else if (resource === 'layer') {
-      await this.refreshLayers()
-    } else if (resource === 'feature') {
-      await this.refreshFeatures()
-    } else if (resource === 'task') {
-      await this.refreshTasks()
-    } else if (resource === 'property') {
-      await this.refreshProperties()
-    } else if (resource === 'userFeatures') {
-      await this.refreshUserFeatures()
-    }
-  }
-
-  /**
-   * Refreshes organisations and reconciles their dependent filter scope.
-   *
-   * @param isCascading - Whether to refresh dependent projects.
-   * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns Nothing after the organisation state is reconciled.
-   */
-  refreshOrganisations = async (
-    isCascading: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const query = this.getRequiredQueryConfig(FirstClassResource.organisation)
-    const organisations = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Organisation[]>,
-    })
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    this.state.resources.organisation = organisations
-    // Efficiently sync organization cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.organisation, this.state.resources.organisation)
-    // Efficiently sync organisation code-to-ID mapping
-    this.syncCodeToIdMap(this.organisationCodeToId, this.state.resources.organisation)
-    // Sync organisation prisms to remove any invalid organisation IDs
-    this.syncOrganisationPrisms()
-    if (isCascading) {
-      await this.refreshProjects(true, expectedRoleScope)
-    }
-  }
-
-  /**
-   * Refreshes projects and reconciles their dependent filter scope.
-   *
-   * @param isCascading - Whether to refresh dependent properties and layers.
-   * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns Nothing after the project state is reconciled.
-   */
-  refreshProjects = async (
-    isCascading: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const query = this.getRequiredQueryConfig(FirstClassResource.project)
-    const projects = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Project[]>,
-    })
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    this.state.resources.project = projects
-    // Efficiently sync project cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.project, this.state.resources.project)
-    // Efficiently sync project code-to-ID mapping
-    this.syncCodeToIdMap(this.projectCodeToId, this.state.resources.project)
-    // Sync project prisms to remove any invalid project IDs
-    this.syncProjectPrisms()
-    if (isCascading) {
-      await this.refreshProperties(true, expectedRoleScope)
-      await this.refreshLayers(true, true, expectedRoleScope)
-    }
-  }
-
-  /**
-   * Refreshes layers for the active hierarchy and reconciles layer filter state.
-   *
-   * @param isCascading - Whether dependent feature and profile data should refresh.
-   * @param shouldAutoSelectSingleLayer - Whether one available layer is activated automatically.
-   * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns A promise that resolves once the layer state has been reconciled.
-   */
-  refreshLayers = async (
-    isCascading: boolean = true,
-    shouldAutoSelectSingleLayer: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const query = this.getRequiredQueryConfig(FirstClassResource.layer)
-    const layers = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Layer[]>,
-    })
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    this.state.resources.layer = layers
-    // Efficiently sync layer cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.layer, this.state.resources.layer)
-    // Sync layer prisms to remove any layerIds which are no londer valid resources given the parent prism selection.
-    this.syncLayerPrisms()
-    // Also calls this.refreshFeatures()
-    await this.postLayerMutation(
-      isCascading,
-      shouldAutoSelectSingleLayer,
-      expectedRoleScope,
-    )
-  }
-
-  /**
-   * Refreshes the feature collection for the current hierarchy and user scope.
-   *
-   * @param _isCascading - Reserved for the resource refresh contract.
-   * @param expectedRoleScope - Optional scope captured before the request started.
-   * @returns Nothing after current-scope feature data has been committed.
-   * @remarks A background public-map request must not overwrite the image-bearing
-   * collection fetched after an anonymous or account session is established.
-   */
-  refreshFeatures = async (
-    _isCascading: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const query = this.getRequiredQueryConfig(FirstClassResource.feature)
-    const features: FeatureFromCollection[] = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<FeatureFromCollection[]>,
-    })
-
-    if (expectedRoleScope && expectedRoleScope !== this.getRoleScopeQueryKey()) {
-      logMarkerBootstrap('stale feature data ignored after identity change', {
-        expectedRoleScope,
-        currentRoleScope: this.getRoleScopeQueryKey(),
-        featureCount: features.length,
-      })
-      return
-    }
-
-    this.state.resources.feature = features
-    this.syncCacheMap(this.cache.feature, features)
-
-    logMarkerBootstrap('feature data committed', {
-      featureCount: features.length,
-      imageBackedFeatureCount: features.filter(feature => Boolean(feature.image))
-        .length,
-      pointFeatureCount: features.filter(feature => feature.geometry?.type === 'Point')
-        .length,
-    })
-
-    // Pre-populate stats cache for this feature
-    features.forEach(feature => {
-      primeFeatureStatsCache(this, feature)
-    })
-
-    // Rebuild the featureId to feature map
-    this.rebuildFeaturesMap()
-
-    // Rebuild the neighbourhoodRef to featureIds map
-    this.placeCtx.setNeighbourhoodFeatures(
-      this.getPrism(FirstClassResource.layer).length > 0 ? features : [],
-    )
-  }
-
-  refreshTasks = async (_isCascading: boolean = true): Promise<void> => {
-    const query = this.getRequiredQueryConfig(FirstClassResource.task)
-    this.state.resources.task = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Task[]>,
-    })
-    // Efficiently sync task cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.task, this.state.resources.task)
-  }
-
-  setTaskResourceAndCache = (task: Task): void => {
-    const existingTask = this.state.resources.task.find(t => t.id === task.id)
-    if (existingTask) {
-      this.state.resources.task = this.state.resources.task.map(t =>
-        t.id === task.id ? task : t,
+    if (options.activeFeatureId) {
+      // Check if the specific feature exists in the collection
+      const featureExists = collection.items.some(
+        item => item.id === optionsWithDefaults.activeFeatureId,
       )
-    } else {
-      this.state.resources.task = [...this.state.resources.task, task]
-    }
-
-    if (task.organisation) {
-      this.cache.organisation.set(
-        task.organisation.id,
-        task.organisation as unknown as Organisation,
-      )
-      if (task.organisation.code) {
-        this.organisationCodeToId.set(task.organisation.code, task.organisation.id)
+      if (featureExists) {
+        featureIdToActivate = optionsWithDefaults.activeFeatureId || null
+      } else {
+        console.error(
+          'Feature not found in collection',
+          optionsWithDefaults.activeFeatureId,
+        )
       }
     }
 
-    if (task.project) {
-      // Task payloads can carry a partial project shape, so preserve richer cached fields
-      // such as mapStyle when refreshing the task editor state.
-      const existingProject = this.cache.project.get(task.project.id)
-      this.cache.project.set(task.project.id, {
-        ...existingProject,
-        ...task.project,
-      } as Project)
-      if (task.project.code) {
-        this.projectCodeToId.set(task.project.code, task.project.id)
+    if (featureIdToActivate) {
+      this.setActiveFeature(featureIdToActivate, {
+        focus: optionsWithDefaults.focusFeature,
+        openCard: optionsWithDefaults.openCard,
+        openCardDelay: optionsWithDefaults.openCardDelay,
+        isCardOpen: optionsWithDefaults.isCardOpen,
+        // Omitted collection intent must preserve feature navigation on the first click.
+        updateUrl: optionsWithDefaults.updateUrl ?? true,
+        navOptions: optionsWithDefaults.navOptions,
+      })
+    }
+  }
+
+  /** Clears feature and collection selection, along with pending presentation work. @returns Nothing. */
+  resetActiveCollection = (): void => {
+    // Clearing collection membership removes renderer highlighting.
+    this.cancelPendingOpenCard()
+    this.clearTransition()
+    // Reset active collection
+    this.selection.collection = null
+    // Reset active feature
+    this.selection.clearFeature()
+  }
+
+  /** Resolves the selected identity to its current resource data. @returns The selected feature, if any. */
+  getActiveFeature = (): FeatureFromCollection | Feature | null =>
+    this.selection.feature
+
+  pendingOpenCardTimeout: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Cancels any deferred feature-card open scheduled from active-feature mutations.
+   */
+  cancelPendingOpenCard = (): void => {
+    if (this.pendingOpenCardTimeout !== null) {
+      clearTimeout(this.pendingOpenCardTimeout)
+      this.pendingOpenCardTimeout = null
+    }
+  }
+
+  /**
+   * Clears the active feature while preserving the active collection context.
+   */
+  resetActiveFeature = (): void => {
+    this.cancelPendingOpenCard()
+    this.clearTransition()
+    this.selection.clearFeature()
+  }
+
+  /**
+   * Selects a retained feature and coordinates public presentation intent.
+   * @param featureId Feature identity to select.
+   * @param options Card, camera and URL intent; route hydration disables URL updates.
+   * @returns Nothing when the feature cannot be resolved.
+   */
+  setActiveFeature = (
+    featureId: Id,
+    options: {
+      focus?: boolean
+      openCard?: boolean | null
+      openCardDelay?: number
+      isCardOpen?: boolean
+      updateUrl?: boolean
+      navOptions?: CollectionNavOptions['navOptions']
+    },
+  ): void => {
+    const optionsWithDefaults = {
+      focus: true,
+      openCard: true,
+      openCardDelay: 0,
+      updateUrl: true,
+      ...options,
+    }
+
+    this.cancelPendingOpenCard()
+    this.clearTransition()
+
+    // Pre-mutation: cleanup from previous feature
+    this.preActiveFeatureMutation()
+
+    // Set active state to new feature
+    const nextFeature =
+      this.view.cache.feature.get(featureId) ??
+      this.selection.collection?.items.find(row => row.id === featureId) ??
+      this.view.features.get(featureId)
+    if (!nextFeature) {
+      this.isTransitioning = false
+      return
+    }
+
+    this.selection.select(nextFeature)
+
+    // Post-mutation: setup new feature
+    this.postActiveFeatureMutation(featureId, optionsWithDefaults)
+  }
+
+  private preActiveFeatureMutation = (): void => {
+    // Remove active state from previous feature
+    this.isTransitioning = true
+    // Marker presentation is derived by the map renderer from active state.
+  }
+
+  private postActiveFeatureMutation = (
+    featureId: Id,
+    options: {
+      focus?: boolean
+      openCard?: boolean | null
+      openCardDelay?: number
+      isCardOpen?: boolean
+      updateUrl?: boolean
+      navOptions?: CollectionNavOptions['navOptions']
+    },
+  ): void => {
+    const optionsWithDefaults = {
+      focus: true,
+      openCard: true,
+      openCardDelay: 0,
+      ...options,
+    }
+    if (optionsWithDefaults.focus || optionsWithDefaults.openCard) {
+      if (!optionsWithDefaults.isCardOpen && optionsWithDefaults.openCard) {
+        this.cancelPendingOpenCard()
+        this.pendingOpenCardTimeout = setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('OmniCtx.openCard'))
+          this.pendingOpenCardTimeout = null
+        }, optionsWithDefaults.openCardDelay)
+      } else {
+        this.cancelPendingOpenCard()
       }
     }
-
-    if (task.feature) {
-      const existingFeature = this.cache.feature.get(task.feature.id)
-      this.cache.feature.set(task.feature.id, {
-        ...existingFeature,
-        ...task.feature,
-      } as Feature)
+    if (optionsWithDefaults.updateUrl) {
+      navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions)
     }
-
-    this.cache.task.set(task.id, task)
+    // Reset transition state; a later selection cancels this timer.
+    this.transitionTimeout = setTimeout(() => {
+      this.isTransitioning = false
+      this.transitionTimeout = null
+    }, 2000)
   }
 
-  refreshHubs = async (_isCascading: boolean = true): Promise<void> => {
-    if (!this.isAdmin()) return
-    const query = this.getRequiredQueryConfig(FirstClassResource.hub)
-    this.state.resources.hub = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Hub[]>,
-    })
-    // Efficiently sync hub cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.hub, this.state.resources.hub)
-    // Efficiently sync hub code-to-ID mapping
-    this.syncCodeToIdMap(this.hubCodeToId, this.state.resources.hub)
-  }
-
-  /**
-   * Refreshes property definitions for the active hierarchy.
-   *
-   * @param _isCascading - Reserved for the resource refresh contract.
-   * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns Nothing after the property cache is reconciled.
-   */
-  refreshProperties = async (
-    _isCascading: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    const query = this.getRequiredQueryConfig(FirstClassResource.property)
-    const properties = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<Property[]>,
-    })
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    // Efficiently sync property cache (only add missing, remove stale)
-    this.syncCacheMap(this.cache.property, properties)
-  }
-
-  refreshUserFeatures = async (_isCascading: boolean = true): Promise<void> => {
-    const query = this.getRequiredQueryConfig('userFeatures')
-    this.state.userFeatures = await this.queryClient
-      .fetchQuery({
-        queryKey: query.queryKey,
-        queryFn: query.queryFn as () => Promise<UserFeature[]>,
-      })
-      .then(uf => ({
-        wishlisted: (uf || []).filter((f: UserFeature) => f.isWishlisted),
-        visited: (uf || []).filter((f: UserFeature) => f.isVisited),
-      }))
-
-    // If active collection is a walk, refresh it and handle navigation
-    this.postUserFeaturesMutation()
-  }
-
-  /**
-   * Reconciles one wishlist or visit mutation into the local user-feature cache.
-   *
-   * @param featureId - The feature whose saved state changed.
-   * @param updated - The remaining server state, or `null` when no saved state remains.
-   * @returns Nothing.
-   * @remarks
-   * This is used for optimistic actions as well as their server confirmations, keeping every
-   * visible feature card in sync without waiting for a full user-feature refetch.
-   */
-  applyUserFeatureState = (featureId: Id, updated: UserFeature | null): void => {
-    const queryKey = this.userFeaturesQueryKey()
-    const cached = this.queryClient.getQueryData<UserFeature[]>(queryKey)
-    const current = cached ?? [
-      ...this.state.userFeatures.wishlisted,
-      ...this.state.userFeatures.visited.filter(
-        visited =>
-          !this.state.userFeatures.wishlisted.some(
-            wishlisted => wishlisted.featureId === visited.featureId,
-          ),
-      ),
-    ]
-    const next = current.filter(item => item.featureId !== featureId)
-
-    if (updated) next.unshift(updated)
-
-    this.queryClient.setQueryData(queryKey, next)
-    this.state.userFeatures = {
-      wishlisted: next.filter(item => item.isWishlisted),
-      visited: next.filter(item => item.isVisited),
+  highlightActiveCollection = (
+    options: { focus: boolean } = { focus: false },
+  ): void => {
+    // Marker presentation is derived by the map renderer from this collection.
+    if (options.focus) {
+      this.zoomToActiveCollection()
     }
-    this.postUserFeaturesMutation()
   }
 
-  refreshUserProfile = async (_isCascading: boolean = true): Promise<void> => {
-    const query = this.getRequiredQueryConfig(FirstClassResource.user)
-    const user = await this.queryClient.fetchQuery({
-      queryKey: query.queryKey,
-      queryFn: query.queryFn as () => Promise<UserProfile | null>,
-    })
-    const currentUsername = this.user?.username?.trim() || null
-    const requestedUsername = this.state.panels.profile.ctx?.username?.trim() || null
-    const isSelfProfile =
-      !requestedUsername ||
-      (currentUsername !== null && requestedUsername === currentUsername)
+  // MAP OPERATIONS -- REBOUNDING
 
-    if (isSelfProfile && user) {
-      this.user = {
-        ...(this.user ?? {}),
-        ...user,
-      } as UserProfile | CurrentUser | SessionUser
-      this.postUserMutation()
-    }
+  zoomToActiveCollection = (): void => {
+    const features = this.getActiveCollection()?.items || []
+    this.zoomToFeatures(features)
+  }
 
-    if (this.state.panels.profile.ctx) {
-      this.state.panels.profile.ctx.userData = user
-    }
+  zoomToActiveFeature = (): void => {
+    const feature = this.getActiveFeature()
+    if (!feature) return
+    this.zoomToFeatures([feature])
   }
 
   /*
@@ -2195,14 +359,25 @@ export class AppCtx {
       return
     }
 
+    // Paged user lists keep their query predicates, ordering and server totals after an edit.
+    if (activeCollection.totalCount !== undefined) {
+      const query = this.view.resources.featureQueries.collection
+      this.selection.collection = {
+        ...activeCollection,
+        items: query.rows,
+        totalCount: query.totalCount,
+      }
+      return
+    }
+
     const currentActiveFeature = this.getActiveFeature()
     let updatedItems: (FeatureFromCollection | Feature)[] = []
 
     // Get updated items based on walk type
     if (activeCollection.id === 'stars') {
-      updatedItems = this.getWishlistedFeatures()
+      updatedItems = this.view.getWishlistedFeatures()
     } else if (activeCollection.id === 'visited') {
-      updatedItems = this.getVisitedFeatures()
+      updatedItems = this.view.getVisitedFeatures()
     }
     // TODO: Add other walk types when implemented
 
@@ -2220,6 +395,7 @@ export class AppCtx {
         items: updatedItems,
       },
       {
+        activeFeatureId: currentActiveFeature?.id,
         highlight: false,
         focus: false,
       },
@@ -2254,1125 +430,76 @@ export class AppCtx {
     }
   }
 
-  // ═══════════════════════
-  // PRISMS
-  // ═══════════════════════
-
-  //* Removes organisation from prisms if they are no longer in the resources.
-  // This should rarely happen as we always fetch all organisations. But it could happen in cases where an organisation is unpublished or deleted.
-  syncOrganisationPrisms = () => {
-    const filteredOrganisations = this.state.prisms.organisation.filter(
-      organisation => {
-        return this.state.resources.organisation.some(o => o.id === organisation)
-      },
-    )
-
-    // Only update if the array actually changed
-    if (
-      filteredOrganisations.length !== this.state.prisms.organisation.length ||
-      !filteredOrganisations.every(
-        (id, index) => id === this.state.prisms.organisation[index],
-      )
-    ) {
-      this.state.prisms.organisation = filteredOrganisations
-    }
-  }
-
-  //* Removes project from prisms if they are no longer in the resources.
-  // This typically is required when an organisation prism is set, and a
-  // previously active prism is no longer valid given that the related
-  // organisation is not selected as a prism.
-  syncProjectPrisms = () => {
-    const filteredProjects = this.state.prisms.project.filter(project => {
-      return this.state.resources.project.some(p => p.id === project)
-    })
-
-    // Only update if the array actually changed
-    if (
-      filteredProjects.length !== this.state.prisms.project.length ||
-      !filteredProjects.every((id, index) => id === this.state.prisms.project[index])
-    ) {
-      this.state.prisms.project = filteredProjects
-    }
-  }
-
-  //* Removes layer from prisms if they are no longer in the resources.
-  // This typically is required when a organisation or project prism is set,
-  // and a previously active prism is no longer valid given that the related
-  // project or organisation is not selected as a prism.
-  syncLayerPrisms = () => {
-    const filteredLayers = this.state.prisms.layer.filter(layer => {
-      return this.state.resources.layer.some(l => l.id === layer)
-    })
-
-    // Use Set comparison for proper array equality check
-    const currentSet = new Set(this.state.prisms.layer)
-    const filteredSet = new Set(filteredLayers)
-
-    // Check if sets are different (different lengths or different contents)
-    const shouldUpdate =
-      currentSet.size !== filteredSet.size ||
-      !Array.from(currentSet).every(id => filteredSet.has(id))
-
-    // Only update if the array actually changed
-    if (shouldUpdate) {
-      this.state.prisms.layer = filteredLayers
-    }
-  }
+  private filterFitRevision = 0
 
   /**
-   * Reconciles property filters and dependent data after an active-layer change.
-   *
-   * @param isCascading - Whether dependent feature and profile data should refresh.
-   * @param shouldAutoSelectSingleLayer - Whether one available layer is activated automatically.
-   * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns A promise that resolves once dependent layer state is up to date.
+   * Flies to every matching feature across the selected divisions and layers.
+   * @returns Completion of the fit; empty or superseded collections leave the camera alone.
+   * @remarks Traversal is independent of viewport marker loading and stops after selection changes.
    */
-  postLayerMutation = async (
-    isCascading: boolean = true,
-    shouldAutoSelectSingleLayer: boolean = true,
-    expectedRoleScope?: string,
-  ): Promise<void> => {
-    if (!this.isExpectedRoleScopeCurrent(expectedRoleScope)) return
-
-    // Auto-select single layer if there's only one available and none selected
-    if (
-      shouldAutoSelectSingleLayer &&
-      this.state.resources.layer.length === 1 &&
-      this.state.prisms.layer.length === 0
-    ) {
-      this.state.prisms.layer = [this.state.resources.layer[0].id]
-    }
-
-    const currentLayerIds = new Set(this.state.prisms.layer)
-    const existingFilterLayerIds = new Set(
-      Object.keys(this.state.filters.feature.properties || {}),
-    )
-
-    // Initialise filters for newly added layers
-    currentLayerIds.forEach(layerId => {
-      if (!existingFilterLayerIds.has(layerId)) {
-        // Call initialization functions for the new layer
-        this.initialiseCategoricalPropertyFilters(layerId)
-        this.initialiseRangePropertyFilter(layerId)
-      }
-    })
-
-    // Remove filters for layers that are no longer active
-    existingFilterLayerIds.forEach(layerId => {
-      if (!currentLayerIds.has(layerId)) {
-        delete this.state.filters.feature.properties?.[layerId]
-      }
-    })
-
-    if (isCascading) {
-      // Only refresh features if user is authenticated
-      if (this.user?.id) {
-        await this.refreshFeatures()
-        if (this.isAdmin()) {
-          await this.refreshTasks()
-        }
-      }
-      // Only refresh if we have a username in the profile context
-      if (this.state.panels.profile.ctx?.username) {
-        await this.refreshUserProfile()
-      }
-    }
-  }
-
-  postUserMutation = (): void => {
-    // Set admin panel state based on user preferences
-    if (this.isAdmin() && this.user && 'preferences' in this.user) {
-      const isPrimaryPanelCollapsed =
-        (this.user as CurrentUser).preferences?.admin?.isPrimaryPanelCollapsed ?? false
-      if (!isPrimaryPanelCollapsed) {
-        this.openPanel(Panel.admin, false)
-      }
-    }
-  }
-
-  // ═══════════════════════
-  // CODE TO ID MAPPINGS
-  // ═══════════════════════
-
-  getOrganisationIdByCode = (code: Code): Id | undefined => {
-    return this.organisationCodeToId.get(code)
-  }
-
-  getProjectIdByCode = (code: Code): Id | undefined => {
-    return this.projectCodeToId.get(code)
-  }
-
-  getHubIdByCode = (code: Code): Id | undefined => {
-    return this.hubCodeToId.get(code)
-  }
-
-  // ═══════════════════════
-  // CODE TO ID MAPPINGS
-  // ═══════════════════════
-
-  getOrganisationCodeById = (id: Id): Code | undefined => {
-    // Reverse lookup: find the code for a given ID
-    for (const [code, orgId] of this.organisationCodeToId) {
-      if (orgId === id) {
-        return code
-      }
-    }
-    return undefined
-  }
-
-  getProjectCodeById = (id: Id): Code | undefined => {
-    // Reverse lookup: find the code for a given ID
-    for (const [code, projectId] of this.projectCodeToId) {
-      if (projectId === id) {
-        return code
-      }
-    }
-    return undefined
-  }
-
-  getHubCodeById = (id: Id): Code | undefined => {
-    // Reverse lookup: find the code for a given ID
-    for (const [code, hubId] of this.hubCodeToId) {
-      if (hubId === id) {
-        return code
-      }
-    }
-    return undefined
-  }
-
-  // FILTERS
-
-  // FILTERS - GENERIC
-
-  getFilterCount = (): { neighbourhoods: number; properties: number } => {
-    return {
-      neighbourhoods: this.placeCtx.neighbourhoodFilterCount,
-      properties: Object.entries(this.state.filters.feature.properties || {}).reduce(
-        (total, [_, layerFilters]) => {
-          // For each layer, count its active property filters
-          return (
-            total +
-            Object.entries(layerFilters).filter(
-              ([_, values]) =>
-                // Count arrays with values
-                (Array.isArray(values) && values.length > 0) ||
-                // Count range objects only if they differ from their global limits
-                (typeof values === 'object' &&
-                  values !== null &&
-                  !Array.isArray(values) &&
-                  'rangeMin' in values &&
-                  'rangeMax' in values &&
-                  'globalMin' in values &&
-                  'globalMax' in values &&
-                  (values.rangeMin !== values.globalMin ||
-                    values.rangeMax !== values.globalMax)),
-            ).length
-          )
-        },
-        0,
-      ),
-    }
-  }
-
-  resetFilters = (): void => {
-    this.state.filters = {
-      organisation: { text: '', properties: {} },
-      project: { text: '', properties: {} },
-      layer: { text: '', properties: {} },
-      feature: { text: '', properties: {} },
-      task: { text: '', properties: {} },
-      hub: { text: '', properties: {} },
-      property: { text: '', properties: {} },
-    }
-    this.placeCtx.resetNeighbourhoods()
-    // Re-initialize property filters for active layers
-    this.state.prisms.layer.forEach(layerId => {
-      this.initialiseCategoricalPropertyFilters(layerId)
-      this.initialiseRangePropertyFilter(layerId)
-    })
-  }
-
-  getFilteredResource = <
-    T extends Organisation | Project | Layer | Feature | Hub | Task,
-  >(
-    resource: FirstClassResource | HierarchicalResource,
-    filters = { text: true, state: true },
-  ): T[] => {
-    const query = this.state.filters[resource as keyof FilterState].text || ''
-    // FULL SET
-    let result = this.state.resources[resource as keyof FilteredResources] as T[]
-    // TIER 2 FILTERS :: Boolean State :: (App Wide)
-    // TODO Implement these filters if the data responses get too large.
-    // TIER 2 FILTERS :: Text :: (App Wide)
-    if (filters.text && resource !== FirstClassResource.hub) {
-      result = result.filter((entity: T) => {
-        if (!isTask(entity)) {
-          return this.textFilter(resource as FirstClassResource, entity, query)
-        }
-        return true
-      })
-    }
-
-    return result
-  }
-
-  textFilter = <
-    T extends Organisation | Project | Layer | Feature | Hub | FeatureFromCollection,
-  >(
-    _resource: FirstClassResource,
-    entity: T,
-    query: string,
-  ) => {
-    return matchesResourceTextQuery(entity, query, getLocaleKey())
-  }
-
-  // Filtered Helpers
-  filteredOrganisations = $derived.by(() => {
-    // Explicitly access reactive dependencies so Svelte tracks them
-    this.state.resources.organisation
-    this.state.filters.organisation
-    return this.getFilteredResource<Organisation>(FirstClassResource.organisation)
-  })
-  filteredProjects = $derived.by(() => {
-    this.state.resources.project
-    this.state.filters.project
-    return this.getFilteredResource<Project>(FirstClassResource.project)
-  })
-  filteredLayers = $derived.by(() => {
-    this.state.resources.layer
-    this.state.filters.layer
-    return this.getFilteredResource<Layer>(FirstClassResource.layer)
-  }) as Layer[]
-  filteredFeatures = $derived.by(() => {
-    this.state.resources.feature
-    this.state.filters.feature
-    return this.getFilteredResource<Feature>(FirstClassResource.feature)
-  })
-
-  // PRISM RELATIONS
-
-  getPrism = (resource: FirstClassResource): Id[] => {
-    return this.state.prisms[resource as ResourceTypeWithChildren]
-  }
-
-  isPrism = (resource: FirstClassResource, id: Id): boolean => {
-    return this.state.prisms[resource as ResourceTypeWithChildren]?.includes(id)
-  }
-
-  // Helper method to fetch resource by ID with cache miss handling
-  private fetchResourceById = async (resource: FirstClassResource, ref: Id) => {
-    if (!ref || ref === 'undefined') {
-      return undefined
-    }
-
-    const remoteGet = this.remoteMap[resource]?.get
-
+  zoomToFilteredFeatures = async (): Promise<void> => {
+    const revision = ++this.filterFitRevision
+    const input = this.view.filters.featureQueryInput({ includeCounts: false })
+    if (!this.mapController || !input.prisms?.layer?.length) return
+    const signature = JSON.stringify(input)
+    /** @returns Whether this fit still matches the active filters and mounted camera. */
+    const isCurrent = (): boolean =>
+      revision === this.filterFitRevision &&
+      this.mapController !== null &&
+      signature ===
+        JSON.stringify(this.view.filters.featureQueryInput({ includeCounts: false }))
+    const query = this.view.cacheCtx.createFeatureQuery()
     try {
-      if (remoteGet) {
-        const response = (await runRemoteQuery(
-          remoteGet({
-            ref,
-            refKey: 'id',
-          }),
-        )) as { data?: unknown }
-        return response?.data
-      }
-
-      const refKey = ResourceRefKey[resource as keyof typeof ResourceRefKey]
-      const response = await fetch(
-        `/api/${ResourcePath[resource]}/${ref}${refKey === 'code' ? '?byId=true' : ''}`,
-      )
-      if (!response.ok) return undefined
-      return await response.json()
-    } catch {
-      return undefined
+      // Traverse the complete filtered collection, including points outside the current viewport.
+      await query.load(input)
+      while (isCurrent() && query.hasMore && !query.error) await query.next()
+      if (isCurrent() && !query.error) this.zoomToFeatures(query.rows)
+    } catch (error) {
+      if (isCurrent()) console.error('Error fitting filtered features:', error)
+    } finally {
+      this.view.cacheCtx.releaseFeatureQuery(query)
     }
   }
 
-  getOrganisationById = async (
-    id: Id,
-    fetchOnCacheMiss: boolean = true,
-  ): Promise<Organisation | undefined> => {
-    // Check cache first
-    let org = this.cache.organisation.get(id)
-    if (org) return org
-
-    if (fetchOnCacheMiss) {
-      org = await this.fetchResourceById(FirstClassResource.organisation, id)
-      if (org) {
-        this.cache.organisation.set(id, org)
-        return org
-      }
+  // Refocus map on currently visible features
+  zoomToAllVisibleFeatures = (): void => {
+    const visibleFeatures = this.getVisibleFeatures()
+    if (visibleFeatures.length > 0) {
+      this.zoomToFeatures(visibleFeatures)
     }
-
-    return undefined
   }
 
-  getProjectById = async (
-    id: Id,
-    fetchOnCacheMiss: boolean = true,
-  ): Promise<Project | undefined> => {
-    // Check cache first
-    let project = this.cache.project.get(id)
-    if (project) return project
-
-    if (fetchOnCacheMiss) {
-      project = await this.fetchResourceById(FirstClassResource.project, id)
-      if (project) {
-        this.cache.project.set(id, project)
-        return project
-      }
-    }
-
-    return undefined
-  }
-
-  getLayerById = async (
-    id: Id,
-    fetchOnCacheMiss: boolean = true,
-  ): Promise<Layer | undefined> => {
-    // Check cache first
-    let layer = this.cache.layer.get(id)
-    if (layer) return layer
-
-    if (fetchOnCacheMiss) {
-      layer = await this.fetchResourceById(FirstClassResource.layer, id)
-      if (layer) {
-        this.cache.layer.set(id, layer)
-        return layer
-      }
-    }
-
-    return undefined
-  }
-
-  getFeatureById = async (
-    id: Id,
-    fetchOnCacheMiss: boolean = true,
-  ): Promise<FeatureFromCollection | Feature | undefined> => {
-    // Check cache first
-    let feature = this.cache.feature.get(id)
-    if (feature) return feature
-
-    if (fetchOnCacheMiss) {
-      feature = await this.fetchResourceById(FirstClassResource.feature, id)
-      if (feature) {
-        this.cache.feature.set(id, feature)
-        this.addFeatureToMap(feature as Feature)
-        return feature
-      }
-    }
-
-    return undefined
-  }
-
-  /**
-   * Sets a feature in the cache and adds it to the Feature SvelteMap.
-   * @remarks This is used to update the cache with the Entity API response,
-   * instead of the FeatureFromCollection which is loaded and cached by default.
-   * @param feature - The feature to set in the cache
-   */
-  setFeatureById = (feature: Feature) => {
-    this.cache.feature.set(feature.id, feature)
-    this.addFeatureToMap(feature)
-  }
-
-  getTaskById = async (
-    id: Id,
-    fetchOnCacheMiss: boolean = true,
-  ): Promise<Task | undefined> => {
-    // Check cache first
-    let task = this.cache.task.get(id)
-    if (task) return task
-
-    if (fetchOnCacheMiss) {
-      task = await this.fetchResourceById(FirstClassResource.task, id)
-      if (task) {
-        this.cache.task.set(id, task)
-        return task
-      }
-    }
-
-    return undefined
-  }
-
-  getHubById = async (
-    id: Id,
-    fetchOnCacheMiss: boolean = true,
-  ): Promise<Hub | undefined> => {
-    // Check cache first
-    let hub = this.cache.hub.get(id)
-    if (hub) return hub
-
-    if (fetchOnCacheMiss) {
-      hub = await this.fetchResourceById(FirstClassResource.hub, id)
-      if (hub) {
-        this.cache.hub.set(id, hub)
-        return hub
-      }
-    }
-
-    return undefined
-  }
-
-  getPropertyById = async (
-    id: Id,
-    fetchOnCacheMiss: boolean = true,
-  ): Promise<Property | undefined> => {
-    // Check cache first
-    const property = this.cache.property.get(id)
-    if (property) return property
-
-    if (fetchOnCacheMiss) {
-      // Properties don't have their own API endpoint, they come with projects
-      // For now, return undefined if not cached
-      return undefined
-    }
-
-    return undefined
-  }
-
-  getUserByUsername = async (username: string): Promise<UserProfile | undefined> => {
-    const user = this.cache.user.get(username)
-    if (user) return user
-
-    const response = await this.fetchResourceById(FirstClassResource.user, username)
-    if (response) {
-      this.cache.user.set(username, response)
-      return response
-    }
-
-    return undefined
-  }
-
-  // Helper method to get visible classifier properties for a layer
-  getClassifierPropertiesForLayer = async (layer: Layer): Promise<Property[]> => {
-    if (!layer.properties) return []
-
-    // Get Properties associated with LayerProperties
-    const properties = layer.properties
-      .filter(lp => lp.isVisible !== false)
-      .map(lp => (lp.propertyId ? this.cache.property.get(lp.propertyId) : undefined))
-
-    // Filter classifiers then sort by rank
-    return sortProperties(
-      properties
+  getVisibleFeatures = (): (FeatureFromCollection | Feature)[] => {
+    if (!this.view.isAdmin()) {
+      // Remove offscreen points, disabled layers and excluded divisions before the debounced page has settled.
+      const { include, exclude } =
+        this.view.divisionCtx.state.filters.feature.neighbourhood
+      return this.view.resources.featureQueries.map.rows
+        .filter(row => this.view.scope.prisms.layer.includes(row.layerId))
+        .filter(row => {
+          const selected =
+            row.divisionMemberships?.filter(member => member.selected) ?? []
+          return (
+            (!include.size ||
+              selected.some(member => include.has(member.divisionId))) &&
+            !selected.some(member => exclude?.has(member.divisionId))
+          )
+        })
         .filter(
-          (prop): prop is Property => prop !== undefined && prop.type === 'classifier',
+          row =>
+            !this.view.featureViewport?.bounds ||
+            isFeaturePointWithinBounds(row.geometry, this.view.featureViewport.bounds),
         )
-        .map(p => ({ property: p })),
-    ).map(item => item.property)
-  }
-
-  getResourceById = async (
-    resource: FirstClassResource,
-    id: Id,
-  ): Promise<Resource | undefined> => {
-    switch (resource) {
-      case FirstClassResource.organisation:
-        return await this.getOrganisationById(id)
-      case FirstClassResource.project:
-        return await this.getProjectById(id)
-      case FirstClassResource.layer:
-        return await this.getLayerById(id)
-      case FirstClassResource.feature:
-        return await this.getFeatureById(id)
-      case FirstClassResource.task:
-        return await this.getTaskById(id)
-      case FirstClassResource.hub:
-        return await this.getHubById(id)
     }
+    return this.view.getFeaturesByIds(this.view.featuresVisible)
   }
 
-  getResourceByRef = async (
-    resource: FirstClassResource,
-    ref: Id | Code,
-  ): Promise<Resource | undefined> => {
-    switch (resource) {
-      case FirstClassResource.organisation: {
-        const code = ref as Code
-        const cachedId = this.getOrganisationIdByCode(code)
-        if (cachedId) {
-          const cached = await this.getOrganisationById(cachedId, false)
-          if (cached) return cached
-        }
-
-        const remote = (await runRemoteQuery(
-          getOrganisation({
-            ref: String(ref),
-            refKey: 'code',
-          }),
-        )) as { data?: Organisation | null }
-
-        if (!remote?.data) return undefined
-
-        this.cache.organisation.set(remote.data.id, remote.data)
-        this.organisationCodeToId.set(remote.data.code, remote.data.id)
-        return remote.data
-      }
-      case FirstClassResource.project:
-        return await this.getProjectById(
-          this.getProjectIdByCode(ref as Code) ?? (ref as Id),
-        )
-      case FirstClassResource.layer:
-        return await this.getLayerById(ref as Id)
-      case FirstClassResource.feature:
-        return await this.getFeatureById(ref as Id)
-      case FirstClassResource.task:
-        return await this.getTaskById(ref as Id)
-      case FirstClassResource.hub: {
-        const code = ref as Code
-        const cachedId = this.getHubIdByCode(code)
-        if (cachedId) {
-          const cached = await this.getHubById(cachedId, false)
-          if (cached) return cached
-        }
-
-        const remote = (await runRemoteQuery(
-          getHub({
-            ref: String(ref),
-            refKey: 'code',
-          }),
-        )) as { data?: Hub | null }
-        if (!remote?.data) return undefined
-
-        this.cache.hub.set(remote.data.id, remote.data)
-        this.hubCodeToId.set(remote.data.code, remote.data.id)
-        return remote.data
-      }
-    }
-  }
-
-  // ================================================
-  // MODE METHODS
-  // ================================================
-
-  setLayoutMode = (mode: LayoutMode) => {
-    const resourceType = this.getActiveResourceType()
-    if (resourceType) {
-      this.state.ui.layoutMode[resourceType] = mode
-    }
-  }
-
-  setControlBarVisible = (isVisible: boolean) => {
-    const resourceType = this.getActiveResourceType()
-    if (resourceType) {
-      this.state.ui.isControlBarVisible[resourceType] = isVisible
-    }
-  }
-
-  /**
-   * Stores whether the search UI is focused for the current active resource view.
-   *
-   * @param isFocused - Focus state to persist.
-   * @returns Nothing.
-   */
-  setSearchFocused = (isFocused: boolean) => {
-    const resourceType = this.getActiveResourceType()
-    if (resourceType) {
-      this.state.ui.isSearchFocused[resourceType] = isFocused
-    }
-  }
-
-  // ================================================
-  // HIERARCHY METHODS
-  // ================================================
-
-  getHierarchyForTask = async (task: Task): Promise<ResourceContext> => {
-    const feature = await this.getFeatureById(task.featureId as Id)
-    if (!feature)
-      return {
-        feature: undefined,
-        layer: undefined,
-        project: undefined,
-        organisation: undefined,
-      }
-    return await this.getHierarchy(feature)
-  }
-
-  // Synchronous version that uses cache only (for UI components)
-  getHierarchySync = (
-    resource: Feature | Layer | Project | Organisation | Task,
-  ): ResourceContext => {
-    // Determine what type of resource we have and build hierarchy accordingly
-    let layer: Layer | undefined
-    let project: Project | undefined
-    let organisation: Organisation | undefined
-    const resolvedLayerId =
-      'featureId' in resource && resource.feature?.layerId
-        ? resource.feature.layerId
-        : 'layerId' in resource
-          ? resource.layerId
-          : undefined
-
-    if (resolvedLayerId) {
-      // Feature or Task - get its layer, then project, then organisation from cache
-      layer = this.cache.layer.get(resolvedLayerId)
-      if (layer) {
-        project = this.cache.project.get(layer.projectId)
-        if (project) {
-          organisation = this.cache.organisation.get(project.organisationId)
-        }
-      }
-    } else if ('projectId' in resource) {
-      // Layer - use itself, get its project, then organisation from cache
-      layer = resource as Layer
-      project = this.cache.project.get(layer.projectId)
-      if (project) {
-        organisation = this.cache.organisation.get(project.organisationId)
-      }
-    } else if ('organisationId' in resource) {
-      // Project - use itself, get its organisation from cache
-      project = resource as Project
-      organisation = this.cache.organisation.get(project.organisationId)
-    } else {
-      // Organisation - use itself
-      organisation = resource as Organisation
-    }
-
-    return {
-      feature:
-        'featureId' in resource
-          ? ((resource.feature as Feature | undefined) ?? undefined)
-          : 'layerId' in resource
-            ? (resource as Feature)
-            : undefined,
-      layer,
-      project,
-      organisation,
-    }
-  }
-
-  getHierarchy = async (
-    resource:
-      | FeatureFromCollection
-      | Feature
-      | Layer
-      | Project
-      | Organisation
-      | Task
-      | Image,
-  ): Promise<ResourceContext> => {
-    const featurePromise =
-      'featureId' in resource && resource.featureId
-        ? this.getFeatureById(resource.featureId).then(f => f as FeatureFromCollection)
-        : 'layerId' in resource
-          ? Promise.resolve(resource as FeatureFromCollection)
-          : Promise.resolve(undefined)
-
-    const layerPromise =
-      'layerId' in resource && resource.layerId
-        ? this.getLayerById(resource.layerId)
-        : 'projectId' in resource
-          ? Promise.resolve(resource as Layer)
-          : featurePromise.then(f => (f ? this.getLayerById(f.layerId) : undefined))
-
-    const projectPromise =
-      'projectId' in resource && resource.projectId
-        ? this.getProjectById(resource.projectId)
-        : 'organisationId' in resource
-          ? Promise.resolve(resource as Project)
-          : layerPromise.then(l => (l ? this.getProjectById(l.projectId) : undefined))
-
-    const organisationPromise =
-      'organisationId' in resource && resource.organisationId
-        ? this.getOrganisationById(resource.organisationId)
-        : !('featureId' in resource) &&
-            !('layerId' in resource) &&
-            !('projectId' in resource) &&
-            !('organisationId' in resource)
-          ? Promise.resolve(resource as Organisation)
-          : projectPromise.then(p =>
-              p ? this.getOrganisationById(p.organisationId) : undefined,
-            )
-
-    const [feature, layer, project, organisation] = await Promise.all([
-      featurePromise,
-      layerPromise,
-      projectPromise,
-      organisationPromise,
-    ])
-
-    return {
-      feature,
-      layer,
-      project,
-      organisation,
-    }
-  }
-
-  // ================================================
-  // COUNT METHODS
-  // ================================================
-
-  // COUNT METHODS
-  getOrganisationCount = (): number => this.state.resources.organisation.length
-
-  getOrganisationProjectCount = (organisationId: Id): number =>
-    this.state.resources.project.filter(p => p.organisationId === organisationId).length
-
-  getProjectLayerCount = (projectId: Id): number =>
-    this.state.resources.layer.filter(l => l.projectId === projectId).length
-
-  // CONTEXTUAL NAME METHODS
-  getContextualOrganisationName = (
-    organisation: Organisation,
-    hideIfOnly: boolean = true,
-    useFallbacks: boolean = true,
-  ): string | null => {
-    const projectCount = this.getOrganisationProjectCount(organisation.id)
-    if (hideIfOnly && projectCount === 1) {
-      return null
-    }
-    const preferences = this.getUserPreferences()
-    const i18nPrefs = useFallbacks
-      ? preferences
-      : { ...preferences, fallbackLocales: [] }
-    const shortName =
-      getI18n(organisation, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
-    const name = getI18n(organisation, 'name', i18nPrefs, '', !useFallbacks) || ''
-    return shortName || name || '-'
-  }
-
-  getContextualProjectName = (
-    project?: Project,
-    hideIfOnly: boolean = true,
-    useFallbacks: boolean = true,
-  ): string | null => {
-    if (!project?.organisationId) return null
-    const organisationProjectCount = this.getOrganisationProjectCount(
-      project.organisationId,
-    )
-    if (hideIfOnly && organisationProjectCount === 1) {
-      return null
-    }
-    const preferences = this.getUserPreferences()
-    const i18nPrefs = useFallbacks
-      ? preferences
-      : { ...preferences, fallbackLocales: [] }
-    const shortName = getI18n(project, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
-    const name = getI18n(project, 'name', i18nPrefs, '', !useFallbacks) || ''
-    return shortName || name || '-'
-  }
-
-  getContextualLayerName = (
-    layer: Layer | undefined,
-    hideIfOnly: boolean = true,
-    useFallbacks: boolean = true,
-  ): string | null => {
-    if (!layer) {
-      return null
-    }
-    const projectLayerCount = this.getProjectLayerCount(layer.projectId)
-    if (hideIfOnly && projectLayerCount === 1) {
-      return null
-    }
-    const preferences = this.getUserPreferences()
-    const i18nPrefs = useFallbacks
-      ? preferences
-      : { ...preferences, fallbackLocales: [] }
-    const shortName = getI18n(layer, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
-    const name = getI18n(layer, 'name', i18nPrefs, '', !useFallbacks) || ''
-    return shortName || name || '-'
-  }
-
-  getContextualFeatureName = (feature: FeatureFromCollection): string | null => {
-    return getI18n(feature, 'title', this.getUserPreferences())
-  }
-
-  // FEATURE COLLECTIONS
-
-  // Features, given the selected Neighbourhoods (or all if none)
-  getFeatureIdsForNeighbourhoods = (): Id[] => {
-    if (this.placeCtx.neighbourhoodFilterCount === 0) {
-      return Array.from(this.features.keys())
-    }
-    return this.placeCtx.getFeaturesForFilteredNeighbourhoods()
-  }
-
-  getFeatureIdsForProperties = (): Id[] => {
-    return getFeatureIdsForProperties(this)
-  }
-
-  // Features for active layers, given the selected Neighbourhoods and Properties.
-  getVisibleFeatureIds = (): Id[] => {
-    // Avoid showing stale markers while an active-layer feature refresh is in flight.
-    if (this.state.prisms.layer.length === 0) {
-      return []
-    }
-
-    const activeLayerIds = new Set(this.state.prisms.layer)
-    return Array.from(
-      new Set(this.featuresForNeighbourhoods).intersection(
-        new Set(this.featuresForProperties),
-      ),
-    ).filter(featureId => activeLayerIds.has(this.features.get(featureId)?.layerId))
-  }
-
-  // Features (for Active Layers) that are on the user's wishlist
-  getWishlistedFeatureIds = (): Id[] => {
-    return (this.state.userFeatures?.wishlisted ?? [])
-      .map(wl => wl.featureId)
-      .filter((featureId): featureId is Id => Boolean(featureId))
-  }
-
-  // Features (for Active Layers) that the user has visited
-  getVisitedFeatureIds = (): Id[] => {
-    return (this.state.userFeatures?.visited ?? [])
-      .map(wl => wl.featureId)
-      .filter((featureId): featureId is Id => Boolean(featureId))
-  }
-
-  getWishlistUserFeatures = (): UserFeature[] => {
-    return this.state.userFeatures?.wishlisted || []
-  }
-
-  getVisitedUserFeatures = (): UserFeature[] => {
-    return this.state.userFeatures?.visited || []
-  }
-
-  // Features Collection -- Subsets
-
-  getActiveCollection = (): ActiveCollection => this.state.active.collection
-
-  setActiveCollection = (
-    collection: ActiveCollection,
-    options: {
-      activeFeatureId?: string
-      focus?: boolean
-      focusFeature?: boolean
-      highlight?: boolean
-      openCard?: boolean
-      openCardDelay?: number
-      isCardOpen?: boolean
-      navOptions?: CollectionNavOptions['navOptions']
-    },
-  ) => {
-    const optionsWithDefaults = {
-      highlight: true,
-      focus: true,
-      focusFeature: true,
-      openCard: true,
-      openCardDelay: 0,
-      ...options,
-    }
-    this.state.active.collection = collection
-
-    // Handle feature activation
-    this.postActiveCollectionMutation(optionsWithDefaults)
-  }
-
-  private postActiveCollectionMutation = (options: {
-    activeFeatureId?: string
-    highlight?: boolean
-    focus?: boolean
-    focusFeature?: boolean
-    openCard?: boolean
-    openCardDelay?: number
-    isCardOpen?: boolean
-    navOptions?: CollectionNavOptions['navOptions']
-  }) => {
-    const optionsWithDefaults = {
-      highlight: true,
-      focus: true,
-      focusFeature: true,
-      openCard: true,
-      openCardDelay: 0,
-      ...options,
-    }
-    const collection = this.state.active.collection
-    if (!collection?.items.length) return
-
-    if (options.highlight) {
-      this.highlightActiveCollection({ focus: optionsWithDefaults.focus })
-    }
-
-    // Determine which feature to activate, default to first
-    let featureIdToActivate: string | null = collection.items[0].id
-
-    if (options.activeFeatureId) {
-      // Check if the specific feature exists in the collection
-      const featureExists = collection.items.some(
-        item => item.id === optionsWithDefaults.activeFeatureId,
-      )
-      if (featureExists) {
-        featureIdToActivate = optionsWithDefaults.activeFeatureId || null
-      } else {
-        console.error(
-          'Feature not found in collection',
-          optionsWithDefaults.activeFeatureId,
-        )
-      }
-    }
-
-    if (featureIdToActivate) {
-      this.setActiveFeature(featureIdToActivate, {
-        focus: optionsWithDefaults.focusFeature,
-        openCard: optionsWithDefaults.openCard,
-        openCardDelay: optionsWithDefaults.openCardDelay,
-        isCardOpen: optionsWithDefaults.isCardOpen,
-        navOptions: optionsWithDefaults.navOptions,
-      })
-    }
-  }
-
-  resetActiveCollection = (): void => {
-    // Remove "highlighted" class from all features
-    this.unhighlightAllFeatures()
-    // Reset active collection
-    this.state.active.collection = null
-    // Remove 'active' class from the active feature
-    this.state.active.feature?.id &&
-      removeMarkerClass(this, this.state.active.feature.id)
-    // Reset active feature
-    this.state.active.feature = null
-  }
-
-  getActiveFeature = (): FeatureFromCollection | Feature | null =>
-    this.state.active.feature
-
-  pendingOpenCardTimeout: ReturnType<typeof setTimeout> | null = null
-
-  /**
-   * Cancels any deferred feature-card open scheduled from active-feature mutations.
-   */
-  cancelPendingOpenCard = (): void => {
-    if (this.pendingOpenCardTimeout !== null) {
-      clearTimeout(this.pendingOpenCardTimeout)
-      this.pendingOpenCardTimeout = null
-    }
-  }
-
-  /**
-   * Clears the active feature while preserving the active collection context.
-   */
-  resetActiveFeature = (): void => {
-    if (this.state.active.feature) {
-      removeMarkerClass(this, this.state.active.feature.id)
-    }
-
-    this.state.active.feature = null
-  }
-
-  setActiveFeature = (
-    featureId: Id,
-    options: {
-      focus?: boolean
-      openCard?: boolean | null
-      openCardDelay?: number
-      isCardOpen?: boolean
-      navOptions?: CollectionNavOptions['navOptions']
-    },
-  ) => {
-    const optionsWithDefaults = {
-      focus: true,
-      openCard: true,
-      openCardDelay: 0,
-      ...options,
-    }
-
-    // Pre-mutation: cleanup from previous feature
-    this.preActiveFeatureMutation()
-
-    // Set active state to new feature
-    const nextFeature = this.features.get(featureId)
-    if (!nextFeature) {
-      this.isTransitioning = false
-      return
-    }
-
-    this.state.active.feature = nextFeature
-
-    // Post-mutation: setup new feature
-    this.postActiveFeatureMutation(featureId, optionsWithDefaults)
-  }
-
-  private preActiveFeatureMutation = () => {
-    // Remove active state from previous feature
-    this.isTransitioning = true
-    if (this.state.active.feature) {
-      removeMarkerClass(this, this.state.active.feature.id)
-    }
-  }
-
-  private postActiveFeatureMutation = (
-    featureId: Id,
-    options: {
-      focus?: boolean
-      openCard?: boolean | null
-      openCardDelay?: number
-      isCardOpen?: boolean
-      navOptions?: CollectionNavOptions['navOptions']
-    },
-  ) => {
-    const optionsWithDefaults = {
-      focus: true,
-      openCard: true,
-      openCardDelay: 0,
-      ...options,
-    }
-    // TODO : Add "active" class to the feature on the map
-    addMarkerClass(this, featureId)
-
-    if (optionsWithDefaults.focus || optionsWithDefaults.openCard) {
-      if (!optionsWithDefaults.isCardOpen && optionsWithDefaults.openCard) {
-        this.cancelPendingOpenCard()
-        this.pendingOpenCardTimeout = setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('OmniCtx.openCard'))
-          this.pendingOpenCardTimeout = null
-        }, optionsWithDefaults.openCardDelay)
-      } else {
-        this.cancelPendingOpenCard()
-      }
-      navigate(FirstClassResource.feature, featureId, optionsWithDefaults.navOptions)
-    }
-    // Reset transition state
-    setTimeout(() => {
-      this.isTransitioning = false
-    }, 2000)
-  }
-
-  highlightActiveCollection = (options: { focus: boolean } = { focus: false }) => {
-    // Remove "highlighted" class from all features
-    this.unhighlightAllFeatures()
-    // Add "highlighted" class to all features in the active collection
-    const features = this.getActiveCollection()?.items || []
-    if (features.length > 0) {
-      features.forEach(f => {
-        addMarkerClass(this, f.id, 'highlighted')
-      })
-    }
-    if (options.focus) {
-      this.zoomToActiveCollection()
-    }
-  }
-
-  unhighlightAllFeatures = (): void => {
-    // Remove "highlighted" class from all features
-    this.state.resources.feature.forEach(f => {
-      removeMarkerClass(this, f.id, 'highlighted')
-    })
-  }
-
-  // MAP OPERATIONS -- REBOUNDING
-
-  zoomToActiveCollection = (): void => {
-    const features = this.getActiveCollection()?.items || []
-    this.zoomToFeatures(features)
-  }
-
-  zoomToActiveFeature = (): void => {
-    const feature = this.getActiveFeature()
-    if (!feature) return
-    this.zoomToFeatures([feature])
-  }
-
+  /** Fits the public camera to feature bounds. @param features Optional feature subset. @returns Nothing. */
   zoomToFeatures = (features?: (FeatureFromCollection | Feature)[]): void => {
-    if (!this.map) return
+    if (!this.mapController) return
 
     // Use provided features or current state features
-    const featuresToZoom = features || this.getFeaturesByIds(this.featuresVisible)
+    const featuresToZoom = features || this.getVisibleFeatures()
     if (!featuresToZoom.length) return
 
     // Create a FeatureCollection
@@ -3394,24 +521,22 @@ export class AppCtx {
       : {
           top: 150,
           bottom: 50,
-          right: 50 + (this.responsiveCtx.isRightPanelOpen() ? PANEL_WIDTH / 2 : 0),
-          left: 50 + (this.responsiveCtx.isLeftPanelOpen() ? PANEL_WIDTH / 2 : 0),
+          right: 50 + (this.view.panels.isRightPanelOpen() ? PANEL_WIDTH : 0),
+          left: 50 + (this.view.panels.isLeftPanelOpen() ? PANEL_WIDTH : 0),
         }
     try {
       // Convert to WGS84 and get bounds
       const bounds = bbox(featureCollection)
 
-      this.map.cachedFitBounds(
+      this.mapController.fitBounds(
         [
           [bounds[0], bounds[1]], // southwestern corner
           [bounds[2], bounds[3]], // northeastern corner
         ],
         {
-          center: [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2],
           padding,
           maxZoom: 18,
           duration: 2500,
-          run: true,
         },
       )
     } catch (error) {
@@ -3419,8 +544,9 @@ export class AppCtx {
     }
   }
 
+  /** Fits the public camera to coordinates. @param coordinates Geographic points. @returns Nothing. */
   zoomToCoordinates = (coordinates: [number, number][]): void => {
-    if (!this.map) return
+    if (!this.mapController) return
 
     // Create a FeatureCollection
     const featureCollection: FeatureCollection = {
@@ -3437,7 +563,7 @@ export class AppCtx {
 
     const bounds = bbox(featureCollection)
 
-    this.map.cachedFitBounds(
+    this.mapController.fitBounds(
       [
         [bounds[0], bounds[1]], // southwestern corner
         [bounds[2], bounds[3]], // northeastern corner
@@ -3452,1091 +578,202 @@ export class AppCtx {
         },
         maxZoom: 20,
         duration: 2500,
-        run: true,
       },
     )
   }
 
-  // ═══════════════════════
-  // REACTIVE FEATURE COLLECTIONS
-  // ═══════════════════════
-
-  // Efficiently update features map from current state.resources.feature
-  private rebuildFeaturesMap = () => {
-    const newFeatures = this.state.resources.feature
-    const newFeatureIds = new Set(newFeatures.map(f => f.id))
-
-    // Remove features that are no longer in the result set
-    for (const [id] of this.featuresMap) {
-      if (!newFeatureIds.has(id)) {
-        this.featuresMap.delete(id)
-      }
+  featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
+    const query = this.view.resources.featureQueries.map
+    if (!this.view.scope.prisms.layer.length) {
+      query.clear()
+      this.view.queries.featureLoadState = 'complete'
+      return []
     }
-
-    // Add new features or update existing ones
-    newFeatures.forEach(feature => {
-      this.featuresMap.set(feature.id, feature)
-    })
-  }
-
-  addFeatureToMap = (feature: FeatureFromCollection | Feature) => {
-    this.featuresMap.set(feature.id, feature)
-  }
-
-  // Public getter for features map
-  get features(): SvelteMap<Id, FeatureFromCollection | Feature> {
-    return this.featuresMap
-  }
-
-  // FEATURE COLLECTIONS -- FeatureIds
-
-  // FeatureIds for Selected Neighbourhoods
-  featuresForNeighbourhoods: Id[] = $derived(
-    (this.placeCtx.state.contains.feature.neighbourhood &&
-      this.placeCtx.state.filters.feature.neighbourhood.include &&
-      this.getFeatureIdsForNeighbourhoods()) ||
-      [],
-  ) as Id[]
-
-  // FeatureIds for Selected Properties
-  featuresForProperties: Id[] = $derived(
-    (this.featuresMap.size && this.getFeatureIdsForProperties()) || [],
-  ) as Id[]
-
-  // Intersection of Neighbourhoods and Properties featureIds
-  featuresVisible: Id[] = $derived(this.getVisibleFeatureIds())
-  // FeatureIds for Wishlisted Features
-  featuresWishlisted: Id[] = $derived(this.getWishlistedFeatureIds()) as Id[]
-  // FeatureIds for Visited Features
-  featuresVisited: Id[] = $derived(this.getVisitedFeatureIds()) as Id[]
-
-  // FEATURE COLLECTIONS -- Utils
-
-  getFeaturesByIds = (ids: Id[]): (FeatureFromCollection | Feature)[] =>
-    ids.map(id => this.features.get(id)).filter(f => f !== undefined)
-
-  // FEATURE COLLECTIONS -- Convenience Methods
-
-  getVisibleFeatures = (): (FeatureFromCollection | Feature)[] => {
-    return this.getFeaturesByIds(this.featuresVisible)
-  }
-
-  getWishlistedFeatures = (): (FeatureFromCollection | Feature)[] => {
-    return this.getFeaturesByIds(this.featuresWishlisted)
-  }
-
-  getVisitedFeatures = (): (FeatureFromCollection | Feature)[] => {
-    return this.getFeaturesByIds(this.featuresVisited)
-  }
-
-  // Active Navigation State Methods
-
-  /**
-   * Sets the active navigable resource type.
-   *
-   * @param resourceType - Resource type to activate, or `false` to clear it.
-   * @returns Nothing.
-   */
-  setActiveResourceType = (resourceType: NavigableResource | false): void => {
-    // Avoid redundant writes so reactive consumers do not re-run on no-op navigation changes.
-    if (untrack(() => this.state.nav.resourceType) === resourceType) return
-    this.state.nav.resourceType = resourceType
-  }
-
-  /**
-   * Sets the active resource reference and optionally updates the active resource type.
-   *
-   * @param resourceRef - Active resource identifier, or `false` to clear it.
-   * @param resourceType - Optional resource type to activate alongside the ref.
-   * @returns Nothing.
-   */
-  setActiveResourceRef = (
-    resourceRef: Id | false,
-    resourceType?: NavigableResource | false,
-  ): void => {
-    if (resourceType !== undefined) {
-      this.setActiveResourceType(resourceType)
-    }
-    // Skip no-op ref updates to prevent extra navigation-driven effects.
-    if (untrack(() => this.state.nav.resourceRef) === resourceRef) return
-    this.state.nav.resourceRef = resourceRef
-  }
-
-  /**
-   * Sets the active facet and optionally updates the active resource ref and type first.
-   *
-   * @param facet - Facet to activate, or `false` to clear it.
-   * @param resourceRef - Optional resource ref to set before the facet.
-   * @param resourceType - Optional resource type to set before the facet.
-   * @returns Nothing.
-   */
-  setActiveFacet = (
-    facet: FacetType | false,
-    resourceRef?: Id | false,
-    resourceType?: NavigableResource | false,
-  ): void => {
-    if (resourceRef !== undefined) {
-      this.setActiveResourceRef(resourceRef, resourceType)
-    }
-    // Keep facet writes idempotent for callers that repeatedly sync URL and state.
-    if (untrack(() => this.state.nav.facet) === facet) return
-    this.state.nav.facet = facet
-  }
-
-  getActiveResourceType = (): NavigableResource | false => {
-    return this.state.nav.resourceType
-  }
-  getActiveResourceRef = (): Id | false => {
-    return this.state.nav.resourceRef
-  }
-  getActiveResourceId = (): Id | null => {
-    const activeResourceType = this.getActiveResourceType()
-    const resourceRef = this.getActiveResourceRef()
-    if (typeof resourceRef === 'string') {
-      if (activeResourceType === FirstClassResource.organisation) {
-        return this.getOrganisationIdByCode(resourceRef as Code) ?? null
-      } else if (activeResourceType === FirstClassResource.project) {
-        return this.getProjectIdByCode(resourceRef as Code) ?? null
-      } else if (activeResourceType === FirstClassResource.hub) {
-        return this.getHubIdByCode(resourceRef as Code) ?? null
-      } else {
-        return resourceRef
-      }
-    }
-    return null
-  }
-  getActiveFacet = (): FacetType | false => {
-    return this.state.nav.facet
-  }
-
-  // Panel methods
-  togglePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    const currentState = this.responsiveCtx.isPanelOpen(panel)
-
-    // Close other panels on the same side first (without updating URL individually)
-    if (this.responsiveCtx.isPanelOnLeft(panel)) {
-      const openLeftPanels =
-        this.responsiveCtx.getOpenLeftPanels() as unknown as Panel[]
-      openLeftPanels
-        .filter(openPanel => openPanel !== panel)
-        .forEach(openPanel => {
-          this.closePanel(openPanel, false)
-        })
-    } else if (this.responsiveCtx.isPanelOnRight(panel)) {
-      const openRightPanels =
-        this.responsiveCtx.getOpenRightPanels() as unknown as Panel[]
-      openRightPanels
-        .filter(openPanel => openPanel !== panel)
-        .forEach(openPanel => {
-          this.closePanel(openPanel, false)
-        })
-    }
-
-    if (window.innerWidth < DUAL_PANEL_MIN_WIDTH) {
-      // Close all panels first, then toggle the target panel based on original state
-      this.closeAllPanels(false)
-      if (!currentState) {
-        // Panel was closed, so open it
-        this.openPanel(panel, false)
-        if (!isMobile()) {
-          this.focusPanel(this.responsiveCtx.isPanelOnLeft(panel) ? 'left' : 'right')
-        }
-      }
-      // If panel was open, leave it closed (toggle behavior)
-    } else {
-      // Toggle the current panel
-      if (currentState) {
-        this.closePanel(panel, false)
-      } else {
-        this.openPanel(panel, false)
-        if (!isMobile()) {
-          this.focusPanel(this.responsiveCtx.isPanelOnLeft(panel) ? 'left' : 'right')
-        }
-      }
-    }
-
-    // Update URL once at the end with the final panel state (only if updateUrl is true)
-    if (updateUrl && typeof window !== 'undefined') {
-      const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
-      )
-      updatePanelUrlParams(panelState, this)
-    }
-  }
-
-  focusPanel = (position: 'left' | 'right'): void => {
-    let panelElement = null
-    setTimeout(() => {
-      panelElement = document.getElementById(`${position}-panel`)
-      const inputElement = panelElement?.querySelector('input')
-      if (inputElement) {
-        inputElement.focus()
-      } else {
-        panelElement?.focus()
-      }
-    }, 250)
-  }
-
-  closeLeftPanel = (): void => {
-    ;(this.responsiveCtx.getOpenLeftPanels() as unknown as Panel[]).forEach(
-      (openPanel: Panel) => {
-        this.closePanel(openPanel, false)
-      },
+    // The map effect starts its first page once the camera provides a viewport.
+    if (!this.view.featureViewport) return []
+    await this.view.queries.loadFeatureQuery(
+      'map',
+      this.view.filters.featureQueryInput({
+        spatial: this.view.featureViewport,
+        includeCounts: false,
+      }),
     )
+    // Native pages allow visible progress without automatically requesting the entire dataset.
+    return query.rows
   }
 
-  closeRightPanel = (): void => {
-    ;(this.responsiveCtx.getOpenRightPanels() as unknown as Panel[]).forEach(
-      (openPanel: Panel) => {
-        this.closePanel(openPanel, false)
-      },
-    )
-  }
-
-  closeAllPanels = (updateUrl: boolean = true): void => {
-    Object.keys(this.state.panels).forEach(panel => {
-      this.closePanel(panel as unknown as Panel, false)
-    })
-    if (updateUrl && typeof window !== 'undefined') {
-      const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
-      )
-      updatePanelUrlParams(panelState, this)
+  /** Restarts public initialization after authentication. @returns Completion of authenticated bootstrap. */
+  reinitializeWithAuth = async (): Promise<void> => {
+    if (this.view.user?.id) {
+      this.view.isInitialised = false
+      await this.init(this.view.user.id)
     }
   }
 
-  openPanel = (panel: Panel, updateUrl: boolean = true): void => {
-    this.state.panels[panel].isOpen = true
-    this.responsiveCtx.setPanelOpen(panel, true)
-
-    // Contribution data is relation-heavy, so only load it when the profile panel needs it.
-    if (
-      panel === Panel.profile &&
-      this.state.panels.profile.ctx?.username &&
-      !this.state.panels.profile.ctx.userData
-    ) {
-      void this.refreshUserProfile(false).catch(error => {
-        console.error('[AppCtx] Profile panel hydration failed:', error)
-      })
-    }
-
-    // Handle stateful parameters for specific panels
-    if (updateUrl && typeof window !== 'undefined') {
-      const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
-      )
-      updatePanelUrlParams(panelState, this)
-    }
-  }
-
-  closePanel = (panel: Panel, updateUrl: boolean = true): void => {
-    this.state.panels[panel].isOpen = false
-    this.responsiveCtx.setPanelOpen(panel, false)
-    if (updateUrl && typeof window !== 'undefined') {
-      const panelState = Object.fromEntries(
-        Object.entries(this.state.panels).map(([key, value]) => [key, value.isOpen]),
-      )
-      updatePanelUrlParams(panelState, this)
-    }
-  }
-
-  isPanelOpen = (panel: Panel): boolean => {
-    return this.responsiveCtx.isPanelOpen(panel)
-  }
-
-  isPanelNarrow = (panel: Panel): boolean => {
-    return this.responsiveCtx.isPanelNarrow(panel)
-  }
-
-  // Visual-only panel methods for auto-hide behavior
-  openPanelVisually = (panel: Panel): void => {
-    this.state.panels[panel].isOpenVisually = true
-    this.responsiveCtx.setPanelOpenVisually(panel, true)
-  }
-
-  closePanelVisually = (panel: Panel): void => {
-    this.state.panels[panel].isOpenVisually = false
-    this.responsiveCtx.setPanelOpenVisually(panel, false)
-  }
-
-  isPanelOpenVisually = (panel: Panel): boolean => {
-    return this.responsiveCtx.isPanelOpenVisually(panel)
-  }
-
-  isPanelOpenOrVisual = (panel: Panel): boolean => {
-    return this.responsiveCtx.isPanelOpenOrVisual(panel)
-  }
-
-  // Helper method to open profile panel with username context
-  setPanelCtx = (
-    panel: Panel,
-    key: 'username',
-    value: string | undefined | null,
-  ): void => {
-    // Set username context if provided
-    if (value && this.state.panels[panel].ctx) {
-      this.state.panels[panel].ctx[key] = value
-    }
-  }
-
-  // Refocus map on currently visible features
-  zoomToAllVisibleFeatures = (): void => {
-    const visibleFeatures = this.getVisibleFeatures()
-    if (visibleFeatures.length > 0) {
-      this.zoomToFeatures(visibleFeatures)
-    }
-  }
-
-  // KEYDOWN HANDLERS
-  registerKeydownHandlers = (): void => {
-    document.addEventListener('keydown', this.handleKeydown)
-  }
-
-  unregisterKeydownHandlers = (): void => {
-    document.removeEventListener('keydown', this.handleKeydown)
-  }
-
-  handleKeydown = (event: KeyboardEvent): void => {
-    // Skip global keyboard shortcuts when any input element is focused
-    const activeElement = document.activeElement
-    if (shouldSkipGlobalKeydown(activeElement)) {
+  init = async (userId: Id | null, loadFeatures: boolean = true): Promise<void> => {
+    // Unauthenticated routes initialise without account data.
+    if (!userId) {
+      // Initialize empty data structures for unauthenticated users.
+      this.view.queries.rows.organisation = []
+      this.view.queries.rows.project = []
+      this.view.queries.rows.layer = []
+      this.view.queries.rows.feature = []
+      this.view.queries.rows.task = []
+      this.view.queries.rows.hub = []
+      this.view.isInitialised = true
       return
     }
-
-    if (
-      consumeEscapeForOpenPanels(
-        event,
-        Object.values(this.state.panels).some(panel => panel.isOpen),
-      )
-    ) {
-      this.closeAllPanels()
-      return
+    // Initialize stats cache
+    this.view.initStatsCache()
+    // Use parallel fetching for initial load
+    this.view.queries.isLoadingResources = true
+    try {
+      await this.initialFetch(true, loadFeatures)
+    } finally {
+      this.view.queries.isLoadingResources = false
     }
-
-    let keyMatched = false
-
-    if (event.key === '1') {
-      if (this.isAdmin()) {
-        this.togglePanel(Panel.admin)
-      } else {
-        if (this.hub?.isCore) {
-          this.togglePanel(Panel.prisms)
-        } else {
-          this.togglePanel(Panel.hub)
-        }
-      }
-      keyMatched = true
-    } else if (event.key === '2') {
-      if (this.isAdmin()) {
-        this.togglePanel(Panel.settings)
-      } else {
-        this.togglePanel(Panel.filters)
-      }
-      keyMatched = true
-    } else if (event.key === '3') {
-      this.togglePanel(Panel.stars)
-      keyMatched = true
-    } else if (event.key === '4') {
-      this.togglePanel(Panel.settings)
-      keyMatched = true
-    } else if (event.key === '5') {
-      const user = this.getUser()
-      if (isGuestUser(user)) {
-        requestProfileUpgrade(window.location.href)
-        event.preventDefault()
-        event.stopPropagation()
-        return
-      }
-      // If no username param is set, use the user's username
-      this.setPanelCtx(
-        Panel.profile,
-        'username',
-        getUrlParam('username') || this.getUser()?.username,
-      )
-      this.togglePanel(Panel.profile)
-      keyMatched = true
-    }
-
-    if (keyMatched) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-  }
-
-  // NEW FEATURE
-
-  setNewFeatureMode = (mode: NewFeatureMode | null): void => {
-    this.newFeatureMode = mode
-  }
-
-  resetNewFeatureMode = (): void => {
-    this.newFeatureMode = null
-  }
-
-  getNewFeatureMode = (): NewFeatureMode | null => {
-    return this.newFeatureMode
-  }
-
-  setNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
-    // Initialize with proper locale structure for all required locales
-    if (newFeature.feature && !newFeature.feature.i18n) {
-      const feature = newFeature.feature
-      const featureI18n: NonNullable<typeof feature.i18n> = {}
-      feature.i18n = featureI18n
-      supportedLocaleKeys.forEach(locale => {
-        featureI18n[locale as LocaleKey] = {
-          ...featureI18n[locale as LocaleKey],
-          title: undefined,
-          description: undefined,
-          displayAddress: '',
-          displayAddressGen: false,
-        }
-      })
-    }
-    this.newFeature = newFeature
-  }
-
-  updateNewFeature = (newFeature: DeepPartial<NewFeatureTask>): void => {
-    this.newFeature = {
-      ...this.newFeature,
-      ...newFeature,
-      feature: {
-        ...this.newFeature?.feature,
-        ...newFeature.feature,
-      },
-    }
-  }
-
-  updateNewFeatureValue = (
-    key: keyof NewFeatureTask['feature'],
-    value: unknown,
-  ): void => {
-    this.newFeature = {
-      ...this.newFeature,
-      feature: { ...this.newFeature?.feature, [key]: value },
-    }
-  }
-
-  updateNewFeatureValueI18n = (
-    key: FeatureI18nFieldKeys,
-    value: unknown,
-    locale = getLocaleKey(),
-  ): void => {
-    this.newFeature = {
-      ...this.newFeature,
-      feature: {
-        ...this.newFeature?.feature,
-        i18n: {
-          ...this.newFeature?.feature?.i18n,
-          [locale]: {
-            ...this.newFeature?.feature?.i18n?.[locale],
-            [key]: value,
-          },
-        },
-      },
-    }
-  }
-
-  getNewFeature = (): DeepPartial<NewFeatureTask> | null => {
-    return this.newFeature
-  }
-
-  resetNewFeature = () => {
-    this.newFeature = null
-  }
-
-  // USER DATA
-  setUser = async (user: CurrentUser | SessionUser | null) => {
-    const previousUserId = this.user?.id ?? null
-    const nextUserId = user?.id ?? null
-
-    if (previousUserId !== nextUserId) {
-      // Identity-bound records must never survive guest/account transitions.
-      this.queryClient.removeQueries({ queryKey: ['userFeatures'], exact: false })
-      this.queryClient.removeQueries({
-        queryKey: [FirstClassResource.user],
-        exact: false,
-      })
-      this.cache.user.clear()
-      this.state.userFeatures = { wishlisted: [], visited: [] }
-      this.resetActiveCollection()
-      if (this.state.panels.profile.ctx) {
-        this.state.panels.profile.ctx.userData = null
-      }
-    }
-
-    this.user = user
-    this.postUserMutation()
-  }
-
-  getUser = (): UserProfile | CurrentUser | SessionUser | null => {
-    return this.user
+    // Prevent init from running again, unless the user (re)authenticates
+    // see reinitializeWithAuth()
+    this.view.isInitialised = true
   }
 
   /**
-   * Merges freshly saved self-profile fields into the reactive application user.
+   * Hydrates map resources that are safe to show before a user authenticates.
    *
-   * @param profile - Persisted self-profile fields returned by a remote mutation.
-   * @returns Nothing after updating the local user snapshot.
+   * @param loadFeatures - Whether to request the public feature collection.
+   * @returns Nothing after the public hierarchy and optional feature collection settle.
+   * @remarks Errors are logged here because the login dialog and base map must remain
+   * usable even when a non-essential public resource request fails.
    */
-  applyUserProfile = (
-    profile: Partial<
-      Pick<CurrentUser, 'attribution' | 'experimental' | 'locale' | 'preferences'>
-    >,
-  ): void => {
-    if (!this.user) return
+  bootstrapPublicMapResources = async (loadFeatures: boolean = true): Promise<void> => {
+    const publicRoleScope = this.view.getRoleScopeQueryKey()
 
-    this.user = {
-      ...this.user,
-      ...profile,
-    } as CurrentUser | SessionUser | UserProfile
-    this.postUserMutation()
-  }
-
-  resetUser = () => {
-    this.user = null
-  }
-
-  getUserPreferences = (withDefaults: boolean = true): UserPreferences => {
-    // If no user, return default preferences
-    if (!this.user) {
-      return {
-        fallbackLocales: getFallbackLocales(getLocale()) as Locale[],
-        allowMachineTranslation: false,
-        preferFallbackInCurrentLocale: false,
-        isTranslateButtonVisible: true,
-        admin: {
-          isAdminMapCollapsed: false,
-          isPrimaryPanelCollapsed: false,
-          isPrimaryPanelAutoHide: false,
-        },
+    try {
+      this.view.initStatsCache()
+      this.view.queries.isLoadingResources = true
+      try {
+        await this.initialFetch(false, loadFeatures, publicRoleScope)
+      } finally {
+        this.view.queries.isLoadingResources = false
       }
+    } catch (error) {
+      console.error('[AppCtx] Public map bootstrap failed:', error)
     }
-
-    return withDefaults
-      ? {
-          fallbackLocales:
-            ((this.user as CurrentUser).preferences.fallbackLocales as Locale[]) ??
-            (getFallbackLocales(getLocale()) as Locale[]),
-          allowMachineTranslation:
-            (this.user as CurrentUser).preferences.allowMachineTranslation ?? false,
-          preferFallbackInCurrentLocale:
-            (this.user as CurrentUser).preferences.preferFallbackInCurrentLocale ??
-            false,
-          isTranslateButtonVisible:
-            (this.user as CurrentUser).preferences.isTranslateButtonVisible ?? true,
-          admin: {
-            isAdminMapCollapsed:
-              (this.user as CurrentUser).preferences.admin?.isAdminMapCollapsed ??
-              false,
-            isPrimaryPanelCollapsed:
-              (this.user as CurrentUser).preferences.admin?.isPrimaryPanelCollapsed ??
-              false,
-            isPrimaryPanelAutoHide:
-              (this.user as CurrentUser).preferences.admin?.isPrimaryPanelAutoHide ??
-              false,
-          },
-        }
-      : ((this.user as CurrentUser).preferences as UserPreferences)
-  }
-
-  updateUserPreferences = (preferences: UserPreferences) => {
-    ;(this.user as CurrentUser).preferences = {
-      ...(this.user as CurrentUser).preferences,
-      ...preferences,
-      admin: {
-        ...(this.user as CurrentUser).preferences.admin,
-        ...preferences.admin,
-      },
-    }
-  }
-
-  setUserAttribution = async (
-    attribution: string,
-    onSuccess?: (attribution: string) => void,
-    onError?: (error: unknown) => void,
-  ) => {
-    ;(this.user as CurrentUser).attribution = attribution
-    await debouncedUpdateUserAttribution(
-      (this.user as CurrentUser).id,
-      attribution,
-      onSuccess,
-      onError,
-    )
-  }
-
-  getUserLayers = (): UserLayer[] => {
-    return this.getUserLayersForCurrentHub()
-  }
-
-  getUserLayerIds = (): string[] => {
-    return this.getUserLayersForCurrentHub().map((layer: UserLayer) => layer.layerId)
   }
 
   /**
-   * Commits saved layer defaults to local user and map state.
+   * Loads application resources in dependency order.
    *
-   * @param layers - Persisted default-visible layer rows returned by the remote mutation.
-   * @param hub - The hub identity used for the mutation, including code-only startup state.
-   * @returns Nothing after replacing the current hub's saved layer defaults.
+   * @param includeUserData - Whether to request identity-bound profile and preference data.
+   * @param loadFeatures - Whether to request the initial feature collection.
+   * @param expectedRoleScope - Optional identity scope that must still be current before
+   * public-bootstrap data is committed.
+   * @returns Nothing after the requested resource stages settle.
    */
-  applyUserLayerDefaults = (
-    layers: UserLayer[],
-    hub: { id?: Id | null; code?: string | null },
-  ): void => {
-    if (!this.user || !('userLayers' in this.user)) return
+  initialFetch = async (
+    includeUserData: boolean = true,
+    loadFeatures: boolean = true,
+    expectedRoleScope?: string,
+  ): Promise<void> => {
+    expectedRoleScope ??= this.view.getRoleScopeQueryKey()
+    if (!this.view.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-    const resolvedHubId = layers[0]?.hubId ?? hub.id ?? null
-    const currentHubLayerIds = new Set(
-      this.state.resources.layer.map(layer => layer.id),
-    )
+    // Bootstrap only map-relevant user state first. Self-profile hydration includes a
+    // contribution relation graph and is deferred until its panel needs it.
+    const lightSteps = includeUserData
+      ? ([
+          ['userFeatures', () => this.view.queries.refreshUserFeatures(false)],
+          ['userLayers', () => this.view.hydrateCurrentUserLayers()],
+        ] as const)
+      : []
 
-    // Replace only rows associated with this hub, including code-only bootstrap state.
-    const retainedLayers = this.user.userLayers.filter(layer => {
-      if (resolvedHubId && layer.hubId === resolvedHubId) return false
-      if (hub.code && layer.hubCode === hub.code) return false
-      return !currentHubLayerIds.has(layer.layerId)
-    })
+    // Independent compact lists and default identities start together; none waits for ancestors.
+    const defaults = this.view.loadDefaultLayerResources(expectedRoleScope)
+    const hierarchy = Promise.allSettled([
+      this.view.queries.refreshOrganisations(false, expectedRoleScope),
+      this.view.queries.refreshProjects(false, expectedRoleScope),
+      this.view.queries.refreshLayers(false, false, expectedRoleScope),
+    ])
+    const results = await Promise.allSettled([
+      defaults,
+      hierarchy,
+      ...lightSteps.map(([, load]) => load()),
+    ])
+    for (const result of results)
+      if (result.status === 'rejected')
+        console.error('[AppCtx] Initial resource loading failed', result.reason)
+    if (!this.view.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-    if (resolvedHubId && hub.code) {
-      this.hubCodeToId.set(hub.code, resolvedHubId)
-    }
-    if (resolvedHubId && this.hub && !this.hub.id) {
-      this.hub = { ...this.hub, id: resolvedHubId }
-    }
+    this.view.scope.applyInitialLayerPrisms(expectedRoleScope)
+    await this.view.loadPinnedLayers(expectedRoleScope)
+    await this.view.postLayerMutation(false, false, expectedRoleScope)
 
-    this.user = {
-      ...this.user,
-      userLayers: [...retainedLayers, ...layers],
-    } as CurrentUser | SessionUser
-    this.setLayers(layers.map(layer => layer.layerId))
-  }
+    if (!this.view.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-  /**
-   * Clears all images arrays from the feature cache
-   * This forces fresh API calls for image data
-   */
-  clearFeatureCacheImages = (): void => {
-    for (const [_featureId, feature] of this.cache.feature) {
-      if (feature && typeof feature === 'object' && 'images' in feature) {
-        // Set images to undefined to force fresh API fetch
-        feature.images = undefined
-      }
-    }
-  }
+    const featureSteps = [
+      ...(loadFeatures
+        ? ([
+            [
+              'features',
+              () => this.view.queries.refreshFeatures(false, expectedRoleScope),
+            ],
+          ] as const)
+        : []),
+      ...(includeUserData
+        ? ([
+            [
+              'tasks',
+              () =>
+                this.view.isAdmin()
+                  ? this.view.queries.refreshTasks(false)
+                  : Promise.resolve(),
+            ],
+          ] as const)
+        : []),
+    ] as const
 
-  // Clear all cache maps (for actual data reset scenarios)
-  clearAllCaches = (): void => {
-    this.cache.organisation.clear()
-    this.cache.project.clear()
-    this.cache.layer.clear()
-    this.cache.feature.clear()
-    this.cache.task.clear()
-    this.cache.hub.clear()
-    this.cache.property.clear()
-    this.cache.image.clear()
-    this.cache.user.clear()
-    this.featuresMap.clear()
-    this.organisationCodeToId.clear()
-    this.projectCodeToId.clear()
-    this.hubCodeToId.clear()
-  }
-
-  /**
-   * Restores the shared query map to the default app-scoped resource loaders.
-   *
-   * @returns Nothing.
-   * @remarks Admin routes override `queryMap` on the shared `AppCtx`. When leaving
-   * `/admin`, this must run before any app-side refresh so non-admin reads do not
-   * keep using admin-scoped query functions.
-   */
-  restoreDefaultQueryMap = (): void => {
-    this.initializeQueryMap()
-  }
-
-  /**
-   * Clears shared resource caches, list metadata, and query results when switching
-   * between app and admin surfaces.
-   *
-   * @returns Nothing.
-   * @remarks App and admin share a single `AppCtx`, so resource entities loaded in one
-   * surface can otherwise leak into the other via in-memory maps or TanStack Query.
-   */
-  resetSharedResourceCachesForSurfaceSwitch = (): void => {
-    this.clearAllCaches()
-    this.listQueryMeta.clear()
-
-    this.state.resources.organisation = []
-    this.state.resources.project = []
-    this.state.resources.layer = []
-    this.state.resources.feature = []
-    this.state.resources.task = []
-    this.state.resources.hub = []
-    this.placeCtx.setNeighbourhoodFeatures([])
-
-    const resourceQueryPrefixes: Array<FirstClassResource | 'property'> = [
-      FirstClassResource.organisation,
-      FirstClassResource.project,
-      FirstClassResource.layer,
-      FirstClassResource.feature,
-      FirstClassResource.task,
-      FirstClassResource.hub,
-      'property',
-    ]
-
-    for (const queryKey of resourceQueryPrefixes) {
-      this.queryClient.removeQueries({
-        queryKey: [queryKey],
-        exact: false,
-      })
-    }
-  }
-
-  /**
-   * Reloads the shared app resource tree after leaving the admin surface.
-   *
-   * @returns A promise that resolves when the public app hierarchy has been refetched.
-   * @remarks This intentionally preserves the current prism state while forcing fresh
-   * non-admin reads so unpublished admin records cannot persist in shared state.
-   */
-  reloadAppSurfaceResources = async (): Promise<void> => {
-    await this.refreshOrganisations()
-  }
-
-  // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
-  resetOrganisations = async () => {
-    this.state.prisms.organisation = []
-    await this.refreshOrganisations()
-  }
-
-  // Efficient reset methods - clears selection filters, used cache if data was fetched before, otherwise refetches
-  resetProjects = async () => {
-    this.state.prisms.project = []
-    await this.refreshProjects()
-  }
-
-  // Force refresh methods for when you actually need to invalidate and fetch fresh data
-  forceRefreshOrganisations = async () => {
-    this.state.prisms.organisation = []
-    await this.invalidateAndRefresh(FirstClassResource.organisation)
-  }
-
-  forceRefreshProjects = async () => {
-    this.state.prisms.project = []
-    await this.invalidateAndRefresh(FirstClassResource.project)
-  }
-
-  // TODO : Clear the Omnibar when a layer is toggled
-  addLayer = (id: Id) => {
-    this.state.prisms.layer.push(id)
-    this.postLayerMutation()
-  }
-
-  removeLayer = (id: Id) => {
-    this.state.prisms.layer = this.state.prisms.layer.filter(l => l !== id)
-    this.postLayerMutation()
-  }
-
-  setLayers = (layers: Id[]) => {
-    this.state.prisms.layer = layers
-    this.postLayerMutation()
-  }
-
-  resetLayers = () => {
-    this.state.prisms.layer = []
-    this.postLayerMutation()
-  }
-
-  initialiseCategoricalPropertyFilters = (layerId: Id) => {
-    const layer = this.state.resources.layer.find(l => l.id === layerId)
-    if (!layer) {
-      return
-    }
-
-    const project = this.state.resources.project.find(p => p.id === layer.projectId)
-    if (!project) {
-      return
-    }
-
-    // Filter properties based on visibility in layer (similar logic to Categories.svelte)
-    const classifierProperties =
-      project.properties
-        ?.filter(p => p.type === 'classifier')
-        .filter(prop => {
-          const layerProperty = layer.properties?.find(lp => lp.propertyId === prop.id)
-          // Only consider properties visible in the layer AND not range fields
-          return layerProperty?.isVisible !== false && prop.component !== 'RangeField'
-        })
-        // Ensure uniqueness by key within the project's properties relevant to this layer
-        .filter(
-          (prop, index, self) => index === self.findIndex(p => p.key === prop.key),
-        ) || []
-
-    // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties) {
-      this.state.filters.feature.properties = {}
-    }
-
-    const featurePropertyFilters = this.state.filters.feature
-      .properties as unknown as Record<Id, Record<string, string[] | RangeFilterValue>>
-    if (!featurePropertyFilters[layerId]) {
-      featurePropertyFilters[layerId] = {}
-    }
-
-    const layerFilters = featurePropertyFilters[layerId] as Record<
-      string,
-      string[] | RangeFilterValue
-    >
-
-    // Initialize each classifier property with an empty array if not already set
-    classifierProperties.forEach((property: Property) => {
-      if (!(property.key in layerFilters)) {
-        layerFilters[property.key] = []
-      }
-    })
-  }
-
-  initialiseRangePropertyFilter = (layerId: Id) => {
-    const layer = this.state.resources.layer.find(l => l.id === layerId)
-    if (!layer) {
-      return
-    }
-
-    const project = this.state.resources.project.find(p => p.id === layer.projectId)
-    if (!project) {
-      return
-    }
-
-    // Find properties that are RangeFields and visible for this layer
-    const rangeProperties =
-      project.properties
-        ?.filter(p => p.component === 'RangeField') // Identify range properties
-        .filter(prop => {
-          const layerProperty = layer.properties?.find(lp => lp.propertyId === prop.id)
-          // Only consider properties visible in the layer
-          return layerProperty?.isVisible !== false
-        })
-        // Ensure uniqueness by key
-        .filter(
-          (prop, index, self) => index === self.findIndex(p => p.key === prop.key),
-        ) || []
-
-    // Ensure the layer's filter object exists
-    if (!this.state.filters.feature.properties) {
-      this.state.filters.feature.properties = {}
-    }
-
-    const featurePropertyFilters = this.state.filters.feature
-      .properties as unknown as Record<Id, Record<string, string[] | RangeFilterValue>>
-    if (!featurePropertyFilters[layerId]) {
-      featurePropertyFilters[layerId] = {}
-    }
-
-    const layerFilters = featurePropertyFilters[layerId] as Record<
-      string,
-      string[] | RangeFilterValue
-    >
-
-    // Initialize each range property using its min/max if not already set
-    rangeProperties.forEach((property: Property) => {
-      // Validate that min and max exist and are numbers
-      const min = property.min
-      const max = property.max
-
-      if (
-        !(property.key in layerFilters) &&
-        typeof min === 'number' &&
-        typeof max === 'number'
-      ) {
-        const filterConfig = {
-          globalMin: min,
-          globalMax: max,
-          rangeMin: min, // Default rangeMin to globalMin
-          rangeMax: max, // Default rangeMax to globalMax
-        }
-
-        layerFilters[property.key] = filterConfig
-      }
-    })
-  }
-
-  // ═══════════════════════
-  //
-  // ═══════════════════════
-  setHub = (hub: HubOptsExtended) => {
-    if (hub.code && hub.id) {
-      this.hubCodeToId.set(hub.code, hub.id)
-    }
-
-    const currentHub = this.hub
-    if (!currentHub) {
-      this.hub = hub
-      this.applyInitialLayerPrisms()
-      return
-    }
-
-    const isSameHub =
-      (hub.id && currentHub.id === hub.id) ||
-      (!hub.id && currentHub.code && currentHub.code === hub.code)
-
-    if (!isSameHub) {
-      this.hub = hub
-      this.applyInitialLayerPrisms()
-      return
-    }
-
-    if (currentHub && !currentHub.id && hub.id) {
-      this.hub = {
-        ...currentHub,
-        ...hub,
-      }
-      this.applyInitialLayerPrisms()
-    }
-  }
-
-  resetHub = () => {
-    this.hub = null
-  }
-
-  // ═══════════════════════
-  // CACHE UPDATE UTILITIES
-  // ═══════════════════════
-
-  // Generic map sync - only add missing items and remove stale ones (no overwrites)
-  private syncMap = <K, V, T>(
-    map: Map<K, V>,
-    newItems: T[],
-    getKey: (item: T) => K,
-    getValue?: (item: T) => V,
-  ): void => {
-    const newKeys = new Set(newItems.map(getKey))
-
-    // Remove entries that are no longer in the result set
-    for (const [key] of map) {
-      if (!newKeys.has(key)) {
-        map.delete(key)
-      }
-    }
-
-    // Only add entries that aren't already present
-    newItems.forEach(item => {
-      const key = getKey(item)
-      if (!map.has(key)) {
-        map.set(key, getValue ? getValue(item) : (item as unknown as V))
-      }
-    })
-  }
-
-  // Convenience methods using the generic syncMap
-  private syncCacheMap = <T extends { id: Id }>(
-    cache: Map<Id, T>,
-    newItems: T[],
-  ): void => {
-    this.syncMap(cache, newItems, item => item.id)
-  }
-
-  private syncCodeToIdMap = <T extends { id: Id; code: Code }>(
-    codeMap: Map<Code, Id>,
-    newItems: T[],
-  ): void => {
-    this.syncMap(
-      codeMap,
-      newItems,
-      item => item.code,
-      item => item.id,
-    )
-  }
-
-  addToCache = <K extends FirstClassResource>(
-    resource: K,
-    id: Id,
-    item: Cache[K] extends Map<Id, infer TValue> ? TValue : never,
-  ): void => {
-    const cache = this.cache[resource] as Map<
-      Id,
-      Cache[K] extends Map<Id, infer TValue> ? TValue : never
-    >
-    cache.set(id, item)
-  }
-
-  // Header management methods
-  setHeaderState = (headerState: Partial<typeof this.state.header>): void => {
-    this.state.header = { ...this.state.header, ...headerState }
-  }
-
-  // Derived values for header
-  isIndex = $derived(this.state.nav.resourceRef === false)
-  headerResourceType = $derived(this.state.nav.resourceType)
-  headerResourceRef = $derived(this.state.nav.resourceRef)
-
-  getResourceByIdSync = (
-    resource: FirstClassResource,
-    id: Id,
-  ): Resource | undefined => {
-    switch (resource) {
-      case FirstClassResource.organisation:
-        return this.cache.organisation.get(id)
-      case FirstClassResource.project:
-        return this.cache.project.get(id)
-      case FirstClassResource.layer:
-        return this.cache.layer.get(id)
-      case FirstClassResource.feature:
-        return this.features.get(id)
-      case FirstClassResource.task:
-        return this.cache.task.get(id)
-      case FirstClassResource.hub:
-        return this.cache.hub.get(id)
-    }
-  }
-
-  getResourceByRefSync = (
-    resource: FirstClassResource,
-    ref: Id | Code,
-  ): Resource | undefined => {
-    switch (resource) {
-      case FirstClassResource.organisation:
-        return this.cache.organisation.get(
-          this.getOrganisationIdByCode(ref as Code) ?? (ref as Id),
+    for (const [label, load] of featureSteps) {
+      try {
+        void load().catch(error =>
+          console.error(`[AppCtx] ${label} loading failed`, error),
         )
-      case FirstClassResource.project:
-        return this.cache.project.get(
-          this.getProjectIdByCode(ref as Code) ?? (ref as Id),
+      } catch (error) {
+        console.error(
+          `[AppCtx][initialFetch] Resource bootstrap failed (${label}):`,
+          error,
         )
-      case FirstClassResource.layer:
-        return this.cache.layer.get(ref as Id)
-      case FirstClassResource.feature:
-        return this.features.get(ref as Id)
-      case FirstClassResource.task:
-        return this.cache.task.get(ref as Id)
-      case FirstClassResource.hub:
-        return this.cache.hub.get(this.getHubIdByCode(ref as Code) ?? (ref as Id))
+      }
     }
   }
 }
-export const APPCTX_KEY = Symbol('mapContext')
-let appCtxSingleton: AppCtx | null = null
 
-export const setAppCtx = (
-  queryClient: QueryClient,
-  placeCtx: PlaceCtx,
-  user: SessionUser | null,
+// Keep providers and consumers on the same key across development module reloads.
+export const APPCTX_KEY = Symbol.for('hype.context.public-app')
+
+/**
+ * Provides a public app instance under its layout.
+ * @param divisionCtx Public place/filter state.
+ * @param account Root-owned session and profile state.
+ * @param responsiveCtx Shared viewport state.
+ * @param cacheCtx Root-owned resource retention.
+ * @returns The public application context.
+ */
+export function setAppCtx(
+  divisionCtx: DivisionCtx,
+  account: AccountState,
   responsiveCtx: ResponsiveCtx,
-) => {
-  const context = new AppCtx(queryClient, placeCtx, user, responsiveCtx)
-  appCtxSingleton = context
-  // Don't initialize immediately - let the session watcher handle it after mount
+  cacheCtx = new CacheCtx(mapResourceProviders),
+): AppCtx {
+  const context = new AppCtx(divisionCtx, account, responsiveCtx, cacheCtx)
+  setSurfaceNavigation(context.navigation)
+  setSurfaceCtx(context.view)
   return setContext(APPCTX_KEY, context)
 }
 
-export const getAppCtx = (): ReturnType<typeof setAppCtx> => {
-  const ctx = getContext<ReturnType<typeof setAppCtx> | undefined>(APPCTX_KEY)
-  if (ctx) return ctx
-
-  if (appCtxSingleton) {
-    return appCtxSingleton as ReturnType<typeof setAppCtx>
-  }
-
-  throw new Error(
-    'AppCtx context is missing. Ensure setAppCtx() is called in the root layout before using getAppCtx().',
-  )
+/** Returns the public application context. @returns The public layout's instance. */
+export function getAppCtx(): AppCtx {
+  const context = getContext<AppCtx | undefined>(APPCTX_KEY)
+  if (!context)
+    throw new Error('AppCtx is only available inside the public application layout')
+  return context
 }

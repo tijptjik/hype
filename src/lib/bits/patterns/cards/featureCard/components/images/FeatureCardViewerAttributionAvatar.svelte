@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Icon } from '$lib/bits'
+import { Icon } from '#lib/bits/index.js'
 import type { Component } from 'svelte'
 
 let {

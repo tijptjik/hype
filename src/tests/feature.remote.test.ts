@@ -1,12 +1,20 @@
 // @vitest-environment node
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Panel query registration is isolated from this resource's authorization fixtures.
+vi.mock('#lib/api/resources.remote.js', () => ({}))
 import { z } from 'zod'
 import { createAuthzMatrixReporter } from './authz-matrix-report'
-import { withRemoteMeta } from './remote-function-mock'
+import { mockedRemoteModule, withRemoteMeta } from './remote-function-mock'
+// API
+import * as remoteModule from '#lib/api/feature.remote.js'
+const remote = mockedRemoteModule(remoteModule)
+import { authorizeFeatureUpdateForSubmission } from '#lib/api/services/authz/feature.js'
 
 const {
   mockAuthorizeFeatureListForContext,
   mockAuthorizeFeatureReadForProbe,
+  mockAuthorizeFeatureAdminReadForProbe,
   mockAuthorizeFeatureCreateForSubmission,
   mockAuthorizeFeatureUpdateForSubmission,
   mockAuthorizeFeaturePublishForSubmission,
@@ -36,32 +44,47 @@ const {
   mockToComparableFeatureProperties,
   mockGuardedContext,
 } = vi.hoisted(() => ({
-  mockAuthorizeFeatureListForContext: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeatureReadForProbe: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeatureCreateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeatureUpdateForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeaturePublishForSubmission: vi.fn(() => ({ allowed: true })),
-  mockAuthorizeFeatureDeleteForSubmission: vi.fn(() => ({ allowed: true })),
-  mockProbeFeatureQuery: vi.fn(async () => null),
+  mockAuthorizeFeatureListForContext: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeFeatureReadForProbe: vi.fn((): { allowed: boolean; code?: string } => ({
+    allowed: true,
+  })),
+  mockAuthorizeFeatureAdminReadForProbe: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeFeatureCreateForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeFeatureUpdateForSubmission: vi.fn<
+    typeof authorizeFeatureUpdateForSubmission
+  >(() => ({ allowed: true })),
+  mockAuthorizeFeaturePublishForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockAuthorizeFeatureDeleteForSubmission: vi.fn(
+    (): { allowed: boolean; code?: string } => ({ allowed: true }),
+  ),
+  mockProbeFeatureQuery: vi.fn(async (): Promise<unknown> => null),
   mockResolveFeatureCommandProbe: vi.fn(),
-  mockProbeFeatureForUpdate: vi.fn(async () => null),
-  mockProbeLayerForUpdate: vi.fn(async () => null),
+  mockProbeFeatureForUpdate: vi.fn(async (): Promise<unknown> => null),
+  mockProbeLayerForUpdate: vi.fn(async (): Promise<unknown> => null),
   mockListFeatures: vi.fn(async () => ({
     data: [],
     limit: 20,
     offset: 0,
     totalCount: 0,
   })),
-  mockLoadFeature: vi.fn(async () => null),
+  mockLoadFeature: vi.fn(async (): Promise<unknown> => null),
   mockCreateFeature: vi.fn(async () => ({
     id: 'feature-1',
     modifiedAt: '2026-03-18T00:00:01.000Z',
   })),
   mockCreateI18n: vi.fn(async () => undefined),
   mockCreateProperties: vi.fn(async () => undefined),
-  mockUpdateFeatureByIdWithConcurrency: vi.fn(async () => null),
-  mockUpdateFeaturePublishedStateById: vi.fn(async () => null),
-  mockUpdateFeatureArchivedStateById: vi.fn(async () => null),
+  mockUpdateFeatureByIdWithConcurrency: vi.fn(async (): Promise<unknown> => null),
+  mockUpdateFeaturePublishedStateById: vi.fn(async (): Promise<unknown> => null),
+  mockUpdateFeatureArchivedStateById: vi.fn(async (): Promise<unknown> => null),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockUpdateProperties: vi.fn(async () => undefined),
   mockPublishAllImagesWithPublicIntent: vi.fn(async () => undefined),
@@ -78,7 +101,7 @@ const {
   mockGuardedContext: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -162,11 +185,11 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
-vi.mock('$lib/api/services', () => ({
+vi.mock('#lib/api/services/index.js', () => ({
   getDuplicateValues: (values: string[]) => {
     const seen = new Set<string>()
     const duplicates: string[] = []
@@ -197,7 +220,7 @@ vi.mock('$lib/api/services', () => ({
   }),
 }))
 
-vi.mock('$lib/api/services/feature', () => ({
+vi.mock('#lib/api/services/feature.js', () => ({
   getFeatureWithRelations: mockGetFeatureWithRelations,
   toComparableFeatureProperties: mockToComparableFeatureProperties,
   toEntityResponseShape: mockToEntityResponseShape,
@@ -208,7 +231,9 @@ vi.mock('$lib/api/services/feature', () => ({
   toRequestedListState: mockToRequestedListState,
 }))
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('#lib/api/services/authz/index.js')>()),
+  authorizeFeatureAdminReadForProbe: mockAuthorizeFeatureAdminReadForProbe,
   authorizeFeatureCreateForSubmission: mockAuthorizeFeatureCreateForSubmission,
   authorizeFeatureDeleteForSubmission: mockAuthorizeFeatureDeleteForSubmission,
   authorizeFeatureListForContext: mockAuthorizeFeatureListForContext,
@@ -232,7 +257,7 @@ vi.mock('$lib/api/services/authz', () => ({
   toIssueDetailMessage: (code: string) => code,
 }))
 
-vi.mock('$lib/db/services/feature', () => ({
+vi.mock('#lib/db/services/feature.js', () => ({
   createFeature: mockCreateFeature,
   createI18n: mockCreateI18n,
   createProperties: mockCreateProperties,
@@ -248,17 +273,17 @@ vi.mock('$lib/db/services/feature', () => ({
   updateProperties: mockUpdateProperties,
 }))
 
-vi.mock('$lib/db/services/layer', () => ({
+vi.mock('#lib/db/services/layer.js', () => ({
   probeLayerForUpdate: mockProbeLayerForUpdate,
 }))
 
-vi.mock('$lib/db/services/image', () => ({
+vi.mock('#lib/db/services/image.js', () => ({
   publishAllImagesWithPublicIntent: mockPublishAllImagesWithPublicIntent,
 }))
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   FeatureFormData: { parse: (value: unknown) => value },
   GetQueryParamsSchema: {},
   ListQueryParamsSchema: {},
@@ -266,19 +291,17 @@ vi.mock('$lib/db/zod', () => ({
   RemoveFeatureSchema: {},
 }))
 
-vi.mock('$lib/db/zod/form', () => ({
+vi.mock('#lib/db/zod/form.js', () => ({
   FormBoolean: z.coerce.boolean<boolean>(),
 }))
 
-vi.mock('$lib/i18n', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/i18n')>()
+vi.mock('#lib/i18n.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/i18n.js')>()
   return {
     ...actual,
     getLocale: vi.fn(() => 'en'),
   }
 })
-
-let remote: Awaited<typeof import('$lib/api/server/feature.remote')>
 
 const matrix = createAuthzMatrixReporter('feature.remote')
 
@@ -303,13 +326,13 @@ afterAll(() => {
 })
 
 describe('feature.remote authz matrix', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-    remote = await import('$lib/api/server/feature.remote')
+  beforeEach(() => {
+    // Reuse the stateless handlers; reset their mocked dependencies for each case.
     vi.clearAllMocks()
 
     mockAuthorizeFeatureListForContext.mockReturnValue({ allowed: true })
     mockAuthorizeFeatureReadForProbe.mockReturnValue({ allowed: true })
+    mockAuthorizeFeatureAdminReadForProbe.mockReturnValue({ allowed: true })
     mockAuthorizeFeatureCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeFeatureUpdateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeFeaturePublishForSubmission.mockReturnValue({ allowed: true })
@@ -361,6 +384,7 @@ describe('feature.remote authz matrix', () => {
       contributorId: 'u-2',
       geometry: { type: 'Point', coordinates: [114.1, 22.3] },
       addressMeta: { street: 'Main' },
+      isPendingReview: false,
       isIntangible: false,
       isVisitable: true,
       modifiedAt: '2026-03-18T00:00:00.000Z',
@@ -388,7 +412,7 @@ describe('feature.remote authz matrix', () => {
       id: 'feature-1',
       isArchived: true,
     })
-  })
+  }, 15_000)
 
   it('getFeatures denies when list authz denies', async () => {
     mockAuthorizeFeatureListForContext.mockReturnValue({
@@ -456,6 +480,30 @@ describe('feature.remote authz matrix', () => {
     expect(mockLoadFeature).not.toHaveBeenCalled()
   })
 
+  it('rejects import hydration without explicit admin intent', async () => {
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      isAdminRequest: false,
+    })
+
+    await expect(remote.getFeatureForImport({ id: 'feature-1' })).rejects.toThrow(
+      'INSUFFICIENT_ROLE',
+    )
+    expect(mockProbeFeatureQuery).not.toHaveBeenCalled()
+  })
+
+  it('does not hydrate an out-of-scope feature into the admin profile', async () => {
+    mockAuthorizeFeatureAdminReadForProbe.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    const result = await remote.getFeatureForImport({ id: 'feature-1' })
+
+    expect(result).toEqual({ data: null })
+    expect(mockListFeatures).not.toHaveBeenCalled()
+  })
+
   it('featureForm create denies when create authz denies', async () => {
     mockAuthorizeFeatureCreateForSubmission.mockReturnValue({
       allowed: false,
@@ -501,6 +549,8 @@ describe('feature.remote authz matrix', () => {
           updatedAt: '2026-03-18T00:00:00.000Z',
         },
         data: {
+          organisationId: 'org-1',
+          projectId: 'project-1',
           layerId: 'layer-1',
           contributorId: null,
           i18n: { en: { name: 'Feature 2' } },
@@ -536,6 +586,131 @@ describe('feature.remote authz matrix', () => {
       expected: true,
       actual: true,
     })
+  })
+
+  it.each([false, true])(
+    'translator feature update checks actual property changes (changed=%s)',
+    async propertiesChanged => {
+      mockAuthorizeFeatureUpdateForSubmission.mockImplementation(
+        authorizeFeatureUpdateForSubmission,
+      )
+      mockGuardedContext.mockResolvedValue({
+        ...(await mockGuardedContext()),
+        userRoles: [{ type: 'project', role: 'translator', projectId: 'project-1' }],
+      })
+      const properties = [{ propertyId: 'property-1', value: 'original' }]
+      mockLoadFeature.mockResolvedValue({
+        id: 'feature-1',
+        i18n: { en: { name: 'Feature' } },
+        properties,
+      })
+      const submission = remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'project-1',
+            layerId: 'layer-1',
+            i18n: { en: { name: 'Translated feature' } },
+            properties: propertiesChanged
+              ? [{ propertyId: 'property-1', value: 'changed' }]
+              : properties,
+            geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+            addressMeta: { street: 'Main' },
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: false,
+          },
+        },
+        throwingInvalid,
+      )
+
+      if (propertiesChanged) {
+        await expect(submission).rejects.toThrow('FIELD_FORBIDDEN')
+        expect(mockUpdateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
+        expect(mockUpdateProperties).not.toHaveBeenCalled()
+      } else {
+        await expect(submission).resolves.toMatchObject({ data: { id: 'feature-1' } })
+        expect(mockUpdateI18n).toHaveBeenCalled()
+        expect(mockUpdateProperties).not.toHaveBeenCalled()
+      }
+    },
+  )
+
+  it('featureForm update authorizes before loading the relation graph', async () => {
+    mockAuthorizeFeatureUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'FIELD_FORBIDDEN',
+    })
+
+    await expect(
+      remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'project-1',
+            layerId: 'layer-1',
+            contributorId: null,
+            i18n: { en: { name: 'Feature' } },
+            properties: [],
+            geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+            addressMeta: { street: 'Main' },
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: true,
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('FIELD_FORBIDDEN')
+
+    expect(mockAuthorizeFeatureUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ isPendingReview: true }),
+      }),
+    )
+    expect(mockLoadFeature).not.toHaveBeenCalled()
+    expect(mockUpdateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
+  })
+
+  it('featureForm update rejects reparenting before probing the target layer', async () => {
+    await expect(
+      remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'project-1',
+            layerId: 'foreign-layer',
+            contributorId: null,
+            i18n: { en: { name: 'Feature' } },
+            properties: [],
+            geometry: { type: 'Point', coordinates: [114.2, 22.4] },
+            addressMeta: {},
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: false,
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('FIELD_FORBIDDEN')
+
+    expect(mockProbeLayerForUpdate).not.toHaveBeenCalled()
+    expect(mockLoadFeature).not.toHaveBeenCalled()
   })
 
   it('featureForm create allows a caller-supplied id', async () => {

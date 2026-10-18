@@ -2,13 +2,17 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // CONTEXT
-import { getResponsiveCtx } from '$lib/context/responsive.svelte'
+import {
+  getSurfaceLayoutCtx,
+  SurfaceLayout,
+} from '#lib/context/surfaceLayout.svelte.js'
+import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
-import { Button, Icon, OverlayBar } from '$lib/bits'
+import { Button, Icon, OverlayBar } from '#lib/bits/index.js'
 // ICONS
-import SwatchIcon from 'virtual:icons/lucide/swatch-book'
+import SwatchIcon from 'virtual:icons/proicons/color-palette'
 
 type MapOverlayBarProps = {
   offsetX?: number
@@ -27,8 +31,9 @@ let {
 }: MapOverlayBarProps = $props()
 
 const responsiveCtx = getResponsiveCtx()
+const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const centerBottomOffset = $derived(
-  Math.max(24, responsiveCtx.menuClearanceHeight - bottomOffset + 24),
+  Math.max(24, surfaceLayout.menuClearanceHeight - bottomOffset + 24),
 )
 const hasVisibleControls = $derived(hasCardToggleTarget)
 </script>
@@ -45,9 +50,9 @@ const hasVisibleControls = $derived(hasCardToggleTarget)
     <Button
       text={m.mapbar__show_card()}
       icon={openCardIcon}
-      color="light"
-      style="soft"
-      class="z-130 border border-white/10 bg-black/70 shadow-lg backdrop-blur"
+      color="primary"
+      style="none"
+      class="z-130 shadow-lg"
       attrs={{ title: m.mapbar__show_card() }}
       onClick={onOpenCard}
     />

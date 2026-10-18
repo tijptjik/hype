@@ -1,16 +1,20 @@
 <script lang="ts">
 // ADAPTERS
-import { useImageEditorGalleryModel } from '$lib/adapters/image'
+import { useImageEditorGalleryModel } from '#lib/adapters/image/index.js'
 // BITS COMPONENTS
-import { Icon, ImageEditor, UserAttributionCard } from '$lib/bits'
+import { Icon, ImageEditor, UserAttributionCard } from '#lib/bits/index.js'
 import ImageMetadataCard from './components/ImageMetadataCard.svelte'
+import {
+  IMAGE_ATTRIBUTION_CLASSES,
+  IMAGE_METADATA_BUTTON_CLASSES,
+} from './components/imageChrome.styles'
 // CONTEXT
-import { getImageCtx } from '$lib/context/image.svelte'
+import { getImageCtx } from '#lib/context/image.svelte.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import CameraIcon from 'virtual:icons/lucide/camera'
-import LoaderCircle from 'virtual:icons/lucide/loader-circle'
+import CameraIcon from 'virtual:icons/proicons/camera'
+import LoaderCircle from 'virtual:icons/proicons/spinner'
 
 const model = useImageEditorGalleryModel(getImageCtx())
 </script>
@@ -45,7 +49,9 @@ const model = useImageEditorGalleryModel(getImageCtx())
   onIntentChange={model.actions.setIntent}
   onRetryUpload={model.actions.retryUpload}
 >
-  {#snippet leftRail(_item)}
+  {#snippet leftRail(
+    _item,
+  )}
     {#if model.state.activeImage}
       <UserAttributionCard
         userId={model.state.activeImage.image.contributorId}
@@ -53,12 +59,16 @@ const model = useImageEditorGalleryModel(getImageCtx())
         type="imageContributor"
         openDirection="right"
         isOpen={true}
+        class={IMAGE_ATTRIBUTION_CLASSES}
       />
     {/if}
   {/snippet}
 
-  {#snippet rightRail(_item)}
+  {#snippet rightRail(
+    _item,
+  )}
     {#if model.state.activeImage}
+      <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
       <div
         class="group/metadata relative"
         onmouseenter={() => {
@@ -70,7 +80,7 @@ const model = useImageEditorGalleryModel(getImageCtx())
       >
         <button
           type="button"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/85"
+          class={IMAGE_METADATA_BUTTON_CLASSES}
           aria-label={m.image__metadata_open()}
         >
           {#if model.state.isMetadataLoading}

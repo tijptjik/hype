@@ -1,22 +1,24 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // BITS
-import Button from '$lib/bits/core/button/Button.svelte'
-import Select from '$lib/bits/core/select/Select.svelte'
+import Button from '#lib/bits/core/button/Button.svelte'
+import Select from '#lib/bits/core/select/Select.svelte'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // ICONS
-import ArrowDownIcon from 'virtual:icons/lucide/arrow-down'
-import ArrowUpDownIcon from 'virtual:icons/lucide/arrow-up-down'
-import ArrowUpIcon from 'virtual:icons/lucide/arrow-up'
+import ArrowDownIcon from 'virtual:icons/proicons/arrow-down'
+import ArrowUpDownIcon from 'virtual:icons/proicons/arrow-up-down'
+import ArrowUpIcon from 'virtual:icons/proicons/arrow-up'
 // TYPES
 import type { ResourceSortControlProps } from './resourceSortControl.types'
 
 let {
   resource,
+  sorting: controlledSorting,
+  onSortingChange,
   sortables,
   onOpenChange,
   isOpen = $bindable(false),
@@ -28,7 +30,12 @@ let isOpening = $state(false)
 let openingTimeout: ReturnType<typeof setTimeout> | null = null
 let lastReportedOpenState = $state(isOpen)
 
-let sorting = $derived(adminCtx.appCtx.state.viewSorting[resource])
+let sorting = $derived(
+  controlledSorting ??
+    (resource
+      ? adminCtx.view.filters.sorting[resource]
+      : { sortBy: 'name', sortOrder: 'asc' as const }),
+)
 let sortDirectionIcon = $derived(
   sorting.sortOrder === 'desc' ? ArrowDownIcon : ArrowUpIcon,
 )
@@ -68,14 +75,24 @@ function toggleMenu(): void {
   isOpening = false
 }
 
+/**
+ * Updates the controlled sort or the current resource's stored sort.
+ * @param sortBy Selected field.
+ * @returns Nothing.
+ */
 function handleSortByChange(sortBy: string): void {
-  void adminCtx.setViewSorting(resource, { sortBy })
+  if (onSortingChange) onSortingChange({ ...sorting, sortBy })
+  else if (resource) void adminCtx.setViewSorting(resource, { sortBy })
 }
 
+/**
+ * Toggles direction for either a controlled list or the current resource.
+ * @returns Nothing.
+ */
 function handleSortOrderToggle(): void {
-  void adminCtx.setViewSorting(resource, {
-    sortOrder: sorting.sortOrder === 'desc' ? 'asc' : 'desc',
-  })
+  const sortOrder = sorting.sortOrder === 'desc' ? 'asc' : 'desc'
+  if (onSortingChange) onSortingChange({ ...sorting, sortOrder })
+  else if (resource) void adminCtx.setViewSorting(resource, { sortOrder })
 }
 
 $effect(() => {
@@ -124,8 +141,8 @@ $effect(() => {
         placeholder="Field"
         variant="default"
         class="bits-resource-sort__select text-sm"
-        triggerClass="bits-resource-sort__select-trigger h-9 px-2 text-sm"
-        contentClass="bits-resource-sort__select-content text-white"
+        triggerClass="min-w-[100px] w-auto h-9 px-2 text-sm"
+        contentClass="bits-resource-sort__select-content text-foreground"
         onValueChange={handleSortByChange}
       />
       <Button

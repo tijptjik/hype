@@ -1,10 +1,10 @@
 <script lang="ts">
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // SERVICES
-import { calculateStatusStatuses } from '$lib/client/services/stats'
+import { calculateStatusStatuses } from '#lib/client/services/stats.js'
 // ICONS
-import DatabaseIcon from 'virtual:icons/lucide/database'
+import DatabaseIcon from 'virtual:icons/proicons/database'
 // TYPES
 import type { FeatureStatsProps } from './featureStats.types'
 // COMPONENTS

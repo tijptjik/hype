@@ -2,7 +2,7 @@ import type {
   ParentSectionLayerItem,
   ParentSectionOrganisationItem,
   ParentSectionProjectItem,
-} from '$lib/bits/patterns/forms/formParentSection'
+} from '#lib/bits/patterns/forms/formParentSection/index.js'
 
 /********************
  *  TABLE OF CONTENTS

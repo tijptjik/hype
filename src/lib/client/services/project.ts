@@ -1,29 +1,25 @@
 // I18N
-import { toLocaleKebab, toFormLocaleRecord } from '$lib/i18n'
+import { toLocaleKebab, toFormLocaleRecord } from '#lib/i18n.js'
 // ENUMS
-import { OrganisationRoleType, ProjectRoleType } from '$lib/enums'
-import { normalizeProjectLicense as normalizeSharedProjectLicense } from '$lib/client/services/licence'
+import { OrganisationRoleType, ProjectRoleType } from '#lib/enums.js'
+import { normalizeProjectLicense as normalizeSharedProjectLicense } from '#lib/client/services/licence.js'
 // CAPABILITIES
 import {
   normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
-} from '$lib/capabilities'
+} from '#lib/capabilities.js'
 // SERVICES
 import {
   overrideResourceEntityBoolean,
   overrideResourceListItemBoolean,
-} from '$lib/client/services/resource'
+} from '#lib/client/services/resource.js'
 // TYPES
-import type {
-  CapabilityDefinitions,
-  CapabilityKey,
-  Locale,
-  LocaleKey,
-  ProjectLicense,
-} from '$lib/types'
-import type { Property } from '$lib/db/zod/schema/property.types'
-import type { User } from '$lib/db/zod/schema/user.types'
-import type { ProjectParentOrganisationScope } from '$lib/api/services/authz/project'
+import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
+import type { Locale, LocaleKey } from '#lib/types.js'
+import type { ProjectLicense } from '#lib/db/zod/schema/projectLicense.types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type { User } from '#lib/db/zod/schema/user.types.js'
+import type { ProjectParentOrganisationScope } from '#lib/api/services/authz/project.js'
 import type {
   Project,
   ProjectBooleanField,
@@ -32,7 +28,7 @@ import type {
   ProjectOwnerRoleSeedOrganisation,
   ProjectRoleCapabilities,
   ProjectSubmitUpdatesParams,
-} from '$lib/db/zod/schema/project.types'
+} from '#lib/db/zod/schema/project.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -63,7 +59,14 @@ import type {
 //    - toUserRolesForCapabilityToggle
 
 function normalizeProjectFormLocale(
-  locale: Partial<ProjectFormInput['data']['i18n']['en']> | null | undefined,
+  locale:
+    | {
+        [K in keyof ProjectFormInput['data']['i18n']['en']]?:
+          | ProjectFormInput['data']['i18n']['en'][K]
+          | null
+      }
+    | null
+    | undefined,
 ): ProjectFormInput['data']['i18n']['en'] {
   return {
     name: locale?.name ?? '',
@@ -274,6 +277,12 @@ export function normalizeProjectLayersForSubmit(
     }))
 }
 
+/**
+ * Builds the canonical editor baseline from committed project data.
+ * @param data - Committed project, or null for creation.
+ * @param defaults - Parent defaults for a new project.
+ * @returns Form input with the same layer ordering and ranks as the editable section.
+ */
 export function toProjectFormInput(
   data?: Project | null,
   defaults?: ProjectFormDefaults,
@@ -323,11 +332,18 @@ export function toProjectFormInput(
         capabilities: normalizeProjectRoleCapabilities(userRole.capabilities),
       })),
       properties: cloneProjectProperties(data.properties),
-      layers: (data.layers ?? []).map(layer => ({
-        id: layer.id,
-        rank: layer.rank ?? 0,
-        isDefaultVisible: Boolean(layer.isDefaultVisible),
-      })),
+      // Match the editable section's active, sorted, densely ranked layer projection.
+      layers: (data.layers ?? [])
+        .filter(layer => !layer.isArchived)
+        .sort(
+          (left, right) =>
+            (left.rank ?? 0) - (right.rank ?? 0) || left.id.localeCompare(right.id),
+        )
+        .map((layer, rank) => ({
+          id: layer.id,
+          rank,
+          isDefaultVisible: Boolean(layer.isDefaultVisible),
+        })),
     },
   }
 }

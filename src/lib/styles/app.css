@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./bits.css";
+@import "./themes.css";
 
 /* Plugins */
 @plugin "tailwindcss-animate";
@@ -39,53 +40,12 @@
   --font-alt: "IBM Plex Mono", monospace;
   --font-display: "Neon Tilt", sans-serif;
 
-  --color-primary: #f04d7f;
-  --color-primary-content: #d4dbff;
-  --color-secondary: #d653b9;
-  --color-secondary-content: #190211;
-  --color-accent: #7042f0;
-  --color-accent-content: #262601;
-  --color-neutral: #2a323c;
-  --color-neutral-content: #a6adbb;
-  --color-base-50: #3f4752;
-  --color-base-100: #1d232a;
-  --color-base-200: #191e24;
-  --color-base-300: #15191e;
-  --color-base-350: #161617;
-  --color-base-400: #101214;
-  --color-base-content: #f7e7ef;
-  --color-info: #6fbcff;
-  --color-info-content: #1d232a;
-  --color-success: #47ffcc;
-  --color-success-content: #1d232a;
-  --color-warning: #f7e1a0;
-  --color-warning-content: #1d232a;
-  --color-error: #ff5b5b;
-  --color-error-content: #1d232a;
-
   --color-map-primary: #cb37c1;
   --color-map-base: #4987e2;
 
-  --color-glass-100: #7d475f;
-  --color-glass-200: #b07b8582;
-  --color-glass-300: #20191e8c;
-  --color-glass-300-solid: #20191e;
-  --color-glass-warning: #ff9b9b;
-  --color-glass-result: #3c2638e6;
-  --color-glass-neutral: #262626c7;
-  --color-glass-rejected: #ff7b7b;
-  --color-glass-accepted: #6ba279;
-  --color-glass-salmon: #ffad9a;
-  --color-glass-salmon-dark: #2b092282;
-  --color-glass-base: rgb(88 85 113 / 71%);
-  --color-light: rgb(255 173 154 / 1);
   --color-dark: #101214;
   --color-gradient-end: hsl(var(--fuchsia-800));
   --color-gradient-start: hsl(var(--rose-500));
-  --color-secondary: #7482ff;
-  --color-ok: rgb(62 173 142);
-  --color-pending: #e0c285;
-  --color-error: #ff5b5b;
 
   /* NAV Colour System */
   --color-accent-soft-hover-bg: color-mix(
@@ -159,7 +119,16 @@
 }
 
 @custom-variant dark (
-  &:where(.dark, .dark *, [data-theme="spectre"], [data-theme="spectre"] *)
+  &:where(
+    .dark,
+    .dark *,
+    [data-theme="hype-black"],
+    [data-theme="hype-black"] *,
+    [data-theme="hype-dark"],
+    [data-theme="hype-dark"] *,
+    [data-theme="breadline-dark"],
+    [data-theme="breadline-dark"] *
+  )
 );
 
 @custom-variant h-160 {
@@ -339,7 +308,6 @@
 }
 
 @layer utilities {
-  /*biome-ignore lint: biome bug */
   .bg-grain::before {
     content: "";
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'%3E%3Cfilter id='a'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)'/%3E%3C/svg%3E");

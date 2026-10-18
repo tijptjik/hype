@@ -1,12 +1,12 @@
 // ENUMS
-import { ImageEnv } from '$lib/enums'
+import { ImageEnv } from '#lib/enums.js'
 import { AwsClient } from 'aws4fetch'
 // TYPES
 import type {
   ImageMetadataBasic,
   ImageMetadataFull,
   ImageMetadataProfile,
-} from '$lib/db/zod/schema/image.types'
+} from '#lib/db/zod/schema/image.types.js'
 import { error } from '@sveltejs/kit'
 
 type ImageStage = `${ImageEnv}`

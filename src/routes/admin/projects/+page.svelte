@@ -1,34 +1,44 @@
 <script lang="ts">
+import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 import { page } from '$app/state'
 // CONTEXT
-import { getAdminCtx } from '$lib/context/admin.svelte'
-import { getHeaderCtrl } from '$lib/context/header.svelte'
-import { createAdminIndexCardModel } from '$lib/adapters/cards/createAdminIndexCardModel'
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
+import { getHeaderCtrl } from '#lib/context/header.svelte.js'
+import { createAdminIndexCardModel } from '#lib/adapters/cards/createAdminIndexCardModel.js'
 // SERVICES
 import {
   createSortable,
   createSortables,
   createToggleFilter,
   createTranslationFilter,
-} from '$lib/client/services/filters'
+} from '#lib/client/services/filters.js'
 // BITS PATTERNS
-import { IndexCard, ResourceControlBar, ResourceIndex, ResourceRow } from '$lib/bits'
+import {
+  IndexCard,
+  ResourceControlBar,
+  ResourceIndex,
+  ResourceRow,
+} from '#lib/bits/index.js'
 // ENUMS
-import { FirstClassResource } from '$lib/enums'
+import { FirstClassResource } from '#lib/enums.js'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // AUTHORIZATION
-import { canCreateAnyProject, toProjectAuthActor } from '$lib/api/services/authz'
+import {
+  canCreateAnyProject,
+  toProjectAuthActor,
+} from '#lib/api/services/authz/index.js'
 // ICONS
-import ProjectIcon from 'virtual:icons/lucide/layout-grid'
-import StatusIcon from 'virtual:icons/lucide/circle-dot-dashed'
-import BookOpenIcon from 'virtual:icons/lucide/book-open'
-import LanguagesIcon from 'virtual:icons/lucide/languages'
-import ImageIcon from 'virtual:icons/lucide/image'
-import CopyleftIcon from 'virtual:icons/lucide/copyright'
+import ProjectIcon from 'virtual:icons/proicons/grid'
+import StatusIcon from 'virtual:icons/proicons/target'
+import BookOpenIcon from 'virtual:icons/proicons/book-open'
+import LanguagesIcon from 'virtual:icons/tabler/language'
+import ImageIcon from 'virtual:icons/proicons/photo'
+import CopyleftIcon from 'virtual:icons/proicons/copyright'
 // TYPES
-import type { KeyMap, ResourceControlBarConfig } from '$lib/types'
-import type { Project } from '$lib/db/zod/schema/project.types'
+import type { KeyMap } from '#lib/client/services/resourceCards.types.js'
+import type { ResourceControlBarConfig } from '#lib/client/services/resourceFilters.types.js'
+import type { Project } from '#lib/db/zod/schema/project.types.js'
 
 // CONFIG :: KEY MAP
 const keyMap: KeyMap = {
@@ -66,13 +76,13 @@ const filters = {
       filters: [
         createToggleFilter('isPublished', {
           label: m.published(),
-          falseLabel: m.filters__is(),
-          trueLabel: m.filters__not(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
         }),
         createToggleFilter('isArchived', {
           label: m.bad_swift_cheetah_surge(),
-          falseLabel: m.filters__is(),
-          trueLabel: m.filters__not(),
+          falseLabel: m.filters__not(),
+          trueLabel: m.filters__is(),
           superAdminOnly: true,
         }),
       ],
@@ -187,8 +197,8 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.project)
 
-const currentUser = $derived(adminCtx.appCtx.getUser())
-const currentHub = $derived(adminCtx.appCtx.hub)
+const currentUser = $derived(adminCtx.view.account.user)
+const currentHub = $derived(adminCtx.view.hub)
 const currentActor = $derived(toProjectAuthActor(currentUser))
 
 const canCreateProject = $derived.by(() =>
@@ -211,16 +221,23 @@ $effect(() => {
       sortables,
     },
     {
-      isVisible:
-        adminCtx.appCtx.state.ui.isControlBarVisible[FirstClassResource.project],
+      isVisible: adminCtx.listUi.state.isControlBarVisible[FirstClassResource.project],
     },
   )
   headerCtrl.clearFooter()
 })
 
 // STATE
+const resourceList = usePanelResources(
+  adminCtx.view,
+  'project',
+  () => adminCtx.view.filters.values.project.text ?? '',
+  'index',
+)
 let entities: Project[] = $derived(
-  adminCtx.getViewFilteredResource<Project>(FirstClassResource.project),
+  adminCtx.view.filters.applyProjectViewFilters(
+    resourceList.rows as unknown as Project[],
+  ) as Project[],
 )
 
 function getIndexModel(entity: Project) {
@@ -234,11 +251,23 @@ function getIndexModel(entity: Project) {
 }
 </script>
 
-<ResourceIndex resource={FirstClassResource.project} {entities}>
-  {#snippet card(entity: Project)}
+<ResourceIndex
+  isInitialised={resourceList.list.isInitialised}
+  onNearEnd={() => resourceList.list.next()}
+  hasMore={resourceList.list.hasMore}
+  isLoadingMore={resourceList.list.loading}
+  resource={FirstClassResource.project}
+  {entities}
+>
+  {#snippet card(
+    entity: Project,
+  )}
     <IndexCard {...getIndexModel(entity)} />
   {/snippet}
-  {#snippet row(entity: Project, index)}
+  {#snippet row(
+    entity: Project,
+    index,
+  )}
     <ResourceRow {index} breadcrumbColumnCount={1} {...getIndexModel(entity)} />
   {/snippet}
 </ResourceIndex>

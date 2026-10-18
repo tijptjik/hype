@@ -1,7 +1,14 @@
 // @vitest-environment node
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Panel query registration is isolated from this resource's authorization fixtures.
+vi.mock('#lib/api/resources.remote.js', () => ({}))
 import { createAuthzMatrixReporter } from './authz-matrix-report'
-import { withRemoteMeta } from './remote-function-mock'
+import { mockedRemoteModule, withRemoteMeta } from './remote-function-mock'
+// API
+import * as remoteModule from '#lib/api/layer.remote.js'
+const remote = mockedRemoteModule(remoteModule)
+import { authorizeLayerUpdateForSubmission } from '#lib/api/services/authz/layer.js'
 
 type MockDecision = {
   allowed: boolean
@@ -49,7 +56,9 @@ const {
   mockAuthorizeLayerCreateForSubmission: vi.fn<() => MockDecision>(() => ({
     allowed: true,
   })),
-  mockAuthorizeLayerUpdateForSubmission: vi.fn<() => MockDecision>(() => ({
+  mockAuthorizeLayerUpdateForSubmission: vi.fn<
+    typeof authorizeLayerUpdateForSubmission
+  >(() => ({
     allowed: true,
   })),
   mockAuthorizeLayerPublishForSubmission: vi.fn<() => MockDecision>(() => ({
@@ -102,7 +111,7 @@ const {
   mockGuardedContext: vi.fn(),
 }))
 
-vi.mock('$lib/api/server/remote', () => ({
+vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
       return (handler as (payload: unknown, ctx: unknown) => Promise<unknown>)(
@@ -162,11 +171,11 @@ vi.mock('@sveltejs/kit', () => ({
   },
 }))
 
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api/index.js', () => ({
   getValidQueryParams: (_table: unknown, params: unknown) => params,
 }))
 
-vi.mock('$lib/api/services', () => ({
+vi.mock('#lib/api/services/index.js', () => ({
   getDuplicateValues: (values: string[]) => {
     const seen = new Set<string>()
     const duplicates: string[] = []
@@ -198,8 +207,8 @@ vi.mock('$lib/api/services', () => ({
   }),
 }))
 
-vi.mock('$lib/api/services/layer', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/api/services/layer')>()
+vi.mock('#lib/api/services/layer.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/api/services/layer.js')>()
   return {
     ...actual,
     getLayerWithRelations: mockGetLayerWithRelations,
@@ -214,7 +223,8 @@ vi.mock('$lib/api/services/layer', async importOriginal => {
   }
 })
 
-vi.mock('$lib/api/services/authz', () => ({
+vi.mock('#lib/api/services/authz/index.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('#lib/api/services/authz/index.js')>()),
   authorizeLayerCreateForSubmission: mockAuthorizeLayerCreateForSubmission,
   authorizeLayerDeleteForSubmission: mockAuthorizeLayerDeleteForSubmission,
   authorizeLayerListForContext: mockAuthorizeLayerListForContext,
@@ -239,7 +249,7 @@ vi.mock('$lib/api/services/authz', () => ({
   toIssueDetailMessage: (code: string) => code,
 }))
 
-vi.mock('$lib/db/services/layer', () => ({
+vi.mock('#lib/db/services/layer.js', () => ({
   createI18n: mockCreateI18n,
   createLayer: mockCreateLayer,
   getLayer: mockLoadLayer,
@@ -256,13 +266,13 @@ vi.mock('$lib/db/services/layer', () => ({
   updateLayerPublishedStateById: mockUpdateLayerPublishedStateById,
 }))
 
-vi.mock('$lib/db/services/project', () => ({
+vi.mock('#lib/db/services/project.js', () => ({
   probeProjectForUpdate: mockProbeProjectForUpdate,
 }))
 
-vi.mock('$lib/db/schema', async importOriginal => await importOriginal())
+vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
-vi.mock('$lib/db/zod', () => ({
+vi.mock('#lib/db/zod/index.js', () => ({
   GetQueryParamsSchema: {},
   LayerFormData: { parse: (value: unknown) => value },
   ListQueryParamsSchema: {},
@@ -270,15 +280,13 @@ vi.mock('$lib/db/zod', () => ({
   RemoveLayerSchema: {},
 }))
 
-vi.mock('$lib/i18n', async importOriginal => {
-  const actual = await importOriginal<typeof import('$lib/i18n')>()
+vi.mock('#lib/i18n.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/i18n.js')>()
   return {
     ...actual,
     getLocale: vi.fn(() => 'en'),
   }
 })
-
-let remote: any
 
 const matrix = createAuthzMatrixReporter('layer.remote')
 
@@ -303,9 +311,8 @@ afterAll(() => {
 })
 
 describe('layer.remote authz matrix', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-    remote = await import('$lib/api/server/layer.remote')
+  beforeEach(() => {
+    // Reuse the stateless handlers; reset their mocked dependencies for each case.
     vi.clearAllMocks()
 
     mockAuthorizeLayerListForContext.mockReturnValue({ allowed: true })
@@ -384,6 +391,54 @@ describe('layer.remote authz matrix', () => {
       isArchived: true,
     })
   })
+
+  it.each([false, true])(
+    'translator layer update checks actual property changes (changed=%s)',
+    async propertiesChanged => {
+      mockAuthorizeLayerUpdateForSubmission.mockImplementation(
+        authorizeLayerUpdateForSubmission,
+      )
+      mockGuardedContext.mockResolvedValue({
+        ...(await mockGuardedContext()),
+        userRoles: [{ type: 'project', role: 'translator', projectId: 'project-1' }],
+      })
+      const properties = [{ propertyId: 'property-1', isVisible: true }]
+      mockLoadLayer.mockResolvedValue({
+        id: 'layer-1',
+        i18n: { en: { name: 'Layer' } },
+        properties,
+        isDefaultVisible: false,
+      })
+      const submission = remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            projectId: 'project-1',
+            metadata: { zoom: 10 },
+            isDefaultVisible: false,
+            i18n: { en: { name: 'Translated layer' } },
+            properties: propertiesChanged
+              ? [{ propertyId: 'property-1', isVisible: false }]
+              : properties,
+          },
+        },
+        throwingInvalid,
+      )
+      if (propertiesChanged) {
+        await expect(submission).rejects.toThrow('FIELD_FORBIDDEN')
+        expect(mockUpdateLayerByIdWithConcurrency).not.toHaveBeenCalled()
+        expect(mockUpdateI18n).not.toHaveBeenCalled()
+      } else {
+        await expect(submission).resolves.toMatchObject({ data: { id: 'layer-1' } })
+        expect(mockUpdateI18n).toHaveBeenCalled()
+      }
+      expect(mockUpdateProperties).not.toHaveBeenCalled()
+    },
+  )
 
   it('getLayers denies when list authz denies', async () => {
     mockAuthorizeLayerListForContext.mockReturnValue({
@@ -521,6 +576,61 @@ describe('layer.remote authz matrix', () => {
       expected: true,
       actual: true,
     })
+  })
+
+  it('layerForm update rejects reparenting before probing the target project', async () => {
+    await expect(
+      remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            projectId: 'foreign-project',
+            metadata: { zoom: 11 },
+            isDefaultVisible: false,
+            properties: [],
+            i18n: { en: { name: 'Layer' } },
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('FIELD_FORBIDDEN')
+
+    expect(mockProbeProjectForUpdate).not.toHaveBeenCalled()
+    expect(mockLoadLayer).not.toHaveBeenCalled()
+  })
+
+  it('layerForm update authorizes before loading the relation graph', async () => {
+    mockAuthorizeLayerUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+
+    await expect(
+      remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            projectId: 'project-1',
+            metadata: { zoom: 11 },
+            isDefaultVisible: true,
+            properties: [],
+            i18n: { en: { name: 'Layer' } },
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('INSUFFICIENT_ROLE')
+
+    expect(mockLoadLayer).not.toHaveBeenCalled()
+    expect(mockUpdateLayerByIdWithConcurrency).not.toHaveBeenCalled()
   })
 
   it('publishLayer denies when publish authz denies', async () => {

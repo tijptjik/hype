@@ -1,8 +1,8 @@
-import { dev } from '$app/environment'
-import { error, json, type RequestHandler } from '@sveltejs/kit'
+import { dev } from '$app/env'
+import { error, type RequestHandler } from '@sveltejs/kit'
 
-import { isMapStyleKey } from '$lib/map/styles'
-import { getMapRenderRemoteConfig } from '$lib/api/services/render'
+import { isMapStyleKey } from '#lib/map/styles/index.js'
+import { getMapRenderRemoteConfig } from '#lib/api/services/render.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -78,7 +78,7 @@ const ensureLocalRenderRuntime = (platform?: App.Platform): void => {
  * @returns Local render runtime module used by the preview API.
  */
 const loadLocalRenderRuntime = async () =>
-  await import('$lib/map/styles/render.local.server')
+  await import('#lib/map/styles/render.local.server.js')
 
 // ---
 /********************
@@ -92,7 +92,8 @@ const loadLocalRenderRuntime = async () =>
  * @param event - SvelteKit request event carrying the preview style key and platform bindings.
  * @returns JSON payload describing whether the render exists or is queued locally.
  */
-export const GET: RequestHandler = async ({ params, platform }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
+  const { platform } = locals
   const key = requireMapStyleKey(params.key)
   ensureLocalRenderRuntime(platform)
 
@@ -100,7 +101,7 @@ export const GET: RequestHandler = async ({ params, platform }) => {
     await loadLocalRenderRuntime()
   const remoteConfig = getMapRenderRemoteConfig(platform)
 
-  return json({
+  return Response.json({
     key,
     exists: await doesMapStyleRenderExistLocally(key, { remoteConfig, stage: 'local' }),
     pending: isMapStyleRenderGenerationPendingLocally(key),
@@ -114,7 +115,8 @@ export const GET: RequestHandler = async ({ params, platform }) => {
  * @param event - SvelteKit request event carrying the preview style key, platform bindings, and origin URL.
  * @returns JSON payload describing the resulting local render status.
  */
-export const POST: RequestHandler = async ({ params, platform, url }) => {
+export const POST: RequestHandler = async ({ params, url, locals }) => {
+  const { platform } = locals
   const key = requireMapStyleKey(params.key)
   ensureLocalRenderRuntime(platform)
 
@@ -145,7 +147,7 @@ export const POST: RequestHandler = async ({ params, platform, url }) => {
     })
   }
 
-  return json({
+  return Response.json({
     key,
     exists,
     pending: !exists || pending,

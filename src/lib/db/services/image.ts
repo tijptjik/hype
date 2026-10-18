@@ -1,9 +1,13 @@
+// SVELTEKIT
+import { error } from '@sveltejs/kit'
 // DRIZZLE
 import {
   and,
   asc,
   desc,
   eq,
+  exists,
+  ne,
   getTableColumns,
   inArray,
   type AnyColumn,
@@ -29,11 +33,11 @@ import {
   ImageContextResourceExtended,
   ImageEnv,
   ImageIntentPublic,
-} from '$lib/enums'
+} from '#lib/enums.js'
 // DB
-import { autochunk } from '$lib/utils/batch-query'
+import { autochunk, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // TYPES
-import type { Id, Database, EntityResponse } from '$lib/types'
+import type { Id, Database, EntityResponse } from '#lib/types.js'
 import type {
   FeatureImage,
   FeatureImageDB,
@@ -49,8 +53,8 @@ import type {
   ImageListByProfile,
   ImageProfile,
   Intent,
-} from '$lib/db/zod/schema/image.types'
-import { ImageListProfileAPI, ImageAdminProfileAPI } from '$lib/db/zod'
+} from '#lib/db/zod/schema/image.types.js'
+import { ImageListProfileAPI, ImageAdminProfileAPI } from '#lib/db/zod/index.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -58,6 +62,7 @@ import { ImageListProfileAPI, ImageAdminProfileAPI } from '$lib/db/zod'
 //
 // 1. CRUD :: CORE OPERATIONS
 //    - createImage
+//    - createUploadedImage
 //    - updateImage
 //
 // 2. CRUD :: RELATIONAL OPERATIONS
@@ -99,6 +104,36 @@ export const createImage = async (db: Database, data: ImageDBNew): Promise<Image
   await insert(db, image, data)
 
 /**
+ * Creates one image row per direct-upload storage identity, including concurrent retries.
+ * @param db Database handle.
+ * @param data Verified upload image data.
+ * @returns The inserted or previously persisted image.
+ * @remarks Existing metadata and moderation state are never overwritten by a retry.
+ */
+export const createUploadedImage = async (
+  db: Database,
+  data: ImageDBNew,
+): Promise<ImageDB> => {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(
+      JSON.stringify([data.env ?? ImageEnv.local, data.publicId]),
+    ),
+  )
+  const id = `upload-${Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')}`
+  // The primary key arbitrates concurrent confirmations without a read-before-write race.
+  const [created] = await db
+    .insert(image)
+    .values({ ...data, id })
+    .onConflictDoNothing({ target: image.id })
+    .returning()
+  if (created) return created as ImageDB
+  const [existing] = await db.select().from(image).where(eq(image.id, id)).limit(1)
+  if (!existing) throw new Error('Uploaded image disappeared during confirmation')
+  return existing as ImageDB
+}
+
+/**
  * Updates an existing image in the database
  * @param db - The database instance
  * @param data - The updated image data
@@ -116,16 +151,54 @@ export const updateImage = async (
 // 2. CRUD :: RELATIONAL OPERATIONS
 // ═══════════════════════
 
+/**
+ * Creates a feature-image association, optionally preserving it on upload retries.
+ * @param db Database handle.
+ * @param newFeatureImage Association data.
+ * @param imageId Image to associate.
+ * @param preserveExisting Whether an existing assignment must remain unchanged.
+ * @returns The persisted association.
+ */
 export const createFeatureImage = async (
   db: Database,
   newFeatureImage: FeatureImage,
   imageId: Id,
-): Promise<FeatureImageDB> =>
-  await insertRelated(db, featureImage, newFeatureImage, 'imageId', imageId)
+  preserveExisting = false,
+): Promise<FeatureImageDB> => {
+  if (!preserveExisting)
+    return await insertRelated(db, featureImage, newFeatureImage, 'imageId', imageId)
+  // Retrying attachment must not reset a review decision made after the first insert.
+  const [created] = await db
+    .insert(featureImage)
+    .values({ ...newFeatureImage, imageId })
+    .onConflictDoNothing({ target: [featureImage.featureId, featureImage.imageId] })
+    .returning()
+  if (created) return created as FeatureImageDB
+  const [existing] = await db
+    .select()
+    .from(featureImage)
+    .where(
+      and(
+        eq(featureImage.featureId, newFeatureImage.featureId),
+        eq(featureImage.imageId, imageId),
+      ),
+    )
+    .limit(1)
+  if (!existing) throw new Error('Feature image disappeared during attachment')
+  return existing as FeatureImageDB
+}
 
+/**
+ * Updates image assignment fields, replacing canonical intent atomically.
+ * @param db Database connection.
+ * @param modifiedFeatureImage Assignment fields and owning feature ID.
+ * @param imageId Image assignment to update.
+ * @returns The persisted assignment.
+ * @remarks Canonical replacement must not demote the previous image if promotion fails.
+ */
 export const updateFeatureImage = async (
   db: Database,
-  modifiedFeatureImage: ImageDBFlatUpdate,
+  modifiedFeatureImage: Omit<ImageDBFlatUpdate, 'imageId'>,
   imageId: string,
 ): Promise<FeatureImageDB> => {
   // Extract only the featureImage-specific fields
@@ -141,6 +214,36 @@ export const updateFeatureImage = async (
     featureImageData.publishedAt = modifiedFeatureImage.publishedAt
   }
 
+  if (featureImageData.intent === 'canonical') {
+    const target = and(
+      eq(featureImage.imageId, imageId),
+      eq(featureImage.featureId, modifiedFeatureImage.featureId),
+    )
+    // D1 batches roll back both statements if promotion fails; missing targets must
+    // leave the current canonical assignment intact as well.
+    const [, updated] = await db.batch([
+      db
+        .update(featureImage)
+        .set({ intent: 'undefined' })
+        .where(
+          and(
+            eq(featureImage.featureId, modifiedFeatureImage.featureId),
+            eq(featureImage.intent, 'canonical'),
+            ne(featureImage.imageId, imageId),
+            exists(
+              db
+                .select({ imageId: featureImage.imageId })
+                .from(featureImage)
+                .where(target),
+            ),
+          ),
+        ),
+      db.update(featureImage).set(featureImageData).where(target).returning(),
+    ])
+    if (!updated[0]) throw error(404, 'Feature image assignment not found')
+    return updated[0]
+  }
+
   return await updateRelated(
     db,
     featureImage,
@@ -152,17 +255,33 @@ export const updateFeatureImage = async (
   )
 }
 
+/**
+ * Attaches images to a task without duplicating existing associations.
+ * @param db Database handle.
+ * @param taskId Task receiving the images.
+ * @param imageIds Image identifiers to attach.
+ * @returns Nothing after all associations have been persisted.
+ * @remarks Bounded inserts can be retried safely after a partially completed request.
+ */
 export const createTaskImagesFromImageIds = async (
   db: Database,
   taskId: string,
   imageIds: string[],
-) => {
-  await db.insert(taskImage).values(
-    imageIds.map(imageId => ({
-      taskId,
-      imageId,
-    })),
-  )
+): Promise<void> => {
+  const uniqueImageIds = [...new Set(imageIds)]
+  // Each join row binds two columns; leave every insert within the D1 budget.
+  const batchSize = Math.floor(SQL_BATCH_SIZE / 2)
+  for (let offset = 0; offset < uniqueImageIds.length; offset += batchSize) {
+    await db
+      .insert(taskImage)
+      .values(
+        uniqueImageIds.slice(offset, offset + batchSize).map(imageId => ({
+          taskId,
+          imageId,
+        })),
+      )
+      .onConflictDoNothing({ target: [taskImage.taskId, taskImage.imageId] })
+  }
 }
 
 /**
@@ -258,6 +377,14 @@ export const getFeatureCanonicalImageOccupancy = async (
   return [...new Set(rows.map(row => row.featureId))]
 }
 
+/**
+ * Loads images and their assignments in bounded ID batches.
+ * @param db Database handle.
+ * @param imageIds Requested image IDs.
+ * @param conditions Additional visibility or query conditions.
+ * @returns Matching image-assignment rows across all batches.
+ * @remarks Duplicate input IDs are ignored; multiple feature assignments are preserved.
+ */
 export const getImagesByIds = async (
   db: Database,
   imageIds: string[],
@@ -265,30 +392,39 @@ export const getImagesByIds = async (
 ): Promise<ImageDBFlat[]> => {
   if (imageIds.length === 0) return []
 
-  // Always filter by the provided image IDs
-  const allConditions = [inArray(image.id, imageIds), ...conditions]
-
-  const results = await db
-    .select({
-      ...getTableColumns(image),
-      intent: featureImage.intent,
-      isPublished: featureImage.isPublished,
-      publishedAt: featureImage.publishedAt,
-      publisherId: featureImage.publisherId,
-      attribution: user.attribution,
-      // Feature context fields
-      organisationId: feature.organisationId,
-      projectId: feature.projectId,
-      layerId: feature.layerId,
-      featureId: feature.id,
-    })
+  // Budget the actual compiled filter parameters before allocating ID placeholders.
+  const otherParametersCount = db
+    .select({ id: image.id })
     .from(image)
-    .leftJoin(featureImage, eq(image.id, featureImage.imageId))
-    .leftJoin(feature, eq(featureImage.featureId, feature.id))
-    .leftJoin(user, eq(image.contributorId, user.id))
-    .where(and(...allConditions))
+    .where(and(...conditions))
+    .toSQL().params.length
+  return await autochunk(
+    { items: [...new Set(imageIds)], otherParametersCount },
+    async idChunk => {
+      // Always filter by the provided image IDs and retain every caller-supplied condition.
+      const results = await db
+        .select({
+          ...getTableColumns(image),
+          intent: featureImage.intent,
+          isPublished: featureImage.isPublished,
+          publishedAt: featureImage.publishedAt,
+          publisherId: featureImage.publisherId,
+          attribution: user.attribution,
+          // Feature context fields
+          organisationId: feature.organisationId,
+          projectId: feature.projectId,
+          layerId: feature.layerId,
+          featureId: feature.id,
+        })
+        .from(image)
+        .leftJoin(featureImage, eq(image.id, featureImage.imageId))
+        .leftJoin(feature, eq(featureImage.featureId, feature.id))
+        .leftJoin(user, eq(image.contributorId, user.id))
+        .where(and(inArray(image.id, idChunk), ...conditions))
 
-  return results as ImageDBFlat[]
+      return results as ImageDBFlat[]
+    },
+  )
 }
 
 export const getImageForContextType = async (

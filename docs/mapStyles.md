@@ -13,8 +13,8 @@ rendered into preview PNGs, and then synced into D1 so projects can assign them.
     project assignment.
 - `src/lib/map/styles/i18n.ts`
   - Provides localized catalog copy used by admin UI and DB sync.
-- `src/lib/types.ts`
-  - `MapStyleCatalogKey` must include the new style key.
+- `src/lib/map/styles/catalog.ts`
+  - `MapStyleCatalogKey` and marker theme contracts live with the map catalog.
 - `static/mapStyles`
   - Generated immutable JSON artifacts plus `manifest.json`.
 - `scripts/generate-map-style-renders.ts`
@@ -28,7 +28,7 @@ rendered into preview PNGs, and then synced into D1 so projects can assign them.
 2. Import that builder into `src/lib/map/styles/catalog.ts`.
 3. Add a `MAP_STYLE_CATALOG` entry.
 4. Add localized copy in `src/lib/map/styles/i18n.ts`.
-5. Add the key to `MapStyleCatalogKey` in `src/lib/types.ts`.
+5. Add the key to `MapStyleCatalogKey` in `src/lib/map/styles/catalog.ts`.
 6. Add translation messages in `messages/en.json`, `messages/zh-hans.json`, and
    `messages/zh-hant.json`.
 7. Add or update tests in `src/tests/map-styles.test.ts`.

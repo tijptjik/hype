@@ -1,5 +1,6 @@
 // SHARED AUTH CONFIGURATION
 // This config is used by both development and runtime auth files
+import type { BetterAuthOptions } from 'better-auth'
 
 export const authConfig = {
   // ID
@@ -7,13 +8,14 @@ export const authConfig = {
 
   // SESSION
   session: {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    expiresIn: 30 * 24 * 60 * 60, // 30 days
     updateAge: 24 * 60 * 60, // update session age every 24 hours
     cookieCache: {
       // signed cookie
       enabled: true,
-      // Keep normal navigation and the app's concurrent remote reads off D1. Sensitive
-      // server operations can opt out with Better Auth's `disableCookieCache` option.
+      // Cache the session payload to avoid repeated session-table reads. Account
+      // availability is still checked on every authenticated auth request. Sensitive
+      // operations can opt out with Better Auth's `disableCookieCache` option.
       maxAge: 5 * 60, // 5 min
     },
   },
@@ -39,10 +41,9 @@ export const authConfig = {
     max: 100,
     customRules: {
       '/sign-in/anonymous': { window: 60, max: 10 },
-      // Keep the route identity explicit; the delegated Better Auth endpoint is
-      // included below because its internal request path is `/set-password`.
-      '/api/account/password': { window: 60, max: 5 },
-      '/set-password': { window: 60, max: 5 },
+      // The app password route delegates through the HTTP router at this path.
+      // Server-only auth.api.setPassword calls do not execute the rate limiter.
+      '/account-password': { window: 60, max: 5 },
     },
   },
 
@@ -77,6 +78,7 @@ export const authConfig = {
     'https://breadline.preview.hype.hk',
     // DEV
     'http://localhost:5173',
+    'http://hype.localhost',
     'https://dove-main-tapir.ngrok-free.app',
     'http://192.168.1.100.traefik.me:5173',
   ],
@@ -90,6 +92,12 @@ export const authConfig = {
       updateEmailWithoutVerification: true,
     },
     additionalFields: {
+      telephone: {
+        type: 'string' as const,
+        required: false,
+        // Phone completion validates and persists this field through its server action.
+        input: false as const,
+      },
       locale: {
         type: 'string' as const,
         required: true,
@@ -101,6 +109,8 @@ export const authConfig = {
       },
       isArchived: {
         type: 'boolean' as const,
+        // Account lifecycle state is changed only by trusted server workflows.
+        input: false as const,
         required: true,
         defaultValue: false,
       },
@@ -121,6 +131,8 @@ export const authConfig = {
       },
       isAnonymous: {
         type: 'boolean' as const,
+        // Promotion requires a verified credential, never a client profile update.
+        input: false as const,
         required: true,
         defaultValue: false,
       },
@@ -128,4 +140,4 @@ export const authConfig = {
       // Layer defaults are loaded separately from the session bootstrap path.
     },
   },
-}
+} satisfies BetterAuthOptions

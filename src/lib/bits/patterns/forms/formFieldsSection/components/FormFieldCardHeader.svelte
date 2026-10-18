@@ -2,20 +2,20 @@
 // SVELTE
 import { fade } from 'svelte/transition'
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ICONS
-import ChevronDown from 'virtual:icons/lucide/chevron-down'
-import ChevronUp from 'virtual:icons/lucide/chevron-up'
+import ChevronDown from 'virtual:icons/proicons/chevron-down'
+import ChevronUp from 'virtual:icons/proicons/chevron-up'
 import CopyCheck from 'virtual:icons/lucide/copy-check'
-import Languages from 'virtual:icons/lucide/languages'
-import Plus from 'virtual:icons/lucide/plus'
-import Trash2 from 'virtual:icons/lucide/trash-2'
+import Languages from 'virtual:icons/tabler/language'
+import Plus from 'virtual:icons/proicons/add'
+import Trash2 from 'virtual:icons/proicons/delete'
 // COMPONENTS
-import { Button, DestructiveDialog, SimpleTooltip } from '$lib/bits/core'
-import Switch from '$lib/bits/custom/switch/Switch.svelte'
+import { Button, DestructiveDialog, SimpleTooltip } from '#lib/bits/core/index.js'
+import Switch from '#lib/bits/custom/switch/Switch.svelte'
 // TYPES
-import type { Id } from '$lib/types'
-import type { Property } from '$lib/db/zod/schema/property.types'
+import type { Id } from '#lib/types.js'
+import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type { Component } from 'svelte'
 
 let {
@@ -146,7 +146,7 @@ function handleAddToProject(event: Event): void {
       {#if sourceTag.iconComponent}
         <SimpleTooltip disabled={!sourceTag.title}>
           {#snippet trigger()}
-            <span class={sourceTagIconClass} aria-label={sourceTag.title}>
+            <span class={sourceTagIconClass}>
               <sourceTag.iconComponent class="bits-project-field-card__source-icon" />
             </span>
           {/snippet}
@@ -156,7 +156,7 @@ function handleAddToProject(event: Event): void {
       {#if sourceTag.label}
         <SimpleTooltip disabled={!sourceTag.title}>
           {#snippet trigger()}
-            <span class={sourceTagLabelClass} aria-label={sourceTag.title}>
+            <span class={sourceTagLabelClass}>
               {sourceTag.label}
             </span>
           {/snippet}
@@ -174,7 +174,9 @@ function handleAddToProject(event: Event): void {
         onclick={onToggleCollapse}
       >
         <h3 class="bits-project-field-card__title">
-          {property.i18n?.en?.label || property.key || m.admin__forms_property_untitled()}
+          {property.i18n?.en?.label ||
+            property.key ||
+            m.admin__forms_property_untitled()}
         </h3>
         <ChevronDown
           class={`bits-project-field-card__collapse-icon ${collapsed ? 'bits-project-field-card__collapse-icon--collapsed' : ''}`}
@@ -187,12 +189,16 @@ function handleAddToProject(event: Event): void {
         {#if titleHref}
           <a href={titleHref} class="bits-project-field-card__title-link">
             <h3 class="bits-project-field-card__title">
-              {property.i18n?.en?.label || property.key || m.admin__forms_property_untitled()}
+              {property.i18n?.en?.label ||
+                property.key ||
+                m.admin__forms_property_untitled()}
             </h3>
           </a>
         {:else}
           <h3 class="bits-project-field-card__title">
-            {property.i18n?.en?.label || property.key || m.admin__forms_property_untitled()}
+            {property.i18n?.en?.label ||
+              property.key ||
+              m.admin__forms_property_untitled()}
           </h3>
         {/if}
       </div>
@@ -203,12 +209,11 @@ function handleAddToProject(event: Event): void {
     {#if showTranslatableToggle}
       <div
         class="bits-project-field-card__toggle bits-project-field-card__toggle--inline"
-        aria-label={m.admin__forms_property_translatable()}
         transition:fade={{ duration: 180 }}
       >
         <SimpleTooltip disabled={!translatableHint}>
           {#snippet trigger()}
-            <span aria-label={translatableHint}>
+            <span>
               <Languages
                 class="bits-project-field-card__toggle-icon"
                 aria-hidden="true"
@@ -223,19 +228,18 @@ function handleAddToProject(event: Event): void {
           color="light"
           size="sm"
           onCheckedChange={nextValue =>
-              onToggleIsTranslatable(property.id, Boolean(nextValue))}
+            onToggleIsTranslatable(property.id, Boolean(nextValue))}
         />
       </div>
     {/if}
     {#if showDefaultEnabledToggle}
       <div
         class="bits-project-field-card__toggle bits-project-field-card__toggle--inline"
-        aria-label={m.default_enabled()}
         transition:fade={{ duration: 180 }}
       >
         <SimpleTooltip disabled={!defaultEnabledHint}>
           {#snippet trigger()}
-            <span aria-label={defaultEnabledHint}>
+            <span>
               <CopyCheck
                 class="bits-project-field-card__toggle-icon"
                 aria-hidden="true"

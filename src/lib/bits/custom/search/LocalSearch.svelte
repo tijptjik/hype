@@ -1,7 +1,7 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
 import { tick } from 'svelte'
-import { slide } from 'svelte/transition'
-import { m } from '$lib/i18n'
+import { fade } from 'svelte/transition'
+import { m } from '#lib/i18n.js'
 import type { LocalSearchProps } from './search.types'
 import { getFirstEnabledResultButton, isSearchResultDisabled } from './search.utils'
 import * as SearchPrimitive from './src/components'
@@ -19,6 +19,7 @@ let {
   onSelect,
   resultMap,
   resultItemClass = '',
+  resultListClass = '',
   visualResultItemClass = '',
   visualPreviewClass = '',
   class: className = '',
@@ -144,7 +145,7 @@ $effect(() => {
 
 <div
   bind:this={rootEl}
-  transition:slide={{ axis: 'y', duration: mountTransitionDuration }}
+  transition:fade={{ duration: mountTransitionDuration }}
   class={`bits-search ${className}`}
   onfocusin={handleFocusIn}
   onfocusout={handleFocusOut}
@@ -165,10 +166,11 @@ $effect(() => {
       <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
           <div
-            class="bits-search__results-list max-h-80 overflow-y-auto overscroll-contain"
+            class={`flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain ${resultListClass}`}
           >
             {#each results as item, index (index)}
-              {#if resultMap.variant?.(item) === 'visual' || resultMap.previewImage?.(item)}
+              {#if resultMap.variant?.(item) === 'visual' ||
+                resultMap.previewImage?.(item)}
                 <SearchPrimitive.VisualResultItem
                   title={resultMap.title(item)}
                   descriminator={resultMap.descriminator?.(item)}
@@ -202,11 +204,9 @@ $effect(() => {
     <SearchPrimitive.ResultWrapper class="bits-search__results mx-3 mt-1">
       <div class="rounded-lg bg-primary/70 px-1 py-1 shadow-sm">
         <div class="overflow-hidden rounded-md">
-          <div
-            class="bits-search__results-list max-h-80 overflow-y-auto overscroll-contain"
-          >
+          <div class="flex flex-col gap-1 max-h-80 overflow-y-auto overscroll-contain">
             <div
-              class="flex min-h-[60px] w-full items-center justify-center rounded-md bg-[#242424] px-3 py-3 text-center text-sm font-medium tracking-[0.08em] text-neutral-content/80"
+              class="flex min-h-[60px] w-full items-center justify-center rounded-md bg-panel px-3 py-3 text-center text-sm font-medium tracking-[0.08em] text-muted-foreground"
               aria-live="polite"
             >
               {noResultsText}

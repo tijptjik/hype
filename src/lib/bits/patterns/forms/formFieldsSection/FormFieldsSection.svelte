@@ -1,7 +1,7 @@
 <script lang="ts">
 import { untrack } from 'svelte'
 import * as FormFieldsSectionPrimitive from './components'
-import { SectionHeader, SectionHeaderPrimitive } from '$lib/bits/custom/form'
+import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import type {
   FormFieldsSectionLoadingItem,
   FormFieldsSectionProps,
@@ -9,6 +9,8 @@ import type {
 
 let {
   items,
+  icon,
+  keepHeader = false,
   isLoading = false,
   loadingItems: providedLoadingItems = [],
   title,
@@ -32,7 +34,9 @@ let {
   class: className = '',
 }: FormFieldsSectionProps = $props()
 
-const rootClass = $derived(['bits-project-fields', className].filter(Boolean).join(' '))
+const rootClass = $derived(
+  ['w-full flex flex-col', className].filter(Boolean).join(' '),
+)
 const hasIssues = $derived(issues.length > 0)
 
 let isCollapsedAll = $state(false)
@@ -174,7 +178,7 @@ $effect(() => {
 })
 </script>
 
-{#if showEmptyState}
+{#if showEmptyState && !keepHeader}
   <FormFieldsSectionPrimitive.Wrapper
     {items}
     {isLoading}
@@ -195,8 +199,9 @@ $effect(() => {
     {onAdd}
   />
 {:else}
-  <section class={rootClass}>
+  <section class={`${rootClass} flex min-h-0 flex-1 flex-col`}>
     <SectionHeader
+      {icon}
       {title}
       description={description ?? ''}
       onCollapsableToggle={hasOptimisticItems ? onCollapsableToggle : undefined}

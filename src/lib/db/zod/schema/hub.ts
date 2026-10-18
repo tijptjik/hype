@@ -1,12 +1,12 @@
 // I18N
-import { m } from '$lib/i18n'
+import { m } from '#lib/i18n.js'
 // ENUMS
-import { HubSubscriptionService } from '$lib/enums'
+import { HubSubscriptionService } from '#lib/enums.js'
 // API
 import {
   normalizeSubstackSessionCookie,
   normalizeSubstackSubscriptionId,
-} from '$lib/api/external/substack.shared'
+} from '#lib/api/external/substack.shared.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -22,7 +22,7 @@ import {
   layerI18n,
   organisation,
   organisationI18n,
-} from '$lib/db/schema/index'
+} from '#lib/db/schema/index.js'
 // ZOD SCHEMAS
 import { getLocales } from '../constraints'
 import { FormBoolean } from '../form'
@@ -238,7 +238,8 @@ export const HubEntityFormData = z
     domain: z.union([z.literal(''), z.string().min(3).max(255)]),
     legalContactAddress: z
       .preprocess(
-        value => (typeof value === 'string' ? value.trim() : value),
+        (value: string | undefined) =>
+          typeof value === 'string' ? value.trim() : value,
         z.union([z.literal(''), z.string().email().max(512)]),
       )
       .optional()
@@ -286,7 +287,7 @@ export const HubFormMeta = z.object({
   id: z.string().optional(),
   updatedAt: z.string().min(1).optional(),
   mode: z.enum(['create', 'replace', 'update']).optional(),
-  isAdminRequest: z.coerce.boolean<boolean>().optional(),
+  isAdminRequest: FormBoolean.optional(),
 })
 
 export const HubFormData = z.object({
@@ -305,7 +306,7 @@ export const PublishHubSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -315,7 +316,7 @@ export const RemoveHubSchema = z.object({
   state: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -325,7 +326,7 @@ export const JoinHubSubscriptionSchema = z.object({
   hasAgreedToTerms: z.coerce.boolean<boolean>(),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })
@@ -334,7 +335,7 @@ export const DismissHubSubscriptionPromptSchema = z.object({
   hubId: z.string().min(1),
   meta: z
     .object({
-      isAdminRequest: z.coerce.boolean<boolean>().optional(),
+      isAdminRequest: FormBoolean.optional(),
     })
     .optional(),
 })

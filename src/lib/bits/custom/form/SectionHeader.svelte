@@ -1,15 +1,16 @@
 <script lang="ts">
-import { m } from '$lib/i18n'
-import Header from '$lib/bits/custom/header/Header.svelte'
+import { m } from '#lib/i18n.js'
+import Header from '#lib/bits/custom/header/Header.svelte'
 import * as SectionHeaderPrimitive from './src/sectionHeader/components'
 import type { SectionHeaderProps } from './sectionHeader.types'
-import Expand from 'virtual:icons/lucide/expand'
-import Shrink from 'virtual:icons/lucide/shrink'
-import Eye from 'virtual:icons/lucide/eye'
-import EyeOff from 'virtual:icons/lucide/eye-off'
+import Expand from 'virtual:icons/proicons/full-screen-maximize'
+import Shrink from 'virtual:icons/proicons/full-screen-minimize'
+import Eye from 'virtual:icons/proicons/eye'
+import EyeOff from 'virtual:icons/proicons/eye-off'
 
 let {
   title,
+  icon,
   description,
   size = 'sm',
   flags = [],
@@ -68,6 +69,7 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
     {:else if title || description}
       <Header
         text={title}
+        {icon}
         {description}
         {size}
         class="bits-form__section-header-heading"
@@ -85,7 +87,8 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
     {#if right}
       {@render right()}
     {:else}
-      {#each actions as action, index (action.key ?? `${action.text ?? 'action'}-${index}`)}
+      {#each actions as action, index (action.key ??
+        `${action.text ?? 'action'}-${index}`)}
         <SectionHeaderPrimitive.Action {...action} />
       {/each}
 
@@ -93,7 +96,8 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
         <SectionHeaderPrimitive.Flag {...flag} />
       {/each}
 
-      {#each triggers as trigger, index (trigger.key ?? `${trigger.text ?? 'trigger'}-${index}`)}
+      {#each triggers as trigger, index (trigger.key ??
+        `${trigger.text ?? 'trigger'}-${index}`)}
         <SectionHeaderPrimitive.Trigger {...trigger} />
       {/each}
     {/if}
