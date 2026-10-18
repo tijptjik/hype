@@ -55,6 +55,23 @@ export const buildBreadlineLightStyle = (
                 ? '#c7b9a6'
                 : '#fffdfa'
         layer.paint = { ...layer.paint, 'line-color': color }
+        // Bring pedestrian routes forward without highlighting other minor roads.
+        if (layer.id.includes('other') && !layer.id.includes('casing')) {
+          layer.paint['line-color'] = [
+            'case',
+            [
+              'any',
+              ['==', ['get', 'kind'], 'path'],
+              [
+                'in',
+                ['get', 'kind_detail'],
+                ['literal', ['footway', 'pedestrian', 'steps']],
+              ],
+            ],
+            '#438c87',
+            color,
+          ]
+        }
         if (layer.id.startsWith('boundaries'))
           layer.layout = { ...layer.layout, visibility: 'none' }
       } else if (layer.type === 'symbol' && layer.layout?.['text-field']) {

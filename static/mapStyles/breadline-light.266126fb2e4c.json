@@ -665,7 +665,37 @@
         ]
       ],
       "paint": {
-        "line-color": "#c7b9a6",
+        "line-color": [
+          "case",
+          [
+            "any",
+            [
+              "==",
+              [
+                "get",
+                "kind"
+              ],
+              "path"
+            ],
+            [
+              "in",
+              [
+                "get",
+                "kind_detail"
+              ],
+              [
+                "literal",
+                [
+                  "footway",
+                  "pedestrian",
+                  "steps"
+                ]
+              ]
+            ]
+          ],
+          "#438c87",
+          "#c7b9a6"
+        ],
         "line-dasharray": [
           4.5,
           0.5
@@ -1210,7 +1240,37 @@
         ]
       ],
       "paint": {
-        "line-color": "#c7b9a6",
+        "line-color": [
+          "case",
+          [
+            "any",
+            [
+              "==",
+              [
+                "get",
+                "kind"
+              ],
+              "path"
+            ],
+            [
+              "in",
+              [
+                "get",
+                "kind_detail"
+              ],
+              [
+                "literal",
+                [
+                  "footway",
+                  "pedestrian",
+                  "steps"
+                ]
+              ]
+            ]
+          ],
+          "#438c87",
+          "#c7b9a6"
+        ],
         "line-width": [
           "interpolate",
           [
@@ -1883,7 +1943,37 @@
         ]
       ],
       "paint": {
-        "line-color": "#c7b9a6",
+        "line-color": [
+          "case",
+          [
+            "any",
+            [
+              "==",
+              [
+                "get",
+                "kind"
+              ],
+              "path"
+            ],
+            [
+              "in",
+              [
+                "get",
+                "kind_detail"
+              ],
+              [
+                "literal",
+                [
+                  "footway",
+                  "pedestrian",
+                  "steps"
+                ]
+              ]
+            ]
+          ],
+          "#438c87",
+          "#c7b9a6"
+        ],
         "line-dasharray": [
           2,
           1
