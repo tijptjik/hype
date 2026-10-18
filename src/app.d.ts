@@ -6,6 +6,7 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type {
   D1Database,
   Fetcher,
+  RateLimit,
   Queue,
   R2Bucket,
   SendEmail,
@@ -45,6 +46,9 @@ declare global {
         // CLOUDFLARE BINDINGS
         DB: D1Database
         ASSETS: Fetcher
+        ROUTING_SERVICE?: Fetcher
+        ROUTING_LIMITER?: RateLimit
+        ROUTING_TOKEN?: string
         MAP_RENDER_QUEUE: Queue<MapRenderJob>
         ASSET_RENDER_QUEUE: Queue<AssetRenderJob>
         ASSET_RAW_DEV: R2Bucket

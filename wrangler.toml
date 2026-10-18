@@ -80,6 +80,17 @@ binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
 remote = true
 
+# Private in-app street routing; ROUTING_TOKEN is a server-only Worker secret.
+[[services]]
+binding = "ROUTING_SERVICE"
+service = "hype-routing-native-benchmark"
+remote = true
+
+[[ratelimits]]
+name = "ROUTING_LIMITER"
+namespace_id = "21301"
+simple = { limit = 30, period = 60 }
+
 [vars]
 ENVIRONMENT = "local"
 
@@ -108,6 +119,15 @@ name = "hype-prod"
 # to ORD (Chicago) and added ~150-200ms RTT to every D1 round trip.
 [env.production.placement]
 region = "azure:eastasia"
+
+[[env.production.services]]
+binding = "ROUTING_SERVICE"
+service = "hype-routing-native-benchmark"
+
+[[env.production.ratelimits]]
+name = "ROUTING_LIMITER"
+namespace_id = "21302"
+simple = { limit = 30, period = 60 }
 
 [env.production.vars]
 ENVIRONMENT = "production"
@@ -196,6 +216,15 @@ name = "hype-preview"
 # as production). See [env.production.placement] for rationale.
 [env.preview.placement]
 region = "azure:eastasia"
+
+[[env.preview.services]]
+binding = "ROUTING_SERVICE"
+service = "hype-routing-native-benchmark"
+
+[[env.preview.ratelimits]]
+name = "ROUTING_LIMITER"
+namespace_id = "21303"
+simple = { limit = 30, period = 60 }
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
