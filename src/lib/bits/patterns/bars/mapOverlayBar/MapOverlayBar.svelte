@@ -50,9 +50,9 @@ const hasVisibleControls = $derived(hasCardToggleTarget)
     <Button
       text={m.mapbar__show_card()}
       icon={openCardIcon}
-      color="light"
-      style="soft"
-      class="z-130 border border-white/10 bg-black/70 shadow-lg backdrop-blur"
+      color="primary"
+      style="none"
+      class="z-130 shadow-lg"
       attrs={{ title: m.mapbar__show_card() }}
       onClick={onOpenCard}
     />
