@@ -20,3 +20,20 @@ from [HK MTR logo.svg](https://en.wikipedia.org/wiki/File:HK_MTR_logo.svg), with
 paper-coloured outline added for contrast. The symbol identifies railway access;
 it does not imply affiliation. PNG sprite assets are rendered from that SVG at
 1× and 2× resolution.
+
+## Building and shopping-landmark labels
+
+`building-labels.geojson` uses the same 2026-10-01 Hong Kong OSM extract and ODbL
+terms above. It contains 35,383 named point features, including 590 shopping malls
+and department stores. Polygon labels use an interior representative point;
+source OSM type/IDs and available English/Chinese names are retained. Plain house
+numbers and duplicate mall/containing-building labels are excluded. It is a
+static snapshot and must be refreshed with the source extract.
+
+```sh
+python3 scripts/maps/build-building-labels.py /path/to/hong-kong.osm.pbf
+```
+
+The generator requires `osmium` and Python `shapely`. The uncompressed point
+collection is approximately 7.5 MB (about 1.1 MB with gzip); no building outlines
+are shipped in this supplementary layer.

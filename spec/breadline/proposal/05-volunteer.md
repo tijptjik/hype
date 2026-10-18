@@ -14,7 +14,26 @@ pale teal water, paper roads and muted teal labels. Ordinary basemap POIs are
 removed; station names and MTR-logo entrance badges remain, with actual exit references
 below each logo. The transit symbol differs from bakery availability markers and
 their status rings.
-The sprite includes normal and double-resolution assets. Night Runner preserves
+The sprite includes normal and double-resolution assets. Full icon/reference badges participate in collision
+placement, with labels trying four sides of the entrance. Specific references
+(e.g. D3) take priority over single-letter concourse markers. A small point keeps
+every entrance location visible when its full badge cannot fit; zooming in
+reveals more badges. Street names repeat at 500 px rather than 750 px (50% more
+frequent native placement). When a name cannot fit, the placement controller
+tries road-section midpoints and progressively offset positions along the line,
+keeping MTR signs fixed. Each round excludes street names already visible, so
+fallback layers do not add copies of names already placed by earlier layers.
+The search resets after camera/style changes and stops after its bounded candidate
+list; a name can still be hidden when none of its positions fits.
+
+Shopping malls and department stores appear from zoom 15, and other named
+buildings from zoom 17. The tiles omit building names, so a bundled OSM overlay
+supplies interior label points for 35,383 named buildings and shopping landmarks
+(including 590 malls/department stores). Matching containing-building labels are
+suppressed near a mall with the same name. Labels use available localized names
+and collision-aware placement; ordinary shop POIs remain hidden. Source and
+regeneration details are in `static/mapData/README.md`.
+The same policy applies to the dark style. Night Runner preserves
 the transit overlay with a dark teal palette and warm labels. Both are featured
 in the expanded map-style picker alongside Hyper, Hyper Light, Hyperpop and
 SaanSeoi Midnight; Show more reveals the remaining styles.

@@ -5,6 +5,9 @@ import type { Map as MapLibreMap, MapOptions } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import '#lib/styles/map.css'
 
+// MAP
+import { installStreetLabelPlacement } from '#lib/map/street-label-placement'
+
 type MapSurfaceProps = Omit<MapOptions, 'container' | 'style'> & {
   style: MapOptions['style']
   map?: MapLibreMap
@@ -22,6 +25,11 @@ let {
   children,
   ...options
 }: MapSurfaceProps = $props()
+// Keep alternate street labels synchronized with the active map and camera.
+$effect(() => {
+  if (!map) return
+  return installStreetLabelPlacement(map)
+})
 </script>
 
 <MapLibre
