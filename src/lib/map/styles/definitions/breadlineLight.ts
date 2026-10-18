@@ -68,7 +68,7 @@ export const buildBreadlineLightStyle = (
                 ['literal', ['footway', 'pedestrian', 'steps']],
               ],
             ],
-            '#438c87',
+            '#d5a084',
             color,
           ]
         }

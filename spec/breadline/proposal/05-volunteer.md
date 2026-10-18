@@ -11,7 +11,7 @@ Their saved style IDs stay stable. The existing `breadline` style remains availa
 as Breadline Classic. Its
 Milque palette follows `src/lib/styles/themes.css`: cream land, peach buildings,
 pale teal water, paper roads and muted teal labels.
-Pedestrian paths, steps and footbridges use deeper teal (`#438c87`) in Day Runner
+Pedestrian paths, steps and footbridges use softened burnt coral (`#d5a084`) in Day Runner
 to bring walking connections forward against the cream and peach background.
 Ordinary basemap POIs are removed; station names and MTR-logo entrance badges remain, with actual exit references
 below each logo. The transit symbol differs from bakery availability markers and
