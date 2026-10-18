@@ -173,6 +173,7 @@ export default defineConfig({
       '**/src/hooks.server.ts', // Exclude server hooks
       '**/src/app.html',
       '**/scripts/breadline/**/*.test.ts', // Bun-only SQLite tests run through breadline:db:test.
+      '**/scripts/geocoding/**/*.test.ts', // Bun-only benchmark tests run directly with bun test.
     ],
   },
 })
