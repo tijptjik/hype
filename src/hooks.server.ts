@@ -17,6 +17,7 @@ import { autochunk } from '#lib/utils/batch-query.js'
 // AUTH
 import { svelteKitHandler } from 'better-auth/svelte-kit'
 import { getAuthForRequest } from '#lib/auth.js'
+import { handleBreadlinePhone } from '#lib/auth/breadline-phone.server.js'
 import { DEV_PERSONAS, isDevPersona, isDevPersonaHost } from '#lib/auth/dev-personas.js'
 import {
   isAuthEntryPath,
@@ -543,6 +544,7 @@ const handle = sequence(
   handle_hub,
   handle_auth,
   handle_session_auth,
+  handleBreadlinePhone,
   handle_auth_redirect,
   handle_hub_enrichment,
   translation,

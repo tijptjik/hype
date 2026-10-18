@@ -12,6 +12,7 @@ import { toast } from 'svelte-sonner'
 import { cx } from '#lib/bits/utils.js'
 // AUTH
 import { signIn, useSession } from '#lib/auth/client.js'
+import { normalizeTelephone } from '#lib/utils/telephone.js'
 import { DEV_PERSONAS } from '#lib/auth/dev-personas.js'
 import {
   bootstrapAnonymousSession,
@@ -302,6 +303,23 @@ watch(
       hasMounted,
     })
     if (!hasMounted || isBootstrapping) {
+      return
+    }
+
+    // Client-side sign-in must reach the same server-enforced completion gate as OAuth navigation.
+    if (
+      newUser &&
+      newUser.isAnonymous !== true &&
+      root.hub?.code === 'breadline' &&
+      page.url.pathname !== '/account/phone' &&
+      !page.url.pathname.startsWith('/policy/') &&
+      !normalizeTelephone(newUser.telephone ?? null)
+    ) {
+      const completion = new URL('/account/phone', window.location.origin)
+      completion.searchParams.set('returnTo', `${page.url.pathname}${page.url.search}`)
+      if (import.meta.env.DEV && page.url.searchParams.get('hub') === 'breadline')
+        completion.searchParams.set('hub', 'breadline')
+      window.location.assign(completion.pathname + completion.search)
       return
     }
 

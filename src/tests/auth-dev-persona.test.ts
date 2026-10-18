@@ -73,6 +73,7 @@ beforeEach(() => {
     vars: { ENVIRONMENT: 'local' },
   } as never)
   sqlite = new DatabaseSync(':memory:')
+  sqlite.exec('CREATE TABLE breadlineImportUser (userId TEXT PRIMARY KEY, state TEXT)')
   const dialect = new SQLiteSyncDialect()
   // Derive column constraints and defaults from the app schema instead of maintaining alternate auth DDL.
   for (const table of [user, session, hub, hubRole, organisationRole, projectRole]) {

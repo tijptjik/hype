@@ -17,6 +17,8 @@ beforeAll(async () => {
 beforeEach(() => {
   sqlite = new DatabaseSync(':memory:')
   sqlite.exec('CREATE TABLE user (id TEXT PRIMARY KEY, isArchived INTEGER NOT NULL)')
+  sqlite.exec('CREATE TABLE breadlineImportUser (userId TEXT PRIMARY KEY, state TEXT)')
+  sqlite.exec('CREATE TABLE breadlineImportIdentity (userId TEXT, email TEXT)')
   sqlite.exec("INSERT INTO user VALUES ('user', 0)")
 })
 afterEach(() => {
@@ -31,6 +33,10 @@ async function setup() {
   const DB = {
     prepare: (sql: string) => ({
       bind: (...params: never[]) => ({
+        all: async () => ({
+          results: sqlite.prepare(sql).all(...params),
+          success: true,
+        }),
         raw: async () => {
           const statement = sqlite.prepare(sql)
           statement.setReturnArrays(true)

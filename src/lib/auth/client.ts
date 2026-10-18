@@ -6,6 +6,7 @@ import { createAuthClient } from 'better-auth/svelte'
 import { passkeyClient } from '@better-auth/passkey/client'
 import {
   anonymousClient,
+  magicLinkClient,
   customSessionClient,
   usernameClient,
 } from 'better-auth/client/plugins'
@@ -20,6 +21,7 @@ export const authClient = createAuthClient({
   },
   plugins: [
     anonymousClient(),
+    magicLinkClient(),
     usernameClient(),
     passkeyClient(),
     customSessionClient<Auth>(),

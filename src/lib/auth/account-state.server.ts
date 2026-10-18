@@ -1,8 +1,8 @@
 // AUTH
 import { APIError } from 'better-auth/api'
 // DB
-import { eq } from 'drizzle-orm'
-import { user } from '#lib/db/schema/index.js'
+import { eq, sql } from 'drizzle-orm'
+import { user, breadlineImportUser } from '#lib/db/schema/index.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -10,7 +10,7 @@ import type { Database } from '#lib/types.js'
  * Requires a currently available account before creating or using an auth session.
  * @param db - Authoritative account database.
  * @param userId - User identified by a validated session or sign-in flow.
- * @returns Nothing when the account exists and is not archived.
+ * @returns Nothing when the account exists, is claimed if imported, and is not archived.
  * @remarks Guests remain eligible. Never trust a signed session's cached archive flag;
  * missing and archived accounts receive the same denial without exposing account details.
  */
@@ -21,8 +21,14 @@ export async function requireAvailableAuthUser(
   const current = await db.query.user.findFirst({
     where: eq(user.id, userId),
     columns: { isArchived: true },
+    extras: {
+      isUnclaimed:
+        sql<boolean>`exists (select 1 from ${breadlineImportUser} where ${breadlineImportUser.userId} = ${user.id} and ${breadlineImportUser.state} = 'unclaimed')`.as(
+          'isUnclaimed',
+        ),
+    },
   })
-  if (!current || current.isArchived) {
+  if (!current || current.isArchived || current.isUnclaimed) {
     throw new APIError('UNAUTHORIZED', {
       code: 'ACCOUNT_UNAVAILABLE',
       message: 'Account unavailable',

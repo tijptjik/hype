@@ -42,6 +42,9 @@
   "guest__auth_generic_error": "無法完成要求。請檢查資料或重試。",
   "guest__email_required": "請先輸入電郵地址。",
   "guest__name_required": "請先輸入你的名稱。",
+  "guest__email_sign_in_link": "傳送登入連結至我的電郵",
+  "guest__sign_in_link_sent": "請查收電郵中的登入連結。",
+  "guest__breadline_email_required": "請使用電郵登入連結存取匯入的 Breadline 帳戶。",
   "guest__forgot_password": "忘記密碼？",
   "guest__password_reset_requested": "如果該電郵已有帳戶，我們會傳送重設郵件。",
   "guest__upgrade_success": "你的收藏地點和設定現已關聯至帳戶。",
@@ -1270,5 +1273,11 @@
   "map_style__breadline_dark_name": "Night Runner",
   "map_style__breadline_dark_description": "深青色 Breadline 地圖，配以暖色標籤和清晰港鐵出口。",
   "theme_map_show_more": "顯示更多",
-  "theme_map_show_less": "顯示較少"
+  "theme_map_show_less": "顯示較少",
+  "breadline__phone_title": "新增電話號碼",
+  "breadline__phone_description": "請先提供電話號碼，再繼續使用 Breadline。香港電話號碼在 +852 後必須有 8 位數字。",
+  "breadline__phone_label": "電話號碼",
+  "breadline__phone_invalid": "請輸入有效的電話號碼。香港號碼在 +852 後須有 8 位數字。",
+  "breadline__phone_in_use": "此電話號碼已屬於另一個帳戶。請登入該帳戶或聯絡 Breadline 尋求協助。",
+  "breadline__phone_continue": "儲存並繼續"
 }

@@ -6,7 +6,14 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // DB
 import { getTableConfig } from 'drizzle-orm/sqlite-core'
-import { user, session, verification } from '#lib/db/schema/user.js'
+import { runWithEndpointContext } from '@better-auth/core/context'
+import {
+  breadlineImportUser,
+  breadlineImportIdentity,
+  user,
+  session,
+  verification,
+} from '#lib/db/schema/user.js'
 // AUTH
 import { getAuthForRequest } from '#lib/auth.js'
 import { toLinkedAccountSelector } from '#lib/auth/account-selector.js'
@@ -31,7 +38,13 @@ beforeEach(() => {
   sqlite = new DatabaseSync(':memory:')
   sqlite.exec('PRAGMA foreign_keys = ON')
   // Use application column types and required constraints for the surrounding auth tables.
-  for (const table of [user, session, verification]) {
+  for (const table of [
+    user,
+    session,
+    verification,
+    breadlineImportUser,
+    breadlineImportIdentity,
+  ]) {
     const config = getTableConfig(table)
     const columns = config.columns.map(
       column =>
@@ -97,13 +110,15 @@ describe('Better Auth production Drizzle adapter', () => {
   it('reproduces issuer failure before migration and persists credentials after migration', async () => {
     const auth = createAuth()
     const context = await auth.$context
-    const created = await context.internalAdapter.createUser(
-      {
-        name: 'User',
-        email: 'user@example.com',
-        emailVerified: true,
-      },
-      { method: 'email-password' },
+    const created = await runWithEndpointContext({ context: context as never }, () =>
+      context.internalAdapter.createUser(
+        {
+          name: 'User',
+          email: 'user@example.com',
+          emailVerified: true,
+        },
+        { method: 'email-password' },
+      ),
     )
     const credential = {
       userId: created.id,
@@ -197,23 +212,27 @@ describe('Better Auth production Drizzle adapter', () => {
     sqlite.exec(migration)
     const auth = createAuth()
     const context = await auth.$context
-    const owner = await context.internalAdapter.createUser(
-      {
-        name: 'Owner',
-        username: 'owner',
-        email: 'owner@example.com',
-        emailVerified: true,
-      },
-      { method: 'email-password' },
+    const owner = await runWithEndpointContext({ context: context as never }, () =>
+      context.internalAdapter.createUser(
+        {
+          name: 'Owner',
+          username: 'owner',
+          email: 'owner@example.com',
+          emailVerified: true,
+        },
+        { method: 'email-password' },
+      ),
     )
-    const other = await context.internalAdapter.createUser(
-      {
-        name: 'Other',
-        username: 'other',
-        email: 'other@example.com',
-        emailVerified: true,
-      },
-      { method: 'email-password' },
+    const other = await runWithEndpointContext({ context: context as never }, () =>
+      context.internalAdapter.createUser(
+        {
+          name: 'Other',
+          username: 'other',
+          email: 'other@example.com',
+          emailVerified: true,
+        },
+        { method: 'email-password' },
+      ),
     )
     const first = await context.internalAdapter.createAccount({
       userId: owner.id,

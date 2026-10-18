@@ -19,6 +19,7 @@ beforeAll(async () => {
 beforeEach(() => {
   sqlite = new DatabaseSync(':memory:')
   sqlite.exec('CREATE TABLE user (id TEXT PRIMARY KEY, isArchived INTEGER NOT NULL)')
+  sqlite.exec('CREATE TABLE breadlineImportUser (userId TEXT PRIMARY KEY, state TEXT)')
   sqlite.prepare('INSERT INTO user VALUES (?, 0)').run('user')
 })
 afterEach(() => sqlite.close())

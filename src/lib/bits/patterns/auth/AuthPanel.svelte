@@ -89,11 +89,13 @@ const modeToggleLabel = $derived(
 )
 const oauthErrorCode = $derived(page.url.searchParams.get('error'))
 const oauthErrorMessage = $derived(
-  oauthErrorCode === 'account_not_linked'
-    ? m.account__social_account_not_linked()
-    : oauthErrorCode
-      ? m.guest__auth_generic_error()
-      : '',
+  oauthErrorCode === 'BREADLINE_EMAIL_VERIFICATION_REQUIRED'
+    ? m.guest__breadline_email_required()
+    : oauthErrorCode === 'account_not_linked'
+      ? m.account__social_account_not_linked()
+      : oauthErrorCode
+        ? m.guest__auth_generic_error()
+        : '',
 )
 
 $effect(() => {
@@ -176,6 +178,10 @@ async function handleEmailSubmit(event: SubmitEvent): Promise<void> {
           })
 
     if (result.error) {
+      if (String(result.error.code) === 'BREADLINE_EMAIL_VERIFICATION_REQUIRED') {
+        errorMessage = m.guest__breadline_email_required()
+        return
+      }
       if (mode === 'sign-in' && result.error.code === 'EMAIL_NOT_VERIFIED') {
         verificationEmail = normalizedEmail
         isAwaitingVerification = true
@@ -332,6 +338,36 @@ async function handleVerificationResend(): Promise<void> {
       callbackURL: safeCallbackUrl,
     })
     statusMessage = m.guest__verification_resent()
+  } catch {
+    errorMessage = m.guest__auth_generic_error()
+  } finally {
+    isBusy = false
+  }
+}
+
+/**
+ * Requests a one-time email login without disclosing imported-account eligibility.
+ * @returns Nothing after showing delivery feedback or an actionable failure.
+ */
+async function handleEmailLink(): Promise<void> {
+  if (isBusy) return
+  errorMessage = ''
+  statusMessage = ''
+  if (!email.trim()) {
+    errorMessage = m.guest__email_required()
+    return
+  }
+  isBusy = true
+  try {
+    const result = await signIn.magicLink({
+      email: email.trim(),
+      callbackURL: safeCallbackUrl,
+    })
+    if (result.error) {
+      errorMessage = m.guest__auth_generic_error()
+      return
+    }
+    statusMessage = m.guest__sign_in_link_sent()
   } catch {
     errorMessage = m.guest__auth_generic_error()
   } finally {
@@ -505,6 +541,14 @@ async function handlePasswordResetRequest(): Promise<void> {
             required
             bind:value={email}
           />
+          <button
+            type="button"
+            disabled={isBusy}
+            onclick={handleEmailLink}
+            class="text-sm text-white/75 underline underline-offset-4 transition hover:text-white disabled:opacity-50"
+          >
+            {m.guest__email_sign_in_link()}
+          </button>
           <AuthTextField
             label={m.guest__password()}
             type="password"

@@ -3,7 +3,7 @@ import { toCloudflareImageWorkerPath } from '#lib/images/delivery.js'
 // TYPES
 import type { HubOptsExtended } from '#lib/db/zod/schema/hub.types.js'
 
-type AuthEmailKind = 'password-reset' | 'verification'
+type AuthEmailKind = 'password-reset' | 'verification' | 'sign-in'
 
 /**
  * Escapes a string for safe inclusion in transactional email HTML.
@@ -87,23 +87,40 @@ export function buildAuthEmail(params: {
   const termsUrl = new URL('/policy/terms', params.baseURL).toString()
   const logoUrl = getHubLogoUrl(params.hub, params.baseURL)
   const isVerification = params.kind === 'verification'
-  const subject = isVerification
-    ? `Verify your ${hubName} email address`
-    : `Reset your ${hubName} password`
-  const heading = isVerification ? 'Verify your email address' : 'Reset your password'
-  const actionLabel = isVerification ? 'Verify email address' : 'Reset password'
-  const intro = isVerification
-    ? `Thanks for creating an account with ${hubName}. Please confirm your email address to finish setting up your account.`
-    : `We received a request to reset the password for your ${hubName} account.`
-  const reassurance = isVerification
-    ? `If you did not create an account with ${hubName}, you can safely ignore this email.`
-    : `If you did not request a password reset, you can safely ignore this email. Your password will not change.`
+  const isSignIn = params.kind === 'sign-in'
+  const subject = isSignIn
+    ? `Sign in to ${hubName}`
+    : isVerification
+      ? `Verify your ${hubName} email address`
+      : `Reset your ${hubName} password`
+  const heading = isSignIn
+    ? 'Sign in to your account'
+    : isVerification
+      ? 'Verify your email address'
+      : 'Reset your password'
+  const actionLabel = isSignIn
+    ? 'Sign in'
+    : isVerification
+      ? 'Verify email address'
+      : 'Reset password'
+  const intro = isSignIn
+    ? `Use this link to sign in to ${hubName}.`
+    : isVerification
+      ? `Thanks for creating an account with ${hubName}. Please confirm your email address to finish setting up your account.`
+      : `We received a request to reset the password for your ${hubName} account.`
+  const reassurance = isSignIn
+    ? 'If you did not request this sign-in link, you can safely ignore this email.'
+    : isVerification
+      ? `If you did not create an account with ${hubName}, you can safely ignore this email.`
+      : `If you did not request a password reset, you can safely ignore this email. Your password will not change.`
   const greeting = params.recipientName?.trim()
     ? `Hi ${params.recipientName.trim()},`
     : 'Hello,'
-  const expiryNote = isVerification
-    ? 'For your security, this verification link can only be used once.'
-    : 'For your security, this reset link will expire soon and can only be used once.'
+  const expiryNote = isSignIn
+    ? 'For your security, this sign-in link expires in 15 minutes and can only be used once.'
+    : isVerification
+      ? 'For your security, this verification link can only be used once.'
+      : 'For your security, this reset link will expire soon and can only be used once.'
   const text = [
     greeting,
     '',

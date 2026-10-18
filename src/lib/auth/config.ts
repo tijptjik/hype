@@ -92,6 +92,12 @@ export const authConfig = {
       updateEmailWithoutVerification: true,
     },
     additionalFields: {
+      telephone: {
+        type: 'string' as const,
+        required: false,
+        // Phone completion validates and persists this field through its server action.
+        input: false as const,
+      },
       locale: {
         type: 'string' as const,
         required: true,

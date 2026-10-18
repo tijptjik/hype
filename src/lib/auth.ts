@@ -3,7 +3,7 @@ import { betterAuth } from 'better-auth'
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { passkey } from '@better-auth/passkey'
-import { customSession, anonymous, username } from 'better-auth/plugins'
+import { customSession, anonymous, username, magicLink } from 'better-auth/plugins'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
@@ -13,6 +13,7 @@ import { buildAuthEmail } from './auth/email'
 import { isAuthProviderEnabled } from './auth/providers'
 import { parseSessionSettings } from './auth/session-settings'
 import { requireAvailableAuthUser } from './auth/account-state.server'
+import { breadlineClaimIntegration } from './auth/breadline-claim.server'
 import { passwordSetup } from './auth/password-setup.server'
 import { devPersonaPlugin } from './auth/dev-persona.server'
 import { isDevPersona, isDevPersonaHost } from './auth/dev-personas'
@@ -113,6 +114,46 @@ function createAuthInstance(
   hub?: HubOptsExtended,
 ) {
   const db = drizzle(env.DB, { schema })
+  const emailLink = magicLink({
+    expiresIn: 15 * 60,
+    storeToken: 'hashed',
+    sendMagicLink: async ({ email: to, url }) => {
+      if (!env.EMAIL || !env.AUTH_EMAIL_FROM)
+        throw new Error('Transactional email is not configured')
+      const { fromName, ...email } = buildAuthEmail({
+        kind: 'sign-in',
+        actionUrl: url,
+        baseURL,
+        hub,
+      })
+      await env.EMAIL.send({
+        to,
+        from: { email: env.AUTH_EMAIL_FROM, name: fromName },
+        ...email,
+      })
+    },
+  })
+  const breadline = breadlineClaimIntegration(
+    env.DB,
+    drizzleAdapter(db, {
+      provider: 'sqlite',
+      schema,
+    }),
+    async (email, context) => {
+      // Nested endpoint execution retains the validated auth request and callback constraints.
+      await emailLink.endpoints.signInMagicLink({
+        ...context,
+        headers: context.headers ?? new Headers(),
+        body: {
+          email,
+          callbackURL:
+            typeof context.body?.callbackURL === 'string'
+              ? context.body.callbackURL
+              : '/',
+        },
+      })
+    },
+  )
   const persona = import.meta.env.HYPE_DEV_PERSONA
   const localPersona =
     import.meta.env.DEV &&
@@ -139,10 +180,8 @@ function createAuthInstance(
     // ENV
     secret: env.AUTH_SECRET,
     // DB
-    database: drizzleAdapter(db, {
-      provider: 'sqlite',
-      schema,
-    }),
+    database: breadline.adapter,
+    user: { ...authConfig.user, validateUserInfo: breadline.validateUserInfo },
     // ADVANCES SETTINGS
     advanced: {
       // Preserve shared cookie attributes required for secure embedded sessions.
@@ -209,6 +248,13 @@ function createAuthInstance(
         },
       },
       user: {
+        update: {
+          before: async data => {
+            // A profile edit cannot reserve an unclaimed import's email or establish ownership.
+            await breadline.assertEmailChange(data.email)
+            return { data }
+          },
+        },
         create: {
           before: async user => {
             // Generate username if not provided
@@ -307,6 +353,7 @@ function createAuthInstance(
     // PLUGINS
     plugins: [
       ...(localPersona ? [devPersonaPlugin(localPersona)] : []),
+      emailLink,
       passwordSetup(),
       passkey({
         rpID: new URL(baseURL).hostname,
@@ -388,6 +435,7 @@ function createAuthInstance(
         return {
           user: {
             ...user,
+            telephone: dbUser.telephone ?? null,
             preferences,
             experimental,
             roles,
