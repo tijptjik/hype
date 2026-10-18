@@ -94,7 +94,7 @@ $effect(() => {
         style={`grid-column: ${(cell?.column ?? 0) + 1} / span ${cell?.colSpan ?? 1}; grid-row: ${(cell?.row ?? 0) + 1};`}
       >
         <span
-          class="font-mono text-xs font-normal uppercase tracking-wide text-gray-400"
+          class="font-mono text-xs font-normal uppercase tracking-wide text-muted-foreground"
         >
           {property.label}
         </span>

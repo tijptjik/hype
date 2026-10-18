@@ -79,7 +79,7 @@ function cancelEditing(propertyId: Id): void {
 
 {#if cardCtx.isNewMode && availableFeatureProperties.length > 0}
   <div class="space-y-3">
-    <p class="font-mono text-[11px] uppercase tracking-[0.28em] text-white/48">
+    <p class="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
       Details
     </p>
 
@@ -92,14 +92,14 @@ function cancelEditing(propertyId: Id): void {
           {@const displayValue = getCurrentValue(propertyId, property)}
           <div class="space-y-2">
             <span
-              class="font-mono text-[11px] uppercase tracking-[0.22em] text-white/42"
+              class="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground"
             >
               {getI18n(property, 'label', userPreferences)}
             </span>
 
             {#if property.component === 'SelectField' && propertyValues.size > 0}
               <select
-                class="h-11 w-full rounded-full border border-white/10 bg-black/25 px-4 text-sm text-white focus:border-white/28 focus:outline-none"
+                class="h-11 w-full rounded-full border border-border-input bg-base-200 px-4 text-sm text-base-content focus:border-border-input-hover focus:outline-none"
                 value={getClassifierValueId(appCtx, propertyId)}
                 onchange={event =>
                   handleCategoricalChange(
@@ -121,7 +121,7 @@ function cancelEditing(propertyId: Id): void {
                   <textarea
                     bind:this={textareaElements[propertyId]}
                     bind:value={currentValues[propertyId]}
-                    class="min-h-24 min-w-0 w-full rounded-[1.5rem] border border-white/14 bg-black/35 px-4 py-3 text-sm leading-6 text-white caret-white placeholder:text-white/34 focus:border-white/28 focus:outline-none"
+                    class="min-h-24 min-w-0 w-full rounded-[1.5rem] border border-border-input bg-base-200 px-4 py-3 text-sm leading-6 text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
                     placeholder={getI18n(property, 'placeholder', userPreferences)}
                     rows="2"
                     onkeydown={event => {
@@ -136,7 +136,7 @@ function cancelEditing(propertyId: Id): void {
                   ></textarea>
                   <button
                     type="button"
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/10 text-white transition hover:bg-white/16"
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-content/8 text-base-content transition hover:bg-base-content/12"
                     onclick={() => saveValue(propertyId, property)}
                     disabled={!(currentValues[propertyId] || '').trim()}
                   >
@@ -146,16 +146,19 @@ function cancelEditing(propertyId: Id): void {
               {:else}
                 <button
                   type="button"
-                  class="flex min-h-24 w-full items-start justify-between gap-3 rounded-[1.5rem] border border-white/10 bg-black/25 px-4 py-3 text-left transition hover:bg-black/35"
+                  class="flex min-h-24 w-full items-start justify-between gap-3 rounded-[1.5rem] border border-border-input bg-base-200 px-4 py-3 text-left transition hover:bg-base-300"
                   onclick={() => startEditing(propertyId, property)}
                 >
                   <span
-                    class={`text-sm leading-6 ${displayValue ? 'text-white/82' : 'font-semibold text-white/45'}`}
+                    class={`text-sm leading-6 ${displayValue ? 'text-muted-foreground' : 'font-semibold text-muted-foreground'}`}
                   >
                     {displayValue ||
                       `Enter ${getI18n(property, 'label', userPreferences)}`}
                   </span>
-                  <Icon src={PencilSquare} class="mt-0.5 h-5 w-5 shrink-0 text-white" />
+                  <Icon
+                    src={PencilSquare}
+                    class="mt-0.5 h-5 w-5 shrink-0 text-base-content"
+                  />
                 </button>
               {/if}
             {:else if property.component === 'InputField'}
@@ -165,7 +168,7 @@ function cancelEditing(propertyId: Id): void {
                     bind:this={inputElements[propertyId]}
                     bind:value={currentValues[propertyId]}
                     type="text"
-                    class="h-11 min-w-0 w-full rounded-full border border-white/14 bg-black/35 px-4 text-sm text-white caret-white placeholder:text-white/34 focus:border-white/28 focus:outline-none"
+                    class="h-11 min-w-0 w-full rounded-full border border-border-input bg-base-200 px-4 text-sm text-base-content caret-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
                     placeholder={getI18n(property, 'placeholder', userPreferences)}
                     onkeydown={event => {
                       event.stopPropagation()
@@ -177,7 +180,7 @@ function cancelEditing(propertyId: Id): void {
                   >
                   <button
                     type="button"
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/10 text-white transition hover:bg-white/16"
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-input bg-base-content/8 text-base-content transition hover:bg-base-content/12"
                     onclick={() => saveValue(propertyId, property)}
                     disabled={!(currentValues[propertyId] || '').trim()}
                   >
@@ -187,22 +190,22 @@ function cancelEditing(propertyId: Id): void {
               {:else}
                 <button
                   type="button"
-                  class="flex h-11 w-full items-center justify-between gap-3 rounded-full border border-white/10 bg-black/25 px-4 text-left transition hover:bg-black/35"
+                  class="flex h-11 w-full items-center justify-between gap-3 rounded-full border border-border-input bg-base-200 px-4 text-left transition hover:bg-base-300"
                   onclick={() => startEditing(propertyId, property)}
                 >
                   <span
-                    class={`!block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm ${displayValue ? 'text-white' : 'font-semibold text-white/45'}`}
+                    class={`!block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm ${displayValue ? 'text-base-content' : 'font-semibold text-muted-foreground'}`}
                   >
                     {displayValue ||
                       `Enter ${getI18n(property, 'label', userPreferences)}`}
                   </span>
-                  <Icon src={PencilSquare} class="h-5 w-5 shrink-0 text-white" />
+                  <Icon src={PencilSquare} class="h-5 w-5 shrink-0 text-base-content" />
                 </button>
               {/if}
             {:else}
               <input
                 type="text"
-                class="h-11 w-full rounded-full border border-white/10 bg-black/25 px-4 text-sm text-white placeholder:text-white/34 focus:border-white/28 focus:outline-none"
+                class="h-11 w-full rounded-full border border-border-input bg-base-200 px-4 text-sm text-base-content placeholder:text-muted-foreground focus:border-border-input-hover focus:outline-none"
                 value={getUniversalSpecifierValue(appCtx, propertyId)}
                 placeholder={m.key_full_raven_wish()}
                 onchange={event =>

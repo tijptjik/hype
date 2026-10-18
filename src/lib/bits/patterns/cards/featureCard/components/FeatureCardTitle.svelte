@@ -136,14 +136,14 @@ function handleDescriptionToggle(event: Event): void {
 </script>
 
 <div
-  class="pointer-events-auto flex min-h-0 shrink-0 items-start justify-between bg-black px-(--feature-card-breadcrumbs-padding) pb-[2px]"
+  class="pointer-events-auto flex min-h-0 shrink-0 items-start justify-between bg-(--theme-panel) px-(--feature-card-breadcrumbs-padding) pb-[2px]"
 >
   {#if cardCtx.isNewMode}
     {#if isEditing}
       <div class="flex w-full items-center gap-2">
         <input
           type="text"
-          class="input input-bordered w-full bg-black caret-white focus:outline-none"
+          class="input input-bordered w-full bg-(--theme-panel) caret-base-content focus:outline-none"
           bind:value={title}
           bind:this={titleInput}
           placeholder={m.fluffy_wide_ladybug_file()}
@@ -171,8 +171,8 @@ function handleDescriptionToggle(event: Event): void {
         onclick={handleEditMode}
       >
         <span
-          class="w-full overflow-visible text-lg text-white"
-          class:text-gray-500={!title.trim()}
+          class="w-full overflow-visible text-lg text-base-content"
+          class:text-muted-foreground={!title.trim()}
           class:font-bold={!title.trim()}
         >
           {title || m.empty_lofty_meerkat_support()}
@@ -190,7 +190,7 @@ function handleDescriptionToggle(event: Event): void {
       padding={16}
       class="block h-full min-w-0 flex-1"
       containerClass="block w-full"
-      textClass="text-lg text-white"
+      textClass="text-lg text-base-content"
     />
   {/if}
 
@@ -200,7 +200,7 @@ function handleDescriptionToggle(event: Event): void {
         <div class="sticky top-0 z-40 self-start">
           <button
             type="button"
-            class="inline-flex h-6 items-start justify-end whitespace-nowrap bg-black pl-3 pr-0 pt-0 font-mono text-right text-xs uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-80"
+            class="inline-flex h-6 items-start justify-end whitespace-nowrap bg-(--theme-panel) pl-3 pr-0 pt-0 font-mono text-right text-xs uppercase tracking-[0.18em] text-primary transition-opacity hover:opacity-80"
             onclick={handleDescriptionToggle}
           >
             {m.common__read_less()}

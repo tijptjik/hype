@@ -51,13 +51,18 @@ const portalMaskId = $derived(`feature-card-portal-mask-${featureKey}`)
       </mask>
     </defs>
 
-    <rect width="100" height="100" fill="black" mask={`url(#${portalMaskId})`}></rect>
+    <rect
+      width="100"
+      height="100"
+      fill="var(--theme-panel)"
+      mask={`url(#${portalMaskId})`}
+    ></rect>
     <circle
       cx="50"
       cy="50"
       r="48"
       fill="none"
-      stroke="#4379CF"
+      stroke="var(--theme-primary)"
       stroke-width="2"
     ></circle>
   </svg>

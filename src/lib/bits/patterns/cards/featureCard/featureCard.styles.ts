@@ -4,7 +4,7 @@ import { cssVars } from '#lib/bits/utils.js'
 import type { FeatureCardLayout } from './featureCard.types'
 
 const FEATURE_CARD_WIDE_SHADOW =
-  '0 0 10px rgba(59,130,246,0.2), 0 0 20px rgba(59,130,246,0.1)'
+  '0 0 10px color-mix(in oklab, var(--theme-primary) 20%, transparent), 0 0 20px color-mix(in oklab, var(--theme-primary) 10%, transparent)'
 
 /**
  * Converts layout and chrome values into inspectable CSS custom properties.

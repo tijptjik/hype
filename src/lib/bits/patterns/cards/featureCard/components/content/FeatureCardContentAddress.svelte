@@ -101,7 +101,7 @@ const lines = $derived(
   {#each lines as line, index}
     {#key `${featureKey}-${index}`}
       <span
-        class={`pointer-events-none absolute inline-block origin-bottom-right whitespace-nowrap rounded-full bg-[#1D232A] ${
+        class={`pointer-events-none absolute inline-block origin-bottom-right whitespace-nowrap rounded-full bg-base-200 text-base-content ${
           line !== '' ? 'px-2 py-0.5 text-sm/6' : ''
         }`}
         style={`transform: translateX(-${addressLineRightPadding[index] ?? 0}px); rotate: -17deg; top: ${index * 34}px;`}

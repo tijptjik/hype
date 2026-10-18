@@ -162,7 +162,7 @@ $effect(() => {
         {value.label}
       </p>
       <p
-        class="mt-1 h-5 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm normal-case tracking-normal text-white"
+        class="mt-1 h-5 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm normal-case tracking-normal text-base-content"
       >
         {value.detail}
       </p>

@@ -759,19 +759,19 @@ $effect(() => {
 >
   <div class="pointer-events-none relative h-full w-full overflow-hidden">
     <div
-      class="pointer-events-auto absolute inset-x-0 top-0 z-20 bg-black"
+      class="pointer-events-auto absolute inset-x-0 top-0 z-20 bg-(--theme-panel)"
       style={`height: ${CONTENT_TOP_PADDING_PX + activePortalGeometry.visualTop}px;`}
     ></div>
     <div
-      class="pointer-events-auto absolute right-0 top-0 z-20 bg-black"
+      class="pointer-events-auto absolute right-0 top-0 z-20 bg-(--theme-panel)"
       style={`width: ${contentSidePaddingPx + activePortalGeometry.visualRight}px; height: ${activeContentHeight}px;`}
     ></div>
     <div
-      class="pointer-events-auto absolute z-20 bg-black"
+      class="pointer-events-auto absolute z-20 bg-(--theme-panel)"
       style={`top: ${CONTENT_TOP_PADDING_PX + activePortalGeometry.visualTop}px; left: 0; width: ${contentSidePaddingPx + activePortalGeometry.visualLeft + PORTAL_LEFT_OCCLUSION_OVERDRAW_PX}px; height: ${activePortalGeometry.visualDiameter}px;`}
     ></div>
     <div
-      class="pointer-events-auto absolute inset-x-0 z-20 bg-black"
+      class="pointer-events-auto absolute inset-x-0 z-20 bg-(--theme-panel)"
       style={`top: ${CONTENT_TOP_PADDING_PX + activePortalGeometry.visualBottom - 1}px; height: ${Math.max(activeContentHeight - (CONTENT_TOP_PADDING_PX + activePortalGeometry.visualBottom) + 1, 0)}px;`}
     ></div>
 
@@ -786,7 +786,7 @@ $effect(() => {
       <div class="pointer-events-none absolute inset-x-0 top-0 z-30">
         {#each visibleCollapsedDescriptionLines as line, index (`collapsed-${index}-${line.top}`)}
           <div
-            class="absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-gray-300"
+            class="absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-muted-foreground"
             style={`top: ${CONTENT_TOP_PADDING_PX + line.top}px; left: ${contentSidePaddingPx + CONTENT_DESCRIPTION_LEFT_OFFSET_PX}px; width: ${line.width}px;`}
           >
             {line.text}
@@ -844,7 +844,7 @@ $effect(() => {
         >
           {#each expandedDescriptionLines as line, index (`expanded-${index}-${line.top}`)}
             <div
-              class="pointer-events-none absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-gray-300"
+              class="pointer-events-none absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-muted-foreground"
               style={`top: ${CONTENT_TOP_PADDING_PX + line.top}px; width: ${line.width}px;`}
             >
               {line.text}

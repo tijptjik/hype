@@ -325,18 +325,18 @@ function handleClickOutside(event: MouseEvent): void {
   <div
     bind:this={shellElement}
     id="feature-card-shell"
-    class="feature-card-chrome relative mx-auto flex w-full flex-col motion-reduce:transition-none"
+    class="feature-card-chrome text-base-content relative mx-auto flex w-full flex-col motion-reduce:transition-none"
     style={cardStyle}
   >
     <!-- Border chrome and inner fill live on the outer shell; the surface handles
          pointer events, transitions, and outside-click detection. -->
     <div
       id="feature-card"
-      class={`feature-card-surface pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col ${isCardContentVisible ? 'bg-transparent' : 'bg-black'}`}
+      class={`feature-card-surface pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col ${isCardContentVisible ? 'bg-transparent' : 'bg-(--theme-panel)'}`}
     >
       <div
         aria-hidden={isCardContentVisible}
-        class={`pointer-events-none absolute inset-0 z-0 bg-black transition-opacity duration-180 ease-out motion-reduce:transition-none ${isCardContentVisible ? 'opacity-0' : 'opacity-100'}`}
+        class={`pointer-events-none absolute inset-0 z-0 bg-(--theme-panel) transition-opacity duration-180 ease-out motion-reduce:transition-none ${isCardContentVisible ? 'opacity-0' : 'opacity-100'}`}
       ></div>
       <div
         aria-hidden={!isCardContentVisible}
@@ -362,7 +362,7 @@ function handleClickOutside(event: MouseEvent): void {
 .feature-card-chrome {
   box-sizing: border-box;
   position: relative;
-  border: var(--feature-card-border-width) solid black;
+  border: var(--feature-card-border-width) solid var(--theme-panel);
   border-radius: var(--feature-card-chrome-radius);
   overflow: hidden;
   isolation: isolate;

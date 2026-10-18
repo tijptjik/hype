@@ -156,7 +156,7 @@ const viewerStyle = $derived.by(() => {
 <!-- biome-ignore lint/a11y/noStaticElementInteractions: The viewer shell stops bubbling pointer events from activating the enclosing card. -->
 <div
   bind:this={viewerRoot}
-  class={`pointer-events-auto w-full select-none bg-black/95 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) transition-[height,min-height,max-height,flex-basis] duration-[240ms] ease-out motion-reduce:transition-none [touch-action:manipulation] ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
+  class={`pointer-events-auto w-full select-none bg-base-200 px-(--feature-card-viewer-padding,0px) pb-(--feature-card-viewer-padding,0px) pt-(--feature-card-viewer-padding-top,0px) transition-[height,min-height,max-height,flex-basis] duration-[240ms] ease-out motion-reduce:transition-none [touch-action:manipulation] ${scrollable ? 'shrink-0 grow-0 basis-auto' : 'flex-[1_1_auto]'}`}
   style={`${viewerStyle ?? ''}${viewerStyle ? ' ' : ''}min-height: ${viewerBlockMinHeightPx}px;`}
   onclick={stopViewerEvent}
   onkeydown={stopViewerEvent}

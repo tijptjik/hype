@@ -129,7 +129,7 @@ const actionItems = [
       Boolean(organisationName || projectName),
     )}
     <div
-      class="pointer-events-auto flex w-full items-center justify-between bg-black px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
+      class="pointer-events-auto flex w-full items-center justify-between bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
     >
       <div
         class="flex min-w-0 items-center gap-2 font-mono text-xs uppercase text-neutral-content"
@@ -165,7 +165,7 @@ const actionItems = [
       {#if cardCtx.isNewMode && onEditSelection}
         <button
           type="button"
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-white/6 hover:text-neutral-content"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-base-content/12 hover:text-neutral-content"
           aria-label="Edit map selection"
           onclick={onEditSelection}
         >
@@ -186,7 +186,7 @@ const actionItems = [
     </div>
   {:else}
     <div
-      class="pointer-events-auto flex w-full items-center justify-between bg-black px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
+      class="pointer-events-auto flex w-full items-center justify-between bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
     >
       <div
         class="flex min-w-0 items-center gap-2 font-mono text-xs uppercase text-neutral-content"
@@ -197,7 +197,7 @@ const actionItems = [
       {#if cardCtx.isNewMode && onEditSelection}
         <button
           type="button"
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-white/6 hover:text-neutral-content"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-content/60 transition hover:bg-base-content/12 hover:text-neutral-content"
           aria-label="Edit map selection"
           onclick={onEditSelection}
         >

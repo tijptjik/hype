@@ -44,7 +44,7 @@ const layout = $derived(
 )
 </script>
 
-<div class="pointer-events-auto shrink-0 bg-black">
+<div class="pointer-events-auto shrink-0 bg-(--theme-panel)">
   {#if topActions}
     <div class="flex justify-center px-[var(--feature-card-content-padding)] pt-2">
       {@render topActions()}

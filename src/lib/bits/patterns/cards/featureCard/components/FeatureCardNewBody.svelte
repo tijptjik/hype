@@ -33,7 +33,9 @@ const infoItems = [
       <FeatureCardNewPrimitive.AddressField />
       <FeatureCardNewPrimitive.DescriptionField />
       <FeatureCardNewPrimitive.PropertiesField {feature} />
-      <div class="border-t border-white/10 pt-4"><FeatureCardAttributionField /></div>
+      <div class="border-t border-border-input pt-4">
+        <FeatureCardAttributionField />
+      </div>
     </div>
   {/snippet}
 </FeatureCardContributionPanel>
