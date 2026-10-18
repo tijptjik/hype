@@ -1,0 +1,645 @@
+{
+  "scope": "Local Atlas only; Google Maps reference agreement, not independently surveyed correctness",
+  "release": "data-hk-addresses-2026-09-22.0",
+  "rubric": "Compare with full Google listing. Ignore casing, abbreviations, transliteration and district formatting. Require matching street/number (including a containing number range) or the named premise. A conflicting named facility is not a full match even at the same street number. Missing floor/shop is not penalized. Distinct letter suffixes remain distinct. Missing candidates fail address agreement. These manual judgements and possible alternate/corner addresses remain reviewable below.",
+  "summary": {
+    "reverse": {
+      "cases": 25,
+      "http200": 25,
+      "withCandidates": 25,
+      "top1AddressAgreement": 16,
+      "top5AddressAgreement": 21,
+      "top1Within50m": 24,
+      "top1Within100m": 25,
+      "top5Within100m": 25,
+      "ambiguousResponses": 3,
+      "medianQueryDurationMs": 3464
+    },
+    "forward_raw": {
+      "cases": 25,
+      "http200": 25,
+      "withCandidates": 0,
+      "top1AddressAgreement": 0,
+      "top5AddressAgreement": 0,
+      "top1Within50m": 0,
+      "top1Within100m": 0,
+      "top5Within100m": 0,
+      "ambiguousResponses": 0,
+      "medianQueryDurationMs": 236
+    },
+    "forward_core": {
+      "cases": 25,
+      "http200": 25,
+      "withCandidates": 19,
+      "top1AddressAgreement": 15,
+      "top5AddressAgreement": 19,
+      "top1Within50m": 12,
+      "top1Within100m": 15,
+      "top5Within100m": 19,
+      "ambiguousResponses": 7,
+      "medianQueryDurationMs": 309
+    }
+  },
+  "reviews": [
+    {
+      "id": "florist-01",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Simplified lookup ranks 370 ahead of 70; 270 is also a substring candidate."
+    },
+    {
+      "id": "florist-01",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-01",
+      "mode": "forward_core",
+      "firstAgreeingRank": 2,
+      "top1Agreement": false,
+      "top5Agreement": true,
+      "notes": "Simplified lookup ranks 370 ahead of 70; 270 is also a substring candidate."
+    },
+    {
+      "id": "florist-02",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Simplified lookup ranks 229 ahead of 29."
+    },
+    {
+      "id": "florist-02",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-02",
+      "mode": "forward_core",
+      "firstAgreeingRank": 2,
+      "top1Agreement": false,
+      "top5Agreement": true,
+      "notes": "Simplified lookup ranks 229 ahead of 29."
+    },
+    {
+      "id": "florist-03",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Forward top result is MTR Hong Kong Station, not the listed One IFC; both share 1 Harbour View Street."
+    },
+    {
+      "id": "florist-03",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-03",
+      "mode": "forward_core",
+      "firstAgreeingRank": 2,
+      "top1Agreement": false,
+      "top5Agreement": true,
+      "notes": "Forward top result is MTR Hong Kong Station, not the listed One IFC; both share 1 Harbour View Street."
+    },
+    {
+      "id": "florist-04",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Forward top result is residential Tower 1, not the listed Lee Tung Avenue; both share 200 Queen’s Road East."
+    },
+    {
+      "id": "florist-04",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-04",
+      "mode": "forward_core",
+      "firstAgreeingRank": 4,
+      "top1Agreement": false,
+      "top5Agreement": true,
+      "notes": "Forward top result is residential Tower 1, not the listed Lee Tung Avenue; both share 200 Queen’s Road East."
+    },
+    {
+      "id": "florist-05",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-05",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-05",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-06",
+      "mode": "reverse",
+      "firstAgreeingRank": 2,
+      "top1Agreement": false,
+      "top5Agreement": true,
+      "notes": "Reverse top result is 12 instead of 13 Swatow Street. Rank 2 has a containing 11–21 range on the expected street."
+    },
+    {
+      "id": "florist-06",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-06",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Reverse top result is 12 instead of 13 Swatow Street. Rank 2 has a containing 11–21 range on the expected street."
+    },
+    {
+      "id": "florist-07",
+      "mode": "reverse",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Google lists 139A Sai Yee Street. Reverse top result is 141; rank 5 is 139, with no A suffix. No exact reference agreement."
+    },
+    {
+      "id": "florist-07",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-07",
+      "mode": "forward_core",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Google lists 139A Sai Yee Street. Reverse top result is 141; rank 5 is 139, with no A suffix. No exact reference agreement."
+    },
+    {
+      "id": "florist-08",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-08",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-08",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-09",
+      "mode": "reverse",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Google lists 164 Prince Edward Road West; returned 164A is kept distinct. Requires independent ground-truth adjudication before calling either provider wrong."
+    },
+    {
+      "id": "florist-09",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-09",
+      "mode": "forward_core",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Google lists 164 Prince Edward Road West; returned 164A is kept distinct. Requires independent ground-truth adjudication before calling either provider wrong."
+    },
+    {
+      "id": "florist-10",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-10",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-10",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-11",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-11",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-11",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-12",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-12",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-12",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-13",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-13",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-13",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-14",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Foo Wah / Fu Wah House is the same named building; returned 36 lies within the listed 32–36 range. Simplified range query yields no candidates."
+    },
+    {
+      "id": "florist-14",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-14",
+      "mode": "forward_core",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Foo Wah / Fu Wah House is the same named building; returned 36 lies within the listed 32–36 range. Simplified range query yields no candidates."
+    },
+    {
+      "id": "florist-15",
+      "mode": "reverse",
+      "firstAgreeingRank": 4,
+      "top1Agreement": false,
+      "top5Agreement": true,
+      "notes": "Reverse returns 71 instead of 75 Yeung Uk Road; 75 ranks fourth."
+    },
+    {
+      "id": "florist-15",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-15",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Reverse returns 71 instead of 75 Yeung Uk Road; 75 ranks fourth."
+    },
+    {
+      "id": "florist-16",
+      "mode": "reverse",
+      "firstAgreeingRank": 2,
+      "top1Agreement": false,
+      "top5Agreement": true,
+      "notes": "Reverse returns Technology Park at 18 On Lai Street instead of Kings Wing Plaza 1 at 3 On Kwan Street. Correct premise ranks second. Forward rank 1 has the correct street/number and no conflicting building name."
+    },
+    {
+      "id": "florist-16",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-16",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Reverse returns Technology Park at 18 On Lai Street instead of Kings Wing Plaza 1 at 3 On Kwan Street. Correct premise ranks second. Forward rank 1 has the correct street/number and no conflicting building name."
+    },
+    {
+      "id": "florist-17",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-17",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-17",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Street number and building (where supplied) agree; floor/shop detail is outside this score."
+    },
+    {
+      "id": "florist-18",
+      "mode": "reverse",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Google names Tai Wai Market. Reverse returns Grandeur Garden blocks; no named-market agreement within top five."
+    },
+    {
+      "id": "florist-18",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-18",
+      "mode": "forward_core",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Google names Tai Wai Market. Reverse returns Grandeur Garden blocks; no named-market agreement within top five."
+    },
+    {
+      "id": "florist-19",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Tai Po Hui Market and Cooked Food Centre and Tai Po Complex share the expected 8 Heung Sze Wui Street; market/shop floors are not scored."
+    },
+    {
+      "id": "florist-19",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-19",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Tai Po Hui Market and Cooked Food Centre and Tai Po Complex share the expected 8 Heung Sze Wui Street; market/shop floors are not scored."
+    },
+    {
+      "id": "florist-20",
+      "mode": "reverse",
+      "firstAgreeingRank": 2,
+      "top1Agreement": false,
+      "top5Agreement": true,
+      "notes": "Reverse top result uses 1 Wai Yan Street. Rank 2 has the expected containing 4–6 Tsing Yuen Street range; exact 4 appears at rank 4. A possible corner-building alternate address is not assumed equivalent."
+    },
+    {
+      "id": "florist-20",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-20",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Reverse top result uses 1 Wai Yan Street. Rank 2 has the expected containing 4–6 Tsing Yuen Street range; exact 4 appears at rank 4. A possible corner-building alternate address is not assumed equivalent."
+    },
+    {
+      "id": "florist-21",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Reverse correctly returns Tai Lee Building, 63 Yuen Long On Ning Road. The shorter core query 63 On Ning Road yields none."
+    },
+    {
+      "id": "florist-21",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-21",
+      "mode": "forward_core",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Reverse correctly returns Tai Lee Building, 63 Yuen Long On Ning Road. The shorter core query 63 On Ning Road yields none."
+    },
+    {
+      "id": "florist-22",
+      "mode": "reverse",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Reverse returns Shun Hing Building on Hop Yick Road instead of the listed 10–16 Kin Tak Street. Correct forward result is Kin Tak House."
+    },
+    {
+      "id": "florist-22",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-22",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Reverse returns Shun Hing Building on Hop Yick Road instead of the listed 10–16 Kin Tak Street. Correct forward result is Kin Tak House."
+    },
+    {
+      "id": "florist-23",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Google supplies only 8 Yan Po Road, so street-number agreement counts; the specific tower/shop is unverified. Forward rank 1 is 123.8m from the Google pin."
+    },
+    {
+      "id": "florist-23",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-23",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Google supplies only 8 Yan Po Road, so street-number agreement counts; the specific tower/shop is unverified. Forward rank 1 is 123.8m from the Google pin."
+    },
+    {
+      "id": "florist-24",
+      "mode": "reverse",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Reverse correctly names Gold Coast Piazza. Core query including Castle Peak Bay yields no candidates."
+    },
+    {
+      "id": "florist-24",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-24",
+      "mode": "forward_core",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "Reverse correctly names Gold Coast Piazza. Core query including Castle Peak Bay yields no candidates."
+    },
+    {
+      "id": "florist-25",
+      "mode": "reverse",
+      "firstAgreeingRank": 4,
+      "top1Agreement": false,
+      "top5Agreement": true,
+      "notes": "Reverse top result is Fu Tung Plaza (partial complex match), not the named Fu Tung Market; market ranks fourth."
+    },
+    {
+      "id": "florist-25",
+      "mode": "forward_raw",
+      "firstAgreeingRank": null,
+      "top1Agreement": false,
+      "top5Agreement": false,
+      "notes": "No candidates for the unmodified Google listing address."
+    },
+    {
+      "id": "florist-25",
+      "mode": "forward_core",
+      "firstAgreeingRank": 1,
+      "top1Agreement": true,
+      "top5Agreement": true,
+      "notes": "Reverse top result is Fu Tung Plaza (partial complex match), not the named Fu Tung Market; market ranks fourth."
+    }
+  ]
+}
