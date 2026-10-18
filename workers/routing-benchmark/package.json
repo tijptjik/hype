@@ -1,0 +1,9 @@
+{
+  "name": "hype-routing-benchmark",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@cloudflare/containers": "0.3.7",
+    "valhalla-server": "0.2.1"
+  }
+}
