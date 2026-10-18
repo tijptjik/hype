@@ -7,14 +7,14 @@ Tracking: [routing parent #186](https://github.com/tijptjik/hype/issues/186),
 
 The October 18 experiment compares native Valhalla 3.8.3 in a container with the
 community `valhalla-server@0.2.1` WASM Worker adapter using the same Hong Kong
-OSM-derived graph. The source is SaanSeoi's October 1 regional PBF. Build scripts,
-isolated Worker configurations and reproduction instructions live under
-[`scripts/routing`](../../../scripts/routing/README.md) and
-[`workers/routing-benchmark`](../../../workers/routing-benchmark).
+OSM-derived graph. The source is SaanSeoi's October 1 regional PBF. Its recorded
+measurements remain in the benchmark report; the dedicated benchmark deployments
+and tooling are retired. Application routing uses the shared SaanSeoi services
+described in [routing setup](../../../scripts/routing/README.md).
 
 The [benchmark report](../../../docs/benchmarks/routing-2026-10-18.md) records
 measured latency, route parity, resource failures and the initial deployment blocker.
-A dedicated token resolved the HTTP 403, and the native container is deployed.
+A dedicated token resolved the HTTP 403 for the recorded native deployment.
 The paired 468-request Cloudflare run favored native Valhalla: warm medians were
 148 ms walking, 138 ms cycling and 140 ms car, versus 225/166/200 ms for WASM.
 Native completed all routable requests; WASM retained memory/queue failures.
@@ -36,8 +36,8 @@ while startup runs. `POST /route` can independently wait for/start the engine, s
 warm-up failure, omission or expiry cannot prevent a calculation. The single
 shared engine expires after 120 seconds of inactivity; each warm-up/completed
 route refreshes that window, and in-flight requests defer shutdown. No periodic
-keepalive or always-warm instance is intended. The isolated benchmark exposes
-authenticated readiness/state/stop endpoints; its bearer token stays server-side.
+keepalive or always-warm instance is intended. The isolated benchmark used
+authenticated readiness/state/stop endpoints with a server-only bearer token.
 
 The runtime experiment initially left the Google Maps action unchanged. The
 application integration below now replaces it on the public card. The technical

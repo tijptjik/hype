@@ -57,10 +57,10 @@ bucket_name = "hype-assets-preview"
 binding = "ASSET_PUBLIC_PRODUCTION"
 bucket_name = "hype-assets-prod"
 
-# Private in-app street routing; ROUTING_TOKEN is a server-only Worker secret.
+# Local development uses the shared preview router with a server-only ROUTING_TOKEN.
 [[services]]
 binding = "ROUTING_SERVICE"
-service = "hype-routing-native-benchmark"
+service = "ss-routing-preview"
 remote = true
 
 [[ratelimits]]

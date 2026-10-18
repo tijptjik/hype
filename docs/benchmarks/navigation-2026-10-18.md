@@ -43,7 +43,8 @@ the serving Cloudflare location). The limiter runs before warm-up or routing.
 Only supported HK points and four street profiles are accepted.
 
 `ROUTING_SERVICE` is a private binding to the already deployed
-`hype-routing-native-benchmark` Worker. Only the app server attaches
+`ss-routing-preview` service for local development and preview, and
+`ss-routing-prod` for production. Only the app server attaches
 `ROUTING_TOKEN`. The app does not persist origin/destination coordinates in its
 URLs, local storage, database or its own application logging/cache.
 
@@ -57,10 +58,10 @@ across hot/config reloads, so a reload alone can leave `ROUTING_LIMITER` missing
 The normal `hype.localhost` server uses port 5175; keep that listener when
 refreshing the running app rather than testing only a separate temporary port.
 Before a production/preview rollout, configure `ROUTING_TOKEN` as that
-environment's Worker secret, matching the native Worker's `BENCHMARK_TOKEN`.
+environment's Worker secret, matching Hype's credential in the corresponding
+SaanSeoi client registry.
 Use Wrangler's secret prompt or a secret file passed through stdin; never put
-the value in command arguments, browser configuration or source control. The
-native service remains an initial graph/runtime, not a graph-update pipeline.
+the value in command arguments, browser configuration or source control. Graph generation and service deployment are owned by SaanSeoi.
 
 ## Map route overlay
 

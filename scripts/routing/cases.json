@@ -1,8 +1,0 @@
-[
-  {"id":"central-sheung-wan","from":[22.2819,114.1589],"to":[22.2865,114.1500],"modes":["pedestrian","bicycle","auto"]},
-  {"id":"mong-kok-yau-ma-tei","from":[22.3192,114.1694],"to":[22.3068,114.1714],"modes":["pedestrian","bicycle","auto"]},
-  {"id":"wan-chai-causeway-bay","from":[22.2776,114.1733],"to":[22.2803,114.1846],"modes":["pedestrian","bicycle","auto"]},
-  {"id":"sha-tin-tai-po","from":[22.3816,114.1877],"to":[22.4446,114.1691],"modes":["pedestrian","bicycle","auto"]},
-  {"id":"central-tsim-sha-tsui","from":[22.2819,114.1589],"to":[22.2950,114.1722],"modes":["pedestrian","bicycle","auto"]},
-  {"id":"central-peak","from":[22.2819,114.1589],"to":[22.2711,114.1497],"modes":["pedestrian","bicycle","auto"]}
-]
