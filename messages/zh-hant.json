@@ -65,6 +65,8 @@
   "account__add_password_action": "新增密碼",
   "account__password_added": "已為你的帳戶新增密碼登入。",
   "account__password_add_error": "無法新增該密碼。請嘗試其他密碼或重新登入。",
+  "account__password_sign_in_again": "你的登入階段已過期。請重新登入，然後再嘗試新增密碼。",
+  "account__password_rate_limited": "設定密碼的嘗試次數過多。請稍候一分鐘再試。",
   "account__passkey": "通行密鑰",
   "account__email": "電郵",
   "account__add_passkey": "新增通行密鑰",

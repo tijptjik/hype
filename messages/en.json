@@ -65,6 +65,8 @@
   "account__add_password_action": "Add password",
   "account__password_added": "Password sign-in has been added to your account.",
   "account__password_add_error": "We couldn't add that password. Try another password or sign in again.",
+  "account__password_sign_in_again": "Your session has expired. Please sign in again, then retry adding a password.",
+  "account__password_rate_limited": "Too many password setup attempts. Wait a minute, then try again.",
   "account__passkey": "Passkey",
   "account__email": "Email",
   "account__add_passkey": "Add passkey",

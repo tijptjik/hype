@@ -65,6 +65,8 @@
   "account__add_password_action": "添加密码",
   "account__password_added": "已为你的账户添加密码登录。",
   "account__password_add_error": "无法添加该密码。请尝试其他密码或重新登录。",
+  "account__password_sign_in_again": "你的登录会话已过期。请重新登录，然后再尝试添加密码。",
+  "account__password_rate_limited": "设置密码的尝试次数过多。请稍候一分钟再试。",
   "account__passkey": "通行密钥",
   "account__email": "邮箱",
   "account__add_passkey": "添加通行密钥",

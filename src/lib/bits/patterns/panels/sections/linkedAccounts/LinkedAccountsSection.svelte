@@ -18,6 +18,7 @@ import {
 } from '#lib/auth/passkey-upgrade.js'
 import { isAuthProviderEnabled } from '#lib/auth/providers.js'
 import { toLinkedAccountSelector } from '#lib/auth/account-selector.js'
+import { getPasswordSetupError } from '#lib/auth/password-setup-feedback.js'
 // I18N
 import { m } from '#lib/i18n.js'
 
@@ -532,7 +533,10 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email, newPassword }),
     })
-    if (!response.ok) throw new Error('password not set')
+    if (!response.ok) {
+      errorMessage = await getPasswordSetupError(response)
+      return
+    }
     newPassword = ''
     // The endpoint may have changed the email too, so replace the session atom's cached user.
     await useSession().get().refetch()

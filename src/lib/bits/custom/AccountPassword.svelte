@@ -3,6 +3,7 @@
 import { onMount } from 'svelte'
 // PROJECT
 import { authClient } from '#lib/auth/client.js'
+import { getPasswordSetupError } from '#lib/auth/password-setup-feedback.js'
 // I18N
 import { m } from '#lib/i18n.js'
 
@@ -43,7 +44,7 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
       body: JSON.stringify({ newPassword }),
     })
     if (!response.ok) {
-      errorMessage = m.account__password_add_error()
+      errorMessage = await getPasswordSetupError(response)
       return
     }
 

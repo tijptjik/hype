@@ -132,10 +132,12 @@ Better Auth's HTTP handler. Both paths share the configured five-attempt,
 60-second IP bucket, including rejected and concurrent attempts. The default
 limiter is isolate-local, not a globally coordinated Cloudflare quota.
 
-Password setup requires a same-origin request, an upgraded account, and a fresh
-authoritative session. A revoked session or a session older than Better Auth's
-configured freshness window must be rejected even if its cookie cache says active.
-An older account session must sign in again before adding a password. Throttled
+Password setup requires a same-origin request, an upgraded account, and a valid
+authoritative session. An older session can add a first password without another
+sign-in, including after Better Auth's default 24-hour freshness window. Expired
+or revoked sessions must be rejected even if their cookie cache says active.
+This exception applies only to first-password setup; other authentication
+operations retain their existing session requirements. Throttled
 responses retain Better Auth's `429` status and `X-Retry-After` header; they must
 not change email, send verification mail, or hash a password.
 
