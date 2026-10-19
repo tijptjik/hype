@@ -1,5 +1,7 @@
 // THIRD-PARTY
 import proj from 'proj4'
+// ADDRESS
+import { ADDRESS_LOCALES, emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 // DATA
 import streetsData from '#lib/map/streets.json'
 // TYPES
@@ -872,7 +874,7 @@ export function toLocalParseResult(
     ...parsedSubpremises,
   }
 
-  return {
+  const result: ParsedReverseGeocodeResult = {
     addressMeta,
     i18n: {
       en: {
@@ -897,6 +899,21 @@ export function toLocalParseResult(
       },
     },
   }
+  // Local parsing is unverified migration/import evidence, never a canonical source.
+  const address = emptyFeatureAddress(
+    Object.fromEntries(
+      (Object.keys(ADDRESS_LOCALES) as LocaleKey[]).map(locale => [
+        ADDRESS_LOCALES[locale],
+        result.i18n[locale].displayAddress ?? '',
+      ]),
+    ),
+  )
+  address.query = components.rawAddress
+  address.legacy = { i18n: structuredClone(result.i18n), addressMeta }
+  result.addressMeta = { ...addressMeta, address }
+  for (const locale of Object.keys(ADDRESS_LOCALES) as LocaleKey[])
+    result.i18n[locale].addressProperties = {}
+  return result
 }
 
 // export function parseToDisplayAddressEn(address: string, name?: string): string {

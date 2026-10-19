@@ -30,7 +30,7 @@ const response = (
           en: {
             formattedAddress,
             buildingName: 'MAIN WING',
-            estateName: 'JUSTICE PLACE',
+            premisesName: 'JUSTICE PLACE',
             buildingNumberFrom: '18',
             buildingNumberExpression: '18',
             streetName: 'LOWER ALBERT ROAD',
@@ -38,7 +38,7 @@ const response = (
           'zh-hant': {
             formattedAddress: '中座律政中心18下亞厘畢道中西區香港',
             buildingName: '中座',
-            estateName: '律政中心',
+            premisesName: '律政中心',
             buildingNumberExpression: '18',
             streetName: '下亞厘畢道',
           },
@@ -102,7 +102,8 @@ describe('SaanSeoi geocoding', () => {
       latitude: 22.27886,
       addressForwardGeocoder: 'saanseoi',
     })
-    expect(result.i18n.en.addressProperties.rawAddress).toBe('18 Lower Albert Road')
+    expect(result.addressMeta.address?.query).toBe('18 Lower Albert Road')
+    expect(result.i18n.en.addressProperties).toEqual({})
   })
 
   it('distinguishes no match from malformed or failed responses', async () => {
@@ -129,7 +130,7 @@ describe('SaanSeoi geocoding', () => {
       'https://api.saanseoi.hk/addresses/v1/geocode',
     )
     expect(url.searchParams.get('lng')).toBe(String(pin.lng))
-    expect(url.searchParams.get('profile')).toBe('map')
+    expect(url.searchParams.get('profile')).toBe('full')
     expect(url.toString()).not.toContain('test-key')
     expect(init.headers['x-api-key']).toBeUndefined()
     expect(init.headers.Origin).toBeUndefined()

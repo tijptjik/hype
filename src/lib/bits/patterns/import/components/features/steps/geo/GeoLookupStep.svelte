@@ -57,7 +57,7 @@ let sampledRowIndices = $state<number[]>([])
 let geocodeCacheSize = $state(0)
 let isLoadingCache = $state(true)
 
-const GEO_LOOKUP_CACHE_KEY = 'hype.import.geo-lookup-cache.saanseoi.v1'
+const GEO_LOOKUP_CACHE_KEY = 'hype.import.geo-lookup-cache.saanseoi.v2'
 
 // Dashboard state for current row being processed
 let currentRowData = $state<{
@@ -490,7 +490,9 @@ async function handleGeocodeForCSV(
       // SaanSeoi returns normalized components; preserve the source address in its locale.
       // Sub-premises remain part of the raw query for provider-side parsing.
       const processedResult = result
-      processedResult.i18n[locale].addressProperties.rawAddress = rawAddress
+      if (processedResult.addressMeta.address)
+        processedResult.addressMeta.address.query = rawAddress
+      else processedResult.i18n[locale].addressProperties.rawAddress = rawAddress
 
       if (!processedResult) {
         throw new Error('Failed to process geocoding result')
@@ -739,8 +741,12 @@ async function startGeocoding() {
               addressProperties: data.addressProperties,
             }
 
-            // Handle rawAddress storage - always store if it exists
-            if (rawAddressValue && geocodedLocale === locale) {
+            // Preserve raw queries in canonical evidence; legacy results retain their old field.
+            if (
+              rawAddressValue &&
+              geocodedLocale === locale &&
+              !featureData.addressMeta?.address
+            ) {
               featureData.i18n[geocodedLocale].addressProperties = {
                 ...featureData.i18n[geocodedLocale].addressProperties,
                 rawAddress: rawAddressValue,

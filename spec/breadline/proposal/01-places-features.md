@@ -259,3 +259,53 @@ membership, missing/duplicate inventories and building-only references.
 This is the dependency-validation boundary, not an activated fetch or synchronization
 job. Pinned network reads, immutable source persistence, Feature materialization,
 override/link controls and the importer rebase remain outstanding (Refs #194).
+
+## Feature address editor migration (Refs #194, #213)
+
+The admin Address tab stores the upstream address contract in the versioned
+`feature.addressMeta.address` envelope. Its `source` uses `PlaceAddress`: selected
+Address2D identity, snapshot, retained JSON:API data, publication metadata,
+attribution, optional Address3D inventory/unit and localized fallback labels.
+Per-feature corrections use upstream field names and locale tags in `overrides`.
+Missing keys inherit; null clears; resetting a field removes its override. Retained
+source records are never rewritten by corrections. An explicit formatted-address
+correction takes precedence over a composed structured label.
+
+The editor supports forward search, reverse lookup, marker/coordinate changes and
+localized corrections. Moving the marker retains the settled address and marks the
+match stale. Requests cannot replace a subsequently edited draft. Units are loaded
+from the selected release set and offered only with established owner membership
+and a matching snapshot. A failed lookup leaves existing values intact.
+
+The admin and public contribution write boundaries project this envelope into the
+existing localized display-address columns for compatibility with readers. Legacy
+`addressProperties` are no longer written by the geocoder. This feature envelope is
+an incremental migration; shared Place association, refresh and materialization
+remain separate work under the accepted architecture above.
+
+Migration `0107_feature_saanseoi_addresses.sql` archives existing metadata and
+structured locale fields as legacy evidence, retaining their display labels as
+unresolved fallback text. It does not guess upstream identity. Apply it through the
+normal migration release process before rollout; it has only been applied to an
+isolated local copy during development. The full-copy rehearsal preserved all
+1,759 feature IDs, geometries and timestamps and all 5,223 locale display values
+and generation flags. All 1,759 envelopes were created and legacy structured
+properties cleared. The migration test also checks safe reruns.
+
+Validation: 60 focused address/geocoding/feature remote tests pass. An authenticated
+isolated browser check verifies geocoder-response application, correction, Save and
+reload, stale-marker feedback, failed-lookup preservation and Reset. Dark and light
+theme layouts were inspected; the existing admin minimum-width guard applies on
+mobile. The full repository check has 10 unrelated errors and no address-file
+diagnostics. Live upstream access from the test origin returns HTTP 401, so successful
+lookup checks use controlled JSON:API fixtures; live geocoder acceptance is pending.
+
+The address editor presents ranked formatted-address candidates for explicit
+selection before populating the draft. Selected-address details request
+`include=divisions,units` from the pinned release set; a Divisions section displays
+only returned relationship memberships. It does not infer feature polygon membership.
+Local corrections show optional expression rows, with one shared building-number
+input and locale-specific Block/Phase inputs. Parsed components are stored alongside
+the expression and reset together; unknown expressions retain their text without
+guessing components. `premisesName` follows the SaanSeoi contract. Migration `0108`
+renames retained source keys and corrections while leaving legacy evidence intact.

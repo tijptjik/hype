@@ -1,3 +1,4 @@
+import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 // SERVICES
 import { geocodeAddress, type GeocodeOptions } from './geocoding.js'
 import {
@@ -42,17 +43,23 @@ export async function geocodeBuilding(
       i18n[locale] = {
         displayAddress: label,
         displayAddressGen: true,
-        addressProperties: {
-          formattedAddress: label,
-          buildingName: name || undefined,
-          streetName: localStreet || undefined,
-          streetAddress: `${number} ${localStreet}`.trim(),
-        },
+        addressProperties: {},
       }
     }
+    const address = emptyFeatureAddress(
+      Object.fromEntries(
+        Object.entries(i18n).map(([locale, value]) => [
+          locale === 'zhHant' ? 'zh-hant' : locale === 'zhHans' ? 'zh-hans' : locale,
+          value.displayAddress ?? '',
+        ]),
+      ),
+    )
+    address.coordinates = [pin.lng, pin.lat]
+    address.legacy = { building: { ...identity, properties: building.properties } }
     return {
       i18n,
       addressMeta: {
+        address,
         ...identity,
         longitude: pin.lng,
         latitude: pin.lat,

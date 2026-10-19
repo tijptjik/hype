@@ -71,6 +71,9 @@ export type AddressProperties = {
 }
 
 export type AddressMeta = {
+  /** Canonical SaanSeoi address, local corrections and retained migration evidence. */
+  address?: import('#lib/addresses/featureAddress.js').FeatureAddress
+
   buildingSourceId?: string
   buildingSource?: string
   addressMatch?: 'building_address' | 'within_footprint' | 'nearest' | 'exact_location'

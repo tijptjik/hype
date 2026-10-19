@@ -19,6 +19,8 @@ import { z } from 'zod'
 import { getLocale } from '#lib/i18n.js'
 // UTILS
 import { nanoid } from 'nanoid'
+// ADDRESS
+import { projectFeatureAddress } from '#lib/addresses/featureAddress.js'
 // API
 import { scheduleFeatureMtr } from '#lib/api/services/feature-mtr.js'
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
@@ -449,10 +451,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const { db, user, userRoles, invalid } = ctx
   const issue = ctx.issue
   const { meta } = params
-  const data = {
+  const data = projectFeatureAddress({
     ...params.data,
     geometry: normalizeFeatureFormGeometry(params.data.geometry),
-  }
+  })
 
   const featureId = meta?.id?.trim()
   const mode = meta?.mode

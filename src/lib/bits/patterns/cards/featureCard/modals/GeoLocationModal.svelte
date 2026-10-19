@@ -1,4 +1,9 @@
 <script lang="ts">
+import {
+  AddressMetaSchema,
+  emptyFeatureAddress,
+  setAddressOverride,
+} from '#lib/addresses/featureAddress.js'
 // SVELTE
 import { onDestroy } from 'svelte'
 // I18N
@@ -132,7 +137,7 @@ $effect(() => {
     syncDisplayAddress(saved)
     resolvedAddress = newFeature?.feature?.addressMeta
       ? {
-          addressMeta: newFeature.feature.addressMeta,
+          addressMeta: AddressMetaSchema.parse(newFeature.feature.addressMeta),
           i18n: Object.fromEntries(
             (['en', 'zhHant', 'zhHans'] as LocaleKey[]).map(locale => [
               locale,
@@ -186,7 +191,18 @@ function handleAccept(): void {
     void handleSetLocation()
     return
   }
-  appCtx.draft.updateField('addressMeta', resolvedAddress?.addressMeta ?? {})
+  const metadata = resolvedAddress?.addressMeta ?? {}
+  let address = metadata.address ?? emptyFeatureAddress()
+  for (const locale of Object.keys(displayAddress) as LocaleKey[]) {
+    if (!addressGenerated[locale])
+      address = setAddressOverride(
+        address,
+        locale,
+        'formattedAddress',
+        displayAddress[locale].trim(),
+      )
+  }
+  appCtx.draft.updateField('addressMeta', { ...metadata, address })
   for (const locale of Object.keys(displayAddress) as LocaleKey[]) {
     appCtx.draft.updateI18n(
       'addressProperties',

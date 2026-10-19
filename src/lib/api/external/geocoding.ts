@@ -5,7 +5,10 @@ import { z } from 'zod'
 import { applyAddressAbbreviations, titleCase } from '#lib/utils/geocoding.js'
 // TYPES
 import type { ParsedReverseGeocodeResult } from '#lib/utils/geocoding.types.js'
-import type { AddressProperties } from '#lib/utils/address.types.js'
+import {
+  emptyFeatureAddress,
+  type FeatureAddress,
+} from '#lib/addresses/featureAddress.js'
 import type { LocaleKey } from '#lib/types.js'
 
 // +++ Table Of Contents
@@ -18,6 +21,7 @@ import type { LocaleKey } from '#lib/types.js'
 // - parseGeocodeResult
 // 3. SAANSEOI REQUESTS
 // - geocodeAddress
+// - loadGeocodedAddressUnits
 // ---
 
 const addressLocaleSchema = z.object({
@@ -33,7 +37,7 @@ const addressLocaleSchema = z.object({
   phaseExpression: z.string().nullish(),
   phaseName: z.string().nullish(),
   phaseRef: z.string().nullish(),
-  estateName: z.string().nullish(),
+  premisesName: z.string().nullish(),
   streetName: z.string().nullish(),
 })
 const responseSchema = z.object({
@@ -61,13 +65,16 @@ const responseSchema = z.object({
   ),
   included: z
     .array(
-      z.object({
-        type: z.string(),
-        id: z.string(),
-        attributes: z.unknown(),
-      }),
+      z
+        .object({
+          type: z.string(),
+          id: z.string(),
+          attributes: z.unknown(),
+        })
+        .passthrough(),
     )
     .default([]),
+  meta: z.record(z.string(), z.unknown()).optional(),
 })
 const addressSchema = z.object({
   geometry: z
@@ -111,7 +118,7 @@ function formatAddress(
           value.blockExpression,
           value.phaseExpression,
           value.buildingName,
-          value.estateName,
+          value.premisesName,
         ].filter((part): part is string => Boolean(part)),
       ),
     ]
@@ -173,22 +180,6 @@ export function parseGeocodeResult(
   for (const locale of Object.keys(locales) as LocaleKey[]) {
     const sourceLocale = locales[locale].find(key => address.i18n[key])
     const value = sourceLocale ? address.i18n[sourceLocale] : undefined
-    const properties: AddressProperties = value
-      ? {
-          formattedAddress: value.formattedAddress,
-          buildingName: value.buildingName ?? undefined,
-          buildingNumberFrom: value.buildingNumberFrom ?? undefined,
-          buildingNumberTo: value.buildingNumberTo ?? undefined,
-          blockType: value.blockType ?? undefined,
-          blockNumber: value.blockRef ?? undefined,
-          blockTypeBeforeNumber: value.blockTypeBeforeNumber ?? undefined,
-          phaseName: value.phaseName ?? undefined,
-          phaseNumber: value.phaseRef ?? undefined,
-          premisesName: value.estateName ?? undefined,
-          streetName: value.streetName ?? undefined,
-          rawAddress: 'address' in input ? input.address : undefined,
-        }
-      : {}
     i18n[locale] = {
       displayAddress: value
         ? formatAddress(
@@ -202,12 +193,45 @@ export function parseGeocodeResult(
           )
         : '',
       displayAddressGen: true,
-      addressProperties: properties,
+      // Compatibility shell only: canonical structure now lives in addressMeta.address.
+      addressProperties: {},
     }
   }
   if (!Object.values(i18n).some(value => value.displayAddress)) return null
+  // Retain the full selected record, publication and source attribution unchanged.
+  const attributes = resource.attributes as Record<string, unknown>
+  const snapshotId =
+    typeof attributes.snapshotId === 'string' ? attributes.snapshotId : null
+  const canonical = emptyFeatureAddress(
+    Object.fromEntries(
+      Object.entries(locales).map(([locale, tags]) => [
+        tags[0],
+        i18n[locale as LocaleKey].displayAddress ?? '',
+      ]),
+    ),
+  )
+  canonical.coordinates = [point[0], point[1]]
+  canonical.matchStatus =
+    candidate.attributes.status === 'resolved' ? 'resolved' : 'ambiguous'
+  canonical.query = 'address' in input ? input.address : undefined
+  canonical.source = {
+    ...canonical.source,
+    status:
+      snapshotId && candidate.attributes.status === 'resolved'
+        ? 'resolved'
+        : 'unresolved',
+    address2dId: link.id,
+    addressSnapshotId: snapshotId,
+    records: {
+      data: resource,
+      included: response.included,
+      meta: response.meta ?? {},
+      match: candidate.attributes,
+    },
+  }
   return {
     addressMeta: {
+      address: canonical,
       saanseoiAddressId: link.id,
       ...('lng' in input
         ? {
@@ -234,14 +258,14 @@ export function parseGeocodeResult(
  * Fetches forward or reverse geocoding exclusively from SaanSeoi.
  * @param input Address text or WGS84 pin.
  * @param options Optional endpoint override and request transport for local verification.
- * @returns The normalized top address or null for a genuine no-match response.
+ * @returns Every usable ranked address, preserving candidates for explicit selection.
  * @remarks Calls SaanSeoi directly from the browser using its whitelisted Origin.
  * No API key, Hype proxy, or government-provider fallback is used. HTTP/schema failures throw.
  */
-export async function geocodeAddress(
+export async function geocodeAddressCandidates(
   input: GeocodeInput,
   options: GeocodeOptions = {},
-): Promise<ParsedReverseGeocodeResult | null> {
+): Promise<ParsedReverseGeocodeResult[]> {
   const validated = z
     .union([
       z
@@ -266,9 +290,9 @@ export async function geocodeAddress(
     ...(options.footprint && 'lng' in validated
       ? { footprint: JSON.stringify(options.footprint) }
       : {}),
-    profile: 'map',
+    profile: 'full',
     locales: 'en,zh-hant,zh-hans',
-    limit: '1',
+    limit: '10',
     maxDistance: '500',
   }).toString()
   const headers: Record<string, string> = { Accept: 'application/vnd.api+json' }
@@ -288,7 +312,102 @@ export async function geocodeAddress(
           candidate.attributes.status === 'ambiguous',
       )
     )
-      return null
+      return []
   }
-  return parseGeocodeResult(body, validated)
+  const parsed = responseSchema.parse(body)
+  // Keep every linked candidate available for explicit selection in the editor.
+  return parsed.data.flatMap(candidate =>
+    (candidate.relationships.address?.data ?? []).flatMap(link => {
+      const result = parseGeocodeResult(
+        {
+          ...parsed,
+          data: [{ ...candidate, relationships: { address: { data: [link] } } }],
+        },
+        validated,
+      )
+      return result ? [result] : []
+    }),
+  )
+}
+
+/** Loads the selected address's structured unit inventory from the same publication.
+ * @param address Geocoded address with publication metadata.
+ * @param options Optional request transport and endpoint.
+ * @returns Address with exact Address3D records; missing pins leave it unchanged.
+ * @remarks Never mixes the geocoded snapshot with independently selected latest units.
+ */
+export async function loadGeocodedAddressUnits(
+  address: FeatureAddress,
+  options: GeocodeOptions = {},
+): Promise<FeatureAddress> {
+  const metadata = address.source.records.meta as
+    | {
+        apiReleaseSet?: unknown
+        release?: { apiReleaseSet?: unknown }
+        addressRelease?: { apiReleaseSet?: unknown }
+      }
+    | undefined
+  const releaseSet =
+    metadata?.addressRelease?.apiReleaseSet ??
+    metadata?.release?.apiReleaseSet ??
+    metadata?.apiReleaseSet
+  if (!address.source.address2dId || !address.source.addressSnapshotId) return address
+  if (typeof releaseSet !== 'string') throw new Error('Address publication is missing')
+  const url = new URL(
+    `/addresses/v0.1/${encodeURIComponent(address.source.address2dId)}`,
+    options.baseUrl ??
+      import.meta.env.PUBLIC_SAANSEOI_API_URL ??
+      'https://api.saanseoi.hk',
+  )
+  url.search = new URLSearchParams({
+    releaseSet,
+    profile: 'full',
+    locales: 'en,zh-hant,zh-hans',
+    include: 'divisions,units',
+  }).toString()
+  const response = await (options.fetcher ?? fetch)(url, {
+    headers: { Accept: 'application/vnd.api+json' },
+    credentials: 'omit',
+    signal: AbortSignal.timeout(15000),
+  })
+  if (!response.ok)
+    throw new Error(`SaanSeoi address units failed (${response.status})`)
+  const raw: unknown = await response.json()
+  const parsed = z
+    .object({
+      data: z.object({
+        type: z.literal('addresses'),
+        id: z.string(),
+        attributes: z.object({ snapshotId: z.string() }),
+      }),
+      meta: z.object({ apiReleaseSet: z.string() }),
+    })
+    .parse(raw)
+  if (
+    parsed.data.id !== address.source.address2dId ||
+    parsed.data.attributes.snapshotId !== address.source.addressSnapshotId ||
+    parsed.meta.apiReleaseSet !== releaseSet
+  )
+    throw new Error('Address inventory publication mismatch')
+  return {
+    ...address,
+    source: {
+      ...address.source,
+      records: {
+        ...z.record(z.string(), z.unknown()).parse(raw),
+        geocoding: address.source.records,
+      },
+    },
+  }
+}
+
+/** Resolves the top result for existing pinpointer/import consumers.
+ * @param input Search text or pin. @param options Transport options.
+ * @returns The first ranked match, or null. Admin editing uses the candidate API.
+ */
+export async function geocodeAddress(
+  input: GeocodeInput,
+  options: GeocodeOptions = {},
+): Promise<ParsedReverseGeocodeResult | null> {
+  return (await geocodeAddressCandidates(input, options))[0] ?? null
 }

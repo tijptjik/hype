@@ -1,5 +1,7 @@
 // DRIZZLE
 import { eq, inArray, sql, type SQL } from 'drizzle-orm'
+// ADDRESS
+import { projectFeatureAddress } from '#lib/addresses/featureAddress.js'
 // API
 import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
 import { toBooleanOrUndefined } from '#lib/api/services/index.js'
@@ -980,10 +982,11 @@ const prepareUserContributedFeatureDraft = async (
     i18n: enrichedI18n as FeatureNew['i18n'],
     properties: enrichedProperties,
   }
-  const validatedFeature =
+  const validatedFeature = projectFeatureAddress(
     stage === 'final'
       ? FeatureEntityFormData.parse(draftPayload)
-      : FeatureDraftEntityFormData.parse(draftPayload)
+      : FeatureDraftEntityFormData.parse(draftPayload),
+  )
 
   validatedFeature.properties = await validateFeaturePhoneProperties(
     db,
