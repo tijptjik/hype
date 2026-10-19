@@ -8,6 +8,7 @@ import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 import {
   authorizeProjectUpdateForSubmission,
   authorizeFeatureReadForProbe,
+  authorizeFeatureUpdateForSubmission,
 } from '#lib/api/services/authz/index.js'
 // DB
 import { probeProjectQuery } from '#lib/db/services/project.js'
@@ -18,6 +19,7 @@ import {
   saveProjectPlaceSettings,
 } from '#lib/db/services/place.js'
 import { createLocalPlace as persistLocalPlace } from '#lib/db/services/placeLocal.js'
+import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
 // DOMAIN
 import { ProjectPlacePolicySchema } from '#lib/places/model.js'
@@ -31,6 +33,7 @@ import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 // 2. POLICY READ / WRITE
 // 3. ACCEPTED FEATURE PLACE READ
 // 4. LOCAL PLACE CREATION
+// 5. INITIAL FEATURE ASSOCIATION
 // ---
 
 const projectInput = z.strictObject({ projectId: z.string().min(1) })
@@ -135,5 +138,49 @@ export const createLocalPlace = guardedCommand(
       { state: input.state, facts: input.facts },
       ctx.user.id,
     )
+  },
+)
+
+/**
+ * Associate a Feature with an explicitly selected existing Place revision.
+ * @param input Feature, selected Place/revision and the editor's Feature timestamp.
+ * @returns New association token after preserving persisted effective values.
+ * @remarks Authorizes all inheritable field groups against persisted ancestry. Source
+ * identities, overrides, project scope and baseline facts cannot be supplied by the client.
+ */
+export const linkFeaturePlace = guardedCommand(
+  z.strictObject({
+    featureId: z.string().min(1),
+    placeId: z.string().min(1),
+    revisionId: z.string().min(1),
+    expectedFeatureModifiedAt: z.string().min(1),
+  }),
+  async (input, ctx) => {
+    const probe = await probeFeatureQuery(ctx.db, {
+      ref: input.featureId,
+      refKey: 'id',
+    })
+    if (!probe) error(404, 'FEATURE_NOT_FOUND')
+    const decision = authorizeFeatureUpdateForSubmission({
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      resource: probe,
+      submittedData: {
+        i18n: true,
+        properties: true,
+        geometry: true,
+        addressMeta: true,
+      },
+    })
+    if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    const result = await linkInitialFeaturePlace(ctx.db, {
+      ...input,
+      projectId: probe.projectId,
+      actorId: ctx.user.id,
+    })
+    if (result.status === 'conflict') error(409, 'PLACE_LINK_CHANGED')
+    if (result.status === 'place-unavailable') error(404, 'PLACE_NOT_FOUND')
+    if (result.status !== 'linked') error(422, 'PLACE_LINK_REVIEW_REQUIRED')
+    return result
   },
 )

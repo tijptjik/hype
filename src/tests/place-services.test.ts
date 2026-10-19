@@ -25,7 +25,10 @@ import { LocalPlaceInputSchema } from '#lib/places/local.js'
 import { ProjectPlacePolicyFormData } from '#lib/db/zod/schema/project.js'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 import { PlaceFactsSchema } from '#lib/places/validation.js'
-import { authorizeProjectUpdateForSubmission } from '#lib/api/services/authz/index.js'
+import {
+  authorizeFeatureUpdateForSubmission,
+  authorizeProjectUpdateForSubmission,
+} from '#lib/api/services/authz/index.js'
 import type { Database, UserRoleDisco } from '#lib/types.js'
 import type { D1Database } from '@cloudflare/workers-types'
 
@@ -1195,4 +1198,35 @@ describe('atomic Feature creation and draft lifecycle', () => {
     ).toBeUndefined()
     expect(snapshot()).toEqual(finalState)
   })
+})
+
+describe('Place link field authorization', () => {
+  it.each([
+    ['maintainer', 'p', false, true],
+    ['owner', 'p', false, true],
+    ['translator', 'p', false, false],
+    ['maintainer', 'other', false, false],
+    ['owner', 'p', true, false],
+  ] as const)(
+    'checks %s in %s anonymous=%s',
+    (role, projectId, isAnonymous, allowed) => {
+      const decision = authorizeFeatureUpdateForSubmission({
+        user: { id: 'u', isAnonymous },
+        userRoles: [{ type: 'project', role, projectId, userId: 'u' } as UserRoleDisco],
+        resource: {
+          id: 'f',
+          projectId: 'p',
+          organisationId: 'org',
+          resourceHubId: 'hub',
+        },
+        submittedData: {
+          i18n: true,
+          properties: true,
+          geometry: true,
+          addressMeta: true,
+        },
+      })
+      expect(decision.allowed).toBe(allowed)
+    },
+  )
 })

@@ -5,6 +5,8 @@ import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
   createPlace: vi.fn(),
+  linkPlace: vi.fn(),
+  authorizeFeatureUpdate: vi.fn(),
   probeProject: vi.fn(),
   probeFeature: vi.fn(),
   authorizeProject: vi.fn(),
@@ -27,6 +29,9 @@ vi.mock('#lib/api/server/guarded.js', () => {
       )
   return { guardedQuery: wrap('query'), guardedCommand: wrap('command') }
 })
+vi.mock('#lib/db/services/placeLink.js', () => ({
+  linkInitialFeaturePlace: mocks.linkPlace,
+}))
 vi.mock('#lib/db/services/placeLocal.js', () => ({
   createLocalPlace: mocks.createPlace,
 }))
@@ -44,9 +49,11 @@ vi.mock('#lib/db/services/place.js', () => ({
 vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeProjectUpdateForSubmission: mocks.authorizeProject,
   authorizeFeatureReadForProbe: mocks.authorizeFeature,
+  authorizeFeatureUpdateForSubmission: mocks.authorizeFeatureUpdate,
 }))
 import {
   createLocalPlace,
+  linkFeaturePlace,
   getFeaturePlace,
   getPlaceUpdatePolicy,
   setPlaceUpdatePolicy,
@@ -58,6 +65,8 @@ beforeEach(() => {
   mocks.probeFeature.mockResolvedValue({ id: 'f', projectId: 'p' })
   mocks.authorizeProject.mockReturnValue({ allowed: true })
   mocks.authorizeFeature.mockReturnValue({ allowed: true })
+  mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: true })
+  mocks.linkPlace.mockResolvedValue({ status: 'linked', revision: 'new' })
   mocks.readPolicy.mockResolvedValue({
     policy: DEFAULT_PROJECT_PLACE_POLICY,
     revision: 0,
@@ -118,6 +127,8 @@ describe('Place remote boundaries', () => {
     })
     expect(mocks.readPlace).not.toHaveBeenCalled()
     mocks.authorizeFeature.mockReturnValue({ allowed: true })
+    mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: true })
+    mocks.linkPlace.mockResolvedValue({ status: 'linked', revision: 'new' })
     expect(await getFeaturePlace({ featureId: 'f' })).toEqual({ placeId: 'place' })
     expect(mocks.readPlace).toHaveBeenCalledWith(mocks.context.db, 'f', 'p')
   })
@@ -164,4 +175,55 @@ it('requires project management before local Place creation', async () => {
     expect.objectContaining({ state: 'manual' }),
     'u',
   )
+})
+
+describe('initial Place link command', () => {
+  const input = {
+    featureId: 'f',
+    placeId: 'place',
+    revisionId: 'revision',
+    expectedFeatureModifiedAt: 'timestamp',
+  }
+  it('uses persisted ancestry and authorizes every inherited field group', async () => {
+    expect(await linkFeaturePlace(input)).toEqual({ status: 'linked', revision: 'new' })
+    expect(mocks.authorizeFeatureUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: { id: 'f', projectId: 'p' },
+        submittedData: {
+          i18n: true,
+          properties: true,
+          geometry: true,
+          addressMeta: true,
+        },
+      }),
+    )
+    expect(mocks.linkPlace).toHaveBeenCalledWith(mocks.context.db, {
+      ...input,
+      projectId: 'p',
+      actorId: 'u',
+    })
+  })
+  it('rejects unauthorized links and client-supplied scope or baselines before writing', async () => {
+    mocks.authorizeFeatureUpdate.mockReturnValue({
+      allowed: false,
+      code: 'FIELD_FORBIDDEN',
+    })
+    await expect(linkFeaturePlace(input)).rejects.toMatchObject({ status: 403 })
+    await expect(
+      linkFeaturePlace({ ...input, projectId: 'other' } as never),
+    ).rejects.toThrow()
+    await expect(
+      linkFeaturePlace({ ...input, overrides: {} } as never),
+    ).rejects.toThrow()
+    expect(mocks.linkPlace).not.toHaveBeenCalled()
+  })
+  it.each([
+    ['conflict', 409],
+    ['place-unavailable', 404],
+    ['ineligible', 422],
+    ['review', 422],
+  ] as const)('maps %s without leaking source records', async (status, httpStatus) => {
+    mocks.linkPlace.mockResolvedValue({ status, reason: 'private' })
+    await expect(linkFeaturePlace(input)).rejects.toMatchObject({ status: httpStatus })
+  })
 })

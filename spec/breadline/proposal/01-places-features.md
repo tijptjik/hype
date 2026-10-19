@@ -521,3 +521,18 @@ excludes intangible records without an existing association. Drafts and non-Poin
 records remain ineligible for initial links. Tests cover creation rollback, duplicate
 identities, finalized-draft rejection and editing after a reported-missing status.
 
+### Authorized initial-link command (Refs #194)
+
+`linkFeaturePlace` accepts only a Feature ID, selected existing Place/revision IDs
+and the editor's Feature timestamp. It probes persisted ancestry and authorizes all
+inheritable field groups with the existing Feature update policy. Translators cannot
+link Places through translation-only access; unrelated project managers and anonymous
+sessions are also denied. Client-supplied project scope, overrides or baseline facts
+are rejected by the strict input schema.
+
+The command delegates to baseline-preserving initial linking, returning a new
+association token. Stale/existing links return 409, unavailable/private-incompatible
+sources return an indistinguishable 404, and ineligible/review baselines return 422.
+Raw source evidence is never returned. Backend linking is now available; source
+selection UI, relinking/unlinking, override resets, source adoption and the migration
+rehearsal remain outstanding.

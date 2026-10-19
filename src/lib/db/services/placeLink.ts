@@ -24,8 +24,8 @@ export type InitialPlaceLinkResult =
  * @returns New association token or a conflict/exclusion/review result without partial writes.
  * @remarks Internal migration/linking service; caller must authorize full Feature editing
  * and verify the selected establishment identity. No client-supplied baseline is accepted.
- * Existing effective columns and timestamps remain untouched. Ordinary Feature editing
- * must integrate override writes before this service is exposed as a public command.
+ * Existing effective columns and timestamps remain untouched. Normal forms use atomic
+ * linked/unlinked saves so association cannot interleave with relation replacement.
  */
 export async function linkInitialFeaturePlace(
   db: Database,
