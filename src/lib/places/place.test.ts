@@ -5,6 +5,7 @@ import { DEFAULT_PROJECT_PLACE_POLICY, ProjectPlacePolicySchema } from './model'
 import type { PlaceFacts, PlaceLocation } from './model'
 import { evaluatePlaceAdoption } from './policy'
 import { resolveFeaturePlace } from './resolve'
+import { preserveFeaturePlaceBaseline } from './baseline'
 
 const location: PlaceLocation = {
   geometry: { type: 'Point', coordinates: [114.17, 22.3] },
@@ -168,4 +169,71 @@ test('additive migration preserves features and enforces Place revision ownershi
   } finally {
     db.close()
   }
+})
+
+describe('initial Feature–Place baseline preservation', () => {
+  test('equal fields inherit and continue receiving upstream updates', () => {
+    const baseline = { ...facts, location }
+    const overrides = preserveFeaturePlaceBaseline(baseline, facts, location)
+    expect(overrides).toEqual({})
+    expect(
+      resolveFeaturePlace({ ...facts, names: { en: 'New name' } }, moved, overrides),
+    ).toEqual({ ...facts, names: { en: 'New name' }, location: moved })
+  })
+
+  test('preserves differing translations, empty arrays, and the entire location', () => {
+    const baseline = {
+      names: { en: 'Collection counter', fr: 'Boulangerie' },
+      phoneNumber: [],
+      brands: [],
+      location,
+    }
+    const overrides = preserveFeaturePlaceBaseline(baseline, facts, moved)
+    expect(overrides.names?.['zh-Hant']).toEqual({ mode: 'clear' })
+    expect(overrides.phoneNumber).toEqual({ mode: 'override', value: [] })
+    expect(overrides.location).toEqual({ mode: 'override', value: location })
+    expect(resolveFeaturePlace(facts, moved, overrides)).toEqual({
+      ...baseline,
+      names: { ...baseline.names, 'zh-Hant': null },
+    })
+    expect(
+      resolveFeaturePlace(
+        { ...facts, names: { ...facts.names, es: 'Panadería' } },
+        moved,
+        overrides,
+      ).names.es,
+    ).toBe('Panadería')
+  })
+
+  test('keeps explicit suppression distinct from empty collections', () => {
+    const baseline = {
+      names: { en: null, fr: null },
+      phoneNumber: null,
+      brands: null,
+      location: null,
+    }
+    const overrides = preserveFeaturePlaceBaseline(baseline, facts, location)
+    expect(overrides.names?.fr).toEqual({ mode: 'clear' })
+    expect(overrides.phoneNumber).toEqual({ mode: 'clear' })
+    expect(overrides.brands).toEqual({ mode: 'clear' })
+    expect(overrides.location).toEqual({ mode: 'clear' })
+    expect(resolveFeaturePlace(facts, moved, overrides)).toEqual({
+      ...baseline,
+      names: { en: null, fr: null, 'zh-Hant': null },
+    })
+  })
+
+  test('ignores object key order but preserves array order and copies corrections', () => {
+    const baseline = structuredClone({ ...facts, location })
+    baseline.location.geometry = { coordinates: [114.17, 22.3], type: 'Point' }
+    baseline.brands[0] = { names: { en: 'Brand' }, identifiers: { wikidata: 'Q123' } }
+    expect(preserveFeaturePlaceBaseline(baseline, facts, location)).toEqual({})
+    baseline.phoneNumber.reverse()
+    const overrides = preserveFeaturePlaceBaseline(baseline, facts, location)
+    baseline.phoneNumber.push('+85221111111')
+    expect(resolveFeaturePlace(facts, location, overrides).phoneNumber).toEqual([
+      '+85229876543',
+      '+85221234567',
+    ])
+  })
 })

@@ -353,3 +353,15 @@ local SQLite file from those inputs, restores secondary schema, rebuilds the kno
 search index and checks integrity/foreign keys. Unknown virtual tables fail closed.
 Production export files, local snapshots and candidate evidence remain private under
 ignored backup paths and `.local/places/`.
+
+### Initial association baseline preservation (Refs #194)
+
+`preserveFeaturePlaceBaseline` compares a complete persisted Feature projection with
+its proposed accepted Place facts and location. Equal values inherit; differences
+become explicit overrides. Existing source translations missing from the Feature
+are suppressed, explicit locale clears survive, and newly introduced source locales
+can inherit. Empty arrays remain explicit empty overrides, distinct from suppression.
+Object key order is irrelevant; array order and the atomic location group are retained.
+The caller must derive the baseline from persisted rows and authorize and atomically
+commit the association with concurrency checks. This pure comparison does not yet
+activate Feature linking or change any existing Feature rows.
