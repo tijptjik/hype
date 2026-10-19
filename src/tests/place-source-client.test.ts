@@ -63,6 +63,42 @@ describe('publication-pinned Places pagination', () => {
     last.meta.page.offset = 1
     expect((await readSaanSeoiPlacePage(client(last), pin, 1)).nextOffset).toBeNull()
   })
+  it('continues historical pages without an exact total and rejects unknown completion', async () => {
+    const d = document()
+    const page = { offset: 0, limit: 100, hasMore: true }
+    const historical = { ...d, meta: { ...d.meta, page } }
+    expect(await readSaanSeoiPlacePage(client(historical), pin)).toMatchObject({
+      total: null,
+      nextOffset: 1,
+    })
+    expect(
+      await readSaanSeoiPlacePage(
+        client({
+          ...historical,
+          meta: { ...historical.meta, page: { ...page, hasMore: false } },
+        }),
+        pin,
+      ),
+    ).toMatchObject({ total: null, nextOffset: null })
+    await expect(
+      readSaanSeoiPlacePage(client({ ...historical, data: [] }), pin),
+    ).rejects.toThrow('pagination')
+    await expect(
+      readSaanSeoiPlacePage(
+        client({
+          ...historical,
+          meta: { ...historical.meta, page: { offset: 0, limit: 100 } },
+        }),
+        pin,
+      ),
+    ).rejects.toThrow('pagination')
+    await expect(
+      readSaanSeoiPlacePage(
+        client({ ...d, meta: { ...d.meta, page: { ...d.meta.page, hasMore: false } } }),
+        pin,
+      ),
+    ).rejects.toThrow('pagination')
+  })
   it.each(['publication', 'catalog', 'offset', 'empty', 'duplicate'])(
     'rejects %s drift or incomplete pagination',
     async kind => {

@@ -115,7 +115,7 @@ async function main(): Promise<void> {
         checkpoint.offset,
         filters,
       )
-      if (checkpoint.total !== null && checkpoint.total !== page.total)
+      if (checkpoint.total !== null && page.total !== null && checkpoint.total !== page.total)
         throw new Error('Pinned publication total changed')
       const revisions = [...checkpoint.revisions]
       for (const projection of page.places) {
@@ -124,12 +124,15 @@ async function main(): Promise<void> {
           throw new Error('Duplicate Place across source pages')
         revisions.push(receipt.revisionId)
       }
+      const processed = checkpoint.offset + page.places.length
+      if (page.nextOffset === null && checkpoint.total !== null && checkpoint.total !== processed)
+        throw new Error('Pinned publication ended before its retained total')
       // Advance only after the whole page has persisted; interrupted pages are safe to replay.
       checkpoint = {
         ...checkpoint,
         revisions,
-        total: page.total,
-        offset: page.nextOffset ?? page.total,
+        total: page.total ?? checkpoint.total ?? (page.nextOffset === null ? processed : null),
+        offset: processed,
         complete: page.nextOffset === null,
       }
       mkdirSync(dirname(checkpointPath), { recursive: true })

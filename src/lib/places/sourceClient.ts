@@ -79,7 +79,8 @@ const pageSchema = z.object({
       page: z.object({
         offset: z.number().int().nonnegative(),
         limit: z.number().int().positive(),
-        total: z.number().int().nonnegative(),
+        total: z.number().int().nonnegative().optional(),
+        hasMore: z.boolean().optional(),
       }),
     })
     .passthrough(),
@@ -103,7 +104,7 @@ export async function readSaanSeoiPlacePage(
   filters: { basicCategory?: string; taxonomyPrimary?: string; division?: string } = {},
 ): Promise<{
   places: SaanSeoiPlaceProjection[]
-  total: number
+  total: number | null
   nextOffset: number | null
 }> {
   if (
@@ -141,6 +142,9 @@ export async function readSaanSeoiPlacePage(
   const document: unknown = await response.json()
   const parsed = pageSchema.parse(document)
   const page = parsed.meta.page
+  const nextOffset = offset + parsed.data.length
+  const hasMore = page.total === undefined ? page.hasMore : nextOffset < page.total
+  // Historical collections report hasMore rather than computing a full total.
   // Reject inconsistent pagination instead of declaring an incomplete export successful.
   if (
     parsed.meta.apiReleaseSet !== pin.releaseSet ||
@@ -148,8 +152,10 @@ export async function readSaanSeoiPlacePage(
     page.offset !== offset ||
     page.limit !== 100 ||
     parsed.data.length > page.limit ||
-    offset + parsed.data.length > page.total ||
-    (parsed.data.length === 0 && offset < page.total) ||
+    hasMore === undefined ||
+    (page.total !== undefined && nextOffset > page.total) ||
+    (page.hasMore !== undefined && page.hasMore !== hasMore) ||
+    (parsed.data.length === 0 && hasMore) ||
     new Set(parsed.data.map(row => row.id)).size !== parsed.data.length
   )
     throw new Error(
@@ -163,8 +169,7 @@ export async function readSaanSeoiPlacePage(
         snapshotId: parsed.data[index].attributes.snapshotId,
       }),
     ),
-    total: page.total,
-    nextOffset:
-      offset + parsed.data.length === page.total ? null : offset + parsed.data.length,
+    total: page.total ?? null,
+    nextOffset: hasMore ? nextOffset : null,
   }
 }

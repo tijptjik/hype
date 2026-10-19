@@ -130,6 +130,23 @@ Discover resource-release IDs/codes through `/places/v0.1/source-releases`. Pres
 the returned comparison `pin` and follow `nextCursor` until null. `view=summary`
 returns unfiltered source-record counts, not canonical Place differences.
 
+The read-only collector is available as:
+
+```sh
+bun --env-file=.dev.vars scripts/places/collect-source-changes.ts FROM_RELEASE TO_RELEASE RECEIPT_NAME [PAGES_PER_RUN]
+```
+
+It retains private numbered pages and a hash manifest under `.local/places/`,
+validates the resolved comparison pin, cursor chain and unique source identities
+on resume, and reports partial checkpoints separately from completed comparisons.
+The optional page budget bounds each invocation. Interrupted page persistence is
+replayed only when its bytes match. It performs no HYPE database writes.
+
+Canonical collection pagination accepts either exact totals or historical
+`hasMore` metadata, rejects contradictory or ambiguous completion, and advances
+by retained row count. Historical scans remain pinned to their publication;
+publisher comparison release IDs are a separate contract.
+
 This route compares publisher source records. SaanSeoi canonical identity reconciliation,
 address dependencies, translations and curation can change canonical results separately.
 Use the feed as change evidence plus publication-pinned canonical refresh of linked IDs;
