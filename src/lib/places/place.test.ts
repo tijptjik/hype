@@ -237,3 +237,54 @@ describe('initial Feature–Place baseline preservation', () => {
     ])
   })
 })
+
+describe('persisted association privacy', () => {
+  test('guards links and ancestry changes while allowing shared Places', () => {
+    const db = new Database(':memory:')
+    try {
+      db.exec(`PRAGMA foreign_keys=ON;
+        CREATE TABLE project(id TEXT PRIMARY KEY);
+        CREATE TABLE feature(id TEXT PRIMARY KEY, projectId TEXT NOT NULL, isDraft INTEGER NOT NULL DEFAULT 0);
+        INSERT INTO project VALUES ('p'), ('q');
+        INSERT INTO feature(id,projectId,isDraft) VALUES ('f','p',0), ('other','q',0), ('draft','p',1);`)
+      db.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
+      db.exec(readFileSync('migrations/0109_place_association_scope.sql', 'utf8'))
+      db.exec(`INSERT INTO place(id,state,ownerProjectId) VALUES ('local','manual','p');
+        INSERT INTO place(id,state,ssId) VALUES ('shared','linked','ss');`)
+      const insertRevision =
+        db.prepare(`INSERT INTO placeRevision(id,placeId,sequence,origin,contentHash,payload,facts)
+        VALUES (?, ?, 1, 'local', 'hash', '{}', ?)`)
+      insertRevision.run('lr', 'local', JSON.stringify(facts))
+      insertRevision.run('sr', 'shared', JSON.stringify(facts))
+      const link = db.prepare(
+        `INSERT INTO featurePlace(featureId,placeId,factsRevisionId,locationRevisionId) VALUES (?,?,?,?)`,
+      )
+      expect(() => link.run('other', 'local', 'lr', 'lr')).toThrow('scope mismatch')
+      expect(() => link.run('draft', 'shared', 'sr', 'sr')).toThrow('scope mismatch')
+      link.run('f', 'local', 'lr', 'lr')
+      expect(() => db.exec("UPDATE feature SET projectId='q' WHERE id='f'")).toThrow(
+        'scope mismatch',
+      )
+      expect(() => db.exec("UPDATE feature SET isDraft=1 WHERE id='f'")).toThrow(
+        'scope mismatch',
+      )
+      expect(() =>
+        db.exec("UPDATE place SET ownerProjectId='q' WHERE id='local'"),
+      ).toThrow('scope mismatch')
+      link.run('other', 'shared', 'sr', 'sr')
+      expect(() =>
+        db.exec(
+          "UPDATE featurePlace SET placeId='local', factsRevisionId='lr', locationRevisionId='lr' WHERE featureId='other'",
+        ),
+      ).toThrow('scope mismatch')
+      expect(() =>
+        db.exec("UPDATE place SET ownerProjectId='p' WHERE id='shared'"),
+      ).toThrow('scope mismatch')
+      db.exec("UPDATE feature SET projectId='p' WHERE id='other'")
+      expect(db.query('SELECT count(*) AS n FROM featurePlace').get()).toEqual({ n: 2 })
+      expect(db.query('PRAGMA foreign_key_check').all()).toEqual([])
+    } finally {
+      db.close()
+    }
+  })
+})

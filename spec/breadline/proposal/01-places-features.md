@@ -365,3 +365,13 @@ Object key order is irrelevant; array order and the atomic location group are re
 The caller must derive the baseline from persisted rows and authorize and atomically
 commit the association with concurrency checks. This pure comparison does not yet
 activate Feature linking or change any existing Feature rows.
+
+Migration `0109_place_association_scope.sql` enforces association scope at the SQLite
+write boundary. Private Places require a non-draft Feature in their owning project;
+shared Places can serve multiple projects. Link updates, Feature project/draft changes
+and Place ownership changes cannot invalidate that invariant. The migration fails if
+pre-existing associations violate scope, rather than silently deleting evidence.
+Applied to the fresh local mirror: all four triggers installed, integrity and foreign
+keys valid, and bidirectional comparisons of Feature, translation and property rows
+against the production snapshot found no changes. Association commands, concurrency
+history and materialization remain required before linking is exposed to clients.
