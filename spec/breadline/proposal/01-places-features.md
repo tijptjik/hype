@@ -660,3 +660,30 @@ association and confirmed it after reload. Database checks verified a different 
 ID, unchanged Feature row, retained original Place and exactly one added history row
 with previous revision and actor. No primary mirror or production data changed. Type
 checking remains at 10 unrelated errors/19 warnings, with no changed-path diagnostics.
+
+### Existing-Feature split manifest (Refs #194)
+
+`bun scripts/places/plan-feature-split.ts .local/places/feature-split-plan.json`
+reads the refreshed default local mirror and produces a private manifest without
+writing associations. Every unlinked eligible Feature receives a deterministic Place
+and baseline revision identity, project ownership, expected timestamp, unresolved
+facts, preservation overrides and legacy address/property provenance. Already-linked
+records are excluded and proposed Place identity collisions fail explicitly.
+
+This is the unresolved fallback plan, not a claim that source identity matching is
+complete. Reviewed canonical matches must supersede the relevant fallback proposals
+before final application. Intangible Features and drafts remain excluded; nameless,
+invalid or non-preservable baselines require review rather than synthetic names.
+Canonical address IDs are not claimed by a local Place: complete old address evidence
+remains in provenance and any necessary atomic location override. Phone normalization
+in the Place projection cannot silently rewrite the effective Feature spelling.
+
+The primary mirror produced 1,190 proposals, 56 intangible exclusions and 25 draft
+exclusions. Every proposal passed exact resolver equality against its persisted
+baseline. Independent SQLite checks verified unique identities, project scope and
+Feature timestamps for all 1,190 records; primary associations remain zero. Three
+focused planner tests cover deterministic preservation, legacy address/phone/brand
+handling, null/clear semantics and invalid baseline review. Type checking remains at
+10 unrelated errors/19 warnings. The manifest contains private source data and is
+ignored; only planner code is committed. Transactional application/replay rehearsal
+and the Breadline importer rebase are still outstanding.
