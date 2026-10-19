@@ -9,7 +9,13 @@ import { equalPlaceValue } from '#lib/places/baseline.js'
 import { FeaturePlaceOverridesSchema } from '#lib/places/validation.js'
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 import { PlaceBrandEditSchema, type PlaceBrandEdit } from '#lib/places/brandEdit.js'
+import {
+  PlaceResetSchema,
+  materializePlaceReset,
+  type PlaceReset,
+} from '#lib/places/reset.js'
 // SERVICES
+import { readPlaceResetSources, preparePlacePhoneReset } from './placeReset'
 import { readFeaturePlaceBaseline } from './placeBaseline'
 import { prepareFeaturePlaceAssociationWrite } from './placeAssociation'
 import { prepareFeaturePlaceRelations } from './placeRelations'
@@ -25,7 +31,7 @@ import type {
 export type LinkedFeatureSaveResult =
   | { status: 'unlinked' | 'conflict' }
   | { status: 'review'; reason: string }
-  | { status: 'saved'; feature: FeatureDB }
+  | { status: 'saved'; feature: FeatureDB; geometryChanged: boolean }
 
 /**
  * Save a linked Feature form and its override history in one conditional batch.
@@ -47,6 +53,7 @@ export async function saveLinkedFeatureForm(
     i18n: Record<string, FeatureI18nPartial>
     properties?: NewFeatureProperty[]
     placeBrandEdit?: PlaceBrandEdit
+    placeReset?: PlaceReset
   },
 ): Promise<LinkedFeatureSaveResult> {
   const association = await db
@@ -55,13 +62,17 @@ export async function saveLinkedFeatureForm(
     .where(eq(featurePlace.featureId, input.featureId))
     .get()
   if (!association)
-    return input.placeBrandEdit
-      ? { status: 'review', reason: 'Brand inheritance requires a linked Place' }
+    return input.placeBrandEdit || input.placeReset
+      ? { status: 'review', reason: 'Inheritance requires a linked Place' }
       : { status: 'unlinked' }
   const brandEdit = input.placeBrandEdit
     ? PlaceBrandEditSchema.parse(input.placeBrandEdit)
     : undefined
-  if (brandEdit && brandEdit.expectedRevision !== association.revision)
+  const reset = input.placeReset ? PlaceResetSchema.parse(input.placeReset) : undefined
+  if (
+    (brandEdit && brandEdit.expectedRevision !== association.revision) ||
+    (reset && reset.expectedRevision !== association.revision)
+  )
     return { status: 'conflict' }
   if (input.data.projectId && input.data.projectId !== input.projectId)
     return {
@@ -101,13 +112,46 @@ export async function saveLinkedFeatureForm(
     !equalPlaceValue(before.baseline.effective.brands, after.baseline.effective.brands)
   )
     return { status: 'review', reason: 'Edit brands through the Place association' }
-  const overrides = applyFeaturePlaceEdits(
+  let overrides = applyFeaturePlaceEdits(
     FeaturePlaceOverridesSchema.parse(association.overrides),
     before.baseline.effective,
     after.baseline.effective,
   )
   // Brand choices live only on the association; reset uses its accepted facts revision.
   if (brandEdit) overrides.brands = brandEdit.choice
+  let materializedData = input.data
+  let materializedI18n = input.i18n
+  let resetPhones: string[] | undefined
+  if (reset) {
+    const sources = await readPlaceResetSources(db, {
+      ...association,
+      projectId: input.projectId,
+    })
+    if (!sources)
+      return { status: 'review', reason: 'Accepted Place source is unavailable' }
+    try {
+      const result = materializePlaceReset({
+        reset,
+        ...sources,
+        overrides,
+        data: {
+          ...input.data,
+          addressMeta: input.data.addressMeta ?? { address: before.baseline.address },
+        },
+        i18n: input.i18n,
+      })
+      materializedData = result.data
+      materializedI18n = result.i18n
+      overrides = result.overrides
+      resetPhones = result.phoneNumber
+    } catch (error) {
+      return {
+        status: 'review',
+        reason:
+          error instanceof Error ? error.message : 'Invalid accepted Place source',
+      }
+    }
+  }
   const associationWrite = prepareFeaturePlaceAssociationWrite(db, {
     featureId: input.featureId,
     projectId: input.projectId,
@@ -120,7 +164,7 @@ export async function saveLinkedFeatureForm(
     overrides,
   })
   // Do not enqueue spatial/MTR work when the user changed only non-location values.
-  const { id: _id, geometry, modifiedAt: _modifiedAt, ...data } = input.data
+  const { id: _id, geometry, modifiedAt: _modifiedAt, ...data } = materializedData
   const geometryChanged =
     geometry !== undefined &&
     !equalPlaceValue(geometry, before.baseline.effective.location?.geometry)
@@ -144,6 +188,23 @@ export async function saveLinkedFeatureForm(
       ),
     )
     .returning()
+  let phoneWrites: Awaited<ReturnType<typeof preparePlacePhoneReset>> = []
+  if (resetPhones !== undefined) {
+    try {
+      phoneWrites = await preparePlacePhoneReset(
+        db,
+        input.featureId,
+        associationWrite.revision,
+        resetPhones,
+      )
+    } catch (error) {
+      return {
+        status: 'review',
+        reason:
+          error instanceof Error ? error.message : 'Invalid accepted Place phones',
+      }
+    }
+  }
   // One batch covers the association, parent, translations and property snapshots.
   const result = await db.batch([
     associationWrite.query,
@@ -152,10 +213,13 @@ export async function saveLinkedFeatureForm(
       db,
       input.featureId,
       associationWrite.revision,
-      input.i18n,
+      materializedI18n,
       input.properties,
     ),
+    ...phoneWrites,
   ])
   const rows = result[1] as FeatureDB[]
-  return rows[0] ? { status: 'saved', feature: rows[0] } : { status: 'conflict' }
+  return rows[0]
+    ? { status: 'saved', feature: rows[0], geometryChanged }
+    : { status: 'conflict' }
 }

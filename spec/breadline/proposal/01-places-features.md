@@ -831,3 +831,40 @@ association rejection, transactional rollback, all three brand modes, translator
 rejection and legacy classifier rejection. Full type-check retains its existing
 10 unrelated errors / 19 warnings baseline. General name/phone/location inheritance
 reset controls, unlinking, source adoption/sync and final migration work remain open.
+
+### Name, phone and atomic location inheritance resets (Refs #194, #213)
+
+The Place section now lets an editor select individual supported name locales, the
+phone collection, or the complete location/address group for reset on the regular
+Feature Save. Selection can be toggled off; the normal form Reset discards it. Reset
+intent contains only field identities and the viewed association revision, never
+client-supplied source facts. Selected resets take precedence over same-field edits
+in that submission; other locale values and descriptions are retained.
+
+The server reads the association's exact independently accepted facts/location
+revisions under private Place ownership checks. It restores source names, performs
+a targeted universal-phone property write, and replaces geometry plus canonical
+address together, clearing local address corrections. Missing source names, invalid
+Hong Kong phone arrays, ambiguous universal-phone definitions and missing canonical
+address dependencies fail before any writes. Accepted source snapshots remain
+immutable. Phone spelling/order remain equal to accepted facts.
+
+Authorization covers every affected field group before source reads: translators
+cannot reset phone or location fields. Feature timestamp and association revision
+guard the batch containing override history, parent, translations and properties.
+Actual materialized geometry changes determine spatial-index rebuilding and MTR
+scheduling; the existing geometry triggers clear stale MTR results and queue routing.
+A name/phone-only reset does not rewrite geometry or enqueue routing.
+
+78 focused tests pass. They cover independent accepted revisions versus a newer
+unaccepted revision, source validation, malformed intent, translator denial, stale
+writes, targeted preservation of unrelated properties/translations, and rollback of
+parent/history/MTR effects after an injected final phone-write failure. Browser
+rehearsal saved name/phone/location resets on an isolated imported donor; direct DB
+checks confirmed inheritance modes and effective phone/geometry equality with the
+accepted source. Local screenshot: `output/playwright/place-reset-editor.png`.
+Full type-check retains the existing 10 unrelated errors / 19 warnings baseline.
+
+Unlinking, source import/matching and address curation, monthly sync and adoption,
+identity lifecycle, and final migration application/acceptance remain unfinished.
+No production mutation or deployment was performed.

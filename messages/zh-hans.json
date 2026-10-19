@@ -1440,5 +1440,12 @@
   "place_brand_remove": "移除品牌",
   "place_brand_add": "新增品牌",
   "place_brand_reset_pending": "保存此项目后将恢复已接受的地点品牌。",
-  "place_brand_none": "没有品牌"
+  "place_brand_none": "没有品牌",
+  "place_reset_title": "恢复地点资料",
+  "place_reset_description": "保存时，所选字段将使用已接受的地点资料，取代这些字段的本地修改。",
+  "place_reset_name_en": "英文名称",
+  "place_reset_name_hant": "繁体中文名称",
+  "place_reset_name_hans": "简体中文名称",
+  "place_reset_phones": "电话号码",
+  "place_reset_location": "位置及地址"
 }

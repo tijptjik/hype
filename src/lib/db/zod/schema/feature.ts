@@ -1,5 +1,7 @@
 // PLACE CONTRACTS
-import { PlaceBrandEditSchema, decodePlaceBrandEdit } from '#lib/places/brandEdit.js'
+import { PlaceResetSchema } from '#lib/places/reset.js'
+import { PlaceBrandEditSchema } from '#lib/places/brandEdit.js'
+import { decodePlaceFormValue } from '#lib/places/form.js'
 import { PlaceFactsSchema } from '#lib/places/validation.js'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -389,7 +391,8 @@ export const FeatureDraftI18nByLocaleFormData = z.object({
 })
 
 export const FeatureEntityFormData = z.object({
-  placeBrandEdit: z.preprocess(decodePlaceBrandEdit, PlaceBrandEditSchema).optional(),
+  placeReset: z.preprocess(decodePlaceFormValue, PlaceResetSchema).optional(),
+  placeBrandEdit: z.preprocess(decodePlaceFormValue, PlaceBrandEditSchema).optional(),
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })
     .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),

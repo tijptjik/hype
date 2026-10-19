@@ -2366,6 +2366,9 @@ $effect(() => {
               modifiedAt={feature.data.modifiedAt}
               {isEditing}
               {isDirty}
+              reset={currentFeatureData.placeReset}
+              onResetFields={reset =>
+                updateFeatureData(data => ({ ...data, placeReset: reset }))}
               brandEdit={currentFeatureData.placeBrandEdit}
               onBrandEdit={edit =>
                 updateFeatureData(data => ({ ...data, placeBrandEdit: edit }))}

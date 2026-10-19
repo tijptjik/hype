@@ -16,6 +16,8 @@ import {
 // COMPONENTS
 import CreateLocalPlace from './CreateLocalPlace.svelte'
 import PlaceBrandEditor from './PlaceBrandEditor.svelte'
+import PlaceResetFields from './PlaceResetFields.svelte'
+import type { PlaceReset } from '#lib/places/reset.js'
 import type { PlaceBrandEdit } from '#lib/places/brandEdit.js'
 // TYPES
 import type { PlaceSearchCandidate } from '#lib/places/sourceClient.js'
@@ -34,6 +36,8 @@ let {
   isDirty,
   brandEdit,
   onBrandEdit,
+  reset,
+  onResetFields,
 }: {
   featureId: string
   projectId: string
@@ -43,6 +47,8 @@ let {
   isDirty: boolean
   brandEdit?: unknown
   onBrandEdit: (edit: PlaceBrandEdit) => void
+  reset?: unknown
+  onResetFields: (reset: PlaceReset | undefined) => void
 } = $props()
 const accepted = $derived(getFeaturePlace({ featureId }))
 let query = $state('')
@@ -166,6 +172,13 @@ async function link(): Promise<void> {
             />
           {/if}
         </div>
+        {#if isEditing}
+          <PlaceResetFields
+            revision={association.revision}
+            {reset}
+            onChange={onResetFields}
+          />
+        {/if}
         <PlaceBrandEditor
           {association}
           edit={brandEdit}

@@ -1178,6 +1178,159 @@ describe('linked Feature form persistence', () => {
     expect(
       sqlite.prepare("SELECT isIntangible FROM feature WHERE id='f'").get(),
     ).toEqual({ isIntangible: 1 })
+    // Independent accepted fact/location revisions must win over both the draft and latest source.
+    const sourceFacts = {
+      ...facts,
+      names: { en: 'Accepted bakery' },
+      phoneNumber: ['+85223456789'],
+    }
+    const locationFacts = {
+      ...facts,
+      location: {
+        ...facts.location,
+        geometry: { type: 'Point', coordinates: [114.18, 22.31] },
+        address: {
+          ...facts.location.address,
+          fallbackDisplay: { en: 'Accepted location' },
+        },
+      },
+    }
+    for (const [id, sequence, value] of [
+      ['reset-facts', 2, sourceFacts],
+      ['reset-location', 3, locationFacts],
+      ['future', 4, { ...facts, names: { en: 'Do not adopt' } }],
+    ] as const)
+      sqlite
+        .prepare(
+          "INSERT INTO placeRevision(id,placeId,sequence,origin,contentHash,payload,facts) VALUES (?,?,?,'local',?,'{}',?)",
+        )
+        .run(id, local.placeId, sequence, id, JSON.stringify(value))
+    const resetLink = prepareFeaturePlaceAssociationWrite(db, {
+      featureId: 'f',
+      projectId: 'p',
+      actorId: 'actor',
+      expectedFeatureModifiedAt: timestamp,
+      expectedRevision: (await getAcceptedFeaturePlace(db, 'f', 'p'))!.revision,
+      placeId: local.placeId,
+      factsRevisionId: 'reset-facts',
+      locationRevisionId: 'reset-location',
+      overrides: {
+        names: { en: { mode: 'override', value: 'Retained historical donor' } },
+      },
+    })
+    await resetLink.query
+    // Use the real MTR triggers after the fixture has added their columns.
+    const mtrMigration = readFileSync('migrations/0096_feature_mtr_access.sql', 'utf8')
+    sqlite.exec(mtrMigration.slice(mtrMigration.indexOf('CREATE TABLE featureMtrJob')))
+    sqlite.exec(
+      "UPDATE feature SET mtrStation='OLD',mtrExit='OLD'; DELETE FROM featureMtrJob;",
+    )
+    const resetInput = {
+      ...input,
+      updatedAt: timestamp,
+      i18n: {
+        en: {
+          title: 'Draft title',
+          description: 'Keep this description',
+          displayAddress: 'Draft address',
+        },
+      },
+      placeReset: {
+        expectedRevision: resetLink.revision,
+        names: ['en'] as Array<'en'>,
+        phoneNumber: true,
+        location: true,
+      },
+    }
+    const beforeReset = snapshot()
+    sqlite.exec(`CREATE TRIGGER reject_reset_phone BEFORE INSERT ON featureProperty
+      WHEN NEW.propertyId='phone' AND NEW.value='["+85223456789"]'
+      BEGIN SELECT RAISE(ABORT,'injected phone reset failure'); END`)
+    await expect(saveLinkedFeatureForm(db, resetInput)).rejects.toThrow()
+    expect(snapshot()).toEqual(beforeReset)
+    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toEqual([])
+    sqlite.exec('DROP TRIGGER reject_reset_phone')
+    expect(
+      await saveLinkedFeatureForm(db, {
+        ...resetInput,
+        placeReset: { ...resetInput.placeReset, expectedRevision: 'stale' },
+      }),
+    ).toEqual({ status: 'conflict' })
+    expect(snapshot()).toEqual(beforeReset)
+    const resetSaved = await saveLinkedFeatureForm(db, resetInput)
+    expect(resetSaved).toMatchObject({ status: 'saved', geometryChanged: true })
+    const restored = await getAcceptedFeaturePlace(db, 'f', 'p')
+    expect(restored?.effective.names.en).toBe('Accepted bakery')
+    expect(restored?.effective.phoneNumber).toEqual(sourceFacts.phoneNumber)
+    expect(restored?.effective.location).toEqual(locationFacts.location)
+    expect(
+      sqlite
+        .prepare(
+          "SELECT title,description,displayAddress FROM featureI18n WHERE locale='en'",
+        )
+        .get(),
+    ).toEqual({
+      title: 'Accepted bakery',
+      description: 'Keep this description',
+      displayAddress: 'Accepted location',
+    })
+    expect(
+      sqlite
+        .prepare("SELECT value FROM featureProperty WHERE propertyId='phone'")
+        .get(),
+    ).toEqual({ value: JSON.stringify(sourceFacts.phoneNumber) })
+    const storedLocation = sqlite
+      .prepare(
+        "SELECT geometry,spatialIndex,mtrStation,mtrExit FROM feature WHERE id='f'",
+      )
+      .get()!
+    expect(JSON.parse(storedLocation.geometry as string)).toEqual(
+      locationFacts.location.geometry,
+    )
+    expect(storedLocation.spatialIndex).toBeTruthy()
+    expect(storedLocation.mtrStation).toBeNull()
+    expect(storedLocation.mtrExit).toBeNull()
+    expect(
+      JSON.parse(
+        sqlite.prepare('SELECT geometry FROM featureMtrJob').get()!.geometry as string,
+      ),
+    ).toEqual(locationFacts.location.geometry)
+    if (resetSaved.status !== 'saved') throw new Error('Expected reset')
+    sqlite.exec(
+      "INSERT INTO featureProperty VALUES ('f','unrelated',NULL,'keep'); INSERT INTO featurePropertyI18n VALUES ('f','unrelated','en','Keep translation',0); DELETE FROM featureMtrJob;",
+    )
+    const sourceSnapshot = sqlite.prepare('SELECT * FROM placeRevision').all()
+    const phoneOnly = await saveLinkedFeatureForm(db, {
+      ...input,
+      updatedAt: resetSaved.feature.modifiedAt,
+      properties: undefined,
+      i18n: {
+        en: {
+          title: 'Accepted bakery',
+          description: 'Keep this description',
+          displayAddress: 'Accepted location',
+        },
+      },
+      placeReset: {
+        expectedRevision: restored!.revision,
+        names: [],
+        phoneNumber: true,
+        location: false,
+      },
+    })
+    expect(phoneOnly).toMatchObject({ status: 'saved', geometryChanged: false })
+    expect(
+      sqlite
+        .prepare("SELECT value FROM featureProperty WHERE propertyId='unrelated'")
+        .get(),
+    ).toEqual({ value: 'keep' })
+    expect(
+      sqlite
+        .prepare("SELECT value FROM featurePropertyI18n WHERE propertyId='unrelated'")
+        .get(),
+    ).toEqual({ value: 'Keep translation' })
+    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toEqual([])
+    expect(sqlite.prepare('SELECT * FROM placeRevision').all()).toEqual(sourceSnapshot)
   })
 })
 

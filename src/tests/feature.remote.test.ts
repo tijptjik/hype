@@ -599,6 +599,7 @@ describe('feature.remote authz matrix', () => {
         status === 'saved'
           ? {
               status,
+              geometryChanged: false,
               feature: {
                 id: 'feature-1',
                 modifiedAt: '2026-03-18T00:00:02.000Z',
@@ -802,6 +803,52 @@ describe('feature.remote authz matrix', () => {
       expect(mockLoadFeature).not.toHaveBeenCalled()
       expect(mockSaveLinkedFeatureForm).not.toHaveBeenCalled()
       expect(mockSaveUnlinkedFeatureForm).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['phoneNumber', 'location'] as const)(
+    'rejects translator Place %s reset before source reads',
+    async field => {
+      mockAuthorizeFeatureUpdateForSubmission.mockImplementation(
+        authorizeFeatureUpdateForSubmission,
+      )
+      mockGuardedContext.mockResolvedValue({
+        ...(await mockGuardedContext()),
+        userRoles: [{ type: 'project', role: 'translator', projectId: 'project-1' }],
+      })
+      await expect(
+        remote.featureForm(
+          {
+            meta: {
+              id: 'feature-1',
+              mode: 'update',
+              updatedAt: '2026-03-18T00:00:00.000Z',
+            },
+            data: {
+              organisationId: 'org-1',
+              projectId: 'project-1',
+              layerId: 'layer-1',
+              i18n: { en: { name: 'Translated feature' } },
+              properties: [],
+              geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+              addressMeta: { street: 'Main' },
+              isIntangible: false,
+              isVisitable: true,
+              isPendingReview: false,
+              placeReset: {
+                expectedRevision: 'accepted',
+                names: [],
+                phoneNumber: false,
+                location: false,
+                [field]: true,
+              },
+            },
+          },
+          throwingInvalid,
+        ),
+      ).rejects.toThrow('FIELD_FORBIDDEN')
+      expect(mockLoadFeature).not.toHaveBeenCalled()
+      expect(mockSaveLinkedFeatureForm).not.toHaveBeenCalled()
     },
   )
 

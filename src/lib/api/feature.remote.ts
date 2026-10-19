@@ -462,8 +462,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
 
-  if (mode === 'create' && data.placeBrandEdit)
-    invalid(issue('Brand inheritance requires an existing linked Feature'))
+  if (mode === 'create' && (data.placeBrandEdit || data.placeReset))
+    invalid(issue('Inheritance requires an existing linked Feature'))
 
   let submittedProperties = Array.isArray(data.properties) ? data.properties : []
   const duplicatePropertyIds = getDuplicateValues(
@@ -586,8 +586,13 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     submittedDataBeforeHydration.isPendingReview = data.isPendingReview
   }
 
-  // Place brands use the same non-translator permission as Feature properties.
-  if (data.placeBrandEdit) submittedDataBeforeHydration.properties = []
+  // Authorize reset intent by its affected field groups before reading accepted source values.
+  if (data.placeBrandEdit || data.placeReset?.phoneNumber)
+    submittedDataBeforeHydration.properties = []
+  if (data.placeReset?.location) {
+    submittedDataBeforeHydration.geometry = data.geometry
+    submittedDataBeforeHydration.addressMeta = data.addressMeta
+  }
   const preliminaryUpdateDecision = authorizeFeatureUpdateForSubmission({
     user,
     userRoles,
@@ -644,11 +649,14 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)
   const submittedDataForUpdate: Record<string, unknown> = {}
 
-  if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
-  if (propertiesChanged || data.placeBrandEdit)
+  if (i18nChanged || data.placeReset?.names.length)
+    submittedDataForUpdate.i18n = data.i18n
+  if (propertiesChanged || data.placeBrandEdit || data.placeReset?.phoneNumber)
     submittedDataForUpdate.properties = submittedProperties
-  if (geometryChanged) submittedDataForUpdate.geometry = data.geometry
-  if (addressChanged) submittedDataForUpdate.addressMeta = data.addressMeta
+  if (geometryChanged || data.placeReset?.location)
+    submittedDataForUpdate.geometry = data.geometry
+  if (addressChanged || data.placeReset?.location)
+    submittedDataForUpdate.addressMeta = data.addressMeta
   if (intangibleChanged) submittedDataForUpdate.isIntangible = data.isIntangible
   if (visitableChanged) submittedDataForUpdate.isVisitable = data.isVisitable
 
@@ -711,6 +719,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     i18n: data.i18n,
     properties: propertiesChanged ? submittedProperties : undefined,
     placeBrandEdit: data.placeBrandEdit,
+    placeReset: data.placeReset,
   }
   const linkedSave = await saveLinkedFeatureForm(db, saveInput)
   if (linkedSave.status === 'conflict')
@@ -718,7 +727,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   if (linkedSave.status === 'review')
     invalid(issue(`Place-linked feature requires review: ${linkedSave.reason}`))
   if (linkedSave.status === 'saved') {
-    if (geometryChanged)
+    if (linkedSave.geometryChanged)
       scheduleFeatureMtr(ctx.event.locals.platform, linkedSave.feature.id)
     return toCreatedResponseShape(linkedSave.feature)
   }

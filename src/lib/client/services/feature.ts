@@ -378,6 +378,9 @@ export function getProgrammaticFeatureInputEntries(
     }
   }
 
+  if (featureData?.placeReset)
+    appendEntry('data.placeReset', JSON.stringify(featureData.placeReset))
+
   if (featureData?.placeBrandEdit)
     appendEntry('data.placeBrandEdit', JSON.stringify(featureData.placeBrandEdit))
 

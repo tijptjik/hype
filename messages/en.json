@@ -1440,5 +1440,12 @@
   "place_brand_remove": "Remove brand",
   "place_brand_add": "Add brand",
   "place_brand_reset_pending": "The accepted Place brands will be restored when you save this Feature.",
-  "place_brand_none": "No brands"
+  "place_brand_none": "No brands",
+  "place_reset_title": "Restore Place values",
+  "place_reset_description": "Selected fields will use the accepted Place values when you save. This replaces local edits to those fields.",
+  "place_reset_name_en": "English name",
+  "place_reset_name_hant": "Traditional Chinese name",
+  "place_reset_name_hans": "Simplified Chinese name",
+  "place_reset_phones": "Phone numbers",
+  "place_reset_location": "Location and address"
 }
