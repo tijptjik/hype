@@ -50,7 +50,7 @@ const activeMapId = `${name}-active-map`
   iconColorClass="text-base-content"
 >
   <div class="flex flex-col gap-4 px-6 pt-2 pb-6">
-    <SettingsDisclosure title="UI" open>
+    <SettingsDisclosure title={m.theme_ui_title()} open>
       <div class="pt-3 pb-2">
         <div class="mb-4 flex items-center justify-between gap-4">
           <label for={syncId} class="min-w-0 text-sm font-light"
@@ -65,7 +65,7 @@ const activeMapId = `${name}-active-map`
           />
         </div>
         <ThemePicker
-          label="UI"
+          label={m.theme_ui_title()}
           class="[&>legend]:sr-only"
           value={model.theme}
           onSelect={model.onTheme}

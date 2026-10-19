@@ -5,6 +5,7 @@ import Moon from 'virtual:icons/proicons/moon'
 import Check from 'virtual:icons/proicons/checkmark'
 // I18N
 import { m } from '#lib/i18n.js'
+import { getThemeName } from '#lib/themes/i18n.js'
 // TYPES
 import type { ThemeOptionProps } from './themePickerPrimitives.types'
 let { theme, selected, name, onSelect }: ThemeOptionProps = $props()
@@ -23,10 +24,10 @@ let { theme, selected, name, onSelect }: ThemeOptionProps = $props()
     value={theme.id}
     checked={selected}
     onchange={onSelect}
-    aria-label={`${theme.name} — ${theme.mode === 'dark' ? m.theme_dark() : m.theme_light()}`}
+    aria-label={`${getThemeName(theme.id)} — ${theme.mode === 'dark' ? m.theme_dark() : m.theme_light()}`}
   >
   <span class="flex items-center justify-between gap-2">
-    <span class="font-semibold">{theme.name}</span>
+    <span class="font-semibold">{getThemeName(theme.id)}</span>
     {#if theme.mode === 'dark'}
       <Moon class="size-4 text-muted-foreground" aria-hidden="true" />
     {:else}

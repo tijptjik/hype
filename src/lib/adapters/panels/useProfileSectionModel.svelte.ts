@@ -121,6 +121,8 @@ export function useProfileSectionModel(
       return m.anonymous()
     }
 
+    if (isGuestUserSession(user)) return m.guest__guest_account()
+
     return (
       user.displayUsername ??
       user.username ??

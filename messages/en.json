@@ -399,7 +399,7 @@
   "same_lower_orangutan_enchant": "Tap <i>✓ Check In</i> to record your visit. Every place card has this button in the bottom left corner.",
   "topical_alive_dolphin_pinch": "Account",
   "extra_yummy_midge_wish": "We use Google to authenticate you. Your name, profile picture, and password are managed through Google, and cannot be changed here.",
-  "settings__language": "Language",
+  "settings__language": "Language / 語言",
   "petty_steep_dove_clasp": "The app is currently available in <i>English, Traditional, and Simplified Chinese</i>.",
   "settings_contributor_title": "Contribution Credit",
   "sleek_main_shell_taste": "We would love to acknowledge your contributions to the map. Please provide the name to be credited. This can either be a nickname, your legal name, or an organisation.",
@@ -1279,5 +1279,11 @@
   "breadline__phone_label": "Phone number",
   "breadline__phone_invalid": "Enter a valid phone number. Hong Kong numbers need 8 digits after +852.",
   "breadline__phone_in_use": "This phone number belongs to another account. Sign in to that account or contact Breadline for help.",
-  "breadline__phone_continue": "Save and continue"
+  "breadline__phone_continue": "Save and continue",
+  "theme_name_nullspace": "Nullspace",
+  "theme_name_nebula": "Nebula",
+  "theme_name_oblivion": "Oblivion",
+  "theme_name_milque": "Milque",
+  "theme_name_rye": "Rye",
+  "theme_ui_title": "Interface"
 }

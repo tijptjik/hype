@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { getThemeName } from '#lib/themes/i18n.js'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/index.js'
 import { ThemePicker } from '#lib/bits/patterns/themePicker/index.js'
@@ -575,7 +577,7 @@ const panel: ResourcePanelModel = {
             class="bits-theme rounded-2xl border border-border bg-panel p-5 text-base-content"
           >
             <div class="flex justify-between">
-              <h2 class="font-semibold">{theme.name}</h2>
+              <h2 class="font-semibold">{getThemeName(theme.id)}</h2>
               {#if theme.mode === 'dark'}
                 <Moon class="size-4 text-muted-foreground" />
               {:else}
