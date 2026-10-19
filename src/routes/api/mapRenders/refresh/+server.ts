@@ -7,6 +7,7 @@ import { listMapStyleDefinitions } from '#lib/map/styles/index.js'
 import { buildMapStyleMapRenderJob } from '#lib/map/styles/render.jobs.server.js'
 import { getMapStyleAssetRecord } from '#lib/map/styles/registry.js'
 import { requireMapRefreshAccess } from '#lib/map/renders/auth.server.js'
+import { enqueueMissingMapRender } from '#lib/map/renders/recovery.server.js'
 import { enqueueMapRenderJob } from '#lib/map/renders/queue.server.js'
 import {
   planLayerMapRenderRefreshJobs,
@@ -15,6 +16,7 @@ import {
 import type { MapRenderJob } from '#lib/map/renders/render.types.js'
 import {
   getMapRenderQueue,
+  getRemoteMapRenderBucket,
   getMapRenderRemoteConfig,
 } from '#lib/api/services/render.js'
 
@@ -115,6 +117,8 @@ const planMapRenderJobs = async (
  *
  * @param event Request event.
  * @returns JSON summary of the planned or executed preview work.
+ * @remarks Reconciliation includes all eligible entities and queues only absent versions.
+ * Without reconciliation, explicit force requests retain full rebuild semantics.
  */
 export const POST: RequestHandler = async ({ request, url, locals }) => {
   const { platform } = locals
@@ -123,6 +127,7 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
   const mode = parseMode(url, environment)
   const sinceHours = Number(url.searchParams.get('sinceHours') ?? '24')
   const force = url.searchParams.get('force') === 'true'
+  const reconcile = url.searchParams.get('reconcile') === 'true'
 
   if (environment !== 'local') {
     requireMapRefreshAccess(request, platform)
@@ -137,7 +142,7 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
     publicOrigin,
     renderToken,
     sinceHours,
-    force,
+    force || reconcile,
   )
 
   if (mode === 'plan') {
@@ -186,8 +191,22 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
     })
   }
 
+  // Reconciliation scans all active entities but only queues missing versions.
+  let enqueued = 0
   for (const job of jobs) {
-    await enqueueMapRenderJob(getMapRenderQueue(platform), job)
+    if (reconcile) {
+      if (
+        await enqueueMissingMapRender(
+          getRemoteMapRenderBucket(platform),
+          getMapRenderQueue(platform),
+          job,
+        )
+      )
+        enqueued++
+    } else {
+      await enqueueMapRenderJob(getMapRenderQueue(platform), job)
+      enqueued++
+    }
   }
 
   return Response.json({
@@ -197,6 +216,7 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
     sinceHours,
     force,
     planned: jobs.length,
-    enqueued: jobs.length,
+    reconcile,
+    enqueued,
   })
 }

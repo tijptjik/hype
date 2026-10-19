@@ -19,7 +19,7 @@ import { serveMapRenderAsset } from '#lib/api/services/render.js'
 
 /**
  * Serves the current layer render image from the dev asset bucket or redirects to the
- * current immutable remote asset URL.
+ * latest completed immutable remote asset URL while repairing missing versions.
  *
  * @param event Request event carrying the layer id.
  * @returns PNG response in local development, or a redirect to the immutable asset URL.

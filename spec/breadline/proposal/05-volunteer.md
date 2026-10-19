@@ -107,7 +107,17 @@ Breadline markers never use feature photos. They show brand identity, a neutral 
 when yield is unknown, operational yield/reported/claimed states when supplied, and
 a distinct destination shape for the canonical drop-off layer. Date filtering and
 live state delivery remain #199 acceptance work. Shared map previews use the same
-saved marker choices.
+saved marker choices. Because marker configuration participates in the preview hash,
+asset delivery must retain the last completed PNG while a replacement is generated.
+`src/lib/map/renders/recovery.server.ts` provides stage-local fallback and conditional
+R2 repair leases; project/layer asset requests queue missing versions. The hourly
+scheduler uses `reconcile=true` to inspect all active entities regardless of their
+modification dates, enqueuing only missing versions. Mutable redirects and temporary
+404s use `no-store`; completed PNGs keep immutable URLs. Five-minute repair leases
+bound repeated requests and expire after send failures or stalled work. Explicit
+`force=true` rebuilds remain available. This recovery covers project/layer previews;
+style preview delivery is unchanged. Focused recovery, reconciliation, planning,
+redirect and scheduler tests cover this behavior; deployment remains pending.
 
 Migration 0102 adds project marker configuration; 0103 selects the card and marker
 only for the hkfoodworks Breadline project. Neither imports donors or runs. Browser

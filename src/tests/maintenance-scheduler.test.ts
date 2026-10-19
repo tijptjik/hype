@@ -46,6 +46,7 @@ describe('maintenance scheduler tasks', () => {
 
     const [requestUrl, options] = fetchMock.mock.calls[0]
     expect(String(requestUrl)).toContain('/api/mapRenders/refresh?')
+    expect(new URL(String(requestUrl)).searchParams.get('reconcile')).toBe('true')
     expect(options).toMatchObject({
       method: 'POST',
       headers: { 'x-map-render-refresh-token': 'refresh-secret' },

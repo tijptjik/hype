@@ -97,16 +97,26 @@ describe('SvelteKit 3 external map render redirects', () => {
     'permits %s layer and project CDN redirects',
     async stage => {
       for (const kind of ['layers', 'projects'] as const) {
-        await expectAssetRedirect(() =>
-          serveMapRenderAsset({
-            stage,
-            kind,
-            identifier: 'item',
-            hash: 'abc123',
-            objectKey: `mapRender/${kind}/item/abc123.png`,
-            notFoundMessage: 'Missing render',
-          }),
+        const response = await serveMapRenderAsset({
+          platform: {
+            env: {
+              ENVIRONMENT: stage,
+              ASSET_PUBLIC_PREVIEW: { head: vi.fn().mockResolvedValue({}) },
+              ASSET_PUBLIC_PRODUCTION: { head: vi.fn().mockResolvedValue({}) },
+            },
+          } as unknown as App.Platform,
+          stage,
+          kind,
+          identifier: 'item',
+          hash: 'abc123',
+          objectKey: `mapRender/${kind}/item/abc123.png`,
+          notFoundMessage: 'Missing render',
+        })
+        expect(response.status).toBe(307)
+        expect(response.headers.get('location')).toBe(
+          `https://assets.${stage === 'preview' ? 'preview.' : ''}hype.hk/mapRender/${kind}/item/abc123.png`,
         )
+        expect(response.headers.get('cache-control')).toBe('no-store')
       }
     },
   )

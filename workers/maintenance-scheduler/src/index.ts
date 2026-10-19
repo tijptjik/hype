@@ -45,7 +45,7 @@ const hasValidSchedulerCredential = (
 }
 
 /**
- * Builds the bounded render-refresh request URL for the current environment.
+ * Builds a missing-version reconciliation request for the current environment.
  *
  * @param env - Scheduler configuration and application origin.
  * @returns Absolute application URL with refresh query parameters.
@@ -54,6 +54,8 @@ const buildRenderRefreshUrl = (env: Env): string => {
   const url = new URL('/api/mapRenders/refresh', env.APP_BASE_URL)
 
   url.searchParams.set('mode', 'enqueue')
+  // Hash changes and missed jobs are independent of database modification timestamps.
+  url.searchParams.set('reconcile', 'true')
   url.searchParams.set('kinds', env.RENDER_REFRESH_KINDS ?? 'layers,projects')
   url.searchParams.set('sinceHours', env.RENDER_REFRESH_SINCE_HOURS ?? '24')
 
