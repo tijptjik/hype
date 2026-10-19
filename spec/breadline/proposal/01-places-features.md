@@ -720,3 +720,45 @@ replay, changed source values, manifest tampering, identity collisions, concurre
 ordering, later overrides and late transaction failure. Private databases/manifests/
 receipts remain ignored. Reviewed source matching, final migration packaging, Breadline
 importer rebase and remaining source lifecycle work are still outstanding.
+
+### Breadline Places import rebase (Refs #194)
+
+`scripts/breadline/features.ts` now generates a linked private unresolved Place and
+immutable local revision for each newly eligible donor/dropoff Feature. Brands live
+in Place arrays; the importer no longer seeds classifier options or assigns legacy
+brand properties. Known brand translations and curated independent-shop identities
+are retained with provenance identifiers; unclassified `independent` is not invented
+as an establishment brand. The original source brand code remains in the snapshot.
+
+| Breadline source | HYPE destination |
+| --- | --- |
+| `donors.id` / `dropoffs.id`, source row hash | Stable Feature ID and `breadlineImportFeature`; deterministic Place/revision IDs |
+| `name_en`, `name_zh` | Place localized names and Feature titles; existing Traditional-Chinese fallback for both Chinese locales retained |
+| display/full address fields | Unresolved SaanSeoi-shaped Place address and Feature `addressMeta.address`; legacy display strings retained |
+| longitude/latitude plus reviewed correction | Place Point and effective Feature geometry/spatial index |
+| donor `phone` | Normalized Place phone array and universal `gPropPhNum01` JSON array, including explicit empty arrays |
+| donor `brand` plus curated identities | Place brand identifiers/names; no new `WhWlW8KcN2wq` Feature assignments |
+| donor recorded runs | Import eligibility; schedules and active status do not substitute for run history |
+| donor `active`, privacy/location-review exceptions | Feature visitability/publication/review state |
+| reviewed MTR decisions | Existing core Feature MTR fields and resolution evidence; matching routing job cleared |
+| complete source row, hash, import policy/correction | Private immutable Place revision provenance; never asserted to be canonical SaanSeoi data |
+
+Full local rehearsal on a separate copy of the split database imported 311 donors and
+19 dropoffs, excluding 155 donors without recorded runs. All 330 imports have private
+Place associations, matching geometry/address/phone arrays, and one history event.
+All 64 reviewed MTR results were independently compared to stored core fields/evidence;
+#558/#727 retain their accepted labels without invented entrance mappings. In this
+fresh export #171 has no recorded runs and is excluded; #658 remains unpublished.
+
+Regenerating against the imported copy matched all 330 mappings and created zero new
+records. Reapplying that generated replay SQL added no association history. Existing
+Feature/Place rows and property catalogs remain unchanged; integrity is `ok`, with
+zero FK violations. Two integration tests cover run eligibility, linked Place facts,
+array phones, absence of legacy brand assignments, regeneration/replay and rollback
+on association-history failure. Tests use Python sqlite3's fail-fast transactional
+runner: Bun multi-statement `exec` was observed skipping an intermediate failing
+statement and must not be used to apply generated migrations.
+
+The private generated SQL and rehearsal databases are ignored. Final reviewed source
+matching, structured-address curation, inherited brand presentation and production
+migration packaging remain outstanding; nothing was deployed or remotely mutated.

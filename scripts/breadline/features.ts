@@ -10,6 +10,8 @@ import donorBrandIdentities from './donor-brand-identities.json'
 import { reviewedDonorMtr } from './lib/donor-mtr-decisions'
 // VALIDATION
 import { normalizeHongKongPhoneNumber } from '../../src/lib/utils/phone-property'
+import { LocalPlaceInputSchema } from '../../src/lib/places/local'
+import { emptyFeatureAddress } from '../../src/lib/addresses/featureAddress'
 import { createFeatureSpatialIndex } from '../../src/lib/map/featureSpatial'
 
 type SourceRow = Record<string, string | number | null>
@@ -39,7 +41,7 @@ function insert(table: string, row: Record<string, unknown>): string {
 }
 
 /**
- * Generates a repeatable feature import against an explicit destination snapshot.
+ * Generates a repeatable Places + Features import against an explicit destination snapshot.
  * @param args - --source mirror --target snapshot --output SQL path.
  * @returns Nothing; writes a private plan and count-only receipt.
  * @remarks Source changes to accepted mappings fail closed. No remote writes.
@@ -74,26 +76,11 @@ export function planBreadlineFeatures(args: string[]): void {
     { original: [number, number]; corrected: [number, number]; evidence: string }
   >
   const statements = [
-    '-- Breadline feature data migration. Run after schema migrations 0095-0097.',
+    '-- Breadline Places + Features migration. Requires schema migrations through 0111.',
     '-- Generated from a fresh source snapshot; source hashes preserve accepted identity.',
+    '-- Apply in an error-propagating transaction; do not use Bun multi-statement exec.',
   ]
-  // Complete the known source brand vocabulary without altering existing choices.
-  for (const [key, en, hans, hant] of [
-    ['independent', 'Independent', '独立店铺', '獨立店舖'],
-    ['kayser', 'Maison Kayser', 'Maison Kayser', 'Maison Kayser'],
-  ]) {
-    statements.push(
-      `INSERT INTO propertyValue(id,propertyId,rank) VALUES (${sql(brandIds[key])},'WhWlW8KcN2wq',${key === 'independent' ? 5 : 6}) ON CONFLICT(id) DO NOTHING;`,
-    )
-    for (const [locale, value] of [
-      ['en', en],
-      ['zh-hans', hans],
-      ['zh-hant', hant],
-    ])
-      statements.push(
-        `INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES (${sql(brandIds[key])},${sql(locale)},${sql(value)},0) ON CONFLICT(propertyValueId,locale) DO NOTHING;`,
-      )
-  }
+  // Known brand labels now populate Place facts; do not create new classifier options.
   // Run history establishes participation; active status alone does not qualify a donor.
   const donorRuns = new Set(
     (
@@ -102,17 +89,7 @@ export function planBreadlineFeatures(args: string[]): void {
       }[]
     ).map(row => String(row.donor_id)),
   )
-  // Seed real brand values before assigning new donors; the renderer only sees properties.
-  for (const [index, brand] of donorBrandIdentities.entries()) {
-    statements.push(
-      `INSERT INTO propertyValue(id,propertyId,rank,value) VALUES (${sql(brand.id)},'WhWlW8KcN2wq',${7 + index},${sql(brand.code)}) ON CONFLICT(id) DO NOTHING;`,
-    )
-    for (const locale of ['en', 'zh-hans', 'zh-hant']) {
-      statements.push(
-        `INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES (${sql(brand.id)},${sql(locale)},${sql(brand.name)},0) ON CONFLICT(propertyValueId,locale) DO NOTHING;`,
-      )
-    }
-  }
+  // Curated independent shop identities are retained directly in Place brand provenance.
   const excludedDonors: {
     sourceId: string
     reason: string
@@ -192,6 +169,13 @@ export function planBreadlineFeatures(args: string[]): void {
       if (existing) {
         if (existing.featureId !== id || existing.sourceHash !== hash)
           throw new Error(`Source changed for ${table}:${sourceId}; review required`)
+        const association = target
+          .query('SELECT placeId FROM featurePlace WHERE featureId=?')
+          .get(id)
+        if (!association)
+          throw new Error(
+            `Mapped ${table}:${sourceId} still needs the existing-Feature Place split`,
+          )
         if (table === 'donors') {
           const feature = target
             .query('SELECT geometry FROM feature WHERE id=?')
@@ -227,6 +211,76 @@ export function planBreadlineFeatures(args: string[]): void {
       )
         throw new Error(`Invalid source geometry ${table}:${sourceId}`)
       const geometry = { type: 'Point' as const, coordinates }
+      const names: Record<string, string> = {}
+      const addresses: Record<string, string> = {}
+      for (const locale of ['en', 'zh-hant', 'zh-hans']) {
+        const english = locale === 'en'
+        names[locale] = String(
+          (english ? row.name_en : row.name_zh) || row.name_en || '',
+        )
+        addresses[locale] = String(
+          (english
+            ? row.address_display_en || row.address_full_en
+            : row.address_display_zn || row.address_full_zh) ||
+            row.address_full_en ||
+            '',
+        )
+      }
+      const phone =
+        table === 'donors'
+          ? normalizeHongKongPhoneNumber(String(row.phone || ''))
+          : null
+      if (table === 'donors' && row.phone && !phone) invalidPhones++
+      const phones = phone ? [phone] : []
+      const brands = []
+      if (table === 'donors') {
+        const curated =
+          row.brand === 'independent'
+            ? donorBrandIdentities.find(brand => brand.sourceName === row.name_en)
+            : undefined
+        const optionId = curated?.id ?? brandIds[String(row.brand)]
+        if (!optionId) throw new Error('Unknown source brand')
+        // "Independent" describes ownership, not a brand; retain the original code in provenance.
+        if (curated || row.brand !== 'independent') {
+          const translations = target
+            .query('SELECT locale,value FROM propertyValueI18n WHERE propertyValueId=?')
+            .all(optionId) as { locale: string; value: string }[]
+          const brandNames = curated
+            ? { en: curated.name, 'zh-hant': curated.name, 'zh-hans': curated.name }
+            : row.brand === 'kayser'
+              ? {
+                  en: 'Maison Kayser',
+                  'zh-hant': 'Maison Kayser',
+                  'zh-hans': 'Maison Kayser',
+                }
+              : Object.fromEntries(
+                  translations.map(value => [value.locale, value.value]),
+                )
+          if (!Object.keys(brandNames).length)
+            throw new Error('Missing reviewed brand translations')
+          brands.push({
+            identifiers: {
+              breadlineBrand: curated?.code ?? String(row.brand),
+              hypePropertyValueId: optionId,
+            },
+            names: brandNames,
+          })
+        }
+      }
+      const local = LocalPlaceInputSchema.parse({
+        state: 'unresolved',
+        facts: {
+          names,
+          phoneNumber: phones,
+          brands,
+          location: { geometry, address: emptyFeatureAddress(addresses).source },
+        },
+      })
+      const placeId = `blPlace_${id}`
+      const revisionId = `blPlaceBaseline_${id}`
+      if (target.query('SELECT id FROM place WHERE id=?').get(placeId))
+        throw new Error('Unmapped Place ID collision')
+
       // Peninsula remains privately managed; inactive donors remain unavailable/unpublished.
       const requiresLocationReview = table === 'donors' && row.id === 171
       const published =
@@ -241,6 +295,7 @@ export function planBreadlineFeatures(args: string[]): void {
           geometry,
           spatialIndex: createFeatureSpatialIndex(geometry),
           addressMeta: {
+            address: { ...emptyFeatureAddress(addresses), coordinates },
             breadlineSource: { table, id: sourceId },
             ...(correction ? { coordinateCorrection: correction.evidence } : {}),
           },
@@ -276,32 +331,57 @@ export function planBreadlineFeatures(args: string[]): void {
           }),
         )
       }
-      if (table === 'donors') {
-        const brand =
-          (row.brand === 'independent'
-            ? donorBrandIdentities.find(brand => brand.sourceName === row.name_en)?.id
-            : undefined) ?? brandIds[String(row.brand)]
-        if (!brand) throw new Error('Unknown source brand')
-        statements.push(
-          insert('featureProperty', {
-            featureId: id,
-            propertyId: 'WhWlW8KcN2wq',
-            propertyValueId: brand,
-            value: null,
-          }),
-        )
-        const phone = normalizeHongKongPhoneNumber(String(row.phone || ''))
-        if (phone)
-          statements.push(
-            insert('featureProperty', {
-              featureId: id,
-              propertyId: 'gPropPhNum01',
-              propertyValueId: null,
-              value: phone,
-            }),
-          )
-        else if (row.phone) invalidPhones++
+      // The universal property is the materialized phone array; brands inherit from Place.
+      statements.push(
+        insert('featureProperty', {
+          featureId: id,
+          propertyId: 'gPropPhNum01',
+          propertyValueId: null,
+          value: JSON.stringify(local.facts.phoneNumber),
+        }),
+      )
+      const payload = {
+        kind: 'breadline-place-import',
+        version: 2,
+        sourceTable: table,
+        sourceId,
+        sourceHash: hash,
+        source: row,
+        policyVersion: donorImportPolicy.version,
+        coordinateCorrection: correction ?? null,
+        invalidPhone: table === 'donors' && Boolean(row.phone) && !phone,
       }
+      statements.push(
+        insert('place', {
+          id: placeId,
+          state: 'unresolved',
+          ownerProjectId: scope.projectId,
+        }),
+      )
+      statements.push(
+        insert('placeRevision', {
+          id: revisionId,
+          placeId,
+          sequence: 1,
+          origin: 'local',
+          contentHash: createHash('sha256')
+            .update(JSON.stringify({ payload, facts: local.facts }))
+            .digest('hex'),
+          payload,
+          facts: local.facts,
+        }),
+      )
+      statements.push(
+        insert('featurePlace', {
+          featureId: id,
+          placeId,
+          factsRevisionId: revisionId,
+          locationRevisionId: revisionId,
+          overrides: {},
+          revision: `breadline-import:${table}:${sourceId}:${hash}`,
+          actorId: authors[0].id,
+        }),
+      )
       statements.push(
         insert('breadlineImportFeature', {
           sourceTable: table,
@@ -321,7 +401,9 @@ export function planBreadlineFeatures(args: string[]): void {
     output + '.receipt.json',
     JSON.stringify(
       {
+        version: 2,
         created,
+        createdPlaces: created,
         matched,
         invalidPhones,
         coordinateCorrections: corrected,
