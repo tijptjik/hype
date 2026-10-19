@@ -7,6 +7,7 @@ export interface SearchResultMap<T> {
   descriminator?: (item: T) => string | null | undefined
   description?: (item: T) => string | null | undefined
   previewImage?: (item: T) => string | null | undefined
+  preview?: (item: T) => Snippet | undefined
   variant?: (item: T) => 'default' | 'visual'
   disabled?: (item: T) => boolean
   disabledMeta?: (item: T) => SearchResultDisabledMeta | null | undefined
@@ -75,6 +76,7 @@ export interface SearchResultItemProps {
   descriminator?: string | null
   description?: string | null
   previewImage?: string | null
+  preview?: Snippet
   disabled?: boolean
   disabledMeta?: SearchResultDisabledMeta | null
   staggerIndex?: number

@@ -193,7 +193,8 @@ $effect(() => {
     lastCoordinateKey = coordinateKey
     map.flyTo({
       center: coordinateTuple,
-      zoom: 20,
+      zoom: map.getZoom(),
+      duration: 520,
     })
     feature.setLngLat(coordinateTuple)
   }

@@ -1,0 +1,5041 @@
+{
+  "source": "OpenStreetMap HK 2026-10-01",
+  "sourceSha256": "490f678d2c57a98a9bb9f6fe9a8e49516f5e4a278e7b7225b4f654bc6278d723",
+  "stations": [
+    {
+      "id": "ADM",
+      "name": "Admiralty",
+      "nameZh": "金鐘",
+      "coordinates": [114.16510418653846, 22.27900336730769]
+    },
+    {
+      "id": "AIR",
+      "name": "Airport",
+      "nameZh": "機場",
+      "coordinates": [113.93643744347825, 22.31586598478261]
+    },
+    {
+      "id": "AUS",
+      "name": "Austin",
+      "nameZh": "柯士甸",
+      "coordinates": [114.1666014, 22.3042356]
+    },
+    {
+      "id": "AWE",
+      "name": "AsiaWorld-Expo",
+      "nameZh": "博覽館",
+      "coordinates": [113.9422214, 22.3219881]
+    },
+    {
+      "id": "CAB",
+      "name": "Causeway Bay",
+      "nameZh": "銅鑼灣",
+      "coordinates": [114.18335368928571, 22.280030276785713]
+    },
+    {
+      "id": "CEN",
+      "name": "Central",
+      "nameZh": "中環",
+      "coordinates": [114.15889551851852, 22.28170774259259]
+    },
+    {
+      "id": "CHH",
+      "name": "Choi Hung",
+      "nameZh": "彩虹",
+      "coordinates": [114.2093482448276, 22.334426196551725]
+    },
+    {
+      "id": "CHW",
+      "name": "Chai Wan",
+      "nameZh": "柴灣",
+      "coordinates": [114.237044, 22.2644535]
+    },
+    {
+      "id": "CIO",
+      "name": "City One",
+      "nameZh": "第一城",
+      "coordinates": [114.20341993333334, 22.382779244444446]
+    },
+    {
+      "id": "CKT",
+      "name": "Che Kung Temple",
+      "nameZh": "車公廟",
+      "coordinates": [114.18629429545454, 22.374731695454546]
+    },
+    {
+      "id": "CSW",
+      "name": "Cheung Sha Wan",
+      "nameZh": "長沙灣",
+      "coordinates": [114.1561596, 22.3355066]
+    },
+    {
+      "id": "DIH",
+      "name": "Diamond Hill",
+      "nameZh": "鑽石山",
+      "coordinates": [114.20138646541666, 22.3398313675]
+    },
+    {
+      "id": "DIS",
+      "name": "Disneyland Resort",
+      "nameZh": "迪士尼",
+      "coordinates": [114.04513935, 22.31538984166667]
+    },
+    {
+      "id": "ETS",
+      "name": "East Tsim Sha Tsui",
+      "nameZh": "尖東",
+      "coordinates": [114.1750721, 22.295561]
+    },
+    {
+      "id": "EXC",
+      "name": "Exhibition Centre",
+      "nameZh": "會展",
+      "coordinates": [114.1756895, 22.2816132]
+    },
+    {
+      "id": "FAN",
+      "name": "Fanling",
+      "nameZh": "粉嶺",
+      "coordinates": [114.13881275833334, 22.491967537500003]
+    },
+    {
+      "id": "FOH",
+      "name": "Fortress Hill",
+      "nameZh": "炮台山",
+      "coordinates": [114.1933149, 22.2875631]
+    },
+    {
+      "id": "FOT",
+      "name": "Fo Tan",
+      "nameZh": "火炭",
+      "coordinates": [114.19817011142857, 22.39533664]
+    },
+    {
+      "id": "HAH",
+      "name": "Hang Hau",
+      "nameZh": "坑口",
+      "coordinates": [114.2646777, 22.3145874]
+    },
+    {
+      "id": "HEO",
+      "name": "Heng On",
+      "nameZh": "恆安",
+      "coordinates": [114.22575158571429, 22.4174673]
+    },
+    {
+      "id": "HFC",
+      "name": "Heng Fa Chuen",
+      "nameZh": "杏花邨",
+      "coordinates": [114.2397196, 22.2766726]
+    },
+    {
+      "id": "HIK",
+      "name": "Hin Keng",
+      "nameZh": "顯徑",
+      "coordinates": [114.17089445, 22.364105965384617]
+    },
+    {
+      "id": "HKU",
+      "name": "HKU",
+      "nameZh": "香港大學",
+      "coordinates": [114.1355067, 22.2839758]
+    },
+    {
+      "id": "HOK",
+      "name": "Hong Kong",
+      "nameZh": "香港",
+      "coordinates": [114.15821661052632, 22.28457965789474]
+    },
+    {
+      "id": "HOM",
+      "name": "Ho Man Tin",
+      "nameZh": "何文田",
+      "coordinates": [114.18258806153845, 22.309417084615383]
+    },
+    {
+      "id": "HUH",
+      "name": "Hung Hom",
+      "nameZh": "紅磡",
+      "coordinates": [114.182248, 22.3029008]
+    },
+    {
+      "id": "JOR",
+      "name": "Jordan",
+      "nameZh": "佐敦",
+      "coordinates": [114.17167907499999, 22.304982640909092]
+    },
+    {
+      "id": "KAT",
+      "name": "Kai Tak",
+      "nameZh": "啟德",
+      "coordinates": [114.19966113225806, 22.330942935483872]
+    },
+    {
+      "id": "KET",
+      "name": "Kennedy Town",
+      "nameZh": "堅尼地城",
+      "coordinates": [114.1283812, 22.2812252]
+    },
+    {
+      "id": "KOB",
+      "name": "Kowloon Bay",
+      "nameZh": "九龍灣",
+      "coordinates": [114.21408454, 22.32323512]
+    },
+    {
+      "id": "KOT",
+      "name": "Kowloon Tong",
+      "nameZh": "九龍塘",
+      "coordinates": [114.1758588, 22.3370021]
+    },
+    {
+      "id": "KOW",
+      "name": "Kowloon",
+      "nameZh": "九龍",
+      "coordinates": [114.1616003, 22.3049255]
+    },
+    {
+      "id": "KSR",
+      "name": "Kam Sheung Road",
+      "nameZh": "錦上路",
+      "coordinates": [114.06334185882352, 22.43486835882353]
+    },
+    {
+      "id": "KWF",
+      "name": "Kwai Fong",
+      "nameZh": "葵芳",
+      "coordinates": [114.127749175, 22.356801783333335]
+    },
+    {
+      "id": "KWH",
+      "name": "Kwai Hing",
+      "nameZh": "葵興",
+      "coordinates": [114.13120399259259, 22.363277892592595]
+    },
+    {
+      "id": "KWT",
+      "name": "Kwun Tong",
+      "nameZh": "觀塘",
+      "coordinates": [114.22647483333334, 22.31214379]
+    },
+    {
+      "id": "LAK",
+      "name": "Lai King",
+      "nameZh": "荔景",
+      "coordinates": [114.12601886666667, 22.34844874666667]
+    },
+    {
+      "id": "LAT",
+      "name": "Lam Tin",
+      "nameZh": "藍田",
+      "coordinates": [114.23295102432432, 22.307303202702702]
+    },
+    {
+      "id": "LCK",
+      "name": "Lai Chi Kok",
+      "nameZh": "荔枝角",
+      "coordinates": [114.1484136, 22.3373962]
+    },
+    {
+      "id": "LET",
+      "name": "Lei Tung",
+      "nameZh": "利東",
+      "coordinates": [114.155942475, 22.24191328125]
+    },
+    {
+      "id": "LHP",
+      "name": "LOHAS Park",
+      "nameZh": "康城",
+      "coordinates": [114.2687519, 22.2955588]
+    },
+    {
+      "id": "LMC",
+      "name": "Lok Ma Chau",
+      "nameZh": "落馬洲",
+      "coordinates": [114.06567135185186, 22.514481066666665]
+    },
+    {
+      "id": "LOF",
+      "name": "Lok Fu",
+      "nameZh": "樂富",
+      "coordinates": [114.187233, 22.3380228]
+    },
+    {
+      "id": "LOP",
+      "name": "Long Ping",
+      "nameZh": "朗屏",
+      "coordinates": [114.02534847058824, 22.447678747058823]
+    },
+    {
+      "id": "LOW",
+      "name": "Lo Wu",
+      "nameZh": "羅湖",
+      "coordinates": [114.1133387, 22.5281768]
+    },
+    {
+      "id": "MEF",
+      "name": "Mei Foo",
+      "nameZh": "美孚",
+      "coordinates": [114.1365553, 22.3388901]
+    },
+    {
+      "id": "MKK",
+      "name": "Mong Kok East",
+      "nameZh": "旺角東",
+      "coordinates": [114.17262691428571, 22.321994517857142]
+    },
+    {
+      "id": "MOK",
+      "name": "Mong Kok",
+      "nameZh": "旺角",
+      "coordinates": [114.16933326521739, 22.319528730434786]
+    },
+    {
+      "id": "MOS",
+      "name": "Ma On Shan",
+      "nameZh": "馬鞍山",
+      "coordinates": [114.23119374545455, 22.424684772727275]
+    },
+    {
+      "id": "NAC",
+      "name": "Nam Cheong",
+      "nameZh": "南昌",
+      "coordinates": [114.1535827, 22.3263553]
+    },
+    {
+      "id": "NOP",
+      "name": "North Point",
+      "nameZh": "北角",
+      "coordinates": [114.2007532, 22.2909093]
+    },
+    {
+      "id": "NTK",
+      "name": "Ngau Tau Kok",
+      "nameZh": "牛頭角",
+      "coordinates": [114.2190835952381, 22.31551142857143]
+    },
+    {
+      "id": "OCP",
+      "name": "Ocean Park",
+      "nameZh": "海洋公園",
+      "coordinates": [114.1742861, 22.248546817647057]
+    },
+    {
+      "id": "OLY",
+      "name": "Olympic",
+      "nameZh": "奧運",
+      "coordinates": [114.16022504166666, 22.317858958333332]
+    },
+    {
+      "id": "POA",
+      "name": "Po Lam",
+      "nameZh": "寶琳",
+      "coordinates": [114.25795912666668, 22.32230032]
+    },
+    {
+      "id": "PRE",
+      "name": "Prince Edward",
+      "nameZh": "太子",
+      "coordinates": [114.1683017, 22.3244547]
+    },
+    {
+      "id": "QUB",
+      "name": "Quarry Bay",
+      "nameZh": "鰂魚涌",
+      "coordinates": [114.208992, 22.2881654]
+    },
+    {
+      "id": "RAC",
+      "name": "Racecourse",
+      "nameZh": "馬場",
+      "coordinates": [114.2028994, 22.4004756]
+    },
+    {
+      "id": "SHM",
+      "name": "Shek Mun",
+      "nameZh": "石門",
+      "coordinates": [114.20819437692307, 22.387522046153848]
+    },
+    {
+      "id": "SHS",
+      "name": "Sheung Shui",
+      "nameZh": "上水",
+      "coordinates": [114.1280325, 22.5011624]
+    },
+    {
+      "id": "SHT",
+      "name": "Sha Tin",
+      "nameZh": "沙田",
+      "coordinates": [114.1878389125, 22.38317161875]
+    },
+    {
+      "id": "SHW",
+      "name": "Sheung Wan",
+      "nameZh": "上環",
+      "coordinates": [114.15262215617977, 22.286796886516854]
+    },
+    {
+      "id": "SIH",
+      "name": "Siu Hong",
+      "nameZh": "兆康",
+      "coordinates": [113.9787542888889, 22.411981561111112]
+    },
+    {
+      "id": "SKM",
+      "name": "Shek Kip Mei",
+      "nameZh": "石硤尾",
+      "coordinates": [114.16888457647059, 22.33187421764706]
+    },
+    {
+      "id": "SKW",
+      "name": "Shau Kei Wan",
+      "nameZh": "筲箕灣",
+      "coordinates": [114.2288977, 22.2791539]
+    },
+    {
+      "id": "SOH",
+      "name": "South Horizons",
+      "nameZh": "海怡半島",
+      "coordinates": [114.14870558333334, 22.242941283333334]
+    },
+    {
+      "id": "SSP",
+      "name": "Sham Shui Po",
+      "nameZh": "深水埗",
+      "coordinates": [114.16239072727274, 22.330694223376625]
+    },
+    {
+      "id": "STW",
+      "name": "Sha Tin Wai",
+      "nameZh": "沙田圍",
+      "coordinates": [114.19476846363636, 22.376864427272725]
+    },
+    {
+      "id": "SUN",
+      "name": "Sunny Bay",
+      "nameZh": "欣澳",
+      "coordinates": [114.0289149, 22.3319843]
+    },
+    {
+      "id": "SUW",
+      "name": "Sung Wong Toi",
+      "nameZh": "宋皇臺",
+      "coordinates": [114.19105709354838, 22.325814425806453]
+    },
+    {
+      "id": "SWH",
+      "name": "Sai Wan Ho",
+      "nameZh": "西灣河",
+      "coordinates": [114.2222887, 22.2816305]
+    },
+    {
+      "id": "SYP",
+      "name": "Sai Ying Pun",
+      "nameZh": "西營盤",
+      "coordinates": [114.1426424, 22.2854347]
+    },
+    {
+      "id": "TAK",
+      "name": "Tai Koo",
+      "nameZh": "太古",
+      "coordinates": [114.2163223, 22.2846366]
+    },
+    {
+      "id": "TAP",
+      "name": "Tai Po Market",
+      "nameZh": "大埔墟",
+      "coordinates": [114.1706348, 22.4446507]
+    },
+    {
+      "id": "TAW",
+      "name": "Tai Wai",
+      "nameZh": "大圍",
+      "coordinates": [114.17857600222223, 22.373042062222222]
+    },
+    {
+      "id": "TIH",
+      "name": "Tin Hau",
+      "nameZh": "天后",
+      "coordinates": [114.1919173, 22.2822771]
+    },
+    {
+      "id": "TIK",
+      "name": "Tiu Keng Leng",
+      "nameZh": "調景嶺",
+      "coordinates": [114.2523705, 22.3040753]
+    },
+    {
+      "id": "TIS",
+      "name": "Tin Shui Wai",
+      "nameZh": "天水圍",
+      "coordinates": [114.00447313859648, 22.447934589473686]
+    },
+    {
+      "id": "TKO",
+      "name": "Tseung Kwan O",
+      "nameZh": "將軍澳",
+      "coordinates": [114.25998726428573, 22.307399642857142]
+    },
+    {
+      "id": "TKW",
+      "name": "To Kwa Wan",
+      "nameZh": "土瓜灣",
+      "coordinates": [114.1876486, 22.3169748]
+    },
+    {
+      "id": "TSH",
+      "name": "Tai Shui Hang",
+      "nameZh": "大水坑",
+      "coordinates": [114.22263698181818, 22.408306472727272]
+    },
+    {
+      "id": "TST",
+      "name": "Tsim Sha Tsui",
+      "nameZh": "尖沙咀",
+      "coordinates": [114.17232382985075, 22.297625011940298]
+    },
+    {
+      "id": "TSW",
+      "name": "Tsuen Wan",
+      "nameZh": "荃灣",
+      "coordinates": [114.117725244, 22.373680844]
+    },
+    {
+      "id": "TSY",
+      "name": "Tsing Yi",
+      "nameZh": "青衣",
+      "coordinates": [114.1067535, 22.3584969]
+    },
+    {
+      "id": "TUC",
+      "name": "Tung Chung",
+      "nameZh": "東涌",
+      "coordinates": [113.9413739, 22.2892449]
+    },
+    {
+      "id": "TUM",
+      "name": "Tuen Mun",
+      "nameZh": "屯門",
+      "coordinates": [113.9731389347826, 22.394706117391305]
+    },
+    {
+      "id": "TWH",
+      "name": "Tai Wo Hau",
+      "nameZh": "大窩口",
+      "coordinates": [114.1250708, 22.370804080000003]
+    },
+    {
+      "id": "TWO",
+      "name": "Tai Wo",
+      "nameZh": "太和",
+      "coordinates": [114.16105728604651, 22.451006976744186]
+    },
+    {
+      "id": "TWW",
+      "name": "Tsuen Wan West",
+      "nameZh": "荃灣西",
+      "coordinates": [114.11014058787879, 22.36808723939394]
+    },
+    {
+      "id": "UNI",
+      "name": "University",
+      "nameZh": "大學",
+      "coordinates": [114.2101033, 22.4135688]
+    },
+    {
+      "id": "WAC",
+      "name": "Wan Chai",
+      "nameZh": "灣仔",
+      "coordinates": [114.1728604, 22.2775843]
+    },
+    {
+      "id": "WCH",
+      "name": "Wong Chuk Hang",
+      "nameZh": "黃竹坑",
+      "coordinates": [114.1675119, 22.2478643]
+    },
+    {
+      "id": "WHA",
+      "name": "Whampoa",
+      "nameZh": "黃埔",
+      "coordinates": [114.18955998979592, 22.304918755102044]
+    },
+    {
+      "id": "WKS",
+      "name": "Wu Kai Sha",
+      "nameZh": "烏溪沙",
+      "coordinates": [114.24384808148149, 22.429201796296297]
+    },
+    {
+      "id": "WTS",
+      "name": "Wong Tai Sin",
+      "nameZh": "黃大仙",
+      "coordinates": [114.19382161636364, 22.341582107272725]
+    },
+    {
+      "id": "YAT",
+      "name": "Yau Tong",
+      "nameZh": "油塘",
+      "coordinates": [114.2371593, 22.2977882]
+    },
+    {
+      "id": "YMT",
+      "name": "Yau Ma Tei",
+      "nameZh": "油麻地",
+      "coordinates": [114.17054838541667, 22.313029710416668]
+    },
+    {
+      "id": "YUL",
+      "name": "Yuen Long",
+      "nameZh": "元朗",
+      "coordinates": [114.03491879107142, 22.44619596607143]
+    }
+  ],
+  "exits": [
+    {
+      "id": "osm:n10005931530",
+      "station": "YUL",
+      "ref": "K",
+      "coordinates": [114.0364796, 22.4459361],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10018328749",
+      "station": "TWW",
+      "ref": "C1",
+      "coordinates": [114.1102116, 22.3674745],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10072617359",
+      "station": "CHH",
+      "ref": "A3",
+      "coordinates": [114.2097387, 22.3340686],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10091243583",
+      "station": "HUH",
+      "ref": "D3",
+      "coordinates": [114.1810501, 22.3013941],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10110489374",
+      "station": "HUH",
+      "ref": "D6",
+      "coordinates": [114.1813403, 22.3021592],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10110489377",
+      "station": "HUH",
+      "ref": "D2",
+      "coordinates": [114.1821256, 22.3019068],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10117786612",
+      "station": "HUH",
+      "ref": "D5",
+      "coordinates": [114.1809251, 22.3007428],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10117786613",
+      "station": "HUH",
+      "ref": "D4",
+      "coordinates": [114.1809739, 22.300791],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1012176477",
+      "station": "CAB",
+      "ref": "D1",
+      "coordinates": [114.1842425, 22.2805978],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1012176526",
+      "station": "CAB",
+      "ref": "F1",
+      "coordinates": [114.1844365, 22.2798881],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10125880851",
+      "station": "ETS",
+      "ref": "K",
+      "coordinates": [114.1736748, 22.2954873],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n10164505894",
+      "station": "KOW",
+      "ref": "C1",
+      "coordinates": [114.1620627, 22.3047485],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10181827452",
+      "station": "TSW",
+      "ref": "C",
+      "coordinates": [114.1185108, 22.3733295],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10211064227",
+      "station": "TWW",
+      "ref": "C3",
+      "coordinates": [114.1104722, 22.3676953],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10211064237",
+      "station": "TWW",
+      "ref": "C2",
+      "coordinates": [114.1100472, 22.3678446],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10211064240",
+      "station": "TWW",
+      "ref": "C4",
+      "coordinates": [114.1103447, 22.3675723],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10211113075",
+      "station": "SHS",
+      "ref": "D1",
+      "coordinates": [114.1276699, 22.5016865],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10213765479",
+      "station": "NAC",
+      "ref": "A2",
+      "coordinates": [114.1536256, 22.3277181],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n10213765480",
+      "station": "NAC",
+      "ref": "D2",
+      "coordinates": [114.1543502, 22.3263815],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1023011812",
+      "station": "LAT",
+      "ref": "B",
+      "coordinates": [114.2336348, 22.3066677],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1023011855",
+      "station": "LAT",
+      "ref": "C",
+      "coordinates": [114.2336331, 22.3060808],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1023011937",
+      "station": "LAT",
+      "ref": "A",
+      "coordinates": [114.2343281, 22.3080086],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1023011993",
+      "station": "LAT",
+      "ref": "D2",
+      "coordinates": [114.2320816, 22.3072166],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10301092070",
+      "station": "NTK",
+      "ref": "B3",
+      "coordinates": [114.2187397, 22.3160193],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10301092071",
+      "station": "NTK",
+      "ref": "B4",
+      "coordinates": [114.218596, 22.3158799],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10301092072",
+      "station": "NTK",
+      "ref": "B2",
+      "coordinates": [114.2191631, 22.3159471],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10301092073",
+      "station": "NTK",
+      "ref": "B1",
+      "coordinates": [114.2194424, 22.3157562],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10608449266",
+      "station": "KOB",
+      "ref": "B",
+      "coordinates": [114.2140011, 22.3242867],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10703682000",
+      "station": "KOW",
+      "ref": "E4",
+      "coordinates": [114.1610913, 22.3048867],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10740506419",
+      "station": "ETS",
+      "ref": "J1",
+      "coordinates": [114.173697, 22.2951854],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n10758674303",
+      "station": "SHS",
+      "ref": "",
+      "coordinates": [114.1277664, 22.5016608],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10758683505",
+      "station": "SHS",
+      "ref": "B",
+      "coordinates": [114.1283873, 22.5008668],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10789714336",
+      "station": "TWW",
+      "ref": "C5",
+      "coordinates": [114.1104198, 22.3675768],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10841608424",
+      "station": "LMC",
+      "ref": "B",
+      "coordinates": [114.0656373, 22.5149797],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10842157477",
+      "station": "LOF",
+      "ref": "A",
+      "coordinates": [114.1877292, 22.3381481],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n10842157478",
+      "station": "LOF",
+      "ref": "A",
+      "coordinates": [114.1876907, 22.3382621],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n11264962675",
+      "station": "ETS",
+      "ref": "J5",
+      "coordinates": [114.1722357, 22.2951919],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n11335379996",
+      "station": "TAW",
+      "ref": "H",
+      "coordinates": [114.1795271, 22.37337],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n11372395047",
+      "station": "KAT",
+      "ref": "C",
+      "coordinates": [114.1991433, 22.3307115],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n11384842235",
+      "station": "AUS",
+      "ref": "E",
+      "coordinates": [114.1673793, 22.3028399],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n11516591167",
+      "station": "CSW",
+      "ref": "",
+      "coordinates": [114.1569528, 22.3351968],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n11516591168",
+      "station": "CSW",
+      "ref": "",
+      "coordinates": [114.1569751, 22.3351795],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1179848571",
+      "station": "QUB",
+      "ref": "",
+      "coordinates": [114.2098504, 22.288128],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n11875948362",
+      "station": "MEF",
+      "ref": "G",
+      "coordinates": [114.1365129, 22.3397029],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1189559651",
+      "station": "ETS",
+      "ref": "P2",
+      "coordinates": [114.1762512, 22.2973001],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n12046189249",
+      "station": "MOK",
+      "ref": "B4",
+      "coordinates": [114.1695071, 22.3204081],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n12179383321",
+      "station": "KAT",
+      "ref": "B2",
+      "coordinates": [114.1994397, 22.3312913],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n12233929079",
+      "station": "AWE",
+      "ref": "B",
+      "coordinates": [113.94077, 22.3216322],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n12234009402",
+      "station": "AWE",
+      "ref": "A",
+      "coordinates": [113.9437313, 22.3222581],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n12304286656",
+      "station": "WCH",
+      "ref": "C",
+      "coordinates": [114.1680534, 22.247909],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1234054220",
+      "station": "ADM",
+      "ref": "C1",
+      "coordinates": [114.1647676, 22.2785189],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n12466920421",
+      "station": "TAP",
+      "ref": "A",
+      "coordinates": [114.1701423, 22.4442836],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n12589966854",
+      "station": "LAK",
+      "ref": "C",
+      "coordinates": [114.1260978, 22.348552],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n12595506494",
+      "station": "LCK",
+      "ref": "A",
+      "coordinates": [114.1488828, 22.3373307],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1268358716",
+      "station": "ETS",
+      "ref": "L5",
+      "coordinates": [114.1703632, 22.2962118],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n1268358723",
+      "station": "ETS",
+      "ref": "L6",
+      "coordinates": [114.1706378, 22.2951015],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n12730532635",
+      "station": "HOK",
+      "ref": "",
+      "coordinates": [114.1573919, 22.284948],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1276680606",
+      "station": "TSW",
+      "ref": "A3",
+      "coordinates": [114.1161059, 22.3741051],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848661",
+      "station": "MOK",
+      "ref": "B2",
+      "coordinates": [114.1696731, 22.3203941],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848665",
+      "station": "MOK",
+      "ref": "D1",
+      "coordinates": [114.1695494, 22.3194348],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848668",
+      "station": "MOK",
+      "ref": "A2",
+      "coordinates": [114.1686505, 22.3201894],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848672",
+      "station": "MOK",
+      "ref": "D3",
+      "coordinates": [114.1700803, 22.3191447],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848674",
+      "station": "MOK",
+      "ref": "C3",
+      "coordinates": [114.1686758, 22.3189982],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848676",
+      "station": "MOK",
+      "ref": "B1",
+      "coordinates": [114.1693592, 22.3203356],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848677",
+      "station": "MOK",
+      "ref": "B3",
+      "coordinates": [114.1697125, 22.3205221],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848678",
+      "station": "MOK",
+      "ref": "C4",
+      "coordinates": [114.1688279, 22.3191127],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848683",
+      "station": "MOK",
+      "ref": "E2",
+      "coordinates": [114.1698389, 22.31836],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848689",
+      "station": "MOK",
+      "ref": "C2",
+      "coordinates": [114.168861, 22.31929],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848691",
+      "station": "MOK",
+      "ref": "D2",
+      "coordinates": [114.1698266, 22.3194812],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848692",
+      "station": "MOK",
+      "ref": "A1",
+      "coordinates": [114.1689752, 22.3202353],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848700",
+      "station": "MOK",
+      "ref": "C1",
+      "coordinates": [114.1691704, 22.3193442],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1277848701",
+      "station": "MOK",
+      "ref": "E1",
+      "coordinates": [114.1693237, 22.3182653],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1279026536",
+      "station": "YMT",
+      "ref": "A1",
+      "coordinates": [114.1702379, 22.3138159],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1279026544",
+      "station": "YMT",
+      "ref": "B2",
+      "coordinates": [114.1701134, 22.3130003],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1279026546",
+      "station": "YMT",
+      "ref": "A2",
+      "coordinates": [114.1707603, 22.3139072],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1279026553",
+      "station": "YMT",
+      "ref": "B1",
+      "coordinates": [114.1704365, 22.3130606],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1279026559",
+      "station": "YMT",
+      "ref": "D",
+      "coordinates": [114.170922, 22.3129306],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1279026568",
+      "station": "YMT",
+      "ref": "C",
+      "coordinates": [114.1707101, 22.3117934],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n12946984639",
+      "station": "KOW",
+      "ref": "C2",
+      "coordinates": [114.161654, 22.3049007],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n12946984676",
+      "station": "KOW",
+      "ref": "E5",
+      "coordinates": [114.1612739, 22.305305],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n12946984698",
+      "station": "KOW",
+      "ref": "D2",
+      "coordinates": [114.161497, 22.3049502],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n12946994706",
+      "station": "KOW",
+      "ref": "D1",
+      "coordinates": [114.1611346, 22.3050687],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1295654877",
+      "station": "NOP",
+      "ref": "A4",
+      "coordinates": [114.20033, 22.2917],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1295864438",
+      "station": "OLY",
+      "ref": "B",
+      "coordinates": [114.1601228, 22.3184881],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13138017360",
+      "station": "QUB",
+      "ref": "B",
+      "coordinates": [114.2098603, 22.2880764],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13138042138",
+      "station": "HOM",
+      "ref": "B",
+      "coordinates": [114.1828012, 22.3093771],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1323956313",
+      "station": "KOB",
+      "ref": "A",
+      "coordinates": [114.2141747, 22.3226497],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13442537598",
+      "station": "NTK",
+      "ref": "B",
+      "coordinates": [114.2190886, 22.3156071],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13587375421",
+      "station": "TUM",
+      "ref": "B",
+      "coordinates": [113.9728177, 22.3941052],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13620585266",
+      "station": "POA",
+      "ref": "B",
+      "coordinates": [114.2582128, 22.3220187],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13620585268",
+      "station": "POA",
+      "ref": "A",
+      "coordinates": [114.2574845, 22.3229332],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13626435742",
+      "station": "TSH",
+      "ref": "",
+      "coordinates": [114.2223671, 22.4077456],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13662713593",
+      "station": "TAP",
+      "ref": "A",
+      "coordinates": [114.1700076, 22.4443812],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13665029390",
+      "station": "FAN",
+      "ref": "A",
+      "coordinates": [114.1389545, 22.4920076],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13666351816",
+      "station": "SHS",
+      "ref": "A",
+      "coordinates": [114.1277656, 22.5013904],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13666351817",
+      "station": "SHS",
+      "ref": "D",
+      "coordinates": [114.1278409, 22.501502],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13745638786",
+      "station": "KWH",
+      "ref": "A",
+      "coordinates": [114.1313252, 22.3637096],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13745638795",
+      "station": "KWH",
+      "ref": "E",
+      "coordinates": [114.1312663, 22.3626898],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13745638798",
+      "station": "KWH",
+      "ref": "B",
+      "coordinates": [114.1312903, 22.3627684],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13745797026",
+      "station": "KWH",
+      "ref": "C",
+      "coordinates": [114.1310736, 22.3625914],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n13745797036",
+      "station": "KWH",
+      "ref": "D",
+      "coordinates": [114.1311082, 22.3635854],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1387112133",
+      "station": "ETS",
+      "ref": "N3",
+      "coordinates": [114.174343, 22.2972731],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n1387112134",
+      "station": "ETS",
+      "ref": "N4",
+      "coordinates": [114.1737076, 22.2971701],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n13905228792",
+      "station": "TSY",
+      "ref": "C",
+      "coordinates": [114.106376, 22.3581141],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13905228800",
+      "station": "TSY",
+      "ref": "C",
+      "coordinates": [114.1069967, 22.3580081],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13905248203",
+      "station": "TSY",
+      "ref": "B",
+      "coordinates": [114.1069198, 22.3583988],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13905248205",
+      "station": "TSY",
+      "ref": "A2",
+      "coordinates": [114.1071068, 22.3590098],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13905248223",
+      "station": "TSY",
+      "ref": "F",
+      "coordinates": [114.1072002, 22.3586695],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13905248224",
+      "station": "TSY",
+      "ref": "G",
+      "coordinates": [114.1071953, 22.3586522],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13905248225",
+      "station": "TSY",
+      "ref": "A1",
+      "coordinates": [114.1069765, 22.3591139],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13905248229",
+      "station": "TSY",
+      "ref": "A",
+      "coordinates": [114.1069346, 22.3589419],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13905248232",
+      "station": "TSY",
+      "ref": "C",
+      "coordinates": [114.1067118, 22.3582067],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13909377256",
+      "station": "AIR",
+      "ref": "",
+      "coordinates": [113.936429, 22.315198],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13909377260",
+      "station": "AIR",
+      "ref": "",
+      "coordinates": [113.9360056, 22.3163632],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13910356528",
+      "station": "AIR",
+      "ref": "",
+      "coordinates": [113.9367385, 22.3159443],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13914065029",
+      "station": "AIR",
+      "ref": "",
+      "coordinates": [113.936468, 22.316586],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13914065032",
+      "station": "AIR",
+      "ref": "",
+      "coordinates": [113.9369257, 22.3153489],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n13953869543",
+      "station": "TUM",
+      "ref": "F1",
+      "coordinates": [113.9736061, 22.3965055],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n14022100401",
+      "station": "DIH",
+      "ref": "D",
+      "coordinates": [114.2016043, 22.3391157],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n14029097703",
+      "station": "OLY",
+      "ref": "C",
+      "coordinates": [114.160691, 22.3172091],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n14029097704",
+      "station": "OLY",
+      "ref": "D",
+      "coordinates": [114.1607165, 22.3171478],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n14029097707",
+      "station": "OLY",
+      "ref": "",
+      "coordinates": [114.1604937, 22.3171977],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n14030999390",
+      "station": "OLY",
+      "ref": "E",
+      "coordinates": [114.1603474, 22.3170826],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n14041077225",
+      "station": "OLY",
+      "ref": "",
+      "coordinates": [114.159999, 22.3183692],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n14041077227",
+      "station": "OLY",
+      "ref": "A2",
+      "coordinates": [114.1591036, 22.3181307],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n14079931908",
+      "station": "SKW",
+      "ref": "D",
+      "coordinates": [114.229298, 22.2796868],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n14079932000",
+      "station": "SKW",
+      "ref": "B",
+      "coordinates": [114.2294051, 22.2792458],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n14115380417",
+      "station": "TSW",
+      "ref": "A",
+      "coordinates": [114.11698, 22.3739137],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n14115380421",
+      "station": "TSW",
+      "ref": "B",
+      "coordinates": [114.118262, 22.3733239],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1442107002",
+      "station": "CEN",
+      "ref": "G",
+      "coordinates": [114.1577864, 22.2818243],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1442107003",
+      "station": "CEN",
+      "ref": "D2",
+      "coordinates": [114.1570574, 22.2819661],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1442107005",
+      "station": "CEN",
+      "ref": "C",
+      "coordinates": [114.1574634, 22.2822161],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1442107006",
+      "station": "CEN",
+      "ref": "A",
+      "coordinates": [114.1579391, 22.282714],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1465206059",
+      "station": "POA",
+      "ref": "B2",
+      "coordinates": [114.2582024, 22.3218213],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1465206102",
+      "station": "POA",
+      "ref": "A1",
+      "coordinates": [114.2573934, 22.3229134],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1490080694",
+      "station": "RAC",
+      "ref": "A",
+      "coordinates": [114.2035406, 22.3996735],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1490080723",
+      "station": "RAC",
+      "ref": "B",
+      "coordinates": [114.2033472, 22.4001296],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1490080736",
+      "station": "RAC",
+      "ref": "C",
+      "coordinates": [114.2039171, 22.4007925],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1597620669",
+      "station": "TAP",
+      "ref": "B",
+      "coordinates": [114.1708013, 22.4442524],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1628446441",
+      "station": "TAW",
+      "ref": "G",
+      "coordinates": [114.1771724, 22.3723948],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1640472762",
+      "station": "OLY",
+      "ref": "A",
+      "coordinates": [114.1598281, 22.3183829],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1691725692",
+      "station": "KWT",
+      "ref": "B3",
+      "coordinates": [114.226076, 22.3117103],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1691725727",
+      "station": "KWT",
+      "ref": "C2",
+      "coordinates": [114.226911, 22.3122324],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1691725738",
+      "station": "KWT",
+      "ref": "C1",
+      "coordinates": [114.2268944, 22.3123897],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1704465153",
+      "station": "KWF",
+      "ref": "E",
+      "coordinates": [114.1278752, 22.357133],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1709834365",
+      "station": "MEF",
+      "ref": "F",
+      "coordinates": [114.1368489, 22.3385739],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1737253258",
+      "station": "OLY",
+      "ref": "C5",
+      "coordinates": [114.1609513, 22.3179216],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1894143161",
+      "station": "CSW",
+      "ref": "C2",
+      "coordinates": [114.1551577, 22.3364463],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1894143163",
+      "station": "CSW",
+      "ref": "B",
+      "coordinates": [114.1553734, 22.3357335],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1937862547",
+      "station": "NOP",
+      "ref": "B4",
+      "coordinates": [114.2006776, 22.290696],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1937863198",
+      "station": "NOP",
+      "ref": "B2",
+      "coordinates": [114.2006342, 22.2910383],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1937863275",
+      "station": "NOP",
+      "ref": "B3",
+      "coordinates": [114.2009802, 22.2911066],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1942600954",
+      "station": "YAT",
+      "ref": "B1",
+      "coordinates": [114.2367112, 22.2985307],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1942600955",
+      "station": "YAT",
+      "ref": "B2",
+      "coordinates": [114.2365798, 22.2984539],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1942600956",
+      "station": "YAT",
+      "ref": "A1",
+      "coordinates": [114.237768, 22.2971312],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1942600957",
+      "station": "YAT",
+      "ref": "A2",
+      "coordinates": [114.2376312, 22.2970443],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1947452672",
+      "station": "LOF",
+      "ref": "A",
+      "coordinates": [114.1877115, 22.3381945],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1952510747",
+      "station": "TST",
+      "ref": "A1",
+      "coordinates": [114.1719412, 22.2983158],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1956684701",
+      "station": "SKM",
+      "ref": "B2",
+      "coordinates": [114.1689901, 22.3316724],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1956684819",
+      "station": "SKM",
+      "ref": "A",
+      "coordinates": [114.16853, 22.331674],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1956684827",
+      "station": "SKM",
+      "ref": "C",
+      "coordinates": [114.1688149, 22.3327479],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1956684875",
+      "station": "SKM",
+      "ref": "B1",
+      "coordinates": [114.1691738, 22.3314751],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1962793037",
+      "station": "TKO",
+      "ref": "B1",
+      "coordinates": [114.2590326, 22.307009],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1962793082",
+      "station": "TKO",
+      "ref": "B2",
+      "coordinates": [114.2589954, 22.3071034],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1962793273",
+      "station": "TKO",
+      "ref": "A2",
+      "coordinates": [114.2608441, 22.3076198],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1962793277",
+      "station": "TKO",
+      "ref": "C",
+      "coordinates": [114.2599109, 22.3074614],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1962793390",
+      "station": "TKO",
+      "ref": "A1",
+      "coordinates": [114.2608051, 22.3077187],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1988098082",
+      "station": "TAW",
+      "ref": "D",
+      "coordinates": [114.1780568, 22.3730449],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1988098086",
+      "station": "TAW",
+      "ref": "F",
+      "coordinates": [114.1777152, 22.3723944],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n1988098090",
+      "station": "TAW",
+      "ref": "C",
+      "coordinates": [114.1780439, 22.3726634],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1988098091",
+      "station": "TAW",
+      "ref": "E",
+      "coordinates": [114.1775485, 22.3726206],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1988098093",
+      "station": "TAW",
+      "ref": "B",
+      "coordinates": [114.1793291, 22.3729463],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1988101458",
+      "station": "SHM",
+      "ref": "C",
+      "coordinates": [114.2086273, 22.3881124],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1988101459",
+      "station": "SHM",
+      "ref": "B",
+      "coordinates": [114.2082235, 22.3874181],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1988101468",
+      "station": "SHM",
+      "ref": "A",
+      "coordinates": [114.2080651, 22.3875433],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1988101515",
+      "station": "SHM",
+      "ref": "D",
+      "coordinates": [114.2087676, 22.3879701],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1992279551",
+      "station": "FOT",
+      "ref": "C",
+      "coordinates": [114.1986725, 22.3957215],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1992279630",
+      "station": "FOT",
+      "ref": "A",
+      "coordinates": [114.198033, 22.3947205],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1992279638",
+      "station": "FOT",
+      "ref": "D",
+      "coordinates": [114.1981112, 22.3959888],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n1992279664",
+      "station": "FOT",
+      "ref": "B",
+      "coordinates": [114.1976498, 22.3949228],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2028019506",
+      "station": "KSR",
+      "ref": "C",
+      "coordinates": [114.0639191, 22.4342941],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2028019587",
+      "station": "KSR",
+      "ref": "D",
+      "coordinates": [114.0637156, 22.4341732],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2028025892",
+      "station": "KSR",
+      "ref": "B",
+      "coordinates": [114.0630537, 22.4355136],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2028025893",
+      "station": "KSR",
+      "ref": "A",
+      "coordinates": [114.0628534, 22.4353897],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2029411541",
+      "station": "FAN",
+      "ref": "B",
+      "coordinates": [114.1387823, 22.4918273],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2042508937",
+      "station": "DIH",
+      "ref": "A2",
+      "coordinates": [114.200328, 22.340067],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2042509009",
+      "station": "DIH",
+      "ref": "A1",
+      "coordinates": [114.2009049, 22.3409759],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2046659659",
+      "station": "DIH",
+      "ref": "C2",
+      "coordinates": [114.2025474, 22.3401757],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2046659662",
+      "station": "DIH",
+      "ref": "B",
+      "coordinates": [114.2021696, 22.3392836],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2078621332",
+      "station": "AIR",
+      "ref": "G",
+      "coordinates": [113.9364765, 22.3165635],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2093151954",
+      "station": "KWF",
+      "ref": "D",
+      "coordinates": [114.1280643, 22.3573828],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2093151958",
+      "station": "KWF",
+      "ref": "A",
+      "coordinates": [114.1282665, 22.3572648],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2096110564",
+      "station": "LAK",
+      "ref": "B",
+      "coordinates": [114.1256664, 22.3486098],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2096110594",
+      "station": "LAK",
+      "ref": "A3",
+      "coordinates": [114.1263049, 22.3482531],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2118748414",
+      "station": "UNI",
+      "ref": "A",
+      "coordinates": [114.2098955, 22.4137195],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2118748432",
+      "station": "UNI",
+      "ref": "D",
+      "coordinates": [114.2106771, 22.4151207],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2153312717",
+      "station": "HFC",
+      "ref": "A",
+      "coordinates": [114.239914, 22.2767764],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2213577057",
+      "station": "POA",
+      "ref": "B3",
+      "coordinates": [114.2582995, 22.3218065],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2251195619",
+      "station": "CSW",
+      "ref": "A1",
+      "coordinates": [114.1572266, 22.3343071],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2251195628",
+      "station": "CSW",
+      "ref": "A2",
+      "coordinates": [114.1578104, 22.3349211],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2251195633",
+      "station": "CSW",
+      "ref": "C1",
+      "coordinates": [114.1565083, 22.3356151],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2251286250",
+      "station": "NAC",
+      "ref": "A1",
+      "coordinates": [114.153593, 22.327799],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2251292845",
+      "station": "NAC",
+      "ref": "B",
+      "coordinates": [114.1526711, 22.3262365],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2251292851",
+      "station": "NAC",
+      "ref": "D1",
+      "coordinates": [114.155216, 22.3256549],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2251292856",
+      "station": "NAC",
+      "ref": "C",
+      "coordinates": [114.1543017, 22.3249965],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2294267334",
+      "station": "SUN",
+      "ref": "A",
+      "coordinates": [114.028623, 22.3319892],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2298558134",
+      "station": "TSH",
+      "ref": "B",
+      "coordinates": [114.2224323, 22.4076764],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2298558162",
+      "station": "TSH",
+      "ref": "A",
+      "coordinates": [114.222245, 22.407774],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2303356543",
+      "station": "NOP",
+      "ref": "A1",
+      "coordinates": [114.2002722, 22.2922475],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2315765554",
+      "station": "SHS",
+      "ref": "A1",
+      "coordinates": [114.1276038, 22.5013549],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2315859109",
+      "station": "TWO",
+      "ref": "A",
+      "coordinates": [114.1609177, 22.4506191],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2318534636",
+      "station": "TAP",
+      "ref": "A3",
+      "coordinates": [114.1700938, 22.4442135],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2321702079",
+      "station": "LAK",
+      "ref": "A2",
+      "coordinates": [114.1264211, 22.3483266],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2321702082",
+      "station": "LAK",
+      "ref": "A1",
+      "coordinates": [114.1265811, 22.3479946],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2368397761",
+      "station": "NTK",
+      "ref": "B5",
+      "coordinates": [114.2187248, 22.3150707],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2368397777",
+      "station": "NTK",
+      "ref": "B6",
+      "coordinates": [114.2184925, 22.3149852],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2373085251",
+      "station": "QUB",
+      "ref": "",
+      "coordinates": [114.2102822, 22.2883628],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2373085256",
+      "station": "QUB",
+      "ref": "A",
+      "coordinates": [114.2099511, 22.2878025],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2373085258",
+      "station": "QUB",
+      "ref": "",
+      "coordinates": [114.2104384, 22.2884664],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2373085308",
+      "station": "QUB",
+      "ref": "",
+      "coordinates": [114.2099323, 22.2884556],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2373122143",
+      "station": "QUB",
+      "ref": "C",
+      "coordinates": [114.207926, 22.2905784],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2387406267",
+      "station": "SKW",
+      "ref": "C",
+      "coordinates": [114.2296833, 22.2788449],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2387406268",
+      "station": "SKW",
+      "ref": "B3",
+      "coordinates": [114.2282779, 22.2795168],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2387406271",
+      "station": "SKW",
+      "ref": "D2",
+      "coordinates": [114.2288265, 22.279732],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2387406272",
+      "station": "SKW",
+      "ref": "A2",
+      "coordinates": [114.2286339, 22.2787056],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2387406274",
+      "station": "SKW",
+      "ref": "B2",
+      "coordinates": [114.2298711, 22.2798213],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2387406276",
+      "station": "SKW",
+      "ref": "A3",
+      "coordinates": [114.2281666, 22.2786537],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2387406277",
+      "station": "SKW",
+      "ref": "A1",
+      "coordinates": [114.2286867, 22.2789503],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2387406278",
+      "station": "SKW",
+      "ref": "D1",
+      "coordinates": [114.2298235, 22.2804482],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2387406279",
+      "station": "SKW",
+      "ref": "B1",
+      "coordinates": [114.2296884, 22.2791652],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2403562276",
+      "station": "TUM",
+      "ref": "E",
+      "coordinates": [113.9736564, 22.3961984],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2409907559",
+      "station": "WKS",
+      "ref": "A1",
+      "coordinates": [114.2437838, 22.4294168],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2409907561",
+      "station": "WKS",
+      "ref": "B",
+      "coordinates": [114.2438805, 22.4290301],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2409919310",
+      "station": "MOS",
+      "ref": "A1",
+      "coordinates": [114.2312418, 22.425045],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2409919311",
+      "station": "MOS",
+      "ref": "A2",
+      "coordinates": [114.2316834, 22.4251689],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2409919312",
+      "station": "MOS",
+      "ref": "B",
+      "coordinates": [114.2316438, 22.424493],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2409931194",
+      "station": "HEO",
+      "ref": "A",
+      "coordinates": [114.2258039, 22.4178817],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2409931195",
+      "station": "HEO",
+      "ref": "B",
+      "coordinates": [114.2259672, 22.4178287],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2409931196",
+      "station": "HEO",
+      "ref": "C",
+      "coordinates": [114.2264295, 22.4192729],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410074738",
+      "station": "CIO",
+      "ref": "B",
+      "coordinates": [114.2032013, 22.3824231],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410074739",
+      "station": "CIO",
+      "ref": "A",
+      "coordinates": [114.2030545, 22.3825622],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410074740",
+      "station": "CIO",
+      "ref": "D",
+      "coordinates": [114.2038394, 22.3830363],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410074741",
+      "station": "CIO",
+      "ref": "C",
+      "coordinates": [114.2036999, 22.3831719],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410078031",
+      "station": "STW",
+      "ref": "C",
+      "coordinates": [114.1952575, 22.3773444],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410078032",
+      "station": "STW",
+      "ref": "D",
+      "coordinates": [114.1953821, 22.3771942],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410078033",
+      "station": "STW",
+      "ref": "A",
+      "coordinates": [114.1945897, 22.376874],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410078034",
+      "station": "STW",
+      "ref": "B",
+      "coordinates": [114.194706, 22.3767145],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410098346",
+      "station": "CKT",
+      "ref": "A",
+      "coordinates": [114.1857738, 22.3749091],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410098347",
+      "station": "CKT",
+      "ref": "B",
+      "coordinates": [114.1857574, 22.3746394],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410098348",
+      "station": "CKT",
+      "ref": "C",
+      "coordinates": [114.1863407, 22.3748836],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410098353",
+      "station": "CKT",
+      "ref": "D",
+      "coordinates": [114.186325, 22.3746142],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410149807",
+      "station": "FAN",
+      "ref": "A2",
+      "coordinates": [114.139184, 22.4918753],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410149810",
+      "station": "FAN",
+      "ref": "A3",
+      "coordinates": [114.1388841, 22.4921754],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410149817",
+      "station": "FAN",
+      "ref": "C",
+      "coordinates": [114.1383685, 22.4926213],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410171246",
+      "station": "TAP",
+      "ref": "A1",
+      "coordinates": [114.1698927, 22.4442174],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2410171248",
+      "station": "TAP",
+      "ref": "A2",
+      "coordinates": [114.1697412, 22.4443453],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2434934690",
+      "station": "SHT",
+      "ref": "A3",
+      "coordinates": [114.1879438, 22.3823303],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2435280354",
+      "station": "TUM",
+      "ref": "C1",
+      "coordinates": [113.9736936, 22.3941722],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435280355",
+      "station": "TUM",
+      "ref": "C2",
+      "coordinates": [113.9737665, 22.3944454],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435280356",
+      "station": "TUM",
+      "ref": "C3",
+      "coordinates": [113.9733722, 22.3944114],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435280359",
+      "station": "TUM",
+      "ref": "F1",
+      "coordinates": [113.9734609, 22.396537],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435280360",
+      "station": "TUM",
+      "ref": "F2",
+      "coordinates": [113.9734656, 22.3962515],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435303319",
+      "station": "SIH",
+      "ref": "A",
+      "coordinates": [113.9785479, 22.4109379],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435303320",
+      "station": "SIH",
+      "ref": "F",
+      "coordinates": [113.9790581, 22.4118098],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435303321",
+      "station": "SIH",
+      "ref": "B1",
+      "coordinates": [113.9786487, 22.4117924],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2435303322",
+      "station": "SIH",
+      "ref": "B2",
+      "coordinates": [113.9787096, 22.4119979],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2435303323",
+      "station": "SIH",
+      "ref": "D",
+      "coordinates": [113.9786575, 22.4120548],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435303324",
+      "station": "SIH",
+      "ref": "C1",
+      "coordinates": [113.9781976, 22.4119996],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435303325",
+      "station": "SIH",
+      "ref": "C2",
+      "coordinates": [113.978116, 22.4120521],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435303326",
+      "station": "SIH",
+      "ref": "C3",
+      "coordinates": [113.9782132, 22.4120526],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435303327",
+      "station": "SIH",
+      "ref": "E",
+      "coordinates": [113.9790955, 22.4127815],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435335624",
+      "station": "TIS",
+      "ref": "A",
+      "coordinates": [114.0036088, 22.4468725],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435335625",
+      "station": "TIS",
+      "ref": "B",
+      "coordinates": [114.0033561, 22.4470589],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435335626",
+      "station": "TIS",
+      "ref": "C",
+      "coordinates": [114.004498, 22.4481731],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435335627",
+      "station": "TIS",
+      "ref": "D",
+      "coordinates": [114.0054366, 22.4491298],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2435335628",
+      "station": "TIS",
+      "ref": "E1",
+      "coordinates": [114.0058728, 22.4495469],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2435335629",
+      "station": "TIS",
+      "ref": "E2",
+      "coordinates": [114.005969, 22.4494756],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2435335630",
+      "station": "TIS",
+      "ref": "E3",
+      "coordinates": [114.0061366, 22.4493443],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2436054859",
+      "station": "LOP",
+      "ref": "B1",
+      "coordinates": [114.0247273, 22.4475242],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436054864",
+      "station": "LOP",
+      "ref": "B2",
+      "coordinates": [114.0241856, 22.4475217],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436054870",
+      "station": "LOP",
+      "ref": "C",
+      "coordinates": [114.0248937, 22.4475613],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436054877",
+      "station": "LOP",
+      "ref": "D",
+      "coordinates": [114.0259538, 22.4475595],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436054883",
+      "station": "LOP",
+      "ref": "E",
+      "coordinates": [114.0264814, 22.4475584],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436054889",
+      "station": "LOP",
+      "ref": "F",
+      "coordinates": [114.0265379, 22.447783],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436311511",
+      "station": "YUL",
+      "ref": "A",
+      "coordinates": [114.0337171, 22.446239],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436311514",
+      "station": "YUL",
+      "ref": "B",
+      "coordinates": [114.0334056, 22.4459464],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436311517",
+      "station": "YUL",
+      "ref": "E",
+      "coordinates": [114.0346694, 22.4459422],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436311520",
+      "station": "YUL",
+      "ref": "F",
+      "coordinates": [114.0352194, 22.4459403],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436311522",
+      "station": "YUL",
+      "ref": "G1",
+      "coordinates": [114.0351326, 22.4462797],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436311525",
+      "station": "YUL",
+      "ref": "G2",
+      "coordinates": [114.035346, 22.4464288],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436311528",
+      "station": "YUL",
+      "ref": "H",
+      "coordinates": [114.0367204, 22.4459353],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2436311531",
+      "station": "YUL",
+      "ref": "J",
+      "coordinates": [114.0364041, 22.4462353],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2441044910",
+      "station": "ETS",
+      "ref": "P1",
+      "coordinates": [114.1761709, 22.2969579],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n2484962281",
+      "station": "LMC",
+      "ref": "A",
+      "coordinates": [114.0662608, 22.514906],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n253288941",
+      "station": "WAC",
+      "ref": "A4",
+      "coordinates": [114.1732833, 22.277386],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n253289096",
+      "station": "CAB",
+      "ref": "E",
+      "coordinates": [114.1850696, 22.2803598],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n253289239",
+      "station": "NOP",
+      "ref": "B1",
+      "coordinates": [114.2004094, 22.2909529],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n253289407",
+      "station": "SWH",
+      "ref": "A",
+      "coordinates": [114.2223492, 22.2822053],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n253289508",
+      "station": "CHW",
+      "ref": "A",
+      "coordinates": [114.2368875, 22.2638697],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555174996",
+      "station": "KET",
+      "ref": "A",
+      "coordinates": [114.1285401, 22.2811785],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555174997",
+      "station": "KET",
+      "ref": "C",
+      "coordinates": [114.1280347, 22.281282],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555174998",
+      "station": "KET",
+      "ref": "B",
+      "coordinates": [114.1293531, 22.2818121],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555184303",
+      "station": "HKU",
+      "ref": "A2",
+      "coordinates": [114.136744, 22.2832689],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555184304",
+      "station": "HKU",
+      "ref": "B1",
+      "coordinates": [114.1368203, 22.2856593],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555184305",
+      "station": "HKU",
+      "ref": "B2",
+      "coordinates": [114.1351513, 22.28564],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555184306",
+      "station": "HKU",
+      "ref": "C1",
+      "coordinates": [114.1346392, 22.2844548],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555184307",
+      "station": "HKU",
+      "ref": "C2",
+      "coordinates": [114.1326439, 22.2859012],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555265437",
+      "station": "SYP",
+      "ref": "B1",
+      "coordinates": [114.1418059, 22.2864364],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555265438",
+      "station": "SYP",
+      "ref": "B2",
+      "coordinates": [114.1417987, 22.2862083],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555265440",
+      "station": "SYP",
+      "ref": "A2",
+      "coordinates": [114.1442223, 22.2877584],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555265441",
+      "station": "SYP",
+      "ref": "A1",
+      "coordinates": [114.1444696, 22.2870918],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555281852",
+      "station": "SHW",
+      "ref": "E4",
+      "coordinates": [114.1536721, 22.2866504],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555299649",
+      "station": "SHW",
+      "ref": "A1",
+      "coordinates": [114.1522586, 22.2863876],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555299650",
+      "station": "SHW",
+      "ref": "A2",
+      "coordinates": [114.1522131, 22.2861139],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555299651",
+      "station": "SHW",
+      "ref": "B",
+      "coordinates": [114.1520067, 22.2866684],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555299652",
+      "station": "SHW",
+      "ref": "C",
+      "coordinates": [114.1521102, 22.2870882],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555299653",
+      "station": "SHW",
+      "ref": "D",
+      "coordinates": [114.1522424, 22.2876583],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555299655",
+      "station": "SHW",
+      "ref": "E1",
+      "coordinates": [114.1533254, 22.2860874],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555299656",
+      "station": "SHW",
+      "ref": "E2",
+      "coordinates": [114.153269, 22.2858939],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555299657",
+      "station": "SHW",
+      "ref": "E3",
+      "coordinates": [114.1536409, 22.2861706],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555299659",
+      "station": "SHW",
+      "ref": "E5",
+      "coordinates": [114.1536075, 22.286617],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555337840",
+      "station": "CEN",
+      "ref": "J2",
+      "coordinates": [114.1609802, 22.2810152],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555348136",
+      "station": "CEN",
+      "ref": "H",
+      "coordinates": [114.1587712, 22.2816497],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555632176",
+      "station": "CEN",
+      "ref": "J3",
+      "coordinates": [114.1609732, 22.2812628],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555632177",
+      "station": "CEN",
+      "ref": "J1",
+      "coordinates": [114.1604814, 22.2812671],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555632178",
+      "station": "CEN",
+      "ref": "K",
+      "coordinates": [114.1595412, 22.2810983],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555632179",
+      "station": "CEN",
+      "ref": "F",
+      "coordinates": [114.1586996, 22.2818589],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555632180",
+      "station": "CEN",
+      "ref": "E",
+      "coordinates": [114.1583907, 22.2819388],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555854344",
+      "station": "HOK",
+      "ref": "C",
+      "coordinates": [114.1570888, 22.2831241],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2555854345",
+      "station": "HOK",
+      "ref": "",
+      "coordinates": [114.1584992, 22.2843365],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555854346",
+      "station": "HOK",
+      "ref": "A",
+      "coordinates": [114.1589258, 22.2842075],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555854347",
+      "station": "HOK",
+      "ref": "B2",
+      "coordinates": [114.1590613, 22.2841277],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555854348",
+      "station": "HOK",
+      "ref": "B1",
+      "coordinates": [114.1586529, 22.2841259],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555854350",
+      "station": "HOK",
+      "ref": "F",
+      "coordinates": [114.1584653, 22.2853571],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555863739",
+      "station": "HOK",
+      "ref": "D",
+      "coordinates": [114.157419, 22.2848674],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2555863742",
+      "station": "HOK",
+      "ref": "E",
+      "coordinates": [114.1572736, 22.2850418],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556667486",
+      "station": "ADM",
+      "ref": "A",
+      "coordinates": [114.1650694, 22.2793029],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556667487",
+      "station": "ADM",
+      "ref": "B",
+      "coordinates": [114.164107, 22.2793539],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556667489",
+      "station": "ADM",
+      "ref": "C2",
+      "coordinates": [114.1647669, 22.2790194],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556667490",
+      "station": "ADM",
+      "ref": "D",
+      "coordinates": [114.1655709, 22.2787238],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556672766",
+      "station": "ADM",
+      "ref": "F",
+      "coordinates": [114.1658437, 22.2788263],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556736106",
+      "station": "WAC",
+      "ref": "B2",
+      "coordinates": [114.1726851, 22.2772605],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556736117",
+      "station": "WAC",
+      "ref": "A5",
+      "coordinates": [114.1733047, 22.2772036],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556760113",
+      "station": "WAC",
+      "ref": "A1",
+      "coordinates": [114.1732159, 22.2780881],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556760114",
+      "station": "WAC",
+      "ref": "A2",
+      "coordinates": [114.1732529, 22.2777689],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556799120",
+      "station": "CAB",
+      "ref": "A",
+      "coordinates": [114.1824142, 22.2783753],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556799121",
+      "station": "CAB",
+      "ref": "B",
+      "coordinates": [114.1829982, 22.2802036],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556799124",
+      "station": "CAB",
+      "ref": "D",
+      "coordinates": [114.1844978, 22.280641],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556799125",
+      "station": "CAB",
+      "ref": "D3",
+      "coordinates": [114.1843136, 22.2804356],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556799126",
+      "station": "CAB",
+      "ref": "D4",
+      "coordinates": [114.1841881, 22.2804322],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556829055",
+      "station": "TIH",
+      "ref": "A1",
+      "coordinates": [114.1921408, 22.2829199],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2556829060",
+      "station": "TIH",
+      "ref": "A2",
+      "coordinates": [114.1918868, 22.2829322],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2578042194",
+      "station": "DIS",
+      "ref": "A",
+      "coordinates": [114.0454351, 22.3152336],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2578067189",
+      "station": "AIR",
+      "ref": "A",
+      "coordinates": [113.9364445, 22.3151536],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2578067190",
+      "station": "AIR",
+      "ref": "B",
+      "coordinates": [113.936219, 22.3157819],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2578067192",
+      "station": "AIR",
+      "ref": "F",
+      "coordinates": [113.9369163, 22.3153736],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2578067196",
+      "station": "AIR",
+      "ref": "C",
+      "coordinates": [113.9359829, 22.3164244],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2589679005",
+      "station": "KWT",
+      "ref": "A2",
+      "coordinates": [114.225621, 22.3124269],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2604586672",
+      "station": "TST",
+      "ref": "A2",
+      "coordinates": [114.1724603, 22.2981844],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2604586673",
+      "station": "TST",
+      "ref": "B1",
+      "coordinates": [114.1722759, 22.2987444],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2604586675",
+      "station": "TST",
+      "ref": "D1",
+      "coordinates": [114.1723403, 22.2976378],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2604586676",
+      "station": "TST",
+      "ref": "D2",
+      "coordinates": [114.1727238, 22.2976626],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2604586677",
+      "station": "TST",
+      "ref": "G",
+      "coordinates": [114.1725914, 22.2970419],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2604586687",
+      "station": "ETS",
+      "ref": "N1",
+      "coordinates": [114.1745217, 22.2972881],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n2604586688",
+      "station": "ETS",
+      "ref": "N2",
+      "coordinates": [114.1740651, 22.2976794],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n2604586689",
+      "station": "ETS",
+      "ref": "N5",
+      "coordinates": [114.1727035, 22.2970617],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n2609916590",
+      "station": "SHS",
+      "ref": "B2",
+      "coordinates": [114.1285089, 22.5009494],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2609916951",
+      "station": "SHS",
+      "ref": "A4",
+      "coordinates": [114.12781, 22.501557],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2609916984",
+      "station": "SHS",
+      "ref": "A2",
+      "coordinates": [114.1273755, 22.501554],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2616047477",
+      "station": "SHT",
+      "ref": "A2",
+      "coordinates": [114.1877565, 22.3825516],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2616047479",
+      "station": "SHT",
+      "ref": "B",
+      "coordinates": [114.1877322, 22.3828804],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2616047484",
+      "station": "SHT",
+      "ref": "A4",
+      "coordinates": [114.1873398, 22.382155],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2674335450",
+      "station": "KOB",
+      "ref": "C",
+      "coordinates": [114.2139662, 22.3236164],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2689359969",
+      "station": "LOF",
+      "ref": "B",
+      "coordinates": [114.1877487, 22.3378367],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2702258420",
+      "station": "DIH",
+      "ref": "C1",
+      "coordinates": [114.2022361, 22.3401353],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2719226726",
+      "station": "TIH",
+      "ref": "B",
+      "coordinates": [114.1917545, 22.2823045],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n2754770536",
+      "station": "AUS",
+      "ref": "B5",
+      "coordinates": [114.1657878, 22.3058984],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n288361301",
+      "station": "WAC",
+      "ref": "A3",
+      "coordinates": [114.1733505, 22.2767999],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n288361302",
+      "station": "WAC",
+      "ref": "B1",
+      "coordinates": [114.1726664, 22.2774123],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n288361303",
+      "station": "WAC",
+      "ref": "C",
+      "coordinates": [114.1728885, 22.278067],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n288382081",
+      "station": "CEN",
+      "ref": "D1",
+      "coordinates": [114.1572702, 22.2818123],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n288382082",
+      "station": "CEN",
+      "ref": "B",
+      "coordinates": [114.1575643, 22.2824897],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n2977109015",
+      "station": "CAB",
+      "ref": "C",
+      "coordinates": [114.182774, 22.2805041],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3013850322",
+      "station": "KWT",
+      "ref": "D1",
+      "coordinates": [114.2275397, 22.3117454],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3031760634",
+      "station": "NTK",
+      "ref": "A",
+      "coordinates": [114.219417, 22.3154841],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3035882934",
+      "station": "TAW",
+      "ref": "A",
+      "coordinates": [114.1788311, 22.3735958],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3047962913",
+      "station": "TWH",
+      "ref": "B",
+      "coordinates": [114.1243745, 22.3706474],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3047962917",
+      "station": "TWH",
+      "ref": "A",
+      "coordinates": [114.1259577, 22.3709928],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3063935135",
+      "station": "LOP",
+      "ref": "A",
+      "coordinates": [114.0247565, 22.4479502],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3070117379",
+      "station": "POA",
+      "ref": "C",
+      "coordinates": [114.2577521, 22.3223954],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3070117382",
+      "station": "POA",
+      "ref": "B1",
+      "coordinates": [114.2584006, 22.3220975],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3070117383",
+      "station": "POA",
+      "ref": "A2",
+      "coordinates": [114.2576607, 22.3230941],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3071501082",
+      "station": "TUM",
+      "ref": "B",
+      "coordinates": [113.9730261, 22.3940595],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3071501083",
+      "station": "TUM",
+      "ref": "A",
+      "coordinates": [113.9727265, 22.3943477],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3145326115",
+      "station": "CEN",
+      "ref": "L",
+      "coordinates": [114.1613841, 22.2811238],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3230266823",
+      "station": "OLY",
+      "ref": "D1",
+      "coordinates": [114.1613451, 22.3171217],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3230266824",
+      "station": "OLY",
+      "ref": "C2",
+      "coordinates": [114.1610245, 22.3180412],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3230266841",
+      "station": "OLY",
+      "ref": "C4",
+      "coordinates": [114.1610319, 22.318189],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3230266842",
+      "station": "OLY",
+      "ref": "C3",
+      "coordinates": [114.1606939, 22.3183909],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3230266847",
+      "station": "OLY",
+      "ref": "D2",
+      "coordinates": [114.1611467, 22.3166901],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3230273785",
+      "station": "OLY",
+      "ref": "D3",
+      "coordinates": [114.1610689, 22.3169601],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3230273804",
+      "station": "OLY",
+      "ref": "C1",
+      "coordinates": [114.1606786, 22.3183775],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3230273821",
+      "station": "AUS",
+      "ref": "F",
+      "coordinates": [114.1676324, 22.303162],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n333383083",
+      "station": "CSW",
+      "ref": "A3",
+      "coordinates": [114.1572049, 22.3348737],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3389134667",
+      "station": "KOT",
+      "ref": "F",
+      "coordinates": [114.1762546, 22.3370879],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3413857798",
+      "station": "NOP",
+      "ref": "A2",
+      "coordinates": [114.2003087, 22.2918584],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n3606334545",
+      "station": "MEF",
+      "ref": "A",
+      "coordinates": [114.1402795, 22.3366682],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606334546",
+      "station": "MEF",
+      "ref": "B",
+      "coordinates": [114.1398055, 22.3376997],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606334547",
+      "station": "MEF",
+      "ref": "C1",
+      "coordinates": [114.1382857, 22.3383891],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606334548",
+      "station": "MEF",
+      "ref": "E",
+      "coordinates": [114.1385889, 22.3382305],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606334550",
+      "station": "MEF",
+      "ref": "C2",
+      "coordinates": [114.1387391, 22.3382151],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606334552",
+      "station": "MEF",
+      "ref": "D",
+      "coordinates": [114.1377471, 22.3380487],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606657744",
+      "station": "SSP",
+      "ref": "B2",
+      "coordinates": [114.1631189, 22.3308089],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606657756",
+      "station": "SSP",
+      "ref": "D1",
+      "coordinates": [114.1620258, 22.3311522],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606657761",
+      "station": "SSP",
+      "ref": "C1",
+      "coordinates": [114.1617696, 22.3309587],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606657766",
+      "station": "SSP",
+      "ref": "C2",
+      "coordinates": [114.1615549, 22.3306497],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606657772",
+      "station": "SSP",
+      "ref": "A1",
+      "coordinates": [114.1626521, 22.3302897],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606657776",
+      "station": "SSP",
+      "ref": "A2",
+      "coordinates": [114.1624362, 22.3299777],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606666223",
+      "station": "SSP",
+      "ref": "B1",
+      "coordinates": [114.1628839, 22.33048],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3606666224",
+      "station": "SSP",
+      "ref": "D2",
+      "coordinates": [114.1622502, 22.3314755],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3607107694",
+      "station": "PRE",
+      "ref": "C2",
+      "coordinates": [114.1679901, 22.3240356],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3607107706",
+      "station": "PRE",
+      "ref": "D",
+      "coordinates": [114.1676565, 22.3250731],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3607107707",
+      "station": "PRE",
+      "ref": "E",
+      "coordinates": [114.1680012, 22.3251375],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3607107708",
+      "station": "PRE",
+      "ref": "A",
+      "coordinates": [114.1683454, 22.3250576],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3607107709",
+      "station": "PRE",
+      "ref": "C1",
+      "coordinates": [114.1682361, 22.3240834],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3607107711",
+      "station": "PRE",
+      "ref": "B1",
+      "coordinates": [114.168584, 22.3241543],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3607107712",
+      "station": "PRE",
+      "ref": "B2",
+      "coordinates": [114.1690286, 22.3238531],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3646949234",
+      "station": "TWW",
+      "ref": "B1",
+      "coordinates": [114.108846, 22.3684913],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3689794629",
+      "station": "WKS",
+      "ref": "A2",
+      "coordinates": [114.2437331, 22.4294052],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3906009472",
+      "station": "LCK",
+      "ref": "C",
+      "coordinates": [114.1468073, 22.3369966],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3906009488",
+      "station": "LCK",
+      "ref": "A",
+      "coordinates": [114.1488828, 22.3373307],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3906009490",
+      "station": "LCK",
+      "ref": "D3",
+      "coordinates": [114.1489732, 22.335547],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3906009491",
+      "station": "LCK",
+      "ref": "D4",
+      "coordinates": [114.1493312, 22.3355095],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3906009492",
+      "station": "LCK",
+      "ref": "D1",
+      "coordinates": [114.1481806, 22.3363458],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3906009493",
+      "station": "LCK",
+      "ref": "D2",
+      "coordinates": [114.1482316, 22.3361861],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716007",
+      "station": "JOR",
+      "ref": "B2",
+      "coordinates": [114.1722798, 22.3057169],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716008",
+      "station": "JOR",
+      "ref": "E",
+      "coordinates": [114.1719032, 22.3043298],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716010",
+      "station": "JOR",
+      "ref": "C2",
+      "coordinates": [114.171209, 22.3042792],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716011",
+      "station": "JOR",
+      "ref": "D",
+      "coordinates": [114.1719493, 22.3038862],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716012",
+      "station": "KOT",
+      "ref": "H",
+      "coordinates": [114.1756454, 22.3370233],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716013",
+      "station": "KOT",
+      "ref": "C1",
+      "coordinates": [114.1755307, 22.3369609],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716014",
+      "station": "KOT",
+      "ref": "C2",
+      "coordinates": [114.1754928, 22.3366796],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716015",
+      "station": "KOT",
+      "ref": "G2",
+      "coordinates": [114.1759267, 22.3371286],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716016",
+      "station": "KOT",
+      "ref": "G1",
+      "coordinates": [114.1759802, 22.3370297],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716017",
+      "station": "KOT",
+      "ref": "B",
+      "coordinates": [114.1765532, 22.3369681],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716018",
+      "station": "KOT",
+      "ref": "D",
+      "coordinates": [114.1765237, 22.3364815],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716019",
+      "station": "KOT",
+      "ref": "E",
+      "coordinates": [114.1775564, 22.3366639],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716020",
+      "station": "KOT",
+      "ref": "A1",
+      "coordinates": [114.177764, 22.3368954],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924716021",
+      "station": "KOT",
+      "ref": "A2",
+      "coordinates": [114.1779842, 22.336889],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924731857",
+      "station": "WTS",
+      "ref": "C1",
+      "coordinates": [114.1929708, 22.3415413],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924731858",
+      "station": "WTS",
+      "ref": "C2",
+      "coordinates": [114.1931971, 22.3413665],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924731859",
+      "station": "WTS",
+      "ref": "B2",
+      "coordinates": [114.1934536, 22.341803],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924731860",
+      "station": "WTS",
+      "ref": "B1",
+      "coordinates": [114.1928623, 22.3417909],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924731862",
+      "station": "WTS",
+      "ref": "A",
+      "coordinates": [114.1944788, 22.3418991],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924731863",
+      "station": "WTS",
+      "ref": "E",
+      "coordinates": [114.1946376, 22.3418974],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924731864",
+      "station": "WTS",
+      "ref": "D3",
+      "coordinates": [114.1946575, 22.3412997],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924731865",
+      "station": "WTS",
+      "ref": "D2",
+      "coordinates": [114.1946803, 22.3412307],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3924731866",
+      "station": "WTS",
+      "ref": "D1",
+      "coordinates": [114.1950579, 22.3415663],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3933280549",
+      "station": "KWT",
+      "ref": "D3",
+      "coordinates": [114.2270784, 22.3115999],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n3933280556",
+      "station": "KWT",
+      "ref": "D4",
+      "coordinates": [114.227323, 22.3114307],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4099072622",
+      "station": "HKU",
+      "ref": "A1",
+      "coordinates": [114.1366559, 22.2834236],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4102394732",
+      "station": "MKK",
+      "ref": "A",
+      "coordinates": [114.1725686, 22.3217312],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4102394733",
+      "station": "MKK",
+      "ref": "C",
+      "coordinates": [114.1724953, 22.3225649],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4102394734",
+      "station": "MKK",
+      "ref": "D",
+      "coordinates": [114.1726344, 22.3232827],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4102394735",
+      "station": "MKK",
+      "ref": "B",
+      "coordinates": [114.1724851, 22.3217556],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4128161006",
+      "station": "SYP",
+      "ref": "B3",
+      "coordinates": [114.1415061, 22.2876065],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4159230886",
+      "station": "TST",
+      "ref": "E",
+      "coordinates": [114.1721625, 22.2962034],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n4276009216",
+      "station": "JOR",
+      "ref": "A",
+      "coordinates": [114.1713153, 22.3054144],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4276009223",
+      "station": "JOR",
+      "ref": "B1",
+      "coordinates": [114.1719658, 22.3055666],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4276009224",
+      "station": "JOR",
+      "ref": "B1",
+      "coordinates": [114.171944, 22.3055446],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4276009233",
+      "station": "JOR",
+      "ref": "C1",
+      "coordinates": [114.1714978, 22.3042917],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4402756982",
+      "station": "ETS",
+      "ref": "J2",
+      "coordinates": [114.1739278, 22.2946721],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n4423210028",
+      "station": "HOM",
+      "ref": "A1",
+      "coordinates": [114.1834589, 22.3102693],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4423210030",
+      "station": "HOM",
+      "ref": "B2",
+      "coordinates": [114.1822884, 22.3089754],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4423210031",
+      "station": "HOM",
+      "ref": "B1",
+      "coordinates": [114.1828588, 22.3092898],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4459362791",
+      "station": "WHA",
+      "ref": "A",
+      "coordinates": [114.1887229, 22.3058121],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4459399532",
+      "station": "WHA",
+      "ref": "B",
+      "coordinates": [114.1883747, 22.3052274],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4459551604",
+      "station": "WHA",
+      "ref": "C2",
+      "coordinates": [114.1898786, 22.30454],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4459551605",
+      "station": "WHA",
+      "ref": "C1",
+      "coordinates": [114.1897472, 22.3044486],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4459551606",
+      "station": "WHA",
+      "ref": "D2",
+      "coordinates": [114.1908456, 22.3040584],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4459551607",
+      "station": "WHA",
+      "ref": "D1",
+      "coordinates": [114.1906479, 22.3041181],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4462785948",
+      "station": "HOM",
+      "ref": "A3",
+      "coordinates": [114.182107, 22.3103752],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4506726719",
+      "station": "OCP",
+      "ref": "B",
+      "coordinates": [114.1745306, 22.2480707],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4506726720",
+      "station": "OCP",
+      "ref": "A",
+      "coordinates": [114.1738402, 22.2483354],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4506726721",
+      "station": "OCP",
+      "ref": "C",
+      "coordinates": [114.1749711, 22.248911],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4506834409",
+      "station": "WCH",
+      "ref": "B",
+      "coordinates": [114.1669095, 22.2477339],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4506834410",
+      "station": "WCH",
+      "ref": "A1",
+      "coordinates": [114.1676575, 22.2481012],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4507531598",
+      "station": "LET",
+      "ref": "A1",
+      "coordinates": [114.1553329, 22.2436512],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4507531599",
+      "station": "LET",
+      "ref": "A2",
+      "coordinates": [114.1554259, 22.2435951],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4507531602",
+      "station": "LET",
+      "ref": "B",
+      "coordinates": [114.1562399, 22.2409991],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4507655919",
+      "station": "SOH",
+      "ref": "A",
+      "coordinates": [114.1489437, 22.2435269],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4507655920",
+      "station": "SOH",
+      "ref": "B",
+      "coordinates": [114.1481572, 22.2429495],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4507655921",
+      "station": "SOH",
+      "ref": "C",
+      "coordinates": [114.1490496, 22.2427753],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4576615774",
+      "station": "WCH",
+      "ref": "A2",
+      "coordinates": [114.1680915, 22.2482035],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n474219840",
+      "station": "AUS",
+      "ref": "D2",
+      "coordinates": [114.166699, 22.3034734],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4793044337",
+      "station": "TWO",
+      "ref": "B",
+      "coordinates": [114.1613482, 22.4510239],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n4832806901",
+      "station": "TWW",
+      "ref": "E2",
+      "coordinates": [114.1106612, 22.3681037],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n4832881038",
+      "station": "TWW",
+      "ref": "A2",
+      "coordinates": [114.1098817, 22.3688176],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n489414265",
+      "station": "TUM",
+      "ref": "D",
+      "coordinates": [113.9734402, 22.3953565],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5093611286",
+      "station": "TUC",
+      "ref": "D",
+      "coordinates": [113.9418428, 22.2894025],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5093611287",
+      "station": "TUC",
+      "ref": "C",
+      "coordinates": [113.9416617, 22.2895782],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5093611288",
+      "station": "TUC",
+      "ref": "B",
+      "coordinates": [113.9409809, 22.2891486],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5093611289",
+      "station": "TUC",
+      "ref": "A",
+      "coordinates": [113.9412041, 22.2888783],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n515688776",
+      "station": "ETS",
+      "ref": "J3",
+      "coordinates": [114.1726039, 22.2942873],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n515696992",
+      "station": "ETS",
+      "ref": "P3",
+      "coordinates": [114.1754008, 22.2971488],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n5220743103",
+      "station": "KWT",
+      "ref": "A1",
+      "coordinates": [114.2256305, 22.3128356],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5220743109",
+      "station": "KWT",
+      "ref": "C3",
+      "coordinates": [114.2260346, 22.312731],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5226330530",
+      "station": "SHS",
+      "ref": "A3",
+      "coordinates": [114.1276483, 22.5016658],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5274674609",
+      "station": "UNI",
+      "ref": "C",
+      "coordinates": [114.2100208, 22.4140914],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n5276888138",
+      "station": "AUS",
+      "ref": "B4",
+      "coordinates": [114.1658333, 22.3054273],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5276888139",
+      "station": "AUS",
+      "ref": "D4",
+      "coordinates": [114.1666749, 22.3038401],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5447058900",
+      "station": "WAC",
+      "ref": "D",
+      "coordinates": [114.1724445, 22.2764167],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5602771872",
+      "station": "ADM",
+      "ref": "E",
+      "coordinates": [114.1661202, 22.2788731],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5640765554",
+      "station": "CHW",
+      "ref": "E",
+      "coordinates": [114.236706, 22.2639621],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5640765555",
+      "station": "CHW",
+      "ref": "B",
+      "coordinates": [114.2367677, 22.2640822],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5640765556",
+      "station": "CHW",
+      "ref": "C",
+      "coordinates": [114.2372032, 22.2649302],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5640765557",
+      "station": "CHW",
+      "ref": "D",
+      "coordinates": [114.2374361, 22.2653959],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5757793926",
+      "station": "LHP",
+      "ref": "C2",
+      "coordinates": [114.2696631, 22.2961756],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5757793927",
+      "station": "LHP",
+      "ref": "C1",
+      "coordinates": [114.269742, 22.2962364],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5890242541",
+      "station": "AUS",
+      "ref": "K2",
+      "coordinates": [114.1654837, 22.3053812],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5890242542",
+      "station": "AUS",
+      "ref": "K1",
+      "coordinates": [114.1655382, 22.3053544],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5890284960",
+      "station": "AUS",
+      "ref": "D1",
+      "coordinates": [114.166682, 22.3037636],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5890284962",
+      "station": "AUS",
+      "ref": "B2",
+      "coordinates": [114.1660464, 22.3050281],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5890284963",
+      "station": "AUS",
+      "ref": "B1",
+      "coordinates": [114.1658083, 22.3054742],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5917702058",
+      "station": "AUS",
+      "ref": "C",
+      "coordinates": [114.1663362, 22.3044712],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5921970333",
+      "station": "TAK",
+      "ref": "C",
+      "coordinates": [114.2168139, 22.2843756],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5921970334",
+      "station": "TAK",
+      "ref": "B",
+      "coordinates": [114.2150388, 22.28454],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5921970335",
+      "station": "TAK",
+      "ref": "E3",
+      "coordinates": [114.2168708, 22.2853719],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5921970336",
+      "station": "TAK",
+      "ref": "D1",
+      "coordinates": [114.2166234, 22.2858712],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5921970337",
+      "station": "TAK",
+      "ref": "A2",
+      "coordinates": [114.2155041, 22.2848078],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5921970338",
+      "station": "TAK",
+      "ref": "E2",
+      "coordinates": [114.2169263, 22.2853321],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5921970339",
+      "station": "TAK",
+      "ref": "E1",
+      "coordinates": [114.2171999, 22.2855492],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5921970340",
+      "station": "TAK",
+      "ref": "D2",
+      "coordinates": [114.2171117, 22.2858278],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n5922657228",
+      "station": "AUS",
+      "ref": "K4",
+      "coordinates": [114.1653299, 22.304989],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6132030464",
+      "station": "SUW",
+      "ref": "B3",
+      "coordinates": [114.1898643, 22.3285982],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6132030465",
+      "station": "SUW",
+      "ref": "B2",
+      "coordinates": [114.1898417, 22.3280178],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6132030466",
+      "station": "SUW",
+      "ref": "B2",
+      "coordinates": [114.1898374, 22.3279082],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6132030479",
+      "station": "TKW",
+      "ref": "B",
+      "coordinates": [114.1870821, 22.3179311],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6132030484",
+      "station": "TKW",
+      "ref": "C",
+      "coordinates": [114.1871164, 22.3162812],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6155837516",
+      "station": "TWH",
+      "ref": "",
+      "coordinates": [114.1247336, 22.37064],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6309071633",
+      "station": "TST",
+      "ref": "H",
+      "coordinates": [114.1720724, 22.2967793],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6309071634",
+      "station": "TST",
+      "ref": "R",
+      "coordinates": [114.1720366, 22.2973076],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6309071635",
+      "station": "TST",
+      "ref": "D3",
+      "coordinates": [114.1730943, 22.2977299],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6534842280",
+      "station": "KWT",
+      "ref": "B1",
+      "coordinates": [114.2261649, 22.3115418],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6579966180",
+      "station": "SKM",
+      "ref": "B1",
+      "coordinates": [114.1686991, 22.3314618],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6629900550",
+      "station": "LCK",
+      "ref": "B2",
+      "coordinates": [114.1483446, 22.3375557],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6769203044",
+      "station": "UNI",
+      "ref": "B",
+      "coordinates": [114.2103441, 22.4133351],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6825575400",
+      "station": "CAB",
+      "ref": "D",
+      "coordinates": [114.1842454, 22.2804322],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6843965291",
+      "station": "SHT",
+      "ref": "A1",
+      "coordinates": [114.1878231, 22.3828238],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6844920874",
+      "station": "WTS",
+      "ref": "B3",
+      "coordinates": [114.19317, 22.341953],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6863890287",
+      "station": "SSP",
+      "ref": "B1",
+      "coordinates": [114.1628176, 22.3305415],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6876936124",
+      "station": "NOP",
+      "ref": "A3",
+      "coordinates": [114.2003317, 22.2919214],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6876936125",
+      "station": "FOH",
+      "ref": "B",
+      "coordinates": [114.1939883, 22.2883911],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6908992954",
+      "station": "KWT",
+      "ref": "C",
+      "coordinates": [114.2265219, 22.3123693],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6914766732",
+      "station": "LAT",
+      "ref": "D1",
+      "coordinates": [114.2318447, 22.3070387],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6918454182",
+      "station": "SWH",
+      "ref": "",
+      "coordinates": [114.2226498, 22.2816925],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n6948560579",
+      "station": "HAH",
+      "ref": "A1",
+      "coordinates": [114.2642111, 22.3160129],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6948560580",
+      "station": "HAH",
+      "ref": "A2",
+      "coordinates": [114.2641245, 22.3159698],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6948560581",
+      "station": "HAH",
+      "ref": "B1",
+      "coordinates": [114.2647167, 22.3152554],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6948560582",
+      "station": "HAH",
+      "ref": "B2",
+      "coordinates": [114.2646393, 22.3152115],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n6992554251",
+      "station": "WHA",
+      "ref": "",
+      "coordinates": [114.1901728, 22.3048101],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7015935406",
+      "station": "HUH",
+      "ref": "D1",
+      "coordinates": [114.1809481, 22.3020574],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7016481520",
+      "station": "KWF",
+      "ref": "B",
+      "coordinates": [114.1275101, 22.3562572],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7016481521",
+      "station": "KWF",
+      "ref": "C",
+      "coordinates": [114.1273138, 22.3563831],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7018858862",
+      "station": "TSW",
+      "ref": "B1",
+      "coordinates": [114.1182573, 22.3731474],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7018858863",
+      "station": "TSW",
+      "ref": "B2",
+      "coordinates": [114.1185393, 22.3730245],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7060166412",
+      "station": "CAB",
+      "ref": "D2",
+      "coordinates": [114.184257, 22.2802725],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7060182527",
+      "station": "CAB",
+      "ref": "F2",
+      "coordinates": [114.1840897, 22.2799718],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7077478907",
+      "station": "TST",
+      "ref": "C1",
+      "coordinates": [114.1721233, 22.296851],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n7077478908",
+      "station": "TST",
+      "ref": "C2",
+      "coordinates": [114.1720981, 22.2972239],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n7083795022",
+      "station": "HOM",
+      "ref": "A3",
+      "coordinates": [114.1822236, 22.3103895],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7083795026",
+      "station": "HOM",
+      "ref": "A2",
+      "coordinates": [114.1835322, 22.31132],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7098776740",
+      "station": "KWT",
+      "ref": "B2",
+      "coordinates": [114.2261509, 22.311503],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7098776769",
+      "station": "KWT",
+      "ref": "D",
+      "coordinates": [114.2272649, 22.3116643],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7098776791",
+      "station": "KWT",
+      "ref": "A",
+      "coordinates": [114.2257481, 22.3125954],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7144509951",
+      "station": "KAT",
+      "ref": "B1",
+      "coordinates": [114.1998352, 22.3315518],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7144509953",
+      "station": "KAT",
+      "ref": "A",
+      "coordinates": [114.200583, 22.3308838],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7151049508",
+      "station": "LCK",
+      "ref": "B1",
+      "coordinates": [114.1491005, 22.3377924],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7151183303",
+      "station": "SHS",
+      "ref": "C",
+      "coordinates": [114.1275156, 22.5014085],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7208625806",
+      "station": "HIK",
+      "ref": "A",
+      "coordinates": [114.1709419, 22.3636399],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7208625807",
+      "station": "KAT",
+      "ref": "D",
+      "coordinates": [114.1988085, 22.3297878],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7244230139",
+      "station": "KAT",
+      "ref": "",
+      "coordinates": [114.2003777, 22.3308763],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7265335520",
+      "station": "KWT",
+      "ref": "B",
+      "coordinates": [114.2262962, 22.3120012],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7328255984",
+      "station": "LOW",
+      "ref": "A2",
+      "coordinates": [114.1136712, 22.5288896],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7328319691",
+      "station": "LOW",
+      "ref": "A1",
+      "coordinates": [114.1128051, 22.528956],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7328319693",
+      "station": "LOW",
+      "ref": "A",
+      "coordinates": [114.1133671, 22.5290978],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7509598989",
+      "station": "SHS",
+      "ref": "B1",
+      "coordinates": [114.1283086, 22.5007507],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7509598990",
+      "station": "SHS",
+      "ref": "E",
+      "coordinates": [114.1284517, 22.5010115],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7509598995",
+      "station": "SHS",
+      "ref": "D2",
+      "coordinates": [114.1279353, 22.501516],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7559804954",
+      "station": "AUS",
+      "ref": "A",
+      "coordinates": [114.1662981, 22.3058909],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7600830759",
+      "station": "SWH",
+      "ref": "B",
+      "coordinates": [114.2222144, 22.2819393],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n7617293457",
+      "station": "SYP",
+      "ref": "C",
+      "coordinates": [114.1433534, 22.2845364],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n835004647",
+      "station": "TAK",
+      "ref": "A1",
+      "coordinates": [114.2152014, 22.2850915],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8424412470",
+      "station": "HOK",
+      "ref": "",
+      "coordinates": [114.1584882, 22.2846412],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8424412473",
+      "station": "HOK",
+      "ref": "",
+      "coordinates": [114.1580087, 22.2849189],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8562160628",
+      "station": "FOH",
+      "ref": "A",
+      "coordinates": [114.1936641, 22.2880508],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8631066789",
+      "station": "TKW",
+      "ref": "A",
+      "coordinates": [114.1879291, 22.3177994],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8631066790",
+      "station": "TKW",
+      "ref": "D",
+      "coordinates": [114.1878357, 22.3153221],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8711408515",
+      "station": "ETS",
+      "ref": "L3",
+      "coordinates": [114.172117, 22.2956385],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n8821676012",
+      "station": "SUW",
+      "ref": "A",
+      "coordinates": [114.1919482, 22.3261319],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n8821676013",
+      "station": "SUW",
+      "ref": "D",
+      "coordinates": [114.1912817, 22.3256657],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n8869631404",
+      "station": "SUW",
+      "ref": "B1",
+      "coordinates": [114.1896061, 22.3270288],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n8873824707",
+      "station": "TKW",
+      "ref": "D",
+      "coordinates": [114.1879936, 22.3153219],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8893847489",
+      "station": "HUH",
+      "ref": "A3",
+      "coordinates": [114.1814923, 22.3041226],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8893847505",
+      "station": "HUH",
+      "ref": "",
+      "coordinates": [114.182204, 22.3035573],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8895250772",
+      "station": "HUH",
+      "ref": "A2",
+      "coordinates": [114.1814892, 22.3038258],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8943344494",
+      "station": "CHH",
+      "ref": "B",
+      "coordinates": [114.2092963, 22.3343679],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8946269271",
+      "station": "TWW",
+      "ref": "D",
+      "coordinates": [114.1108994, 22.3671702],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n8974729471",
+      "station": "ETS",
+      "ref": "L4",
+      "coordinates": [114.1717716, 22.2957139],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n8974745435",
+      "station": "ETS",
+      "ref": "L1",
+      "coordinates": [114.1731746, 22.2957662],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n8974745438",
+      "station": "ETS",
+      "ref": "J4",
+      "coordinates": [114.17259, 22.2949088],
+      "association": "station_exit_plan"
+    },
+    {
+      "id": "osm:n9000013652",
+      "station": "LMC",
+      "ref": "B",
+      "coordinates": [114.065655, 22.5149813],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9160033155",
+      "station": "YUL",
+      "ref": "C",
+      "coordinates": [114.0337768, 22.4459451],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n9273513565",
+      "station": "CHH",
+      "ref": "C2",
+      "coordinates": [114.2079047, 22.3356035],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9350653717",
+      "station": "AUS",
+      "ref": "G",
+      "coordinates": [114.1661062, 22.302355],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n9609113919",
+      "station": "TST",
+      "ref": "B2",
+      "coordinates": [114.1725613, 22.2987628],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n9643550182",
+      "station": "CHH",
+      "ref": "A1",
+      "coordinates": [114.209726, 22.3340859],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9643550183",
+      "station": "CHH",
+      "ref": "A2",
+      "coordinates": [114.2093413, 22.3339944],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9659973855",
+      "station": "EXC",
+      "ref": "B1",
+      "coordinates": [114.1748895, 22.2814999],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9659973859",
+      "station": "EXC",
+      "ref": "B2",
+      "coordinates": [114.1748957, 22.2816117],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9659973861",
+      "station": "EXC",
+      "ref": "A3",
+      "coordinates": [114.1758679, 22.2813183],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9660468950",
+      "station": "TSW",
+      "ref": "D",
+      "coordinates": [114.1172885, 22.3737707],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9660468952",
+      "station": "TSW",
+      "ref": "E",
+      "coordinates": [114.1182946, 22.3733088],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9660912774",
+      "station": "EXC",
+      "ref": "A2",
+      "coordinates": [114.1761723, 22.281621],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9672056463",
+      "station": "CKT",
+      "ref": "F",
+      "coordinates": [114.186981, 22.3748549],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9684737753",
+      "station": "TIK",
+      "ref": "A2",
+      "coordinates": [114.2529502, 22.304476],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n9684737754",
+      "station": "TIK",
+      "ref": "A1",
+      "coordinates": [114.2528322, 22.3045935],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n9684737755",
+      "station": "TIK",
+      "ref": "B",
+      "coordinates": [114.2522171, 22.3042244],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n9705067986",
+      "station": "OLY",
+      "ref": "A1",
+      "coordinates": [114.1591785, 22.3181959],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n9711005592",
+      "station": "EXC",
+      "ref": "A1",
+      "coordinates": [114.1761385, 22.2813684],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9730739285",
+      "station": "EXC",
+      "ref": "B3",
+      "coordinates": [114.1745746, 22.2812483],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n9769723651",
+      "station": "LHP",
+      "ref": "B",
+      "coordinates": [114.268519, 22.2955174],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n984409347",
+      "station": "NOP",
+      "ref": "B1",
+      "coordinates": [114.2004944, 22.2910096],
+      "association": "nearest_station"
+    },
+    {
+      "id": "osm:n9848516498",
+      "station": "TWW",
+      "ref": "A1",
+      "coordinates": [114.1098648, 22.3686222],
+      "association": "stop_area"
+    },
+    {
+      "id": "osm:n9848516506",
+      "station": "TWW",
+      "ref": "E1",
+      "coordinates": [114.1106635, 22.3679044],
+      "association": "stop_area"
+    }
+  ]
+}

@@ -390,7 +390,7 @@ const toProfileData = (
     name: user.name,
     username: user.username,
     displayUsername: user.displayUsername ?? user.username,
-    email: user.email,
+    email: null,
     image: user.image,
     attribution: user.attribution,
   }
@@ -745,6 +745,18 @@ export const toUserSearchQueryPlan = async (
   const conditions: SQL<unknown>[] = []
   if (requestedState.isArchived !== null) {
     conditions.push(eq(user.isArchived, requestedState.isArchived))
+  }
+
+  // Presence filters treat null, empty and whitespace-only contacts as missing.
+  for (const [column, value] of [
+    [user.email, params.conditions?.hasEmail],
+    [user.telephone, params.conditions?.hasTelephone],
+  ] as const) {
+    if (typeof value === 'boolean') {
+      conditions.push(
+        sql`(length(trim(coalesce(${column}, ''))) > 0) = ${value ? 1 : 0}`,
+      )
+    }
   }
 
   const q = params.q?.trim()

@@ -21,6 +21,7 @@ import {
 } from '../schema'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
+import { validateFeaturePhoneProperties } from './feature-property-validation'
 // MAP
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // I18N
@@ -251,6 +252,7 @@ export const createProperties = async (
   featureId: Id,
   properties: NewFeatureProperty[],
 ) => {
+  properties = await validateFeaturePhoneProperties(db, properties)
   if (properties.length > 0) {
     for (const propertyRow of properties) {
       const normalizedLink = normalizeFeaturePropertyLink(
@@ -786,6 +788,7 @@ export const updateProperties = async (
   properties: Array<NewFeatureProperty | FeatureProperty>,
   featureId: Id,
 ) => {
+  properties = await validateFeaturePhoneProperties(db, properties)
   const existingProperties = await db
     .select({ propertyId: featureProperty.propertyId })
     .from(featureProperty)

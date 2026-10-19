@@ -8,6 +8,7 @@ import {
   THEME_MAP_STYLES,
   THEMES,
 } from './themes'
+import { isProjectOnlyMapStyle } from '#lib/map/styles/catalog.js'
 import type { ThemePreferences } from './preferences'
 import { isMapStyleKey, type MapStyleKey } from '#lib/map/styles/registry.js'
 // TYPES
@@ -111,7 +112,7 @@ export class ThemeModel {
       this.setUseActiveMap(true)
       return
     }
-    if (!isMapStyleKey(style)) return
+    if (!isMapStyleKey(style) || isProjectOnlyMapStyle(style)) return
     this.setMapSync(false)
     this.setUseActiveMap(false)
     this.applyMapSelection(style)
@@ -125,9 +126,10 @@ export class ThemeModel {
    * @returns Nothing.
    */
   private applyMapSelection = (style: MapStyleKey | null): void => {
-    this.mapSelected = style
+    this.mapSelected = style && !isProjectOnlyMapStyle(style) ? style : null
     try {
-      if (style) localStorage.setItem(MAP_STYLE_STORAGE_KEY, style)
+      if (this.mapSelected)
+        localStorage.setItem(MAP_STYLE_STORAGE_KEY, this.mapSelected)
       else localStorage.removeItem(MAP_STYLE_STORAGE_KEY)
     } catch {
       // Keep the current selection usable when browser storage is unavailable.
@@ -180,7 +182,7 @@ export class ThemeModel {
   restoreMapPreferences = (): void => {
     try {
       const stored = localStorage.getItem(MAP_STYLE_STORAGE_KEY)
-      if (stored && isMapStyleKey(stored)) {
+      if (stored && isMapStyleKey(stored) && !isProjectOnlyMapStyle(stored)) {
         this.mapSelected = stored
       }
       const activePreference = localStorage.getItem(MAP_ACTIVE_STORAGE_KEY)

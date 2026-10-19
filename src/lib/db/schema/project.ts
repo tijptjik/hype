@@ -1,3 +1,4 @@
+import type { MarkerStyleCode } from '#lib/features/markerStyle.js'
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -52,6 +53,8 @@ export const project = sqliteTable('project', {
   cardStyleCode: text('cardStyleCode')
     .$type<CardStyleCode>()
     .references(() => cardStyle.code),
+  // Null inherits the user's marker preference; layers may override it.
+  markerStyleCode: text('markerStyleCode').$type<MarkerStyleCode>(),
   // Project-level capability availability map.
   // Keys set to true are available for assignment in projectRole.capabilities.
   capabilities: text('capabilities', {

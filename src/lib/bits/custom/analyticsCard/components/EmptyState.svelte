@@ -11,18 +11,18 @@ let {
 
 const toneClass = $derived.by(() => {
   if (tone === 'error') {
-    return 'border-error/30 bg-black'
+    return 'border-error/30 bg-panel'
   }
 
   if (tone === 'warning') {
-    return 'border-warning/30 bg-black'
+    return 'border-warning/30 bg-panel'
   }
 
   if (tone === 'subtle') {
-    return 'border-dashed border-base-300 bg-[#121212]'
+    return 'border-dashed border-border bg-raised'
   }
 
-  return 'border-base-300 bg-[#121212]'
+  return 'border-border bg-raised'
 })
 </script>
 

@@ -5,7 +5,7 @@ import type { StyleSpecification } from 'maplibre-gl'
 import type { StyleBuildOptions } from './common'
 
 /**
- * Builds the Hyper Light basemap in the Oblivion palette.
+ * Builds the Sketch basemap in the Oblivion palette.
  * @param options - Locale and label visibility preferences.
  * @returns The selected Etch composition with fine footprints and no POIs.
  */

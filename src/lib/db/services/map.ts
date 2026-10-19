@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm'
 // UTILS
 import { nanoid } from 'nanoid'
 // DB
@@ -47,6 +47,7 @@ import type {
 //    - getProjectScope
 //    - getOrganisationMapStyleScope
 //    - resolveVisibleMapStyleIdForScope
+//    - assertMapStyleProjectScope
 
 type ProjectScope = {
   id?: string
@@ -275,6 +276,7 @@ export const setProjectMapStyleByCode = async (
   const mapStyleId = await resolveVisibleMapStyleIdForScope(
     db,
     {
+      id: params.projectId,
       organisationId: params.organisationId,
       hubId: params.hubId,
     },
@@ -294,7 +296,7 @@ export const setProjectMapStyleByCode = async (
       and(
         eq(mapStyles.id, mapStyleId),
         eq(mapStyles.code, normalizedCode),
-        isVisibleToScope(params),
+        isVisibleToScope({ ...params, id: params.projectId }),
       ),
     )
     .limit(1)
@@ -420,9 +422,20 @@ const toResolvedMapStyle = (row: MapStyleRowDB): MapStyleResolvedDB => ({
  * @returns SQL predicate that keeps global styles visible while honoring scoped styles.
  * @remarks
  * A `null` hub means "core/global only", so hub-scoped styles are excluded in that case.
+ * Project-only catalog entries also require a matching persisted project id and code.
  */
-const isVisibleToScope = (scope: ProjectScope) =>
+const isVisibleToScope = (scope: ProjectScope): SQL | undefined =>
   and(
+    // Keep owner identifiers literal: relational queries re-alias Drizzle column references.
+    // Resolve the owning project inside SQL so missing projects fail closed.
+    ...REGISTERED_MAP_STYLE_CATALOG.filter(entry => entry.projectCode).map(entry =>
+      or(
+        sql`${mapStyles.code} != ${entry.key}`,
+        scope.id
+          ? sql`EXISTS (SELECT 1 FROM "project" AS "styleOwner" WHERE "styleOwner"."id" = ${scope.id} AND "styleOwner"."code" = ${entry.projectCode})`
+          : sql`0`,
+      ),
+    ),
     or(
       isNull(mapStyles.organisationId),
       eq(mapStyles.organisationId, scope.organisationId),
@@ -501,4 +514,29 @@ export const resolveVisibleMapStyleIdForScope = async (
   )
 
   return row?.id ?? null
+}
+
+/**
+ * Checks project ownership before persisting a layer style or moving its layer.
+ * @param db - Database handle.
+ * @param projectId - Destination project id.
+ * @param code - Requested layer map style, if any.
+ * @returns Nothing when the style is available to the destination project.
+ * @remarks Project restrictions come from the catalog even before database sync.
+ */
+export const assertMapStyleProjectScope = async (
+  db: Database,
+  projectId: string,
+  code?: string | null,
+): Promise<void> => {
+  const ownerCode = REGISTERED_MAP_STYLE_CATALOG.find(
+    entry => entry.key === code,
+  )?.projectCode
+  if (!ownerCode) return
+  const owner = await db
+    .select({ id: project.id })
+    .from(project)
+    .where(and(eq(project.id, projectId), eq(project.code, ownerCode)))
+    .limit(1)
+  if (!owner.length) throw new Error(`Unknown or unavailable map style: ${code}`)
 }

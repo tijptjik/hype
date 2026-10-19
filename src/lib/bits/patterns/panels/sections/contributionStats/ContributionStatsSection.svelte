@@ -134,9 +134,7 @@ const statsConfig = [
 
   {#if settingsOpen}
     <div id={settingsId} transition:slide={{ duration: 220 }}>
-      <div
-        class="mb-4 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-4 rounded-md border border-border bg-surface p-3"
-      >
+      <div class="mb-4 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-4 py-3">
         {#if !model.isSingleOrganisation}
           <span class="text-xs font-medium text-muted-foreground"
             >{m.maps__title()}:</span

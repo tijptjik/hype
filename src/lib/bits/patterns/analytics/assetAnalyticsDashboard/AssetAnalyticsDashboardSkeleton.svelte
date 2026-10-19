@@ -278,7 +278,7 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
 {/snippet}
 
 <section
-  class="bits-theme flex min-h-0 flex-col gap-5 pb-12"
+  class="bits-theme flex min-h-0 flex-col gap-4 pb-12"
   data-testid="analytics-loading-state"
 >
   <AnalyticsCardPrimitive.Root>
@@ -372,9 +372,9 @@ const WINDOW_GRID_CLASS = 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.08) 45%,
-    rgba(255, 255, 255, 0.14) 50%,
-    rgba(255, 255, 255, 0.08) 55%,
+    color-mix(in oklab, var(--theme-text) 8%, transparent) 45%,
+    color-mix(in oklab, var(--theme-text) 14%, transparent) 50%,
+    color-mix(in oklab, var(--theme-text) 8%, transparent) 55%,
     transparent 100%
   );
   animation: analytics-skeleton-sweep 1.8s ease-in-out infinite;

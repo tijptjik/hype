@@ -19,6 +19,8 @@ import PenIcon from 'virtual:icons/proicons/pencil'
 import { m } from '#lib/i18n.js'
 // SERVICES
 import { getFeatureIdenticonUrl } from '#lib/client/services/image.js'
+// PRESENTATION
+import { breadlineBrand } from '#lib/features/breadlinePresentation.js'
 // TYPES
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type { FeatureRowStatMap } from '#lib/client/services/featureRows.types.js'
@@ -84,10 +86,13 @@ function toPlaceholderStatuses(statuses: FeatureRowStatMap): string[] {
   return Object.keys(statuses)
 }
 
+// Read the effective brand property so inherited Place values use the same thumbnail.
+const brandLogoSrc = $derived(breadlineBrand(entity).logoSrc)
 const fallbackImageSrc = $derived(
-  entity.image
-    ? undefined
-    : getFeatureIdenticonUrl(`${entity.id}:${model.title || 'feature'}`),
+  brandLogoSrc ??
+    (entity.image
+      ? undefined
+      : getFeatureIdenticonUrl(`${entity.id}:${model.title || 'feature'}`)),
 )
 
 function handleRowKeyDown(event: KeyboardEvent): void {
@@ -103,7 +108,7 @@ function handleRowKeyDown(event: KeyboardEvent): void {
   if (event.key === ' ' || event.key === 'Space') {
     event.preventDefault()
     event.stopPropagation()
-    if (entity.image && onImageClick) {
+    if (!brandLogoSrc && entity.image && onImageClick) {
       onImageClick(entity.image as ImageCtxEnvelope, entity)
     }
   }
@@ -130,10 +135,10 @@ function handleDescriptionClick(): void {
   variant="feature"
   onclick={handleTitleClick}
   onkeydown={handleRowKeyDown}
-  image={entity.image}
+  image={brandLogoSrc ? null : entity.image}
   imageSrc={fallbackImageSrc}
   alt={model.imageAlt}
-  onImageClick={entity.image
+  onImageClick={!brandLogoSrc && entity.image
     ? (handleImageClick as (image: unknown) => void)
     : undefined}
   title={model.title || m.deft_dry_chipmunk_blink()}

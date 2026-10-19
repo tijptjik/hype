@@ -19,7 +19,7 @@ let {
 const hasRails = $derived(Boolean(leftLabel || rightLabel || right))
 </script>
 
-<div class={cx('border-b border-white/10 pb-4', className)}>
+<div class={cx('border-b border-border pb-4', className)}>
   <div
     class={cx(
       'grid gap-3',

@@ -12,6 +12,7 @@ import Palette from 'virtual:icons/tabler/palette'
 import {
   FEATURED_MAP_STYLE_KEYS,
   SELECTABLE_MAP_STYLE_CATALOG,
+  isProjectOnlyMapStyle,
 } from '#lib/map/styles/catalog.js'
 import { getMapStyleCatalogCopy } from '#lib/map/styles/i18n.js'
 import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
@@ -25,7 +26,9 @@ let {
 }: PanelProps & {
   model: ReturnType<typeof useSettingsPanelModel>
 } = $props()
-const styles = SELECTABLE_MAP_STYLE_CATALOG.filter(style => style.key !== 'hyperAdmin')
+const styles = SELECTABLE_MAP_STYLE_CATALOG.filter(
+  style => style.key !== 'hyperAdmin' && !isProjectOnlyMapStyle(style.key),
+)
 const featuredStyles = FEATURED_MAP_STYLE_KEYS.flatMap(key =>
   styles.filter(style => style.key === key),
 )

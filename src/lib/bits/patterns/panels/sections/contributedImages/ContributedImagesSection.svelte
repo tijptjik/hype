@@ -536,8 +536,8 @@ const setupNextTrigger = () => {
                 <div class="grid grid-cols-2 gap-2 px-6 sm:grid-cols-3">
                   {#each imageIds as imageId, idx (imageId)}
                     <a
-                      class="relative aspect-square {userData.privateContributions
-                        ?.images[imageId]
+                      class="relative isolate aspect-square {userData
+                        .privateContributions?.images[imageId]
                         ? 'cursor-default'
                         : 'cursor-pointer'} overflow-hidden rounded-md border border-border bg-surface transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                       data-image-id={imageId}

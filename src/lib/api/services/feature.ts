@@ -1,10 +1,13 @@
 // DRIZZLE
 import { eq, inArray, sql, type SQL } from 'drizzle-orm'
+// ADDRESS
+import { projectFeatureAddress } from '#lib/addresses/featureAddress.js'
 // API
 import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
 import { toBooleanOrUndefined } from '#lib/api/services/index.js'
 import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
 // DB
+import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
 import { applyTriStateBooleanCondition } from '#lib/db/query.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
@@ -816,8 +819,8 @@ const prepareUserContributedFeatureDraft = async (
         displayAddress: localeValue?.displayAddress?.trim() ?? '',
         titleGen: false,
         descriptionGen: false,
-        displayAddressGen: false,
-        addressProperties: {},
+        displayAddressGen: localeValue?.displayAddressGen ?? false,
+        addressProperties: localeValue?.addressProperties ?? {},
       }
     }
   } else {
@@ -836,8 +839,8 @@ const prepareUserContributedFeatureDraft = async (
           displayAddress: toTrimmedString(sourceTextObj.displayAddress),
           titleGen: false,
           descriptionGen: false,
-          displayAddressGen: false,
-          addressProperties: {},
+          displayAddressGen: sourceTextObj.displayAddressGen ?? false,
+          addressProperties: sourceTextObj.addressProperties ?? {},
         }
         continue
       }
@@ -901,8 +904,12 @@ const prepareUserContributedFeatureDraft = async (
           targetDisplayAddress || translatedDisplayAddress || sourceDisplayAddress,
         titleGen: Boolean(translatedTitle),
         descriptionGen: Boolean(translatedDescription),
-        displayAddressGen: Boolean(translatedDisplayAddress),
-        addressProperties: {},
+        displayAddressGen: targetDisplayAddress
+          ? (targetTextObj?.displayAddressGen ?? false)
+          : Boolean(translatedDisplayAddress),
+        addressProperties: targetDisplayAddress
+          ? (targetTextObj?.addressProperties ?? {})
+          : {},
       }
     }
   }
@@ -975,11 +982,16 @@ const prepareUserContributedFeatureDraft = async (
     i18n: enrichedI18n as FeatureNew['i18n'],
     properties: enrichedProperties,
   }
-  const validatedFeature =
+  const validatedFeature = projectFeatureAddress(
     stage === 'final'
       ? FeatureEntityFormData.parse(draftPayload)
-      : FeatureDraftEntityFormData.parse(draftPayload)
+      : FeatureDraftEntityFormData.parse(draftPayload),
+  )
 
+  validatedFeature.properties = await validateFeaturePhoneProperties(
+    db,
+    validatedFeature.properties ?? [],
+  )
   return {
     validatedFeature,
     layerScope,

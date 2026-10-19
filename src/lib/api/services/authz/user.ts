@@ -56,9 +56,18 @@ export const canAccessAnalytics = (actor: UserSearchActor): boolean => {
  * - hub admins
  * - organisation owners
  * - project owners
+ * - explicitly assigned volunteer and drop-off managers
+ * @param actor Fresh session identity and role assignments.
+ * @returns Whether user lookup is permitted.
  */
 export const canSearchUsers = (actor: UserSearchActor): boolean =>
-  canAccessAnalytics(actor)
+  canAccessAnalytics(actor) ||
+  actor.userRoles.some(
+    role =>
+      role.type === 'project' &&
+      (role.capabilities?.manageVolunteers === true ||
+        role.capabilities?.manageDropOffs === true),
+  )
 
 /**
  * Archived visibility override policy for user search.

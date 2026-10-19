@@ -70,6 +70,9 @@ simple = { limit = 30, period = 60 }
 
 [vars]
 ENVIRONMENT = "local"
+# Admin operational analytics monitors the same production resources as other modes.
+ANALYTICS_DATABASE_ID = "7786af0e-3782-47f8-b70d-de645ba836ad"
+ANALYTICS_QUEUE_IDS = "e4fe727b98e84d44a37fa9d0f4a86005,a8e1bc6c68be4f5fa5fa12113fb58583"
 PUBLIC_DRIZZLE_LOGGER = false
 PUBLIC_HUB_CODE = "core"
 PUBLIC_AZURE_TRANSLATION_REGION = "eastasia"

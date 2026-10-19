@@ -10,6 +10,7 @@ export interface FormParentResourceSectionProps<TItem extends ParentSectionItemB
   issues?: string[]
   subHeader?: Snippet<[FormParentSectionHeaderContext]>
   parent: TItem | null
+  fallbackImage?: string | null
   hiddenInputAttrs?: Record<string, unknown> | null
   isEditing?: boolean
   isSubmitting?: boolean

@@ -1,13 +1,8 @@
 <script lang="ts">
 import { Button } from '#lib/bits/core/index.js'
 import { m } from '#lib/i18n.js'
-import {
-  FormFeatureSectionHeader,
-  FormFeatureSubSectionHeader,
-} from '#lib/bits/patterns/forms/formFeatureSectionHeader/index.js'
 import { FormParentSection } from '#lib/bits/patterns/forms/formParentSection/index.js'
 import EraserIcon from 'virtual:icons/proicons/eraser'
-import type { FormParentSectionHeaderContext } from '../formParentSection/formParentSection.types'
 import type { FormFeatureParentSectionProps } from './formFeatureParentSection.types'
 
 let {
@@ -27,65 +22,44 @@ let {
     .filter(Boolean)
     .join(' ')}
 >
-  <FormFeatureSectionHeader
-    title={m.admin__forms_feature_collections_title()}
-    subtitle={m.admin__forms_feature_collections_subtitle()}
-  >
-    {#snippet right()}
-      {#if isEditing}
-        <Button
-          text={m.admin__forms_common_clear_all()}
-          color="light"
-          style="ghost"
-          size="sm"
-          iconComponent={EraserIcon}
-          class="flex-none"
-          onClick={onClearAll}
-        />
-      {/if}
-    {/snippet}
-  </FormFeatureSectionHeader>
-
   <div class="bits-feature-parent-section__grid">
-    {#snippet defaultSubHeader({
-      title,
-      subtitle,
-      issues,
-      isEditing,
-      isSearchActive,
-      isSubmitting,
-      isResultsVisible,
-      onToggleAdding,
-    }: FormParentSectionHeaderContext)}
-      <FormFeatureSubSectionHeader
-        {title}
-        {subtitle}
-        {issues}
-        {isEditing}
-        {isSearchActive}
-        {isSubmitting}
-        {isResultsVisible}
-        {onToggleAdding}
-      />
-    {/snippet}
-
     <FormParentSection
       title={m.resource__organisation_singular()}
-      subHeader={subHeader ?? defaultSubHeader}
+      {subHeader}
       {...sharedSectionProps}
       {...organisationSection}
     />
     <FormParentSection
       title={m.resource__project_singular()}
-      subHeader={subHeader ?? defaultSubHeader}
+      {subHeader}
       {...sharedSectionProps}
       {...projectSection}
+      fallbackImage={projectSection.fallbackImage ??
+        (projectSection.parent?.id
+          ? `/api/mapRenders/projects/${projectSection.parent.id}/asset`
+          : null)}
     />
     <FormParentSection
       title={m.resource__layer_singular()}
-      subHeader={subHeader ?? defaultSubHeader}
+      {subHeader}
       {...sharedSectionProps}
       {...layerSection}
+      fallbackImage={layerSection.fallbackImage ??
+        (layerSection.parent?.id
+          ? `/api/mapRenders/layers/${layerSection.parent.id}/asset`
+          : null)}
     />
   </div>
+  {#if isEditing && onClearAll}
+    <div class="flex justify-end px-6 pt-4">
+      <Button
+        text={m.admin__forms_common_clear_all()}
+        color="light"
+        style="ghost"
+        size="sm"
+        iconComponent={EraserIcon}
+        onClick={onClearAll}
+      />
+    </div>
+  {/if}
 </section>

@@ -3,6 +3,7 @@ node_modules
 scripts/.venv
 
 # Output
+/output/
 .output
 .wrangler
 /.svelte-kit
@@ -48,7 +49,6 @@ tmp/test.jpg
 # Dev assets
 static/mapPreviews/
 spec/breadline/Breadline v4 - Scope of Work.pdf
-output/playwright/
 
 # Local division migration rehearsals, backups and verification logs
 .local/division-refresh/

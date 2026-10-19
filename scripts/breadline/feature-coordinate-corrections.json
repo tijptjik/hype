@@ -1,0 +1,17 @@
+{
+  "171": {
+    "original": [114.78034, 22.37453],
+    "corrected": [114.17729002, 22.37419913333333],
+    "evidence": "Source address is Grandeur Garden, Shatin. OSM way/149908067 identifies Grandeur Garden (金禧花園), 2-18 Chik Fai Street. Approximate estate-centre location; source longitude is outside Hong Kong."
+  },
+  "197": {
+    "original": [114.998455, 22.456083],
+    "corrected": [113.998455, 22.456083],
+    "evidence": "Longitude degree typo: the corrected point is within 26m of Tin Shui Shopping Centre in the OSM 2026-10-01 building catalog at 113.9983039,22.4559042."
+  },
+  "242": {
+    "original": [114.941653, 22.289485],
+    "corrected": [113.941653, 22.289485],
+    "evidence": "Longitude degree typo: corrected point is within 40m of Tung Chung MTR station (TUC), matching the source unpaid-concourse address."
+  }
+}

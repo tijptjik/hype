@@ -182,7 +182,7 @@ it('keeps basemap ownership on the top layer through marker navigation and chang
       getActiveMapStyleIdentity(context),
       getActiveMapStyleCode(context),
     )
-    expect(theme.resolvedMapStyle).toBe('hyperLight')
+    expect(theme.resolvedMapStyle).toBe('hype-light')
   }
   context.view.scope.prisms.layer = ['books', 'signs']
   expect(getActiveMapStyleCode(context)).toBe('rosepunk')

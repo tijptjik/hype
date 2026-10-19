@@ -237,6 +237,7 @@ export function toSelectedParentProject(params: {
     id: cachedProject.id,
     organisationId: cachedProject.organisationId,
     code: cachedProject.code,
+    mapStyle: cachedProject.mapStyle,
     i18n: cachedProject.i18n,
     image: (cachedProject.image ?? null) as ParentSectionProjectItem['image'],
   }

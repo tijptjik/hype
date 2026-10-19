@@ -142,13 +142,15 @@ const featureProperties = $derived(
       getFPI18n(property, userPreferences) !== m.great_crazy_squid_promise(),
   ),
 )
-const featurePropertyItems = $derived.by((): FeaturePropertyItem[] =>
-  featureProperties.map(property => ({
+const featurePropertyItems = $derived.by((): FeaturePropertyItem[] => {
+  const items = featureProperties.map(property => ({
     id: property.propertyId,
     label: getI18n(property.property, 'label', userPreferences),
     value: getFPI18n(property, userPreferences),
-  })),
-)
+  }))
+  // MTR access belongs to the future Breadline-specific card, not default cards.
+  return items
+})
 const portalRightInsetPx = $derived(
   PORTAL_RIGHT_INSET_PX + (layout.mode === 'tiny' ? -PORTAL_TINY_RIGHT_SHIFT_PX : 0),
 )

@@ -1,0 +1,45 @@
+[
+  {
+    "sourceName": "Fresh Wheat Bakery - Happy Valley",
+    "code": "fresh-wheat",
+    "id": "blBrFreshW01",
+    "name": "Fresh Wheat Bakery"
+  },
+  {
+    "sourceName": "The Peninsula Hong Kong",
+    "code": "peninsula",
+    "id": "blBrPenins01",
+    "name": "The Peninsula"
+  },
+  { "sourceName": "Garden", "code": "garden", "id": "blBrGarden01", "name": "Garden" },
+  {
+    "sourceName": "Dee Dee Bakery",
+    "code": "deedee",
+    "id": "blBrDeedee01",
+    "name": "Dee Dee Bakery"
+  },
+  {
+    "sourceName": "Childhood Bakery",
+    "code": "childhood",
+    "id": "blBrChildh01",
+    "name": "Childhood Bakery"
+  },
+  {
+    "sourceName": "Nibbles Baking Nook",
+    "code": "nibbles",
+    "id": "blBrNibble01",
+    "name": "Nibbles Baking Nook"
+  },
+  {
+    "sourceName": "Harlan's",
+    "code": "harlans",
+    "id": "blBrHarlan01",
+    "name": "Harlan’s"
+  },
+  {
+    "sourceName": "Wooloomooloo Prime",
+    "code": "wooloomooloo",
+    "id": "blBrWooloo01",
+    "name": "Wooloomooloo Prime"
+  }
+]

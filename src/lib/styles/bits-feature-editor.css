@@ -260,6 +260,10 @@
     padding: 0;
     justify-content: flex-end;
     align-items: center;
+    transition:
+      flex-basis 520ms ease-out,
+      width 520ms ease-out,
+      max-width 520ms ease-out;
   }
 
   .bits-feature-editor__visual--image-loaded .bits-feature-visual__image {

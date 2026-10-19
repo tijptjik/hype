@@ -277,3 +277,134 @@ must not multiply the same event quantity in aggregate calculations.
 
 No issue acceptance checkbox is completed by the framework alone. Tests use
 synthetic rows and prove the backup and schema boundaries, not a production import.
+
+## Shared phone and organisation brand properties (19 October 2026)
+
+Refs [MIG-2 #194](https://github.com/tijptjik/hype/issues/194), parent
+[MIG #180](https://github.com/tijptjik/hype/issues/180).
+
+Migration `0095_breadline_phone_brand_properties.sql` upgrades the existing core-hub
+`phoneNumber` definition (`gPropPhNum01`) to `PhoneField` and promotes the existing
+Breadline `brand` (`WhWlW8KcN2wq`) to the HKFoodWorks organisation. Established property
+and value IDs, project opt-ins, layer visibility and feature references are retained.
+The five brand options have English, Simplified Chinese and Traditional Chinese
+labels: Maxim's / 美心西餅, Arome / 東海堂, 7-Eleven, Saint Honore / 聖安娜餅屋,
+and Yamazaki / 山崎麵包. Unrelated/custom options are preserved. Conflicting scoped
+catalogs fail closed rather than being silently merged.
+
+`PhoneField` is a non-translatable specifier in the existing property component
+model; no additional database column is required. It accepts valid Hong Kong
+landline/mobile numbers with optional +852 and formatting spaces, parentheses or
+hyphens. Values are normalized to E.164; extensions, foreign numbers, multiple
+numbers and prose are rejected. Blank values remain optional. Browser feedback
+uses the same parser as server validation; persisted definitions determine the
+validation rule, including import and contribution paths. Validation occurs before
+feature writes and before property replacement/deletion.
+
+The migration was applied locally after an online SQLite backup and a disposable
+rehearsal, including repeat execution, preserved feature/assignment counts and
+foreign-key/integrity checks. Tests cover parsing, persisted-definition validation,
+pre-write rejection, scope promotion, translations, preserved references and
+conflicting catalogs. An isolated rendered-input Playwright check verifies telephone
+input, HK acceptance and rejection feedback. Production application remains pending.
+
+### Core MTR access data: local implementation and routing blocker
+
+Nearest MTR access should be derived feature data (`mtrStation`, `mtrExit`,
+`mtrDistance` in metres), rather than configurable properties. Prefer stable station
+and exit references and record routing/source versions and calculation time. Recompute
+on feature creation or coordinate changes; stale/failed results must not appear current.
+Shortlist entrances spatially, then compare actual pedestrian routes across candidate
+stations. Do not select a station by centroid distance or restrict routing to its
+geometrically closest exit: barriers and disconnected streets can change the winner.
+An unreachable route remains unknown/unreachable rather than becoming a straight-line
+walking estimate.
+
+Import Breadline bakeries and drop-off points into their existing layers before the
+all-feature backfill. Rehearse the routing backfill locally against a recent production
+export. Keep schema expansion and data updates as separately reviewable migration
+steps; guard updates by feature ID and the coordinates used for calculation so changed
+production locations cannot receive stale routes. Migration `0098` retires the two legacy MTR properties and their assignments;
+the shared HYPE `phoneNumber` property remains. Legacy feature values cause the
+retirement migration to fail for review rather than silently losing data.
+
+
+Local evidence (2026-10-19, refs #194 and #213): fresh Breadline mirror and HYPE
+production base-table export were taken. HYPE FTS is a virtual table unsupported by
+D1 export; its schema/index contents were reconstructed for rehearsal. Migrations
+0095–0098 were applied locally. The import creates 466 donor features and 19 dropoff
+features, with stable source mappings; a second plan matches all 485 without inserts.
+Foreign-key and integrity checks pass. Existing application data is preserved.
+
+The source contains seven brands, including Independent and Maison Kayser in addition
+to the five previously specified. Three source longitudes needed reviewed corrections
+in `scripts/breadline/feature-coordinate-corrections.json`. Donor 171 has only an
+estate-centre approximation and remains unpublished/pending review. Peninsula remains
+private; inactive donors remain unpublished. Source Chinese is Traditional and is
+preserved as a fallback for Simplified Chinese. Schedules/events are outside this
+feature-location import and remain in the source mirror for their own migration.
+
+Full routing acceptance remains blocked: the pinned Valhalla 3.8.3 graph
+`dff05fbd7b562e6bd672d2ed9e6b67f0ad0cf6107eeed5369d87e155bd443a4f`
+returns error 499 / HTTP 500 (`GetTags: offset exceeds size of text list`) for a
+reproducible pedestrian request. The archive hash matches the release manifest;
+reproduction includes the pinned container digest and single-thread configuration.
+Failed calculations keep durable retry jobs. Explicit partial plans may contain only
+successful calculations; they are not evidence of a complete backfill. Production
+application and complete routing/browser acceptance remain pending.
+
+The explicit partial backfill applied locally has 2,258 ready results and 60 retained
+jobs (479 of 485 Breadline features ready). The production-snapshot plan has 2,255
+ready results and 60 failures; the three-result difference is local-only content.
+There is no complete production backfill yet. A real public-feature card browser check
+renders station, exit and walking metres with zero page errors; authenticated Breadline
+card acceptance remains pending. Focused MTR/property/API/card tests: 47 passed. Retry
+Worker typecheck and Wrangler preview dry-run pass; no Worker was deployed.
+
+Final whole-app typecheck reports 14 errors in unrelated map/panel/test and concurrently
+edited geocoding paths; no MTR/phone implementation errors were reported.
+
+
+Breadline's existing `nearest_mtr_station_en`, `nearest_mtr_station_zh` and
+`nearest_mtr_exit` are now used as an independent audit reference (not discarded or
+converted into editable MTR properties). `scripts/breadline/audit-mtr.py` compares them
+with derived data without database writes. The 19 October comparison has 396 station
+matches, 26 differences, 41 missing source stations, two unresolved derived results and
+one out-of-scope high-speed station. Donor 171 agrees on Tai Wai exit D; the exact shop
+location remains approximate. See the graph-error follow-up runbook for the review queue
+and comparison limitations. Dropoffs have no equivalent source station/exit fields.
+
+
+### MTR engine repair verification (19 October 2026; Refs #194 / #213)
+
+The historical `GetTags` blocker is repaired locally by backporting Valhalla #6291,
+which fixes the wrong-tile predecessor-edge read during reverse pedestrian elevator
+costing. The pinned source, regression and graph identity are recorded in
+[the investigation runbook](../../../docs/operations/MTR-Graph-Error-Followup.md).
+The complete rehearsal now has 2,284 ready and 31 explicitly unreachable features;
+local has 2,287 ready and 31 unreachable. Both have zero engine failures and zero
+remaining jobs. Breadline coverage is 483 ready / 2 unreachable out of 485.
+Transactional application preserves unrelated content and passes integrity/foreign
+keys; new/moved-feature refresh and durable outage retry were verified against the
+repaired engine. Source-station/exit differences and physical entrance association
+review remain acceptance work. No production deployment or production data write
+occurred; broad issue acceptance checkboxes remain unchecked.
+
+MTR presentation is reserved for a future Breadline-specific card. The experimental
+MTR row on default full and compact cards was removed by product decision; routing
+and persisted access data remain available for the dedicated card implementation.
+
+### Donor eligibility policy (Refs #194)
+
+[Donor import policy](donor-import-policy.md) defines exclusions shared by feature
+import planning and MTR review. Donors without recorded runs are excluded regardless
+of `active`; the planner emits per-donor exclusion evidence in its private receipt.
+Earlier local rehearsals still contain these donors and require reconciliation.
+
+### Place and Address architecture prerequisite (20 October 2026; Refs #194)
+
+The accepted [Places and feature inheritance design](01-places-features.md) replaces
+the feature-only import target with shared Places and project-specific Features.
+It includes SaanSeoi Addresses, project-controlled source-change adoption, array-valued
+phones/brands, and unresolved/manual identities. Existing import SQL remains rehearsal
+evidence; rebase it before production application.

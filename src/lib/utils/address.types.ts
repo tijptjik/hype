@@ -71,7 +71,17 @@ export type AddressProperties = {
 }
 
 export type AddressMeta = {
+  /** Canonical SaanSeoi address, local corrections and retained migration evidence. */
+  address?: import('#lib/addresses/featureAddress.js').FeatureAddress
+
+  buildingSourceId?: string
+  buildingSource?: string
+  addressMatch?: 'building_address' | 'within_footprint' | 'nearest' | 'exact_location'
+
   // IDENTIFIERS
+
+  // IDENTIFIERS :: SAANSEOI
+  saanseoiAddressId?: string
 
   // IDENTIFIERS :: HKGOV
   // // Building Deparment CSUID
@@ -92,8 +102,12 @@ export type AddressMeta = {
   confidenceForwardGeocoder?: number
 
   // GEOCODING
-  addressForwardGeocoder?: 'hkgov_als' | 'googlemaps' | 'invalid'
-  addressReverseGeocoder?: 'hkgov_reverse' | 'googlemaps'
+  addressForwardGeocoder?: 'saanseoi' | 'hkgov_als' | 'googlemaps' | 'invalid'
+  addressReverseGeocoder?:
+    | 'saanseoi_basemap'
+    | 'saanseoi'
+    | 'hkgov_reverse'
+    | 'googlemaps'
   addressReverseGen?: boolean
   addressForwardGen?: boolean
 }

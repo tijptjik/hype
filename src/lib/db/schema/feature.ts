@@ -19,6 +19,7 @@ import { propertyValue } from './property'
 // ENUM
 import { supportedLocales } from '../../enums'
 // TYPES
+import type { MtrResolution } from '#lib/routing/mtr.js'
 import type { GeometryObject } from 'geojson'
 import type { AddressProperties, AddressMeta } from '#lib/utils/address.types.js'
 import type { FeatureSpatialIndex } from '#lib/db/services/featureSpatial.types.js'
@@ -92,6 +93,11 @@ export const feature = sqliteTable(
       status: string
       branches: Record<string, string[][]>
     }>(),
+    // Derived pedestrian access; identifiers reference the versioned MTR catalog.
+    mtrStation: text('mtrStation'),
+    mtrExit: text('mtrExit'),
+    mtrDistance: integer('mtrDistance'),
+    mtrResolution: text('mtrResolution', { mode: 'json' }).$type<MtrResolution>(),
     // Address Metadata
     addressMeta: text('addressMeta', {
       mode: 'json',

@@ -278,7 +278,7 @@ function shouldRenderTimelineAxisLabel(index: number, total: number): boolean {
 
           {#if timelineTooltip}
             <div
-              class="pointer-events-none absolute z-10 min-w-36 -translate-x-1/2 -translate-y-full rounded-[1rem] border border-base-300 bg-panel px-3 py-2 shadow-xl"
+              class="pointer-events-none absolute z-10 min-w-36 -translate-x-1/2 -translate-y-full rounded-[1rem] border border-border bg-panel px-3 py-2 shadow-xl"
               style={`left: ${timelineTooltip.left}px; top: ${timelineTooltip.top}px;`}
             >
               <p

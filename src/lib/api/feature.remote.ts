@@ -19,7 +19,10 @@ import { z } from 'zod'
 import { getLocale } from '#lib/i18n.js'
 // UTILS
 import { nanoid } from 'nanoid'
+// ADDRESS
+import { projectFeatureAddress } from '#lib/addresses/featureAddress.js'
 // API
+import { scheduleFeatureMtr } from '#lib/api/services/feature-mtr.js'
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
   getDuplicateValues,
@@ -51,6 +54,7 @@ import {
   toIssueDetailMessage,
 } from '#lib/api/services/authz/index.js'
 // DB
+import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import {
   createFeature,
   createI18n,
@@ -447,10 +451,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const { db, user, userRoles, invalid } = ctx
   const issue = ctx.issue
   const { meta } = params
-  const data = {
+  const data = projectFeatureAddress({
     ...params.data,
     geometry: normalizeFeatureFormGeometry(params.data.geometry),
-  }
+  })
 
   const featureId = meta?.id?.trim()
   const mode = meta?.mode
@@ -459,7 +463,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
 
-  const submittedProperties = Array.isArray(data.properties) ? data.properties : []
+  let submittedProperties = Array.isArray(data.properties) ? data.properties : []
   const duplicatePropertyIds = getDuplicateValues(
     submittedProperties
       .map(property => property?.propertyId)
@@ -504,6 +508,17 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
     }
 
+    try {
+      submittedProperties = await validateFeaturePhoneProperties(
+        db,
+        submittedProperties,
+      )
+    } catch (error) {
+      invalid(
+        issue.data.properties(error instanceof Error ? error.message : String(error)),
+      )
+    }
+
     const created = await createFeature(db, {
       ...data,
       id: featureId || nanoid(12),
@@ -518,6 +533,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     await createI18n(db, data.i18n, created.id)
     await createProperties(db, created.id, submittedProperties)
 
+    scheduleFeatureMtr(ctx.event.locals.platform, created.id)
     return toCreatedResponseShape(created)
   }
 
@@ -657,6 +673,19 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('STALE_WRITE')))
   }
 
+  if (propertiesChanged) {
+    try {
+      submittedProperties = await validateFeaturePhoneProperties(
+        db,
+        submittedProperties,
+      )
+    } catch (error) {
+      invalid(
+        issue.data.properties(error instanceof Error ? error.message : String(error)),
+      )
+    }
+  }
+
   const persisted = requireValue(
     await updateFeatureByIdWithConcurrency(db, {
       id: current.id as Id,
@@ -681,6 +710,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     await updateProperties(db, submittedProperties, current.id as Id)
   }
 
+  if (geometryChanged) scheduleFeatureMtr(ctx.event.locals.platform, persisted.id)
   return toCreatedResponseShape(persisted)
 })
 

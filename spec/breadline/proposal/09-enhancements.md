@@ -140,3 +140,63 @@ broader native cold/warm/concurrent capacity, cache keys and
 invalidation, shared volunteer/operations consumption and broader UI integration remain
 implementation work under #213. Distinguish cached estimates from fresh routes;
 an unreachable route must not silently become a straight-line travel estimate.
+
+### Core nearest-MTR walking access (Refs #213)
+
+`mtrStation` stores the station code, `mtrExit` a stable OSM entrance node ID and
+`mtrDistance` integer walking metres. `mtrResolution` records graph/catalog version,
+calculation time and ready/unreachable/unsupported state. This is feature data, not
+hub/organisation/project configurable property data. Cards resolve names and exit
+labels from the catalog.
+
+Geometry-change triggers clear obsolete results and enqueue durable work. Authorized
+feature creation/edits attempt request-local background enrichment; the dedicated
+MTR refresh Worker retries queued work. Lease/geometry fencing prevents stale writes.
+Candidate entrances are ordered by great-circle distance; actual pedestrian routes
+across stations compete until the remaining lower bound exceeds the best walk.
+Routes involving ferries or endpoint snaps over 75 metres are rejected. A short snap
+connector is included in the distance, so entrance approach quality still depends on
+OSM pedestrian connectivity and requires visual sampling before production acceptance.
+
+The catalog contains 98 stations and 635 entrances from OSM HK 2026-10-01. Associations
+include 496 stop-area relations, 19 explicit station-exit-plan mappings and 120 spatial
+fallbacks. Spatial fallback associations require review; they are recorded in provenance.
+See `docs/operations/Feature-MTR.md` for commands, limitations and the routing blocker.
+
+## Building-aware address selection
+
+The new-feature location picker resolves the containing full building from loaded z15
+basemap source polygons, including styles that show outlines only. Tile fragments share
+the type-encoded OSM source identity. Independent overlapping buildings require manual
+resolution. A source full address or number plus street supplies the address directly,
+with number ranges retained. Missing translations use source text.
+
+Without complete building tags, the picker requests ALS candidates constrained to the
+selected footprint. An empty or ambiguous response does not select an adjacent building.
+Pins outside buildings use nearest-point lookup with an approximate-address label.
+Changing the pin invalidates the earlier selection. Building identity, match evidence and
+address components persist with the contribution; source OSM identity is separate from
+canonical SaanSeoi Address identity.
+
+Activation requires SaanSeoi basemap schema `protomaps-v4.1` tiles and the address
+geocoder's `footprint` contract. Source-tagged buildings do not need a geocoder request.
+
+
+### MTR engine repair verification (19 October 2026; Refs #194 / #213)
+
+The historical `GetTags` blocker is repaired locally by backporting Valhalla #6291,
+which fixes the wrong-tile predecessor-edge read during reverse pedestrian elevator
+costing. The pinned source, regression and graph identity are recorded in
+[the investigation runbook](../../../docs/operations/MTR-Graph-Error-Followup.md).
+The complete rehearsal now has 2,284 ready and 31 explicitly unreachable features;
+local has 2,287 ready and 31 unreachable. Both have zero engine failures and zero
+remaining jobs. Breadline coverage is 483 ready / 2 unreachable out of 485.
+Transactional application preserves unrelated content and passes integrity/foreign
+keys; new/moved-feature refresh and durable outage retry were verified against the
+repaired engine. Source-station/exit differences and physical entrance association
+review remain acceptance work. No production deployment or production data write
+occurred; broad issue acceptance checkboxes remain unchecked.
+
+MTR presentation is reserved for a future Breadline-specific card. The experimental
+MTR row on default full and compact cards was removed by product decision; routing
+and persisted access data remain available for the dedicated card implementation.

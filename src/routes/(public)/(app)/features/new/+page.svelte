@@ -21,5 +21,8 @@ onMount(() => {
 </script>
 
 <LayerSelectionModal />
-<GeoLocationModal getMapCenter={appCtx.getMapCenter} />
+<GeoLocationModal
+  getMapCenter={appCtx.getMapCenter}
+  getBuildingAt={appCtx.getBuildingAt}
+/>
 <NewFeatureCard />

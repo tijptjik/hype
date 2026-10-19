@@ -420,7 +420,10 @@ export const getProjectMapStylesQuery = guardedQuery(
     }
 
     if (params.projectId) {
-      const probe = await probeProjectQuery(db, { ref: params.projectId, refKey: 'id' })
+      // Admin routes may identify an existing project by its public code.
+      const probe =
+        (await probeProjectQuery(db, { ref: params.projectId, refKey: 'id' })) ??
+        (await probeProjectQuery(db, { ref: params.projectId, refKey: 'code' }))
 
       if (!probe) return { data: [] }
 
@@ -524,6 +527,10 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
 
+  // Place settings are edited only after the Project identity has been created.
+  if (mode === 'create' && data.placeUpdatePolicy) {
+    invalid(issue('PLACE_POLICY_REQUIRES_EXISTING_PROJECT'))
+  }
   const normalizedCode = data.code.trim()
   const hasSubmittedUserRoles = Object.hasOwn(data, 'userRoles')
   const submittedRoles =
@@ -694,6 +701,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       code: normalizedCode,
       useAllInOrgContext: data.useAllInOrgContext,
       cardStyleCode: data.cardStyleCode,
+      markerStyleCode: data.markerStyleCode,
       license: data.license,
       capabilities: submittedProjectCapabilities,
       isPublished: false,
@@ -777,10 +785,16 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataBeforeHydration.cardStyleCode = data.cardStyleCode
   }
+  if (data.markerStyleCode !== (current.markerStyleCode ?? null)) {
+    submittedDataBeforeHydration.markerStyleCode = data.markerStyleCode
+  }
   if (meta?.licenseTouched === true) {
     submittedDataBeforeHydration.license = data.license
   }
 
+  if (data.placeUpdatePolicy) {
+    submittedDataBeforeHydration.placeUpdatePolicy = data.placeUpdatePolicy
+  }
   const preliminaryUpdateDecision = authorizeProjectUpdateForSubmission({
     user,
     userRoles,
@@ -896,6 +910,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataForUpdate.cardStyleCode = data.cardStyleCode
   }
+  if (data.markerStyleCode !== (current.markerStyleCode ?? null)) {
+    submittedDataForUpdate.markerStyleCode = data.markerStyleCode
+  }
   if (licenseChanged) submittedDataForUpdate.license = data.license
   if (projectCapabilitiesChanged) {
     submittedDataForUpdate.capabilities = submittedProjectCapabilities
@@ -911,6 +928,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   // UPDATE FLOW: AUTHORIZATION
   /* -------- */
 
+  if (data.placeUpdatePolicy) {
+    submittedDataForUpdate.placeUpdatePolicy = data.placeUpdatePolicy
+  }
   // Apply role-based authorization for core update fields.
   const updateDecision = authorizeProjectUpdateForSubmission({
     user,
@@ -1023,11 +1043,13 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     await updateProjectByIdWithConcurrency(db, {
       id: current.id as Id,
       updatedAt: updatedAt as string,
+      placeUpdatePolicy: data.placeUpdatePolicy,
       data: {
         organisationId: data.organisationId,
         code: normalizedCode,
         useAllInOrgContext: data.useAllInOrgContext,
         cardStyleCode: data.cardStyleCode,
+        markerStyleCode: data.markerStyleCode,
         ...(persistedLicense ? { license: persistedLicense } : {}),
         capabilities: submittedProjectCapabilities,
       },

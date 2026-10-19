@@ -238,6 +238,7 @@ export enum PropertyComponentType {
   SelectField = 'SelectField',
   RangeField = 'RangeField',
   InputField = 'InputField',
+  PhoneField = 'PhoneField',
   TextareaField = 'TextareaField',
   ToggleField = 'ToggleField',
 }
@@ -249,7 +250,11 @@ export enum PropertyScope {
 }
 export const propertyScopes = Object.values(PropertyScope)
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const
-export const specifierComponentTypes = ['InputField', 'TextareaField'] as const
+export const specifierComponentTypes = [
+  'InputField',
+  'PhoneField',
+  'TextareaField',
+] as const
 
 /* ----------------- */
 // FEATURE CARD
@@ -279,15 +284,6 @@ export enum CollectionStatistic {
   access = 'access',
   filtered = 'filtered',
   selected = 'selected',
-}
-
-/* ----------------- */
-// GEOCODING
-/* -------- */
-export enum GeoCoder {
-  hkgov_als = 'hkgov_als',
-  hkgov_identify = 'hkgov_identify',
-  googlemaps = 'googlemaps',
 }
 
 /* ----------------- */

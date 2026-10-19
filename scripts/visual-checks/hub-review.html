@@ -1,0 +1,8 @@
+<html data-theme="hype-black"><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="app"></div><script>globalThis.__sveltekit_dev = { env: {} };</script><script type="module">
+import { mount } from '/.svelte-kit/vite/deps/svelte.js';
+import Fixture from '/src/tests/fixtures/components/HubTabsVisualFixture.svelte';
+import '/src/lib/styles/app.css';
+const params = new URLSearchParams(location.search);
+document.documentElement.dataset.theme = params.get('theme') || 'hype-black';
+mount(Fixture, { target: document.getElementById('app'), props: { tab: params.get('tab') || 'core', editing: params.get('edit') === 'true' } });
+</script></body></html>

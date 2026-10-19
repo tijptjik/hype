@@ -1,4 +1,6 @@
 <script lang="ts">
+// PRESENTATION
+import { isMarkerStyleCode } from '#lib/features/markerStyle.js'
 import type { ReadonlyURL } from '$app/state'
 // SVELTEKIT
 import { browser } from '$app/env'
@@ -400,6 +402,22 @@ const layerMarkerThemes = $derived.by(() => {
   }
   return palettes
 })
+// Marker settings travel with hierarchy data, independently of the basemap theme.
+const projectMarkerStyles = $derived(
+  new Map(
+    [...appCtx.view.cache.project.values()].map(
+      project => [project.id, project.markerStyleCode ?? null] as const,
+    ),
+  ),
+)
+const layerMarkerStyles = $derived(
+  new Map(
+    [...appCtx.view.cache.layer.values()].map(layer => {
+      const code = layer.metadata?.markerStyleCode
+      return [layer.id, isMarkerStyleCode(code) ? code : null] as const
+    }),
+  ),
+)
 // MAP SURFACE LIFECYCLE
 let geolocateControl: GeolocateControlWithPrivateFields | undefined = $state(undefined)
 
@@ -778,6 +796,8 @@ watch(
     userMarkerStyleVariant,
     activeMarkerTheme,
     projectMarkerThemes,
+    projectMarkerStyles,
+    layerMarkerStyles,
     layerMarkerThemes,
     appCtx.selection.featureId,
     appCtx.selection.collection?.items.map(item => item.id).join(','),
@@ -795,6 +815,8 @@ watch(
         markerStyle: userMarkerStyleVariant,
         markerTheme: activeMarkerTheme,
         markerThemesByProjectId: projectMarkerThemes,
+        markerStylesByProjectId: projectMarkerStyles,
+        markerStylesByLayerId: layerMarkerStyles,
         markerThemesByLayerId: layerMarkerThemes,
         selectedId: appCtx.selection.featureId,
         highlightedIds: new Set(

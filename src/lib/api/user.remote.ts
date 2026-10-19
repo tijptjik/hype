@@ -12,13 +12,16 @@ import {
   SetUserLayerDefaultsSchema,
   UpdateUserParamsSchema,
   UserAdminListProfileAPI,
-  UserDirectoryProfileAPI,
   UserHydrationSchema,
   UserSearchQueryParamsSchema,
 } from '#lib/db/zod/index.js'
 // DRIZZLE
 import { eq, sql } from 'drizzle-orm'
 // API
+import {
+  getTelephoneVisibleUserIds,
+  toUserDirectoryProfile,
+} from '#lib/api/services/userContacts.js'
 import {
   guardedBatchByIdQuery,
   guardedCommand,
@@ -42,7 +45,10 @@ import {
 import { readAdminUserProfile } from '#lib/api/services/adminUser.js'
 import { loadPrivateContributions } from '#lib/api/services/profileContributions.js'
 import { sortContributionGroups } from '#lib/contributions/presentation.js'
-import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
+import {
+  canBrowseUsers,
+  canReadAllUserContacts,
+} from '#lib/api/services/authz/userDirectory.js'
 // DB
 import { hub, user } from '#lib/db/schema/index.js'
 import {
@@ -116,7 +122,7 @@ const resolveTargetUserId = (
  * Uses guarded query context so request-scoped auth/session state is resolved once and
  * `meta.isAdminRequest` semantics stay aligned with the rest of the remote layer.
  * Archived-user search is additionally protected behind a privileged policy gate.
- * Directory fields require active-hub administrator access; member-picker payloads stay unchanged.
+ * Directory fields require active-hub administrator access; email addresses require core/SuperAdmin authority.
  */
 export const searchUsers = guardedQuery(
   UserSearchQueryParamsSchema,
@@ -165,12 +171,28 @@ export const searchUsers = guardedQuery(
       sortOrder: queryPlan.sortOrder,
     })
 
+    // Resolve contact scope in bulk before constructing any client-visible records.
+    const telephoneUserIds = await getTelephoneVisibleUserIds(
+      db,
+      {
+        isAnonymous: user.isAnonymous,
+        superAdmin: user.superAdmin,
+        userRoles,
+        hubId: ctx.event.locals.hub?.id,
+      },
+      result.data.map(row => row.id),
+    )
+
+    const canReadEmail = canReadAllUserContacts({ ...user, userRoles })
+
     // Return loaded records and list metadata.
     return {
       data: result.data.map(row =>
         params.directory
-          ? UserDirectoryProfileAPI.parse(row)
-          : UserAdminListProfileAPI.parse(row),
+          ? toUserDirectoryProfile(row, telephoneUserIds.has(row.id), canReadEmail)
+          : UserAdminListProfileAPI.parse(
+              toUserDirectoryProfile(row, telephoneUserIds.has(row.id), canReadEmail),
+            ),
       ),
       limit: queryPlan.limit,
       offset: queryPlan.offset,

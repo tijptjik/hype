@@ -283,7 +283,7 @@
   stroke-width: 2;
   stroke: #ffffffee;
   fill: #824cb8;
-  animation: pulse 3s infinite ease-in-out;
+  animation: map-marker-pulse 3s infinite ease-in-out;
 }
 .marker-address .marker-dot {
   fill: #eeedf8;
@@ -297,7 +297,7 @@
   animation: none;
 }
 
-@keyframes pulse {
+@keyframes map-marker-pulse {
   0% {
     transform: scale(1);
     transform-origin: center;

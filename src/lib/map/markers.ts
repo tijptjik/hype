@@ -1,3 +1,16 @@
+// PRESENTATION
+import {
+  MARKER_STYLE_CODES,
+  isMarkerStyleCode,
+  resolveMarkerStyle,
+  type MarkerStyleCode,
+} from '#lib/features/markerStyle.js'
+import type { BreadlineMarkerState } from '#lib/features/breadlinePresentation.js'
+import {
+  customMarkerModel,
+  customMarkerSignature,
+  createCustomMarkerElement,
+} from './customMarkers'
 // API
 import { getImageSrc } from '#lib/client/services/image.js'
 // DEBUG
@@ -31,7 +44,7 @@ import type { MapMarkerTheme } from './styles/catalog'
 
 export const USER_MARKER_STYLE_PARAM = 'markerStyle'
 
-export const MARKER_STYLE_VARIANTS = ['image', 'dot'] as const
+export const MARKER_STYLE_VARIANTS = MARKER_STYLE_CODES
 
 export type MarkerStyleVariant = (typeof MARKER_STYLE_VARIANTS)[number]
 
@@ -88,6 +101,10 @@ export type MarkerRenderer = {
     features: FeatureFromCollection[],
     options?: {
       markerStyle?: MarkerStyleVariant
+      markerStylesByProjectId?: ReadonlyMap<string, MarkerStyleCode | null>
+      markerStylesByLayerId?: ReadonlyMap<string, MarkerStyleCode | null>
+      /** Live date-scoped state; changes invalidate the visible marker. */
+      breadlineStateByFeatureId?: ReadonlyMap<string, BreadlineMarkerState>
       /** Active basemap default; explicit layer/project palettes take precedence. */
       markerTheme?: MapMarkerTheme
       markerThemesByProjectId?: ReadonlyMap<string, MapMarkerTheme>
@@ -177,7 +194,7 @@ function getMarkerImageRenderState(): Record<string, number> {
  * @returns Supported marker style variant.
  */
 export function getUserMarkerStyleVariant(value: string | null): MarkerStyleVariant {
-  return value === 'dot' ? 'dot' : 'image'
+  return isMarkerStyleCode(value) ? value : 'image'
 }
 
 /**
@@ -470,6 +487,10 @@ export function createMarkerRenderer(
     features: FeatureFromCollection[],
     options: {
       markerStyle?: MarkerStyleVariant
+      markerStylesByProjectId?: ReadonlyMap<string, MarkerStyleCode | null>
+      markerStylesByLayerId?: ReadonlyMap<string, MarkerStyleCode | null>
+      /** Live date-scoped state; changes invalidate the visible marker. */
+      breadlineStateByFeatureId?: ReadonlyMap<string, BreadlineMarkerState>
       /** Active basemap default; explicit layer/project palettes take precedence. */
       markerTheme?: MapMarkerTheme
       markerThemesByProjectId?: ReadonlyMap<string, MapMarkerTheme>
@@ -486,6 +507,9 @@ export function createMarkerRenderer(
       ? JSON.stringify([
           retention.scope,
           options.markerStyle ?? 'image',
+          [...(options.markerStylesByProjectId ?? new Map())],
+          [...(options.markerStylesByLayerId ?? new Map())],
+          [...(options.breadlineStateByFeatureId ?? new Map())],
           options.markerTheme,
           [...(options.markerThemesByProjectId ?? new Map())],
           [...(options.markerThemesByLayerId ?? new Map())],
@@ -593,8 +617,19 @@ export function createMarkerRenderer(
       const previousCoordinates = positions.get(feature.id)
       positions.set(feature.id, coordinates)
       const existingMarker = markers.get(feature.id)
-      const nextSignature =
-        markerStyle === 'dot'
+      const effectiveStyle = resolveMarkerStyle(
+        options.markerStylesByProjectId?.get(feature.projectId),
+        options.markerStylesByLayerId?.get(feature.layerId),
+        markerStyle,
+      )
+      const custom = customMarkerModel(effectiveStyle, {
+        feature,
+        imageSrc: effectiveStyle === 'flag' ? getFeatureMarkerImageSrc(feature) : null,
+        state: options.breadlineStateByFeatureId?.get(feature.id),
+      })
+      const nextSignature = custom
+        ? customMarkerSignature(custom)
+        : effectiveStyle === 'dot'
           ? `dot:${markerTheme}`
           : `${getFeatureMarkerImageSrc(feature) ?? 'dot'}:${markerTheme}`
 
@@ -619,12 +654,9 @@ export function createMarkerRenderer(
         onElementChange?.(feature.id, null)
       }
 
-      const element = createFeatureMarkerElement(
-        feature,
-        markerStyle,
-        markerTheme,
-        diagnostics,
-      )
+      const element = custom
+        ? createCustomMarkerElement(custom)
+        : createFeatureMarkerElement(feature, effectiveStyle, markerTheme, diagnostics)
       const addDataToElements = (node: Element): void => {
         node.setAttribute('data-type', 'marker')
         node.setAttribute('data-feature-id', feature.id as string)

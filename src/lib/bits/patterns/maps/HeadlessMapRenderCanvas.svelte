@@ -1,4 +1,6 @@
 <script lang="ts">
+// PRESENTATION
+import type { MarkerStyleCode } from '#lib/features/markerStyle.js'
 // SVELTE
 import { onMount, tick } from 'svelte'
 import { page } from '$app/state'
@@ -30,6 +32,7 @@ import type { FeatureCollection } from 'geojson'
 
 type HeadlessRenderKind = 'projects' | 'layers'
 type RenderPayload = {
+  markerStylesByLayerId?: Array<[string, MarkerStyleCode]>
   styleCode: string
   features: FeatureFromCollection[]
   layers: Array<{ id: string; rank: number; modifiedAt: string }>
@@ -201,6 +204,7 @@ $effect(() => {
   const noLabels = page.url.searchParams.get('noLabels') === '1'
   const nextRenderKey = JSON.stringify({
     styleCode: payload.styleCode,
+    markerStylesByLayerId: payload.markerStylesByLayerId,
     selectedLayerIds: payload.selectedLayerIds,
     featureIds: payload.features.map(feature => feature.id),
     locale,
@@ -211,7 +215,10 @@ $effect(() => {
   const serial = ++renderRequestSerial
   renderKey = nextRenderKey
   markerRenderer ??= createMarkerRenderer(map, maplibregl)
-  markerRenderer.sync(payload.features, { markerStyle: 'image' })
+  markerRenderer.sync(payload.features, {
+    markerStyle: 'image',
+    markerStylesByLayerId: new Map(payload.markerStylesByLayerId ?? []),
+  })
   resetReadySignal()
   void (async () => {
     if (!map.loaded()) await waitForMapEvent(map, 'load', MAP_RENDER_READY_TIMEOUT_MS)

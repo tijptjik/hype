@@ -188,42 +188,52 @@ $effect(() => {
     {title}
     {icon}
     description={subtitle}
-    class={issues.length > 0 ? formMemberIssuesHeaderStyles : formSearchHeaderStyles}
+    class={issues.length > 0
+      ? formMemberIssuesHeaderStyles
+      : isEditing
+        ? formSearchHeaderStyles
+        : 'h-[68px]! min-h-[68px]! py-0!'}
   >
     {#snippet right()}
-      <div class="flex w-full flex-wrap items-center justify-end gap-3">
-        {#if issues.length > 0}
-          <SectionHeaderPrimitive.Issues {issues} />
-        {/if}
-        {#if isEditing}
-          <div
-            class="w-full min-w-0 max-w-96 flex-1 basis-64"
-            transition:fade={{ duration: 140 }}
-            inert={!showModeUi}
-          >
+      {#if isEditing || issues.length > 0}
+        <div class="flex w-full flex-wrap items-center justify-end gap-3">
+          {#if issues.length > 0}
+            <SectionHeaderPrimitive.Issues {issues} />
+          {/if}
+          {#if isEditing}
             <div
-              class={isSubmitting ? 'w-full pointer-events-none opacity-50' : 'w-full'}
+              class="w-full min-w-0 max-w-96 flex-1 basis-64"
+              transition:fade={{ duration: 140 }}
+              inert={!showModeUi}
             >
-              <Search
-                placeholder={m.admin__forms_add_users_placeholder()}
-                focusOnMount={false}
-                mountTransitionDuration={0}
-                {userQueryParams}
-                excludeIds={Array.from(userIdSet)}
-                getItemId={(user: User) => user.id}
-                onSelect={handleAddUser}
-                resultMap={{
-                  image: (user: User) => toImageSrc(user.image),
-                  title: (user: User) => user.name || '-',
-                  descriminator: (user: User) =>
-                    user.username ? `@${user.displayUsername ?? user.username}` : null,
-                }}
-                class="w-full [&_.bits-search-bar]:mb-0"
-              />
+              <div
+                class={isSubmitting
+                  ? 'w-full pointer-events-none opacity-50'
+                  : 'w-full'}
+              >
+                <Search
+                  placeholder={m.admin__forms_add_users_placeholder()}
+                  focusOnMount={false}
+                  mountTransitionDuration={0}
+                  {userQueryParams}
+                  excludeIds={Array.from(userIdSet)}
+                  getItemId={(user: User) => user.id}
+                  onSelect={handleAddUser}
+                  resultMap={{
+                    image: (user: User) => toImageSrc(user.image),
+                    title: (user: User) => user.name || '-',
+                    descriminator: (user: User) =>
+                      user.username
+                        ? `@${user.displayUsername ?? user.username}`
+                        : null,
+                  }}
+                  class="w-full [&_.bits-search-bar]:mb-0"
+                />
+              </div>
             </div>
-          </div>
-        {/if}
-      </div>
+          {/if}
+        </div>
+      {/if}
     {/snippet}
   </SectionHeader>
 

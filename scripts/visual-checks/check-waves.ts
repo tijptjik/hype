@@ -1,0 +1,10 @@
+import { chromium } from 'playwright'
+const browser = await chromium.launch({executablePath:'/home/io/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome',args:['--disable-web-security']})
+const page = await browser.newPage({viewport:{width:1140,height:330}})
+await page.route('**/__waves_check', route=>route.fulfill({contentType:'text/html',body:`<html><body style="margin:0;display:flex"><script type="module">import {mount} from "/.svelte-kit/vite/deps/svelte.js";import Profile from "/src/lib/bits/patterns/panels/sections/components/ProfileSectionBackground.svelte";import "/src/lib/styles/app.css";for(const theme of ['hype-light','breadline-light','breadline-dark']){const host=document.createElement('div');host.dataset.theme=theme;host.className='bits-theme bg-panel text-foreground';host.style='width:380px;height:330px;position:relative;overflow:hidden';host.innerHTML='<div style="position:relative;z-index:1;text-align:center;padding:20px">'+theme+'<div style="width:128px;height:128px;border-radius:50%;background:#91b83b;margin:16px auto"></div><b>tijptjik</b><div style="margin-top:16px">MY PROFILE &nbsp; SIGN OUT</div></div>';document.body.append(host);mount(Profile,{target:host,props:{userDisplayName:'tijptjik',openProfileText:'MY PROFILE',logoutText:'SIGN OUT'}})}</script></body></html>`}))
+page.on('pageerror', e=>console.log('PAGE ERROR',e.message))
+await page.goto('http://127.0.0.1:4173/__waves_check')
+await page.waitForSelector('[data-profile-waves]',{state:'visible'})
+await page.screenshot({path:'output/playwright/settings-waves.png'})
+console.log(await page.locator('[data-profile-waves]').evaluateAll(elements=>elements.map(el=>({display:getComputedStyle(el).display,color:getComputedStyle(el).color}))))
+await browser.close()

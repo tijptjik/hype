@@ -119,10 +119,12 @@ describe('saved feature card presentation', () => {
     const db = new DatabaseSync(':memory:')
     try {
       db.exec(
-        "PRAGMA foreign_keys = ON; CREATE TABLE project (id text PRIMARY KEY, code text); INSERT INTO project VALUES ('p', 'neon');",
+        "PRAGMA foreign_keys = ON; CREATE TABLE organisation(id TEXT PRIMARY KEY,code TEXT); CREATE TABLE project (id text PRIMARY KEY, code text, organisationId TEXT); INSERT INTO project VALUES ('p', 'neon', null);",
       )
       db.exec(readFileSync('migrations/0093_card_styles.sql', 'utf8'))
       db.exec(readFileSync('migrations/0094_conditional_card_style.sql', 'utf8'))
+      db.exec(readFileSync('migrations/0102_marker_presentation.sql', 'utf8'))
+      db.exec(readFileSync('migrations/0103_breadline_presentation.sql', 'utf8'))
       expect(
         db
           .prepare('SELECT code FROM cardStyle ORDER BY code')

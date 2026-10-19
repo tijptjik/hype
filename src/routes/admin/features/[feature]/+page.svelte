@@ -82,11 +82,9 @@ import { configureForm } from '#lib/factories.svelte.js'
 // BITS
 import {
   cx,
-  FormFacetNav,
   FormFeatureFields,
   FormFeatureParentSection,
   FormFeatureVisualSection,
-  FormFeatureSectionHeader,
   FeatureImageEditor,
   FormI18nDescriptorFields,
   FormI18nSection,
@@ -104,6 +102,7 @@ import {
 import {
   createFeatureVisualSectionController,
   HiddenInputs,
+  SectionHeaderPrimitive,
 } from '#lib/bits/custom/form/index.js'
 
 import {
@@ -111,10 +110,23 @@ import {
   FEATURE_EDITOR_CONTENT_PAD_CLASS,
   FEATURE_EDITOR_CONTENT_SECTION_CLASS,
   FEATURE_EDITOR_FORM_CLASS,
-  FEATURE_EDITOR_PLACEHOLDER_CLASS,
   FEATURE_EDITOR_ROOT_CLASS,
   getFeatureEditorFacetClass,
 } from './page.styles'
+import FormFeatureAddress from '#lib/bits/patterns/forms/formFeatureAddress/FormFeatureAddress.svelte'
+import {
+  geocodeAddressCandidates,
+  loadGeocodedAddressUnits,
+} from '#lib/api/external/geocoding.js'
+import {
+  ADDRESS_LOCALES,
+  emptyFeatureAddress,
+  getAddressDisplay,
+  getAddressUnits,
+  invalidateAddressLocation,
+  type FeatureAddress,
+} from '#lib/addresses/featureAddress.js'
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ImageProvider from '#lib/providers/ImageProvider.svelte'
 import { canCreateFeatureForProject } from '#lib/api/services/authz/feature.js'
 // NAVIGATION
@@ -322,6 +334,10 @@ const noopHeaderAction = (): void => {}
 // - onResetTranslatableValues
 //
 // GEOMETRY + RESOURCE STATE TOGGLES
+// - editorAddress
+// - updateAddressDraft
+// - lookupFeatureAddress
+// - selectAddressCandidate
 // - handleCoordinateChange
 // - handleFeatureStateToggle
 // - onPublishToggle
@@ -1156,10 +1172,166 @@ const currentAuthorizationUser = $derived(toCurrentAuthorizationUser(currentUser
 const initialMapCenter = $derived(getUserLocationCoordinates(adminCtx.view))
 
 /********************
+ *  ADDRESS EDITOR
+ ************/
+let isAddressLookupLoading = $state(false)
+let addressLookupMessage = $state('')
+let addressLookupRevision = 0
+let addressCandidates = $state<FeatureAddress[]>([])
+let addressCandidateQuery = $state('')
+
+const editorAddress = $derived.by((): FeatureAddress => {
+  if (currentFeatureData.addressMeta?.address)
+    return currentFeatureData.addressMeta.address
+  // Unsaved and not-yet-migrated records retain their original labels as evidence.
+  const fallback = Object.fromEntries(
+    Object.entries(ADDRESS_LOCALES).map(([locale, tag]) => [
+      tag,
+      currentFeatureData.i18n?.[locale as keyof typeof ADDRESS_LOCALES]
+        ?.displayAddress ?? '',
+    ]),
+  )
+  const address = emptyFeatureAddress(fallback)
+  address.legacy = {
+    addressMeta: currentFeatureData.addressMeta ?? {},
+    i18n: currentFeatureData.i18n ?? {},
+  }
+  return address
+})
+
+$effect(() => {
+  featureRef
+  isEditing
+  addressLookupRevision += 1
+  isAddressLookupLoading = false
+  addressLookupMessage = ''
+  addressCandidates = []
+})
+
+/** Updates the canonical address and its display-only projections in one draft mutation.
+ * @param address Source envelope and per-feature corrections.
+ * @returns Nothing; persistence uses the existing authorized Save/Cancel workflow.
+ */
+function updateAddressDraft(address: FeatureAddress): void {
+  addressLookupRevision += 1
+  isAddressLookupLoading = false
+  addressLookupMessage = ''
+  addressCandidates = []
+  updateFeatureData(data => ({
+    ...data,
+    addressMeta: { ...data.addressMeta, address },
+    i18n: Object.fromEntries(
+      Object.entries(data.i18n).map(([locale, value]) => [
+        locale,
+        {
+          ...value,
+          displayAddress: getAddressDisplay(
+            address,
+            locale as keyof typeof ADDRESS_LOCALES,
+          ),
+          displayAddressGen:
+            Object.keys(
+              address.overrides[
+                ADDRESS_LOCALES[locale as keyof typeof ADDRESS_LOCALES]
+              ] ?? {},
+            ).length === 0,
+          addressProperties: {},
+        },
+      ]),
+    ) as typeof data.i18n,
+  }))
+}
+
+/** Fetches the selected pin or an address query without overwriting a newer draft.
+ * @param query Optional forward search; reverse lookup preserves the selected pin.
+ * @returns Completion of the lookup; errors leave settled address data intact.
+ */
+async function lookupFeatureAddress(query?: string): Promise<void> {
+  if (!isEditing || !featureCoordinates) return
+  const revision = ++addressLookupRevision
+  const ref = featureRef
+  const draftSignature = JSON.stringify(currentFeatureData)
+  isAddressLookupLoading = true
+  addressLookupMessage = ''
+  addressCandidates = []
+  const isCurrent = (): boolean =>
+    revision === addressLookupRevision &&
+    ref === featureRef &&
+    isEditing &&
+    JSON.stringify(currentFeatureData) === draftSignature
+  try {
+    const results = await geocodeAddressCandidates(
+      query?.trim()
+        ? { address: query.trim() }
+        : { lng: featureCoordinates[0], lat: featureCoordinates[1] },
+    )
+    if (!isCurrent()) return
+    addressCandidates = results.flatMap(result =>
+      result.addressMeta.address ? [result.addressMeta.address] : [],
+    )
+    addressCandidateQuery = query?.trim() ?? ''
+    if (!addressCandidates.length) addressLookupMessage = m.feature_address_no_match()
+  } catch {
+    if (isCurrent()) addressLookupMessage = m.feature_address_failed()
+  } finally {
+    if (revision === addressLookupRevision) isAddressLookupLoading = false
+  }
+}
+
+/** Applies only the candidate the user selected, with publication-pinned details.
+ * @param candidate Selected source summary. @returns Completion without replacing a newer draft.
+ */
+async function selectAddressCandidate(candidate: FeatureAddress): Promise<void> {
+  const revision = ++addressLookupRevision
+  const signature = JSON.stringify(currentFeatureData)
+  const previous = editorAddress
+  const forward = Boolean(addressCandidateQuery)
+  isAddressLookupLoading = true
+  try {
+    const address = await loadGeocodedAddressUnits(candidate)
+    if (
+      revision !== addressLookupRevision ||
+      !isEditing ||
+      signature !== JSON.stringify(currentFeatureData)
+    )
+      return
+    if (previous.legacy) address.legacy = previous.legacy
+    if (
+      previous.source.address2dId &&
+      previous.source.address2dId === address.source.address2dId
+    ) {
+      address.overrides = previous.overrides
+      const unit = getAddressUnits(address, 'en').find(
+        item => item.value === previous.source.address3dUnitId,
+      )
+      if (unit) {
+        address.source.address3dId = unit.inventoryId
+        address.source.address3dUnitId = unit.value
+      }
+    }
+    if (forward && address.coordinates) handleCoordinateChange(address.coordinates)
+    updateAddressDraft(address)
+  } catch {
+    if (revision === addressLookupRevision)
+      addressLookupMessage = m.feature_address_failed()
+  } finally {
+    if (revision === addressLookupRevision) isAddressLookupLoading = false
+  }
+}
+
+/********************
  *  MAP MUTATION
  ************/
 
+/** Moves the draft marker and invalidates any address tied to the previous point.
+ * @param nextCoordinates Selected longitude/latitude.
+ * @returns Nothing; the address is retained for review until a new lookup.
+ */
 function handleCoordinateChange(nextCoordinates: number[]): void {
+  addressLookupRevision += 1
+  isAddressLookupLoading = false
+  addressLookupMessage = ''
+  addressCandidates = []
   updateFeatureData(
     data => ({
       ...data,
@@ -1168,6 +1340,7 @@ function handleCoordinateChange(nextCoordinates: number[]): void {
         type: 'Point',
         coordinates: nextCoordinates,
       },
+      addressMeta: invalidateAddressLocation(data.addressMeta ?? {}, nextCoordinates),
     }),
     { revalidate: true },
   )
@@ -1281,74 +1454,70 @@ const featureImageProviderModel = useImageProviderModel(
  ************/
 
 $effect(() => {
-  canonicalImageSrc
-  isCanonicalImagePending = Boolean(presentedCanonicalImageSrc)
-
-  // Keep the last confirmed ratio while a replacement image is loading.
-  if (!presentedCanonicalImageSrc) {
-    canonicalImageMeasuredAspectRatio = null
-  }
-})
-
-$effect(() => {
-  featureRef
-  if (presentedCanonicalImageSrc) {
-    isCanonicalImagePending = true
-  }
-})
-
-$effect(() => {
   const nextSrc = canonicalImageSrc
   const nextHref = canonicalImageHref
   const nextTitle = title
+  const settled = isCurrentRefSettled
+  // Invalidate pending decodes immediately when navigation requests another feature.
+  featureRef
 
-  if (!nextSrc) {
-    if (isCurrentRefSettled) {
+  return untrack(() => {
+    if (!settled) {
+      isCanonicalImagePending = Boolean(presentedCanonicalImageSrc)
+      return
+    }
+    if (!nextSrc) {
       presentedCanonicalImageSrc = null
       presentedCanonicalImageHref = nextHref
       presentedCanonicalImageTitle = nextTitle
       isCanonicalImagePending = false
       canonicalImageMeasuredAspectRatio = null
+      return
     }
-    return
-  }
+    if (nextSrc === presentedCanonicalImageSrc) {
+      presentedCanonicalImageHref = nextHref
+      presentedCanonicalImageTitle = nextTitle
+      isCanonicalImagePending = false
+      return
+    }
 
-  if (nextSrc === presentedCanonicalImageSrc) {
-    presentedCanonicalImageHref = nextHref
-    presentedCanonicalImageTitle = nextTitle
-    isCanonicalImagePending = false
-    return
-  }
+    let cancelled = false
+    const image = new Image()
+    isCanonicalImagePending = true
 
-  let cancelled = false
-  const image = new Image()
+    // Keep the last confirmed image and ratio until its replacement is paint-ready;
+    // publish the source and dimensions together to crossfade while the frame resizes.
+    image.onload = async () => {
+      try {
+        await image.decode()
+      } catch {
+        // An already loaded image can still be paintable when decode rejects.
+      }
+      if (cancelled) return
+      handleCanonicalImageLoad({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      })
+      presentedCanonicalImageSrc = nextSrc
+      presentedCanonicalImageHref = nextHref
+      presentedCanonicalImageTitle = nextTitle
+      isCanonicalImagePending = false
+    }
+    image.onerror = () => {
+      if (cancelled) return
+      // Do not leave another feature's photo linked to the current feature on failure.
+      presentedCanonicalImageSrc = null
+      presentedCanonicalImageHref = nextHref
+      presentedCanonicalImageTitle = nextTitle
+      canonicalImageMeasuredAspectRatio = null
+      isCanonicalImagePending = false
+    }
+    image.src = nextSrc
 
-  // Show the resolved image source immediately and keep it in a pending visual
-  // state while the browser finishes loading/measuring the asset.
-  presentedCanonicalImageSrc = nextSrc
-
-  presentedCanonicalImageHref = nextHref
-  presentedCanonicalImageTitle = nextTitle
-  isCanonicalImagePending = true
-
-  image.onload = () => {
-    if (cancelled) return
-
-    isCanonicalImagePending = false
-    handleCanonicalImageLoad({ width: image.naturalWidth, height: image.naturalHeight })
-  }
-
-  image.onerror = () => {
-    if (cancelled) return
-
-    isCanonicalImagePending = false
-  }
-
-  image.src = nextSrc
-
-  return () => {
-    cancelled = true
-  }
+    return () => {
+      cancelled = true
+    }
+  })
 })
 
 /********************
@@ -1546,6 +1715,10 @@ const isCurrentRefSettled = $derived(
  ************/
 
 function onReset(): void {
+  addressLookupRevision += 1
+  isAddressLookupLoading = false
+  addressLookupMessage = ''
+  addressCandidates = []
   suppressFormLevelIssues = true
   const emptyResetValue = toEmptyFeatureFormInput()
   const resetValue = committedFeature?.data
@@ -1569,7 +1742,15 @@ function onReset(): void {
 
 // Serialize non-native feature fields into hidden inputs before remote form submission.
 const programmaticFeatureInputEntries = $derived(
-  getProgrammaticFeatureInputEntries(currentFeatureData),
+  getProgrammaticFeatureInputEntries(currentFeatureData).map(entry => {
+    // Register dynamic paths with the remote form so SvelteKit encodes its form identity.
+    const path = entry.name.replace(/\[(\d+)\]/g, '.$1').split('.')
+    let field: unknown = formCtx.form.fields
+    for (const key of path) field = (field as Record<string, unknown>)[key]
+    return (
+      field as { as: (type: 'hidden', value: string) => Record<string, string> }
+    ).as('hidden', entry.value)
+  }),
 )
 
 function revalidateAfterProgrammaticChange(): void {
@@ -1974,7 +2155,6 @@ $effect(() => {
             isPending={isCanonicalImagePending}
             isCollapsed={isVisualSectionCollapsed}
             emptyText={m.feature__no_canonical_image_yet()}
-            onImageLoad={handleCanonicalImageLoad}
           />
         {/snippet}
       </FormFeatureVisualSection>
@@ -1988,23 +2168,35 @@ $effect(() => {
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
+      navMode="footer"
+      previousAction={buildFacetNavAction('core', 'previous')}
+      nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <div class={FEATURE_EDITOR_CONTENT_PAD_CLASS}>
+      <FormSurface class={FEATURE_EDITOR_CONTENT_PAD_CLASS}>
         <FormI18nSection
-          class={cx(FEATURE_EDITOR_CONTENT_SECTION_CLASS, 'mt-4')}
+          class={FEATURE_EDITOR_CONTENT_SECTION_CLASS}
           {locales}
           onTranslate={onTranslateDescriptorLocale}
           onResetLocale={onResetDescriptorLocale}
           sectionKey="descriptor"
           {isEditing}
         >
+          {#snippet left()}
+            <div class="flex items-center gap-3">
+              <FeatureIcon class="size-6 text-primary" aria-hidden="true" />
+              <div>
+                <h2 class="text-xl font-semibold tracking-tight">
+                  {m.admin__forms_common_descriptors()}
+                </h2>
+                <p class="text-xs text-muted-foreground">
+                  {m.feature__descriptor_subtitle()}
+                </p>
+              </div>
+            </div>
+          {/snippet}
           {#snippet center()}
-            <FormFeatureSectionHeader
-              title={m.admin__forms_common_descriptors()}
-              subtitle={m.feature__descriptor_subtitle()}
-              issues={formLevelIssues}
-            />
+            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
 
           {#snippet children(
@@ -2072,11 +2264,7 @@ $effect(() => {
             onReplaceParent: onReplaceParentLayer,
           }}
         />
-        <FormFacetNav
-          previousAction={buildFacetNavAction('core', 'previous')}
-          nextAction={buildFacetNavAction('core', 'next')}
-        />
-      </div>
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet
@@ -2087,21 +2275,24 @@ $effect(() => {
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
+      navMode="footer"
+      previousAction={buildFacetNavAction('fields', 'previous')}
+      nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormFeatureFields
-        {localeKey}
-        {locales}
-        {nonTranslatableItems}
-        {translatableSpecifierItems}
-        {isEditing}
-        previousAction={buildFacetNavAction('fields', 'previous')}
-        nextAction={buildFacetNavAction('fields', 'next')}
-        onTranslate={onTranslateTranslatableValues}
-        onResetLocale={onResetTranslatableValues}
-        onToggleGenAI={togglePropertyI18nValueGen}
-        onValueChange={updatePropertyI18nValue}
-      />
+      <FormSurface class={FEATURE_EDITOR_CONTENT_PAD_CLASS}>
+        <FormFeatureFields
+          {localeKey}
+          {locales}
+          {nonTranslatableItems}
+          {translatableSpecifierItems}
+          {isEditing}
+          onTranslate={onTranslateTranslatableValues}
+          onResetLocale={onResetTranslatableValues}
+          onToggleGenAI={togglePropertyI18nValueGen}
+          onValueChange={updatePropertyI18nValue}
+        />
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet
@@ -2112,16 +2303,37 @@ $effect(() => {
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
+      navMode="footer"
+      previousAction={buildFacetNavAction('address', 'previous')}
+      nextAction={buildFacetNavAction('address', 'next')}
       attrs={{ 'data-facet-id': 'address' }}
     >
-      <div class={FEATURE_EDITOR_PLACEHOLDER_CLASS}>
-        <p>{m.feature__address_refactor_placeholder()}</p>
-
-        <FormFacetNav
-          previousAction={buildFacetNavAction('address', 'previous')}
-          nextAction={buildFacetNavAction('address', 'next')}
-        />
-      </div>
+      <FormSurface class="pb-12">
+        {#key featureRef}
+          <FormFeatureAddress
+            address={editorAddress}
+            coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
+            {isEditing}
+            isLoading={isAddressLookupLoading}
+            message={addressLookupMessage}
+            candidates={addressCandidates}
+            onSelectCandidate={selectAddressCandidate}
+            onCoordinateChange={handleCoordinateChange}
+            onLookup={lookupFeatureAddress}
+            onChange={updateAddressDraft}
+          >
+            {#snippet map()}
+              <FormMapSection
+                initialCenter={initialMapCenter}
+                coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
+                addressMeta={currentFeatureData.addressMeta ?? null}
+                draggable={isEditing}
+                onCoordinateChange={handleCoordinateChange}
+              />
+            {/snippet}
+          </FormFeatureAddress>
+        {/key}
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet

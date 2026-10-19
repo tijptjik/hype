@@ -1,6 +1,7 @@
 <script lang="ts">
-import { Card } from '#lib/bits/custom/index.js'
+// BITS
 import { SimpleTooltip } from '#lib/bits/core/index.js'
+// TYPES
 import type { LayerPropertyCardBodyProps } from '../layerPropertyCard.types'
 
 let {
@@ -15,28 +16,27 @@ let {
 const IconComponent = $derived(iconComponent)
 </script>
 
-<Card.Body title={name || '-'} class={`bits-form__layer-card-body ${className}`}>
-  {#snippet tags()}
-    <div class="inline-flex items-center gap-2 flex-wrap">
-      {#if IconComponent}
-        <SimpleTooltip disabled={!iconTitle}>
-          {#snippet trigger()}
-            <span
-              class={`bits-form__layer-card-type-icon-wrap bits-form__layer-card-type-icon-wrap--${scopeTone}`}
-            >
-              <IconComponent class="bits-form__layer-card-type-icon" />
-            </span>
-          {/snippet}
-          {iconTitle ?? ''}
-        </SimpleTooltip>
-      {/if}
-      {#if scopeLabel}
-        <span
-          class={`bits-form__layer-card-scope bits-form__layer-card-scope--${scopeTone}`}
-        >
-          {scopeLabel}
-        </span>
-      {/if}
-    </div>
-  {/snippet}
-</Card.Body>
+<div class={`min-w-0 flex-1 ${className}`}>
+  <h3 class="break-words text-[15px] font-semibold leading-5">{name || '-'}</h3>
+  <div class="mt-1.5 flex flex-wrap items-center gap-2">
+    {#if IconComponent}
+      <SimpleTooltip disabled={!iconTitle}>
+        {#snippet trigger()}
+          <span
+            class={`bits-form__layer-card-type-icon-wrap bits-form__layer-card-type-icon-wrap--${scopeTone}`}
+          >
+            <IconComponent class="bits-form__layer-card-type-icon" />
+          </span>
+        {/snippet}
+        {iconTitle ?? ''}
+      </SimpleTooltip>
+    {/if}
+    {#if scopeLabel}
+      <span
+        class={`bits-form__layer-card-scope bits-form__layer-card-scope--${scopeTone}`}
+      >
+        {scopeLabel}
+      </span>
+    {/if}
+  </div>
+</div>

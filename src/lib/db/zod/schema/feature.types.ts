@@ -1,3 +1,4 @@
+import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
 import type { z } from 'zod'
 import type {
   ApplyChangedRelationFieldParams,
@@ -207,6 +208,7 @@ export type UserContributedFeatureProperty = {
 }
 
 export type UserContributedFeature = {
+  addressMeta?: AddressMeta
   organisationId: Id
   projectId: Id
   layerId: Id
@@ -220,6 +222,7 @@ export type UserContributedFeature = {
         description?: string
         displayAddress: string
         displayAddressGen: boolean
+        addressProperties?: AddressProperties
       }
     >
   >

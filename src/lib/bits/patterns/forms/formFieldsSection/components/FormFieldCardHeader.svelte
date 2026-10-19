@@ -81,6 +81,7 @@ const showTranslatableToggle = $derived(
   presentation === 'full' &&
     (property.type === 'specifier' || property.type === 'classifier') &&
     property.component !== 'RangeField' &&
+    property.component !== 'PhoneField' &&
     property.component !== 'ToggleField',
 )
 const inheritedEnabled = $derived(
@@ -96,7 +97,8 @@ const showHeaderActionOverlay = $derived(removeMode || showAddToProjectAction)
 const canCollapse = $derived(presentation === 'full')
 const translatableHint = $derived(m.admin__forms_property_support_localisation())
 const defaultEnabledHint = $derived(
-  isProjectScopedCard
+  // Inherited header cards edit project defaults for layers, regardless of origin.
+  isProjectScopedCard || isInheritedHeaderCard
     ? m.admin__forms_property_default_enabled_in_layers()
     : m.admin__forms_property_default_enabled_in_projects(),
 )

@@ -167,13 +167,13 @@ describe('unpublished preview SQL eligibility', () => {
     const sqlite = new DatabaseSync(':memory:')
     sqlite.exec(`
       CREATE TABLE organisation(id TEXT, isPublished INTEGER, isArchived INTEGER);
-      CREATE TABLE project(id TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT);
+      CREATE TABLE project(id TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, markerStyleCode TEXT);
       CREATE TABLE layer(id TEXT, projectId TEXT, isPublished INTEGER, isArchived INTEGER, isDefaultVisible INTEGER, modifiedAt TEXT, rank INTEGER, metadata TEXT);
       CREATE TABLE feature(id TEXT, layerId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, geometry TEXT);
       CREATE TABLE mapStyles(id TEXT, code TEXT);
       CREATE TABLE projectMapStyles(projectId TEXT, mapStyleId TEXT);
       INSERT INTO organisation VALUES('org',0,0);
-      INSERT INTO project VALUES('draft','org',0,0,'2000-01-01T00:00:00.000Z');
+      INSERT INTO project VALUES('draft','org',0,0,'2000-01-01T00:00:00.000Z','breadline');
       INSERT INTO layer VALUES('draft-layer','draft',0,0,1,'2099-01-01T00:00:00.000Z',1,NULL);
     `)
     const db = drizzle(async (query, params) => ({
@@ -185,9 +185,11 @@ describe('unpublished preview SQL eligibility', () => {
     try {
       expect(await getLayerMapRenderData(db as never, 'draft-layer')).toMatchObject({
         selectedLayerIds: ['draft-layer'],
+        markerStylesByLayerId: [['draft-layer', 'breadline']],
       })
       expect(await getProjectMapRenderData(db as never, 'draft')).toMatchObject({
         selectedLayerIds: ['draft-layer'],
+        markerStylesByLayerId: [['draft-layer', 'breadline']],
       })
       const jobs = await planProjectMapRenderRefreshJobs(
         db as never,

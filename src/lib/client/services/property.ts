@@ -1030,7 +1030,7 @@ export function updateProjectPropertyBase(
           ? ('classifier' as const)
           : ('specifier' as const)
       target.type = inferredType
-      if (value === 'RangeField') {
+      if (value === 'RangeField' || value === 'PhoneField') {
         target.isTranslatable = false
       }
       if (inferredType === 'specifier') {

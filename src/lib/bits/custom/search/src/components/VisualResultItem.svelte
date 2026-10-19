@@ -5,6 +5,7 @@ let {
   title,
   descriminator = null,
   previewImage = null,
+  preview,
   disabled = false,
   disabledMeta = null,
   staggerIndex = 0,
@@ -43,7 +44,9 @@ $effect(() => {
     class="bits-search-result-item__content bits-search-result-item__content--visual"
   >
     <div class={`bits-search-result-item__preview ${previewClass}`}>
-      {#if previewImage && !imageFailed}
+      {#if preview}
+        {@render preview()}
+      {:else if previewImage && !imageFailed}
         <img
           src={previewImage}
           alt={title}

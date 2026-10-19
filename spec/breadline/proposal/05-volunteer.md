@@ -62,3 +62,98 @@ The overlay can be retired once equivalent reference coverage is in the tiles.
 - Preview: `output/playwright/breadline-light.png` (local artifact).
 - Registered in local D1 with all three catalogue locales. Deployment and remote
   catalogue sync follow the existing release process.
+
+## Admin marker choices (Refs #199)
+
+The marker picker offers Photo, Dot, Country chip (`flag`) and Brand status
+(`breadline`). Layers additionally offer Project Default and preview the inherited
+project style. Projects have no User Choice option; an unset project displays Photo.
+Pin is retired from the picker, and saved `pin` values resolve to Photo. Persisted
+`flag` and `breadline` codes remain unchanged by the display-name updates.
+
+## Donor card and marker decision (19 October 2026; Refs #199)
+
+The main specification already defines bakery-card fields and yield/claim marker
+semantics. The dedicated card is Breadline-specific and based on the full-card layout;
+default HYPE cards do not render MTR data. Donor photos are shown in the card and
+must not be used as map markers. Brand badges should remain visible alongside
+shop identity whether or not a brand icon is also used inside the marker.
+
+The initial styling proposal uses a small brand badge and a restrained brand-colour
+header or border accent, leaving operational yield colours and status rings intact.
+Brand assets/colour tokens, contrast and the finished layout remain design acceptance
+work. Pickup times, availability and Claim/Unclaim require date-specific event data;
+do not fabricate these values from static feature properties. The user-facing card
+and marker implementation is separate from the routing-policy change; see below.
+
+
+## Implemented presentation (20 October 2026; Refs #199)
+
+The `breadline` card reuses the full card photo viewer, title, hierarchy and actions.
+Its content adds a text brand badge and restrained accent, address, phone, description
+and verified MTR access up to 1,000 metres. Other card styles still omit MTR.
+`BreadlineRunPresentation` supplies date-specific pickup, amount and Claim/Unclaim;
+the event adapter/backend remains outstanding, so no availability or claim action is
+fabricated when that adapter is absent. Brand badges currently use text, not verified
+commercial logos. Official assets and final colour approval remain open.
+
+Projects and layers can select Photo, Dot, Country chip or Brand status in
+admin Style settings. Layers also offer Project Default; unset projects display
+Photo. Pin and User Choice are not offered. Custom providers are registered in `customMarkers.ts`,
+consume feature data, and return DOM markers without modifying MapLibre. Stored
+configuration selects a provider, never executable code. Country rings read `country`
+labels/ISO codes and support combined countries with bundled MIT-licensed flags.
+Breadline markers never use feature photos. They show brand identity, a neutral ring
+when yield is unknown, operational yield/reported/claimed states when supplied, and
+a distinct destination shape for the canonical drop-off layer. Date filtering and
+live state delivery remain #199 acceptance work. Shared map previews use the same
+saved marker choices.
+
+Migration 0102 adds project marker configuration; 0103 selects the card and marker
+only for the hkfoodworks Breadline project. Neither imports donors or runs. Browser
+checks exercised desktop/mobile cards and the real DOM marker providers; focused
+presentation, migration, authorisation and marker tests cover configuration and
+reconciliation. Full repository typecheck still has unrelated existing errors.
+
+
+## SVG brand treatments (20 October 2026; Refs #199)
+
+Eight standalone 128-unit SVGs are available in `static/brands/breadline/` for review:
+7-Eleven, Maxim’s, arôme, Saint Honore, Yamazaki, Maison Kayser, Peninsula and Garden.
+They share ivory rims and restrained palettes without baking in operational state.
+The requested interpretations use a clean cocoa rose, an olive egg, the app-inspired
+chef outline, centred wheat, the negative Kayser monogram, a favicon-inspired P and
+Garden’s chef. No raster images, external fonts or remote resources are embedded.
+The eight assets were rendered and inspected at 48 px and 32 px. These files are selected by the Brand status renderer through the effective
+feature brand property; the renderer does not query Place storage. Date-specific
+pickup/claim integration is explicitly deferred at the user’s request.
+
+
+The version 03 review extends the family to fourteen SVGs with Childhood’s rocking
+horse, Harlan’s negative H, Fresh Wheat’s diagonal wheat/disc, Nibbles’ bitten loaf,
+Wooloomooloo’s dotted W and Dee Dee’s spiral cat. Yamazaki and Kayser are enlarged
+18% and 20% respectively for balanced visual weight. All new/revised badges were
+rendered at 48 px and 32 px, with no raster/font dependencies. Runtime selection uses the same brand-property contract for stored and inherited values.
+
+
+## Effective brand property contract (Refs #199, #194)
+
+`brandIdentity.ts` maps canonical brand values and reviewed classifier labels to the
+fourteen local SVGs. `customMarkers.ts` reads only the hydrated feature property:
+a direct `value`, a classifier's canonical `propertyValue.value`, or its English label.
+It never guesses identity from a feature title or queries Place/source tables.
+Place inheritance can supply that property transparently. Brand SVGs participate in
+marker invalidation signatures; failures retain a text badge, and drop-offs keep the
+destination shape. Donor photos remain excluded from Brand status markers.
+
+Admin feature-list thumbnails also prefer the resolved brand SVG, using the same
+effective property contract. Features without a recognised brand retain their photo
+or identicon fallback; this display choice does not replace stored feature images.
+
+Until Place inheritance provides brand identity, migration 0106 replaces only the
+generic Independent classifier on eight known imported donors, preserving explicit
+overrides. The import adapter seeds the same canonical values for future imports.
+This bridge is confined to import/data preparation and can be retired independently
+of the renderer. The migration was rehearsed and applied locally: eight assignments,
+eight values, 24 translations and the expected cache revision changed; integrity and
+foreign keys pass. No other feature data or jobs changed; production is untouched.

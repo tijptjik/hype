@@ -73,21 +73,21 @@ const stats = $derived([
           <dd class="break-words">{data.profile.attribution || 'Not provided'}</dd>
         </div>
         {#if data.details}
-          <div>
-            <dt class="text-muted-foreground">Email</dt>
-            <dd class="break-all">{data.details.email || 'Not provided'}</dd>
-          </div>
-          <div>
-            <dt class="text-muted-foreground">Phone</dt>
-            <dd>{data.details.telephone || 'Not provided'}</dd>
-          </div>
+          {#if data.details.email}
+            <div>
+              <dt class="text-muted-foreground">Email</dt>
+              <dd class="break-all">{data.details.email}</dd>
+            </div>
+          {/if}
+          {#if data.details.telephone}
+            <div>
+              <dt class="text-muted-foreground">Phone</dt>
+              <dd>{data.details.telephone}</dd>
+            </div>
+          {/if}
           <div>
             <dt class="text-muted-foreground">Language</dt>
             <dd>{data.details.locale}</dd>
-          </div>
-          <div>
-            <dt class="text-muted-foreground">Email verification</dt>
-            <dd>{data.details.emailVerified ? 'Verified' : 'Unverified'}</dd>
           </div>
           <div>
             <dt class="text-muted-foreground">Account status</dt>

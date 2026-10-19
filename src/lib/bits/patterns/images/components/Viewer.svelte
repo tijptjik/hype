@@ -387,7 +387,7 @@ onDestroy(() => {
       {#if leftRail || centerRail || rightRail}
         <div
           class={cx(
-            'pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-end justify-between gap-3 px-8',
+            'pointer-events-none absolute inset-x-0 bottom-0 z-50 flex items-end justify-between gap-3 px-8',
             railPaddingClass,
           )}
         >

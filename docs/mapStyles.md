@@ -77,3 +77,23 @@ That means a style becomes project-assignable only after both are true:
 
 - It is registered in `REGISTERED_MAP_STYLE_CATALOG`.
 - The relevant `db:sync:map:styles:*` command has been run against the target database.
+
+## Project-only styles
+
+Set `projectCode` on a catalog entry to restrict assignment to that project's code.
+The map service checks the persisted project identity during listing, selection and
+again inside the assignment transaction. Organisation-only queries and new-project
+fallback pickers exclude these styles. They cannot be saved as global theme
+preferences. Layer overrides are available within the owning project, and layer
+saves validate the destination project too.
+This is an application selection rule, not access control for public style JSON.
+
+`noclit26` (NocLit'26) belongs exclusively to `eln`. It uses ten layers: flat
+brick-red land, charcoal streets and lighter charcoal water, with sparse major
+street names from zoom 16. Building footprints, place names, ordinary POIs,
+minor street names, paths and transport decoration are omitted so book covers
+and venue markers provide the detail.
+
+A catalog `bundledPreviewPath` can provide a checked-in preview when the style ships
+with the application. NocLit'26 uses this so its picker card does not depend on a
+separate R2 render upload.

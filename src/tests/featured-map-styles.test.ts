@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
 import {
+  canonicalMapStyleCode,
   FEATURED_MAP_STYLE_KEYS,
   SELECTABLE_MAP_STYLE_CATALOG,
   isMapStyleSelectable,
@@ -8,17 +9,33 @@ import {
 import { buildMapStyle } from '#lib/map/styles/registry.js'
 
 describe('featured map styles', () => {
+  it('keeps old saved keys renderable without offering duplicate choices', () => {
+    for (const [legacy, canonical] of [
+      ['hyper', 'hype-dark'],
+      ['hyperLight', 'hype-light'],
+    ] as const) {
+      expect(buildMapStyle(legacy)).toEqual(buildMapStyle(canonical))
+      expect(canonicalMapStyleCode(legacy)).toBe(canonical)
+      expect(isMapStyleSelectable(legacy)).toBe(false)
+      expect(isMapStyleSelectable(canonical)).toBe(true)
+    }
+  })
   it('presents the six requested choices in order', () => {
     expect(FEATURED_MAP_STYLE_KEYS).toEqual([
-      'hyper',
-      'hyperLight',
+      'hype-dark',
+      'hype-light',
       'breadline-light',
       'breadline-dark',
       'hyperpop',
       'midnight',
     ])
   })
-  for (const key of ['hyper', 'hyperLight', 'breadline-dark', 'midnight'] as const) {
+  for (const key of [
+    'hype-dark',
+    'hype-light',
+    'breadline-dark',
+    'midnight',
+  ] as const) {
     it(`builds valid ${key} styles with and without labels`, () => {
       expect(validateStyleMin(buildMapStyle(key))).toEqual([])
       const unlabelled = buildMapStyle(key, { noLabels: true })
@@ -30,7 +47,7 @@ describe('featured map styles', () => {
       ).toBe(false)
     })
   }
-  it.each(['hyper', 'hyperLight'] as const)('omits all POIs in %s', key => {
+  it.each(['hype-dark', 'hype-light'] as const)('omits all POIs in %s', key => {
     const style = buildMapStyle(key)
     expect(
       style.layers.some(
@@ -39,7 +56,7 @@ describe('featured map styles', () => {
     ).toBe(false)
     expect(style.layers.some(layer => layer.id === 'streets')).toBe(true)
   })
-  it.each(['hyper', 'hyperLight'] as const)(
+  it.each(['hype-dark', 'hype-light'] as const)(
     'uses the selected Etch composition for %s',
     key => {
       const style = buildMapStyle(key)
@@ -54,7 +71,7 @@ describe('featured map styles', () => {
       expect(style.layers.some(layer => layer.id === 'blocks')).toBe(false)
     },
   )
-  it.each(['hyper', 'hyperLight'] as const)(
+  it.each(['hype-dark', 'hype-light'] as const)(
     'reveals building detail at high zoom without enabling POIs in %s',
     key => {
       const style = buildMapStyle(key)

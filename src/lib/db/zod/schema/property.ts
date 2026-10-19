@@ -64,19 +64,28 @@ import { FormBoolean } from '../form'
 const PROPERTY_KEY_IDENTIFIER_REGEX = /^[A-Za-z_$][A-Za-z0-9_$]*$/u
 const RANGE_FIELD_COMPONENT = 'RangeField'
 
-const withRangeFieldBoundsRequirement = <TSchema extends z.ZodTypeAny>(
+const withPropertyFieldRequirements = <TSchema extends z.ZodTypeAny>(
   schema: TSchema,
+  requireRangeBounds = true,
 ): TSchema =>
   schema.superRefine((value: unknown, ctx) => {
     if (!value || typeof value !== 'object') return
 
     const record = value as {
+      isTranslatable?: unknown
       component?: unknown
       min?: unknown
       max?: unknown
     }
 
-    if (record.component !== RANGE_FIELD_COMPONENT) return
+    if (record.component === 'PhoneField' && record.isTranslatable !== false) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['isTranslatable'],
+        message: 'Phone fields must not be translatable',
+      })
+    }
+    if (!requireRangeBounds || record.component !== RANGE_FIELD_COMPONENT) return
 
     if (record.min === undefined || record.min === null) {
       ctx.addIssue({
@@ -98,7 +107,7 @@ const withRangeFieldBoundsRequirement = <TSchema extends z.ZodTypeAny>(
 export const PropertyRecord = createSelectSchema(property)
 export const ProjectPropertyRecord = createSelectSchema(projectProperty)
 
-export const PropertyRecordCreate = withRangeFieldBoundsRequirement(
+export const PropertyRecordCreate = withPropertyFieldRequirements(
   createInsertSchema(property).extend({
     ...getDefaultConstraints(property),
     key: z
@@ -114,19 +123,22 @@ export const PropertyRecordCreate = withRangeFieldBoundsRequirement(
   }),
 )
 
-export const PropertyRecordUpdate = createUpdateSchema(property).extend({
-  ...getDefaultConstraints(property),
-  key: z
-    .string()
-    .regex(PROPERTY_KEY_IDENTIFIER_REGEX, {
-      message: m.admin__validation_key_valid_characters(),
-    })
-    .optional(),
-  type: z.string().min(1),
-  component: z.string().min(1),
-  min: z.coerce.number().int().nullish(),
-  max: z.coerce.number().int().nullish(),
-})
+export const PropertyRecordUpdate = withPropertyFieldRequirements(
+  createUpdateSchema(property).extend({
+    ...getDefaultConstraints(property),
+    key: z
+      .string()
+      .regex(PROPERTY_KEY_IDENTIFIER_REGEX, {
+        message: m.admin__validation_key_valid_characters(),
+      })
+      .optional(),
+    type: z.string().min(1),
+    component: z.string().min(1),
+    min: z.coerce.number().int().nullish(),
+    max: z.coerce.number().int().nullish(),
+  }),
+  false,
+)
 
 export const PropertyValueRecord = createSelectSchema(propertyValue)
 export const PropertyValueRecordCreate = createInsertSchema(propertyValue)
@@ -239,7 +251,7 @@ export const ProjectPropertyValueFormData = z.object({
   i18n: PropertyValueI18nByLocaleFormData.optional(),
 })
 
-export const ProjectPropertyFormData = withRangeFieldBoundsRequirement(
+export const ProjectPropertyFormData = withPropertyFieldRequirements(
   z.object({
     id: z.string().optional(),
     scope: z.enum(['hub', 'organisation', 'project']).default('project'),

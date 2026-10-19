@@ -29,9 +29,10 @@ queue. The current implementation is limited to the [user import](02-user-import
 
 ## Proposed interpretation
 
-- Schedule owners retain the spec's feature/place polymorphism. Place IDs are
-  external to Hype; owner existence must be checked in services. `purpose`
-  distinguishes opening hours from pickup/drop-off hours.
+- Schedule owners retain the spec's feature/place polymorphism. Places are first-class
+  HYPE resources with stable local identities, as defined in
+  [Places and feature inheritance](01-places-features.md). `purpose` distinguishes
+  Place opening hours from Feature pickup/drop-off hours.
 - Store dates and wall-clock times separately in `Asia/Hong_Kong`. A segment with
   `untilDayOffset = 1` ends on the next day. Validate calendar dates and HH:mm
   values in the future writer; SQL checks are not a full calendar validator.
