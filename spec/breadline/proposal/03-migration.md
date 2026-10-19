@@ -363,3 +363,43 @@ Worker typecheck and Wrangler preview dry-run pass; no Worker was deployed.
 
 Final whole-app typecheck reports 14 errors in unrelated map/panel/test and concurrently
 edited geocoding paths; no MTR/phone implementation errors were reported.
+
+
+Breadline's existing `nearest_mtr_station_en`, `nearest_mtr_station_zh` and
+`nearest_mtr_exit` are now used as an independent audit reference (not discarded or
+converted into editable MTR properties). `scripts/breadline/audit-mtr.py` compares them
+with derived data without database writes. The 19 October comparison has 396 station
+matches, 26 differences, 41 missing source stations, two unresolved derived results and
+one out-of-scope high-speed station. Donor 171 agrees on Tai Wai exit D; the exact shop
+location remains approximate. See the graph-error follow-up runbook for the review queue
+and comparison limitations. Dropoffs have no equivalent source station/exit fields.
+
+
+### MTR engine repair verification (19 October 2026; Refs #194 / #213)
+
+The historical `GetTags` blocker is repaired locally by backporting Valhalla #6291,
+which fixes the wrong-tile predecessor-edge read during reverse pedestrian elevator
+costing. The pinned source, regression and graph identity are recorded in
+[the investigation runbook](../../../docs/operations/MTR-Graph-Error-Followup.md).
+The complete rehearsal now has 2,284 ready and 31 explicitly unreachable features;
+local has 2,287 ready and 31 unreachable. Both have zero engine failures and zero
+remaining jobs. Breadline coverage is 483 ready / 2 unreachable out of 485.
+Transactional application preserves unrelated content and passes integrity/foreign
+keys; new/moved-feature refresh and durable outage retry were verified against the
+repaired engine. Source-station/exit differences and physical entrance association
+review remain acceptance work. No production deployment or production data write
+occurred; broad issue acceptance checkboxes remain unchecked.
+
+Browser acceptance also exposed and repaired the compact `portal-band` card's missing
+MTR row. Full and compact cards now share the same field formatter and renderer.
+Four desktop cards, including two previously failing Breadline features, and three
+mobile Breadline cards render station/exit/metres with zero page errors. The targeted
+card/MTR suite has 24 passing tests. These checks do not close broader routing-view,
+source-reference or production acceptance TODOs.
+
+### Donor eligibility policy (Refs #194)
+
+[Donor import policy](donor-import-policy.md) defines exclusions shared by feature
+import planning and MTR review. Donors without recorded runs are excluded regardless
+of `active`; the planner emits per-donor exclusion evidence in its private receipt.
+Earlier local rehearsals still contain these donors and require reconciliation.

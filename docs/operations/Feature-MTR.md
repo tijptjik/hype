@@ -16,12 +16,16 @@ aborts on engine errors. `--allow-partial` explicitly emits successes only, with
 IDs in a private sidecar and unresolved jobs retained. Do not treat a partial plan as
 complete. Apply the feature import before its MTR plan. Data SQL guards source geometry.
 
-Current blocker: the checked release archive and pinned Valhalla 3.8.3 image produce
-`GetTags: offset exceeds size of text list` on some routes. Do not relabel these engine
-errors as unreachable. Repair/rebuild the graph upstream and rerun the backfill with its
-new SHA before claiming full coverage. See the
-[graph-error follow-up instructions](MTR-Graph-Error-Followup.md) for reproduction,
-isolation steps and completion criteria.
+The local engine repair backports Valhalla #6291: reverse pedestrian elevator costs
+must read the predecessor edge from its own graph tile. The staged release is
+`gba-2026-10-01-valhalla-6291`, graph SHA
+`f775900729629bc448586a06a8dfc7b5a73b6d94bcd63ecc2e585b382a35e2b6`.
+The complete rehearsal has 2,284 ready / 31 unreachable; local has 2,287 ready /
+31 unreachable. Both have zero engine failures and no pending jobs after application.
+Breadline is 483 ready / 2 unreachable. Do not relabel engine errors as unreachable.
+Production deployment and broad entrance/association acceptance remain separate.
+See the [graph-error follow-up](MTR-Graph-Error-Followup.md) for root cause, regression
+matrix, immutable artifacts, backup and verification evidence.
 
 Runtime app bindings reuse `ROUTING_SERVICE` and `ROUTING_TOKEN`. The retry Worker is
 `workers/mtr-refresh/wrangler.jsonc`; provision the same environment-specific HYPE routing

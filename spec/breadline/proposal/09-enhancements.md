@@ -180,3 +180,26 @@ canonical SaanSeoi Address identity.
 
 Activation requires SaanSeoi basemap schema `protomaps-v4.1` tiles and the address
 geocoder's `footprint` contract. Source-tagged buildings do not need a geocoder request.
+
+
+### MTR engine repair verification (19 October 2026; Refs #194 / #213)
+
+The historical `GetTags` blocker is repaired locally by backporting Valhalla #6291,
+which fixes the wrong-tile predecessor-edge read during reverse pedestrian elevator
+costing. The pinned source, regression and graph identity are recorded in
+[the investigation runbook](../../../docs/operations/MTR-Graph-Error-Followup.md).
+The complete rehearsal now has 2,284 ready and 31 explicitly unreachable features;
+local has 2,287 ready and 31 unreachable. Both have zero engine failures and zero
+remaining jobs. Breadline coverage is 483 ready / 2 unreachable out of 485.
+Transactional application preserves unrelated content and passes integrity/foreign
+keys; new/moved-feature refresh and durable outage retry were verified against the
+repaired engine. Source-station/exit differences and physical entrance association
+review remain acceptance work. No production deployment or production data write
+occurred; broad issue acceptance checkboxes remain unchecked.
+
+Browser acceptance also exposed and repaired the compact `portal-band` card's missing
+MTR row. Full and compact cards now share the same field formatter and renderer.
+Four desktop cards, including two previously failing Breadline features, and three
+mobile Breadline cards render station/exit/metres with zero page errors. The targeted
+card/MTR suite has 24 passing tests. These checks do not close broader routing-view,
+source-reference or production acceptance TODOs.
