@@ -7,6 +7,7 @@ import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
 // API
 import {
   getFeaturePlace,
+  getFeatureDetachedBrands,
   getFeaturePlaceCandidate,
   linkFeaturePlace,
   relinkFeaturePlace,
@@ -38,6 +39,7 @@ let {
   onBrandEdit,
   reset,
   onResetFields,
+  onUnlink,
 }: {
   featureId: string
   projectId: string
@@ -49,6 +51,7 @@ let {
   onBrandEdit: (edit: PlaceBrandEdit) => void
   reset?: unknown
   onResetFields: (reset: PlaceReset | undefined) => void
+  onUnlink: (expectedRevision: string) => Promise<void>
 } = $props()
 const accepted = $derived(getFeaturePlace({ featureId }))
 let query = $state('')
@@ -60,6 +63,25 @@ let failed = $state(false)
 let searchFailed = $state(false)
 let requestVersion = 0
 let replacementRevision = $state<string | null>(null)
+
+/** Preserve values through the parent-owned unlink command and refresh the regular form. */
+async function unlink(expectedRevision: string): Promise<void> {
+  if (busy || !isEditing || isDirty) return
+  busy = true
+  failed = false
+  try {
+    await onUnlink(expectedRevision)
+    await accepted.refresh()
+    replacementRevision = null
+    selected = null
+    results = null
+    localResults = null
+  } catch {
+    failed = true
+  } finally {
+    busy = false
+  }
+}
 
 /** Search source and project-local Places independently, retaining settled results while loading. */
 async function search(): Promise<void> {
@@ -170,6 +192,12 @@ async function link(): Promise<void> {
                 selected = null
               }}
             />
+            <Button
+              type="button"
+              text={m.feature_place_unlink()}
+              disabled={busy || isDirty}
+              onClick={() => void unlink(association.revision)}
+            />
           {/if}
         </div>
         {#if isEditing}
@@ -185,6 +213,25 @@ async function link(): Promise<void> {
           {isEditing}
           onChange={onBrandEdit}
         />
+      {/if}
+      {#if !association}
+        {#await getFeatureDetachedBrands({ featureId }) then detached}
+          {#if detached}
+            <PlaceBrandEditor
+              association={{
+                revision: detached.revision,
+                brandMode: 'override',
+                effective: { brands: detached.brands },
+              }}
+              canInherit={false}
+              edit={brandEdit}
+              {isEditing}
+              onChange={onBrandEdit}
+            />
+          {/if}
+        {:catch}
+          <p class="text-sm text-error" role="alert">{m.resource_action_failed()}</p>
+        {/await}
       {/if}
       {#if isEditing && (!association || replacementRevision)}
         {#if replacementRevision}

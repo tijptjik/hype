@@ -15,8 +15,12 @@ let {
   edit,
   isEditing,
   onChange,
+  canInherit = true,
 }: {
-  association: AcceptedFeaturePlace
+  association: Pick<AcceptedFeaturePlace, 'revision' | 'brandMode'> & {
+    effective: Pick<AcceptedFeaturePlace['effective'], 'brands'>
+  }
+  canInherit?: boolean
   edit?: unknown
   isEditing: boolean
   onChange: (edit: PlaceBrandEdit) => void
@@ -30,7 +34,7 @@ const brands = $derived(
     : (association.effective.brands ?? []),
 )
 const modes = $derived([
-  { value: 'inherit', label: m.place_brand_inherit() },
+  ...(canInherit ? [{ value: 'inherit', label: m.place_brand_inherit() }] : []),
   { value: 'override', label: m.place_brand_override() },
   { value: 'clear', label: m.place_brand_clear() },
 ])

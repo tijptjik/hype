@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   searchPlaces: vi.fn(),
   createPlace: vi.fn(),
   relinkPlace: vi.fn(),
+  unlinkPlace: vi.fn(),
   linkPlace: vi.fn(),
   authorizeFeatureUpdate: vi.fn(),
   probeProject: vi.fn(),
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   readPolicy: vi.fn(),
   savePolicy: vi.fn(),
   readPlace: vi.fn(),
+  readDetached: vi.fn(),
   context: {
     db: {},
     user: { id: 'u' },
@@ -49,6 +51,9 @@ vi.mock('#lib/db/services/placeCandidate.js', () => ({
   resolvePlaceCandidate: mocks.resolveCandidate,
   searchLocalPlaceCandidates: mocks.searchLocal,
 }))
+vi.mock('#lib/db/services/placeUnlink.js', () => ({
+  unlinkFeaturePlace: mocks.unlinkPlace,
+}))
 vi.mock('#lib/db/services/placeRelink.js', () => ({
   relinkFeaturePlace: mocks.relinkPlace,
 }))
@@ -63,6 +68,9 @@ vi.mock('#lib/db/services/project.js', () => ({
 }))
 vi.mock('#lib/db/services/feature.js', () => ({
   probeFeatureQuery: mocks.probeFeature,
+}))
+vi.mock('#lib/db/services/placeDetached.js', () => ({
+  getDetachedFeatureBrands: mocks.readDetached,
 }))
 vi.mock('#lib/db/services/place.js', () => ({
   getProjectPlaceSettings: mocks.readPolicy,
@@ -80,8 +88,10 @@ import {
   searchFeaturePlaces,
   createLocalPlace,
   relinkFeaturePlace,
+  unlinkFeaturePlace,
   linkFeaturePlace,
   getFeaturePlace,
+  getFeatureDetachedBrands,
   getPlaceUpdatePolicy,
   setPlaceUpdatePolicy,
 } from '#lib/api/place.remote.js'
@@ -370,4 +380,66 @@ it('authorizes reassociation and derives actor/scope while retaining both concur
   await expect(
     relinkFeaturePlace({ ...input, actorId: 'someone-else' } as never),
   ).rejects.toThrow()
+})
+
+describe('detached Feature brand read boundary', () => {
+  it('uses persisted scope and denies unauthorized reads before loading brands', async () => {
+    mocks.authorizeFeature.mockReturnValue({ allowed: false, code: 'DENIED' })
+    await expect(getFeatureDetachedBrands({ featureId: 'f' })).rejects.toMatchObject({
+      status: 403,
+    })
+    expect(mocks.readDetached).not.toHaveBeenCalled()
+    mocks.authorizeFeature.mockReturnValue({ allowed: true })
+    mocks.readDetached.mockResolvedValue({ revision: 'detached', brands: [] })
+    expect(await getFeatureDetachedBrands({ featureId: 'f' })).toEqual({
+      revision: 'detached',
+      brands: [],
+    })
+    expect(mocks.readDetached).toHaveBeenCalledWith(mocks.context.db, 'f', 'p')
+    await expect(
+      getFeatureDetachedBrands({ featureId: 'f', projectId: 'other' } as never),
+    ).rejects.toThrow()
+  })
+})
+
+describe('explicit unlink authorization', () => {
+  const input = {
+    featureId: 'f',
+    expectedFeatureModifiedAt: 'seen',
+    expectedRevision: 'seen-link',
+  }
+  it('requires all inherited-field permissions and derives actor and project', async () => {
+    mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: false, code: 'DENIED' })
+    await expect(unlinkFeaturePlace(input)).rejects.toMatchObject({ status: 403 })
+    expect(mocks.unlinkPlace).not.toHaveBeenCalled()
+    mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: true })
+    mocks.unlinkPlace.mockResolvedValue({ status: 'unlinked', revision: 'detached' })
+    await expect(unlinkFeaturePlace(input)).resolves.toMatchObject({
+      status: 'unlinked',
+    })
+    expect(mocks.authorizeFeatureUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: {
+          i18n: true,
+          properties: true,
+          geometry: true,
+          addressMeta: true,
+        },
+      }),
+    )
+    expect(mocks.unlinkPlace).toHaveBeenCalledWith(mocks.context.db, {
+      ...input,
+      actorId: 'u',
+      projectId: 'p',
+    })
+    await expect(
+      unlinkFeaturePlace({ ...input, projectId: 'other' } as never),
+    ).rejects.toThrow()
+  })
+  it('returns stale conflicts and missing Features explicitly', async () => {
+    mocks.unlinkPlace.mockResolvedValue({ status: 'conflict' })
+    await expect(unlinkFeaturePlace(input)).rejects.toMatchObject({ status: 409 })
+    mocks.probeFeature.mockResolvedValue(null)
+    await expect(unlinkFeaturePlace(input)).rejects.toMatchObject({ status: 404 })
+  })
 })

@@ -1430,6 +1430,7 @@
   "feature_place_project_results": "Project Places",
   "feature_place_source_results": "SaanSeoi Places",
   "feature_place_search_partial": "Some Place search results could not be loaded. Available results are shown.",
+  "feature_place_unlink": "Unlink Place (keep current values)",
   "feature_place_change": "Change Place",
   "feature_place_change_cancel": "Cancel Place change",
   "feature_place_change_confirm": "Use this Place instead",

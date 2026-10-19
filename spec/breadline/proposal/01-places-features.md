@@ -23,9 +23,23 @@ Feature-cascade deletion remains unattributed. Place identities and immutable
 source revisions survive. Initial relinking reads detached brands into its baseline
 before a link trigger removes the detached copy.
 
-The preservation primitive is implemented and tested; it is not yet exposed as a
-remote command or UI action. Detached brand editing and lifecycle authorization
-must be integrated before enabling that action.
+The Feature Place section exposes explicit unlink only while editing a clean form.
+The command authorizes all inherited field groups against persisted Feature ancestry,
+uses the authenticated actor, and rejects stale Feature/association tokens. Its
+response refreshes the Feature, accepted association and detached brand query before
+the editor continues.
+
+Detached brands remain editable through the regular Feature Save/Reset, with replace
+and clear choices but no source-inheritance option. The detached revision and Feature
+timestamp guard one atomic form batch; failures roll back parent, brand and relation
+changes together. Reads use normal Feature visibility and persisted project scope.
+Brand arrays suppress legacy classifier presentation, including when explicitly empty.
+
+Browser rehearsal on an isolated imported donor verified unlink and two successive
+regular-form brand saves with no page errors. Database comparison confirmed unchanged
+source revisions and Feature geometry/address, plus one actor-attributed unlink.
+Screenshot: `output/playwright/place-unlink-editor.png`. The primary local database
+received migration 0112 only; split/import application remains outstanding.
 
 Use HYPE's permanent `place.id`. The nullable `ssId` is the canonical Place ID returned
 by SaanSeoi, not an assumption that the current Overture publisher ID is identical.
@@ -896,6 +910,6 @@ checks confirmed inheritance modes and effective phone/geometry equality with th
 accepted source. Local screenshot: `output/playwright/place-reset-editor.png`.
 Full type-check retains the existing 10 unrelated errors / 19 warnings baseline.
 
-Unlinking, source import/matching and address curation, monthly sync and adoption,
+Source import/matching and address curation, monthly sync and adoption,
 identity lifecycle, and final migration application/acceptance remain unfinished.
 No production mutation or deployment was performed.

@@ -60,7 +60,11 @@ export async function unlinkFeaturePlace(
       .returning({ revision: featurePlaceDetached.revision }),
     db
       .update(feature)
-      .set({ modifiedAt: new Date().toISOString() })
+      .set({
+        modifiedAt: new Date(
+          Math.max(Date.now(), (Date.parse(input.expectedFeatureModifiedAt) || 0) + 1),
+        ).toISOString(),
+      })
       .where(sql`${feature.id}=${input.featureId} AND ${detachedGuard}`),
     db
       .delete(featurePlace)

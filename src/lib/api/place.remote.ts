@@ -18,6 +18,8 @@ import {
   getProjectPlaceSettings,
   saveProjectPlaceSettings,
 } from '#lib/db/services/place.js'
+import { unlinkFeaturePlace as persistFeatureUnlink } from '#lib/db/services/placeUnlink.js'
+import { getDetachedFeatureBrands } from '#lib/db/services/placeDetached.js'
 import { createLocalPlace as persistLocalPlace } from '#lib/db/services/placeLocal.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { relinkFeaturePlace as persistFeatureRelink } from '#lib/db/services/placeRelink.js'
@@ -40,13 +42,14 @@ import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 // ═══════════════════════
 // 1. PROJECT SETTINGS AUTHORIZATION
 // 2. POLICY READ / WRITE
-// 3. ACCEPTED FEATURE PLACE READ
+// 3. ACCEPTED FEATURE PLACE AND DETACHED BRAND READS
 // 4. LOCAL PLACE CREATION
 // 5. INITIAL FEATURE ASSOCIATION
 // 6. SOURCE DISCOVERY
 // 7. CANDIDATE RESOLUTION
 // 8. PRIVATE LOCAL DISCOVERY
 // 9. EXPLICIT REASSOCIATION
+// 10. EXPLICIT UNLINK
 // ---
 
 const projectInput = z.strictObject({ projectId: z.string().min(1) })
@@ -132,6 +135,30 @@ export const getFeaturePlace = guardedQuery(
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
     return getAcceptedFeaturePlace(ctx.db, input.featureId, probe.projectId)
+  },
+)
+
+/**
+ * Read preserved Feature-owned brands through normal Feature visibility checks.
+ * @param input Feature identity.
+ * @returns Detached brands and editor revision, or null when unavailable.
+ * @remarks Authorization precedes the projection read; no source payload is returned.
+ */
+export const getFeatureDetachedBrands = guardedQuery(
+  z.strictObject({ featureId: z.string().min(1) }),
+  async (input, ctx) => {
+    const probe = await probeFeatureQuery(ctx.db, {
+      ref: input.featureId,
+      refKey: 'id',
+    })
+    if (!probe) return null
+    const decision = authorizeFeatureReadForProbe({
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      probe,
+    })
+    if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    return getDetachedFeatureBrands(ctx.db, input.featureId, probe.projectId)
   },
 )
 
@@ -356,6 +383,46 @@ export const relinkFeaturePlace = guardedCommand(
     if (result.status === 'conflict') error(409, 'PLACE_LINK_CHANGED')
     if (result.status === 'place-unavailable') error(404, 'PLACE_NOT_FOUND')
     if (result.status !== 'linked') error(422, 'PLACE_LINK_REVIEW_REQUIRED')
+    return result
+  },
+)
+
+/**
+ * Unlink a persisted Feature without discarding its effective values.
+ * @param input Feature identity and editor concurrency tokens.
+ * @returns Detached revision; stale requests fail without mutation.
+ * @remarks Requires every inherited field permission. Project and actor are server-derived.
+ */
+export const unlinkFeaturePlace = guardedCommand(
+  z.strictObject({
+    featureId: z.string().min(1),
+    expectedFeatureModifiedAt: z.string().min(1),
+    expectedRevision: z.string().min(1),
+  }),
+  async (input, ctx) => {
+    const probe = await probeFeatureQuery(ctx.db, {
+      ref: input.featureId,
+      refKey: 'id',
+    })
+    if (!probe) error(404, 'FEATURE_NOT_FOUND')
+    const decision = authorizeFeatureUpdateForSubmission({
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      resource: probe,
+      submittedData: {
+        i18n: true,
+        properties: true,
+        geometry: true,
+        addressMeta: true,
+      },
+    })
+    if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    const result = await persistFeatureUnlink(ctx.db, {
+      ...input,
+      projectId: probe.projectId,
+      actorId: ctx.user.id,
+    })
+    if (result.status === 'conflict') error(409, 'PLACE_LINK_CHANGED')
     return result
   },
 )

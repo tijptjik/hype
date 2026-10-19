@@ -113,7 +113,11 @@ import {
   FEATURE_EDITOR_ROOT_CLASS,
   getFeatureEditorFacetClass,
 } from './page.styles'
-import { getFeaturePlace } from '#lib/api/place.remote.js'
+import {
+  getFeaturePlace,
+  getFeatureDetachedBrands,
+  unlinkFeaturePlace,
+} from '#lib/api/place.remote.js'
 import FeaturePlaceSection from '#lib/bits/patterns/forms/featurePlace/FeaturePlaceSection.svelte'
 import FormFeatureAddress from '#lib/bits/patterns/forms/formFeatureAddress/FormFeatureAddress.svelte'
 import {
@@ -784,6 +788,7 @@ const configuredFeatureForm = configureForm(() => ({
       if (!isNewFeatureRef) {
         updates.unshift(
           getFeaturePlace({ featureId: featureRef }),
+          getFeatureDetachedBrands({ featureId: featureRef }),
           getFeature({
             ref: featureRef,
             refKey: 'id',
@@ -2366,6 +2371,24 @@ $effect(() => {
               modifiedAt={feature.data.modifiedAt}
               {isEditing}
               {isDirty}
+              onUnlink={async expectedRevision => {
+                const current = feature?.data
+                if (!current || isDirty) return
+                await unlinkFeaturePlace({
+                  featureId: current.id,
+                  expectedFeatureModifiedAt: current.modifiedAt,
+                  expectedRevision,
+                }).updates(
+                  getFeature({
+                    ref: current.id,
+                    refKey: 'id',
+                    meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+                  }),
+                  getFeaturePlace({ featureId: current.id }),
+                  getFeatureDetachedBrands({ featureId: current.id }),
+                )
+                await refreshFeature()
+              }}
               reset={currentFeatureData.placeReset}
               onResetFields={reset =>
                 updateFeatureData(data => ({ ...data, placeReset: reset }))}

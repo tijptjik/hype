@@ -28,6 +28,7 @@ import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
 import { applyUnresolvedFeatureSplit } from '#lib/db/services/placeSplit.js'
 import { planUnresolvedFeatureSplit } from '#lib/places/migrationPlan.js'
+import { getDetachedFeatureBrands } from '#lib/db/services/placeDetached.js'
 import { unlinkFeaturePlace } from '#lib/db/services/placeUnlink.js'
 import { relinkFeaturePlace } from '#lib/db/services/placeRelink.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
@@ -1990,6 +1991,82 @@ describe('explicit Place unlink preservation', () => {
       brands,
     )
     expect(sqlite.prepare('SELECT * FROM featurePlaceDetached').all()).toHaveLength(0)
+  })
+
+  it('saves detached brand edits with the regular form, rejects stale and inherit, and rolls back late failures', async () => {
+    const { db, sqlite, input } = await linked()
+    const { getTableColumns } = await import('drizzle-orm')
+    const { feature, featureI18n } = await import('#lib/db/schema/feature.js')
+    for (const [name, table] of [
+      ['feature', feature],
+      ['featureI18n', featureI18n],
+    ] as const) {
+      const existing = new Set(
+        sqlite
+          .prepare(`PRAGMA table_info(${name})`)
+          .all()
+          .map(row => row.name),
+      )
+      for (const column of Object.values(getTableColumns(table)))
+        if (!existing.has(column.name))
+          sqlite.exec(
+            `ALTER TABLE ${name} ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+          )
+    }
+    const result = await unlinkFeaturePlace(db, input)
+    if (result.status !== 'unlinked') throw new Error('Unlink failed')
+    const updatedAt = (
+      sqlite.prepare('SELECT modifiedAt FROM feature').get() as { modifiedAt: string }
+    ).modifiedAt
+    const edit = {
+      featureId: 'f',
+      projectId: 'p',
+      actorId: 'editor',
+      updatedAt,
+      data: { isVisitable: true },
+      i18n: { en: { title: 'Edited' } },
+      placeBrandEdit: {
+        expectedRevision: result.revision,
+        choice: {
+          mode: 'override' as const,
+          value: [
+            {
+              identifiers: { wikidata: 'Q2' },
+              names: { en: 'Corrected', 'zh-hant': '修正' },
+            },
+          ],
+        },
+      },
+    }
+    expect(await saveLinkedFeatureForm(db, edit)).toEqual({ status: 'unlinked' })
+    expect(
+      await saveUnlinkedFeatureForm(db, {
+        ...edit,
+        placeBrandEdit: { ...edit.placeBrandEdit, expectedRevision: 'stale' },
+      }),
+    ).toBeUndefined()
+    await expect(
+      saveUnlinkedFeatureForm(db, {
+        ...edit,
+        placeBrandEdit: { ...edit.placeBrandEdit, choice: { mode: 'inherit' } },
+      }),
+    ).rejects.toThrow('cannot inherit')
+    const before = await getDetachedFeatureBrands(db, 'f', 'p')
+    sqlite.exec(
+      "CREATE TRIGGER fail_detached_form BEFORE INSERT ON featureI18n BEGIN SELECT RAISE(ABORT,'late failure'); END;",
+    )
+    await expect(saveUnlinkedFeatureForm(db, edit)).rejects.toThrow()
+    expect(await getDetachedFeatureBrands(db, 'f', 'p')).toEqual(before)
+    expect(sqlite.prepare('SELECT modifiedAt FROM feature').get()).toMatchObject({
+      modifiedAt: updatedAt,
+    })
+    sqlite.exec('DROP TRIGGER fail_detached_form')
+    expect(await saveUnlinkedFeatureForm(db, edit)).toBeDefined()
+    const saved = await getDetachedFeatureBrands(db, 'f', 'p')
+    expect(saved?.brands).toEqual(edit.placeBrandEdit.choice.value)
+    expect(saved?.revision).not.toBe(result.revision)
+    expect(await getDetachedFeatureBrands(db, 'f', 'other')).toBeNull()
+    expect(await saveUnlinkedFeatureForm(db, edit)).toBeUndefined()
   })
 
   it('keeps an explicit brand clear empty after unlink and leaves source facts intact', async () => {

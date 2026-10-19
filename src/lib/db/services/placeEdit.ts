@@ -16,6 +16,7 @@ import {
 } from '#lib/places/reset.js'
 // SERVICES
 import { readPlaceResetSources, preparePlacePhoneReset } from './placeReset'
+import { getDetachedFeatureBrands } from './placeDetached'
 import { readFeaturePlaceBaseline } from './placeBaseline'
 import { prepareFeaturePlaceAssociationWrite } from './placeAssociation'
 import { prepareFeaturePlaceRelations } from './placeRelations'
@@ -61,10 +62,20 @@ export async function saveLinkedFeatureForm(
     .from(featurePlace)
     .where(eq(featurePlace.featureId, input.featureId))
     .get()
-  if (!association)
-    return input.placeBrandEdit || input.placeReset
-      ? { status: 'review', reason: 'Inheritance requires a linked Place' }
-      : { status: 'unlinked' }
+  if (!association) {
+    if (input.placeReset || input.placeBrandEdit?.choice.mode === 'inherit')
+      return { status: 'review', reason: 'Inheritance requires a linked Place' }
+    if (input.placeBrandEdit) {
+      const detached = await getDetachedFeatureBrands(
+        db,
+        input.featureId,
+        input.projectId,
+      )
+      if (!detached || detached.revision !== input.placeBrandEdit.expectedRevision)
+        return { status: 'conflict' }
+    }
+    return { status: 'unlinked' }
+  }
   const brandEdit = input.placeBrandEdit
     ? PlaceBrandEditSchema.parse(input.placeBrandEdit)
     : undefined

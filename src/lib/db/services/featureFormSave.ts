@@ -4,10 +4,13 @@ import { and, eq, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
 import { feature } from '../schema/feature'
+import { featurePlaceDetached } from '../schema/place'
 // DOMAIN
+import { PlaceBrandEditSchema, type PlaceBrandEdit } from '#lib/places/brandEdit.js'
 import { equalPlaceValue } from '#lib/places/baseline.js'
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // SERVICES
+import { getDetachedFeatureBrands } from './placeDetached'
 import { prepareFeatureFormRelations } from './placeRelations'
 // TYPES
 import type { Database } from '#lib/types.js'
@@ -84,8 +87,24 @@ export async function saveUnlinkedFeatureForm(
     data: FeatureDBPartial
     i18n: Record<string, FeatureI18nPartial>
     properties?: NewFeatureProperty[]
+    placeBrandEdit?: PlaceBrandEdit
+    actorId?: string
   },
 ): Promise<FeatureDB | undefined> {
+  const brandEdit = input.placeBrandEdit
+    ? PlaceBrandEditSchema.parse(input.placeBrandEdit)
+    : undefined
+  if (brandEdit) {
+    if (brandEdit.choice.mode === 'inherit')
+      throw new Error('Detached brands cannot inherit from a Place')
+    if (!input.actorId) throw new Error('Brand editor actor is required')
+    const detached = await getDetachedFeatureBrands(
+      db,
+      input.featureId,
+      input.projectId,
+    )
+    if (!detached || detached.revision !== brandEdit.expectedRevision) return undefined
+  }
   const before = await db
     .select({ geometry: feature.geometry })
     .from(feature)
@@ -117,6 +136,12 @@ export async function saveUnlinkedFeatureForm(
         eq(feature.id, input.featureId),
         eq(feature.projectId, input.projectId),
         eq(feature.modifiedAt, input.updatedAt),
+        ...(brandEdit
+          ? [
+              sql`EXISTS (SELECT 1 FROM featurePlaceDetached
+          WHERE featureId=${input.featureId} AND revision=${brandEdit.expectedRevision})`,
+            ]
+          : []),
         ...(input.expectedDraftState === undefined
           ? []
           : [eq(feature.isDraft, input.expectedDraftState)]),
@@ -128,6 +153,20 @@ export async function saveUnlinkedFeatureForm(
   // One atomic batch prevents a linker from observing new parent data with old children.
   const result = await db.batch([
     parent,
+    ...(brandEdit
+      ? [
+          db
+            .update(featurePlaceDetached)
+            .set({
+              brands:
+                brandEdit.choice.mode === 'override' ? brandEdit.choice.value : [],
+              revision: crypto.randomUUID(),
+              actorId: input.actorId!,
+            })
+            .where(sql`${featurePlaceDetached.featureId}=${input.featureId}
+      AND ${featurePlaceDetached.revision}=${brandEdit.expectedRevision} AND ${guard}`),
+        ]
+      : []),
     ...prepareFeatureFormRelations(
       db,
       input.featureId,
