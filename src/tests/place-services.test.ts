@@ -28,6 +28,11 @@ import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
 import { applyUnresolvedFeatureSplit } from '#lib/db/services/placeSplit.js'
 import { planUnresolvedFeatureSplit } from '#lib/places/migrationPlan.js'
+import {
+  proposeFeaturePlaceAdoption,
+  readPlaceAdoptionReview,
+  rejectPlaceAdoptionGroup,
+} from '#lib/db/services/placeAdoptionReview.js'
 import { previewFeaturePlaceAdoption } from '#lib/db/services/placeAdoption.js'
 import { getDetachedFeatureBrands } from '#lib/db/services/placeDetached.js'
 import { unlinkFeaturePlace } from '#lib/db/services/placeUnlink.js'
@@ -69,6 +74,7 @@ function setup() {
   sqlite.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0110_feature_place_history.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0112_feature_place_detachment.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0113_place_adoption_review.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => {
       if (args.length > 100) throw new Error('D1 parameter limit exceeded')
@@ -2193,7 +2199,80 @@ describe('persisted Place adoption preview', () => {
     expect(
       (await previewFeaturePlaceAdoption(db, input))?.plan.locationRevisionId,
     ).toBe(next.revisionId)
+    let proposed = await proposeFeaturePlaceAdoption(db, input)
+    expect(proposed?.proposal.policyRevision).toBe(1)
+    expect(proposed?.decisions).toEqual([])
+    if (!proposed) throw new Error('Missing proposal')
+    const originalProposal = proposed
+    await saveProjectPlaceSettings(db, 'p', DEFAULT_PROJECT_PLACE_POLICY, 1)
+    expect((await proposeFeaturePlaceAdoption(db, input))?.proposal.id).toBe(
+      originalProposal.proposal.id,
+    )
+    proposed = await proposeFeaturePlaceAdoption(db, {
+      ...input,
+      reevaluatePending: true,
+    })
+    if (!proposed) throw new Error('Missing refreshed proposal')
+    expect(proposed.proposal.id).not.toBe(originalProposal.proposal.id)
+    expect(proposed.proposal.policyRevision).toBe(2)
+    const rejection = {
+      featureId: 'f',
+      projectId: 'p',
+      proposalId: proposed.proposal.id,
+      fieldGroup: 'location' as const,
+      expectedRevision: association.revision,
+      expectedFeatureModifiedAt: 'original',
+      actorId: 'reviewer',
+      reason: 'Wrong premises',
+    }
+    expect(
+      await rejectPlaceAdoptionGroup(db, { ...rejection, expectedRevision: 'stale' }),
+    ).toBeNull()
+    expect(
+      await rejectPlaceAdoptionGroup(db, { ...rejection, projectId: 'other' }),
+    ).toBeNull()
+    expect(
+      await rejectPlaceAdoptionGroup(db, {
+        ...rejection,
+        proposalId: originalProposal.proposal.id,
+      }),
+    ).toBeNull()
+    expect(await rejectPlaceAdoptionGroup(db, rejection)).toMatchObject({
+      fieldGroup: 'location',
+      action: 'rejected',
+      actorId: 'reviewer',
+      reason: 'Wrong premises',
+    })
+    expect(
+      await rejectPlaceAdoptionGroup(db, { ...rejection, reason: 'Overwrite' }),
+    ).toBeNull()
+    await saveProjectPlaceSettings(db, 'p', DEFAULT_PROJECT_PLACE_POLICY, 2)
+    const replay = await proposeFeaturePlaceAdoption(db, input)
+    expect(replay?.proposal).toEqual(proposed.proposal)
+    expect(
+      (await proposeFeaturePlaceAdoption(db, { ...input, reevaluatePending: true }))
+        ?.proposal,
+    ).toEqual(proposed.proposal)
+    expect(replay?.decisions).toHaveLength(1)
+    expect(replay?.decisions[0].fieldGroup).toBe('location')
+    expect(
+      sqlite.prepare('SELECT count(*) AS n FROM placeAdoptionProposal').get(),
+    ).toEqual({ n: 2 })
+    expect(
+      await readPlaceAdoptionReview(db, { ...rejection, projectId: 'other' }),
+    ).toBeNull()
+    expect(() =>
+      sqlite.exec("UPDATE placeAdoptionDecision SET reason='changed'"),
+    ).toThrow('immutable')
+    expect(() => sqlite.exec('DELETE FROM placeAdoptionProposal')).toThrow('immutable')
+    expect(snapshot()).toEqual(before)
     sqlite.exec("UPDATE place SET sourceAvailability='missing'")
     expect(await previewFeaturePlaceAdoption(db, input)).toBeNull()
+    expect((await proposeFeaturePlaceAdoption(db, input))?.decisions).toHaveLength(1)
+    sqlite.exec("DELETE FROM feature WHERE id='f'")
+    expect(await readPlaceAdoptionReview(db, rejection)).toBeNull()
+    expect(
+      sqlite.prepare('SELECT count(*) AS n FROM placeAdoptionDecision').get(),
+    ).toEqual({ n: 1 })
   })
 })

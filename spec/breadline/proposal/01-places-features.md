@@ -135,8 +135,25 @@ Places. It returns the Feature timestamp, association token, policy revision and
 proposed effective values for the applying workflow. Local sequence checks prevent
 rewinding accepted ingestion revisions, but do not establish upstream publication
 chronology: the sync workflow must select a verified forward publication explicitly.
-Durable proposals/rejections, acceptance/materialization and monthly orchestration
-remain to be connected; preview does not reopen rejected decisions or mutate Features.
+Migration 0113 adds immutable proposal snapshots and separate append-only facts/location
+decisions. Proposals retain the Project policy and revision, Feature timestamp,
+association token, candidate identity and comparison evidence. Repeated sync proposals
+reuse the retained assessment, including its rejection decisions. Explicit
+`reevaluatePending` appends a new assessment only while both groups are undecided;
+it never rewrites evidence or reopens a decision. Superseded assessments cannot be
+rejected through the current decision service. Concurrent inserts and decisions are
+guarded at the database write boundary.
+
+Rejection records the authenticated actor and reason without changing effective values,
+source revisions or association history. Evidence survives Feature deletion, while
+normal reads require the surviving Feature's current authorized Project scope.
+The local schema upgrade passed integrity and foreign-key checks. Persistence tests
+verify retries, explicit pending re-evaluation, policy changes after rejection, stale
+tokens, scope isolation and immutable audit retention.
+
+Atomic acceptance/materialization, remote review authorization/UI, and monthly
+orchestration remain to be connected. Preview and proposal creation do not apply
+source updates or reopen rejected decisions.
 
 ## Replace the address model
 

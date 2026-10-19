@@ -14,6 +14,7 @@ import {
 import { feature } from './feature'
 import { project } from './project'
 // TYPES
+import type { PlaceAdoptionPlan } from '#lib/places/adoption.js'
 import type {
   FeaturePlaceOverrides,
   PlaceFacts,
@@ -195,6 +196,72 @@ export const featurePlaceDetached = sqliteTable(
     check(
       'feature_place_detached_brands_json',
       sql`json_valid(${table.brands}) AND json_type(${table.brands}) = 'array'`,
+    ),
+  ],
+)
+
+/** Immutable assessment, scoped to the Feature's project at proposal time. */
+export const placeAdoptionProposal = sqliteTable(
+  'placeAdoptionProposal',
+  {
+    id: text('id').primaryKey(),
+    featureId: text('featureId').notNull(),
+    projectId: text('projectId').notNull(),
+    placeId: text('placeId').notNull(),
+    candidateRevisionId: text('candidateRevisionId').notNull(),
+    associationRevision: text('associationRevision').notNull(),
+    featureModifiedAt: text('featureModifiedAt').notNull(),
+    policyRevision: integer('policyRevision').notNull(),
+    evidence: text('evidence', { mode: 'json' })
+      .$type<{
+        policy: ProjectPlacePolicy
+        plan: PlaceAdoptionPlan
+      }>()
+      .notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  table => [
+    unique('place_adoption_candidate').on(
+      table.featureId,
+      table.projectId,
+      table.placeId,
+      table.candidateRevisionId,
+      table.associationRevision,
+      table.featureModifiedAt,
+      table.policyRevision,
+    ),
+    index('place_adoption_project').on(table.projectId, table.featureId),
+    check('place_adoption_policy_revision', sql`${table.policyRevision} >= 0`),
+    check('place_adoption_evidence_json', sql`json_valid(${table.evidence})`),
+  ],
+)
+
+/** A field group is pending until an immutable rejection or atomic application is recorded. */
+export const placeAdoptionDecision = sqliteTable(
+  'placeAdoptionDecision',
+  {
+    id: text('id').primaryKey(),
+    proposalId: text('proposalId')
+      .notNull()
+      .references(() => placeAdoptionProposal.id, { onDelete: 'restrict' }),
+    fieldGroup: text('fieldGroup', { enum: ['facts', 'location'] }).notNull(),
+    action: text('action', { enum: ['rejected', 'applied'] }).notNull(),
+    actorId: text('actorId').notNull(),
+    reason: text('reason').notNull(),
+    associationRevision: text('associationRevision').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  table => [
+    unique('place_adoption_group_decision').on(table.proposalId, table.fieldGroup),
+    check('place_adoption_group', sql`${table.fieldGroup} IN ('facts','location')`),
+    check('place_adoption_action', sql`${table.action} IN ('rejected','applied')`),
+    check(
+      'place_adoption_reason',
+      sql`length(trim(${table.reason})) BETWEEN 1 AND 2000`,
     ),
   ],
 )
