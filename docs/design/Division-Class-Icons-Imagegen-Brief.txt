@@ -3,7 +3,7 @@ HYPE — division class icon generation brief
 REFERENCE IMAGES
 Attach rendered copies of static/neighbourhood.svg, static/map.svg,
 static/globe.svg, static/sanPan.svg and static/walkingTours.svg. A rendered
-reference sheet is available at output/playwright/divisions/icon-references.png.
+reference sheet is available at docs/design/division-icons/icon-references.png.
 Use neighbourhood.svg as the primary reference for the new division family.
 The other assets establish the same pale monochrome colour, crisp geometry,
 Hong Kong character and restrained illustrative detail. Do not use the temporary

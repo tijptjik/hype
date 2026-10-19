@@ -11,7 +11,7 @@ Fourteen standalone SVGs, each `viewBox="0 0 128 128"`. All typography is outlin
 - `peninsula.svg`: custom outlined serif P based on the website favicon reference supplied by the user.
 - `garden.svg`: simplified chef mark based on the user-supplied Garden reference, on berry red.
 
-These are app-specific treatments, not official replacement brand masters. Preview and 48/32 px checks: `output/breadline-brand-review/v2/treatments.png`. The Brand status renderer selects these assets from the effective feature `brand` property. Unknown values retain a text badge; drop-offs retain their destination symbol.
+These are app-specific treatments, not official replacement brand masters. Preview and 48/32 px checks: `docs/design/breadline-brand-review/v2/treatments.png`. The Brand status renderer selects these assets from the effective feature `brand` property. Unknown values retain a text badge; drop-offs retain their destination symbol.
 
 
 ## Additional donor treatments (version 03)
@@ -27,4 +27,4 @@ Drawn from references supplied by the user:
 
 Yamazaki’s inner device is enlarged from 1.1× to 1.3× (18%); Kayser’s from 1.46×
 to 1.75× (20%), preserving their centres and the shared outer badge size.
-Latest preview: `output/breadline-brand-review/v3/treatments.png`.
+Latest preview: `docs/design/breadline-brand-review/v3/treatments.png`.
