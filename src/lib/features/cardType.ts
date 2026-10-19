@@ -8,7 +8,7 @@ export type FeatureCardType = (typeof FEATURE_CARD_TYPES)[number]
 /**
  * Resolves a display renderer from persisted hierarchy selections.
  * @param options Project style, optional layer override and localized description.
- * @returns The registered renderer, defaulting to the Full card.
+ * @returns The registered renderer, using Conditional for unset choices.
  * @remarks No project-specific experiments override saved settings.
  */
 export function resolveFeatureCardType(options: {

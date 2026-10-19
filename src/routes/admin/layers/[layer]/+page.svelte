@@ -77,7 +77,7 @@ import {
   formSelectionSectionStyles,
 } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 import FormCardStyleSection from '#lib/bits/patterns/forms/formCardStyleSection/FormCardStyleSection.svelte'
-import { isCardStyleCode } from '#lib/features/cardStyle.js'
+import { isCardStyleCode, DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import type { CardStyleCode } from '#lib/features/cardStyle.js'
 import {
   FormI18nDescriptorFields,
@@ -636,7 +636,7 @@ const inheritedCardStyle = $derived(
   isCardStyleCode(selectedParentProject?.cardStyleCode)
     ? selectedParentProject.cardStyleCode
     : (adminCtx.view.cache.project.get(selectedParentProjectId)?.cardStyleCode ??
-        'full'),
+        DEFAULT_CARD_STYLE),
 )
 
 const hasSelectedParentProject = $derived(selectedParentProjectId.length > 0)

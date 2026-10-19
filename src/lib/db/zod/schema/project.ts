@@ -1,4 +1,4 @@
-import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
+import { CARD_STYLE_CODES, DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import { CompactAncestorsSchema } from './api'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -304,7 +304,7 @@ export const ProjectLayerFormData = z.object({
 })
 
 export const ProjectEntityFormData = z.object({
-  cardStyleCode: z.enum(CARD_STYLE_CODES).default('full'),
+  cardStyleCode: z.enum(CARD_STYLE_CODES).default(DEFAULT_CARD_STYLE),
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })
     .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),

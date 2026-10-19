@@ -5,6 +5,9 @@ import type { FeatureCardType } from './cardType.js'
 export const CARD_STYLE_CODES = ['full', 'no-description', 'conditional'] as const
 export type CardStyleCode = (typeof CARD_STYLE_CODES)[number]
 
+/** Default for new projects and unset presentation choices. */
+export const DEFAULT_CARD_STYLE: CardStyleCode = 'conditional'
+
 /** Shared catalogue for admin previews and public card rendering. */
 export const CARD_STYLE_CATALOG = [
   { code: 'full', cardType: 'standard', preview: '/cardStyles/full.svg' },
@@ -31,14 +34,14 @@ export function isCardStyleCode(value: unknown): value is CardStyleCode {
 
 /**
  * Resolves the effective style with layer-over-project inheritance.
- * @param projectCode Saved project choice; absent values use Full.
+ * @param projectCode Saved project choice; absent values use Conditional.
  * @param layerCode Optional layer override; null/absent values inherit.
- * @returns A supported style code, falling back safely to Full.
+ * @returns A supported style code, falling back safely to Conditional.
  */
 export function resolveCardStyle(
   projectCode?: unknown,
   layerCode?: unknown,
 ): CardStyleCode {
   if (isCardStyleCode(layerCode)) return layerCode
-  return isCardStyleCode(projectCode) ? projectCode : 'full'
+  return isCardStyleCode(projectCode) ? projectCode : DEFAULT_CARD_STYLE
 }

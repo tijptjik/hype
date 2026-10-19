@@ -14,8 +14,11 @@ import { toProjectSubmittedFields } from '#lib/api/services/authz/project.js'
 const projectChoice = ProjectEntityFormData.pick({ cardStyleCode: true })
 
 describe('saved feature card presentation', () => {
-  it('defaults to Full and resolves explicit layer overrides before the project', () => {
-    expect(resolveFeatureCardType({})).toBe('standard')
+  it('defaults to Conditional and resolves explicit layer overrides before the project', () => {
+    expect(resolveFeatureCardType({})).toBe('portal-band')
+    expect(resolveFeatureCardType({ description: 'Available description' })).toBe(
+      'standard',
+    )
     expect(
       resolveFeatureCardType({ project: { cardStyleCode: 'no-description' } }),
     ).toBe('portal-band')
@@ -32,7 +35,7 @@ describe('saved feature card presentation', () => {
       }),
     ).toBe('portal-band')
     expect(resolveFeatureCardType({ project: { cardStyleCode: 'unknown' } })).toBe(
-      'standard',
+      'portal-band',
     )
   })
 
@@ -78,7 +81,7 @@ describe('saved feature card presentation', () => {
   })
 
   it('validates saved choices and resets inheritance without discarding other metadata', () => {
-    expect(projectChoice.parse({}).cardStyleCode).toBe('full')
+    expect(projectChoice.parse({}).cardStyleCode).toBe('conditional')
     expect(projectChoice.safeParse({ cardStyleCode: 'bogus' }).success).toBe(false)
     expect(LayerMetadataSchema.safeParse({ cardStyleCode: 'bogus' }).success).toBe(
       false,
@@ -90,7 +93,7 @@ describe('saved feature card presentation', () => {
         other: 1,
       }),
     ).toEqual({ mapStyleCode: 'neorange', other: 1 })
-    expect(toProjectFormInput().data.cardStyleCode).toBe('full')
+    expect(toProjectFormInput().data.cardStyleCode).toBe('conditional')
     const input = toLayerFormInput({
       metadata: { cardStyleCode: 'no-description', mapStyleCode: null },
     } as unknown as Layer)

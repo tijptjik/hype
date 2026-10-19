@@ -176,8 +176,9 @@ rich-text paragraphs and placeholder dashes count as no content. Both variants r
 Migration `0094_conditional_card_style.sql` adds the Conditional choice without
 changing existing selections. Migration `0093_card_styles.sql` registers the catalogue in `cardStyle` and adds
 `project.cardStyleCode` as a foreign key. Existing projects are initialized to
-`full`; null/absent project choices resolve to Full as well. New project forms
-explicitly save Full. Layer overrides use validated `metadata.cardStyleCode`, like
+`full` by that original migration; existing saved choices are preserved.
+Null/absent project choices now resolve to Conditional, and new project forms
+explicitly save Conditional. Layer overrides use validated `metadata.cardStyleCode`, like
 layer map-style overrides. Clearing an override removes the metadata key and
 inherits the project, without discarding map or other metadata. There is no
 remaining neon-specific selection rule.
@@ -187,7 +188,7 @@ and the same selection primitives as map styles. Project changes pass the existi
 project write policy; layer overrides pass the existing metadata write policy.
 Both use the remote form's optimistic-concurrency, save, reset and validation flow.
 Public project ancestors and layer profiles expose the selected codes so direct
-feature links resolve layer override, project choice, then Full.
+feature links resolve layer override, project choice, then Conditional.
 
 To add a style, add its code/renderer/preview to the catalogue, localized labels to
 the selector, and a migration registering the code in `cardStyle`. Implement a new

@@ -1,4 +1,6 @@
 <script lang="ts">
+// PRESENTATION
+import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 // SVELTE
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
@@ -1756,7 +1758,7 @@ const selectedParentOrganisation = $derived.by(() => {
   return null
 })
 const selectedCardStyle = $derived(
-  formCtx.form.fields.data.cardStyleCode.value() ?? 'full',
+  formCtx.form.fields.data.cardStyleCode.value() ?? DEFAULT_CARD_STYLE,
 )
 
 /**
@@ -1766,7 +1768,7 @@ const selectedCardStyle = $derived(
  */
 function onSelectCardStyle(code: CardStyleCode | null): void {
   updateFormData(projectEntityUpdaterForm, data => {
-    data.cardStyleCode = code ?? 'full'
+    data.cardStyleCode = code ?? DEFAULT_CARD_STYLE
     return data
   })
   revalidateAfterProgrammaticChange()

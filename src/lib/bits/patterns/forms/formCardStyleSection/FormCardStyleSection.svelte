@@ -7,7 +7,11 @@ import SelectionActions from '../formMapStyleSection/components/FormMapStyleSect
 import { formSelectionSearchHeaderStyles } from '../formSurface/formSearchHeader.styles.js'
 import { formSelectionSectionStyles } from '../formSurface/formSurface.styles.js'
 // CATALOGUE
-import { CARD_STYLE_CATALOG, resolveCardStyle } from '#lib/features/cardStyle.js'
+import {
+  CARD_STYLE_CATALOG,
+  DEFAULT_CARD_STYLE,
+  resolveCardStyle,
+} from '#lib/features/cardStyle.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES
@@ -21,9 +25,9 @@ type StyleOption = {
   preview: string
 }
 let {
-  value = 'full',
+  value = DEFAULT_CARD_STYLE,
   allowInherit = false,
-  inheritedValue = 'full',
+  inheritedValue = DEFAULT_CARD_STYLE,
   isEditing = false,
   isSubmitting = false,
   isSubmitRequested = false,
@@ -60,9 +64,12 @@ const options = $derived<StyleOption[]>(
     preview: style.preview,
   })),
 )
+const defaultOption = $derived(
+  options.find(option => option.code === DEFAULT_CARD_STYLE)!,
+)
 const inherited = $derived(
   options.find(option => option.code === resolveCardStyle(inheritedValue)) ??
-    options[0],
+    defaultOption,
 )
 const inheritOption = $derived<StyleOption>({
   id: 'inherit',
@@ -74,10 +81,10 @@ const inheritOption = $derived<StyleOption>({
 const choices = $derived(allowInherit ? [inheritOption, ...options] : options)
 const selected = $derived(
   value
-    ? (options.find(option => option.code === value) ?? options[0])
+    ? (options.find(option => option.code === value) ?? defaultOption)
     : allowInherit
       ? inheritOption
-      : options[0],
+      : defaultOption,
 )
 
 /**

@@ -1,3 +1,5 @@
+// PRESENTATION
+import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import { error } from '@sveltejs/kit'
 import type {
   ProjectProfile,
@@ -772,7 +774,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (data.useAllInOrgContext !== current.useAllInOrgContext) {
     submittedDataBeforeHydration.useAllInOrgContext = data.useAllInOrgContext
   }
-  if (data.cardStyleCode !== (current.cardStyleCode ?? 'full')) {
+  if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataBeforeHydration.cardStyleCode = data.cardStyleCode
   }
   if (meta?.licenseTouched === true) {
@@ -891,7 +893,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (data.useAllInOrgContext !== current.useAllInOrgContext) {
     submittedDataForUpdate.useAllInOrgContext = data.useAllInOrgContext
   }
-  if (data.cardStyleCode !== (current.cardStyleCode ?? 'full')) {
+  if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataForUpdate.cardStyleCode = data.cardStyleCode
   }
   if (licenseChanged) submittedDataForUpdate.license = data.license

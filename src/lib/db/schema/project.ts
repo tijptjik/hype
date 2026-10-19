@@ -48,7 +48,7 @@ export const project = sqliteTable('project', {
     onDelete: 'set null',
     onUpdate: 'cascade',
   }),
-  // Null inherits the application default (Full), including older API clients.
+  // Null inherits the application default (Conditional), including older API clients.
   cardStyleCode: text('cardStyleCode')
     .$type<CardStyleCode>()
     .references(() => cardStyle.code),

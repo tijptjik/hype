@@ -1,3 +1,5 @@
+// PRESENTATION
+import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 // I18N
 import { toLocaleKebab, toFormLocaleRecord } from '#lib/i18n.js'
 // ENUMS
@@ -293,7 +295,7 @@ export function toProjectFormInput(
       data: {
         organisationId: defaults?.organisationId ?? '',
         mapStyleCode: '',
-        cardStyleCode: 'full',
+        cardStyleCode: DEFAULT_CARD_STYLE,
         code: '',
         useAllInOrgContext: false,
         i18n: {
@@ -320,7 +322,7 @@ export function toProjectFormInput(
     data: {
       organisationId: data.organisationId,
       mapStyleCode: data.mapStyle?.code ?? '',
-      cardStyleCode: data.cardStyleCode ?? 'full',
+      cardStyleCode: data.cardStyleCode ?? DEFAULT_CARD_STYLE,
       code: data.code,
       useAllInOrgContext: data.useAllInOrgContext ?? false,
       i18n: {
