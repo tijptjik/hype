@@ -8,6 +8,7 @@ import {
   sqliteTable,
   text,
   unique,
+  uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 // SCHEMA
 import { feature } from './feature'
@@ -119,6 +120,8 @@ export const featurePlace = sqliteTable(
     placeId: text('placeId')
       .notNull()
       .references(() => place.id, { onDelete: 'restrict' }),
+    revision: text('revision').notNull().default('initial'),
+    actorId: text('actorId'),
     factsRevisionId: text('factsRevisionId').notNull(),
     locationRevisionId: text('locationRevisionId').notNull(),
     overrides: text('overrides', { mode: 'json' })
@@ -138,5 +141,40 @@ export const featurePlace = sqliteTable(
       columns: [table.placeId, table.locationRevisionId],
       foreignColumns: [placeRevision.placeId, placeRevision.id],
     }),
+  ],
+)
+
+/** Immutable association evidence survives Feature deletion; actor identities are historical. */
+export const featurePlaceHistory = sqliteTable(
+  'featurePlaceHistory',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    featureId: text('featureId').notNull(),
+    revision: text('revision').notNull(),
+    previousRevision: text('previousRevision'),
+    action: text('action', {
+      enum: ['baseline', 'link', 'update', 'unlink'],
+    }).notNull(),
+    placeId: text('placeId').notNull(),
+    factsRevisionId: text('factsRevisionId').notNull(),
+    locationRevisionId: text('locationRevisionId').notNull(),
+    overrides: text('overrides', { mode: 'json' })
+      .$type<FeaturePlaceOverrides>()
+      .notNull(),
+    actorId: text('actorId'),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  table => [
+    index('feature_place_history_feature').on(table.featureId, table.id),
+    uniqueIndex('feature_place_history_revision')
+      .on(table.featureId, table.revision)
+      .where(sql`${table.action} != 'unlink'`),
+    check(
+      'feature_place_history_action_check',
+      sql`${table.action} IN ('baseline', 'link', 'update', 'unlink')`,
+    ),
+    check('feature_place_history_overrides_json', sql`json_valid(${table.overrides})`),
   ],
 )

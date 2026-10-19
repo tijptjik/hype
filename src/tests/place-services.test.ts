@@ -11,6 +11,7 @@ import {
 import { updateProjectByIdWithConcurrency } from '#lib/db/services/project.js'
 import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
+import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
 import { createLocalPlace } from '#lib/db/services/placeLocal.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
 import { ProjectPlacePolicyFormData } from '#lib/db/zod/schema/project.js'
@@ -32,10 +33,11 @@ function setup() {
     CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
       organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
       cardStyleCode TEXT, useAllInOrgContext INTEGER);
-    CREATE TABLE feature(id TEXT PRIMARY KEY, projectId TEXT, isDraft INTEGER DEFAULT 0);
+    CREATE TABLE feature(id TEXT PRIMARY KEY, projectId TEXT, isDraft INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original');
     INSERT INTO project(id) VALUES ('p'), ('other');
     INSERT INTO feature(id,projectId) VALUES ('f','p');`)
   sqlite.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0110_feature_place_history.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => prepare(query, args),
     raw: async () => {
@@ -163,7 +165,9 @@ describe('accepted Place reads', () => {
         )
     }
     sqlite
-      .prepare('INSERT INTO featurePlace VALUES (?, ?, ?, ?, ?)')
+      .prepare(
+        'INSERT INTO featurePlace(featureId,placeId,factsRevisionId,locationRevisionId,overrides) VALUES (?, ?, ?, ?, ?)',
+      )
       .run(
         'f',
         'place',
@@ -432,5 +436,173 @@ describe('immutable SaanSeoi Place ingestion', () => {
         .prepare("SELECT count(*) AS count FROM place WHERE ssId='other-shop'")
         .get()?.count,
     ).toBe(0)
+  })
+})
+
+describe('conditional association writes and immutable history', () => {
+  it('gates effective writes on the winning token and leaves stale batches unchanged', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(readFileSync('migrations/0109_place_association_scope.sql', 'utf8'))
+    const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      placeId: local.placeId,
+      factsRevisionId: local.revisionId,
+      locationRevisionId: local.revisionId,
+      overrides: {},
+      actorId: 'actor',
+    }
+    const { feature } = await import('#lib/db/schema/feature.js')
+    const { sql } = await import('drizzle-orm')
+    const winner = prepareFeaturePlaceAssociationWrite(db, input)
+    const stale = prepareFeaturePlaceAssociationWrite(db, input)
+    const materialize = (revision: string, modifiedAt: string) =>
+      db
+        .update(feature)
+        .set({ modifiedAt })
+        .where(sql`id = 'f' AND EXISTS
+        (SELECT 1 FROM featurePlace WHERE featureId = 'f' AND revision = ${revision})`)
+        .returning({ id: feature.id })
+    const accepted = await db.batch([
+      winner.query,
+      materialize(winner.revision, 'accepted'),
+    ])
+    expect(accepted[0]).toEqual([{ revision: winner.revision }])
+    expect(accepted[1]).toEqual([{ id: 'f' }])
+    expect(await db.batch([stale.query, materialize(stale.revision, 'stale')])).toEqual(
+      [[], []],
+    )
+    expect(sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='f'").get()).toEqual(
+      { modifiedAt: 'accepted' },
+    )
+    expect(
+      sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get(),
+    ).toEqual({ n: 1 })
+  })
+
+  it('rejects stale saves, retains immutable snapshots and prevents token reuse after unlink', async () => {
+    const { db, sqlite } = setup()
+    const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      placeId: local.placeId,
+      factsRevisionId: local.revisionId,
+      locationRevisionId: local.revisionId,
+      overrides: {},
+      actorId: 'actor',
+    }
+    const [initial] = await db.batch([
+      prepareFeaturePlaceAssociationWrite(db, input).query,
+    ])
+    expect(initial).toHaveLength(1)
+    expect(await prepareFeaturePlaceAssociationWrite(db, input).query).toEqual([])
+    const edit = {
+      ...input,
+      expectedRevision: initial[0].revision,
+      overrides: { phoneNumber: { mode: 'clear' as const } },
+    }
+    const updated = await prepareFeaturePlaceAssociationWrite(db, edit).query
+    expect(updated).toHaveLength(1)
+    expect(await prepareFeaturePlaceAssociationWrite(db, edit).query).toEqual([])
+    sqlite.exec("UPDATE feature SET modifiedAt='later' WHERE id='f'")
+    expect(
+      await prepareFeaturePlaceAssociationWrite(db, {
+        ...edit,
+        expectedRevision: updated[0].revision,
+      }).query,
+    ).toEqual([])
+    const history = sqlite
+      .prepare(
+        'SELECT action, previousRevision, overrides, actorId FROM featurePlaceHistory ORDER BY id',
+      )
+      .all()
+    expect(history).toEqual([
+      { action: 'link', previousRevision: null, overrides: '{}', actorId: 'actor' },
+      {
+        action: 'update',
+        previousRevision: initial[0].revision,
+        overrides: '{"phoneNumber":{"mode":"clear"}}',
+        actorId: 'actor',
+      },
+    ])
+    expect(() =>
+      sqlite.exec("UPDATE featurePlace SET overrides='{}' WHERE featureId='f'"),
+    ).toThrow('new revision')
+    expect(() => sqlite.exec('DELETE FROM featurePlaceHistory')).toThrow('immutable')
+    expect(() =>
+      sqlite.exec("UPDATE featurePlaceHistory SET actorId='someone'"),
+    ).toThrow('immutable')
+    sqlite.exec("DELETE FROM featurePlace WHERE featureId='f'")
+    expect(
+      sqlite
+        .prepare(
+          'SELECT action,actorId FROM featurePlaceHistory ORDER BY id DESC LIMIT 1',
+        )
+        .get(),
+    ).toEqual({ action: 'unlink', actorId: null })
+    expect(() =>
+      sqlite
+        .prepare(`INSERT INTO featurePlace(featureId,placeId,factsRevisionId,locationRevisionId,revision)
+      VALUES ('f',?,?,?,?)`)
+        .run(local.placeId, local.revisionId, local.revisionId, initial[0].revision),
+    ).toThrow()
+    expect(sqlite.prepare('SELECT count(*) AS n FROM featurePlace').get()).toEqual({
+      n: 0,
+    })
+    expect(
+      await prepareFeaturePlaceAssociationWrite(db, {
+        ...input,
+        expectedFeatureModifiedAt: 'later',
+      }).query,
+    ).toHaveLength(1)
+    sqlite.exec("DELETE FROM feature WHERE id='f'")
+    expect(
+      sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get(),
+    ).toEqual({ n: 5 })
+  })
+
+  it('rolls back association and history if the surrounding materialization batch fails', async () => {
+    const { db, sqlite } = setup()
+    const local = await createLocalPlace(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'actor',
+    )
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      placeId: local.placeId,
+      factsRevisionId: local.revisionId,
+      locationRevisionId: local.revisionId,
+      overrides: {},
+      actorId: 'actor',
+    }
+    const { featurePlace } = await import('#lib/db/schema/place.js')
+    await expect(
+      db.batch([
+        prepareFeaturePlaceAssociationWrite(db, input).query,
+        db.insert(featurePlace).values({
+          featureId: 'f',
+          placeId: local.placeId,
+          factsRevisionId: local.revisionId,
+          locationRevisionId: local.revisionId,
+        }),
+      ]),
+    ).rejects.toThrow()
+    expect(sqlite.prepare('SELECT count(*) AS n FROM featurePlace').get()).toEqual({
+      n: 0,
+    })
+    expect(
+      sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get(),
+    ).toEqual({ n: 0 })
   })
 })

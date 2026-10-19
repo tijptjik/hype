@@ -94,6 +94,7 @@ export async function saveProjectPlaceSettings(
 }
 
 export type AcceptedFeaturePlace = {
+  revision: string
   placeId: string
   ssId: string | null
   state: 'linked' | 'unresolved' | 'manual'
@@ -120,6 +121,7 @@ export async function getAcceptedFeaturePlace(
   // Scope private baselines even if an invalid cross-project link was inserted out of band.
   const row = await db
     .select({
+      revision: featurePlace.revision,
       placeId: place.id,
       ssId: place.ssId,
       state: place.state,

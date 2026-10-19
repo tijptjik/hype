@@ -375,3 +375,25 @@ Applied to the fresh local mirror: all four triggers installed, integrity and fo
 keys valid, and bidirectional comparisons of Feature, translation and property rows
 against the production snapshot found no changes. Association commands, concurrency
 history and materialization remain required before linking is exposed to clients.
+
+Migration `0110_feature_place_history.sql` adds association revision tokens and
+append-only snapshots for initial links, updates and removals. History survives
+Feature deletion, prevents token reuse after unlink/relink, and records the actor
+for link/update writes. Deletion evidence intentionally has no actor: a cascade
+must not be attributed to the previous editor. An explicit unlink command still
+needs its own authenticated action evidence.
+
+`prepareFeaturePlaceAssociationWrite` prepares a trusted internal conditional write,
+guarded by persisted project scope, non-draft status, Feature `modifiedAt` and the
+expected association revision. It returns the new token and a batchable query.
+Subsequent materialization statements must require that token to exist; a failed
+compare-and-swap returns no rows and must not update effective Feature values.
+Tests cover that stale-batch invariant, transactional rollback including history,
+immutable evidence and token reuse. Accepted Place reads now expose the concurrency
+token. This primitive is not a client linking command: authorization, persisted
+baseline extraction and full effective-value materialization remain to be connected.
+
+Local application of `0110` passed integrity and FK checks with no Feature,
+translation or property differences from the production snapshot. The focused
+Place/service/remote suites pass 40 tests. The broader type check retains ten
+pre-existing diagnostics outside these changed files; no deployment was performed.
