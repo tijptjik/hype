@@ -4,6 +4,7 @@ import { withRemoteMeta } from './remote-function-mock'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
+  createPlace: vi.fn(),
   probeProject: vi.fn(),
   probeFeature: vi.fn(),
   authorizeProject: vi.fn(),
@@ -26,6 +27,9 @@ vi.mock('#lib/api/server/guarded.js', () => {
       )
   return { guardedQuery: wrap('query'), guardedCommand: wrap('command') }
 })
+vi.mock('#lib/db/services/placeLocal.js', () => ({
+  createLocalPlace: mocks.createPlace,
+}))
 vi.mock('#lib/db/services/project.js', () => ({
   probeProjectQuery: mocks.probeProject,
 }))
@@ -42,6 +46,7 @@ vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeFeatureReadForProbe: mocks.authorizeFeature,
 }))
 import {
+  createLocalPlace,
   getFeaturePlace,
   getPlaceUpdatePolicy,
   setPlaceUpdatePolicy,
@@ -121,4 +126,42 @@ describe('Place remote boundaries', () => {
     expect(await getFeaturePlace({ featureId: 'missing' })).toBeNull()
     expect(mocks.readPlace).not.toHaveBeenCalled()
   })
+})
+
+it('requires project management before local Place creation', async () => {
+  const input = {
+    projectId: 'p',
+    state: 'manual' as const,
+    facts: {
+      names: { en: 'Shop' },
+      phoneNumber: [],
+      brands: [],
+      location: {
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [114, 22] as [number, number],
+        },
+        address: {
+          status: 'unresolved' as const,
+          address2dId: null,
+          address3dId: null,
+          address3dUnitId: null,
+          addressSnapshotId: null,
+          records: {},
+          fallbackDisplay: {},
+        },
+      },
+    },
+  }
+  mocks.authorizeProject.mockReturnValue({ allowed: false })
+  await expect(createLocalPlace(input)).rejects.toMatchObject({ status: 403 })
+  expect(mocks.createPlace).not.toHaveBeenCalled()
+  mocks.authorizeProject.mockReturnValue({ allowed: true })
+  await createLocalPlace(input)
+  expect(mocks.createPlace).toHaveBeenCalledWith(
+    mocks.context.db,
+    'p',
+    expect.objectContaining({ state: 'manual' }),
+    'u',
+  )
 })

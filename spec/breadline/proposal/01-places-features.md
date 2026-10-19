@@ -219,3 +219,19 @@ Shared Place mutation authorization, linking/manual creation, override editing,
 effective-value materialization, phone property array migration, Address dependency
 reads, monthly jobs and the import rebase must land before activating synchronization.
 No source data matching or backfill has been applied by these runtime additions.
+
+### Local Place creation boundary
+
+`createLocalPlace` is an authenticated remote command for project managers. The
+persisted project ancestry is authorized before a private `manual` or `unresolved`
+Place is created. The identity and initial immutable revision are written in one
+atomic batch; failure cannot leave an orphan identity. The baseline retains author,
+project and normalized input provenance with a SHA-256 content hash.
+
+Local input requires a name, valid Point coordinates and valid Hong Kong phone arrays.
+It preserves brand arrays and localized names. Address strings remain unresolved local
+evidence: clients cannot claim canonical address IDs, snapshots or structured records
+through this command. Source-backed address selection requires the later verified
+address read workflow. Creation does not link or rewrite any existing Feature and does
+not write upstream. The manual creation UI and Feature association/override commands
+remain separate work.

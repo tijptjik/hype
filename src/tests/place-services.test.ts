@@ -8,6 +8,8 @@ import {
   getProjectPlaceSettings,
   saveProjectPlaceSettings,
 } from '#lib/db/services/place.js'
+import { createLocalPlace } from '#lib/db/services/placeLocal.js'
+import { LocalPlaceInputSchema } from '#lib/places/local.js'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 import { PlaceFactsSchema } from '#lib/places/validation.js'
 import { authorizeProjectUpdateForSubmission } from '#lib/api/services/authz/index.js'
@@ -46,7 +48,22 @@ function setup() {
       },
     }),
   })
-  return { sqlite, db: drizzle({ prepare } as unknown as D1Database) as Database }
+  const batch = async (statements: ReturnType<typeof prepare>[]) => {
+    sqlite.exec('BEGIN')
+    try {
+      const results = []
+      for (const statement of statements) results.push(await statement.all())
+      sqlite.exec('COMMIT')
+      return results
+    } catch (cause) {
+      sqlite.exec('ROLLBACK')
+      throw cause
+    }
+  }
+  return {
+    sqlite,
+    db: drizzle({ prepare, batch } as unknown as D1Database) as Database,
+  }
 }
 const facts = {
   names: { en: 'Bakery' },
@@ -175,6 +192,75 @@ describe('accepted Place reads', () => {
         location: {
           ...facts.location,
           address: { ...facts.location.address, status: 'resolved', address2dId: 'a' },
+        },
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('local Place creation', () => {
+  it.each(['manual', 'unresolved'] as const)(
+    'creates a private %s identity with immutable provenance',
+    async state => {
+      const { sqlite, db } = setup()
+      const created = await createLocalPlace(
+        db,
+        'p',
+        { state, facts: { ...facts, phoneNumber: ['2345 6789', '91234567'] } },
+        'author',
+      )
+      expect(
+        sqlite
+          .prepare('SELECT state,ownerProjectId,ssId FROM place WHERE id=?')
+          .get(created.placeId),
+      ).toEqual({ state, ownerProjectId: 'p', ssId: null })
+      const revision = sqlite
+        .prepare(
+          'SELECT facts,payload,origin,contentHash FROM placeRevision WHERE id=?',
+        )
+        .get(created.revisionId)
+      if (!revision) throw new Error('Missing local baseline')
+      expect(JSON.parse(revision.facts as string).phoneNumber).toEqual([
+        '+85223456789',
+        '+85291234567',
+      ])
+      expect(JSON.parse(revision.payload as string).actorId).toBe('author')
+      expect(revision.origin).toBe('local')
+      expect(revision.contentHash).toMatch(/^[a-f0-9]{64}$/)
+      expect(
+        sqlite.prepare('SELECT count(*) AS count FROM featurePlace').get()?.count,
+      ).toBe(0)
+    },
+  )
+  it('rolls back the identity if its baseline cannot be stored', async () => {
+    const { sqlite, db } = setup()
+    sqlite.exec(
+      "CREATE TRIGGER fail_baseline BEFORE INSERT ON placeRevision BEGIN SELECT RAISE(ABORT,'test failure'); END",
+    )
+    await expect(
+      createLocalPlace(db, 'p', { state: 'manual', facts }, 'author'),
+    ).rejects.toThrow()
+    expect(sqlite.prepare('SELECT count(*) AS count FROM place').get()?.count).toBe(0)
+  })
+  it('rejects invalid phones and unverified canonical addresses', () => {
+    expect(
+      LocalPlaceInputSchema.safeParse({
+        state: 'manual',
+        facts: { ...facts, phoneNumber: ['bad'] },
+      }).success,
+    ).toBe(false)
+    expect(
+      LocalPlaceInputSchema.safeParse({
+        state: 'manual',
+        facts: {
+          ...facts,
+          location: {
+            ...facts.location,
+            address: {
+              ...facts.location.address,
+              address2dId: 'claimed-source-address',
+            },
+          },
         },
       }).success,
     ).toBe(false)

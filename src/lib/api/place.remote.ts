@@ -17,6 +17,8 @@ import {
   getProjectPlaceSettings,
   saveProjectPlaceSettings,
 } from '#lib/db/services/place.js'
+import { createLocalPlace as persistLocalPlace } from '#lib/db/services/placeLocal.js'
+import { LocalPlaceInputSchema } from '#lib/places/local.js'
 // DOMAIN
 import { ProjectPlacePolicySchema } from '#lib/places/model.js'
 // TYPES
@@ -28,6 +30,7 @@ import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 // 1. PROJECT SETTINGS AUTHORIZATION
 // 2. POLICY READ / WRITE
 // 3. ACCEPTED FEATURE PLACE READ
+// 4. LOCAL PLACE CREATION
 // ---
 
 const projectInput = z.strictObject({ projectId: z.string().min(1) })
@@ -113,5 +116,24 @@ export const getFeaturePlace = guardedQuery(
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
     return getAcceptedFeaturePlace(ctx.db, input.featureId, probe.projectId)
+  },
+)
+
+/**
+ * Create a private Place baseline in a project the caller manages.
+ * @param input Owning project, intentional state and validated local facts.
+ * @returns Stable HYPE identity and immutable initial revision.
+ * @remarks No Feature or upstream SaanSeoi record is changed by creation.
+ */
+export const createLocalPlace = guardedCommand(
+  projectInput.extend(LocalPlaceInputSchema.shape),
+  async (input, ctx) => {
+    await requireProjectPolicyManager(ctx, input.projectId)
+    return persistLocalPlace(
+      ctx.db,
+      input.projectId,
+      { state: input.state, facts: input.facts },
+      ctx.user.id,
+    )
   },
 )
