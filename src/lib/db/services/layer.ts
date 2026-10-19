@@ -12,6 +12,7 @@ import {
 } from '../schema'
 // SERVICES
 import { getLayerHubFilter } from './hub'
+import { assertMapStyleProjectScope } from './map'
 // DB
 import {
   firstOrNull,
@@ -98,12 +99,18 @@ import type { TaskEditorLayerOption } from '#lib/db/zod/schema/task.types.js'
 /**
  * Inserts a new layer row with persisted defaults.
  * Used as the base write primitive for layer creation.
+ * @param db - Database handle.
+ * @param data - New layer including its destination project and presentation.
+ * @returns The persisted layer.
+ * @remarks Project-only map styles must belong to the destination project.
  */
-export const createLayer = async (db: Database, data: LayerDBNew): Promise<LayerDB> =>
-  await insert(db, layer, {
+export const createLayer = async (db: Database, data: LayerDBNew): Promise<LayerDB> => {
+  await assertMapStyleProjectScope(db, data.projectId, data.metadata?.mapStyleCode)
+  return await insert(db, layer, {
     ...data,
     isPublished: data.isPublished ?? false,
   })
+}
 
 /**
  * Creates layer i18n rows from locale-keyed payload.
@@ -585,6 +592,10 @@ export const syncProjectLayerPresentation = async (
 /**
  * Updates a layer with modified-at match for optimistic concurrency control.
  * Used to prevent stale writes in remote form submissions.
+ * @param db - Database handle.
+ * @param params - Layer identity, concurrency version and replacement values.
+ * @returns Updated identity/version, or null for a stale write.
+ * @remarks Project moves validate retained map-style ownership too.
  */
 export const updateLayerByIdWithConcurrency = async (
   db: Database,
@@ -599,6 +610,17 @@ export const updateLayerByIdWithConcurrency = async (
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
+  // Preserve the ownership check when metadata is omitted during a project move.
+  const metadata =
+    params.data.metadata ??
+    (
+      await db
+        .select({ metadata: layer.metadata })
+        .from(layer)
+        .where(eq(layer.id, params.id))
+        .limit(1)
+    )[0]?.metadata
+  await assertMapStyleProjectScope(db, params.data.projectId, metadata?.mapStyleCode)
   const [updated] = await db
     .update(layer)
     .set(params.data)

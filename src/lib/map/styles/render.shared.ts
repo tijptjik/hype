@@ -1,3 +1,5 @@
+// MAP
+import { REGISTERED_MAP_STYLE_CATALOG } from './catalog'
 // HELPERS
 import {
   buildMapRenderObjectKey,
@@ -52,12 +54,13 @@ export const getMapStyleRenderPublicPath = (code: string, hash: string): string 
   `/${getMapStyleRenderObjectKey(code, hash)}`
 
 /**
- * Returns the stable API asset path for a built-in map-style render.
+ * Returns the bundled preview or stable API asset path for a built-in map style.
  *
  * @param code Map style code.
- * @returns Asset route path that streams from local R2 or redirects to the target CDN.
+ * @returns Bundled image path, or an asset route backed by local R2 or the target CDN.
  */
 export const getMapStyleRenderAssetPath = (code: string): string =>
+  REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.key === code)?.bundledPreviewPath ??
   `/api/mapRenders/styles/${code}/asset`
 
 /**
@@ -98,6 +101,10 @@ export const resolveMapStyleRenderUrl = (
   code: string,
   hash: string,
 ): string => {
+  const bundledPreview = REGISTERED_MAP_STYLE_CATALOG.find(
+    entry => entry.key === code,
+  )?.bundledPreviewPath
+  if (bundledPreview) return bundledPreview
   const stage = getMapRenderStage(environment)
 
   if (stage === 'local') {

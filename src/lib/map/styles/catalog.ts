@@ -1,3 +1,4 @@
+import { buildNoclit26Style } from './definitions/noclit26'
 import { buildMidnightStyle } from './definitions/midnight'
 import { buildBreadlineDarkStyle } from './definitions/breadlineDark'
 import { buildBreadlineLightStyle } from './definitions/breadlineLight'
@@ -38,6 +39,7 @@ export type MapStyleCatalogKey =
   | 'breadline-light'
   | 'breadline-dark'
   | 'midnight'
+  | 'noclit26'
   | 'protomaps-light'
   | 'protomaps-dark'
   | 'protomaps-white'
@@ -77,6 +79,8 @@ export type MapStyleCatalogEntry<TCode extends string = string> = Omit<
   register?: boolean
   selectable?: boolean
   default?: boolean
+  bundledPreviewPath?: string
+  projectCode?: string | null
   hubCode?: string | null
   organisationCode?: string | null
   basemapVariant: MapStyleVariant | null
@@ -108,6 +112,16 @@ const PROTOMAPS_FLAVOR_ENTRIES: ReadonlyArray<
 }))
 
 export const MAP_STYLE_CATALOG = [
+  {
+    key: 'noclit26',
+    ...getMapStyleCatalogCopy('noclit26', 'en'),
+    buildStyle: buildNoclit26Style,
+    projectCode: 'eln',
+    bundledPreviewPath: '/mapStylePreviews/noclit26.png',
+    basemapVariant: 'dark',
+    markerTheme: 'dark',
+    showSymbols: true,
+  },
   {
     key: 'hyper',
     name: getMapStyleCatalogCopy('hyper', 'en').name,
@@ -297,3 +311,11 @@ export const isMapStyleSelectable = (key: string): boolean =>
 export const SELECTABLE_MAP_STYLE_CATALOG = REGISTERED_MAP_STYLE_CATALOG.filter(entry =>
   isMapStyleSelectable(entry.key),
 )
+
+/**
+ * Identifies styles that must only be offered through their owning project.
+ * @param key - Built-in or custom map style code.
+ * @returns Whether the catalog restricts the style to a project.
+ */
+export const isProjectOnlyMapStyle = (key: string): boolean =>
+  Boolean(REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.key === key)?.projectCode)

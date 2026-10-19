@@ -420,7 +420,10 @@ export const getProjectMapStylesQuery = guardedQuery(
     }
 
     if (params.projectId) {
-      const probe = await probeProjectQuery(db, { ref: params.projectId, refKey: 'id' })
+      // Admin routes may identify an existing project by its public code.
+      const probe =
+        (await probeProjectQuery(db, { ref: params.projectId, refKey: 'id' })) ??
+        (await probeProjectQuery(db, { ref: params.projectId, refKey: 'code' }))
 
       if (!probe) return { data: [] }
 

@@ -5,6 +5,8 @@ import { drizzle } from 'drizzle-orm/d1'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   createProperties,
+  createLayer,
+  updateLayerByIdWithConcurrency,
   syncProperties,
   updateProperties,
 } from '#lib/db/services/layer.js'
@@ -23,6 +25,7 @@ beforeEach(() => {
   // Include every real selected column so nested hydration runs through Drizzle SQL.
   for (const table of [
     schema.layer,
+    schema.project,
     schema.layerProperty,
     schema.property,
     schema.propertyI18n,
@@ -288,5 +291,39 @@ describe('layer-property replacement integrity', () => {
       },
     ])
     expect(batches).toEqual([1])
+  })
+})
+
+describe('project-scoped layer map styles', () => {
+  it('saves NocLit for eln and rejects carrying it into another project', async () => {
+    sqlite.exec(
+      "INSERT INTO project (id, code) VALUES ('project', 'eln'), ('other-project', 'other')",
+    )
+    const created = await createLayer(db, {
+      id: 'literature',
+      organisationId: 'org',
+      projectId: 'project',
+      metadata: { mapStyleCode: 'noclit26' },
+    } as never)
+    expect(created.metadata?.mapStyleCode).toBe('noclit26')
+    await expect(
+      updateLayerByIdWithConcurrency(db, {
+        id: created.id,
+        updatedAt: created.modifiedAt,
+        data: { organisationId: 'org', projectId: 'other-project' },
+      }),
+    ).rejects.toThrow('unavailable')
+    expect(
+      sqlite.prepare("SELECT projectId FROM layer WHERE id = 'literature'").get()
+        ?.projectId,
+    ).toBe('project')
+    await expect(
+      createLayer(db, {
+        id: 'foreign-literature',
+        organisationId: 'org',
+        projectId: 'other-project',
+        metadata: { mapStyleCode: 'noclit26' },
+      } as never),
+    ).rejects.toThrow('unavailable')
   })
 })

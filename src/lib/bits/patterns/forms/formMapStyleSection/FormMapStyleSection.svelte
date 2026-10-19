@@ -7,6 +7,7 @@ import { MapStyleCard } from '#lib/bits/patterns/cards/mapStyleCard/index.js'
 import {
   isMapStyleSelectable,
   SELECTABLE_MAP_STYLE_CATALOG,
+  isProjectOnlyMapStyle,
 } from '#lib/map/styles/catalog.js'
 import { getMapStyleCatalogI18n } from '#lib/map/styles/i18n.js'
 import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
@@ -37,7 +38,7 @@ let wasSubmitRequested = $state(false)
 let hasAutoOpenedAdding = $state(false)
 
 const fallbackMapStyles = $derived(
-  SELECTABLE_MAP_STYLE_CATALOG.map(
+  SELECTABLE_MAP_STYLE_CATALOG.filter(entry => !isProjectOnlyMapStyle(entry.key)).map(
     (entry): MapStyleSelectionItem => ({
       id: entry.key,
       code: entry.key,

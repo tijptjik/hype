@@ -525,7 +525,9 @@ const layerMapStyleCode = $derived(
   formCtx.form.fields.data.metadata.value()?.mapStyleCode,
 )
 const layerMapStyleOptions = $derived(
-  SELECTABLE_MAP_STYLE_CATALOG.map(entry => ({
+  SELECTABLE_MAP_STYLE_CATALOG.filter(
+    entry => !entry.projectCode || entry.projectCode === selectedParentProject?.code,
+  ).map(entry => ({
     id: entry.key,
     code: entry.key,
     previewImagePath: getMapStyleRenderAssetPath(entry.key),

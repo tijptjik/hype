@@ -1821,11 +1821,14 @@ $effect(() => {
 
 $effect(() => {
   const organisationId = parentOrganisationIdValue
-  const fallbackProject = !organisationId && !isNewProjectRef ? projectRef : ''
-  const nextSignature = organisationId
-    ? `organisation:${organisationId}`
-    : fallbackProject
-      ? `project:${fallbackProject}`
+  // Preserve project scope while the editor hydrates; the API also resolves route codes.
+  const existingProjectId = !isNewProjectRef
+    ? (activeProjectData?.id ?? cachedProjectForRef?.id ?? projectRef)
+    : ''
+  const nextSignature = existingProjectId
+    ? `project:${existingProjectId}:organisation:${organisationId}`
+    : organisationId
+      ? `organisation:${organisationId}`
       : ''
 
   if (!nextSignature) {
@@ -1850,9 +1853,9 @@ $effect(() => {
   untrack(() => {
     void (async () => {
       try {
-        const response = organisationId
-          ? await getProjectMapStyles({ organisationId })
-          : await getProjectMapStyles({ projectId: fallbackProject })
+        const response = existingProjectId
+          ? await getProjectMapStyles({ projectId: existingProjectId })
+          : await getProjectMapStyles({ organisationId })
 
         if (lastMapStyleScopeSignature !== nextSignature) {
           return

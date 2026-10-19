@@ -16,6 +16,20 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('UI and map style synchronization', () => {
+  it('does not persist project-only styles as global preferences', () => {
+    const model = new ThemeModel()
+    model.selectMap('noclit26')
+    expect(model.mapSelected).toBeNull()
+    storage.set('hype-map-style', 'noclit26')
+    storage.set('hype-sync-ui-map-styles', 'false')
+    model.restoreMapPreferences()
+    expect(model.mapSelected).toBeNull()
+    model.updateActiveMapContext('eln', 'noclit26')
+    expect(model.resolvedMapStyle).toBe('noclit26')
+    model.updateActiveMapContext('other', null)
+    expect(model.resolvedMapStyle).not.toBe('noclit26')
+  })
+
   it.each<[ThemeId, string]>([
     ['hype-black', 'hyper'],
     ['hype-dark', 'hyper'],

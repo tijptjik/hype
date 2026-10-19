@@ -998,6 +998,17 @@ describe('project.remote form organisation move authz', () => {
     })
   })
 
+  it('resolves a project code before authorizing its map-style picker', async () => {
+    mockProbeProjectQuery.mockResolvedValueOnce(null)
+    mockAuthorizeProjectReadForProbe.mockReturnValue({ allowed: true })
+    await remote.getProjectMapStyles({ projectId: 'eln' })
+    expect(mockProbeProjectQuery).toHaveBeenCalledWith(expect.anything(), {
+      ref: 'eln',
+      refKey: 'code',
+    })
+    expect(mockAuthorizeProjectReadForProbe).toHaveBeenCalled()
+  })
+
   it('authorizes project map-style reads against the persisted project scope', async () => {
     mockAuthorizeProjectReadForProbe.mockReturnValue({
       allowed: false,
