@@ -112,10 +112,10 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   project: [
     ADMIN_FACETS.core,
-    ADMIN_FACETS.policies,
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.layers,
     ADMIN_FACETS.fields,
+    ADMIN_FACETS.policies,
     ADMIN_FACETS.images,
   ],
   layer: [ADMIN_FACETS.core, ADMIN_FACETS.fields],
