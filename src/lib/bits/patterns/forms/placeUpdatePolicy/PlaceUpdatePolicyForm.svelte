@@ -110,7 +110,20 @@ const coordinateItems = $derived([
     icon={MapPinIcon}
   />
   <div class="flex flex-col gap-6 p-6 pb-24">
-    <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_inactive()}</p>
+    <div class="flex items-start justify-between gap-6">
+      <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_inactive()}</p>
+      {#if isEditing}
+        <Button
+          type="button"
+          color="primary"
+          style="soft"
+          class="self-start"
+          disabled={saving}
+          onClick={save}
+          text={saving ? m.place_policy_saving() : m.place_policy_save()}
+        />
+      {/if}
+    </div>
     <div class="flex max-w-5xl flex-col divide-y divide-[var(--form-control-border)]">
       <div class="grid gap-4 pb-6 md:grid-cols-2 md:gap-8">
         <div>
@@ -186,17 +199,6 @@ const coordinateItems = $derived([
       {/each}
     </div>
     <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_note()}</p>
-    {#if isEditing}
-      <Button
-        type="button"
-        color="primary"
-        style="soft"
-        class="self-start"
-        disabled={saving}
-        onClick={save}
-        text={saving ? m.place_policy_saving() : m.place_policy_save()}
-      />
-    {/if}
     {#if notice}
       <p role="status" class="text-sm">{notice}</p>
     {/if}
