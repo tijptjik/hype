@@ -353,19 +353,20 @@ export function getHubFromDomain(
         locale: 'en',
         name: 'HYPE.HK',
         nameShort: 'HYPE',
-        description: 'Beautiful Hong Kong',
+        description:
+          'Find your Hong Kong. Hidden gems, local stories, and places worth sharing.',
       },
       zhHant: {
         locale: 'zh-hant',
         name: 'HYPE.HK',
         nameShort: 'HYPE',
-        description: '美丽的香港',
+        description: '發現屬於你的香港。隱世好去處、地道故事，還有值得分享的地方。',
       },
       zhHans: {
         locale: 'zh-hans',
         name: 'HYPE.HK',
         nameShort: 'HYPE',
-        description: '美丽的香港',
+        description: '发现属于你的香港。小众好去处、地道故事，还有值得分享的地方。',
       },
     },
   }

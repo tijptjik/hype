@@ -363,9 +363,9 @@ let title = $state(page.data.title)
 let site_name = $state(page.data.site_name)
 let site_description = $state(page.data.site_description)
 let socialImage = {
-  image: '/favicon.png',
-  width: '200',
-  height: '200',
+  image: '/social/hype-logo-v1.png',
+  width: '512',
+  height: '512',
 }
 
 watch(
