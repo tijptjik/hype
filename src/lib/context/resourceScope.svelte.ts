@@ -418,6 +418,29 @@ export class ResourceScope {
 
   // PRISM RELATIONS
 
+  /**
+   * Reorders active layers without changing visibility, filters or feature selection.
+   * @param id - Active layer being moved.
+   * @param destination - Final zero-based position among all active layers.
+   * @returns Nothing; invalid or unchanged moves leave the order intact.
+   * @remarks The first active layer owns the basemap. Reordering needs no data refresh.
+   */
+  moveLayer = (id: Id, destination: number): void => {
+    const ids = [...this.prisms.layer]
+    const from = ids.indexOf(id)
+    if (
+      from < 0 ||
+      !Number.isInteger(destination) ||
+      destination < 0 ||
+      destination >= ids.length ||
+      destination === from
+    )
+      return
+    ids.splice(from, 1)
+    ids.splice(destination, 0, id)
+    this.prisms.layer = ids
+  }
+
   getPrism = (resource: FirstClassResource): Id[] => {
     return this.prisms[resource as keyof Prisms]
   }

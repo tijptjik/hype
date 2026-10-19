@@ -16,6 +16,7 @@ import type { AppCtx } from '#lib/context/app.svelte.js'
 //
 // 1. STYLE RESOLUTION
 //    - getActiveMapStyleCode(appCtx: AppCtx): string | null
+//    - getActiveMapStyleIdentity(appCtx: AppCtx): string
 //
 // 2. MAP PREVIEW ACTIONS
 //    - createMapRenderTitleMenuItem(...)
@@ -24,10 +25,11 @@ import type { AppCtx } from '#lib/context/app.svelte.js'
 // ═══════════════════════
 
 /**
- * Resolves the currently active map-style code from the active resource context.
+ * Resolves the map-style code from the ordered active layers and hierarchy scope.
  *
  * @param appCtx - Shared application context containing active resource state.
  * @returns Layer/project style, or `null` when the resource follows User Preference.
+ * @remarks Feature navigation never changes the basemap; the first active layer wins.
  */
 export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   const activeResourceType = appCtx.navigation.getActiveResourceType()
@@ -35,7 +37,6 @@ export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   // Pinned resources may be outside the current list page but remain in the cache.
   const projects = appCtx.view.cache.project
   const layers = appCtx.view.cache.layer
-  const features = appCtx.view.cache.feature
 
   /**
    * Resolves a layer override before legacy project inheritance.
@@ -75,19 +76,25 @@ export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
     return projects.get(activeResourceId)?.mapStyle?.code ?? null
   }
 
-  if (activeResourceType === 'feature' && activeResourceId) {
-    const activeFeature = features.get(activeResourceId)
-    if (activeFeature) {
-      const activeLayer = activeFeature.layerId
-        ? layers.get(activeFeature.layerId)
-        : undefined
-      return activeLayer
-        ? layerStyle(activeLayer)
-        : (projects.get(activeFeature.projectId)?.mapStyle?.code ?? null)
-    }
-  }
-
   return null
+}
+
+/**
+ * Identifies the basemap-owning selection without including marker/card navigation.
+ * @param appCtx - Public map context with ordered active layers and hierarchy scope.
+ * @returns Stable identity until the leading layer or fallback hierarchy changes.
+ */
+export function getActiveMapStyleIdentity(appCtx: AppCtx): string {
+  const layerId = appCtx.view.scope.prisms.layer[0]
+  if (layerId) return JSON.stringify(['layer', layerId])
+  const projectId = appCtx.view.scope.prisms.project[0]
+  if (projectId) return JSON.stringify(['project', projectId])
+  const type = appCtx.navigation.getActiveResourceType()
+  return JSON.stringify(
+    type === 'layer' || type === 'project'
+      ? [type, appCtx.navigation.getActiveResourceId()]
+      : [],
+  )
 }
 
 type MapRenderKind = 'projects' | 'layers'

@@ -40,7 +40,10 @@ import { setOmniCtx } from '#lib/context/omni.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
 // SERVICES
-import { getActiveMapStyleCode } from '#lib/client/services/map.js'
+import {
+  getActiveMapStyleCode,
+  getActiveMapStyleIdentity,
+} from '#lib/client/services/map.js'
 import MapCanvas from '#lib/bits/patterns/maps/MapCanvas.svelte'
 import Filters from '#lib/bits/patterns/filtersPanel/FiltersPanel.svelte'
 import { ResourcePanel } from '#lib/bits/patterns/resourcePanel/index.js'
@@ -281,12 +284,7 @@ beforeNavigate(({ from, to, shallow }) => {
 })
 
 const activeMapStyleContext = $derived.by(() => ({
-  identity: JSON.stringify([
-    appCtx.view.scope.prisms.project,
-    appCtx.view.scope.prisms.layer,
-    appCtx.navigation.getActiveResourceType(),
-    appCtx.navigation.getActiveResourceId(),
-  ]),
+  identity: getActiveMapStyleIdentity(appCtx),
   style: getActiveMapStyleCode(appCtx),
 }))
 $effect(() => {

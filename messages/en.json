@@ -1293,5 +1293,6 @@
   "theme_name_milque": "Milque",
   "theme_name_rye": "Rye",
   "theme_ui_title": "Interface",
-  "admin__project_same_as_organisation": "Same as Organisation"
+  "admin__project_same_as_organisation": "Same as Organisation",
+  "panel__reorder_layer": "Reorder {name}. Drag or use Up and Down arrow keys. The top layer sets the map style."
 }

@@ -47,6 +47,22 @@ function setup() {
 }
 
 describe('resource scope', () => {
+  it('reorders active layers without changing filters or triggering dependent refreshes', () => {
+    const { scope, calls } = setup()
+    scope.prisms = { organisation: ['o'], project: ['p'], layer: ['a', 'b', 'c'] }
+    scope.moveLayer('c', 0)
+    expect(scope.prisms).toEqual({
+      organisation: ['o'],
+      project: ['p'],
+      layer: ['c', 'a', 'b'],
+    })
+    scope.moveLayer('c', 2)
+    expect(scope.prisms.layer).toEqual(['a', 'b', 'c'])
+    for (const destination of [-1, 3, 0.5, NaN]) scope.moveLayer('a', destination)
+    scope.moveLayer('missing', 0)
+    expect(scope.prisms.layer).toEqual(['a', 'b', 'c'])
+    expect(calls).toEqual([])
+  })
   it('removes cached descendants even when they are absent from the loaded page', async () => {
     const { scope, calls, dependencies } = setup()
     scope.prisms = {
