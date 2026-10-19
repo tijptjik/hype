@@ -42,7 +42,7 @@ The first unseen detailed query, or the first query after a relevant change, sti
 
 ## Populate existing features
 
-The production-to-local mirror workflow now performs this through `bun run db:mirror:post:local`, together with local migrations, map-style synchronization and agent-user initialization. Run that post-command directly to repair an existing local mirror without resetting it. The automatic local backfill remains until production mirrors include populated H3 cells. Preparation fails if pending point geometries remain after its bounded backfill.
+Spatial backfill is a one-off rollout or recovery operation, not a deployment step. Production mirrors now include populated H3 cells. `bun run db:mirror:post:local` validates that no point indexes are missing, prepares divisions and initializes agent users without rebuilding spatial indexes. If validation fails, inspect the affected geometry and run the manual repair command below before repeating mirror preparation.
 
 For a manual bounded backfill, apply pending migrations (0078 through 0081), then run:
 
@@ -62,7 +62,7 @@ bun run feature:spatial:backfill --remote --stage preview --batch-size 100 --max
 
 Use `hype-db-prod`/`--env production` and `--stage production` for production. Remote indexing is never triggered by application startup. Complete the H3 backfill before directing map traffic to spatial queries; features without indexed memberships are not spatial query candidates.
 
-Deploy in this order: apply the migrations, complete and verify the H3 backfill, then enable the application revision that issues spatial queries. Migration 0081 drops the legacy gram table and populates its FTS/neighbourhood indexes without updating source translations. It upgrades databases that already applied the earlier version of 0079; fresh databases no longer create the gram table. The old search application revision requires the removed gram table, so coordinate this migration with the new application revision instead of serving old search code after it runs. The backfill reports remaining pending rows; require zero valid pending point geometries before rollout. The implementation was verified against local D1 only; remote migrations, backfill and application deployment are separate rollout actions.
+Deploy in this order: apply the migrations, complete and verify the H3 backfill, then enable the application revision that issues spatial queries. Migration 0081 drops the legacy gram table and populates its FTS/neighbourhood indexes without updating source translations. It upgrades databases that already applied the earlier version of 0079; fresh databases no longer create the gram table. The old search application revision requires the removed gram table, so coordinate this migration with the new application revision instead of serving old search code after it runs. The backfill reports remaining pending rows; require zero valid pending point geometries before rollout. For one-off repairs, add `--require-complete` to verify all pending point geometries, including rows before a resume cursor, and fail on skipped points or an exhausted batch budget. Neither CI deployments nor local mirror preparation automatically invoke the backfill.
 
 ## Search index maintenance
 
@@ -77,3 +77,21 @@ Each update checks the raw geometry snapshot and that its index is still missing
 ## Repair after manual geometry changes
 
 Application writes keep membership current. A raw SQL geometry edit that omits a matching `spatialIndex` removes its old membership and sets its index to NULL, so a feature cannot continue appearing at its old location. Run the same backfill command to repair these rows. A failed batch can be retried safely because writes are conditional and trigger work is atomic.
+
+
+## Production map recovery (2026-10-19)
+
+Production had 1,830 point features with missing H3 indexes after migrations were applied without the local preparation step. The guarded remote backfill populated all 1,830 features and 23,790 spatial memberships (13 per feature), with no skipped points or remaining pending indexes. The subsequent `--remote --stage production --require-complete` check completed without writes.
+
+The division facet query also failed with `D1_ERROR: out of memory: SQLITE_NOMEM`. Joining division definitions before grouping carried large polygon attributes through the membership sorter. Facet counts now group only feature/division identities in a subquery before joining definitions and localized labels. This preserves authorized filters and exact counts while keeping polygon payloads out of the grouping operation. A SQLite regression check verifies the separate grouped query plan and facet metadata with a large polygon fixture.
+
+Deployed application version `a97f7c8f-c12c-4b13-9b72-28145be5f86a`. A fresh production browser at `https://hype.hk/?panel=filters` returned 602 matching public features, 98 division facets, and viewport pages of 100 features; the screenshot confirmed rendered markers and populated filters. Worker tail showed no errors for the observed new-version requests. Focused spatial, count, query and readiness suites passed 121 tests; the production build passed.
+
+
+Preview was checked separately before retiring the automatic steps: all 1,811 features lacked spatial indexes. Its explicit one-off repair populated 23,543 memberships with no skipped points and passed the global completeness check.
+
+## Ongoing feature lifecycle
+
+Application creation and optimistic geometry updates calculate H3 membership in the same write as geometry; database triggers materialize 13 resolution rows. Feature creation queues division resolution. Geometry changes immediately remove old division memberships and queue a new generation. The scheduled division worker processes up to ten jobs every five minutes, with retries and monthly discovery of SaanSeoi releases; backlog and release scanning can delay completion. It resolves against the pinned applied or target release. These paths do not depend on backfills or application deployments.
+
+The service-level regression test exercises actual creation, spatial materialization, scheduled division resolution, movement and stale-write rejection against SQLite with the production migrations. Manual repair commands remain available for raw SQL imports and restores that bypass the application write helpers.

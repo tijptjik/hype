@@ -21,8 +21,8 @@ type FeatureSpatialBackfillOptions = {
   maxBatches: number
   afterId: string
   dryRun: boolean
+  requireComplete: boolean
 }
-
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -75,6 +75,7 @@ export function parseFeatureSpatialBackfillOptions(
     '--max-batches',
     '--after-id',
     '--dry-run',
+    '--require-complete',
   ])
   for (const arg of args)
     if (arg.startsWith('--') && !known.has(arg))
@@ -104,6 +105,7 @@ export function parseFeatureSpatialBackfillOptions(
       .parse(value('--max-batches', '20')),
     afterId: value('--after-id', ''),
     dryRun: args.includes('--dry-run'),
+    requireComplete: args.includes('--require-complete'),
   }
 }
 
@@ -178,7 +180,8 @@ async function executeSql(
  * Processes a bounded number of missing spatial-index pages and prints resume state.
  * @param options Validated target and execution limits.
  * @returns Resolves after exhaustion or the configured work budget.
- * @remarks Re-running without --after-id is safe: indexed rows leave the pending
+ * @remarks --require-complete fails deployment on remaining points or exhausted work.
+ * Re-running without --after-id is safe: indexed rows leave the pending
  * index. Use --after-id from progress output to skip invalid rows within a run.
  * Apply migration 0078 before this script. Remote migrations/backfills are explicit
  * operator actions and are never invoked by application startup.
@@ -201,6 +204,17 @@ export async function runFeatureSpatialBackfill(
       .array(pendingRow)
       .parse(result[0]?.results ?? [])
     if (rows.length === 0) {
+      // Deployment readiness is global: a resume cursor must not hide skipped points.
+      if (options.requireComplete) {
+        const readiness = await executeSql(
+          options,
+          "SELECT count(*) AS pending FROM feature WHERE spatialIndex IS NULL AND json_extract(geometry, '$.type') = 'Point'",
+        )
+        if (Number(readiness[0]?.results[0]?.pending ?? NaN) !== 0)
+          throw new Error(
+            'Spatial preparation incomplete: point features still lack indexes',
+          )
+      }
       console.log(
         JSON.stringify({
           complete: true,
@@ -244,6 +258,10 @@ export async function runFeatureSpatialBackfill(
       resume: ['--after-id', afterId],
     }),
   )
+  if (options.requireComplete)
+    throw new Error(
+      'Spatial preparation exhausted its batch budget; resume before deployment',
+    )
 }
 
 if (import.meta.main)
