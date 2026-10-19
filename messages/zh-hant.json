@@ -1418,5 +1418,13 @@
   "feature_place_save_first": "請先儲存或捨棄圖徵變更，再建立關聯。",
   "feature_place_link": "關聯此地點",
   "feature_place_unlinked": "尚未關聯地點。",
-  "feature_place_failed": "無法載入或關聯此地點。請重新整理後再試。"
+  "feature_place_failed": "無法載入或關聯此地點。請重新整理後再試。",
+  "feature_place_create_local": "建立本地地點",
+  "feature_place_unresolved_kind": "待配對 — 日後與 SaanSeoi 配對",
+  "feature_place_manual_kind": "手動 — 保持獨立於 SaanSeoi",
+  "feature_place_kind": "來源設定",
+  "feature_place_local_description": "建立此專案專用的地點。如可能有 SaanSeoi 對應記錄，請選待配對；如需獨立地點，請選手動。建立後須確認預覽才會關聯。",
+  "feature_place_local_address": "地址文字（選填）",
+  "feature_place_local_coordinates": "使用已儲存圖徵的位置：",
+  "feature_place_create_preview": "建立並預覽"
 }

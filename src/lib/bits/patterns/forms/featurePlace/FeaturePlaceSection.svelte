@@ -11,17 +11,26 @@ import {
   linkFeaturePlace,
   searchFeaturePlaces,
 } from '#lib/api/place.remote.js'
+// COMPONENTS
+import CreateLocalPlace from './CreateLocalPlace.svelte'
 // TYPES
 import type { PlaceSearchCandidate } from '#lib/places/sourceClient.js'
-import type { PlaceCandidateResolution } from '#lib/db/services/placeCandidate.js'
+import type { PlaceFacts } from '#lib/places/model.js'
+type Selection =
+  | { status: 'source-import-needed' }
+  | { status: 'ready'; placeId: string; revisionId: string; facts: PlaceFacts }
 
 let {
   featureId,
+  projectId,
+  coordinates,
   modifiedAt,
   isEditing,
   isDirty,
 }: {
   featureId: string
+  projectId: string
+  coordinates: number[]
   modifiedAt: string
   isEditing: boolean
   isDirty: boolean
@@ -29,7 +38,7 @@ let {
 const accepted = $derived(getFeaturePlace({ featureId }))
 let query = $state('')
 let results = $state<PlaceSearchCandidate[] | null>(null)
-let selected = $state<PlaceCandidateResolution | null>(null)
+let selected = $state<Selection | null>(null)
 let busy = $state(false)
 let failed = $state(false)
 let requestVersion = 0
@@ -110,6 +119,13 @@ async function link(): Promise<void> {
             {Object.values(association.effective.names).join(' · ')}
           </p>
           <p class="text-sm text-muted-foreground">{m.feature_place_linked()}</p>
+          {#if association.state !== 'linked'}
+            <p class="text-sm text-muted-foreground">
+              {association.state === 'manual'
+                ? m.feature_place_manual_kind()
+                : m.feature_place_unresolved_kind()}
+            </p>
+          {/if}
         </div>
       {:else if isEditing}
         <div class="flex items-end gap-3">
@@ -196,6 +212,18 @@ async function link(): Promise<void> {
             />
           </div>
         {/if}
+        {#if isDirty && selected?.status !== 'ready'}
+          <p class="text-sm text-muted-foreground">{m.feature_place_save_first()}</p>
+        {/if}
+        <CreateLocalPlace
+          {projectId}
+          {coordinates}
+          disabled={busy || isDirty}
+          onCreated={value => {
+            selected = { status: 'ready', ...value }
+            results = null
+          }}
+        />
       {:else}
         <p class="text-sm text-muted-foreground">{m.feature_place_unlinked()}</p>
       {/if}

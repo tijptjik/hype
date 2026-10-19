@@ -1418,5 +1418,13 @@
   "feature_place_save_first": "请先保存或放弃图征更改，再建立关联。",
   "feature_place_link": "关联此地点",
   "feature_place_unlinked": "尚未关联地点。",
-  "feature_place_failed": "无法加载或关联此地点。请刷新后重试。"
+  "feature_place_failed": "无法加载或关联此地点。请刷新后重试。",
+  "feature_place_create_local": "创建本地地点",
+  "feature_place_unresolved_kind": "待匹配 — 日后与 SaanSeoi 匹配",
+  "feature_place_manual_kind": "手动 — 保持独立于 SaanSeoi",
+  "feature_place_kind": "来源设置",
+  "feature_place_local_description": "创建此项目专用的地点。如可能有 SaanSeoi 对应记录，请选待匹配；如需独立地点，请选手动。创建后须确认预览才会关联。",
+  "feature_place_local_address": "地址文字（选填）",
+  "feature_place_local_coordinates": "使用已保存图征的位置：",
+  "feature_place_create_preview": "创建并预览"
 }

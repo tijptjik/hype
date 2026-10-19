@@ -586,12 +586,31 @@ Browser verification used the installed Playwright package and Chrome against th
 isolated local rehearsal database: live Bakehouse search returned nine candidates,
 the first resolved to mirrored facts, and an unsaved title edit disabled linking.
 No unrelated establishment was linked and no test edit was saved. The local server
-was stopped after verification. The existing coordinate input did not mark the form
-dirty during this browser check; coordinate editing needs a separate follow-up before
-its acceptance can be claimed. External map tiles also returned 401 in this local
+was stopped after verification. The initial automated coordinate-input check raced the focus transition. A follow-up
+with settled focus verified that the coordinate edit persists, enables Save and
+disables Place linking; no coordinate-control code change was required. External map tiles also returned 401 in this local
 session. These do not invalidate the verified search/preview/title-edit guard.
 
 61 focused service/source/remote tests pass. Type checking remains at the existing
 10 unrelated errors and 19 warnings, with no changed-path diagnostics. Full source
 import-on-selection, manual creation, relinking/reset and migration acceptance remain
 outstanding; this is basic selection UI, not completion of the Places migration.
+
+
+### Private local Place creation UI (Refs #194)
+
+The Feature Place section now offers explicit local creation using the existing
+project-authorized command. Editors choose unresolved (eligible for later source
+matching) or intentionally manual, supply a localized name and optional address text,
+and use the saved Feature coordinates. Unsaved Feature changes disable creation.
+Local addresses remain unresolved without invented canonical IDs. Creation is a
+separate action from linking: it creates a private project-owned resource and displays
+its preview; only explicit confirmation associates it with the Feature. Linked local
+Places display their manual/unresolved state.
+
+An isolated local browser rehearsal created an unresolved Place, previewed and linked
+it, and confirmed the association after reload. Database inspection verified project
+ownership, null ssId, local revision provenance, one history event, and unchanged
+original Feature columns. No edit or association was made in the primary mirrors.
+Manual/unresolved resource discovery and administration are still needed for reuse
+when an editor leaves after creation without linking; no upstream submission occurs.

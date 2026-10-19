@@ -2350,6 +2350,8 @@ $effect(() => {
           {#if currentFeatureId && feature?.data?.modifiedAt}
             <FeaturePlaceSection
               featureId={currentFeatureId}
+              projectId={feature.data.projectId}
+              coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
               modifiedAt={feature.data.modifiedAt}
               {isEditing}
               {isDirty}
