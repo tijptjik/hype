@@ -6,6 +6,7 @@ let { class: className = '', pill = false }: AnalyticsCardSkeletonBlockProps = $
 
 <div
   class={[
+    'min-w-0 max-w-full overflow-hidden',
     pill
       ? 'rounded-full border border-border bg-raised px-3 py-1.5 text-transparent'
       : 'bg-raised',
