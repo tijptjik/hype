@@ -201,7 +201,8 @@ under existing Feature visibility permissions, excludes drafts and scopes privat
 baselines to their owning project. It never returns raw snapshots.
 
 Project managers can configure adoption at
-`/admin/projects/<project-code>#policies` in the visible Place updates tab. The old
+`/admin/projects/<project-code>#policies` in the visible Place updates tab after Fields. Rules use stable explanatory rows;
+the distance threshold remains visible and is disabled when irrelevant. The old
 `place-policy` URL redirects there. Shared FormSurface, SectionHeader, SelectField,
 TextInput and Button components follow the project editor's read/edit mode. Settings use the `placeUpdatePolicy`
 authorization field and optimistic revision checks; translators and unrelated project
@@ -235,3 +236,22 @@ through this command. Source-backed address selection requires the later verifie
 address read workflow. Creation does not link or rewrite any existing Feature and does
 not write upstream. The manual creation UI and Feature association/override commands
 remain separate work.
+
+### Structured Address dependency validation
+
+`resolveSaanSeoiPlaceAddress` attaches a full-profile Address detail response to a
+pinned Place projection. Address publications have their own release-set identity;
+the adapter checks that publication plus the exact Address ID and snapshot already
+referenced by the Place. Referenced inventories must have established owner membership,
+the same snapshot and the exact selected unit. Unresolved ancestor coverage is not
+treated as a verified shop address.
+
+The original structured response, locales and attribution are retained without
+conversion into HYPE's legacy address object. Failures leave the input projection
+unresolved; successful hydration removes only the pending-address issue. Focused tests
+cover publication/identity/snapshot mismatches, owner/unit mismatches, unresolved
+membership, missing/duplicate inventories and building-only references.
+
+This is the dependency-validation boundary, not an activated fetch or synchronization
+job. Pinned network reads, immutable source persistence, Feature materialization,
+override/link controls and the importer rebase remain outstanding (Refs #194).
