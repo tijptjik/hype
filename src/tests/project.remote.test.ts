@@ -568,6 +568,25 @@ describe('project.remote form organisation move authz', () => {
     policyMatrix.flush()
   })
 
+  it('authorizes and persists the selected card style with the project update', async () => {
+    const payload = buildUpdatePayload('org-1')
+    await remote.projectForm(
+      { ...payload, data: { ...payload.data, cardStyleCode: 'no-description' } },
+      throwingInvalid,
+    )
+    expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ cardStyleCode: 'no-description' }),
+      }),
+    )
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        data: expect.objectContaining({ cardStyleCode: 'no-description' }),
+      }),
+    )
+  })
+
   it('authorizes and persists changes to the organisation-context naming policy', async () => {
     const payload = buildUpdatePayload('org-1')
     const data = { ...payload.data, useAllInOrgContext: true }

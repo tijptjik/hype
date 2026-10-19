@@ -293,6 +293,7 @@ export function toProjectFormInput(
       data: {
         organisationId: defaults?.organisationId ?? '',
         mapStyleCode: '',
+        cardStyleCode: 'full',
         code: '',
         useAllInOrgContext: false,
         i18n: {
@@ -319,6 +320,7 @@ export function toProjectFormInput(
     data: {
       organisationId: data.organisationId,
       mapStyleCode: data.mapStyle?.code ?? '',
+      cardStyleCode: data.cardStyleCode ?? 'full',
       code: data.code,
       useAllInOrgContext: data.useAllInOrgContext ?? false,
       i18n: {

@@ -578,6 +578,43 @@ describe('layer.remote authz matrix', () => {
     })
   })
 
+  it.each(['full', 'no-description', undefined])(
+    'persists card override or inheritance without dropping map metadata: %s',
+    async cardStyleCode => {
+      const metadata = {
+        zoom: 10,
+        mapStyleCode: 'neorange',
+        ...(cardStyleCode ? { cardStyleCode } : {}),
+      }
+      await remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            projectId: 'project-1',
+            metadata,
+            isDefaultVisible: true,
+            properties: [],
+            i18n: { en: { name: 'Layer' } },
+          },
+        },
+        throwingInvalid,
+      )
+      expect(mockUpdateLayerByIdWithConcurrency).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ data: expect.objectContaining({ metadata }) }),
+      )
+      expect(mockAuthorizeLayerUpdateForSubmission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          submittedData: expect.objectContaining({ metadata }),
+        }),
+      )
+    },
+  )
+
   it.each(['neorange', null])(
     'layerForm persists the layer map override including User Preference: %s',
     async mapStyleCode => {

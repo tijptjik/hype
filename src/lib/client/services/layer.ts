@@ -110,6 +110,7 @@ function toLayerFormMetadata(
     LayerFormInput['data']['metadata']
   >
   if (metadata?.mapStyleCode === null) result.mapStyleCode = ''
+  if (metadata?.cardStyleCode === null) result.cardStyleCode = ''
   return result
 }
 
@@ -777,6 +778,7 @@ const mergeLayerFromSubmit = (
     const metadata = LayerMetadataSchema.parse(submittedData.metadata)
     next.metadata = metadata
     next.mapStyleCode = metadata.mapStyleCode
+    next.cardStyleCode = metadata.cardStyleCode
   }
   return next
 }

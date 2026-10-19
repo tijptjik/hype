@@ -3,6 +3,8 @@ import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
 import { organisation } from './organisation'
+import { cardStyle } from './cardStyle'
+import type { CardStyleCode } from '#lib/features/cardStyle.js'
 import { image } from './image'
 import { user } from './user'
 // ENUM
@@ -46,6 +48,10 @@ export const project = sqliteTable('project', {
     onDelete: 'set null',
     onUpdate: 'cascade',
   }),
+  // Null inherits the application default (Full), including older API clients.
+  cardStyleCode: text('cardStyleCode')
+    .$type<CardStyleCode>()
+    .references(() => cardStyle.code),
   // Project-level capability availability map.
   // Keys set to true are available for assignment in projectRole.capabilities.
   capabilities: text('capabilities', {
