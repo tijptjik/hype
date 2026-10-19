@@ -1951,7 +1951,7 @@ export function guardUserRolesDesync({
       name: formUserRole.userId,
       username: formUserRole.userId,
       displayUsername: formUserRole.userId,
-      email: '',
+      email: null,
       image: null,
       attribution: '',
       locale: 'en',

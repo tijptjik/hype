@@ -4,12 +4,12 @@ import { error } from '@sveltejs/kit'
 import { eq, sql } from 'drizzle-orm'
 // AUTH
 import { canSearchUsers } from './authz/user'
-import { canBrowseUsers } from './authz/userDirectory'
+import { canBrowseUsers, canReadAllUserContacts } from './authz/userDirectory'
 // DB
 import { user } from '#lib/db/schema/user.js'
 import { getUser } from '#lib/db/services/user.js'
-import { UserDirectoryProfileAPI } from '#lib/db/zod/schema/user.js'
 // SERVICES
+import { getTelephoneVisibleUserIds, toUserDirectoryProfile } from './userContacts'
 import {
   toUserProfileResponseShape,
   toUserRelationsWithContributionConstraints,
@@ -75,8 +75,20 @@ export async function readAdminUserProfile(
   // Project the response on the server so hidden fields never reach the browser.
   const profile = toUserProfileResponseShape(row, 'detail')
   if (!profile) return null
+  const telephoneUserIds = await getTelephoneVisibleUserIds(
+    db,
+    { ...actor, hubId: params.hub?.id },
+    [row.id],
+  )
   return {
     profile,
-    details: canReadDetails ? UserDirectoryProfileAPI.parse(row) : null,
+    details:
+      canReadDetails || telephoneUserIds.has(row.id)
+        ? toUserDirectoryProfile(
+            row,
+            telephoneUserIds.has(row.id),
+            canReadAllUserContacts(actor),
+          )
+        : null,
   }
 }

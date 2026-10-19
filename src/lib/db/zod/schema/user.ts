@@ -172,16 +172,17 @@ export const UserAdminListProfileAPI = UserBase.pick({
   name: true,
   username: true,
   displayUsername: true,
-  email: true,
   image: true,
   attribution: true,
-} as const)
+} as const).extend({
+  // Contact values are permission-filtered by the server before parsing.
+  email: UserBase.shape.email,
+  telephone: UserBase.shape.telephone.optional(),
+})
 
 export const UserDirectoryProfileAPI = UserAdminListProfileAPI.extend(
   UserBase.pick({
-    telephone: true,
     locale: true,
-    emailVerified: true,
     isArchived: true,
     createdAt: true,
   }).shape,
@@ -309,6 +310,8 @@ export const UserSearchQueryParamsSchema = z.object({
   conditions: z
     .object({
       isArchived: z.boolean().nullable().optional(),
+      hasEmail: z.boolean().nullable().optional(),
+      hasTelephone: z.boolean().nullable().optional(),
     })
     .optional(),
   pagination: z

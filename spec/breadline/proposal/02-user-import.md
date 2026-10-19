@@ -372,25 +372,35 @@ variant of `searchUsers` enforce this policy. Organisation/project owners retain
 the existing member-picker search without access to the extra directory fields.
 
 The list loads 25 users per page, with server-side search across name, username,
-email and attribution. Rows show avatar, name, case-preserving username, email,
-attribution, telephone, locale, verification, archive status and join date.
+email and attribution. Rows show avatar, name, case-preserving username,
+attribution, locale, archive status and join date, with permission-filtered contacts.
+HYPE/core HubAdmin and explicit SuperAdmin can see all email addresses and phone
+numbers. Other HubAdmins await hub-specific interaction/onboarding rules for email
+access. Telephone is additionally available to explicit `manageVolunteers` or
+`manageDropOffs` holders for users in a shared, non-archived project in the active
+hub. Email verification metadata is omitted.
 The shared admin header and control bar provide server-side sorting by name, email,
-join date or update date, plus a tri-state archived filter. The initial view
-excludes archived users.
+join date or update date, plus tri-state archived, has-email and has-phone filters.
+Presence filters treat blank values as missing and apply before paging/counting.
+The initial view excludes archived users. Settled rows and empty results remain
+mounted during replacement queries; keyed FLIP and fades animate result changes.
 No account identifiers, tokens or legacy import metadata are returned.
 
 ### Admin user profiles
 
 `/admin/users/{username}` resolves canonical usernames case-insensitively. The
 user directory and admin attribution cards link to it. Profile reads reuse the
-user-search entitlement: authenticated hub administrators and organisation/project
-owners may open profiles; ordinary members and guests cannot.
+user-search entitlement: authenticated hub administrators, organisation/project
+owners and explicitly assigned volunteer/drop-off managers may open profiles;
+ordinary members and guests cannot.
 
 The `getAdminUserProfile` remote chooses fields on the server. Active-hub/core
-administrators and super administrators receive the directory's name, email,
-telephone, locale, verification, archive state and join date. Other eligible admins
-receive only username/display username, avatar, attribution and contribution
-summaries; they cannot read archived profiles. No provider accounts, tokens,
+administrators and super administrators receive the directory's non-contact fields.
+Contact fields follow the same core/SuperAdmin and scoped management-capability
+rules as the listing. Eligible managers receive details for targets whose phone
+they may read; other eligible viewers receive only username/display username,
+avatar, attribution and contribution summaries. Non-directory viewers cannot read
+archived profiles. No provider accounts, tokens,
 preferences or experimental settings are returned. This is a read-only view and
 introduces no additional profile-editing or role-assignment permissions.
 

@@ -94,16 +94,17 @@ describe('admin user profile permissions', () => {
     },
   )
 
-  it('returns contact fields to active-hub admins without exposing account or preference data', async () => {
+  it('returns non-contact fields to active-hub admins without exposing account or preference data', async () => {
     const result = await read([
       { type: 'hub', role: 'admin', hubId: 'hub-1' } as UserRoleDisco,
     ])
     expect(result?.details).toMatchObject({
       name: row.name,
-      email: row.email,
-      telephone: row.telephone,
+      email: null,
     })
-    expect(JSON.stringify(result)).not.toMatch(/never-expose|preferences|experimental/)
+    expect(JSON.stringify(result)).not.toMatch(
+      /never-expose|preferences|experimental|private@example.invalid|91234567/,
+    )
     expect(loadUser.mock.calls[0][2]).toHaveLength(1)
     expect(contributions).toHaveBeenCalledWith(db, {
       sessionUser: actor,
@@ -130,6 +131,7 @@ describe('admin user profile permissions', () => {
       } as UserRoleDisco,
     ])
     expect(core?.details?.email).toBe(row.email)
+    expect(core?.details?.telephone).toBe(row.telephone)
     const superUser = await readAdminUserProfile(db, {
       username: 'KindRunner01',
       actor: { ...actor, superAdmin: true },
@@ -137,6 +139,7 @@ describe('admin user profile permissions', () => {
       hub,
     })
     expect(superUser?.details?.email).toBe(row.email)
+    expect(superUser?.details?.telephone).toBe(row.telephone)
   })
 
   it('matches mixed-case usernames through a bound lowercase lookup and handles missing records', async () => {

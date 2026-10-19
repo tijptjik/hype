@@ -280,3 +280,24 @@ and rejected status; unpublished content without a pending or rejected review is
 labeled unpublished. Published entries remain unlabeled. A photo omitted by an
 accepted partial review is rejected individually. General resource navigation
 continues to enforce its existing authorization rules.
+
+## User directory contact privacy
+
+- HYPE/core HubAdmin is SuperAdmin: core hub admins and explicit super admins may
+  read all user email addresses and telephone numbers, regardless of active hub.
+- Other HubAdmins do not receive email addresses until hub-specific interaction /
+  core HYPE onboarding eligibility rules are implemented. Other viewers receive
+  `email: null`; email remains accepted as search input.
+- Outside SuperAdmin access, telephone disclosure requires explicit
+  `manageVolunteers` or `manageDropOffs` capability and target membership in that
+  same project. The project belongs to the server-resolved active hub, and neither
+  project nor organisation may be archived. Scoped HubAdmin alone grants no phone access.
+- Contact permissions are enforced before response shaping, including direct
+  admin-profile reads and member search. Denied telephone fields and email
+  verification metadata are omitted.
+- Directory rows retain name, username, avatar, attribution, joined date, locale
+  and archived/active status. Search results remain mounted during replacement loads.
+- Contact-presence filters support any / yes / no for email and phone, combining
+  with text search and archived state before pagination and total counting. Null,
+  empty and whitespace-only values count as missing. Filtering does not grant
+  contact disclosure permission.

@@ -19,6 +19,8 @@ const adminCtx = getAdminCtx()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setResourceType(false)
 let archived = $state<boolean | null>(false)
+let hasEmail = $state<boolean | null>(null)
+let hasTelephone = $state<boolean | null>(null)
 let sorting = $state<{
   sortBy: 'name' | 'email' | 'createdAt' | 'updatedAt'
   sortOrder: 'asc' | 'desc'
@@ -29,6 +31,7 @@ let totalCount = $state(0)
 let offset = $state(0)
 let query = $state('')
 let loading = $state(true)
+let hasLoaded = $state(false)
 let failed = $state(false)
 let requestVersion = 0
 
@@ -49,10 +52,11 @@ async function loadUsers(nextOffset = 0): Promise<void> {
         directory: true,
         pagination: { limit: 25, offset: nextOffset },
         sorting,
-        conditions: { isArchived: archived },
+        conditions: { isArchived: archived, hasEmail, hasTelephone },
       }),
     )
     if (version !== requestVersion) return
+    hasLoaded = true
     users = result.data
     totalCount = result.totalCount
     offset = result.offset
@@ -77,6 +81,8 @@ function changeSorting(value: { sortBy: string; sortOrder: 'asc' | 'desc' }): vo
 /** @returns Nothing after restoring the initial directory filters and sort. */
 function resetControls(): void {
   archived = false
+  hasEmail = null
+  hasTelephone = null
   sorting = { sortBy: 'name', sortOrder: 'asc' }
   void loadUsers()
 }
@@ -109,6 +115,16 @@ $effect(() => {
     {
       count: totalCount,
       archived,
+      hasEmail,
+      hasTelephone,
+      onHasEmailChange: (value: boolean | null) => {
+        hasEmail = value
+        void loadUsers()
+      },
+      onHasTelephoneChange: (value: boolean | null) => {
+        hasTelephone = value
+        void loadUsers()
+      },
       sorting,
       onArchivedChange: (value: boolean | null) => {
         archived = value
@@ -138,6 +154,7 @@ onMount(() => {
   {totalCount}
   {offset}
   {loading}
+  {hasLoaded}
   {failed}
   showSummary={false}
   onPrevious={() => void loadUsers(Math.max(0, offset - 25))}
