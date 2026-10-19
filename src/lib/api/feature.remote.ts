@@ -20,6 +20,7 @@ import { getLocale } from '#lib/i18n.js'
 // UTILS
 import { nanoid } from 'nanoid'
 // API
+import { scheduleFeatureMtr } from '#lib/api/services/feature-mtr.js'
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
   getDuplicateValues,
@@ -530,6 +531,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     await createI18n(db, data.i18n, created.id)
     await createProperties(db, created.id, submittedProperties)
 
+    scheduleFeatureMtr(ctx.event.locals.platform, created.id)
     return toCreatedResponseShape(created)
   }
 
@@ -706,6 +708,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     await updateProperties(db, submittedProperties, current.id as Id)
   }
 
+  if (geometryChanged) scheduleFeatureMtr(ctx.event.locals.platform, persisted.id)
   return toCreatedResponseShape(persisted)
 })
 

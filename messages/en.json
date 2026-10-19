@@ -1314,5 +1314,7 @@
   "card_style__conditional_description": "Full when a description is available; No Description otherwise.",
   "card_style__inherit": "Project Default",
   "card_style__inherit_description": "Inherit the parent project’s card style.",
-  "property__phone_hk_invalid": "Enter a valid Hong Kong phone number (8 digits, optionally prefixed with +852)."
+  "property__phone_hk_invalid": "Enter a valid Hong Kong phone number (8 digits, optionally prefixed with +852).",
+  "feature_mtr_access": "MTR on foot",
+  "feature_mtr_access_value": "{station} · Exit {exit} · {distance} m walk"
 }

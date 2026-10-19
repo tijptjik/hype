@@ -21,7 +21,9 @@ import {
 } from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // I18N
-import { getFPI18n, getI18n, m } from '#lib/i18n.js'
+import { getLocale, getFPI18n, getI18n, m } from '#lib/i18n.js'
+// CORE FEATURE DATA
+import { mtrCatalog } from '#lib/routing/mtr.js'
 // TYPES
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type { FeatureCardPortalObstacle } from '#lib/context/featureCard.types.js'
@@ -142,13 +144,31 @@ const featureProperties = $derived(
       getFPI18n(property, userPreferences) !== m.great_crazy_squid_promise(),
   ),
 )
-const featurePropertyItems = $derived.by((): FeaturePropertyItem[] =>
-  featureProperties.map(property => ({
+const featurePropertyItems = $derived.by((): FeaturePropertyItem[] => {
+  const items = featureProperties.map(property => ({
     id: property.propertyId,
     label: getI18n(property.property, 'label', userPreferences),
     value: getFPI18n(property, userPreferences),
-  })),
-)
+  }))
+  // Core walking access is read-only and uses the same compact card layout.
+  const station = mtrCatalog.stations.find(station => station.id === feature.mtrStation)
+  const exit = mtrCatalog.exits.find(exit => exit.id === feature.mtrExit)
+  if (station && exit && feature.mtrDistance != null) {
+    const name = getLocale().startsWith('zh')
+      ? station.nameZh || station.name
+      : station.name
+    items.push({
+      id: 'core-mtr-access',
+      label: m.feature_mtr_access(),
+      value: m.feature_mtr_access_value({
+        station: name,
+        exit: exit.ref || '—',
+        distance: String(feature.mtrDistance),
+      }),
+    })
+  }
+  return items
+})
 const portalRightInsetPx = $derived(
   PORTAL_RIGHT_INSET_PX + (layout.mode === 'tiny' ? -PORTAL_TINY_RIGHT_SHIFT_PX : 0),
 )

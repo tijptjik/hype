@@ -6,6 +6,7 @@ import { getLocale } from '#lib/i18n.js'
 // DRIZZLE
 import { and, eq } from 'drizzle-orm'
 // API
+import { scheduleFeatureMtr } from '#lib/api/services/feature-mtr.js'
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
   authorizeTaskListForContext,
@@ -503,6 +504,7 @@ export const beginNewFeatureDraft = guardedCommand(
         subscriptionKey,
       )
 
+      scheduleFeatureMtr(ctx.event.locals.platform, updatedFeature.id)
       const updatedTask = await updateTask(
         ctx.db,
         {
@@ -533,6 +535,7 @@ export const beginNewFeatureDraft = guardedCommand(
       subscriptionKey,
     )
 
+    scheduleFeatureMtr(ctx.event.locals.platform, createdFeature.id)
     const createdTask = await createTask(ctx.db, {
       type: 'newFeature',
       featureId: createdFeature.id,

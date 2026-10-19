@@ -85,6 +85,10 @@ import type { GeometryObject } from 'geojson'
 export const FeatureBase = createSelectSchema(feature)
   .omit({ spatialIndex: true })
   .extend({
+    mtrStation: z.string().nullish(),
+    mtrExit: z.string().nullish(),
+    mtrDistance: z.number().int().nonnegative().nullish(),
+    mtrResolution: z.custom<import('#lib/routing/mtr.js').MtrResolution>().nullish(),
     countryId: z.string().nullish(),
     areaId: z.string().nullish(),
     districtId: z.string().nullish(),
@@ -110,6 +114,10 @@ export const FeatureBase = createSelectSchema(feature)
 export const FeatureInsert = createInsertSchema(feature)
   .omit({
     spatialIndex: true,
+    mtrStation: true,
+    mtrExit: true,
+    mtrDistance: true,
+    mtrResolution: true,
     countryId: true,
     areaId: true,
     districtId: true,
@@ -140,6 +148,10 @@ export const FeatureInsert = createInsertSchema(feature)
 export const FeatureUpdate = createUpdateSchema(feature)
   .omit({
     spatialIndex: true,
+    mtrStation: true,
+    mtrExit: true,
+    mtrDistance: true,
+    mtrResolution: true,
     countryId: true,
     areaId: true,
     districtId: true,
@@ -471,6 +483,10 @@ export const FeaturePropertyAPI = FeaturePropertyBase.extend({
 })
 
 const FeatureListFields = FeatureBase.pick({
+  mtrStation: true,
+  mtrExit: true,
+  mtrDistance: true,
+  mtrResolution: true,
   countryId: true,
   areaId: true,
   districtId: true,
