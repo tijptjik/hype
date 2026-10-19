@@ -260,7 +260,8 @@ function handleFacetChange(nextFacet: string): void {
 let lastPrismSignature = $state('')
 
 $effect(() => {
-  headerCtrl.setHeaderForIndex('Analytics', ChartColumnIncreasing, {
+  // Analytics owns its controls and must clear the previous resource list's filter bar.
+  headerCtrl.setHeaderForStandAlone('Analytics', ChartColumnIncreasing, {
     showNew: false,
     showFilter: false,
     showFacets: true,
