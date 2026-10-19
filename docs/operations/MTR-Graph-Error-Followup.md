@@ -313,3 +313,39 @@ The private row-level audit is `.local/breadline/plans/2026-10-19-mtr-source-aud
 These are historical pre-review counts. The completed schedule-filtered review and
 64 accepted import decisions are recorded in
 [the donor import policy](../../spec/breadline/proposal/donor-import-policy.md).
+
+## Distance-policy acceptance (19 October 2026; read-only)
+
+A fresh run of the repaired pinned engine with `walk-1000m-v1` evaluated all 1,759
+current local features using 8,614 requests, with zero engine failures. Automatic
+comparison results: 1,666 ready / 93 unreachable, including 446 ready / 39 unreachable
+Breadline features. Preserve the 64 saved review decisions: this automatic comparison
+is not an applied plan. It also does not replace the two accepted but unmapped exit
+labels with invented entrance IDs. No unreviewed feature with stored access within
+1 km changed station. There are 84 stored walks over 1 km, including 37 Breadline
+locations; data application is on hold.
+
+A second pass replayed all 462 mapped donor access routes and compared reference
+entrances in 722 requests. Every persisted mapped route reproduced within 3 metres;
+no engine failures occurred. Current source comparison remains 396 matching stations,
+26 different stations, 41 missing source stations, two unresolved derived results,
+and one out-of-scope high-speed station. There are 161 strict exit-label differences;
+combined with station differences these make 187 review candidates. Saved source
+choices and calculated choices remain intact, not silently overwritten.
+
+All four nearest-station association disagreements have a shorter reproducible route
+to the selected entrance than to the source reference: Tsim Sha Tsui D1 / Jordan E
+(21 / 767 m); Hong Kong C / Central C (205 / 287 m); Hong Kong C / Central D2
+(338 / 406 m); Tai Wo B / Tai Po Market (933 / at least 1,366 m among tested source
+entrances). This supports the routing comparison, but is not independent proof of
+station ownership or physical entrance accessibility. Those physical checks and the
+two unmapped accepted labels remain explicit acceptance limitations.
+
+The three location investigations found two bakery points inconsistent with their
+source addresses, while Nam Wan Bookshop's Peng Chau point is about 16 m from the
+bundled OSM building with the same name. Its displayed Wan Chai address is inconsistent
+with that evidence. No feature coordinates or addresses were changed.
+
+Private evidence: `.local/breadline/mtr-1km-review/{results,source-audit,acceptance}.json`.
+Map artifact: `output/mtr-location-review/index.html` and `map.png`. Reference landmark
+centroids are comparison anchors, not verified replacement shop coordinates.

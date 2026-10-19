@@ -12,6 +12,8 @@ export type MtrResolution = {
   catalogVersion: string
   graphVersion: string
   candidatesChecked: number
+  policyVersion?: string
+  maxWalkingMetres?: number
   stationAssociation?: string
 }
 export type MtrAccess = {
@@ -22,6 +24,10 @@ export type MtrAccess = {
 }
 export type MtrRoute = (origin: MtrPoint, exit: MtrExit) => Promise<number | null>
 export const mtrCatalog = catalog
+/** Maximum accepted walking route, including endpoint connectors, in metres. */
+export const MTR_MAX_WALKING_METRES = 1000
+/** Changes when access policy changes so old backfill checkpoints cannot be reused. */
+export const MTR_POLICY_VERSION = 'walk-1000m-v1'
 
 /**
  * Measures a conservative great-circle lower bound for pedestrian route selection.
@@ -47,7 +53,8 @@ export function mtrAirDistance(a: MtrPoint, b: MtrPoint): number {
  * @param exits - Station-linked entrances; injectable for deterministic tests.
  * @returns Core feature fields and calculation provenance.
  * @remarks Never substitutes straight-line distance for a failed walking route.
- * Stops only when remaining entrances cannot beat the current walking distance.
+ * Rejects walks over 1 km including endpoint connectors. Stops when remaining
+ * entrances exceed that limit or cannot beat the current walking distance.
  */
 export async function calculateMtrAccess(
   point: MtrPoint | null,
@@ -65,6 +72,8 @@ export async function calculateMtrAccess(
       catalogVersion: catalog.sourceSha256,
       graphVersion,
       candidatesChecked: 0,
+      policyVersion: MTR_POLICY_VERSION,
+      maxWalkingMetres: MTR_MAX_WALKING_METRES,
     },
   }
   if (
@@ -84,6 +93,8 @@ export async function calculateMtrAccess(
     }))
     .sort((a, b) => a.lower - b.lower || a.exit.id.localeCompare(b.exit.id))
   for (const { exit, lower } of candidates) {
+    // A straight-line lower bound can reject distant exits, never establish access.
+    if (lower > MTR_MAX_WALKING_METRES) break
     // Allow a small numerical tolerance; route adapters include endpoint connectors.
     if (result.mtrDistance !== null && lower > result.mtrDistance + 2) break
     const metres = await route(point, exit)
@@ -92,6 +103,7 @@ export async function calculateMtrAccess(
     if (!Number.isFinite(metres) || metres < 0)
       throw new Error('Invalid MTR route distance')
     const distance = Math.ceil(Math.max(metres, lower))
+    if (distance > MTR_MAX_WALKING_METRES) continue
     if (result.mtrDistance === null || distance < result.mtrDistance) {
       result.mtrStation = exit.station
       result.mtrExit = exit.id

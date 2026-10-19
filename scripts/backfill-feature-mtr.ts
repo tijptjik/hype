@@ -16,6 +16,8 @@ import {
   mtrFeaturePoint,
   mtrRouteDistance,
   mtrCatalog,
+  MTR_POLICY_VERSION,
+  MTR_MAX_WALKING_METRES,
   type MtrAccess,
 } from '../src/lib/routing/mtr'
 
@@ -29,7 +31,7 @@ function sql(value: string | null): string {
  * @param args - Explicit --database, --endpoint, --graph and --output paths/identity.
  * @returns Nothing after the complete SQL plan and count-only receipt are written.
  * @remarks Never writes the input database or calls production routing. Checkpoints
- * include graph/catalog/geometry identity; failed calculations abort unless --allow-partial explicitly retains failed jobs.
+ * include policy/graph/catalog/geometry identity; failed calculations abort unless --allow-partial explicitly retains failed jobs.
  */
 export async function backfillFeatureMtr(args: string[]): Promise<void> {
   process.umask(0o077)
@@ -70,7 +72,9 @@ export async function backfillFeatureMtr(args: string[]): Promise<void> {
     while (index < rows.length) {
       const row = rows[index++]
       const key = createHash('sha256')
-        .update(graph + mtrCatalog.sourceSha256 + row.geometry)
+        .update(
+          JSON.stringify([MTR_POLICY_VERSION, graph, mtrCatalog.sourceSha256, row.geometry]),
+        )
         .digest('hex')
       let result = cache.get(key)
       try {
@@ -160,6 +164,8 @@ export async function backfillFeatureMtr(args: string[]): Promise<void> {
         requests,
         graph,
         catalog: mtrCatalog.sourceSha256,
+        policy: MTR_POLICY_VERSION,
+        maxWalkingMetres: MTR_MAX_WALKING_METRES,
       },
       null,
       2,

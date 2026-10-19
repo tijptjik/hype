@@ -52,6 +52,49 @@ describe('core MTR access', () => {
       ),
     ).rejects.toThrow('engine')
   })
+  it('accepts exactly 1 km and rejects a longer walk without losing nearer alternatives', async () => {
+    const boundary = await calculateMtrAccess(
+      origin,
+      async () => 1000,
+      'graph',
+      exits.slice(0, 1),
+    )
+    expect(boundary.mtrDistance).toBe(1000)
+    expect(boundary.mtrResolution.maxWalkingMetres).toBe(1000)
+    const tooLong = await calculateMtrAccess(
+      origin,
+      async () => 1000.01,
+      'graph',
+      exits.slice(0, 1),
+    )
+    expect(tooLong.mtrResolution.status).toBe('unreachable')
+    expect([tooLong.mtrStation, tooLong.mtrExit, tooLong.mtrDistance]).toEqual([
+      null,
+      null,
+      null,
+    ])
+    const alternate = await calculateMtrAccess(
+      origin,
+      async (_, exit) => (exit.id === 'exit0' ? 1400 : 700),
+      'graph',
+      exits,
+    )
+    expect(alternate.mtrExit).toBe('exit1')
+    expect(alternate.mtrDistance).toBe(700)
+  })
+  it('does not request routes for entrances beyond the 1 km lower bound', async () => {
+    const remoteExit = { ...exits[0], coordinates: [114.3, 22.3] }
+    const result = await calculateMtrAccess(
+      origin,
+      async () => {
+        throw new Error('must not route')
+      },
+      'graph',
+      [remoteExit],
+    )
+    expect(result.mtrResolution.status).toBe('unreachable')
+    expect(result.mtrResolution.candidatesChecked).toBe(0)
+  })
   it('does not invent access points for polygons or out of region points', async () => {
     expect(mtrFeaturePoint({ type: 'Polygon', coordinates: [] })).toBeNull()
     const result = await calculateMtrAccess(

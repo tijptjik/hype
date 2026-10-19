@@ -20,6 +20,26 @@ describe('reviewed donor MTR import', () => {
       policy.decisions.filter(row => row.entranceId === null).map(row => row.sourceId),
     ).toEqual(['558', '727'])
   })
+  test('retains reviewed provenance but clears access beyond the walking limit', () => {
+    const row = policy.decisions.find(row => row.distance !== null)!
+    const distance = row.distance
+    try {
+      row.distance = 1001
+      const result = reviewedDonorMtr(row.sourceId, row.sourceHash, row.coordinates)!
+      expect([result.mtrStation, result.mtrExit, result.mtrDistance]).toEqual([
+        null,
+        null,
+        null,
+      ])
+      expect(result.mtrResolution.status).toBe('unreachable')
+      expect(result.mtrResolution.review.exitLabel).toBe(row.exitLabel)
+      expect(result.mtrResolution.review.unresolved).toBe(
+        'walking_distance_exceeds_limit',
+      )
+    } finally {
+      row.distance = distance
+    }
+  })
   test('refuses stale source and changed coordinates', () => {
     const row = policy.decisions[0]
     expect(() => reviewedDonorMtr(row.sourceId, 'changed', row.coordinates)).toThrow(

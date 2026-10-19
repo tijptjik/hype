@@ -52,3 +52,29 @@ Source: OpenStreetMap contributors, HK extract dated 2026-10-01, ODbL 1.0
 and stop-area objects. The catalog records source SHA and per-entrance station association.
 Private entrances and West Kowloon high-speed-only entrances are excluded. Spatial
 fallback station associations and short routing snaps remain review requirements.
+
+## Walking-distance policy and data hold (19 October 2026)
+
+`walk-1000m-v1` accepts only pedestrian routes of at most 1,000 metres, including
+endpoint connectors. Routes above the limit leave station, exit and distance null.
+The existing no-ferry and 75 m endpoint-snap rules remain. Calculation provenance
+records the policy and limit; backfill checkpoint keys include policy identity so
+pre-limit results cannot be silently reused. Reviewed imports retain their decision
+provenance but cannot publish a walking distance over this limit.
+
+On 20 October, the user separately authorised clearing all over-limit results.
+Migration `0105_enforce_mtr_walk_limit.sql` was rehearsed and applied locally: all
+84 over-limit records now have null station, exit and distance. Their prior values
+remain in `mtrResolution.policyRejection`, with an explicit policy reason and timestamp;
+original calculation/review provenance is retained. This is not a fresh route search.
+Database triggers reject future inserts/updates above 1,000 m; exactly 1,000 m is valid.
+Verification found only the 84 feature rows changed (only four MTR fields), no changes
+to jobs or other data tables, and clean integrity/foreign-key checks. A private backup
+and receipt are retained. Production application and the broader Breadline data import
+remain on hold. Default cards omit MTR; the dedicated Breadline card enforces the cap.
+
+Read-only validation over the current 1,759-feature local snapshot made 8,614 native
+requests with zero engine errors: automatic policy results were 1,666 ready and 93
+unreachable. These are automatic comparison results, not an applied backfill and not
+a replacement for the 64 saved manual decisions. The pre-migration 84 stored walks over 1 km included
+37 Breadline locations. No unreviewed in-limit feature changed station.
