@@ -571,3 +571,27 @@ is latest-only. Efficient canonical import of a previously unmirrored search res
 still requires a source API extension or complete publication mirror; the current
 bakery mirror supports previews but is not the full source catalogue. This remains
 an explicit implementation gap, not a completed selection/import workflow.
+
+### Basic Feature Place selection UI (Refs #194)
+
+The Feature Address facet now contains a Place section using the shared SectionHeader,
+TextInput and Button components, with English/Traditional Chinese/Simplified Chinese
+messages. Editors can search the live source, preview a mirrored canonical candidate's
+names/address/coordinates and explicitly link it. The preview explains baseline
+preservation; unsaved Feature edits disable linking. Existing associations are shown
+read-only until relinking/reset controls are implemented. Unmirrored candidates show
+an import-needed state rather than becoming manual Places or unverified links.
+
+Browser verification used the installed Playwright package and Chrome against the
+isolated local rehearsal database: live Bakehouse search returned nine candidates,
+the first resolved to mirrored facts, and an unsaved title edit disabled linking.
+No unrelated establishment was linked and no test edit was saved. The local server
+was stopped after verification. The existing coordinate input did not mark the form
+dirty during this browser check; coordinate editing needs a separate follow-up before
+its acceptance can be claimed. External map tiles also returned 401 in this local
+session. These do not invalidate the verified search/preview/title-edit guard.
+
+61 focused service/source/remote tests pass. Type checking remains at the existing
+10 unrelated errors and 19 warnings, with no changed-path diagnostics. Full source
+import-on-selection, manual creation, relinking/reset and migration acceptance remain
+outstanding; this is basic selection UI, not completion of the Places migration.

@@ -1405,5 +1405,18 @@
   "feature__fields_empty_description": "Define fields in the project, then enable them on the layer to use them here.",
   "feature__fields_configure_project": "Configure project fields",
   "feature__fields_configure_layer": "Configure layer fields",
-  "feature__fields_choose_layer": "Choose a layer"
+  "feature__fields_choose_layer": "Choose a layer",
+  "feature_place_title": "Place",
+  "feature_place_description": "The physical establishment associated with this Feature.",
+  "feature_place_loading": "Loading Places…",
+  "feature_place_linked": "Linked Place",
+  "feature_place_search_label": "Place name",
+  "feature_place_search": "Search Places",
+  "feature_place_no_results": "No matching Places found.",
+  "feature_place_import_needed": "This Place needs to be imported from SaanSeoi before it can be linked.",
+  "feature_place_preserve": "Linking preserves the current Feature names, location and other values as overrides where they differ.",
+  "feature_place_save_first": "Save or discard your Feature changes before linking.",
+  "feature_place_link": "Link this Place",
+  "feature_place_unlinked": "No Place linked yet.",
+  "feature_place_failed": "Unable to load or link this Place. Refresh and try again."
 }

@@ -1405,5 +1405,18 @@
   "feature__fields_empty_description": "在專案中定義欄位，然後在圖層中啟用，即可在此使用。",
   "feature__fields_configure_project": "設定專案欄位",
   "feature__fields_configure_layer": "設定圖層欄位",
-  "feature__fields_choose_layer": "選擇圖層"
+  "feature__fields_choose_layer": "選擇圖層",
+  "feature_place_title": "地點",
+  "feature_place_description": "與此項目圖徵關聯的實體場所。",
+  "feature_place_loading": "正在載入地點…",
+  "feature_place_linked": "已關聯地點",
+  "feature_place_search_label": "地點名稱",
+  "feature_place_search": "搜尋地點",
+  "feature_place_no_results": "找不到相符地點。",
+  "feature_place_import_needed": "此地點需要先從 SaanSeoi 匯入才能關聯。",
+  "feature_place_preserve": "關聯時會保留目前圖徵的名稱、位置及其他值；與來源不同的值會儲存為覆寫。",
+  "feature_place_save_first": "請先儲存或捨棄圖徵變更，再建立關聯。",
+  "feature_place_link": "關聯此地點",
+  "feature_place_unlinked": "尚未關聯地點。",
+  "feature_place_failed": "無法載入或關聯此地點。請重新整理後再試。"
 }

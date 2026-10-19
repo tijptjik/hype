@@ -113,6 +113,7 @@ import {
   FEATURE_EDITOR_ROOT_CLASS,
   getFeatureEditorFacetClass,
 } from './page.styles'
+import FeaturePlaceSection from '#lib/bits/patterns/forms/featurePlace/FeaturePlaceSection.svelte'
 import FormFeatureAddress from '#lib/bits/patterns/forms/formFeatureAddress/FormFeatureAddress.svelte'
 import {
   geocodeAddressCandidates,
@@ -2346,6 +2347,14 @@ $effect(() => {
     >
       <FormSurface class="pb-12">
         {#key featureRef}
+          {#if currentFeatureId && feature?.data?.modifiedAt}
+            <FeaturePlaceSection
+              featureId={currentFeatureId}
+              modifiedAt={feature.data.modifiedAt}
+              {isEditing}
+              {isDirty}
+            />
+          {/if}
           <FormFeatureAddress
             address={editorAddress}
             coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}

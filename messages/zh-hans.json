@@ -1405,5 +1405,18 @@
   "feature__fields_empty_description": "在项目中定义字段，然后在图层中启用，即可在此使用。",
   "feature__fields_configure_project": "设置项目字段",
   "feature__fields_configure_layer": "设置图层字段",
-  "feature__fields_choose_layer": "选择图层"
+  "feature__fields_choose_layer": "选择图层",
+  "feature_place_title": "地点",
+  "feature_place_description": "与此项目图征关联的实体场所。",
+  "feature_place_loading": "正在加载地点…",
+  "feature_place_linked": "已关联地点",
+  "feature_place_search_label": "地点名称",
+  "feature_place_search": "搜索地点",
+  "feature_place_no_results": "找不到相符地点。",
+  "feature_place_import_needed": "此地点需要先从 SaanSeoi 导入才能关联。",
+  "feature_place_preserve": "关联时会保留当前图征的名称、位置及其他值；与来源不同的值会保存为覆盖值。",
+  "feature_place_save_first": "请先保存或放弃图征更改，再建立关联。",
+  "feature_place_link": "关联此地点",
+  "feature_place_unlinked": "尚未关联地点。",
+  "feature_place_failed": "无法加载或关联此地点。请刷新后重试。"
 }
