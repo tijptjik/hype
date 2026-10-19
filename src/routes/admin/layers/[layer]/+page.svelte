@@ -1336,26 +1336,6 @@ $effect(() => {
 
         <div class={`${formSectionDividerStyles} grid grid-cols-1 xl:grid-cols-3`}>
           <div class="min-w-0">
-            <FormParentSection
-              class={formSelectionSectionStyles}
-              title={m.admin__forms_layer_parent_project_title()}
-              subtitle={m.admin__forms_layer_parent_project_subtitle()}
-              issues={parentProjectIssues}
-              parent={selectedParentProject}
-              fallbackImage={selectedParentProject
-                ? `/api/mapRenders/projects/${selectedParentProject.id}/asset`
-                : null}
-              hiddenInputAttrs={hiddenParentProjectInputAttrs}
-              closeOnParentChange={true}
-              isEditing={isEditing && canSetParentProject}
-              isSubmitting={formCtx.submitting}
-              isSubmitRequested={formCtx.isSubmitRequested}
-              startInAddingMode={isNewLayerRef}
-              onSearch={onSearchParentProjects}
-              onReplaceParent={onReplaceParentProject}
-            />
-          </div>
-          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
             <FormMapStyleSection
               class={formSelectionSectionStyles}
               title={m.theme_map_style_label()}
@@ -1368,6 +1348,21 @@ $effect(() => {
               isSubmitting={formCtx.submitting}
               isSubmitRequested={formCtx.isSubmitRequested}
               onSelectMapStyle={onSelectLayerMapStyle}
+            />
+          </div>
+          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+            <FormMarkerStyleSection
+              value={selectedLayerMarkerStyle}
+              allowInherit
+              inheritedValue={inheritedMarkerStyle}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              inputAttrs={layerPresentationFields.markerStyleCode.as(
+                'hidden',
+                selectedLayerMarkerStyle ?? '',
+              )}
+              isEditing={isEditing && canEditLayerFields}
+              disabled={formCtx.submitting}
+              onSelect={onSelectLayerMarkerStyle}
             />
           </div>
           <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
@@ -1385,19 +1380,24 @@ $effect(() => {
               onSelect={onSelectLayerCardStyle}
             />
           </div>
-          <div class="min-w-0 border-t border-border">
-            <FormMarkerStyleSection
-              value={selectedLayerMarkerStyle}
-              allowInherit
-              inheritedValue={inheritedMarkerStyle}
+          <div class="min-w-0 border-t border-border xl:col-span-3">
+            <FormParentSection
+              class={formSelectionSectionStyles}
+              title={m.admin__forms_layer_parent_project_title()}
+              subtitle={m.admin__forms_layer_parent_project_subtitle()}
+              issues={parentProjectIssues}
+              parent={selectedParentProject}
+              fallbackImage={selectedParentProject
+                ? `/api/mapRenders/projects/${selectedParentProject.id}/asset`
+                : null}
+              hiddenInputAttrs={hiddenParentProjectInputAttrs}
+              closeOnParentChange={true}
+              isEditing={isEditing && canSetParentProject}
+              isSubmitting={formCtx.submitting}
               isSubmitRequested={formCtx.isSubmitRequested}
-              inputAttrs={layerPresentationFields.markerStyleCode.as(
-                'hidden',
-                selectedLayerMarkerStyle ?? '',
-              )}
-              isEditing={isEditing && canEditLayerFields}
-              disabled={formCtx.submitting}
-              onSelect={onSelectLayerMarkerStyle}
+              startInAddingMode={isNewLayerRef}
+              onSearch={onSearchParentProjects}
+              onReplaceParent={onReplaceParentProject}
             />
           </div>
         </div>
