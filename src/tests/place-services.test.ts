@@ -13,7 +13,10 @@ import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
 import { prepareFeaturePlaceRelations } from '#lib/db/services/placeRelations.js'
-import { saveUnlinkedFeatureForm } from '#lib/db/services/featureFormSave.js'
+import {
+  createFeatureForm,
+  saveUnlinkedFeatureForm,
+} from '#lib/db/services/featureFormSave.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
@@ -997,6 +1000,30 @@ describe('linked Feature form persistence', () => {
       }),
     ).toMatchObject({ status: 'review' })
     expect(snapshot()).toEqual(before)
+    // A reported-missing task owns the Feature flag, not the physical Place identity.
+    const reportedAt = new Date(Date.parse(saved.feature.modifiedAt) + 1).toISOString()
+    sqlite
+      .prepare("UPDATE feature SET isIntangible=1, modifiedAt=? WHERE id='f'")
+      .run(reportedAt)
+    expect(await readFeaturePlaceBaseline(db, 'f', 'p')).toEqual({
+      status: 'ineligible',
+      reason: 'intangible',
+    })
+    const editedMissing = await saveLinkedFeatureForm(db, {
+      ...input,
+      updatedAt: reportedAt,
+      data: {},
+      i18n: {
+        en: { title: 'Retained historical donor', displayAddress: 'Original address' },
+      },
+    })
+    expect(editedMissing.status).toBe('saved')
+    expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.effective.names.en).toBe(
+      'Retained historical donor',
+    )
+    expect(
+      sqlite.prepare("SELECT isIntangible FROM feature WHERE id='f'").get(),
+    ).toEqual({ isIntangible: 1 })
   })
 })
 
@@ -1088,5 +1115,84 @@ describe('initial association versus unlinked form saves', () => {
       }),
     ).toBeUndefined()
     expect(snapshot()).toEqual(linked)
+  })
+})
+
+describe('atomic Feature creation and draft lifecycle', () => {
+  it('rolls back incomplete creation and refuses to overwrite a finalized draft', async () => {
+    const { db, sqlite } = setup()
+    const { getTableColumns } = await import('drizzle-orm')
+    const { feature, featureI18n } = await import('#lib/db/schema/feature.js')
+    const { FeatureInsert } = await import('#lib/db/zod/schema/feature.js')
+    for (const [name, table] of [
+      ['feature', feature],
+      ['featureI18n', featureI18n],
+    ] as const) {
+      const existing = new Set(
+        sqlite
+          .prepare(`PRAGMA table_info(${name})`)
+          .all()
+          .map(row => row.name),
+      )
+      for (const column of Object.values(getTableColumns(table)))
+        if (!existing.has(column.name))
+          sqlite.exec(
+            `ALTER TABLE ${name} ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+          )
+    }
+    sqlite.exec(
+      'CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER)',
+    )
+    const input = {
+      data: FeatureInsert.parse({
+        id: 'created',
+        organisationId: 'org',
+        projectId: 'p',
+        layerId: 'layer',
+        geometry: facts.location.geometry,
+        isDraft: true,
+      }),
+      i18n: { en: { title: 'New draft' } },
+      properties: [],
+    }
+    const snapshot = () =>
+      ['feature', 'featureI18n', 'featureProperty'].map(table =>
+        sqlite.prepare(`SELECT * FROM ${table}`).all(),
+      )
+    const before = snapshot()
+    sqlite.exec(`CREATE TRIGGER reject_creation BEFORE INSERT ON featureI18n WHEN NEW.featureId='created'
+      BEGIN SELECT RAISE(ABORT,'injected creation failure'); END`)
+    await expect(createFeatureForm(db, input)).rejects.toThrow()
+    expect(snapshot()).toEqual(before)
+    sqlite.exec('DROP TRIGGER reject_creation')
+    const created = await createFeatureForm(db, input)
+    expect(created).toMatchObject({ id: 'created', isDraft: true })
+    expect(
+      sqlite.prepare("SELECT title FROM featureI18n WHERE featureId='created'").get(),
+    ).toEqual({ title: 'New draft' })
+    const complete = snapshot()
+    await expect(createFeatureForm(db, input)).rejects.toThrow()
+    expect(snapshot()).toEqual(complete)
+    const finalized = await saveUnlinkedFeatureForm(db, {
+      featureId: created.id,
+      projectId: 'p',
+      updatedAt: created.modifiedAt,
+      expectedDraftState: true,
+      data: { isDraft: false },
+      i18n: { en: { title: 'Submitted feature' } },
+    })
+    expect(finalized?.isDraft).toBe(false)
+    const finalState = snapshot()
+    expect(
+      await saveUnlinkedFeatureForm(db, {
+        featureId: created.id,
+        projectId: 'p',
+        updatedAt: finalized!.modifiedAt,
+        expectedDraftState: true,
+        data: { isDraft: true },
+        i18n: { en: { title: 'Late draft edit' } },
+      }),
+    ).toBeUndefined()
+    expect(snapshot()).toEqual(finalState)
   })
 })

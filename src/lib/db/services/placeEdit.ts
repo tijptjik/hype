@@ -58,18 +58,32 @@ export async function saveLinkedFeatureForm(
       status: 'review',
       reason: 'Place association must be reviewed before moving projects',
     }
-  const before = await readFeaturePlaceBaseline(db, input.featureId, input.projectId)
+  const before = await readFeaturePlaceBaseline(
+    db,
+    input.featureId,
+    input.projectId,
+    undefined,
+    'linked',
+  )
   if (before.status !== 'ready') return { status: 'review', reason: before.reason }
   if (before.baseline.modifiedAt !== input.updatedAt) return { status: 'conflict' }
-  const after = await readFeaturePlaceBaseline(db, input.featureId, input.projectId, {
-    data: {
-      geometry: input.data.geometry ?? before.baseline.effective.location!.geometry,
-      addressMeta: input.data.addressMeta ?? { address: before.baseline.address },
-      isIntangible: input.data.isIntangible ?? false,
+  const after = await readFeaturePlaceBaseline(
+    db,
+    input.featureId,
+    input.projectId,
+    {
+      data: {
+        geometry: input.data.geometry ?? before.baseline.effective.location!.geometry,
+        addressMeta: input.data.addressMeta ?? { address: before.baseline.address },
+        ...(input.data.isIntangible === undefined
+          ? {}
+          : { isIntangible: input.data.isIntangible }),
+      },
+      i18n: input.i18n,
+      properties: input.properties,
     },
-    i18n: input.i18n,
-    properties: input.properties,
-  })
+    'linked',
+  )
   if (after.status !== 'ready') return { status: 'review', reason: after.reason }
   if (after.baseline.modifiedAt !== input.updatedAt) return { status: 'conflict' }
   const overrides = applyFeaturePlaceEdits(

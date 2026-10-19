@@ -54,13 +54,13 @@ import {
   toIssueDetailMessage,
 } from '#lib/api/services/authz/index.js'
 // DB
-import { saveUnlinkedFeatureForm } from '#lib/db/services/featureFormSave.js'
+import {
+  createFeatureForm,
+  saveUnlinkedFeatureForm,
+} from '#lib/db/services/featureFormSave.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import {
-  createFeature,
-  createI18n,
-  createProperties,
   getFeature as loadFeature,
   listFeatures,
   probeFeatureForUpdate,
@@ -443,8 +443,7 @@ export const getFeatureForImport = guardedBatchByIdQuery<
  * - Duplicate property ids are rejected before any write occurs.
  * - Authorization is evaluated against a changed-field subset on update so unrelated
  *   permissions are not required for no-op fields.
- * - The mutation path persists the core feature row first, then synchronizes i18n and
- *   property relations through the DB relation helpers.
+ * - Parent and relation writes commit atomically, coordinated with Place associations.
  */
 export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const params = FeatureFormData.parse(input)
@@ -519,19 +518,20 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       )
     }
 
-    const created = await createFeature(db, {
-      ...data,
-      id: featureId || nanoid(12),
-      organisationId: resolvedOrganisationId,
-      projectId: resolvedProjectId,
-      contributorId: data.contributorId ?? user.id ?? null,
-      addressMeta: data.addressMeta ?? {},
-      isPublished: false,
-      isArchived: false,
+    const created = await createFeatureForm(db, {
+      data: {
+        ...data,
+        id: featureId || nanoid(12),
+        organisationId: resolvedOrganisationId,
+        projectId: resolvedProjectId,
+        contributorId: data.contributorId ?? user.id ?? null,
+        addressMeta: data.addressMeta ?? {},
+        isPublished: false,
+        isArchived: false,
+      },
+      i18n: data.i18n,
+      properties: submittedProperties,
     })
-
-    await createI18n(db, data.i18n, created.id)
-    await createProperties(db, created.id, submittedProperties)
 
     scheduleFeatureMtr(ctx.event.locals.platform, created.id)
     return toCreatedResponseShape(created)

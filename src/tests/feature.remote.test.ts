@@ -27,7 +27,7 @@ const {
   mockLoadFeature,
   mockSaveUnlinkedFeatureForm,
   mockSaveLinkedFeatureForm,
-  mockCreateFeature,
+  mockCreateFeatureForm,
   mockCreateI18n,
   mockCreateProperties,
   mockUpdateFeatureByIdWithConcurrency,
@@ -89,7 +89,7 @@ const {
       import('#lib/db/services/placeEdit.js').LinkedFeatureSaveResult
     > => ({ status: 'unlinked' }),
   ),
-  mockCreateFeature: vi.fn(async () => ({
+  mockCreateFeatureForm: vi.fn(async () => ({
     id: 'feature-1',
     modifiedAt: '2026-03-18T00:00:01.000Z',
   })),
@@ -271,6 +271,7 @@ vi.mock('#lib/api/services/authz/index.js', async importOriginal => ({
 }))
 
 vi.mock('#lib/db/services/featureFormSave.js', () => ({
+  createFeatureForm: mockCreateFeatureForm,
   saveUnlinkedFeatureForm: mockSaveUnlinkedFeatureForm,
 }))
 
@@ -279,7 +280,7 @@ vi.mock('#lib/db/services/placeEdit.js', () => ({
 }))
 
 vi.mock('#lib/db/services/feature.js', () => ({
-  createFeature: mockCreateFeature,
+  createFeature: mockCreateFeatureForm,
   createI18n: mockCreateI18n,
   createProperties: mockCreateProperties,
   getFeature: mockLoadFeature,
@@ -559,7 +560,7 @@ describe('feature.remote authz matrix', () => {
       actual: false,
       code: 'INSUFFICIENT_ROLE',
     })
-    expect(mockCreateFeature).not.toHaveBeenCalled()
+    expect(mockCreateFeatureForm).not.toHaveBeenCalled()
   })
 
   it('rejects invalid persisted phone properties before creating a feature', async () => {
@@ -586,7 +587,7 @@ describe('feature.remote authz matrix', () => {
         throwingInvalid,
       ),
     ).rejects.toThrow()
-    expect(mockCreateFeature).not.toHaveBeenCalled()
+    expect(mockCreateFeatureForm).not.toHaveBeenCalled()
     expect(mockCreateI18n).not.toHaveBeenCalled()
     expect(mockCreateProperties).not.toHaveBeenCalled()
   })
@@ -856,10 +857,10 @@ describe('feature.remote authz matrix', () => {
       throwingInvalid,
     )
 
-    expect(mockCreateFeature).toHaveBeenCalledWith(
+    expect(mockCreateFeatureForm).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
-        id: 'import-feature-1',
+        data: expect.objectContaining({ id: 'import-feature-1' }),
       }),
     )
   })

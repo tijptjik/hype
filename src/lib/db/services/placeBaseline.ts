@@ -55,6 +55,7 @@ export type PlaceBaselineResult =
  * @param featureId Authorized Feature identity.
  * @param projectId Persisted project scope from authorization.
  * @param proposal Optional validated form projection; property definitions still come from the database.
+ * @param associationContext Existing-link edits may retain intangible Feature interpretations.
  * @returns Complete preservation baseline or an explicit exclusion/review reason.
  * @remarks Legacy brand option identities remain local identifiers, never inferred
  * SaanSeoi brands. Full address corrections remain separate from immutable source
@@ -65,6 +66,7 @@ export async function readFeaturePlaceBaseline(
   featureId: string,
   projectId: string,
   proposal?: FeaturePlaceProposal,
+  associationContext?: 'linked',
 ): Promise<PlaceBaselineResult> {
   const stored = await db
     .select({
@@ -87,7 +89,8 @@ export async function readFeaturePlaceBaseline(
     isIntangible: proposal?.data.isIntangible ?? stored.isIntangible,
   }
   if (row.isDraft) return { status: 'ineligible', reason: 'draft' }
-  if (row.isIntangible) return { status: 'ineligible', reason: 'intangible' }
+  if (row.isIntangible && associationContext !== 'linked')
+    return { status: 'ineligible', reason: 'intangible' }
   if (row.geometry.type !== 'Point')
     return { status: 'ineligible', reason: 'non-point' }
   const translations = proposal

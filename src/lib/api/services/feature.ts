@@ -7,6 +7,10 @@ import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
 import { toBooleanOrUndefined } from '#lib/api/services/index.js'
 import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
 // DB
+import {
+  createFeatureForm,
+  saveUnlinkedFeatureForm,
+} from '#lib/db/services/featureFormSave.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
 import { applyTriStateBooleanCondition } from '#lib/db/query.js'
@@ -14,14 +18,8 @@ import { chunkedInArray } from '#lib/utils/batch-query.js'
 import { toImageEnvelope, toNormalizedImageRecord } from '#lib/db/services/image.js'
 import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 import {
-  createFeature,
-  createI18n,
-  createProperties,
   mergeFeatureProperties,
   probeFeatureForUpdate,
-  updateFeatureByIdWithConcurrency,
-  updateI18n,
-  updateProperties,
 } from '#lib/db/services/feature.js'
 import { probeLayerForUpdate } from '#lib/db/services/layer.js'
 // I18N
@@ -1023,25 +1021,33 @@ export const createUserContributedFeature = async (
     stage,
   )
 
-  const created = await createFeature(db, {
-    ...validatedFeature,
-    organisationId: layerScope.organisationId,
-    projectId: layerScope.projectId,
-    addressMeta: validatedFeature.addressMeta ?? {},
-    isPublished: false,
-    isArchived: false,
-    // Explicit drafts stay editable; immediate submissions are ready for review.
-    isDraft: stage === 'draft',
+  const created = await createFeatureForm(db, {
+    data: {
+      ...validatedFeature,
+      organisationId: layerScope.organisationId,
+      projectId: layerScope.projectId,
+      addressMeta: validatedFeature.addressMeta ?? {},
+      isPublished: false,
+      isArchived: false,
+      // Explicit drafts stay editable; immediate submissions are ready for review.
+      isDraft: stage === 'draft',
+    },
+    i18n: validatedFeature.i18n,
+    properties: validatedFeature.properties ?? [],
   })
-
-  await createI18n(db, validatedFeature.i18n, created.id)
-  await createProperties(db, created.id, validatedFeature.properties ?? [])
 
   return created
 }
 
 /**
  * Updates an existing user-contributed feature draft in place.
+ * @param db Request-local database.
+ * @param featureId Authorized draft identity.
+ * @param newFeature Validated contribution input.
+ * @param region Translation service region.
+ * @param subscriptionKey Translation credential.
+ * @returns The updated draft after its parent and relations commit together.
+ * @remarks A finalized or Place-linked Feature cannot be overwritten as a draft.
  */
 export const updateUserContributedFeatureDraft = async (
   db: Database,
@@ -1049,7 +1055,7 @@ export const updateUserContributedFeatureDraft = async (
   newFeature: UserContributedFeature,
   region: string,
   subscriptionKey: string,
-) => {
+): Promise<FeatureDB> => {
   const featureProbe = await probeFeatureForUpdate(db, featureId)
   if (!featureProbe) {
     throw new Error('Feature not found')
@@ -1065,8 +1071,12 @@ export const updateUserContributedFeatureDraft = async (
     stage,
   )
 
-  const updated = await updateFeatureByIdWithConcurrency(db, {
-    id: featureId,
+  const updated = await saveUnlinkedFeatureForm(db, {
+    featureId,
+    projectId: featureProbe.projectId,
+    expectedDraftState: true,
+    i18n: validatedFeature.i18n,
+    properties: validatedFeature.properties ?? [],
     updatedAt: featureProbe.modifiedAt,
     data: {
       organisationId: layerScope.organisationId,
@@ -1087,9 +1097,6 @@ export const updateUserContributedFeatureDraft = async (
   if (!updated) {
     throw new Error('Feature draft update failed')
   }
-
-  await updateI18n(db, validatedFeature.i18n, featureId)
-  await updateProperties(db, validatedFeature.properties ?? [], featureId)
 
   return updated
 }

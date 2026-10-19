@@ -2,7 +2,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  createFeature: vi.fn(),
+  createFeatureForm: vi.fn(),
+  saveUnlinkedFeatureForm: vi.fn(),
+  probeFeatureForUpdate: vi.fn(),
   createI18n: vi.fn(),
   createProperties: vi.fn(),
   probeLayerForUpdate: vi.fn(),
@@ -11,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('#lib/db/services/feature.js', () => mocks)
+vi.mock('#lib/db/services/featureFormSave.js', () => mocks)
 vi.mock('#lib/db/services/layer.js', () => mocks)
 vi.mock('#lib/db/zod/schema/feature.js', async importOriginal => ({
   ...(await importOriginal<object>()),
@@ -18,7 +21,10 @@ vi.mock('#lib/db/zod/schema/feature.js', async importOriginal => ({
   FeatureEntityFormData: { parse: mocks.finalParse },
 }))
 
-import { createUserContributedFeature } from '#lib/api/services/feature.js'
+import {
+  createUserContributedFeature,
+  updateUserContributedFeatureDraft,
+} from '#lib/api/services/feature.js'
 
 describe('feature contribution submission stage', () => {
   beforeEach(() => {
@@ -28,7 +34,7 @@ describe('feature contribution submission stage', () => {
       projectId: 'project',
       organisationId: 'organisation',
     })
-    mocks.createFeature.mockImplementation(async (_db, data) => ({
+    mocks.createFeatureForm.mockImplementation(async (_db, { data }) => ({
       id: 'feature',
       ...data,
     }))
@@ -50,8 +56,13 @@ describe('feature contribution submission stage', () => {
         isPendingReview: true,
       })
       expect(isDraft ? mocks.draftParse : mocks.finalParse).toHaveBeenCalledOnce()
-      expect(mocks.createI18n).toHaveBeenCalledOnce()
-      expect(mocks.createProperties).toHaveBeenCalledOnce()
+      expect(mocks.createFeatureForm).toHaveBeenCalledOnce()
+      expect(mocks.createFeatureForm).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ i18n: expect.any(Object), properties: [] }),
+      )
+      expect(mocks.createI18n).not.toHaveBeenCalled()
+      expect(mocks.createProperties).not.toHaveBeenCalled()
     },
   )
 })
@@ -71,7 +82,7 @@ it('retains selected building identity and address components through contributi
     projectId: 'project',
     organisationId: 'organisation',
   })
-  mocks.createFeature.mockImplementation(async (_db, data) => ({
+  mocks.createFeatureForm.mockImplementation(async (_db, { data }) => ({
     id: 'feature',
     ...data,
   }))
@@ -104,4 +115,39 @@ it('retains selected building identity and address components through contributi
       }),
     }),
   )
+})
+
+it('requires the exact persisted draft state for atomic contribution updates', async () => {
+  mocks.probeFeatureForUpdate.mockResolvedValue({
+    id: 'feature',
+    projectId: 'project',
+    modifiedAt: 'original',
+  })
+  mocks.probeLayerForUpdate.mockResolvedValue({
+    id: 'layer',
+    projectId: 'project',
+    organisationId: 'organisation',
+  })
+  mocks.saveUnlinkedFeatureForm.mockResolvedValue({ id: 'feature', isDraft: true })
+  const input = { layerId: 'layer', i18n: {}, properties: [], isDraft: true } as never
+  await updateUserContributedFeatureDraft({} as never, 'feature', input, '', '')
+  expect(mocks.saveUnlinkedFeatureForm).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({
+      featureId: 'feature',
+      projectId: 'project',
+      updatedAt: 'original',
+      expectedDraftState: true,
+      properties: [],
+      data: expect.objectContaining({
+        isDraft: true,
+        isPublished: false,
+        isPendingReview: true,
+      }),
+    }),
+  )
+  mocks.saveUnlinkedFeatureForm.mockResolvedValue(undefined)
+  await expect(
+    updateUserContributedFeatureDraft({} as never, 'feature', input, '', ''),
+  ).rejects.toThrow('Feature draft update failed')
 })

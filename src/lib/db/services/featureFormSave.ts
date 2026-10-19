@@ -1,5 +1,7 @@
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
+// IDENTITY
+import { nanoid } from 'nanoid'
 // SCHEMA
 import { feature } from '../schema/feature'
 // DOMAIN
@@ -11,10 +13,57 @@ import { prepareFeatureFormRelations } from './placeRelations'
 import type { Database } from '#lib/types.js'
 import type {
   FeatureDB,
+  FeatureDBNew,
   FeatureDBPartial,
   FeatureI18nPartial,
   NewFeatureProperty,
 } from '#lib/db/zod/schema/feature.types.js'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+// 1. ATOMIC CREATION
+// 2. CONDITIONAL UPDATE
+// ---
+
+/**
+ * Create a complete Feature and its relations as one visible database state.
+ * @param db Request-local database.
+ * @param input Authorized core values and validated translations/property snapshots.
+ * @returns The inserted Feature after all relations commit.
+ * @remarks Callers validate phone properties before calling. Any child failure rolls
+ * back the parent too; initial Place linking cannot observe an incomplete baseline.
+ */
+export async function createFeatureForm(
+  db: Database,
+  input: {
+    data: FeatureDBNew
+    i18n: Record<string, FeatureI18nPartial>
+    properties: NewFeatureProperty[]
+  },
+): Promise<FeatureDB> {
+  const id = input.data.id || nanoid(12)
+  const formWriteToken = crypto.randomUUID()
+  const parent = db
+    .insert(feature)
+    .values({
+      ...input.data,
+      id,
+      formWriteToken,
+      spatialIndex: createFeatureSpatialIndex(input.data.geometry),
+      addressMeta: input.data.addressMeta ?? {},
+      isPublished: input.data.isPublished ?? false,
+    })
+    .returning()
+  const guard = sql`EXISTS (SELECT 1 FROM feature WHERE id = ${id} AND formWriteToken = ${formWriteToken})`
+  const result = await db.batch([
+    parent,
+    ...prepareFeatureFormRelations(db, id, guard, input.i18n, input.properties),
+  ])
+  const created = (result[0] as FeatureDB[])[0]
+  if (!created) throw new Error('Feature creation failed')
+  return created
+}
 
 /**
  * Atomically save an unlinked Feature form without racing initial Place association.
@@ -31,6 +80,7 @@ export async function saveUnlinkedFeatureForm(
     featureId: string
     projectId: string
     updatedAt: string
+    expectedDraftState?: boolean
     data: FeatureDBPartial
     i18n: Record<string, FeatureI18nPartial>
     properties?: NewFeatureProperty[]
@@ -67,6 +117,9 @@ export async function saveUnlinkedFeatureForm(
         eq(feature.id, input.featureId),
         eq(feature.projectId, input.projectId),
         eq(feature.modifiedAt, input.updatedAt),
+        ...(input.expectedDraftState === undefined
+          ? []
+          : [eq(feature.isDraft, input.expectedDraftState)]),
         sql`NOT EXISTS
       (SELECT 1 FROM featurePlace WHERE featureId = ${input.featureId})`,
       ),

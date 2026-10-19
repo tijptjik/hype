@@ -436,8 +436,8 @@ The Feature editor displays stored arrays as individual lines and preserves unfi
 input, including trailing newlines. Generic property displays format all numbers,
 and Breadline cards create a separate call link for each. Component tests exercise
 array loading, input callbacks, trailing-newline preservation and malformed text kept
-for correction. These changes enable multi-phone materialization but do not yet
-connect normal Feature edits to Place override persistence or migrate brand storage.
+for correction. Normal Feature edits now persist these phone collections alongside Place overrides.
+Place brand storage and reset/adoption materialization remain separate work.
 
 ### Linked edit preparation and atomic relations (Refs #194)
 
@@ -452,9 +452,8 @@ for the same atomic batch as the association and Feature update. Every delete an
 insert requires the new association token. One-row inserts keep parameter counts
 bounded without splitting the transaction. Tests cover a 151-property replacement,
 property translations, checkbox transport, a late injected failure, stale tokens and
-unrelated-Feature isolation. These helpers still require integration into the normal
-save endpoint and complete submitted-value projection; they do not activate linked
-editing on their own.
+unrelated-Feature isolation. Normal linked form saves use these helpers together
+with persisted and submitted effective-value projection.
 
 Baseline extraction now accepts persisted kebab-case locale keys as well as form
 camel-case keys. The corrected live local assessment retains 1,190 English names and
@@ -471,7 +470,8 @@ against the proposed effective values, then association/history, parent Feature,
 translations and changed properties are written in one conditional D1 batch. Stale
 writes and review-required changes do not fall through to the legacy save path.
 Unchanged geometry is omitted from the update to avoid unnecessary spatial/MTR work.
-Project transfers and conversion to non-place representations require review.
+Project transfers and non-Point geometry changes require review. Feature-owned
+status flags can change without changing the physical Place identity.
 
 Service tests cover a real linked edit, unchanged inherited names, phone arrays,
 stale saves and full rollback on a child-write failure. Remote tests cover linked
@@ -482,11 +482,9 @@ only parent modifiedAt changed, effective Place facts stayed identical, and repl
 with the old timestamp was rejected. The primary mirror still has zero associations
 and zero Feature/translation/property differences from the production snapshot.
 
-This integrates the normal form for already-linked Features, not every write path.
-Public linking remains pending until the unlinked-to-linked transition is serialized
-with unlinked form saves and all direct/import/contribution mutation paths are covered.
-Reset/adoption materialization, Place brand storage and source synchronization remain
-outstanding. No remote database mutation or deployment was performed.
+Normal creation, unlinked saves and contribution drafts use the atomic services
+described below. Reset/adoption materialization, Place brand storage and source
+synchronization remain outstanding. No remote database mutation or deployment was performed.
 
 ### Initial-link/form-save serialization (Refs #194)
 
@@ -506,5 +504,20 @@ copy also passed stale-save rejection, stale-link rejection, current-baseline li
 and rejection of an unlinked save after linking. The primary mirror's original
 Feature columns, translations and properties remain identical to production; its
 new tokens are all null and integrity/FK checks pass. Migration 0111 is local only.
-Contribution application in `src/lib/api/services/feature.ts` and other direct write
-paths still require integration before exposing public linking controls.
+
+### Atomic creation and contribution lifecycle (Refs #194)
+
+`createFeatureForm` commits new Features and their complete translation/property
+snapshots in a single batch. Normal creation and user-contribution creation use it;
+a child failure cannot leave a half-created Feature visible for initial linking.
+Contribution draft edits use `saveUnlinkedFeatureForm` with an atomic `isDraft=true`
+precondition, so a draft finalized during validation cannot be overwritten.
+
+The application write-path audit found that task review, bulk state changes and
+hierarchy cascades update Feature-owned state or ancestry, not inherited Place facts.
+Reported-missing reviews can mark a linked Feature intangible without changing its
+physical Place. Subsequent linked edits remain supported; initial migration still
+excludes intangible records without an existing association. Drafts and non-Point
+records remain ineligible for initial links. Tests cover creation rollback, duplicate
+identities, finalized-draft rejection and editing after a reported-missing status.
+
