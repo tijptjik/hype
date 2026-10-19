@@ -51,14 +51,16 @@ function handleSignIn(): void {
       text={upgradeText}
       color="primary"
       size="sm"
-      class="min-w-43 uppercase shadow-md"
+      class="h-10 px-3 uppercase shadow-md"
+      labelClasses="dark:text-white"
       onClick={handleUpgrade}
     />
     <Button
       text={signInText}
       color="primary"
       size="sm"
-      class="uppercase shadow-md"
+      class="h-10 px-3 uppercase shadow-md"
+      labelClasses="dark:text-white"
       onClick={handleSignIn}
     />
   </div>
