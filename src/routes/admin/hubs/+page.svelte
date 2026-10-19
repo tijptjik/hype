@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { onMount } from 'svelte'
 import { page } from '$app/state'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -114,9 +116,28 @@ const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.hub)
 
 // STATE
+let isInitialised = $state(false)
+let loadFailed = $state(false)
 let entities: Hub[] = $derived(
   adminCtx.view.filters.getViewFilteredResource<Hub>(FirstClassResource.hub),
 )
+
+/** Loads the hub index independently of layout startup. @returns Nothing after loading or exposing a retry. */
+async function loadHubs(): Promise<void> {
+  loadFailed = false
+  try {
+    await adminCtx.refreshHubs(false)
+    isInitialised = true
+  } catch (error) {
+    loadFailed = true
+    console.error('[AdminHubs] Failed to load hubs', error)
+  }
+}
+
+// Load on every route entry; the shared admin layout may already be initialised.
+onMount(() => {
+  void loadHubs()
+})
 
 function getIndexModel(entity: Hub) {
   return createAdminIndexCardModel({
@@ -146,21 +167,34 @@ $effect(() => {
 })
 </script>
 
-<ResourceIndex resource={FirstClassResource.hub} {entities}>
-  {#snippet card(
-    entity: Hub,
-  )}
-    <IndexCard {...getIndexModel(entity)} />
-  {/snippet}
-  {#snippet row(
-    entity: Hub,
-    index,
-  )}
-    <ResourceRow
-      {index}
-      breadcrumbColumnCount={3}
-      breadcrumbVariant="stats"
-      {...getIndexModel(entity)}
-    />
-  {/snippet}
-</ResourceIndex>
+{#if loadFailed}
+  <div class="p-6 text-center" role="alert">
+    <p>{m.bootstrap__error()}</p>
+    <button
+      type="button"
+      class="mt-4 rounded-lg bg-base-content px-4 py-2 text-base-100"
+      onclick={() => void loadHubs()}
+    >
+      {m.bootstrap__retry()}
+    </button>
+  </div>
+{:else}
+  <ResourceIndex resource={FirstClassResource.hub} {entities} {isInitialised}>
+    {#snippet card(
+      entity: Hub,
+    )}
+      <IndexCard {...getIndexModel(entity)} />
+    {/snippet}
+    {#snippet row(
+      entity: Hub,
+      index,
+    )}
+      <ResourceRow
+        {index}
+        breadcrumbColumnCount={3}
+        breadcrumbVariant="stats"
+        {...getIndexModel(entity)}
+      />
+    {/snippet}
+  </ResourceIndex>
+{/if}
