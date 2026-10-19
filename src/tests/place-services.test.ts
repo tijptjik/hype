@@ -29,6 +29,7 @@ import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
 import { applyUnresolvedFeatureSplit } from '#lib/db/services/placeSplit.js'
 import { planUnresolvedFeatureSplit } from '#lib/places/migrationPlan.js'
 import {
+  listPlaceAdoptionReviews,
   proposeFeaturePlaceAdoption,
   readPlaceAdoptionReview,
   rejectPlaceAdoptionGroup,
@@ -2589,5 +2590,43 @@ describe('atomic source group application', () => {
     )
     await saveProjectPlaceSettings(db, 'p', DEFAULT_PROJECT_PLACE_POLICY, 0)
     expect(await applyPlaceAdoptionGroup(db, input)).toMatchObject({ status: 'review' })
+  })
+})
+
+describe('bounded Place review discovery', () => {
+  it('paginates newest candidate assessments without duplicates and carries group status', async () => {
+    const { db, sqlite } = setup()
+    const insert =
+      sqlite.prepare(`INSERT INTO placeAdoptionProposal(id,featureId,projectId,placeId,
+      candidateRevisionId,associationRevision,featureModifiedAt,policyRevision,evidence)
+      VALUES (?,'f','p','place',?,?, 'timestamp',0,'{}')`)
+    for (let i = 0; i < 23; i++)
+      insert.run('proposal-' + i, 'candidate-' + i, 'association')
+    insert.run('replacement', 'candidate-22', 'revised-association')
+    sqlite.exec(
+      "INSERT INTO placeAdoptionDecision(id,proposalId,fieldGroup,action,actorId,reason,associationRevision) VALUES ('d','proposal-22','location','rejected','actor','wrong premises','association')",
+    )
+    const first = await listPlaceAdoptionReviews(db, { featureId: 'f', projectId: 'p' })
+    expect(first.reviews).toHaveLength(20)
+    expect(first.reviews[0]).toMatchObject({ id: 'replacement', decidedGroups: 1 })
+    expect(first.reviews.some(row => row.id === 'proposal-22')).toBe(false)
+    expect(first.nextCursor).not.toBeNull()
+    const second = await listPlaceAdoptionReviews(db, {
+      featureId: 'f',
+      projectId: 'p',
+      beforeRow: first.nextCursor!,
+    })
+    expect(second.reviews).toHaveLength(3)
+    expect(second.nextCursor).toBeNull()
+    expect(
+      new Set([...first.reviews, ...second.reviews].map(row => row.candidateRevisionId))
+        .size,
+    ).toBe(23)
+    expect(
+      await listPlaceAdoptionReviews(db, { featureId: 'f', projectId: 'other' }),
+    ).toEqual({ reviews: [], nextCursor: null })
+    await expect(
+      listPlaceAdoptionReviews(db, { featureId: 'f', projectId: 'p', beforeRow: -1 }),
+    ).rejects.toThrow()
   })
 })

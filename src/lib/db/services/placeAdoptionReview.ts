@@ -18,10 +18,75 @@ type Decision = typeof placeAdoptionDecision.$inferSelect
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
-// 1. SCOPED REVIEW READS
+// 1. SCOPED REVIEW READS AND PAGINATION
 // 2. IDEMPOTENT PROPOSALS
 // 3. EXPLICIT REJECTION
 // ---
+
+export type PlaceAdoptionReviewSummary = Pick<
+  Proposal,
+  'id' | 'candidateRevisionId' | 'createdAt' | 'policyRevision'
+> & {
+  rowNumber: number
+  decidedGroups: number
+}
+
+/**
+ * List the newest assessment for each candidate in bounded, stable pages.
+ * @param db Request-local database.
+ * @param input Authorized Feature scope and optional previous page cursor.
+ * @returns Up to twenty summaries and a continuation cursor, never source payloads.
+ * @remarks A cursor only narrows this Feature/project query; it grants no additional access.
+ */
+export async function listPlaceAdoptionReviews(
+  db: Database,
+  input: { featureId: string; projectId: string; beforeRow?: number },
+): Promise<{ reviews: PlaceAdoptionReviewSummary[]; nextCursor: number | null }> {
+  if (
+    input.beforeRow !== undefined &&
+    (!Number.isSafeInteger(input.beforeRow) || input.beforeRow < 1)
+  )
+    throw new Error('Invalid Place review cursor')
+  const rows = await db
+    .select({
+      id: placeAdoptionProposal.id,
+      candidateRevisionId: placeAdoptionProposal.candidateRevisionId,
+      createdAt: placeAdoptionProposal.createdAt,
+      policyRevision: placeAdoptionProposal.policyRevision,
+      rowNumber: sql<number>`placeAdoptionProposal.rowid`,
+      decidedGroups: sql<number>`(SELECT COUNT(DISTINCT d.fieldGroup)
+      FROM placeAdoptionDecision d JOIN placeAdoptionProposal prior ON prior.id=d.proposalId
+      WHERE prior.featureId=placeAdoptionProposal.featureId
+        AND prior.projectId=placeAdoptionProposal.projectId
+        AND prior.placeId=placeAdoptionProposal.placeId
+        AND prior.candidateRevisionId=placeAdoptionProposal.candidateRevisionId)`,
+    })
+    .from(placeAdoptionProposal)
+    .innerJoin(feature, eq(feature.id, placeAdoptionProposal.featureId))
+    .where(
+      and(
+        eq(placeAdoptionProposal.featureId, input.featureId),
+        eq(placeAdoptionProposal.projectId, input.projectId),
+        eq(feature.projectId, input.projectId),
+        eq(feature.isDraft, false),
+        ...(input.beforeRow === undefined
+          ? []
+          : [sql`placeAdoptionProposal.rowid < ${input.beforeRow}`]),
+        sql`NOT EXISTS (SELECT 1 FROM placeAdoptionProposal newer
+        WHERE newer.featureId=placeAdoptionProposal.featureId
+          AND newer.projectId=placeAdoptionProposal.projectId
+          AND newer.placeId=placeAdoptionProposal.placeId
+          AND newer.candidateRevisionId=placeAdoptionProposal.candidateRevisionId
+          AND newer.rowid > placeAdoptionProposal.rowid)`,
+      ),
+    )
+    .orderBy(sql`placeAdoptionProposal.rowid DESC`)
+    .limit(21)
+  return {
+    reviews: rows.slice(0, 20),
+    nextCursor: rows.length > 20 ? rows[19].rowNumber : null,
+  }
+}
 
 /**
  * Read retained evidence only through the Feature's current, authorized project.

@@ -31,6 +31,13 @@ export type PlaceAdoptionPlan = {
   factsRevisionId: string
   locationRevisionId: string
   effective: EffectivePlaceFacts
+  before: EffectivePlaceFacts
+  candidate: EffectivePlaceFacts
+  source: {
+    beforeFacts: PlaceFacts
+    beforeLocation: PlaceFacts['location']
+    candidate: PlaceFacts
+  }
 }
 
 const establishmentSchema = z.object({
@@ -199,5 +206,8 @@ export function planPlaceAdoption(input: {
     factsRevisionId: decision.facts === 'adopt' ? candidate.id : facts.id,
     locationRevisionId: decision.location === 'adopt' ? candidate.id : location.id,
     effective: resolveFeaturePlace(acceptedFacts, acceptedLocation, overrides),
+    before: resolveFeaturePlace(oldFacts, oldLocation, overrides),
+    candidate: resolveFeaturePlace(next, next.location, overrides),
+    source: { beforeFacts: oldFacts, beforeLocation: oldLocation, candidate: next },
   }
 }

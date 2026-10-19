@@ -5,6 +5,12 @@ import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
   searchLocal: vi.fn(),
+  listReviews: vi.fn(),
+  readReview: vi.fn(),
+  proposeReview: vi.fn(),
+  rejectReview: vi.fn(),
+  applyReview: vi.fn(),
+  scheduleMtr: vi.fn(),
   resolveCandidate: vi.fn(),
   searchPlaces: vi.fn(),
   createPlace: vi.fn(),
@@ -43,6 +49,18 @@ vi.mock('#lib/api/server/guarded.js', () => {
       )
   return { guardedQuery: wrap('query'), guardedCommand: wrap('command') }
 })
+vi.mock('#lib/db/services/placeAdoptionReview.js', () => ({
+  listPlaceAdoptionReviews: mocks.listReviews,
+  readPlaceAdoptionReview: mocks.readReview,
+  proposeFeaturePlaceAdoption: mocks.proposeReview,
+  rejectPlaceAdoptionGroup: mocks.rejectReview,
+}))
+vi.mock('#lib/db/services/placeAdoptionApply.js', () => ({
+  applyPlaceAdoptionGroup: mocks.applyReview,
+}))
+vi.mock('#lib/api/services/feature-mtr.js', () => ({
+  scheduleFeatureMtr: mocks.scheduleMtr,
+}))
 vi.mock('#lib/places/sourceClient.js', async importOriginal => {
   const original = await importOriginal<typeof import('#lib/places/sourceClient.js')>()
   return { ...original, searchSaanSeoiPlaces: mocks.searchPlaces }
@@ -95,6 +113,14 @@ import {
   getPlaceUpdatePolicy,
   setPlaceUpdatePolicy,
 } from '#lib/api/place.remote.js'
+
+import {
+  listFeaturePlaceReviews,
+  getFeaturePlaceReview,
+  reevaluateFeaturePlaceReview,
+  rejectFeaturePlaceReview,
+  acceptFeaturePlaceReview,
+} from '#lib/api/placeReview.remote.js'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -441,5 +467,160 @@ describe('explicit unlink authorization', () => {
     await expect(unlinkFeaturePlace(input)).rejects.toMatchObject({ status: 409 })
     mocks.probeFeature.mockResolvedValue(null)
     await expect(unlinkFeaturePlace(input)).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('Place adoption review API boundaries', () => {
+  const review = { featureId: 'f', proposalId: 'proposal' }
+  const decision = {
+    ...review,
+    fieldGroup: 'location' as const,
+    expectedRevision: 'seen',
+    expectedFeatureModifiedAt: 'timestamp',
+    reason: 'Reviewed premises',
+  }
+
+  it('authorizes every endpoint before accessing evidence or mutating decisions', async () => {
+    mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: false, code: 'DENIED' })
+    for (const action of [
+      () => listFeaturePlaceReviews({ featureId: 'f' }),
+      () => getFeaturePlaceReview(review),
+      () => reevaluateFeaturePlaceReview(review),
+      () => rejectFeaturePlaceReview(decision),
+      () => acceptFeaturePlaceReview(decision),
+    ])
+      await expect(action()).rejects.toMatchObject({ status: 403 })
+    for (const read of [
+      mocks.listReviews,
+      mocks.readReview,
+      mocks.proposeReview,
+      mocks.rejectReview,
+      mocks.applyReview,
+    ])
+      expect(read).not.toHaveBeenCalled()
+    expect(mocks.authorizeFeatureUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: { id: 'f', projectId: 'p' },
+        submittedData: {
+          i18n: true,
+          properties: true,
+          geometry: true,
+          addressMeta: true,
+        },
+      }),
+    )
+  })
+
+  it('derives persisted scope, enforces bounded cursors and rejects client authority/source fields', async () => {
+    mocks.listReviews.mockResolvedValue({ reviews: [], nextCursor: null })
+    await listFeaturePlaceReviews({ featureId: 'f', beforeRow: 15 })
+    expect(mocks.listReviews).toHaveBeenCalledWith(mocks.context.db, {
+      featureId: 'f',
+      projectId: 'p',
+      beforeRow: 15,
+    })
+    for (const beforeRow of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])
+      await expect(
+        listFeaturePlaceReviews({ featureId: 'f', beforeRow }),
+      ).rejects.toThrow()
+    for (const extra of [
+      { projectId: 'other' },
+      { actorId: 'other' },
+      { mode: 'automatic' },
+      { facts: { names: { en: 'Forged' } } },
+    ])
+      await expect(
+        acceptFeaturePlaceReview({ ...decision, ...extra } as never),
+      ).rejects.toThrow()
+    await expect(
+      rejectFeaturePlaceReview({ ...decision, reason: ' ' }),
+    ).rejects.toThrow()
+  })
+
+  it('only re-evaluates the candidate from retained evidence and preserves unavailable/conflict results', async () => {
+    mocks.readReview.mockResolvedValue(null)
+    await expect(getFeaturePlaceReview(review)).rejects.toMatchObject({ status: 404 })
+    await expect(reevaluateFeaturePlaceReview(review)).rejects.toMatchObject({
+      status: 404,
+    })
+    expect(mocks.proposeReview).not.toHaveBeenCalled()
+    mocks.readReview.mockResolvedValue({
+      proposal: { candidateRevisionId: 'retained-candidate' },
+    })
+    mocks.proposeReview.mockResolvedValue({
+      proposal: { id: 'new-assessment' },
+      decisions: [],
+    })
+    await reevaluateFeaturePlaceReview(review)
+    expect(mocks.proposeReview).toHaveBeenCalledWith(mocks.context.db, {
+      featureId: 'f',
+      projectId: 'p',
+      candidateRevisionId: 'retained-candidate',
+      reevaluatePending: true,
+    })
+    mocks.proposeReview.mockResolvedValue(null)
+    await expect(reevaluateFeaturePlaceReview(review)).rejects.toMatchObject({
+      status: 409,
+    })
+  })
+
+  it('forces reviewed mode, uses authenticated actor and wakes routing only after committed geometry change', async () => {
+    mocks.applyReview.mockResolvedValue({
+      status: 'applied',
+      revision: 'new',
+      feature: { id: 'f', modifiedAt: 'next' },
+      geometryChanged: false,
+    })
+    expect(await acceptFeaturePlaceReview(decision)).toEqual({
+      status: 'applied',
+      revision: 'new',
+      modifiedAt: 'next',
+    })
+    expect(mocks.applyReview).toHaveBeenCalledWith(mocks.context.db, {
+      ...decision,
+      projectId: 'p',
+      actorId: 'u',
+      mode: 'reviewed',
+    })
+    expect(mocks.scheduleMtr).not.toHaveBeenCalled()
+    mocks.applyReview.mockResolvedValue({
+      status: 'review',
+      reason: 'Missing dependency',
+    })
+    expect(await acceptFeaturePlaceReview(decision)).toEqual({
+      status: 'review',
+      reason: 'Missing dependency',
+    })
+    mocks.applyReview.mockResolvedValue({ status: 'conflict' })
+    await expect(acceptFeaturePlaceReview(decision)).rejects.toMatchObject({
+      status: 409,
+    })
+    expect(mocks.scheduleMtr).not.toHaveBeenCalled()
+    mocks.applyReview.mockResolvedValue({
+      status: 'applied',
+      revision: 'new',
+      feature: { id: 'f', modifiedAt: 'next' },
+      geometryChanged: true,
+    })
+    await acceptFeaturePlaceReview(decision)
+    expect(mocks.scheduleMtr).toHaveBeenCalledWith(
+      mocks.context.event.locals.platform,
+      'f',
+    )
+    mocks.rejectReview.mockResolvedValue(null)
+    await expect(rejectFeaturePlaceReview(decision)).rejects.toMatchObject({
+      status: 409,
+    })
+    expect(mocks.rejectReview).toHaveBeenCalledWith(mocks.context.db, {
+      ...decision,
+      projectId: 'p',
+      actorId: 'u',
+    })
+  })
+
+  it('does not read evidence for missing Features', async () => {
+    mocks.probeFeature.mockResolvedValue(null)
+    await expect(getFeaturePlaceReview(review)).rejects.toMatchObject({ status: 404 })
+    expect(mocks.readReview).not.toHaveBeenCalled()
   })
 })

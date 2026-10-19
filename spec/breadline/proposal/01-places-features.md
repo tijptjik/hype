@@ -174,8 +174,20 @@ and routing jobs together.
 conflicts, multilingual description preservation, override retention, facts-only
 routing avoidance, location routing, rejection after partial adoption, and explicit
 re-evaluation after an unrelated edit. Full type-check retains the existing baseline.
-Remote review authorization/UI and monthly orchestration remain to be connected.
-Preview and proposal creation themselves never apply source updates.
+The review remote APIs now provide bounded, cursor-paginated discovery, evidence reads,
+explicit pending re-evaluation and separate accept/reject commands. All require inherited
+field-editing authorization against persisted Feature ancestry before reading evidence.
+Project/actor identity comes from the server; clients cannot supply source values,
+arbitrary candidate revisions for re-evaluation, or automatic-adoption mode. Incomplete
+evidence returns a review result, while stale decisions return a conflict. Routing is
+woken only after successful geometry application.
+
+Assessment snapshots now include source-before/source-candidate values as well as the
+Feature's effective before/candidate values, so overrides do not conceal source changes
+from reviewers. Discovery returns the newest assessment per candidate, up to twenty
+per page, and carries group decisions across assessment versions. Older assessments
+remain readable by authorized reviewers. The editor review UI and monthly orchestration
+remain to be connected. Preview and proposal creation themselves never apply updates.
 
 ## Replace the address model
 

@@ -67,6 +67,8 @@ describe('source revision adoption evidence', () => {
     expect(result.locationRevisionId).toBe('old')
     expect(result.effective.phoneNumber).toEqual(next.facts.phoneNumber)
     expect(result.effective.location).toEqual(source().facts.location)
+    expect(result.before.location).toEqual(source().facts.location)
+    expect(result.candidate.location).toEqual(next.facts.location)
     expect(result.decision.reasons).toEqual(['coordinates'])
   })
   it('evaluates Project distance policies independently', () => {
@@ -106,6 +108,8 @@ describe('source revision adoption evidence', () => {
       overrides,
     })
     expect(result.effective.names.en).toBe('Local name')
+    expect(result.candidate.names.en).toBe('Local name')
+    expect(result.source.candidate.names.en).toBe('Bakery')
     expect(result.effective.brands).toBeNull()
     expect(result.effective.phoneNumber).toEqual([])
     expect(overrides).toEqual(saved)
