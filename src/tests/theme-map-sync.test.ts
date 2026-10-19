@@ -94,12 +94,13 @@ describe('UI and map style synchronization', () => {
     expect(reloaded.mapSyncEnabled).toBe(true)
   })
 
-  it('restores sync using the resolved UI palette and preserves legacy manual preferences', () => {
+  it('defaults both switches to enabled even with a legacy manual map preference', () => {
     storage.set('hype-map-style', 'midnight')
     const legacy = new ThemeModel()
     legacy.restoreMapPreferences()
-    expect(legacy.mapSelected).toBe('midnight')
-    expect(legacy.mapSyncEnabled).toBe(false)
+    expect(legacy.mapSelected).toBe('hyper')
+    expect(legacy.mapSyncEnabled).toBe(true)
+    expect(legacy.useActiveMapStyle).toBe(true)
     legacy.setMapSync(true)
     const reloaded = new ThemeModel()
     reloaded.select('breadline-dark')
@@ -108,11 +109,22 @@ describe('UI and map style synchronization', () => {
     expect(reloaded.mapSelected).toBe('breadline-dark')
   })
 
+  it('preserves explicitly disabled switches and the independent map on reload', () => {
+    storage.set('hype-map-style', 'midnight')
+    storage.set('hype-sync-ui-map-styles', 'false')
+    storage.set('hype-use-active-map-style', 'false')
+    const model = new ThemeModel()
+    model.restoreMapPreferences()
+    expect(model.mapSelected).toBe('midnight')
+    expect(model.mapSyncEnabled).toBe(false)
+    expect(model.useActiveMapStyle).toBe(false)
+  })
+
   it('ignores invalid saved styles and works when storage is unavailable', () => {
     storage.set('hype-map-style', 'invalid-style')
     const model = new ThemeModel()
     model.restoreMapPreferences()
-    expect(model.mapSelected).toBeNull()
+    expect(model.mapSelected).toBe('hyper')
     vi.stubGlobal('localStorage', {
       getItem: () => {
         throw new Error('Unavailable')

@@ -10,8 +10,8 @@ import type { ThemeId } from './themes.types'
 export const ThemePreferencesSchema = z.object({
   uiTheme: z.enum(THEMES.map(theme => theme.id) as [ThemeId, ...ThemeId[]]),
   mapStyle: z.enum(MAP_STYLE_KEYS).nullable(),
-  syncUiAndMap: z.boolean(),
-  useActiveMapStyle: z.boolean(),
+  syncUiAndMap: z.boolean().default(true),
+  useActiveMapStyle: z.boolean().default(true),
 })
 
 export type ThemePreferences = z.infer<typeof ThemePreferencesSchema>
