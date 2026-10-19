@@ -136,7 +136,7 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
     </div>
   </div>
   <div
-    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 grid translate-y-1/2 grid-cols-[minmax(max-content,1fr)_auto_minmax(0,max-content)] items-center gap-3 px-6 @max-[1100px]:relative @max-[1100px]:translate-y-0 @max-[1100px]:grid-cols-1 @max-[1100px]:py-3"
+    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 grid translate-y-1/2 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-6 @max-[1100px]:relative @max-[1100px]:translate-y-0 @max-[1100px]:grid-cols-1 @max-[1100px]:py-3"
   >
     <div class="pointer-events-auto min-w-0 justify-self-start">
       {@render coordinatesControl()}
