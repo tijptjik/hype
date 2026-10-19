@@ -100,11 +100,13 @@ function normalizeLayerFormLocale(
  * Normalizes persisted metadata for string-valued HTML controls.
  * @param metadata - Retained layer metadata, including unrelated presentation fields.
  * @returns A form-compatible copy with User Preference encoded as an empty string.
+ * @remarks Metadata is persisted JSON and may arrive wrapped in Svelte state proxies.
  */
 function toLayerFormMetadata(
   metadata: Layer['metadata'],
 ): NonNullable<LayerFormInput['data']['metadata']> {
-  const result = structuredClone(metadata ?? {}) as NonNullable<
+  // Copy persisted JSON through proxy getters without retaining nested reactive state.
+  const result = JSON.parse(JSON.stringify(metadata ?? {})) as NonNullable<
     LayerFormInput['data']['metadata']
   >
   if (metadata?.mapStyleCode === null) result.mapStyleCode = ''

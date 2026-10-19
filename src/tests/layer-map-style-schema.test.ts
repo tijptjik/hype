@@ -1,8 +1,34 @@
 import { describe, expect, it } from 'vitest'
 import { LayerMetadataSchema } from '#lib/db/zod/schema/layer.js'
 import { toLayerFormInput } from '#lib/client/services/layer.js'
+import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 
 describe('layer map style metadata', () => {
+  it.each([null, 'neorange'] as const)(
+    'copies proxy-backed metadata with map style %s without mutating retained state',
+    mapStyleCode => {
+      const coordinates = new Proxy([114.17, 22.3], {})
+      const presentation = new Proxy({ coordinates, zoom: 18 }, {})
+      const metadata = new Proxy({ mapStyleCode, presentation }, {})
+      const layer = { metadata } as unknown as Layer
+
+      const result = toLayerFormInput(layer).data.metadata
+      expect(result).toEqual({
+        mapStyleCode: mapStyleCode ?? '',
+        presentation: { coordinates: [114.17, 22.3], zoom: 18 },
+      })
+      expect(() => structuredClone(result)).not.toThrow()
+      if (!result) throw new Error('Expected layer form metadata')
+
+      const copiedPresentation = result.presentation as typeof presentation
+      copiedPresentation.coordinates[0] = 0
+      copiedPresentation.zoom = 10
+      expect(coordinates[0]).toBe(114.17)
+      expect(presentation.zoom).toBe(18)
+      expect(metadata.mapStyleCode).toBe(mapStyleCode)
+    },
+  )
+
   it('round-trips User Preference through string form input and nullable persisted metadata', () => {
     expect(LayerMetadataSchema.parse({ mapStyleCode: '', zoom: 18 })).toEqual({
       mapStyleCode: null,
