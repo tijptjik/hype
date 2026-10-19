@@ -555,3 +555,19 @@ Twenty-four focused source/remote tests pass. A read-only live search returned t
 validated candidates. Type checking reports the existing 10 unrelated errors and
 19 warnings, with no diagnostics in this change. Candidate resolution and the basic
 selection UI remain the next implementation step; no deployment was performed.
+
+### Verified candidate resolution (Refs #194)
+
+`getFeaturePlaceCandidate` resolves a selected SaanSeoi ID and resource release to
+an accessible immutable mirrored revision. It requires full inherited-field edit
+permissions, derives project ancestry server-side, and excludes missing/review source
+identities and private records owned by other projects. Only validated projected
+facts are returned, never raw source payloads. Discovery labels cannot supply facts.
+A missing exact release returns `source-import-needed`; no nearby match, older release
+or latest-only detail response is substituted. Resolution does not create links.
+
+The canonical collection currently lacks a Place-ID filter, while the detail endpoint
+is latest-only. Efficient canonical import of a previously unmirrored search result
+still requires a source API extension or complete publication mirror; the current
+bakery mirror supports previews but is not the full source catalogue. This remains
+an explicit implementation gap, not a completed selection/import workflow.

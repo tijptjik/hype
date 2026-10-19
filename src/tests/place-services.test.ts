@@ -9,6 +9,7 @@ import {
   saveProjectPlaceSettings,
 } from '#lib/db/services/place.js'
 import { updateProjectByIdWithConcurrency } from '#lib/db/services/project.js'
+import { resolvePlaceCandidate } from '#lib/db/services/placeCandidate.js'
 import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
@@ -437,6 +438,74 @@ describe('immutable SaanSeoi Place ingestion', () => {
     expect(
       sqlite.prepare('SELECT count(*) AS count FROM featurePlace').get()?.count,
     ).toBe(0)
+  })
+
+  it('resolves exact source releases without leaking raw snapshots or linking Features', async () => {
+    const { db, sqlite } = setup()
+    const source = projection()
+    const first = await persistSaanSeoiPlace(db, source)
+    const input = {
+      projectId: 'p',
+      ssId: source.ssId,
+      resourceReleaseId: source.releaseId,
+    }
+    expect(await resolvePlaceCandidate(db, input)).toEqual({
+      status: 'ready',
+      ...first,
+      ssId: source.ssId,
+      resourceReleaseId: source.releaseId,
+      snapshotId: source.snapshotId,
+      facts: source.facts,
+    })
+    await persistSaanSeoiPlace(db, {
+      ...source,
+      releaseId: 'new-release',
+      facts: { ...source.facts, names: { en: 'Changed' } },
+    })
+    expect(await resolvePlaceCandidate(db, input)).toMatchObject({
+      revisionId: first.revisionId,
+      facts: source.facts,
+    })
+    expect(
+      await resolvePlaceCandidate(db, { ...input, resourceReleaseId: 'absent' }),
+    ).toEqual({ status: 'source-import-needed' })
+    expect(await resolvePlaceCandidate(db, { ...input, ssId: 'absent' })).toEqual({
+      status: 'source-import-needed',
+    })
+    expect(
+      sqlite.prepare('SELECT count(*) AS count FROM featurePlace').get()?.count,
+    ).toBe(0)
+  })
+
+  it('does not expose private, missing, or review-required source candidates', async () => {
+    const { db, sqlite } = setup()
+    const source = projection()
+    const mirrored = await persistSaanSeoiPlace(db, source)
+    const input = {
+      projectId: 'p',
+      ssId: source.ssId,
+      resourceReleaseId: source.releaseId,
+    }
+    sqlite
+      .prepare('UPDATE place SET ownerProjectId=? WHERE id=?')
+      .run('other', mirrored.placeId)
+    expect(await resolvePlaceCandidate(db, input)).toEqual({
+      status: 'source-import-needed',
+    })
+    expect(
+      await resolvePlaceCandidate(db, { ...input, projectId: 'other' }),
+    ).toMatchObject({ status: 'ready' })
+    sqlite
+      .prepare('UPDATE place SET ownerProjectId=NULL WHERE id=?')
+      .run(mirrored.placeId)
+    for (const availability of ['missing', 'review']) {
+      sqlite
+        .prepare('UPDATE place SET sourceAvailability=? WHERE id=?')
+        .run(availability, mirrored.placeId)
+      expect(await resolvePlaceCandidate(db, input)).toEqual({
+        status: 'source-import-needed',
+      })
+    }
   })
 
   it('retains an existing HYPE identity and rolls back failed new ingestion', async () => {

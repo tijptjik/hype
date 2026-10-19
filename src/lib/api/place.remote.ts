@@ -20,6 +20,7 @@ import {
 } from '#lib/db/services/place.js'
 import { createLocalPlace as persistLocalPlace } from '#lib/db/services/placeLocal.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
+import { resolvePlaceCandidate } from '#lib/db/services/placeCandidate.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
 // DOMAIN
 import { ProjectPlacePolicySchema } from '#lib/places/model.js'
@@ -39,6 +40,7 @@ import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 // 4. LOCAL PLACE CREATION
 // 5. INITIAL FEATURE ASSOCIATION
 // 6. SOURCE DISCOVERY
+// 7. CANDIDATE RESOLUTION
 // ---
 
 const projectInput = z.strictObject({ projectId: z.string().min(1) })
@@ -229,5 +231,44 @@ export const searchFeaturePlaces = guardedQuery(
     } catch {
       error(502, 'PLACE_SEARCH_FAILED')
     }
+  },
+)
+
+/**
+ * Preview canonical facts for a source candidate before explicit Feature linking.
+ * @param input Feature and selected SaanSeoi identity/release, without client facts.
+ * @returns Accessible mirrored revision or an explicit source-import-needed result.
+ * @remarks Requires the same inherited-field permissions as linking. Project scope
+ * comes from persisted ancestry, never from the caller or search result labels.
+ */
+export const getFeaturePlaceCandidate = guardedQuery(
+  z.strictObject({
+    featureId: z.string().min(1),
+    ssId: z.string().min(1).max(200),
+    resourceReleaseId: z.string().min(1).max(200),
+  }),
+  async (input, ctx) => {
+    const probe = await probeFeatureQuery(ctx.db, {
+      ref: input.featureId,
+      refKey: 'id',
+    })
+    if (!probe) error(404, 'FEATURE_NOT_FOUND')
+    const decision = authorizeFeatureUpdateForSubmission({
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      resource: probe,
+      submittedData: {
+        i18n: true,
+        properties: true,
+        geometry: true,
+        addressMeta: true,
+      },
+    })
+    if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    return resolvePlaceCandidate(ctx.db, {
+      projectId: probe.projectId,
+      ssId: input.ssId,
+      resourceReleaseId: input.resourceReleaseId,
+    })
   },
 )

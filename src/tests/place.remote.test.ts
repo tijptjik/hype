@@ -4,6 +4,7 @@ import { withRemoteMeta } from './remote-function-mock'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
+  resolveCandidate: vi.fn(),
   searchPlaces: vi.fn(),
   createPlace: vi.fn(),
   linkPlace: vi.fn(),
@@ -42,6 +43,9 @@ vi.mock('#lib/places/sourceClient.js', async importOriginal => {
   const original = await importOriginal<typeof import('#lib/places/sourceClient.js')>()
   return { ...original, searchSaanSeoiPlaces: mocks.searchPlaces }
 })
+vi.mock('#lib/db/services/placeCandidate.js', () => ({
+  resolvePlaceCandidate: mocks.resolveCandidate,
+}))
 vi.mock('#lib/db/services/placeLink.js', () => ({
   linkInitialFeaturePlace: mocks.linkPlace,
 }))
@@ -65,6 +69,7 @@ vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeFeatureUpdateForSubmission: mocks.authorizeFeatureUpdate,
 }))
 import {
+  getFeaturePlaceCandidate,
   searchFeaturePlaces,
   createLocalPlace,
   linkFeaturePlace,
@@ -286,5 +291,32 @@ describe('Place source search authorization', () => {
     } finally {
       mocks.context.event.locals.platform.env.SAANSEOI_API_KEY = 'test-key'
     }
+  })
+})
+
+describe('source candidate resolution boundary', () => {
+  const input = { featureId: 'f', ssId: 'ss-id', resourceReleaseId: 'release' }
+  it('uses persisted project scope and returns explicit import-needed results', async () => {
+    mocks.resolveCandidate.mockResolvedValue({ status: 'source-import-needed' })
+    expect(await getFeaturePlaceCandidate(input)).toEqual({
+      status: 'source-import-needed',
+    })
+    expect(mocks.resolveCandidate).toHaveBeenCalledWith(mocks.context.db, {
+      projectId: 'p',
+      ssId: 'ss-id',
+      resourceReleaseId: 'release',
+    })
+    expect(mocks.createPlace).not.toHaveBeenCalled()
+    expect(mocks.linkPlace).not.toHaveBeenCalled()
+  })
+  it('rejects forbidden editing and injected project scope before reading facts', async () => {
+    mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: false })
+    await expect(getFeaturePlaceCandidate(input)).rejects.toMatchObject({ status: 403 })
+    await expect(
+      getFeaturePlaceCandidate({ ...input, projectId: 'other' } as never),
+    ).rejects.toThrow()
+    mocks.probeFeature.mockResolvedValue(null)
+    await expect(getFeaturePlaceCandidate(input)).rejects.toMatchObject({ status: 404 })
+    expect(mocks.resolveCandidate).not.toHaveBeenCalled()
   })
 })
