@@ -133,7 +133,10 @@ returns unfiltered source-record counts, not canonical Place differences.
 This route compares publisher source records. SaanSeoi canonical identity reconciliation,
 address dependencies, translations and curation can change canonical results separately.
 Use the feed as change evidence plus publication-pinned canonical refresh of linked IDs;
-do not use it as the sole invalidation signal. Preserve source-to-canonical provenance.
+do not use it as the sole invalidation signal. The current individual Place detail route
+resolves the latest snapshot, despite the collection supporting publication selectors.
+Use the canonical collection with `releaseSet`, `profile=full` and all supported locales
+for a pinned scan; do not assume the detail route accepts those selectors. Preserve source-to-canonical provenance.
 
 Follow DivisionSync's monthly discovery and bounded durable work pattern, with leases,
 retry state, fenced writes and resumable checkpoints. Advance a publication checkpoint
@@ -192,8 +195,24 @@ projection, explicit override resolver and validated adoption policy. Feature lo
 overrides are atomic geometry/address selections; cleared locations must be handled
 by the later materializer rather than written into the existing required geometry.
 
-The runtime still reads existing Feature columns. Resource authorization, policy
-editing, validated source adapters, effective-value materialization, phone property
-array migration, monthly jobs and the import rebase must land before activating this
-model. No new local data application is part of this schema-only change; the existing
-migration hold remains in force.
+The runtime still reads existing Feature columns. The user applied migration 0102
+locally. The additive `getFeaturePlace` remote reads accepted revision projections
+under existing Feature visibility permissions, excludes drafts and scopes private
+baselines to their owning project. It never returns raw snapshots.
+
+Project managers can configure adoption at
+`/admin/projects/<project-code>/place-policy`. Settings use the `placeUpdatePolicy`
+authorization field and optimistic revision checks; translators and unrelated project
+maintainers cannot read/write the settings. Saving a policy does not replay pending or
+rejected changes. The basic form remains English-only pending the UI localization pass.
+
+`src/lib/places/saanseoi.ts` validates full canonical collection records against a
+publication/snapshot checkpoint. It retains the original payload and attribution,
+normalizes all supported phones with explicit invalid-value issues, and preserves
+brand identifiers and localized names in an array. Address references remain unresolved
+until their pinned structured records have been loaded; freeform text is fallback only.
+
+Shared Place mutation authorization, linking/manual creation, override editing,
+effective-value materialization, phone property array migration, Address dependency
+reads, monthly jobs and the import rebase must land before activating synchronization.
+No source data matching or backfill has been applied by these runtime additions.
