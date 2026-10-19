@@ -163,8 +163,13 @@ function updateViewerBudget(): void {
     contributionHeightCompensationPx
   const viewerBlockMinHeightPx =
     layout.viewerMinHeightPx + layout.viewerTopPaddingPx + layout.viewerPaddingPx
+  // Compact cards may already overflow before expansion and never latch a height.
+  // Use the viewer's minimum in that case so the expanded text still enables scrolling.
   const resolvedViewerTargetHeightPx = isDescriptionExpanded
-    ? latchedViewerTargetHeightPx
+    ? Math.max(
+        latchedViewerTargetHeightPx ?? viewerBlockMinHeightPx,
+        viewerBlockMinHeightPx,
+      )
     : availableHeight
 
   // Preserve the last collapsed viewer budget so description expansion cannot
@@ -175,9 +180,8 @@ function updateViewerBudget(): void {
 
   const collapsedScrollable = availableHeight < viewerBlockMinHeightPx
   const expandedScrollable =
-    resolvedViewerTargetHeightPx !== null &&
     staticHeight + resolvedViewerTargetHeightPx + chromeBorderHeight >
-      layout.heightBudgetPx
+    layout.heightBudgetPx
   const shouldScrollContainer = isDescriptionExpanded
     ? expandedScrollable
     : collapsedScrollable
@@ -227,8 +231,11 @@ function handleRootContentVisibilityChange(visible: boolean): void {
   })
 }
 
+// Cache refreshes can replace the feature object while the same card stays open.
+// Reset expansion only when navigating to a different feature identity.
+const featureId = $derived(feature.id)
 $effect(() => {
-  feature.id
+  featureId
   isDescriptionExpanded = false
   latchedViewerTargetHeightPx = null
 })
