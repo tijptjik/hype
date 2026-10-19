@@ -44,7 +44,7 @@ export async function backfillFeatureMtr(args: string[]): Promise<void> {
   if (!['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname))
     throw new Error('Backfill requires a local routing engine')
   const db = new Database(option('--database'), { readonly: true })
-  const rows = db.query('SELECT id,geometry FROM feature ORDER BY id').all() as {
+  const rows = db.query("SELECT id,geometry FROM feature WHERE json_extract(COALESCE(mtrResolution,'{}'),'$.review') IS NULL ORDER BY id").all() as {
     id: string
     geometry: string
   }[]
@@ -64,6 +64,7 @@ export async function backfillFeatureMtr(args: string[]): Promise<void> {
   let done = 0,
     index = 0,
     requests = 0
+  // Reviewed imports are excluded; geometry changes clear their approval via the schema trigger.
   // Four independent features share a local two-thread native engine without flooding it.
   async function worker(): Promise<void> {
     while (index < rows.length) {
@@ -141,7 +142,7 @@ export async function backfillFeatureMtr(args: string[]): Promise<void> {
     if (!result) continue
     counts[result.mtrResolution.status] = (counts[result.mtrResolution.status] || 0) + 1
     statements.push(
-      `UPDATE feature SET mtrStation=${sql(result.mtrStation)},mtrExit=${sql(result.mtrExit)},mtrDistance=${result.mtrDistance ?? 'NULL'},mtrResolution=${sql(JSON.stringify(result.mtrResolution))} WHERE id=${sql(row.id)} AND geometry=${sql(row.geometry)};`,
+      `UPDATE feature SET mtrStation=${sql(result.mtrStation)},mtrExit=${sql(result.mtrExit)},mtrDistance=${result.mtrDistance ?? 'NULL'},mtrResolution=${sql(JSON.stringify(result.mtrResolution))} WHERE id=${sql(row.id)} AND geometry=${sql(row.geometry)} AND json_extract(COALESCE(mtrResolution,'{}'),'$.review') IS NULL;`,
     )
     statements.push(
       `DELETE FROM featureMtrJob WHERE featureId=${sql(row.id)} AND geometry=${sql(row.geometry)};`,

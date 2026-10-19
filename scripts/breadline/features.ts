@@ -4,6 +4,9 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 // SQLITE
 import { Database } from 'bun:sqlite'
+// IMPORT POLICY
+import donorImportPolicy from './donor-import-policy.json'
+import { reviewedDonorMtr } from './lib/donor-mtr-decisions'
 // VALIDATION
 import { normalizeHongKongPhoneNumber } from '../../src/lib/utils/phone-property'
 import { createFeatureSpatialIndex } from '../../src/lib/map/featureSpatial'
@@ -90,6 +93,40 @@ export function planBreadlineFeatures(args: string[]): void {
         `INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES (${sql(brandIds[key])},${sql(locale)},${sql(value)},0) ON CONFLICT(propertyValueId,locale) DO NOTHING;`,
       )
   }
+  // Run history establishes participation; active status alone does not qualify a donor.
+  const donorRuns = new Set(
+    (
+      source.query('SELECT DISTINCT donor_id FROM breadline__public__runs').all() as {
+        donor_id: number
+      }[]
+    ).map(row => String(row.donor_id)),
+  )
+  const excludedDonors: {
+    sourceId: string
+    reason: string
+    alreadyImported: boolean
+  }[] = []
+  let reviewedMtr = 0
+  const unmappedReviewedExits: string[] = []
+  // Apply accepted access after insertion, clearing only the matching automatic job.
+  const applyReview = (
+    sourceId: string,
+    id: string,
+    hash: string,
+    coordinates: number[],
+    geometry: string,
+  ): void => {
+    const reviewed = reviewedDonorMtr(sourceId, hash, coordinates)
+    if (!reviewed) return
+    reviewedMtr++
+    if (!reviewed.mtrExit) unmappedReviewedExits.push(sourceId)
+    statements.push(
+      `UPDATE feature SET mtrStation=${sql(reviewed.mtrStation)},mtrExit=${sql(reviewed.mtrExit)},mtrDistance=${sql(reviewed.mtrDistance)},mtrResolution=${sql(reviewed.mtrResolution)} WHERE id=${sql(id)} AND geometry=${sql(geometry)};`,
+    )
+    statements.push(
+      `DELETE FROM featureMtrJob WHERE featureId=${sql(id)} AND geometry=${sql(geometry)};`,
+    )
+  }
   let created = 0,
     matched = 0,
     invalidPhones = 0,
@@ -107,6 +144,29 @@ export function planBreadlineFeatures(args: string[]): void {
       .all() as SourceRow[]
     for (const row of rows) {
       const sourceId = String(row.id)
+      if (table === 'donors') {
+        const reason = (donorImportPolicy.excludedDonorIds as number[]).includes(
+          Number(row.id),
+        )
+          ? 'explicit_exclusion'
+          : donorImportPolicy.requireRecordedRun && !donorRuns.has(sourceId)
+            ? 'no_recorded_runs'
+            : null
+        if (reason) {
+          excludedDonors.push({
+            sourceId,
+            reason,
+            alreadyImported: Boolean(
+              target
+                .query(
+                  "SELECT 1 FROM breadlineImportFeature WHERE sourceTable='donors' AND sourceId=?",
+                )
+                .get(sourceId),
+            ),
+          })
+          continue
+        }
+      }
       const id =
         'bl' +
         (table === 'donors' ? 'D' : 'P') +
@@ -120,6 +180,19 @@ export function planBreadlineFeatures(args: string[]): void {
       if (existing) {
         if (existing.featureId !== id || existing.sourceHash !== hash)
           throw new Error(`Source changed for ${table}:${sourceId}; review required`)
+        if (table === 'donors') {
+          const feature = target
+            .query('SELECT geometry FROM feature WHERE id=?')
+            .get(id) as { geometry: string } | null
+          if (!feature) throw new Error(`Missing mapped donor:${sourceId}`)
+          applyReview(
+            sourceId,
+            id,
+            hash,
+            JSON.parse(feature.geometry).coordinates,
+            feature.geometry,
+          )
+        }
         matched++
         continue
       }
@@ -222,6 +295,8 @@ export function planBreadlineFeatures(args: string[]): void {
           sourceHash: hash,
         }),
       )
+      if (table === 'donors')
+        applyReview(sourceId, id, hash, coordinates, JSON.stringify(geometry))
       created++
     }
   }
@@ -230,7 +305,16 @@ export function planBreadlineFeatures(args: string[]): void {
   writeFileSync(
     output + '.receipt.json',
     JSON.stringify(
-      { created, matched, invalidPhones, coordinateCorrections: corrected },
+      {
+        created,
+        matched,
+        invalidPhones,
+        coordinateCorrections: corrected,
+        policyVersion: donorImportPolicy.version,
+        excludedDonors,
+        reviewedMtr,
+        unmappedReviewedExits,
+      },
       null,
       2,
     ) + '\n',
@@ -242,6 +326,10 @@ export function planBreadlineFeatures(args: string[]): void {
       matched,
       invalidPhones,
       coordinateCorrections: corrected,
+      excludedDonors: excludedDonors.length,
+      excludedAlreadyImported: excludedDonors.filter(row => row.alreadyImported).length,
+      reviewedMtr,
+      unmappedReviewedExits,
       output,
     }),
   )
