@@ -18,6 +18,7 @@ import {
 import CreateLocalPlace from './CreateLocalPlace.svelte'
 import PlaceBrandEditor from './PlaceBrandEditor.svelte'
 import PlaceResetFields from './PlaceResetFields.svelte'
+import PlaceReviewSection from './PlaceReviewSection.svelte'
 import type { PlaceReset } from '#lib/places/reset.js'
 import type { PlaceBrandEdit } from '#lib/places/brandEdit.js'
 // TYPES
@@ -40,6 +41,7 @@ let {
   reset,
   onResetFields,
   onUnlink,
+  onSourceUpdate,
 }: {
   featureId: string
   projectId: string
@@ -52,6 +54,7 @@ let {
   reset?: unknown
   onResetFields: (reset: PlaceReset | undefined) => void
   onUnlink: (expectedRevision: string) => Promise<void>
+  onSourceUpdate: () => Promise<void>
 } = $props()
 const accepted = $derived(getFeaturePlace({ featureId }))
 let query = $state('')
@@ -380,6 +383,13 @@ async function link(): Promise<void> {
     {:catch}
       <p role="alert" class="text-sm text-destructive">{m.feature_place_failed()}</p>
     {/await}
+    <PlaceReviewSection
+      {featureId}
+      associationRevision={accepted.current?.revision ?? ''}
+      {modifiedAt}
+      {isDirty}
+      onCommitted={onSourceUpdate}
+    />
     {#if searchFailed}
       <p role="alert" class="text-sm text-muted-foreground">
         {m.feature_place_search_partial()}

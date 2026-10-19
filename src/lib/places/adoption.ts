@@ -37,6 +37,16 @@ export type PlaceAdoptionPlan = {
     beforeFacts: PlaceFacts
     beforeLocation: PlaceFacts['location']
     candidate: PlaceFacts
+    establishmentBefore: {
+      basicCategory: string | null
+      taxonomy: { primary: string | null; [key: string]: unknown }
+      operatingStatus: string | null
+    } | null
+    establishmentCandidate: {
+      basicCategory: string | null
+      taxonomy: { primary: string | null; [key: string]: unknown }
+      operatingStatus: string | null
+    } | null
   }
 }
 
@@ -208,6 +218,16 @@ export function planPlaceAdoption(input: {
     effective: resolveFeaturePlace(acceptedFacts, acceptedLocation, overrides),
     before: resolveFeaturePlace(oldFacts, oldLocation, overrides),
     candidate: resolveFeaturePlace(next, next.location, overrides),
-    source: { beforeFacts: oldFacts, beforeLocation: oldLocation, candidate: next },
+    source: {
+      beforeFacts: oldFacts,
+      beforeLocation: oldLocation,
+      candidate: next,
+      establishmentBefore: beforeEstablishment.success
+        ? beforeEstablishment.data.resource.attributes
+        : null,
+      establishmentCandidate: afterEstablishment.success
+        ? afterEstablishment.data.resource.attributes
+        : null,
+    },
   }
 }

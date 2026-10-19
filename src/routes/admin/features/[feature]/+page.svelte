@@ -2371,6 +2371,14 @@ $effect(() => {
               modifiedAt={feature.data.modifiedAt}
               {isEditing}
               {isDirty}
+              onSourceUpdate={async () => {
+                await getFeature({
+                  ref: featureRef,
+                  refKey: 'id',
+                  meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+                }).refresh()
+                await refreshFeature()
+              }}
               onUnlink={async expectedRevision => {
                 const current = feature?.data
                 if (!current || isDirty) return

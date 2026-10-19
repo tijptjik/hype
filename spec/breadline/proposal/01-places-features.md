@@ -186,8 +186,24 @@ Assessment snapshots now include source-before/source-candidate values as well a
 Feature's effective before/candidate values, so overrides do not conceal source changes
 from reviewers. Discovery returns the newest assessment per candidate, up to twenty
 per page, and carries group decisions across assessment versions. Older assessments
-remain readable by authorized reviewers. The editor review UI and monthly orchestration
-remain to be connected. Preview and proposal creation themselves never apply updates.
+remain readable by authorized reviewers. Preview and proposal creation themselves never
+apply updates. Monthly orchestration remains to be connected.
+
+The Feature editor now exposes source-update review in its Place section. Reviewers
+load bounded assessment pages explicitly, compare source names, phones, brand identities,
+category/taxonomy, operating status, coordinates and addresses, and expand the effective
+Feature values to see retained overrides. Facts and location each require a reason and
+have separate accept/reject actions. Dirty forms and unresolved dependencies block
+application; pending evidence can be explicitly re-evaluated without reopening decisions.
+The panel remains mounted across accepted-Place refreshes so a reviewer can decide the
+second group after accepting the first.
+
+Validation on an isolated local fixture: the browser accepted facts and then rejected
+location with separate reasons and no page errors. Database inspection confirmed both
+decisions, independent accepted revisions, unchanged geometry and SQLite integrity.
+The 93 focused planner, persistence and API tests pass; the full type-check remains at
+the existing 10 errors / 19 warnings. Synthetic fixture records are development-only
+and are not canonical matches or migration input.
 
 ## Replace the address model
 
