@@ -6,15 +6,12 @@ import Badge from '#lib/bits/custom/badge/Badge.svelte'
 // CONTEXT
 import { getImportCtx } from '#lib/context/import.svelte.js'
 // SERVICES
-import {
-  fetchALSResultFromAddress,
-  processForwardGeocodeResult,
-} from '#lib/api/external/geocoding.js'
+import { geocodeAddress } from '#lib/api/external/geocoding.js'
 import { getAddressForQuery, toLocalParseResult } from '#lib/utils/geocoding.js'
 // TYPES
 import type { GeoLookupStatusCounts } from '#lib/client/services/import/features.js'
 import type {
-  ALSResult,
+  ParsedReverseGeocodeResult,
   ParsedReverseGeocodeResultI18n,
 } from '#lib/utils/geocoding.types.js'
 import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
@@ -60,7 +57,7 @@ let sampledRowIndices = $state<number[]>([])
 let geocodeCacheSize = $state(0)
 let isLoadingCache = $state(true)
 
-const GEO_LOOKUP_CACHE_KEY = 'hype.import.geo-lookup-cache.v1'
+const GEO_LOOKUP_CACHE_KEY = 'hype.import.geo-lookup-cache.saanseoi.v1'
 
 // Dashboard state for current row being processed
 let currentRowData = $state<{
@@ -131,7 +128,7 @@ onMount(() => {
   isLoadingCache = false
 })
 
-function getGeocodeCache(): Record<string, ALSResult> {
+function getGeocodeCache(): Record<string, ParsedReverseGeocodeResult> {
   if (typeof localStorage === 'undefined') return {}
 
   try {
@@ -145,7 +142,7 @@ function getGeocodeCache(): Record<string, ALSResult> {
   }
 }
 
-function setGeocodeCache(cache: Record<string, ALSResult>) {
+function setGeocodeCache(cache: Record<string, ParsedReverseGeocodeResult>) {
   if (typeof localStorage === 'undefined') return
 
   localStorage.setItem(GEO_LOOKUP_CACHE_KEY, JSON.stringify(cache))
@@ -467,7 +464,7 @@ async function handleGeocodeForCSV(
   rawAddress: string,
   locale: LocaleKey,
 ): Promise<{
-  processedResult: Awaited<ReturnType<typeof processForwardGeocodeResult>> | null
+  processedResult: ParsedReverseGeocodeResult | null
   fromCache: boolean
 }> {
   try {
@@ -476,19 +473,12 @@ async function handleGeocodeForCSV(
 
     // Geocode using the optimized query address (includes disambiguation if needed)
     if (addressComponents.queryAddress) {
-      const cacheKey = toGeocodeCacheKey(
-        addressComponents.queryAddress,
-        locale,
-        null,
-        null,
-      )
+      const cacheKey = toGeocodeCacheKey(rawAddress, locale, null, null)
       const cache = getGeocodeCache()
       const cachedResult = cache[cacheKey]
-      const result =
-        cachedResult ??
-        (await fetchALSResultFromAddress(addressComponents.queryAddress))
+      const result = cachedResult ?? (await geocodeAddress({ address: rawAddress }))
 
-      if (!cachedResult) {
+      if (!cachedResult && result) {
         cache[cacheKey] = result
         setGeocodeCache(cache)
       }
@@ -497,17 +487,10 @@ async function handleGeocodeForCSV(
         throw new Error('No geocoding result found')
       }
 
-      // Process the result
-      // Note: subPremises parsing will be added in future enhancement
-      const processedResult = await processForwardGeocodeResult(
-        result,
-        addressComponents.neighbourhood,
-        true,
-        0, // placeholder longitude for distance calculation
-        0, // placeholder latitude for distance calculation
-        addressComponents.subpremisesRaw,
-        rawAddress,
-      )
+      // SaanSeoi returns normalized components; preserve the source address in its locale.
+      // Sub-premises remain part of the raw query for provider-side parsing.
+      const processedResult = result
+      processedResult.i18n[locale].addressProperties.rawAddress = rawAddress
 
       if (!processedResult) {
         throw new Error('Failed to process geocoding result')
@@ -827,7 +810,7 @@ async function startGeocoding() {
         }
       }
 
-      // Rate limiting: only delay after actual ALS requests, not cache hits.
+      // Rate limiting: only delay after actual SaanSeoi requests, not cache hits.
       if (i < sampledRowIndices.length - 1 && usedApiLookup) {
         await new Promise(resolve => setTimeout(resolve, 1000))
       }

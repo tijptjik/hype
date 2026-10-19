@@ -73,6 +73,9 @@ export type AddressProperties = {
 export type AddressMeta = {
   // IDENTIFIERS
 
+  // IDENTIFIERS :: SAANSEOI
+  saanseoiAddressId?: string
+
   // IDENTIFIERS :: HKGOV
   // // Building Deparment CSUID
   geoAddressCode?: string
@@ -92,8 +95,8 @@ export type AddressMeta = {
   confidenceForwardGeocoder?: number
 
   // GEOCODING
-  addressForwardGeocoder?: 'hkgov_als' | 'googlemaps' | 'invalid'
-  addressReverseGeocoder?: 'hkgov_reverse' | 'googlemaps'
+  addressForwardGeocoder?: 'saanseoi' | 'hkgov_als' | 'googlemaps' | 'invalid'
+  addressReverseGeocoder?: 'saanseoi' | 'hkgov_reverse' | 'googlemaps'
   addressReverseGen?: boolean
   addressForwardGen?: boolean
 }

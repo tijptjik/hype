@@ -1,649 +1,264 @@
+// THIRD PARTY
+import { z } from 'zod'
 // SERVICES
-import {
-  calculateDistance,
-  capitalizeFirstLetter,
-  getFirstLocation,
-  getNormalisedDistrict,
-  getNormalisedArea,
-  removeArea,
-  titleCase,
-  applyAddressAbbreviations,
-  getNormalisedCountry,
-  districtCodeToName,
-  parseSubPremisesComponent,
-} from '#lib/utils/geocoding.js'
-import { translateText } from '#lib/api/external/translation.js'
+import { applyAddressAbbreviations, titleCase } from '#lib/utils/geocoding.js'
 // TYPES
-import type { AddressProperties, AddressMeta } from '#lib/utils/address.types.js'
-import type {
-  ParsedReverseGeocodeResult,
-  ALSResult,
-} from '#lib/utils/geocoding.types.js'
+import type { ParsedReverseGeocodeResult } from '#lib/utils/geocoding.types.js'
+import type { AddressProperties } from '#lib/utils/address.types.js'
 import type { LocaleKey } from '#lib/types.js'
-// TYPES
 
-interface ReverseGeocodeResult {
-  address: {
-    Street: string
-    Neighborhood: string | null
-    City: string
-    Subregion: string | null
-    State: string
-    Country: string | null
-    Match_addr: string
-    Loc_name: string
-  }
-  location: {
-    x: number
-    y: number
-    spatialReference: {
-      wkid: number
-      latestWkid: number
-    }
-  }
-}
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+// 1. CONTRACTS
+// 2. ADDRESS PRESENTATION
+// - formatAddress
+// - parseGeocodeResult
+// 3. SAANSEOI REQUESTS
+// - geocodeAddress
+// ---
 
-type ALSSuggestedAddressItem = NonNullable<ALSResult['SuggestedAddress']>[number]
-
-// TYPES
-type PlatformEnv = {
-  PUBLIC_AZURE_TRANSLATION_REGION?: string
-  AZURE_TRANSLATION_KEY?: string
-}
-function getPlatformEnv(): PlatformEnv | null {
-  if (!('platform' in globalThis)) return null
-
-  return (
-    (
-      globalThis as typeof globalThis & {
-        platform?: {
-          env?: PlatformEnv
-        }
-      }
-    ).platform?.env ?? null
-  )
-}
-
-/************
- * UTILS
- ************/
-
-/**
- * Convert WGS84 coordinates to Web Mercator (EPSG:3857)
- * @param lng - The longitude of the point to convert
- * @param lat - The latitude of the point to convert
- * @returns The Web Mercator coordinates
- */
-function convertToWebMercator(lng: number, lat: number): [number, number] {
-  const x = (lng * 20037508.34) / 180
-  const y = Math.log(Math.tan(((90 + lat) * Math.PI) / 360)) / (Math.PI / 180)
-  return [x, (y * 20037508.34) / 180]
-}
-
-/**
- * Convert Web Mercator (EPSG:3857) coordinates to WGS84
- * @param x - The x coordinate of the point to convert
- * @param y - The y coordinate of the point to convert
- * @returns The WGS84 coordinates
- */
-function convertFromWebMercator(x: number, y: number): [number, number] {
-  const lng = (x * 180) / 20037508.34
-  const lat = (Math.atan(Math.exp((y * Math.PI) / 20037508.34)) * 360) / Math.PI - 90
-  return [lng, lat]
-}
-
-/************
- * GEOCODING
- ************/
-
-/**
- * Fetch a reverse geocoding result from the HK Map Service API
- * @param lng - The longitude of the point to reverse geocode
- * @param lat - The latitude of the point to reverse geocode
- * @returns The reverse geocoding result, or null if the request fails
- */
-async function fetchReverseGeocodeResult(
-  lng: number,
-  lat: number,
-): Promise<ReverseGeocodeResult | null> {
-  const endPoint = 'https://api.hkmapservice.gov.hk/ags/gc/loc/address/reverseGeocode'
-  const [x, y] = convertToWebMercator(lng, lat)
-  const params = new URLSearchParams({
-    key: '6a40dd75bce8494ea735efd8d97dd820',
-    outSR: JSON.stringify({ wkid: 3857 }),
-    location: JSON.stringify({
-      x,
-      y,
-      spatialReference: { wkid: 102100, latestWkid: 3857 },
+const addressLocaleSchema = z.object({
+  formattedAddress: z.string(),
+  buildingName: z.string().nullish(),
+  buildingNumberExpression: z.string().nullish(),
+  buildingNumberFrom: z.string().nullish(),
+  buildingNumberTo: z.string().nullish(),
+  blockExpression: z.string().nullish(),
+  blockType: z.string().nullish(),
+  blockRef: z.string().nullish(),
+  blockTypeBeforeNumber: z.boolean().nullish(),
+  phaseExpression: z.string().nullish(),
+  phaseName: z.string().nullish(),
+  phaseRef: z.string().nullish(),
+  estateName: z.string().nullish(),
+  streetName: z.string().nullish(),
+})
+const responseSchema = z.object({
+  data: z.array(
+    z.object({
+      type: z.literal('geocoding-results'),
+      attributes: z.object({
+        status: z.enum(['resolved', 'ambiguous', 'incomplete', 'not_found']),
+        match: z
+          .object({ distanceMetres: z.number().optional() })
+          .passthrough()
+          .optional(),
+      }),
+      relationships: z.object({
+        address: z
+          .object({
+            data: z.array(z.object({ type: z.literal('addresses'), id: z.string() })),
+          })
+          .optional(),
+      }),
     }),
-    distance: '500',
-    f: 'json',
-  })
-
-  const response = await fetch(`${endPoint}?${params}`)
-  const result = await response.json()
-
-  return result?.address ? result : null
-}
-
-export async function fetchForwardGeocodeALSResult(
-  address: string,
-  _neighbourhood: string | null = null,
-  minConfidence: number = 60,
-  maxResults: number = 1,
-  floor: string | null = null,
-  unit: string | null = null,
-): Promise<ALSResult> {
-  const endPoint = 'https://www.als.gov.hk/lookup'
-  const params = new URLSearchParams({
-    q: address,
-    t: String(minConfidence),
-    n: String(maxResults),
-    '3d': floor || unit ? '1' : '0',
-  })
-  if (floor) params.set('floor', floor)
-  if (unit) params.set('unit', unit)
-
-  const response = await fetch(`${endPoint}?${params}`, {
-    headers: {
-      Accept: 'application/json',
-      'Accept-Encoding': 'gzip',
-      'Accept-Language': 'en-US,en;q=0.9,zh-HK;q=0.8,zh;q=0.7,zh-hant;q=0.7',
-    },
-  })
-  const result = await response.json()
-  return result
-}
-
-/**
- * Fetch forward geocoding results for an address.
- * @param address - The address query to geocode.
- * @param floor - Optional floor for ALS 3D sub-premises lookup.
- * @param unit - Optional unit for ALS 3D sub-premises lookup.
- * @returns The ALS geocoding result.
- * @remarks Compatibility wrapper for the revived import flow.
- */
-export async function fetchALSResultFromAddress(
-  address: string,
-  floor: string | null = null,
-  unit: string | null = null,
-): Promise<ALSResult> {
-  return fetchForwardGeocodeALSResult(address, null, 60, 1, floor, unit)
-}
-
-export async function geoAddressLookup(geoAddressCode: string): Promise<ALSResult> {
-  const endPoint = 'https://www.als.gov.hk/galookup'
-  const response = await fetch(`${endPoint}?ga=${geoAddressCode}`, {
-    headers: {
-      Accept: 'application/json',
-      'Accept-Encoding': 'gzip',
-      'Accept-Language': 'en-US,en;q=0.9,zh-HK;q=0.8,zh;q=0.7,zh-hant;q=0.7',
-    },
-  })
-  return response.json()
-}
-
-/************
- * PARSING
- ************/
-
-/**
- * Process a reverse geocoding result
- * @param result - The reverse geocoding result to process
- * @param lng - The longitude of the point to process
- * @param lat - The latitude of the point to process
- * @returns The processed reverse geocoding result
- */
-function processReverseGeocodeResult(
-  result: ReverseGeocodeResult,
-  lng: number,
-  lat: number,
-): ParsedReverseGeocodeResult | null {
-  // Parse street address
-  const streetParts = result.address?.Street?.split(' ') || []
-  let buildingNumberFrom: string | undefined
-  let buildingNumberTo: string | undefined
-  let streetName: string | undefined
-
-  if (streetParts.length > 1) {
-    const numbers = streetParts[0].split(/[-/]/)
-    buildingNumberFrom = numbers[0]
-    buildingNumberTo = numbers[1]
-    streetName = capitalizeFirstLetter(
-      applyAddressAbbreviations(streetParts.slice(1).join(' ')),
+  ),
+  included: z
+    .array(
+      z.object({
+        type: z.string(),
+        id: z.string(),
+        attributes: z.unknown(),
+      }),
     )
-  }
+    .default([]),
+})
+const addressSchema = z.object({
+  geometry: z
+    .object({
+      type: z.literal('Point'),
+      coordinates: z.tuple([z.number(), z.number()]),
+    })
+    .nullish(),
+  i18n: z.record(z.string(), addressLocaleSchema),
+})
 
-  // Get coordinates and calculate distance
-  const [resultLng, resultLat] = convertFromWebMercator(
-    result.location.x,
-    result.location.y,
-  )
-  const distance = calculateDistance(lng, lat, resultLng, resultLat)
-
-  // Preserve provider address text; the division resolver owns hierarchy and membership.
-  const neighbourhood = result.address.Neighborhood
-  const district = result.address.Subregion
-
-  // Create display address - ensure it exists
-  const rawDisplayAddress = result.address.Match_addr
-  const processedDisplayAddress = rawDisplayAddress
-    ? removeArea(titleCase(applyAddressAbbreviations(rawDisplayAddress)))
-    : undefined
-
-  // Process the result
-  const processedResult: ParsedReverseGeocodeResult = {
-    addressMeta: {
-      longitude: resultLng,
-      latitude: resultLat,
-      distanceFromPoint: distance,
-      addressReverseGeocoder: 'hkgov_reverse',
-      addressReverseGen: true,
-    },
-    i18n: {
-      en: {
-        displayAddress: processedDisplayAddress,
-        displayAddressGen: true,
-        addressProperties: {
-          formattedAddress: titleCase(result.address.Match_addr) || undefined,
-          buildingNumberFrom,
-          buildingNumberTo,
-          streetName,
-          neighbourhood: titleCase(neighbourhood) || undefined,
-          district: district,
-          area: getNormalisedArea(result.address.State, 'en'),
-          country: 'HKSAR',
-        },
-      },
-      zhHant: {
-        displayAddress: undefined,
-        displayAddressGen: true,
-        addressProperties: {},
-      },
-      zhHans: {
-        displayAddress: undefined,
-        displayAddressGen: true,
-        addressProperties: {},
-      },
-    },
-  }
-
-  return processedResult
+type AddressLocale = z.infer<typeof addressLocaleSchema>
+export type GeocodeInput = { lng: number; lat: number } | { address: string }
+export type GeocodeOptions = {
+  baseUrl?: string
+  fetcher?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 }
 
 /**
- * Process a forward geocoding result
- * @param result - The forward geocoding result to process
- * @param neighbourhood - The neighbourhood to process
- * @param genDisplayAddress - Whether to generate a display address
- * @param lng - The longitude of the point to process
- * @param lat - The latitude of the point to process
- * @returns The processed forward geocoding result
+ * Builds a readable address while leaving polygon-derived divisions out of urban labels.
+ * @param value Canonical localized SaanSeoi address components.
+ * @param locale Hype locale key.
+ * @param urban Whether the canonical English region identifies HK Island or Kowloon.
+ * @returns Building and street address for urban records, otherwise the full canonical label.
+ * @remarks Keep NT village/locality context and addresses without a street intact.
  */
-export async function processForwardGeocodeResult(
-  result: ALSResult,
-  neighbourhood: string | null | undefined,
-  genDisplayAddress: boolean,
-  lng: number,
-  lat: number,
-  subpremisesRaw?: string | null,
-  rawAddress?: string | null,
-): Promise<ParsedReverseGeocodeResult | null> {
-  if (!result.SuggestedAddress?.length) return null
-
-  const address = result.SuggestedAddress[0]
-  const { PremisesAddress: pa } = address.Address
-
-  // Do not invent translated neighbourhoods from a separate static catalogue.
-  const neighbourhoodZhHant = null
-
-  // Only generate display addresses if allowed
-  const displayAddressEn = genDisplayAddress
-    ? parseALSResultToDisplay(address, neighbourhood ?? null, 'en')
-    : undefined
-  const displayAddressZhHant = genDisplayAddress
-    ? parseALSResultToDisplay(address, neighbourhoodZhHant, 'zhHant')
-    : undefined
-  let displayAddressZhHans: string | undefined
-  const parsedSubpremises = parseSubPremisesComponent(subpremisesRaw)
-  const premisesNameEn = titleCase(pa.EngPremisesAddress?.EngEstate?.EstateName)
-  const premisesNameZhHant =
-    'ChiPremisesAddress' in pa
-      ? pa.ChiPremisesAddress.ChiEstate?.EstateName || undefined
-      : undefined
-
-  // Prepare Chinese address properties
-  let addressPropsZhHant: Partial<AddressProperties> = {}
-  if ('ChiPremisesAddress' in pa) {
-    addressPropsZhHant = {
-      ...parsedSubpremises,
-      buildingName: pa.ChiPremisesAddress.BuildingName || undefined,
-      buildingNumberFrom: pa.ChiPremisesAddress.ChiStreet?.BuildingNoFrom || undefined,
-      buildingNumberTo: pa.ChiPremisesAddress.ChiStreet?.BuildingNoTo || undefined,
-      blockType: pa.ChiPremisesAddress.ChiBlock?.BlockDescriptor || undefined,
-      blockNumber: pa.ChiPremisesAddress.ChiBlock?.BlockNo || undefined,
-      premisesName: premisesNameZhHant,
-      streetName: pa.ChiPremisesAddress.ChiStreet?.StreetName || undefined,
-      macrohood: neighbourhoodZhHant || undefined,
-      neighbourhood: neighbourhoodZhHant || undefined,
-      district: getNormalisedDistrict(
-        pa.ChiPremisesAddress.ChiDistrict?.DcDistrict,
-        'zhHant',
+function formatAddress(
+  value: AddressLocale,
+  locale: LocaleKey,
+  urban: boolean,
+): string {
+  let label = value.formattedAddress
+  if (urban && value.streetName) {
+    const number =
+      value.buildingNumberExpression ||
+      [value.buildingNumberFrom, value.buildingNumberTo].filter(Boolean).join('-')
+    const premises = [
+      ...new Set(
+        [
+          value.blockExpression,
+          value.phaseExpression,
+          value.buildingName,
+          value.estateName,
+        ].filter((part): part is string => Boolean(part)),
       ),
-      area: getNormalisedArea(pa.ChiPremisesAddress?.Region, 'zhHant'),
-      country: getNormalisedCountry('Hong Kong', 'zhHant'),
-      rawAddress: rawAddress ?? undefined,
-    }
+    ]
+    label =
+      locale === 'en'
+        ? [
+            ...premises,
+            [number, applyAddressAbbreviations(value.streetName)]
+              .filter(Boolean)
+              .join(' '),
+          ].join(', ')
+        : `${value.streetName}${number ? `${number}${locale === 'zhHans' ? '号' : '號'}` : ''}${[...premises].reverse().join('')}`
   }
-
-  // Translate Chinese properties to Simplified Chinese
-  let addressPropsZhHans: Partial<AddressProperties> = {}
-  if ('ChiPremisesAddress' in pa) {
-    try {
-      const platformEnv = getPlatformEnv()
-      if (
-        !platformEnv?.PUBLIC_AZURE_TRANSLATION_REGION ||
-        !platformEnv?.AZURE_TRANSLATION_KEY
-      ) {
-        displayAddressZhHans = displayAddressZhHant ?? undefined
-        addressPropsZhHans = { ...addressPropsZhHant }
-      } else {
-        const propsToTranslate = Object.entries(addressPropsZhHant).reduce<
-          Array<[string, string]>
-        >((entries, [key, value]) => {
-          if (typeof value === 'string' && value !== '') {
-            entries.push([key, value])
-          }
-
-          return entries
-        }, [])
-        const zhHantDisplayAddress = displayAddressZhHant ?? ''
-        const [translatedDisplayAddress, ...translatedProps] = await translateText(
-          [zhHantDisplayAddress, ...propsToTranslate.map(([, value]) => value)],
-          'zhHant',
-          'zhHans',
-          platformEnv.PUBLIC_AZURE_TRANSLATION_REGION,
-          platformEnv.AZURE_TRANSLATION_KEY,
+  return locale === 'en'
+    ? titleCase(label)
+        .replace(
+          /\b(\d+)([a-z])\b/g,
+          (_, digits: string, suffix: string) => digits + suffix.toUpperCase(),
         )
-        displayAddressZhHans = translatedDisplayAddress
-
-        // Reattach translated values by property name so schema changes cannot shift indices.
-        const translatedPropsByKey = Object.fromEntries(
-          propsToTranslate.map(([key], index) => [key, translatedProps[index]]),
-        )
-        addressPropsZhHans = Object.fromEntries(
-          Object.entries(addressPropsZhHant).map(([key, value]) => [
-            key,
-            translatedPropsByKey[key] ?? value,
-          ]),
-        )
-      }
-    } catch (error) {
-      console.error('Translation failed:', error)
-    }
-  }
-
-  const addressPropertiesEn: AddressProperties = {
-    ...parsedSubpremises,
-    buildingName: titleCase(pa.EngPremisesAddress.BuildingName),
-    buildingNumberFrom: pa.EngPremisesAddress.EngStreet.BuildingNoFrom,
-    buildingNumberTo: pa.EngPremisesAddress.EngStreet.BuildingNoTo,
-    blockType: titleCase(pa.EngPremisesAddress?.EngBlock?.BlockDescriptor),
-    blockNumber: pa.EngPremisesAddress?.EngBlock?.BlockNo,
-    blockTypeBeforeNumber:
-      'EngBlock' in pa.EngPremisesAddress
-        ? pa.EngPremisesAddress?.EngBlock?.BlockDescriptorPrecedenceIndicator === 'Y'
-        : undefined,
-    phaseName: pa.EngPremisesAddress?.EngEstate?.EngPhase?.PhaseName
-      ? titleCase(pa.EngPremisesAddress.EngEstate.EngPhase.PhaseName)
-      : undefined,
-    phaseNumber: pa.EngPremisesAddress?.EngEstate?.EngPhase?.PhaseNo,
-    premisesName: premisesNameEn,
-    streetName: titleCase(pa.EngPremisesAddress?.EngStreet?.StreetName),
-    macrohood: neighbourhood || undefined,
-    neighbourhood: neighbourhood
-      ? neighbourhood
-      : pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName
-        ? getFirstLocation(pa.EngPremisesAddress?.EngStreet?.EngVillage?.LocationName)
-        : undefined,
-    district: getNormalisedDistrict(
-      pa.EngPremisesAddress?.EngDistrict?.DcDistrict,
-      'en',
-    ),
-    area: getNormalisedArea(pa.EngPremisesAddress?.Region, 'en'),
-    country: getNormalisedCountry('Hong Kong', 'en'),
-    rawAddress: rawAddress ?? undefined,
-  }
-
-  const addressMeta: AddressMeta = {
-    geoAddressCode: pa.GeoAddress,
-    distanceFromPoint: calculateDistance(
-      lng,
-      lat,
-      parseFloat(pa.GeospatialInformation.Longitude),
-      parseFloat(pa.GeospatialInformation.Latitude),
-    ),
-    longitude: parseFloat(pa.GeospatialInformation.Longitude),
-    latitude: parseFloat(pa.GeospatialInformation.Latitude),
-    confidenceForwardGeocoder: address.ValidationInformation.Score,
-    addressForwardGeocoder: 'hkgov_als',
-    addressForwardGen: true,
-  }
-
-  return {
-    addressMeta: Object.fromEntries(
-      Object.entries(addressMeta).filter(([_, value]) => value !== undefined),
-    ),
-    i18n: {
-      en: {
-        displayAddress: displayAddressEn,
-        displayAddressGen: genDisplayAddress,
-        addressProperties: Object.fromEntries(
-          Object.entries(addressPropertiesEn).filter(
-            ([_, value]) => value !== undefined,
-          ),
-        ),
-      },
-      zhHant: {
-        displayAddress: displayAddressZhHant,
-        displayAddressGen: genDisplayAddress,
-        addressProperties: Object.fromEntries(
-          Object.entries(addressPropsZhHant).filter(
-            ([_, value]) => value !== undefined,
-          ),
-        ),
-      },
-      zhHans: {
-        displayAddress: displayAddressZhHans,
-        displayAddressGen: genDisplayAddress,
-        addressProperties: Object.fromEntries(
-          Object.entries(addressPropsZhHans).filter(
-            ([_, value]) => value !== undefined,
-          ),
-        ),
-      },
-    },
-  }
+        .replace(/\b(?:Hk|Nt|Kln)\b/g, part => part.toUpperCase())
+    : label
 }
-
-function parseALSResultToDisplay(
-  address: ALSSuggestedAddressItem,
-  neighbourhood: string | null,
-  locale: Exclude<LocaleKey, 'zhHans'> = 'en',
-) {
-  const pa = address.Address.PremisesAddress
-
-  if (locale === 'en') {
-    const { EngPremisesAddress: eng } = pa
-    const parts = []
-
-    // Building/Block info
-    if (eng.BuildingName) {
-      parts.push(eng.BuildingName)
-    }
-    if (eng.EngBlock) {
-      const blockPart =
-        eng.EngBlock.BlockDescriptorPrecedenceIndicator === 'Y'
-          ? `${eng.EngBlock.BlockDescriptor} ${eng.EngBlock.BlockNo}`
-          : `${eng.EngBlock.BlockNo} ${eng.EngBlock.BlockDescriptor}`
-      parts.push(blockPart)
-    }
-
-    // Estate/Phase info
-    if (eng.EngEstate) {
-      let estatePart = eng.EngEstate.EstateName
-      if (eng.EngEstate.EngPhase?.PhaseNo) {
-        estatePart = `${estatePart} PH ${eng.EngEstate.EngPhase.PhaseNo}`
-      }
-      parts.push(estatePart)
-    }
-
-    // Street address
-    if (eng.EngStreet) {
-      let streetAddress = ''
-      if (eng.EngStreet.BuildingNoFrom) {
-        streetAddress = eng.EngStreet.BuildingNoFrom
-      }
-      if (eng.EngStreet.BuildingNoTo) {
-        streetAddress = `${streetAddress}-${eng.EngStreet.BuildingNoTo}`
-      }
-      streetAddress = `${streetAddress} ${eng.EngStreet.StreetName}`
-      parts.push(streetAddress)
-    }
-
-    // Area info
-    if (neighbourhood) {
-      parts.push(neighbourhood)
-    } else {
-      const districtKey = getNormalisedDistrict(eng.EngDistrict.DcDistrict, 'en')
-      const districtNameFromCode = districtKey
-        ? districtCodeToName[districtKey as keyof typeof districtCodeToName]
-        : undefined
-      const location = eng.EngStreet?.EngVillage?.LocationName || districtNameFromCode
-      if (location) {
-        parts.push(location)
-      }
-    }
-
-    return removeArea(titleCase(applyAddressAbbreviations(parts.join(', '))))
-  } else {
-    if (!('ChiPremisesAddress' in pa)) return null
-    const { ChiPremisesAddress: chi } = pa
-    const parts = []
-
-    // Area info
-    const location = chi.ChiDistrict.DcDistrict
-    if (location) {
-      parts.push(location)
-    }
-
-    // Street address
-    if (chi.ChiStreet) {
-      parts.push(chi.ChiStreet.StreetName)
-      if (chi.ChiStreet.BuildingNoFrom) {
-        let numberRange = chi.ChiStreet.BuildingNoFrom
-        if (chi.ChiStreet.BuildingNoTo) {
-          numberRange = `${chi.ChiStreet.BuildingNoFrom}-${chi.ChiStreet.BuildingNoTo}`
-        }
-        parts.push(`${numberRange}號`)
-      }
-    }
-
-    // Estate/Phase info
-    if (chi.ChiEstate) {
-      let estatePart = chi.ChiEstate.EstateName
-      if (chi.ChiEstate.ChiPhase?.PhaseNo) {
-        estatePart = `${estatePart}第${chi.ChiEstate.ChiPhase.PhaseNo}期`
-      }
-      parts.push(estatePart)
-    }
-
-    // Building/Block info
-    if (chi.BuildingName) {
-      parts.push(chi.BuildingName)
-    }
-    if (chi.ChiBlock) {
-      parts.push(`${chi.ChiBlock.BlockNo}${chi.ChiBlock.BlockDescriptor}`)
-    }
-
-    // Skip adding region to avoid regional suffixes
-    // parts.push(chi.Region);
-
-    return parts.join('')
-  }
-}
-
-/************
- * ORCHESTRATION
- ************/
 
 /**
- * Reverse geocode - take a point and return an address
- * @param lng - The longitude of the point to reverse geocode
- * @param lat - The latitude of the point to reverse geocode
- * @returns The reverse geocoding result, or null if the request fails
+ * Adapts the highest-ranked address through its JSON:API relationship.
+ * @param body SaanSeoi response body.
+ * @param input Original address or selected map coordinates.
+ * @returns Canonical Hype address data, or null when no usable address exists.
+ * @remarks Reverse results preserve the selected pin; forward results use address geometry.
+ * Division membership is never inferred from address text or copied into the feature.
  */
-export async function reverseGeocode(
-  lng: number,
-  lat: number,
-): Promise<ParsedReverseGeocodeResult | null> {
-  const result = await fetchReverseGeocodeResult(lng, lat)
-  if (!result) {
+export function parseGeocodeResult(
+  body: unknown,
+  input: GeocodeInput,
+): ParsedReverseGeocodeResult | null {
+  const response = responseSchema.parse(body)
+  const candidate = response.data[0]
+  if (!candidate || ['not_found', 'incomplete'].includes(candidate.attributes.status))
     return null
-  }
+  const link = candidate.relationships.address?.data[0]
+  if (!link) return null
+  const resource = response.included.find(
+    item => item.type === link.type && item.id === link.id,
+  )
+  if (!resource) throw new Error('SaanSeoi address relationship is missing')
+  const address = addressSchema.parse(resource.attributes)
+  const point = 'lng' in input ? [input.lng, input.lat] : address.geometry?.coordinates
+  if (!point) return null
+  const english = address.i18n.en?.formattedAddress ?? ''
+  const urban = /,\s*(?:HK|HKI|KL|KLN|KOWLOON|HONG KONG ISLAND)\s*$/i.test(english)
+  const locales = {
+    en: ['en'],
+    zhHant: ['zh-hant', 'zh-hans', 'en'],
+    zhHans: ['zh-hans', 'zh-hant', 'en'],
+  } as const
+  const i18n = {} as ParsedReverseGeocodeResult['i18n']
 
-  // Parse the response into our canonical format
-  const processedResult = processReverseGeocodeResult(result, lng, lat)
-
-  if (!processedResult) {
-    return null
-  }
-
-  // Perform forward lookup using the Match_addr
-  try {
-    // Use English address properties to perform forward geocoding
-    const addressProperties = processedResult?.i18n.en.addressProperties
-    const streetAddress = `${addressProperties?.buildingNumberFrom} ${addressProperties?.streetName}`
-
-    const forwardResult = await fetchForwardGeocodeALSResult(
-      streetAddress,
-      addressProperties?.neighbourhood,
-    )
-
-    if (forwardResult) {
-      const fullResult = await processForwardGeocodeResult(
-        forwardResult,
-        addressProperties?.neighbourhood,
-        true,
-        lng,
-        lat,
-      )
-      if (fullResult) {
-        // Merge the results, keeping reverse geocode specific fields
-        const mergedResult = {
-          ...fullResult,
-          addressMeta: {
-            ...fullResult.addressMeta,
-            distanceFromPoint: processedResult?.addressMeta?.distanceFromPoint,
-            addressReverseGeocoder:
-              processedResult?.addressMeta?.addressReverseGeocoder,
-            addressReverseGen: processedResult?.addressMeta?.addressReverseGen,
-          },
-          // The reverse geocoder result is cleaner than the forward geocoder result
-          i18n: {
-            ...fullResult.i18n,
-            en: {
-              ...fullResult.i18n.en,
-              displayAddress: processedResult?.i18n?.en?.displayAddress,
-            },
-          },
+  // Map provider locale tags and structured fields without an extra translation/provider call.
+  for (const locale of Object.keys(locales) as LocaleKey[]) {
+    const sourceLocale = locales[locale].find(key => address.i18n[key])
+    const value = sourceLocale ? address.i18n[sourceLocale] : undefined
+    const properties: AddressProperties = value
+      ? {
+          formattedAddress: value.formattedAddress,
+          buildingName: value.buildingName ?? undefined,
+          buildingNumberFrom: value.buildingNumberFrom ?? undefined,
+          buildingNumberTo: value.buildingNumberTo ?? undefined,
+          blockType: value.blockType ?? undefined,
+          blockNumber: value.blockRef ?? undefined,
+          blockTypeBeforeNumber: value.blockTypeBeforeNumber ?? undefined,
+          phaseName: value.phaseName ?? undefined,
+          phaseNumber: value.phaseRef ?? undefined,
+          premisesName: value.estateName ?? undefined,
+          streetName: value.streetName ?? undefined,
+          rawAddress: 'address' in input ? input.address : undefined,
         }
-        return mergedResult
-      }
+      : {}
+    i18n[locale] = {
+      displayAddress: value
+        ? formatAddress(
+            value,
+            sourceLocale === 'en'
+              ? 'en'
+              : sourceLocale === 'zh-hans'
+                ? 'zhHans'
+                : 'zhHant',
+            urban,
+          )
+        : '',
+      displayAddressGen: true,
+      addressProperties: properties,
     }
-  } catch (error) {
-    console.error('Forward geocoding failed:', error)
   }
+  if (!Object.values(i18n).some(value => value.displayAddress)) return null
+  return {
+    addressMeta: {
+      saanseoiAddressId: link.id,
+      longitude: point[0],
+      latitude: point[1],
+      distanceFromPoint: candidate.attributes.match?.distanceMetres,
+      ...('lng' in input
+        ? { addressReverseGeocoder: 'saanseoi' as const, addressReverseGen: true }
+        : { addressForwardGeocoder: 'saanseoi' as const, addressForwardGen: true }),
+    },
+    i18n,
+  }
+}
 
-  return processedResult
+/**
+ * Fetches forward or reverse geocoding exclusively from SaanSeoi.
+ * @param input Address text or WGS84 pin.
+ * @param options Optional endpoint override and request transport for local verification.
+ * @returns The normalized top address or null for a genuine no-match response.
+ * @remarks Calls SaanSeoi directly from the browser using its whitelisted Origin.
+ * No API key, Hype proxy, or government-provider fallback is used. HTTP/schema failures throw.
+ */
+export async function geocodeAddress(
+  input: GeocodeInput,
+  options: GeocodeOptions = {},
+): Promise<ParsedReverseGeocodeResult | null> {
+  const validated = z
+    .union([
+      z
+        .object({
+          lng: z.number().finite().min(-180).max(180),
+          lat: z.number().finite().min(-90).max(90),
+        })
+        .strict(),
+      z.object({ address: z.string().trim().min(1).max(500) }).strict(),
+    ])
+    .parse(input)
+  const url = new URL(
+    '/addresses/v1/geocode',
+    options.baseUrl ??
+      import.meta.env.PUBLIC_SAANSEOI_API_URL ??
+      'https://api.saanseoi.hk',
+  )
+  url.search = new URLSearchParams({
+    ...('lng' in validated
+      ? { lng: String(validated.lng), lat: String(validated.lat) }
+      : { address: validated.address }),
+    profile: 'map',
+    locales: 'en,zh-hant,zh-hans',
+    limit: '1',
+    maxDistance: '500',
+  }).toString()
+  const headers: Record<string, string> = { Accept: 'application/vnd.api+json' }
+  const response = await (options.fetcher ?? fetch)(url, {
+    headers,
+    credentials: 'omit',
+    signal: AbortSignal.timeout(15000),
+  })
+  if (!response.ok) throw new Error(`SaanSeoi geocoding failed (${response.status})`)
+  return parseGeocodeResult(await response.json(), validated)
 }

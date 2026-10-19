@@ -462,6 +462,8 @@
   "full_calm_monkey_engage": "获取地址",
   "lazy_round_falcon_shine": "使用精确定位",
   "new_feature__location": "位置",
+  "new_feature__address_not_found": "找不到地址。请输入地址或选择其他位置。",
+  "new_feature__address_lookup_failed": "暂时无法查询地址。请重试或输入地址。",
   "new_feature__looking_up_address": "正在查询地址",
   "new_feature__reacquire_location": "重新获取位置",
   "new_feature__select_location": "选择位置",

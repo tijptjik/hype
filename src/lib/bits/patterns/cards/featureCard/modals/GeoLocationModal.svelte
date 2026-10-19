@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { onDestroy } from 'svelte'
 // I18N
 import { getLocaleKey, m, toFormLocaleRecord } from '#lib/i18n.js'
 // COMPONENTS
@@ -12,7 +14,7 @@ import {
 } from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // SERVICES
-import { reverseGeocode } from '#lib/api/external/geocoding.js'
+import { geocodeAddress } from '#lib/api/external/geocoding.js'
 // ENUMS
 import { NewFeatureMode } from '#lib/enums.js'
 // ICONS
@@ -48,11 +50,23 @@ const EMPTY_DISPLAY_ADDRESS: Record<LocaleKey, string> = {
 }
 
 let displayAddress = $state<Record<LocaleKey, string>>({ ...EMPTY_DISPLAY_ADDRESS })
-let isDisplayAddressGen = $state(true)
+let addressGenerated = $state<Record<LocaleKey, boolean>>({
+  en: true,
+  zhHant: true,
+  zhHans: true,
+})
 let isEditingAddress = $state(false)
 let isLoading = $state(false)
 let previousMode: NewFeatureMode | null = null
 let originalAddress = $state('')
+let originalAddressGen = true
+let lookupStatus = $state<'idle' | 'not_found' | 'error'>('idle')
+let lookupRevision = 0
+
+// Invalidate pending responses when the pinpointer is unmounted.
+onDestroy(() => {
+  lookupRevision++
+})
 const currentDisplayAddress = $derived(displayAddress[currentLocaleKey] ?? '')
 
 const isValid = $derived.by(() => {
@@ -90,7 +104,11 @@ function syncDisplayAddress(
     | undefined,
 ): void {
   displayAddress = toDisplayAddressMap(i18n)
-  isDisplayAddressGen = i18n?.[currentLocaleKey]?.displayAddressGen ?? true
+  addressGenerated = {
+    en: i18n?.en?.displayAddressGen ?? true,
+    zhHant: i18n?.zhHant?.displayAddressGen ?? true,
+    zhHans: i18n?.zhHans?.displayAddressGen ?? true,
+  }
   originalAddress = displayAddress[currentLocaleKey] || ''
   isEditingAddress = false
 }
@@ -104,11 +122,21 @@ $effect(() => {
     syncDisplayAddress(toFormLocaleRecord(newFeature?.feature?.i18n))
   }
 
+  if (
+    currentMode !== NewFeatureMode.location &&
+    previousMode === NewFeatureMode.location
+  ) {
+    lookupRevision++
+    isLoading = false
+    lookupStatus = 'idle'
+  }
   previousMode = currentMode
 })
 
 function reset(): void {
-  isDisplayAddressGen = true
+  lookupRevision++
+  lookupStatus = 'idle'
+  addressGenerated = { en: true, zhHant: true, zhHans: true }
   isEditingAddress = false
   isLoading = false
 }
@@ -120,14 +148,17 @@ function handleCloseModal(): void {
 
 function handleAccept(): void {
   if (appCtx.draft.mode !== NewFeatureMode.location || !isValid || isLoading) return
-  appCtx.draft.updateI18n('displayAddress', currentDisplayAddress.trim())
-  appCtx.draft.updateI18n('displayAddressGen', isDisplayAddressGen)
+  for (const locale of Object.keys(displayAddress) as LocaleKey[]) {
+    appCtx.draft.updateI18n('displayAddress', displayAddress[locale].trim(), locale)
+    appCtx.draft.updateI18n('displayAddressGen', addressGenerated[locale], locale)
+  }
   reset()
   appCtx.draft.setMode(NewFeatureMode.card)
 }
 
 function handleStartEditing(): void {
   originalAddress = currentDisplayAddress
+  originalAddressGen = addressGenerated[currentLocaleKey]
   isEditingAddress = true
 }
 
@@ -136,9 +167,15 @@ function handleCancelEditing(): void {
     ...displayAddress,
     [currentLocaleKey]: originalAddress,
   }
+  addressGenerated[currentLocaleKey] = originalAddressGen
   isEditingAddress = false
 }
 
+/**
+ * Resolves the current pin while ignoring results from superseded selections.
+ * @returns Resolves when this request settles.
+ * @remarks Failure clears the old address so it cannot be accepted for a different pin.
+ */
 async function handleSetLocation(): Promise<void> {
   const center = getMapCenter?.()
   if (center) {
@@ -152,17 +189,33 @@ async function handleSetLocation(): Promise<void> {
     ?.coordinates
   if (!coordinates) return
 
+  const revision = ++lookupRevision
+  const draft = appCtx.draft.current
+  const [lng, lat] = coordinates
   isLoading = true
+  lookupStatus = 'idle'
+  syncDisplayAddress(null)
 
+  // Check both request order and the active draft before applying asynchronous results.
+  const isCurrent = (): boolean =>
+    revision === lookupRevision &&
+    appCtx.draft.mode === NewFeatureMode.location &&
+    appCtx.draft.current === draft
   try {
-    const [lng, lat] = coordinates
-    const result = await reverseGeocode(lng, lat)
-
-    if (!result) return
-
+    const result = await geocodeAddress({ lng, lat })
+    if (!isCurrent()) return
+    if (!result) {
+      lookupStatus = 'not_found'
+      isEditingAddress = true
+      return
+    }
     syncDisplayAddress(toFormLocaleRecord(result.i18n))
+  } catch {
+    if (!isCurrent()) return
+    lookupStatus = 'error'
+    isEditingAddress = true
   } finally {
-    isLoading = false
+    if (revision === lookupRevision) isLoading = false
   }
 }
 
@@ -230,13 +283,27 @@ function handleKeydown(event: KeyboardEvent): void {
           >
             {m.new_feature__looking_up_address()}
           </div>
-        {:else if isValid}
+        {:else if isValid || isEditingAddress || lookupStatus !== 'idle'}
+          {#if lookupStatus !== 'idle'}
+            <p
+              role="status"
+              class="rounded-2xl bg-panel px-4 py-2 text-center text-sm text-base-content"
+            >
+              {lookupStatus === 'not_found'
+                ? m.new_feature__address_not_found()
+                : m.new_feature__address_lookup_failed()}
+            </p>
+          {/if}
           <div
             class="w-full max-w-[360px] rounded-[1.75rem] border border-border bg-panel px-4 py-2 shadow-2xl"
           >
             <div class="flex items-center gap-3">
               <input
                 bind:value={displayAddress[currentLocaleKey]}
+                aria-label={m.less_quaint_clownfish_succeed()}
+                oninput={() => {
+                  addressGenerated[currentLocaleKey] = false
+                }}
                 type="text"
                 class="h-11 min-w-0 grow rounded-full bg-surface px-4 text-sm text-base-content caret-primary placeholder:text-muted-foreground focus:outline-none disabled:opacity-100"
                 placeholder={m.less_quaint_clownfish_succeed()}

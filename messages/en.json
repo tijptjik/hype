@@ -462,6 +462,8 @@
   "full_calm_monkey_engage": "Getting Address",
   "lazy_round_falcon_shine": "Pinpoint Location",
   "new_feature__location": "Location",
+  "new_feature__address_not_found": "No address found. Enter an address or select another location.",
+  "new_feature__address_lookup_failed": "Address lookup is unavailable. Try again or enter an address.",
   "new_feature__looking_up_address": "Looking up Address",
   "new_feature__reacquire_location": "Reacquire Location",
   "new_feature__select_location": "Select Location",
