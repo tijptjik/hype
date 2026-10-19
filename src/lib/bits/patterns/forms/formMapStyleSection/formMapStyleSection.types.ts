@@ -1,6 +1,7 @@
 export interface MapStyleSelectionItem extends Record<string, unknown> {
   id: string
   code: string
+  displayCode?: string | null
   previewImagePath?: string | null
   i18n?: {
     en?: {

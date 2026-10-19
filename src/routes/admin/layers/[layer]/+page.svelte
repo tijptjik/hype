@@ -534,16 +534,22 @@ const layerMapStyleOptions = $derived(
     i18n: getMapStyleCatalogI18n(entry.key),
   })),
 )
-const projectDefaultMapStyle = $derived<MapStyleSelectionItem>({
-  id: 'project-default',
-  code: '__project-default__',
-  i18n: {
-    en: {
-      name: m.theme_map_project_default(),
-      description: m.theme_map_project_default_description(),
+const projectDefaultMapStyle = $derived.by(
+  (): MapStyleSelectionItem => ({
+    id: 'project-default',
+    code: '__project-default__',
+    displayCode: selectedParentProject?.mapStyle?.code ?? null,
+    previewImagePath: selectedParentProject?.mapStyle?.code
+      ? getMapStyleRenderAssetPath(selectedParentProject.mapStyle.code)
+      : null,
+    i18n: {
+      en: {
+        name: m.theme_map_project_default(),
+        description: m.theme_map_project_default_description(),
+      },
     },
-  },
-})
+  }),
+)
 const selectedLayerMapStyle = $derived.by((): MapStyleSelectionItem | null => {
   if (layerMapStyleCode === undefined) return projectDefaultMapStyle
   if (layerMapStyleCode === null || layerMapStyleCode === '') return null
@@ -1268,6 +1274,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
@@ -1309,6 +1316,9 @@ $effect(() => {
               subtitle={m.admin__forms_layer_parent_project_subtitle()}
               issues={parentProjectIssues}
               parent={selectedParentProject}
+              fallbackImage={selectedParentProject
+                ? `/api/mapRenders/projects/${selectedParentProject.id}/asset`
+                : null}
               hiddenInputAttrs={hiddenParentProjectInputAttrs}
               closeOnParentChange={true}
               isEditing={isEditing && canSetParentProject}

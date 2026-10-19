@@ -32,6 +32,7 @@ let {
   issues = [],
   subHeader,
   parent,
+  fallbackImage = null,
   hiddenInputAttrs = null,
   isEditing = true,
   isSubmitting = false,
@@ -294,10 +295,12 @@ $effect(() => {
       <ResourceCard.Media
         size="xl"
         image={parent
-          ? getImageSrcOrHashicon(parent.image, parent.id, {
+          ? (getImageSrc(parent.image, { transformation: 'c_fill,h_256,w_256' }) ??
+            fallbackImage ??
+            getImageSrcOrHashicon(parent.image, parent.id, {
               transformation: 'c_fill,h_256,w_256',
               hashiconSize: 256,
-            })
+            }))
           : null}
         alt={parent?.i18n?.en?.name || parent?.code || `No ${title}`}
       />

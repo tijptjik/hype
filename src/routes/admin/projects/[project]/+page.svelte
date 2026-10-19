@@ -2672,20 +2672,16 @@ $effect(() => {
               {isEditing}
               {isRequiredInPreflight}
             >
-              {#snippet afterField(
-                field,
-              )}
-                {#if field === 'nameShort'}
-                  <Checkbox
-                    id={`project-use-all-in-org-context-${locale}`}
-                    checked={useAllInOrgContext}
-                    disabled={!isEditing}
-                    rightText={m.admin__project_same_as_organisation()}
-                    color="accent"
-                    size="sm"
-                    onCheckedChange={setUseAllInOrgContext}
-                  />
-                {/if}
+              {#snippet besideShortName()}
+                <Checkbox
+                  id={`project-use-all-in-org-context-${locale}`}
+                  checked={useAllInOrgContext}
+                  disabled={!isEditing}
+                  rightText={m.admin__project_same_as_organisation()}
+                  color="accent"
+                  size="sm"
+                  onCheckedChange={setUseAllInOrgContext}
+                />
               {/snippet}
             </FormI18nDescriptorFields>
           {/snippet}

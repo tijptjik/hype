@@ -16,6 +16,7 @@ export interface ParentSectionItemBase extends Record<string, unknown> {
 export interface ParentSectionOrganisationItem extends ParentSectionItemBase {}
 
 export interface ParentSectionProjectItem extends ParentSectionItemBase {
+  mapStyle?: { code: string } | null
   organisationId: string
 }
 
@@ -43,6 +44,7 @@ export interface FormParentSectionProps<
   issues?: string[]
   subHeader?: Snippet<[FormParentSectionHeaderContext]>
   parent: TItem | null
+  fallbackImage?: string | null
   hiddenInputAttrs?: Record<string, unknown> | null
   isEditing?: boolean
   isSubmitting?: boolean

@@ -60,6 +60,7 @@ let {
   isRequiredInPreflight,
   fieldConfigs = defaultFieldConfigs,
   afterField,
+  besideShortName,
 }: {
   form: DescriptorForm
   fields: DescriptorFormFields
@@ -68,6 +69,7 @@ let {
   isRequiredInPreflight: (path: Array<string | number>) => boolean
   fieldConfigs?: DescriptorFieldConfig[]
   afterField?: Snippet<[GenAiField]>
+  besideShortName?: Snippet
 } = $props()
 </script>
 
@@ -100,18 +102,30 @@ let {
         textareaAttrs={attrs as Record<string, unknown>}
       />
     {:else}
-      <TextInput
-        label={config.label}
-        {locale}
-        isTranslated={true}
-        {required}
-        {isEditing}
-        isGenAI={genValue}
-        onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
-        value={(attrs as { value?: string }).value ?? ''}
-        {issues}
-        inputAttrs={attrs as Record<string, unknown>}
-      />
+      <div
+        class={besideShortName && config.key === 'nameShort'
+          ? 'flex items-end gap-3'
+          : 'contents'}
+      >
+        <TextInput
+          class={besideShortName && config.key === 'nameShort' ? 'min-w-0 flex-1' : ''}
+          label={config.label}
+          {locale}
+          isTranslated={true}
+          {required}
+          {isEditing}
+          isGenAI={genValue}
+          onToggleGenAI={() => toggleGenAiField(form, locale, config.key)}
+          value={(attrs as { value?: string }).value ?? ''}
+          {issues}
+          inputAttrs={attrs as Record<string, unknown>}
+        />
+        {#if config.key === 'nameShort' && besideShortName}
+          <div class="flex h-12 shrink-0 items-center whitespace-nowrap">
+            {@render besideShortName()}
+          </div>
+        {/if}
+      </div>
     {/if}
     {@render afterField?.(config.key)}
   {/if}
