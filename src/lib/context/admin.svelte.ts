@@ -379,7 +379,12 @@ export class AdminCtx {
     }
   }
 
-  // Initialize data using view's refresh methods
+  /**
+   * Initializes the active admin resource for the current account scope.
+   * @returns Completion of this initialization attempt.
+   * @remarks A superseded attempt leaves initialization pending so the layout retries
+   * after the active request settles; it must not mark another account scope ready.
+   */
   init = async (): Promise<void> => {
     if (this.isInitialised || this.isInitializing) return
 
@@ -389,6 +394,7 @@ export class AdminCtx {
     }
 
     this.isInitializing = true
+    const scope = this.view.resources.scopeKey
 
     try {
       // Initialise only the selected admin resource; panels load their own independent pages.
@@ -405,7 +411,7 @@ export class AdminCtx {
       else if (resource === FirstClassResource.task)
         await this.invalidateAndRefresh(resource)
 
-      this.isInitialised = true
+      this.isInitialised = scope === this.view.resources.scopeKey
     } finally {
       this.isInitializing = false
     }

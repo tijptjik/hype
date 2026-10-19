@@ -783,3 +783,20 @@ copy of the imported rehearsal database opened the Maison Kayser donor and its
 unresolved Place association. List-logo visual acceptance remains unverified: the
 admin Features index returned an empty list in that session. Brand override editing
 and complete retirement of the legacy classifier UI remain outstanding.
+
+### Imported-list browser acceptance and initialization race (Refs #194)
+
+The empty admin list observed above was an account-initialization race. A request
+started before session hydration could finish after the account scope changed and
+mark admin initialization complete, suppressing the replacement request. Admin
+initialization now marks only the scope it actually loaded as ready; the layout
+retries after a superseded attempt settles. A regression test changes account scope
+while the first request is pending and verifies a second initialization request.
+
+Browser verification on the same isolated imported database now shows 1,565 visible
+Features. Searching Maison Kayser renders all eight imported donor rows with the
+bundled Kayser logo, confirming inherited Place brands reach actual list presentation.
+The local screenshot is `output/playwright/place-brand-index.png` (not committed).
+All 11 context-boundary tests pass; type-check remains at 10 unrelated errors and
+19 warnings. This closes the earlier list-logo acceptance gap, not the remaining
+brand editor, source lifecycle or migration requirements.

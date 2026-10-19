@@ -194,6 +194,43 @@ describe('surface context boundaries', () => {
     view.dispose()
   })
 
+  it('retries admin initialization when the account changes during its first request', async () => {
+    const root = new RootCTX(new ResponsiveCtx())
+    const view = new ResourceViewCtx(
+      new DivisionCtx(),
+      root.account,
+      root.responsive,
+      root.cacheCtx,
+      'admin',
+    )
+    const admin = new AdminCtx(view)
+    admin.setResourceType(FirstClassResource.feature)
+    let finish!: () => void
+    const firstRequest = new Promise<void>(resolve => {
+      finish = resolve
+    })
+    const refresh = vi
+      .spyOn(view.queries, 'refreshFeatures')
+      .mockImplementationOnce(() => firstRequest)
+      .mockResolvedValue(undefined)
+    const initializing = admin.init()
+    expect(admin.isInitializing).toBe(true)
+    root.sync(
+      { id: 'admin', roles: [], superAdmin: true } as unknown as SessionUser,
+      null,
+    )
+    view.syncAccount()
+    admin.isInitialised = false
+    finish()
+    await initializing
+    expect(admin.isInitialised).toBe(false)
+    expect(admin.isInitializing).toBe(false)
+    await admin.init()
+    expect(refresh).toHaveBeenCalledTimes(2)
+    expect(admin.isInitialised).toBe(true)
+    view.dispose()
+  })
+
   it('keeps admin prisms empty even when the user has saved map defaults', async () => {
     const root = new RootCTX({} as ResponsiveCtx)
     root.sync(
