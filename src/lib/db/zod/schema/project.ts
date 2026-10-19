@@ -446,6 +446,7 @@ export const ProjectCompactProfileAPI = ProjectBase.pick({
   code: true,
   organisationId: true,
 }).extend({
+  mapStyle: MapStyleResolved.nullish(),
   ancestors: CompactAncestorsSchema.optional(),
   i18n: getLocales(ProjectI18nBase.pick({ name: true, nameShort: true })),
 })
