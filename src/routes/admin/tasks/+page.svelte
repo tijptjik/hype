@@ -258,10 +258,7 @@ function updateRowFocus(index: number) {
 }
 </script>
 
-<div
-  data-form-surface
-  class="h-full overflow-y-auto overscroll-auto bg-[var(--form-workspace)] pb-6 text-foreground"
->
+<div class="flex min-h-0 flex-1 flex-col overflow-hidden text-foreground">
   <GroupedResourceIndex
     resource={FirstClassResource.task}
     {groupedEntities}
