@@ -31,9 +31,9 @@ describe('UI and map style synchronization', () => {
   })
 
   it.each<[ThemeId, string]>([
-    ['hype-black', 'hyper'],
-    ['hype-dark', 'hyper'],
-    ['hype-light', 'hyperLight'],
+    ['hype-black', 'hype-dark'],
+    ['hype-dark', 'hype-dark'],
+    ['hype-light', 'hype-light'],
     ['breadline-light', 'breadline-light'],
     ['breadline-dark', 'breadline-dark'],
   ])('pairs %s immediately and when switching UI palettes', (theme, style) => {
@@ -53,7 +53,7 @@ describe('UI and map style synchronization', () => {
     model.setMapSync(true)
     model.setMapSync(false)
     model.select('breadline-light')
-    expect(model.mapSelected).toBe('hyper')
+    expect(model.mapSelected).toBe('hype-dark')
   })
 
   it('lets UI sync and active resource styles coexist, with the most recent change taking priority', () => {
@@ -63,22 +63,22 @@ describe('UI and map style synchronization', () => {
     model.setMapSync(true)
     expect(model.mapSyncEnabled).toBe(true)
     expect(model.useActiveMapStyle).toBe(true)
-    expect(model.resolvedMapStyle).toBe('hyper')
+    expect(model.resolvedMapStyle).toBe('hype-dark')
     model.updateActiveMapContext('layer-b', 'ghostery')
     expect(model.resolvedMapStyle).toBe('ghostery')
     model.select('hype-light')
-    expect(model.resolvedMapStyle).toBe('hyperLight')
+    expect(model.resolvedMapStyle).toBe('hype-light')
     // An unrelated reactive rerun must not undo the user's later UI selection.
     model.updateActiveMapContext('layer-b', 'ghostery')
-    expect(model.resolvedMapStyle).toBe('hyperLight')
+    expect(model.resolvedMapStyle).toBe('hype-light')
     model.updateActiveMapContext('layer-b', 'neorange')
-    expect(model.resolvedMapStyle).toBe('hyperLight')
+    expect(model.resolvedMapStyle).toBe('hype-light')
     model.updateActiveMapContext('layer-user-preference', null)
-    expect(model.resolvedMapStyle).toBe('hyperLight')
+    expect(model.resolvedMapStyle).toBe('hype-light')
     model.updateActiveMapContext('layer-c', 'neorange')
     expect(model.resolvedMapStyle).toBe('neorange')
     model.setUseActiveMap(false)
-    expect(model.resolvedMapStyle).toBe('hyperLight')
+    expect(model.resolvedMapStyle).toBe('hype-light')
     expect(model.mapSyncEnabled).toBe(true)
   })
 
@@ -112,7 +112,7 @@ describe('UI and map style synchronization', () => {
     storage.set('hype-map-style', 'midnight')
     const legacy = new ThemeModel()
     legacy.restoreMapPreferences()
-    expect(legacy.mapSelected).toBe('hyper')
+    expect(legacy.mapSelected).toBe('hype-dark')
     expect(legacy.mapSyncEnabled).toBe(true)
     expect(legacy.useActiveMapStyle).toBe(true)
     legacy.setMapSync(true)
@@ -138,7 +138,7 @@ describe('UI and map style synchronization', () => {
     storage.set('hype-map-style', 'invalid-style')
     const model = new ThemeModel()
     model.restoreMapPreferences()
-    expect(model.mapSelected).toBe('hyper')
+    expect(model.mapSelected).toBe('hype-dark')
     vi.stubGlobal('localStorage', {
       getItem: () => {
         throw new Error('Unavailable')
@@ -153,6 +153,6 @@ describe('UI and map style synchronization', () => {
     expect(() => model.restoreMapPreferences()).not.toThrow()
     model.setMapSync(true)
     model.select('hype-light')
-    expect(model.mapSelected).toBe('hyperLight')
+    expect(model.mapSelected).toBe('hype-light')
   })
 })

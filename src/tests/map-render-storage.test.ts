@@ -8,12 +8,27 @@ import {
   resolveMapRenderAssetUrl,
 } from '#lib/map/renders/storage.shared.js'
 import {
+  getMapStyleRenderAssetPath,
+  resolveMapStyleRenderPathForKey,
   getMapStyleRenderObjectKey,
   getMapStyleRenderOrigin,
   resolveMapStyleRenderUrl,
 } from '#lib/map/styles/render.shared.js'
 
 describe('map render storage helpers', () => {
+  it('reuses existing previews for renamed map styles', async () => {
+    for (const [current, legacy] of [
+      ['hype-dark', 'hyper'],
+      ['hype-light', 'hyperLight'],
+    ] as const) {
+      expect(getMapStyleRenderAssetPath(current)).toBe(
+        getMapStyleRenderAssetPath(legacy),
+      )
+      expect(await resolveMapStyleRenderPathForKey('production', current)).toBe(
+        await resolveMapStyleRenderPathForKey('production', legacy),
+      )
+    }
+  })
   it('maps runtime environments to render stages', () => {
     expect(getMapRenderStage('preview')).toBe('preview')
     expect(getMapRenderStage('production')).toBe('production')

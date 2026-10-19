@@ -25,6 +25,8 @@ import { getMapStyleCatalogCopy } from './i18n'
 
 /** Keys available in the map-style catalog, including the internal admin style. */
 export type MapStyleCatalogKey =
+  | 'hype-dark'
+  | 'hype-light'
   | 'hyper'
   | 'hyperLight'
   | 'hyperpop'
@@ -123,9 +125,29 @@ export const MAP_STYLE_CATALOG = [
     showSymbols: true,
   },
   {
+    key: 'hype-dark',
+    name: getMapStyleCatalogCopy('hype-dark', 'en').name,
+    description: getMapStyleCatalogCopy('hype-dark', 'en').description,
+    buildStyle: buildHyperStyle,
+    basemapVariant: 'dark',
+    markerTheme: 'etch-dark',
+    showSymbols: true,
+  },
+  {
+    key: 'hype-light',
+    name: getMapStyleCatalogCopy('hype-light', 'en').name,
+    description: getMapStyleCatalogCopy('hype-light', 'en').description,
+    buildStyle: buildHyperLightStyle,
+    basemapVariant: 'light',
+    markerTheme: 'etch-light',
+    showSymbols: true,
+  },
+  // Keep legacy keys registered for saved project, layer and account selections.
+  {
     key: 'hyper',
     name: getMapStyleCatalogCopy('hyper', 'en').name,
     description: getMapStyleCatalogCopy('hyper', 'en').description,
+    selectable: false,
     buildStyle: buildHyperStyle,
     basemapVariant: 'dark',
     markerTheme: 'etch-dark',
@@ -135,6 +157,7 @@ export const MAP_STYLE_CATALOG = [
     key: 'hyperLight',
     name: getMapStyleCatalogCopy('hyperLight', 'en').name,
     description: getMapStyleCatalogCopy('hyperLight', 'en').description,
+    selectable: false,
     buildStyle: buildHyperLightStyle,
     basemapVariant: 'light',
     markerTheme: 'etch-light',
@@ -290,8 +313,8 @@ export const getDefaultMapStyleCatalogEntry =
 
 /** Default map choices in the settings panel, in presentation order. */
 export const FEATURED_MAP_STYLE_KEYS = [
-  'hyper',
-  'hyperLight',
+  'hype-dark',
+  'hype-light',
   'breadline-light',
   'breadline-dark',
   'hyperpop',
@@ -319,3 +342,11 @@ export const SELECTABLE_MAP_STYLE_CATALOG = REGISTERED_MAP_STYLE_CATALOG.filter(
  */
 export const isProjectOnlyMapStyle = (key: string): boolean =>
   Boolean(REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.key === key)?.projectCode)
+
+/**
+ * Resolves historical map-style keys to their current public code.
+ * @param code - Persisted or current style code.
+ * @returns Canonical public code, preserving custom style codes.
+ */
+export const canonicalMapStyleCode = (code: string): string =>
+  code === 'hyper' ? 'hype-dark' : code === 'hyperLight' ? 'hype-light' : code
