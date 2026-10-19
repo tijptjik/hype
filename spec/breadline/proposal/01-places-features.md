@@ -1108,3 +1108,29 @@ This completes primary-local application of the unresolved fallback migration, n
 canonical identity review or production rollout. Canonical matching/promotion, address
 curation and lifecycle acceptance remain necessary; no production mutation or deployment
 was performed.
+
+### Reviewed Place identity transition primitive (Refs #194)
+
+Migration 0116 adds append-only identity history, including the previous source binding,
+reviewer/reason and exact immutable source revision. `acceptPlaceIdentity` supports
+manual/unresolved promotion and reviewed ssId corrections while preserving the HYPE
+Place ID, private ownership, all Feature links, accepted revision groups and overrides.
+Identity acceptance does not implicitly accept new source facts or location; the existing
+adoption review remains responsible for those changes.
+
+The trusted service requires a captured state/source/owner/history baseline. Its atomic
+batch rechecks that baseline, writes the canonical revision and review evidence, then
+updates the source binding. History-tail fencing rejects stale reviews even after an
+ssId round trip. A late identity-write failure rolls back the source revision and history.
+Another Place's current or historical claim returns `merge-required`; this primitive
+never silently moves Feature relationships or merges immutable histories. Source ingestion
+also refuses to recreate retired IDs and fences revision writes against concurrent identity
+changes. Canonical source revisions use the same deterministic hashing as ordinary ingestion.
+
+The caller must separately authorize Place ownership or global stewardship and supply
+server-verified publication-pinned source evidence. This is not yet exposed as a remote
+command or UI: authorized review presentation and explicit merge/redirect handling remain
+outstanding. No unconfirmed source match has been accepted in the primary database.
+Migration 0116 is applied locally. Focused service, refresh, source-client, Worker and remote
+coverage passes 125 tests; Worker type-check passes and the app retains its existing
+10 errors / 19 warnings baseline. No deployment or production mutation was performed.

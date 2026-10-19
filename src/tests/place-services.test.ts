@@ -20,6 +20,7 @@ import {
   resolvePlaceCandidate,
   searchLocalPlaceCandidates,
 } from '#lib/db/services/placeCandidate.js'
+import { acceptPlaceIdentity } from '#lib/db/services/placeIdentity.js'
 import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
@@ -81,6 +82,7 @@ function setup() {
   sqlite.exec(readFileSync('migrations/0110_feature_place_history.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0112_feature_place_detachment.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0113_place_adoption_review.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0116_place_identity_history.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => {
       if (args.length > 100) throw new Error('D1 parameter limit exceeded')
@@ -440,6 +442,180 @@ describe('immutable SaanSeoi Place ingestion', () => {
       resource: { id: 'canonical-shop', sources: ['retained-attribution'] },
       meta: { apiReleaseSet: 'pinned-release' },
     },
+  })
+
+  it.each(['manual', 'unresolved'] as const)(
+    'promotes %s without changing identity, privacy or accepted values',
+    async state => {
+      const { db, sqlite } = setup()
+      const local = await createLocalPlace(db, 'p', { state, facts }, 'actor')
+      sqlite
+        .prepare(`INSERT INTO featurePlace(featureId,placeId,factsRevisionId,locationRevisionId,overrides)
+      VALUES ('f',?,?,?,?)`)
+        .run(
+          local.placeId,
+          local.revisionId,
+          local.revisionId,
+          JSON.stringify({ names: { en: { mode: 'override', value: 'Our name' } } }),
+        )
+      const before = sqlite.prepare('SELECT * FROM featurePlace').all()
+      const input = {
+        placeId: local.placeId,
+        expectedState: state,
+        expectedSsId: null,
+        expectedHistoryId: null,
+        expectedOwnerProjectId: 'p',
+        actorId: 'reviewer',
+        reason: 'Verified establishment and unit',
+      }
+      const result = await acceptPlaceIdentity(db, input, projection())
+      expect(result.status).toBe('applied')
+      expect(
+        sqlite.prepare('SELECT id,ssId,state,ownerProjectId FROM place').get(),
+      ).toEqual({
+        id: local.placeId,
+        ssId: 'canonical-shop',
+        state: 'linked',
+        ownerProjectId: 'p',
+      })
+      expect(sqlite.prepare('SELECT * FROM featurePlace').all()).toEqual(before)
+      expect(
+        sqlite.prepare('SELECT count(*) n FROM featurePlaceHistory').get()?.n,
+      ).toBe(1)
+      const next = await persistSaanSeoiPlace(db, projection())
+      expect(next.placeId).toBe(local.placeId)
+      expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(2)
+      expect(await acceptPlaceIdentity(db, input, projection())).toEqual({
+        status: 'conflict',
+      })
+      expect(() =>
+        sqlite.exec("UPDATE placeIdentityHistory SET reason='rewritten'"),
+      ).toThrow()
+      expect(() => sqlite.exec('DELETE FROM placeIdentityHistory')).toThrow()
+    },
+  )
+
+  it('fences source ID corrections with history and preserves the original HYPE ID', async () => {
+    const { db, sqlite } = setup()
+    const original = await persistSaanSeoiPlace(db, projection())
+    const input = {
+      placeId: original.placeId,
+      expectedState: 'linked' as const,
+      expectedSsId: 'canonical-shop',
+      expectedHistoryId: null,
+      expectedOwnerProjectId: null,
+      actorId: 'steward',
+      reason: 'Confirmed upstream replacement',
+    }
+    const changed = { ...projection(), ssId: 'replacement' }
+    const first = await acceptPlaceIdentity(db, input, changed)
+    expect(first.status).toBe('applied')
+    if (first.status !== 'applied') throw new Error('Expected identity change')
+    await expect(persistSaanSeoiPlace(db, projection())).rejects.toThrow(
+      'Retired source identity requires review',
+    )
+
+    expect(
+      await acceptPlaceIdentity(
+        db,
+        { ...input, expectedSsId: 'replacement' },
+        projection(),
+      ),
+    ).toEqual({ status: 'conflict' })
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(2)
+    expect(
+      await acceptPlaceIdentity(
+        db,
+        { ...input, expectedSsId: 'replacement', expectedHistoryId: first.historyId },
+        projection(),
+      ),
+    ).toMatchObject({ status: 'applied' })
+    // Even a complete ssId round trip cannot make the original review token valid again.
+    expect(await acceptPlaceIdentity(db, input, changed)).toEqual({
+      status: 'conflict',
+    })
+    expect(sqlite.prepare('SELECT count(*) n FROM placeIdentityHistory').get()?.n).toBe(
+      2,
+    )
+    expect(sqlite.prepare('SELECT id FROM place').get()?.id).toBe(original.placeId)
+  })
+
+  it('requires explicit merge review for an occupied source ID and rejects ownership drift', async () => {
+    const { db, sqlite } = setup()
+    const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
+    const canonical = await persistSaanSeoiPlace(db, projection())
+    const input = {
+      placeId: local.placeId,
+      expectedState: 'manual' as const,
+      expectedSsId: null,
+      expectedHistoryId: null,
+      expectedOwnerProjectId: 'p',
+      actorId: 'actor',
+      reason: 'Reviewed',
+    }
+    expect(await acceptPlaceIdentity(db, input, projection())).toEqual({
+      status: 'merge-required',
+    })
+    expect(
+      await acceptPlaceIdentity(
+        db,
+        { ...input, expectedOwnerProjectId: 'other' },
+        projection(),
+      ),
+    ).toEqual({ status: 'conflict' })
+    expect(sqlite.prepare('SELECT count(*) n FROM placeIdentityHistory').get()?.n).toBe(
+      0,
+    )
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(2)
+    expect(
+      await acceptPlaceIdentity(
+        db,
+        {
+          ...input,
+          placeId: canonical.placeId,
+          expectedState: 'linked',
+          expectedSsId: 'canonical-shop',
+          expectedOwnerProjectId: null,
+        },
+        { ...projection(), ssId: 'replacement' },
+      ),
+    ).toMatchObject({ status: 'applied' })
+    expect(await acceptPlaceIdentity(db, input, projection())).toEqual({
+      status: 'merge-required',
+    })
+  })
+
+  it('rolls back the revision and history if the final identity write fails', async () => {
+    const { db, sqlite } = setup()
+    const local = await createLocalPlace(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'actor',
+    )
+    sqlite.exec(
+      "CREATE TRIGGER reject_identity BEFORE UPDATE ON place BEGIN SELECT RAISE(ABORT,'injected failure'); END",
+    )
+    await expect(
+      acceptPlaceIdentity(
+        db,
+        {
+          placeId: local.placeId,
+          expectedState: 'unresolved',
+          expectedSsId: null,
+          expectedHistoryId: null,
+          expectedOwnerProjectId: 'p',
+          actorId: 'actor',
+          reason: 'Reviewed',
+        },
+        projection(),
+      ),
+    ).rejects.toThrow('injected failure')
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(1)
+    expect(sqlite.prepare('SELECT count(*) n FROM placeIdentityHistory').get()?.n).toBe(
+      0,
+    )
+    expect(sqlite.prepare('SELECT ssId FROM place').get()?.ssId).toBeNull()
   })
 
   it('replays idempotently and appends changes without altering accepted Features', async () => {

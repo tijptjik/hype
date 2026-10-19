@@ -265,3 +265,53 @@ export const placeAdoptionDecision = sqliteTable(
     ),
   ],
 )
+
+/** Reviewed identity transitions retain the local Place and immutable source evidence. */
+export const placeIdentityHistory = sqliteTable(
+  'placeIdentityHistory',
+  {
+    id: text('id').primaryKey(),
+    placeId: text('placeId')
+      .notNull()
+      .references(() => place.id, { onDelete: 'restrict' }),
+    previousHistoryId: text('previousHistoryId'),
+    previousState: text('previousState', {
+      enum: ['manual', 'unresolved', 'linked'],
+    }).notNull(),
+    previousSsId: text('previousSsId'),
+    ssId: text('ssId').notNull(),
+    sourceRevisionId: text('sourceRevisionId').notNull(),
+    actorId: text('actorId').notNull(),
+    reason: text('reason').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  table => [
+    foreignKey({ columns: [table.previousHistoryId], foreignColumns: [table.id] }),
+    foreignKey({
+      columns: [table.placeId, table.sourceRevisionId],
+      foreignColumns: [placeRevision.placeId, placeRevision.id],
+    }),
+    index('place_identity_history_place').on(table.placeId, table.createdAt, table.id),
+    uniqueIndex('place_identity_history_previous')
+      .on(table.previousHistoryId)
+      .where(sql`${table.previousHistoryId} IS NOT NULL`),
+    uniqueIndex('place_identity_history_initial')
+      .on(table.placeId)
+      .where(sql`${table.previousHistoryId} IS NULL`),
+    check(
+      'place_identity_history_state',
+      sql`${table.previousState} IN ('manual','unresolved','linked')`,
+    ),
+    check('place_identity_history_actor', sql`length(trim(${table.actorId})) > 0`),
+    check(
+      'place_identity_history_reason',
+      sql`length(trim(${table.reason})) BETWEEN 1 AND 2000`,
+    ),
+    check(
+      'place_identity_history_source',
+      sql`(${table.previousState} = 'linked' AND ${table.previousSsId} IS NOT NULL) OR (${table.previousState} != 'linked' AND ${table.previousSsId} IS NULL)`,
+    ),
+  ],
+)
