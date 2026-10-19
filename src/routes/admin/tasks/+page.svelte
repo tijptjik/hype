@@ -12,6 +12,8 @@ import {
 import { getTaskReviewActionLabel } from '#lib/client/services/task.js'
 // BITS PATTERNS
 import { GroupedResourceIndex, ResourceControlBar, TaskRow } from '#lib/bits/index.js'
+// NAVIGATION
+import { navigateOnAdmin } from '#lib/navigation/index.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // I18N
@@ -115,16 +117,17 @@ let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
     ),
   )
     .map(([projectId, projectTasks]) => {
-      const project = adminCtx.view.getResourceByIdSync(
+      // Unfiltered tasks can belong to projects beyond the sidebar's loaded page.
+      const project = (adminCtx.view.getResourceByIdSync(
         FirstClassResource.project,
         projectId,
-      ) as Project
+      ) ?? projectTasks[0]?.project) as Project
       return {
         group: project,
         entities: projectTasks,
       }
     })
-    .filter(({ group }) => group != null), // Filter out undefined projects during navigation
+    .filter(({ group }) => group != null), // Filter out genuinely unresolved projects during navigation
 )
 
 $effect(() => {
@@ -208,10 +211,14 @@ function closeModal() {
   }
 }
 
-function openModal(image: ImageCtxEnvelope, task: Task) {
-  selectedImage = image
-  selectedTask = task
-  selectedTaskIndex = entities.findIndex(f => f.id === task.id)
+/**
+ * Opens the review workspace from a queue thumbnail.
+ * @param _image - Clicked task image
+ * @param task - Task to review
+ * @returns Nothing
+ */
+function openModal(_image: ImageCtxEnvelope, task: Task): void {
+  navigateOnAdmin(adminCtx, FirstClassResource.task, task.id)
 }
 
 function updateRowFocus(index: number) {
@@ -252,7 +259,8 @@ function updateRowFocus(index: number) {
 </script>
 
 <div
-  class="h-full overflow-y-auto overscroll-auto bg-linear-to-br from-rose-500 to-indigo-700 bg-fixed pb-6"
+  data-form-surface
+  class="h-full overflow-y-auto overscroll-auto bg-[var(--form-workspace)] pb-6 text-foreground"
 >
   <GroupedResourceIndex
     resource={FirstClassResource.task}

@@ -11,9 +11,12 @@ let {
 </script>
 
 <div
+  data-form-surface
   class={cx(
-    'grid h-full min-h-0 w-full gap-0 bg-panel text-foreground',
-    hasAside ? 'grid-cols-[minmax(0,1fr)_28rem]' : 'grid-cols-1',
+    '@container/task grid h-full min-h-0 w-full gap-4 overflow-y-auto bg-[var(--form-workspace)] p-4 text-foreground',
+    hasAside
+      ? 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:overflow-hidden'
+      : 'grid-cols-1',
     className,
   )}
 >

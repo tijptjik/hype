@@ -27,15 +27,12 @@ const createdAtLabel = $derived.by(() => {
 })
 </script>
 
-<div class="bits-task-row__meta">
-  <div class="bits-task-row__meta-item bits-task-row__meta-item--created">
-    <small
-      class="m-0 text-xs leading-4 text-center uppercase whitespace-nowrap text-base-content/60"
-      >{m.close_muddy_trout_clap()}</small
-    >
+<div class="hidden min-w-0 gap-1 @min-[48rem]:flex @min-[48rem]:flex-col">
+  <div class="flex min-w-0 items-center gap-2">
+    <small class="sr-only">{m.close_muddy_trout_clap()}</small>
     <SimpleTooltip disabled={!createdAtLabel} triggerProps={{ tabindex: -1 }}>
       {#snippet trigger()}
-        <p class="bits-task-row__meta-value">
+        <p class="m-0 max-w-44 truncate text-xs text-muted-foreground">
           {createdAtLabel
             ? formatDistanceToNow(new Date(createdAtLabel), { addSuffix: true })
             : '-'}
@@ -45,14 +42,11 @@ const createdAtLabel = $derived.by(() => {
     </SimpleTooltip>
   </div>
 
-  <div class="bits-task-row__meta-item bits-task-row__meta-item--contributor">
-    <small
-      class="m-0 text-xs leading-4 text-center uppercase whitespace-nowrap text-base-content/60"
-      >{m.profile__role_type__contributor()}</small
-    >
+  <div class="flex min-w-0 items-center gap-2">
+    <small class="sr-only">{m.profile__role_type__contributor()}</small>
     <SimpleTooltip disabled={!contributorAttribution} triggerProps={{ tabindex: -1 }}>
       {#snippet trigger()}
-        <p class="bits-task-row__meta-value bits-task-row__meta-value--wide">
+        <p class="m-0 max-w-44 truncate text-sm text-foreground">
           {contributorName}
         </p>
       {/snippet}
@@ -60,18 +54,19 @@ const createdAtLabel = $derived.by(() => {
     </SimpleTooltip>
   </div>
 
-  <div class="bits-task-row__meta-item bits-task-row__meta-item--reviewer">
-    <small
-      class="m-0 text-xs leading-4 text-center uppercase whitespace-nowrap text-base-content/60"
-      >{m.stock_active_kestrel_offer()}</small
-    >
-    <SimpleTooltip disabled={!reviewerAttribution} triggerProps={{ tabindex: -1 }}>
-      {#snippet trigger()}
-        <p class="bits-task-row__meta-value bits-task-row__meta-value--wide">
-          {reviewerName}
-        </p>
-      {/snippet}
-      {reviewerAttribution}
-    </SimpleTooltip>
-  </div>
+  {#if reviewerName !== '-'}
+    <div class="hidden min-w-0 items-center gap-2 @min-[72rem]:flex">
+      <small class="text-xs text-muted-foreground"
+        >{m.stock_active_kestrel_offer()}</small
+      >
+      <SimpleTooltip disabled={!reviewerAttribution} triggerProps={{ tabindex: -1 }}>
+        {#snippet trigger()}
+          <p class="m-0 max-w-44 truncate text-sm text-foreground">
+            {reviewerName}
+          </p>
+        {/snippet}
+        {reviewerAttribution}
+      </SimpleTooltip>
+    </div>
+  {/if}
 </div>

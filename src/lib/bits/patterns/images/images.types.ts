@@ -147,6 +147,8 @@ export type CameraViewerProps = AdminViewerProps & {
 }
 
 export type ThumbnailWrapperProps = {
+  /** Classes for the scrolling track, allowing its container to own gutters. */
+  trackClass?: string
   items: ViewerRenderable[]
   activeId?: string | null
   followActiveIdRequestKey?: number

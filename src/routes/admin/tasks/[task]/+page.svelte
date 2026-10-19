@@ -227,7 +227,7 @@ function createReviewTaskAction(config: {
         if (!config.action) return
         void handleReview(config.action)
       }),
-    disabled: isReviewBusy,
+    disabled: isReviewBusy || isLayerBusy,
     color: config.color,
     style: 'ghost',
   }
@@ -442,12 +442,13 @@ $effect(() => {
  * Reviews the current task and handles the resulting navigation flow.
  * @param action - Review action to submit
  * @param explicitReviewReason - Optional review reason for rejected tasks
+ * @returns Whether the review completed successfully
  */
 async function handleReview(
   action: TaskReviewUiAction,
   explicitReviewReason?: string,
-): Promise<void> {
-  if (!task?.id || isReviewBusy) return
+): Promise<boolean> {
+  if (!task?.id || isReviewBusy || isLayerBusy) return false
 
   isReviewBusy = true
 
@@ -463,7 +464,7 @@ async function handleReview(
 
     // Apply the reviewed task immediately so cache, toast, and navigation use the same snapshot.
     const updatedTask = structuredClone(result.data)
-    if (!updatedTask) return
+    if (!updatedTask) return false
 
     taskState = updatedTask
     adminCtx.view.setTaskResourceAndCache(updatedTask)
@@ -472,13 +473,15 @@ async function handleReview(
     if (action === 'accept' && updatedTask.featureId) {
       adminCtx.invalidateAndRefresh(FirstClassResource.task)
       navigateOnAdmin(adminCtx, FirstClassResource.feature, updatedTask.featureId)
-      return
+      return true
     }
 
     goToNextTask(adminCtx)
+    return true
   } catch (error) {
     console.error('Failed to review task:', error)
     toast.error('Failed to review task')
+    return false
   } finally {
     isReviewBusy = false
   }
@@ -491,10 +494,13 @@ async function handleConfirmReject(): Promise<void> {
   if (!pendingRejectAction) return
 
   const action = pendingRejectAction
-  pendingRejectAction = null
-  isRejectDialogOpen = false
-  await handleReview(action, reviewReason.trim() || undefined)
-  reviewReason = ''
+  // Preserve the reason and dialog when a review fails so the reviewer can retry.
+  const completed = await handleReview(action, reviewReason.trim() || undefined)
+  if (completed) {
+    pendingRejectAction = null
+    isRejectDialogOpen = false
+    reviewReason = ''
+  }
 }
 
 /**
@@ -502,7 +508,7 @@ async function handleConfirmReject(): Promise<void> {
  * @param layerId - Newly selected layer ID
  */
 async function handleReassignLayer(layerId: string): Promise<void> {
-  if (!task?.id || isLayerBusy) return
+  if (!task?.id || isLayerBusy || isReviewBusy) return
 
   isLayerBusy = true
 
@@ -592,8 +598,10 @@ const imageProviderModel = useImageProviderModel(
       {task}
       {assignableLayers}
       {canReassignLayer}
-      {isLayerBusy}
-      onReview={handleReview}
+      isLayerBusy={isLayerBusy || isReviewBusy}
+      onReview={async action => {
+        await handleReview(action)
+      }}
       onReassignLayer={handleReassignLayer}
     />
   {/if}

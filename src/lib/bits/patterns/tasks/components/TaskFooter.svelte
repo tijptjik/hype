@@ -16,14 +16,19 @@ let {
 const model = useImageEditorGalleryModel(getImageCtx())
 </script>
 
-<section class={['bg-panel', className].filter(Boolean).join(' ')}>
+<section
+  class={['shrink-0 border-t border-border bg-panel p-3', className]
+    .filter(Boolean)
+    .join(' ')}
+>
   <ThumbnailWrapper
     items={model.state.items}
     activeId={model.state.activeId}
     variant="admin"
     orientation="horizontal"
-    class="h-57 pr-3"
-    size={192}
+    class="h-28"
+    trackClass="m-0 bg-transparent p-0"
+    size={112}
     fit="fit"
     getIsLoading={model.status.isLoading}
     getIsUploading={model.status.isUploading}

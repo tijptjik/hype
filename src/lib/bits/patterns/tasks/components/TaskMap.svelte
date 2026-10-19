@@ -71,7 +71,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
 
 <section
   class={cx(
-    'relative min-h-[18rem] flex-1 overflow-hidden rounded-2xl border border-foreground/10 bg-panel',
+    'relative min-h-[18rem] flex-1 overflow-hidden bg-surface',
     isFullscreen && 'fixed inset-0 z-[999] rounded-none border-0',
     className,
   )}
@@ -87,7 +87,7 @@ function handleWindowKeydown(event: KeyboardEvent): void {
 
   <button
     type="button"
-    class="absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-foreground/12 bg-panel/70 text-foreground transition hover:bg-panel/90"
+    class="absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-panel/95 text-foreground transition hover:bg-panel/90"
     onclick={() => {
       void toggleFullscreen()
     }}
