@@ -11,4 +11,7 @@ export interface AdminMenuItem {
   tone?: 'primary' | 'secondary' | 'accent'
 }
 
-export interface AdminMenuProps extends Pick<PanelProps, 'isNarrow'> {}
+export interface AdminMenuProps extends Pick<PanelProps, 'isNarrow'> {
+  /** First row in the sidebar's current filtered and ordered Layers list. */
+  firstLayerId?: string
+}
