@@ -6,7 +6,7 @@ import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import { searchUsers } from '#lib/api/user.remote.js'
-import { runRemoteQuery } from '#lib/remote/index.js'
+import { refreshRemoteQuery, runRemoteQuery } from '#lib/remote/index.js'
 // BITS
 import UserDirectoryControls from '#lib/bits/patterns/userDirectory/UserDirectoryControls.svelte'
 import UserDirectory from '#lib/bits/patterns/userDirectory/UserDirectory.svelte'
@@ -28,7 +28,10 @@ let sorting = $state<{
 
 let users = $state<DirectoryUser[]>([])
 let totalCount = $state(0)
-let offset = $state(0)
+let nextOffset = $state(0)
+let hasMore = $state(false)
+let retryOffset = $state(0)
+let resetVersion = $state(0)
 let query = $state('')
 let loading = $state(true)
 let hasLoaded = $state(false)
@@ -37,34 +40,49 @@ let requestVersion = 0
 
 /**
  * Loads a server-filtered page using the same endpoint as member selection.
- * @param nextOffset Zero-based offset into the matching users.
+ * @param pageOffset Zero-based offset into the matching users.
+ * @param refresh Whether to retry a cached failed remote query.
  * @returns Completion after the newest request is reflected in the list.
  * @remarks Late responses from superseded searches are ignored.
  */
-async function loadUsers(nextOffset = 0): Promise<void> {
+async function loadUsers(pageOffset = 0, refresh = false): Promise<void> {
+  retryOffset = pageOffset
   const version = ++requestVersion
   loading = true
   failed = false
   try {
-    const result = await runRemoteQuery(
+    const result = await (refresh ? refreshRemoteQuery : runRemoteQuery)(
       searchUsers({
         q: query,
         directory: true,
-        pagination: { limit: 25, offset: nextOffset },
+        pagination: { limit: 25, offset: pageOffset },
         sorting,
         conditions: { isArchived: archived, hasEmail, hasTelephone },
       }),
     )
     if (version !== requestVersion) return
     hasLoaded = true
-    users = result.data
+    users =
+      pageOffset === 0
+        ? result.data
+        : [...new Map([...users, ...result.data].map(user => [user.id, user])).values()]
     totalCount = result.totalCount
-    offset = result.offset
+    nextOffset = result.offset + result.data.length
+    hasMore = result.data.length > 0 && nextOffset < totalCount
+    if (pageOffset === 0) resetVersion++
   } catch {
     if (version === requestVersion) failed = true
   } finally {
     if (version === requestVersion) loading = false
   }
+}
+
+/** Loads the next page without replacing settled rows.
+ * @returns Nothing when already loading, failed, or at the end.
+ */
+function loadMore(): void {
+  if (loading || failed || !hasLoaded || !hasMore) return
+  void loadUsers(nextOffset)
 }
 
 /**
@@ -152,12 +170,12 @@ onMount(() => {
 <UserDirectory
   {users}
   {totalCount}
-  {offset}
+  {resetVersion}
+  {hasMore}
   {loading}
   {hasLoaded}
   {failed}
   showSummary={false}
-  onPrevious={() => void loadUsers(Math.max(0, offset - 25))}
-  onNext={() => void loadUsers(offset + 25)}
-  onRetry={() => void loadUsers(offset)}
+  onLoadMore={loadMore}
+  onRetry={() => void loadUsers(retryOffset, true)}
 />

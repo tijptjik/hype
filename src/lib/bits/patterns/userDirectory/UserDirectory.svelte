@@ -11,25 +11,45 @@ let {
   users,
   showSummary = true,
   totalCount,
-  offset,
+  hasMore = false,
+  resetVersion = 0,
   loading,
   hasLoaded = false,
   failed,
-  onPrevious,
-  onNext,
+  onLoadMore,
   onRetry,
 }: {
   showSummary?: boolean
   users: DirectoryUser[]
   totalCount: number
-  offset: number
+  hasMore?: boolean
+  resetVersion?: number
   hasLoaded?: boolean
   loading: boolean
   failed: boolean
-  onPrevious: () => void
-  onNext: () => void
+  onLoadMore: () => void
   onRetry: () => void
 } = $props()
+let viewport = $state<HTMLDivElement | null>(null)
+let sentinel = $state<HTMLDivElement | null>(null)
+
+$effect(() => {
+  resetVersion
+  if (viewport) viewport.scrollTop = 0
+})
+
+// Recheck after each settled page, including when the first page is shorter than the viewport.
+$effect(() => {
+  if (!viewport || !sentinel || !hasMore || loading || failed) return
+  const observer = new IntersectionObserver(
+    entries => {
+      if (entries.some(entry => entry.isIntersecting)) onLoadMore()
+    },
+    { root: viewport, rootMargin: '240px' },
+  )
+  observer.observe(sentinel)
+  return () => observer.disconnect()
+})
 </script>
 
 <section
@@ -52,9 +72,7 @@ let {
       </p>
     </div>
   {/if}
-  <div
-    class="min-h-0 flex-1 overflow-y-auto bg-[color-mix(in_oklab,var(--theme-panel)_78%,var(--color-primary)_22%)] p-4 md:p-5"
-  >
+  <div bind:this={viewport} class="min-h-0 flex-1 overflow-y-auto p-3">
     {#if failed}
       <div
         class="rounded-lg border border-border bg-panel p-8 text-center"
@@ -83,7 +101,7 @@ let {
           No users found. Try another name, username or email.
         </div>
       {/if}
-      <ul class="flex flex-col gap-2" aria-label="Users">
+      <ul class="flex flex-col gap-1.5" aria-label="Users">
         {#each users as user (user.id)}
           <li
             animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180 }}
@@ -146,31 +164,18 @@ let {
         {/each}
       </ul>
     {/if}
-  </div>
-  <div
-    class="flex min-h-14 items-center justify-between gap-4 border-t border-border bg-panel px-6 py-3 text-sm"
-  >
-    <p>
-      {totalCount === 0 ? 0 : offset + 1}–{Math.min(offset + users.length, totalCount)}
-      of {totalCount.toLocaleString()}
-    </p>
-    <div class="flex gap-2">
-      <button
-        type="button"
-        class="rounded-lg border border-border px-4 py-2 disabled:opacity-40"
-        disabled={loading || offset === 0}
-        onclick={onPrevious}
-      >
-        Previous
-      </button>
-      <button
-        type="button"
-        class="rounded-lg border border-border px-4 py-2 disabled:opacity-40"
-        disabled={loading || offset + 25 >= totalCount}
-        onclick={onNext}
-      >
-        Next
-      </button>
-    </div>
+    <div bind:this={sentinel} class="h-px" aria-hidden="true"></div>
+    {#if hasMore && hasLoaded}
+      <div class="flex justify-center py-3">
+        <button
+          type="button"
+          disabled={loading || failed}
+          onclick={onLoadMore}
+          class="rounded-md px-4 py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+        >
+          {loading ? 'Loading more users…' : 'Load more users'}
+        </button>
+      </div>
+    {/if}
   </div>
 </section>

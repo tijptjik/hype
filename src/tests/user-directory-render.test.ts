@@ -23,12 +23,11 @@ const user = (id: string) => ({
 const props = {
   users: [user('alpha'), user('beta')],
   totalCount: 2,
-  offset: 0,
+  hasMore: false,
   loading: false,
   hasLoaded: true,
   failed: false,
-  onPrevious: vi.fn(),
-  onNext: vi.fn(),
+  onLoadMore: vi.fn(),
   onRetry: vi.fn(),
 }
 
@@ -61,4 +60,42 @@ it('retains settled empty results while a replacement loads and keeps rows on er
   await view.rerender({ failed: true })
   expect(screen.getByText('@beta').closest('li')).toBe(original)
   expect(screen.getByRole('alert')).toBeTruthy()
+})
+
+it('loads at the scroll sentinel and pauses observation while loading or failed', async () => {
+  const disconnect = vi.fn()
+  const observe = vi.fn()
+  let intersect: IntersectionObserverCallback | undefined
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      constructor(callback: IntersectionObserverCallback) {
+        intersect = callback
+      }
+      observe = observe
+      disconnect = disconnect
+    },
+  )
+  const load = vi.fn()
+  try {
+    const view = render(UserDirectory, { ...props, hasMore: true, onLoadMore: load })
+    expect(observe).toHaveBeenCalledTimes(1)
+    if (!intersect) throw new Error('Observer was not created')
+    intersect(
+      [{ isIntersecting: true } as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    )
+    expect(load).toHaveBeenCalledTimes(1)
+    await view.rerender({ loading: true })
+    expect(disconnect).toHaveBeenCalledTimes(1)
+    await view.rerender({ loading: false, failed: true })
+    expect(observe).toHaveBeenCalledTimes(1)
+    await view.rerender({ failed: false })
+    expect(observe).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Previous' })).toBeNull()
+  } finally {
+    cleanup()
+    vi.unstubAllGlobals()
+  }
 })
