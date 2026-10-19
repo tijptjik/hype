@@ -136,7 +136,7 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
     </div>
   </div>
   <div
-    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 grid translate-y-1/2 grid-cols-[1fr_auto_1fr] items-center gap-3 px-6 @max-[1100px]:relative @max-[1100px]:translate-y-0 @max-[1100px]:grid-cols-1 @max-[1100px]:py-3"
+    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 grid translate-y-1/2 grid-cols-[minmax(max-content,1fr)_auto_minmax(0,max-content)] items-center gap-3 px-6 @max-[1100px]:relative @max-[1100px]:translate-y-0 @max-[1100px]:grid-cols-1 @max-[1100px]:py-3"
   >
     <div class="pointer-events-auto min-w-0 justify-self-start">
       {@render coordinatesControl()}
@@ -190,7 +190,9 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
         >
       </div>
     </div>
-    <div class="pointer-events-auto min-w-0 w-full justify-self-end max-w-80">
+    <div
+      class="pointer-events-auto w-max min-w-80 max-w-full justify-self-end @max-[400px]:min-w-0"
+    >
       {@render lookupControl()}
     </div>
   </div>

@@ -312,7 +312,7 @@ function moveMarker(): void {
       placeholder={m.feature_address_lookup()}
       value={getAddressDisplay(address, getLocaleKey())}
       readonly={!isEditing}
-      class="min-w-0 flex-1 rounded-md bg-transparent py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      class="field-sizing-content min-w-0 flex-1 rounded-md bg-transparent py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary"
       oninput={event =>
         onChange(
           setAddressExpression(
