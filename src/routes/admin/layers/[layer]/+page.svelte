@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { RemoteForm, RemoteFormInput } from '$app/server'
+import type { RemoteForm, RemoteFormInput, RemoteFormFields } from '$app/server'
 
 // SVELTE
 import { page } from '$app/state'
@@ -71,6 +71,14 @@ import { LayerPreflightFormData } from '#lib/db/zod/index.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import {
+  formSectionDividerStyles,
+  formSelectionSectionStyles,
+} from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
+import FormCardStyleSection from '#lib/bits/patterns/forms/formCardStyleSection/FormCardStyleSection.svelte'
+import { isCardStyleCode } from '#lib/features/cardStyle.js'
+import type { CardStyleCode } from '#lib/features/cardStyle.js'
 import {
   FormI18nDescriptorFields,
   FormI18nSection,
@@ -504,6 +512,14 @@ const formCtx = $derived(configuredLayerForm())
 const formDataUpdater = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<LayerFormPayload>,
 )
+// Metadata retains arbitrary JSON keys; expose its known string controls through
+// SvelteKit's field contract instead of treating their .as method as a JSON key.
+const layerPresentationFields = $derived(
+  formCtx.form.fields.data.metadata as unknown as RemoteFormFields<{
+    mapStyleCode?: string
+    cardStyleCode?: string
+  }>,
+)
 // Map presentation is persisted with the existing layer metadata and scalar concurrency guard.
 const layerMapStyleCode = $derived(
   formCtx.form.fields.data.metadata.value()?.mapStyleCode,
@@ -543,13 +559,7 @@ const selectedLayerMapStyle = $derived.by((): MapStyleSelectionItem | null => {
 })
 const hiddenLayerMapStyleInputAttrs = $derived(
   layerMapStyleCode !== undefined
-    ? [
-        {
-          type: 'hidden',
-          name: 'data.metadata.mapStyleCode',
-          value: layerMapStyleCode ?? '',
-        },
-      ]
+    ? [layerPresentationFields.mapStyleCode.as('hidden', layerMapStyleCode ?? '')]
     : [],
 )
 
@@ -566,6 +576,24 @@ function onSelectLayerMapStyle(selection: MapStyleSelectionItem): void {
     else if (isMapStyleKey(selection.code)) data.metadata.mapStyleCode = selection.code
     return data
   })
+}
+
+const selectedLayerCardStyle = $derived.by(() => {
+  const code = formCtx.form.fields.value().data?.metadata?.cardStyleCode
+  return isCardStyleCode(code) ? code : null
+})
+
+/**
+ * Sets or clears the layer override while preserving unrelated metadata.
+ * @param code Registered style, or null to inherit the project.
+ * @returns Nothing; the existing layer form persists metadata.
+ */
+function onSelectLayerCardStyle(code: CardStyleCode | null): void {
+  updateFormData(formDataUpdater, data => {
+    data.metadata = { ...data.metadata, cardStyleCode: code ?? '' }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
 }
 
 const isRequiredInPreflight = createSchemaRequiredInferer(LayerPreflightFormData)
@@ -604,6 +632,13 @@ const selectedParentProject = $derived.by((): ParentSectionProjectItem | null =>
 })
 
 const selectedParentProjectId = $derived(selectedParentProject?.id ?? '')
+const inheritedCardStyle = $derived(
+  isCardStyleCode(selectedParentProject?.cardStyleCode)
+    ? selectedParentProject.cardStyleCode
+    : (adminCtx.view.cache.project.get(selectedParentProjectId)?.cardStyleCode ??
+        'full'),
+)
+
 const hasSelectedParentProject = $derived(selectedParentProjectId.length > 0)
 
 /********************
@@ -1233,14 +1268,20 @@ $effect(() => {
       nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <div data-facet-id="core">
+      <FormSurface>
         <FormI18nSection
-          title={m.admin__forms_common_descriptors()}
+          title="Profile"
           {locales}
           {onTranslate}
           {onResetLocale}
           {isEditing}
         >
+          {#snippet left()}
+            <div class="flex items-center gap-3">
+              <LayerIcon class="size-6 text-primary" aria-hidden="true" />
+              <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
+            </div>
+          {/snippet}
           {#snippet center()}
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
@@ -1258,9 +1299,10 @@ $effect(() => {
           {/snippet}
         </FormI18nSection>
 
-        <GridSpacer cols={3} leftCols={1} rightCols={2}>
-          {#snippet left()}
+        <div class={`${formSectionDividerStyles} grid grid-cols-1 xl:grid-cols-3`}>
+          <div class="min-w-0">
             <FormParentSection
+              class={formSelectionSectionStyles}
               title={m.admin__forms_layer_parent_project_title()}
               subtitle={m.admin__forms_layer_parent_project_subtitle()}
               issues={parentProjectIssues}
@@ -1274,21 +1316,39 @@ $effect(() => {
               onSearch={onSearchParentProjects}
               onReplaceParent={onReplaceParentProject}
             />
-          {/snippet}
-        </GridSpacer>
-        <FormMapStyleSection
-          title={m.theme_map_style_label()}
-          subtitle={m.theme_map_layer_style_description()}
-          availableMapStyles={layerMapStyleOptions}
-          selectedMapStyle={selectedLayerMapStyle}
-          additionalMapStyles={[projectDefaultMapStyle]}
-          hiddenMapStyleInputAttrs={hiddenLayerMapStyleInputAttrs}
-          isEditing={isEditing && canEditLayerFields}
-          isSubmitting={formCtx.submitting}
-          isSubmitRequested={formCtx.isSubmitRequested}
-          onSelectMapStyle={onSelectLayerMapStyle}
-        />
-      </div>
+          </div>
+          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+            <FormMapStyleSection
+              class={formSelectionSectionStyles}
+              title={m.theme_map_style_label()}
+              subtitle={m.theme_map_layer_style_description()}
+              availableMapStyles={layerMapStyleOptions}
+              selectedMapStyle={selectedLayerMapStyle}
+              additionalMapStyles={[projectDefaultMapStyle]}
+              hiddenMapStyleInputAttrs={hiddenLayerMapStyleInputAttrs}
+              isEditing={isEditing && canEditLayerFields}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              onSelectMapStyle={onSelectLayerMapStyle}
+            />
+          </div>
+          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+            <FormCardStyleSection
+              value={selectedLayerCardStyle}
+              allowInherit
+              inheritedValue={inheritedCardStyle}
+              inputAttrs={layerPresentationFields.cardStyleCode.as(
+                'hidden',
+                selectedLayerCardStyle ?? '',
+              )}
+              isEditing={isEditing && canEditLayerFields}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              onSelect={onSelectLayerCardStyle}
+            />
+          </div>
+        </div>
+      </FormSurface>
     </Main.Facet>
 
     <Main.Facet

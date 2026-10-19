@@ -7,6 +7,10 @@ import { page } from '$app/state'
 import { useImageProviderModel } from '#lib/adapters/image/index.js'
 // BITS
 import { FeatureCard } from '#lib/bits/index.js'
+// I18N
+import { getI18n } from '#lib/i18n.js'
+// PRESENTATION
+import { resolveFeatureCardType } from '#lib/features/cardType.js'
 // NAVIGATION
 import { getCollectionDescriptorFromSearchParams } from '#lib/navigation/index.js'
 // PROVIDERS
@@ -244,7 +248,19 @@ const imageProviderModel = useImageProviderModel(
 {#if appCtx}
   {#if feature}
     <ImageProvider model={imageProviderModel}>
-      <FeatureCard feature={feature as Feature} />
+      <FeatureCard
+        feature={feature as Feature}
+        cardType={resolveFeatureCardType({
+          description: getI18n(
+            feature,
+            'description',
+            appCtx.view.getUserPreferences(),
+            '',
+          ),
+          project: appCtx.view.getHierarchySync(feature).project,
+          layer: appCtx.view.getHierarchySync(feature).layer,
+        })}
+      />
     </ImageProvider>
   {/if}
 {:else}

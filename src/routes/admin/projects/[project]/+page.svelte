@@ -118,6 +118,8 @@ import { ProjectPreflightFormData } from '#lib/db/zod/schema/project.js'
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import { Checkbox } from '#lib/bits/custom/index.js'
+import FormCardStyleSection from '#lib/bits/patterns/forms/formCardStyleSection/FormCardStyleSection.svelte'
+import type { CardStyleCode } from '#lib/features/cardStyle.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import {
   formSectionDividerStyles,
@@ -1753,6 +1755,23 @@ const selectedParentOrganisation = $derived.by(() => {
     return hierarchy.organisation
   return null
 })
+const selectedCardStyle = $derived(
+  formCtx.form.fields.data.cardStyleCode.value() ?? 'full',
+)
+
+/**
+ * Updates the saved project card style in the current draft.
+ * @param code Registered style; null resets to Full.
+ * @returns Nothing; the remote project form persists the selection.
+ */
+function onSelectCardStyle(code: CardStyleCode | null): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.cardStyleCode = code ?? 'full'
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
 const selectedMapStyleCodeValue = $derived(
   String(formCtx.form.fields.data.mapStyleCode.value() ?? ''),
 )
@@ -2698,7 +2717,7 @@ $effect(() => {
         </div>
 
         <div
-          class={`${formSectionDividerStyles} grid grid-cols-1 ${canSetParentOrganisation ? 'md:grid-cols-2' : ''}`}
+          class={`${formSectionDividerStyles} grid grid-cols-1 ${canSetParentOrganisation ? 'xl:grid-cols-3' : 'md:grid-cols-2'}`}
         >
           {#if canSetParentOrganisation}
             <div class="min-w-0">
@@ -2721,7 +2740,7 @@ $effect(() => {
 
           <div
             class={canSetParentOrganisation
-              ? 'min-w-0 border-t border-border md:border-l md:border-t-0'
+              ? 'min-w-0 border-t border-border xl:border-l xl:border-t-0'
               : 'min-w-0'}
           >
             <FormMapStyleSection
@@ -2736,6 +2755,21 @@ $effect(() => {
               isSubmitRequested={formCtx.isSubmitRequested}
               startInAddingMode={isNewProjectRef}
               {onSelectMapStyle}
+            />
+          </div>
+          <div
+            class={`min-w-0 border-t border-border ${canSetParentOrganisation ? 'xl:border-l xl:border-t-0' : 'md:border-l md:border-t-0'}`}
+          >
+            <FormCardStyleSection
+              value={selectedCardStyle}
+              inputAttrs={formCtx.form.fields.data.cardStyleCode.as(
+                'hidden',
+                selectedCardStyle,
+              )}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              onSelect={onSelectCardStyle}
             />
           </div>
         </div>

@@ -164,6 +164,38 @@ main width; shared chrome policy accepts explicit dimensions from its caller.
 - Builds/uses an adapter model (for example `createAdminHeaderModel`) to map app/context state into pattern props.
 - Passes controlled/bindable state + callbacks into patterns via the adapter output.
 
+## Feature Card Presentation
+
+`src/lib/features/cardStyle.ts` owns stable presentation codes and SVG preview paths.
+`full` renders the standard card; `no-description` renders the compact title/action
+band and raised map portal. The renderer mapping stays separate from user-facing,
+localized names. `conditional` selects Full when the localized description has
+content and No Description otherwise, reusing both existing renderers. Empty
+rich-text paragraphs and placeholder dashes count as no content. Both variants reuse the viewer, actions and contribution forms.
+
+Migration `0094_conditional_card_style.sql` adds the Conditional choice without
+changing existing selections. Migration `0093_card_styles.sql` registers the catalogue in `cardStyle` and adds
+`project.cardStyleCode` as a foreign key. Existing projects are initialized to
+`full`; null/absent project choices resolve to Full as well. New project forms
+explicitly save Full. Layer overrides use validated `metadata.cardStyleCode`, like
+layer map-style overrides. Clearing an override removes the metadata key and
+inherits the project, without discarding map or other metadata. There is no
+remaining neon-specific selection rule.
+
+Project and layer Profile tabs share `FormCardStyleSection`, SVG choice previews,
+and the same selection primitives as map styles. Project changes pass the existing
+project write policy; layer overrides pass the existing metadata write policy.
+Both use the remote form's optimistic-concurrency, save, reset and validation flow.
+Public project ancestors and layer profiles expose the selected codes so direct
+feature links resolve layer override, project choice, then Full.
+
+To add a style, add its code/renderer/preview to the catalogue, localized labels to
+the selector, and a migration registering the code in `cardStyle`. Implement a new
+display body at the card composition boundary rather than copying entire cards.
+Apply normal D1 migrations before deploying code that reads a new column. Renderer
+identities are code-owned rather than editable admin resources; no separate catalogue
+sync command or media upload is required for these bundled SVG previews.
+
 ## Handler Placement
 
 - Local UI handlers:

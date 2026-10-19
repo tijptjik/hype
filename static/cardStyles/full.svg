@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="title desc">
+<title>Full feature card</title>
+<desc>Image, breadcrumbs, title, description and map portal above actions.</desc>
+<defs><clipPath id="card"><rect x="18" y="10" width="284" height="220" rx="14"/></clipPath><clipPath id="portal"><circle cx="260" cy="171" r="29"/></clipPath></defs>
+<rect width="320" height="240" rx="16" fill="#272333"/>
+<g clip-path="url(#card)"><rect x="18" y="10" width="284" height="220" fill="#10121c"/>
+<rect x="26" y="18" width="268" height="97" rx="8" fill="#39475d"/>
+<path d="M26 105l72 -75 54 37 45 -60 97 98Z" fill="#59677a"/>
+<circle cx="228" cy="48" r="14" fill="#d5b477"/>
+<rect x="18" y="115" width="284" height="110" fill="#10121c"/>
+<path d="M34 125h28m8 0h20m8 0h24" stroke="#9a96ad" stroke-width="3" stroke-linecap="round"/>
+<path d="M34 139h130" stroke="#f5f1fc" stroke-width="6" stroke-linecap="round"/>
+<path d="M34 150h146m-146 10h128m-128 10h102" stroke="#aaa8bf" stroke-width="4" stroke-linecap="round"/>
+<circle cx="260" cy="171" r="36" fill="#10121c"/>
+<g clip-path="url(#portal)"><rect x="229" y="140" width="62" height="62" fill="#211a32"/><path d="M220 176l75 -20m-55 -25 24 80m-45 -10 70 -18" stroke="#9474ad" stroke-width="3"/><circle cx="260" cy="171" r="7" fill="#ff68aa"/></g>
+<circle cx="260" cy="171" r="30" fill="none" stroke="#ff68aa" stroke-width="2"/>
+<path d="M36 214h34m25 0h44m99 0h43" stroke="#f5f1fc" stroke-width="4" stroke-linecap="round"/>
+</g></svg>

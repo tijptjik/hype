@@ -1300,5 +1300,16 @@
   "profile__status_submitted": "已提交",
   "profile__status_rejected": "已拒絕",
   "profile__status_unpublished": "未發佈",
-  "profile__maps_selected": "已選"
+  "profile__maps_selected": "已選",
+  "card_style__title": "卡片樣式",
+  "card_style__project_description": "選擇地點卡片的顯示方式。",
+  "card_style__layer_description": "繼承項目樣式或選擇其他樣式。",
+  "card_style__full": "完整",
+  "card_style__full_description": "照片、標題、描述、欄位和地圖視窗。",
+  "card_style__no_description": "無描述",
+  "card_style__no_description_description": "精簡標題和操作按鈕，配有凸起的地圖視窗。",
+  "card_style__conditional": "按內容顯示",
+  "card_style__conditional_description": "有描述時顯示完整卡片，否則顯示無描述卡片。",
+  "card_style__inherit": "項目預設",
+  "card_style__inherit_description": "繼承所屬項目的卡片樣式。"
 }

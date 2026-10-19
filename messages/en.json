@@ -1300,5 +1300,16 @@
   "profile__status_submitted": "Submitted",
   "profile__status_rejected": "Rejected",
   "profile__status_unpublished": "Unpublished",
-  "profile__maps_selected": "Selected"
+  "profile__maps_selected": "Selected",
+  "card_style__title": "Card Style",
+  "card_style__project_description": "Choose how features are displayed.",
+  "card_style__layer_description": "Inherit the project style or choose an override.",
+  "card_style__full": "Full",
+  "card_style__full_description": "Photo, title, description, fields and map portal.",
+  "card_style__no_description": "No Description",
+  "card_style__no_description_description": "Compact title and actions with a raised map portal.",
+  "card_style__conditional": "Conditional",
+  "card_style__conditional_description": "Full when a description is available; No Description otherwise.",
+  "card_style__inherit": "Project Default",
+  "card_style__inherit_description": "Inherit the parent project’s card style."
 }
