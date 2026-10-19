@@ -307,7 +307,7 @@ $effect(() => {
 })
 </script>
 
-<section class="bits-theme flex h-full min-h-0 flex-col overflow-y-auto p-6 pb-12">
+<section class="bits-theme flex h-full min-h-0 flex-col overflow-y-auto p-3 pb-12">
   {#if !analyticsState}
     <div in:fade={{ duration: 180 }} out:fade={{ duration: 140 }}>
       <AssetAnalyticsDashboardSkeleton />
@@ -321,7 +321,7 @@ $effect(() => {
       </div>
     {:else}
       <section class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
-        <article class="rounded-xl border border-base-300 bg-base-100 p-6">
+        <article class="rounded-xl border border-border bg-panel p-6">
           <h2 class="text-xl font-semibold text-foreground">
             {#if activeFacet === 'views'}
               {m.analytics__views_title()}
@@ -342,7 +342,7 @@ $effect(() => {
           </p>
 
           <div class="mt-6 grid gap-3 md:grid-cols-2">
-            <div class="rounded-lg border border-base-300 bg-base-50 p-4">
+            <div class="rounded-lg border border-border bg-surface p-4">
               <h3
                 class="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-alt"
               >
@@ -353,7 +353,7 @@ $effect(() => {
               </p>
             </div>
 
-            <div class="rounded-lg border border-base-300 bg-base-50 p-4">
+            <div class="rounded-lg border border-border bg-surface p-4">
               <h3
                 class="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-alt"
               >
@@ -366,7 +366,7 @@ $effect(() => {
           </div>
         </article>
 
-        <aside class="rounded-xl border border-base-300 bg-base-100 p-6">
+        <aside class="rounded-xl border border-border bg-panel p-6">
           <h3
             class="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-alt"
           >

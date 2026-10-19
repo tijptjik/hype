@@ -172,7 +172,7 @@ onDestroy(() => {
   <div class="space-y-3" onmouseenter={openPopover} onmouseleave={closePopoverSoon}>
     {#if previewFailed}
       <div
-        class="flex h-44 items-center justify-center rounded-[1rem] border border-dashed border-base-300 bg-surface px-4 text-center text-sm text-foreground-alt"
+        class="flex h-44 items-center justify-center rounded-[1rem] border border-dashed border-border bg-surface px-4 text-center text-sm text-foreground-alt"
       >
         {m.image__metadata_preview_unavailable()}
       </div>
@@ -180,7 +180,7 @@ onDestroy(() => {
       <img
         src={previewUrl}
         alt={normalizedPublicId}
-        class="h-44 w-full rounded-[1rem] border border-base-300 bg-surface object-cover"
+        class="h-44 w-full rounded-[1rem] border border-border bg-surface object-cover"
         loading="lazy"
         onerror={() => {
           previewFailed = true
@@ -199,7 +199,7 @@ onDestroy(() => {
       </div>
     </div>
 
-    <div class="rounded-[1rem] border border-base-300 bg-surface px-3 py-3">
+    <div class="rounded-[1rem] border border-border bg-surface px-3 py-3">
       {#if metadataEntries.length > 0}
         <div class="flex flex-col gap-2">
           {#each metadataEntries as entry}
