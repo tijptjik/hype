@@ -28,8 +28,24 @@ independent of identity accents.
 
 The server resolves the validated `hype-theme` cookie before the hub default, so
 returning users get the selected palette in the initial HTML. The root theme model
-applies Settings changes immediately and stores a one-year host-scoped cookie.
-This is a device/browser preference, separate from domain-resource offline caching.
+applies Settings changes immediately and mirrors the UI theme in localStorage and a
+one-year host-scoped cookie. A small startup script restores validated localStorage
+appearance before styles paint; the cookie supplies the server-rendered fallback.
+
+The account owns `userPreferences.theme`: `uiTheme`, `mapStyle`, `syncUiAndMap`,
+and `useActiveMapStyle`. The root layout restores these on login even when Settings
+is closed, replacing browser caches with saved account choices. Accounts without
+saved appearance settings adopt the current browser choices once. Explicit changes
+made while preferences load take precedence over that older response. Failed reads
+never migrate browser settings over unknown account preferences.
+
+Appearance writes patch only `$.theme` in the existing preferences JSON, preserving
+language, admin and other keys without a database migration. Writes are serialized,
+and account identity is checked both locally and against the server session. Resource
+map overrides remain transient and are not saved as the preferred map style. Browser
+storage is a startup cache and offline fallback; synchronization errors leave the
+local choice intact and show a notification. This is separate from domain-resource
+offline caching.
 
 ## Component styling
 
