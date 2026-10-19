@@ -422,3 +422,19 @@ On the fresh production mirror, 1,190 of 1,271 Features have ready baselines; 56
 intangible and 25 are drafts. No Place links are created by this assessment. Tests
 exercise baseline preservation, exact legacy identifiers, arrays, structured address
 corrections, stale edits, private sources and unchanged Feature rows after linking.
+
+### Phone collection editing and presentation (Refs #194)
+
+PhoneField writes now validate every member and persist an ordered E.164 JSON array
+in the existing text-valued property storage. Legacy scalar values remain readable;
+this change does not bulk-rewrite the production mirror. Empty text remains optional
+null and an explicit empty array remains `[]`. JSON arrays and one-number-per-line
+form input are supported; malformed arrays, invalid members and classifier bypasses
+reject the whole write. Validation uses persisted property component definitions.
+
+The Feature editor displays stored arrays as individual lines and preserves unfinished
+input, including trailing newlines. Generic property displays format all numbers,
+and Breadline cards create a separate call link for each. Component tests exercise
+array loading, input callbacks, trailing-newline preservation and malformed text kept
+for correction. These changes enable multi-phone materialization but do not yet
+connect normal Feature edits to Place override persistence or migrate brand storage.

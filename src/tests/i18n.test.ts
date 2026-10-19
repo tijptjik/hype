@@ -338,6 +338,16 @@ describe('getFPI18n', () => {
     ...overrides,
   })
 
+  it('displays every phone without exposing storage JSON', () => {
+    const base = createProperty()
+    const phone = createProperty({
+      value: '["+85223456789","+85291234567"]',
+      property: { ...base.property!, component: 'PhoneField', type: 'specifier' },
+    })
+    expect(getFPI18n(phone, userPreferences)).toBe('+85223456789, +85291234567')
+    expect(getFPI18n({ ...phone, value: '[]' }, userPreferences)).toBe(fallback)
+  })
+
   it('returns the normal fallback for empty feature properties without warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 

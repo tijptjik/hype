@@ -28,7 +28,9 @@ const isRangeField = $derived(property.component === 'RangeField')
 const isToggleField = $derived(
   property.component === 'CheckboxField' || property.component === 'Toggle',
 )
-const isTextareaField = $derived(property.component === 'TextareaField')
+const isTextareaField = $derived(
+  property.component === 'TextareaField' || property.component === 'PhoneField',
+)
 const hasValue = $derived(
   isToggleField
     ? checked
@@ -92,7 +94,7 @@ const fieldClass = $derived(
           onChange={nextValue => onChange(nextValue)}
         />
       </div>
-    {:else if property.component === 'TextareaField'}
+    {:else if isTextareaField}
       <div
         class={[
           'bits-feature-field__control',
@@ -104,6 +106,7 @@ const fieldClass = $derived(
           .join(' ')}
       >
         <FeatureFieldTextArea
+          isPhone={property.component === 'PhoneField'}
           id={`feature-field-${property.id}`}
           value={value ?? ''}
           {placeholder}

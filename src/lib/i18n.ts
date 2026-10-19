@@ -3,6 +3,8 @@ import type { Locale as DateFnsLocale } from 'date-fns'
 import { enGB } from 'date-fns/locale/en-GB'
 import { zhCN } from 'date-fns/locale/zh-CN'
 import { zhHK } from 'date-fns/locale/zh-HK'
+// PROPERTY VALUES
+import { formatPhoneNumbers } from '#lib/utils/phone-property.js'
 // I18N
 import * as runtime from '#lib/paraglide/runtime.js'
 import * as m from '#lib/paraglide/messages.js'
@@ -431,6 +433,10 @@ export function getFPI18n(
 
   // Ignore empty property shells created for incomplete feature data.
   if (isEmptyFeatureProperty(obj)) return fallback
+
+  // Phone arrays retain every number in generic property displays.
+  if (obj.property?.component === 'PhoneField')
+    return formatPhoneNumbers(obj.value) || fallback
 
   // CASE : SPECIFIER Property & UNIVERSAL VALUE
   if (obj.property?.type === 'specifier' && obj.value) {

@@ -3,7 +3,10 @@ import { eq } from 'drizzle-orm'
 // SCHEMA
 import { property } from '../schema/property'
 // VALIDATION
-import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
+import {
+  normalizeHongKongPhoneNumber,
+  readPhoneNumbers,
+} from '#lib/utils/phone-property.js'
 import { m } from '#lib/i18n.js'
 // TYPES
 import type { Database } from '#lib/types.js'
@@ -19,7 +22,7 @@ type PropertyInput = {
  * Validates phone values against persisted definitions and canonicalizes them.
  * @param db - Database containing the authoritative property definitions.
  * @param properties - Submitted feature properties, including imports and drafts.
- * @returns Cloned rows with phone numbers normalized to E.164.
+ * @returns Cloned rows with ordered E.164 phone arrays serialized for property storage.
  * @remarks Run before any feature writes or relation deletions. Client-supplied
  * property metadata cannot bypass validation; empty phone values remain optional.
  */
@@ -37,11 +40,17 @@ export async function validateFeaturePhoneProperties<T extends PropertyInput>(
   return properties.map(row => {
     if (!phoneIds.has(row.propertyId)) return row
     const value = row.value?.trim() ?? ''
-    const normalized = value ? normalizeHongKongPhoneNumber(value) : null
-    if ((value && !normalized) || row.propertyValueId) {
+    const numbers = readPhoneNumbers(value)
+    const normalized = numbers?.map(number => normalizeHongKongPhoneNumber(number))
+    if (numbers === null || row.propertyValueId) {
       throw new Error(m.property__phone_hk_invalid())
     }
-    // A phone has one canonical value, never locale-specific alternatives.
-    return { ...row, value: normalized, propertyValueId: null, i18n: undefined }
+    // A phone collection has one canonical ordered value, never locale-specific alternatives.
+    return {
+      ...row,
+      value: value ? JSON.stringify(normalized) : null,
+      propertyValueId: null,
+      i18n: undefined,
+    }
   })
 }

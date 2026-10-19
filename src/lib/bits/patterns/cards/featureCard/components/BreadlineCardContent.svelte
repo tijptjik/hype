@@ -9,6 +9,7 @@ import {
   breadlineCardMtr,
   type BreadlineRunPresentation,
 } from '#lib/features/breadlineCard.js'
+import { readPhoneNumbers } from '#lib/utils/phone-property.js'
 import { presentationProperty } from '#lib/features/presentationProperties.js'
 import { stripRichTextToPlainText } from '../featureCard.layout'
 // I18N
@@ -25,7 +26,9 @@ const address = $derived(getI18n(feature, 'displayAddress', preferences, ''))
 const description = $derived(
   stripRichTextToPlainText(getI18n(feature, 'description', preferences, '')),
 )
-const phone = $derived(presentationProperty(feature, 'phoneNumber'))
+const phones = $derived(
+  readPhoneNumbers(presentationProperty(feature, 'phoneNumber')) ?? [],
+)
 const fields = $derived(
   access
     ? [
@@ -61,13 +64,13 @@ const fields = $derived(
       {#if address}
         <p class="mt-1 text-sm leading-relaxed">{address}</p>
       {/if}
-      {#if phone}
+      {#each phones as phone}
         <a
-          class="mt-1 inline-block text-sm underline underline-offset-4"
+          class="mt-1 block text-sm underline underline-offset-4"
           href={`tel:${phone.replace(/[^+\d]/g, '')}`}
           >{phone}</a
         >
-      {/if}
+      {/each}
     </div>
   </div>
   {#if fields.length}
