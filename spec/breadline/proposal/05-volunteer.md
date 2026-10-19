@@ -146,6 +146,10 @@ Place inheritance can supply that property transparently. Brand SVGs participate
 marker invalidation signatures; failures retain a text badge, and drop-offs keep the
 destination shape. Donor photos remain excluded from Brand status markers.
 
+Admin feature-list thumbnails also prefer the resolved brand SVG, using the same
+effective property contract. Features without a recognised brand retain their photo
+or identicon fallback; this display choice does not replace stored feature images.
+
 Until Place inheritance provides brand identity, migration 0106 replaces only the
 generic Independent classifier on eight known imported donors, preserving explicit
 overrides. The import adapter seeds the same canonical values for future imports.
