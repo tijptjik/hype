@@ -21,9 +21,7 @@ import {
 } from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // I18N
-import { getLocale, getFPI18n, getI18n, m } from '#lib/i18n.js'
-// CORE FEATURE DATA
-import { getFeatureMtrProperty } from '../featureCardMtr'
+import { getFPI18n, getI18n, m } from '#lib/i18n.js'
 // TYPES
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type { FeatureCardPortalObstacle } from '#lib/context/featureCard.types.js'
@@ -150,9 +148,7 @@ const featurePropertyItems = $derived.by((): FeaturePropertyItem[] => {
     label: getI18n(property.property, 'label', userPreferences),
     value: getFPI18n(property, userPreferences),
   }))
-  // Core walking access is read-only and uses the same compact card layout.
-  const mtrProperty = getFeatureMtrProperty(feature, getLocale())
-  if (mtrProperty) items.push(mtrProperty)
+  // MTR access belongs to the future Breadline-specific card, not default cards.
   return items
 })
 const portalRightInsetPx = $derived(

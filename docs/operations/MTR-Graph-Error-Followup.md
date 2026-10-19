@@ -270,13 +270,10 @@ requests and the shared-service handler checks pass against the final packaged i
 
 ### Card verification
 
-Real browser checks found a separate presentation omission: the compact
-`portal-band` card did not render the MTR field that full cards already showed.
-`featureCardMtr.ts` now supplies the same localized field to both layouts, and the
-compact band reuses `FeatureCardContentFields`. Empty or unknown access stays hidden.
-Four desktop cards (two public and two previously failing Breadline features) and
-three mobile Breadline cards show the expected station, exit and walking metres,
-with zero page errors. Screenshots were visually inspected, including mobile wrapping.
+The experimental MTR row on default full and compact cards was removed by product
+decision. MTR presentation is reserved for a future Breadline-specific card. Earlier
+browser checks of that experiment are historical evidence, not acceptance of the
+current card design. Routing and persisted MTR access data are unchanged.
 The whole-app check reports 10 errors outside the changed card/helper files (map,
 panel and test paths); it is not a clean application-wide check.
 The final checks used a stable source snapshot, an isolated copy of the repaired

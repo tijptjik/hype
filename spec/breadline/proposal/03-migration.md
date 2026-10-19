@@ -390,12 +390,9 @@ repaired engine. Source-station/exit differences and physical entrance associati
 review remain acceptance work. No production deployment or production data write
 occurred; broad issue acceptance checkboxes remain unchecked.
 
-Browser acceptance also exposed and repaired the compact `portal-band` card's missing
-MTR row. Full and compact cards now share the same field formatter and renderer.
-Four desktop cards, including two previously failing Breadline features, and three
-mobile Breadline cards render station/exit/metres with zero page errors. The targeted
-card/MTR suite has 24 passing tests. These checks do not close broader routing-view,
-source-reference or production acceptance TODOs.
+MTR presentation is reserved for a future Breadline-specific card. The experimental
+MTR row on default full and compact cards was removed by product decision; routing
+and persisted access data remain available for the dedicated card implementation.
 
 ### Donor eligibility policy (Refs #194)
 
