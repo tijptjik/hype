@@ -10,6 +10,7 @@ import {
 // SERVICES
 import { previewFeaturePlaceAdoption } from './placeAdoption'
 // TYPES
+import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
 
 type Proposal = typeof placeAdoptionProposal.$inferSelect
@@ -151,6 +152,7 @@ export async function proposeFeaturePlaceAdoption(
     projectId: string
     candidateRevisionId: string
     reevaluatePending?: boolean
+    additionalGuard?: SQL
   },
 ): Promise<{ proposal: Proposal; decisions: Decision[] } | null> {
   const association = await db
@@ -206,7 +208,7 @@ export async function proposeFeaturePlaceAdoption(
     SELECT ${id}, ${input.featureId}, ${input.projectId}, ${association.placeId},
       ${input.candidateRevisionId}, ${preview.expectedRevision}, ${preview.expectedFeatureModifiedAt},
       ${preview.settings.revision}, ${JSON.stringify(evidence)}, strftime('%Y-%m-%dT%H:%M:%fZ','now')
-    WHERE EXISTS (SELECT 1 FROM feature f JOIN featurePlace fp ON fp.featureId=f.id
+    WHERE (${input.additionalGuard ?? sql`1`}) AND EXISTS (SELECT 1 FROM feature f JOIN featurePlace fp ON fp.featureId=f.id
       JOIN place p ON p.id=fp.placeId
       WHERE f.id=${input.featureId} AND f.projectId=${input.projectId} AND f.isDraft=0
       AND f.modifiedAt=${preview.expectedFeatureModifiedAt} AND fp.revision=${preview.expectedRevision}

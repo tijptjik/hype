@@ -300,6 +300,20 @@ database with integrity/foreign-key checks passing and all 1,271 Features unchan
 SQLite-backed tests cover page resumption, late-write rollback, lease loss/expiry, retry,
 monthly discovery, publication regression and missing source identities.
 
+The per-Feature refresh adoption coordinator is implemented in
+`src/lib/db/services/placeRefreshAdoption.ts`. It uses the retained candidate assessment,
+checks facts and location independently under Project policy, refreshes concurrency
+tokens between groups, preserves explicit overrides and durable rejections, and resumes
+partial applications without duplicate decisions. A mandatory trusted run/lease guard
+is also included in the proposal/application SQL, so losing ownership prevents writes.
+Policy changes and unrelated edits do not trigger silent re-evaluation. Successful
+geometry adoption retains the existing transactional MTR job trigger.
+
+This coordinator still needs the run-item ingestion/cursor stage and scheduled Worker
+entrypoint; it is not yet a running monthly refresh. SQLite-backed tests cover both
+automatic groups, policy review, rejection replay, lease loss between groups, atomic
+write fencing, association scope changes and policy edits after assessment.
+
 ## Existing-feature and Breadline migration
 
 Preserve Feature IDs, URLs, media, permissions, histories and project relationships.

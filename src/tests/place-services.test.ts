@@ -3,6 +3,8 @@ import { FeatureListProfileAPI } from '#lib/db/zod/schema/feature.js'
 import { feature as featureTable } from '#lib/db/schema/feature.js'
 import { featurePlaceBrandsSQL } from '#lib/db/services/placeBrandProjection.js'
 import { DatabaseSync } from 'node:sqlite'
+import { sql } from 'drizzle-orm'
+import { adoptRefreshedPlaceForFeature } from '#lib/db/services/placeRefreshAdoption.js'
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
 import { drizzle } from 'drizzle-orm/d1'
@@ -2201,6 +2203,9 @@ describe('persisted Place adoption preview', () => {
     expect(
       (await previewFeaturePlaceAdoption(db, input))?.plan.locationRevisionId,
     ).toBe(next.revisionId)
+    expect(
+      await proposeFeaturePlaceAdoption(db, { ...input, additionalGuard: sql`0` }),
+    ).toBeNull()
     let proposed = await proposeFeaturePlaceAdoption(db, input)
     expect(proposed?.proposal.policyRevision).toBe(1)
     expect(proposed?.decisions).toEqual([])
@@ -2282,7 +2287,7 @@ describe('persisted Place adoption preview', () => {
 })
 
 describe('atomic source group application', () => {
-  async function fixture() {
+  async function fixture(automaticLocation = false) {
     const { db, sqlite } = setup()
     const { getTableColumns } = await import('drizzle-orm')
     const { feature, featureI18n } = await import('#lib/db/schema/feature.js')
@@ -2357,6 +2362,13 @@ describe('atomic source group application', () => {
       releaseId: 'release2',
       snapshotId: 'snapshot2',
     })
+    if (automaticLocation)
+      await saveProjectPlaceSettings(
+        db,
+        'p',
+        { ...DEFAULT_PROJECT_PLACE_POLICY, coordinates: { mode: 'automatic' } },
+        0,
+      )
     const proposal = await proposeFeaturePlaceAdoption(db, {
       featureId: 'f',
       projectId: 'p',
@@ -2381,6 +2393,143 @@ describe('atomic source group application', () => {
     }
     return { db, sqlite, input, first, next }
   }
+
+  it('processes both automatic groups and replays without duplicate writes or routing', async () => {
+    const { db, sqlite, next, first } = await fixture(true)
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: first.placeId,
+      candidateRevisionId: next.revisionId,
+      guard: sql`1`,
+    }
+    expect(await adoptRefreshedPlaceForFeature(db, input)).toMatchObject({
+      status: 'processed',
+      geometryChanged: true,
+      groups: { facts: 'applied', location: 'applied' },
+    })
+    const decisions = sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()
+    const jobs = sqlite.prepare('SELECT * FROM featureMtrJob').all()
+    expect(decisions).toHaveLength(2)
+    expect(jobs).toHaveLength(1)
+    expect(await adoptRefreshedPlaceForFeature(db, input)).toMatchObject({
+      status: 'processed',
+      geometryChanged: false,
+      groups: { facts: 'unchanged', location: 'unchanged' },
+    })
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toEqual(
+      decisions,
+    )
+    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toEqual(jobs)
+  })
+
+  it('retains policy review and never reopens a rejected location on retry', async () => {
+    const { db, sqlite, next, first, input: original } = await fixture()
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: first.placeId,
+      candidateRevisionId: next.revisionId,
+      guard: sql`1`,
+    }
+    const outcome = await adoptRefreshedPlaceForFeature(db, input)
+    expect(outcome).toMatchObject({
+      status: 'review',
+      geometryChanged: false,
+      groups: { facts: 'applied', location: 'review' },
+    })
+    const state = await getAcceptedFeaturePlace(db, 'f', 'p')
+    if (!state) throw new Error('Missing association')
+    const parent = sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='f'").get()
+    await rejectPlaceAdoptionGroup(db, {
+      ...original,
+      fieldGroup: 'location',
+      expectedRevision: state.revision,
+      expectedFeatureModifiedAt: String(parent?.modifiedAt),
+    })
+    expect(await adoptRefreshedPlaceForFeature(db, input)).toMatchObject({
+      status: 'processed',
+      groups: { facts: 'applied', location: 'rejected' },
+    })
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+    expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.locationRevisionId).toBe(
+      first.revisionId,
+    )
+  })
+
+  it('stops after lease loss between groups and resumes the durable partial decision', async () => {
+    const { db, sqlite, first, next } = await fixture(true)
+    sqlite.exec(`CREATE TABLE testLease(owned INTEGER); INSERT INTO testLease VALUES(1);
+      CREATE TRIGGER lose_lease AFTER INSERT ON placeAdoptionDecision BEGIN UPDATE testLease SET owned=0; END;`)
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: first.placeId,
+      candidateRevisionId: next.revisionId,
+      guard: sql`EXISTS(SELECT 1 FROM testLease WHERE owned=1)`,
+    }
+    expect(await adoptRefreshedPlaceForFeature(db, input)).toMatchObject({
+      status: 'superseded',
+      groups: { facts: 'applied' },
+    })
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(1)
+    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toHaveLength(0)
+    sqlite.exec('DROP TRIGGER lose_lease; UPDATE testLease SET owned=1')
+    expect(await adoptRefreshedPlaceForFeature(db, input)).toMatchObject({
+      status: 'processed',
+      geometryChanged: true,
+      groups: { facts: 'applied', location: 'applied' },
+    })
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+  })
+
+  it('does not silently reassess a proposal after a Project policy edit', async () => {
+    const { db, sqlite, first, next } = await fixture(true)
+    await saveProjectPlaceSettings(db, 'p', DEFAULT_PROJECT_PLACE_POLICY, 1)
+    const result = await adoptRefreshedPlaceForFeature(db, {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: first.placeId,
+      candidateRevisionId: next.revisionId,
+      guard: sql`1`,
+    })
+    expect(result).toMatchObject({
+      status: 'review',
+      groups: { facts: 'review', location: 'review' },
+    })
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionProposal').all()).toHaveLength(1)
+    expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.factsRevisionId).toBe(
+      first.revisionId,
+    )
+  })
+
+  it('fences atomic applications and skips lost leases or changed association scope', async () => {
+    const { db, sqlite, first, next, input: original } = await fixture(true)
+    const before = sqlite.prepare('SELECT * FROM featurePlace').all()
+    expect(
+      await applyPlaceAdoptionGroup(db, { ...original, additionalGuard: sql`0` }),
+    ).toEqual({ status: 'conflict' })
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: first.placeId,
+      candidateRevisionId: next.revisionId,
+      guard: sql`0`,
+    }
+    expect(await adoptRefreshedPlaceForFeature(db, input)).toMatchObject({
+      status: 'superseded',
+    })
+    expect(
+      await adoptRefreshedPlaceForFeature(db, {
+        ...input,
+        guard: sql`1`,
+        placeId: 'different',
+      }),
+    ).toMatchObject({ status: 'unlinked' })
+    expect(sqlite.prepare('SELECT * FROM featurePlace').all()).toEqual(before)
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+  })
 
   it('adopts facts without routing, then location with independent review and atomic routing', async () => {
     const { db, sqlite, input, next, first } = await fixture()

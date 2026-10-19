@@ -14,6 +14,7 @@ import { readPlaceResetSources, preparePlacePhoneReset } from './placeReset'
 import { prepareFeaturePlaceAssociationWrite } from './placeAssociation'
 import { prepareFeaturePlaceRelations } from './placeRelations'
 // TYPES
+import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
 import type { FeatureDB } from '#lib/db/zod/schema/feature.types.js'
 
@@ -34,6 +35,7 @@ export type PlaceAdoptionApplyResult =
  * @returns Updated Feature or non-mutating conflict/review result.
  * @remarks Caller authorizes inherited fields. Automatic calls require unchanged policy
  * and an adopt decision. Reviewed calls may accept policy review, never missing evidence.
+ * Trusted worker callers may add a lease/run guard to the atomic write.
  * Geometry triggers enqueue routing in the same transaction.
  */
 export async function applyPlaceAdoptionGroup(
@@ -48,6 +50,7 @@ export async function applyPlaceAdoptionGroup(
     expectedFeatureModifiedAt: string
     actorId: string
     reason: string
+    additionalGuard?: SQL
   },
 ): Promise<PlaceAdoptionApplyResult> {
   if (
@@ -179,7 +182,7 @@ export async function applyPlaceAdoptionGroup(
       input.fieldGroup === 'facts' ? candidate.id : current.factsRevisionId,
     locationRevisionId:
       input.fieldGroup === 'location' ? candidate.id : current.locationRevisionId,
-    additionalGuard: proposalGuard,
+    additionalGuard: and(proposalGuard, input.additionalGuard),
   })
   const guard = sql`EXISTS (SELECT 1 FROM featurePlace WHERE featureId=${input.featureId} AND revision=${association.revision})`
   const geometry = materialized.data.geometry!
