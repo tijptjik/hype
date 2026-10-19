@@ -1,6 +1,6 @@
 // NODE
 import { resolve, join } from 'node:path'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 // TESTS
 import { describe, expect, it } from 'bun:test'
@@ -15,7 +15,15 @@ describe('clean local source and migration bootstrap', () => {
     try {
       const receipt = bootstrapLocalDatabase(db, resolve('.'))
       seedLocalApplication(db)
-      expect(receipt.migrations.at(-1)?.name).toBe('0091_breadline_email_identity.sql')
+      const migrationNames = readdirSync(resolve('migrations'))
+        .filter(name => name.endsWith('.sql'))
+        .sort()
+      expect(receipt.migrations.map(migration => migration.name)).toEqual(
+        migrationNames,
+      )
+      expect(db.query('SELECT name FROM d1_migrations ORDER BY id').all()).toEqual(
+        migrationNames.map(name => ({ name })),
+      )
       expect(db.query('SELECT count(*) AS n FROM d1_migrations').get()).toEqual({
         n: receipt.migrations.length,
       })
