@@ -817,8 +817,8 @@ const prepareUserContributedFeatureDraft = async (
         displayAddress: localeValue?.displayAddress?.trim() ?? '',
         titleGen: false,
         descriptionGen: false,
-        displayAddressGen: false,
-        addressProperties: {},
+        displayAddressGen: localeValue?.displayAddressGen ?? false,
+        addressProperties: localeValue?.addressProperties ?? {},
       }
     }
   } else {
@@ -837,8 +837,8 @@ const prepareUserContributedFeatureDraft = async (
           displayAddress: toTrimmedString(sourceTextObj.displayAddress),
           titleGen: false,
           descriptionGen: false,
-          displayAddressGen: false,
-          addressProperties: {},
+          displayAddressGen: sourceTextObj.displayAddressGen ?? false,
+          addressProperties: sourceTextObj.addressProperties ?? {},
         }
         continue
       }
@@ -902,8 +902,12 @@ const prepareUserContributedFeatureDraft = async (
           targetDisplayAddress || translatedDisplayAddress || sourceDisplayAddress,
         titleGen: Boolean(translatedTitle),
         descriptionGen: Boolean(translatedDescription),
-        displayAddressGen: Boolean(translatedDisplayAddress),
-        addressProperties: {},
+        displayAddressGen: targetDisplayAddress
+          ? (targetTextObj?.displayAddressGen ?? false)
+          : Boolean(translatedDisplayAddress),
+        addressProperties: targetDisplayAddress
+          ? (targetTextObj?.addressProperties ?? {})
+          : {},
       }
     }
   }

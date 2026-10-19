@@ -71,6 +71,10 @@ export type AddressProperties = {
 }
 
 export type AddressMeta = {
+  buildingSourceId?: string
+  buildingSource?: string
+  addressMatch?: 'building_address' | 'within_footprint' | 'nearest' | 'exact_location'
+
   // IDENTIFIERS
 
   // IDENTIFIERS :: SAANSEOI
@@ -96,7 +100,11 @@ export type AddressMeta = {
 
   // GEOCODING
   addressForwardGeocoder?: 'saanseoi' | 'hkgov_als' | 'googlemaps' | 'invalid'
-  addressReverseGeocoder?: 'saanseoi' | 'hkgov_reverse' | 'googlemaps'
+  addressReverseGeocoder?:
+    | 'saanseoi_basemap'
+    | 'saanseoi'
+    | 'hkgov_reverse'
+    | 'googlemaps'
   addressReverseGen?: boolean
   addressForwardGen?: boolean
 }
