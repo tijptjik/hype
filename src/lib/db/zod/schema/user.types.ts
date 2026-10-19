@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import type { ThemePreferences } from '#lib/themes/preferences.js'
 import type {
   EntityResponse,
   Locale,
@@ -132,6 +133,7 @@ export type UserPreferences = {
   allowMachineTranslation: boolean
   preferFallbackInCurrentLocale: boolean
   isTranslateButtonVisible: boolean
+  theme?: ThemePreferences | null
   admin?: AdminPreferences
 }
 

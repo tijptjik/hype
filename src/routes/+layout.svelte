@@ -2,6 +2,7 @@
 // SVELTE
 import { onMount, untrack } from 'svelte'
 import { setThemeModel } from '#lib/themes/theme.svelte.js'
+import { useAccountThemePreferences } from '#lib/themes/useAccountThemePreferences.svelte.js'
 // SVELTEKIT
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
@@ -61,8 +62,9 @@ let upgradeReason = $state<UpgradeReason>('account')
 let upgradeReturnTo = $state('/')
 
 // Shared foundations are created once; surface layouts own resource mechanics.
-setThemeModel()
+const theme = setThemeModel()
 const root = setRootCTX(responsive)
+useAccountThemePreferences(root.account, theme)
 
 function clearPendingAuthReinit(): void {
   if (pendingAuthReinit !== null) {

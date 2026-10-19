@@ -1,4 +1,5 @@
 // TYPES
+import type { MapStyleKey } from '#lib/map/styles/registry.js'
 import type { ThemeId, ThemeDefinition } from './themes.types'
 
 export const THEMES: readonly ThemeDefinition[] = [
@@ -8,6 +9,15 @@ export const THEMES: readonly ThemeDefinition[] = [
   { id: 'breadline-light', name: 'Milque', mode: 'light', family: 'Breadline' },
   { id: 'breadline-dark', name: 'Rye', mode: 'dark', family: 'Breadline' },
 ]
+/** Basemaps paired with each UI palette when UI/map synchronization is enabled. */
+export const THEME_MAP_STYLES = {
+  'hype-black': 'hyper',
+  'hype-dark': 'hyper',
+  'hype-light': 'hyperLight',
+  'breadline-light': 'breadline-light',
+  'breadline-dark': 'breadline-dark',
+} as const satisfies Record<ThemeId, MapStyleKey>
+
 export const THEME_COOKIE = 'hype-theme'
 
 /**

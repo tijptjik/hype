@@ -1949,6 +1949,7 @@ export class ResourceViewCtx {
       fallbackLocales:
         (preferences?.fallbackLocales as Locale[] | null) ??
         (['en', 'zh-hant'] as Locale[]),
+      theme: preferences?.theme,
       allowMachineTranslation: preferences?.allowMachineTranslation ?? false,
       preferFallbackInCurrentLocale:
         preferences?.preferFallbackInCurrentLocale ?? false,
