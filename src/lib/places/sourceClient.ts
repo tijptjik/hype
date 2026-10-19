@@ -15,6 +15,54 @@ export type PlaceSourceClient = {
   apiKey: string
   fetch: typeof fetch
 }
+
+export const PlaceSearchInputSchema = z.strictObject({
+  q: z.string().trim().min(1).max(200),
+  locale: z.enum(['en', 'zh-hant', 'zh-hans']).optional(),
+  limit: z.number().int().min(1).max(20).default(10),
+})
+const searchResultSchema = z.object({
+  placeId: z.string().min(1),
+  resourceReleaseId: z.string().min(1),
+  locale: z.string().min(1),
+  nameText: z.string().nullable(),
+  brandText: z.string().nullable(),
+})
+export type PlaceSearchCandidate = z.infer<typeof searchResultSchema>
+
+/**
+ * Discover candidates across SaanSeoi's latest published Hong Kong Places index.
+ * @param client Trusted server endpoint, credential and request transport.
+ * @param input Bounded text query and optional preferred locale.
+ * @returns Ranked discovery candidates, not canonical Place revisions.
+ * @remarks Search supplies no geometry or publication pin. Results must be resolved
+ * against canonical source evidence before import/linking; never pass them to ingestion.
+ * Redirects are rejected so credentials cannot follow an upstream redirect.
+ */
+export async function searchSaanSeoiPlaces(
+  client: PlaceSourceClient,
+  input: z.input<typeof PlaceSearchInputSchema>,
+): Promise<PlaceSearchCandidate[]> {
+  const query = PlaceSearchInputSchema.parse(input)
+  const url = new URL('/places/v0.1/search', client.baseUrl)
+  url.search = new URLSearchParams({
+    q: query.q,
+    region: 'hk',
+    limit: String(query.limit),
+    ...(query.locale ? { locale: query.locale } : {}),
+  }).toString()
+  const response = await client.fetch(url, {
+    headers: { Accept: 'application/json', 'x-api-key': client.apiKey },
+    redirect: 'error',
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (!response.ok)
+    throw new Error(`SaanSeoi Places search failed (${response.status})`)
+  // Reject contract drift rather than passing arbitrary upstream records to the UI.
+  return z
+    .object({ results: z.array(searchResultSchema).max(query.limit) })
+    .parse(await response.json()).results
+}
 const pageSchema = z.object({
   data: z.array(
     z

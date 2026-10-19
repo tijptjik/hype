@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { readSaanSeoiPlacePage } from '#lib/places/sourceClient.js'
+import {
+  readSaanSeoiPlacePage,
+  searchSaanSeoiPlaces,
+} from '#lib/places/sourceClient.js'
 
 const pin = {
   releaseSet: 'publication',
@@ -72,4 +75,63 @@ describe('publication-pinned Places pagination', () => {
       await expect(readSaanSeoiPlacePage(client(d), pin)).rejects.toThrow('checkpoint')
     },
   )
+})
+
+describe('latest-source Place discovery', () => {
+  const candidate = {
+    placeId: 'shop',
+    resourceReleaseId: 'release',
+    locale: 'zh-hant',
+    nameText: '麵包店',
+    brandText: null,
+  }
+  it('preserves ranking and source identities without inventing canonical revisions', async () => {
+    const c = client({ results: [candidate], privateMetadata: 'not returned' })
+    expect(await searchSaanSeoiPlaces(c, { q: ' 麵包 ', locale: 'zh-hant' })).toEqual([
+      candidate,
+    ])
+    const [url, options] = c.request.mock.calls[0]
+    expect(url.pathname).toBe('/places/v0.1/search')
+    expect(url.searchParams.get('q')).toBe('麵包')
+    expect(url.searchParams.get('region')).toBe('hk')
+    expect(url.searchParams.get('limit')).toBe('10')
+    expect(url.searchParams.get('locale')).toBe('zh-hant')
+    expect(options.redirect).toBe('error')
+    expect(options.headers).toEqual({
+      Accept: 'application/json',
+      'x-api-key': 'test-credential',
+    })
+  })
+  it('bounds input before issuing a request', async () => {
+    const c = client({ results: [] })
+    for (const q of ['', '  ', 'x'.repeat(201)]) {
+      await expect(searchSaanSeoiPlaces(c, { q })).rejects.toThrow()
+    }
+    await expect(searchSaanSeoiPlaces(c, { q: 'shop', limit: 21 })).rejects.toThrow()
+    expect(c.request).not.toHaveBeenCalled()
+  })
+  it('distinguishes empty results from source failures and malformed responses', async () => {
+    expect(await searchSaanSeoiPlaces(client({ results: [] }), { q: 'shop' })).toEqual(
+      [],
+    )
+    const c = client(null)
+    c.request.mockResolvedValue(
+      new Response('private upstream diagnostic', { status: 503 }),
+    )
+    await expect(searchSaanSeoiPlaces(c, { q: 'shop' })).rejects.toThrow(
+      'search failed (503)',
+    )
+    await expect(
+      searchSaanSeoiPlaces(
+        client({ results: [{ ...candidate, resourceReleaseId: '' }] }),
+        { q: 'shop' },
+      ),
+    ).rejects.toThrow()
+    await expect(
+      searchSaanSeoiPlaces(client({ results: [candidate, candidate] }), {
+        q: 'shop',
+        limit: 1,
+      }),
+    ).rejects.toThrow()
+  })
 })

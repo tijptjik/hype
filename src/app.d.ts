@@ -85,6 +85,8 @@ declare global {
         PUBLIC_HUB_CODE: string
         PUBLIC_GIPHY_KEY: string
         PUBLIC_SAANSEOI_API_KEY?: string
+        SAANSEOI_API_KEY?: string
+        VITE_SAANSEOI_API_KEY?: string
         PUBLIC_ORIGIN: string
         PUBLIC_ASSET_BASE_URL: string
         PUBLIC_PREVIEW_ASSET_BASE_URL: string

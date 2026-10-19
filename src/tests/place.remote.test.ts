@@ -4,6 +4,7 @@ import { withRemoteMeta } from './remote-function-mock'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
+  searchPlaces: vi.fn(),
   createPlace: vi.fn(),
   linkPlace: vi.fn(),
   authorizeFeatureUpdate: vi.fn(),
@@ -14,7 +15,15 @@ const mocks = vi.hoisted(() => ({
   readPolicy: vi.fn(),
   savePolicy: vi.fn(),
   readPlace: vi.fn(),
-  context: { db: {}, user: { id: 'u' }, userRoles: [] },
+  context: {
+    db: {},
+    user: { id: 'u' },
+    userRoles: [],
+    event: {
+      locals: { platform: { env: { SAANSEOI_API_KEY: 'test-key' } } },
+      fetch: vi.fn(),
+    },
+  },
 }))
 vi.mock('#lib/api/server/guarded.js', () => {
   const wrap =
@@ -28,6 +37,10 @@ vi.mock('#lib/api/server/guarded.js', () => {
         kind,
       )
   return { guardedQuery: wrap('query'), guardedCommand: wrap('command') }
+})
+vi.mock('#lib/places/sourceClient.js', async importOriginal => {
+  const original = await importOriginal<typeof import('#lib/places/sourceClient.js')>()
+  return { ...original, searchSaanSeoiPlaces: mocks.searchPlaces }
 })
 vi.mock('#lib/db/services/placeLink.js', () => ({
   linkInitialFeaturePlace: mocks.linkPlace,
@@ -52,6 +65,7 @@ vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeFeatureUpdateForSubmission: mocks.authorizeFeatureUpdate,
 }))
 import {
+  searchFeaturePlaces,
   createLocalPlace,
   linkFeaturePlace,
   getFeaturePlace,
@@ -225,5 +239,52 @@ describe('initial Place link command', () => {
   ] as const)('maps %s without leaking source records', async (status, httpStatus) => {
     mocks.linkPlace.mockResolvedValue({ status, reason: 'private' })
     await expect(linkFeaturePlace(input)).rejects.toMatchObject({ status: httpStatus })
+  })
+})
+
+describe('Place source search authorization', () => {
+  const input = { featureId: 'f', q: 'Shop', locale: 'en' as const }
+  it('authorizes persisted Feature editing before making an external request', async () => {
+    mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: false })
+    await expect(searchFeaturePlaces(input)).rejects.toMatchObject({ status: 403 })
+    expect(mocks.searchPlaces).not.toHaveBeenCalled()
+    mocks.probeFeature.mockResolvedValue(null)
+    await expect(searchFeaturePlaces(input)).rejects.toMatchObject({ status: 404 })
+    expect(mocks.searchPlaces).not.toHaveBeenCalled()
+  })
+  it('returns discovery candidates without creating or linking Places', async () => {
+    mocks.searchPlaces.mockResolvedValue([{ placeId: 'ss-id' }])
+    expect(await searchFeaturePlaces(input)).toEqual({
+      source: 'saanseoi-latest',
+      candidates: [{ placeId: 'ss-id' }],
+    })
+    expect(mocks.searchPlaces).toHaveBeenCalledWith(
+      {
+        baseUrl: 'https://api.saanseoi.hk',
+        apiKey: 'test-key',
+        fetch: mocks.context.event.fetch,
+      },
+      { q: 'Shop', locale: 'en', limit: 10 },
+    )
+    expect(mocks.createPlace).not.toHaveBeenCalled()
+    expect(mocks.linkPlace).not.toHaveBeenCalled()
+  })
+  it('rejects client source overrides and reports failures without leaking upstream details', async () => {
+    await expect(
+      searchFeaturePlaces({ ...input, baseUrl: 'https://other.example' } as never),
+    ).rejects.toThrow()
+    expect(mocks.searchPlaces).not.toHaveBeenCalled()
+    mocks.searchPlaces.mockRejectedValue(new Error('private source diagnostic'))
+    await expect(searchFeaturePlaces(input)).rejects.toMatchObject({
+      status: 502,
+      body: { message: 'PLACE_SEARCH_FAILED' },
+    })
+    mocks.context.event.locals.platform.env.SAANSEOI_API_KEY = ''
+    try {
+      await expect(searchFeaturePlaces(input)).rejects.toMatchObject({ status: 503 })
+      expect(mocks.searchPlaces).toHaveBeenCalledTimes(1)
+    } finally {
+      mocks.context.event.locals.platform.env.SAANSEOI_API_KEY = 'test-key'
+    }
   })
 })

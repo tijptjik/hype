@@ -23,6 +23,10 @@ import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
 // DOMAIN
 import { ProjectPlacePolicySchema } from '#lib/places/model.js'
+import {
+  PlaceSearchInputSchema,
+  searchSaanSeoiPlaces,
+} from '#lib/places/sourceClient.js'
 // TYPES
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 
@@ -34,6 +38,7 @@ import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 // 3. ACCEPTED FEATURE PLACE READ
 // 4. LOCAL PLACE CREATION
 // 5. INITIAL FEATURE ASSOCIATION
+// 6. SOURCE DISCOVERY
 // ---
 
 const projectInput = z.strictObject({ projectId: z.string().min(1) })
@@ -182,5 +187,47 @@ export const linkFeaturePlace = guardedCommand(
     if (result.status === 'place-unavailable') error(404, 'PLACE_NOT_FOUND')
     if (result.status !== 'linked') error(422, 'PLACE_LINK_REVIEW_REQUIRED')
     return result
+  },
+)
+
+/**
+ * Search upstream Places for an editor allowed to associate the selected Feature.
+ * @param input Feature identity and bounded discovery query; no client source URL or key.
+ * @returns Latest-source candidates, explicitly distinguished from linkable revisions.
+ * @remarks Authorization precedes external requests. Discovery neither writes source
+ * records nor links Features, and upstream errors never masquerade as empty results.
+ */
+export const searchFeaturePlaces = guardedQuery(
+  PlaceSearchInputSchema.extend({ featureId: z.string().min(1) }),
+  async (input, ctx) => {
+    const probe = await probeFeatureQuery(ctx.db, {
+      ref: input.featureId,
+      refKey: 'id',
+    })
+    if (!probe) error(404, 'FEATURE_NOT_FOUND')
+    const decision = authorizeFeatureUpdateForSubmission({
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      resource: probe,
+      submittedData: {
+        i18n: true,
+        properties: true,
+        geometry: true,
+        addressMeta: true,
+      },
+    })
+    if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    const env = ctx.event.locals.platform?.env
+    const apiKey = env?.SAANSEOI_API_KEY ?? env?.VITE_SAANSEOI_API_KEY
+    if (!apiKey?.trim()) error(503, 'PLACE_SEARCH_UNAVAILABLE')
+    try {
+      const candidates = await searchSaanSeoiPlaces(
+        { baseUrl: 'https://api.saanseoi.hk', apiKey, fetch: ctx.event.fetch },
+        { q: input.q, locale: input.locale, limit: input.limit },
+      )
+      return { source: 'saanseoi-latest' as const, candidates }
+    } catch {
+      error(502, 'PLACE_SEARCH_FAILED')
+    }
   },
 )

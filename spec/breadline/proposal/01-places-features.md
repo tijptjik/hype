@@ -536,3 +536,22 @@ sources return an indistinguishable 404, and ineligible/review baselines return 
 Raw source evidence is never returned. Backend linking is now available; source
 selection UI, relinking/unlinking, override resets, source adoption and the migration
 rehearsal remain outstanding.
+
+### Live source discovery (Refs #194)
+
+`searchFeaturePlaces` now searches SaanSeoi's latest published Hong Kong index after
+checking full inherited-field edit authorization against persisted Feature ancestry.
+Queries are limited to 200 characters and 20 results; credentials and the upstream
+endpoint are server-owned. Missing configuration and upstream failures are distinct
+from a successful empty result, and upstream diagnostics are not exposed.
+
+Discovery returns ranked source identities and localized names/brands, explicitly
+labelled `saanseoi-latest`. It does not write Places or create associations. SaanSeoi's
+search endpoint does not supply canonical geometry or publication pins, so candidate
+resolution must retrieve verified canonical evidence before offering an import/link.
+The bakery-only local mirror must not be presented as the complete Places index.
+
+Twenty-four focused source/remote tests pass. A read-only live search returned three
+validated candidates. Type checking reports the existing 10 unrelated errors and
+19 warnings, with no diagnostics in this change. Candidate resolution and the basic
+selection UI remain the next implementation step; no deployment was performed.
