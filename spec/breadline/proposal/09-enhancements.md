@@ -140,3 +140,26 @@ broader native cold/warm/concurrent capacity, cache keys and
 invalidation, shared volunteer/operations consumption and broader UI integration remain
 implementation work under #213. Distinguish cached estimates from fresh routes;
 an unreachable route must not silently become a straight-line travel estimate.
+
+
+### Core nearest-MTR walking access (Refs #213)
+
+`mtrStation` stores the station code, `mtrExit` a stable OSM entrance node ID and
+`mtrDistance` integer walking metres. `mtrResolution` records graph/catalog version,
+calculation time and ready/unreachable/unsupported state. This is feature data, not
+hub/organisation/project configurable property data. Cards resolve names and exit
+labels from the catalog.
+
+Geometry-change triggers clear obsolete results and enqueue durable work. Authorized
+feature creation/edits attempt request-local background enrichment; the dedicated
+MTR refresh Worker retries queued work. Lease/geometry fencing prevents stale writes.
+Candidate entrances are ordered by great-circle distance; actual pedestrian routes
+across stations compete until the remaining lower bound exceeds the best walk.
+Routes involving ferries or endpoint snaps over 75 metres are rejected. A short snap
+connector is included in the distance, so entrance approach quality still depends on
+OSM pedestrian connectivity and requires visual sampling before production acceptance.
+
+The catalog contains 98 stations and 635 entrances from OSM HK 2026-10-01. Associations
+include 496 stop-area relations, 19 explicit station-exit-plan mappings and 120 spatial
+fallbacks. Spatial fallback associations require review; they are recorded in provenance.
+See `docs/operations/Feature-MTR.md` for commands, limitations and the routing blocker.
