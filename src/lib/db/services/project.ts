@@ -1,3 +1,4 @@
+import { ProjectPlacePolicySchema, type ProjectPlacePolicy } from '#lib/places/model.js'
 import { gt } from 'drizzle-orm'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
@@ -20,6 +21,7 @@ import {
   project,
   projectI18n,
   projectRole,
+  projectPlacePolicy,
   task,
 } from '../schema'
 // DB
@@ -745,7 +747,8 @@ export const updateProjectById = async (
 
 /**
  * Updates project core fields with optimistic concurrency guard on `modifiedAt`.
- * Used by remote form updates to prevent stale writes.
+ * Used by remote form updates to prevent stale writes. Optional Place settings are
+ * committed in the same batch, guarded by both Project and policy revisions.
  * @param db - The database instance.
  * @param params - Update payload including expected `updatedAt`.
  * @returns Updated id/modifiedAt pair, or `null` when stale/missing.
@@ -755,6 +758,7 @@ export const updateProjectByIdWithConcurrency = async (
   params: {
     id: Id
     updatedAt: string
+    placeUpdatePolicy?: { policy: ProjectPlacePolicy; expectedRevision: number }
     data: {
       organisationId: ProjectDB['organisationId']
       code: string
@@ -766,16 +770,57 @@ export const updateProjectByIdWithConcurrency = async (
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
-  const [updated] = await db
+  const settings = params.placeUpdatePolicy
+  if (
+    settings &&
+    (!Number.isSafeInteger(settings.expectedRevision) ||
+      settings.expectedRevision < 0 ||
+      settings.expectedRevision >= Number.MAX_SAFE_INTEGER)
+  ) {
+    throw new Error('Invalid policy revision')
+  }
+  const policy = settings ? ProjectPlacePolicySchema.parse(settings.policy) : undefined
+  // Guard both revisions before changing either record; absence is policy revision zero.
+  const policyGuard = settings
+    ? sql`coalesce((select ${projectPlacePolicy.revision} from ${projectPlacePolicy}
+        where ${projectPlacePolicy.projectId} = ${params.id}), 0) = ${settings.expectedRevision}`
+    : undefined
+  const updateCore = db
     .update(project)
     .set(params.data)
-    .where(and(eq(project.id, params.id), eq(project.modifiedAt, params.updatedAt)))
-    .returning({
-      id: project.id,
-      modifiedAt: project.modifiedAt,
-    })
+    .where(
+      and(
+        eq(project.id, params.id),
+        eq(project.modifiedAt, params.updatedAt),
+        policyGuard,
+      ),
+    )
+    .returning({ id: project.id, modifiedAt: project.modifiedAt })
 
-  return updated ?? null
+  if (!settings || !policy) {
+    const [updated] = await updateCore
+    return updated ?? null
+  }
+
+  // D1 batches are atomic. The second statement writes only when the core CAS succeeded.
+  const writePolicy = db
+    .insert(projectPlacePolicy)
+    .select(
+      db
+        .select({
+          projectId: project.id,
+          policy: sql<ProjectPlacePolicy>`${JSON.stringify(policy)}`.as('policy'),
+          revision: sql<number>`${settings.expectedRevision + 1}`.as('revision'),
+        })
+        .from(project)
+        .where(and(eq(project.id, params.id), sql`changes() > 0`)),
+    )
+    .onConflictDoUpdate({
+      target: projectPlacePolicy.projectId,
+      set: { policy, revision: settings.expectedRevision + 1 },
+    })
+  const [updated] = await db.batch([updateCore, writePolicy])
+  return updated[0] ?? null
 }
 
 /**

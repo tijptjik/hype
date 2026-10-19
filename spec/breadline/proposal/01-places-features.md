@@ -201,14 +201,18 @@ under existing Feature visibility permissions, excludes drafts and scopes privat
 baselines to their owning project. It never returns raw snapshots.
 
 Project managers can configure adoption at
-`/admin/projects/<project-code>#policies` in the visible Place updates tab after Fields. Rules use stable explanatory rows;
+`/admin/projects/<project-code>#policies` in the visible Places tab after Fields. Rules use stable explanatory rows;
 the distance threshold remains visible and is disabled when irrelevant. The old
 `place-policy` URL redirects there. Shared FormSurface, SectionHeader, SelectField,
-TextInput and Button components follow the project editor's read/edit mode. Settings use the `placeUpdatePolicy`
+TextInput components follow the project editor's read/edit mode. Settings use the `placeUpdatePolicy`
 authorization field and optimistic revision checks; translators and unrelated project
 maintainers cannot read/write the settings. Saving a policy does not replay pending or
 rejected changes. Labels and feedback are localized in English, Traditional Chinese and Simplified
-Chinese. Leaving edit mode discards unsaved policy changes.
+Chinese. Places settings participate in the regular Project Save/Cancel workflow, with no
+independent Save button. Policy drafts enable the shared dirty state and pass through
+the Project form schema and authorization. Core Project changes and the policy use
+one atomic database batch guarded by both revisions; a stale revision changes neither.
+Successful save refreshes the accepted policy, and Cancel restores the saved values.
 
 `src/lib/places/saanseoi.ts` validates full canonical collection records against a
 publication/snapshot checkpoint. It retains the original payload and attribution,

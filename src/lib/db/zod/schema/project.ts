@@ -1,3 +1,4 @@
+import { ProjectPlacePolicySchema } from '#lib/places/model.js'
 import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES, DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import { CompactAncestorsSchema } from './api'
@@ -96,7 +97,7 @@ export const ProjectRoleCapabilitiesSchema: z.ZodType<ProjectRoleCapabilities> =
     manageDropOffs: FormBoolean.optional(),
   })
 
-const toProjectCapabilitiesValue = (value: unknown): unknown => {
+const toProjectJsonValue = (value: unknown): unknown => {
   if (typeof value !== 'string') return value
   const trimmed = value.trim()
   if (!trimmed) return undefined
@@ -109,10 +110,10 @@ const toProjectCapabilitiesValue = (value: unknown): unknown => {
 
 const ProjectCapabilitiesBase = z.preprocess(
   value => {
-    if (!Array.isArray(value)) return toProjectCapabilitiesValue(value)
+    if (!Array.isArray(value)) return toProjectJsonValue(value)
 
     const normalized = value
-      .map(toProjectCapabilitiesValue)
+      .map(toProjectJsonValue)
       .filter(item => item !== undefined && item !== null)
     if (normalized.length === 0) return undefined
 
@@ -307,7 +308,23 @@ export const ProjectLayerFormData = z.object({
   isDefaultVisible: FormBoolean.default(false),
 })
 
+/** Policy transport uses the same JSON field convention as project capabilities. */
+export const ProjectPlacePolicyFormData = z.preprocess(
+  toProjectJsonValue,
+  z
+    .object({
+      policy: ProjectPlacePolicySchema,
+      expectedRevision: z
+        .number()
+        .int()
+        .nonnegative()
+        .max(Number.MAX_SAFE_INTEGER - 1),
+    })
+    .optional(),
+)
+
 export const ProjectEntityFormData = z.object({
+  placeUpdatePolicy: ProjectPlacePolicyFormData,
   cardStyleCode: z.enum(CARD_STYLE_CODES).default(DEFAULT_CARD_STYLE),
   markerStyleCode: z
     .union([z.enum(MARKER_STYLE_CODES), z.literal('')])

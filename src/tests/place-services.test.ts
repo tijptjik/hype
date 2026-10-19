@@ -8,8 +8,10 @@ import {
   getProjectPlaceSettings,
   saveProjectPlaceSettings,
 } from '#lib/db/services/place.js'
+import { updateProjectByIdWithConcurrency } from '#lib/db/services/project.js'
 import { createLocalPlace } from '#lib/db/services/placeLocal.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
+import { ProjectPlacePolicyFormData } from '#lib/db/zod/schema/project.js'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 import { PlaceFactsSchema } from '#lib/places/validation.js'
 import { authorizeProjectUpdateForSubmission } from '#lib/api/services/authz/index.js'
@@ -25,9 +27,11 @@ function setup() {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
   sqlite.exec(`PRAGMA foreign_keys=ON;
-    CREATE TABLE project(id TEXT PRIMARY KEY);
+    CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
+      organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
+      cardStyleCode TEXT, useAllInOrgContext INTEGER);
     CREATE TABLE feature(id TEXT PRIMARY KEY, projectId TEXT, isDraft INTEGER DEFAULT 0);
-    INSERT INTO project VALUES ('p'), ('other');
+    INSERT INTO project(id) VALUES ('p'), ('other');
     INSERT INTO feature(id,projectId) VALUES ('f','p');`)
   sqlite.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
@@ -263,6 +267,106 @@ describe('local Place creation', () => {
           },
         },
       }).success,
+    ).toBe(false)
+  })
+})
+
+describe('Project form atomic Place settings', () => {
+  const data = {
+    organisationId: 'org',
+    code: 'updated',
+    capabilities: {
+      manageBakeries: false,
+      manageVolunteers: false,
+      manageDropOffs: false,
+    },
+    markerStyleCode: null,
+    cardStyleCode: 'full',
+    useAllInOrgContext: false,
+  } as Parameters<typeof updateProjectByIdWithConcurrency>[1]['data']
+
+  it('saves core and first policy together, then rejects either stale revision', async () => {
+    const { db, sqlite } = setup()
+    const saved = await updateProjectByIdWithConcurrency(db, {
+      id: 'p',
+      updatedAt: 'original',
+      data,
+      placeUpdatePolicy: { policy: DEFAULT_PROJECT_PLACE_POLICY, expectedRevision: 0 },
+    })
+    expect(saved).not.toBeNull()
+    if (!saved) throw new Error('Expected saved Project')
+    expect((await getProjectPlaceSettings(db, 'p')).revision).toBe(1)
+    for (const [updatedAt, expectedRevision] of [
+      ['original', 1],
+      [saved.modifiedAt, 0],
+    ] as const) {
+      expect(
+        await updateProjectByIdWithConcurrency(db, {
+          id: 'p',
+          updatedAt,
+          data: { ...data, code: 'must-not-save' },
+          placeUpdatePolicy: { policy: DEFAULT_PROJECT_PLACE_POLICY, expectedRevision },
+        }),
+      ).toBeNull()
+      expect(sqlite.prepare('SELECT code FROM project WHERE id=?').get('p')?.code).toBe(
+        'updated',
+      )
+      expect((await getProjectPlaceSettings(db, 'p')).revision).toBe(1)
+    }
+    expect(
+      await updateProjectByIdWithConcurrency(db, {
+        id: 'p',
+        updatedAt: saved.modifiedAt,
+        data,
+        placeUpdatePolicy: {
+          policy: DEFAULT_PROJECT_PLACE_POLICY,
+          expectedRevision: 1,
+        },
+      }),
+    ).not.toBeNull()
+    expect((await getProjectPlaceSettings(db, 'p')).revision).toBe(2)
+  })
+
+  it('rolls back core changes if the policy write fails', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(
+      "CREATE TRIGGER fail_policy BEFORE INSERT ON projectPlacePolicy BEGIN SELECT RAISE(ABORT, 'policy failure'); END;",
+    )
+    await expect(
+      updateProjectByIdWithConcurrency(db, {
+        id: 'p',
+        updatedAt: 'original',
+        data,
+        placeUpdatePolicy: {
+          policy: DEFAULT_PROJECT_PLACE_POLICY,
+          expectedRevision: 0,
+        },
+      }),
+    ).rejects.toThrow()
+    expect(
+      sqlite.prepare('SELECT modifiedAt,code FROM project WHERE id=?').get('p'),
+    ).toMatchObject({
+      modifiedAt: 'original',
+      code: null,
+    })
+    expect((await getProjectPlaceSettings(db, 'p')).revision).toBe(0)
+  })
+})
+
+describe('Project Places form transport', () => {
+  it('accepts serialized policy drafts and rejects incomplete or invalid settings', () => {
+    const draft = { policy: DEFAULT_PROJECT_PLACE_POLICY, expectedRevision: 0 }
+    expect(ProjectPlacePolicyFormData.parse(JSON.stringify(draft))).toEqual(draft)
+    expect(ProjectPlacePolicyFormData.parse(undefined)).toBeUndefined()
+    expect(ProjectPlacePolicyFormData.safeParse('{invalid').success).toBe(false)
+    expect(
+      ProjectPlacePolicyFormData.safeParse({
+        ...draft,
+        policy: { ...draft.policy, coordinates: { mode: 'withinDistance' } },
+      }).success,
+    ).toBe(false)
+    expect(
+      ProjectPlacePolicyFormData.safeParse({ ...draft, expectedRevision: -1 }).success,
     ).toBe(false)
   })
 })

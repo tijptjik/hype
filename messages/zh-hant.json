@@ -1329,7 +1329,7 @@
   "place_policy_address_help": "控制大廈或街道地址的變更。地址與座標會一併接受。",
   "place_policy_unit_help": "控制地址中的樓層或舖位變更。",
   "place_policy_establishment_help": "控制可能代表另一間商戶的變更，例如名稱或品牌。",
-  "place_policy_tab": "地點更新",
+  "place_policy_tab": "地點",
   "place_policy_title": "地點來源更新",
   "place_policy_description": "選擇此專案如何採納山水的更新。地圖項目的自訂值將予以保留。",
   "place_policy_coordinates": "座標修正",

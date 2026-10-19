@@ -568,6 +568,36 @@ describe('project.remote form organisation move authz', () => {
     policyMatrix.flush()
   })
 
+  it('authorizes and persists Place settings through the Project form', async () => {
+    const payload = buildUpdatePayload('org-1')
+    const placeUpdatePolicy = {
+      policy: {
+        version: 1,
+        coordinates: { mode: 'review' },
+        address: 'review',
+        unit: 'review',
+        establishment: 'review',
+      },
+      expectedRevision: 2,
+    }
+    await remote.projectForm(
+      {
+        ...payload,
+        data: { ...payload.data, placeUpdatePolicy },
+      },
+      throwingInvalid,
+    )
+    expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ placeUpdatePolicy }),
+      }),
+    )
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ placeUpdatePolicy }),
+    )
+  })
+
   it('authorizes and persists the selected card style with the project update', async () => {
     const payload = buildUpdatePayload('org-1')
     await remote.projectForm(

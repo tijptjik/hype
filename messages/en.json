@@ -1329,7 +1329,7 @@
   "place_policy_address_help": "Controls changes to the building or street address. Address and coordinates are accepted together.",
   "place_policy_unit_help": "Controls changes to the floor or shop unit within the address.",
   "place_policy_establishment_help": "Controls changes that may identify a different establishment, such as its name or brand.",
-  "place_policy_tab": "Place updates",
+  "place_policy_tab": "Places",
   "place_policy_title": "Place source updates",
   "place_policy_description": "Choose how this project adopts changes from SaanSeoi. Feature overrides are preserved.",
   "place_policy_coordinates": "Coordinate corrections",

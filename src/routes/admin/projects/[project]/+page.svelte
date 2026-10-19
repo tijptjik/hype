@@ -1,4 +1,5 @@
 <script lang="ts">
+import { getPlaceUpdatePolicy } from '#lib/api/place.remote.js'
 import PlacePolicyPanel from '#lib/bits/patterns/forms/placeUpdatePolicy/PlacePolicyPanel.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
 import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
@@ -436,6 +437,7 @@ const translatableI18nFieldsBySection: Record<
 > = {
   descriptor: ['name', 'nameShort', 'description'],
 }
+let placePolicyResetVersion = $state(0)
 // Main remote-form configuration for project create/update.
 const configuredProjectForm = configureForm(() => ({
   form: projectForm as never,
@@ -613,6 +615,11 @@ const configuredProjectForm = configureForm(() => ({
       const submittedCode = data.data?.code?.trim() ?? ''
       const refreshed = await refreshProject(shouldRedirect ? submittedCode : undefined)
       commitSettledProjectState(refreshed)
+      if (data.data?.placeUpdatePolicy && activeCommittedProjectData?.id) {
+        await getPlaceUpdatePolicy({
+          projectId: activeCommittedProjectData.id,
+        }).refresh()
+      }
     },
   }),
 }))
@@ -1206,6 +1213,17 @@ function getHiddenProjectLicenseAttrs(): Record<string, unknown> {
   }
   if (typeof as !== 'function') return {}
   return as('hidden', JSON.stringify(formProjectLicense)) as Record<string, unknown>
+}
+
+/**
+ * Register the optional Places JSON draft with the native Project remote form.
+ * @returns Bound hidden attributes; the schema validates the policy and revision.
+ */
+function getHiddenPlacePolicyAttrs(): Record<string, unknown> {
+  const { as } = formCtx.form.fields.data.placeUpdatePolicy as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }
+  return as('hidden', String(formCtx.form.fields.value().data?.placeUpdatePolicy))
 }
 
 const hiddenProjectLayerInputAttrs = $derived.by(() => {
@@ -2235,6 +2253,7 @@ async function onDeleteToggle(): Promise<void> {
 }
 
 async function onReset(): Promise<void> {
+  placePolicyResetVersion += 1
   fieldRemoveMode = false
   isProjectFieldResetInProgress = true
   fieldsLayoutMutationVersion += 1
@@ -2851,7 +2870,23 @@ $effect(() => {
       <FormSurface>
         {#if activeCommittedProjectData?.id}
           {#key activeCommittedProjectData.id}
-            <PlacePolicyPanel projectId={activeCommittedProjectData.id} {isEditing} />
+            <PlacePolicyPanel
+              projectId={activeCommittedProjectData.id}
+              {isEditing}
+              saving={formCtx.submitting}
+              resetVersion={placePolicyResetVersion}
+              onChange={value => {
+                updateFormData(projectEntityUpdaterForm, data => {
+                  if (value === undefined) delete data.placeUpdatePolicy
+                  else data.placeUpdatePolicy = value
+                  return data
+                })
+                revalidateAfterProgrammaticChange()
+              }}
+            />
+            {#if formCtx.form.fields.value().data?.placeUpdatePolicy}
+              <input {...getHiddenPlacePolicyAttrs()}>
+            {/if}
           {/key}
         {/if}
       </FormSurface>

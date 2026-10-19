@@ -4,11 +4,8 @@ import { untrack } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { Button } from '#lib/bits/core/index.js'
 import { SectionHeader, SelectField, TextInput } from '#lib/bits/custom/index.js'
 import MapPinIcon from 'virtual:icons/proicons/location'
-// API
-import { setPlaceUpdatePolicy } from '#lib/api/place.remote.js'
 // DOMAIN
 import { ProjectPlacePolicySchema } from '#lib/places/model.js'
 // TYPES
@@ -16,17 +13,22 @@ import type { ProjectPlacePolicy } from '#lib/places/model.js'
 import type { ProjectPlaceSettings } from '#lib/db/services/place.js'
 
 let {
-  projectId,
   initial,
   isEditing = true,
-}: { projectId: string; initial: ProjectPlaceSettings; isEditing?: boolean } = $props()
+  saving = false,
+  resetVersion = 0,
+  onChange,
+}: {
+  initial: ProjectPlaceSettings
+  isEditing?: boolean
+  saving?: boolean
+  resetVersion?: number
+  onChange: (value: string | undefined) => void
+} = $props()
+let lastResetVersion = $state(-1)
 let policy = $state<ProjectPlacePolicy>(
   untrack(() => ProjectPlacePolicySchema.parse(initial.policy)),
 )
-let savedPolicy = $state<ProjectPlacePolicy>(
-  untrack(() => ProjectPlacePolicySchema.parse(initial.policy)),
-)
-let revision = $state(untrack(() => initial.revision))
 let coordinateMode = $state(untrack(() => initial.policy.coordinates.mode))
 let maxMetres = $state<number | undefined>(
   untrack(() =>
@@ -35,60 +37,38 @@ let maxMetres = $state<number | undefined>(
       : undefined,
   ),
 )
-let saving = $state(false)
-let notice = $state('')
-let failure = $state('')
-
 /**
- * Persist the complete policy with the revision loaded by this editor.
- * @returns Completion after the authorized command has saved or reported a conflict.
+ * Stage the complete policy in the owning Project form without writing separately.
+ * @returns Nothing; validation and persistence belong to the Project submission.
  */
-async function save(): Promise<void> {
-  if (saving || !isEditing) return
-  notice = ''
-  failure = ''
-  const candidate = ProjectPlacePolicySchema.safeParse({
-    ...policy,
-    coordinates:
-      coordinateMode === 'withinDistance'
-        ? { mode: coordinateMode, maxMetres }
-        : { mode: coordinateMode },
-  })
-  if (!candidate.success) {
-    failure = m.place_policy_invalid()
-    return
+function stagePolicy(): void {
+  const candidate = {
+    policy: {
+      ...policy,
+      coordinates:
+        coordinateMode === 'withinDistance'
+          ? { mode: coordinateMode, maxMetres }
+          : { mode: coordinateMode },
+    },
+    expectedRevision: initial.revision,
   }
-  saving = true
-  try {
-    const saved = await setPlaceUpdatePolicy({
-      projectId,
-      policy: candidate.data,
-      expectedRevision: revision,
-    })
-    policy = saved.policy
-    savedPolicy = ProjectPlacePolicySchema.parse(saved.policy)
-    revision = saved.revision
-    notice = m.place_policy_saved()
-  } catch (cause) {
-    failure =
-      cause instanceof Error && cause.message.includes('PLACE_POLICY_CHANGED')
-        ? m.place_policy_conflict()
-        : m.place_policy_failed()
-  } finally {
-    saving = false
-  }
+  onChange(
+    JSON.stringify(candidate.policy) === JSON.stringify(initial.policy)
+      ? undefined
+      : JSON.stringify(candidate),
+  )
 }
-// Leaving edit mode discards unsaved policy edits just like the project editor.
+
+// Project Cancel and successful refresh restore the last committed settings.
 $effect(() => {
-  if (!isEditing) {
-    const baseline = untrack(() => ProjectPlacePolicySchema.parse(savedPolicy))
-    policy = baseline
-    coordinateMode = baseline.coordinates.mode
+  if (!isEditing || resetVersion !== untrack(() => lastResetVersion)) {
+    lastResetVersion = resetVersion
+    policy = ProjectPlacePolicySchema.parse(initial.policy)
+    coordinateMode = initial.policy.coordinates.mode
     maxMetres =
-      baseline.coordinates.mode === 'withinDistance'
-        ? baseline.coordinates.maxMetres
+      initial.policy.coordinates.mode === 'withinDistance'
+        ? initial.policy.coordinates.maxMetres
         : undefined
-    failure = ''
   }
 })
 
@@ -110,20 +90,7 @@ const coordinateItems = $derived([
     icon={MapPinIcon}
   />
   <div class="flex flex-col gap-6 p-6 pb-24">
-    <div class="flex items-start justify-between gap-6">
-      <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_inactive()}</p>
-      {#if isEditing}
-        <Button
-          type="button"
-          color="primary"
-          style="soft"
-          class="self-start"
-          disabled={saving}
-          onClick={save}
-          text={saving ? m.place_policy_saving() : m.place_policy_save()}
-        />
-      {/if}
-    </div>
+    <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_inactive()}</p>
     <div class="flex max-w-5xl flex-col divide-y divide-[var(--form-control-border)]">
       <div class="grid gap-4 pb-6 md:grid-cols-2 md:gap-8">
         <div>
@@ -142,7 +109,10 @@ const coordinateItems = $derived([
             items={coordinateItems}
             {isEditing}
             disabled={saving}
-            onValueChange={value => (coordinateMode = value as typeof coordinateMode)}
+            onValueChange={value => {
+              coordinateMode = value as typeof coordinateMode
+              stagePolicy()
+            }}
           />
           <TextInput
             id="place-distance"
@@ -153,8 +123,10 @@ const coordinateItems = $derived([
             inputAttrs={{ min: 0, step: 'any' }}
             {isEditing}
             disabled={saving || coordinateMode !== 'withinDistance'}
-            onValueChange={value =>
-              (maxMetres = value.trim() ? Number(value) : undefined)}
+            onValueChange={value => {
+              maxMetres = value.trim() ? Number(value) : undefined
+              stagePolicy()
+            }}
           />
           <p class="text-sm text-muted-foreground">{m.place_policy_distance_help()}</p>
         </div>
@@ -187,10 +159,12 @@ const coordinateItems = $derived([
             label={m.place_policy_rule()}
             placeholder={setting.title}
             value={policy[setting.key as 'address' | 'unit' | 'establishment']}
-            onValueChange={value =>
-              (policy[setting.key as 'address' | 'unit' | 'establishment'] = value as
+            onValueChange={value => {
+              policy[setting.key as 'address' | 'unit' | 'establishment'] = value as
                 | 'review'
-                | 'automatic')}
+                | 'automatic'
+              stagePolicy()
+            }}
             items={reviewItems}
             {isEditing}
             disabled={saving}
@@ -199,11 +173,5 @@ const coordinateItems = $derived([
       {/each}
     </div>
     <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_note()}</p>
-    {#if notice}
-      <p role="status" class="text-sm">{notice}</p>
-    {/if}
-    {#if failure}
-      <p role="alert" class="text-sm text-destructive">{failure}</p>
-    {/if}
   </div>
 </section>
