@@ -215,9 +215,9 @@
   "admin__map_preview_refresh_failed_log": "刷新{resource}地图预览失败",
   "admin__map_preview_regenerated": "地图预览已重新生成",
   "admin__map_preview_queued": "地图预览已加入重新生成队列",
-  "map_style__hyper_name": "极速深色",
+  "map_style__hyper_name": "Etch",
   "map_style__hyper_description": "Nullspace 配色的 Etch 地图：近黑底色、紫色建筑轮廓、玫瑰色道路及薄荷绿海岸线，不显示兴趣点。",
-  "map_style__hyper_light_name": "极速浅色",
+  "map_style__hyper_light_name": "Sketch",
   "map_style__hyper_light_description": "Oblivion 配色的 Etch 地图：淡丁香底色、莓红线条及蓝绿海岸线，不显示兴趣点。",
   "map_style__hyperpop_name": "炫彩流行",
   "map_style__hyperpop_description": "以 Hype 的粉红、洋红和紫色界面调色板打造的极简夜间地图，配有发光的长春花蓝标签。",
@@ -1317,5 +1317,10 @@
   "card_style__inherit_description": "继承所属项目的卡片样式。",
   "property__phone_hk_invalid": "请输入有效的香港电话号码（8位数字，可加 +852 前缀）。",
   "feature_mtr_access": "步行至港铁",
-  "feature_mtr_access_value": "{station} · {exit} 出口 · 步行 {distance} 米"
+  "feature_mtr_access_value": "{station} · {exit} 出口 · 步行 {distance} 米",
+  "card_style__breadline": "面包线",
+  "card_style__breadline_description": "捐赠商户照片、品牌及步行信息；选择收集日期后显示收集详情。",
+  "breadline_card__claim": "认领这家店",
+  "breadline_card__unclaim": "取消认领",
+  "breadline_card__choose_date": "选择收集日期以查看收集时间和可收集数量。"
 }
