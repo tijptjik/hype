@@ -120,6 +120,24 @@ never combine a new unit with an old building's address. Non-location facts can 
 independently unless establishment identity is under review. Two projects can therefore
 adopt different revisions of the same Place without duplicating Place identities.
 
+The adoption planner derives evidence from stored accepted facts/location revisions
+and an explicit candidate revision. It compares names, brand arrays, canonical
+category/taxonomy and operating status; compares address content independently
+from the selected unit; and excludes publication metadata and unrelated unit rows
+from premises-change decisions. Project policy is read with its concurrency revision.
+Missing establishment evidence or source identity changes hold both revision groups;
+invalid-phone omissions cannot silently erase inherited contacts. Unresolved canonical
+address dependencies hold the location group even under an automatic policy.
+Explicit overrides survive resolution unchanged.
+
+The database preview is read-only, scope-checked and unavailable for missing source
+Places. It returns the Feature timestamp, association token, policy revision and
+proposed effective values for the applying workflow. Local sequence checks prevent
+rewinding accepted ingestion revisions, but do not establish upstream publication
+chronology: the sync workflow must select a verified forward publication explicitly.
+Durable proposals/rejections, acceptance/materialization and monthly orchestration
+remain to be connected; preview does not reopen rejected decisions or mutate Features.
+
 ## Replace the address model
 
 SaanSeoi Addresses replace HYPE's structured address system. Do not build a permanent

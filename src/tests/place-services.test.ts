@@ -28,6 +28,7 @@ import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
 import { applyUnresolvedFeatureSplit } from '#lib/db/services/placeSplit.js'
 import { planUnresolvedFeatureSplit } from '#lib/places/migrationPlan.js'
+import { previewFeaturePlaceAdoption } from '#lib/db/services/placeAdoption.js'
 import { getDetachedFeatureBrands } from '#lib/db/services/placeDetached.js'
 import { unlinkFeaturePlace } from '#lib/db/services/placeUnlink.js'
 import { relinkFeaturePlace } from '#lib/db/services/placeRelink.js'
@@ -2118,5 +2119,81 @@ describe('explicit Place unlink preservation', () => {
       sqlite.prepare("SELECT * FROM featurePlaceHistory WHERE action='unlink'").all(),
     ).toHaveLength(0)
     expect(await getAcceptedFeaturePlace(db, 'f', 'p')).not.toBeNull()
+  })
+})
+
+describe('persisted Place adoption preview', () => {
+  it('uses stored policy and accepted revisions without mutating the Feature or source', async () => {
+    const { db, sqlite } = setup()
+    const projection: SaanSeoiPlaceProjection = {
+      ssId: 'shop',
+      apiVersion: 'v0.1',
+      releaseId: 'release1',
+      snapshotId: 'snapshot1',
+      facts: PlaceFactsSchema.parse(facts),
+      issues: [],
+      payload: {
+        resource: {
+          attributes: {
+            basicCategory: 'bakery',
+            taxonomy: { primary: 'bakery' },
+            operatingStatus: 'open',
+          },
+        },
+      },
+    }
+    const first = await persistSaanSeoiPlace(db, projection)
+    const association = prepareFeaturePlaceAssociationWrite(db, {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: first.placeId,
+      factsRevisionId: first.revisionId,
+      locationRevisionId: first.revisionId,
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      actorId: 'actor',
+      overrides: {},
+    })
+    await association.query
+    const nextFacts = structuredClone(projection.facts)
+    nextFacts.location.geometry.coordinates[0] += 0.01
+    const next = await persistSaanSeoiPlace(db, {
+      ...projection,
+      facts: nextFacts,
+      releaseId: 'release2',
+      snapshotId: 'snapshot2',
+    })
+    const snapshot = () =>
+      ['feature', 'featurePlace', 'featurePlaceHistory', 'placeRevision'].map(table =>
+        sqlite.prepare(`SELECT * FROM ${table}`).all(),
+      )
+    const before = snapshot()
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      candidateRevisionId: next.revisionId,
+    }
+    const result = await previewFeaturePlaceAdoption(db, input)
+    expect(result).toMatchObject({
+      expectedRevision: association.revision,
+      expectedFeatureModifiedAt: 'original',
+      settings: { revision: 0 },
+      plan: { factsRevisionId: next.revisionId, locationRevisionId: first.revisionId },
+    })
+    expect(snapshot()).toEqual(before)
+    expect(
+      await previewFeaturePlaceAdoption(db, { ...input, projectId: 'other' }),
+    ).toBeNull()
+    await saveProjectPlaceSettings(
+      db,
+      'p',
+      { ...DEFAULT_PROJECT_PLACE_POLICY, coordinates: { mode: 'automatic' } },
+      0,
+    )
+    expect(
+      (await previewFeaturePlaceAdoption(db, input))?.plan.locationRevisionId,
+    ).toBe(next.revisionId)
+    sqlite.exec("UPDATE place SET sourceAvailability='missing'")
+    expect(await previewFeaturePlaceAdoption(db, input)).toBeNull()
   })
 })
