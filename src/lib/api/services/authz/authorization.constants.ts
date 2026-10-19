@@ -63,6 +63,7 @@ export const projectAuthorizationFields = [
   'placeUpdatePolicy',
   'useAllInOrgContext',
   'cardStyleCode',
+  'markerStyleCode',
   'organisationId',
   'code',
   'i18n',

@@ -697,6 +697,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       code: normalizedCode,
       useAllInOrgContext: data.useAllInOrgContext,
       cardStyleCode: data.cardStyleCode,
+      markerStyleCode: data.markerStyleCode,
       license: data.license,
       capabilities: submittedProjectCapabilities,
       isPublished: false,
@@ -779,6 +780,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   }
   if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataBeforeHydration.cardStyleCode = data.cardStyleCode
+  }
+  if (data.markerStyleCode !== (current.markerStyleCode ?? null)) {
+    submittedDataBeforeHydration.markerStyleCode = data.markerStyleCode
   }
   if (meta?.licenseTouched === true) {
     submittedDataBeforeHydration.license = data.license
@@ -898,6 +902,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   }
   if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataForUpdate.cardStyleCode = data.cardStyleCode
+  }
+  if (data.markerStyleCode !== (current.markerStyleCode ?? null)) {
+    submittedDataForUpdate.markerStyleCode = data.markerStyleCode
   }
   if (licenseChanged) submittedDataForUpdate.license = data.license
   if (projectCapabilitiesChanged) {
@@ -1031,6 +1038,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         code: normalizedCode,
         useAllInOrgContext: data.useAllInOrgContext,
         cardStyleCode: data.cardStyleCode,
+        markerStyleCode: data.markerStyleCode,
         ...(persistedLicense ? { license: persistedLicense } : {}),
         capabilities: submittedProjectCapabilities,
       },

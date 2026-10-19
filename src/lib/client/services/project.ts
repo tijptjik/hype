@@ -296,6 +296,7 @@ export function toProjectFormInput(
         organisationId: defaults?.organisationId ?? '',
         mapStyleCode: '',
         cardStyleCode: DEFAULT_CARD_STYLE,
+        markerStyleCode: null,
         code: '',
         useAllInOrgContext: false,
         i18n: {
@@ -323,6 +324,7 @@ export function toProjectFormInput(
       organisationId: data.organisationId,
       mapStyleCode: data.mapStyle?.code ?? '',
       cardStyleCode: data.cardStyleCode ?? DEFAULT_CARD_STYLE,
+      markerStyleCode: data.markerStyleCode ?? null,
       code: data.code,
       useAllInOrgContext: data.useAllInOrgContext ?? false,
       i18n: {

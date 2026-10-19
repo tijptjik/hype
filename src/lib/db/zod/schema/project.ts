@@ -1,3 +1,4 @@
+import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES, DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import { CompactAncestorsSchema } from './api'
 // I18N
@@ -175,18 +176,21 @@ const ProjectLicenseBase = z.preprocess(
 
 export const ProjectBase = createSelectSchema(project).extend({
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().default(null),
+  markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().default(null),
   capabilities: ProjectCapabilitiesBase,
   license: ProjectLicenseBase,
 })
 
 export const ProjectInsert = createInsertSchema(project).extend({
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().default(null),
+  markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().default(null),
   capabilities: ProjectCapabilitiesBase,
   license: ProjectLicenseBase,
 })
 
 export const ProjectUpdate = createUpdateSchema(project).extend({
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().optional(),
+  markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().optional(),
   capabilities: ProjectCapabilitiesBase.optional(),
   license: ProjectLicenseBase.optional(),
 })
@@ -305,6 +309,11 @@ export const ProjectLayerFormData = z.object({
 
 export const ProjectEntityFormData = z.object({
   cardStyleCode: z.enum(CARD_STYLE_CODES).default(DEFAULT_CARD_STYLE),
+  markerStyleCode: z
+    .union([z.enum(MARKER_STYLE_CODES), z.literal('')])
+    .nullable()
+    .default(null)
+    .transform(value => value || null),
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })
     .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),
@@ -401,6 +410,7 @@ export const ProjectProfile = z.enum([
 
 const ProjectListFields = ProjectBase.pick({
   cardStyleCode: true,
+  markerStyleCode: true,
   useAllInOrgContext: true,
   id: true,
   organisationId: true,
@@ -445,6 +455,7 @@ export const ProjectAdminProfileAPI = ProjectBase.extend({
 /** Minimal identity and action state for paged resource lists. */
 export const ProjectCompactProfileAPI = ProjectBase.pick({
   cardStyleCode: true,
+  markerStyleCode: true,
   useAllInOrgContext: true,
   id: true,
   isPublished: true,
