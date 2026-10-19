@@ -285,12 +285,22 @@ remain separate work under the accepted architecture above.
 
 Migration `0107_feature_saanseoi_addresses.sql` archives existing metadata and
 structured locale fields as legacy evidence, retaining their display labels as
-unresolved fallback text. It does not guess upstream identity. Apply it through the
-normal migration release process before rollout; it has only been applied to an
-isolated local copy during development. The full-copy rehearsal preserved all
+unresolved fallback text. It does not guess upstream identity. It was applied through
+the D1 migration runner to preview and production on 20 October 2026, with `0108`:
+all 1,252 preview and 1,271 production features have canonical envelopes. D1 requires
+an ordinary staging table, dropped within the migration, rather than a TEMP table.
+The full-copy development rehearsal preserved all
 1,759 feature IDs, geometries and timestamps and all 5,223 locale display values
 and generation flags. All 1,759 envelopes were created and legacy structured
 properties cleared. The migration test also checks safe reruns.
+
+Deployment recovery also corrected `0099` to tolerate pending refresh jobs created
+by `0096`, environment-dependent division/rollup state, and fewer reviewed relationship
+assignments in preview. Exact resource identities, content counts and external-property
+guards remain enforced. All 41 guards passed on both targets before application; an
+isolated rehearsal preserved unrelated rows across 62 tables. Recovery bookmarks were
+recorded before applying migrations. Production's post-migration foreign-key check is
+clean; preview has an unrelated dangling `projectMapStyles` reference outside this scope.
 
 Validation: 60 focused address/geocoding/feature remote tests pass. An authenticated
 isolated browser check verifies geocoder-response application, correction, Save and
