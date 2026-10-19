@@ -284,6 +284,22 @@ only after successful application. Keep the last accepted snapshot on failed rea
 missing source IDs. Source removal does not imply closure, donor inactivity or deletion.
 Rebuild affected Feature projections and caches using their own Project policies.
 
+The durable scan stage is implemented in `src/lib/places/refresh.ts`, with migration
+`0114_place_refresh.sql`. Monthly discovery snapshots the linked Place identity set and
+pins a full canonical catalogue scan. Each bounded page retains only tracked candidates
+and commits them with its offset in one transaction. Lease tokens and expiry checks
+fence writes; failures retain the previous offset and use bounded retry backoff.
+Cross-page duplicate tracked IDs and changing totals stop advancement. Missing IDs are
+explicit run items, never inferred deletions or donor inactivity.
+
+A completed scan enters `ready` without advancing the accepted publication or modifying
+Features. Candidate ingestion, per-Feature policy processing, final checkpoint completion
+and the scheduled Worker entrypoint remain to be connected. Source changes-feed evidence
+is also separate from this canonical scan. Migration 0114 is applied to the primary local
+database with integrity/foreign-key checks passing and all 1,271 Features unchanged.
+SQLite-backed tests cover page resumption, late-write rollback, lease loss/expiry, retry,
+monthly discovery, publication regression and missing source identities.
+
 ## Existing-feature and Breadline migration
 
 Preserve Feature IDs, URLs, media, permissions, histories and project relationships.
