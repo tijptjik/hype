@@ -23,6 +23,7 @@ import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 import {
   ProjectAdminProfileAPI,
   ProjectCardProfileAPI,
+  ProjectCompactProfileAPI,
   ProjectDetailProfileAPI,
   ProjectListProfileAPI,
 } from '#lib/db/zod/schema/project.js'
@@ -196,6 +197,8 @@ export const getProjectWithRelations = <P extends ProjectProfile>(
     return {
       i18n: true,
       organisation: compactAncestorRelations,
+      // Layer markers inherit this palette even when another project owns the basemap.
+      mapStyleAssignment: projectListWithRelations.mapStyleAssignment,
     } as unknown as ProjectRelationsByProfile<P>
   if (profile === 'admin') {
     return projectEntityWithRelations as ProjectRelationsByProfile<P>
@@ -334,6 +337,11 @@ const toProfileResponseShape = async (
       : null,
   }
 
+  if (profile === 'compact') {
+    return ProjectCompactProfileAPI.parse(
+      data,
+    ) as ProjectEntityByProfile<ProjectProfile>
+  }
   if (profile === 'admin') {
     return ProjectAdminProfileAPI.parse(data) as ProjectEntityByProfile<ProjectProfile>
   }

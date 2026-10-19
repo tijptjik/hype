@@ -1,5 +1,6 @@
 // ZOD
 import { z } from 'zod'
+import { PrivateContributionDetailsSchema } from '#lib/contributions/profile.js'
 import { ListQueryParamsSchema } from './api'
 import { FormBoolean } from '../form'
 // THEME
@@ -66,6 +67,12 @@ const UserPreferencesSchema = z
     preferFallbackInCurrentLocale: z.boolean().nullish(),
     isTranslateButtonVisible: z.boolean().nullish(),
     theme: ThemePreferencesSchema.nullish().catch(undefined),
+    profileContributions: z
+      .object({
+        observePrisms: z.boolean().optional(),
+        showAll: z.boolean().optional(),
+      })
+      .nullish(),
     admin: z
       .object({
         isAdminMapCollapsed: z.boolean().optional(),
@@ -145,6 +152,7 @@ export const UserBasic = UserBase.pick({
 // ═══════════════════════
 
 const UserContributionSummaryFields = z.object({
+  privateContributions: PrivateContributionDetailsSchema.optional(),
   contributedFeatures: z.record(z.string(), z.array(z.string())),
   contributedImages: z.record(z.string(), z.array(z.string())),
   reportedMissingCount: z.number(),
@@ -198,6 +206,7 @@ export const UserLeaderboardProfileAPI = UserBase.pick({
 })
 
 export const UserDetailProfileAPI = UserCardProfileAPI.extend({
+  privateContributions: UserContributionSummaryFields.shape.privateContributions,
   contributedFeatures: UserContributionSummaryFields.shape.contributedFeatures,
   contributedImages: UserContributionSummaryFields.shape.contributedImages,
   reportedMissingCount: UserContributionSummaryFields.shape.reportedMissingCount,
@@ -224,6 +233,7 @@ export const UserSelfProfileAPI = UserBase.pick({
   .extend(UserContributionSummaryFields.shape)
 
 export const UserAdminProfileAPI = UserAdminListProfileAPI.extend({
+  privateContributions: UserContributionSummaryFields.shape.privateContributions,
   attribution: UserSelfProfileAPI.shape.attribution,
   locale: UserSelfProfileAPI.shape.locale,
   preferences: UserSelfProfileAPI.shape.preferences,

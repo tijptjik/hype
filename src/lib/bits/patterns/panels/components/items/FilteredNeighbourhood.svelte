@@ -67,7 +67,7 @@ const displayName = $derived(
 {#if row.count > 0}
   <button
     type="button"
-    class="group ml-4 flex w-[calc(100%-1rem)] cursor-pointer items-center justify-between gap-4 rounded-l-md bg-panel py-2 pl-4 pr-7 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-focus"
+    class="group flex w-full cursor-pointer items-center justify-between gap-4 bg-panel py-2 pl-8 pr-7 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
     aria-pressed={row.selected}
     onclick={() => onToggle(row.id)}
     onpointerenter={() => onPreview?.(row.id, true)}

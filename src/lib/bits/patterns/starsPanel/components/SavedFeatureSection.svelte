@@ -30,11 +30,9 @@ let {
     })}
   />
   <div class="px-6 pb-4">
-    {#if model.loading && model.rows.length === 0}
-      <p role="status" class="py-3 text-sm text-muted-foreground">
-        {m.resource_loading()}
-      </p>
-    {:else if model.rows.length === 0 && !model.error}
+    {#if model.rows.length === 0 &&
+      !model.error &&
+      (!model.loading || model.totalCount !== null)}
       <p class="py-3 text-sm text-muted-foreground">
         {kind === 'visited' ? m.due_mad_whale_attend() : m.short_watery_marten_race()}
       </p>
@@ -78,7 +76,7 @@ let {
           disabled={model.loading}
           onclick={model.loadMore}
         >
-          {model.loading ? m.resource_loading() : m.resource_load_more()}
+          {m.resource_load_more()}
         </button>
       {/if}
     {/if}

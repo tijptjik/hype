@@ -14,9 +14,9 @@ let reportCount = $derived(userData?.reportedMissingCount ?? 0)
 let isLoading = $derived(!userData)
 </script>
 
-<div id="contributed-reports" class="border-b border-base-300">
+<div id="contributed-reports" class="border-b border-border">
   <h3
-    class="p-4 pb-2 text-sm font-semibold uppercase tracking-wide text-base-content/60"
+    class="px-6 pt-5 pb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
   >
     {m.brief_aqua_piranha_grow()}
   </h3>

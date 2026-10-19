@@ -1,12 +1,13 @@
 // SVELTE
-import { untrack } from 'svelte'
 import { fromStore } from 'svelte/store'
 // AUTH
 import { useSession } from '#lib/auth/client.js'
 import { isGuestUser } from '#lib/auth/upgrade.js'
 // SHARED CONTRIBUTIONS
+import { filterProfileContributions } from '#lib/contributions/presentation.js'
 import { createUserContributionsModel } from './userContributions'
 // ADAPTERS
+import { useProfileContributionPreferences } from './useProfileContributionPreferences.svelte'
 import { useProfileSectionModel } from './useProfileSectionModel.svelte'
 // NAVIGATION
 import {
@@ -32,24 +33,17 @@ import type { Hub } from '#lib/db/zod/schema/hub.types.js'
  */
 export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
   const session = fromStore(useSession())
-  const initializedProfileContexts = new WeakSet<object>()
+  const contributionPreferences = useProfileContributionPreferences(app)
+  const visibleUserData = $derived(
+    filterProfileContributions(
+      app.panels.state.profile.ctx?.userData,
+      contributionPreferences.showAll,
+    ),
+  )
   const profile = useProfileSectionModel(app, () => ({
     hideActions: true,
     hideEditableFields: true,
   }))
-
-  // Apply the default once for each profile context so user toggles survive rerenders.
-  $effect(() => {
-    const profileContext = app.panels.state.profile.ctx
-    const hub = app.hub as Hub | undefined
-    if (!profileContext || !hub || initializedProfileContexts.has(profileContext))
-      return
-
-    untrack(() => {
-      profileContext.observePrisms = hub.organisations?.length !== 1
-    })
-    initializedProfileContexts.add(profileContext)
-  })
 
   return {
     // Get the username and profile loaded from URL navigation.
@@ -57,8 +51,15 @@ export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
       return app.panels.state.profile.ctx?.username
     },
     get userData() {
-      return app.panels.state.profile.ctx?.userData
+      return visibleUserData
     },
+    get showAllContributions() {
+      return contributionPreferences.showAll
+    },
+    get contributionSettingsDisabled() {
+      return contributionPreferences.disabled
+    },
+    onShowAllContributions: contributionPreferences.setShowAll,
     get isOwnProfile() {
       return app.panels.state.profile.ctx?.userData?.id === app.account.user?.id
     },
@@ -75,14 +76,9 @@ export function useProfilePanelModel(app: ResourceViewCtx, omni: OmniCtx) {
       return (app.hub as Hub | undefined)?.organisations?.length === 1
     },
     get observePrisms() {
-      return app.panels.state.profile.ctx?.observePrisms ?? false
+      return contributionPreferences.observePrisms
     },
-    onToggleObservePrisms: () => {
-      const profileContext = app.panels.state.profile.ctx
-      if (!profileContext) return
-      profileContext.observePrisms = !profileContext.observePrisms
-      void app.refreshUserProfile()
-    },
+    onToggleObservePrisms: contributionPreferences.toggleObservePrisms,
     ...createUserContributionsModel(app, {
       onContributedFeature: (
         featureId: string,

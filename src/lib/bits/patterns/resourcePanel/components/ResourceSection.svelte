@@ -115,6 +115,11 @@ const color = $derived(
 const items = $derived(
   open ? section.rows : section.rows.filter(row => row.selected || row.active),
 )
+const reorder = $derived(
+  section.onMove && section.reorderIds && section.reorderIds.length > 1
+    ? { group: `active-layers-${id}`, ids: section.reorderIds, onMove: section.onMove }
+    : undefined,
+)
 </script>
 
 <section
@@ -236,13 +241,27 @@ const items = $derived(
         {#snippet item(
           row,
         )}
-          <ResourceRow {row} {tone} {narrow} {onLabelShow} {onLabelHide} />
+          <ResourceRow
+            {row}
+            {tone}
+            {narrow}
+            {onLabelShow}
+            {onLabelHide}
+            reorder={row.selected ? reorder : undefined}
+          />
         {/snippet}
       </VirtualResourceList>
     {:else if items.length && narrow}
       <div class="max-h-32 shrink-0 overflow-y-auto">
         {#each items as row (row.id)}
-          <ResourceRow {row} {tone} {narrow} {onLabelShow} {onLabelHide} />
+          <ResourceRow
+            {row}
+            {tone}
+            {narrow}
+            {onLabelShow}
+            {onLabelHide}
+            reorder={row.selected ? reorder : undefined}
+          />
         {/each}
       </div>
     {:else if items.length}

@@ -51,7 +51,40 @@ beforeEach(() => {
   mocks.unlinkAccount.mockResolvedValue({ data: { status: true } })
   mocks.listUserPasskeys.mockResolvedValue({ data: [] })
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
+
+it.each([
+  [401, { code: 'UNAUTHORIZED' }, () => m.account__password_sign_in_again()],
+  [429, {}, () => m.account__password_rate_limited()],
+  [403, { message: 'FORBIDDEN' }, () => m.account__password_add_error()],
+  [400, { message: 'PASSWORD_NOT_SET' }, () => m.account__password_add_error()],
+] as const)(
+  'explains password setup rejection %s (%j)',
+  async (status, body, message) => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(body), { status }))
+    vi.stubGlobal('fetch', fetch)
+    render(LinkedAccounts, { startGuestUpgradeOpen: true })
+    await fireEvent.click(
+      await screen.findByRole('button', { name: m.account__add_password_action() }),
+    )
+    await fireEvent.input(screen.getByLabelText(m.guest__email()), {
+      target: { value: 'user@example.com' },
+    })
+    await fireEvent.input(screen.getByLabelText(m.guest__password()), {
+      target: { value: 'valid-test-password-123' },
+    })
+    await fireEvent.click(
+      screen.getByRole('button', { name: m.account__setup_email_login() }),
+    )
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(message()))
+    expect(fetch).toHaveBeenCalledOnce()
+  },
+)
 
 it('uses local IDs for provider info and unlinking without removing a different provider', async () => {
   render(LinkedAccounts, { startGuestUpgradeOpen: true })

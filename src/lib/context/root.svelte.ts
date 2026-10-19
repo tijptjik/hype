@@ -46,7 +46,9 @@ export class RootCTX {
   }
 }
 
-const ROOT_CONTEXT_KEY = Symbol('root-context')
+// Reloaded consumers must retain the provider key; state remains in Svelte's
+// per-render context map, never in the global symbol registry.
+const ROOT_CONTEXT_KEY = Symbol.for('hype.context.root')
 
 /** Provides shared state for one rendered application. @param responsive Viewport state. @returns The new root. */
 export function setRootCTX(responsive: ResponsiveCtx): RootCTX {

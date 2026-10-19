@@ -1,3 +1,4 @@
+import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
 // ZOD
 import { z } from 'zod'
 
@@ -60,5 +61,6 @@ export const CompactAncestorsSchema = z.object({
   organisation: CompactAncestorSchema.nullish(),
   project: CompactAncestorSchema.extend({
     useAllInOrgContext: z.boolean().default(false),
+    cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().optional(),
   }).nullish(),
 })

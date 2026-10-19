@@ -37,7 +37,14 @@ afterEach(() => {
  * @param active - Currently open organisation ID.
  * @returns The adapter and observable navigation/prism actions.
  */
-function setup(selected: string[] = [], active = 'b') {
+function setup(
+  selected: string[] = [],
+  active = 'b',
+  options: {
+    mode?: 'admin' | 'prisms'
+    layers?: string[]
+  } = {},
+) {
   const resources = ['a', 'b', 'c'].map(id => ({
     id,
     name: `Organisation ${id}`,
@@ -53,7 +60,8 @@ function setup(selected: string[] = [], active = 'b') {
   }
   const app = {
     scope: {
-      prisms: { organisation: selected, project: [], layer: [] },
+      prisms: { organisation: selected, project: [], layer: options.layers ?? [] },
+      moveLayer: vi.fn(),
       // Map defaults deliberately differ from prism selections.
       isOrganisationDefaultLayersActive: () => true,
       isProjectDefaultLayersActive: () => true,
@@ -67,7 +75,10 @@ function setup(selected: string[] = [], active = 'b') {
     resources: {
       createCollection: (type: string) => ({
         ...list,
-        rows: type === 'organisation' ? resources : [],
+        rows:
+          type === 'organisation' || (type === 'layer' && options.layers)
+            ? resources
+            : [],
         release: vi.fn(),
       }),
     },
@@ -81,6 +92,7 @@ function setup(selected: string[] = [], active = 'b') {
   let model!: ResourcePanelModel
   render(Fixture, {
     app,
+    mode: options.mode,
     admin: { navigation: routeNavigation } as AdminCtx,
     onModel: value => {
       model = value
@@ -89,9 +101,21 @@ function setup(selected: string[] = [], active = 'b') {
   return {
     rows: model.sections[0].rows,
     sections: model.sections,
+    app,
     toggleOrganisation,
   }
 }
+
+it('presents active layers in basemap priority order and exposes reordering only on the public layer section', () => {
+  const { sections, app } = setup([], 'b', { mode: 'prisms', layers: ['c', 'a'] })
+  expect(sections[2].rows.map(row => row.id)).toEqual(['c', 'a', 'b'])
+  expect(sections[2].reorderIds).toEqual(['c', 'a'])
+  sections[2].onMove?.('a', 0)
+  expect(app.scope.moveLayer).toHaveBeenCalledWith('a', 0)
+  expect(sections[0].onMove).toBeUndefined()
+  expect(sections[1].onMove).toBeUndefined()
+  expect(setup([], 'b', { layers: ['c', 'a'] }).sections[2].onMove).toBeUndefined()
+})
 
 it('keeps navigation-only active rows in page order and their dots unselected', async () => {
   const { rows, toggleOrganisation } = setup()

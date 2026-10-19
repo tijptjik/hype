@@ -318,10 +318,23 @@ describe('account password HTTP pipeline', () => {
     expect(hash).not.toHaveBeenCalled()
   })
 
-  it('requires a fresh authoritative session for password setup', async () => {
+  it.each([false, true])(
+    'accepts an older valid session for password setup (direct: %s)',
+    async direct => {
+      const { request, store, hash } = await setup()
+      store.session[0].createdAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+      const response = await request(undefined, direct)
+      expect(response.status).toBe(200)
+      expect(store.account).toHaveLength(1)
+      expect(hash).toHaveBeenCalledOnce()
+    },
+  )
+
+  it('rejects expired sessions without trusting cached cookies or route locals', async () => {
     const { request, store, hash } = await setup()
-    store.session[0].createdAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
-    expect((await request()).status).toBe(403)
+    store.session[0].expiresAt = new Date(Date.now() - 1000)
+    expect((await request(undefined, true)).status).toBe(401)
+    expect((await request()).status).toBe(401)
     expect(hash).not.toHaveBeenCalled()
   })
 

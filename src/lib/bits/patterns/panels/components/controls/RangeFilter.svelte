@@ -37,7 +37,7 @@ let displayText = $derived(filter.displayText)
 >
   <button
     type="button"
-    class="flex w-full shrink-0 items-center justify-between gap-4 rounded-md py-3 outline-none focus-visible:ring-2 focus-visible:ring-focus"
+    class="-mx-6 flex w-[calc(100%+3rem)] shrink-0 items-center justify-between gap-4 px-6 py-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
     aria-expanded={isOpen}
     onclick={() => (isOpen = !isOpen)}
   >

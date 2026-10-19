@@ -219,11 +219,15 @@ export function useResourcePanelModel(
             : {}),
         }
       })
-      .sort(
-        (a, b) =>
+      .sort((a, b) => {
+        // Active map layers share the scope's order so the first visible row owns the basemap.
+        if (mode === 'prisms' && type === 'layer' && a.selected && b.selected)
+          return selected.indexOf(a.id) - selected.indexOf(b.id)
+        return (
           Number(b.selected || (mode === 'prisms' && b.enabled)) -
-          Number(a.selected || (mode === 'prisms' && a.enabled)),
-      )
+          Number(a.selected || (mode === 'prisms' && a.enabled))
+        )
+      })
   }
 
   const sections: ResourcePanelSection[] = types.map((type, index) => ({
@@ -241,6 +245,13 @@ export function useResourcePanelModel(
     get rows() {
       return rows(type, index)
     },
+    get reorderIds() {
+      return mode === 'prisms' && type === 'layer' ? app.scope.prisms.layer : undefined
+    },
+    onMove:
+      mode === 'prisms' && type === 'layer'
+        ? (id, destination) => app.scope.moveLayer(id, destination)
+        : undefined,
     get loading() {
       return lists[index].list.loading
     },

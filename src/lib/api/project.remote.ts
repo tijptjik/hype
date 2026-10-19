@@ -1,3 +1,5 @@
+// PRESENTATION
+import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import { error } from '@sveltejs/kit'
 import type {
   ProjectProfile,
@@ -691,6 +693,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       organisationId: data.organisationId,
       code: normalizedCode,
       useAllInOrgContext: data.useAllInOrgContext,
+      cardStyleCode: data.cardStyleCode,
       license: data.license,
       capabilities: submittedProjectCapabilities,
       isPublished: false,
@@ -770,6 +773,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   }
   if (data.useAllInOrgContext !== current.useAllInOrgContext) {
     submittedDataBeforeHydration.useAllInOrgContext = data.useAllInOrgContext
+  }
+  if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
+    submittedDataBeforeHydration.cardStyleCode = data.cardStyleCode
   }
   if (meta?.licenseTouched === true) {
     submittedDataBeforeHydration.license = data.license
@@ -886,6 +892,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
   if (data.useAllInOrgContext !== current.useAllInOrgContext) {
     submittedDataForUpdate.useAllInOrgContext = data.useAllInOrgContext
+  }
+  if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
+    submittedDataForUpdate.cardStyleCode = data.cardStyleCode
   }
   if (licenseChanged) submittedDataForUpdate.license = data.license
   if (projectCapabilitiesChanged) {
@@ -1018,6 +1027,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         organisationId: data.organisationId,
         code: normalizedCode,
         useAllInOrgContext: data.useAllInOrgContext,
+        cardStyleCode: data.cardStyleCode,
         ...(persistedLicense ? { license: persistedLicense } : {}),
         capabilities: submittedProjectCapabilities,
       },

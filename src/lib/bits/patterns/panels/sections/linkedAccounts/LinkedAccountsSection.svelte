@@ -18,6 +18,7 @@ import {
 } from '#lib/auth/passkey-upgrade.js'
 import { isAuthProviderEnabled } from '#lib/auth/providers.js'
 import { toLinkedAccountSelector } from '#lib/auth/account-selector.js'
+import { getPasswordSetupError } from '#lib/auth/password-setup-feedback.js'
 // I18N
 import { m } from '#lib/i18n.js'
 
@@ -532,7 +533,10 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email, newPassword }),
     })
-    if (!response.ok) throw new Error('password not set')
+    if (!response.ok) {
+      errorMessage = await getPasswordSetupError(response)
+      return
+    }
     newPassword = ''
     // The endpoint may have changed the email too, so replace the session atom's cached user.
     await useSession().get().refetch()
@@ -547,7 +551,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
 }
 </script>
 
-<section in:slide={{ duration: 220 }} class="border-b border-base-content/15 p-4">
+<section in:slide={{ duration: 220 }} class="border-b border-border px-6 py-5">
   {#if isGuest}
     {#if !startGuestUpgradeOpen}
       <div class="flex flex-col items-center text-center">
@@ -771,7 +775,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
     <div class="flex flex-col gap-4">
       {#if isLoading}
         <div class="flex flex-col gap-2">
-          <h3 class="text-sm font-medium text-base-content/70">
+          <h3
+            class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
             {m.account__social_accounts()}
           </h3>
           {#each socialProviders as provider (provider.id)}
@@ -794,7 +800,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
         </div>
 
         <div class="flex flex-col gap-2">
-          <h3 class="text-sm font-medium text-base-content/70">
+          <h3
+            class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
             {m.account__standard_login_methods()}
           </h3>
           {#each [
@@ -817,7 +825,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
         </div>
       {:else}
         <div class="flex flex-col gap-2">
-          <h3 class="text-sm font-medium text-base-content/70">
+          <h3
+            class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
             {m.account__social_accounts()}
           </h3>
           {#each accounts.filter(
@@ -830,7 +840,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                   class={account.providerId === 'facebook'
                     ? 'h-5 w-5 text-[#1877F2]'
                     : 'h-5 w-5'}
-                /><span class="min-w-0 text-base-content"
+                /><span class="min-w-0 break-words text-base-content"
                   >{providerLabel(account.providerId)}
                   {#if providerEmails[accountKey(account)]}
                     <span class="text-base-content/55"
@@ -840,7 +850,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 ></span
               >
               <button
-                class="shrink-0 rounded border border-error/40 px-2 py-1 text-error transition hover:bg-error/10 disabled:opacity-40"
+                class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-error/40 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
                 type="button"
                 disabled={isBusy || accounts.length <= 1}
                 onclick={() => handleUnlink(account)}
@@ -861,7 +871,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                   /><span class="text-base-content">{provider.label}</span></span
                 >
                 <button
-                  class="shrink-0 rounded border border-base-content/20 px-2 py-1 text-base-content transition hover:bg-base-content/10 disabled:opacity-40"
+                  class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-base-content transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
                   type="button"
                   disabled={isBusy}
                   onclick={() => handleLink(provider.id)}
@@ -874,7 +884,9 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
         </div>
 
         <div class="flex flex-col gap-2">
-          <h3 class="text-sm font-medium text-base-content/70">
+          <h3
+            class="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
             {m.account__standard_login_methods()}
           </h3>
           {#each accounts.filter(
@@ -883,7 +895,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
             <div class="flex items-center justify-between gap-3 text-sm">
               <span class="flex min-w-0 flex-1 items-center gap-2.5"
                 ><Mail class="h-5 w-5" />
-                <span class="min-w-0 text-base-content"
+                <span class="min-w-0 break-words text-base-content"
                   >{m.account__email()}
                   {#if linkedAccountLabel}
                     <span class="text-base-content/55">({linkedAccountLabel})</span>
@@ -891,7 +903,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 ></span
               >
               <button
-                class="shrink-0 rounded border border-error/40 px-2 py-1 text-error transition hover:bg-error/10 disabled:opacity-40"
+                class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-error/40 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
                 type="button"
                 disabled={isBusy || accounts.length <= 1}
                 onclick={() => handleUnlink(account)}
@@ -905,7 +917,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
               <div class="flex items-center justify-between gap-3 text-sm">
                 <span class="flex min-w-0 flex-1 items-center gap-2.5"
                   ><KeyRound class="h-4 w-4" />
-                  <span class="min-w-0 text-base-content"
+                  <span class="min-w-0 break-words text-base-content"
                     >{m.account__passkey()}
                     <span class="text-base-content/55"
                       >({passkeyIdentifier(passkey)})</span
@@ -913,7 +925,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                   ></span
                 >
                 <button
-                  class="shrink-0 rounded border border-error/40 px-2 py-1 text-error transition hover:bg-error/10 disabled:opacity-40"
+                  class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-error/40 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
                   type="button"
                   disabled={isBusy || (accounts.length === 0 && passkeys.length <= 1)}
                   onclick={() => handleRemovePasskey(passkey)}
@@ -928,7 +940,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 ><KeyRound class="h-4 w-4" />{m.account__passkey()}</span
               >
               <button
-                class="rounded border border-base-content/20 px-2 py-1 text-base-content transition hover:bg-base-content/10 disabled:opacity-40"
+                class="rounded-md border border-border px-2.5 py-1.5 text-xs text-base-content transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
                 type="button"
                 disabled={isBusy}
                 onclick={handleAddPasskey}
@@ -945,7 +957,7 @@ async function handlePasswordSubmit(event: SubmitEvent): Promise<void> {
                 <span class="text-base-content">{m.account__email()}</span></span
               >
               <button
-                class="shrink-0 rounded border border-base-content/20 px-2 py-1 text-base-content transition hover:bg-base-content/10 disabled:opacity-40"
+                class="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs text-base-content transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40"
                 type="button"
                 disabled={isBusy}
                 onclick={() => (showEmailSetup = true)}

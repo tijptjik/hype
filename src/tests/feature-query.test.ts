@@ -281,6 +281,80 @@ describe('composed cached feature matching', () => {
 })
 
 describe('native feature query retention', () => {
+  it.each(['wishlist', 'visited'] as const)(
+    'keeps the %s list and total until a replacement settles, including empty results',
+    async listId => {
+      const first = controlledQuery()
+      const replacement = controlledQuery()
+      const factory = vi
+        .fn()
+        .mockReturnValueOnce(first.query)
+        .mockReturnValue(replacement.query)
+      const query = new FeatureQuery(factory)
+      const savedInput = { ...input, filters: { list: { listId } } }
+      const initial = query.load(savedInput)
+      first.resolve(page([row('original')], 23))
+      await initial
+
+      const pending = query.load({ ...savedInput, q: 'no matches' })
+      const duplicate = query.load({ ...savedInput, q: 'no matches' })
+      expect(query.loading).toBe(true)
+      expect(query.rows.map(row => row.id)).toEqual(['original'])
+      expect(query.totalCount).toBe(23)
+      expect(factory).toHaveBeenCalledTimes(2)
+      replacement.resolve(page([], 0))
+      await Promise.all([pending, duplicate])
+      expect(query.loading).toBe(false)
+      expect(query.rows).toEqual([])
+      expect(query.totalCount).toBe(0)
+    },
+  )
+
+  it('clears saved results immediately when the authorization scope changes', async () => {
+    const first = controlledQuery()
+    const replacement = controlledQuery()
+    const query = new FeatureQuery(
+      vi.fn().mockReturnValueOnce(first.query).mockReturnValue(replacement.query),
+    )
+    const savedInput = { ...input, filters: { list: { listId: 'wishlist' as const } } }
+    const initial = query.load(savedInput)
+    first.resolve(page([row('private')]))
+    await initial
+    const pending = query.load({
+      ...savedInput,
+      meta: { ...input.meta, scope: 'user-b' },
+    })
+    expect(query.rows).toEqual([])
+    expect(query.totalCount).toBeNull()
+    replacement.resolve(page([]))
+    await pending
+  })
+
+  it('retains saved results on a failed refresh but clears them on access denial', async () => {
+    const first = controlledQuery()
+    const failed = controlledQuery()
+    const denied = controlledQuery()
+    const query = new FeatureQuery(
+      vi
+        .fn()
+        .mockReturnValueOnce(first.query)
+        .mockReturnValueOnce(failed.query)
+        .mockReturnValueOnce(denied.query),
+    )
+    const savedInput = { ...input, filters: { list: { listId: 'visited' as const } } }
+    const initial = query.load(savedInput)
+    first.resolve(page([row('original')]))
+    await initial
+    const pending = query.load({ ...savedInput, q: 'tea' })
+    failed.reject(new Error('Network unavailable'))
+    await expect(pending).rejects.toThrow('Network unavailable')
+    expect(query.rows.map(row => row.id)).toEqual(['original'])
+    const retry = query.load({ ...savedInput, q: 'tea' })
+    denied.reject({ status: 403 })
+    await expect(retry).rejects.toEqual({ status: 403 })
+    expect(query.rows).toEqual([])
+  })
+
   it('previews cached matches immediately and merges fresh unique server results with authoritative totals', async () => {
     const first = controlledQuery(),
       search = controlledQuery()

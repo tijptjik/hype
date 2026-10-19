@@ -783,19 +783,30 @@ $effect(() => {
     </div>
 
     {#if hasDescription && !expanded}
-      <div class="pointer-events-none absolute inset-x-0 top-0 z-30">
+      <button
+        type="button"
+        class="pointer-events-none absolute inset-x-0 top-0 z-30 border-0 bg-transparent p-0 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        style={`height: ${collapsedContentPlan.descriptionInteractiveHeight}px;`}
+        aria-label={m.common__read_more()}
+        aria-expanded="false"
+        disabled={!showToggle}
+        onclick={event => {
+          event.stopPropagation()
+          onToggle?.(true)
+        }}
+      >
         {#each visibleCollapsedDescriptionLines as line, index (`collapsed-${index}-${line.top}`)}
-          <div
-            class="absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-muted-foreground"
+          <span
+            class={`absolute left-0 h-[22px] overflow-hidden whitespace-pre-wrap break-words text-[0.9375rem] font-light leading-[22px] tracking-tight text-muted-foreground ${showToggle ? 'pointer-events-auto cursor-pointer' : ''}`}
             style={`top: ${CONTENT_TOP_PADDING_PX + line.top}px; left: ${contentSidePaddingPx + CONTENT_DESCRIPTION_LEFT_OFFSET_PX}px; width: ${line.width}px;`}
           >
             {line.text}
             {line.appendEllipsis && collapsedInlineMoreLineTop !== line.top
               ? TRUNCATION_ELLIPSIS
               : ''}
-          </div>
+          </span>
         {/each}
-      </div>
+      </button>
 
       {#if collapsedMoreButtonPosition}
         <button

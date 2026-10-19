@@ -3,6 +3,7 @@ import { writable } from 'svelte/store'
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import ResourceSection from '#lib/bits/patterns/resourcePanel/components/ResourceSection.svelte'
+import ResourceRow from '#lib/bits/patterns/resourcePanel/components/ResourceRow.svelte'
 import type { ResourcePanelSection } from '#lib/bits/patterns/resourcePanel/index.js'
 
 // Geometry and animation are checked in Firefox and Chromium; jsdom has no Web Animations API.
@@ -71,6 +72,25 @@ const section = (count: number): ResourcePanelSection => ({
     onToggle: vi.fn(),
     onIsolate: vi.fn(),
   })),
+})
+
+it('reorders from the layer handle without toggling or isolating the layer', async () => {
+  const row = section(1).rows[0]
+  const onMove = vi.fn()
+  render(ResourceRow, {
+    row,
+    tone: 'secondary',
+    reorder: { group: 'layers', ids: ['other', row.id], onMove },
+  })
+  const handle = document.querySelector<HTMLButtonElement>('[data-layer-drag-handle]')
+  if (!handle) throw new Error('Missing active layer reorder handle')
+  await fireEvent.keyDown(handle, { key: 'ArrowUp' })
+  expect(onMove).toHaveBeenLastCalledWith(row.id, 0)
+  await fireEvent.keyDown(handle, { key: 'End' })
+  expect(onMove).toHaveBeenLastCalledWith(row.id, 1)
+  await fireEvent.click(handle)
+  expect(row.onPrimary).not.toHaveBeenCalled()
+  expect(row.onIsolate).not.toHaveBeenCalled()
 })
 
 it('shows search at five rows and keeps a typed search available when results shrink', async () => {

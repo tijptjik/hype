@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { getActiveMapStyleCode } from '#lib/client/services/map.js'
+import {
+  getActiveMapStyleCode,
+  getActiveMapStyleIdentity,
+} from '#lib/client/services/map.js'
+import { ThemeModel } from '#lib/themes/theme.svelte.js'
+import { FirstClassResource } from '#lib/enums.js'
 import type { AppCtx } from '#lib/context/app.svelte.js'
 
 type MapStyleProject = {
@@ -145,5 +150,61 @@ it('honours User Preference from the public layer profile even when a project st
     projects: [{ id: 'project', mapStyle: { code: 'ghostery' } }],
     layers: [{ id: 'layer', projectId: 'project', mapStyleCode: null }],
   })
+  expect(getActiveMapStyleCode(context)).toBeNull()
+})
+
+it('keeps basemap ownership on the top layer through marker navigation and changes it on reorder', () => {
+  const context = createAppContext({
+    selectedProjectIds: [],
+    selectedLayerIds: ['signs', 'books'],
+    projects: [
+      { id: 'signs-project', mapStyle: { code: 'ghostery' } },
+      { id: 'books-project', mapStyle: { code: 'rosepunk' } },
+    ],
+    layers: [
+      { id: 'signs', projectId: 'signs-project' },
+      { id: 'books', projectId: 'books-project' },
+    ],
+  })
+  const identity = getActiveMapStyleIdentity(context)
+  const theme = new ThemeModel()
+  theme.updateActiveMapContext(identity, getActiveMapStyleCode(context))
+  expect(theme.resolvedMapStyle).toBe('ghostery')
+  // A later UI palette selection must also survive clicks on either layer's markers.
+  theme.setMapSync(true)
+  theme.select('hype-light')
+  context.navigation.getActiveResourceType = () => FirstClassResource.feature
+  for (const featureId of ['books-marker', 'signs-marker']) {
+    context.navigation.getActiveResourceId = () => featureId
+    expect(getActiveMapStyleCode(context)).toBe('ghostery')
+    expect(getActiveMapStyleIdentity(context)).toBe(identity)
+    theme.updateActiveMapContext(
+      getActiveMapStyleIdentity(context),
+      getActiveMapStyleCode(context),
+    )
+    expect(theme.resolvedMapStyle).toBe('hyperLight')
+  }
+  context.view.scope.prisms.layer = ['books', 'signs']
+  expect(getActiveMapStyleCode(context)).toBe('rosepunk')
+  theme.updateActiveMapContext(
+    getActiveMapStyleIdentity(context),
+    getActiveMapStyleCode(context),
+  )
+  expect(theme.resolvedMapStyle).toBe('rosepunk')
+})
+
+it('never derives a basemap from a feature when no layers are active', () => {
+  const context = createAppContext({
+    selectedProjectIds: [],
+    projects: [{ id: 'books', mapStyle: { code: 'rosepunk' } }],
+    layers: [{ id: 'bookshops', projectId: 'books' }],
+  })
+  context.navigation.getActiveResourceType = () => FirstClassResource.feature
+  context.navigation.getActiveResourceId = () => 'marker'
+  context.view.cache.feature.set('marker', {
+    id: 'marker',
+    layerId: 'bookshops',
+    projectId: 'books',
+  } as never)
   expect(getActiveMapStyleCode(context)).toBeNull()
 })

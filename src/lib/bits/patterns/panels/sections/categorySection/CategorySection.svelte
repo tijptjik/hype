@@ -35,7 +35,7 @@ let {
 {#snippet hierarchyPath()}
   <!-- Hierarchy path stays visible so each layer's filters remain identifiable. -->
   <div
-    class="flex flex-wrap items-baseline gap-x-1 gap-y-0.5 px-6 pb-3 text-xs text-muted-foreground [overflow-wrap:anywhere]"
+    class="flex flex-wrap items-baseline gap-x-1 gap-y-0.5 px-6 py-3 text-xs text-muted-foreground [overflow-wrap:anywhere]"
   >
     {#each [
       { name: hierarchy.organisation, color: 'text-primary' },

@@ -30,6 +30,9 @@ export type ResourcePanelSection = {
   onNext: () => void | Promise<void>
   onRetry: () => void
   onVisible: (rows: ResourcePanelRow[]) => void
+  /** Complete active-layer order, including selected rows hidden by search. */
+  reorderIds?: string[]
+  onMove?: (id: string, destination: number) => void
   /** Whether the current route is this section's resource index. */
   isIndexActive?: boolean
   onNavigate?: () => void | Promise<void>

@@ -1,3 +1,4 @@
+import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
 import { CompactAncestorsSchema } from './api'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -64,6 +65,12 @@ import { UserBasic } from './user'
 /** Layer presentation overrides; empty form values explicitly select User Preference. */
 export const LayerMetadataSchema = z
   .object({
+    cardStyleCode: z
+      .preprocess(
+        value => (value === '' ? null : value),
+        z.enum(CARD_STYLE_CODES).nullable(),
+      )
+      .optional(),
     mapStyleCode: z
       .preprocess(
         value => (value === '' ? null : value),
@@ -72,6 +79,12 @@ export const LayerMetadataSchema = z
       .optional(),
   })
   .passthrough()
+  .transform(metadata => {
+    // Inheritance has one canonical representation so unchanged translation forms
+    // do not accidentally submit a restricted metadata change.
+    if (metadata.cardStyleCode === null) delete metadata.cardStyleCode
+    return metadata
+  })
 
 export const LayerRecord = createSelectSchema(layer)
 
@@ -244,6 +257,7 @@ export const LayerPropertyAdminProfileAPI = LayerPropertyRecordUpdate.extend({
 })
 
 export const LayerListProfileAPI = LayerListFields.extend({
+  cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().optional(),
   mapStyleCode: z.enum(MAP_STYLE_KEYS).nullable().optional(),
   i18n: getLocales(LayerI18nRecord),
   properties: z.array(LayerPropertyListProfileAPI).default([]),
@@ -281,6 +295,7 @@ export const LayerCompactProfileAPI = LayerRecord.pick({
   rank: true,
   isDefaultVisible: true,
 }).extend({
+  cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().optional(),
   mapStyleCode: z.enum(MAP_STYLE_KEYS).nullable().optional(),
   ancestors: CompactAncestorsSchema.optional(),
   i18n: getLocales(LayerI18nRecord.pick({ name: true, nameShort: true })),

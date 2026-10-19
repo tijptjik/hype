@@ -10,7 +10,7 @@ import { OmniCollection, OmniMode } from '#lib/enums.js'
 // CONTEXT
 import { hasElevatedChrome } from '#lib/layout/chrome.js'
 // I18N
-import { getI18n, getLocaleKey, getLocaleOrder, m } from '#lib/i18n.js'
+import { getI18n, m } from '#lib/i18n.js'
 // TYPES
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type {
@@ -61,8 +61,8 @@ export function useOmnibarModel(
 
   /**
    * Resolve feature text for navigation chrome across locale fallbacks.
-   * The header should still identify the current feature even when only generated
-   * translations exist in the preferred or fallback locales.
+   * Titles follow the same translation preferences as feature cards; address
+   * labels may explicitly allow generated geocoding results.
    * @param source Feature-like payload to read translated fields from.
    * @param field I18n field name to resolve.
    * @param fallback Fallback text if no value exists.
@@ -81,21 +81,13 @@ export function useOmnibarModel(
       return fallback
     }
 
-    const locales = getLocaleOrder(getLocaleKey())
-
-    for (const localeKey of locales) {
-      const entry = i18n[localeKey]
-      const value = entry?.[field]
-      const isGenerated = Boolean(entry?.[`${field}Gen`])
-
-      if (typeof value === 'string' && value.length > 0) {
-        if (!isGenerated || allowGenerated) {
-          return value
-        }
-      }
-    }
-
-    return fallback
+    return getI18n(
+      { i18n },
+      field,
+      appCtx.view.getUserPreferences(),
+      fallback,
+      allowGenerated,
+    )
   }
 
   function handleSearchTermChange(value: string): void {
@@ -202,7 +194,7 @@ export function useOmnibarModel(
         appCtx.view.draft.current?.feature,
         'title',
         m.red_arable_herring_trust(),
-        true,
+        false,
       )
     }
 
@@ -210,7 +202,7 @@ export function useOmnibarModel(
       appCtx.getActiveFeature() ?? undefined,
       'title',
       '',
-      true,
+      false,
     )
   }
 

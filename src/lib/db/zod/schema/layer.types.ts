@@ -89,10 +89,10 @@ export type LayerNew = z.infer<typeof LayerEntityFormData>
 export type LayerPartial = Partial<LayerNew>
 
 type LayerSchemaInput = z.input<typeof LayerFormData>
-/** String-valued map preference for HTML forms; server parsing normalizes blank to null. */
+/** String-valued presentation choices for HTML forms; server parsing normalizes blank to null. */
 export type LayerFormInput = Omit<LayerSchemaInput, 'data'> & {
   data: Omit<LayerSchemaInput['data'], 'metadata'> & {
-    metadata?: RemoteFormInput & { mapStyleCode?: string }
+    metadata?: RemoteFormInput & { mapStyleCode?: string; cardStyleCode?: string }
   }
 }
 export type LayerFormLocaleInput = FormLocaleInput<LayerFormInput>

@@ -22,7 +22,7 @@ const MAP_ACTIVE_STORAGE_KEY = 'hype-use-active-map-style'
 export class ThemeModel {
   selected: ThemeId = $state('hype-black')
   mapSelected: MapStyleKey | null = $state(null)
-  mapSyncEnabled: boolean = $state(false)
+  mapSyncEnabled: boolean = $state(true)
   useActiveMapStyle: boolean = $state(true)
   private activeMapStyle: string | null = $state(null)
   private activeMapIdentity = ''
@@ -175,7 +175,7 @@ export class ThemeModel {
   /**
    * Restores host-local map preferences after the UI palette has been resolved.
    * @returns Nothing.
-   * @remarks Existing installations retain independent map selection until sync is enabled.
+   * @remarks Missing switches default to enabled; explicitly saved false values remain disabled.
    */
   restoreMapPreferences = (): void => {
     try {
@@ -184,9 +184,9 @@ export class ThemeModel {
         this.mapSelected = stored
       }
       const activePreference = localStorage.getItem(MAP_ACTIVE_STORAGE_KEY)
-      this.useActiveMapStyle =
-        activePreference === null ? !stored : activePreference === 'true'
-      if (localStorage.getItem(MAP_SYNC_STORAGE_KEY) === 'true') {
+      this.useActiveMapStyle = activePreference !== 'false'
+      this.mapSyncEnabled = localStorage.getItem(MAP_SYNC_STORAGE_KEY) !== 'false'
+      if (this.mapSyncEnabled) {
         this.setMapSync(true)
       }
       this.mapSource = this.useActiveMapStyle ? 'active' : 'preference'
@@ -240,7 +240,10 @@ export function setThemeModel(): ThemeModel {
     } catch {
       // Server-selected cookie/default remains available without browser storage.
     }
+    // Resolve the UI first without replacing a cached map before its sync switch is restored.
+    model.mapSyncEnabled = false
     model.select(resolveTheme(preference, location.hostname))
+    model.mapSyncEnabled = true
     model.restoreMapPreferences()
   })
   return model

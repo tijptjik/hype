@@ -497,6 +497,25 @@ describe('project authorization policy matrix', () => {
   })
 
   describe('updateProject field-level restrictions', () => {
+    it('restricts card style changes to project managers', () => {
+      expect(
+        authorize(
+          withActor(ACTORS.projectTranslator, {
+            action: 'updateProject',
+            fields: ['cardStyleCode'],
+          }),
+        ).allowed,
+      ).toBe(false)
+      expect(
+        authorize(
+          withActor(ACTORS.projectOwner, {
+            action: 'updateProject',
+            fields: ['cardStyleCode'],
+          }),
+        ).allowed,
+      ).toBe(true)
+    })
+
     it('allows translator updates for i18n fields only', () => {
       const i18nDecision = authorize(
         withActor(ACTORS.projectTranslator, {

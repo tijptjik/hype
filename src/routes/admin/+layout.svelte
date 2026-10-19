@@ -81,8 +81,9 @@ onDestroy(() => {
 // CONTEXT :: ADMIN
 // svelte-ignore state_referenced_locally
 const adminCtx = setAdminCtx(view)
-adminCtx.navigation.syncUrl(page.url, 'admin')
-$effect(() => adminCtx.navigation.syncUrl(page.url, 'admin'))
+// Shallow facet navigation changes the visible URL without replacing page.url.
+adminCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'admin')
+$effect(() => adminCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'admin'))
 
 const settingsModel = useSettingsPanelModel(view, getThemeModel(), adminCtx)
 

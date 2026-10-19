@@ -169,6 +169,16 @@ describe('account appearance synchronization', () => {
 })
 
 describe('appearance preference schema', () => {
+  it('defaults missing switches to enabled while preserving explicit false choices', () => {
+    expect(
+      ThemePreferencesSchema.parse({
+        uiTheme: saved.uiTheme,
+        mapStyle: saved.mapStyle,
+      }),
+    ).toEqual({ ...saved, syncUiAndMap: true, useActiveMapStyle: true })
+    expect(ThemePreferencesSchema.parse(saved)).toEqual(saved)
+  })
+
   it('round-trips through the self-profile JSON schema alongside other preferences', () => {
     expect(
       UserSelfProfileAPI.shape.preferences.parse(

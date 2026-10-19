@@ -61,6 +61,7 @@ export const organisationAuthorizationFields = [
 
 export const projectAuthorizationFields = [
   'useAllInOrgContext',
+  'cardStyleCode',
   'organisationId',
   'code',
   'i18n',

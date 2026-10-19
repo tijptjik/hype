@@ -8,6 +8,11 @@ export type ResourceRowProps = ResourceLabelHandlers & {
   row: ResourcePanelRow
   tone: 'primary' | 'secondary' | 'tertiary'
   narrow?: boolean
+  reorder?: {
+    group: string
+    ids: string[]
+    onMove: (id: string, destination: number) => void
+  }
 }
 export type ResourceSectionProps = ResourceLabelHandlers & {
   section: ResourcePanelSection

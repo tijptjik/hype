@@ -12,7 +12,11 @@ export const compactAncestorRelations = {
 /** Public project breadcrumbs also carry the organisation-context naming policy. */
 export const compactProjectAncestorRelations = {
   ...compactAncestorRelations,
-  columns: { ...compactAncestorRelations.columns, useAllInOrgContext: true },
+  columns: {
+    ...compactAncestorRelations.columns,
+    useAllInOrgContext: true,
+    cardStyleCode: true,
+  },
 }
 
 /**

@@ -40,6 +40,8 @@ import {
   toAuthMessage,
 } from '#lib/api/services/authz/index.js'
 import { readAdminUserProfile } from '#lib/api/services/adminUser.js'
+import { loadPrivateContributions } from '#lib/api/services/profileContributions.js'
+import { sortContributionGroups } from '#lib/contributions/presentation.js'
 import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
 // DB
 import { hub, user } from '#lib/db/schema/index.js'
@@ -288,9 +290,57 @@ export const getUser = guardedQuery(GetUserParamsSchema, async (params, ctx) => 
   )) as UserRaw
   if (!result) return { data: null }
 
-  return {
-    data: toUserProfileResponseShape(result, queryPlan.profile),
+  const data = toUserProfileResponseShape(result, queryPlan.profile)
+  // Only the persisted account owner receives personal previews; admin/search access is not ownership.
+  if (data && result.id === sessionUser.id && 'contributedFeatures' in data) {
+    const details = await loadPrivateContributions(db, {
+      sessionUser,
+      prisms: {
+        organisation: requestPrisms.organisation ?? [],
+        project: requestPrisms.project ?? [],
+        layer: requestPrisms.layer ?? [],
+      },
+      hubOpts: event.locals.hub,
+    })
+    data.privateContributions = details
+    for (const preview of Object.values(details.features)) {
+      data.contributedFeatures[preview.projectId] ??= []
+      const ids = data.contributedFeatures[preview.projectId]
+      if (!ids.includes(preview.id)) ids.push(preview.id)
+    }
+    for (const [id, preview] of Object.entries(details.images)) {
+      data.contributedImages[preview.projectId] ??= []
+      const ids = data.contributedImages[preview.projectId]
+      if (!ids.includes(id)) ids.push(id)
+    }
   }
+  // Sort before image pagination, interleaving public rows and personal previews by creation time.
+  if (data && 'contributedFeatures' in data) {
+    const source = result as unknown as {
+      contributedFeatures?: Array<{ id: string; createdAt: string }>
+      contributedImages?: Array<{ id: string; createdAt: string }>
+    }
+    const featureDates = new Map(
+      (Array.isArray(source.contributedFeatures) ? source.contributedFeatures : []).map(
+        row => [row.id, row.createdAt],
+      ),
+    )
+    const imageDates = new Map(
+      (Array.isArray(source.contributedImages) ? source.contributedImages : []).map(
+        row => [row.id, row.createdAt],
+      ),
+    )
+    for (const preview of Object.values(data.privateContributions?.features ?? {}))
+      featureDates.set(preview.id, preview.createdAt)
+    for (const [id, preview] of Object.entries(data.privateContributions?.images ?? {}))
+      imageDates.set(id, preview.image.createdAt)
+    data.contributedFeatures = sortContributionGroups(
+      data.contributedFeatures,
+      featureDates,
+    )
+    data.contributedImages = sortContributionGroups(data.contributedImages, imageDates)
+  }
+  return { data }
 })
 
 /**

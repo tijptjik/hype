@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
 // CONTEXT
 import { setSurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 // ADAPTERS
@@ -10,13 +12,17 @@ import type { ResourcePanelModel } from '#lib/bits/patterns/resourcePanel/resour
 let {
   app,
   admin,
+  mode = 'admin',
   onModel,
 }: {
   app: ResourceViewCtx
   admin: AdminCtx
+  mode?: 'admin' | 'prisms'
   onModel: (model: ResourcePanelModel) => void
 } = $props()
 setSurfaceNavigation(admin.navigation)
-const model = useResourcePanelModel(app, 'admin', admin)
+const model = untrack(() =>
+  useResourcePanelModel(app, mode, mode === 'admin' ? admin : undefined),
+)
 onModel(model)
 </script>

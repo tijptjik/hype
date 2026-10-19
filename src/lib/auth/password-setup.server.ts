@@ -4,7 +4,6 @@ import {
   changeEmail,
   createAuthEndpoint,
   createAuthMiddleware,
-  freshSessionMiddleware,
   isAPIError,
   sensitiveSessionMiddleware,
   setPassword,
@@ -19,6 +18,7 @@ import type { BetterAuthPlugin } from 'better-auth'
  * @returns A plugin with a same-origin, account-only credential endpoint.
  * @remarks The app route delegates through auth.handler, not auth.api. Direct API
  * calls do not execute the HTTP limiter. Existing passwords cannot be replaced.
+ * Any valid persisted session is accepted, regardless of when the user signed in.
  */
 export function passwordSetup(): BetterAuthPlugin {
   return {
@@ -36,9 +36,9 @@ export function passwordSetup(): BetterAuthPlugin {
                 throw new APIError('FORBIDDEN', { message: 'FORBIDDEN' })
               }
             }),
+            // Bypass the signed cookie cache to reject expired or revoked sessions;
+            // adding a first password does not require a recent sign-in.
             sensitiveSessionMiddleware,
-            // Freshness must be evaluated only after bypassing the signed cookie cache.
-            freshSessionMiddleware,
           ],
         },
         async ctx => {

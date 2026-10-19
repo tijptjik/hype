@@ -124,6 +124,14 @@ immediately returns to the user preference; disabling sync retains the preferred
 map without changing it on later UI theme changes. Selecting a map card manually
 turns off both automatic modes.
 
+The first active layer in the Maps panel owns the resource basemap. Active layers
+appear in that same priority order; drag their handles to reorder them, or focus
+a handle and use Up/Down (Home/End moves to the first/last position). Reordering
+changes priority without toggling visibility or clearing filters. Marker clicks
+and feature-card navigation never change the basemap or reclaim priority from a
+later UI-theme choice. The leading layer's User Preference setting still falls
+back to the viewer's preferred map.
+
 Layer editors offer a specific style, **Project Default**, or **User Preference**.
 The override persists in the existing layer metadata: an absent `mapStyleCode`
 inherits the project, a catalog code selects a style, and `null` selects User

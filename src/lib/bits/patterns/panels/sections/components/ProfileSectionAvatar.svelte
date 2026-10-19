@@ -13,8 +13,8 @@ let {
 
 <div class="relative z-10">
   <div
-    class={`flex h-32 w-32 items-center justify-center overflow-hidden rounded-full ring-4 ring-black/20 ${
-      isGuest ? 'bg-panel/70 shadow-md' : 'bg-base-300'
+    class={`flex items-center justify-center overflow-hidden rounded-full ring-4 ring-panel ${
+      isGuest ? 'h-32 w-32 bg-panel/70 shadow-md' : 'h-32 w-32 bg-surface'
     }`}
   >
     {#if avatarSrc}

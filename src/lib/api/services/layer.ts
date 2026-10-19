@@ -261,6 +261,7 @@ const toProfileResponseShape = async (
     ...row,
     // Public layer profiles need only the style override, not unrelated metadata.
     mapStyleCode: row.metadata?.mapStyleCode,
+    cardStyleCode: row.metadata?.cardStyleCode,
     i18n: transformI18nSafely(row.i18n),
     properties: normalizeLayerPropertiesForProfile(row.properties),
   }
