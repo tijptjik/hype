@@ -72,12 +72,12 @@ const handleKeydown = () => {
   {...panelProps}
 >
   <div
-    class="mx-6 mt-2 mb-6 flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface"
+    class="mx-6 mt-2 mb-6 flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus"
   >
     <input
       name="attribution"
       type="text"
-      class="m-0 h-12 min-w-0 flex-1 rounded-lg bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-focus"
+      class="m-0 h-12 min-w-0 flex-1 rounded-lg bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none"
       placeholder={m.settings_contributor_placeholder()}
       value={attribution}
       oninput={({ target }) => handleAttributionChange(target as HTMLInputElement)}
