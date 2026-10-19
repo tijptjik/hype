@@ -465,6 +465,11 @@ In the first two cases (which we call a 'hub'), the user directly runs the bread
       - YES - keep it.
   - Show 'You are here' marker.
   - Modernise the markers style
+    - Donor photographs belong in the detail card, never in map markers.
+    - Preserve the operational encodings below. A verified donor-brand icon may be
+      used inside a bakery marker when it remains legible; brand colours must not
+      replace yield colours or claimed/reported/estimated ring states. Use a generic
+      bakery icon if no usable brand asset exists. Drop-offs remain distinct.
     - We differentiate along two dimensions:
       - Statistically Expected vs Reported Expected (the former has a white ring, the latter has a accent hue of the volume).
         - We also use the outer ring to indicate 'claimed' status, to clearly indicate which bakeries they have already picked.
@@ -569,11 +574,21 @@ In the first two cases (which we call a 'hub'), the user directly runs the bread
       - This indicator turns red in case the number and distance between the selected shops makes it unlikely the user can pick up from all these shops.
         - In advanced settings, the user can turn off the warnings (for visually impaired group leads)
     - **Bakery Cards** - Donor detail cards which
+      - Use a dedicated Breadline card based on the full-card layout, not the default
+        HYPE card. Include donor photos in its media area; photos do not become markers.
+      - First design proposal: brand badge beside the shop name, photo area, address
+        and contact details, MTR walking access, then the date-specific pickup/yield
+        section and Claim/Unclaim action. Brand colour is an optional restrained header
+        or border accent with accessible text contrast; yield/status colours keep their
+        existing operational meaning. Logos and colour tokens require verified assets.
       - Feature:
         - Name
         - Address
         - Phone number
-        - Nearest MTR Station & Exit
+        - Nearest MTR Station & Exit, plus walking metres, only when a valid walking
+          route is at most 1,000 m including endpoint connectors. Ferry routes and
+          endpoint snapping over 75 m are excluded. Keep unavailable access null;
+          never substitute straight-line distance or show it on default HYPE cards.
         - Pick up window start / end
         - Available Amount
           - If no Info, a recency-biased average collected amount is used, where every recent month is twice as important as the values from the month prior to it, only the most recent 3 months are considered.

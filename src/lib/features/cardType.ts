@@ -2,7 +2,7 @@
 import { CARD_STYLE_CATALOG, resolveCardStyle } from './cardStyle.js'
 
 /** Renderers remain independent of the persisted and user-facing style names. */
-export const FEATURE_CARD_TYPES = ['standard', 'portal-band'] as const
+export const FEATURE_CARD_TYPES = ['standard', 'portal-band', 'breadline'] as const
 export type FeatureCardType = (typeof FEATURE_CARD_TYPES)[number]
 
 /**

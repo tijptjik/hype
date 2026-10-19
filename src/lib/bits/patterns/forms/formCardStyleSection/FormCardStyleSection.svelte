@@ -50,17 +50,21 @@ const options = $derived<StyleOption[]>(
     id: style.code,
     code: style.code,
     name:
-      style.code === 'conditional'
-        ? m.card_style__conditional()
-        : style.code === 'full'
-          ? m.card_style__full()
-          : m.card_style__no_description(),
+      style.code === 'breadline'
+        ? m.card_style__breadline()
+        : style.code === 'conditional'
+          ? m.card_style__conditional()
+          : style.code === 'full'
+            ? m.card_style__full()
+            : m.card_style__no_description(),
     description:
-      style.code === 'conditional'
-        ? m.card_style__conditional_description()
-        : style.code === 'full'
-          ? m.card_style__full_description()
-          : m.card_style__no_description_description(),
+      style.code === 'breadline'
+        ? m.card_style__breadline_description()
+        : style.code === 'conditional'
+          ? m.card_style__conditional_description()
+          : style.code === 'full'
+            ? m.card_style__full_description()
+            : m.card_style__no_description_description(),
     preview: style.preview,
   })),
 )
