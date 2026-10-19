@@ -397,3 +397,28 @@ Local application of `0110` passed integrity and FK checks with no Feature,
 translation or property differences from the production snapshot. The focused
 Place/service/remote suites pass 40 tests. The broader type check retains ten
 pre-existing diagnostics outside these changed files; no deployment was performed.
+
+### Persisted baseline extraction and initial linking (Refs #194)
+
+`readFeaturePlaceBaseline` reads persisted Feature names, Point geometry, canonical
+Address envelope/corrections and relevant property assignments. It maps HYPE locale
+keys to SaanSeoi tags. The universal phone field is identified by key plus the `core`
+hub scope; this is not a project or organisation phone definition. Valid scalar or
+array phone values retain their existing spelling and order. Legacy brand options
+retain `hypePropertyValueId` and localized names, without implying a canonical brand
+identity. Ambiguous properties, invalid phones/addresses/brands require review rather
+than silent omission. Draft, intangible and non-Point Features are excluded.
+
+`linkInitialFeaturePlace` derives initial overrides from this persisted baseline and
+an explicitly selected, scope-accessible immutable Place revision. It uses both
+Feature and association concurrency guards, and does not rewrite effective Feature
+columns or timestamps. It remains internal until ordinary editing writes inheritance
+inputs and materialized values together. Full structured Address corrections remain
+in the existing Feature envelope; linking does not replace that evidence.
+
+The local-only read-only `scripts/places/assess-features.ts private-output.json`
+reports readiness and exclusion reasons without selecting any establishment identity.
+On the fresh production mirror, 1,190 of 1,271 Features have ready baselines; 56 are
+intangible and 25 are drafts. No Place links are created by this assessment. Tests
+exercise baseline preservation, exact legacy identifiers, arrays, structured address
+corrections, stale edits, private sources and unchanged Feature rows after linking.

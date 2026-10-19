@@ -12,6 +12,8 @@ import { updateProjectByIdWithConcurrency } from '#lib/db/services/project.js'
 import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
+import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
+import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { createLocalPlace } from '#lib/db/services/placeLocal.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
 import { ProjectPlacePolicyFormData } from '#lib/db/zod/schema/project.js'
@@ -33,7 +35,12 @@ function setup() {
     CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
       organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
       cardStyleCode TEXT, useAllInOrgContext INTEGER);
-    CREATE TABLE feature(id TEXT PRIMARY KEY, projectId TEXT, isDraft INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original');
+    CREATE TABLE feature(id TEXT PRIMARY KEY, projectId TEXT, isDraft INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original', geometry TEXT, addressMeta TEXT, isIntangible INTEGER DEFAULT 0);
+    CREATE TABLE featureI18n(featureId TEXT,locale TEXT,title TEXT,displayAddress TEXT);
+    CREATE TABLE hub(id TEXT PRIMARY KEY,code TEXT);
+    CREATE TABLE property(id TEXT PRIMARY KEY,key TEXT,scope TEXT,hubId TEXT);
+    CREATE TABLE featureProperty(featureId TEXT,propertyId TEXT,propertyValueId TEXT,value TEXT);
+    CREATE TABLE propertyValueI18n(propertyValueId TEXT,locale TEXT,value TEXT);
     INSERT INTO project(id) VALUES ('p'), ('other');
     INSERT INTO feature(id,projectId) VALUES ('f','p');`)
   sqlite.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
@@ -604,5 +611,141 @@ describe('conditional association writes and immutable history', () => {
     expect(
       sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get(),
     ).toEqual({ n: 0 })
+  })
+})
+
+describe('persisted Feature baseline and initial linking', () => {
+  it('retains structured address corrections and ordered phone arrays', async () => {
+    const { db, sqlite } = setup()
+    const { emptyFeatureAddress } = await import('#lib/addresses/featureAddress.js')
+    const address = emptyFeatureAddress({ en: 'Old address' })
+    address.overrides.en = {
+      formattedAddress: 'Corrected address',
+      premisesName: 'Collection room',
+    }
+    sqlite
+      .prepare("UPDATE feature SET geometry=?, addressMeta=? WHERE id='f'")
+      .run(JSON.stringify(facts.location.geometry), JSON.stringify({ address }))
+    sqlite.exec(`INSERT INTO featureI18n VALUES ('f','en','Bakery','Old address');
+      INSERT INTO hub VALUES ('core','core');
+      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');
+      INSERT INTO featureProperty VALUES ('f','phone',NULL,'["9123 4567","2345 6789"]');`)
+    const result = await readFeaturePlaceBaseline(db, 'f', 'p')
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready baseline')
+    expect(result.baseline.address).toEqual(address)
+    expect(result.baseline.effective.location?.address.fallbackDisplay.en).toBe(
+      'Corrected address',
+    )
+    expect(result.baseline.effective.phoneNumber).toEqual(['9123 4567', '2345 6789'])
+  })
+
+  it('preserves names, universal phone, brand identities and existing columns when linking', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(readFileSync('migrations/0109_place_association_scope.sql', 'utf8'))
+    sqlite
+      .prepare("UPDATE feature SET geometry=? WHERE id='f'")
+      .run(JSON.stringify(facts.location.geometry))
+    sqlite.exec(`INSERT INTO featureI18n VALUES ('f','en','Collection counter','Original address'), ('f','zhHant','麵包店',NULL);
+      INSERT INTO hub VALUES ('core','core');
+      INSERT INTO property VALUES ('phone','phoneNumber','hub','core'),('brand','brand','organisation',NULL);
+      INSERT INTO featureProperty VALUES ('f','phone',NULL,'2345 6789'),('f','brand','legacy-brand',NULL);
+      INSERT INTO propertyValueI18n VALUES ('legacy-brand','en','Bakery brand');`)
+    const baseline = await readFeaturePlaceBaseline(db, 'f', 'p')
+    expect(baseline.status).toBe('ready')
+    if (baseline.status !== 'ready') throw new Error('Expected persisted baseline')
+    expect(baseline.baseline.effective).toMatchObject({
+      names: { en: 'Collection counter', 'zh-hant': '麵包店' },
+      phoneNumber: ['2345 6789'],
+      brands: [
+        {
+          identifiers: { hypePropertyValueId: 'legacy-brand' },
+          names: { en: 'Bakery brand' },
+        },
+      ],
+    })
+    const local = await createLocalPlace(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'actor',
+    )
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: local.placeId,
+      revisionId: local.revisionId,
+      expectedFeatureModifiedAt: 'original',
+      actorId: 'actor',
+    }
+    const before = ['feature', 'featureI18n', 'featureProperty'].map(table =>
+      sqlite.prepare(`SELECT * FROM ${table}`).all(),
+    )
+    const linked = await linkInitialFeaturePlace(db, input)
+    expect(linked.status).toBe('linked')
+    expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.effective).toEqual(
+      baseline.baseline.effective,
+    )
+    expect(
+      ['feature', 'featureI18n', 'featureProperty'].map(table =>
+        sqlite.prepare(`SELECT * FROM ${table}`).all(),
+      ),
+    ).toEqual(before)
+    expect(await linkInitialFeaturePlace(db, input)).toEqual({ status: 'conflict' })
+    expect(
+      sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get(),
+    ).toEqual({ n: 1 })
+  })
+
+  it('excludes non-place Features and refuses invalid phones and private cross-project sources', async () => {
+    const { db, sqlite } = setup()
+    sqlite
+      .prepare("UPDATE feature SET geometry=? WHERE id='f'")
+      .run(JSON.stringify(facts.location.geometry))
+    sqlite.exec("INSERT INTO featureI18n VALUES ('f','en','Bakery',NULL)")
+    expect(await readFeaturePlaceBaseline(db, 'f', 'other')).toEqual({
+      status: 'ineligible',
+      reason: 'not-found',
+    })
+    sqlite.exec('UPDATE feature SET isIntangible=1')
+    expect(await readFeaturePlaceBaseline(db, 'f', 'p')).toEqual({
+      status: 'ineligible',
+      reason: 'intangible',
+    })
+    sqlite.exec(`UPDATE feature SET isIntangible=0;
+      INSERT INTO hub VALUES ('core','core');
+      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');
+      INSERT INTO featureProperty VALUES ('f','phone',NULL,'call the manager');`)
+    expect(await readFeaturePlaceBaseline(db, 'f', 'p')).toEqual({
+      status: 'review',
+      reason: 'invalid-phone',
+    })
+    sqlite.exec('DELETE FROM featureProperty')
+    const local = await createLocalPlace(
+      db,
+      'other',
+      { state: 'manual', facts },
+      'actor',
+    )
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: local.placeId,
+      revisionId: local.revisionId,
+      expectedFeatureModifiedAt: 'original',
+      actorId: 'actor',
+    }
+    expect(await linkInitialFeaturePlace(db, input)).toEqual({
+      status: 'place-unavailable',
+    })
+    expect(
+      await linkInitialFeaturePlace(db, {
+        ...input,
+        expectedFeatureModifiedAt: 'stale',
+      }),
+    ).toEqual({ status: 'conflict' })
+    expect(sqlite.prepare('SELECT count(*) AS n FROM featurePlace').get()).toEqual({
+      n: 0,
+    })
   })
 })
