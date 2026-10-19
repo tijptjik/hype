@@ -1,6 +1,7 @@
 // DRIZZLE
 import { and, eq, or } from 'drizzle-orm'
 // SCHEMA
+import { featurePlaceDetached } from '../schema/place'
 import { feature, featureI18n, featureProperty } from '../schema/feature'
 import { hub } from '../schema/hub'
 import { property, propertyValue, propertyValueI18n } from '../schema/property'
@@ -177,7 +178,12 @@ export async function readFeaturePlaceBaseline(
   if (phones.some(item => item.scope !== 'hub' || item.hubCode !== 'core'))
     return { status: 'review', reason: 'ambiguous-properties' }
   const brands = properties.filter(item => item.key === 'brand')
-  if (phones.length > 1 || brands.length > 1)
+  const detached = await db
+    .select({ brands: featurePlaceDetached.brands })
+    .from(featurePlaceDetached)
+    .where(eq(featurePlaceDetached.featureId, featureId))
+    .get()
+  if (phones.length > 1 || (!detached && brands.length > 1))
     return { status: 'review', reason: 'ambiguous-properties' }
   const phoneNumber: string[] = []
   for (const phone of phones) {
@@ -202,7 +208,7 @@ export async function readFeaturePlaceBaseline(
     phoneNumber.push(...(values as string[]))
   }
   const projectedBrands: NonNullable<EffectivePlaceFacts['brands']> = []
-  for (const brand of brands) {
+  for (const brand of detached ? [] : brands) {
     // Forms carry empty catalog fields even when no legacy classifier is assigned.
     if (!brand.propertyValueId && (brand.value === null || brand.value === '')) continue
     if (!brand.propertyValueId || brand.value !== null)
@@ -235,7 +241,7 @@ export async function readFeaturePlaceBaseline(
   const facts = PlaceFactsSchema.safeParse({
     names,
     phoneNumber,
-    brands: projectedBrands,
+    brands: detached?.brands ?? projectedBrands,
     location: {
       geometry: row.geometry,
       address: { ...address.source, fallbackDisplay },

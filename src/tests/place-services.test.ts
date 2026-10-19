@@ -28,6 +28,7 @@ import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
 import { applyUnresolvedFeatureSplit } from '#lib/db/services/placeSplit.js'
 import { planUnresolvedFeatureSplit } from '#lib/places/migrationPlan.js'
+import { unlinkFeaturePlace } from '#lib/db/services/placeUnlink.js'
 import { relinkFeaturePlace } from '#lib/db/services/placeRelink.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { createLocalPlace } from '#lib/db/services/placeLocal.js'
@@ -65,6 +66,7 @@ function setup() {
     INSERT INTO feature(id,projectId) VALUES ('f','p');`)
   sqlite.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0110_feature_place_history.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0112_feature_place_detachment.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => {
       if (args.length > 100) throw new Error('D1 parameter limit exceeded')
@@ -1909,5 +1911,135 @@ describe('accepted Place brand read projection', () => {
     expect((await query())?.placeBrands).toBeNull()
     sqlite.exec("UPDATE feature SET isDraft=0; UPDATE place SET ownerProjectId='other'")
     expect((await query())?.placeBrands).toBeNull()
+  })
+})
+
+describe('explicit Place unlink preservation', () => {
+  async function linked() {
+    const store = setup()
+    const brands = [
+      { identifiers: { wikidata: 'Q1' }, names: { en: 'First', 'zh-hant': '一' } },
+      { identifiers: {}, names: { en: 'Second' } },
+    ]
+    store.sqlite
+      .prepare('UPDATE feature SET geometry=?')
+      .run(JSON.stringify(facts.location.geometry))
+    const local = await createLocalPlace(
+      store.db,
+      'p',
+      { state: 'manual', facts: { ...facts, brands } },
+      'creator',
+    )
+    const write = prepareFeaturePlaceAssociationWrite(store.db, {
+      featureId: 'f',
+      projectId: 'p',
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      ...local,
+      factsRevisionId: local.revisionId,
+      locationRevisionId: local.revisionId,
+      overrides: {},
+      actorId: 'linker',
+    })
+    await write.query
+    return {
+      ...store,
+      brands,
+      local,
+      input: {
+        featureId: 'f',
+        projectId: 'p',
+        expectedFeatureModifiedAt: 'original',
+        expectedRevision: write.revision,
+        actorId: 'unlinker',
+      },
+    }
+  }
+
+  it('retains ordered localized brands and fields, records the actor, and relinks without loss', async () => {
+    const { db, sqlite, input, brands, local } = await linked()
+    const before = sqlite.prepare('SELECT geometry,addressMeta FROM feature').get()
+    expect(await unlinkFeaturePlace(db, input)).toMatchObject({ status: 'unlinked' })
+    expect(await getAcceptedFeaturePlace(db, 'f', 'p')).toBeNull()
+    const row = await db.query.feature.findFirst({
+      columns: { id: true },
+      extras: { placeBrands: featurePlaceBrandsSQL().as('placeBrands') },
+    })
+    expect(JSON.parse(row!.placeBrands!)).toEqual(brands)
+    expect(sqlite.prepare('SELECT geometry,addressMeta FROM feature').get()).toEqual(
+      before,
+    )
+    expect(
+      sqlite
+        .prepare("SELECT actorId FROM featurePlaceHistory WHERE action='unlink'")
+        .get(),
+    ).toMatchObject({ actorId: 'unlinker' })
+    expect(await unlinkFeaturePlace(db, input)).toEqual({ status: 'conflict' })
+    const baseline = await readFeaturePlaceBaseline(db, 'f', 'p')
+    expect(baseline.status).toBe('ready')
+    if (baseline.status !== 'ready') throw new Error('Missing baseline')
+    expect(baseline.baseline.effective.brands).toEqual(brands)
+    expect(
+      await linkInitialFeaturePlace(db, {
+        ...input,
+        ...local,
+        expectedFeatureModifiedAt: baseline.baseline.modifiedAt,
+      }),
+    ).toMatchObject({ status: 'linked' })
+    expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.effective.brands).toEqual(
+      brands,
+    )
+    expect(sqlite.prepare('SELECT * FROM featurePlaceDetached').all()).toHaveLength(0)
+  })
+
+  it('keeps an explicit brand clear empty after unlink and leaves source facts intact', async () => {
+    const { db, sqlite, input, brands, local } = await linked()
+    sqlite.exec(
+      `UPDATE featurePlace SET overrides='{"brands":{"mode":"clear"}}',revision='cleared'`,
+    )
+    expect(
+      await unlinkFeaturePlace(db, { ...input, expectedRevision: 'cleared' }),
+    ).toMatchObject({ status: 'unlinked' })
+    const row = await db.query.feature.findFirst({
+      columns: { id: true },
+      extras: { placeBrands: featurePlaceBrandsSQL().as('placeBrands') },
+    })
+    expect(JSON.parse(row!.placeBrands!)).toEqual([])
+    const source = sqlite
+      .prepare('SELECT facts FROM placeRevision WHERE id=?')
+      .get(local.revisionId) as { facts: string }
+    expect(JSON.parse(source.facts).brands).toEqual(brands)
+    expect(sqlite.prepare('SELECT id FROM place').all()).toHaveLength(1)
+  })
+
+  it('rejects stale Feature tokens and private scope without adding evidence', async () => {
+    const { db, sqlite, input } = await linked()
+    expect(
+      await unlinkFeaturePlace(db, { ...input, expectedFeatureModifiedAt: 'stale' }),
+    ).toEqual({ status: 'conflict' })
+    expect(await unlinkFeaturePlace(db, { ...input, projectId: 'other' })).toEqual({
+      status: 'conflict',
+    })
+    expect(sqlite.prepare('SELECT * FROM featurePlaceDetached').all()).toHaveLength(0)
+    expect(
+      sqlite.prepare("SELECT * FROM featurePlaceHistory WHERE action='unlink'").all(),
+    ).toHaveLength(0)
+    expect(await getAcceptedFeaturePlace(db, 'f', 'p')).not.toBeNull()
+  })
+
+  it('rolls back preserved brands and the Feature timestamp when deletion fails', async () => {
+    const { db, sqlite, input } = await linked()
+    sqlite.exec(
+      "CREATE TRIGGER fail_unlink BEFORE DELETE ON featurePlace BEGIN SELECT RAISE(ABORT,'injected unlink failure'); END;",
+    )
+    await expect(unlinkFeaturePlace(db, input)).rejects.toThrow()
+    expect(sqlite.prepare('SELECT * FROM featurePlaceDetached').all()).toHaveLength(0)
+    expect(sqlite.prepare('SELECT modifiedAt FROM feature').get()).toMatchObject({
+      modifiedAt: 'original',
+    })
+    expect(
+      sqlite.prepare("SELECT * FROM featurePlaceHistory WHERE action='unlink'").all(),
+    ).toHaveLength(0)
+    expect(await getAcceptedFeaturePlace(db, 'f', 'p')).not.toBeNull()
   })
 })

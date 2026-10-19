@@ -13,6 +13,20 @@ One Place can support multiple Features; deleting a Feature never deletes its Pl
 Places are first-class resources, not children of a project's layer hierarchy.
 Non-place features may retain a null place reference.
 
+Explicit unlink preserves the existing effective Feature columns and ordered brand
+arrays. Migration 0112 adds a Feature-owned detached-brand projection; an empty
+array remains an explicit empty value and cannot revive a legacy classifier.
+The internal unlink service guards both Feature and association revisions, stores
+the detached brands, advances the Feature timestamp and removes the association in
+one atomic batch. Association history records the authenticated unlink actor;
+Feature-cascade deletion remains unattributed. Place identities and immutable
+source revisions survive. Initial relinking reads detached brands into its baseline
+before a link trigger removes the detached copy.
+
+The preservation primitive is implemented and tested; it is not yet exposed as a
+remote command or UI action. Detached brand editing and lifecycle authorization
+must be integrated before enabling that action.
+
 Use HYPE's permanent `place.id`. The nullable `ssId` is the canonical Place ID returned
 by SaanSeoi, not an assumption that the current Overture publisher ID is identical.
 Retain accepted association history and source attribution. Never rebind a Place just

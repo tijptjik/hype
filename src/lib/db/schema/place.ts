@@ -178,3 +178,23 @@ export const featurePlaceHistory = sqliteTable(
     check('feature_place_history_overrides_json', sql`json_valid(${table.overrides})`),
   ],
 )
+
+/** Feature-owned brands retained after explicit unlink; source history remains immutable. */
+export const featurePlaceDetached = sqliteTable(
+  'featurePlaceDetached',
+  {
+    featureId: text('featureId')
+      .primaryKey()
+      .references(() => feature.id, { onDelete: 'cascade' }),
+    revision: text('revision').notNull(),
+    sourceAssociationRevision: text('sourceAssociationRevision').notNull(),
+    actorId: text('actorId').notNull(),
+    brands: text('brands', { mode: 'json' }).$type<PlaceFacts['brands']>().notNull(),
+  },
+  table => [
+    check(
+      'feature_place_detached_brands_json',
+      sql`json_valid(${table.brands}) AND json_type(${table.brands}) = 'array'`,
+    ),
+  ],
+)
