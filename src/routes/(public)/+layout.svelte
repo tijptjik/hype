@@ -80,8 +80,9 @@ async function applyInitialMapResourceDeepLink(): Promise<void> {
 }
 
 // The root owns identity; this layout owns map loading and keyboard listeners.
-appCtx.navigation.syncUrl(page.url, 'app')
-$effect(() => appCtx.navigation.syncUrl(page.url, 'app'))
+// Shallow facet navigation changes the visible URL without replacing page.url.
+appCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'app')
+$effect(() => appCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'app'))
 
 $effect(() => {
   retry
