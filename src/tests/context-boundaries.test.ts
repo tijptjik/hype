@@ -194,6 +194,36 @@ describe('surface context boundaries', () => {
     view.dispose()
   })
 
+  it('keeps admin prisms empty even when the user has saved map defaults', async () => {
+    const root = new RootCTX({} as ResponsiveCtx)
+    root.sync(
+      { id: 'alice', roles: [], superAdmin: true } as unknown as SessionUser,
+      null,
+    )
+    root.account.applyProfile(
+      { userLayers: [{ layerId: 'saved', hubId: 'hub' }] } as never,
+      root.account.revision,
+    )
+    const view = new ResourceViewCtx(
+      new DivisionCtx(),
+      root.account,
+      root.responsive,
+      root.cacheCtx,
+      'admin',
+    )
+    view.setHub({ id: 'hub', code: 'hub' } as never)
+    const admin = new AdminCtx(view)
+    const hydrate = vi.spyOn(view, 'hydrateCurrentUserLayers')
+    await admin.init()
+    expect(view.scope.prisms).toEqual({ organisation: [], project: [], layer: [] })
+    expect(hydrate).not.toHaveBeenCalled()
+    view.scope.prisms.layer = ['manual']
+    admin.isInitialised = false
+    await admin.init()
+    expect(view.scope.prisms.layer).toEqual(['manual'])
+    view.dispose()
+  })
+
   it('keeps admin queries, filters and raw records independent from the public application', () => {
     const root = new RootCTX({} as ResponsiveCtx)
     const app = new AppCtx(

@@ -27,7 +27,7 @@ const organisationRole = (organisationId: string): UserRoleDisco =>
 
 describe('task authorization', () => {
   describe('authorizeTaskListForContext', () => {
-    it('denies unscoped task lists for project maintainers', () => {
+    it('allows permission-filtered task lists for project maintainers without prisms', () => {
       const decision = authorizeTaskListForContext({
         user: { id: 'u-1', isAnonymous: false, superAdmin: false },
         userRoles: [projectRole('maintainer', 'project-1')],
@@ -35,10 +35,7 @@ describe('task authorization', () => {
         resourceHubId: 'hub-1',
       })
 
-      expect(decision).toEqual({
-        allowed: false,
-        code: 'INSUFFICIENT_ROLE',
-      })
+      expect(decision).toEqual({ allowed: true })
     })
 
     it('allows scoped task lists for project maintainers', () => {

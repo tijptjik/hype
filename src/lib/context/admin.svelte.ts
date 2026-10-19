@@ -36,7 +36,6 @@ import type { Project } from '#lib/db/zod/schema/project.types.js'
 import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 import type { AdminPreferences } from '#lib/db/zod/schema/user.types.js'
-import type { UserRoleDisco } from '#lib/types.js'
 
 export class AdminCtx {
   readonly navigation = new SurfaceNavigation((type, ref) => {
@@ -238,40 +237,12 @@ export class AdminCtx {
   /**
    * Builds the effective task prism scope for admin task queries.
    *
-   * @returns Active prisms, or role-derived fallback prisms when the current admin scope is empty.
+   * @returns Explicit user-selected prisms; empty means all server-authorized tasks.
    */
   private getTaskListPrisms(): { organisation: string[]; project: string[] } {
-    const activeOrganisationPrisms = this.view.scope.prisms.organisation
-    const activeProjectPrisms = this.view.scope.prisms.project
-
-    if (activeOrganisationPrisms.length > 0 || activeProjectPrisms.length > 0) {
-      return {
-        organisation: activeOrganisationPrisms,
-        project: activeProjectPrisms,
-      }
-    }
-
-    const userRoles = Array.isArray(this.view.user?.roles)
-      ? (this.view.user.roles as UserRoleDisco[])
-      : []
-
     return {
-      organisation: userRoles
-        .filter(
-          (role): role is Extract<UserRoleDisco, { type: 'organisation' }> =>
-            role.type === 'organisation' &&
-            role.role === 'owner' &&
-            typeof role.organisationId === 'string',
-        )
-        .map(role => role.organisationId),
-      project: userRoles
-        .filter(
-          (role): role is Extract<UserRoleDisco, { type: 'project' }> =>
-            role.type === 'project' &&
-            typeof role.projectId === 'string' &&
-            (role.role === 'owner' || role.role === 'maintainer'),
-        )
-        .map(role => role.projectId),
+      organisation: this.view.scope.prisms.organisation,
+      project: this.view.scope.prisms.project,
     }
   }
 

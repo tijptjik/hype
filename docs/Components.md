@@ -95,6 +95,13 @@ home, clearing the collection, account changes and disposal clear selection.
 Public card timers, navigation intent and camera commands belong to `AppCtx` and
 its adapters. Shared filter services only mutate filter data.
 
+Admin feature and task indexes treat empty prisms as all records the caller is
+permitted to read, subject to explicit state and search filters. Opening either
+index does not select a layer. Saved default map layers initialise the public map
+only; admin starts without hierarchy selections. Server permissions constrain task
+lists to the union of owned organisations and managed projects independently of
+prism selections, with hub administrator access resolved by the existing policy.
+
 `AdminCtx.listUi` retains per-resource layout mode and control-bar visibility
 within that surface. `HeaderCtrl` owns transient search focus, page metadata and
 action visibility; the header adapter combines those with navigation and list
