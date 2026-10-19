@@ -158,10 +158,14 @@
 
   .bits-theme .bits-switch[data-state="checked"] {
     --switch-current-color: var(--switch-right-color, var(--switch-neutral-color));
-    background-color: color-mix(
-      in oklab,
-      var(--switch-current-color) var(--switch-track-on-mix, 28%),
-      var(--color-raised)
+    /* Light themes keep the track clear, with colour on the border and thumb. */
+    background-color: var(
+      --theme-switch-on-track,
+      color-mix(
+        in oklab,
+        var(--switch-current-color) var(--switch-track-on-mix, 28%),
+        var(--color-raised)
+      )
     );
     box-shadow: none;
   }
