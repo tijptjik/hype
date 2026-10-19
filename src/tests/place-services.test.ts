@@ -12,6 +12,7 @@ import { updateProjectByIdWithConcurrency } from '#lib/db/services/project.js'
 import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
+import { prepareFeaturePlaceRelations } from '#lib/db/services/placeRelations.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { createLocalPlace } from '#lib/db/services/placeLocal.js'
@@ -46,7 +47,10 @@ function setup() {
   sqlite.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0110_feature_place_history.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
-    bind: (...args: unknown[]) => prepare(query, args),
+    bind: (...args: unknown[]) => {
+      if (args.length > 100) throw new Error('D1 parameter limit exceeded')
+      return prepare(query, args)
+    },
     raw: async () => {
       const statement = sqlite.prepare(query)
       statement.setReturnArrays(true)
@@ -646,11 +650,11 @@ describe('persisted Feature baseline and initial linking', () => {
     sqlite
       .prepare("UPDATE feature SET geometry=? WHERE id='f'")
       .run(JSON.stringify(facts.location.geometry))
-    sqlite.exec(`INSERT INTO featureI18n VALUES ('f','en','Collection counter','Original address'), ('f','zhHant','麵包店',NULL);
+    sqlite.exec(`INSERT INTO featureI18n VALUES ('f','en','Collection counter','Original address'), ('f','zh-hant','麵包店',NULL);
       INSERT INTO hub VALUES ('core','core');
       INSERT INTO property VALUES ('phone','phoneNumber','hub','core'),('brand','brand','organisation',NULL);
       INSERT INTO featureProperty VALUES ('f','phone',NULL,'2345 6789'),('f','brand','legacy-brand',NULL);
-      INSERT INTO propertyValueI18n VALUES ('legacy-brand','en','Bakery brand');`)
+      INSERT INTO propertyValueI18n VALUES ('legacy-brand','en','Bakery brand'),('legacy-brand','zh-hant','品牌');`)
     const baseline = await readFeaturePlaceBaseline(db, 'f', 'p')
     expect(baseline.status).toBe('ready')
     if (baseline.status !== 'ready') throw new Error('Expected persisted baseline')
@@ -660,7 +664,7 @@ describe('persisted Feature baseline and initial linking', () => {
       brands: [
         {
           identifiers: { hypePropertyValueId: 'legacy-brand' },
-          names: { en: 'Bakery brand' },
+          names: { en: 'Bakery brand', 'zh-hant': '品牌' },
         },
       ],
     })
@@ -747,5 +751,139 @@ describe('persisted Feature baseline and initial linking', () => {
     expect(sqlite.prepare('SELECT count(*) AS n FROM featurePlace').get()).toEqual({
       n: 0,
     })
+  })
+})
+
+describe('atomic linked Feature relation replacement', () => {
+  it('gates all deletes/inserts, retains other Features, and rolls back a late error', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(`ALTER TABLE featureI18n ADD COLUMN titleGen INTEGER;
+      ALTER TABLE featureI18n ADD COLUMN description TEXT;
+      ALTER TABLE featureI18n ADD COLUMN descriptionGen INTEGER;
+      ALTER TABLE featureI18n ADD COLUMN displayAddressGen INTEGER;
+      ALTER TABLE featureI18n ADD COLUMN addressProperties TEXT;
+      CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
+      INSERT INTO featureI18n(featureId,locale,title) VALUES ('f','en','Old name'),('unrelated','en','Keep me');
+      INSERT INTO featureProperty VALUES ('f','old',NULL,'old value'),('unrelated','other',NULL,'Keep me');
+      INSERT INTO featurePropertyI18n VALUES ('f','old','en','old translation',0);`)
+    const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      placeId: local.placeId,
+      factsRevisionId: local.revisionId,
+      locationRevisionId: local.revisionId,
+      overrides: {},
+      actorId: 'actor',
+    }
+    const snapshot = () =>
+      [
+        'featureI18n',
+        'featureProperty',
+        'featurePropertyI18n',
+        'featurePlace',
+        'featurePlaceHistory',
+      ].map(table => sqlite.prepare(`SELECT * FROM ${table}`).all())
+    const properties = Array.from({ length: 150 }, (_, i) => ({
+      propertyId: `new-${i}`,
+      value: `value-${i}`,
+    }))
+    const submittedProperties = [
+      ...properties,
+      {
+        propertyId: 'checkbox',
+        propertyValueId: 'true',
+        value: null,
+        i18n: { en: { value: 'Checked', valueGen: false } },
+      },
+    ]
+    const before = snapshot()
+    const stale = prepareFeaturePlaceAssociationWrite(db, {
+      ...input,
+      expectedFeatureModifiedAt: 'stale',
+    })
+    await db.batch([
+      stale.query,
+      ...prepareFeaturePlaceRelations(
+        db,
+        'f',
+        stale.revision,
+        { en: { title: 'Do not save' } },
+        submittedProperties,
+      ),
+    ])
+    expect(snapshot()).toEqual(before)
+    sqlite.exec(`CREATE TRIGGER reject_last BEFORE INSERT ON featureProperty WHEN NEW.propertyId='new-149'
+      BEGIN SELECT RAISE(ABORT,'injected late failure'); END;`)
+    const failing = prepareFeaturePlaceAssociationWrite(db, input)
+    await expect(
+      db.batch([
+        failing.query,
+        ...prepareFeaturePlaceRelations(
+          db,
+          'f',
+          failing.revision,
+          { en: { title: 'New name' } },
+          submittedProperties,
+        ),
+      ]),
+    ).rejects.toThrow()
+    expect(snapshot()).toEqual(before)
+    sqlite.exec('DROP TRIGGER reject_last')
+    const winner = prepareFeaturePlaceAssociationWrite(db, input)
+    await db.batch([
+      winner.query,
+      ...prepareFeaturePlaceRelations(
+        db,
+        'f',
+        winner.revision,
+        { en: { title: 'New name' }, zhHant: { title: '新名稱' } },
+        submittedProperties,
+      ),
+    ])
+    expect(
+      sqlite
+        .prepare(
+          "SELECT locale,title FROM featureI18n WHERE featureId='f' ORDER BY locale",
+        )
+        .all(),
+    ).toEqual([
+      { locale: 'en', title: 'New name' },
+      { locale: 'zh-hant', title: '新名稱' },
+    ])
+    expect(
+      sqlite
+        .prepare("SELECT count(*) AS n FROM featureProperty WHERE featureId='f'")
+        .get(),
+    ).toEqual({ n: 151 })
+    expect(
+      sqlite
+        .prepare("SELECT value FROM featureProperty WHERE featureId='unrelated'")
+        .get(),
+    ).toEqual({ value: 'Keep me' })
+    expect(
+      sqlite
+        .prepare("SELECT count(*) AS n FROM featurePropertyI18n WHERE featureId='f'")
+        .get(),
+    ).toEqual({ n: 1 })
+    expect(
+      sqlite
+        .prepare(
+          "SELECT propertyValueId,value FROM featureProperty WHERE featureId='f' AND propertyId='checkbox'",
+        )
+        .get(),
+    ).toEqual({ propertyValueId: null, value: 'true' })
+    expect(
+      sqlite
+        .prepare(
+          "SELECT locale,value,valueGen FROM featurePropertyI18n WHERE featureId='f'",
+        )
+        .all(),
+    ).toEqual([{ locale: 'en', value: 'Checked', valueGen: 0 }])
+    expect(
+      sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get(),
+    ).toEqual({ n: 1 })
   })
 })

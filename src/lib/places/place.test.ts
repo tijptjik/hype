@@ -5,6 +5,7 @@ import { DEFAULT_PROJECT_PLACE_POLICY, ProjectPlacePolicySchema } from './model'
 import type { PlaceFacts, PlaceLocation } from './model'
 import { evaluatePlaceAdoption } from './policy'
 import { resolveFeaturePlace } from './resolve'
+import { applyFeaturePlaceEdits } from './edits'
 import { preserveFeaturePlaceBaseline } from './baseline'
 
 const location: PlaceLocation = {
@@ -286,5 +287,45 @@ describe('persisted association privacy', () => {
     } finally {
       db.close()
     }
+  })
+})
+
+describe('normal Feature edits on inherited values', () => {
+  test('unchanged values keep inheriting while explicit existing choices survive', () => {
+    const before = { ...facts, location }
+    const current = {
+      names: { en: { mode: 'override' as const, value: facts.names.en } },
+    }
+    expect(applyFeaturePlaceEdits(current, before, structuredClone(before))).toEqual(
+      current,
+    )
+    expect(applyFeaturePlaceEdits({}, before, structuredClone(before))).toEqual({})
+  })
+  test('only edited locales and arrays change, with atomic location replacement', () => {
+    const before = { ...facts, location }
+    const after = {
+      ...before,
+      names: { ...before.names, en: 'Local title' },
+      phoneNumber: [],
+      location: structuredClone(moved),
+    }
+    const overrides = applyFeaturePlaceEdits({}, before, after)
+    expect(overrides).toEqual({
+      names: { en: { mode: 'override', value: 'Local title' } },
+      phoneNumber: { mode: 'override', value: [] },
+      location: { mode: 'override', value: moved },
+    })
+    expect(resolveFeaturePlace(facts, location, overrides)).toEqual(after)
+    after.location.geometry.coordinates[0] += 1
+    expect(overrides.location).not.toEqual({ mode: 'override', value: after.location })
+  })
+  test('clears removed translations without suppressing untouched locales', () => {
+    const before = { ...facts, location }
+    const after = { ...before, names: { en: facts.names.en }, brands: null }
+    const overrides = applyFeaturePlaceEdits({}, before, after)
+    expect(overrides).toEqual({
+      names: { 'zh-Hant': { mode: 'clear' } },
+      brands: { mode: 'clear' },
+    })
   })
 })

@@ -82,8 +82,8 @@ export async function readFeaturePlaceBaseline(
   const names: Record<string, string> = {}
   const labels: Record<string, string> = {}
   for (const translation of translations) {
-    const locale = ADDRESS_LOCALES[translation.locale as LocaleKey]
-    if (!locale) continue
+    const locale =
+      ADDRESS_LOCALES[translation.locale as LocaleKey] ?? translation.locale
     names[locale] = translation.title
     if (translation.displayAddress !== null) labels[locale] = translation.displayAddress
   }
@@ -157,8 +157,8 @@ export async function readFeaturePlaceBaseline(
       .where(eq(propertyValueI18n.propertyValueId, brand.propertyValueId))
     const brandNames: Record<string, string> = {}
     for (const value of values) {
-      const locale = ADDRESS_LOCALES[value.locale as LocaleKey]
-      if (locale) brandNames[locale] = value.value
+      const locale = ADDRESS_LOCALES[value.locale as LocaleKey] ?? value.locale
+      brandNames[locale] = value.value
     }
     projectedBrands.push({
       identifiers: { hypePropertyValueId: brand.propertyValueId },

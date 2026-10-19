@@ -438,3 +438,25 @@ and Breadline cards create a separate call link for each. Component tests exerci
 array loading, input callbacks, trailing-newline preservation and malformed text kept
 for correction. These changes enable multi-phone materialization but do not yet
 connect normal Feature edits to Place override persistence or migrate brand storage.
+
+### Linked edit preparation and atomic relations (Refs #194)
+
+`applyFeaturePlaceEdits` compares persisted and submitted effective facts, preserving
+all existing override choices and leaving untouched inherited fields absent. Edited
+locales are independent; removed translations become clears; arrays replace as a
+whole; geometry/address changes replace the atomic location group. Reset-to-inherit
+remains an explicit action rather than an implicit consequence of matching source.
+
+`prepareFeaturePlaceRelations` builds translation/property replacement statements
+for the same atomic batch as the association and Feature update. Every delete and
+insert requires the new association token. One-row inserts keep parameter counts
+bounded without splitting the transaction. Tests cover a 151-property replacement,
+property translations, checkbox transport, a late injected failure, stale tokens and
+unrelated-Feature isolation. These helpers still require integration into the normal
+save endpoint and complete submitted-value projection; they do not activate linked
+editing on their own.
+
+Baseline extraction now accepts persisted kebab-case locale keys as well as form
+camel-case keys. The corrected live local assessment retains 1,190 English names and
+1,163 names each in Traditional and Simplified Chinese. Readiness remains 1,190
+Features, with 56 intangible Features and 25 drafts excluded. No links are created.

@@ -32,10 +32,15 @@ async function main(): Promise<void> {
       .from(feature)
       .orderBy(feature.id)
     const counts: Record<string, number> = {}
+    const localeCounts: Record<string, number> = {}
     const results = []
     // Report every Feature once; no candidate identity is inferred from readiness.
     for (const row of rows) {
       const result = await readFeaturePlaceBaseline(db, row.id, row.projectId)
+      if (result.status === 'ready') {
+        for (const locale of Object.keys(result.baseline.effective.names))
+          localeCounts[locale] = (localeCounts[locale] ?? 0) + 1
+      }
       const reason = result.status === 'ready' ? 'ready' : result.reason
       counts[reason] = (counts[reason] ?? 0) + 1
       results.push({
@@ -48,11 +53,11 @@ async function main(): Promise<void> {
     mkdirSync(dirname(output), { recursive: true })
     writeFileSync(
       output,
-      JSON.stringify({ version: 1, total: rows.length, counts, results }, null, 2) +
+      JSON.stringify({ version: 1, total: rows.length, counts, localeCounts, results }, null, 2) +
         '\n',
       { mode: 0o600 },
     )
-    console.log(JSON.stringify({ total: rows.length, counts }))
+    console.log(JSON.stringify({ total: rows.length, counts, localeCounts }))
   } finally {
     await platform.dispose()
   }

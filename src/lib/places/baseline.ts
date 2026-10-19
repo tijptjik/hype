@@ -13,7 +13,7 @@ import type { EffectivePlaceFacts } from './resolve'
  * @param right Accepted source value.
  * @returns Whether values match, retaining meaningful array order.
  */
-function equalValue(left: unknown, right: unknown): boolean {
+export function equalPlaceValue(left: unknown, right: unknown): boolean {
   if (left === right) return true
   if (
     left === null ||
@@ -27,14 +27,16 @@ function equalValue(left: unknown, right: unknown): boolean {
       Array.isArray(left) &&
       Array.isArray(right) &&
       left.length === right.length &&
-      left.every((value, index) => equalValue(value, right[index]))
+      left.every((value, index) => equalPlaceValue(value, right[index]))
     )
   }
   const a = left as Record<string, unknown>
   const b = right as Record<string, unknown>
   return (
     Object.keys(a).length === Object.keys(b).length &&
-    Object.keys(a).every(key => Object.hasOwn(b, key) && equalValue(a[key], b[key]))
+    Object.keys(a).every(
+      key => Object.hasOwn(b, key) && equalPlaceValue(a[key], b[key]),
+    )
   )
 }
 
@@ -48,7 +50,7 @@ function preserveField<T>(
   baseline: T | null,
   inherited: T | null,
 ): PlaceOverride<T> | undefined {
-  if (equalValue(baseline, inherited)) return undefined
+  if (equalPlaceValue(baseline, inherited)) return undefined
   return baseline === null
     ? { mode: 'clear' }
     : { mode: 'override', value: structuredClone(baseline) }
