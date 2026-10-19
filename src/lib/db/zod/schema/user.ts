@@ -72,7 +72,7 @@ const UserPreferencesSchema = z
       .nullish(),
   })
   .prefault({
-    fallbackLocales: ['en'],
+    fallbackLocales: ['en', 'zh-hant'],
     allowMachineTranslation: false,
     preferFallbackInCurrentLocale: false,
     isTranslateButtonVisible: true,

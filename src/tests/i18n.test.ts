@@ -233,7 +233,7 @@ describe('getI18n', () => {
     expect(value).toBe('No title')
   })
 
-  it('returns the provided fallback when user preferences are omitted', async () => {
+  it('uses the default English fallback when user preferences are omitted', async () => {
     await setLocale('zh-hans', { reload: false })
 
     const value = getI18n(
@@ -249,7 +249,7 @@ describe('getI18n', () => {
       'Fallback layer name',
     )
 
-    expect(value).toBe('Fallback layer name')
+    expect(value).toBe('English layer name')
   })
 
   it('preserves an explicit empty fallback for caller-managed fallback chains', async () => {

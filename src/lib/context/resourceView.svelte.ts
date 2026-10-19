@@ -16,7 +16,7 @@ import type {
 // NAVIGATION
 // GEO
 // I18N
-import { getFallbackLocales, getLocale, getLocaleKey, getI18n } from '#lib/i18n.js'
+import { getLocaleKey, getI18n } from '#lib/i18n.js'
 // LIB
 import {
   getOrganisation,
@@ -1944,11 +1944,11 @@ export class ResourceViewCtx {
   getUserPreferences = (withDefaults: boolean = true): UserPreferences => {
     const preferences = this.user?.preferences
     if (!withDefaults && preferences) return preferences as UserPreferences
-    // If no user or preference payload exists, provide the same locale-aware defaults.
+    // If no user or preference payload exists, enable English and Traditional Chinese.
     return {
       fallbackLocales:
         (preferences?.fallbackLocales as Locale[] | null) ??
-        (getFallbackLocales(getLocale()) as Locale[]),
+        (['en', 'zh-hant'] as Locale[]),
       allowMachineTranslation: preferences?.allowMachineTranslation ?? false,
       preferFallbackInCurrentLocale:
         preferences?.preferFallbackInCurrentLocale ?? false,

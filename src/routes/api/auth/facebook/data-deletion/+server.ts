@@ -102,7 +102,7 @@ export const POST: RequestHandler = async ({ request, url, locals }) => {
           isAnonymous: false,
           isArchived: true,
           preferences:
-            '{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}',
+            '{"fallbackLocales":["en","zh-hant"], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}',
           experimental: '{"contributorMode":false, "noLabelsMode":false}',
         })
         .where(and(eq(schema.user.id, matchingAccount.userId), canAnonymize)),
