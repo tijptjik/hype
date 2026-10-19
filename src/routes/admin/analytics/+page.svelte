@@ -5,14 +5,20 @@ import { fade } from 'svelte/transition'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
+import { formatAnalyticsError } from '#lib/bits/patterns/analytics/analyticsError.js'
 import { runRemoteQuery } from '#lib/remote/index.js'
 // API
-import { getAssetAnalyticsSummary } from '#lib/api/analytics.remote.js'
+import {
+  getAssetAnalyticsSummary,
+  getPlatformAnalyticsSummary,
+} from '#lib/api/analytics.remote.js'
 // I18N
-import { getLocale, m } from '#lib/i18n.js'
+import { getLocale } from '#lib/i18n.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // BITS
+import PlatformAnalyticsDashboardSkeleton from '#lib/bits/patterns/analytics/platformAnalyticsDashboard/PlatformAnalyticsDashboardSkeleton.svelte'
+import PlatformAnalyticsDashboard from '#lib/bits/patterns/analytics/platformAnalyticsDashboard/PlatformAnalyticsDashboard.svelte'
 import {
   AssetAnalyticsDashboard,
   AssetAnalyticsDashboardSkeleton,
@@ -26,6 +32,7 @@ import LoaderCircle from 'virtual:icons/proicons/spinner'
 import RefreshCw from 'virtual:icons/proicons/arrow-sync'
 import Users from 'virtual:icons/proicons/person-multiple'
 // TYPES
+import type { PlatformAnalyticsResult } from '#lib/api/services/platformAnalytics.types.js'
 import type { AssetAnalyticsSummaryResult } from '#lib/api/services/assetAnalytics.types.js'
 
 const adminCtx = getAdminCtx()
@@ -59,6 +66,8 @@ const prismSignature = $derived(
 )
 let analyticsState = $state<AssetAnalyticsSummaryResult | null>(null)
 let analyticsPreviewState = $state<AssetAnalyticsSummaryResult | null>(null)
+let platformState = $state<PlatformAnalyticsResult | null>(null)
+let hostname = $state('')
 let isRefreshing = $state(false)
 let analyticsRequestVersion = 0
 
@@ -211,9 +220,23 @@ async function runAnalyticsLoad(options?: {
 
   if (!preservePreview) {
     analyticsState = null
+    platformState = null
   }
 
   try {
+    if (activeFacet !== 'assets') {
+      const query = getPlatformAnalyticsSummary({
+        facet: activeFacet,
+        hostname: hostname || undefined,
+        meta: { isAdminRequest: true },
+      })
+      if (preservePreview) await query.refresh()
+      const result = await runRemoteQuery(query)
+      if (requestVersion !== analyticsRequestVersion) return
+      platformState = result
+      isRefreshing = false
+      return
+    }
     const result = await loadAnalytics()
 
     if (requestVersion !== analyticsRequestVersion) return
@@ -221,11 +244,13 @@ async function runAnalyticsLoad(options?: {
     analyticsState = result
     analyticsPreviewState = result
   } catch (cause) {
-    console.error('Asset analytics remote query failed', cause)
+    console.error(`${activeFacet} analytics remote query failed`, cause)
 
     if (requestVersion !== analyticsRequestVersion) return
 
-    analyticsState = { status: 'error', message: 'Failed to load analytics.' }
+    const message = formatAnalyticsError(cause)
+    analyticsState = { status: 'error', message }
+    platformState = { status: 'error', message }
   }
 
   if (requestVersion === analyticsRequestVersion) {
@@ -233,11 +258,18 @@ async function runAnalyticsLoad(options?: {
   }
 }
 
+/** Refreshes the active facet while retaining its last snapshot.
+ * @returns Nothing; starts the guarded asynchronous load.
+ */
 function refreshAnalytics(): void {
   isRefreshing = true
   void runAnalyticsLoad({ preservePreview: true })
 }
 
+/** Formats a snapshot timestamp for the refresh tooltip.
+ * @param value - Snapshot timestamp.
+ * @returns Localized timestamp in Hong Kong time.
+ */
 function formatGeneratedAt(value: string | null | undefined): string {
   if (!value) return '—'
 
@@ -252,6 +284,10 @@ function formatGeneratedAt(value: string | null | undefined): string {
   }).format(date)
 }
 
+/** Selects a supported analytics dashboard.
+ * @param nextFacet - Requested facet key.
+ * @returns Nothing; ignores unknown facets.
+ */
 function handleFacetChange(nextFacet: string): void {
   if (!ANALYTICS_FACETS.some(facet => facet.ref === nextFacet)) return
   activeFacet = nextFacet as AnalyticsFacet
@@ -287,7 +323,8 @@ $effect(() => {
         title:
           analyticsPreviewState &&
           (analyticsPreviewState.status === 'success' ||
-            analyticsPreviewState.status === 'empty')
+            analyticsPreviewState.status === 'empty') &&
+          activeFacet === 'assets'
             ? `Production asset analytics. Generated ${formatGeneratedAt(analyticsPreviewState.data?.generatedAt)}.`
             : 'Refresh analytics',
       },
@@ -300,93 +337,38 @@ $effect(() => {
 
 $effect(() => {
   if (!browser) return
-  if (prismSignature === lastPrismSignature) return
-  lastPrismSignature = prismSignature
+  const signature = `${activeFacet}:${activeFacet === 'assets' ? prismSignature : hostname}`
+  if (signature === lastPrismSignature) return
+  lastPrismSignature = signature
   if (!lastPrismSignature) return
   void runAnalyticsLoad()
 })
 </script>
 
 <section class="bits-theme flex h-full min-h-0 flex-col overflow-y-auto p-3 pb-12">
-  {#if !analyticsState}
+  {#if activeFacet === 'assets' ? !analyticsState : !platformState}
     <div in:fade={{ duration: 180 }} out:fade={{ duration: 140 }}>
-      <AssetAnalyticsDashboardSkeleton />
+      {#if activeFacet === 'assets'}
+        <AssetAnalyticsDashboardSkeleton />
+      {:else}
+        <PlatformAnalyticsDashboardSkeleton facet={activeFacet} />
+      {/if}
     </div>
   {:else}
-    {#if activeFacet === 'assets'}
+    {#if activeFacet === 'assets' && analyticsState}
       <div class="relative">
         <div in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
           <AssetAnalyticsDashboard state={analyticsState} />
         </div>
       </div>
-    {:else}
-      <section class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
-        <article class="rounded-xl border border-border bg-panel p-6">
-          <h2 class="text-xl font-semibold text-foreground">
-            {#if activeFacet === 'views'}
-              {m.analytics__views_title()}
-            {:else if activeFacet === 'audience'}
-              {m.analytics__audience_title()}
-            {:else}
-              {m.analytics__data_title()}
-            {/if}
-          </h2>
-          <p class="mt-3 max-w-3xl text-sm leading-6 text-foreground-alt">
-            {#if activeFacet === 'views'}
-              {m.analytics__views_description()}
-            {:else if activeFacet === 'audience'}
-              {m.analytics__audience_description()}
-            {:else}
-              {m.analytics__data_description()}
-            {/if}
-          </p>
-
-          <div class="mt-6 grid gap-3 md:grid-cols-2">
-            <div class="rounded-lg border border-border bg-surface p-4">
-              <h3
-                class="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-alt"
-              >
-                {m.filters__status()}
-              </h3>
-              <p class="mt-2 text-sm text-foreground">
-                {m.analytics__status_unwired()}
-              </p>
-            </div>
-
-            <div class="rounded-lg border border-border bg-surface p-4">
-              <h3
-                class="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-alt"
-              >
-                {m.analytics__scope()}
-              </h3>
-              <p class="mt-2 text-sm text-foreground">
-                {m.analytics__scope_unimplemented()}
-              </p>
-            </div>
-          </div>
-        </article>
-
-        <aside class="rounded-xl border border-border bg-panel p-6">
-          <h3
-            class="text-sm font-semibold uppercase tracking-[0.18em] text-foreground-alt"
-          >
-            {m.analytics__next_steps()}
-          </h3>
-
-          <ul class="mt-4 space-y-3 text-sm leading-6 text-foreground">
-            {#if activeFacet === 'views'}
-              <li>{m.analytics__views_next_step_1()}</li>
-              <li>{m.analytics__views_next_step_2()}</li>
-            {:else if activeFacet === 'audience'}
-              <li>{m.analytics__audience_next_step_1()}</li>
-              <li>{m.analytics__audience_next_step_2()}</li>
-            {:else}
-              <li>{m.analytics__data_next_step_1()}</li>
-              <li>{m.analytics__data_next_step_2()}</li>
-            {/if}
-          </ul>
-        </aside>
-      </section>
+    {:else if platformState && activeFacet !== 'assets'}
+      {#key activeFacet}
+        <PlatformAnalyticsDashboard
+          state={platformState}
+          facet={activeFacet}
+          onHostChange={value => (hostname = value)}
+        />
+      {/key}
     {/if}
 
     <div class="h-12 shrink-0" aria-hidden="true"></div>
