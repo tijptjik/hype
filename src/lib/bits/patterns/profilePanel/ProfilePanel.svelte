@@ -12,7 +12,6 @@ import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
 import ContributionStats from '#lib/bits/patterns/panels/sections/contributionStats/ContributionStatsSection.svelte'
 import ContributedFeatures from '#lib/bits/patterns/panels/sections/contributedFeatures/ContributedFeaturesSection.svelte'
 import ContributedImages from '#lib/bits/patterns/panels/sections/contributedImages/ContributedImagesSection.svelte'
-import ContributedReports from '#lib/bits/patterns/panels/sections/contributedReports/ContributedReportsSection.svelte'
 import LinkedAccounts from '#lib/bits/patterns/panels/sections/linkedAccounts/LinkedAccountsSection.svelte'
 // AUTH
 
@@ -74,9 +73,17 @@ const isGuestAccount = $derived(model.isGuestAccount)
           <LinkedAccounts accountUsername={model.accountUsername} />
         {/if}
         <ContributionStats {userData} {model} />
-        <ContributedFeatures {userData} {model} />
-        <ContributedImages {userData} {model} />
-        <ContributedReports {userData} />
+        {#if Object.values(userData.contributedFeatures ?? {}).some(
+          ids => ids.length > 0,
+        )}
+          <ContributedFeatures {userData} {model} />
+        {/if}
+        {#if Object.values(userData.contributedImages ?? {}).some(
+          ids => ids.length > 0,
+        )}
+          <ContributedImages {userData} {model} />
+        {/if}
+        <!-- Reports currently expose a summary count only, so there is no detail section. -->
       </div>
     {:else}
       <div class="flex h-[calc(100vh-206px)] flex-col items-center justify-center">

@@ -33,7 +33,7 @@ let {
 </script>
 
 <div
-  class={`bits-theme relative flex w-full flex-col items-center overflow-hidden ${
+  class={`bits-theme relative flex shrink-0 w-full flex-col items-center overflow-hidden ${
     isGuest ? 'min-h-[17rem] justify-center' : ''
   }`}
 >
@@ -41,7 +41,9 @@ let {
 
   <div
     class={`flex flex-col items-center gap-3 ${
-      isGuest ? 'absolute inset-x-0 top-1/2 -translate-y-1/2' : 'py-4'
+      isGuest
+        ? 'absolute inset-x-0 top-1/2 -translate-y-1/2'
+        : 'relative w-full px-6 py-5'
     }`}
   >
     <ProfileSectionPrimitive.ProfileSectionAvatar {avatarSrc} {isGuest} />
