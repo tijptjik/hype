@@ -1296,5 +1296,8 @@
   "theme_name_rye": "Rye",
   "theme_ui_title": "Interface",
   "admin__project_same_as_organisation": "Same as Organisation",
-  "panel__reorder_layer": "Reorder {name}. Drag or use Up and Down arrow keys. The top layer sets the map style."
+  "panel__reorder_layer": "Reorder {name}. Drag or use Up and Down arrow keys. The top layer sets the map style.",
+  "profile__status_submitted": "Submitted",
+  "profile__status_rejected": "Rejected",
+  "profile__status_unpublished": "Unpublished"
 }

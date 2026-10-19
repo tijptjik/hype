@@ -1296,5 +1296,8 @@
   "theme_name_rye": "黑麦",
   "theme_ui_title": "界面",
   "admin__project_same_as_organisation": "与机构相同",
-  "panel__reorder_layer": "重新排列{name}。拖动或使用上下方向键。最上层决定地图样式。"
+  "panel__reorder_layer": "重新排列{name}。拖动或使用上下方向键。最上层决定地图样式。",
+  "profile__status_submitted": "已提交",
+  "profile__status_rejected": "已拒绝",
+  "profile__status_unpublished": "未发布"
 }

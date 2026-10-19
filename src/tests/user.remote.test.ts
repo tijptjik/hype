@@ -27,6 +27,10 @@ const {
 
 const mockUpdateUser = vi.hoisted(() => vi.fn())
 const mockReadAdminUserProfile = vi.hoisted(() => vi.fn())
+const mockPrivateContributions = vi.hoisted(() => vi.fn())
+vi.mock('#lib/api/services/profileContributions.js', () => ({
+  loadPrivateContributions: mockPrivateContributions,
+}))
 
 vi.mock('$app/server', () => ({
   getRequestEvent: mockGetRequestEvent,
@@ -457,6 +461,42 @@ describe('user.remote', () => {
         },
       }),
     )
+  })
+
+  it('merges personal previews only for the persisted account owner', async () => {
+    mockLoadUser.mockResolvedValue({
+      id: 'u-1',
+      contributedFeatures: {},
+      contributedImages: {},
+    })
+    mockPrivateContributions.mockResolvedValue({
+      features: {
+        private: { id: 'private', projectId: 'project-1', status: 'submitted' },
+      },
+      images: {
+        photo: {
+          projectId: 'project-1',
+          status: 'rejected',
+          image: { createdAt: '2026-01-01' },
+        },
+      },
+    })
+    const result = await remote.getUser({ ref: 'u-1', refKey: 'id' })
+    expect(result.data).toMatchObject({
+      contributedFeatures: { 'project-1': ['private'] },
+      contributedImages: { 'project-1': ['photo'] },
+    })
+    expect(mockPrivateContributions).toHaveBeenCalledOnce()
+
+    mockPrivateContributions.mockClear()
+    // Even a lookup that appears to be self must not attach private data to a different persisted user.
+    mockLoadUser.mockResolvedValue({
+      id: 'u-2',
+      contributedFeatures: {},
+      contributedImages: {},
+    })
+    await remote.getUser({ ref: 'u-1', refKey: 'id', meta: { isAdminRequest: true } })
+    expect(mockPrivateContributions).not.toHaveBeenCalled()
   })
 
   it('rejects arbitrary user reads without the user-search capability', async () => {

@@ -6,6 +6,7 @@ import { m } from '#lib/i18n.js'
 // SERVICES
 import { formatDistanceToNow } from '#lib'
 // COMPONENTS
+import ContributionStatus from '../components/ContributionStatus.svelte'
 import { Scrollbar } from '#lib/bits/custom/scrollbar/index.js'
 import { ScrollableText } from '#lib/bits/index.js'
 // ICONS
@@ -85,7 +86,10 @@ const getTimeSpanCategory = (date: Date) => {
   return 'ancient'
 }
 
-const shouldShowDate = (features: FeatureFromCollection[], currentIndex: number) => {
+const shouldShowDate = (
+  features: Array<{ createdAt: string }>,
+  currentIndex: number,
+) => {
   if (currentIndex === 0) return true // Always show for first item
 
   const currentFeature = features[currentIndex]
@@ -100,33 +104,52 @@ const shouldShowDate = (features: FeatureFromCollection[], currentIndex: number)
 }
 
 // Helper to fetch all features for a project group, and the hierarchy for the first feature
-const fetchFeaturesForProject = async (featureIds: string[]) => {
+const fetchFeaturesForProject = async (featureIds: string[], projectId: string) => {
   // Fetch all features first
   const features = await Promise.all(
-    featureIds.map(async featureId => {
-      try {
-        return await model.getFeatureById(featureId)
-      } catch {
-        return null
-      }
-    }),
+    featureIds
+      .filter(id => !userData?.privateContributions?.features[id])
+      .map(async featureId => {
+        try {
+          return await model.getFeatureById(featureId)
+        } catch {
+          return null
+        }
+      }),
   )
   // Sort by createdAt descending
   const filtered = features
-    .filter((feature): feature is FeatureFromCollection => feature !== null)
+    .filter((feature): feature is FeatureFromCollection => feature != null)
     .sort((a, b) => new Date(b?.createdAt).getTime() - new Date(a?.createdAt).getTime())
-  let hierarchy = null
+  let hierarchy = await model.getProjectHierarchy(projectId)
   const firstFeature = filtered[0]
   if (firstFeature) {
     hierarchy = await model.getHierarchy(firstFeature)
   }
-  return { features: filtered, hierarchy }
+  const entries = [
+    ...filtered.map(feature => ({
+      kind: 'published' as const,
+      id: feature.id,
+      createdAt: feature.createdAt,
+      feature,
+    })),
+    ...featureIds.flatMap(id => {
+      const preview = userData?.privateContributions?.features[id]
+      return preview
+        ? [{ kind: 'private' as const, id, createdAt: preview.createdAt, preview }]
+        : []
+    }),
+  ].sort(
+    (a, b) =>
+      Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.id.localeCompare(b.id),
+  )
+  return { features: filtered, entries, hierarchy }
 }
 </script>
 
-<div id="contributed-features" class="border-b border-base-300">
+<div id="contributed-features" class="border-b border-border">
   <h3
-    class="p-4 pb-2 text-sm font-semibold uppercase tracking-wide text-base-content/60"
+    class="px-6 pt-5 pb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
   >
     {m.omni__title_features()}
   </h3>
@@ -139,12 +162,13 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
           {#each Object.entries(
             userData.contributedFeatures,
           ) as [projectId, featureIds] (projectId)}
-            {#await fetchFeaturesForProject(featureIds) then groupData}
+            {#await fetchFeaturesForProject(featureIds, projectId) then groupData}
               <div class="group-container" data-group-id={projectId}>
                 <!-- Sticky Group Header -->
                 <button
                   type="button"
-                  class="sticky top-0 z-10 flex w-full items-center justify-between bg-panel px-4 py-2 transition-colors"
+                  class="sticky top-0 z-10 flex w-full items-center justify-between bg-panel px-6 py-2.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+                  aria-expanded={!collapsedGroups.has(projectId)}
                   onclick={() => toggleGroup(projectId)}
                 >
                   <div class="flex items-center gap-2">
@@ -156,9 +180,7 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                         ? '-rotate-90'
                         : ''}"
                     />
-                    <p
-                      class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest"
-                    >
+                    <p class="flex space-x-0.5 text-xs font-medium">
                       {#if groupData.hierarchy?.organisation}
                         <span class="text-primary"
                           >{model.getOrganisationName(
@@ -171,7 +193,7 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                         Boolean(groupData.hierarchy?.organisation),
                       )}
                         <span class="px-0">›</span>
-                        <span class="text-accent"
+                        <span class="text-muted-foreground"
                           >{model.getProjectName(
                             groupData.hierarchy?.project,
                             Boolean(groupData.hierarchy?.organisation),
@@ -180,11 +202,8 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                       {/if}
                     </p>
                   </div>
-                  <div
-                    class="text-sm text-base-content/60"
-                    style="font-family: 'Tilt Neon', sans-serif"
-                  >
-                    {groupData.features.length}
+                  <div class="text-xs tabular-nums text-muted-foreground">
+                    {featureIds.length}
                   </div>
                 </button>
 
@@ -194,54 +213,77 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                     class="group-content space-y-2 py-2"
                     transition:slide={{ duration: 300 }}
                   >
-                    {#each groupData.features.filter(
-                      f => f !== null && f !== undefined,
-                    ) as feature, index (feature.id)}
-                      <a
-                        href={`/features/${feature.id}`}
-                        onclick={e => {
-                          e.preventDefault()
-                          model.onContributedFeature(
-                            feature.id,
-                            projectId,
-                            groupData.features,
-                            model.getProjectTitle(groupData.hierarchy?.project),
-                            userData?.username ?? '',
-                          )
-                        }}
-                        class="flex w-full cursor-pointer items-center gap-2 rounded px-4 text-left transition-colors hover:bg-base-300/20"
-                      >
-                        <Icon
-                          src={MapPin}
-                          class="h-5 w-5 stroke-[1.5px] text-base-content/60"
-                        />
-                        <div
-                          class="flex flex-1 flex-col gap-0.5 text-sm text-base-content"
+                    {#each groupData.entries as entry, index (entry.id)}
+                      {#if entry.kind === 'private'}
+                        {@const preview = entry.preview}
+                        <div class="flex w-full items-center gap-3 px-6 py-2">
+                          <Icon
+                            src={MapPin}
+                            class="h-5 w-5 shrink-0 stroke-[1.5px] text-base-content/60"
+                          />
+                          <div class="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                            {#if preview.address}
+                              <span class="text-xs text-muted-foreground"
+                                >{preview.address}</span
+                              >
+                            {/if}
+                            <span class="break-words">{preview.title}</span>
+                          </div>
+                          <div class="flex shrink-0 flex-col items-end gap-1.5">
+                            <ContributionStatus status={preview.status} />
+                            <span class="text-xs text-muted-foreground"
+                              >{formatDistanceToNow(new Date(preview.createdAt), {
+                                addSuffix: true,
+                              })}</span
+                            >
+                          </div>
+                        </div>
+                      {:else}
+                        {@const feature = entry.feature}
+                        <a
+                          href={`/features/${feature.id}`}
+                          onclick={e => {
+                            e.preventDefault()
+                            model.onContributedFeature(
+                              feature.id,
+                              projectId,
+                              groupData.features,
+                              model.getProjectTitle(groupData.hierarchy?.project),
+                              userData?.username ?? '',
+                            )
+                          }}
+                          class="flex w-full cursor-pointer items-center gap-3 rounded-md px-6 py-2 text-left transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
                         >
-                          <span class="text-xs text-base-content/60"
-                            ><ScrollableText
-                              text={getFeatureDisplayAddress(
+                          <Icon
+                            src={MapPin}
+                            class="h-5 w-5 stroke-[1.5px] text-base-content/60"
+                          />
+                          <div
+                            class="flex min-w-0 flex-1 flex-col gap-0.5 text-sm text-base-content"
+                          >
+                            <span class="text-xs text-base-content/60"
+                              ><ScrollableText
+                                text={getFeatureDisplayAddress(
+                                  feature as FeatureFromCollection,
+                                )}
+                              /></span
+                            >
+                            <ScrollableText
+                              text={model.getFeatureName(
                                 feature as FeatureFromCollection,
                               )}
-                            /></span
-                          >
-                          <ScrollableText
-                            text={model.getFeatureName(
-                              feature as FeatureFromCollection,
-                            )}
-                          />
-                        </div>
-                        {#if shouldShowDate(
-                          groupData.features.filter(f => f !== null && f !== undefined),
-                          index,
-                        ) && feature.createdAt}
-                          <div class="font-mono text-xs text-base-content/40">
-                            {formatDistanceToNow(new Date(feature.createdAt), {
-                              addSuffix: true,
-                            })}
+                            />
                           </div>
-                        {/if}
-                      </a>
+                          {#if shouldShowDate(groupData.entries, index) &&
+                            feature.createdAt}
+                            <div class="shrink-0 text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(feature.createdAt), {
+                                addSuffix: true,
+                              })}
+                            </div>
+                          {/if}
+                        </a>
+                      {/if}
                     {/each}
                   </div>
                 {/if}

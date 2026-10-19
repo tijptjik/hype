@@ -5,6 +5,7 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
+import ContributionStatus from '../components/ContributionStatus.svelte'
 import { Icon } from '#lib/bits/index.js'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import { Scrollbar } from '#lib/bits/custom/scrollbar/index.js'
@@ -12,6 +13,8 @@ import { Scrollbar } from '#lib/bits/custom/scrollbar/index.js'
 import { getImagesForIds } from '#lib/api/image.remote.js'
 // SERVICES
 import { getURLfromImage } from '#lib/client/services/image.js'
+// ENUMS
+import { ImageContextResource } from '#lib/enums.js'
 // NAVIGATION
 // TYPES
 import type { Id, ResourceContext } from '#lib/types.js'
@@ -88,8 +91,12 @@ $effect(() => {
   if (userData?.contributedImages && !isInitializing) {
     // How many images did the user contribute across all (or all selected) projects?
     const totalImages = getTotalImagesFromUserData(userData)
-    // Create a stable identifier for userData to detect real changes
-    const userDataId = `${userData.id}-${totalImages}`
+    // Include IDs and review states so equal-count filter and moderation changes refresh thumbnails.
+    const userDataId = JSON.stringify([
+      userData.id,
+      userData.contributedImages,
+      userData.privateContributions?.images,
+    ])
 
     // Prevent infinite loops - only reinitialize if userData actually changed
     // Prevent concurrent initialization
@@ -172,10 +179,14 @@ const loadNextBatch = async () => {
       return
     }
 
-    const batchResult = await getImagesForIds({
-      ids: batchIds,
-      meta: { isAdminRequest: true },
-    })
+    const privateImages = userData.privateContributions?.images ?? {}
+    const publicIds = batchIds.filter(id => !privateImages[id])
+    const batchResult = publicIds.length
+      ? await getImagesForIds({
+          ids: publicIds,
+          meta: { isAdminRequest: true },
+        })
+      : { data: [] }
     const batchImages = batchResult?.data ?? []
 
     const processedImages = batchImages
@@ -197,6 +208,23 @@ const loadNextBatch = async () => {
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
+    // Personal thumbnails come from the owner-scoped profile, never the public resource cache.
+    for (const id of batchIds) {
+      const preview = privateImages[id]
+      if (!preview) continue
+      loadedImages.set(id, {
+        ...preview.image,
+        url: getURLfromImage({
+          image: {
+            image: preview.image,
+            ctxType: ImageContextResource.feature,
+            ctxId: preview.featureId,
+          },
+          transformation: 'c_fill,h_256,w_256',
+          quality: 'auto',
+        }),
+      })
+    }
     for (const img of processedImages) {
       loadedImages.set(img.id as Id, img)
     }
@@ -445,9 +473,9 @@ const setupNextTrigger = () => {
 }
 </script>
 
-<div id="contributed-images" class="border-b border-base-300">
+<div id="contributed-images" class="border-b border-border">
   <h3
-    class="p-4 pb-2 text-sm font-semibold uppercase tracking-wide text-base-content/60"
+    class="px-6 pt-5 pb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
   >
     {m.filters__image()}
   </h3>
@@ -458,11 +486,12 @@ const setupNextTrigger = () => {
         {#each Object.entries(
           userData.contributedImages,
         ) as [projectId, imageIds] (projectId)}
-          <div class="group-container px-1" bind:this={contents}>
+          <div class="group-container" bind:this={contents}>
             <!-- Sticky Group Header -->
             <button
               type="button"
-              class="sticky top-0 z-10 flex w-full items-center justify-between border-b border-base-300/10 bg-panel px-4 py-2 transition-colors"
+              class="sticky top-0 z-10 flex w-full items-center justify-between border-b border-border/10 bg-panel px-6 py-2.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+              aria-expanded={!collapsedGroups.has(projectId)}
               onclick={() => toggleGroup(projectId)}
             >
               <div class="flex items-center gap-2">
@@ -474,7 +503,7 @@ const setupNextTrigger = () => {
                     ? '-rotate-90'
                     : ''}"
                 />
-                <p class="flex space-x-0.5 font-mono text-xs uppercase tracking-widest">
+                <p class="flex space-x-0.5 text-xs font-medium">
                   {#if hierarchies?.[projectId]?.organisation}
                     <span class="text-primary"
                       >{model.getOrganisationName(
@@ -487,7 +516,7 @@ const setupNextTrigger = () => {
                     Boolean(hierarchies?.[projectId]?.organisation),
                   )}
                     <span class="px-0">›</span>
-                    <span class="text-accent"
+                    <span class="text-muted-foreground"
                       >{model.getProjectName(
                         hierarchies?.[projectId]?.project,
                         Boolean(hierarchies?.[projectId]?.organisation),
@@ -496,10 +525,7 @@ const setupNextTrigger = () => {
                   {/if}
                 </p>
               </div>
-              <div
-                class="text-sm text-base-content/60"
-                style="font-family: 'Tilt Neon', sans-serif"
-              >
+              <div class="text-xs tabular-nums text-muted-foreground">
                 {imageIds.length}
               </div>
             </button>
@@ -507,15 +533,19 @@ const setupNextTrigger = () => {
             <!-- Collapsible Group Images -->
             {#if !collapsedGroups.has(projectId)}
               <div class="py-2" transition:slide={{ duration: 300 }}>
-                <div class="grid grid-cols-2 gap-2 pl-4 pr-2 sm:grid-cols-3">
+                <div class="grid grid-cols-2 gap-2 px-6 sm:grid-cols-3">
                   {#each imageIds as imageId, idx (imageId)}
                     <a
-                      class="aspect-square cursor-pointer overflow-hidden rounded bg-base-200 transition-transform hover:scale-105"
+                      class="relative aspect-square {userData.privateContributions
+                        ?.images[imageId]
+                        ? 'cursor-default'
+                        : 'cursor-pointer'} overflow-hidden rounded-md border border-border bg-surface transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                       data-image-id={imageId}
                       href={loadedImages.get(imageId)?.href}
                       onclick={async e => {
                         e.preventDefault()
                         e.stopPropagation()
+                        if (userData.privateContributions?.images[imageId]) return
                         const image = loadedImages.get(imageId)
                         if (image?.featureId) {
                           model.onContributedImage(
@@ -576,6 +606,16 @@ const setupNextTrigger = () => {
                         }
                       }}
                     >
+                      {#if userData.privateContributions?.images[imageId]}
+                        <span
+                          class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center p-1"
+                        >
+                          <ContributionStatus
+                            status={userData.privateContributions.images[imageId]
+                              .status}
+                          />
+                        </span>
+                      {/if}
                       {#if loadedImages.has(imageId)}
                         <img
                           src={loadedImages.get(imageId)?.url}

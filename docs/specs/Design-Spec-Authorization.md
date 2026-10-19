@@ -264,3 +264,19 @@ Working notes for designing a unified authorization system with hierarchical own
 - Remote functions must perform explicit write authorization before mutation.
 - Query filters should be built from shared policy helpers to keep auth and data
   access consistent.
+
+## Personal contribution previews
+
+The profile panel includes an authenticated account's own submitted, rejected and
+unpublished features and images, including task-only photo submissions. These are
+minimal read-only previews returned by the owner-scoped user profile request, not
+an expansion of public feature/image read permissions. User-search or admin access
+to someone else's profile does not grant access to their private previews.
+
+Previews retain active hub, selected-map and live-layer boundaries. Drafts, orphan
+uploads and unrelated archived content stay excluded. Rejected submissions may be
+archived but remain visible to their author. Review records determine submitted
+and rejected status; unpublished content without a pending or rejected review is
+labeled unpublished. Published entries remain unlabeled. A photo omitted by an
+accepted partial review is rejected individually. General resource navigation
+continues to enforce its existing authorization rules.

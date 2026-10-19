@@ -5,6 +5,7 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'driz
 // DRIZZLE SCHEMA
 import { feature, featureImage, image } from '#lib/db/schema/index.js'
 // IMAGE
+import { ImageListFields } from './imageList.js'
 import { isSupportedUploadImageContentType } from '#lib/images/accept.js'
 import {
   ImageCDN,
@@ -117,20 +118,6 @@ export const FeatureImageUpdate = createUpdateSchema(featureImage)
 // ═══════════════════════
 // 2. REMOTE PROFILE SCHEMAS
 // ═══════════════════════
-
-const ImageListFields = ImageBase.pick({
-  id: true,
-  cdn: true,
-  env: true,
-  cdnId: true,
-  publicId: true,
-  contentHash: true,
-  version: true,
-  presentationMode: true,
-  contributorId: true,
-  createdAt: true,
-  modifiedAt: true,
-})
 
 export const ImageProfile = z.enum(['list', 'card', 'detail', 'admin'])
 
