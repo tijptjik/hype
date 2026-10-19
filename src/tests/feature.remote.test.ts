@@ -25,6 +25,7 @@ const {
   mockProbeLayerForUpdate,
   mockListFeatures,
   mockLoadFeature,
+  mockSaveLinkedFeatureForm,
   mockCreateFeature,
   mockCreateI18n,
   mockCreateProperties,
@@ -76,6 +77,11 @@ const {
     totalCount: 0,
   })),
   mockLoadFeature: vi.fn(async (): Promise<unknown> => null),
+  mockSaveLinkedFeatureForm: vi.fn(
+    async (): Promise<
+      import('#lib/db/services/placeEdit.js').LinkedFeatureSaveResult
+    > => ({ status: 'unlinked' }),
+  ),
   mockCreateFeature: vi.fn(async () => ({
     id: 'feature-1',
     modifiedAt: '2026-03-18T00:00:01.000Z',
@@ -257,6 +263,10 @@ vi.mock('#lib/api/services/authz/index.js', async importOriginal => ({
   toIssueDetailMessage: (code: string) => code,
 }))
 
+vi.mock('#lib/db/services/placeEdit.js', () => ({
+  saveLinkedFeatureForm: mockSaveLinkedFeatureForm,
+}))
+
 vi.mock('#lib/db/services/feature.js', () => ({
   createFeature: mockCreateFeature,
   createI18n: mockCreateI18n,
@@ -329,6 +339,7 @@ describe('feature.remote authz matrix', () => {
   beforeEach(() => {
     // Reuse the stateless handlers; reset their mocked dependencies for each case.
     vi.clearAllMocks()
+    mockSaveLinkedFeatureForm.mockResolvedValue({ status: 'unlinked' })
 
     mockAuthorizeFeatureListForContext.mockReturnValue({ allowed: true })
     mockAuthorizeFeatureReadForProbe.mockReturnValue({ allowed: true })
@@ -569,6 +580,68 @@ describe('feature.remote authz matrix', () => {
     expect(mockCreateProperties).not.toHaveBeenCalled()
   })
 
+  it.each(['saved', 'conflict', 'review'] as const)(
+    'routes linked form result %s without legacy relation writes',
+    async status => {
+      mockSaveLinkedFeatureForm.mockResolvedValue(
+        status === 'saved'
+          ? {
+              status,
+              feature: {
+                id: 'feature-1',
+                modifiedAt: '2026-03-18T00:00:02.000Z',
+              } as import('#lib/db/zod/schema/feature.types.js').FeatureDB,
+            }
+          : status === 'review'
+            ? { status, reason: 'invalid-brand' }
+            : { status },
+      )
+      const request = remote.featureForm(
+        {
+          meta: {
+            id: 'feature-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            organisationId: 'org-1',
+            projectId: 'project-1',
+            layerId: 'layer-1',
+            contributorId: null,
+            i18n: { en: { title: 'Edited feature' } },
+            properties: [],
+            geometry: { type: 'Point', coordinates: [114.2, 22.4] },
+            addressMeta: {},
+            isIntangible: false,
+            isVisitable: true,
+            isPendingReview: false,
+          },
+        },
+        throwingInvalid,
+      )
+      if (status === 'saved')
+        expect(await request).toEqual({
+          data: { id: 'feature-1', modifiedAt: '2026-03-18T00:00:02.000Z' },
+        })
+      else
+        await expect(request).rejects.toThrow(
+          status === 'conflict' ? 'STALE_WRITE' : 'requires review',
+        )
+      expect(mockAuthorizeFeatureUpdateForSubmission).toHaveBeenCalled()
+      expect(mockSaveLinkedFeatureForm).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          featureId: 'feature-1',
+          projectId: 'project-1',
+          actorId: 'u-1',
+        }),
+      )
+      expect(mockUpdateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
+      expect(mockUpdateI18n).not.toHaveBeenCalled()
+      expect(mockUpdateProperties).not.toHaveBeenCalled()
+    },
+  )
+
   it('featureForm update allows changed field submission', async () => {
     const result = await remote.featureForm(
       {
@@ -740,6 +813,7 @@ describe('feature.remote authz matrix', () => {
 
     expect(mockProbeLayerForUpdate).not.toHaveBeenCalled()
     expect(mockLoadFeature).not.toHaveBeenCalled()
+    expect(mockSaveLinkedFeatureForm).not.toHaveBeenCalled()
   })
 
   it('featureForm create allows a caller-supplied id', async () => {

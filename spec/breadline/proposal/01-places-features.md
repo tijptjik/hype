@@ -460,3 +460,30 @@ Baseline extraction now accepts persisted kebab-case locale keys as well as form
 camel-case keys. The corrected live local assessment retains 1,190 English names and
 1,163 names each in Traditional and Simplified Chinese. Readiness remains 1,190
 Features, with 56 intangible Features and 25 drafts excluded. No links are created.
+
+### Normal linked Feature form integration (Refs #194)
+
+The authorized `featureForm` update handler now routes linked Features through
+`saveLinkedFeatureForm`. Submitted baseline projection uses persisted property
+definitions and verifies legacy brand option ownership; client-hydrated property or
+brand metadata is not used as identity evidence. Existing overrides are compared
+against the proposed effective values, then association/history, parent Feature,
+translations and changed properties are written in one conditional D1 batch. Stale
+writes and review-required changes do not fall through to the legacy save path.
+Unchanged geometry is omitted from the update to avoid unnecessary spatial/MTR work.
+Project transfers and conversion to non-place representations require review.
+
+Service tests cover a real linked edit, unchanged inherited names, phone arrays,
+stale saves and full rollback on a child-write failure. Remote tests cover linked
+success/conflict/review routing and absence of legacy relation writes. Seventy-five
+targeted service, remote, import and contribution-guard tests pass. An isolated copy
+of the fresh local mirror also passed initial linking and a normal description edit:
+only parent modifiedAt changed, effective Place facts stayed identical, and replay
+with the old timestamp was rejected. The primary mirror still has zero associations
+and zero Feature/translation/property differences from the production snapshot.
+
+This integrates the normal form for already-linked Features, not every write path.
+Public linking remains pending until the unlinked-to-linked transition is serialized
+with unlinked form saves and all direct/import/contribution mutation paths are covered.
+Reset/adoption materialization, Place brand storage and source synchronization remain
+outstanding. No remote database mutation or deployment was performed.

@@ -29,7 +29,11 @@ export function prepareFeaturePlaceRelations(
   featureId: string,
   revision: string,
   translations: Record<string, FeatureI18nPartial>,
-  properties?: NewFeatureProperty[],
+  properties?: Array<
+    Omit<NewFeatureProperty, 'i18n'> & {
+      i18n?: Partial<NonNullable<NewFeatureProperty['i18n']>>
+    }
+  >,
 ): BatchItem<'sqlite'>[] {
   if (!featureId || !revision) throw new Error('Feature association token is required')
   const guard = sql`EXISTS (SELECT 1 FROM featurePlace

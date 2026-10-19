@@ -3,7 +3,7 @@ import { and, eq, or } from 'drizzle-orm'
 // SCHEMA
 import { feature, featureI18n, featureProperty } from '../schema/feature'
 import { hub } from '../schema/hub'
-import { property, propertyValueI18n } from '../schema/property'
+import { property, propertyValue, propertyValueI18n } from '../schema/property'
 // DOMAIN
 import {
   ADDRESS_LOCALES,
@@ -16,7 +16,18 @@ import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
 // TYPES
 import type { Database, LocaleKey } from '#lib/types.js'
 import type { EffectivePlaceFacts } from '#lib/places/resolve.js'
+import type {
+  FeatureDBPartial,
+  FeatureI18nPartial,
+  NewFeatureProperty,
+} from '#lib/db/zod/schema/feature.types.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
+
+export type FeaturePlaceProposal = {
+  data: Pick<FeatureDBPartial, 'geometry' | 'addressMeta' | 'isIntangible'>
+  i18n: Record<string, FeatureI18nPartial>
+  properties?: NewFeatureProperty[]
+}
 
 export type PersistedPlaceBaseline = {
   featureId: string
@@ -43,6 +54,7 @@ export type PlaceBaselineResult =
  * @param db Request-local database.
  * @param featureId Authorized Feature identity.
  * @param projectId Persisted project scope from authorization.
+ * @param proposal Optional validated form projection; property definitions still come from the database.
  * @returns Complete preservation baseline or an explicit exclusion/review reason.
  * @remarks Legacy brand option identities remain local identifiers, never inferred
  * SaanSeoi brands. Full address corrections remain separate from immutable source
@@ -52,8 +64,9 @@ export async function readFeaturePlaceBaseline(
   db: Database,
   featureId: string,
   projectId: string,
+  proposal?: FeaturePlaceProposal,
 ): Promise<PlaceBaselineResult> {
-  const row = await db
+  const stored = await db
     .select({
       id: feature.id,
       projectId: feature.projectId,
@@ -66,19 +79,31 @@ export async function readFeaturePlaceBaseline(
     .from(feature)
     .where(and(eq(feature.id, featureId), eq(feature.projectId, projectId)))
     .get()
-  if (!row) return { status: 'ineligible', reason: 'not-found' }
+  if (!stored) return { status: 'ineligible', reason: 'not-found' }
+  const row = {
+    ...stored,
+    geometry: proposal?.data.geometry ?? stored.geometry,
+    addressMeta: proposal?.data.addressMeta ?? stored.addressMeta,
+    isIntangible: proposal?.data.isIntangible ?? stored.isIntangible,
+  }
   if (row.isDraft) return { status: 'ineligible', reason: 'draft' }
   if (row.isIntangible) return { status: 'ineligible', reason: 'intangible' }
   if (row.geometry.type !== 'Point')
     return { status: 'ineligible', reason: 'non-point' }
-  const translations = await db
-    .select({
-      locale: featureI18n.locale,
-      title: featureI18n.title,
-      displayAddress: featureI18n.displayAddress,
-    })
-    .from(featureI18n)
-    .where(eq(featureI18n.featureId, featureId))
+  const translations = proposal
+    ? Object.entries(proposal.i18n).map(([locale, value]) => ({
+        locale,
+        title: value.title ?? '',
+        displayAddress: value.displayAddress ?? null,
+      }))
+    : await db
+        .select({
+          locale: featureI18n.locale,
+          title: featureI18n.title,
+          displayAddress: featureI18n.displayAddress,
+        })
+        .from(featureI18n)
+        .where(eq(featureI18n.featureId, featureId))
   const names: Record<string, string> = {}
   const labels: Record<string, string> = {}
   for (const translation of translations) {
@@ -101,7 +126,7 @@ export async function readFeaturePlaceBaseline(
         ? getAddressDisplay(address, locale)
         : labels[tag]
   }
-  const properties = await db
+  let properties = await db
     .select({
       id: property.id,
       key: property.key,
@@ -119,6 +144,32 @@ export async function readFeaturePlaceBaseline(
         or(eq(property.key, 'phoneNumber'), eq(property.key, 'brand')),
       ),
     )
+  if (proposal?.properties !== undefined) {
+    // Resolve submitted property identities from the catalog, never client-hydrated metadata.
+    const definitions = await db
+      .select({
+        id: property.id,
+        key: property.key,
+        scope: property.scope,
+        hubCode: hub.code,
+      })
+      .from(property)
+      .leftJoin(hub, eq(hub.id, property.hubId))
+      .where(or(eq(property.key, 'phoneNumber'), eq(property.key, 'brand')))
+    const byId = new Map(definitions.map(definition => [definition.id, definition]))
+    properties = proposal.properties.flatMap(value => {
+      const definition = byId.get(value.propertyId)
+      return definition
+        ? [
+            {
+              ...definition,
+              propertyValueId: value.propertyValueId || null,
+              value: value.value ?? null,
+            },
+          ]
+        : []
+    })
+  }
   const phones = properties.filter(item => item.key === 'phoneNumber')
   if (phones.some(item => item.scope !== 'hub' || item.hubCode !== 'core'))
     return { status: 'review', reason: 'ambiguous-properties' }
@@ -151,6 +202,17 @@ export async function readFeaturePlaceBaseline(
   for (const brand of brands) {
     if (!brand.propertyValueId || brand.value !== null)
       return { status: 'review', reason: 'invalid-brand' }
+    const option = await db
+      .select({ id: propertyValue.id })
+      .from(propertyValue)
+      .where(
+        and(
+          eq(propertyValue.id, brand.propertyValueId),
+          eq(propertyValue.propertyId, brand.id),
+        ),
+      )
+      .get()
+    if (!option) return { status: 'review', reason: 'invalid-brand' }
     const values = await db
       .select({ locale: propertyValueI18n.locale, value: propertyValueI18n.value })
       .from(propertyValueI18n)

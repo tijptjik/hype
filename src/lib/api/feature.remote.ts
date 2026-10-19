@@ -54,6 +54,7 @@ import {
   toIssueDetailMessage,
 } from '#lib/api/services/authz/index.js'
 // DB
+import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import {
   createFeature,
@@ -684,6 +685,35 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
         issue.data.properties(error instanceof Error ? error.message : String(error)),
       )
     }
+  }
+
+  const linkedSave = await saveLinkedFeatureForm(db, {
+    featureId: current.id,
+    projectId: current.projectId,
+    actorId: user.id,
+    updatedAt,
+    data: {
+      organisationId: resolvedOrganisationId,
+      projectId: resolvedProjectId,
+      layerId: data.layerId,
+      contributorId: data.contributorId ?? current.contributorId ?? null,
+      geometry: data.geometry,
+      addressMeta: data.addressMeta ?? {},
+      isIntangible: data.isIntangible,
+      isVisitable: data.isVisitable,
+      isPendingReview: data.isPendingReview,
+    },
+    i18n: data.i18n,
+    properties: propertiesChanged ? submittedProperties : undefined,
+  })
+  if (linkedSave.status === 'conflict')
+    invalid(issue(toIssueDetailMessage('STALE_WRITE')))
+  if (linkedSave.status === 'review')
+    invalid(issue(`Place-linked feature requires review: ${linkedSave.reason}`))
+  if (linkedSave.status === 'saved') {
+    if (geometryChanged)
+      scheduleFeatureMtr(ctx.event.locals.platform, linkedSave.feature.id)
+    return toCreatedResponseShape(linkedSave.feature)
   }
 
   const persisted = requireValue(

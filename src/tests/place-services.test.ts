@@ -13,6 +13,7 @@ import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
 import { prepareFeaturePlaceRelations } from '#lib/db/services/placeRelations.js'
+import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { createLocalPlace } from '#lib/db/services/placeLocal.js'
@@ -41,6 +42,7 @@ function setup() {
     CREATE TABLE hub(id TEXT PRIMARY KEY,code TEXT);
     CREATE TABLE property(id TEXT PRIMARY KEY,key TEXT,scope TEXT,hubId TEXT);
     CREATE TABLE featureProperty(featureId TEXT,propertyId TEXT,propertyValueId TEXT,value TEXT);
+    CREATE TABLE propertyValue(id TEXT PRIMARY KEY,propertyId TEXT);
     CREATE TABLE propertyValueI18n(propertyValueId TEXT,locale TEXT,value TEXT);
     INSERT INTO project(id) VALUES ('p'), ('other');
     INSERT INTO feature(id,projectId) VALUES ('f','p');`)
@@ -654,6 +656,7 @@ describe('persisted Feature baseline and initial linking', () => {
       INSERT INTO hub VALUES ('core','core');
       INSERT INTO property VALUES ('phone','phoneNumber','hub','core'),('brand','brand','organisation',NULL);
       INSERT INTO featureProperty VALUES ('f','phone',NULL,'2345 6789'),('f','brand','legacy-brand',NULL);
+      INSERT INTO propertyValue VALUES ('legacy-brand','brand');
       INSERT INTO propertyValueI18n VALUES ('legacy-brand','en','Bakery brand'),('legacy-brand','zh-hant','品牌');`)
     const baseline = await readFeaturePlaceBaseline(db, 'f', 'p')
     expect(baseline.status).toBe('ready')
@@ -885,5 +888,113 @@ describe('atomic linked Feature relation replacement', () => {
     expect(
       sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get(),
     ).toEqual({ n: 1 })
+  })
+})
+
+describe('linked Feature form persistence', () => {
+  it('updates edited overrides and materialized rows atomically while preserving inherited names', async () => {
+    const { db, sqlite } = setup()
+    const { getTableColumns } = await import('drizzle-orm')
+    const { feature, featureI18n } = await import('#lib/db/schema/feature.js')
+    // Add the real schema columns to this lightweight D1 fixture for full-row RETURNING.
+    for (const [name, table] of [
+      ['feature', feature],
+      ['featureI18n', featureI18n],
+    ] as const) {
+      const existing = new Set(
+        sqlite
+          .prepare(`PRAGMA table_info(${name})`)
+          .all()
+          .map(row => row.name),
+      )
+      for (const column of Object.values(getTableColumns(table)))
+        if (!existing.has(column.name))
+          sqlite.exec(
+            `ALTER TABLE ${name} ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+          )
+    }
+    sqlite.exec(`CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
+      INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES ('f','en','Bakery','Original address');
+      INSERT INTO hub VALUES ('core','core');
+      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');`)
+    sqlite
+      .prepare("UPDATE feature SET geometry=? WHERE id='f'")
+      .run(JSON.stringify(facts.location.geometry))
+    sqlite.exec(readFileSync('migrations/0109_place_association_scope.sql', 'utf8'))
+    const local = await createLocalPlace(
+      db,
+      'p',
+      { state: 'manual', facts: { ...facts, phoneNumber: [] } },
+      'actor',
+    )
+    const link = await linkInitialFeaturePlace(db, {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: local.placeId,
+      revisionId: local.revisionId,
+      expectedFeatureModifiedAt: 'original',
+      actorId: 'actor',
+    })
+    expect(link.status).toBe('linked')
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      actorId: 'editor',
+      updatedAt: 'original',
+      data: { isVisitable: true },
+      i18n: {
+        en: {
+          title: 'Bakery',
+          description: 'Collection instructions',
+          displayAddress: 'Original address',
+        },
+      },
+      properties: [{ propertyId: 'phone', value: '["+85291234567","+85223456789"]' }],
+    }
+    const saved = await saveLinkedFeatureForm(db, input)
+    expect(saved.status).toBe('saved')
+    if (saved.status !== 'saved') throw new Error('Expected save')
+    const accepted = await getAcceptedFeaturePlace(db, 'f', 'p')
+    expect(accepted?.effective.phoneNumber).toEqual(['+85291234567', '+85223456789'])
+    const stored = sqlite.prepare('SELECT overrides FROM featurePlace').get()
+    expect(JSON.parse(stored!.overrides as string)).toEqual({
+      phoneNumber: { mode: 'override', value: ['+85291234567', '+85223456789'] },
+    })
+    expect(
+      sqlite
+        .prepare("SELECT title,description FROM featureI18n WHERE featureId='f'")
+        .get(),
+    ).toEqual({ title: 'Bakery', description: 'Collection instructions' })
+    expect(
+      sqlite.prepare("SELECT value FROM featureProperty WHERE featureId='f'").get(),
+    ).toEqual({ value: '["+85291234567","+85223456789"]' })
+    expect(await saveLinkedFeatureForm(db, input)).toEqual({ status: 'conflict' })
+    const snapshot = () =>
+      [
+        'feature',
+        'featureI18n',
+        'featureProperty',
+        'featurePlace',
+        'featurePlaceHistory',
+      ].map(table => sqlite.prepare(`SELECT * FROM ${table}`).all())
+    const before = snapshot()
+    sqlite.exec(`CREATE TRIGGER reject_title BEFORE INSERT ON featureI18n WHEN NEW.title='Failure'
+      BEGIN SELECT RAISE(ABORT,'injected save failure'); END`)
+    await expect(
+      saveLinkedFeatureForm(db, {
+        ...input,
+        updatedAt: saved.feature.modifiedAt,
+        i18n: { en: { title: 'Failure', displayAddress: 'Original address' } },
+      }),
+    ).rejects.toThrow()
+    expect(snapshot()).toEqual(before)
+    expect(
+      await saveLinkedFeatureForm(db, {
+        ...input,
+        updatedAt: saved.feature.modifiedAt,
+        data: { projectId: 'other' },
+      }),
+    ).toMatchObject({ status: 'review' })
+    expect(snapshot()).toEqual(before)
   })
 })
