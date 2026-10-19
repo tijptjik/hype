@@ -283,6 +283,70 @@ describe('map markers', () => {
     expect(markerImage?.loading).toBe('eager')
   })
 
+  it('uses the chosen map palette for default markers and updates retained markers', () => {
+    const renderer = createMarkerRenderer(retentionMap, markerFactory)
+    const row = feature('etch-marker', [1, 1])
+    const options = {
+      retention: { scope: 'etch', budget: 1000 },
+    }
+    renderer.sync([row], { ...options, markerTheme: 'etch-dark' })
+    expect(renderer.getElement(row.id)).toHaveClass('marker-theme--etch-dark')
+    renderer.sync([], { ...options, markerTheme: 'etch-dark' })
+    renderer.sync([row], { ...options, markerTheme: 'etch-light' })
+    expect(renderer.getElement(row.id)).toHaveClass('marker-theme--etch-light')
+    renderer.sync([row], options)
+    expect(renderer.getElement(row.id)).toHaveClass('marker-theme--ghostery')
+  })
+
+  it.each([
+    'light',
+    'dark',
+    'etch-dark',
+    'etch-light',
+    'ghostery',
+    'hyperpop',
+    'neon',
+    'rosepunk',
+  ] as const)(
+    'preserves the explicit %s colour rule over the active default',
+    palette => {
+      const renderer = createMarkerRenderer(map, markerFactory)
+      renderer.sync([feature('explicit')], {
+        markerTheme: 'etch-light',
+        markerThemesByProjectId: new Map([['project-1', palette]]),
+      })
+      expect(renderer.getElement('explicit')).toHaveClass(`marker-theme--${palette}`)
+    },
+  )
+
+  it('respects layer overrides, inherited projects and User Preference independently', () => {
+    const renderer = createMarkerRenderer(retentionMap, markerFactory)
+    const row = { ...feature('layer-marker', [1, 1]), layerId: 'layer-1' }
+    const options = {
+      retention: { scope: 'layers', budget: 1000 },
+      markerTheme: 'etch-dark' as const,
+      markerThemesByProjectId: new Map([['project-1', 'neon' as const]]),
+    }
+    renderer.sync([row], options)
+    expect(renderer.getElement(row.id)).toHaveClass('marker-theme--neon')
+    renderer.sync([row], {
+      ...options,
+      markerThemesByLayerId: new Map([['layer-1', 'light']]),
+    })
+    expect(renderer.getElement(row.id)).toHaveClass('marker-theme--light')
+    renderer.sync([], {
+      ...options,
+      markerThemesByLayerId: new Map([['layer-1', 'light']]),
+    })
+    renderer.sync([row], {
+      ...options,
+      markerThemesByLayerId: new Map([['layer-1', null]]),
+    })
+    expect(renderer.getElement(row.id)).toHaveClass('marker-theme--etch-dark')
+    renderer.sync([row], options)
+    expect(renderer.getElement(row.id)).toHaveClass('marker-theme--neon')
+  })
+
   it('rebuilds image markers when their map-style theme changes', () => {
     const renderer = createMarkerRenderer(map, markerFactory)
     renderer.sync([feature('feature-1')], {

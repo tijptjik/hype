@@ -20,6 +20,7 @@ import {
   type MarkerRenderer,
 } from '#lib/map/markers.js'
 import {
+  type MapMarkerTheme,
   getDefaultMapStyleKey,
   getMapStyleDefinition,
   isMapStyleKey,
@@ -366,17 +367,38 @@ const activeLocale = $derived(getLocale())
 const resolvedMapStyleCode = $derived(
   mapStyleCode && isMapStyleKey(mapStyleCode) ? mapStyleCode : getDefaultMapStyleKey(),
 )
+// The chosen map supplies defaults; explicit layer/project palettes remain authoritative.
+const activeMarkerTheme = $derived(
+  getMapStyleDefinition(resolvedMapStyleCode).markerTheme,
+)
 const projectMarkerThemes = $derived.by(() => {
-  const fallbackTheme = getMapStyleDefinition(getDefaultMapStyleKey()).markerTheme
-
+  // Pinned projects can be absent from paginated query rows, but remain in the reactive cache.
   return new Map(
-    appCtx.view.queries.rows.project.map(project => [
-      project.id,
+    [...appCtx.view.cache.project.values()].flatMap(project =>
       project.mapStyle?.code && isMapStyleKey(project.mapStyle.code)
-        ? getMapStyleDefinition(project.mapStyle.code).markerTheme
-        : fallbackTheme,
-    ]),
+        ? [
+            [
+              project.id,
+              getMapStyleDefinition(project.mapStyle.code).markerTheme,
+            ] as const,
+          ]
+        : [],
+    ),
   )
+})
+const layerMarkerThemes = $derived.by(() => {
+  const palettes = new Map<string, MapMarkerTheme | null>()
+  for (const layer of appCtx.view.cache.layer.values()) {
+    const metadata = layer.metadata as { mapStyleCode?: unknown } | null
+    const code =
+      layer.mapStyleCode !== undefined ? layer.mapStyleCode : metadata?.mapStyleCode
+    // User Preference skips the project palette; legacy layers inherit it.
+    if (code === null) palettes.set(layer.id, null)
+    else if (typeof code === 'string' && isMapStyleKey(code)) {
+      palettes.set(layer.id, getMapStyleDefinition(code).markerTheme)
+    }
+  }
+  return palettes
 })
 // MAP SURFACE LIFECYCLE
 let geolocateControl: GeolocateControlWithPrivateFields | undefined = $state(undefined)
@@ -639,9 +661,6 @@ $effect(() => {
       map.getZoom(),
     )
   }
-  const onMoveStart = (): void => {
-    map.getContainer().dataset.markerMotion = 'moving'
-  }
   let movementTimer: ReturnType<typeof setTimeout> | undefined
   const onMove = (): void => {
     markerRenderer?.updateCamera()
@@ -652,21 +671,17 @@ $effect(() => {
     }, 300)
   }
   const onMoveEnd = (): void => {
-    delete map.getContainer().dataset.markerMotion
     clearTimeout(movementTimer)
     movementTimer = undefined
     markerRenderer?.updateCamera(true)
     updateViewport()
   }
-  map.on('movestart', onMoveStart)
   map.on('move', onMove)
   map.on('moveend', onMoveEnd)
   map.on('resize', updateViewport)
   updateViewport()
   return () => {
     clearTimeout(movementTimer)
-    delete map.getContainer().dataset.markerMotion
-    map.off('movestart', onMoveStart)
     map.off('move', onMove)
     map.off('moveend', onMoveEnd)
     map.off('resize', updateViewport)
@@ -761,7 +776,9 @@ watch(
     featureQueryKey(appCtx.view.filters.featureQueryInput()),
     activeMapInstance,
     userMarkerStyleVariant,
+    activeMarkerTheme,
     projectMarkerThemes,
+    layerMarkerThemes,
     appCtx.selection.featureId,
     appCtx.selection.collection?.items.map(item => item.id).join(','),
     isAnimating,
@@ -776,7 +793,9 @@ watch(
               budget: getMarkerRetentionBudget(navigator),
             },
         markerStyle: userMarkerStyleVariant,
+        markerTheme: activeMarkerTheme,
         markerThemesByProjectId: projectMarkerThemes,
+        markerThemesByLayerId: layerMarkerThemes,
         selectedId: appCtx.selection.featureId,
         highlightedIds: new Set(
           appCtx.selection.collection?.items.map(item => item.id) ?? [],

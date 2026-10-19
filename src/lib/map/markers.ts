@@ -88,7 +88,11 @@ export type MarkerRenderer = {
     features: FeatureFromCollection[],
     options?: {
       markerStyle?: MarkerStyleVariant
+      /** Active basemap default; explicit layer/project palettes take precedence. */
+      markerTheme?: MapMarkerTheme
       markerThemesByProjectId?: ReadonlyMap<string, MapMarkerTheme>
+      /** Null selects the active map default; absence inherits the project palette. */
+      markerThemesByLayerId?: ReadonlyMap<string, MapMarkerTheme | null>
       selectedId?: Id | null
       highlightedIds?: ReadonlySet<Id>
       retention?: MarkerRetentionOptions
@@ -238,17 +242,26 @@ function getFeatureMarkerImageSrc(feature: FeatureFromCollection): string | null
 }
 
 /**
- * Resolves one feature's marker treatment from its parent project's map style.
+ * Resolves marker styling from explicit layer/project choices before the map default.
  *
  * @param feature - Feature being rendered as a marker.
- * @param markerThemesByProjectId - Project map-style themes indexed by project id.
- * @returns Project-backed theme, or the default theme when project data is unavailable.
+ * @param markerThemesByProjectId - Explicit project palettes indexed by project id.
+ * @param markerThemesByLayerId - Layer palettes; null selects the map default.
+ * @param activeTheme - Chosen basemap palette for default markers.
+ * @returns Layer palette, inherited project palette, or the chosen map default.
  */
 function getFeatureMarkerTheme(
   feature: FeatureFromCollection,
   markerThemesByProjectId: ReadonlyMap<string, MapMarkerTheme>,
+  markerThemesByLayerId: ReadonlyMap<string, MapMarkerTheme | null>,
+  activeTheme?: MapMarkerTheme,
 ): MapMarkerTheme {
-  return markerThemesByProjectId.get(feature.projectId) ?? DEFAULT_MARKER_THEME
+  const fallback = activeTheme ?? DEFAULT_MARKER_THEME
+  const layerTheme = feature.layerId
+    ? markerThemesByLayerId.get(feature.layerId)
+    : undefined
+  if (layerTheme === null) return fallback
+  return layerTheme ?? markerThemesByProjectId.get(feature.projectId) ?? fallback
 }
 
 /**
@@ -457,7 +470,11 @@ export function createMarkerRenderer(
     features: FeatureFromCollection[],
     options: {
       markerStyle?: MarkerStyleVariant
+      /** Active basemap default; explicit layer/project palettes take precedence. */
+      markerTheme?: MapMarkerTheme
       markerThemesByProjectId?: ReadonlyMap<string, MapMarkerTheme>
+      /** Null selects the active map default; absence inherits the project palette. */
+      markerThemesByLayerId?: ReadonlyMap<string, MapMarkerTheme | null>
       selectedId?: Id | null
       highlightedIds?: ReadonlySet<Id>
       retention?: MarkerRetentionOptions
@@ -469,7 +486,9 @@ export function createMarkerRenderer(
       ? JSON.stringify([
           retention.scope,
           options.markerStyle ?? 'image',
+          options.markerTheme,
           [...(options.markerThemesByProjectId ?? new Map())],
+          [...(options.markerThemesByLayerId ?? new Map())],
         ])
       : undefined
     const incomingIds = new Set(features.map(feature => feature.id))
@@ -495,6 +514,7 @@ export function createMarkerRenderer(
     const isNear = retention ? createMarkerVisibilityTest(map) : () => true
     const markerStyle = options.markerStyle ?? 'image'
     const markerThemesByProjectId = options.markerThemesByProjectId ?? new Map()
+    const markerThemesByLayerId = options.markerThemesByLayerId ?? new Map()
     const markerState: MarkerRenderState = {
       selectedId: options.selectedId,
       highlightedIds: options.highlightedIds,
@@ -552,7 +572,12 @@ export function createMarkerRenderer(
     for (const feature of pointFeatures) {
       const coordinates = getFeaturePointCoordinates(feature.geometry)
       if (!coordinates) continue
-      const markerTheme = getFeatureMarkerTheme(feature, markerThemesByProjectId)
+      const markerTheme = getFeatureMarkerTheme(
+        feature,
+        markerThemesByProjectId,
+        markerThemesByLayerId,
+        options.markerTheme,
+      )
       const cached = retained.get(feature.id)
       if (cached) {
         retained.delete(feature.id)
