@@ -62,3 +62,11 @@ The overlay can be retired once equivalent reference coverage is in the tiles.
 - Preview: `output/playwright/breadline-light.png` (local artifact).
 - Registered in local D1 with all three catalogue locales. Deployment and remote
   catalogue sync follow the existing release process.
+
+## Admin marker choices (Refs #199)
+
+The marker picker offers Photo, Dot, Country chip (`flag`) and Brand status
+(`breadline`). Layers additionally offer Project Default and preview the inherited
+project style. Projects have no User Choice option; an unset project displays Photo.
+Pin is retired from the picker, and saved `pin` values resolve to Photo. Persisted
+`flag` and `breadline` codes remain unchanged by the display-name updates.
