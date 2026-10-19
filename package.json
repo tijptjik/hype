@@ -73,6 +73,7 @@
     "check:division-refresh": "tsc -p workers/division-refresh/tsconfig.json",
     "auth:secrets:configure": "bun run scripts/cloud/configure-auth-secrets.ts",
     "render:assets": "bun run scripts/generate-image-derived-assets.ts",
+    "feature:divisions:prepare:remote": "node --import tsx scripts/cloud/prepare-divisions.ts",
     "feature:divisions:backfill": "bun run scripts/backfill-feature-divisions.ts",
     "feature:spatial:backfill": "bun run scripts/backfill-feature-spatial-index.ts",
     "image:hash:backfill": "bun run scripts/backfill-image-content-hashes.ts",

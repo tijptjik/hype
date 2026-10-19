@@ -55,8 +55,17 @@ export const shouldTreatDeployErrorAsSuccess = (
  * @param target Deployment target being executed.
  * @returns Process exit code.
  */
-const deployWorker = async (target: DeployTarget): Promise<number> => {
+export const deployWorker = async (target: DeployTarget): Promise<number> => {
   const { name, env } = DEPLOY_TARGETS[target]
+
+  // Deploy the database writer with the app so newly queued division jobs have a consumer.
+  const refresh = Bun.spawn([
+    'bun', 'wrangler', 'deploy', '--config',
+    'workers/division-refresh/wrangler.jsonc', '--env', env,
+  ], { stdout: 'inherit', stderr: 'inherit' })
+  const refreshExitCode = await refresh.exited
+  if (refreshExitCode !== 0) return refreshExitCode
+
   const command = ['bun', 'wrangler', 'deploy', '--name', name, '--env', env]
 
   const process = Bun.spawn(command, {
