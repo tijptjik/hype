@@ -9,6 +9,7 @@ import { placeRevision } from '../../src/lib/db/schema/place'
 import { persistSaanSeoiPlace } from '../../src/lib/db/services/placeSource'
 // SOURCE
 import { readSaanSeoiPlacePage } from '../../src/lib/places/sourceClient'
+import { parsePlacePublication } from '../../src/lib/places/publication'
 // TYPES
 import type { PlacePublicationPin } from '../../src/lib/places/sourceClient'
 import type { Database } from '../../src/lib/types'
@@ -40,14 +41,7 @@ async function main(): Promise<void> {
     throw new Error('Use the default remirrored local HYPE database')
   process.umask(0o077)
   const publication = JSON.parse(readFileSync(publicationPath, 'utf8'))
-  const permalink = new URL(publication.links.permalink)
-  const knownAt = permalink.searchParams.get('knownAt')
-  if (!knownAt) throw new Error('Publication permalink must pin knownAt')
-  const pin: PlacePublicationPin = {
-    releaseSet: publication.meta.apiReleaseSet,
-    catalogRevision: publication.meta.apiCatalogRevision,
-    knownAt,
-  }
+  const { pin } = parsePlacePublication(publication)
   const filters = taxonomyPrimary ? { taxonomyPrimary } : {}
   let checkpoint: Checkpoint = existsSync(checkpointPath)
     ? JSON.parse(readFileSync(checkpointPath, 'utf8'))

@@ -268,6 +268,16 @@ resolves the latest snapshot, despite the collection supporting publication sele
 Use the canonical collection with `releaseSet`, `profile=full` and all supported locales
 for a pinned scan; do not assume the detail route accepts those selectors. Preserve source-to-canonical provenance.
 
+Canonical publication discovery is implemented in `src/lib/places/publication.ts`.
+It makes one bounded collection request and validates the catalogue timestamp, cohort,
+API family/region and permalink selectors together. The local mirror command uses the
+same parser. The sync comparison distinguishes exact replay, initial discovery and
+forward publication: same-cohort curation is eligible when the catalogue timestamp
+increases; older cohorts, backwards numeric cohort revisions, equal-time identity
+conflicts and changed release identity within the same cohort require review. Local
+Place revision sequence is never used as proof of upstream chronology. This discovery
+boundary does not activate a scheduler or apply Feature updates.
+
 Follow DivisionSync's monthly discovery and bounded durable work pattern, with leases,
 retry state, fenced writes and resumable checkpoints. Advance a publication checkpoint
 only after successful application. Keep the last accepted snapshot on failed reads or
