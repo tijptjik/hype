@@ -400,3 +400,11 @@ and persisted access data remain available for the dedicated card implementation
 import planning and MTR review. Donors without recorded runs are excluded regardless
 of `active`; the planner emits per-donor exclusion evidence in its private receipt.
 Earlier local rehearsals still contain these donors and require reconciliation.
+
+### Place and Address architecture prerequisite (20 October 2026; Refs #194)
+
+The accepted [Places and feature inheritance design](01-places-features.md) replaces
+the feature-only import target with shared Places and project-specific Features.
+It includes SaanSeoi Addresses, project-controlled source-change adoption, array-valued
+phones/brands, and unresolved/manual identities. Existing import SQL remains rehearsal
+evidence; rebase it before production application.
