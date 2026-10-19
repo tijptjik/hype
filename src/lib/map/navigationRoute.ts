@@ -140,7 +140,7 @@ export function createNavigationRoute(map: MapLibreMap): {
   return {
     update(geometry, theme) {
       color = divisionHighlightColors[theme]
-      halo = theme === 'light' ? '#ffffff' : '#101827'
+      halo = theme === 'light' || theme === 'etch-light' ? '#ffffff' : '#101827'
       const first = geometry.coordinates[0][0]
       const lastLeg = geometry.coordinates[geometry.coordinates.length - 1]
       const last = lastLeg[lastLeg.length - 1]

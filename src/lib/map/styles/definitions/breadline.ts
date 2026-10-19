@@ -1,12 +1,16 @@
 import type { StyleSpecification } from 'maplibre-gl'
 
-import type { StyleBuildOptions } from './common'
-import { buildHyperLightStyle } from './hyperLight'
+import { buildNamedProtomapsStyle, type StyleBuildOptions } from './common'
 
+/**
+ * Builds the legacy Breadline map independently of the current Hyper art direction.
+ * @param options - Locale and label visibility preferences.
+ * @returns The original light basemap retained for saved Breadline Classic selections.
+ */
 export const buildBreadlineStyle = (
   options: StyleBuildOptions = {},
 ): StyleSpecification => {
-  const style = buildHyperLightStyle(options)
+  const style = buildNamedProtomapsStyle('light', options)
 
   return {
     ...style,

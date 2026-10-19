@@ -77,8 +77,6 @@ describe('map styles', () => {
 
   it('spaces repeated street names farther apart across Protomaps-derived styles', () => {
     const styleKeys = [
-      'hyper',
-      'hyperLight',
       'hyperpop',
       'ghostery',
       'neonmaster',

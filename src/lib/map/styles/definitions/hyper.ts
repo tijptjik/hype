@@ -1,16 +1,13 @@
+// MAP
+import { buildEtchStyle } from './etch'
+// TYPES
 import type { StyleSpecification } from 'maplibre-gl'
+import type { StyleBuildOptions } from './common'
 
-import { buildNamedProtomapsStyle, type StyleBuildOptions } from './common'
-
-const withName = (style: StyleSpecification, name: string): StyleSpecification => {
-  style.name = name
-  style.metadata = {
-    ...(style.metadata ?? {}),
-    'hype:style-variant': name,
-  }
-
-  return style
-}
-
+/**
+ * Builds the Hyper Dark basemap in the Nullspace palette.
+ * @param options - Locale and label visibility preferences.
+ * @returns The selected Etch composition with fine footprints and no POIs.
+ */
 export const buildHyperStyle = (options: StyleBuildOptions = {}): StyleSpecification =>
-  withName(buildNamedProtomapsStyle('dark', options), 'Hyper')
+  buildEtchStyle('dark', options)

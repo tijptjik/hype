@@ -53,6 +53,8 @@ export type MapMarkerTheme =
   | 'hyperpop'
   | 'neon'
   | 'rosepunk'
+  | 'etch-dark'
+  | 'etch-light'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -73,6 +75,7 @@ export type MapStyleCatalogEntry<TCode extends string = string> = Omit<
   name: string
   description: string
   register?: boolean
+  selectable?: boolean
   default?: boolean
   hubCode?: string | null
   organisationCode?: string | null
@@ -111,7 +114,7 @@ export const MAP_STYLE_CATALOG = [
     description: getMapStyleCatalogCopy('hyper', 'en').description,
     buildStyle: buildHyperStyle,
     basemapVariant: 'dark',
-    markerTheme: 'dark',
+    markerTheme: 'etch-dark',
     showSymbols: true,
   },
   {
@@ -120,7 +123,7 @@ export const MAP_STYLE_CATALOG = [
     description: getMapStyleCatalogCopy('hyperLight', 'en').description,
     buildStyle: buildHyperLightStyle,
     basemapVariant: 'light',
-    markerTheme: 'light',
+    markerTheme: 'etch-light',
     showSymbols: true,
   },
   {
@@ -145,6 +148,7 @@ export const MAP_STYLE_CATALOG = [
   },
   {
     key: 'ghostery-legacy',
+    selectable: false,
     name: getMapStyleCatalogCopy('ghostery-legacy', 'en').name,
     description: getMapStyleCatalogCopy('ghostery-legacy', 'en').description,
     buildStyle: buildGhosteryLegacyStyle,
@@ -155,6 +159,7 @@ export const MAP_STYLE_CATALOG = [
   },
   {
     key: 'neonmaster',
+    selectable: false,
     name: getMapStyleCatalogCopy('neonmaster', 'en').name,
     description: getMapStyleCatalogCopy('neonmaster', 'en').description,
     buildStyle: buildNeonmasterStyle,
@@ -173,6 +178,7 @@ export const MAP_STYLE_CATALOG = [
   },
   {
     key: 'genesis',
+    selectable: false,
     name: getMapStyleCatalogCopy('genesis', 'en').name,
     description: getMapStyleCatalogCopy('genesis', 'en').description,
     buildStyle: buildGenesisStyle,
@@ -182,6 +188,7 @@ export const MAP_STYLE_CATALOG = [
   },
   {
     key: 'sin',
+    selectable: false,
     name: getMapStyleCatalogCopy('sin', 'en').name,
     description: getMapStyleCatalogCopy('sin', 'en').description,
     buildStyle: buildSinStyle,
@@ -191,6 +198,7 @@ export const MAP_STYLE_CATALOG = [
   },
   {
     key: 'rosepunk',
+    selectable: false,
     name: getMapStyleCatalogCopy('rosepunk', 'en').name,
     description: getMapStyleCatalogCopy('rosepunk', 'en').description,
     buildStyle: buildRosepunkStyle,
@@ -200,6 +208,7 @@ export const MAP_STYLE_CATALOG = [
   },
   {
     key: 'breadline',
+    selectable: false,
     name: getMapStyleCatalogCopy('breadline', 'en').name,
     description: getMapStyleCatalogCopy('breadline', 'en').description,
     buildStyle: buildBreadlineStyle,
@@ -274,3 +283,17 @@ export const FEATURED_MAP_STYLE_KEYS = [
   'hyperpop',
   'midnight',
 ] as const satisfies readonly MapStyleCatalogKey[]
+
+/**
+ * Checks whether a style should be offered for a new map selection.
+ * @param key - Built-in catalog key or an application-owned custom style code.
+ * @returns False for retired picker options; true for current or custom styles.
+ * @remarks Retired styles stay registered so existing saved selections still render.
+ */
+export const isMapStyleSelectable = (key: string): boolean =>
+  REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.key === key)?.selectable !== false
+
+/** Built-in styles offered by theme and project style pickers. */
+export const SELECTABLE_MAP_STYLE_CATALOG = REGISTERED_MAP_STYLE_CATALOG.filter(entry =>
+  isMapStyleSelectable(entry.key),
+)
