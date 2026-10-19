@@ -3,7 +3,7 @@ import { and, eq, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import { featureI18n, featureProperty, featurePropertyI18n } from '../schema/feature'
 // DOMAIN
-import { normalizeI18nLocaleRecord, toLocaleKebab } from '#lib/i18n.js'
+import { normalizeI18nLocaleRecord, toLocaleKebab } from '#lib/i18n/localeRecords.js'
 // TYPES
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database, LocaleKey } from '#lib/types.js'

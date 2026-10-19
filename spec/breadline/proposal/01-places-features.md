@@ -296,8 +296,8 @@ explicit run items, never inferred deletions or donor inactivity.
 A completed scan enters `ready` without advancing the accepted publication or modifying
 Features. The ready phase now ingests one retained candidate or assesses one Feature per
 step through `placeRefreshProcess.ts`. Only after every item has a durable outcome does
-the completed-publication checkpoint advance. The scheduled Worker entrypoint remains
-to be connected. Source changes-feed evidence
+the completed-publication checkpoint advance. The scheduled Worker now invokes this
+workflow. Source changes-feed evidence
 is also separate from this canonical scan. Migration 0114 is applied to the primary local
 database with integrity/foreign-key checks passing and all 1,271 Features unchanged.
 SQLite-backed tests cover page resumption, late-write rollback, lease loss/expiry, retry,
@@ -322,10 +322,25 @@ checks prevent a long-running scan from rewinding a newly linked Feature; absent
 chronology or conflicting records within one publication require review. Identical
 canonical records with only different collection page metadata remain eligible.
 
-The scheduled Worker entrypoint is still outstanding, so monthly refresh is not yet
-running. SQLite-backed tests cover both
+The scheduled Worker is implemented but not deployed, so monthly refresh is not yet
+running remotely. SQLite-backed tests cover both
 automatic groups, policy review, rejection replay, lease loss between groups, atomic
 write fencing, association scope changes and policy edits after assessment.
+
+`workers/place-refresh` invokes one durable step every five minutes; upstream publication
+discovery remains monthly. It uses a primary D1 session and then attempts one pending MTR
+job, including after a failed refresh step. Routing failures retain the durable job and
+do not roll back completed Place processing. Logs include only stable task/status codes.
+Preview and production configs select their matching SaanSeoi, D1 and routing bindings;
+local configuration has no remote routing binding. Required secrets are `SAANSEOI_API_KEY`
+and `ROUTING_TOKEN`. No deployment or secret provisioning has been performed.
+
+Validation: `bun run check:place-refresh` passes, both environment bundles build with
+Wrangler `--dry-run`, and the compiled Worker runs in isolated Miniflare with outbound
+requests blocked (ready-run completion, then idle, with the lease released). Scheduler
+failure/routing tests and existing locale/Place tests pass. Pure locale record helpers
+now live in `src/lib/i18n/localeRecords.ts`, with existing app exports preserved, so
+Worker bundling does not pull in SvelteKit remote translation APIs.
 
 ## Existing-feature and Breadline migration
 

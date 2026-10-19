@@ -6,6 +6,7 @@ import { zhHK } from 'date-fns/locale/zh-HK'
 // PROPERTY VALUES
 import { formatPhoneNumbers } from '#lib/utils/phone-property.js'
 // I18N
+import { normalizeLocaleCode, toLocaleKebab } from '#lib/i18n/localeRecords.js'
 import * as runtime from '#lib/paraglide/runtime.js'
 import * as m from '#lib/paraglide/messages.js'
 // TYPES
@@ -24,6 +25,11 @@ import type {
 } from '#lib/db/zod/schema/feature.types.js'
 
 export { supportedLocaleKeys }
+export {
+  normalizeLocaleCode,
+  toLocaleKebab,
+  normalizeI18nLocaleRecord,
+} from '#lib/i18n/localeRecords.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -115,24 +121,6 @@ export function toLocaleKey(locale: string): LocaleKey {
   if (locale === 'zh-hans') return 'zhHans'
   if (locale === 'zh-hant') return 'zhHant'
   return 'en'
-}
-
-export function toLocaleKebab(locale: LocaleKey | Locale): Locale {
-  if (locale === 'en' || locale === 'zh-hans' || locale === 'zh-hant') return locale
-  if (locale === 'zhHans') return 'zh-hans'
-  if (locale === 'zhHant') return 'zh-hant'
-  return 'en'
-}
-
-/**
- * Normalize an incoming locale identifier to canonical locale code where possible.
- * Accepts form keys (`zhHans`, `zhHant`) and locale codes (`zh-hans`, `zh-hant`).
- */
-export function normalizeLocaleCode(input: string): string {
-  if (input === 'zhHans' || input === 'zhHant' || input === 'en') {
-    return toLocaleKebab(input as LocaleKey)
-  }
-  return input
 }
 
 // ═══════════════════════
@@ -234,25 +222,6 @@ export function ensureLocaleEntryForWrite(
     }
   }
   return i18n[localeKey] as Record<string, unknown>
-}
-
-/**
- * Normalize an i18n map to canonical locale-code keys and ensure each entry has `locale`.
- */
-export function normalizeI18nLocaleRecord<T extends Record<string, unknown>>(
-  i18n: Record<string, T>,
-): Record<string, T> {
-  const normalized: Record<string, T> = {}
-  for (const [rawLocale, entry] of Object.entries(i18n)) {
-    const entryLocale =
-      typeof entry?.locale === 'string' ? normalizeLocaleCode(entry.locale) : undefined
-    const locale = entryLocale ?? normalizeLocaleCode(rawLocale)
-    normalized[locale] = {
-      ...entry,
-      locale,
-    } as T
-  }
-  return normalized
 }
 
 // ═══════════════════════

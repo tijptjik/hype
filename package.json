@@ -117,7 +117,10 @@
     "breadline:db:import": "bun --env-file=.dev.vars run scripts/breadline/import.ts",
     "breadline:users:plan": "bun --env-file=.dev.vars run scripts/breadline/users.ts",
     "breadline:users:test": "bun run scripts/breadline/rehearse-users.ts",
-    "breadline:local:prepare": "bun run scripts/breadline/prepare-local.ts"
+    "breadline:local:prepare": "bun run scripts/breadline/prepare-local.ts",
+    "check:place-refresh": "tsc -p workers/place-refresh/tsconfig.json",
+    "deploy:place-refresh:prod": "bun wrangler deploy -c workers/place-refresh/wrangler.jsonc --env production",
+    "deploy:place-refresh:preview": "bun wrangler deploy -c workers/place-refresh/wrangler.jsonc --env preview"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
