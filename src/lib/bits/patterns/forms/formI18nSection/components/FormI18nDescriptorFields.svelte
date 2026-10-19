@@ -1,4 +1,7 @@
 <script lang="ts">
+// SVELTE
+import type { Snippet } from 'svelte'
+// I18N
 import { m } from '#lib/i18n.js'
 import { getGenAiState, toggleGenAiField } from '#lib/client/services/form.js'
 import { TextArea, TextInput } from '#lib/bits/custom/form/index.js'
@@ -56,6 +59,7 @@ let {
   isEditing = false,
   isRequiredInPreflight,
   fieldConfigs = defaultFieldConfigs,
+  afterField,
 }: {
   form: DescriptorForm
   fields: DescriptorFormFields
@@ -63,6 +67,7 @@ let {
   isEditing?: boolean
   isRequiredInPreflight: (path: Array<string | number>) => boolean
   fieldConfigs?: DescriptorFieldConfig[]
+  afterField?: Snippet<[GenAiField]>
 } = $props()
 </script>
 
@@ -108,5 +113,6 @@ let {
         inputAttrs={attrs as Record<string, unknown>}
       />
     {/if}
+    {@render afterField?.(config.key)}
   {/if}
 {/each}

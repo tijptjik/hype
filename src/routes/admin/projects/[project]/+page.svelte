@@ -117,6 +117,7 @@ import { ProjectPreflightFormData } from '#lib/db/zod/schema/project.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
+import { Checkbox } from '#lib/bits/custom/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import {
   formSectionDividerStyles,
@@ -611,6 +612,25 @@ const configuredProjectForm = configureForm(() => ({
 
 // Bound form controller for template/actions.
 const formCtx = $derived(configuredProjectForm())
+// All locale controls edit one project-wide naming policy.
+const useAllInOrgContext = $derived(
+  formCtx.form.fields.value().data?.useAllInOrgContext === true ||
+    formCtx.form.fields.value().data?.useAllInOrgContext === 'true',
+)
+
+/**
+ * Updates the shared organisation-context naming policy from any locale column.
+ * @param checked - Whether this project should be labelled All beside its organisation.
+ * @returns Nothing after updating form state and validation.
+ */
+function setUseAllInOrgContext(checked: boolean): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.useAllInOrgContext = checked
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
 // Required-field resolver from preflight schema.
 const isRequiredInPreflight = createSchemaRequiredInferer(ProjectPreflightFormData)
 // Dirty flag exposed to header actions.
@@ -2627,7 +2647,23 @@ $effect(() => {
               {locale}
               {isEditing}
               {isRequiredInPreflight}
-            />
+            >
+              {#snippet afterField(
+                field,
+              )}
+                {#if field === 'nameShort'}
+                  <Checkbox
+                    id={`project-use-all-in-org-context-${locale}`}
+                    checked={useAllInOrgContext}
+                    disabled={!isEditing}
+                    rightText={m.admin__project_same_as_organisation()}
+                    color="accent"
+                    size="sm"
+                    onCheckedChange={setUseAllInOrgContext}
+                  />
+                {/if}
+              {/snippet}
+            </FormI18nDescriptorFields>
           {/snippet}
         </FormI18nSection>
 
@@ -2870,6 +2906,12 @@ $effect(() => {
     </Main.Facet>
 
     <div class="hidden" aria-hidden="true">
+      <input
+        {...formCtx.form.fields.data.useAllInOrgContext.as(
+          'hidden',
+          useAllInOrgContext ? 'true' : 'false',
+        )}
+      >
       {#if hasLicenseChanges}
         <input {...getHiddenProjectLicenseAttrs()}>
         <input {...formCtx.form.fields.meta.licenseTouched.as('hidden', true)}>

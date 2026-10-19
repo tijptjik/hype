@@ -36,6 +36,10 @@ export const project = sqliteTable('project', {
   organisationId: text('organisationId')
     .notNull()
     .references(() => organisation.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  // Replace the project name with localised All only beside its organisation.
+  useAllInOrgContext: integer('useAllInOrgContext', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   // Public identifier
   code: text('code').unique().notNull(),
   imageId: text('imageId').references(() => image.id, {

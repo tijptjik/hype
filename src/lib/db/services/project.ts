@@ -543,6 +543,7 @@ export const probeProjectForUpdate = async (
   code: string
   organisationId: string
   capabilities: ProjectDB['capabilities']
+  useAllInOrgContext: boolean
   hubId: string | null
   modifiedAt: string
 } | null> => {
@@ -553,6 +554,7 @@ export const probeProjectForUpdate = async (
         code: project.code,
         organisationId: project.organisationId,
         capabilities: project.capabilities,
+        useAllInOrgContext: project.useAllInOrgContext,
         hubId: organisation.hubId,
         modifiedAt: project.modifiedAt,
       })
@@ -754,6 +756,7 @@ export const updateProjectByIdWithConcurrency = async (
       code: string
       license?: ProjectDB['license']
       capabilities: ProjectDB['capabilities']
+      useAllInOrgContext: boolean
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {

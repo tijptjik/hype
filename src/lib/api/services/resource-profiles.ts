@@ -9,6 +9,12 @@ export const compactAncestorRelations = {
   with: { i18n: { columns: { locale: true, name: true, nameShort: true } } },
 }
 
+/** Public project breadcrumbs also carry the organisation-context naming policy. */
+export const compactProjectAncestorRelations = {
+  ...compactAncestorRelations,
+  columns: { ...compactAncestorRelations.columns, useAllInOrgContext: true },
+}
+
 /**
  * Converts directly joined ancestor labels to the client breadcrumb shape.
  * @param row - Resource row with independently joined organisation/project ancestors.

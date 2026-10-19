@@ -1285,5 +1285,6 @@
   "theme_name_oblivion": "忘境",
   "theme_name_milque": "奶白",
   "theme_name_rye": "黑麦",
-  "theme_ui_title": "界面"
+  "theme_ui_title": "界面",
+  "admin__project_same_as_organisation": "与机构相同"
 }
