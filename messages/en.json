@@ -1400,5 +1400,10 @@
   "feature_address_copy_failed": "Could not copy address ID",
   "feature_address_copy_coordinates": "Copy coordinates",
   "feature_address_coordinates_copied": "Coordinates copied",
-  "feature_address_coordinates_copy_failed": "Could not copy coordinates"
+  "feature_address_coordinates_copy_failed": "Could not copy coordinates",
+  "feature__fields_empty_title": "No fields to set",
+  "feature__fields_empty_description": "Define fields in the project, then enable them on the layer to use them here.",
+  "feature__fields_configure_project": "Configure project fields",
+  "feature__fields_configure_layer": "Configure layer fields",
+  "feature__fields_choose_layer": "Choose a layer"
 }

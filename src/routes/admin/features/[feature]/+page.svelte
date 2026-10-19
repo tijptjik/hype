@@ -2280,19 +2280,55 @@ $effect(() => {
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <FormSurface class={FEATURE_EDITOR_CONTENT_PAD_CLASS}>
-        <FormFeatureFields
-          {localeKey}
-          {locales}
-          {nonTranslatableItems}
-          {translatableSpecifierItems}
-          {isEditing}
-          onTranslate={onTranslateTranslatableValues}
-          onResetLocale={onResetTranslatableValues}
-          onToggleGenAI={togglePropertyI18nValueGen}
-          onValueChange={updatePropertyI18nValue}
-        />
-      </FormSurface>
+      {#if nonTranslatableItems.length === 0 && translatableSpecifierItems.length === 0}
+        <div
+          class="flex min-h-72 h-full flex-col items-center justify-center gap-3 px-6 py-12 text-center"
+        >
+          <h2 class="text-xl font-semibold tracking-tight">
+            {m.feature__fields_empty_title()}
+          </h2>
+          <p class="max-w-md text-sm text-muted-foreground">
+            {m.feature__fields_empty_description()}
+          </p>
+          <div class="mt-2 flex flex-wrap justify-center gap-4">
+            {#if projectIdValue}
+              <a
+                class="font-medium text-primary underline underline-offset-4"
+                href={`/admin/projects/${projectIdValue}#fields`}
+                >{m.feature__fields_configure_project()}</a
+              >
+            {/if}
+            {#if layerIdValue}
+              <a
+                class="font-medium text-primary underline underline-offset-4"
+                href={`/admin/layers/${layerIdValue}#fields`}
+                >{m.feature__fields_configure_layer()}</a
+              >
+            {/if}
+            {#if !layerIdValue}
+              <a
+                class="font-medium text-primary underline underline-offset-4"
+                href="#core"
+                >{m.feature__fields_choose_layer()}</a
+              >
+            {/if}
+          </div>
+        </div>
+      {:else}
+        <FormSurface class={FEATURE_EDITOR_CONTENT_PAD_CLASS}>
+          <FormFeatureFields
+            {localeKey}
+            {locales}
+            {nonTranslatableItems}
+            {translatableSpecifierItems}
+            {isEditing}
+            onTranslate={onTranslateTranslatableValues}
+            onResetLocale={onResetTranslatableValues}
+            onToggleGenAI={togglePropertyI18nValueGen}
+            onValueChange={updatePropertyI18nValue}
+          />
+        </FormSurface>
+      {/if}
     </Main.Facet>
 
     <Main.Facet

@@ -28,6 +28,7 @@ import type { FormParentResourceSectionProps } from './formParentResourceSection
 
 let {
   title,
+  icon,
   subtitle,
   issues = [],
   subHeader,
@@ -256,6 +257,7 @@ $effect(() => {
   {:else}
     <SectionHeader
       {title}
+      {icon}
       description={subtitle}
       class={`${headerClass} ${formSelectionSearchHeaderStyles}`}
     >
