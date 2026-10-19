@@ -1,6 +1,7 @@
 <script lang="ts">
+// SVELTE
 import type { Snippet } from 'svelte'
-import { Card } from '#lib/bits/custom/index.js'
+// TYPES
 import type { LayerPropertyCardRootProps } from '../layerPropertyCard.types'
 
 type Props = LayerPropertyCardRootProps & { children?: Snippet }
@@ -8,6 +9,6 @@ type Props = LayerPropertyCardRootProps & { children?: Snippet }
 let { class: className = '', children }: Props = $props()
 </script>
 
-<Card.Root size="lg" class={`bits-form__layer-card-root ${className}`}>
+<article class={`flex min-h-20 w-full items-center gap-4 py-3 ${className}`}>
   {@render children?.()}
-</Card.Root>
+</article>

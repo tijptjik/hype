@@ -84,7 +84,6 @@ import {
   FormI18nSection,
   FormParentSection,
   FormMapStyleSection,
-  GridSpacer,
   LayerPropertyCard,
   Main,
 } from '#lib/bits/index.js'
@@ -1369,45 +1368,34 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <div class="bits-form__section" data-facet-id="fields">
-        <section class="bits-form__section">
-          <GridSpacer cols={2} leftCols={1} rightCols={1}>
-            {#snippet left()}
+      <FormSurface>
+        <div class="grid grid-cols-1 lg:grid-cols-2">
+          {#each propertyColumns as column, columnIndex}
+            <div
+              class={columnIndex > 0
+                ? 'min-w-0 border-t border-border lg:border-l lg:border-t-0'
+                : 'min-w-0'}
+            >
               <LayerPropertyCard.Column
-                title={propertyColumns[0].title}
-                description={propertyColumns[0].description}
-                rows={propertyColumns[0].rows}
+                title={column.title}
+                description={column.description}
+                rows={column.rows}
                 toRowFields={index => formCtx.form.fields.data.properties[index]}
                 isEditing={isEditing && canEditLayerFields}
-                isContributableDisabled={propertyColumns[0].isContributableDisabled}
+                isContributableDisabled={column.isContributableDisabled}
                 isFlipDisabled={isLayerCardFlipDisabled}
                 onVisibleChange={(index, value) =>
                   updateLayerPropertyToggle(index, 'isVisible', value)}
                 onUserContributableChange={(index, value) =>
                   updateLayerPropertyToggle(index, 'isUserContributable', value)}
               />
-            {/snippet}
-
-            {#snippet right()}
-              <LayerPropertyCard.Column
-                title={propertyColumns[1].title}
-                description={propertyColumns[1].description}
-                rows={propertyColumns[1].rows}
-                toRowFields={index => formCtx.form.fields.data.properties[index]}
-                isEditing={isEditing && canEditLayerFields}
-                isContributableDisabled={propertyColumns[1].isContributableDisabled}
-                isFlipDisabled={isLayerCardFlipDisabled}
-                onVisibleChange={(index, value) =>
-                  updateLayerPropertyToggle(index, 'isVisible', value)}
-                onUserContributableChange={(index, value) =>
-                  updateLayerPropertyToggle(index, 'isUserContributable', value)}
-              />
-            {/snippet}
-          </GridSpacer>
-        </section>
-      </div>
+            </div>
+          {/each}
+        </div>
+      </FormSurface>
     </Main.Facet>
   </Main.Form>
 </Main.Root>
