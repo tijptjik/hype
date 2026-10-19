@@ -1281,74 +1281,67 @@ const featureImageProviderModel = useImageProviderModel(
  ************/
 
 $effect(() => {
-  canonicalImageSrc
-  isCanonicalImagePending = Boolean(presentedCanonicalImageSrc)
-
-  // Keep the last confirmed ratio while a replacement image is loading.
-  if (!presentedCanonicalImageSrc) {
-    canonicalImageMeasuredAspectRatio = null
-  }
-})
-
-$effect(() => {
-  featureRef
-  if (presentedCanonicalImageSrc) {
-    isCanonicalImagePending = true
-  }
-})
-
-$effect(() => {
   const nextSrc = canonicalImageSrc
   const nextHref = canonicalImageHref
   const nextTitle = title
+  const settled = isCurrentRefSettled
+  // Invalidate pending decodes immediately when navigation requests another feature.
+  featureRef
 
-  if (!nextSrc) {
-    if (isCurrentRefSettled) {
+  return untrack(() => {
+    if (!settled) {
+      isCanonicalImagePending = Boolean(presentedCanonicalImageSrc)
+      return
+    }
+    if (!nextSrc) {
       presentedCanonicalImageSrc = null
       presentedCanonicalImageHref = nextHref
       presentedCanonicalImageTitle = nextTitle
       isCanonicalImagePending = false
       canonicalImageMeasuredAspectRatio = null
+      return
     }
-    return
-  }
+    if (nextSrc === presentedCanonicalImageSrc) {
+      presentedCanonicalImageHref = nextHref
+      presentedCanonicalImageTitle = nextTitle
+      isCanonicalImagePending = false
+      return
+    }
 
-  if (nextSrc === presentedCanonicalImageSrc) {
-    presentedCanonicalImageHref = nextHref
-    presentedCanonicalImageTitle = nextTitle
-    isCanonicalImagePending = false
-    return
-  }
+    let cancelled = false
+    const image = new Image()
+    isCanonicalImagePending = true
 
-  let cancelled = false
-  const image = new Image()
+    // Keep the last confirmed image and ratio until its replacement is paint-ready;
+    // publish the source and dimensions together to crossfade while the frame resizes.
+    image.onload = async () => {
+      try {
+        await image.decode()
+      } catch {
+        // An already loaded image can still be paintable when decode rejects.
+      }
+      if (cancelled) return
+      handleCanonicalImageLoad({ width: image.naturalWidth, height: image.naturalHeight })
+      presentedCanonicalImageSrc = nextSrc
+      presentedCanonicalImageHref = nextHref
+      presentedCanonicalImageTitle = nextTitle
+      isCanonicalImagePending = false
+    }
+    image.onerror = () => {
+      if (cancelled) return
+      // Do not leave another feature's photo linked to the current feature on failure.
+      presentedCanonicalImageSrc = null
+      presentedCanonicalImageHref = nextHref
+      presentedCanonicalImageTitle = nextTitle
+      canonicalImageMeasuredAspectRatio = null
+      isCanonicalImagePending = false
+    }
+    image.src = nextSrc
 
-  // Show the resolved image source immediately and keep it in a pending visual
-  // state while the browser finishes loading/measuring the asset.
-  presentedCanonicalImageSrc = nextSrc
-
-  presentedCanonicalImageHref = nextHref
-  presentedCanonicalImageTitle = nextTitle
-  isCanonicalImagePending = true
-
-  image.onload = () => {
-    if (cancelled) return
-
-    isCanonicalImagePending = false
-    handleCanonicalImageLoad({ width: image.naturalWidth, height: image.naturalHeight })
-  }
-
-  image.onerror = () => {
-    if (cancelled) return
-
-    isCanonicalImagePending = false
-  }
-
-  image.src = nextSrc
-
-  return () => {
-    cancelled = true
-  }
+    return () => {
+      cancelled = true
+    }
+  })
 })
 
 /********************
@@ -1974,7 +1967,6 @@ $effect(() => {
             isPending={isCanonicalImagePending}
             isCollapsed={isVisualSectionCollapsed}
             emptyText={m.feature__no_canonical_image_yet()}
-            onImageLoad={handleCanonicalImageLoad}
           />
         {/snippet}
       </FormFeatureVisualSection>
