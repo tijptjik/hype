@@ -20,7 +20,10 @@ import {
 } from '#lib/db/services/place.js'
 import { createLocalPlace as persistLocalPlace } from '#lib/db/services/placeLocal.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
-import { resolvePlaceCandidate } from '#lib/db/services/placeCandidate.js'
+import {
+  resolvePlaceCandidate,
+  searchLocalPlaceCandidates,
+} from '#lib/db/services/placeCandidate.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
 // DOMAIN
 import { ProjectPlacePolicySchema } from '#lib/places/model.js'
@@ -41,6 +44,7 @@ import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 // 5. INITIAL FEATURE ASSOCIATION
 // 6. SOURCE DISCOVERY
 // 7. CANDIDATE RESOLUTION
+// 8. PRIVATE LOCAL DISCOVERY
 // ---
 
 const projectInput = z.strictObject({ projectId: z.string().min(1) })
@@ -269,6 +273,42 @@ export const getFeaturePlaceCandidate = guardedQuery(
       projectId: probe.projectId,
       ssId: input.ssId,
       resourceReleaseId: input.resourceReleaseId,
+    })
+  },
+)
+
+/**
+ * Search private manual/unresolved Places available for reuse in this Feature's project.
+ * @param input Feature identity and a bounded literal name fragment.
+ * @returns Latest local revisions with projected facts for explicit preview/linking.
+ * @remarks Project ownership is derived from persisted ancestry; no client scope is accepted.
+ */
+export const searchFeatureLocalPlaces = guardedQuery(
+  z.strictObject({
+    featureId: z.string().min(1),
+    q: z.string().trim().min(1).max(200),
+  }),
+  async (input, ctx) => {
+    const probe = await probeFeatureQuery(ctx.db, {
+      ref: input.featureId,
+      refKey: 'id',
+    })
+    if (!probe) error(404, 'FEATURE_NOT_FOUND')
+    const decision = authorizeFeatureUpdateForSubmission({
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      resource: probe,
+      submittedData: {
+        i18n: true,
+        properties: true,
+        geometry: true,
+        addressMeta: true,
+      },
+    })
+    if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    return searchLocalPlaceCandidates(ctx.db, {
+      projectId: probe.projectId,
+      q: input.q,
     })
   },
 )

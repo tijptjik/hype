@@ -1426,5 +1426,8 @@
   "feature_place_local_description": "建立此專案專用的地點。如可能有 SaanSeoi 對應記錄，請選待配對；如需獨立地點，請選手動。建立後須確認預覽才會關聯。",
   "feature_place_local_address": "地址文字（選填）",
   "feature_place_local_coordinates": "使用已儲存圖徵的位置：",
-  "feature_place_create_preview": "建立並預覽"
+  "feature_place_create_preview": "建立並預覽",
+  "feature_place_project_results": "專案地點",
+  "feature_place_source_results": "SaanSeoi 地點",
+  "feature_place_search_partial": "部分地點搜尋結果無法載入。已顯示可用結果。"
 }

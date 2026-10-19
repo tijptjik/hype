@@ -614,3 +614,24 @@ ownership, null ssId, local revision provenance, one history event, and unchange
 original Feature columns. No edit or association was made in the primary mirrors.
 Manual/unresolved resource discovery and administration are still needed for reuse
 when an editor leaves after creation without linking; no upstream submission occurs.
+
+### Reusing private local Places (Refs #194)
+
+Feature Place search now also queries the owning project's manual/unresolved Places,
+with project scope derived from persisted Feature ancestry and full inherited-field
+edit authorization. It searches all localized names on the latest local revision,
+treats wildcard characters literally and returns at most twenty validated projections.
+Other projects' records and raw provenance never appear. Local results show their
+manual/unresolved intent and can be previewed before the existing explicit link action.
+
+Upstream and local searches settle independently: source unavailability cannot hide
+usable private records, and partial failures are labelled separately from no matches.
+Explicit search refreshes local results so newly created Places can be rediscovered.
+This closes the creation-without-linking discovery gap; full local Place administration
+and editing remain future work.
+
+56 focused service/remote tests pass, including cross-project isolation, latest-only
+matching, literal wildcards, localized names, result bounds and authorization. A local
+browser rehearsal deliberately blocked upstream search and still found and previewed
+private Places. No unrelated Feature link was made. Type checking remains at the
+existing 10 unrelated errors and 19 warnings, with no changed-path diagnostics.

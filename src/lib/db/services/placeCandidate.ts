@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, desc, eq, isNull, or } from 'drizzle-orm'
+import { and, desc, eq, isNull, or, sql } from 'drizzle-orm'
 // SCHEMA
 import { place, placeRevision } from '../schema/place'
 // VALIDATION
@@ -7,6 +7,13 @@ import { PlaceFactsSchema } from '#lib/places/validation.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { PlaceFacts } from '#lib/places/model.js'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+// 1. CANONICAL SOURCE CANDIDATE RESOLUTION
+// 2. PRIVATE LOCAL DISCOVERY
+// ---
 
 export type PlaceCandidateResolution =
   | { status: 'source-import-needed' }
@@ -70,4 +77,53 @@ export async function resolvePlaceCandidate(
     snapshotId: row.snapshotId,
     facts: PlaceFactsSchema.parse(row.facts),
   }
+}
+
+export type LocalPlaceCandidate = {
+  placeId: string
+  revisionId: string
+  state: 'manual' | 'unresolved'
+  facts: PlaceFacts
+}
+
+/**
+ * Find reusable private local Places by their latest localized names.
+ * @param db Request-local database.
+ * @param input Authorized owning project and a literal name fragment.
+ * @returns At most twenty validated local baselines, never another project's records.
+ * @remarks Search only the latest revision, so superseded names cannot resurrect old
+ * facts. Wildcards are literal text; raw provenance is not returned. Caller must
+ * authorize full inherited-field editing before accessing this private catalogue.
+ */
+export async function searchLocalPlaceCandidates(
+  db: Database,
+  input: { projectId: string; q: string },
+): Promise<LocalPlaceCandidate[]> {
+  const query = input.q.trim()
+  if (!query || query.length > 200) throw new Error('Invalid local Place query')
+  // Scope and latest-revision selection precede name matching and the result bound.
+  const rows = await db
+    .select({
+      placeId: place.id,
+      revisionId: placeRevision.id,
+      state: place.state,
+      facts: placeRevision.facts,
+    })
+    .from(place)
+    .innerJoin(placeRevision, eq(placeRevision.placeId, place.id))
+    .where(
+      and(
+        eq(place.ownerProjectId, input.projectId),
+        or(eq(place.state, 'manual'), eq(place.state, 'unresolved')),
+        eq(placeRevision.origin, 'local'),
+        sql`${placeRevision.sequence} = (select max(latest.sequence) from placeRevision latest where latest.placeId = ${place.id})`,
+        sql`exists (select 1 from json_each(${placeRevision.facts}, '$.names') names where names.type = 'text' and instr(lower(names.value), lower(${query})) > 0)`,
+      ),
+    )
+    .orderBy(desc(place.createdAt), place.id)
+    .limit(20)
+  return rows.map(row => {
+    if (row.state === 'linked') throw new Error('Unexpected linked Place')
+    return { ...row, state: row.state, facts: PlaceFactsSchema.parse(row.facts) }
+  })
 }

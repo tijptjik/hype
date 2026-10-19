@@ -1426,5 +1426,8 @@
   "feature_place_local_description": "Create a Place private to this project. Choose unresolved if a SaanSeoi equivalent may exist; choose manual for an intentionally independent Place. Creation does not link it until you confirm the preview.",
   "feature_place_local_address": "Address text (optional)",
   "feature_place_local_coordinates": "Uses the saved Feature coordinates:",
-  "feature_place_create_preview": "Create and preview"
+  "feature_place_create_preview": "Create and preview",
+  "feature_place_project_results": "Project Places",
+  "feature_place_source_results": "SaanSeoi Places",
+  "feature_place_search_partial": "Some Place search results could not be loaded. Available results are shown."
 }

@@ -4,6 +4,7 @@ import { withRemoteMeta } from './remote-function-mock'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
+  searchLocal: vi.fn(),
   resolveCandidate: vi.fn(),
   searchPlaces: vi.fn(),
   createPlace: vi.fn(),
@@ -45,6 +46,7 @@ vi.mock('#lib/places/sourceClient.js', async importOriginal => {
 })
 vi.mock('#lib/db/services/placeCandidate.js', () => ({
   resolvePlaceCandidate: mocks.resolveCandidate,
+  searchLocalPlaceCandidates: mocks.searchLocal,
 }))
 vi.mock('#lib/db/services/placeLink.js', () => ({
   linkInitialFeaturePlace: mocks.linkPlace,
@@ -69,6 +71,7 @@ vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeFeatureUpdateForSubmission: mocks.authorizeFeatureUpdate,
 }))
 import {
+  searchFeatureLocalPlaces,
   getFeaturePlaceCandidate,
   searchFeaturePlaces,
   createLocalPlace,
@@ -319,4 +322,21 @@ describe('source candidate resolution boundary', () => {
     await expect(getFeaturePlaceCandidate(input)).rejects.toMatchObject({ status: 404 })
     expect(mocks.resolveCandidate).not.toHaveBeenCalled()
   })
+})
+
+it('authorizes private local discovery using persisted scope before accessing facts', async () => {
+  const input = { featureId: 'f', q: 'Shop' }
+  mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: false })
+  await expect(searchFeatureLocalPlaces(input)).rejects.toMatchObject({ status: 403 })
+  expect(mocks.searchLocal).not.toHaveBeenCalled()
+  mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: true })
+  mocks.searchLocal.mockResolvedValue([])
+  expect(await searchFeatureLocalPlaces(input)).toEqual([])
+  expect(mocks.searchLocal).toHaveBeenCalledWith(mocks.context.db, {
+    projectId: 'p',
+    q: 'Shop',
+  })
+  await expect(
+    searchFeatureLocalPlaces({ ...input, projectId: 'other' } as never),
+  ).rejects.toThrow()
 })

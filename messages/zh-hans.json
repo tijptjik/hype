@@ -1426,5 +1426,8 @@
   "feature_place_local_description": "创建此项目专用的地点。如可能有 SaanSeoi 对应记录，请选待匹配；如需独立地点，请选手动。创建后须确认预览才会关联。",
   "feature_place_local_address": "地址文字（选填）",
   "feature_place_local_coordinates": "使用已保存图征的位置：",
-  "feature_place_create_preview": "创建并预览"
+  "feature_place_create_preview": "创建并预览",
+  "feature_place_project_results": "项目地点",
+  "feature_place_source_results": "SaanSeoi 地点",
+  "feature_place_search_partial": "部分地点搜索结果无法加载。已显示可用结果。"
 }

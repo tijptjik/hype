@@ -10,11 +10,13 @@ import {
   getFeaturePlaceCandidate,
   linkFeaturePlace,
   searchFeaturePlaces,
+  searchFeatureLocalPlaces,
 } from '#lib/api/place.remote.js'
 // COMPONENTS
 import CreateLocalPlace from './CreateLocalPlace.svelte'
 // TYPES
 import type { PlaceSearchCandidate } from '#lib/places/sourceClient.js'
+import type { LocalPlaceCandidate } from '#lib/db/services/placeCandidate.js'
 import type { PlaceFacts } from '#lib/places/model.js'
 type Selection =
   | { status: 'source-import-needed' }
@@ -38,21 +40,32 @@ let {
 const accepted = $derived(getFeaturePlace({ featureId }))
 let query = $state('')
 let results = $state<PlaceSearchCandidate[] | null>(null)
+let localResults = $state<LocalPlaceCandidate[] | null>(null)
 let selected = $state<Selection | null>(null)
 let busy = $state(false)
 let failed = $state(false)
+let searchFailed = $state(false)
 let requestVersion = 0
 
-/** Search all upstream Places; retain settled results while another query loads. */
+/** Search source and project-local Places independently, retaining settled results while loading. */
 async function search(): Promise<void> {
   if (!query.trim() || busy || !isEditing) return
   const version = ++requestVersion
+  searchFailed = false
   busy = true
   failed = false
   selected = null
   try {
-    const response = await searchFeaturePlaces({ featureId, q: query.trim() })
-    if (version === requestVersion) results = response.candidates
+    const localQuery = searchFeatureLocalPlaces({ featureId, q: query.trim() })
+    const [source, local] = await Promise.allSettled([
+      searchFeaturePlaces({ featureId, q: query.trim() }),
+      localQuery.refresh().then(() => localQuery),
+    ])
+    if (version === requestVersion) {
+      results = source.status === 'fulfilled' ? source.value.candidates : null
+      localResults = local.status === 'fulfilled' ? local.value : null
+      searchFailed = source.status === 'rejected' || local.status === 'rejected'
+    }
   } catch {
     if (version === requestVersion) failed = true
   } finally {
@@ -94,6 +107,7 @@ async function link(): Promise<void> {
     await accepted.refresh()
     selected = null
     results = null
+    localResults = null
   } catch {
     failed = true
   } finally {
@@ -157,10 +171,38 @@ async function link(): Promise<void> {
             {m.feature_place_loading()}
           </p>
         {/if}
-        {#if results?.length === 0}
+        {#if !failed &&
+          !searchFailed &&
+          results?.length === 0 &&
+          localResults?.length === 0}
           <p class="text-sm text-muted-foreground">{m.feature_place_no_results()}</p>
         {/if}
+        {#if localResults?.length}
+          <h3 class="text-sm font-semibold">{m.feature_place_project_results()}</h3>
+          <ul class="max-h-72 space-y-2 overflow-y-auto">
+            {#each localResults as candidate (candidate.placeId)}
+              <li>
+                <button
+                  type="button"
+                  class="w-full rounded-xl border border-border bg-panel p-4 text-left hover:bg-muted disabled:opacity-50"
+                  disabled={busy}
+                  onclick={() => (selected = { status: 'ready', ...candidate })}
+                >
+                  <span class="block font-medium"
+                    >{Object.values(candidate.facts.names).join(' · ')}</span
+                  >
+                  <span class="block text-sm text-muted-foreground"
+                    >{candidate.state === 'manual'
+                      ? m.feature_place_manual_kind()
+                      : m.feature_place_unresolved_kind()}</span
+                  >
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
         {#if results?.length}
+          <h3 class="text-sm font-semibold">{m.feature_place_source_results()}</h3>
           <ul class="max-h-72 space-y-2 overflow-y-auto">
             {#each results as candidate}
               <li>
@@ -222,6 +264,7 @@ async function link(): Promise<void> {
           onCreated={value => {
             selected = { status: 'ready', ...value }
             results = null
+            localResults = null
           }}
         />
       {:else}
@@ -230,6 +273,11 @@ async function link(): Promise<void> {
     {:catch}
       <p role="alert" class="text-sm text-destructive">{m.feature_place_failed()}</p>
     {/await}
+    {#if searchFailed}
+      <p role="alert" class="text-sm text-muted-foreground">
+        {m.feature_place_search_partial()}
+      </p>
+    {/if}
     {#if failed}
       <p role="alert" class="text-sm text-destructive">{m.feature_place_failed()}</p>
     {/if}

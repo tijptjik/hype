@@ -9,7 +9,10 @@ import {
   saveProjectPlaceSettings,
 } from '#lib/db/services/place.js'
 import { updateProjectByIdWithConcurrency } from '#lib/db/services/project.js'
-import { resolvePlaceCandidate } from '#lib/db/services/placeCandidate.js'
+import {
+  resolvePlaceCandidate,
+  searchLocalPlaceCandidates,
+} from '#lib/db/services/placeCandidate.js'
 import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
@@ -1298,4 +1301,72 @@ describe('Place link field authorization', () => {
       expect(decision.allowed).toBe(allowed)
     },
   )
+})
+
+describe('private local Place discovery', () => {
+  it('scopes results and treats wildcard characters as literal name text', async () => {
+    const { db } = setup()
+    const local = await createLocalPlace(
+      db,
+      'p',
+      {
+        state: 'manual',
+        facts: { ...facts, names: { en: 'Shop 100%_ local', 'zh-hant': '本地麵包' } },
+      },
+      'u',
+    )
+    await createLocalPlace(db, 'other', { state: 'unresolved', facts }, 'other-u')
+    expect(
+      await searchLocalPlaceCandidates(db, { projectId: 'p', q: '100%_' }),
+    ).toMatchObject([{ ...local, state: 'manual' }])
+    expect(
+      await searchLocalPlaceCandidates(db, { projectId: 'p', q: '麵包' }),
+    ).toHaveLength(1)
+    expect(
+      await searchLocalPlaceCandidates(db, { projectId: 'p', q: 'SHOP' }),
+    ).toHaveLength(1)
+    expect(
+      await searchLocalPlaceCandidates(db, { projectId: 'p', q: 'Bakery' }),
+    ).toEqual([])
+    expect(
+      await searchLocalPlaceCandidates(db, { projectId: 'other', q: '100%_' }),
+    ).toEqual([])
+  })
+  it('matches only the latest baseline and returns no raw provenance', async () => {
+    const { db, sqlite } = setup()
+    const local = await createLocalPlace(db, 'p', { state: 'unresolved', facts }, 'u')
+    sqlite
+      .prepare(
+        "INSERT INTO placeRevision(id,placeId,sequence,origin,contentHash,payload,facts) VALUES(?,?,2,'local','new','{}',?)",
+      )
+      .run(
+        'new-revision',
+        local.placeId,
+        JSON.stringify({ ...facts, names: { en: 'Renamed shop' } }),
+      )
+    expect(
+      await searchLocalPlaceCandidates(db, { projectId: 'p', q: 'Bakery' }),
+    ).toEqual([])
+    const results = await searchLocalPlaceCandidates(db, {
+      projectId: 'p',
+      q: 'renamed',
+    })
+    expect(results).toHaveLength(1)
+    expect(results[0]).toMatchObject({ revisionId: 'new-revision' })
+    expect(results[0]).not.toHaveProperty('payload')
+  })
+  it('bounds results and rejects blank or oversized queries', async () => {
+    const { db } = setup()
+    for (let i = 0; i < 22; i++)
+      await createLocalPlace(db, 'p', { state: 'unresolved', facts }, 'u')
+    expect(
+      await searchLocalPlaceCandidates(db, { projectId: 'p', q: 'Bakery' }),
+    ).toHaveLength(20)
+    await expect(
+      searchLocalPlaceCandidates(db, { projectId: 'p', q: ' ' }),
+    ).rejects.toThrow()
+    await expect(
+      searchLocalPlaceCandidates(db, { projectId: 'p', q: 'x'.repeat(201) }),
+    ).rejects.toThrow()
+  })
 })
