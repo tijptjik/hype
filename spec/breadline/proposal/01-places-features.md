@@ -319,3 +319,37 @@ input and locale-specific Block/Phase inputs. Parsed components are stored along
 the expression and reset together; unknown expressions retain their text without
 guessing components. `premisesName` follows the SaanSeoi contract. Migration `0108`
 renames retained source keys and corrections while leaving legacy evidence intact.
+
+### Pinned source ingestion and migration candidates (Refs #194)
+
+`readSaanSeoiPlacePage` reads canonical collection pages with a fixed release set,
+catalog revision and `knownAt` from the publication permalink. Every page verifies
+publication identity, offset, bounds and duplicate IDs. Full records retain source
+attribution and explicit invalid-phone/address-pending issues. The source API key is
+server-side; redirects are rejected rather than forwarding credentials elsewhere.
+
+`persistSaanSeoiPlace` atomically creates a shared Place identity and immutable source
+revision. A canonical evidence hash makes retries idempotent. Existing HYPE identity
+wins over generated identity, and later source changes append revisions without
+changing any Feature's accepted revisions. Source mirroring is not project adoption.
+
+The local-only `scripts/places/mirror-source.ts` takes a captured publication response,
+a private checkpoint path and an optional taxonomy filter. Checkpoints advance after
+all records in a page persist and retain revision receipts. Restart verifies receipts
+against the target database; missing receipts after a local reset replay the source.
+This is a rehearsal/ingestion command, not the monthly scheduler or a production deploy.
+
+`place-candidates.py` compares eligible Breadline records with a read-only SaanSeoi
+CURRENT mirror whose selected snapshot matches the captured publication. It applies
+the existing recorded-run import policy and reviewed coordinate corrections, searches
+nearby and exact-name candidates, and writes private review evidence. Neither nearby
+brands nor exact names alone establish identity; all suggestions remain unaccepted.
+No candidate scan creates Feature links or silently changes existing values.
+
+For fresh HYPE mirrors, D1's full export currently rejects FTS virtual tables. Export
+an explicit canonical-table list excluding virtual/shadow tables and retain a separate
+`sqlite_schema` JSON inventory. `scripts/dev/restore-d1-export.ts` reconstructs a new
+local SQLite file from those inputs, restores secondary schema, rebuilds the known
+search index and checks integrity/foreign keys. Unknown virtual tables fail closed.
+Production export files, local snapshots and candidate evidence remain private under
+ignored backup paths and `.local/places/`.

@@ -9,6 +9,8 @@ import {
   saveProjectPlaceSettings,
 } from '#lib/db/services/place.js'
 import { updateProjectByIdWithConcurrency } from '#lib/db/services/project.js'
+import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
+import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { createLocalPlace } from '#lib/db/services/placeLocal.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
 import { ProjectPlacePolicyFormData } from '#lib/db/zod/schema/project.js'
@@ -368,5 +370,67 @@ describe('Project Places form transport', () => {
     expect(
       ProjectPlacePolicyFormData.safeParse({ ...draft, expectedRevision: -1 }).success,
     ).toBe(false)
+  })
+})
+
+describe('immutable SaanSeoi Place ingestion', () => {
+  const projection = (): SaanSeoiPlaceProjection => ({
+    ssId: 'canonical-shop',
+    apiVersion: 'api-places-v0.1',
+    releaseId: 'release',
+    snapshotId: 'snapshot',
+    facts: PlaceFactsSchema.parse(facts),
+    issues: [],
+    payload: {
+      resource: { id: 'canonical-shop', sources: ['retained-attribution'] },
+      meta: { apiReleaseSet: 'pinned-release' },
+    },
+  })
+
+  it('replays idempotently and appends changes without altering accepted Features', async () => {
+    const { db, sqlite } = setup()
+    const source = projection()
+    const first = await persistSaanSeoiPlace(db, source)
+    const replay = await persistSaanSeoiPlace(db, {
+      ...source,
+      payload: { meta: source.payload.meta, resource: source.payload.resource },
+    })
+    expect(replay).toEqual(first)
+    source.facts.names.en = 'Updated bakery'
+    const next = await persistSaanSeoiPlace(db, source)
+    expect(next.placeId).toBe(first.placeId)
+    expect(next.revisionId).not.toBe(first.revisionId)
+    expect(
+      sqlite.prepare('SELECT sequence FROM placeRevision ORDER BY sequence').all(),
+    ).toEqual([{ sequence: 1 }, { sequence: 2 }])
+    const original = sqlite
+      .prepare('SELECT facts,payload FROM placeRevision WHERE id=?')
+      .get(first.revisionId)
+    expect(JSON.parse(String(original?.facts)).names.en).toBe('Bakery')
+    expect(JSON.parse(String(original?.payload)).resource.sources).toEqual([
+      'retained-attribution',
+    ])
+    expect(
+      sqlite.prepare('SELECT count(*) AS count FROM featurePlace').get()?.count,
+    ).toBe(0)
+  })
+
+  it('retains an existing HYPE identity and rolls back failed new ingestion', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(
+      "INSERT INTO place(id,ssId,state) VALUES ('permanent-id','canonical-shop','linked')",
+    )
+    expect((await persistSaanSeoiPlace(db, projection())).placeId).toBe('permanent-id')
+    sqlite.exec(
+      "CREATE TRIGGER fail_source BEFORE INSERT ON placeRevision BEGIN SELECT RAISE(ABORT,'failed'); END",
+    )
+    await expect(
+      persistSaanSeoiPlace(db, { ...projection(), ssId: 'other-shop' }),
+    ).rejects.toThrow()
+    expect(
+      sqlite
+        .prepare("SELECT count(*) AS count FROM place WHERE ssId='other-shop'")
+        .get()?.count,
+    ).toBe(0)
   })
 })
