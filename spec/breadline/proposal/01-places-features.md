@@ -687,3 +687,36 @@ handling, null/clear semantics and invalid baseline review. Type checking remain
 10 unrelated errors/19 warnings. The manifest contains private source data and is
 ignored; only planner code is committed. Transactional application/replay rehearsal
 and the Breadline importer rebase are still outstanding.
+
+### Atomic split application and full local rehearsal (Refs #194)
+
+`applyUnresolvedFeatureSplit` recomputes each proposal from current persisted values
+before writing. It rejects altered manifests, changed baselines, existing identity
+collisions and later association edits. Place, immutable local revision and initial
+association/history are one guarded D1 batch per Feature. A concurrent save winning
+before that batch leaves no orphan records; a late history failure rolls everything
+back. Exact completed splits replay without new history. Original Feature values and
+spatial jobs are never updated by this operation. The actor is retained in provenance
+and association history.
+
+`apply-feature-split.ts <manifest> <isolated-state> <receipt>` deliberately restricts
+execution to existing `.local/places/*-state` directories, with remote bindings disabled.
+It stops at the first conflict and writes a private receipt. The manifest is resumable,
+not one transaction across all Features: completed individual splits remain committed.
+This rehearsal CLI does not provide production execution authorization or a deploy step.
+
+`verify-feature-split.ts <manifest> <baseline.sqlite> <result.sqlite>` compares all
+original Feature, translation, property and property-translation rows in both directions,
+then resolves actual accepted revision facts and overrides independently of the apply
+receipt. It checks planned identities, private project ownership, local provenance,
+exactly one history entry per split, foreign keys and SQLite integrity.
+
+A fresh isolated SQLite backup of the existing primary mirror applied all 1,190 plans.
+A second complete run returned 1,190 `already-applied` results. Verification passed both
+before and after replay: original rows unchanged, effective values preserved, one history
+per split, integrity `ok`, zero foreign-key violations. The primary mirror remains
+unassociated. Forty-eight focused service/planner tests cover normal application,
+replay, changed source values, manifest tampering, identity collisions, concurrent-save
+ordering, later overrides and late transaction failure. Private databases/manifests/
+receipts remain ignored. Reviewed source matching, final migration packaging, Breadline
+importer rebase and remaining source lifecycle work are still outstanding.

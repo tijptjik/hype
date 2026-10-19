@@ -23,6 +23,8 @@ import {
 } from '#lib/db/services/featureFormSave.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
+import { applyUnresolvedFeatureSplit } from '#lib/db/services/placeSplit.js'
+import { planUnresolvedFeatureSplit } from '#lib/places/migrationPlan.js'
 import { relinkFeaturePlace } from '#lib/db/services/placeRelink.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { createLocalPlace } from '#lib/db/services/placeLocal.js'
@@ -1495,5 +1497,116 @@ describe('explicit Place reassociation', () => {
     expect(
       sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get()?.n,
     ).toBe(1)
+  })
+})
+
+describe('atomic unresolved Feature split application', () => {
+  async function fixture() {
+    const { db, sqlite } = setup()
+    sqlite
+      .prepare('UPDATE feature SET geometry=? WHERE id=?')
+      .run(JSON.stringify(facts.location.geometry), 'f')
+    sqlite.exec("INSERT INTO featureI18n VALUES ('f','en','Shop','Original address')")
+    const baseline = await readFeaturePlaceBaseline(db, 'f', 'p')
+    if (baseline.status !== 'ready') throw new Error('Expected baseline')
+    const result = planUnresolvedFeatureSplit(baseline.baseline)
+    if (result.status !== 'planned') throw new Error('Expected plan')
+    return { db, sqlite, plan: result.plan, baseline: baseline.baseline }
+  }
+  it('applies once, preserves values and replays without duplicate history', async () => {
+    const { db, sqlite, plan, baseline } = await fixture()
+    const before = ['feature', 'featureI18n', 'featureProperty'].map(t =>
+      sqlite.prepare(`SELECT * FROM ${t}`).all(),
+    )
+    expect(await applyUnresolvedFeatureSplit(db, plan, 'actor')).toEqual({
+      status: 'applied',
+    })
+    expect(await applyUnresolvedFeatureSplit(db, plan, 'actor')).toEqual({
+      status: 'already-applied',
+    })
+    expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.effective).toEqual(
+      baseline.effective,
+    )
+    expect(
+      ['feature', 'featureI18n', 'featureProperty'].map(t =>
+        sqlite.prepare(`SELECT * FROM ${t}`).all(),
+      ),
+    ).toEqual(before)
+    expect(
+      sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get()?.n,
+    ).toBe(1)
+    expect(
+      sqlite.prepare('SELECT actorId FROM featurePlaceHistory').get()?.actorId,
+    ).toBe('actor')
+  })
+  it('rejects altered manifests, changed baselines and identity collisions', async () => {
+    const { db, sqlite, plan } = await fixture()
+    expect(
+      await applyUnresolvedFeatureSplit(
+        db,
+        { ...plan, facts: { ...plan.facts, names: { en: 'Injected' } } },
+        'actor',
+      ),
+    ).toEqual({ status: 'conflict' })
+    sqlite.exec("UPDATE featureI18n SET title='Changed without timestamp'")
+    expect(await applyUnresolvedFeatureSplit(db, plan, 'actor')).toEqual({
+      status: 'conflict',
+    })
+    sqlite.exec("UPDATE featureI18n SET title='Shop'")
+    sqlite
+      .prepare("INSERT INTO place(id,state,ownerProjectId) VALUES (?,'manual','p')")
+      .run(plan.placeId)
+    expect(await applyUnresolvedFeatureSplit(db, plan, 'actor')).toEqual({
+      status: 'conflict',
+    })
+    expect(sqlite.prepare('SELECT count(*) AS n FROM featurePlace').get()?.n).toBe(0)
+  })
+  it('leaves no orphan when a concurrent save wins after baseline validation', async () => {
+    const { db, sqlite, plan } = await fixture()
+    const originalBatch = db.batch.bind(db)
+    db.batch = ((queries: Parameters<Database['batch']>[0]) => {
+      sqlite.exec("UPDATE feature SET modifiedAt='concurrent-save' WHERE id='f'")
+      return originalBatch(queries)
+    }) as unknown as Database['batch']
+    expect(await applyUnresolvedFeatureSplit(db, plan, 'actor')).toEqual({
+      status: 'conflict',
+    })
+    for (const table of [
+      'place',
+      'placeRevision',
+      'featurePlace',
+      'featurePlaceHistory',
+    ])
+      expect(sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n).toBe(0)
+    expect(
+      sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='f'").get()?.modifiedAt,
+    ).toBe('concurrent-save')
+  })
+
+  it('rolls back Place and revision when association/history insertion fails', async () => {
+    const { db, sqlite, plan } = await fixture()
+    sqlite.exec(
+      "CREATE TRIGGER fail_split BEFORE INSERT ON featurePlaceHistory BEGIN SELECT RAISE(ABORT,'injected failure'); END",
+    )
+    await expect(applyUnresolvedFeatureSplit(db, plan, 'actor')).rejects.toThrow(
+      'injected failure',
+    )
+    for (const table of [
+      'place',
+      'placeRevision',
+      'featurePlace',
+      'featurePlaceHistory',
+    ])
+      expect(sqlite.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n).toBe(0)
+  })
+  it('does not replay over later user overrides', async () => {
+    const { db, sqlite, plan } = await fixture()
+    await applyUnresolvedFeatureSplit(db, plan, 'actor')
+    sqlite.exec(
+      `UPDATE featurePlace SET overrides='{"names":{"en":{"mode":"override","value":"Later"}}}',revision='later'`,
+    )
+    expect(await applyUnresolvedFeatureSplit(db, plan, 'actor')).toEqual({
+      status: 'conflict',
+    })
   })
 })
