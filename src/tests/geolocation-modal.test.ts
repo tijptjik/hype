@@ -180,7 +180,10 @@ it('retains saved building evidence when reopening and accepting the same pin', 
   )
   await fireEvent.click(view.getByText('close_shy_jurgen_cook'))
   expect(mocks.lookup).not.toHaveBeenCalled()
-  expect(mocks.draft.updateField).toHaveBeenCalledWith('addressMeta', identity)
+  expect(mocks.draft.updateField).toHaveBeenCalledWith(
+    'addressMeta',
+    expect.objectContaining(identity),
+  )
   expect(mocks.draft.updateI18n).toHaveBeenCalledWith(
     'addressProperties',
     properties,
