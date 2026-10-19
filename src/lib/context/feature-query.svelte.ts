@@ -239,6 +239,7 @@ export class FeatureQuery {
   private preview: FeatureQueryCachedEntity[] = $state.raw([])
   private validatedAt = 0
   private generation = 0
+  private pendingPage: RemoteQuery<FeatureQueryPage> | undefined
   private history = new Map<string, FeatureQueryHistory>()
   private matchContext: FeatureQueryMatchContext = {}
   private mapRows: FeatureFromCollection[] = $state.raw([])
@@ -318,7 +319,7 @@ export class FeatureQuery {
     const key = featureQueryKey(input)
     const sameQuery = this.input && featureQueryKey(this.input) === key
     if (!force && sameQuery && this.loading) {
-      await this.pages[0]
+      await (this.pendingPage ?? this.pages[0])
       return
     }
     if (
@@ -330,29 +331,48 @@ export class FeatureQuery {
     )
       return
 
+    // Saved lists keep their committed page and count while a replacement is pending.
+    const listId = input.filters?.list?.listId
+    const preserveSavedList = listId === 'wishlist' || listId === 'visited'
+    const sameScope =
+      this.input &&
+      featureQueryScopeKey(this.input.meta) === featureQueryScopeKey(input.meta)
+    const keepPrevious =
+      preserveSavedList && sameScope && this.input?.filters?.list?.listId === listId
+
     // Each query transition obtains its own preview and native first-page handle.
     const generation = ++this.generation
     this.input = { ...input, cursor: undefined }
     this.error = null
-    this.preview = this.retained.preview(input, {
-      ...this.context(),
-      ...this.matchContext,
-    })
+    if (!keepPrevious)
+      this.preview = this.retained.preview(input, {
+        ...this.context(),
+        ...this.matchContext,
+      })
     const history = this.history.get(key)
     if (!force && history && Date.now() - history.fetchedAt < FRESHNESS_MS) {
+      this.pendingPage = undefined
       this.pages = history.pages
       this.validatedAt = history.fetchedAt
       this.loading = false
       return
     }
     this.history.delete(key)
+    // Retained rows belong to the previous result; they cannot mark a failed replacement fresh.
+    this.validatedAt = 0
     const page = this.query(this.input)
-    this.pages = [page]
+    this.pendingPage = page
+    if (!preserveSavedList) this.pages = [page]
+    else if (!keepPrevious) this.pages = []
     this.loading = true
     try {
       if (force || page.ready) await page.refresh()
       else await page
       if (generation !== this.generation) return
+      if (preserveSavedList) {
+        this.pages = [page]
+        this.preview = []
+      }
       this.validatedAt = Date.now()
       if (page.current) this.retained.retain(page.current.data, this.input, page)
       this.remember(key)
@@ -368,7 +388,10 @@ export class FeatureQuery {
       }
       throw error
     } finally {
-      if (generation === this.generation) this.loading = false
+      if (generation === this.generation) {
+        this.pendingPage = undefined
+        this.loading = false
+      }
     }
   }
 
@@ -491,6 +514,7 @@ export class FeatureQuery {
    */
   invalidate(): void {
     this.generation++
+    this.pendingPage = undefined
     this.loading = false
     this.history.clear()
     this.validatedAt = 0
@@ -503,6 +527,7 @@ export class FeatureQuery {
    */
   clear(): void {
     this.generation++
+    this.pendingPage = undefined
     this.input = undefined
     this.preview = []
     this.mapRows = []

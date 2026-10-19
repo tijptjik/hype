@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => {
   const query = () => ({
     rows: [feature],
     pages: [{ current: { userFeatures: [membership] } }],
-    totalCount: 23,
+    totalCount: 23 as number | null,
     loading: false,
     error: null,
     hasMore: true,
@@ -134,5 +134,75 @@ describe.each([
         }),
       ),
     )
+  })
+
+  it('keeps saved rows and the load-more label visible during a pending response', () => {
+    const query = mocks.app.resources.featureQueries[channel]
+    query.loading = true
+    try {
+      renderPanel()
+      expect(screen.getByText('Server-only feature')).toBeTruthy()
+      expect(screen.queryByText('resource_loading')).toBeNull()
+      expect(screen.queryByRole('status')).toBeNull()
+      expect(
+        (
+          screen.getByRole('button', {
+            name: 'resource_load_more',
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(true)
+    } finally {
+      query.loading = false
+    }
+  })
+
+  it('shows neither loading text nor an empty-state message before the first response', () => {
+    const query = mocks.app.resources.featureQueries[channel]
+    const rows = query.rows
+    const totalCount = query.totalCount
+    query.rows = []
+    query.totalCount = null
+    query.loading = true
+    try {
+      renderPanel()
+      expect(screen.queryByText('resource_loading')).toBeNull()
+      expect(screen.queryByRole('status')).toBeNull()
+      expect(screen.queryByText('due_mad_whale_attend')).toBeNull()
+      expect(screen.queryByText('short_watery_marten_race')).toBeNull()
+    } finally {
+      query.rows = rows
+      query.totalCount = totalCount
+      query.loading = false
+    }
+  })
+
+  it('keeps a settled empty state until the replacement rows arrive', async () => {
+    const model = {
+      title: 'Saved places (0)',
+      rows: [],
+      totalCount: 0,
+      loading: false,
+      error: null,
+      hasMore: false,
+      search: '',
+      setSearch: vi.fn(),
+      onOpen: vi.fn(),
+    }
+    const view = render(Component, { model: model as never, panel: {} as PanelProps })
+    const emptyLabel =
+      channel === 'visited' ? 'due_mad_whale_attend' : 'short_watery_marten_race'
+    const emptyState = screen.getByText(emptyLabel)
+    await view.rerender({ model: { ...model, loading: true } as never })
+    expect(screen.getByText(emptyLabel)).toBe(emptyState)
+    expect(screen.queryByText('resource_loading')).toBeNull()
+    await view.rerender({
+      model: {
+        ...model,
+        totalCount: 1,
+        rows: [{ id: 'market', title: 'Bridges Street Market' }],
+      } as never,
+    })
+    expect(screen.queryByText(emptyLabel)).toBeNull()
+    expect(screen.getByText('Bridges Street Market')).toBeTruthy()
   })
 })
