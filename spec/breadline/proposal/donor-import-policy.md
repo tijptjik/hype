@@ -85,3 +85,19 @@ The temporary review map and scratch browser/test artifacts were retired after
 processing all 64 decisions. Original exports, retained route evidence and
 pre-application backups remain private. The committed decision policy and source
 audit script are the retained import/review deliverables.
+
+## Location-review exclusions (20 October 2026)
+
+Maxim's Cakes – Lo Tak Court and Maxim's Cakes – MTR Kowloon Tong B both have
+zero recorded runs in the retained source mirror. Both are excluded by the existing
+`requireRecordedRun` policy before coordinate and MTR import processing. Do not carry
+these records forward from the earlier all-donor rehearsal or guess replacement
+coordinates. If either acquires run history, recheck eligibility and verify its shop
+location before importing: the retained points conflict with the source addresses.
+Nam Wan Bookshop is outside Breadline; its guarded address correction is separate.
+
+
+The 20 October fresh planner pass confirms both entries are excluded with
+`no_recorded_runs`. Both already exist from the earlier import: this policy skips
+future import operations; it does not delete existing features or alter their
+locations. Removing those existing records requires a separate reviewed cleanup.

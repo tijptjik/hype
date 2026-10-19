@@ -6,6 +6,7 @@ import { dirname } from 'node:path'
 import { Database } from 'bun:sqlite'
 // IMPORT POLICY
 import donorImportPolicy from './donor-import-policy.json'
+import donorBrandIdentities from './donor-brand-identities.json'
 import { reviewedDonorMtr } from './lib/donor-mtr-decisions'
 // VALIDATION
 import { normalizeHongKongPhoneNumber } from '../../src/lib/utils/phone-property'
@@ -101,6 +102,17 @@ export function planBreadlineFeatures(args: string[]): void {
       }[]
     ).map(row => String(row.donor_id)),
   )
+  // Seed real brand values before assigning new donors; the renderer only sees properties.
+  for (const [index, brand] of donorBrandIdentities.entries()) {
+    statements.push(
+      `INSERT INTO propertyValue(id,propertyId,rank,value) VALUES (${sql(brand.id)},'WhWlW8KcN2wq',${7 + index},${sql(brand.code)}) ON CONFLICT(id) DO NOTHING;`,
+    )
+    for (const locale of ['en', 'zh-hans', 'zh-hant']) {
+      statements.push(
+        `INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES (${sql(brand.id)},${sql(locale)},${sql(brand.name)},0) ON CONFLICT(propertyValueId,locale) DO NOTHING;`,
+      )
+    }
+  }
   const excludedDonors: {
     sourceId: string
     reason: string
@@ -265,7 +277,10 @@ export function planBreadlineFeatures(args: string[]): void {
         )
       }
       if (table === 'donors') {
-        const brand = brandIds[String(row.brand)]
+        const brand =
+          (row.brand === 'independent'
+            ? donorBrandIdentities.find(brand => brand.sourceName === row.name_en)?.id
+            : undefined) ?? brandIds[String(row.brand)]
         if (!brand) throw new Error('Unknown source brand')
         statements.push(
           insert('featureProperty', {
