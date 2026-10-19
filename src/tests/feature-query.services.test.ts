@@ -155,6 +155,31 @@ function setup(withOrphan = false) {
 }
 
 describe('indexed feature queries', () => {
+  it('groups membership IDs before reading large division polygons', async () => {
+    const { db, sqlite, statements } = setup()
+    sqlite.prepare('UPDATE divisionDefinition SET attributes = ? WHERE id = ?').run(
+      JSON.stringify({
+        level: 5,
+        membershipGeometry: [Array(10000).fill([114, 22])],
+      }),
+      'Central',
+    )
+    const page = await queryFeaturePage(db, input(), base, hub)
+    expect(facetCounts(page)).toEqual({ Central: 2, 'Wan Chai': 1 })
+    expect(page.facets?.divisions.Central.hasGeometry).toBe(true)
+    const aggregate = statements.find(statement =>
+      statement.includes('count(distinct'),
+    )!
+    const plan = sqlite
+      .prepare(`EXPLAIN QUERY PLAN ${aggregate}`)
+      .all(1, 1, 0, 0)
+      .map(row => String(row.detail))
+    // A separate grouped subquery prevents polygon payloads entering the membership sorter.
+    expect(
+      plan.some(detail => /(?:CO-ROUTINE|MATERIALIZE) memberships/.test(detail)),
+    ).toBe(true)
+  })
+
   it('keeps same-name divisions distinct and invalidates ancestor and translation changes', async () => {
     const { db, sqlite } = setup()
     sqlite.prepare('INSERT INTO divisionDefinition VALUES(?,?,?)').run(

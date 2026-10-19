@@ -103,6 +103,24 @@ export async function getFeatureQueryCounts(
   source: SQL,
   rollupConditions: SQL[] | null,
 ): Promise<FeatureQueryCounts> {
+  // Aggregate only IDs before joining large polygon attributes; SQLite otherwise
+  // carries a copy of those attributes per membership through its grouping sorter.
+  const memberships = db
+    .select({
+      divisionId: featureDivisionMembership.divisionId,
+      count: sql<number>`count(distinct ${feature.id})`.as('count'),
+    })
+    .from(source)
+    .innerJoin(
+      featureDivisionMembership,
+      and(
+        eq(featureDivisionMembership.featureId, feature.id),
+        eq(featureDivisionMembership.selected, true),
+      ),
+    )
+    .where(and(...conditions))
+    .groupBy(featureDivisionMembership.divisionId)
+    .as('memberships')
   // Group by stable identity; localized names are a scalar lookup, never a counting join.
   const aggregate = db
     .select({
@@ -129,22 +147,10 @@ export async function getFeatureQueryCounts(
         where divisionId = ${divisionDefinition.id} and name is not null and name != '')`.mapWith(
         value => JSON.parse(String(value)),
       ),
-      count: sql<number>`count(distinct ${feature.id})`,
+      count: memberships.count,
     })
-    .from(source)
-    .innerJoin(
-      featureDivisionMembership,
-      and(
-        eq(featureDivisionMembership.featureId, feature.id),
-        eq(featureDivisionMembership.selected, true),
-      ),
-    )
-    .innerJoin(
-      divisionDefinition,
-      eq(divisionDefinition.id, featureDivisionMembership.divisionId),
-    )
-    .where(and(...conditions))
-    .groupBy(divisionDefinition.id)
+    .from(memberships)
+    .innerJoin(divisionDefinition, eq(divisionDefinition.id, memberships.divisionId))
   const targetUserId = input.filters?.list?.userId
   const userRevision = targetUserId
     ? sql<number>`coalesce((${db.select({ revision: featureCountUserRevision.revision }).from(featureCountUserRevision).where(eq(featureCountUserRevision.userId, targetUserId)).limit(1)}), 0)`
