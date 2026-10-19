@@ -203,6 +203,8 @@ export async function readFeaturePlaceBaseline(
   }
   const projectedBrands: NonNullable<EffectivePlaceFacts['brands']> = []
   for (const brand of brands) {
+    // Forms carry empty catalog fields even when no legacy classifier is assigned.
+    if (!brand.propertyValueId && (brand.value === null || brand.value === '')) continue
     if (!brand.propertyValueId || brand.value !== null)
       return { status: 'review', reason: 'invalid-brand' }
     const option = await db

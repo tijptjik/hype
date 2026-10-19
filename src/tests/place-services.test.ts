@@ -1003,7 +1003,8 @@ describe('linked Feature form persistence', () => {
     sqlite.exec(`CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
       INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES ('f','en','Bakery','Original address');
       INSERT INTO hub VALUES ('core','core');
-      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');`)
+      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');
+      INSERT INTO property VALUES ('brand','brand','organisation',NULL);`)
     sqlite
       .prepare("UPDATE feature SET geometry=? WHERE id='f'")
       .run(JSON.stringify(facts.location.geometry))
@@ -1036,7 +1037,10 @@ describe('linked Feature form persistence', () => {
           displayAddress: 'Original address',
         },
       },
-      properties: [{ propertyId: 'phone', value: '["+85291234567","+85223456789"]' }],
+      properties: [
+        { propertyId: 'phone', value: '["+85291234567","+85223456789"]' },
+        { propertyId: 'brand', value: '', propertyValueId: null },
+      ],
     }
     const saved = await saveLinkedFeatureForm(db, input)
     expect(saved.status).toBe('saved')
@@ -1101,6 +1105,73 @@ describe('linked Feature form persistence', () => {
       },
     })
     expect(editedMissing.status).toBe('saved')
+    if (editedMissing.status !== 'saved') throw new Error('Expected save')
+    const customBrands = [
+      { identifiers: {}, names: { en: 'Local brand', 'zh-hant': '品牌' } },
+    ]
+    let timestamp = editedMissing.feature.modifiedAt
+    for (const choice of [
+      { mode: 'override', value: customBrands },
+      { mode: 'clear' },
+      { mode: 'inherit' },
+    ] as const) {
+      const revision = (await getAcceptedFeaturePlace(db, 'f', 'p'))!.revision
+      const brandInput = {
+        ...input,
+        updatedAt: timestamp,
+        i18n: {
+          en: {
+            title: 'Retained historical donor',
+            displayAddress: 'Original address',
+          },
+        },
+        placeBrandEdit: {
+          expectedRevision: revision,
+          choice: structuredClone(
+            choice,
+          ) as import('#lib/places/brandEdit.js').PlaceBrandEdit['choice'],
+        },
+      }
+      const beforeBrand = snapshot()
+      await expect(
+        saveLinkedFeatureForm(db, {
+          ...brandInput,
+          i18n: { en: { title: 'Failure', displayAddress: 'Original address' } },
+        }),
+      ).rejects.toThrow()
+      expect(snapshot()).toEqual(beforeBrand)
+      expect(
+        await saveLinkedFeatureForm(db, {
+          ...brandInput,
+          placeBrandEdit: { ...brandInput.placeBrandEdit, expectedRevision: 'stale' },
+        }),
+      ).toEqual({ status: 'conflict' })
+      expect(snapshot()).toEqual(beforeBrand)
+      const result = await saveLinkedFeatureForm(db, brandInput)
+      expect(result.status).toBe('saved')
+      if (result.status !== 'saved') throw new Error('Expected brand save')
+      timestamp = result.feature.modifiedAt
+      const current = await getAcceptedFeaturePlace(db, 'f', 'p')
+      expect(current?.brandMode).toBe(choice.mode)
+      expect(current?.effective.brands).toEqual(
+        choice.mode === 'override' ? customBrands : choice.mode === 'clear' ? null : [],
+      )
+      expect(current?.factsRevisionId).toBe(local.revisionId)
+    }
+    sqlite.exec(
+      "INSERT INTO propertyValue VALUES ('legacy-brand','brand'); INSERT INTO propertyValueI18n VALUES ('legacy-brand','en','Legacy brand');",
+    )
+    const beforeLegacy = snapshot()
+    expect(
+      await saveLinkedFeatureForm(db, {
+        ...input,
+        updatedAt: timestamp,
+        properties: [
+          { propertyId: 'brand', propertyValueId: 'legacy-brand', value: null },
+        ],
+      }),
+    ).toEqual({ status: 'review', reason: 'Edit brands through the Place association' })
+    expect(snapshot()).toEqual(beforeLegacy)
     expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.effective.names.en).toBe(
       'Retained historical donor',
     )

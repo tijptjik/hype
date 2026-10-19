@@ -1432,5 +1432,13 @@
   "feature_place_search_partial": "部分地點搜尋結果無法載入。已顯示可用結果。",
   "feature_place_change": "更換地點",
   "feature_place_change_cancel": "取消更換地點",
-  "feature_place_change_confirm": "改用此地點"
+  "feature_place_change_confirm": "改用此地點",
+  "place_brand_title": "品牌",
+  "place_brand_inherit": "使用地點品牌",
+  "place_brand_override": "修正此項目的品牌",
+  "place_brand_clear": "隱藏品牌",
+  "place_brand_remove": "移除品牌",
+  "place_brand_add": "新增品牌",
+  "place_brand_reset_pending": "儲存此項目後將恢復已接受的地點品牌。",
+  "place_brand_none": "沒有品牌"
 }

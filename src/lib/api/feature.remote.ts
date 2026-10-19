@@ -462,6 +462,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
 
+  if (mode === 'create' && data.placeBrandEdit)
+    invalid(issue('Brand inheritance requires an existing linked Feature'))
+
   let submittedProperties = Array.isArray(data.properties) ? data.properties : []
   const duplicatePropertyIds = getDuplicateValues(
     submittedProperties
@@ -583,6 +586,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     submittedDataBeforeHydration.isPendingReview = data.isPendingReview
   }
 
+  // Place brands use the same non-translator permission as Feature properties.
+  if (data.placeBrandEdit) submittedDataBeforeHydration.properties = []
   const preliminaryUpdateDecision = authorizeFeatureUpdateForSubmission({
     user,
     userRoles,
@@ -640,7 +645,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const submittedDataForUpdate: Record<string, unknown> = {}
 
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
-  if (propertiesChanged) submittedDataForUpdate.properties = submittedProperties
+  if (propertiesChanged || data.placeBrandEdit)
+    submittedDataForUpdate.properties = submittedProperties
   if (geometryChanged) submittedDataForUpdate.geometry = data.geometry
   if (addressChanged) submittedDataForUpdate.addressMeta = data.addressMeta
   if (intangibleChanged) submittedDataForUpdate.isIntangible = data.isIntangible
@@ -704,6 +710,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     },
     i18n: data.i18n,
     properties: propertiesChanged ? submittedProperties : undefined,
+    placeBrandEdit: data.placeBrandEdit,
   }
   const linkedSave = await saveLinkedFeatureForm(db, saveInput)
   if (linkedSave.status === 'conflict')

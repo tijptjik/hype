@@ -761,6 +761,50 @@ describe('feature.remote authz matrix', () => {
     },
   )
 
+  it.each(['inherit', 'clear', 'override'] as const)(
+    'rejects translator Place brand %s before persistence',
+    async mode => {
+      mockAuthorizeFeatureUpdateForSubmission.mockImplementation(
+        authorizeFeatureUpdateForSubmission,
+      )
+      mockGuardedContext.mockResolvedValue({
+        ...(await mockGuardedContext()),
+        userRoles: [{ type: 'project', role: 'translator', projectId: 'project-1' }],
+      })
+      await expect(
+        remote.featureForm(
+          {
+            meta: {
+              id: 'feature-1',
+              mode: 'update',
+              updatedAt: '2026-03-18T00:00:00.000Z',
+            },
+            data: {
+              organisationId: 'org-1',
+              projectId: 'project-1',
+              layerId: 'layer-1',
+              i18n: { en: { name: 'Translated feature' } },
+              properties: [],
+              geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+              addressMeta: { street: 'Main' },
+              isIntangible: false,
+              isVisitable: true,
+              isPendingReview: false,
+              placeBrandEdit: {
+                expectedRevision: 'accepted',
+                choice: mode === 'override' ? { mode, value: [] } : { mode },
+              },
+            },
+          },
+          throwingInvalid,
+        ),
+      ).rejects.toThrow('FIELD_FORBIDDEN')
+      expect(mockLoadFeature).not.toHaveBeenCalled()
+      expect(mockSaveLinkedFeatureForm).not.toHaveBeenCalled()
+      expect(mockSaveUnlinkedFeatureForm).not.toHaveBeenCalled()
+    },
+  )
+
   it('featureForm update authorizes before loading the relation graph', async () => {
     mockAuthorizeFeatureUpdateForSubmission.mockReturnValue({
       allowed: false,

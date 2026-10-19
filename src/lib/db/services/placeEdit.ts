@@ -8,6 +8,7 @@ import { applyFeaturePlaceEdits } from '#lib/places/edits.js'
 import { equalPlaceValue } from '#lib/places/baseline.js'
 import { FeaturePlaceOverridesSchema } from '#lib/places/validation.js'
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
+import { PlaceBrandEditSchema, type PlaceBrandEdit } from '#lib/places/brandEdit.js'
 // SERVICES
 import { readFeaturePlaceBaseline } from './placeBaseline'
 import { prepareFeaturePlaceAssociationWrite } from './placeAssociation'
@@ -45,6 +46,7 @@ export async function saveLinkedFeatureForm(
     data: FeatureDBPartial
     i18n: Record<string, FeatureI18nPartial>
     properties?: NewFeatureProperty[]
+    placeBrandEdit?: PlaceBrandEdit
   },
 ): Promise<LinkedFeatureSaveResult> {
   const association = await db
@@ -52,7 +54,15 @@ export async function saveLinkedFeatureForm(
     .from(featurePlace)
     .where(eq(featurePlace.featureId, input.featureId))
     .get()
-  if (!association) return { status: 'unlinked' }
+  if (!association)
+    return input.placeBrandEdit
+      ? { status: 'review', reason: 'Brand inheritance requires a linked Place' }
+      : { status: 'unlinked' }
+  const brandEdit = input.placeBrandEdit
+    ? PlaceBrandEditSchema.parse(input.placeBrandEdit)
+    : undefined
+  if (brandEdit && brandEdit.expectedRevision !== association.revision)
+    return { status: 'conflict' }
   if (input.data.projectId && input.data.projectId !== input.projectId)
     return {
       status: 'review',
@@ -86,11 +96,18 @@ export async function saveLinkedFeatureForm(
   )
   if (after.status !== 'ready') return { status: 'review', reason: after.reason }
   if (after.baseline.modifiedAt !== input.updatedAt) return { status: 'conflict' }
+  // Legacy classifier writes cannot become a second authority for linked Place brands.
+  if (
+    !equalPlaceValue(before.baseline.effective.brands, after.baseline.effective.brands)
+  )
+    return { status: 'review', reason: 'Edit brands through the Place association' }
   const overrides = applyFeaturePlaceEdits(
     FeaturePlaceOverridesSchema.parse(association.overrides),
     before.baseline.effective,
     after.baseline.effective,
   )
+  // Brand choices live only on the association; reset uses its accepted facts revision.
+  if (brandEdit) overrides.brands = brandEdit.choice
   const associationWrite = prepareFeaturePlaceAssociationWrite(db, {
     featureId: input.featureId,
     projectId: input.projectId,

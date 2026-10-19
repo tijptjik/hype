@@ -113,6 +113,7 @@ import {
   FEATURE_EDITOR_ROOT_CLASS,
   getFeatureEditorFacetClass,
 } from './page.styles'
+import { getFeaturePlace } from '#lib/api/place.remote.js'
 import FeaturePlaceSection from '#lib/bits/patterns/forms/featurePlace/FeaturePlaceSection.svelte'
 import FormFeatureAddress from '#lib/bits/patterns/forms/formFeatureAddress/FormFeatureAddress.svelte'
 import {
@@ -782,6 +783,7 @@ const configuredFeatureForm = configureForm(() => ({
 
       if (!isNewFeatureRef) {
         updates.unshift(
+          getFeaturePlace({ featureId: featureRef }),
           getFeature({
             ref: featureRef,
             refKey: 'id',
@@ -1525,9 +1527,18 @@ $effect(() => {
  *  SECTION : FIELDS STATE
  ************/
 
+// Linked Features edit brands through their Place association, never the legacy classifier.
+const editableFeatureProperties = $derived(
+  feature?.data?.placeBrands != null
+    ? (currentFeatureData.properties ?? []).filter(
+        property => property.property?.key !== 'brand',
+      )
+    : currentFeatureData.properties,
+)
+
 const nonTranslatableItems = $derived(
   getNonTranslatableFeatureFieldItems({
-    properties: currentFeatureData.properties,
+    properties: editableFeatureProperties,
     localeKey,
     isEditing,
     onChange: updatePropertyValue,
@@ -1535,7 +1546,7 @@ const nonTranslatableItems = $derived(
 )
 
 const translatableSpecifierItems = $derived(
-  getTranslatableSpecifierProperties(currentFeatureData.properties),
+  getTranslatableSpecifierProperties(editableFeatureProperties),
 )
 
 /********************
@@ -2355,6 +2366,9 @@ $effect(() => {
               modifiedAt={feature.data.modifiedAt}
               {isEditing}
               {isDirty}
+              brandEdit={currentFeatureData.placeBrandEdit}
+              onBrandEdit={edit =>
+                updateFeatureData(data => ({ ...data, placeBrandEdit: edit }))}
             />
           {/if}
           <FormFeatureAddress

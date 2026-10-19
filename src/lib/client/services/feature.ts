@@ -378,6 +378,9 @@ export function getProgrammaticFeatureInputEntries(
     }
   }
 
+  if (featureData?.placeBrandEdit)
+    appendEntry('data.placeBrandEdit', JSON.stringify(featureData.placeBrandEdit))
+
   appendEntry('data.isIntangible', Boolean(featureData?.isIntangible))
   appendEntry('data.isVisitable', Boolean(featureData?.isVisitable))
   appendEntry('data.isPendingReview', Boolean(featureData?.isPendingReview))

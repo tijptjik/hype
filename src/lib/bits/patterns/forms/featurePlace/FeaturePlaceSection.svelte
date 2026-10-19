@@ -15,6 +15,8 @@ import {
 } from '#lib/api/place.remote.js'
 // COMPONENTS
 import CreateLocalPlace from './CreateLocalPlace.svelte'
+import PlaceBrandEditor from './PlaceBrandEditor.svelte'
+import type { PlaceBrandEdit } from '#lib/places/brandEdit.js'
 // TYPES
 import type { PlaceSearchCandidate } from '#lib/places/sourceClient.js'
 import type { LocalPlaceCandidate } from '#lib/db/services/placeCandidate.js'
@@ -30,6 +32,8 @@ let {
   modifiedAt,
   isEditing,
   isDirty,
+  brandEdit,
+  onBrandEdit,
 }: {
   featureId: string
   projectId: string
@@ -37,6 +41,8 @@ let {
   modifiedAt: string
   isEditing: boolean
   isDirty: boolean
+  brandEdit?: unknown
+  onBrandEdit: (edit: PlaceBrandEdit) => void
 } = $props()
 const accepted = $derived(getFeaturePlace({ featureId }))
 let query = $state('')
@@ -160,6 +166,12 @@ async function link(): Promise<void> {
             />
           {/if}
         </div>
+        <PlaceBrandEditor
+          {association}
+          edit={brandEdit}
+          {isEditing}
+          onChange={onBrandEdit}
+        />
       {/if}
       {#if isEditing && (!association || replacementRevision)}
         {#if replacementRevision}

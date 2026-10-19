@@ -100,6 +100,7 @@ export type AcceptedFeaturePlace = {
   state: 'linked' | 'unresolved' | 'manual'
   factsRevisionId: string
   locationRevisionId: string
+  brandMode: 'inherit' | 'override' | 'clear'
   effective: EffectivePlaceFacts
 }
 
@@ -166,6 +167,7 @@ export async function getAcceptedFeaturePlace(
   const { facts, location, overrides, ...identity } = row
   return {
     ...identity,
+    brandMode: FeaturePlaceOverridesSchema.parse(overrides).brands?.mode ?? 'inherit',
     effective: resolveFeaturePlace(
       PlaceFactsSchema.parse(facts),
       PlaceFactsSchema.parse(location).location,

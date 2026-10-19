@@ -1432,5 +1432,13 @@
   "feature_place_search_partial": "Some Place search results could not be loaded. Available results are shown.",
   "feature_place_change": "Change Place",
   "feature_place_change_cancel": "Cancel Place change",
-  "feature_place_change_confirm": "Use this Place instead"
+  "feature_place_change_confirm": "Use this Place instead",
+  "place_brand_title": "Brands",
+  "place_brand_inherit": "Use Place brands",
+  "place_brand_override": "Correct for this Feature",
+  "place_brand_clear": "Hide brands",
+  "place_brand_remove": "Remove brand",
+  "place_brand_add": "Add brand",
+  "place_brand_reset_pending": "The accepted Place brands will be restored when you save this Feature.",
+  "place_brand_none": "No brands"
 }

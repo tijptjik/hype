@@ -800,3 +800,34 @@ The local screenshot is `output/playwright/place-brand-index.png` (not committed
 All 11 context-boundary tests pass; type-check remains at 10 unrelated errors and
 19 warnings. This closes the earlier list-logo acceptance gap, not the remaining
 brand editor, source lifecycle or migration requirements.
+
+### Feature brand corrections and explicit inheritance (Refs #194)
+
+The Feature Place section now offers accepted-Place inheritance, a local brand-array
+correction, and explicit suppression. Corrections edit English and both Chinese names
+while retaining other source locales and identifiers; users can add or remove brands.
+These changes use the regular Feature Save/Reset flow, not an independent save button.
+The read projection exposes only the brand mode alongside effective facts, not raw
+source payloads or the full override object. Linked Features hide the legacy classifier
+field; attempts to change its assignment through the normal save are rejected.
+
+The form carries an explicit brand choice and the association revision viewed by the
+editor. The existing property-edit permission is required before relation hydration;
+translator-only access cannot set, clear or reset brands. Creation and unlinked saves
+cannot silently discard this intent. The association/history and ordinary Feature
+changes commit in the same conditional batch, guarded by both Feature timestamp and
+association revision. Reset inherits the accepted facts revision, never the newest
+unreviewed source revision. Brand corrections do not mutate Place snapshots.
+
+Browser rehearsal on the isolated imported database exercised clear, reset, localized
+correction and reset again through the header Save action. Persisted overrides and
+unchanged source brand facts were checked directly. The legacy empty catalog field
+exposed a baseline validation bug: an unassigned empty classifier is now treated as
+absent, while malformed/nonempty assignments still fail validation. A local screenshot
+is retained at `output/playwright/place-brand-editor.png` (not committed).
+
+75 focused tests pass, including malformed form envelopes, empty arrays, stale
+association rejection, transactional rollback, all three brand modes, translator
+rejection and legacy classifier rejection. Full type-check retains its existing
+10 unrelated errors / 19 warnings baseline. General name/phone/location inheritance
+reset controls, unlinking, source adoption/sync and final migration work remain open.
