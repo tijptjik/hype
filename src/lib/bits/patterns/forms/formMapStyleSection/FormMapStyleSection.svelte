@@ -67,16 +67,23 @@ const userPreferenceStyle = $derived<MapStyleSelectionItem>({
 })
 const displayMapStyle = $derived(selectedMapStyle ?? userPreferenceStyle)
 
-// Inheritance choices stay first; only explicit styles are alphabetized.
+// Inheritance choices stay first; explicit styles follow their canonical code.
 const sortedMapStyles = $derived([
   ...additionalMapStyles,
   userPreferenceStyle,
   ...resolvedMapStyles
     .filter(style => isMapStyleSelectable(style.code))
     .toSorted((a, b) =>
-      (a.i18n?.en?.name ?? a.code).localeCompare(b.i18n?.en?.name ?? b.code),
+      canonicalMapStyleCode(a.code).localeCompare(canonicalMapStyleCode(b.code)),
     ),
 ])
+// Ten narrow windows sample the public dark palettes, repeating if fewer are available.
+const darkPreviewStyles = SELECTABLE_MAP_STYLE_CATALOG.filter(
+  entry => entry.basemapVariant === 'dark' && !isProjectOnlyMapStyle(entry.key),
+)
+const userChoiceSlices = Array.from({ length: 10 }, (_, index) =>
+  getMapStyleRenderAssetPath(darkPreviewStyles[index % darkPreviewStyles.length].key),
+)
 const showModeUi = $derived(isEditing && !isSubmitting)
 
 function toggleAdding(): void {
@@ -119,6 +126,16 @@ $effect(() => {
 })
 </script>
 
+{#snippet userChoicePreview()}
+  <div class="flex h-full w-full overflow-hidden bg-black" aria-hidden="true">
+    {#each userChoiceSlices as image, index (index)}
+      <div class="relative h-full min-w-0 flex-1 overflow-hidden">
+        <img src={image} alt="" class="h-full w-full object-cover" loading="lazy">
+      </div>
+    {/each}
+  </div>
+{/snippet}
+
 <section
   class={`bits-form__section bits-form__parent-resource bits-map-style-section ${isAdding && showModeUi ? 'bits-form__parent-resource--search-open' : ''} ${className}`}
 >
@@ -149,6 +166,8 @@ $effect(() => {
                 ),
               previewImage: (mapStyle: MapStyleSelectionItem) =>
                 mapStyle.previewImagePath || null,
+              preview: (mapStyle: MapStyleSelectionItem) =>
+                mapStyle.code === '' ? userChoicePreview : undefined,
               variant: () => 'visual',
             }}
           />
@@ -168,6 +187,7 @@ $effect(() => {
   <div class="bits-form__parent-resource-list bits-map-style-section__list">
     <MapStyleCard.Root>
       <MapStyleCard.Preview
+        children={displayMapStyle.code === '' ? userChoicePreview : undefined}
         image={displayMapStyle?.previewImagePath || null}
         class="shrink-0"
         alt={displayMapStyle?.i18n?.en?.name || displayMapStyle?.code || `No ${title}`}

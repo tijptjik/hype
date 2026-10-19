@@ -1,8 +1,11 @@
+import type { Snippet } from 'svelte'
+
 export interface MapStyleCardRootProps {
   class?: string
 }
 
 export interface MapStyleCardPreviewProps {
+  children?: Snippet
   image?: string | null
   alt?: string | null
   styleCode?: string | null

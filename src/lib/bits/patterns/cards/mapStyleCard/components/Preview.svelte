@@ -3,6 +3,7 @@ import type { MapStyleCardPreviewProps } from '../mapStyleCard.types'
 
 let {
   image = null,
+  children,
   alt = null,
   class: className = '',
 }: MapStyleCardPreviewProps = $props()
@@ -19,7 +20,9 @@ $effect(() => {
 </script>
 
 <div class={`bits-map-style-card__preview ${className}`}>
-  {#if image && !imageFailed}
+  {#if children}
+    {@render children()}
+  {:else if image && !imageFailed}
     <img
       src={image}
       alt={alt ?? ''}
