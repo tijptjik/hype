@@ -635,3 +635,28 @@ matching, literal wildcards, localized names, result bounds and authorization. A
 browser rehearsal deliberately blocked upstream search and still found and previewed
 private Places. No unrelated Feature link was made. Type checking remains at the
 existing 10 unrelated errors and 19 warnings, with no changed-path diagnostics.
+
+### Explicit Feature reassociation (Refs #194)
+
+`relinkFeaturePlace` changes one Feature's selected Place/revision after full
+inherited-field edit authorization. It requires both the persisted Feature timestamp
+and association revision, uses the existing atomic association guard/history triggers,
+and derives scope and actor server-side. Missing/private destinations and stale tokens
+produce no writes. The destination must have current source availability.
+
+Reassociation preserves effective facts by deriving overrides against the destination,
+then retaining every existing explicit override/clear even if equal to the new source.
+New source locales absent from the Feature are explicitly cleared. Feature columns and
+spatial jobs remain untouched because no effective location changes. The original
+Place is retained and other Features are unaffected. This is not identity merging,
+manual-Place promotion or SaanSeoi ssId churn reconciliation; those remain separate.
+
+The UI offers an explicit Change Place mode and destination confirmation. It captures
+the association revision when editing begins and blocks changes with unsaved Feature
+edits. Search, local creation and previews reuse the existing selection workflow.
+
+59 focused service/remote tests pass. An isolated browser rehearsal changed a local
+association and confirmed it after reload. Database checks verified a different Place
+ID, unchanged Feature row, retained original Place and exactly one added history row
+with previous revision and actor. No primary mirror or production data changed. Type
+checking remains at 10 unrelated errors/19 warnings, with no changed-path diagnostics.

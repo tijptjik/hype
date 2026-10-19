@@ -1429,5 +1429,8 @@
   "feature_place_create_preview": "建立並預覽",
   "feature_place_project_results": "專案地點",
   "feature_place_source_results": "SaanSeoi 地點",
-  "feature_place_search_partial": "部分地點搜尋結果無法載入。已顯示可用結果。"
+  "feature_place_search_partial": "部分地點搜尋結果無法載入。已顯示可用結果。",
+  "feature_place_change": "更換地點",
+  "feature_place_change_cancel": "取消更換地點",
+  "feature_place_change_confirm": "改用此地點"
 }

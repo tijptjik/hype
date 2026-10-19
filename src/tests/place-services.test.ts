@@ -23,6 +23,7 @@ import {
 } from '#lib/db/services/featureFormSave.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
+import { relinkFeaturePlace } from '#lib/db/services/placeRelink.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { createLocalPlace } from '#lib/db/services/placeLocal.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
@@ -1368,5 +1369,131 @@ describe('private local Place discovery', () => {
     await expect(
       searchLocalPlaceCandidates(db, { projectId: 'p', q: 'x'.repeat(201) }),
     ).rejects.toThrow()
+  })
+})
+
+describe('explicit Place reassociation', () => {
+  it('preserves effective facts and explicit choices, records the actor, and rejects stale retries', async () => {
+    const { db, sqlite } = setup()
+    sqlite
+      .prepare('UPDATE feature SET geometry=? WHERE id=?')
+      .run(JSON.stringify(facts.location.geometry), 'f')
+    const original = await createLocalPlace(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'creator',
+    )
+    const destination = await createLocalPlace(
+      db,
+      'p',
+      {
+        state: 'manual',
+        facts: { ...facts, names: { en: 'Different', 'zh-hant': '新名稱' } },
+      },
+      'creator',
+    )
+    const write = prepareFeaturePlaceAssociationWrite(db, {
+      featureId: 'f',
+      projectId: 'p',
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      placeId: original.placeId,
+      factsRevisionId: original.revisionId,
+      locationRevisionId: original.revisionId,
+      actorId: 'first-editor',
+      overrides: {
+        phoneNumber: { mode: 'override', value: facts.phoneNumber },
+        brands: { mode: 'clear' },
+      },
+    })
+    await write.query
+    const before = await getAcceptedFeaturePlace(db, 'f', 'p')
+    const featureBefore = sqlite.prepare('SELECT * FROM feature').all()
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      ...destination,
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: write.revision,
+      actorId: 'second-editor',
+    }
+    const changed = await relinkFeaturePlace(db, input)
+    expect(changed.status).toBe('linked')
+    const after = await getAcceptedFeaturePlace(db, 'f', 'p')
+    expect(after?.effective).toEqual({
+      ...before?.effective,
+      names: { ...before?.effective.names, 'zh-hant': null },
+    })
+    expect(after?.placeId).toBe(destination.placeId)
+    const overrides = JSON.parse(
+      String(sqlite.prepare('SELECT overrides FROM featurePlace').get()?.overrides),
+    )
+    expect(overrides.phoneNumber).toEqual({
+      mode: 'override',
+      value: facts.phoneNumber,
+    })
+    expect(overrides.brands).toEqual({ mode: 'clear' })
+    expect(overrides.names.en).toEqual({ mode: 'override', value: 'Bakery' })
+    expect(overrides.names['zh-hant']).toEqual({ mode: 'clear' })
+    expect(sqlite.prepare('SELECT * FROM feature').all()).toEqual(featureBefore)
+    expect(
+      sqlite
+        .prepare(
+          'SELECT actorId,previousRevision,placeId FROM featurePlaceHistory ORDER BY id DESC LIMIT 1',
+        )
+        .get(),
+    ).toEqual({
+      actorId: 'second-editor',
+      previousRevision: write.revision,
+      placeId: destination.placeId,
+    })
+    expect(await relinkFeaturePlace(db, input)).toEqual({ status: 'conflict' })
+    expect(sqlite.prepare('SELECT count(*) AS n FROM place').get()?.n).toBe(2)
+  })
+  it('rejects inaccessible destinations and stale Feature timestamps without history writes', async () => {
+    const { db, sqlite } = setup()
+    sqlite
+      .prepare('UPDATE feature SET geometry=? WHERE id=?')
+      .run(JSON.stringify(facts.location.geometry), 'f')
+    const original = await createLocalPlace(
+      db,
+      'p',
+      { state: 'manual', facts },
+      'creator',
+    )
+    const destination = await createLocalPlace(
+      db,
+      'other',
+      { state: 'manual', facts },
+      'creator',
+    )
+    const linked = await linkInitialFeaturePlace(db, {
+      featureId: 'f',
+      projectId: 'p',
+      ...original,
+      expectedFeatureModifiedAt: 'original',
+      actorId: 'actor',
+    })
+    if (linked.status !== 'linked') throw new Error('Expected link')
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      ...destination,
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: linked.revision,
+      actorId: 'actor',
+    }
+    expect(await relinkFeaturePlace(db, input)).toEqual({ status: 'place-unavailable' })
+    expect(
+      await relinkFeaturePlace(db, {
+        ...input,
+        ...original,
+        expectedFeatureModifiedAt: 'stale',
+      }),
+    ).toEqual({ status: 'conflict' })
+    expect(
+      sqlite.prepare('SELECT count(*) AS n FROM featurePlaceHistory').get()?.n,
+    ).toBe(1)
   })
 })

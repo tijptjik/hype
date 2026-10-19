@@ -9,6 +9,7 @@ import {
   getFeaturePlace,
   getFeaturePlaceCandidate,
   linkFeaturePlace,
+  relinkFeaturePlace,
   searchFeaturePlaces,
   searchFeatureLocalPlaces,
 } from '#lib/api/place.remote.js'
@@ -46,6 +47,7 @@ let busy = $state(false)
 let failed = $state(false)
 let searchFailed = $state(false)
 let requestVersion = 0
+let replacementRevision = $state<string | null>(null)
 
 /** Search source and project-local Places independently, retaining settled results while loading. */
 async function search(): Promise<void> {
@@ -98,13 +100,19 @@ async function link(): Promise<void> {
   busy = true
   failed = false
   try {
-    await linkFeaturePlace({
+    const input = {
       featureId,
       placeId: selected.placeId,
       revisionId: selected.revisionId,
       expectedFeatureModifiedAt: modifiedAt,
-    })
+    }
+    if (replacementRevision) {
+      await relinkFeaturePlace({ ...input, expectedRevision: replacementRevision })
+    } else {
+      await linkFeaturePlace(input)
+    }
     await accepted.refresh()
+    replacementRevision = null
     selected = null
     results = null
     localResults = null
@@ -140,8 +148,33 @@ async function link(): Promise<void> {
                 : m.feature_place_unresolved_kind()}
             </p>
           {/if}
+          {#if isEditing}
+            <Button
+              type="button"
+              text={m.feature_place_change()}
+              disabled={busy || isDirty}
+              onClick={() => {
+                replacementRevision = association.revision
+                selected = null
+              }}
+            />
+          {/if}
         </div>
-      {:else if isEditing}
+      {/if}
+      {#if isEditing && (!association || replacementRevision)}
+        {#if replacementRevision}
+          <Button
+            type="button"
+            text={m.feature_place_change_cancel()}
+            disabled={busy}
+            onClick={() => {
+              replacementRevision = null
+              selected = null
+              results = null
+              localResults = null
+            }}
+          />
+        {/if}
         <div class="flex items-end gap-3">
           <TextInput
             id="feature-place-search"
@@ -248,7 +281,9 @@ async function link(): Promise<void> {
             {/if}
             <Button
               type="button"
-              text={m.feature_place_link()}
+              text={replacementRevision
+                ? m.feature_place_change_confirm()
+                : m.feature_place_link()}
               onClick={link}
               disabled={busy || isDirty}
             />
@@ -267,7 +302,7 @@ async function link(): Promise<void> {
             localResults = null
           }}
         />
-      {:else}
+      {:else if !association}
         <p class="text-sm text-muted-foreground">{m.feature_place_unlinked()}</p>
       {/if}
     {:catch}

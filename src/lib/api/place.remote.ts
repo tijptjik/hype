@@ -20,6 +20,7 @@ import {
 } from '#lib/db/services/place.js'
 import { createLocalPlace as persistLocalPlace } from '#lib/db/services/placeLocal.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
+import { relinkFeaturePlace as persistFeatureRelink } from '#lib/db/services/placeRelink.js'
 import {
   resolvePlaceCandidate,
   searchLocalPlaceCandidates,
@@ -45,6 +46,7 @@ import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 // 6. SOURCE DISCOVERY
 // 7. CANDIDATE RESOLUTION
 // 8. PRIVATE LOCAL DISCOVERY
+// 9. EXPLICIT REASSOCIATION
 // ---
 
 const projectInput = z.strictObject({ projectId: z.string().min(1) })
@@ -310,5 +312,50 @@ export const searchFeatureLocalPlaces = guardedQuery(
       projectId: probe.projectId,
       q: input.q,
     })
+  },
+)
+
+/**
+ * Change one Feature's Place while preserving current values and explicit corrections.
+ * @param input Destination identity and the Feature/association tokens shown to the editor.
+ * @returns New association revision; stale requests fail without changing either Place.
+ * @remarks Project and actor come from persisted/authenticated context. This does not
+ * reconcile SaanSeoi ID churn or move other Features attached to the original Place.
+ */
+export const relinkFeaturePlace = guardedCommand(
+  z.strictObject({
+    featureId: z.string().min(1),
+    placeId: z.string().min(1),
+    revisionId: z.string().min(1),
+    expectedFeatureModifiedAt: z.string().min(1),
+    expectedRevision: z.string().min(1),
+  }),
+  async (input, ctx) => {
+    const probe = await probeFeatureQuery(ctx.db, {
+      ref: input.featureId,
+      refKey: 'id',
+    })
+    if (!probe) error(404, 'FEATURE_NOT_FOUND')
+    const decision = authorizeFeatureUpdateForSubmission({
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      resource: probe,
+      submittedData: {
+        i18n: true,
+        properties: true,
+        geometry: true,
+        addressMeta: true,
+      },
+    })
+    if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    const result = await persistFeatureRelink(ctx.db, {
+      ...input,
+      projectId: probe.projectId,
+      actorId: ctx.user.id,
+    })
+    if (result.status === 'conflict') error(409, 'PLACE_LINK_CHANGED')
+    if (result.status === 'place-unavailable') error(404, 'PLACE_NOT_FOUND')
+    if (result.status !== 'linked') error(422, 'PLACE_LINK_REVIEW_REQUIRED')
+    return result
   },
 )

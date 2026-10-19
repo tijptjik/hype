@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   resolveCandidate: vi.fn(),
   searchPlaces: vi.fn(),
   createPlace: vi.fn(),
+  relinkPlace: vi.fn(),
   linkPlace: vi.fn(),
   authorizeFeatureUpdate: vi.fn(),
   probeProject: vi.fn(),
@@ -48,6 +49,9 @@ vi.mock('#lib/db/services/placeCandidate.js', () => ({
   resolvePlaceCandidate: mocks.resolveCandidate,
   searchLocalPlaceCandidates: mocks.searchLocal,
 }))
+vi.mock('#lib/db/services/placeRelink.js', () => ({
+  relinkFeaturePlace: mocks.relinkPlace,
+}))
 vi.mock('#lib/db/services/placeLink.js', () => ({
   linkInitialFeaturePlace: mocks.linkPlace,
 }))
@@ -75,6 +79,7 @@ import {
   getFeaturePlaceCandidate,
   searchFeaturePlaces,
   createLocalPlace,
+  relinkFeaturePlace,
   linkFeaturePlace,
   getFeaturePlace,
   getPlaceUpdatePolicy,
@@ -338,5 +343,31 @@ it('authorizes private local discovery using persisted scope before accessing fa
   })
   await expect(
     searchFeatureLocalPlaces({ ...input, projectId: 'other' } as never),
+  ).rejects.toThrow()
+})
+
+it('authorizes reassociation and derives actor/scope while retaining both concurrency tokens', async () => {
+  const input = {
+    featureId: 'f',
+    placeId: 'next',
+    revisionId: 'r',
+    expectedRevision: 'old',
+    expectedFeatureModifiedAt: 'timestamp',
+  }
+  mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: false })
+  await expect(relinkFeaturePlace(input)).rejects.toMatchObject({ status: 403 })
+  expect(mocks.relinkPlace).not.toHaveBeenCalled()
+  mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: true })
+  mocks.relinkPlace.mockResolvedValue({ status: 'linked', revision: 'new' })
+  await relinkFeaturePlace(input)
+  expect(mocks.relinkPlace).toHaveBeenCalledWith(mocks.context.db, {
+    ...input,
+    projectId: 'p',
+    actorId: 'u',
+  })
+  mocks.relinkPlace.mockResolvedValue({ status: 'conflict' })
+  await expect(relinkFeaturePlace(input)).rejects.toMatchObject({ status: 409 })
+  await expect(
+    relinkFeaturePlace({ ...input, actorId: 'someone-else' } as never),
   ).rejects.toThrow()
 })
