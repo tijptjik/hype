@@ -109,4 +109,78 @@ its Map subsection displays the registered public map styles using their rendere
 `/api/mapRenders/styles/{code}/asset` previews. An explicit map choice overrides the
 active project's style and persists in host-local browser storage as
 `hype-map-style`. Selecting the automatic option restores the active map's style.
-The UI palette and map style remain independent preferences.
+“Sync UI & Map Styles” pairs Nullspace and Nebula with Hyper Dark (`hyper`),
+Oblivion with Hyper Light (`hyperLight`), Milque with Day Runner (`breadline-light`)
+and Rye with Night Runner (`breadline-dark`). Enabling sync applies the pairing
+immediately. The preferred map persists as `hype-map-style`, sync as
+`hype-sync-ui-map-styles`, and following resource styles as
+`hype-use-active-map-style`. The two switches are independent and can both be on.
+
+With both enabled, the most recent relevant change controls the map: changing the
+UI theme applies its pairing; changing layers/projects applies that resource's
+style. An unchanged resource context never undoes a later UI choice. A layer set
+to **User Preference** uses the preferred map instead. Disabling resource styles
+immediately returns to the user preference; disabling sync retains the preferred
+map without changing it on later UI theme changes. Selecting a map card manually
+turns off both automatic modes.
+
+Layer editors offer a specific style, **Project Default**, or **User Preference**.
+The override persists in the existing layer metadata: an absent `mapStyleCode`
+inherits the project, a catalog code selects a style, and `null` selects User
+Preference. Existing layers retain project inheritance; new layers default to User
+Preference. Project editors also allow User Preference by clearing their existing
+map-style assignment. No database migration is required. Shared layer thumbnails
+use the explicit layer style, the inherited project style, or default Etch for
+User Preference; the live map resolves the viewer's actual preference.
+
+## Hyper basemaps
+
+Hyper Dark (`hyper`) and Hyper Light (`hyperLight`) use the selected **Etch**
+composition: fine building outlines, sparse uppercase place names, thin road
+hierarchies, dashed rail and mint/teal coastlines. Hyper Dark follows Nullspace
+with near-black land, violet footprints and rose roads. Hyper Light follows
+Oblivion with pale lilac land, berry linework and teal coastlines. Neither style
+includes POIs. Street names use a brighter foreground and a stronger halo.
+Building names appear from zoom 18 using the shared OSM interior-point dataset;
+building numbers appear from zoom 19 using the vector tiles' address points.
+Both yield to label collisions, and label-free maps omit the building-name source.
+
+`src/lib/map/styles/definitions/etch.ts` owns the shared composition, authored
+directly against SaanSeoi's vector schema without Protomaps-generated layers.
+`hyper.ts` and `hyperLight.ts` supply the two treatments. Locale selection and
+label-free variants remain supported. The existing catalog IDs are retained so
+saved map selections and UI/map synchronization continue to work.
+
+Generated static assets and preview hashes follow the style content. Regenerate
+the two thumbnails after style changes so the picker uses the current treatment.
+
+Ghostery Legacy, Neonmaster, Genesis, Sin, Rosé Punk and Breadline Classic are
+retired from theme and project style pickers. Their catalog entries remain registered to support saved maps.
+
+Four POI-free design studies are defined in
+`snippets/map-styles/hyper-directions/styles.ts`: Velvet (luminous route ribbons),
+Petal (graphic colour blocks), Etch (fine cadastral linework) and Prism (saturated
+poster geometry). Each has a Nullspace and Oblivion treatment. These studies
+construct their own layers directly against the SaanSeoi vector schema, without
+Protomaps-generated layers. Velvet, Petal and Prism remain exploratory directions; Etch is now
+the Hyper Dark/Light composition. The studies are not additional picker options.
+
+Default marker rings follow the chosen **map style**, independently of the app UI.
+Hyper Dark uses a thin warm-white ring and muted rose interactions; Hyper Light
+uses violet rings and berry interactions. Other dark/light map palettes use the
+corresponding dark/light ring treatment. Rings remain solid and stable during panning.
+
+Explicit layer palettes take precedence over project palettes, and every explicit
+project palette takes precedence over the map default. A layer set to User Preference
+uses the chosen map's default marker; an older layer without an override inherits
+its project palette. Unassigned projects also use the chosen map's default.
+Layer and project choices resolve from retained cache entries, including resources
+outside the current page of results. Palette variables live in
+`src/lib/styles/map-markers.css` and do not read UI theme tokens.
+
+Building outlines interpolate smoothly from 0.45 px at zoom 14 to 1 px at zoom 18,
+1.5 px at zoom 20 and 2 px at zoom 22.
+
+Marker appearance is stable during camera movement: solid rings and unblurred
+separators replace decorative glows, and the map no longer toggles marker styling
+on movement start/end. Selection, highlights and hover remain interactive states.
