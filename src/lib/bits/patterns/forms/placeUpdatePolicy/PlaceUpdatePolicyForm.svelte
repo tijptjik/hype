@@ -109,64 +109,81 @@ const coordinateItems = $derived([
     description={m.place_policy_description()}
     icon={MapPinIcon}
   />
-  <div class="flex flex-col gap-6 p-6">
+  <div class="flex flex-col gap-6 p-6 pb-24">
     <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_inactive()}</p>
-    <div class="grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
-      <SelectField
-        triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
-        id="place-coordinates"
-        label={m.place_policy_coordinates()}
-        placeholder={m.place_policy_coordinates()}
-        value={coordinateMode}
-        items={coordinateItems}
-        {isEditing}
-        disabled={saving}
-        onValueChange={value => (coordinateMode = value as typeof coordinateMode)}
-      />
-      {#if coordinateMode === 'withinDistance'}
-        <TextInput
-          id="place-distance"
-          name=""
-          label={m.place_policy_metres()}
-          value={maxMetres?.toString() ?? ''}
-          inputType="number"
-          inputAttrs={{ min: 0, step: 'any' }}
-          {isEditing}
-          disabled={saving}
-          onValueChange={value =>
-            (maxMetres = value.trim() ? Number(value) : undefined)}
-        />
-      {/if}
-      <SelectField
-        triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
-        id="place-address"
-        label={m.place_policy_address()}
-        placeholder={m.place_policy_address()}
-        bind:value={policy.address}
-        items={reviewItems}
-        {isEditing}
-        disabled={saving}
-      />
-      <SelectField
-        triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
-        id="place-unit"
-        label={m.place_policy_unit()}
-        placeholder={m.place_policy_unit()}
-        bind:value={policy.unit}
-        items={reviewItems}
-        {isEditing}
-        disabled={saving}
-      />
-      <SelectField
-        triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
-        id="place-establishment"
-        label={m.place_policy_establishment()}
-        placeholder={m.place_policy_establishment()}
-        bind:value={policy.establishment}
-        items={reviewItems}
-        {isEditing}
-        disabled={saving}
-      />
+    <div class="flex max-w-5xl flex-col divide-y divide-[var(--form-control-border)]">
+      <div class="grid gap-4 pb-6 md:grid-cols-2 md:gap-8">
+        <div>
+          <h3 class="font-medium">{m.place_policy_coordinates()}</h3>
+          <p class="mt-1 text-sm text-muted-foreground">
+            {m.place_policy_coordinates_help()}
+          </p>
+        </div>
+        <div class="flex flex-col gap-4">
+          <SelectField
+            triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
+            id="place-coordinates"
+            label={m.place_policy_rule()}
+            placeholder={m.place_policy_coordinates()}
+            value={coordinateMode}
+            items={coordinateItems}
+            {isEditing}
+            disabled={saving}
+            onValueChange={value => (coordinateMode = value as typeof coordinateMode)}
+          />
+          <TextInput
+            id="place-distance"
+            name=""
+            label={m.place_policy_metres()}
+            value={maxMetres?.toString() ?? ''}
+            inputType="number"
+            inputAttrs={{ min: 0, step: 'any' }}
+            {isEditing}
+            disabled={saving || coordinateMode !== 'withinDistance'}
+            onValueChange={value =>
+              (maxMetres = value.trim() ? Number(value) : undefined)}
+          />
+          <p class="text-sm text-muted-foreground">{m.place_policy_distance_help()}</p>
+        </div>
+      </div>
+      {#each [
+        {
+          key: 'address',
+          title: m.place_policy_address(),
+          description: m.place_policy_address_help(),
+        },
+        {
+          key: 'unit',
+          title: m.place_policy_unit(),
+          description: m.place_policy_unit_help(),
+        },
+        {
+          key: 'establishment',
+          title: m.place_policy_establishment(),
+          description: m.place_policy_establishment_help(),
+        },
+      ] as setting (setting.key)}
+        <div class="grid gap-4 py-6 md:grid-cols-2 md:gap-8">
+          <div>
+            <h3 class="font-medium">{setting.title}</h3>
+            <p class="mt-1 text-sm text-muted-foreground">{setting.description}</p>
+          </div>
+          <SelectField
+            triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
+            id={`place-${setting.key}`}
+            label={m.place_policy_rule()}
+            placeholder={setting.title}
+            value={policy[setting.key as 'address' | 'unit' | 'establishment']}
+            onValueChange={value =>
+              (policy[setting.key as 'address' | 'unit' | 'establishment'] = value as
+                | 'review'
+                | 'automatic')}
+            items={reviewItems}
+            {isEditing}
+            disabled={saving}
+          />
+        </div>
+      {/each}
     </div>
     <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_note()}</p>
     {#if isEditing}
