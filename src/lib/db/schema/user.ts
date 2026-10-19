@@ -54,7 +54,7 @@ export const user = sqliteTable(
     preferences: text('preferences')
       .$type<string>()
       .default(
-        sql`'{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`,
+        sql`'{"fallbackLocales":["en","zh-hant"], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}'`,
       )
       .notNull(),
     // Experimental features

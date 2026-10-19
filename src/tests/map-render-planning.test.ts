@@ -168,13 +168,13 @@ describe('unpublished preview SQL eligibility', () => {
     sqlite.exec(`
       CREATE TABLE organisation(id TEXT, isPublished INTEGER, isArchived INTEGER);
       CREATE TABLE project(id TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT);
-      CREATE TABLE layer(id TEXT, projectId TEXT, isPublished INTEGER, isArchived INTEGER, isDefaultVisible INTEGER, modifiedAt TEXT, rank INTEGER);
+      CREATE TABLE layer(id TEXT, projectId TEXT, isPublished INTEGER, isArchived INTEGER, isDefaultVisible INTEGER, modifiedAt TEXT, rank INTEGER, metadata TEXT);
       CREATE TABLE feature(id TEXT, layerId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, geometry TEXT);
       CREATE TABLE mapStyles(id TEXT, code TEXT);
       CREATE TABLE projectMapStyles(projectId TEXT, mapStyleId TEXT);
       INSERT INTO organisation VALUES('org',0,0);
       INSERT INTO project VALUES('draft','org',0,0,'2000-01-01T00:00:00.000Z');
-      INSERT INTO layer VALUES('draft-layer','draft',0,0,1,'2099-01-01T00:00:00.000Z',1);
+      INSERT INTO layer VALUES('draft-layer','draft',0,0,1,'2099-01-01T00:00:00.000Z',1,NULL);
     `)
     const db = drizzle(async (query, params) => ({
       rows: sqlite
@@ -197,6 +197,18 @@ describe('unpublished preview SQL eligibility', () => {
         false,
       )
       expect(jobs.map(job => job.identifier)).toEqual(['draft'])
+      sqlite
+        .prepare('UPDATE layer SET metadata = ?')
+        .run(JSON.stringify({ mapStyleCode: 'neorange' }))
+      expect(await getLayerMapRenderData(db as never, 'draft-layer')).toMatchObject({
+        styleCode: 'neorange',
+      })
+      sqlite
+        .prepare('UPDATE layer SET metadata = ?')
+        .run(JSON.stringify({ mapStyleCode: null }))
+      expect(await getLayerMapRenderData(db as never, 'draft-layer')).toMatchObject({
+        styleCode: 'hyper',
+      })
       sqlite.exec('UPDATE layer SET isArchived = 1')
       expect(await getLayerMapRenderData(db as never, 'draft-layer')).toBeNull()
       expect(await getProjectMapRenderData(db as never, 'draft')).toMatchObject({

@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { shouldTreatDeployErrorAsSuccess } from '../../scripts/cloud/deploy-worker'
+import {
+  deployWorker,
+  shouldTreatDeployErrorAsSuccess,
+} from '../../scripts/cloud/deploy-worker'
 
 describe('shouldTreatDeployErrorAsSuccess', () => {
   it('rejects the old breadline.hk DNS collision after upload', () => {
@@ -60,5 +63,58 @@ Uploaded hype-preview (11.93 sec)
 `
 
     expect(shouldTreatDeployErrorAsSuccess(output, 'preview')).toBe(false)
+  })
+})
+
+describe('division worker deployment', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('stops before deploying the app when the division worker fails', async () => {
+    const spawn = vi.fn().mockReturnValue({ exited: Promise.resolve(1) })
+    vi.stubGlobal('Bun', { spawn })
+    expect(await deployWorker('production')).toBe(1)
+    expect(spawn).toHaveBeenCalledTimes(1)
+    expect(spawn.mock.calls[0][0]).toEqual([
+      'bun',
+      'wrangler',
+      'deploy',
+      '--config',
+      'workers/division-refresh/wrangler.jsonc',
+      '--env',
+      'production',
+    ])
+  })
+
+  it('deploys the matching division worker before the preview app', async () => {
+    const spawn = vi
+      .fn()
+      .mockReturnValueOnce({ exited: Promise.resolve(0) })
+      .mockReturnValueOnce({
+        exited: Promise.resolve(0),
+        stdout: new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        }),
+        stderr: new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        }),
+      })
+    vi.stubGlobal('Bun', { spawn })
+    expect(await deployWorker('preview')).toBe(0)
+    expect(spawn.mock.calls.map(call => call[0])).toEqual([
+      [
+        'bun',
+        'wrangler',
+        'deploy',
+        '--config',
+        'workers/division-refresh/wrangler.jsonc',
+        '--env',
+        'preview',
+      ],
+      ['bun', 'wrangler', 'deploy', '--name', 'hype-preview', '--env', 'preview'],
+    ])
   })
 })

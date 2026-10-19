@@ -8,7 +8,12 @@ export type CompactAncestorRow = {
     code: string
     i18n?: Array<Record<string, unknown>>
   } | null
-  project?: { id: string; code: string; i18n?: Array<Record<string, unknown>> } | null
+  project?: {
+    id: string
+    code: string
+    useAllInOrgContext?: boolean
+    i18n?: Array<Record<string, unknown>>
+  } | null
 }
 
 /** Resources exposed by the independently paged hierarchy panels. */

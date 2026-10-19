@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS "user" (
 	`locale` text DEFAULT 'en' NOT NULL,
 	`attribution` text,
 	`isArchived` integer DEFAULT false NOT NULL,
-	`preferences` text DEFAULT '{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}' NOT NULL,
+	`preferences` text DEFAULT '{"fallbackLocales":["en","zh-hant"], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}' NOT NULL,
 	`experimental` text DEFAULT '{"contributorMode":false, "noLabelsMode":false}' NOT NULL,
 	`createdAt` integer NOT NULL,
 	`updatedAt` integer NOT NULL

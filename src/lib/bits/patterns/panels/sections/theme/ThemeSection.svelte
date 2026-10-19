@@ -2,6 +2,7 @@
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // COMPONENTS
+import { Switch } from '#lib/bits/custom/switch/index.js'
 import SettingsDisclosure from '#lib/bits/patterns/settingsPanel/components/SettingsDisclosure.svelte'
 import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 import { ThemePicker } from '#lib/bits/patterns/themePicker/index.js'
@@ -10,7 +11,7 @@ import Palette from 'virtual:icons/tabler/palette'
 // MAP STYLES
 import {
   FEATURED_MAP_STYLE_KEYS,
-  REGISTERED_MAP_STYLE_CATALOG,
+  SELECTABLE_MAP_STYLE_CATALOG,
 } from '#lib/map/styles/catalog.js'
 import { getMapStyleCatalogCopy } from '#lib/map/styles/i18n.js'
 import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
@@ -24,7 +25,7 @@ let {
 }: PanelProps & {
   model: ReturnType<typeof useSettingsPanelModel>
 } = $props()
-const styles = REGISTERED_MAP_STYLE_CATALOG.filter(style => style.key !== 'hyperAdmin')
+const styles = SELECTABLE_MAP_STYLE_CATALOG.filter(style => style.key !== 'hyperAdmin')
 const featuredStyles = FEATURED_MAP_STYLE_KEYS.flatMap(key =>
   styles.filter(style => style.key === key),
 )
@@ -37,6 +38,8 @@ const visibleStyles = $derived(
 )
 const name = $props.id()
 const stylesId = `${name}-styles`
+const syncId = `${name}-sync`
+const activeMapId = `${name}-active-map`
 </script>
 
 <Section
@@ -47,10 +50,22 @@ const stylesId = `${name}-styles`
   iconColorClass="text-base-content"
 >
   <div class="flex flex-col gap-4 px-6 pt-2 pb-6">
-    <SettingsDisclosure title="UI" open>
+    <SettingsDisclosure title={m.theme_ui_title()} open>
       <div class="pt-3 pb-2">
+        <div class="mb-4 flex items-center justify-between gap-4">
+          <label for={syncId} class="min-w-0 text-sm font-light"
+            >{m.theme_map_sync()}</label
+          >
+          <Switch
+            id={syncId}
+            class="shrink-0"
+            checked={model.mapSyncEnabled}
+            onCheckedChange={checked => model.onMapSync(checked === true)}
+            size="sm"
+          />
+        </div>
         <ThemePicker
-          label="UI"
+          label={m.theme_ui_title()}
           class="[&>legend]:sr-only"
           value={model.theme}
           onSelect={model.onTheme}
@@ -60,16 +75,18 @@ const stylesId = `${name}-styles`
     <SettingsDisclosure title={m.theme_map_title()} open>
       <fieldset class="min-w-0 pt-3 pb-2">
         <legend class="sr-only">{m.theme_map_title()}</legend>
-        <label class="mb-4 flex cursor-pointer items-center gap-3 text-sm">
-          <input
-            type="radio"
-            {name}
-            checked={model.mapTheme === null}
-            onchange={() => model.onMapTheme(null)}
-            class="accent-primary"
+        <div class="mb-4 flex items-center justify-between gap-4">
+          <label for={activeMapId} class="min-w-0 text-sm font-light"
+            >{m.theme_map_automatic()}</label
           >
-          {m.theme_map_automatic()}
-        </label>
+          <Switch
+            id={activeMapId}
+            class="shrink-0"
+            checked={model.useActiveMapStyle}
+            onCheckedChange={checked => model.onUseActiveMap(checked === true)}
+            size="sm"
+          />
+        </div>
         <div id={stylesId} class="grid grid-cols-2 gap-3">
           {#each visibleStyles as style (style.key)}
             {@const copy = getMapStyleCatalogCopy(style.key, getLocaleKey())}
@@ -102,7 +119,7 @@ const stylesId = `${name}-styles`
               {#if model.mapTheme === style.key}
                 <span
                   aria-hidden="true"
-                  class="absolute right-2 top-2 rounded-full bg-primary px-2 py-0.5 text-primary-foreground"
+                  class="absolute right-2 top-2 rounded-full bg-primary px-2 py-0.5 text-primary-content"
                   >✓</span
                 >
               {/if}

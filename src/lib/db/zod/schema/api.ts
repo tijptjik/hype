@@ -58,5 +58,7 @@ export const CompactAncestorSchema = z.object({
 })
 export const CompactAncestorsSchema = z.object({
   organisation: CompactAncestorSchema.nullish(),
-  project: CompactAncestorSchema.nullish(),
+  project: CompactAncestorSchema.extend({
+    useAllInOrgContext: z.boolean().default(false),
+  }).nullish(),
 })

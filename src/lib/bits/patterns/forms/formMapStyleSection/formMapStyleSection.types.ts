@@ -15,6 +15,7 @@ export interface FormMapStyleSectionProps {
   subtitle?: string
   availableMapStyles: MapStyleSelectionItem[]
   selectedMapStyle?: MapStyleSelectionItem | null
+  additionalMapStyles?: MapStyleSelectionItem[]
   hiddenMapStyleInputAttrs?: Array<Record<string, unknown>> | null
   isEditing?: boolean
   isSubmitting?: boolean

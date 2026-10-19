@@ -1,4 +1,8 @@
-import { compactAncestorRelations, toCompactAncestors } from './resource-profiles'
+import {
+  compactAncestorRelations,
+  compactProjectAncestorRelations,
+  toCompactAncestors,
+} from './resource-profiles'
 import type { CompactAncestorRow } from '#lib/api/services/resourcePage.types.js'
 // DRIZZLE
 import type { SQL } from 'drizzle-orm'
@@ -135,7 +139,7 @@ export const getLayerWithRelations = (
     return {
       i18n: true,
       organisation: compactAncestorRelations,
-      project: compactAncestorRelations,
+      project: compactProjectAncestorRelations,
     }
   if (profile === 'admin') return layerEntityWithRelations
 
@@ -149,7 +153,7 @@ export const getLayerWithRelations = (
     return {
       i18n: true,
       organisation: compactAncestorRelations,
-      project: compactAncestorRelations,
+      project: compactProjectAncestorRelations,
       properties: true,
       ...(isAdminUser
         ? {
@@ -255,6 +259,8 @@ const toProfileResponseShape = async (
   const data = {
     ancestors: toCompactAncestors(row as unknown as CompactAncestorRow),
     ...row,
+    // Public layer profiles need only the style override, not unrelated metadata.
+    mapStyleCode: row.metadata?.mapStyleCode,
     i18n: transformI18nSafely(row.i18n),
     properties: normalizeLayerPropertiesForProfile(row.properties),
   }

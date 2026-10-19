@@ -28,7 +28,10 @@ describe('session settings validation', () => {
     expect(
       parseSessionSettings({ isTranslateButtonVisible: false }, { noLabelsMode: true }),
     ).toEqual({
-      preferences: { isTranslateButtonVisible: false },
+      preferences: {
+        isTranslateButtonVisible: false,
+        fallbackLocales: ['en', 'zh-hant'],
+      },
       experimental: { noLabelsMode: true },
     })
   })
@@ -36,4 +39,17 @@ describe('session settings validation', () => {
   it('keeps malformed JSON from breaking session creation', () => {
     expect(() => parseSessionSettings('{', '{')).not.toThrow()
   })
+})
+
+it('defaults absent fallback settings without overriding explicit opt-outs', () => {
+  for (const raw of [undefined, '{}', '{', 'null']) {
+    expect(parseSessionSettings(raw, undefined).preferences.fallbackLocales).toEqual([
+      'en',
+      'zh-hant',
+    ])
+  }
+  expect(
+    parseSessionSettings({ fallbackLocales: [] }, undefined).preferences
+      .fallbackLocales,
+  ).toEqual([])
 })

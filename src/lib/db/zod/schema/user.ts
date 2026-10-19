@@ -2,6 +2,8 @@
 import { z } from 'zod'
 import { ListQueryParamsSchema } from './api'
 import { FormBoolean } from '../form'
+// THEME
+import { ThemePreferencesSchema } from '#lib/themes/preferences.js'
 // DRIZZLE
 import { createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
@@ -63,6 +65,7 @@ const UserPreferencesSchema = z
     allowMachineTranslation: z.boolean().nullish(),
     preferFallbackInCurrentLocale: z.boolean().nullish(),
     isTranslateButtonVisible: z.boolean().nullish(),
+    theme: ThemePreferencesSchema.nullish().catch(undefined),
     admin: z
       .object({
         isAdminMapCollapsed: z.boolean().optional(),
@@ -72,7 +75,7 @@ const UserPreferencesSchema = z
       .nullish(),
   })
   .prefault({
-    fallbackLocales: ['en'],
+    fallbackLocales: ['en', 'zh-hant'],
     allowMachineTranslation: false,
     preferFallbackInCurrentLocale: false,
     isTranslateButtonVisible: true,

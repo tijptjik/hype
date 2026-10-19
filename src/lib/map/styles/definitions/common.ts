@@ -1,4 +1,4 @@
-import { layers, namedFlavor } from '@protomaps/basemaps'
+import { layers, namedFlavor, type Flavor } from '@protomaps/basemaps'
 import type { StyleSpecification, ExpressionSpecification } from 'maplibre-gl'
 
 import { toProtomapLocale } from '#lib/i18n.js'
@@ -177,15 +177,32 @@ export const getLocaleTextField = (
   ]
 }
 
+/**
+ * Builds a named Protomaps palette with shared label and sprite policies.
+ * @param flavorName - Built-in palette name.
+ * @param options - Locale and label visibility preferences.
+ * @returns An independent localized map style.
+ */
 export const buildNamedProtomapsStyle = (
   flavorName: NamedProtomapsFlavor,
+  options: StyleBuildOptions = {},
+): StyleSpecification => buildProtomapsStyle(namedFlavor(flavorName), options)
+
+/**
+ * Builds a custom Protomaps palette with shared label and sprite policies.
+ * @param flavor - Cartographic colours for land, transport and labels.
+ * @param options - Locale and label visibility preferences.
+ * @returns An independent localized map style.
+ */
+export const buildProtomapsStyle = (
+  flavor: Flavor,
   { noLabels = false, locale = 'en' }: StyleBuildOptions = {},
 ): StyleSpecification => {
   const style = cloneStyle(BASE_VECTOR_STYLE)
 
   style.layers = layers(
     'hongkong-latest',
-    namedFlavor(flavorName),
+    flavor,
     noLabels
       ? undefined
       : {

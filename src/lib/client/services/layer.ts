@@ -1,3 +1,5 @@
+// SCHEMA
+import { LayerMetadataSchema } from '#lib/db/zod/schema/layer.js'
 import type { ParentSectionProjectItem } from '#lib/bits/patterns/forms/formParentSection/formParentSection.types.js'
 import { getI18n, m, normalizeI18nLocaleRecord, toFormLocaleRecord } from '#lib/i18n.js'
 import {
@@ -95,8 +97,25 @@ function normalizeLayerFormLocale(
 }
 
 /**
+ * Normalizes persisted metadata for string-valued HTML controls.
+ * @param metadata - Retained layer metadata, including unrelated presentation fields.
+ * @returns A form-compatible copy with User Preference encoded as an empty string.
+ */
+function toLayerFormMetadata(
+  metadata: Layer['metadata'],
+): NonNullable<LayerFormInput['data']['metadata']> {
+  const result = structuredClone(metadata ?? {}) as NonNullable<
+    LayerFormInput['data']['metadata']
+  >
+  if (metadata?.mapStyleCode === null) result.mapStyleCode = ''
+  return result
+}
+
+/**
  * Converts a layer entity into the canonical layer form input payload.
  * Used to initialize create/update forms with stable defaults and normalized i18n.
+ * @param data - Persisted layer, or no value for a new User Preference layer.
+ * @returns Canonical form input with normalized locale and map-style fields.
  */
 export function toLayerFormInput(data?: Layer | null): LayerFormInput {
   if (!data) {
@@ -112,7 +131,7 @@ export function toLayerFormInput(data?: Layer | null): LayerFormInput {
         },
         properties: [],
         isDefaultVisible: false,
-        metadata: {},
+        metadata: { mapStyleCode: '' },
       },
     }
   }
@@ -154,7 +173,7 @@ export function toLayerFormInput(data?: Layer | null): LayerFormInput {
           isUserContributable: Boolean(property.isUserContributable),
         })),
       isDefaultVisible: Boolean(data.isDefaultVisible),
-      metadata: data.metadata ?? {},
+      metadata: toLayerFormMetadata(data.metadata),
     },
   }
 }
@@ -753,7 +772,9 @@ const mergeLayerFromSubmit = (
     next.isDefaultVisible = submittedData.isDefaultVisible
   }
   if (submittedData.metadata && typeof submittedData.metadata === 'object') {
-    next.metadata = submittedData.metadata
+    const metadata = LayerMetadataSchema.parse(submittedData.metadata)
+    next.metadata = metadata
+    next.mapStyleCode = metadata.mapStyleCode
   }
   return next
 }

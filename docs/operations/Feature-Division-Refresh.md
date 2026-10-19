@@ -180,6 +180,60 @@ not run against 0083, because its membership-bin columns have been removed.
 Pause the old schedule during that coordinated transition. Local execution does
 not deploy or activate a remote cron.
 
+## Remote preparation and deployment
+
+`deploy:prod` and `deploy:preview` deploy the matching division-refresh Worker
+before deploying the application. A failed refresh-worker deployment stops the
+application deployment. Apply migrations first, as the CI workflow does. Provision
+`SAANSEOI_API_KEY` on each refresh Worker before deployment; Wrangler enforces its
+required-secret declaration. The key must work against that environment's Atlas
+origin. Local Atlas access does not prove production credential validity.
+
+Inspect production without changing its data:
+
+```sh
+bun run feature:divisions:prepare:remote production
+```
+
+To drain the initial backlog immediately, load a valid server credential from a
+protected environment file and explicitly apply:
+
+```sh
+node --env-file=/path/to/server-credential.env --import tsx scripts/cloud/prepare-divisions.ts production --apply
+```
+
+Run the remote command under Node: Wrangler remote bindings did not establish a
+connection under Bun during production verification. The command obtains the database ID and Atlas origin from the refresh Worker's
+selected environment. It probes Atlas before writes, checks the named-role schema,
+uses primary D1 reads, and runs the same fenced writer as cron. It preserves all
+checkpoints and memberships, and stops on competing leases, newly failed jobs,
+deferred retries or its step budget. Rerun after resolving the reported condition.
+Only an idle current-month applied release with zero queued jobs reports ready.
+The five-minute cron handles subsequent changes and newly created features.
+
+Atlas fetches use `redirect: manual` and reject non-success responses, including
+redirects. Cloudflare Workers does not support `redirect: error`; Node-only tests
+cannot establish compatibility with that edge runtime option.
+
+### Production verification — 19 October 2026
+
+Production Worker version `ee806155-dad9-4bbc-97ed-342212431f8c` is deployed with
+`*/5 * * * *` confirmed through Cloudflare's schedules API. The initial backfill
+completed against `data-hk-divisions-2026-10-01.0`: checkpoint idle, checked month
+`2026-10`, no active lease, no last error, and zero pending jobs or queued changes.
+All 1,830 features have resolved query status and district assignments, with 185
+definitions and 9,862 memberships. Missing definition references are zero and the
+count rollup totals 1,830. Four legacy Point geometries had numeric strings; their
+values were validated and converted to identical numbers with original-geometry
+write guards before their jobs were resolved. Existing coordinate-change triggers
+queued those lookups. The temporary remote preview used to accelerate the initial
+backfill was stopped after completion; the deployed schedule remains active.
+
+Validation: 33 focused deployment/preparation/refresh tests, worker type checking,
+and live production queries. Cached enrichment reads use one query per feature and
+a JSON ID array with two bound parameters; membership writes retain their existing
+lease, generation and coordinate guards.
+
 ## Division filtering, counts and localization
 
 Migration 0084 removes the old `featureNeighbourhood` compatibility view. Apply it

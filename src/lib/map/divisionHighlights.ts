@@ -8,6 +8,8 @@ import type { DivisionGeometry } from '#lib/divisions/geometry.js'
 export const divisionHighlightColors: Record<MapMarkerTheme, string> = {
   light: '#7c3aed',
   dark: '#60a5fa',
+  'etch-dark': '#76d9ad',
+  'etch-light': '#08776f',
   // Match Ghostery's hot-pink building outlines.
   ghostery: '#f04d7f',
   hyperpop: '#a78bfa',

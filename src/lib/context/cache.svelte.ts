@@ -481,6 +481,10 @@ export class CacheCtx {
                             ...ancestor,
                             ...(patch.code ? { code: patch.code } : {}),
                             ...(patch.i18n ? { i18n: patch.i18n } : {}),
+                            ...(type === 'project' &&
+                            typeof patch.useAllInOrgContext === 'boolean'
+                              ? { useAllInOrgContext: patch.useAllInOrgContext }
+                              : {}),
                           },
                         },
                       } as PanelResource,

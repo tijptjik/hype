@@ -1,18 +1,14 @@
+// MAP
+import { buildEtchStyle } from './etch'
+// TYPES
 import type { StyleSpecification } from 'maplibre-gl'
+import type { StyleBuildOptions } from './common'
 
-import { buildNamedProtomapsStyle, type StyleBuildOptions } from './common'
-
-const withName = (style: StyleSpecification, name: string): StyleSpecification => {
-  style.name = name
-  style.metadata = {
-    ...(style.metadata ?? {}),
-    'hype:style-variant': name,
-  }
-
-  return style
-}
-
+/**
+ * Builds the Hyper Light basemap in the Oblivion palette.
+ * @param options - Locale and label visibility preferences.
+ * @returns The selected Etch composition with fine footprints and no POIs.
+ */
 export const buildHyperLightStyle = (
   options: StyleBuildOptions = {},
-): StyleSpecification =>
-  withName(buildNamedProtomapsStyle('light', options), 'Hyper Light')
+): StyleSpecification => buildEtchStyle('light', options)

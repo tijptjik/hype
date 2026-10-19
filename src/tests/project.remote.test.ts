@@ -469,6 +469,7 @@ const buildUpdatePayload = (organisationId: string) => ({
     organisationId,
     mapStyleCode: 'hyper',
     code: 'project-code',
+    useAllInOrgContext: false,
     i18n: { en: {}, zhHans: {}, zhHant: {} },
     capabilities: {},
     userRoles: [{ userId: 'u-1', role: 'owner', capabilities: {} }],
@@ -494,6 +495,7 @@ describe('project.remote form organisation move authz', () => {
       organisationId: 'org-1',
       hubId: 'hub-a',
       code: 'project-code',
+      useAllInOrgContext: false,
       capabilities: {},
       modifiedAt: '2026-02-24T00:00:00.000Z',
     })
@@ -501,6 +503,7 @@ describe('project.remote form organisation move authz', () => {
       id: 'project-1',
       organisationId: 'org-1',
       code: 'project-code',
+      useAllInOrgContext: false,
       capabilities: {},
       i18n: { en: {}, zhHans: {}, zhHant: {} },
       properties: [],
@@ -563,6 +566,23 @@ describe('project.remote form organisation move authz', () => {
 
   afterAll(() => {
     policyMatrix.flush()
+  })
+
+  it('authorizes and persists changes to the organisation-context naming policy', async () => {
+    const payload = buildUpdatePayload('org-1')
+    const data = { ...payload.data, useAllInOrgContext: true }
+    await remote.projectForm({ ...payload, data }, throwingInvalid)
+    expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ useAllInOrgContext: true }),
+      }),
+    )
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        data: expect.objectContaining({ useAllInOrgContext: true }),
+      }),
+    )
   })
 
   it('allows organisation reassignment when create(target) and delete(source) are both allowed', async () => {
@@ -921,6 +941,7 @@ describe('project.remote form organisation move authz', () => {
       organisationId: 'org-1',
       hubId: 'hub-a',
       code: 'project-code',
+      useAllInOrgContext: false,
       capabilities: { old: true },
       modifiedAt: '2026-02-24T00:00:00.000Z',
     })

@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { getThemeName } from '#lib/themes/i18n.js'
 // ICONS
 import Search from 'virtual:icons/proicons/search'
 import Add from 'virtual:icons/proicons/add'
@@ -67,7 +69,7 @@ const appliedCount = iconComparisons.filter(icon => icon.status === 'Applied').l
           class="rounded-xl border border-border bg-surface px-3 py-2 text-base-content"
         >
           {#each THEMES as theme}
-            <option value={theme.id}>{theme.name}</option>
+            <option value={theme.id}>{getThemeName(theme.id)}</option>
           {/each}
         </select>
       </label>

@@ -690,6 +690,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       id: nanoid(12),
       organisationId: data.organisationId,
       code: normalizedCode,
+      useAllInOrgContext: data.useAllInOrgContext,
       license: data.license,
       capabilities: submittedProjectCapabilities,
       isPublished: false,
@@ -766,6 +767,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     toProjectStableAuthzSignature(current.capabilities ?? {})
   ) {
     submittedDataBeforeHydration.capabilities = data.capabilities
+  }
+  if (data.useAllInOrgContext !== current.useAllInOrgContext) {
+    submittedDataBeforeHydration.useAllInOrgContext = data.useAllInOrgContext
   }
   if (meta?.licenseTouched === true) {
     submittedDataBeforeHydration.license = data.license
@@ -880,6 +884,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   const submittedDataForUpdate: Partial<Record<ProjectAuthorizationField, unknown>> = {}
   if (normalizedCode !== current.code) submittedDataForUpdate.code = normalizedCode
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
+  if (data.useAllInOrgContext !== current.useAllInOrgContext) {
+    submittedDataForUpdate.useAllInOrgContext = data.useAllInOrgContext
+  }
   if (licenseChanged) submittedDataForUpdate.license = data.license
   if (projectCapabilitiesChanged) {
     submittedDataForUpdate.capabilities = submittedProjectCapabilities
@@ -1010,6 +1017,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       data: {
         organisationId: data.organisationId,
         code: normalizedCode,
+        useAllInOrgContext: data.useAllInOrgContext,
         ...(persistedLicense ? { license: persistedLicense } : {}),
         capabilities: submittedProjectCapabilities,
       },

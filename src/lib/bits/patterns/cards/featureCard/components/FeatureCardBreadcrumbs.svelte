@@ -76,9 +76,9 @@ function openContributionMode(mode: FeatureCardMode): void {
 }
 
 /**
- * Omits the generic "All" scope label when its parent is already visible.
+ * Omits a generic layer "All" label when its parent is already visible.
  *
- * @param label - Contextual project or layer label.
+ * @param label - Contextual layer label.
  * @param hasParent - Whether the preceding scope is rendered in the breadcrumb.
  * @returns The label to display, or null when the parent makes "All" redundant.
  */
@@ -120,8 +120,10 @@ const actionItems = [
     {@const organisationName = hierarchy.organisation
       ? appCtx.getContextualOrganisationName(hierarchy.organisation, false)
       : null}
-    {@const projectName = getDistinctScopeLabel(
-      appCtx.getContextualProjectName(hierarchy.project, false),
+    {@const projectName = appCtx.getContextualProjectName(
+      hierarchy.project,
+      false,
+      true,
       Boolean(organisationName),
     )}
     {@const layerName = getDistinctScopeLabel(

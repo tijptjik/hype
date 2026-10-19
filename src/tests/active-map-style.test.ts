@@ -15,7 +15,12 @@ const createAppContext = (params: {
   selectedProjectIds: string[]
   projects: MapStyleProject[]
   selectedLayerIds?: string[]
-  layers?: { id: string; projectId: string }[]
+  layers?: {
+    id: string
+    projectId: string
+    metadata?: { mapStyleCode?: string | null }
+    mapStyleCode?: string | null
+  }[]
 }): AppCtx =>
   ({
     navigation: {
@@ -112,4 +117,33 @@ describe('pinned layer map style', () => {
     context.view.scope.prisms.layer = []
     expect(getActiveMapStyleCode(context)).toBe('ghostery')
   })
+})
+
+describe('layer map style preference', () => {
+  it.each([
+    [{ mapStyleCode: 'neorange' }, 'neorange'],
+    [{ mapStyleCode: null }, null],
+    [{}, 'ghostery'],
+  ] as const)(
+    'resolves explicit style, User Preference or project inheritance: %j',
+    (metadata, expected) => {
+      const context = createAppContext({
+        selectedProjectIds: ['project'],
+        selectedLayerIds: ['layer'],
+        projects: [{ id: 'project', mapStyle: { code: 'ghostery' } }],
+        layers: [{ id: 'layer', projectId: 'project', metadata }],
+      })
+      expect(getActiveMapStyleCode(context)).toBe(expected)
+    },
+  )
+})
+
+it('honours User Preference from the public layer profile even when a project style is selected', () => {
+  const context = createAppContext({
+    selectedProjectIds: ['project'],
+    selectedLayerIds: ['layer'],
+    projects: [{ id: 'project', mapStyle: { code: 'ghostery' } }],
+    layers: [{ id: 'layer', projectId: 'project', mapStyleCode: null }],
+  })
+  expect(getActiveMapStyleCode(context)).toBeNull()
 })

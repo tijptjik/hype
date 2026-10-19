@@ -4,6 +4,15 @@ import { DatabaseSync } from 'node:sqlite'
 import { readFileSync } from 'node:fs'
 // VITEST
 import { afterEach, describe, expect, it, vi } from 'vitest'
+// DRIZZLE
+import { getTableColumns } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/d1'
+import { feature } from '#lib/db/schema/feature.js'
+import {
+  createFeature,
+  updateFeatureByIdWithConcurrency,
+} from '#lib/db/services/feature.js'
+import type { Database } from '#lib/types.js'
 // SERVICES
 import { refreshDivisions } from '../../workers/division-refresh/src/refresh'
 import {
@@ -111,6 +120,11 @@ function setup() {
   const prepare = (sql: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => prepare(sql, args),
     first: async () => sqlite.prepare(sql).get(...(values as never[])) ?? null,
+    raw: async () =>
+      sqlite
+        .prepare(sql)
+        .all(...(values as never[]))
+        .map(row => Object.values(row)),
     all: async () => ({
       results: sqlite.prepare(sql).all(...(values as never[])),
       success: true,
@@ -152,6 +166,69 @@ function setup() {
 }
 
 describe('division refresh', () => {
+  it('maintains memberships through real feature creation and optimistic geometry writes', async () => {
+    const s = setup()
+    // Extend the migration fixture for all columns returned by the production write helpers.
+    const columns = new Set(
+      s.sqlite
+        .prepare('PRAGMA table_info(feature)')
+        .all()
+        .map(row => row.name),
+    )
+    for (const column of Object.values(getTableColumns(feature)))
+      if (!columns.has(column.name))
+        s.sqlite.exec(
+          `ALTER TABLE feature ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+        )
+    const db = drizzle(s.db) as Database
+    const created = await createFeature(db, {
+      id: 'created',
+      organisationId: 'org-1',
+      projectId: 'project-1',
+      layerId: 'layer-1',
+      geometry: { type: 'Point', coordinates: [5, 5] },
+    })
+    expect(s.count('featureSpatial')).toBe(13)
+    expect(s.count('featureDivisionJob')).toBe(1)
+    const initialCells = s.sqlite
+      .prepare('SELECT cell FROM featureSpatial ORDER BY resolution')
+      .all()
+    const fetcher = vi.fn<typeof fetch>(async () => Response.json(geocoded()))
+    await s.tick(fetcher)
+    await s.tick(fetcher)
+    expect(s.count('featureDivisionJob')).toBe(0)
+    expect(s.count('featureDivisionMembership')).toBeGreaterThan(0)
+
+    const moved = await updateFeatureByIdWithConcurrency(db, {
+      id: created.id,
+      updatedAt: created.modifiedAt,
+      data: { geometry: { type: 'Point', coordinates: [6, 6] } },
+    })
+    expect(moved).toBeDefined()
+    expect(s.count('featureSpatial')).toBe(13)
+    expect(
+      s.sqlite.prepare('SELECT cell FROM featureSpatial ORDER BY resolution').all(),
+    ).not.toEqual(initialCells)
+    expect(s.count('featureDivisionMembership')).toBe(0)
+    expect(s.count('featureDivisionJob')).toBe(1)
+    await s.tick(fetcher)
+    expect(s.count('featureDivisionJob')).toBe(0)
+    expect(s.count('featureDivisionMembership')).toBeGreaterThan(0)
+
+    // A rejected stale edit must change neither index nor the completed division work.
+    expect(
+      await updateFeatureByIdWithConcurrency(db, {
+        id: created.id,
+        updatedAt: 'stale-version',
+        data: { geometry: { type: 'Point', coordinates: [7, 7] } },
+      }),
+    ).toBeUndefined()
+    expect(
+      s.sqlite.prepare('SELECT DISTINCT longitude,latitude FROM featureSpatial').all(),
+    ).toEqual([{ longitude: 6, latitude: 6 }])
+    expect(s.count('featureDivisionJob')).toBe(0)
+  })
+
   it('accepts current live changes and definition metadata independently of worker mocks', () => {
     const changes = changesSchema.parse(
       JSON.parse(
@@ -254,11 +331,31 @@ describe('division refresh', () => {
     )
     expect(fetcher.mock.calls[0][1]).toMatchObject({
       headers: { 'x-api-key': 'test-key' },
-      redirect: 'error',
+      redirect: 'manual',
     })
     expect(
       new URL(String(fetcher.mock.calls[0][0])).searchParams.get('releaseSet'),
     ).toBe('r2')
+  })
+
+  it('rejects redirects without forwarding the API credential', async () => {
+    const fetcher = vi.fn(
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: 'https://example.com/redirect' },
+        }),
+    )
+    await expect(
+      apiRead(
+        { baseUrl: 'https://api.saanseoi.hk', token: 'test-key', fetcher },
+        '/divisions/v0.2/geocode',
+        {},
+        geocodeSchema,
+      ),
+    ).rejects.toThrow('SAANSEOI_HTTP_302')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher.mock.calls[0]).toBeDefined()
   })
 
   it('rejects an upstream comparison that changes release during pagination', async () => {

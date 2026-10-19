@@ -294,6 +294,7 @@ export function toProjectFormInput(
         organisationId: defaults?.organisationId ?? '',
         mapStyleCode: '',
         code: '',
+        useAllInOrgContext: false,
         i18n: {
           en: normalizeProjectFormLocale(undefined),
           zhHans: normalizeProjectFormLocale(undefined),
@@ -319,6 +320,7 @@ export function toProjectFormInput(
       organisationId: data.organisationId,
       mapStyleCode: data.mapStyle?.code ?? '',
       code: data.code,
+      useAllInOrgContext: data.useAllInOrgContext ?? false,
       i18n: {
         en: normalizeProjectFormLocale(data.i18n?.en),
         zhHans: normalizeProjectFormLocale(data.i18n?.zhHans),

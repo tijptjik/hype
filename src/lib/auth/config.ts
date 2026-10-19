@@ -118,7 +118,7 @@ export const authConfig = {
         type: 'string' as const,
         required: true,
         defaultValue:
-          '{"fallbackLocales":[], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}',
+          '{"fallbackLocales":["en","zh-hant"], "allowMachineTranslation":false, "preferFallbackInCurrentLocale":false, "isTranslateButtonVisible":true}',
       },
       experimental: {
         type: 'string' as const,

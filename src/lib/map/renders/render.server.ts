@@ -204,6 +204,7 @@ export const getLayerMapRenderData = async (
       projectId: layer.projectId,
       modifiedAt: layer.modifiedAt,
       rank: layer.rank,
+      metadata: layer.metadata,
     })
     .from(layer)
     .innerJoin(project, eq(layer.projectId, project.id))
@@ -225,7 +226,12 @@ export const getLayerMapRenderData = async (
     return null
   }
 
-  const styleCode = await getProjectMapStyleCode(db, targetLayer.projectId)
+  // Shared thumbnails are deterministic; User Preference previews use the default Etch treatment.
+  const styleCode =
+    targetLayer.metadata?.mapStyleCode === null
+      ? DEFAULT_STYLE_CODE
+      : (targetLayer.metadata?.mapStyleCode ??
+        (await getProjectMapStyleCode(db, targetLayer.projectId)))
   const features = await getLayerFeatures(db, [layerId])
   const featureRecords = await getMapRenderFeatureRecords(db, [layerId])
 

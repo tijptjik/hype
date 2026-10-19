@@ -80,6 +80,18 @@ export function useSettingsPanelModel(
       return theme.mapSelected
     },
     onMapTheme: theme.selectMap,
+    get mapSyncEnabled() {
+      return theme.mapSyncEnabled
+    },
+    onMapSync: theme.setMapSync,
+    onUseActiveMap: theme.setUseActiveMap,
+    get useActiveMapStyle() {
+      return theme.useActiveMapStyle
+    },
+    get resolvedMapTheme() {
+      return theme.resolvedMapStyle
+    },
+    onActiveMapContext: theme.updateActiveMapContext,
     onClose: () => app.panels.closePanel(Panel.settings),
   }
 }

@@ -106,8 +106,7 @@ function getProjectLabel(project: Project | null | undefined): string {
 
   // Search results include the organisation breadcrumb, so the compact project name is clear.
   return (
-    getI18n(project, 'nameShort', appCtx.getUserPreferences(), '') ||
-    getI18n(project, 'name', appCtx.getUserPreferences(), '') ||
+    appCtx.getContextualProjectName(project, false, true, true) ||
     project.code ||
     m.deft_mealy_ant_vent()
   )
@@ -115,7 +114,7 @@ function getProjectLabel(project: Project | null | undefined): string {
 
 /**
  * Resolves the compact project label used beside an organisation in the active
- * layer hierarchy. This intentionally preserves labels such as "All".
+ * layer hierarchy. This uses the project policy for the localised "All" replacement.
  *
  * @param project - Project whose contextual label should be resolved.
  * @returns The short project label or a safe identifying fallback.
@@ -125,8 +124,7 @@ function getActiveLayerProjectLabel(project: Project | null | undefined): string
 
   // The organisation is displayed alongside this label, so a compact project name is clear.
   return (
-    getI18n(project, 'nameShort', appCtx.getUserPreferences(), '') ||
-    getI18n(project, 'name', appCtx.getUserPreferences(), '') ||
+    appCtx.getContextualProjectName(project, false, true, true) ||
     project.code ||
     m.deft_mealy_ant_vent()
   )

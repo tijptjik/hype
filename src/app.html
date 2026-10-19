@@ -14,6 +14,19 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
+    <script>
+      // Restore the last appearance before styles paint; account preferences reconcile after login.
+      try {
+        const theme = localStorage.getItem('hype-theme');
+        const modes = {'hype-black':'dark','hype-dark':'dark','hype-light':'light','breadline-light':'light','breadline-dark':'dark'};
+        if (Object.hasOwn(modes, theme)) {
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.dataset.colorScheme = modes[theme];
+        }
+      } catch {
+        // Storage restrictions leave the server-selected cookie or hub default intact.
+      }
+    </script>
     %sveltekit.head%
     <!-- PWA meta tags -->
     <link rel="manifest" href="/manifest.webmanifest">

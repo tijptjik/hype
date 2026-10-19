@@ -286,7 +286,7 @@ function getUserLocaleSearchOrder(userPreferences: UserPreferences): LocaleKey[]
 }
 
 const defaultUserPreferences: UserPreferences = {
-  fallbackLocales: [],
+  fallbackLocales: ['en', 'zh-hant'],
   allowMachineTranslation: false,
   preferFallbackInCurrentLocale: false,
   isTranslateButtonVisible: true,

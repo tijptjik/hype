@@ -209,7 +209,8 @@ export async function apiRead<T>(
   const response = await (options.fetcher ?? fetch)(url, {
     signal: AbortSignal.timeout(15000),
     headers: options.token ? { 'x-api-key': options.token } : {},
-    redirect: 'error',
+    // Workers supports manual redirects; the status check below rejects all 3xx responses.
+    redirect: 'manual',
   })
   if (!response.ok) {
     await response.body?.cancel()

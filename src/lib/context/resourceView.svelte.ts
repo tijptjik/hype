@@ -16,7 +16,8 @@ import type {
 // NAVIGATION
 // GEO
 // I18N
-import { getFallbackLocales, getLocale, getLocaleKey, getI18n } from '#lib/i18n.js'
+import { getLocaleKey, getI18n } from '#lib/i18n.js'
+import { getProjectDisplayName } from '#lib/projectNames.js'
 // LIB
 import {
   getOrganisation,
@@ -1708,25 +1709,31 @@ export class ResourceViewCtx {
     return shortName || name || '-'
   }
 
+  /**
+   * Resolves a compact project label with optional organisation-context replacement.
+   * @param project - Full project or compact ancestor.
+   * @param hideIfOnly - Hide a redundant single-project breadcrumb when requested.
+   * @param useFallbacks - Whether translation fallback locales are allowed.
+   * @param inOrganisationContext - Whether the organisation is displayed alongside it.
+   * @returns The localised project label, or null when absent or hidden.
+   */
   getContextualProjectName = (
     project?: Project,
     hideIfOnly: boolean = true,
     useFallbacks: boolean = true,
+    inOrganisationContext: boolean = false,
   ): string | null => {
-    if (!project?.organisationId) return null
-    const organisationProjectCount = this.getOrganisationProjectCount(
-      project.organisationId,
+    if (!project) return null
+    if (
+      hideIfOnly &&
+      project.organisationId &&
+      this.getOrganisationProjectCount(project.organisationId) === 1
     )
-    if (hideIfOnly && organisationProjectCount === 1) {
       return null
-    }
-    const preferences = this.getUserPreferences()
-    const i18nPrefs = useFallbacks
-      ? preferences
-      : { ...preferences, fallbackLocales: [] }
-    const shortName = getI18n(project, 'nameShort', i18nPrefs, '', !useFallbacks) || ''
-    const name = getI18n(project, 'name', i18nPrefs, '', !useFallbacks) || ''
-    return shortName || name || '-'
+    return getProjectDisplayName(project, this.getUserPreferences(), {
+      inOrganisationContext,
+      useFallbacks,
+    })
   }
 
   getContextualLayerName = (
@@ -1944,11 +1951,12 @@ export class ResourceViewCtx {
   getUserPreferences = (withDefaults: boolean = true): UserPreferences => {
     const preferences = this.user?.preferences
     if (!withDefaults && preferences) return preferences as UserPreferences
-    // If no user or preference payload exists, provide the same locale-aware defaults.
+    // If no user or preference payload exists, enable English and Traditional Chinese.
     return {
       fallbackLocales:
         (preferences?.fallbackLocales as Locale[] | null) ??
-        (getFallbackLocales(getLocale()) as Locale[]),
+        (['en', 'zh-hant'] as Locale[]),
+      theme: preferences?.theme,
       allowMachineTranslation: preferences?.allowMachineTranslation ?? false,
       preferFallbackInCurrentLocale:
         preferences?.preferFallbackInCurrentLocale ?? false,

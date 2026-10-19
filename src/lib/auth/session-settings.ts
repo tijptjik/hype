@@ -21,9 +21,12 @@ export function parseSessionSettings(
 
   return {
     preferences: parsedPreferences.success
-      ? parsedPreferences.data
+      ? {
+          ...parsedPreferences.data,
+          fallbackLocales: parsedPreferences.data.fallbackLocales ?? ['en', 'zh-hant'],
+        }
       : {
-          fallbackLocales: [],
+          fallbackLocales: ['en', 'zh-hant'],
           allowMachineTranslation: false,
           preferFallbackInCurrentLocale: false,
           isTranslateButtonVisible: true,

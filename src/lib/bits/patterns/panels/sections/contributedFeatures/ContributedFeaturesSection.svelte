@@ -166,10 +166,16 @@ const fetchFeaturesForProject = async (featureIds: string[]) => {
                           )}</span
                         >
                       {/if}
-                      {#if model.getProjectName(groupData.hierarchy?.project)}
+                      {#if model.getProjectName(
+                        groupData.hierarchy?.project,
+                        Boolean(groupData.hierarchy?.organisation),
+                      )}
                         <span class="px-0">›</span>
                         <span class="text-accent"
-                          >{model.getProjectName(groupData.hierarchy?.project)}</span
+                          >{model.getProjectName(
+                            groupData.hierarchy?.project,
+                            Boolean(groupData.hierarchy?.organisation),
+                          )}</span
                         >
                       {/if}
                     </p>

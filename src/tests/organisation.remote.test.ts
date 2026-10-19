@@ -268,16 +268,20 @@ vi.mock('#lib/db/zod/index.js', async importOriginal => {
   }
 })
 
-vi.mock('#lib/i18n.js', () => ({
-  getLocale: vi.fn(() => 'en'),
-  m: new Proxy(
-    {},
-    {
-      get: () => () => '',
-    },
-  ),
-  toLocaleRecordFromOrganisationFormI18n: vi.fn(),
-}))
+vi.mock('#lib/i18n.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('#lib/i18n.js')>()
+  return {
+    ...actual,
+    getLocale: vi.fn(() => 'en'),
+    m: new Proxy(
+      {},
+      {
+        get: () => () => '',
+      },
+    ),
+    toLocaleRecordFromOrganisationFormI18n: vi.fn(),
+  }
+})
 
 let remote: MockedRemoteModule<typeof import('#lib/api/organisation.remote.js')>
 const policyMatrix = createPolicyMatrixReporter('organisation.remote')

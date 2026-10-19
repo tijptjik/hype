@@ -24,7 +24,14 @@ const organisationName = $derived(
     : '',
 )
 const projectName = $derived(
-  hierarchy.project ? appCtx.getContextualProjectName(hierarchy.project, false) : '',
+  hierarchy.project
+    ? appCtx.getContextualProjectName(
+        hierarchy.project,
+        false,
+        true,
+        Boolean(organisationName),
+      )
+    : '',
 )
 </script>
 
@@ -34,7 +41,9 @@ const projectName = $derived(
       <span class="min-w-0 text-primary">{organisationName}</span>
     {/if}
     {#if projectName}
-      <span class="shrink-0 px-0">›</span>
+      {#if organisationName}
+        <span class="shrink-0 px-0">›</span>
+      {/if}
       <span class="min-w-0 text-accent">{projectName}</span>
     {/if}
   </p>

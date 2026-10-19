@@ -482,10 +482,16 @@ const setupNextTrigger = () => {
                       )}</span
                     >
                   {/if}
-                  {#if model.getProjectName(hierarchies?.[projectId]?.project)}
+                  {#if model.getProjectName(
+                    hierarchies?.[projectId]?.project,
+                    Boolean(hierarchies?.[projectId]?.organisation),
+                  )}
                     <span class="px-0">›</span>
                     <span class="text-accent"
-                      >{model.getProjectName(hierarchies?.[projectId]?.project)}</span
+                      >{model.getProjectName(
+                        hierarchies?.[projectId]?.project,
+                        Boolean(hierarchies?.[projectId]?.organisation),
+                      )}</span
                     >
                   {/if}
                 </p>

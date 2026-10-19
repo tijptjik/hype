@@ -346,16 +346,29 @@ async function geocodeJobs(
             member => [member.id, member],
           ),
         )
+      // Fetch only enrichment fields in one read; JSON IDs keep the bind count fixed at two.
+      const missingMetadataIds = [...members.values()]
+        .filter(member => !member.hierarchies)
+        .map(member => member.id)
+      const cachedDefinitions = missingMetadataIds.length
+        ? await db
+            .prepare(`SELECT id,json_object(
+            'divisionCode',json_extract(attributes,'$.divisionCode'),
+            'identifiers',json_extract(attributes,'$.identifiers'),
+            'hierarchies',json_extract(attributes,'$.hierarchies')
+          ) AS attributes FROM divisionDefinition
+          WHERE apiReleaseSet=? AND id IN (SELECT value FROM json_each(?))`)
+            .bind(release, JSON.stringify(missingMetadataIds))
+            .all<{ id: string; attributes: string }>()
+        : { results: [] }
+      const metadataById = new Map(
+        cachedDefinitions.results.map(row => [row.id, row.attributes]),
+      )
       // Geocoding omits definition metadata; enrich once per mirrored ID and release.
       for (const member of members.values()) {
         if (member.hierarchies) continue
-        const cached = await db
-          .prepare(
-            'SELECT attributes FROM divisionDefinition WHERE id=? AND apiReleaseSet=?',
-          )
-          .bind(member.id, release)
-          .first<{ attributes: string }>()
-        const metadata = cached ? JSON.parse(cached.attributes) : null
+        const cached = metadataById.get(member.id)
+        const metadata = cached ? JSON.parse(cached) : null
         if (metadata?.hierarchies) {
           Object.assign(member, {
             divisionCode: metadata.divisionCode,

@@ -60,6 +60,7 @@ export const organisationAuthorizationFields = [
 ] as const
 
 export const projectAuthorizationFields = [
+  'useAllInOrgContext',
   'organisationId',
   'code',
   'i18n',

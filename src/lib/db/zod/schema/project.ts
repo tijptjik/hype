@@ -317,6 +317,7 @@ export const ProjectEntityFormData = z.object({
     .regex(/^[a-zA-Z0-9_$]*$/, {
       message: m.admin__validation_key_valid_characters(),
     }),
+  useAllInOrgContext: FormBoolean.default(false),
   i18n: ProjectI18nByLocaleFormData,
   license: ProjectLicenseBase,
   capabilities: ProjectCapabilitiesBase,
@@ -394,6 +395,7 @@ export const ProjectProfile = z.enum([
 ])
 
 const ProjectListFields = ProjectBase.pick({
+  useAllInOrgContext: true,
   id: true,
   organisationId: true,
   code: true,
@@ -436,6 +438,7 @@ export const ProjectAdminProfileAPI = ProjectBase.extend({
 
 /** Minimal identity and action state for paged resource lists. */
 export const ProjectCompactProfileAPI = ProjectBase.pick({
+  useAllInOrgContext: true,
   id: true,
   isPublished: true,
   isArchived: true,

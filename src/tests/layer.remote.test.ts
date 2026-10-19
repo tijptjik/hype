@@ -578,6 +578,42 @@ describe('layer.remote authz matrix', () => {
     })
   })
 
+  it.each(['neorange', null])(
+    'layerForm persists the layer map override including User Preference: %s',
+    async mapStyleCode => {
+      await remote.layerForm(
+        {
+          meta: {
+            id: 'layer-1',
+            mode: 'update',
+            updatedAt: '2026-03-18T00:00:00.000Z',
+          },
+          data: {
+            projectId: 'project-1',
+            metadata: { zoom: 10, mapStyleCode },
+            isDefaultVisible: true,
+            properties: [],
+            i18n: { en: { name: 'Layer' } },
+          },
+        },
+        throwingInvalid,
+      )
+      expect(mockAuthorizeLayerUpdateForSubmission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          submittedData: expect.objectContaining({
+            metadata: { zoom: 10, mapStyleCode },
+          }),
+        }),
+      )
+      expect(mockUpdateLayerByIdWithConcurrency).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          data: expect.objectContaining({ metadata: { zoom: 10, mapStyleCode } }),
+        }),
+      )
+    },
+  )
+
   it('layerForm update rejects reparenting before probing the target project', async () => {
     await expect(
       remote.layerForm(
