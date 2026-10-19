@@ -59,6 +59,7 @@ function setup() {
     INSERT INTO place VALUES('p','shop'),('missing','absent'),('unlinked','unused');
     INSERT INTO featurePlace VALUES('f','p'),('g','missing');`)
   sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => prepare(query, args),
     first: async () => sqlite.prepare(query).get(...(values as never[])) ?? null,
@@ -88,7 +89,7 @@ function setup() {
       }
     },
   } as unknown as D1Database
-  let now = Date.UTC(2026, 9, 20)
+  let now = Date.now()
   const request = vi.fn(async () => Response.json(publication()))
   const tick = () =>
     refreshPlaces(
@@ -136,7 +137,7 @@ describe('durable canonical Place scan', () => {
       lease: null,
     })
     expect(s.items().map(x => x.status)).toEqual(['missing', 'pending'])
-    expect(await s.tick()).toBe('ready')
+    expect(await s.tick()).toBe('review')
     expect(s.request).toHaveBeenCalledTimes(3)
     const calls = s.request.mock.calls as unknown as [URL, RequestInit][]
     expect(calls[2][0].searchParams.get('knownAt')).toBe(

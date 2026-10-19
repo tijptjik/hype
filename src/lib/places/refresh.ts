@@ -1,6 +1,8 @@
 // SOURCE
 import { comparePlacePublications, discoverPlacePublication } from './publication'
 import { readSaanSeoiPlacePage } from './sourceClient'
+// SERVICES
+import { processPlaceRefresh } from '../db/services/placeRefreshProcess'
 // TYPES
 import type { D1Database, D1PreparedStatement } from '@cloudflare/workers-types'
 import type { PlacePublication } from './publication'
@@ -32,9 +34,9 @@ const FENCE =
  * @param db Primary-session D1 connection; no replica-only reads are permitted.
  * @param source Trusted SaanSeoi connection.
  * @param clock Clock used again after network reads to reject expired ownership.
- * @returns The bounded step result; ready means scanned, never fully applied.
- * @remarks No Feature values or accepted checkpoint are changed by this scan stage.
- * A later adoption stage must resolve every retained item before completing the run.
+ * @returns The bounded step result; complete means every scanned item has an adoption or retained review outcome.
+ * @remarks Scanning never changes Feature values. The ready phase processes one source
+ * or Feature per step before advancing the completed-publication checkpoint.
  */
 export async function refreshPlaces(
   db: RefreshDatabase,
@@ -61,7 +63,15 @@ export async function refreshPlaces(
       .prepare('SELECT * FROM placeRefresh WHERE id=1')
       .first<State>()
     if (!state) throw new Error('PLACE_REFRESH_STATE_MISSING')
-    if (state.phase === 'ready' || state.phase === 'review') return state.phase
+    if (state.phase === 'review') return state.phase
+    if (state.phase === 'ready') {
+      if (!state.runId || !state.target) throw new Error('PLACE_REFRESH_PIN_MISSING')
+      return await processPlaceRefresh(db, {
+        runId: state.runId,
+        lease,
+        target: JSON.parse(state.target) as PlacePublication,
+      })
+    }
     if (state.phase === 'idle') {
       const month = new Date(now).toISOString().slice(0, 7)
       if (state.checkedMonth === month) return 'idle'

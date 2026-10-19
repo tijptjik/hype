@@ -2,7 +2,13 @@
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
 import { feature } from '../schema/feature'
-import { featurePlace } from '../schema/place'
+import { featurePlace, placeRevision } from '../schema/place'
+// DOMAIN
+import { equalPlaceValue } from '#lib/places/baseline.js'
+import {
+  comparePlacePublications,
+  readPlacePublicationMetadata,
+} from '#lib/places/publication.js'
 // SERVICES
 import { proposeFeaturePlaceAdoption } from './placeAdoptionReview'
 import { applyPlaceAdoptionGroup } from './placeAdoptionApply'
@@ -16,6 +22,7 @@ export type PlaceRefreshAdoptionResult = {
   status: 'processed' | 'review' | 'conflict' | 'superseded' | 'unlinked'
   geometryChanged: boolean
   proposalId?: string
+  reason?: 'publication-order' | 'publication-evidence'
   groups: Partial<Record<Group, GroupResult>>
 }
 
@@ -95,6 +102,62 @@ export async function adoptRefreshedPlaceForFeature(
   if (!review || review.proposal.placeId !== input.placeId)
     return { ...result, status: (await ownsRun()) ? 'conflict' : 'superseded' }
   result.proposalId = review.proposal.id
+  // Global scan chronology cannot authorize rewinding a Feature linked after discovery.
+  const candidate = await db
+    .select()
+    .from(placeRevision)
+    .where(
+      and(
+        eq(placeRevision.id, input.candidateRevisionId),
+        eq(placeRevision.placeId, input.placeId),
+      ),
+    )
+    .get()
+  const acceptedSources = await Promise.all(
+    [initial.factsRevisionId, initial.locationRevisionId].map(id =>
+      db
+        .select()
+        .from(placeRevision)
+        .where(and(eq(placeRevision.id, id), eq(placeRevision.placeId, input.placeId)))
+        .get(),
+    ),
+  )
+  try {
+    const publication = readPlacePublicationMetadata(candidate?.payload.meta)
+    if (
+      acceptedSources.some(source => {
+        if (!source) return true
+        if (source.id === input.candidateRevisionId) return false
+        const transition = comparePlacePublications(
+          readPlacePublicationMetadata(source.payload.meta),
+          publication,
+        )
+        if (transition === 'forward') return false
+        // Collection page/filter metadata can change the retained revision hash without
+        // changing a canonical record in the exact same publication.
+        return !(
+          transition === 'unchanged' &&
+          source.snapshotId === candidate?.snapshotId &&
+          source.payload.resource != null &&
+          candidate?.payload.resource != null &&
+          equalPlaceValue(source.payload.resource, candidate.payload.resource)
+        )
+      })
+    )
+      return {
+        ...result,
+        status: 'review',
+        reason: 'publication-order',
+        groups: { facts: 'review', location: 'review' },
+      }
+  } catch {
+    return {
+      ...result,
+      status: 'review',
+      reason: 'publication-evidence',
+      groups: { facts: 'review', location: 'review' },
+    }
+  }
   // Re-read tokens between groups because the first application advances both tokens.
   for (const fieldGroup of ['facts', 'location'] as const) {
     if (!(await ownsRun())) return { ...result, status: 'superseded' }

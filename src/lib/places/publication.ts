@@ -50,6 +50,18 @@ export function parsePlacePublication(document: unknown): PlacePublication {
     )
   )
     throw new Error('Place publication permalink disagrees with metadata')
+  return readPlacePublicationMetadata(meta)
+}
+
+/**
+ * Read chronology from validated, retained canonical response metadata.
+ * @param value Metadata retained alongside a source Place revision.
+ * @returns Publication identity suitable for per-Feature forward comparisons.
+ * @remarks This does not prove ingestion provenance; only trusted canonical readers
+ * may persist source metadata. Missing chronology must hold automatic adoption.
+ */
+export function readPlacePublicationMetadata(value: unknown): PlacePublication {
+  const meta = publicationSchema.shape.meta.parse(value)
   return {
     pin: {
       releaseSet: meta.apiReleaseSet,

@@ -38,6 +38,9 @@ export const placeRefreshItem = sqliteTable(
     placeId: text('placeId').notNull(),
     ssId: text('ssId').notNull(),
     sourceOffset: integer('sourceOffset'),
+    revisionId: text('revisionId'),
+    featureCursor: text('featureCursor').notNull().default(''),
+    reviewReason: text('reviewReason'),
     projection: text('projection', { mode: 'json' }).$type<SaanSeoiPlaceProjection>(),
     status: text('status', { enum: ['missing', 'pending', 'processed', 'review'] })
       .notNull()
@@ -48,4 +51,22 @@ export const placeRefreshItem = sqliteTable(
     unique().on(table.runId, table.ssId),
     index('place_refresh_item_work').on(table.runId, table.status, table.placeId),
   ],
+)
+
+/** Durable per-run Feature assessment receipt; review remains separate from acceptance. */
+export const placeRefreshFeature = sqliteTable(
+  'placeRefreshFeature',
+  {
+    runId: text('runId').notNull(),
+    placeId: text('placeId').notNull(),
+    featureId: text('featureId').notNull(),
+    projectId: text('projectId').notNull(),
+    proposalId: text('proposalId'),
+    reason: text('reason'),
+    outcome: text('outcome', {
+      enum: ['processed', 'review', 'conflict', 'unlinked'],
+    }).notNull(),
+    geometryChanged: integer('geometryChanged', { mode: 'boolean' }).notNull(),
+  },
+  table => [primaryKey({ columns: [table.runId, table.placeId, table.featureId] })],
 )

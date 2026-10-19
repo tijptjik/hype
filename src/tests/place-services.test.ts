@@ -4,6 +4,8 @@ import { feature as featureTable } from '#lib/db/schema/feature.js'
 import { featurePlaceBrandsSQL } from '#lib/db/services/placeBrandProjection.js'
 import { DatabaseSync } from 'node:sqlite'
 import { sql } from 'drizzle-orm'
+import { processPlaceRefresh } from '#lib/db/services/placeRefreshProcess.js'
+import { readPlacePublicationMetadata } from '#lib/places/publication.js'
 import { adoptRefreshedPlaceForFeature } from '#lib/db/services/placeRefreshAdoption.js'
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -84,6 +86,7 @@ function setup() {
       if (args.length > 100) throw new Error('D1 parameter limit exceeded')
       return prepare(query, args)
     },
+    first: async () => sqlite.prepare(query).get(...(values as never[])) ?? null,
     raw: async () => {
       const statement = sqlite.prepare(query)
       statement.setReturnArrays(true)
@@ -92,6 +95,7 @@ function setup() {
     all: async () => ({
       results: sqlite.prepare(query).all(...(values as never[])),
       success: true,
+      meta: { changes: Number(sqlite.prepare('SELECT changes() AS n').get()?.n ?? 0) },
     }),
     run: async () => ({
       success: true,
@@ -114,6 +118,7 @@ function setup() {
   }
   return {
     sqlite,
+    binding: { prepare, batch } as unknown as D1Database,
     db: drizzle({ prepare, batch } as unknown as D1Database, {
       schema: { feature: featureTable },
     }) as unknown as Database,
@@ -2288,7 +2293,7 @@ describe('persisted Place adoption preview', () => {
 
 describe('atomic source group application', () => {
   async function fixture(automaticLocation = false) {
-    const { db, sqlite } = setup()
+    const { db, sqlite, binding } = setup()
     const { getTableColumns } = await import('drizzle-orm')
     const { feature, featureI18n } = await import('#lib/db/schema/feature.js')
     for (const [name, table] of [
@@ -2328,6 +2333,15 @@ describe('atomic source group application', () => {
       }),
       issues: [],
       payload: {
+        meta: {
+          apiReleaseSet: 'publication-one',
+          apiCatalogRevision: 'catalog-one',
+          catalogPublishedAt: '2026-09-01T00:00:00Z',
+          cohort: '2026-08-23.0',
+          resolvedApiVersion: 'api-places-v0.1',
+          domain: 'overture',
+          region: 'hk',
+        },
         resource: {
           attributes: {
             basicCategory: 'bakery',
@@ -2356,12 +2370,25 @@ describe('atomic source group application', () => {
     const nextFacts = structuredClone(source.facts)
     nextFacts.phoneNumber = ['+85291234567']
     nextFacts.location.geometry.coordinates[0] += 0.01
-    const next = await persistSaanSeoiPlace(db, {
+    const nextSource: SaanSeoiPlaceProjection = {
       ...source,
       facts: nextFacts,
       releaseId: 'release2',
       snapshotId: 'snapshot2',
-    })
+      payload: {
+        ...source.payload,
+        meta: {
+          apiReleaseSet: 'publication-two',
+          apiCatalogRevision: 'catalog-two',
+          catalogPublishedAt: '2026-10-01T00:00:00Z',
+          cohort: '2026-09-23.0',
+          resolvedApiVersion: 'api-places-v0.1',
+          domain: 'overture',
+          region: 'hk',
+        },
+      },
+    }
+    const next = await persistSaanSeoiPlace(db, nextSource)
     if (automaticLocation)
       await saveProjectPlaceSettings(
         db,
@@ -2391,8 +2418,199 @@ describe('atomic source group application', () => {
       fieldGroup: 'facts' as const,
       mode: 'automatic' as const,
     }
-    return { db, sqlite, input, first, next }
+    return { db, sqlite, binding, input, first, next, nextSource }
   }
+
+  it('drains ingestion and Feature assessment before completing a durable run', async () => {
+    const { sqlite, binding, nextSource, first } = await fixture(true)
+    sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    const target = readPlacePublicationMetadata(nextSource.payload.meta)
+    sqlite
+      .prepare(
+        "UPDATE placeRefresh SET phase='ready',target=?,runId='run',lease='owner',leaseUntil=?",
+      )
+      .run(JSON.stringify(target), Date.now() + 60000)
+    sqlite
+      .prepare(
+        "INSERT INTO placeRefreshItem(runId,placeId,ssId,projection,status) VALUES('run',?,'shop',?,'pending')",
+      )
+      .run(first.placeId, JSON.stringify(nextSource))
+    const tick = () =>
+      processPlaceRefresh(binding, { runId: 'run', lease: 'owner', target })
+    expect(await tick()).toBe('ingested')
+    expect(
+      sqlite.prepare('SELECT accepted FROM placeRefresh').get()?.accepted,
+    ).toBeNull()
+    expect(await tick()).toBe('assessed')
+    expect(
+      sqlite.prepare('SELECT outcome FROM placeRefreshFeature').get()?.outcome,
+    ).toBe('processed')
+    expect(
+      sqlite.prepare('SELECT accepted FROM placeRefresh').get()?.accepted,
+    ).toBeNull()
+    expect(await tick()).toBe('processed')
+    expect(await tick()).toBe('complete')
+    const state = sqlite.prepare('SELECT phase,accepted FROM placeRefresh').get()
+    expect(state?.phase).toBe('idle')
+    expect(JSON.parse(String(state?.accepted))).toEqual(target)
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+    expect(await tick()).toBe('superseded')
+  })
+
+  it('replays a failed outcome checkpoint without repeating already applied groups', async () => {
+    const { sqlite, binding, nextSource, first } = await fixture(true)
+    sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    const target = readPlacePublicationMetadata(nextSource.payload.meta)
+    sqlite
+      .prepare(
+        "UPDATE placeRefresh SET phase='ready',target=?,runId='run',lease='owner',leaseUntil=?",
+      )
+      .run(JSON.stringify(target), Date.now() + 60000)
+    sqlite
+      .prepare(
+        "INSERT INTO placeRefreshItem(runId,placeId,ssId,projection,status) VALUES('run',?,'shop',?,'pending')",
+      )
+      .run(first.placeId, JSON.stringify(nextSource))
+    const tick = () =>
+      processPlaceRefresh(binding, { runId: 'run', lease: 'owner', target })
+    await tick()
+    sqlite.exec(
+      "CREATE TRIGGER fail_cursor BEFORE UPDATE OF featureCursor ON placeRefreshItem BEGIN SELECT RAISE(ABORT,'cursor failure'); END",
+    )
+    await expect(tick()).rejects.toThrow('cursor failure')
+    expect(sqlite.prepare('SELECT * FROM placeRefreshFeature').all()).toHaveLength(0)
+    expect(
+      sqlite.prepare('SELECT featureCursor FROM placeRefreshItem').get()?.featureCursor,
+    ).toBe('')
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+    const jobs = sqlite.prepare('SELECT * FROM featureMtrJob').all()
+    sqlite.exec('DROP TRIGGER fail_cursor')
+    expect(await tick()).toBe('assessed')
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toEqual(jobs)
+  })
+
+  it('fences source ingestion without appending revisions or changing availability', async () => {
+    const { db, sqlite, nextSource } = await fixture()
+    sqlite.exec("UPDATE place SET sourceAvailability='missing'")
+    const before = sqlite.prepare('SELECT * FROM placeRevision').all()
+    await persistSaanSeoiPlace(
+      db,
+      {
+        ...nextSource,
+        snapshotId: 'new-snapshot',
+        payload: { ...nextSource.payload, marker: 'new' },
+      },
+      sql`0`,
+    )
+    expect(sqlite.prepare('SELECT * FROM placeRevision').all()).toEqual(before)
+    expect(
+      sqlite.prepare('SELECT sourceAvailability FROM place').get()?.sourceAvailability,
+    ).toBe('missing')
+  })
+
+  it('holds missing sources and expired processing leases without changing Features', async () => {
+    const { sqlite, binding, nextSource, first } = await fixture()
+    sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    const target = readPlacePublicationMetadata(nextSource.payload.meta)
+    sqlite
+      .prepare(
+        "UPDATE placeRefresh SET phase='ready',target=?,runId='run',lease='owner',leaseUntil=0",
+      )
+      .run(JSON.stringify(target))
+    sqlite
+      .prepare(
+        "INSERT INTO placeRefreshItem(runId,placeId,ssId) VALUES('run',?,'shop')",
+      )
+      .run(first.placeId)
+    const tick = () =>
+      processPlaceRefresh(binding, { runId: 'run', lease: 'owner', target })
+    expect(await tick()).toBe('superseded')
+    sqlite.prepare('UPDATE placeRefresh SET leaseUntil=?').run(Date.now() + 60000)
+    expect(await tick()).toBe('review')
+    expect(
+      sqlite.prepare('SELECT status,reviewReason FROM placeRefreshItem').get(),
+    ).toEqual({ status: 'review', reviewReason: 'source-missing' })
+    expect(await tick()).toBe('complete')
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+  })
+
+  it('accepts same-publication page metadata changes but holds conflicting canonical records', async () => {
+    const { db, first, next, nextSource } = await fixture(true)
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: first.placeId,
+      candidateRevisionId: next.revisionId,
+      guard: sql`1`,
+    }
+    await adoptRefreshedPlaceForFeature(db, input)
+    const replay = await persistSaanSeoiPlace(db, {
+      ...nextSource,
+      payload: {
+        ...nextSource.payload,
+        meta: {
+          ...(nextSource.payload.meta as Record<string, unknown>),
+          page: { offset: 100, limit: 100 },
+        },
+      },
+    })
+    expect(
+      await adoptRefreshedPlaceForFeature(db, {
+        ...input,
+        candidateRevisionId: replay.revisionId,
+      }),
+    ).toMatchObject({ status: 'processed', geometryChanged: false })
+    const conflict = await persistSaanSeoiPlace(db, {
+      ...nextSource,
+      payload: {
+        ...nextSource.payload,
+        resource: {
+          attributes: {
+            basicCategory: 'other',
+            taxonomy: { primary: 'other' },
+            operatingStatus: 'open',
+          },
+        },
+      },
+    })
+    expect(
+      await adoptRefreshedPlaceForFeature(db, {
+        ...input,
+        candidateRevisionId: conflict.revisionId,
+      }),
+    ).toMatchObject({ status: 'review', reason: 'publication-order' })
+  })
+
+  it('holds per-Feature chronology regressions despite later local ingestion sequence', async () => {
+    const { db, sqlite, first, nextSource } = await fixture(true)
+    const older = await persistSaanSeoiPlace(db, {
+      ...nextSource,
+      payload: {
+        ...nextSource.payload,
+        meta: {
+          ...(nextSource.payload.meta as Record<string, unknown>),
+          apiReleaseSet: 'older-publication',
+          apiCatalogRevision: 'older-catalog',
+          catalogPublishedAt: '2026-08-01T00:00:00Z',
+          cohort: '2026-07-23.0',
+        },
+      },
+    })
+    expect(
+      await adoptRefreshedPlaceForFeature(db, {
+        featureId: 'f',
+        projectId: 'p',
+        placeId: first.placeId,
+        candidateRevisionId: older.revisionId,
+        guard: sql`1`,
+      }),
+    ).toMatchObject({ status: 'review' })
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+  })
 
   it('processes both automatic groups and replays without duplicate writes or routing', async () => {
     const { db, sqlite, next, first } = await fixture(true)

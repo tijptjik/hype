@@ -280,7 +280,8 @@ boundary does not activate a scheduler or apply Feature updates.
 
 Follow DivisionSync's monthly discovery and bounded durable work pattern, with leases,
 retry state, fenced writes and resumable checkpoints. Advance a publication checkpoint
-only after successful application. Keep the last accepted snapshot on failed reads or
+only after each item has an applied or durable review outcome. This run checkpoint is
+not a Feature acceptance: retain each Feature's last accepted snapshot on failed reads or
 missing source IDs. Source removal does not imply closure, donor inactivity or deletion.
 Rebuild affected Feature projections and caches using their own Project policies.
 
@@ -293,8 +294,10 @@ Cross-page duplicate tracked IDs and changing totals stop advancement. Missing I
 explicit run items, never inferred deletions or donor inactivity.
 
 A completed scan enters `ready` without advancing the accepted publication or modifying
-Features. Candidate ingestion, per-Feature policy processing, final checkpoint completion
-and the scheduled Worker entrypoint remain to be connected. Source changes-feed evidence
+Features. The ready phase now ingests one retained candidate or assesses one Feature per
+step through `placeRefreshProcess.ts`. Only after every item has a durable outcome does
+the completed-publication checkpoint advance. The scheduled Worker entrypoint remains
+to be connected. Source changes-feed evidence
 is also separate from this canonical scan. Migration 0114 is applied to the primary local
 database with integrity/foreign-key checks passing and all 1,271 Features unchanged.
 SQLite-backed tests cover page resumption, late-write rollback, lease loss/expiry, retry,
@@ -309,8 +312,18 @@ is also included in the proposal/application SQL, so losing ownership prevents w
 Policy changes and unrelated edits do not trigger silent re-evaluation. Successful
 geometry adoption retains the existing transactional MTR job trigger.
 
-This coordinator still needs the run-item ingestion/cursor stage and scheduled Worker
-entrypoint; it is not yet a running monthly refresh. SQLite-backed tests cover both
+Migration `0115_place_refresh_processing.sql` adds ingestion/Feature cursors and run
+outcome receipts. It is applied locally with integrity and foreign-key checks passing;
+all 1,271 original Features remain unchanged. Source writes and per-Feature processing
+are fenced, and the outcome/cursor commit atomically. Failed cursor writes replay
+already-applied groups without duplicating decisions or routing jobs. Missing sources
+and identity changes retain explicit source review outcomes. Per-Feature publication
+checks prevent a long-running scan from rewinding a newly linked Feature; absent
+chronology or conflicting records within one publication require review. Identical
+canonical records with only different collection page metadata remain eligible.
+
+The scheduled Worker entrypoint is still outstanding, so monthly refresh is not yet
+running. SQLite-backed tests cover both
 automatic groups, policy review, rejection replay, lease loss between groups, atomic
 write fencing, association scope changes and policy edits after assessment.
 
