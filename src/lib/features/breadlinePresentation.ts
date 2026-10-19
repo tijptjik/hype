@@ -4,28 +4,22 @@ import {
   type PresentationFeature,
 } from './presentationProperties'
 
-/** Brand labels and restrained accents; badges are text, not fabricated official logos. */
-const BRANDS = [
-  { match: /maxim|美心/i, name: 'Maxim’s', badge: '美心', color: '#b43633' },
-  { match: /arome|東海堂/i, name: 'arôme', badge: 'a', color: '#7c493c' },
-  { match: /7.?eleven|7.?11/i, name: '7-Eleven', badge: '7', color: '#087c56' },
-  { match: /honor|聖安娜/i, name: 'Saint Honore', badge: 'SH', color: '#8c394a' },
-  { match: /yamazaki|山崎/i, name: 'Yamazaki', badge: 'Y', color: '#a82932' },
-  { match: /kayser/i, name: 'Maison Kayser', badge: 'MK', color: '#65452d' },
-] as const
+// BRAND CATALOGUE
+import { resolveBrandIdentity } from './brandIdentity'
 
 /**
  * Resolves brand identity from the canonical brand property.
  * @param feature Hydrated feature.
- * @returns Text badge and accent, with a neutral independent-shop fallback.
+ * @returns Bundled logo, text fallback and accent from the effective brand property.
  */
 export function breadlineBrand(feature: PresentationFeature): {
   name: string
   badge: string
   color: string
+  logoSrc?: string
 } {
   const name = presentationProperty(feature, 'brand')
-  const known = BRANDS.find(brand => brand.match.test(name))
+  const known = resolveBrandIdentity(name)
   return (
     known ?? {
       name: name || 'Breadline',

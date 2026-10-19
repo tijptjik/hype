@@ -21,6 +21,7 @@ export type CustomMarkerModel = {
   imageSrc?: string | null
   flags?: string[]
   badge?: string
+  brandLogoSrc?: string
   brandColor?: string
   label: string
   state?: BreadlineMarkerState
@@ -44,6 +45,7 @@ export const CUSTOM_MARKER_PROVIDERS: Readonly<
       kind: 'breadline',
       badge: brand.badge,
       brandColor: brand.color,
+      brandLogoSrc: brand.logoSrc,
       state: availability,
       label: `${brand.name}; ${availability.dropoff ? 'drop-off' : availability.yield + ' yield'}; ${availability.source}${availability.claimed ? '; claimed' : ''}`,
     }
@@ -168,7 +170,23 @@ export function createCustomMarkerElement(model: CustomMarkerModel): HTMLDivElem
     font: '700 18px system-ui',
     border: '2px solid #fff',
   })
-  if (model.kind === 'flag' && model.imageSrc) {
+  if (model.kind === 'breadline' && model.brandLogoSrc && !model.state?.dropoff) {
+    // Only catalogue-owned SVGs are loaded; feature photos never enter this branch.
+    const logo = document.createElement('img')
+    logo.src = model.brandLogoSrc
+    logo.alt = ''
+    logo.draggable = false
+    Object.assign(logo.style, { width: '100%', height: '100%', objectFit: 'contain' })
+    logo.addEventListener(
+      'error',
+      () => {
+        logo.remove()
+        center.textContent = model.badge ?? '•'
+      },
+      { once: true },
+    )
+    center.append(logo)
+  } else if (model.kind === 'flag' && model.imageSrc) {
     const image = document.createElement('img')
     image.src = model.imageSrc
     image.alt = ''
