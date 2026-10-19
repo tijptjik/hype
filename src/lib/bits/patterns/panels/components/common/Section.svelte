@@ -7,6 +7,7 @@ import type { Component, Snippet } from 'svelte'
 // COMPONENTS
 import * as Panel from '#lib/bits/patterns/panels/index.js'
 // SERVICES
+import { getSectionReveal } from '#lib/bits/patterns/panels/sectionReveal.js'
 import { navigateOnAdmin } from '#lib/navigation/index.js'
 // TYPES
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
@@ -53,6 +54,9 @@ const usesCompactHeader = $derived(
     panelProps.panelType === 'stars',
 )
 const contentId = $props.id()
+const revealSection = getSectionReveal()
+let sectionElement: HTMLElement
+let revealRequested = false
 
 // STATE
 // Apply the default once so user toggles remain independent of prop updates.
@@ -61,6 +65,14 @@ let isOpen = $state(untrack(() => defaultOpen))
 const onToggle = (e: MouseEvent) => {
   e.stopPropagation()
   isOpen = !isOpen
+  revealRequested = isOpen
+}
+
+/** Reveals only deliberate expansions after the slide has its final height. @returns Nothing. */
+function onExpanded(): void {
+  if (!isOpen || !revealRequested) return
+  revealRequested = false
+  revealSection?.(sectionElement)
 }
 
 const onNavigate = (e: MouseEvent) => {
@@ -84,6 +96,7 @@ const onNavigate = (e: MouseEvent) => {
 </script>
 
 <section
+  bind:this={sectionElement}
   class="bits-theme flex min-h-0 {usesCompactHeader
     ? 'border-b border-border'
     : 'pt-3'} flex-col overflow-hidden bg-panel caret-transparent {isOpen
@@ -143,6 +156,7 @@ const onNavigate = (e: MouseEvent) => {
   <div id={contentId} class="contents">
     <Panel.Section.Content
       {isOpen}
+      {onExpanded}
       {children}
       {collapsedContent}
       {managedContent}

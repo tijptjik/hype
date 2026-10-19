@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { slide } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 import Theme from '#lib/bits/patterns/panels/sections/theme/ThemeSection.svelte'
 
 // I18N
@@ -12,6 +13,10 @@ import type { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPane
 // AUTH
 
 // COMPONENTS
+import {
+  setSectionReveal,
+  revealPanelSection,
+} from '#lib/bits/patterns/panels/sectionReveal.js'
 import Header from '#lib/bits/patterns/panels/components/common/Header.svelte'
 import Info from '#lib/bits/patterns/panels/components/info/Settings.svelte'
 import LinkedAccounts from '#lib/bits/patterns/panels/sections/linkedAccounts/LinkedAccountsSection.svelte'
@@ -38,6 +43,11 @@ let isGuestUpgradeOpen = $state(false)
 let guestAuthMode = $state<'create' | 'sign-in'>('create')
 // svelte-ignore non_reactive_update
 let panelContainer: HTMLDivElement
+
+// Only this panel opts into revealing user-expanded sections after their slide finishes.
+setSectionReveal(section => {
+  revealPanelSection(panelContainer, section, prefersReducedMotion.current)
+})
 
 let handleToggleInfo = (e: MouseEvent | TouchEvent) => {
   e.stopPropagation()

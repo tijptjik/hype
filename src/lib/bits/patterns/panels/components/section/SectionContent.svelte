@@ -9,6 +9,7 @@ import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
 type Props = {
   isOpen: boolean
+  onExpanded?: () => void
   children?: Snippet
   collapsedContent?: Snippet
   managedContent?: Snippet<[boolean]>
@@ -16,6 +17,7 @@ type Props = {
 
 let {
   isOpen,
+  onExpanded,
   children,
   collapsedContent = undefined,
   managedContent = undefined,
@@ -31,6 +33,7 @@ let {
 {:else if isOpen && children}
   <div
     class="bits-theme bits-panel-section-content"
+    onintroend={onExpanded}
     transition:slide={{
       duration: prefersReducedMotion.current ? 0 : 240,
       easing: cubicOut,
