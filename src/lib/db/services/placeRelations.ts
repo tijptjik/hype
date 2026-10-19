@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import { featureI18n, featureProperty, featurePropertyI18n } from '../schema/feature'
 // DOMAIN
@@ -38,6 +38,26 @@ export function prepareFeaturePlaceRelations(
   if (!featureId || !revision) throw new Error('Feature association token is required')
   const guard = sql`EXISTS (SELECT 1 FROM featurePlace
     WHERE featureId = ${featureId} AND revision = ${revision})`
+  return prepareFeatureFormRelations(db, featureId, guard, translations, properties)
+}
+
+/**
+ * Prepare complete relation replacement behind an internal transaction guard.
+ * @param db Request-local database.
+ * @param featureId Authorized parent identity.
+ * @param guard Unique successful parent/association write predicate, supplied only by server code.
+ * @param translations Validated complete translation snapshot.
+ * @param properties Validated property snapshot, or undefined to leave properties untouched.
+ * @returns Statements to execute in the same atomic batch as the guarded parent write.
+ * @remarks Guard every delete and insert; never execute these statements in separate batches.
+ */
+export function prepareFeatureFormRelations(
+  db: Database,
+  featureId: string,
+  guard: SQL,
+  translations: Record<string, FeatureI18nPartial>,
+  properties?: Parameters<typeof prepareFeaturePlaceRelations>[4],
+): BatchItem<'sqlite'>[] {
   const queries: BatchItem<'sqlite'>[] = [
     db.delete(featureI18n).where(and(eq(featureI18n.featureId, featureId), guard)),
   ]

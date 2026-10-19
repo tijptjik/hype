@@ -132,6 +132,8 @@ export const feature = sqliteTable(
     createdAt: text('createdAt')
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
       .notNull(),
+    // Server-owned form transaction token; never accepted from client payloads.
+    formWriteToken: text('formWriteToken'),
     modifiedAt: text('modifiedAt')
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
       .$onUpdate(() => new Date().toISOString())

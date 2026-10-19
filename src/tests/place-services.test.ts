@@ -13,6 +13,7 @@ import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
 import { prepareFeaturePlaceRelations } from '#lib/db/services/placeRelations.js'
+import { saveUnlinkedFeatureForm } from '#lib/db/services/featureFormSave.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { readFeaturePlaceBaseline } from '#lib/db/services/placeBaseline.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
@@ -996,5 +997,96 @@ describe('linked Feature form persistence', () => {
       }),
     ).toMatchObject({ status: 'review' })
     expect(snapshot()).toEqual(before)
+  })
+})
+
+describe('initial association versus unlinked form saves', () => {
+  it('serializes either winner and rolls back the complete unlinked form on failure', async () => {
+    const { db, sqlite } = setup()
+    const { getTableColumns } = await import('drizzle-orm')
+    const { feature, featureI18n } = await import('#lib/db/schema/feature.js')
+    for (const [name, table] of [
+      ['feature', feature],
+      ['featureI18n', featureI18n],
+    ] as const) {
+      const existing = new Set(
+        sqlite
+          .prepare(`PRAGMA table_info(${name})`)
+          .all()
+          .map(row => row.name),
+      )
+      for (const column of Object.values(getTableColumns(table)))
+        if (!existing.has(column.name))
+          sqlite.exec(
+            `ALTER TABLE ${name} ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+          )
+    }
+    sqlite.exec(`CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
+      INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES ('f','en','Bakery','Original address');`)
+    sqlite
+      .prepare("UPDATE feature SET geometry=? WHERE id='f'")
+      .run(JSON.stringify(facts.location.geometry))
+    const snapshot = () =>
+      [
+        'feature',
+        'featureI18n',
+        'featureProperty',
+        'featurePlace',
+        'featurePlaceHistory',
+      ].map(table => sqlite.prepare(`SELECT * FROM ${table}`).all())
+    const local = await createLocalPlace(
+      db,
+      'p',
+      { state: 'unresolved', facts: { ...facts, phoneNumber: [] } },
+      'actor',
+    )
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      updatedAt: 'original',
+      data: { isVisitable: true },
+      i18n: { en: { title: 'Edited bakery', displayAddress: 'Original address' } },
+      properties: [],
+    }
+    const original = snapshot()
+    sqlite.exec(`CREATE TRIGGER fail_form BEFORE INSERT ON featureI18n
+      BEGIN SELECT RAISE(ABORT,'injected form failure'); END`)
+    await expect(saveUnlinkedFeatureForm(db, input)).rejects.toThrow()
+    expect(snapshot()).toEqual(original)
+    sqlite.exec('DROP TRIGGER fail_form')
+    const saved = await saveUnlinkedFeatureForm(db, input)
+    expect(saved).toBeDefined()
+    expect(
+      sqlite.prepare("SELECT title FROM featureI18n WHERE featureId='f'").get(),
+    ).toEqual({ title: 'Edited bakery' })
+    expect(await saveUnlinkedFeatureForm(db, input)).toBeUndefined()
+    const link = {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: local.placeId,
+      revisionId: local.revisionId,
+      actorId: 'actor',
+      expectedFeatureModifiedAt: 'original',
+    }
+    expect(await linkInitialFeaturePlace(db, link)).toEqual({ status: 'conflict' })
+    expect(
+      await linkInitialFeaturePlace(db, {
+        ...link,
+        expectedFeatureModifiedAt: saved!.modifiedAt,
+      }),
+    ).toMatchObject({ status: 'linked' })
+    expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.effective.names.en).toBe(
+      'Edited bakery',
+    )
+    const linked = snapshot()
+    // Initial linking preserves modifiedAt, so the association guard is essential here.
+    expect(
+      await saveUnlinkedFeatureForm(db, {
+        ...input,
+        updatedAt: saved!.modifiedAt,
+        i18n: { en: { title: 'Must not overwrite' } },
+      }),
+    ).toBeUndefined()
+    expect(snapshot()).toEqual(linked)
   })
 })

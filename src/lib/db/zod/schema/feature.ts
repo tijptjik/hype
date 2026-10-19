@@ -84,7 +84,7 @@ import type { GeometryObject } from 'geojson'
 // ═══════════════════════
 
 export const FeatureBase = createSelectSchema(feature)
-  .omit({ spatialIndex: true })
+  .omit({ spatialIndex: true, formWriteToken: true })
   .extend({
     mtrStation: z.string().nullish(),
     mtrExit: z.string().nullish(),
@@ -115,6 +115,7 @@ export const FeatureBase = createSelectSchema(feature)
 export const FeatureInsert = createInsertSchema(feature)
   .omit({
     spatialIndex: true,
+    formWriteToken: true,
     mtrStation: true,
     mtrExit: true,
     mtrDistance: true,
@@ -149,6 +150,7 @@ export const FeatureInsert = createInsertSchema(feature)
 export const FeatureUpdate = createUpdateSchema(feature)
   .omit({
     spatialIndex: true,
+    formWriteToken: true,
     mtrStation: true,
     mtrExit: true,
     mtrDistance: true,

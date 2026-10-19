@@ -487,3 +487,24 @@ Public linking remains pending until the unlinked-to-linked transition is serial
 with unlinked form saves and all direct/import/contribution mutation paths are covered.
 Reset/adoption materialization, Place brand storage and source synchronization remain
 outstanding. No remote database mutation or deployment was performed.
+
+### Initial-link/form-save serialization (Refs #194)
+
+Migration `0111_feature_form_write_token.sql` adds a server-owned Feature form token,
+excluded from public/select, insert and update Zod schemas. Unlinked normal form
+saves now use `saveUnlinkedFeatureForm`: parent and relation changes share one D1
+batch, the parent checks both modifiedAt and absence of an association, and every
+child statement requires the newly generated token. If linking wins first, no form
+rows change. If saving wins first, linking must use the completed new baseline.
+The unique token avoids treating a coincidentally equal timestamp as a winning write.
+Linked and unlinked handlers receive the same authorized form snapshot.
+
+Tests cover both orderings, rollback of token/parent/children after a late failure,
+translator access without property replacement, and affected import/contribution
+and spatial read paths (117 tests pass). Actual local D1 rehearsal on an isolated
+copy also passed stale-save rejection, stale-link rejection, current-baseline linking
+and rejection of an unlinked save after linking. The primary mirror's original
+Feature columns, translations and properties remain identical to production; its
+new tokens are all null and integrity/FK checks pass. Migration 0111 is local only.
+Contribution application in `src/lib/api/services/feature.ts` and other direct write
+paths still require integration before exposing public linking controls.

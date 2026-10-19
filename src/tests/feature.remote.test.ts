@@ -25,6 +25,7 @@ const {
   mockProbeLayerForUpdate,
   mockListFeatures,
   mockLoadFeature,
+  mockSaveUnlinkedFeatureForm,
   mockSaveLinkedFeatureForm,
   mockCreateFeature,
   mockCreateI18n,
@@ -77,6 +78,12 @@ const {
     totalCount: 0,
   })),
   mockLoadFeature: vi.fn(async (): Promise<unknown> => null),
+  mockSaveUnlinkedFeatureForm: vi.fn(
+    async (): Promise<unknown> => ({
+      id: 'feature-1',
+      modifiedAt: '2026-03-18T00:00:01.000Z',
+    }),
+  ),
   mockSaveLinkedFeatureForm: vi.fn(
     async (): Promise<
       import('#lib/db/services/placeEdit.js').LinkedFeatureSaveResult
@@ -261,6 +268,10 @@ vi.mock('#lib/api/services/authz/index.js', async importOriginal => ({
   },
   toAuthMessage: (code: string) => code,
   toIssueDetailMessage: (code: string) => code,
+}))
+
+vi.mock('#lib/db/services/featureFormSave.js', () => ({
+  saveUnlinkedFeatureForm: mockSaveUnlinkedFeatureForm,
 }))
 
 vi.mock('#lib/db/services/placeEdit.js', () => ({
@@ -637,6 +648,7 @@ describe('feature.remote authz matrix', () => {
         }),
       )
       expect(mockUpdateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
+      expect(mockSaveUnlinkedFeatureForm).not.toHaveBeenCalled()
       expect(mockUpdateI18n).not.toHaveBeenCalled()
       expect(mockUpdateProperties).not.toHaveBeenCalled()
     },
@@ -734,10 +746,15 @@ describe('feature.remote authz matrix', () => {
       if (propertiesChanged) {
         await expect(submission).rejects.toThrow('FIELD_FORBIDDEN')
         expect(mockUpdateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
+        expect(mockSaveUnlinkedFeatureForm).not.toHaveBeenCalled()
         expect(mockUpdateProperties).not.toHaveBeenCalled()
       } else {
         await expect(submission).resolves.toMatchObject({ data: { id: 'feature-1' } })
-        expect(mockUpdateI18n).toHaveBeenCalled()
+        expect(mockSaveUnlinkedFeatureForm).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ properties: undefined }),
+        )
+        expect(mockUpdateI18n).not.toHaveBeenCalled()
         expect(mockUpdateProperties).not.toHaveBeenCalled()
       }
     },
@@ -782,6 +799,7 @@ describe('feature.remote authz matrix', () => {
     )
     expect(mockLoadFeature).not.toHaveBeenCalled()
     expect(mockUpdateFeatureByIdWithConcurrency).not.toHaveBeenCalled()
+    expect(mockSaveUnlinkedFeatureForm).not.toHaveBeenCalled()
   })
 
   it('featureForm update rejects reparenting before probing the target layer', async () => {

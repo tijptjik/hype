@@ -54,6 +54,7 @@ import {
   toIssueDetailMessage,
 } from '#lib/api/services/authz/index.js'
 // DB
+import { saveUnlinkedFeatureForm } from '#lib/db/services/featureFormSave.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import {
@@ -68,8 +69,6 @@ import {
   updateFeatureArchivedStateById,
   updateFeatureByIdWithConcurrency,
   updateFeaturePublishedStateById,
-  updateI18n,
-  updateProperties,
 } from '#lib/db/services/feature.js'
 import { probeLayerForUpdate } from '#lib/db/services/layer.js'
 import { publishAllImagesWithPublicIntent } from '#lib/db/services/image.js'
@@ -687,7 +686,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     }
   }
 
-  const linkedSave = await saveLinkedFeatureForm(db, {
+  const saveInput = {
     featureId: current.id,
     projectId: current.projectId,
     actorId: user.id,
@@ -705,7 +704,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     },
     i18n: data.i18n,
     properties: propertiesChanged ? submittedProperties : undefined,
-  })
+  }
+  const linkedSave = await saveLinkedFeatureForm(db, saveInput)
   if (linkedSave.status === 'conflict')
     invalid(issue(toIssueDetailMessage('STALE_WRITE')))
   if (linkedSave.status === 'review')
@@ -716,29 +716,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     return toCreatedResponseShape(linkedSave.feature)
   }
 
-  const persisted = requireValue(
-    await updateFeatureByIdWithConcurrency(db, {
-      id: current.id as Id,
-      updatedAt,
-      data: {
-        organisationId: resolvedOrganisationId,
-        projectId: resolvedProjectId,
-        layerId: data.layerId,
-        contributorId: data.contributorId ?? current.contributorId ?? null,
-        geometry: data.geometry,
-        addressMeta: data.addressMeta ?? {},
-        isIntangible: data.isIntangible,
-        isVisitable: data.isVisitable,
-        isPendingReview: data.isPendingReview,
-      },
-    }),
-    () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
+  const persisted = requireValue(await saveUnlinkedFeatureForm(db, saveInput), () =>
+    invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
   )
-
-  await updateI18n(db, data.i18n, current.id as Id)
-  if (propertiesChanged) {
-    await updateProperties(db, submittedProperties, current.id as Id)
-  }
 
   if (geometryChanged) scheduleFeatureMtr(ctx.event.locals.platform, persisted.id)
   return toCreatedResponseShape(persisted)
