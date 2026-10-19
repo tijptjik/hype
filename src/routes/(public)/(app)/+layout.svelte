@@ -280,9 +280,20 @@ beforeNavigate(({ from, to, shallow }) => {
   }
 })
 
-const activeMapStyleCode = $derived.by(
-  () => settingsModel.mapTheme ?? getActiveMapStyleCode(appCtx),
-)
+const activeMapStyleContext = $derived.by(() => ({
+  identity: JSON.stringify([
+    appCtx.view.scope.prisms.project,
+    appCtx.view.scope.prisms.layer,
+    appCtx.navigation.getActiveResourceType(),
+    appCtx.navigation.getActiveResourceId(),
+  ]),
+  style: getActiveMapStyleCode(appCtx),
+}))
+$effect(() => {
+  const context = activeMapStyleContext
+  untrack(() => settingsModel.onActiveMapContext(context.identity, context.style))
+})
+const activeMapStyleCode = $derived(settingsModel.resolvedMapTheme)
 const MAP_GESTURE_SURFACE_SELECTOR = '[data-map-gesture-surface="true"]'
 
 // PROFILE PANEL SCROLL POSITION

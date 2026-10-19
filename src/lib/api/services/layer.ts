@@ -259,6 +259,8 @@ const toProfileResponseShape = async (
   const data = {
     ancestors: toCompactAncestors(row as unknown as CompactAncestorRow),
     ...row,
+    // Public layer profiles need only the style override, not unrelated metadata.
+    mapStyleCode: row.metadata?.mapStyleCode,
     i18n: transformI18nSafely(row.i18n),
     properties: normalizeLayerPropertiesForProfile(row.properties),
   }

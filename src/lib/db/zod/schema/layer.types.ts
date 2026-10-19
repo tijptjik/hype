@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import type { RemoteFormInput } from '$app/server'
 import type { EntityResponse } from '#lib/types.js'
 import type { FormLocaleInput } from '#lib/client/services/formLocale.types.js'
 import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
@@ -87,7 +88,13 @@ export type Layer = z.infer<typeof LayerAdminProfileAPI>
 export type LayerNew = z.infer<typeof LayerEntityFormData>
 export type LayerPartial = Partial<LayerNew>
 
-export type LayerFormInput = z.input<typeof LayerFormData>
+type LayerSchemaInput = z.input<typeof LayerFormData>
+/** String-valued map preference for HTML forms; server parsing normalizes blank to null. */
+export type LayerFormInput = Omit<LayerSchemaInput, 'data'> & {
+  data: Omit<LayerSchemaInput['data'], 'metadata'> & {
+    metadata?: RemoteFormInput & { mapStyleCode?: string }
+  }
+}
 export type LayerFormLocaleInput = FormLocaleInput<LayerFormInput>
 export type LayerSubmitData = Partial<LayerFormInput['data']>
 export type LayerBooleanField = 'isPublished' | 'isArchived'

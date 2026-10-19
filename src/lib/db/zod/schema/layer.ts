@@ -7,14 +7,14 @@ import { z } from 'zod'
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 // DRIZZLE SCHEMA
 import { layer, layerI18n, layerProperty, userLayer } from '#lib/db/schema/index.js'
+// MAP
+import { MAP_STYLE_KEYS } from '#lib/map/styles/registry.js'
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints'
 import { FormBoolean } from '../form'
 // ZOD SCHEMAS
 import { PropertyAdminProfileAPI } from './property'
 import { UserBasic } from './user'
-// TYPES
-import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -61,16 +61,28 @@ import type { LayerMetadata } from '#lib/db/zod/schema/layerMetadata.types.js'
 // 1. DB / RELATIONAL PRIMITIVES
 // ═══════════════════════
 
+/** Layer presentation overrides; empty form values explicitly select User Preference. */
+export const LayerMetadataSchema = z
+  .object({
+    mapStyleCode: z
+      .preprocess(
+        value => (value === '' ? null : value),
+        z.enum(MAP_STYLE_KEYS).nullable(),
+      )
+      .optional(),
+  })
+  .passthrough()
+
 export const LayerRecord = createSelectSchema(layer)
 
 export const LayerRecordCreate = createInsertSchema(layer).extend({
   ...getDefaultConstraints(layer),
-  metadata: z.custom<LayerMetadata>().prefault({}),
+  metadata: LayerMetadataSchema.prefault({}),
 })
 
 export const LayerRecordUpdate = createUpdateSchema(layer).extend({
   ...getDefaultConstraints(layer),
-  metadata: z.custom<LayerMetadata>().optional(),
+  metadata: LayerMetadataSchema.optional(),
 })
 
 export const LayerI18nRecord = createSelectSchema(layerI18n)
@@ -147,7 +159,7 @@ export const LayerEntityFormData = z.object({
   i18n: LayerI18nByLocaleFormData,
   properties: z.array(LayerPropertyFormData).optional(),
   isDefaultVisible: FormBoolean.default(false),
-  metadata: z.custom<LayerMetadata>().optional().default({}),
+  metadata: LayerMetadataSchema.optional().default({}),
 })
 
 export const LayerFormMeta = z.object({
@@ -232,6 +244,7 @@ export const LayerPropertyAdminProfileAPI = LayerPropertyRecordUpdate.extend({
 })
 
 export const LayerListProfileAPI = LayerListFields.extend({
+  mapStyleCode: z.enum(MAP_STYLE_KEYS).nullable().optional(),
   i18n: getLocales(LayerI18nRecord),
   properties: z.array(LayerPropertyListProfileAPI).default([]),
 })
@@ -268,6 +281,7 @@ export const LayerCompactProfileAPI = LayerRecord.pick({
   rank: true,
   isDefaultVisible: true,
 }).extend({
+  mapStyleCode: z.enum(MAP_STYLE_KEYS).nullable().optional(),
   ancestors: CompactAncestorsSchema.optional(),
   i18n: getLocales(LayerI18nRecord.pick({ name: true, nameShort: true })),
 })

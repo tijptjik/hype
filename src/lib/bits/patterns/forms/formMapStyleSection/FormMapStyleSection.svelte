@@ -4,7 +4,10 @@ import { formSelectionSearchHeaderStyles } from '../formSurface/formSearchHeader
 import { LocalSearch, SectionHeader } from '#lib/bits/custom/index.js'
 import { m } from '#lib/i18n.js'
 import { MapStyleCard } from '#lib/bits/patterns/cards/mapStyleCard/index.js'
-import { REGISTERED_MAP_STYLE_CATALOG } from '#lib/map/styles/catalog.js'
+import {
+  isMapStyleSelectable,
+  SELECTABLE_MAP_STYLE_CATALOG,
+} from '#lib/map/styles/catalog.js'
 import { getMapStyleCatalogI18n } from '#lib/map/styles/i18n.js'
 import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
 import * as FormMapStyleSectionPrimitive from './components'
@@ -19,6 +22,7 @@ let {
   subtitle,
   availableMapStyles,
   selectedMapStyle = null,
+  additionalMapStyles = [],
   hiddenMapStyleInputAttrs = [],
   isEditing = true,
   isSubmitting = false,
@@ -33,7 +37,7 @@ let wasSubmitRequested = $state(false)
 let hasAutoOpenedAdding = $state(false)
 
 const fallbackMapStyles = $derived(
-  REGISTERED_MAP_STYLE_CATALOG.map(
+  SELECTABLE_MAP_STYLE_CATALOG.map(
     (entry): MapStyleSelectionItem => ({
       id: entry.key,
       code: entry.key,
@@ -49,10 +53,24 @@ const resolvedMapStyles = $derived(
   availableMapStyles.length > 0 ? availableMapStyles : fallbackMapStyles,
 )
 
+const userPreferenceStyle = $derived<MapStyleSelectionItem>({
+  id: 'user-preference',
+  code: '',
+  i18n: {
+    en: {
+      name: m.theme_map_user_preference(),
+      description: m.theme_map_user_preference_description(),
+    },
+  },
+})
+const displayMapStyle = $derived(selectedMapStyle ?? userPreferenceStyle)
+
 const sortedMapStyles = $derived(
-  [...resolvedMapStyles].sort((a, b) =>
-    (a.i18n?.en?.name ?? a.code).localeCompare(b.i18n?.en?.name ?? b.code),
-  ),
+  [userPreferenceStyle, ...additionalMapStyles, ...resolvedMapStyles]
+    .filter(style => isMapStyleSelectable(style.code))
+    .sort((a, b) =>
+      (a.i18n?.en?.name ?? a.code).localeCompare(b.i18n?.en?.name ?? b.code),
+    ),
 )
 const showModeUi = $derived(isEditing && !isSubmitting)
 
@@ -127,6 +145,20 @@ $effect(() => {
         </div>
       {/if}
 
+      {#if isAdding && showModeUi}
+        <div class="flex flex-wrap justify-end gap-2">
+          {#each [userPreferenceStyle, ...additionalMapStyles] as option (option.id)}
+            <button
+              type="button"
+              class="rounded-md border border-border px-3 py-2 text-sm text-foreground hover:border-primary"
+              onclick={() => handleSelect(option)}
+            >
+              {option.i18n?.en?.name}
+            </button>
+          {/each}
+        </div>
+      {/if}
+
       <FormMapStyleSectionPrimitive.Actions
         {isAdding}
         {isEditing}
@@ -140,18 +172,14 @@ $effect(() => {
   <div class="bits-form__parent-resource-list bits-map-style-section__list">
     <MapStyleCard.Root>
       <MapStyleCard.Preview
-        image={selectedMapStyle?.previewImagePath || null}
+        image={displayMapStyle?.previewImagePath || null}
         class="shrink-0"
-        alt={selectedMapStyle?.i18n?.en?.name ||
-          selectedMapStyle?.code ||
-          `No ${title}`}
+        alt={displayMapStyle?.i18n?.en?.name || displayMapStyle?.code || `No ${title}`}
       />
       <MapStyleCard.Body
-        code={selectedMapStyle?.code}
-        name={selectedMapStyle?.i18n?.en?.name ||
-          selectedMapStyle?.code ||
-          `No ${title}`}
-        description={selectedMapStyle?.i18n?.en?.description || null}
+        code={displayMapStyle?.code}
+        name={displayMapStyle?.i18n?.en?.name || displayMapStyle?.code || `No ${title}`}
+        description={displayMapStyle?.i18n?.en?.description || null}
       />
     </MapStyleCard.Root>
   </div>

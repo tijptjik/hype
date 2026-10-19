@@ -4,6 +4,8 @@ import { toast } from 'svelte-sonner'
 import { m } from '#lib/i18n.js'
 // ICONS
 import RefreshCwIcon from 'virtual:icons/proicons/arrow-sync'
+// MAP
+import { isMapStyleKey } from '#lib/map/styles/registry.js'
 // TYPES
 import type { HeaderTitleMenuItemConfig } from '#lib/bits/patterns/layout/header/header.types.js'
 import type { AppCtx } from '#lib/context/app.svelte.js'
@@ -25,7 +27,7 @@ import type { AppCtx } from '#lib/context/app.svelte.js'
  * Resolves the currently active map-style code from the active resource context.
  *
  * @param appCtx - Shared application context containing active resource state.
- * @returns Project-backed map-style code for the active resource, or `null`.
+ * @returns Layer/project style, or `null` when the resource follows User Preference.
  */
 export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   const activeResourceType = appCtx.navigation.getActiveResourceType()
@@ -35,27 +37,38 @@ export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   const layers = appCtx.view.cache.layer
   const features = appCtx.view.cache.feature
 
-  const firstPrismProjectId = appCtx.view.scope.prisms.project[0]
-  if (firstPrismProjectId) {
-    // Project prism order is the user's active selection order, so it must take
-    // precedence over a stale active-resource reference after a project is removed.
-    return projects.get(firstPrismProjectId)?.mapStyle?.code ?? null
+  /**
+   * Resolves a layer override before legacy project inheritance.
+   * @param layer - Active layer with optional map-style metadata.
+   * @returns Explicit/inherited style, or null for User Preference.
+   */
+  const layerStyle = (layer: {
+    projectId: string
+    metadata?: unknown
+    mapStyleCode?: unknown
+  }): string | null => {
+    const metadata = layer.metadata as { mapStyleCode?: unknown } | null
+    const code =
+      layer.mapStyleCode !== undefined ? layer.mapStyleCode : metadata?.mapStyleCode
+    if (code === null) return null
+    if (typeof code === 'string' && isMapStyleKey(code)) return code
+    return projects.get(layer.projectId)?.mapStyle?.code ?? null
   }
 
-  // Selected layers take precedence over navigation left on a different resource.
+  // Selected layers override project prisms; older layers retain project inheritance.
   const firstPrismLayerId = appCtx.view.scope.prisms.layer[0]
   if (firstPrismLayerId) {
-    const firstPrismLayer = layers.get(firstPrismLayerId)
-    if (firstPrismLayer) {
-      return projects.get(firstPrismLayer.projectId)?.mapStyle?.code ?? null
-    }
+    const selectedLayer = layers.get(firstPrismLayerId)
+    if (selectedLayer) return layerStyle(selectedLayer)
   }
+
+  const firstPrismProjectId = appCtx.view.scope.prisms.project[0]
+  if (firstPrismProjectId)
+    return projects.get(firstPrismProjectId)?.mapStyle?.code ?? null
 
   if (activeResourceType === 'layer' && activeResourceId) {
     const activeLayer = layers.get(activeResourceId)
-    if (activeLayer) {
-      return projects.get(activeLayer.projectId)?.mapStyle?.code ?? null
-    }
+    if (activeLayer) return layerStyle(activeLayer)
   }
 
   if (activeResourceType === 'project' && activeResourceId) {
@@ -65,7 +78,12 @@ export const getActiveMapStyleCode = (appCtx: AppCtx): string | null => {
   if (activeResourceType === 'feature' && activeResourceId) {
     const activeFeature = features.get(activeResourceId)
     if (activeFeature) {
-      return projects.get(activeFeature.projectId)?.mapStyle?.code ?? null
+      const activeLayer = activeFeature.layerId
+        ? layers.get(activeFeature.layerId)
+        : undefined
+      return activeLayer
+        ? layerStyle(activeLayer)
+        : (projects.get(activeFeature.projectId)?.mapStyle?.code ?? null)
     }
   }
 

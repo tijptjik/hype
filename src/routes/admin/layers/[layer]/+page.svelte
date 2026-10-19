@@ -75,11 +75,20 @@ import {
   FormI18nDescriptorFields,
   FormI18nSection,
   FormParentSection,
+  FormMapStyleSection,
   GridSpacer,
   LayerPropertyCard,
   Main,
 } from '#lib/bits/index.js'
 import { SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
+// MAP STYLES
+import {
+  REGISTERED_MAP_STYLE_CATALOG,
+  SELECTABLE_MAP_STYLE_CATALOG,
+} from '#lib/map/styles/catalog.js'
+import { getMapStyleCatalogI18n } from '#lib/map/styles/i18n.js'
+import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
+import { isMapStyleKey } from '#lib/map/styles/registry.js'
 // FACTORIES
 import { configureForm } from '#lib/factories.svelte.js'
 // NAVIGATION
@@ -111,6 +120,7 @@ import type {
 
 import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
 import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
+import type { MapStyleSelectionItem } from '#lib/bits/patterns/forms/formMapStyleSection/formMapStyleSection.types.js'
 import type { Locale } from '#lib/types.js'
 
 // ═══════════════════════
@@ -138,6 +148,8 @@ import type { Locale } from '#lib/types.js'
 // - configuredLayerForm
 // - formCtx
 // - formDataUpdater
+// - layerMapStyleOptions / selectedLayerMapStyle
+// - onSelectLayerMapStyle
 // - isRequiredInPreflight
 // - isDirty
 //
@@ -492,6 +504,70 @@ const formCtx = $derived(configuredLayerForm())
 const formDataUpdater = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<LayerFormPayload>,
 )
+// Map presentation is persisted with the existing layer metadata and scalar concurrency guard.
+const layerMapStyleCode = $derived(
+  formCtx.form.fields.data.metadata.value()?.mapStyleCode,
+)
+const layerMapStyleOptions = $derived(
+  SELECTABLE_MAP_STYLE_CATALOG.map(entry => ({
+    id: entry.key,
+    code: entry.key,
+    previewImagePath: getMapStyleRenderAssetPath(entry.key),
+    i18n: getMapStyleCatalogI18n(entry.key),
+  })),
+)
+const projectDefaultMapStyle = $derived<MapStyleSelectionItem>({
+  id: 'project-default',
+  code: '__project-default__',
+  i18n: {
+    en: {
+      name: m.theme_map_project_default(),
+      description: m.theme_map_project_default_description(),
+    },
+  },
+})
+const selectedLayerMapStyle = $derived.by((): MapStyleSelectionItem | null => {
+  if (layerMapStyleCode === undefined) return projectDefaultMapStyle
+  if (layerMapStyleCode === null || layerMapStyleCode === '') return null
+  const entry = REGISTERED_MAP_STYLE_CATALOG.find(
+    style => style.key === layerMapStyleCode,
+  )
+  return entry
+    ? {
+        id: entry.key,
+        code: entry.key,
+        previewImagePath: getMapStyleRenderAssetPath(entry.key),
+        i18n: getMapStyleCatalogI18n(entry.key),
+      }
+    : null
+})
+const hiddenLayerMapStyleInputAttrs = $derived(
+  layerMapStyleCode !== undefined
+    ? [
+        {
+          type: 'hidden',
+          name: 'data.metadata.mapStyleCode',
+          value: layerMapStyleCode ?? '',
+        },
+      ]
+    : [],
+)
+
+/**
+ * Changes the layer's explicit style, user preference or legacy project inheritance.
+ * @param selection - Controlled style picker item.
+ * @returns Nothing; persistence uses the existing layer form submission.
+ */
+function onSelectLayerMapStyle(selection: MapStyleSelectionItem): void {
+  updateFormData(formDataUpdater, data => {
+    data.metadata = { ...data.metadata }
+    if (selection.code === '__project-default__') delete data.metadata.mapStyleCode
+    else if (!selection.code) data.metadata.mapStyleCode = ''
+    else if (isMapStyleKey(selection.code)) data.metadata.mapStyleCode = selection.code
+    return data
+  })
+}
+
 const isRequiredInPreflight = createSchemaRequiredInferer(LayerPreflightFormData)
 const isDirty = $derived(Boolean(formCtx.dirty))
 
@@ -1200,6 +1276,18 @@ $effect(() => {
             />
           {/snippet}
         </GridSpacer>
+        <FormMapStyleSection
+          title={m.theme_map_style_label()}
+          subtitle={m.theme_map_layer_style_description()}
+          availableMapStyles={layerMapStyleOptions}
+          selectedMapStyle={selectedLayerMapStyle}
+          additionalMapStyles={[projectDefaultMapStyle]}
+          hiddenMapStyleInputAttrs={hiddenLayerMapStyleInputAttrs}
+          isEditing={isEditing && canEditLayerFields}
+          isSubmitting={formCtx.submitting}
+          isSubmitRequested={formCtx.isSubmitRequested}
+          onSelectMapStyle={onSelectLayerMapStyle}
+        />
       </div>
     </Main.Facet>
 
