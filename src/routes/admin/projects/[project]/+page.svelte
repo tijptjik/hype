@@ -1,4 +1,5 @@
 <script lang="ts">
+import PlacePolicyPanel from '#lib/bits/patterns/forms/placeUpdatePolicy/PlacePolicyPanel.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
 import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 // PRESENTATION
@@ -2836,6 +2837,23 @@ $effect(() => {
             />
           </div>
         </div>
+      </FormSurface>
+    </Main.Facet>
+    <Main.Facet
+      isVisible={activeFacet === 'policies'}
+      transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('policies', 'previous')}
+      nextAction={buildFacetNavAction('policies', 'next')}
+      class="left-0! right-0!"
+      attrs={{ 'data-facet-id': 'policies' }}
+    >
+      <FormSurface>
+        {#if activeCommittedProjectData?.id}
+          {#key activeCommittedProjectData.id}
+            <PlacePolicyPanel projectId={activeCommittedProjectData.id} {isEditing} />
+          {/key}
+        {/if}
       </FormSurface>
     </Main.Facet>
     <Main.Facet

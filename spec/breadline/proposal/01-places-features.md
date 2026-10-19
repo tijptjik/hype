@@ -201,10 +201,13 @@ under existing Feature visibility permissions, excludes drafts and scopes privat
 baselines to their owning project. It never returns raw snapshots.
 
 Project managers can configure adoption at
-`/admin/projects/<project-code>/place-policy`. Settings use the `placeUpdatePolicy`
+`/admin/projects/<project-code>#policies` in the visible Place updates tab. The old
+`place-policy` URL redirects there. Shared FormSurface, SectionHeader, SelectField,
+TextInput and Button components follow the project editor's read/edit mode. Settings use the `placeUpdatePolicy`
 authorization field and optimistic revision checks; translators and unrelated project
 maintainers cannot read/write the settings. Saving a policy does not replay pending or
-rejected changes. The basic form remains English-only pending the UI localization pass.
+rejected changes. Labels and feedback are localized in English, Traditional Chinese and Simplified
+Chinese. Leaving edit mode discards unsaved policy changes.
 
 `src/lib/places/saanseoi.ts` validates full canonical collection records against a
 publication/snapshot checkpoint. It retains the original payload and attribution,

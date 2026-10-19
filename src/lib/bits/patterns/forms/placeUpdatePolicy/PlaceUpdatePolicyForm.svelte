@@ -1,6 +1,12 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+// I18N
+import { m } from '#lib/i18n.js'
+// BITS COMPONENTS
+import { Button } from '#lib/bits/core/index.js'
+import { SectionHeader, SelectField, TextInput } from '#lib/bits/custom/index.js'
+import MapPinIcon from 'virtual:icons/proicons/location'
 // API
 import { setPlaceUpdatePolicy } from '#lib/api/place.remote.js'
 // DOMAIN
@@ -9,9 +15,17 @@ import { ProjectPlacePolicySchema } from '#lib/places/model.js'
 import type { ProjectPlacePolicy } from '#lib/places/model.js'
 import type { ProjectPlaceSettings } from '#lib/db/services/place.js'
 
-let { projectId, initial }: { projectId: string; initial: ProjectPlaceSettings } =
-  $props()
-let policy = $state<ProjectPlacePolicy>(untrack(() => structuredClone(initial.policy)))
+let {
+  projectId,
+  initial,
+  isEditing = true,
+}: { projectId: string; initial: ProjectPlaceSettings; isEditing?: boolean } = $props()
+let policy = $state<ProjectPlacePolicy>(
+  untrack(() => ProjectPlacePolicySchema.parse(initial.policy)),
+)
+let savedPolicy = $state<ProjectPlacePolicy>(
+  untrack(() => ProjectPlacePolicySchema.parse(initial.policy)),
+)
 let revision = $state(untrack(() => initial.revision))
 let coordinateMode = $state(untrack(() => initial.policy.coordinates.mode))
 let maxMetres = $state<number | undefined>(
@@ -27,12 +41,10 @@ let failure = $state('')
 
 /**
  * Persist the complete policy with the revision loaded by this editor.
- * @param event Native form submission.
  * @returns Completion after the authorized command has saved or reported a conflict.
  */
-async function save(event: SubmitEvent): Promise<void> {
-  event.preventDefault()
-  if (saving) return
+async function save(): Promise<void> {
+  if (saving || !isEditing) return
   notice = ''
   failure = ''
   const candidate = ProjectPlacePolicySchema.safeParse({
@@ -43,7 +55,7 @@ async function save(event: SubmitEvent): Promise<void> {
         : { mode: coordinateMode },
   })
   if (!candidate.success) {
-    failure = 'Enter a valid maximum distance in metres.'
+    failure = m.place_policy_invalid()
     return
   }
   saving = true
@@ -54,81 +66,125 @@ async function save(event: SubmitEvent): Promise<void> {
       expectedRevision: revision,
     })
     policy = saved.policy
+    savedPolicy = ProjectPlacePolicySchema.parse(saved.policy)
     revision = saved.revision
-    notice = 'Saved. These settings apply to future source updates.'
+    notice = m.place_policy_saved()
   } catch (cause) {
     failure =
       cause instanceof Error && cause.message.includes('PLACE_POLICY_CHANGED')
-        ? 'These settings changed in another session. Reload before saving again.'
-        : 'Could not save these settings. Check your access and try again.'
+        ? m.place_policy_conflict()
+        : m.place_policy_failed()
   } finally {
     saving = false
   }
 }
+// Leaving edit mode discards unsaved policy edits just like the project editor.
+$effect(() => {
+  if (!isEditing) {
+    const baseline = untrack(() => ProjectPlacePolicySchema.parse(savedPolicy))
+    policy = baseline
+    coordinateMode = baseline.coordinates.mode
+    maxMetres =
+      baseline.coordinates.mode === 'withinDistance'
+        ? baseline.coordinates.maxMetres
+        : undefined
+    failure = ''
+  }
+})
+
+const reviewItems = $derived([
+  { value: 'review', label: m.place_policy_review() },
+  { value: 'automatic', label: m.place_policy_automatic() },
+])
+const coordinateItems = $derived([
+  reviewItems[0],
+  { value: 'withinDistance', label: m.place_policy_distance() },
+  reviewItems[1],
+])
 </script>
 
-<form onsubmit={save} class="flex max-w-xl flex-col gap-6">
-  <p>
-    Choose how this project adopts location and establishment changes from SaanSeoi.
-    Feature overrides remain in place.
-  </p>
-  <fieldset disabled={saving} class="flex flex-col gap-5">
-    <label class="flex flex-col gap-2">
-      <span class="font-medium">Coordinate corrections</span>
-      <select
-        bind:value={coordinateMode}
-        class="rounded border border-current/25 bg-transparent p-2"
-      >
-        <option value="review">Review all changes</option>
-        <option value="withinDistance">Automatically accept within a distance</option>
-        <option value="automatic">Automatically accept all coordinate changes</option>
-      </select>
-    </label>
-    {#if coordinateMode === 'withinDistance'}
-      <label class="flex flex-col gap-2">
-        <span class="font-medium">Maximum displacement (metres)</span>
-        <input
-          type="number"
-          min="0"
-          step="any"
-          required
-          bind:value={maxMetres}
-          class="rounded border border-current/25 bg-transparent p-2"
-        >
-      </label>
+<section>
+  <SectionHeader
+    title={m.place_policy_title()}
+    description={m.place_policy_description()}
+    icon={MapPinIcon}
+  />
+  <div class="flex flex-col gap-6 p-6">
+    <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_inactive()}</p>
+    <div class="grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+      <SelectField
+        triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
+        id="place-coordinates"
+        label={m.place_policy_coordinates()}
+        placeholder={m.place_policy_coordinates()}
+        value={coordinateMode}
+        items={coordinateItems}
+        {isEditing}
+        disabled={saving}
+        onValueChange={value => (coordinateMode = value as typeof coordinateMode)}
+      />
+      {#if coordinateMode === 'withinDistance'}
+        <TextInput
+          id="place-distance"
+          name=""
+          label={m.place_policy_metres()}
+          value={maxMetres?.toString() ?? ''}
+          inputType="number"
+          inputAttrs={{ min: 0, step: 'any' }}
+          {isEditing}
+          disabled={saving}
+          onValueChange={value =>
+            (maxMetres = value.trim() ? Number(value) : undefined)}
+        />
+      {/if}
+      <SelectField
+        triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
+        id="place-address"
+        label={m.place_policy_address()}
+        placeholder={m.place_policy_address()}
+        bind:value={policy.address}
+        items={reviewItems}
+        {isEditing}
+        disabled={saving}
+      />
+      <SelectField
+        triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
+        id="place-unit"
+        label={m.place_policy_unit()}
+        placeholder={m.place_policy_unit()}
+        bind:value={policy.unit}
+        items={reviewItems}
+        {isEditing}
+        disabled={saving}
+      />
+      <SelectField
+        triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
+        id="place-establishment"
+        label={m.place_policy_establishment()}
+        placeholder={m.place_policy_establishment()}
+        bind:value={policy.establishment}
+        items={reviewItems}
+        {isEditing}
+        disabled={saving}
+      />
+    </div>
+    <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_note()}</p>
+    {#if isEditing}
+      <Button
+        type="button"
+        color="primary"
+        style="soft"
+        class="self-start"
+        disabled={saving}
+        onClick={save}
+        text={saving ? m.place_policy_saving() : m.place_policy_save()}
+      />
     {/if}
-    {#each [
-      { key: 'address', label: 'Address identity changes' },
-      { key: 'unit', label: 'Shop or unit changes' },
-      { key: 'establishment', label: 'Establishment identity changes' },
-    ] as field}
-      <label class="flex flex-col gap-2">
-        <span class="font-medium">{field.label}</span>
-        <select
-          bind:value={policy[field.key as 'address' | 'unit' | 'establishment']}
-          class="rounded border border-current/25 bg-transparent p-2"
-        >
-          <option value="review">Require review</option>
-          <option value="automatic">Automatically accept</option>
-        </select>
-      </label>
-    {/each}
-    <p class="text-sm">
-      Any required location review holds the geometry, address and unit together.
-      Establishment review also holds the other Place facts. Saving does not reconsider
-      previously pending or rejected changes.
-    </p>
-    <button
-      type="submit"
-      class="self-start rounded border border-current/25 px-4 py-2 font-medium disabled:opacity-50"
-    >
-      {saving ? 'Saving…' : 'Save settings'}
-    </button>
-  </fieldset>
-  {#if notice}
-    <p role="status">{notice}</p>
-  {/if}
-  {#if failure}
-    <p role="alert">{failure}</p>
-  {/if}
-</form>
+    {#if notice}
+      <p role="status" class="text-sm">{notice}</p>
+    {/if}
+    {#if failure}
+      <p role="alert" class="text-sm text-destructive">{failure}</p>
+    {/if}
+  </div>
+</section>
