@@ -121,7 +121,9 @@ let {
           inputAttrs={attrs as Record<string, unknown>}
         />
         {#if config.key === 'nameShort' && besideShortName}
-          <div class="flex h-12 shrink-0 items-center whitespace-nowrap">
+          <div
+            class="flex shrink-0 items-end whitespace-nowrap [&_.bits-checkbox-field]:gap-1 [&_.bits-checkbox-row]:h-[42px] [&_label]:text-[13px] [&_label]:font-semibold [&_label]:leading-5"
+          >
             {@render besideShortName()}
           </div>
         {/if}

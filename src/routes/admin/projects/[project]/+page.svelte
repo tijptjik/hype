@@ -1,4 +1,6 @@
 <script lang="ts">
+import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
+import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 // PRESENTATION
 import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 // SVELTE
@@ -1757,6 +1759,23 @@ const selectedParentOrganisation = $derived.by(() => {
     return hierarchy.organisation
   return null
 })
+const selectedMarkerStyle = $derived.by(() => {
+  const code = formCtx.form.fields.data.markerStyleCode.value()
+  return isMarkerStyleCode(code) ? code : null
+})
+/**
+ * Updates project marker presentation without modifying card or basemap choices.
+ * @param code Registered marker renderer, or null for the application default.
+ * @returns Nothing; the project form persists the change.
+ */
+function onSelectMarkerStyle(code: MarkerStyleCode | null): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.markerStyleCode = code
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
 const selectedCardStyle = $derived(
   formCtx.form.fields.data.cardStyleCode.value() ?? DEFAULT_CARD_STYLE,
 )
@@ -2677,7 +2696,7 @@ $effect(() => {
                   id={`project-use-all-in-org-context-${locale}`}
                   checked={useAllInOrgContext}
                   disabled={!isEditing}
-                  rightText={m.admin__project_same_as_organisation()}
+                  topText={m.admin__project_same_as_organisation()}
                   color="accent"
                   size="sm"
                   onCheckedChange={setUseAllInOrgContext}
@@ -2687,41 +2706,43 @@ $effect(() => {
           {/snippet}
         </FormI18nSection>
 
-        <div class={formSectionDividerStyles}>
-          <FormUserRolesSection
-            icon={MembersIcon}
-            layout="list"
-            currentUserId={authActor.userId}
-            title={m.admin__forms_project_members_title()}
-            subtitle={m.admin__forms_project_members_subtitle()}
-            transitionEntityKey={activeProjectData?.id ?? projectRef}
-            removeSelfResourceLabel={m.resource__project_singular()}
-            issues={userRoleSectionIssues}
-            userRoles={projectUserRoles}
-            {hiddenUserIdInputAttrs}
-            {roleFieldNameByUserId}
-            {isEditing}
-            isSubmitting={formCtx.submitting}
-            isSubmitRequested={formCtx.isSubmitRequested}
-            startInAddingMode={isNewProjectRef}
-            availableRoles={[
-              { value: ProjectRoleType.owner, label: m.profile__role_type__owner() },
-              { value: ProjectRoleType.maintainer, label: 'Maintainer' },
-              { value: ProjectRoleType.member, label: m.profile__role_type__member() },
-              { value: ProjectRoleType.translator, label: 'Translator' },
-              { value: ProjectRoleType.user, label: 'User' },
-            ]}
-            {onAddUser}
-            {onRemoveUser}
-            {onRoleChange}
-          />
-        </div>
-
         <div
-          class={`${formSectionDividerStyles} grid grid-cols-1 ${canSetParentOrganisation ? 'xl:grid-cols-3' : 'md:grid-cols-2'}`}
+          class={`${formSectionDividerStyles} grid grid-cols-1 ${canSetParentOrganisation ? 'xl:grid-cols-3' : ''}`}
         >
+          <div class={canSetParentOrganisation ? 'min-w-0 xl:col-span-2' : 'min-w-0'}>
+            <FormUserRolesSection
+              icon={MembersIcon}
+              layout="list"
+              currentUserId={authActor.userId}
+              title={m.admin__forms_project_members_title()}
+              subtitle={m.admin__forms_project_members_subtitle()}
+              transitionEntityKey={activeProjectData?.id ?? projectRef}
+              removeSelfResourceLabel={m.resource__project_singular()}
+              issues={userRoleSectionIssues}
+              userRoles={projectUserRoles}
+              {hiddenUserIdInputAttrs}
+              {roleFieldNameByUserId}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewProjectRef}
+              availableRoles={[
+                { value: ProjectRoleType.owner, label: m.profile__role_type__owner() },
+                { value: ProjectRoleType.maintainer, label: 'Maintainer' },
+                {
+                  value: ProjectRoleType.member,
+                  label: m.profile__role_type__member(),
+                },
+                { value: ProjectRoleType.translator, label: 'Translator' },
+                { value: ProjectRoleType.user, label: 'User' },
+              ]}
+              {onAddUser}
+              {onRemoveUser}
+              {onRoleChange}
+            />
+          </div>
           {#if canSetParentOrganisation}
-            <div class="min-w-0">
+            <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
               <FormParentSection
                 class={formSelectionSectionStyles}
                 title="Parent Organisation"
@@ -2738,15 +2759,13 @@ $effect(() => {
               />
             </div>
           {/if}
+        </div>
 
-          <div
-            class={canSetParentOrganisation
-              ? 'min-w-0 border-t border-border xl:border-l xl:border-t-0'
-              : 'min-w-0'}
-          >
+        <div class={`${formSectionDividerStyles} grid grid-cols-1 xl:grid-cols-3`}>
+          <div class="min-w-0">
             <FormMapStyleSection
               class={formSelectionSectionStyles}
-              title="Map style"
+              title="Map Style"
               subtitle="Choose the basemap assigned to this project."
               {availableMapStyles}
               {selectedMapStyle}
@@ -2758,9 +2777,20 @@ $effect(() => {
               {onSelectMapStyle}
             />
           </div>
-          <div
-            class={`min-w-0 border-t border-border ${canSetParentOrganisation ? 'xl:border-l xl:border-t-0' : 'md:border-l md:border-t-0'}`}
-          >
+          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+            <FormMarkerStyleSection
+              value={selectedMarkerStyle}
+              inputAttrs={formCtx.form.fields.data.markerStyleCode.as(
+                'hidden',
+                selectedMarkerStyle ?? '',
+              )}
+              {isEditing}
+              disabled={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              onSelect={onSelectMarkerStyle}
+            />
+          </div>
+          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
             <FormCardStyleSection
               value={selectedCardStyle}
               inputAttrs={formCtx.form.fields.data.cardStyleCode.as(

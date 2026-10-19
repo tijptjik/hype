@@ -1,4 +1,6 @@
 <script lang="ts">
+import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
+import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 import type { RemoteForm, RemoteFormInput, RemoteFormFields } from '$app/server'
 
 // SVELTE
@@ -517,6 +519,7 @@ const layerPresentationFields = $derived(
   formCtx.form.fields.data.metadata as unknown as RemoteFormFields<{
     mapStyleCode?: string
     cardStyleCode?: string
+    markerStyleCode?: string
   }>,
 )
 // Map presentation is persisted with the existing layer metadata and scalar concurrency guard.
@@ -585,6 +588,23 @@ function onSelectLayerMapStyle(selection: MapStyleSelectionItem): void {
   })
 }
 
+const selectedLayerMarkerStyle = $derived.by(() => {
+  const code = formCtx.form.fields.value().data?.metadata?.markerStyleCode
+  return isMarkerStyleCode(code) ? code : null
+})
+/**
+ * Updates only the marker override in the layer metadata.
+ * @param code Registered renderer, or null for project inheritance.
+ * @returns Nothing; the existing layer form persists metadata.
+ */
+function onSelectLayerMarkerStyle(code: MarkerStyleCode | null): void {
+  updateFormData(formDataUpdater, data => {
+    data.metadata = { ...data.metadata, markerStyleCode: code ?? '' }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
 const selectedLayerCardStyle = $derived.by(() => {
   const code = formCtx.form.fields.value().data?.metadata?.cardStyleCode
   return isCardStyleCode(code) ? code : null
@@ -645,6 +665,13 @@ const inheritedCardStyle = $derived(
     : (adminCtx.view.cache.project.get(selectedParentProjectId)?.cardStyleCode ??
         DEFAULT_CARD_STYLE),
 )
+
+const inheritedMarkerStyle = $derived.by((): MarkerStyleCode | null => {
+  const code =
+    selectedParentProject?.markerStyleCode ??
+    adminCtx.view.cache.project.get(selectedParentProjectId)?.markerStyleCode
+  return isMarkerStyleCode(code) ? code : null
+})
 
 const hasSelectedParentProject = $derived(selectedParentProjectId.length > 0)
 
@@ -1356,6 +1383,21 @@ $effect(() => {
               isSubmitting={formCtx.submitting}
               isSubmitRequested={formCtx.isSubmitRequested}
               onSelect={onSelectLayerCardStyle}
+            />
+          </div>
+          <div class="min-w-0 border-t border-border">
+            <FormMarkerStyleSection
+              value={selectedLayerMarkerStyle}
+              allowInherit
+              inheritedValue={inheritedMarkerStyle}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              inputAttrs={layerPresentationFields.markerStyleCode.as(
+                'hidden',
+                selectedLayerMarkerStyle ?? '',
+              )}
+              isEditing={isEditing && canEditLayerFields}
+              disabled={formCtx.submitting}
+              onSelect={onSelectLayerMarkerStyle}
             />
           </div>
         </div>
