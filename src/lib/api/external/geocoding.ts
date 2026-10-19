@@ -1,3 +1,4 @@
+import type { Polygon, MultiPolygon } from 'geojson'
 // THIRD PARTY
 import { z } from 'zod'
 // SERVICES
@@ -42,7 +43,10 @@ const responseSchema = z.object({
       attributes: z.object({
         status: z.enum(['resolved', 'ambiguous', 'incomplete', 'not_found']),
         match: z
-          .object({ distanceMetres: z.number().optional() })
+          .object({
+            distanceMetres: z.number().optional(),
+            type: z.string().optional(),
+          })
           .passthrough()
           .optional(),
       }),
@@ -78,6 +82,7 @@ const addressSchema = z.object({
 type AddressLocale = z.infer<typeof addressLocaleSchema>
 export type GeocodeInput = { lng: number; lat: number } | { address: string }
 export type GeocodeOptions = {
+  footprint?: Polygon | MultiPolygon
   baseUrl?: string
   fetcher?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 }
@@ -204,6 +209,16 @@ export function parseGeocodeResult(
   return {
     addressMeta: {
       saanseoiAddressId: link.id,
+      ...('lng' in input
+        ? {
+            addressMatch:
+              candidate.attributes.match?.type === 'within_footprint'
+                ? ('within_footprint' as const)
+                : candidate.attributes.match?.type === 'exact_location'
+                  ? ('exact_location' as const)
+                  : ('nearest' as const),
+          }
+        : {}),
       longitude: point[0],
       latitude: point[1],
       distanceFromPoint: candidate.attributes.match?.distanceMetres,
@@ -248,6 +263,9 @@ export async function geocodeAddress(
     ...('lng' in validated
       ? { lng: String(validated.lng), lat: String(validated.lat) }
       : { address: validated.address }),
+    ...(options.footprint && 'lng' in validated
+      ? { footprint: JSON.stringify(options.footprint) }
+      : {}),
     profile: 'map',
     locales: 'en,zh-hant,zh-hans',
     limit: '1',
@@ -260,5 +278,17 @@ export async function geocodeAddress(
     signal: AbortSignal.timeout(15000),
   })
   if (!response.ok) throw new Error(`SaanSeoi geocoding failed (${response.status})`)
-  return parseGeocodeResult(await response.json(), validated)
+  const body: unknown = await response.json()
+  if (options.footprint) {
+    const parsed = responseSchema.parse(body)
+    if (
+      parsed.data.some(
+        candidate =>
+          candidate.attributes.match?.type !== 'within_footprint' ||
+          candidate.attributes.status === 'ambiguous',
+      )
+    )
+      return null
+  }
+  return parseGeocodeResult(body, validated)
 }
