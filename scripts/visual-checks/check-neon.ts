@@ -1,0 +1,10 @@
+import { chromium } from 'playwright'
+const browser = await chromium.launch({executablePath:'/home/io/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome',args:['--disable-web-security']})
+const page = await browser.newPage({viewport:{width:400,height:350}})
+await page.route('**/__neon_check', route=>route.fulfill({contentType:'text/html',body:`<html data-theme="hype-black"><body style="margin:0;background:black"><div id="app" class="bits-theme" style="width:379px;height:250px;position:relative;overflow:hidden"></div><script type="module">import {mount} from "/.svelte-kit/vite/deps/svelte.js?v=3570d780";import Background from "/src/lib/bits/patterns/panels/sections/components/ProfileSectionBackground.svelte";import "/src/lib/styles/app.css";mount(Background,{target:document.getElementById("app")});</script></body></html>`}))
+page.on('pageerror', e=>console.log('PAGE ERROR',e.message))
+await page.goto('http://127.0.0.1:4173/__neon_check')
+await page.waitForSelector('svg path')
+await page.screenshot({path:'output/playwright/settings-neon-background.png'})
+console.log(await page.locator('svg').first().boundingBox())
+await browser.close()
