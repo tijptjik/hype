@@ -64,3 +64,24 @@ these protections: discard it and regenerate plans after importing reviewed acce
 Applied and verified against the local application database and repaired production
 snapshot rehearsal: 64 reviewed records, no queued jobs for those records, intact
 foreign keys, and geometry-change invalidation. Production has not been changed.
+
+## Evidence for unmapped exit labels (19 October 2026)
+
+Evidence only; these findings have not changed the accepted import decisions or
+added entrance coordinates.
+
+- **#727, Hung Hom C2:** MTR's [January 2026 street map](https://www.mtr.com.hk/archive/en/services/maps/huh.pdf)
+  explicitly lists C2 for Fortune Metropolis, alongside B2 and D6. C2 is on the
+  southern side of the station facing Metropolis. The [station layout](https://www.mtr.com.hk/archive/en/services/layouts/huh.pdf)
+  places C2 at the U2/3 Exit C concourse. The label is confirmed; our entrance catalog
+  still lacks the corresponding mapped point.
+- **#558, Hong Kong A2:** MTR's [August 2026 street map](https://www.mtr.com.hk/archive/en/services/maps/hok.pdf)
+  shows A, with no A1/A2 subdivision, and lists A for Central Piers. The
+  [March 2025 station layout](https://www.mtr.com.hk/archive/en/services/layouts/hok.pdf)
+  also shows A at ground level near B1/B2. A is a plausible intended reference,
+  but no evidence established A2 as a historical or equivalent label.
+
+The temporary review map and scratch browser/test artifacts were retired after
+processing all 64 decisions. Original exports, retained route evidence and
+pre-application backups remain private. The committed decision policy and source
+audit script are the retained import/review deliverables.

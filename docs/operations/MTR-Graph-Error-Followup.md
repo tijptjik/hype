@@ -312,3 +312,7 @@ also resolves to Tai Wai exit D (271 walking metres in the partial backfill). Th
 corroborates station/exit access but does not establish the exact shop entrance; retain
 the approximate-coordinate provenance and location-review flag until that is checked.
 The private row-level audit is `.local/breadline/plans/2026-10-19-mtr-source-audit.json`.
+
+These are historical pre-review counts. The completed schedule-filtered review and
+64 accepted import decisions are recorded in
+[the donor import policy](../../spec/breadline/proposal/donor-import-policy.md).
