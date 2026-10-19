@@ -77,12 +77,10 @@ const sortedMapStyles = $derived([
       canonicalMapStyleCode(a.code).localeCompare(canonicalMapStyleCode(b.code)),
     ),
 ])
-// Ten narrow windows sample the public dark palettes, repeating if fewer are available.
-const darkPreviewStyles = SELECTABLE_MAP_STYLE_CATALOG.filter(
-  entry => entry.basemapVariant === 'dark' && !isProjectOnlyMapStyle(entry.key),
-)
+// Ten narrow windows repeat the dark linework palettes, omitting filled basemaps.
+const darkPreviewStyles = ['hype-dark', 'hyperpop', 'ghostery', 'neorange'] as const
 const userChoiceSlices = Array.from({ length: 10 }, (_, index) =>
-  getMapStyleRenderAssetPath(darkPreviewStyles[index % darkPreviewStyles.length].key),
+  getMapStyleRenderAssetPath(darkPreviewStyles[index % darkPreviewStyles.length]),
 )
 const showModeUi = $derived(isEditing && !isSubmitting)
 
