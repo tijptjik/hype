@@ -2,6 +2,7 @@
 import { toast } from 'svelte-sonner'
 // I18N
 import { getI18n } from '#lib/i18n.js'
+import { getProjectDisplayName } from '#lib/projectNames.js'
 // API
 import { getUserLayers, setUserLayerDefaults } from '#lib/api/user.remote.js'
 // TYPES
@@ -27,17 +28,67 @@ export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
   )
   const canSaveUserLayers = $derived(Boolean(appCtx.hub?.id || appCtx.hub?.code))
   const userPreferences = $derived(appCtx.getUserPreferences())
+
+  /**
+   * Resolves standalone short names from compact ancestors without organisation IDs.
+   * @param project - Project owning a default map layer.
+   * @returns Localised short name, falling back to the full name if missing.
+   */
+  const getProjectName = (
+    project: Parameters<ResourceViewCtx['getContextualProjectName']>[0],
+  ): string | null => {
+    return getProjectDisplayName(project, userPreferences)
+  }
+
   const orderedLayers = $derived.by(() =>
     [...appCtx.scope.selectionLayers].sort((left, right) => {
-      const rankDiff =
-        (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)
-      if (rankDiff !== 0) return rankDiff
+      const leftProject = appCtx.getHierarchySync(left).project
+      const rightProject = appCtx.getHierarchySync(right).project
+      const projectNameDiff = (getProjectName(leftProject) ?? '')
+        .trim()
+        .localeCompare((getProjectName(rightProject) ?? '').trim())
+      if (projectNameDiff !== 0) return projectNameDiff
 
-      return getI18n(left, 'name', userPreferences).localeCompare(
-        getI18n(right, 'name', userPreferences),
+      // Keep distinct projects with the same displayed name in separate groups.
+      const projectIdDiff = left.projectId.localeCompare(right.projectId)
+      if (projectIdDiff !== 0) return projectIdDiff
+
+      return (
+        getI18n(left, 'name', userPreferences).localeCompare(
+          getI18n(right, 'name', userPreferences),
+        ) || left.id.localeCompare(right.id)
       )
     }),
   )
+
+  const ambiguousProjectIds = $derived.by(() => {
+    const projectIdsByName = new Map<string, Set<string>>()
+
+    // Count distinct projects, so multiple layers in one project are not a name clash.
+    for (const layer of orderedLayers) {
+      const { project } = appCtx.getHierarchySync(layer)
+      const name = getProjectName(project)?.trim().toLocaleLowerCase()
+      if (!project || !name) continue
+      const projectIds = projectIdsByName.get(name) ?? new Set<string>()
+      projectIds.add(project.id)
+      projectIdsByName.set(name, projectIds)
+    }
+
+    return new Set(
+      [...projectIdsByName.values()]
+        .filter(ids => ids.size > 1)
+        .flatMap(ids => [...ids]),
+    )
+  })
+
+  /**
+   * Determines whether the project label needs an organisation prefix.
+   * @param project - Project owning a default map layer.
+   * @returns Whether another project in this list has the same displayed name.
+   */
+  const shouldShowOrganisation = (
+    project: Parameters<ResourceViewCtx['getContextualProjectName']>[0],
+  ): boolean => Boolean(project && ambiguousProjectIds.has(project.id))
 
   $effect(() => {
     const nextPersistedUserLayerIds = persistedUserLayerIds
@@ -130,8 +181,20 @@ export function useDefaultMapSettingsModel(appCtx: ResourceViewCtx) {
     toggleUserLayer,
     getHierarchy: (layer: Parameters<ResourceViewCtx['getHierarchySync']>[0]) =>
       appCtx.getHierarchySync(layer),
-    getProjectName: (
+    getProjectName,
+    /**
+     * Resolves the label actually rendered beside an optional organisation prefix.
+     * @param project - Project owning a default map layer.
+     * @param hasOrganisation - Whether an organisation prefix will be rendered.
+     * @returns The standalone short name or the localised replacement.
+     */
+    getProjectLabel: (
       project: Parameters<ResourceViewCtx['getContextualProjectName']>[0],
-    ) => appCtx.getContextualProjectName(project, false),
+      hasOrganisation: boolean,
+    ): string | null =>
+      getProjectDisplayName(project, userPreferences, {
+        inOrganisationContext: hasOrganisation,
+      }),
+    shouldShowOrganisation,
   }
 }

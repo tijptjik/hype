@@ -66,8 +66,11 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
   <div class="flex min-w-0 flex-col gap-4 px-6 pt-2 pb-6">
     {#each orderedLayers as layer (layer.id)}
       {@const { organisation, project } = model.getHierarchy(layer)}
-      {@const organisationName = getI18n(organisation, 'nameShort', userPreferences)}
-      {@const projectName = model.getProjectName(project)}
+      {@const organisationName = model.shouldShowOrganisation(project)
+        ? getI18n(organisation, 'nameShort', userPreferences, '') ||
+          getI18n(organisation, 'name', userPreferences, '')
+        : ''}
+      {@const projectName = model.getProjectLabel(project, Boolean(organisationName))}
       {@const description = getI18n(layer, 'description', userPreferences)}
       {@const hasLongDescription =
         Boolean(description && description !== '-') &&
@@ -75,7 +78,7 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
       {@const isExpanded = isDescriptionExpanded(layer.id)}
       <div class="flex w-full flex-row items-start justify-between gap-3 py-2">
         <div class="flex min-w-0 grow flex-col gap-0.5">
-          {#if organisation && project}
+          {#if project}
             <div class="flex flex-row items-center gap-3">
               <div class="flex min-w-0 flex-col items-start gap-0">
                 <p
@@ -83,9 +86,9 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
                 >
                   {#if organisationName}
                     <span class="text-primary">{organisationName}</span>
+                    <span class="px-0">›</span>
                   {/if}
                   {#if projectName}
-                    <span class="px-0">›</span>
                     <span class="text-accent">{projectName}</span>
                   {/if}
                 </p>
