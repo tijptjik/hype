@@ -134,6 +134,7 @@ export type UserPreferences = {
   preferFallbackInCurrentLocale: boolean
   isTranslateButtonVisible: boolean
   theme?: ThemePreferences | null
+  profileContributions?: { observePrisms?: boolean; showAll?: boolean } | null
   admin?: AdminPreferences
 }
 

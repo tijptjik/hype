@@ -67,6 +67,12 @@ const UserPreferencesSchema = z
     preferFallbackInCurrentLocale: z.boolean().nullish(),
     isTranslateButtonVisible: z.boolean().nullish(),
     theme: ThemePreferencesSchema.nullish().catch(undefined),
+    profileContributions: z
+      .object({
+        observePrisms: z.boolean().optional(),
+        showAll: z.boolean().optional(),
+      })
+      .nullish(),
     admin: z
       .object({
         isAdminMapCollapsed: z.boolean().optional(),

@@ -1299,5 +1299,6 @@
   "panel__reorder_layer": "重新排列{name}。拖动或使用上下方向键。最上层决定地图样式。",
   "profile__status_submitted": "已提交",
   "profile__status_rejected": "已拒绝",
-  "profile__status_unpublished": "未发布"
+  "profile__status_unpublished": "未发布",
+  "profile__maps_selected": "已选"
 }

@@ -1957,6 +1957,7 @@ export class ResourceViewCtx {
         (preferences?.fallbackLocales as Locale[] | null) ??
         (['en', 'zh-hant'] as Locale[]),
       theme: preferences?.theme,
+      profileContributions: preferences?.profileContributions,
       allowMachineTranslation: preferences?.allowMachineTranslation ?? false,
       preferFallbackInCurrentLocale:
         preferences?.preferFallbackInCurrentLocale ?? false,

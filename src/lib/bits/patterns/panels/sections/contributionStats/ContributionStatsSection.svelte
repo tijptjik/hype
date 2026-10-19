@@ -1,12 +1,14 @@
 <script lang="ts">
 // SVELTE
+import { slide } from 'svelte/transition'
 // I18N
 import { m } from '#lib/i18n.js'
 // ADAPTERS
 import type { useProfilePanelModel } from '#lib/adapters/panels/useProfilePanelModel.svelte.js'
 
 // COMPONENTS
-import { Icon } from '#lib/bits/index.js'
+import { Icon, Switch } from '#lib/bits/index.js'
+import Settings from 'virtual:icons/proicons/settings'
 import Camera from 'virtual:icons/proicons/camera'
 import MapPin from 'virtual:icons/proicons/location'
 import CubeTransparent from 'virtual:icons/lucide/ghost'
@@ -20,6 +22,9 @@ type Props = {
 }
 
 let { userData, model }: Props = $props()
+
+let settingsOpen = $state(false)
+const settingsId = $props.id()
 
 // DERIVED STATE - Get data from cache
 let isChecked = $derived(!model.observePrisms)
@@ -40,20 +45,6 @@ let stats = $derived(
 )
 let isLoading = $derived(!userData)
 let error = $derived<string | null>(null)
-
-// GLOW COLOR HELPER
-const getGlowColor = (statKey: string): string => {
-  switch (statKey) {
-    case 'features':
-      return 'rgba(240, 77, 127, 0.4)' // primary: '#F04D7F'
-    case 'images':
-      return 'rgba(120, 89, 241, 0.4)' // accent: '#7859F1'
-    case 'missingReports':
-      return 'rgba(223, 69, 69, 0.4)' // warning: 'rgb(223, 69, 69)'
-    default:
-      return 'rgba(42, 50, 60, 0.4)' // neutral: '#2A323C'
-  }
-}
 
 // SMOOTH SCROLL HANDLER
 const scrollToSection = (targetId: string) => {
@@ -102,26 +93,20 @@ const statsConfig = [
   {
     key: 'features' as const,
     icon: MapPin,
-    bgColor: 'bg-primary/10',
-    textColor: 'text-primary',
     label: m.omni__title_features(),
     targetId: 'contributed-features',
   },
   {
     key: 'images' as const,
     icon: Camera,
-    bgColor: 'bg-accent/10',
-    textColor: 'text-accent',
     label: m.filters__image(),
     targetId: 'contributed-images',
   },
   {
     key: 'missingReports' as const,
     icon: CubeTransparent,
-    bgColor: 'bg-warning/10',
-    textColor: 'text-warning',
     label: m.weak_equal_puffin_dig(),
-    targetId: 'contributed-reports',
+    targetId: null,
   },
 ]
 </script>
@@ -130,24 +115,59 @@ const statsConfig = [
 <!-- 2.1 CONTRIBUTIONS :: STATS -->
 <!-- ═══════════════════════ -->
 
-<div class="border-b border-base-300 p-4">
-  <div class="mb-3 flex items-center justify-between">
-    <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">
+<div class="border-b border-border px-6 py-5">
+  <div class="relative mb-3 pr-10">
+    <h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
       {m.dry_still_myna_yell()}
     </h3>
-    {#if !model.isSingleOrganisation}
-      <div class="flex items-center gap-2">
-        <span class="text-xs text-base-content/70">{m.aqua_cozy_nils_scoop()}</span>
-        <input
-          type="checkbox"
-          class="toggle toggle-primary toggle-sm"
-          checked={!model.isSingleOrganisation && isChecked}
-          onchange={model.onToggleObservePrisms}
-        >
-        <span class="text-xs text-base-content/70">{m.filters__all()}</span>
-      </div>
-    {/if}
+    <button
+      type="button"
+      class="absolute right-0 -top-2 flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+      aria-label={m.menu_settings()}
+      aria-expanded={settingsOpen}
+      aria-controls={settingsId}
+      onclick={() => (settingsOpen = !settingsOpen)}
+    >
+      <Icon src={Settings} class="size-4" />
+    </button>
   </div>
+
+  {#if settingsOpen}
+    <div id={settingsId} transition:slide={{ duration: 220 }}>
+      <div
+        class="mb-4 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-4 rounded-md border border-border bg-surface p-3"
+      >
+        {#if !model.isSingleOrganisation}
+          <span class="text-xs font-medium text-muted-foreground"
+            >{m.maps__title()}:</span
+          >
+          <div class="justify-self-end">
+            <Switch
+              size="sm"
+              leftText={m.profile__maps_selected()}
+              rightText={m.filters__all()}
+              checked={isChecked}
+              disabled={model.contributionSettingsDisabled}
+              onCheckedChange={model.onToggleObservePrisms}
+            />
+          </div>
+        {/if}
+        <span class="text-xs font-medium text-muted-foreground"
+          >{m.filters__status()}:</span
+        >
+        <div class="justify-self-end">
+          <Switch
+            size="sm"
+            leftText={m.published()}
+            rightText={m.filters__all()}
+            checked={model.showAllContributions}
+            disabled={model.contributionSettingsDisabled}
+            onCheckedChange={model.onShowAllContributions}
+          />
+        </div>
+      </div>
+    </div>
+  {/if}
 
   {#if isLoading}
     <div class="flex items-center justify-center py-4">
@@ -162,42 +182,25 @@ const statsConfig = [
       <span class="text-sm">{error}</span>
     </div>
   {:else if stats}
-    <div class="flex flex-row items-stretch justify-between gap-3">
+    <div class="grid grid-cols-3 gap-2">
       {#each statsConfig as stat}
-        <div class="flex flex-1 flex-col items-center justify-center gap-3">
-          <button
-            type="button"
-            class="relative flex h-24 w-full items-center justify-center overflow-hidden rounded-2xl {stat.bgColor} shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl active:scale-95"
-            onclick={() => scrollToSection(stat.targetId)}
-          >
-            <!-- Background Icon -->
-            <div class="absolute inset-0 flex items-center justify-center opacity-30">
-              <Icon
-                src={stat.icon}
-                class="h-40 w-40 -translate-x-8 rotate-12 {stat.textColor}"
-              />
-            </div>
-
-            <!-- Foreground Content -->
-            <div class="relative z-10 flex flex-col items-center justify-center">
-              <span
-                class="text-6xl {stat.textColor} font-extrabold leading-none"
-                style="font-family: 'Tilt Neon', sans-serif; text-shadow:
-                    0 0 8px {getGlowColor(stat.key)},
-                    0 0 16px {getGlowColor(stat.key)},
-                    0 0 24px {getGlowColor(stat.key)},
-                    0 0 32px {getGlowColor(stat.key)};"
-              >
-                {stats[stat.key]}
-              </span>
-            </div>
-          </button>
+        <button
+          type="button"
+          class="flex min-w-0 flex-col gap-2 rounded-md border border-border bg-surface px-3 py-3 text-left transition-colors enabled:hover:border-primary/50 enabled:hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          disabled={!stat.targetId || stats[stat.key] === 0}
+          onclick={() => stat.targetId && scrollToSection(stat.targetId)}
+        >
+          <!-- Small icons identify each contribution type without dominating the count. -->
+          <Icon src={stat.icon} class="h-4 w-4 text-primary" />
+          <!-- Counts and labels use the same typography as the other panels. -->
           <span
-            class="text-center text-xs font-semibold uppercase tracking-wider text-base-content/70"
+            class="text-2xl font-semibold leading-none tabular-nums text-base-content"
+            >{stats[stat.key]}</span
           >
-            {stat.label}
-          </span>
-        </div>
+          <span class="max-w-full break-words text-xs text-muted-foreground"
+            >{stat.label}</span
+          >
+        </button>
       {/each}
     </div>
   {/if}
