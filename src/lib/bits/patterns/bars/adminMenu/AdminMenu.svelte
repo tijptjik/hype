@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
+import { goto } from '$app/navigation'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // LIB
@@ -30,7 +31,7 @@ const PAGE_SIZE = 5
 const WHEEL_INTENT_THRESHOLD = 12
 const PAGE_SCROLL_SETTLE_MS = 220
 
-let { isNarrow }: AdminMenuProps = $props()
+let { isNarrow, firstLayerId }: AdminMenuProps = $props()
 let viewportElement = $state<HTMLDivElement | null>(null)
 let pageScrollLock = $state(false)
 let pageScrollLockTimeout: ReturnType<typeof setTimeout> | null = null
@@ -39,6 +40,30 @@ let initialScrollTimeout: ReturnType<typeof setTimeout> | null = null
 
 const notificationCount = $derived(adminCtx.filteredTasks.length)
 const featureCount = $derived(adminCtx.filteredFeatures.length)
+
+/**
+ * Open Features and default an empty layer selection to the first visible sidebar row.
+ * @param event Features link click, handled once through SvelteKit navigation.
+ * @returns Completion after navigation and any dependent layer refresh.
+ * @remarks Select only after navigation succeeds so canceled unsaved-edit navigation
+ * cannot change the current scope. Existing selections and empty lists remain intact.
+ */
+async function openFeatures(event: MouseEvent): Promise<void> {
+  event.preventDefault()
+  try {
+    await goto(`${ADMIN_PATH}/features`, { reset: false, replace: false })
+  } catch {
+    // Navigation can be canceled by the current editor's unsaved-change guard.
+    return
+  }
+  if (
+    page.url.pathname === `${ADMIN_PATH}/features` &&
+    adminCtx.view.scope.prisms.layer.length === 0 &&
+    firstLayerId
+  ) {
+    await adminCtx.view.scope.togglePrism(FirstClassResource.layer, firstLayerId)
+  }
+}
 
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   const actor = adminCtx.view.user as SessionUser | null
@@ -57,7 +82,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       href: `${ADMIN_PATH}/features`,
       label: 'Features',
       icon: MapPin,
-      onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.feature),
+      onClick: openFeatures,
       notificationCount: featureCount,
     },
     {

@@ -32,11 +32,23 @@ export const getMapStyleCatalogCopy = (
   const locale = toLocaleKebab(localeKey)
 
   switch (key) {
+    case 'noclit26':
+      return {
+        name: "NocLit'26",
+        description:
+          localeKey === 'en'
+            ? 'Flat red city blocks, black streets and quiet grey water. A quiet stage for literature-night books and venues.'
+            : localeKey === 'zhHant'
+              ? '磚紅城市、炭黑街道與灰色水域，讓文學之夜的書籍與場地成為焦點。'
+              : '砖红城市、炭黑街道与灰色水域，让文学之夜的书籍与场地成为焦点。',
+      }
+    case 'hype-dark':
     case 'hyper':
       return {
         name: m.map_style__hyper_name({}, { locale }),
         description: m.map_style__hyper_description({}, { locale }),
       }
+    case 'hype-light':
     case 'hyperLight':
       return {
         name: m.map_style__hyper_light_name({}, { locale }),

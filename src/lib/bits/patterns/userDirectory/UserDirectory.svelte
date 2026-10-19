@@ -1,4 +1,8 @@
 <script lang="ts">
+// SVELTE
+import { flip } from 'svelte/animate'
+import { fade } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 // ICONS
 import Person from 'virtual:icons/proicons/person'
 // TYPES
@@ -9,6 +13,7 @@ let {
   totalCount,
   offset,
   loading,
+  hasLoaded = false,
   failed,
   onPrevious,
   onNext,
@@ -18,6 +23,7 @@ let {
   users: DirectoryUser[]
   totalCount: number
   offset: number
+  hasLoaded?: boolean
   loading: boolean
   failed: boolean
   onPrevious: () => void
@@ -37,7 +43,7 @@ let {
     >
       <p class="text-sm text-base-content/70">User profiles</p>
       <p class="shrink-0 text-sm font-semibold" role="status">
-        {#if loading}
+        {#if loading && !hasLoaded}
           Loading users…
         {:else}
           {totalCount.toLocaleString()}
@@ -63,22 +69,26 @@ let {
           Try again
         </button>
       </div>
-    {:else if loading}
+    {/if}
+    {#if loading && !hasLoaded}
       <div
         class="rounded-lg bg-panel p-8 text-center text-base-content/60"
         role="status"
       >
         Loading users…
       </div>
-    {:else if users.length === 0}
-      <div class="rounded-lg border border-border bg-panel p-8 text-center">
-        No users found. Try another name, username or email.
-      </div>
-    {:else}
+    {:else if hasLoaded}
+      {#if users.length === 0}
+        <div class="rounded-lg border border-border bg-panel p-8 text-center">
+          No users found. Try another name, username or email.
+        </div>
+      {/if}
       <ul class="flex flex-col gap-2" aria-label="Users">
         {#each users as user (user.id)}
           <li
-            class="grid min-h-20 grid-cols-[4rem_minmax(0,1fr)] items-center gap-x-4 rounded-lg border border-border bg-panel p-2 shadow-sm lg:grid-cols-[4rem_minmax(12rem,1fr)_minmax(14rem,1fr)_minmax(10rem,0.7fr)]"
+            animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180 }}
+            transition:fade={{ duration: prefersReducedMotion.current ? 0 : 120 }}
+            class="grid min-h-20 grid-cols-[4rem_minmax(0,1fr)] items-center gap-x-4 rounded-lg border border-border bg-panel p-2 shadow-sm lg:grid-cols-[4rem_minmax(12rem,1fr)_minmax(10rem,0.7fr)]"
           >
             <div
               class="row-span-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-md bg-base-200 lg:row-span-2"
@@ -112,23 +122,21 @@ let {
               </p>
             </div>
             <p
-              class="truncate text-sm text-base-content/75"
-              title={user.email ?? undefined}
-            >
-              {user.email || 'No email'}
-            </p>
-            <p
               class="truncate text-sm text-base-content/60"
               title={user.attribution ?? undefined}
             >
               {user.attribution || 'No attribution'}
             </p>
             <div
-              class="col-start-2 flex flex-wrap gap-x-4 gap-y-1 pb-1 text-xs text-base-content/60 lg:col-span-3 lg:col-start-2"
+              class="col-start-2 flex flex-wrap gap-x-4 gap-y-1 pb-1 text-xs text-base-content/60 lg:col-span-2 lg:col-start-2"
             >
-              <span>{user.telephone || 'No phone'}</span>
+              {#if user.email}
+                <span>{user.email}</span>
+              {/if}
+              {#if user.telephone}
+                <span>{user.telephone}</span>
+              {/if}
               <span>{user.locale || 'en'}</span>
-              <span>{user.emailVerified ? 'Email verified' : 'Email unverified'}</span>
               <span>{user.isArchived ? 'Archived' : 'Active'}</span>
               {#if user.createdAt}
                 <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>

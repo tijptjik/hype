@@ -1,4 +1,11 @@
 <script lang="ts">
+import {
+  AddressMetaSchema,
+  emptyFeatureAddress,
+  setAddressOverride,
+} from '#lib/addresses/featureAddress.js'
+// SVELTE
+import { onDestroy } from 'svelte'
 // I18N
 import { getLocaleKey, m, toFormLocaleRecord } from '#lib/i18n.js'
 // COMPONENTS
@@ -12,7 +19,9 @@ import {
 } from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // SERVICES
-import { reverseGeocode } from '#lib/api/external/geocoding.js'
+import { geocodeBuilding } from '#lib/api/external/buildingGeocoding.js'
+import type { SelectedBuilding } from '#lib/map/buildingAddress.js'
+import type { ParsedReverseGeocodeResult } from '#lib/utils/geocoding.types.js'
 // ENUMS
 import { NewFeatureMode } from '#lib/enums.js'
 // ICONS
@@ -25,7 +34,14 @@ import X from 'virtual:icons/proicons/cancel'
 import type { LocaleKey } from '#lib/types.js'
 import type { Point } from 'geojson'
 
-let { getMapCenter }: { getMapCenter?: () => [number, number] | null } = $props()
+let {
+  getMapCenter,
+  getBuildingAt,
+}: {
+  getMapCenter?: () => [number, number] | null
+  getBuildingAt?: (point: [number, number]) => Promise<SelectedBuilding | null>
+} = $props()
+let resolvedAddress = $state<ParsedReverseGeocodeResult | null>(null)
 
 const appCtx = getSurfaceCtx()
 const omniCtx = getOmniCtx()
@@ -48,11 +64,23 @@ const EMPTY_DISPLAY_ADDRESS: Record<LocaleKey, string> = {
 }
 
 let displayAddress = $state<Record<LocaleKey, string>>({ ...EMPTY_DISPLAY_ADDRESS })
-let isDisplayAddressGen = $state(true)
+let addressGenerated = $state<Record<LocaleKey, boolean>>({
+  en: true,
+  zhHant: true,
+  zhHans: true,
+})
 let isEditingAddress = $state(false)
 let isLoading = $state(false)
 let previousMode: NewFeatureMode | null = null
 let originalAddress = $state('')
+let originalAddressGen = true
+let lookupStatus = $state<'idle' | 'not_found' | 'error'>('idle')
+let lookupRevision = 0
+
+// Invalidate pending responses when the pinpointer is unmounted.
+onDestroy(() => {
+  lookupRevision++
+})
 const currentDisplayAddress = $derived(displayAddress[currentLocaleKey] ?? '')
 
 const isValid = $derived.by(() => {
@@ -90,7 +118,11 @@ function syncDisplayAddress(
     | undefined,
 ): void {
   displayAddress = toDisplayAddressMap(i18n)
-  isDisplayAddressGen = i18n?.[currentLocaleKey]?.displayAddressGen ?? true
+  addressGenerated = {
+    en: i18n?.en?.displayAddressGen ?? true,
+    zhHant: i18n?.zhHant?.displayAddressGen ?? true,
+    zhHans: i18n?.zhHans?.displayAddressGen ?? true,
+  }
   originalAddress = displayAddress[currentLocaleKey] || ''
   isEditingAddress = false
 }
@@ -101,14 +133,40 @@ $effect(() => {
     currentMode === NewFeatureMode.location && previousMode !== NewFeatureMode.location
 
   if (isEnteringLocation) {
-    syncDisplayAddress(toFormLocaleRecord(newFeature?.feature?.i18n))
+    const saved = toFormLocaleRecord(newFeature?.feature?.i18n)
+    syncDisplayAddress(saved)
+    resolvedAddress = newFeature?.feature?.addressMeta
+      ? {
+          addressMeta: AddressMetaSchema.parse(newFeature.feature.addressMeta),
+          i18n: Object.fromEntries(
+            (['en', 'zhHant', 'zhHans'] as LocaleKey[]).map(locale => [
+              locale,
+              {
+                displayAddress: saved?.[locale]?.displayAddress ?? '',
+                displayAddressGen: saved?.[locale]?.displayAddressGen ?? false,
+                addressProperties: saved?.[locale]?.addressProperties ?? {},
+              },
+            ]),
+          ) as ParsedReverseGeocodeResult['i18n'],
+        }
+      : null
   }
 
+  if (
+    currentMode !== NewFeatureMode.location &&
+    previousMode === NewFeatureMode.location
+  ) {
+    lookupRevision++
+    isLoading = false
+    lookupStatus = 'idle'
+  }
   previousMode = currentMode
 })
 
 function reset(): void {
-  isDisplayAddressGen = true
+  lookupRevision++
+  lookupStatus = 'idle'
+  addressGenerated = { en: true, zhHant: true, zhHans: true }
   isEditingAddress = false
   isLoading = false
 }
@@ -120,14 +178,49 @@ function handleCloseModal(): void {
 
 function handleAccept(): void {
   if (appCtx.draft.mode !== NewFeatureMode.location || !isValid || isLoading) return
-  appCtx.draft.updateI18n('displayAddress', currentDisplayAddress.trim())
-  appCtx.draft.updateI18n('displayAddressGen', isDisplayAddressGen)
+  const centre = getMapCenter?.()
+  const selected = (appCtx.draft.current?.feature?.geometry as Point | undefined)
+    ?.coordinates
+  if (
+    centre &&
+    selected &&
+    (Math.abs(centre[0] - selected[0]) > 1e-8 ||
+      Math.abs(centre[1] - selected[1]) > 1e-8)
+  ) {
+    // Reacquire instead of accepting an address belonging to a different building.
+    void handleSetLocation()
+    return
+  }
+  const metadata = resolvedAddress?.addressMeta ?? {}
+  let address = metadata.address ?? emptyFeatureAddress()
+  for (const locale of Object.keys(displayAddress) as LocaleKey[]) {
+    if (!addressGenerated[locale])
+      address = setAddressOverride(
+        address,
+        locale,
+        'formattedAddress',
+        displayAddress[locale].trim(),
+      )
+  }
+  appCtx.draft.updateField('addressMeta', { ...metadata, address })
+  for (const locale of Object.keys(displayAddress) as LocaleKey[]) {
+    appCtx.draft.updateI18n(
+      'addressProperties',
+      addressGenerated[locale]
+        ? (resolvedAddress?.i18n[locale].addressProperties ?? {})
+        : {},
+      locale,
+    )
+    appCtx.draft.updateI18n('displayAddress', displayAddress[locale].trim(), locale)
+    appCtx.draft.updateI18n('displayAddressGen', addressGenerated[locale], locale)
+  }
   reset()
   appCtx.draft.setMode(NewFeatureMode.card)
 }
 
 function handleStartEditing(): void {
   originalAddress = currentDisplayAddress
+  originalAddressGen = addressGenerated[currentLocaleKey]
   isEditingAddress = true
 }
 
@@ -136,9 +229,15 @@ function handleCancelEditing(): void {
     ...displayAddress,
     [currentLocaleKey]: originalAddress,
   }
+  addressGenerated[currentLocaleKey] = originalAddressGen
   isEditingAddress = false
 }
 
+/**
+ * Resolves the current pin while ignoring results from superseded selections.
+ * @returns Resolves when this request settles.
+ * @remarks Failure clears the old address so it cannot be accepted for a different pin.
+ */
 async function handleSetLocation(): Promise<void> {
   const center = getMapCenter?.()
   if (center) {
@@ -152,17 +251,37 @@ async function handleSetLocation(): Promise<void> {
     ?.coordinates
   if (!coordinates) return
 
+  const revision = ++lookupRevision
+  const draft = appCtx.draft.current
+  const [lng, lat] = coordinates
   isLoading = true
+  lookupStatus = 'idle'
+  syncDisplayAddress(null)
+  resolvedAddress = null
 
+  // Check both request order and the active draft before applying asynchronous results.
+  const isCurrent = (): boolean =>
+    revision === lookupRevision &&
+    appCtx.draft.mode === NewFeatureMode.location &&
+    appCtx.draft.current === draft
   try {
-    const [lng, lat] = coordinates
-    const result = await reverseGeocode(lng, lat)
-
-    if (!result) return
-
+    const building = (await getBuildingAt?.([lng, lat])) ?? null
+    if (!isCurrent()) return
+    const result = await geocodeBuilding({ lng, lat }, building)
+    if (!isCurrent()) return
+    if (!result) {
+      lookupStatus = 'not_found'
+      isEditingAddress = true
+      return
+    }
+    resolvedAddress = result
     syncDisplayAddress(toFormLocaleRecord(result.i18n))
+  } catch {
+    if (!isCurrent()) return
+    lookupStatus = 'error'
+    isEditingAddress = true
   } finally {
-    isLoading = false
+    if (revision === lookupRevision) isLoading = false
   }
 }
 
@@ -230,13 +349,35 @@ function handleKeydown(event: KeyboardEvent): void {
           >
             {m.new_feature__looking_up_address()}
           </div>
-        {:else if isValid}
+        {:else if isValid || isEditingAddress || lookupStatus !== 'idle'}
+          {#if resolvedAddress?.addressMeta.addressMatch === 'nearest'}
+            <p
+              role="status"
+              class="rounded-2xl bg-panel px-4 py-2 text-center text-sm text-base-content"
+            >
+              {m.new_feature__approximate_address()}
+            </p>
+          {/if}
+          {#if lookupStatus !== 'idle'}
+            <p
+              role="status"
+              class="rounded-2xl bg-panel px-4 py-2 text-center text-sm text-base-content"
+            >
+              {lookupStatus === 'not_found'
+                ? m.new_feature__address_not_found()
+                : m.new_feature__address_lookup_failed()}
+            </p>
+          {/if}
           <div
             class="w-full max-w-[360px] rounded-[1.75rem] border border-border bg-panel px-4 py-2 shadow-2xl"
           >
             <div class="flex items-center gap-3">
               <input
                 bind:value={displayAddress[currentLocaleKey]}
+                aria-label={m.less_quaint_clownfish_succeed()}
+                oninput={() => {
+                  addressGenerated[currentLocaleKey] = false
+                }}
                 type="text"
                 class="h-11 min-w-0 grow rounded-full bg-surface px-4 text-sm text-base-content caret-primary placeholder:text-muted-foreground focus:outline-none disabled:opacity-100"
                 placeholder={m.less_quaint_clownfish_succeed()}

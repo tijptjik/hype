@@ -1,5 +1,7 @@
 // THIRD-PARTY
 import proj from 'proj4'
+// ADDRESS
+import { ADDRESS_LOCALES, emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 // DATA
 import streetsData from '#lib/map/streets.json'
 // TYPES
@@ -290,7 +292,7 @@ export function applyAddressAbbreviations(address: string): string {
 }
 
 /**
- * Intermediate parse result used to build ALS lookup queries and local fallback results.
+ * Intermediate parse result used to build geocoding queries and local fallback results.
  * This carries parser-only fields that do not belong in the canonical `addressProperties`
  * payload, such as `queryAddress`, `buildingNumbering`, `subpremisesRaw`, and
  * source address components.
@@ -771,7 +773,7 @@ export function parseSubPremisesComponent(
 }
 
 /**
- * Parse an imported address into structured components and an ALS query.
+ * Parse an imported address into structured components and a geocoding query.
  * @param rawAddress - Address text from the import file.
  * @param locale - Locale for the imported address text.
  * @returns Parsed address components for API geocoding or local fallback storage.
@@ -857,7 +859,7 @@ export function getAddressForQuery(
  * Convert locally parsed address components to the canonical geocode result shape.
  * @param components - Parsed local address components.
  * @returns A geocode-like result marked as locally parsed rather than API matched.
- * @remarks Used when an import row has address content that cannot be sent to ALS.
+ * @remarks Used when an import row has address content that cannot be sent to the geocoder.
  */
 export function toLocalParseResult(
   components: ParsedAddressQueryComponents,
@@ -872,7 +874,7 @@ export function toLocalParseResult(
     ...parsedSubpremises,
   }
 
-  return {
+  const result: ParsedReverseGeocodeResult = {
     addressMeta,
     i18n: {
       en: {
@@ -897,6 +899,21 @@ export function toLocalParseResult(
       },
     },
   }
+  // Local parsing is unverified migration/import evidence, never a canonical source.
+  const address = emptyFeatureAddress(
+    Object.fromEntries(
+      (Object.keys(ADDRESS_LOCALES) as LocaleKey[]).map(locale => [
+        ADDRESS_LOCALES[locale],
+        result.i18n[locale].displayAddress ?? '',
+      ]),
+    ),
+  )
+  address.query = components.rawAddress
+  address.legacy = { i18n: structuredClone(result.i18n), addressMeta }
+  result.addressMeta = { ...addressMeta, address }
+  for (const locale of Object.keys(ADDRESS_LOCALES) as LocaleKey[])
+    result.i18n[locale].addressProperties = {}
+  return result
 }
 
 // export function parseToDisplayAddressEn(address: string, name?: string): string {

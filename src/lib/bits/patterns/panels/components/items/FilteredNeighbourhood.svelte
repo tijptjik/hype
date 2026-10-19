@@ -4,38 +4,9 @@ import { onDestroy } from 'svelte'
 // TRANSITIONS
 import { fade, slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
-// ICONS
-import MapIcon from 'virtual:icons/hype-divisions/area'
-import SarIcon from 'virtual:icons/hype-divisions/sar'
-import DistrictIcon from 'virtual:icons/hype-divisions/district'
-import IslandIcon from 'virtual:icons/hype-divisions/major_island'
-import MacrohoodIcon from 'virtual:icons/hype-divisions/macrohood'
-import TownIcon from 'virtual:icons/hype-divisions/town'
-import HoodIcon from 'virtual:icons/hype-divisions/neighbourhood'
-import RuralIcon from 'virtual:icons/hype-divisions/rural_area'
-import MinorIslandIcon from 'virtual:icons/hype-divisions/minor_island'
-import VillageIcon from 'virtual:icons/hype-divisions/village'
-import MicrohoodIcon from 'virtual:icons/hype-divisions/microhood'
-import HamletIcon from 'virtual:icons/hype-divisions/hamlet'
-import IsletIcon from 'virtual:icons/hype-divisions/islet'
 // DOMAIN
 import { divisionClassLabel } from '#lib/divisions/classes.js'
-
-const icons = {
-  sar: SarIcon,
-  area: MapIcon,
-  district: DistrictIcon,
-  major_island: IslandIcon,
-  macrohood: MacrohoodIcon,
-  town: TownIcon,
-  neighbourhood: HoodIcon,
-  rural_area: RuralIcon,
-  minor_island: MinorIslandIcon,
-  village: VillageIcon,
-  microhood: MicrohoodIcon,
-  hamlet: HamletIcon,
-  islet: IsletIcon,
-}
+import { divisionIcons } from '#lib/divisions/icons.js'
 
 type NeighbourhoodRow = {
   id: string
@@ -57,7 +28,9 @@ let {
   onPreview?: (id: string, active: boolean) => void
 } = $props()
 onDestroy(() => onPreview?.(row.id, false))
-const Icon = $derived(icons[row.class as keyof typeof icons] ?? MapIcon)
+const Icon = $derived(
+  divisionIcons[row.class as keyof typeof divisionIcons] ?? divisionIcons.area,
+)
 // The class label already identifies districts; shorten only the English name suffix.
 const displayName = $derived(
   row.class === 'district' ? row.name.replace(/\s+District$/, '') : row.name,

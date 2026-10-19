@@ -1,5 +1,5 @@
 // AUTH
-import { isRelevantHubAdmin } from './hub'
+import { isCoreHubAdmin, isRelevantHubAdmin } from './hub'
 // TYPES
 import type { UserRoleDisco } from '#lib/types.js'
 
@@ -18,5 +18,22 @@ export function canBrowseUsers(actor: {
   return (
     actor.isAnonymous !== true &&
     (actor.superAdmin === true || isRelevantHubAdmin(actor.userRoles, actor.hubId))
+  )
+}
+
+/**
+ * Grants unrestricted user contact visibility only to HYPE/core administrators.
+ * @param actor Fresh session identity and resolved roles.
+ * @returns Whether both email and telephone may be disclosed globally.
+ * @remarks Other hub admins await hub-specific interaction/onboarding rules.
+ */
+export function canReadAllUserContacts(actor: {
+  isAnonymous?: boolean | null
+  superAdmin?: boolean | null
+  userRoles: UserRoleDisco[]
+}): boolean {
+  return (
+    actor.isAnonymous !== true &&
+    (actor.superAdmin === true || isCoreHubAdmin(actor.userRoles))
   )
 }

@@ -1,0 +1,657 @@
+{
+  "version": 8,
+  "name": "Velvet / light",
+  "sources": {
+    "hongkong-latest": {
+      "type": "vector",
+      "url": "https://tiles.saanseoi.hk/hongkong-latest.json"
+    }
+  },
+  "glyphs": "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#eee3f7"
+      }
+    },
+    {
+      "id": "land",
+      "type": "fill",
+      "source": "hongkong-latest",
+      "source-layer": "earth",
+      "filter": [
+        "==",
+        [
+          "geometry-type"
+        ],
+        "Polygon"
+      ],
+      "paint": {
+        "fill-color": "#fff9fc"
+      }
+    },
+    {
+      "id": "gardens",
+      "type": "fill",
+      "source": "hongkong-latest",
+      "source-layer": "landuse",
+      "filter": [
+        "in",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "literal",
+          [
+            "park",
+            "forest",
+            "wood",
+            "nature_reserve",
+            "national_park",
+            "garden",
+            "golf_course"
+          ]
+        ]
+      ],
+      "paint": {
+        "fill-color": "#dbefe6",
+        "fill-opacity": 1
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "hongkong-latest",
+      "source-layer": "water",
+      "filter": [
+        "==",
+        [
+          "geometry-type"
+        ],
+        "Polygon"
+      ],
+      "paint": {
+        "fill-color": "#eee3f7"
+      }
+    },
+    {
+      "id": "coast-wash",
+      "type": "line",
+      "source": "hongkong-latest",
+      "source-layer": "water",
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "coastline"
+      ],
+      "paint": {
+        "line-color": "#b99ad9",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          1.25,
+          14,
+          5,
+          18,
+          12,
+          21,
+          36
+        ],
+        "line-blur": 4,
+        "line-opacity": 0.25
+      }
+    },
+    {
+      "id": "coast",
+      "type": "line",
+      "source": "hongkong-latest",
+      "source-layer": "water",
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "coastline"
+      ],
+      "paint": {
+        "line-color": "#b99ad9",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          0.3,
+          14,
+          1.2,
+          18,
+          2,
+          21,
+          6
+        ],
+        "line-opacity": 0.65
+      }
+    },
+    {
+      "id": "blocks",
+      "type": "fill",
+      "source": "hongkong-latest",
+      "source-layer": "buildings",
+      "minzoom": 15,
+      "paint": {
+        "fill-color": "#efdae8",
+        "fill-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          0.15,
+          16,
+          0.65
+        ]
+      }
+    },
+    {
+      "id": "route-other",
+      "type": "line",
+      "source": "hongkong-latest",
+      "source-layer": "roads",
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "other"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ],
+      "minzoom": 16,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#c99bb9",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          0.05,
+          14,
+          0.2,
+          18,
+          1,
+          21,
+          3
+        ],
+        "line-opacity": 0.4,
+        "line-blur": 0.3
+      }
+    },
+    {
+      "id": "route-minor_road",
+      "type": "line",
+      "source": "hongkong-latest",
+      "source-layer": "roads",
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "minor_road"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ],
+      "minzoom": 13,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#c99bb9",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          0.175,
+          14,
+          0.7,
+          18,
+          2.5,
+          21,
+          7.5
+        ],
+        "line-opacity": 0.6,
+        "line-blur": 0.3
+      }
+    },
+    {
+      "id": "route-major_road-glow",
+      "type": "line",
+      "source": "hongkong-latest",
+      "source-layer": "roads",
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "major_road"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ],
+      "minzoom": 7,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#af245a",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          1.8,
+          14,
+          7.2,
+          18,
+          14.399999999999999,
+          21,
+          43.199999999999996
+        ],
+        "line-blur": 5,
+        "line-opacity": 0.18
+      }
+    },
+    {
+      "id": "route-major_road",
+      "type": "line",
+      "source": "hongkong-latest",
+      "source-layer": "roads",
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "major_road"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ],
+      "minzoom": 7,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#af245a",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          0.45,
+          14,
+          1.8,
+          18,
+          6,
+          21,
+          18
+        ],
+        "line-opacity": 1,
+        "line-blur": 0.3
+      }
+    },
+    {
+      "id": "route-highway-glow",
+      "type": "line",
+      "source": "hongkong-latest",
+      "source-layer": "roads",
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "highway"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ],
+      "minzoom": 7,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#7450b6",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          2.8,
+          14,
+          11.2,
+          18,
+          21.599999999999998,
+          21,
+          64.8
+        ],
+        "line-blur": 5,
+        "line-opacity": 0.18
+      }
+    },
+    {
+      "id": "route-highway",
+      "type": "line",
+      "source": "hongkong-latest",
+      "source-layer": "roads",
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "kind"
+          ],
+          "highway"
+        ],
+        [
+          "==",
+          [
+            "geometry-type"
+          ],
+          "LineString"
+        ]
+      ],
+      "minzoom": 7,
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#7450b6",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          0.7,
+          14,
+          2.8,
+          18,
+          9,
+          21,
+          27
+        ],
+        "line-opacity": 1,
+        "line-blur": 0.3
+      }
+    },
+    {
+      "id": "rail",
+      "type": "line",
+      "source": "hongkong-latest",
+      "source-layer": "roads",
+      "minzoom": 13,
+      "filter": [
+        "==",
+        [
+          "get",
+          "kind"
+        ],
+        "rail"
+      ],
+      "paint": {
+        "line-color": "#7450b6",
+        "line-width": [
+          "interpolate",
+          [
+            "exponential",
+            1.5
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          0.125,
+          14,
+          0.5,
+          18,
+          1.6,
+          21,
+          4.800000000000001
+        ],
+        "line-dasharray": [
+          2,
+          3
+        ],
+        "line-opacity": 0.5
+      }
+    },
+    {
+      "id": "districts",
+      "type": "symbol",
+      "source": "hongkong-latest",
+      "source-layer": "places",
+      "minzoom": 9,
+      "maxzoom": 16,
+      "filter": [
+        "in",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "literal",
+          [
+            "locality",
+            "neighbourhood",
+            "macrohood"
+          ]
+        ]
+      ],
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:en"
+          ],
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name2"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          13,
+          15,
+          16
+        ],
+        "text-transform": "none",
+        "text-letter-spacing": 0.03,
+        "text-max-width": 8,
+        "text-padding": 25
+      },
+      "paint": {
+        "text-color": "#44213c",
+        "text-halo-color": "#fff9fc",
+        "text-halo-width": 2.2,
+        "text-halo-blur": 2
+      }
+    },
+    {
+      "id": "streets",
+      "type": "symbol",
+      "source": "hongkong-latest",
+      "source-layer": "roads",
+      "minzoom": 16,
+      "filter": [
+        "in",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "literal",
+          [
+            "major_road",
+            "minor_road"
+          ]
+        ]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "symbol-spacing": 650,
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:en"
+          ],
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name2"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": 12,
+        "text-letter-spacing": 0.01,
+        "text-max-angle": 25,
+        "text-padding": 8
+      },
+      "paint": {
+        "text-color": "#936581",
+        "text-halo-color": "#fff9fc",
+        "text-halo-width": 1.6,
+        "text-halo-blur": 1
+      }
+    }
+  ]
+}

@@ -427,6 +427,8 @@ export class CacheCtx {
           ? ['project', 'layer']
           : ['layer']
     const lists = this.listsFor(affected).filter(list => !scope || list.scope === scope)
+    // Sidebar, index and panel traversals can retain distinct proxies for one native query.
+    const overriddenPages = new Set<string | object>()
     for (const list of lists) list.invalidate()
     this.details.clear()
     const patch = input.data ?? {}
@@ -455,7 +457,14 @@ export class CacheCtx {
                 row => row.id === id || list.visibleIds.has(row.id),
               ),
           )
-          .map((page, index) =>
+          .map((page, index) => ({ page, index }))
+          .filter(({ page }) => {
+            const identity = list.pageIdentity(page)
+            if (overriddenPages.has(identity)) return false
+            overriddenPages.add(identity)
+            return true
+          })
+          .map(({ page, index }) =>
             page.withOverride(current => {
               if (!current) return current
               const data = current.data.flatMap(row => {

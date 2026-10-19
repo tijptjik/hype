@@ -26,7 +26,13 @@ export const ADMIN_FACETS = {
 
 export type HubFacet = 'core' | 'layers' | 'fields' | 'images' | 'policies'
 export type OrganisationFacet = 'core' | 'capabilities' | 'fields' | 'images'
-export type ProjectFacet = 'core' | 'capabilities' | 'layers' | 'fields' | 'images'
+export type ProjectFacet =
+  | 'core'
+  | 'capabilities'
+  | 'layers'
+  | 'fields'
+  | 'images'
+  | 'policies'
 export type LayerFacet = 'core' | 'fields'
 
 export const ADMIN_FACET_DEFINITIONS = {
@@ -73,6 +79,7 @@ export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
 export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
   Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
 > = {
+  project: { policies: () => m.place_policy_tab() },
   feature: {
     images: () => m.feature__images(),
   },
@@ -81,6 +88,7 @@ export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 export const ADMIN_FACET_ACTION_LABEL_OVERRIDES_BY_RESOURCE: Partial<
   Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
 > = {
+  project: { policies: () => m.place_policy_tab() },
   feature: {
     fields: () => m.feature__fields_title(),
   },
@@ -107,6 +115,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.layers,
     ADMIN_FACETS.fields,
+    ADMIN_FACETS.policies,
     ADMIN_FACETS.images,
   ],
   layer: [ADMIN_FACETS.core, ADMIN_FACETS.fields],

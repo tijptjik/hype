@@ -8,12 +8,20 @@ import FilterIcon from 'virtual:icons/proicons/filter'
 let {
   count,
   archived,
+  hasEmail,
+  hasTelephone,
+  onHasEmailChange,
+  onHasTelephoneChange,
   sorting,
   onArchivedChange,
   onSortingChange,
   onReset,
 }: {
   count: number
+  hasEmail: boolean | null
+  hasTelephone: boolean | null
+  onHasEmailChange: (value: boolean | null) => void
+  onHasTelephoneChange: (value: boolean | null) => void
   archived: boolean | null
   sorting: { sortBy: string; sortOrder: 'asc' | 'desc' }
   onArchivedChange: (value: boolean | null) => void
@@ -35,11 +43,29 @@ const sortables = {
   filterIcon={FilterIcon}
   {count}
   resetDisabled={archived === false &&
+    hasEmail === null &&
+    hasTelephone === null &&
     sorting.sortBy === 'name' &&
     sorting.sortOrder === 'asc'}
   {onReset}
 >
   {#snippet filterMenuContent()}
+    <Control.TriStateToggle
+      class="min-w-44"
+      label="Has phone number"
+      falseLabel="No"
+      trueLabel="Yes"
+      currentValue={hasTelephone}
+      onCheckedChange={onHasTelephoneChange}
+    />
+    <Control.TriStateToggle
+      class="min-w-44"
+      label="Has email address"
+      falseLabel="No"
+      trueLabel="Yes"
+      currentValue={hasEmail}
+      onCheckedChange={onHasEmailChange}
+    />
     <Control.TriStateToggle
       label="Archived"
       falseLabel="Hide"

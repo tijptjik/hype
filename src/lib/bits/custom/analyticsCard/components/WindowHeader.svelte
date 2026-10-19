@@ -9,7 +9,7 @@ let {
 </script>
 
 <header
-  class={['rounded-[1.4rem] bg-black px-3 pt-2 pb-3 text-center', className]
+  class={['rounded-[1.4rem] bg-panel px-3 pt-2 pb-3 text-center', className]
     .filter(Boolean)
     .join(' ')}
 >

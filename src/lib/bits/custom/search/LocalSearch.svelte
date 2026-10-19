@@ -176,6 +176,7 @@ $effect(() => {
                   descriminator={resultMap.descriminator?.(item)}
                   description={resultMap.description?.(item)}
                   previewImage={resultMap.previewImage?.(item)}
+                  preview={resultMap.preview?.(item)}
                   disabled={isSearchResultDisabled(item, resultMap)}
                   disabledMeta={resultMap.disabledMeta?.(item)}
                   staggerIndex={index}

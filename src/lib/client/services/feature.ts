@@ -388,7 +388,9 @@ export function getProgrammaticFeatureInputEntries(
     appendEntry(`data.geometry.coordinates[${index}]`, coordinate)
   })
 
-  appendNestedEntries('data.addressMeta', featureData?.addressMeta ?? {})
+  const { address, ...addressMetadata } = featureData?.addressMeta ?? {}
+  appendNestedEntries('data.addressMeta', addressMetadata)
+  if (address) appendEntry('data.addressMeta.address', JSON.stringify(address))
 
   ;(['en', 'zhHans', 'zhHant'] as const).forEach(locale => {
     const localeI18n = featureData?.i18n?.[locale]

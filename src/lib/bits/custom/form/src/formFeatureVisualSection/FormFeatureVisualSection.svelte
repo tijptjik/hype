@@ -64,14 +64,14 @@ const rootClass = $derived(
     {#if isNewFeature && contributorUser}
       <article class="inline-flex items-center">
         <img
-          class="h-12 w-12 shrink-0 rounded-full bg-[color:color-mix(in_oklab,var(--color-base-content)_16%,transparent)] object-cover shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-base-content)_12%,transparent)]"
+          class="h-12 w-12 shrink-0 rounded-full bg-[color:color-mix(in_oklab,var(--color-foreground)_16%,transparent)] object-cover shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-foreground)_12%,transparent)]"
           src={resolveAvatarImageSrc(contributorUser.image) ?? ''}
           alt={contributorUser.name ??
             contributorUser.attribution ??
             m.user__current_user()}
         >
         <div
-          class="-ml-12 flex h-11 min-w-max max-w-none flex-col justify-center gap-0.5 rounded-full border border-[color:color-mix(in_oklab,var(--color-base-content)_12%,transparent)] bg-[color:color-mix(in_oklab,black_82%,var(--color-glass-result)_18%)] py-0.5 pr-4 pl-14 backdrop-blur-[14px]"
+          class="-ml-12 flex h-11 min-w-max max-w-none flex-col justify-center gap-0.5 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] bg-panel text-foreground py-0.5 pr-4 pl-14 backdrop-blur-[14px]"
         >
           <span class="whitespace-nowrap text-[0.9375rem] leading-[1.1] font-semibold">
             {contributorUser.name ??
@@ -79,7 +79,7 @@ const rootClass = $derived(
               m.user__current_user()}
           </span>
           <span
-            class="flex items-center gap-[0.35rem] whitespace-nowrap text-[0.8125rem] leading-none text-[color:color-mix(in_oklab,var(--color-base-content)_65%,transparent)]"
+            class="flex items-center gap-[0.35rem] whitespace-nowrap text-[0.8125rem] leading-none text-[color:color-mix(in_oklab,var(--color-foreground)_65%,transparent)]"
           >
             {m.profile__role_type__contributor()}
           </span>
@@ -97,7 +97,7 @@ const rootClass = $derived(
 
   {#snippet centerControls()}
     <div
-      class="inline-flex min-h-11 items-center gap-1 rounded-full border border-[color:color-mix(in_oklab,var(--color-base-content)_12%,transparent)] bg-[color:color-mix(in_oklab,black_84%,var(--color-glass-result)_16%)] px-2.5 py-1 backdrop-blur-[14px]"
+      class="inline-flex min-h-11 items-center gap-1 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] bg-panel text-foreground px-2.5 py-1 backdrop-blur-[14px]"
     >
       <SimpleTooltip>
         {#snippet trigger()}
@@ -106,7 +106,7 @@ const rootClass = $derived(
               checked={Boolean(isIntangible)}
               disabled={!isEditing}
               size="sm"
-              class="inline-flex h-10 w-10 min-w-10 items-center justify-center transform-none [&_.bits-swap-field]:inline-flex [&_.bits-swap-field]:h-10 [&_.bits-swap-field]:w-10 [&_.bits-swap-field]:items-center [&_.bits-swap-field]:justify-center [&_[data-ui=swap]]:h-10 [&_[data-ui=swap]]:min-h-10 [&_[data-ui=swap]]:w-10 [&_[data-ui=swap]]:min-w-10 [&_[data-ui=swap]]:border-none [&_[data-ui=swap]]:bg-transparent [&_[data-ui=swap]]:p-0 [&_[data-ui=swap]]:shadow-none [&_[data-ui=swap][data-state=checked]]:border-none [&_[data-ui=swap][data-state=checked]]:bg-transparent [&_[data-ui=swap][data-state=checked]]:shadow-none [&_[data-ui=swap]:disabled]:border-none [&_[data-ui=swap]:disabled]:bg-transparent [&_[data-ui=swap]:disabled]:shadow-none"
+              class="inline-flex h-10 w-10 min-w-10 items-center justify-center transform-none [&_.bits-swap-field]:inline-flex [&_.bits-swap-field]:h-10 [&_.bits-swap-field]:w-10 [&_.bits-swap-field]:items-center [&_.bits-swap-field]:justify-center [&_[data-ui=swap]]:h-10 [&_[data-ui=swap]]:min-h-10 [&_[data-ui=swap]]:w-10 [&_[data-ui=swap]]:min-w-10 [&_[data-ui=swap]]:border-none [&_[data-ui=swap]]:bg-transparent [&_[data-ui=swap]]:p-0 [&_[data-ui=swap]]:shadow-none [&_[data-ui=swap][data-state=checked]]:border-none [&_[data-ui=swap][data-state=checked]]:bg-primary! [&_[data-ui=swap][data-state=checked]]:text-primary-content! [&_[data-ui=swap][data-state=checked]]:opacity-100! [&_[data-ui=swap][data-state=checked]]:shadow-none [&_[data-ui=swap]:disabled]:border-none [&_[data-ui=swap]:disabled]:bg-transparent [&_[data-ui=swap]:disabled]:shadow-none"
               label={m.feature__intangible()}
               onColor="accent"
               offColor="dark"
@@ -126,7 +126,7 @@ const rootClass = $derived(
               checked={!isVisitable}
               disabled={!isEditing}
               size="sm"
-              class="inline-flex h-10 w-10 min-w-10 items-center justify-center transform-none [&_.bits-swap-field]:inline-flex [&_.bits-swap-field]:h-10 [&_.bits-swap-field]:w-10 [&_.bits-swap-field]:items-center [&_.bits-swap-field]:justify-center [&_[data-ui=swap]]:h-10 [&_[data-ui=swap]]:min-h-10 [&_[data-ui=swap]]:w-10 [&_[data-ui=swap]]:min-w-10 [&_[data-ui=swap]]:border-none [&_[data-ui=swap]]:bg-transparent [&_[data-ui=swap]]:p-0 [&_[data-ui=swap]]:shadow-none [&_[data-ui=swap][data-state=checked]]:border-none [&_[data-ui=swap][data-state=checked]]:bg-transparent [&_[data-ui=swap][data-state=checked]]:shadow-none [&_[data-ui=swap]:disabled]:border-none [&_[data-ui=swap]:disabled]:bg-transparent [&_[data-ui=swap]:disabled]:shadow-none"
+              class="inline-flex h-10 w-10 min-w-10 items-center justify-center transform-none [&_.bits-swap-field]:inline-flex [&_.bits-swap-field]:h-10 [&_.bits-swap-field]:w-10 [&_.bits-swap-field]:items-center [&_.bits-swap-field]:justify-center [&_[data-ui=swap]]:h-10 [&_[data-ui=swap]]:min-h-10 [&_[data-ui=swap]]:w-10 [&_[data-ui=swap]]:min-w-10 [&_[data-ui=swap]]:border-none [&_[data-ui=swap]]:bg-transparent [&_[data-ui=swap]]:p-0 [&_[data-ui=swap]]:shadow-none [&_[data-ui=swap][data-state=checked]]:border-none [&_[data-ui=swap][data-state=checked]]:bg-error! [&_[data-ui=swap][data-state=checked]]:text-error-content! [&_[data-ui=swap][data-state=checked]]:opacity-100! [&_[data-ui=swap][data-state=checked]]:shadow-none [&_[data-ui=swap]:disabled]:border-none [&_[data-ui=swap]:disabled]:bg-transparent [&_[data-ui=swap]:disabled]:shadow-none"
               label={m.feature__cannot_visit()}
               onColor="error"
               offColor="dark"
@@ -142,14 +142,14 @@ const rootClass = $derived(
       <Separator
         orientation="vertical"
         decorative={true}
-        class="mx-0 my-0 block h-6 bg-[color:color-mix(in_oklab,var(--color-base-content)_30%,transparent)] mx-2"
+        class="mx-0 my-0 block h-6 bg-[color:color-mix(in_oklab,var(--color-foreground)_30%,transparent)] mx-2"
       />
 
       <InfoDialog
         title={m.antsy_patient_moth_taste()}
         triggerText=""
         triggerIconComponent={InfoIcon}
-        triggerIconClasses="h-[22px] w-[22px] text-white hover:text-primary"
+        triggerIconClasses="h-[22px] w-[22px] text-foreground hover:text-primary"
       >
         <section>
           <h3 class="font-bold">{m.antsy_patient_moth_taste()}</h3>
@@ -192,7 +192,7 @@ const rootClass = $derived(
 
   {#snippet rightControls()}
     <div
-      class="inline-flex min-h-11 items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--color-base-content)_12%,transparent)] bg-[color:color-mix(in_oklab,black_84%,var(--color-glass-result)_16%)] px-2.5 py-1 backdrop-blur-[14px]"
+      class="inline-flex min-h-11 items-center gap-2 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] bg-panel text-foreground px-2.5 py-1 backdrop-blur-[14px]"
     >
       <Button
         text={m.slimy_helpful_shad_vent()}
@@ -204,7 +204,7 @@ const rootClass = $derived(
         hideLabelInstantly={true}
         disabled={!hasPrevious}
         iconClasses="h-5.5 w-5.5"
-        class="h-10 w-6 !border-0 !bg-transparent p-0 text-[var(--color-base-content)] shadow-none transition-[background-color,opacity] duration-180 ease-out disabled:opacity-35"
+        class="h-10 w-6 !border-0 !bg-transparent p-0 text-[var(--color-foreground)] shadow-none transition-[background-color,opacity] duration-180 ease-out disabled:opacity-35"
         onClick={() => onNavigatePrevious?.()}
       />
       <Button

@@ -1,3 +1,4 @@
+import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
 // ZOD
 import { z } from 'zod'
@@ -62,5 +63,6 @@ export const CompactAncestorsSchema = z.object({
   project: CompactAncestorSchema.extend({
     useAllInOrgContext: z.boolean().default(false),
     cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().optional(),
+    markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().optional(),
   }).nullish(),
 })

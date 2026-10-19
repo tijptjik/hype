@@ -568,6 +568,36 @@ describe('project.remote form organisation move authz', () => {
     policyMatrix.flush()
   })
 
+  it('authorizes and persists Place settings through the Project form', async () => {
+    const payload = buildUpdatePayload('org-1')
+    const placeUpdatePolicy = {
+      policy: {
+        version: 1,
+        coordinates: { mode: 'review' },
+        address: 'review',
+        unit: 'review',
+        establishment: 'review',
+      },
+      expectedRevision: 2,
+    }
+    await remote.projectForm(
+      {
+        ...payload,
+        data: { ...payload.data, placeUpdatePolicy },
+      },
+      throwingInvalid,
+    )
+    expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ placeUpdatePolicy }),
+      }),
+    )
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ placeUpdatePolicy }),
+    )
+  })
+
   it('authorizes and persists the selected card style with the project update', async () => {
     const payload = buildUpdatePayload('org-1')
     await remote.projectForm(
@@ -996,6 +1026,17 @@ describe('project.remote form organisation move authz', () => {
       actual: 'Deny (403 + authz code)',
       code: 'INSUFFICIENT_ROLE',
     })
+  })
+
+  it('resolves a project code before authorizing its map-style picker', async () => {
+    mockProbeProjectQuery.mockResolvedValueOnce(null)
+    mockAuthorizeProjectReadForProbe.mockReturnValue({ allowed: true })
+    await remote.getProjectMapStyles({ projectId: 'eln' })
+    expect(mockProbeProjectQuery).toHaveBeenCalledWith(expect.anything(), {
+      ref: 'eln',
+      refKey: 'code',
+    })
+    expect(mockAuthorizeProjectReadForProbe).toHaveBeenCalled()
   })
 
   it('authorizes project map-style reads against the persisted project scope', async () => {

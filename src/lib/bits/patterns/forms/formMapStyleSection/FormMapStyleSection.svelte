@@ -5,8 +5,10 @@ import { LocalSearch, SectionHeader } from '#lib/bits/custom/index.js'
 import { m } from '#lib/i18n.js'
 import { MapStyleCard } from '#lib/bits/patterns/cards/mapStyleCard/index.js'
 import {
+  canonicalMapStyleCode,
   isMapStyleSelectable,
   SELECTABLE_MAP_STYLE_CATALOG,
+  isProjectOnlyMapStyle,
 } from '#lib/map/styles/catalog.js'
 import { getMapStyleCatalogI18n } from '#lib/map/styles/i18n.js'
 import { getMapStyleRenderAssetPath } from '#lib/map/styles/render.shared.js'
@@ -37,7 +39,7 @@ let wasSubmitRequested = $state(false)
 let hasAutoOpenedAdding = $state(false)
 
 const fallbackMapStyles = $derived(
-  SELECTABLE_MAP_STYLE_CATALOG.map(
+  SELECTABLE_MAP_STYLE_CATALOG.filter(entry => !isProjectOnlyMapStyle(entry.key)).map(
     (entry): MapStyleSelectionItem => ({
       id: entry.key,
       code: entry.key,
@@ -65,12 +67,20 @@ const userPreferenceStyle = $derived<MapStyleSelectionItem>({
 })
 const displayMapStyle = $derived(selectedMapStyle ?? userPreferenceStyle)
 
-const sortedMapStyles = $derived(
-  [userPreferenceStyle, ...additionalMapStyles, ...resolvedMapStyles]
+// Inheritance choices stay first; explicit styles follow their canonical code.
+const sortedMapStyles = $derived([
+  ...additionalMapStyles,
+  userPreferenceStyle,
+  ...resolvedMapStyles
     .filter(style => isMapStyleSelectable(style.code))
-    .sort((a, b) =>
-      (a.i18n?.en?.name ?? a.code).localeCompare(b.i18n?.en?.name ?? b.code),
+    .toSorted((a, b) =>
+      canonicalMapStyleCode(a.code).localeCompare(canonicalMapStyleCode(b.code)),
     ),
+])
+// Ten narrow windows repeat the dark linework palettes, omitting filled basemaps.
+const darkPreviewStyles = ['hype-dark', 'hyperpop', 'ghostery', 'neorange'] as const
+const userChoiceSlices = Array.from({ length: 10 }, (_, index) =>
+  getMapStyleRenderAssetPath(darkPreviewStyles[index % darkPreviewStyles.length]),
 )
 const showModeUi = $derived(isEditing && !isSubmitting)
 
@@ -114,19 +124,30 @@ $effect(() => {
 })
 </script>
 
+{#snippet userChoicePreview()}
+  <div class="flex h-full w-full overflow-hidden bg-black" aria-hidden="true">
+    {#each userChoiceSlices as image, index (index)}
+      <div class="relative h-full min-w-0 flex-1 overflow-hidden">
+        <img src={image} alt="" class="h-full w-full object-cover" loading="lazy">
+      </div>
+    {/each}
+  </div>
+{/snippet}
+
 <section
   class={`bits-form__section bits-form__parent-resource bits-map-style-section ${isAdding && showModeUi ? 'bits-form__parent-resource--search-open' : ''} ${className}`}
 >
   <SectionHeader {title} description={subtitle} class={formSelectionSearchHeaderStyles}>
     {#snippet right()}
       {#if isAdding && showModeUi}
-        <div class="w-[clamp(7rem,16vw,12rem)] min-w-0">
+        <div class="w-[clamp(7rem,12vw,10rem)] min-w-0">
           <LocalSearch
             options={sortedMapStyles}
             placeholder={m.forms__search_placeholder()}
             focusOnMount={true}
-            mountTransitionDuration={showModeUi ? 80 : 0}
-            maxResults={20}
+            mountTransitionDuration={0}
+            getItemId={() => ''}
+            maxResults={sortedMapStyles.length}
             onSelect={handleSelect}
             class="[&_.bits-search-result-item]:min-h-40!"
             resultListClass="grid! grid-cols-2 gap-1!"
@@ -136,26 +157,18 @@ $effect(() => {
               image: () => null,
               title: (mapStyle: MapStyleSelectionItem) =>
                 mapStyle.i18n?.en?.name || mapStyle.code,
-              descriminator: (mapStyle: MapStyleSelectionItem) => mapStyle.code,
+              descriminator: (mapStyle: MapStyleSelectionItem) =>
+                canonicalMapStyleCode(
+                  mapStyle.displayCode ??
+                    (mapStyle.code === '__project-default__' ? '' : mapStyle.code),
+                ),
               previewImage: (mapStyle: MapStyleSelectionItem) =>
                 mapStyle.previewImagePath || null,
+              preview: (mapStyle: MapStyleSelectionItem) =>
+                mapStyle.code === '' ? userChoicePreview : undefined,
               variant: () => 'visual',
             }}
           />
-        </div>
-      {/if}
-
-      {#if isAdding && showModeUi}
-        <div class="flex flex-wrap justify-end gap-2">
-          {#each [userPreferenceStyle, ...additionalMapStyles] as option (option.id)}
-            <button
-              type="button"
-              class="rounded-md border border-border px-3 py-2 text-sm text-foreground hover:border-primary"
-              onclick={() => handleSelect(option)}
-            >
-              {option.i18n?.en?.name}
-            </button>
-          {/each}
         </div>
       {/if}
 
@@ -172,12 +185,15 @@ $effect(() => {
   <div class="bits-form__parent-resource-list bits-map-style-section__list">
     <MapStyleCard.Root>
       <MapStyleCard.Preview
+        children={displayMapStyle.code === '' ? userChoicePreview : undefined}
         image={displayMapStyle?.previewImagePath || null}
         class="shrink-0"
         alt={displayMapStyle?.i18n?.en?.name || displayMapStyle?.code || `No ${title}`}
       />
       <MapStyleCard.Body
-        code={displayMapStyle?.code}
+        code={canonicalMapStyleCode(
+          displayMapStyle.displayCode ?? displayMapStyle.code,
+        )}
         name={displayMapStyle?.i18n?.en?.name || displayMapStyle?.code || `No ${title}`}
         description={displayMapStyle?.i18n?.en?.description || null}
       />

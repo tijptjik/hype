@@ -1,3 +1,4 @@
+import { buildingAt, type SelectedBuilding } from './buildingAddress.js'
 import type {
   CameraOptions,
   FitBoundsOptions,
@@ -6,6 +7,7 @@ import type {
 } from 'maplibre-gl'
 
 export type MapController = {
+  getBuildingAt?: (point: [number, number]) => Promise<SelectedBuilding | null>
   getCamera: () => {
     center: [number, number]
     zoom: number
@@ -40,6 +42,11 @@ export const createMapController = (
   }
 
   return {
+    getBuildingAt: async point => {
+      const map = getMap()
+      if (!map) throw new Error('Map unavailable')
+      return buildingAt(map, point)
+    },
     getCamera: () => {
       const map = getMap()
       if (!map) return null

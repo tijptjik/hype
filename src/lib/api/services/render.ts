@@ -14,6 +14,7 @@ import type {
 type RemoteStage = 'preview' | 'production'
 
 type MapRenderPayloadSource = {
+  markerStylesByLayerId?: unknown
   styleCode: string
   featureRecords: unknown
   layers: unknown
@@ -86,6 +87,7 @@ export const getMapRenderQueue = (platform?: App.Platform): Queue<MapRenderJob> 
 export const toMapRenderPayload = (renderData: MapRenderPayloadSource) => ({
   styleCode: renderData.styleCode,
   features: renderData.featureRecords,
+  markerStylesByLayerId: renderData.markerStylesByLayerId,
   layers: renderData.layers,
   selectedLayerIds: renderData.selectedLayerIds,
 })

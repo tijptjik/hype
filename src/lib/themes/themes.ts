@@ -11,9 +11,9 @@ export const THEMES: readonly ThemeDefinition[] = [
 ]
 /** Basemaps paired with each UI palette when UI/map synchronization is enabled. */
 export const THEME_MAP_STYLES = {
-  'hype-black': 'hyper',
-  'hype-dark': 'hyper',
-  'hype-light': 'hyperLight',
+  'hype-black': 'hype-dark',
+  'hype-dark': 'hype-dark',
+  'hype-light': 'hype-light',
   'breadline-light': 'breadline-light',
   'breadline-dark': 'breadline-dark',
 } as const satisfies Record<ThemeId, MapStyleKey>

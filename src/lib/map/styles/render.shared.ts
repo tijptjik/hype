@@ -1,3 +1,5 @@
+// MAP
+import { REGISTERED_MAP_STYLE_CATALOG } from './catalog'
 // HELPERS
 import {
   buildMapRenderObjectKey,
@@ -52,13 +54,15 @@ export const getMapStyleRenderPublicPath = (code: string, hash: string): string 
   `/${getMapStyleRenderObjectKey(code, hash)}`
 
 /**
- * Returns the stable API asset path for a built-in map-style render.
+ * Returns the bundled preview or stable API asset path for a built-in map style.
  *
  * @param code Map style code.
- * @returns Asset route path that streams from local R2 or redirects to the target CDN.
+ * @returns Bundled image path, or an asset route backed by local R2 or the target CDN.
  */
 export const getMapStyleRenderAssetPath = (code: string): string =>
-  `/api/mapRenders/styles/${code}/asset`
+  REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.key === code)?.bundledPreviewPath ??
+  // Reuse the existing previews while old and canonical style keys coexist.
+  `/api/mapRenders/styles/${code === 'hype-dark' ? 'hyper' : code === 'hype-light' ? 'hyperLight' : code}/asset`
 
 /**
  * Returns the local API asset path for a built-in map-style render.
@@ -98,6 +102,10 @@ export const resolveMapStyleRenderUrl = (
   code: string,
   hash: string,
 ): string => {
+  const bundledPreview = REGISTERED_MAP_STYLE_CATALOG.find(
+    entry => entry.key === code,
+  )?.bundledPreviewPath
+  if (bundledPreview) return bundledPreview
   const stage = getMapRenderStage(environment)
 
   if (stage === 'local') {
@@ -126,8 +134,11 @@ export const resolveMapStyleRenderPathForKey = async (
   environment: string | null | undefined,
   key: MapStyleKey,
 ): Promise<string> => {
-  const asset = await getMapStyleAssetRecord(key)
-  return resolveMapStyleRenderUrl(environment, key, asset.hash)
+  // Canonical names share the unchanged legacy style JSON and existing render assets.
+  const assetKey =
+    key === 'hype-dark' ? 'hyper' : key === 'hype-light' ? 'hyperLight' : key
+  const asset = await getMapStyleAssetRecord(assetKey)
+  return resolveMapStyleRenderUrl(environment, assetKey, asset.hash)
 }
 
 /**

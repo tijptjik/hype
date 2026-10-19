@@ -539,3 +539,117 @@ visitor-behavior analytics.
 - Partial failures are visible and specific.
 - The analytics page can be refreshed repeatedly in dev without generic opaque failures.
 - Server logs are sufficient to distinguish local request problems from upstream analytics issues.
+
+## Implementation update — 2026-10-19
+
+The Views, Audience and Data placeholders now use `getPlatformAnalyticsSummary`
+and `platformAnalytics.ts`. The shared `PlatformAnalyticsDashboard` composes the
+same AnalyticsCard primitives as Assets, including window headers, tooltips,
+warning/empty states, responsive columns and window toggle styling. Assets keeps
+its specialized transformation and delivery views. Only the active facet loads;
+refresh retains the previous snapshot and request versions discard stale replies.
+
+Views and Audience query Cloudflare's `rumPageloadEventsAdaptiveGroups`, filtered
+by one persisted hub domain. The hostname selector is shared across those tabs. Its default is the active hub's
+authorized production domain, then `hype.hk` when authorized, then the first
+available domain. Explicit selections take precedence.
+Hub administrators can select only their own hub domains; core administrators and
+superadmins can select all persisted production hub domains. Organisation/project
+prisms apply only to Assets. Traffic figures are sampled page loads and visits,
+not unique people. Rankings show shares of displayed rows, including when the top
+25 truncates the distribution. Core Web Vitals are not yet included.
+
+Data is restricted to core administrators and superadmins because Hype's database
+and render queues are shared infrastructure. It queries `d1AnalyticsAdaptiveGroups`
+for read/write queries, rows, response bytes, batch latency mean/p50/p95/p99,
+regional reads and daily query totals. `queueMessageOperationsAdaptiveGroups`
+provides writes, reads and deletions grouped by queue and outcome. These operation
+counts must not be interpreted as backlog or completed jobs. Storage growth,
+pipeline-level failures and backlog remain unimplemented.
+
+Server configuration:
+
+- `CLOUDFLARE_ACCOUNT_ID` and secret `CLOUDFLARE_ANALYTICS_API_TOKEN` authorize the
+  GraphQL reads. The token needs access to the RUM, D1 and Queue analytics datasets.
+- `ANALYTICS_DATABASE_ID` and comma-separated `ANALYTICS_QUEUE_IDS` constrain Data.
+  The checked-in local, preview and production configurations deliberately monitor
+  Hype production, matching the existing analytics development policy.
+- Credentials stay server-side. Upstream errors are normalized to safe messages;
+  each of the four windows has a timeout and fails independently. Missing sections
+  remain unavailable, while successful empty datasets display zero/empty results.
+
+Validation: focused service tests cover host rejection, resource filters, rolling
+cutoffs, partial failures, safe errors, and empty-versus-unavailable semantics.
+Live read-only queries returned all four windows for all three facets on October
+19. No deployment or changes to Cloudflare credentials were performed.
+
+Desktop/mobile browser verification used a temporary component preview populated
+with those live responses: all three panels rendered, facet/window controls worked,
+no-window states rendered, and the 390px viewport had no page overflow. The preview
+was removed afterward. The authenticated admin route was not exercised end to end.
+Repository type checking still reports ten unrelated errors; the changed analytics
+files have no diagnostics.
+
+Local configuration correction: `wrangler.local.toml` also supplies the production
+analytics database and queue IDs. This is the configuration selected by
+`HYPE_LOCAL_R2=1` / `dev:agent`; omitting these variables produced the Data tab's
+"analytics database is not configured" error. A read through this configuration's
+actual platform proxy now returns D1 metrics. The same credentials return page
+views for `breadline.hk`, while `hype.hk` and `hkghostsigns.com` currently return
+zero RUM events across all four windows; zero counts do not establish that a host
+has no visitors, only that this dataset has no recorded events for it.
+
+Follow-up end-to-end verification used the existing local admin persona with
+`HYPE_LOCAL_R2=1` and the actual admin route. Views and Audience rendered live
+`breadline.hk` counts and breakdowns, and Data rendered production D1 and queue
+metrics with the corrected local config. This supersedes the earlier limitation
+that only the component preview had been browser-verified.
+
+## Production tracking investigation — 2026-10-19
+
+Both `hype.hk` and `hkghostsigns.com` returned HTTP 200 HTML without a Web Analytics
+script. Chrome likewise observed no script or collector request. Cloudflare's
+existing `hype.hk` Web Analytics site has automatic installation enabled and an
+active include-all rule, but injection is absent from the served app. Ghost Signs
+has automatic installation disabled. The configured API token can read RUM site
+settings, but Cloudflare rejected its attempted Ghost Signs update with error
+10000 (authentication/insufficient permission); the remote settings are unchanged.
+
+`src/lib/analytics/webAnalytics.ts` supplies a fallback using the existing public
+site tokens. The production root layout installs it only on the exact HTTPS
+production hosts, without custom ports. It skips any existing Cloudflare beacon
+and relies on the beacon's own SPA navigation tracking. Development, preview,
+Breadline and other hosts are excluded.
+
+The two collectors were verified separately with the fallback injected only into
+an isolated test browser:
+
+- Hype: `https://hype.hk/cdn-cgi/rum` returned 204. Its request to the public
+  cross-origin collector failed CORS in Chrome, so the fallback uses same-origin.
+- Ghost Signs: `https://cloudflareinsights.com/cdn-cgi/rum` returned 204. Its
+  same-origin collector returned 404, so it uses the public endpoint.
+
+Nine focused tests cover the production host allowlist, collector selection and
+idempotence. The fallback is prepared in source but requires deployment before
+ordinary visitors are tracked. No production application deployment was performed.
+The current production version is `39db399e-1fff-4eca-89ea-c2d86202f438`, created
+at 2026-10-19 11:15 UTC; its annotations do not identify a Git revision. The current
+checkout includes later commits and unrelated pending work, so a production
+rollout must explicitly select the release scope rather than deploying this tree
+as an incidental analytics configuration change. Historical missing traffic
+cannot be recovered from the RUM dataset.
+
+## Skeleton containment and request errors — 2026-10-19
+
+The global map-marker `pulse` keyframes overrode Tailwind's opacity animation,
+scaling analytics placeholders outside their containers. The marker animation is
+now named `map-marker-pulse`; shared skeleton blocks also constrain their width.
+Browser sampling across the animation found no placeholder overflow at 1200px
+(the admin minimum supported width) or 1336px.
+
+Rejected remote queries now retain public server error details and HTTP status
+with recovery guidance. Data no longer queries hub domains, which it does not use.
+Initial Data loading and refresh both succeeded locally; the originally reported
+failure was not reproduced. A simulated HTTP 503 displayed its status and Refresh
+successfully recovered the panel. The workspace type check still reports its ten
+unrelated existing errors; these analytics changes introduce no new diagnostics.

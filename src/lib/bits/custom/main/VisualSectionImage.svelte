@@ -1,4 +1,7 @@
 <script lang="ts">
+// SVELTE
+import { fade } from 'svelte/transition'
+// BITS
 import { cx } from '#lib/bits/index.js'
 import * as ImagePrimitive from '#lib/bits/patterns/images/components/index.js'
 import ImageIcon from 'virtual:icons/proicons/photo'
@@ -9,7 +12,6 @@ let {
   href = undefined,
   src = null,
   alt,
-  isPending = false,
   isCollapsed = false,
   emptyText = 'No image available',
   onImageLoad,
@@ -44,18 +46,22 @@ const imageItem = $derived(
 <div class={rootClass}>
   <a class={mediaClass} {href}>
     {#if src}
-      <ImagePrimitive.ImageSurface
-        item={imageItem}
-        fit={isCollapsed ? 'cover' : 'fit'}
-        isLoading={isPending}
-        showBackdrop={!isCollapsed}
-        class="h-full w-full"
-        rounded="rounded-none"
-        onLoad={size => {
-          if (!size) return
-          onImageLoad?.(size)
-        }}
-      />
+      {#key src}
+        <div class="absolute inset-0" transition:fade={{ duration: 520 }}>
+          <ImagePrimitive.ImageSurface
+            item={imageItem}
+            fit={isCollapsed ? 'cover' : 'fit'}
+            enableSourceTransition={false}
+            showBackdrop={!isCollapsed}
+            class="h-full w-full"
+            rounded="rounded-none"
+            onLoad={size => {
+              if (!size) return
+              onImageLoad?.(size)
+            }}
+          />
+        </div>
+      {/key}
     {:else}
       <div
         class="flex h-full min-h-[18rem] w-full items-center justify-center text-center text-[color:color-mix(in_oklab,var(--color-base-content)_68%,transparent)]"

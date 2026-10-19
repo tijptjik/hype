@@ -1,7 +1,11 @@
 <script lang="ts">
+// SVELTE
 import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
 import type { Component } from 'svelte'
+// I18N
+import { m } from '#lib/i18n.js'
+// COMPONENTS
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import Actions from './Actions.svelte'
 import Body from './Body.svelte'
@@ -56,7 +60,15 @@ let {
 </script>
 
 <section class="bits-form__section">
-  <SectionHeader {title} {description} />
+  <SectionHeader {title} {description}>
+    {#snippet right()}
+      <span
+        class="rounded-md border border-primary/20 bg-primary/5 px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground"
+      >
+        {rows.length}
+      </span>
+    {/snippet}
+  </SectionHeader>
   <Wrapper>
     {#each rows as row (row.propertyId)}
       <div
@@ -106,6 +118,10 @@ let {
           {/if}
         </Root>
       </div>
+    {:else}
+      <p class="py-6 text-sm text-muted-foreground">
+        {m.admin__forms_project_fields_empty_title()}
+      </p>
     {/each}
   </Wrapper>
 </section>

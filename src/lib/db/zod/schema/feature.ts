@@ -15,6 +15,7 @@ import {
 // CONSTRAINTS
 import { getLocales } from '../constraints'
 import { FormBoolean } from '../form'
+import { AddressMetaSchema } from '#lib/addresses/featureAddress.js'
 // ZOD SCHEMAS
 import {
   PropertyAdminProfileAPI,
@@ -27,7 +28,7 @@ import { UserBasic } from './user'
 // ENUMS
 import { supportedLocales } from '#lib/enums.js'
 // TYPES
-import type { AddressMeta, AddressProperties } from '#lib/utils/address.types.js'
+import type { AddressProperties } from '#lib/utils/address.types.js'
 import type { GeometryObject } from 'geojson'
 
 // ═══════════════════════
@@ -85,6 +86,10 @@ import type { GeometryObject } from 'geojson'
 export const FeatureBase = createSelectSchema(feature)
   .omit({ spatialIndex: true })
   .extend({
+    mtrStation: z.string().nullish(),
+    mtrExit: z.string().nullish(),
+    mtrDistance: z.number().int().nonnegative().nullish(),
+    mtrResolution: z.custom<import('#lib/routing/mtr.js').MtrResolution>().nullish(),
     countryId: z.string().nullish(),
     areaId: z.string().nullish(),
     districtId: z.string().nullish(),
@@ -104,12 +109,16 @@ export const FeatureBase = createSelectSchema(feature)
       .nullish(),
 
     geometry: z.custom<GeometryObject>(),
-    addressMeta: z.custom<AddressMeta>().default({}),
+    addressMeta: AddressMetaSchema.default({}),
   })
 
 export const FeatureInsert = createInsertSchema(feature)
   .omit({
     spatialIndex: true,
+    mtrStation: true,
+    mtrExit: true,
+    mtrDistance: true,
+    mtrResolution: true,
     countryId: true,
     areaId: true,
     districtId: true,
@@ -128,7 +137,7 @@ export const FeatureInsert = createInsertSchema(feature)
       type: 'Point',
       coordinates: [114.1693671540923, 22.319307515052614],
     }),
-    addressMeta: z.custom<AddressMeta>().prefault({}),
+    addressMeta: AddressMetaSchema.prefault({}),
     isPublished: FormBoolean.default(false),
     isPendingReview: FormBoolean.default(false),
     isArchived: FormBoolean.default(false),
@@ -140,6 +149,10 @@ export const FeatureInsert = createInsertSchema(feature)
 export const FeatureUpdate = createUpdateSchema(feature)
   .omit({
     spatialIndex: true,
+    mtrStation: true,
+    mtrExit: true,
+    mtrDistance: true,
+    mtrResolution: true,
     countryId: true,
     areaId: true,
     districtId: true,
@@ -155,7 +168,7 @@ export const FeatureUpdate = createUpdateSchema(feature)
   })
   .extend({
     geometry: z.custom<GeometryObject>().optional(),
-    addressMeta: z.custom<AddressMeta>().optional(),
+    addressMeta: AddressMetaSchema.optional(),
     isPublished: FormBoolean.optional(),
     isPendingReview: FormBoolean.optional(),
     isArchived: FormBoolean.optional(),
@@ -374,7 +387,7 @@ export const FeatureEntityFormData = z.object({
     .min(1, { message: m.field_is_required({ field: 'Layer' }) }),
   contributorId: z.string().optional().nullable(),
   geometry: z.custom<GeometryObject>(),
-  addressMeta: z.custom<AddressMeta>().prefault({}).nullish(),
+  addressMeta: AddressMetaSchema.prefault({}).nullish(),
   isIntangible: FormBoolean.default(false),
   isVisitable: FormBoolean.default(true),
   isPendingReview: FormBoolean.default(false),
@@ -395,7 +408,7 @@ export const FeatureDraftEntityFormData = z.object({
     .min(1, { message: m.field_is_required({ field: 'Layer' }) }),
   contributorId: z.string().optional().nullable(),
   geometry: z.custom<GeometryObject>(),
-  addressMeta: z.custom<AddressMeta>().prefault({}).nullish(),
+  addressMeta: AddressMetaSchema.prefault({}).nullish(),
   isIntangible: FormBoolean.default(false),
   isVisitable: FormBoolean.default(true),
   isPendingReview: FormBoolean.default(false),
@@ -471,6 +484,10 @@ export const FeaturePropertyAPI = FeaturePropertyBase.extend({
 })
 
 const FeatureListFields = FeatureBase.pick({
+  mtrStation: true,
+  mtrExit: true,
+  mtrDistance: true,
+  mtrResolution: true,
   countryId: true,
   areaId: true,
   districtId: true,

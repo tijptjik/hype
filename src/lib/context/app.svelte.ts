@@ -60,6 +60,11 @@ export class AppCtx {
   getMapCenter = (): [number, number] | null =>
     this.mapController?.getCamera()?.center ?? null
 
+  /** Reads the footprint at the pin. @param point Selected location. @returns The loaded building or null outdoors. */
+  getBuildingAt = (point: [number, number]) =>
+    this.mapController?.getBuildingAt?.(point) ??
+    Promise.reject(new Error('Map unavailable'))
+
   /**
    * Creates only the public application's resource and map orchestration.
    * @param divisionCtx Public division filters.

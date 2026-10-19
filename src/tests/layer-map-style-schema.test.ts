@@ -4,6 +4,11 @@ import { toLayerFormInput } from '#lib/client/services/layer.js'
 import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 
 describe('layer map style metadata', () => {
+  it('accepts project styles for server-side ownership validation', () => {
+    expect(LayerMetadataSchema.safeParse({ mapStyleCode: 'noclit26' }).success).toBe(
+      true,
+    )
+  })
   it.each([null, 'neorange'] as const)(
     'copies proxy-backed metadata with map style %s without mutating retained state',
     mapStyleCode => {

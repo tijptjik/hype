@@ -196,7 +196,7 @@ let formData = $derived.by((): ProjectPropertyForm => {
     key: propertyKey,
     rank: 0, // Will be calculated properly by the API
     component: componentType,
-    isTranslatable: isTranslatable,
+    isTranslatable: componentType === 'PhoneField' ? false : isTranslatable,
     values,
     min:
       componentType === 'RangeField' && numericValues.length > 0
@@ -654,6 +654,7 @@ function setEditingField(
               <option value="RangeField">RangeField</option>
             {:else}
               <option value="InputField">InputField</option>
+              <option value="PhoneField">PhoneField</option>
               <option value="TextareaField">TextareaField</option>
             {/if}
           </select>

@@ -2,7 +2,12 @@
 import type { FeatureCardType } from './cardType.js'
 
 /** Stable persisted codes; add new renderers here and register them in a migration. */
-export const CARD_STYLE_CODES = ['full', 'no-description', 'conditional'] as const
+export const CARD_STYLE_CODES = [
+  'full',
+  'no-description',
+  'conditional',
+  'breadline',
+] as const
 export type CardStyleCode = (typeof CARD_STYLE_CODES)[number]
 
 /** Default for new projects and unset presentation choices. */
@@ -11,6 +16,7 @@ export const DEFAULT_CARD_STYLE: CardStyleCode = 'conditional'
 /** Shared catalogue for admin previews and public card rendering. */
 export const CARD_STYLE_CATALOG = [
   { code: 'full', cardType: 'standard', preview: '/cardStyles/full.svg' },
+  { code: 'breadline', cardType: 'breadline', preview: '/cardStyles/breadline.svg' },
   {
     code: 'no-description',
     cardType: 'portal-band',

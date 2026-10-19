@@ -18,6 +18,7 @@ export class ResourceList {
   loading = $state(false)
   error: unknown = $state(null)
   visibleIds = new Set<string>()
+  private readonly pageIdentities = new WeakMap<RemoteQuery<ResourcePage>, string>()
   private generation = 0
   private released = false
   private fallback: PanelResource[] = []
@@ -59,6 +60,16 @@ export class ResourceList {
         ...[...this.history.values()].flatMap(entry => entry.pages),
       ]),
     ]
+  }
+
+  /**
+   * Identifies the underlying query independently of its native proxy object.
+   * @param page Retained page handle.
+   * @returns Complete query arguments, or the handle for externally supplied pages.
+   * @remarks SvelteKit creates distinct proxies for identical query calls.
+   */
+  pageIdentity(page: RemoteQuery<ResourcePage>): string | RemoteQuery<ResourcePage> {
+    return this.pageIdentities.get(page) ?? page
   }
 
   /** Ordered current rows reflect native optimistic overrides without an AppCtx copy. */
@@ -126,6 +137,7 @@ export class ResourceList {
       return
     }
     const page = this.query(input)
+    this.pageIdentities.set(page, key)
     this.pages = [page]
     this.loading = true
     try {
@@ -167,7 +179,9 @@ export class ResourceList {
     this.loading = true
     this.error = null
     try {
-      const page = this.query({ ...input, cursor })
+      const pageInput = { ...input, cursor }
+      const page = this.query(pageInput)
+      this.pageIdentities.set(page, JSON.stringify(pageInput))
       await page
       if (generation !== this.generation) return
       this.pages = [...this.pages, page]

@@ -59,6 +59,9 @@ declare global {
         ASSET_PUBLIC_PRODUCTION: R2Bucket
         // CLOUDFLARE
         CLOUDFLARE_ACCOUNT_ID: string
+        CLOUDFLARE_ANALYTICS_API_TOKEN?: string
+        ANALYTICS_DATABASE_ID?: string
+        ANALYTICS_QUEUE_IDS?: string
         R2_S3_ACCESS_KEY_ID: string
         R2_S3_SECRET_ACCESS_KEY: string
         MAP_REFRESH_TOKEN: string

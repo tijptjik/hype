@@ -1,4 +1,8 @@
 <script lang="ts">
+import { getPlaceUpdatePolicy } from '#lib/api/place.remote.js'
+import PlacePolicyPanel from '#lib/bits/patterns/forms/placeUpdatePolicy/PlacePolicyPanel.svelte'
+import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
+import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 // PRESENTATION
 import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 // SVELTE
@@ -433,6 +437,7 @@ const translatableI18nFieldsBySection: Record<
 > = {
   descriptor: ['name', 'nameShort', 'description'],
 }
+let placePolicyResetVersion = $state(0)
 // Main remote-form configuration for project create/update.
 const configuredProjectForm = configureForm(() => ({
   form: projectForm as never,
@@ -610,6 +615,11 @@ const configuredProjectForm = configureForm(() => ({
       const submittedCode = data.data?.code?.trim() ?? ''
       const refreshed = await refreshProject(shouldRedirect ? submittedCode : undefined)
       commitSettledProjectState(refreshed)
+      if (data.data?.placeUpdatePolicy && activeCommittedProjectData?.id) {
+        await getPlaceUpdatePolicy({
+          projectId: activeCommittedProjectData.id,
+        }).refresh()
+      }
     },
   }),
 }))
@@ -1205,6 +1215,17 @@ function getHiddenProjectLicenseAttrs(): Record<string, unknown> {
   return as('hidden', JSON.stringify(formProjectLicense)) as Record<string, unknown>
 }
 
+/**
+ * Register the optional Places JSON draft with the native Project remote form.
+ * @returns Bound hidden attributes; the schema validates the policy and revision.
+ */
+function getHiddenPlacePolicyAttrs(): Record<string, unknown> {
+  const { as } = formCtx.form.fields.data.placeUpdatePolicy as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }
+  return as('hidden', String(formCtx.form.fields.value().data?.placeUpdatePolicy))
+}
+
 const hiddenProjectLayerInputAttrs = $derived.by(() => {
   const layerValues = getProjectLayerSubmitValues() ?? []
 
@@ -1757,6 +1778,23 @@ const selectedParentOrganisation = $derived.by(() => {
     return hierarchy.organisation
   return null
 })
+const selectedMarkerStyle = $derived.by(() => {
+  const code = formCtx.form.fields.data.markerStyleCode.value()
+  return isMarkerStyleCode(code) ? code : null
+})
+/**
+ * Updates project marker presentation without modifying card or basemap choices.
+ * @param code Registered marker renderer, or null for the application default.
+ * @returns Nothing; the project form persists the change.
+ */
+function onSelectMarkerStyle(code: MarkerStyleCode | null): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.markerStyleCode = code
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
 const selectedCardStyle = $derived(
   formCtx.form.fields.data.cardStyleCode.value() ?? DEFAULT_CARD_STYLE,
 )
@@ -1821,11 +1859,14 @@ $effect(() => {
 
 $effect(() => {
   const organisationId = parentOrganisationIdValue
-  const fallbackProject = !organisationId && !isNewProjectRef ? projectRef : ''
-  const nextSignature = organisationId
-    ? `organisation:${organisationId}`
-    : fallbackProject
-      ? `project:${fallbackProject}`
+  // Preserve project scope while the editor hydrates; the API also resolves route codes.
+  const existingProjectId = !isNewProjectRef
+    ? (activeProjectData?.id ?? cachedProjectForRef?.id ?? projectRef)
+    : ''
+  const nextSignature = existingProjectId
+    ? `project:${existingProjectId}:organisation:${organisationId}`
+    : organisationId
+      ? `organisation:${organisationId}`
       : ''
 
   if (!nextSignature) {
@@ -1850,9 +1891,9 @@ $effect(() => {
   untrack(() => {
     void (async () => {
       try {
-        const response = organisationId
-          ? await getProjectMapStyles({ organisationId })
-          : await getProjectMapStyles({ projectId: fallbackProject })
+        const response = existingProjectId
+          ? await getProjectMapStyles({ projectId: existingProjectId })
+          : await getProjectMapStyles({ organisationId })
 
         if (lastMapStyleScopeSignature !== nextSignature) {
           return
@@ -2212,6 +2253,7 @@ async function onDeleteToggle(): Promise<void> {
 }
 
 async function onReset(): Promise<void> {
+  placePolicyResetVersion += 1
   fieldRemoveMode = false
   isProjectFieldResetInProgress = true
   fieldsLayoutMutationVersion += 1
@@ -2669,60 +2711,58 @@ $effect(() => {
               {isEditing}
               {isRequiredInPreflight}
             >
-              {#snippet afterField(
-                field,
-              )}
-                {#if field === 'nameShort'}
-                  <Checkbox
-                    id={`project-use-all-in-org-context-${locale}`}
-                    checked={useAllInOrgContext}
-                    disabled={!isEditing}
-                    rightText={m.admin__project_same_as_organisation()}
-                    color="accent"
-                    size="sm"
-                    onCheckedChange={setUseAllInOrgContext}
-                  />
-                {/if}
+              {#snippet besideShortName()}
+                <Checkbox
+                  id={`project-use-all-in-org-context-${locale}`}
+                  checked={useAllInOrgContext}
+                  disabled={!isEditing}
+                  topText={m.admin__project_same_as_organisation()}
+                  color="accent"
+                  size="sm"
+                  onCheckedChange={setUseAllInOrgContext}
+                />
               {/snippet}
             </FormI18nDescriptorFields>
           {/snippet}
         </FormI18nSection>
 
-        <div class={formSectionDividerStyles}>
-          <FormUserRolesSection
-            icon={MembersIcon}
-            layout="list"
-            currentUserId={authActor.userId}
-            title={m.admin__forms_project_members_title()}
-            subtitle={m.admin__forms_project_members_subtitle()}
-            transitionEntityKey={activeProjectData?.id ?? projectRef}
-            removeSelfResourceLabel={m.resource__project_singular()}
-            issues={userRoleSectionIssues}
-            userRoles={projectUserRoles}
-            {hiddenUserIdInputAttrs}
-            {roleFieldNameByUserId}
-            {isEditing}
-            isSubmitting={formCtx.submitting}
-            isSubmitRequested={formCtx.isSubmitRequested}
-            startInAddingMode={isNewProjectRef}
-            availableRoles={[
-              { value: ProjectRoleType.owner, label: m.profile__role_type__owner() },
-              { value: ProjectRoleType.maintainer, label: 'Maintainer' },
-              { value: ProjectRoleType.member, label: m.profile__role_type__member() },
-              { value: ProjectRoleType.translator, label: 'Translator' },
-              { value: ProjectRoleType.user, label: 'User' },
-            ]}
-            {onAddUser}
-            {onRemoveUser}
-            {onRoleChange}
-          />
-        </div>
-
         <div
-          class={`${formSectionDividerStyles} grid grid-cols-1 ${canSetParentOrganisation ? 'xl:grid-cols-3' : 'md:grid-cols-2'}`}
+          class={`${formSectionDividerStyles} grid grid-cols-1 ${canSetParentOrganisation ? 'xl:grid-cols-3' : ''}`}
         >
+          <div class={canSetParentOrganisation ? 'min-w-0 xl:col-span-2' : 'min-w-0'}>
+            <FormUserRolesSection
+              icon={MembersIcon}
+              layout="list"
+              currentUserId={authActor.userId}
+              title={m.admin__forms_project_members_title()}
+              subtitle={m.admin__forms_project_members_subtitle()}
+              transitionEntityKey={activeProjectData?.id ?? projectRef}
+              removeSelfResourceLabel={m.resource__project_singular()}
+              issues={userRoleSectionIssues}
+              userRoles={projectUserRoles}
+              {hiddenUserIdInputAttrs}
+              {roleFieldNameByUserId}
+              {isEditing}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewProjectRef}
+              availableRoles={[
+                { value: ProjectRoleType.owner, label: m.profile__role_type__owner() },
+                { value: ProjectRoleType.maintainer, label: 'Maintainer' },
+                {
+                  value: ProjectRoleType.member,
+                  label: m.profile__role_type__member(),
+                },
+                { value: ProjectRoleType.translator, label: 'Translator' },
+                { value: ProjectRoleType.user, label: 'User' },
+              ]}
+              {onAddUser}
+              {onRemoveUser}
+              {onRoleChange}
+            />
+          </div>
           {#if canSetParentOrganisation}
-            <div class="min-w-0">
+            <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
               <FormParentSection
                 class={formSelectionSectionStyles}
                 title="Parent Organisation"
@@ -2739,15 +2779,13 @@ $effect(() => {
               />
             </div>
           {/if}
+        </div>
 
-          <div
-            class={canSetParentOrganisation
-              ? 'min-w-0 border-t border-border xl:border-l xl:border-t-0'
-              : 'min-w-0'}
-          >
+        <div class={`${formSectionDividerStyles} grid grid-cols-1 xl:grid-cols-3`}>
+          <div class="min-w-0">
             <FormMapStyleSection
               class={formSelectionSectionStyles}
-              title="Map style"
+              title="Map Style"
               subtitle="Choose the basemap assigned to this project."
               {availableMapStyles}
               {selectedMapStyle}
@@ -2759,9 +2797,20 @@ $effect(() => {
               {onSelectMapStyle}
             />
           </div>
-          <div
-            class={`min-w-0 border-t border-border ${canSetParentOrganisation ? 'xl:border-l xl:border-t-0' : 'md:border-l md:border-t-0'}`}
-          >
+          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+            <FormMarkerStyleSection
+              value={selectedMarkerStyle}
+              inputAttrs={formCtx.form.fields.data.markerStyleCode.as(
+                'hidden',
+                selectedMarkerStyle ?? '',
+              )}
+              {isEditing}
+              disabled={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              onSelect={onSelectMarkerStyle}
+            />
+          </div>
+          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
             <FormCardStyleSection
               value={selectedCardStyle}
               inputAttrs={formCtx.form.fields.data.cardStyleCode.as(
@@ -2807,6 +2856,39 @@ $effect(() => {
             />
           </div>
         </div>
+      </FormSurface>
+    </Main.Facet>
+    <Main.Facet
+      isVisible={activeFacet === 'policies'}
+      transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('policies', 'previous')}
+      nextAction={buildFacetNavAction('policies', 'next')}
+      class="left-0! right-0!"
+      attrs={{ 'data-facet-id': 'policies' }}
+    >
+      <FormSurface>
+        {#if activeCommittedProjectData?.id}
+          {#key activeCommittedProjectData.id}
+            <PlacePolicyPanel
+              projectId={activeCommittedProjectData.id}
+              {isEditing}
+              saving={formCtx.submitting}
+              resetVersion={placePolicyResetVersion}
+              onChange={value => {
+                updateFormData(projectEntityUpdaterForm, data => {
+                  if (value === undefined) delete data.placeUpdatePolicy
+                  else data.placeUpdatePolicy = value
+                  return data
+                })
+                revalidateAfterProgrammaticChange()
+              }}
+            />
+            {#if formCtx.form.fields.value().data?.placeUpdatePolicy}
+              <input {...getHiddenPlacePolicyAttrs()}>
+            {/if}
+          {/key}
+        {/if}
       </FormSurface>
     </Main.Facet>
     <Main.Facet

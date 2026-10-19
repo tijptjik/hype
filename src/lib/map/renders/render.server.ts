@@ -1,4 +1,7 @@
+// DRIZZLE
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
+// PRESENTATION
+import { resolveMarkerStyle, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 
 // DB
 import {
@@ -55,6 +58,7 @@ type MapRenderLayerRow = {
 }
 
 type MapEntityRenderData = {
+  markerStylesByLayerId?: Array<[string, MarkerStyleCode]>
   styleCode: string
   featureCollection: FeatureCollection
   features: MapRenderFeatureRow[]
@@ -202,6 +206,7 @@ export const getLayerMapRenderData = async (
     .select({
       id: layer.id,
       projectId: layer.projectId,
+      projectMarkerStyleCode: project.markerStyleCode,
       modifiedAt: layer.modifiedAt,
       rank: layer.rank,
       metadata: layer.metadata,
@@ -248,6 +253,15 @@ export const getLayerMapRenderData = async (
       },
     ],
     selectedLayerIds: [targetLayer.id],
+    markerStylesByLayerId: [
+      [
+        targetLayer.id,
+        resolveMarkerStyle(
+          targetLayer.projectMarkerStyleCode,
+          targetLayer.metadata?.markerStyleCode,
+        ),
+      ],
+    ],
     modifiedAt: targetLayer.modifiedAt,
   }
 }
@@ -267,6 +281,7 @@ export const getProjectMapRenderData = async (
   const projectRows = await db
     .select({
       id: project.id,
+      markerStyleCode: project.markerStyleCode,
       modifiedAt: project.modifiedAt,
     })
     .from(project)
@@ -281,6 +296,7 @@ export const getProjectMapRenderData = async (
   const defaultVisibleLayers = await db
     .select({
       id: layer.id,
+      metadata: layer.metadata,
       rank: layer.rank,
       modifiedAt: layer.modifiedAt,
     })
@@ -308,6 +324,10 @@ export const getProjectMapRenderData = async (
     features,
     featureRecords,
     layers: defaultVisibleLayers,
+    markerStylesByLayerId: defaultVisibleLayers.map(row => [
+      row.id,
+      resolveMarkerStyle(targetProject.markerStyleCode, row.metadata?.markerStyleCode),
+    ]),
     selectedLayerIds,
     modifiedAt: targetProject.modifiedAt,
   }
@@ -318,6 +338,7 @@ export const buildLayerMapRenderHash = async (
 ): Promise<string> =>
   hashMapRenderPayload({
     styleCode: renderData.styleCode,
+    markerStylesByLayerId: renderData.markerStylesByLayerId,
     layer: renderData.layers[0],
     features: renderData.features.map(featureRow => ({
       id: featureRow.id,
@@ -330,6 +351,7 @@ export const buildProjectMapRenderHash = async (
 ): Promise<string> =>
   hashMapRenderPayload({
     styleCode: renderData.styleCode,
+    markerStylesByLayerId: renderData.markerStylesByLayerId,
     projectModifiedAt: renderData.modifiedAt,
     layers: renderData.layers.map(layerRow => ({
       id: layerRow.id,

@@ -1,4 +1,6 @@
 <script lang="ts">
+import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
+import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 import type { RemoteForm, RemoteFormInput, RemoteFormFields } from '$app/server'
 
 // SVELTE
@@ -84,7 +86,6 @@ import {
   FormI18nSection,
   FormParentSection,
   FormMapStyleSection,
-  GridSpacer,
   LayerPropertyCard,
   Main,
 } from '#lib/bits/index.js'
@@ -518,6 +519,7 @@ const layerPresentationFields = $derived(
   formCtx.form.fields.data.metadata as unknown as RemoteFormFields<{
     mapStyleCode?: string
     cardStyleCode?: string
+    markerStyleCode?: string
   }>,
 )
 // Map presentation is persisted with the existing layer metadata and scalar concurrency guard.
@@ -525,23 +527,31 @@ const layerMapStyleCode = $derived(
   formCtx.form.fields.data.metadata.value()?.mapStyleCode,
 )
 const layerMapStyleOptions = $derived(
-  SELECTABLE_MAP_STYLE_CATALOG.map(entry => ({
+  SELECTABLE_MAP_STYLE_CATALOG.filter(
+    entry => !entry.projectCode || entry.projectCode === selectedParentProject?.code,
+  ).map(entry => ({
     id: entry.key,
     code: entry.key,
     previewImagePath: getMapStyleRenderAssetPath(entry.key),
     i18n: getMapStyleCatalogI18n(entry.key),
   })),
 )
-const projectDefaultMapStyle = $derived<MapStyleSelectionItem>({
-  id: 'project-default',
-  code: '__project-default__',
-  i18n: {
-    en: {
-      name: m.theme_map_project_default(),
-      description: m.theme_map_project_default_description(),
+const projectDefaultMapStyle = $derived.by(
+  (): MapStyleSelectionItem => ({
+    id: 'project-default',
+    code: '__project-default__',
+    displayCode: selectedParentProject?.mapStyle?.code ?? null,
+    previewImagePath: selectedParentProject?.mapStyle?.code
+      ? getMapStyleRenderAssetPath(selectedParentProject.mapStyle.code)
+      : null,
+    i18n: {
+      en: {
+        name: m.theme_map_project_default(),
+        description: m.theme_map_project_default_description(),
+      },
     },
-  },
-})
+  }),
+)
 const selectedLayerMapStyle = $derived.by((): MapStyleSelectionItem | null => {
   if (layerMapStyleCode === undefined) return projectDefaultMapStyle
   if (layerMapStyleCode === null || layerMapStyleCode === '') return null
@@ -576,6 +586,23 @@ function onSelectLayerMapStyle(selection: MapStyleSelectionItem): void {
     else if (isMapStyleKey(selection.code)) data.metadata.mapStyleCode = selection.code
     return data
   })
+}
+
+const selectedLayerMarkerStyle = $derived.by(() => {
+  const code = formCtx.form.fields.value().data?.metadata?.markerStyleCode
+  return isMarkerStyleCode(code) ? code : null
+})
+/**
+ * Updates only the marker override in the layer metadata.
+ * @param code Registered renderer, or null for project inheritance.
+ * @returns Nothing; the existing layer form persists metadata.
+ */
+function onSelectLayerMarkerStyle(code: MarkerStyleCode | null): void {
+  updateFormData(formDataUpdater, data => {
+    data.metadata = { ...data.metadata, markerStyleCode: code ?? '' }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
 }
 
 const selectedLayerCardStyle = $derived.by(() => {
@@ -638,6 +665,13 @@ const inheritedCardStyle = $derived(
     : (adminCtx.view.cache.project.get(selectedParentProjectId)?.cardStyleCode ??
         DEFAULT_CARD_STYLE),
 )
+
+const inheritedMarkerStyle = $derived.by((): MarkerStyleCode | null => {
+  const code =
+    selectedParentProject?.markerStyleCode ??
+    adminCtx.view.cache.project.get(selectedParentProjectId)?.markerStyleCode
+  return isMarkerStyleCode(code) ? code : null
+})
 
 const hasSelectedParentProject = $derived(selectedParentProjectId.length > 0)
 
@@ -1266,6 +1300,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
@@ -1301,23 +1336,6 @@ $effect(() => {
 
         <div class={`${formSectionDividerStyles} grid grid-cols-1 xl:grid-cols-3`}>
           <div class="min-w-0">
-            <FormParentSection
-              class={formSelectionSectionStyles}
-              title={m.admin__forms_layer_parent_project_title()}
-              subtitle={m.admin__forms_layer_parent_project_subtitle()}
-              issues={parentProjectIssues}
-              parent={selectedParentProject}
-              hiddenInputAttrs={hiddenParentProjectInputAttrs}
-              closeOnParentChange={true}
-              isEditing={isEditing && canSetParentProject}
-              isSubmitting={formCtx.submitting}
-              isSubmitRequested={formCtx.isSubmitRequested}
-              startInAddingMode={isNewLayerRef}
-              onSearch={onSearchParentProjects}
-              onReplaceParent={onReplaceParentProject}
-            />
-          </div>
-          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
             <FormMapStyleSection
               class={formSelectionSectionStyles}
               title={m.theme_map_style_label()}
@@ -1330,6 +1348,21 @@ $effect(() => {
               isSubmitting={formCtx.submitting}
               isSubmitRequested={formCtx.isSubmitRequested}
               onSelectMapStyle={onSelectLayerMapStyle}
+            />
+          </div>
+          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+            <FormMarkerStyleSection
+              value={selectedLayerMarkerStyle}
+              allowInherit
+              inheritedValue={inheritedMarkerStyle}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              inputAttrs={layerPresentationFields.markerStyleCode.as(
+                'hidden',
+                selectedLayerMarkerStyle ?? '',
+              )}
+              isEditing={isEditing && canEditLayerFields}
+              disabled={formCtx.submitting}
+              onSelect={onSelectLayerMarkerStyle}
             />
           </div>
           <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
@@ -1347,6 +1380,26 @@ $effect(() => {
               onSelect={onSelectLayerCardStyle}
             />
           </div>
+          <div class="min-w-0 border-t border-border xl:col-span-3">
+            <FormParentSection
+              class={formSelectionSectionStyles}
+              title={m.admin__forms_layer_parent_project_title()}
+              subtitle={m.admin__forms_layer_parent_project_subtitle()}
+              issues={parentProjectIssues}
+              parent={selectedParentProject}
+              fallbackImage={selectedParentProject
+                ? `/api/mapRenders/projects/${selectedParentProject.id}/asset`
+                : null}
+              hiddenInputAttrs={hiddenParentProjectInputAttrs}
+              closeOnParentChange={true}
+              isEditing={isEditing && canSetParentProject}
+              isSubmitting={formCtx.submitting}
+              isSubmitRequested={formCtx.isSubmitRequested}
+              startInAddingMode={isNewLayerRef}
+              onSearch={onSearchParentProjects}
+              onReplaceParent={onReplaceParentProject}
+            />
+          </div>
         </div>
       </FormSurface>
     </Main.Facet>
@@ -1357,45 +1410,34 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
+      class="left-0! right-0!"
       attrs={{ 'data-facet-id': 'fields' }}
     >
-      <div class="bits-form__section" data-facet-id="fields">
-        <section class="bits-form__section">
-          <GridSpacer cols={2} leftCols={1} rightCols={1}>
-            {#snippet left()}
+      <FormSurface>
+        <div class="grid grid-cols-1 lg:grid-cols-2">
+          {#each propertyColumns as column, columnIndex}
+            <div
+              class={columnIndex > 0
+                ? 'min-w-0 border-t border-border lg:border-l lg:border-t-0'
+                : 'min-w-0'}
+            >
               <LayerPropertyCard.Column
-                title={propertyColumns[0].title}
-                description={propertyColumns[0].description}
-                rows={propertyColumns[0].rows}
+                title={column.title}
+                description={column.description}
+                rows={column.rows}
                 toRowFields={index => formCtx.form.fields.data.properties[index]}
                 isEditing={isEditing && canEditLayerFields}
-                isContributableDisabled={propertyColumns[0].isContributableDisabled}
+                isContributableDisabled={column.isContributableDisabled}
                 isFlipDisabled={isLayerCardFlipDisabled}
                 onVisibleChange={(index, value) =>
                   updateLayerPropertyToggle(index, 'isVisible', value)}
                 onUserContributableChange={(index, value) =>
                   updateLayerPropertyToggle(index, 'isUserContributable', value)}
               />
-            {/snippet}
-
-            {#snippet right()}
-              <LayerPropertyCard.Column
-                title={propertyColumns[1].title}
-                description={propertyColumns[1].description}
-                rows={propertyColumns[1].rows}
-                toRowFields={index => formCtx.form.fields.data.properties[index]}
-                isEditing={isEditing && canEditLayerFields}
-                isContributableDisabled={propertyColumns[1].isContributableDisabled}
-                isFlipDisabled={isLayerCardFlipDisabled}
-                onVisibleChange={(index, value) =>
-                  updateLayerPropertyToggle(index, 'isVisible', value)}
-                onUserContributableChange={(index, value) =>
-                  updateLayerPropertyToggle(index, 'isUserContributable', value)}
-              />
-            {/snippet}
-          </GridSpacer>
-        </section>
-      </div>
+            </div>
+          {/each}
+        </div>
+      </FormSurface>
     </Main.Facet>
   </Main.Form>
 </Main.Root>

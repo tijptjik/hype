@@ -12,6 +12,12 @@ DROP TABLE IF EXISTS hubUserState;
 DROP TABLE IF EXISTS taskImage;
 DROP TABLE IF EXISTS task;
 
+-- Place inheritance children and immutable source snapshots
+DROP TABLE IF EXISTS featurePlace;
+DROP TABLE IF EXISTS projectPlacePolicy;
+DROP TABLE IF EXISTS placeRevision;
+DROP TABLE IF EXISTS place;
+
 -- Feature + layer children
 -- Search documents are derived from translations; remove them before their owners.
 DROP VIEW IF EXISTS featureSearchContent;

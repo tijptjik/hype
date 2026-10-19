@@ -11,6 +11,7 @@ export type CompactAncestorRow = {
   project?: {
     id: string
     code: string
+    markerStyleCode?: import('#lib/features/markerStyle.js').MarkerStyleCode | null
     cardStyleCode?: import('#lib/features/cardStyle.js').CardStyleCode | null
     useAllInOrgContext?: boolean
     i18n?: Array<Record<string, unknown>>

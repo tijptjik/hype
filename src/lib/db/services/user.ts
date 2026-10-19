@@ -213,7 +213,7 @@ export const searchUsersByConditions = async (
       attribution: user.attribution,
       telephone: user.telephone,
       locale: user.locale,
-      emailVerified: user.emailVerified,
+      emailVerified: sql<null>`null`,
       isArchived: user.isArchived,
       createdAt: user.createdAt,
     })

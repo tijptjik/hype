@@ -42,6 +42,38 @@ const row = (id: string) => ({
 })
 
 describe('native collection optimistic projections', () => {
+  it('overrides a shared project query once even when independent lists retain distinct proxies', async () => {
+    const cache = new CacheCtx(resourceProviders)
+    const first = cache.createList('project')
+    const second = cache.createList('project')
+    const other = cache.createList('project')
+    const a = page([row('project')])
+    const b = page([row('project')])
+    const c = page([row('project')])
+    const { getResourcePage } = await import('#lib/api/resources.remote.js')
+    vi.mocked(getResourcePage)
+      .mockReturnValueOnce(a.query)
+      .mockReturnValueOnce(b.query)
+      .mockReturnValueOnce(c.query)
+    const input = {
+      type: 'project' as const,
+      meta: { isAdminRequest: true, scope: 'admin' },
+    }
+    await first.load(input)
+    await second.load(input)
+    await other.load({ ...input, q: 'different' })
+    const updates = cache.optimisticUpdates('project', {
+      meta: { id: 'project' },
+      data: { code: 'renamed' },
+    })
+    expect(updates).toHaveLength(2)
+    expect(a.transforms).toHaveLength(1)
+    expect(b.transforms).toHaveLength(0)
+    expect(c.transforms).toHaveLength(1)
+    expect(a.transforms[0](a.value).data[0]).toMatchObject({ code: 'renamed' })
+    expect(a.value.data[0]).toMatchObject({ code: 'project' })
+  })
+
   it('projects images into inactive index pages retained for back navigation', async () => {
     const cache = new CacheCtx(resourceProviders)
     const indexLists = lazyRegistry<

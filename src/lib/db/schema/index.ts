@@ -18,3 +18,4 @@ export * from './map'
 
 // Re-export all relations
 export * from './relations'
+export * from './place'

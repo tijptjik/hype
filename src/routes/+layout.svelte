@@ -219,6 +219,14 @@ async function handleRequestedUpgrade(): Promise<void> {
 }
 
 onMount(() => {
+  // Optional production tracking must never prevent the application from mounting.
+  if (import.meta.env.PROD) {
+    void import('#lib/analytics/webAnalytics.js')
+      .then(({ installWebAnalytics }) => installWebAnalytics(document))
+      .catch(() => {
+        // Tracking can be blocked by browser privacy controls; the app remains usable.
+      })
+  }
   // Shared lifecycle runs on every entry route; only the public surface loads map resources.
   hasMounted = true
   let disposed = false

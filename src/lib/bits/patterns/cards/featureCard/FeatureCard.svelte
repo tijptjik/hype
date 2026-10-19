@@ -1,4 +1,7 @@
 <script lang="ts">
+// BREADLINE
+import BreadlineCardContent from './components/BreadlineCardContent.svelte'
+import type { BreadlineRunPresentation } from '#lib/features/breadlineCard.js'
 // BITS
 import FeatureCardAddPhotoBody from './components/FeatureCardAddPhotoBody.svelte'
 import FeatureCardActions from './components/FeatureCardActions.svelte'
@@ -32,9 +35,10 @@ import { getFeatureCardResponsiveWidth } from './featureCard.utils'
 type FeatureCardProps = {
   feature: Feature
   cardType?: FeatureCardType
+  breadlineRun?: BreadlineRunPresentation
 }
 
-let { feature, cardType = 'standard' }: FeatureCardProps = $props()
+let { feature, cardType = 'standard', breadlineRun }: FeatureCardProps = $props()
 
 const cardCtx = getCardCtx()
 const omniCtx = getOmniCtx()
@@ -349,12 +353,16 @@ $effect(() => {
             />
           </div>
           <div bind:this={contentShellElement}>
-            <FeatureCardContent
-              {feature}
-              expanded={isDescriptionExpanded}
-              onToggle={handleDescriptionToggle}
-              onToggleVisibility={handleDescriptionToggleVisibility}
-            />
+            {#if cardType === 'breadline'}
+              <BreadlineCardContent {feature} run={breadlineRun} />
+            {:else}
+              <FeatureCardContent
+                {feature}
+                expanded={isDescriptionExpanded}
+                onToggle={handleDescriptionToggle}
+                onToggleVisibility={handleDescriptionToggleVisibility}
+              />
+            {/if}
           </div>
         {:else if viewport}
           <div bind:this={contentShellElement}>

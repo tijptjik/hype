@@ -6,7 +6,7 @@ let { class: className = '', children }: AnalyticsCardRootProps = $props()
 
 <section
   class={[
-    'rounded-xl border border-[#121212] bg-black px-5 py-5 sm:px-6 sm:py-6',
+    'rounded-xl border border-border bg-panel px-5 py-5 sm:px-6 sm:py-6',
     className,
   ]
     .filter(Boolean)

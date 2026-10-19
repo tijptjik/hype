@@ -1,3 +1,4 @@
+import { buildNoclit26Style } from './definitions/noclit26'
 import { buildMidnightStyle } from './definitions/midnight'
 import { buildBreadlineDarkStyle } from './definitions/breadlineDark'
 import { buildBreadlineLightStyle } from './definitions/breadlineLight'
@@ -24,6 +25,8 @@ import { getMapStyleCatalogCopy } from './i18n'
 
 /** Keys available in the map-style catalog, including the internal admin style. */
 export type MapStyleCatalogKey =
+  | 'hype-dark'
+  | 'hype-light'
   | 'hyper'
   | 'hyperLight'
   | 'hyperpop'
@@ -38,6 +41,7 @@ export type MapStyleCatalogKey =
   | 'breadline-light'
   | 'breadline-dark'
   | 'midnight'
+  | 'noclit26'
   | 'protomaps-light'
   | 'protomaps-dark'
   | 'protomaps-white'
@@ -77,6 +81,8 @@ export type MapStyleCatalogEntry<TCode extends string = string> = Omit<
   register?: boolean
   selectable?: boolean
   default?: boolean
+  bundledPreviewPath?: string
+  projectCode?: string | null
   hubCode?: string | null
   organisationCode?: string | null
   basemapVariant: MapStyleVariant | null
@@ -109,9 +115,39 @@ const PROTOMAPS_FLAVOR_ENTRIES: ReadonlyArray<
 
 export const MAP_STYLE_CATALOG = [
   {
+    key: 'noclit26',
+    ...getMapStyleCatalogCopy('noclit26', 'en'),
+    buildStyle: buildNoclit26Style,
+    projectCode: 'eln',
+    bundledPreviewPath: '/mapStylePreviews/noclit26.png',
+    basemapVariant: 'dark',
+    markerTheme: 'dark',
+    showSymbols: true,
+  },
+  {
+    key: 'hype-dark',
+    name: getMapStyleCatalogCopy('hype-dark', 'en').name,
+    description: getMapStyleCatalogCopy('hype-dark', 'en').description,
+    buildStyle: buildHyperStyle,
+    basemapVariant: 'dark',
+    markerTheme: 'etch-dark',
+    showSymbols: true,
+  },
+  {
+    key: 'hype-light',
+    name: getMapStyleCatalogCopy('hype-light', 'en').name,
+    description: getMapStyleCatalogCopy('hype-light', 'en').description,
+    buildStyle: buildHyperLightStyle,
+    basemapVariant: 'light',
+    markerTheme: 'etch-light',
+    showSymbols: true,
+  },
+  // Keep legacy keys registered for saved project, layer and account selections.
+  {
     key: 'hyper',
     name: getMapStyleCatalogCopy('hyper', 'en').name,
     description: getMapStyleCatalogCopy('hyper', 'en').description,
+    selectable: false,
     buildStyle: buildHyperStyle,
     basemapVariant: 'dark',
     markerTheme: 'etch-dark',
@@ -121,6 +157,7 @@ export const MAP_STYLE_CATALOG = [
     key: 'hyperLight',
     name: getMapStyleCatalogCopy('hyperLight', 'en').name,
     description: getMapStyleCatalogCopy('hyperLight', 'en').description,
+    selectable: false,
     buildStyle: buildHyperLightStyle,
     basemapVariant: 'light',
     markerTheme: 'etch-light',
@@ -276,8 +313,8 @@ export const getDefaultMapStyleCatalogEntry =
 
 /** Default map choices in the settings panel, in presentation order. */
 export const FEATURED_MAP_STYLE_KEYS = [
-  'hyper',
-  'hyperLight',
+  'hype-dark',
+  'hype-light',
   'breadline-light',
   'breadline-dark',
   'hyperpop',
@@ -297,3 +334,19 @@ export const isMapStyleSelectable = (key: string): boolean =>
 export const SELECTABLE_MAP_STYLE_CATALOG = REGISTERED_MAP_STYLE_CATALOG.filter(entry =>
   isMapStyleSelectable(entry.key),
 )
+
+/**
+ * Identifies styles that must only be offered through their owning project.
+ * @param key - Built-in or custom map style code.
+ * @returns Whether the catalog restricts the style to a project.
+ */
+export const isProjectOnlyMapStyle = (key: string): boolean =>
+  Boolean(REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.key === key)?.projectCode)
+
+/**
+ * Resolves historical map-style keys to their current public code.
+ * @param code - Persisted or current style code.
+ * @returns Canonical public code, preserving custom style codes.
+ */
+export const canonicalMapStyleCode = (code: string): string =>
+  code === 'hyper' ? 'hype-dark' : code === 'hyperLight' ? 'hype-light' : code

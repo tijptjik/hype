@@ -1,3 +1,4 @@
+import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
 import { CompactAncestorsSchema } from './api'
 // I18N
@@ -65,6 +66,12 @@ import { UserBasic } from './user'
 /** Layer presentation overrides; empty form values explicitly select User Preference. */
 export const LayerMetadataSchema = z
   .object({
+    markerStyleCode: z
+      .preprocess(
+        value => (value === '' ? null : value),
+        z.enum(MARKER_STYLE_CODES).nullable(),
+      )
+      .optional(),
     cardStyleCode: z
       .preprocess(
         value => (value === '' ? null : value),
@@ -82,6 +89,7 @@ export const LayerMetadataSchema = z
   .transform(metadata => {
     // Inheritance has one canonical representation so unchanged translation forms
     // do not accidentally submit a restricted metadata change.
+    if (metadata.markerStyleCode === null) delete metadata.markerStyleCode
     if (metadata.cardStyleCode === null) delete metadata.cardStyleCode
     return metadata
   })

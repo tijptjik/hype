@@ -128,7 +128,7 @@ function toggleSeries(seriesKey: AssetAnalyticsSeriesKey): void {
   </div>
 {/snippet}
 
-<section class="bits-theme flex min-h-0 flex-col gap-5 pb-12">
+<section class="bits-theme flex min-h-0 flex-col gap-4 pb-12">
   {#if analyticsState.status === 'error'}
     <AnalyticsCardPrimitive.EmptyState
       tone="error"

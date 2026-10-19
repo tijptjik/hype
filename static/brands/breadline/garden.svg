@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title"><title id="title">Garden — Breadline treatment</title><circle cx="64" cy="64" r="62" fill="#F4F0E6"/><circle cx="64" cy="64" r="56" fill="#C92943"/><g fill="#FFF6E8">
+<path d="M43 63C29 62 24 52 28 42C31 33 41 29 49 31C55 23 69 23 77 30C88 28 99 34 101 44C103 54 97 62 87 64V80H77V54C83 55 89 52 89 46C89 41 84 38 78 41C74 32 60 32 55 41C47 36 39 40 39 47C39 53 45 56 51 54V81H41Z"/>
+<path d="M87 82C86 66 77 59 64 59C47 59 38 72 39 87C40 102 54 110 68 106C77 104 83 98 87 91H75C70 99 58 100 52 91C45 81 52 69 63 69C72 69 76 74 77 82Z"/>
+<ellipse cx="57" cy="80" rx="4" ry="5"/><ellipse cx="70" cy="80" rx="4" ry="5"/>
+<path d="M49 91C53 92 58 86 63 87C68 86 72 92 78 91L81 96C73 99 68 94 63 93C58 94 54 99 47 96Z"/>
+</g></svg>

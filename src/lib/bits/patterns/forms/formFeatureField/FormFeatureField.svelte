@@ -123,6 +123,7 @@ const fieldClass = $derived(
           .join(' ')}
       >
         <FeatureFieldInput
+          isPhone={property.component === 'PhoneField'}
           id={`feature-field-${property.id}`}
           value={value ?? ''}
           {placeholder}

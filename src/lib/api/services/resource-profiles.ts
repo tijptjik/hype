@@ -16,6 +16,7 @@ export const compactProjectAncestorRelations = {
     ...compactAncestorRelations.columns,
     useAllInOrgContext: true,
     cardStyleCode: true,
+    markerStyleCode: true,
   },
 }
 

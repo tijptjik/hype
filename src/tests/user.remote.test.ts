@@ -32,6 +32,18 @@ vi.mock('#lib/api/services/profileContributions.js', () => ({
   loadPrivateContributions: mockPrivateContributions,
 }))
 
+vi.mock('#lib/api/services/userContacts.js', () => ({
+  getTelephoneVisibleUserIds: vi.fn(async () => new Set<string>()),
+  toUserDirectoryProfile: (
+    row: Record<string, unknown>,
+    _phone: boolean,
+    emailAllowed = false,
+  ) => {
+    const { telephone, emailVerified, ...fields } = row
+    return { ...fields, email: emailAllowed ? row.email : null }
+  },
+}))
+
 vi.mock('$app/server', () => ({
   getRequestEvent: mockGetRequestEvent,
   requested: vi.fn(() => ({ refreshAll: vi.fn() })),
@@ -575,6 +587,20 @@ describe('user.remote', () => {
     )
   })
 
+  it('returns email for an explicit SuperAdmin search', async () => {
+    mockSetupRequestHandler.mockResolvedValue({
+      db: {},
+      user: { id: 'viewer', isAnonymous: false, superAdmin: true },
+      userRoles: [],
+    })
+    mockSearchUsersByConditions.mockResolvedValue({
+      data: [{ id: 'target', email: 'contact@example.invalid' }],
+      totalCount: 1,
+    })
+    const result = await remote.searchUsers({ directory: true })
+    expect(result.data[0].email).toBe('contact@example.invalid')
+  })
+
   it('searchUsers caps limit at 100 and parses count rows', async () => {
     const db = { __tag: 'db-caps-limit' }
     mockSearchUsersByConditions.mockResolvedValue({
@@ -621,7 +647,7 @@ describe('user.remote', () => {
         {
           id: 'u-1',
           name: 'Alice',
-          email: 'alice@example.com',
+          email: null,
           image: null,
           attribution: 'Alice',
         },
