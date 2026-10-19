@@ -12,21 +12,25 @@ import type { D1Database } from '@cloudflare/workers-types'
 import type { UnresolvedFeatureSplit } from '../../src/lib/places/migrationPlan'
 
 /**
- * Rehearse a private split manifest only in an existing isolated local state directory.
+ * Apply a private split manifest to isolated state or explicitly selected primary LOCAL state.
  * @returns Count-only output and a private outcome receipt; stops on the first conflict.
- * @remarks Each Feature is atomic and replayable. Never targets default local state or
- * remote bindings. Prepare an isolated copy of the fresh mirror before invoking this CLI.
+ * @remarks Each Feature is atomic and replayable. Remote bindings are always disabled.
+ * The --primary-local target requires an existing default state and a prior backup;
+ * otherwise prepare an isolated copy of the fresh mirror before invoking this CLI.
  * A manifest is revalidated against live persisted values by the application service.
  */
 async function main(): Promise<void> {
   const [manifestPath, statePath, receiptPath] = process.argv.slice(2)
   if (!manifestPath || !statePath || !receiptPath)
     throw new Error(
-      'Usage: apply-feature-split.ts manifest.json isolated-state receipt.json',
+      'Usage: apply-feature-split.ts manifest.json <isolated-state|--primary-local> receipt.json',
     )
-  const state = realpathSync(statePath)
+  const primaryLocal = statePath === '--primary-local'
+  if (primaryLocal && process.env.HYPE_DEV_STATE)
+    throw new Error('Primary local application cannot use HYPE_DEV_STATE')
+  const state = realpathSync(primaryLocal ? '.wrangler/state/v3' : statePath)
   const root = realpathSync('.local/places')
-  if (!state.startsWith(root + sep) || !state.endsWith('-state'))
+  if (!primaryLocal && (!state.startsWith(root + sep) || !state.endsWith('-state')))
     throw new Error(
       'Split rehearsal requires an isolated .local/places/*-state directory',
     )

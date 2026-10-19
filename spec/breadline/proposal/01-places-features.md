@@ -914,8 +914,10 @@ back. Exact completed splits replay without new history. Original Feature values
 spatial jobs are never updated by this operation. The actor is retained in provenance
 and association history.
 
-`apply-feature-split.ts <manifest> <isolated-state> <receipt>` deliberately restricts
-execution to existing `.local/places/*-state` directories, with remote bindings disabled.
+`apply-feature-split.ts <manifest> <isolated-state|--primary-local> <receipt>` defaults
+to existing `.local/places/*-state` directories. The explicit `--primary-local` target
+uses `.wrangler/state/v3` and rejects `HYPE_DEV_STATE`; take a backup before applying.
+Remote bindings are disabled for both targets.
 It stops at the first conflict and writes a private receipt. The manifest is resumable,
 not one transaction across all Features: completed individual splits remain committed.
 This rehearsal CLI does not provide production execution authorization or a deploy step.
@@ -1083,3 +1085,26 @@ Full type-check retains the existing 10 unrelated errors / 19 warnings baseline.
 Source import/matching and address curation, monthly sync and adoption,
 identity lifecycle, and final migration application/acceptance remain unfinished.
 No production mutation or deployment was performed.
+
+### Primary local split and Breadline application (Refs #194)
+
+The refreshed primary local database now contains 1,601 Features, 2,850 Places and
+1,520 Feature–Place associations. The pre-application SQLite backup is retained
+privately. All 1,190 existing eligible Features were split into private unresolved
+Places; the independent split verifier confirmed unchanged original Feature,
+translation and property rows, preserved effective values, one history entry per
+split, integrity `ok` and zero foreign-key violations. The 81 intangible/draft
+exclusions remain unassociated.
+
+The importer was regenerated against that post-split state and applied in a
+fail-fast SQLite transaction: 311 donors with recorded runs and 19 dropoffs were
+imported; 155 donors without runs were excluded. Existing rows and property catalogs
+were preserved. Imported Place facts, accepted revisions, geometry/address, publication
+and MTR fields match the independently verified rehearsal. Regeneration matched all
+330 imports with zero creations, and replay added no association history. The two
+importer integration tests pass. Private SQL, databases and receipts remain ignored.
+
+This completes primary-local application of the unresolved fallback migration, not
+canonical identity review or production rollout. Canonical matching/promotion, address
+curation and lifecycle acceptance remain necessary; no production mutation or deployment
+was performed.
