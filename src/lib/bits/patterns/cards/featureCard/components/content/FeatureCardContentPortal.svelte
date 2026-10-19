@@ -16,9 +16,11 @@ import FeatureCardContentAddress from './FeatureCardContentAddress.svelte'
 let {
   feature,
   size = 200,
+  roundedSurface = false,
 }: {
   feature: Feature | NewFeatureWithLocationAndParents
   size?: number
+  roundedSurface?: boolean
 } = $props()
 
 const appCtx = getSurfaceCtx()
@@ -54,6 +56,7 @@ const portalMaskId = $derived(`feature-card-portal-mask-${featureKey}`)
     <rect
       width="100"
       height="100"
+      rx={roundedSurface ? 50 : 0}
       fill="var(--theme-panel)"
       mask={`url(#${portalMaskId})`}
     ></rect>

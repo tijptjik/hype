@@ -5,6 +5,7 @@ import FeatureCardActions from './components/FeatureCardActions.svelte'
 import FeatureCardBreadcrumbs from './components/FeatureCardBreadcrumbs.svelte'
 import FeatureCardContainer from './components/FeatureCardContainer.svelte'
 import FeatureCardContent from './components/FeatureCardContent.svelte'
+import FeatureCardPortalBand from './components/FeatureCardPortalBand.svelte'
 import FeatureCardMissingReportBody from './components/FeatureCardMissingReportBody.svelte'
 import FeatureCardRoot from './components/FeatureCardRoot.svelte'
 import FeatureCardTitle from './components/FeatureCardTitle.svelte'
@@ -23,15 +24,17 @@ import { getResponsiveCtx, setResponsiveCtx } from '#lib/context/responsive.svel
 import { FeatureCardMode } from '#lib/enums.js'
 // TYPES
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
+import type { FeatureCardType } from '#lib/features/cardType.js'
 // LOCAL
 import { getFeatureCardLayout } from './featureCard.layout'
 import { getFeatureCardResponsiveWidth } from './featureCard.utils'
 
 type FeatureCardProps = {
   feature: Feature
+  cardType?: FeatureCardType
 }
 
-let { feature }: FeatureCardProps = $props()
+let { feature, cardType = 'standard' }: FeatureCardProps = $props()
 
 const cardCtx = getCardCtx()
 const omniCtx = getOmniCtx()
@@ -46,6 +49,7 @@ const responsiveCtx = (() => {
 })()
 const surfaceLayout = getSurfaceLayoutCtx() ?? new SurfaceLayout(responsiveCtx)
 const mode = $derived(cardCtx.state.mode)
+const isPortalBand = $derived(cardType === 'portal-band' && cardCtx.isDisplayMode)
 const responsiveWidth = $derived(
   getFeatureCardResponsiveWidth(responsiveCtx, surfaceLayout),
 )
@@ -60,6 +64,11 @@ const layout = $derived(
 )
 
 let viewport = $state<HTMLElement>()
+let cardContentWidth = $state(0)
+let portalBandHeight = $state(64)
+const bandPortalSize = $derived(cardContentWidth < 480 ? 120 : 160)
+// The circle ends at the title row; it must not add space above the actions.
+const bandPortalCenterY = $derived(portalBandHeight - bandPortalSize / 2 - 4)
 let isDescriptionExpanded = $state(false)
 let showDescriptionToggle = $state(false)
 let viewerShellElement = $state<HTMLDivElement | null>(null)
@@ -132,7 +141,11 @@ function updateViewerBudget(): void {
     return
   }
 
-  if (shouldMeasureDisplayChrome && (!breadcrumbsElement || !titleElement)) {
+  if (
+    shouldMeasureDisplayChrome &&
+    !isPortalBand &&
+    (!breadcrumbsElement || !titleElement)
+  ) {
     containerScrollable = false
     viewerTargetHeightPx = null
     return
@@ -242,6 +255,7 @@ $effect(() => {
 
 $effect(() => {
   const currentLayout = layout
+  isPortalBand
   const viewportElement = viewport
   const contentShell = contentShellElement
   const shouldMeasureDisplayChrome =
@@ -255,7 +269,11 @@ $effect(() => {
     return
   }
 
-  if (shouldMeasureDisplayChrome && (!breadcrumbsElement || !titleElement)) {
+  if (
+    shouldMeasureDisplayChrome &&
+    !isPortalBand &&
+    (!breadcrumbsElement || !titleElement)
+  ) {
     containerScrollable = false
     viewerTargetHeightPx = null
     return
@@ -293,6 +311,10 @@ $effect(() => {
     <FeatureCardContainer bind:viewport scrollable={containerScrollable}>
       <div
         bind:this={viewerShellElement}
+        bind:clientWidth={cardContentWidth}
+        style={isPortalBand
+          ? `mask-image: radial-gradient(circle at calc(100% - ${bandPortalSize / 2 + 12}px) calc(100% + ${bandPortalCenterY}px), transparent ${bandPortalSize * 0.48}px, black ${bandPortalSize * 0.48 + 0.5}px);`
+          : undefined}
         class="pointer-events-none flex min-h-0 w-full shrink-0 flex-col items-stretch"
       >
         <FeatureCardViewerContent
@@ -308,7 +330,15 @@ $effect(() => {
           ? 'pointer-events-none flex shrink-0 flex-col'
           : 'pointer-events-none flex min-h-0 shrink-0 flex-col'}
       >
-        {#if cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode}
+        {#if isPortalBand}
+          <div bind:this={contentShellElement} bind:clientHeight={portalBandHeight}>
+            <FeatureCardPortalBand
+              {feature}
+              portalSize={bandPortalSize}
+              portalCenterY={bandPortalCenterY}
+            />
+          </div>
+        {:else if cardCtx.isDisplayMode || cardCtx.isSubmissionSuccessMode}
           <div bind:this={breadcrumbsElement}><FeatureCardBreadcrumbs {feature} /></div>
           <div bind:this={titleElement}>
             <FeatureCardTitle
