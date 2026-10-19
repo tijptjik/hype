@@ -544,6 +544,23 @@ nearby and exact-name candidates, and writes private review evidence. Neither ne
 brands nor exact names alone establish identity; all suggestions remain unaccepted.
 No candidate scan creates Feature links or silently changes existing values.
 
+Existing Feature candidate discovery is reproducible with
+`scripts/places/match-feature-places.py --plan <private-split-manifest> --saanseoi
+<current-mirror.sqlite> --publication <captured-response.json> --output <private-report>`.
+Use `--immutable-snapshot` only for a sealed standalone export without a WAL. The
+read-only scan verifies the selected snapshot, retains the split-manifest hash and
+Feature concurrency timestamps, and searches exact localized names, contact numbers
+and nearby coordinates across the full canonical scope. Exact addresses and shared
+versus unique phone evidence remain explicit. Nearby-only suggestions remain unresolved;
+independently corroborated candidates are prioritized for review, never automatically
+linked. No report decision changes the migration's baseline-preservation guarantees.
+
+The retained 1,190 eligible Feature baselines have 335 exact-name candidate sets (203
+within 25 metres); none contains phone evidence or an exact freeform-address match.
+The other 81 Features remain excluded as drafts/intangible records. These findings are
+candidate evidence, not 335 approved identities. Reports include source/candidate names,
+coordinates and addresses privately under `.local/places/`; no raw exports are committed.
+
 For fresh HYPE mirrors, D1's full export currently rejects FTS virtual tables. Export
 an explicit canonical-table list excluding virtual/shadow tables and retain a separate
 `sqlite_schema` JSON inventory. `scripts/dev/restore-d1-export.ts` reconstructs a new
