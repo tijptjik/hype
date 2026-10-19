@@ -52,3 +52,6 @@ spec/breadline/Breadline v4 - Scope of Work.pdf
 
 # Local division migration rehearsals, backups and verification logs
 .local/division-refresh/
+
+# Private Places migration snapshots and matching evidence
+.local/places/
