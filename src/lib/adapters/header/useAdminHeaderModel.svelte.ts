@@ -148,6 +148,7 @@ export function useAdminHeaderModel(
   function getCachedCrumbLabel(
     resourceType: FirstClassResource,
     resource: unknown,
+    inOrganisationContext: boolean = false,
   ): string {
     switch (resourceType) {
       case FirstClassResource.organisation:
@@ -158,8 +159,12 @@ export function useAdminHeaderModel(
 
       case FirstClassResource.project:
         return (
-          appCtx.getContextualProjectName(resource as never, false, false) ||
-          getCachedEntityLabel(resourceType, resource)
+          appCtx.getContextualProjectName(
+            resource as never,
+            false,
+            false,
+            inOrganisationContext,
+          ) || getCachedEntityLabel(resourceType, resource)
         )
 
       case FirstClassResource.layer:
@@ -243,7 +248,15 @@ export function useAdminHeaderModel(
           ? ((resourceValue as { id?: string }).id ?? '').trim()
           : ((resourceValue as { code?: string }).code ?? '').trim()
 
-      const name = getCachedCrumbLabel(type, resourceValue)
+      const name = getCachedCrumbLabel(
+        type,
+        resourceValue,
+        list.some(crumb =>
+          crumb.href?.startsWith(
+            `/admin/${ResourcePath[FirstClassResource.organisation]}/`,
+          ),
+        ),
+      )
 
       if (!name) return
 

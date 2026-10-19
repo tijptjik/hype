@@ -1,8 +1,9 @@
 import { expect, it } from 'vitest'
 import { getResourcePanelShortName } from '#lib/adapters/panels/resourcePanelLabels.js'
+import { getProjectDisplayName } from '#lib/projectNames.js'
 import { CompactAncestorsSchema } from '#lib/db/zod/schema/api.js'
 
-it('keeps joined short names and the authored All scope without loaded parent lists', () => {
+it('resolves joined project naming policy without loaded parent lists', () => {
   const ancestors = CompactAncestorsSchema.parse({
     organisation: {
       id: 'org',
@@ -11,12 +12,16 @@ it('keeps joined short names and the authored All scope without loaded parent li
     },
     project: {
       id: 'project',
-      code: 'all',
-      i18n: { en: { name: 'HK Ghost Signs', nameShort: 'All' } },
+      code: 'hkghostsigns',
+      useAllInOrgContext: true,
+      i18n: { en: { name: 'HK Ghost Signs', nameShort: 'Ghost Signs' } },
     },
   })
   expect(getResourcePanelShortName(ancestors.organisation, {})).toBe('HKGhostSigns')
-  expect(getResourcePanelShortName(ancestors.project, {})).toBe('All')
+  expect(getProjectDisplayName(ancestors.project, {})).toBe('Ghost Signs')
+  expect(
+    getProjectDisplayName(ancestors.project, {}, { inOrganisationContext: true }),
+  ).toBe('All')
 })
 
 it('falls back from absent or blank short names to full names and then identity', () => {

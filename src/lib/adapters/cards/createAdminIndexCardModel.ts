@@ -311,8 +311,12 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
 
       if (resourceType !== FirstClassResource.project && hierarchy.project) {
         const label =
-          appCtx.getContextualProjectName(hierarchy.project, false, false) ??
-          hierarchy.project.code
+          appCtx.getContextualProjectName(
+            hierarchy.project,
+            false,
+            false,
+            Boolean(hierarchy.organisation),
+          ) ?? hierarchy.project.code
         if (label) {
           breadcrumbs.push({
             label,

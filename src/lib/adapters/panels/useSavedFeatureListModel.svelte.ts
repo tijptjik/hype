@@ -89,7 +89,12 @@ export function useSavedFeatureListModel(
         ? getI18n(record.hierarchy.organisation, 'nameShort', preferences)
         : undefined,
       project: record.hierarchy.project
-        ? app.getContextualProjectName(record.hierarchy.project)
+        ? app.getContextualProjectName(
+            record.hierarchy.project,
+            false,
+            true,
+            Boolean(record.hierarchy.organisation),
+          )
         : undefined,
       layer: record.hierarchy.layer
         ? app.getContextualLayerName(record.hierarchy.layer)

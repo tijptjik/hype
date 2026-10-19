@@ -9,6 +9,7 @@ import { ADMIN_PATH } from '#lib/constants.js'
 import { getI18n, m } from '#lib/i18n.js'
 // LABELS
 import { getResourcePanelShortName } from './resourcePanelLabels'
+import { getProjectDisplayName } from '#lib/projectNames.js'
 // CONTEXT
 import { getSurfaceNavigation } from '#lib/context/surfaceNavigation.svelte.js'
 import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
@@ -157,19 +158,23 @@ export function useResourcePanelModel(
         const hierarchy = app.getHierarchySync(
           record as Parameters<ResourceViewCtx['getHierarchySync']>[0],
         )
-        const breadcrumbs = [
-          type !== 'organisation' ? hierarchy.organisation : undefined,
-          type === 'layer' ? hierarchy.project : undefined,
-        ]
-          .filter(Boolean)
-          .map(ancestor =>
-            getResourcePanelShortName(
-              ancestor,
-              app.getUserPreferences(),
-              ancestor?.code ?? '',
-            ),
-          )
-          .filter(label => label.length > 0)
+        const organisationName =
+          type !== 'organisation' && hierarchy.organisation
+            ? getResourcePanelShortName(
+                hierarchy.organisation,
+                app.getUserPreferences(),
+                hierarchy.organisation.code,
+              )
+            : ''
+        const projectName =
+          type === 'layer'
+            ? getProjectDisplayName(hierarchy.project, app.getUserPreferences(), {
+                inOrganisationContext: Boolean(organisationName),
+              })
+            : null
+        const breadcrumbs = [organisationName, projectName].filter(
+          (label): label is string => Boolean(label),
+        )
         const pinned = selected.includes(resource.id)
         const active =
           navigation.getActiveResourceType() === type &&

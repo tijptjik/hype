@@ -220,6 +220,27 @@ describe('native collection optimistic projections', () => {
       ancestors: { organisation: { code: 'old' } },
     })
   })
+  it('updates an organisation-context naming policy in retained layer breadcrumbs, including false', () => {
+    const cache = new CacheCtx(resourceProviders)
+    const resources = new ResourceClient(cache, () => 'test')
+    const descendant = page([
+      {
+        ...row('layer'),
+        ancestors: { project: { id: 'p', code: 'project', useAllInOrgContext: true } },
+      } as PanelResource,
+    ])
+    resources.lists.layer.pages = [descendant.query]
+    cache.optimisticUpdates('project', {
+      meta: { id: 'p' },
+      data: { useAllInOrgContext: false },
+    })
+    expect(descendant.transforms[0](descendant.value).data[0]).toMatchObject({
+      ancestors: { project: { useAllInOrgContext: false } },
+    })
+    expect(descendant.value.data[0]).toMatchObject({
+      ancestors: { project: { useAllInOrgContext: true } },
+    })
+  })
   it('updates the active native feature collection during form submission', () => {
     const cache = new CacheCtx(resourceProviders)
     const collection = page([row('feature')])

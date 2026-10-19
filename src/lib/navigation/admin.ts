@@ -307,8 +307,12 @@ export async function getBreadcrumbs(
 
     if (hierarchy.project && resourceType !== FirstClassResource.project) {
       const projectName =
-        appCtx.getContextualProjectName(hierarchy.project, false, false) ??
-        hierarchy.project.code
+        appCtx.getContextualProjectName(
+          hierarchy.project,
+          false,
+          false,
+          Boolean(hierarchy.organisation),
+        ) ?? hierarchy.project.code
       breadcrumbs.push({
         name: projectName,
         href: `${ADMIN_PATH}/${ResourcePath.project}/${hierarchy.project.code}`,

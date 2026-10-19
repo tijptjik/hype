@@ -47,7 +47,12 @@ export async function getWishlistedFeaturesAsync(
             ? getI18n(organisation, 'nameShort', appCtx.getUserPreferences())
             : null,
           project: project
-            ? getI18n(project, 'nameShort', appCtx.getUserPreferences())
+            ? appCtx.getContextualProjectName(
+                project,
+                false,
+                true,
+                Boolean(organisation),
+              )
             : null,
           layer:
             layer && projectLayerCount > 1
