@@ -1,5 +1,8 @@
+import type { PlaceBrand } from '#lib/places/model.js'
+
 /** Minimal shape shared by public collection rows and full feature cards. */
 export type PresentationFeature = {
+  placeBrands?: PlaceBrand[] | null
   layerId?: string
   properties?: ReadonlyArray<{
     value?: string | null

@@ -20,7 +20,7 @@ import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 let { feature, run }: { feature: Feature; run?: BreadlineRunPresentation } = $props()
 const view = getSurfaceCtx()
 const preferences = $derived(view.getUserPreferences())
-const brand = $derived(breadlineBrand(feature))
+const brand = $derived(breadlineBrand(feature, getLocale()))
 const access = $derived(breadlineCardMtr(feature, getLocale()))
 const address = $derived(getI18n(feature, 'displayAddress', preferences, ''))
 const description = $derived(

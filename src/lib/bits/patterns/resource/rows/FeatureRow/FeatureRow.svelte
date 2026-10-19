@@ -16,7 +16,7 @@ import ImageIcon from 'virtual:icons/proicons/photo'
 import TagsIcon from 'virtual:icons/proicons/tag-multiple'
 import PenIcon from 'virtual:icons/proicons/pencil'
 // I18N
-import { m } from '#lib/i18n.js'
+import { getLocale, m } from '#lib/i18n.js'
 // SERVICES
 import { getFeatureIdenticonUrl } from '#lib/client/services/image.js'
 // PRESENTATION
@@ -86,8 +86,8 @@ function toPlaceholderStatuses(statuses: FeatureRowStatMap): string[] {
   return Object.keys(statuses)
 }
 
-// Read the effective brand property so inherited Place values use the same thumbnail.
-const brandLogoSrc = $derived(breadlineBrand(entity).logoSrc)
+// Read accepted Place brands (or the legacy property) for the shared thumbnail.
+const brandLogoSrc = $derived(breadlineBrand(entity, getLocale()).logoSrc)
 const fallbackImageSrc = $derived(
   brandLogoSrc ??
     (entity.image

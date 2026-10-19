@@ -86,6 +86,7 @@ function setup(withOrphan = false) {
   sqlite.exec(readFileSync('migrations/0083_feature_division_registry.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0084_division_facets.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0088_feature_division_roles.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
   const statements: string[] = []
   const prepare = (query: string, bindings: unknown[] = []) => ({
     bind: (...params: unknown[]) => prepare(query, params),

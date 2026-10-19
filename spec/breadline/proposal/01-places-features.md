@@ -762,3 +762,24 @@ statement and must not be used to apply generated migrations.
 The private generated SQL and rehearsal databases are ignored. Final reviewed source
 matching, structured-address curation, inherited brand presentation and production
 migration packaging remain outstanding; nothing was deployed or remotely mutated.
+
+### Accepted Place brand read projection (Refs #194)
+
+Feature list, detail and query hydration now project brand arrays from the accepted
+`featurePlace.factsRevisionId`. The projection honors explicit override and clear,
+checks private Place ownership, and excludes drafts. It does not read a newer source
+revision before adoption or create duplicate Feature classifier assignments. JSON is
+decoded in read-only response contracts, not writable Feature input schemas.
+
+Breadline cards and shared Feature rows consume this projection. A single recognized
+brand keeps its bundled logo and localized name; multiple brands retain all names
+without arbitrarily choosing one logo. An empty array suppresses legacy classifier
+fallback; an unassociated Feature retains that fallback during migration.
+
+Validation: 144 tests pass across Place services, brand presentation, Feature query
+services, remote APIs and query integration. The full type-check reports the existing
+10 errors and 19 warnings outside this change. A browser check against an isolated
+copy of the imported rehearsal database opened the Maison Kayser donor and its
+unresolved Place association. List-logo visual acceptance remains unverified: the
+admin Features index returned an empty list in that session. Brand override editing
+and complete retirement of the legacy classifier UI remain outstanding.

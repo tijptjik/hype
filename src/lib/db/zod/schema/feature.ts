@@ -1,3 +1,5 @@
+// PLACE CONTRACTS
+import { PlaceFactsSchema } from '#lib/places/validation.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // ZOD
@@ -264,7 +266,14 @@ export const UserFeatureBase = createSelectSchema(userFeature)
 export const UserFeatureInsert = createInsertSchema(userFeature)
 export const UserFeatureUpdate = createUpdateSchema(userFeature)
 
+// SQLite relational extras return JSON text; decode only in the read-only response contract.
+const ReadPlaceBrands = z.preprocess(
+  value => (typeof value === 'string' ? JSON.parse(value) : value),
+  PlaceFactsSchema.shape.brands.nullish(),
+)
+
 export const FeatureListRow = FeatureBase.extend({
+  placeBrands: ReadPlaceBrands,
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
@@ -290,6 +299,7 @@ export const FeatureCardRow = FeatureListRow.extend({
 })
 
 export const FeatureAdminRow = FeatureBase.extend({
+  placeBrands: ReadPlaceBrands,
   i18n: z.array(FeatureI18nBase).nullish(),
   properties: z
     .array(
@@ -520,6 +530,7 @@ const FeatureListFields = FeatureBase.pick({
 })
 
 export const FeatureListProfileAPI = FeatureListFields.extend({
+  placeBrands: ReadPlaceBrands,
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
@@ -540,6 +551,7 @@ export const FeatureDetailProfileAPI = FeatureCardProfileAPI.extend({
 })
 
 export const FeatureAdminProfileAPI = FeatureBase.extend({
+  placeBrands: ReadPlaceBrands,
   i18n: getLocales(FeatureI18nBase),
   properties: z.array(FeaturePropertyAPI).default([]),
   contributor: UserBasic.nullish(),

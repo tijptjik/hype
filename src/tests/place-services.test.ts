@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { FeatureListProfileAPI } from '#lib/db/zod/schema/feature.js'
+import { feature as featureTable } from '#lib/db/schema/feature.js'
+import { featurePlaceBrandsSQL } from '#lib/db/services/placeBrandProjection.js'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -97,7 +100,9 @@ function setup() {
   }
   return {
     sqlite,
-    db: drizzle({ prepare, batch } as unknown as D1Database) as Database,
+    db: drizzle({ prepare, batch } as unknown as D1Database, {
+      schema: { feature: featureTable },
+    }) as unknown as Database,
   }
 }
 const facts = {
@@ -1608,5 +1613,77 @@ describe('atomic unresolved Feature split application', () => {
     expect(await applyUnresolvedFeatureSplit(db, plan, 'actor')).toEqual({
       status: 'conflict',
     })
+  })
+})
+
+describe('accepted Place brand read projection', () => {
+  it('uses accepted revisions and honors override/clear without extra reads or legacy fallback', async () => {
+    const { db, sqlite } = setup()
+    const query = async () => {
+      const row = await db.query.feature.findFirst({
+        columns: { id: true },
+        extras: { placeBrands: featurePlaceBrandsSQL().as('placeBrands') },
+      })
+      return {
+        placeBrands: FeatureListProfileAPI.shape.placeBrands.parse(row?.placeBrands),
+      }
+    }
+    expect((await query())?.placeBrands).toBeNull()
+    const brands = [
+      {
+        identifiers: { breadlineBrand: 'kayser' },
+        names: { en: 'Maison Kayser', 'zh-hant': '品牌' },
+      },
+    ]
+    const local = await createLocalPlace(
+      db,
+      'p',
+      { state: 'unresolved', facts: { ...facts, brands } },
+      'actor',
+    )
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      placeId: local.placeId,
+      factsRevisionId: local.revisionId,
+      locationRevisionId: local.revisionId,
+      overrides: {},
+      actorId: 'actor',
+    }
+    const write = prepareFeaturePlaceAssociationWrite(db, input)
+    await write.query
+    expect((await query())?.placeBrands).toEqual(brands)
+    sqlite
+      .prepare(
+        "INSERT INTO placeRevision(id,placeId,sequence,origin,contentHash,payload,facts) VALUES ('future',?,2,'local','hash','{}',?)",
+      )
+      .run(local.placeId, JSON.stringify({ ...facts, brands: [] }))
+    expect((await query())?.placeBrands).toEqual(brands)
+    const changed = prepareFeaturePlaceAssociationWrite(db, {
+      ...input,
+      expectedRevision: write.revision,
+      overrides: {
+        brands: {
+          mode: 'override',
+          value: [{ identifiers: {}, names: { en: 'Correction' } }],
+        },
+      },
+    })
+    await changed.query
+    expect((await query())?.placeBrands).toEqual([
+      { identifiers: {}, names: { en: 'Correction' } },
+    ])
+    await prepareFeaturePlaceAssociationWrite(db, {
+      ...input,
+      expectedRevision: changed.revision,
+      overrides: { brands: { mode: 'clear' } },
+    }).query
+    expect((await query())?.placeBrands).toEqual([])
+    sqlite.exec('UPDATE feature SET isDraft=1')
+    expect((await query())?.placeBrands).toBeNull()
+    sqlite.exec("UPDATE feature SET isDraft=0; UPDATE place SET ownerProjectId='other'")
+    expect((await query())?.placeBrands).toBeNull()
   })
 })
