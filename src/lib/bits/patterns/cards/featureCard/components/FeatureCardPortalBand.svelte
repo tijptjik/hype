@@ -3,6 +3,11 @@
 import FeatureCardBreadcrumbs from './FeatureCardBreadcrumbs.svelte'
 import FeatureCardTitle from './FeatureCardTitle.svelte'
 import FeatureCardContentPortal from './content/FeatureCardContentPortal.svelte'
+import FeatureCardContentFields from './content/FeatureCardContentFields.svelte'
+// I18N
+import { getLocale } from '#lib/i18n.js'
+// CORE FEATURE DATA
+import { getFeatureMtrProperty } from '../featureCardMtr'
 // TYPES
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 
@@ -15,6 +20,8 @@ let {
   portalSize: number
   portalCenterY: number
 } = $props()
+
+const mtrProperty = $derived(getFeatureMtrProperty(feature, getLocale()))
 </script>
 
 <div data-card-type="portal-band" class="pointer-events-none relative isolate">
@@ -36,5 +43,10 @@ let {
   <div class="min-w-0 py-1" style={`padding-right: ${portalSize + 24}px;`}>
     <FeatureCardBreadcrumbs {feature} />
     <FeatureCardTitle {feature} />
+    {#if mtrProperty}
+      <div class="pb-2 pt-1">
+        <FeatureCardContentFields {feature} items={[mtrProperty]} />
+      </div>
+    {/if}
   </div>
 </div>
