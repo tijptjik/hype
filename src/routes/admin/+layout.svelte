@@ -206,11 +206,7 @@ afterNavigate(({ shallow }) => {
   {#snippet sidebar()}
     <ResourcePanel model={sidebarModel}
       >{#snippet footer()}
-        <AdminMenu
-          isNarrow={sidebarModel.panel.isNarrow}
-          firstLayerId={sidebarModel.sections.find(section => section.id === 'layer')
-            ?.rows[0]?.id}
-        />
+        <AdminMenu isNarrow={sidebarModel.panel.isNarrow} />
       {/snippet}</ResourcePanel
     >
   {/snippet}

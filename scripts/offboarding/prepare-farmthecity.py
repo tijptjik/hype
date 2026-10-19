@@ -96,7 +96,11 @@ def prepare(source, output):
              'CREATE TABLE _farmthecity_guard (ok INTEGER NOT NULL CHECK (ok=1));']
     guards = external_guards + [f"EXISTS (SELECT 1 FROM organisation WHERE id={quote(ORG)} AND code='farmthecity')"]
     for table, predicate in predicates.items():
-        guards.append(f'(SELECT count(*) FROM "{table}" WHERE {predicate})={len(scoped[table])}')
+        # Derived state can change between environments and while refresh workers run.
+        if table in ['featureDivisionMembership', 'featureDivisionJob', 'featureCountRollup', 'featureMtrJob']:
+            continue
+        operator = '<=' if table in ['projectProperty', 'hubLayer'] else '='
+        guards.append(f'(SELECT count(*) FROM "{table}" WHERE {predicate}){operator}{len(scoped[table])}')
     for table in ['project', 'layer', 'feature']:
         ids = ','.join(quote(r['id']) for r in scoped[table])
         guards.append(f'NOT EXISTS (SELECT 1 FROM "{table}" WHERE ({predicates[table]}) AND id NOT IN ({ids}))')

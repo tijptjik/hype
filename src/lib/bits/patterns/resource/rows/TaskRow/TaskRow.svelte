@@ -78,7 +78,7 @@ function handleTitleClick(): void {
   {index}
   entityId={entity.id}
   {isSelected}
-  variant="task"
+  class="grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 pr-3 @min-[48rem]:grid-cols-[minmax(0,1fr)_11rem_12rem_8rem]"
   onclick={handleTitleClick}
   onkeydown={handleRowKeyDown}
   image={entity.feature ? entity.images?.[0] : undefined}

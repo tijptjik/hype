@@ -1,4 +1,4 @@
-import type { Snippet } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 import type {
   FormParentSectionHeaderContext,
   ParentSectionItemBase,
@@ -6,6 +6,7 @@ import type {
 
 export interface FormParentResourceSectionProps<TItem extends ParentSectionItemBase> {
   title: string
+  icon?: Component
   subtitle?: string
   issues?: string[]
   subHeader?: Snippet<[FormParentSectionHeaderContext]>

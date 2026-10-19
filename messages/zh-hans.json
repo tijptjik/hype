@@ -1400,5 +1400,10 @@
   "feature_address_copy_failed": "无法复制地址 ID",
   "feature_address_copy_coordinates": "复制坐标",
   "feature_address_coordinates_copied": "已复制坐标",
-  "feature_address_coordinates_copy_failed": "无法复制坐标"
+  "feature_address_coordinates_copy_failed": "无法复制坐标",
+  "feature__fields_empty_title": "没有可设置的字段",
+  "feature__fields_empty_description": "在项目中定义字段，然后在图层中启用，即可在此使用。",
+  "feature__fields_configure_project": "设置项目字段",
+  "feature__fields_configure_layer": "设置图层字段",
+  "feature__fields_choose_layer": "选择图层"
 }

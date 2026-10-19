@@ -9,6 +9,9 @@ import { ResourceViewer } from '#lib/bits/index.js'
 // UTILS
 import { calculateDistance } from '#lib/map/index.js'
 import { getMetadata } from '#lib/api/image.remote.js'
+// THEME
+import { getThemeModel } from '#lib/themes/theme.svelte.js'
+import { THEME_MAP_STYLES } from '#lib/themes/themes.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 // TYPES
@@ -25,6 +28,7 @@ let {
 }: TaskEditorProps = $props()
 
 const appCtx = getSurfaceCtx()
+const theme = getThemeModel()
 
 function formatRelativeDate(value: string | null | undefined): string {
   if (!value) return '-'
@@ -60,23 +64,8 @@ const featureAddress = $derived(
   getI18n(task.feature, 'displayAddress', appCtx.getUserPreferences()) || '-',
 )
 const effectiveLayerId = $derived(task.feature?.layerId ?? null)
-const selectedAssignableLayer = $derived(
-  assignableLayers.find(layer => layer.id === effectiveLayerId) ??
-    (effectiveLayerId ? appCtx.cache.layer.get(effectiveLayerId) : null) ??
-    null,
-)
-const mapStyleCode = $derived(
-  appCtx.cache.project.get(
-    selectedAssignableLayer?.projectId ??
-      task.feature?.projectId ??
-      task.projectId ??
-      '',
-  )?.mapStyle?.code ??
-    (task.project && 'mapStyle' in task.project
-      ? (task.project.mapStyle as { code?: string } | null)?.code
-      : null) ??
-    null,
-)
+// Review maps follow the user's UI palette rather than the submitted project's basemap.
+const mapStyleCode = $derived(THEME_MAP_STYLES[theme.selected])
 const featureCoordinates = $derived(
   ((task.feature?.geometry as Point | undefined)?.coordinates as
     | [number, number]
@@ -215,6 +204,7 @@ $effect(() => {
         <TaskPrimitive.TaskImageEditor readonly={isReviewed} {isReviewed} />
       {:else}
         <ResourceViewer
+          flush
           canEditPresentationMode={true}
           canEditDropzone={isNewFeature && !isReviewed}
           hasBottomPadding={isReportedMissing}
@@ -232,7 +222,7 @@ $effect(() => {
   {#if !isNewPhoto}
     <TaskPrimitive.TaskAside>
       {#if isNewFeature}
-        <div class="flex min-h-0 max-h-[66%] flex-col gap-3 overflow-auto">
+        <div class="flex shrink-0 flex-col">
           <TaskPrimitive.TaskDescriptors
             title={m.task__feature()}
             items={newFeatureDescriptors}
@@ -251,12 +241,13 @@ $effect(() => {
             {/if}
           </TaskPrimitive.TaskDescriptors>
 
-          <TaskPrimitive.TaskFields
-            title={m.admin__forms_common_fields()}
-            items={featureFields}
-            emptyLabel={m.bland_sad_goat_gasp()}
-            class="shrink-0"
-          />
+          {#if featureFields.length > 0}
+            <TaskPrimitive.TaskFields
+              title={m.admin__forms_common_fields()}
+              items={featureFields}
+              class="shrink-0"
+            />
+          {/if}
         </div>
 
         {#if featureCoordinates}
@@ -267,7 +258,7 @@ $effect(() => {
           />
         {/if}
       {:else if isReportedMissing}
-        <div class="flex max-h-[75%] shrink-0 flex-col gap-3 overflow-hidden">
+        <div class="flex shrink-0 flex-col">
           {#each missingReportDescriptors as descriptor (descriptor.title)}
             <TaskPrimitive.TaskDescriptors
               title={descriptor.title}

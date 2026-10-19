@@ -41,6 +41,7 @@ let {
   onLoad,
   onError,
   footer,
+  trackClass = '',
 }: ThumbnailWrapperProps = $props()
 
 let trackEl = $state<HTMLElement>()
@@ -450,6 +451,7 @@ onDestroy(() => {
         : variant === 'admin'
           ? 'overflow-x-auto overflow-y-hidden bg-surface p-3 mt-3 mr-3'
           : 'overflow-x-auto overflow-y-hidden pb-4',
+      trackClass,
     )}
   >
     {#each items as item, index (item.renderKey ?? item.id)}

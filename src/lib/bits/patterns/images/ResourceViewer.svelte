@@ -91,6 +91,7 @@ let {
   canEditDropzone = false,
   hasBottomPadding = false,
   workspace = false,
+  flush = false,
   isReadonly = false,
   prefetchMetadata = false,
   onPresentationModeCommitted,
@@ -99,6 +100,8 @@ let {
   canEditDropzone?: boolean
   hasBottomPadding?: boolean
   workspace?: boolean
+  /** The containing workspace owns padding and background. */
+  flush?: boolean
   isReadonly?: boolean
   prefetchMetadata?: boolean
   onPresentationModeCommitted?: (nextMode: 'cover' | 'contain') => void
@@ -318,16 +321,19 @@ onDestroy(() => {
 </script>
 
 <div
-  class={workspace
-    ? 'h-full min-h-0 w-full select-none bg-transparent p-6'
-    : hasBottomPadding
-      ? 'h-full w-full select-none bg-base-100 pb-4 pr-4 pt-1'
-      : 'h-full w-full select-none bg-base-100 pr-4 pt-1'}
+  class={flush
+    ? 'h-full min-h-0 w-full select-none bg-transparent'
+    : workspace
+      ? 'h-full min-h-0 w-full select-none bg-transparent p-6'
+      : hasBottomPadding
+        ? 'h-full w-full select-none bg-base-100 pb-4 pr-4 pt-1'
+        : 'h-full w-full select-none bg-base-100 pr-4 pt-1'}
 >
   <Dropzone
     disabled={!hasItems || isDropzoneDisabled}
     {hasItems}
-    rounded="rounded-2xl"
+    rounded="rounded-xl"
+    promptOnHover={!flush}
     uploadSelectionMode="single"
     onFiles={model.actions.addFiles}
   >

@@ -119,6 +119,64 @@ describe('image refresh ownership', () => {
     expect(ctx.activeImage?.image.id).toBe('next')
     expect(ctx.activeImage?.image.presentationMode).toBe('contain')
   })
+  it('refreshes native feature and task queries after intent changes instead of restoring cached labels', async () => {
+    const ctx = new ImageCtx({}, createImageResources())
+    vi.spyOn(ctx, 'preloadImages').mockResolvedValue(undefined)
+    await ctx.setContext({
+      context: {
+        ctxType: ImageContextResource.feature,
+        ctxId: 'feature',
+        ctxTypeSecondary: ImageContextResourceExtended.task,
+        ctxIdSecondary: 'task',
+      },
+    })
+    const submitted = {
+      image: { id: 'submitted' },
+      intent: 'undefined',
+      isPublished: false,
+    } as ImageCtxEnvelope
+    const previous = {
+      image: { id: 'previous' },
+      intent: 'canonical',
+      isPublished: true,
+    } as ImageCtxEnvelope
+    await ctx.setImages([submitted, previous])
+    ctx.setActiveImage(submitted)
+    const fresh = [
+      { ...submitted, intent: 'canonical', isPublished: true },
+      { ...previous, intent: 'undefined' },
+    ] as ImageCtxEnvelope[]
+    const refreshes = [vi.fn(), vi.fn()]
+    vi.mocked(getImagesForContext).mockImplementation(params => {
+      const handle = Object.assign(Promise.resolve({ data: [submitted, previous] }), {
+        current: { data: [submitted, previous] },
+        refresh: async () => {
+          refreshes[params.ctxType === 'task' ? 1 : 0]()
+          handle.current = { data: fresh }
+        },
+      })
+      return handle as never
+    })
+    vi.mocked(setImageIntent).mockResolvedValue({} as never)
+    try {
+      await ctx.handleSetIntent('submitted', 'canonical')
+      expect(refreshes[0]).toHaveBeenCalledOnce()
+      expect(refreshes[1]).toHaveBeenCalledOnce()
+      expect(ctx.getImage('submitted')).toMatchObject({
+        intent: 'canonical',
+        isPublished: true,
+      })
+      expect(ctx.activeImage?.intent).toBe('canonical')
+      expect(ctx.getImage('previous')?.intent).toBe('undefined')
+    } finally {
+      vi.mocked(getImagesForContext).mockReset()
+      vi.mocked(getImagesForContext).mockReturnValue({
+        withOverride: vi.fn(() => () => {}),
+      } as never)
+      ctx.dispose()
+    }
+  })
+
   it('submits canonical replacement without first clearing the existing canonical image', async () => {
     const ctx = new ImageCtx({}, createImageResources())
     await ctx.setContext({

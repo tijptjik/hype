@@ -1,4 +1,4 @@
-import type { Snippet } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 import type { ImageContextEnvelope } from '#lib/db/zod/schema/image.types.js'
 
 export interface ParentSectionItemBase extends Record<string, unknown> {
@@ -40,6 +40,7 @@ export interface FormParentSectionProps<
   TItem extends ParentSectionItemBase = ParentSectionOrganisationItem,
 > {
   title: string
+  icon?: Component
   subtitle?: string
   issues?: string[]
   subHeader?: Snippet<[FormParentSectionHeaderContext]>

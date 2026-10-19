@@ -1400,5 +1400,10 @@
   "feature_address_copy_failed": "無法複製地址 ID",
   "feature_address_copy_coordinates": "複製座標",
   "feature_address_coordinates_copied": "已複製座標",
-  "feature_address_coordinates_copy_failed": "無法複製座標"
+  "feature_address_coordinates_copy_failed": "無法複製座標",
+  "feature__fields_empty_title": "沒有可設定的欄位",
+  "feature__fields_empty_description": "在專案中定義欄位，然後在圖層中啟用，即可在此使用。",
+  "feature__fields_configure_project": "設定專案欄位",
+  "feature__fields_configure_layer": "設定圖層欄位",
+  "feature__fields_choose_layer": "選擇圖層"
 }

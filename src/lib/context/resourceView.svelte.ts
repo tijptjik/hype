@@ -2093,7 +2093,8 @@ export class ResourceViewCtx {
     const currentHub = this.hub
     if (!currentHub) {
       this.hub = hub
-      this.scope.applyInitialLayerPrisms()
+      // Saved map defaults belong to the public map, not admin list filtering.
+      if (!this.isAdmin()) this.scope.applyInitialLayerPrisms()
       return
     }
 
@@ -2103,7 +2104,8 @@ export class ResourceViewCtx {
 
     if (!isSameHub) {
       this.hub = hub
-      this.scope.applyInitialLayerPrisms()
+      // Saved map defaults belong to the public map, not admin list filtering.
+      if (!this.isAdmin()) this.scope.applyInitialLayerPrisms()
       return
     }
 
@@ -2112,7 +2114,8 @@ export class ResourceViewCtx {
         ...currentHub,
         ...hub,
       }
-      this.scope.applyInitialLayerPrisms()
+      // Saved map defaults belong to the public map, not admin list filtering.
+      if (!this.isAdmin()) this.scope.applyInitialLayerPrisms()
     }
   }
 

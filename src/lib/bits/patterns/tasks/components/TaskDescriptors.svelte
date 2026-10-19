@@ -11,20 +11,19 @@ let {
 }: TaskDescriptorsProps & { children?: Snippet } = $props()
 
 function getDisplayValue(value: string): string {
-  console.log('VALUE', value)
   return value.trim().length > 0 ? value : '-'
 }
 </script>
 
 <section
   class={cx(
-    'flex min-h-0 flex-col overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] py-4',
+    'flex min-h-0 flex-col overflow-hidden border-b border-border bg-panel pb-4',
     className,
   )}
 >
   {#if title}
     <h3
-      class="px-4 pb-3 text-center text-sm font-semibold uppercase tracking-[0.24em] text-foreground/55"
+      class="mb-4 border-b border-border px-4 py-3 text-sm font-semibold text-foreground"
     >
       {title}
     </h3>
@@ -32,13 +31,13 @@ function getDisplayValue(value: string): string {
 
   <div class="flex min-h-0 flex-col gap-4 overflow-auto">
     {#each items as item (`${item.label}:${item.value}`)}
-      <div class="flex flex-col gap-0 px-4">
-        <div class="font-mono text-sm uppercase tracking-[0.22em] text-foreground/45">
+      <div class="flex flex-col gap-1 px-4">
+        <div class="text-xs font-semibold text-muted-foreground">
           {item.label}
         </div>
         <div
           class={cx(
-            'text-md leading-6 text-foreground/88',
+            'text-sm leading-6 text-foreground',
             item.wrap
               ? 'whitespace-pre-wrap'
               : 'overflow-hidden text-ellipsis whitespace-nowrap',

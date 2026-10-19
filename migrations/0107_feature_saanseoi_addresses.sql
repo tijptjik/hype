@@ -1,7 +1,8 @@
 -- Refs #194, #213. Preserve historical address evidence without inventing canonical
 -- SaanSeoi identities or snapshots. Existing display text and pin geometry stay unchanged.
 -- Existing canonical envelopes are left intact, making the data conversion repeatable.
-CREATE TEMP TABLE _feature_address_0107 (id TEXT PRIMARY KEY);
+-- D1 disallows TEMP tables; this transaction-scoped staging table is dropped below.
+CREATE TABLE _feature_address_0107 (id TEXT PRIMARY KEY);
 INSERT INTO _feature_address_0107 SELECT id FROM feature
 WHERE json_extract(coalesce(addressMeta, '{}'), '$.address.version') IS NULL;
 

@@ -15,6 +15,7 @@ let {
   rounded = 'rounded-2xl',
   class: className = '',
   showPrompt = true,
+  promptOnHover = true,
   showEmptyState = false,
   uploadSelectionMode = 'multiple',
   inputElement = $bindable<HTMLInputElement | undefined>(undefined),
@@ -26,6 +27,8 @@ let {
   rounded?: string
   class?: string
   showPrompt?: boolean
+  /** Keep populated review images unobscured until files are dragged over them. */
+  promptOnHover?: boolean
   showEmptyState?: boolean
   uploadSelectionMode?: 'single' | 'multiple'
   inputElement?: HTMLInputElement | undefined
@@ -92,7 +95,9 @@ async function handleFiles(event: CustomEvent): Promise<void> {
           ? 'border-border bg-transparent'
           : isDragActive
             ? 'border-primary'
-            : 'border-transparent group-hover/gallery-dropzone:border-border',
+            : promptOnHover
+              ? 'border-transparent group-hover/gallery-dropzone:border-border'
+              : 'border-transparent',
       )}
     ></div>
 
@@ -132,7 +137,9 @@ async function handleFiles(event: CustomEvent): Promise<void> {
           'pointer-events-none absolute inset-0 z-70 flex items-center justify-center px-6 transition-all duration-200',
           isDragActive
             ? 'translate-y-0 opacity-100'
-            : 'translate-y-2 opacity-0 group-hover/gallery-dropzone:translate-y-0 group-hover/gallery-dropzone:opacity-100',
+            : promptOnHover
+              ? 'translate-y-2 opacity-0 group-hover/gallery-dropzone:translate-y-0 group-hover/gallery-dropzone:opacity-100'
+              : 'translate-y-2 opacity-0',
         )}
       >
         <div

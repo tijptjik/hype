@@ -22,7 +22,7 @@ import {
   setImagePublished,
   updateImage as updateImageRemote,
 } from '#lib/api/image.remote.js'
-import { runRemoteQuery } from '#lib/remote/index.js'
+import { refreshRemoteQuery } from '#lib/remote/index.js'
 import { projectResourcePatch } from '#lib/client/services/optimisticRecords.js'
 // CONTEXT
 import {
@@ -1815,7 +1815,8 @@ export class ImageCtx {
     ctxId: Id,
     _includeSingleImage = true,
   ): Promise<ImageCtxEnvelope[]> {
-    const result = await runRemoteQuery(
+    // A mutation refresh must bypass the native query cache, including task images.
+    const result = await refreshRemoteQuery(
       getImagesForContext({
         ctxType,
         ctxId,

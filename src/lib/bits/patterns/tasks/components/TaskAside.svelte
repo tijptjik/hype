@@ -8,7 +8,10 @@ let { class: className = '', children }: TaskAsideProps & { children?: Snippet }
 </script>
 
 <aside
-  class={cx('flex min-h-0 flex-col gap-3 overflow-hidden pr-3 pb-3 pt-1', className)}
+  class={cx(
+    'flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-panel lg:overflow-y-auto',
+    className,
+  )}
 >
   {@render children?.()}
 </aside>

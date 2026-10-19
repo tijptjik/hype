@@ -113,7 +113,13 @@ const hasScopedTaskListAccess = (
   const projectIds = target.projectIds ?? []
 
   if (organisationIds.length === 0 && projectIds.length === 0) {
-    return false
+    // Unfiltered lists are permitted for managers; row-level SQL limits the result.
+    return actor.userRoles.some(
+      role =>
+        (role.type === 'organisation' && role.role === 'owner') ||
+        (role.type === 'project' &&
+          (role.role === 'owner' || role.role === 'maintainer')),
+    )
   }
 
   const hasOwnedOrganisationScope =

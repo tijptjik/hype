@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, type SQL, sql } from 'drizzle-orm'
+import { eq, or, type SQL, sql } from 'drizzle-orm'
 // API
 import { applyQueryFilters } from '#lib/api/index.js'
 import { toBooleanOrUndefined } from '#lib/api/services/index.js'
@@ -13,6 +13,8 @@ import {
   assertParamIdentifierEqualsFormIdentifier,
 } from '#lib/auth/asserts.js'
 
+// UTILS
+import { chunkedInArray } from '#lib/utils/batch-query.js'
 // DB
 import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 // SCHEMA
@@ -279,6 +281,19 @@ export const toRequestedListState = (params: Partial<TaskDB>) => ({
   isReviewed: toBooleanOrUndefined(params.isReviewed),
 })
 
+/**
+ * Builds task filters independently from server-owned read permissions.
+ * @param db - Database used for explicit prism constraints.
+ * @param user - Authenticated caller.
+ * @param isAdminRequest - Whether this is an admin surface request.
+ * @param params - Requested task state filters.
+ * @param userRoles - Authoritative caller roles.
+ * @param prisms - Optional explicit hierarchy selections.
+ * @param resourceHubId - Current hub used for scoped administrator checks.
+ * @returns Query conditions, filters, and excluded columns.
+ * @remarks Empty prisms mean all permitted tasks. Permission scopes form a union,
+ * while explicit filters narrow that union. Non-admin requests match no tasks.
+ */
 export const toQueryConditions = (
   db: Database,
   user: SessionUser,
@@ -294,16 +309,6 @@ export const toQueryConditions = (
 } => {
   const conditions: SQL<unknown>[] = []
   const excludeColumns: string[] = []
-  const organisationIds =
-    prisms?.organisation?.filter(
-      (organisationId): organisationId is Id =>
-        typeof organisationId === 'string' && organisationId.length > 0,
-    ) ?? []
-  const projectIds =
-    prisms?.project?.filter(
-      (projectId): projectId is Id =>
-        typeof projectId === 'string' && projectId.length > 0,
-    ) ?? []
 
   if (prisms) {
     conditions.push(...applyPrismConstraints(db, HierarchicalResource.task, prisms))
@@ -312,11 +317,6 @@ export const toQueryConditions = (
   if (!isAdminRequest) {
     conditions.push(sql`false`)
   } else if (!user.superAdmin && !isRelevantHubAdmin(userRoles, resourceHubId)) {
-    if (organisationIds.length === 0 && projectIds.length === 0) {
-      conditions.push(sql`false`)
-      return { filtersToApply: params, conditions, excludeColumns }
-    }
-
     const ownedOrganisationIds = userRoles
       .filter(
         (role): role is Extract<UserRoleDisco, { type: 'organisation' }> =>
@@ -334,18 +334,13 @@ export const toQueryConditions = (
       )
       .map(role => role.projectId)
 
-    const allowsOwnedOrganisationScope =
-      organisationIds.length > 0 &&
-      organisationIds.every(organisationId =>
-        ownedOrganisationIds.includes(organisationId),
-      )
-    const allowsManagedProjectScope =
-      projectIds.length > 0 &&
-      projectIds.every(projectId => managedProjectIds.includes(projectId))
-
-    if (!allowsOwnedOrganisationScope && !allowsManagedProjectScope) {
-      conditions.push(sql`false`)
-    }
+    // Explicit prisms narrow the union of all manageable scopes; empty prisms do not.
+    conditions.push(
+      or(
+        chunkedInArray(task.organisationId, ownedOrganisationIds),
+        chunkedInArray(task.projectId, managedProjectIds),
+      )!,
+    )
   }
 
   if (Object.keys(params).length > 0) {

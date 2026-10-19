@@ -2,6 +2,10 @@
 import { Button } from '#lib/bits/core/index.js'
 import { m } from '#lib/i18n.js'
 import { FormParentSection } from '#lib/bits/patterns/forms/formParentSection/index.js'
+// ICONS
+import OrganisationIcon from 'virtual:icons/proicons/person-multiple'
+import ProjectIcon from 'virtual:icons/proicons/grid'
+import LayerIcon from 'virtual:icons/proicons/layers'
 import EraserIcon from 'virtual:icons/proicons/eraser'
 import type { FormFeatureParentSectionProps } from './formFeatureParentSection.types'
 
@@ -25,12 +29,14 @@ let {
   <div class="bits-feature-parent-section__grid">
     <FormParentSection
       title={m.resource__organisation_singular()}
+      icon={OrganisationIcon}
       {subHeader}
       {...sharedSectionProps}
       {...organisationSection}
     />
     <FormParentSection
       title={m.resource__project_singular()}
+      icon={ProjectIcon}
       {subHeader}
       {...sharedSectionProps}
       {...projectSection}
@@ -41,6 +47,7 @@ let {
     />
     <FormParentSection
       title={m.resource__layer_singular()}
+      icon={LayerIcon}
       {subHeader}
       {...sharedSectionProps}
       {...layerSection}
