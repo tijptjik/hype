@@ -1313,5 +1313,6 @@
   "card_style__conditional": "按内容显示",
   "card_style__conditional_description": "有描述时显示完整卡片，否则显示无描述卡片。",
   "card_style__inherit": "项目默认",
-  "card_style__inherit_description": "继承所属项目的卡片样式。"
+  "card_style__inherit_description": "继承所属项目的卡片样式。",
+  "property__phone_hk_invalid": "请输入有效的香港电话号码（8位数字，可加 +852 前缀）。"
 }

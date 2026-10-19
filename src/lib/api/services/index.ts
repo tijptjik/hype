@@ -112,7 +112,11 @@ export const inferPropertyDiscriminatorFromComponent = (
   ) {
     return 'classifier'
   }
-  if (component === 'InputField' || component === 'TextareaField') {
+  if (
+    component === 'InputField' ||
+    component === 'PhoneField' ||
+    component === 'TextareaField'
+  ) {
     return 'specifier'
   }
   return undefined

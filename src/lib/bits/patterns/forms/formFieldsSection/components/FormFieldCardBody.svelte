@@ -853,7 +853,10 @@ $effect(() => {
           onValueChange={value => {
             onLayoutMutationStart?.()
             onUpdateBase(property.id, 'component', value)
-            if (value === 'RangeField' && property.isTranslatable) {
+            if (
+              (value === 'RangeField' || value === 'PhoneField') &&
+              property.isTranslatable
+            ) {
               onUpdateBase(property.id, 'isTranslatable', false)
             }
           }}

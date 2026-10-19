@@ -81,6 +81,7 @@ const showTranslatableToggle = $derived(
   presentation === 'full' &&
     (property.type === 'specifier' || property.type === 'classifier') &&
     property.component !== 'RangeField' &&
+    property.component !== 'PhoneField' &&
     property.component !== 'ToggleField',
 )
 const inheritedEnabled = $derived(

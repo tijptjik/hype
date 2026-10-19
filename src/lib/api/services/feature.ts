@@ -5,6 +5,7 @@ import { applyQueryFilters, removeExcludedColumns } from '#lib/api/index.js'
 import { toBooleanOrUndefined } from '#lib/api/services/index.js'
 import { isRelevantHubAdmin } from '#lib/api/services/authz/index.js'
 // DB
+import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
 import { applyTriStateBooleanCondition } from '#lib/db/query.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
@@ -980,6 +981,10 @@ const prepareUserContributedFeatureDraft = async (
       ? FeatureEntityFormData.parse(draftPayload)
       : FeatureDraftEntityFormData.parse(draftPayload)
 
+  validatedFeature.properties = await validateFeaturePhoneProperties(
+    db,
+    validatedFeature.properties ?? [],
+  )
   return {
     validatedFeature,
     layerScope,

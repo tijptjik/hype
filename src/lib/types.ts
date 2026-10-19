@@ -197,7 +197,7 @@ export type TranslatedValue = {
 // HTML
 /* -------- */
 
-export type InputType = 'text' | 'number' | 'email' | 'password'
+export type InputType = 'text' | 'number' | 'email' | 'password' | 'tel'
 
 /* ----------------- */
 // SESSION

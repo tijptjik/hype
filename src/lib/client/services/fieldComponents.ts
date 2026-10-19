@@ -2,6 +2,7 @@
 
 const fieldComponentTypes = [
   'InputField',
+  'PhoneField',
   'SelectField',
   'RangeField',
   'TextareaField',
@@ -14,6 +15,10 @@ const fieldComponentTypes = [
 
 export const classifierComponentTypes = ['SelectField', 'RangeField'] as const
 
-export const specifierComponentTypes = ['InputField', 'TextareaField'] as const
+export const specifierComponentTypes = [
+  'InputField',
+  'PhoneField',
+  'TextareaField',
+] as const
 
 export type FieldComponentType = (typeof fieldComponentTypes)[number]

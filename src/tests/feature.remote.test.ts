@@ -540,6 +540,35 @@ describe('feature.remote authz matrix', () => {
     expect(mockCreateFeature).not.toHaveBeenCalled()
   })
 
+  it('rejects invalid persisted phone properties before creating a feature', async () => {
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      db: {
+        query: { property: { findMany: vi.fn().mockResolvedValue([{ id: 'phone' }]) } },
+      },
+    })
+    await expect(
+      remote.featureForm(
+        {
+          meta: { mode: 'create' },
+          data: {
+            layerId: 'layer-1',
+            i18n: { en: { name: 'Feature' } },
+            properties: [{ propertyId: 'phone', value: '+853 66123456' }],
+            geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+            addressMeta: {},
+            isIntangible: false,
+            isVisitable: true,
+          },
+        },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow()
+    expect(mockCreateFeature).not.toHaveBeenCalled()
+    expect(mockCreateI18n).not.toHaveBeenCalled()
+    expect(mockCreateProperties).not.toHaveBeenCalled()
+  })
+
   it('featureForm update allows changed field submission', async () => {
     const result = await remote.featureForm(
       {

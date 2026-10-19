@@ -51,6 +51,7 @@ import {
   toIssueDetailMessage,
 } from '#lib/api/services/authz/index.js'
 // DB
+import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import {
   createFeature,
   createI18n,
@@ -459,7 +460,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
 
-  const submittedProperties = Array.isArray(data.properties) ? data.properties : []
+  let submittedProperties = Array.isArray(data.properties) ? data.properties : []
   const duplicatePropertyIds = getDuplicateValues(
     submittedProperties
       .map(property => property?.propertyId)
@@ -502,6 +503,17 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     })
     if (!createDecision.allowed) {
       invalid(issue(toIssueDetailMessage(createDecision.code ?? 'INSUFFICIENT_ROLE')))
+    }
+
+    try {
+      submittedProperties = await validateFeaturePhoneProperties(
+        db,
+        submittedProperties,
+      )
+    } catch (error) {
+      invalid(
+        issue.data.properties(error instanceof Error ? error.message : String(error)),
+      )
     }
 
     const created = await createFeature(db, {
@@ -655,6 +667,19 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   )
   if (updatedAt !== current.modifiedAt) {
     invalid(issue(toIssueDetailMessage('STALE_WRITE')))
+  }
+
+  if (propertiesChanged) {
+    try {
+      submittedProperties = await validateFeaturePhoneProperties(
+        db,
+        submittedProperties,
+      )
+    } catch (error) {
+      invalid(
+        issue.data.properties(error instanceof Error ? error.message : String(error)),
+      )
+    }
   }
 
   const persisted = requireValue(
