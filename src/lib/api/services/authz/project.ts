@@ -311,6 +311,7 @@ export const toProjectSubmittedFields = (
   data: Partial<Record<ProjectAuthorizationField, unknown>>,
 ): ProjectAuthorizationField[] => {
   const fields: ProjectAuthorizationField[] = []
+  if ('placeUpdatePolicy' in data) fields.push('placeUpdatePolicy')
   if ('organisationId' in data) fields.push('organisationId')
   if ('code' in data) fields.push('code')
   if ('i18n' in data) fields.push('i18n')
