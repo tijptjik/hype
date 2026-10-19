@@ -1,9 +1,14 @@
 <script lang="ts">
+// BITS-UI
 import { Popover } from 'bits-ui'
+// BITS
 import { cx } from '#lib/bits/utils.js'
+// I18N
 import { m } from '#lib/i18n.js'
+// API
 import { adminIntentOrder } from '#lib/api/services/image.js'
 import { intentDisplay } from '#lib/client/services/image.js'
+// TYPES
 import type { Intent } from '#lib/db/zod/schema/image.types.js'
 import type { ThumbnailIntentSelectorProps } from './imagePrimitives.types'
 
@@ -41,12 +46,12 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
     <Popover.Trigger
       {disabled}
       class={cx(
-        'inline-flex h-[26px] max-w-[6.25rem] items-center rounded-md px-2 text-[10px] font-medium uppercase tracking-[0.14em] transition disabled:cursor-not-allowed',
+        'inline-flex h-[26px] max-w-[6.25rem] items-center rounded-md px-2 text-[10px] font-medium uppercase tracking-[0.14em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed',
         hasIntentError
-          ? 'bg-error text-white hover:bg-error'
+          ? 'bg-error text-error-content hover:bg-error'
           : currentIntent === 'canonical'
-            ? 'bg-primary/70 text-white hover:bg-primary/85'
-            : 'bg-black/70 text-white hover:bg-black/85',
+            ? 'bg-primary text-primary-content hover:bg-primary/85'
+            : 'border border-border-input bg-(--theme-panel) text-base-content hover:bg-base-200',
       )}
       aria-label={m.gallery__change_image_intent()}
       title={intentErrorMessage ?? undefined}
@@ -61,16 +66,14 @@ async function handleSelect(nextIntent: Intent): Promise<void> {
         side={contentSide}
         align="center"
         sideOffset={10}
-        class="bits-theme z-[200] flex w-40 flex-col gap-1 overflow-hidden rounded-xl border border-white/10 bg-black/95 p-1.5 shadow-xl backdrop-blur-sm"
+        class="bits-theme z-[200] flex w-40 flex-col gap-1 overflow-hidden rounded-xl border border-border-input bg-(--theme-panel) p-1.5 text-base-content shadow-xl backdrop-blur-sm"
       >
         {#each orderedIntentOptions as option}
           <button
             type="button"
             class={cx(
-              'flex w-full items-center rounded-lg px-3 py-2 text-left text-sm transition',
-              option === currentIntent
-                ? 'text-primary hover:bg-white/10'
-                : 'text-white hover:bg-white/10',
+              'flex w-full items-center rounded-lg px-3 py-2 text-left text-sm outline-none transition hover:bg-base-200 focus-visible:bg-base-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
+              option === currentIntent ? 'text-primary' : 'text-base-content',
             )}
             onclick={() => {
               void handleSelect(option as Intent)
