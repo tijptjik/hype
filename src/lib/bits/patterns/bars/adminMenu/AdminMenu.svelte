@@ -1,6 +1,10 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
+// FEEDBACK
+import { toast } from 'svelte-sonner'
+// I18N
+import * as m from '#lib/paraglide/messages.js'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // LIB
@@ -30,7 +34,7 @@ const PAGE_SIZE = 5
 const WHEEL_INTENT_THRESHOLD = 12
 const PAGE_SCROLL_SETTLE_MS = 220
 
-let { isNarrow }: AdminMenuProps = $props()
+let { isNarrow, firstLayerId }: AdminMenuProps = $props()
 let viewportElement = $state<HTMLDivElement | null>(null)
 let pageScrollLock = $state(false)
 let pageScrollLockTimeout: ReturnType<typeof setTimeout> | null = null
@@ -40,7 +44,24 @@ let initialScrollTimeout: ReturnType<typeof setTimeout> | null = null
 const notificationCount = $derived(adminCtx.filteredTasks.length)
 const featureCount = $derived(adminCtx.filteredFeatures.length)
 
-// Index navigation preserves explicit prisms; an empty selection means all permitted rows.
+/**
+ * Opens Features with the first displayed layer when no layer is selected.
+ * @returns Completion after layer dependents refresh and navigation is requested.
+ * @remarks Existing selection and an empty layer list are preserved.
+ */
+async function openFeatures(): Promise<void> {
+  try {
+    if (!adminCtx.view.scope.prisms.layer.length && firstLayerId) {
+      await adminCtx.view.scope.togglePrism(FirstClassResource.layer, firstLayerId)
+    }
+    navigateOnAdmin(adminCtx, FirstClassResource.feature)
+  } catch (error) {
+    console.error('[Admin menu] Opening Features failed:', error)
+    toast.error(m.resource_action_failed())
+  }
+}
+
+// Features seeds an empty layer selection; other indexes preserve explicit prisms.
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   const actor = adminCtx.view.user as SessionUser | null
   const directoryAllowed =
@@ -58,7 +79,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       href: `${ADMIN_PATH}/features`,
       label: 'Features',
       icon: MapPin,
-      onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.feature),
+      onClick: () => void openFeatures(),
       notificationCount: featureCount,
     },
     {

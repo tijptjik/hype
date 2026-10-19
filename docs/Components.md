@@ -96,8 +96,10 @@ Public card timers, navigation intent and camera commands belong to `AppCtx` and
 its adapters. Shared filter services only mutate filter data.
 
 Admin feature and task indexes treat empty prisms as all records the caller is
-permitted to read, subject to explicit state and search filters. Opening either
-index does not select a layer. Saved default map layers initialise the public map
+permitted to read, subject to explicit state and search filters. Clicking Features
+in the admin menu selects the first displayed sidebar layer if none is selected;
+existing layer selections are preserved. Direct index URLs and the Tasks menu do
+not select a layer. Saved default map layers initialise the public map
 only; admin starts without hierarchy selections. Server permissions constrain task
 lists to the union of owned organisations and managed projects independently of
 prism selections, with hub administrator access resolved by the existing policy.
