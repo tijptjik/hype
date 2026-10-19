@@ -33,6 +33,7 @@ import {
   readPlaceAdoptionReview,
   rejectPlaceAdoptionGroup,
 } from '#lib/db/services/placeAdoptionReview.js'
+import { applyPlaceAdoptionGroup } from '#lib/db/services/placeAdoptionApply.js'
 import { previewFeaturePlaceAdoption } from '#lib/db/services/placeAdoption.js'
 import { getDetachedFeatureBrands } from '#lib/db/services/placeDetached.js'
 import { unlinkFeaturePlace } from '#lib/db/services/placeUnlink.js'
@@ -2249,15 +2250,17 @@ describe('persisted Place adoption preview', () => {
     await saveProjectPlaceSettings(db, 'p', DEFAULT_PROJECT_PLACE_POLICY, 2)
     const replay = await proposeFeaturePlaceAdoption(db, input)
     expect(replay?.proposal).toEqual(proposed.proposal)
-    expect(
-      (await proposeFeaturePlaceAdoption(db, { ...input, reevaluatePending: true }))
-        ?.proposal,
-    ).toEqual(proposed.proposal)
+    const refreshedPending = await proposeFeaturePlaceAdoption(db, {
+      ...input,
+      reevaluatePending: true,
+    })
+    expect(refreshedPending?.proposal.id).not.toBe(proposed.proposal.id)
+    expect(refreshedPending?.decisions).toEqual(replay?.decisions)
     expect(replay?.decisions).toHaveLength(1)
     expect(replay?.decisions[0].fieldGroup).toBe('location')
     expect(
       sqlite.prepare('SELECT count(*) AS n FROM placeAdoptionProposal').get(),
-    ).toEqual({ n: 2 })
+    ).toEqual({ n: 3 })
     expect(
       await readPlaceAdoptionReview(db, { ...rejection, projectId: 'other' }),
     ).toBeNull()
@@ -2274,5 +2277,317 @@ describe('persisted Place adoption preview', () => {
     expect(
       sqlite.prepare('SELECT count(*) AS n FROM placeAdoptionDecision').get(),
     ).toEqual({ n: 1 })
+  })
+})
+
+describe('atomic source group application', () => {
+  async function fixture() {
+    const { db, sqlite } = setup()
+    const { getTableColumns } = await import('drizzle-orm')
+    const { feature, featureI18n } = await import('#lib/db/schema/feature.js')
+    for (const [name, table] of [
+      ['feature', feature],
+      ['featureI18n', featureI18n],
+    ] as const) {
+      const existing = new Set(
+        sqlite
+          .prepare(`PRAGMA table_info(${name})`)
+          .all()
+          .map(row => row.name),
+      )
+      for (const column of Object.values(getTableColumns(table)))
+        if (!existing.has(column.name))
+          sqlite.exec(
+            `ALTER TABLE ${name} ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+          )
+    }
+    sqlite.exec(`CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
+      INSERT INTO hub VALUES ('core','core');
+      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');
+      INSERT INTO featureProperty VALUES ('f','phone',NULL,'["+85223456789"]');
+      INSERT INTO featureI18n(featureId,locale,title,description,displayAddress)
+        VALUES ('f','en','Local correction','Keep description','Original address'),
+               ('f','zh-hant','舊名稱','保留說明','舊地址');`)
+    sqlite
+      .prepare('UPDATE feature SET geometry=?')
+      .run(JSON.stringify(facts.location.geometry))
+    const source: SaanSeoiPlaceProjection = {
+      ssId: 'shop',
+      apiVersion: 'v0.1',
+      releaseId: 'release1',
+      snapshotId: 'snapshot1',
+      facts: PlaceFactsSchema.parse({
+        ...facts,
+        names: { en: 'Bakery', 'zh-hant': '舊名稱' },
+      }),
+      issues: [],
+      payload: {
+        resource: {
+          attributes: {
+            basicCategory: 'bakery',
+            taxonomy: { primary: 'bakery' },
+            operatingStatus: 'open',
+          },
+        },
+      },
+    }
+    const first = await persistSaanSeoiPlace(db, source)
+    const link = prepareFeaturePlaceAssociationWrite(db, {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: first.placeId,
+      factsRevisionId: first.revisionId,
+      locationRevisionId: first.revisionId,
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      actorId: 'actor',
+      overrides: {
+        names: { en: { mode: 'override', value: 'Local correction' } },
+        brands: { mode: 'clear' },
+      },
+    })
+    await link.query
+    const nextFacts = structuredClone(source.facts)
+    nextFacts.phoneNumber = ['+85291234567']
+    nextFacts.location.geometry.coordinates[0] += 0.01
+    const next = await persistSaanSeoiPlace(db, {
+      ...source,
+      facts: nextFacts,
+      releaseId: 'release2',
+      snapshotId: 'snapshot2',
+    })
+    const proposal = await proposeFeaturePlaceAdoption(db, {
+      featureId: 'f',
+      projectId: 'p',
+      candidateRevisionId: next.revisionId,
+    })
+    if (!proposal) throw new Error('Missing proposal')
+    const migration = readFileSync('migrations/0096_feature_mtr_access.sql', 'utf8')
+    sqlite.exec(migration.slice(migration.indexOf('CREATE TABLE featureMtrJob')))
+    sqlite.exec(
+      "DELETE FROM featureMtrJob; UPDATE feature SET mtrStation='OLD',mtrExit='OLD'",
+    )
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      proposalId: proposal.proposal.id,
+      expectedRevision: link.revision,
+      expectedFeatureModifiedAt: 'original',
+      actorId: 'actor',
+      reason: 'Reviewed source',
+      fieldGroup: 'facts' as const,
+      mode: 'automatic' as const,
+    }
+    return { db, sqlite, input, first, next }
+  }
+
+  it('adopts facts without routing, then location with independent review and atomic routing', async () => {
+    const { db, sqlite, input, next, first } = await fixture()
+    const result = await applyPlaceAdoptionGroup(db, input)
+    expect(result.status).toBe('applied')
+    if (result.status !== 'applied') throw new Error(JSON.stringify(result))
+    expect(result.geometryChanged).toBe(false)
+    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toHaveLength(0)
+    const accepted = await getAcceptedFeaturePlace(db, 'f', 'p')
+    expect(accepted).toMatchObject({
+      factsRevisionId: next.revisionId,
+      locationRevisionId: first.revisionId,
+    })
+    expect(accepted?.effective.names.en).toBe('Local correction')
+    expect(accepted?.effective.brands).toBeNull()
+    expect(
+      sqlite
+        .prepare("SELECT title,description FROM featureI18n WHERE locale='zh-hant'")
+        .get(),
+    ).toEqual({ title: '舊名稱', description: '保留說明' })
+    expect(
+      sqlite
+        .prepare("SELECT value FROM featureProperty WHERE propertyId='phone'")
+        .get(),
+    ).toEqual({ value: '["+85291234567"]' })
+    expect(await applyPlaceAdoptionGroup(db, input)).toEqual({ status: 'conflict' })
+    const locationInput = {
+      ...input,
+      fieldGroup: 'location' as const,
+      expectedRevision: result.revision,
+      expectedFeatureModifiedAt: result.feature.modifiedAt,
+    }
+    expect(await applyPlaceAdoptionGroup(db, locationInput)).toMatchObject({
+      status: 'review',
+    })
+    const moved = await applyPlaceAdoptionGroup(db, {
+      ...locationInput,
+      mode: 'reviewed',
+    })
+    expect(moved).toMatchObject({ status: 'applied', geometryChanged: true })
+    expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.locationRevisionId).toBe(
+      next.revisionId,
+    )
+    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toHaveLength(1)
+    expect(sqlite.prepare('SELECT mtrStation,mtrExit FROM feature').get()).toEqual({
+      mtrStation: null,
+      mtrExit: null,
+    })
+    expect(
+      sqlite
+        .prepare(
+          "SELECT fieldGroup FROM placeAdoptionDecision WHERE action='applied' ORDER BY fieldGroup",
+        )
+        .all(),
+    ).toEqual([{ fieldGroup: 'facts' }, { fieldGroup: 'location' }])
+  })
+
+  it('rolls back all projections, association history and jobs when the final decision fails', async () => {
+    const { db, sqlite, input } = await fixture()
+    const snapshot = () =>
+      [
+        'feature',
+        'featureI18n',
+        'featureProperty',
+        'featurePlace',
+        'featurePlaceHistory',
+        'featureMtrJob',
+        'placeAdoptionDecision',
+      ].map(table => sqlite.prepare(`SELECT * FROM ${table}`).all())
+    const before = snapshot()
+    sqlite.exec(
+      "CREATE TRIGGER fail_adoption BEFORE INSERT ON placeAdoptionDecision BEGIN SELECT RAISE(ABORT,'injected final decision failure'); END",
+    )
+    await expect(
+      applyPlaceAdoptionGroup(db, {
+        ...input,
+        fieldGroup: 'location',
+        mode: 'reviewed',
+      }),
+    ).rejects.toThrow()
+    expect(snapshot()).toEqual(before)
+  })
+
+  it('allows location rejection after facts apply and never applies a rejected group', async () => {
+    const { db, input } = await fixture()
+    const applied = await applyPlaceAdoptionGroup(db, input)
+    if (applied.status !== 'applied') throw new Error(JSON.stringify(applied))
+    const current = {
+      ...input,
+      fieldGroup: 'location' as const,
+      expectedRevision: applied.revision,
+      expectedFeatureModifiedAt: applied.feature.modifiedAt,
+    }
+    expect(await rejectPlaceAdoptionGroup(db, current)).toMatchObject({
+      action: 'rejected',
+    })
+    expect(await applyPlaceAdoptionGroup(db, { ...current, mode: 'reviewed' })).toEqual(
+      { status: 'conflict' },
+    )
+  })
+
+  it('advances an overridden location revision without changing geometry/address or routing', async () => {
+    const { db, sqlite, input, first, next } = await fixture()
+    const corrected = prepareFeaturePlaceAssociationWrite(db, {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: first.placeId,
+      factsRevisionId: first.revisionId,
+      locationRevisionId: first.revisionId,
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: input.expectedRevision,
+      actorId: 'editor',
+      overrides: {
+        location: { mode: 'override', value: PlaceFactsSchema.parse(facts).location },
+      },
+    })
+    await corrected.query
+    const proposed = await proposeFeaturePlaceAdoption(db, {
+      featureId: 'f',
+      projectId: 'p',
+      candidateRevisionId: next.revisionId,
+      reevaluatePending: true,
+    })
+    if (!proposed) throw new Error('Missing re-evaluation')
+    const before = sqlite.prepare('SELECT geometry,addressMeta FROM feature').get()
+    expect(
+      await applyPlaceAdoptionGroup(db, {
+        ...input,
+        proposalId: proposed.proposal.id,
+        expectedRevision: corrected.revision,
+        fieldGroup: 'location',
+        mode: 'reviewed',
+      }),
+    ).toMatchObject({ status: 'applied', geometryChanged: false })
+    expect(sqlite.prepare('SELECT geometry,addressMeta FROM feature').get()).toEqual(
+      before,
+    )
+    expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toHaveLength(0)
+    expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.locationRevisionId).toBe(
+      next.revisionId,
+    )
+  })
+
+  it('blocks a remaining group after an unrelated association edit', async () => {
+    const { db, input, next } = await fixture()
+    const applied = await applyPlaceAdoptionGroup(db, input)
+    if (applied.status !== 'applied') throw new Error('Facts failed')
+    const current = await getAcceptedFeaturePlace(db, 'f', 'p')
+    if (!current) throw new Error('Missing association')
+    const edit = prepareFeaturePlaceAssociationWrite(db, {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: current.placeId,
+      factsRevisionId: current.factsRevisionId,
+      locationRevisionId: current.locationRevisionId,
+      expectedFeatureModifiedAt: applied.feature.modifiedAt,
+      expectedRevision: applied.revision,
+      actorId: 'editor',
+      overrides: { brands: { mode: 'clear' } },
+    })
+    await edit.query
+    expect(
+      await applyPlaceAdoptionGroup(db, {
+        ...input,
+        fieldGroup: 'location',
+        mode: 'reviewed',
+        expectedRevision: edit.revision,
+        expectedFeatureModifiedAt: applied.feature.modifiedAt,
+      }),
+    ).toEqual({ status: 'conflict' })
+    const refreshed = await proposeFeaturePlaceAdoption(db, {
+      featureId: 'f',
+      projectId: 'p',
+      candidateRevisionId: next.revisionId,
+      reevaluatePending: true,
+    })
+    if (!refreshed) throw new Error('Missing refreshed pending location')
+    expect(refreshed.decisions).toHaveLength(1)
+    expect(refreshed.decisions[0].fieldGroup).toBe('facts')
+    expect(
+      await applyPlaceAdoptionGroup(db, {
+        ...input,
+        proposalId: refreshed.proposal.id,
+        fieldGroup: 'location',
+        mode: 'reviewed',
+        expectedRevision: edit.revision,
+        expectedFeatureModifiedAt: applied.feature.modifiedAt,
+      }),
+    ).toMatchObject({ status: 'applied' })
+    expect(
+      (
+        await readPlaceAdoptionReview(db, {
+          ...input,
+          proposalId: refreshed.proposal.id,
+        })
+      )?.decisions,
+    ).toHaveLength(2)
+  })
+
+  it('rejects stale writes and holds automatic adoption after policy changes', async () => {
+    const { db, input } = await fixture()
+    expect(
+      await applyPlaceAdoptionGroup(db, { ...input, expectedRevision: 'stale' }),
+    ).toEqual({ status: 'conflict' })
+    expect(await applyPlaceAdoptionGroup(db, { ...input, projectId: 'other' })).toEqual(
+      { status: 'conflict' },
+    )
+    await saveProjectPlaceSettings(db, 'p', DEFAULT_PROJECT_PLACE_POLICY, 0)
+    expect(await applyPlaceAdoptionGroup(db, input)).toMatchObject({ status: 'review' })
   })
 })

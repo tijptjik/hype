@@ -139,8 +139,9 @@ Migration 0113 adds immutable proposal snapshots and separate append-only facts/
 decisions. Proposals retain the Project policy and revision, Feature timestamp,
 association token, candidate identity and comparison evidence. Repeated sync proposals
 reuse the retained assessment, including its rejection decisions. Explicit
-`reevaluatePending` appends a new assessment only while both groups are undecided;
-it never rewrites evidence or reopens a decision. Superseded assessments cannot be
+`reevaluatePending` appends a new assessment while at least one group is undecided;
+reads carry forward all candidate decisions across assessments. It never rewrites
+evidence or reopens a decided group. Superseded assessments cannot be
 rejected through the current decision service. Concurrent inserts and decisions are
 guarded at the database write boundary.
 
@@ -151,9 +152,30 @@ The local schema upgrade passed integrity and foreign-key checks. Persistence te
 verify retries, explicit pending re-evaluation, policy changes after rejection, stale
 tokens, scope isolation and immutable audit retention.
 
-Atomic acceptance/materialization, remote review authorization/UI, and monthly
-orchestration remain to be connected. Preview and proposal creation do not apply
-source updates or reopen rejected decisions.
+The internal application service now accepts one group atomically: association
+revision/history, effective Feature fields, locale rows, targeted universal-phone
+values and the applied decision commit together. It retains explicit overrides and
+unrelated descriptions/properties. Location adoption updates geometry plus the
+SaanSeoi address envelope as one group; actual geometry changes rebuild the spatial
+index and enqueue MTR work through the existing database triggers. Overridden
+locations advance their accepted source revision without moving the Feature.
+
+Automatic calls require an unchanged policy revision and the retained assessment's
+adopt decision. Reviewed calls may accept a policy review, but cannot bypass missing
+source evidence or unresolved address dependencies. Every write also checks current
+Feature/association tokens, source identity/availability, newest assessment identity
+and the candidate's durable group decisions. After facts apply, location can be
+accepted or rejected independently. An intervening Feature edit requires explicit
+pending-group re-evaluation; previous applications/rejections remain visible and final.
+A failure at the last decision insert rolls back effective values, association history
+and routing jobs together.
+
+95 focused tests verify these paths, including late failure injection, stale/policy
+conflicts, multilingual description preservation, override retention, facts-only
+routing avoidance, location routing, rejection after partial adoption, and explicit
+re-evaluation after an unrelated edit. Full type-check retains the existing baseline.
+Remote review authorization/UI and monthly orchestration remain to be connected.
+Preview and proposal creation themselves never apply source updates.
 
 ## Replace the address model
 

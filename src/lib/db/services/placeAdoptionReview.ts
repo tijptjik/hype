@@ -50,10 +50,24 @@ export async function readPlaceAdoptionReview(
     .get()
   if (!rows) return null
   const decisions = await db
-    .select()
+    .select({ decision: placeAdoptionDecision })
     .from(placeAdoptionDecision)
-    .where(eq(placeAdoptionDecision.proposalId, rows.proposal.id))
-  return { proposal: rows.proposal, decisions }
+    .innerJoin(
+      placeAdoptionProposal,
+      eq(placeAdoptionProposal.id, placeAdoptionDecision.proposalId),
+    )
+    .where(
+      and(
+        eq(placeAdoptionProposal.featureId, rows.proposal.featureId),
+        eq(placeAdoptionProposal.projectId, rows.proposal.projectId),
+        eq(placeAdoptionProposal.placeId, rows.proposal.placeId),
+        eq(
+          placeAdoptionProposal.candidateRevisionId,
+          rows.proposal.candidateRevisionId,
+        ),
+      ),
+    )
+  return { proposal: rows.proposal, decisions: decisions.map(row => row.decision) }
 }
 
 /**
@@ -63,7 +77,7 @@ export async function readPlaceAdoptionReview(
  * @returns Existing/new proposal and decisions, or null on unavailable/stale inputs.
  * @remarks Selection of a forward canonical publication remains the sync caller's duty.
  * Only an explicit reevaluatePending request can append a replacement assessment, and
- * only before any group is decided. Prior evidence is never rewritten. No Feature changes occur.
+ * only for still-pending groups. Prior evidence and all decisions are never rewritten. No Feature changes occur.
  */
 export async function proposeFeaturePlaceAdoption(
   db: Database,
@@ -105,18 +119,16 @@ export async function proposeFeaturePlaceAdoption(
       proposalId: previous.id,
     })
     if (!input.reevaluatePending) return retained
-    // A decision on any earlier assessment holds for the same candidate and project.
+    // Completed groups remain decided across every assessment of this candidate.
     const decided = await db
-      .select({ id: placeAdoptionDecision.id })
+      .select({ fieldGroup: placeAdoptionDecision.fieldGroup })
       .from(placeAdoptionDecision)
       .innerJoin(
         placeAdoptionProposal,
         eq(placeAdoptionProposal.id, placeAdoptionDecision.proposalId),
       )
       .where(identity)
-      .limit(1)
-      .get()
-    if (decided) return retained
+    if (new Set(decided.map(row => row.fieldGroup)).size === 2) return retained
   }
   const preview = await previewFeaturePlaceAdoption(db, input)
   if (!preview) return null
@@ -136,9 +148,9 @@ export async function proposeFeaturePlaceAdoption(
       AND fp.placeId=${association.placeId} AND p.sourceAvailability='current'
       AND (p.ownerProjectId IS NULL OR p.ownerProjectId=f.projectId))
     AND COALESCE((SELECT revision FROM projectPlacePolicy WHERE projectId=${input.projectId}),0)=${preview.settings.revision}
-    AND NOT EXISTS (SELECT 1 FROM placeAdoptionDecision d JOIN placeAdoptionProposal ap ON ap.id=d.proposalId
+    AND (SELECT COUNT(DISTINCT d.fieldGroup) FROM placeAdoptionDecision d JOIN placeAdoptionProposal ap ON ap.id=d.proposalId
       WHERE ap.featureId=${input.featureId} AND ap.projectId=${input.projectId}
-      AND ap.placeId=${association.placeId} AND ap.candidateRevisionId=${input.candidateRevisionId})
+      AND ap.placeId=${association.placeId} AND ap.candidateRevisionId=${input.candidateRevisionId}) < 2
   `)
     .onConflictDoNothing()
   const retained = await db
@@ -190,9 +202,10 @@ export async function rejectPlaceAdoptionGroup(
       WHERE ap.id=${input.proposalId} AND ap.featureId=${input.featureId}
       AND ap.projectId=${input.projectId} AND f.projectId=${input.projectId} AND f.isDraft=0
       AND fp.placeId=ap.placeId AND fp.revision=${input.expectedRevision}
-      AND ap.associationRevision=${input.expectedRevision}
       AND f.modifiedAt=${input.expectedFeatureModifiedAt}
-      AND ap.featureModifiedAt=${input.expectedFeatureModifiedAt}
+      AND ((ap.associationRevision=${input.expectedRevision} AND ap.featureModifiedAt=${input.expectedFeatureModifiedAt})
+        OR EXISTS (SELECT 1 FROM placeAdoptionDecision prior WHERE prior.proposalId=ap.id
+          AND prior.action='applied' AND prior.associationRevision=${input.expectedRevision}))
       AND ap.rowid=(SELECT MAX(newer.rowid) FROM placeAdoptionProposal newer
         WHERE newer.featureId=ap.featureId AND newer.projectId=ap.projectId
           AND newer.placeId=ap.placeId AND newer.candidateRevisionId=ap.candidateRevisionId)

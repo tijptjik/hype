@@ -1,5 +1,5 @@
 // DRIZZLE
-import { sql } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import { featurePlace } from '../schema/place'
 // VALIDATION
@@ -18,6 +18,7 @@ export type FeaturePlaceAssociationWrite = {
   locationRevisionId: string
   overrides: FeaturePlaceOverrides
   actorId: string
+  additionalGuard?: SQL
 }
 
 /**
@@ -29,7 +30,8 @@ export type FeaturePlaceAssociationWrite = {
  * affected Feature fields, derive initial overrides from persisted values, and batch
  * effective-value writes with this query. Subsequent writes must require this new token
  * to exist, so a stale association cannot change materialized values. Database triggers enforce scope and retain
- * history. This function does not execute or expose source payloads to clients.
+ * history. An optional server-owned SQL guard adds workflow preconditions (never client SQL).
+ * This function does not execute or expose source payloads to clients.
  */
 export function prepareFeaturePlaceAssociationWrite(
   db: Database,
@@ -52,7 +54,8 @@ export function prepareFeaturePlaceAssociationWrite(
   // The persisted Feature guard closes the gap between baseline reads and the write.
   const featureGuard = sql`EXISTS (SELECT 1 FROM feature
     WHERE id = ${input.featureId} AND projectId = ${input.projectId}
-      AND isDraft = 0 AND modifiedAt = ${input.expectedFeatureModifiedAt})`
+      AND isDraft = 0 AND modifiedAt = ${input.expectedFeatureModifiedAt})
+    AND (${input.additionalGuard ?? sql.raw('1=1')})`
   if (input.expectedRevision === null) {
     // Raw SELECT follows the schema column order; explicit insert columns are emitted by Drizzle.
     const query = db
