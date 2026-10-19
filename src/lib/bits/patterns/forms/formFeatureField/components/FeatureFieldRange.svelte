@@ -35,7 +35,13 @@ function handleUnset(): void {
 }
 </script>
 
-<div class={rangeClass}>
+<div class={[rangeClass, !isEditing && 'pt-0!'].filter(Boolean).join(' ')}>
+  {#if !isEditing}
+    <output
+      class="flex h-10 min-w-10 shrink-0 items-center justify-start rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground"
+      >{hasValue ? resolvedValue : '—'}</output
+    >
+  {/if}
   {#if isEditing}
     <button
       type="button"
@@ -49,17 +55,19 @@ function handleUnset(): void {
     </button>
   {/if}
 
-  <RangeSlider
-    min={resolvedMin}
-    max={resolvedMax}
-    step={1}
-    bind:values
-    disabled={!isEditing}
-    pips
-    first="label"
-    last="label"
-    rest="pip"
-    pipstep={Math.max(1, Math.ceil((resolvedMax - resolvedMin) / 4))}
-    on:change={() => onChange(String(values[0] ?? resolvedMin))}
-  />
+  {#if isEditing}
+    <RangeSlider
+      min={resolvedMin}
+      max={resolvedMax}
+      step={1}
+      bind:values
+      disabled={!isEditing}
+      pips
+      first="label"
+      last="label"
+      rest="pip"
+      pipstep={Math.max(1, Math.ceil((resolvedMax - resolvedMin) / 4))}
+      on:change={() => onChange(String(values[0] ?? resolvedMin))}
+    />
+  {/if}
 </div>
