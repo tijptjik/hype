@@ -290,7 +290,7 @@ export function applyAddressAbbreviations(address: string): string {
 }
 
 /**
- * Intermediate parse result used to build ALS lookup queries and local fallback results.
+ * Intermediate parse result used to build geocoding queries and local fallback results.
  * This carries parser-only fields that do not belong in the canonical `addressProperties`
  * payload, such as `queryAddress`, `buildingNumbering`, `subpremisesRaw`, and
  * source address components.
@@ -771,7 +771,7 @@ export function parseSubPremisesComponent(
 }
 
 /**
- * Parse an imported address into structured components and an ALS query.
+ * Parse an imported address into structured components and a geocoding query.
  * @param rawAddress - Address text from the import file.
  * @param locale - Locale for the imported address text.
  * @returns Parsed address components for API geocoding or local fallback storage.
@@ -857,7 +857,7 @@ export function getAddressForQuery(
  * Convert locally parsed address components to the canonical geocode result shape.
  * @param components - Parsed local address components.
  * @returns A geocode-like result marked as locally parsed rather than API matched.
- * @remarks Used when an import row has address content that cannot be sent to ALS.
+ * @remarks Used when an import row has address content that cannot be sent to the geocoder.
  */
 export function toLocalParseResult(
   components: ParsedAddressQueryComponents,

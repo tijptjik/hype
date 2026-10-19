@@ -282,15 +282,6 @@ export enum CollectionStatistic {
 }
 
 /* ----------------- */
-// GEOCODING
-/* -------- */
-export enum GeoCoder {
-  hkgov_als = 'hkgov_als',
-  hkgov_identify = 'hkgov_identify',
-  googlemaps = 'googlemaps',
-}
-
-/* ----------------- */
 // QUERY PARAMETERS
 /* -------- */
 export const PRISM_PARAMETERS = ['organisation', 'project', 'layer']
