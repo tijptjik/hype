@@ -50,6 +50,7 @@ beforeEach(() => {
 afterEach(cleanup)
 
 const result = {
+  addressMeta: { addressMatch: 'nearest' },
   i18n: {
     en: { displayAddress: '3 Kennedy Rd', displayAddressGen: true },
     zhHant: { displayAddress: '堅尼地道3號', displayAddressGen: true },
@@ -62,7 +63,7 @@ it('uses the selected pin and accepts localized street labels without replacing 
   const view = render(GeoLocationModal, { getMapCenter: () => [114.16, 22.28] })
   await fireEvent.click(view.getByText('new_feature__select_location'))
   await waitFor(() => expect(view.getByDisplayValue('3 Kennedy Rd')).toBeTruthy())
-  expect(mocks.lookup).toHaveBeenCalledWith({ lng: 114.16, lat: 22.28 })
+  expect(mocks.lookup).toHaveBeenCalledWith({ lng: 114.16, lat: 22.28 }, {})
   expect(mocks.draft.updateField).toHaveBeenCalledTimes(1)
   await fireEvent.click(view.getByText('close_shy_jurgen_cook'))
   expect(mocks.draft.updateI18n).toHaveBeenCalledWith(
@@ -107,4 +108,82 @@ it('does not apply a pending response after closing the pinpointer', async () =>
   resolve(result)
   await waitFor(() => expect(view.queryByDisplayValue('3 Kennedy Rd')).toBeNull())
   expect(mocks.draft.updateI18n).not.toHaveBeenCalled()
+})
+
+it('accepts the containing building address without a nearest-address call and persists identity', async () => {
+  const getBuildingAt = vi.fn().mockResolvedValue({
+    id: 'osm:42',
+    source: 'hongkong-latest',
+    properties: { addr_housenumber: '22-24', addr_street: 'Possession Street' },
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [114.159, 22.279],
+          [114.161, 22.279],
+          [114.161, 22.281],
+          [114.159, 22.281],
+          [114.159, 22.279],
+        ],
+      ],
+    },
+  })
+  const view = render(GeoLocationModal, {
+    getMapCenter: () => [114.16, 22.28],
+    getBuildingAt,
+  })
+  await fireEvent.click(view.getByText('new_feature__select_location'))
+  await waitFor(() =>
+    expect(view.getByDisplayValue('22-24 Possession Street')).toBeTruthy(),
+  )
+  expect(mocks.lookup).not.toHaveBeenCalled()
+  await fireEvent.click(view.getByText('close_shy_jurgen_cook'))
+  expect(mocks.draft.updateField).toHaveBeenCalledWith(
+    'addressMeta',
+    expect.objectContaining({
+      buildingSourceId: 'osm:42',
+      addressMatch: 'building_address',
+    }),
+  )
+})
+
+it('reacquires instead of accepting when the map centre has moved to another building', async () => {
+  let centre: [number, number] = [114.16, 22.28]
+  mocks.lookup.mockResolvedValue(result)
+  const view = render(GeoLocationModal, { getMapCenter: () => centre })
+  await fireEvent.click(view.getByText('new_feature__select_location'))
+  await waitFor(() => expect(view.getByDisplayValue('3 Kennedy Rd')).toBeTruthy())
+  centre = [114.17, 22.29]
+  await fireEvent.click(view.getByText('close_shy_jurgen_cook'))
+  await waitFor(() =>
+    expect(mocks.lookup).toHaveBeenLastCalledWith({ lng: 114.17, lat: 22.29 }, {}),
+  )
+  expect(mocks.draft.setMode).not.toHaveBeenCalled()
+})
+
+it('retains saved building evidence when reopening and accepting the same pin', async () => {
+  const identity = { buildingSourceId: 'osm:42', addressMatch: 'building_address' }
+  const properties = { streetAddress: '22-24 Possession Street' }
+  Object.assign(mocks.draft.current.feature, {
+    addressMeta: identity,
+    i18n: {
+      en: {
+        displayAddress: '22-24 Possession Street',
+        displayAddressGen: true,
+        addressProperties: properties,
+      },
+    },
+  })
+  const view = render(GeoLocationModal, { getMapCenter: () => [114.1, 22.3] })
+  await waitFor(() =>
+    expect(view.getByDisplayValue('22-24 Possession Street')).toBeTruthy(),
+  )
+  await fireEvent.click(view.getByText('close_shy_jurgen_cook'))
+  expect(mocks.lookup).not.toHaveBeenCalled()
+  expect(mocks.draft.updateField).toHaveBeenCalledWith('addressMeta', identity)
+  expect(mocks.draft.updateI18n).toHaveBeenCalledWith(
+    'addressProperties',
+    properties,
+    'en',
+  )
 })

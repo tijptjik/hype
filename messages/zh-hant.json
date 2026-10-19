@@ -1,4 +1,5 @@
 {
+  "new_feature__approximate_address": "約略地址 · 最近的地址點",
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "lang__en": "英語",
   "lang__zh_hant": "繁體中文",

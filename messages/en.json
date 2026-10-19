@@ -1,4 +1,5 @@
 {
+  "new_feature__approximate_address": "Approximate address · nearest address point",
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "lang__en": "English",
   "lang__zh_hant": "Trad. Chinese",

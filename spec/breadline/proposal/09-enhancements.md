@@ -141,7 +141,6 @@ invalidation, shared volunteer/operations consumption and broader UI integration
 implementation work under #213. Distinguish cached estimates from fresh routes;
 an unreachable route must not silently become a straight-line travel estimate.
 
-
 ### Core nearest-MTR walking access (Refs #213)
 
 `mtrStation` stores the station code, `mtrExit` a stable OSM entrance node ID and
@@ -163,3 +162,21 @@ The catalog contains 98 stations and 635 entrances from OSM HK 2026-10-01. Assoc
 include 496 stop-area relations, 19 explicit station-exit-plan mappings and 120 spatial
 fallbacks. Spatial fallback associations require review; they are recorded in provenance.
 See `docs/operations/Feature-MTR.md` for commands, limitations and the routing blocker.
+
+## Building-aware address selection
+
+The new-feature location picker resolves the containing full building from loaded z15
+basemap source polygons, including styles that show outlines only. Tile fragments share
+the type-encoded OSM source identity. Independent overlapping buildings require manual
+resolution. A source full address or number plus street supplies the address directly,
+with number ranges retained. Missing translations use source text.
+
+Without complete building tags, the picker requests ALS candidates constrained to the
+selected footprint. An empty or ambiguous response does not select an adjacent building.
+Pins outside buildings use nearest-point lookup with an approximate-address label.
+Changing the pin invalidates the earlier selection. Building identity, match evidence and
+address components persist with the contribution; source OSM identity is separate from
+canonical SaanSeoi Address identity.
+
+Activation requires SaanSeoi basemap schema `protomaps-v4.1` tiles and the address
+geocoder's `footprint` contract. Source-tagged buildings do not need a geocoder request.
