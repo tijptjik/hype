@@ -3,7 +3,9 @@ import { getContext, hasContext, setContext } from 'svelte'
 // LIB
 import { MOBILE_MAX_WIDTH } from '#lib/constants.js'
 
-const RESPONSIVE_CONTEXT_KEY = Symbol('responsive-context')
+// Keep root viewport consumers attached across development module reloads.
+// Only the key is global; each rendered application owns its viewport state.
+const RESPONSIVE_CONTEXT_KEY = Symbol.for('hype.context.responsive')
 
 export type ResponsiveDimensions = {
   width: number
