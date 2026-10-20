@@ -18,6 +18,7 @@ import {
 import { updateProjectByIdWithConcurrency } from '#lib/db/services/project.js'
 import {
   resolvePlaceCandidate,
+  persistPlaceCandidate,
   searchLocalPlaceCandidates,
 } from '#lib/db/services/placeCandidate.js'
 import {
@@ -1266,6 +1267,67 @@ describe('immutable SaanSeoi Place ingestion', () => {
         .prepare("SELECT count(*) AS count FROM place WHERE ssId='other-shop'")
         .get()?.count,
     ).toBe(0)
+  })
+  describe('scoped canonical candidate ingestion', () => {
+    it('creates an idempotent preview without changing Features', async () => {
+      const { db, sqlite } = setup()
+      const result = await persistPlaceCandidate(db, 'p', projection())
+      expect(result).toMatchObject({ status: 'ready' })
+      expect(await persistPlaceCandidate(db, 'p', projection())).toEqual(result)
+      expect(sqlite.prepare('SELECT count(*) AS n FROM placeRevision').get()?.n).toBe(1)
+      expect(sqlite.prepare('SELECT count(*) AS n FROM featurePlace').get()?.n).toBe(0)
+    })
+    it('rechecks ownership inside the write batch after a concurrent scope change', async () => {
+      const { db, sqlite } = setup()
+      const original = await persistSaanSeoiPlace(db, projection())
+      db.batch = new Proxy(db.batch, {
+        apply(target, receiver, args) {
+          sqlite
+            .prepare(
+              "UPDATE place SET ownerProjectId='other',sourceAvailability='missing' WHERE id=?",
+            )
+            .run(original.placeId)
+          return Reflect.apply(target, receiver, args)
+        },
+      })
+      const source = projection()
+      expect(
+        await persistPlaceCandidate(db, 'p', {
+          ...source,
+          releaseId: 'new-release',
+          payload: { ...source.payload, meta: { apiReleaseSet: 'new-publication' } },
+        }),
+      ).toBeNull()
+      expect(sqlite.prepare('SELECT count(*) AS n FROM placeRevision').get()?.n).toBe(1)
+      expect(
+        sqlite
+          .prepare('SELECT sourceAvailability FROM place WHERE id=?')
+          .get(original.placeId)?.sourceAvailability,
+      ).toBe('missing')
+    })
+    it('does not mutate or disclose another project private Place', async () => {
+      const { db, sqlite } = setup()
+      const source = projection()
+      const original = await persistSaanSeoiPlace(db, source)
+      sqlite
+        .prepare(
+          "UPDATE place SET ownerProjectId='other',sourceAvailability='missing' WHERE id=?",
+        )
+        .run(original.placeId)
+      const before = sqlite.prepare('SELECT * FROM place').all()
+      expect(
+        await persistPlaceCandidate(db, 'p', { ...source, releaseId: 'new-release' }),
+      ).toBeNull()
+      expect(sqlite.prepare('SELECT * FROM place').all()).toEqual(before)
+      expect(sqlite.prepare('SELECT count(*) AS n FROM placeRevision').get()?.n).toBe(1)
+      expect(
+        await persistPlaceCandidate(db, 'other', {
+          ...source,
+          releaseId: 'new-release',
+          payload: { ...source.payload, meta: { apiReleaseSet: 'new-publication' } },
+        }),
+      ).toMatchObject({ status: 'ready', placeId: original.placeId })
+    })
   })
 })
 

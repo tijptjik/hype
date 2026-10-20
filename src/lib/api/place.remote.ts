@@ -25,6 +25,7 @@ import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
 import { relinkFeaturePlace as persistFeatureRelink } from '#lib/db/services/placeRelink.js'
 import {
   resolvePlaceCandidate,
+  persistPlaceCandidate,
   searchLocalPlaceCandidates,
 } from '#lib/db/services/placeCandidate.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
@@ -34,6 +35,8 @@ import {
   PlaceSearchInputSchema,
   searchSaanSeoiPlaces,
 } from '#lib/places/sourceClient.js'
+import { discoverPlacePublication } from '#lib/places/publication.js'
+import { findSaanSeoiPlace } from '#lib/places/sourceLookup.js'
 // TYPES
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 
@@ -50,6 +53,7 @@ import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 // 8. PRIVATE LOCAL DISCOVERY
 // 9. EXPLICIT REASSOCIATION
 // 10. EXPLICIT UNLINK
+// 11. CANONICAL CANDIDATE IMPORT
 // ---
 
 const projectInput = z.strictObject({ projectId: z.string().min(1) })
@@ -424,5 +428,68 @@ export const unlinkFeaturePlace = guardedCommand(
     })
     if (result.status === 'conflict') error(409, 'PLACE_LINK_CHANGED')
     return result
+  },
+)
+
+/**
+ * Load a selected source candidate into the canonical mirror before explicit review.
+ * @param input Feature and exact source identity/release selected in search.
+ * @returns Accessible immutable candidate; no Feature association or adoption is performed.
+ * @remarks Permissions precede source requests. Publication pins and facts come only
+ * from the server. Release drift requires a new search; upstream diagnostics stay private.
+ */
+export const importFeaturePlaceCandidate = guardedCommand(
+  z.strictObject({
+    featureId: z.string().min(1),
+    ssId: z.string().min(1).max(200),
+    resourceReleaseId: z.string().min(1).max(200),
+  }),
+  async (input, ctx) => {
+    const probe = await probeFeatureQuery(ctx.db, {
+      ref: input.featureId,
+      refKey: 'id',
+    })
+    if (!probe) error(404, 'FEATURE_NOT_FOUND')
+    const decision = authorizeFeatureUpdateForSubmission({
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      resource: probe,
+      submittedData: {
+        i18n: true,
+        properties: true,
+        geometry: true,
+        addressMeta: true,
+      },
+    })
+    if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    const env = ctx.event.locals.platform?.env
+    const apiKey = env?.SAANSEOI_API_KEY ?? env?.VITE_SAANSEOI_API_KEY
+    if (!apiKey?.trim()) error(503, 'PLACE_SEARCH_UNAVAILABLE')
+    const client = {
+      baseUrl: 'https://api.saanseoi.hk',
+      apiKey,
+      fetch: ctx.event.fetch,
+    }
+    let found: Awaited<ReturnType<typeof findSaanSeoiPlace>>
+    try {
+      const publication = await discoverPlacePublication(client)
+      found = await findSaanSeoiPlace(client, publication.pin, input.ssId)
+    } catch {
+      error(502, 'PLACE_SOURCE_LOOKUP_FAILED')
+    }
+    if (!found) error(404, 'PLACE_SOURCE_NOT_FOUND')
+    if (
+      found.projection.ssId !== input.ssId ||
+      found.projection.releaseId !== input.resourceReleaseId
+    )
+      error(409, 'PLACE_SOURCE_CHANGED')
+    let candidate: Awaited<ReturnType<typeof persistPlaceCandidate>>
+    try {
+      candidate = await persistPlaceCandidate(ctx.db, probe.projectId, found.projection)
+    } catch {
+      error(409, 'PLACE_CANDIDATE_UNAVAILABLE')
+    }
+    if (!candidate) error(409, 'PLACE_CANDIDATE_UNAVAILABLE')
+    return candidate
   },
 )

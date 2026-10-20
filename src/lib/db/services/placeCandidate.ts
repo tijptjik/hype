@@ -2,17 +2,20 @@
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm'
 // SCHEMA
 import { place, placeRevision } from '../schema/place'
+import { persistSaanSeoiPlace } from './placeSource'
 // VALIDATION
 import { PlaceFactsSchema } from '#lib/places/validation.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { PlaceFacts } from '#lib/places/model.js'
+import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
 // ═══════════════════════
 // 1. CANONICAL SOURCE CANDIDATE RESOLUTION
 // 2. PRIVATE LOCAL DISCOVERY
+// 3. SCOPED CANONICAL CANDIDATE INGESTION
 // ---
 
 export type PlaceCandidateResolution =
@@ -127,4 +130,30 @@ export async function searchLocalPlaceCandidates(
       throw new Error('Unexpected nonlocal Place')
     return { ...row, state: row.state, facts: PlaceFactsSchema.parse(row.facts) }
   })
+}
+
+/**
+ * Retain trusted canonical evidence without writing another project's private identity.
+ * @param db Request-local database.
+ * @param projectId Persisted authorized Feature ancestry.
+ * @param projection Publication-pinned projection fetched by the server.
+ * @returns Accessible candidate, or null when unavailable or concurrently moved out of scope.
+ * @remarks Every ingestion write carries the ownership fence. Retired source identity
+ * protections remain in the source service. No Feature is linked or adopted here.
+ */
+export async function persistPlaceCandidate(
+  db: Database,
+  projectId: string,
+  projection: SaanSeoiPlaceProjection,
+): Promise<PlaceCandidateResolution | null> {
+  // Fence all source writes against private ownership, including concurrent scope changes.
+  const guard = sql`NOT EXISTS (SELECT 1 FROM place WHERE ssId=${projection.ssId}
+    AND ownerProjectId IS NOT NULL AND ownerProjectId<>${projectId})`
+  await persistSaanSeoiPlace(db, projection, guard)
+  const candidate = await resolvePlaceCandidate(db, {
+    projectId,
+    ssId: projection.ssId,
+    resourceReleaseId: projection.releaseId,
+  })
+  return candidate.status === 'ready' ? candidate : null
 }

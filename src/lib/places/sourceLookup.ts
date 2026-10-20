@@ -26,11 +26,11 @@ export async function findSaanSeoiPlace(
   const deadline = AbortSignal.timeout(45_000)
   const bounded: PlaceSourceClient = {
     ...client,
-    fetch: (input, init) =>
+    fetch: ((input, init) =>
       client.fetch(input, {
         ...init,
         signal: AbortSignal.any([deadline, ...(init?.signal ? [init.signal] : [])]),
-      }),
+      })) as typeof client.fetch,
   }
   const pages = new Map<number, Page>()
   let total: number | null = null

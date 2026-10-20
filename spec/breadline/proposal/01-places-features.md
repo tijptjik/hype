@@ -1302,3 +1302,40 @@ partial final pages, publication/order/snapshot/pagination drift and request lim
 including a 200,001-record synthetic collection. Together with source-client tests,
 22 tests pass; the Place refresh worker type-check also passes. Live upstream lookup
 and browser acceptance are not established by these fixture tests.
+
+### Authorized candidate loading and live lookup limitation (Refs #194)
+
+Both Feature selection and identity-review selection now request canonical ingestion
+when a selected source result is not mirrored. `importFeaturePlaceCandidate` authorizes
+all inherited fields using persisted Feature ancestry before contacting SaanSeoi. It
+discovers the publication server-side, verifies the selected source identity and release,
+and returns only the scoped candidate projection. Client facts, project scope and source
+URLs are rejected. Missing records, release drift, source failures and inaccessible
+identities remain explicit failures; raw upstream/database diagnostics are not returned.
+
+`persistPlaceCandidate` passes an ownership predicate into every source-ingestion write,
+so another project's private Place cannot be updated, including when ownership changes
+between the initial read and batch execution. Existing retired-source protections remain
+in force. Selection does not link, merge, accept identity, or adopt facts/location. Feature
+preview callbacks are invalidated on unmount. Source lookup's callable transport typing
+also accommodates Bun's augmented global fetch type without requiring its extra methods.
+
+Validation: 166 focused service/remote/source/refresh tests pass. Worker checking passes;
+application checking retains the existing 10 errors / 19 warnings. Tests cover forbidden
+editing, injected scope/facts, server publication selectors, release mismatch, sanitized
+failures, idempotence, private ownership and a concurrent scope change during ingestion.
+
+**Live acceptance remains incomplete.** An isolated browser rehearsal searched for a
+previously unmirrored McDonald's result and invoked the import command, but no comparison
+appeared. An independent read-only source probe reproduced a canonical page-request timeout
+after successful publication discovery and the first page. The bounded collection search
+is therefore not yet a demonstrated usable live import path. An efficient canonical
+lookup by ID that honors publication selectors is needed; the current latest-only detail
+endpoint must not silently replace pinned evidence. Implement and verify that source API
+path locally, then repeat browser acceptance before marking candidate loading complete.
+
+The isolated rehearsal retained identical Feature, association, Place, revision, identity
+history, merge-review and redirect tables to primary local state (1,601 Features, 1,520
+associations, 2,850 Places). Integrity is OK with zero foreign-key violations. No identity
+was accepted and no source record was imported during this failed rehearsal. The server
+was stopped. No production mutation or deployment was performed.

@@ -80,7 +80,7 @@ function fixture(
   return {
     baseUrl: 'https://source.example',
     apiKey: 'test',
-    fetch: request as typeof fetch,
+    fetch: request as unknown as typeof fetch,
     request,
   }
 }

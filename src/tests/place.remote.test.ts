@@ -25,6 +25,9 @@ const mocks = vi.hoisted(() => ({
   applyReview: vi.fn(),
   scheduleMtr: vi.fn(),
   resolveCandidate: vi.fn(),
+  persistCandidate: vi.fn(),
+  discoverPublication: vi.fn(),
+  lookupSource: vi.fn(),
   searchPlaces: vi.fn(),
   createPlace: vi.fn(),
   relinkPlace: vi.fn(),
@@ -97,8 +100,15 @@ vi.mock('#lib/places/sourceClient.js', async importOriginal => {
     readSaanSeoiPlacePage: mocks.readSourcePage,
   }
 })
+vi.mock('#lib/places/publication.js', () => ({
+  discoverPlacePublication: mocks.discoverPublication,
+}))
+vi.mock('#lib/places/sourceLookup.js', () => ({
+  findSaanSeoiPlace: mocks.lookupSource,
+}))
 vi.mock('#lib/db/services/placeCandidate.js', () => ({
   resolvePlaceCandidate: mocks.resolveCandidate,
+  persistPlaceCandidate: mocks.persistCandidate,
   searchLocalPlaceCandidates: mocks.searchLocal,
 }))
 vi.mock('#lib/db/services/placeUnlink.js', () => ({
@@ -135,6 +145,7 @@ vi.mock('#lib/api/services/authz/index.js', () => ({
 import {
   searchFeatureLocalPlaces,
   getFeaturePlaceCandidate,
+  importFeaturePlaceCandidate,
   searchFeaturePlaces,
   createLocalPlace,
   relinkFeaturePlace,
@@ -965,5 +976,77 @@ describe('two-Place merge authorization', () => {
     })
     mocks.probeMergeReview.mockResolvedValue(null)
     await expect(getPlaceMergeReview(read)).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('canonical candidate import boundary', () => {
+  const input = { featureId: 'f', ssId: 'ss-id', resourceReleaseId: 'release' }
+  beforeEach(() => {
+    mocks.discoverPublication.mockResolvedValue({ pin: { releaseSet: 'server-pin' } })
+    mocks.lookupSource.mockResolvedValue({
+      projection: { ssId: 'ss-id', releaseId: 'release' },
+      offset: 100,
+    })
+    mocks.persistCandidate.mockResolvedValue({
+      status: 'ready',
+      placeId: 'place',
+      revisionId: 'revision',
+    })
+  })
+  it('uses server publication and persisted scope without linking or adopting', async () => {
+    expect(await importFeaturePlaceCandidate(input)).toMatchObject({ status: 'ready' })
+    expect(mocks.lookupSource).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: 'https://api.saanseoi.hk' }),
+      { releaseSet: 'server-pin' },
+      'ss-id',
+    )
+    expect(mocks.persistCandidate).toHaveBeenCalledWith(mocks.context.db, 'p', {
+      ssId: 'ss-id',
+      releaseId: 'release',
+    })
+    expect(mocks.linkPlace).not.toHaveBeenCalled()
+    expect(mocks.applyReview).not.toHaveBeenCalled()
+  })
+  it('authorizes inherited fields before any source request', async () => {
+    mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: false })
+    await expect(importFeaturePlaceCandidate(input)).rejects.toMatchObject({
+      status: 403,
+    })
+    expect(mocks.discoverPublication).not.toHaveBeenCalled()
+    expect(mocks.persistCandidate).not.toHaveBeenCalled()
+    await expect(
+      importFeaturePlaceCandidate({ ...input, projectId: 'other' } as never),
+    ).rejects.toThrow()
+    await expect(
+      importFeaturePlaceCandidate({ ...input, facts: {} } as never),
+    ).rejects.toThrow()
+  })
+  it.each([
+    null,
+    { projection: { ssId: 'other', releaseId: 'release' } },
+    { projection: { ssId: 'ss-id', releaseId: 'changed' } },
+  ])('rejects missing or changed selection before persistence: %j', async found => {
+    mocks.lookupSource.mockResolvedValue(found)
+    await expect(importFeaturePlaceCandidate(input)).rejects.toMatchObject({
+      status: found ? 409 : 404,
+    })
+    expect(mocks.persistCandidate).not.toHaveBeenCalled()
+  })
+  it('sanitizes upstream and unavailable identity failures', async () => {
+    mocks.lookupSource.mockRejectedValueOnce(new Error('private upstream payload'))
+    await expect(importFeaturePlaceCandidate(input)).rejects.toMatchObject({
+      status: 502,
+      body: { message: 'PLACE_SOURCE_LOOKUP_FAILED' },
+    })
+    mocks.persistCandidate.mockResolvedValueOnce(null)
+    await expect(importFeaturePlaceCandidate(input)).rejects.toMatchObject({
+      status: 409,
+      body: { message: 'PLACE_CANDIDATE_UNAVAILABLE' },
+    })
+    mocks.persistCandidate.mockRejectedValueOnce(new Error('private identity history'))
+    await expect(importFeaturePlaceCandidate(input)).rejects.toMatchObject({
+      status: 409,
+      body: { message: 'PLACE_CANDIDATE_UNAVAILABLE' },
+    })
   })
 })

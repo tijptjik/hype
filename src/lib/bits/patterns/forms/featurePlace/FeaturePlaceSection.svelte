@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { onDestroy } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
@@ -9,6 +11,7 @@ import {
   getFeaturePlace,
   getFeatureDetachedBrands,
   getFeaturePlaceCandidate,
+  importFeaturePlaceCandidate,
   linkFeaturePlace,
   relinkFeaturePlace,
   searchFeaturePlaces,
@@ -66,6 +69,9 @@ let busy = $state(false)
 let failed = $state(false)
 let searchFailed = $state(false)
 let requestVersion = 0
+onDestroy(() => {
+  requestVersion++
+})
 let replacementRevision = $state<string | null>(null)
 
 /** Preserve values through the parent-owned unlink command and refresh the regular form. */
@@ -116,19 +122,26 @@ async function search(): Promise<void> {
 /** Load verified facts, keeping an unavailable source distinct from an empty search. */
 async function preview(candidate: PlaceSearchCandidate): Promise<void> {
   if (busy || !isEditing) return
+  const version = ++requestVersion
+  const input = {
+    featureId,
+    ssId: candidate.placeId,
+    resourceReleaseId: candidate.resourceReleaseId,
+  }
   busy = true
   failed = false
   selected = null
   try {
-    selected = await getFeaturePlaceCandidate({
-      featureId,
-      ssId: candidate.placeId,
-      resourceReleaseId: candidate.resourceReleaseId,
-    })
+    let resolved = await getFeaturePlaceCandidate(input)
+    if (version !== requestVersion) return
+    if (resolved.status === 'source-import-needed') {
+      resolved = await importFeaturePlaceCandidate(input)
+    }
+    if (version === requestVersion) selected = resolved
   } catch {
-    failed = true
+    if (version === requestVersion) failed = true
   } finally {
-    busy = false
+    if (version === requestVersion) busy = false
   }
 }
 

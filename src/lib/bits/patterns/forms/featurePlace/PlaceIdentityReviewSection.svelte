@@ -11,6 +11,7 @@ import {
   getFeaturePlace,
   searchFeaturePlaces,
   getFeaturePlaceCandidate,
+  importFeaturePlaceCandidate,
 } from '#lib/api/place.remote.js'
 import {
   getPlaceIdentityReviewAccess,
@@ -76,11 +77,19 @@ async function select(candidate: PlaceSearchCandidate): Promise<void> {
   busy = true
   failure = ''
   try {
-    const resolved = await getFeaturePlaceCandidate({
+    let resolved = await getFeaturePlaceCandidate({
       featureId,
       ssId: candidate.placeId,
       resourceReleaseId: candidate.resourceReleaseId,
     })
+    if (!alive) return
+    if (resolved.status === 'source-import-needed') {
+      resolved = await importFeaturePlaceCandidate({
+        featureId,
+        ssId: candidate.placeId,
+        resourceReleaseId: candidate.resourceReleaseId,
+      })
+    }
     if (!alive) return
     if (resolved.status !== 'ready') {
       failure = m.feature_place_import_needed()
