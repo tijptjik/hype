@@ -12,6 +12,7 @@ import {
   getConfiguredBasemapAccessToken,
   listMapStyleCatalog,
 } from '#lib/map/styles/index.js'
+import { freezeMapForResize } from '#lib/map/resizeSnapshot.js'
 import { createMapController, type MapController } from '#lib/map/controller.js'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 // ICONS
@@ -30,6 +31,7 @@ import type { Id } from '#lib/types.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 import type { MapStyleCatalogKey } from '#lib/map/styles/catalog.js'
 type MapProps = {
+  freezeForResize?: boolean
   coordinates: number[]
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
@@ -77,7 +79,39 @@ let isMapLoaded = $state(false)
 let hasSyncedViewport = $state(false)
 let lastCoordinateKey = $state('')
 let activeMapInstance = $state<MaplibreMap | undefined>(undefined)
+let resizeContainer = $state<HTMLDivElement>()
+let containerResizing = $state(false)
 let map = $derived(activeMapInstance)
+$effect(() => {
+  if (!resizeContainer || !activeMapInstance) return
+  let width = resizeContainer.clientWidth,
+    height = resizeContainer.clientHeight
+  let timer: ReturnType<typeof setTimeout> | undefined
+  // Also cover width changes from adjacent panels and responsive layout changes.
+  const observer = new ResizeObserver(() => {
+    if (
+      !resizeContainer ||
+      (width === resizeContainer.clientWidth && height === resizeContainer.clientHeight)
+    )
+      return
+    width = resizeContainer.clientWidth
+    height = resizeContainer.clientHeight
+    containerResizing = true
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      containerResizing = false
+    }, 300)
+  })
+  observer.observe(resizeContainer)
+  return () => {
+    observer.disconnect()
+    clearTimeout(timer)
+  }
+})
+const shouldFreeze = $derived(Boolean(mapProps.freezeForResize || containerResizing))
+$effect(() => {
+  if (activeMapInstance && shouldFreeze) return freezeMapForResize(activeMapInstance)
+})
 
 // STATE : DERIVED
 let markedAddressLngLat: [number, number] | null = $state(null)
@@ -254,7 +288,7 @@ $effect(() => {
 
 <!-- ENHANCEMENT - show the canonical image on top of the marker, so that we
  can remove the canonical image box and leave more space for the properties -->
-<div class="relative h-full w-full">
+<div bind:this={resizeContainer} class="relative h-full w-full overflow-hidden">
   <div
     class="{isCollapsed
       ? 'absolute w-full justify-center'

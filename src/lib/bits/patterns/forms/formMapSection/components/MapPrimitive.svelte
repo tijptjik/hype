@@ -1,11 +1,15 @@
 <script lang="ts">
+import { getContext } from 'svelte'
+import {
+  VISUAL_RESIZE_CONTEXT,
+  type VisualResizeContext,
+} from '#lib/bits/custom/main/visualResize.js'
 import LegacyMap from '#lib/bits/patterns/maps/Maplet.svelte'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // THEME
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
 import { THEME_MAP_STYLES } from '#lib/themes/themes.js'
 // TYPES
-import type { MapController } from '#lib/map/controller.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 
 type Props = {
@@ -28,23 +32,7 @@ let {
   onToggleCollapsed,
 }: Props = $props()
 
-let container = $state<HTMLDivElement>()
-let controller = $state<MapController | null>(null)
-$effect(() => {
-  if (!container || !controller) return
-  const activeController = controller
-  let frame = 0
-  // Container resizing does not fire a window resize event; keep the canvas in sync.
-  const observer = new ResizeObserver(() => {
-    cancelAnimationFrame(frame)
-    frame = requestAnimationFrame(() => activeController.resize())
-  })
-  observer.observe(container)
-  return () => {
-    observer.disconnect()
-    cancelAnimationFrame(frame)
-  }
-})
+const resizeState = getContext<VisualResizeContext | undefined>(VISUAL_RESIZE_CONTEXT)
 
 // Keep admin preferences and navigation state at the application adapter boundary.
 const adminCtx = getAdminCtx()
@@ -55,10 +43,10 @@ const initialCollapsed =
   adminCtx.view.getUserPreferences().admin?.isAdminMapCollapsed ?? false
 </script>
 
-<div bind:this={container} class="bits-feature-map">
+<div class="bits-feature-map">
   <LegacyMap
     {coordinates}
-    onMapReady={value => (controller = value)}
+    freezeForResize={resizeState?.active ?? false}
     {initialCenter}
     {addressMeta}
     {mapStyleCode}

@@ -36,6 +36,7 @@ let {
   onIntangibleChange,
   onVisitableChange,
   onExpand,
+  onHeightChange,
   onCollapse,
   onNavigatePrevious,
   onNavigateNext,
@@ -54,6 +55,7 @@ const rootClass = $derived(
 </script>
 
 <Main.VisualSection
+  {onHeightChange}
   class={rootClass}
   {imageAspectRatio}
   {isCollapsed}

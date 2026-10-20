@@ -1,9 +1,12 @@
 <script lang="ts">
+import { setContext, onDestroy } from 'svelte'
+import { VISUAL_RESIZE_CONTEXT } from './visualResize.js'
 import type { MainVisualSectionProps } from './main.types'
 
 let {
   class: className = '',
   resizeLabel,
+  onHeightChange,
   isCollapsed = false,
   expandedHeight = 520,
   collapsedHeight = 64,
@@ -14,6 +17,27 @@ let {
   map,
   image,
 }: MainVisualSectionProps = $props()
+
+let measuredHeight = $state(0)
+$effect(() => {
+  if (measuredHeight > 0) onHeightChange?.(measuredHeight)
+})
+
+let resizing = $state(false)
+let settleTimer: ReturnType<typeof setTimeout> | undefined
+setContext(VISUAL_RESIZE_CONTEXT, {
+  get active() {
+    return resizing
+  },
+})
+function markResizeActivity(): void {
+  resizing = true
+  clearTimeout(settleTimer)
+  settleTimer = setTimeout(() => {
+    resizing = false
+  }, 300)
+}
+onDestroy(() => clearTimeout(settleTimer))
 
 const visualId = $props.id()
 const minimumHeight = 200
@@ -29,6 +53,7 @@ const height = $derived(customHeight ?? expandedHeight)
  * @returns Nothing.
  */
 function resize(value: number): void {
+  markResizeActivity()
   customHeight = Math.max(minimumHeight, Math.min(maximumHeight, value))
 }
 
@@ -39,6 +64,7 @@ function resize(value: number): void {
 function startResize(event: PointerEvent & { currentTarget: HTMLDivElement }): void {
   if (event.button !== 0) return
   event.preventDefault()
+  markResizeActivity()
   event.currentTarget.setPointerCapture(event.pointerId)
   drag = { pointerId: event.pointerId, startY: event.clientY, startHeight: height }
 }
@@ -74,7 +100,12 @@ const rootStyle = $derived(
 )
 </script>
 
-<section id={visualId} class={rootClass} style={rootStyle}>
+<section
+  bind:offsetHeight={measuredHeight}
+  id={visualId}
+  class={rootClass}
+  style={rootStyle}
+>
   {#if leftControls}
     <div class="bits-feature-visual__controls bits-feature-visual__controls--left">
       {@render leftControls()}

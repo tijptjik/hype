@@ -8,6 +8,7 @@ export type FormFeatureVisualSectionContributor = {
 }
 
 export type FormFeatureVisualSectionProps = {
+  onHeightChange?: (height: number) => void
   class?: string
   hasPresentedCanonicalImageSizing?: boolean
   isCanonicalImagePending?: boolean

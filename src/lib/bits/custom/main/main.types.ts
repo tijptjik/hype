@@ -45,6 +45,7 @@ export interface MainDualSectionProps {
 }
 
 export interface MainVisualSectionProps {
+  onHeightChange?: (height: number) => void
   resizeLabel?: string
   class?: string
   isCollapsed?: boolean
