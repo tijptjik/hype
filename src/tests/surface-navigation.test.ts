@@ -58,3 +58,11 @@ describe('surface navigation projection', () => {
     expect(admin.getActiveResourceRef()).toBe('b')
   })
 })
+
+it('recognizes standalone Places without adding them to the resource hierarchy', () => {
+  const nav = new SurfaceNavigation()
+  nav.syncUrl(url('/admin/places'), 'admin')
+  expect(nav.state).toEqual({ resourceType: 'place', resourceRef: false, facet: false })
+  nav.syncUrl(url('/admin/places/permanent-id'), 'admin')
+  expect(nav.getActiveResourceId()).toBe('permanent-id')
+})

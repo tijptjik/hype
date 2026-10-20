@@ -11,6 +11,7 @@ export class ResourceIndexUi {
     layoutMode: Record<NavigableResource, LayoutMode>
   }>({
     isControlBarVisible: {
+      place: false,
       organisation: false,
       project: false,
       layer: false,
@@ -20,6 +21,7 @@ export class ResourceIndexUi {
       user: false,
     },
     layoutMode: {
+      place: 'table',
       organisation: 'card',
       project: 'card',
       layer: 'card',

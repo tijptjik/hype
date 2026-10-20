@@ -52,6 +52,7 @@ export const localeNames: Record<LocaleKey, Record<LocaleKey, string>> = {
 /* -------- */
 
 export enum ResourcePath {
+  place = 'places',
   organisation = 'organisations',
   project = 'projects',
   layer = 'layers',
@@ -63,6 +64,7 @@ export enum ResourcePath {
 }
 
 export enum FirstClassResource {
+  place = 'place',
   organisation = 'organisation',
   project = 'project',
   layer = 'layer',
@@ -90,6 +92,7 @@ export enum HierarchicalResourceSeq {
 }
 
 export enum ResourceRefKey {
+  place = 'id',
   hub = 'code',
   // Hubs and organisations both use their code as the public resource key.
   // biome-ignore lint/suspicious/noDuplicateEnumValues: intentional alias for the shared code key

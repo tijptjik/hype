@@ -224,7 +224,12 @@ export async function getBreadcrumbs(
       return []
     }
 
-    if (resourceType === 'property' || resourceType === 'user') return []
+    if (
+      resourceType === 'property' ||
+      resourceType === 'user' ||
+      resourceType === 'place'
+    )
+      return []
     const hierarchy = await appCtx.getHierarchy(
       currentResource as Parameters<ResourceViewCtx['getHierarchy']>[0],
     )

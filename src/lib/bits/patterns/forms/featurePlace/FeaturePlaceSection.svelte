@@ -219,7 +219,11 @@ async function link(): Promise<void> {
           <p class="font-medium">
             {Object.values(association.effective.names).join(' · ')}
           </p>
-          <p class="text-sm text-muted-foreground">{m.feature_place_linked()}</p>
+          <a
+            class="text-sm text-primary underline"
+            href={`/admin/places/${encodeURIComponent(association.placeId)}`}
+            >{m.feature_place_linked()}</a
+          >
           {#if association.state !== 'linked'}
             <p class="text-sm text-muted-foreground">
               {association.state === 'manual'

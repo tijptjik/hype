@@ -1564,3 +1564,35 @@ replayed those two and applied the remaining 1,188. Independent preservation/his
 integrity/FK checks pass. Eight focused tests verify target/hash checks, remote binding
 configuration, offline default behavior, receipt lifecycle and batch rollback. No remote
 execution was attempted; live release verification still requires separate authorization.
+
+### Standalone Place resources (Refs #194)
+
+`place` is registered in the first-class resource, path, reference and cache contracts,
+with `/admin/places` and `/admin/places/[id]` routes. It is deliberately absent from
+`HierarchicalResource` and its parent/sequence mappings. Resource ID/ref resolution
+uses the Place API rather than deriving ownership from a Feature or layer.
+
+The directory searches latest retained names and exact HYPE/SaanSeoi IDs, with bounded
+25-row ID pagination. Its default scope contains shared Places; an explicit Project
+adds that Project's private Places only after current persisted Project management
+permission is checked. Detail access probes persisted ownership, authorizes it, then
+fences the data read to that scope. Anonymous reads are denied. Client scope strings
+separate native query caches across account/role changes and confer no authority.
+Raw source payloads, private provenance and associated Feature identities are omitted.
+
+The basic read-only pages show source status, names, phone/brand arrays, coordinates
+and the shared structured-Address formatter. Latest source facts are explicitly
+separate from each Feature's accepted revisions and overrides. The admin menu and
+linked Feature section provide entry points. Project choices use the existing paginated
+resource client, with traversal/retry, rather than the legacy filtered Project rows.
+Place creation and identity/adoption decisions remain in the established Feature flows;
+the standalone pages expose no unimplemented creation action.
+
+Validation: 152 focused service, authorization and navigation tests pass. App checking
+retains its existing 10 errors / 19 warnings, with no new diagnostics. Chromium against
+an isolated database copy verified 25-to-50 shared pagination, Breadline-scoped name
+search, private Place detail navigation and rendered phone/brand/address values. Final
+run had no page errors; private screenshots were inspected, and the server was stopped.
+An earlier browser run exposed a legacy Project-list dependency and missing scroll/header
+configuration; both were corrected before final verification. No primary local source
+facts, identity decisions, production data or deployment were changed.

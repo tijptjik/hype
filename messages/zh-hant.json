@@ -1491,5 +1491,18 @@
   "place_merge_confirm": "確認合併",
   "place_merge_saved": "地點已合併。此 HYPE 地點 ID、地圖項目資料及自訂覆寫均已保留。",
   "place_merge_scope": "合併這些地點會改變私隱或項目擁有權，因此無法合併。資料未有更改。",
-  "place_merge_failed": "無法準備或確認此合併。請核對你對兩個地點的權限，並重新載入比較。"
+  "place_merge_failed": "無法準備或確認此合併。請核對你對兩個地點的權限，並重新載入比較。",
+  "place_directory_search": "搜尋地點",
+  "place_directory_scope": "專案範圍",
+  "place_directory_shared": "共用地點",
+  "place_directory_help": "此處顯示共用地點。選擇專案可包含其私人地點；需要管理權限。",
+  "place_directory_loading": "正在載入地點…",
+  "place_directory_empty": "找不到地點。",
+  "place_directory_more": "載入更多",
+  "place_directory_state": "來源狀態",
+  "place_directory_phone": "電話號碼",
+  "place_directory_brand": "品牌",
+  "place_directory_location": "座標",
+  "place_directory_detail_help": "這些是最新保留的地點資料。功能會保留已接受的版本及覆寫值，直到採用更新。",
+  "place_directory_more_projects": "載入更多專案"
 }

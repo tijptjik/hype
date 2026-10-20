@@ -1,4 +1,5 @@
 // TYPES
+import type { PlaceResource } from '#lib/places/resource.js'
 import type { SvelteMap } from 'svelte/reactivity'
 import type { FirstClassResource } from '#lib/enums.js'
 import type { Id, Key } from '#lib/types.js'
@@ -32,6 +33,7 @@ type StatsCache = SvelteMap<
 
 // Define the shape of the cache
 export type Cache = {
+  place: Map<Id, PlaceResource>
   organisation: Map<Id, Organisation>
   project: Map<Id, Project>
   layer: Map<Id, Layer>

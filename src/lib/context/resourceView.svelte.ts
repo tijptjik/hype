@@ -23,6 +23,7 @@ import {
   getOrganisation,
   getOrganisationsWhichHaveLayers,
 } from '#lib/api/organisation.remote.js'
+import { getPlace } from '#lib/api/placeDirectory.remote.js'
 import { getHub, getHubs } from '#lib/api/hub.remote.js'
 import { getProject, getProjects } from '#lib/api/project.remote.js'
 import { getLayer, getLayers } from '#lib/api/layer.remote.js'
@@ -177,6 +178,7 @@ type RemoteMapEntry<
 }
 
 type RemoteMapEntryByResource = {
+  [FirstClassResource.place]: RemoteMapEntry
   [FirstClassResource.organisation]: {
     list?: OrganisationRemoteListFn
     get?: OrganisationRemoteGetFn
@@ -260,6 +262,7 @@ export class ResourceViewCtx {
 
   // Remote function map for list/get queries (parallel to queryMap).
   remoteMap: RemoteMap = {
+    [FirstClassResource.place]: {},
     [FirstClassResource.organisation]: {},
     [FirstClassResource.project]: {},
     [FirstClassResource.layer]: {},
@@ -1455,11 +1458,29 @@ export class ResourceViewCtx {
     ).map(item => item.property)
   }
 
+  /**
+   * Resolve standalone Place facts without loading hierarchy or Feature associations.
+   * @param id Permanent HYPE Place ID.
+   * @returns Authorized latest projection, or undefined if no longer accessible.
+   */
+  getPlaceById = async (
+    id: Id,
+  ): Promise<import('#lib/places/resource.js').PlaceResource | undefined> => {
+    const scope = this.getRoleScopeQueryKey()
+    const record = await runRemoteQuery(getPlace({ id, scope }))
+    if (scope !== this.getRoleScopeQueryKey()) return undefined
+    if (record) this.cache.place.set(id, record)
+    else this.cache.place.delete(id)
+    return record ?? undefined
+  }
+
   getResourceById = async (
     resource: FirstClassResource,
     id: Id,
   ): Promise<Resource | undefined> => {
     switch (resource) {
+      case FirstClassResource.place:
+        return await this.getPlaceById(id)
       case FirstClassResource.organisation:
         return await this.getOrganisationById(id)
       case FirstClassResource.project:
@@ -1480,6 +1501,8 @@ export class ResourceViewCtx {
     ref: Id | Code,
   ): Promise<Resource | undefined> => {
     switch (resource) {
+      case FirstClassResource.place:
+        return await this.getPlaceById(ref)
       case FirstClassResource.organisation: {
         const code = ref as Code
         const cachedId = this.getOrganisationIdByCode(code)
@@ -2191,6 +2214,8 @@ export class ResourceViewCtx {
     ref: Id | Code,
   ): Resource | undefined => {
     switch (resource) {
+      case FirstClassResource.place:
+        return this.cache.place.get(ref)
       case FirstClassResource.organisation:
         return this.cache.organisation.get(
           this.getOrganisationIdByCode(ref as Code) ?? (ref as Id),

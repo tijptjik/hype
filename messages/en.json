@@ -1491,5 +1491,18 @@
   "place_merge_confirm": "Confirm merge",
   "place_merge_saved": "Places merged. This HYPE Place ID, Feature values and overrides have been preserved.",
   "place_merge_scope": "These Places cannot be merged without changing privacy or project ownership. No records have changed.",
-  "place_merge_failed": "Unable to prepare or confirm this merge. Check your access to both Places and reload the comparison."
+  "place_merge_failed": "Unable to prepare or confirm this merge. Check your access to both Places and reload the comparison.",
+  "place_directory_search": "Search Places",
+  "place_directory_scope": "Project scope",
+  "place_directory_shared": "Shared Places",
+  "place_directory_help": "Shared Places are visible here. Select a Project to include its private Places; management access is required.",
+  "place_directory_loading": "Loading Places…",
+  "place_directory_empty": "No Places found.",
+  "place_directory_more": "Load more",
+  "place_directory_state": "Source status",
+  "place_directory_phone": "Phone numbers",
+  "place_directory_brand": "Brands",
+  "place_directory_location": "Coordinates",
+  "place_directory_detail_help": "These are the latest retained Place facts. Features retain their accepted revisions and overrides until updates are adopted.",
+  "place_directory_more_projects": "Load more Projects"
 }

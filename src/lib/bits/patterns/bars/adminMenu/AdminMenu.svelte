@@ -76,6 +76,12 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
 
   const items: AdminMenuItem[] = [
     {
+      href: `${ADMIN_PATH}/places`,
+      label: m.place_policy_tab(),
+      icon: MapPin,
+      onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.place),
+    },
+    {
       href: `${ADMIN_PATH}/features`,
       label: 'Features',
       icon: MapPin,
