@@ -106,3 +106,10 @@ Migration `0133_project_image_publication.sql` was applied only to the local dat
 with backup `/tmp/hype-before-image-policy-20261020T173647.sqlite`. Both policies are
 enabled for ELN. Ghostsigns and Independent Bookstores retain automatic publication
 but have automatic first-image classification disabled. No production state changed.
+
+## Numeric bibliographic fields
+
+After the structured-property migrations, apply `0136_eln_numeric_fields.sql`
+to configure ISBN and Published as numeric `TextField` inputs. Published stores
+the four-digit year; full source dates remain in `data/backfill.json`. The
+correction preserves ISBN values and their internal visibility.

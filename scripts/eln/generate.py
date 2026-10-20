@@ -45,7 +45,8 @@ def generate():
     for rank,(key,label) in enumerate(EXTRA.items(),10):
         pid = 'eln_' + key
         PROPERTIES[key] = pid
-        emit(f"INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUserContributable,isDefaultEnabled) VALUES ({quote(pid)},{quote(PROJECT)},'project','specifier',{quote(key)},'TextareaField',0,1,1) ON CONFLICT(id) DO NOTHING;")
+        component = 'TextField' if key in {'isbn', 'publicationDate'} else 'TextareaField'
+        emit(f"INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUserContributable,isDefaultEnabled) VALUES ({quote(pid)},{quote(PROJECT)},'project','specifier',{quote(key)},{quote(component)},0,1,1) ON CONFLICT(id) DO NOTHING;")
         emit(f"INSERT INTO _eln_backfill_guard SELECT count(*)=1 FROM property WHERE id={quote(pid)} AND projectId={quote(PROJECT)} AND key={quote(key)} AND type='specifier';")
         emit(f"INSERT INTO projectProperty(projectId,propertyId,isEnabled,isDefaultEnabled,rank) VALUES({quote(PROJECT)},{quote(pid)},1,1,{rank}) ON CONFLICT DO NOTHING;")
         emit(f"INSERT INTO propertyI18n(propertyId,locale,label,labelGen,placeholder,placeholderGen) SELECT {quote(pid)},'en',{quote(label)},0,'',0 WHERE NOT EXISTS(SELECT 1 FROM propertyI18n WHERE propertyId={quote(pid)} AND locale='en');")
@@ -65,6 +66,8 @@ def generate():
             emit(f"INSERT INTO featureProperty(featureId,propertyId) VALUES({quote(fid)},{quote(pid)}) ON CONFLICT DO NOTHING;")
             emit(f"INSERT INTO featurePropertyI18n(featureId,propertyId,locale,value,valueGen) VALUES({quote(fid)},{quote(pid)},'en',{quote(value)},0) ON CONFLICT(featureId,propertyId,locale) DO UPDATE SET value=excluded.value,valueGen=0 WHERE coalesce(trim(featurePropertyI18n.value),'')='';")
         else:
+            if key == 'publicationDate':
+                value = value[:4]
             emit(f"INSERT INTO featureProperty(featureId,propertyId,value) VALUES({quote(fid)},{quote(pid)},{quote(value)}) ON CONFLICT(featureId,propertyId) DO UPDATE SET value=excluded.value WHERE coalesce(trim(featureProperty.value),'')='' AND featureProperty.propertyValueId IS NULL;")
 
     # Copy the known Wyndham point and its matching H3 index; never inherit place identity.
