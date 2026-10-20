@@ -86,6 +86,26 @@ export function shouldBootstrapAnonymous(pathname: string): boolean {
 }
 
 /**
+ * Waits for the initial session lookup before a route decides access.
+ *
+ * @param options Session access and optional clock wait for deterministic tests.
+ * @returns Nothing once the session lookup has settled.
+ * @remarks A timeout is a bootstrap failure, never evidence of missing permission.
+ */
+export async function waitForSession(
+  options: Pick<AnonymousBootstrapOptions, 'getSession' | 'wait'>,
+): Promise<void> {
+  const wait = options.wait ?? defaultWait
+  const startedAt = Date.now()
+  while (options.getSession().isPending) {
+    if (Date.now() - startedAt >= ANONYMOUS_BOOTSTRAP_TIMEOUT_MS) {
+      throw new Error('Session lookup did not finish')
+    }
+    await wait(50)
+  }
+}
+
+/**
  * Creates one guest session and waits until Better Auth exposes its user.
  *
  * @param options - Session access and Better Auth client operations.

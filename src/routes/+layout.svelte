@@ -16,6 +16,7 @@ import { signIn, useSession } from '#lib/auth/client.js'
 import { normalizeTelephone } from '#lib/utils/telephone.js'
 import { DEV_PERSONAS } from '#lib/auth/dev-personas.js'
 import {
+  waitForSession,
   bootstrapAnonymousSession,
   consumeSignOutIntent,
   isAuthEntryPath,
@@ -158,6 +159,14 @@ async function initializeAuthenticatedApp(): Promise<void> {
     pathname: page.url.pathname,
     hasSessionUser: Boolean($session.data?.user),
     isSessionPending: $session.isPending,
+  })
+
+  // Admin routes skip guest creation but must still resolve identity before access checks.
+  await waitForSession({
+    getSession: () => ({
+      isPending: $session.isPending,
+      userId: $session.data?.user?.id,
+    }),
   })
 
   // Publish the server-resolved hub before surfaces start their own resource passes.

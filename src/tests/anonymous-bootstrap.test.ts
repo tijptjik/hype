@@ -1,10 +1,47 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   bootstrapAnonymousSession,
   isAuthEntryPath,
   shouldBootstrapAnonymous,
+  waitForSession,
 } from '#lib/auth/bootstrap.js'
 import { AUTH_PROVIDER_REGISTRY } from '#lib/auth/providers.js'
+
+describe('initial session readiness', () => {
+  it('waits for a delayed authenticated session before allowing access decisions', async () => {
+    let session = { isPending: true, userId: null as string | null }
+    let waits = 0
+    await waitForSession({
+      getSession: () => session,
+      wait: async () => {
+        waits += 1
+        session = { isPending: false, userId: 'admin-1' }
+      },
+    })
+    expect(waits).toBe(1)
+    expect(session.userId).toBe('admin-1')
+  })
+
+  it('accepts a settled missing session for the access guard to reject', async () => {
+    const wait = vi.fn()
+    await waitForSession({
+      getSession: () => ({ isPending: false, userId: null }),
+      wait,
+    })
+    expect(wait).not.toHaveBeenCalled()
+  })
+
+  it('fails bootstrap instead of treating a timed-out lookup as an unauthorised user', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValueOnce(0).mockReturnValue(8_000)
+    try {
+      await expect(
+        waitForSession({ getSession: () => ({ isPending: true }) }),
+      ).rejects.toThrow('Session lookup did not finish')
+    } finally {
+      now.mockRestore()
+    }
+  })
+})
 
 describe('guest session bootstrap', () => {
   it('coalesces concurrent bootstrap calls into one anonymous sign-in', async () => {

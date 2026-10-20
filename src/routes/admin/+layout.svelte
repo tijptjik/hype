@@ -3,6 +3,8 @@
 import { onDestroy, untrack } from 'svelte'
 import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
 import { page } from '$app/state'
+// AUTH
+import { canAccessAdminPanel } from '#lib/api/services/authz/user.js'
 // TANSTACK
 // I18N
 import { m } from '#lib/i18n.js'
@@ -45,6 +47,16 @@ let { children, data }: AdminRootProps = $props()
 // CONTEXT :: APP
 // Admin owns its resource view; it never constructs the public AppCtx.
 const root = getRootCTX()
+const hasAdminAccess = $derived(
+  Boolean(
+    root.user &&
+      root.user.isAnonymous !== true &&
+      canAccessAdminPanel({
+        superAdmin: root.user.superAdmin,
+        userRoles: root.user.roles ?? [],
+      }),
+  ),
+)
 root.cacheCtx.installProviders(resourceProviders)
 const view = setSurfaceCtx(
   new ResourceViewCtx(
@@ -60,7 +72,7 @@ $effect(() => {
   const user = root.user
   const hub = root.hub
   if (!root.ready) return
-  if (!user || user.isAnonymous === true) {
+  if (!hasAdminAccess) {
     void goto('/', { replaceState: true })
     return
   }
@@ -171,7 +183,7 @@ let failedAdminScope = $state<string | null>(null)
 $effect(() => {
   const user = root.user
   const scope = view.resources.scopeKey
-  if (!root.ready || !user || user.isAnonymous === true) return
+  if (!root.ready || !user || !hasAdminAccess) return
   if (
     view.isInitialised &&
     !adminCtx.isInitialised &&
@@ -182,15 +194,7 @@ $effect(() => {
       // Ignore failures from an account scope that has already been replaced.
       if (scope !== view.resources.scopeKey) return
       failedAdminScope = scope
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'status' in error &&
-        error.status === 401
-      ) {
-        void goto('/', { replaceState: true })
-        return
-      }
+      // Resource failures do not determine panel access; the session guard owns redirects.
       console.error('[AdminLayout] Failed to initialize admin context', error)
     })
   }
