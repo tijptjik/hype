@@ -8,7 +8,7 @@ export type FeatureCardType = (typeof FEATURE_CARD_TYPES)[number]
 /**
  * Resolves a display renderer from persisted hierarchy selections.
  * @param options Project style, optional layer override and localized description.
- * @returns The registered renderer, using Conditional for unset choices.
+ * @returns The registered renderer, using Flexible for unset choices.
  * @remarks No project-specific experiments override saved settings.
  */
 export function resolveFeatureCardType(options: {
@@ -21,7 +21,7 @@ export function resolveFeatureCardType(options: {
     options.layer?.cardStyleCode,
   )
   // Empty rich-text paragraphs and placeholder dashes count as no description.
-  if (code === 'conditional') {
+  if (code === 'flexible') {
     const text = (options.description ?? '')
       .replace(/<[^>]*>/g, '')
       .replace(/&(?:nbsp|#160|#x0*a0);/gi, ' ')

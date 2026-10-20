@@ -14,7 +14,7 @@ import { toProjectSubmittedFields } from '#lib/api/services/authz/project.js'
 const projectChoice = ProjectEntityFormData.pick({ cardStyleCode: true })
 
 describe('saved feature card presentation', () => {
-  it('defaults to Conditional and resolves explicit layer overrides before the project', () => {
+  it('defaults to Flexible and resolves explicit layer overrides before the project', () => {
     expect(resolveFeatureCardType({})).toBe('portal-band')
     expect(resolveFeatureCardType({ description: 'Available description' })).toBe(
       'standard',
@@ -40,48 +40,48 @@ describe('saved feature card presentation', () => {
   })
 
   it.each([null, undefined, '', '  ', '-', '<p><br></p>', '<p>&nbsp;</p>'])(
-    'uses the compact renderer for an empty conditional description: %s',
+    'uses the compact renderer for an empty flexible description: %s',
     description => {
       expect(
         resolveFeatureCardType({
-          project: { cardStyleCode: 'conditional' },
+          project: { cardStyleCode: 'flexible' },
           description,
         }),
       ).toBe('portal-band')
     },
   )
 
-  it('resolves conditional content after applying layer precedence', () => {
+  it('resolves flexible content after applying layer precedence', () => {
     expect(
       resolveFeatureCardType({
-        project: { cardStyleCode: 'conditional' },
+        project: { cardStyleCode: 'flexible' },
         description: '<p>A real description</p>',
       }),
     ).toBe('standard')
     expect(
       resolveFeatureCardType({
         project: { cardStyleCode: 'full' },
-        layer: { cardStyleCode: 'conditional' },
+        layer: { cardStyleCode: 'flexible' },
         description: '',
       }),
     ).toBe('portal-band')
     expect(
       resolveFeatureCardType({
-        project: { cardStyleCode: 'conditional' },
+        project: { cardStyleCode: 'flexible' },
         layer: { cardStyleCode: 'full' },
         description: '',
       }),
     ).toBe('standard')
-    expect(projectChoice.parse({ cardStyleCode: 'conditional' }).cardStyleCode).toBe(
-      'conditional',
+    expect(projectChoice.parse({ cardStyleCode: 'flexible' }).cardStyleCode).toBe(
+      'flexible',
     )
     expect(
-      LayerMetadataSchema.parse({ cardStyleCode: 'conditional' }).cardStyleCode,
-    ).toBe('conditional')
+      LayerMetadataSchema.parse({ cardStyleCode: 'flexible' }).cardStyleCode,
+    ).toBe('flexible')
   })
 
   it('validates saved choices and resets inheritance without discarding other metadata', () => {
-    expect(projectChoice.parse({}).cardStyleCode).toBe('conditional')
+    expect(projectChoice.parse({}).cardStyleCode).toBe('flexible')
     expect(projectChoice.safeParse({ cardStyleCode: 'bogus' }).success).toBe(false)
     expect(LayerMetadataSchema.safeParse({ cardStyleCode: 'bogus' }).success).toBe(
       false,
@@ -93,7 +93,7 @@ describe('saved feature card presentation', () => {
         other: 1,
       }),
     ).toEqual({ mapStyleCode: 'neorange', other: 1 })
-    expect(toProjectFormInput().data.cardStyleCode).toBe('conditional')
+    expect(toProjectFormInput().data.cardStyleCode).toBe('flexible')
     const input = toLayerFormInput({
       metadata: { cardStyleCode: 'no-description', mapStyleCode: null },
     } as unknown as Layer)
@@ -125,6 +125,13 @@ describe('saved feature card presentation', () => {
       db.exec(readFileSync('migrations/0094_conditional_card_style.sql', 'utf8'))
       db.exec(readFileSync('migrations/0102_marker_presentation.sql', 'utf8'))
       db.exec(readFileSync('migrations/0103_breadline_presentation.sql', 'utf8'))
+      db.exec(`CREATE TABLE layer (id TEXT PRIMARY KEY, metadata TEXT);
+        INSERT INTO layer VALUES ('l', '{"cardStyleCode":"conditional","other":1}');
+        UPDATE project SET cardStyleCode='conditional';`)
+      db.exec(readFileSync('migrations/0109_flexible_card_style.sql', 'utf8'))
+      expect(db.prepare('SELECT metadata FROM layer').get()).toEqual({
+        metadata: '{"cardStyleCode":"flexible","other":1}',
+      })
       expect(
         db
           .prepare('SELECT code FROM cardStyle ORDER BY code')
@@ -134,10 +141,10 @@ describe('saved feature card presentation', () => {
       expect(db.prepare('SELECT id, code, cardStyleCode FROM project').get()).toEqual({
         id: 'p',
         code: 'neon',
-        cardStyleCode: 'full',
+        cardStyleCode: 'flexible',
       })
       db.exec("UPDATE project SET cardStyleCode='no-description'")
-      db.exec("UPDATE project SET cardStyleCode='conditional'")
+      db.exec("UPDATE project SET cardStyleCode='flexible'")
       expect(() => db.exec("UPDATE project SET cardStyleCode='bogus'")).toThrow()
       expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
       for (const style of CARD_STYLE_CATALOG) {

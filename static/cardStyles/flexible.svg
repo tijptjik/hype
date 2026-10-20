@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="title desc">
-<title>Conditional feature card</title><desc>Full with a description, compact without a description.</desc>
+<title>Flexible feature card</title><desc>Full with a description, compact without a description.</desc>
 <rect width="320" height="240" rx="16" fill="#272333"/>
 <g transform="translate(8 50) scale(.45)">
 <title>Full feature card</title>

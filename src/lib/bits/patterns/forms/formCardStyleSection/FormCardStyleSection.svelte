@@ -52,16 +52,16 @@ const options = $derived<StyleOption[]>(
     name:
       style.code === 'breadline'
         ? m.card_style__breadline()
-        : style.code === 'conditional'
-          ? m.card_style__conditional()
+        : style.code === 'flexible'
+          ? m.card_style__flexible()
           : style.code === 'full'
             ? m.card_style__full()
             : m.card_style__no_description(),
     description:
       style.code === 'breadline'
         ? m.card_style__breadline_description()
-        : style.code === 'conditional'
-          ? m.card_style__conditional_description()
+        : style.code === 'flexible'
+          ? m.card_style__flexible_description()
           : style.code === 'full'
             ? m.card_style__full_description()
             : m.card_style__no_description_description(),
