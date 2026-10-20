@@ -1,0 +1,28 @@
+{
+  "source": "Cloudflare hype.hk DNS owner names and Worker custom domains",
+  "retrievedAt": "2026-10-20T06:00:26.513Z",
+  "names": [
+    "_dmarc",
+    "_domainkey",
+    "_keybase",
+    "admin",
+    "api",
+    "assets",
+    "breadline",
+    "cf-bounce",
+    "core",
+    "hkghostsigns",
+    "mail",
+    "mappinghk",
+    "preview",
+    "romanticassets",
+    "romanticatlas",
+    "tramways",
+    "tramways-assets",
+    "tramways-primary",
+    "tramways-quiz",
+    "tramways-secondary",
+    "tramways-worker",
+    "www"
+  ]
+}

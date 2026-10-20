@@ -1,4 +1,9 @@
+// NODE
+import { writeFile, unlink } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 import { exit, stderr, stdout } from 'node:process'
+// DOMAIN
+import { preserveHubDomainRoutes } from './hub-domain-deploy'
 
 type DeployTarget = 'preview' | 'production'
 
@@ -58,46 +63,61 @@ export const shouldTreatDeployErrorAsSuccess = (
 export const deployWorker = async (target: DeployTarget): Promise<number> => {
   const { name, env } = DEPLOY_TARGETS[target]
 
-  // Deploy the database writer with the app so newly queued division jobs have a consumer.
-  const refresh = Bun.spawn([
-    'bun', 'wrangler', 'deploy', '--config',
-    'workers/division-refresh/wrangler.jsonc', '--env', env,
-  ], { stdout: 'inherit', stderr: 'inherit' })
-  const refreshExitCode = await refresh.exited
-  if (refreshExitCode !== 0) return refreshExitCode
+  // Wrangler replaces domain registrations: preserve live assignments before any deployment.
+  const config = Bun.TOML.parse(await Bun.file('wrangler.toml').text()) as {
+    env: Record<string, { routes?: Array<string | { pattern: string; custom_domain?: boolean }> }>
+  }
+  config.env[env].routes = await preserveHubDomainRoutes({
+    CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+    HUB_DOMAINS_API_TOKEN: process.env.HUB_DOMAINS_API_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN,
+  }, name, config.env[env].routes ?? [])
+  // Keep the temporary config beside wrangler.toml so relative asset paths remain valid.
+  const configPath = `.hub-deploy-${randomUUID()}.json`
+  await writeFile(configPath, JSON.stringify(config), { mode: 0o600 })
+  try {
+    // Deploy the database writer with the app so newly queued division jobs have a consumer.
+    const refresh = Bun.spawn([
+      'bun', 'wrangler', 'deploy', '--config',
+      'workers/division-refresh/wrangler.jsonc', '--env', env,
+    ], { stdout: 'inherit', stderr: 'inherit' })
+    const refreshExitCode = await refresh.exited
+    if (refreshExitCode !== 0) return refreshExitCode
 
-  const command = ['bun', 'wrangler', 'deploy', '--name', name, '--env', env]
+    const command = ['bun', 'wrangler', 'deploy', '--config', configPath, '--name', name, '--env', env]
 
-  const process = Bun.spawn(command, {
-    stdout: 'pipe',
-    stderr: 'pipe'
-  })
+    const process = Bun.spawn(command, {
+      stdout: 'pipe',
+      stderr: 'pipe'
+    })
 
-  const [stdoutText, stderrText, exitCode] = await Promise.all([
-    new Response(process.stdout).text(),
-    new Response(process.stderr).text(),
-    process.exited
-  ])
+    const [stdoutText, stderrText, exitCode] = await Promise.all([
+      new Response(process.stdout).text(),
+      new Response(process.stderr).text(),
+      process.exited
+    ])
 
-  stdout.write(stdoutText)
-  stderr.write(stderrText)
+    stdout.write(stdoutText)
+    stderr.write(stderrText)
 
-  const output = [stdoutText, stderrText].filter(Boolean).join('\n')
+    const output = [stdoutText, stderrText].filter(Boolean).join('\n')
 
-  if (exitCode === 0) {
+    if (exitCode === 0) {
+      return exitCode
+    }
+
+    // Allow deploy success when Wrangler only failed while re-attaching a known
+    // future domain that still has external DNS in place.
+    if (shouldTreatDeployErrorAsSuccess(output, target)) {
+      console.warn(
+        `Wrangler deployed ${name} but could not attach a tolerated custom domain. Continuing with success.`
+      )
+      return 0
+    }
+
     return exitCode
+  } finally {
+    await unlink(configPath)
   }
-
-  // Allow deploy success when Wrangler only failed while re-attaching a known
-  // future domain that still has external DNS in place.
-  if (shouldTreatDeployErrorAsSuccess(output, target)) {
-    console.warn(
-      `Wrangler deployed ${name} but could not attach a tolerated custom domain. Continuing with success.`
-    )
-    return 0
-  }
-
-  return exitCode
 }
 
 if (typeof Bun !== 'undefined' && import.meta.main) {
