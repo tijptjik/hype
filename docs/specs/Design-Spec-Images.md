@@ -473,3 +473,22 @@ stores:
 - Should optimistic upload ids remain stable through finalization, or should a gallery store reconcile temporary ids to final ids explicitly?
 - Should hover preview be treated as immediate active selection, or as a separate preview channel that can be disabled on touch devices and throttled centrally?
 - Should `ResourceViewer` remain a specialized root, or should it collapse into a documented composition recipe once the gallery store exists?
+
+## Project publication policies
+
+Project Advanced settings persist `autoPublishClassifiedImages` and
+`autoFeatureFirstImage` in `project.flags`; omitted keys default to enabled.
+Migration `0133_project_image_publication.sql` explicitly disables first-image
+classification for `hkghostsigns` and `independentBookstores`, preserving other
+saved preferences.
+
+Publishing a feature, layer, project or organisation applies these policies to
+published, non-archived features in that scope. Automatic classification preserves
+an existing Featured (`canonical`) choice; otherwise it selects the earliest
+uploaded non-archived image with an unclassified or public intent, breaking timestamp
+ties by image ID. Research images are never promoted or automatically published.
+Classification runs before publication, so the selected cover can publish in the
+same operation. Each switch acts independently. Classification and image publication
+are a database batch; already published image attribution is retained on retries.
+Ancestor publishing respects each descendant feature's own project flags and the
+existing choice of whether to include draft descendants.

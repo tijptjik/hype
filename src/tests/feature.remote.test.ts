@@ -987,11 +987,8 @@ describe('feature.remote authz matrix', () => {
         publisherId: 'u-1',
       }),
     )
-    expect(mockPublishAllImagesWithPublicIntent).toHaveBeenCalledWith(
-      expect.any(Object),
-      'feature-1',
-      'u-1',
-    )
+    // The database publication command owns image policy enforcement.
+    expect(mockPublishAllImagesWithPublicIntent).not.toHaveBeenCalled()
     expect(result).toEqual({
       data: {
         id: 'feature-1',
@@ -1023,11 +1020,8 @@ describe('feature.remote authz matrix', () => {
         publisherId: 'u-1',
       }),
     )
-    expect(mockPublishAllImagesWithPublicIntent).toHaveBeenCalledWith(
-      expect.any(Object),
-      'feature-1',
-      'u-1',
-    )
+    // The database publication command owns image policy enforcement.
+    expect(mockPublishAllImagesWithPublicIntent).not.toHaveBeenCalled()
     expect(result).toEqual({
       id: 'feature-1',
       ok: true,

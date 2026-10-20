@@ -27,6 +27,8 @@ import { validateFeaturePhoneProperties } from './feature-property-validation'
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // I18N
 import { normalizeI18nLocaleRecord, toLocaleKebab } from '#lib/i18n.js'
+// PUBLICATION
+import { publishScopedFeatureImages } from './publication.js'
 // TYPES
 import type {
   Database,
@@ -710,6 +712,14 @@ export const updateFeaturePublishedStateById = async (
     })
     .where(eq(feature.id, params.id))
     .returning()
+
+  if (updated && params.state) {
+    await publishScopedFeatureImages(
+      db,
+      { kind: 'feature', id: params.id },
+      params.publisherId,
+    )
+  }
 
   return updated as FeatureDB | undefined
 }

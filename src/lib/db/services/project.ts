@@ -12,6 +12,8 @@ import {
   normalizeProjectCapabilities,
   normalizeProjectRoleCapabilities,
 } from '#lib/capabilities.js'
+// PUBLICATION
+import { publishScopedFeatureImages } from './publication.js'
 // SCHEMA
 import {
   feature,
@@ -915,6 +917,13 @@ export const cascadeProjectPublishedStateToDescendants = async (
         : sql`0`,
     })
     .where(eq(feature.projectId, params.projectId))
+  if (params.state) {
+    await publishScopedFeatureImages(
+      db,
+      { kind: 'project', id: params.projectId },
+      params.publisherId,
+    )
+  }
 }
 
 /**

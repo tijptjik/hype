@@ -1,6 +1,8 @@
 import { gt } from 'drizzle-orm'
 // DRIZZLE
 import { and, eq, like, sql, or } from 'drizzle-orm'
+// PUBLICATION
+import { publishScopedFeatureImages } from './publication.js'
 // SCHEMA
 import {
   feature,
@@ -729,6 +731,13 @@ export const cascadeOrganisationPublishedStateToDescendants = async (
         : sql`0`,
     })
     .where(eq(feature.organisationId, params.organisationId))
+  if (params.state) {
+    await publishScopedFeatureImages(
+      db,
+      { kind: 'organisation', id: params.organisationId },
+      params.publisherId,
+    )
+  }
 }
 
 /**

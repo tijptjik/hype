@@ -32,10 +32,11 @@ import {
   ImageContextResource,
   ImageContextResourceExtended,
   ImageEnv,
-  ImageIntentPublic,
 } from '#lib/enums.js'
 // DB
 import { autochunk, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
+// PUBLICATION
+import { publishScopedFeatureImages } from './publication.js'
 // TYPES
 import type { Id, Database, EntityResponse } from '#lib/types.js'
 import type {
@@ -285,10 +286,11 @@ export const createTaskImagesFromImageIds = async (
 }
 
 /**
- * Publishes all images with public intent for a feature
+ * Applies project classification and publication policies to a feature.
  * @param db - The database instance
  * @param featureId - The feature ID
  * @param publisherId - The user ID of the publisher
+ * @returns Resolves after image policy writes complete.
  * @throws {Error} If the update fails
  */
 export const publishAllImagesWithPublicIntent = async (
@@ -296,21 +298,7 @@ export const publishAllImagesWithPublicIntent = async (
   featureId: Id,
   publisherId: Id,
 ): Promise<void> => {
-  const publicIntentValues = Object.values(ImageIntentPublic)
-
-  await db
-    .update(featureImage)
-    .set({
-      isPublished: true,
-      publishedAt: new Date().toISOString(),
-      publisherId,
-    })
-    .where(
-      and(
-        eq(featureImage.featureId, featureId),
-        inArray(featureImage.intent, publicIntentValues),
-      ),
-    )
+  await publishScopedFeatureImages(db, { kind: 'feature', id: featureId }, publisherId)
 }
 
 // ═══════════════════════

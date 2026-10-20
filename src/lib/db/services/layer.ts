@@ -1,6 +1,8 @@
 import { gt } from 'drizzle-orm'
 // DRIZZLE
 import { and, eq, inArray, not, or, sql, type SQL } from 'drizzle-orm'
+// PUBLICATION
+import { publishScopedFeatureImages } from './publication.js'
 // SCHEMA
 import {
   feature,
@@ -692,6 +694,13 @@ export const cascadeLayerPublishedStateToDescendants = async (
         : sql`0`,
     })
     .where(eq(feature.layerId, params.layerId))
+  if (params.state) {
+    await publishScopedFeatureImages(
+      db,
+      { kind: 'layer', id: params.layerId },
+      params.publisherId,
+    )
+  }
 }
 
 /**

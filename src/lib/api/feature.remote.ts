@@ -749,8 +749,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
  * @returns A promise resolving to `{ data: { id, isPublished } }`.
  * @remarks
  * Runs a command probe first, authorizes against persisted hierarchy state, persists the
- * publish flag, and publishes all public-intent images when switching to `true` so image
- * visibility stays consistent with the feature publish transition.
+ * publish flag, and applies the project image policies through the database service
+ * when switching to `true`.
  */
 export const publishFeature = guardedCommand(
   PublishFeatureSchema,
@@ -787,10 +787,6 @@ export const publishFeature = guardedCommand(
         throw error(404, 'FEATURE_NOT_FOUND')
       },
     )
-
-    if (params.state) {
-      await publishAllImagesWithPublicIntent(db, featureId, user.id as Id)
-    }
 
     return toBooleanStateResponseShape(persisted, 'isPublished')
   },
@@ -949,10 +945,6 @@ async function applyFeatureBulkStateField(
         throw error(404, 'FEATURE_NOT_FOUND')
       },
     )
-
-    if (params.value) {
-      await publishAllImagesWithPublicIntent(db, featureId, user.id as Id)
-    }
 
     return persisted
   }
