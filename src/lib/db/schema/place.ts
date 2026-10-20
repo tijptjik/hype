@@ -427,3 +427,30 @@ export const placeRedirect = sqliteTable(
     ),
   ],
 )
+
+/** Immutable negative identity evidence, scoped to one retained comparison. */
+export const placeIdentityRejection = sqliteTable(
+  'placeIdentityRejection',
+  {
+    reviewId: text('reviewId')
+      .primaryKey()
+      .references(() => placeIdentityReview.id, { onDelete: 'restrict' }),
+    placeId: text('placeId')
+      .notNull()
+      .references(() => place.id, { onDelete: 'restrict' }),
+    ssId: text('ssId').notNull(),
+    actorId: text('actorId').notNull(),
+    reason: text('reason').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  table => [
+    index('place_identity_rejection_candidate').on(table.placeId, table.ssId),
+    check('place_identity_rejection_actor', sql`length(trim(${table.actorId}))>0`),
+    check(
+      'place_identity_rejection_reason',
+      sql`length(trim(${table.reason})) BETWEEN 1 AND 2000`,
+    ),
+  ],
+)

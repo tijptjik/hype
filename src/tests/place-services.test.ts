@@ -1,3 +1,7 @@
+import {
+  rejectPlaceIdentityReview,
+  rejectedFeaturePlaceSourceIds,
+} from '#lib/db/services/placeIdentityRejection.js'
 import { listPlaceResources } from '#lib/db/services/placeDirectory.js'
 // @vitest-environment node
 import { FeatureListProfileAPI } from '#lib/db/zod/schema/feature.js'
@@ -102,6 +106,7 @@ function setup(includeScope = false) {
   sqlite.exec(readFileSync('migrations/0116_place_identity_history.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0117_place_identity_review.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0118_place_merge_redirect.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0120_place_identity_rejection.sql', 'utf8'))
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
     sqlite.exec(`DROP TRIGGER feature_place_scope_insert;
@@ -591,6 +596,23 @@ describe('immutable SaanSeoi Place ingestion', () => {
       },
     }
   }
+
+  it('invalidates a prepared merge when its underlying identity review is rejected', async () => {
+    const { db, sqlite, identityReviewId, input } = await mergeFixture()
+    const before = sqlite.prepare('SELECT * FROM featurePlace ORDER BY featureId').all()
+    expect(
+      await rejectPlaceIdentityReview(db, {
+        ...input,
+        reviewId: identityReviewId,
+        reason: 'Different premises',
+      }),
+    ).toEqual({ status: 'rejected' })
+    expect(await applyPlaceMergeReview(db, input)).toEqual({ status: 'conflict' })
+    expect(
+      sqlite.prepare('SELECT * FROM featurePlace ORDER BY featureId').all(),
+    ).toEqual(before)
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRedirect').get()?.n).toBe(0)
+  })
 
   it('merges reviewed identities atomically while preserving Feature values, overrides and source history', async () => {
     const { db, sqlite, target, source, captured, input } = await mergeFixture()
@@ -3918,5 +3940,135 @@ describe('standalone Place directory', () => {
       (await listPlaceResources(db, { projectId: 'p', id: 'directory-00' })).data,
     ).toEqual([])
     expect(first.data[0]).not.toHaveProperty('payload')
+  })
+})
+
+describe('retained negative Place identity decisions', () => {
+  const projection = (): SaanSeoiPlaceProjection => ({
+    ssId: 'canonical-shop',
+    apiVersion: 'api-places-v0.1',
+    releaseId: 'release',
+    snapshotId: 'snapshot',
+    facts: PlaceFactsSchema.parse(facts),
+    issues: [],
+    payload: {
+      resource: { id: 'canonical-shop', sources: ['retained-attribution'] },
+      meta: { apiReleaseSet: 'pinned-release' },
+    },
+  })
+  async function fixture() {
+    const state = setup()
+    const local = await createLocalPlace(
+      state.db,
+      'p',
+      { state: 'manual', facts },
+      'creator',
+    )
+    const baseline = await readPlaceIdentityBaseline(state.db, local.placeId, 'p')
+    if (!baseline) throw new Error('Missing baseline')
+    const candidate = projection()
+    const reviewId = await capturePlaceIdentityReview(
+      state.db,
+      baseline,
+      candidate,
+      'reviewer',
+    )
+    if (!reviewId) throw new Error('Missing review')
+    state.sqlite
+      .prepare(
+        'INSERT INTO featurePlace(featureId,placeId,factsRevisionId,locationRevisionId) VALUES (?,?,?,?)',
+      )
+      .run('f', local.placeId, local.revisionId, local.revisionId)
+    return {
+      ...state,
+      local,
+      baseline,
+      candidate,
+      input: {
+        placeId: local.placeId,
+        ownerProjectId: 'p',
+        reviewId,
+        actorId: 'reviewer',
+        reason: 'Different premises',
+      },
+    }
+  }
+  it('fences a rejection that arrives after acceptance reads but before its batch', async () => {
+    const { db, sqlite, candidate, input } = await fixture()
+    db.batch = new Proxy(db.batch, {
+      apply(target, receiver, args) {
+        sqlite
+          .prepare(
+            'INSERT INTO placeIdentityRejection(reviewId,placeId,ssId,actorId,reason) VALUES (?,?,?,?,?)',
+          )
+          .run(
+            input.reviewId,
+            input.placeId,
+            candidate.ssId,
+            'other-reviewer',
+            'Different shop',
+          )
+        return Reflect.apply(target, receiver, args)
+      },
+    })
+    expect(await acceptPlaceIdentityReview(db, input)).toEqual({ status: 'conflict' })
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(1)
+    expect(sqlite.prepare('SELECT count(*) n FROM placeIdentityHistory').get()?.n).toBe(
+      0,
+    )
+    expect(sqlite.prepare('SELECT state FROM place').get()?.state).toBe('manual')
+  })
+  it('retains an immutable rejection, suppresses only its scoped source, and permits deliberate new review', async () => {
+    const { db, sqlite, local, baseline, candidate, input } = await fixture()
+    const before = sqlite.prepare('SELECT * FROM featurePlace').all()
+    expect(await rejectPlaceIdentityReview(db, input)).toEqual({ status: 'rejected' })
+    expect(await rejectPlaceIdentityReview(db, input)).toEqual({ status: 'rejected' })
+    expect(
+      await rejectPlaceIdentityReview(db, { ...input, reason: 'Changed' }),
+    ).toEqual({ status: 'conflict' })
+    expect(await readPlaceIdentityReview(db, input)).toMatchObject({
+      rejected: true,
+      stale: false,
+    })
+    expect(await acceptPlaceIdentityReview(db, input)).toEqual({ status: 'conflict' })
+    expect([...(await rejectedFeaturePlaceSourceIds(db, 'f', 'p'))]).toEqual([
+      candidate.ssId,
+    ])
+    expect([...(await rejectedFeaturePlaceSourceIds(db, 'f', 'other'))]).toEqual([])
+    expect(sqlite.prepare('SELECT * FROM featurePlace').all()).toEqual(before)
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(1)
+    expect(() => sqlite.exec('DELETE FROM placeIdentityRejection')).toThrow(/immutable/)
+    expect(() =>
+      sqlite.exec("UPDATE placeIdentityRejection SET reason='Changed'"),
+    ).toThrow(/immutable/)
+    const reviewId = await capturePlaceIdentityReview(
+      db,
+      baseline,
+      candidate,
+      'reviewer',
+    )
+    if (!reviewId || reviewId === input.reviewId)
+      throw new Error('Expected a fresh explicit review')
+    expect(
+      await acceptPlaceIdentityReview(db, {
+        ...input,
+        reviewId,
+        reason: 'New evidence confirms premises',
+      }),
+    ).toMatchObject({ status: 'applied' })
+    expect([...(await rejectedFeaturePlaceSourceIds(db, 'f', 'p'))]).toEqual([])
+    expect(
+      sqlite.prepare('SELECT count(*) n FROM placeIdentityRejection').get()?.n,
+    ).toBe(1)
+  })
+  it('rejects wrong ownership, stale source baselines, and already accepted reviews', async () => {
+    const { db, local, input } = await fixture()
+    expect(
+      await rejectPlaceIdentityReview(db, { ...input, ownerProjectId: 'other' }),
+    ).toEqual({ status: 'conflict' })
+    expect(await acceptPlaceIdentityReview(db, input)).toMatchObject({
+      status: 'applied',
+    })
+    expect(await rejectPlaceIdentityReview(db, input)).toEqual({ status: 'conflict' })
   })
 })

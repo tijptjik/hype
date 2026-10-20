@@ -6,6 +6,8 @@ import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
   directory: vi.fn(),
+  rejectIdentity: vi.fn(),
+  rejectedSourceIds: vi.fn(),
   probeMergeSource: vi.fn(),
   probeMergeReview: vi.fn(),
   captureMerge: vi.fn(),
@@ -67,6 +69,10 @@ vi.mock('#lib/api/server/guarded.js', () => {
       )
   return { guardedQuery: wrap('query'), guardedCommand: wrap('command') }
 })
+vi.mock('#lib/db/services/placeIdentityRejection.js', () => ({
+  rejectPlaceIdentityReview: mocks.rejectIdentity,
+  rejectedFeaturePlaceSourceIds: mocks.rejectedSourceIds,
+}))
 vi.mock('#lib/db/services/placeMerge.js', () => ({
   probePlaceMergeSource: mocks.probeMergeSource,
   probePlaceMergeReview: mocks.probeMergeReview,
@@ -179,10 +185,13 @@ import {
   getPlaceIdentityReviewAccess,
   getPlaceIdentityReview,
   acceptPlaceIdentityReview,
+  rejectPlaceIdentityReview,
 } from '#lib/api/placeIdentity.remote.js'
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.rejectedSourceIds.mockResolvedValue(new Set())
+  mocks.rejectIdentity.mockResolvedValue({ status: 'rejected' })
   mocks.hydrateSource.mockImplementation(async (_client, projection) => projection)
   mocks.probeMergeSource.mockResolvedValue({ sourcePlaceId: 'source' })
   mocks.probeMergeReview.mockResolvedValue({ sourcePlaceId: 'source' })
@@ -421,6 +430,7 @@ describe('Place source search authorization', () => {
     'opens an exact source identity from %s without name search or persistence',
     async query => {
       const ssId = query.startsWith('id:') ? query.slice(3) : query
+      mocks.rejectedSourceIds.mockResolvedValue(new Set([ssId]))
       mocks.discoverPublication.mockResolvedValue({
         pin: { releaseSet: 'release', catalogRevision: 'catalog', knownAt: 'time' },
       })
@@ -442,6 +452,7 @@ describe('Place source search authorization', () => {
         candidates: [
           {
             placeId: ssId,
+            previouslyRejected: true,
             resourceReleaseId: 'resource-release',
             locale: 'en',
             nameText: 'Shop',
@@ -1164,5 +1175,58 @@ describe('standalone Place reads', () => {
   it('returns missing if ownership changed after authorization', async () => {
     mocks.directory.mockResolvedValue({ data: [], nextCursor: null })
     expect(await getPlace({ id: 'place' })).toBeNull()
+  })
+})
+
+describe('negative identity review authorization', () => {
+  it('uses persisted scope and authenticated actor for rejection', async () => {
+    await expect(
+      rejectPlaceIdentityReview({
+        placeId: 'place',
+        reviewId: 'review',
+        reason: 'Different shop unit',
+      }),
+    ).resolves.toEqual({ status: 'rejected' })
+    expect(mocks.rejectIdentity).toHaveBeenCalledWith(mocks.context.db, {
+      placeId: 'place',
+      reviewId: 'review',
+      reason: 'Different shop unit',
+      ownerProjectId: 'p',
+      actorId: 'u',
+    })
+  })
+  it('denies revocation, blank reasons and client-supplied ownership before persistence', async () => {
+    mocks.authorizeProject.mockReturnValue({ allowed: false })
+    await expect(
+      rejectPlaceIdentityReview({
+        placeId: 'place',
+        reviewId: 'review',
+        reason: 'Different',
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+    await expect(
+      rejectPlaceIdentityReview({ placeId: 'place', reviewId: 'review', reason: ' ' }),
+    ).rejects.toThrow()
+    await expect(
+      rejectPlaceIdentityReview({
+        placeId: 'place',
+        reviewId: 'review',
+        reason: 'Different',
+        ownerProjectId: 'other',
+      } as never),
+    ).rejects.toThrow()
+    expect(mocks.rejectIdentity).not.toHaveBeenCalled()
+  })
+  it('omits rejected source IDs from ordinary discovery without exposing reasons', async () => {
+    mocks.rejectedSourceIds.mockResolvedValue(new Set(['rejected']))
+    mocks.searchPlaces.mockResolvedValue([
+      { placeId: 'rejected' },
+      { placeId: 'other' },
+    ])
+    expect(await searchFeaturePlaces({ featureId: 'f', q: 'Shop' })).toEqual({
+      source: 'saanseoi-latest',
+      candidates: [{ placeId: 'other' }],
+    })
+    expect(mocks.rejectedSourceIds).toHaveBeenCalledWith(mocks.context.db, 'f', 'p')
   })
 })

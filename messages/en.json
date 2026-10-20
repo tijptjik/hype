@@ -1504,5 +1504,8 @@
   "place_directory_brand": "Brands",
   "place_directory_location": "Coordinates",
   "place_directory_detail_help": "These are the latest retained Place facts. Features retain their accepted revisions and overrides until updates are adopted.",
-  "place_directory_more_projects": "Load more Projects"
+  "place_directory_more_projects": "Load more Projects",
+  "place_identity_reject": "Not this establishment",
+  "place_identity_rejected": "Rejection saved. This candidate will be omitted from name searches for this Place.",
+  "place_identity_previously_rejected": "Previously rejected. Only confirm after reviewing new evidence."
 }

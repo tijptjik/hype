@@ -1504,5 +1504,8 @@
   "place_directory_brand": "品牌",
   "place_directory_location": "坐标",
   "place_directory_detail_help": "这些是最新保留的地点资料。功能会保留已接受的版本及覆盖值，直到采用更新。",
-  "place_directory_more_projects": "加载更多项目"
+  "place_directory_more_projects": "加载更多项目",
+  "place_identity_reject": "不是这间店铺",
+  "place_identity_rejected": "已保存拒绝决定。此候选地点将不再出现在这个地点的名称搜索中。",
+  "place_identity_previously_rejected": "先前已拒绝。请先审阅新证据再确认。"
 }

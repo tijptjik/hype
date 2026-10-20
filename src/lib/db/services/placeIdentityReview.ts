@@ -243,6 +243,7 @@ export async function readPlaceIdentityReview(
     issueKinds: SaanSeoiPlaceProjection['issues'][number]['kind'][]
   }
   createdAt: string
+  rejected: boolean
 } | null> {
   const row = await db
     .select()
@@ -287,6 +288,11 @@ export async function readPlaceIdentityReview(
       facts: PlaceFactsSchema.parse(row.projection.facts),
       issueKinds: row.projection.issues.map(issue => issue.kind),
     },
+    rejected: Boolean(
+      await db.get(
+        sql`SELECT 1 AS found FROM placeIdentityRejection WHERE reviewId=${row.id}`,
+      ),
+    ),
     createdAt: row.createdAt,
   }
 }
@@ -319,6 +325,7 @@ export async function acceptPlaceIdentityReview(
     .where(
       and(
         eq(placeIdentityReview.id, input.reviewId),
+        sql`NOT EXISTS (SELECT 1 FROM placeIdentityRejection WHERE reviewId=${input.reviewId})`,
         eq(placeIdentityReview.placeId, input.placeId),
         sql`${placeIdentityReview.ownerProjectId} IS ${input.ownerProjectId}`,
       ),

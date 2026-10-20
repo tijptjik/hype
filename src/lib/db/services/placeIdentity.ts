@@ -66,6 +66,13 @@ export async function acceptPlaceIdentity(
     throw new Error(
       'Identity review requires an actor and a reason of 1–2000 characters',
     )
+  if (
+    input.reviewId &&
+    (await db.get(
+      sql`SELECT 1 AS found FROM placeIdentityRejection WHERE reviewId=${input.reviewId}`,
+    ))
+  )
+    return { status: 'conflict' }
   const prepared = await prepareSaanSeoiRevision(input.placeId, projection)
   const revisionId = `identityRevision_${nanoid(24)}`
   const current = await db.select().from(place).where(eq(place.id, input.placeId)).get()
@@ -101,7 +108,7 @@ export async function acceptPlaceIdentity(
     : sql`1`
   const historyId = nanoid(24)
   // The history tail fences ABA identity changes; the batch rechecks every captured input.
-  const guard = sql`${availabilityGuard} AND EXISTS (SELECT 1 FROM place WHERE id=${input.placeId}
+  const guard = sql`NOT EXISTS (SELECT 1 FROM placeIdentityRejection WHERE reviewId=${input.reviewId ?? null}) AND ${availabilityGuard} AND EXISTS (SELECT 1 FROM place WHERE id=${input.placeId}
     AND state=${input.expectedState} AND ssId IS ${input.expectedSsId}
     AND ownerProjectId IS ${input.expectedOwnerProjectId})
     AND NOT EXISTS (SELECT 1 FROM place WHERE ssId=${projection.ssId} AND id!=${input.placeId})

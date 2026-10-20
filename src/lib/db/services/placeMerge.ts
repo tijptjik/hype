@@ -79,11 +79,15 @@ function featureTokenSQL(placeId: string): SQL {
  * @returns One predicate used before the transaction's permanent redirect receipt is created.
  */
 function mergeGuard(
-  row: Pick<MergeReview, 'targetBaseline' | 'sourceBaseline' | 'sourceFeatureToken'>,
+  row: Pick<
+    MergeReview,
+    'targetBaseline' | 'sourceBaseline' | 'sourceFeatureToken' | 'identityReviewId'
+  >,
 ): SQL {
   const target = row.targetBaseline,
     source = row.sourceBaseline
-  return sql`${baselineGuard(target)} AND ${baselineGuard(source)}
+  return sql`NOT EXISTS (SELECT 1 FROM placeIdentityRejection WHERE reviewId=${row.identityReviewId})
+    AND ${baselineGuard(target)} AND ${baselineGuard(source)}
     AND ${featureTokenSQL(source.placeId)}=${row.sourceFeatureToken}
     AND (${source.expectedOwnerProjectId} IS NULL OR ${source.expectedOwnerProjectId} IS ${target.expectedOwnerProjectId})
     AND NOT EXISTS(SELECT 1 FROM featurePlace fp JOIN feature f ON f.id=fp.featureId
@@ -293,7 +297,7 @@ export async function capturePlaceMergeReview(
     .select(sql`SELECT ${id},${identity.id},${target.placeId},${source.placeId},
     ${JSON.stringify(target)},${JSON.stringify(source)},${token.value},${affected.length},${candidate.id},
     ${input.actorId},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE
-    ${mergeGuard({ targetBaseline: target, sourceBaseline: source, sourceFeatureToken: token.value })}`)
+    ${mergeGuard({ targetBaseline: target, sourceBaseline: source, sourceFeatureToken: token.value, identityReviewId: identity.id })}`)
     .returning({ id: placeMergeReview.id })
   return rows.length
     ? { status: 'ready', reviewId: id, affectedFeatures: affected.length }

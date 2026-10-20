@@ -11,6 +11,7 @@
 // - getPlaceIdentityReview
 // 3. REVIEW ACCEPTANCE
 // - acceptPlaceIdentityReview
+// - rejectPlaceIdentityReview
 // 4. EXPLICIT MERGE REVIEW
 // - preparePlaceMergeReview
 // - getPlaceMergeReview
@@ -26,6 +27,7 @@ import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 import { authorizeProjectUpdateForSubmission } from '#lib/api/services/authz/index.js'
 import { canManageSharedPlaceIdentity } from '#lib/api/services/authz/place.js'
 // SERVICES
+import { rejectPlaceIdentityReview as persistIdentityRejection } from '#lib/db/services/placeIdentityRejection.js'
 import { probeProjectQuery } from '#lib/db/services/project.js'
 import {
   probePlaceIdentityScope,
@@ -246,6 +248,26 @@ export const acceptPlaceIdentityReview = guardedCommand(
   async (input, ctx) => {
     const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
     const result = await persistIdentityReview(ctx.db, {
+      ...input,
+      ownerProjectId,
+      actorId: ctx.user.id,
+    })
+    if (result.status === 'conflict') error(409, 'PLACE_IDENTITY_CHANGED')
+    return result
+  },
+)
+
+/**
+ * Retain a negative establishment decision with current Place management authority.
+ * @param input Retained comparison and mandatory reason.
+ * @returns Rejected outcome; stale or already accepted comparisons return 409.
+ * @remarks Actor and ownership are server-derived. No Place or Feature facts change.
+ */
+export const rejectPlaceIdentityReview = guardedCommand(
+  reviewInput.extend({ reason: z.string().trim().min(1).max(2000) }),
+  async (input, ctx) => {
+    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+    const result = await persistIdentityRejection(ctx.db, {
       ...input,
       ownerProjectId,
       actorId: ctx.user.id,

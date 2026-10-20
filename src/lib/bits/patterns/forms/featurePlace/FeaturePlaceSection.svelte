@@ -104,9 +104,10 @@ async function search(): Promise<void> {
   failed = false
   selected = null
   try {
+    const sourceQuery = searchFeaturePlaces({ featureId, q: query.trim() })
     const localQuery = searchFeatureLocalPlaces({ featureId, q: query.trim() })
     const [source, local] = await Promise.allSettled([
-      searchFeaturePlaces({ featureId, q: query.trim() }),
+      sourceQuery.refresh().then(() => sourceQuery),
       localQuery.refresh().then(() => localQuery),
     ])
     if (version === requestVersion) {
@@ -369,6 +370,11 @@ async function link(): Promise<void> {
                   <span class="block font-medium"
                     >{candidate.nameText ?? candidate.placeId}</span
                   >
+                  {#if candidate.previouslyRejected}
+                    <span class="block text-sm text-muted-foreground"
+                      >{m.place_identity_previously_rejected()}</span
+                    >
+                  {/if}
                   {#if candidate.brandText}
                     <span class="block text-sm text-muted-foreground"
                       >{candidate.brandText}</span

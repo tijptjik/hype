@@ -18,6 +18,7 @@ import {
   prepareMirroredPlaceIdentityReview,
   getPlaceIdentityReview,
   acceptPlaceIdentityReview,
+  rejectPlaceIdentityReview,
   preparePlaceMergeReview,
   getPlaceMergeReview,
   acceptPlaceMergeReview,
@@ -48,7 +49,9 @@ let detail = $state<Review | null>(null)
 let reason = $state('')
 let busy = $state(false)
 let failure = $state('')
-let outcome = $state<'applied' | 'unchanged' | 'merge-required' | 'merged' | null>(null)
+let outcome = $state<
+  'applied' | 'unchanged' | 'merge-required' | 'merged' | 'rejected' | null
+>(null)
 let merge = $state<Awaited<ReturnType<typeof getPlaceMergeReview>> | null>(null)
 let mergeReason = $state('')
 let alive = true
@@ -62,7 +65,10 @@ async function search(): Promise<void> {
   busy = true
   failure = ''
   try {
-    const found = await searchFeaturePlaces({ featureId, q: query.trim() })
+    // An explicit search must see decisions saved since this native query was cached.
+    const request = searchFeaturePlaces({ featureId, q: query.trim() })
+    await request.refresh()
+    const found = await request
     if (alive) results = found.candidates
   } catch {
     if (alive) failure = m.resource_action_failed()
@@ -126,9 +132,49 @@ async function select(candidate: PlaceSearchCandidate): Promise<void> {
   }
 }
 
+/** Retain a negative identity decision without changing source or Feature facts. */
+async function reject(): Promise<void> {
+  if (
+    !detail ||
+    detail.stale ||
+    detail.rejected ||
+    busy ||
+    isDirty ||
+    !reason.trim() ||
+    outcome
+  )
+    return
+  busy = true
+  failure = ''
+  try {
+    await rejectPlaceIdentityReview({
+      placeId,
+      reviewId: detail.id,
+      reason: reason.trim(),
+    })
+    if (!alive) return
+    outcome = 'rejected'
+    results =
+      results?.filter(candidate => candidate.placeId !== detail?.candidate.ssId) ?? null
+  } catch {
+    if (alive) failure = m.place_identity_stale()
+  } finally {
+    if (alive) busy = false
+  }
+}
+
 /** Accept the retained identity comparison without changing Feature values or overrides. */
 async function accept(): Promise<void> {
-  if (!detail || detail.stale || busy || isDirty || !reason.trim() || outcome) return
+  if (
+    !detail ||
+    detail.stale ||
+    detail.rejected ||
+    busy ||
+    isDirty ||
+    !reason.trim() ||
+    outcome
+  )
+    return
   busy = true
   failure = ''
   try {
@@ -309,6 +355,11 @@ function rows(facts: PlaceFacts): Array<{ label: string; value: string }> {
                     <span class="block font-medium"
                       >{candidate.nameText ?? candidate.placeId}</span
                     >
+                    {#if candidate.previouslyRejected}
+                      <span class="block text-sm text-muted-foreground"
+                        >{m.place_identity_previously_rejected()}</span
+                      >
+                    {/if}
                     {#if candidate.brandText}
                       <span class="block text-sm text-muted-foreground"
                         >{candidate.brandText}</span
@@ -395,6 +446,10 @@ function rows(facts: PlaceFacts): Array<{ label: string; value: string }> {
                 <p role="status" class="text-sm text-muted-foreground">
                   {m.place_merge_saved()}
                 </p>
+              {:else if outcome === 'rejected' || detail.rejected}
+                <p role="status" class="text-sm text-muted-foreground">
+                  {m.place_identity_rejected()}
+                </p>
               {:else if outcome}
                 <p role="status" class="text-sm text-muted-foreground">
                   {m.place_identity_saved()}
@@ -411,6 +466,12 @@ function rows(facts: PlaceFacts): Array<{ label: string; value: string }> {
                   type="button"
                   text={m.place_identity_accept()}
                   onClick={accept}
+                  disabled={busy || isDirty || detail.stale || !reason.trim()}
+                />
+                <Button
+                  type="button"
+                  text={m.place_identity_reject()}
+                  onClick={reject}
                   disabled={busy || isDirty || detail.stale || !reason.trim()}
                 />
               {/if}

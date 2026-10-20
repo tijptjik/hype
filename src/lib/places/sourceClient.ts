@@ -28,7 +28,10 @@ const searchResultSchema = z.object({
   nameText: z.string().nullable(),
   brandText: z.string().nullable(),
 })
-export type PlaceSearchCandidate = z.infer<typeof searchResultSchema>
+export type PlaceSearchCandidate = z.infer<typeof searchResultSchema> & {
+  /** HYPE-owned review metadata; never accepted from the upstream search payload. */
+  previouslyRejected?: boolean
+}
 
 /**
  * Discover candidates across SaanSeoi's latest published Hong Kong Places index.

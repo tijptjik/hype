@@ -11,6 +11,7 @@ import {
   authorizeFeatureUpdateForSubmission,
 } from '#lib/api/services/authz/index.js'
 // DB
+import { rejectedFeaturePlaceSourceIds } from '#lib/db/services/placeIdentityRejection.js'
 import { probeProjectQuery } from '#lib/db/services/project.js'
 import { probeFeatureQuery } from '#lib/db/services/feature.js'
 import {
@@ -263,6 +264,11 @@ export const searchFeaturePlaces = guardedQuery(
     if (!apiKey?.trim()) error(503, 'PLACE_SEARCH_UNAVAILABLE')
     try {
       const client = { ...placeSourceEndpoint(apiKey), fetch: ctx.event.fetch }
+      const rejected = await rejectedFeaturePlaceSourceIds(
+        ctx.db,
+        input.featureId,
+        probe.projectId,
+      )
       // Exact IDs from migration evidence bypass the name-only discovery index.
       const exactId = input.q.startsWith('id:')
         ? input.q.slice(3).trim()
@@ -282,6 +288,7 @@ export const searchFeaturePlaces = guardedQuery(
             ? [
                 {
                   placeId: projection.ssId,
+                  previouslyRejected: rejected.has(projection.ssId),
                   resourceReleaseId: projection.releaseId,
                   locale,
                   nameText:
@@ -309,7 +316,10 @@ export const searchFeaturePlaces = guardedQuery(
         locale: input.locale,
         limit: input.limit,
       })
-      return { source: 'saanseoi-latest' as const, candidates }
+      return {
+        source: 'saanseoi-latest' as const,
+        candidates: candidates.filter(candidate => !rejected.has(candidate.placeId)),
+      }
     } catch {
       error(502, 'PLACE_SEARCH_FAILED')
     }

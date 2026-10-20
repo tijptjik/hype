@@ -1655,3 +1655,37 @@ copy and read-only local SaanSeoi API: donor #1's phone-matching source candidat
 in both identity and association search. Final run had zero page errors and zero source
 import, link, review-capture or acceptance requests. The screenshot was inspected privately;
 both servers were stopped. No identity decision or deployment was made.
+
+### Retained negative establishment decisions (Refs #194)
+
+Migration `0120_place_identity_rejection.sql` adds append-only rejection evidence tied
+to a server-captured identity review, Place, exact source ID, actor and mandatory reason.
+**Not this establishment** uses the same current Place management authorization as
+identity acceptance. The write fences ownership, source availability, identity, latest
+revision and history; stale or accepted comparisons cannot be rejected. Exact retries
+preserve the original reason. SQL guards and triggers prevent accepting or merging the
+same rejected comparison, including a rejection arriving between reads and an atomic
+acceptance batch. Rejection changes no Place identity or Feature facts/associations.
+
+Ordinary source-name discovery omits rejected IDs for the Feature's current scoped
+Place. The query does not expose other Projects' rejection reasons or actors. Explicit
+`id:` lookup remains available and displays a previous-rejection reminder. Deliberate
+reconsideration captures a new immutable comparison and still requires its own acceptance
+reason; the old rejection is never deleted. A subsequently accepted source identity is
+no longer suppressed as rejected. Explicit searches refresh their native query, so a
+new decision is visible immediately rather than reusing cached discovery results.
+
+Local migration passed a backup-copy rehearsal, integrity and FK checks, and preserved
+2,850 Places/revisions, 1,601 Features and 1,520 associations. Primary local rejection
+and identity-decision counts remain zero. Backup and receipt are private under
+`.local/places/`. There were 174 passing focused service/remote/source tests, including
+scope denial, exact replay, immutable reasons, acceptance races and invalidation of a
+prepared merge. Worker checking passes; app checking retains 10 errors / 19 warnings.
+
+An isolated browser rehearsal captured and rejected a source comparison with an explicit
+test-only reason. Repeating its exact lookup showed the rejection reminder, with zero
+page errors and no acceptance/link requests. An initial run revealed stale native search
+caching, corrected before the final run. Independent DB comparison found all 26 Feature
+and acceptance/redirect tables unchanged, with one isolated review/rejection, valid
+integrity and no FK violations. The private screenshot was inspected and both servers
+stopped. This test decision is not an actual bakery identity judgment. Nothing deployed.
