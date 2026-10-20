@@ -1,30 +1,48 @@
 #!/usr/bin/env python3
 """Build private, review-only Place candidates from fresh Breadline and pinned SaanSeoi mirrors."""
 import argparse
-import collections
+import importlib.util
 import json
 import math
 import os
 import sqlite3
-import unicodedata
 from pathlib import Path
 
-
-def normalized(value):
-    """Normalize name evidence without treating a brand or distance as identity."""
-    return ''.join(c for c in unicodedata.normalize('NFKC', value or '').casefold() if c.isalnum())
-
-
-def distance(a, b):
-    """Return great-circle metres between longitude/latitude pairs."""
-    lng1, lat1, lng2, lat2 = map(math.radians, [*a, *b])
-    h = math.sin((lat2-lat1)/2)**2 + math.cos(lat1)*math.cos(lat2)*math.sin((lng2-lng1)/2)**2
-    return 6371008.8 * 2 * math.asin(min(1, math.sqrt(h)))
+# Both migration cohorts use the same review-only evidence rules.
+_spec = importlib.util.spec_from_file_location(
+    'feature_place_matcher', Path(__file__).resolve().parents[1] / 'places' / 'match-feature-places.py')
+matcher = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(matcher)
 
 
-def connect(path):
+def candidate_record(row, table, index, corrections):
+    """Rank a source row using names, complete phones and addresses without accepting identity."""
+    sid = str(row['id'])
+    point = [float(row['longitude']), float(row['latitude'])]
+    if table == 'donors' and sid in corrections:
+        if point != corrections[sid]['original']:
+            raise ValueError(f'Reviewed coordinates changed for donor {sid}')
+        point = corrections[sid]['corrected']
+    if not all(math.isfinite(value) for value in point) or not (-180 <= point[0] <= 180 and -90 <= point[1] <= 90):
+        raise ValueError(f'Invalid coordinates for {table} {sid}')
+    names = {key: row[column] for key, column in [('en', 'name_en'), ('zh-hant', 'name_zh')] if row[column]}
+    addresses = {key: row[column] for key, column in [('en', 'address_full_en'), ('zh-hant', 'address_full_zh')] if row[column]}
+    raw_phone = row['phone'] if table == 'donors' else None
+    plan = {'facts': {'names': names, 'phoneNumber': [raw_phone] if raw_phone else [],
+                     'location': {'geometry': {'type': 'Point', 'coordinates': point},
+                                  'address': {'fallbackDisplay': addresses}}}}
+    return {'table': table, 'id': sid, 'sourceHash': row['_breadline_row_hash'],
+            'names': names, 'addresses': addresses, 'coordinates': point,
+            'phoneEvidence': 'absent' if not raw_phone else 'complete' if matcher.phone(raw_phone) else 'unusable',
+            **matcher.candidates(plan, index)}
+
+
+def connect(path, immutable=False):
     """Open a read-only, transaction-consistent source without mutating its contents."""
-    db = sqlite3.connect(f'file:{Path(path).resolve()}?mode=ro', uri=True)
+    path = Path(path).resolve()
+    if immutable and Path(str(path) + '-wal').exists():
+        raise ValueError('Immutable source has a WAL; use a consistent transaction instead')
+    db = sqlite3.connect(path.as_uri() + '?mode=ro' + ('&immutable=1' if immutable else ''), uri=True)
     db.row_factory = sqlite3.Row
     db.execute('BEGIN')
     return db
@@ -35,36 +53,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for arg in ['breadline', 'hype', 'saanseoi', 'publication', 'output']:
         parser.add_argument('--'+arg, required=True)
+    parser.add_argument('--immutable-snapshot', action='store_true', help='SaanSeoi input is a sealed export without WAL')
     args = parser.parse_args()
     os.umask(0o077)
     publication = json.loads(Path(args.publication).read_text())
     snapshot = publication['data'][0]['attributes']['snapshotId']
-    source, target, ss = map(connect, [args.breadline, args.hype, args.saanseoi])
+    source, target = map(connect, [args.breadline, args.hype])
+    ss = connect(args.saanseoi, args.immutable_snapshot)
     try:
-        states = ss.execute('SELECT * FROM placePublicationState WHERE snapshotId=? AND status=?', (snapshot, 'current')).fetchall()
-        if len(states) != 1:
-            raise ValueError('SaanSeoi mirror does not contain the pinned current publication')
-        scope = states[0]['scopeId']
-        places = {}
-        grid = collections.defaultdict(list)
-        by_name = collections.defaultdict(set)
-        for row in ss.execute('SELECT id,geometry,basicCategory,taxonomyPrimary,address2dId,address3dUnitId FROM places WHERE scopeId=?', (scope,)):
-            geometry = json.loads(row['geometry'])
-            if geometry.get('type') != 'Point':
-                continue
-            point = geometry['coordinates']
-            places[row['id']] = {**dict(row), 'coordinates': point, 'names': {}, 'brands': {}}
-            places[row['id']].pop('geometry')
-            grid[(math.floor(point[0]*400), math.floor(point[1]*400))].append(row['id'])
-        for row in ss.execute('SELECT placeId,locale,name,brandName FROM placesI18n WHERE scopeId=?', (scope,)):
-            place = places.get(row['placeId'])
-            if not place:
-                continue
-            if row['name']:
-                place['names'][row['locale']] = row['name']
-                by_name[normalized(row['name'])].add(row['placeId'])
-            if row['brandName']:
-                place['brands'][row['locale']] = row['brandName']
+        index = matcher.load_places(ss, snapshot)
         policy = json.loads(Path('scripts/breadline/donor-import-policy.json').read_text())
         corrections = json.loads(Path('scripts/breadline/feature-coordinate-corrections.json').read_text())
         runs = {str(row[0]) for row in source.execute('SELECT DISTINCT donor_id FROM breadline__public__runs')}
@@ -75,36 +72,17 @@ def main():
                 if table == 'donors' and (row['id'] in policy['excludedDonorIds'] or (policy['requireRecordedRun'] and sid not in runs)):
                     excluded.append({'table':table, 'id':sid, 'reason':'explicit_exclusion' if row['id'] in policy['excludedDonorIds'] else 'no_recorded_runs'})
                     continue
-                point = [float(row['longitude']), float(row['latitude'])]
-                if table == 'donors' and sid in corrections:
-                    if point != corrections[sid]['original']:
-                        raise ValueError('Reviewed source coordinates changed')
-                    point = corrections[sid]['corrected']
-                keys = {normalized(row['name_en']), normalized(row['name_zh'])} - {''}
-                x, y = math.floor(point[0]*400), math.floor(point[1]*400)
-                ids = set()
-                for dx in range(-2,3):
-                    for dy in range(-2,3):
-                        ids.update(grid[(x+dx,y+dy)])
-                for key in keys:
-                    ids.update(by_name[key])
-                candidates = []
-                for pid in ids:
-                    place = places[pid]
-                    metres = distance(point, place['coordinates'])
-                    exact = bool(keys & {normalized(v) for v in place['names'].values()})
-                    if metres > 250 and not exact:
-                        continue
-                    candidates.append({**place, 'distanceMetres':round(metres,1), 'exactLocalizedName':exact})
-                candidates.sort(key=lambda value: (not value['exactLocalizedName'],value['distanceMetres'],value['id']))
-                items.append({'table':table,'id':sid,'sourceHash':row['_breadline_row_hash'],
-                    'names':{'en':row['name_en'],'zh-hant':row['name_zh']}, 'coordinates':point,
-                    'state':'review' if candidates else 'unresolved','candidates':candidates[:5]})
+                items.append(candidate_record(row, table, index, corrections))
         summary = {'eligibleDonors':sum(x['table']=='donors' for x in items),'dropoffs':sum(x['table']=='dropoffs' for x in items),
             'excludedDonors':len(excluded),'withCandidates':sum(bool(x['candidates']) for x in items),
-            'withExactNameCandidates':sum(any(c['exactLocalizedName'] for c in x['candidates']) for x in items),
-            'existingHypeFeatures':target.execute('SELECT count(*) FROM feature').fetchone()[0], 'canonicalPlaces':len(places)}
-        evidence = {'version':1,'publication':publication['meta'],'permalink':publication['links']['permalink'],
+            'withExactNameCandidates':sum(any(c['evidence']['exactLocalizedName'] for c in x['candidates']) for x in items),
+            'existingHypeFeatures':target.execute('SELECT count(*) FROM feature').fetchone()[0], 'canonicalPlaces':len(index[0]),
+            'withPhoneCandidates':sum(any(c['evidence']['matchedPhoneCount'] for c in x['candidates']) for x in items),
+            'withAddressCandidates':sum(any(c['evidence']['exactFreeformAddress'] for c in x['candidates']) for x in items),
+            'corroboratedCandidates':sum(any(c['reviewPriority']=='corroborated' for c in x['candidates']) for x in items),
+            'nearbyOnly':sum(x['reason']=='nearby-only' for x in items),
+            'unusableSourcePhones':sum(x['phoneEvidence']=='unusable' for x in items)}
+        evidence = {'version':2,'publication':publication['meta'],'permalink':publication['links']['permalink'],
             'snapshotId':snapshot,'policy':policy,'summary':summary,'records':items,'excluded':excluded,
             'acceptance':'Review only. Distance, brand and names alone do not authorize shared Place identity.'}
         out = Path(args.output);out.parent.mkdir(parents=True,exist_ok=True)

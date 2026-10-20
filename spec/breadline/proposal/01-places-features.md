@@ -1596,3 +1596,38 @@ run had no page errors; private screenshots were inspected, and the server was s
 An earlier browser run exposed a legacy Project-list dependency and missing scroll/header
 configuration; both were corrected before final verification. No primary local source
 facts, identity decisions, production data or deployment were changed.
+
+### Breadline identity discovery with contact evidence (Refs #194)
+
+The Breadline candidate exporter now uses the same evidence matcher as existing Feature
+splits. It reads full source addresses and complete Hong Kong phone strings, discovers
+phone matches outside the spatial window, and ranks contact/address evidence ahead of
+nearby-only businesses. Shared publication phone matches remain candidates, not unique
+establishment evidence. Even an exact name plus unique phone within 50 metres remains
+a review priority, never an accepted identity. Compound/unusable phone text is flagged;
+partial numbers are not extracted. Candidate reports expose evidence counts rather than
+raw source phone strings. Version 2 nests evidence consistently with the Feature report.
+
+Reproduction against the retained sealed source export:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/breadline/place-candidates.py \
+  --breadline .local/breadline/mirror.sqlite \
+  --hype .local/places/hype-production-20261020.sqlite \
+  --saanseoi ../saanseoi/.local/d1-bootstrap/production-20261018/bundle-ordered/DB_CURRENT.sqlite \
+  --publication .local/places/saanseoi-first-page.json --immutable-snapshot \
+  --output .local/places/breadline-place-candidates-v2.json
+```
+
+The same 139,522-Place publication yields phone candidates for 89 eligible records,
+including 41 with a publication-unique phone within 50 metres; 16 have exact-name
+candidates and one has an exact freeform-address candidate. None satisfy the strict
+exact-name-plus-unique-phone priority rule. There are 104 records with identity-related
+review evidence and 226 with nearby-only candidates. One source phone is unusable.
+These counts overlap and do not imply 104 confirmed matches.
+
+Independent comparison verifies unchanged source hashes, names, reviewed coordinates,
+publication, 311-donor/19-dropoff cohort and all 155 exclusions. Twelve focused Python
+tests cover shared phones, branch-name differences, distant contact discovery, unusable
+phones, dropoffs without phones, stale coordinate corrections and crowded nearby results.
+No HYPE identities, Feature links, source facts or production records were modified.

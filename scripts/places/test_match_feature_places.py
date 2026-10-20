@@ -67,6 +67,21 @@ class MatchEvidenceTest(unittest.TestCase):
         self.assertEqual(result['reason'], 'nearby-only')
         self.assertEqual(len(result['candidates']), 1)
 
+    def test_shared_contact_candidates_rank_ahead_of_nearby_only_businesses(self):
+        plan, index = fixture(shared=True)
+        plan['facts']['names'] = {'en': 'Shop - Branch'}
+        plan['facts']['location']['address']['fallbackDisplay'] = {}
+        places, grid, names, phones = index
+        for n in range(6):
+            pid = f'nearby-{n}'
+            places[pid] = {**places['a'], 'id': pid, 'phones': [], 'names': {'en': f'Other {n}'}}
+            grid[next(iter(grid))].add(pid)
+        result = matcher.candidates(plan, index)
+        self.assertEqual(result['candidates'][0]['id'], 'a')
+        self.assertIn('other-branch', [row['id'] for row in result['candidates']])
+        self.assertFalse(result['candidates'][0]['evidence']['uniquePhoneInPublication'])
+        self.assertEqual(result['candidates'][0]['reviewPriority'], 'candidate')
+
     def test_non_point_geometry_remains_unresolved(self):
         plan, index = fixture()
         plan['facts']['location']['geometry']['type'] = 'Polygon'

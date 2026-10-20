@@ -110,6 +110,7 @@ def candidates(plan, index):
     found.sort(key=lambda item: (item['reviewPriority'] != 'corroborated',
                                 not item['evidence']['exactLocalizedName'],
                                 not item['evidence']['uniquePhoneInPublication'],
+                                not item['evidence']['matchedPhoneCount'],
                                 not item['evidence']['exactFreeformAddress'],
                                 item['distanceMetres'], item['id']))
     identity_evidence = any(item['evidence']['exactLocalizedName'] or item['evidence']['matchedPhoneCount'] or item['evidence']['exactFreeformAddress'] for item in found)
