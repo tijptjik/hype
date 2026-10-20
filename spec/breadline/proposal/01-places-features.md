@@ -131,6 +131,9 @@ Policy and Project fields update in one statement, guarded by both revisions.
 Defaults require review for location and establishment changes. Each Project can
 configure coordinate adoption (automatic, all reviewed, or a displacement limit
 in metres), address identity, shop/unit and establishment evidence changes.
+The policy editor presents these as four auto-fitting scenario cards under **Upstream Change
+Acceptance Policy**, with the distance limit shown only for distance-based
+coordinate acceptance. Controls retain scenario-specific accessible names.
 
 The shared mirror advances independently of each Project's accepted data.
 `featurePlace` accepts facts and location revisions independently. Two Projects

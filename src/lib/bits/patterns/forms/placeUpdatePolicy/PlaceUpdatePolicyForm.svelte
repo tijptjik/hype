@@ -4,7 +4,12 @@ import { untrack } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS COMPONENTS
-import { SectionHeader, SelectField, TextInput } from '#lib/bits/custom/index.js'
+import { SectionHeader, TextInput } from '#lib/bits/custom/index.js'
+import { Select } from '#lib/bits/core/index.js'
+// ICONS
+import BuildingIcon from 'virtual:icons/proicons/building-multiple'
+import DoorIcon from 'virtual:icons/proicons/door'
+import BrandIcon from 'virtual:icons/proicons/tag'
 import MapPinIcon from 'virtual:icons/proicons/location'
 // DOMAIN
 import { ProjectPlacePolicySchema } from '#lib/places/model.js'
@@ -89,89 +94,106 @@ const coordinateItems = $derived([
     description={m.place_policy_description()}
     icon={MapPinIcon}
   />
-  <div class="flex flex-col gap-6 p-6 pb-24">
-    <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_inactive()}</p>
-    <div class="flex max-w-5xl flex-col divide-y divide-[var(--form-control-border)]">
-      <div class="grid gap-4 pb-6 md:grid-cols-2 md:gap-8">
-        <div>
-          <h3 class="font-medium">{m.place_policy_coordinates()}</h3>
-          <p class="mt-1 text-sm text-muted-foreground">
-            {m.place_policy_coordinates_help()}
-          </p>
-        </div>
-        <div class="flex flex-col gap-4">
-          <SelectField
-            triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
-            id="place-coordinates"
-            label={m.place_policy_rule()}
-            placeholder={m.place_policy_coordinates()}
-            value={coordinateMode}
-            items={coordinateItems}
-            {isEditing}
-            disabled={saving}
-            onValueChange={value => {
-              coordinateMode = value as typeof coordinateMode
-              stagePolicy()
-            }}
-          />
-          <TextInput
-            id="place-distance"
-            name=""
-            label={m.place_policy_metres()}
-            value={maxMetres?.toString() ?? ''}
-            inputType="number"
-            inputAttrs={{ min: 0, step: 'any' }}
-            {isEditing}
-            disabled={saving || coordinateMode !== 'withinDistance'}
-            onValueChange={value => {
-              maxMetres = value.trim() ? Number(value) : undefined
-              stagePolicy()
-            }}
-          />
-          <p class="text-sm text-muted-foreground">{m.place_policy_distance_help()}</p>
-        </div>
-      </div>
+  <div class="flex flex-col gap-5 p-4 pb-24 sm:p-6 sm:pb-24">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4">
       {#each [
+        {
+          key: 'coordinates',
+          title: m.place_policy_coordinates(),
+          description: m.place_policy_coordinates_help(),
+          icon: MapPinIcon,
+        },
         {
           key: 'address',
           title: m.place_policy_address(),
           description: m.place_policy_address_help(),
+          icon: BuildingIcon,
         },
         {
           key: 'unit',
           title: m.place_policy_unit(),
           description: m.place_policy_unit_help(),
+          icon: DoorIcon,
         },
         {
           key: 'establishment',
           title: m.place_policy_establishment(),
           description: m.place_policy_establishment_help(),
+          icon: BrandIcon,
         },
       ] as setting (setting.key)}
-        <div class="grid gap-4 py-6 md:grid-cols-2 md:gap-8">
-          <div>
-            <h3 class="font-medium">{setting.title}</h3>
-            <p class="mt-1 text-sm text-muted-foreground">{setting.description}</p>
+        <div
+          class="flex flex-col gap-5 rounded-xl border border-[var(--form-control-border)] bg-[var(--form-control-edit-fill)] p-5"
+        >
+          <div class="flex flex-1 items-start gap-3">
+            <span
+              class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+              aria-hidden="true"
+            >
+              <setting.icon class="size-5" />
+            </span>
+            <div class="min-w-0">
+              <h3 id={`place-${setting.key}-title`} class="font-medium">
+                {setting.title}
+              </h3>
+              <p
+                id={`place-${setting.key}-help`}
+                class="mt-1 text-sm leading-relaxed text-muted-foreground"
+              >
+                {setting.description}
+              </p>
+            </div>
           </div>
-          <SelectField
-            triggerClass="bg-[var(--form-control-edit-fill)]! border-[var(--form-control-border)]!"
-            id={`place-${setting.key}`}
-            label={m.place_policy_rule()}
-            placeholder={setting.title}
-            value={policy[setting.key as 'address' | 'unit' | 'establishment']}
-            onValueChange={value => {
-              policy[setting.key as 'address' | 'unit' | 'establishment'] = value as
-                | 'review'
-                | 'automatic'
-              stagePolicy()
+          <Select
+            triggerClass="bg-background/50! border-[var(--form-control-border)]!"
+            triggerAttrs={{
+              id: `place-${setting.key}`,
+              'aria-labelledby': `place-${setting.key}-title`,
+              'aria-describedby': `place-${setting.key}-help`,
             }}
-            items={reviewItems}
+            placeholder={setting.title}
+            value={setting.key === 'coordinates'
+              ? coordinateMode
+              : policy[setting.key as 'address' | 'unit' | 'establishment']}
+            items={setting.key === 'coordinates' ? coordinateItems : reviewItems}
             {isEditing}
             disabled={saving}
+            onValueChange={value => {
+              if (setting.key === 'coordinates') {
+                coordinateMode = value as typeof coordinateMode
+              } else {
+                policy[setting.key as 'address' | 'unit' | 'establishment'] = value as
+                  | 'review'
+                  | 'automatic'
+              }
+              stagePolicy()
+            }}
           />
+          {#if setting.key === 'coordinates' && coordinateMode === 'withinDistance'}
+            <div
+              class="flex flex-col gap-2 border-t border-[var(--form-control-border)] pt-4"
+            >
+              <TextInput
+                id="place-distance"
+                name=""
+                label={m.place_policy_metres()}
+                value={maxMetres?.toString() ?? ''}
+                inputType="number"
+                inputAttrs={{ min: 0, step: 'any' }}
+                {isEditing}
+                disabled={saving}
+                onValueChange={value => {
+                  maxMetres = value.trim() ? Number(value) : undefined
+                  stagePolicy()
+                }}
+              />
+              <p class="text-xs leading-relaxed text-muted-foreground">
+                {m.place_policy_distance_help()}
+              </p>
+            </div>
+          {/if}
         </div>
       {/each}
     </div>
-    <p class="max-w-3xl text-sm text-muted-foreground">{m.place_policy_note()}</p>
   </div>
 </section>
