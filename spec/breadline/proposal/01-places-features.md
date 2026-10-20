@@ -1702,3 +1702,18 @@ unchanged domain rows. Final rehearsal counts are 1,601 Features, 1,520 Places
 and 1,520 associations; integrity and foreign-key checks pass. All 64 reviewed
 MTR decisions survive, including the retained unmapped labels for #558/#727.
 This isolated rehearsal changes neither primary local state nor production.
+
+### Real donor identity rehearsal (Refs #194)
+
+The [identity rehearsal command](places-migration-runbook.md#rehearse-an-explicitly-reviewed-identity-match)
+now exercises retained review and merge services against an isolated copy of the
+actual imported dataset. Donor #4 has independently reviewed matching branch, shop
+unit and street-address evidence, a publication-unique phone match and 24.4 metre
+separation. Accepting that candidate in the copy preserves the donor's original
+HYPE Place identity and all 23 Feature-owned tables, including effective values,
+properties, media and reviewed MTR access. The former candidate identity becomes
+a redirect. Reusing the consumed review is refused without changing identity or
+audit rows. Integrity/FKs pass; primary local and production decisions are untouched.
+
+This is a real-data migration rehearsal, not approval of other candidates. Source
+Address adoption and any further curation remain separate from identity acceptance.

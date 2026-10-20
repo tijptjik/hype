@@ -57,7 +57,7 @@ the cause. Individual split operations additionally have tested idempotent repla
    counts, exclusions, validation receipts and plan hashes. The bundle contains private
    source data and belongs outside Git and public issue attachments.
 
-The completed 2026-10-20 rehearsal applied 11 missing migrations (0109–0119), split
+The completed 2026-10-20 rehearsal applied 12 missing migrations (0109–0120), split
 1,190 Features, excluded 56 intangible Features and 25 drafts, imported 311 donors plus
 19 drop-points, and skipped 155 donors without recorded runs. Replay created zero
 records and matched all 330 imports. All 64 reviewed MTR decisions were retained.
@@ -133,3 +133,35 @@ fixture edit and resuming produced two replays plus 1,188 applications, without 
 history. Eight focused executor/adapter tests cover target/hash validation, explicit
 remote config, offline description, receipt locking and append-preserving runs, and
 transaction rollback. Remote execution itself remains unverified and has not occurred.
+
+## Rehearse an explicitly reviewed identity match
+
+After independently reviewing an establishment candidate, use the existing local
+database containing the imported Feature and pinned source candidate:
+
+```sh
+bun scripts/places/rehearse-identity-match.ts \
+  SOURCE.sqlite .local/places/NEW-identity-rehearsal \
+  FEATURE_ID CANONICAL_SS_ID 'Evidence-based establishment review reason'
+```
+
+This command always snapshots its read-only input into a new private directory. It
+never applies to the input or a remote database. It requires an unresolved Feature
+Place and a current, already-mirrored canonical candidate with no associated Features.
+It captures a retained identity review, verifies that acceptance requires a merge,
+and applies the explicit merge using the existing domain services. The actor is
+labelled `system:isolated-identity-rehearsal`; the decision is not attributed to a user.
+
+Verification requires the original HYPE Place ID to become linked, the absorbed
+candidate to become a redirect, and every Feature-owned table to remain exactly
+unchanged. A consumed review cannot apply twice; replay must leave identity, revision,
+review and redirect rows unchanged. Integrity and foreign keys must pass before the
+private receipt is written. The receipt includes the input snapshot hash and reason.
+Do not treat a successful rehearsal as production acceptance or a general candidate
+matching algorithm. Facts/location adoption remains a separate policy-controlled step.
+
+Verified with Breadline donor #4: matching branch/address/unit evidence and a
+publication-unique phone corroborate the candidate, whose point is 24.4 metres away.
+The isolated acceptance retained all 23 Feature-owned tables, including routing/MTR
+data, with no duplicate transition on replay. Primary local identity decisions remain
+unchanged. No raw contacts or review exports belong in tracked documentation.
