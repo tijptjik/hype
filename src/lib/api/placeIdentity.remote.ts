@@ -5,13 +5,15 @@
 // 1. AUTHORIZATION
 // - requireIdentityManager
 // 2. REVIEW CAPTURE AND READ
+// - getPlaceIdentityReviewAccess
 // - preparePlaceIdentityReview
+// - prepareMirroredPlaceIdentityReview
 // - getPlaceIdentityReview
 // 3. REVIEW ACCEPTANCE
 // - acceptPlaceIdentityReview
 // ---
 // SVELTE
-import { error } from '@sveltejs/kit'
+import { error, isHttpError } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // REMOTE
@@ -25,6 +27,7 @@ import {
   probePlaceIdentityScope,
   readPlaceIdentityBaseline,
   capturePlaceIdentityReview,
+  captureMirroredPlaceIdentityReview,
   readPlaceIdentityReview,
   acceptPlaceIdentityReview as persistIdentityReview,
 } from '#lib/db/services/placeIdentityReview.js'
@@ -86,6 +89,55 @@ async function requireIdentityManager(
  *  2. REVIEW CAPTURE AND READ
  ************/
 // +++ Review Capture And Read
+/**
+ * Determine whether identity review controls belong in this editor.
+ * @param input Stable Place ID.
+ * @returns Whether current persisted ownership and account roles permit management.
+ * @remarks Does not reveal ownership or source facts when access is denied.
+ */
+export const getPlaceIdentityReviewAccess = guardedQuery(
+  identityInput,
+  async (input, ctx) => {
+    try {
+      await requireIdentityManager(ctx, input.placeId)
+      return { allowed: true }
+    } catch (cause) {
+      if (isHttpError(cause) && (cause.status === 403 || cause.status === 404))
+        return { allowed: false }
+      throw cause
+    }
+  },
+)
+
+/**
+ * Prepare the canonical candidate selected from the Feature editor's source search.
+ * @param input Stable target Place and exact mirrored source revision.
+ * @returns Retained comparison ID, without changing either Place's identity or Feature links.
+ * @remarks Authorization and source ownership are rechecked before reading candidate facts.
+ */
+export const prepareMirroredPlaceIdentityReview = guardedCommand(
+  identityInput.extend({
+    candidateRevisionId: z.string().min(1).max(200),
+  }),
+  async (input, ctx) => {
+    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+    const baseline = await readPlaceIdentityBaseline(
+      ctx.db,
+      input.placeId,
+      ownerProjectId,
+    )
+    if (!baseline) error(409, 'PLACE_IDENTITY_CHANGED')
+    const reviewId = await captureMirroredPlaceIdentityReview(
+      ctx.db,
+      baseline,
+      input.candidateRevisionId,
+      ctx.user.id,
+    )
+    if (!reviewId) error(409, 'PLACE_IDENTITY_CANDIDATE_UNAVAILABLE')
+    return { reviewId }
+  },
+)
+
 /**
  * Retain one candidate from a verified pinned collection page for explicit identity review.
  * @param input Target identity and bounded source-page selectors; never client facts or URLs.

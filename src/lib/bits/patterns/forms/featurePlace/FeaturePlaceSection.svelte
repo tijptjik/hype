@@ -19,6 +19,7 @@ import CreateLocalPlace from './CreateLocalPlace.svelte'
 import PlaceBrandEditor from './PlaceBrandEditor.svelte'
 import PlaceResetFields from './PlaceResetFields.svelte'
 import PlaceReviewSection from './PlaceReviewSection.svelte'
+import PlaceIdentityReviewSection from './PlaceIdentityReviewSection.svelte'
 import type { PlaceReset } from '#lib/places/reset.js'
 import type { PlaceBrandEdit } from '#lib/places/brandEdit.js'
 // TYPES
@@ -383,6 +384,16 @@ async function link(): Promise<void> {
     {:catch}
       <p role="alert" class="text-sm text-destructive">{m.feature_place_failed()}</p>
     {/await}
+    {#if isEditing && accepted.current}
+      {#key featureId + ':' + accepted.current.placeId}
+        <PlaceIdentityReviewSection
+          {featureId}
+          placeId={accepted.current.placeId}
+          {isDirty}
+          onCommitted={onSourceUpdate}
+        />
+      {/key}
+    {/if}
     <PlaceReviewSection
       {featureId}
       associationRevision={accepted.current?.revision ?? ''}

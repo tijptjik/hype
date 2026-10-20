@@ -1472,5 +1472,15 @@
   "place_reset_name_hant": "繁體中文名稱",
   "place_reset_name_hans": "簡體中文名稱",
   "place_reset_phones": "電話號碼",
-  "place_reset_location": "位置及地址"
+  "place_reset_location": "位置及地址",
+  "place_identity_title": "地點身份",
+  "place_identity_description": "核實此地點是否對應 SaanSeoi 收錄的商戶或場所。",
+  "place_identity_open": "核對來源身份",
+  "place_identity_preserve": "確認身份會保留此 HYPE 地點，以及所有地圖項目的資料和自訂覆寫。來源資料更新須另行審核。",
+  "place_identity_current": "目前地點",
+  "place_identity_incomplete": "部分來源電話或地址資料不完整。請仔細核對商戶及其所在位置。",
+  "place_identity_stale": "無法接受此比較。請重新選取來源候選地點，核對最新的地點狀態。",
+  "place_identity_merge": "此來源身份已屬於另一個 HYPE 地點，需要另行審核合併。資料未有更改。",
+  "place_identity_saved": "已確認身份。地圖項目的資料和自訂覆寫已保留。",
+  "place_identity_accept": "確認為同一商戶或場所"
 }

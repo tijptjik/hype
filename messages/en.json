@@ -1472,5 +1472,15 @@
   "place_reset_name_hant": "Traditional Chinese name",
   "place_reset_name_hans": "Simplified Chinese name",
   "place_reset_phones": "Phone numbers",
-  "place_reset_location": "Location and address"
+  "place_reset_location": "Location and address",
+  "place_identity_title": "Place identity",
+  "place_identity_description": "Review whether this Place represents an establishment listed in SaanSeoi.",
+  "place_identity_open": "Review source identity",
+  "place_identity_preserve": "Confirming an identity keeps this HYPE Place and all its Feature values and overrides. Source updates are reviewed separately.",
+  "place_identity_current": "Current Place",
+  "place_identity_incomplete": "Some source phone or address details are incomplete. Check the establishment and premises carefully.",
+  "place_identity_stale": "This comparison could not be accepted. Select the source candidate again to review the latest Place state.",
+  "place_identity_merge": "This source identity already belongs to another HYPE Place. A separate merge review is required; nothing has changed.",
+  "place_identity_saved": "Identity confirmed. Feature values and overrides are preserved.",
+  "place_identity_accept": "Confirm same establishment"
 }

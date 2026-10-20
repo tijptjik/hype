@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   probeIdentity: vi.fn(),
   identityBaseline: vi.fn(),
   captureIdentity: vi.fn(),
+  captureMirroredIdentity: vi.fn(),
   readIdentity: vi.fn(),
   acceptIdentity: vi.fn(),
   readSourcePage: vi.fn(),
@@ -60,6 +61,7 @@ vi.mock('#lib/db/services/placeIdentityReview.js', () => ({
   probePlaceIdentityScope: mocks.probeIdentity,
   readPlaceIdentityBaseline: mocks.identityBaseline,
   capturePlaceIdentityReview: mocks.captureIdentity,
+  captureMirroredPlaceIdentityReview: mocks.captureMirroredIdentity,
   readPlaceIdentityReview: mocks.readIdentity,
   acceptPlaceIdentityReview: mocks.acceptIdentity,
 }))
@@ -142,6 +144,8 @@ import {
 
 import {
   preparePlaceIdentityReview,
+  prepareMirroredPlaceIdentityReview,
+  getPlaceIdentityReviewAccess,
   getPlaceIdentityReview,
   acceptPlaceIdentityReview,
 } from '#lib/api/placeIdentity.remote.js'
@@ -156,6 +160,7 @@ beforeEach(() => {
     expectedOwnerProjectId: 'p',
   })
   mocks.captureIdentity.mockResolvedValue('identity-review')
+  mocks.captureMirroredIdentity.mockResolvedValue('mirrored-review')
   mocks.readIdentity.mockResolvedValue({ id: 'identity-review', stale: false })
   mocks.acceptIdentity.mockResolvedValue({
     status: 'applied',
@@ -679,6 +684,34 @@ describe('Place identity review authority and retained evidence', () => {
       knownAt: '2026-10-18T00:00:00Z',
     },
   }
+  it('reports editor access without exposing ownership and captures only a server-resolved revision', async () => {
+    await expect(getPlaceIdentityReviewAccess({ placeId: 'place' })).resolves.toEqual({
+      allowed: true,
+    })
+    await expect(
+      prepareMirroredPlaceIdentityReview({
+        placeId: 'place',
+        candidateRevisionId: 'source-revision',
+      }),
+    ).resolves.toEqual({ reviewId: 'mirrored-review' })
+    expect(mocks.captureMirroredIdentity).toHaveBeenCalledWith(
+      mocks.context.db,
+      { placeId: 'place', expectedOwnerProjectId: 'p' },
+      'source-revision',
+      'u',
+    )
+    mocks.authorizeProject.mockReturnValue({ allowed: false })
+    await expect(getPlaceIdentityReviewAccess({ placeId: 'place' })).resolves.toEqual({
+      allowed: false,
+    })
+    await expect(
+      prepareMirroredPlaceIdentityReview({
+        placeId: 'place',
+        candidateRevisionId: 'source-revision',
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mocks.captureMirroredIdentity).toHaveBeenCalledTimes(1)
+  })
   it('authorizes persisted owner ancestry before capturing a pinned server record', async () => {
     await expect(preparePlaceIdentityReview(input)).resolves.toEqual({
       reviewId: 'identity-review',

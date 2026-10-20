@@ -7,12 +7,15 @@
 // 2. REVIEW EVIDENCE
 // - readPlaceIdentityBaseline
 // - capturePlaceIdentityReview
+// - captureMirroredPlaceIdentityReview
 // - readPlaceIdentityReview
 // 3. REVIEW ACCEPTANCE
 // - acceptPlaceIdentityReview
 // ---
 // DRIZZLE
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, isNull, or, sql } from 'drizzle-orm'
+// VALIDATION
+import { z } from 'zod'
 // IDENTITY
 import { nanoid } from 'nanoid'
 // SCHEMA
@@ -135,6 +138,79 @@ export async function capturePlaceIdentityReview(
       IS ${baseline.expectedHistoryId}`)
     .returning({ id: placeIdentityReview.id })
   return rows[0]?.id ?? null
+}
+
+/**
+ * Capture a canonical revision already mirrored in HYPE for the editor's selected candidate.
+ * @param db Request-local database.
+ * @param baseline Authorized target scope captured before resolving the candidate.
+ * @param candidateRevisionId Exact selected source revision, not client-supplied facts.
+ * @param actorId Authenticated reviewer.
+ * @returns Retained review ID or null for inaccessible, obsolete-identity or changed input.
+ * @remarks Only shared source evidence or evidence owned by the same project is eligible.
+ * A candidate already bound to another Place remains subject to explicit merge handling.
+ */
+export async function captureMirroredPlaceIdentityReview(
+  db: Database,
+  baseline: PlaceIdentityBaseline,
+  candidateRevisionId: string,
+  actorId: string,
+): Promise<string | null> {
+  const row = await db
+    .select({
+      ssId: placeRevision.ssId,
+      apiVersion: placeRevision.apiVersion,
+      releaseId: placeRevision.releaseId,
+      snapshotId: placeRevision.snapshotId,
+      payload: placeRevision.payload,
+      facts: placeRevision.facts,
+    })
+    .from(placeRevision)
+    .innerJoin(place, eq(place.id, placeRevision.placeId))
+    .where(
+      and(
+        eq(placeRevision.id, candidateRevisionId),
+        eq(placeRevision.origin, 'saanseoi'),
+        eq(place.state, 'linked'),
+        eq(place.sourceAvailability, 'current'),
+        eq(place.ssId, placeRevision.ssId),
+        or(
+          isNull(place.ownerProjectId),
+          baseline.expectedOwnerProjectId
+            ? eq(place.ownerProjectId, baseline.expectedOwnerProjectId)
+            : sql`0`,
+        ),
+      ),
+    )
+    .get()
+  if (!row?.ssId || !row.apiVersion || !row.releaseId || !row.snapshotId) return null
+  const { issues: rawIssues, ...payload } = row.payload
+  const issues = z
+    .array(
+      z.discriminatedUnion('kind', [
+        z.object({
+          kind: z.literal('invalidPhone'),
+          index: z.number().int().nonnegative(),
+          value: z.string(),
+        }),
+        z.object({ kind: z.literal('addressRecordsPending') }),
+      ]),
+    )
+    .parse(rawIssues ?? [])
+  return capturePlaceIdentityReview(
+    db,
+    baseline,
+    {
+      ...row,
+      ssId: row.ssId,
+      apiVersion: row.apiVersion,
+      releaseId: row.releaseId,
+      snapshotId: row.snapshotId,
+      payload,
+      issues,
+    },
+    actorId,
+  )
 }
 
 /**

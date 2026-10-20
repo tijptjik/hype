@@ -1167,3 +1167,36 @@ and all 1,601 Features / 1,520 associations remain unchanged. No unconfirmed ide
 review or acceptance was applied to primary data. Merge/redirect handling, a usable
 review/discovery UI, address curation and broader acceptance work remain outstanding.
 No deployment or production mutation was performed.
+
+### Feature-editor identity comparison (Refs #194)
+
+The Feature editor's Address tab now offers a Place identity review section only when
+current persisted ownership and roles permit identity management. Review controls expand
+explicitly, and reuse the established source search and exact mirrored-revision preview.
+Users do not enter publication IDs or collection offsets. A new server command captures
+that selected canonical revision after checking source availability, current ssId and
+shared/same-project ownership; local baselines, obsolete identities and another project's
+private source evidence are rejected. Retained raw payloads remain server-side.
+
+The comparison shows the current Place and proposed source side by side, including
+localized names, phones, brands, coordinates and structured address displays. A reason
+is required before confirmation. Dirty Feature forms cannot capture or accept identity
+comparisons. The UI explains that Feature values/overrides remain unchanged; successful
+identity acceptance refreshes the ordinary form. Async results cannot replace another
+Feature's review after navigation, and settled comparisons remain visible during loading.
+English, Traditional Chinese and Simplified Chinese messages are included.
+
+Already-claimed source IDs produce an explicit merge-required outcome without changing
+identities. This is not yet a merge UI: merge/redirect implementation is still required
+before those comparisons can be resolved. Source candidates not mirrored yet retain the
+existing import-needed message; interactive ingestion/discovery integration remains open.
+
+Browser verification on an isolated copy of the primary local database searched Maison
+Kayser, loaded the comparison, verified the disabled confirmation without a reason, and
+observed the merge-required outcome after confirmation. No browser errors occurred.
+Independent SQLite comparison proved Feature, association/history, Place/revision and
+identity-history tables unchanged; only one retained comparison was added. Private
+screenshots are at `output/playwright/place-identity-comparison.png` and
+`output/playwright/place-identity-merge-required.png`. The dev server was stopped.
+136 focused tests pass and the full app check retains 10 existing errors / 19 warnings.
+No primary identity acceptance, deployment or production mutation was performed.

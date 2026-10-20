@@ -23,6 +23,7 @@ import {
 import {
   readPlaceIdentityBaseline,
   capturePlaceIdentityReview,
+  captureMirroredPlaceIdentityReview,
   readPlaceIdentityReview,
   acceptPlaceIdentityReview,
 } from '#lib/db/services/placeIdentityReview.js'
@@ -490,6 +491,86 @@ describe('immutable SaanSeoi Place ingestion', () => {
       state: 'manual',
       ssId: null,
     })
+  })
+
+  it('captures only a current accessible canonical mirror for identity review', async () => {
+    const { db, sqlite } = setup()
+    const target = await createLocalPlace(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'actor',
+    )
+    const baseline = await readPlaceIdentityBaseline(db, target.placeId, 'p')
+    if (!baseline) throw new Error('Missing baseline')
+    expect(
+      await captureMirroredPlaceIdentityReview(
+        db,
+        baseline,
+        target.revisionId,
+        'actor',
+      ),
+    ).toBeNull()
+    const source = await persistSaanSeoiPlace(db, projection())
+    const reviewId = await captureMirroredPlaceIdentityReview(
+      db,
+      baseline,
+      source.revisionId,
+      'actor',
+    )
+    expect(reviewId).toBeTruthy()
+    const view = await readPlaceIdentityReview(db, {
+      placeId: target.placeId,
+      ownerProjectId: 'p',
+      reviewId: reviewId!,
+    })
+    expect(view?.candidate.facts).toEqual(projection().facts)
+    expect(
+      await acceptPlaceIdentityReview(db, {
+        placeId: target.placeId,
+        ownerProjectId: 'p',
+        reviewId: reviewId!,
+        actorId: 'actor',
+        reason: 'Same establishment',
+      }),
+    ).toEqual({ status: 'merge-required' })
+    sqlite
+      .prepare("UPDATE place SET ownerProjectId='other' WHERE id=?")
+      .run(source.placeId)
+    expect(
+      await captureMirroredPlaceIdentityReview(
+        db,
+        baseline,
+        source.revisionId,
+        'actor',
+      ),
+    ).toBeNull()
+    sqlite
+      .prepare(
+        "UPDATE place SET ownerProjectId=NULL,sourceAvailability='missing' WHERE id=?",
+      )
+      .run(source.placeId)
+    expect(
+      await captureMirroredPlaceIdentityReview(
+        db,
+        baseline,
+        source.revisionId,
+        'actor',
+      ),
+    ).toBeNull()
+    sqlite
+      .prepare(
+        "UPDATE place SET sourceAvailability='current',ssId='changed' WHERE id=?",
+      )
+      .run(source.placeId)
+    expect(
+      await captureMirroredPlaceIdentityReview(
+        db,
+        baseline,
+        source.revisionId,
+        'actor',
+      ),
+    ).toBeNull()
   })
 
   it('captures immutable review evidence, accepts it, and keeps source ingestion idempotent', async () => {
