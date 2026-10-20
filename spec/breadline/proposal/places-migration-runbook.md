@@ -165,3 +165,33 @@ publication-unique phone corroborate the candidate, whose point is 24.4 metres a
 The isolated acceptance retained all 23 Feature-owned tables, including routing/MTR
 data, with no duplicate transition on replay. Primary local identity decisions remain
 unchanged. No raw contacts or review exports belong in tracked documentation.
+
+## Apply a reviewed identity to primary local state
+
+After a successful independent identity rehearsal:
+
+```sh
+bun scripts/places/apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY
+bun scripts/places/apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY --apply-local
+```
+
+The first command describes the operation. Only real SQLite paths beneath this
+checkout's `.wrangler/state/v3/d1/` are accepted; there is no remote mode. Application
+requires unchanged target/source identity, revision and history baselines, plus exact
+agreement of all Feature-owned rows with the successful rehearsal. A complete
+`before-primary-apply.sqlite` backup is retained before any review writes. Actual
+acceptance uses the current domain guards and records `system:reviewed-place-migration`
+as the actor, with the reviewed evidence reason and reference to the isolated review.
+
+On success `primary-apply.json` records the retained Place ID and new review IDs.
+Existing application evidence blocks repeat execution. After an interruption, inspect
+the database, backup and reviews before any retry; do not remove the evidence just to
+rerun the command. An identity/merge decision does not adopt source facts or location.
+
+The command was rehearsed on another isolated copy, then applied to donor #4 in
+primary local state. The original HYPE Place ID now carries the reviewed SaanSeoi ID;
+the mirrored candidate is a redirect. All 23 Feature-owned tables are unchanged,
+including MTR access. Integrity and foreign keys pass. A changed-Feature fixture was
+refused before backup/review writes; a repeat application was refused without writes.
+This supersedes earlier statements that primary local identity decisions are zero.
+No production database, deployment or source publisher was modified.

@@ -1717,3 +1717,20 @@ audit rows. Integrity/FKs pass; primary local and production decisions are untou
 
 This is a real-data migration rehearsal, not approval of other candidates. Source
 Address adoption and any further curation remain separate from identity acceptance.
+
+### First reviewed canonical identity applied locally (Refs #194)
+
+The [local identity application command](places-migration-runbook.md#apply-a-reviewed-identity-to-primary-local-state)
+now promotes the corroborated donor #4 Place using the retained successful rehearsal.
+It checks both identity baselines and every Feature-owned row before creating a full
+backup and applying the domain review/merge flow. The original HYPE Place ID is
+preserved; the previous mirrored candidate becomes a redirect. All 23 Feature-owned
+tables remain exact, including accepted revision groups, local branch values and MTR
+access. Integrity/FKs pass. Primary local now contains this one reviewed transition;
+earlier zero-decision statements describe the state before this application.
+
+Identity acceptance remains separate from source adoption. Existing Feature values
+are retained until an explicit preserving reassociation or policy/adoption review.
+The established reassociation service derives overrides for differing values while
+leaving equal values inheritable. No source facts/location were adopted in this step.
+Nothing was deployed, pushed or applied to production.
