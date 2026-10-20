@@ -1,3 +1,4 @@
+import { ProjectFlagsSchema } from '#lib/projects/flags.js'
 import { ProjectPlacePolicySchema } from '#lib/places/model.js'
 import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES, DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
@@ -166,6 +167,11 @@ export const ProjectLicenseSchema: z.ZodType<ProjectLicense> = z.object({
   }),
 })
 
+const ProjectFlagsBase = z.preprocess(
+  toProjectJsonValue,
+  ProjectFlagsSchema.default({}),
+)
+
 const ProjectLicenseBase = z.preprocess(
   value => normalizeProjectLicense(parseProjectLicense(value)),
   ProjectLicenseSchema.default(createDefaultProjectLicense()),
@@ -178,6 +184,7 @@ const ProjectLicenseBase = z.preprocess(
 export const ProjectBase = createSelectSchema(project).extend({
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().default(null),
   markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().default(null),
+  flags: ProjectFlagsBase,
   capabilities: ProjectCapabilitiesBase,
   license: ProjectLicenseBase,
 })
@@ -185,6 +192,7 @@ export const ProjectBase = createSelectSchema(project).extend({
 export const ProjectInsert = createInsertSchema(project).extend({
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().default(null),
   markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().default(null),
+  flags: ProjectFlagsBase,
   capabilities: ProjectCapabilitiesBase,
   license: ProjectLicenseBase,
 })
@@ -192,6 +200,7 @@ export const ProjectInsert = createInsertSchema(project).extend({
 export const ProjectUpdate = createUpdateSchema(project).extend({
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().optional(),
   markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().optional(),
+  flags: ProjectFlagsBase.optional(),
   capabilities: ProjectCapabilitiesBase.optional(),
   license: ProjectLicenseBase.optional(),
 })
@@ -351,6 +360,7 @@ export const ProjectEntityFormData = z.object({
   useAllInOrgContext: FormBoolean.default(false),
   i18n: ProjectI18nByLocaleFormData,
   license: ProjectLicenseBase,
+  flags: ProjectFlagsBase,
   capabilities: ProjectCapabilitiesBase,
   userRoles: ProjectUserRolesFormData.optional(),
   properties: ProjectPropertiesFormData,
@@ -427,6 +437,7 @@ export const ProjectProfile = z.enum([
 ])
 
 const ProjectListFields = ProjectBase.pick({
+  flags: true,
   cardStyleCode: true,
   markerStyleCode: true,
   useAllInOrgContext: true,
@@ -472,6 +483,7 @@ export const ProjectAdminProfileAPI = ProjectBase.extend({
 
 /** Minimal identity and action state for paged resource lists. */
 export const ProjectCompactProfileAPI = ProjectBase.pick({
+  flags: true,
   cardStyleCode: true,
   markerStyleCode: true,
   useAllInOrgContext: true,

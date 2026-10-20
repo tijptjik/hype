@@ -1514,5 +1514,8 @@
   "publish_children__project": "你是否也想自动发布此项目下的所有图层和地点？",
   "publish_children__layer": "你是否也想自动发布此图层下的所有地点？",
   "publish_children__parent_only": "保留子资源的发布状态",
-  "publish_children__all": "全部发布"
+  "publish_children__all": "全部发布",
+  "project_advanced": "高级",
+  "project_auto_publish_classified_images": "发布地点时自动发布所有已分类图片",
+  "project_auto_feature_first_image": "发布地点时自动将第一张图片设为精选"
 }

@@ -33,6 +33,11 @@ import { createDefaultProjectLicense } from '#lib/db/services/licence.js'
  * - Archive status
  */
 export const project = sqliteTable('project', {
+  // Extensible project preferences and publication policies; absent keys inherit defaults.
+  flags: text('flags', { mode: 'json' })
+    .$type<import('#lib/projects/flags.js').ProjectFlags>()
+    .notNull()
+    .default({}),
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),

@@ -6,6 +6,7 @@ import FileTextIcon from 'virtual:icons/proicons/file-text'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import Layers3Icon from 'virtual:icons/proicons/layers'
 import MapPinIcon from 'virtual:icons/proicons/location'
+import SettingsIcon from 'virtual:icons/proicons/settings'
 import ShieldCheckIcon from 'virtual:icons/proicons/shield-checkmark'
 import TagIcon from 'virtual:icons/proicons/tag'
 import type { Component } from 'svelte'
@@ -22,11 +23,13 @@ export const ADMIN_FACETS = {
   fields: 'fields',
   layers: 'layers',
   policies: 'policies',
+  advanced: 'advanced',
 } as const satisfies Record<FacetType, FacetType>
 
 export type HubFacet = 'core' | 'layers' | 'fields' | 'images' | 'policies'
 export type OrganisationFacet = 'core' | 'capabilities' | 'fields' | 'images'
 export type ProjectFacet =
+  | 'advanced'
   | 'core'
   | 'capabilities'
   | 'layers'
@@ -36,6 +39,7 @@ export type ProjectFacet =
 export type LayerFacet = 'core' | 'fields'
 
 export const ADMIN_FACET_DEFINITIONS = {
+  [ADMIN_FACETS.advanced]: { label: () => m.project_advanced(), icon: SettingsIcon },
   [ADMIN_FACETS.core]: {
     label: () => m.resources__profile(),
     icon: FormInputIcon,
@@ -67,6 +71,7 @@ export const ADMIN_FACET_DEFINITIONS = {
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
+  [ADMIN_FACETS.advanced]: () => m.project_advanced(),
   [ADMIN_FACETS.core]: () => m.admin__forms_common_descriptors(),
   [ADMIN_FACETS.capabilities]: () => m.resources__capabilities(),
   [ADMIN_FACETS.address]: () => m.feature__address(),
@@ -117,6 +122,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.fields,
     ADMIN_FACETS.policies,
     ADMIN_FACETS.images,
+    ADMIN_FACETS.advanced,
   ],
   layer: [ADMIN_FACETS.core, ADMIN_FACETS.fields],
   feature: [

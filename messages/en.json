@@ -1514,5 +1514,8 @@
   "publish_children__project": "Do you also want to automatically publish all layers and features associated with this project?",
   "publish_children__layer": "Do you also want to automatically publish all features associated with this layer?",
   "publish_children__parent_only": "Keep child states",
-  "publish_children__all": "Publish all"
+  "publish_children__all": "Publish all",
+  "project_advanced": "Advanced",
+  "project_auto_publish_classified_images": "Auto-publish all classified images when publishing their feature",
+  "project_auto_feature_first_image": "Automatically classify the first image as Featured when publishing its feature"
 }

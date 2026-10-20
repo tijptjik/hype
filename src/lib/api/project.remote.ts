@@ -700,6 +700,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       organisationId: data.organisationId,
       code: normalizedCode,
       useAllInOrgContext: data.useAllInOrgContext,
+      flags: data.flags,
       cardStyleCode: data.cardStyleCode,
       markerStyleCode: data.markerStyleCode,
       license: data.license,
@@ -781,6 +782,12 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   }
   if (data.useAllInOrgContext !== current.useAllInOrgContext) {
     submittedDataBeforeHydration.useAllInOrgContext = data.useAllInOrgContext
+  }
+  if (
+    toProjectStableAuthzSignature(data.flags) !==
+    toProjectStableAuthzSignature(current.flags ?? {})
+  ) {
+    submittedDataBeforeHydration.flags = data.flags
   }
   if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataBeforeHydration.cardStyleCode = data.cardStyleCode
@@ -906,6 +913,12 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   if (i18nChanged) submittedDataForUpdate.i18n = data.i18n
   if (data.useAllInOrgContext !== current.useAllInOrgContext) {
     submittedDataForUpdate.useAllInOrgContext = data.useAllInOrgContext
+  }
+  if (
+    toProjectStableAuthzSignature(data.flags) !==
+    toProjectStableAuthzSignature(current.flags ?? {})
+  ) {
+    submittedDataForUpdate.flags = data.flags
   }
   if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataForUpdate.cardStyleCode = data.cardStyleCode
@@ -1048,6 +1061,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         organisationId: data.organisationId,
         code: normalizedCode,
         useAllInOrgContext: data.useAllInOrgContext,
+        flags: data.flags,
         cardStyleCode: data.cardStyleCode,
         markerStyleCode: data.markerStyleCode,
         ...(persistedLicense ? { license: persistedLicense } : {}),

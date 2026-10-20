@@ -315,6 +315,7 @@ export const toProjectSubmittedFields = (
   if ('organisationId' in data) fields.push('organisationId')
   if ('code' in data) fields.push('code')
   if ('i18n' in data) fields.push('i18n')
+  if ('flags' in data) fields.push('flags')
   if ('cardStyleCode' in data) fields.push('cardStyleCode')
   if ('markerStyleCode' in data) fields.push('markerStyleCode')
   if ('useAllInOrgContext' in data) fields.push('useAllInOrgContext')

@@ -1,4 +1,6 @@
 <script lang="ts">
+import { ProjectFlagsSchema } from '#lib/projects/flags.js'
+import { Card, Switch } from '#lib/bits/custom/index.js'
 import { getPlaceUpdatePolicy } from '#lib/api/place.remote.js'
 import PlacePolicyPanel from '#lib/bits/patterns/forms/placeUpdatePolicy/PlacePolicyPanel.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
@@ -626,6 +628,37 @@ const configuredProjectForm = configureForm(() => ({
 // Bound form controller for template/actions.
 const formCtx = $derived(configuredProjectForm())
 // All locale controls edit one project-wide naming policy.
+const projectFlags = $derived(
+  ProjectFlagsSchema.parse(formCtx.form.fields.value().data?.flags ?? {}),
+)
+
+/**
+ * Updates an image publication preference without replacing other project flags.
+ * @param key Image policy being edited.
+ * @param checked Next switch value.
+ * @returns Nothing; updates and revalidates the form draft.
+ */
+function setImagePublicationFlag(
+  key: 'autoPublishClassifiedImages' | 'autoFeatureFirstImage',
+  checked: boolean | null,
+): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.flags = { ...projectFlags, [key]: checked === true }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+/** Registers the extensible flags object with the remote form.
+ * @returns Hidden JSON field attributes for server validation.
+ */
+function getHiddenProjectFlagsAttrs(): Record<string, unknown> {
+  const { as } = formCtx.form.fields.data.flags as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }
+  return as('hidden', JSON.stringify(projectFlags))
+}
+
 const useAllInOrgContext = $derived(
   formCtx.form.fields.value().data?.useAllInOrgContext === true ||
     formCtx.form.fields.value().data?.useAllInOrgContext === 'true',
@@ -3103,7 +3136,65 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
 
+    <Main.Facet
+      isVisible={activeFacet === 'advanced'}
+      transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('advanced', 'previous')}
+      nextAction={buildFacetNavAction('advanced', 'next')}
+      class="left-0! right-0!"
+      attrs={{ 'data-facet-id': 'advanced' }}
+    >
+      <FormSurface>
+        <section class="flex min-h-0 flex-col gap-4">
+          <SectionHeader title={m.project_advanced()} />
+          <div class="mx-6 flex min-w-0 flex-col gap-3">
+            {#each [
+              {
+                key: 'autoPublishClassifiedImages',
+                label: m.project_auto_publish_classified_images(),
+              },
+              {
+                key: 'autoFeatureFirstImage',
+                label: m.project_auto_feature_first_image(),
+              },
+            ] as setting (setting.key)}
+              <Card.Root
+                size="md"
+                class="min-h-14 rounded-lg border border-border bg-foreground/4 bg-none shadow-none before:hidden"
+              >
+                <label
+                  for={`project-${setting.key}`}
+                  class="flex min-w-0 flex-1 items-center px-5 py-3 text-sm font-semibold"
+                  >{setting.label}</label
+                >
+                <Card.Actions
+                  padding="md"
+                  bg="none"
+                  class="w-auto! min-w-0! shrink-0 border-l border-border/60"
+                >
+                  <Switch
+                    id={`project-${setting.key}`}
+                    checked={projectFlags[setting.key] !== false}
+                    disabled={!isEditing || formCtx.submitting}
+                    size="sm"
+                    onCheckedChange={checked =>
+                      setImagePublicationFlag(
+                        setting.key as
+                          | 'autoPublishClassifiedImages'
+                          | 'autoFeatureFirstImage',
+                        checked,
+                      )}
+                  />
+                </Card.Actions>
+              </Card.Root>
+            {/each}
+          </div>
+        </section>
+      </FormSurface>
+    </Main.Facet>
     <div class="hidden" aria-hidden="true">
+      <input {...getHiddenProjectFlagsAttrs()}>
       <input
         {...formCtx.form.fields.data.useAllInOrgContext.as(
           'hidden',
