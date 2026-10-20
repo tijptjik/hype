@@ -134,6 +134,8 @@ simple = { limit = 30, period = 60 }
 
 [env.production.vars]
 ENVIRONMENT = "production"
+# Dedicated HUB_DOMAINS_API_TOKEN secret: DNS Read and Workers Scripts Write.
+HUB_DOMAINS_ZONE_ID = "f001c808ff392341b958e89aedad3dfa"
 # Admin operational analytics intentionally monitors production, including local dev.
 ANALYTICS_DATABASE_ID = "7786af0e-3782-47f8-b70d-de645ba836ad"
 ANALYTICS_QUEUE_IDS = "e4fe727b98e84d44a37fa9d0f4a86005,a8e1bc6c68be4f5fa5fa12113fb58583"
@@ -211,6 +213,10 @@ custom_domain = true
 pattern = "breadline.hype.hk"
 custom_domain = true
 
+[[env.production.routes]]
+pattern = "mappinghk.hype.hk"
+custom_domain = true
+
 ########
 # PREVIEW ENVIRONMENT
 ###
@@ -233,7 +239,10 @@ namespace_id = "21303"
 simple = { limit = 30, period = 60 }
 
 [env.preview.vars]
+# Account ID is not a secret; preview needs it for domain registration.
+CLOUDFLARE_ACCOUNT_ID = "a6eeace4b6d9f8e07ab307964e74d801"
 ENVIRONMENT = "preview"
+HUB_DOMAINS_ZONE_ID = "f001c808ff392341b958e89aedad3dfa"
 # Admin operational analytics intentionally monitors production, including local dev.
 ANALYTICS_DATABASE_ID = "7786af0e-3782-47f8-b70d-de645ba836ad"
 ANALYTICS_QUEUE_IDS = "e4fe727b98e84d44a37fa9d0f4a86005,a8e1bc6c68be4f5fa5fa12113fb58583"
