@@ -29,6 +29,7 @@ import X from 'virtual:icons/proicons/cancel'
 import { FirstClassResource, Panel, ResourcePath } from '#lib/enums.js'
 // TYPES
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
+import type { FacetType } from '#lib/context/facets.js'
 import type { AdminCtx } from '#lib/context/admin.svelte.js'
 import type {
   HeaderActionConfig,
@@ -574,10 +575,17 @@ export function useAdminHeaderModel(
       !adminCtx.listUi.state.isControlBarVisible[resourceType]
   }
 
-  // Commit facet intent to the URL; the surface projection follows route changes.
+  /**
+   * Activate the selected tab and persist its hash, including retries after a page fallback.
+   * @param ref Facet exposed by the current header.
+   * @returns Nothing.
+   */
   function handleFacetChange(ref: string): void {
     if (typeof window === 'undefined') return
 
+    // A page can fall back to Profile while the URL still names Fields. Restore
+    // the selected facet even when there is no URL change for SvelteKit to project.
+    adminCtx.setFacet(ref as FacetType)
     const url = new URL(window.location.href)
     url.hash = ref
     if (url.href === window.location.href) return
