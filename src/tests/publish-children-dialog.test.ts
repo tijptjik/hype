@@ -65,13 +65,11 @@ it.each([false, true])(
       onChoice,
       onCancel: vi.fn(),
     })
-    expect(
-      await screen.findByRole('dialog', { name: 'Preview publication' }),
-    ).toBeTruthy()
+    expect(await screen.findByRole('dialog', { name: 'Preview map' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Publish all' })).toBeNull()
     await fireEvent.click(
       screen.getByRole('button', {
-        name: publishChildren ? 'Preview all children' : 'Preview existing selections',
+        name: publishChildren ? 'Include unpublished' : 'Current selection',
       }),
     )
     expect(onChoice).toHaveBeenCalledExactlyOnceWith(publishChildren)

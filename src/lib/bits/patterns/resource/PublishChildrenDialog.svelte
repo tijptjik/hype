@@ -33,18 +33,28 @@ const description = $derived(
   description={mode === 'preview' ? m.publication_preview__description() : description}
   {onCancel}
 >
-  <Button text={m.cancel()} color="neutral" style="ghost" onClick={onCancel} />
-  <Button
-    text={mode === 'preview'
-      ? m.publication_preview__parent_only()
-      : m.publish_children__parent_only()}
-    color="neutral"
-    style="outline"
-    onClick={() => onChoice(false)}
-  />
-  <Button
-    text={mode === 'preview' ? m.publication_preview__all() : m.publish_children__all()}
-    color="success"
-    onClick={() => onChoice(true)}
-  />
+  <div class="flex w-full flex-col gap-3">
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <Button
+        text={mode === 'preview'
+          ? m.publication_preview__parent_only()
+          : m.publish_children__parent_only()}
+        color="neutral"
+        style="outline"
+        class="w-full justify-center"
+        onClick={() => onChoice(false)}
+      />
+      <Button
+        text={mode === 'preview'
+          ? m.publication_preview__all()
+          : m.publish_children__all()}
+        color="success"
+        class="w-full justify-center"
+        onClick={() => onChoice(true)}
+      />
+    </div>
+    <div class="flex justify-end">
+      <Button text={m.cancel()} color="neutral" style="ghost" onClick={onCancel} />
+    </div>
+  </div>
 </ChoiceDialog>

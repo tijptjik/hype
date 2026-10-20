@@ -2314,6 +2314,7 @@ const canPreview = $derived.by(() => {
   if (!currentUser) return false
   return (
     isCurrentRefLoaded &&
+    !optimisticProjectData?.isPublished &&
     !project?.data?.isArchived &&
     canPreviewPublication(currentUser, currentUser.roles ?? [], {
       organisationId: project?.data?.organisationId ?? '',
