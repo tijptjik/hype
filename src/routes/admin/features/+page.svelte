@@ -45,7 +45,6 @@ import CopyrightIcon from 'virtual:icons/proicons/copyright'
 // TYPES
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
-import type { FeatureRowModel } from '#lib/client/services/featureRows.types.js'
 import type {
   FeatureTextSearchWorkerRequest,
   FeatureTextSearchWorkerResponse,
@@ -426,25 +425,6 @@ const baseEntities = $derived(
 const baseEntitiesById = $derived.by(
   () => new Map(baseEntities.map(feature => [feature.id, feature])),
 )
-const rowModelsById = $derived.by(() => {
-  const userPreferences = adminCtx.view.getUserPreferences()
-  const entries = displayEntities.map(
-    feature =>
-      [
-        feature.id,
-        getCachedFeatureRowModel({
-          appCtx: adminCtx.view,
-          feature,
-          localeKey,
-          activeTranslationLocales,
-          isSuperAdmin,
-          userPreferences,
-        }),
-      ] as const,
-  )
-
-  return new Map<string, FeatureRowModel>(entries)
-})
 
 function buildFeatureSearchIndex(feature: Feature) {
   const textObject = feature.i18n?.[localeKey] ?? feature.i18n?.en
@@ -454,36 +434,6 @@ function buildFeatureSearchIndex(feature: Feature) {
     description: textObject?.description ?? '',
     displayAddress: textObject?.displayAddress ?? '',
     contributor: feature.contributor?.name ?? '',
-  }
-}
-
-function getFeatureTitle(feature: Feature): string {
-  const textObject = feature.i18n?.[localeKey] ?? feature.i18n?.en
-  return textObject?.title?.trim() || feature.id
-}
-
-function getFeatureDescription(feature: Feature): string {
-  const textObject = feature.i18n?.[localeKey] ?? feature.i18n?.en
-  return textObject?.displayAddress?.trim() || textObject?.description?.trim() || ''
-}
-
-function toFallbackFeatureRowModel(feature: Feature): FeatureRowModel {
-  return {
-    id: feature.id,
-    title: getFeatureTitle(feature),
-    description: getFeatureDescription(feature),
-    imageAlt:
-      (feature.image as { altText?: string } | null)?.altText ?? 'Feature image',
-    isPublished: feature.isPublished,
-    isPendingReview: feature.isPendingReview,
-    stats: {
-      status: {},
-      content: {},
-      translation: {},
-      image: {},
-      category: {},
-      freeform: {},
-    },
   }
 }
 
@@ -1091,10 +1041,18 @@ function updateRowFocus(index: number) {
     selectionState,
     isSelectionModeActive,
   )}
-    {@const rowModel = rowModelsById.get(entity.id)}
+    <!-- Calculate only mounted rows, after the virtual list's scrolling placeholder settles. -->
+    {@const rowModel = getCachedFeatureRowModel({
+      appCtx: adminCtx.view,
+      feature: entity,
+      localeKey,
+      activeTranslationLocales,
+      isSuperAdmin,
+      userPreferences: adminCtx.view.getUserPreferences(),
+    })}
     <FeatureRow
       {entity}
-      model={rowModel ?? toFallbackFeatureRowModel(entity)}
+      model={rowModel}
       {index}
       {adminCtx}
       onImageClick={openModal}

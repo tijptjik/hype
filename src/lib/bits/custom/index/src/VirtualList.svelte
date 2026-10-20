@@ -7,17 +7,19 @@ import { prefersReducedMotion } from 'svelte/motion'
 import type { Snippet } from 'svelte'
 // BITS
 import { Scrollbar } from '#lib/bits/custom/scrollbar/index.js'
+import Secondary from './Secondary.svelte'
 // CONTEXT
 import { setVirtualListRenderContext } from './virtualListContext'
 
 const DEFAULT_ITEM_HEIGHT = 50
-const SECONDARY_RENDER_IDLE_MS = 50
+const SECONDARY_RENDER_IDLE_MS = 80
 
 let {
   items,
   height,
   itemHeight: estimatedItemHeight,
   children,
+  placeholder,
   getKey,
   bufferBefore = 20,
   bufferAfter = 25,
@@ -42,6 +44,8 @@ let {
   height: string
   itemHeight?: number | undefined
   children: Snippet<[T, number]>
+  /** Lightweight content for newly mounted rows until input settles. */
+  placeholder?: Snippet<[number]>
   getKey?: (item: T) => string | number
   bufferBefore?: number
   bufferAfter?: number
@@ -102,10 +106,6 @@ let heightMap: Array<number> = $state([])
 let averageHeight: number = $state(DEFAULT_ITEM_HEIGHT)
 let viewportHeight = $state(0)
 
-let isChrome =
-  typeof window !== 'undefined' &&
-  /Chrome/.test(navigator.userAgent) &&
-  !/Edg|OPR/.test(navigator.userAgent)
 let isMounted: boolean = $state(false)
 
 let resizeObserver: ResizeObserver | null = null
@@ -149,6 +149,7 @@ $effect.pre(() => {
 
 let scrollRAF: number | null = null
 let currentScrollTop = $state(0)
+let previousScrollTop = 0
 let secondaryRenderTimeout = $state<ReturnType<typeof setTimeout> | null>(null)
 
 let renderContext = $state({
@@ -196,10 +197,7 @@ function setSecondaryRenderingPending(): void {
 function scheduleSecondaryRenderingResume(): void {
   clearSecondaryRenderTimeout()
 
-  if (renderContext.isScrollbarDragging) {
-    return
-  }
-
+  // A paused thumb drag should also resolve placeholders without requiring release.
   secondaryRenderTimeout = setTimeout(() => {
     renderContext.isScrolling = false
     renderContext.canRenderSecondary = true
@@ -221,14 +219,38 @@ function clampScrollTop(nextScrollTop: number): number {
 }
 
 $effect(() => {
-  items
-  viewportHeight
-  itemHeight
+  const nextItems = items
+  const nextViewportHeight = viewportHeight
+  const nextItemHeight = itemHeight
+  canResize
+  padding
+  applyBottomOverflow
+  bufferBefore
+  bufferAfter
 
   if (isMounted) {
-    void refresh(items, viewportHeight, itemHeight)
+    // Internal range reads must not subscribe refresh to every scroll update.
+    untrack(() => void refresh(nextItems, nextViewportHeight, nextItemHeight))
   }
 })
+
+/**
+ * Updates fixed-height geometry without walking or measuring preceding rows.
+ * @returns Nothing; updates the visible range and its surrounding spacers.
+ * @remarks Both spacers retain padding and bottom overflow throughout scrolling.
+ */
+function updateFixedRange(): void {
+  if (!viewport) return
+  const stride = itemHeight || DEFAULT_ITEM_HEIGHT
+  const offset = Math.max(0, viewport.scrollTop - padding)
+  currentScrollTop = viewport.scrollTop
+  start = Math.min(items.length, Math.floor(offset / stride))
+  end = Math.min(items.length, Math.ceil((offset + viewportHeight) / stride))
+  top = Math.max(0, start - bufferBefore) * stride
+  bottom =
+    (items.length - Math.min(items.length, end + bufferAfter)) * stride +
+    getBottomOverflow()
+}
 
 async function refresh(
   items: Array<T>,
@@ -239,6 +261,11 @@ async function refresh(
   const currentRenderedRows = renderedRows
 
   if (!currentViewport || !currentRenderedRows) {
+    return
+  }
+
+  if (!canResize) {
+    updateFixedRange()
     return
   }
 
@@ -326,27 +353,45 @@ async function refresh(
   }
 }
 
-async function handleScroll(): Promise<void> {
-  setSecondaryRenderingPending()
+/**
+ * Keeps normal scrolling populated and defers rendering only for large jumps.
+ * @returns Nothing; schedules one visible-range update per animation frame.
+ */
+function handleScroll(): void {
+  const nextScrollTop = viewport?.scrollTop ?? 0
+  const distance = Math.abs(nextScrollTop - previousScrollTop)
+  previousScrollTop = nextScrollTop
+
+  // Normal input must keep filling the overscan window without waiting for idle.
+  if (
+    distance >
+    Math.max(
+      viewportHeight * 2,
+      (itemHeight || DEFAULT_ITEM_HEIGHT) * Math.max(bufferBefore, bufferAfter),
+    )
+  ) {
+    setSecondaryRenderingPending()
+  } else if (distance > 0) {
+    renderContext.isScrolling = true
+    renderContext.canRenderSecondary = true
+  }
   scheduleSecondaryRenderingResume()
 
-  if (isChrome) {
-    await handleScrollImmediate()
-    return
-  }
-
-  if (scrollRAF) {
-    cancelAnimationFrame(scrollRAF)
-  }
-
-  scrollRAF = requestAnimationFrame(async () => {
-    await handleScrollImmediate()
+  // Coalesce input into one range update per frame on every browser.
+  if (scrollRAF !== null) return
+  scrollRAF = requestAnimationFrame(() => {
     scrollRAF = null
+    void handleScrollImmediate()
   })
 }
 
 async function handleScrollImmediate(): Promise<void> {
   if (!viewport || !renderedRows) {
+    return
+  }
+
+  if (!canResize) {
+    updateFixedRange()
     return
   }
 
@@ -441,7 +486,7 @@ async function handleScrollImmediate(): Promise<void> {
   const remaining = items.length - nextRenderEnd
   const estimatedHeight = canResize ? averageHeight : itemHeight || DEFAULT_ITEM_HEIGHT
 
-  bottom = remaining * estimatedHeight
+  bottom = remaining * estimatedHeight + getBottomOverflow()
 }
 
 function handleHeightChange(): void {
@@ -453,7 +498,7 @@ function handleVirtualScroll(nextScrollTop: number): void {
     return
   }
 
-  setSecondaryRenderingPending()
+  // Let the scroll event assess distance; thumb input alone does not defer rows.
   viewport.scrollTop = clampScrollTop(nextScrollTop)
 }
 
@@ -464,12 +509,8 @@ function handleVirtualInteractionChange(isActive: boolean): void {
 
   renderContext.isScrollbarDragging = isActive
 
-  if (isActive) {
-    setSecondaryRenderingPending()
-    return
-  }
-
-  scheduleSecondaryRenderingResume()
+  // Grabbing the thumb alone is not a reason to replace incoming rows with skeletons.
+  if (!isActive) scheduleSecondaryRenderingResume()
 }
 
 $effect(() => {
@@ -480,16 +521,13 @@ $effect(() => {
   renderedRows = contents.getElementsByTagName('svelte-virtual-list-row')
   resizeObserver = new ResizeObserver(handleHeightChange)
 
-  if (isChrome) {
-    viewport.addEventListener('scroll', handleScroll, { passive: true })
-  }
+  const scrollViewport = viewport
+  scrollViewport.addEventListener('scroll', handleScroll, { passive: true })
 
   isMounted = true
 
   return () => {
-    if (isChrome) {
-      viewport?.removeEventListener('scroll', handleScroll)
-    }
+    scrollViewport.removeEventListener('scroll', handleScroll)
 
     if (scrollRAF) {
       cancelAnimationFrame(scrollRAF)
@@ -507,7 +545,6 @@ $effect(() => {
 <svelte-virtual-list-viewport
   bind:this={viewport}
   bind:offsetHeight={viewportHeight}
-  onscroll={isChrome ? undefined : handleScroll}
   style="height: {height};"
 >
   <svelte-virtual-list-contents
@@ -532,7 +569,16 @@ $effect(() => {
               easing: cubicOut,
             }}
           >
-            {@render cell(entry.data, entry.index)}
+            {#if placeholder}
+              <Secondary>
+                {@render cell(entry.data, entry.index)}
+                {#snippet fallback()}
+                  {@render placeholder(Math.max(0, itemHeight - rowGap))}
+                {/snippet}
+              </Secondary>
+            {:else}
+              {@render cell(entry.data, entry.index)}
+            {/if}
           </div>
         {/each}
       </div>
@@ -541,7 +587,18 @@ $effect(() => {
         <svelte-virtual-list-row
           style={`--bits-virtual-list-row-gap: ${Math.max(0, rowGap)}px;`}
         >
-          {@render children(row.data, row.index)}
+          {#if placeholder && !canResize}
+            <Secondary>
+              {@render children(row.data, row.index)}
+              {#snippet fallback()}
+                {@render placeholder(
+                  Math.max(0, (itemHeight || DEFAULT_ITEM_HEIGHT) - rowGap),
+                )}
+              {/snippet}
+            </Secondary>
+          {:else}
+            {@render children(row.data, row.index)}
+          {/if}
         </svelte-virtual-list-row>
       {/each}
     {/if}
@@ -553,7 +610,7 @@ $effect(() => {
     virtual={true}
     {viewport}
     {viewportHeight}
-    contentsHeight={totalContentHeight}
+    contentsHeight={totalContentHeight + getBottomOverflow()}
     scrollTop={currentScrollTop}
     onVirtualScroll={handleVirtualScroll}
     onVirtualInteractionChange={handleVirtualInteractionChange}
@@ -612,7 +669,7 @@ svelte-virtual-list-row * {
   svelte-virtual-list-viewport {
     overscroll-behavior: contain;
     scroll-behavior: auto;
-    overflow-anchor: auto;
+    overflow-anchor: none;
   }
 }
 

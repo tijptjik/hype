@@ -9,6 +9,8 @@ export type FeatureStatsProps = {
 }
 
 export type FeatureStatPipsProps = {
+  /** Dense virtual rows use native labels without mounting a tooltip tree per dot. */
+  tooltipMode?: 'rich' | 'native'
   title: string
   icon?: Component
   statuses: Record<string, boolean | null>

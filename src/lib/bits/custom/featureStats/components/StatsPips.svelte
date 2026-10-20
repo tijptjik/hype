@@ -2,7 +2,13 @@
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import type { FeatureStatPipsProps } from '../featureStats.types'
 
-let { title, icon, statuses, showTitle = true }: FeatureStatPipsProps = $props()
+let {
+  title,
+  icon,
+  statuses,
+  showTitle = true,
+  tooltipMode = 'rich',
+}: FeatureStatPipsProps = $props()
 </script>
 
 <div class="bits-theme bits-feature-stat">
@@ -23,20 +29,23 @@ let { title, icon, statuses, showTitle = true }: FeatureStatPipsProps = $props()
 
   <div class="flex gap-1.5">
     {#each Object.entries(statuses) as [label, status]}
-      <SimpleTooltip>
-        {#snippet trigger()}
-          <div
-            class={`bits-feature-stat__pip ${
-              status === true
-                ? 'bits-feature-stat__pip--ok'
-                : status === false
-                  ? 'bits-feature-stat__pip--error'
-                  : 'bits-feature-stat__pip--pending'
-            }`}
-          ></div>
-        {/snippet}
-        {label}
-      </SimpleTooltip>
+      {@const pipClass = `bits-feature-stat__pip ${
+        status === true
+          ? 'bits-feature-stat__pip--ok'
+          : status === false
+            ? 'bits-feature-stat__pip--error'
+            : 'bits-feature-stat__pip--pending'
+      }`}
+      {#if tooltipMode === 'native'}
+        <span class={pipClass} title={label} role="img" aria-label={label}></span>
+      {:else}
+        <SimpleTooltip>
+          {#snippet trigger()}
+            <div class={pipClass}></div>
+          {/snippet}
+          {label}
+        </SimpleTooltip>
+      {/if}
     {/each}
   </div>
 </div>

@@ -157,6 +157,7 @@ function handleDescriptionClick(): void {
                 icon={section.icon}
                 statuses={section.statuses}
                 showTitle={false}
+                tooltipMode="native"
               />
             </div>
           {/each}

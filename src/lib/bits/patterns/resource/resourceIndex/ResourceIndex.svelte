@@ -10,6 +10,7 @@ import ResourceEmptyState from './components/ResourceEmptyState.svelte'
 import ResourceLoadingState from './components/ResourceLoadingState.svelte'
 import ResourceTableRow from './components/ResourceTableRow.svelte'
 // BITS
+import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import { VirtualList } from '#lib/bits/custom/index/src/index.js'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
@@ -186,6 +187,20 @@ $effect(() => {
   {/if}
 {/snippet}
 
+{#snippet scrollPlaceholder(
+  contentHeight: number,
+)}
+  <div
+    aria-hidden="true"
+    class="flex items-center gap-4 overflow-hidden rounded-xl border border-border bg-panel px-4"
+    style:height={`${contentHeight}px`}
+  >
+    <Skeleton class="size-10 shrink-0 rounded-lg" />
+    <Skeleton class="h-4 w-1/3" />
+    <Skeleton class="ml-auto h-3 w-1/5" />
+  </div>
+{/snippet}
+
 <div
   bind:clientWidth={gridWidth}
   bind:this={listContainer}
@@ -204,6 +219,7 @@ $effect(() => {
           {columnCount}
           columnGap={GRID_COLUMN_GAP_PX}
           {children}
+          placeholder={scrollPlaceholder}
           getKey={item => item.id}
           height="100%"
           {itemHeight}
