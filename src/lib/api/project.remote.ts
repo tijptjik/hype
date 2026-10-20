@@ -12,7 +12,7 @@ import type { ListResponse, EntityResponse } from '#lib/types.js'
 // Register panel query families for bounded single-flight mutation refreshes.
 import './resources.remote'
 // SVELTE
-import { requested, type RemoteQuery } from '$app/server'
+import type { RemoteQuery } from '$app/server'
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
 
@@ -1203,10 +1203,8 @@ export const publishProject = guardedCommand(
       publisherId: user.id,
     })
 
-    // Settle client optimistic overrides with the complete persisted relation graph.
-    void requested(getProjectQuery, 1).refreshAll()
-
-    void requested(getProjectsQuery, 1).refreshAll()
+    // guardedCommand refreshes every requested editor and hierarchy query variant.
+    // Do not consume only one variant here: skipped queries become client errors.
 
     return toBooleanStateResponseShape(persisted, 'isPublished')
   },
@@ -1254,10 +1252,8 @@ export const archiveProject = guardedCommand(
       },
     )
 
-    // Settle client optimistic overrides with the complete persisted relation graph.
-    void requested(getProjectQuery, 1).refreshAll()
-
-    void requested(getProjectsQuery, 1).refreshAll()
+    // guardedCommand refreshes every requested editor and hierarchy query variant.
+    // Do not consume only one variant here: skipped queries become client errors.
     return toBooleanStateResponseShape(persisted, 'isArchived')
   },
 )

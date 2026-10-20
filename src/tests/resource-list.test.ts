@@ -182,3 +182,24 @@ it('preserves populated results while the next view loads', async () => {
   expect(list.isInitialised).toBe(true)
   expect(list.rows).toEqual([])
 })
+
+it('identifies equivalent native pages across argument and nested key ordering', async () => {
+  const first = controlledQuery()
+  const second = controlledQuery()
+  const a = new ResourceList(() => first.query)
+  const b = new ResourceList(() => second.query)
+  const pendingA = a.load({
+    type: 'project',
+    meta: { isAdminRequest: true, scope: 'admin' },
+    conditions: { isArchived: false, isPublished: null },
+  })
+  const pendingB = b.load({
+    conditions: { isPublished: null, isArchived: false },
+    meta: { scope: 'admin', isAdminRequest: true },
+    type: 'project',
+  })
+  first.resolve({ data: [], nextCursor: null })
+  second.resolve({ data: [], nextCursor: null })
+  await Promise.all([pendingA, pendingB])
+  expect(a.pageIdentity(first.query)).toBe(b.pageIdentity(second.query))
+})

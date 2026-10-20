@@ -68,8 +68,6 @@ import {
   normalizeProjectCapabilitiesForSubmit,
   normalizeProjectLayersForSubmit,
   normalizePropertiesForSubmit,
-  overrideProjectEntityBoolean,
-  overrideProjectListItemBoolean,
   resolveProjectCapabilityDefinitionState,
   resolveProjectCapabilitySourceOrganisationId,
   resolveDefaultProjectOrganisationIdForCreate,
@@ -123,6 +121,7 @@ import { ProjectPreflightFormData } from '#lib/db/zod/schema/project.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
+import PublishChildrenDialog from '#lib/bits/patterns/resource/PublishChildrenDialog.svelte'
 import { Checkbox } from '#lib/bits/custom/index.js'
 import FormCardStyleSection from '#lib/bits/patterns/forms/formCardStyleSection/FormCardStyleSection.svelte'
 import type { CardStyleCode } from '#lib/features/cardStyle.js'
@@ -2164,80 +2163,156 @@ async function onSearchParentOrganisations(
   return Array.from(byId.values())
 }
 
+/**
+ * Resolves the refreshed project without replacing editor data on query failure.
+ * @param ref - Project code, defaulting to the current route.
+ * @returns The authoritative project response, or null for a new project.
+ * @remarks Query errors propagate so callers retain the last populated form.
+ */
 async function refreshProject(ref: string = projectRef): Promise<ProjectGetState> {
   if (ref === NEW_REF) return null
   const result = (await getProject({
     ref,
     refKey: 'code',
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-  }).catch(() => null)) as ProjectGetState
+  })) as ProjectGetState
   return result
 }
 
+/**
+ * Persists a resource state change and reconciles affected cached descendants.
+ * @param options - State action, feedback, busy handler and explicit child publication choice.
+ * @returns Completion of the mutation and cache reconciliation.
+ */
 async function handleProjectStateToggle({
   field,
   successWhenTrue,
   successWhenFalse,
   setBusy,
   mutate,
+  publishChildren = false,
 }: {
+  publishChildren?: boolean
   field: ProjectBooleanField
   successWhenTrue: string
   successWhenFalse: string
   setBusy: (value: boolean) => void
   mutate: typeof publishProject | typeof archiveProject
 }): Promise<void> {
-  const projectData = project?.data
+  const previousProject = project
+  const previousCommittedProject = committedProject
+  const projectData = previousProject?.data
   if (!projectData) return
 
+  const mutationRef = projectRef
+  const mutationScope = adminCtx.view.resources.scopeKey
   const nextState = !projectData[field]
+  const nextProject = {
+    ...previousProject,
+    data: { ...projectData, [field]: nextState },
+  } as ProjectGetState
   setBusy(true)
 
   const mutation = adminCtx.view.cacheCtx.beginMutation('project', {
     meta: { id: projectData.id },
     data: { [field]: nextState },
   })
+  // Publication changes one field; keep the complete editor and its relations mounted.
+  commitSettledProjectState(nextProject)
   try {
-    await mutate({
+    const result = await mutate({
       id: projectData.id,
       state: nextState,
+      ...(field === 'isPublished' ? { publishChildren } : {}),
       meta: { isAdminRequest: true },
     }).updates(
+      // The cache owns optimistic overrides; these handles only request refreshes.
       ...mutation.updates,
       getProject({
-        ref: projectRef,
+        ref: mutationRef,
         refKey: 'code',
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-      }).withOverride(overrideProjectEntityBoolean(field, nextState)),
+      }),
       getProjects({
         conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
         prisms: adminCtx.view.scope.prisms,
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
-      }).withOverride(overrideProjectListItemBoolean(projectData.id, field, nextState)),
+      }),
     )
     mutation.settle(true)
 
-    commitSettledProjectState(await refreshProject())
-    await adminCtx.view.cacheCtx.reconcile('project')
+    // Settle from the write acknowledgement, never from a possibly empty filtered read.
+    if (
+      projectRef === mutationRef &&
+      adminCtx.view.resources.scopeKey === mutationScope
+    ) {
+      commitSettledProjectState({
+        ...nextProject,
+        data: { ...projectData, ...result.data },
+      } as ProjectGetState)
+    }
     toast.success(
-      `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(project, 'nameShort')}`,
+      `${nextState ? successWhenTrue : successWhenFalse} ${getNameForToast(previousProject, 'nameShort')}`,
     )
   } catch {
     mutation.settle(false)
+    if (
+      projectRef === mutationRef &&
+      adminCtx.view.resources.scopeKey === mutationScope
+    ) {
+      project = previousProject
+      committedProject = previousCommittedProject
+    }
     toast.error(m.long_crazy_peacock_care())
+    return
   } finally {
     setBusy(false)
   }
+
+  // Refresh dependent lists independently; a read failure must not undo a committed write.
+  try {
+    await adminCtx.view.cacheCtx.reconcile('project')
+  } catch (error) {
+    console.warn('Project state saved, but dependent lists could not refresh', error)
+  }
 }
 
-async function onPublishToggle(): Promise<void> {
-  if (!isCurrentRefLoaded || !canPublishProject) return
+let pendingPublishId = $state<string | null>(null)
+
+// Dismiss pending publication when navigation changes the target resource.
+$effect(() => {
+  projectRef
+  pendingPublishId = null
+})
+
+/** Prompts before publishing drafts below this resource; unpublishing remains immediate.
+ * @param publishChildren - Explicit choice, or undefined to open the prompt.
+ * @returns Completion of the selected publication action.
+ */
+async function onPublishToggle(publishChildren?: boolean): Promise<void> {
+  if (
+    !isCurrentRefLoaded ||
+    !canPublishProject ||
+    headerCtrl.state.formActions?.isPublishing
+  )
+    return
+  // A delayed dialog choice must never turn into an unpublish after a remote refresh.
+  if (publishChildren !== undefined && project?.data?.isPublished) {
+    pendingPublishId = null
+    return
+  }
+  if (!project?.data?.isPublished && publishChildren === undefined) {
+    pendingPublishId = project?.data?.id ?? null
+    return
+  }
+  pendingPublishId = null
   await handleProjectStateToggle({
     field: 'isPublished',
     successWhenTrue: m.published(),
     successWhenFalse: m.forms__unpublished(),
     setBusy: value => headerCtrl.setPublishing(value),
     mutate: publishProject,
+    publishChildren,
   })
 }
 
@@ -2394,38 +2469,43 @@ $effect(() => {
 })
 
 $effect(() => {
+  const ref = projectRef
+  // Reload on navigation or authorization scope changes, not reactive query settlement.
+  adminCtx.view.resources.scopeKey
   const resolvedFacetTabsSnapshot = untrack(() => resolvedFacetTabs)
-  return editorCtrl.syncRouteAndLoad({
-    ref: projectRef,
-    resetFormActionsSignature: () => {
-      lastFormActionsSignature = ''
-      suppressFormLevelIssues = true
-      settledProjectRef = null
-      isRefreshingMapRender = false
-      fieldRemoveMode = false
-      showDisabledFields = false
-      selectedUsersById = {}
-      selectedParentOrganisationById = {}
-      autoSeededOwnerOrganisationIds = new Set()
-      ownerRoleSeedAttempt = 0
-      hasAutoEnteredEditForNew = false
-      isProjectFieldResetInProgress = false
-      project = null
-      hierarchy = null
-    },
-    setFacetForRef: nextRef => {
-      untrack(() => {
-        const currentFacet = adminCtx.activeFacet
-        const nextFacet =
-          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
-            ? currentFacet
-            : 'core'
-        adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.project)
-      })
-    },
-    load: refreshProject,
-    commit: commitSettledProjectState,
-  })
+  return untrack(() =>
+    editorCtrl.syncRouteAndLoad({
+      ref,
+      resetFormActionsSignature: () => {
+        lastFormActionsSignature = ''
+        suppressFormLevelIssues = true
+        settledProjectRef = null
+        isRefreshingMapRender = false
+        fieldRemoveMode = false
+        showDisabledFields = false
+        selectedUsersById = {}
+        selectedParentOrganisationById = {}
+        autoSeededOwnerOrganisationIds = new Set()
+        ownerRoleSeedAttempt = 0
+        hasAutoEnteredEditForNew = false
+        isProjectFieldResetInProgress = false
+        project = null
+        hierarchy = null
+      },
+      setFacetForRef: nextRef => {
+        untrack(() => {
+          const currentFacet = adminCtx.activeFacet
+          const nextFacet =
+            currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
+              ? currentFacet
+              : 'core'
+          adminCtx.setFacet(nextFacet, nextRef, FirstClassResource.project)
+        })
+      },
+      load: refreshProject,
+      commit: commitSettledProjectState,
+    }),
+  )
 })
 
 $effect(() => {
@@ -3080,3 +3160,13 @@ $effect(() => {
     </FormSurface>
   </Main.Facet>
 </Main.Root>
+
+{#if pendingPublishId && pendingPublishId === project?.data?.id}
+  <PublishChildrenDialog
+    resourceType="project"
+    onChoice={choice => onPublishToggle(choice)}
+    onCancel={() => {
+      pendingPublishId = null
+    }}
+  />
+{/if}

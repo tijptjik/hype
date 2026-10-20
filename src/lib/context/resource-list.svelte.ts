@@ -12,6 +12,19 @@ type ResourcePageFactory = (
   input: ResourcePageInput,
 ) => import('$app/server').RemoteQuery<ResourcePage>
 
+/**
+ * Canonicalizes JSON query arguments so equivalent native proxies share one identity.
+ * @param value - Query arguments, including ordered cursors and access scope.
+ * @returns JSON with recursively sorted object keys and unchanged array order.
+ */
+function resourceQueryIdentity(value: unknown): string {
+  return JSON.stringify(value, (_key, child) =>
+    child && typeof child === 'object' && !Array.isArray(child)
+      ? Object.fromEntries(Object.entries(child).sort(([a], [b]) => a.localeCompare(b)))
+      : child,
+  )
+}
+
 /** Native query handles own page data; this controller owns traversal and retained handles. */
 export class ResourceList {
   pages: RemoteQuery<ResourcePage>[] = $state.raw([])
@@ -108,23 +121,28 @@ export class ResourceList {
    */
   async load(input: ResourcePageInput, force = false): Promise<void> {
     if (this.released) throw new Error('Resource list has been released')
-    const key = JSON.stringify(input)
+    const key = resourceQueryIdentity(input)
     if (
       !force &&
       this.input &&
-      JSON.stringify(this.input) === key &&
+      resourceQueryIdentity(this.input) === key &&
       this.pages.length &&
       Date.now() - this.validatedAt < 60_000
     )
       return
-    if (!force && this.loading && this.input && JSON.stringify(this.input) === key) {
+    if (
+      !force &&
+      this.loading &&
+      this.input &&
+      resourceQueryIdentity(this.input) === key
+    ) {
       await this.pages[0]
       return
     }
     // Keep the displayed collection latched during view changes, never across access scopes.
     const sameScope =
       this.input?.type === input.type &&
-      JSON.stringify(this.input?.meta) === JSON.stringify(input.meta)
+      resourceQueryIdentity(this.input?.meta) === resourceQueryIdentity(input.meta)
     this.fallback = sameScope ? this.rows : []
     const generation = ++this.generation
     this.input = input
@@ -181,11 +199,11 @@ export class ResourceList {
     try {
       const pageInput = { ...input, cursor }
       const page = this.query(pageInput)
-      this.pageIdentities.set(page, JSON.stringify(pageInput))
+      this.pageIdentities.set(page, resourceQueryIdentity(pageInput))
       await page
       if (generation !== this.generation) return
       this.pages = [...this.pages, page]
-      this.history.set(JSON.stringify(input), {
+      this.history.set(resourceQueryIdentity(input), {
         pages: this.pages,
         fetchedAt: Date.now(),
       })

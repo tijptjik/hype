@@ -60,7 +60,6 @@ import {
   getSafeImageUrl,
 } from '#lib/client/services/image.js'
 import { getIssueMessagesForPath } from '#lib/client/services/issues.js'
-import { overrideResourceEntityBoolean } from '#lib/client/services/resource.js'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
@@ -958,7 +957,7 @@ async function handleFeatureStateToggle(
         ref: current.id,
         refKey: 'id',
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-      }).withOverride(overrideResourceEntityBoolean(field, nextState)),
+      }),
     )
     mutation.settle(true)
     commitSettledFeatureState(await refreshFeature())

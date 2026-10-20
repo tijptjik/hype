@@ -1071,6 +1071,8 @@ describe('project.remote form organisation move authz', () => {
   it('cascades descendant publish state after a successful publish command', async () => {
     await remote.publishProject({ id: 'project-1', state: true })
 
+    // Consuming only one requested variant would strand the populated editor query.
+    expect(mockRequested).not.toHaveBeenCalled()
     expect(mockCascadeProjectPublishedStateToDescendants).toHaveBeenCalledWith(
       expect.any(Object),
       {
@@ -1092,9 +1094,9 @@ describe('project.remote form organisation move authz', () => {
         { id: 'project-1', state },
       )
       expect(mockCascadeProjectArchivedStateToDescendants).not.toHaveBeenCalled()
-      expect(mockRequested).toHaveBeenCalledWith(remote.getProject, 1)
-      expect(mockRequested).toHaveBeenCalledWith(remote.getProjects, 1)
-      expect(mockRefreshAll).toHaveBeenCalledTimes(2)
+      // The shared guarded command must receive every requested query variant.
+      expect(mockRequested).not.toHaveBeenCalled()
+      expect(mockRefreshAll).not.toHaveBeenCalled()
     },
   )
 

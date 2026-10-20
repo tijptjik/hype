@@ -40,9 +40,7 @@ import {
   getLayerSubmitUpdates,
   mergeProjectPropertiesIntoLayerForm as applyProjectPropertiesToLayerForm,
   overrideLayerEntityFromSubmit,
-  overrideLayerEntityBoolean,
   overrideLayerListItemFromSubmit,
-  overrideLayerListItemBoolean,
   replaceLayerParentProject,
   resolveLayerEditorPermissions,
   toLayerFormInput,
@@ -73,6 +71,7 @@ import { LayerPreflightFormData } from '#lib/db/zod/index.js'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
+import PublishChildrenDialog from '#lib/bits/patterns/resource/PublishChildrenDialog.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import {
   formSectionDividerStyles,
@@ -981,13 +980,20 @@ async function refreshLayerMapRender(): Promise<void> {
   })
 }
 
+/**
+ * Persists a resource state change and reconciles affected cached descendants.
+ * @param options - State action, feedback, busy handler and explicit child publication choice.
+ * @returns Completion of the mutation and cache reconciliation.
+ */
 async function handleLayerStateToggle({
   field,
   successWhenTrue,
   successWhenFalse,
   setBusy,
   mutate,
+  publishChildren = false,
 }: {
+  publishChildren?: boolean
   field: 'isPublished' | 'isArchived'
   successWhenTrue: string
   successWhenFalse: string
@@ -1006,14 +1012,16 @@ async function handleLayerStateToggle({
     await (mutate as typeof publishLayer)({
       id: current.id,
       state: nextState,
+      ...(field === 'isPublished' ? { publishChildren } : {}),
       meta: { isAdminRequest: true },
     }).updates(
+      // The cache owns optimistic overrides; these handles only request refreshes.
       ...mutation.updates,
       getLayer({
         ref: layerRef,
         refKey: 'id',
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-      }).withOverride(overrideLayerEntityBoolean(field, nextState)),
+      }),
     )
     mutation.settle(true)
     commitLayerState(await refreshLayer())
@@ -1027,14 +1035,42 @@ async function handleLayerStateToggle({
   }
 }
 
-async function onPublishToggle(): Promise<void> {
-  if (!isCurrentRefLoaded || !canPublishLayer) return
+let pendingPublishId = $state<string | null>(null)
+
+// Dismiss pending publication when navigation changes the target resource.
+$effect(() => {
+  layerRef
+  pendingPublishId = null
+})
+
+/** Prompts before publishing drafts below this resource; unpublishing remains immediate.
+ * @param publishChildren - Explicit choice, or undefined to open the prompt.
+ * @returns Completion of the selected publication action.
+ */
+async function onPublishToggle(publishChildren?: boolean): Promise<void> {
+  if (
+    !isCurrentRefLoaded ||
+    !canPublishLayer ||
+    headerCtrl.state.formActions?.isPublishing
+  )
+    return
+  // A delayed dialog choice must never turn into an unpublish after a remote refresh.
+  if (publishChildren !== undefined && layer?.data?.isPublished) {
+    pendingPublishId = null
+    return
+  }
+  if (!layer?.data?.isPublished && publishChildren === undefined) {
+    pendingPublishId = layer?.data?.id ?? null
+    return
+  }
+  pendingPublishId = null
   await handleLayerStateToggle({
     field: 'isPublished',
     successWhenTrue: m.published(),
     successWhenFalse: m.forms__unpublished(),
     setBusy: value => headerCtrl.setPublishing(value),
     mutate: publishLayer,
+    publishChildren,
   })
 }
 
@@ -1441,3 +1477,13 @@ $effect(() => {
     </Main.Facet>
   </Main.Form>
 </Main.Root>
+
+{#if pendingPublishId && pendingPublishId === layer?.data?.id}
+  <PublishChildrenDialog
+    resourceType="layer"
+    onChoice={choice => onPublishToggle(choice)}
+    onCancel={() => {
+      pendingPublishId = null
+    }}
+  />
+{/if}

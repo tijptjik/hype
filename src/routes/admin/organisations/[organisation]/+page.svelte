@@ -48,8 +48,6 @@ import {
 import { getNameForToast } from '#lib/client/services/resource.js'
 import {
   getOrganisationSubmitUpdates,
-  overrideOrganisationEntityBoolean,
-  overrideOrganisationListItemBoolean,
   toOrganisationFormInput,
 } from '#lib/client/services/organisation.js'
 import {
@@ -99,6 +97,7 @@ import {
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
+import PublishChildrenDialog from '#lib/bits/patterns/resource/PublishChildrenDialog.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
@@ -1031,13 +1030,20 @@ async function retryOrganisationLoad(): Promise<void> {
   completedOrganisationLoadRef = ref
 }
 
+/**
+ * Persists a resource state change and reconciles affected cached descendants.
+ * @param options - State action, feedback, busy handler and explicit child publication choice.
+ * @returns Completion of the mutation and cache reconciliation.
+ */
 async function handleOrganisationStateToggle({
   field,
   successWhenTrue,
   successWhenFalse,
   setBusy,
   mutate,
+  publishChildren = false,
 }: {
+  publishChildren?: boolean
   field: OrganisationBooleanField
   successWhenTrue: string
   successWhenFalse: string
@@ -1060,22 +1066,22 @@ async function handleOrganisationStateToggle({
     await mutate({
       id: organisationData.id,
       state: nextState,
+      ...(field === 'isPublished' ? { publishChildren } : {}),
       meta: { isAdminRequest: true },
     }).updates(
+      // The cache owns optimistic overrides; these handles only request refreshes.
       ...mutation.updates,
       getOrganisation({
         ref: organisationRef,
         refKey: 'code',
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-      }).withOverride(overrideOrganisationEntityBoolean(field, nextState)),
+      }),
       // TODO Invalidate cache
       getOrganisations({
         conditions: adminCtx.view.isSuperAdmin() ? {} : { isArchived: false },
         prisms: adminCtx.view.scope.prisms,
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
-      }).withOverride(
-        overrideOrganisationListItemBoolean(organisationData.id, field, nextState),
-      ),
+      }),
     )
     mutation.settle(true)
     // TODO Invalidate cache
@@ -1093,14 +1099,42 @@ async function handleOrganisationStateToggle({
   }
 }
 
-async function onPublishToggle(): Promise<void> {
-  if (!isCurrentRefLoaded || !canPublishOrganisation) return
+let pendingPublishId = $state<string | null>(null)
+
+// Dismiss pending publication when navigation changes the target resource.
+$effect(() => {
+  organisationRef
+  pendingPublishId = null
+})
+
+/** Prompts before publishing drafts below this resource; unpublishing remains immediate.
+ * @param publishChildren - Explicit choice, or undefined to open the prompt.
+ * @returns Completion of the selected publication action.
+ */
+async function onPublishToggle(publishChildren?: boolean): Promise<void> {
+  if (
+    !isCurrentRefLoaded ||
+    !canPublishOrganisation ||
+    headerCtrl.state.formActions?.isPublishing
+  )
+    return
+  // A delayed dialog choice must never turn into an unpublish after a remote refresh.
+  if (publishChildren !== undefined && organisation?.data?.isPublished) {
+    pendingPublishId = null
+    return
+  }
+  if (!organisation?.data?.isPublished && publishChildren === undefined) {
+    pendingPublishId = organisation?.data?.id ?? null
+    return
+  }
+  pendingPublishId = null
   await handleOrganisationStateToggle({
     field: 'isPublished',
     successWhenTrue: m.published(),
     successWhenFalse: m.forms__unpublished(),
     setBusy: value => headerCtrl.setPublishing(value),
     mutate: publishOrganisation,
+    publishChildren,
   })
 }
 
@@ -1644,3 +1678,13 @@ $effect(() => {
     </FormSurface>
   </Main.Facet>
 </Main.Root>
+
+{#if pendingPublishId && pendingPublishId === organisation?.data?.id}
+  <PublishChildrenDialog
+    resourceType="organisation"
+    onChoice={choice => onPublishToggle(choice)}
+    onCancel={() => {
+      pendingPublishId = null
+    }}
+  />
+{/if}
