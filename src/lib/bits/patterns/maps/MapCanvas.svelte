@@ -28,6 +28,7 @@ import {
   isMapStyleKey,
 } from '#lib/map/styles/index.js'
 import { getFeatureViewportQuery } from '#lib/map/featureSpatial.js'
+import { installLocationHeading } from '#lib/map/locationHeading.js'
 import { getMarkerRetentionBudget } from '#lib/map/markerRetention.js'
 import { featureQueryKey } from '#lib/client/services/featureQuery.js'
 import {
@@ -87,7 +88,6 @@ type GeolocateControlProps = {
   position: 'bottom-right'
   positionOptions: PositionOptions
   trackUserLocation: boolean
-  showUserHeading: boolean
   showUserLocation: boolean
   autoTrigger: boolean
 }
@@ -369,6 +369,14 @@ const activeLocale = $derived(getLocale())
 const resolvedMapStyleCode = $derived(
   mapStyleCode && isMapStyleKey(mapStyleCode) ? mapStyleCode : getDefaultMapStyleKey(),
 )
+// Location contrast follows the visible basemap, independently of feature-marker palettes.
+const locationMarkerTone = $derived(
+  ['light', 'white', 'grayscale'].includes(
+    getMapStyleDefinition(resolvedMapStyleCode).basemapVariant ?? '',
+  )
+    ? 'light'
+    : 'dark',
+)
 // The chosen map supplies defaults; explicit layer/project palettes remain authoritative.
 const activeMarkerTheme = $derived(
   getMapStyleDefinition(resolvedMapStyleCode).markerTheme,
@@ -421,6 +429,7 @@ const layerMarkerStyles = $derived(
 // MAP SURFACE LIFECYCLE
 let geolocateControl: GeolocateControlWithPrivateFields | undefined = $state(undefined)
 
+let detachLocationHeading: (() => void) | undefined
 let geolocationFixStarted = false
 let geolocationLoadMap: MaplibreMap | null = null
 let geolocationLoadHandler: (() => void) | null = null
@@ -481,6 +490,7 @@ const setupMap = (map: MaplibreMap): void => {
       if (!geolocateControl || geolocationFixStarted) return
       const control = geolocateControl
       geolocationFixStarted = true
+      detachLocationHeading = installLocationHeading(control)
       const updateCamera = control._updateCamera
       control._updateCamera = () => {}
       control.once('geolocate', () => {
@@ -631,6 +641,8 @@ onDestroy(() => {
   }
   geolocationLoadMap = null
   geolocationLoadHandler = null
+  detachLocationHeading?.()
+  detachLocationHeading = undefined
   markerRenderer?.clear()
   markerRenderer = null
   markerRendererMap = undefined
@@ -926,6 +938,7 @@ $effect(() => {
   class="map absolute! inset-0 overflow-hidden caret-transparent"
   data-map-gesture-surface="true"
   data-testid="map"
+  data-location-marker-tone={locationMarkerTone}
   data-navigation-active={journey ? 'true' : undefined}
   bind:this={mapContainer}
 >
@@ -1004,7 +1017,6 @@ $effect(() => {
               maximumAge: Infinity,
             },
             trackUserLocation: true,
-            showUserHeading: true,
             showUserLocation: true,
             autoTrigger: false,
           } satisfies GeolocateControlProps}

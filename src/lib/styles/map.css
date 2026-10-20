@@ -60,7 +60,7 @@
    3. USER LOCATION
    ═══════════════════════ */
 
-/* User location marker - ethereal neon green orb */
+/* User location marker - ethereal neon green orb on dark basemaps */
 .maplibregl-user-location-dot {
   /* Desaturated neon green core with ethereal glow */
   background: radial-gradient(
@@ -128,6 +128,27 @@
     0 0 30px rgba(77, 255, 77, 0.1);
 }
 
+/* Travel bearing: a small detached chevron keeps the existing orb as the focal point. */
+@layer components {
+  [data-location-heading] {
+    position: absolute;
+    width: 14px;
+    height: 9px;
+    top: -13px;
+    left: 1px;
+    pointer-events: none;
+    background: var(--location-heading-color, #9dff9d);
+    clip-path: polygon(50% 0, 100% 100%, 50% 65%, 0 100%);
+    filter: drop-shadow(0 0 2px #173f4a);
+  }
+
+  /* Never suggest a current direction when MapLibre marks the fix as stale. */
+  .maplibregl-user-location-dot-stale [data-location-heading],
+  [data-location-heading][hidden] {
+    display: none;
+  }
+}
+
 /* Smooth breathing pulse like a living beacon */
 @keyframes userLocationOrbPulse {
   0% {
@@ -151,6 +172,35 @@
     0 0 0 3px rgba(102, 255, 255, 0.3),
     0 0 8px #66ffff;
   animation: none;
+}
+
+/* Light basemaps need a crisp blue fix and white outline rather than a luminous halo. */
+@layer components {
+  [data-location-marker-tone="light"] {
+    --location-heading-color: #0284c7;
+  }
+}
+
+[data-location-marker-tone="light"] .maplibregl-user-location-dot {
+  background: #0ea5e9;
+  border: none;
+  box-shadow: none;
+}
+
+[data-location-marker-tone="light"] .maplibregl-user-location-dot::before {
+  background: none;
+  animation: none;
+}
+
+[data-location-marker-tone="light"] .maplibregl-user-location-dot::after {
+  background: none;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgb(15 23 42 / 35%);
+}
+
+/* A stale fix remains distinguishable without bringing back the dark-map glow. */
+[data-location-marker-tone="light"] .maplibregl-user-location-dot-stale {
+  background: #64748b;
 }
 
 /* ═══════════════════════
