@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { projectSaanSeoiPlace } from '#lib/places/saanseoi.js'
 import { resolveSaanSeoiPlaceAddress } from '#lib/places/saanseoiAddress.js'
+import { hydrateSaanSeoiPlaceAddress } from '#lib/places/sourceAddress.js'
 
 function fixture() {
   const projection = projectSaanSeoiPlace(
@@ -22,7 +23,12 @@ function fixture() {
     },
     {
       apiReleaseSet: 'places-publication',
-      resolvedApiVersion: '0.1',
+      resolvedApiVersion: 'api-places-v0.1',
+      apiCatalogRevision: 'places-catalog',
+      catalogPublishedAt: '2026-10-18T02:10:00Z',
+      cohort: '2026-09-23.0',
+      domain: 'overture',
+      region: 'hk',
       schemaVersion: 'v1',
     },
     { apiReleaseSet: 'places-publication', snapshotId: 'places-snapshot' },
@@ -56,7 +62,19 @@ function fixture() {
         },
       },
     ],
-    meta: { apiReleaseSet: 'addresses-publication' },
+    meta: {
+      apiReleaseSet: 'addresses-publication',
+      apiCatalogRevision: 'addresses-catalog',
+      catalogPublishedAt: '2026-10-18T02:00:00Z',
+      cohort: '2026-09-23.0',
+      domain: 'saanseoi',
+      resolvedApiVersion: 'api-addresses-v0.1',
+      profile: 'full',
+    },
+    links: {
+      permalink:
+        'https://source.example/addresses/v0.1/building?releaseSet=addresses-publication&catalogRevision=addresses-catalog&knownAt=2026-10-18T02%3A00%3A00Z&cohort=2026-09-23.0&domain=saanseoi',
+    },
   }
   return { projection, response, pin: { apiReleaseSet: 'addresses-publication' } }
 }
@@ -112,5 +130,128 @@ describe('pinned structured Place Addresses', () => {
       resolveSaanSeoiPlaceAddress(projection, response, pin).facts.location.address
         .status,
     ).toBe('resolved')
+  })
+})
+
+describe('structured Address network hydration', () => {
+  function client(responses: unknown[]) {
+    const request = vi.fn(async (_url: URL, _options: RequestInit) => {
+      const value = responses.shift()
+      return value instanceof Response ? value : Response.json(value)
+    })
+    return {
+      baseUrl: 'https://source.example',
+      apiKey: 'test',
+      fetch: request as unknown as typeof fetch,
+      request,
+    }
+  }
+  it('discovers as of the Place publication and rereads the independent Address pin', async () => {
+    const { projection, response } = fixture()
+    const c = client([response, response])
+    const result = await hydrateSaanSeoiPlaceAddress(c, projection)
+    expect(result.facts.location.address.status).toBe('resolved')
+    expect(result.payload.address).toEqual(response)
+    expect(result.issues).toEqual([
+      { kind: 'invalidPhone', index: 0, value: 'invalid' },
+    ])
+    expect(c.request).toHaveBeenCalledTimes(2)
+    const [discovery] = c.request.mock.calls[0]
+    const [pinned, options] = c.request.mock.calls[1]
+    expect(discovery.searchParams.get('knownAt')).toBe('2026-10-18T02:10:00Z')
+    expect(pinned.searchParams.get('releaseSet')).toBe('addresses-publication')
+    expect(pinned.searchParams.get('catalogRevision')).toBe('addresses-catalog')
+    expect(pinned.searchParams.get('knownAt')).toBe('2026-10-18T02:00:00Z')
+    expect(pinned.searchParams.get('include')).toBe('units')
+    expect(pinned.searchParams.get('profile')).toBe('full')
+    expect(options.redirect).toBe('error')
+    expect(projection.facts.location.address.status).toBe('unresolved')
+  })
+  it('does not fetch for an unreferenced Address or invent a missing parent', async () => {
+    const { projection } = fixture()
+    const c = client([])
+    projection.facts.location.address.address2dId = null
+    expect(
+      (await hydrateSaanSeoiPlaceAddress(c, projection)).payload.addressHydration,
+    ).toMatchObject({ reason: 'incomplete-address-reference' })
+    projection.facts.location.address.address3dId = null
+    projection.facts.location.address.address3dUnitId = null
+    expect(await hydrateSaanSeoiPlaceAddress(c, projection)).toBe(projection)
+    expect(c.request).not.toHaveBeenCalled()
+  })
+  it.each(['snapshot', 'unit', 'future', 'permalink', 'catalog'])(
+    'retains explicit pending evidence for %s mismatches',
+    async kind => {
+      const { projection, response } = fixture()
+      const discovered = structuredClone(response)
+      if (kind === 'snapshot') response.data.attributes.snapshotId = 'wrong'
+      if (kind === 'unit') response.included[0].attributes.units = []
+      if (kind === 'catalog') response.meta.apiCatalogRevision = 'changed'
+      if (kind === 'future') discovered.meta.catalogPublishedAt = '2027-01-01T00:00:00Z'
+      if (kind === 'permalink') discovered.links.permalink += '&releaseSet=other'
+      const result = await hydrateSaanSeoiPlaceAddress(
+        client([discovered, response]),
+        projection,
+      )
+      expect(result.facts.location.address.status).toBe('unresolved')
+      expect(result.payload.addressHydration).toMatchObject({ status: 'review' })
+      expect(result.issues).toContainEqual({ kind: 'addressRecordsPending' })
+      expect(result.facts).toEqual(projection.facts)
+    },
+  )
+  it('keeps missing records pending but throws transient upstream failures for retry', async () => {
+    const { projection } = fixture()
+    expect(
+      (
+        await hydrateSaanSeoiPlaceAddress(
+          client([new Response(null, { status: 404 })]),
+          projection,
+        )
+      ).payload.addressHydration,
+    ).toMatchObject({ reason: 'address-not-published' })
+    await expect(
+      hydrateSaanSeoiPlaceAddress(
+        client([new Response(null, { status: 503 })]),
+        projection,
+      ),
+    ).rejects.toThrow('503')
+  })
+  it('invalidates old resolved evidence on a dependency mismatch and clears review state after repair', async () => {
+    const { projection, response, pin } = fixture()
+    const resolved = resolveSaanSeoiPlaceAddress(projection, response, pin)
+    const wrong = structuredClone(response)
+    wrong.data.attributes.snapshotId = 'wrong'
+    const pending = await hydrateSaanSeoiPlaceAddress(
+      client([response, wrong]),
+      resolved,
+    )
+    expect(pending.facts.location.address.status).toBe('unresolved')
+    expect(pending.facts.location.address.records).toEqual({})
+    expect(pending.issues).toContainEqual({ kind: 'addressRecordsPending' })
+    const repaired = await hydrateSaanSeoiPlaceAddress(
+      client([response, response]),
+      pending,
+    )
+    expect(repaired.facts.location.address.status).toBe('resolved')
+    expect(repaired.payload.addressHydration).toMatchObject({
+      status: 'resolved',
+      releaseSet: 'addresses-publication',
+    })
+    expect(repaired.issues).not.toContainEqual({ kind: 'addressRecordsPending' })
+  })
+
+  it('never follows a response-controlled host or sends credentials to it', async () => {
+    const { projection, response } = fixture()
+    response.links.permalink = response.links.permalink.replace(
+      'source.example',
+      'elsewhere.example',
+    )
+    const c = client([response, response])
+    expect(
+      (await hydrateSaanSeoiPlaceAddress(c, projection)).facts.location.address.status,
+    ).toBe('resolved')
+    expect(
+      c.request.mock.calls.every(([url]) => url.origin === 'https://source.example'),
+    ).toBe(true)
   })
 })

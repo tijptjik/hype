@@ -3194,6 +3194,111 @@ describe('atomic source group application', () => {
     return { db, sqlite, binding, input, first, next, nextSource }
   }
 
+  it.each(['success', 'mismatch', 'retry', 'expired'])(
+    'hydrates a bounded refresh item before fenced ingestion: %s',
+    async mode => {
+      const { sqlite, binding, nextSource, first } = await fixture(true)
+      sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
+      sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+      nextSource.facts.location.address = {
+        ...nextSource.facts.location.address,
+        status: 'unresolved',
+        addressSnapshotId: 'address-snapshot',
+        address2dId: 'building',
+      }
+      nextSource.issues.push({ kind: 'addressRecordsPending' })
+      const target = readPlacePublicationMetadata(nextSource.payload.meta)
+      sqlite
+        .prepare(
+          "UPDATE placeRefresh SET phase='ready',target=?,runId='run',lease='owner',leaseUntil=?",
+        )
+        .run(JSON.stringify(target), Date.now() + 60000)
+      sqlite
+        .prepare(
+          "INSERT INTO placeRefreshItem(runId,placeId,ssId,projection,status) VALUES('run',?,'shop',?,'pending')",
+        )
+        .run(first.placeId, JSON.stringify(nextSource))
+      const response = {
+        data: {
+          type: 'addresses',
+          id: 'building',
+          attributes: {
+            snapshotId: mode === 'mismatch' ? 'other-snapshot' : 'address-snapshot',
+            address3dCoverage: { kind: 'none' },
+            sources: [],
+            i18n: { en: { formattedAddress: 'Building' } },
+          },
+        },
+        meta: {
+          apiReleaseSet: 'addresses',
+          apiCatalogRevision: 'address-catalog',
+          catalogPublishedAt: '2026-09-30T00:00:00Z',
+          cohort: '2026-09-23.0',
+          domain: 'saanseoi',
+          profile: 'full',
+          resolvedApiVersion: 'api-addresses-v0.1',
+        },
+        links: {
+          permalink:
+            'https://source.example/addresses/v0.1/building?releaseSet=addresses&catalogRevision=address-catalog&knownAt=2026-09-30T00%3A00%3A00Z&cohort=2026-09-23.0&domain=saanseoi',
+        },
+      }
+      let requests = 0
+      const fetcher = async () => {
+        requests++
+        if (mode === 'expired' && requests === 2)
+          sqlite.exec('UPDATE placeRefresh SET leaseUntil=0')
+        return mode === 'retry'
+          ? new Response(null, { status: 503 })
+          : Response.json(response)
+      }
+      const before = sqlite.prepare('SELECT * FROM feature').all()
+      const tick = () =>
+        processPlaceRefresh(
+          binding,
+          { runId: 'run', lease: 'owner', target },
+          {
+            baseUrl: 'https://source.example',
+            apiKey: 'test',
+            fetch: fetcher as unknown as typeof fetch,
+          },
+        )
+      if (mode === 'retry') await expect(tick()).rejects.toThrow('503')
+      else expect(await tick()).toBe(mode === 'expired' ? 'superseded' : 'ingested')
+      expect(sqlite.prepare('SELECT * FROM feature').all()).toEqual(before)
+      const saved = sqlite
+        .prepare('SELECT revisionId FROM placeRefreshItem')
+        .get()?.revisionId
+      if (mode === 'retry' || mode === 'expired') {
+        expect(saved).toBeNull()
+        expect(sqlite.prepare('SELECT count(*) AS n FROM placeRevision').get()?.n).toBe(
+          2,
+        )
+      } else {
+        const row = sqlite
+          .prepare('SELECT facts,payload FROM placeRevision WHERE id=?')
+          .get(saved as string)
+        expect(JSON.parse(String(row?.facts)).location.address.status).toBe(
+          mode === 'success' ? 'resolved' : 'unresolved',
+        )
+        if (mode === 'mismatch')
+          expect(JSON.parse(String(row?.payload)).addressHydration.reason).toBe(
+            'address-dependency-mismatch',
+          )
+      }
+      if (mode === 'mismatch') {
+        expect(await tick()).toBe('assessed')
+        expect(
+          sqlite.prepare('SELECT fieldGroup FROM placeAdoptionDecision').all(),
+        ).toEqual([{ fieldGroup: 'facts' }])
+        expect(
+          sqlite.prepare('SELECT outcome FROM placeRefreshFeature').get()?.outcome,
+        ).toBe('review')
+      }
+      expect(requests).toBe(mode === 'retry' ? 1 : 2)
+    },
+  )
+
   it('drains ingestion and Feature assessment before completing a durable run', async () => {
     const { sqlite, binding, nextSource, first } = await fixture(true)
     sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))

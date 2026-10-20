@@ -44,6 +44,7 @@ import {
 } from '#lib/db/services/placeMerge.js'
 // DOMAIN
 import { readSaanSeoiPlacePage } from '#lib/places/sourceClient.js'
+import { hydrateSaanSeoiPlaceAddress } from '#lib/places/sourceAddress.js'
 import { placeSourceEndpoint } from '#lib/places/sourceEndpoint.server.js'
 // TYPES
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
@@ -194,10 +195,19 @@ export const preparePlaceIdentityReview = guardedCommand(
     }
     const candidates = page.places.filter(candidate => candidate.ssId === input.ssId)
     if (candidates.length !== 1) error(404, 'PLACE_SOURCE_NOT_IN_PAGE')
+    let projection = candidates[0]
+    try {
+      projection = await hydrateSaanSeoiPlaceAddress(
+        { ...placeSourceEndpoint(apiKey), fetch: ctx.event.fetch },
+        projection,
+      )
+    } catch {
+      error(502, 'PLACE_SOURCE_FAILED')
+    }
     const reviewId = await capturePlaceIdentityReview(
       ctx.db,
       baseline,
-      candidates[0],
+      projection,
       ctx.user.id,
     )
     if (!reviewId) error(409, 'PLACE_IDENTITY_CHANGED')

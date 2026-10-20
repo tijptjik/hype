@@ -6,6 +6,8 @@ import { m } from '#lib/i18n.js'
 // BITS
 import { Button } from '#lib/bits/core/index.js'
 import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
+// DOMAIN
+import { getAddressDisplay } from '#lib/addresses/featureAddress.js'
 // API
 import {
   getFeaturePlace,
@@ -134,7 +136,15 @@ async function preview(candidate: PlaceSearchCandidate): Promise<void> {
   try {
     let resolved = await getFeaturePlaceCandidate(input)
     if (version !== requestVersion) return
-    if (resolved.status === 'source-import-needed') {
+    if (
+      resolved.status === 'source-import-needed' ||
+      (resolved.facts.location.address.status !== 'resolved' &&
+        Boolean(
+          resolved.facts.location.address.address2dId ||
+            resolved.facts.location.address.address3dId ||
+            resolved.facts.location.address.address3dUnitId,
+        ))
+    ) {
       resolved = await importFeaturePlaceCandidate(input)
     }
     if (version === requestVersion) selected = resolved
@@ -143,6 +153,24 @@ async function preview(candidate: PlaceSearchCandidate): Promise<void> {
   } finally {
     if (version === requestVersion) busy = false
   }
+}
+
+/** Prefer verified structured Address values with the shared locale fallback. */
+function addressDisplay(facts: PlaceFacts): string {
+  const address = {
+    version: 1 as const,
+    source: facts.location.address,
+    coordinates: facts.location.geometry.coordinates,
+    matchStatus: facts.location.address.status,
+    overrides: {},
+  }
+  return [
+    ...new Set(
+      (['en', 'zhHant', 'zhHans'] as const)
+        .map(locale => getAddressDisplay(address, locale))
+        .filter(Boolean),
+    ),
+  ].join(' · ')
 }
 
 /** Link only a persisted clean Feature; the server preserves its existing effective values. */
@@ -355,9 +383,7 @@ async function link(): Promise<void> {
           <div class="space-y-3 rounded-xl border border-border bg-panel p-4">
             <p class="font-medium">{Object.values(selected.facts.names).join(' · ')}</p>
             <p class="text-sm">
-              {Object.values(selected.facts.location.address.fallbackDisplay).join(
-                ' · ',
-              )}
+              {addressDisplay(selected.facts)}
             </p>
             <p class="text-sm text-muted-foreground">
               {selected.facts.location.geometry.coordinates.join(', ')}

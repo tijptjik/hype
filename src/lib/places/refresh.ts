@@ -66,11 +66,15 @@ export async function refreshPlaces(
     if (state.phase === 'review') return state.phase
     if (state.phase === 'ready') {
       if (!state.runId || !state.target) throw new Error('PLACE_REFRESH_PIN_MISSING')
-      return await processPlaceRefresh(db, {
-        runId: state.runId,
-        lease,
-        target: JSON.parse(state.target) as PlacePublication,
-      })
+      return await processPlaceRefresh(
+        db,
+        {
+          runId: state.runId,
+          lease,
+          target: JSON.parse(state.target) as PlacePublication,
+        },
+        source,
+      )
     }
     if (state.phase === 'idle') {
       const month = new Date(now).toISOString().slice(0, 7)

@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   readIdentity: vi.fn(),
   acceptIdentity: vi.fn(),
   readSourcePage: vi.fn(),
+  hydrateSource: vi.fn(),
   searchLocal: vi.fn(),
   listReviews: vi.fn(),
   readReview: vi.fn(),
@@ -103,6 +104,9 @@ vi.mock('#lib/places/sourceClient.js', async importOriginal => {
 vi.mock('#lib/places/publication.js', () => ({
   discoverPlacePublication: mocks.discoverPublication,
 }))
+vi.mock('#lib/places/sourceAddress.js', () => ({
+  hydrateSaanSeoiPlaceAddress: mocks.hydrateSource,
+}))
 vi.mock('#lib/places/sourceLookup.js', () => ({
   findSaanSeoiPlace: mocks.lookupSource,
 }))
@@ -178,6 +182,7 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.hydrateSource.mockImplementation(async (_client, projection) => projection)
   mocks.probeMergeSource.mockResolvedValue({ sourcePlaceId: 'source' })
   mocks.probeMergeReview.mockResolvedValue({ sourcePlaceId: 'source' })
   mocks.captureMerge.mockResolvedValue({

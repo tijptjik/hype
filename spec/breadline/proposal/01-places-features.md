@@ -455,9 +455,9 @@ unresolved; successful hydration removes only the pending-address issue. Focused
 cover publication/identity/snapshot mismatches, owner/unit mismatches, unresolved
 membership, missing/duplicate inventories and building-only references.
 
-This is the dependency-validation boundary, not an activated fetch or synchronization
-job. Pinned network reads, immutable source persistence, Feature materialization,
-override/link controls and the importer rebase remain outstanding (Refs #194).
+The network reader and its candidate/refresh integration are defined below under
+“Pinned structured Address hydration”. The adapter remains the pure validation boundary;
+upstream curation and publication are separate from accepting an address in HYPE (Refs #194).
 
 ## Feature address editor migration (Refs #194, #213)
 
@@ -1336,4 +1336,56 @@ search index, Feature–Place association/history and MTR job remained identical
 No adoption or identity decision, merge or redirect was created. Integrity is OK with zero
 foreign-key violations. Screenshots are private at `output/playwright/place-candidate-import.png`
 and `output/playwright/place-candidate-replacement.png`. Both servers were stopped. Address
-hydration/curation, source changes-feed integration and the full acceptance audit remain open.
+curation, source changes-feed integration and the full acceptance audit remain open.
+
+
+### Pinned structured Address hydration (Refs #194)
+
+`hydrateSaanSeoiPlaceAddress` now connects the existing dependency validator to the Address
+API. It discovers an Address publication as of the Place publication time, validates the
+response metadata/permalink, and rereads the exact Address ID with that independent release
+set, catalogue revision and known-at pin. The Place and Address catalogues have different
+identities. Every request uses the configured trusted endpoint; response-controlled hosts
+are never fetched and redirects are rejected. Full records, all requested locales, sources,
+coverage and included unit inventories are retained natively.
+
+Exact Address snapshot, owner, inventory and unit validation remains mandatory. An incomplete
+reference, missing record, publication mismatch or dependency mismatch retains unresolved
+location and stable `addressHydration` review evidence; it does not invent a structured match.
+A successful read removes the pending-address issue and replaces any previous hydration review
+status. Transient transport/server failures throw for retry without persisting a partial
+source revision. Each referenced Address requires at most two 30-second requests; Places
+without Address references make none.
+
+Canonical candidate import and explicit source-page identity review hydrate before retaining
+source evidence. Both editor selection paths also request ingestion for previously mirrored
+candidates whose referenced Addresses remain unresolved. Resolved mirrored selections are
+reused. The normal Place replacement preview uses the same structured-address formatter as
+identity comparison, with freeform display retained only as fallback.
+
+Monthly refresh hydrates one tracked item during processing, before immutable source
+persistence; scanning a 100-record page does not fan out Address requests. Existing lease and
+identity predicates fence writes after the network calls. An expired lease creates no revision
+or checkpoint. Semantic Address mismatches retain the existing location-review blocker while
+eligible facts can still be adopted independently. Successful hydration alone does not link,
+accept identity, merge or adopt a Feature location.
+
+Validation: 199 focused tests cover canonical lookup, Address transport/validation, remote
+permissions, source persistence, refresh and worker behavior. Tests include pin drift, future
+publication, missing/mismatched snapshots/units, retry, resolved-to-unresolved invalidation,
+repair, independent fact adoption and expiry during Address reads. The worker check passes;
+application checking retains its existing 10 errors / 19 warnings.
+A local read-only API rehearsal returned an actual hydrated canonical record with matching
+snapshot and no pending-address issue. The saved source mirror predates SaanSeoi's existing
+`20261019184429_tired_valeria_richards` rename; that migration was applied only to a reflinked
+isolated current-database copy. The original mirror was not changed or refreshed.
+
+The isolated browser rehearsal imported the resolved candidate and displayed its structured
+address with zero page errors. Reopening it did not import again. The isolated HYPE database
+gained one Place, one immutable source revision and two retained comparisons. All Feature
+fields/locales/properties/images, indexes, associations/history and MTR jobs remained identical
+to primary state; no adoption, identity acceptance, merge or redirect occurred. Integrity is
+OK with zero foreign-key violations. The screenshot is private at
+`output/playwright/place-address-hydration.png`. Both local servers were stopped. Address
+curation/upsert handling, source changes-feed integration and final acceptance remain open;
+no primary or production data was changed and nothing was deployed.

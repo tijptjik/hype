@@ -83,7 +83,15 @@ async function select(candidate: PlaceSearchCandidate): Promise<void> {
       resourceReleaseId: candidate.resourceReleaseId,
     })
     if (!alive) return
-    if (resolved.status === 'source-import-needed') {
+    if (
+      resolved.status === 'source-import-needed' ||
+      (resolved.facts.location.address.status !== 'resolved' &&
+        Boolean(
+          resolved.facts.location.address.address2dId ||
+            resolved.facts.location.address.address3dId ||
+            resolved.facts.location.address.address3dUnitId,
+        ))
+    ) {
       resolved = await importFeaturePlaceCandidate({
         featureId,
         ssId: candidate.placeId,

@@ -6,6 +6,7 @@ import {
   comparePlacePublications,
   readPlacePublicationMetadata,
 } from '#lib/places/publication.js'
+import { hydrateSaanSeoiPlaceAddress } from '#lib/places/sourceAddress.js'
 // SERVICES
 import { persistSaanSeoiPlace } from './placeSource'
 import { adoptRefreshedPlaceForFeature } from './placeRefreshAdoption'
@@ -14,6 +15,8 @@ import type { D1Database } from '@cloudflare/workers-types'
 import type { Database } from '#lib/types.js'
 import type { PlacePublication } from '#lib/places/publication.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
+
+import type { PlaceSourceClient } from '#lib/places/sourceClient.js'
 
 type Item = {
   placeId: string
@@ -28,14 +31,16 @@ type Item = {
  * Process one run item or Feature, retaining the outcome before advancing its cursor.
  * @param binding Primary-session D1 connection owned by the refresh caller.
  * @param input Active pinned run and lease; database time is checked inside SQL at each write.
+ * @param source Trusted source client for pinned Address reads before ingestion.
  * @returns Bounded progress state; complete means every scanned item was processed or held for review.
  * @remarks Reviews are durable terminal outcomes for this run, not accepted Feature values.
  * Retry reuses immutable source/proposal identities and group decisions. Missing sources
- * never deactivate or delete Features. This service does not make network requests.
+ * never deactivate or delete Features. Address hydration makes at most two requests before the fenced source write.
  */
 export async function processPlaceRefresh(
   binding: Pick<D1Database, 'prepare' | 'batch'>,
   input: { runId: string; lease: string; target: PlacePublication },
+  source?: PlaceSourceClient,
 ): Promise<string> {
   const db = drizzle(binding as D1Database) as Database
   // SQLite's clock is evaluated during the transaction, not before asynchronous preparation.
@@ -69,7 +74,7 @@ export async function processPlaceRefresh(
     .first<{ ssId: string | null }>()
   if (identity?.ssId !== row.ssId) return hold('source-identity-changed')
   if (!row.revisionId) {
-    const projection = JSON.parse(row.projection) as SaanSeoiPlaceProjection
+    let projection = JSON.parse(row.projection) as SaanSeoiPlaceProjection
     try {
       if (
         projection.ssId !== row.ssId ||
@@ -82,6 +87,10 @@ export async function processPlaceRefresh(
     } catch {
       return hold('publication-metadata-missing')
     }
+    // Hydrate only this tracked item; a full scan page never fans out Address requests.
+    if (source) projection = await hydrateSaanSeoiPlaceAddress(source, projection)
+    else if (projection.issues.some(issue => issue.kind === 'addressRecordsPending'))
+      throw new Error('Place Address hydration requires a source client')
     const receipt = await persistSaanSeoiPlace(
       db,
       projection,

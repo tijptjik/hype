@@ -1,5 +1,6 @@
 // DOMAIN
 import { readSaanSeoiPlacePage } from './sourceClient'
+import { hydrateSaanSeoiPlaceAddress } from './sourceAddress'
 // TYPES
 import type { PlacePublicationPin, PlaceSourceClient } from './sourceClient'
 import type { SaanSeoiPlaceProjection } from './saanseoi'
@@ -10,7 +11,8 @@ import type { SaanSeoiPlaceProjection } from './saanseoi'
  * @param pin Publication discovered server-side and retained for this request.
  * @param ssId Exact canonical candidate identity returned by source search.
  * @returns Verified source record and zero page offset, or null when absent.
- * @remarks One bounded full-profile request replaces collection scans. The reader
+ * @remarks One full-profile Place request replaces collection scans; referenced Addresses
+ * are hydrated with their independent publication pin. The reader
  * requires the server to acknowledge the filter; older servers that ignore it fail
  * explicitly. Latest-only detail endpoints are not immutable canonical evidence.
  * This lookup never writes source data, links a Feature or adopts new values.
@@ -30,5 +32,10 @@ export async function findSaanSeoiPlace(
     page.places.some(record => record.ssId !== ssId)
   )
     throw new Error('Canonical Place lookup did not return an exact ID selection')
-  return page.places[0] ? { projection: page.places[0], offset: 0 } : null
+  return page.places[0]
+    ? {
+        projection: await hydrateSaanSeoiPlaceAddress(client, page.places[0]),
+        offset: 0,
+      }
+    : null
 }
