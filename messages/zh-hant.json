@@ -1507,5 +1507,11 @@
   "place_directory_more_projects": "載入更多專案",
   "place_identity_reject": "不是這間店舖",
   "place_identity_rejected": "已儲存拒絕決定。此候選地點將不再出現在這個地點的名稱搜尋中。",
-  "place_identity_previously_rejected": "先前已拒絕。請先審閱新證據再確認。"
+  "place_identity_previously_rejected": "先前已拒絕。請先審閱新證據再確認。",
+  "publish_children__title": "發佈相關資源？",
+  "publish_children__organisation": "你是否也想自動發佈此機構下的所有項目、圖層和地點？",
+  "publish_children__project": "你是否也想自動發佈此項目下的所有圖層和地點？",
+  "publish_children__layer": "你是否也想自動發佈此圖層下的所有地點？",
+  "publish_children__parent_only": "保留子資源的發佈狀態",
+  "publish_children__all": "全部發佈"
 }

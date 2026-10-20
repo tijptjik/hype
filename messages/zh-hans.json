@@ -1507,5 +1507,11 @@
   "place_directory_more_projects": "加载更多项目",
   "place_identity_reject": "不是这间店铺",
   "place_identity_rejected": "已保存拒绝决定。此候选地点将不再出现在这个地点的名称搜索中。",
-  "place_identity_previously_rejected": "先前已拒绝。请先审阅新证据再确认。"
+  "place_identity_previously_rejected": "先前已拒绝。请先审阅新证据再确认。",
+  "publish_children__title": "发布相关资源？",
+  "publish_children__organisation": "你是否也想自动发布此机构下的所有项目、图层和地点？",
+  "publish_children__project": "你是否也想自动发布此项目下的所有图层和地点？",
+  "publish_children__layer": "你是否也想自动发布此图层下的所有地点？",
+  "publish_children__parent_only": "保留子资源的发布状态",
+  "publish_children__all": "全部发布"
 }
