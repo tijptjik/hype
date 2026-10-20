@@ -364,6 +364,14 @@ const activeLocale = $derived(getLocale())
 const resolvedMapStyleCode = $derived(
   mapStyleCode && isMapStyleKey(mapStyleCode) ? mapStyleCode : getDefaultMapStyleKey(),
 )
+// Location contrast follows the visible basemap, independently of feature-marker palettes.
+const locationMarkerTone = $derived(
+  ['light', 'white', 'grayscale'].includes(
+    getMapStyleDefinition(resolvedMapStyleCode).basemapVariant ?? '',
+  )
+    ? 'light'
+    : 'dark',
+)
 // The chosen map supplies defaults; explicit layer/project palettes remain authoritative.
 const activeMarkerTheme = $derived(
   getMapStyleDefinition(resolvedMapStyleCode).markerTheme,
@@ -890,6 +898,7 @@ $effect(() => {
   class="map absolute! inset-0 overflow-hidden caret-transparent"
   data-map-gesture-surface="true"
   data-testid="map"
+  data-location-marker-tone={locationMarkerTone}
   data-navigation-active={journey ? 'true' : undefined}
   bind:this={mapContainer}
 >
