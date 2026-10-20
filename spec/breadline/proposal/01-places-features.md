@@ -173,10 +173,14 @@ compatible publications. Do not reconstruct the retired HYPE address model.
 Old freeform/structured values remain migration or curation evidence. A fallback
 display string is not a resolved canonical Address. Feature address corrections
 select Address/unit records; access notes and pickup instructions remain Project
-data. Manual Places can retain unresolved local address evidence.
+data. Both unmatched local Places and matched Places with an `ssId` can retain locally
+authored structured address content. Place identity and canonical Address resolution
+are independent.
 
-Identify the relevant Places, curate missing Addresses in SaanSeoi, associate and
-publish them there, then refresh HYPE. The supported source-side workflow is in
+Match Place identity first. Parse and review the available address in HYPE using
+SaanSeoi content fields, and retain that authored content on the HYPE Place even
+when its SaanSeoi mirror has no canonical Address. Upstream address reconciliation
+and publication follow later; they do not block matching or local address authoring. The supported source-side workflow is in
 [the Address curation hand-off](places-address-curation.md). HYPE edits never
 silently write upstream; a HYPE submission API is a separate extension.
 
@@ -339,9 +343,10 @@ This is the proposed flow; the current review UI has not been replaced yet.
 3. Compare names, location, branch/unit and contact evidence against one pinned
    SaanSeoi publication. Proximity and chain-name matches alone cannot accept an
    identity. Keep unresolved Places where evidence is insufficient.
-4. Resolve identities first, then curate missing address components/units in SaanSeoi
-   and associate those canonical addresses with the accepted Places. Upstream
-   publication remains a separate explicit operation.
+4. Resolve identities independently of canonical Address availability. Parse and
+   review the available text into SaanSeoi content fields locally, retaining the
+   authored address on the HYPE Place alongside its `ssId`. Defer upstream
+   Address creation/association to the reconciliation workflow in #233.
 5. Review the resulting **effective Feature display**, including retained overrides,
    before adopting each canonical address. Missing source translations never silently
    erase existing Feature text; a missing unit must be preserved or explicitly resolved.
@@ -357,3 +362,45 @@ This is the proposed flow; the current review UI has not been replaced yet.
 Structured-local conversion is a schema upgrade, not proof that a freeform address
 has been parsed or verified. Candidate matching and the preview do not authorize
 mass canonical adoption or manufacture missing structured components.
+
+
+## Matched Places with locally authored addresses
+
+Accepted architecture; reconciliation is tracked in
+[#233](https://github.com/tijptjik/hype/issues/233), parent #180.
+
+A matched Place retains its HYPE ID and `ssId` independently of its address source.
+An absent SaanSeoi Address does not prevent an identity match or force the Place to
+remain unresolved. The address can remain locally authored while the Place is linked.
+Represent that content as a Place-level address overlay/revision, separate from the
+immutable source mirror and from Feature-specific corrections. Sibling Features
+inherit this Place content unless they have their own overrides. The existing
+local-address editor/service only supports Places without `ssId`; extending that
+write path and refresh resolution is still required.
+
+Until reconciliation succeeds, incomplete or missing source addresses cannot erase
+local content. A new source address is a candidate for comparison, not permission to
+discard the local overlay. Resolve effective display from the accepted source plus
+Place-authored address and then Feature overrides, preserving explicit clearing.
+
+The shared parser should live in a publishable SaanSeoi `libs/` package (proposed
+name `@saanseoi/address`), extracted from the existing Harbour Place address parser.
+Export shared address content types/validation, parsing and formatting. Keep DB/API
+access and publication outside the package; inject optional street/building lookup
+dictionaries. Return recognised components, unresolved fragments and diagnostics,
+retaining the source text, parser version and review provenance. Preserve the exact
+display until a proposed generated display has been accepted. Canonical IDs must
+come from matching, not from parsing.
+
+Both repositories consume explicit package versions, with shared multilingual
+regression fixtures. Parser improvements become available through dependency
+updates; reruns generate reviewable proposals rather than changing accepted content
+silently. Extract the existing tested parser instead of starting a second parser in
+HYPE. No package has been published or integrated by this design change.
+
+Later, an authorised reconciliation finds/reuses an equivalent SaanSeoi Address or
+submits HYPE's reviewed components when none exists, then associates that Address
+with the matched Place. Store an idempotent receipt tied to the submitted local
+revision. Only a subsequent compatible sync confirming the expected association
+and content can retire the redundant Place overlay. A newer local edit, changed
+unit or differing display returns to review; independent Feature overrides survive.
