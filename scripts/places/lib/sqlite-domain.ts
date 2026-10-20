@@ -8,6 +8,7 @@ import type { Database } from '../../../src/lib/types'
 type Statement = {
   bind: (...values: unknown[]) => Statement
   raw: () => Promise<unknown[][]>
+  first: () => Promise<unknown | null>
   all: () => Promise<{
     success: boolean
     results: unknown[]
@@ -25,6 +26,7 @@ type Statement = {
  */
 export function openSqliteDomain(path: string): {
   db: Database
+  binding: D1Database
   sqlite: Sqlite
   close: () => void
 } {
@@ -37,6 +39,7 @@ export function openSqliteDomain(path: string): {
       return prepare(query, args)
     },
     raw: async () => sqlite.query(query).values(...(values as never[])),
+    first: async () => sqlite.query(query).get(...(values as never[])) ?? null,
     all: async () => ({
       success: true,
       results: sqlite.query(query).all(...(values as never[])),
@@ -67,5 +70,5 @@ export function openSqliteDomain(path: string): {
     }
   }
   const binding = { prepare, batch } as unknown as D1Database
-  return { db: drizzle(binding) as Database, sqlite, close: () => sqlite.close() }
+  return { db: drizzle(binding) as Database, binding, sqlite, close: () => sqlite.close() }
 }

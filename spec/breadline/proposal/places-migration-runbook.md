@@ -57,7 +57,7 @@ the cause. Individual split operations additionally have tested idempotent repla
    counts, exclusions, validation receipts and plan hashes. The bundle contains private
    source data and belongs outside Git and public issue attachments.
 
-The completed 2026-10-20 rehearsal applied 12 missing migrations (0109–0120), split
+The completed 2026-10-20 rehearsal applied 13 missing migrations (0109–0121), split
 1,190 Features, excluded 56 intangible Features and 25 drafts, imported 311 donors plus
 19 drop-points, and skipped 155 donors without recorded runs. Replay created zero
 records and matched all 330 imports. All 64 reviewed MTR decisions were retained.
@@ -281,3 +281,33 @@ changed. Integrity and foreign keys pass. A completed-checkpoint replay leaves a
 application tables unchanged; Wrangler still advances its internal metadata counter.
 Private backup, checkpoint, table fingerprints and receipt are
 retained; source and production databases were not modified.
+
+## Rehearse the monthly canonical refresh
+
+Use a local HYPE snapshot with migration 0121 installed, an idle refresh state not
+already checked this UTC month, and sealed SaanSeoi exports:
+
+```sh
+bun scripts/places/rehearse-canonical-refresh.ts \
+  HYPE.sqlite SOURCE_EXPORT_DIRECTORY CURRENT.sqlite \
+  .local/places/NEW-canonical-refresh-rehearsal
+```
+
+The command backs up HYPE read-only, then invokes the actual durable refresh loop
+against the read-only local source API. No source responses are mocked. New runs
+capture every source-linked Place with associated Features and require acknowledged,
+publication-pinned exact-ID lookup. Existing catalogue cursors remain compatible with
+migration 0121, but this fresh-run command deliberately requires an idle input.
+
+Completion requires all captured items to have durable outcomes, unchanged reviewed
+identities/associations/overrides, integrity/FKs, and an idle replay with zero requests
+or database changes. The private receipt records the backup hash, processing outcomes,
+changed tables and source request count. Source, primary HYPE, publisher-feed dispatch,
+routing-service invocation and deployed cron delivery are outside its mutation scope.
+
+The real imported-data rehearsal completed the full captured set of one associated
+canonical Place in six steps and four source requests. Facts adoption preserved values;
+location remained under review, without geometry or MTR changes. Reviewed identities
+and explicit corrections survived; idle replay and integrity checks passed. This
+replaces the unfinished full-catalogue performance rehearsal, whose partial checkpoint
+was retained when it was deliberately stopped.
