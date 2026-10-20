@@ -6,7 +6,7 @@ import { cubicOut } from 'svelte/easing'
 import { prefersReducedMotion } from 'svelte/motion'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import { Icon } from '#lib/bits/index.js'
-import RangeSlider from 'svelte-range-slider-pips'
+import PropertyRangeControl from '#lib/bits/patterns/forms/formFeatureField/components/PropertyRangeControl.svelte'
 // ADAPTERS
 import type { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
 // TYPES
@@ -20,8 +20,6 @@ let { filter, defaultOpen = false }: Props = $props()
 
 // Derive values from property
 let label = $derived(filter.label)
-let min = $derived(filter.min)
-let max = $derived(filter.max)
 
 // Apply the default once so user toggles remain independent of prop updates.
 let isOpen = $state(untrack(() => defaultOpen))
@@ -61,23 +59,14 @@ let displayText = $derived(filter.displayText)
         duration: prefersReducedMotion.current ? 0 : 200,
         easing: cubicOut,
       }}
-      class="flex max-h-65 flex-col overflow-y-auto overscroll-contain px-1"
+      class="flex flex-col overflow-visible px-1"
     >
-      <div class="pb-4 pl-2 pr-4 pt-8">
-        <RangeSlider
-          {min}
-          {max}
-          step={1}
-          bind:values
-          pips
-          all="label"
-          first="label"
-          last="label"
-          rest="pip"
-          pipstep={Math.max(1, Math.ceil((max - min) / 10))}
-          pushy
-          float
-          on:change={() => filter.setRange(values)}
+      <div class="pb-3.5 pt-2.5">
+        <PropertyRangeControl
+          compact
+          definition={filter.definition}
+          {values}
+          onChange={range => filter.setRange(range)}
         />
       </div>
     </div>

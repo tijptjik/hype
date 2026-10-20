@@ -326,11 +326,21 @@ export function buildFeatureQueryConditions(
         )
         when 'true' then ${featureProperty.value} in ('true', '1')
         when 'false' then ${featureProperty.value} in ('false', '0')
-        when 'object' then (
+        when 'object' then case when exists (
+          select 1 from property as rangeDefinition where rangeDefinition.id = ${featureProperty.propertyId}
+          and rangeDefinition.dataType in ('dateRange','timeRange')
+        ) then case when json_valid(${featureProperty.valueJson}) then (
+          json_extract(${featureProperty.valueJson}, '$.version') = 1
+          and json_type(${featureProperty.valueJson}, '$.start') = 'integer'
+          and json_type(${featureProperty.valueJson}, '$.end') = 'integer'
+          and json_extract(${featureProperty.valueJson}, '$.start') <= json_extract(${featureProperty.valueJson}, '$.end')
+          and json_extract(${featureProperty.valueJson}, '$.start') <= json_extract("requestedProperty"."value", '$[2].rangeMax')
+          and json_extract(${featureProperty.valueJson}, '$.end') >= json_extract("requestedProperty"."value", '$[2].rangeMin')
+        ) else 0 end else (
           case when json_valid(${featureProperty.value}) then json_type(${featureProperty.value}) in ('integer', 'real') else 0 end
           and cast(${featureProperty.value} as real) >= json_extract("requestedProperty"."value", '$[2].rangeMin')
           and cast(${featureProperty.value} as real) <= json_extract("requestedProperty"."value", '$[2].rangeMax')
-        )
+        ) end
         else 0 end`,
         ),
       )

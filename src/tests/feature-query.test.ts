@@ -541,3 +541,53 @@ describe('native feature query retention', () => {
     expect(results.totalCount).toBeNull()
   })
 })
+
+describe('cached interval overlap', () => {
+  it.each(['dateRange', 'timeRange'])(
+    '%s includes any overlap, including touching endpoints',
+    dataType => {
+      const query: FeatureQueryInput = {
+        ...input,
+        filters: {
+          properties: {
+            'layer-a': {
+              interval: { globalMin: 0, globalMax: 100, rangeMin: 40, rangeMax: 60 },
+            },
+          },
+        },
+      }
+      for (const [start, end, expected] of [
+        [10, 39, false],
+        [10, 40, true],
+        [20, 50, true],
+        [45, 55, true],
+        [10, 90, true],
+        [60, 80, true],
+        [61, 80, false],
+      ]) {
+        const feature = row('interval')
+        feature.properties = [
+          {
+            propertyId: 'interval',
+            value: null,
+            valueJson: JSON.stringify({ version: 1, start, end }),
+            property: { dataType },
+          },
+        ] as unknown as FeatureFromCollection['properties']
+        expect(matchesFeatureQuery(feature, query), `${start}–${end}`).toBe(expected)
+      }
+      for (const valueJson of [
+        null,
+        'broken',
+        '{"version":2,"start":40,"end":60}',
+        '{"version":1,"start":60,"end":40}',
+      ]) {
+        const feature = row('invalid')
+        feature.properties = [
+          { propertyId: 'interval', value: null, valueJson, property: { dataType } },
+        ] as unknown as FeatureFromCollection['properties']
+        expect(matchesFeatureQuery(feature, query)).toBe(false)
+      }
+    },
+  )
+})

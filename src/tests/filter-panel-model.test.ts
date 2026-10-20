@@ -128,3 +128,59 @@ it('uses full project names and only qualifies distinct projects with matching n
     'two',
   ])
 })
+
+it('includes public temporal specifiers and uses their service-day domain and formatted selection', async () => {
+  vi.useRealTimers()
+  const hours = {
+    id: 'hours',
+    key: 'hours',
+    type: 'specifier',
+    dataType: 'timeRange',
+    timeMaxHour: 36,
+    audience: 'public',
+    rank: 0,
+  } as Property
+  const privateHours = {
+    ...hours,
+    id: 'private-hours',
+    audience: 'internal',
+  } as Property
+  const cache = new SvelteMap<string, Property>([
+    [hours.id, hours],
+    [privateHours.id, privateHours],
+  ])
+  const layer = {
+    id: 'events',
+    properties: [
+      { propertyId: hours.id, isVisible: true },
+      { propertyId: privateHours.id, isVisible: true },
+    ],
+  }
+  const app = {
+    cache: { property: cache },
+    scope: { getPrism: () => ['events'] },
+    getLayerById: async () => layer,
+    getHierarchy: async () => ({ project: {}, organisation: {} }),
+    getContextualOrganisationName: () => '',
+    getContextualProjectName: () => '',
+    getContextualLayerName: () => '',
+    getUserPreferences: () => ({}),
+    getClassifierPropertiesForLayer: async () => [],
+    filters: { values: { feature: { properties: {} } } },
+  } as unknown as ResourceViewCtx
+  let model!: ReturnType<typeof useFilterPanelModel>
+  render(Fixture, { app, onModel: value => (model = value) })
+  await waitFor(() =>
+    expect(model.categories[0]?.properties.map(row => row.id)).toEqual(['hours']),
+  )
+  const filter = model.propertyFilter(hours, 'events')
+  expect(filter.rangeValues).toEqual([0, 2160])
+  filter.setRange([1440, 1530])
+  expect(filter.displayText).toBe('24:00 – 25:30')
+  expect(filter.rangeValues).toEqual([1440, 1530])
+  expect(app.filters.values.feature.properties).toEqual({
+    events: {
+      hours: { globalMin: 0, globalMax: 2160, rangeMin: 1440, rangeMax: 1530 },
+    },
+  })
+})

@@ -64,7 +64,8 @@ function setup(withOrphan = false) {
     )
   sqlite.exec(`CREATE TABLE feature (${columns.join(',')});
     CREATE TABLE featureI18n(featureId TEXT, locale TEXT, title TEXT, description TEXT, displayAddress TEXT, addressProperties TEXT, PRIMARY KEY(featureId,locale));
-    CREATE TABLE featureProperty(featureId TEXT, propertyId TEXT, propertyValueId TEXT, value TEXT, PRIMARY KEY(featureId,propertyId));
+    CREATE TABLE featureProperty(featureId TEXT, propertyId TEXT, propertyValueId TEXT, value TEXT, valueJson TEXT, PRIMARY KEY(featureId,propertyId));
+    CREATE TABLE property(id TEXT PRIMARY KEY, dataType TEXT NOT NULL DEFAULT 'text');
     CREATE TABLE userFeature(userId TEXT, featureId TEXT, isWishlisted INTEGER, isVisited INTEGER, visitedAt TEXT, createdAt TEXT, modifiedAt TEXT, PRIMARY KEY(userId,featureId));
     CREATE TABLE featureSpatial(featureId TEXT, resolution INTEGER, cell TEXT, latitude REAL, longitude REAL, PRIMARY KEY(featureId,resolution));
     CREATE INDEX featureSpatial_cell_layer_idx ON featureSpatial(resolution,cell,featureId,longitude,latitude);
@@ -154,7 +155,7 @@ function setup(withOrphan = false) {
   add('c', 'South place', 'Wan Chai')
   add('d', 'North private', 'Central', 'layer', 0)
   add('e', 'Other layer', null, 'other')
-  sqlite.exec(`INSERT INTO featureProperty VALUES('a','kind','cafe',NULL),('b','kind','bar',NULL),('a','number',NULL,'5'),('b','number',NULL,'garbage');
+  sqlite.exec(`INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES('a','kind','cafe',NULL),('b','kind','bar',NULL),('a','number',NULL,'5'),('b','number',NULL,'garbage');
     INSERT INTO userFeature(userId,featureId,isWishlisted,isVisited) VALUES('user','a',1,0),('user','c',0,1),('other','b',1,0);
     INSERT INTO featureSpatial VALUES('a',7,'cell',22,114),('b',7,'cell',22,115),('c',7,'other',22,114);`)
   return { db, sqlite, add, statements }
@@ -972,7 +973,7 @@ describe('indexed feature queries', () => {
       NonNullable<FeatureQueryInput['filters']>['properties']
     >[string] = {}
     const insertProperty = sqlite.prepare(
-      'INSERT INTO featureProperty VALUES (?, ?, ?, ?)',
+      'INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES (?, ?, ?, ?)',
     )
     for (let index = 0; index < 24; index++) {
       layerFilters[`selection-${index}`] = ['selected']
@@ -1034,7 +1035,9 @@ describe('indexed feature queries', () => {
     const propertyId = "property') OR 1=1 --"
     add('f', 'Escaped identifiers', 'Central', layerId)
     sqlite
-      .prepare('INSERT INTO featureProperty VALUES(?, ?, ?, NULL)')
+      .prepare(
+        'INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES(?, ?, ?, NULL)',
+      )
       .run('f', propertyId, 'yes')
     const request = input({
       q: 'Escaped',
@@ -1143,3 +1146,49 @@ function facetCounts(page: {
     ]),
   )
 }
+
+it('filters versioned date/time intervals by overlap with matching counts and missing-value semantics', async () => {
+  const { db, sqlite } = setup()
+  sqlite.exec("INSERT INTO property(id,dataType) VALUES ('hours','timeRange')")
+  const insert = sqlite.prepare(
+    'INSERT INTO featureProperty(featureId,propertyId,valueJson) VALUES (?,?,?)',
+  )
+  insert.run('a', 'hours', JSON.stringify({ version: 1, start: 1380, end: 1530 }))
+  insert.run('b', 'hours', JSON.stringify({ version: 1, start: 600, end: 660 }))
+  insert.run('c', 'hours', 'broken')
+  insert.run('d', 'hours', JSON.stringify({ version: 2, start: 1380, end: 1530 }))
+  const selection = await queryFeaturePage(
+    db,
+    input({
+      filters: {
+        properties: {
+          layer: {
+            hours: { globalMin: 0, globalMax: 2160, rangeMin: 1440, rangeMax: 1500 },
+          },
+        },
+      },
+    }),
+    base,
+    hub,
+  )
+  expect(
+    selection.data.filter(row => row.layerId === 'layer').map(row => row.id),
+  ).toEqual(['a'])
+  expect(selection.totalCount).toBe(selection.data.length)
+  const reset = await queryFeaturePage(
+    db,
+    input({
+      filters: {
+        properties: {
+          layer: {
+            hours: { globalMin: 0, globalMax: 2160, rangeMin: 0, rangeMax: 2160 },
+          },
+        },
+      },
+    }),
+    base,
+    hub,
+  )
+  const unfiltered = await queryFeaturePage(db, input(), base, hub)
+  expect(reset.data.map(row => row.id)).toEqual(unfiltered.data.map(row => row.id))
+})

@@ -18,6 +18,8 @@
 import { latLngToCell } from 'h3-js'
 // SERVICES
 import { getFeaturePointCoordinates } from '#lib/map/featureSpatial.js'
+// PROPERTY CONTRACTS
+import { isRangeProperty, RangeValueSchema } from '#lib/properties/range.js'
 // TYPES
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 import type {
@@ -213,6 +215,17 @@ export function matchesFeatureQuery(
           return (filter ? ['true', '1'] : ['false', '0']).includes(
             String(property.value),
           )
+        // Cached results use the same inclusive overlap rule as the database query.
+        if (property.property && isRangeProperty(property.property)) {
+          try {
+            const interval = RangeValueSchema.parse(
+              JSON.parse(property.valueJson ?? ''),
+            )
+            return interval.start <= filter.rangeMax && interval.end >= filter.rangeMin
+          } catch {
+            return false
+          }
+        }
         if (
           property.value === null ||
           property.value === undefined ||

@@ -1,3 +1,8 @@
+import {
+  formatRangeEndpoint,
+  isRangeProperty,
+  rangeDomain,
+} from '#lib/properties/range.js'
 // SVELTE
 import { untrack } from 'svelte'
 // I18N
@@ -85,6 +90,7 @@ export function useFilterPanelModel(
 
   /** Builds label, selection and mutation data for one classifier control. */
   function propertyFilter(property: Property, layerId: Id) {
+    const domain = rangeDomain(property)
     const values = (property.values as PropertyValue[]) || []
     const getSelection = () => getPropertyFilterMap(app)?.[layerId]?.[property.id]
     return {
@@ -100,14 +106,22 @@ export function useFilterPanelModel(
       },
       get displayText() {
         const selected = getSelection() ?? []
+        if (isRangeProperty(property)) {
+          if (
+            Array.isArray(selected) ||
+            (selected.rangeMin === domain.min && selected.rangeMax === domain.max)
+          )
+            return m.filters__all()
+          return `${formatRangeEndpoint(property, selected.rangeMin)} – ${formatRangeEndpoint(property, selected.rangeMax)}`
+        }
         return Array.isArray(selected)
           ? displaySelectedProperties(
               selected,
               propertyValuesToLocalisedOptions(app, values),
             )
-          : displayRangeFilter(property.min ?? 0, property.max ?? 100, [
-              selected.rangeMin ?? property.min ?? 0,
-              selected.rangeMax ?? property.max ?? 100,
+          : displayRangeFilter(domain.min, domain.max, [
+              selected.rangeMin ?? domain.min,
+              selected.rangeMax ?? domain.max,
             ])
       },
       get rangeValues(): [number, number] {
@@ -115,14 +129,15 @@ export function useFilterPanelModel(
         return [
           !Array.isArray(selected) && selected?.rangeMin !== undefined
             ? selected.rangeMin
-            : (property.min ?? 0),
+            : domain.min,
           !Array.isArray(selected) && selected?.rangeMax !== undefined
             ? selected.rangeMax
-            : (property.max ?? 100),
+            : domain.max,
         ]
       },
-      min: property.min ?? 0,
-      max: property.max ?? 100,
+      definition: property,
+      min: domain.min,
+      max: domain.max,
       toggle: (valueId: Id) => {
         toggleCategoricalPropertyValue(app, layerId, property.id, valueId)
         zoomToVisible()

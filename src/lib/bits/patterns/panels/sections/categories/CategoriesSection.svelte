@@ -1,4 +1,5 @@
 <script lang="ts">
+import { isRangeProperty } from '#lib/properties/range.js'
 // SVELTE
 import { slide } from 'svelte/transition'
 import { cubicOut } from 'svelte/easing'
@@ -44,7 +45,7 @@ let {
       <div class="space-y-2">
         {#each group.properties as property (property.id)}
           {@const filter = model.propertyFilter(property, group.hierarchy.layerId)}
-          {#if property.component === 'RangeField'}
+          {#if property.component === 'RangeField' || isRangeProperty(property)}
             <RangeFilter {filter} defaultOpen={property.key === 'grade'} />
           {:else}
             <CategoryFilter {property} {filter} />
