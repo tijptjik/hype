@@ -359,6 +359,9 @@ const selectAdapter = () => {
 // CONFIG
 export default defineConfig(async ({ command }) => ({
   define: {
+    'import.meta.env.HYPE_PLACE_SOURCE_URL': JSON.stringify(
+      command === 'serve' ? (process.env.HYPE_PLACE_SOURCE_URL ?? '') : '',
+    ),
     'import.meta.env.HYPE_STATIC_BUILD': process.env.SVELTE_ADAPTER === 'static',
     'import.meta.env.HYPE_DEV_PERSONA': JSON.stringify(
       command === 'serve' ? getDevPersona(process.env) : null,

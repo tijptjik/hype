@@ -76,6 +76,7 @@ const pageSchema = z.object({
     .object({
       apiReleaseSet: z.string().min(1),
       apiCatalogRevision: z.string().min(1),
+      filters: z.object({ id: z.string().optional() }).optional(),
       page: z.object({
         offset: z.number().int().nonnegative(),
         limit: z.number().int().positive(),
@@ -91,7 +92,7 @@ const pageSchema = z.object({
  * @param client Trusted server endpoint, credential and request implementation.
  * @param pin Immutable publication selection, retained across every page and retry.
  * @param offset Next offset from the last successfully persisted page.
- * @param filters Optional canonical category or Division restriction, unchanged across pages.
+ * @param filters Optional canonical ID, category or Division restriction, unchanged across pages.
  * @returns Verified projections, total count and the next offset (null only when complete).
  * @remarks Latest-only search/detail results are never used as canonical snapshots.
  * Credentials are sent only to the configured endpoint, with redirects rejected.
@@ -101,7 +102,12 @@ export async function readSaanSeoiPlacePage(
   client: PlaceSourceClient,
   pin: PlacePublicationPin,
   offset = 0,
-  filters: { basicCategory?: string; taxonomyPrimary?: string; division?: string } = {},
+  filters: {
+    id?: string
+    basicCategory?: string
+    taxonomyPrimary?: string
+    division?: string
+  } = {},
 ): Promise<{
   places: SaanSeoiPlaceProjection[]
   total: number | null
@@ -124,6 +130,7 @@ export async function readSaanSeoiPlacePage(
     locales: 'en,zh-hant,zh-hans',
     'page[limit]': '100',
     'page[offset]': String(offset),
+    ...(filters.id ? { 'filter[id]': filters.id } : {}),
     ...(filters.basicCategory
       ? { 'filter[basicCategory]': filters.basicCategory }
       : {}),
@@ -147,6 +154,7 @@ export async function readSaanSeoiPlacePage(
   // Historical collections report hasMore rather than computing a full total.
   // Reject inconsistent pagination instead of declaring an incomplete export successful.
   if (
+    (filters.id !== undefined && parsed.meta.filters?.id !== filters.id) ||
     parsed.meta.apiReleaseSet !== pin.releaseSet ||
     parsed.meta.apiCatalogRevision !== pin.catalogRevision ||
     page.offset !== offset ||

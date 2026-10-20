@@ -1282,60 +1282,58 @@ retains its existing 10 errors / 19 warnings. Unmirrored-source ingestion, addre
 source changes-feed integration and the final acceptance audit remain open. No primary
 identity decision, deployment or production mutation was performed.
 
-### Bounded lookup of unmirrored source candidates (Refs #194)
+### Canonical candidate loading by exact ID (Refs #194)
 
-Canonical candidate lookup uses the ID-ordered collection with the server-discovered
-publication pin, rather than the latest-only detail endpoint. `sourceLookup.ts` searches
-100-record pages by binary search when an exact total is available. Historical responses
-without totals use exponential upper-bound discovery followed by binary search. Every
-request retains the same release-set, catalog-revision and known-at selectors.
+Both Feature selection and identity-review selection request canonical ingestion when a
+selected source result is not mirrored. `importFeaturePlaceCandidate` authorizes inherited
+fields using persisted Feature ancestry before contacting SaanSeoi. It discovers the
+publication server-side, verifies the selected source identity and resource release, and
+returns only the scoped candidate projection. Client facts, project scope and source URLs
+are rejected. Missing records, release drift, source failures and inaccessible identities
+remain explicit failures; raw upstream/database diagnostics are not returned.
 
-Lookup rejects observed ordering violations, overlapping page ranges, sparse nonterminal
-pages, inconsistent totals and changed canonical snapshots. It caches pages within one
-lookup and caps work at 24 requests and a 45-second lookup deadline. Contract failures
-remain errors rather than becoming misleading empty results. This reader performs no
-persistence or Feature adoption. The guarded candidate-import command and editor wiring
-are still required before previously unmirrored search results can be selected end to end.
+Candidate lookup uses the canonical collection with `filter[id]`, full profile and the
+server-discovered release-set, catalog-revision and known-at selectors. SaanSeoi applies
+the exact ID predicate to current records/counts and historical journal selection, retaining
+normal publication readiness, geography, locale, pagination and permission handling. The
+response echoes `meta.filters.id`; HYPE requires that acknowledgement, at most one exact
+matching record and complete pagination. An older server ignoring the filter fails explicitly.
+Latest-only detail is not accepted as pinned canonical evidence.
 
-Twelve lookup tests cover current/historical boundaries, absent IDs, empty collections,
-partial final pages, publication/order/snapshot/pagination drift and request limits,
-including a 200,001-record synthetic collection. Together with source-client tests,
-22 tests pass; the Place refresh worker type-check also passes. Live upstream lookup
-and browser acceptance are not established by these fixture tests.
+This replaces collection binary search: a live collection-page request timed out during
+rehearsal despite successful discovery and the first page. The direct filtered lookup against
+the existing read-only production mirror returned that same canonical candidate in about
+7 ms after discovery (55 ms). These are local measurements, not production latency claims.
+The source API filter (SaanSeoi commit `5dfb3b471`) must be released before HYPE's unmirrored candidate path can work
+against the hosted API; neither application has been deployed by this work.
 
-### Authorized candidate loading and live lookup limitation (Refs #194)
+`persistPlaceCandidate` includes an ownership predicate in every ingestion write, preventing
+updates to another project's private identity even if ownership changes between the initial
+read and the write batch. Retired-source identity protections remain in force. Selection
+does not link, merge, accept identity or adopt facts/location. Feature preview callbacks
+are invalidated on unmount.
 
-Both Feature selection and identity-review selection now request canonical ingestion
-when a selected source result is not mirrored. `importFeaturePlaceCandidate` authorizes
-all inherited fields using persisted Feature ancestry before contacting SaanSeoi. It
-discovers the publication server-side, verifies the selected source identity and release,
-and returns only the scoped candidate projection. Client facts, project scope and source
-URLs are rejected. Missing records, release drift, source failures and inaccessible
-identities remain explicit failures; raw upstream/database diagnostics are not returned.
+For local source rehearsals, launch HYPE with `HYPE_PLACE_SOURCE_URL=http://127.0.0.1:8787`
+(or the local SaanSeoi API port). Vite exposes this setting only during development; builds
+receive an empty override and use the hosted endpoint. The server validates a loopback HTTP
+origin without credentials, path, query or fragment. It sends a dummy development key to
+that local API, never the hosted credential. All Places source commands share this setting.
 
-`persistPlaceCandidate` passes an ownership predicate into every source-ingestion write,
-so another project's private Place cannot be updated, including when ownership changes
-between the initial read and batch execution. Existing retired-source protections remain
-in force. Selection does not link, merge, accept identity, or adopt facts/location. Feature
-preview callbacks are invalidated on unmount. Source lookup's callable transport typing
-also accommodates Bun's augmented global fetch type without requiring its extra methods.
+Validation: 174 focused HYPE tests pass, including ID-filter acknowledgement, current and
+historical responses, permission boundaries, exact release checks, private ownership and
+concurrent scope changes. Worker checking passes; application checking retains 10 existing errors / 19 warnings.
+SaanSeoi has 55 passing focused route,
+history and tutorial tests and a passing API type-check; its required Markdown formatting
+was run. Browser rehearsals against the real local API and read-only production mirror
+verified both identity comparison and Change Place preview for previously unmirrored records,
+with zero page errors. Reopening a mirrored result did not call import again. These deliberately
+different establishments were selected only to exercise the UI; neither was accepted as a
+match or linked to the Feature.
 
-Validation: 166 focused service/remote/source/refresh tests pass. Worker checking passes;
-application checking retains the existing 10 errors / 19 warnings. Tests cover forbidden
-editing, injected scope/facts, server publication selectors, release mismatch, sanitized
-failures, idempotence, private ownership and a concurrent scope change during ingestion.
-
-**Live acceptance remains incomplete.** An isolated browser rehearsal searched for a
-previously unmirrored McDonald's result and invoked the import command, but no comparison
-appeared. An independent read-only source probe reproduced a canonical page-request timeout
-after successful publication discovery and the first page. The bounded collection search
-is therefore not yet a demonstrated usable live import path. An efficient canonical
-lookup by ID that honors publication selectors is needed; the current latest-only detail
-endpoint must not silently replace pinned evidence. Implement and verify that source API
-path locally, then repeat browser acceptance before marking candidate loading complete.
-
-The isolated rehearsal retained identical Feature, association, Place, revision, identity
-history, merge-review and redirect tables to primary local state (1,601 Features, 1,520
-associations, 2,850 Places). Integrity is OK with zero foreign-key violations. No identity
-was accepted and no source record was imported during this failed rehearsal. The server
-was stopped. No production mutation or deployment was performed.
+The isolated HYPE database gained exactly two Places, two source revisions and two retained
+identity-review records. Every Feature table, property/localization/image record, spatial and
+search index, Feature–Place association/history and MTR job remained identical to primary.
+No adoption or identity decision, merge or redirect was created. Integrity is OK with zero
+foreign-key violations. Screenshots are private at `output/playwright/place-candidate-import.png`
+and `output/playwright/place-candidate-replacement.png`. Both servers were stopped. Address
+hydration/curation, source changes-feed integration and the full acceptance audit remain open.

@@ -37,6 +37,7 @@ import {
 } from '#lib/places/sourceClient.js'
 import { discoverPlacePublication } from '#lib/places/publication.js'
 import { findSaanSeoiPlace } from '#lib/places/sourceLookup.js'
+import { placeSourceEndpoint } from '#lib/places/sourceEndpoint.server.js'
 // TYPES
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 
@@ -261,7 +262,7 @@ export const searchFeaturePlaces = guardedQuery(
     if (!apiKey?.trim()) error(503, 'PLACE_SEARCH_UNAVAILABLE')
     try {
       const candidates = await searchSaanSeoiPlaces(
-        { baseUrl: 'https://api.saanseoi.hk', apiKey, fetch: ctx.event.fetch },
+        { ...placeSourceEndpoint(apiKey), fetch: ctx.event.fetch },
         { q: input.q, locale: input.locale, limit: input.limit },
       )
       return { source: 'saanseoi-latest' as const, candidates }
@@ -466,8 +467,7 @@ export const importFeaturePlaceCandidate = guardedCommand(
     const apiKey = env?.SAANSEOI_API_KEY ?? env?.VITE_SAANSEOI_API_KEY
     if (!apiKey?.trim()) error(503, 'PLACE_SEARCH_UNAVAILABLE')
     const client = {
-      baseUrl: 'https://api.saanseoi.hk',
-      apiKey,
+      ...placeSourceEndpoint(apiKey),
       fetch: ctx.event.fetch,
     }
     let found: Awaited<ReturnType<typeof findSaanSeoiPlace>>

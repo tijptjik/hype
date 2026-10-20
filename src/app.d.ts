@@ -23,6 +23,7 @@ import 'unplugin-icons/types/svelte'
 
 declare global {
   interface ImportMetaEnv {
+    readonly HYPE_PLACE_SOURCE_URL: string
     readonly HYPE_DEV_PERSONA: 'admin' | 'user' | null
   }
   namespace App {

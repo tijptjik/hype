@@ -44,6 +44,7 @@ import {
 } from '#lib/db/services/placeMerge.js'
 // DOMAIN
 import { readSaanSeoiPlacePage } from '#lib/places/sourceClient.js'
+import { placeSourceEndpoint } from '#lib/places/sourceEndpoint.server.js'
 // TYPES
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 
@@ -184,7 +185,7 @@ export const preparePlaceIdentityReview = guardedCommand(
     let page: Awaited<ReturnType<typeof readSaanSeoiPlacePage>>
     try {
       page = await readSaanSeoiPlacePage(
-        { baseUrl: 'https://api.saanseoi.hk', apiKey, fetch: ctx.event.fetch },
+        { ...placeSourceEndpoint(apiKey), fetch: ctx.event.fetch },
         input.publication,
         input.sourceOffset,
       )
