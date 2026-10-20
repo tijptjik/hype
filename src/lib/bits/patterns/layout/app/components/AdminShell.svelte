@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTEKIT
+import { page } from '$app/state'
 // CUSTOM
 import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
 // LAYOUT
@@ -84,6 +86,6 @@ const footerConfig = $derived(headerProps.footer ?? null)
       {@render settings()}
     </div>
   {:else}
-    <LoadScreen color="accent" />
+    <LoadScreen color="accent" hubCode={page.data.hub?.code} />
   {/if}
 </MinWidthGuard>

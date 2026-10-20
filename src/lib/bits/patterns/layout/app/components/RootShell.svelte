@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTEKIT
+import { page } from '$app/state'
 // QUERY
 // BITS
 import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
@@ -24,6 +26,6 @@ const classes = $derived(
   {#if isReady}
     {@render children()}
   {:else}
-    <LoadScreen color="accent" />
+    <LoadScreen color="accent" hubCode={page.data.hub?.code} />
   {/if}
 </div>

@@ -14,7 +14,7 @@ let {
 
 <div
   {...restProps}
-  class={['bits-load-screen__breadline h-32 w-40', className]}
+  class={['block h-32 w-40', className]}
   role="status"
   aria-label={label}
 >
@@ -28,13 +28,3 @@ let {
     aria-hidden="true"
   >
 </div>
-
-<style>
-.bits-load-screen__breadline {
-  display: none;
-}
-
-:global(html[data-theme^="breadline-"]) .bits-load-screen__breadline {
-  display: block;
-}
-</style>

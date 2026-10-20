@@ -742,6 +742,9 @@ $effect(() => {
       </AppMain>
     </AppSurface>
   {:else if appCtx.view.publicationPreview}
-    <LoadScreen label={m.publication_preview__preparing()} />
+    <LoadScreen
+      label={m.publication_preview__preparing()}
+      hubCode={page.data.hub?.code}
+    />
   {/if}
 </AppShell>

@@ -1,9 +1,19 @@
 <script lang="ts">
+// SVELTE
 import { fade } from 'svelte/transition'
+// COMPONENTS
 import BreadlineToastLoader from './BreadlineToastLoader.svelte'
+import HypeLogoLoader from './HypeLogoLoader.svelte'
+// TYPES
 import type { LoadScreenProps } from './loading.types'
 
-let { color = 'primary', surface = 'transparent', label }: LoadScreenProps = $props()
+let {
+  color = 'primary',
+  surface = 'transparent',
+  label,
+  hubCode,
+}: LoadScreenProps = $props()
+const isBreadline = $derived(hubCode === 'breadline')
 const classes = $derived(
   [
     'bits-load-screen',
@@ -13,7 +23,12 @@ const classes = $derived(
 )
 </script>
 
-<div class={classes} in:fade={{ duration: 220 }} out:fade={{ duration: 260 }}>
+<div
+  class={classes}
+  data-hub={hubCode}
+  in:fade={{ duration: 220 }}
+  out:fade={{ duration: 260 }}
+>
   <div class="bits-load-screen__center">
     {#if label}
       <p
@@ -22,13 +37,10 @@ const classes = $derived(
       >
         {label}
       </p>
-    {:else}
-      <div class="bits-load-screen__spinner" aria-hidden="true">
-        <span class="bits-load-screen__ring bits-load-screen__ring--outer"></span>
-        <span class="bits-load-screen__ring bits-load-screen__ring--middle"></span>
-        <span class="bits-load-screen__ring bits-load-screen__ring--inner"></span>
-      </div>
+    {:else if isBreadline}
       <BreadlineToastLoader />
+    {:else}
+      <HypeLogoLoader />
     {/if}
   </div>
 </div>
@@ -49,7 +61,7 @@ const classes = $derived(
   background: var(--color-base-300);
 }
 
-:global(html[data-theme^="breadline-"]) .bits-load-screen {
+.bits-load-screen[data-hub="breadline"] {
   background: var(--color-surface);
 }
 
@@ -60,62 +72,11 @@ const classes = $derived(
   transform: translate(-50%, -50%);
 }
 
-.bits-load-screen__spinner {
-  position: relative;
-  display: block;
-  height: 5.5rem;
-  width: 5.5rem;
-  color: var(--bits-load-screen-color, var(--color-primary));
-}
-
-:global(html[data-theme^="breadline-"]) .bits-load-screen__spinner {
-  display: none;
-}
-
 .bits-load-screen--color-primary {
   --bits-load-screen-color: var(--color-primary);
 }
 
 .bits-load-screen--color-accent {
   --bits-load-screen-color: var(--color-accent);
-}
-
-.bits-load-screen__ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  border: 2px solid color-mix(in srgb, var(--bits-load-screen-color) 44%, transparent);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
-  animation: bits-load-screen-pulse 1.6s ease-in-out infinite;
-}
-
-.bits-load-screen__ring--outer {
-  animation-delay: 0s;
-  opacity: 0.85;
-}
-
-.bits-load-screen__ring--middle {
-  inset: 0.75rem;
-  animation-delay: 0.18s;
-  opacity: 0.72;
-}
-
-.bits-load-screen__ring--inner {
-  inset: 1.5rem;
-  animation-delay: 0.36s;
-  opacity: 0.58;
-}
-
-@keyframes bits-load-screen-pulse {
-  0%,
-  100% {
-    opacity: 0.38;
-    transform: scale(0.94);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 </style>
