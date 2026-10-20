@@ -23,7 +23,7 @@ export const UnitIdentitySchema = z.strictObject({
 })
 
 // Local details have no inventory ID or granularity. Room is a unit type;
-// portions belong to unitPortion, never a separate room_part hierarchy level.
+// portions belong to unitPortion, with unit_portion describing address scope rather than another hierarchy level.
 export const UnitDetailsSchema = z.strictObject({
   ...FloorDetailsSchema.shape,
   ...UnitIdentitySchema.shape,

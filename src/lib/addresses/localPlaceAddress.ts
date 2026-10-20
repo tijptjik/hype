@@ -12,9 +12,10 @@ export const ADDRESS_GRANULARITIES = [
   'section',
   'floor',
   'unit',
-  'room',
-  'room_part',
+  'unit_portion',
 ] as const
+// Source block descriptors, not a guarantee of building-level scope: some source
+// block components identify flats or units. Preserve the descriptor and expression.
 export const ADDRESS_BLOCK_TYPES = [
   'block',
   'building',
@@ -35,27 +36,27 @@ export const ADDRESS_BLOCK_TYPES = [
   'other',
 ] as const
 export const ADDRESS_UNIT_TYPES = [
-  'F',
-  'R',
-  'S',
-  'SU',
-  'U',
-  'ST',
-  'K',
-  'O',
-  'X',
+  'F', // Flat or apartment.
+  'R', // Room.
+  'S', // Shop.
+  'SU', // Suite.
+  'U', // Unit.
+  'ST', // Stall.
+  'K', // Kiosk.
+  'O', // Office.
+  'X', // Other or unclassified unit type.
 ] as const
 export const ADDRESS_FLOOR_TYPES = [
-  'F',
-  'G',
-  'UG',
-  'LG',
-  'B',
-  'M',
-  'C',
-  'P',
-  'R',
-  'X',
+  'F', // Floor.
+  'G', // Ground floor.
+  'UG', // Upper ground floor.
+  'LG', // Lower ground floor.
+  'B', // Basement.
+  'M', // Mezzanine.
+  'C', // Concourse.
+  'P', // Podium.
+  'R', // Roof.
+  'X', // Other or unclassified floor type.
 ] as const
 const optionalText = z.string().max(4000).nullable().optional()
 

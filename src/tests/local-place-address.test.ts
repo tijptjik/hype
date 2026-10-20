@@ -54,6 +54,23 @@ const facts = {
 }
 
 describe('locally authored SaanSeoi address content', () => {
+  it('uses unit and unit_portion scope while retaining room as a unit type', () => {
+    for (const granularity of ['unit', 'unit_portion'])
+      expect(
+        LocalPlaceAddressSchema.safeParse({ ...authored, granularity }).success,
+      ).toBe(true)
+    for (const granularity of ['room', 'room_part'])
+      expect(
+        LocalPlaceAddressSchema.safeParse({ ...authored, granularity }).success,
+      ).toBe(false)
+    expect(
+      LocalPlaceAddressSchema.safeParse({
+        ...authored,
+        unit: { ...authored.unit, unitType: 'R' },
+      }).success,
+    ).toBe(true)
+  })
+
   it('round-trips canonical component types, locale content and unit semantics without upstream IDs', () => {
     expect(
       LocalPlaceInputSchema.parse({ state: 'manual', facts }).facts.location.address
