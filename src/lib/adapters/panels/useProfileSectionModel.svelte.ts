@@ -226,12 +226,14 @@ export function useProfileSectionModel(
   }
 
   async function handleLogout(): Promise<void> {
-    // Prevent automatic guest bootstrap from racing the explicit sign-in redirect.
+    // Prevent automatic guest bootstrap from racing the explicit user-app redirect.
     markSignOutIntent()
     await signOut({
       fetchOptions: {
         onSuccess: () => {
-          goto('/signin')
+          // Reload the public surface so its guest bootstrap starts with a fresh session.
+          clearSignOutIntent()
+          window.location.replace('/')
         },
         onError: error => {
           clearSignOutIntent()

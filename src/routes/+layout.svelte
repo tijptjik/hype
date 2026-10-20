@@ -350,7 +350,7 @@ watch(
       scheduleAuthReinit(newUser as SessionUser)
     } else if (!newUser && currentUserId) {
       if (consumeSignOutIntent()) {
-        // Let an explicit sign-out reach the sign-in page before another guest is created.
+        // Let an explicit sign-out reach the user app before another guest is created.
         root.sync(null, root.hub)
         logMarkerBootstrap('intentional sign-out suppressed automatic guest bootstrap')
         return

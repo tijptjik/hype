@@ -1,7 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
-import { afterNavigate, beforeNavigate } from '$app/navigation'
+import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
 import { page } from '$app/state'
 // TANSTACK
 // I18N
@@ -60,6 +60,10 @@ $effect(() => {
   const user = root.user
   const hub = root.hub
   if (!root.ready) return
+  if (!user || user.isAnonymous === true) {
+    void goto('/', { replaceState: true })
+    return
+  }
   untrack(() => {
     if (hub) view.setHub(hub)
     view.syncAccount()
@@ -161,11 +165,32 @@ const isPrimaryPanelAutoHide = $derived(
   view.isAdmin() && (adminPreferences?.isPrimaryPanelAutoHide ?? false),
 )
 
-// Initialize AdminCtx if AppCtx is ready
+let failedAdminScope = $state<string | null>(null)
+
+// Initialize AdminCtx if AppCtx is ready; a failed scope must not retry on loading changes.
 $effect(() => {
-  view.isInitialised
-  if (view.isInitialised && !adminCtx.isInitialised && !adminCtx.isInitializing) {
+  const user = root.user
+  const scope = view.resources.scopeKey
+  if (!root.ready || !user || user.isAnonymous === true) return
+  if (
+    view.isInitialised &&
+    !adminCtx.isInitialised &&
+    !adminCtx.isInitializing &&
+    failedAdminScope !== scope
+  ) {
     void adminCtx.init().catch(error => {
+      // Ignore failures from an account scope that has already been replaced.
+      if (scope !== view.resources.scopeKey) return
+      failedAdminScope = scope
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'status' in error &&
+        error.status === 401
+      ) {
+        void goto('/', { replaceState: true })
+        return
+      }
       console.error('[AdminLayout] Failed to initialize admin context', error)
     })
   }

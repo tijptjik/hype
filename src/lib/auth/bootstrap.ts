@@ -27,7 +27,7 @@ const defaultWait = (durationMs: number): Promise<void> =>
  *
  * @returns Nothing.
  * @remarks This prevents the root session watcher from racing a sign-out redirect
- * by creating an anonymous session before the sign-in page is reached.
+ * by creating an anonymous session before the user app is reached.
  */
 export function markSignOutIntent(): void {
   if (typeof window === 'undefined') return
