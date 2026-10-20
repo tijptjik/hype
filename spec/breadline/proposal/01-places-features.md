@@ -1511,3 +1511,19 @@ and time-window import is not implemented: the schema remains a proposal under
 [Schedules and events](04-schedules-events.md). Pickup text is retained as source
 provenance, never promoted to business opening hours. Consequently the broad #194
 acceptance item covering time-window/numeric event validation stays open.
+
+### Curated Address service round trip
+
+`scripts/places/rehearse-address-curation.ts` now supplies reproducible cross-repository
+integration evidence using synthetic data and in-memory databases. A guarded SaanSeoi
+curation decision produces a deterministic supplementary Address, which is materialised
+before source snapshot/release-set publication. The actual Address API service feeds
+HYPE's independent pinned hydration and immutable Place persistence. Native components
+and publisher attribution survive, exact replay creates neither another Place nor another
+revision, and the shared Feature resolver preserves its explicit name override. A wrong
+snapshot remains unresolved for review. Source/HYPE foreign-key checks pass.
+
+The canonical Place collection response is deliberately synthetic; this is not evidence
+for a real bakery match, full CLI upload orchestration or automatic Project adoption.
+See the [reproducible curation rehearsal](places-address-curation.md#reproducible-source-service-integration-rehearsal)
+for the command and proof boundary. No production or primary local data was modified.

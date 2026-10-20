@@ -80,3 +80,34 @@ The existing local hydration rehearsal proves consumption of an already-publishe
 structured Address. It does **not** yet prove a new HYPE-originated curation through
 SaanSeoi assembly/publication and back. That full round trip and actual establishment
 matching remain open acceptance work.
+
+## Reproducible source-service integration rehearsal
+
+With the sibling SaanSeoi checkout and both repositories' dependencies installed:
+
+```sh
+bun scripts/places/rehearse-address-curation.ts
+```
+
+The script creates in-memory source META/CURRENT and HYPE databases. It uses
+SaanSeoi's current schema migrations, curation parser/analyser, deterministic
+supplementary Address row builder, snapshot and release-set publication services,
+and actual Address detail API service. It materialises the reviewed rows before
+publishing their snapshots. The request transport calls that service in process;
+it makes no network request and writes no mirror, source fixture or production data.
+
+The marked synthetic Place collection record references the resulting exact Address
+snapshot. HYPE's real hydration path discovers the Address publication, rereads with
+its independent pin, preserves native components and attribution, and persists one
+shared Place/revision. Replay must return the same identities with no extra revision.
+The shared resolver must preserve an explicit Feature name override while inheriting
+the structured Address. A mismatched snapshot must remain unresolved for review.
+Source and HYPE foreign-key checks must pass.
+
+Verified against SaanSeoi commit `5dfb3b471`: supplementary curation, exact-snapshot
+hydration, two pinned/discovery requests, source attribution, one persisted HYPE Place
+and revision, unchanged replay, preserved name override, and mismatched-snapshot
+review all pass. This is cross-repository service integration evidence, extending the
+existing read-only real-mirror hydration rehearsal. It does not exercise CLI upload
+or interactive prompt orchestration, automatic Project adoption, or establish any
+real donor's canonical identity. Those boundaries remain separate acceptance work.
