@@ -58,7 +58,7 @@ let {
     />
   </div>
   {#if isEditing && onClearAll}
-    <div class="flex justify-end px-6 pt-4">
+    <div class="flex justify-start px-6 pt-4">
       <Button
         text={m.admin__forms_common_clear_all()}
         color="light"

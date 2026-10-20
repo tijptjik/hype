@@ -978,13 +978,14 @@
     flex-direction: column;
     width: 100%;
     padding-top: 1.5rem;
+    padding-left: 1.75rem;
     position: relative;
   }
 
   .bits-feature-field__range-unset {
     position: absolute;
     top: calc(50% + 4px);
-    left: -32px;
+    left: 0;
     transform: translateY(-50%);
     appearance: none;
     border: 0;
@@ -1044,7 +1045,7 @@
       transparent
     );
     --range-float: var(--color-primary);
-    --range-float-text: var(--color-foreground);
+    --range-float-text: var(--color-primary-content);
     --range-float-background: color-mix(
       in oklab,
       var(--color-panel) 82%,
@@ -1140,6 +1141,7 @@
   }
 
   .bits-feature-visual .bits-feature-map {
+    min-height: 0;
     border-radius: 0;
     border: 0;
   }
@@ -1199,6 +1201,17 @@
       min-width: 100%;
       max-width: 100%;
       padding: 0.75rem;
+    }
+
+    /* Stacked panes need an explicit map height; percentage heights resolve
+       to content height while the visual section itself is auto-sized. */
+    .bits-feature-visual__map {
+      flex: none;
+      height: var(--bits-feature-visual-expanded-height, 520px);
+    }
+
+    .bits-feature-visual--collapsed .bits-feature-visual__map {
+      height: var(--bits-feature-visual-collapsed-height, 64px);
     }
 
     .bits-feature-visual__image {

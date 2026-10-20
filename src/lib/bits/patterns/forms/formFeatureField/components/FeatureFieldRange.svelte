@@ -18,6 +18,17 @@ const hasValue = $derived(
   typeof value === 'string' ? value.trim().length > 0 : value != null,
 )
 const resolvedValue = $derived(hasValue ? Number(value ?? resolvedMin) : resolvedMin)
+const fillPercent = $derived(
+  resolvedMax > resolvedMin
+    ? Math.max(
+        0,
+        Math.min(
+          100,
+          ((resolvedValue - resolvedMin) / (resolvedMax - resolvedMin)) * 100,
+        ),
+      )
+    : 100,
+)
 const rangeClass = $derived(
   ['bits-feature-field__range', !hasValue ? 'bits-feature-field__range--unset' : '']
     .filter(Boolean)
@@ -35,12 +46,27 @@ function handleUnset(): void {
 }
 </script>
 
-<div class={[rangeClass, !isEditing && 'pt-0!'].filter(Boolean).join(' ')}>
+<div class={[rangeClass, !isEditing && 'pt-0! pl-0!'].filter(Boolean).join(' ')}>
   {#if !isEditing}
-    <output
-      class="flex h-10 min-w-10 shrink-0 items-center justify-start rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground"
-      >{hasValue ? resolvedValue : '—'}</output
+    <!-- biome-ignore lint/a11y/useSemanticElements: Native meter hides the custom fill-end label; expose equivalent meter semantics here. -->
+    <div
+      class="relative flex h-12 items-center overflow-hidden rounded-md bg-primary/10"
+      role="meter"
+      aria-label="Value within range"
+      aria-valuemin={resolvedMin}
+      aria-valuemax={resolvedMax}
+      aria-valuenow={resolvedValue}
     >
+      <div
+        class="absolute inset-y-0 left-0 bg-primary/25"
+        style:width={`${fillPercent}%`}
+      ></div>
+      <output
+        class="relative flex h-full min-w-fit items-center justify-end px-3 text-base font-medium text-foreground"
+        style:width={`${fillPercent}%`}
+        >{hasValue ? resolvedValue : '—'}</output
+      >
+    </div>
   {/if}
   {#if isEditing}
     <button

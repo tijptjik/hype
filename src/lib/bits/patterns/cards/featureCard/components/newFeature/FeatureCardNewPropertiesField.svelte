@@ -1,4 +1,8 @@
 <script lang="ts">
+import { isRangeProperty } from '#lib/properties/range.js'
+import FeatureFieldInterval from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldInterval.svelte'
+import FeatureFieldLinks from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldLinks.svelte'
+import { getFeatureProperty } from '#lib/client/services/property.js'
 // BITS
 import { Icon } from '#lib/bits/index.js'
 // I18N
@@ -97,7 +101,21 @@ function cancelEditing(propertyId: Id): void {
               {getI18n(property, 'label', userPreferences)}
             </span>
 
-            {#if property.component === 'SelectField' && propertyValues.size > 0}
+            {#if isRangeProperty(property)}
+              <FeatureFieldInterval
+                definition={property}
+                value={getFeatureProperty(appCtx, propertyId)?.valueJson}
+                onChange={value =>
+                  handleSpecifierChange(appCtx, propertyId, 'core', value)}
+              />
+            {:else if property.dataType === 'link'}
+              <FeatureFieldLinks
+                value={getFeatureProperty(appCtx, propertyId)?.valueJson}
+                cardinality={property.cardinality}
+                onChange={value =>
+                  handleSpecifierChange(appCtx, propertyId, 'core', value)}
+              />
+            {:else if property.component === 'SelectField' && propertyValues.size > 0}
               <select
                 class="h-11 w-full rounded-full border border-border-input bg-base-200 px-4 text-sm text-base-content focus:border-border-input-hover focus:outline-none"
                 value={getClassifierValueId(appCtx, propertyId)}

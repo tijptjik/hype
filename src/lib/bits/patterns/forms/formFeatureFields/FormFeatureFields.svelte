@@ -1,4 +1,6 @@
 <script lang="ts">
+// ICONS
+import TranslateIcon from 'virtual:icons/lucide/languages'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // BITS
@@ -9,7 +11,6 @@ import { FormFeatureFieldsSection } from '#lib/bits/patterns/forms/formFeatureFi
 import { FormFeatureSectionHeader } from '#lib/bits/patterns/forms/formFeatureSectionHeader/index.js'
 // STYLES
 import {
-  FORM_FEATURE_FIELDS_NON_TRANSLATABLE_HEADER_CLASS,
   FORM_FEATURE_FIELDS_ROOT_CLASS,
   FORM_FEATURE_FIELDS_SECTION_CLASS,
   FORM_FEATURE_FIELDS_TRANSLATABLE_CARD_CLASS,
@@ -48,13 +49,6 @@ function resolvePropertyLabel(
 
 <div class={FORM_FEATURE_FIELDS_ROOT_CLASS}>
   {#if nonTranslatableItems.length > 0}
-    <div class={FORM_FEATURE_FIELDS_NON_TRANSLATABLE_HEADER_CLASS}>
-      <FormFeatureSectionHeader
-        title={m.feature__fields_title()}
-        subtitle={m.feature__fields_subtitle()}
-        issues={[]}
-      />
-    </div>
     <FormFeatureFieldsSection
       class={FORM_FEATURE_FIELDS_SECTION_CLASS}
       {localeKey}
@@ -69,7 +63,11 @@ function resolvePropertyLabel(
         title={m.feature__translatable_fields_title()}
         subtitle={m.feature__translatable_fields_subtitle()}
         issues={[]}
-      />
+      >
+        {#snippet left()}
+          <TranslateIcon class="size-6 text-primary" />
+        {/snippet}
+      </FormFeatureSectionHeader>
 
       <div class={FORM_FEATURE_FIELDS_TRANSLATABLE_GRID_CLASS}>
         {#each locales as locale (locale)}

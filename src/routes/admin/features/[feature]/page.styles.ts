@@ -46,9 +46,11 @@ export function getFeatureEditorFacetClass({
   isVisualSectionCollapsed,
 }: FeatureEditorLayoutState): string {
   return cx(
-    'left-0! right-0! bottom-6 transition-[top] duration-180',
+    'left-0! right-0! bottom-6',
     !showsVisualSection && 'top-0',
     showsVisualSection && isVisualSectionCollapsed && 'top-16',
-    showsVisualSection && !isVisualSectionCollapsed && 'top-[520px]',
+    showsVisualSection &&
+      !isVisualSectionCollapsed &&
+      'top-[var(--feature-preview-height,520px)]',
   )
 }

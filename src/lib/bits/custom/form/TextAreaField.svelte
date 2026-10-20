@@ -28,6 +28,10 @@ let {
   onToggleGenAI,
 }: TextAreaProps = $props()
 
+// Plain descriptions retain the same control and metrics across view/edit modes.
+const showsHtmlPreview = $derived(
+  renderHtml && !isEditing && /<[a-z][^>]*>/i.test(value),
+)
 const wrapperClass = $derived(
   [
     'bits-form__field',
@@ -73,11 +77,15 @@ function handleValueChange(nextValue: string): void {
   <Label for={id} text={label} {required} {isEditing} />
 
   <div class={controlWrapClass}>
-    {#if renderHtml && !isEditing}
-      <HtmlPreview html={value} {label} class="min-h-32 px-4 py-2 pr-10" />
+    {#if showsHtmlPreview}
+      <HtmlPreview
+        html={value}
+        {label}
+        class="bits-form__control bits-form__control--textarea bits-form__control--filled bits-form__control--translated"
+      />
     {/if}
     <!-- Keep the bound control mounted so view previews retain remote form state. -->
-    <div class={renderHtml && !isEditing ? 'hidden' : 'contents'}>
+    <div class={showsHtmlPreview ? 'hidden' : 'contents'}>
       <InputPrimitive.TextArea
         attrs={resolvedTextareaAttrs}
         {id}

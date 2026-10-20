@@ -1,11 +1,13 @@
 <script lang="ts">
+import { isRangeProperty } from '#lib/properties/range.js'
 import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 
 // SVELTE
 import { goto } from '$app/navigation'
 
 import { page } from '$app/state'
-import { onMount, untrack } from 'svelte'
+import { onMount, untrack, tick } from 'svelte'
+import { normalizePhoneNumber } from '#lib/utils/phone-property.js'
 
 // TOAST
 import { toast } from 'svelte-sonner'
@@ -449,7 +451,7 @@ const buildFacetNavAction = createFacetNavActionBuilder<FacetType>({
 
 // Reflect URL hash changes back into admin facet state without echoing locally synced updates.
 $effect(() => {
-  const currentHash = page.url.hash
+  const currentHash = (page.shallow?.url ?? page.url).hash
   if (currentHash === lastSyncedFacetHash) return
   lastSyncedFacetHash = currentHash
   syncAdminFacetFromHash({
@@ -555,7 +557,8 @@ $effect(() => {
   const targetFacet = facetIssueSummary.firstFacetWithIssues
 
   if (!targetFacet) return
-  if (activeFacet === targetFacet) return
+  // Validation may focus its first issue once; browsing tabs must not retrigger this effect.
+  if (untrack(() => activeFacet) === targetFacet) return
 
   adminCtx.setFacet(targetFacet, featureRef, FirstClassResource.feature)
 })
@@ -593,6 +596,7 @@ const showsVisualSection = $derived(isCoreFacet || isFieldsFacet)
 let isVisualSectionCollapsed = $state(
   adminCtx.view.getUserPreferences().admin?.isAdminMapCollapsed ?? false,
 )
+let visualSectionHeight = $state(520)
 let visualSectionReopenScrollStartAt: number | null = null
 let visualSectionReopenBufferTimeout: ReturnType<typeof setTimeout> | null = null
 let visualSectionReopenSettleTimeout: ReturnType<typeof setTimeout> | null = null
@@ -1561,12 +1565,20 @@ function updatePropertyValue(propertyId: string, nextValue: string | boolean): v
       property.propertyId === propertyId
         ? {
             ...property,
+            valueJson:
+              property.property?.dataType === 'link' ||
+              isRangeProperty(property.property ?? {})
+                ? String(nextValue)
+                : null,
             value:
-              property.property?.component === 'SelectField'
+              property.property?.dataType === 'link' ||
+              isRangeProperty(property.property ?? {})
                 ? ''
-                : typeof nextValue === 'boolean'
-                  ? String(nextValue)
-                  : String(nextValue),
+                : property.property?.component === 'SelectField'
+                  ? ''
+                  : typeof nextValue === 'boolean'
+                    ? String(nextValue)
+                    : String(nextValue),
             propertyValueId:
               property.property?.component === 'SelectField'
                 ? String(nextValue)
@@ -1575,6 +1587,10 @@ function updatePropertyValue(propertyId: string, nextValue: string | boolean): v
         : property,
     ),
   }))
+  // Server issues survive preflight-only checks; validate-only requests clear stale
+  // property errors after a row is edited or removed without writing the feature.
+  if (formCtx.wasSubmitAttempted)
+    void tick().then(() => formCtx.validate({ preflightOnly: false }))
 }
 
 function updatePropertyI18nValue(
@@ -1697,9 +1713,30 @@ function commitSettledFeatureState(value: FeaturePageState): void {
  *  FORM SUBMISSION ACTION
  ************/
 
-function onSubmit(): void {
+/**
+ * Validate custom phone controls, then submit the current editor values.
+ * @returns Resolves after focusing an invalid phone or requesting form submission.
+ */
+async function onSubmit(): Promise<void> {
   suppressFormLevelIssues = false
   if (!isCurrentRefLoaded) return
+  // Flush the last input edit before serializing custom property controls.
+  await tick()
+  const phoneInputs = Array.from(
+    contentsElement?.querySelectorAll<HTMLInputElement>('input[data-feature-phone]') ??
+      [],
+  )
+  const invalidPhone = phoneInputs.find(
+    input => input.value.trim() && !normalizePhoneNumber(input.value),
+  )
+  if (invalidPhone) {
+    adminCtx.setFacet('fields', featureRef, FirstClassResource.feature)
+    await tick()
+    invalidPhone.focus()
+    invalidPhone.dispatchEvent(new Event('invalid', { cancelable: true }))
+    invalidPhone.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    return
+  }
   formCtx.requestSubmit({
     meta: {
       ...(currentFormValue.meta ?? {}),
@@ -2085,7 +2122,10 @@ $effect(() => () => clearVisualSectionReopenState())
 >
   <Main.Form
     bind:formEl={contentsElement}
-    attrs={formCtx.attributes}
+    attrs={{
+      ...formCtx.attributes,
+      style: `--feature-preview-height:${visualSectionHeight}px`,
+    }}
     isReady={true}
     class={FEATURE_EDITOR_FORM_CLASS}
   >
@@ -2093,6 +2133,7 @@ $effect(() => () => clearVisualSectionReopenState())
 
     {#if showsVisualSection}
       <FormFeatureVisualSection
+        onHeightChange={height => (visualSectionHeight = height)}
         {hasPresentedCanonicalImageSizing}
         {isCanonicalImagePending}
         imageAspectRatio={resolvedCanonicalImageAspectRatio}
@@ -2154,7 +2195,8 @@ $effect(() => () => clearVisualSectionReopenState())
       nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <FormSurface class={FEATURE_EDITOR_CONTENT_PAD_CLASS}>
+      <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-9! pb-12`}>
+        <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nSection
           class={FEATURE_EDITOR_CONTENT_SECTION_CLASS}
           {locales}
@@ -2163,23 +2205,6 @@ $effect(() => () => clearVisualSectionReopenState())
           sectionKey="descriptor"
           {isEditing}
         >
-          {#snippet left()}
-            <div class="flex items-center gap-3">
-              <FeatureIcon class="size-6 text-primary" aria-hidden="true" />
-              <div>
-                <h2 class="text-xl font-semibold tracking-tight">
-                  {m.admin__forms_common_descriptors()}
-                </h2>
-                <p class="text-xs text-muted-foreground">
-                  {m.feature__descriptor_subtitle()}
-                </p>
-              </div>
-            </div>
-          {/snippet}
-          {#snippet center()}
-            <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-          {/snippet}
-
           {#snippet children(
             locale,
           )}
@@ -2296,7 +2321,7 @@ $effect(() => () => clearVisualSectionReopenState())
           </div>
         </div>
       {:else}
-        <FormSurface class={FEATURE_EDITOR_CONTENT_PAD_CLASS}>
+        <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-9! pb-12`}>
           <FormFeatureFields
             {localeKey}
             {locales}

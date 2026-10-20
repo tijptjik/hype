@@ -47,3 +47,19 @@ describe('description HTML previews', () => {
     expect(textarea.readOnly).toBe(false)
   })
 })
+
+it('keeps plain descriptions in the same visible textarea across editing modes', async () => {
+  const { container, rerender } = render(TextAreaField, {
+    value: 'Previously also located at Room 2203.\nNow on another street.',
+    renderHtml: true,
+    isEditing: false,
+    label: 'Description',
+  })
+  const textarea = container.querySelector('textarea')!
+  expect(textarea.closest('.hidden')).toBeNull()
+  const classes = textarea.className
+  await rerender({ isEditing: true })
+  expect(container.querySelector('textarea')).toBe(textarea)
+  expect(textarea.className).toBe(classes)
+  expect(textarea.closest('.hidden')).toBeNull()
+})

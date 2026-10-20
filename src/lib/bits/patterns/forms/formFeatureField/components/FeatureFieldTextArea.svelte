@@ -35,7 +35,7 @@ const resolvedPlaceholder = $derived(isEditing ? placeholder : '—')
     ? formatPhoneNumbers(value, '\n')
     : (value ?? '')}
   issues={isPhone && readPhoneNumbers(value) === null
-    ? [m.property__phone_hk_invalid()]
+    ? [m.property__phone_invalid()]
     : undefined}
   {isEditing}
   placeholder={resolvedPlaceholder}
