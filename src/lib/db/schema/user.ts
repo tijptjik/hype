@@ -259,8 +259,8 @@ export const passkey = sqliteTable('passkey', {
   deviceType: text('deviceType').notNull(),
   backedUp: integer('backedUp', { mode: 'boolean' }).notNull(),
   transports: text('transports'),
-  createdAt: integer('createdAt', { mode: 'timestamp_ms' }).$type<Date>(),
   aaguid: text('aaguid'),
+  createdAt: integer('createdAt', { mode: 'timestamp_ms' }).$type<Date>(),
 })
 
 /* ============================================================================

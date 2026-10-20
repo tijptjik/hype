@@ -5,52 +5,43 @@ import { z } from 'zod'
 // REMOTE
 import { guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
-import { authorizeProjectUpdateForSubmission } from '#lib/api/services/authz/index.js'
+import { requirePlaceOrganisationManager } from '#lib/api/services/placeOwnership.js'
 // DB
-import { probeProjectQuery } from '#lib/db/services/project.js'
 import { probePlaceIdentityScope } from '#lib/db/services/placeIdentityReview.js'
 import { listPlaceResources } from '#lib/db/services/placeDirectory.js'
 // TYPES
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 
 /**
- * Authorize private catalogue access using current persisted Project ancestry.
+ * Authorize private catalogue access using current persisted Organisation ownership.
  * @param ctx Current request account and roles.
- * @param projectId Optional private owner; omission allows only shared Places.
+ * @param organisationId Optional private owner; omission allows only shared Places.
  * @returns Nothing when authorized.
  * @remarks Public Feature visibility never grants access to private Place baselines.
  */
 async function requireDirectoryAccess(
   ctx: GuardedBaseContext,
-  projectId?: string,
+  organisationId?: string,
 ): Promise<void> {
   if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
-  if (!projectId) return
-  const resource = await probeProjectQuery(ctx.db, { ref: projectId, refKey: 'id' })
-  if (!resource) error(404, 'PROJECT_NOT_FOUND')
-  const decision = authorizeProjectUpdateForSubmission({
-    user: ctx.user,
-    userRoles: ctx.userRoles,
-    resource,
-    submittedData: { placeUpdatePolicy: true },
-  })
-  if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+  if (!organisationId) return
+  await requirePlaceOrganisationManager(ctx, organisationId)
 }
 
 /**
- * Browse shared Places and optionally one manageable Project's private Places.
+ * Browse shared Places and optionally one manageable Organisation's private Places.
  * @param input Literal search, authorized owner scope and stable ID cursor.
  * @returns A bounded page without source payloads or associated Features.
  */
 export const getPlaces = guardedQuery(
   z.strictObject({
     scope: z.string().max(4000).optional(),
-    projectId: z.string().min(1).max(200).optional(),
+    organisationId: z.string().min(1).max(200).optional(),
     q: z.string().trim().max(200).optional(),
     after: z.string().min(1).max(200).optional(),
   }),
   async (input, ctx) => {
-    await requireDirectoryAccess(ctx, input.projectId)
+    await requireDirectoryAccess(ctx, input.organisationId)
     return listPlaceResources(ctx.db, input)
   },
 )
@@ -70,10 +61,10 @@ export const getPlace = guardedQuery(
     await requireDirectoryAccess(ctx)
     const scope = await probePlaceIdentityScope(ctx.db, input.id)
     if (!scope) return null
-    await requireDirectoryAccess(ctx, scope.ownerProjectId ?? undefined)
+    await requireDirectoryAccess(ctx, scope.ownerOrganisationId ?? undefined)
     const result = await listPlaceResources(ctx.db, {
       id: input.id,
-      projectId: scope.ownerProjectId ?? undefined,
+      organisationId: scope.ownerOrganisationId ?? undefined,
     })
     return result.data[0] ?? null
   },

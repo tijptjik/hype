@@ -8,6 +8,8 @@ import { property } from '../schema/property'
 import { hub } from '../schema/hub'
 // DOMAIN
 import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
+// OWNERSHIP
+import { placeOwnerForProject } from './placeScope'
 // TYPES
 import type { PlaceFacts } from '#lib/places/model.js'
 import type { Database } from '#lib/types.js'
@@ -53,7 +55,10 @@ export async function readPlaceResetSources(
     .where(
       and(
         eq(place.id, input.placeId),
-        or(isNull(place.ownerProjectId), eq(place.ownerProjectId, input.projectId)),
+        or(
+          isNull(place.ownerOrganisationId),
+          eq(place.ownerOrganisationId, placeOwnerForProject(input.projectId)),
+        ),
       ),
     )
     .get()
@@ -114,7 +119,7 @@ export async function preparePlacePhoneReset(
     db
       .insert(featureProperty)
       .select(
-        sql`SELECT ${featureId},${propertyId},NULL,${JSON.stringify(phones)} WHERE ${guard}`,
+        sql`SELECT ${featureId},${propertyId},NULL,${JSON.stringify(phones)},NULL WHERE ${guard}`,
       ),
   ]
 }

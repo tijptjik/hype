@@ -10,7 +10,9 @@
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
-import { placeIdentityRejection } from '../schema/place'
+import { placeIdentityReview } from '../schema/place'
+// OWNERSHIP
+import { placeOwnerForProject } from './placeScope'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -19,14 +21,14 @@ import type { Database } from '#lib/types.js'
  * @param db Request-local database.
  * @param input Reauthorized owner scope, retained review, actor and mandatory reason.
  * @returns Rejected (including exact replay) or conflict; reasons are never overwritten.
- * @remarks The INSERT fences ownership, identity, latest revision and identity history.
+ * @remarks The UPDATE fences ownership, identity, latest revision and identity history.
  * Database triggers serialize rejection against acceptance and merge application.
  */
 export async function rejectPlaceIdentityReview(
   db: Database,
   input: {
     placeId: string
-    ownerProjectId: string | null
+    ownerOrganisationId: string | null
     reviewId: string
     actorId: string
     reason: string
@@ -37,30 +39,34 @@ export async function rejectPlaceIdentityReview(
     throw new Error('Identity rejection requires an actor and reason')
   // Read only the caller's current Place scope; old ownership never authorizes a replay.
   const existing = await db
-    .select()
-    .from(placeIdentityRejection)
+    .select({ rejection: placeIdentityReview.rejection })
+    .from(placeIdentityReview)
     .where(
       and(
-        eq(placeIdentityRejection.reviewId, input.reviewId),
-        eq(placeIdentityRejection.placeId, input.placeId),
-        sql`EXISTS (SELECT 1 FROM place p WHERE p.id=${input.placeId} AND p.ownerProjectId IS ${input.ownerProjectId})`,
+        eq(placeIdentityReview.id, input.reviewId),
+        eq(placeIdentityReview.placeId, input.placeId),
+        sql`EXISTS (SELECT 1 FROM place p WHERE p.id=${input.placeId} AND p.ownerOrganisationId IS ${input.ownerOrganisationId})`,
       ),
     )
     .get()
-  if (existing)
+  if (existing?.rejection)
     return {
       status:
-        existing.actorId === input.actorId && existing.reason === reason
+        existing.rejection.actorId === input.actorId &&
+        existing.rejection.reason === reason
           ? 'rejected'
           : 'conflict',
     }
   const inserted = await db
-    .insert(placeIdentityRejection)
-    .select(sql`SELECT
-    r.id,r.placeId,json_extract(r.projection,'$.ssId'),${input.actorId},${reason},strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    .update(placeIdentityReview)
+    .set({
+      rejection: sql`json_object('reviewId',id,'placeId',placeId,'ssId',json_extract(projection,'$.ssId'),
+      'actorId',${input.actorId},'reason',${reason},'createdAt',strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
+    })
+    .where(sql`placeIdentityReview.id=${input.reviewId} AND rejection IS NULL AND EXISTS (SELECT 1
     FROM placeIdentityReview r JOIN place p ON p.id=r.placeId
     WHERE r.id=${input.reviewId} AND r.placeId=${input.placeId}
-      AND r.ownerProjectId IS ${input.ownerProjectId} AND p.ownerProjectId IS ${input.ownerProjectId}
+      AND r.ownerOrganisationId IS ${input.ownerOrganisationId} AND p.ownerOrganisationId IS ${input.ownerOrganisationId}
       AND p.state=json_extract(r.baseline,'$.expectedState')
       AND p.ssId IS json_extract(r.baseline,'$.expectedSsId')
       AND p.sourceAvailability=json_extract(r.baseline,'$.expectedSourceAvailability')
@@ -68,10 +74,9 @@ export async function rejectPlaceIdentityReview(
       AND (SELECT h.id FROM placeIdentityHistory h WHERE h.placeId=p.id AND NOT EXISTS
         (SELECT 1 FROM placeIdentityHistory n WHERE n.previousHistoryId=h.id)) IS json_extract(r.baseline,'$.expectedHistoryId')
       AND NOT EXISTS (SELECT 1 FROM placeIdentityHistory WHERE reviewId=r.id)
-      AND NOT EXISTS (SELECT 1 FROM placeRedirect d JOIN placeMergeReview m ON m.id=d.reviewId WHERE m.identityReviewId=r.id)
-    `)
-    .onConflictDoNothing()
-    .returning({ id: placeIdentityRejection.reviewId })
+      AND NOT EXISTS (SELECT 1 FROM place d,json_each(r.mergeReviews) m WHERE json_extract(d.redirect,'$.reviewId')=json_extract(m.value,'$.id'))
+    )`)
+    .returning({ id: placeIdentityReview.id })
   return { status: inserted.length ? 'rejected' : 'conflict' }
 }
 
@@ -90,10 +95,10 @@ export async function rejectedFeaturePlaceSourceIds(
 ): Promise<Set<string>> {
   const rows = await db.all<{
     ssId: string
-  }>(sql`SELECT DISTINCT r.ssId FROM placeIdentityRejection r
+  }>(sql`SELECT DISTINCT json_extract(r.projection,'$.ssId') AS ssId FROM placeIdentityReview r
     JOIN featurePlace fp ON fp.placeId=r.placeId JOIN place p ON p.id=fp.placeId
     JOIN feature f ON f.id=fp.featureId
-    WHERE f.id=${featureId} AND f.projectId=${projectId}
-      AND (p.ownerProjectId IS NULL OR p.ownerProjectId=${projectId}) AND p.ssId IS NOT r.ssId`)
+    WHERE r.rejection IS NOT NULL AND f.id=${featureId} AND f.projectId=${projectId}
+      AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=${placeOwnerForProject(projectId)}) AND p.ssId IS NOT json_extract(r.projection,'$.ssId')`)
   return new Set(rows.map(row => row.ssId))
 }

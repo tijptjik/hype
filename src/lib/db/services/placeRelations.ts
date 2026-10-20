@@ -75,14 +75,16 @@ export function prepareFeatureFormRelations(
     )
   }
   if (properties === undefined) return queries
+  // Preserve omitted internal fields when a public editor saves the visible snapshot.
+  const replaceable = sql`(propertyId NOT IN (SELECT id FROM property WHERE audience = 'internal') OR propertyId IN (SELECT value FROM json_each(${JSON.stringify(properties.map(row => row.propertyId))})))`
   // Remove children before parents, keeping unrelated Features outside the guard.
   queries.push(
     db
       .delete(featurePropertyI18n)
-      .where(and(eq(featurePropertyI18n.featureId, featureId), guard)),
+      .where(and(eq(featurePropertyI18n.featureId, featureId), guard, replaceable)),
     db
       .delete(featureProperty)
-      .where(and(eq(featureProperty.featureId, featureId), guard)),
+      .where(and(eq(featureProperty.featureId, featureId), guard, replaceable)),
   )
   for (const property of properties) {
     let propertyValueId = property.propertyValueId || null
@@ -94,7 +96,7 @@ export function prepareFeatureFormRelations(
     }
     queries.push(
       db.insert(featureProperty).select(sql`SELECT
-      ${featureId}, ${property.propertyId}, ${propertyValueId}, ${value} WHERE ${guard}`),
+      ${featureId}, ${property.propertyId}, ${propertyValueId}, ${value}, ${property.valueJson || null} WHERE ${guard}`),
     )
     for (const [locale, translation] of Object.entries(property.i18n ?? {})) {
       if (!translation) continue

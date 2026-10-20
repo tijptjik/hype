@@ -103,11 +103,6 @@ export async function refreshPlaces(
           [JSON.stringify(target), runId, month],
         ),
         statement(
-          `INSERT INTO placeSourceTransition(id,fromPublication,toPublication)
-          SELECT ?,?,? WHERE ${FENCE}`,
-          [runId, state.accepted, JSON.stringify(target)],
-        ),
-        statement(
           `INSERT INTO placeRefreshItem(runId,placeId,ssId)
           SELECT ?,p.id,p.ssId FROM place p WHERE p.ssId IS NOT NULL
           AND EXISTS(SELECT 1 FROM featurePlace fp WHERE fp.placeId=p.id)

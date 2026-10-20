@@ -95,7 +95,7 @@ async function unlink(expectedRevision: string): Promise<void> {
   }
 }
 
-/** Search source and project-local Places independently, retaining settled results while loading. */
+/** Search source and organisation-local Places independently, retaining settled results while loading. */
 async function search(): Promise<void> {
   if (!query.trim() || busy || !isEditing) return
   const version = ++requestVersion

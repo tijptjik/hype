@@ -28,6 +28,9 @@ export const placeRefresh = sqliteTable('placeRefresh', {
   retryAt: integer('retryAt').notNull().default(0),
   failures: integer('failures').notNull().default(0),
   lastError: text('lastError'),
+  scanMode: text('scanMode', { enum: ['catalogue', 'identities'] })
+    .notNull()
+    .default('catalogue'),
 })
 
 /** Run-local source evidence survives reassociation or deletion of a Feature. */
@@ -40,6 +43,21 @@ export const placeRefreshItem = sqliteTable(
     sourceOffset: integer('sourceOffset'),
     revisionId: text('revisionId'),
     featureCursor: text('featureCursor').notNull().default(''),
+    outcomes: text('outcomes', { mode: 'json' })
+      .$type<
+        Record<
+          string,
+          {
+            projectId: string
+            proposalId?: string | null
+            reason?: string | null
+            outcome: 'processed' | 'review' | 'conflict' | 'unlinked'
+            geometryChanged: number
+          }
+        >
+      >()
+      .notNull()
+      .default({}),
     reviewReason: text('reviewReason'),
     projection: text('projection', { mode: 'json' }).$type<SaanSeoiPlaceProjection>(),
     status: text('status', { enum: ['missing', 'pending', 'processed', 'review'] })
@@ -51,22 +69,4 @@ export const placeRefreshItem = sqliteTable(
     unique().on(table.runId, table.ssId),
     index('place_refresh_item_work').on(table.runId, table.status, table.placeId),
   ],
-)
-
-/** Durable per-run Feature assessment receipt; review remains separate from acceptance. */
-export const placeRefreshFeature = sqliteTable(
-  'placeRefreshFeature',
-  {
-    runId: text('runId').notNull(),
-    placeId: text('placeId').notNull(),
-    featureId: text('featureId').notNull(),
-    projectId: text('projectId').notNull(),
-    proposalId: text('proposalId'),
-    reason: text('reason'),
-    outcome: text('outcome', {
-      enum: ['processed', 'review', 'conflict', 'unlinked'],
-    }).notNull(),
-    geometryChanged: integer('geometryChanged', { mode: 'boolean' }).notNull(),
-  },
-  table => [primaryKey({ columns: [table.runId, table.placeId, table.featureId] })],
 )

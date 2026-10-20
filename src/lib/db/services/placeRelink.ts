@@ -12,6 +12,8 @@ import {
 import { getAcceptedFeaturePlace } from './place'
 import { readFeaturePlaceBaseline } from './placeBaseline'
 import { prepareFeaturePlaceAssociationWrite } from './placeAssociation'
+// OWNERSHIP
+import { placeOwnerForProject } from './placeScope'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { InitialPlaceLinkResult } from './placeLink'
@@ -73,7 +75,10 @@ export async function relinkFeaturePlace(
         ne(place.state, 'redirect'),
         eq(placeRevision.id, input.revisionId),
         eq(place.sourceAvailability, 'current'),
-        or(isNull(place.ownerProjectId), eq(place.ownerProjectId, input.projectId)),
+        or(
+          isNull(place.ownerOrganisationId),
+          eq(place.ownerOrganisationId, placeOwnerForProject(input.projectId)),
+        ),
       ),
     )
     .get()

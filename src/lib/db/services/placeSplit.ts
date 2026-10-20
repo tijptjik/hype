@@ -7,6 +7,7 @@ import { equalPlaceValue } from '#lib/places/baseline.js'
 import { planUnresolvedFeatureSplit } from '#lib/places/migrationPlan.js'
 // SERVICES
 import { readFeaturePlaceBaseline } from './placeBaseline'
+import { readProjectPlaceOwner, placeOwnerForProject } from './placeScope'
 import { prepareFeaturePlaceAssociationWrite } from './placeAssociation'
 // TYPES
 import type { Database } from '#lib/types.js'
@@ -40,6 +41,7 @@ export async function applyUnresolvedFeatureSplit(
   if (recomputed.status !== 'planned' || !equalPlaceValue(recomputed.plan, proposed))
     return { status: 'conflict' }
   const plan = recomputed.plan
+  const ownerOrganisationId = await readProjectPlaceOwner(db, plan.projectId)
   const association = await db
     .select()
     .from(featurePlace)
@@ -50,7 +52,7 @@ export async function applyUnresolvedFeatureSplit(
     const prior = await db
       .select({
         state: place.state,
-        ownerProjectId: place.ownerProjectId,
+        ownerOrganisationId: place.ownerOrganisationId,
         ssId: place.ssId,
         facts: placeRevision.facts,
         payload: placeRevision.payload,
@@ -65,7 +67,7 @@ export async function applyUnresolvedFeatureSplit(
         prior &&
         prior.state === 'unresolved' &&
         prior.ssId === null &&
-        prior.ownerProjectId === plan.projectId &&
+        prior.ownerOrganisationId === ownerOrganisationId &&
         prior.origin === 'local' &&
         association.placeId === plan.placeId &&
         association.factsRevisionId === plan.revisionId &&
@@ -94,6 +96,7 @@ export async function applyUnresolvedFeatureSplit(
   const guard = sql`EXISTS (SELECT 1 FROM feature WHERE id=${plan.featureId}
     AND projectId=${plan.projectId} AND modifiedAt=${plan.expectedFeatureModifiedAt}
     AND isDraft=0 AND isIntangible=0)
+    AND ${placeOwnerForProject(plan.projectId)}=${ownerOrganisationId}
     AND NOT EXISTS (SELECT 1 FROM featurePlace WHERE featureId=${plan.featureId})`
   const associationWrite = prepareFeaturePlaceAssociationWrite(db, {
     featureId: plan.featureId,
@@ -111,8 +114,8 @@ export async function applyUnresolvedFeatureSplit(
   const results = await db.batch([
     db
       .insert(place)
-      .select(sql`SELECT ${plan.placeId},NULL,'unresolved',${plan.projectId},'current',
-      strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
+      .select(sql`SELECT ${plan.placeId},NULL,${ownerOrganisationId},'unresolved','current',
+      NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
     db
       .insert(placeRevision)
       .select(sql`SELECT ${plan.revisionId},${plan.placeId},1,'local',

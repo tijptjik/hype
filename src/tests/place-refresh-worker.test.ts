@@ -3,12 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { runPlaceRefreshSchedule } from '../../workers/place-refresh/src/scheduled'
 import type { MtrEnvironment } from '#lib/routing/mtr-refresh.js'
 import { refreshPlaces } from '#lib/places/refresh.js'
-import { refreshPlaceSourceEvidence } from '#lib/places/sourceRefresh.js'
 import { refreshFeatureMtr } from '#lib/routing/mtr-refresh.js'
 
-vi.mock('#lib/places/sourceRefresh.js', () => ({
-  refreshPlaceSourceEvidence: vi.fn(async () => 'idle'),
-}))
 vi.mock('#lib/places/refresh.js', () => ({ refreshPlaces: vi.fn() }))
 vi.mock('#lib/routing/mtr-refresh.js', () => ({ refreshFeatureMtr: vi.fn() }))
 afterEach(() => vi.restoreAllMocks())
@@ -56,7 +52,6 @@ describe('scheduled Places refresh', () => {
       'PLACE_REFRESH_STEP_FAILED',
     )
     expect(refreshFeatureMtr).toHaveBeenCalledWith(e.env, undefined, 90000)
-    expect(refreshPlaceSourceEvidence).toHaveBeenCalledWith(e.session, source)
     expect(JSON.stringify(log.mock.calls)).not.toContain('private source payload')
   })
   it('does not fail a completed refresh when routing is temporarily unavailable', async () => {
@@ -80,19 +75,4 @@ describe('scheduled Places refresh', () => {
     expect(refreshPlaces).not.toHaveBeenCalled()
     expect(refreshFeatureMtr).not.toHaveBeenCalled()
   })
-})
-
-it('keeps canonical completion and routing independent of publisher evidence failure', async () => {
-  vi.spyOn(console, 'log').mockImplementation(() => {})
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-  vi.mocked(refreshPlaces).mockResolvedValue('complete')
-  vi.mocked(refreshPlaceSourceEvidence).mockRejectedValueOnce(
-    new Error('private source payload'),
-  )
-  vi.mocked(refreshFeatureMtr).mockResolvedValue('idle')
-  const e = environment()
-  await expect(runPlaceRefreshSchedule(event, e.env, source)).resolves.toBeUndefined()
-  expect(refreshFeatureMtr).toHaveBeenCalledWith(e.env, undefined, 90000)
-  expect(warn).toHaveBeenCalledWith('Place source evidence deferred to durable retry')
-  expect(JSON.stringify(warn.mock.calls)).not.toContain('private source payload')
 })

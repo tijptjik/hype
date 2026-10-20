@@ -29,7 +29,7 @@ export type PlaceIdentityTransition = {
   expectedState: 'manual' | 'unresolved' | 'linked'
   expectedSsId: string | null
   expectedHistoryId: string | null
-  expectedOwnerProjectId: string | null
+  expectedOwnerOrganisationId: string | null
   reviewId?: string
   expectedLatestRevisionId?: string
   expectedSourceAvailability?: 'current' | 'missing' | 'review'
@@ -69,7 +69,7 @@ export async function acceptPlaceIdentity(
   if (
     input.reviewId &&
     (await db.get(
-      sql`SELECT 1 AS found FROM placeIdentityRejection WHERE reviewId=${input.reviewId}`,
+      sql`SELECT 1 AS found FROM placeIdentityReview WHERE rejection IS NOT NULL AND id=${input.reviewId}`,
     ))
   )
     return { status: 'conflict' }
@@ -80,7 +80,7 @@ export async function acceptPlaceIdentity(
     !current ||
     current.state !== input.expectedState ||
     current.ssId !== input.expectedSsId ||
-    current.ownerProjectId !== input.expectedOwnerProjectId
+    current.ownerOrganisationId !== input.expectedOwnerOrganisationId
   )
     return { status: 'conflict' }
   const occupied = await db
@@ -108,9 +108,9 @@ export async function acceptPlaceIdentity(
     : sql`1`
   const historyId = nanoid(24)
   // The history tail fences ABA identity changes; the batch rechecks every captured input.
-  const guard = sql`NOT EXISTS (SELECT 1 FROM placeIdentityRejection WHERE reviewId=${input.reviewId ?? null}) AND ${availabilityGuard} AND EXISTS (SELECT 1 FROM place WHERE id=${input.placeId}
+  const guard = sql`NOT EXISTS (SELECT 1 FROM placeIdentityReview WHERE rejection IS NOT NULL AND id=${input.reviewId ?? null}) AND ${availabilityGuard} AND EXISTS (SELECT 1 FROM place WHERE id=${input.placeId}
     AND state=${input.expectedState} AND ssId IS ${input.expectedSsId}
-    AND ownerProjectId IS ${input.expectedOwnerProjectId})
+    AND ownerOrganisationId IS ${input.expectedOwnerOrganisationId})
     AND NOT EXISTS (SELECT 1 FROM place WHERE ssId=${projection.ssId} AND id!=${input.placeId})
     AND NOT EXISTS (SELECT 1 FROM placeIdentityHistory WHERE placeId NOT IN ${placeAliasIds(input.placeId)}
       AND (ssId=${projection.ssId} OR previousSsId=${projection.ssId}))
@@ -129,7 +129,7 @@ export async function acceptPlaceIdentity(
       .onConflictDoNothing({ target: placeRevision.id }),
     db.insert(placeIdentityHistory).select(sql`SELECT ${historyId},${input.placeId},
       ${input.expectedHistoryId},${input.expectedState},${input.expectedSsId},${projection.ssId},
-      ${revisionId},${input.actorId},${reason},strftime('%Y-%m-%dT%H:%M:%fZ','now'),${input.reviewId ?? null}
+      ${revisionId},${input.actorId},${reason},${input.reviewId ?? null},strftime('%Y-%m-%dT%H:%M:%fZ','now')
       WHERE ${guard} AND EXISTS (SELECT 1 FROM placeRevision WHERE id=${revisionId})`),
     db
       .update(place)

@@ -2,7 +2,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
 import { feature } from '../schema/feature'
-import { featurePlaceDetached } from '../schema/place'
 // VALIDATION
 import { PlaceFactsSchema } from '#lib/places/validation.js'
 // TYPES
@@ -23,11 +22,9 @@ export async function getDetachedFeatureBrands(
 ): Promise<{ revision: string; brands: PlaceBrand[] } | null> {
   const row = await db
     .select({
-      revision: featurePlaceDetached.revision,
-      brands: featurePlaceDetached.brands,
+      data: feature.localPlaceBrands,
     })
-    .from(featurePlaceDetached)
-    .innerJoin(feature, eq(feature.id, featurePlaceDetached.featureId))
+    .from(feature)
     .where(
       and(
         eq(feature.id, featureId),
@@ -37,10 +34,10 @@ export async function getDetachedFeatureBrands(
       ),
     )
     .get()
-  return row
+  return row?.data
     ? {
-        revision: row.revision,
-        brands: PlaceFactsSchema.shape.brands.parse(row.brands),
+        revision: row.data.revision,
+        brands: PlaceFactsSchema.shape.brands.parse(row.data.brands),
       }
     : null
 }

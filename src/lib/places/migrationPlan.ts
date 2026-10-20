@@ -1,4 +1,5 @@
 // DOMAIN
+import { derivePlaceId } from './id.server'
 import { LocalPlaceInputSchema } from './local'
 import { preserveFeaturePlaceBaseline, equalPlaceValue } from './baseline'
 import { resolveFeaturePlace } from './resolve'
@@ -85,7 +86,7 @@ export function planUnresolvedFeatureSplit(
       featureId: baseline.featureId,
       projectId: baseline.projectId,
       expectedFeatureModifiedAt: baseline.modifiedAt,
-      placeId: `featurePlace_${baseline.featureId}`,
+      placeId: derivePlaceId('feature-baseline', baseline.featureId),
       revisionId: `featurePlaceBaseline_${baseline.featureId}`,
       state: 'unresolved',
       facts,

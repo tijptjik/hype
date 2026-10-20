@@ -39,6 +39,8 @@ const mocks = vi.hoisted(() => ({
   linkPlace: vi.fn(),
   authorizeFeatureUpdate: vi.fn(),
   probeProject: vi.fn(),
+  probeOrganisation: vi.fn(),
+  authorizeOrganisation: vi.fn(),
   probeFeature: vi.fn(),
   authorizeProject: vi.fn(),
   authorizeFeature: vi.fn(),
@@ -134,6 +136,9 @@ vi.mock('#lib/db/services/placeLink.js', () => ({
 vi.mock('#lib/db/services/placeLocal.js', () => ({
   createLocalPlace: mocks.createPlace,
 }))
+vi.mock('#lib/db/services/organisation.js', () => ({
+  probeOrganisationQuery: mocks.probeOrganisation,
+}))
 vi.mock('#lib/db/services/project.js', () => ({
   probeProjectQuery: mocks.probeProject,
 }))
@@ -150,6 +155,7 @@ vi.mock('#lib/db/services/place.js', () => ({
 }))
 vi.mock('#lib/api/services/authz/index.js', () => ({
   authorizeProjectUpdateForSubmission: mocks.authorizeProject,
+  authorizeOrganisationUpdateForSubmission: mocks.authorizeOrganisation,
   authorizeFeatureReadForProbe: mocks.authorizeFeature,
   authorizeFeatureUpdateForSubmission: mocks.authorizeFeatureUpdate,
 }))
@@ -159,6 +165,7 @@ import {
   importFeaturePlaceCandidate,
   searchFeaturePlaces,
   createLocalPlace,
+  getLocalPlaceCreationAccess,
   relinkFeaturePlace,
   unlinkFeaturePlace,
   linkFeaturePlace,
@@ -214,10 +221,10 @@ beforeEach(() => {
   })
   mocks.context.user.isAnonymous = false
   mocks.context.userRoles = []
-  mocks.probeIdentity.mockResolvedValue({ id: 'place', ownerProjectId: 'p' })
+  mocks.probeIdentity.mockResolvedValue({ id: 'place', ownerOrganisationId: 'p' })
   mocks.identityBaseline.mockResolvedValue({
     placeId: 'place',
-    expectedOwnerProjectId: 'p',
+    expectedOwnerOrganisationId: 'p',
   })
   mocks.captureIdentity.mockResolvedValue('identity-review')
   mocks.captureMirroredIdentity.mockResolvedValue('mirrored-review')
@@ -234,6 +241,11 @@ beforeEach(() => {
   })
   mocks.probeProject.mockResolvedValue({ id: 'p', organisationId: 'org', hubId: 'hub' })
   mocks.probeFeature.mockResolvedValue({ id: 'f', projectId: 'p' })
+  mocks.authorizeOrganisation.mockReturnValue({ allowed: true })
+  mocks.probeOrganisation.mockImplementation(async (_db, input) => ({
+    id: input.ref,
+    hubId: 'hub',
+  }))
   mocks.authorizeProject.mockReturnValue({ allowed: true })
   mocks.authorizeFeature.mockReturnValue({ allowed: true })
   mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: true })
@@ -310,7 +322,23 @@ describe('Place remote boundaries', () => {
   })
 })
 
-it('requires project management before local Place creation', async () => {
+it('hides local creation for Project-only managers and rechecks Organisation authority', async () => {
+  mocks.authorizeProject.mockReturnValue({ allowed: true })
+  mocks.authorizeOrganisation.mockReturnValue({ allowed: false })
+  expect(await getLocalPlaceCreationAccess({ projectId: 'p' })).toEqual({
+    allowed: false,
+  })
+  mocks.authorizeOrganisation.mockReturnValue({ allowed: true })
+  expect(await getLocalPlaceCreationAccess({ projectId: 'p' })).toEqual({
+    allowed: true,
+  })
+  expect(mocks.probeOrganisation).toHaveBeenCalledWith(mocks.context.db, {
+    ref: 'org',
+    refKey: 'id',
+  })
+})
+
+it('requires Organisation management before local Place creation', async () => {
   const input = {
     projectId: 'p',
     state: 'manual' as const,
@@ -335,14 +363,14 @@ it('requires project management before local Place creation', async () => {
       },
     },
   }
-  mocks.authorizeProject.mockReturnValue({ allowed: false })
+  mocks.authorizeOrganisation.mockReturnValue({ allowed: false })
   await expect(createLocalPlace(input)).rejects.toMatchObject({ status: 403 })
   expect(mocks.createPlace).not.toHaveBeenCalled()
-  mocks.authorizeProject.mockReturnValue({ allowed: true })
+  mocks.authorizeOrganisation.mockReturnValue({ allowed: true })
   await createLocalPlace(input)
   expect(mocks.createPlace).toHaveBeenCalledWith(
     mocks.context.db,
-    'p',
+    'org',
     expect.objectContaining({ state: 'manual' }),
     'u',
   )
@@ -822,11 +850,11 @@ describe('Place identity review authority and retained evidence', () => {
     ).resolves.toEqual({ reviewId: 'mirrored-review' })
     expect(mocks.captureMirroredIdentity).toHaveBeenCalledWith(
       mocks.context.db,
-      { placeId: 'place', expectedOwnerProjectId: 'p' },
+      { placeId: 'place', expectedOwnerOrganisationId: 'p' },
       'source-revision',
       'u',
     )
-    mocks.authorizeProject.mockReturnValue({ allowed: false })
+    mocks.authorizeOrganisation.mockReturnValue({ allowed: false })
     await expect(getPlaceIdentityReviewAccess({ placeId: 'place' })).resolves.toEqual({
       allowed: false,
     })
@@ -842,12 +870,12 @@ describe('Place identity review authority and retained evidence', () => {
     await expect(preparePlaceIdentityReview(input)).resolves.toEqual({
       reviewId: 'identity-review',
     })
-    expect(mocks.probeProject).toHaveBeenCalledWith(mocks.context.db, {
+    expect(mocks.probeOrganisation).toHaveBeenCalledWith(mocks.context.db, {
       ref: 'p',
       refKey: 'id',
     })
-    expect(mocks.authorizeProject).toHaveBeenCalledWith(
-      expect.objectContaining({ submittedData: { placeUpdatePolicy: true } }),
+    expect(mocks.authorizeOrganisation).toHaveBeenCalledWith(
+      expect.objectContaining({ submittedData: { code: true } }),
     )
     expect(mocks.readSourcePage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -859,11 +887,11 @@ describe('Place identity review authority and retained evidence', () => {
     )
     expect(mocks.captureIdentity).toHaveBeenCalledWith(
       mocks.context.db,
-      { placeId: 'place', expectedOwnerProjectId: 'p' },
+      { placeId: 'place', expectedOwnerOrganisationId: 'p' },
       { ssId: 'candidate', facts: { names: { en: 'Shop' } } },
       'u',
     )
-    expect(mocks.authorizeProject.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(mocks.authorizeOrganisation.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.readSourcePage.mock.invocationCallOrder[0],
     )
   })
@@ -874,7 +902,7 @@ describe('Place identity review authority and retained evidence', () => {
     })
     expect(mocks.probeIdentity).not.toHaveBeenCalled()
     mocks.context.user.isAnonymous = false
-    mocks.authorizeProject.mockReturnValue({
+    mocks.authorizeOrganisation.mockReturnValue({
       allowed: false,
       code: 'INSUFFICIENT_ROLE',
     })
@@ -885,7 +913,7 @@ describe('Place identity review authority and retained evidence', () => {
     expect(mocks.readSourcePage).not.toHaveBeenCalled()
   })
   it('requires core hub stewardship for shared Places, not an unrelated hub admin', async () => {
-    mocks.probeIdentity.mockResolvedValue({ id: 'place', ownerProjectId: null })
+    mocks.probeIdentity.mockResolvedValue({ id: 'place', ownerOrganisationId: null })
     mocks.context.userRoles = [
       Object.assign(
         { type: 'hub' as const, role: 'admin', hubId: 'hub', userId: 'u' },
@@ -906,7 +934,7 @@ describe('Place identity review authority and retained evidence', () => {
     expect(mocks.readIdentity).toHaveBeenCalledWith(mocks.context.db, {
       placeId: 'place',
       reviewId: 'r',
-      ownerProjectId: null,
+      ownerOrganisationId: null,
     })
   })
   it('does not accept a search label, missing/duplicate source record or client-authored facts', async () => {
@@ -941,7 +969,7 @@ describe('Place identity review authority and retained evidence', () => {
     expect(mocks.acceptIdentity).toHaveBeenCalledWith(mocks.context.db, {
       ...decision,
       actorId: 'u',
-      ownerProjectId: 'p',
+      ownerOrganisationId: 'p',
     })
     await expect(
       acceptPlaceIdentityReview({ ...decision, actorId: 'spoofed' } as never),
@@ -954,7 +982,7 @@ describe('Place identity review authority and retained evidence', () => {
     await expect(acceptPlaceIdentityReview(decision)).rejects.toMatchObject({
       status: 409,
     })
-    mocks.authorizeProject.mockReturnValue({ allowed: false })
+    mocks.authorizeOrganisation.mockReturnValue({ allowed: false })
     await expect(acceptPlaceIdentityReview(decision)).rejects.toMatchObject({
       status: 403,
     })
@@ -968,7 +996,7 @@ describe('two-Place merge authorization', () => {
   function scopeBoth() {
     mocks.probeIdentity.mockImplementation((_db, id) => ({
       id,
-      ownerProjectId: id === 'source' ? null : 'p',
+      ownerOrganisationId: id === 'source' ? null : 'p',
     }))
   }
   function core() {
@@ -1001,23 +1029,23 @@ describe('two-Place merge authorization', () => {
     expect(mocks.captureMerge).toHaveBeenCalledWith(mocks.context.db, {
       ...prepare,
       sourcePlaceId: 'source',
-      ownerProjectId: 'p',
-      sourceOwnerProjectId: null,
+      ownerOrganisationId: 'p',
+      sourceOwnerOrganisationId: null,
       actorId: 'u',
     })
     await getPlaceMergeReview(read)
     expect(mocks.readMerge).toHaveBeenCalledWith(mocks.context.db, {
       ...read,
       sourcePlaceId: 'source',
-      ownerProjectId: 'p',
-      sourceOwnerProjectId: null,
+      ownerOrganisationId: 'p',
+      sourceOwnerOrganisationId: null,
     })
     await acceptPlaceMergeReview(decision)
     expect(mocks.applyMerge).toHaveBeenCalledWith(mocks.context.db, {
       ...decision,
       sourcePlaceId: 'source',
-      ownerProjectId: 'p',
-      sourceOwnerProjectId: null,
+      ownerOrganisationId: 'p',
+      sourceOwnerOrganisationId: null,
       actorId: 'u',
     })
     mocks.context.userRoles = []
@@ -1033,7 +1061,7 @@ describe('two-Place merge authorization', () => {
       preparePlaceMergeReview({ ...prepare, sourcePlaceId: 'injected' } as never),
     ).rejects.toThrow()
     await expect(
-      acceptPlaceMergeReview({ ...decision, ownerProjectId: 'other' } as never),
+      acceptPlaceMergeReview({ ...decision, ownerOrganisationId: 'other' } as never),
     ).rejects.toThrow()
     await expect(
       acceptPlaceMergeReview({ ...decision, reason: '  ' }),
@@ -1147,15 +1175,15 @@ describe('standalone Place reads', () => {
   it('allows shared catalogue reads without a claimed project scope', async () => {
     mocks.directory.mockResolvedValue({ data: [], nextCursor: null })
     await getPlaces({ q: 'shop', scope: 'client-cache-only' })
-    expect(mocks.authorizeProject).not.toHaveBeenCalled()
+    expect(mocks.authorizeOrganisation).not.toHaveBeenCalled()
     expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {
       q: 'shop',
       scope: 'client-cache-only',
     })
   })
   it('rejects project discovery and private details before reading facts', async () => {
-    mocks.authorizeProject.mockReturnValue({ allowed: false })
-    await expect(getPlaces({ projectId: 'other' })).rejects.toMatchObject({
+    mocks.authorizeOrganisation.mockReturnValue({ allowed: false })
+    await expect(getPlaces({ organisationId: 'other' })).rejects.toMatchObject({
       status: 403,
     })
     await expect(getPlace({ id: 'place' })).rejects.toMatchObject({ status: 403 })
@@ -1166,7 +1194,7 @@ describe('standalone Place reads', () => {
     expect(await getPlace({ id: 'place' })).toEqual({ id: 'place' })
     expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {
       id: 'place',
-      projectId: 'p',
+      organisationId: 'p',
     })
     await expect(
       getPlace({ id: 'place', projectId: 'other' } as never),
@@ -1191,12 +1219,12 @@ describe('negative identity review authorization', () => {
       placeId: 'place',
       reviewId: 'review',
       reason: 'Different shop unit',
-      ownerProjectId: 'p',
+      ownerOrganisationId: 'p',
       actorId: 'u',
     })
   })
   it('denies revocation, blank reasons and client-supplied ownership before persistence', async () => {
-    mocks.authorizeProject.mockReturnValue({ allowed: false })
+    mocks.authorizeOrganisation.mockReturnValue({ allowed: false })
     await expect(
       rejectPlaceIdentityReview({
         placeId: 'place',
@@ -1212,7 +1240,7 @@ describe('negative identity review authorization', () => {
         placeId: 'place',
         reviewId: 'review',
         reason: 'Different',
-        ownerProjectId: 'other',
+        ownerOrganisationId: 'other',
       } as never),
     ).rejects.toThrow()
     expect(mocks.rejectIdentity).not.toHaveBeenCalled()

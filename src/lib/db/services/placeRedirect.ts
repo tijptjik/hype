@@ -1,5 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
+// OWNERSHIP
+import { placeOwnerForProject } from './placeScope'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
@@ -12,8 +14,8 @@ import type { Database } from '#lib/types.js'
  */
 export function placeAliasIds(placeId: string): SQL {
   return sql`(WITH RECURSIVE aliases(id) AS (
-    SELECT ${placeId} UNION SELECT r.sourcePlaceId FROM placeRedirect r
-      JOIN aliases a ON r.targetPlaceId=a.id
+    SELECT ${placeId} UNION SELECT r.id FROM place r
+      JOIN aliases a ON r.redirectTargetId=a.id
   ) SELECT id FROM aliases)`
 }
 
@@ -34,9 +36,9 @@ export async function resolvePlaceRedirect(
       placeId: string
       ssId: string | null
     }>(sql`WITH RECURSIVE chain(id) AS (
-    SELECT ${placeId} UNION SELECT r.targetPlaceId FROM placeRedirect r JOIN chain c ON r.sourcePlaceId=c.id
+    SELECT ${placeId} UNION SELECT r.redirectTargetId FROM place r JOIN chain c ON r.id=c.id
   ) SELECT p.id AS placeId,p.ssId FROM chain c JOIN place p ON p.id=c.id
-    WHERE p.state!='redirect' AND (p.ownerProjectId IS NULL OR p.ownerProjectId=${projectId}) LIMIT 1`)) ??
+    WHERE p.state!='redirect' AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=${placeOwnerForProject(projectId)}) LIMIT 1`)) ??
     null
   )
 }

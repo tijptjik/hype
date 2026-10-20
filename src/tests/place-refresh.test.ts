@@ -62,6 +62,7 @@ function setup(mode: 'catalogue' | 'identities' = 'catalogue') {
   sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0119_place_source_changes.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0121_place_refresh_identity_scan.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => prepare(query, args),
     first: async () => sqlite.prepare(query).get(...(values as never[])) ?? null,

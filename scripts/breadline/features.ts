@@ -11,6 +11,7 @@ import { validateBreadlineFeatureRows } from './lib/feature-validation'
 import { reviewedDonorMtr } from './lib/donor-mtr-decisions'
 // VALIDATION
 import { normalizeHongKongPhoneNumber } from '../../src/lib/utils/phone-property'
+import { derivePlaceId } from '../../src/lib/places/id.server'
 import { LocalPlaceInputSchema } from '../../src/lib/places/local'
 import { emptyFeatureAddress } from '../../src/lib/addresses/featureAddress'
 import { createFeatureSpatialIndex } from '../../src/lib/map/featureSpatial'
@@ -358,7 +359,10 @@ export function planBreadlineFeatures(args: string[]): void {
             location: { geometry, address: emptyFeatureAddress(addresses).source },
           },
         })
-        const placeId = `blPlace_${id}`
+        const placeId = derivePlaceId(
+          table === 'donors' ? 'breadline-donor' : 'breadline-dropoff',
+          sourceId,
+        )
         const revisionId = `blPlaceBaseline_${id}`
         if (target.query('SELECT id FROM place WHERE id=?').get(placeId))
           throw new Error(
@@ -440,7 +444,7 @@ export function planBreadlineFeatures(args: string[]): void {
           insert('place', {
             id: placeId,
             state: 'unresolved',
-            ownerProjectId: scope.projectId,
+            ownerOrganisationId: scope.organisationId,
           }),
         )
         statements.push(

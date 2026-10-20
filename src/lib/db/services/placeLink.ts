@@ -8,6 +8,8 @@ import { PlaceFactsSchema } from '#lib/places/validation.js'
 // SERVICES
 import { readFeaturePlaceBaseline } from './placeBaseline'
 import { prepareFeaturePlaceAssociationWrite } from './placeAssociation'
+// OWNERSHIP
+import { placeOwnerForProject } from './placeScope'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { PlaceBaselineResult } from './placeBaseline'
@@ -52,7 +54,10 @@ export async function linkInitialFeaturePlace(
         eq(place.id, input.placeId),
         ne(place.state, 'redirect'),
         eq(placeRevision.id, input.revisionId),
-        or(isNull(place.ownerProjectId), eq(place.ownerProjectId, input.projectId)),
+        or(
+          isNull(place.ownerOrganisationId),
+          eq(place.ownerOrganisationId, placeOwnerForProject(input.projectId)),
+        ),
       ),
     )
     .get()

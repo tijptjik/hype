@@ -25,8 +25,7 @@ import {
   featurePlace,
   placeIdentityHistory,
   placeIdentityReview,
-  placeMergeReview,
-  placeRedirect,
+  type PlaceMergeReviewRecord,
 } from '../schema/place'
 // DOMAIN
 import { equalPlaceValue } from '#lib/places/baseline.js'
@@ -39,7 +38,7 @@ import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
 import type { PlaceIdentityBaseline } from '#lib/places/identity.js'
 
-type MergeReview = typeof placeMergeReview.$inferSelect
+type MergeReview = PlaceMergeReviewRecord
 
 // ---
 /********************
@@ -53,7 +52,7 @@ type MergeReview = typeof placeMergeReview.$inferSelect
  */
 function baselineGuard(value: PlaceIdentityBaseline): SQL {
   return sql`EXISTS(SELECT 1 FROM place WHERE id=${value.placeId} AND state=${value.expectedState}
-    AND ssId IS ${value.expectedSsId} AND ownerProjectId IS ${value.expectedOwnerProjectId}
+    AND ssId IS ${value.expectedSsId} AND ownerOrganisationId IS ${value.expectedOwnerOrganisationId}
     AND sourceAvailability=${value.expectedSourceAvailability})
     AND (SELECT id FROM placeRevision WHERE placeId=${value.placeId} ORDER BY sequence DESC LIMIT 1)
       =${value.expectedLatestRevisionId}
@@ -86,13 +85,13 @@ function mergeGuard(
 ): SQL {
   const target = row.targetBaseline,
     source = row.sourceBaseline
-  return sql`NOT EXISTS (SELECT 1 FROM placeIdentityRejection WHERE reviewId=${row.identityReviewId})
+  return sql`NOT EXISTS (SELECT 1 FROM placeIdentityReview WHERE rejection IS NOT NULL AND id=${row.identityReviewId})
     AND ${baselineGuard(target)} AND ${baselineGuard(source)}
     AND ${featureTokenSQL(source.placeId)}=${row.sourceFeatureToken}
-    AND (${source.expectedOwnerProjectId} IS NULL OR ${source.expectedOwnerProjectId} IS ${target.expectedOwnerProjectId})
+    AND (${source.expectedOwnerOrganisationId} IS NULL OR ${source.expectedOwnerOrganisationId} IS ${target.expectedOwnerOrganisationId})
     AND NOT EXISTS(SELECT 1 FROM featurePlace fp JOIN feature f ON f.id=fp.featureId
       WHERE fp.placeId=${source.placeId} AND (f.isDraft!=0 OR
-        (${target.expectedOwnerProjectId} IS NOT NULL AND f.projectId IS NOT ${target.expectedOwnerProjectId})))
+        (${target.expectedOwnerOrganisationId} IS NOT NULL AND (SELECT organisationId FROM project WHERE id=f.projectId) IS NOT ${target.expectedOwnerOrganisationId})))
     AND NOT EXISTS(SELECT 1 FROM placeIdentityHistory WHERE
       (ssId=${source.expectedSsId} OR previousSsId=${source.expectedSsId})
       AND placeId NOT IN ${placeAliasIds(target.placeId)} AND placeId NOT IN ${placeAliasIds(source.placeId)})`
@@ -111,7 +110,11 @@ function mergeGuard(
  */
 export async function probePlaceMergeSource(
   db: Database,
-  input: { placeId: string; identityReviewId: string; ownerProjectId: string | null },
+  input: {
+    placeId: string
+    identityReviewId: string
+    ownerOrganisationId: string | null
+  },
 ): Promise<{ sourcePlaceId: string } | null> {
   return (
     (await db
@@ -125,7 +128,7 @@ export async function probePlaceMergeSource(
         and(
           eq(placeIdentityReview.id, input.identityReviewId),
           eq(placeIdentityReview.placeId, input.placeId),
-          sql`${placeIdentityReview.ownerProjectId} IS ${input.ownerProjectId}`,
+          sql`${placeIdentityReview.ownerOrganisationId} IS ${input.ownerOrganisationId}`,
         ),
       )
       .get()) ?? null
@@ -142,18 +145,8 @@ export async function probePlaceMergeReview(
   db: Database,
   input: { placeId: string; reviewId: string },
 ): Promise<{ sourcePlaceId: string } | null> {
-  return (
-    (await db
-      .select({ sourcePlaceId: placeMergeReview.sourcePlaceId })
-      .from(placeMergeReview)
-      .where(
-        and(
-          eq(placeMergeReview.id, input.reviewId),
-          eq(placeMergeReview.targetPlaceId, input.placeId),
-        ),
-      )
-      .get()) ?? null
-  )
+  const row = await readMergeEvidence(db, input)
+  return row ? { sourcePlaceId: row.sourcePlaceId } : null
 }
 
 /**
@@ -168,8 +161,8 @@ export async function readPlaceMergeReview(
     placeId: string
     sourcePlaceId: string
     reviewId: string
-    ownerProjectId: string | null
-    sourceOwnerProjectId: string | null
+    ownerOrganisationId: string | null
+    sourceOwnerOrganisationId: string | null
   },
 ): Promise<{
   reviewId: string
@@ -178,32 +171,23 @@ export async function readPlaceMergeReview(
   stale: boolean
   applied: boolean
 } | null> {
-  const row = await db
-    .select()
-    .from(placeMergeReview)
-    .where(
-      and(
-        eq(placeMergeReview.id, input.reviewId),
-        eq(placeMergeReview.targetPlaceId, input.placeId),
-        eq(placeMergeReview.sourcePlaceId, input.sourcePlaceId),
-      ),
-    )
-    .get()
+  const row = await readMergeEvidence(db, input)
   if (
     !row ||
-    row.targetBaseline.expectedOwnerProjectId !== input.ownerProjectId ||
-    row.sourceBaseline.expectedOwnerProjectId !== input.sourceOwnerProjectId
+    row.sourcePlaceId !== input.sourcePlaceId ||
+    row.targetBaseline.expectedOwnerOrganisationId !== input.ownerOrganisationId ||
+    row.sourceBaseline.expectedOwnerOrganisationId !== input.sourceOwnerOrganisationId
   )
     return null
   const state = await db.get<{
     current: number
     applied: number
   }>(sql`SELECT CASE WHEN ${mergeGuard(row)} THEN 1 ELSE 0 END AS current,
-    EXISTS(SELECT 1 FROM placeRedirect WHERE reviewId=${row.id}) AS applied`)
+    EXISTS(SELECT 1 FROM place WHERE json_extract(redirect,'$.reviewId')=${row.id}) AS applied`)
   return {
     reviewId: row.id,
     affectedFeatures: row.sourceFeatureCount,
-    visibility: input.ownerProjectId === null ? 'shared' : 'private',
+    visibility: input.ownerOrganisationId === null ? 'shared' : 'private',
     stale: !state?.current,
     applied: Boolean(state?.applied),
   }
@@ -222,9 +206,9 @@ export async function capturePlaceMergeReview(
   input: {
     placeId: string
     identityReviewId: string
-    ownerProjectId: string | null
+    ownerOrganisationId: string | null
     sourcePlaceId: string
-    sourceOwnerProjectId: string | null
+    sourceOwnerOrganisationId: string | null
     actorId: string
   },
 ): Promise<
@@ -240,7 +224,7 @@ export async function capturePlaceMergeReview(
       and(
         eq(placeIdentityReview.id, input.identityReviewId),
         eq(placeIdentityReview.placeId, input.placeId),
-        sql`${placeIdentityReview.ownerProjectId} IS ${input.ownerProjectId}`,
+        sql`${placeIdentityReview.ownerOrganisationId} IS ${input.ownerOrganisationId}`,
       ),
     )
     .get()
@@ -248,12 +232,12 @@ export async function capturePlaceMergeReview(
   const target = await readPlaceIdentityBaseline(
     db,
     input.placeId,
-    input.ownerProjectId,
+    input.ownerOrganisationId,
   )
   const source = await readPlaceIdentityBaseline(
     db,
     input.sourcePlaceId,
-    input.sourceOwnerProjectId,
+    input.sourceOwnerOrganisationId,
   )
   if (
     !target ||
@@ -284,21 +268,38 @@ export async function capturePlaceMergeReview(
   )
   if (!token) throw new Error('Missing merge association token')
   const affected = JSON.parse(token.value) as Array<{ projectId: string }>
+  const outsideOwner = await db.get<{
+    found: number
+  }>(sql`SELECT 1 AS found FROM featurePlace fp JOIN feature f ON f.id=fp.featureId
+    JOIN project pr ON pr.id=f.projectId WHERE fp.placeId=${source.placeId}
+    AND pr.organisationId IS NOT ${target.expectedOwnerOrganisationId} LIMIT 1`)
   if (
-    (source.expectedOwnerProjectId !== null &&
-      source.expectedOwnerProjectId !== target.expectedOwnerProjectId) ||
-    (target.expectedOwnerProjectId !== null &&
-      affected.some(row => row.projectId !== target.expectedOwnerProjectId))
+    (source.expectedOwnerOrganisationId !== null &&
+      source.expectedOwnerOrganisationId !== target.expectedOwnerOrganisationId) ||
+    (target.expectedOwnerOrganisationId !== null && Boolean(outsideOwner))
   )
     return { status: 'scope-conflict' }
   const id = nanoid(24)
+  const review: MergeReview = {
+    id,
+    identityReviewId: identity.id,
+    targetPlaceId: target.placeId,
+    sourcePlaceId: source.placeId,
+    targetBaseline: target,
+    sourceBaseline: source,
+    sourceFeatureToken: token.value,
+    sourceFeatureCount: affected.length,
+    sourceRevisionId: candidate.id,
+    actorId: input.actorId,
+    createdAt: new Date().toISOString(),
+  }
   const rows = await db
-    .insert(placeMergeReview)
-    .select(sql`SELECT ${id},${identity.id},${target.placeId},${source.placeId},
-    ${JSON.stringify(target)},${JSON.stringify(source)},${token.value},${affected.length},${candidate.id},
-    ${input.actorId},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE
-    ${mergeGuard({ targetBaseline: target, sourceBaseline: source, sourceFeatureToken: token.value, identityReviewId: identity.id })}`)
-    .returning({ id: placeMergeReview.id })
+    .update(placeIdentityReview)
+    .set({
+      mergeReviews: sql`json_insert(mergeReviews,'$[#]',json(${JSON.stringify(review)}))`,
+    })
+    .where(and(eq(placeIdentityReview.id, identity.id), mergeGuard(review)))
+    .returning({ id: placeIdentityReview.id })
   return rows.length
     ? { status: 'ready', reviewId: id, affectedFeatures: affected.length }
     : { status: 'conflict' }
@@ -325,8 +326,8 @@ export async function applyPlaceMergeReview(
     reviewId: string
     placeId: string
     sourcePlaceId: string
-    ownerProjectId: string | null
-    sourceOwnerProjectId: string | null
+    ownerOrganisationId: string | null
+    sourceOwnerOrganisationId: string | null
     actorId: string
     reason: string
   },
@@ -337,21 +338,12 @@ export async function applyPlaceMergeReview(
   const reason = input.reason.trim()
   if (!input.actorId.trim() || !reason || reason.length > 2000)
     throw new Error('Merge requires an actor and a reason of 1–2000 characters')
-  const row = await db
-    .select()
-    .from(placeMergeReview)
-    .where(
-      and(
-        eq(placeMergeReview.id, input.reviewId),
-        eq(placeMergeReview.targetPlaceId, input.placeId),
-        eq(placeMergeReview.sourcePlaceId, input.sourcePlaceId),
-      ),
-    )
-    .get()
+  const row = await readMergeEvidence(db, input)
   if (
     !row ||
-    row.targetBaseline.expectedOwnerProjectId !== input.ownerProjectId ||
-    row.sourceBaseline.expectedOwnerProjectId !== input.sourceOwnerProjectId
+    row.sourcePlaceId !== input.sourcePlaceId ||
+    row.targetBaseline.expectedOwnerOrganisationId !== input.ownerOrganisationId ||
+    row.sourceBaseline.expectedOwnerOrganisationId !== input.sourceOwnerOrganisationId
   )
     return { status: 'conflict' }
   const targetLatest = await db
@@ -378,14 +370,25 @@ export async function applyPlaceMergeReview(
   const id = nanoid(24),
     prefix = `mergeRevision_${id}_`,
     historyId = nanoid(24)
-  const receipt = sql`EXISTS(SELECT 1 FROM placeRedirect WHERE id=${id})`
-  // The redirect row is the transaction's unique receipt; every subsequent write requires it.
+  const receipt = sql`EXISTS(SELECT 1 FROM place WHERE json_extract(redirect,'$.id')=${id})`
+  // The absorbed Place's redirect is the unique receipt; subsequent writes require it.
   const result = await db.batch([
     db
-      .insert(placeRedirect)
-      .select(sql`SELECT ${input.sourcePlaceId},${input.placeId},${id},
-      ${row.sourceBaseline.expectedSsId},${row.id},${input.actorId},${reason},strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE ${mergeGuard(row)}`),
+      .update(place)
+      .set({
+        redirectTargetId: input.placeId,
+        redirect: {
+          sourcePlaceId: input.sourcePlaceId,
+          targetPlaceId: input.placeId,
+          id,
+          sourceSsId: row.sourceBaseline.expectedSsId,
+          reviewId: row.id,
+          actorId: input.actorId,
+          reason,
+          createdAt: new Date().toISOString(),
+        },
+      })
+      .where(and(eq(place.id, input.sourcePlaceId), mergeGuard(row))),
     db
       .insert(placeRevision)
       .select(sql`SELECT ${prefix}||sequence,${input.placeId},${targetLatest.sequence}+sequence,
@@ -418,10 +421,27 @@ export async function applyPlaceMergeReview(
       .select(sql`SELECT ${historyId},${input.placeId},
       ${row.targetBaseline.expectedHistoryId},${row.targetBaseline.expectedState},${row.targetBaseline.expectedSsId},
       ${row.sourceBaseline.expectedSsId},${prefix + candidate.sequence},${input.actorId},${reason},
-      strftime('%Y-%m-%dT%H:%M:%fZ','now'),${row.identityReviewId} WHERE ${receipt}`)
+      ${row.identityReviewId},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${receipt}`)
       .returning({ id: placeIdentityHistory.id }),
   ])
   return result[5].length
     ? { status: 'applied', redirectId: id, affectedFeatures: row.sourceFeatureCount }
     : { status: 'conflict' }
+}
+
+/**
+ * Read one retained merge impact from its owning identity comparison.
+ * @param db Request-local database.
+ * @param input Authorized target and immutable impact ID.
+ * @returns Saved impact, or null outside the requested target scope.
+ */
+async function readMergeEvidence(
+  db: Database,
+  input: { placeId: string; reviewId: string },
+): Promise<MergeReview | null> {
+  const row = await db.get<{
+    value: string
+  }>(sql`SELECT m.value FROM placeIdentityReview r,json_each(r.mergeReviews) m
+    WHERE r.placeId=${input.placeId} AND json_extract(m.value,'$.id')=${input.reviewId} LIMIT 1`)
+  return row ? (JSON.parse(row.value) as MergeReview) : null
 }

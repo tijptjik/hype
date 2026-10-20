@@ -12,7 +12,7 @@ import {
 } from 'drizzle-orm/sqlite-core'
 // SCHEMA
 import { feature } from './feature'
-import { project } from './project'
+import { organisation } from './organisation'
 // TYPES
 import type { PlaceIdentityBaseline } from '#lib/places/identity.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
@@ -29,18 +29,20 @@ export const place = sqliteTable(
   {
     id: text('id').primaryKey(),
     ssId: text('ssId').unique(),
+    // Local baselines are private to their owning organisation until explicitly published.
+    ownerOrganisationId: text('ownerOrganisationId').references(() => organisation.id, {
+      onDelete: 'restrict',
+    }),
     state: text('state', {
       enum: ['linked', 'unresolved', 'manual', 'redirect'],
     }).notNull(),
-    // Local baselines are private to their owning project until explicitly published.
-    ownerProjectId: text('ownerProjectId').references(() => project.id, {
-      onDelete: 'restrict',
-    }),
     sourceAvailability: text('sourceAvailability', {
       enum: ['current', 'missing', 'review'],
     })
       .notNull()
       .default('current'),
+    redirectTargetId: text('redirectTargetId'),
+    redirect: text('redirect', { mode: 'json' }).$type<PlaceRedirectRecord>(),
     createdAt: text('createdAt')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
@@ -52,7 +54,7 @@ export const place = sqliteTable(
     ),
     check(
       'place_identity_check',
-      sql`(${table.state} = 'linked' AND ${table.ssId} IS NOT NULL) OR (${table.state} IN ('unresolved','manual') AND ${table.ssId} IS NULL AND ${table.ownerProjectId} IS NOT NULL) OR (${table.state}='redirect' AND ${table.ssId} IS NULL)`,
+      sql`(${table.state} = 'linked' AND ${table.ssId} IS NOT NULL) OR (${table.state} IN ('unresolved','manual') AND ${table.ssId} IS NULL AND ${table.ownerOrganisationId} IS NOT NULL) OR (${table.state}='redirect' AND ${table.ssId} IS NULL)`,
     ),
     check(
       'place_availability_check',
@@ -96,22 +98,6 @@ export const placeRevision = sqliteTable(
       'place_revision_source_check',
       sql`${table.origin} = 'local' OR (${table.ssId} IS NOT NULL AND ${table.apiVersion} IS NOT NULL AND ${table.releaseId} IS NOT NULL AND ${table.snapshotId} IS NOT NULL)`,
     ),
-  ],
-)
-
-/** A project policy controls adoption, never shared source snapshot refresh. */
-export const projectPlacePolicy = sqliteTable(
-  'projectPlacePolicy',
-  {
-    projectId: text('projectId')
-      .primaryKey()
-      .references(() => project.id, { onDelete: 'cascade' }),
-    policy: text('policy', { mode: 'json' }).$type<ProjectPlacePolicy>().notNull(),
-    revision: integer('revision').notNull().default(1),
-  },
-  table => [
-    check('project_place_policy_json', sql`json_valid(${table.policy})`),
-    check('project_place_policy_revision_check', sql`${table.revision} > 0`),
   ],
 )
 
@@ -184,26 +170,6 @@ export const featurePlaceHistory = sqliteTable(
   ],
 )
 
-/** Feature-owned brands retained after explicit unlink; source history remains immutable. */
-export const featurePlaceDetached = sqliteTable(
-  'featurePlaceDetached',
-  {
-    featureId: text('featureId')
-      .primaryKey()
-      .references(() => feature.id, { onDelete: 'cascade' }),
-    revision: text('revision').notNull(),
-    sourceAssociationRevision: text('sourceAssociationRevision').notNull(),
-    actorId: text('actorId').notNull(),
-    brands: text('brands', { mode: 'json' }).$type<PlaceFacts['brands']>().notNull(),
-  },
-  table => [
-    check(
-      'feature_place_detached_brands_json',
-      sql`json_valid(${table.brands}) AND json_type(${table.brands}) = 'array'`,
-    ),
-  ],
-)
-
 /** Immutable assessment, scoped to the Feature's project at proposal time. */
 export const placeAdoptionProposal = sqliteTable(
   'placeAdoptionProposal',
@@ -222,6 +188,12 @@ export const placeAdoptionProposal = sqliteTable(
         plan: PlaceAdoptionPlan
       }>()
       .notNull(),
+    factsDecision: text('factsDecision', {
+      mode: 'json',
+    }).$type<PlaceAdoptionDecisionRecord>(),
+    locationDecision: text('locationDecision', {
+      mode: 'json',
+    }).$type<PlaceAdoptionDecisionRecord>(),
     createdAt: text('createdAt')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
@@ -242,33 +214,17 @@ export const placeAdoptionProposal = sqliteTable(
   ],
 )
 
-/** A field group is pending until an immutable rejection or atomic application is recorded. */
-export const placeAdoptionDecision = sqliteTable(
-  'placeAdoptionDecision',
-  {
-    id: text('id').primaryKey(),
-    proposalId: text('proposalId')
-      .notNull()
-      .references(() => placeAdoptionProposal.id, { onDelete: 'restrict' }),
-    fieldGroup: text('fieldGroup', { enum: ['facts', 'location'] }).notNull(),
-    action: text('action', { enum: ['rejected', 'applied'] }).notNull(),
-    actorId: text('actorId').notNull(),
-    reason: text('reason').notNull(),
-    associationRevision: text('associationRevision').notNull(),
-    createdAt: text('createdAt')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
-  },
-  table => [
-    unique('place_adoption_group_decision').on(table.proposalId, table.fieldGroup),
-    check('place_adoption_group', sql`${table.fieldGroup} IN ('facts','location')`),
-    check('place_adoption_action', sql`${table.action} IN ('rejected','applied')`),
-    check(
-      'place_adoption_reason',
-      sql`length(trim(${table.reason})) BETWEEN 1 AND 2000`,
-    ),
-  ],
-)
+/** Immutable group decision embedded in its assessment. */
+export type PlaceAdoptionDecisionRecord = {
+  id: string
+  proposalId: string
+  fieldGroup: 'facts' | 'location'
+  action: 'rejected' | 'applied'
+  actorId: string
+  reason: string
+  associationRevision: string
+  createdAt: string
+}
 
 /** Reviewed identity transitions retain the local Place and immutable source evidence. */
 export const placeIdentityHistory = sqliteTable(
@@ -287,12 +243,12 @@ export const placeIdentityHistory = sqliteTable(
     sourceRevisionId: text('sourceRevisionId').notNull(),
     actorId: text('actorId').notNull(),
     reason: text('reason').notNull(),
-    createdAt: text('createdAt')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
     reviewId: text('reviewId').references(() => placeIdentityReview.id, {
       onDelete: 'restrict',
     }),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
   },
   table => [
     foreignKey({ columns: [table.previousHistoryId], foreignColumns: [table.id] }),
@@ -331,7 +287,7 @@ export const placeIdentityReview = sqliteTable(
     placeId: text('placeId')
       .notNull()
       .references(() => place.id, { onDelete: 'restrict' }),
-    ownerProjectId: text('ownerProjectId'),
+    ownerOrganisationId: text('ownerOrganisationId'),
     baseline: text('baseline', { mode: 'json' })
       .$type<PlaceIdentityBaseline>()
       .notNull(),
@@ -339,6 +295,13 @@ export const placeIdentityReview = sqliteTable(
       .$type<SaanSeoiPlaceProjection>()
       .notNull(),
     actorId: text('actorId').notNull(),
+    mergeReviews: text('mergeReviews', { mode: 'json' })
+      .$type<PlaceMergeReviewRecord[]>()
+      .notNull()
+      .default(sql`'[]'`),
+    rejection: text('rejection', {
+      mode: 'json',
+    }).$type<PlaceIdentityRejectionRecord>(),
     createdAt: text('createdAt')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
@@ -351,106 +314,39 @@ export const placeIdentityReview = sqliteTable(
   ],
 )
 
-/** Captured merge impact; both identities and source associations are fenced at acceptance. */
-export const placeMergeReview = sqliteTable(
-  'placeMergeReview',
-  {
-    id: text('id').primaryKey(),
-    identityReviewId: text('identityReviewId')
-      .notNull()
-      .references(() => placeIdentityReview.id, { onDelete: 'restrict' }),
-    targetPlaceId: text('targetPlaceId')
-      .notNull()
-      .references(() => place.id, { onDelete: 'restrict' }),
-    sourcePlaceId: text('sourcePlaceId')
-      .notNull()
-      .references(() => place.id, { onDelete: 'restrict' }),
-    targetBaseline: text('targetBaseline', { mode: 'json' })
-      .$type<PlaceIdentityBaseline>()
-      .notNull(),
-    sourceBaseline: text('sourceBaseline', { mode: 'json' })
-      .$type<PlaceIdentityBaseline>()
-      .notNull(),
-    sourceFeatureToken: text('sourceFeatureToken').notNull(),
-    sourceFeatureCount: integer('sourceFeatureCount').notNull(),
-    sourceRevisionId: text('sourceRevisionId').notNull(),
-    actorId: text('actorId').notNull(),
-    createdAt: text('createdAt')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
-  },
-  table => [
-    foreignKey({
-      columns: [table.sourcePlaceId, table.sourceRevisionId],
-      foreignColumns: [placeRevision.placeId, placeRevision.id],
-    }),
-    check('place_merge_distinct', sql`${table.sourcePlaceId}!=${table.targetPlaceId}`),
-    check('place_merge_target_json', sql`json_valid(${table.targetBaseline})`),
-    check('place_merge_source_json', sql`json_valid(${table.sourceBaseline})`),
-    check('place_merge_features_json', sql`json_valid(${table.sourceFeatureToken})`),
-    check('place_merge_count', sql`${table.sourceFeatureCount}>=0`),
-  ],
-)
+/** Immutable merge impact versions retained within their identity comparison. */
+export type PlaceMergeReviewRecord = {
+  id: string
+  identityReviewId: string
+  targetPlaceId: string
+  sourcePlaceId: string
+  targetBaseline: PlaceIdentityBaseline
+  sourceBaseline: PlaceIdentityBaseline
+  sourceFeatureToken: string
+  sourceFeatureCount: number
+  sourceRevisionId: string
+  actorId: string
+  createdAt: string
+}
 
-/** Permanent alias retains absorbed IDs and auditable review/actor evidence. */
-export const placeRedirect = sqliteTable(
-  'placeRedirect',
-  {
-    sourcePlaceId: text('sourcePlaceId')
-      .primaryKey()
-      .references(() => place.id, { onDelete: 'restrict' }),
-    targetPlaceId: text('targetPlaceId')
-      .notNull()
-      .references(() => place.id, { onDelete: 'restrict' }),
-    id: text('id').notNull().unique(),
-    sourceSsId: text('sourceSsId'),
-    reviewId: text('reviewId')
-      .notNull()
-      .unique()
-      .references(() => placeMergeReview.id, { onDelete: 'restrict' }),
-    actorId: text('actorId').notNull(),
-    reason: text('reason').notNull(),
-    createdAt: text('createdAt')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
-  },
-  table => [
-    index('place_redirect_target').on(table.targetPlaceId, table.sourcePlaceId),
-    check(
-      'place_redirect_distinct',
-      sql`${table.sourcePlaceId}!=${table.targetPlaceId}`,
-    ),
-    check('place_redirect_actor', sql`length(trim(${table.actorId}))>0`),
-    check(
-      'place_redirect_reason',
-      sql`length(trim(${table.reason})) BETWEEN 1 AND 2000`,
-    ),
-  ],
-)
+/** Permanent receipt stored on the absorbed Place. */
+export type PlaceRedirectRecord = {
+  id: string
+  sourcePlaceId: string
+  targetPlaceId: string
+  sourceSsId: string | null
+  reviewId: string
+  actorId: string
+  reason: string
+  createdAt: string
+}
 
-/** Immutable negative identity evidence, scoped to one retained comparison. */
-export const placeIdentityRejection = sqliteTable(
-  'placeIdentityRejection',
-  {
-    reviewId: text('reviewId')
-      .primaryKey()
-      .references(() => placeIdentityReview.id, { onDelete: 'restrict' }),
-    placeId: text('placeId')
-      .notNull()
-      .references(() => place.id, { onDelete: 'restrict' }),
-    ssId: text('ssId').notNull(),
-    actorId: text('actorId').notNull(),
-    reason: text('reason').notNull(),
-    createdAt: text('createdAt')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
-  },
-  table => [
-    index('place_identity_rejection_candidate').on(table.placeId, table.ssId),
-    check('place_identity_rejection_actor', sql`length(trim(${table.actorId}))>0`),
-    check(
-      'place_identity_rejection_reason',
-      sql`length(trim(${table.reason})) BETWEEN 1 AND 2000`,
-    ),
-  ],
-)
+/** Negative decision retained with the comparison it rejects. */
+export type PlaceIdentityRejectionRecord = {
+  reviewId: string
+  placeId: string
+  ssId: string
+  actorId: string
+  reason: string
+  createdAt: string
+}

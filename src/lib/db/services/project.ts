@@ -26,7 +26,6 @@ import {
   project,
   projectI18n,
   projectRole,
-  projectPlacePolicy,
   task,
 } from '../schema'
 // DB
@@ -755,7 +754,7 @@ export const updateProjectById = async (
 /**
  * Updates project core fields with optimistic concurrency guard on `modifiedAt`.
  * Used by remote form updates to prevent stale writes. Optional Place settings are
- * committed in the same batch, guarded by both Project and policy revisions.
+ * committed in one update, guarded by both Project and policy revisions.
  * @param db - The database instance.
  * @param params - Update payload including expected `updatedAt`.
  * @returns Updated id/modifiedAt pair, or `null` when stale/missing.
@@ -788,14 +787,21 @@ export const updateProjectByIdWithConcurrency = async (
     throw new Error('Invalid policy revision')
   }
   const policy = settings ? ProjectPlacePolicySchema.parse(settings.policy) : undefined
-  // Guard both revisions before changing either record; absence is policy revision zero.
+  // Guard both revisions before updating the Project and its policy; absence is policy revision zero.
   const policyGuard = settings
-    ? sql`coalesce((select ${projectPlacePolicy.revision} from ${projectPlacePolicy}
-        where ${projectPlacePolicy.projectId} = ${params.id}), 0) = ${settings.expectedRevision}`
+    ? eq(project.placePolicyRevision, settings.expectedRevision)
     : undefined
   const updateCore = db
     .update(project)
-    .set(params.data)
+    .set({
+      ...params.data,
+      ...(settings && policy
+        ? {
+            placePolicy: policy,
+            placePolicyRevision: settings.expectedRevision + 1,
+          }
+        : {}),
+    })
     .where(
       and(
         eq(project.id, params.id),
@@ -805,30 +811,8 @@ export const updateProjectByIdWithConcurrency = async (
     )
     .returning({ id: project.id, modifiedAt: project.modifiedAt })
 
-  if (!settings || !policy) {
-    const [updated] = await updateCore
-    return updated ?? null
-  }
-
-  // D1 batches are atomic. The second statement writes only when the core CAS succeeded.
-  const writePolicy = db
-    .insert(projectPlacePolicy)
-    .select(
-      db
-        .select({
-          projectId: project.id,
-          policy: sql<ProjectPlacePolicy>`${JSON.stringify(policy)}`.as('policy'),
-          revision: sql<number>`${settings.expectedRevision + 1}`.as('revision'),
-        })
-        .from(project)
-        .where(and(eq(project.id, params.id), sql`changes() > 0`)),
-    )
-    .onConflictDoUpdate({
-      target: projectPlacePolicy.projectId,
-      set: { policy, revision: settings.expectedRevision + 1 },
-    })
-  const [updated] = await db.batch([updateCore, writePolicy])
-  return updated[0] ?? null
+  const [updated] = await updateCore
+  return updated ?? null
 }
 
 /**

@@ -4,7 +4,6 @@ import { and, eq, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
 import { feature } from '../schema/feature'
-import { featurePlaceDetached } from '../schema/place'
 // DOMAIN
 import { PlaceBrandEditSchema, type PlaceBrandEdit } from '#lib/places/brandEdit.js'
 import { equalPlaceValue } from '#lib/places/baseline.js'
@@ -127,6 +126,16 @@ export async function saveUnlinkedFeatureForm(
       ...data,
       modifiedAt,
       formWriteToken,
+      ...(brandEdit
+        ? {
+            localPlaceBrands: {
+              brands:
+                brandEdit.choice.mode === 'override' ? brandEdit.choice.value : [],
+              revision: crypto.randomUUID(),
+              actorId: input.actorId!,
+            },
+          }
+        : {}),
       ...(geometryChanged
         ? { geometry, spatialIndex: createFeatureSpatialIndex(geometry) }
         : {}),
@@ -138,8 +147,7 @@ export async function saveUnlinkedFeatureForm(
         eq(feature.modifiedAt, input.updatedAt),
         ...(brandEdit
           ? [
-              sql`EXISTS (SELECT 1 FROM featurePlaceDetached
-          WHERE featureId=${input.featureId} AND revision=${brandEdit.expectedRevision})`,
+              sql`json_extract(${feature.localPlaceBrands},'$.revision')=${brandEdit.expectedRevision}`,
             ]
           : []),
         ...(input.expectedDraftState === undefined
@@ -153,20 +161,6 @@ export async function saveUnlinkedFeatureForm(
   // One atomic batch prevents a linker from observing new parent data with old children.
   const result = await db.batch([
     parent,
-    ...(brandEdit
-      ? [
-          db
-            .update(featurePlaceDetached)
-            .set({
-              brands:
-                brandEdit.choice.mode === 'override' ? brandEdit.choice.value : [],
-              revision: crypto.randomUUID(),
-              actorId: input.actorId!,
-            })
-            .where(sql`${featurePlaceDetached.featureId}=${input.featureId}
-      AND ${featurePlaceDetached.revision}=${brandEdit.expectedRevision} AND ${guard}`),
-        ]
-      : []),
     ...prepareFeatureFormRelations(
       db,
       input.featureId,

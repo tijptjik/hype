@@ -5,6 +5,8 @@ import { place, placeRevision } from '../schema/place'
 import { persistSaanSeoiPlace } from './placeSource'
 // VALIDATION
 import { PlaceFactsSchema } from '#lib/places/validation.js'
+// OWNERSHIP
+import { placeOwnerForProject } from './placeScope'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { PlaceFacts } from '#lib/places/model.js'
@@ -61,7 +63,10 @@ export async function resolvePlaceCandidate(
         eq(place.ssId, input.ssId),
         eq(place.state, 'linked'),
         eq(place.sourceAvailability, 'current'),
-        or(isNull(place.ownerProjectId), eq(place.ownerProjectId, input.projectId)),
+        or(
+          isNull(place.ownerOrganisationId),
+          eq(place.ownerOrganisationId, placeOwnerForProject(input.projectId)),
+        ),
         eq(placeRevision.origin, 'saanseoi'),
         eq(placeRevision.ssId, input.ssId),
         eq(placeRevision.releaseId, input.resourceReleaseId),
@@ -116,7 +121,7 @@ export async function searchLocalPlaceCandidates(
     .innerJoin(placeRevision, eq(placeRevision.placeId, place.id))
     .where(
       and(
-        eq(place.ownerProjectId, input.projectId),
+        eq(place.ownerOrganisationId, placeOwnerForProject(input.projectId)),
         or(eq(place.state, 'manual'), eq(place.state, 'unresolved')),
         eq(placeRevision.origin, 'local'),
         sql`${placeRevision.sequence} = (select max(latest.sequence) from placeRevision latest where latest.placeId = ${place.id})`,
@@ -148,7 +153,7 @@ export async function persistPlaceCandidate(
 ): Promise<PlaceCandidateResolution | null> {
   // Fence all source writes against private ownership, including concurrent scope changes.
   const guard = sql`NOT EXISTS (SELECT 1 FROM place WHERE ssId=${projection.ssId}
-    AND ownerProjectId IS NOT NULL AND ownerProjectId<>${projectId})`
+    AND ownerOrganisationId IS NOT NULL AND ownerOrganisationId IS NOT ${placeOwnerForProject(projectId)})`
   await persistSaanSeoiPlace(db, projection, guard)
   const candidate = await resolvePlaceCandidate(db, {
     projectId,

@@ -46,10 +46,10 @@ import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 export async function probePlaceIdentityScope(
   db: Database,
   placeId: string,
-): Promise<{ id: string; ownerProjectId: string | null } | null> {
+): Promise<{ id: string; ownerOrganisationId: string | null } | null> {
   return (
     (await db
-      .select({ id: place.id, ownerProjectId: place.ownerProjectId })
+      .select({ id: place.id, ownerOrganisationId: place.ownerOrganisationId })
       .from(place)
       .where(eq(place.id, placeId))
       .get()) ?? null
@@ -65,21 +65,21 @@ export async function probePlaceIdentityScope(
  * Capture the current identity and source-revision concurrency baseline.
  * @param db Request-local database.
  * @param placeId Authorized Place identity.
- * @param ownerProjectId Ownership checked by the authorization probe, including null for shared.
+ * @param ownerOrganisationId Ownership checked by the authorization probe, including null for shared.
  * @returns Baseline tokens or null if ownership/identity disappeared.
  * @remarks One SQL statement captures the latest revision and history tail together.
  */
 export async function readPlaceIdentityBaseline(
   db: Database,
   placeId: string,
-  ownerProjectId: string | null,
+  ownerOrganisationId: string | null,
 ): Promise<PlaceIdentityBaseline | null> {
   const row = await db
     .select({
       placeId: place.id,
       expectedState: place.state,
       expectedSsId: place.ssId,
-      expectedOwnerProjectId: place.ownerProjectId,
+      expectedOwnerOrganisationId: place.ownerOrganisationId,
       expectedSourceAvailability: place.sourceAvailability,
       expectedLatestRevisionId: placeRevision.id,
       expectedHistoryId: sql<string | null>`(SELECT h.id FROM placeIdentityHistory h
@@ -91,7 +91,7 @@ export async function readPlaceIdentityBaseline(
     .where(
       and(
         eq(place.id, placeId),
-        sql`${place.ownerProjectId} IS ${ownerProjectId}`,
+        sql`${place.ownerOrganisationId} IS ${ownerOrganisationId}`,
         sql`${placeRevision.sequence}=(SELECT max(r.sequence) FROM placeRevision r WHERE r.placeId=${place.id})`,
       ),
     )
@@ -119,7 +119,7 @@ export async function capturePlaceIdentityReview(
   const current = await readPlaceIdentityBaseline(
     db,
     baseline.placeId,
-    baseline.expectedOwnerProjectId,
+    baseline.expectedOwnerOrganisationId,
   )
   if (!equalPlaceValue(current, baseline)) return null
   const id = nanoid(24)
@@ -127,9 +127,9 @@ export async function capturePlaceIdentityReview(
   const rows = await db
     .insert(placeIdentityReview)
     .select(sql`SELECT ${id},${baseline.placeId},
-    ${baseline.expectedOwnerProjectId},${JSON.stringify(baseline)},${JSON.stringify(projection)},
-    ${actorId},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE EXISTS
-    (SELECT 1 FROM place WHERE id=${baseline.placeId} AND ownerProjectId IS ${baseline.expectedOwnerProjectId}
+    ${baseline.expectedOwnerOrganisationId},${JSON.stringify(baseline)},${JSON.stringify(projection)},
+    ${actorId},'[]',NULL,strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE EXISTS
+    (SELECT 1 FROM place WHERE id=${baseline.placeId} AND ownerOrganisationId IS ${baseline.expectedOwnerOrganisationId}
       AND state=${baseline.expectedState} AND ssId IS ${baseline.expectedSsId}
       AND sourceAvailability=${baseline.expectedSourceAvailability})
     AND (SELECT id FROM placeRevision WHERE placeId=${baseline.placeId} ORDER BY sequence DESC LIMIT 1)
@@ -176,9 +176,9 @@ export async function captureMirroredPlaceIdentityReview(
         eq(place.sourceAvailability, 'current'),
         eq(place.ssId, placeRevision.ssId),
         or(
-          isNull(place.ownerProjectId),
-          baseline.expectedOwnerProjectId
-            ? eq(place.ownerProjectId, baseline.expectedOwnerProjectId)
+          isNull(place.ownerOrganisationId),
+          baseline.expectedOwnerOrganisationId
+            ? eq(place.ownerOrganisationId, baseline.expectedOwnerOrganisationId)
             : sql`0`,
         ),
       ),
@@ -225,7 +225,7 @@ export async function readPlaceIdentityReview(
   db: Database,
   input: {
     placeId: string
-    ownerProjectId: string | null
+    ownerOrganisationId: string | null
     reviewId: string
   },
 ): Promise<{
@@ -252,7 +252,7 @@ export async function readPlaceIdentityReview(
       and(
         eq(placeIdentityReview.id, input.reviewId),
         eq(placeIdentityReview.placeId, input.placeId),
-        sql`${placeIdentityReview.ownerProjectId} IS ${input.ownerProjectId}`,
+        sql`${placeIdentityReview.ownerOrganisationId} IS ${input.ownerOrganisationId}`,
       ),
     )
     .get()
@@ -260,7 +260,7 @@ export async function readPlaceIdentityReview(
   const current = await readPlaceIdentityBaseline(
     db,
     input.placeId,
-    input.ownerProjectId,
+    input.ownerOrganisationId,
   )
   if (!current) return null
   const baseline = await db
@@ -290,7 +290,7 @@ export async function readPlaceIdentityReview(
     },
     rejected: Boolean(
       await db.get(
-        sql`SELECT 1 AS found FROM placeIdentityRejection WHERE reviewId=${row.id}`,
+        sql`SELECT 1 AS found FROM placeIdentityReview WHERE rejection IS NOT NULL AND id=${row.id}`,
       ),
     ),
     createdAt: row.createdAt,
@@ -313,7 +313,7 @@ export async function acceptPlaceIdentityReview(
   db: Database,
   input: {
     placeId: string
-    ownerProjectId: string | null
+    ownerOrganisationId: string | null
     reviewId: string
     actorId: string
     reason: string
@@ -325,9 +325,9 @@ export async function acceptPlaceIdentityReview(
     .where(
       and(
         eq(placeIdentityReview.id, input.reviewId),
-        sql`NOT EXISTS (SELECT 1 FROM placeIdentityRejection WHERE reviewId=${input.reviewId})`,
+        sql`NOT EXISTS (SELECT 1 FROM placeIdentityReview WHERE rejection IS NOT NULL AND id=${input.reviewId})`,
         eq(placeIdentityReview.placeId, input.placeId),
-        sql`${placeIdentityReview.ownerProjectId} IS ${input.ownerProjectId}`,
+        sql`${placeIdentityReview.ownerOrganisationId} IS ${input.ownerOrganisationId}`,
       ),
     )
     .get()
@@ -335,7 +335,7 @@ export async function acceptPlaceIdentityReview(
   const current = await readPlaceIdentityBaseline(
     db,
     input.placeId,
-    input.ownerProjectId,
+    input.ownerOrganisationId,
   )
   if (!equalPlaceValue(current, row.baseline)) return { status: 'conflict' }
   return acceptPlaceIdentity(

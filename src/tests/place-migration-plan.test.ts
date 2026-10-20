@@ -42,7 +42,7 @@ describe('unresolved Feature split planning', () => {
     const result = planUnresolvedFeatureSplit(original)
     if (result.status !== 'planned') throw new Error(result.reason)
     expect(result.plan.state).toBe('unresolved')
-    expect(result.plan.placeId).toBe('featurePlace_f')
+    expect(result.plan.placeId).toMatch(/^[A-Za-z0-9_-]{12}$/)
     expect(result.plan.facts.phoneNumber).toEqual(['+85223456789'])
     expect(result.plan.facts.location.address.address2dId).toBeNull()
     expect(result.plan.facts.location.address.records).toEqual({})

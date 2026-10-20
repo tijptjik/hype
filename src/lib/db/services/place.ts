@@ -2,8 +2,9 @@
 import { and, eq, isNull, or } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 // SCHEMA
-import { featurePlace, place, placeRevision, projectPlacePolicy } from '../schema/place'
+import { featurePlace, place, placeRevision } from '../schema/place'
 import { feature } from '../schema/feature'
+import { project } from '../schema/project'
 // DOMAIN
 import {
   DEFAULT_PROJECT_PLACE_POLICY,
@@ -14,6 +15,8 @@ import {
   FeaturePlaceOverridesSchema,
   PlaceFactsSchema,
 } from '#lib/places/validation.js'
+// OWNERSHIP
+import { placeOwnerForProject } from './placeScope'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { ProjectPlacePolicy } from '#lib/places/model.js'
@@ -40,9 +43,9 @@ export async function getProjectPlaceSettings(
   projectId: string,
 ): Promise<ProjectPlaceSettings> {
   const row = await db
-    .select()
-    .from(projectPlacePolicy)
-    .where(eq(projectPlacePolicy.projectId, projectId))
+    .select({ policy: project.placePolicy, revision: project.placePolicyRevision })
+    .from(project)
+    .where(eq(project.id, projectId))
     .get()
   return {
     policy: ProjectPlacePolicySchema.parse(row?.policy ?? DEFAULT_PROJECT_PLACE_POLICY),
@@ -72,25 +75,20 @@ export async function saveProjectPlaceSettings(
     expectedRevision >= Number.MAX_SAFE_INTEGER
   )
     throw new Error('Invalid policy revision')
-  // Initial creation and subsequent updates both use a single conditional statement.
-  const rows =
-    expectedRevision === 0
-      ? await db
-          .insert(projectPlacePolicy)
-          .values({ projectId, policy, revision: 1 })
-          .onConflictDoNothing({ target: projectPlacePolicy.projectId })
-          .returning()
-      : await db
-          .update(projectPlacePolicy)
-          .set({ policy, revision: expectedRevision + 1 })
-          .where(
-            and(
-              eq(projectPlacePolicy.projectId, projectId),
-              eq(projectPlacePolicy.revision, expectedRevision),
-            ),
-          )
-          .returning()
-  return rows[0] ? { policy: rows[0].policy, revision: rows[0].revision } : null
+  // Policy and revision live on their Project and change under one compare-and-swap.
+  const rows = await db
+    .update(project)
+    .set({ placePolicy: policy, placePolicyRevision: expectedRevision + 1 })
+    .where(
+      and(eq(project.id, projectId), eq(project.placePolicyRevision, expectedRevision)),
+    )
+    .returning({ policy: project.placePolicy, revision: project.placePolicyRevision })
+  return rows[0]
+    ? {
+        policy: ProjectPlacePolicySchema.parse(rows[0].policy),
+        revision: rows[0].revision,
+      }
+    : null
 }
 
 export type AcceptedFeaturePlace = {
@@ -159,7 +157,10 @@ export async function getAcceptedFeaturePlace(
     .where(
       and(
         eq(featurePlace.featureId, featureId),
-        or(isNull(place.ownerProjectId), eq(place.ownerProjectId, projectId)),
+        or(
+          isNull(place.ownerOrganisationId),
+          eq(place.ownerOrganisationId, placeOwnerForProject(projectId)),
+        ),
       ),
     )
     .get()

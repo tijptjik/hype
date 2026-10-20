@@ -145,27 +145,27 @@ export async function processPlaceRefresh(
   const fence = `EXISTS(SELECT 1 FROM placeRefresh WHERE id=1 AND runId=?
     AND phase='ready' AND lease=?
     AND leaseUntil > CAST((julianday('now')-2440587.5)*86400000 AS INTEGER))`
-  const saved = await binding.batch([
-    binding
-      .prepare(`INSERT INTO placeRefreshFeature(runId,placeId,featureId,projectId,proposalId,reason,outcome,geometryChanged)
-      SELECT ?,?,?,?,?,?,?,? WHERE ${fence}
-      ON CONFLICT(runId,placeId,featureId) DO NOTHING`)
-      .bind(
-        input.runId,
-        row.placeId,
-        feature.id,
-        feature.projectId,
-        result.proposalId ?? null,
-        result.reason ?? null,
-        result.status,
-        Number(result.geometryChanged),
-        input.runId,
-        input.lease,
-      ),
-    binding
-      .prepare(`UPDATE placeRefreshItem SET featureCursor=?
-      WHERE runId=? AND placeId=? AND ${fence}`)
-      .bind(feature.id, input.runId, row.placeId, input.runId, input.lease),
-  ])
-  return saved[1].meta.changes ? 'assessed' : 'superseded'
+  const saved = await binding
+    .prepare(`UPDATE placeRefreshItem
+    SET featureCursor=?,outcomes=CASE WHEN EXISTS(SELECT 1 FROM json_each(outcomes) WHERE key=?)
+      THEN outcomes ELSE json_patch(outcomes,json_object(?,json(?))) END
+    WHERE runId=? AND placeId=? AND ${fence}`)
+    .bind(
+      feature.id,
+      feature.id,
+      feature.id,
+      JSON.stringify({
+        projectId: feature.projectId,
+        proposalId: result.proposalId ?? null,
+        reason: result.reason ?? null,
+        outcome: result.status,
+        geometryChanged: Number(result.geometryChanged),
+      }),
+      input.runId,
+      row.placeId,
+      input.runId,
+      input.lease,
+    )
+    .run()
+  return saved.meta.changes ? 'assessed' : 'superseded'
 }

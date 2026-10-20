@@ -5,7 +5,7 @@ import { feature } from '../schema/feature'
 import {
   featurePlace,
   placeAdoptionProposal,
-  placeAdoptionDecision,
+  type PlaceAdoptionDecisionRecord,
 } from '../schema/place'
 // SERVICES
 import { previewFeaturePlaceAdoption } from './placeAdoption'
@@ -14,7 +14,7 @@ import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
 
 type Proposal = typeof placeAdoptionProposal.$inferSelect
-type Decision = typeof placeAdoptionDecision.$inferSelect
+type Decision = PlaceAdoptionDecisionRecord
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -55,8 +55,8 @@ export async function listPlaceAdoptionReviews(
       createdAt: placeAdoptionProposal.createdAt,
       policyRevision: placeAdoptionProposal.policyRevision,
       rowNumber: sql<number>`placeAdoptionProposal.rowid`,
-      decidedGroups: sql<number>`(SELECT COUNT(DISTINCT d.fieldGroup)
-      FROM placeAdoptionDecision d JOIN placeAdoptionProposal prior ON prior.id=d.proposalId
+      decidedGroups: sql<number>`(SELECT MAX(prior.factsDecision IS NOT NULL) + MAX(prior.locationDecision IS NOT NULL)
+      FROM placeAdoptionProposal prior
       WHERE prior.featureId=placeAdoptionProposal.featureId
         AND prior.projectId=placeAdoptionProposal.projectId
         AND prior.placeId=placeAdoptionProposal.placeId
@@ -116,12 +116,11 @@ export async function readPlaceAdoptionReview(
     .get()
   if (!rows) return null
   const decisions = await db
-    .select({ decision: placeAdoptionDecision })
-    .from(placeAdoptionDecision)
-    .innerJoin(
-      placeAdoptionProposal,
-      eq(placeAdoptionProposal.id, placeAdoptionDecision.proposalId),
-    )
+    .select({
+      facts: placeAdoptionProposal.factsDecision,
+      location: placeAdoptionProposal.locationDecision,
+    })
+    .from(placeAdoptionProposal)
     .where(
       and(
         eq(placeAdoptionProposal.featureId, rows.proposal.featureId),
@@ -133,7 +132,14 @@ export async function readPlaceAdoptionReview(
         ),
       ),
     )
-  return { proposal: rows.proposal, decisions: decisions.map(row => row.decision) }
+  return {
+    proposal: rows.proposal,
+    decisions: decisions.flatMap(row =>
+      [row.facts, row.location].filter(
+        (decision): decision is Decision => decision !== null,
+      ),
+    ),
+  }
 }
 
 /**
@@ -187,15 +193,8 @@ export async function proposeFeaturePlaceAdoption(
     })
     if (!input.reevaluatePending) return retained
     // Completed groups remain decided across every assessment of this candidate.
-    const decided = await db
-      .select({ fieldGroup: placeAdoptionDecision.fieldGroup })
-      .from(placeAdoptionDecision)
-      .innerJoin(
-        placeAdoptionProposal,
-        eq(placeAdoptionProposal.id, placeAdoptionDecision.proposalId),
-      )
-      .where(identity)
-    if (new Set(decided.map(row => row.fieldGroup)).size === 2) return retained
+    if (new Set(retained?.decisions.map(row => row.fieldGroup)).size === 2)
+      return retained
   }
   const preview = await previewFeaturePlaceAdoption(db, input)
   if (!preview) return null
@@ -207,15 +206,15 @@ export async function proposeFeaturePlaceAdoption(
     .select(sql`
     SELECT ${id}, ${input.featureId}, ${input.projectId}, ${association.placeId},
       ${input.candidateRevisionId}, ${preview.expectedRevision}, ${preview.expectedFeatureModifiedAt},
-      ${preview.settings.revision}, ${JSON.stringify(evidence)}, strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      ${preview.settings.revision}, ${JSON.stringify(evidence)}, NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE (${input.additionalGuard ?? sql`1`}) AND EXISTS (SELECT 1 FROM feature f JOIN featurePlace fp ON fp.featureId=f.id
       JOIN place p ON p.id=fp.placeId
       WHERE f.id=${input.featureId} AND f.projectId=${input.projectId} AND f.isDraft=0
       AND f.modifiedAt=${preview.expectedFeatureModifiedAt} AND fp.revision=${preview.expectedRevision}
       AND fp.placeId=${association.placeId} AND p.sourceAvailability='current'
-      AND (p.ownerProjectId IS NULL OR p.ownerProjectId=f.projectId))
-    AND COALESCE((SELECT revision FROM projectPlacePolicy WHERE projectId=${input.projectId}),0)=${preview.settings.revision}
-    AND (SELECT COUNT(DISTINCT d.fieldGroup) FROM placeAdoptionDecision d JOIN placeAdoptionProposal ap ON ap.id=d.proposalId
+      AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id=f.projectId)))
+    AND COALESCE((SELECT placePolicyRevision FROM project WHERE id=${input.projectId}),0)=${preview.settings.revision}
+    AND (SELECT COALESCE(MAX(ap.factsDecision IS NOT NULL),0) + COALESCE(MAX(ap.locationDecision IS NOT NULL),0) FROM placeAdoptionProposal ap
       WHERE ap.featureId=${input.featureId} AND ap.projectId=${input.projectId}
       AND ap.placeId=${association.placeId} AND ap.candidateRevisionId=${input.candidateRevisionId}) < 2
   `)
@@ -259,29 +258,44 @@ export async function rejectPlaceAdoptionGroup(
     !['facts', 'location'].includes(input.fieldGroup)
   )
     throw new Error('Invalid Place rejection')
+  const column =
+    input.fieldGroup === 'facts'
+      ? placeAdoptionProposal.factsDecision
+      : placeAdoptionProposal.locationDecision
+  const decision: Decision = {
+    id: crypto.randomUUID(),
+    proposalId: input.proposalId,
+    fieldGroup: input.fieldGroup,
+    action: 'rejected',
+    actorId: input.actorId,
+    reason,
+    associationRevision: input.expectedRevision,
+    createdAt: new Date().toISOString(),
+  }
   const rows = await db
-    .insert(placeAdoptionDecision)
-    .select(sql`
-    SELECT ${crypto.randomUUID()}, ${input.proposalId}, ${input.fieldGroup}, 'rejected',
-      ${input.actorId}, ${reason}, ${input.expectedRevision}, strftime('%Y-%m-%dT%H:%M:%fZ','now')
-    WHERE EXISTS (SELECT 1 FROM placeAdoptionProposal ap JOIN feature f ON f.id=ap.featureId
+    .update(placeAdoptionProposal)
+    .set(
+      input.fieldGroup === 'facts'
+        ? { factsDecision: decision }
+        : { locationDecision: decision },
+    )
+    .where(sql`placeAdoptionProposal.id=${input.proposalId} AND ${column} IS NULL AND EXISTS (SELECT 1 FROM placeAdoptionProposal ap JOIN feature f ON f.id=ap.featureId
       JOIN featurePlace fp ON fp.featureId=f.id
       WHERE ap.id=${input.proposalId} AND ap.featureId=${input.featureId}
       AND ap.projectId=${input.projectId} AND f.projectId=${input.projectId} AND f.isDraft=0
       AND fp.placeId=ap.placeId AND fp.revision=${input.expectedRevision}
       AND f.modifiedAt=${input.expectedFeatureModifiedAt}
       AND ((ap.associationRevision=${input.expectedRevision} AND ap.featureModifiedAt=${input.expectedFeatureModifiedAt})
-        OR EXISTS (SELECT 1 FROM placeAdoptionDecision prior WHERE prior.proposalId=ap.id
-          AND prior.action='applied' AND prior.associationRevision=${input.expectedRevision}))
+        OR EXISTS (SELECT 1 FROM json_each(json_array(json(ap.factsDecision),json(ap.locationDecision))) prior
+          WHERE json_extract(prior.value,'$.action')='applied' AND json_extract(prior.value,'$.associationRevision')=${input.expectedRevision}))
       AND ap.rowid=(SELECT MAX(newer.rowid) FROM placeAdoptionProposal newer
         WHERE newer.featureId=ap.featureId AND newer.projectId=ap.projectId
           AND newer.placeId=ap.placeId AND newer.candidateRevisionId=ap.candidateRevisionId)
-      AND NOT EXISTS (SELECT 1 FROM placeAdoptionDecision d JOIN placeAdoptionProposal older ON older.id=d.proposalId
+      AND NOT EXISTS (SELECT 1 FROM placeAdoptionProposal older
         WHERE older.featureId=ap.featureId AND older.projectId=ap.projectId
           AND older.placeId=ap.placeId AND older.candidateRevisionId=ap.candidateRevisionId
-          AND d.fieldGroup=${input.fieldGroup}))
+          AND (CASE WHEN ${input.fieldGroup}='facts' THEN older.factsDecision ELSE older.locationDecision END) IS NOT NULL))
   `)
-    .onConflictDoNothing()
-    .returning()
-  return rows[0] ?? null
+    .returning({ decision: column })
+  return rows[0]?.decision ?? null
 }

@@ -48,7 +48,10 @@ import {
 } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
-import { prepareFeaturePlaceRelations } from '#lib/db/services/placeRelations.js'
+import {
+  prepareFeatureFormRelations,
+  prepareFeaturePlaceRelations,
+} from '#lib/db/services/placeRelations.js'
 import {
   createFeatureForm,
   saveUnlinkedFeatureForm,
@@ -90,17 +93,19 @@ function setup(includeScope = false) {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
   sqlite.exec(`PRAGMA foreign_keys=ON;
+    CREATE TABLE organisation(id TEXT PRIMARY KEY);
+    INSERT INTO organisation VALUES ('p'),('other');
     CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
       organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
       cardStyleCode TEXT, useAllInOrgContext INTEGER);
     CREATE TABLE feature(id TEXT PRIMARY KEY, projectId TEXT, isDraft INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original', geometry TEXT, addressMeta TEXT, isIntangible INTEGER DEFAULT 0);
     CREATE TABLE featureI18n(featureId TEXT,locale TEXT,title TEXT,displayAddress TEXT);
     CREATE TABLE hub(id TEXT PRIMARY KEY,code TEXT);
-    CREATE TABLE property(id TEXT PRIMARY KEY,key TEXT,scope TEXT,hubId TEXT);
-    CREATE TABLE featureProperty(featureId TEXT,propertyId TEXT,propertyValueId TEXT,value TEXT);
+    CREATE TABLE property(id TEXT PRIMARY KEY,key TEXT,scope TEXT,hubId TEXT,audience TEXT NOT NULL DEFAULT 'public');
+    CREATE TABLE featureProperty(featureId TEXT,propertyId TEXT,propertyValueId TEXT,value TEXT,valueJson TEXT);
     CREATE TABLE propertyValue(id TEXT PRIMARY KEY,propertyId TEXT);
     CREATE TABLE propertyValueI18n(propertyValueId TEXT,locale TEXT,value TEXT);
-    INSERT INTO project(id) VALUES ('p'), ('other');
+    INSERT INTO project(id,organisationId) VALUES ('p','p'), ('other','other');
     INSERT INTO feature(id,projectId) VALUES ('f','p');`)
   sqlite.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0110_feature_place_history.sql', 'utf8'))
@@ -110,6 +115,10 @@ function setup(includeScope = false) {
   sqlite.exec(readFileSync('migrations/0117_place_identity_review.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0118_place_merge_redirect.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0120_place_identity_rejection.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0123_place_owned_fields.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0124_place_adoption_decisions.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0125_place_identity_consolidation.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0135_place_organisation_ownership.sql', 'utf8'))
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
     sqlite.exec(`DROP TRIGGER feature_place_scope_insert;
@@ -222,7 +231,7 @@ describe('accepted Place reads', () => {
   it('uses accepted revisions, preserves overrides, and prevents private cross-project reads', async () => {
     const { sqlite, db } = setup()
     sqlite.exec(
-      "INSERT INTO place(id,state,ownerProjectId) VALUES ('place','unresolved','p')",
+      "INSERT INTO place(id,state,ownerOrganisationId) VALUES ('place','unresolved','p')",
     )
     for (const [id, sequence, value] of [
       ['old', 1, facts],
@@ -267,9 +276,11 @@ describe('accepted Place reads', () => {
     expect(result?.effective.phoneNumber).toBeNull()
     expect(JSON.stringify(result)).not.toContain('secret')
     expect(await getAcceptedFeaturePlace(db, 'f', 'other')).toBeNull()
-    sqlite.exec("UPDATE place SET ownerProjectId='other'")
+    sqlite.exec("UPDATE place SET ownerOrganisationId='other'")
     expect(await getAcceptedFeaturePlace(db, 'f', 'p')).toBeNull()
-    sqlite.exec("UPDATE place SET ownerProjectId='p'; UPDATE feature SET isDraft=1")
+    sqlite.exec(
+      "UPDATE place SET ownerOrganisationId='p'; UPDATE feature SET isDraft=1",
+    )
     expect(await getAcceptedFeaturePlace(db, 'f', 'p')).toBeNull()
   })
   it('rejects invalid geometry and unpinned resolved addresses', () => {
@@ -307,9 +318,9 @@ describe('local Place creation', () => {
       )
       expect(
         sqlite
-          .prepare('SELECT state,ownerProjectId,ssId FROM place WHERE id=?')
+          .prepare('SELECT state,ownerOrganisationId,ssId FROM place WHERE id=?')
           .get(created.placeId),
-      ).toEqual({ state, ownerProjectId: 'p', ssId: null })
+      ).toEqual({ state, ownerOrganisationId: 'p', ssId: null })
       const revision = sqlite
         .prepare(
           'SELECT facts,payload,origin,contentHash FROM placeRevision WHERE id=?',
@@ -422,7 +433,7 @@ describe('Project form atomic Place settings', () => {
   it('rolls back core changes if the policy write fails', async () => {
     const { db, sqlite } = setup()
     sqlite.exec(
-      "CREATE TRIGGER fail_policy BEFORE INSERT ON projectPlacePolicy BEGIN SELECT RAISE(ABORT, 'policy failure'); END;",
+      "CREATE TRIGGER fail_policy BEFORE UPDATE OF placePolicy ON project BEGIN SELECT RAISE(ABORT, 'policy failure'); END;",
     )
     await expect(
       updateProjectByIdWithConcurrency(db, {
@@ -502,7 +513,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
     expect(
       await acceptPlaceIdentityReview(db, {
         placeId: local.placeId,
-        ownerProjectId: 'p',
+        ownerOrganisationId: 'p',
         reviewId,
         actorId: 'reviewer',
         reason: 'Reviewed before the concurrent change',
@@ -573,9 +584,9 @@ describe('immutable SaanSeoi Place ingestion', () => {
     const captured = await capturePlaceMergeReview(db, {
       placeId: target.placeId,
       identityReviewId,
-      ownerProjectId: 'p',
+      ownerOrganisationId: 'p',
       sourcePlaceId: source.placeId,
-      sourceOwnerProjectId: null,
+      sourceOwnerOrganisationId: null,
       actorId: 'reviewer',
     })
     if (captured.status !== 'ready')
@@ -591,8 +602,8 @@ describe('immutable SaanSeoi Place ingestion', () => {
       input: {
         placeId: target.placeId,
         sourcePlaceId: source.placeId,
-        ownerProjectId: 'p',
-        sourceOwnerProjectId: null,
+        ownerOrganisationId: 'p',
+        sourceOwnerOrganisationId: null,
         reviewId: captured.reviewId,
         actorId: 'reviewer',
         reason: 'Verified same shop and premises',
@@ -614,7 +625,10 @@ describe('immutable SaanSeoi Place ingestion', () => {
     expect(
       sqlite.prepare('SELECT * FROM featurePlace ORDER BY featureId').all(),
     ).toEqual(before)
-    expect(sqlite.prepare('SELECT count(*) n FROM placeRedirect').get()?.n).toBe(0)
+    expect(
+      sqlite.prepare('SELECT count(*) n FROM place WHERE redirect IS NOT NULL').get()
+        ?.n,
+    ).toBe(0)
   })
 
   it('merges reviewed identities atomically while preserving Feature values, overrides and source history', async () => {
@@ -624,12 +638,14 @@ describe('immutable SaanSeoi Place ingestion', () => {
       sourcePlaceId: source.placeId,
     })
     const reviewRecord = sqlite
-      .prepare('SELECT identityReviewId FROM placeMergeReview WHERE id=?')
+      .prepare(
+        `SELECT r.id AS identityReviewId FROM placeIdentityReview r,json_each(r.mergeReviews) m WHERE json_extract(m.value,'$.id')=?`,
+      )
       .get(input.reviewId)
     expect(
       await probePlaceMergeSource(db, {
         placeId: target.placeId,
-        ownerProjectId: 'p',
+        ownerOrganisationId: 'p',
         identityReviewId: String(reviewRecord?.identityReviewId),
       }),
     ).toEqual({ sourcePlaceId: source.placeId })
@@ -641,7 +657,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       applied: false,
     })
     expect(
-      await readPlaceMergeReview(db, { ...input, ownerProjectId: 'other' }),
+      await readPlaceMergeReview(db, { ...input, ownerOrganisationId: 'other' }),
     ).toBeNull()
 
     const beforeFeatures = sqlite.prepare('SELECT * FROM feature ORDER BY id').all()
@@ -695,7 +711,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       applied: true,
     })
     expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
-    expect(() => sqlite.exec('DELETE FROM placeRedirect')).toThrow()
+    expect(() => sqlite.exec('DELETE FROM place WHERE redirect IS NOT NULL')).toThrow()
     expect(() =>
       sqlite
         .prepare("UPDATE place SET state='linked',ssId='reactivated' WHERE id=?")
@@ -725,7 +741,10 @@ describe('immutable SaanSeoi Place ingestion', () => {
         })
       else change()
       expect(await applyPlaceMergeReview(db, input)).toEqual({ status: 'conflict' })
-      expect(sqlite.prepare('SELECT count(*) n FROM placeRedirect').get()?.n).toBe(0)
+      expect(
+        sqlite.prepare('SELECT count(*) n FROM place WHERE redirect IS NOT NULL').get()
+          ?.n,
+      ).toBe(0)
       expect(
         sqlite
           .prepare('SELECT count(*) n FROM placeRevision WHERE placeId=?')
@@ -744,7 +763,6 @@ describe('immutable SaanSeoi Place ingestion', () => {
       'placeRevision',
       'featurePlace',
       'featurePlaceHistory',
-      'placeRedirect',
       'placeIdentityHistory',
     ]
     const before = tables.map(table => sqlite.prepare(`SELECT * FROM ${table}`).all())
@@ -763,7 +781,9 @@ describe('immutable SaanSeoi Place ingestion', () => {
       status: 'scope-conflict',
     })
     sqlite.exec("UPDATE feature SET projectId='p' WHERE id='g'")
-    sqlite.prepare("UPDATE place SET ownerProjectId='p' WHERE id=?").run(source.placeId)
+    sqlite
+      .prepare("UPDATE place SET ownerOrganisationId='p' WHERE id=?")
+      .run(source.placeId)
     const shared = await persistSaanSeoiPlace(db, {
       ...projection(),
       ssId: 'shared-survivor',
@@ -780,10 +800,10 @@ describe('immutable SaanSeoi Place ingestion', () => {
     expect(
       await capturePlaceMergeReview(db, {
         placeId: shared.placeId,
-        ownerProjectId: null,
+        ownerOrganisationId: null,
         identityReviewId: review,
         sourcePlaceId: source.placeId,
-        sourceOwnerProjectId: 'p',
+        sourceOwnerOrganisationId: 'p',
         actorId: 'core-reviewer',
       }),
     ).toEqual({ status: 'scope-conflict' })
@@ -805,9 +825,9 @@ describe('immutable SaanSeoi Place ingestion', () => {
     const captured = await capturePlaceMergeReview(db, {
       placeId: next.placeId,
       identityReviewId,
-      ownerProjectId: 'p',
+      ownerOrganisationId: 'p',
       sourcePlaceId: target.placeId,
-      sourceOwnerProjectId: 'p',
+      sourceOwnerOrganisationId: 'p',
       actorId: 'reviewer',
     })
     expect(captured).toMatchObject({ status: 'ready', affectedFeatures: 2 })
@@ -817,7 +837,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
         ...input,
         placeId: next.placeId,
         sourcePlaceId: target.placeId,
-        sourceOwnerProjectId: 'p',
+        sourceOwnerOrganisationId: 'p',
         reviewId: captured.reviewId,
       }),
     ).toMatchObject({ status: 'applied' })
@@ -869,21 +889,21 @@ describe('immutable SaanSeoi Place ingestion', () => {
     expect(reviewId).toBeTruthy()
     const view = await readPlaceIdentityReview(db, {
       placeId: target.placeId,
-      ownerProjectId: 'p',
+      ownerOrganisationId: 'p',
       reviewId: reviewId!,
     })
     expect(view?.candidate.facts).toEqual(projection().facts)
     expect(
       await acceptPlaceIdentityReview(db, {
         placeId: target.placeId,
-        ownerProjectId: 'p',
+        ownerOrganisationId: 'p',
         reviewId: reviewId!,
         actorId: 'actor',
         reason: 'Same establishment',
       }),
     ).toEqual({ status: 'merge-required' })
     sqlite
-      .prepare("UPDATE place SET ownerProjectId='other' WHERE id=?")
+      .prepare("UPDATE place SET ownerOrganisationId='other' WHERE id=?")
       .run(source.placeId)
     expect(
       await captureMirroredPlaceIdentityReview(
@@ -895,7 +915,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
     ).toBeNull()
     sqlite
       .prepare(
-        "UPDATE place SET ownerProjectId=NULL,sourceAvailability='missing' WHERE id=?",
+        "UPDATE place SET ownerOrganisationId=NULL,sourceAvailability='missing' WHERE id=?",
       )
       .run(source.placeId)
     expect(
@@ -933,7 +953,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       'reviewer',
     )
     if (!reviewId) throw new Error('Missing review')
-    const input = { placeId: local.placeId, ownerProjectId: 'p', reviewId }
+    const input = { placeId: local.placeId, ownerOrganisationId: 'p', reviewId }
     const view = await readPlaceIdentityReview(db, input)
     expect(view).toMatchObject({
       stale: false,
@@ -943,7 +963,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
     expect(view).not.toHaveProperty('projection')
     expect(view?.candidate).not.toHaveProperty('payload')
     expect(
-      await readPlaceIdentityReview(db, { ...input, ownerProjectId: 'other' }),
+      await readPlaceIdentityReview(db, { ...input, ownerOrganisationId: 'other' }),
     ).toBeNull()
     expect(
       await acceptPlaceIdentityReview(db, {
@@ -991,7 +1011,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
     expect(
       await capturePlaceIdentityReview(db, baseline, candidate, 'reviewer'),
     ).toBeNull()
-    const input = { placeId: original.placeId, ownerProjectId: null, reviewId }
+    const input = { placeId: original.placeId, ownerOrganisationId: null, reviewId }
     expect(await readPlaceIdentityReview(db, input)).toMatchObject({ stale: true })
     expect(
       await acceptPlaceIdentityReview(db, {
@@ -1026,19 +1046,19 @@ describe('immutable SaanSeoi Place ingestion', () => {
         expectedState: state,
         expectedSsId: null,
         expectedHistoryId: null,
-        expectedOwnerProjectId: 'p',
+        expectedOwnerOrganisationId: 'p',
         actorId: 'reviewer',
         reason: 'Verified establishment and unit',
       }
       const result = await acceptPlaceIdentity(db, input, projection())
       expect(result.status).toBe('applied')
       expect(
-        sqlite.prepare('SELECT id,ssId,state,ownerProjectId FROM place').get(),
+        sqlite.prepare('SELECT id,ssId,state,ownerOrganisationId FROM place').get(),
       ).toEqual({
         id: local.placeId,
         ssId: 'canonical-shop',
         state: 'linked',
-        ownerProjectId: 'p',
+        ownerOrganisationId: 'p',
       })
       expect(sqlite.prepare('SELECT * FROM featurePlace').all()).toEqual(before)
       expect(
@@ -1065,7 +1085,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       expectedState: 'linked' as const,
       expectedSsId: 'canonical-shop',
       expectedHistoryId: null,
-      expectedOwnerProjectId: null,
+      expectedOwnerOrganisationId: null,
       actorId: 'steward',
       reason: 'Confirmed upstream replacement',
     }
@@ -1111,7 +1131,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       expectedState: 'manual' as const,
       expectedSsId: null,
       expectedHistoryId: null,
-      expectedOwnerProjectId: 'p',
+      expectedOwnerOrganisationId: 'p',
       actorId: 'actor',
       reason: 'Reviewed',
     }
@@ -1121,7 +1141,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
     expect(
       await acceptPlaceIdentity(
         db,
-        { ...input, expectedOwnerProjectId: 'other' },
+        { ...input, expectedOwnerOrganisationId: 'other' },
         projection(),
       ),
     ).toEqual({ status: 'conflict' })
@@ -1137,7 +1157,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
           placeId: canonical.placeId,
           expectedState: 'linked',
           expectedSsId: 'canonical-shop',
-          expectedOwnerProjectId: null,
+          expectedOwnerOrganisationId: null,
         },
         { ...projection(), ssId: 'replacement' },
       ),
@@ -1166,7 +1186,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
           expectedState: 'unresolved',
           expectedSsId: null,
           expectedHistoryId: null,
-          expectedOwnerProjectId: 'p',
+          expectedOwnerOrganisationId: 'p',
           actorId: 'actor',
           reason: 'Reviewed',
         },
@@ -1255,7 +1275,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       resourceReleaseId: source.releaseId,
     }
     sqlite
-      .prepare('UPDATE place SET ownerProjectId=? WHERE id=?')
+      .prepare('UPDATE place SET ownerOrganisationId=? WHERE id=?')
       .run('other', mirrored.placeId)
     expect(await resolvePlaceCandidate(db, input)).toEqual({
       status: 'source-import-needed',
@@ -1264,7 +1284,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       await resolvePlaceCandidate(db, { ...input, projectId: 'other' }),
     ).toMatchObject({ status: 'ready' })
     sqlite
-      .prepare('UPDATE place SET ownerProjectId=NULL WHERE id=?')
+      .prepare('UPDATE place SET ownerOrganisationId=NULL WHERE id=?')
       .run(mirrored.placeId)
     for (const availability of ['missing', 'review']) {
       sqlite
@@ -1310,7 +1330,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
         apply(target, receiver, args) {
           sqlite
             .prepare(
-              "UPDATE place SET ownerProjectId='other',sourceAvailability='missing' WHERE id=?",
+              "UPDATE place SET ownerOrganisationId='other',sourceAvailability='missing' WHERE id=?",
             )
             .run(original.placeId)
           return Reflect.apply(target, receiver, args)
@@ -1337,7 +1357,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       const original = await persistSaanSeoiPlace(db, source)
       sqlite
         .prepare(
-          "UPDATE place SET ownerProjectId='other',sourceAvailability='missing' WHERE id=?",
+          "UPDATE place SET ownerOrganisationId='other',sourceAvailability='missing' WHERE id=?",
         )
         .run(original.placeId)
       const before = sqlite.prepare('SELECT * FROM place').all()
@@ -1360,7 +1380,13 @@ describe('immutable SaanSeoi Place ingestion', () => {
 describe('conditional association writes and immutable history', () => {
   it('gates effective writes on the winning token and leaves stale batches unchanged', async () => {
     const { db, sqlite } = setup()
-    sqlite.exec(readFileSync('migrations/0109_place_association_scope.sql', 'utf8'))
+    sqlite.exec(
+      readFileSync('migrations/0135_place_organisation_ownership.sql', 'utf8')
+        .match(
+          /CREATE TRIGGER feature_place_(?:scope_insert|scope_update|feature_scope|owner_scope)[\s\S]*?END;/g,
+        )!
+        .join('\n'),
+    )
     const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
     const input = {
       featureId: 'f',
@@ -1539,8 +1565,8 @@ describe('persisted Feature baseline and initial linking', () => {
       .run(JSON.stringify(facts.location.geometry), JSON.stringify({ address }))
     sqlite.exec(`INSERT INTO featureI18n VALUES ('f','en','Bakery','Old address');
       INSERT INTO hub VALUES ('core','core');
-      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');
-      INSERT INTO featureProperty VALUES ('f','phone',NULL,'["9123 4567","2345 6789"]');`)
+      INSERT INTO property(id,key,scope,hubId) VALUES ('phone','phoneNumber','hub','core');
+      INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES ('f','phone',NULL,'["9123 4567","2345 6789"]');`)
     const result = await readFeaturePlaceBaseline(db, 'f', 'p')
     expect(result.status).toBe('ready')
     if (result.status !== 'ready') throw new Error('Expected ready baseline')
@@ -1553,14 +1579,20 @@ describe('persisted Feature baseline and initial linking', () => {
 
   it('preserves names, universal phone, brand identities and existing columns when linking', async () => {
     const { db, sqlite } = setup()
-    sqlite.exec(readFileSync('migrations/0109_place_association_scope.sql', 'utf8'))
+    sqlite.exec(
+      readFileSync('migrations/0135_place_organisation_ownership.sql', 'utf8')
+        .match(
+          /CREATE TRIGGER feature_place_(?:scope_insert|scope_update|feature_scope|owner_scope)[\s\S]*?END;/g,
+        )!
+        .join('\n'),
+    )
     sqlite
       .prepare("UPDATE feature SET geometry=? WHERE id='f'")
       .run(JSON.stringify(facts.location.geometry))
     sqlite.exec(`INSERT INTO featureI18n VALUES ('f','en','Collection counter','Original address'), ('f','zh-hant','麵包店',NULL);
       INSERT INTO hub VALUES ('core','core');
-      INSERT INTO property VALUES ('phone','phoneNumber','hub','core'),('brand','brand','organisation',NULL);
-      INSERT INTO featureProperty VALUES ('f','phone',NULL,'2345 6789'),('f','brand','legacy-brand',NULL);
+      INSERT INTO property(id,key,scope,hubId) VALUES ('phone','phoneNumber','hub','core'),('brand','brand','organisation',NULL);
+      INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES ('f','phone',NULL,'2345 6789'),('f','brand','legacy-brand',NULL);
       INSERT INTO propertyValue VALUES ('legacy-brand','brand');
       INSERT INTO propertyValueI18n VALUES ('legacy-brand','en','Bakery brand'),('legacy-brand','zh-hant','品牌');`)
     const baseline = await readFeaturePlaceBaseline(db, 'f', 'p')
@@ -1626,8 +1658,8 @@ describe('persisted Feature baseline and initial linking', () => {
     })
     sqlite.exec(`UPDATE feature SET isIntangible=0;
       INSERT INTO hub VALUES ('core','core');
-      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');
-      INSERT INTO featureProperty VALUES ('f','phone',NULL,'call the manager');`)
+      INSERT INTO property(id,key,scope,hubId) VALUES ('phone','phoneNumber','hub','core');
+      INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES ('f','phone',NULL,'call the manager');`)
     expect(await readFeaturePlaceBaseline(db, 'f', 'p')).toEqual({
       status: 'review',
       reason: 'invalid-phone',
@@ -1672,7 +1704,7 @@ describe('atomic linked Feature relation replacement', () => {
       ALTER TABLE featureI18n ADD COLUMN addressProperties TEXT;
       CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
       INSERT INTO featureI18n(featureId,locale,title) VALUES ('f','en','Old name'),('unrelated','en','Keep me');
-      INSERT INTO featureProperty VALUES ('f','old',NULL,'old value'),('unrelated','other',NULL,'Keep me');
+      INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES ('f','old',NULL,'old value'),('unrelated','other',NULL,'Keep me');
       INSERT INTO featurePropertyI18n VALUES ('f','old','en','old translation',0);`)
     const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
     const input = {
@@ -1821,12 +1853,18 @@ describe('linked Feature form persistence', () => {
     sqlite.exec(`CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
       INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES ('f','en','Bakery','Original address');
       INSERT INTO hub VALUES ('core','core');
-      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');
-      INSERT INTO property VALUES ('brand','brand','organisation',NULL);`)
+      INSERT INTO property(id,key,scope,hubId) VALUES ('phone','phoneNumber','hub','core');
+      INSERT INTO property(id,key,scope,hubId) VALUES ('brand','brand','organisation',NULL);`)
     sqlite
       .prepare("UPDATE feature SET geometry=? WHERE id='f'")
       .run(JSON.stringify(facts.location.geometry))
-    sqlite.exec(readFileSync('migrations/0109_place_association_scope.sql', 'utf8'))
+    sqlite.exec(
+      readFileSync('migrations/0135_place_organisation_ownership.sql', 'utf8')
+        .match(
+          /CREATE TRIGGER feature_place_(?:scope_insert|scope_update|feature_scope|owner_scope)[\s\S]*?END;/g,
+        )!
+        .join('\n'),
+    )
     const local = await createLocalPlace(
       db,
       'p',
@@ -2115,7 +2153,7 @@ describe('linked Feature form persistence', () => {
     ).toEqual(locationFacts.location.geometry)
     if (resetSaved.status !== 'saved') throw new Error('Expected reset')
     sqlite.exec(
-      "INSERT INTO featureProperty VALUES ('f','unrelated',NULL,'keep'); INSERT INTO featurePropertyI18n VALUES ('f','unrelated','en','Keep translation',0); DELETE FROM featureMtrJob;",
+      "INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES ('f','unrelated',NULL,'keep'); INSERT INTO featurePropertyI18n VALUES ('f','unrelated','en','Keep translation',0); DELETE FROM featureMtrJob;",
     )
     const sourceSnapshot = sqlite.prepare('SELECT * FROM placeRevision').all()
     const phoneOnly = await saveLinkedFeatureForm(db, {
@@ -2601,7 +2639,9 @@ describe('atomic unresolved Feature split application', () => {
     })
     sqlite.exec("UPDATE featureI18n SET title='Shop'")
     sqlite
-      .prepare("INSERT INTO place(id,state,ownerProjectId) VALUES (?,'manual','p')")
+      .prepare(
+        "INSERT INTO place(id,state,ownerOrganisationId) VALUES (?,'manual','p')",
+      )
       .run(plan.placeId)
     expect(await applyUnresolvedFeatureSplit(db, plan, 'actor')).toEqual({
       status: 'conflict',
@@ -2725,7 +2765,9 @@ describe('accepted Place brand read projection', () => {
     expect((await query())?.placeBrands).toEqual([])
     sqlite.exec('UPDATE feature SET isDraft=1')
     expect((await query())?.placeBrands).toBeNull()
-    sqlite.exec("UPDATE feature SET isDraft=0; UPDATE place SET ownerProjectId='other'")
+    sqlite.exec(
+      "UPDATE feature SET isDraft=0; UPDATE place SET ownerOrganisationId='other'",
+    )
     expect((await query())?.placeBrands).toBeNull()
   })
 })
@@ -2805,7 +2847,13 @@ describe('explicit Place unlink preservation', () => {
     expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.effective.brands).toEqual(
       brands,
     )
-    expect(sqlite.prepare('SELECT * FROM featurePlaceDetached').all()).toHaveLength(0)
+    expect(
+      sqlite
+        .prepare(
+          'SELECT localPlaceBrands FROM feature WHERE localPlaceBrands IS NOT NULL',
+        )
+        .all(),
+    ).toHaveLength(0)
   })
 
   it('saves detached brand edits with the regular form, rejects stale and inherit, and rolls back late failures', async () => {
@@ -2912,7 +2960,13 @@ describe('explicit Place unlink preservation', () => {
     expect(await unlinkFeaturePlace(db, { ...input, projectId: 'other' })).toEqual({
       status: 'conflict',
     })
-    expect(sqlite.prepare('SELECT * FROM featurePlaceDetached').all()).toHaveLength(0)
+    expect(
+      sqlite
+        .prepare(
+          'SELECT localPlaceBrands FROM feature WHERE localPlaceBrands IS NOT NULL',
+        )
+        .all(),
+    ).toHaveLength(0)
     expect(
       sqlite.prepare("SELECT * FROM featurePlaceHistory WHERE action='unlink'").all(),
     ).toHaveLength(0)
@@ -2925,7 +2979,13 @@ describe('explicit Place unlink preservation', () => {
       "CREATE TRIGGER fail_unlink BEFORE DELETE ON featurePlace BEGIN SELECT RAISE(ABORT,'injected unlink failure'); END;",
     )
     await expect(unlinkFeaturePlace(db, input)).rejects.toThrow()
-    expect(sqlite.prepare('SELECT * FROM featurePlaceDetached').all()).toHaveLength(0)
+    expect(
+      sqlite
+        .prepare(
+          'SELECT localPlaceBrands FROM feature WHERE localPlaceBrands IS NOT NULL',
+        )
+        .all(),
+    ).toHaveLength(0)
     expect(sqlite.prepare('SELECT modifiedAt FROM feature').get()).toMatchObject({
       modifiedAt: 'original',
     })
@@ -3059,7 +3119,10 @@ describe('persisted Place adoption preview', () => {
     ).toBeNull()
     await saveProjectPlaceSettings(db, 'p', DEFAULT_PROJECT_PLACE_POLICY, 2)
     const replay = await proposeFeaturePlaceAdoption(db, input)
-    expect(replay?.proposal).toEqual(proposed.proposal)
+    expect(replay?.proposal).toEqual({
+      ...proposed.proposal,
+      locationDecision: replay?.decisions[0],
+    })
     const refreshedPending = await proposeFeaturePlaceAdoption(db, {
       ...input,
       reevaluatePending: true,
@@ -3075,7 +3138,9 @@ describe('persisted Place adoption preview', () => {
       await readPlaceAdoptionReview(db, { ...rejection, projectId: 'other' }),
     ).toBeNull()
     expect(() =>
-      sqlite.exec("UPDATE placeAdoptionDecision SET reason='changed'"),
+      sqlite.exec(
+        "UPDATE placeAdoptionProposal SET factsDecision=json_set(factsDecision,'$.reason','changed'),locationDecision=json_set(locationDecision,'$.reason','changed')",
+      ),
     ).toThrow('immutable')
     expect(() => sqlite.exec('DELETE FROM placeAdoptionProposal')).toThrow('immutable')
     expect(snapshot()).toEqual(before)
@@ -3085,7 +3150,11 @@ describe('persisted Place adoption preview', () => {
     sqlite.exec("DELETE FROM feature WHERE id='f'")
     expect(await readPlaceAdoptionReview(db, rejection)).toBeNull()
     expect(
-      sqlite.prepare('SELECT count(*) AS n FROM placeAdoptionDecision').get(),
+      sqlite
+        .prepare(
+          `SELECT count(*) AS n FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .get(),
     ).toEqual({ n: 1 })
   })
 })
@@ -3113,8 +3182,8 @@ describe('atomic source group application', () => {
     }
     sqlite.exec(`CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
       INSERT INTO hub VALUES ('core','core');
-      INSERT INTO property VALUES ('phone','phoneNumber','hub','core');
-      INSERT INTO featureProperty VALUES ('f','phone',NULL,'["+85223456789"]');
+      INSERT INTO property(id,key,scope,hubId) VALUES ('phone','phoneNumber','hub','core');
+      INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES ('f','phone',NULL,'["+85223456789"]');
       INSERT INTO featureI18n(featureId,locale,title,description,displayAddress)
         VALUES ('f','en','Local correction','Keep description','Original address'),
                ('f','zh-hant','舊名稱','保留說明','舊地址');`)
@@ -3226,6 +3295,7 @@ describe('atomic source group application', () => {
       const { sqlite, binding, nextSource, first } = await fixture(true)
       sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
       sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+      sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
       nextSource.facts.location.address = {
         ...nextSource.facts.location.address,
         status: 'unresolved',
@@ -3315,10 +3385,18 @@ describe('atomic source group application', () => {
       if (mode === 'mismatch') {
         expect(await tick()).toBe('assessed')
         expect(
-          sqlite.prepare('SELECT fieldGroup FROM placeAdoptionDecision').all(),
+          sqlite
+            .prepare(
+              `SELECT fieldGroup FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+            )
+            .all(),
         ).toEqual([{ fieldGroup: 'facts' }])
         expect(
-          sqlite.prepare('SELECT outcome FROM placeRefreshFeature').get()?.outcome,
+          sqlite
+            .prepare(
+              "SELECT json_extract(value,'$.outcome') AS outcome FROM placeRefreshItem,json_each(outcomes)",
+            )
+            .get()?.outcome,
         ).toBe('review')
       }
       expect(requests).toBe(mode === 'retry' ? 1 : 2)
@@ -3329,6 +3407,7 @@ describe('atomic source group application', () => {
     const { sqlite, binding, first } = await fixture(true)
     sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
     sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
     const original = sqlite
       .prepare('SELECT * FROM placeRevision WHERE id=?')
       .get(first.revisionId)
@@ -3367,13 +3446,20 @@ describe('atomic source group application', () => {
       status: 'review',
       reviewReason: 'source-evidence-conflict',
     })
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(0)
   })
 
   it('drains ingestion and Feature assessment before completing a durable run', async () => {
     const { sqlite, binding, nextSource, first } = await fixture(true)
     sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
     sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
     const target = readPlacePublicationMetadata(nextSource.payload.meta)
     sqlite
       .prepare(
@@ -3393,7 +3479,11 @@ describe('atomic source group application', () => {
     ).toBeNull()
     expect(await tick()).toBe('assessed')
     expect(
-      sqlite.prepare('SELECT outcome FROM placeRefreshFeature').get()?.outcome,
+      sqlite
+        .prepare(
+          "SELECT json_extract(value,'$.outcome') AS outcome FROM placeRefreshItem,json_each(outcomes)",
+        )
+        .get()?.outcome,
     ).toBe('processed')
     expect(
       sqlite.prepare('SELECT accepted FROM placeRefresh').get()?.accepted,
@@ -3403,7 +3493,13 @@ describe('atomic source group application', () => {
     const state = sqlite.prepare('SELECT phase,accepted FROM placeRefresh').get()
     expect(state?.phase).toBe('idle')
     expect(JSON.parse(String(state?.accepted))).toEqual(target)
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(2)
     expect(await tick()).toBe('superseded')
   })
 
@@ -3420,6 +3516,7 @@ describe('atomic source group application', () => {
     await persistForwardSaanSeoiPlace(db, hydrated)
     sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
     sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
     const target = readPlacePublicationMetadata(nextSource.payload.meta)
     sqlite
       .prepare(
@@ -3450,6 +3547,7 @@ describe('atomic source group application', () => {
     const { sqlite, binding, nextSource, first } = await fixture(true)
     sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
     sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
     const target = readPlacePublicationMetadata(nextSource.payload.meta)
     sqlite
       .prepare(
@@ -3468,15 +3566,29 @@ describe('atomic source group application', () => {
       "CREATE TRIGGER fail_cursor BEFORE UPDATE OF featureCursor ON placeRefreshItem BEGIN SELECT RAISE(ABORT,'cursor failure'); END",
     )
     await expect(tick()).rejects.toThrow('cursor failure')
-    expect(sqlite.prepare('SELECT * FROM placeRefreshFeature').all()).toHaveLength(0)
+    expect(
+      sqlite.prepare('SELECT value FROM placeRefreshItem,json_each(outcomes)').all(),
+    ).toHaveLength(0)
     expect(
       sqlite.prepare('SELECT featureCursor FROM placeRefreshItem').get()?.featureCursor,
     ).toBe('')
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(2)
     const jobs = sqlite.prepare('SELECT * FROM featureMtrJob').all()
     sqlite.exec('DROP TRIGGER fail_cursor')
     expect(await tick()).toBe('assessed')
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(2)
     expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toEqual(jobs)
   })
 
@@ -3503,6 +3615,7 @@ describe('atomic source group application', () => {
     const { sqlite, binding, nextSource, first } = await fixture()
     sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
     sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
     const target = readPlacePublicationMetadata(nextSource.payload.meta)
     sqlite
       .prepare(
@@ -3523,7 +3636,13 @@ describe('atomic source group application', () => {
       sqlite.prepare('SELECT status,reviewReason FROM placeRefreshItem').get(),
     ).toEqual({ status: 'review', reviewReason: 'source-missing' })
     expect(await tick()).toBe('complete')
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(0)
   })
 
   it('accepts same-publication page metadata changes but holds conflicting canonical records', async () => {
@@ -3597,7 +3716,13 @@ describe('atomic source group application', () => {
         guard: sql`1`,
       }),
     ).toMatchObject({ status: 'review' })
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(0)
   })
 
   it('processes both automatic groups and replays without duplicate writes or routing', async () => {
@@ -3614,7 +3739,11 @@ describe('atomic source group application', () => {
       geometryChanged: true,
       groups: { facts: 'applied', location: 'applied' },
     })
-    const decisions = sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()
+    const decisions = sqlite
+      .prepare(
+        `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+      )
+      .all()
     const jobs = sqlite.prepare('SELECT * FROM featureMtrJob').all()
     expect(decisions).toHaveLength(2)
     expect(jobs).toHaveLength(1)
@@ -3623,9 +3752,13 @@ describe('atomic source group application', () => {
       geometryChanged: false,
       groups: { facts: 'unchanged', location: 'unchanged' },
     })
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toEqual(
-      decisions,
-    )
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toEqual(decisions)
     expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toEqual(jobs)
   })
 
@@ -3657,7 +3790,13 @@ describe('atomic source group application', () => {
       status: 'processed',
       groups: { facts: 'applied', location: 'rejected' },
     })
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(2)
     expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.locationRevisionId).toBe(
       first.revisionId,
     )
@@ -3666,7 +3805,7 @@ describe('atomic source group application', () => {
   it('stops after lease loss between groups and resumes the durable partial decision', async () => {
     const { db, sqlite, first, next } = await fixture(true)
     sqlite.exec(`CREATE TABLE testLease(owned INTEGER); INSERT INTO testLease VALUES(1);
-      CREATE TRIGGER lose_lease AFTER INSERT ON placeAdoptionDecision BEGIN UPDATE testLease SET owned=0; END;`)
+      CREATE TRIGGER lose_lease AFTER UPDATE OF factsDecision,locationDecision ON placeAdoptionProposal BEGIN UPDATE testLease SET owned=0; END;`)
     const input = {
       featureId: 'f',
       projectId: 'p',
@@ -3678,7 +3817,13 @@ describe('atomic source group application', () => {
       status: 'superseded',
       groups: { facts: 'applied' },
     })
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(1)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(1)
     expect(sqlite.prepare('SELECT * FROM featureMtrJob').all()).toHaveLength(0)
     sqlite.exec('DROP TRIGGER lose_lease; UPDATE testLease SET owned=1')
     expect(await adoptRefreshedPlaceForFeature(db, input)).toMatchObject({
@@ -3686,7 +3831,13 @@ describe('atomic source group application', () => {
       geometryChanged: true,
       groups: { facts: 'applied', location: 'applied' },
     })
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(2)
   })
 
   it('does not silently reassess a proposal after a Project policy edit', async () => {
@@ -3703,7 +3854,13 @@ describe('atomic source group application', () => {
       status: 'review',
       groups: { facts: 'review', location: 'review' },
     })
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(0)
     expect(sqlite.prepare('SELECT * FROM placeAdoptionProposal').all()).toHaveLength(1)
     expect((await getAcceptedFeaturePlace(db, 'f', 'p'))?.factsRevisionId).toBe(
       first.revisionId,
@@ -3734,7 +3891,13 @@ describe('atomic source group application', () => {
       }),
     ).toMatchObject({ status: 'unlinked' })
     expect(sqlite.prepare('SELECT * FROM featurePlace').all()).toEqual(before)
-    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+    expect(
+      sqlite
+        .prepare(
+          `SELECT * FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL)`,
+        )
+        .all(),
+    ).toHaveLength(0)
   })
 
   it('adopts facts without routing, then location with independent review and atomic routing', async () => {
@@ -3787,7 +3950,7 @@ describe('atomic source group application', () => {
     expect(
       sqlite
         .prepare(
-          "SELECT fieldGroup FROM placeAdoptionDecision WHERE action='applied' ORDER BY fieldGroup",
+          "SELECT fieldGroup FROM (SELECT json_extract(d.value,'$.fieldGroup') AS fieldGroup,json_extract(d.value,'$.action') AS action,d.value FROM placeAdoptionProposal p,json_each(json_array(json(p.factsDecision),json(p.locationDecision))) d WHERE d.value IS NOT NULL) WHERE action='applied' ORDER BY fieldGroup",
         )
         .all(),
     ).toEqual([{ fieldGroup: 'facts' }, { fieldGroup: 'location' }])
@@ -3803,11 +3966,10 @@ describe('atomic source group application', () => {
         'featurePlace',
         'featurePlaceHistory',
         'featureMtrJob',
-        'placeAdoptionDecision',
       ].map(table => sqlite.prepare(`SELECT * FROM ${table}`).all())
     const before = snapshot()
     sqlite.exec(
-      "CREATE TRIGGER fail_adoption BEFORE INSERT ON placeAdoptionDecision BEGIN SELECT RAISE(ABORT,'injected final decision failure'); END",
+      "CREATE TRIGGER fail_adoption BEFORE UPDATE OF factsDecision,locationDecision ON placeAdoptionProposal BEGIN SELECT RAISE(ABORT,'injected final decision failure'); END",
     )
     await expect(
       applyPlaceAdoptionGroup(db, {
@@ -3959,7 +4121,7 @@ describe('bounded Place review discovery', () => {
       insert.run('proposal-' + i, 'candidate-' + i, 'association')
     insert.run('replacement', 'candidate-22', 'revised-association')
     sqlite.exec(
-      "INSERT INTO placeAdoptionDecision(id,proposalId,fieldGroup,action,actorId,reason,associationRevision) VALUES ('d','proposal-22','location','rejected','actor','wrong premises','association')",
+      "UPDATE placeAdoptionProposal SET locationDecision=json_object('id','d','proposalId','proposal-22','fieldGroup','location','action','rejected','actorId','actor','reason','wrong premises','associationRevision','association','createdAt','now') WHERE id='proposal-22'",
     )
     const first = await listPlaceAdoptionReviews(db, { featureId: 'f', projectId: 'p' })
     expect(first.reviews).toHaveLength(20)
@@ -3993,7 +4155,9 @@ describe('standalone Place directory', () => {
       const id = `directory-${String(n).padStart(2, '0')}`
       const owner = n < 2 ? 'other' : n < 28 ? 'p' : null
       sqlite
-        .prepare('INSERT INTO place(id,ssId,state,ownerProjectId) VALUES (?,?,?,?)')
+        .prepare(
+          'INSERT INTO place(id,ssId,state,ownerOrganisationId) VALUES (?,?,?,?)',
+        )
         .run(id, owner ? null : 'shared-ss', owner ? 'manual' : 'linked', owner)
       for (let sequence = 1; sequence <= 2; sequence++) {
         const value = {
@@ -4009,22 +4173,22 @@ describe('standalone Place directory', () => {
     }
     const shared = await listPlaceResources(db, {})
     expect(shared.data.map(row => row.id)).toEqual(['directory-28'])
-    const first = await listPlaceResources(db, { projectId: 'p', q: '%' })
+    const first = await listPlaceResources(db, { organisationId: 'p', q: '%' })
     expect(first.data).toHaveLength(25)
     expect(first.data[0].id).toBe('directory-02')
     expect(first.data.every(row => row.facts?.names.en === 'Latest % shop')).toBe(true)
     const last = await listPlaceResources(db, {
-      projectId: 'p',
+      organisationId: 'p',
       q: '%',
       after: first.nextCursor!,
     })
     expect(last.data.map(row => row.id)).toEqual(['directory-27', 'directory-28'])
     expect(last.nextCursor).toBeNull()
     expect(
-      (await listPlaceResources(db, { projectId: 'p', q: 'Old name' })).data,
+      (await listPlaceResources(db, { organisationId: 'p', q: 'Old name' })).data,
     ).toEqual([])
     expect(
-      (await listPlaceResources(db, { projectId: 'p', id: 'directory-00' })).data,
+      (await listPlaceResources(db, { organisationId: 'p', id: 'directory-00' })).data,
     ).toEqual([])
     expect(first.data[0]).not.toHaveProperty('payload')
   })
@@ -4073,7 +4237,7 @@ describe('retained negative Place identity decisions', () => {
       candidate,
       input: {
         placeId: local.placeId,
-        ownerProjectId: 'p',
+        ownerOrganisationId: 'p',
         reviewId,
         actorId: 'reviewer',
         reason: 'Different premises',
@@ -4086,7 +4250,7 @@ describe('retained negative Place identity decisions', () => {
       apply(target, receiver, args) {
         sqlite
           .prepare(
-            'INSERT INTO placeIdentityRejection(reviewId,placeId,ssId,actorId,reason) VALUES (?,?,?,?,?)',
+            `UPDATE placeIdentityReview SET rejection=json_object('reviewId',?1,'placeId',?2,'ssId',?3,'actorId',?4,'reason',?5,'createdAt','now') WHERE id=?1`,
           )
           .run(
             input.reviewId,
@@ -4124,9 +4288,13 @@ describe('retained negative Place identity decisions', () => {
     expect([...(await rejectedFeaturePlaceSourceIds(db, 'f', 'other'))]).toEqual([])
     expect(sqlite.prepare('SELECT * FROM featurePlace').all()).toEqual(before)
     expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(1)
-    expect(() => sqlite.exec('DELETE FROM placeIdentityRejection')).toThrow(/immutable/)
     expect(() =>
-      sqlite.exec("UPDATE placeIdentityRejection SET reason='Changed'"),
+      sqlite.exec('DELETE FROM placeIdentityReview WHERE rejection IS NOT NULL'),
+    ).toThrow(/immutable/)
+    expect(() =>
+      sqlite.exec(
+        "UPDATE placeIdentityReview SET rejection=json_set(rejection,'$.reason','Changed') WHERE rejection IS NOT NULL",
+      ),
     ).toThrow(/immutable/)
     const reviewId = await capturePlaceIdentityReview(
       db,
@@ -4145,13 +4313,17 @@ describe('retained negative Place identity decisions', () => {
     ).toMatchObject({ status: 'applied' })
     expect([...(await rejectedFeaturePlaceSourceIds(db, 'f', 'p'))]).toEqual([])
     expect(
-      sqlite.prepare('SELECT count(*) n FROM placeIdentityRejection').get()?.n,
+      sqlite
+        .prepare(
+          'SELECT count(*) n FROM placeIdentityReview WHERE rejection IS NOT NULL',
+        )
+        .get()?.n,
     ).toBe(1)
   })
   it('rejects wrong ownership, stale source baselines, and already accepted reviews', async () => {
     const { db, local, input } = await fixture()
     expect(
-      await rejectPlaceIdentityReview(db, { ...input, ownerProjectId: 'other' }),
+      await rejectPlaceIdentityReview(db, { ...input, ownerOrganisationId: 'other' }),
     ).toEqual({ status: 'conflict' })
     expect(await acceptPlaceIdentityReview(db, input)).toMatchObject({
       status: 'applied',
@@ -4266,4 +4438,114 @@ describe('forward-only bulk source persistence', () => {
       )
     },
   )
+})
+
+describe('structured feature property snapshots', () => {
+  it('round trips ordered links, preserves omitted internal rows, and ignores stale writes', async () => {
+    const { db, sqlite } = setup()
+    sqlite.exec(`ALTER TABLE featureI18n ADD COLUMN titleGen INTEGER;
+      ALTER TABLE featureI18n ADD COLUMN description TEXT;
+      ALTER TABLE featureI18n ADD COLUMN descriptionGen INTEGER;
+      ALTER TABLE featureI18n ADD COLUMN displayAddressGen INTEGER;
+      ALTER TABLE featureI18n ADD COLUMN addressProperties TEXT;
+      CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
+      INSERT INTO property(id,key,audience) VALUES ('links','links','public'),('isbn','isbn','internal');
+      INSERT INTO featureProperty(featureId,propertyId,value) VALUES ('f','isbn','private');`)
+    const items = [
+      { id: 'a', url: 'https://example.org/a', label: { en: 'A' } },
+      { id: 'b', url: 'https://example.org/b', label: { zhHant: '乙' } },
+    ]
+    const valueJson = JSON.stringify({ version: 1, items })
+    await db.batch(
+      prepareFeatureFormRelations(db, 'f', sql`1`, {}, [
+        { propertyId: 'links', valueJson },
+      ]) as never,
+    )
+    expect(
+      sqlite
+        .prepare("SELECT valueJson,value FROM featureProperty WHERE propertyId='links'")
+        .get(),
+    ).toEqual({ valueJson, value: null })
+    const reordered = JSON.stringify({ version: 1, items: [...items].reverse() })
+    await db.batch(
+      prepareFeatureFormRelations(db, 'f', sql`0`, {}, [
+        { propertyId: 'links', valueJson: reordered },
+      ]) as never,
+    )
+    expect(
+      sqlite
+        .prepare("SELECT valueJson FROM featureProperty WHERE propertyId='links'")
+        .get()?.valueJson,
+    ).toBe(valueJson)
+    await db.batch(
+      prepareFeatureFormRelations(db, 'f', sql`1`, {}, [
+        { propertyId: 'links', valueJson: reordered },
+      ]) as never,
+    )
+    expect(
+      sqlite
+        .prepare("SELECT valueJson FROM featureProperty WHERE propertyId='links'")
+        .get()?.valueJson,
+    ).toBe(reordered)
+    await db.batch(prepareFeatureFormRelations(db, 'f', sql`1`, {}, []) as never)
+    expect(
+      sqlite.prepare('SELECT propertyId,value FROM featureProperty').all(),
+    ).toEqual([{ propertyId: 'isbn', value: 'private' }])
+  })
+})
+
+describe('Organisation-owned private Places', () => {
+  it('shares local discovery and linking across sibling Projects while fencing other Organisations', async () => {
+    const { db, sqlite } = setup(true)
+    sqlite.exec(
+      "INSERT INTO project(id,organisationId) VALUES('sibling','p'); INSERT INTO feature(id,projectId) VALUES('sibling-feature','sibling'),('outside','other')",
+    )
+    sqlite
+      .prepare('UPDATE feature SET geometry=?')
+      .run(JSON.stringify(facts.location.geometry))
+    const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
+    expect(
+      await searchLocalPlaceCandidates(db, { projectId: 'sibling', q: facts.names.en }),
+    ).toHaveLength(1)
+    expect(
+      await searchLocalPlaceCandidates(db, { projectId: 'other', q: facts.names.en }),
+    ).toHaveLength(0)
+    const input = {
+      placeId: local.placeId,
+      revisionId: local.revisionId,
+      expectedFeatureModifiedAt: 'original',
+      actorId: 'actor',
+    }
+    expect(
+      await linkInitialFeaturePlace(db, {
+        ...input,
+        featureId: 'sibling-feature',
+        projectId: 'sibling',
+      }),
+    ).toMatchObject({ status: 'linked' })
+    expect(
+      await linkInitialFeaturePlace(db, {
+        ...input,
+        featureId: 'outside',
+        projectId: 'other',
+      }),
+    ).toEqual({ status: 'place-unavailable' })
+    expect(
+      await getAcceptedFeaturePlace(db, 'sibling-feature', 'sibling'),
+    ).not.toBeNull()
+    expect(await getAcceptedFeaturePlace(db, 'sibling-feature', 'other')).toBeNull()
+    expect(() =>
+      sqlite.exec("UPDATE project SET organisationId='other' WHERE id='sibling'"),
+    ).toThrow('Feature Place scope mismatch')
+    expect(() =>
+      sqlite.exec("UPDATE feature SET projectId='other' WHERE id='sibling-feature'"),
+    ).toThrow('Feature Place scope mismatch')
+    sqlite.exec("UPDATE feature SET projectId='p' WHERE id='sibling-feature'")
+    expect(await getAcceptedFeaturePlace(db, 'sibling-feature', 'p')).not.toBeNull()
+    expect(() =>
+      sqlite
+        .prepare("UPDATE place SET ownerOrganisationId='other' WHERE id=?")
+        .run(local.placeId),
+    ).toThrow('Feature Place scope mismatch')
+  })
 })

@@ -19,15 +19,15 @@ import type { PlaceResource } from '#lib/places/resource.js'
 
 const admin = getAdminCtx()
 const header = getHeaderCtrl()
-const projects = usePanelResources(admin.view, 'project', () => '')
+const organisations = usePanelResources(admin.view, 'organisation', () => '')
 let query = $state('')
-let projectId = $state('')
+let organisationId = $state('')
 let rows = $state<PlaceResource[]>([])
 let cursor = $state<string | null>(null)
 let loading = $state(false)
 let failed = $state(false)
 let version = 0
-let activeSearch = { q: '', projectId: '' }
+let activeSearch = { q: '', organisationId: '' }
 
 /**
  * Load one server-authorized page, preserving settled rows during replacement.
@@ -36,7 +36,7 @@ let activeSearch = { q: '', projectId: '' }
  */
 async function load(more = false): Promise<void> {
   const request = ++version
-  if (!more) activeSearch = { q: query, projectId }
+  if (!more) activeSearch = { q: query, organisationId }
   loading = true
   failed = false
   try {
@@ -44,7 +44,7 @@ async function load(more = false): Promise<void> {
       getPlaces({
         scope: admin.view.getRoleScopeQueryKey(),
         q: activeSearch.q,
-        projectId: activeSearch.projectId || undefined,
+        organisationId: activeSearch.organisationId || undefined,
         after: more ? (cursor ?? undefined) : undefined,
       }),
     )
@@ -103,29 +103,31 @@ onDestroy(() => {
         <span>{m.place_directory_scope()}</span>
         <select
           class="rounded-lg border border-border bg-panel px-3 py-2"
-          bind:value={projectId}
+          bind:value={organisationId}
         >
           <option value="">{m.place_directory_shared()}</option>
-          {#each projects.rows as project (project.id)}
-            <option value={project.id}>{project.i18n?.en?.name ?? project.id}</option>
+          {#each organisations.rows as organisation (organisation.id)}
+            <option value={organisation.id}>
+              {organisation.i18n?.en?.name ?? organisation.id}
+            </option>
           {/each}
         </select>
       </label>
-      {#if projects.list.hasMore}
+      {#if organisations.list.hasMore}
         <Button
           type="button"
-          disabled={projects.list.loading}
-          text={m.place_directory_more_projects()}
+          disabled={organisations.list.loading}
+          text={m.place_directory_more_organisations()}
           onClick={() => {
-            void projects.list.next().catch(() => {})
+            void organisations.list.next().catch(() => {})
           }}
         />
       {/if}
-      {#if projects.list.error}
+      {#if organisations.list.error}
         <Button
           type="button"
           text={m.resource_action_failed()}
-          onClick={() => projects.retry()}
+          onClick={() => organisations.retry()}
         />
       {/if}
       <Button type="submit" disabled={loading} text={m.place_directory_search()} />

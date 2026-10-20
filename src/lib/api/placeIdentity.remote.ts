@@ -24,11 +24,10 @@ import { z } from 'zod'
 // REMOTE
 import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
-import { authorizeProjectUpdateForSubmission } from '#lib/api/services/authz/index.js'
+import { requirePlaceOrganisationManager } from '#lib/api/services/placeOwnership.js'
 import { canManageSharedPlaceIdentity } from '#lib/api/services/authz/place.js'
 // SERVICES
 import { rejectPlaceIdentityReview as persistIdentityRejection } from '#lib/db/services/placeIdentityRejection.js'
-import { probeProjectQuery } from '#lib/db/services/project.js'
 import {
   probePlaceIdentityScope,
   readPlaceIdentityBaseline,
@@ -64,7 +63,7 @@ const reviewInput = identityInput.extend({ reviewId: z.string().min(1).max(200) 
  * @param ctx Authenticated request with current roles.
  * @param placeId Stable Place ID; ownership is always loaded from persistence.
  * @returns Authorized owner scope, null for a shared Place.
- * @remarks Project managers may administer their private Places. Shared identity changes
+ * @remarks Organisation administrators may administer their private Places. Shared identity changes
  * require a core hub administrator. Feature edit/read authority alone is insufficient.
  */
 async function requireIdentityManager(
@@ -74,7 +73,7 @@ async function requireIdentityManager(
   if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
   const scope = await probePlaceIdentityScope(ctx.db, placeId)
   if (!scope) error(404, 'PLACE_NOT_FOUND')
-  if (scope.ownerProjectId === null) {
+  if (scope.ownerOrganisationId === null) {
     if (
       !canManageSharedPlaceIdentity({
         isAnonymous: ctx.user.isAnonymous,
@@ -84,19 +83,8 @@ async function requireIdentityManager(
       error(403, 'INSUFFICIENT_ROLE')
     return null
   }
-  const probe = await probeProjectQuery(ctx.db, {
-    ref: scope.ownerProjectId,
-    refKey: 'id',
-  })
-  if (!probe) error(404, 'PROJECT_NOT_FOUND')
-  const decision = authorizeProjectUpdateForSubmission({
-    user: ctx.user,
-    userRoles: ctx.userRoles,
-    resource: probe,
-    submittedData: { placeUpdatePolicy: true },
-  })
-  if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
-  return scope.ownerProjectId
+  await requirePlaceOrganisationManager(ctx, scope.ownerOrganisationId)
+  return scope.ownerOrganisationId
 }
 
 // ---
@@ -135,11 +123,11 @@ export const prepareMirroredPlaceIdentityReview = guardedCommand(
     candidateRevisionId: z.string().min(1).max(200),
   }),
   async (input, ctx) => {
-    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+    const ownerOrganisationId = await requireIdentityManager(ctx, input.placeId)
     const baseline = await readPlaceIdentityBaseline(
       ctx.db,
       input.placeId,
-      ownerProjectId,
+      ownerOrganisationId,
     )
     if (!baseline) error(409, 'PLACE_IDENTITY_CHANGED')
     const reviewId = await captureMirroredPlaceIdentityReview(
@@ -175,11 +163,11 @@ export const preparePlaceIdentityReview = guardedCommand(
       .max(Number.MAX_SAFE_INTEGER - 100),
   }),
   async (input, ctx) => {
-    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+    const ownerOrganisationId = await requireIdentityManager(ctx, input.placeId)
     const baseline = await readPlaceIdentityBaseline(
       ctx.db,
       input.placeId,
-      ownerProjectId,
+      ownerOrganisationId,
     )
     if (!baseline) error(409, 'PLACE_IDENTITY_CHANGED')
     const env = ctx.event.locals.platform?.env
@@ -223,8 +211,11 @@ export const preparePlaceIdentityReview = guardedCommand(
  * @returns Safe comparison including stale state; no raw source payload or other Feature records.
  */
 export const getPlaceIdentityReview = guardedQuery(reviewInput, async (input, ctx) => {
-  const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
-  const review = await readPlaceIdentityReview(ctx.db, { ...input, ownerProjectId })
+  const ownerOrganisationId = await requireIdentityManager(ctx, input.placeId)
+  const review = await readPlaceIdentityReview(ctx.db, {
+    ...input,
+    ownerOrganisationId,
+  })
   if (!review) error(404, 'PLACE_IDENTITY_REVIEW_NOT_FOUND')
   return review
 })
@@ -246,10 +237,10 @@ export const acceptPlaceIdentityReview = guardedCommand(
     reason: z.string().trim().min(1).max(2000),
   }),
   async (input, ctx) => {
-    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+    const ownerOrganisationId = await requireIdentityManager(ctx, input.placeId)
     const result = await persistIdentityReview(ctx.db, {
       ...input,
-      ownerProjectId,
+      ownerOrganisationId,
       actorId: ctx.user.id,
     })
     if (result.status === 'conflict') error(409, 'PLACE_IDENTITY_CHANGED')
@@ -266,10 +257,10 @@ export const acceptPlaceIdentityReview = guardedCommand(
 export const rejectPlaceIdentityReview = guardedCommand(
   reviewInput.extend({ reason: z.string().trim().min(1).max(2000) }),
   async (input, ctx) => {
-    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+    const ownerOrganisationId = await requireIdentityManager(ctx, input.placeId)
     const result = await persistIdentityRejection(ctx.db, {
       ...input,
-      ownerProjectId,
+      ownerOrganisationId,
       actorId: ctx.user.id,
     })
     if (result.status === 'conflict') error(409, 'PLACE_IDENTITY_CHANGED')
@@ -291,15 +282,21 @@ export const rejectPlaceIdentityReview = guardedCommand(
 export const preparePlaceMergeReview = guardedCommand(
   identityInput.extend({ identityReviewId: z.string().min(1).max(200) }),
   async (input, ctx) => {
-    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
-    const source = await probePlaceMergeSource(ctx.db, { ...input, ownerProjectId })
+    const ownerOrganisationId = await requireIdentityManager(ctx, input.placeId)
+    const source = await probePlaceMergeSource(ctx.db, {
+      ...input,
+      ownerOrganisationId,
+    })
     if (!source) error(409, 'PLACE_MERGE_CHANGED')
-    const sourceOwnerProjectId = await requireIdentityManager(ctx, source.sourcePlaceId)
+    const sourceOwnerOrganisationId = await requireIdentityManager(
+      ctx,
+      source.sourcePlaceId,
+    )
     const result = await capturePlaceMergeReview(ctx.db, {
       ...input,
       ...source,
-      ownerProjectId,
-      sourceOwnerProjectId,
+      ownerOrganisationId,
+      sourceOwnerOrganisationId,
       actorId: ctx.user.id,
     })
     if (result.status === 'conflict') error(409, 'PLACE_MERGE_CHANGED')
@@ -313,15 +310,18 @@ export const preparePlaceMergeReview = guardedCommand(
  * @returns Affected count, retained visibility and stale/applied state, without private Feature data.
  */
 export const getPlaceMergeReview = guardedQuery(reviewInput, async (input, ctx) => {
-  const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+  const ownerOrganisationId = await requireIdentityManager(ctx, input.placeId)
   const source = await probePlaceMergeReview(ctx.db, input)
   if (!source) error(404, 'PLACE_MERGE_REVIEW_NOT_FOUND')
-  const sourceOwnerProjectId = await requireIdentityManager(ctx, source.sourcePlaceId)
+  const sourceOwnerOrganisationId = await requireIdentityManager(
+    ctx,
+    source.sourcePlaceId,
+  )
   const result = await readPlaceMergeReview(ctx.db, {
     ...input,
     ...source,
-    ownerProjectId,
-    sourceOwnerProjectId,
+    ownerOrganisationId,
+    sourceOwnerOrganisationId,
   })
   if (!result) error(409, 'PLACE_MERGE_CHANGED')
   return result
@@ -336,15 +336,18 @@ export const getPlaceMergeReview = guardedQuery(reviewInput, async (input, ctx) 
 export const acceptPlaceMergeReview = guardedCommand(
   reviewInput.extend({ reason: z.string().trim().min(1).max(2000) }),
   async (input, ctx) => {
-    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+    const ownerOrganisationId = await requireIdentityManager(ctx, input.placeId)
     const source = await probePlaceMergeReview(ctx.db, input)
     if (!source) error(404, 'PLACE_MERGE_REVIEW_NOT_FOUND')
-    const sourceOwnerProjectId = await requireIdentityManager(ctx, source.sourcePlaceId)
+    const sourceOwnerOrganisationId = await requireIdentityManager(
+      ctx,
+      source.sourcePlaceId,
+    )
     const result = await applyPlaceMergeReview(ctx.db, {
       ...input,
       ...source,
-      ownerProjectId,
-      sourceOwnerProjectId,
+      ownerOrganisationId,
+      sourceOwnerOrganisationId,
       actorId: ctx.user.id,
     })
     if (result.status === 'conflict') error(409, 'PLACE_MERGE_CHANGED')

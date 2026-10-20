@@ -53,6 +53,7 @@ function setup(withOrphan = false) {
   const columns = Object.values(getTableColumns(feature))
     .filter(
       column =>
+        column.name !== 'localPlaceBrands' &&
         !/^(country|area|district|town|ruralArea|macrohood|neighbourhood|village|microhood|hamlet|island)Id$|^divisionResolution$/.test(
           column.name,
         ),
@@ -89,6 +90,8 @@ function setup(withOrphan = false) {
   sqlite.exec(readFileSync('migrations/0102_place_inheritance_foundation.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0110_feature_place_history.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0112_feature_place_detachment.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0123_place_owned_fields.sql', 'utf8'))
+  sqlite.exec('ALTER TABLE place ADD COLUMN ownerOrganisationId TEXT')
   const statements: string[] = []
   const prepare = (query: string, bindings: unknown[] = []) => ({
     bind: (...params: unknown[]) => prepare(query, params),

@@ -55,6 +55,16 @@ function fixture() {
     '0097_breadline_feature_identity.sql',
     '0102_place_inheritance_foundation.sql',
     '0110_feature_place_history.sql',
+    '0112_feature_place_detachment.sql',
+    '0113_place_adoption_review.sql',
+    '0116_place_identity_history.sql',
+    '0117_place_identity_review.sql',
+    '0118_place_merge_redirect.sql',
+    '0120_place_identity_rejection.sql',
+    '0123_place_owned_fields.sql',
+    '0124_place_adoption_decisions.sql',
+    '0125_place_identity_consolidation.sql',
+    '0135_place_organisation_ownership.sql',
   ])
     target.exec(readFileSync(`migrations/${migration}`, 'utf8'))
   const generate = () =>
@@ -87,6 +97,15 @@ test('imports participating donors/dropoffs as linked Places, with brands and ph
   const { target, generate, apply, output } = fixture()
   try {
     generate()
+    const firstPlaces = readFileSync(output, 'utf8')
+      .split('\n')
+      .filter(line => line.startsWith('INSERT INTO place '))
+    generate()
+    expect(
+      readFileSync(output, 'utf8')
+        .split('\n')
+        .filter(line => line.startsWith('INSERT INTO place ')),
+    ).toEqual(firstPlaces)
     apply()
     expect(target.query('SELECT count(*) AS n FROM feature').get()).toEqual({ n: 2 })
     expect(target.query('SELECT count(*) AS n FROM featurePlace').get()).toEqual({
@@ -95,13 +114,22 @@ test('imports participating donors/dropoffs as linked Places, with brands and ph
     expect(target.query('SELECT count(*) AS n FROM featurePlaceHistory').get()).toEqual(
       { n: 2 },
     )
+    const placeIds = target.query('SELECT id FROM place ORDER BY id').all() as {
+      id: string
+    }[]
+    for (const row of placeIds) expect(row.id).toMatch(/^[A-Za-z0-9_-]{12}$/)
     const donor = target
       .query(
-        "SELECT r.facts,p.state,p.ownerProjectId,p.ssId FROM breadlineImportFeature i JOIN featurePlace f ON f.featureId=i.featureId JOIN place p ON p.id=f.placeId JOIN placeRevision r ON r.id=f.factsRevisionId WHERE i.sourceTable='donors'",
+        "SELECT r.facts,p.state,p.ownerOrganisationId,p.ssId FROM breadlineImportFeature i JOIN featurePlace f ON f.featureId=i.featureId JOIN place p ON p.id=f.placeId JOIN placeRevision r ON r.id=f.factsRevisionId WHERE i.sourceTable='donors'",
       )
-      .get() as { facts: string; state: string; ownerProjectId: string; ssId: null }
+      .get() as {
+      facts: string
+      state: string
+      ownerOrganisationId: string
+      ssId: null
+    }
     expect(donor.state).toBe('unresolved')
-    expect(donor.ownerProjectId).toBe('p')
+    expect(donor.ownerOrganisationId).toBe('org')
     expect(donor.ssId).toBeNull()
     const facts = JSON.parse(donor.facts)
     expect(facts.phoneNumber).toEqual(['+85223456789'])

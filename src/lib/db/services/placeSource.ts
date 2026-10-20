@@ -11,6 +11,7 @@ import { place, placeIdentityHistory, placeRevision } from '../schema/place'
 // VALIDATION
 import { PlaceFactsSchema } from '#lib/places/validation.js'
 // DOMAIN
+import { derivePlaceId } from '#lib/places/id.server.js'
 import { equalPlaceSourceRecord } from '#lib/places/sourceEvidence.js'
 import {
   comparePlacePublications,
@@ -116,7 +117,7 @@ export async function persistSaanSeoiPlace(
     .get()
   if (!existing && retired) throw new Error('Retired source identity requires review')
   // Deterministic first identity makes concurrent first ingestion converge without orphan rows.
-  const placeId = existing?.id ?? `ssPlace_${await hash(projection.ssId)}`
+  const placeId = existing?.id ?? derivePlaceId('saanseoi', projection.ssId)
   const {
     facts,
     payload,
@@ -145,8 +146,8 @@ export async function persistSaanSeoiPlace(
   await db.batch([
     db
       .insert(place)
-      .select(sql`SELECT ${placeId},${projection.ssId},'linked',NULL,'current',
-        strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${creationGuard}`)
+      .select(sql`SELECT ${placeId},${projection.ssId},NULL,'linked','current',
+        NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${creationGuard}`)
       .onConflictDoNothing({ target: place.id }),
     db
       .insert(placeRevision)
@@ -189,14 +190,14 @@ export async function persistForwardSaanSeoiPlace(
   const publication = readPlacePublicationMetadata(projection.payload.meta)
   const existing = await db.get<{
     id: string
-    ownerProjectId: string | null
+    ownerOrganisationId: string | null
     state: string
     sourceAvailability: string
     latestId: string | null
     historyId: string | null
     payload: string | null
     facts: string | null
-  }>(sql`SELECT p.id,p.ownerProjectId,p.state,p.sourceAvailability,r.id AS latestId,
+  }>(sql`SELECT p.id,p.ownerOrganisationId,p.state,p.sourceAvailability,r.id AS latestId,
     r.payload,r.facts,(SELECT h.id FROM placeIdentityHistory h WHERE h.placeId=p.id
       AND NOT EXISTS(SELECT 1 FROM placeIdentityHistory n WHERE n.previousHistoryId=h.id)) AS historyId
     FROM place p LEFT JOIN placeRevision r ON r.placeId=p.id
@@ -238,19 +239,19 @@ export async function persistForwardSaanSeoiPlace(
         )
     }
   }
-  const placeId = existing?.id ?? `ssPlace_${await hash(projection.ssId)}`
+  const placeId = existing?.id ?? derivePlaceId('saanseoi', projection.ssId)
   const prepared = await prepareSaanSeoiRevision(placeId, projection)
   // The new revision is allowed in the guard after this batch inserts it, so availability can advance too.
   const guard = existing
     ? sql`EXISTS(SELECT 1 FROM place p WHERE p.id=${placeId} AND p.ssId=${projection.ssId}
-      AND p.state='linked' AND p.ownerProjectId IS ${existing.ownerProjectId}
+      AND p.state='linked' AND p.ownerOrganisationId IS ${existing.ownerOrganisationId}
       AND p.sourceAvailability=${existing.sourceAvailability}
       AND (SELECT h.id FROM placeIdentityHistory h WHERE h.placeId=p.id AND NOT EXISTS
         (SELECT 1 FROM placeIdentityHistory n WHERE n.previousHistoryId=h.id)) IS ${existing.historyId}
       AND (SELECT id FROM placeRevision WHERE placeId=p.id ORDER BY sequence DESC LIMIT 1)
         IN (${existing.latestId},${prepared.revisionId}))`
     : sql`NOT EXISTS(SELECT 1 FROM place p WHERE p.ssId=${projection.ssId} AND
-      (p.id!=${placeId} OR p.state!='linked' OR p.ownerProjectId IS NOT NULL OR p.sourceAvailability!='current'
+      (p.id!=${placeId} OR p.state!='linked' OR p.ownerOrganisationId IS NOT NULL OR p.sourceAvailability!='current'
         OR EXISTS(SELECT 1 FROM placeRevision r WHERE r.placeId=p.id AND r.id!=${prepared.revisionId})
         OR EXISTS(SELECT 1 FROM placeIdentityHistory h WHERE h.placeId=p.id)))`
   const receipt = await persistSaanSeoiPlace(
@@ -263,7 +264,7 @@ export async function persistForwardSaanSeoiPlace(
     id: string
   }>(sql`SELECT r.id FROM placeRevision r JOIN place p ON p.id=r.placeId
     WHERE (${ownershipGuard}) AND r.id=${receipt.revisionId} AND p.id=${placeId} AND p.ssId=${projection.ssId}
-      AND p.state='linked' AND p.sourceAvailability='current' AND p.ownerProjectId IS ${existing?.ownerProjectId ?? null}
+      AND p.state='linked' AND p.sourceAvailability='current' AND p.ownerOrganisationId IS ${existing?.ownerOrganisationId ?? null}
       AND (SELECT h.id FROM placeIdentityHistory h WHERE h.placeId=p.id AND NOT EXISTS
         (SELECT 1 FROM placeIdentityHistory n WHERE n.previousHistoryId=h.id)) IS ${existing?.historyId ?? null}
       AND (SELECT id FROM placeRevision WHERE placeId=p.id ORDER BY sequence DESC LIMIT 1)

@@ -7,7 +7,7 @@ export type PlaceResource = {
   ssId: string | null
   state: 'linked' | 'manual' | 'unresolved' | 'redirect'
   sourceAvailability: 'current' | 'missing' | 'review'
-  ownerProjectId: string | null
+  ownerOrganisationId: string | null
   revisionId: string | null
   facts: PlaceFacts | null
 }

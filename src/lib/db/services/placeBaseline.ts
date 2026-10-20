@@ -1,7 +1,6 @@
 // DRIZZLE
 import { and, eq, or } from 'drizzle-orm'
 // SCHEMA
-import { featurePlaceDetached } from '../schema/place'
 import { feature, featureI18n, featureProperty } from '../schema/feature'
 import { hub } from '../schema/hub'
 import { property, propertyValue, propertyValueI18n } from '../schema/property'
@@ -78,6 +77,7 @@ export async function readFeaturePlaceBaseline(
       addressMeta: feature.addressMeta,
       isDraft: feature.isDraft,
       isIntangible: feature.isIntangible,
+      localPlaceBrands: feature.localPlaceBrands,
     })
     .from(feature)
     .where(and(eq(feature.id, featureId), eq(feature.projectId, projectId)))
@@ -178,11 +178,7 @@ export async function readFeaturePlaceBaseline(
   if (phones.some(item => item.scope !== 'hub' || item.hubCode !== 'core'))
     return { status: 'review', reason: 'ambiguous-properties' }
   const brands = properties.filter(item => item.key === 'brand')
-  const detached = await db
-    .select({ brands: featurePlaceDetached.brands })
-    .from(featurePlaceDetached)
-    .where(eq(featurePlaceDetached.featureId, featureId))
-    .get()
+  const detached = stored.localPlaceBrands
   if (phones.length > 1 || (!detached && brands.length > 1))
     return { status: 'review', reason: 'ambiguous-properties' }
   const phoneNumber: string[] = []

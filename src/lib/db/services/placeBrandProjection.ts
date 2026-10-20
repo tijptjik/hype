@@ -21,8 +21,8 @@ export function featurePlaceBrandsSQL(): SQL<string | null> {
     FROM featurePlace fp JOIN place p ON p.id=fp.placeId
     JOIN placeRevision pr ON pr.id=fp.factsRevisionId AND pr.placeId=fp.placeId
     WHERE fp.featureId="feature"."id" AND "feature"."isDraft"=0
-      AND (p.ownerProjectId IS NULL OR p.ownerProjectId="feature"."projectId")),
-    (SELECT d.brands FROM featurePlaceDetached d WHERE d.featureId="feature"."id"
-      AND "feature"."isDraft"=0 AND NOT EXISTS
-        (SELECT 1 FROM featurePlace fp WHERE fp.featureId="feature"."id")))`
+      AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id="feature"."projectId"))),
+    (CASE WHEN "feature"."isDraft"=0 AND NOT EXISTS
+        (SELECT 1 FROM featurePlace fp WHERE fp.featureId="feature"."id")
+      THEN json_extract("feature"."localPlaceBrands",'$.brands') END))`
 }

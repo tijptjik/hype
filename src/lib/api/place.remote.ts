@@ -1,10 +1,11 @@
 // SVELTE
-import { error } from '@sveltejs/kit'
+import { error, isHttpError } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // REMOTE
 import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
+import { requirePlaceOrganisationManager } from '#lib/api/services/placeOwnership.js'
 import {
   authorizeProjectUpdateForSubmission,
   authorizeFeatureReadForProbe,
@@ -169,18 +170,48 @@ export const getFeatureDetachedBrands = guardedQuery(
 )
 
 /**
- * Create a private Place baseline in a project the caller manages.
- * @param input Owning project, intentional state and validated local facts.
+ * Check whether the Feature editor may offer Organisation-owned Place creation.
+ * @param input Project context whose persisted Organisation determines ownership.
+ * @returns Only an access boolean; the create command repeats authorization before writing.
+ */
+export const getLocalPlaceCreationAccess = guardedQuery(
+  projectInput,
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) return { allowed: false }
+    const project = await probeProjectQuery(ctx.db, {
+      ref: input.projectId,
+      refKey: 'id',
+    })
+    if (!project) return { allowed: false }
+    try {
+      await requirePlaceOrganisationManager(ctx, project.organisationId)
+      return { allowed: true }
+    } catch (cause) {
+      if (isHttpError(cause, 403) || isHttpError(cause, 404)) return { allowed: false }
+      throw cause
+    }
+  },
+)
+
+/**
+ * Create a private Place baseline owned by the selected Project's Organisation.
+ * @param input Project context, intentional state and validated local facts.
  * @returns Stable HYPE identity and immutable initial revision.
  * @remarks No Feature or upstream SaanSeoi record is changed by creation.
  */
 export const createLocalPlace = guardedCommand(
   projectInput.extend(LocalPlaceInputSchema.shape),
   async (input, ctx) => {
-    await requireProjectPolicyManager(ctx, input.projectId)
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    const project = await probeProjectQuery(ctx.db, {
+      ref: input.projectId,
+      refKey: 'id',
+    })
+    if (!project) error(404, 'PROJECT_NOT_FOUND')
+    await requirePlaceOrganisationManager(ctx, project.organisationId)
     return persistLocalPlace(
       ctx.db,
-      input.projectId,
+      project.organisationId,
       { state: input.state, facts: input.facts },
       ctx.user.id,
     )

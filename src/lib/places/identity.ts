@@ -4,7 +4,7 @@ export type PlaceIdentityBaseline = {
   expectedState: 'manual' | 'unresolved' | 'linked'
   expectedSsId: string | null
   expectedHistoryId: string | null
-  expectedOwnerProjectId: string | null
+  expectedOwnerOrganisationId: string | null
   expectedLatestRevisionId: string
   expectedSourceAvailability: 'current' | 'missing' | 'review'
 }

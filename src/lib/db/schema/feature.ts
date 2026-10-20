@@ -23,6 +23,7 @@ import type { MtrResolution } from '#lib/routing/mtr.js'
 import type { GeometryObject } from 'geojson'
 import type { AddressProperties, AddressMeta } from '#lib/utils/address.types.js'
 import type { FeatureSpatialIndex } from '#lib/db/services/featureSpatial.types.js'
+import type { PlaceBrand } from '#lib/places/model.js'
 
 /* ============================================================================
  * FEATURE MANAGEMENT
@@ -56,6 +57,12 @@ import type { FeatureSpatialIndex } from '#lib/db/services/featureSpatial.types.
 export const feature = sqliteTable(
   'feature',
   {
+    localPlaceBrands: text('localPlaceBrands', { mode: 'json' }).$type<{
+      brands: PlaceBrand[]
+      revision: string
+      sourceAssociationRevision?: string
+      actorId: string
+    }>(),
     id: text('id')
       .primaryKey()
       .$defaultFn(() => nanoid(12)),
@@ -128,12 +135,12 @@ export const feature = sqliteTable(
     isIntangible: integer('isIntangible', { mode: 'boolean' }).notNull().default(false),
     isVisitable: integer('isVisitable', { mode: 'boolean' }).notNull().default(true),
     visitableAsOf: text('visitableAsOf').default(sql`(CURRENT_DATE)`),
+    // Server-owned form transaction token; never accepted from client payloads.
+    formWriteToken: text('formWriteToken'),
 
     createdAt: text('createdAt')
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
       .notNull(),
-    // Server-owned form transaction token; never accepted from client payloads.
-    formWriteToken: text('formWriteToken'),
     modifiedAt: text('modifiedAt')
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
       .$onUpdate(() => new Date().toISOString())

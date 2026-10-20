@@ -2,7 +2,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
 import { feature, featureI18n } from '../schema/feature'
-import { featurePlace, placeRevision, placeAdoptionDecision } from '../schema/place'
+import { featurePlace, placeRevision, placeAdoptionProposal } from '../schema/place'
 // DOMAIN
 import { materializePlaceAdoption } from '#lib/places/adoptionMaterialize.js'
 import { equalPlaceValue } from '#lib/places/baseline.js'
@@ -13,6 +13,8 @@ import { previewFeaturePlaceAdoption } from './placeAdoption'
 import { readPlaceResetSources, preparePlacePhoneReset } from './placeReset'
 import { prepareFeaturePlaceAssociationWrite } from './placeAssociation'
 import { prepareFeaturePlaceRelations } from './placeRelations'
+// OWNERSHIP
+import { placeOwnerForProject } from './placeScope'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
@@ -159,19 +161,19 @@ export async function applyPlaceAdoptionGroup(
   const proposalGuard = sql`EXISTS (
     SELECT 1 FROM placeAdoptionProposal ap JOIN place p ON p.id=ap.placeId
     WHERE ap.id=${proposal.id} AND p.sourceAvailability='current' AND p.ssId=${candidate.ssId}
-      AND (p.ownerProjectId IS NULL OR p.ownerProjectId=${input.projectId})
+      AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=${placeOwnerForProject(input.projectId)})
       AND ap.rowid=(SELECT MAX(newer.rowid) FROM placeAdoptionProposal newer
         WHERE newer.featureId=ap.featureId AND newer.projectId=ap.projectId
           AND newer.placeId=ap.placeId AND newer.candidateRevisionId=ap.candidateRevisionId)
       AND ((ap.associationRevision=${input.expectedRevision} AND ap.featureModifiedAt=${input.expectedFeatureModifiedAt})
-        OR EXISTS (SELECT 1 FROM placeAdoptionDecision prior WHERE prior.proposalId=ap.id
-          AND prior.action='applied' AND prior.associationRevision=${input.expectedRevision}))
-      AND NOT EXISTS (SELECT 1 FROM placeAdoptionDecision d JOIN placeAdoptionProposal older ON older.id=d.proposalId
+        OR EXISTS (SELECT 1 FROM json_each(json_array(json(ap.factsDecision),json(ap.locationDecision))) prior
+          WHERE json_extract(prior.value,'$.action')='applied' AND json_extract(prior.value,'$.associationRevision')=${input.expectedRevision}))
+      AND NOT EXISTS (SELECT 1 FROM placeAdoptionProposal older
         WHERE older.featureId=ap.featureId AND older.projectId=ap.projectId
           AND older.placeId=ap.placeId AND older.candidateRevisionId=ap.candidateRevisionId
-          AND d.fieldGroup=${input.fieldGroup})
+          AND (CASE WHEN ${input.fieldGroup}='facts' THEN older.factsDecision ELSE older.locationDecision END) IS NOT NULL)
       AND (${Number(input.mode !== 'automatic')} OR
-        COALESCE((SELECT revision FROM projectPlacePolicy WHERE projectId=ap.projectId),0)=ap.policyRevision)
+        COALESCE((SELECT placePolicyRevision FROM project WHERE id=ap.projectId),0)=ap.policyRevision)
   )`
   const association = prepareFeaturePlaceAssociationWrite(db, {
     ...input,
@@ -230,10 +232,20 @@ export async function applyPlaceAdoptionGroup(
     ),
     ...phones,
     db
-      .insert(placeAdoptionDecision)
-      .select(sql`SELECT ${crypto.randomUUID()}, ${proposal.id},
-      ${input.fieldGroup}, 'applied', ${input.actorId}, ${input.reason.trim()}, ${association.revision},
-      strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
+      .update(placeAdoptionProposal)
+      .set({
+        [input.fieldGroup === 'facts' ? 'factsDecision' : 'locationDecision']: {
+          id: crypto.randomUUID(),
+          proposalId: proposal.id,
+          fieldGroup: input.fieldGroup,
+          action: 'applied',
+          actorId: input.actorId,
+          reason: input.reason.trim(),
+          associationRevision: association.revision,
+          createdAt: new Date().toISOString(),
+        },
+      })
+      .where(and(eq(placeAdoptionProposal.id, proposal.id), guard)),
   ])
   const saved = (result[1] as FeatureDB[])[0]
   return saved

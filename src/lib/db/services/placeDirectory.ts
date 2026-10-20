@@ -17,7 +17,7 @@ import type { PlaceResource } from '#lib/places/resource.js'
  */
 export async function listPlaceResources(
   db: Database,
-  input: { projectId?: string; q?: string; after?: string; id?: string },
+  input: { organisationId?: string; q?: string; after?: string; id?: string },
 ): Promise<{ data: PlaceResource[]; nextCursor: string | null }> {
   // Fence ownership before pagination; never search superseded revisions or raw payloads.
   const rows = await db
@@ -26,7 +26,7 @@ export async function listPlaceResources(
       ssId: place.ssId,
       state: place.state,
       sourceAvailability: place.sourceAvailability,
-      ownerProjectId: place.ownerProjectId,
+      ownerOrganisationId: place.ownerOrganisationId,
       revisionId: placeRevision.id,
       facts: placeRevision.facts,
     })
@@ -40,9 +40,12 @@ export async function listPlaceResources(
     )
     .where(
       and(
-        input.projectId
-          ? or(isNull(place.ownerProjectId), eq(place.ownerProjectId, input.projectId))
-          : isNull(place.ownerProjectId),
+        input.organisationId
+          ? or(
+              isNull(place.ownerOrganisationId),
+              eq(place.ownerOrganisationId, input.organisationId),
+            )
+          : isNull(place.ownerOrganisationId),
         input.id ? eq(place.id, input.id) : undefined,
         input.after ? gt(place.id, input.after) : undefined,
         input.q
