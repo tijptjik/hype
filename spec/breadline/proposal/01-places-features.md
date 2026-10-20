@@ -1631,3 +1631,27 @@ publication, 311-donor/19-dropoff cohort and all 155 exclusions. Twelve focused 
 tests cover shared phones, branch-name differences, distant contact discovery, unusable
 phones, dropoffs without phones, stale coordinate corrections and crowded nearby results.
 No HYPE identities, Feature links, source facts or production records were modified.
+
+### Opening migration candidates by exact source ID (Refs #194)
+
+Candidate exports now include `lookupQuery: "id:<canonical ID>"`. Paste that value
+into **Place name or SaanSeoi ID** in either **Review source identity** or **Change Place**.
+Canonical `ss-UUID` values may also be pasted without the prefix. The authorized server
+search discovers the current publication and uses the existing exact-ID, pinned collection
+reader. It never substitutes a similarly named result when the requested ID is absent.
+Missing IDs return no candidates; source failures stay explicit. Publication IDs and
+candidate facts come from SaanSeoi, not the pasted text. This opens current evidence,
+not a claim that an older migration report's publication is still current.
+
+Search performs no persistence, linking, merge or acceptance. Selecting a result still
+uses the existing import/preview/review path, including release-change checks. Full
+source identity acceptance remains a separate explicit decision; ordinary Change Place
+continues to mean reassociating a Feature. Both keep their existing permission boundaries.
+Hosted use depends on release of SaanSeoi's canonical `filter[id]` support, as before.
+
+Validation: 65 focused remote/source-reader tests and 12 matching tests pass. App checking
+retains the baseline 10 errors / 19 warnings. Browser verification used the isolated HYPE
+copy and read-only local SaanSeoi API: donor #1's phone-matching source candidate appeared
+in both identity and association search. Final run had zero page errors and zero source
+import, link, review-capture or acceptance requests. The screenshot was inspected privately;
+both servers were stopped. No identity decision or deployment was made.

@@ -236,6 +236,7 @@ export const linkFeaturePlace = guardedCommand(
  * @returns Latest-source candidates, explicitly distinguished from linkable revisions.
  * @remarks Authorization precedes external requests. Discovery neither writes source
  * records nor links Features, and upstream errors never masquerade as empty results.
+ * `id:<canonical ID>` and canonical ss-UUIDs use a pinned exact lookup, never name search.
  */
 export const searchFeaturePlaces = guardedQuery(
   PlaceSearchInputSchema.extend({ featureId: z.string().min(1) }),
@@ -261,10 +262,53 @@ export const searchFeaturePlaces = guardedQuery(
     const apiKey = env?.SAANSEOI_API_KEY ?? env?.VITE_SAANSEOI_API_KEY
     if (!apiKey?.trim()) error(503, 'PLACE_SEARCH_UNAVAILABLE')
     try {
-      const candidates = await searchSaanSeoiPlaces(
-        { ...placeSourceEndpoint(apiKey), fetch: ctx.event.fetch },
-        { q: input.q, locale: input.locale, limit: input.limit },
-      )
+      const client = { ...placeSourceEndpoint(apiKey), fetch: ctx.event.fetch }
+      // Exact IDs from migration evidence bypass the name-only discovery index.
+      const exactId = input.q.startsWith('id:')
+        ? input.q.slice(3).trim()
+        : /^ss-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+              input.q,
+            )
+          ? input.q
+          : null
+      if (exactId !== null) {
+        const publication = await discoverPlacePublication(client)
+        const found = await findSaanSeoiPlace(client, publication.pin, exactId)
+        const locale = input.locale ?? 'en'
+        const projection = found?.projection
+        return {
+          source: 'saanseoi-latest' as const,
+          candidates: projection
+            ? [
+                {
+                  placeId: projection.ssId,
+                  resourceReleaseId: projection.releaseId,
+                  locale,
+                  nameText:
+                    projection.facts.names[locale] ??
+                    projection.facts.names.en ??
+                    Object.values(projection.facts.names)[0] ??
+                    null,
+                  brandText:
+                    projection.facts.brands
+                      .map(
+                        brand =>
+                          brand.names[locale] ??
+                          brand.names.en ??
+                          Object.values(brand.names)[0],
+                      )
+                      .filter(Boolean)
+                      .join(' · ') || null,
+                },
+              ]
+            : [],
+        }
+      }
+      const candidates = await searchSaanSeoiPlaces(client, {
+        q: input.q,
+        locale: input.locale,
+        limit: input.limit,
+      })
       return { source: 'saanseoi-latest' as const, candidates }
     } catch {
       error(502, 'PLACE_SEARCH_FAILED')

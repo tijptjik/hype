@@ -102,7 +102,7 @@ def candidates(plan, index):
                     'uniquePhoneInPublication': unique_phone, 'exactFreeformAddress': exact_address}
         # This is a review priority, never an accepted identity or automatic migration link.
         corroborated = exact_name and unique_phone and metres <= 50
-        found.append({'id': pid, 'names': item['names'], 'addresses': item['addresses'], 'coordinates': item['coordinates'],
+        found.append({'id': pid, 'lookupQuery': 'id:' + pid, 'names': item['names'], 'addresses': item['addresses'], 'coordinates': item['coordinates'],
                       'basicCategory': item['basicCategory'], 'taxonomyPrimary': item['taxonomyPrimary'],
                       'address2dId': item['address2dId'], 'address3dUnitId': item['address3dUnitId'],
                       'distanceMetres': round(metres, 1), 'evidence': evidence,

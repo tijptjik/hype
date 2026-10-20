@@ -1410,7 +1410,7 @@
   "feature_place_description": "The physical establishment associated with this Feature.",
   "feature_place_loading": "Loading Places…",
   "feature_place_linked": "Linked Place",
-  "feature_place_search_label": "Place name",
+  "feature_place_search_label": "Place name or SaanSeoi ID",
   "feature_place_search": "Search Places",
   "feature_place_no_results": "No matching Places found.",
   "feature_place_import_needed": "This Place needs to be imported from SaanSeoi before it can be linked.",

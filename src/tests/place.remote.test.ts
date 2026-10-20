@@ -417,6 +417,70 @@ describe('Place source search authorization', () => {
     expect(mocks.createPlace).not.toHaveBeenCalled()
     expect(mocks.linkPlace).not.toHaveBeenCalled()
   })
+  it.each(['id:ss-selected', 'ss-0006a46f-6276-5970-9e43-c962a2d535d6'])(
+    'opens an exact source identity from %s without name search or persistence',
+    async query => {
+      const ssId = query.startsWith('id:') ? query.slice(3) : query
+      mocks.discoverPublication.mockResolvedValue({
+        pin: { releaseSet: 'release', catalogRevision: 'catalog', knownAt: 'time' },
+      })
+      mocks.lookupSource.mockResolvedValue({
+        projection: {
+          ssId,
+          releaseId: 'resource-release',
+          facts: {
+            names: { en: 'Shop', 'zh-hant': '店' },
+            brands: [
+              { names: { en: 'First brand' } },
+              { names: { en: 'Second brand' } },
+            ],
+          },
+        },
+      })
+      expect(await searchFeaturePlaces({ ...input, q: query })).toEqual({
+        source: 'saanseoi-latest',
+        candidates: [
+          {
+            placeId: ssId,
+            resourceReleaseId: 'resource-release',
+            locale: 'en',
+            nameText: 'Shop',
+            brandText: 'First brand · Second brand',
+          },
+        ],
+      })
+      expect(mocks.lookupSource).toHaveBeenCalledWith(
+        expect.anything(),
+        { releaseSet: 'release', catalogRevision: 'catalog', knownAt: 'time' },
+        ssId,
+      )
+      expect(mocks.searchPlaces).not.toHaveBeenCalled()
+      expect(mocks.persistCandidate).not.toHaveBeenCalled()
+      expect(mocks.linkPlace).not.toHaveBeenCalled()
+      expect(mocks.captureIdentity).not.toHaveBeenCalled()
+    },
+  )
+  it('authorizes exact-ID discovery before publication requests', async () => {
+    mocks.authorizeFeatureUpdate.mockReturnValue({ allowed: false })
+    await expect(
+      searchFeaturePlaces({ ...input, q: 'id:ss-selected' }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mocks.discoverPublication).not.toHaveBeenCalled()
+    expect(mocks.lookupSource).not.toHaveBeenCalled()
+  })
+  it('distinguishes absent exact IDs from source failures without falling back to names', async () => {
+    mocks.discoverPublication.mockResolvedValue({ pin: {} })
+    mocks.lookupSource.mockResolvedValue(null)
+    expect(await searchFeaturePlaces({ ...input, q: 'id:ss-missing' })).toEqual({
+      source: 'saanseoi-latest',
+      candidates: [],
+    })
+    mocks.lookupSource.mockRejectedValue(new Error('private upstream diagnostic'))
+    await expect(
+      searchFeaturePlaces({ ...input, q: 'id:ss-missing' }),
+    ).rejects.toMatchObject({ status: 502, body: { message: 'PLACE_SEARCH_FAILED' } })
+    expect(mocks.searchPlaces).not.toHaveBeenCalled()
+  })
   it('rejects client source overrides and reports failures without leaking upstream details', async () => {
     await expect(
       searchFeaturePlaces({ ...input, baseUrl: 'https://other.example' } as never),

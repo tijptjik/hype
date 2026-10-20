@@ -40,6 +40,7 @@ class MatchEvidenceTest(unittest.TestCase):
         plan, index = fixture()
         result = matcher.candidates(plan, index)
         self.assertEqual(result['state'], 'review')
+        self.assertEqual(result['candidates'][0]['lookupQuery'], 'id:a')
         self.assertEqual(result['candidates'][0]['reviewPriority'], 'corroborated')
         self.assertTrue(result['candidates'][0]['evidence']['exactFreeformAddress'])
 

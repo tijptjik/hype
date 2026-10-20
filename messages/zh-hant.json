@@ -1410,7 +1410,7 @@
   "feature_place_description": "與此項目圖徵關聯的實體場所。",
   "feature_place_loading": "正在載入地點…",
   "feature_place_linked": "已關聯地點",
-  "feature_place_search_label": "地點名稱",
+  "feature_place_search_label": "地點名稱或 SaanSeoi ID",
   "feature_place_search": "搜尋地點",
   "feature_place_no_results": "找不到相符地點。",
   "feature_place_import_needed": "此地點需要先從 SaanSeoi 匯入才能關聯。",
