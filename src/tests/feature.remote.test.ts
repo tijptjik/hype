@@ -306,7 +306,9 @@ vi.mock('#lib/db/services/image.js', () => ({
 vi.mock('#lib/db/schema/index.js', async importOriginal => await importOriginal())
 
 vi.mock('#lib/db/zod/index.js', () => ({
-  FeatureFormData: { parse: (value: unknown) => value },
+  FeatureFormData: {
+    safeParse: vi.fn((value: unknown) => ({ success: true, data: value })),
+  },
   GetQueryParamsSchema: {},
   ListQueryParamsSchema: {},
   PublishFeatureSchema: {},
@@ -372,7 +374,7 @@ describe('feature.remote authz matrix', () => {
     mockToListResponseShape.mockImplementation(async (value: unknown) => value)
 
     mockGuardedContext.mockResolvedValue({
-      db: {},
+      db: { query: { property: { findMany: vi.fn().mockResolvedValue([]) } } },
       user: { id: 'u-1', isAnonymous: false, superAdmin: false },
       userRoles: [],
       isAdminRequest: true,
@@ -527,6 +529,30 @@ describe('feature.remote authz matrix', () => {
     expect(mockListFeatures).not.toHaveBeenCalled()
   })
 
+  it('returns field validation issues for an incomplete form before any writes', async () => {
+    const { FeatureFormData } = await import('#lib/db/zod/index.js')
+    vi.mocked(FeatureFormData.safeParse).mockReturnValueOnce({
+      success: false,
+      error: { issues: [{ path: ['data', 'layerId'], message: 'Choose a layer' }] },
+    } as never)
+    const invalid = vi.fn((..._issues: unknown[]): never => {
+      throw new Error('FORM_VALIDATION')
+    })
+    await expect(
+      remote.featureForm(
+        { meta: { mode: 'update' }, data: { i18n: { en: { name: '' } } } },
+        invalid,
+      ),
+    ).rejects.toThrow('FORM_VALIDATION')
+    expect(invalid).toHaveBeenCalled()
+    expect(
+      invalid.mock.calls[0].some(
+        issue => typeof issue === 'object' && issue !== null && 'path' in issue,
+      ),
+    ).toBe(true)
+    expect(mockCreateFeatureForm).not.toHaveBeenCalled()
+  })
+
   it('featureForm create denies when create authz denies', async () => {
     mockAuthorizeFeatureCreateForSubmission.mockReturnValue({
       allowed: false,
@@ -567,7 +593,15 @@ describe('feature.remote authz matrix', () => {
     mockGuardedContext.mockResolvedValue({
       ...(await mockGuardedContext()),
       db: {
-        query: { property: { findMany: vi.fn().mockResolvedValue([{ id: 'phone' }]) } },
+        query: {
+          property: {
+            findMany: vi
+              .fn()
+              .mockResolvedValue([
+                { id: 'phone', component: 'PhoneField', dataType: 'text' },
+              ]),
+          },
+        },
       },
     })
     await expect(
@@ -577,7 +611,7 @@ describe('feature.remote authz matrix', () => {
           data: {
             layerId: 'layer-1',
             i18n: { en: { name: 'Feature' } },
-            properties: [{ propertyId: 'phone', value: '+853 66123456' }],
+            properties: [{ propertyId: 'phone', value: 'not a phone number' }],
             geometry: { type: 'Point', coordinates: [114.1, 22.3] },
             addressMeta: {},
             isIntangible: false,

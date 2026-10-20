@@ -113,6 +113,9 @@ export const inferPropertyDiscriminatorFromComponent = (
     return 'classifier'
   }
   if (
+    component === 'LinkField' ||
+    component === 'DateRangeField' ||
+    component === 'TimeRangeField' ||
     component === 'InputField' ||
     component === 'PhoneField' ||
     component === 'TextareaField'

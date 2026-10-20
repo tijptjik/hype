@@ -17,6 +17,7 @@ import {
   featureI18n,
   organisation,
   featureProperty,
+  property,
   featurePropertyI18n,
 } from '../schema'
 import { getFeatureHubFilter } from './hub'
@@ -266,6 +267,7 @@ export const createProperties = async (
         featureId,
         propertyId: propertyRow.propertyId,
         value: normalizedLink.value,
+        valueJson: propertyRow.valueJson ?? null,
         propertyValueId: normalizedLink.propertyValueId,
       }
 
@@ -286,6 +288,7 @@ export const createProperties = async (
           target: [featureProperty.featureId, featureProperty.propertyId],
           set: {
             value: propertyToInsert.value,
+            valueJson: propertyToInsert.valueJson,
             propertyValueId: propertyToInsert.propertyValueId,
           },
         })
@@ -618,7 +621,7 @@ export const mergeFeatureProperties = (
 
   const visibleLayerProperties = new Map()
   layerData.properties?.forEach(layerProperty => {
-    if (layerProperty.isVisible) {
+    if (layerProperty.isVisible || layerProperty.property?.audience === 'internal') {
       visibleLayerProperties.set(layerProperty.propertyId, layerProperty)
     }
   })
@@ -813,8 +816,12 @@ export const updateProperties = async (
   const incomingPropertyIds = new Set(
     properties.map(propertyRow => propertyRow.propertyId),
   )
+  const internal = await db.query.property.findMany({
+    where: eq(property.audience, 'internal'),
+  })
+  const internalIds = new Set(internal.map(row => row.id))
   const propertyIdsToDelete = [...existingPropertyIds].filter(
-    propertyId => !incomingPropertyIds.has(propertyId),
+    propertyId => !incomingPropertyIds.has(propertyId) && !internalIds.has(propertyId),
   )
 
   if (propertyIdsToDelete.length > 0) {
@@ -846,6 +853,7 @@ export const updateProperties = async (
       featureId,
       propertyId: propertyRow.propertyId,
       value: normalizedLink.value,
+      valueJson: propertyRow.valueJson ?? null,
       propertyValueId: normalizedLink.propertyValueId,
     }
 
@@ -866,6 +874,7 @@ export const updateProperties = async (
         target: [featureProperty.featureId, featureProperty.propertyId],
         set: {
           value: propertyToUpsert.value,
+          valueJson: propertyToUpsert.valueJson,
           propertyValueId: propertyToUpsert.propertyValueId,
         },
       })

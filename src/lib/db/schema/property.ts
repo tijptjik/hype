@@ -62,6 +62,26 @@ export const property = sqliteTable(
       .notNull()
       .default(FieldDiscriminator.classifier),
     key: text('key').notNull(),
+    dataType: text('dataType', {
+      enum: ['text', 'number', 'date', 'boolean', 'link', 'dateRange', 'timeRange'],
+    })
+      .notNull()
+      .default('text'),
+    dateResolution: text('dateResolution', { enum: ['decade', 'year', 'month', 'day'] })
+      .notNull()
+      .default('day'),
+    timeMaxHour: integer('timeMaxHour').$type<24 | 36>().notNull().default(24),
+    cardinality: text('cardinality', { enum: ['one', 'many'] })
+      .notNull()
+      .default('one'),
+    presentation: text('presentation', {
+      enum: ['text', 'labelledLinks', 'numberedReferences'],
+    })
+      .notNull()
+      .default('text'),
+    audience: text('audience', { enum: ['public', 'internal'] })
+      .notNull()
+      .default('public'),
     component: text('component', {
       enum: Object.values(PropertyComponentType) as [string, ...string[]],
     })

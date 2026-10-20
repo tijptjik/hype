@@ -37,6 +37,7 @@ beforeEach(() => {
     schema.layer,
     schema.layerProperty,
     schema.property,
+    schema.featureProperty,
     schema.propertyI18n,
     schema.propertyValue,
     schema.propertyValueI18n,
@@ -53,7 +54,20 @@ beforeEach(() => {
           : table === schema.propertyValueI18n && column.name === 'propertyValueId'
             ? ' REFERENCES propertyValue(id) ON DELETE CASCADE'
             : ''
-      return `"${column.name}" ${column.getSQLType()}${parent}`
+      const contractDefault =
+        table === schema.property
+          ? (
+              {
+                dataType: 'text',
+                cardinality: 'one',
+                presentation: 'text',
+                audience: 'public',
+                dateResolution: 'day',
+                timeMaxHour: '24',
+              } as Record<string, string>
+            )[column.name]
+          : undefined
+      return `"${column.name}" ${column.getSQLType()}${parent}${contractDefault ? ` NOT NULL DEFAULT '${contractDefault}'` : ''}`
     })
     sqlite.exec(`CREATE TABLE "${getTableName(table)}" (${columns.join(', ')})`)
   }
@@ -862,4 +876,75 @@ describe('project property cascade transaction integrity', () => {
     expect(snapshot().links.filter(row => row.layerId === 'second')).toHaveLength(254)
     expect(batches).toEqual([253])
   })
+})
+
+it('persists structured metadata and rejects reinterpreting populated values', async () => {
+  const definition = {
+    id: 'links',
+    key: 'links',
+    component: 'LinkField',
+    dataType: 'link',
+    cardinality: 'many',
+    presentation: 'numberedReferences',
+    audience: 'public',
+    isTranslatable: false,
+    i18n: {},
+    values: [],
+  } as unknown as ProjectPropertyForm
+  const saved = await upsertProjectProperties(db, [definition], 'project')
+  expect(saved.find(row => row.id === 'links')).toMatchObject({
+    dataType: 'link',
+    cardinality: 'many',
+    presentation: 'numberedReferences',
+  })
+  sqlite
+    .prepare(
+      'INSERT INTO featureProperty(featureId,propertyId,valueJson) VALUES (?,?,?)',
+    )
+    .run(
+      'f',
+      'links',
+      JSON.stringify({
+        version: 1,
+        items: [{ id: 'a', url: 'https://example.org', label: { en: 'Example' } }],
+      }),
+    )
+  await expect(
+    upsertProjectProperties(db, [{ ...definition, cardinality: 'one' }], 'project'),
+  ).rejects.toMatchObject({ status: 400 })
+  expect(
+    sqlite.prepare("SELECT cardinality FROM property WHERE id='links'").get()
+      ?.cardinality,
+  ).toBe('many')
+})
+
+it('keeps populated calendar coordinates tied to their resolution', async () => {
+  const definition = {
+    id: 'dates',
+    key: 'dates',
+    component: 'DateRangeField',
+    dataType: 'dateRange',
+    dateResolution: 'year',
+    isTranslatable: false,
+    cardinality: 'one',
+    presentation: 'text',
+    i18n: {},
+    values: [],
+  } as unknown as ProjectPropertyForm
+  await upsertProjectProperties(db, [definition], 'project')
+  sqlite
+    .prepare(
+      'INSERT INTO featureProperty(featureId,propertyId,valueJson) VALUES (?,?,?)',
+    )
+    .run('f', 'dates', JSON.stringify({ version: 1, start: 2020, end: 2024 }))
+  await expect(
+    upsertProjectProperties(db, [definition], 'project'),
+  ).resolves.toBeDefined()
+  await expect(
+    upsertProjectProperties(
+      db,
+      [{ ...definition, dateResolution: 'month' }],
+      'project',
+    ),
+  ).rejects.toMatchObject({ status: 400 })
 })

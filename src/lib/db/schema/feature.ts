@@ -1,4 +1,5 @@
 import {
+  check,
   foreignKey,
   index,
   integer,
@@ -254,9 +255,15 @@ export const featureProperty = sqliteTable(
     // categorical, there will be no value set, and there will be no i18n records for this property. Instead the i18n records will be
     // set on the propertyValue table.
     value: text('value'),
+    // Versioned structured values are separate from legacy scalar and classifier storage.
+    valueJson: text('valueJson'),
   },
   table => [
     primaryKey({ columns: [table.featureId, table.propertyId] }),
+    check(
+      'feature_property_structured_storage',
+      sql`${table.valueJson} IS NULL OR (json_valid(${table.valueJson}) AND ${table.value} IS NULL AND ${table.propertyValueId} IS NULL)`,
+    ),
     index('feature_property_selection_idx').on(
       table.propertyId,
       table.propertyValueId,

@@ -4,7 +4,9 @@ import { enGB } from 'date-fns/locale/en-GB'
 import { zhCN } from 'date-fns/locale/zh-CN'
 import { zhHK } from 'date-fns/locale/zh-HK'
 // PROPERTY VALUES
-import { formatPhoneNumbers } from '#lib/utils/phone-property.js'
+import { isRangeProperty, rangeText, singleDateText } from '#lib/properties/range.js'
+import { displayLinkValue, type PropertyDisplay } from '#lib/properties/value.js'
+import { phoneDisplay, readPhoneNumbers } from '#lib/utils/phone-property.js'
 // I18N
 import { normalizeLocaleCode, toLocaleKebab } from '#lib/i18n/localeRecords.js'
 import * as runtime from '#lib/paraglide/runtime.js'
@@ -384,7 +386,7 @@ export function getI18n<T>(
 function isEmptyFeatureProperty(obj: Omit<FeatureProperty, 'featureId'>): boolean {
   const hasDirectValue =
     typeof obj.value === 'string' ? obj.value.trim().length > 0 : !!obj.value
-  return !hasDirectValue && !obj.propertyValueId && !obj.i18n
+  return !hasDirectValue && !obj.valueJson && !obj.propertyValueId && !obj.i18n
 }
 
 /**
@@ -397,6 +399,23 @@ export function getFPI18n(
   obj: Omit<FeatureProperty, 'featureId'>,
   userPreferences: UserPreferences,
 ): string {
+  if (obj.property?.dataType === 'date')
+    return singleDateText(obj.value ?? '') || m.great_crazy_squid_promise()
+  if (obj.property && isRangeProperty(obj.property))
+    return rangeText(obj.property, obj.valueJson) || m.great_crazy_squid_promise()
+  if (obj.property?.dataType === 'link') {
+    const display = displayLinkValue(
+      obj.property,
+      obj.valueJson,
+      getUserLocaleSearchOrder(userPreferences),
+    )
+    return display.kind === 'links'
+      ? display.links.map(link => `${link.label} (${link.url})`).join('; ') ||
+          m.great_crazy_squid_promise()
+      : display.kind === 'unavailable'
+        ? display.text
+        : display.text
+  }
   const field = 'value'
   const fallback = m.great_crazy_squid_promise()
 
@@ -404,8 +423,14 @@ export function getFPI18n(
   if (isEmptyFeatureProperty(obj)) return fallback
 
   // Phone arrays retain every number in generic property displays.
-  if (obj.property?.component === 'PhoneField')
-    return formatPhoneNumbers(obj.value) || fallback
+  if (obj.property?.component === 'PhoneField') {
+    const numbers = readPhoneNumbers(obj.value)
+    return (
+      (numbers === null
+        ? obj.value
+        : numbers.map(number => phoneDisplay(number).text).join(', ')) || fallback
+    )
+  }
 
   // CASE : SPECIFIER Property & UNIVERSAL VALUE
   if (obj.property?.type === 'specifier' && obj.value) {
@@ -426,14 +451,13 @@ export function getFPI18n(
   }
   // CASE : CLASSIFIER Property
   else if (obj.property?.type === 'classifier' && obj.propertyValueId) {
+    // Non-translated classifier options still have a canonical display value.
+    const option = obj.property.values?.find(v => v.id === obj.propertyValueId)
     return getI18n<PropertyValueI18nDB>(
-      obj.property.values?.find(v => v.id === obj.propertyValueId)?.i18n as Record<
-        LocaleKey,
-        PropertyValueI18nDB
-      >,
+      option?.i18n as Record<LocaleKey, PropertyValueI18nDB>,
       field,
       userPreferences,
-      fallback,
+      option?.value || obj.propertyValue?.value || fallback,
     )
   }
   // CASE : FALLBACK
@@ -521,4 +545,32 @@ export async function translateI18nFields({
     onFailure?.(error)
     throw error
   }
+}
+
+/**
+ * Build safe presentation data separately from plain-text export.
+ * @param obj Hydrated feature property.
+ * @param userPreferences User locale fallback preferences.
+ * @returns Typed text or validated links.
+ */
+export function getFeaturePropertyDisplay(
+  obj: Omit<FeatureProperty, 'featureId'>,
+  userPreferences: UserPreferences,
+): PropertyDisplay {
+  if (obj.property?.component === 'PhoneField') {
+    const text = getFPI18n(obj, userPreferences)
+    const numbers =
+      readPhoneNumbers(obj.value)?.flatMap(number => {
+        const display = phoneDisplay(number)
+        return display.href ? [{ text: display.text, href: display.href }] : []
+      }) ?? []
+    return numbers.length ? { kind: 'phones', text, numbers } : { kind: 'text', text }
+  }
+  return obj.property?.dataType === 'link'
+    ? displayLinkValue(
+        obj.property,
+        obj.valueJson,
+        getUserLocaleSearchOrder(userPreferences),
+      )
+    : { kind: 'text', text: getFPI18n(obj, userPreferences) }
 }

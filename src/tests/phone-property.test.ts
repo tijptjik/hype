@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 // VALIDATION
 import {
   normalizeHongKongPhoneNumber,
+  normalizePhoneNumber,
   readPhoneNumbers,
   formatPhoneNumbers,
 } from '#lib/utils/phone-property.js'
@@ -39,7 +40,13 @@ describe('Hong Kong phone properties', () => {
   })
   it('uses persisted types and ignores spoofed client metadata', async () => {
     const db = {
-      query: { property: { findMany: vi.fn().mockResolvedValue([{ id: 'phone' }]) } },
+      query: {
+        property: {
+          findMany: vi
+            .fn()
+            .mockResolvedValue([{ id: 'phone', component: 'PhoneField' }]),
+        },
+      },
     } as unknown as Database
     const rows = [
       {
@@ -100,7 +107,13 @@ describe('phone collections', () => {
   })
   it('normalizes every submitted number without selecting one or discarding invalid members', async () => {
     const db = {
-      query: { property: { findMany: vi.fn().mockResolvedValue([{ id: 'phone' }]) } },
+      query: {
+        property: {
+          findMany: vi
+            .fn()
+            .mockResolvedValue([{ id: 'phone', component: 'PhoneField' }]),
+        },
+      },
     } as unknown as Database
     expect(
       await validateFeaturePhoneProperties(db, [
@@ -116,4 +129,36 @@ describe('phone collections', () => {
       ]),
     ).rejects.toThrow()
   })
+})
+
+describe('international feature phone numbers', () => {
+  it.each([
+    ['+1 (202) 555-0123', '+12025550123'],
+    ['0044 20 7946 0018', '+442079460018'],
+    ['+853 6612 3456', '+85366123456'],
+    ['2345 6789', '+85223456789'],
+  ])('normalizes %s', (input, expected) => {
+    expect(normalizePhoneNumber(input)).toBe(expected)
+  })
+  it('persists international and local numbers in the same collection', async () => {
+    const db = {
+      query: {
+        property: {
+          findMany: vi
+            .fn()
+            .mockResolvedValue([{ id: 'phone', component: 'PhoneField' }]),
+        },
+      },
+    } as unknown as Database
+    expect(
+      await validateFeaturePhoneProperties(db, [
+        { propertyId: 'phone', value: '+1 202 555 0123\n23456789' },
+      ]),
+    ).toMatchObject([{ value: '["+12025550123","+85223456789"]' }])
+  })
+})
+
+it('ignores empty editor rows while retaining invalid-number rejection', () => {
+  expect(readPhoneNumbers('["+31613401674", "", "  "]')).toEqual(['+31613401674'])
+  expect(readPhoneNumbers('["+31613401674", "invalid"]')).toBeNull()
 })

@@ -15,6 +15,30 @@ import {
 // CONSTRAINTS
 import { getDefaultConstraints, getLocales } from '../constraints'
 import { FormBoolean } from '../form'
+import {
+  PropertyDataType,
+  PropertyCardinality,
+  PropertyPresentation,
+  PropertyAudience,
+} from '#lib/properties/value.js'
+
+import {
+  DateResolution,
+  TimeMaxHour,
+  isRangeProperty,
+  rangeDomain,
+  formatRangeEndpoint,
+  parseRangeEndpoint,
+} from '#lib/properties/range.js'
+
+const valueContract = {
+  dateResolution: DateResolution.optional(),
+  timeMaxHour: z.coerce.number().pipe(TimeMaxHour).optional(),
+  dataType: PropertyDataType.optional(),
+  cardinality: PropertyCardinality.optional(),
+  presentation: PropertyPresentation.optional(),
+  audience: PropertyAudience.optional(),
+}
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -76,6 +100,122 @@ const withPropertyFieldRequirements = <TSchema extends z.ZodTypeAny>(
       component?: unknown
       min?: unknown
       max?: unknown
+      dataType?: string
+      cardinality?: string
+      presentation?: string
+      type?: string
+      dateResolution?: z.infer<typeof DateResolution>
+      timeMaxHour?: 24 | 36
+    }
+
+    if (
+      record.dataType &&
+      record.dataType !== 'text' &&
+      record.dataType !== 'link' &&
+      !isRangeProperty(record) &&
+      (record.isTranslatable !== false || record.type === 'classifier')
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['dataType'],
+        message: 'Typed scalars require a non-translatable specifier',
+      })
+    }
+    if (isRangeProperty(record)) {
+      if (
+        record.component !==
+          (record.dataType === 'dateRange' ? 'DateRangeField' : 'TimeRangeField') ||
+        record.type === 'classifier' ||
+        record.isTranslatable !== false ||
+        (record.cardinality && record.cardinality !== 'one') ||
+        (record.presentation && record.presentation !== 'text')
+      )
+        ctx.addIssue({
+          code: 'custom',
+          path: ['dataType'],
+          message:
+            'Ranges require a non-translatable range specifier with one value and text presentation',
+        })
+      const bounds = rangeDomain({
+        ...record,
+        min: typeof record.min === 'number' ? record.min : null,
+        max: typeof record.max === 'number' ? record.max : null,
+      })
+      if (
+        !Number.isInteger(bounds.min) ||
+        !Number.isInteger(bounds.max) ||
+        bounds.min >= bounds.max
+      )
+        ctx.addIssue({
+          code: 'custom',
+          path: ['min'],
+          message: 'Range minimum must precede maximum',
+        })
+      try {
+        for (const bound of [bounds.min, bounds.max])
+          if (
+            parseRangeEndpoint(
+              {
+                dataType: record.dataType,
+                dateResolution: record.dateResolution,
+                timeMaxHour: record.timeMaxHour,
+              },
+              formatRangeEndpoint(
+                { dataType: record.dataType, dateResolution: record.dateResolution },
+                bound,
+              ),
+            ) !== bound
+          )
+            throw new Error('Invalid bound')
+      } catch {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['min'],
+          message: 'Bounds must be valid calendar endpoints at the selected resolution',
+        })
+      }
+    } else if (
+      record.component === 'DateRangeField' ||
+      record.component === 'TimeRangeField'
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['dataType'],
+        message: 'Choose the matching range data type',
+      })
+    }
+    if (record.dataType === 'link') {
+      if (
+        record.component !== 'LinkField' ||
+        record.type === 'classifier' ||
+        record.isTranslatable !== false
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['dataType'],
+          message:
+            'Links require a LinkField specifier with scalar translation disabled',
+        })
+      }
+      if (
+        record.presentation !== 'labelledLinks' &&
+        record.presentation !== 'numberedReferences'
+      )
+        ctx.addIssue({
+          code: 'custom',
+          path: ['presentation'],
+          message: 'Choose a link presentation',
+        })
+    } else if (
+      record.cardinality === 'many' ||
+      record.component === 'LinkField' ||
+      (record.presentation && record.presentation !== 'text')
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['dataType'],
+        message: 'Collections and link presentations require the link data type',
+      })
     }
 
     if (record.component === 'PhoneField' && record.isTranslatable !== false) {
@@ -108,6 +248,7 @@ const selectedPropertyRecord = createSelectSchema(property)
 
 // Older ELN imports used TextField for the canonical single-line InputField.
 export const PropertyRecord = selectedPropertyRecord.extend({
+  ...valueContract,
   component: z.preprocess(
     value => (value === 'TextField' ? 'InputField' : value),
     selectedPropertyRecord.shape.component,
@@ -118,6 +259,7 @@ export const ProjectPropertyRecord = createSelectSchema(projectProperty)
 export const PropertyRecordCreate = withPropertyFieldRequirements(
   createInsertSchema(property).extend({
     ...getDefaultConstraints(property),
+    ...valueContract,
     key: z
       .string()
       .min(1, { message: m.field_is_required({ field: m.field_code() }) })
@@ -134,6 +276,7 @@ export const PropertyRecordCreate = withPropertyFieldRequirements(
 export const PropertyRecordUpdate = withPropertyFieldRequirements(
   createUpdateSchema(property).extend({
     ...getDefaultConstraints(property),
+    ...valueContract,
     key: z
       .string()
       .regex(PROPERTY_KEY_IDENTIFIER_REGEX, {
@@ -261,6 +404,7 @@ export const ProjectPropertyValueFormData = z.object({
 
 export const ProjectPropertyFormData = withPropertyFieldRequirements(
   z.object({
+    ...valueContract,
     id: z.string().optional(),
     scope: z.enum(['hub', 'organisation', 'project']).default('project'),
     hubId: z.string().nullish().optional(),

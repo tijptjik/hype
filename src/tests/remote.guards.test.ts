@@ -126,6 +126,26 @@ describe('remote guard wrappers', () => {
     expect(result).toEqual({ ok: true })
   })
 
+  it.each([
+    [true, true],
+    ['true', true],
+    [false, false],
+    ['false', false],
+    ['on', false],
+    ['1', false],
+    ['', false],
+    [undefined, false],
+  ])('normalizes unchecked form admin intent %s to %s', async (flag, expected) => {
+    const handler = guardedForm('unchecked', async (_input, ctx) => {
+      expect(ctx.isAdminRequest).toBe(expected)
+      return { ok: true }
+    })
+    await (handler as unknown as (input: unknown, issue: unknown) => Promise<unknown>)(
+      { meta: { isAdminRequest: flag } },
+      {},
+    )
+  })
+
   it('guardedBatchQuery settles row promises before returning its resolver', async () => {
     const handler = guardedBatchQuery(
       z.object({ id: z.string() }),

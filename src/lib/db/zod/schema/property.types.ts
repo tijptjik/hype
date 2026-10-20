@@ -56,7 +56,19 @@ export type FormFieldCardBodyProps = {
   isEditing?: boolean
   onUpdateBase: (
     propertyId: Id,
-    key: 'key' | 'component' | 'min' | 'max' | 'isTranslatable' | 'isDefaultEnabled',
+    key:
+      | 'key'
+      | 'component'
+      | 'min'
+      | 'max'
+      | 'isTranslatable'
+      | 'dateResolution'
+      | 'timeMaxHour'
+      | 'dataType'
+      | 'cardinality'
+      | 'presentation'
+      | 'audience'
+      | 'isDefaultEnabled',
     value: string | number | null | boolean,
   ) => void
   onUpdateI18n: (

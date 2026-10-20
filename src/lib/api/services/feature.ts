@@ -597,6 +597,7 @@ export const toComparableFeatureProperties = (
   properties: Array<{
     propertyId?: string | null
     value?: string | null
+    valueJson?: string | null
     propertyValueId?: string | null
     i18n?: Record<string, { value?: string | null }>
   }>,
@@ -614,6 +615,7 @@ export const toComparableFeatureProperties = (
     .map(property => ({
       propertyId: property.propertyId,
       value: property.value ?? null,
+      valueJson: property.valueJson ?? null,
       propertyValueId: property.propertyValueId ?? null,
       i18n: Object.fromEntries(
         Object.entries(property.i18n ?? {}).map(([localeKey, localeValue]) => [
@@ -986,6 +988,8 @@ const prepareUserContributedFeatureDraft = async (
   validatedFeature.properties = await validateFeaturePhoneProperties(
     db,
     validatedFeature.properties ?? [],
+    new Set(),
+    validatedFeature.layerId,
   )
   return {
     validatedFeature,
@@ -1158,6 +1162,7 @@ export const assertUserContributedFeatureDraftIsSubmittable = async (
   const properties = (persistedFeature.properties ?? []).map(propertyRow => ({
     propertyId: propertyRow.propertyId,
     value: propertyRow.value ?? null,
+    valueJson: propertyRow.valueJson ?? null,
     propertyValueId: propertyRow.propertyValueId ?? null,
     i18n: (propertyRow.i18n ?? []).reduce<
       Record<LocaleKey, { value?: string; valueGen?: boolean }>

@@ -238,6 +238,9 @@ export const fieldDiscriminators = Object.values(FieldDiscriminator)
 // COMPONENT TYPES
 /* -------- */
 export enum PropertyComponentType {
+  LinkField = 'LinkField',
+  DateRangeField = 'DateRangeField',
+  TimeRangeField = 'TimeRangeField',
   SelectField = 'SelectField',
   RangeField = 'RangeField',
   InputField = 'InputField',

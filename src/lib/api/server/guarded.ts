@@ -1,4 +1,8 @@
 import { invalid, isRedirect } from '@sveltejs/kit'
+import {
+  protectPropertyFilters,
+  protectPropertyResponse,
+} from '#lib/properties/audience.server.js'
 
 import {
   command,
@@ -14,6 +18,8 @@ import {
 
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { setupRequestHandler } from '#lib/api/index.js'
+// FORM VALUES
+import { FormBoolean } from '#lib/db/zod/form.js'
 
 import type {
   GuardedBaseContext,
@@ -100,7 +106,9 @@ const toMetaAdminRequest = (payload: unknown): boolean | undefined => {
 
   const isAdminRequest = (meta as { isAdminRequest?: unknown }).isAdminRequest
 
-  return typeof isAdminRequest === 'boolean' ? isAdminRequest : undefined
+  // Unchecked remote forms carry HTML boolean values as strings before schema parsing.
+  const parsed = FormBoolean.safeParse(isAdminRequest)
+  return parsed.success ? parsed.data : undefined
 }
 
 /**
@@ -176,7 +184,8 @@ export function guardedQuery(
       query(schemaOrFn, async output => {
         const ctx = await resolveGuardedContext(output)
 
-        return maybeFn(output, ctx)
+        await protectPropertyFilters(output, ctx)
+        return protectPropertyResponse(await maybeFn(output, ctx), ctx)
       }),
     )
   }
@@ -185,7 +194,7 @@ export function guardedQuery(
     return registerQuery(
       query(async () => {
         const ctx = await resolveGuardedContext()
-        return schemaOrFn(ctx)
+        return protectPropertyResponse(await schemaOrFn(ctx), ctx)
       }),
     )
   }
@@ -221,12 +230,26 @@ export function guardedBatchQuery<Schema extends StandardSchemaV1, Output>(
   return registerQuery(
     query.batch(schema, async outputs => {
       const ctx = await resolveGuardedContext(outputs)
+      await Promise.all(
+        outputs.map(output =>
+          protectPropertyFilters(output, {
+            ...ctx,
+            isAdminRequest: toMetaAdminRequest(output) === true,
+          }),
+        ),
+      )
       const resolver = await fn(outputs, ctx)
 
       const settled = await Promise.all(
         outputs.map(async (output, index) => {
           try {
-            return { ok: true as const, value: await resolver(output, index) }
+            return {
+              ok: true as const,
+              value: await protectPropertyResponse(await resolver(output, index), {
+                ...ctx,
+                isAdminRequest: toMetaAdminRequest(output) === true,
+              }),
+            }
           } catch (error) {
             return { ok: false as const, error }
           }
@@ -326,12 +349,15 @@ export function guardedForm(
     >
     return form(schema, async (output, issue) => {
       const ctx = await resolveGuardedContext(output)
-      return withRequestedRefreshes(() =>
-        maybeFn(output, {
-          ...ctx,
-          invalid,
-          issue: issue as GuardedIssue,
-        }),
+      return withRequestedRefreshes(async () =>
+        protectPropertyResponse(
+          await maybeFn(output, {
+            ...ctx,
+            invalid,
+            issue: issue as GuardedIssue,
+          }),
+          ctx,
+        ),
       )
     })
   }
@@ -339,12 +365,15 @@ export function guardedForm(
   if (schemaOrFn === 'unchecked' && typeof maybeFn === 'function') {
     return form('unchecked', async (input: unknown, issue) => {
       const ctx = await resolveGuardedContext(input)
-      return withRequestedRefreshes(() =>
-        maybeFn(input, {
-          ...ctx,
-          invalid,
-          issue: issue as GuardedIssue,
-        }),
+      return withRequestedRefreshes(async () =>
+        protectPropertyResponse(
+          await maybeFn(input, {
+            ...ctx,
+            invalid,
+            issue: issue as GuardedIssue,
+          }),
+          ctx,
+        ),
       )
     })
   }
@@ -352,12 +381,15 @@ export function guardedForm(
   if (typeof schemaOrFn === 'function' && !maybeFn) {
     return form('unchecked', async (_input: unknown, issue) => {
       const ctx = await resolveGuardedContext()
-      return withRequestedRefreshes(() =>
-        schemaOrFn({
-          ...ctx,
-          invalid,
-          issue: issue as GuardedIssue,
-        }),
+      return withRequestedRefreshes(async () =>
+        protectPropertyResponse(
+          await schemaOrFn({
+            ...ctx,
+            invalid,
+            issue: issue as GuardedIssue,
+          }),
+          ctx,
+        ),
       )
     })
   }
@@ -390,14 +422,18 @@ export function guardedCommand(
   if (typeof maybeFn === 'function' && typeof schemaOrFn !== 'function') {
     return command(schemaOrFn, async output => {
       const ctx = await resolveGuardedContext(output)
-      return withRequestedRefreshes(() => maybeFn(output, ctx))
+      return withRequestedRefreshes(async () =>
+        protectPropertyResponse(await maybeFn(output, ctx), ctx),
+      )
     })
   }
 
   if (typeof schemaOrFn === 'function' && !maybeFn) {
     return command('unchecked', async (input: unknown) => {
       const ctx = await resolveGuardedContext(input)
-      return withRequestedRefreshes(() => schemaOrFn(input, ctx))
+      return withRequestedRefreshes(async () =>
+        protectPropertyResponse(await schemaOrFn(input, ctx), ctx),
+      )
     })
   }
 

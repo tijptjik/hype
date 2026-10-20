@@ -344,8 +344,27 @@ describe('getFPI18n', () => {
       value: '["+85223456789","+85291234567"]',
       property: { ...base.property!, component: 'PhoneField', type: 'specifier' },
     })
-    expect(getFPI18n(phone, userPreferences)).toBe('+85223456789, +85291234567')
+    expect(getFPI18n(phone, userPreferences)).toBe('+852 2345 6789, +852 9123 4567')
     expect(getFPI18n({ ...phone, value: '[]' }, userPreferences)).toBe(fallback)
+  })
+
+  it('displays the canonical classifier value when translations are absent', () => {
+    const base = createProperty()
+    const genre = createProperty({
+      propertyValueId: 'fiction',
+      property: {
+        ...base.property!,
+        values: [
+          {
+            id: 'fiction',
+            propertyId: base.propertyId,
+            rank: 0,
+            value: 'Literary Fiction',
+          },
+        ],
+      },
+    })
+    expect(getFPI18n(genre, userPreferences)).toBe('Literary Fiction')
   })
 
   it('returns the normal fallback for empty feature properties without warning', () => {

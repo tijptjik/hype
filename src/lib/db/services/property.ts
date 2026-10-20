@@ -6,6 +6,8 @@ import { nanoid } from 'nanoid'
 import { and, asc, eq, inArray, or, not, sql, getTableColumns } from 'drizzle-orm'
 import { chunkedInArray, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // DB
+// PROPERTY CONTRACT
+import { rangeDomain } from '#lib/properties/range.js'
 import { transformI18nSafely, toRelatedRecords } from '#lib/db/index.js'
 import { inferPropertyDiscriminatorFromComponent } from '#lib/api/services/index.js'
 import { toPropertyResponseFromRaw } from '#lib/api/services/property.js'
@@ -27,6 +29,7 @@ import {
   projectProperty,
   hubProperty,
   organisationProperty,
+  featureProperty,
   propertyI18n,
   propertyValue,
   propertyValueI18n,
@@ -749,6 +752,26 @@ const savePropertyCatalog = async (
   })
   const existingById = new Map(existingProperties.map(row => [row.id, row]))
 
+  // Populated contracts cannot be reinterpreted by a metadata edit; migrate values explicitly.
+  for (const input of properties) {
+    const existing = existingById.get(input.id ?? '')
+    if (
+      existing &&
+      ((input.dataType ?? existing.dataType) !== existing.dataType ||
+        (input.cardinality ?? existing.cardinality) !== existing.cardinality ||
+        input.component !== existing.component ||
+        (input.dateResolution ?? existing.dateResolution) !== existing.dateResolution ||
+        (input.timeMaxHour ?? existing.timeMaxHour) !== existing.timeMaxHour ||
+        ((existing.dataType === 'dateRange' || existing.dataType === 'timeRange') &&
+          (rangeDomain({ ...existing, ...input }).min !== rangeDomain(existing).min ||
+            rangeDomain({ ...existing, ...input }).max !== rangeDomain(existing).max)))
+    ) {
+      const populated = await db.query.featureProperty.findFirst({
+        where: eq(featureProperty.propertyId, existing.id),
+      })
+      if (populated) throw error(400, 'PROPERTY_CONTRACT_HAS_VALUES')
+    }
+  }
   // Validate every create/update before mutating existing records, avoiding destructive
   // deletes or partial saves when any submitted base payload is invalid.
   const prepared = properties.map(input => {
@@ -759,6 +782,7 @@ const savePropertyCatalog = async (
     const existing = existingById.get(id)
     const serverOwnedBase = {
       ...base,
+      ...(base.audience === 'internal' ? { isUserContributable: false } : {}),
       id,
       projectId: target.scope === 'project' ? target.id : null,
       hubId: target.scope === 'hub' ? target.id : null,
@@ -959,7 +983,13 @@ const savePropertyCatalog = async (
   // Delete stale properties after successful create/update processing, within the same batch.
   const deletion = db
     .delete(property)
-    .where(and(scopeFilter, not(chunkedInArray(property.id, ids))))
+    .where(
+      and(
+        scopeFilter,
+        eq(property.audience, 'public'),
+        not(chunkedInArray(property.id, ids)),
+      ),
+    )
   const readback = db.query.property.findMany({
     where: scopeFilter,
     with: { i18n: true, values: { with: { i18n: true } } },

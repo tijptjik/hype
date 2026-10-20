@@ -1,6 +1,13 @@
 import { customAlphabet } from 'nanoid'
 import { tick } from 'svelte'
 // I18N
+// PROPERTY CONTRACT
+import {
+  isRangeProperty,
+  rangeDomain,
+  normalizeRangeValue,
+  RangeValueSchema,
+} from '#lib/properties/range.js'
 import { m } from '#lib/i18n.js'
 import { ensureLocaleEntryForWrite } from '#lib/i18n.js'
 import { getI18n } from '#lib/i18n.js'
@@ -231,7 +238,21 @@ export const getGroupedClassifierProperties = async (
       if (!project || !organisation) return null
 
       // Get sorted classifier properties from layerProperties
-      const properties = await appCtx.getClassifierPropertiesForLayer(layer)
+      const classifiers = await appCtx.getClassifierPropertiesForLayer(layer)
+      const intervals = (layer.properties ?? [])
+        .filter(row => row.isVisible)
+        .flatMap(row => {
+          const definition =
+            row.property ?? appCtx.cache.property.get(row.propertyId ?? '')
+          return definition &&
+            definition.audience !== 'internal' &&
+            isRangeProperty(definition)
+            ? [definition]
+            : []
+        })
+      const properties = [...classifiers, ...intervals].sort(
+        (a, b) => (a.rank ?? 0) - (b.rank ?? 0),
+      )
       if (properties.length === 0) return null
 
       // Construct hierarchy info without hiding single-child names: each filter group needs its own identity.
@@ -385,8 +406,8 @@ export function setRangePropertyFilter(
       // Find the property definition to get the global min/max
       const property = appCtx.cache.property.get(propertyId)
       if (property) {
-        globalMin = property.min ?? undefined
-        globalMax = property.max ?? undefined
+        globalMin = rangeDomain(property).min
+        globalMax = rangeDomain(property).max
       }
     }
 
@@ -843,6 +864,38 @@ export async function scrollWithMovedProperty(
 // 3.2.2 PROPERTY MUTATORS
 // ───────────────────────
 
+/**
+ * Build an empty option with a stable ID and the property's translation shape.
+ * @param propertyId Owning property ID.
+ * @param isTranslatable Whether option labels have locale entries.
+ * @param rank Position in the option list.
+ * @returns A new, editable option.
+ */
+function createEmptyPropertyOption(
+  propertyId: Id,
+  isTranslatable: boolean,
+  rank = 0,
+): NonNullable<Property['values']>[number] {
+  const id = propertyNanoId(12)
+  return {
+    id,
+    propertyId,
+    rank,
+    value: '',
+    i18n: isTranslatable ? toEmptyPropertyValueI18n(id) : undefined,
+  }
+}
+
+/**
+ * Initialise a field, including one empty option for a Select component.
+ * @param form Mutable property form.
+ * @param fieldDiscriminator Classifier or specifier family.
+ * @param projectId Owning project.
+ * @param classifierComponents Available classifier widgets.
+ * @param specifierComponents Available specifier widgets.
+ * @param options Optional ownership and default overrides.
+ * @returns Nothing; updates the form in place.
+ */
 export function addProjectPropertyForType(
   form: FormDataUpdaterForm<PropertyFormData>,
   fieldDiscriminator: PropertyDiscriminator,
@@ -882,7 +935,12 @@ export function addProjectPropertyForType(
     rank: 0,
     component,
     isTranslatable: fieldDiscriminator === 'classifier',
-    values: fieldDiscriminator === 'classifier' ? [] : null,
+    values:
+      component === 'SelectField'
+        ? [createEmptyPropertyOption(id, fieldDiscriminator === 'classifier')]
+        : fieldDiscriminator === 'classifier'
+          ? []
+          : null,
     min: null,
     max: null,
     i18n: toEmptyPropertyI18n(id),
@@ -975,6 +1033,15 @@ export function changeProjectPropertyRankUnified(
   })
 }
 
+/**
+ * Update a definition and keep its component-specific defaults consistent.
+ * @param form Mutable property form.
+ * @param propertyId Definition to update.
+ * @param key Definition field to change.
+ * @param value New field value.
+ * @returns Nothing; updates the form in place.
+ * @remarks Selecting SelectField seeds a blank option only when no options exist.
+ */
 export function updateProjectPropertyBase(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
@@ -984,6 +1051,12 @@ export function updateProjectPropertyBase(
     | 'min'
     | 'max'
     | 'isTranslatable'
+    | 'dateResolution'
+    | 'timeMaxHour'
+    | 'dataType'
+    | 'cardinality'
+    | 'presentation'
+    | 'audience'
     | 'isDefaultEnabled'
     | 'isEnabled',
   value: string | number | null | boolean,
@@ -1003,6 +1076,34 @@ export function updateProjectPropertyBase(
     const wasEnabledBeforeChange = isPropertyEnabled(target)
 
     ;(target as Record<string, unknown>)[key] = value
+    if (key === 'dateResolution') {
+      target.min = null
+      target.max = null
+    }
+    if (key === 'dataType' && value !== 'text') target.isTranslatable = false
+    if (key === 'component') {
+      target.dataType =
+        value === 'LinkField'
+          ? 'link'
+          : value === 'DateRangeField'
+            ? 'dateRange'
+            : value === 'TimeRangeField'
+              ? 'timeRange'
+              : 'text'
+      target.cardinality = 'one'
+      target.presentation = value === 'LinkField' ? 'labelledLinks' : 'text'
+      if (
+        value === 'LinkField' ||
+        value === 'DateRangeField' ||
+        value === 'TimeRangeField'
+      ) {
+        target.isTranslatable = false
+        target.min = null
+        target.max = null
+      }
+      target.dateResolution ??= 'day'
+      target.timeMaxHour ??= 24
+    }
 
     // When an inherited property is explicitly added to a project, place it at the
     // end of the currently enabled window so rank controls stay bounded to active items.
@@ -1037,6 +1138,12 @@ export function updateProjectPropertyBase(
         target.values = []
       } else if (!Array.isArray(target.values)) {
         target.values = []
+      }
+      // Seed newly selected lists without replacing existing options or re-adding removed rows.
+      if (value === 'SelectField' && !target.values?.length) {
+        target.values = [
+          createEmptyPropertyOption(target.id, Boolean(target.isTranslatable)),
+        ]
       }
     }
     if (
@@ -1117,20 +1224,25 @@ export function updateProjectPropertyI18n(
 // 3.2.3 PROPERTY VALUE MUTATORS
 // ───────────────────────
 
+/**
+ * Append a blank option with a stable ID and the next rank.
+ * @param form Mutable property form.
+ * @param propertyId Owning definition.
+ * @returns Nothing; updates the form in place.
+ */
 export function addProjectPropertyValue(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
 ): void {
   mutatePropertyById(form, propertyId, target => {
     const values = (target.values || []) as NonNullable<Property['values']>
-    const valueId = propertyNanoId(12)
-    values.push({
-      id: valueId,
-      propertyId,
-      rank: values.length,
-      value: '',
-      i18n: target.isTranslatable ? toEmptyPropertyValueI18n(valueId) : undefined,
-    })
+    values.push(
+      createEmptyPropertyOption(
+        propertyId,
+        Boolean(target.isTranslatable),
+        values.length,
+      ),
+    )
     target.values = values
   })
 }
@@ -1472,6 +1584,13 @@ export function getFeatureIdsForProperties(appCtx: ResourceViewCtx): Id[] {
           return true
         }
 
+        // A reset interval is inactive even when this feature has no stored value.
+        if (
+          !Array.isArray(filterValue) &&
+          filterValue.rangeMin === filterValue.globalMin &&
+          filterValue.rangeMax === filterValue.globalMax
+        )
+          return true
         // Find the feature's property by property ID
         const featureProperty = feature.properties.find(
           (fp: FeatureProperty) => fp.propertyId === propertyId,
@@ -1488,6 +1607,26 @@ export function getFeatureIdsForProperties(appCtx: ResourceViewCtx): Id[] {
           return true // Property definition not found, so we keep showing it
         }
 
+        // Interval selection matches overlap; unknown versions never match an active filter.
+        if (isRangeProperty(property)) {
+          if (Array.isArray(filterValue)) return false
+          if (
+            filterValue.rangeMin === filterValue.globalMin &&
+            filterValue.rangeMax === filterValue.globalMax
+          )
+            return true
+          try {
+            const raw = normalizeRangeValue(property, featureProperty.valueJson)
+            if (!raw) return false
+            const interval = RangeValueSchema.parse(JSON.parse(raw))
+            return (
+              interval.start <= filterValue.rangeMax &&
+              interval.end >= filterValue.rangeMin
+            )
+          } catch {
+            return false
+          }
+        }
         // Handle different property types and components
         if (property.type === 'classifier' && property.component === 'SelectField') {
           // Categorical filter: check if feature's PropertyValue ID is in selected IDs
@@ -1552,6 +1691,8 @@ export function getFeatureIdsForProperties(appCtx: ResourceViewCtx): Id[] {
  * @param layerId - The ID of the layer to get the properties for.
  * @param feature - The feature to get the properties for.
  * @returns The properties for the feature.
+ * @remarks Card payloads must have server-normalized layer visibility. Their
+ * hydrated definitions remain usable before separate metadata caches load.
  */
 export function getFeatureCardDisplayProperties(
   appCtx: ResourceViewCtx,
@@ -1561,55 +1702,36 @@ export function getFeatureCardDisplayProperties(
   if (!layerId) {
     return []
   }
-  // ASSERT : Layer exists
-  const layer = appCtx.queries.rows.layer.find(l => l.id === layerId)
-  if (!layer) {
-    console.warn(`Layer ${layerId} not found`)
-    return []
-  }
-
-  // Get all visible properties for the layer (not just user contributable ones)
+  // Card responses already contain hydrated, visibility-filtered properties.
+  // Prefer detailed layer metadata when available; compact query rows omit it.
   const layerProperties =
-    layer.properties
-      ?.filter(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
-        return (
-          property &&
-          (property.type === 'classifier' || property.type === 'specifier') &&
-          layerProp.isVisible === true &&
-          property.key !== 'grade'
-        )
-      })
-      .map(layerProp => {
-        const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
-        return {
-          property,
-          propertyId: layerProp.propertyId,
-        }
-      })
-      .filter(
-        (item): item is { property: Property; propertyId: Id } =>
-          item.property !== undefined,
-      ) || []
+    appCtx.cache.layer.get(layerId)?.properties ??
+    appCtx.queries.rows.layer.find(l => l.id === layerId)?.properties
 
-  // Map layer properties to feature properties, including the property definition
+  // Show all visible fields, not only user-contributable ones, with their definitions.
   return sortFeatureProperties(
-    layerProperties
-      .map(item => {
-        const featureProperty = feature.properties.find(
-          prop => prop.propertyId === item.propertyId,
+    feature.properties.flatMap(featureProperty => {
+      if (
+        layerProperties &&
+        !layerProperties.some(
+          row => row.propertyId === featureProperty.propertyId && row.isVisible,
         )
-        if (featureProperty) {
-          return {
-            ...featureProperty,
-            property: item.property,
-          }
-        }
-        return null
-      })
-      .filter(
-        (item): item is FeatureProperty & { property: Property } => item !== null,
-      ),
+      )
+        return []
+
+      const property =
+        featureProperty.property ??
+        appCtx.cache.property.get(featureProperty.propertyId)
+      if (
+        !property ||
+        property.audience === 'internal' ||
+        (property.type !== 'classifier' && property.type !== 'specifier') ||
+        property.key === 'grade'
+      )
+        return []
+
+      return [{ ...featureProperty, property }]
+    }),
   )
 }
 
@@ -1644,6 +1766,7 @@ export function getFeatureCardEditableProperties(
         const property = appCtx.cache.property.get(layerProp.propertyId ?? '')
         return (
           property &&
+          property.audience !== 'internal' &&
           (property.type === 'classifier' || property.type === 'specifier') &&
           layerProp.isVisible === true &&
           layerProp.isUserContributable === true &&
@@ -1966,7 +2089,13 @@ export function handleSpecifierChange(
 ): void {
   const property = appCtx.cache.property.get(propertyId)
 
-  if (property?.isTranslatable && locale !== 'core') {
+  if (property && (property.dataType === 'link' || isRangeProperty(property))) {
+    updateFeatureProperty(appCtx, propertyId, {
+      value: null,
+      valueJson: newValue,
+      propertyValueId: null,
+    })
+  } else if (property?.isTranslatable && locale !== 'core') {
     // Translatable property - use i18n structure
     updateFeatureI18nProperty(appCtx, propertyId, locale as Locale, newValue)
   } else {

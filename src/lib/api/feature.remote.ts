@@ -60,6 +60,7 @@ import {
   saveUnlinkedFeatureForm,
 } from '#lib/db/services/featureFormSave.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
+import { getInternalPropertyAccess } from '#lib/properties/audience.server.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import {
   getFeature as loadFeature,
@@ -464,8 +465,11 @@ export const getFeatureForImport = guardedBatchByIdQuery<
  * - Parent and relation writes commit atomically, coordinated with Place associations.
  */
 export const featureForm = guardedForm('unchecked', async (input, ctx) => {
-  const params = FeatureFormData.parse(input)
   const { db, user, userRoles, invalid } = ctx
+  // In-progress form values must return field issues, not throw a server error.
+  const parsed = FeatureFormData.safeParse(input)
+  if (!parsed.success) return invalid(...parsed.error.issues)
+  const params = parsed.data
   const issue = ctx.issue
   const { meta } = params
   const data = projectFeatureAddress({
@@ -532,6 +536,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       submittedProperties = await validateFeaturePhoneProperties(
         db,
         submittedProperties,
+        (await getInternalPropertyAccess(ctx)).allowed,
+        data.layerId,
       )
     } catch (error) {
       invalid(
@@ -712,6 +718,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       submittedProperties = await validateFeaturePhoneProperties(
         db,
         submittedProperties,
+        (await getInternalPropertyAccess(ctx)).allowed,
+        current.layerId,
       )
     } catch (error) {
       invalid(

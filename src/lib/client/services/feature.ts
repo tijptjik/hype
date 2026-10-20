@@ -1,5 +1,7 @@
 import { browser } from '$app/env'
 import { goto } from '$app/navigation'
+// PROPERTY CONTRACT
+import { isRangeProperty } from '#lib/properties/range.js'
 import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 import type { Point } from 'geojson'
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
@@ -308,6 +310,7 @@ export function toFeatureFormInput(
         value.properties?.map(property => ({
           propertyId: property.propertyId,
           value: property.value ?? '',
+          valueJson: property.valueJson ?? '',
           propertyValueId: sanitizeFeaturePropertyValueId(property.propertyValueId),
           i18n: {
             en: {
@@ -415,6 +418,7 @@ export function getProgrammaticFeatureInputEntries(
   ;(featureData?.properties ?? []).forEach((property, index) => {
     appendEntry(`data.properties[${index}].propertyId`, property.propertyId)
     appendEntry(`data.properties[${index}].value`, property.value ?? '')
+    appendEntry(`data.properties[${index}].valueJson`, property.valueJson ?? '')
     appendEntry(
       `data.properties[${index}].propertyValueId`,
       sanitizeFeaturePropertyValueId(property.propertyValueId),
@@ -546,7 +550,9 @@ export function toLayerBackedFeatureProperties(
       seenPropertyIds.add(propertyId)
 
       return (
-        layerProperty.isVisible === true &&
+        (layerProperty.isVisible === true ||
+          property?.audience === 'internal' ||
+          Boolean(currentByPropertyId.get(propertyId)?.valueJson)) &&
         property &&
         (property.type === 'classifier' || property.type === 'specifier')
       )
@@ -617,9 +623,11 @@ export function getNonTranslatableFeatureFieldItems({
     .map(property => ({
       property: property.property,
       value:
-        property.property.component === 'SelectField'
-          ? property.propertyValueId || ''
-          : (property.value ?? ''),
+        property.property.dataType === 'link' || isRangeProperty(property.property)
+          ? (property.valueJson ?? '')
+          : property.property.component === 'SelectField'
+            ? property.propertyValueId || ''
+            : (property.value ?? ''),
       checked: property.value === 'true',
       isEditing,
       options:
