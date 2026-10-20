@@ -7,6 +7,8 @@ export const FORM_FEATURE_FIELDS_ROOT_CLASS = cx(
   String.raw`[&_.bits-feature-fields\_\_grid]:grid-cols-1 [&_.bits-feature-fields\_\_grid]:gap-0`,
   String.raw`[&_.bits-feature-field_.bits-form\_\_control-wrap]:border [&_.bits-feature-field_.bits-form\_\_control-wrap]:border-border/60 [&_.bits-feature-field_.bits-form\_\_select-display-wrap]:border [&_.bits-feature-field_.bits-form\_\_select-display-wrap]:border-border/60 [&_.bits-feature-field_.bits-form\_\_select-display-wrap]:bg-foreground/4`,
   '[&_.bits-feature-field]:rounded-none [&_.bits-feature-field]:border-0 [&_.bits-feature-field]:border-b [&_.bits-feature-field]:border-border/50 [&_.bits-feature-field]:bg-transparent [&_.bits-feature-field]:shadow-none [&_.bits-feature-field]:before:hidden [&_.bits-feature-field:last-child]:border-b-0',
+  // Carry column dividers through both the tinted header and the field body.
+  '@min-[640px]:@max-[1050px]:[&_.bits-feature-field:nth-child(odd)]:border-r @min-[1050px]:[&_.bits-feature-field:not(:nth-child(3n))]:border-r',
   String.raw`[&_.bits-feature-field\_\_content]:grid-cols-1 @min-[600px]:[&_.bits-feature-field\_\_content]:grid-cols-[minmax(10rem,1fr)_minmax(0,2fr)] [&_.bits-feature-field\_\_content]:gap-3 [&_.bits-feature-field\_\_content]:px-0 [&_.bits-feature-field\_\_content]:py-5 [&_.bits-feature-field\_\_content>div:first-child]:max-w-none`,
   String.raw`[&_.bits-feature-field\_\_title]:whitespace-normal [&_.bits-feature-field\_\_title]:text-sm [&_.bits-feature-field\_\_title]:leading-5 [&_.bits-feature-field\_\_subtitle]:text-muted-foreground`,
   String.raw`[&_.bits-feature-field_.bits-form\_\_control-wrap]:shadow-none [&_.bits-feature-field_.bits-form\_\_select-display-wrap]:shadow-none`,
