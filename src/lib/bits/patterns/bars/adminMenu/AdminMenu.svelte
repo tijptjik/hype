@@ -48,13 +48,14 @@ const notificationCount = $derived(adminCtx.filteredTasks.length)
 const featureCount = $derived(adminCtx.filteredFeatures.length)
 
 /**
- * Opens Features with the first displayed layer when no layer is selected.
+ * Opens Features with the first displayed layer when no hierarchy prism is selected.
  * @returns Completion after layer dependents refresh and navigation is requested.
- * @remarks Existing selection and an empty layer list are preserved.
+ * @remarks Existing organisation, project, or layer selections and an empty layer list are preserved.
  */
 async function openFeatures(): Promise<void> {
   try {
-    if (!adminCtx.view.scope.prisms.layer.length && firstLayerId) {
+    const { organisation, project, layer } = adminCtx.view.scope.prisms
+    if (!organisation.length && !project.length && !layer.length && firstLayerId) {
       await adminCtx.view.scope.togglePrism(FirstClassResource.layer, firstLayerId)
     }
     navigateOnAdmin(adminCtx, FirstClassResource.feature)
@@ -64,7 +65,7 @@ async function openFeatures(): Promise<void> {
   }
 }
 
-// Features seeds an empty layer selection; other indexes preserve explicit prisms.
+// Features seeds a layer only without hierarchy prisms; other indexes preserve explicit prisms.
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   const actor = adminCtx.view.user as SessionUser | null
   const directoryAllowed =
