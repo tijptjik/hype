@@ -2,8 +2,9 @@
 
 Accepted architecture, 20 October 2026. Refs #194 (migration), #213 (location and
 routing), parent #180. This supersedes the external-lookup-only interpretation of
-Places in the schedule proposal. The feature-only Breadline importer is a rehearsal
-and must be rebased onto this architecture before production application.
+Places in the schedule proposal. The Breadline importer now creates unresolved Places
+and associated donor/dropoff Features; local application and replay are verified.
+Schedule import remains dependent on #195/#196, and production application is pending.
 
 ## Identity and ownership
 
@@ -1474,3 +1475,39 @@ Validation also includes six verifier tests, 216 combined Places tests, and two 
 collector tests for discovery rollback and in-flight migration seeding (18 collector
 tests total). Actual Address curation/assembly round-trip, canonical identity decisions,
 final import acceptance and production packaging remain open. No deployment occurred.
+
+
+### Donor/dropoff importer acceptance and preflight
+
+The importer validates the entire eligible cohort before generating SQL. Receipt version
+3 reports `created`, `matched`, `skipped` and `quarantined`; malformed eligible rows
+produce a blocked receipt with source table/ID, field, stable diagnostic code and
+remediation. It checks positive integer identities, duplicate IDs, retained source
+hashes, finite numeric coordinates, the required English title, localized text types,
+exact 0/1 activity flags and valid UTC mirror timestamps. Excluded donors do not block
+the cohort. Invalid phone values retain the existing evidence/warning policy rather
+than silently becoming accepted phone numbers.
+
+A failed plan invalidates its previous SQL output, including failures caused by changed
+accepted source hashes. The output must be a separate `.sql` file. Both read-only input
+database handles close after planning. Destination prerequisites require the exact
+universal `gPropPhNum01` core-hub PhoneField; a same-named organisation/project property
+is not an acceptable substitute. Brand and coordinate-correction errors identify the
+source record and required review. Existing IDs and accepted mappings remain protected.
+
+The current source mirror replay matched all 330 imported records, skipped 155 donors
+without recorded runs, quarantined zero, and retained 64 reviewed MTR decisions.
+Applying the generated replay in a fail-fast transaction on an isolated current-database
+copy left exact row fingerprints unchanged across Feature, translation, property,
+Place, revision, association, association-history, import-mapping and property-catalog
+tables. Integrity and foreign-key checks pass. Ten focused importer/MTR tests cover
+initial import/replay, history rollback, malformed eligible versus excluded rows,
+stale-source protection and rejection of an incorrectly scoped phone property.
+
+This proves the Places/Features portion of importer replay and reporting. Schedule
+and time-window import is not implemented: the schema remains a proposal under
+[#195](https://github.com/tijptjik/hype/issues/195) and
+[#196](https://github.com/tijptjik/hype/issues/196), described in
+[Schedules and events](04-schedules-events.md). Pickup text is retained as source
+provenance, never promoted to business opening hours. Consequently the broad #194
+acceptance item covering time-window/numeric event validation stays open.
