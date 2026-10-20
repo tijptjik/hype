@@ -1389,3 +1389,34 @@ OK with zero foreign-key violations. The screenshot is private at
 `output/playwright/place-address-hydration.png`. Both local servers were stopped. Address
 curation/upsert handling, source changes-feed integration and final acceptance remain open;
 no primary or production data was changed and nothing was deployed.
+
+
+### Durable publisher comparison collection (Refs #194)
+
+Canonical refresh now enqueues a separate publisher-evidence transition. Migration
+0119 retains the discovered inventories, comparison plan, resolved publisher pin,
+complete response pages, cross-page source identities and resumable cursor. The
+worker collects one bounded page per invocation; feed failures retain a stable retry
+code and do not block canonical refresh or MTR routing. Source removals are evidence
+only and never delete Places or alter Feature adoption.
+
+Inventory discovery has no catalogue/time pin, so its actual response is retained
+without claiming historical canonical proof. Duplicate inventory roles collapse only
+when release, variant and availability agree. Ambiguous, missing or unavailable
+publisher sources require review; an initial baseline does not invent a comparison.
+Evidence and progress commit atomically, and immutable-page triggers plus uniqueness
+constraints reject duplicate identities and cursor cycles. Lease loss prevents writes.
+
+Local validation on 2026-10-20: migration 0119 passed a backup-copy rehearsal and
+was applied to the primary local database, preserving 2,850 Places, 1,601 Features
+and 1,520 associations, with integrity and foreign-key checks passing. A separate
+local-API rehearsal against sealed source mirrors discovered the August-to-September
+publisher comparison and retained two pages (200 changes: 12 added, 188 changed).
+This is explicitly a partial feed, still in collection, not a completed comparison.
+Focused collector/refresh/scheduler tests cover atomic rollback, pagination, pin
+continuity, lease loss/expiry and failure isolation. Worker type-checking passes;
+the app check retains its baseline 10 errors and 19 warnings.
+
+Full feed completion, structured-address curation, actual identity decisions,
+first-layer browser verification and the broader import acceptance audit remain
+outstanding. No production migration or deployment was performed.
