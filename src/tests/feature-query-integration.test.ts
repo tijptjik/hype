@@ -169,6 +169,43 @@ afterEach(() => {
 })
 
 describe('map query integration', () => {
+  it('opens prism collection navigation on the second Features click and steps across pages', async () => {
+    const app = createApp()
+    const first = controlledPage()
+    const next = controlledPage()
+    vi.mocked(getFeaturePage)
+      .mockReturnValueOnce(first.query)
+      .mockReturnValueOnce(next.query)
+    const omni = createOmni(app)
+
+    await omni.expandSearchSection(OmniCollection.feature)
+    expect(app.selection.collection).toBeNull()
+    await omni.expandSearchSection(OmniCollection.feature)
+    expect(omni.state.mode).toBe('navigation')
+    expect(omni.activeCollectionDescriptor).toEqual({
+      kind: 'walk',
+      ref: 'prismFeatures',
+    })
+    const input = vi.mocked(getFeaturePage).mock.calls[0][0]
+    expect(input.prisms.layer).toEqual(['layer-a'])
+    expect(input.filters?.list).toBeUndefined()
+    expect(input.spatial).toBeUndefined()
+
+    first.resolve([row('first')], 2, true)
+    await settle()
+    expect(app.selection.feature?.id).toBe('first')
+    expect(app.selection.collection?.totalCount).toBe(2)
+    const stepping = omni.navNext()
+    next.resolve([row('second')], null)
+    await stepping
+    await settle()
+    expect(app.selection.feature?.id).toBe('second')
+    expect(app.selection.collection?.items.map(item => item.id)).toEqual([
+      'first',
+      'second',
+    ])
+  })
+
   it('expands one search section at a time and resets when searching or closing', async () => {
     const omni = createOmni(createApp())
     await omni.expandSearchSection(OmniCollection.neighbourhood)

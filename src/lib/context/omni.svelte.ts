@@ -179,7 +179,8 @@ export class OmniCtx {
 
       if (
         !descriptor ||
-        (descriptor.kind === 'walk' && !['stars', 'visited'].includes(descriptor.ref))
+        (descriptor.kind === 'walk' &&
+          !['stars', 'visited', 'prismFeatures'].includes(descriptor.ref))
       )
         return
 
@@ -318,11 +319,19 @@ export class OmniCtx {
   searchSectionLimit = $state(25)
 
   /**
-   * Focuses a result section and reveals its next batch of matches.
+   * Focuses a result section; a second Features click starts prism collection navigation.
    * @param collectionType Section to expand.
    * @returns Completion after any required feature page has loaded.
    */
   async expandSearchSection(collectionType: OmniCollection): Promise<void> {
+    // Reuse paginated collection navigation for every feature in the active prisms.
+    if (
+      collectionType === OmniCollection.feature &&
+      this.searchSection === OmniCollection.feature
+    ) {
+      this.initWalk('prismFeatures', { openCardDelay: 0 })
+      return
+    }
     this.searchSectionLimit =
       this.searchSection === collectionType ? this.searchSectionLimit + 25 : 25
     this.searchSection = collectionType
@@ -868,6 +877,10 @@ export class OmniCtx {
   private collectionQueryInput(
     descriptor: OmniCollectionDescriptor,
   ): FeatureQueryInput {
+    // Prism collections retain common filters without adding saved-list membership.
+    if (descriptor.kind === 'walk' && descriptor.ref === 'prismFeatures') {
+      return this.appCtx.view.filters.featureQueryInput()
+    }
     return this.appCtx.view.filters.featureQueryInput({
       filters:
         descriptor.kind === 'neighbourhood'
@@ -1044,8 +1057,8 @@ export class OmniCtx {
       highlight: true,
       ...options,
     }
-    // Built-in user lists use the same paginated feature-query path as neighbourhoods.
-    if (walkRef === 'stars' || walkRef === 'visited') {
+    // Built-in user lists and prism features use the paginated neighbourhood query path.
+    if (walkRef === 'stars' || walkRef === 'visited' || walkRef === 'prismFeatures') {
       this.loadFeatureCollection({ kind: 'walk', ref: walkRef }, optionsWithDefaults)
       return
     }
@@ -1281,7 +1294,13 @@ export class OmniCtx {
     // Default i18n for special walks
     let i18nConfig: CollectionI18n
 
-    if (walkRef === 'stars') {
+    if (walkRef === 'prismFeatures') {
+      i18nConfig = {
+        en: { name: m.omni__title_features() },
+        zhHant: { name: m.omni__title_features() },
+        zhHans: { name: m.omni__title_features() },
+      }
+    } else if (walkRef === 'stars') {
       i18nConfig = {
         en: { name: m.omni__title_star_walks() },
         zhHant: { name: m.omni__title_star_walks() },
