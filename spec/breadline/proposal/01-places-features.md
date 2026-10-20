@@ -1840,3 +1840,15 @@ mirror verification boundary. No primary local, source or production data change
 checkpoint write failure. Worker checking passes; app checking remains at the existing
 10 errors / 19 warnings. The observed navigation-link false conflict was fixed and
 the entire cohort rerun successfully with that final comparison.
+
+### Primary local source hydration applied (Refs #194)
+
+The normal bulk mirror now supports paired explicit local source-export flags using
+the read-only in-process API. Its destination remains local Wrangler D1. Following a
+consistent backup, the verified bakery publication was applied to primary local HYPE:
+1,330 records, 81 resolved Addresses and 1,249 without Address references. Every
+Feature-owned and identity table remained exact; source revisions and Wrangler's
+internal metadata were the only changed tables. Integrity/FKs and completed replay
+pass. The 125 focused tests pass. This does not accept additional establishment
+matches or adopt new Feature values. Remaining identity/address curation, unresolved
+MTR entrance mappings and production rollout remain separate work.

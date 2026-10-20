@@ -257,3 +257,27 @@ final complete run. Source payload bytes remain retained, including their origin
 partial-page Address failures, persistence conflicts and failed checkpoint writes.
 A failed page never reports completion or advances durable progress. Worker checking
 passes; application checking retains its existing 10 errors and 19 warnings.
+
+### Apply the verified mirror to primary local HYPE
+
+After retaining a consistent SQLite backup, copy the input checkpoint to a new
+private application directory. Keep the original checkpoint as evidence. The normal
+command accepts the same sealed source exports without requiring a hosted API key:
+
+```sh
+bun scripts/places/mirror-source.ts PUBLICATION.json APPLICATION_CHECKPOINT.json bakery \
+  --source-export SOURCE_EXPORT_DIRECTORY --current-export CURRENT.sqlite
+```
+
+Both source flags are required together. Without them, the existing authenticated
+hosted source reader is used. The destination remains the default local HYPE binding
+from `wrangler.local.toml`, with remote bindings disabled. Source and Wrangler handles
+are closed on success or failure, including proxy initialization failure.
+
+Primary-local application verified all 1,330 records, including 81 resolved Addresses
+and 1,249 without Address references. All 23 Feature-owned tables and all identity
+tables were preserved exactly. Only `placeRevision` and Wrangler's `_cf_METADATA`
+changed. Integrity and foreign keys pass. A completed-checkpoint replay leaves all
+application tables unchanged; Wrangler still advances its internal metadata counter.
+Private backup, checkpoint, table fingerprints and receipt are
+retained; source and production databases were not modified.
