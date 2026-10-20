@@ -1,5 +1,7 @@
 // DRIZZLE
 import { sql, type SQL, type SQLWrapper } from 'drizzle-orm'
+// DB
+import { featureImage } from '#lib/db/schema/image.js'
 // TYPES
 import type { Database, Id } from '#lib/types.js'
 
@@ -52,8 +54,10 @@ export async function publishScopedFeatureImages(
       AND f.isPublished = 1 AND f.isArchived = 0`
 
   // Classify at most one eligible image per feature without replacing editorial choices.
-  const classify = db.run(sql`UPDATE featureImage SET intent = 'canonical'
-    WHERE featureId IN (${eligible}
+  const classify = db
+    .update(featureImage)
+    .set({ intent: 'canonical' })
+    .where(sql`featureId IN (${eligible}
       AND coalesce(json_extract(p.flags, '$.autoFeatureFirstImage'), 1) = 1)
       AND NOT EXISTS (SELECT 1 FROM featureImage existing
         WHERE existing.featureId = featureImage.featureId AND existing.intent = 'canonical')
@@ -64,9 +68,15 @@ export async function publishScopedFeatureImages(
         ORDER BY i.createdAt ASC, i.id ASC LIMIT 1)`)
 
   // Publish only public classifications, retaining the original attribution on retries.
-  const publish = db.run(sql`UPDATE featureImage SET isPublished = 1,
-      localIsPublished = NULL, publishedAt = ${new Date().toISOString()}, publisherId = ${publisherId}
-    WHERE featureId IN (${eligible}
+  const publish = db
+    .update(featureImage)
+    .set({
+      isPublished: true,
+      localIsPublished: null,
+      publishedAt: new Date().toISOString(),
+      publisherId,
+    })
+    .where(sql`featureId IN (${eligible}
       AND coalesce(json_extract(p.flags, '$.autoPublishClassifiedImages'), 1) = 1)
       AND isPublished = 0 AND intent IN ('canonical', 'general', 'context', 'closeUp')
       AND imageId IN (SELECT id FROM image WHERE isArchived = 0)`)

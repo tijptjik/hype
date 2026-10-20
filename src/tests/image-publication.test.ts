@@ -20,19 +20,6 @@ function fixture() {
       ('f','a','undefined',0), ('f','b','context',0), ('f','r','research',0), ('f','archived','general',0),
       ('draft','a','undefined',0), ('outside','a','undefined',0);
   `)
-  // Execute the helper's prepared statements in one real SQLite transaction.
-  db.batch = (async (queries: Promise<unknown>[]) => {
-    sqlite.exec('BEGIN')
-    try {
-      const results = []
-      for (const query of queries) results.push(await query)
-      sqlite.exec('COMMIT')
-      return results
-    } catch (error) {
-      sqlite.exec('ROLLBACK')
-      throw error
-    }
-  }) as typeof db.batch
   return { sqlite, db: db as unknown as Database }
 }
 

@@ -23,5 +23,17 @@ export function publicationSqlite<T extends Record<string, unknown>>(schema: T) 
       meta: sqlite.prepare(query).run(...(bindings as never[])),
     }),
   })
-  return { sqlite, db: drizzle({ prepare } as never, { schema }) }
+  const batch = async (statements: ReturnType<typeof prepare>[]) => {
+    sqlite.exec('BEGIN')
+    try {
+      const results = []
+      for (const statement of statements) results.push(await statement.all())
+      sqlite.exec('COMMIT')
+      return results
+    } catch (error) {
+      sqlite.exec('ROLLBACK')
+      throw error
+    }
+  }
+  return { sqlite, db: drizzle({ prepare, batch } as never, { schema }) }
 }
