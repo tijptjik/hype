@@ -5,6 +5,7 @@ import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
 const {
+  mockEnsureHubDomain,
   mockHubFormDataParse,
   mockToLocaleRecordFromOrganisationFormI18n,
   mockCreateHub,
@@ -33,6 +34,7 @@ const {
   mockListOrganisations,
   mockGuardedContext,
 } = vi.hoisted(() => ({
+  mockEnsureHubDomain: vi.fn(async () => undefined),
   mockHubFormDataParse: vi.fn((input: unknown) => input),
   mockToLocaleRecordFromOrganisationFormI18n: vi.fn(() => ({})),
   mockCreateHub: vi.fn(async (_db: unknown, payload: Record<string, unknown>) => ({
@@ -78,6 +80,8 @@ const {
   mockGuardedContext: vi.fn(),
 }))
 
+vi.mock('#lib/server/hub-domains.js', () => ({ ensureHubDomain: mockEnsureHubDomain }))
+
 vi.mock('#lib/api/server/guarded.js', () => ({
   guardedQuery: (_schema: unknown, handler: unknown) =>
     withRemoteMeta(async (input: unknown) => {
@@ -118,6 +122,7 @@ vi.mock('#lib/api/server/guarded.js', () => ({
           },
         ) => Promise<unknown>
       )(input, {
+        event: { platform: { env: { ENVIRONMENT: 'local' } } },
         ...(await mockGuardedContext()),
         invalid,
         issue,
@@ -348,6 +353,7 @@ describe('hub.remote form image handling', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockEnsureHubDomain.mockResolvedValue(undefined)
     mockAuthorizeHubCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeHubUpdateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeHubManageRolesForSubmission.mockReturnValue({ allowed: true })
@@ -373,6 +379,62 @@ describe('hub.remote form image handling', () => {
 
   afterAll(() => {
     policyMatrix.flush()
+  })
+
+  it('does not persist a hub when domain registration fails', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: buildDbForCreate(),
+      user: { id: 'u-1', superAdmin: true },
+      userRoles: [],
+    })
+    mockEnsureHubDomain.mockRejectedValueOnce(new Error('Cloudflare unavailable'))
+    await expect(
+      remote.hubForm(
+        {
+          meta: { mode: 'create' },
+          data: {
+            code: 'new-hub',
+            domain: '',
+            i18n: {},
+            userRoles: [{ userId: 'u-1', role: 'admin' }],
+          },
+        },
+        message => {
+          throw new Error(String(message))
+        },
+      ),
+    ).rejects.toThrow('Unable to register')
+    expect(mockCreateHub).not.toHaveBeenCalled()
+  })
+
+  it('does not register a domain for unauthorized hub creation', async () => {
+    mockGuardedContext.mockResolvedValue({
+      db: buildDbForCreate(),
+      user: { id: 'u-1' },
+      userRoles: [],
+    })
+    mockAuthorizeHubCreateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    await expect(
+      remote.hubForm(
+        {
+          meta: { mode: 'create' },
+          data: {
+            code: 'new-hub',
+            domain: '',
+            i18n: {},
+            userRoles: [{ userId: 'u-1', role: 'admin' }],
+          },
+        },
+        message => {
+          throw new Error(String(message))
+        },
+      ),
+    ).rejects.toThrow()
+    expect(mockEnsureHubDomain).not.toHaveBeenCalled()
+    expect(mockCreateHub).not.toHaveBeenCalled()
   })
 
   it('create mode ignores imageId from incoming form payload', async () => {

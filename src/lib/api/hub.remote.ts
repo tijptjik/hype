@@ -42,6 +42,9 @@ import {
   authorizeHubList,
   isRelevantHubAdmin,
 } from '#lib/api/services/authz/index.js'
+// DOMAIN MANAGEMENT
+import { ensureHubDomain } from '#lib/server/hub-domains.js'
+import { isReservedHubCode } from '#lib/hub-domains.js'
 // SERVICES
 import {
   createHub,
@@ -349,12 +352,24 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
 
     await validateUniqueNonReservedCode({
       code: normalizedCode,
-      isReservedCode,
+      isReservedCode: code => isReservedCode(code) || isReservedHubCode(code),
       probeExisting: code => probeExistingHub(db, code),
       onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
       onConflict: () =>
         invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
     })
+
+    // Register the hostname after authorization and validation, before publishing the hub.
+    try {
+      await ensureHubDomain(ctx.event.platform?.env ?? {}, normalizedCode)
+    } catch (cause) {
+      console.error('Hub domain registration failed', cause)
+      invalid(
+        issue.data.code(
+          'Unable to register this hub subdomain. Check domain configuration or choose another code.',
+        ),
+      )
+    }
 
     // Create main record and related rows.
     const created = await createHub(db, {
@@ -448,12 +463,24 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   await validateUniqueNonReservedCode({
     code: normalizedCode,
     current,
-    isReservedCode,
+    isReservedCode: code => isReservedCode(code) || isReservedHubCode(code),
     probeExisting: code => probeExistingHub(db, code),
     onReserved: () => invalid(issue.data.code(toIssueDetailMessage('CODE_RESERVED'))),
     onConflict: () =>
       invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
   })
+
+  // Ensure unchanged names too, allowing operators to repair missing registrations by saving.
+  try {
+    await ensureHubDomain(ctx.event.platform?.env ?? {}, normalizedCode, current.code)
+  } catch (cause) {
+    console.error('Hub domain registration failed', cause)
+    invalid(
+      issue.data.code(
+        'Unable to register this hub subdomain. Check domain configuration or choose another code.',
+      ),
+    )
+  }
 
   // Persist main record atomically with optimistic concurrency.
   const result = await updateHubByIdWithConcurrency(db, {

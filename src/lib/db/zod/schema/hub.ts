@@ -1,3 +1,5 @@
+// DOMAIN
+import { HUB_CODE_PATTERN } from '#lib/hub-domains.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // ENUMS
@@ -232,8 +234,9 @@ export const HubEntityFormData = z
       .min(1, { message: m.field_is_required({ field: m.field_code() }) })
       .min(2, { message: m.admin__validation_code_is_required() })
       .max(24, { message: m.admin__validation_code_lte_24_chars() })
-      .regex(/^[a-zA-Z0-9_$]*$/, {
-        message: m.admin__validation_key_valid_characters(),
+      .regex(HUB_CODE_PATTERN, {
+        message:
+          'Use 2–24 lowercase letters, digits or hyphens; start and end with a letter or digit.',
       }),
     domain: z.union([z.literal(''), z.string().min(3).max(255)]),
     legalContactAddress: z
