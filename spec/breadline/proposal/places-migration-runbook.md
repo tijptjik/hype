@@ -223,3 +223,37 @@ all 330 imports, created zero, skipped the 155 ineligible donors and retained al
 MTR decisions. Every row in all 86 application tables remained identical, including
 the reviewed source identity and new inheritance overrides. This verifies that import
 replay does not undo later identity curation. Production remains untouched.
+
+## Rehearse complete source mirroring and Address hydration
+
+The normal bulk command and the isolated rehearsal share
+`scripts/places/lib/mirror-source-subset.ts`; only their database/source transports
+and checkpoint sinks differ. To verify against the retained source exports:
+
+```sh
+bun scripts/places/rehearse-source-mirror.ts \
+  HYPE.sqlite SOURCE_EXPORT_DIRECTORY CURRENT.sqlite \
+  PUBLICATION.json CHECKPOINT.json .local/places/NEW-source-mirror-rehearsal
+```
+
+The command snapshots HYPE into its new output directory and opens the source shards
+read-only through the actual in-process Atlas API. CURRENT must match the source API
+schema. The input publication and checkpoint must select the same publication/subset.
+It runs the same hydration, forward-only persistence, receipt verification and page
+checkpoint path as `mirror-source.ts`. Private page checkpoints survive for inspection.
+Completion additionally requires exact preservation of every Feature-owned table,
+complete pagination, integrity/FKs, and a completed-checkpoint replay with no API
+requests or new source revisions. No primary local or production database is changed.
+
+Verified from the retained version-one completed bakery checkpoint: version-two replay
+processes all 1,330 Places over 14 pages and 176 source requests. All 81 referenced
+Addresses resolve to their exact published snapshots; 1,249 Places have no Address
+reference. All 23 Feature-owned tables remain exact. Completed replay makes zero
+source requests and adds no revisions. The first attempt exposed API-origin navigation
+links being compared as canonical data; the corrected comparison is verified in the
+final complete run. Source payload bytes remain retained, including their original links.
+
+125 focused tests cover publication races, canonical evidence, checkpoint upgrades,
+partial-page Address failures, persistence conflicts and failed checkpoint writes.
+A failed page never reports completion or advances durable progress. Worker checking
+passes; application checking retains its existing 10 errors and 19 warnings.

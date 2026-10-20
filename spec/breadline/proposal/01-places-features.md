@@ -1824,3 +1824,19 @@ They still reject canonical changes; they no longer mistake API origin/profile-l
 changes for establishment changes. Source payloads themselves remain unmodified in
 immutable revisions. Focused tests cover both ignored navigation and retained identity,
 attribute and relationship evidence.
+
+### Complete bulk hydration and replay proof (Refs #194)
+
+The [full source-mirror rehearsal](places-migration-runbook.md#rehearse-complete-source-mirroring-and-address-hydration)
+now shares the normal bulk command's mirror engine and exercises the real local API
+against an isolated HYPE copy. Replaying the old completed bakery checkpoint hydrates
+all 1,330 records: 81 resolved Addresses and 1,249 records without Address references.
+Fourteen Place pages plus 162 Address requests complete the pinned source cohort.
+All 23 Feature-owned tables remain unchanged; integrity/FKs pass. Completed replay
+makes no source requests and adds no revisions. This closes the earlier unrun bulk
+mirror verification boundary. No primary local, source or production data changed.
+
+125 focused tests pass, including interrupted-page recovery and rejection of durable
+checkpoint write failure. Worker checking passes; app checking remains at the existing
+10 errors / 19 warnings. The observed navigation-link false conflict was fixed and
+the entire cohort rerun successfully with that final comparison.
