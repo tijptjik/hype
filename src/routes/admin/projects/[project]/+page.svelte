@@ -2858,15 +2858,17 @@ $effect(() => {
               {isRequiredInPreflight}
             >
               {#snippet besideShortName()}
-                <Checkbox
-                  id={`project-use-all-in-org-context-${locale}`}
-                  checked={useAllInOrgContext}
-                  disabled={!isEditing}
-                  topText={m.admin__project_same_as_organisation()}
-                  color="accent"
-                  size="sm"
-                  onCheckedChange={setUseAllInOrgContext}
-                />
+                <div title={m.admin__project_same_as_organisation_hint()}>
+                  <Checkbox
+                    id={`project-use-all-in-org-context-${locale}`}
+                    checked={useAllInOrgContext}
+                    disabled={!isEditing}
+                    topText={m.admin__project_same_as_organisation()}
+                    color="accent"
+                    size="sm"
+                    onCheckedChange={setUseAllInOrgContext}
+                  />
+                </div>
               {/snippet}
             </FormI18nDescriptorFields>
           {/snippet}
