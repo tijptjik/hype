@@ -1449,3 +1449,28 @@ source API rehearsal uses the existing sealed publisher mirrors, not a fresh pro
 export. Avoid long read transactions against a running rollback-journal SQLite writer:
 they can block its commit. If a collector stops, confirm termination, preserve its
 checkpoint and wait for its lease to expire before resuming.
+
+### Complete publisher-feed and navigation rehearsal (2026-10-20)
+
+The August-to-September Overture Place comparison completed against the local source
+API over the sealed mirrors: 1,406 pages, 6,811 additions, 131,725 changes and 2,061
+removals (140,597 unique change records). The read-only verifier passed with
+`--require-complete --summary`, proving retained cursor/pin/identity consistency and
+exact agreement with the independently fetched API summary. Evidence digest:
+`3bcf878ed979ca78af41d046358f3dbd82c66898c64ebe93d769327845cc9d56`.
+The interrupted local run resumed after lease expiry without lost or duplicate evidence.
+This closes the partial-feed rehearsal gap; it does not establish canonical identities.
+
+Chromium against an isolated HYPE database copy verified Features navigation from
+`/admin/projects`: an initially empty selection became the first displayed layer,
+“2025 - 2nd Edition”; a separately selected Donors layer remained the only selected layer
+when navigating to Features. Evidence used the rendered pin buttons' `aria-pressed`
+state before and after navigation, with private screenshots retained. This verifies
+navigation/selection only, not Feature-card data loading or empty-layer-list behavior.
+The initial automation locator waited on a collapsed label; retrying the actual visible
+navigation link succeeded. The dev server and browser were stopped after verification.
+
+Validation also includes six verifier tests, 216 combined Places tests, and two added
+collector tests for discovery rollback and in-flight migration seeding (18 collector
+tests total). Actual Address curation/assembly round-trip, canonical identity decisions,
+final import acceptance and production packaging remain open. No deployment occurred.
