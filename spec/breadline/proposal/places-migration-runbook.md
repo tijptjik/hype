@@ -71,13 +71,11 @@ this production-export rehearsal and are not accepted canonical matches.
 This is a reproducible local acceptance bundle, not a production execution command.
 Schema migrations are checked-in SQL; the data split currently runs through the guarded
 application service, and Breadline import SQL is generated for the explicit destination
-snapshot. A production executor must preserve those per-Feature transaction and
-conflict/replay checks rather than bypass them with unguarded inserts. Generating this
-bundle does not grant deployment authorization.
+snapshot. The guarded executor described below preserves per-Feature transactions and
+conflict/replay checks. Generating this bundle does not grant deployment authorization.
 
 Before release, retain the selected source exports and code/migration hashes, review
-all exclusion/review outcomes, provide the production data-split execution path, and
-repeat verification against the actual release target. Deploy the required SaanSeoi
+all exclusion/review outcomes and repeat verification against the actual release target. Deploy the required SaanSeoi
 canonical `filter[id]` support before enabling HYPE's exact candidate reader. Configure
 and deploy the Place refresh worker only in the separately authorized release step.
 Retain the production recovery bookmark and verify application/worker state afterward.
@@ -86,3 +84,52 @@ None of those production actions has been performed by this rehearsal.
 Schedule/time-window import remains separate under #195/#196. Canonical Place identity
 and Address curation decisions remain explicit reviews; unresolved fallback records are
 not automatically upgraded by this procedure.
+
+
+## Guarded data-split executor
+
+`execute-feature-split.ts` supports an explicit local SQLite file or the `preview` /
+`production` D1 binding selected from checked-in `wrangler.toml`. It requires the exact
+manifest SHA-256 and an explicit receipt path. Description is the default and performs
+no connection, schema mutation or deployment:
+
+```sh
+bun scripts/places/execute-feature-split.ts \
+  --manifest .local/places/RELEASE/split.json \
+  --sha256 MANIFEST_SHA256 \
+  --receipt .local/places/RELEASE/execution.json \
+  --remote production --account-id ACCOUNT_ID --database-id DATABASE_UUID
+```
+
+Replace the uppercase placeholders with the reviewed artifact hash and target identities.
+The database UUID must match the selected environment's unique `DB` binding. The
+account ID is explicit; no default environment/database inference is used. The temporary
+Wrangler proxy configuration contains only this D1 binding with `remote: true`, disables
+local persistence and env-file loading, and uses a `first-primary` database session.
+It does not load the application's queues, R2 or other bindings. Installed Wrangler
+4.151.1 types/configuration and the current Wrangler API documentation were checked for
+this integration. No remote connection was established during development verification.
+
+After separate authorization for the actual release, `--apply` executes the manifest
+through `applyUnresolvedFeatureSplit`. Schema migrations must already be applied. Each
+Feature is revalidated against live baseline values and commits Place/revision/association
+history atomically. A conflict stops subsequent work while preserving prior completed
+Features. Retry the same hash/target/receipt to replay accepted steps and continue; later
+user edits are not silently repaired. A receipt belonging to another target or manifest
+is rejected.
+
+The receipt records a separate run for every invocation and is atomically replaced after
+each outcome. A sibling `.lock` file prevents overlapping writers to that receipt. Normal
+completion/failure releases the lock. After a process crash, inspect its recorded PID and
+confirm that execution has stopped before removing the stale lock; file age alone is not
+proof. Retain the receipt, then resume with the same command. Receipts omit source error
+bodies and SQL payloads.
+
+Local execution uses `--sqlite ISOLATED_DATABASE.sqlite` instead of the remote/account/
+database flags. Verification applied all 1,190 splits and replayed all as `already-applied`,
+with original values, one history per split, integrity and foreign keys verified. A second
+copy with a changed third Feature stopped after two commits; restoring that deliberate
+fixture edit and resuming produced two replays plus 1,188 applications, without extra
+history. Eight focused executor/adapter tests cover target/hash validation, explicit
+remote config, offline description, receipt locking and append-preserving runs, and
+transaction rollback. Remote execution itself remains unverified and has not occurred.

@@ -1546,3 +1546,21 @@ rows and effective values are preserved; domain/history/property-catalog rows ar
 unchanged on replay. SQLite integrity and foreign-key checks pass. Two adapter tests
 prove rollback after a late batch failure and literal preservation of bound text.
 The production data-split execution path and deployment remain separate open work.
+
+
+### Guarded release execution path
+
+`execute-feature-split.ts` now provides the explicit remote/local data-split execution
+path described in the [runbook](places-migration-runbook.md#guarded-data-split-executor).
+It defaults to offline description, verifies the manifest hash and exact configured DB,
+and requires `--apply` for execution. The remote proxy isolates one explicit remote D1
+binding, disables local persistence/env files and uses primary-session reads. No schema,
+donor import or application deployment is implicit in this command.
+
+Execution reuses the guarded split service and retains atomic per-Feature outcomes in
+an append-preserving, exclusively locked receipt. Local verification applied and replayed
+all 1,190 records. An injected third-record conflict left the first two intact; retry
+replayed those two and applied the remaining 1,188. Independent preservation/history/
+integrity/FK checks pass. Eight focused tests verify target/hash checks, remote binding
+configuration, offline default behavior, receipt lifecycle and batch rollback. No remote
+execution was attempted; live release verification still requires separate authorization.
