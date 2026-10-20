@@ -2,7 +2,7 @@
 // TABLE OF CONTENTS
 // 1. CANONICAL EVIDENCE PREPARATION
 // 2. GUARDED SOURCE PERSISTENCE
-// 3. FORWARD-ONLY BULK MIRROR PERSISTENCE
+// 3. FORWARD-ONLY SOURCE PERSISTENCE
 // ---
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
@@ -20,6 +20,12 @@ import {
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
+
+/** Canonical source evidence requires review rather than an automatic retry. */
+export class PlaceSourceReviewError extends Error {}
+
+/** Concurrent state or lost ownership prevented a confirmed source write. */
+export class PlaceSourceConflictError extends Error {}
 
 /**
  * Serialize JSON with stable object-key order for reproducible source revision identity.
@@ -166,9 +172,10 @@ export async function persistSaanSeoiPlace(
 }
 
 /**
- * Persist bulk mirror evidence without rewinding a source publication or losing hydration.
+ * Persist source evidence without rewinding a source publication or losing hydration.
  * @param db Primary/local database with atomic batch support.
  * @param projection Verified canonical projection with publication and Address evidence.
+ * @param ownershipGuard Optional trusted run/lease fence, checked during writes and receipt verification.
  * @returns Confirmed stable Place/revision receipt, or throws before checkpoint advancement.
  * @remarks Same-publication hydration may improve, but canonical records cannot drift.
  * Identity/history/latest-revision guards fence concurrent refresh and merge operations.
@@ -177,6 +184,7 @@ export async function persistSaanSeoiPlace(
 export async function persistForwardSaanSeoiPlace(
   db: Database,
   projection: SaanSeoiPlaceProjection,
+  ownershipGuard: SQL = sql`1`,
 ): Promise<{ placeId: string; revisionId: string }> {
   const publication = readPlacePublicationMetadata(projection.payload.meta)
   const existing = await db.get<{
@@ -201,14 +209,16 @@ export async function persistForwardSaanSeoiPlace(
       !existing.payload ||
       !existing.facts
     )
-      throw new Error('Source mirror identity requires review')
+      throw new PlaceSourceReviewError('Source mirror identity requires review')
     const previousPayload = JSON.parse(existing.payload)
     const transition = comparePlacePublications(
       readPlacePublicationMetadata(previousPayload.meta),
       publication,
     )
     if (transition === 'review')
-      throw new Error('Source mirror publication is older or ambiguous')
+      throw new PlaceSourceReviewError(
+        'Source mirror publication is older or ambiguous',
+      )
     if (transition === 'unchanged') {
       if (
         existing.sourceAvailability !== 'current' ||
@@ -216,14 +226,16 @@ export async function persistForwardSaanSeoiPlace(
         !projection.payload.resource ||
         !equalPlaceSourceRecord(previousPayload.resource, projection.payload.resource)
       )
-        throw new Error(
+        throw new PlaceSourceReviewError(
           'Source mirror canonical evidence changed within its publication',
         )
       if (
         JSON.parse(existing.facts).location.address.status === 'resolved' &&
         projection.facts.location.address.status !== 'resolved'
       )
-        throw new Error('Source mirror cannot discard resolved Address evidence')
+        throw new PlaceSourceReviewError(
+          'Source mirror cannot discard resolved Address evidence',
+        )
     }
   }
   const placeId = existing?.id ?? `ssPlace_${await hash(projection.ssId)}`
@@ -241,18 +253,24 @@ export async function persistForwardSaanSeoiPlace(
       (p.id!=${placeId} OR p.state!='linked' OR p.ownerProjectId IS NOT NULL OR p.sourceAvailability!='current'
         OR EXISTS(SELECT 1 FROM placeRevision r WHERE r.placeId=p.id AND r.id!=${prepared.revisionId})
         OR EXISTS(SELECT 1 FROM placeIdentityHistory h WHERE h.placeId=p.id)))`
-  const receipt = await persistSaanSeoiPlace(db, projection, guard)
+  const receipt = await persistSaanSeoiPlace(
+    db,
+    projection,
+    sql`${guard} AND (${ownershipGuard})`,
+  )
   // Low-level persistence can return deterministic IDs after a rejected fence; verify before checkpointing.
   const retained = await db.get<{
     id: string
   }>(sql`SELECT r.id FROM placeRevision r JOIN place p ON p.id=r.placeId
-    WHERE r.id=${receipt.revisionId} AND p.id=${placeId} AND p.ssId=${projection.ssId}
+    WHERE (${ownershipGuard}) AND r.id=${receipt.revisionId} AND p.id=${placeId} AND p.ssId=${projection.ssId}
       AND p.state='linked' AND p.sourceAvailability='current' AND p.ownerProjectId IS ${existing?.ownerProjectId ?? null}
       AND (SELECT h.id FROM placeIdentityHistory h WHERE h.placeId=p.id AND NOT EXISTS
         (SELECT 1 FROM placeIdentityHistory n WHERE n.previousHistoryId=h.id)) IS ${existing?.historyId ?? null}
       AND (SELECT id FROM placeRevision WHERE placeId=p.id ORDER BY sequence DESC LIMIT 1)
         IN (${existing?.latestId ?? null},${prepared.revisionId},${receipt.revisionId})`)
   if (!retained || receipt.placeId !== placeId)
-    throw new Error('Source mirror changed during persistence; retry required')
+    throw new PlaceSourceConflictError(
+      'Source mirror changed during persistence; retry required',
+    )
   return receipt
 }

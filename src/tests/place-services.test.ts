@@ -3325,6 +3325,51 @@ describe('atomic source group application', () => {
     },
   )
 
+  it('retains a source review when a scan is older than the latest mirrored publication', async () => {
+    const { sqlite, binding, first } = await fixture(true)
+    sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    const original = sqlite
+      .prepare('SELECT * FROM placeRevision WHERE id=?')
+      .get(first.revisionId)
+    if (!original) throw new Error('Missing original source fixture')
+    const projection = {
+      ssId: 'shop',
+      apiVersion: original.apiVersion,
+      releaseId: original.releaseId,
+      snapshotId: original.snapshotId,
+      facts: JSON.parse(String(original.facts)),
+      payload: JSON.parse(String(original.payload)),
+      issues: [],
+    }
+    projection.payload.meta.page = { offset: 100, limit: 100 }
+    const target = readPlacePublicationMetadata(projection.payload.meta)
+    sqlite
+      .prepare(
+        "UPDATE placeRefresh SET phase='ready',target=?,runId='run',lease='owner',leaseUntil=?",
+      )
+      .run(JSON.stringify(target), Date.now() + 60000)
+    sqlite
+      .prepare(
+        "INSERT INTO placeRefreshItem(runId,placeId,ssId,projection,status) VALUES('run',?,'shop',?,'pending')",
+      )
+      .run(first.placeId, JSON.stringify(projection))
+    const before = sqlite.prepare('SELECT * FROM placeRevision ORDER BY sequence').all()
+    expect(
+      await processPlaceRefresh(binding, { runId: 'run', lease: 'owner', target }),
+    ).toBe('review')
+    expect(
+      sqlite.prepare('SELECT * FROM placeRevision ORDER BY sequence').all(),
+    ).toEqual(before)
+    expect(
+      sqlite.prepare('SELECT status,reviewReason FROM placeRefreshItem').get(),
+    ).toEqual({
+      status: 'review',
+      reviewReason: 'source-evidence-conflict',
+    })
+    expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(0)
+  })
+
   it('drains ingestion and Feature assessment before completing a durable run', async () => {
     const { sqlite, binding, nextSource, first } = await fixture(true)
     sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
@@ -3360,6 +3405,45 @@ describe('atomic source group application', () => {
     expect(JSON.parse(String(state?.accepted))).toEqual(target)
     expect(sqlite.prepare('SELECT * FROM placeAdoptionDecision').all()).toHaveLength(2)
     expect(await tick()).toBe('superseded')
+  })
+
+  it('does not downgrade a hydrated latest revision during scheduled ingestion', async () => {
+    const { db, sqlite, binding, nextSource, first } = await fixture(true)
+    const hydrated = structuredClone(nextSource)
+    hydrated.facts.location.address = {
+      ...hydrated.facts.location.address,
+      status: 'resolved',
+      address2dId: 'building',
+      addressSnapshotId: 'address-snapshot',
+      records: { verified: true },
+    }
+    await persistForwardSaanSeoiPlace(db, hydrated)
+    sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
+    sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
+    const target = readPlacePublicationMetadata(nextSource.payload.meta)
+    sqlite
+      .prepare(
+        "UPDATE placeRefresh SET phase='ready',target=?,runId='run',lease='owner',leaseUntil=?",
+      )
+      .run(JSON.stringify(target), Date.now() + 60000)
+    sqlite
+      .prepare(
+        "INSERT INTO placeRefreshItem(runId,placeId,ssId,projection,status) VALUES('run',?,'shop',?,'pending')",
+      )
+      .run(first.placeId, JSON.stringify(nextSource))
+    const before = sqlite.prepare('SELECT * FROM placeRevision ORDER BY sequence').all()
+    expect(
+      await processPlaceRefresh(binding, { runId: 'run', lease: 'owner', target }),
+    ).toBe('review')
+    expect(
+      sqlite.prepare('SELECT * FROM placeRevision ORDER BY sequence').all(),
+    ).toEqual(before)
+    expect(
+      sqlite.prepare('SELECT revisionId,reviewReason FROM placeRefreshItem').get(),
+    ).toEqual({
+      revisionId: null,
+      reviewReason: 'source-evidence-conflict',
+    })
   })
 
   it('replays a failed outcome checkpoint without repeating already applied groups', async () => {

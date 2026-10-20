@@ -8,7 +8,11 @@ import {
 } from '#lib/places/publication.js'
 import { hydrateSaanSeoiPlaceAddress } from '#lib/places/sourceAddress.js'
 // SERVICES
-import { persistSaanSeoiPlace } from './placeSource'
+import {
+  persistForwardSaanSeoiPlace,
+  PlaceSourceConflictError,
+  PlaceSourceReviewError,
+} from './placeSource'
 import { adoptRefreshedPlaceForFeature } from './placeRefreshAdoption'
 // TYPES
 import type { D1Database } from '@cloudflare/workers-types'
@@ -91,12 +95,26 @@ export async function processPlaceRefresh(
     if (source) projection = await hydrateSaanSeoiPlaceAddress(source, projection)
     else if (projection.issues.some(issue => issue.kind === 'addressRecordsPending'))
       throw new Error('Place Address hydration requires a source client')
-    const receipt = await persistSaanSeoiPlace(
-      db,
-      projection,
-      sql`${guard}
-      AND EXISTS(SELECT 1 FROM place WHERE id=${row.placeId} AND ssId=${row.ssId})`,
-    )
+    let receipt: { placeId: string; revisionId: string }
+    // A long scan cannot overwrite newer mirror evidence or discard hydrated Addresses.
+    try {
+      receipt = await persistForwardSaanSeoiPlace(
+        db,
+        projection,
+        sql`${guard}
+        AND EXISTS(SELECT 1 FROM place WHERE id=${row.placeId} AND ssId=${row.ssId})`,
+      )
+    } catch (error) {
+      if (error instanceof PlaceSourceReviewError)
+        return hold('source-evidence-conflict')
+      if (error instanceof PlaceSourceConflictError) {
+        const owned = await db.get<{ owned: number }>(
+          sql`SELECT CASE WHEN (${guard}) THEN 1 ELSE 0 END AS owned`,
+        )
+        if (!owned.owned) return 'superseded'
+      }
+      throw error
+    }
     if (receipt.placeId !== row.placeId) return hold('source-identity-changed')
     const saved =
       await db.run(sql`UPDATE placeRefreshItem SET revisionId=${receipt.revisionId}

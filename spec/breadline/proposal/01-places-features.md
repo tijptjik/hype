@@ -1852,3 +1852,22 @@ internal metadata were the only changed tables. Integrity/FKs and completed repl
 pass. The 125 focused tests pass. This does not accept additional establishment
 matches or adopt new Feature values. Remaining identity/address curation, unresolved
 MTR entrance mappings and production rollout remain separate work.
+
+### Scheduled ingestion preserves newer source evidence (Refs #194)
+
+The completion audit found that scheduled ingestion still used the low-level source
+writer: an older long-running scan could append a later local sequence than a newer
+mirrored publication. Feature adoption checked chronology afterward, but the shared
+Place's latest source projection could already have regressed.
+
+Scheduled ingestion now shares forward-only source persistence with bulk mirroring,
+including same-publication canonical comparison and resolved Address preservation.
+Its run/lease guard applies to both atomic writes and receipt verification. Semantic
+conflicts retain a `source-evidence-conflict` review outcome without appending source
+revisions or advancing Feature values. Concurrent changes remain retryable; expired
+ownership returns `superseded` without claiming ingestion.
+
+The regression test first reproduced the old `ingested` result for a stale scan.
+The corrected path and hydration-downgrade regression pass with 141 focused tests;
+Worker type checking passes. The full real-source canonical refresh rehearsal is
+separate and remains in progress; these checks do not claim its completion.
