@@ -66,8 +66,11 @@ const menuButtonClasses = $derived(
   getAppMenuItemButtonClasses(viewportState.isIconOnlyMenu, isPillMenu),
 )
 const itemGridClasses = $derived(getAppMenuItemGridClasses(isPillMenu))
+// Short desktop windows keep desktop actions even when the menu becomes compact.
 const visibleTrailingItems = $derived(
-  trailingItems.filter(item => isPillMenu || item.isMobileVisible === true),
+  trailingItems.filter(
+    item => !viewportState.isMobileMenu || item.isMobileVisible === true,
+  ),
 )
 const mobileItems = $derived(isPillMenu ? items : [...items, ...visibleTrailingItems])
 const navItemCount = $derived(isPillMenu ? items.length : mobileItems.length)
