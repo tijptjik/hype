@@ -7,10 +7,12 @@ import { m } from '#lib/i18n.js'
 
 let {
   resourceType,
+  mode = 'publish',
   onChoice,
   onCancel,
 }: {
   resourceType: 'organisation' | 'project' | 'layer'
+  mode?: 'publish' | 'preview'
   onChoice: (publishChildren: boolean) => void | Promise<void>
   onCancel: () => void
 } = $props()
@@ -24,16 +26,24 @@ const description = $derived(
 )
 </script>
 
-<ChoiceDialog title={m.publish_children__title()} {description} {onCancel}>
+<ChoiceDialog
+  title={mode === 'preview'
+    ? m.publication_preview__title()
+    : m.publish_children__title()}
+  description={mode === 'preview' ? m.publication_preview__description() : description}
+  {onCancel}
+>
   <Button text={m.cancel()} color="neutral" style="ghost" onClick={onCancel} />
   <Button
-    text={m.publish_children__parent_only()}
+    text={mode === 'preview'
+      ? m.publication_preview__parent_only()
+      : m.publish_children__parent_only()}
     color="neutral"
     style="outline"
     onClick={() => onChoice(false)}
   />
   <Button
-    text={m.publish_children__all()}
+    text={mode === 'preview' ? m.publication_preview__all() : m.publish_children__all()}
     color="success"
     onClick={() => onChoice(true)}
   />

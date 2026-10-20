@@ -198,11 +198,9 @@ describe('project authorization policy matrix', () => {
           'coreAdmin',
           'hubAdminSame',
           'orgOwner',
-          'orgMember',
           'projectOwner',
           'projectMaintainer',
           'projectTranslator',
-          'projectMember',
         ],
       },
       {
@@ -257,14 +255,12 @@ describe('project authorization policy matrix', () => {
   describe('listProjects', () => {
     const action: AuthorizeParams['action'] = 'listProjects'
 
-    it('allows membership actors to request unpublished + non-archived', () => {
+    it('allows management and translation actors to request unpublished + non-archived', () => {
       const allowed = [
         ACTORS.orgOwner,
-        ACTORS.orgMember,
         ACTORS.projectOwner,
         ACTORS.projectMaintainer,
         ACTORS.projectTranslator,
-        ACTORS.projectMember,
       ]
 
       for (const actor of allowed) {

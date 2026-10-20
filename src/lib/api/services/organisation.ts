@@ -1,5 +1,5 @@
 // DRIZZLE
-import { asc, eq, type SQL } from 'drizzle-orm'
+import { and, or, asc, eq, type SQL } from 'drizzle-orm'
 // LIB
 import {
   applyQueryFilters,
@@ -400,7 +400,22 @@ const buildVisibilityAndOwnershipConditions = (
     conditions.push(eq(organisation.id, '__none__' as Id))
     return { filtersToApply: filteredParams, conditions, excludeColumns }
   }
-  conditions.push(chunkedInArray(organisation.id, allowedOrganisationIds))
+  // Membership grants published/non-archived visibility; only ownership grants other states.
+  const ownedOrganisationIds = userRoles
+    .filter(role => role.type === 'organisation' && role.role === 'owner')
+    .map(
+      role => (role as Extract<UserRoleDisco, { type: 'organisation' }>).organisationId,
+    )
+  conditions.push(
+    or(
+      chunkedInArray(organisation.id, ownedOrganisationIds),
+      and(
+        chunkedInArray(organisation.id, allowedOrganisationIds),
+        eq(organisation.isPublished, true),
+        eq(organisation.isArchived, false),
+      ),
+    )!,
+  )
 
   // Apply tri-state visibility semantics for admin owner queries.
   const isPublished = toTriStateBoolean(params.isPublished)

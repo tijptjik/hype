@@ -48,6 +48,9 @@ export interface ResourceFilterDependencies {
   specifierTranslation: (feature: Feature) => boolean | null
   prisms: () => Prisms
   rows: () => FilteredResources
+  publicationPreview?: () =>
+    | import('#lib/publication/preview.js').PublicationPreview
+    | null
   scopeKey: () => string
   isAdmin: () => boolean
   preferences: () => UserPreferences
@@ -99,6 +102,7 @@ export class ResourceFilters {
     meta: {
       isAdminRequest: this.dependencies.isAdmin(),
       scope: this.dependencies.scopeKey(),
+      publicationPreview: this.dependencies.publicationPreview?.() ?? undefined,
     },
   })
 
@@ -132,6 +136,7 @@ export class ResourceFilters {
     meta: {
       isAdminRequest: false,
       scope: this.dependencies.scopeKey(),
+      publicationPreview: this.dependencies.publicationPreview?.() ?? undefined,
     },
   })
 

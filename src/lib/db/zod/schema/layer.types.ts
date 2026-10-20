@@ -66,6 +66,7 @@ export type LayerGetParamsByProfile<P extends LayerProfile> = Omit<
 > & {
   meta?: {
     isAdminRequest?: boolean
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
     profile?: P
   }
 }
@@ -76,6 +77,7 @@ export type LayerListParamsByProfile<P extends LayerProfile> = Omit<
 > & {
   meta?: {
     isAdminRequest?: boolean
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
     profile?: P
   }
 }

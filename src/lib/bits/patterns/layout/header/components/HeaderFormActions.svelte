@@ -23,6 +23,7 @@ let {
   saveAction = null,
   deleteAction = null,
   publishAction = null,
+  previewAction = null,
   hideLabel = false,
 }: HeaderFormActionsProps = $props()
 
@@ -130,5 +131,20 @@ function resolveIconClasses(icon?: unknown): string {
         {/if}
       </div>
     {/if}
+  {/if}
+  {#if previewAction}
+    <Button
+      size="sm"
+      text={previewAction.text}
+      color={previewAction.color ?? 'neutral'}
+      style={previewAction.style ?? 'outline'}
+      iconComponent={previewAction.icon}
+      labelClasses={HEADER_BUTTON_LABEL_CLASSES}
+      class={resolveActionClass(previewAction.class)}
+      {hideLabel}
+      hideLabelInstantly
+      disabled={previewAction.disabled}
+      onClick={() => previewAction.onClick?.()}
+    />
   {/if}
 </div>

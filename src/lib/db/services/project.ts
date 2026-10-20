@@ -13,7 +13,10 @@ import {
   normalizeProjectRoleCapabilities,
 } from '#lib/capabilities.js'
 // PUBLICATION
-import { publishScopedFeatureImages } from './publication.js'
+import {
+  descendantPublicationState,
+  publishScopedFeatureImages,
+} from './publication.js'
 // SCHEMA
 import {
   feature,
@@ -895,7 +898,7 @@ export const cascadeProjectPublishedStateToDescendants = async (
       isPublished: params.state
         ? params.publishChildren
           ? true
-          : sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`
+          : descendantPublicationState(layer)
         : sql`0`,
     })
     .where(eq(layer.projectId, params.projectId))
@@ -913,7 +916,7 @@ export const cascadeProjectPublishedStateToDescendants = async (
       isPublished: params.state
         ? params.publishChildren
           ? true
-          : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
+          : descendantPublicationState(feature)
         : sql`0`,
     })
     .where(eq(feature.projectId, params.projectId))

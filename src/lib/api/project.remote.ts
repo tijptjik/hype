@@ -21,6 +21,7 @@ import { getLocale } from '#lib/i18n.js'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 // API
+import { publicationPreviewConditions } from './services/publicationPreview.js'
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
   getDuplicateValues,
@@ -171,7 +172,8 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
   // Resolve desired `profile`.
   const profile = toProjectProfile(params.meta?.profile, 'list')
 
-  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+  if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+    throw error(403, 'ACCOUNT_REQUIRED')
 
   // Resolve desired `query params`.
   const queryParams = validateQueryParams<ProjectDB>(
@@ -188,24 +190,32 @@ const getProjectsQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
     hub: event.locals.hub,
     requestedListState,
   })
-  if (!listDecision.allowed) {
+  if (!params.meta?.publicationPreview && !listDecision.allowed) {
     throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
   // Resolve query conditions.
-  const { conditions, filtersToApply } = toQueryConditions(
-    db,
-    user,
-    ctx.isAdminRequest,
-    queryParams,
-    userRoles,
-    (params.prisms as Prisms | undefined) ?? {
-      organisation: [],
-      project: [],
-      layer: [],
-    },
-    event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
-  )
+  const { conditions, filtersToApply } = params.meta?.publicationPreview
+    ? await publicationPreviewConditions(
+        ctx,
+        params.meta.publicationPreview,
+        'project',
+        queryParams,
+        params.prisms,
+      )
+    : toQueryConditions(
+        db,
+        user,
+        ctx.isAdminRequest,
+        queryParams,
+        userRoles,
+        (params.prisms as Prisms | undefined) ?? {
+          organisation: [],
+          project: [],
+          layer: [],
+        },
+        event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
+      )
 
   // Load records from DB.
   const result = await listProjects(
@@ -242,7 +252,8 @@ const getProjectsWhichHaveLayersQuery = guardedQuery(
     const { db, user, userRoles, event } = ctx
     const profile = toProjectProfile(params.meta?.profile, 'list')
 
-    if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+    if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+      throw error(403, 'ACCOUNT_REQUIRED')
 
     const queryParams = validateQueryParams<ProjectDB>(
       project,
@@ -256,23 +267,31 @@ const getProjectsWhichHaveLayersQuery = guardedQuery(
       requestedListState,
     })
 
-    if (!listDecision.allowed) {
+    if (!params.meta?.publicationPreview && !listDecision.allowed) {
       throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
 
-    const { conditions, filtersToApply } = toQueryConditions(
-      db,
-      user,
-      ctx.isAdminRequest,
-      queryParams,
-      userRoles,
-      (params.prisms as Prisms | undefined) ?? {
-        organisation: [],
-        project: [],
-        layer: [],
-      },
-      event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
-    )
+    const { conditions, filtersToApply } = params.meta?.publicationPreview
+      ? await publicationPreviewConditions(
+          ctx,
+          params.meta.publicationPreview,
+          'project',
+          queryParams,
+          params.prisms,
+        )
+      : toQueryConditions(
+          db,
+          user,
+          ctx.isAdminRequest,
+          queryParams,
+          userRoles,
+          (params.prisms as Prisms | undefined) ?? {
+            organisation: [],
+            project: [],
+            layer: [],
+          },
+          event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
+        )
 
     conditions.push(
       hasProjectLayersCondition({
@@ -327,7 +346,8 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
   // Resolve desired `profile`.
   const profile = toProjectProfile(params.meta?.profile, 'detail')
 
-  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+  if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+    throw error(403, 'ACCOUNT_REQUIRED')
 
   // Probe the requested project for flags.
   const probe = await probeProjectQuery(db, {
@@ -346,7 +366,7 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
     userRoles,
     probe,
   })
-  if (!readDecision.allowed) {
+  if (!params.meta?.publicationPreview && !readDecision.allowed) {
     throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
@@ -360,15 +380,22 @@ const getProjectQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
     } as Partial<ProjectDB>,
   )
 
-  const { conditions } = toQueryConditions(
-    db,
-    user,
-    isAdminRequest,
-    queryParams,
-    userRoles,
-    undefined,
-    event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
-  )
+  const { conditions } = params.meta?.publicationPreview
+    ? await publicationPreviewConditions(
+        ctx,
+        params.meta.publicationPreview,
+        'project',
+        queryParams,
+      )
+    : toQueryConditions(
+        db,
+        user,
+        isAdminRequest,
+        queryParams,
+        userRoles,
+        undefined,
+        event.locals.hub?.isCore ? null : (event.locals.hub?.id ?? null),
+      )
 
   // Load record from DB.
   const result = await loadProject(

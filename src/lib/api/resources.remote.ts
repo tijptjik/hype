@@ -4,6 +4,7 @@ import { error } from '@sveltejs/kit'
 // SCHEMA
 import { z } from 'zod'
 // REMOTE
+import { PublicationPreviewSchema } from '#lib/publication/schema.js'
 import { guardedBatchQuery, guardedQuery } from './server/guarded.js'
 import {
   getOrganisations,
@@ -24,7 +25,11 @@ import type {
 // - getPinnedResource: batched authorized compact identities
 
 const resourceType = z.enum(['organisation', 'project', 'layer'])
-const meta = z.object({ isAdminRequest: z.boolean(), scope: z.string().max(4096) })
+const meta = z.object({
+  isAdminRequest: z.boolean(),
+  scope: z.string().max(4096),
+  publicationPreview: PublicationPreviewSchema.optional(),
+})
 const pageInput = z.object({
   type: resourceType,
   profile: z.enum(['compact', 'default']).optional(),
@@ -98,13 +103,14 @@ export const getResourcePage = guardedQuery(
       q: input.q,
       meta: {
         isAdminRequest: input.meta.isAdminRequest,
+        publicationPreview: input.meta.publicationPreview,
         profile: input.profile ?? ('compact' as const),
       },
     }
     // Existing resource queries remain the single authorization and visibility boundary.
     const result =
       input.type === 'organisation'
-        ? await (input.meta.isAdminRequest
+        ? await (input.meta.isAdminRequest || input.meta.publicationPreview
             ? getOrganisations(params)
             : getOrganisationsWhichHaveLayers(params))
         : input.type === 'project'
@@ -164,6 +170,7 @@ export const getPinnedResource = guardedBatchQuery(
           pagination: { limit: 25 },
           meta: {
             isAdminRequest: first.meta.isAdminRequest,
+            publicationPreview: first.meta.publicationPreview,
             profile: first.profile ?? ('compact' as const),
           },
         }
@@ -205,7 +212,7 @@ export const getDefaultLayerResources = guardedQuery(
         },
         pagination: { limit: 250, afterId },
         sorting: { sortBy: 'id', sortOrder: 'asc' },
-        meta: { isAdminRequest: input.meta.isAdminRequest, profile: 'default' },
+        meta: { ...input.meta, profile: 'default' },
       })
       rows.push(...(result.data as PanelResource[]))
       if (!result.hasMore || !result.data.length) break

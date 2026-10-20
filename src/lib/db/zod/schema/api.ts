@@ -2,10 +2,13 @@ import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES } from '#lib/features/cardStyle.js'
 // ZOD
 import { z } from 'zod'
+// PUBLICATION
+import { PublicationPreviewSchema } from '#lib/publication/schema.js'
 
 export const RequestMetaSchema = z
   .object({
     isAdminRequest: z.boolean().optional(),
+    publicationPreview: PublicationPreviewSchema.optional(),
     profile: z
       .enum(['compact', 'default', 'map', 'full', 'admin', 'list', 'card', 'detail'])
       .optional(),

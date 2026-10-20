@@ -2,7 +2,10 @@ import { gt } from 'drizzle-orm'
 // DRIZZLE
 import { and, eq, inArray, not, or, sql, type SQL } from 'drizzle-orm'
 // PUBLICATION
-import { publishScopedFeatureImages } from './publication.js'
+import {
+  descendantPublicationState,
+  publishScopedFeatureImages,
+} from './publication.js'
 // SCHEMA
 import {
   feature,
@@ -690,7 +693,7 @@ export const cascadeLayerPublishedStateToDescendants = async (
       isPublished: params.state
         ? params.publishChildren
           ? true
-          : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
+          : descendantPublicationState(feature)
         : sql`0`,
     })
     .where(eq(feature.layerId, params.layerId))

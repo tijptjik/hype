@@ -49,6 +49,7 @@ export type FeatureAuthTarget = {
   projectId?: string | null
   layerId?: string | null
   resourceHubId?: string | null
+  isArchived?: boolean
 }
 
 export type FeatureSubmittedData = Partial<{
@@ -117,13 +118,35 @@ const hasProjectRole = (
 const hasAnyProjectRole = (roles: UserRoleDisco[], allowedRoles: string[]): boolean =>
   roles.some(role => role.type === 'project' && allowedRoles.includes(role.role))
 
+/**
+ * Resolves owner-level archived feature access within persisted ancestry.
+ * @param actor Authenticated role snapshot.
+ * @param target Persisted feature ancestry.
+ * @returns Whether the actor can read and edit archived features in this scope.
+ */
+const canManageArchivedFeature = (
+  actor: FeatureAuthActor,
+  target: FeatureAuthTarget,
+): boolean =>
+  Boolean(actor.isSuperAdmin) ||
+  isRelevantHubAdmin(actor.userRoles, target.resourceHubId) ||
+  hasProjectRole(actor.userRoles, target.projectId, ['owner']) ||
+  actor.userRoles.some(
+    role =>
+      role.type === 'organisation' &&
+      role.role === 'owner' &&
+      role.organisationId === target.organisationId,
+  )
+
 const canManageFeatureProject = (
   actor: FeatureAuthActor,
   target: FeatureAuthTarget,
 ): boolean => {
-  if (actor.isSuperAdmin) return true
-  if (isRelevantHubAdmin(actor.userRoles, target.resourceHubId)) return true
-  return hasProjectRole(actor.userRoles, target.projectId, ['owner', 'maintainer'])
+  if (canManageArchivedFeature(actor, target)) return true
+  return (
+    !target.isArchived &&
+    hasProjectRole(actor.userRoles, target.projectId, ['maintainer'])
+  )
 }
 
 const canTranslateFeatureProject = (
@@ -131,7 +154,10 @@ const canTranslateFeatureProject = (
   target: FeatureAuthTarget,
 ): boolean => {
   if (canManageFeatureProject(actor, target)) return true
-  return hasProjectRole(actor.userRoles, target.projectId, ['translator'])
+  return (
+    !target.isArchived &&
+    hasProjectRole(actor.userRoles, target.projectId, ['translator'])
+  )
 }
 
 export const toFeatureAuthActor = (user: {
@@ -212,7 +238,15 @@ export const authorizeFeatureListForContext = (params: {
 
   // This is a capability gate only. Actual project scoping is enforced by
   // `api/services/feature.ts::toQueryConditions(...)`.
-  if (hasAnyProjectRole(actor.userRoles, ['owner', 'maintainer'])) {
+  if (
+    actor.userRoles.some(
+      role => role.type === 'organisation' && role.role === 'owner',
+    ) ||
+    hasAnyProjectRole(
+      actor.userRoles,
+      requestsArchived ? ['owner'] : ['owner', 'maintainer'],
+    )
+  ) {
     return { allowed: true }
   }
 

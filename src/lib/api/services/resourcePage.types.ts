@@ -39,5 +39,9 @@ export type ResourcePageInput = {
   q?: string
   cursor?: { id: string; signature: string; value?: string | number | null } | null
   prisms?: { organisation?: string[]; project?: string[]; layer?: string[] }
-  meta: { isAdminRequest: boolean; scope: string }
+  meta: {
+    isAdminRequest: boolean
+    scope: string
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
+  }
 }

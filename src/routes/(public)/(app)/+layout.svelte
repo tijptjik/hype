@@ -31,6 +31,8 @@ import {
 } from '#lib/client/services/hubSubscription.js'
 import { shouldSkipGlobalKeydown } from '#lib/client/keybindings.js'
 import { toast } from 'svelte-sonner'
+// COMPONENTS
+import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // CONTEXT
@@ -705,7 +707,26 @@ $effect(() => {
           {privacyPolicyDialogProps}
           {termsOfServiceDialogProps}
         />
-        <Omnibar {...omnibarProps} />
+        <Omnibar {...omnibarProps}>
+          {#snippet below()}
+            {#if appCtx.view.publicationPreview}
+              <aside
+                aria-label={m.publication_preview__title()}
+                class="pointer-events-auto mx-auto mt-3 flex w-fit max-w-full items-center gap-3 rounded-full border border-error/40 bg-panel px-3 py-1.5 text-xs text-error shadow-lg"
+              >
+                <span class="min-w-0 leading-relaxed"
+                  >{m.publication_preview__banner()}</span
+                >
+                <a
+                  href={appCtx.publicationPreviewExitUrl}
+                  data-sveltekit-reload
+                  class="shrink-0 rounded-full bg-error/15 px-3 py-1.5 font-semibold text-error transition-colors hover:bg-error/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-error"
+                  >{m.publication_preview__exit()}</a
+                >
+              </aside>
+            {/if}
+          {/snippet}
+        </Omnibar>
         {@render children()}
         <AppMapOverlayBar />
         <AppNav
@@ -720,5 +741,7 @@ $effect(() => {
         />
       </AppMain>
     </AppSurface>
+  {:else if appCtx.view.publicationPreview}
+    <LoadScreen label={m.publication_preview__preparing()} />
   {/if}
 </AppShell>

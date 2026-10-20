@@ -10,6 +10,9 @@ import { untrack } from 'svelte'
 import { getLocaleKey, getLocaleOrder, m } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
+// PUBLICATION
+import { publicationPreviewUrl } from '#lib/publication/preview.js'
+import { canPreviewPublication } from '#lib/publication/permissions.js'
 // SERVICES
 import {
   bindAdminFacetHistorySync,
@@ -211,6 +214,7 @@ import type { Locale } from '#lib/types.js'
 // REMOTE REFRESH + STATE TOGGLES
 // - refreshLayer
 // - handleLayerStateToggle
+// - onPreview
 // - onPublishToggle
 // - onDeleteToggle
 // - onReset
@@ -1035,12 +1039,44 @@ async function handleLayerStateToggle({
   }
 }
 
+let pendingPreviewId = $state<string | null>(null)
+const canPreview = $derived.by(() => {
+  if (!currentUser) return false
+  return (
+    isCurrentRefLoaded &&
+    !layer?.data?.isArchived &&
+    canPreviewPublication(currentUser, currentUser.roles ?? [], {
+      organisationId: layer?.data?.organisationId ?? '',
+      projectId: layer?.data?.projectId,
+      hubId: adminCtx.view.hub?.id,
+    })
+  )
+})
+
+/**
+ * Opens the same descendant choice as publishing, then starts an isolated map preview.
+ * @param publishChildren Explicit descendant choice, or undefined to open the dialog.
+ * @returns Nothing; navigation creates a fresh map context without changing publication state.
+ */
+function onPreview(publishChildren?: boolean): void {
+  if (!canPreview || !layer?.data?.id) return
+  if (publishChildren === undefined) {
+    pendingPreviewId = layer.data.id
+    return
+  }
+  if (pendingPreviewId !== layer.data.id) return
+  window.location.assign(
+    publicationPreviewUrl({ type: 'layer', id: layer.data.id, publishChildren }),
+  )
+}
+
 let pendingPublishId = $state<string | null>(null)
 
 // Dismiss pending publication when navigation changes the target resource.
 $effect(() => {
   layerRef
   pendingPublishId = null
+  pendingPreviewId = null
 })
 
 /** Prompts before publishing drafts below this resource; unpublishing remains immediate.
@@ -1280,6 +1316,7 @@ $effect(() => {
     reset: onReset,
     submit: onSubmit,
     togglePublish: onPublishToggle,
+    preview: canPreview ? () => onPreview() : null,
     toggleDelete: onDeleteToggle,
   })
 })
@@ -1484,6 +1521,17 @@ $effect(() => {
     onChoice={choice => onPublishToggle(choice)}
     onCancel={() => {
       pendingPublishId = null
+    }}
+  />
+{/if}
+
+{#if pendingPreviewId && pendingPreviewId === layer?.data?.id}
+  <PublishChildrenDialog
+    resourceType="layer"
+    mode="preview"
+    onChoice={choice => onPreview(choice)}
+    onCancel={() => {
+      pendingPreviewId = null
     }}
   />
 {/if}

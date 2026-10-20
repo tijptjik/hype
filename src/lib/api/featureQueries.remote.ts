@@ -4,6 +4,8 @@ import { error } from '@sveltejs/kit'
 import { z } from 'zod'
 import { getResolution, isValidCell } from 'h3-js'
 // API
+import { publicationPreviewConditions } from './services/publicationPreview.js'
+import { PublicationPreviewSchema } from '#lib/publication/schema.js'
 import { guardedBatchQuery } from './server/guarded.js'
 import {
   authorizeFeatureListForContext,
@@ -98,7 +100,11 @@ const inputSchema = z.object({
       value: z.string().nullable().optional(),
     })
     .nullish(),
-  meta: z.object({ isAdminRequest: z.boolean(), scope: z.string().max(4096) }),
+  meta: z.object({
+    isAdminRequest: z.boolean(),
+    scope: z.string().max(4096),
+    publicationPreview: PublicationPreviewSchema.optional(),
+  }),
 })
 
 /**
@@ -144,15 +150,21 @@ export const getFeaturePage = guardedBatchQuery(
       const targetUserId = list?.userId ?? user.id
       if (list && targetUserId !== user.id && !user.superAdmin)
         throw error(403, toAuthMessage('INSUFFICIENT_ROLE'))
-      const { conditions } = toQueryConditions(
-        db,
-        user,
-        isAdminRequest,
-        requested,
-        userRoles,
-        undefined,
-        event.locals.hub.id ?? null,
-      )
+      const { conditions } = input.meta.publicationPreview
+        ? await publicationPreviewConditions(
+            ctx,
+            input.meta.publicationPreview,
+            'feature',
+          )
+        : toQueryConditions(
+            db,
+            user,
+            isAdminRequest,
+            requested,
+            userRoles,
+            undefined,
+            event.locals.hub.id ?? null,
+          )
       // Resolve prism membership at layer level so counts can share the same exact scope.
       conditions.push(...buildFeaturePrismConditions(db, input.prisms))
       const result = await queryFeaturePage(

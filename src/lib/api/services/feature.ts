@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, inArray, sql, type SQL } from 'drizzle-orm'
+import { and, or, eq, inArray, sql, type SQL } from 'drizzle-orm'
 // ADDRESS
 import { projectFeatureAddress } from '#lib/addresses/featureAddress.js'
 // API
@@ -686,19 +686,14 @@ export const toQueryConditions = (
   const filtersToApply: QueryParams = { ...(params as QueryParams) }
   const conditions: SQL<unknown>[] = []
   const normalizedPrisms = toFeaturePrisms(prisms)
-  const maintainerProjectIds = Array.from(
-    new Set(
-      userRoles
-        .filter(
-          (role): role is Extract<UserRoleDisco, { type: 'project' }> =>
-            role.type === 'project' &&
-            (role.role === 'owner' || role.role === 'maintainer') &&
-            typeof role.projectId === 'string' &&
-            role.projectId.length > 0,
-        )
-        .map(role => role.projectId),
-    ),
-  )
+  const ownerProjectIds = userRoles
+    .filter(role => role.type === 'project' && role.role === 'owner')
+    .map(role => (role as Extract<UserRoleDisco, { type: 'project' }>).projectId)
+  const ownerOrganisationIds = userRoles
+    .filter(role => role.type === 'organisation' && role.role === 'owner')
+    .map(
+      role => (role as Extract<UserRoleDisco, { type: 'organisation' }>).organisationId,
+    )
   const translatorProjectIds = Array.from(
     new Set(
       userRoles
@@ -723,7 +718,11 @@ export const toQueryConditions = (
   }
 
   const isSuperAdmin = Boolean(user.superAdmin)
-  const isScopedAdmin = isSuperAdmin || isHubAdmin || translatorProjectIds.length > 0
+  const isScopedAdmin =
+    isSuperAdmin ||
+    isHubAdmin ||
+    translatorProjectIds.length > 0 ||
+    ownerOrganisationIds.length > 0
 
   if (!isAdminRequest) {
     removeExcludedColumns(filtersToApply, ['isPublished', 'isArchived'])
@@ -740,19 +739,17 @@ export const toQueryConditions = (
   const requestedIsDraft = toBooleanOrUndefined(isDraft)
 
   if (!isSuperAdmin && !isHubAdmin && isAdminRequest) {
-    const allowedProjectIds = requestedIsArchived
-      ? maintainerProjectIds
-      : translatorProjectIds
-
-    if (allowedProjectIds.length === 0) {
-      conditions.push(sql`false`)
-    } else {
-      const allowedLayerIds = db
-        .select({ id: layer.id })
-        .from(layer)
-        .where(chunkedInArray(layer.projectId, allowedProjectIds))
-      conditions.push(inArray(feature.layerId, allowedLayerIds))
-    }
+    // Owners can view every archive state; maintainers/translators only non-archived rows.
+    conditions.push(
+      or(
+        chunkedInArray(feature.organisationId, ownerOrganisationIds),
+        chunkedInArray(feature.projectId, ownerProjectIds),
+        and(
+          eq(feature.isArchived, false),
+          chunkedInArray(feature.projectId, translatorProjectIds),
+        ),
+      )!,
+    )
   }
 
   applyTriStateBooleanCondition(

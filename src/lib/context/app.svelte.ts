@@ -38,6 +38,9 @@ export class AppCtx {
   )
   // Whether the public app is transitioning between feature presentations.
   isTransitioning = $state(false)
+
+  /** Canonical editor destination resolved by publication preview authorization. */
+  publicationPreviewExitUrl = $state('/')
   private transitionTimeout: ReturnType<typeof setTimeout> | null = null
 
   /** Cancels presentation timing when selection changes or the surface unmounts. @returns Nothing. */
@@ -709,7 +712,12 @@ export class AppCtx {
         console.error('[AppCtx] Initial resource loading failed', result.reason)
     if (!this.view.isExpectedRoleScopeCurrent(expectedRoleScope)) return
 
-    this.view.scope.applyInitialLayerPrisms(expectedRoleScope)
+    if (this.view.publicationPreview) {
+      // A preview starts with every layer in the simulated publication, independent of saved defaults.
+      this.view.scope.prisms.layer = this.view.scope.selectionLayers.map(
+        layer => layer.id,
+      )
+    } else this.view.scope.applyInitialLayerPrisms(expectedRoleScope)
     await this.view.loadPinnedLayers(expectedRoleScope)
     await this.view.postLayerMutation(false, false, expectedRoleScope)
 

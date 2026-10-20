@@ -171,7 +171,7 @@ describe('feature authorization policy matrix', () => {
       {
         name: 'archived',
         requestedState: { isPublished: true, isArchived: true },
-        allowed: ['coreAdmin', 'hubAdminSame', 'projectOwner', 'projectMaintainer'],
+        allowed: ['coreAdmin', 'hubAdminSame', 'projectOwner'],
       },
     ] as const
 

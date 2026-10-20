@@ -34,7 +34,11 @@ export type FeatureQueryInput = {
   limit?: number
   sorting?: { sortBy: 'id' | 'visitedAt'; sortOrder: 'asc' | 'desc' }
   cursor?: { id: string; signature: string; value?: string | null } | null
-  meta: { isAdminRequest: boolean; scope: string }
+  meta: {
+    isAdminRequest: boolean
+    scope: string
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
+  }
 }
 
 /** Counts cover the entire filtered query, independently of page traversal. */

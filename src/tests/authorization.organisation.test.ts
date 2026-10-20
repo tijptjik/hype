@@ -151,7 +151,7 @@ describe('organisation authorization policy matrix', () => {
       {
         name: 'unpublished + non-archived',
         requestedState: { isPublished: false, isArchived: false },
-        allowedActors: ['coreAdmin', 'hubAdminSame', 'owner', 'member'],
+        allowedActors: ['coreAdmin', 'hubAdminSame', 'owner'],
       },
       {
         name: 'archived',
@@ -219,7 +219,7 @@ describe('organisation authorization policy matrix', () => {
   describe('listOrganisations', () => {
     const action: AuthorizeParams['action'] = 'listOrganisations'
 
-    it('allows members to request unpublished + non-archived lists', () => {
+    it('denies members to request unpublished + non-archived lists', () => {
       const decision = authorize(
         withActor(ACTORS.member, {
           action,
@@ -232,7 +232,7 @@ describe('organisation authorization policy matrix', () => {
         action,
         scenario: 'unpublished list',
         actor: ACTORS.member.name,
-        expected: true,
+        expected: false,
         actual: decision.allowed,
         code: decision.code,
       })

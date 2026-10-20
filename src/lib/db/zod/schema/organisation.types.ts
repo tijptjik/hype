@@ -85,6 +85,7 @@ export type OrganisationGetParamsByProfile<P extends OrganisationProfile> = Omit
 > & {
   meta?: {
     isAdminRequest?: boolean
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
     profile?: P
   }
 }
@@ -95,6 +96,7 @@ export type OrganisationListParamsByProfile<P extends OrganisationProfile> = Omi
 > & {
   meta?: {
     isAdminRequest?: boolean
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
     profile?: P
   }
 }

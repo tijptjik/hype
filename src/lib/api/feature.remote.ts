@@ -22,6 +22,7 @@ import { nanoid } from 'nanoid'
 // ADDRESS
 import { projectFeatureAddress } from '#lib/addresses/featureAddress.js'
 // API
+import { publicationPreviewConditions } from './services/publicationPreview.js'
 import { scheduleFeatureMtr } from '#lib/api/services/feature-mtr.js'
 import { getValidQueryParams as validateQueryParams } from '#lib/api/index.js'
 import {
@@ -221,7 +222,8 @@ const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toFeatureProfile(params.meta?.profile, 'list')
 
-  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+  if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+    throw error(403, 'ACCOUNT_REQUIRED')
 
   const queryParams = validateQueryParams<FeatureDB>(
     feature,
@@ -235,19 +237,27 @@ const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
     requestedListState,
     resourceHubId: event.locals.hub.id ?? null,
   })
-  if (!listDecision.allowed) {
+  if (!params.meta?.publicationPreview && !listDecision.allowed) {
     throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
-  const { conditions, filtersToApply } = toQueryConditions(
-    db,
-    user,
-    isAdminRequest,
-    queryParams,
-    userRoles,
-    params.prisms as never,
-    event.locals.hub.id ?? null,
-  )
+  const { conditions, filtersToApply } = params.meta?.publicationPreview
+    ? await publicationPreviewConditions(
+        ctx,
+        params.meta.publicationPreview,
+        'feature',
+        queryParams,
+        params.prisms,
+      )
+    : toQueryConditions(
+        db,
+        user,
+        isAdminRequest,
+        queryParams,
+        userRoles,
+        params.prisms as never,
+        event.locals.hub.id ?? null,
+      )
   const result = await listFeatures(
     db,
     getFeatureWithRelations(profile) as never,
@@ -294,7 +304,8 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toFeatureProfile(params.meta?.profile, 'detail')
 
-  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+  if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+    throw error(403, 'ACCOUNT_REQUIRED')
 
   const normalizedParams = { ...params, refKey: 'id' as const }
   const probe = await probeFeatureQuery(db, normalizedParams)
@@ -308,7 +319,7 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
     userRoles,
     probe,
   })
-  if (!readDecision.allowed) {
+  if (!params.meta?.publicationPreview && !readDecision.allowed) {
     throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
@@ -320,15 +331,22 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
       isArchived: probe.isArchived,
     } as Partial<FeatureDB>,
   )
-  const { conditions } = toQueryConditions(
-    db,
-    user,
-    isAdminRequest,
-    queryParams,
-    userRoles,
-    undefined,
-    event.locals.hub.id ?? null,
-  )
+  const { conditions } = params.meta?.publicationPreview
+    ? await publicationPreviewConditions(
+        ctx,
+        params.meta.publicationPreview,
+        'feature',
+        queryParams,
+      )
+    : toQueryConditions(
+        db,
+        user,
+        isAdminRequest,
+        queryParams,
+        userRoles,
+        undefined,
+        event.locals.hub.id ?? null,
+      )
   const result = await loadFeature(
     db,
     getFeatureWithRelations(profile) as never,
@@ -602,6 +620,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       projectId: current.projectId,
       layerId: current.layerId,
       resourceHubId: current.resourceHubId,
+      isArchived: current.isArchived,
     },
     submittedData: submittedDataBeforeHydration,
   })
@@ -673,6 +692,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       projectId: current.projectId,
       layerId: current.layerId,
       resourceHubId: current.resourceHubId,
+      isArchived: current.isArchived,
     },
     submittedData: submittedDataForUpdate,
   })
@@ -872,6 +892,7 @@ async function applyFeatureStatePatch(
       projectId: current.projectId,
       layerId: current.layerId,
       resourceHubId: current.resourceHubId,
+      isArchived: current.isArchived,
     },
     submittedData: params.data,
   })

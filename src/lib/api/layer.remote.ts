@@ -22,6 +22,7 @@ import {
   toIssueDetailMessage,
 } from '#lib/api/services/authz/index.js'
 // SERVICES
+import { publicationPreviewConditions } from './services/publicationPreview.js'
 import {
   getDuplicateValues,
   requireValue,
@@ -114,7 +115,8 @@ const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) =
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toLayerProfile(params.meta?.profile, 'list')
 
-  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+  if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+    throw error(403, 'ACCOUNT_REQUIRED')
 
   const queryParams = validateQueryParams<LayerDB>(
     layer,
@@ -130,19 +132,27 @@ const getLayersQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) =
     resourceHubId: event.locals.hub.id ?? null,
     isAdminRequest,
   })
-  if (!listDecision.allowed) {
+  if (!params.meta?.publicationPreview && !listDecision.allowed) {
     throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
-  const { conditions, filtersToApply } = toQueryConditions(
-    db,
-    user,
-    isAdminRequest,
-    queryParams,
-    userRoles,
-    normalizedPrisms,
-    event.locals.hub.id ?? null,
-  )
+  const { conditions, filtersToApply } = params.meta?.publicationPreview
+    ? await publicationPreviewConditions(
+        ctx,
+        params.meta.publicationPreview,
+        'layer',
+        queryParams,
+        params.prisms,
+      )
+    : toQueryConditions(
+        db,
+        user,
+        isAdminRequest,
+        queryParams,
+        userRoles,
+        normalizedPrisms,
+        event.locals.hub.id ?? null,
+      )
   const result = await listLayers(
     db,
     getLayerWithRelations(profile, Boolean(user.superAdmin)) as RelationShape,
@@ -178,7 +188,8 @@ const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => 
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toLayerProfile(params.meta?.profile, 'detail')
 
-  if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+  if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+    throw error(403, 'ACCOUNT_REQUIRED')
 
   const normalizedParams = { ...params, refKey: 'id' as const }
   const probe = await probeLayerQuery(db, normalizedParams)
@@ -193,7 +204,7 @@ const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => 
     isAdminRequest,
     probe,
   })
-  if (!readDecision.allowed) {
+  if (!params.meta?.publicationPreview && !readDecision.allowed) {
     throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
@@ -205,15 +216,22 @@ const getLayerQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => 
       isArchived: probe.isArchived,
     } as Partial<LayerDB>,
   )
-  const { conditions } = toQueryConditions(
-    db,
-    user,
-    isAdminRequest,
-    queryParams,
-    userRoles,
-    undefined,
-    event.locals.hub.id ?? null,
-  )
+  const { conditions } = params.meta?.publicationPreview
+    ? await publicationPreviewConditions(
+        ctx,
+        params.meta.publicationPreview,
+        'layer',
+        queryParams,
+      )
+    : toQueryConditions(
+        db,
+        user,
+        isAdminRequest,
+        queryParams,
+        userRoles,
+        undefined,
+        event.locals.hub.id ?? null,
+      )
   const result = await loadLayer(
     db,
     getLayerWithRelations(profile, Boolean(user.superAdmin)) as RelationShape,

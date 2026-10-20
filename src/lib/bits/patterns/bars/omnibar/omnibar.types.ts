@@ -1,3 +1,6 @@
+// SVELTE
+import type { Snippet } from 'svelte'
+// TYPES
 import type { OmniCollection, OmniMode } from '#lib/enums.js'
 import type { SearchResult } from '#lib/context/omni.types.js'
 
@@ -56,6 +59,7 @@ export type OmnibarNavigationProps = {
 }
 
 export type OmnibarProps = {
+  below?: Snippet
   mode: OmniMode
   hasElevatedChrome: boolean
   horizontalOffset: number

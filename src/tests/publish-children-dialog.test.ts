@@ -54,3 +54,26 @@ it('dismisses with Escape without publishing', async () => {
   expect(onCancel).toHaveBeenCalledOnce()
   expect(onChoice).not.toHaveBeenCalled()
 })
+
+it.each([false, true])(
+  'preview confirms the same child choice (%s) without publication wording',
+  async publishChildren => {
+    const onChoice = vi.fn()
+    render(PublishChildrenDialog, {
+      resourceType: 'project',
+      mode: 'preview',
+      onChoice,
+      onCancel: vi.fn(),
+    })
+    expect(
+      await screen.findByRole('dialog', { name: 'Preview publication' }),
+    ).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Publish all' })).toBeNull()
+    await fireEvent.click(
+      screen.getByRole('button', {
+        name: publishChildren ? 'Preview all children' : 'Preview existing selections',
+      }),
+    )
+    expect(onChoice).toHaveBeenCalledExactlyOnceWith(publishChildren)
+  },
+)

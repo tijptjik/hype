@@ -57,6 +57,7 @@ export type HeaderFormActionsState = {
   canEdit: boolean
   disableEdit: boolean
   canPublish: boolean
+  preview?: (() => void) | null
   showDeleteAction: boolean
   showPublishAction: boolean
   reset: () => void

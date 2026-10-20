@@ -1,7 +1,30 @@
 // DRIZZLE
-import { sql } from 'drizzle-orm'
+import { sql, type SQL, type SQLWrapper } from 'drizzle-orm'
 // TYPES
 import type { Database, Id } from '#lib/types.js'
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+// 1. DESCENDANT PUBLICATION STATE
+// 2. PROJECT IMAGE POLICIES
+// ---
+
+/**
+ * Resolves descendant publication exactly as the parent publication command does.
+ * @param row Persisted effective and saved local publication columns.
+ * @param publishChildren Whether the user explicitly includes all draft descendants.
+ * @returns A SQL boolean expression shared by publication writes and preview reads.
+ * @remarks Archive state is independent and must still be enforced by preview queries.
+ */
+export function descendantPublicationState(
+  row: { isPublished: SQLWrapper; localIsPublished: SQLWrapper },
+  publishChildren = false,
+): SQL<boolean> {
+  return publishChildren
+    ? sql<boolean>`1`
+    : sql<boolean>`coalesce(${row.localIsPublished}, ${row.isPublished})`
+}
 
 /**
  * Applies project image policies to published, active features in one scope.

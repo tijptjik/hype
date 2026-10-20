@@ -268,7 +268,6 @@ const evaluateOrganisationReadStatePolicy = (
   const isArchived = params.requestedState.isArchived
   const isPublished = params.requestedState.isPublished
   const isStrong = isRelevantHubAdmin(params.userRoles, params.resourceHubId)
-  const isMemberOrOwner = hasOrganisationRole(params.userRoles, params.resourceId)
   const isOwner = isOrganisationOwner(params.userRoles, params.resourceId)
 
   if (isArchived) {
@@ -278,7 +277,7 @@ const evaluateOrganisationReadStatePolicy = (
   }
 
   if (!isPublished) {
-    return isMemberOrOwner || isStrong
+    return isOwner || isStrong
       ? { allowed: true }
       : logOrganisationReject('read-state', params, 'INSUFFICIENT_ROLE')
   }
@@ -299,7 +298,6 @@ const evaluateOrganisationListStatePolicy = (
   const isArchived = params.requestedState.isArchived
   const isPublished = params.requestedState.isPublished
   const isStrong = isRelevantHubAdmin(params.userRoles, params.resourceHubId)
-  const hasOrgMembership = hasAnyOrganisationRole(params.userRoles)
   const hasOrgOwnerRole = hasAnyOrganisationOwnerRole(params.userRoles)
 
   if (isArchived) {
@@ -309,7 +307,7 @@ const evaluateOrganisationListStatePolicy = (
   }
 
   if (!isPublished) {
-    return hasOrgMembership || isStrong
+    return hasOrgOwnerRole || isStrong
       ? { allowed: true }
       : logOrganisationReject('list-state', params, 'INSUFFICIENT_ROLE')
   }

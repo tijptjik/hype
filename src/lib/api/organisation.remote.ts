@@ -26,6 +26,7 @@ import {
   ensureOrganisationCommandAllowed,
 } from '#lib/api/services/authz/index.js'
 // SERVICES
+import { publicationPreviewConditions } from './services/publicationPreview.js'
 import {
   hasOrganisationCapabilitiesChanged,
   toQueryConditions,
@@ -136,7 +137,8 @@ const getOrganisationsQuery = guardedQuery(
     // Resolve desired `profile`.
     const profile = toOrganisationProfile(params.meta?.profile, 'list')
 
-    if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+    if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+      throw error(403, 'ACCOUNT_REQUIRED')
 
     // Resolve desired `query params`.
     const queryParams = validateQueryParams<OrganisationDB>(
@@ -155,17 +157,20 @@ const getOrganisationsQuery = guardedQuery(
       hub: event.locals.hub,
       requestedListState,
     })
-    if (!listDecision.allowed) {
+    if (!params.meta?.publicationPreview && !listDecision.allowed) {
       throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
 
     // Resolve query conditions.
-    const { conditions, filtersToApply } = toQueryConditions(
-      user,
-      isAdminRequest,
-      queryParams,
-      userRoles,
-    )
+    const { conditions, filtersToApply } = params.meta?.publicationPreview
+      ? await publicationPreviewConditions(
+          ctx,
+          params.meta.publicationPreview,
+          'organisation',
+          queryParams,
+          params.prisms,
+        )
+      : toQueryConditions(user, isAdminRequest, queryParams, userRoles)
 
     // Load records from DB.
     const result = await listOrganisations(
@@ -199,7 +204,8 @@ const getOrganisationsWhichHaveLayersQuery = guardedQuery(
     const { db, user, userRoles, isAdminRequest, event } = ctx
     const profile = toOrganisationProfile(params.meta?.profile, 'list')
 
-    if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+    if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+      throw error(403, 'ACCOUNT_REQUIRED')
 
     const queryParams = validateQueryParams<OrganisationDB>(
       organisation,
@@ -215,16 +221,19 @@ const getOrganisationsWhichHaveLayersQuery = guardedQuery(
       requestedListState,
     })
 
-    if (!listDecision.allowed) {
+    if (!params.meta?.publicationPreview && !listDecision.allowed) {
       throw error(403, toAuthMessage(listDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
 
-    const { conditions, filtersToApply } = toQueryConditions(
-      user,
-      isAdminRequest,
-      queryParams,
-      userRoles,
-    )
+    const { conditions, filtersToApply } = params.meta?.publicationPreview
+      ? await publicationPreviewConditions(
+          ctx,
+          params.meta.publicationPreview,
+          'organisation',
+          queryParams,
+          params.prisms,
+        )
+      : toQueryConditions(user, isAdminRequest, queryParams, userRoles)
 
     conditions.push(
       hasOrganisationLayersCondition({
@@ -278,7 +287,8 @@ const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, c
     // Resolve desired `profile`.
     const profile = toOrganisationProfile(params.meta?.profile, 'detail')
 
-    if (user.isAnonymous && profile === 'admin') throw error(403, 'ACCOUNT_REQUIRED')
+    if ((user.isAnonymous || params.meta?.publicationPreview) && profile === 'admin')
+      throw error(403, 'ACCOUNT_REQUIRED')
 
     // Probe the requested organisation for flags.
     const probe = await probeOrganisationQuery(db, params)
@@ -292,7 +302,7 @@ const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, c
       userRoles,
       probe,
     })
-    if (!readDecision.allowed) {
+    if (!params.meta?.publicationPreview && !readDecision.allowed) {
       throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
     }
 
@@ -307,12 +317,14 @@ const getOrganisationQuery = guardedQuery(GetQueryParamsSchema, async (params, c
     )
 
     // Resolve query conditions.
-    const { conditions } = toQueryConditions(
-      user,
-      isAdminRequest,
-      queryParams,
-      userRoles,
-    )
+    const { conditions } = params.meta?.publicationPreview
+      ? await publicationPreviewConditions(
+          ctx,
+          params.meta.publicationPreview,
+          'organisation',
+          queryParams,
+        )
+      : toQueryConditions(user, isAdminRequest, queryParams, userRoles)
 
     // Load record from DB.
     const result = await loadOrganisation(

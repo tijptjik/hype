@@ -8,6 +8,9 @@ import { goto } from '$app/navigation'
 import { getRootCTX } from '#lib/context/root.svelte.js'
 import { setAppCtx } from '#lib/context/app.svelte.js'
 import { setDivisionCtx } from '#lib/context/division.svelte.js'
+// PUBLICATION
+import { parsePublicationPreview } from '#lib/publication/preview.js'
+import { getPublicationPreview } from '#lib/api/publicationPreview.remote.js'
 // SERVICES
 import { getMapResourceDeepLinkLayerIds } from '#lib/client/services/mapResourceDeepLink.js'
 import { isAuthEntryPath } from '#lib/auth/bootstrap.js'
@@ -23,6 +26,35 @@ const appCtx = setAppCtx(setDivisionCtx(), root.account, root.responsive, root.c
 let bootstrapGeneration = 0
 let error = $state<string | null>(null)
 let retry = $state(0)
+// Entry and exit use full navigation so public and private map retention cannot overlap.
+try {
+  appCtx.view.publicationPreview = parsePublicationPreview(page.url.searchParams)
+} catch (reason) {
+  error = String(reason)
+}
+const preview = $derived(appCtx.view.publicationPreview)
+let previewExitRef = $state('')
+const previewExitUrl = $derived(
+  preview
+    ? `/admin/${preview.type}s${previewExitRef ? `/${encodeURIComponent(previewExitRef)}` : ''}`
+    : '/',
+)
+
+/**
+ * Checks preview access before bootstrapping any map data.
+ * @param userId Current account identity.
+ * @returns Completion of ordinary map initialization after preview authorization.
+ */
+async function initializeMap(userId: string | null): Promise<void> {
+  if (appCtx.view.publicationPreview) {
+    const request = getPublicationPreview(appCtx.view.publicationPreview)
+    await request.refresh()
+    const target = await request
+    previewExitRef = target.ref
+    appCtx.publicationPreviewExitUrl = `/admin/${appCtx.view.publicationPreview.type}s/${encodeURIComponent(target.ref)}`
+  }
+  await appCtx.init(userId, page.url.pathname !== '/screensaver')
+}
 
 /**
  * Determines whether the current route can apply a map project or layer deep link.
@@ -42,7 +74,7 @@ function canApplyMapResourceDeepLink(): boolean {
  * turning prism selection into continuously synchronized navigation state.
  */
 async function applyInitialMapResourceDeepLink(): Promise<void> {
-  if (!canApplyMapResourceDeepLink()) return
+  if (!canApplyMapResourceDeepLink() || appCtx.view.publicationPreview) return
 
   const selectedLayerIds = getMapResourceDeepLinkLayerIds(
     page.url.searchParams,
@@ -96,9 +128,14 @@ $effect(() => {
     appCtx.view.syncAccount()
     appCtx.view.isInitialised = false
     error = null
+    try {
+      parsePublicationPreview(page.url.searchParams)
+    } catch (reason) {
+      error = String(reason)
+      return
+    }
     // Screensaver resolves its own layer after hierarchy loading, avoiding a flash of default features.
-    void appCtx
-      .init(user?.id ?? null, page.url.pathname !== '/screensaver')
+    void initializeMap(user?.id ?? null)
       .then(async () => {
         if (generation !== bootstrapGeneration) return
         if (!user && isAuthEntryPath(page.url.pathname))
@@ -129,7 +166,15 @@ onDestroy(() => {
 
 {#if error}
   <div role="alert" class="p-6">
-    <p>{m.bootstrap__error()}</p>
+    <p>{preview ? m.publication_preview__unavailable() : m.bootstrap__error()}</p>
+    {#if preview}
+      <p class="mt-2 text-sm">
+        {m.publication_preview__access_error()}
+      </p>
+      <a href={previewExitUrl} data-sveltekit-reload class="mt-4 inline-block underline"
+        >{m.publication_preview__exit()}</a
+      >
+    {/if}
     <button
       type="button"
       class="mt-4 rounded bg-base-content px-4 py-2 text-base-100"

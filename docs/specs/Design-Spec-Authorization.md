@@ -327,3 +327,32 @@ survivor does not grant access to the other Place's retained baseline or affecte
 The impact response exposes a count and retained visibility, not other Feature contents.
 Roles and ownership are rechecked at submission, and privacy-incompatible merges remain
 blocked even for a core administrator; merging does not authorize publishing private history.
+
+
+## Publication preview
+
+Organisation, project and layer editors expose **Preview** beside their publication
+controls. Access is inherited from scoped management roles, with no new assignable
+capability: project Maintainer/Owner, organisation Owner, or relevant hub admin.
+Members and translation-only users cannot preview. Project roles do not grant upward
+organisation access. The server resolves persisted ancestry and checks the role on
+every hierarchy, feature-page and feature-detail request.
+
+Preview carries explicit `publicationPreview` intent in request metadata, separately
+from `isAdminRequest`. The normal public response profiles and map renderer are reused.
+The same saved `localIsPublished` restoration expression used by publication writes
+controls preview visibility; the all-children option includes saved unpublished
+children. Archived rows and unsaved feature drafts remain excluded. Previewing a
+child includes unpublished ancestors as hierarchy context only. It does not include
+sibling resources, grant upward editing rights, or write parent publication state.
+
+Preview intent participates in retained entity scopes, query identities and cursors.
+Native remote responses are `private, no-store`. Entering and exiting use full navigation
+to dispose the previous map state. Private previews never regenerate public map-render
+assets or change publication, attribution, review state or timestamps. The map displays
+a persistent preview banner and a return link to the resource editor.
+
+Feature visibility follows the agreed matrix: Members see published/non-archived;
+Maintainers see either publication state but no archived rows; Owners see either state.
+Feature edit authorization enforces the same archive boundary. Existing translation-only
+editing remains field-restricted and does not grant publication preview.

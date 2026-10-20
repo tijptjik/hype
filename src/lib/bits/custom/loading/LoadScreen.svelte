@@ -3,7 +3,7 @@ import { fade } from 'svelte/transition'
 import BreadlineToastLoader from './BreadlineToastLoader.svelte'
 import type { LoadScreenProps } from './loading.types'
 
-let { color = 'primary', surface = 'transparent' }: LoadScreenProps = $props()
+let { color = 'primary', surface = 'transparent', label }: LoadScreenProps = $props()
 const classes = $derived(
   [
     'bits-load-screen',
@@ -15,12 +15,21 @@ const classes = $derived(
 
 <div class={classes} in:fade={{ duration: 220 }} out:fade={{ duration: 260 }}>
   <div class="bits-load-screen__center">
-    <div class="bits-load-screen__spinner" aria-hidden="true">
-      <span class="bits-load-screen__ring bits-load-screen__ring--outer"></span>
-      <span class="bits-load-screen__ring bits-load-screen__ring--middle"></span>
-      <span class="bits-load-screen__ring bits-load-screen__ring--inner"></span>
-    </div>
-    <BreadlineToastLoader />
+    {#if label}
+      <p
+        role="status"
+        class="whitespace-nowrap text-xs font-medium tracking-[0.18em] text-base-content/70 motion-safe:animate-pulse motion-safe:[animation-duration:3s]"
+      >
+        {label}
+      </p>
+    {:else}
+      <div class="bits-load-screen__spinner" aria-hidden="true">
+        <span class="bits-load-screen__ring bits-load-screen__ring--outer"></span>
+        <span class="bits-load-screen__ring bits-load-screen__ring--middle"></span>
+        <span class="bits-load-screen__ring bits-load-screen__ring--inner"></span>
+      </div>
+      <BreadlineToastLoader />
+    {/if}
   </div>
 </div>
 

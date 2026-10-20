@@ -53,6 +53,7 @@ import { SvelteMap } from 'svelte/reactivity'
 // ENUMS
 import { FirstClassResource, Panel } from '#lib/enums.js'
 // TYPES
+import type { PublicationPreview } from '#lib/publication/preview.js'
 import type { Cache, CachedEntity } from '#lib/context/cache.types.js'
 import type {
   Code,
@@ -306,6 +307,9 @@ export class ResourceViewCtx {
 
   private disposed = false
 
+  /** Surface-local saved publication intent; never shared with the admin surface. */
+  publicationPreview: PublicationPreview | null = $state(null)
+
   getRoleScopeQueryKey = (): string => {
     if (this.disposed) return 'disposed'
     const userId = this.account.session?.id ?? 'anonymous'
@@ -326,7 +330,7 @@ export class ResourceViewCtx {
 
     const anonymous = this.account.session?.isAnonymous
     const superAdmin = this.account.session?.superAdmin
-    return `${userId}::${Boolean(anonymous)}::${Boolean(superAdmin)}::${roleSignature}`
+    return `${userId}::${Boolean(anonymous)}::${Boolean(superAdmin)}::${roleSignature}${this.publicationPreview ? `::preview=${JSON.stringify(this.publicationPreview)}` : ''}`
   }
 
   /**
@@ -424,6 +428,7 @@ export class ResourceViewCtx {
         `${this.getRoleScopeQueryKey()}:${this.hub?.id ?? this.hub?.code ?? ''}:${getLocaleKey()}:${this.surface}`,
       this.cache,
       () => this.isAdmin(),
+      () => this.publicationPreview,
     )
     this.queries = new ResourceQueryCoordinator({
       client: this.resources,
@@ -487,6 +492,7 @@ export class ResourceViewCtx {
       prisms: () => this.scope.prisms,
       rows: () => this.queries.rows,
       scopeKey: () => this.resources.scopeKey,
+      publicationPreview: () => this.publicationPreview,
       isAdmin: () => this.isAdmin(),
       preferences: () => this.getUserPreferences(),
       divisions: divisionCtx,
@@ -1268,7 +1274,7 @@ export class ResourceViewCtx {
                 () =>
                   remoteGet({
                     ...input,
-                    meta: { ...input.meta, scope: this.resources.scopeKey },
+                    meta: { ...input.meta, ...this.resources.queryMeta },
                   }) as import('$app/server').RemoteQuery<
                     import('#lib/types.js').EntityResponse<unknown>
                   >,

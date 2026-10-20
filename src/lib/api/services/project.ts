@@ -904,11 +904,15 @@ const buildVisibilityAndOwnershipConditions = (
     userRoles,
     role => role.role === ProjectRoleType.owner,
   )
-  const nonUserProjectIds = toScopedProjectIds(
-    userRoles,
-    role => role.role !== ProjectRoleType.user,
+  const draftReadProjectIds = toScopedProjectIds(userRoles, role =>
+    ['owner', 'maintainer', 'translator'].includes(role.role),
   )
-  const organisationIds = toScopedOrganisationIds(userRoles, () => true)
+  const organisationIds = toScopedOrganisationIds(
+    userRoles,
+    role => role.role === 'owner',
+  )
+  const membershipProjectIds = toScopedProjectIds(userRoles, () => true)
+  const membershipOrganisationIds = toScopedOrganisationIds(userRoles, () => true)
 
   const combineScopeCondition = (
     projectIds: Id[],
@@ -931,8 +935,8 @@ const buildVisibilityAndOwnershipConditions = (
   const isArchived = toBooleanOrUndefined(params.isArchived)
 
   const ownerScopeCondition = combineScopeCondition(ownerProjectIds, organisationIds)
-  const nonUserMembershipScopeCondition = combineScopeCondition(
-    nonUserProjectIds,
+  const draftReadScopeCondition = combineScopeCondition(
+    draftReadProjectIds,
     organisationIds,
   )
 
@@ -940,49 +944,34 @@ const buildVisibilityAndOwnershipConditions = (
     requestedIsPublished: boolean | undefined,
     requestedIsArchived: boolean | undefined,
   ): SQL<unknown> | undefined => {
-    if (requestedIsArchived === true) {
-      if (!ownerScopeCondition) return undefined
-      return and(ownerScopeCondition, eq(project.isArchived, true))
-    }
-
-    if (requestedIsPublished === false) {
-      if (!nonUserMembershipScopeCondition) return undefined
-
-      const parts: SQL<unknown>[] = [
-        nonUserMembershipScopeCondition,
-        eq(project.isPublished, false),
-      ]
-
-      if (requestedIsArchived === false) {
-        parts.push(eq(project.isArchived, false))
-      }
-
-      return parts.length === 1 ? parts[0] : and(...parts)
-    }
-
-    // Admin list requests with `isPublished` omitted should still stay inside the
-    // actor's scoped membership rather than widening to globally published projects.
+    const nonArchivedManagement = draftReadScopeCondition
+      ? and(draftReadScopeCondition, eq(project.isArchived, false))
+      : undefined
+    const managed = or(ownerScopeCondition, nonArchivedManagement)
+    if (requestedIsArchived === true)
+      return ownerScopeCondition
+        ? and(ownerScopeCondition, eq(project.isArchived, true))
+        : undefined
+    if (requestedIsPublished === false)
+      return managed ? and(managed, eq(project.isPublished, false)) : undefined
+    // Mixed admin lists preserve each row's role tier instead of promoting membership to ownership.
     if (isAdminRequest && requestedIsPublished === undefined) {
-      if (!nonUserMembershipScopeCondition) return undefined
-
-      const parts: SQL<unknown>[] = [nonUserMembershipScopeCondition]
-
-      if (requestedIsArchived === false || requestedIsArchived === undefined) {
-        parts.push(eq(project.isArchived, false))
-      }
-
-      return parts.length === 1 ? parts[0] : and(...parts)
+      const membership = combineScopeCondition(
+        membershipProjectIds,
+        membershipOrganisationIds,
+      )
+      return or(
+        managed,
+        membership
+          ? and(
+              membership,
+              eq(project.isPublished, true),
+              eq(project.isArchived, false),
+            )
+          : undefined,
+      )
     }
-
-    const publishedBranch = and(
-      eq(project.isPublished, true),
-      eq(project.isArchived, false),
-    )
-    if (requestedIsArchived === false || requestedIsArchived === undefined) {
-      return publishedBranch
-    }
-
-    return undefined
+    return and(eq(project.isPublished, true), eq(project.isArchived, false))
   }
 
   const scopedAccessCondition = toScopedAccessCondition(isPublished, isArchived)

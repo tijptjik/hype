@@ -20,6 +20,9 @@ import { m } from '#lib/i18n.js'
 import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '#lib/i18n.js'
 // TOAST
 import { toast } from 'svelte-sonner'
+// PUBLICATION
+import { publicationPreviewUrl } from '#lib/publication/preview.js'
+import { canPreviewPublication } from '#lib/publication/permissions.js'
 // SERVICES
 import {
   buildProjectLicense,
@@ -2310,12 +2313,44 @@ async function handleProjectStateToggle({
   }
 }
 
+let pendingPreviewId = $state<string | null>(null)
+const canPreview = $derived.by(() => {
+  if (!currentUser) return false
+  return (
+    isCurrentRefLoaded &&
+    !project?.data?.isArchived &&
+    canPreviewPublication(currentUser, currentUser.roles ?? [], {
+      organisationId: project?.data?.organisationId ?? '',
+      projectId: project?.data?.id,
+      hubId: effectiveProjectResourceHubId,
+    })
+  )
+})
+
+/**
+ * Opens the same descendant choice as publishing, then starts an isolated map preview.
+ * @param publishChildren Explicit descendant choice, or undefined to open the dialog.
+ * @returns Nothing; navigation creates a fresh map context without changing publication state.
+ */
+function onPreview(publishChildren?: boolean): void {
+  if (!canPreview || !project?.data?.id) return
+  if (publishChildren === undefined) {
+    pendingPreviewId = project.data.id
+    return
+  }
+  if (pendingPreviewId !== project.data.id) return
+  window.location.assign(
+    publicationPreviewUrl({ type: 'project', id: project.data.id, publishChildren }),
+  )
+}
+
 let pendingPublishId = $state<string | null>(null)
 
 // Dismiss pending publication when navigation changes the target resource.
 $effect(() => {
   projectRef
   pendingPublishId = null
+  pendingPreviewId = null
 })
 
 /** Prompts before publishing drafts below this resource; unpublishing remains immediate.
@@ -2733,6 +2768,7 @@ $effect(() => {
     reset: onReset,
     submit: onSubmit,
     togglePublish: onPublishToggle,
+    preview: canPreview ? () => onPreview() : null,
     toggleDelete: onDeleteToggle,
   })
 })
@@ -3258,6 +3294,17 @@ $effect(() => {
     onChoice={choice => onPublishToggle(choice)}
     onCancel={() => {
       pendingPublishId = null
+    }}
+  />
+{/if}
+
+{#if pendingPreviewId && pendingPreviewId === project?.data?.id}
+  <PublishChildrenDialog
+    resourceType="project"
+    mode="preview"
+    onChoice={choice => onPreview(choice)}
+    onCancel={() => {
+      pendingPreviewId = null
     }}
   />
 {/if}

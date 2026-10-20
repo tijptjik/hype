@@ -184,30 +184,38 @@ const hasProjectTranslatorRole = (
       role.role === 'translator',
   )
 
-const hasProjectNonUserRole = (roles: UserRoleDisco[], projectId?: string): boolean =>
+/**
+ * Checks project roles with draft visibility; membership alone grants public content only.
+ * @param roles Authoritative assignments.
+ * @param projectId Persisted project scope.
+ * @returns Whether management or translation access applies to this project.
+ */
+const hasProjectDraftReadRole = (roles: UserRoleDisco[], projectId?: string): boolean =>
   Boolean(projectId) &&
   roles.some(
     role =>
-      role.type === 'project' && role.projectId === projectId && role.role !== 'user',
+      role.type === 'project' &&
+      role.projectId === projectId &&
+      ['owner', 'maintainer', 'translator'].includes(role.role),
   )
 
-const hasAnyProjectNonUserRole = (roles: UserRoleDisco[]): boolean =>
-  roles.some(role => role.type === 'project' && role.role !== 'user')
+/**
+ * Checks the capability to request drafts before SQL applies per-project scope.
+ * @param roles Authoritative assignments.
+ * @returns Whether any project assignment permits draft reads.
+ */
+const hasAnyProjectDraftReadRole = (roles: UserRoleDisco[]): boolean =>
+  roles.some(
+    role =>
+      role.type === 'project' &&
+      ['owner', 'maintainer', 'translator'].includes(role.role),
+  )
 
 const hasAnyProjectOwnerRole = (roles: UserRoleDisco[]): boolean =>
   roles.some(role => role.type === 'project' && role.role === 'owner')
 
 const hasAnyOrganisationOwnerRole = (roles: UserRoleDisco[]): boolean =>
   roles.some(role => role.type === 'organisation' && role.role === 'owner')
-
-const hasOrganisationMembership = (
-  roles: UserRoleDisco[],
-  organisationId?: string,
-): boolean =>
-  Boolean(organisationId) &&
-  roles.some(
-    role => role.type === 'organisation' && role.organisationId === organisationId,
-  )
 
 const hasHubAdminRole = (roles: UserRoleDisco[]): boolean =>
   isCoreHubAdmin(roles) || getScopedHubAdminIds(roles).size > 0
@@ -477,8 +485,8 @@ const evaluateProjectListStatePolicy = (
     hasAnyOrganisationOwnerRole(params.userRoles) ||
     hasAnyProjectOwnerRole(params.userRoles)
   const hasProjectMembership =
-    hasAnyProjectNonUserRole(params.userRoles) ||
-    hasAnyOrganisationRole(params.userRoles)
+    hasAnyProjectDraftReadRole(params.userRoles) ||
+    hasAnyOrganisationOwnerRole(params.userRoles)
 
   if (isArchived) {
     return isStrong || isOwner
@@ -506,8 +514,7 @@ const evaluateProjectReadStatePolicy = (
   }
 
   const canReadAdminResource =
-    hasProjectNonUserRole(params.userRoles, params.resourceId) ||
-    hasOrganisationMembership(params.userRoles, params.organisationId ?? undefined) ||
+    hasProjectDraftReadRole(params.userRoles, params.resourceId) ||
     isOrganisationOwner(params.userRoles, params.organisationId ?? undefined)
   const isOwner =
     isOrganisationOwner(params.userRoles, params.organisationId ?? undefined) ||

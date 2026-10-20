@@ -111,6 +111,7 @@ export interface HeaderFormActionsConfig {
   saveAction?: HeaderButtonActionConfig | null
   deleteAction?: HeaderButtonActionConfig | null
   publishAction?: HeaderActionConfig | null
+  previewAction?: HeaderButtonActionConfig | null
 }
 
 export interface HeaderAvatarConfig {

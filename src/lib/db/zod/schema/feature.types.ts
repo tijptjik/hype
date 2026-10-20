@@ -86,6 +86,7 @@ export type FeatureGetParamsByProfile<P extends FeatureProfile> = Omit<
 > & {
   meta?: {
     isAdminRequest?: boolean
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
     profile?: P
   }
 }
@@ -96,6 +97,7 @@ export type FeatureListParamsByProfile<P extends FeatureProfile> = Omit<
 > & {
   meta?: {
     isAdminRequest?: boolean
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
     profile?: P
   }
 }

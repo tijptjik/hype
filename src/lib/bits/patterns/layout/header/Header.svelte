@@ -152,6 +152,7 @@ const rootClass = $derived(
                 saveAction={formActions.saveAction}
                 deleteAction={formActions.deleteAction}
                 publishAction={formActions.publishAction}
+                previewAction={formActions.previewAction}
                 hideLabel={!showButtonText}
               />
             {/if}

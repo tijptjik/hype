@@ -807,6 +807,19 @@ export function useAdminHeaderModel(
     }
   })
 
+  // Preview uses the current resource's role-derived handler and saved state.
+  const previewAction = $derived.by((): HeaderButtonActionConfig | null => {
+    if (isEditing || isDeleted || !formActions?.preview) return null
+    return {
+      text: m.publication_preview__button(),
+      color: 'neutral',
+      style: 'outline',
+      icon: Eye,
+      disabled: isInFlight,
+      onClick: formActions.preview,
+    }
+  })
+
   const titleMenuAction = $derived.by(() => ({
     // Tasks never expose title-menu actions, even if shared header state is stale.
     isVisible: !isTaskHeader && titleMenuItems.length > 0,
@@ -874,6 +887,7 @@ export function useAdminHeaderModel(
       saveAction,
       deleteAction,
       publishAction,
+      previewAction,
     },
     avatar: {
       isVisible: resolvedVisibility.showAvatar,

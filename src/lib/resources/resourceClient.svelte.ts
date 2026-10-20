@@ -8,6 +8,7 @@ import {
 import type { FeatureQuery } from '#lib/context/feature-query.svelte.js'
 import type { FeatureQueryChannel } from '#lib/context/featureQuery.types.js'
 // TYPES
+import type { PublicationPreview } from '#lib/publication/preview.js'
 import type { RemoteQuery } from '$app/server'
 import type { CacheCtx } from '#lib/context/cache.svelte.js'
 import type { ResourceList } from '#lib/context/resource-list.svelte.js'
@@ -132,6 +133,7 @@ export class ResourceClient {
     private readonly scope: () => string,
     private readonly entities: Cache = cache.entities,
     private readonly isAdminRequest: () => boolean = () => false,
+    private readonly preview: () => PublicationPreview | null = () => null,
   ) {}
 
   /**
@@ -167,8 +169,16 @@ export class ResourceClient {
   }
 
   /** Access intent is bound by the surface, independently of view query filters. */
-  get queryMeta(): { scope: string; isAdminRequest: boolean } {
-    return { scope: this.scopeKey, isAdminRequest: this.isAdminRequest() }
+  get queryMeta(): {
+    scope: string
+    isAdminRequest: boolean
+    publicationPreview?: PublicationPreview
+  } {
+    return {
+      scope: this.scopeKey,
+      isAdminRequest: this.isAdminRequest(),
+      ...(this.preview() ? { publicationPreview: this.preview()! } : {}),
+    }
   }
 
   /**

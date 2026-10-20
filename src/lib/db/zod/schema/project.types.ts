@@ -88,6 +88,7 @@ export type ProjectGetParamsByProfile<P extends ProjectProfile> = Omit<
 > & {
   meta?: {
     isAdminRequest?: boolean
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
     profile?: P
   }
 }
@@ -98,6 +99,7 @@ export type ProjectListParamsByProfile<P extends ProjectProfile> = Omit<
 > & {
   meta?: {
     isAdminRequest?: boolean
+    publicationPreview?: import('#lib/publication/preview.js').PublicationPreview
     profile?: P
   }
 }

@@ -19,6 +19,7 @@ let {
   search,
   navigation,
   onDismiss,
+  below,
 }: OmnibarProps = $props()
 
 const showSearch = $derived(mode === OmniMode.search)
@@ -59,5 +60,6 @@ function handleEscape(event: KeyboardEvent): void {
         {effectiveAppMainWidth}
       />
     {/if}
+    {@render below?.()}
   {/snippet}
 </OmnibarPrimitive.Root>

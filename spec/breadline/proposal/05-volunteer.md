@@ -167,3 +167,22 @@ This bridge is confined to import/data preparation and can be retired independen
 of the renderer. The migration was rehearsed and applied locally: eight assignments,
 eight values, 24 translations and the expected cache revision changed; integrity and
 foreign keys pass. No other feature data or jobs changed; production is untouched.
+
+
+### Authenticated publication preview
+
+Shared map publication preview supports the private/unpublished-state work tracked in
+[#199](https://github.com/tijptjik/hype/issues/199). Organisation, project and layer
+editors reuse the Publish descendant-choice dialog to open the normal map with a
+read-only simulated publication context. Project Maintainers/Owners, organisation
+Owners and scoped hub admins can preview only their managed scope. Members and
+translation-only roles cannot preview. Archived records remain excluded even for
+Owners. Unpublished ancestors provide hierarchy context for the selected scope;
+siblings remain excluded and parent publication state is unchanged.
+
+Preview uses saved state, scoped public-shaped data and isolated query/cache identities;
+it does not publish records or replace public thumbnail assets. See
+[the authorization design](../../../docs/specs/Design-Spec-Authorization.md#publication-preview)
+for the boundary and [Roles](../../../docs/auth/Roles.md#effects) for role visibility.
+The event-availability and complete operational-state acceptance items in #199 remain
+separate requirements; this shared preview feature does not complete that issue.

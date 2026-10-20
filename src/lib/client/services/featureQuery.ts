@@ -64,7 +64,11 @@ export function featureQueryKey(input: FeatureQueryInput): string {
  * @returns A stable entity-retention scope key.
  */
 export function featureQueryScopeKey(meta: FeatureQueryInput['meta']): string {
-  return JSON.stringify([meta.isAdminRequest, meta.scope])
+  return JSON.stringify([
+    meta.isAdminRequest,
+    meta.scope,
+    ...(meta.publicationPreview ? [meta.publicationPreview] : []),
+  ])
 }
 
 /**
@@ -139,7 +143,10 @@ export function matchesFeatureQuery(
   input: FeatureQueryInput,
   context: FeatureQueryMatchContext = {},
 ): boolean {
-  if (!input.meta.isAdminRequest && (!row.isPublished || row.isArchived)) return false
+  if (input.meta.publicationPreview) {
+    if (row.isArchived) return false
+  } else if (!input.meta.isAdminRequest && (!row.isPublished || row.isArchived))
+    return false
 
   // The deepest selected IDs narrow their own ancestor branches; other branches form a union.
   const { prisms, filters, spatial } = input
