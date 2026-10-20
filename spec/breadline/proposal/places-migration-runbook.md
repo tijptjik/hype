@@ -195,3 +195,31 @@ including MTR access. Integrity and foreign keys pass. A changed-Feature fixture
 refused before backup/review writes; a repeat application was refused without writes.
 This supersedes earlier statements that primary local identity decisions are zero.
 No production database, deployment or source publisher was modified.
+
+## Preserve Feature values while starting source inheritance
+
+After the preceding identity application, explicitly select its exact reviewed source
+revision without replacing current effective values:
+
+```sh
+bun scripts/places/apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY --preserve-feature-values
+```
+
+This separate step requires the accepted identity history tail and its source revision
+to remain current/latest. It retains a second full backup before calling the existing
+guarded reassociation service. Equal values inherit; differing values become overrides;
+existing explicit corrections remain explicit. No source records are edited. A private
+`preserving-reassociation.json` receipt records revision tokens and override field names.
+Existing backup/receipt evidence prevents blind retries after an interruption.
+
+The isolated rehearsal and primary local donor #4 application both pass: names, brands
+and location are preserved as overrides, while the equal phone array inherits. Every
+effective value and the HYPE Place ID is unchanged. Other associations are unchanged,
+exactly one association-history row is added, and all 37 other Feature/Place tables
+remain identical. Stale replay is refused without extra history; integrity/FKs pass.
+
+A subsequent full Breadline import replay on a copy of this primary state matched
+all 330 imports, created zero, skipped the 155 ineligible donors and retained all 64
+MTR decisions. Every row in all 86 application tables remained identical, including
+the reviewed source identity and new inheritance overrides. This verifies that import
+replay does not undo later identity curation. Production remains untouched.

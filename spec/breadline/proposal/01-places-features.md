@@ -1734,3 +1734,19 @@ are retained until an explicit preserving reassociation or policy/adoption revie
 The established reassociation service derives overrides for differing values while
 leaving equal values inheritable. No source facts/location were adopted in this step.
 Nothing was deployed, pushed or applied to production.
+
+### Reviewed source inheritance with preserved donor values (Refs #194)
+
+The separate [preserving reassociation command](places-migration-runbook.md#preserve-feature-values-while-starting-source-inheritance)
+is now applied to donor #4 locally after isolated verification. Its equal phone array
+inherits from the exact reviewed source revision. Differing branch names, brands and
+location become explicit overrides; the effective values and HYPE Place ID stay exact.
+Only the association and one actor-attributed history row change. The source mirror,
+other associations, MTR access and all 37 other Feature/Place tables remain unchanged.
+Backups/receipts are private; stale replay is refused and integrity/FKs pass.
+
+Replaying the full Breadline import on an isolated copy after these decisions matches
+330 records, creates none and preserves every row across all 86 application tables.
+Thus importer replay preserves accepted identities and later Feature corrections.
+Other donor matches and any source Address curation still require their own evidence;
+this decision is not extrapolated to nearby or same-brand establishments.

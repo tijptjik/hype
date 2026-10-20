@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 // DOMAIN
+import { preserveReviewedFeature } from './lib/preserve-reviewed-feature'
 import { openSqliteDomain } from './lib/sqlite-domain'
 import { equalPlaceValue } from '../../src/lib/places/baseline'
 import {
@@ -22,13 +23,18 @@ import {
  * @returns A private applied receipt, or a non-mutating description without --apply-local.
  * @remarks Only real paths beneath the repository's local D1 state are accepted. Both
  * identities and all Feature-owned rows must still equal the rehearsed baseline. This
- * never adopts source facts/location and has no remote or deployment operation.
+ * identity acceptance never adopts source facts/location. The separate preserving mode
+ * switches revision inputs with unchanged effective values. No remote/deployment operation exists.
  */
 async function main(): Promise<void> {
   const [input, rehearsal, flag] = process.argv.slice(2)
-  if (!input || !rehearsal || (flag && flag !== '--apply-local'))
+  if (
+    !input ||
+    !rehearsal ||
+    (flag && !['--apply-local', '--preserve-feature-values'].includes(flag))
+  )
     throw new Error(
-      'Usage: apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY [--apply-local]',
+      'Usage: apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY [--apply-local | --preserve-feature-values]',
     )
   const database = realpathSync(input)
   assert.ok(
@@ -54,6 +60,10 @@ async function main(): Promise<void> {
         applies: false,
       }),
     )
+    return
+  }
+  if (flag === '--preserve-feature-values') {
+    await preserveReviewedFeature(database, directory)
     return
   }
   const backupPath = resolve(directory, 'before-primary-apply.sqlite')
