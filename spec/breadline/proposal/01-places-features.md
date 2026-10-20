@@ -1134,3 +1134,36 @@ outstanding. No unconfirmed source match has been accepted in the primary databa
 Migration 0116 is applied locally. Focused service, refresh, source-client, Worker and remote
 coverage passes 125 tests; Worker type-check passes and the app retains its existing
 10 errors / 19 warnings baseline. No deployment or production mutation was performed.
+
+### Authorized retained identity reviews (Refs #194)
+
+`placeIdentity.remote.ts` exposes preparation, read and acceptance of an immutable
+identity comparison. Preparation accepts only a HYPE Place ID, candidate ssId and a
+pinned canonical collection page selector (publication and offset). The server fetches
+that bounded page and requires exactly one matching canonical record; search labels,
+client facts, credentials and arbitrary source URLs are not accepted. Source errors
+remain explicit and are sanitized. No source identity is claimed during preparation.
+This API is not yet wired to the Feature editor's discovery/review interface.
+
+Private Place management delegates to the persisted owner's project-management policy;
+shared Place identity administration requires a core hub administrator. Feature edit
+permission and non-core hub administration do not grant shared identity control. Each
+read/acceptance reauthorizes current ownership. The projected comparison contains facts,
+source identifiers, issue kinds and stale state, while raw payloads stay server-side.
+
+Migration 0117 retains the original baseline and source projection, with immutable
+review evidence. Accepted identity history references the exact review ID. Acceptance
+uses only that retained projection plus the authenticated actor and required reason.
+The baseline includes ownership, state, ssId, source availability, latest source revision
+and history tail. A concurrent revision change inside the D1 batch leaves neither an
+identity revision nor history entry. Each identity event has its own revision ID to
+prove which guarded write succeeded; ordinary ingestion reuses the earliest exact
+source-content revision, retaining idempotence after promotion.
+
+All 134 focused service, remote, source-client, refresh and Worker tests pass. Worker
+type-check passes; full application checking retains 10 existing errors / 19 warnings.
+Migration 0117 is applied locally; integrity is `ok`, foreign-key violations are zero,
+and all 1,601 Features / 1,520 associations remain unchanged. No unconfirmed identity
+review or acceptance was applied to primary data. Merge/redirect handling, a usable
+review/discovery UI, address curation and broader acceptance work remain outstanding.
+No deployment or production mutation was performed.

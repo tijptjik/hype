@@ -29,6 +29,9 @@ export type PlaceIdentityTransition = {
   expectedSsId: string | null
   expectedHistoryId: string | null
   expectedOwnerProjectId: string | null
+  reviewId?: string
+  expectedLatestRevisionId?: string
+  expectedSourceAvailability?: 'current' | 'missing' | 'review'
   actorId: string
   reason: string
 }
@@ -63,6 +66,7 @@ export async function acceptPlaceIdentity(
       'Identity review requires an actor and a reason of 1–2000 characters',
     )
   const prepared = await prepareSaanSeoiRevision(input.placeId, projection)
+  const revisionId = `identityRevision_${nanoid(24)}`
   const current = await db.select().from(place).where(eq(place.id, input.placeId)).get()
   if (
     !current ||
@@ -87,9 +91,16 @@ export async function acceptPlaceIdentity(
   if (historicalClaim) return { status: 'merge-required' }
   if (current.ssId === projection.ssId) return { status: 'unchanged' }
 
+  const revisionGuard = input.expectedLatestRevisionId
+    ? sql`(SELECT id FROM placeRevision WHERE placeId=${input.placeId}
+        ORDER BY sequence DESC LIMIT 1)=${input.expectedLatestRevisionId}`
+    : sql`1`
+  const availabilityGuard = input.expectedSourceAvailability
+    ? sql`(SELECT sourceAvailability FROM place WHERE id=${input.placeId})=${input.expectedSourceAvailability}`
+    : sql`1`
   const historyId = nanoid(24)
   // The history tail fences ABA identity changes; the batch rechecks every captured input.
-  const guard = sql`EXISTS (SELECT 1 FROM place WHERE id=${input.placeId}
+  const guard = sql`${availabilityGuard} AND EXISTS (SELECT 1 FROM place WHERE id=${input.placeId}
     AND state=${input.expectedState} AND ssId IS ${input.expectedSsId}
     AND ownerProjectId IS ${input.expectedOwnerProjectId})
     AND NOT EXISTS (SELECT 1 FROM place WHERE ssId=${projection.ssId} AND id!=${input.placeId})
@@ -102,16 +113,16 @@ export async function acceptPlaceIdentity(
   const results = await db.batch([
     db
       .insert(placeRevision)
-      .select(sql`SELECT ${prepared.revisionId},${input.placeId},
+      .select(sql`SELECT ${revisionId},${input.placeId},
       (SELECT coalesce(max(sequence),0)+1 FROM placeRevision WHERE placeId=${input.placeId}),
       'saanseoi',${projection.ssId},${projection.apiVersion},${projection.releaseId},
       ${projection.snapshotId},${prepared.contentHash},${JSON.stringify(prepared.payload)},
-      ${JSON.stringify(prepared.facts)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`)
+      ${JSON.stringify(prepared.facts)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${revisionGuard}`)
       .onConflictDoNothing({ target: placeRevision.id }),
     db.insert(placeIdentityHistory).select(sql`SELECT ${historyId},${input.placeId},
       ${input.expectedHistoryId},${input.expectedState},${input.expectedSsId},${projection.ssId},
-      ${prepared.revisionId},${input.actorId},${reason},strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE ${guard}`),
+      ${revisionId},${input.actorId},${reason},strftime('%Y-%m-%dT%H:%M:%fZ','now'),${input.reviewId ?? null}
+      WHERE ${guard} AND EXISTS (SELECT 1 FROM placeRevision WHERE id=${revisionId})`),
     db
       .update(place)
       .set({ state: 'linked', ssId: projection.ssId, sourceAvailability: 'current' })
@@ -125,6 +136,6 @@ export async function acceptPlaceIdentity(
       .returning({ id: place.id }),
   ])
   return results[2].length
-    ? { status: 'applied', historyId, revisionId: prepared.revisionId }
+    ? { status: 'applied', historyId, revisionId }
     : { status: 'conflict' }
 }

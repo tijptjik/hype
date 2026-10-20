@@ -20,6 +20,12 @@ import {
   resolvePlaceCandidate,
   searchLocalPlaceCandidates,
 } from '#lib/db/services/placeCandidate.js'
+import {
+  readPlaceIdentityBaseline,
+  capturePlaceIdentityReview,
+  readPlaceIdentityReview,
+  acceptPlaceIdentityReview,
+} from '#lib/db/services/placeIdentityReview.js'
 import { acceptPlaceIdentity } from '#lib/db/services/placeIdentity.js'
 import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
@@ -83,6 +89,7 @@ function setup() {
   sqlite.exec(readFileSync('migrations/0112_feature_place_detachment.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0113_place_adoption_review.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0116_place_identity_history.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0117_place_identity_review.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => {
       if (args.length > 100) throw new Error('D1 parameter limit exceeded')
@@ -442,6 +449,132 @@ describe('immutable SaanSeoi Place ingestion', () => {
       resource: { id: 'canonical-shop', sources: ['retained-attribution'] },
       meta: { apiReleaseSet: 'pinned-release' },
     },
+  })
+
+  it('fences a late revision race inside the identity batch without leaving a new revision or history', async () => {
+    const { db, sqlite } = setup()
+    const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'creator')
+    const baseline = await readPlaceIdentityBaseline(db, local.placeId, 'p')
+    if (!baseline) throw new Error('Missing baseline')
+    const reviewId = await capturePlaceIdentityReview(
+      db,
+      baseline,
+      projection(),
+      'reviewer',
+    )
+    if (!reviewId) throw new Error('Missing review')
+    db.batch = new Proxy(db.batch, {
+      apply(target, receiver, args) {
+        sqlite
+          .prepare(`INSERT INTO placeRevision
+        SELECT 'race-revision',placeId,sequence+1,origin,ssId,apiVersion,releaseId,snapshotId,
+          contentHash,payload,facts,createdAt FROM placeRevision WHERE id=?`)
+          .run(local.revisionId)
+        return Reflect.apply(target, receiver, args)
+      },
+    })
+    expect(
+      await acceptPlaceIdentityReview(db, {
+        placeId: local.placeId,
+        ownerProjectId: 'p',
+        reviewId,
+        actorId: 'reviewer',
+        reason: 'Reviewed before the concurrent change',
+      }),
+    ).toEqual({ status: 'conflict' })
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(2)
+    expect(sqlite.prepare('SELECT count(*) n FROM placeIdentityHistory').get()?.n).toBe(
+      0,
+    )
+    expect(sqlite.prepare('SELECT state,ssId FROM place').get()).toEqual({
+      state: 'manual',
+      ssId: null,
+    })
+  })
+
+  it('captures immutable review evidence, accepts it, and keeps source ingestion idempotent', async () => {
+    const { db, sqlite } = setup()
+    const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'creator')
+    const baseline = await readPlaceIdentityBaseline(db, local.placeId, 'p')
+    if (!baseline) throw new Error('Missing baseline')
+    const reviewId = await capturePlaceIdentityReview(
+      db,
+      baseline,
+      projection(),
+      'reviewer',
+    )
+    if (!reviewId) throw new Error('Missing review')
+    const input = { placeId: local.placeId, ownerProjectId: 'p', reviewId }
+    const view = await readPlaceIdentityReview(db, input)
+    expect(view).toMatchObject({
+      stale: false,
+      previousState: 'manual',
+      candidate: { ssId: 'canonical-shop' },
+    })
+    expect(view).not.toHaveProperty('projection')
+    expect(view?.candidate).not.toHaveProperty('payload')
+    expect(
+      await readPlaceIdentityReview(db, { ...input, ownerProjectId: 'other' }),
+    ).toBeNull()
+    expect(
+      await acceptPlaceIdentityReview(db, {
+        ...input,
+        actorId: 'approver',
+        reason: 'Verified unit',
+      }),
+    ).toMatchObject({ status: 'applied' })
+    expect(
+      sqlite.prepare('SELECT actorId,reason,reviewId FROM placeIdentityHistory').get(),
+    ).toEqual({ actorId: 'approver', reason: 'Verified unit', reviewId })
+    await persistSaanSeoiPlace(db, projection())
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(2)
+    expect(await readPlaceIdentityReview(db, input)).toMatchObject({ stale: true })
+    expect(
+      await acceptPlaceIdentityReview(db, {
+        ...input,
+        actorId: 'approver',
+        reason: 'Repeat',
+      }),
+    ).toEqual({ status: 'conflict' })
+    expect(() =>
+      sqlite.exec("UPDATE placeIdentityReview SET actorId='changed'"),
+    ).toThrow()
+    expect(() => sqlite.exec('DELETE FROM placeIdentityReview')).toThrow()
+  })
+
+  it('rejects a captured comparison after source revisions advance, without orphan evidence', async () => {
+    const { db, sqlite } = setup()
+    const original = await persistSaanSeoiPlace(db, projection())
+    const baseline = await readPlaceIdentityBaseline(db, original.placeId, null)
+    if (!baseline) throw new Error('Missing baseline')
+    const candidate = { ...projection(), ssId: 'replacement' }
+    const reviewId = await capturePlaceIdentityReview(
+      db,
+      baseline,
+      candidate,
+      'reviewer',
+    )
+    if (!reviewId) throw new Error('Missing review')
+    await persistSaanSeoiPlace(db, {
+      ...projection(),
+      facts: { ...projection().facts, names: { en: 'Updated' } },
+    })
+    expect(
+      await capturePlaceIdentityReview(db, baseline, candidate, 'reviewer'),
+    ).toBeNull()
+    const input = { placeId: original.placeId, ownerProjectId: null, reviewId }
+    expect(await readPlaceIdentityReview(db, input)).toMatchObject({ stale: true })
+    expect(
+      await acceptPlaceIdentityReview(db, {
+        ...input,
+        actorId: 'reviewer',
+        reason: 'Stale review',
+      }),
+    ).toEqual({ status: 'conflict' })
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(2)
+    expect(sqlite.prepare('SELECT count(*) n FROM placeIdentityHistory').get()?.n).toBe(
+      0,
+    )
   })
 
   it.each(['manual', 'unresolved'] as const)(

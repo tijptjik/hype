@@ -1,9 +1,16 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
+import type { UserRoleDisco } from '#lib/types.js'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
+  probeIdentity: vi.fn(),
+  identityBaseline: vi.fn(),
+  captureIdentity: vi.fn(),
+  readIdentity: vi.fn(),
+  acceptIdentity: vi.fn(),
+  readSourcePage: vi.fn(),
   searchLocal: vi.fn(),
   listReviews: vi.fn(),
   readReview: vi.fn(),
@@ -28,8 +35,8 @@ const mocks = vi.hoisted(() => ({
   readDetached: vi.fn(),
   context: {
     db: {},
-    user: { id: 'u' },
-    userRoles: [],
+    user: { id: 'u', isAnonymous: false },
+    userRoles: [] as UserRoleDisco[],
     event: {
       locals: { platform: { env: { SAANSEOI_API_KEY: 'test-key' } } },
       fetch: vi.fn(),
@@ -49,6 +56,13 @@ vi.mock('#lib/api/server/guarded.js', () => {
       )
   return { guardedQuery: wrap('query'), guardedCommand: wrap('command') }
 })
+vi.mock('#lib/db/services/placeIdentityReview.js', () => ({
+  probePlaceIdentityScope: mocks.probeIdentity,
+  readPlaceIdentityBaseline: mocks.identityBaseline,
+  capturePlaceIdentityReview: mocks.captureIdentity,
+  readPlaceIdentityReview: mocks.readIdentity,
+  acceptPlaceIdentityReview: mocks.acceptIdentity,
+}))
 vi.mock('#lib/db/services/placeAdoptionReview.js', () => ({
   listPlaceAdoptionReviews: mocks.listReviews,
   readPlaceAdoptionReview: mocks.readReview,
@@ -63,7 +77,11 @@ vi.mock('#lib/api/services/feature-mtr.js', () => ({
 }))
 vi.mock('#lib/places/sourceClient.js', async importOriginal => {
   const original = await importOriginal<typeof import('#lib/places/sourceClient.js')>()
-  return { ...original, searchSaanSeoiPlaces: mocks.searchPlaces }
+  return {
+    ...original,
+    searchSaanSeoiPlaces: mocks.searchPlaces,
+    readSaanSeoiPlacePage: mocks.readSourcePage,
+  }
 })
 vi.mock('#lib/db/services/placeCandidate.js', () => ({
   resolvePlaceCandidate: mocks.resolveCandidate,
@@ -122,8 +140,33 @@ import {
   acceptFeaturePlaceReview,
 } from '#lib/api/placeReview.remote.js'
 
+import {
+  preparePlaceIdentityReview,
+  getPlaceIdentityReview,
+  acceptPlaceIdentityReview,
+} from '#lib/api/placeIdentity.remote.js'
+
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.context.user.isAnonymous = false
+  mocks.context.userRoles = []
+  mocks.probeIdentity.mockResolvedValue({ id: 'place', ownerProjectId: 'p' })
+  mocks.identityBaseline.mockResolvedValue({
+    placeId: 'place',
+    expectedOwnerProjectId: 'p',
+  })
+  mocks.captureIdentity.mockResolvedValue('identity-review')
+  mocks.readIdentity.mockResolvedValue({ id: 'identity-review', stale: false })
+  mocks.acceptIdentity.mockResolvedValue({
+    status: 'applied',
+    historyId: 'history',
+    revisionId: 'source',
+  })
+  mocks.readSourcePage.mockResolvedValue({
+    places: [{ ssId: 'candidate', facts: { names: { en: 'Shop' } } }],
+    nextOffset: null,
+    total: 1,
+  })
   mocks.probeProject.mockResolvedValue({ id: 'p', organisationId: 'org', hubId: 'hub' })
   mocks.probeFeature.mockResolvedValue({ id: 'f', projectId: 'p' })
   mocks.authorizeProject.mockReturnValue({ allowed: true })
@@ -622,5 +665,139 @@ describe('Place adoption review API boundaries', () => {
     mocks.probeFeature.mockResolvedValue(null)
     await expect(getFeaturePlaceReview(review)).rejects.toMatchObject({ status: 404 })
     expect(mocks.readReview).not.toHaveBeenCalled()
+  })
+})
+
+describe('Place identity review authority and retained evidence', () => {
+  const input = {
+    placeId: 'place',
+    ssId: 'candidate',
+    sourceOffset: 100,
+    publication: {
+      releaseSet: 'release',
+      catalogRevision: 'catalog',
+      knownAt: '2026-10-18T00:00:00Z',
+    },
+  }
+  it('authorizes persisted owner ancestry before capturing a pinned server record', async () => {
+    await expect(preparePlaceIdentityReview(input)).resolves.toEqual({
+      reviewId: 'identity-review',
+    })
+    expect(mocks.probeProject).toHaveBeenCalledWith(mocks.context.db, {
+      ref: 'p',
+      refKey: 'id',
+    })
+    expect(mocks.authorizeProject).toHaveBeenCalledWith(
+      expect.objectContaining({ submittedData: { placeUpdatePolicy: true } }),
+    )
+    expect(mocks.readSourcePage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: 'https://api.saanseoi.hk',
+        fetch: mocks.context.event.fetch,
+      }),
+      input.publication,
+      100,
+    )
+    expect(mocks.captureIdentity).toHaveBeenCalledWith(
+      mocks.context.db,
+      { placeId: 'place', expectedOwnerProjectId: 'p' },
+      { ssId: 'candidate', facts: { names: { en: 'Shop' } } },
+      'u',
+    )
+    expect(mocks.authorizeProject.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.readSourcePage.mock.invocationCallOrder[0],
+    )
+  })
+  it('rejects guests before reading scope and project editors without management authority before source access', async () => {
+    mocks.context.user.isAnonymous = true
+    await expect(preparePlaceIdentityReview(input)).rejects.toMatchObject({
+      status: 403,
+    })
+    expect(mocks.probeIdentity).not.toHaveBeenCalled()
+    mocks.context.user.isAnonymous = false
+    mocks.authorizeProject.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    await expect(preparePlaceIdentityReview(input)).rejects.toMatchObject({
+      status: 403,
+    })
+    expect(mocks.identityBaseline).not.toHaveBeenCalled()
+    expect(mocks.readSourcePage).not.toHaveBeenCalled()
+  })
+  it('requires core hub stewardship for shared Places, not an unrelated hub admin', async () => {
+    mocks.probeIdentity.mockResolvedValue({ id: 'place', ownerProjectId: null })
+    mocks.context.userRoles = [
+      Object.assign(
+        { type: 'hub' as const, role: 'admin', hubId: 'hub', userId: 'u' },
+        { hub: { code: 'breadline' } },
+      ),
+    ] as UserRoleDisco[]
+    await expect(
+      getPlaceIdentityReview({ placeId: 'place', reviewId: 'r' }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mocks.readIdentity).not.toHaveBeenCalled()
+    mocks.context.userRoles = [
+      Object.assign(
+        { type: 'hub' as const, role: 'admin', hubId: 'core', userId: 'u' },
+        { hub: { code: 'core' } },
+      ),
+    ] as UserRoleDisco[]
+    await getPlaceIdentityReview({ placeId: 'place', reviewId: 'r' })
+    expect(mocks.readIdentity).toHaveBeenCalledWith(mocks.context.db, {
+      placeId: 'place',
+      reviewId: 'r',
+      ownerProjectId: null,
+    })
+  })
+  it('does not accept a search label, missing/duplicate source record or client-authored facts', async () => {
+    await expect(
+      preparePlaceIdentityReview({
+        ...input,
+        projection: { ssId: 'candidate' },
+      } as never),
+    ).rejects.toThrow()
+    for (const places of [[], [{ ssId: 'candidate' }, { ssId: 'candidate' }]]) {
+      mocks.readSourcePage.mockResolvedValue({ places })
+      await expect(preparePlaceIdentityReview(input)).rejects.toMatchObject({
+        status: 404,
+      })
+    }
+    expect(mocks.captureIdentity).not.toHaveBeenCalled()
+  })
+  it('normalizes upstream failures and rejects a target changed during retrieval', async () => {
+    mocks.readSourcePage.mockRejectedValueOnce(new Error('sensitive upstream error'))
+    await expect(preparePlaceIdentityReview(input)).rejects.toMatchObject({
+      status: 502,
+      body: { message: 'PLACE_SOURCE_FAILED' },
+    })
+    mocks.captureIdentity.mockResolvedValue(null)
+    await expect(preparePlaceIdentityReview(input)).rejects.toMatchObject({
+      status: 409,
+    })
+  })
+  it('accepts only a retained review and server-derived actor/owner, preserving explicit merge outcomes', async () => {
+    const decision = { placeId: 'place', reviewId: 'r', reason: 'Confirmed shop unit' }
+    await acceptPlaceIdentityReview(decision)
+    expect(mocks.acceptIdentity).toHaveBeenCalledWith(mocks.context.db, {
+      ...decision,
+      actorId: 'u',
+      ownerProjectId: 'p',
+    })
+    await expect(
+      acceptPlaceIdentityReview({ ...decision, actorId: 'spoofed' } as never),
+    ).rejects.toThrow()
+    mocks.acceptIdentity.mockResolvedValue({ status: 'merge-required' })
+    await expect(acceptPlaceIdentityReview(decision)).resolves.toEqual({
+      status: 'merge-required',
+    })
+    mocks.acceptIdentity.mockResolvedValue({ status: 'conflict' })
+    await expect(acceptPlaceIdentityReview(decision)).rejects.toMatchObject({
+      status: 409,
+    })
+    mocks.authorizeProject.mockReturnValue({ allowed: false })
+    await expect(acceptPlaceIdentityReview(decision)).rejects.toMatchObject({
+      status: 403,
+    })
   })
 })

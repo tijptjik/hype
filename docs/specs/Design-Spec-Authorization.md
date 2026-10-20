@@ -301,3 +301,20 @@ continues to enforce its existing authorization rules.
   with text search and archived state before pagination and total counting. Null,
   empty and whitespace-only values count as missing. Filtering does not grant
   contact disclosure permission.
+
+## Place Identity Review (Refs #194)
+
+Identity administration acts on the persisted Place, not on a Feature's edit rights.
+For a private Place, read its owner project from the minimal Place probe, resolve that
+project's persisted ancestry, and require the existing project management permission
+used for Place policy updates. Translators and ordinary Feature editors cannot gain
+identity administration through a Feature link. Shared Places require a core hub admin;
+non-core hub administrators have no authority over globally shared source identities.
+Guests cannot prepare, read or accept these reviews.
+
+Authorize before reading private comparison facts or requesting upstream source data.
+Reauthorize current ownership when accepting a retained review. Clients submit only
+Place/review IDs and a reason; actor, owner scope, concurrency baseline and canonical
+projection are server-derived. Private ownership is preserved by promotion. Identity
+acceptance does not authorize source fact/location adoption or merging another Place.
+The technical workflow is defined in [Places and Features](../../spec/breadline/proposal/01-places-features.md).

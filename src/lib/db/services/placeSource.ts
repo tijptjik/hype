@@ -99,10 +99,27 @@ export async function persistSaanSeoiPlace(
   if (!existing && retired) throw new Error('Retired source identity requires review')
   // Deterministic first identity makes concurrent first ingestion converge without orphan rows.
   const placeId = existing?.id ?? `ssPlace_${await hash(projection.ssId)}`
-  const { facts, payload, contentHash, revisionId } = await prepareSaanSeoiRevision(
-    placeId,
-    projection,
-  )
+  const {
+    facts,
+    payload,
+    contentHash,
+    revisionId: generatedRevisionId,
+  } = await prepareSaanSeoiRevision(placeId, projection)
+  // Reviewed identity transitions may already retain this exact source evidence.
+  const retainedRevision = await db
+    .select({ id: placeRevision.id })
+    .from(placeRevision)
+    .where(
+      and(
+        eq(placeRevision.placeId, placeId),
+        eq(placeRevision.ssId, projection.ssId),
+        eq(placeRevision.contentHash, contentHash),
+        eq(placeRevision.origin, 'saanseoi'),
+      ),
+    )
+    .orderBy(placeRevision.sequence)
+    .get()
+  const revisionId = retainedRevision?.id ?? generatedRevisionId
   const identityGuard = sql`EXISTS (SELECT 1 FROM place WHERE id=${placeId}
     AND ssId=${projection.ssId} AND state='linked')`
   const creationGuard = sql`${guard} AND NOT EXISTS

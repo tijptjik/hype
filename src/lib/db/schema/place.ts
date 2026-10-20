@@ -14,6 +14,8 @@ import {
 import { feature } from './feature'
 import { project } from './project'
 // TYPES
+import type { PlaceIdentityBaseline } from '#lib/places/identity.js'
+import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import type { PlaceAdoptionPlan } from '#lib/places/adoption.js'
 import type {
   FeaturePlaceOverrides,
@@ -286,6 +288,9 @@ export const placeIdentityHistory = sqliteTable(
     createdAt: text('createdAt')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+    reviewId: text('reviewId').references(() => placeIdentityReview.id, {
+      onDelete: 'restrict',
+    }),
   },
   table => [
     foreignKey({ columns: [table.previousHistoryId], foreignColumns: [table.id] }),
@@ -313,5 +318,33 @@ export const placeIdentityHistory = sqliteTable(
       'place_identity_history_source',
       sql`(${table.previousState} = 'linked' AND ${table.previousSsId} IS NOT NULL) OR (${table.previousState} != 'linked' AND ${table.previousSsId} IS NULL)`,
     ),
+  ],
+)
+
+/** Server-captured candidate evidence; client decisions refer only to this immutable ID. */
+export const placeIdentityReview = sqliteTable(
+  'placeIdentityReview',
+  {
+    id: text('id').primaryKey(),
+    placeId: text('placeId')
+      .notNull()
+      .references(() => place.id, { onDelete: 'restrict' }),
+    ownerProjectId: text('ownerProjectId'),
+    baseline: text('baseline', { mode: 'json' })
+      .$type<PlaceIdentityBaseline>()
+      .notNull(),
+    projection: text('projection', { mode: 'json' })
+      .$type<SaanSeoiPlaceProjection>()
+      .notNull(),
+    actorId: text('actorId').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  table => [
+    index('place_identity_review_place').on(table.placeId, table.createdAt, table.id),
+    check('place_identity_review_baseline', sql`json_valid(${table.baseline})`),
+    check('place_identity_review_projection', sql`json_valid(${table.projection})`),
+    check('place_identity_review_actor', sql`length(trim(${table.actorId})) > 0`),
   ],
 )
