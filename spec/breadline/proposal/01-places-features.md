@@ -1783,3 +1783,28 @@ partial checkpoints, malformed receipts, input mismatch, scoped exact-ID reads a
 pinned hydration. The full bulk mirror was not rerun during this command change;
 real-data source hydration and persistence were independently verified above.
 No local Feature, production or source database was changed by these tests.
+
+### Bulk mirroring cannot rewind source publications (Refs #194)
+
+Bulk mirroring now uses `persistForwardSaanSeoiPlace`, leaving the low-level guarded
+ingestion primitive available to the existing refresh/identity workflows. Before a
+write, it compares verified publication metadata with the Place's latest revision.
+Older or ambiguous publication order is rejected. Same-publication hydration may
+improve, but canonical source-record drift or loss of an already resolved Address
+is rejected. A source marked missing cannot be restored by replaying its old
+publication; a verified forward publication is required.
+
+The atomic write guard retains the captured identity, owner, history tail, source
+availability and latest revision. It allows the inserted revision within its own
+batch so a valid forward reappearance can update availability. First-ingestion races
+also reject a different intervening revision. A returned deterministic ID is not
+treated as persistence evidence: the wrapper verifies the retained revision and
+current identity/latest state before the mirror can checkpoint it. Thus an older
+receipt cannot produce false progress after a concurrent newer publication wins.
+
+114 focused service/checkpoint tests pass, including initial/replay/forward imports,
+old-publication rejection, hydration improvement/downgrade, same-publication drift,
+missing-source restoration, and concurrent newer writes both with and without an
+existing old receipt. Worker checking passes; app checking retains its unrelated
+10-error/19-warning baseline. The full mirror was not run for this change; no
+primary, source or production database was changed.

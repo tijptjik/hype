@@ -42,7 +42,10 @@ import {
 } from '#lib/db/services/placeMerge.js'
 import { resolvePlaceRedirect } from '#lib/db/services/placeRedirect.js'
 import { acceptPlaceIdentity } from '#lib/db/services/placeIdentity.js'
-import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
+import {
+  persistSaanSeoiPlace,
+  persistForwardSaanSeoiPlace,
+} from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
 import { prepareFeaturePlaceAssociationWrite } from '#lib/db/services/placeAssociation.js'
 import { prepareFeaturePlaceRelations } from '#lib/db/services/placeRelations.js'
@@ -4071,4 +4074,112 @@ describe('retained negative Place identity decisions', () => {
     })
     expect(await rejectPlaceIdentityReview(db, input)).toEqual({ status: 'conflict' })
   })
+})
+
+describe('forward-only bulk source persistence', () => {
+  function source(month = 8): SaanSeoiPlaceProjection {
+    return {
+      ssId: 'forward-shop',
+      apiVersion: 'v0.1',
+      releaseId: `release-${month}`,
+      snapshotId: `snapshot-${month}`,
+      facts: PlaceFactsSchema.parse(facts),
+      issues: [],
+      payload: {
+        resource: { id: 'forward-shop', attributes: { name: 'Bakery' } },
+        meta: {
+          apiReleaseSet: `publication-${month}`,
+          apiCatalogRevision: `catalog-${month}`,
+          catalogPublishedAt: `2026-${String(month + 1).padStart(2, '0')}-01T00:00:00Z`,
+          cohort: `2026-${String(month).padStart(2, '0')}-23.0`,
+          resolvedApiVersion: 'api-places-v0.1',
+          domain: 'overture',
+          region: 'hk',
+        },
+      },
+    }
+  }
+  it('creates, replays and advances while refusing older publications', async () => {
+    const { db, sqlite } = setup()
+    const first = await persistForwardSaanSeoiPlace(db, source())
+    expect(await persistForwardSaanSeoiPlace(db, source())).toEqual(first)
+    const next = await persistForwardSaanSeoiPlace(db, source(9))
+    expect(next.placeId).toBe(first.placeId)
+    expect(next.revisionId).not.toBe(first.revisionId)
+    await expect(persistForwardSaanSeoiPlace(db, source())).rejects.toThrow(
+      'older or ambiguous',
+    )
+    expect(sqlite.prepare('SELECT count(*) AS n FROM placeRevision').get()?.n).toBe(2)
+    expect(
+      sqlite
+        .prepare('SELECT id FROM placeRevision ORDER BY sequence DESC LIMIT 1')
+        .get()?.id,
+    ).toBe(next.revisionId)
+  })
+  it('allows same-publication hydration but not canonical drift or lost Address evidence', async () => {
+    const { db, sqlite } = setup()
+    await persistForwardSaanSeoiPlace(db, source())
+    const hydrated = source()
+    hydrated.facts.location.address = {
+      ...hydrated.facts.location.address,
+      status: 'resolved',
+      address2dId: 'address',
+      addressSnapshotId: 'address-snapshot',
+      records: { verified: true },
+    }
+    await persistForwardSaanSeoiPlace(db, hydrated)
+    await expect(persistForwardSaanSeoiPlace(db, source())).rejects.toThrow(
+      'discard resolved',
+    )
+    const drift = structuredClone(hydrated)
+    drift.payload.resource = {
+      id: 'forward-shop',
+      attributes: { name: 'Different establishment' },
+    }
+    await expect(persistForwardSaanSeoiPlace(db, drift)).rejects.toThrow(
+      'canonical evidence changed',
+    )
+    expect(sqlite.prepare('SELECT count(*) AS n FROM placeRevision').get()?.n).toBe(2)
+  })
+  it('requires forward evidence to restore a missing source', async () => {
+    const { db, sqlite } = setup()
+    const first = await persistForwardSaanSeoiPlace(db, source())
+    sqlite
+      .prepare("UPDATE place SET sourceAvailability='missing' WHERE id=?")
+      .run(first.placeId)
+    await expect(persistForwardSaanSeoiPlace(db, source())).rejects.toThrow(
+      'canonical evidence changed',
+    )
+    await persistForwardSaanSeoiPlace(db, source(9))
+    expect(
+      sqlite
+        .prepare('SELECT sourceAvailability FROM place WHERE id=?')
+        .get(first.placeId)?.sourceAvailability,
+    ).toBe('current')
+  })
+  it.each([false, true])(
+    'fences a concurrent newer publication, with existing receipt=%s',
+    async existing => {
+      const { db, sqlite } = setup()
+      if (existing) await persistForwardSaanSeoiPlace(db, source())
+      const originalBatch = db.batch.bind(db)
+      db.batch = (async (queries: Parameters<Database['batch']>[0]) => {
+        db.batch = originalBatch
+        await persistSaanSeoiPlace(db, source(9))
+        return originalBatch(queries)
+      }) as unknown as Database['batch']
+      await expect(persistForwardSaanSeoiPlace(db, source())).rejects.toThrow(
+        'changed during persistence',
+      )
+      expect(sqlite.prepare('SELECT count(*) AS n FROM placeRevision').get()?.n).toBe(
+        existing ? 2 : 1,
+      )
+      const latest = sqlite
+        .prepare('SELECT payload FROM placeRevision ORDER BY sequence DESC LIMIT 1')
+        .get()
+      expect(JSON.parse(String(latest?.payload)).meta.apiReleaseSet).toBe(
+        'publication-9',
+      )
+    },
+  )
 })

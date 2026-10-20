@@ -1,9 +1,21 @@
+// ═══════════════════════
+// TABLE OF CONTENTS
+// 1. CANONICAL EVIDENCE PREPARATION
+// 2. GUARDED SOURCE PERSISTENCE
+// 3. FORWARD-ONLY BULK MIRROR PERSISTENCE
+// ---
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
 import { place, placeIdentityHistory, placeRevision } from '../schema/place'
 // VALIDATION
 import { PlaceFactsSchema } from '#lib/places/validation.js'
+// DOMAIN
+import { equalPlaceValue } from '#lib/places/baseline.js'
+import {
+  comparePlacePublications,
+  readPlacePublicationMetadata,
+} from '#lib/places/publication.js'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
@@ -151,4 +163,96 @@ export async function persistSaanSeoiPlace(
   if (retained && retained.ssId !== projection.ssId)
     throw new Error('Source identity changed during ingestion; review required')
   return { placeId, revisionId }
+}
+
+/**
+ * Persist bulk mirror evidence without rewinding a source publication or losing hydration.
+ * @param db Primary/local database with atomic batch support.
+ * @param projection Verified canonical projection with publication and Address evidence.
+ * @returns Confirmed stable Place/revision receipt, or throws before checkpoint advancement.
+ * @remarks Same-publication hydration may improve, but canonical records cannot drift.
+ * Identity/history/latest-revision guards fence concurrent refresh and merge operations.
+ * This never changes Feature associations, effective values or adoption decisions.
+ */
+export async function persistForwardSaanSeoiPlace(
+  db: Database,
+  projection: SaanSeoiPlaceProjection,
+): Promise<{ placeId: string; revisionId: string }> {
+  const publication = readPlacePublicationMetadata(projection.payload.meta)
+  const existing = await db.get<{
+    id: string
+    ownerProjectId: string | null
+    state: string
+    sourceAvailability: string
+    latestId: string | null
+    historyId: string | null
+    payload: string | null
+    facts: string | null
+  }>(sql`SELECT p.id,p.ownerProjectId,p.state,p.sourceAvailability,r.id AS latestId,
+    r.payload,r.facts,(SELECT h.id FROM placeIdentityHistory h WHERE h.placeId=p.id
+      AND NOT EXISTS(SELECT 1 FROM placeIdentityHistory n WHERE n.previousHistoryId=h.id)) AS historyId
+    FROM place p LEFT JOIN placeRevision r ON r.placeId=p.id
+      AND r.sequence=(SELECT max(sequence) FROM placeRevision WHERE placeId=p.id)
+    WHERE p.ssId=${projection.ssId}`)
+  if (existing) {
+    if (
+      existing.state !== 'linked' ||
+      !existing.latestId ||
+      !existing.payload ||
+      !existing.facts
+    )
+      throw new Error('Source mirror identity requires review')
+    const previousPayload = JSON.parse(existing.payload)
+    const transition = comparePlacePublications(
+      readPlacePublicationMetadata(previousPayload.meta),
+      publication,
+    )
+    if (transition === 'review')
+      throw new Error('Source mirror publication is older or ambiguous')
+    if (transition === 'unchanged') {
+      if (
+        existing.sourceAvailability !== 'current' ||
+        !previousPayload.resource ||
+        !projection.payload.resource ||
+        !equalPlaceValue(previousPayload.resource, projection.payload.resource)
+      )
+        throw new Error(
+          'Source mirror canonical evidence changed within its publication',
+        )
+      if (
+        JSON.parse(existing.facts).location.address.status === 'resolved' &&
+        projection.facts.location.address.status !== 'resolved'
+      )
+        throw new Error('Source mirror cannot discard resolved Address evidence')
+    }
+  }
+  const placeId = existing?.id ?? `ssPlace_${await hash(projection.ssId)}`
+  const prepared = await prepareSaanSeoiRevision(placeId, projection)
+  // The new revision is allowed in the guard after this batch inserts it, so availability can advance too.
+  const guard = existing
+    ? sql`EXISTS(SELECT 1 FROM place p WHERE p.id=${placeId} AND p.ssId=${projection.ssId}
+      AND p.state='linked' AND p.ownerProjectId IS ${existing.ownerProjectId}
+      AND p.sourceAvailability=${existing.sourceAvailability}
+      AND (SELECT h.id FROM placeIdentityHistory h WHERE h.placeId=p.id AND NOT EXISTS
+        (SELECT 1 FROM placeIdentityHistory n WHERE n.previousHistoryId=h.id)) IS ${existing.historyId}
+      AND (SELECT id FROM placeRevision WHERE placeId=p.id ORDER BY sequence DESC LIMIT 1)
+        IN (${existing.latestId},${prepared.revisionId}))`
+    : sql`NOT EXISTS(SELECT 1 FROM place p WHERE p.ssId=${projection.ssId} AND
+      (p.id!=${placeId} OR p.state!='linked' OR p.ownerProjectId IS NOT NULL OR p.sourceAvailability!='current'
+        OR EXISTS(SELECT 1 FROM placeRevision r WHERE r.placeId=p.id AND r.id!=${prepared.revisionId})
+        OR EXISTS(SELECT 1 FROM placeIdentityHistory h WHERE h.placeId=p.id)))`
+  const receipt = await persistSaanSeoiPlace(db, projection, guard)
+  // Low-level persistence can return deterministic IDs after a rejected fence; verify before checkpointing.
+  const retained = await db.get<{
+    id: string
+  }>(sql`SELECT r.id FROM placeRevision r JOIN place p ON p.id=r.placeId
+    WHERE r.id=${receipt.revisionId} AND p.id=${placeId} AND p.ssId=${projection.ssId}
+      AND p.state='linked' AND p.sourceAvailability='current' AND p.ownerProjectId IS ${existing?.ownerProjectId ?? null}
+      AND (SELECT h.id FROM placeIdentityHistory h WHERE h.placeId=p.id AND NOT EXISTS
+        (SELECT 1 FROM placeIdentityHistory n WHERE n.previousHistoryId=h.id)) IS ${existing?.historyId ?? null}
+      AND (SELECT id FROM placeRevision WHERE placeId=p.id ORDER BY sequence DESC LIMIT 1)
+        IN (${existing?.latestId ?? null},${prepared.revisionId},${receipt.revisionId})`)
+  if (!retained || receipt.placeId !== placeId)
+    throw new Error('Source mirror changed during persistence; retry required')
+  return receipt
 }

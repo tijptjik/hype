@@ -181,3 +181,10 @@ persistence. Its version-two checkpoint distinguishes this from older mirrors th
 only retained unresolved references. Old checkpoints replay the selected publication
 once; Address transport failures cannot advance page progress. Semantic mismatches
 remain unresolved review evidence. This does not grant Feature adoption authority.
+
+Bulk replay also checks source publication order before persistence. An old pinned
+checkpoint cannot rewind a newer mirrored revision, resurrect a missing source from
+old evidence or replace a resolved Address with unresolved evidence. Conflicting
+canonical bytes within the same publication require review. A concurrency conflict
+throws before checkpoint advancement; inspect the current source publication before
+retrying an obsolete checkpoint.

@@ -6,7 +6,7 @@ import { getPlatformProxy } from 'wrangler'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 import { placeRevision } from '../../src/lib/db/schema/place'
-import { persistSaanSeoiPlace } from '../../src/lib/db/services/placeSource'
+import { persistForwardSaanSeoiPlace } from '../../src/lib/db/services/placeSource'
 // SOURCE
 import { readSaanSeoiPlacePage } from '../../src/lib/places/sourceClient'
 import { hydrateSaanSeoiPlaceAddress } from '../../src/lib/places/sourceAddress'
@@ -97,7 +97,7 @@ async function main(): Promise<void> {
       for (const projection of page.places) {
         // Persist native Address evidence before recording successful mirror progress.
         const hydrated = await hydrateSaanSeoiPlaceAddress(client, projection)
-        const receipt = await persistSaanSeoiPlace(db, hydrated)
+        const receipt = await persistForwardSaanSeoiPlace(db, hydrated)
         if (revisions.includes(receipt.revisionId))
           throw new Error('Duplicate Place across source pages')
         revisions.push(receipt.revisionId)
