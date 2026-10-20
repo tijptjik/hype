@@ -93,6 +93,25 @@ Add `--write` only for the intended upload destination. The script validates eve
 
 Book-specific publisher and biography sources are stored alongside each record in `data/backfill.json`. Cover-source URLs and hashes are in `data/covers.json`.
 
+## Card field cleanup
+
+The generator no longer creates Sources, Publisher or Translator properties.
+Research citations remain in the checked-in backfill evidence, not in application
+property values. ISBN values are retained with layer visibility and public editing
+disabled. The publication-date label is shortened to `Published`.
+
+After the structured-property migrations, apply `0136_eln_numeric_fields.sql`
+to configure ISBN and Published as numeric `InputField` inputs. Published stores
+the four-digit year; full source dates remain in `data/backfill.json`. The
+correction preserves ISBN values and their internal visibility.
+
+`0130_eln_card_fields.sql` corrects databases which already received the earlier
+import: it removes the three exact generated property definitions and their
+cascading values/assignments, retains ISBN values, and updates display flags.
+Run the rehearsal before applying it; it now verifies this cleanup and repeatability.
+The local correction was applied after a backup at
+`/tmp/hype-before-eln-card-field-cleanup.sqlite`; no remote environment was changed.
+
 ## Image publication verification (20 October 2026)
 
 All 28 published 2024–2026 listings were verified to have a published Featured
@@ -106,10 +125,3 @@ Migration `0133_project_image_publication.sql` was applied only to the local dat
 with backup `/tmp/hype-before-image-policy-20261020T173647.sqlite`. Both policies are
 enabled for ELN. Ghostsigns and Independent Bookstores retain automatic publication
 but have automatic first-image classification disabled. No production state changed.
-
-## Numeric bibliographic fields
-
-After the structured-property migrations, apply `0136_eln_numeric_fields.sql`
-to configure ISBN and Published as numeric `InputField` inputs. Published stores
-the four-digit year; full source dates remain in `data/backfill.json`. The
-correction preserves ISBN values and their internal visibility.

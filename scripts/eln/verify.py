@@ -26,6 +26,7 @@ def main():
     baseline_fk=db.execute('PRAGMA foreign_key_check').fetchall()
     before=snapshot(db)
     sql=(ROOT/'migrations/0127_eln_sourced_backfill.sql').read_text()
+    sql+='\n'+(ROOT/'migrations/0130_eln_card_fields.sql').read_text()
     if args.images:sql+='\n'+args.images.read_text()
     db.executescript('BEGIN;'+sql+'COMMIT;')
     after=snapshot(db)
@@ -37,6 +38,11 @@ def main():
     assert db.execute("SELECT count(*) FROM featureSpatial WHERE featureId='eln2025Book013'").fetchone()[0]==13
     assert db.execute("SELECT count(*) FROM feature WHERE layerId='0bf1RYWdpaAt' AND id LIKE 'eln2025Book%'").fetchone()[0]==13
     assert db.execute("SELECT count(*) FROM (SELECT layerId,propertyId,count(*) n FROM layerProperty GROUP BY layerId,propertyId HAVING n>1)").fetchone()[0]==0
+    # Removed catalogue entries stay absent, while ISBN values survive privately.
+    assert db.execute("SELECT count(*) FROM property WHERE id IN ('eln_sources','eln_publisher','eln_translator')").fetchone()[0]==0
+    assert db.execute("SELECT count(*) FROM layerProperty WHERE propertyId='eln_isbn' AND (isVisible<>0 OR isUserContributable<>0)").fetchone()[0]==0
+    isbn_before=[r for r in before['featureProperty'] if r[1]=='eln_isbn']
+    assert all(r in after['featureProperty'] for r in isbn_before), 'ISBN values changed'
     books=json.loads((ROOT/'scripts/eln/data/backfill.json').read_text())['books']
     for book in books:
         fid=book['id']

@@ -7,7 +7,8 @@ ROOT = Path(__file__).resolve().parents[2]
 PROJECT = 'vGBvWfSZNELM'
 LAYERS = {2024: 'lvWu_dCwiVZt', 2025: '0bf1RYWdpaAt', 2026: 'vli8hfmD-XEZ', 2027: 'zJJawV9ay56p'}
 PROPERTIES = {'country': 'j608565AMXfN', 'synopsis': 'ZkXV20T2Bsa7', 'author': 'PLifDO417BbU', 'authorBio': 'w7L3$qPA41ij', 'performer': 'Wvsnoy64ilyJ', 'performerBio': 'K0ceBm5NQFlF', 'host': 'eln2024HostProp'}
-EXTRA = {'translator': 'Translator', 'publisher': 'Publisher', 'isbn': 'ISBN', 'publicationDate': 'Publication date (cover edition)', 'awards': 'Awards', 'sources': 'Sources', 'nominationStatus': 'Nomination / availability notes'}
+EXTRA = {'isbn': 'ISBN', 'publicationDate': 'Published', 'awards': 'Awards', 'nominationStatus': 'Nomination / availability notes'}
+INTERNAL = {'isbn'}
 TRANS = {'synopsis', 'authorBio', 'performerBio'}
 COUNTRIES = dict(zip(['Germany','Czechia','France','Finland','Hungary','Italy','Ireland','The Netherlands','Spain','Ukraine','Belgium'], ['c8g3m0$7Bin8','fB6nseLK9k71','97u0sJB8WjKr','oNX7m$EI2QAc','SEvRA5ti17R7','80W3pCYC5vQx','KLMt4Zr$ia4p','ifnFW4WRxNhD','F08sWnOJ5hX9','Am5$Z1oqwaa7','eln2025CountryBE']))
 COUNTRIES.update({'Portugal': 'eln2025CountryPT', 'Switzerland': 'eln2025CountryCH', 'Poland': 'eln2025CountryPL'})
@@ -45,16 +46,18 @@ def generate():
     for rank,(key,label) in enumerate(EXTRA.items(),10):
         pid = 'eln_' + key
         PROPERTIES[key] = pid
+        public = int(key not in INTERNAL)
         component = 'InputField' if key in {'isbn', 'publicationDate'} else 'TextareaField'
-        emit(f"INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUserContributable,isDefaultEnabled) VALUES ({quote(pid)},{quote(PROJECT)},'project','specifier',{quote(key)},{quote(component)},0,1,1) ON CONFLICT(id) DO NOTHING;")
+        emit(f"INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUserContributable,isDefaultEnabled) VALUES ({quote(pid)},{quote(PROJECT)},'project','specifier',{quote(key)},{quote(component)},0,{public},{public}) ON CONFLICT(id) DO NOTHING;")
         emit(f"INSERT INTO _eln_backfill_guard SELECT count(*)=1 FROM property WHERE id={quote(pid)} AND projectId={quote(PROJECT)} AND key={quote(key)} AND type='specifier';")
-        emit(f"INSERT INTO projectProperty(projectId,propertyId,isEnabled,isDefaultEnabled,rank) VALUES({quote(PROJECT)},{quote(pid)},1,1,{rank}) ON CONFLICT DO NOTHING;")
+        emit(f"INSERT INTO projectProperty(projectId,propertyId,isEnabled,isDefaultEnabled,rank) VALUES({quote(PROJECT)},{quote(pid)},1,{public},{rank}) ON CONFLICT DO NOTHING;")
         emit(f"INSERT INTO propertyI18n(propertyId,locale,label,labelGen,placeholder,placeholderGen) SELECT {quote(pid)},'en',{quote(label)},0,'',0 WHERE NOT EXISTS(SELECT 1 FROM propertyI18n WHERE propertyId={quote(pid)} AND locale='en');")
     emit('-- Enable the supported fields on every edition without duplicating layer assignments.')
     for lid in LAYERS.values():
-        for pid in PROPERTIES.values():
-            emit(f"UPDATE layerProperty SET isVisible=1,isUserContributable=1 WHERE layerId={quote(lid)} AND propertyId={quote(pid)};")
-            emit(f"INSERT INTO layerProperty(layerId,propertyId,isVisible,isUserContributable) SELECT {quote(lid)},{quote(pid)},1,1 WHERE NOT EXISTS(SELECT 1 FROM layerProperty WHERE layerId={quote(lid)} AND propertyId={quote(pid)});")
+        for key, pid in PROPERTIES.items():
+            public = int(key not in INTERNAL)
+            emit(f"UPDATE layerProperty SET isVisible={public},isUserContributable={public} WHERE layerId={quote(lid)} AND propertyId={quote(pid)};")
+            emit(f"INSERT INTO layerProperty(layerId,propertyId,isVisible,isUserContributable) SELECT {quote(lid)},{quote(pid)},{public},{public} WHERE NOT EXISTS(SELECT 1 FROM layerProperty WHERE layerId={quote(lid)} AND propertyId={quote(pid)});")
 
     def prop(fid,key,value):
         """Fill only absent values, preserving non-empty editorial content."""
@@ -85,7 +88,7 @@ def generate():
         emit(f"-- {r['edition']}: {r['title']} | {r['sources'][0]}")
         for key in PROPERTIES:
             if key in r:
-                prop(r['id'],key,'\n'.join(r[key]) if key=='sources' else r[key])
+                prop(r['id'],key,r[key])
         emit(f"UPDATE featureI18n SET description={quote(r['synopsis'])},descriptionGen=0 WHERE featureId={quote(r['id'])} AND locale='en' AND coalesce(trim(description),'')='';")
         if r['edition']==2024:
             host={ 'Germany':'eln2024Host001','Czechia':'eln2024Host002','Italy':'eln2024Host003','France':'eln2024Host004'}[r['country']]
@@ -96,8 +99,6 @@ def generate():
     emit('-- Correct only the exact seeded typos; retain subsequent editorial changes.')
     emit("UPDATE featureI18n SET title='The Alaska Sanders Affair' WHERE featureId='eln2025Book011' AND locale='en' AND title='The Alaska Sanders Affairs';")
     emit("UPDATE featureProperty SET value='Nataliia Prysiazhniuk' WHERE featureId='eln2025Book012' AND propertyId='Wvsnoy64ilyJ' AND value='Nataliia Prysiazhniukiuk';")
-    for n in range(1,12):
-        prop(f'elnBook{n:05}', 'sources', 'https://www.goethe.de/ins/hon/en/bib/el6.html')
     for locale,old,newlabel in [('en',"Sep '26","Feb '26"),('zh-hans','2026年9月','2026年2月'),('zh-hant','26年9月','26年2月')]:
         emit(f"UPDATE layerI18n SET nameShort={quote(newlabel)} WHERE layerId='vli8hfmD-XEZ' AND locale={quote(locale)} AND nameShort={quote(old)};")
     # Publish completed editions and restore their descendants; keep the next edition private.
