@@ -1281,3 +1281,24 @@ scope incompatibility and saved-impact projection. Worker type-check passes; the
 retains its existing 10 errors / 19 warnings. Unmirrored-source ingestion, address curation,
 source changes-feed integration and the final acceptance audit remain open. No primary
 identity decision, deployment or production mutation was performed.
+
+### Bounded lookup of unmirrored source candidates (Refs #194)
+
+Canonical candidate lookup uses the ID-ordered collection with the server-discovered
+publication pin, rather than the latest-only detail endpoint. `sourceLookup.ts` searches
+100-record pages by binary search when an exact total is available. Historical responses
+without totals use exponential upper-bound discovery followed by binary search. Every
+request retains the same release-set, catalog-revision and known-at selectors.
+
+Lookup rejects observed ordering violations, overlapping page ranges, sparse nonterminal
+pages, inconsistent totals and changed canonical snapshots. It caches pages within one
+lookup and caps work at 24 requests and a 45-second lookup deadline. Contract failures
+remain errors rather than becoming misleading empty results. This reader performs no
+persistence or Feature adoption. The guarded candidate-import command and editor wiring
+are still required before previously unmirrored search results can be selected end to end.
+
+Twelve lookup tests cover current/historical boundaries, absent IDs, empty collections,
+partial final pages, publication/order/snapshot/pagination drift and request limits,
+including a 200,001-record synthetic collection. Together with source-client tests,
+22 tests pass; the Place refresh worker type-check also passes. Live upstream lookup
+and browser acceptance are not established by these fixture tests.
