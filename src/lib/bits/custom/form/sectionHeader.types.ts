@@ -9,6 +9,7 @@ import type {
 export type { SectionHeaderAction, SectionHeaderFlag, SectionHeaderTrigger }
 
 export interface SectionHeaderProps {
+  showControlLabels?: boolean
   icon?: Component
   title?: string
   description?: string

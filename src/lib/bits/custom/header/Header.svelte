@@ -9,6 +9,7 @@ import type { HeaderProps } from './header.types'
 
 let {
   text,
+  titleAction,
   description,
   hideTitle = false,
   hideDescription = false,
@@ -69,11 +70,18 @@ const iconStyle = $derived(
   {/if}
 
   {#if !hideTitle}
-    <HeaderPrimitive.Title
-      class="bits-header__title"
-      data-header-title-text=""
-      {text}
-    />
+    {#if titleAction}
+      <div class="bits-header__title flex items-center gap-3">
+        <HeaderPrimitive.Title data-header-title-text="" {text} />
+        {@render titleAction()}
+      </div>
+    {:else}
+      <HeaderPrimitive.Title
+        class="bits-header__title"
+        data-header-title-text=""
+        {text}
+      />
+    {/if}
   {/if}
 
   {#if description && !hideDescription}

@@ -7,12 +7,21 @@ import { m, toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
 // ICONS
 import GripVertical from 'virtual:icons/lucide/grip-vertical'
 // SERVICES
+import {
+  rangeDomain,
+  formatRangeEndpoint,
+  parseRangeEndpoint,
+} from '#lib/properties/range.js'
 import { getDropIndex } from '#lib/client/services/dragDrop.js'
 // COMPONENTS
+import Label from '#lib/bits/custom/form/src/label/Label.svelte'
+import Switch from '#lib/bits/custom/switch/Switch.svelte'
 import { SelectField, TextInput } from '#lib/bits/custom/form/index.js'
 import { FormI18nSection } from '#lib/bits/patterns/forms/formI18nSection/index.js'
 import FormFieldPropertyValueItem from './FormFieldPropertyValueItem.svelte'
 import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelte'
+import PropertyComponentPreview from './PropertyComponentPreview.svelte'
+import PropertySettingPreview from './PropertySettingPreview.svelte'
 // TYPES
 import type { SelectItem } from '#lib/bits/core/select/select.types.js'
 import type { FormIssueLike } from '#lib/client/services/form.types.js'
@@ -50,14 +59,75 @@ let {
 
 let optionRemoveMode = $state(false)
 
+// Put common inputs first, keep range types together, and append future types.
+const componentOrder: readonly string[] = [
+  'SelectField',
+  'InputField',
+  'TextareaField',
+  'ToggleField',
+  'RangeField',
+  'DateRangeField',
+  'TimeRangeField',
+  'LinkField',
+  'PhoneField',
+]
+const componentLabels: Record<string, string> = {
+  SelectField: 'Dropdown',
+  InputField: 'Text input',
+  TextareaField: 'Long text',
+  ToggleField: 'On / off',
+  RangeField: 'Number range',
+  DateRangeField: 'Date range',
+  TimeRangeField: 'Time range',
+  LinkField: 'Link',
+  PhoneField: 'Phone number',
+}
 const componentOptions = $derived<SelectItem[]>(
   Array.from(
-    new Set([...classifierComponents, 'ToggleField', ...specifierComponents]),
-  ).map(component => ({ value: component, label: component })),
+    new Set([
+      ...classifierComponents,
+      'ToggleField',
+      'LinkField',
+      'DateRangeField',
+      'TimeRangeField',
+      ...specifierComponents,
+    ]),
+  )
+    .sort((a, b) => {
+      const aIndex = componentOrder.indexOf(a)
+      const bIndex = componentOrder.indexOf(b)
+      return (
+        (aIndex < 0 ? componentOrder.length : aIndex) -
+        (bIndex < 0 ? componentOrder.length : bIndex)
+      )
+    })
+    .map(component => ({
+      value: component,
+      label:
+        componentLabels[component] ??
+        component.replace(/Field$/, '').replace(/([a-z])([A-Z])/g, '$1 $2'),
+    })),
+)
+const supportsTranslations = $derived(
+  ![
+    'RangeField',
+    'PhoneField',
+    'ToggleField',
+    'DateRangeField',
+    'TimeRangeField',
+    'LinkField',
+  ].includes(property.component) &&
+    (!property.dataType || property.dataType === 'text'),
 )
 const canShowRange = $derived(property.component === 'RangeField')
 // Share intrinsic row heights across locales, including validation messages.
-const localeRowsClass = $derived(canShowRange ? 'md:row-span-7' : 'md:row-span-6')
+const hasComponentSettings = $derived(
+  ['TextField', 'InputField'].includes(property.component) ||
+    ['dateRange', 'timeRange', 'link'].includes(property.dataType ?? ''),
+)
+const localeRowsClass = $derived(
+  canShowRange || hasComponentSettings ? 'md:row-span-7' : 'md:row-span-6',
+)
 const rangeBoundsAreRequired = $derived(canShowRange)
 const canShowValues = $derived(
   property.type === 'classifier' && property.component === 'SelectField',
@@ -368,7 +438,7 @@ function getFieldAttrsWithValue(
   value: string | number | boolean,
 ): Record<string, unknown> | undefined {
   const field = getPropertyField(pathSuffix)
-  if (!isFormFieldAccessor(field)) return undefined
+  if (!isFormFieldAccessor(field)) return { type: kind, value }
   return field.as(kind, value) as Record<string, unknown>
 }
 
@@ -693,6 +763,58 @@ $effect(() => {
 })
 </script>
 
+{#snippet componentPreview(
+  component: string,
+)}
+  <PropertyComponentPreview {component} />
+{/snippet}
+
+{#snippet settingPreview(
+  value: string,
+)}
+  <PropertySettingPreview {value} />
+{/snippet}
+
+<!-- Shared definition settings sit above the locale-specific fields. -->
+<div
+  class="bits-theme flex flex-wrap justify-center gap-x-10 gap-y-3 border-b border-border/40 px-6 py-4"
+>
+  {#if supportsTranslations}
+    <div
+      class="flex min-h-9 w-full max-w-72 items-center justify-between gap-4 sm:w-auto sm:max-w-none"
+    >
+      <Label for={`translation-${property.id}`} text="Translations" />
+      <Switch
+        id={`translation-${property.id}`}
+        checked={Boolean(property.isTranslatable)}
+        disabled={!isEditing}
+        leftText="Off"
+        rightText="On"
+        size="sm"
+        onCheckedChange={value => {
+          onLayoutMutationStart?.()
+          onUpdateBase(property.id, 'isTranslatable', value)
+        }}
+      />
+    </div>
+  {/if}
+  <div
+    class="flex min-h-9 w-full max-w-72 items-center justify-between gap-4 sm:w-auto sm:max-w-none"
+  >
+    <Label for={`audience-${property.id}`} text="Audience" />
+    <Switch
+      id={`audience-${property.id}`}
+      checked={property.audience !== 'internal'}
+      disabled={!isEditing}
+      leftText="Private"
+      rightText="Public"
+      size="sm"
+      onCheckedChange={value =>
+        onUpdateBase(property.id, 'audience', value ? 'public' : 'internal')}
+    />
+  </div>
+</div>
+
 <FormI18nSection
   title=""
   class="bits-theme w-full"
@@ -835,10 +957,26 @@ $effect(() => {
       />
 
       {#if showCoreFields}
+        {#each ['dataType', 'cardinality', 'presentation', 'audience'] as key}
+          <input
+            {...getFieldAttrsWithValue(
+              [key],
+              'hidden',
+              property[key as 'dataType'] ??
+                (key === 'dataType' || key === 'presentation'
+                  ? 'text'
+                  : key === 'cardinality'
+                    ? 'one'
+                    : 'public'),
+            )}
+          >
+        {/each}
         <SelectField
           value={property.component}
           displayClass="bg-foreground/4 border-foreground/10"
           items={componentOptions}
+          itemPreview={componentPreview}
+          contentClass="max-h-[calc(100dvh-2rem)] w-[var(--bits-select-anchor-width)] max-w-[calc(100vw-2rem)]"
           label={m.admin__forms_property_component()}
           required={isFieldRequired(['component'])}
           placeholder={m.admin__forms_property_component()}
@@ -861,8 +999,157 @@ $effect(() => {
             }
           }}
         />
+        <input
+          {...getFieldAttrsWithValue(
+            ['dateResolution'],
+            'hidden',
+            property.dateResolution ?? 'day',
+          )}
+        >
+        <input
+          {...getFieldAttrsWithValue(
+            ['timeMaxHour'],
+            'hidden',
+            property.timeMaxHour ?? 24,
+          )}
+        >
+        {#if hasComponentSettings}
+          <div class="grid min-w-0 gap-3">
+            {#if property.component === 'TextField' ||
+              property.component === 'InputField'}
+              <SelectField
+                label="Data type"
+                value={property.dataType ?? 'text'}
+                items={[
+                  { value: 'text', label: 'Text' },
+                  { value: 'number', label: 'Number' },
+                  { value: 'date', label: 'Date' },
+                  { value: 'boolean', label: 'Boolean' },
+                ]}
+                itemPreview={settingPreview}
+                {isEditing}
+                contentClass="w-[var(--bits-select-anchor-width)]"
+                onValueChange={value => onUpdateBase(property.id, 'dataType', value)}
+              />
+            {/if}
+            {#if property.dataType === 'dateRange'}
+              <SelectField
+                label="Resolution"
+                value={property.dateResolution ?? 'day'}
+                items={['decade', 'year', 'month', 'day'].map(value => ({
+                  value,
+                  label: value[0].toUpperCase() + value.slice(1),
+                }))}
+                itemPreview={settingPreview}
+                {isEditing}
+                contentClass="w-[var(--bits-select-anchor-width)]"
+                onValueChange={value =>
+                  onUpdateBase(property.id, 'dateResolution', value)}
+              />
+              <div class="grid min-w-0 grid-cols-2 gap-3">
+                {#each ['min', 'max'] as bound}
+                  <input
+                    {...getFieldAttrsWithValue(
+                      [bound],
+                      'hidden',
+                      rangeDomain(property)[bound as 'min'],
+                    )}
+                  >
+                  <TextInput
+                    label={bound === 'min' ? 'Min' : 'Max'}
+                    required={true}
+                    {isEditing}
+                    inputType={property.dateResolution === 'day'
+                      ? 'date'
+                      : property.dateResolution === 'month'
+                        ? 'month'
+                        : 'text'}
+                    value={formatRangeEndpoint(
+                      property,
+                      rangeDomain(property)[bound as 'min'],
+                    )}
+                    inputClass="min-w-0 w-full"
+                    issues={getFieldIssues([bound])}
+                    inputAttrs={{
+                      onchange: (event: Event) => {
+                        const input = event.currentTarget as HTMLInputElement
+                        try {
+                          onUpdateBase(
+                            property.id,
+                            bound as 'min' | 'max',
+                            parseRangeEndpoint(property, input.value),
+                          )
+                          input.setCustomValidity('')
+                        } catch (error) {
+                          input.setCustomValidity(
+                            error instanceof Error ? error.message : 'Invalid date',
+                          )
+                          input.reportValidity()
+                        }
+                      },
+                    }}
+                  />
+                {/each}
+              </div>
+            {:else if property.dataType === 'timeRange'}
+              <SelectField
+                label="Service day"
+                value={String(property.timeMaxHour ?? 24)}
+                items={[
+                  { value: '24', label: '24 hours' },
+                  { value: '36', label: '36 hours' },
+                ]}
+                itemPreview={settingPreview}
+                {isEditing}
+                contentClass="w-[var(--bits-select-anchor-width)]"
+                onValueChange={value =>
+                  onUpdateBase(property.id, 'timeMaxHour', Number(value))}
+              />
+              <div class="grid min-w-0 grid-cols-2 gap-3">
+                <TextInput label="Min" value="00:00" readonly={true} {isEditing} />
+                <TextInput
+                  label="Max"
+                  value={`${property.timeMaxHour ?? 24}:00`}
+                  readonly={true}
+                  {isEditing}
+                />
+              </div>
+            {/if}
+            {#if property.dataType === 'link'}
+              <SelectField
+                label="Cardinality"
+                value={property.cardinality ?? 'one'}
+                items={[
+                  { value: 'one', label: 'One' },
+                  { value: 'many', label: 'Many' },
+                ]}
+                itemPreview={settingPreview}
+                {isEditing}
+                contentClass="w-[var(--bits-select-anchor-width)]"
+                onValueChange={value => onUpdateBase(property.id, 'cardinality', value)}
+              />
+              <SelectField
+                label="Link text"
+                value={property.presentation ?? 'labelledLinks'}
+                items={[
+                  { value: 'numberedReferences', label: 'As Footnotes' },
+                  { value: 'labelledLinks', label: 'Display text' },
+                ]}
+                itemPreview={settingPreview}
+                {isEditing}
+                contentClass="w-[var(--bits-select-anchor-width)]"
+                onValueChange={value =>
+                  onUpdateBase(property.id, 'presentation', value)}
+              />
+            {/if}
+          </div>
+        {/if}
       {:else}
+        <!-- Match the component and configuration rows across locale columns. -->
         <div class="hidden md:block" aria-hidden="true"></div>
+        {#if hasComponentSettings}
+          <div class="hidden md:block" aria-hidden="true"></div>
+        {/if}
       {/if}
 
       {#if canShowRange}
@@ -982,8 +1269,10 @@ $effect(() => {
                   {#if valuesAreTranslatable || showCoreFields}
                     <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
                     <div
-                      class={`bits-project-field-card__value-editable focus-override ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                      class={`bits-project-field-card__value-editable focus-override empty:before:content-[attr(data-placeholder)] empty:before:opacity-50 ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
                       role="textbox"
+                      aria-label={`Option ${valueIndex + 1}`}
+                      data-placeholder="Option label"
                       aria-readonly={!isEditing}
                       contenteditable={isEditing &&
                       (!showCoreFields || !valuesAreTranslatable)

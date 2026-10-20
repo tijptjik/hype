@@ -1,4 +1,5 @@
 <script lang="ts">
+import { SimpleTooltip } from '#lib/bits/core/index.js'
 import { m } from '#lib/i18n.js'
 import Header from '#lib/bits/custom/header/Header.svelte'
 import * as SectionHeaderPrimitive from './src/sectionHeader/components'
@@ -10,6 +11,7 @@ import EyeOff from 'virtual:icons/proicons/eye-off'
 
 let {
   title,
+  showControlLabels = false,
   icon,
   description,
   size = 'sm',
@@ -33,6 +35,9 @@ let {
 const rootClass = $derived(
   [
     'bits-form__section-header',
+    showControlLabels
+      ? 'h-auto! grid-cols-1! gap-y-2 py-3! lg:grid-cols-[minmax(0,1fr)_auto]!'
+      : '',
     center ? 'bits-form__section-header--with-center' : '',
     className,
   ]
@@ -83,7 +88,9 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
     </div>
   {/if}
 
-  <div class="bits-form__section-header-right">
+  <div
+    class={`bits-form__section-header-right ${showControlLabels ? 'flex-wrap justify-start! lg:justify-end! [container-type:normal]' : ''}`}
+  >
     {#if right}
       {@render right()}
     {:else}
@@ -103,31 +110,47 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
     {/if}
 
     {#if onVisibilityToggle}
-      <SectionHeaderPrimitive.Action
-        text={visibilityToggleLabel}
-        size="sm"
-        style="ghost"
-        color="light"
-        hideLabel={true}
-        hideLabelInstantly={true}
-        iconComponent={visibilityToggleIcon}
-        class="bits-form__section-header-action-btn"
-        onClick={handleVisibilityToggle}
-      />
+      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+        {#snippet trigger()}
+          <SectionHeaderPrimitive.Action
+            text={visibilityToggleLabel}
+            size="sm"
+            style="ghost"
+            color="light"
+            hideLabel={!showControlLabels}
+            hideLabelInstantly={true}
+            iconClasses={showControlLabels ? 'size-5! [&_svg]:size-5!' : ''}
+            iconComponent={visibilityToggleIcon}
+            class={showControlLabels
+              ? 'min-h-10 gap-2 px-3 [&_svg]:size-5'
+              : 'bits-form__section-header-action-btn'}
+            onClick={handleVisibilityToggle}
+          />
+        {/snippet}
+        {visibilityToggleLabel}
+      </SimpleTooltip>
     {/if}
 
     {#if onCollapsableToggle}
-      <SectionHeaderPrimitive.Action
-        text={collapsableToggleLabel}
-        size="sm"
-        style="ghost"
-        color="light"
-        hideLabel={true}
-        hideLabelInstantly={true}
-        iconComponent={collapsableToggleIcon}
-        class="bits-form__section-header-action-btn"
-        onClick={handleCollapsableToggle}
-      />
+      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+        {#snippet trigger()}
+          <SectionHeaderPrimitive.Action
+            text={collapsableToggleLabel}
+            size="sm"
+            style="ghost"
+            color="light"
+            hideLabel={!showControlLabels}
+            hideLabelInstantly={true}
+            iconClasses={showControlLabels ? 'size-5! [&_svg]:size-5!' : ''}
+            iconComponent={collapsableToggleIcon}
+            class={showControlLabels
+              ? 'min-h-10 gap-2 px-3 [&_svg]:size-5'
+              : 'bits-form__section-header-action-btn'}
+            onClick={handleCollapsableToggle}
+          />
+        {/snippet}
+        {collapsableToggleLabel}
+      </SimpleTooltip>
     {/if}
   </div>
 </header>

@@ -2,6 +2,7 @@ import type { SelectItem, SelectProps } from '#lib/bits/core/select/select.types
 import type { FormIssueValue } from './src/label/types'
 
 export interface SelectFieldProps {
+  itemPreview?: SelectProps['itemPreview']
   id?: string
   name?: string
   label?: string

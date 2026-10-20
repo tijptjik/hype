@@ -1,5 +1,17 @@
 <script lang="ts">
+// SVELTE
 import { untrack } from 'svelte'
+// ICONS
+import Plus from 'virtual:icons/proicons/add'
+// COMPONENTS
+import { Button } from '#lib/bits/core/index.js'
+import Header from '#lib/bits/custom/header/Header.svelte'
+// STYLES
+import {
+  getHeaderActionClasses,
+  HEADER_NEW_BUTTON_CLASSES,
+  HEADER_BUTTON_LABEL_CLASSES,
+} from '#lib/bits/patterns/layout/header/components/headerPrimitives.styles.js'
 import * as FormFieldsSectionPrimitive from './components'
 import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 import type {
@@ -203,6 +215,7 @@ $effect(() => {
     <SectionHeader
       {icon}
       {title}
+      showControlLabels={true}
       description={description ?? ''}
       onCollapsableToggle={hasOptimisticItems ? onCollapsableToggle : undefined}
       isCollapsableCollapsed={isCollapsedAll}
@@ -211,6 +224,29 @@ $effect(() => {
       {visibilityOnLabel}
       {visibilityOffLabel}
     >
+      {#snippet left()}
+        <div class="flex min-w-0 items-center gap-4">
+          <Header
+            text={title}
+            {icon}
+            description={description ?? ''}
+            size="sm"
+            class="bits-form__section-header-heading w-auto! min-w-0"
+          />
+          {#if isEditing && canEdit && !isLoading}
+            <Button
+              text="New"
+              iconComponent={Plus}
+              color="neutral"
+              style="ghost"
+              labelClasses={HEADER_BUTTON_LABEL_CLASSES}
+              class={getHeaderActionClasses(`${HEADER_NEW_BUTTON_CLASSES} shrink-0`)}
+              disabled={removeMode || (disableEmptyAdd && !hasOptimisticItems)}
+              onClick={onAdd}
+            />
+          {/if}
+        </div>
+      {/snippet}
       {#if hasIssues}
         {#snippet center()}
           <SectionHeaderPrimitive.Issues {issues} />

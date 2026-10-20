@@ -1,3 +1,6 @@
+// SVELTE
+import type { Snippet } from 'svelte'
+
 export interface SelectItem {
   value: string
   label: string
@@ -5,6 +8,7 @@ export interface SelectItem {
 }
 
 export interface SelectProps {
+  itemPreview?: Snippet<[value: string]>
   value?: string
   items: SelectItem[]
   placeholder?: string

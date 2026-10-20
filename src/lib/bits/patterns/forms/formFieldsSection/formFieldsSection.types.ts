@@ -133,6 +133,12 @@ export interface FormFieldCardCallbacks {
       | 'min'
       | 'max'
       | 'isTranslatable'
+      | 'dateResolution'
+      | 'timeMaxHour'
+      | 'dataType'
+      | 'cardinality'
+      | 'presentation'
+      | 'audience'
       | 'isDefaultEnabled'
       | 'isEnabled',
     value: string | number | null | boolean,

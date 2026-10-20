@@ -1,6 +1,10 @@
 <script lang="ts">
 // SVELTE
 import { flip } from 'svelte/animate'
+import { tick } from 'svelte'
+// DRAG AND DROP
+import { draggable, droppable, type DragDropState } from '@thisux/sveltednd'
+import { getDropIndex } from '#lib/client/services/dragDrop.js'
 import { cubicInOut } from 'svelte/easing'
 import { fade, slide } from 'svelte/transition'
 // I18N
@@ -40,6 +44,91 @@ const moveWindowSize = $derived(
     ? Math.max(0, Math.min(items.length, card.getMoveWindowSize(items)))
     : items.length,
 )
+const dragId = $props.id()
+const dragGroup = `property-fields-${dragId}`
+let isReordering = $state(false)
+
+/**
+ * Respect the editable rank window and inherited-field locks for drag targets.
+ * @param index Index in the displayed field list.
+ * @returns Whether this position can participate in a reorder.
+ */
+function canReorder(index: number): boolean {
+  return Boolean(
+    isEditing &&
+      canEdit &&
+      card &&
+      !card.removeMode &&
+      index >= 0 &&
+      index < moveWindowSize &&
+      !card.isMoveLocked?.(items[index]),
+  )
+}
+
+/**
+ * Prevent keyboard reorders from crossing the same boundaries as pointer drops.
+ * @param event Captured key event from a field handle.
+ * @param index Current field position.
+ * @returns Nothing; suppresses invalid rank commands.
+ */
+function guardReorderKey(event: KeyboardEvent, index: number): void {
+  if (
+    !event.altKey ||
+    !(event.target instanceof Element) ||
+    !event.target.closest('[data-property-drag-handle]')
+  )
+    return
+  const direction = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
+  if (
+    direction &&
+    (isReordering || !canReorder(index) || !canReorder(index + direction))
+  ) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+}
+
+/**
+ * Apply a same-list drop through the existing rank callbacks.
+ * @param state Drag state, including the insertion edge.
+ * @param targetId Target definition ID.
+ * @returns Resolves after every rank step has updated the form.
+ */
+async function onFieldDrop(state: DragDropState, targetId: string): Promise<void> {
+  if (isReordering || !card) return
+  const dragged = state.draggedItem
+  if (
+    !dragged ||
+    typeof dragged !== 'object' ||
+    !('id' in dragged) ||
+    typeof dragged.id !== 'string'
+  )
+    return
+  const ids = items.map(item => item.id)
+  const nextIndex = getDropIndex(state, ids, targetId, dragGroup)
+  const fromIndex = ids.indexOf(dragged.id)
+  const targetIndex = ids.indexOf(targetId)
+  if (nextIndex === null || !canReorder(fromIndex) || !canReorder(targetIndex)) return
+  // Never cross a locked or inherited boundary while moving between positions.
+  for (
+    let i = Math.min(fromIndex, nextIndex);
+    i <= Math.max(fromIndex, nextIndex);
+    i++
+  ) {
+    if (!canReorder(i)) return
+  }
+  const move = nextIndex < fromIndex ? card.onIncreaseRank : card.onDecreaseRank
+  isReordering = true
+  try {
+    onCardCollapseToggle?.()
+    for (let i = 0; i < Math.abs(nextIndex - fromIndex); i++) {
+      await move(new Event('reorder'), dragged.id)
+      await tick()
+    }
+  } finally {
+    isReordering = false
+  }
+}
 </script>
 
 {#if isLoading}
@@ -99,7 +188,23 @@ const moveWindowSize = $derived(
           if (introItemId !== property.id) return
           onIntroEnd?.(property.id)
         }}
+        onkeydowncapture={event => guardReorderKey(event, index)}
         id={`property-wrapper-${property.id}`}
+        use:draggable={{
+          container: `${dragGroup}-${property.id}`,
+          containerGroup: dragGroup,
+          dragData: { id: property.id },
+          handle: '[data-property-drag-handle]',
+          disabled: !canReorder(index) || isReordering,
+          attributes: { draggingClass: 'opacity-50' },
+        }}
+        use:droppable={{
+          container: `${dragGroup}-${property.id}`,
+          containerGroup: dragGroup,
+          disabled: !canReorder(index) || isReordering,
+          callbacks: { onDrop: state => onFieldDrop(state, property.id) },
+          attributes: { dragOverClass: 'ring-2' },
+        }}
       >
         <Item
           {property}

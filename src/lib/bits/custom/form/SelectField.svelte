@@ -24,6 +24,7 @@ let {
   triggerAttrs = {},
   contentClass = '',
   onValueChange,
+  itemPreview,
 }: SelectFieldProps = $props()
 
 const wrapperClass = $derived(
@@ -62,5 +63,6 @@ const wrapperClass = $derived(
     {triggerAttrs}
     {contentClass}
     {onValueChange}
+    {itemPreview}
   />
 </div>

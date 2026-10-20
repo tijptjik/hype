@@ -1,4 +1,4 @@
-import type { Component } from 'svelte'
+import type { Component, Snippet } from 'svelte'
 
 export type HeaderSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
@@ -8,6 +8,7 @@ export interface HeaderCrumb {
 }
 
 export interface HeaderProps {
+  titleAction?: Snippet
   text?: string
   description?: string
   hideTitle?: boolean

@@ -1,18 +1,15 @@
 <script lang="ts">
 // SVELTE
-import { fade } from 'svelte/transition'
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
-import ChevronUp from 'virtual:icons/proicons/chevron-up'
+import GripVertical from 'virtual:icons/lucide/grip-vertical'
 import CopyCheck from 'virtual:icons/lucide/copy-check'
-import Languages from 'virtual:icons/tabler/language'
 import Plus from 'virtual:icons/proicons/add'
 import Trash2 from 'virtual:icons/proicons/delete'
 // COMPONENTS
 import { Button, DestructiveDialog, SimpleTooltip } from '#lib/bits/core/index.js'
-import Switch from '#lib/bits/custom/switch/Switch.svelte'
 // TYPES
 import type { Id } from '#lib/types.js'
 import type { Property } from '#lib/db/zod/schema/property.types.js'
@@ -77,13 +74,6 @@ const isProjectScopedCard = $derived(property.scope === 'project')
 const isInheritedHeaderCard = $derived(
   !isProjectScopedCard && presentation === 'header',
 )
-const showTranslatableToggle = $derived(
-  presentation === 'full' &&
-    (property.type === 'specifier' || property.type === 'classifier') &&
-    property.component !== 'RangeField' &&
-    property.component !== 'PhoneField' &&
-    property.component !== 'ToggleField',
-)
 const inheritedEnabled = $derived(
   typeof (property as Property & { isEnabled?: boolean }).isEnabled === 'boolean'
     ? Boolean((property as Property & { isEnabled?: boolean }).isEnabled)
@@ -95,7 +85,6 @@ const showDefaultEnabledToggle = $derived(
 const showAddToProjectAction = $derived(isInheritedHeaderCard && !inheritedEnabled)
 const showHeaderActionOverlay = $derived(removeMode || showAddToProjectAction)
 const canCollapse = $derived(presentation === 'full')
-const translatableHint = $derived(m.admin__forms_property_support_localisation())
 const defaultEnabledHint = $derived(
   // Inherited header cards edit project defaults for layers, regardless of origin.
   isProjectScopedCard || isInheritedHeaderCard
@@ -122,6 +111,10 @@ const sourceTagIconClass = $derived(
     .join(' '),
 )
 let isDeleteConfirmOpen = $state(false)
+// Equal side tracks keep the title centred even when only one rail has content.
+let leftRailWidth = $state(0)
+let rightRailWidth = $state(0)
+const sideRailWidth = $derived(Math.max(leftRailWidth, rightRailWidth))
 
 function openDeleteConfirm(event: Event): void {
   event.preventDefault()
@@ -138,12 +131,50 @@ function handleAddToProject(event: Event): void {
   event.stopPropagation()
   onToggleIsEnabled(property.id, true)
 }
+/**
+ * Keep rank changes accessible without exposing separate arrow controls.
+ * @param event Keyboard event from the drag handle.
+ * @returns Nothing; invokes the existing guarded rank action.
+ */
+function onReorderKey(event: KeyboardEvent): void {
+  if (!event.altKey || !isEditing || showHeaderActionOverlay) return
+  if (event.key === 'ArrowUp' && canIncreaseRank) {
+    event.preventDefault()
+    void onIncreaseRank(event, property.id)
+  } else if (event.key === 'ArrowDown' && canDecreaseRank) {
+    event.preventDefault()
+    void onDecreaseRank(event, property.id)
+  }
+}
 </script>
 
 <header
-  class="bits-project-field-card__header bits-form__i18n-card border-glass-100 py-4"
+  style:grid-template-columns={`${sideRailWidth}px minmax(0, 1fr) ${sideRailWidth}px`}
+  class="bits-project-field-card__header bits-form__i18n-card border-glass-100 grid! items-center gap-2 px-3! py-2!"
 >
-  <div class="bits-project-field-card__header-left-rail">
+  <div
+    bind:clientWidth={leftRailWidth}
+    class="bits-project-field-card__header-left-rail static! transform-none! w-max justify-self-start"
+  >
+    {#if isEditing &&
+      !isRankMoveLocked &&
+      !showHeaderActionOverlay &&
+      resolvedMoveWindowSize > 1}
+      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+        {#snippet trigger()}
+          <button
+            type="button"
+            data-property-drag-handle
+            aria-label="Reorder field"
+            onkeydown={onReorderKey}
+            class="flex size-10 cursor-grab touch-none items-center justify-center rounded-md text-foreground/60 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing"
+          >
+            <GripVertical class="size-5" />
+          </button>
+        {/snippet}
+        Drag to reorder. Use Alt + Up or Down with the keyboard.
+      </SimpleTooltip>
+    {/if}
     {#if sourceTag}
       {#if sourceTag.iconComponent}
         <SimpleTooltip disabled={!sourceTag.title}>
@@ -168,36 +199,36 @@ function handleAddToProject(event: Event): void {
     {/if}
   </div>
 
-  <div class="bits-project-field-card__title-wrap">
+  <div class="bits-project-field-card__title-wrap static! transform-none! min-w-0 px-3">
     {#if canCollapse}
       <button
         type="button"
-        class="bits-project-field-card__title-pill"
+        class="bits-project-field-card__title-pill relative min-w-0 max-w-full px-2!"
         onclick={onToggleCollapse}
       >
-        <h3 class="bits-project-field-card__title">
+        <h3 class="bits-project-field-card__title truncate">
           {property.i18n?.en?.label ||
             property.key ||
             m.admin__forms_property_untitled()}
         </h3>
         <ChevronDown
-          class={`bits-project-field-card__collapse-icon ${collapsed ? 'bits-project-field-card__collapse-icon--collapsed' : ''}`}
+          class={`absolute -right-3 top-1/2 -translate-y-1/2 bits-project-field-card__collapse-icon ${collapsed ? 'bits-project-field-card__collapse-icon--collapsed' : ''}`}
         />
       </button>
     {:else}
       <div
-        class="bits-project-field-card__title-pill bits-project-field-card__title-pill--static"
+        class="bits-project-field-card__title-pill bits-project-field-card__title-pill--static min-w-0 max-w-full px-2!"
       >
         {#if titleHref}
           <a href={titleHref} class="bits-project-field-card__title-link">
-            <h3 class="bits-project-field-card__title">
+            <h3 class="bits-project-field-card__title truncate">
               {property.i18n?.en?.label ||
                 property.key ||
                 m.admin__forms_property_untitled()}
             </h3>
           </a>
         {:else}
-          <h3 class="bits-project-field-card__title">
+          <h3 class="bits-project-field-card__title truncate">
             {property.i18n?.en?.label ||
               property.key ||
               m.admin__forms_property_untitled()}
@@ -207,126 +238,60 @@ function handleAddToProject(event: Event): void {
     {/if}
   </div>
 
-  <div class="bits-project-field-card__header-right-rail pr-2">
-    {#if showTranslatableToggle}
-      <div
-        class="bits-project-field-card__toggle bits-project-field-card__toggle--inline"
-        transition:fade={{ duration: 180 }}
-      >
-        <SimpleTooltip disabled={!translatableHint}>
-          {#snippet trigger()}
-            <span>
-              <Languages
-                class="bits-project-field-card__toggle-icon"
-                aria-hidden="true"
-              />
+  <div
+    bind:clientWidth={rightRailWidth}
+    class="bits-project-field-card__header-right-rail static! transform-none! w-max justify-self-end gap-2"
+  >
+    {#if showDefaultEnabledToggle && (isEditing || property.isDefaultEnabled)}
+      <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+        {#snippet trigger()}
+          {#if isEditing}
+            <button
+              type="button"
+              aria-pressed={Boolean(property.isDefaultEnabled)}
+              class={`inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition-colors ${property.isDefaultEnabled ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border/40 text-foreground/50 hover:bg-foreground/5'}`}
+              onclick={() =>
+                onToggleIsDefaultEnabled(property.id, !property.isDefaultEnabled)}
+            >
+              <CopyCheck class="size-4" />
+              {isProjectScopedCard || isInheritedHeaderCard
+                ? 'Layer default'
+                : 'Project default'}
+            </button>
+          {:else}
+            <span
+              class="inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/15 px-3 py-2 text-xs font-semibold text-primary"
+            >
+              <CopyCheck class="size-4" />
+              {isProjectScopedCard || isInheritedHeaderCard
+                ? 'Layer default'
+                : 'Project default'}
             </span>
-          {/snippet}
-          {translatableHint}
-        </SimpleTooltip>
-        <Switch
-          checked={Boolean(property.isTranslatable)}
-          disabled={!isEditing}
-          color="light"
-          size="sm"
-          onCheckedChange={nextValue =>
-            onToggleIsTranslatable(property.id, Boolean(nextValue))}
-        />
-      </div>
+          {/if}
+        {/snippet}
+        {defaultEnabledHint}
+      </SimpleTooltip>
     {/if}
-    {#if showDefaultEnabledToggle}
-      <div
-        class="bits-project-field-card__toggle bits-project-field-card__toggle--inline"
-        transition:fade={{ duration: 180 }}
-      >
-        <SimpleTooltip disabled={!defaultEnabledHint}>
-          {#snippet trigger()}
-            <span>
-              <CopyCheck
-                class="bits-project-field-card__toggle-icon"
-                aria-hidden="true"
-              />
-            </span>
-          {/snippet}
-          {defaultEnabledHint}
-        </SimpleTooltip>
-        <Switch
-          checked={Boolean(property.isDefaultEnabled)}
-          disabled={!isEditing}
-          color="light"
-          size="sm"
-          onCheckedChange={nextValue =>
-            onToggleIsDefaultEnabled(property.id, Boolean(nextValue))}
+    {#if isEditing && showHeaderActionOverlay}
+      {#if showAddToProjectAction}
+        <Button
+          text={m.admin__forms_property_add_to_project()}
+          style="ghost"
+          color="success"
+          iconComponent={Plus}
+          onClick={handleAddToProject}
+          class="min-h-10 [&_svg]:size-5"
         />
-      </div>
-    {/if}
-    {#if isEditing}
-      <div
-        class="bits-project-field-card__header-actions-shell bits-project-field-card__header-actions-shell--visible"
-      >
-        <div class="bits-project-field-card__header-actions pr-2">
-          <div
-            class={`bits-project-field-card__header-actions-rank ${showHeaderActionOverlay ? 'bits-project-field-card__header-actions-rank--hidden' : ''}`}
-          >
-            <Button
-              text={m.admin__forms_common_move_up()}
-              hideLabel={true}
-              modifier="square"
-              size="sm"
-              style="ghost"
-              color="light"
-              iconComponent={ChevronUp}
-              disabled={showHeaderActionOverlay || !canIncreaseRank}
-              onClick={event => onIncreaseRank(event, property.id)}
-              class="bits-project-field-card__icon-btn"
-            />
-            <Button
-              text={m.admin__forms_common_move_down()}
-              hideLabel={true}
-              modifier="square"
-              size="sm"
-              style="ghost"
-              color="light"
-              iconComponent={ChevronDown}
-              disabled={showHeaderActionOverlay || !canDecreaseRank}
-              onClick={event => onDecreaseRank(event, property.id)}
-              class="bits-project-field-card__icon-btn"
-            />
-          </div>
-          <div
-            class={`bits-project-field-card__header-actions-remove-overlay ${showHeaderActionOverlay ? 'bits-project-field-card__header-actions-remove-overlay--active' : ''}`}
-          >
-            {#if showAddToProjectAction}
-              <Button
-                text={m.admin__forms_property_add_to_project()}
-                hideLabel={true}
-                style="ghost"
-                modifier="circle"
-                color="success"
-                iconComponent={Plus}
-                onClick={handleAddToProject}
-                class="bits-project-field-card__icon-btn bits-project-field-card__icon-btn--round"
-              />
-            {:else if canShowRemoveAction}
-              <Button
-                text={m.admin__forms_common_remove()}
-                hideLabel={true}
-                style="ghost"
-                modifier="circle"
-                color="dark"
-                iconComponent={Trash2}
-                onClick={openDeleteConfirm}
-                class="bits-project-field-card__icon-btn bits-project-field-card__icon-btn--round"
-              />
-            {:else}
-              <span
-                class="bits-project-field-card__icon-btn bits-project-field-card__icon-btn--placeholder"
-                aria-hidden="true"
-              ></span>
-            {/if}
-          </div>
-        </div>
-      </div>
+      {:else if canShowRemoveAction}
+        <Button
+          text={m.admin__forms_common_remove()}
+          style="ghost"
+          color="error"
+          iconComponent={Trash2}
+          onClick={openDeleteConfirm}
+          class="min-h-10 [&_svg]:size-5"
+        />
+      {/if}
     {/if}
   </div>
 </header>

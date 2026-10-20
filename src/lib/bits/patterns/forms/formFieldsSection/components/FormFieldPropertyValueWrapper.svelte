@@ -85,9 +85,12 @@ const hideLabels = $derived(labelledWidth > availableWidth)
   />
 {/snippet}
 
-<section class="bits-project-field-card__values">
-  <div class="relative min-h-8.5">
-    {#if isEditing}
+<section class="bits-project-field-card__values rounded-lg border border-border/40 p-2">
+  <h4 class="px-2 text-sm font-bold text-[var(--form-label)]">
+    {m.admin__forms_property_options()}
+  </h4>
+  {#if isEditing}
+    <div class="relative min-h-8.5">
       <div
         class="bits-project-field-card__value-actions-layer"
         transition:fade={{ duration: 180 }}
@@ -109,17 +112,8 @@ const hideLabels = $derived(labelledWidth > availableWidth)
           {@render actions(hideLabels)}
         </div>
       </div>
-    {:else}
-      <div
-        class="bits-project-field-card__value-actions-layer"
-        transition:fade={{ duration: 180 }}
-      >
-        <div class="bits-project-field-card__value-actions-label">
-          {m.admin__forms_property_options()}
-        </div>
-      </div>
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   {@render rows?.()}
 </section>
