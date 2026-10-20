@@ -1,6 +1,8 @@
 <script lang="ts">
 // THIRD PARTY
 import Portal from 'svelte-portal'
+// CONSTANTS
+import { PANEL_WIDTH } from '#lib/constants.js'
 // COMPONENTS
 import * as HubPanelSubscriptionPrimitive from './components'
 // TYPES
@@ -43,7 +45,8 @@ $effect(() => {
 
 <Portal target="body">
   <div
-    class="bits-theme pointer-events-none fixed inset-x-0 bottom-0 z-[60] md:right-auto md:w-[420px]"
+    class="bits-theme pointer-events-none fixed inset-x-0 bottom-0 z-[60] md:right-auto md:w-(--panel-width)"
+    style:--panel-width={`${PANEL_WIDTH}px`}
   >
     <div
       bind:this={cardContainer}
