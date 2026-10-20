@@ -1523,8 +1523,10 @@ and publisher attribution survive, exact replay creates neither another Place no
 revision, and the shared Feature resolver preserves its explicit name override. A wrong
 snapshot remains unresolved for review. Source/HYPE foreign-key checks pass.
 
-The canonical Place collection response is deliberately synthetic; this is not evidence
-for a real bakery match, full CLI upload orchestration or automatic Project adoption.
+The initial canonical Place response was hand-built; the expanded rehearsal now
+materialises and publishes a synthetic Place and reads it through the real collection
+service, including an exact-ID publication-pinned request. This is not evidence for
+a real bakery match, full CLI upload orchestration or automatic Project adoption.
 See the [reproducible curation rehearsal](places-address-curation.md#reproducible-source-service-integration-rehearsal)
 for the command and proof boundary. No production or primary local data was modified.
 

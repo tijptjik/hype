@@ -28,6 +28,8 @@ import {
   recordSnapshotAssembly,
   upsertSnapshotSource,
 } from '../../../saanseoi/libs/core/src/lib/db/metaRegistry'
+import { listPlaces } from '../../../saanseoi/apps/atlas-api/src/services/places'
+import { PlacesListQuerySchema } from '../../../saanseoi/apps/atlas-api/src/schema/places'
 import { getAddressDetail } from '../../../saanseoi/apps/atlas-api/src/services/addresses'
 import { AddressDetailQuerySchema } from '../../../saanseoi/apps/atlas-api/src/schema/addresses'
 
@@ -36,7 +38,7 @@ import { AddressDetailQuerySchema } from '../../../saanseoi/apps/atlas-api/src/s
  * @returns Completion only after exact snapshot hydration and idempotent persistence pass.
  * @remarks All databases are in memory. Requires the sibling SaanSeoi checkout; never
  * opens production mirrors, publishes remotely or accepts a real establishment match.
- * Place collection evidence is synthetic; Address curation/publication/read services are real.
+ * Records are synthetic; Place and Address publication/read services are real.
  */
 async function main(): Promise<void> {
   const { store: lineageStore } = createMemoryProvenanceStore()
@@ -90,6 +92,14 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
         datasetId: 'overture-hk-place',
         datasetCode: 'ds-hk-overture-place',
         variant: 'overture-places',
+      },
+      {
+        id: 'place',
+        type: 'place',
+        source: 'overture',
+        datasetId: 'overture-hk-place',
+        datasetCode: 'ds-hk-overture-place',
+        variant: 'overture',
       },
     ] as const
     const snapshots = new Map<string, string>()
@@ -274,6 +284,53 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
         .insert(currentSchema.address2dI18n)
         .values({ ...row, scopeId: snapshotId })
         .run()
+    const placeSnapshotId = requireDefined(snapshots.get('place'))
+    // The canonical Place carries the curated supplementary dependency, not a hand-built API response.
+    for (const [dependencySnapshotId, role] of [
+      [divisionSnapshotId, 'division'],
+      [snapshots.get('als')!, 'address'],
+      [snapshotId, 'supplementaryAddress'],
+    ])
+      meta
+        .query(
+          'INSERT INTO snapshotDependencies(snapshotId,dependencySnapshotId,role) VALUES (?,?,?)',
+        )
+        .run(placeSnapshotId, dependencySnapshotId!, role!)
+    currentDb
+      .insert(currentSchema.placePublicationState)
+      .values({
+        scopeId: placeSnapshotId,
+        snapshotId: placeSnapshotId,
+        divisionSnapshotId,
+        addressSnapshotId: snapshots.get('als')!,
+        supplementaryAddressSnapshotId: snapshotId,
+        status: 'current',
+        publicationToken: 'place-rehearsal',
+        preparedAt: '2025-09-25T00:00:00Z',
+      })
+      .run()
+    currentDb
+      .insert(currentSchema.places)
+      .values({
+        scopeId: placeSnapshotId,
+        id: 'synthetic-canonical-place',
+        resourceReleaseId: 'place',
+        geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+        firstSeenMonth: '2025-09',
+        addressRole: 'supplementaryAddress',
+        address2dId: resolution.addressId!,
+        phones: [],
+      })
+      .run()
+    currentDb
+      .insert(currentSchema.placesI18n)
+      .values({
+        scopeId: placeSnapshotId,
+        placeId: 'synthetic-canonical-place',
+        locale: 'en',
+        name: 'Synthetic rehearsal shop',
+      })
+      .run()
     // Materialise the curated rows before publishing their source snapshots and catalogue.
     for (const snapshot of snapshots.values()) await publishSnapshot(db, snapshot)
     // Publishing the supplementary resource must accept its snapshot variant,
@@ -335,41 +392,94 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
         return Response.json(result.body, { status: result.status })
       },
     }
-    const { projectSaanSeoiPlace } = await import('../../src/lib/places/saanseoi.ts')
+    const placeReleaseSet = await ensureDraftReleaseSetForRelease(
+      db,
+      'place',
+      { cohortKey: cohort, regionCode: 'hk' },
+      {
+        domainCode: 'overture',
+        schemaVersion: 'sv-place-v1',
+        rulesetVersion: 'rs-place-merge-v1',
+      },
+    )
+    const placeDataset = await getDatasetRecordByReleaseId(db, 'place')
+    assert.ok(placeDataset)
+    const placePublication = await publishReleaseArtefacts(db, {
+      lineageStore,
+      dataset: placeDataset,
+      currentRelease: null,
+      currentReleaseIsCorrected: false,
+      releaseSetId: placeReleaseSet.id,
+      snapshotId: placeSnapshotId,
+      snapshotVariant: 'overture',
+      resourceType: 'place',
+      publishedAt: '2025-09-25T00:00:00Z',
+      updateDatasetRelease: false,
+      carriedSnapshots: [
+        {
+          resourceType: 'division',
+          variant: 'overture',
+          snapshotId: divisionSnapshotId,
+        },
+        {
+          resourceType: 'address',
+          variant: 'hkgov-dpo',
+          snapshotId: snapshots.get('als')!,
+        },
+        { resourceType: 'address', variant: 'overture-places', snapshotId },
+      ],
+    })
+    assert.ok(placePublication)
+    const placeRequests: string[] = []
+    /** Invoke the real collection service in memory. @param input Requested URL. @returns Its JSON response. */
+    const placeTransport = async (input: URL | RequestInfo): Promise<Response> => {
+      const url = new URL(String(input))
+      placeRequests.push(url.toString())
+      const result = await listPlaces({
+        currentDb: currentDb as never,
+        metaDb: db as never,
+        region: 'hk',
+        requestUrl: url.toString(),
+        requestedVersionPath: 'places/v0.1',
+        requestedApiVersion: '0.1',
+        resolvedApiVersion: 'api-places-v0.1',
+        query: PlacesListQuerySchema.parse(Object.fromEntries(url.searchParams)),
+      })
+      return Response.json(result.body, { status: result.status })
+    }
+    // Discover the publication through the real collection contract, then reread its exact pin.
+    const discovery = await placeTransport(
+      'https://source.example/places/v0.1?region=hk&profile=full',
+    )
+    assert.equal(discovery.status, 200)
+    const published = (await discovery.json()) as {
+      meta: {
+        apiReleaseSet: string
+        apiCatalogRevision: string
+        catalogPublishedAt: string
+      }
+    }
+    const { readSaanSeoiPlacePage } = await import(
+      '../../src/lib/places/sourceClient.ts'
+    )
+    const page = await readSaanSeoiPlacePage(
+      { ...client, fetch: placeTransport as typeof fetch },
+      {
+        releaseSet: published.meta.apiReleaseSet,
+        catalogRevision: published.meta.apiCatalogRevision,
+        knownAt: published.meta.catalogPublishedAt,
+      },
+      0,
+      { id: 'synthetic-canonical-place' },
+    )
+    assert.equal(page.places.length, 1)
+    assert.equal(page.nextOffset, null)
+    const projection = page.places[0]!
+    assert.equal(projection.ssId, 'synthetic-canonical-place')
+    assert.equal(projection.snapshotId, placeSnapshotId)
+    assert.equal(projection.facts.location.address.addressSnapshotId, snapshotId)
     const { hydrateSaanSeoiPlaceAddress } = await import(
       '../../src/lib/places/sourceAddress.ts'
-    )
-    const projection = projectSaanSeoiPlace(
-      {
-        type: 'places',
-        id: 'synthetic-canonical-place',
-        attributes: {
-          geometry: { type: 'Point', coordinates: [114.1, 22.3] },
-          snapshotId: 'synthetic-place-snapshot',
-          resourceReleaseId: 'synthetic-place-release',
-          addressSnapshotId: snapshotId,
-          address2dId: resolution.addressId,
-          address3dId: null,
-          address3dUnitId: null,
-          phones: [],
-          identifiers: null,
-          i18n: { en: { name: 'Synthetic rehearsal shop', brandName: null } },
-        },
-      },
-      {
-        apiReleaseSet: 'synthetic-place-publication',
-        apiCatalogRevision: 'synthetic-place-catalog',
-        catalogPublishedAt: new Date().toISOString(),
-        cohort,
-        domain: 'overture',
-        region: 'hk',
-        resolvedApiVersion: 'api-places-v0.1',
-        schemaVersion: 'v1',
-      },
-      {
-        apiReleaseSet: 'synthetic-place-publication',
-        snapshotId: 'synthetic-place-snapshot',
-      },
     )
     const hydrated = await hydrateSaanSeoiPlaceAddress(client as never, projection)
 
@@ -499,6 +609,8 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
           {
             fixture: 'synthetic-address-curation',
             curation: resolution.tier,
+            placeCollectionService: true,
+            placeCollectionRequests: placeRequests.length,
             addressResolved: true,
             exactSnapshot: true,
             pinnedRequests: 2,

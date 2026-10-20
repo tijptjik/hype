@@ -96,13 +96,17 @@ and actual Address detail API service. It materialises the reviewed rows before
 publishing their snapshots. The request transport calls that service in process;
 it makes no network request and writes no mirror, source fixture or production data.
 
-The marked synthetic Place collection record references the resulting exact Address
-snapshot. HYPE's real hydration path discovers the Address publication, rereads with
+A synthetic canonical Place is materialised with the supplementary Address role and
+exact dependency, then published through the actual Place release service. The real
+Place collection service supplies discovery and exact-ID pinned reads to HYPE; no
+Place API response is assembled by hand. Its publication carries the official and
+supplementary Address snapshots plus the Division dependency. HYPE's real hydration path discovers the Address publication, rereads with
 its independent pin, preserves native components and attribution, and persists one
 shared Place/revision. Replay must return the same identities with no extra revision.
 The shared resolver must preserve an explicit Feature name override while inheriting
 the structured Address. A mismatched snapshot must remain unresolved for review.
-Source and HYPE foreign-key checks must pass.
+Source and HYPE foreign-key checks must pass. The Place publication must resolve
+its real field-mapping fixture with those dependency publishers present.
 
 Verified against SaanSeoi commit `5dfb3b471`: supplementary curation, exact-snapshot
 hydration, two pinned/discovery requests, source attribution, one persisted HYPE Place
@@ -111,3 +115,9 @@ review all pass. This is cross-repository service integration evidence, extendin
 existing read-only real-mirror hydration rehearsal. It does not exercise CLI upload
 or interactive prompt orchestration, automatic Project adoption, or establish any
 real donor's canonical identity. Those boundaries remain separate acceptance work.
+
+The expanded rehearsal verifies two real Place collection service requests in addition
+to the two Address service requests. Both publication families use the in-memory source
+catalogue. HYPE validates the exact canonical ID and Place snapshot before hydrating
+the curated Address. The synthetic records still do not establish a real donor identity
+or exercise the interactive CLI; this closes the hand-built Place-response boundary.
