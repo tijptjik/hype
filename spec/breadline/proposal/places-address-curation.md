@@ -175,3 +175,9 @@ primary local state. One hydrated source revision is stored; persistence replay 
 idempotent. All 23 Feature-owned tables stay exact, including the local location
 override and MTR access. Integrity/FKs pass, and private backups/receipts are retained.
 No upstream Address curation was needed or performed for this record.
+
+Bulk `scripts/places/mirror-source.ts` also hydrates Addresses before source
+persistence. Its version-two checkpoint distinguishes this from older mirrors that
+only retained unresolved references. Old checkpoints replay the selected publication
+once; Address transport failures cannot advance page progress. Semantic mismatches
+remain unresolved review evidence. This does not grant Feature adoption authority.

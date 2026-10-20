@@ -1761,3 +1761,25 @@ An isolated application preceded the primary local application. Replay returns t
 same source revision; all 23 Feature-owned tables, local overrides and MTR data
 remain unchanged, with integrity/FKs passing. The Feature still retains its own
 location override. No upstream curation, deployment or production write occurred.
+
+### Bulk source mirror hydrates Addresses (Refs #194)
+
+`mirror-source.ts` now runs the same pinned Address hydration used by candidate
+lookup and monthly refresh before persisting each Place. Transport failures leave
+the current page checkpoint unadvanced; semantic dependency mismatches remain
+explicit unresolved evidence rather than fabricated Addresses. The checkpoint is
+written only after every Place in the page has persisted.
+
+Checkpoint version two records this hydration protocol. Version-one checkpoints,
+including completed ones, replay from offset zero within the same publication/subset
+because their revision receipts did not prove an Address lookup occurred. Existing
+revision persistence makes interrupted-page retries idempotent. Version-two progress
+requires unique, nonempty revision receipts matching the offset and a consistent
+completion total; changed publication/subset inputs remain errors. Reset local
+databases still trigger replay when retained revision IDs no longer exist.
+
+46 focused checkpoint/source-lookup/Address tests pass, covering old completed and
+partial checkpoints, malformed receipts, input mismatch, scoped exact-ID reads and
+pinned hydration. The full bulk mirror was not rerun during this command change;
+real-data source hydration and persistence were independently verified above.
+No local Feature, production or source database was changed by these tests.

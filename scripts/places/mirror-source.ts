@@ -9,27 +9,19 @@ import { placeRevision } from '../../src/lib/db/schema/place'
 import { persistSaanSeoiPlace } from '../../src/lib/db/services/placeSource'
 // SOURCE
 import { readSaanSeoiPlacePage } from '../../src/lib/places/sourceClient'
+import { hydrateSaanSeoiPlaceAddress } from '../../src/lib/places/sourceAddress'
+import { readMirrorCheckpoint } from './lib/mirror-checkpoint'
 import { parsePlacePublication } from '../../src/lib/places/publication'
 // TYPES
-import type { PlacePublicationPin } from '../../src/lib/places/sourceClient'
 import type { Database } from '../../src/lib/types'
 import type { D1Database } from '@cloudflare/workers-types'
-
-type Checkpoint = {
-  version: 1
-  pin: PlacePublicationPin
-  filters: { taxonomyPrimary?: string }
-  offset: number
-  total: number | null
-  complete: boolean
-  revisions: string[]
-}
 
 /**
  * Mirror a pinned source subset into LOCAL HYPE, checkpointing completed pages only.
  * @returns Completion when every canonical page has been stored without changing Features.
  * @remarks No remote target switch exists. Source credentials are never written to receipts.
  * Rerunning after failure replays at most one page using idempotent revision persistence.
+ * Version-one checkpoints replay once because their records may lack Address hydration.
  */
 async function main(): Promise<void> {
   const [publicationPath, checkpointPath, taxonomyPrimary] = process.argv.slice(2)
@@ -43,23 +35,13 @@ async function main(): Promise<void> {
   const publication = JSON.parse(readFileSync(publicationPath, 'utf8'))
   const { pin } = parsePlacePublication(publication)
   const filters = taxonomyPrimary ? { taxonomyPrimary } : {}
-  let checkpoint: Checkpoint = existsSync(checkpointPath)
-    ? JSON.parse(readFileSync(checkpointPath, 'utf8'))
-    : {
-        version: 1,
-        pin,
-        filters,
-        offset: 0,
-        total: null,
-        complete: false,
-        revisions: [],
-      }
-  if (
-    checkpoint.version !== 1 ||
-    JSON.stringify(checkpoint.pin) !== JSON.stringify(pin) ||
-    JSON.stringify(checkpoint.filters) !== JSON.stringify(filters)
+  let checkpoint = readMirrorCheckpoint(
+    existsSync(checkpointPath)
+      ? JSON.parse(readFileSync(checkpointPath, 'utf8'))
+      : undefined,
+    pin,
+    filters,
   )
-    throw new Error('Checkpoint belongs to another publication or source subset')
   const apiKey = process.env.SAANSEOI_API_KEY ?? process.env.VITE_SAANSEOI_API_KEY
   if (!apiKey) throw new Error('SaanSeoi API key required')
   const proxy = await getPlatformProxy<{ DB: D1Database }>({
@@ -88,7 +70,7 @@ async function main(): Promise<void> {
     }
     if (!receiptsPresent)
       checkpoint = {
-        version: 1,
+        version: 2,
         pin,
         filters,
         offset: 0,
@@ -102,30 +84,39 @@ async function main(): Promise<void> {
       })
       return
     }
+    const client = { baseUrl: 'https://api.saanseoi.hk', apiKey, fetch }
     while (!checkpoint.complete) {
-      const page = await readSaanSeoiPlacePage(
-        { baseUrl: 'https://api.saanseoi.hk', apiKey, fetch },
-        pin,
-        checkpoint.offset,
-        filters,
+      const page = await readSaanSeoiPlacePage(client, pin, checkpoint.offset, filters)
+      if (
+        checkpoint.total !== null &&
+        page.total !== null &&
+        checkpoint.total !== page.total
       )
-      if (checkpoint.total !== null && page.total !== null && checkpoint.total !== page.total)
         throw new Error('Pinned publication total changed')
       const revisions = [...checkpoint.revisions]
       for (const projection of page.places) {
-        const receipt = await persistSaanSeoiPlace(db, projection)
+        // Persist native Address evidence before recording successful mirror progress.
+        const hydrated = await hydrateSaanSeoiPlaceAddress(client, projection)
+        const receipt = await persistSaanSeoiPlace(db, hydrated)
         if (revisions.includes(receipt.revisionId))
           throw new Error('Duplicate Place across source pages')
         revisions.push(receipt.revisionId)
       }
       const processed = checkpoint.offset + page.places.length
-      if (page.nextOffset === null && checkpoint.total !== null && checkpoint.total !== processed)
+      if (
+        page.nextOffset === null &&
+        checkpoint.total !== null &&
+        checkpoint.total !== processed
+      )
         throw new Error('Pinned publication ended before its retained total')
       // Advance only after the whole page has persisted; interrupted pages are safe to replay.
       checkpoint = {
         ...checkpoint,
         revisions,
-        total: page.total ?? checkpoint.total ?? (page.nextOffset === null ? processed : null),
+        total:
+          page.total ??
+          checkpoint.total ??
+          (page.nextOffset === null ? processed : null),
         offset: processed,
         complete: page.nextOffset === null,
       }
