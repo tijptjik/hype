@@ -85,7 +85,7 @@ async function continueAsGuest(): Promise<void> {
 }
 </script>
 
-<FlightSurface class="px-4 py-8 text-white">
+<FlightSurface class="px-4 py-8 text-foreground">
   <div class="relative z-10 w-fit max-w-full">
     <AuthPanel
       title={m.login__title()}

@@ -129,7 +129,7 @@ async function handleCompletionClose(): Promise<void> {
           />
         {/key}
         <Dialog.Close
-          class="absolute right-3 top-3 flex size-7 items-center justify-center rounded text-xl leading-none text-white/60 transition-colors hover:text-white"
+          class="absolute right-3 top-3 flex size-7 items-center justify-center rounded text-xl leading-none text-muted-foreground transition-colors hover:text-foreground"
           aria-label={m.guest__close()}
           >×</Dialog.Close
         >
@@ -140,7 +140,7 @@ async function handleCompletionClose(): Promise<void> {
               <p>{m.bootstrap__error()}</p>
               <button
                 type="button"
-                class="mt-4 rounded-lg bg-white px-4 py-2 text-black"
+                class="mt-4 rounded-lg bg-primary px-4 py-2 text-primary-content"
                 onclick={() => void loadAuthPanel().catch(() => {})}
               >
                 {m.bootstrap__retry()}
@@ -155,7 +155,7 @@ async function handleCompletionClose(): Promise<void> {
           {/if}
         </div>
         <Dialog.Close
-          class="absolute right-3 top-3 flex size-7 items-center justify-center rounded text-xl leading-none text-white/60 transition-colors hover:text-white"
+          class="absolute right-3 top-3 flex size-7 items-center justify-center rounded text-xl leading-none text-muted-foreground transition-colors hover:text-foreground"
           aria-label={m.guest__close()}
           >×</Dialog.Close
         >

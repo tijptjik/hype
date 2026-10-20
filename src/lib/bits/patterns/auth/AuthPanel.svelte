@@ -399,17 +399,17 @@ async function handlePasswordResetRequest(): Promise<void> {
 </script>
 
 <section
-  class="w-[27rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/15 bg-neutral-950/95 p-6 text-white shadow-2xl"
+  class="w-[27rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-panel/95 p-6 text-foreground shadow-2xl"
 >
   {#if showAuthModeTitle && (modeToggleHref || onModeChange)}
     <div class="flex items-center justify-center gap-3">
       <h1 class="shrink-0 whitespace-nowrap text-center text-2xl font-semibold">
         {authTitle}
       </h1>
-      <span class="h-7 border-l border-white/30" aria-hidden="true"></span>
+      <span class="h-7 border-l border-border" aria-hidden="true"></span>
       {#if modeToggleHref}
         <a
-          class="shrink-0 whitespace-nowrap text-lg font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
+          class="shrink-0 whitespace-nowrap text-lg font-medium text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline"
           href={modeToggleHref}
           onclick={handleModeToggle}
         >
@@ -417,7 +417,7 @@ async function handlePasswordResetRequest(): Promise<void> {
         </a>
       {:else}
         <button
-          class="shrink-0 whitespace-nowrap text-lg font-medium text-white/70 underline-offset-4 transition hover:text-white hover:underline"
+          class="shrink-0 whitespace-nowrap text-lg font-medium text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline"
           type="button"
           onclick={() => onModeChange?.(mode === 'sign-in' ? 'sign-up' : 'sign-in')}
         >
@@ -429,15 +429,17 @@ async function handlePasswordResetRequest(): Promise<void> {
     <h1 class="text-center text-2xl font-semibold">{authTitle}</h1>
   {/if}
   {#if description && !showEmailAuth}
-    <p class="mt-2 text-center text-sm leading-6 text-white/70">{description}</p>
+    <p class="mt-2 text-center text-sm leading-6 text-muted-foreground">
+      {description}
+    </p>
   {/if}
   {#if errorMessage}
-    <p class="mt-4 whitespace-pre-line text-center text-sm text-red-300">
+    <p class="mt-4 whitespace-pre-line text-center text-sm text-error">
       {errorMessage}
     </p>
   {/if}
   {#if statusMessage}
-    <p class="mt-4 text-center text-sm text-emerald-300" role="status">
+    <p class="mt-4 text-center text-sm text-success" role="status">
       {statusMessage}
     </p>
   {/if}
@@ -447,41 +449,42 @@ async function handlePasswordResetRequest(): Promise<void> {
       <AuthSocialButtons disabled={isBusy} onSelect={handleSocial} />
 
       <button
-        class="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white/40 hover:bg-white/5 hover:text-white"
+        class="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm transition hover:border-foreground/40 hover:bg-foreground/5 hover:text-foreground"
         type="button"
         aria-expanded={showEmailAuth}
         onclick={openEmailAuth}
       >
-        <Mail class="h-5 w-5 text-white/70" />
+        <Mail class="h-5 w-5 text-muted-foreground" />
         {m.guest__email()}
       </button>
       <button
-        class="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white hover:bg-white/5 disabled:opacity-40"
+        class="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm transition hover:border-foreground/40 hover:bg-foreground/5 disabled:opacity-40"
         type="button"
         disabled={isBusy}
         onclick={handlePasskeyAction}
       >
-        <KeyRound class="h-5 w-5 text-white/70" />
+        <KeyRound class="h-5 w-5 text-muted-foreground" />
         {m.account__passkey()}
       </button>
     </div>
 
     {#if showGuest}
       <div class="mt-3 flex flex-col items-center">
-        <div class="h-1 border-l border-white/20" aria-hidden="true"></div>
-        <span class="py-1 text-xs font-medium tracking-[0.2em] text-white/50 uppercase"
+        <div class="h-1 border-l border-border" aria-hidden="true"></div>
+        <span
+          class="py-1 text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase"
           >{m.or()}</span
         >
-        <div class="mb-3 h-1 border-l border-white/20" aria-hidden="true"></div>
+        <div class="mb-3 h-1 border-l border-border" aria-hidden="true"></div>
         <button
-          class="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-medium text-white transition hover:bg-white/15 disabled:opacity-50"
+          class="w-full rounded-lg border border-border bg-foreground/5 px-4 py-2 font-medium text-foreground transition hover:bg-foreground/5 disabled:opacity-50"
           type="button"
           disabled={isBusy}
           onclick={handleGuest}
         >
           {m.guest__continue_as_guest()}
         </button>
-        <p class="mt-2 text-center text-xs text-white/45">
+        <p class="mt-2 text-center text-xs text-muted-foreground">
           {m.login__guest_limitation()}
         </p>
       </div>
@@ -490,7 +493,7 @@ async function handlePasswordResetRequest(): Promise<void> {
     <div class="mt-4" in:fade={{ duration: 180 }}>
       {#if showPasskeySignUp}
         <form class="flex flex-col gap-3" onsubmit={handlePasskeySignUp}>
-          <p class="whitespace-pre-line text-center text-sm text-white/65">
+          <p class="whitespace-pre-line text-center text-sm text-muted-foreground">
             {m.guest__passkey_setup_description()}
           </p>
           <AuthTextField
@@ -511,7 +514,7 @@ async function handlePasswordResetRequest(): Promise<void> {
             bind:value={preferredEmail}
           />
           <button
-            class="mt-3 inline-flex min-w-40 self-center items-center justify-center whitespace-nowrap rounded-lg bg-[#4987E2] px-4 py-2 font-medium text-white transition hover:bg-[#4987E2]/90 disabled:opacity-50"
+            class="mt-3 inline-flex min-w-40 self-center items-center justify-center whitespace-nowrap rounded-lg bg-primary px-4 py-2 font-medium text-primary-content transition hover:bg-primary/90 disabled:opacity-50"
             type="submit"
             disabled={isBusy}
             aria-busy={isBusy}
@@ -545,7 +548,7 @@ async function handlePasswordResetRequest(): Promise<void> {
             type="button"
             disabled={isBusy}
             onclick={handleEmailLink}
-            class="text-sm text-white/75 underline underline-offset-4 transition hover:text-white disabled:opacity-50"
+            class="text-sm text-muted-foreground underline underline-offset-4 transition hover:text-foreground disabled:opacity-50"
           >
             {m.guest__email_sign_in_link()}
           </button>
@@ -559,7 +562,7 @@ async function handlePasswordResetRequest(): Promise<void> {
             bind:value={password}
           />
           <button
-            class="mt-3 min-w-40 self-center whitespace-nowrap rounded-lg bg-[#4987E2] px-4 py-2 font-medium text-white transition hover:bg-[#4987E2]/90 disabled:opacity-50"
+            class="mt-3 min-w-40 self-center whitespace-nowrap rounded-lg bg-primary px-4 py-2 font-medium text-primary-content transition hover:bg-primary/90 disabled:opacity-50"
             type="submit"
             disabled={isBusy}
           >
@@ -571,7 +574,7 @@ async function handlePasswordResetRequest(): Promise<void> {
         <div class="mt-4 flex justify-center">
           <button
             type="button"
-            class="text-sm text-white/65 underline"
+            class="text-sm text-muted-foreground underline"
             onclick={handlePasswordResetRequest}
           >
             {m.guest__forgot_password()}
@@ -581,7 +584,7 @@ async function handlePasswordResetRequest(): Promise<void> {
       {#if isAwaitingVerification && !showPasskeySignUp}
         <div class="mt-3 flex justify-center">
           <button
-            class="text-sm text-white/65 underline"
+            class="text-sm text-muted-foreground underline"
             type="button"
             disabled={isBusy}
             onclick={handleVerificationResend}
@@ -590,15 +593,15 @@ async function handlePasswordResetRequest(): Promise<void> {
           </button>
         </div>
       {/if}
-      <footer class="mt-6 border-t border-white/10 text-center">
+      <footer class="mt-6 border-t border-border text-center">
         {#if showPasskeySignUp}
-          <p class="mt-4 text-xs uppercase tracking-[0.16em] text-white/45">
+          <p class="mt-4 text-xs uppercase tracking-[0.16em] text-muted-foreground">
             {m.login__or_sign_up_with()}
           </p>
           <div class="mt-3 flex justify-center gap-3">
             <AuthSocialButtons compact disabled={isBusy} onSelect={handleSocial} />
             <button
-              class="flex h-10 w-10 items-center justify-center rounded-lg border border-white/20 transition hover:border-white hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+              class="flex h-10 w-10 items-center justify-center rounded-lg border border-border transition hover:border-foreground/40 hover:bg-foreground hover:text-canvas disabled:cursor-not-allowed disabled:opacity-40"
               type="button"
               aria-label={m.account__email()}
               title={m.account__email()}
@@ -609,14 +612,14 @@ async function handlePasswordResetRequest(): Promise<void> {
             </button>
           </div>
         {:else}
-          <p class="mt-5 text-xs uppercase tracking-[0.16em] text-white/45">
+          <p class="mt-5 text-xs uppercase tracking-[0.16em] text-muted-foreground">
             {mode === 'sign-up' ? m.login__or_sign_up_with() : m.login__or_login_with()}
           </p>
           <div class="mt-3 flex justify-center gap-3">
             <AuthSocialButtons compact disabled={isBusy} onSelect={handleSocial} />
           </div>
           <button
-            class="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-sm transition hover:border-white/40 disabled:opacity-40"
+            class="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm transition hover:border-foreground/40 disabled:opacity-40"
             type="button"
             disabled={isBusy}
             onclick={handlePasskeyAction}
