@@ -131,3 +131,18 @@ In this case:
   widths and heights.
 - The collapsed short/long decision should come from measured layout output, not from raw
   character count or a fixed description line budget alone.
+
+## Property width and text rhythm
+
+Property grids preserve their input order and use content-sized columns when those
+columns fit; spare width must not spread short values across the field region.
+Short values prefer one line; longer names and prose receive wider cells or spans.
+Compare candidate arrangements rather than accepting the first four-column fit.
+Measured label/value fonts, line heights and gaps must match their rendered CSS;
+wrapped labels contribute to row height. The grid must not exceed its container.
+Region fit checks allow a half-pixel rounding tolerance and evaluate later
+arrangements before moving fields below the portal.
+Expanded descriptions retain the property grid below both the text and portal.
+
+Future structured links and numbered references are proposed separately in
+[Structured property values](Design-Spec-Structured-Properties.md).

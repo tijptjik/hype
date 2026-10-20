@@ -46,7 +46,7 @@ const _DESCRIPTION_FONT = '300 15px Geologica'
 const _DESCRIPTION_LINE_HEIGHT = 22
 const PROPERTY_LABEL_FONT = '400 12px "IBM Plex Mono"'
 const PROPERTY_LABEL_LINE_HEIGHT = 16
-const PROPERTY_VALUE_FONT = '500 15px Geologica'
+const PROPERTY_VALUE_FONT = '500 16px Geologica'
 const PROPERTY_VALUE_LINE_HEIGHT = 22
 const PROPERTY_MIN_CELL_WIDTH = 88
 const PROPERTY_LAYOUT_SEARCH_STEPS = 14
@@ -375,9 +375,12 @@ function measureWidthForLineBudget(
 function preparePropertyItems(items: PropertyLayoutItem[]): PropertyPreparedItem[] {
   return items.map(item => ({
     id: item.id,
+    display: item.display,
     label: item.label,
     value: item.value,
-    labelWidth: Math.ceil(measureSingleLineWidth(item.label, PROPERTY_LABEL_FONT)),
+    labelWidth: Math.ceil(
+      measureSingleLineWidth(item.label.toUpperCase(), PROPERTY_LABEL_FONT),
+    ),
     singleLineValueWidth: Math.ceil(
       measureSingleLineWidth(item.value, PROPERTY_VALUE_FONT),
     ),
@@ -466,9 +469,13 @@ function comparePropertyLayoutResults(
   return comparePropertyLayoutScores(leftScore, rightScore)
 }
 
-function getPropertyCellHeight(lineCount: number, lineBudget: 2 | 3): number {
+function getPropertyCellHeight(
+  lineCount: number,
+  lineBudget: 2 | 3,
+  labelLineCount: number,
+): number {
   return (
-    PROPERTY_LABEL_LINE_HEIGHT +
+    Math.max(1, labelLineCount) * PROPERTY_LABEL_LINE_HEIGHT +
     PROPERTY_VALUE_TOP_MARGIN_PX +
     Math.min(lineCount, lineBudget) * PROPERTY_VALUE_LINE_HEIGHT
   )
@@ -554,7 +561,39 @@ function searchCandidateLayout(params: {
     for (let colSpan = 1; colSpan <= remainingColumns; colSpan += 1) {
       const spanWidth = getPropertySpanWidth(widths, column, colSpan, gap)
       const valueLineCount = getPropertyValueLineCount(item, spanWidth)
-      const height = getPropertyCellHeight(valueLineCount, lineBudget)
+      // Wrapped labels participate in the same row rhythm as wrapped values.
+      const labelLineCount = layout(
+        prepare(item.label.toUpperCase(), PROPERTY_LABEL_FONT),
+        spanWidth,
+        PROPERTY_LABEL_LINE_HEIGHT,
+      ).lineCount
+      // Link rows keep a usable hit target, but reserve only their actual wrapped height.
+      const linkHeight =
+        item.display?.kind === 'links'
+          ? item.display.numbered
+            ? Math.min(88, Math.max(44, valueLineCount * 44))
+            : Math.min(
+                88,
+                item.display.links.reduce((height, link, index) => {
+                  const text =
+                    item.display?.kind === 'links' && item.display.numbered
+                      ? `${index + 1} ↗`
+                      : `${link.label} ↗`
+                  const lines = layout(
+                    prepare(text, PROPERTY_VALUE_FONT),
+                    Math.max(1, spanWidth - 8),
+                    PROPERTY_VALUE_LINE_HEIGHT,
+                  ).lineCount
+                  return height + Math.max(44, lines * PROPERTY_VALUE_LINE_HEIGHT)
+                }, 0),
+              )
+          : 0
+      const height =
+        item.display?.kind === 'links'
+          ? labelLineCount * PROPERTY_LABEL_LINE_HEIGHT +
+            PROPERTY_VALUE_TOP_MARGIN_PX +
+            linkHeight
+          : getPropertyCellHeight(valueLineCount, lineBudget, labelLineCount)
       const nextRowHeights = [...normalizedRowHeights]
       nextRowHeights[row] = Math.max(nextRowHeights[row] ?? 0, height)
 
@@ -657,6 +696,8 @@ function buildCandidateLayout(params: {
     const column = index % columns
     const preferredWidth = Math.max(
       item.labelWidth,
+      // Short values should remain on one line; prose can span neighbouring cells.
+      Math.min(item.singleLineValueWidth, 280),
       lineBudget === 2 ? item.widthForTwoLines : item.widthForThreeLines,
       PROPERTY_MIN_CELL_WIDTH,
     )
@@ -666,16 +707,16 @@ function buildCandidateLayout(params: {
 
   const totalWidth = widths.reduce((sum, width) => sum + width, 0) + gap * (columns - 1)
 
+  const contentWidth = Math.max(availableWidth - gap * (columns - 1), 0)
+  const naturalWidth = widths.reduce((sum, width) => sum + width, 0)
+  // Preserve content-sized columns when they fit, as in the original card layout.
   const resolvedWidths =
     columns === 1
-      ? [Math.max(availableWidth, PROPERTY_MIN_CELL_WIDTH)]
+      ? [availableWidth]
       : totalWidth <= availableWidth
         ? widths
         : widths.map(width =>
-            Math.max(
-              PROPERTY_MIN_CELL_WIDTH,
-              Math.floor((width / totalWidth) * (availableWidth - gap * (columns - 1))),
-            ),
+            Math.max(PROPERTY_MIN_CELL_WIDTH, (width / naturalWidth) * contentWidth),
           )
   const searchedLayout = searchCandidateLayout({
     items,
@@ -722,7 +763,14 @@ function resolveFeaturePropertyLayoutWithStrategy(
   }
 
   const preparedItems = preparePropertyItems(items)
-  const maxColumns = Math.min(preparedItems.length, 4)
+  const maxColumns = Math.max(
+    1,
+    Math.min(
+      preparedItems.length,
+      4,
+      Math.floor((availableWidth + gap) / (PROPERTY_MIN_CELL_WIDTH + gap)),
+    ),
+  )
   let bestLayout: PropertyLayoutResult | null = null
 
   for (const lineBudget of [2, 3] as const) {
@@ -734,6 +782,7 @@ function resolveFeaturePropertyLayoutWithStrategy(
         columns,
         lineBudget,
       })
+      if (candidate.totalWidth > availableWidth + 0.5) continue
 
       const candidateResult: PropertyLayoutResult = {
         templateColumns: candidate.widths.map(width => `${width}px`).join(' '),
@@ -753,9 +802,8 @@ function resolveFeaturePropertyLayoutWithStrategy(
         }
       }
 
-      if (candidate.totalWidth <= availableWidth && candidate.overflowIds.size === 0) {
-        return candidateResult
-      }
+      // Compare every candidate: the first four-column fit may wrap far more
+      // than a balanced three-column arrangement at the same overall height.
     }
   }
 
@@ -854,11 +902,12 @@ export function fitFeaturePropertyLayoutInRegion(
     )
 
     if (
-      layoutResult.totalWidth > availableWidth ||
+      layoutResult.totalWidth > availableWidth + 0.5 ||
       layoutResult.totalHeight > availableHeight ||
       layoutResult.rowHeights.length > maxRows
     ) {
-      break
+      // A later item can produce a different column arrangement that fits the region.
+      continue
     }
 
     bestFitCount = count

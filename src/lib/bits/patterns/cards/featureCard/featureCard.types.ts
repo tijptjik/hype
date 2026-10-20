@@ -6,12 +6,14 @@ export type FeatureCardResponsiveMode =
   | 'desktopWide'
 
 export type PropertyLayoutItem = {
+  display?: import('#lib/properties/value.js').PropertyDisplay
   id: string
   label: string
   value: string
 }
 
 export type PropertyPreparedItem = {
+  display?: import('#lib/properties/value.js').PropertyDisplay
   id: string
   label: string
   value: string

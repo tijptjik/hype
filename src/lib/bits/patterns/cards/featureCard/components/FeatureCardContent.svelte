@@ -21,7 +21,7 @@ import {
 } from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // I18N
-import { getFPI18n, getI18n, m } from '#lib/i18n.js'
+import { getFeaturePropertyDisplay, getFPI18n, getI18n, m } from '#lib/i18n.js'
 // TYPES
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'
 import type { FeatureCardPortalObstacle } from '#lib/context/featureCard.types.js'
@@ -146,7 +146,20 @@ const featurePropertyItems = $derived.by((): FeaturePropertyItem[] => {
   const items = featureProperties.map(property => ({
     id: property.propertyId,
     label: getI18n(property.property, 'label', userPreferences),
-    value: getFPI18n(property, userPreferences),
+    value:
+      property.property?.dataType === 'link'
+        ? (() => {
+            const display = getFeaturePropertyDisplay(property, userPreferences)
+            return display.kind === 'links'
+              ? display.links
+                  .map((link, index) =>
+                    display.numbered ? `${index + 1} ↗` : `${link.label} ↗`,
+                  )
+                  .join('  ')
+              : getFPI18n(property, userPreferences)
+          })()
+        : getFPI18n(property, userPreferences),
+    display: getFeaturePropertyDisplay(property, userPreferences),
   }))
   // MTR access belongs to the future Breadline-specific card, not default cards.
   return items
@@ -528,12 +541,30 @@ const expandedDescriptionContentHeight = $derived.by(() =>
     : getDescriptionBottom(expandedFullDescriptionLayout) +
       EXPANDED_DESCRIPTION_BOTTOM_BUFFER_PX,
 )
+// Keep expanded fields below both the full description and the location portal.
+const expandedPropertiesTop = $derived(
+  CONTENT_TOP_PADDING_PX +
+    Math.max(expandedDescriptionContentHeight, expandedPortalGeometry.visualBottom) +
+    CONTENT_GAP_PX,
+)
+const expandedPropertyLayout = $derived(
+  resolveFeaturePropertyLayout(
+    featurePropertyItems,
+    Math.max(descriptionContentWidth - propertyContainerHorizontalPaddingPx, 0),
+    PROPERTY_GAP_PX,
+  ),
+)
 const activeContentHeight = $derived.by(() => {
   if (!expanded) return collapsedContentHeight
 
   return Math.max(
     collapsedContentHeight,
     expandedDescriptionContentHeight + EXPANDED_DESCRIPTION_CHROME_PX,
+    featurePropertyItems.length > 0
+      ? expandedPropertiesTop +
+          expandedPropertyLayout.totalHeight +
+          CONTENT_BOTTOM_PADDING_PX
+      : 0,
   )
 })
 const expandedViewportHeight = $derived(
@@ -841,6 +872,15 @@ $effect(() => {
       </div>
     {/if}
   </div>
+
+  {#if expanded && featurePropertyItems.length > 0}
+    <div
+      class="pointer-events-none absolute inset-x-0 z-30"
+      style={`top: ${expandedPropertiesTop}px;`}
+    >
+      <FeatureCardContentFields {feature} items={featurePropertyItems} />
+    </div>
+  {/if}
 
   {#if expanded && hasDescription}
     <div

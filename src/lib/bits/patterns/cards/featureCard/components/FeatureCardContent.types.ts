@@ -27,6 +27,7 @@ export type PortalGeometry = {
 }
 
 export type FeaturePropertyItem = {
+  display?: import('#lib/properties/value.js').PropertyDisplay
   id: string
   label: string
   value: string
