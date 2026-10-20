@@ -143,3 +143,35 @@ including independent Project adoption. It does not claim a new-publication refr
 or execution of the scheduled Worker. The fixture uses actual Feature schema column
 order and Place migrations in memory; it does not reset the application database.
 The helper is `scripts/places/lib/rehearse-curated-adoption.ts`.
+
+## Hydrate an existing reviewed Place from sealed local exports
+
+For a source Address already published, no curation write is necessary:
+
+```sh
+bun scripts/places/hydrate-local-place.ts \
+  LOCAL_D1.sqlite HYPE_PLACE_ID SOURCE_EXPORT_DIRECTORY CURRENT.sqlite \
+  .local/places/NEW-hydration-report
+```
+
+The default writes only private projection evidence and a receipt. Add `--apply-local`
+to retain a full HYPE backup and persist the hydrated revision, guarded against a
+changed latest revision or identity. Only local D1 targets are accepted. Exact replay
+must return the same revision without increasing its count; every Feature-owned
+table must remain unchanged. Source adoption remains a separate Project decision.
+
+The in-process transport in `scripts/places/lib/local-source-api.ts` runs the actual
+SaanSeoi Atlas API against explicitly selected read-only SQLite exports. It opens
+no listener and sends no network request. All META/current/history/source shards
+must be sealed; a nonempty WAL is rejected. A zero-length WAL has no unapplied
+frames. The supplied CURRENT database must match the checked-out API schema; use
+a disposable migrated copy if the retained production mirror predates a schema rename.
+Do not modify the sealed source mirror to make a rehearsal work.
+
+Verified for donor #4's reviewed Place with the retained September publication:
+two real API reads resolve its supplementary Address and exact snapshot, with no
+remaining hydration issues. The command passed on an isolated copy and then on
+primary local state. One hydrated source revision is stored; persistence replay is
+idempotent. All 23 Feature-owned tables stay exact, including the local location
+override and MTR access. Integrity/FKs pass, and private backups/receipts are retained.
+No upstream Address curation was needed or performed for this record.

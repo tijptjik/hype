@@ -1750,3 +1750,14 @@ Replaying the full Breadline import on an isolated copy after these decisions ma
 Thus importer replay preserves accepted identities and later Feature corrections.
 Other donor matches and any source Address curation still require their own evidence;
 this decision is not extrapolated to nearby or same-brand establishments.
+
+### Real reviewed Place Address hydrated locally (Refs #194)
+
+Donor #4's source Place now retains its published native supplementary Address in
+a new immutable local revision. The [local hydration command](places-address-curation.md#hydrate-an-existing-reviewed-place-from-sealed-local-exports)
+uses the real in-process Atlas API and read-only sealed source exports. Two pinned
+Address reads verify the exact dependency snapshot; no hydration issues remain.
+An isolated application preceded the primary local application. Replay returns the
+same source revision; all 23 Feature-owned tables, local overrides and MTR data
+remain unchanged, with integrity/FKs passing. The Feature still retains its own
+location override. No upstream curation, deployment or production write occurred.
