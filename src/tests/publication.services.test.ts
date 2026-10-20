@@ -191,3 +191,39 @@ describe('publication cascade services', () => {
     expect(isSqlExpression(updateCalls[0]?.values.isArchived)).toBe(true)
   })
 })
+
+it.each([
+  [
+    'organisation',
+    cascadeOrganisationPublishedStateToDescendants,
+    { organisationId: 'org-1' },
+    3,
+  ],
+  ['project', cascadeProjectPublishedStateToDescendants, { projectId: 'project-1' }, 2],
+  ['layer', cascadeLayerPublishedStateToDescendants, { layerId: 'layer-1' }, 1],
+] as const)(
+  'publishes every %s descendant only on explicit opt-in',
+  async (_name, cascade, id, count) => {
+    const { db, updateCalls } = createDbMock()
+    await cascade(db, {
+      ...id,
+      state: true,
+      publishChildren: true,
+      publisherId: 'actor-1',
+    } as never)
+    expect(updateCalls).toHaveLength(count)
+    for (const { values } of updateCalls) {
+      expect(values.isPublished).toBe(true)
+      expect(values.localIsPublished).toBeNull()
+      expect(values.publisherId).toBe('actor-1')
+      expect(values.publishedAt).toEqual(expect.any(String))
+    }
+    updateCalls.length = 0
+    await cascade(db, { ...id, state: false, publishChildren: true } as never)
+    for (const { values } of updateCalls) {
+      expect(isSqlExpression(values.isPublished)).toBe(true)
+      expect(isSqlExpression(values.localIsPublished)).toBe(true)
+      expect(values.publisherId).toBeUndefined()
+    }
+  },
+)

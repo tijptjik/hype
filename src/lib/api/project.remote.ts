@@ -1148,6 +1148,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
  * @param params - Command payload validated by `PublishProjectSchema`.
  * @param params.id - Target project id.
  * @param params.state - Next publish state.
+ * @param params.publishChildren - Opts into publishing all associated descendant drafts.
  * @returns A promise resolving to `{ data: { id, isPublished } }`.
  */
 export const publishProject = guardedCommand(
@@ -1198,6 +1199,8 @@ export const publishProject = guardedCommand(
     await cascadeProjectPublishedStateToDescendants(db, {
       projectId,
       state: params.state,
+      publishChildren: params.publishChildren,
+      publisherId: user.id,
     })
 
     // Settle client optimistic overrides with the complete persisted relation graph.

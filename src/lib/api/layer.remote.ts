@@ -424,6 +424,7 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
  * @param params - Command payload validated by `PublishLayerSchema`.
  * @param params.id - Target layer id.
  * @param params.state - Next publish state.
+ * @param params.publishChildren - Opts into publishing all associated descendant drafts.
  * @returns A promise resolving to `{ data: { id, isPublished } }`.
  */
 export const publishLayer = guardedCommand(PublishLayerSchema, async (params, ctx) => {
@@ -459,7 +460,12 @@ export const publishLayer = guardedCommand(PublishLayerSchema, async (params, ct
     },
   )
 
-  await cascadeLayerPublishedStateToDescendants(db, { layerId, state: params.state })
+  await cascadeLayerPublishedStateToDescendants(db, {
+    layerId,
+    state: params.state,
+    publishChildren: params.publishChildren,
+    publisherId: user.id,
+  })
 
   return toBooleanStateResponseShape(persisted, 'isPublished')
 })

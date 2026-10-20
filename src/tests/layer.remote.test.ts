@@ -440,6 +440,17 @@ describe('layer.remote authz matrix', () => {
     },
   )
 
+  it.each([true, false])(
+    'forwards explicit child publication choice %s',
+    async publishChildren => {
+      await remote.publishLayer({ id: 'layer-1', state: true, publishChildren })
+      expect(mockCascadeLayerPublishedStateToDescendants).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({ state: true, publishChildren, publisherId: 'u-1' }),
+      )
+    },
+  )
+
   it('getLayers denies when list authz denies', async () => {
     mockAuthorizeLayerListForContext.mockReturnValue({
       allowed: false,
@@ -742,6 +753,8 @@ describe('layer.remote authz matrix', () => {
       {
         layerId: 'layer-1',
         state: true,
+        publishChildren: undefined,
+        publisherId: 'u-1',
       },
     )
     expect(result).toEqual({

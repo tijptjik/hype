@@ -662,6 +662,8 @@ export const updateLayerPublishedStateById = async (
  * Existing local publish snapshots are preserved while an ancestor remains unpublished.
  * @param db - The database instance.
  * @param params - The parent layer id and next publish state.
+ * @param params.publishChildren - Whether publishing explicitly includes all draft descendants.
+ * @param params.publisherId - Actor attributed to explicitly published descendants.
  * @returns A promise that resolves once descendant rows are updated.
  */
 export const cascadeLayerPublishedStateToDescendants = async (
@@ -669,16 +671,24 @@ export const cascadeLayerPublishedStateToDescendants = async (
   params: {
     layerId: Id
     state: boolean
+    publishChildren?: boolean
+    publisherId?: Id
   },
 ): Promise<void> => {
   await db
     .update(feature)
     .set({
+      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
+      ...(params.state && params.publishChildren
+        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
+        : {}),
       localIsPublished: params.state
         ? null
         : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`,
       isPublished: params.state
-        ? sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
+        ? params.publishChildren
+          ? true
+          : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
         : sql`0`,
     })
     .where(eq(feature.layerId, params.layerId))

@@ -663,6 +663,8 @@ export const updateOrganisationPublishedStateById = async (
  * Existing local publish snapshots are preserved while an ancestor remains unpublished.
  * @param db - The database instance.
  * @param params - The parent organisation id and next publish state.
+ * @param params.publishChildren - Whether publishing explicitly includes all draft descendants.
+ * @param params.publisherId - Actor attributed to explicitly published descendants.
  * @returns A promise that resolves once descendant rows are updated.
  */
 export const cascadeOrganisationPublishedStateToDescendants = async (
@@ -670,16 +672,24 @@ export const cascadeOrganisationPublishedStateToDescendants = async (
   params: {
     organisationId: Id
     state: boolean
+    publishChildren?: boolean
+    publisherId?: Id
   },
 ): Promise<void> => {
   await db
     .update(project)
     .set({
+      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
+      ...(params.state && params.publishChildren
+        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
+        : {}),
       localIsPublished: params.state
         ? null
         : sql`coalesce(${project.localIsPublished}, ${project.isPublished})`,
       isPublished: params.state
-        ? sql`coalesce(${project.localIsPublished}, ${project.isPublished})`
+        ? params.publishChildren
+          ? true
+          : sql`coalesce(${project.localIsPublished}, ${project.isPublished})`
         : sql`0`,
     })
     .where(eq(project.organisationId, params.organisationId))
@@ -687,11 +697,17 @@ export const cascadeOrganisationPublishedStateToDescendants = async (
   await db
     .update(layer)
     .set({
+      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
+      ...(params.state && params.publishChildren
+        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
+        : {}),
       localIsPublished: params.state
         ? null
         : sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`,
       isPublished: params.state
-        ? sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`
+        ? params.publishChildren
+          ? true
+          : sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`
         : sql`0`,
     })
     .where(eq(layer.organisationId, params.organisationId))
@@ -699,11 +715,17 @@ export const cascadeOrganisationPublishedStateToDescendants = async (
   await db
     .update(feature)
     .set({
+      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
+      ...(params.state && params.publishChildren
+        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
+        : {}),
       localIsPublished: params.state
         ? null
         : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`,
       isPublished: params.state
-        ? sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
+        ? params.publishChildren
+          ? true
+          : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`
         : sql`0`,
     })
     .where(eq(feature.organisationId, params.organisationId))

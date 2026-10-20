@@ -353,6 +353,17 @@ describe('organisation.remote authz', () => {
     policyMatrix.flush()
   })
 
+  it.each([true, false])(
+    'forwards explicit child publication choice %s',
+    async publishChildren => {
+      await remote.publishOrganisation({ id: 'org-1', state: true, publishChildren })
+      expect(mockCascadeOrganisationPublishedStateToDescendants).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({ state: true, publishChildren, publisherId: 'u-1' }),
+      )
+    },
+  )
+
   it('getOrganisations denies when authz denies', async () => {
     mockAuthorizeOrganisationListForContext.mockReturnValue({
       allowed: false,
@@ -455,6 +466,8 @@ describe('organisation.remote authz', () => {
       {
         organisationId: 'org-1',
         state: true,
+        publishChildren: undefined,
+        publisherId: 'u-1',
       },
     )
     expect(result).toEqual({

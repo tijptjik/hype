@@ -592,6 +592,7 @@ export const organisationForm = guardedForm(
  * @param params.id - Target organisation id.
  * @param params.state - Next publish state.
  * @param params.meta - Optional request metadata (`isAdminRequest`).
+ * @param params.publishChildren - Opts into publishing all associated descendant drafts.
  * @returns A promise resolving to `{ data: { id, isPublished } }`.
  */
 export const publishOrganisation = guardedCommand(
@@ -636,6 +637,8 @@ export const publishOrganisation = guardedCommand(
     await cascadeOrganisationPublishedStateToDescendants(db, {
       organisationId: commandOrganisationId,
       state: params.state,
+      publishChildren: params.publishChildren,
+      publisherId: user.id,
     })
 
     return toBooleanStateResponseShape(persisted, 'isPublished')

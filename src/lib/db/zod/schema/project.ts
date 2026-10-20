@@ -387,6 +387,7 @@ export const ProjectPreflightFormData = ProjectFormData
 export const PublishProjectSchema = z.object({
   id: z.string().min(1),
   state: z.coerce.boolean<boolean>(),
+  publishChildren: z.boolean().optional(),
   meta: z
     .object({
       isAdminRequest: FormBoolean.optional(),

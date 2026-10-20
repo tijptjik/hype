@@ -568,6 +568,17 @@ describe('project.remote form organisation move authz', () => {
     policyMatrix.flush()
   })
 
+  it.each([true, false])(
+    'forwards explicit child publication choice %s',
+    async publishChildren => {
+      await remote.publishProject({ id: 'project-1', state: true, publishChildren })
+      expect(mockCascadeProjectPublishedStateToDescendants).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({ state: true, publishChildren, publisherId: 'u-1' }),
+      )
+    },
+  )
+
   it('authorizes and persists Place settings through the Project form', async () => {
     const payload = buildUpdatePayload('org-1')
     const placeUpdatePolicy = {
@@ -1065,6 +1076,8 @@ describe('project.remote form organisation move authz', () => {
       {
         projectId: 'project-1',
         state: true,
+        publishChildren: undefined,
+        publisherId: 'u-1',
       },
     )
   })
