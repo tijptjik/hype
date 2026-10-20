@@ -1393,6 +1393,7 @@
   "feature_address_divisions_loading": "Loading divisions…",
   "feature_address_divisions_failed": "Could not load divisions. Your saved address is unchanged.",
   "feature_address_divisions_unloaded": "Select a SaanSeoi address to load its divisions.",
+  "feature_visual_resize": "Resize map and image section",
   "feature_address_resize_map": "Resize address map",
   "feature_address_locate_display": "Locate display address",
   "feature_address_lookup": "Look up address",

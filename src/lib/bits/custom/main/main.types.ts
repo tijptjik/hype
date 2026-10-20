@@ -45,6 +45,7 @@ export interface MainDualSectionProps {
 }
 
 export interface MainVisualSectionProps {
+  resizeLabel?: string
   class?: string
   isCollapsed?: boolean
   expandedHeight?: number

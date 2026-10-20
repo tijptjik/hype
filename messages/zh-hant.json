@@ -1393,6 +1393,7 @@
   "feature_address_divisions_loading": "正在載入分區…",
   "feature_address_divisions_failed": "無法載入分區。已儲存的地址未有更改。",
   "feature_address_divisions_unloaded": "請選擇 SaanSeoi 地址以載入所屬分區。",
+  "feature_visual_resize": "調整地圖和圖片區域高度",
   "feature_address_resize_map": "調整地址地圖高度",
   "feature_address_locate_display": "定位顯示地址",
   "feature_address_lookup": "查找地址",

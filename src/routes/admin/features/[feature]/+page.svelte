@@ -368,7 +368,7 @@ const noopHeaderAction = (): void => {}
 // - new-feature parent bootstrap
 //
 // VISUAL SECTION EFFECTS
-// - visual section scroll wiring
+// - visual section cleanup
 
 /********************
  *  PAGE SETUP
@@ -1396,12 +1396,9 @@ const featureVisualSectionCtrl = createFeatureVisualSectionController({
 })
 const {
   clearVisualSectionReopenState,
-  collapseVisualSectionAndScrollToTop,
   expandVisualSection,
   handleCanonicalImageLoad,
   handleFeatureStepperNavigation,
-  syncVisualSectionWithScrollPosition,
-  syncVisualSectionWithWheelIntent,
 } = featureVisualSectionCtrl
 
 // Keep visual-section routing and presentation URLs derived from the currently committed feature image.
@@ -2074,43 +2071,11 @@ async function getCreatableProjectRecords(
 }
 
 /********************
- *  SCROLL EFFECTS
+ *  VISUAL SECTION CLEANUP
  ************/
 
-$effect(() => {
-  showsVisualSection
-  activeFacet
-
-  if (!showsVisualSection) {
-    clearVisualSectionReopenState()
-    return
-  }
-
-  let activeSection: HTMLElement | null = null
-
-  const bindScrollTarget = (): void => {
-    activeSection?.removeEventListener('scroll', syncVisualSectionWithScrollPosition)
-    activeSection?.removeEventListener('wheel', syncVisualSectionWithWheelIntent)
-    activeSection = document.querySelector<HTMLElement>(
-      `[data-facet-id="${activeFacet}"]`,
-    )
-    activeSection?.addEventListener('scroll', syncVisualSectionWithScrollPosition, {
-      passive: true,
-    })
-    activeSection?.addEventListener('wheel', syncVisualSectionWithWheelIntent, {
-      passive: true,
-    })
-    syncVisualSectionWithScrollPosition()
-  }
-
-  queueMicrotask(bindScrollTarget)
-
-  return () => {
-    activeSection?.removeEventListener('scroll', syncVisualSectionWithScrollPosition)
-    activeSection?.removeEventListener('wheel', syncVisualSectionWithWheelIntent)
-    clearVisualSectionReopenState()
-  }
-})
+// Scrolling leaves the visual height unchanged; only explicit controls resize it.
+$effect(() => () => clearVisualSectionReopenState())
 </script>
 
 <Main.Root
@@ -2147,7 +2112,7 @@ $effect(() => {
         onVisitableChange={value =>
           updateFeatureData(data => ({ ...data, isVisitable: value }))}
         onExpand={expandVisualSection}
-        onCollapse={collapseVisualSectionAndScrollToTop}
+        onCollapse={() => (isVisualSectionCollapsed = true)}
         onNavigatePrevious={() => handleFeatureStepperNavigation('previous')}
         onNavigateNext={() => handleFeatureStepperNavigation('next')}
       >

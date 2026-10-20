@@ -57,6 +57,7 @@ const rootClass = $derived(
   class={rootClass}
   {imageAspectRatio}
   {isCollapsed}
+  resizeLabel={m.feature_visual_resize()}
   expandedHeight={520}
   collapsedHeight={64}
 >
