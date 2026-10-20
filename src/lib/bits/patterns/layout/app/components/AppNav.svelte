@@ -143,7 +143,7 @@ async function handleSelect(
       return
     }
 
-    goto('/admin/tasks')
+    goto('/admin/features')
     return
   }
 

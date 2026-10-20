@@ -10,7 +10,9 @@ import { Button } from '#lib/bits/core/index.js'
 // LIB
 import { ADMIN_PATH } from '#lib/index.js'
 // AUTH
-import { canViewAnalytics, hasControlPanelAccess } from '#lib/client/services/auth.js'
+import { canViewAnalytics } from '#lib/client/services/auth.js'
+import { canAccessAdminPanel } from '#lib/api/services/authz/user.js'
+import { authorizeTaskListForContext } from '#lib/api/services/authz/task.js'
 import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
 // NAVIGATION
 import { navigateOnAdmin } from '#lib/navigation/index.js'
@@ -73,7 +75,16 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       userRoles: actor.roles ?? [],
       hubId: adminCtx.view.hub?.id,
     })
-  if (!actor || (!hasControlPanelAccess(actor) && !directoryAllowed)) return []
+  if (
+    !actor ||
+    actor.isAnonymous ||
+    (!canAccessAdminPanel({
+      superAdmin: actor.superAdmin,
+      userRoles: actor.roles ?? [],
+    }) &&
+      !directoryAllowed)
+  )
+    return []
 
   const items: AdminMenuItem[] = []
 
@@ -86,22 +97,31 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     })
   }
 
-  items.push(
-    {
+  // Review queue visibility follows the same scoped policy as its server query.
+  if (
+    authorizeTaskListForContext({
+      user: actor,
+      userRoles: actor.roles ?? [],
+      isAdminRequest: true,
+      resourceHubId: adminCtx.view.hub?.id,
+    }).allowed
+  ) {
+    items.push({
       href: `${ADMIN_PATH}/tasks`,
       label: 'Tasks',
       icon: InboxArrowDown,
       onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.task),
       notificationCount,
-    },
-    {
-      href: `${ADMIN_PATH}/features`,
-      label: 'Features',
-      icon: MapPin,
-      onClick: () => void openFeatures(),
-      notificationCount: featureCount,
-    },
-  )
+    })
+  }
+
+  items.push({
+    href: `${ADMIN_PATH}/features`,
+    label: 'Features',
+    icon: MapPin,
+    onClick: () => void openFeatures(),
+    notificationCount: featureCount,
+  })
 
   if (directoryAllowed) {
     items.push({ href: '/admin/users', label: 'Users', icon: UsersIcon })
