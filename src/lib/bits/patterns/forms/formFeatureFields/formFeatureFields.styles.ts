@@ -33,6 +33,11 @@ export const FORM_FEATURE_FIELDS_TRANSLATABLE_GRID_CLASS = cx(
   'grid w-full grid-cols-3 gap-0',
   'max-[1200px]:grid-cols-2',
   'max-[900px]:grid-cols-1',
+  // Locale cards keep separators when their grid wraps to two or one columns.
+  '[&>article]:border-0 [&>article]:border-border',
+  'min-[1200px]:[&>article:not(:nth-child(3n+1))]:border-l min-[1200px]:[&>article:nth-child(n+4)]:border-t',
+  'min-[900px]:max-[1200px]:[&>article:nth-child(even)]:border-l min-[900px]:max-[1200px]:[&>article:nth-child(n+3)]:border-t',
+  'max-[900px]:[&>article+article]:border-t',
 )
 
 export const FORM_FEATURE_FIELDS_TRANSLATABLE_CARD_CLASS =
