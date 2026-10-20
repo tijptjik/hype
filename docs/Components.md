@@ -206,6 +206,33 @@ Apply normal D1 migrations before deploying code that reads a new column. Render
 identities are code-owned rather than editable admin resources; no separate catalogue
 sync command or media upload is required for these bundled SVG previews.
 
+## Project Advanced Settings
+
+Tracking: [#232](https://github.com/tijptjik/hype/issues/232).
+
+The project Advanced tab stores evolving boolean UI preferences in `project.flags`
+(JSON), validated by `ProjectFlagsSchema`. Missing keys inherit application defaults.
+`show3dAddressOptions` defaults to true and makes optional portion, unit and floor
+controls available in Add detail, ordered from specific to broad. Existing values
+remain visible when enabled; empty fields are added explicitly. Entry uses the app
+locale with separate Floor type and Unit type dropdowns and validation. `address.unitDetails` retains SaanSeoi's shared
+`unitRef`, `unitType`, `floorRef`, `floorType`, and `unitPortion` fields. Original
+expressions stay in locale overrides; recognized semantics generate other languages
+and display text. Unknown expressions remain literal (`X`), without invented source
+unit IDs. Source inventory selection remains available when compatible data exists.
+HYPE does not store a local granularity enum or a local inventory ID in these details.
+Room is `unitType: "R"`, at the same level as flat, shop, and other units; a portion
+is `unitPortion`. Floor `R` means Roof and belongs only to `floorType`. The local
+schema rejects `id`, `granularity`, `room`, and `room_part` keys. A selected source
+unit may retain its external ID only in `source.address3dUnitId`; raw source records
+remain unmodified evidence, including any upstream granularity labels.
+Feature-local `address.accessHints` stores localized directions separately from the
+building/unit evidence and display address, matching SaanSeoi's Place-level ownership
+of `accessHint`. Disabling 3D options preserves parsed details and saved selections.
+Compact project responses retain flags for the Feature parent selection flow. Changes
+use the normal project form, write authorization, and optimistic concurrency checks.
+Migration `0126_project_flags.sql` adds the JSON column and must precede deployment.
+
 ## Handler Placement
 
 - Local UI handlers:

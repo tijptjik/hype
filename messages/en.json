@@ -1550,5 +1550,8 @@
   "place_address_parse": "Parse address",
   "place_address_parse_help": "Review the proposed display and components before using them. Unrecognised text is preserved; no canonical identity is assigned.",
   "place_address_unparsed": "Unclassified text",
-  "place_address_use_parse": "Use proposed components"
+  "place_address_use_parse": "Use proposed components",
+  "project_show_3d_address_options": "Show 3D Address options for Features",
+  "project_3d_address_options_help": "Add optional unit, floor and portion details. Shared values are formatted automatically in each language. Turning this off preserves saved details.",
+  "feature_address_accessHint": "Access hint"
 }

@@ -1,17 +1,30 @@
 // ADDRESS
-import { ADDRESS_LOCALES, setAddressOverride } from './featureAddress'
+import {
+  parseFloor,
+  parseUnit,
+  formatFloor,
+  formatUnit,
+  type FloorType,
+  type UnitType,
+  type StructuredAddressField,
+} from './address3d.js'
+import { ADDRESS_LOCALES, getAddressUnits, setAddressOverride } from './featureAddress'
 // TYPES
 import type { AddressField, FeatureAddress } from './featureAddress'
 import type { LocaleKey } from '#lib/types.js'
 
 export const EDITABLE_ADDRESS_FIELDS = [
   'formattedAddress',
-  'buildingName',
-  'buildingNumberExpression',
+  'unitPortion',
+  'unitExpression',
+  'floorExpression',
   'blockExpression',
+  'buildingName',
   'phaseExpression',
   'premisesName',
+  'buildingNumberExpression',
   'streetName',
+  'accessHint',
 ] as const
 export type EditableAddressField = (typeof EDITABLE_ADDRESS_FIELDS)[number]
 const parsedFields: Partial<Record<EditableAddressField, AddressField[]>> = {
@@ -121,6 +134,12 @@ export function setAddressExpression(
   field: EditableAddressField,
   value: string | undefined,
 ): FeatureAddress {
+  if (field === 'accessHint') {
+    const accessHints = { ...address.accessHints }
+    if (value === undefined) delete accessHints[ADDRESS_LOCALES[locale]]
+    else accessHints[ADDRESS_LOCALES[locale]] = value.trim() || null
+    return { ...address, accessHints }
+  }
   const locales: LocaleKey[] =
     field === 'buildingNumberExpression' ? ['en', 'zhHant', 'zhHans'] : [locale]
   for (const target of locales) {
@@ -211,4 +230,74 @@ export function hasAddressDivisionDetails(address: FeatureAddress): boolean {
     | { relationships?: { divisions?: { data?: unknown } } }
     | undefined
   return Array.isArray(data?.relationships?.divisions?.data)
+}
+
+/**
+ * Edits a shared 3D component while retaining the user's expression in their locale.
+ * @param address Current envelope.
+ * @param locale Input language.
+ * @param field Component to edit.
+ * @param value Original input; undefined resets to the source.
+ * @param type Explicit dropdown code.
+ * @returns Canonical local semantics plus generated expressions for other locales.
+ * @remarks Source inventory and its IDs remain unchanged; ambiguous input is retained as X.
+ */
+export function setStructuredAddressExpression(
+  address: FeatureAddress,
+  locale: LocaleKey,
+  field: StructuredAddressField,
+  value: string | undefined,
+  type?: FloorType | UnitType,
+): FeatureAddress {
+  const details = { ...address.unitDetails }
+  const keys =
+    field === 'floorExpression'
+      ? (['floorRef', 'floorType'] as const)
+      : field === 'unitExpression'
+        ? (['unitRef', 'unitType'] as const)
+        : (['unitPortion'] as const)
+  if (value === undefined) {
+    for (const key of keys) delete details[key]
+  } else if (field === 'floorExpression')
+    Object.assign(details, parseFloor(value, type as FloorType | undefined))
+  else if (field === 'unitExpression')
+    Object.assign(details, parseUnit(value, type as UnitType | undefined))
+  else details.unitPortion = value.trim() || null
+  const next = {
+    ...address,
+    unitDetails: Object.keys(details).length ? details : undefined,
+  }
+  for (const target of ['en', 'zhHant', 'zhHans'] as const) {
+    const expression =
+      value === undefined
+        ? undefined
+        : target === locale
+          ? value
+          : field === 'floorExpression'
+            ? formatFloor(details, target)
+            : field === 'unitExpression'
+              ? formatUnit(details, target)
+              : value
+    const updated = setAddressOverride(next, target, field, expression ?? undefined)
+    next.overrides = updated.overrides
+  }
+  return next
+}
+
+/**
+ * Resolves the type dropdown from local semantics or the selected inventory unit.
+ * @param address Address envelope.
+ * @param field Floor or unit expression.
+ * @returns Canonical code.
+ */
+export function getStructuredAddressType(
+  address: FeatureAddress,
+  field: 'floorExpression' | 'unitExpression',
+): string {
+  const unit = getAddressUnits(address, 'en').find(
+    item => item.value === address.source.address3dUnitId,
+  )
+  return field === 'floorExpression'
+    ? (address.unitDetails?.floorType ?? unit?.floorType ?? 'F')
+    : (address.unitDetails?.unitType ?? unit?.unitType ?? 'U')
 }

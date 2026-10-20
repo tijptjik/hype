@@ -1,4 +1,5 @@
 <script lang="ts">
+import { show3dAddressOptions } from '#lib/projects/flags.js'
 import { isRangeProperty } from '#lib/properties/range.js'
 import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 
@@ -2395,6 +2396,7 @@ $effect(() => () => clearVisualSectionReopenState())
             />
           {/if}
           <FormFeatureAddress
+            show3dAddressOptions={show3dAddressOptions(selectedProject?.flags)}
             address={editorAddress}
             coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
             {isEditing}

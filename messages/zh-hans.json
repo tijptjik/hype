@@ -1550,5 +1550,8 @@
   "place_address_parse": "解析地址",
   "place_address_parse_help": "使用前请核对建议显示地址及组成部分。未识别文字会保留，并不会指派正式地址标识码。",
   "place_address_unparsed": "未分类文字",
-  "place_address_use_parse": "使用建议组成部分"
+  "place_address_use_parse": "使用建议组成部分",
+  "project_show_3d_address_options": "显示地点的 3D 地址选项",
+  "project_3d_address_options_help": "可选择添加单位、楼层及部分数据。共享数据会自动以各语言格式显示。关闭后会保留已保存的数据。",
+  "feature_address_accessHint": "到达提示"
 }

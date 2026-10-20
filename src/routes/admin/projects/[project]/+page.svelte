@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ProjectFlagsSchema } from '#lib/projects/flags.js'
+import { ProjectFlagsSchema, show3dAddressOptions } from '#lib/projects/flags.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
 import { getPlaceUpdatePolicy } from '#lib/api/place.remote.js'
 import PlacePolicyPanel from '#lib/bits/patterns/forms/placeUpdatePolicy/PlacePolicyPanel.svelte'
@@ -633,6 +633,19 @@ const formCtx = $derived(configuredProjectForm())
 const projectFlags = $derived(
   ProjectFlagsSchema.parse(formCtx.form.fields.value().data?.flags ?? {}),
 )
+
+/**
+ * Updates one project flag while retaining other evolving preferences.
+ * @param checked Whether Feature editors should offer 3D address units.
+ * @returns Nothing; updates and revalidates the project form draft.
+ */
+function setShow3dAddressOptions(checked: boolean | null): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.flags = { ...projectFlags, show3dAddressOptions: checked === true }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
 
 /**
  * Updates an image publication preference without replacing other project flags.
@@ -3188,8 +3201,35 @@ $effect(() => {
     >
       <FormSurface>
         <section class="flex min-h-0 flex-col gap-4">
-          <SectionHeader title={m.project_advanced()} />
+          <SectionHeader
+            title={m.project_advanced()}
+            description={m.project_3d_address_options_help()}
+          />
           <div class="mx-6 flex min-w-0 flex-col gap-3">
+            <Card.Root
+              size="md"
+              class="min-h-14 rounded-lg border border-border bg-foreground/4 bg-none shadow-none before:hidden"
+            >
+              <label
+                for="project-show-3d-address-options"
+                class="flex min-w-0 flex-1 items-center px-5 py-3 text-sm font-semibold"
+              >
+                {m.project_show_3d_address_options()}
+              </label>
+              <Card.Actions
+                padding="md"
+                bg="none"
+                class="w-auto! min-w-0! shrink-0 border-l border-border/60"
+              >
+                <Switch
+                  id="project-show-3d-address-options"
+                  checked={show3dAddressOptions(projectFlags)}
+                  disabled={!isEditing || formCtx.submitting}
+                  size="sm"
+                  onCheckedChange={setShow3dAddressOptions}
+                />
+              </Card.Actions>
+            </Card.Root>
             {#each [
               {
                 key: 'autoPublishClassifiedImages',

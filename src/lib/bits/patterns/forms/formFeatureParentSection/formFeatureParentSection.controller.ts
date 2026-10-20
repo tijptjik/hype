@@ -21,6 +21,7 @@ export type ParentOrganisationRecord = {
 }
 
 export type ParentProjectRecord = {
+  flags?: ParentSectionProjectItem['flags']
   id?: string | null
   organisationId?: string | null
   code?: string | null
@@ -134,6 +135,7 @@ export function toParentProjectItem(
 ): ParentSectionProjectItem | null {
   if (!project?.id) return null
   return {
+    flags: project.flags,
     id: project.id,
     organisationId: project.organisationId ?? '',
     code: project.code ?? '',

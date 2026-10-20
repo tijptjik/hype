@@ -1,6 +1,22 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, type Snippet } from 'svelte'
+// ADDRESS
+import {
+  FLOOR_TYPES,
+  UNIT_TYPES,
+  FloorTypeSchema,
+  UnitTypeSchema,
+  floorTerms,
+  unitTerms,
+  addressTerm,
+  type FloorType,
+  type UnitType,
+} from '#lib/addresses/address3d.js'
+import {
+  setStructuredAddressExpression,
+  getStructuredAddressType,
+} from '#lib/addresses/addressExpressions.js'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // BITS
@@ -38,6 +54,7 @@ let {
   coordinates,
   isEditing,
   isLoading,
+  show3dAddressOptions = true,
   message = '',
   candidates = [],
   onSelectCandidate,
@@ -50,6 +67,7 @@ let {
   coordinates: number[]
   isEditing: boolean
   isLoading: boolean
+  show3dAddressOptions?: boolean
   message?: string
   candidates?: FeatureAddress[]
   onSelectCandidate: (address: FeatureAddress) => void
@@ -60,9 +78,18 @@ let {
 } = $props()
 
 let addedFields = $state<EditableAddressField[]>([])
+let explicitFloorType = $state<FloorType | undefined>()
+let explicitUnitType = $state<UnitType | undefined>()
 const locales = ['en', 'zhHant', 'zhHans'] as const
-const visibleFields = $derived(
+const availableFields = $derived(
   EDITABLE_ADDRESS_FIELDS.filter(
+    field =>
+      show3dAddressOptions ||
+      !['floorExpression', 'unitExpression', 'unitPortion'].includes(field),
+  ),
+)
+const visibleFields = $derived(
+  availableFields.filter(
     field =>
       field === 'formattedAddress' ||
       addedFields.includes(field) ||
@@ -86,17 +113,17 @@ const divisionDetailsKey = $derived(
   ]),
 )
 const divisionAddress = $derived(
-  hasAddressDivisionDetails(address)
-    ? address
-    : divisionDetails?.key === divisionDetailsKey
-      ? divisionDetails.address
-      : address,
+  divisionDetails?.key === divisionDetailsKey ? divisionDetails.address : address,
 )
 const divisions = $derived(getAddressDivisions(divisionAddress, getLocaleKey()))
 $effect(() => {
   const selected = address
   const key = divisionDetailsKey
-  if (hasAddressDivisionDetails(selected) || divisionDetails?.key === key) {
+  if (
+    divisionDetails?.key === key ||
+    (hasAddressDivisionDetails(selected) &&
+      (!show3dAddressOptions || getAddressUnits(selected, getLocaleKey()).length > 0))
+  ) {
     divisionsLoading = false
     divisionsFailed = false
     return
@@ -173,8 +200,12 @@ const labels = $derived<Record<AddressField, string>>({
   phaseRef: m.feature_address_phaseRef(),
   premisesName: m.feature_address_premisesName(),
   streetName: m.feature_address_streetName(),
+  floorExpression: m.feature_address_floorExpression(),
+  unitExpression: m.feature_address_unitExpression(),
+  unitPortion: m.feature_address_unitPortion(),
+  accessHint: m.feature_address_accessHint(),
 })
-const units = $derived(getAddressUnits(address, getLocaleKey()))
+const units = $derived(getAddressUnits(divisionAddress, getLocaleKey()))
 const status = $derived(
   address.matchStatus === 'stale'
     ? m.feature_address_stale()
@@ -387,7 +418,7 @@ function moveMarker(): void {
     </div>
   </div>
 {/if}
-{#if units.length}
+{#if show3dAddressOptions && units.length}
   <div class="border-b border-border px-6 py-6">
     <SelectField
       label={m.feature_address_unit()}
@@ -401,6 +432,7 @@ function moveMarker(): void {
           ...address,
           source: {
             ...address.source,
+            records: divisionAddress.source.records,
             address3dId: selected?.inventoryId ?? null,
             address3dUnitId: selected?.value ?? null,
           },
@@ -417,78 +449,190 @@ function moveMarker(): void {
   {#each visibleFields as field (field)}
     <div class="grid gap-3 px-6 py-4 @min-[700px]:grid-cols-[10rem_1fr]">
       <div class="pt-2 text-sm font-medium">{labels[field]}</div>
-      <div
-        class="grid gap-4 {field === 'buildingNumberExpression'
-          ? ''
-          : '@min-[700px]:grid-cols-3'}"
-      >
-        {#each field === 'buildingNumberExpression'
-          ? (['en'] as const)
-          : locales as locale}
-          {@const overridden = Object.hasOwn(
-            address.overrides[ADDRESS_LOCALES[locale]] ?? {},
-            field,
-          )}
-          {@const suggestions = getExpressionSuggestions(field, locale)}
-          <div class="flex items-end gap-1">
-            <TextInput
-              name=""
-              id={`address-${locale}-${field}`}
-              class="min-w-0 flex-1"
-              label={field === 'buildingNumberExpression'
-                ? m.feature_address_shared()
-                : locale === 'en'
-                  ? 'EN'
-                  : locale === 'zhHant'
-                    ? '繁體'
-                    : '简体'}
-              value={field === 'formattedAddress'
-                ? getAddressDisplay(address, locale)
-                : String(
-                    field === 'buildingNumberExpression'
-                      ? (locales
-                          .map(key => getAddressLocale(address, key)[field])
-                          .find(Boolean) ?? '')
-                      : (getAddressLocale(address, locale)[field] ?? ''),
-                  )}
-              placeholder="—"
+      {#if field === 'floorExpression' ||
+        field === 'unitExpression' ||
+        field === 'unitPortion'}
+        {@const locale = getLocaleKey()}
+        {@const value = String(getAddressLocale(address, locale)[field] ?? '')}
+        <div
+          class="grid min-w-0 items-end gap-3 @min-[700px]:grid-cols-[minmax(0,1fr)_12rem_auto]"
+        >
+          <TextInput
+            name=""
+            id={`address-${locale}-${field}`}
+            class="min-w-0"
+            label={labels[field]}
+            {value}
+            placeholder="—"
+            {isEditing}
+            inputAttrs={{
+              list:
+                field === 'floorExpression' ? 'address-floor-suggestions' : undefined,
+            }}
+            onValueChange={next =>
+              onChange(
+                setStructuredAddressExpression(
+                  address,
+                  locale,
+                  field,
+                  next,
+                  field === 'floorExpression'
+                    ? explicitFloorType
+                    : field === 'unitExpression'
+                      ? explicitUnitType
+                      : undefined,
+                ),
+              )}
+          />
+          {#if field === 'floorExpression'}
+            <SelectField
+              id="address-floorExpression-type"
+              triggerAttrs={{ id: 'address-floorExpression-type' }}
+              label={m.feature_address_floor_type()}
+              class="min-w-0"
+              items={FLOOR_TYPES.map(code => ({
+                value: code,
+                label: addressTerm(floorTerms[code], locale),
+              }))}
+              value={getStructuredAddressType(address, 'floorExpression')}
               {isEditing}
-              inputAttrs={{
-                list: suggestions.length ? `suggest-${locale}-${field}` : undefined,
+              onValueChange={valueType => {
+                explicitFloorType = FloorTypeSchema.parse(valueType)
+                onChange(
+                  setStructuredAddressExpression(
+                    address,
+                    locale,
+                    'floorExpression',
+                    value,
+                    explicitFloorType,
+                  ),
+                )
               }}
-              onValueChange={value =>
-                onChange(setAddressExpression(address, locale, field, value))}
             />
-            {#if suggestions.length}
-              <datalist id={`suggest-${locale}-${field}`}>
-                {#each suggestions as suggestion}
-                  <option value={suggestion}></option>
-                {/each}
-              </datalist>
-            {/if}
-            {#if isEditing && overridden}
-              <Button
-                text={m.feature_address_reset()}
-                size="sm"
-                style="ghost"
-                onClick={() =>
-                  onChange(setAddressExpression(address, locale, field, undefined))}
+          {:else if field === 'unitExpression'}
+            <SelectField
+              id="address-unitExpression-type"
+              triggerAttrs={{ id: 'address-unitExpression-type' }}
+              label={m.feature_address_unit_type()}
+              class="min-w-0"
+              items={UNIT_TYPES.map(code => ({
+                value: code,
+                label: addressTerm(unitTerms[code], locale),
+              }))}
+              value={getStructuredAddressType(address, 'unitExpression')}
+              {isEditing}
+              onValueChange={valueType => {
+                explicitUnitType = UnitTypeSchema.parse(valueType)
+                onChange(
+                  setStructuredAddressExpression(
+                    address,
+                    locale,
+                    'unitExpression',
+                    value,
+                    explicitUnitType,
+                  ),
+                )
+              }}
+            />
+          {/if}
+          {#if field === 'floorExpression'}
+            <datalist id="address-floor-suggestions">
+              {#each FLOOR_TYPES.filter(code => code !== 'F' && code !== 'X') as code}
+                <option value={addressTerm(floorTerms[code], locale)}></option>
+              {/each}
+            </datalist>
+          {/if}
+          {#if isEditing}
+            <Button
+              text={m.feature_address_reset()}
+              size="sm"
+              style="ghost"
+              onClick={() => {
+                if (field === 'floorExpression') explicitFloorType = undefined
+                if (field === 'unitExpression') explicitUnitType = undefined
+                addedFields = addedFields.filter(item => item !== field)
+                onChange(
+                  setStructuredAddressExpression(address, locale, field, undefined),
+                )
+              }}
+            />
+          {/if}
+        </div>
+      {:else}
+        <div
+          class="grid gap-4 {field === 'buildingNumberExpression'
+            ? ''
+            : '@min-[700px]:grid-cols-3'}"
+        >
+          {#each field === 'buildingNumberExpression'
+            ? (['en'] as const)
+            : locales as locale}
+            {@const overridden =
+              field === 'accessHint'
+                ? Object.hasOwn(address.accessHints ?? {}, ADDRESS_LOCALES[locale])
+                : Object.hasOwn(
+                    address.overrides[ADDRESS_LOCALES[locale]] ?? {},
+                    field,
+                  )}
+            {@const suggestions = getExpressionSuggestions(field, locale)}
+            <div class="flex items-end gap-1">
+              <TextInput
+                name=""
+                id={`address-${locale}-${field}`}
+                class="min-w-0 flex-1"
+                label={field === 'buildingNumberExpression'
+                  ? m.feature_address_shared()
+                  : locale === 'en'
+                    ? 'EN'
+                    : locale === 'zhHant'
+                      ? '繁體'
+                      : '简体'}
+                value={field === 'formattedAddress'
+                  ? getAddressDisplay(address, locale)
+                  : String(
+                      field === 'buildingNumberExpression'
+                        ? (locales
+                            .map(key => getAddressLocale(address, key)[field])
+                            .find(Boolean) ?? '')
+                        : (getAddressLocale(address, locale)[field] ?? ''),
+                    )}
+                placeholder="—"
+                {isEditing}
+                inputAttrs={{
+                  list: suggestions.length ? `suggest-${locale}-${field}` : undefined,
+                }}
+                onValueChange={value =>
+                  onChange(setAddressExpression(address, locale, field, value))}
               />
-            {/if}
-          </div>
-        {/each}
-      </div>
+              {#if suggestions.length}
+                <datalist id={`suggest-${locale}-${field}`}>
+                  {#each suggestions as suggestion}
+                    <option value={suggestion}></option>
+                  {/each}
+                </datalist>
+              {/if}
+              {#if isEditing && overridden}
+                <Button
+                  text={m.feature_address_reset()}
+                  size="sm"
+                  style="ghost"
+                  onClick={() =>
+                    onChange(setAddressExpression(address, locale, field, undefined))}
+                />
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/each}
 </div>
-{#if isEditing && visibleFields.length < EDITABLE_ADDRESS_FIELDS.length}
+{#if isEditing && visibleFields.length < availableFields.length}
   <div class="flex flex-wrap items-center gap-2 border-t border-border px-6 py-4">
     <span class="mr-2 text-sm text-muted-foreground"
       >{m.feature_address_add_detail()}</span
     >
-    {#each EDITABLE_ADDRESS_FIELDS.filter(
-      field => !visibleFields.includes(field),
-    ) as field}
+    {#each availableFields.filter(field => !visibleFields.includes(field)) as field}
       <Button
         text={labels[field]}
         style="outline"
