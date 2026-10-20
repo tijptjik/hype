@@ -116,6 +116,13 @@ export function createCustomMarkerElement(model: CustomMarkerModel): HTMLDivElem
     return root
   }
   if (model.kind === 'flag') {
+    // Allow room for the flag rim and black photo separator at 125% of the standard size.
+    Object.assign(frame.style, {
+      width: '80px',
+      height: '80px',
+      border: 'none',
+      boxShadow: 'none',
+    })
     const flags = model.flags ?? []
     flags.forEach((code, index) => {
       const flag = document.createElement('img')
@@ -170,6 +177,15 @@ export function createCustomMarkerElement(model: CustomMarkerModel): HTMLDivElem
     font: '700 18px system-ui',
     border: '2px solid #fff',
   })
+  if (model.kind === 'flag') {
+    // Keep the flag colours flush to the outer edge, with a black band inside the rim.
+    Object.assign(center.style, {
+      width: '64px',
+      height: '64px',
+      boxSizing: 'border-box',
+      border: '4px solid #000',
+    })
+  }
   if (model.kind === 'breadline' && model.brandLogoSrc && !model.state?.dropoff) {
     // Only catalogue-owned SVGs are loaded; feature photos never enter this branch.
     const logo = document.createElement('img')
