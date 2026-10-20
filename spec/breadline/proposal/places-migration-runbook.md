@@ -382,3 +382,48 @@ owners. Chromium verification on an isolated local database confirmed the Organi
 selector, HKFoodWorks private Place results and the corresponding detail page, with
 no page errors. The dev server was stopped after the check. Production application
 remains a release step.
+
+## Granularity repair and display preview
+
+Refs #194. After schema migration, run the data-only cleanup before application release:
+
+```sh
+bun scripts/address-granularity/run.ts --local DATABASE.sqlite
+bun scripts/address-granularity/run.ts --local DATABASE.sqlite --apply
+# Deployment commands, pending workflow activation approval:
+bun scripts/address-granularity/run.ts --remote preview --apply
+bun scripts/address-granularity/run.ts --remote production --apply
+```
+
+The default is read-only. Local apply first takes a SQLite backup. Remote execution
+requires an explicit environment and credentials; retain the usual recovery bookmark
+before running it. HYPE repairs related JSON rows and hash references atomically.
+Run the equivalent SaanSeoi command for CURRENT and all configured HISTORY shards;
+its runner discovers those bindings from checked-in deployment configuration.
+No remote data cleanup has been executed in this work.
+
+The fresh 2026-10-20 12:05 UTC input bundle is privately retained at
+`.local/places/address-contract-refresh-20261020/`, with schema metadata, SQL export,
+restored HYPE SQLite, complete Breadline mirror, integrity receipts and SHA-256 hashes.
+The isolated `address-contract-rehearsal-20261020` rehearsal applies 27 pending
+migrations, splits 1,205 Features, excludes 56 intangible Features and 26 drafts,
+and imports 311 donors plus 19 drop-points. It excludes 155 donors without runs.
+All 64 accepted MTR choices survive; #558/#727 still lack entrance mappings.
+Replay matches all 330 imports without adding rows; integrity and foreign keys pass.
+This is working-tree evidence, including the separate pending property migrations,
+not certification of a clean release commit.
+
+The reproducible display preview command is:
+
+```sh
+bun scripts/places/preview-address-migration.ts SPLIT.json CANDIDATES.json \
+  SAANSEOI_CURRENT.sqlite PRIVATE_OUTPUT_PREFIX
+```
+
+It writes a complete JSON comparison and a short Markdown sample. The current preview
+retains all 3,537 localized displays across the 1,205 existing eligible Features when
+converting to authored content. Matching against the local SaanSeoi publication finds
+335 Features with exact-name candidates, 870 with proximity-only candidates, and zero
+meeting the existing name-plus-unique-phone corroboration criterion. Of the leading
+name candidates, 305 have no usable canonical address in the pinned dependencies.
+Candidates remain unaccepted; the output is private and is not a migration instruction.

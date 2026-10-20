@@ -281,3 +281,79 @@ Focused tests cover multilingual round trips, invalid types/publication claims,
 immutable edits, stale-owner/revision fences, local review and Feature overrides.
 Chromium verified saving structured components and unit details, reloading them from
 an isolated local database, and rendering the resulting address without page errors.
+
+## Address scope vocabulary and data repair
+
+Address scope uses `unit` for separately identified units, including rooms, and
+`unit_portion` for a portion of a unit. The unit-type code `R` still means Room;
+classification of unit type is independent of address scope. Block descriptors
+preserve the source component: `flat`, `unit` and `apartment` are observed source
+values, not an assertion that the component describes an entire building.
+
+The data repair in `scripts/address-granularity/` maps `room` to `unit` and
+`room_part` to `unit_portion` only at JSON `granularity` keys. It covers Place
+revisions, Feature overrides/history, review evidence, refresh projections and
+Feature address metadata. It preserves display strings and identifiers, recomputes
+revision hashes using the original writer's convention, and updates referenced
+content hashes in the same transaction. Unknown hash conventions fail closed.
+Immutable triggers are restored in that same transaction; stale input rolls it back.
+The SaanSeoi companion repairs CURRENT and every HISTORY shard, including inactive
+scopes, and recomputes canonical history hashes without changing snapshot ancestry.
+No schema DDL is needed: both Drizzle generators report no physical schema change.
+Deployment must run these data repairs after schema migrations and before the new
+application is released. They are explicit deployment commands, not request-time
+compatibility code. Workflow activation is pending approval.
+
+## Proposed Feature Tasks presentation
+
+A Feature's **Tasks** tab shows a count of actionable items. Its initial tasks are:
+
+- **Resolve Place match**: an unresolved local Place has candidate identities.
+- **Review updated Place address**: a newer local or SaanSeoi revision needs adoption.
+- **Complete structured address**: the selected Place lacks usable canonical address
+  content or required floor/unit information.
+
+Each task opens a current/proposed comparison using the actual Feature display
+formatter, with language switching, map positions, source/revision provenance and
+an expandable component difference. The review explicitly calls out removed unit
+information, blank translations, coordinate displacement and retained overrides.
+Actions are **Accept update**, **Keep current** and **Edit Feature override**.
+Place matching additionally offers **Choose another Place** and **No suitable match**.
+A decision resolves the task for that candidate/revision; new evidence can create a
+new task. Simply opening a task never adopts a revision.
+
+Tasks should be a presentation of existing identity/adoption review state, with
+stable keys derived from Feature, review kind and candidate revision. Do not add a
+second task lifecycle/table that can disagree with review decisions. Organisation
+permissions still control editing a Place; Feature permissions control adoption.
+This is the proposed flow; the current review UI has not been replaced yet.
+
+## Display-first address migration plan
+
+1. Rehearse against sealed HYPE/Breadline exports, retain import exclusions and
+   accepted MTR decisions, and preserve the original multilingual display strings.
+2. Produce a per-Feature/per-language preview: existing display, structured-local
+   display, candidate Place, candidate canonical address, coordinate distance and
+   missing floor/unit/translation warnings. `preview-address-migration.ts` uses the
+   same formatter as the app; candidate 2D labels remain unaccepted evidence.
+3. Compare names, location, branch/unit and contact evidence against one pinned
+   SaanSeoi publication. Proximity and chain-name matches alone cannot accept an
+   identity. Keep unresolved Places where evidence is insufficient.
+4. Resolve identities first, then curate missing address components/units in SaanSeoi
+   and associate those canonical addresses with the accepted Places. Upstream
+   publication remains a separate explicit operation.
+5. Review the resulting **effective Feature display**, including retained overrides,
+   before adopting each canonical address. Missing source translations never silently
+   erase existing Feature text; a missing unit must be preserved or explicitly resolved.
+6. For unmatched Places, append a local revision using the same authored content
+   schema, initially retaining the exact display under localized `formattedAddress`.
+   Mark these unresolved, not intentionally manual. Convert active Feature address
+   state to that schema after preview acceptance; retain original data as historical
+   provenance, not as a second editable address system.
+7. Verify every accepted display and coordinate change, preserve explicit clearing
+   and Feature overrides, and replay the migration to prove idempotence. Retire
+   active legacy reads only after no active Feature depends on them.
+
+Structured-local conversion is a schema upgrade, not proof that a freeform address
+has been parsed or verified. Candidate matching and the preview do not authorize
+mass canonical adoption or manufacture missing structured components.
