@@ -5,6 +5,11 @@ import type { UserRoleDisco } from '#lib/types.js'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
+  probeMergeSource: vi.fn(),
+  probeMergeReview: vi.fn(),
+  captureMerge: vi.fn(),
+  readMerge: vi.fn(),
+  applyMerge: vi.fn(),
   probeIdentity: vi.fn(),
   identityBaseline: vi.fn(),
   captureIdentity: vi.fn(),
@@ -57,6 +62,13 @@ vi.mock('#lib/api/server/guarded.js', () => {
       )
   return { guardedQuery: wrap('query'), guardedCommand: wrap('command') }
 })
+vi.mock('#lib/db/services/placeMerge.js', () => ({
+  probePlaceMergeSource: mocks.probeMergeSource,
+  probePlaceMergeReview: mocks.probeMergeReview,
+  capturePlaceMergeReview: mocks.captureMerge,
+  readPlaceMergeReview: mocks.readMerge,
+  applyPlaceMergeReview: mocks.applyMerge,
+}))
 vi.mock('#lib/db/services/placeIdentityReview.js', () => ({
   probePlaceIdentityScope: mocks.probeIdentity,
   readPlaceIdentityBaseline: mocks.identityBaseline,
@@ -143,6 +155,9 @@ import {
 } from '#lib/api/placeReview.remote.js'
 
 import {
+  preparePlaceMergeReview,
+  getPlaceMergeReview,
+  acceptPlaceMergeReview,
   preparePlaceIdentityReview,
   prepareMirroredPlaceIdentityReview,
   getPlaceIdentityReviewAccess,
@@ -152,6 +167,25 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.probeMergeSource.mockResolvedValue({ sourcePlaceId: 'source' })
+  mocks.probeMergeReview.mockResolvedValue({ sourcePlaceId: 'source' })
+  mocks.captureMerge.mockResolvedValue({
+    status: 'ready',
+    reviewId: 'merge',
+    affectedFeatures: 2,
+  })
+  mocks.readMerge.mockResolvedValue({
+    reviewId: 'merge',
+    affectedFeatures: 2,
+    visibility: 'private',
+    stale: false,
+    applied: false,
+  })
+  mocks.applyMerge.mockResolvedValue({
+    status: 'applied',
+    redirectId: 'redirect',
+    affectedFeatures: 2,
+  })
   mocks.context.user.isAnonymous = false
   mocks.context.userRoles = []
   mocks.probeIdentity.mockResolvedValue({ id: 'place', ownerProjectId: 'p' })
@@ -832,5 +866,104 @@ describe('Place identity review authority and retained evidence', () => {
     await expect(acceptPlaceIdentityReview(decision)).rejects.toMatchObject({
       status: 403,
     })
+  })
+})
+
+describe('two-Place merge authorization', () => {
+  const prepare = { placeId: 'place', identityReviewId: 'identity-review' }
+  const read = { placeId: 'place', reviewId: 'merge' }
+  const decision = { ...read, reason: 'Reviewed affected Features and same premises' }
+  function scopeBoth() {
+    mocks.probeIdentity.mockImplementation((_db, id) => ({
+      id,
+      ownerProjectId: id === 'source' ? null : 'p',
+    }))
+  }
+  function core() {
+    mocks.context.userRoles = [
+      Object.assign(
+        { type: 'hub' as const, role: 'admin', hubId: 'core', userId: 'u' },
+        { hub: { code: 'core' } },
+      ),
+    ]
+  }
+  it('requires authority over the absorbed Place before reading impact or making any merge write', async () => {
+    scopeBoth()
+    await expect(preparePlaceMergeReview(prepare)).rejects.toMatchObject({
+      status: 403,
+    })
+    await expect(getPlaceMergeReview(read)).rejects.toMatchObject({ status: 403 })
+    await expect(acceptPlaceMergeReview(decision)).rejects.toMatchObject({
+      status: 403,
+    })
+    expect(mocks.captureMerge).not.toHaveBeenCalled()
+    expect(mocks.readMerge).not.toHaveBeenCalled()
+    expect(mocks.applyMerge).not.toHaveBeenCalled()
+  })
+  it('derives both scopes, source and actor from persistence and reauthorizes each operation', async () => {
+    scopeBoth()
+    core()
+    await expect(preparePlaceMergeReview(prepare)).resolves.toMatchObject({
+      status: 'ready',
+    })
+    expect(mocks.captureMerge).toHaveBeenCalledWith(mocks.context.db, {
+      ...prepare,
+      sourcePlaceId: 'source',
+      ownerProjectId: 'p',
+      sourceOwnerProjectId: null,
+      actorId: 'u',
+    })
+    await getPlaceMergeReview(read)
+    expect(mocks.readMerge).toHaveBeenCalledWith(mocks.context.db, {
+      ...read,
+      sourcePlaceId: 'source',
+      ownerProjectId: 'p',
+      sourceOwnerProjectId: null,
+    })
+    await acceptPlaceMergeReview(decision)
+    expect(mocks.applyMerge).toHaveBeenCalledWith(mocks.context.db, {
+      ...decision,
+      sourcePlaceId: 'source',
+      ownerProjectId: 'p',
+      sourceOwnerProjectId: null,
+      actorId: 'u',
+    })
+    mocks.context.userRoles = []
+    await expect(acceptPlaceMergeReview(decision)).rejects.toMatchObject({
+      status: 403,
+    })
+    expect(mocks.applyMerge).toHaveBeenCalledTimes(1)
+  })
+  it('rejects client authority fields and requires a separate merge reason', async () => {
+    scopeBoth()
+    core()
+    await expect(
+      preparePlaceMergeReview({ ...prepare, sourcePlaceId: 'injected' } as never),
+    ).rejects.toThrow()
+    await expect(
+      acceptPlaceMergeReview({ ...decision, ownerProjectId: 'other' } as never),
+    ).rejects.toThrow()
+    await expect(
+      acceptPlaceMergeReview({ ...decision, reason: '  ' }),
+    ).rejects.toThrow()
+    expect(mocks.applyMerge).not.toHaveBeenCalled()
+  })
+  it('keeps privacy incompatibility explicit and maps missing/stale reviews to non-mutating errors', async () => {
+    scopeBoth()
+    core()
+    mocks.captureMerge.mockResolvedValue({ status: 'scope-conflict' })
+    await expect(preparePlaceMergeReview(prepare)).resolves.toEqual({
+      status: 'scope-conflict',
+    })
+    mocks.captureMerge.mockResolvedValue({ status: 'conflict' })
+    await expect(preparePlaceMergeReview(prepare)).rejects.toMatchObject({
+      status: 409,
+    })
+    mocks.applyMerge.mockResolvedValue({ status: 'conflict' })
+    await expect(acceptPlaceMergeReview(decision)).rejects.toMatchObject({
+      status: 409,
+    })
+    mocks.probeMergeReview.mockResolvedValue(null)
+    await expect(getPlaceMergeReview(read)).rejects.toMatchObject({ status: 404 })
   })
 })

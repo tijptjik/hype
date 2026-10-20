@@ -11,6 +11,10 @@
 // - getPlaceIdentityReview
 // 3. REVIEW ACCEPTANCE
 // - acceptPlaceIdentityReview
+// 4. EXPLICIT MERGE REVIEW
+// - preparePlaceMergeReview
+// - getPlaceMergeReview
+// - acceptPlaceMergeReview
 // ---
 // SVELTE
 import { error, isHttpError } from '@sveltejs/kit'
@@ -31,6 +35,13 @@ import {
   readPlaceIdentityReview,
   acceptPlaceIdentityReview as persistIdentityReview,
 } from '#lib/db/services/placeIdentityReview.js'
+import {
+  probePlaceMergeSource,
+  probePlaceMergeReview,
+  readPlaceMergeReview,
+  capturePlaceMergeReview,
+  applyPlaceMergeReview,
+} from '#lib/db/services/placeMerge.js'
 // DOMAIN
 import { readSaanSeoiPlacePage } from '#lib/places/sourceClient.js'
 // TYPES
@@ -229,6 +240,81 @@ export const acceptPlaceIdentityReview = guardedCommand(
       actorId: ctx.user.id,
     })
     if (result.status === 'conflict') error(409, 'PLACE_IDENTITY_CHANGED')
+    return result
+  },
+)
+
+// ---
+/********************
+ *  4. EXPLICIT MERGE REVIEW
+ ************/
+// +++ Explicit Merge Review
+/**
+ * Prepare an explicit merge impact after independently authorizing both retained identities.
+ * @param input Target Place and the identity comparison already shown to its manager.
+ * @returns Captured impact identity/count or a privacy incompatibility, never an automatic merge.
+ * @remarks The source Place comes from persisted evidence. Client-supplied scopes are rejected.
+ */
+export const preparePlaceMergeReview = guardedCommand(
+  identityInput.extend({ identityReviewId: z.string().min(1).max(200) }),
+  async (input, ctx) => {
+    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+    const source = await probePlaceMergeSource(ctx.db, { ...input, ownerProjectId })
+    if (!source) error(409, 'PLACE_MERGE_CHANGED')
+    const sourceOwnerProjectId = await requireIdentityManager(ctx, source.sourcePlaceId)
+    const result = await capturePlaceMergeReview(ctx.db, {
+      ...input,
+      ...source,
+      ownerProjectId,
+      sourceOwnerProjectId,
+      actorId: ctx.user.id,
+    })
+    if (result.status === 'conflict') error(409, 'PLACE_MERGE_CHANGED')
+    return result
+  },
+)
+
+/**
+ * Read saved merge impact after reauthorizing the current owners of both Places.
+ * @param input Target Place and immutable merge comparison ID.
+ * @returns Affected count, retained visibility and stale/applied state, without private Feature data.
+ */
+export const getPlaceMergeReview = guardedQuery(reviewInput, async (input, ctx) => {
+  const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+  const source = await probePlaceMergeReview(ctx.db, input)
+  if (!source) error(404, 'PLACE_MERGE_REVIEW_NOT_FOUND')
+  const sourceOwnerProjectId = await requireIdentityManager(ctx, source.sourcePlaceId)
+  const result = await readPlaceMergeReview(ctx.db, {
+    ...input,
+    ...source,
+    ownerProjectId,
+    sourceOwnerProjectId,
+  })
+  if (!result) error(409, 'PLACE_MERGE_CHANGED')
+  return result
+})
+
+/**
+ * Confirm the separately reviewed merge without changing Feature facts or overrides.
+ * @param input Target, merge comparison and required explicit merge reason.
+ * @returns Applied receipt/count; stale state returns 409 with no partial writes.
+ * @remarks Reauthorizes BOTH identities on every submission. Scope, source and actor are server-derived.
+ */
+export const acceptPlaceMergeReview = guardedCommand(
+  reviewInput.extend({ reason: z.string().trim().min(1).max(2000) }),
+  async (input, ctx) => {
+    const ownerProjectId = await requireIdentityManager(ctx, input.placeId)
+    const source = await probePlaceMergeReview(ctx.db, input)
+    if (!source) error(404, 'PLACE_MERGE_REVIEW_NOT_FOUND')
+    const sourceOwnerProjectId = await requireIdentityManager(ctx, source.sourcePlaceId)
+    const result = await applyPlaceMergeReview(ctx.db, {
+      ...input,
+      ...source,
+      ownerProjectId,
+      sourceOwnerProjectId,
+      actorId: ctx.user.id,
+    })
+    if (result.status === 'conflict') error(409, 'PLACE_MERGE_CHANGED')
     return result
   },
 )

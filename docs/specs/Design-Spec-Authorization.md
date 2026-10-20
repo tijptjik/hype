@@ -318,3 +318,12 @@ Place/review IDs and a reason; actor, owner scope, concurrency baseline and cano
 projection are server-derived. Private ownership is preserved by promotion. Identity
 acceptance does not authorize source fact/location adoption or merging another Place.
 The technical workflow is defined in [Places and Features](../../spec/breadline/proposal/01-places-features.md).
+
+Place merges require independent administration of BOTH the surviving and absorbed Place.
+The second identity is resolved from retained source/merge evidence, never supplied by the
+client. Preparation, impact reads and confirmation each probe both current owner scopes and
+apply their existing private-project or shared-core-admin policies. Authorization of the
+survivor does not grant access to the other Place's retained baseline or affected Features.
+The impact response exposes a count and retained visibility, not other Feature contents.
+Roles and ownership are rechecked at submission, and privacy-incompatible merges remain
+blocked even for a core administrator; merging does not authorize publishing private history.

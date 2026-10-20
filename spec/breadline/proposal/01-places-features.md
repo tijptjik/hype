@@ -1247,3 +1247,37 @@ worked, and replay was rejected. No unconfirmed primary identities were merged.
 association edits, late-failure rollback, privacy conflicts, multiple redirect steps, and
 post-merge source ID correction. Worker type-check passes; full application checking retains
 10 existing errors / 19 warnings. No deployment or production mutation was performed.
+
+### Explicit two-Place merge workflow (Refs #194)
+
+The identity editor now offers a separate merge-impact review after an identity comparison
+reports an already-claimed source. Preparation, reading the impact and final confirmation
+independently authorize the current owners of both Places. The second Place comes from
+retained evidence; clients cannot supply source identity, ownership or actor authority.
+Shared source identities still require core administration. Revoked roles, missing reviews,
+stale state and privacy conflicts do not execute any merge writes.
+
+The impact view shows the affected-Feature count, retained visibility, redirect behavior
+and history preservation. It requires a second reason and explicit Confirm merge action;
+confirming an establishment identity alone does not merge Places. Dirty forms cannot prepare
+or confirm a merge. Successful completion refreshes the ordinary Feature form and reports
+preservation of the surviving HYPE ID and Feature values/overrides. Messages cover English,
+Traditional Chinese and Simplified Chinese. Captured impact remains readable with stale and
+applied status, but raw baselines and affected Feature contents stay server-side.
+
+An isolated browser rehearsal exercised live source discovery, identity comparison, the
+separate merge review, disabled confirmation without a merge reason, and completed merge
+confirmation. The selected mirrored source had zero existing Feature associations; the prior
+local D1 runtime test separately covered moving one association. Independent SQLite checks
+confirmed unchanged Feature/localization/property/association/history and MTR-job rows,
+preserved original source revisions, one redirect and the original target Place ID as survivor.
+This was a UI-flow rehearsal only, not an accepted match in primary data. No browser errors
+occurred; screenshots are private at `output/playwright/place-merge-impact.png` and
+`output/playwright/place-merge-complete.png`. The local server was stopped.
+
+145 focused tests pass, including denial on the second identity, role revocation between
+review and submission, rejected client authority fields, mandatory merge reason, private
+scope incompatibility and saved-impact projection. Worker type-check passes; the full app
+retains its existing 10 errors / 19 warnings. Unmirrored-source ingestion, address curation,
+source changes-feed integration and the final acceptance audit remain open. No primary
+identity decision, deployment or production mutation was performed.

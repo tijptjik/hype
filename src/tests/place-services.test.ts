@@ -29,6 +29,9 @@ import {
 } from '#lib/db/services/placeIdentityReview.js'
 import {
   capturePlaceMergeReview,
+  probePlaceMergeSource,
+  probePlaceMergeReview,
+  readPlaceMergeReview,
   applyPlaceMergeReview,
 } from '#lib/db/services/placeMerge.js'
 import { resolvePlaceRedirect } from '#lib/db/services/placeRedirect.js'
@@ -590,6 +593,30 @@ describe('immutable SaanSeoi Place ingestion', () => {
   it('merges reviewed identities atomically while preserving Feature values, overrides and source history', async () => {
     const { db, sqlite, target, source, captured, input } = await mergeFixture()
     expect(captured.affectedFeatures).toBe(1)
+    expect(await probePlaceMergeReview(db, input)).toEqual({
+      sourcePlaceId: source.placeId,
+    })
+    const reviewRecord = sqlite
+      .prepare('SELECT identityReviewId FROM placeMergeReview WHERE id=?')
+      .get(input.reviewId)
+    expect(
+      await probePlaceMergeSource(db, {
+        placeId: target.placeId,
+        ownerProjectId: 'p',
+        identityReviewId: String(reviewRecord?.identityReviewId),
+      }),
+    ).toEqual({ sourcePlaceId: source.placeId })
+    expect(await readPlaceMergeReview(db, input)).toEqual({
+      reviewId: input.reviewId,
+      affectedFeatures: 1,
+      visibility: 'private',
+      stale: false,
+      applied: false,
+    })
+    expect(
+      await readPlaceMergeReview(db, { ...input, ownerProjectId: 'other' }),
+    ).toBeNull()
+
     const beforeFeatures = sqlite.prepare('SELECT * FROM feature ORDER BY id').all()
     const beforeTarget = await getAcceptedFeaturePlace(db, 'f', 'p')
     const beforeSource = await getAcceptedFeaturePlace(db, 'g', 'p')
@@ -636,6 +663,10 @@ describe('immutable SaanSeoi Place ingestion', () => {
         .get('g')?.n,
     ).toBe(2)
     expect(await applyPlaceMergeReview(db, input)).toEqual({ status: 'conflict' })
+    expect(await readPlaceMergeReview(db, input)).toMatchObject({
+      stale: true,
+      applied: true,
+    })
     expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
     expect(() => sqlite.exec('DELETE FROM placeRedirect')).toThrow()
     expect(() =>

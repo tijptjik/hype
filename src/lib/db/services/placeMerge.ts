@@ -7,6 +7,9 @@
 // - featureTokenSQL
 // - mergeGuard
 // 2. MERGE REVIEW
+// - probePlaceMergeSource
+// - probePlaceMergeReview
+// - readPlaceMergeReview
 // - capturePlaceMergeReview
 // 3. ATOMIC MERGE
 // - applyPlaceMergeReview
@@ -96,6 +99,112 @@ function mergeGuard(
  *  2. MERGE REVIEW
  ************/
 // +++ Merge Review
+/**
+ * Resolve only the second identity needed for merge authorization from retained evidence.
+ * @param db Request-local database.
+ * @param input Already-authorized target scope and immutable identity comparison.
+ * @returns Source Place ID or null; no candidate facts or Feature records are exposed.
+ */
+export async function probePlaceMergeSource(
+  db: Database,
+  input: { placeId: string; identityReviewId: string; ownerProjectId: string | null },
+): Promise<{ sourcePlaceId: string } | null> {
+  return (
+    (await db
+      .select({ sourcePlaceId: place.id })
+      .from(placeIdentityReview)
+      .innerJoin(
+        place,
+        sql`${place.ssId}=json_extract(${placeIdentityReview.projection},'$.ssId')`,
+      )
+      .where(
+        and(
+          eq(placeIdentityReview.id, input.identityReviewId),
+          eq(placeIdentityReview.placeId, input.placeId),
+          sql`${placeIdentityReview.ownerProjectId} IS ${input.ownerProjectId}`,
+        ),
+      )
+      .get()) ?? null
+  )
+}
+
+/**
+ * Resolve the recorded second Place before authorizing a saved merge impact or decision.
+ * @param db Request-local database.
+ * @param input Already-authorized target and merge comparison IDs.
+ * @returns Minimal source identity; never the retained private baseline or association token.
+ */
+export async function probePlaceMergeReview(
+  db: Database,
+  input: { placeId: string; reviewId: string },
+): Promise<{ sourcePlaceId: string } | null> {
+  return (
+    (await db
+      .select({ sourcePlaceId: placeMergeReview.sourcePlaceId })
+      .from(placeMergeReview)
+      .where(
+        and(
+          eq(placeMergeReview.id, input.reviewId),
+          eq(placeMergeReview.targetPlaceId, input.placeId),
+        ),
+      )
+      .get()) ?? null
+  )
+}
+
+/**
+ * Project merge impact only after both identities have been independently authorized.
+ * @param db Request-local database.
+ * @param input Current authorized owner scopes and saved merge comparison.
+ * @returns A count, privacy boundary and stale/applied state, without other Feature contents.
+ */
+export async function readPlaceMergeReview(
+  db: Database,
+  input: {
+    placeId: string
+    sourcePlaceId: string
+    reviewId: string
+    ownerProjectId: string | null
+    sourceOwnerProjectId: string | null
+  },
+): Promise<{
+  reviewId: string
+  affectedFeatures: number
+  visibility: 'private' | 'shared'
+  stale: boolean
+  applied: boolean
+} | null> {
+  const row = await db
+    .select()
+    .from(placeMergeReview)
+    .where(
+      and(
+        eq(placeMergeReview.id, input.reviewId),
+        eq(placeMergeReview.targetPlaceId, input.placeId),
+        eq(placeMergeReview.sourcePlaceId, input.sourcePlaceId),
+      ),
+    )
+    .get()
+  if (
+    !row ||
+    row.targetBaseline.expectedOwnerProjectId !== input.ownerProjectId ||
+    row.sourceBaseline.expectedOwnerProjectId !== input.sourceOwnerProjectId
+  )
+    return null
+  const state = await db.get<{
+    current: number
+    applied: number
+  }>(sql`SELECT CASE WHEN ${mergeGuard(row)} THEN 1 ELSE 0 END AS current,
+    EXISTS(SELECT 1 FROM placeRedirect WHERE reviewId=${row.id}) AS applied`)
+  return {
+    reviewId: row.id,
+    affectedFeatures: row.sourceFeatureCount,
+    visibility: input.ownerProjectId === null ? 'shared' : 'private',
+    stale: !state?.current,
+    applied: Boolean(state?.applied),
+  }
+}
+
 /**
  * Capture the impact of merging a mirrored source Place into an existing HYPE Place.
  * @param db Request-local database.

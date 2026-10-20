@@ -17,6 +17,9 @@ import {
   prepareMirroredPlaceIdentityReview,
   getPlaceIdentityReview,
   acceptPlaceIdentityReview,
+  preparePlaceMergeReview,
+  getPlaceMergeReview,
+  acceptPlaceMergeReview,
 } from '#lib/api/placeIdentity.remote.js'
 // DOMAIN
 import { getAddressDisplay } from '#lib/addresses/featureAddress.js'
@@ -44,7 +47,9 @@ let detail = $state<Review | null>(null)
 let reason = $state('')
 let busy = $state(false)
 let failure = $state('')
-let outcome = $state<'applied' | 'unchanged' | 'merge-required' | null>(null)
+let outcome = $state<'applied' | 'unchanged' | 'merge-required' | 'merged' | null>(null)
+let merge = $state<Awaited<ReturnType<typeof getPlaceMergeReview>> | null>(null)
+let mergeReason = $state('')
 let alive = true
 onDestroy(() => {
   alive = false
@@ -94,6 +99,8 @@ async function select(candidate: PlaceSearchCandidate): Promise<void> {
       detail = comparison
       reason = ''
       outcome = null
+      merge = null
+      mergeReason = ''
     }
   } catch {
     if (alive) failure = m.resource_action_failed()
@@ -122,6 +129,59 @@ async function accept(): Promise<void> {
     if (result.status !== 'merge-required') await onCommitted()
   } catch {
     if (alive) failure = m.place_identity_stale()
+  } finally {
+    if (alive) busy = false
+  }
+}
+
+/** Review the second identity's impact separately; preparing never performs a merge. */
+async function reviewMerge(): Promise<void> {
+  if (!detail || busy || isDirty || outcome !== 'merge-required') return
+  busy = true
+  failure = ''
+  try {
+    const prepared = await preparePlaceMergeReview({
+      placeId,
+      identityReviewId: detail.id,
+    })
+    if (!alive) return
+    if (prepared.status !== 'ready') {
+      failure = m.place_merge_scope()
+      return
+    }
+    const impact = await getPlaceMergeReview({ placeId, reviewId: prepared.reviewId })
+    if (alive) {
+      merge = impact
+      mergeReason = ''
+    }
+  } catch {
+    if (alive) failure = m.place_merge_failed()
+  } finally {
+    if (alive) busy = false
+  }
+}
+
+/** Require a second explicit decision after displaying the captured merge impact. */
+async function confirmMerge(): Promise<void> {
+  if (!merge || merge.stale || merge.applied || busy || isDirty || !mergeReason.trim())
+    return
+  busy = true
+  failure = ''
+  try {
+    const result = await acceptPlaceMergeReview({
+      placeId,
+      reviewId: merge.reviewId,
+      reason: mergeReason.trim(),
+    }).updates(getFeaturePlace({ featureId }))
+    if (!alive) return
+    if (result.status !== 'applied') {
+      failure = m.place_identity_stale()
+      return
+    }
+    outcome = 'merged'
+    await onCommitted()
+  } catch {
+    if (alive) failure = m.place_merge_failed()
   } finally {
     if (alive) busy = false
   }
@@ -275,6 +335,48 @@ function rows(facts: PlaceFacts): Array<{ label: string; value: string }> {
               {#if outcome === 'merge-required'}
                 <p role="status" class="text-sm text-muted-foreground">
                   {m.place_identity_merge()}
+                </p>
+                <Button
+                  type="button"
+                  text={m.place_merge_review()}
+                  disabled={busy || isDirty}
+                  onClick={reviewMerge}
+                />
+                {#if merge}
+                  <div class="space-y-3 rounded-xl border border-border p-4">
+                    <h3 class="font-semibold">{m.place_merge_title()}</h3>
+                    <p class="text-sm">
+                      {m.place_merge_impact({ count: String(merge.affectedFeatures) })}
+                    </p>
+                    <p class="text-sm text-muted-foreground">
+                      {merge.visibility === 'private'
+                        ? m.place_merge_private()
+                        : m.place_merge_shared()}
+                    </p>
+                    {#if merge.stale || merge.applied}
+                      <p role="status" class="text-sm text-error">
+                        {m.place_identity_stale()}
+                      </p>
+                    {:else}
+                      <TextInput
+                        id="place-merge-reason"
+                        name=""
+                        label={m.place_review_reason()}
+                        bind:value={mergeReason}
+                        inputAttrs={{ maxlength: 2000 }}
+                      />
+                      <Button
+                        type="button"
+                        text={m.place_merge_confirm()}
+                        onClick={confirmMerge}
+                        disabled={busy || isDirty || !mergeReason.trim()}
+                      />
+                    {/if}
+                  </div>
+                {/if}
+              {:else if outcome === 'merged'}
+                <p role="status" class="text-sm text-muted-foreground">
+                  {m.place_merge_saved()}
                 </p>
               {:else if outcome}
                 <p role="status" class="text-sm text-muted-foreground">

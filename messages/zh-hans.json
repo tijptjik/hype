@@ -1482,5 +1482,14 @@
   "place_identity_stale": "无法接受此比较。请重新选取来源候选地点，核对最新的地点状态。",
   "place_identity_merge": "此来源身份已属于另一个 HYPE 地点，需要另行审核合并。资料未有更改。",
   "place_identity_saved": "已确认身份。地图项目的资料和自定义覆盖已保留。",
-  "place_identity_accept": "确认为同一商户或场所"
+  "place_identity_accept": "确认为同一商户或场所",
+  "place_merge_review": "审核合并",
+  "place_merge_title": "合并影响",
+  "place_merge_impact": "{count} 个地图项目将移至此地点，其资料及自定义覆盖维持不变。另一地点的 ID 将转向此处，两者的历史记录均会保留。",
+  "place_merge_private": "此地点仍只供当前所属项目使用。",
+  "place_merge_shared": "此地点维持共用。",
+  "place_merge_confirm": "确认合并",
+  "place_merge_saved": "地点已合并。此 HYPE 地点 ID、地图项目资料及自定义覆盖均已保留。",
+  "place_merge_scope": "合并这些地点会改变隐私或项目所有权，因此无法合并。资料未有更改。",
+  "place_merge_failed": "无法准备或确认此合并。请核对你对两个地点的权限，并重新加载比较。"
 }

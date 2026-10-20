@@ -1482,5 +1482,14 @@
   "place_identity_stale": "This comparison could not be accepted. Select the source candidate again to review the latest Place state.",
   "place_identity_merge": "This source identity already belongs to another HYPE Place. A separate merge review is required; nothing has changed.",
   "place_identity_saved": "Identity confirmed. Feature values and overrides are preserved.",
-  "place_identity_accept": "Confirm same establishment"
+  "place_identity_accept": "Confirm same establishment",
+  "place_merge_review": "Review merge",
+  "place_merge_title": "Merge impact",
+  "place_merge_impact": "{count} Features will move to this Place. Their values and overrides stay unchanged. The other Place ID will redirect here, and both histories will be retained.",
+  "place_merge_private": "This Place remains private to its current project.",
+  "place_merge_shared": "This Place remains shared.",
+  "place_merge_confirm": "Confirm merge",
+  "place_merge_saved": "Places merged. This HYPE Place ID, Feature values and overrides have been preserved.",
+  "place_merge_scope": "These Places cannot be merged without changing privacy or project ownership. No records have changed.",
+  "place_merge_failed": "Unable to prepare or confirm this merge. Check your access to both Places and reload the comparison."
 }
