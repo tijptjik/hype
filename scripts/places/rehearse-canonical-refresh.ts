@@ -48,7 +48,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`, input, database
     ).all() as { name: string }[]).map(row => row.name)
     const before = new Map(tables.map(table => [table, snapshot(table)]))
     const identities = target.sqlite.query(
-      'SELECT id,ssId,state,ownerProjectId FROM place ORDER BY id',
+      'SELECT id,ssId,state,ownerOrganisationId FROM place ORDER BY id',
     ).all()
     const overrides = target.sqlite.query(
       'SELECT featureId,placeId,overrides FROM featurePlace ORDER BY featureId',
@@ -81,13 +81,12 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`, input, database
     const changedTables = tables.filter(table => before.get(table) !== snapshot(table))
     // Source refresh must preserve reviewed identities, associations and explicit corrections.
     assert.deepEqual(target.sqlite.query(
-      'SELECT id,ssId,state,ownerProjectId FROM place ORDER BY id',
+      'SELECT id,ssId,state,ownerOrganisationId FROM place ORDER BY id',
     ).all(), identities)
     assert.deepEqual(target.sqlite.query(
       'SELECT featureId,placeId,overrides FROM featurePlace ORDER BY featureId',
     ).all(), overrides)
-    for (const table of ['placeIdentityHistory', 'placeIdentityReview', 'placeMergeReview',
-      'placeRedirect', 'placeIdentityRejection'])
+    for (const table of ['placeIdentityHistory', 'placeIdentityReview'])
       assert.equal(snapshot(table), before.get(table))
     const beforeReplay = tables.map(snapshot)
     const requests = source.requests.length
@@ -104,7 +103,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`, input, database
       changedTables,
       state: target.sqlite.query('SELECT phase,scanMode,nextOffset,total,failures FROM placeRefresh WHERE id=1').get(),
       items: target.sqlite.query('SELECT status,COUNT(*) AS count FROM placeRefreshItem GROUP BY status').all(),
-      features: target.sqlite.query('SELECT outcome,geometryChanged,COUNT(*) AS count FROM placeRefreshFeature GROUP BY outcome,geometryChanged').all(),
+      features: target.sqlite.query("SELECT json_extract(value,'$.outcome') AS outcome,json_extract(value,'$.geometryChanged') AS geometryChanged,COUNT(*) AS count FROM placeRefreshItem,json_each(outcomes) GROUP BY outcome,geometryChanged").all(),
       idleReplayUnchanged: true,
       identitiesAndOverridesUnchanged: true,
       integrity: 'ok',

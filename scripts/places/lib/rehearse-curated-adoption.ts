@@ -48,7 +48,7 @@ export async function rehearseCuratedAdoption(
       )
     } else {
       for (const column of Object.values(getTableColumns(table))) {
-        if (column.name !== 'id')
+        if (!['id', 'localPlaceBrands'].includes(column.name))
           sqlite.exec(
             `ALTER TABLE feature ADD COLUMN "${column.name}" ${column.getSQLType()}`,
           )
@@ -58,7 +58,15 @@ export async function rehearseCuratedAdoption(
   for (const migration of [
     '0109_place_association_scope.sql',
     '0110_feature_place_history.sql',
+    '0112_feature_place_detachment.sql',
     '0113_place_adoption_review.sql',
+    '0117_place_identity_review.sql',
+    '0118_place_merge_redirect.sql',
+    '0120_place_identity_rejection.sql',
+    '0123_place_owned_fields.sql',
+    '0124_place_adoption_decisions.sql',
+    '0125_place_identity_consolidation.sql',
+    '0135_place_organisation_ownership.sql',
   ]) {
     sqlite.exec(
       readFileSync(resolve(import.meta.dir, '../../../migrations', migration), 'utf8'),
@@ -70,7 +78,8 @@ export async function rehearseCuratedAdoption(
     phoneNumber: { mode: 'override' as const, value: ['+85223456789'] },
   }
   for (const projectId of ['automatic', 'review']) {
-    sqlite.query('INSERT INTO project(id) VALUES (?)').run(projectId)
+    sqlite.query('INSERT INTO organisation(id) VALUES (?)').run(projectId)
+    sqlite.query('INSERT INTO project(id,organisationId) VALUES (?,?)').run(projectId, projectId)
     sqlite
       .query(
         'INSERT INTO feature(id,projectId,isDraft,isIntangible,modifiedAt,geometry,addressMeta) VALUES (?,?,0,0,?,?,?)',
@@ -182,7 +191,6 @@ export async function rehearseCuratedAdoption(
         'featurePlace',
         'featurePlaceHistory',
         'placeAdoptionProposal',
-        'placeAdoptionDecision',
       ].map(table => sqlite.query(`SELECT * FROM ${table} ORDER BY rowid`).all()),
     )
   const before = snapshot()

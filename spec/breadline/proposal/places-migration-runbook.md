@@ -57,7 +57,7 @@ the cause. Individual split operations additionally have tested idempotent repla
    counts, exclusions, validation receipts and plan hashes. The bundle contains private
    source data and belongs outside Git and public issue attachments.
 
-The completed 2026-10-20 rehearsal applied 13 missing migrations (0109–0121), split
+The completed 2026-10-20 rehearsal applied 17 missing migrations (0109–0125), split
 1,190 Features, excluded 56 intangible Features and 25 drafts, imported 311 donors plus
 19 drop-points, and skipped 155 donors without recorded runs. Replay created zero
 records and matched all 330 imports. All 64 reviewed MTR decisions were retained.
@@ -284,7 +284,7 @@ retained; source and production databases were not modified.
 
 ## Rehearse the monthly canonical refresh
 
-Use a local HYPE snapshot with migration 0121 installed, an idle refresh state not
+Use a local HYPE snapshot with migrations through 0125 installed, an idle refresh state not
 already checked this UTC month, and sealed SaanSeoi exports:
 
 ```sh
@@ -311,3 +311,74 @@ location remained under review, without geometry or MTR changes. Reviewed identi
 and explicit corrections survived; idle replay and integrity checks passed. This
 replaces the unfinished full-catalogue performance rehearsal, whose partial checkpoint
 was retained when it was deliberately stopped.
+
+## Consolidate an existing twenty-table local installation
+
+Migrations 0122–0125 reduce Places storage to nine dedicated tables, moving settings
+and detached brands to Project/Feature and decisions/receipts to their owning records.
+They preserve all old business/audit values; only the unused publisher diagnostic
+pipeline is retired. Retain its old pages in the database backup.
+
+Rehearse against an explicit pre-0122 local snapshot in a new private directory:
+
+```sh
+python scripts/places/rehearse-simplification.py INPUT.sqlite .local/places/NEW_SIMPLIFICATION_REHEARSAL
+python scripts/places/test_simplification.py
+```
+
+The command creates `before.sqlite`, migrates `result.sqlite` atomically and writes a
+count-only `receipt.json`. It checks every pre-existing column in retained tables,
+every moved policy/decision/merge/redirect/receipt, integrity, foreign keys and exactly
+nine dedicated tables without compatibility views. It never modifies its input.
+The populated fixture covers states absent from the primary local database.
+
+After successful rehearsal, take a fresh primary backup and apply the same migrations
+locally in one transaction with the migration ledger. Verify against that backup before
+committing. Do not reuse a migrated result as the input for this conversion command.
+Normal migration tooling uses `d1_migrations` to skip already-applied versions.
+
+Rehearsal on 20 October 2026 preserved the accepted Fitfort identity and redirect and
+all retained columns across 76 tables. The fresh production-export import rehearsal
+split 1,190 Features, imported 330 donor/dropoff Features and replayed unchanged.
+Canonical refresh on a converted copy completed in six steps/four source requests,
+retained identities/overrides, held location for review and replayed idle unchanged.
+Private artifacts are under `.local/places/simplification-*`; do not publish exports.
+
+## Organisation ownership conversion (0135)
+
+Private Places now use `ownerOrganisationId`; Project adoption settings remain on
+`project`. Migration 0135 translates persisted owners and retained identity-review
+comparison tokens, preserves identity/redirect/decision evidence, and rejects missing
+Organisation ancestry. Association triggers resolve the persisted Project owner and
+block cross-Organisation Feature and Project moves. Shared Places retain null ownership.
+
+Rehearse this conversion alone on a database through 0134:
+
+```sh
+python scripts/places/rehearse-organisation-ownership.py \
+  INPUT.sqlite .local/places/NEW-organisation-ownership-rehearsal
+```
+
+The 2026-10-20 conversion rehearsal preserved 2,850 Places, including 1,520 private
+Places, and the retained identity review. All other tables were unchanged; integrity
+and foreign keys passed. The primary local database has 0135 recorded and the expected
+Organisation foreign key. Its Place rows and review evidence match the rehearsed
+conversion; ongoing unrelated local edits mean a whole-database byte comparison is
+not an appropriate post-application check.
+
+The subsequent full import rehearsal applied 27 pending migrations through 0135,
+including intervening non-Place migrations. It split 1,202 existing Features, imported
+311 donors and 19 drop-points, excluded 155 donors without runs, and retained all 64
+reviewed MTR decisions. Result: 1,613 Features, 1,532 Places and 1,532 associations.
+The additional 12 splits versus the earlier rehearsal came from the intervening
+migration set. All newly generated Place IDs are opaque. Import replay was unchanged.
+
+Canonical monthly refresh on the converted copy completed with zero failures, held
+the affected Feature for review, preserved identities and overrides, and made no
+changes on idle replay. Address-curation rehearsal also verified automatic adoption,
+per-Project review isolation, preserved overrides and idempotency. Real Organisation
+policy tests permit its owner and reject Project-only roles and other Organisation
+owners. Chromium verification on an isolated local database confirmed the Organisation
+selector, HKFoodWorks private Place results and the corresponding detail page, with
+no page errors. The dev server was stopped after the check. Production application
+remains a release step.

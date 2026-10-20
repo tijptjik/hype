@@ -53,22 +53,22 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
   const { db, sqlite, close } = openSqliteDomain(database)
   try {
     const target = sqlite
-      .query(`SELECT p.id,p.ownerProjectId,p.state FROM featurePlace fp
+      .query(`SELECT p.id,p.ownerOrganisationId,p.state FROM featurePlace fp
       JOIN place p ON p.id=fp.placeId WHERE fp.featureId=?`)
       .get(featureId) as {
       id: string
-      ownerProjectId: string | null
+      ownerOrganisationId: string | null
       state: string
     } | null
     assert.ok(target, 'Feature must already have an unresolved Place')
     assert.equal(target.state, 'unresolved')
     const source = sqlite
-      .query(`SELECT p.id,p.ownerProjectId,r.id AS revisionId FROM place p
+      .query(`SELECT p.id,p.ownerOrganisationId,r.id AS revisionId FROM place p
       JOIN placeRevision r ON r.placeId=p.id WHERE p.ssId=? AND p.state='linked'
       AND p.sourceAvailability='current' ORDER BY r.sequence DESC LIMIT 1`)
       .get(ssId) as {
       id: string
-      ownerProjectId: string | null
+      ownerOrganisationId: string | null
       revisionId: string
     } | null
     assert.ok(source, 'Import the pinned canonical candidate before this rehearsal')
@@ -108,7 +108,7 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
     const baseline = await readPlaceIdentityBaseline(
       db,
       target.id,
-      target.ownerProjectId,
+      target.ownerOrganisationId,
     )
     assert.ok(baseline)
     const reviewId = await captureMirroredPlaceIdentityReview(
@@ -120,7 +120,7 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
     assert.ok(reviewId)
     const acceptance = await acceptPlaceIdentityReview(db, {
       placeId: target.id,
-      ownerProjectId: target.ownerProjectId,
+      ownerOrganisationId: target.ownerOrganisationId,
       reviewId,
       actorId,
       reason,
@@ -129,9 +129,9 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
     const merge = await capturePlaceMergeReview(db, {
       placeId: target.id,
       identityReviewId: reviewId,
-      ownerProjectId: target.ownerProjectId,
+      ownerOrganisationId: target.ownerOrganisationId,
       sourcePlaceId: source.id,
-      sourceOwnerProjectId: source.ownerProjectId,
+      sourceOwnerOrganisationId: source.ownerOrganisationId,
       actorId,
     })
     assert.equal(merge.status, 'ready')
@@ -140,9 +140,9 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
     const applied = await applyPlaceMergeReview(db, {
       reviewId: merge.reviewId,
       placeId: target.id,
-      ownerProjectId: target.ownerProjectId,
+      ownerOrganisationId: target.ownerOrganisationId,
       sourcePlaceId: source.id,
-      sourceOwnerProjectId: source.ownerProjectId,
+      sourceOwnerOrganisationId: source.ownerOrganisationId,
       actorId,
       reason,
     })
@@ -153,8 +153,6 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
       'placeRevision',
       'placeIdentityHistory',
       'placeIdentityReview',
-      'placeMergeReview',
-      'placeRedirect',
     ]
     const acceptedRows = identityTables.map(table =>
       JSON.stringify(sqlite.query(`SELECT * FROM ${table} ORDER BY rowid`).all()),
@@ -162,9 +160,9 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
     const replay = await applyPlaceMergeReview(db, {
       reviewId: merge.reviewId,
       placeId: target.id,
-      ownerProjectId: target.ownerProjectId,
+      ownerOrganisationId: target.ownerOrganisationId,
       sourcePlaceId: source.id,
-      sourceOwnerProjectId: source.ownerProjectId,
+      sourceOwnerOrganisationId: source.ownerOrganisationId,
       actorId,
       reason,
     })

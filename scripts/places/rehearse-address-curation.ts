@@ -526,7 +526,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
     const hype = new Database(':memory:')
     try {
       hype.exec(
-        'PRAGMA foreign_keys=ON; CREATE TABLE project(id TEXT PRIMARY KEY); CREATE TABLE feature(id TEXT PRIMARY KEY);',
+        'PRAGMA foreign_keys=ON; CREATE TABLE organisation(id TEXT PRIMARY KEY); CREATE TABLE project(id TEXT PRIMARY KEY,organisationId TEXT REFERENCES organisation(id),modifiedAt TEXT); CREATE TABLE feature(id TEXT PRIMARY KEY);',
       )
       for (const migration of [
         '0102_place_inheritance_foundation.sql',

@@ -82,7 +82,7 @@ function main(): void {
     }
     const query =
       db.query(`SELECT fp.placeId,fp.factsRevisionId,fp.locationRevisionId,fp.overrides,
-      p.ownerProjectId,p.state,p.ssId,r.facts,r.origin,
+      p.ownerOrganisationId,p.state,p.ssId,r.facts,r.origin,
       (SELECT count(*) FROM featurePlaceHistory h WHERE h.featureId=fp.featureId) AS historyCount
       FROM featurePlace fp JOIN place p ON p.id=fp.placeId
       JOIN placeRevision r ON r.id=fp.factsRevisionId AND r.placeId=fp.placeId
@@ -93,7 +93,7 @@ function main(): void {
         factsRevisionId: string
         locationRevisionId: string
         overrides: string
-        ownerProjectId: string
+        ownerOrganisationId: string
         state: string
         ssId: string | null
         facts: string
@@ -105,7 +105,7 @@ function main(): void {
         row.placeId !== plan.placeId ||
         row.factsRevisionId !== plan.revisionId ||
         row.locationRevisionId !== plan.revisionId ||
-        row.ownerProjectId !== plan.projectId ||
+        row.ownerOrganisationId !== (db.query('SELECT organisationId FROM project WHERE id=?').get(plan.projectId) as { organisationId: string } | null)?.organisationId ||
         row.state !== 'unresolved' ||
         row.ssId !== null ||
         row.origin !== 'local' ||

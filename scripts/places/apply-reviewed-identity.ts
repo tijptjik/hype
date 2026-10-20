@@ -79,7 +79,7 @@ async function main(): Promise<void> {
       .query('SELECT baseline FROM placeIdentityReview WHERE id=?')
       .get(receipt.identityReviewId) as { baseline: string }
     const merge = evidence.sqlite
-      .query('SELECT sourceBaseline,sourceRevisionId FROM placeMergeReview WHERE id=?')
+      .query(`SELECT json_extract(m.value,'$.sourceBaseline') AS sourceBaseline,json_extract(m.value,'$.sourceRevisionId') AS sourceRevisionId FROM placeIdentityReview r,json_each(r.mergeReviews) m WHERE json_extract(m.value,'$.id')=?`)
       .get(receipt.mergeReviewId) as {
       sourceBaseline: string
       sourceRevisionId: string
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
         await readPlaceIdentityBaseline(
           target.db,
           baseline.placeId,
-          baseline.expectedOwnerProjectId,
+          baseline.expectedOwnerOrganisationId,
         ),
         baseline,
       ),
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
         await readPlaceIdentityBaseline(
           target.db,
           sourceBaseline.placeId,
-          sourceBaseline.expectedOwnerProjectId,
+          sourceBaseline.expectedOwnerOrganisationId,
         ),
         sourceBaseline,
       ),
@@ -158,7 +158,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
       (
         await acceptPlaceIdentityReview(target.db, {
           placeId: baseline.placeId,
-          ownerProjectId: baseline.expectedOwnerProjectId,
+          ownerOrganisationId: baseline.expectedOwnerOrganisationId,
           reviewId: identityReviewId,
           actorId,
           reason,
@@ -168,9 +168,9 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     )
     const scope = {
       placeId: baseline.placeId,
-      ownerProjectId: baseline.expectedOwnerProjectId,
+      ownerOrganisationId: baseline.expectedOwnerOrganisationId,
       sourcePlaceId: sourceBaseline.placeId,
-      sourceOwnerProjectId: sourceBaseline.expectedOwnerProjectId,
+      sourceOwnerOrganisationId: sourceBaseline.expectedOwnerOrganisationId,
       actorId,
     }
     const prepared = await capturePlaceMergeReview(target.db, {
