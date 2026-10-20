@@ -1,0 +1,173 @@
+[
+  {
+    "key": "kairos",
+    "file": "scripts/eln/data/covers/kairos.jpg",
+    "sourceUrl": "https://cdn.sanity.io/images/p34gzxcg/production/56f2dccf525f65ec52182b394acf1aa04fe1d7b0-1617x2400.jpg?auto=format&w=1000",
+    "sha256": "4739e91971443e6c847a67d5fbfcabe740a6a9945bbde5a65cf9b1a186ea58b4",
+    "width": 1000,
+    "height": 1484,
+    "bytes": 185835
+  },
+  {
+    "key": "lake",
+    "file": "scripts/eln/data/covers/lake.jpg",
+    "sourceUrl": "https://www.parthianbooks.com/cdn/shop/files/FrontCoverContent_grande.jpg?v=1687443587",
+    "sha256": "df62909324654ca1d3b194f732211930f4c46b98971af3c1e8882cb7c0b65f3d",
+    "width": 391,
+    "height": 600,
+    "bytes": 64256
+  },
+  {
+    "key": "intentions",
+    "file": "scripts/eln/data/covers/intentions.jpg",
+    "sourceUrl": "https://images2.penguinrandomhouse.com/cover/9781681377285",
+    "sha256": "8cd7c3e0336a6797a3d9e464d3c835f503573ba70db9f5312c39277faff1b828",
+    "width": 304,
+    "height": 450,
+    "bytes": 33640
+  },
+  {
+    "key": "glorious",
+    "file": "scripts/eln/data/covers/glorious.jpg",
+    "sourceUrl": "https://pushkinpress.com/wp-content/uploads/2024/08/getimage-345-scaled.jpeg",
+    "sha256": "5b3ff3181979cae5c69015afc316e54eca18e2a6d83f15b5edcdb73ac7c0e745",
+    "width": 994,
+    "height": 1600,
+    "bytes": 280563
+  },
+  {
+    "key": "sad",
+    "file": "scripts/eln/data/covers/sad.jpg",
+    "sourceUrl": "https://images1.penguinrandomhouse.com/cover/9781644214671",
+    "sha256": "9243f02a1c72000286ceabc0c3ea7bc22cd3ff080f1fa63d4afc63f22f80d793",
+    "width": 306,
+    "height": 450,
+    "bytes": 31570
+  },
+  {
+    "key": "perfection",
+    "file": "scripts/eln/data/covers/perfection.jpg",
+    "sourceUrl": "https://fitzcarraldoeditions.com/images/OprrXYJlrBM_XzDb/rs:fit:400:0:1/plain/wp/FITZ-PREMIUM-E-COVERS-fiction-Latronico-scaled.jpg",
+    "sha256": "e83de3b9bd54bf77f04c42c2b064129539e1710fb3bc4dac2cebc04b733975dd",
+    "width": 400,
+    "height": 499,
+    "bytes": 13627
+  },
+  {
+    "key": "end",
+    "file": "scripts/eln/data/covers/end.jpg",
+    "sourceUrl": "https://archipelagobooks.org/wp-content/uploads/2022/06/TheEnd_Chosen-2-scaled.jpg",
+    "sha256": "fd3579fc6c8090f4cea9fc52bd1c62f7212ab64b9b98ca6e18d3805572de23c0",
+    "width": 1387,
+    "height": 1600,
+    "bytes": 133498
+  },
+  {
+    "key": "pike",
+    "file": "scripts/eln/data/covers/pike.jpg",
+    "sourceUrl": "https://static1.squarespace.com/static/6a285a8347d74c3b6ecdc383/6a285a8f47d74c3b6ecdc5db/6a285af047d74c3b6ecdd960/1788225529039/Fishing+for+the+Little+Pike%2C+Juhani+Karila+9781632063434.jpg?format=1500w",
+    "sha256": "7fc1dd363df4f6807fa52b2c0b459c51e29c965e81c5778e98096dcb37015f39",
+    "width": 1046,
+    "height": 1600,
+    "bytes": 222050
+  },
+  {
+    "key": "mist",
+    "file": "scripts/eln/data/covers/mist.jpg",
+    "sourceUrl": "https://www.weidenfeldandnicolson.co.uk/wp-content/uploads/2022/02/hbg-title-the-city-of-mist-2-45.jpg",
+    "sha256": "6bef4b04d5d26131c90bf8253552cf9284e2e0b87224c80ba94ba3dfedb53e6e",
+    "width": 813,
+    "height": 1250,
+    "bytes": 312727
+  },
+  {
+    "key": "blood",
+    "file": "scripts/eln/data/covers/blood.jpg",
+    "sourceUrl": "https://ingramacademic.com/cdn/shop/files/CoreSourceHub_b76a2b2b-ddfd-4323-9fa1-28543eefacd3.jpg?v=1777483644",
+    "sha256": "c2cf4764ee1c8297ee9f7bf7c629035a9e39d9a59a64c11086cbc8983b3ccf5a",
+    "width": 1040,
+    "height": 1600,
+    "bytes": 254675
+  },
+  {
+    "key": "alaska",
+    "file": "scripts/eln/data/covers/alaska.jpg",
+    "sourceUrl": "https://www.hachette.co.uk/wp-content/uploads/2024/03/hbg-title-the-alaska-sanders-affair-4-49.jpg",
+    "sha256": "5458a69fb6f2ed16bef04769f8f62812e678d54fc5f893123c2a70681a706db6",
+    "width": 811,
+    "height": 1250,
+    "bytes": 194962
+  },
+  {
+    "key": "factory",
+    "file": "scripts/eln/data/covers/factory.jpg",
+    "sourceUrl": "https://atthisarts.com/wp-content/uploads/2026/09/TheFactory.webp",
+    "sha256": "00c31afcd46e5ee9797b307c69f08c64e8894d7950754940ee6da5dadcc45664",
+    "width": 800,
+    "height": 1200,
+    "bytes": 107512
+  },
+  {
+    "key": "gerta",
+    "file": "scripts/eln/data/covers/gerta.jpg",
+    "sourceUrl": "https://ceeres.uchicago.edu/sites/default/files/styles/publication_cover/public/2022-04/Gerta.jpeg?itok=3vTgCN60",
+    "sha256": "caa7ff6c22b00af3159655c1879c3c86034953fb4de15f80c2308d1a38590766",
+    "width": 267,
+    "height": 400,
+    "bytes": 20407
+  },
+  {
+    "key": "ceilings",
+    "file": "scripts/eln/data/covers/ceilings.jpg",
+    "sourceUrl": "https://twistedspoon.com/images/covers/ceilings-cover.jpg",
+    "sha256": "b57eb336506e20eb3d7b085d726a71cbd45faa14ffb54bc2db90e274291a4af0",
+    "width": 700,
+    "height": 1000,
+    "bytes": 145465
+  },
+  {
+    "key": "dubliners",
+    "file": "scripts/eln/data/covers/dubliners.jpg",
+    "sourceUrl": "https://cdn.penguin.co.uk/dam-assets/books/9780141199627/9780141199627-jacket-large.jpg",
+    "sha256": "be5f67d6705d5ae4919bd0bd12a8d09decf0797c27bac23d357a8d7c8b2e5f8a",
+    "width": 326,
+    "height": 500,
+    "bytes": 40119
+  },
+  {
+    "key": "death",
+    "file": "scripts/eln/data/covers/death.jpg",
+    "sourceUrl": "https://cdn.penguin.co.uk/dam-assets/books/9781784871789/9781784871789-jacket-large.jpg",
+    "sha256": "7ee30b9578b19c2fb92046df3874ea9beea2e47de82e2d078453d67d84b6e36a",
+    "width": 325,
+    "height": 500,
+    "bytes": 61084
+  },
+  {
+    "key": "hefter",
+    "file": "scripts/eln/data/covers/hefter.jpg",
+    "sourceUrl": "https://cdn.penguin.co.uk/dam-assets/books/9780241772683/9780241772683-jacket-large.jpg",
+    "sha256": "cb4527a03598b72a88739295c3f49d6bee18955f3975c9a85f0335b89059f3f8",
+    "width": 311,
+    "height": 500,
+    "bytes": 59943
+  },
+  {
+    "key": "dickhead",
+    "file": "scripts/eln/data/covers/dickhead.jpg",
+    "sourceUrl": "https://www.hachette.co.uk/wp-content/uploads/2025/03/hbg-title-dear-dickhead-3-60.jpg",
+    "sha256": "59bc234f48a21335958a321b47ecb90527526985fa1c9c55dd6c8341a770cc98",
+    "width": 815,
+    "height": 1250,
+    "bytes": 133695
+  },
+  {
+    "key": "poems",
+    "file": "scripts/eln/data/covers/poems.jpg",
+    "sourceUrl": "https://covers.openlibrary.org/b/isbn/9780156011464-L.jpg?default=false",
+    "sha256": "48cd44b930cbce6b89d1fbe81d802734fc052723a773549a06fbf853202d2fef",
+    "width": 332,
+    "height": 500,
+    "bytes": 53459
+  }
+]
