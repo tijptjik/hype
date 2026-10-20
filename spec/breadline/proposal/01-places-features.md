@@ -1808,3 +1808,19 @@ missing-source restoration, and concurrent newer writes both with and without an
 existing old receipt. Worker checking passes; app checking retains its unrelated
 10-error/19-warning baseline. The full mirror was not run for this change; no
 primary, source or production database was changed.
+
+### Canonical evidence excludes transport navigation (Refs #194)
+
+The complete local mirror rehearsal exposed a false same-publication conflict:
+production and the in-process source API use different JSON:API `links.self` origins.
+`equalPlaceSourceRecord` now compares canonical evidence while ignoring resource
+navigation links and relationship navigation links where relationship `data` already
+identifies the resource. Link-only relationships remain meaningful because no data
+identity is available. Attributes, business websites, embedded attribute links,
+relationship identities and relationship metadata remain part of the comparison.
+
+Bulk publication guards and same-publication refresh adoption share this comparison.
+They still reject canonical changes; they no longer mistake API origin/profile-link
+changes for establishment changes. Source payloads themselves remain unmodified in
+immutable revisions. Focused tests cover both ignored navigation and retained identity,
+attribute and relationship evidence.

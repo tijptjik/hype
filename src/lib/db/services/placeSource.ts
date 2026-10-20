@@ -11,7 +11,7 @@ import { place, placeIdentityHistory, placeRevision } from '../schema/place'
 // VALIDATION
 import { PlaceFactsSchema } from '#lib/places/validation.js'
 // DOMAIN
-import { equalPlaceValue } from '#lib/places/baseline.js'
+import { equalPlaceSourceRecord } from '#lib/places/sourceEvidence.js'
 import {
   comparePlacePublications,
   readPlacePublicationMetadata,
@@ -214,7 +214,7 @@ export async function persistForwardSaanSeoiPlace(
         existing.sourceAvailability !== 'current' ||
         !previousPayload.resource ||
         !projection.payload.resource ||
-        !equalPlaceValue(previousPayload.resource, projection.payload.resource)
+        !equalPlaceSourceRecord(previousPayload.resource, projection.payload.resource)
       )
         throw new Error(
           'Source mirror canonical evidence changed within its publication',

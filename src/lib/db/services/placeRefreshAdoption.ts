@@ -4,7 +4,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { feature } from '../schema/feature'
 import { featurePlace, placeRevision } from '../schema/place'
 // DOMAIN
-import { equalPlaceValue } from '#lib/places/baseline.js'
+import { equalPlaceSourceRecord } from '#lib/places/sourceEvidence.js'
 import {
   comparePlacePublications,
   readPlacePublicationMetadata,
@@ -140,7 +140,7 @@ export async function adoptRefreshedPlaceForFeature(
           source.snapshotId === candidate?.snapshotId &&
           source.payload.resource != null &&
           candidate?.payload.resource != null &&
-          equalPlaceValue(source.payload.resource, candidate.payload.resource)
+          equalPlaceSourceRecord(source.payload.resource, candidate.payload.resource)
         )
       })
     )
