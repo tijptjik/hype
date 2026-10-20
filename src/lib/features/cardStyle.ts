@@ -16,13 +16,13 @@ export const DEFAULT_CARD_STYLE: CardStyleCode = 'conditional'
 /** Shared catalogue for admin previews and public card rendering. */
 export const CARD_STYLE_CATALOG = [
   { code: 'full', cardType: 'standard', preview: '/cardStyles/full.svg' },
+  { code: 'conditional', cardType: null, preview: '/cardStyles/conditional.svg' },
   { code: 'breadline', cardType: 'breadline', preview: '/cardStyles/breadline.svg' },
   {
     code: 'no-description',
     cardType: 'portal-band',
     preview: '/cardStyles/no-description.svg',
   },
-  { code: 'conditional', cardType: null, preview: '/cardStyles/conditional.svg' },
 ] as const satisfies ReadonlyArray<{
   code: CardStyleCode
   cardType: FeatureCardType | null
@@ -40,9 +40,9 @@ export function isCardStyleCode(value: unknown): value is CardStyleCode {
 
 /**
  * Resolves the effective style with layer-over-project inheritance.
- * @param projectCode Saved project choice; absent values use Conditional.
+ * @param projectCode Saved project choice; absent values use Flexible.
  * @param layerCode Optional layer override; null/absent values inherit.
- * @returns A supported style code, falling back safely to Conditional.
+ * @returns A supported style code, falling back safely to Flexible.
  */
 export function resolveCardStyle(
   projectCode?: unknown,

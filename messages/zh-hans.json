@@ -1311,7 +1311,7 @@
   "card_style__full_description": "照片、标题、描述、字段和地图窗口。",
   "card_style__no_description": "无描述",
   "card_style__no_description_description": "精简标题和操作按钮，配有凸起的地图窗口。",
-  "card_style__conditional": "按内容显示",
+  "card_style__conditional": "灵活",
   "card_style__conditional_description": "有描述时显示完整卡片，否则显示无描述卡片。",
   "card_style__inherit": "项目默认",
   "card_style__inherit_description": "继承所属项目的卡片样式。",
