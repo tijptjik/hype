@@ -29,6 +29,7 @@ import {
 } from '#lib/map/styles/index.js'
 import { getFeatureViewportQuery } from '#lib/map/featureSpatial.js'
 import { installLocationHeading } from '#lib/map/locationHeading.js'
+import { installLocationTracking } from '#lib/map/locationTracking.js'
 import { getMarkerRetentionBudget } from '#lib/map/markerRetention.js'
 import { featureQueryKey } from '#lib/client/services/featureQuery.js'
 import {
@@ -79,11 +80,6 @@ type MapCanvasProps = {
   onMapReady?: (controller: MapController | null) => void
 }
 
-type GeolocateControlWithPrivateFields = import('maplibre-gl').GeolocateControl & {
-  _updateCamera: () => void
-  _geolocateButton: HTMLButtonElement
-}
-
 type GeolocateControlProps = {
   position: 'bottom-right'
   positionOptions: PositionOptions
@@ -124,7 +120,6 @@ let initialStyle = $state<StyleSpecification | null>(null)
 let portalRecenterTimeout = 0
 let mapResizeFrame = 0
 let portalRecenterFrame = 0
-let geolocationWatchId: number | null = null
 let featureCardDescriptionExpanded = $state(false)
 let markerRenderer: MarkerRenderer | null = null
 let markerRendererMap: MaplibreMap | undefined
@@ -369,14 +364,6 @@ const activeLocale = $derived(getLocale())
 const resolvedMapStyleCode = $derived(
   mapStyleCode && isMapStyleKey(mapStyleCode) ? mapStyleCode : getDefaultMapStyleKey(),
 )
-// Location contrast follows the visible basemap, independently of feature-marker palettes.
-const locationMarkerTone = $derived(
-  ['light', 'white', 'grayscale'].includes(
-    getMapStyleDefinition(resolvedMapStyleCode).basemapVariant ?? '',
-  )
-    ? 'light'
-    : 'dark',
-)
 // The chosen map supplies defaults; explicit layer/project palettes remain authoritative.
 const activeMarkerTheme = $derived(
   getMapStyleDefinition(resolvedMapStyleCode).markerTheme,
@@ -427,9 +414,11 @@ const layerMarkerStyles = $derived(
   ),
 )
 // MAP SURFACE LIFECYCLE
-let geolocateControl: GeolocateControlWithPrivateFields | undefined = $state(undefined)
+let geolocateControl: import('maplibre-gl').GeolocateControl | undefined =
+  $state(undefined)
 
 let detachLocationHeading: (() => void) | undefined
+let detachLocationTracking: (() => void) | undefined
 let geolocationFixStarted = false
 let geolocationLoadMap: MaplibreMap | null = null
 let geolocationLoadHandler: (() => void) | null = null
@@ -485,60 +474,25 @@ const setupMap = (map: MaplibreMap): void => {
   }
 
   if (appCtx.view.user && showControls && typeof navigator !== 'undefined') {
-    // Keep the established first-fix policy and private-control workaround intact.
+    // Share MapLibre's fix between the orb and camera, with a guarded one-time startup center.
     const configureGeolocation = (): void => {
       if (!geolocateControl || geolocationFixStarted) return
       const control = geolocateControl
       geolocationFixStarted = true
       detachLocationHeading = installLocationHeading(control)
-      const updateCamera = control._updateCamera
-      control._updateCamera = () => {}
-      control.once('geolocate', () => {
-        control._updateCamera = updateCamera
+      detachLocationTracking = installLocationTracking(control, map, {
+        onPosition: position => {
+          appCtx.view.state.userLocation = position
+        },
+        canAutoCenter: () =>
+          !window.location.pathname.includes('/features/') && !isTrackingMapUrl,
+        onInitialFix: ({ coords: { latitude, longitude } }) => {
+          const offset = surfaceLayout.getAppMainOffsetX()
+          const point = map.project({ lng: longitude, lat: latitude })
+          const center = map.unproject([point.x + offset * -0.0215, point.y])
+          map.flyTo({ center, zoom: 17, duration: 2500 })
+        },
       })
-      control.trigger()
-      window.setTimeout(() => control._geolocateButton.click(), 200)
-      let hasReceivedFirstFix = false
-      geolocationWatchId = navigator.geolocation.watchPosition(
-        geoLocation => {
-          const { latitude, longitude } = geoLocation.coords
-          const inHongKong =
-            latitude >= 22.1193278 &&
-            latitude <= 22.4393278 &&
-            longitude >= 114.0028131 &&
-            longitude <= 114.3228131
-
-          if (!inHongKong) {
-            console.warn(
-              'User location outside Hong Kong bounds, disabling location tracking',
-            )
-            return
-          }
-          appCtx.view.state.userLocation = geoLocation
-          const isViewingFeature = window.location.pathname.includes('/features/')
-          if (!hasReceivedFirstFix && !isViewingFeature && !isTrackingMapUrl) {
-            hasReceivedFirstFix = true
-            const offset = surfaceLayout.getAppMainOffsetX()
-            if (offset !== 0) {
-              const point = map.project({ lng: longitude, lat: latitude })
-              const adjustment = offset * -0.0215
-              const adjusted = map.unproject([point.x + adjustment, point.y])
-              map.flyTo({
-                center: [adjusted.lng, adjusted.lat],
-                zoom: 19,
-                duration: 2500,
-              })
-            } else
-              map.flyTo({ center: [longitude, latitude], zoom: 19, duration: 2500 })
-          }
-        },
-        error => console.error('Error getting geolocation:', error),
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: Infinity,
-        },
-      )
     }
 
     if (map.loaded()) {
@@ -632,15 +586,13 @@ onDestroy(() => {
     portalRecenterFrame = 0
   }
   window.clearTimeout(portalRecenterTimeout)
-  if (geolocationWatchId !== null && typeof navigator !== 'undefined') {
-    navigator.geolocation.clearWatch(geolocationWatchId)
-    geolocationWatchId = null
-  }
   if (geolocationLoadMap && geolocationLoadHandler) {
     geolocationLoadMap.off('load', geolocationLoadHandler)
   }
   geolocationLoadMap = null
   geolocationLoadHandler = null
+  detachLocationTracking?.()
+  detachLocationTracking = undefined
   detachLocationHeading?.()
   detachLocationHeading = undefined
   markerRenderer?.clear()
@@ -938,7 +890,6 @@ $effect(() => {
   class="map absolute! inset-0 overflow-hidden caret-transparent"
   data-map-gesture-surface="true"
   data-testid="map"
-  data-location-marker-tone={locationMarkerTone}
   data-navigation-active={journey ? 'true' : undefined}
   bind:this={mapContainer}
 >
@@ -1014,7 +965,7 @@ $effect(() => {
             positionOptions: {
               timeout: 5000,
               enableHighAccuracy: true,
-              maximumAge: Infinity,
+              maximumAge: 0,
             },
             trackUserLocation: true,
             showUserLocation: true,
