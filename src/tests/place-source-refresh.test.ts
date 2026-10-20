@@ -251,3 +251,39 @@ it('flags an unavailable initial publisher for review', () => {
   expect(plan.reviewRequired).toBe(true)
   expect(plan.outcomes[0].reason).toBe('unavailable')
 })
+
+it('rolls back discovery when comparison creation fails', async () => {
+  const s = setup()
+  s.sqlite.exec(`CREATE TRIGGER reject_comparison BEFORE INSERT ON placeSourceComparison
+    BEGIN SELECT RAISE(ABORT,'comparison failure'); END`)
+  await expect(s.tick()).rejects.toThrow('comparison failure')
+  expect(s.state()).toMatchObject({
+    phase: 'queued',
+    plan: null,
+    inventories: null,
+    failures: 1,
+  })
+  expect(
+    s.sqlite.prepare('SELECT COUNT(*) AS n FROM placeSourceComparison').get()!.n,
+  ).toBe(0)
+})
+
+it('preserves an in-flight canonical transition when installing the evidence schema', () => {
+  const sqlite = new DatabaseSync(':memory:')
+  stores.push(sqlite)
+  sqlite.exec(`CREATE TABLE placeRefresh(runId TEXT,accepted TEXT,target TEXT,phase TEXT);
+    INSERT INTO placeRefresh VALUES('active','{"pin":{"releaseSet":"old"}}','{"pin":{"releaseSet":"new"}}','scan');`)
+  sqlite.exec(readFileSync('migrations/0119_place_source_changes.sql', 'utf8'))
+  expect(
+    sqlite
+      .prepare(
+        'SELECT id,phase,fromPublication,toPublication FROM placeSourceTransition',
+      )
+      .get(),
+  ).toEqual({
+    id: 'active',
+    phase: 'queued',
+    fromPublication: '{"pin":{"releaseSet":"old"}}',
+    toPublication: '{"pin":{"releaseSet":"new"}}',
+  })
+})

@@ -229,6 +229,9 @@ Curation order:
 4. Upsert the Place-to-Address associations in SaanSeoi and publish them.
 5. Refresh HYPE from that publication, allowing all consumers to benefit.
 
+The [Address curation hand-off](places-address-curation.md) describes the current
+source-tool workflow and the outstanding round-trip acceptance.
+
 The initial implementation uses existing SaanSeoi curation tools; authenticated
 submission from HYPE is a separate extension unless directed otherwise. No public
 write API is assumed and local feature edits must not cause automatic upstream writes. Manual Places may retain unresolved local address
@@ -1420,3 +1423,29 @@ the app check retains its baseline 10 errors and 19 warnings.
 Full feed completion, structured-address curation, actual identity decisions,
 first-layer browser verification and the broader import acceptance audit remain
 outstanding. No production migration or deployment was performed.
+
+### Publisher evidence verification
+
+`scripts/places/verify-source-evidence.py` opens a retained collector database read-only
+and checks SQLite integrity, foreign keys, discovery/comparison cardinality, contiguous
+page numbers, cursor continuity, exact resolved pins, cross-page identity indexes,
+counters and terminal-page completion. It emits aggregate counts and a digest of the
+ordered retained evidence without printing publisher payloads. `--require-complete`
+rejects empty, queued, collecting and review states. `--summary` additionally requires
+one exact-pin match to an independently obtained source API summary and equal added,
+changed and removed counts.
+
+Run it after stopping the local SQLite writer, or against a consistent SQLite backup:
+
+```sh
+python scripts/places/verify-source-evidence.py DATABASE --require-complete --summary SUMMARY_JSON
+PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s scripts/places -p test_verify_source_evidence.py
+```
+
+Obtain `SUMMARY_JSON` from `/places/v0.1/sources/changes` with `view=summary`,
+`resourceType=place`, `region=hk` and the comparison's exact `fromRelease` / `toRelease`.
+A summary is verification evidence; it cannot replace retained record pages. The local
+source API rehearsal uses the existing sealed publisher mirrors, not a fresh production
+export. Avoid long read transactions against a running rollback-journal SQLite writer:
+they can block its commit. If a collector stops, confirm termination, preserve its
+checkpoint and wait for its lease to expire before resuming.
