@@ -4,6 +4,8 @@
 import { Database } from 'bun:sqlite'
 import assert from 'node:assert/strict'
 import { resolve } from 'node:path'
+// HYPE REHEARSAL
+import { rehearseCuratedAdoption } from './lib/rehearse-curated-adoption'
 // SAANSEOI SOURCE IMPLEMENTATIONS
 import { createMemoryProvenanceStore } from '../../../saanseoi/libs/core/src/testing/provenanceStore'
 import { requireDefined } from '../../../saanseoi/libs/core/src/requireDefined'
@@ -577,19 +579,27 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
         },
       }
       const hypeDb = hypeDrizzle(binding as never)
+      const adoption = await rehearseCuratedAdoption(
+        hypeDb as never,
+        hype,
+        projection,
+        hydrated,
+      )
       const first = await persistSaanSeoiPlace(hypeDb as never, hydrated)
       const second = await persistSaanSeoiPlace(hypeDb as never, hydrated)
       assert.deepEqual(first, second)
       assert.equal(
         (hype.query('SELECT count(*) AS n FROM placeRevision').get() as { n: number })
           .n,
-        1,
+        2,
       )
       assert.equal(
         (hype.query('SELECT count(*) AS n FROM place').get() as { n: number }).n,
         1,
       )
-      const stored = hype.query('SELECT facts FROM placeRevision').get() as {
+      const stored = hype
+        .query('SELECT facts FROM placeRevision ORDER BY sequence DESC LIMIT 1')
+        .get() as {
         facts: string
       }
       assert.deepEqual(
@@ -616,7 +626,8 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
             pinnedRequests: 2,
             wrongSnapshotHeldForReview: true,
             persistedPlaces: 1,
-            persistedRevisions: 1,
+            persistedRevisions: 2,
+            ...adoption,
             replayUnchanged: true,
             featureNameOverridePreserved: true,
           },

@@ -121,3 +121,25 @@ to the two Address service requests. Both publication families use the in-memory
 catalogue. HYPE validates the exact canonical ID and Place snapshot before hydrating
 the curated Address. The synthetic records still do not establish a real donor identity
 or exercise the interactive CLI; this closes the hand-built Place-response boundary.
+
+## Persisted Feature adoption after Address hydration
+
+The same command now persists the unhydrated Place revision first and associates
+two synthetic Features in different Projects with that stable Place ID. Both have
+explicit name/phone overrides and pickup descriptions. It then persists the exact
+Address-hydrated revision and calls the real refresh adoption service with persisted
+Project policies: one permits automatic Address/unit adoption; the other retains
+the default review policy.
+
+The automatic Project receives the native Address envelope and formatted display
+label. The review Project retains its original display address and accepted location
+revision. Both keep the same Place association, explicit overrides and descriptions;
+geometry remains unchanged. Repeating both adoption calls leaves all Place, revision,
+Feature, translation, association, history, proposal and decision rows unchanged.
+There is one shared Place and two immutable source revisions; foreign keys pass.
+
+This verifies delayed dependency hydration within the same pinned publication,
+including independent Project adoption. It does not claim a new-publication refresh
+or execution of the scheduled Worker. The fixture uses actual Feature schema column
+order and Place migrations in memory; it does not reset the application database.
+The helper is `scripts/places/lib/rehearse-curated-adoption.ts`.
