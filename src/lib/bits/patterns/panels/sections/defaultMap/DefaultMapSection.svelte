@@ -12,6 +12,7 @@ import { Switch, cx } from '#lib/bits/index.js'
 import World from 'virtual:icons/tabler/world'
 // COMPONENTS
 import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
+import FilterBar from '#lib/bits/patterns/panels/components/common/FilterBar.svelte'
 // TYPES
 import type { PanelProps } from '#lib/bits/patterns/panels/panel.types.js'
 
@@ -24,6 +25,7 @@ let {
 }: PanelProps & { model: ReturnType<typeof useDefaultMapSettingsModel> } = $props()
 
 const DESCRIPTION_PREVIEW_THRESHOLD = 180
+let searchTerm = $state('')
 let expandedLayerIds = $state(new Set<string>())
 /**
  * Tracks whether a long layer description is expanded.
@@ -51,6 +53,23 @@ const userLayerIds = $derived(model.userLayerIds)
 const canSaveUserLayers = $derived(model.canSaveUserLayers)
 const userPreferences = $derived(model.userPreferences)
 const orderedLayers = $derived(model.orderedLayers)
+// Filter the displayed translations without changing saved layer selections or ordering.
+const filteredLayers = $derived.by(() => {
+  const query = searchTerm.trim().toLocaleLowerCase()
+  if (orderedLayers.length <= 5 || !query) return orderedLayers
+
+  return orderedLayers.filter(layer => {
+    const { organisation, project } = model.getHierarchy(layer)
+    return [
+      getI18n(layer, 'name', userPreferences, ''),
+      getI18n(layer, 'description', userPreferences, ''),
+      getI18n(project, 'name', userPreferences, ''),
+      model.getProjectName(project),
+      getI18n(organisation, 'name', userPreferences, ''),
+      getI18n(organisation, 'nameShort', userPreferences, ''),
+    ].some(value => value?.toLocaleLowerCase().includes(query))
+  })
+})
 const isSavingLayers = $derived(model.isSavingLayers)
 const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
   model.toggleUserLayer(...args)
@@ -63,8 +82,14 @@ const toggleUserLayer = (...args: Parameters<typeof model.toggleUserLayer>) =>
   icon={World}
   position="right"
 >
+  {#if orderedLayers.length > 5}
+    <FilterBar bind:searchTerm label={m.settings_default_map_search()} />
+  {/if}
   <div class="flex min-w-0 flex-col gap-4 px-6 pt-2 pb-6">
-    {#each orderedLayers as layer (layer.id)}
+    {#if filteredLayers.length === 0 && searchTerm.trim()}
+      <p class="text-sm text-muted-foreground" role="status">{m.omni__no_results()}</p>
+    {/if}
+    {#each filteredLayers as layer (layer.id)}
       {@const { organisation, project } = model.getHierarchy(layer)}
       {@const organisationName = model.shouldShowOrganisation(project)
         ? getI18n(organisation, 'nameShort', userPreferences, '') ||
