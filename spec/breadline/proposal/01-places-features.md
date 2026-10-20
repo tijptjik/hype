@@ -290,9 +290,13 @@ not a Feature acceptance: retain each Feature's last accepted snapshot on failed
 missing source IDs. Source removal does not imply closure, donor inactivity or deletion.
 Rebuild affected Feature projections and caches using their own Project policies.
 
-The durable scan stage is implemented in `src/lib/places/refresh.ts`, with migration
-`0114_place_refresh.sql`. Monthly discovery snapshots the linked Place identity set and
-pins a full canonical catalogue scan. Each bounded page retains only tracked candidates
+The durable scan stage is implemented in `src/lib/places/refresh.ts`, with migrations
+`0114_place_refresh.sql` and `0121_place_refresh_identity_scan.sql`. Monthly discovery
+snapshots source-linked Places with associated Features. New runs read each captured ID
+through the publication-pinned canonical collection's acknowledged `filter[id]` contract.
+The scan ordinal counts captured identities, including explicit missing-ID outcomes.
+Older in-flight runs retain their full-catalogue mode and cursor after migration.
+In that compatibility path, each bounded page retains only tracked candidates
 and commits them with its offset in one transaction. Lease tokens and expiry checks
 fence writes; failures retain the previous offset and use bounded retry backoff.
 Cross-page duplicate tracked IDs and changing totals stop advancement. Missing IDs are
@@ -1869,5 +1873,39 @@ ownership returns `superseded` without claiming ingestion.
 
 The regression test first reproduced the old `ingested` result for a stale scan.
 The corrected path and hydration-downgrade regression pass with 141 focused tests;
-Worker type checking passes. The full real-source canonical refresh rehearsal is
-separate and remains in progress; these checks do not claim its completion.
+Worker type checking passes. These regression checks are separate from the subsequent
+real-source acceptance described below.
+
+### Bounded linked-identity refresh and real-source acceptance (Refs #194)
+
+The full-catalogue rehearsal exposed the cost of 1,396 scan pages before processing
+the current linked identity set: at one scheduled step per five minutes, scanning alone
+would take almost five days. New runs now read only their captured source-linked
+identities using exact canonical collection filters. This covers the entire intended
+refresh set; it does not sample candidates or substitute latest-only detail responses.
+The source must acknowledge each filter and return at most its exact ID. Unsupported
+filters, mismatched IDs and incomplete results fail without checkpoint advancement.
+Missing IDs remain explicit review items. Late Feature links do not alter a captured run.
+
+Migration 0121 defaults existing rows to `catalogue`, preserving in-flight offsets.
+Discovery selects `identities` for new runs and atomically records the captured count.
+An empty set needs no catalogue reads. Candidate/absence persistence and ordinal
+advancement remain atomic and fenced by the run lease. The original isolated catalogue
+rehearsal was deliberately stopped after the replacement completed; its partial
+checkpoint is retained and is not presented as a completed scan.
+
+The real source API rehearsal completed discovery, exact lookup, Address hydration,
+ingestion and Feature assessment in six steps/four source requests for the complete
+captured set of one associated canonical Place. The Feature's values, explicit overrides,
+identity/redirect records and MTR jobs stayed unchanged. Automatic facts adoption advanced
+metadata; location retained a review outcome with no geometry change. Idle replay made
+no source requests or database changes. Integrity/FKs pass. This verifies the canonical
+workflow, not a deployed cron trigger or routing-service invocation.
+
+343 Places/address/property tests and Worker checking pass. A fresh retained-export
+migration rehearsal through 0121 applied 13 migrations, split 1,190 existing Features,
+imported 330 donor/dropoff Features, excluded 155 donors without runs and replayed all
+330 without changes. Migration 0121 was then applied to primary local HYPE after a
+backup; all other application data and the existing refresh state were preserved.
+No production/source mutation or deployment occurred. Release still requires the
+SaanSeoi exact-ID capability before enabling this worker.

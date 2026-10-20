@@ -16,6 +16,7 @@ import type { PlaceSourceClient } from './sourceClient'
 
 type RefreshDatabase = Pick<D1Database, 'prepare' | 'batch'>
 type State = {
+  scanMode: 'catalogue' | 'identities'
   phase: 'idle' | 'scan' | 'ready' | 'review'
   accepted: string | null
   target: string | null
@@ -30,12 +31,13 @@ const FENCE =
   'EXISTS(SELECT 1 FROM placeRefresh WHERE id=1 AND lease=? AND leaseUntil>?)'
 
 /**
- * Discover monthly work or retain one canonical page atomically with its checkpoint.
+ * Discover monthly work or retain one canonical read atomically with its checkpoint.
  * @param db Primary-session D1 connection; no replica-only reads are permitted.
  * @param source Trusted SaanSeoi connection.
  * @param clock Clock used again after network reads to reject expired ownership.
  * @returns The bounded step result; complete means every scanned item has an adoption or retained review outcome.
- * @remarks Scanning never changes Feature values. The ready phase processes one source
+ * @remarks New runs read captured linked IDs; existing catalogue runs retain their cursors.
+ * Scanning never changes Feature values. The ready phase processes one source
  * or Feature per step before advancing the completed-publication checkpoint.
  */
 export async function refreshPlaces(
@@ -96,7 +98,7 @@ export async function refreshPlaces(
       // Snapshot the linked identity set in the same transaction as publication selection.
       const results = await db.batch([
         statement(
-          `UPDATE placeRefresh SET phase='scan',target=?,runId=?,checkedMonth=?,
+          `UPDATE placeRefresh SET phase='scan',scanMode='identities',target=?,runId=?,checkedMonth=?,
           nextOffset=0,total=NULL,failures=0,retryAt=0,lastError=NULL WHERE id=1 AND ${FENCE}`,
           [JSON.stringify(target), runId, month],
         ),
@@ -112,10 +114,20 @@ export async function refreshPlaces(
           AND ${FENCE}`,
           [runId],
         ),
+        statement(
+          `UPDATE placeRefresh SET total=(SELECT count(*) FROM placeRefreshItem WHERE runId=?),
+          phase=CASE WHEN EXISTS(SELECT 1 FROM placeRefreshItem WHERE runId=?) THEN 'scan' ELSE 'ready' END
+          WHERE id=1 AND ${FENCE}`,
+          [runId, runId],
+        ),
       ])
       return results[0].meta.changes ? 'started' : 'superseded'
     }
-    return (await scanPage(db, source, state, statement)) ? 'scanned' : 'superseded'
+    const scanned =
+      state.scanMode === 'identities'
+        ? await scanIdentity(db, source, state, statement)
+        : await scanPage(db, source, state, statement)
+    return scanned ? 'scanned' : 'superseded'
   } catch (error) {
     writeAt = undefined
     // Retain only a stable error code: upstream payloads may contain personal data.
@@ -133,6 +145,66 @@ export async function refreshPlaces(
       .bind(lease)
       .run()
   }
+}
+
+/**
+ * Read one captured linked identity from the pinned canonical collection.
+ * @param db Primary-session connection.
+ * @param source Trusted upstream transport with acknowledged exact-ID support.
+ * @param state Durable identity-scan checkpoint.
+ * @param statement Factory that applies the active run lease.
+ * @returns Whether the source result and ordinal committed together.
+ * @remarks Missing IDs retain an explicit source review item. Unsupported filters fail
+ * without advancement; latest-only detail reads are never substituted. Existing catalogue
+ * runs keep their original mode and offset after migration.
+ */
+async function scanIdentity(
+  db: RefreshDatabase,
+  source: PlaceSourceClient,
+  state: State,
+  statement: Statement,
+): Promise<boolean> {
+  if (!state.target || !state.runId || state.total === null)
+    throw new Error('PLACE_REFRESH_PIN_MISSING')
+  const item = await db
+    .prepare(
+      `SELECT placeId,ssId FROM placeRefreshItem WHERE runId=? AND sourceOffset IS NULL
+    ORDER BY placeId LIMIT 1`,
+    )
+    .bind(state.runId)
+    .first<{ placeId: string; ssId: string }>()
+  if (!item || state.nextOffset >= state.total)
+    throw new Error('PLACE_REFRESH_IDENTITY_CHECKPOINT_INVALID')
+  const target = JSON.parse(state.target) as PlacePublication
+  const page = await readSaanSeoiPlacePage(source, target.pin, 0, { id: item.ssId })
+  if (
+    page.places.length > 1 ||
+    page.nextOffset !== null ||
+    (page.total !== null && page.total !== page.places.length) ||
+    page.places.some(projection => projection.ssId !== item.ssId)
+  )
+    throw new Error('PLACE_REFRESH_IDENTITY_SELECTION_INVALID')
+  const projection = page.places[0]
+  // Retain absence and successful reads alike before advancing the captured-identity ordinal.
+  const results = await db.batch([
+    statement(
+      `UPDATE placeRefreshItem SET sourceOffset=?,projection=?,status=?
+      WHERE runId=? AND placeId=? AND sourceOffset IS NULL AND ${FENCE}`,
+      [
+        state.nextOffset,
+        projection ? JSON.stringify(projection) : null,
+        projection ? 'pending' : 'missing',
+        state.runId,
+        item.placeId,
+      ],
+    ),
+    statement(
+      `UPDATE placeRefresh SET nextOffset=?,phase=?,failures=0,retryAt=0,lastError=NULL
+      WHERE id=1 AND ${FENCE}`,
+      [state.nextOffset + 1, state.nextOffset + 1 === state.total ? 'ready' : 'scan'],
+    ),
+  ])
+  return Boolean(results[0].meta.changes && results[1].meta.changes)
 }
 
 /**

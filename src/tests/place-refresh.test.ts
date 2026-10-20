@@ -51,7 +51,7 @@ function page(ids = ['shop'], offset = 0, total = 1) {
     meta: { ...publication().meta, page: { offset, limit: 100, total } },
   }
 }
-function setup() {
+function setup(mode: 'catalogue' | 'identities' = 'catalogue') {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
   sqlite.exec(`CREATE TABLE place(id TEXT PRIMARY KEY,ssId TEXT);
@@ -61,6 +61,7 @@ function setup() {
   sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0115_place_refresh_processing.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0119_place_source_changes.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0121_place_refresh_identity_scan.sql', 'utf8'))
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => prepare(query, args),
     first: async () => sqlite.prepare(query).get(...(values as never[])) ?? null,
@@ -92,8 +93,8 @@ function setup() {
   } as unknown as D1Database
   let now = Date.now()
   const request = vi.fn(async () => Response.json(publication()))
-  const tick = () =>
-    refreshPlaces(
+  const tick = async () => {
+    const result = await refreshPlaces(
       db,
       {
         baseUrl: 'https://source.example',
@@ -102,6 +103,13 @@ function setup() {
       },
       () => now,
     )
+    // Legacy scan tests model a catalogue run captured before migration 0121.
+    if (result === 'started' && mode === 'catalogue')
+      sqlite.exec(
+        "UPDATE placeRefresh SET scanMode='catalogue',total=NULL,phase='scan'",
+      )
+    return result
+  }
   const state = () => {
     const row = sqlite.prepare('SELECT * FROM placeRefresh').get()
     if (!row) throw new Error('Missing refresh state')
@@ -264,5 +272,121 @@ describe('durable canonical Place scan', () => {
     expect(
       s.sqlite.prepare('SELECT count(*) AS count FROM featurePlace').get()?.count,
     ).toBe(2)
+  })
+})
+
+describe('captured identity refresh scans', () => {
+  function exact(id: string, found = true) {
+    const result = page(found ? [id] : [], 0, found ? 1 : 0)
+    return { ...result, meta: { ...result.meta, filters: { id } } }
+  }
+
+  it('reads every linked ID once with its publication pin, retaining explicit absence', async () => {
+    const s = setup('identities')
+    expect(await s.tick()).toBe('started')
+    expect(s.state()).toMatchObject({ scanMode: 'identities', total: 2, nextOffset: 0 })
+    s.sqlite.exec("INSERT INTO featurePlace VALUES('later','unlinked')")
+    s.request.mockImplementation(async () => Response.json(exact('absent', false)))
+    expect(await s.tick()).toBe('scanned')
+    expect(s.state()).toMatchObject({ phase: 'scan', nextOffset: 1 })
+    expect(s.items()[0]).toMatchObject({ sourceOffset: 0, status: 'missing' })
+    s.request.mockImplementation(async () => Response.json(exact('shop')))
+    expect(await s.tick()).toBe('scanned')
+    expect(s.state()).toMatchObject({
+      phase: 'ready',
+      nextOffset: 2,
+      total: 2,
+      accepted: null,
+    })
+    expect(s.items()[1]).toMatchObject({ sourceOffset: 1, status: 'pending' })
+    const calls = s.request.mock.calls as unknown as [URL, RequestInit][]
+    expect(calls.slice(1).map(([url]) => url.searchParams.get('filter[id]'))).toEqual([
+      'absent',
+      'shop',
+    ])
+    expect(
+      calls
+        .slice(1)
+        .every(
+          ([url]) =>
+            url.searchParams.get('knownAt') === publication().meta.catalogPublishedAt,
+        ),
+    ).toBe(true)
+    expect(s.request).toHaveBeenCalledTimes(3)
+  })
+
+  it('preserves an in-flight catalogue cursor when installing migration 0121', () => {
+    const sqlite = new DatabaseSync(':memory:')
+    stores.push(sqlite)
+    sqlite.exec(readFileSync('migrations/0114_place_refresh.sql', 'utf8'))
+    sqlite.exec(
+      "UPDATE placeRefresh SET phase='scan',runId='existing',nextOffset=12300,total=139522",
+    )
+    const before = sqlite.prepare('SELECT * FROM placeRefresh').get()
+    sqlite.exec(readFileSync('migrations/0121_place_refresh_identity_scan.sql', 'utf8'))
+    expect(sqlite.prepare('SELECT * FROM placeRefresh').get()).toEqual({
+      ...before,
+      scanMode: 'catalogue',
+    })
+  })
+
+  it('skips catalogue reads when no Places have linked Features', async () => {
+    const s = setup('identities')
+    s.sqlite.exec('DELETE FROM featurePlace')
+    expect(await s.tick()).toBe('started')
+    expect(s.state()).toMatchObject({ phase: 'ready', total: 0, nextOffset: 0 })
+    expect(await s.tick()).toBe('complete')
+    expect(s.request).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['ignored', 'wrong-id', 'multiple'])(
+    'rejects %s ID selection without advancing',
+    async mode => {
+      const s = setup('identities')
+      await s.tick()
+      const response =
+        mode === 'ignored'
+          ? page()
+          : {
+              ...exact('absent'),
+              data: page(mode === 'wrong-id' ? ['shop'] : ['absent', 'shop'], 0, 2)
+                .data,
+            }
+      s.request.mockImplementation(async () => Response.json(response))
+      await expect(s.tick()).rejects.toThrow()
+      expect(s.state()).toMatchObject({ nextOffset: 0, failures: 1 })
+      expect(s.items().every(item => item.sourceOffset === null)).toBe(true)
+    },
+  )
+
+  it('rolls a found identity back when its checkpoint fails and retries the same ID', async () => {
+    const s = setup('identities')
+    await s.tick()
+    s.sqlite.exec(`CREATE TRIGGER fail_identity_checkpoint BEFORE UPDATE OF nextOffset ON placeRefresh
+      WHEN NEW.nextOffset>0 BEGIN SELECT RAISE(ABORT,'checkpoint failure'); END`)
+    s.request.mockImplementation(async () => Response.json(exact('absent')))
+    await expect(s.tick()).rejects.toThrow('checkpoint failure')
+    expect(
+      s.items().every(item => item.sourceOffset === null && item.projection === null),
+    ).toBe(true)
+    s.sqlite.exec('DROP TRIGGER fail_identity_checkpoint')
+    s.advance(30_001)
+    expect(await s.tick()).toBe('scanned')
+    expect(s.state().nextOffset).toBe(1)
+  })
+
+  it('rejects expired identity reads without losing the successor lease', async () => {
+    const s = setup('identities')
+    await s.tick()
+    s.request.mockImplementation(async () => {
+      s.advance(240_001)
+      s.sqlite.exec(
+        "UPDATE placeRefresh SET lease='successor',leaseUntil=9999999999999",
+      )
+      return Response.json(exact('absent'))
+    })
+    expect(await s.tick()).toBe('superseded')
+    expect(s.state()).toMatchObject({ nextOffset: 0, lease: 'successor' })
+    expect(s.items().every(item => item.sourceOffset === null)).toBe(true)
   })
 })
