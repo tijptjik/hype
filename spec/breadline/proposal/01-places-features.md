@@ -1689,3 +1689,12 @@ caching, corrected before the final run. Independent DB comparison found all 26 
 and acceptance/redirect tables unchanged, with one isolated review/rejection, valid
 integrity and no FK violations. The private screenshot was inspected and both servers
 stopped. This test decision is not an actual bakery identity judgment. Nothing deployed.
+
+Full export-to-import rehearsal at `6961b424` also passes with all 12 pending
+migrations through 0120: 1,190 existing Feature splits, 56 intangible/25 draft
+exclusions, 311 donors and 19 dropoffs imported, and 155 donors without recorded
+runs excluded. Replay matches all 330 imported records with zero creates and
+unchanged domain rows. Final rehearsal counts are 1,601 Features, 1,520 Places
+and 1,520 associations; integrity and foreign-key checks pass. All 64 reviewed
+MTR decisions survive, including the retained unmapped labels for #558/#727.
+This isolated rehearsal changes neither primary local state nor production.
