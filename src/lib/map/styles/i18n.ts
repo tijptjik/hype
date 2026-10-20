@@ -32,6 +32,16 @@ export const getMapStyleCatalogCopy = (
   const locale = toLocaleKebab(localeKey)
 
   switch (key) {
+    case 'noclit25':
+      return {
+        name: "NocLit'25",
+        description:
+          localeKey === 'en'
+            ? 'Navy water, blue city blocks and orange streets inspired by the 2025 European Literature Night poster.'
+            : localeKey === 'zhHant'
+              ? '以2025歐洲文學之夜海報為靈感，呈現深藍水域、藍色城市與橙色街道。'
+              : '以2025欧洲文学之夜海报为灵感，呈现深蓝水域、蓝色城市与橙色街道。',
+      }
     case 'noclit26':
       return {
         name: "NocLit'26",

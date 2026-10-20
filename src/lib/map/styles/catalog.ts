@@ -1,3 +1,4 @@
+import { buildNoclit25Style } from './definitions/noclit25'
 import { buildNoclit26Style } from './definitions/noclit26'
 import { buildMidnightStyle } from './definitions/midnight'
 import { buildBreadlineDarkStyle } from './definitions/breadlineDark'
@@ -42,6 +43,7 @@ export type MapStyleCatalogKey =
   | 'breadline-dark'
   | 'midnight'
   | 'noclit26'
+  | 'noclit25'
   | 'protomaps-light'
   | 'protomaps-dark'
   | 'protomaps-white'
@@ -114,6 +116,16 @@ const PROTOMAPS_FLAVOR_ENTRIES: ReadonlyArray<
 }))
 
 export const MAP_STYLE_CATALOG = [
+  {
+    key: 'noclit25',
+    ...getMapStyleCatalogCopy('noclit25', 'en'),
+    buildStyle: buildNoclit25Style,
+    projectCode: 'eln',
+    bundledPreviewPath: '/mapStylePreviews/noclit25.png',
+    basemapVariant: 'dark',
+    markerTheme: 'dark',
+    showSymbols: true,
+  },
   {
     key: 'noclit26',
     ...getMapStyleCatalogCopy('noclit26', 'en'),
