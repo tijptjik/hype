@@ -45,6 +45,41 @@ function fixture() {
 }
 
 describe('canonical feature addresses', () => {
+  it('saves manual floor and unit details without inventing source unit identities', () => {
+    const original = fixture()
+    let address = setAddressOverride(original, 'en', 'floorExpression', '3/F')
+    address = setAddressOverride(address, 'en', 'unitExpression', 'Flat B')
+    expect(getAddressDisplay(address, 'en')).toBe('Flat B, 3/F, 18 Old Street')
+    expect(getAddressDisplay(address, 'zhHant')).toBe('舊街18號')
+    expect(address.source).toEqual(original.source)
+    expect(address.source.address3dUnitId).toBeNull()
+    expect(
+      AddressMetaSchema.parse({ address: JSON.stringify(address) }).address,
+    ).toEqual(address)
+    const cleared = setAddressOverride(address, 'en', 'unitExpression', null)
+    expect(getAddressDisplay(cleared, 'en')).toBe('3/F, 18 Old Street')
+    const reset = setAddressOverride(
+      setAddressOverride(address, 'en', 'unitExpression', undefined),
+      'en',
+      'floorExpression',
+      undefined,
+    )
+    expect(getAddressDisplay(reset, 'en')).toBe('18 Old Street')
+  })
+  it('appends localized floor and unit details in Chinese address order', () => {
+    let address = setAddressOverride(fixture(), 'zhHant', 'floorExpression', '3樓')
+    address = setAddressOverride(address, 'zhHant', 'unitExpression', 'B室')
+    expect(getAddressDisplay(address, 'zhHant')).toBe('舊街18號3樓B室')
+  })
+  it('retains a free-text building address when only 3D details change', () => {
+    const address = setAddressOverride(
+      emptyFeatureAddress({ en: 'The courtyard' }),
+      'en',
+      'floorExpression',
+      'Ground floor',
+    )
+    expect(getAddressDisplay(address, 'en')).toBe('Ground floor, The courtyard')
+  })
   it('round-trips source records, nulls, booleans, empty arrays and explicit clear through hidden JSON input', () => {
     const address = setAddressOverride(fixture(), 'en', 'buildingName', null)
     address.legacy = { oldNull: null, oldArray: [], oldBoolean: false }
@@ -182,7 +217,13 @@ describe('canonical address writes and units', () => {
       },
     ]
     expect(getAddressUnits(address, 'en')).toEqual([
-      { value: 'unit-a', inventoryId: 'inventory', label: 'Unit A, 3/F' },
+      {
+        value: 'unit-a',
+        inventoryId: 'inventory',
+        label: 'Unit A, 3/F',
+        floorExpression: '3/F',
+        unitExpression: 'Unit A',
+      },
     ])
     address.source.address3dId = 'inventory'
     address.source.address3dUnitId = 'unit-a'
@@ -194,6 +235,19 @@ describe('canonical address writes and units', () => {
         'en',
       ),
     ).toBe('Unit A, 3/F, 18 New Street')
+    expect(getAddressLocale(address, 'en')).toMatchObject({
+      floorExpression: '3/F',
+      unitExpression: 'Unit A',
+    })
+    const correctedFloor = setAddressOverride(address, 'en', 'floorExpression', '4/F')
+    expect(getAddressDisplay(correctedFloor, 'en')).toBe('Unit A, 4/F, 18 Old Street')
+    expect(
+      getAddressDisplay(
+        setAddressOverride(correctedFloor, 'en', 'floorExpression', undefined),
+        'en',
+      ),
+    ).toBe('Unit A, 3/F, 18 Old Street')
+    expect(address.source.address3dUnitId).toBe('unit-a')
     address.source.address3dUnitId = 'wrong-unit'
     expect(FeatureAddressSchema.safeParse(address).success).toBe(false)
     address.source.addressSnapshotId = 'different-publication'

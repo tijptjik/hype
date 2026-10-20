@@ -3,9 +3,12 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // REMOTE
-import { guardedQuery } from '#lib/api/server/guarded.js'
+import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
 import { requirePlaceOrganisationManager } from '#lib/api/services/placeOwnership.js'
+// DOMAIN
+import { LocalPlaceAddressSchema } from '#lib/addresses/localPlaceAddress.js'
+import { updateLocalPlaceAddress } from '#lib/db/services/placeLocal.js'
 // DB
 import { probePlaceIdentityScope } from '#lib/db/services/placeIdentityReview.js'
 import { listPlaceResources } from '#lib/db/services/placeDirectory.js'
@@ -67,5 +70,30 @@ export const getPlace = guardedQuery(
       organisationId: scope.ownerOrganisationId ?? undefined,
     })
     return result.data[0] ?? null
+  },
+)
+
+/**
+ * Save locally authored address content on a private Place's next immutable revision.
+ * @param input Place identity, expected latest revision and SaanSeoi-shaped content.
+ * @returns New revision; conflicts require reloading rather than overwriting another edit.
+ */
+export const saveLocalPlaceAddress = guardedCommand(
+  z.strictObject({
+    placeId: z.string().min(1),
+    expectedRevisionId: z.string().min(1),
+    address: LocalPlaceAddressSchema,
+  }),
+  async (input, ctx) => {
+    const scope = await probePlaceIdentityScope(ctx.db, input.placeId)
+    if (!scope?.ownerOrganisationId) error(403, 'PRIVATE_PLACE_REQUIRED')
+    await requirePlaceOrganisationManager(ctx, scope.ownerOrganisationId)
+    const result = await updateLocalPlaceAddress(ctx.db, {
+      ...input,
+      organisationId: scope.ownerOrganisationId,
+      actorId: ctx.user.id,
+    })
+    if (!result) error(409, 'PLACE_CHANGED')
+    return result
   },
 )

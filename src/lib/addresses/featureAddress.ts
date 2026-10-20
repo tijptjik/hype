@@ -1,3 +1,4 @@
+import { UnitDetailsSchema, formatFloor, formatUnit } from './address3d.js'
 // VALIDATION
 import { z } from 'zod'
 import { PlaceFactsSchema } from '#lib/places/validation.js'
@@ -42,6 +43,10 @@ export const ADDRESS_FIELDS = [
   'phaseRef',
   'premisesName',
   'streetName',
+  'floorExpression',
+  'unitExpression',
+  'unitPortion',
+  'accessHint',
 ] as const
 export type AddressField = (typeof ADDRESS_FIELDS)[number]
 const fields = z.partialRecord(
@@ -59,6 +64,10 @@ const featureAddressBase = z.strictObject({
     .nullable(),
   matchStatus: z.enum(['resolved', 'ambiguous', 'unresolved', 'stale']),
   overrides: z.record(z.string(), fields),
+  // Feature-local semantics follow SaanSeoi unit fields without inventing inventory IDs.
+  unitDetails: UnitDetailsSchema.optional(),
+  // Place-level directions are separate from canonical building/unit evidence.
+  accessHints: z.record(z.string(), z.string().max(4000).nullable()).optional(),
   legacy: z.record(z.string(), z.unknown()).optional(),
   query: z.string().optional(),
 })
@@ -161,7 +170,10 @@ export function getAddressLocale(
     | undefined
   const parsed = z
     .record(z.string(), z.unknown())
-    .safeParse(data?.attributes?.i18n?.[ADDRESS_LOCALES[locale]])
+    .safeParse(
+      address.source.authored?.i18n[ADDRESS_LOCALES[locale]] ??
+        data?.attributes?.i18n?.[ADDRESS_LOCALES[locale]],
+    )
   const result: Partial<Record<AddressField, string | boolean | null>> = {}
   if (parsed.success)
     for (const key of ADDRESS_FIELDS) {
@@ -169,19 +181,60 @@ export function getAddressLocale(
       if (typeof value === 'string' || typeof value === 'boolean' || value === null)
         result[key] = value
     }
+  // Selected inventory supplies defaults; local floor/unit corrections remain independent.
+  const unit = getAddressUnits(address, locale).find(
+    item => item.value === address.source.address3dUnitId,
+  )
+  if (unit) {
+    result.floorExpression = unit.floorExpression
+    result.unitExpression = unit.unitExpression
+  }
+  const authored = address.source.authored
+  const localUnit = authored?.unit
+  const localExpressions = authored?.unitI18n[ADDRESS_LOCALES[locale]]
+  if (localUnit) {
+    result.floorExpression =
+      localExpressions?.floorExpression ?? formatFloor(localUnit, locale)
+    result.unitExpression =
+      localExpressions?.unitExpression ?? formatUnit(localUnit, locale)
+  }
+  result.unitPortion =
+    address.unitDetails?.unitPortion ?? localUnit?.unitPortion ?? unit?.unitPortion
+  result.accessHint = address.accessHints?.[ADDRESS_LOCALES[locale]]
   return { ...result, ...address.overrides[ADDRESS_LOCALES[locale]] }
 }
 
-/** Resolves display text without rewriting canonical evidence. @param address Address and corrections. @param locale HYPE locale. @returns Effective display label, including explicit clearing. @remarks Structured corrections compose a local label; an explicit formattedAddress override always wins. */
+/** Resolves display text without rewriting canonical evidence. @param address Address and corrections. @param locale HYPE locale. @returns Effective display label, including explicit clearing. @remarks Structured corrections compose a local label; an explicit formattedAddress override supplies the base label; 3D details remain composable. */
 export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): string {
   const tag = ADDRESS_LOCALES[locale]
   const overrides = address.overrides[tag] ?? {}
-  if (Object.hasOwn(overrides, 'formattedAddress'))
-    return String(overrides.formattedAddress ?? '')
+  // Effective local location overrides may retain a complete display label, including unit text.
+  if (
+    address.source.authored &&
+    Object.hasOwn(address.source.fallbackDisplay, tag) &&
+    !Object.keys(overrides).length
+  )
+    return address.source.fallbackDisplay[tag]
+  const hasDisplayOverride = Object.hasOwn(overrides, 'formattedAddress')
+  if (hasDisplayOverride && !overrides.formattedAddress) return ''
   const value = getAddressLocale(address, locale)
-  let display =
-    address.source.fallbackDisplay[tag] ?? String(value.formattedAddress ?? '')
-  if (Object.keys(overrides).length) {
+  let display = hasDisplayOverride
+    ? String(overrides.formattedAddress)
+    : (address.source.fallbackDisplay[tag] ??
+      address.source.authored?.i18n[tag]?.formattedAddress ??
+      String(value.formattedAddress ?? ''))
+  if (
+    !hasDisplayOverride &&
+    ((Boolean(address.source.authored?.i18n[tag]) &&
+      !value.formattedAddress &&
+      !Object.hasOwn(address.source.fallbackDisplay, tag)) ||
+      Object.keys(overrides).some(
+        key =>
+          !['floorExpression', 'unitExpression', 'unitPortion', 'accessHint'].includes(
+            key,
+          ),
+      ))
+  ) {
     const text = (key: AddressField): string =>
       typeof value[key] === 'string' ? (value[key] as string) : ''
     const number = Object.hasOwn(overrides, 'buildingNumberExpression')
@@ -194,7 +247,7 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
         : text('buildingNumberExpression') ||
           [text('buildingNumberFrom'), text('buildingNumberTo')]
             .filter(Boolean)
-            .join('-')
+            .join(text('buildingNumberConnector') || '-')
     const block = Object.hasOwn(overrides, 'blockExpression')
       ? text('blockExpression')
       : Object.hasOwn(overrides, 'blockRef') ||
@@ -206,14 +259,23 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
           )
             .filter(Boolean)
             .join(locale === 'en' ? ' ' : '')
-        : text('blockExpression')
+        : text('blockExpression') ||
+          (value.blockTypeBeforeNumber === false
+            ? [text('blockRef'), text('blockType')]
+            : [text('blockType'), text('blockRef')]
+          )
+            .filter(Boolean)
+            .join(locale === 'en' ? ' ' : '')
     const phase = Object.hasOwn(overrides, 'phaseExpression')
       ? text('phaseExpression')
       : Object.hasOwn(overrides, 'phaseName') || Object.hasOwn(overrides, 'phaseRef')
         ? [text('phaseName'), text('phaseRef')]
             .filter(Boolean)
             .join(locale === 'en' ? ' ' : '')
-        : text('phaseExpression')
+        : text('phaseExpression') ||
+          [text('phaseName'), text('phaseRef')]
+            .filter(Boolean)
+            .join(locale === 'en' ? ' ' : '')
     const premises = [
       ...new Set(
         [block, phase, text('buildingName'), text('premisesName')].filter(Boolean),
@@ -229,10 +291,37 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
   const unit = getAddressUnits(address, locale).find(
     item => item.value === address.source.address3dUnitId,
   )
-  return unit
+  // Parsed shared values generate display text; original expressions remain editable evidence.
+  const details = address.unitDetails
+  const floor =
+    details && Object.hasOwn(details, 'floorRef')
+      ? formatFloor(details, locale)
+      : String(value.floorExpression ?? '')
+  const flat =
+    details && Object.hasOwn(details, 'unitRef')
+      ? formatUnit(details, locale)
+      : String(value.unitExpression ?? '')
+  const portion = details?.unitPortion ?? ''
+  const hasUnitCorrections =
+    Boolean(details) ||
+    ['floorExpression', 'unitExpression'].some(key => Object.hasOwn(overrides, key))
+  const unitPart = hasUnitCorrections
+    ? (locale === 'en' ? [portion, flat, floor] : [floor, flat, portion])
+        .filter(Boolean)
+        .join(locale === 'en' ? ', ' : '')
+    : (unit?.label ??
+      address.source.authored?.unitI18n[tag]?.formattedAddressPart ??
+      (locale === 'en'
+        ? [value.unitPortion, value.unitExpression, value.floorExpression]
+            .filter(Boolean)
+            .join(', ')
+        : [value.floorExpression, value.unitExpression, value.unitPortion]
+            .filter(Boolean)
+            .join('')))
+  return unitPart
     ? locale === 'en'
-      ? [unit.label, display].filter(Boolean).join(', ')
-      : display + unit.label
+      ? [unitPart, display].filter(Boolean).join(', ')
+      : display + unitPart
     : display
 }
 
@@ -273,7 +362,18 @@ export function invalidateAddressLocation(
 export function getAddressUnits(
   address: FeatureAddress,
   locale: LocaleKey,
-): Array<{ value: string; label: string; inventoryId: string }> {
+): Array<{
+  value: string
+  label: string
+  inventoryId: string
+  floorExpression: string
+  unitExpression: string
+  floorRef?: string
+  floorType?: import('./address3d.js').FloorType
+  unitRef?: string
+  unitType?: import('./address3d.js').UnitType
+  unitPortion?: string | null
+}> {
   const parsed = z
     .object({
       data: z.object({
@@ -305,7 +405,12 @@ export function getAddressUnits(
           snapshotId: z.string(),
           address2dId: z.string(),
           units: z.array(
-            z.object({ id: z.string(), unitRef: z.string(), floorRef: z.string() }),
+            z.object({
+              ...UnitDetailsSchema.shape,
+              id: z.string(),
+              unitRef: z.string(),
+              floorRef: z.string(),
+            }),
           ),
           i18n: z.record(
             z.string(),
@@ -336,6 +441,15 @@ export function getAddressUnits(
       return {
         value: unit.id,
         inventoryId: inventory.data.id,
+        ...(unit.unitType
+          ? { unitRef: unit.unitRef ?? undefined, unitType: unit.unitType }
+          : {}),
+        ...(unit.floorType
+          ? { floorRef: unit.floorRef ?? undefined, floorType: unit.floorType }
+          : {}),
+        ...(unit.unitPortion != null ? { unitPortion: unit.unitPortion } : {}),
+        floorExpression: translation?.floorExpression ?? unit.floorRef ?? '',
+        unitExpression: translation?.unitExpression ?? unit.unitRef ?? '',
         label:
           translation?.formattedAddressPart ||
           [translation?.unitExpression, translation?.floorExpression]

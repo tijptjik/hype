@@ -1528,5 +1528,20 @@
   "publication_preview__access_error": "預覽需要此資源的擁有者或維護者角色，且資源不能已封存。",
   "project_advanced": "進階",
   "project_auto_publish_classified_images": "發佈地點時自動發佈所有已分類圖片",
-  "project_auto_feature_first_image": "發佈地點時自動將第一張圖片設為精選"
+  "project_auto_feature_first_image": "發佈地點時自動將第一張圖片設為精選",
+  "place_address_authoring_help": "此地點的共用地址資料。顯示地址留空時會以各部分組合。功能記錄的修正會獨立保留。",
+  "place_address_language": "地址語言",
+  "place_address_granularity": "地址層級",
+  "place_address_before": "號碼之前",
+  "place_address_after": "號碼之後",
+  "place_address_edit": "編輯地點地址",
+  "place_address_save": "儲存地點地址",
+  "place_address_saved": "已儲存。現有功能記錄在接納此版本前會保留已接受的地址。",
+  "place_address_failed": "無法儲存。如地點已變更，請重新載入後再試。",
+  "place_address_review_latest": "檢視最新地點地址",
+  "feature_address_floorExpression": "樓層",
+  "feature_address_unitExpression": "單位",
+  "feature_address_unitPortion": "單位部分",
+  "feature_address_floor_type": "樓層類型",
+  "feature_address_unit_type": "單位類型"
 }

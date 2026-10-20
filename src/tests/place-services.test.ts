@@ -63,6 +63,7 @@ import { planUnresolvedFeatureSplit } from '#lib/places/migrationPlan.js'
 import {
   listPlaceAdoptionReviews,
   proposeFeaturePlaceAdoption,
+  proposeLatestLocalPlaceAdoption,
   readPlaceAdoptionReview,
   rejectPlaceAdoptionGroup,
 } from '#lib/db/services/placeAdoptionReview.js'
@@ -72,7 +73,10 @@ import { getDetachedFeatureBrands } from '#lib/db/services/placeDetached.js'
 import { unlinkFeaturePlace } from '#lib/db/services/placeUnlink.js'
 import { relinkFeaturePlace } from '#lib/db/services/placeRelink.js'
 import { linkInitialFeaturePlace } from '#lib/db/services/placeLink.js'
-import { createLocalPlace } from '#lib/db/services/placeLocal.js'
+import {
+  createLocalPlace,
+  updateLocalPlaceAddress,
+} from '#lib/db/services/placeLocal.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
 import { ProjectPlacePolicyFormData } from '#lib/db/zod/schema/project.js'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
@@ -4548,4 +4552,163 @@ describe('Organisation-owned private Places', () => {
         .run(local.placeId),
     ).toThrow('Feature Place scope mismatch')
   })
+})
+
+describe('local Place address revisions', () => {
+  it('preserves the old revision and fences stale edits and other owners', async () => {
+    const { db, sqlite } = setup()
+    const created = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
+    const old = sqlite
+      .prepare('SELECT * FROM placeRevision WHERE id=?')
+      .get(created.revisionId)
+    const input = {
+      placeId: created.placeId,
+      organisationId: 'p',
+      expectedRevisionId: created.revisionId,
+      actorId: 'editor',
+      address: {
+        granularity: 'building',
+        i18n: {
+          en: {
+            formattedAddress: '',
+            buildingName: 'New Building',
+            streetName: 'New Road',
+          },
+        },
+        unit: null,
+        unitI18n: {},
+      },
+    }
+    expect(
+      await updateLocalPlaceAddress(db, { ...input, organisationId: 'other' }),
+    ).toBeNull()
+    const updated = await updateLocalPlaceAddress(db, input)
+    expect(updated?.revisionId).toBeTruthy()
+    expect(await updateLocalPlaceAddress(db, input)).toBeNull()
+    expect(
+      sqlite.prepare('SELECT * FROM placeRevision WHERE id=?').get(created.revisionId),
+    ).toEqual(old)
+    const row = sqlite
+      .prepare('SELECT facts,payload FROM placeRevision WHERE id=?')
+      .get(updated!.revisionId)!
+    expect(JSON.parse(row.facts as string).location.address.authored).toEqual(
+      input.address,
+    )
+    expect(JSON.parse(row.payload as string)).toMatchObject({
+      actorId: 'editor',
+      previousRevisionId: created.revisionId,
+    })
+    expect(sqlite.prepare('SELECT count(*) n FROM placeRevision').get()?.n).toBe(2)
+  })
+})
+
+it('prepares a local address review only for the linked Feature owner and leaves accepted revisions pinned', async () => {
+  const { db, sqlite } = setup()
+  const created = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
+  const association = prepareFeaturePlaceAssociationWrite(db, {
+    featureId: 'f',
+    projectId: 'p',
+    placeId: created.placeId,
+    factsRevisionId: created.revisionId,
+    locationRevisionId: created.revisionId,
+    expectedFeatureModifiedAt: 'original',
+    expectedRevision: null,
+    actorId: 'actor',
+    overrides: {},
+  })
+  await association.query
+  const address = {
+    granularity: 'building',
+    i18n: { en: { formattedAddress: 'New address' } },
+    unit: null,
+    unitI18n: {},
+  }
+  const updated = await updateLocalPlaceAddress(db, {
+    placeId: created.placeId,
+    organisationId: 'p',
+    expectedRevisionId: created.revisionId,
+    actorId: 'editor',
+    address,
+  })
+  expect(
+    await proposeLatestLocalPlaceAdoption(db, { featureId: 'f', projectId: 'other' }),
+  ).toBeNull()
+  const review = await proposeLatestLocalPlaceAdoption(db, {
+    featureId: 'f',
+    projectId: 'p',
+  })
+  expect(review?.proposal.candidateRevisionId).toBe(updated?.revisionId)
+  expect(review?.proposal.evidence.plan.blockers).toEqual([])
+  expect(
+    sqlite.prepare('SELECT locationRevisionId FROM featurePlace').get()
+      ?.locationRevisionId,
+  ).toBe(created.revisionId)
+})
+
+it('retains local structured Feature corrections and explicit clearing without duplicating unit labels', async () => {
+  const { db, sqlite } = setup()
+  const authored = {
+    granularity: 'building',
+    i18n: {
+      en: {
+        formattedAddress: '',
+        buildingName: 'Shared Building',
+        streetName: 'Example Road',
+      },
+    },
+    unit: {
+      unitRef: 'A',
+      unitType: 'U',
+      floorRef: '2',
+      floorType: 'F',
+      unitPortion: null,
+    },
+    unitI18n: {},
+  }
+  const address = {
+    version: 1,
+    source: { ...facts.location.address, fallbackDisplay: {}, authored },
+    coordinates: facts.location.geometry.coordinates,
+    matchStatus: 'unresolved',
+    overrides: { en: { buildingName: 'Feature Building' } },
+  }
+  sqlite
+    .prepare('UPDATE feature SET geometry=?,addressMeta=? WHERE id=?')
+    .run(JSON.stringify(facts.location.geometry), JSON.stringify({ address }), 'f')
+  sqlite
+    .prepare(
+      'INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES (?,?,?,?)',
+    )
+    .run('f', 'en', 'Bakery', 'Unit A, 2/F, Feature Building, Example Road')
+  const baseline = await readFeaturePlaceBaseline(db, 'f', 'p')
+  expect(baseline.status).toBe('ready')
+  if (baseline.status !== 'ready') throw new Error('Missing baseline')
+  const { getAddressDisplay } = await import('#lib/addresses/featureAddress.js')
+  const effective = {
+    ...baseline.baseline.address,
+    source: baseline.baseline.effective.location!.address,
+    overrides: {},
+  }
+  expect(getAddressDisplay(effective, 'en')).toBe(
+    'Unit A, 2/F, Feature Building, Example Road',
+  )
+  expect(
+    baseline.baseline.effective.location?.address.authored?.i18n.en.buildingName,
+  ).toBe('Feature Building')
+  const clear = { ...address, overrides: { en: { formattedAddress: null } } }
+  sqlite
+    .prepare('UPDATE feature SET addressMeta=? WHERE id=?')
+    .run(JSON.stringify({ address: clear }), 'f')
+  const cleared = await readFeaturePlaceBaseline(db, 'f', 'p')
+  if (cleared.status !== 'ready') throw new Error('Missing clear baseline')
+  expect(
+    getAddressDisplay(
+      {
+        ...cleared.baseline.address,
+        source: cleared.baseline.effective.location!.address,
+        overrides: {},
+      },
+      'en',
+    ),
+  ).toBe('')
 })

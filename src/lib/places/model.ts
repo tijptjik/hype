@@ -1,5 +1,6 @@
 // VALIDATION
 import { z } from 'zod'
+import type { LocalPlaceAddress } from '#lib/addresses/localPlaceAddress.js'
 
 /** Explicit clear differs from inheritance, including for empty arrays and locales. */
 export type PlaceOverride<T> =
@@ -14,6 +15,8 @@ export type PlaceBrand = {
 
 /** Publication-pinned references; address records retain SaanSeoi's own schema. */
 export type PlaceAddress = {
+  /** Locally authored SaanSeoi content; never a claim of upstream publication. */
+  authored?: LocalPlaceAddress
   status: 'resolved' | 'unresolved'
   address2dId: string | null
   address3dId: string | null

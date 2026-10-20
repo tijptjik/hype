@@ -27,7 +27,7 @@ export const LocalPlaceInputSchema = z.strictObject({
         code: 'custom',
         path: ['location', 'address'],
         message:
-          'Local address evidence must remain unresolved until a canonical address is verified',
+          'Local content cannot claim unverified canonical Address identities or publication evidence',
       })
     }
     for (const [index, number] of facts.phoneNumber.entries()) {

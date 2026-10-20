@@ -12,6 +12,7 @@ import {
   listPlaceAdoptionReviews,
   readPlaceAdoptionReview,
   proposeFeaturePlaceAdoption,
+  proposeLatestLocalPlaceAdoption,
   rejectPlaceAdoptionGroup,
 } from '#lib/db/services/placeAdoptionReview.js'
 import { applyPlaceAdoptionGroup } from '#lib/db/services/placeAdoptionApply.js'
@@ -155,5 +156,18 @@ export const acceptFeaturePlaceReview = guardedCommand(
       revision: result.revision,
       modifiedAt: result.feature.modifiedAt,
     }
+  },
+)
+
+/**
+ * Prepare a review of newer locally authored Place content without accepting it.
+ * @param input Feature identity; its current Project scope is resolved server-side.
+ * @returns Retained review evidence, or null when already current or not a local Place.
+ */
+export const reviewLatestLocalPlace = guardedCommand(
+  featureInput,
+  async (input, ctx) => {
+    const projectId = await requireReviewer(ctx, input.featureId)
+    return proposeLatestLocalPlaceAdoption(ctx.db, { ...input, projectId })
   },
 )

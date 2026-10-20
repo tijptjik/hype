@@ -243,3 +243,41 @@ multiple merge assessments, detached empty arrays and in-flight refresh outcomes
 Source identity/Address curation, schedule import and production rollout remain
 explicit delivery work in GitHub. This document defines behavior and architecture;
 GitHub issues contain current acceptance and release evidence.
+
+## Locally authored structured addresses
+
+Local Place creation and address editing use the SaanSeoi address **content** contract:
+`address2d` component names, granularity and relationships; `address2dI18n` component
+values; and `Address3dUnit` / `Address3dUnitI18n` semantics. HYPE stores these under
+`PlaceFacts.location.address.authored`. Geometry at the Place level remains its
+location; optional authored address geometry can describe the premises separately.
+Address content is distinct from publication envelopes: HYPE does not invent
+SaanSeoi address IDs, inventory IDs, snapshot IDs, dataset codes or publisher metadata.
+A local Place remains manual/unresolved even when its address is fully structured.
+
+The component/type contract is in `src/lib/addresses/localPlaceAddress.ts`, based on
+SaanSeoi `libs/db/src/schema/shared.ts`, `addressGranularity.ts`, `address3d.ts` and
+Atlas's Address/Identifiers API schemas. Unit/floor codes and block types are validated;
+locale expressions and explicit null/false values survive. The local editor supports
+multilingual address components, unit/floor semantics and exact locale expressions.
+Shared unit content belongs to the Place; Feature-only corrections and access hints
+remain independent. Editing a Place requires its Organisation's management authority.
+
+Edits append immutable `placeRevision` rows with actor, owner and predecessor evidence;
+the insert fences both current owner and latest revision. Existing linked Features keep
+their accepted revisions. The Feature review command prepares the newer local revision
+for explicit adoption through the ordinary review flow, preserving Feature overrides.
+Local-to-local changes do not require fabricated publisher identity evidence; crossing
+between local and SaanSeoi source identity still requires the identity review workflow.
+
+Previously stored fallback-only local addresses remain readable and are converted into
+structured editor content when opened. No historical revision is rewritten and no new
+SQL table or destructive backfill is required. Saving performs the explicit upgrade.
+This is local authoring, not an upstream curation/publishing endpoint.
+
+Validation: `bun scripts/places/verify-address-contract.ts ../saanseoi` compares the
+current sibling repository's canonical content keys and all four enum vocabularies.
+Focused tests cover multilingual round trips, invalid types/publication claims,
+immutable edits, stale-owner/revision fences, local review and Feature overrides.
+Chromium verified saving structured components and unit details, reloading them from
+an isolated local database, and rendering the resulting address without page errors.

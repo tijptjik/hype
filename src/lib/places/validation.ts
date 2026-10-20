@@ -1,5 +1,6 @@
 // VALIDATION
 import { z } from 'zod'
+import { LocalPlaceAddressSchema } from '#lib/addresses/localPlaceAddress.js'
 // TYPES
 import type {
   FeaturePlaceOverrides,
@@ -18,6 +19,7 @@ const location = z.strictObject({
   address: z
     .strictObject({
       status: z.enum(['resolved', 'unresolved']),
+      authored: LocalPlaceAddressSchema.optional(),
       address2dId: z.string().min(1).nullable(),
       address3dId: z.string().min(1).nullable(),
       address3dUnitId: z.string().min(1).nullable(),
@@ -25,6 +27,17 @@ const location = z.strictObject({
       records: z.record(z.string(), z.unknown()),
       fallbackDisplay: names,
     })
+    .refine(
+      address =>
+        !address.authored ||
+        (address.status === 'unresolved' &&
+          !address.address2dId &&
+          !address.address3dId &&
+          !address.address3dUnitId &&
+          !address.addressSnapshotId &&
+          !Object.keys(address.records).length),
+      'Authored addresses cannot claim canonical publication evidence',
+    )
     .refine(
       address =>
         address.status !== 'resolved' ||

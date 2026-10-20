@@ -8,6 +8,7 @@ import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
 import { getFeaturePlace } from '#lib/api/place.remote.js'
 import {
   listFeaturePlaceReviews,
+  reviewLatestLocalPlace,
   getFeaturePlaceReview,
   reevaluateFeaturePlaceReview,
   acceptFeaturePlaceReview,
@@ -25,11 +26,13 @@ type Group = 'facts' | 'location'
 let {
   featureId,
   associationRevision,
+  isLocal = false,
   modifiedAt,
   isDirty,
   onCommitted,
 }: {
   featureId: string
+  isLocal?: boolean
   associationRevision: string
   modifiedAt: string
   isDirty: boolean
@@ -52,6 +55,24 @@ async function load(beforeRow?: number): Promise<void> {
     await query.refresh()
     page = await query
     cursor = beforeRow
+  } catch {
+    failure = m.resource_action_failed()
+  } finally {
+    busy = false
+  }
+}
+
+/** Prepare the latest local revision for explicit review; never accept it from a read. */
+async function latestLocal(): Promise<void> {
+  if (busy || isDirty) return
+  busy = true
+  failure = ''
+  try {
+    detail = await reviewLatestLocalPlace({ featureId })
+    const query = listFeaturePlaceReviews({ featureId })
+    await query.refresh()
+    page = await query
+    reason = ''
   } catch {
     failure = m.resource_action_failed()
   } finally {
@@ -234,6 +255,14 @@ function blocked(group: Group): boolean {
   )
 }
 </script>
+
+{#if isLocal}
+  <Button
+    text={m.place_address_review_latest()}
+    disabled={busy || isDirty}
+    onClick={latestLocal}
+  />
+{/if}
 
 <section class="space-y-4" aria-label={m.place_review_title()}>
   <SectionHeader

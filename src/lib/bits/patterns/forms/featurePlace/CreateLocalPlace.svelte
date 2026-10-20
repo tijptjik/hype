@@ -7,6 +7,8 @@ import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 // API
 import { createLocalPlace, getLocalPlaceCreationAccess } from '#lib/api/place.remote.js'
 // DOMAIN
+import LocalPlaceAddressFields from '#lib/bits/patterns/forms/localPlaceAddress/LocalPlaceAddressFields.svelte'
+import { createLocalPlaceAddress } from '#lib/addresses/localPlaceAddress.js'
 import { LocalPlaceInputSchema } from '#lib/places/local.js'
 // TYPES
 import type { PlaceFacts } from '#lib/places/model.js'
@@ -48,7 +50,7 @@ $effect(() => {
   }
 })
 let name = $state('')
-let address = $state('')
+let address = $state(createLocalPlaceAddress())
 let placeState = $state<'manual' | 'unresolved'>('unresolved')
 let busy = $state(false)
 let failed = $state(false)
@@ -80,7 +82,8 @@ async function create(): Promise<void> {
             address3dUnitId: null,
             addressSnapshotId: null,
             records: {},
-            fallbackDisplay: address.trim() ? { [locale]: address.trim() } : {},
+            fallbackDisplay: {},
+            authored: address,
           },
         },
       },
@@ -89,7 +92,7 @@ async function create(): Promise<void> {
     onCreated({ ...identity, facts: input.facts })
     open = false
     name = ''
-    address = ''
+    address = createLocalPlaceAddress()
   } catch {
     failed = true
   } finally {
@@ -133,21 +136,7 @@ async function create(): Promise<void> {
         }}
         disabled={busy || disabled}
       />
-      <TextInput
-        name=""
-        id="local-place-address"
-        label={m.feature_place_local_address()}
-        bind:value={address}
-        inputAttrs={{
-          onkeydown: (event: KeyboardEvent) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              void create()
-            }
-          },
-        }}
-        disabled={busy || disabled}
-      />
+      <LocalPlaceAddressFields bind:value={address} disabled={busy || disabled} />
       <p class="text-sm text-muted-foreground">
         {m.feature_place_local_coordinates()} {coordinates.join(', ')}
       </p>

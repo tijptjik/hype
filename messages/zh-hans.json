@@ -1528,5 +1528,20 @@
   "publication_preview__access_error": "预览需要此资源的所有者或维护者角色，且资源不能已归档。",
   "project_advanced": "高级",
   "project_auto_publish_classified_images": "发布地点时自动发布所有已分类图片",
-  "project_auto_feature_first_image": "发布地点时自动将第一张图片设为精选"
+  "project_auto_feature_first_image": "发布地点时自动将第一张图片设为精选",
+  "place_address_authoring_help": "此地点的共用地址资料。显示地址留空时会以各部分组合。功能记录的修正会独立保留。",
+  "place_address_language": "地址语言",
+  "place_address_granularity": "地址层级",
+  "place_address_before": "号码之前",
+  "place_address_after": "号码之后",
+  "place_address_edit": "编辑地点地址",
+  "place_address_save": "保存地点地址",
+  "place_address_saved": "已保存。现有功能记录在接纳此版本前会保留已接受的地址。",
+  "place_address_failed": "无法保存。如地点已变更，请重新载入后再试。",
+  "place_address_review_latest": "查看最新地点地址",
+  "feature_address_floorExpression": "楼层",
+  "feature_address_unitExpression": "单位",
+  "feature_address_unitPortion": "单位部分",
+  "feature_address_floor_type": "楼层类型",
+  "feature_address_unit_type": "单位类型"
 }

@@ -1528,5 +1528,20 @@
   "publication_preview__access_error": "Preview requires an Owner or Maintainer role for this resource, and the resource must not be archived.",
   "project_advanced": "Advanced",
   "project_auto_publish_classified_images": "Auto-publish all classified images when publishing their feature",
-  "project_auto_feature_first_image": "Automatically classify the first image as Featured when publishing its feature"
+  "project_auto_feature_first_image": "Automatically classify the first image as Featured when publishing its feature",
+  "place_address_authoring_help": "Shared address details belong to this Place. Leave the display address empty to build it from the components. Feature corrections remain separate.",
+  "place_address_language": "Address language",
+  "place_address_granularity": "Address level",
+  "place_address_before": "Before number",
+  "place_address_after": "After number",
+  "place_address_edit": "Edit Place address",
+  "place_address_save": "Save Place address",
+  "place_address_saved": "Saved. Existing Features keep their accepted address until they adopt this revision.",
+  "place_address_failed": "Could not save. Reload the Place before retrying if it has changed.",
+  "place_address_review_latest": "Review latest Place address",
+  "feature_address_floorExpression": "Floor",
+  "feature_address_unitExpression": "Unit / flat",
+  "feature_address_unitPortion": "Unit portion / part",
+  "feature_address_floor_type": "Floor type",
+  "feature_address_unit_type": "Unit type"
 }

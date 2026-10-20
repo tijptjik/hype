@@ -4,10 +4,13 @@ import { and, eq, sql } from 'drizzle-orm'
 import { feature } from '../schema/feature'
 import {
   featurePlace,
+  place,
+  placeRevision,
   placeAdoptionProposal,
   type PlaceAdoptionDecisionRecord,
 } from '../schema/place'
 // SERVICES
+import { placeOwnerForProject } from './placeScope'
 import { previewFeaturePlaceAdoption } from './placeAdoption'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -298,4 +301,37 @@ export async function rejectPlaceAdoptionGroup(
   `)
     .returning({ decision: column })
   return rows[0]?.decision ?? null
+}
+
+/**
+ * Prepare an explicit review of the newest local address revision for one authorized Feature.
+ * @param db Request-local database.
+ * @param input Persisted Feature and Project scope.
+ * @returns Review evidence, or null when no newer local revision is available.
+ */
+export async function proposeLatestLocalPlaceAdoption(
+  db: Database,
+  input: { featureId: string; projectId: string },
+): Promise<{ proposal: Proposal; decisions: Decision[] } | null> {
+  const candidate = await db
+    .select({ id: placeRevision.id })
+    .from(featurePlace)
+    .innerJoin(feature, eq(feature.id, featurePlace.featureId))
+    .innerJoin(place, eq(place.id, featurePlace.placeId))
+    .innerJoin(placeRevision, eq(placeRevision.placeId, place.id))
+    .where(
+      and(
+        eq(feature.id, input.featureId),
+        eq(feature.projectId, input.projectId),
+        sql`${place.ownerOrganisationId}=${placeOwnerForProject(input.projectId)}`,
+        sql`${place.state} IN ('manual','unresolved')`,
+        eq(placeRevision.origin, 'local'),
+        sql`${placeRevision.sequence}=(SELECT max(r.sequence) FROM placeRevision r WHERE r.placeId=${place.id})`,
+        sql`${placeRevision.id} IS NOT ${featurePlace.locationRevisionId}`,
+      ),
+    )
+    .get()
+  return candidate
+    ? proposeFeaturePlaceAdoption(db, { ...input, candidateRevisionId: candidate.id })
+    : null
 }

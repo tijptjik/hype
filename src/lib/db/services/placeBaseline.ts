@@ -5,6 +5,7 @@ import { feature, featureI18n, featureProperty } from '../schema/feature'
 import { hub } from '../schema/hub'
 import { property, propertyValue, propertyValueI18n } from '../schema/property'
 // DOMAIN
+import { LocalAddressI18nSchema } from '#lib/addresses/localPlaceAddress.js'
 import {
   ADDRESS_LOCALES,
   emptyFeatureAddress,
@@ -125,10 +126,65 @@ export async function readFeaturePlaceBaseline(
   const fallbackDisplay = { ...address.source.fallbackDisplay }
   for (const locale of Object.keys(ADDRESS_LOCALES) as LocaleKey[]) {
     const tag = ADDRESS_LOCALES[locale]
-    if (Object.hasOwn(labels, tag) || Object.hasOwn(address.overrides, tag))
+    if (
+      Object.hasOwn(address.overrides, tag) ||
+      (Object.hasOwn(labels, tag) &&
+        (!address.source.authored ||
+          labels[tag] !== getAddressDisplay(address, locale)))
+    )
       fallbackDisplay[tag] = Object.hasOwn(address.overrides, tag)
         ? getAddressDisplay(address, locale)
         : labels[tag]
+  }
+  // Carry Feature corrections into its effective location without changing the shared Place revision.
+  const authored = address.source.authored
+    ? structuredClone(address.source.authored)
+    : undefined
+  if (authored) {
+    for (const [tag, corrections] of Object.entries(address.overrides)) {
+      const components = Object.fromEntries(
+        Object.entries(corrections).filter(
+          ([key]) => key !== 'formattedAddress' && key in LocalAddressI18nSchema.shape,
+        ),
+      )
+      if (Object.keys(components).length)
+        authored.i18n[tag] = LocalAddressI18nSchema.parse({
+          ...authored.i18n[tag],
+          formattedAddress: '',
+          ...components,
+        })
+      if (
+        authored.unit &&
+        ('floorExpression' in corrections || 'unitExpression' in corrections)
+      ) {
+        authored.unitI18n[tag] = {
+          floorExpression:
+            (corrections.floorExpression as string) ??
+            authored.unitI18n[tag]?.floorExpression ??
+            authored.unit.floorRef,
+          unitExpression:
+            (corrections.unitExpression as string) ??
+            authored.unitI18n[tag]?.unitExpression ??
+            authored.unit.unitRef,
+        }
+      }
+    }
+    if (address.unitDetails) {
+      authored.unit = {
+        unitRef: '',
+        unitType: 'U',
+        floorRef: '',
+        floorType: 'F',
+        unitPortion: null,
+        ...authored.unit,
+        ...Object.fromEntries(
+          Object.entries(address.unitDetails).filter(
+            ([, value]) => value !== undefined && value !== null,
+          ),
+        ),
+      }
+      authored.unitI18n = {}
+    }
   }
   let properties = await db
     .select({
@@ -240,7 +296,11 @@ export async function readFeaturePlaceBaseline(
     brands: detached?.brands ?? projectedBrands,
     location: {
       geometry: row.geometry,
-      address: { ...address.source, fallbackDisplay },
+      address: {
+        ...address.source,
+        fallbackDisplay,
+        ...(authored ? { authored } : {}),
+      },
     },
   })
   if (!facts.success) return { status: 'review', reason: 'invalid-address' }

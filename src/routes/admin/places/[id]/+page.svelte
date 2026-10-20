@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
+// COMPONENTS
+import LocalPlaceAddressEditor from '#lib/bits/patterns/forms/localPlaceAddress/LocalPlaceAddressEditor.svelte'
 // DOMAIN
 import { getAddressDisplay } from '#lib/addresses/featureAddress.js'
 // API
@@ -83,6 +85,12 @@ $effect(() => {
             {/each}
           {/if}
         </dl>
+        <LocalPlaceAddressEditor
+          {place}
+          onSaved={async () => {
+            await request.refresh()
+          }}
+        />
         <p class="text-sm text-muted-foreground">{m.place_directory_detail_help()}</p>
       {:else}
         <p>{m.place_directory_empty()}</p>

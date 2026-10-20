@@ -85,6 +85,9 @@ function addressContent(address: PlaceFacts['location']['address']): unknown {
   }
   const { meta: _meta, links: _links, data, included, ...rest } = address.records
   return {
+    authored: address.authored
+      ? { ...address.authored, unit: undefined, unitI18n: undefined }
+      : undefined,
     status: address.status,
     address2dId: address.address2dId,
     address3dId: address.address3dId,
@@ -120,7 +123,11 @@ function unitContent(address: PlaceFacts['location']['address']): unknown {
       'id' in value &&
       value.id === address.address3dUnitId,
   )
-  return { id: address.address3dUnitId, unit: unit ?? null }
+  return {
+    id: address.address3dUnitId,
+    unit: unit ?? address.authored?.unit ?? null,
+    authoredI18n: address.authored?.unitI18n,
+  }
 }
 
 /**
@@ -157,14 +164,19 @@ export function planPlaceAdoption(input: {
   const beforeEstablishment = establishmentSchema.safeParse(facts.payload)
   const afterEstablishment = establishmentSchema.safeParse(candidate.payload)
   const blockers: PlaceAdoptionPlan['blockers'] = []
+  // A local revision chain has no publisher identity; crossing into source data still requires identity review.
+  const localChain = [facts, location, candidate].every(
+    revision => revision.origin === 'local' && revision.ssId === null,
+  )
   if (
-    candidate.origin !== 'saanseoi' ||
-    !candidate.ssId ||
-    facts.ssId !== candidate.ssId ||
-    location.ssId !== candidate.ssId
+    !localChain &&
+    (candidate.origin !== 'saanseoi' ||
+      !candidate.ssId ||
+      facts.ssId !== candidate.ssId ||
+      location.ssId !== candidate.ssId)
   )
     blockers.push('source-identity')
-  if (!beforeEstablishment.success || !afterEstablishment.success)
+  if (!localChain && (!beforeEstablishment.success || !afterEstablishment.success))
     blockers.push('establishment-evidence')
   const address = next.location.address
   if (
@@ -197,9 +209,10 @@ export function planPlaceAdoption(input: {
     establishmentChanged:
       !equalPlaceValue(oldFacts.names, next.names) ||
       !equalPlaceValue(oldFacts.brands, next.brands) ||
-      !beforeEstablishment.success ||
-      !afterEstablishment.success ||
-      !equalPlaceValue(beforeEstablishment.data, afterEstablishment.data),
+      (!localChain &&
+        (!beforeEstablishment.success ||
+          !afterEstablishment.success ||
+          !equalPlaceValue(beforeEstablishment.data, afterEstablishment.data))),
   }
   const decision = evaluatePlaceAdoption(evidence, input.policy)
   // Incomplete source evidence cannot silently erase inherited values.
