@@ -1,0 +1,57 @@
+// THIRD-PARTY
+import { describe, expect, it } from 'vitest'
+// NAVIGATION
+import { getAdminMapHref, getMapPrisms } from '#lib/navigation/adminMapLink.js'
+
+describe('admin map navigation', () => {
+  const prisms = { organisation: ['org'], project: ['one', 'two'], layer: ['a', 'b'] }
+
+  it('opens the active feature and transfers every prism', () => {
+    const url = new URL(
+      getAdminMapHref(prisms, 'feature', 'feature-id'),
+      'https://hype.test',
+    )
+    expect(url.pathname).toBe('/features/feature-id')
+    expect(getMapPrisms(url.searchParams)).toEqual(prisms)
+  })
+
+  it('targets a hierarchy resource without discarding other selections', () => {
+    const url = new URL(getAdminMapHref(prisms, 'layer', 'c'), 'https://hype.test')
+    expect(url.pathname).toBe('/')
+    expect(getMapPrisms(url.searchParams)?.layer).toEqual(['a', 'b', 'c'])
+  })
+
+  it.each([
+    { featureId: 'linked-feature' },
+    { feature: { id: 'linked-feature' } },
+    { featureId: 'linked-feature', feature: { id: 'stale-feature' } },
+  ])('opens the feature associated with a loaded task: %j', task => {
+    const url = new URL(
+      getAdminMapHref(prisms, 'task', 'task-id', task),
+      'https://hype.test',
+    )
+    expect(url.pathname).toBe('/features/linked-feature')
+    expect(getMapPrisms(url.searchParams)).toEqual(prisms)
+  })
+
+  it('does not reuse a task feature after navigating to an index', () => {
+    expect(
+      getAdminMapHref(prisms, 'task', false, { featureId: 'old-feature' }),
+    ).toMatch(/^\/\?/)
+  })
+
+  it.each([
+    ['feature', false],
+    ['feature', 'new'],
+    ['task', 'task-id'],
+  ] as const)('falls back to the map for %s %s', (type, ref) => {
+    expect(getAdminMapHref(prisms, type, ref)).toMatch(/^\/\?/)
+  })
+
+  it('distinguishes explicit empty scope from an ordinary map visit', () => {
+    const empty = { organisation: [], project: [], layer: [] }
+    const url = new URL(getAdminMapHref(empty, false, false), 'https://hype.test')
+    expect(getMapPrisms(url.searchParams)).toEqual(empty)
+    expect(getMapPrisms(new URLSearchParams())).toBeNull()
+  })
+})

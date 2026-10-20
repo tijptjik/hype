@@ -19,6 +19,7 @@ import { useSettingsPanelModel } from '#lib/adapters/panels/useSettingsPanelMode
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
 import { useAdminHeaderModel } from '#lib/adapters/header/index.js'
 // NAVIGATION
+import { getAdminMapHref } from '#lib/navigation/adminMapLink.js'
 import {
   resetAdminIndexResourceRef,
   shouldClearAdminFeatureCacheOnNavigate,
@@ -168,7 +169,14 @@ const headerProps = $derived({
     src: '/logos/hype-mark.svg',
     alt: 'HYPE',
     monochrome: true,
-    href: '/',
+    href: getAdminMapHref(
+      view.scope.prisms,
+      adminCtx.activeResourceType,
+      adminCtx.activeResourceRef,
+      adminCtx.activeResourceType === 'task' && adminCtx.activeResourceRef
+        ? view.cache.task.get(adminCtx.activeResourceRef)
+        : null,
+    ),
     label: 'HYPE — Back to map',
   },
 })

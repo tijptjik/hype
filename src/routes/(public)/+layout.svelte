@@ -12,6 +12,7 @@ import { setDivisionCtx } from '#lib/context/division.svelte.js'
 import { parsePublicationPreview } from '#lib/publication/preview.js'
 import { getPublicationPreview } from '#lib/api/publicationPreview.remote.js'
 // SERVICES
+import { getMapPrisms, MAP_PRISM_PARAMS } from '#lib/navigation/adminMapLink.js'
 import { getMapResourceDeepLinkLayerIds } from '#lib/client/services/mapResourceDeepLink.js'
 import { isAuthEntryPath } from '#lib/auth/bootstrap.js'
 import { m } from '#lib/i18n.js'
@@ -75,6 +76,30 @@ function canApplyMapResourceDeepLink(): boolean {
  */
 async function applyInitialMapResourceDeepLink(): Promise<void> {
   if (!canApplyMapResourceDeepLink() || appCtx.view.publicationPreview) return
+
+  const transferredPrisms = getMapPrisms(page.url.searchParams)
+  if (transferredPrisms) {
+    // Refresh hierarchy under the incoming scope before resolving visible map layers.
+    appCtx.view.scope.prisms = transferredPrisms
+    await appCtx.view.queries.refreshProjects(false)
+    await appCtx.view.queries.refreshLayers(false, false)
+    if (transferredPrisms.layer.length === 0) {
+      appCtx.view.scope.prisms.layer = appCtx.view.queries.rows.layer.map(
+        layer => layer.id,
+      )
+    }
+    await appCtx.view.postLayerMutation(false, false)
+    await appCtx.view.queries.refreshFeatures(false)
+    const cleanUrl = new URL(page.url.href)
+    for (const key of ['mapPrisms', ...MAP_PRISM_PARAMS]) {
+      cleanUrl.searchParams.delete(key)
+    }
+    await goto(`${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`, {
+      replace: true,
+      reset: false,
+    })
+    return
+  }
 
   const selectedLayerIds = getMapResourceDeepLinkLayerIds(
     page.url.searchParams,
