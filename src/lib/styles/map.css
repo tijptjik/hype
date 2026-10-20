@@ -157,111 +157,108 @@
    4. MAP CONTROLS :: Navigation
    ═══════════════════════ */
 
-.maplibregl-ctrl-compass {
-  border-radius: 12px;
-  overflow: hidden;
-}
+@layer components {
+  /* Control groups stay transparent so the separate circular widgets float over the map. */
+  .maplibregl-ctrl-group {
+    /* biome-ignore lint/complexity/noImportantStyles: Override upstream unlayered MapLibre styles. */
+    background: transparent !important;
+    border: 0;
+    border-radius: 0;
+    /* biome-ignore lint/complexity/noImportantStyles: Override upstream unlayered MapLibre styles. */
+    box-shadow: none !important;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-.maplibregl-ctrl-compass .maplibregl-ctrl-icon {
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23333' viewBox='0 0 29 29'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23A294E5' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E");
-  position: relative;
-}
+  .maplibregl-ctrl-group button {
+    /* biome-ignore lint/complexity/noImportantStyles: Override upstream unlayered MapLibre control states. */
+    background: var(--theme-panel) !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Override upstream button separators. */
+    border: 1px solid var(--theme-border) !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Override upstream first/last button corners. */
+    border-radius: 9999px !important;
+    color: var(--theme-text);
+    appearance: none;
+    -webkit-appearance: none;
+  }
 
-.maplibregl-ctrl-compass .maplibregl-ctrl-icon::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23555' viewBox='0 0 29 29'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23B8A8FF' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E");
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-}
+  .maplibregl-ctrl-group button:hover:not(:disabled) {
+    /* biome-ignore lint/complexity/noImportantStyles: Override upstream unlayered hover styles. */
+    background: var(--theme-raised) !important;
+  }
 
-.maplibregl-ctrl-compass:hover .maplibregl-ctrl-icon::after {
-  opacity: 1;
-}
+  .maplibregl-ctrl-group button:focus-visible {
+    /* biome-ignore lint/complexity/noImportantStyles: Override MapLibre's unlayered focus outline reset. */
+    outline: 2px solid var(--theme-primary) !important;
+    outline-offset: 2px;
+  }
 
-.maplibregl-ctrl-compass:hover .maplibregl-ctrl-icon {
-  filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(92%)
-    contrast(90%);
-}
+  /* Navigation: paint each compass half with theme colors, retaining MapLibre's inline rotation. */
+  .maplibregl-ctrl-compass .maplibregl-ctrl-icon,
+  .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
+    /* biome-ignore lint/complexity/noImportantStyles: Replace upstream fixed-color SVGs in every control state. */
+    background-image: none !important;
+    position: relative;
+  }
 
-/* <button class="maplibregl-ctrl-compass" type="button" title="Reset bearing to north" aria-label="Reset bearing to north"><span class="maplibregl-ctrl-icon" aria-hidden="true" style="transform: rotate(-17.6deg);"></span></button> */
+  .maplibregl-ctrl-compass .maplibregl-ctrl-icon::before,
+  .maplibregl-ctrl-compass .maplibregl-ctrl-icon::after,
+  .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon::before,
+  .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+  }
 
-/* ═══════════════════════
-   4. MAP CONTROLS :: UserLocation
-   ═══════════════════════ */
+  .maplibregl-ctrl-compass .maplibregl-ctrl-icon::before {
+    clip-path: polygon(36% 48%, 50% 21%, 64% 48%);
+  }
 
-/* Geolocate control button styling */
-.maplibregl-ctrl-geolocate {
-  border-radius: 12px;
-  overflow: hidden;
-}
+  .maplibregl-ctrl-compass .maplibregl-ctrl-icon::after {
+    background: var(--theme-secondary);
+    clip-path: polygon(36% 55%, 50% 83%, 64% 55%);
+  }
 
-.maplibregl-ctrl-geolocate:hover {
-  border-radius: 12px;
-}
+  /* UserLocation: a theme-colored mask keeps the target legible in every palette. */
+  .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon::before {
+    mask:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 4C9 4 9 5 9 5v.1A5 5 0 0 0 5.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 0 0 9 14.9v.1s0 1 1 1 1-1 1-1v-.1a5 5 0 0 0 3.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0 0 11 5.1V5s0-1-1-1m0 2.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 1 1 0-7'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
 
-.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active {
-  border-radius: 12px;
-}
+  .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon::after {
+    clip-path: circle(10%);
+  }
 
-/* Geolocate control icon - #4987E2 color */
-/* biome-ignore lint/style/noDescendingSpecificity: MapLibre control selectors target separate control states and retain their source order. */
-.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
-  filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(115%)
-    contrast(90%);
-  transition: all 0.3s ease-in-out;
-}
+  .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active,
+  .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background {
+    color: var(--theme-primary);
+  }
 
-.maplibregl-ctrl-geolocate:hover .maplibregl-ctrl-icon {
-  filter: invert(50%) sepia(100%) saturate(800%) hue-rotate(210deg) brightness(92%)
-    contrast(90%);
-}
+  /* Background tracking uses a hollow target; waiting retains MapLibre's icon animation. */
+  .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background
+  .maplibregl-ctrl-icon::after,
+  .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background-error
+    .maplibregl-ctrl-icon::after {
+    content: none;
+  }
 
-.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active .maplibregl-ctrl-icon {
-  filter: invert(50%) sepia(100%) saturate(960%) hue-rotate(210deg) brightness(115%)
-    contrast(90%);
-}
+  .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active-error,
+  .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background-error {
+    color: var(--theme-error);
+  }
 
-/* Control groups */
-.maplibregl-ctrl-group {
-  /* biome-ignore lint/complexity/noImportantStyles: MapLibre's global control stylesheet has higher specificity. */
-  background: transparent !important;
-  /* biome-ignore lint/complexity/noImportantStyles: MapLibre's global control stylesheet has higher specificity. */
-  border: 0 !important;
-  border-radius: 0;
-  /* biome-ignore lint/complexity/noImportantStyles: MapLibre's global control stylesheet has higher specificity. */
-  box-shadow: none !important;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+  /* Disabled geolocation retains the unavailable slash instead of looking active. */
+  .maplibregl-ctrl-group button:disabled {
+    color: var(--theme-muted);
+    cursor: not-allowed;
+  }
 
-.maplibregl-ctrl-group button,
-.maplibregl-ctrl-group button:hover,
-.maplibregl-ctrl-group button:focus,
-.maplibregl-ctrl-group button:active,
-.maplibregl-ctrl-group button.maplibregl-ctrl-geolocate-active,
-.maplibregl-ctrl-group button.maplibregl-ctrl-compass {
-  /* biome-ignore lint/complexity/noImportantStyles: Keep app control states above upstream MapLibre rules. */
-  background: #000 !important;
-  /* biome-ignore lint/complexity/noImportantStyles: Keep app control states above upstream MapLibre rules. */
-  border: 1px solid #15191e !important;
-  /* biome-ignore lint/complexity/noImportantStyles: Keep app control states above upstream MapLibre rules. */
-  border-radius: 9999px !important;
-  /* biome-ignore lint/complexity/noImportantStyles: Keep app control states above upstream MapLibre rules. */
-  outline: none !important;
-  /* biome-ignore lint/complexity/noImportantStyles: Keep app control states above upstream MapLibre rules. */
-  box-shadow: none !important;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-/* biome-ignore lint/style/noDescendingSpecificity: The control group background reset intentionally follows control-specific filter rules. */
-.maplibregl-ctrl-group .maplibregl-ctrl-icon {
-  /* biome-ignore lint/complexity/noImportantStyles: Keep app control icons above upstream MapLibre rules. */
-  background-color: transparent !important;
+  .maplibregl-ctrl-geolocate:disabled .maplibregl-ctrl-icon::after {
+    content: "";
+    background: var(--theme-error);
+    clip-path: polygon(70% 25%, 75% 30%, 30% 75%, 25% 70%);
+  }
 }
