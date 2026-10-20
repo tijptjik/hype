@@ -92,3 +92,17 @@ Add `--write` only for the intended upload destination. The script validates eve
 - [Martina Hefter's publisher](https://www.penguin.co.uk/books/471737/hey-good-morning-how-are-you-by-hefter-martina/9780241772683) and [Ceilings publisher](https://twistedspoon.com/ceilings.html).
 
 Book-specific publisher and biography sources are stored alongside each record in `data/backfill.json`. Cover-source URLs and hashes are in `data/covers.json`.
+
+## Image publication verification (20 October 2026)
+
+All 28 published 2024–2026 listings were verified to have a published Featured
+(`canonical`) cover, including The Lake. The blank cover was caused by the local
+asset service returning HTTP 502. Restarting `dev:asset-service:simulated` restored
+all nineteen backfill cover URLs: each returned HTTP 200 and decoded in Chromium.
+The service must remain running while using the local app.
+
+Project image policies are documented in `../../docs/specs/Design-Spec-Images.md`.
+Migration `0133_project_image_publication.sql` was applied only to the local database,
+with backup `/tmp/hype-before-image-policy-20261020T173647.sqlite`. Both policies are
+enabled for ELN. Ghostsigns and Independent Bookstores retain automatic publication
+but have automatic first-image classification disabled. No production state changed.
