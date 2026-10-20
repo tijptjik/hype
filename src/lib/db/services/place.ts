@@ -163,10 +163,11 @@ export async function getAcceptedFeaturePlace(
       ),
     )
     .get()
-  if (!row) return null
+  if (!row || row.state === 'redirect') return null
   const { facts, location, overrides, ...identity } = row
   return {
     ...identity,
+    state: row.state,
     brandMode: FeaturePlaceOverridesSchema.parse(overrides).brands?.mode ?? 'inherit',
     effective: resolveFeaturePlace(
       PlaceFactsSchema.parse(facts),

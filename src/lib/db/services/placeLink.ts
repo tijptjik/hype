@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, isNull, or } from 'drizzle-orm'
+import { and, eq, isNull, ne, or } from 'drizzle-orm'
 // SCHEMA
 import { place, placeRevision } from '../schema/place'
 // DOMAIN
@@ -50,6 +50,7 @@ export async function linkInitialFeaturePlace(
     .where(
       and(
         eq(place.id, input.placeId),
+        ne(place.state, 'redirect'),
         eq(placeRevision.id, input.revisionId),
         or(isNull(place.ownerProjectId), eq(place.ownerProjectId, input.projectId)),
       ),

@@ -96,7 +96,8 @@ export async function readPlaceIdentityBaseline(
       ),
     )
     .get()
-  return row ?? null
+  if (!row || row.expectedState === 'redirect') return null
+  return { ...row, expectedState: row.expectedState }
 }
 
 /**

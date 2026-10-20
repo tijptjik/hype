@@ -27,6 +27,11 @@ import {
   readPlaceIdentityReview,
   acceptPlaceIdentityReview,
 } from '#lib/db/services/placeIdentityReview.js'
+import {
+  capturePlaceMergeReview,
+  applyPlaceMergeReview,
+} from '#lib/db/services/placeMerge.js'
+import { resolvePlaceRedirect } from '#lib/db/services/placeRedirect.js'
 import { acceptPlaceIdentity } from '#lib/db/services/placeIdentity.js'
 import { persistSaanSeoiPlace } from '#lib/db/services/placeSource.js'
 import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
@@ -69,7 +74,7 @@ afterEach(() => {
   for (const db of stores.splice(0)) db.close()
 })
 
-function setup() {
+function setup(includeScope = false) {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
   sqlite.exec(`PRAGMA foreign_keys=ON;
@@ -91,6 +96,13 @@ function setup() {
   sqlite.exec(readFileSync('migrations/0113_place_adoption_review.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0116_place_identity_history.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0117_place_identity_review.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0118_place_merge_redirect.sql', 'utf8'))
+  // Scope-focused cases explicitly install their guards after arranging legacy input.
+  if (!includeScope)
+    sqlite.exec(`DROP TRIGGER feature_place_scope_insert;
+    DROP TRIGGER feature_place_scope_update; DROP TRIGGER feature_place_feature_scope;
+    DROP TRIGGER feature_place_owner_scope;`)
+
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => {
       if (args.length > 100) throw new Error('D1 parameter limit exceeded')
@@ -491,6 +503,284 @@ describe('immutable SaanSeoi Place ingestion', () => {
       state: 'manual',
       ssId: null,
     })
+  })
+
+  /** Arrange two Places with independent accepted groups and explicit Feature corrections. */
+  async function mergeFixture() {
+    const { db, sqlite } = setup(true)
+    const target = await createLocalPlace(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'creator',
+    )
+    const source = await persistSaanSeoiPlace(db, projection())
+    const newer = await persistSaanSeoiPlace(db, {
+      ...projection(),
+      facts: {
+        ...projection().facts,
+        names: { en: 'Newer source' },
+        location: {
+          ...projection().facts.location,
+          geometry: { type: 'Point', coordinates: [114.18, 22.31] },
+        },
+      },
+    })
+    sqlite.exec("INSERT INTO feature(id,projectId) VALUES('g','p')")
+    const associate =
+      sqlite.prepare(`INSERT INTO featurePlace(featureId,placeId,factsRevisionId,locationRevisionId,overrides)
+      VALUES(?,?,?,?,?)`)
+    associate.run(
+      'f',
+      target.placeId,
+      target.revisionId,
+      target.revisionId,
+      JSON.stringify({
+        names: { en: { mode: 'override', value: 'Target correction' } },
+      }),
+    )
+    associate.run(
+      'g',
+      source.placeId,
+      source.revisionId,
+      newer.revisionId,
+      JSON.stringify({
+        names: { en: { mode: 'override', value: 'Source correction' } },
+      }),
+    )
+    const baseline = await readPlaceIdentityBaseline(db, target.placeId, 'p')
+    if (!baseline) throw new Error('Missing baseline')
+    const identityReviewId = await captureMirroredPlaceIdentityReview(
+      db,
+      baseline,
+      source.revisionId,
+      'reviewer',
+    )
+    if (!identityReviewId) throw new Error('Missing identity review')
+    const captured = await capturePlaceMergeReview(db, {
+      placeId: target.placeId,
+      identityReviewId,
+      ownerProjectId: 'p',
+      sourcePlaceId: source.placeId,
+      sourceOwnerProjectId: null,
+      actorId: 'reviewer',
+    })
+    if (captured.status !== 'ready')
+      throw new Error('Missing merge review: ' + captured.status)
+    return {
+      db,
+      sqlite,
+      target,
+      source,
+      newer,
+      identityReviewId,
+      captured,
+      input: {
+        placeId: target.placeId,
+        sourcePlaceId: source.placeId,
+        ownerProjectId: 'p',
+        sourceOwnerProjectId: null,
+        reviewId: captured.reviewId,
+        actorId: 'reviewer',
+        reason: 'Verified same shop and premises',
+      },
+    }
+  }
+
+  it('merges reviewed identities atomically while preserving Feature values, overrides and source history', async () => {
+    const { db, sqlite, target, source, captured, input } = await mergeFixture()
+    expect(captured.affectedFeatures).toBe(1)
+    const beforeFeatures = sqlite.prepare('SELECT * FROM feature ORDER BY id').all()
+    const beforeTarget = await getAcceptedFeaturePlace(db, 'f', 'p')
+    const beforeSource = await getAcceptedFeaturePlace(db, 'g', 'p')
+    const sourceHistory = sqlite
+      .prepare('SELECT * FROM placeRevision WHERE placeId=? ORDER BY sequence')
+      .all(source.placeId)
+    expect(await applyPlaceMergeReview(db, input)).toMatchObject({
+      status: 'applied',
+      affectedFeatures: 1,
+    })
+    expect(sqlite.prepare('SELECT * FROM feature ORDER BY id').all()).toEqual(
+      beforeFeatures,
+    )
+    expect(await getAcceptedFeaturePlace(db, 'f', 'p')).toEqual(
+      beforeTarget && { ...beforeTarget, state: 'linked', ssId: 'canonical-shop' },
+    )
+    const afterSource = await getAcceptedFeaturePlace(db, 'g', 'p')
+    expect(afterSource?.placeId).toBe(target.placeId)
+    expect(afterSource?.effective).toEqual(beforeSource?.effective)
+    expect(afterSource?.revision).not.toBe(beforeSource?.revision)
+    expect(
+      sqlite
+        .prepare('SELECT * FROM placeRevision WHERE placeId=? ORDER BY sequence')
+        .all(source.placeId),
+    ).toEqual(sourceHistory)
+    expect(
+      sqlite.prepare('SELECT state,ssId FROM place WHERE id=?').get(source.placeId),
+    ).toEqual({ state: 'redirect', ssId: null })
+    expect(await resolvePlaceRedirect(db, source.placeId, 'p')).toEqual({
+      placeId: target.placeId,
+      ssId: 'canonical-shop',
+    })
+    expect(await resolvePlaceRedirect(db, source.placeId, 'other')).toBeNull()
+    const replay = await persistSaanSeoiPlace(db, projection())
+    expect(replay.placeId).toBe(target.placeId)
+    expect(
+      sqlite
+        .prepare('SELECT count(*) n FROM placeRevision WHERE placeId=?')
+        .get(target.placeId)?.n,
+    ).toBe(3)
+    expect(
+      sqlite
+        .prepare('SELECT count(*) n FROM featurePlaceHistory WHERE featureId=?')
+        .get('g')?.n,
+    ).toBe(2)
+    expect(await applyPlaceMergeReview(db, input)).toEqual({ status: 'conflict' })
+    expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+    expect(() => sqlite.exec('DELETE FROM placeRedirect')).toThrow()
+    expect(() =>
+      sqlite
+        .prepare("UPDATE place SET state='linked',ssId='reactivated' WHERE id=?")
+        .run(source.placeId),
+    ).toThrow()
+  })
+
+  it('rejects a merge after an affected Feature changes and fences the same race inside its batch', async () => {
+    for (const late of [false, true]) {
+      const { db, sqlite, input, target } = await mergeFixture()
+      const change = () =>
+        sqlite
+          .prepare(
+            "UPDATE featurePlace SET revision='concurrent',overrides=? WHERE featureId='g'",
+          )
+          .run(
+            JSON.stringify({
+              names: { en: { mode: 'override', value: 'Concurrent correction' } },
+            }),
+          )
+      if (late)
+        db.batch = new Proxy(db.batch, {
+          apply(fn, receiver, args) {
+            change()
+            return Reflect.apply(fn, receiver, args)
+          },
+        })
+      else change()
+      expect(await applyPlaceMergeReview(db, input)).toEqual({ status: 'conflict' })
+      expect(sqlite.prepare('SELECT count(*) n FROM placeRedirect').get()?.n).toBe(0)
+      expect(
+        sqlite
+          .prepare('SELECT count(*) n FROM placeRevision WHERE placeId=?')
+          .get(target.placeId)?.n,
+      ).toBe(1)
+      expect(
+        sqlite.prepare('SELECT count(*) n FROM placeIdentityHistory').get()?.n,
+      ).toBe(0)
+    }
+  })
+
+  it('rolls back copied revisions, associations, redirects and identities after a late history failure', async () => {
+    const { db, sqlite, input } = await mergeFixture()
+    const tables = [
+      'place',
+      'placeRevision',
+      'featurePlace',
+      'featurePlaceHistory',
+      'placeRedirect',
+      'placeIdentityHistory',
+    ]
+    const before = tables.map(table => sqlite.prepare(`SELECT * FROM ${table}`).all())
+    sqlite.exec(
+      "CREATE TRIGGER reject_merge BEFORE INSERT ON placeIdentityHistory BEGIN SELECT RAISE(ABORT,'late merge failure'); END",
+    )
+    await expect(applyPlaceMergeReview(db, input)).rejects.toThrow('late merge failure')
+    for (const [index, table] of tables.entries())
+      expect(sqlite.prepare(`SELECT * FROM ${table}`).all()).toEqual(before[index])
+  })
+
+  it('does not move another project into a private Place or widen private history into a shared survivor', async () => {
+    const { db, sqlite, input, identityReviewId, source } = await mergeFixture()
+    sqlite.exec("UPDATE feature SET projectId='other' WHERE id='g'")
+    expect(await capturePlaceMergeReview(db, { ...input, identityReviewId })).toEqual({
+      status: 'scope-conflict',
+    })
+    sqlite.exec("UPDATE feature SET projectId='p' WHERE id='g'")
+    sqlite.prepare("UPDATE place SET ownerProjectId='p' WHERE id=?").run(source.placeId)
+    const shared = await persistSaanSeoiPlace(db, {
+      ...projection(),
+      ssId: 'shared-survivor',
+    })
+    const baseline = await readPlaceIdentityBaseline(db, shared.placeId, null)
+    if (!baseline) throw new Error('Missing shared baseline')
+    const review = await capturePlaceIdentityReview(
+      db,
+      baseline,
+      projection(),
+      'core-reviewer',
+    )
+    if (!review) throw new Error('Missing review')
+    expect(
+      await capturePlaceMergeReview(db, {
+        placeId: shared.placeId,
+        ownerProjectId: null,
+        identityReviewId: review,
+        sourcePlaceId: source.placeId,
+        sourceOwnerProjectId: 'p',
+        actorId: 'core-reviewer',
+      }),
+    ).toEqual({ status: 'scope-conflict' })
+  })
+
+  it('resolves multi-step redirects and retains historical identity claims with the survivor', async () => {
+    const { db, sqlite, input, source, target } = await mergeFixture()
+    expect(await applyPlaceMergeReview(db, input)).toMatchObject({ status: 'applied' })
+    const next = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'creator')
+    const baseline = await readPlaceIdentityBaseline(db, next.placeId, 'p')
+    if (!baseline) throw new Error('Missing baseline')
+    const identityReviewId = await capturePlaceIdentityReview(
+      db,
+      baseline,
+      projection(),
+      'reviewer',
+    )
+    if (!identityReviewId) throw new Error('Missing review')
+    const captured = await capturePlaceMergeReview(db, {
+      placeId: next.placeId,
+      identityReviewId,
+      ownerProjectId: 'p',
+      sourcePlaceId: target.placeId,
+      sourceOwnerProjectId: 'p',
+      actorId: 'reviewer',
+    })
+    expect(captured).toMatchObject({ status: 'ready', affectedFeatures: 2 })
+    if (captured.status !== 'ready') throw new Error('Missing merge')
+    expect(
+      await applyPlaceMergeReview(db, {
+        ...input,
+        placeId: next.placeId,
+        sourcePlaceId: target.placeId,
+        sourceOwnerProjectId: 'p',
+        reviewId: captured.reviewId,
+      }),
+    ).toMatchObject({ status: 'applied' })
+    expect(await resolvePlaceRedirect(db, source.placeId, 'p')).toEqual({
+      placeId: next.placeId,
+      ssId: 'canonical-shop',
+    })
+    const current = await readPlaceIdentityBaseline(db, next.placeId, 'p')
+    if (!current) throw new Error('Missing current baseline')
+    expect(
+      await acceptPlaceIdentity(
+        db,
+        { ...current, actorId: 'reviewer', reason: 'Reviewed source replacement' },
+        { ...projection(), ssId: 'new-canonical-shop' },
+      ),
+    ).toMatchObject({ status: 'applied' })
+    expect(await resolvePlaceRedirect(db, target.placeId, 'p')).toEqual({
+      placeId: next.placeId,
+      ssId: 'new-canonical-shop',
+    })
+    expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
   })
 
   it('captures only a current accessible canonical mirror for identity review', async () => {

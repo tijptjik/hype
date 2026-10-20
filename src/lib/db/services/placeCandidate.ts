@@ -123,7 +123,8 @@ export async function searchLocalPlaceCandidates(
     .orderBy(desc(place.createdAt), place.id)
     .limit(20)
   return rows.map(row => {
-    if (row.state === 'linked') throw new Error('Unexpected linked Place')
+    if (row.state !== 'manual' && row.state !== 'unresolved')
+      throw new Error('Unexpected nonlocal Place')
     return { ...row, state: row.state, facts: PlaceFactsSchema.parse(row.facts) }
   })
 }

@@ -29,7 +29,9 @@ export const place = sqliteTable(
   {
     id: text('id').primaryKey(),
     ssId: text('ssId').unique(),
-    state: text('state', { enum: ['linked', 'unresolved', 'manual'] }).notNull(),
+    state: text('state', {
+      enum: ['linked', 'unresolved', 'manual', 'redirect'],
+    }).notNull(),
     // Local baselines are private to their owning project until explicitly published.
     ownerProjectId: text('ownerProjectId').references(() => project.id, {
       onDelete: 'restrict',
@@ -46,11 +48,11 @@ export const place = sqliteTable(
   table => [
     check(
       'place_state_check',
-      sql`${table.state} IN ('linked', 'unresolved', 'manual')`,
+      sql`${table.state} IN ('linked', 'unresolved', 'manual', 'redirect')`,
     ),
     check(
       'place_identity_check',
-      sql`(${table.state} = 'linked' AND ${table.ssId} IS NOT NULL) OR (${table.state} != 'linked' AND ${table.ssId} IS NULL AND ${table.ownerProjectId} IS NOT NULL)`,
+      sql`(${table.state} = 'linked' AND ${table.ssId} IS NOT NULL) OR (${table.state} IN ('unresolved','manual') AND ${table.ssId} IS NULL AND ${table.ownerProjectId} IS NOT NULL) OR (${table.state}='redirect' AND ${table.ssId} IS NULL)`,
     ),
     check(
       'place_availability_check',
@@ -346,5 +348,82 @@ export const placeIdentityReview = sqliteTable(
     check('place_identity_review_baseline', sql`json_valid(${table.baseline})`),
     check('place_identity_review_projection', sql`json_valid(${table.projection})`),
     check('place_identity_review_actor', sql`length(trim(${table.actorId})) > 0`),
+  ],
+)
+
+/** Captured merge impact; both identities and source associations are fenced at acceptance. */
+export const placeMergeReview = sqliteTable(
+  'placeMergeReview',
+  {
+    id: text('id').primaryKey(),
+    identityReviewId: text('identityReviewId')
+      .notNull()
+      .references(() => placeIdentityReview.id, { onDelete: 'restrict' }),
+    targetPlaceId: text('targetPlaceId')
+      .notNull()
+      .references(() => place.id, { onDelete: 'restrict' }),
+    sourcePlaceId: text('sourcePlaceId')
+      .notNull()
+      .references(() => place.id, { onDelete: 'restrict' }),
+    targetBaseline: text('targetBaseline', { mode: 'json' })
+      .$type<PlaceIdentityBaseline>()
+      .notNull(),
+    sourceBaseline: text('sourceBaseline', { mode: 'json' })
+      .$type<PlaceIdentityBaseline>()
+      .notNull(),
+    sourceFeatureToken: text('sourceFeatureToken').notNull(),
+    sourceFeatureCount: integer('sourceFeatureCount').notNull(),
+    sourceRevisionId: text('sourceRevisionId').notNull(),
+    actorId: text('actorId').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  table => [
+    foreignKey({
+      columns: [table.sourcePlaceId, table.sourceRevisionId],
+      foreignColumns: [placeRevision.placeId, placeRevision.id],
+    }),
+    check('place_merge_distinct', sql`${table.sourcePlaceId}!=${table.targetPlaceId}`),
+    check('place_merge_target_json', sql`json_valid(${table.targetBaseline})`),
+    check('place_merge_source_json', sql`json_valid(${table.sourceBaseline})`),
+    check('place_merge_features_json', sql`json_valid(${table.sourceFeatureToken})`),
+    check('place_merge_count', sql`${table.sourceFeatureCount}>=0`),
+  ],
+)
+
+/** Permanent alias retains absorbed IDs and auditable review/actor evidence. */
+export const placeRedirect = sqliteTable(
+  'placeRedirect',
+  {
+    sourcePlaceId: text('sourcePlaceId')
+      .primaryKey()
+      .references(() => place.id, { onDelete: 'restrict' }),
+    targetPlaceId: text('targetPlaceId')
+      .notNull()
+      .references(() => place.id, { onDelete: 'restrict' }),
+    id: text('id').notNull().unique(),
+    sourceSsId: text('sourceSsId'),
+    reviewId: text('reviewId')
+      .notNull()
+      .unique()
+      .references(() => placeMergeReview.id, { onDelete: 'restrict' }),
+    actorId: text('actorId').notNull(),
+    reason: text('reason').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  table => [
+    index('place_redirect_target').on(table.targetPlaceId, table.sourcePlaceId),
+    check(
+      'place_redirect_distinct',
+      sql`${table.sourcePlaceId}!=${table.targetPlaceId}`,
+    ),
+    check('place_redirect_actor', sql`length(trim(${table.actorId}))>0`),
+    check(
+      'place_redirect_reason',
+      sql`length(trim(${table.reason})) BETWEEN 1 AND 2000`,
+    ),
   ],
 )

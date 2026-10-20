@@ -47,7 +47,8 @@ Retain accepted association history and source attribution. Never rebind a Place
 because its source ID disappears or a nearby candidate looks similar. Accepted source
 identity changes retain the HYPE ID and all feature relationships.
 
-Place states are `linked`, `unresolved`, and `manual`. Unresolved records participate
+Active Place states are `linked`, `unresolved`, and `manual`; absorbed identities use
+`redirect` and cannot receive new Feature associations. Unresolved records participate
 in later candidate discovery. Intentionally manual records do not. Source availability
 (current, missing, review required) is independent of those states. Manual/unresolved
 records have a local baseline with provenance; they never impersonate upstream records.
@@ -1200,3 +1201,49 @@ screenshots are at `output/playwright/place-identity-comparison.png` and
 `output/playwright/place-identity-merge-required.png`. The dev server was stopped.
 136 focused tests pass and the full app check retains 10 existing errors / 19 warnings.
 No primary identity acceptance, deployment or production mutation was performed.
+
+
+### Reviewed merge and permanent redirects (Refs #194)
+
+Migration 0118 retains absorbed Place IDs as immutable redirects rather than deleting or
+reusing them. Redirect resolution follows multiple merges and checks the final survivor's
+owner before returning its identity. Reactivation, redirect editing/deletion, cycles through
+retired targets and new Feature associations to redirected Places are prohibited. Existing
+Feature queries still resolve only live associations; stale candidate links must be refreshed.
+
+`capturePlaceMergeReview` captures both independently authorized Place baselines, the exact
+canonical source evidence already reviewed, and an ordered association/ancestry token with
+an affected-Feature count. `applyPlaceMergeReview` rechecks all of them in its atomic batch.
+It retains the target HYPE Place ID and ownership, copies source revisions with unchanged
+facts/payloads into that survivor, and moves source associations to their corresponding copied
+facts/location revisions. Explicit overrides, effective Feature fields, timestamps and MTR
+values remain unchanged. Association history records the move; original source revisions
+remain immutable under the absorbed identity. Identity history links to the source comparison,
+and the permanent redirect records the merge review, actor and reason.
+
+The first guarded redirect insert is a unique transaction receipt for every subsequent write.
+A concurrent Feature edit or Place/source change therefore leaves no partial merge. Later
+errors roll back revisions, associations, redirects and identities together. Historical source
+claims follow their surviving alias set, and source ingestion remains idempotent after merging.
+An exact replay is a stale conflict, never a second merge.
+
+Privacy is preserved: a private source cannot be widened into a shared or differently owned
+survivor, and another project's Features cannot be moved into a private Place. Such cases
+return `scope-conflict` and require a separate visibility/ownership decision. The caller must
+administer BOTH Places; these are trusted domain services, not yet remote merge commands.
+The editor still reports merge-required until the two-Place authorization/impact review and
+explicit merge confirmation are wired into its existing identity comparison.
+
+The parent-table rebuild was rehearsed through local D1 against a populated copy. All 77
+existing application tables were unchanged, with integrity `ok` and zero FK violations.
+The migration preserves RESTRICT relationships, verifies actual foreign keys before clearing
+SQLite's stale deferred counter, and never disables `foreign_keys`. It is now applied to the
+primary local database after a fresh backup, with the same 77-table preservation check and
+zero primary merges. A local D1 runtime rehearsal used synthetic source evidence and one
+existing Feature in the isolated copy: all Feature fields stayed unchanged, redirect resolution
+worked, and replay was rejected. No unconfirmed primary identities were merged.
+
+141 focused tests pass, including independent revision groups, overrides, stale and concurrent
+association edits, late-failure rollback, privacy conflicts, multiple redirect steps, and
+post-merge source ID correction. Worker type-check passes; full application checking retains
+10 existing errors / 19 warnings. No deployment or production mutation was performed.

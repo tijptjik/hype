@@ -13,6 +13,7 @@ import { nanoid } from 'nanoid'
 // SCHEMA
 import { place, placeIdentityHistory, placeRevision } from '../schema/place'
 // SERVICES
+import { placeAliasIds } from './placeRedirect'
 import { prepareSaanSeoiRevision } from './placeSource'
 // TYPES
 import type { Database } from '#lib/types.js'
@@ -84,7 +85,7 @@ export async function acceptPlaceIdentity(
   const historicalClaim = await db
     .select({ id: placeIdentityHistory.id })
     .from(placeIdentityHistory)
-    .where(sql`${placeIdentityHistory.placeId} != ${input.placeId}
+    .where(sql`${placeIdentityHistory.placeId} NOT IN ${placeAliasIds(input.placeId)}
       AND (${placeIdentityHistory.ssId}=${projection.ssId}
         OR ${placeIdentityHistory.previousSsId}=${projection.ssId})`)
     .get()
@@ -104,7 +105,7 @@ export async function acceptPlaceIdentity(
     AND state=${input.expectedState} AND ssId IS ${input.expectedSsId}
     AND ownerProjectId IS ${input.expectedOwnerProjectId})
     AND NOT EXISTS (SELECT 1 FROM place WHERE ssId=${projection.ssId} AND id!=${input.placeId})
-    AND NOT EXISTS (SELECT 1 FROM placeIdentityHistory WHERE placeId!=${input.placeId}
+    AND NOT EXISTS (SELECT 1 FROM placeIdentityHistory WHERE placeId NOT IN ${placeAliasIds(input.placeId)}
       AND (ssId=${projection.ssId} OR previousSsId=${projection.ssId}))
     AND (SELECT h.id FROM placeIdentityHistory h WHERE h.placeId=${input.placeId}
       AND NOT EXISTS (SELECT 1 FROM placeIdentityHistory next WHERE next.previousHistoryId=h.id))
