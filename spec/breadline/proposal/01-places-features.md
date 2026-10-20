@@ -259,9 +259,9 @@ Address content is distinct from publication envelopes: HYPE does not invent
 SaanSeoi address IDs, inventory IDs, snapshot IDs, dataset codes or publisher metadata.
 A local Place remains manual/unresolved even when its address is fully structured.
 
-The component/type contract is in `src/lib/addresses/localPlaceAddress.ts`, based on
-SaanSeoi `libs/db/src/schema/shared.ts`, `addressGranularity.ts`, `address3d.ts` and
-Atlas's Address/Identifiers API schemas. Unit/floor codes and block types are validated;
+The shared content/type contract is in SaanSeoi `libs/address/src/content.ts`,
+consumed by both repositories through `@saanseoi/address`. HYPE retains compatibility
+exports in `src/lib/addresses/localPlaceAddress.ts`. Unit/floor codes and block types are validated;
 locale expressions and explicit null/false values survive. The local editor supports
 multilingual address components, unit/floor semantics and exact locale expressions.
 Shared unit content belongs to the Place; Feature-only corrections and access hints
@@ -286,27 +286,13 @@ immutable edits, stale-owner/revision fences, local review and Feature overrides
 Chromium verified saving structured components and unit details, reloading them from
 an isolated local database, and rendering the resulting address without page errors.
 
-## Address scope vocabulary and data repair
+## Address scope vocabulary
 
 Address scope uses `unit` for separately identified units, including rooms, and
 `unit_portion` for a portion of a unit. The unit-type code `R` still means Room;
 classification of unit type is independent of address scope. Block descriptors
 preserve the source component: `flat`, `unit` and `apartment` are observed source
 values, not an assertion that the component describes an entire building.
-
-The data repair in `scripts/address-granularity/` maps `room` to `unit` and
-`room_part` to `unit_portion` only at JSON `granularity` keys. It covers Place
-revisions, Feature overrides/history, review evidence, refresh projections and
-Feature address metadata. It preserves display strings and identifiers, recomputes
-revision hashes using the original writer's convention, and updates referenced
-content hashes in the same transaction. Unknown hash conventions fail closed.
-Immutable triggers are restored in that same transaction; stale input rolls it back.
-The SaanSeoi companion repairs CURRENT and every HISTORY shard, including inactive
-scopes, and recomputes canonical history hashes without changing snapshot ancestry.
-No schema DDL is needed: both Drizzle generators report no physical schema change.
-Deployment must run these data repairs after schema migrations and before the new
-application is released. They are explicit deployment commands, not request-time
-compatibility code. Workflow activation is pending approval.
 
 ## Proposed Feature Tasks presentation
 
@@ -330,7 +316,10 @@ Tasks should be a presentation of existing identity/adoption review state, with
 stable keys derived from Feature, review kind and candidate revision. Do not add a
 second task lifecycle/table that can disagree with review decisions. Organisation
 permissions still control editing a Place; Feature permissions control adoption.
-This is the proposed flow; the current review UI has not been replaced yet.
+The basic review section now presents pending adoption reviews as **Tasks**, with
+a count and an action to prepare the latest locally authored address for review.
+The dedicated tab, unified identity tasks and richer component comparisons remain
+UI follow-up work; they do not require another persistence model.
 
 ## Display-first address migration plan
 
@@ -374,18 +363,18 @@ An absent SaanSeoi Address does not prevent an identity match or force the Place
 remain unresolved. The address can remain locally authored while the Place is linked.
 Represent that content as a Place-level address overlay/revision, separate from the
 immutable source mirror and from Feature-specific corrections. Sibling Features
-inherit this Place content unless they have their own overrides. The existing
-local-address editor/service only supports Places without `ssId`; extending that
-write path and refresh resolution is still required.
+inherit this Place content unless they have their own overrides. The local-address editor/service supports matched Places as well as manual and
+unresolved Places. Organisation managers edit owned Places; core stewards edit
+shared Places. Writes fence ownership, source identity and the latest revision.
 
 Until reconciliation succeeds, incomplete or missing source addresses cannot erase
 local content. A new source address is a candidate for comparison, not permission to
 discard the local overlay. Resolve effective display from the accepted source plus
 Place-authored address and then Feature overrides, preserving explicit clearing.
 
-The shared parser should live in a publishable SaanSeoi `libs/` package (proposed
-name `@saanseoi/address`), extracted from the existing Harbour Place address parser.
-Export shared address content types/validation, parsing and formatting. Keep DB/API
+The shared parser lives in SaanSeoi `libs/address` as `@saanseoi/address`, extracted
+from the existing Harbour Place address parser. It exports shared address content
+types/validation, parsing and formatting. Keep DB/API
 access and publication outside the package; inject optional street/building lookup
 dictionaries. Return recognised components, unresolved fragments and diagnostics,
 retaining the source text, parser version and review provenance. Preserve the exact
@@ -396,7 +385,20 @@ Both repositories consume explicit package versions, with shared multilingual
 regression fixtures. Parser improvements become available through dependency
 updates; reruns generate reviewable proposals rather than changing accepted content
 silently. Extract the existing tested parser instead of starting a second parser in
-HYPE. No package has been published or integrated by this design change.
+HYPE. SaanSeoi uses a workspace dependency; HYPE pins the packaged 0.1.0 artifact
+in `vendor/`. No registry publication is required or has been performed.
+
+New imports and Feature splits retain original display strings and parse structured
+Place content. Parser review in the editor compares the actual before/after display
+before accepting components. Unknown building/street text stays unresolved without
+lookup dictionaries; conflicting units remain visible in the original display.
+
+Source refresh and identity promotion retain authored address content and its
+provenance, keeping incoming canonical address evidence separately in
+`payload.sourceAddress`. A new canonical address never automatically retires the
+local content. Local edits on matched Places remain eligible for Feature adoption.
+The obsolete one-time granularity repair scripts and deployment instructions have
+been removed; the corrected `unit`/`unit_portion` vocabulary remains.
 
 Later, an authorised reconciliation finds/reuses an equivalent SaanSeoi Address or
 submits HYPE's reviewed components when none exists, then associates that Address

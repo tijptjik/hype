@@ -256,20 +256,23 @@ function blocked(group: Group): boolean {
 }
 </script>
 
-{#if isLocal}
-  <Button
-    text={m.place_address_review_latest()}
-    disabled={busy || isDirty}
-    onClick={latestLocal}
-  />
-{/if}
-
 <section class="space-y-4" aria-label={m.place_review_title()}>
   <SectionHeader
-    title={m.place_review_title()}
+    title={m.place_review_title() +
+      (page
+        ? ' (' + page.reviews.filter(review => review.decidedGroups < 2).length + ')'
+        : '')}
     description={m.place_review_description()}
   />
   <div class="space-y-4 px-6 pb-4">
+    {#if isLocal}
+      <Button
+        text={m.place_address_review_latest()}
+        disabled={busy || isDirty}
+        onClick={latestLocal}
+      />
+    {/if}
+
     <Button
       type="button"
       text={m.place_review_load()}

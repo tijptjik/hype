@@ -1,3 +1,5 @@
+// SHARED ADDRESS PARSER
+import { ADDRESS_PARSER_VERSION, parseAddressContent } from '@saanseoi/address'
 // DOMAIN
 import { derivePlaceId } from './id.server'
 import { LocalPlaceInputSchema } from './local'
@@ -19,6 +21,7 @@ export type UnresolvedFeatureSplit = {
   overrides: FeaturePlaceOverrides
   provenance: {
     kind: 'existing-feature-split'
+    addressParserVersion?: string
     originalAddress: PersistedPlaceBaseline['address']
     legacyPropertyIds: string[]
   }
@@ -60,6 +63,9 @@ export function planUnresolvedFeatureSplit(
           addressSnapshotId: null,
           records: {},
           fallbackDisplay: location.address.fallbackDisplay,
+          authored:
+            location.address.authored ??
+            parseAddressContent(location.address.fallbackDisplay).content,
         },
       },
     },
@@ -93,6 +99,9 @@ export function planUnresolvedFeatureSplit(
       overrides,
       provenance: {
         kind: 'existing-feature-split',
+        ...(facts.location.address.authored
+          ? { addressParserVersion: ADDRESS_PARSER_VERSION }
+          : {}),
         originalAddress: structuredClone(baseline.address),
         legacyPropertyIds: [...baseline.legacyPropertyIds].sort(),
       },

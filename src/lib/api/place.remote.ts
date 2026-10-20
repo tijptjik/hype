@@ -212,7 +212,7 @@ export const createLocalPlace = guardedCommand(
     return persistLocalPlace(
       ctx.db,
       project.organisationId,
-      { state: input.state, facts: input.facts },
+      { state: input.state, facts: input.facts, parseSource: input.parseSource },
       ctx.user.id,
     )
   },

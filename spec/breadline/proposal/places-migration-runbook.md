@@ -383,24 +383,7 @@ selector, HKFoodWorks private Place results and the corresponding detail page, w
 no page errors. The dev server was stopped after the check. Production application
 remains a release step.
 
-## Granularity repair and display preview
-
-Refs #194. After schema migration, run the data-only cleanup before application release:
-
-```sh
-bun scripts/address-granularity/run.ts --local DATABASE.sqlite
-bun scripts/address-granularity/run.ts --local DATABASE.sqlite --apply
-# Deployment commands, pending workflow activation approval:
-bun scripts/address-granularity/run.ts --remote preview --apply
-bun scripts/address-granularity/run.ts --remote production --apply
-```
-
-The default is read-only. Local apply first takes a SQLite backup. Remote execution
-requires an explicit environment and credentials; retain the usual recovery bookmark
-before running it. HYPE repairs related JSON rows and hash references atomically.
-Run the equivalent SaanSeoi command for CURRENT and all configured HISTORY shards;
-its runner discovers those bindings from checked-in deployment configuration.
-No remote data cleanup has been executed in this work.
+## Display preview
 
 The fresh 2026-10-20 12:05 UTC input bundle is privately retained at
 `.local/places/address-contract-refresh-20261020/`, with schema metadata, SQL export,
@@ -427,3 +410,15 @@ converting to authored content. Matching against the local SaanSeoi publication 
 meeting the existing name-plus-unique-phone corroboration criterion. Of the leading
 name candidates, 305 have no usable canonical address in the pinned dependencies.
 Candidates remain unaccepted; the output is private and is not a migration instruction.
+
+## Shared address implementation verification (2026-10-20)
+
+The fresh rehearsal using the retained production exports splits 1,205 Features,
+imports 311 donors and 19 drop-points, and excludes 155 donors with no recorded runs.
+The 64 reviewed MTR decisions remain applied. Replay produces no database changes.
+Address content is parsed through `@saanseoi/address`; original display strings and
+source provenance remain available. Unknown premises components require curation.
+
+No granularity repair command is needed. The obsolete repair tooling is removed.
+Upstream address reconciliation and retirement of local content remain tracked in
+[#233](https://github.com/tijptjik/hype/issues/233).

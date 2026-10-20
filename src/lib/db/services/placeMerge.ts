@@ -32,6 +32,7 @@ import { equalPlaceValue } from '#lib/places/baseline.js'
 // SERVICES
 import { readPlaceIdentityBaseline } from './placeIdentityReview'
 import { prepareSaanSeoiRevision } from './placeSource'
+import { retainAuthoredAddress } from '#lib/places/authoredAddress.js'
 import { placeAliasIds } from './placeRedirect'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -248,20 +249,34 @@ export async function capturePlaceMergeReview(
     source.expectedSourceAvailability !== 'current'
   )
     return { status: 'conflict' }
-  const evidence = await prepareSaanSeoiRevision(source.placeId, identity.projection)
-  const candidate = await db
-    .select({ id: placeRevision.id })
+  const candidates = await db
+    .select({
+      id: placeRevision.id,
+      facts: placeRevision.facts,
+      payload: placeRevision.payload,
+      contentHash: placeRevision.contentHash,
+    })
     .from(placeRevision)
     .where(
       and(
         eq(placeRevision.placeId, source.placeId),
         eq(placeRevision.origin, 'saanseoi'),
         eq(placeRevision.ssId, identity.projection.ssId),
-        eq(placeRevision.contentHash, evidence.contentHash),
       ),
     )
     .orderBy(placeRevision.sequence)
-    .get()
+  // Compare immutable source evidence while preserving each revision's authored address.
+  let candidate: (typeof candidates)[number] | undefined
+  for (const revision of candidates) {
+    const evidence = await prepareSaanSeoiRevision(
+      source.placeId,
+      retainAuthoredAddress(identity.projection, revision),
+    )
+    if (revision.contentHash === evidence.contentHash) {
+      candidate = revision
+      break
+    }
+  }
   if (!candidate) return { status: 'conflict' }
   const token = await db.get<{ value: string }>(
     sql`SELECT ${featureTokenSQL(source.placeId)} AS value`,

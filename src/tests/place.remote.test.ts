@@ -1191,7 +1191,10 @@ describe('standalone Place reads', () => {
   })
   it('uses persisted ownership and fences the subsequent detail query', async () => {
     mocks.directory.mockResolvedValue({ data: [{ id: 'place' }], nextCursor: null })
-    expect(await getPlace({ id: 'place' })).toEqual({ id: 'place' })
+    expect(await getPlace({ id: 'place' })).toEqual({
+      id: 'place',
+      canEditAddress: true,
+    })
     expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {
       id: 'place',
       organisationId: 'p',

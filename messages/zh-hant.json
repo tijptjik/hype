@@ -1434,10 +1434,10 @@
   "feature_place_search_partial": "部分地點搜尋結果無法載入。已顯示可用結果。",
   "place_review_category": "類別",
   "place_review_operating_status": "營業狀態",
-  "place_review_title": "來源更新",
-  "place_review_description": "比較 SaanSeoi 的變更，決定此要素應接受哪些更新。",
+  "place_review_title": "待辦事項",
+  "place_review_description": "核對此地圖物件的地點識別及地址更新。",
   "place_review_load": "檢視更新",
-  "place_review_empty": "此要素尚無來源更新提案。",
+  "place_review_empty": "此地圖物件暫無更新待辦事項。",
   "place_review_older": "較舊的更新",
   "place_review_overrides": "來源資料變更時，此要素會保留您明確設定的覆寫值。",
   "place_review_clean_form": "請先儲存或重設要素的編輯，再處理更新。",
@@ -1543,5 +1543,9 @@
   "feature_address_unitExpression": "單位",
   "feature_address_unitPortion": "單位部分",
   "feature_address_floor_type": "樓層類型",
-  "feature_address_unit_type": "單位類型"
+  "feature_address_unit_type": "單位類型",
+  "place_address_parse": "解析地址",
+  "place_address_parse_help": "使用前請核對建議顯示地址及組成部分。未識別文字會保留，並不會指派正式地址識別碼。",
+  "place_address_unparsed": "未分類文字",
+  "place_address_use_parse": "使用建議組成部分"
 }

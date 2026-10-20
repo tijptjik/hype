@@ -444,9 +444,7 @@ async function link(): Promise<void> {
       {/key}
     {/if}
     <PlaceReviewSection
-      isLocal={isEditing &&
-        (accepted.current?.state === 'manual' ||
-          accepted.current?.state === 'unresolved')}
+      isLocal={isEditing && Boolean(accepted.current)}
       {featureId}
       associationRevision={accepted.current?.revision ?? ''}
       {modifiedAt}

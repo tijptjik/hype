@@ -46,10 +46,10 @@ sameKeys(LocalPlaceAddressSchema.shape, keys(declaration(shared, 'canonicalAddre
 sameKeys(LocalAddressUnitSchema.shape, keys(declaration(units, 'Address3dUnit')), ['id'])
 sameKeys(LocalAddressUnitI18nSchema.shape, keys(declaration(units, 'Address3dUnitI18n')), [])
 for (const [file, name, values] of [
-  [shared, 'addressBlockTypes', ADDRESS_BLOCK_TYPES],
-  [source('libs/db/src/addressGranularity.ts'), 'addressGranularities', ADDRESS_GRANULARITIES],
-  [units, 'address3dUnitTypes', ADDRESS_UNIT_TYPES],
-  [units, 'address3dFloorTypes', ADDRESS_FLOOR_TYPES],
+  [source('libs/address/src/content.ts'), 'ADDRESS_BLOCK_TYPES', ADDRESS_BLOCK_TYPES],
+  [source('libs/address/src/content.ts'), 'ADDRESS_GRANULARITIES', ADDRESS_GRANULARITIES],
+  [source('libs/address/src/content.ts'), 'ADDRESS_UNIT_TYPES', ADDRESS_UNIT_TYPES],
+  [source('libs/address/src/content.ts'), 'ADDRESS_FLOOR_TYPES', ADDRESS_FLOOR_TYPES],
 ] as const) {
   const found: string[] = []
   const visit = (node: ts.Node): void => { if (ts.isStringLiteral(node)) found.push(node.text); else ts.forEachChild(node, visit) }

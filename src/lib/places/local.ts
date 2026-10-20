@@ -6,6 +6,7 @@ import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
 /** Local baselines cannot claim unverified canonical Address identities. */
 export const LocalPlaceInputSchema = z.strictObject({
   state: z.enum(['manual', 'unresolved']),
+  parseSource: z.record(z.string().max(35), z.string().max(10000)).optional(),
   facts: PlaceFactsSchema.superRefine((facts, context) => {
     if (!Object.values(facts.names).some(name => name.trim().length > 0)) {
       context.addIssue({

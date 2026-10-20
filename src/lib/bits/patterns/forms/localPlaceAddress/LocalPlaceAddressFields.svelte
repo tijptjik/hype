@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import LocalAddressParseReview from './LocalAddressParseReview.svelte'
 // DOMAIN
 import {
   ADDRESS_BLOCK_TYPES,
@@ -14,7 +16,12 @@ import { m } from '#lib/i18n.js'
 let {
   value = $bindable(),
   disabled = false,
-}: { value: LocalPlaceAddress; disabled?: boolean } = $props()
+  onParsed,
+}: {
+  value: LocalPlaceAddress
+  disabled?: boolean
+  onParsed?: (source: Record<string, string>) => void
+} = $props()
 let locale = $state('en')
 const labels = $derived({
   formattedAddress: m.feature_address_formattedAddress(),
@@ -68,6 +75,7 @@ function setUnitExpression(
 <fieldset {disabled} class="space-y-4 rounded-xl border border-border p-4">
   <legend class="px-2 font-medium">{m.feature__address()}</legend>
   <p class="text-sm text-muted-foreground">{m.place_address_authoring_help()}</p>
+  <LocalAddressParseReview bind:value {disabled} {onParsed} />
   <div class="grid gap-3 sm:grid-cols-2">
     <label class="flex flex-col gap-1"
       >{m.place_address_language()}

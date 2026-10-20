@@ -1,3 +1,5 @@
+// SHARED ADDRESS PARSER
+import { parseAddressContent } from '@saanseoi/address'
 // NODE
 import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
@@ -350,13 +352,18 @@ export function planBreadlineFeatures(args: string[]): void {
             })
           }
         }
+        const addressParse = parseAddressContent(addresses)
+        const localAddress = {
+          ...emptyFeatureAddress(addresses).source,
+          authored: addressParse.content,
+        }
         const local = LocalPlaceInputSchema.parse({
           state: 'unresolved',
           facts: {
             names,
             phoneNumber: phones,
             brands,
-            location: { geometry, address: emptyFeatureAddress(addresses).source },
+            location: { geometry, address: localAddress },
           },
         })
         const placeId = derivePlaceId(
@@ -383,7 +390,11 @@ export function planBreadlineFeatures(args: string[]): void {
             geometry,
             spatialIndex: createFeatureSpatialIndex(geometry),
             addressMeta: {
-              address: { ...emptyFeatureAddress(addresses), coordinates },
+              address: {
+                ...emptyFeatureAddress(addresses),
+                source: localAddress,
+                coordinates,
+              },
               breadlineSource: { table, id: sourceId },
               ...(correction ? { coordinateCorrection: correction.evidence } : {}),
             },
@@ -432,6 +443,7 @@ export function planBreadlineFeatures(args: string[]): void {
         const payload = {
           kind: 'breadline-place-import',
           version: 2,
+          addressParse,
           sourceTable: table,
           sourceId,
           sourceHash: hash,

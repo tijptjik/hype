@@ -492,6 +492,37 @@ describe('immutable SaanSeoi Place ingestion', () => {
     },
   })
 
+  it('accepts Place identity without waiting for a canonical address and retains local display', async () => {
+    const { db, sqlite } = setup()
+    const local = await createLocalPlace(
+      db,
+      'p',
+      { state: 'unresolved', facts },
+      'creator',
+    )
+    const baseline = await readPlaceIdentityBaseline(db, local.placeId, 'p')
+    if (!baseline) throw new Error('Missing baseline')
+    const accepted = await acceptPlaceIdentity(
+      db,
+      { ...baseline, actorId: 'reviewer', reason: 'Verified establishment' },
+      projection(),
+    )
+    expect(accepted.status).toBe('applied')
+    const latest = sqlite
+      .prepare(
+        'SELECT facts,payload FROM placeRevision WHERE placeId=? ORDER BY sequence DESC LIMIT 1',
+      )
+      .get(local.placeId)!
+    const address = JSON.parse(latest.facts as string).location.address
+    expect(address.authored.i18n.en.formattedAddress).toBe('Original address')
+    expect(address.fallbackDisplay.en).toBe('Original address')
+    expect(address.address2dId).toBeNull()
+    expect(JSON.parse(latest.payload as string).localAddress.review).toBe('required')
+    expect(
+      sqlite.prepare('SELECT ssId FROM place WHERE id=?').get(local.placeId)?.ssId,
+    ).toBe('canonical-shop')
+  })
+
   it('fences a late revision race inside the identity batch without leaving a new revision or history', async () => {
     const { db, sqlite } = setup()
     const local = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'creator')
@@ -4359,6 +4390,74 @@ describe('forward-only bulk source persistence', () => {
       },
     }
   }
+  it('retains a matched Place local address and source evidence through refresh and replay', async () => {
+    const { db, sqlite } = setup()
+    const initial = source()
+    initial.payload.resource = {
+      id: initial.ssId,
+      attributes: {
+        basicCategory: 'bakery',
+        taxonomy: { primary: 'bakery' },
+        operatingStatus: 'open',
+      },
+    }
+    const first = await persistForwardSaanSeoiPlace(db, initial)
+    const address = {
+      granularity: 'unit',
+      i18n: { en: { formattedAddress: 'Reviewed local address' } },
+      unit: null,
+      unitI18n: {},
+    }
+    expect(
+      await updateLocalPlaceAddress(db, {
+        placeId: first.placeId,
+        organisationId: 'p',
+        expectedRevisionId: first.revisionId,
+        address,
+        actorId: 'actor',
+      }),
+    ).toBeNull()
+    const edit = await updateLocalPlaceAddress(db, {
+      placeId: first.placeId,
+      organisationId: null,
+      expectedRevisionId: first.revisionId,
+      address,
+      actorId: 'steward',
+      parseSource: { en: 'Shop 18, G/F, Example Road' },
+    })
+    expect(edit).not.toBeNull()
+    const edited = sqlite
+      .prepare('SELECT * FROM placeRevision WHERE id=?')
+      .get(edit!.revisionId)!
+    expect(edited.ssId).toBe(initial.ssId)
+    expect(JSON.parse(edited.payload as string).resource).toEqual(
+      initial.payload.resource,
+    )
+    expect(JSON.parse(edited.payload as string).localAddress.parse.parserVersion).toBe(
+      '0.1.0',
+    )
+    const next = source(9)
+    next.payload.resource = initial.payload.resource
+    const refreshed = await persistForwardSaanSeoiPlace(db, next)
+    const row = sqlite
+      .prepare('SELECT * FROM placeRevision WHERE id=?')
+      .get(refreshed.revisionId)!
+    expect(JSON.parse(row.facts as string).location.address.authored).toEqual(address)
+    expect(JSON.parse(row.payload as string).localAddress.actorId).toBe('steward')
+    expect(JSON.parse(row.payload as string).sourceAddress).toEqual(
+      next.facts.location.address,
+    )
+    expect(await persistForwardSaanSeoiPlace(db, next)).toEqual(refreshed)
+    expect(
+      sqlite.prepare('SELECT ssId FROM place WHERE id=?').get(first.placeId)?.ssId,
+    ).toBe(initial.ssId)
+    expect(
+      sqlite
+        .prepare('SELECT payload FROM placeRevision WHERE id=?')
+        .get(first.revisionId)?.payload,
+    ).not.toBe(edited.payload)
+  })
+
   it('creates, replays and advances while refusing older publications', async () => {
     const { db, sqlite } = setup()
     const first = await persistForwardSaanSeoiPlace(db, source())
@@ -4602,48 +4701,83 @@ describe('local Place address revisions', () => {
   })
 })
 
-it('prepares a local address review only for the linked Feature owner and leaves accepted revisions pinned', async () => {
-  const { db, sqlite } = setup()
-  const created = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
-  const association = prepareFeaturePlaceAssociationWrite(db, {
-    featureId: 'f',
-    projectId: 'p',
-    placeId: created.placeId,
-    factsRevisionId: created.revisionId,
-    locationRevisionId: created.revisionId,
-    expectedFeatureModifiedAt: 'original',
-    expectedRevision: null,
-    actorId: 'actor',
-    overrides: {},
-  })
-  await association.query
-  const address = {
-    granularity: 'building',
-    i18n: { en: { formattedAddress: 'New address' } },
-    unit: null,
-    unitI18n: {},
-  }
-  const updated = await updateLocalPlaceAddress(db, {
-    placeId: created.placeId,
-    organisationId: 'p',
-    expectedRevisionId: created.revisionId,
-    actorId: 'editor',
-    address,
-  })
-  expect(
-    await proposeLatestLocalPlaceAdoption(db, { featureId: 'f', projectId: 'other' }),
-  ).toBeNull()
-  const review = await proposeLatestLocalPlaceAdoption(db, {
-    featureId: 'f',
-    projectId: 'p',
-  })
-  expect(review?.proposal.candidateRevisionId).toBe(updated?.revisionId)
-  expect(review?.proposal.evidence.plan.blockers).toEqual([])
-  expect(
-    sqlite.prepare('SELECT locationRevisionId FROM featurePlace').get()
-      ?.locationRevisionId,
-  ).toBe(created.revisionId)
-})
+it.each([false, true])(
+  'prepares a local address review with matched identity %s and leaves accepted revisions pinned',
+  async matched => {
+    const { db, sqlite } = setup()
+    const created = await createLocalPlace(db, 'p', { state: 'manual', facts }, 'actor')
+    if (matched) {
+      const baseline = await readPlaceIdentityBaseline(db, created.placeId, 'p')
+      if (!baseline) throw new Error('Missing identity baseline')
+      const accepted = await acceptPlaceIdentity(
+        db,
+        { ...baseline, actorId: 'actor', reason: 'Verified match' },
+        {
+          ssId: 'matched',
+          apiVersion: 'api-places-v0.1',
+          releaseId: 'release',
+          snapshotId: 'snapshot',
+          facts,
+          issues: [],
+          payload: {
+            resource: {
+              id: 'matched',
+              attributes: {
+                basicCategory: 'bakery',
+                taxonomy: { primary: 'bakery' },
+                operatingStatus: 'open',
+              },
+            },
+          },
+        },
+      )
+      expect(accepted.status).toBe('applied')
+      created.revisionId = sqlite
+        .prepare(
+          'SELECT id FROM placeRevision WHERE placeId=? ORDER BY sequence DESC LIMIT 1',
+        )
+        .get(created.placeId)!.id as string
+    }
+    const association = prepareFeaturePlaceAssociationWrite(db, {
+      featureId: 'f',
+      projectId: 'p',
+      placeId: created.placeId,
+      factsRevisionId: created.revisionId,
+      locationRevisionId: created.revisionId,
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      actorId: 'actor',
+      overrides: {},
+    })
+    await association.query
+    const address = {
+      granularity: 'building',
+      i18n: { en: { formattedAddress: 'New address' } },
+      unit: null,
+      unitI18n: {},
+    }
+    const updated = await updateLocalPlaceAddress(db, {
+      placeId: created.placeId,
+      organisationId: 'p',
+      expectedRevisionId: created.revisionId,
+      actorId: 'editor',
+      address,
+    })
+    expect(
+      await proposeLatestLocalPlaceAdoption(db, { featureId: 'f', projectId: 'other' }),
+    ).toBeNull()
+    const review = await proposeLatestLocalPlaceAdoption(db, {
+      featureId: 'f',
+      projectId: 'p',
+    })
+    expect(review?.proposal.candidateRevisionId).toBe(updated?.revisionId)
+    expect(review?.proposal.evidence.plan.blockers).toEqual([])
+    expect(
+      sqlite.prepare('SELECT locationRevisionId FROM featurePlace').get()
+        ?.locationRevisionId,
+    ).toBe(created.revisionId)
+  },
+)
 
 it('retains local structured Feature corrections and explicit clearing without duplicating unit labels', async () => {
   const { db, sqlite } = setup()

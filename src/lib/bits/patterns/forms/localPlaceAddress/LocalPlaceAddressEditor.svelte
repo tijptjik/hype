@@ -15,6 +15,7 @@ let { place, onSaved }: { place: PlaceResource; onSaved: () => Promise<void> } =
   $props()
 let value = $state(createLocalPlaceAddress())
 let expectedRevisionId = $state('')
+let parseSource = $state<Record<string, string> | undefined>()
 let editing = $state(false)
 let busy = $state(false)
 let failed = $state(false)
@@ -26,6 +27,7 @@ function edit(): void {
     place.facts.location.address.authored ??
       createLocalPlaceAddress(place.facts.location.address.fallbackDisplay),
   )
+  parseSource = undefined
   expectedRevisionId = place.revisionId
   editing = true
   saved = failed = false
@@ -40,6 +42,7 @@ async function save(): Promise<void> {
       placeId: place.id,
       expectedRevisionId,
       address: value,
+      parseSource,
     })
     editing = false
     saved = true
@@ -52,12 +55,16 @@ async function save(): Promise<void> {
 }
 </script>
 
-{#if place.ownerOrganisationId &&
-  (place.state === 'manual' || place.state === 'unresolved') &&
-  place.facts}
+{#if place.canEditAddress && place.state !== 'redirect' && place.facts}
   <div class="space-y-3">
     {#if editing}
-      <LocalPlaceAddressFields bind:value disabled={busy} />
+      <LocalPlaceAddressFields
+        bind:value
+        disabled={busy}
+        onParsed={source => {
+          parseSource = source
+        }}
+      />
       <Button text={m.place_address_save()} disabled={busy} onClick={save} />
     {:else}
       <Button text={m.place_address_edit()} onClick={edit} />

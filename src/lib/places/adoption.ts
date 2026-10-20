@@ -170,8 +170,7 @@ export function planPlaceAdoption(input: {
   )
   if (
     !localChain &&
-    (candidate.origin !== 'saanseoi' ||
-      !candidate.ssId ||
+    (!candidate.ssId ||
       facts.ssId !== candidate.ssId ||
       location.ssId !== candidate.ssId)
   )

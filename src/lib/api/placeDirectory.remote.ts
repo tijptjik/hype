@@ -5,6 +5,7 @@ import { z } from 'zod'
 // REMOTE
 import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
+import { canManageSharedPlaceIdentity } from '#lib/api/services/authz/place.js'
 import { requirePlaceOrganisationManager } from '#lib/api/services/placeOwnership.js'
 // DOMAIN
 import { LocalPlaceAddressSchema } from '#lib/addresses/localPlaceAddress.js'
@@ -69,7 +70,18 @@ export const getPlace = guardedQuery(
       id: input.id,
       organisationId: scope.ownerOrganisationId ?? undefined,
     })
-    return result.data[0] ?? null
+    const resource = result.data[0]
+    return resource
+      ? {
+          ...resource,
+          canEditAddress:
+            scope.ownerOrganisationId !== null ||
+            canManageSharedPlaceIdentity({
+              isAnonymous: ctx.user.isAnonymous,
+              userRoles: ctx.userRoles,
+            }),
+        }
+      : null
   },
 )
 
@@ -83,11 +95,20 @@ export const saveLocalPlaceAddress = guardedCommand(
     placeId: z.string().min(1),
     expectedRevisionId: z.string().min(1),
     address: LocalPlaceAddressSchema,
+    parseSource: z.record(z.string().max(32), z.string().max(4000)).optional(),
   }),
   async (input, ctx) => {
     const scope = await probePlaceIdentityScope(ctx.db, input.placeId)
-    if (!scope?.ownerOrganisationId) error(403, 'PRIVATE_PLACE_REQUIRED')
-    await requirePlaceOrganisationManager(ctx, scope.ownerOrganisationId)
+    if (!scope) error(404, 'PLACE_NOT_FOUND')
+    if (scope.ownerOrganisationId)
+      await requirePlaceOrganisationManager(ctx, scope.ownerOrganisationId)
+    else if (
+      !canManageSharedPlaceIdentity({
+        isAnonymous: ctx.user.isAnonymous,
+        userRoles: ctx.userRoles,
+      })
+    )
+      error(403, 'INSUFFICIENT_ROLE')
     const result = await updateLocalPlaceAddress(ctx.db, {
       ...input,
       organisationId: scope.ownerOrganisationId,

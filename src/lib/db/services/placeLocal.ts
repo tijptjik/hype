@@ -6,11 +6,13 @@
 // ---
 
 // DRIZZLE
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 // IDENTITY
 import { nanoid } from 'nanoid'
 // SCHEMA
 import { place, placeRevision } from '../schema/place'
+// SHARED PARSER
+import { parseAddressContent } from '@saanseoi/address'
 // VALIDATION
 import { LocalPlaceAddressSchema } from '#lib/addresses/localPlaceAddress.js'
 import { PlaceFactsSchema } from '#lib/places/validation.js'
@@ -37,7 +39,20 @@ export async function createLocalPlace(
   const parsed = LocalPlaceInputSchema.parse(input)
   const placeId = nanoid(12)
   const revisionId = nanoid(12)
-  const payload = { kind: 'local-baseline', actorId, organisationId, input: parsed }
+  const payload = {
+    kind: 'local-baseline',
+    actorId,
+    organisationId,
+    input: parsed,
+    ...(parsed.parseSource
+      ? {
+          localAddress: {
+            parse: parseAddressContent(parsed.parseSource),
+            review: 'authored',
+          },
+        }
+      : {}),
+  }
   const digest = await crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(JSON.stringify(payload)),
@@ -68,7 +83,7 @@ export async function createLocalPlace(
 /**
  * Append structured address content without rewriting accepted or historical revisions.
  * @param db Request-local database.
- * @param input Authorized Organisation, expected revision and validated authored content.
+ * @param input Authorized Organisation (null only for a shared-Place steward), expected revision and validated authored content.
  * @returns New revision identity, or null if ownership, source identity or revision changed.
  * @remarks Existing Features retain their accepted revision until explicitly adopting this one.
  */
@@ -76,25 +91,33 @@ export async function updateLocalPlaceAddress(
   db: Database,
   input: {
     placeId: string
-    organisationId: string
+    organisationId: string | null
     expectedRevisionId: string
     address: unknown
+    parseSource?: Record<string, string>
     actorId: string
   },
 ): Promise<{ revisionId: string } | null> {
   if (!input.actorId.trim()) throw new Error('Local Place edits require an author')
   const address = LocalPlaceAddressSchema.parse(input.address)
   const current = await db
-    .select({ facts: placeRevision.facts, sequence: placeRevision.sequence })
+    .select({
+      facts: placeRevision.facts,
+      payload: placeRevision.payload,
+      sequence: placeRevision.sequence,
+      ssId: place.ssId,
+      apiVersion: placeRevision.apiVersion,
+      releaseId: placeRevision.releaseId,
+      snapshotId: placeRevision.snapshotId,
+    })
     .from(placeRevision)
     .innerJoin(place, eq(place.id, placeRevision.placeId))
     .where(
       and(
         eq(place.id, input.placeId),
-        eq(place.ownerOrganisationId, input.organisationId),
+        sql`${place.ownerOrganisationId} IS ${input.organisationId}`,
         eq(placeRevision.id, input.expectedRevisionId),
-        isNull(place.ssId),
-        sql`${place.state} IN ('manual','unresolved')`,
+        sql`${place.state} IN ('manual','unresolved','linked')`,
         sql`${placeRevision.sequence}=(SELECT max(r.sequence) FROM placeRevision r WHERE r.placeId=${place.id})`,
       ),
     )
@@ -113,7 +136,21 @@ export async function updateLocalPlaceAddress(
   }
   const revisionId = nanoid(12)
   const payload = {
+    ...current.payload,
     kind: 'local-address-edit',
+    ...(current.ssId
+      ? {
+          sourceAddress:
+            current.payload.sourceAddress ?? current.facts.location.address,
+        }
+      : {}),
+    localAddress: {
+      actorId: input.actorId,
+      organisationId: input.organisationId,
+      previousRevisionId: input.expectedRevisionId,
+      review: 'authored',
+      ...(input.parseSource ? { parse: parseAddressContent(input.parseSource) } : {}),
+    },
     actorId: input.actorId,
     organisationId: input.organisationId,
     previousRevisionId: input.expectedRevisionId,
@@ -128,10 +165,10 @@ export async function updateLocalPlaceAddress(
   // The insert reads its expected predecessor and owner in the same SQLite statement.
   const rows = await db
     .insert(placeRevision)
-    .select(sql`SELECT ${revisionId},p.id,${current.sequence + 1},'local',NULL,NULL,NULL,NULL,${contentHash},${JSON.stringify(payload)},${JSON.stringify(facts)},strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    .select(sql`SELECT ${revisionId},p.id,${current.sequence + 1},'local',${current.ssId},${current.apiVersion},${current.releaseId},${current.snapshotId},${contentHash},${JSON.stringify(payload)},${JSON.stringify(facts)},strftime('%Y-%m-%dT%H:%M:%fZ','now')
     FROM place p JOIN placeRevision r ON r.placeId=p.id
-    WHERE p.id=${input.placeId} AND p.ownerOrganisationId=${input.organisationId}
-      AND p.ssId IS NULL AND p.state IN ('manual','unresolved')
+    WHERE p.id=${input.placeId} AND p.ownerOrganisationId IS ${input.organisationId}
+      AND p.ssId IS ${current.ssId} AND p.state IN ('manual','unresolved','linked')
       AND r.id=${input.expectedRevisionId}
       AND r.sequence=(SELECT max(latest.sequence) FROM placeRevision latest WHERE latest.placeId=p.id)`)
     .returning({ revisionId: placeRevision.id })

@@ -3,6 +3,7 @@ import type { PlaceFacts } from './model'
 
 /** Standalone Place projection; source payloads and Feature associations stay private. */
 export type PlaceResource = {
+  canEditAddress?: boolean
   id: string
   ssId: string | null
   state: 'linked' | 'manual' | 'unresolved' | 'redirect'

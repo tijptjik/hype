@@ -11,6 +11,7 @@ import { place, placeIdentityHistory, placeRevision } from '../schema/place'
 // VALIDATION
 import { PlaceFactsSchema } from '#lib/places/validation.js'
 // DOMAIN
+import { retainAuthoredAddress } from '#lib/places/authoredAddress.js'
 import { derivePlaceId } from '#lib/places/id.server.js'
 import { equalPlaceSourceRecord } from '#lib/places/sourceEvidence.js'
 import {
@@ -118,6 +119,17 @@ export async function persistSaanSeoiPlace(
   if (!existing && retired) throw new Error('Retired source identity requires review')
   // Deterministic first identity makes concurrent first ingestion converge without orphan rows.
   const placeId = existing?.id ?? derivePlaceId('saanseoi', projection.ssId)
+  const latest = await db
+    .select({
+      id: placeRevision.id,
+      facts: placeRevision.facts,
+      payload: placeRevision.payload,
+    })
+    .from(placeRevision)
+    .where(eq(placeRevision.placeId, placeId))
+    .orderBy(sql`${placeRevision.sequence} DESC`)
+    .get()
+  projection = retainAuthoredAddress(projection, latest)
   const {
     facts,
     payload,
@@ -139,6 +151,8 @@ export async function persistSaanSeoiPlace(
     .orderBy(placeRevision.sequence)
     .get()
   const revisionId = retainedRevision?.id ?? generatedRevisionId
+  guard = sql`(${guard}) AND ((SELECT id FROM placeRevision WHERE placeId=${placeId} ORDER BY sequence DESC LIMIT 1) IS ${latest?.id ?? null}
+    OR (SELECT id FROM placeRevision WHERE placeId=${placeId} ORDER BY sequence DESC LIMIT 1)=${revisionId})`
   const identityGuard = sql`EXISTS (SELECT 1 FROM place WHERE id=${placeId}
     AND ssId=${projection.ssId} AND state='linked')`
   const creationGuard = sql`${guard} AND NOT EXISTS
@@ -231,7 +245,8 @@ export async function persistForwardSaanSeoiPlace(
           'Source mirror canonical evidence changed within its publication',
         )
       if (
-        JSON.parse(existing.facts).location.address.status === 'resolved' &&
+        (previousPayload.sourceAddress ?? JSON.parse(existing.facts).location.address)
+          .status === 'resolved' &&
         projection.facts.location.address.status !== 'resolved'
       )
         throw new PlaceSourceReviewError(
@@ -240,6 +255,12 @@ export async function persistForwardSaanSeoiPlace(
     }
   }
   const placeId = existing?.id ?? derivePlaceId('saanseoi', projection.ssId)
+  projection = retainAuthoredAddress(
+    projection,
+    existing?.facts && existing.payload
+      ? { facts: JSON.parse(existing.facts), payload: JSON.parse(existing.payload) }
+      : null,
+  )
   const prepared = await prepareSaanSeoiRevision(placeId, projection)
   // The new revision is allowed in the guard after this batch inserts it, so availability can advance too.
   const guard = existing

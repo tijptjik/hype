@@ -51,6 +51,7 @@ $effect(() => {
 })
 let name = $state('')
 let address = $state(createLocalPlaceAddress())
+let parseSource = $state<Record<string, string> | undefined>()
 let placeState = $state<'manual' | 'unresolved'>('unresolved')
 let busy = $state(false)
 let failed = $state(false)
@@ -69,6 +70,7 @@ async function create(): Promise<void> {
     const locale = key === 'zhHant' ? 'zh-hant' : key === 'zhHans' ? 'zh-hans' : 'en'
     const input = LocalPlaceInputSchema.parse({
       state: placeState,
+      parseSource,
       facts: {
         names: { [locale]: name.trim() },
         phoneNumber: [],
@@ -93,6 +95,7 @@ async function create(): Promise<void> {
     open = false
     name = ''
     address = createLocalPlaceAddress()
+    parseSource = undefined
   } catch {
     failed = true
   } finally {
@@ -136,7 +139,13 @@ async function create(): Promise<void> {
         }}
         disabled={busy || disabled}
       />
-      <LocalPlaceAddressFields bind:value={address} disabled={busy || disabled} />
+      <LocalPlaceAddressFields
+        bind:value={address}
+        disabled={busy || disabled}
+        onParsed={source => {
+          parseSource = source
+        }}
+      />
       <p class="text-sm text-muted-foreground">
         {m.feature_place_local_coordinates()} {coordinates.join(', ')}
       </p>

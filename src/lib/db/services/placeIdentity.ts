@@ -14,6 +14,7 @@ import { nanoid } from 'nanoid'
 import { place, placeIdentityHistory, placeRevision } from '../schema/place'
 // SERVICES
 import { placeAliasIds } from './placeRedirect'
+import { retainAuthoredAddress } from '#lib/places/authoredAddress.js'
 import { prepareSaanSeoiRevision } from './placeSource'
 // TYPES
 import type { Database } from '#lib/types.js'
@@ -73,6 +74,21 @@ export async function acceptPlaceIdentity(
     ))
   )
     return { status: 'conflict' }
+  const retained = await db
+    .select({
+      id: placeRevision.id,
+      facts: placeRevision.facts,
+      payload: placeRevision.payload,
+    })
+    .from(placeRevision)
+    .where(eq(placeRevision.placeId, input.placeId))
+    .orderBy(sql`${placeRevision.sequence} DESC`)
+    .get()
+  projection = retainAuthoredAddress(
+    projection,
+    retained,
+    input.expectedState !== 'linked',
+  )
   const prepared = await prepareSaanSeoiRevision(input.placeId, projection)
   const revisionId = `identityRevision_${nanoid(24)}`
   const current = await db.select().from(place).where(eq(place.id, input.placeId)).get()
@@ -102,7 +118,7 @@ export async function acceptPlaceIdentity(
   const revisionGuard = input.expectedLatestRevisionId
     ? sql`(SELECT id FROM placeRevision WHERE placeId=${input.placeId}
         ORDER BY sequence DESC LIMIT 1)=${input.expectedLatestRevisionId}`
-    : sql`1`
+    : sql`(SELECT id FROM placeRevision WHERE placeId=${input.placeId} ORDER BY sequence DESC LIMIT 1) IS ${retained?.id ?? null}`
   const availabilityGuard = input.expectedSourceAvailability
     ? sql`(SELECT sourceAvailability FROM place WHERE id=${input.placeId})=${input.expectedSourceAvailability}`
     : sql`1`

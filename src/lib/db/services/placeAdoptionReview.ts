@@ -323,8 +323,8 @@ export async function proposeLatestLocalPlaceAdoption(
       and(
         eq(feature.id, input.featureId),
         eq(feature.projectId, input.projectId),
-        sql`${place.ownerOrganisationId}=${placeOwnerForProject(input.projectId)}`,
-        sql`${place.state} IN ('manual','unresolved')`,
+        sql`(${place.ownerOrganisationId} IS NULL OR ${place.ownerOrganisationId}=${placeOwnerForProject(input.projectId)})`,
+        sql`${place.state} IN ('manual','unresolved','linked')`,
         eq(placeRevision.origin, 'local'),
         sql`${placeRevision.sequence}=(SELECT max(r.sequence) FROM placeRevision r WHERE r.placeId=${place.id})`,
         sql`${placeRevision.id} IS NOT ${featurePlace.locationRevisionId}`,

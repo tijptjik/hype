@@ -1434,10 +1434,10 @@
   "feature_place_search_partial": "Some Place search results could not be loaded. Available results are shown.",
   "place_review_category": "Category",
   "place_review_operating_status": "Operating status",
-  "place_review_title": "Source updates",
-  "place_review_description": "Compare SaanSeoi changes and decide which updates this Feature should accept.",
+  "place_review_title": "Tasks",
+  "place_review_description": "Review Place identity and address updates for this Feature.",
   "place_review_load": "Review updates",
-  "place_review_empty": "No source updates have been proposed for this Feature.",
+  "place_review_empty": "No update tasks have been proposed for this Feature.",
   "place_review_older": "Older updates",
   "place_review_overrides": "Your Feature keeps its explicit overrides when source values change.",
   "place_review_clean_form": "Save or reset your Feature edits before reviewing an update.",
@@ -1543,5 +1543,9 @@
   "feature_address_unitExpression": "Unit / flat",
   "feature_address_unitPortion": "Unit portion / part",
   "feature_address_floor_type": "Floor type",
-  "feature_address_unit_type": "Unit type"
+  "feature_address_unit_type": "Unit type",
+  "place_address_parse": "Parse address",
+  "place_address_parse_help": "Review the proposed display and components before using them. Unrecognised text is preserved; no canonical identity is assigned.",
+  "place_address_unparsed": "Unclassified text",
+  "place_address_use_parse": "Use proposed components"
 }
