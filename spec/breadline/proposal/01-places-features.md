@@ -1527,3 +1527,22 @@ The canonical Place collection response is deliberately synthetic; this is not e
 for a real bakery match, full CLI upload orchestration or automatic Project adoption.
 See the [reproducible curation rehearsal](places-address-curation.md#reproducible-source-service-integration-rehearsal)
 for the command and proof boundary. No production or primary local data was modified.
+
+### Reproducible export-to-import rehearsal
+
+The [migration runbook](places-migration-runbook.md) and
+`scripts/places/rehearse-migration.ts` now reproduce the local schema upgrade, existing
+Feature split, donor/dropoff import and both replay checks from explicit input exports.
+The script creates a new private artifact directory, snapshots its inputs, records code
+and migration hashes, applies missing migrations with fail-fast transactions, invokes
+the actual split domain service and independently verifies the resulting data. Source
+inputs and primary local state are not modified. A failed run has no success receipt.
+
+The retained production export rehearsal passed with 11 pending migrations, 1,190 splits,
+56 intangible/25 draft exclusions, 330 new donor/dropoff Features and Places, 155 excluded
+donors without runs, all 64 reviewed MTR decisions, and zero creates on import replay.
+Final counts are 1,601 Features, 1,520 Places and 1,520 associations. Original Feature
+rows and effective values are preserved; domain/history/property-catalog rows are
+unchanged on replay. SQLite integrity and foreign-key checks pass. Two adapter tests
+prove rollback after a late batch failure and literal preservation of bound text.
+The production data-split execution path and deployment remain separate open work.
