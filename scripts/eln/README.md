@@ -110,6 +110,6 @@ but have automatic first-image classification disabled. No production state chan
 ## Numeric bibliographic fields
 
 After the structured-property migrations, apply `0136_eln_numeric_fields.sql`
-to configure ISBN and Published as numeric `TextField` inputs. Published stores
+to configure ISBN and Published as numeric `InputField` inputs. Published stores
 the four-digit year; full source dates remain in `data/backfill.json`. The
 correction preserves ISBN values and their internal visibility.

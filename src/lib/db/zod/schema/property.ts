@@ -104,7 +104,15 @@ const withPropertyFieldRequirements = <TSchema extends z.ZodTypeAny>(
     }
   }) as TSchema
 
-export const PropertyRecord = createSelectSchema(property)
+const selectedPropertyRecord = createSelectSchema(property)
+
+// Older ELN imports used TextField for the canonical single-line InputField.
+export const PropertyRecord = selectedPropertyRecord.extend({
+  component: z.preprocess(
+    value => (value === 'TextField' ? 'InputField' : value),
+    selectedPropertyRecord.shape.component,
+  ),
+})
 export const ProjectPropertyRecord = createSelectSchema(projectProperty)
 
 export const PropertyRecordCreate = withPropertyFieldRequirements(

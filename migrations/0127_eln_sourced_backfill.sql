@@ -37,11 +37,11 @@ INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUser
 INSERT INTO _eln_backfill_guard SELECT count(*)=1 FROM property WHERE id='eln_publisher' AND projectId='vGBvWfSZNELM' AND key='publisher' AND type='specifier';
 INSERT INTO projectProperty(projectId,propertyId,isEnabled,isDefaultEnabled,rank) VALUES('vGBvWfSZNELM','eln_publisher',1,1,11) ON CONFLICT DO NOTHING;
 INSERT INTO propertyI18n(propertyId,locale,label,labelGen,placeholder,placeholderGen) SELECT 'eln_publisher','en','Publisher',0,'',0 WHERE NOT EXISTS(SELECT 1 FROM propertyI18n WHERE propertyId='eln_publisher' AND locale='en');
-INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUserContributable,isDefaultEnabled) VALUES ('eln_isbn','vGBvWfSZNELM','project','specifier','isbn','TextField',0,1,1) ON CONFLICT(id) DO NOTHING;
+INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUserContributable,isDefaultEnabled) VALUES ('eln_isbn','vGBvWfSZNELM','project','specifier','isbn','InputField',0,1,1) ON CONFLICT(id) DO NOTHING;
 INSERT INTO _eln_backfill_guard SELECT count(*)=1 FROM property WHERE id='eln_isbn' AND projectId='vGBvWfSZNELM' AND key='isbn' AND type='specifier';
 INSERT INTO projectProperty(projectId,propertyId,isEnabled,isDefaultEnabled,rank) VALUES('vGBvWfSZNELM','eln_isbn',1,1,12) ON CONFLICT DO NOTHING;
 INSERT INTO propertyI18n(propertyId,locale,label,labelGen,placeholder,placeholderGen) SELECT 'eln_isbn','en','ISBN',0,'',0 WHERE NOT EXISTS(SELECT 1 FROM propertyI18n WHERE propertyId='eln_isbn' AND locale='en');
-INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUserContributable,isDefaultEnabled) VALUES ('eln_publicationDate','vGBvWfSZNELM','project','specifier','publicationDate','TextField',0,1,1) ON CONFLICT(id) DO NOTHING;
+INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUserContributable,isDefaultEnabled) VALUES ('eln_publicationDate','vGBvWfSZNELM','project','specifier','publicationDate','InputField',0,1,1) ON CONFLICT(id) DO NOTHING;
 INSERT INTO _eln_backfill_guard SELECT count(*)=1 FROM property WHERE id='eln_publicationDate' AND projectId='vGBvWfSZNELM' AND key='publicationDate' AND type='specifier';
 INSERT INTO projectProperty(projectId,propertyId,isEnabled,isDefaultEnabled,rank) VALUES('vGBvWfSZNELM','eln_publicationDate',1,1,13) ON CONFLICT DO NOTHING;
 INSERT INTO propertyI18n(propertyId,locale,label,labelGen,placeholder,placeholderGen) SELECT 'eln_publicationDate','en','Publication date (cover edition)',0,'',0 WHERE NOT EXISTS(SELECT 1 FROM propertyI18n WHERE propertyId='eln_publicationDate' AND locale='en');

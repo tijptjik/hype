@@ -45,7 +45,7 @@ def generate():
     for rank,(key,label) in enumerate(EXTRA.items(),10):
         pid = 'eln_' + key
         PROPERTIES[key] = pid
-        component = 'TextField' if key in {'isbn', 'publicationDate'} else 'TextareaField'
+        component = 'InputField' if key in {'isbn', 'publicationDate'} else 'TextareaField'
         emit(f"INSERT INTO property(id,projectId,scope,type,key,component,isTranslatable,isUserContributable,isDefaultEnabled) VALUES ({quote(pid)},{quote(PROJECT)},'project','specifier',{quote(key)},{quote(component)},0,1,1) ON CONFLICT(id) DO NOTHING;")
         emit(f"INSERT INTO _eln_backfill_guard SELECT count(*)=1 FROM property WHERE id={quote(pid)} AND projectId={quote(PROJECT)} AND key={quote(key)} AND type='specifier';")
         emit(f"INSERT INTO projectProperty(projectId,propertyId,isEnabled,isDefaultEnabled,rank) VALUES({quote(PROJECT)},{quote(pid)},1,1,{rank}) ON CONFLICT DO NOTHING;")
