@@ -1,3 +1,4 @@
+import { listPlaceResources } from '#lib/db/services/placeDirectory.js'
 // @vitest-environment node
 import { FeatureListProfileAPI } from '#lib/db/zod/schema/feature.js'
 import { feature as featureTable } from '#lib/db/schema/feature.js'
@@ -3873,5 +3874,49 @@ describe('bounded Place review discovery', () => {
     await expect(
       listPlaceAdoptionReviews(db, { featureId: 'f', projectId: 'p', beforeRow: -1 }),
     ).rejects.toThrow()
+  })
+})
+
+describe('standalone Place directory', () => {
+  it('fences owners before pagination and only searches latest names', async () => {
+    const { db, sqlite } = setup()
+    for (let n = 0; n < 29; n++) {
+      const id = `directory-${String(n).padStart(2, '0')}`
+      const owner = n < 2 ? 'other' : n < 28 ? 'p' : null
+      sqlite
+        .prepare('INSERT INTO place(id,ssId,state,ownerProjectId) VALUES (?,?,?,?)')
+        .run(id, owner ? null : 'shared-ss', owner ? 'manual' : 'linked', owner)
+      for (let sequence = 1; sequence <= 2; sequence++) {
+        const value = {
+          ...facts,
+          names: { en: sequence === 1 ? 'Old name' : 'Latest % shop' },
+        }
+        sqlite
+          .prepare(
+            "INSERT INTO placeRevision(id,placeId,sequence,origin,contentHash,payload,facts) VALUES (?,?,?,'local',?,'{}',?)",
+          )
+          .run(`${id}-${sequence}`, id, sequence, `${sequence}`, JSON.stringify(value))
+      }
+    }
+    const shared = await listPlaceResources(db, {})
+    expect(shared.data.map(row => row.id)).toEqual(['directory-28'])
+    const first = await listPlaceResources(db, { projectId: 'p', q: '%' })
+    expect(first.data).toHaveLength(25)
+    expect(first.data[0].id).toBe('directory-02')
+    expect(first.data.every(row => row.facts?.names.en === 'Latest % shop')).toBe(true)
+    const last = await listPlaceResources(db, {
+      projectId: 'p',
+      q: '%',
+      after: first.nextCursor!,
+    })
+    expect(last.data.map(row => row.id)).toEqual(['directory-27', 'directory-28'])
+    expect(last.nextCursor).toBeNull()
+    expect(
+      (await listPlaceResources(db, { projectId: 'p', q: 'Old name' })).data,
+    ).toEqual([])
+    expect(
+      (await listPlaceResources(db, { projectId: 'p', id: 'directory-00' })).data,
+    ).toEqual([])
+    expect(first.data[0]).not.toHaveProperty('payload')
   })
 })

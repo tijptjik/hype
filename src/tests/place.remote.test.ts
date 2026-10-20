@@ -5,6 +5,7 @@ import type { UserRoleDisco } from '#lib/types.js'
 import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
 
 const mocks = vi.hoisted(() => ({
+  directory: vi.fn(),
   probeMergeSource: vi.fn(),
   probeMergeReview: vi.fn(),
   captureMerge: vi.fn(),
@@ -1053,5 +1054,51 @@ describe('canonical candidate import boundary', () => {
       status: 409,
       body: { message: 'PLACE_CANDIDATE_UNAVAILABLE' },
     })
+  })
+})
+
+vi.mock('#lib/db/services/placeDirectory.js', () => ({
+  listPlaceResources: mocks.directory,
+}))
+import { getPlaces, getPlace } from '#lib/api/placeDirectory.remote.js'
+
+describe('standalone Place reads', () => {
+  it('denies anonymous directory and detail reads before querying facts', async () => {
+    mocks.context.user.isAnonymous = true
+    await expect(getPlaces({})).rejects.toMatchObject({ status: 403 })
+    await expect(getPlace({ id: 'place' })).rejects.toMatchObject({ status: 403 })
+    expect(mocks.directory).not.toHaveBeenCalled()
+  })
+  it('allows shared catalogue reads without a claimed project scope', async () => {
+    mocks.directory.mockResolvedValue({ data: [], nextCursor: null })
+    await getPlaces({ q: 'shop', scope: 'client-cache-only' })
+    expect(mocks.authorizeProject).not.toHaveBeenCalled()
+    expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {
+      q: 'shop',
+      scope: 'client-cache-only',
+    })
+  })
+  it('rejects project discovery and private details before reading facts', async () => {
+    mocks.authorizeProject.mockReturnValue({ allowed: false })
+    await expect(getPlaces({ projectId: 'other' })).rejects.toMatchObject({
+      status: 403,
+    })
+    await expect(getPlace({ id: 'place' })).rejects.toMatchObject({ status: 403 })
+    expect(mocks.directory).not.toHaveBeenCalled()
+  })
+  it('uses persisted ownership and fences the subsequent detail query', async () => {
+    mocks.directory.mockResolvedValue({ data: [{ id: 'place' }], nextCursor: null })
+    expect(await getPlace({ id: 'place' })).toEqual({ id: 'place' })
+    expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {
+      id: 'place',
+      projectId: 'p',
+    })
+    await expect(
+      getPlace({ id: 'place', projectId: 'other' } as never),
+    ).rejects.toThrow()
+  })
+  it('returns missing if ownership changed after authorization', async () => {
+    mocks.directory.mockResolvedValue({ data: [], nextCursor: null })
+    expect(await getPlace({ id: 'place' })).toBeNull()
   })
 })
