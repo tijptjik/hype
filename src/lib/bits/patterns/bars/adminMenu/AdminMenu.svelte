@@ -23,6 +23,7 @@ import CloudArrowUp from 'virtual:icons/proicons/cloud-arrow-up'
 import BuildingLibrary from 'virtual:icons/proicons/bank'
 import InboxArrowDown from 'virtual:icons/proicons/mail-open'
 import MapPin from 'virtual:icons/proicons/location'
+import StoreIcon from 'virtual:icons/lucide/store'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
@@ -74,12 +75,24 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     })
   if (!actor || (!hasControlPanelAccess(actor) && !directoryAllowed)) return []
 
-  const items: AdminMenuItem[] = [
+  const items: AdminMenuItem[] = []
+
+  if (adminCtx.view.isSuperAdmin()) {
+    items.push({
+      href: `${ADMIN_PATH}/hubs`,
+      label: 'Hubs',
+      icon: BuildingLibrary,
+      onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.hub),
+    })
+  }
+
+  items.push(
     {
-      href: `${ADMIN_PATH}/places`,
-      label: m.place_policy_tab(),
-      icon: MapPin,
-      onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.place),
+      href: `${ADMIN_PATH}/tasks`,
+      label: 'Tasks',
+      icon: InboxArrowDown,
+      onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.task),
+      notificationCount,
     },
     {
       href: `${ADMIN_PATH}/features`,
@@ -88,18 +101,18 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       onClick: () => void openFeatures(),
       notificationCount: featureCount,
     },
-    {
-      href: `${ADMIN_PATH}/tasks`,
-      label: 'Tasks',
-      icon: InboxArrowDown,
-      onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.task),
-      notificationCount,
-    },
-  ]
+  )
 
   if (directoryAllowed) {
     items.push({ href: '/admin/users', label: 'Users', icon: UsersIcon })
   }
+
+  items.push({
+    href: `${ADMIN_PATH}/places`,
+    label: m.place_policy_tab(),
+    icon: StoreIcon,
+    onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.place),
+  })
 
   if (canViewAnalytics(adminCtx.view.user as SessionUser)) {
     items.push({
@@ -111,17 +124,8 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
 
   if (adminCtx.view.isSuperAdmin()) {
     items.push({
-      href: `${ADMIN_PATH}/hubs`,
-      label: 'Hubs',
-      icon: BuildingLibrary,
-      onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.hub),
-    })
-  }
-
-  if (adminCtx.view.isSuperAdmin()) {
-    items.push({
       href: `${ADMIN_PATH}/import`,
-      label: 'Uploads',
+      label: 'Bulk Upload',
       icon: CloudArrowUp,
     })
   }

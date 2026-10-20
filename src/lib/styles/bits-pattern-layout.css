@@ -307,7 +307,7 @@
   }
 
   .bits-theme .bits-admin-menu--wide .bits-admin-menu__list {
-    @apply flex-row-reverse gap-2;
+    @apply flex-row gap-2;
   }
 
   .bits-theme .bits-admin-menu--wide .bits-admin-menu__viewport {
