@@ -61,8 +61,8 @@ export const getMapStyleRenderPublicPath = (code: string, hash: string): string 
  */
 export const getMapStyleRenderAssetPath = (code: string): string =>
   REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.key === code)?.bundledPreviewPath ??
-  // Reuse the existing previews while old and canonical style keys coexist.
-  `/api/mapRenders/styles/${code === 'hype-dark' ? 'hyper' : code === 'hype-light' ? 'hyperLight' : code}/asset`
+  // Resolve previews through each registered style code.
+  `/api/mapRenders/styles/${code}/asset`
 
 /**
  * Returns the local API asset path for a built-in map-style render.
@@ -134,11 +134,9 @@ export const resolveMapStyleRenderPathForKey = async (
   environment: string | null | undefined,
   key: MapStyleKey,
 ): Promise<string> => {
-  // Canonical names share the unchanged legacy style JSON and existing render assets.
-  const assetKey =
-    key === 'hype-dark' ? 'hyper' : key === 'hype-light' ? 'hyperLight' : key
-  const asset = await getMapStyleAssetRecord(assetKey)
-  return resolveMapStyleRenderUrl(environment, assetKey, asset.hash)
+  // Resolve the preview with the registered style's own asset hash.
+  const asset = await getMapStyleAssetRecord(key)
+  return resolveMapStyleRenderUrl(environment, key, asset.hash)
 }
 
 /**

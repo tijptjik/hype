@@ -3,14 +3,11 @@ import { buildNoclit26Style } from './definitions/noclit26'
 import { buildMidnightStyle } from './definitions/midnight'
 import { buildBreadlineDarkStyle } from './definitions/breadlineDark'
 import { buildBreadlineLightStyle } from './definitions/breadlineLight'
-import { buildBreadlineStyle } from './definitions/breadline'
 import { buildGhosteryStyle } from './definitions/ghostery'
-import { buildGhosteryLegacyStyle } from './definitions/ghostery-legacy'
 import { buildHyperStyle } from './definitions/hyper'
 import { buildHyperLightStyle } from './definitions/hyperLight'
 import { buildHyperAdminStyle } from './definitions/hyperAdmin'
 import { buildHyperpopStyle } from './definitions/hyperpop'
-import { buildNeonmasterStyle } from './definitions/neonmaster'
 import { buildneorangeStyle } from './definitions/neorange'
 import { buildGenesisStyle } from './definitions/genesis'
 import { buildRosepunkStyle } from './definitions/rosepunk'
@@ -28,17 +25,12 @@ import { getMapStyleCatalogCopy } from './i18n'
 export type MapStyleCatalogKey =
   | 'hype-dark'
   | 'hype-light'
-  | 'hyper'
-  | 'hyperLight'
   | 'hyperpop'
   | 'ghostery'
-  | 'ghostery-legacy'
-  | 'neonmaster'
   | 'neorange'
   | 'genesis'
   | 'sin'
   | 'rosepunk'
-  | 'breadline'
   | 'breadline-light'
   | 'breadline-dark'
   | 'midnight'
@@ -154,27 +146,6 @@ export const MAP_STYLE_CATALOG = [
     markerTheme: 'etch-light',
     showSymbols: true,
   },
-  // Keep legacy keys registered for saved project, layer and account selections.
-  {
-    key: 'hyper',
-    name: getMapStyleCatalogCopy('hyper', 'en').name,
-    description: getMapStyleCatalogCopy('hyper', 'en').description,
-    selectable: false,
-    buildStyle: buildHyperStyle,
-    basemapVariant: 'dark',
-    markerTheme: 'etch-dark',
-    showSymbols: true,
-  },
-  {
-    key: 'hyperLight',
-    name: getMapStyleCatalogCopy('hyperLight', 'en').name,
-    description: getMapStyleCatalogCopy('hyperLight', 'en').description,
-    selectable: false,
-    buildStyle: buildHyperLightStyle,
-    basemapVariant: 'light',
-    markerTheme: 'etch-light',
-    showSymbols: true,
-  },
   {
     key: 'hyperpop',
     name: getMapStyleCatalogCopy('hyperpop', 'en').name,
@@ -193,27 +164,6 @@ export const MAP_STYLE_CATALOG = [
     hubCode: 'hkghostsigns',
     basemapVariant: 'dark',
     markerTheme: 'ghostery',
-    showSymbols: true,
-  },
-  {
-    key: 'ghostery-legacy',
-    selectable: false,
-    name: getMapStyleCatalogCopy('ghostery-legacy', 'en').name,
-    description: getMapStyleCatalogCopy('ghostery-legacy', 'en').description,
-    buildStyle: buildGhosteryLegacyStyle,
-    hubCode: 'hkghostsigns',
-    basemapVariant: null,
-    markerTheme: 'ghostery',
-    showSymbols: false,
-  },
-  {
-    key: 'neonmaster',
-    selectable: false,
-    name: getMapStyleCatalogCopy('neonmaster', 'en').name,
-    description: getMapStyleCatalogCopy('neonmaster', 'en').description,
-    buildStyle: buildNeonmasterStyle,
-    basemapVariant: 'dark',
-    markerTheme: 'neon',
     showSymbols: true,
   },
   {
@@ -253,17 +203,6 @@ export const MAP_STYLE_CATALOG = [
     buildStyle: buildRosepunkStyle,
     basemapVariant: 'dark',
     markerTheme: 'rosepunk',
-    showSymbols: true,
-  },
-  {
-    key: 'breadline',
-    selectable: false,
-    name: getMapStyleCatalogCopy('breadline', 'en').name,
-    description: getMapStyleCatalogCopy('breadline', 'en').description,
-    buildStyle: buildBreadlineStyle,
-    hubCode: 'breadline',
-    basemapVariant: 'light',
-    markerTheme: 'light',
     showSymbols: true,
   },
   {
@@ -354,11 +293,3 @@ export const SELECTABLE_MAP_STYLE_CATALOG = REGISTERED_MAP_STYLE_CATALOG.filter(
  */
 export const isProjectOnlyMapStyle = (key: string): boolean =>
   Boolean(REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.key === key)?.projectCode)
-
-/**
- * Resolves historical map-style keys to their current public code.
- * @param code - Persisted or current style code.
- * @returns Canonical public code, preserving custom style codes.
- */
-export const canonicalMapStyleCode = (code: string): string =>
-  code === 'hyper' ? 'hype-dark' : code === 'hyperLight' ? 'hype-light' : code

@@ -42,7 +42,7 @@ import type { MapRenderJob } from '#lib/map/renders/render.types.js'
 //    - planLayerMapRenderRefreshJobs
 //    - planProjectMapRenderRefreshJobs
 
-const DEFAULT_STYLE_CODE = 'hyper'
+const DEFAULT_STYLE_CODE = 'hype-dark'
 
 type MapRenderFeatureRow = {
   id: string

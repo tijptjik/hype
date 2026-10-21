@@ -53,13 +53,11 @@ export const getMapStyleCatalogCopy = (
               : '砖红城市、炭黑街道与灰色水域，让文学之夜的书籍与场地成为焦点。',
       }
     case 'hype-dark':
-    case 'hyper':
       return {
         name: m.map_style__hyper_name({}, { locale }),
         description: m.map_style__hyper_description({}, { locale }),
       }
     case 'hype-light':
-    case 'hyperLight':
       return {
         name: m.map_style__hyper_light_name({}, { locale }),
         description: m.map_style__hyper_light_description({}, { locale }),
@@ -73,16 +71,6 @@ export const getMapStyleCatalogCopy = (
       return {
         name: m.map_style__ghostery_name({}, { locale }),
         description: m.map_style__ghostery_description({}, { locale }),
-      }
-    case 'ghostery-legacy':
-      return {
-        name: m.map_style__ghostery_legacy_name({}, { locale }),
-        description: m.map_style__ghostery_legacy_description({}, { locale }),
-      }
-    case 'neonmaster':
-      return {
-        name: m.map_style__neonmaster_name({}, { locale }),
-        description: m.map_style__neonmaster_description({}, { locale }),
       }
     case 'neorange':
       return {
@@ -118,11 +106,6 @@ export const getMapStyleCatalogCopy = (
       return {
         name: m.map_style__breadline_light_name({}, { locale }),
         description: m.map_style__breadline_light_description({}, { locale }),
-      }
-    case 'breadline':
-      return {
-        name: m.map_style__breadline_name({}, { locale }),
-        description: m.map_style__breadline_description({}, { locale }),
       }
     case 'protomaps-light':
       return {
