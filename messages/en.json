@@ -1636,5 +1636,19 @@
   "image_attribution_contributor": "Contributed by",
   "image_attribution_record_created": "Record created",
   "image_attribution_loading": "Loading…",
-  "image_attribution_unknown_date": "Date unknown"
+  "image_attribution_unknown_date": "Date unknown",
+  "location_lifecycle_title": "Lifecycle",
+  "location_lifecycle_status": "Status",
+  "location_lifecycle_unknown": "Unknown",
+  "location_lifecycle_open": "Operating",
+  "location_lifecycle_temporarily_closed": "Temporarily closed",
+  "location_lifecycle_permanently_closed": "Permanently closed",
+  "location_lifecycle_standing": "Standing",
+  "location_lifecycle_demolished": "Demolished",
+  "location_lifecycle_help": "Operating status describes the establishment; standing/demolished describes the building. Feature existence and visitability are managed separately.",
+  "location_lifecycle_invalid": "Check that the status matches the record type before saving.",
+  "location_lifecycle_filter": "Lifecycle",
+  "location_lifecycle_all": "All statuses",
+  "location_lifecycle_historic": "Historical Location",
+  "location_successor_id": "Successor / relocated Location ID"
 }

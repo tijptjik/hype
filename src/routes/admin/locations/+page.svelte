@@ -8,7 +8,15 @@ import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // API
 import { getLocations } from '#lib/api/locationDirectory.remote.js'
 import { runRemoteQuery } from '#lib/remote/index.js'
+// DOMAIN
+import {
+  LIFECYCLE_STATUSES,
+  lifecycleStatus as statusOf,
+  type LifecycleStatus,
+} from '#lib/locations/lifecycle.js'
+import { lifecycleLabel } from '#lib/locations/lifecycle.i18n.js'
 // BITS
+import { SelectField } from '#lib/bits/custom/form/index.js'
 import { Button } from '#lib/bits/core/index.js'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -22,12 +30,21 @@ const header = getHeaderCtrl()
 const organisations = usePanelResources(admin.view, 'organisation', () => '')
 let query = $state('')
 let organisationId = $state('')
+let lifecycleStatus = $state<LifecycleStatus | ''>('')
+const lifecycleItems = $derived([
+  { value: '', label: m.location_lifecycle_all() },
+  ...LIFECYCLE_STATUSES.map(value => ({ value, label: lifecycleLabel(value) })),
+])
 let rows = $state<LocationResource[]>([])
 let cursor = $state<string | null>(null)
 let loading = $state(false)
 let failed = $state(false)
 let version = 0
-let activeSearch = { q: '', organisationId: '' }
+let activeSearch = $state<{
+  q: string
+  organisationId: string
+  lifecycleStatus: LifecycleStatus | ''
+}>({ q: '', organisationId: '', lifecycleStatus: '' })
 
 /**
  * Load one server-authorized page, preserving settled rows during replacement.
@@ -36,7 +53,7 @@ let activeSearch = { q: '', organisationId: '' }
  */
 async function load(more = false): Promise<void> {
   const request = ++version
-  if (!more) activeSearch = { q: query, organisationId }
+  if (!more) activeSearch = { q: query, organisationId, lifecycleStatus }
   loading = true
   failed = false
   try {
@@ -44,6 +61,7 @@ async function load(more = false): Promise<void> {
       getLocations({
         scope: admin.view.getRoleScopeQueryKey(),
         q: activeSearch.q,
+        lifecycleStatus: activeSearch.lifecycleStatus || undefined,
         organisationId: activeSearch.organisationId || undefined,
         after: more ? (cursor ?? undefined) : undefined,
       }),
@@ -113,6 +131,16 @@ onDestroy(() => {
           {/each}
         </select>
       </label>
+      <div class="min-w-48">
+        <SelectField
+          id="location-lifecycle-filter"
+          label={m.location_lifecycle_filter()}
+          placeholder={m.location_lifecycle_all()}
+          value={lifecycleStatus}
+          items={lifecycleItems}
+          onValueChange={value => (lifecycleStatus = value as LifecycleStatus | '')}
+        />
+      </div>
       {#if organisations.list.hasMore}
         <Button
           type="button"
@@ -153,7 +181,9 @@ onDestroy(() => {
             </div>
             <div class="text-sm text-muted-foreground">{place.id}</div>
           </div>
-          <span class="rounded-full bg-muted px-3 py-1 text-sm">{place.state}</span>
+          <span class="rounded-full bg-muted px-3 py-1 text-sm"
+            >{lifecycleLabel(statusOf(place.facts))}</span
+          >
         </a>
       {:else}
         <p class="p-5">

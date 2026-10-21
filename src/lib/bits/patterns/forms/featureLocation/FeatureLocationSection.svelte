@@ -52,6 +52,7 @@ import {
   searchFeatureLocalLocations,
 } from '#lib/api/location.remote.js'
 // COMPONENTS
+import LocationLifecycleFields from '../localLocationAddress/LocationLifecycleFields.svelte'
 import CreateLocalLocation from './CreateLocalLocation.svelte'
 import FormDisclosureGroup from '#lib/bits/patterns/forms/formDisclosureGroup/FormDisclosureGroup.svelte'
 import LocationBrandEditor from './LocationBrandEditor.svelte'
@@ -878,6 +879,11 @@ async function link(): Promise<void> {
           </p>
         {:then association}
           {#if association}
+            <LocationLifecycleFields
+              value={association.effective}
+              successorLocationId={association.effective.successorLocationId}
+              kind={association.kind}
+            />
             {#if isEditing}
               <FormDisclosureGroup
                 title={m.feature_location_settings()}

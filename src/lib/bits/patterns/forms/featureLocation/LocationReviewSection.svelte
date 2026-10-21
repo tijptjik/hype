@@ -15,6 +15,8 @@ import {
   rejectFeatureLocationReview,
 } from '#lib/api/locationReview.remote.js'
 // DOMAIN
+import { lifecycleLabel } from '#lib/locations/lifecycle.i18n.js'
+import { lifecycleStatus } from '#lib/locations/lifecycle.js'
 import { getAddressDisplay } from '#lib/addresses/featureAddress.js'
 // TYPES
 import type { LocationFacts, LocationPosition } from '#lib/locations/model.js'
@@ -214,6 +216,11 @@ function rows(
 ): Array<{ label: string; value: string }> {
   return group === 'facts'
     ? [
+        {
+          label: m.location_lifecycle_title(),
+          value: lifecycleLabel(lifecycleStatus(value)),
+        },
+        { label: m.location_successor_id(), value: value.successorLocationId ?? '—' },
         { label: m.location_review_names(), value: names(value.names) },
         {
           label: m.location_reset_phones(),
@@ -255,7 +262,9 @@ function categories(
 function blocked(group: Group): boolean {
   return Boolean(
     detail?.proposal.evidence.plan.blockers.some(
-      value => group === 'location' || value !== 'address-dependencies',
+      value =>
+        value !== 'lifecycle-review' &&
+        (group === 'location' || value !== 'address-dependencies'),
     ),
   )
 }

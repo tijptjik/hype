@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import LocationLifecycleBadge from '#lib/bits/patterns/forms/localLocationAddress/LocationLifecycleBadge.svelte'
 // ICONS
 import { Icon } from '#lib/bits/index.js'
 import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
@@ -185,13 +187,18 @@ function handleDescriptionToggle(event: Event): void {
       </button>
     {/if}
   {:else}
-    <ScrollableText
-      text={getI18n(feature as Feature, 'title', userPreferences)}
-      padding={16}
-      class="block h-full min-w-0 flex-1"
-      containerClass="block w-full"
-      textClass="text-lg text-base-content"
-    />
+    <div class="min-w-0 flex-1 space-y-1">
+      <ScrollableText
+        text={getI18n(feature as Feature, 'title', userPreferences)}
+        padding={16}
+        class="block h-full min-w-0 flex-1"
+        containerClass="block w-full"
+        textClass="text-lg text-base-content"
+      />
+      <LocationLifecycleBadge
+        value={'locationLifecycle' in feature ? feature.locationLifecycle : undefined}
+      />
+    </div>
   {/if}
 
   <div class="m-0 flex items-start gap-3 caret-transparent">

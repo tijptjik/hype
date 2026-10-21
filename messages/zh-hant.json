@@ -1636,5 +1636,19 @@
   "image_attribution_contributor": "提供者",
   "image_attribution_record_created": "記錄建立日期",
   "image_attribution_loading": "載入中…",
-  "image_attribution_unknown_date": "日期不詳"
+  "image_attribution_unknown_date": "日期不詳",
+  "location_lifecycle_title": "存續狀況",
+  "location_lifecycle_status": "狀況",
+  "location_lifecycle_unknown": "未知",
+  "location_lifecycle_open": "營業中",
+  "location_lifecycle_temporarily_closed": "暫停營業",
+  "location_lifecycle_permanently_closed": "永久結業",
+  "location_lifecycle_standing": "現存",
+  "location_lifecycle_demolished": "已拆卸",
+  "location_lifecycle_help": "營業狀態適用於商戶；現存／已拆卸適用於建築物。Feature 的存在及可到訪狀態分開管理。",
+  "location_lifecycle_invalid": "儲存前請確認狀態符合記錄類型。",
+  "location_lifecycle_filter": "存續狀況",
+  "location_lifecycle_all": "所有狀況",
+  "location_lifecycle_historic": "歷史地點",
+  "location_successor_id": "後繼／搬遷地點 ID"
 }

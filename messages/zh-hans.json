@@ -1636,5 +1636,19 @@
   "image_attribution_contributor": "提供者",
   "image_attribution_record_created": "记录创建日期",
   "image_attribution_loading": "加载中…",
-  "image_attribution_unknown_date": "日期不详"
+  "image_attribution_unknown_date": "日期不详",
+  "location_lifecycle_title": "存续状况",
+  "location_lifecycle_status": "状况",
+  "location_lifecycle_unknown": "未知",
+  "location_lifecycle_open": "营业中",
+  "location_lifecycle_temporarily_closed": "暂停营业",
+  "location_lifecycle_permanently_closed": "永久结业",
+  "location_lifecycle_standing": "现存",
+  "location_lifecycle_demolished": "已拆除",
+  "location_lifecycle_help": "营业状态适用于商户；现存／已拆除适用于建筑物。Feature 的存在及可到访状态分开管理。",
+  "location_lifecycle_invalid": "保存前请确认状态符合记录类型。",
+  "location_lifecycle_filter": "存续状况",
+  "location_lifecycle_all": "所有状况",
+  "location_lifecycle_historic": "历史地点",
+  "location_successor_id": "后继／搬迁地点 ID"
 }

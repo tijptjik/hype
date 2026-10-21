@@ -1,5 +1,6 @@
 <script lang="ts">
 // COMPONENTS
+import LocationLifecycleFields from './LocationLifecycleFields.svelte'
 import LocalLocationAddressFields from './LocalLocationAddressFields.svelte'
 import { Button } from '#lib/bits/core/index.js'
 // API
@@ -9,6 +10,7 @@ import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES
+import type { LocationLifecycleSummary } from '#lib/locations/lifecycle.js'
 import type { LocationResource } from '#lib/locations/resource.js'
 
 let { place, onSaved }: { place: LocationResource; onSaved: () => Promise<void> } =
@@ -16,6 +18,8 @@ let { place, onSaved }: { place: LocationResource; onSaved: () => Promise<void> 
 let value = $state(createLocalLocationAddress())
 let expectedRevisionId = $state('')
 let expectedOrganisationRevision = $state<string | null>(null)
+let lifecycle = $state<LocationLifecycleSummary>({})
+let successorLocationId = $state<string | null>(null)
 let parseSource = $state<Record<string, string> | undefined>()
 let editing = $state(false)
 let busy = $state(false)
@@ -28,6 +32,11 @@ function edit(): void {
     place.facts.location.address.authored ??
       createLocalLocationAddress(place.facts.location.address.fallbackDisplay),
   )
+  lifecycle = {
+    operatingStatus: place.facts.operatingStatus ?? null,
+    buildingStatus: place.facts.buildingStatus ?? null,
+  }
+  successorLocationId = place.facts.successorLocationId ?? null
   parseSource = undefined
   expectedRevisionId = place.revisionId
   expectedOrganisationRevision = place.organisationRevision ?? null
@@ -45,6 +54,8 @@ async function save(): Promise<void> {
       expectedRevisionId,
       organisationId: place.editingOrganisationId ?? undefined,
       expectedOrganisationRevision,
+      ...lifecycle,
+      successorLocationId,
       address: value,
       parseSource,
     })
@@ -61,6 +72,17 @@ async function save(): Promise<void> {
 
 {#if place.canEditAddress && place.state !== 'redirect' && place.facts}
   <div class="space-y-3">
+    <LocationLifecycleFields
+      value={editing ? lifecycle : place.facts}
+      successorLocationId={editing
+        ? successorLocationId
+        : place.facts.successorLocationId}
+      kind={place.kind}
+      isEditing={editing}
+      disabled={busy}
+      onChange={next => (lifecycle = next)}
+      onSuccessorChange={next => (successorLocationId = next)}
+    />
     {#if editing}
       <LocalLocationAddressFields
         bind:value
