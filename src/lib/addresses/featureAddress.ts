@@ -1,4 +1,5 @@
 import { UnitDetailsSchema, formatFloor, formatUnit } from './address3d.js'
+import { AddressDivisionOverridesSchema } from './divisions.js'
 // VALIDATION
 import { z } from 'zod'
 import { LocationFactsSchema } from '#lib/locations/validation.js'
@@ -64,6 +65,8 @@ const featureAddressBase = z.strictObject({
     .nullable(),
   matchStatus: z.enum(['resolved', 'ambiguous', 'unresolved', 'stale']),
   overrides: z.record(z.string(), fields),
+  // Subjective geography is shared across locales; factual geography always follows the marker.
+  divisionOverrides: AddressDivisionOverridesSchema.optional(),
   // Feature-local semantics follow SaanSeoi unit fields without inventing inventory IDs.
   unitDetails: UnitDetailsSchema.optional(),
   // Location-level directions are separate from canonical building/unit evidence.

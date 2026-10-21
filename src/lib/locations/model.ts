@@ -15,6 +15,8 @@ export type LocationBrand = {
 
 /** Publication-pinned references; address records retain SaanSeoi's own schema. */
 export type LocationAddress = {
+  /** Local hood/locality selections; administrative and landform memberships remain marker-derived. */
+  divisionOverrides?: import('#lib/addresses/divisions.js').AddressDivisionOverrides
   /** Locally authored SaanSeoi content; never a claim of upstream publication. */
   authored?: LocalLocationAddress
   status: 'resolved' | 'unresolved'

@@ -84,6 +84,42 @@ it('uses actual division relationships and ignores unrelated included divisions'
     { id: 'district', role: 'district', name: 'Central' },
   ])
 })
+it('excludes city relationships by role or source class without changing retained evidence', () => {
+  const address = emptyFeatureAddress()
+  address.source.records = {
+    data: {
+      relationships: {
+        divisions: {
+          data: [
+            { id: 'kowloon', meta: { role: 'locality' } },
+            { id: 'city-without-included-record', meta: { role: 'city' } },
+            { id: 'district', meta: { role: 'district' } },
+          ],
+        },
+      },
+    },
+    included: [
+      {
+        type: 'divisions',
+        id: 'kowloon',
+        attributes: { class: 'city', i18n: { en: { name: 'Kowloon' } } },
+      },
+      {
+        type: 'divisions',
+        id: 'district',
+        attributes: {
+          class: 'district',
+          i18n: { en: { name: 'Kowloon City District' } },
+        },
+      },
+    ],
+  }
+  const evidence = structuredClone(address.source.records)
+  expect(getAddressDivisions(address, 'en')).toEqual([
+    { id: 'district', role: 'district', name: 'Kowloon City District' },
+  ])
+  expect(address.source.records).toEqual(evidence)
+})
 it('retains every returned address candidate instead of silently selecting the first', async () => {
   const result = await geocodeAddressCandidates(
     { lng: 114, lat: 22 },

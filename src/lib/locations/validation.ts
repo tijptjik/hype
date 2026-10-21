@@ -1,6 +1,7 @@
 // VALIDATION
 import { z } from 'zod'
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
+import { AddressDivisionOverridesSchema } from '#lib/addresses/divisions.js'
 // TYPES
 import type {
   FeatureLocationOverrides,
@@ -18,6 +19,7 @@ const location = z.strictObject({
   }),
   address: z
     .strictObject({
+      divisionOverrides: AddressDivisionOverridesSchema.optional(),
       status: z.enum(['resolved', 'unresolved']),
       authored: LocalLocationAddressSchema.optional(),
       address2dId: z.string().min(1).nullable(),

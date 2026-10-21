@@ -156,7 +156,7 @@ export function setAddressExpression(
 }
 
 /** Reads source-provided division relationships only, without spatial or textual inference.
- * @param address Selected address. @param locale UI locale. @returns Named division memberships, ordered by level with landforms positioned relative to district and area.
+ * @param address Selected address. @param locale UI locale. @returns Named non-city division memberships, ordered by level with landforms positioned relative to district and area.
  */
 export function getAddressDivisions(
   address: FeatureAddress,
@@ -172,6 +172,7 @@ export function getAddressDivisions(
       type: string
       id: string
       attributes?: {
+        class?: string | null
         level?: number | null
         i18n?: Record<string, { name?: string; displayName?: string }>
       }
@@ -182,6 +183,9 @@ export function getAddressDivisions(
       const record = records.included?.find(
         item => item.type === 'divisions' && item.id === link.id,
       )
+      // Cities are source evidence only, never part of HYPE address geography.
+      if (link.meta?.role === 'city' || record?.attributes?.class === 'city')
+        return null
       const text =
         record?.attributes?.i18n?.[ADDRESS_LOCALES[locale]] ??
         record?.attributes?.i18n?.en
@@ -198,6 +202,7 @@ export function getAddressDivisions(
         name: text?.name ?? text?.displayName ?? link.id,
       }
     })
+    .filter(division => division !== null)
     .sort((a, b) => b.level - a.level)
 
   // Preserve level ordering elsewhere; only landforms move around district and area.

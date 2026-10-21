@@ -703,6 +703,14 @@ matter to reconciliation and review. Display/formatted addresses are projections
 structured components and source provenance remain necessary. Division filtering uses
 `featureDivisionMembership`, maintained independently, and is not an address identity.
 
+Cities are not part of HYPE's address model (Refs #194). Feature and Location
+division overrides do not accept `cityId`, matching the shared authored address
+contract. Address memberships, locality choices and displayed divisions exclude
+the upstream `city` class. Retained SaanSeoi source records and the generic
+division mirror may preserve that classification as source evidence; they do not
+make it an address field or an editable address role. Districts such as Kowloon
+City District remain districts and are unaffected.
+
 When Buildings become available, model `Feature -> Establishment -> Building` as an
 explicit association chain, with direct Feature-to-Building association also possible.
 Do not let an establishment's street-level building fallback replace its own unit or
