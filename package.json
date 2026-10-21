@@ -102,8 +102,8 @@
     "format": "biome format --write .",
     "prepare": "husky && svelte-kit sync",
     "test": "bun run i18n:build && vitest --config=vitest.config.ts",
-    "test:places": "bun test src/lib/places/place.test.ts",
-    "test:run": "bun run i18n:build && bun run test:places && vitest run --config=vitest.config.ts",
+    "test:locations": "bun test src/lib/locations/location.test.ts",
+    "test:run": "bun run i18n:build && bun run test:locations && vitest run --config=vitest.config.ts",
     "test:run:verbose": "bun run i18n:build && vitest run --config=vitest.config.ts --reporter=verbose",
     "test:run:metrics": "bun run i18n:build && vitest run --config=vitest.config.ts --reporter=default",
     "test:watch": "bun run i18n:build && vitest watch --config=vitest.config.ts",
@@ -118,9 +118,9 @@
     "breadline:users:plan": "bun --env-file=.dev.vars run scripts/breadline/users.ts",
     "breadline:users:test": "bun run scripts/breadline/rehearse-users.ts",
     "breadline:local:prepare": "bun run scripts/breadline/prepare-local.ts",
-    "check:place-refresh": "tsc -p workers/place-refresh/tsconfig.json",
-    "deploy:place-refresh:prod": "bun wrangler deploy -c workers/place-refresh/wrangler.jsonc --env production",
-    "deploy:place-refresh:preview": "bun wrangler deploy -c workers/place-refresh/wrangler.jsonc --env preview"
+    "check:location-refresh": "tsc -p workers/location-refresh/tsconfig.json",
+    "deploy:location-refresh:prod": "bun wrangler deploy -c workers/location-refresh/wrangler.jsonc --env production",
+    "deploy:location-refresh:preview": "bun wrangler deploy -c workers/location-refresh/wrangler.jsonc --env preview"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "hype-place-refresh",
+  "name": "hype-location-refresh",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-19",
   "compatibility_flags": [
@@ -30,7 +30,7 @@
   ],
   "env": {
     "preview": {
-      "name": "hype-place-refresh-preview",
+      "name": "hype-location-refresh-preview",
       "secrets": {
         "required": [
           "SAANSEOI_API_KEY",
@@ -61,7 +61,7 @@
       ]
     },
     "production": {
-      "name": "hype-place-refresh-production",
+      "name": "hype-location-refresh-production",
       "secrets": {
         "required": [
           "SAANSEOI_API_KEY",
