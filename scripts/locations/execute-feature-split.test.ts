@@ -28,7 +28,7 @@ function fixture() {
   sqlite.exec('CREATE TABLE sentinel(id INTEGER)')
   sqlite.close()
   const args = [
-    'scripts/places/execute-feature-split.ts',
+    'scripts/locations/execute-feature-split.ts',
     '--manifest',
     manifest,
     '--sha256',

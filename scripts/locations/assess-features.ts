@@ -5,13 +5,13 @@ import { dirname } from 'node:path'
 import { getPlatformProxy } from 'wrangler'
 import { drizzle } from 'drizzle-orm/d1'
 import { feature } from '../../src/lib/db/schema/feature'
-import { readFeaturePlaceBaseline } from '../../src/lib/db/services/placeBaseline'
+import { readFeatureLocationBaseline } from '../../src/lib/db/services/locationBaseline'
 // TYPES
 import type { Database } from '../../src/lib/types'
 import type { D1Database } from '@cloudflare/workers-types'
 
 /**
- * Assess all local Feature baselines before attempting a Place split.
+ * Assess all local Feature baselines before attempting a Location split.
  * @returns A private report with identities and explicit review/exclusion reasons.
  * @remarks Read-only domain queries; no remote database or association mutations.
  */
@@ -36,7 +36,7 @@ async function main(): Promise<void> {
     const results = []
     // Report every Feature once; no candidate identity is inferred from readiness.
     for (const row of rows) {
-      const result = await readFeaturePlaceBaseline(db, row.id, row.projectId)
+      const result = await readFeatureLocationBaseline(db, row.id, row.projectId)
       if (result.status === 'ready') {
         for (const locale of Object.keys(result.baseline.effective.names))
           localeCounts[locale] = (localeCounts[locale] ?? 0) + 1

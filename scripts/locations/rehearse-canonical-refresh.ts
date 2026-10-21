@@ -8,7 +8,7 @@ import { resolve } from 'node:path'
 // DOMAIN
 import { openLocalSourceApi } from './lib/local-source-api'
 import { openSqliteDomain } from './lib/sqlite-domain'
-import { refreshPlaces } from '../../src/lib/places/refresh'
+import { refreshLocations } from '../../src/lib/locations/refresh'
 
 /**
  * Exercise monthly canonical discovery, scanning and adoption against real source exports.
@@ -48,12 +48,12 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`, input, database
     ).all() as { name: string }[]).map(row => row.name)
     const before = new Map(tables.map(table => [table, snapshot(table)]))
     const identities = target.sqlite.query(
-      'SELECT id,ssId,state,ownerOrganisationId FROM place ORDER BY id',
+      'SELECT id,ssId,state,ownerOrganisationId FROM location ORDER BY id',
     ).all()
     const overrides = target.sqlite.query(
-      'SELECT featureId,placeId,overrides FROM featurePlace ORDER BY featureId',
+      'SELECT featureId,locationId,overrides FROM featureLocation ORDER BY featureId',
     ).all()
-    const state = target.sqlite.query('SELECT phase,checkedMonth FROM placeRefresh WHERE id=1').get() as {
+    const state = target.sqlite.query('SELECT phase,checkedMonth FROM locationRefresh WHERE id=1').get() as {
       phase: string
       checkedMonth: string | null
     }
@@ -64,7 +64,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`, input, database
     let completed = false
     // Execute bounded production steps without replacing publication reads or pagination.
     for (let step = 0; step < 10000; step++) {
-      const result = await refreshPlaces(target.binding, source.client)
+      const result = await refreshLocations(target.binding, source.client)
       outcomes[result] = (outcomes[result] ?? 0) + 1
       if (step % 100 === 0 || result !== 'scanned')
         console.log(JSON.stringify({ step, result, requests: source.requests.length }))
@@ -74,23 +74,23 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`, input, database
       }
       assert.ok(['started', 'scanned', 'ingested', 'assessed', 'processed', 'review'].includes(result),
         `Refresh did not make progress: ${result}`)
-      const phase = target.sqlite.query('SELECT phase FROM placeRefresh WHERE id=1').get() as { phase: string }
+      const phase = target.sqlite.query('SELECT phase FROM locationRefresh WHERE id=1').get() as { phase: string }
       assert.notEqual(phase.phase, 'review', 'Publication requires external review')
     }
     assert.ok(completed, 'Refresh exceeded the bounded rehearsal budget')
     const changedTables = tables.filter(table => before.get(table) !== snapshot(table))
     // Source refresh must preserve reviewed identities, associations and explicit corrections.
     assert.deepEqual(target.sqlite.query(
-      'SELECT id,ssId,state,ownerOrganisationId FROM place ORDER BY id',
+      'SELECT id,ssId,state,ownerOrganisationId FROM location ORDER BY id',
     ).all(), identities)
     assert.deepEqual(target.sqlite.query(
-      'SELECT featureId,placeId,overrides FROM featurePlace ORDER BY featureId',
+      'SELECT featureId,locationId,overrides FROM featureLocation ORDER BY featureId',
     ).all(), overrides)
-    for (const table of ['placeIdentityHistory', 'placeIdentityReview'])
+    for (const table of ['locationIdentityHistory', 'locationIdentityReview'])
       assert.equal(snapshot(table), before.get(table))
     const beforeReplay = tables.map(snapshot)
     const requests = source.requests.length
-    assert.equal(await refreshPlaces(target.binding, source.client), 'idle')
+    assert.equal(await refreshLocations(target.binding, source.client), 'idle')
     assert.equal(source.requests.length, requests)
     assert.deepEqual(tables.map(snapshot), beforeReplay)
     assert.deepEqual(target.sqlite.query('PRAGMA foreign_key_check').all(), [])
@@ -101,9 +101,9 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`, input, database
       outcomes,
       requests,
       changedTables,
-      state: target.sqlite.query('SELECT phase,scanMode,nextOffset,total,failures FROM placeRefresh WHERE id=1').get(),
-      items: target.sqlite.query('SELECT status,COUNT(*) AS count FROM placeRefreshItem GROUP BY status').all(),
-      features: target.sqlite.query("SELECT json_extract(value,'$.outcome') AS outcome,json_extract(value,'$.geometryChanged') AS geometryChanged,COUNT(*) AS count FROM placeRefreshItem,json_each(outcomes) GROUP BY outcome,geometryChanged").all(),
+      state: target.sqlite.query('SELECT phase,scanMode,nextOffset,total,failures FROM locationRefresh WHERE id=1').get(),
+      items: target.sqlite.query('SELECT status,COUNT(*) AS count FROM locationRefreshItem GROUP BY status').all(),
+      features: target.sqlite.query("SELECT json_extract(value,'$.outcome') AS outcome,json_extract(value,'$.geometryChanged') AS geometryChanged,COUNT(*) AS count FROM locationRefreshItem,json_each(outcomes) GROUP BY outcome,geometryChanged").all(),
       idleReplayUnchanged: true,
       identitiesAndOverridesUnchanged: true,
       integrity: 'ok',

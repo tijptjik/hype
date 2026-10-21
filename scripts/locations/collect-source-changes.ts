@@ -5,12 +5,12 @@ import { resolve } from 'node:path'
 // VALIDATION
 import { z } from 'zod'
 // SOURCE
-import { PlaceSourceChangesInputSchema, readSaanSeoiPlaceSourceChanges, validatePlaceSourceChangesPage } from '../../src/lib/places/sourceChanges'
-import type { PlaceSourceComparisonPin, PlaceSourceChangesPage } from '../../src/lib/places/sourceChanges'
+import { LocationSourceChangesInputSchema, readSaanSeoiPlaceSourceChanges, validateLocationSourceChangesPage } from '../../src/lib/locations/sourceChanges'
+import type { LocationSourceComparisonPin, LocationSourceChangesPage } from '../../src/lib/locations/sourceChanges'
 
 const manifestSchema = z.strictObject({
   version: z.literal(1),
-  request: PlaceSourceChangesInputSchema.omit({ cursor: true }),
+  request: LocationSourceChangesInputSchema.omit({ cursor: true }),
   pages: z.array(z.string().regex(/^[a-f0-9]{64}$/)),
 })
 
@@ -26,7 +26,7 @@ function atomicWrite(path: string, text: string): void {
 /**
  * Collect a reproducible publisher comparison into private local evidence files.
  * @returns Completion after the terminal page or the requested page budget is retained.
- * @remarks Read-only upstream; no database or canonical Place mutation. Resume verifies
+ * @remarks Read-only upstream; no database or canonical Location mutation. Resume verifies
  * every page hash, pin, cursor chain and source identity before making another request.
  * Interrupted pages replay idempotently; the manifest advances only after page persistence.
  */
@@ -43,13 +43,13 @@ async function main(): Promise<void> {
   mkdirSync(directory, { recursive: true })
   if (realpathSync(directory) !== directory) throw new Error('Receipt directory must not be a symlink')
   const manifestPath = resolve(directory, 'manifest.json')
-  const request = PlaceSourceChangesInputSchema.parse({ fromRelease, toRelease, limit: 100 })
+  const request = LocationSourceChangesInputSchema.parse({ fromRelease, toRelease, limit: 100 })
   const manifest = existsSync(manifestPath)
     ? manifestSchema.parse(JSON.parse(readFileSync(manifestPath, 'utf8')))
     : { version: 1 as const, request, pages: [] as string[] }
   if (JSON.stringify(manifest.request) !== JSON.stringify(request))
     throw new Error('Receipt belongs to a different source comparison')
-  let pin: PlaceSourceComparisonPin | undefined
+  let pin: LocationSourceComparisonPin | undefined
   let cursor: string | undefined
   let complete = false
   const seenIds = new Set<string>()
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   const pagePath = (index: number): string => resolve(directory, `${String(index).padStart(6, '0')}.json`)
   /** Validate cross-page evidence and advance in-memory state. @param page Validated page. @returns Nothing. */
   // Validate identity/cursor uniqueness across the entire comparison, including resumed pages.
-  const accept = (page: PlaceSourceChangesPage): void => {
+  const accept = (page: LocationSourceChangesPage): void => {
     if (complete) throw new Error('Receipt includes pages after comparison completion')
     for (const row of page.records) {
       if (seenIds.has(row.sourceRecordId)) throw new Error('Duplicate source identity across comparison pages')
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   for (const [index, hash] of manifest.pages.entries()) {
     const text = readFileSync(pagePath(index), 'utf8')
     if (digest(text) !== hash) throw new Error('Retained source evidence does not match its receipt')
-    accept(validatePlaceSourceChangesPage(JSON.parse(text), nextRequest(), pin))
+    accept(validateLocationSourceChangesPage(JSON.parse(text), nextRequest(), pin))
   }
   const apiKey = process.env.SAANSEOI_API_KEY ?? process.env.VITE_SAANSEOI_API_KEY
   if (!complete && !apiKey) throw new Error('SaanSeoi API key required')

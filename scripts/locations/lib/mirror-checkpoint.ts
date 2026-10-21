@@ -1,12 +1,12 @@
 // DOMAIN
-import { equalPlaceValue } from '../../../src/lib/places/baseline'
+import { equalLocationValue } from '../../../src/lib/locations/baseline'
 // TYPES
-import type { PlacePublicationPin } from '../../../src/lib/places/sourceClient'
+import type { LocationPublicationPin } from '../../../src/lib/locations/sourceClient'
 
 export type MirrorFilters = { taxonomyPrimary?: string }
 export type MirrorCheckpoint = {
   version: 2
-  pin: PlacePublicationPin
+  pin: LocationPublicationPin
   filters: MirrorFilters
   offset: number
   total: number | null
@@ -25,7 +25,7 @@ export type MirrorCheckpoint = {
  */
 export function readMirrorCheckpoint(
   raw: unknown,
-  pin: PlacePublicationPin,
+  pin: LocationPublicationPin,
   filters: MirrorFilters,
 ): MirrorCheckpoint {
   const fresh: MirrorCheckpoint = {
@@ -43,8 +43,8 @@ export function readMirrorCheckpoint(
   const value = raw as Record<string, unknown>
   if (
     (value.version !== 1 && value.version !== 2) ||
-    !equalPlaceValue(value.pin, pin) ||
-    !equalPlaceValue(value.filters, filters)
+    !equalLocationValue(value.pin, pin) ||
+    !equalLocationValue(value.filters, filters)
   )
     throw new Error(
       'Checkpoint belongs to another publication, source subset or protocol',

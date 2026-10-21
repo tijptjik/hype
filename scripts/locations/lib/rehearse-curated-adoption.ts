@@ -5,24 +5,24 @@ import { resolve } from 'node:path'
 import { getTableColumns, sql } from 'drizzle-orm'
 // DOMAIN
 import { feature, featureI18n } from '../../../src/lib/db/schema/feature'
-import { persistSaanSeoiPlace } from '../../../src/lib/db/services/placeSource'
-import { prepareFeaturePlaceAssociationWrite } from '../../../src/lib/db/services/placeAssociation'
-import { saveProjectPlaceSettings } from '../../../src/lib/db/services/place'
-import { adoptRefreshedPlaceForFeature } from '../../../src/lib/db/services/placeRefreshAdoption'
-import { DEFAULT_PROJECT_PLACE_POLICY } from '../../../src/lib/places/model'
+import { persistSaanSeoiPlace } from '../../../src/lib/db/services/locationSource'
+import { prepareFeatureLocationAssociationWrite } from '../../../src/lib/db/services/locationAssociation'
+import { saveProjectLocationSettings } from '../../../src/lib/db/services/location'
+import { adoptRefreshedLocationForFeature } from '../../../src/lib/db/services/locationRefreshAdoption'
+import { DEFAULT_PROJECT_LOCATION_POLICY } from '../../../src/lib/locations/model'
 // TYPES
 import type { Database as Sqlite } from 'bun:sqlite'
 import type { Database } from '../../../src/lib/types'
-import type { SaanSeoiPlaceProjection } from '../../../src/lib/places/saanseoi'
+import type { SaanSeoiPlaceProjection } from '../../../src/lib/locations/saanseoi'
 
 /**
  * Verify persisted Project adoption using real source-service hydration evidence.
  * @param db Isolated D1-compatible domain connection.
- * @param sqlite The same in-memory SQLite database with Place foundation installed.
+ * @param sqlite The same in-memory SQLite database with Location foundation installed.
  * @param unresolved Canonical collection projection before Address hydration.
  * @param resolved The same publication after exact Address dependency hydration.
  * @returns Count-only evidence after automatic adoption, review isolation and replay checks.
- * @remarks Synthetic Feature fixtures use actual schema column order and Place migrations.
+ * @remarks Synthetic Feature fixtures use actual schema column order and Location migrations.
  * This tests the refresh adoption service, not the scheduled Worker or a new publication.
  */
 export async function rehearseCuratedAdoption(
@@ -48,7 +48,7 @@ export async function rehearseCuratedAdoption(
       )
     } else {
       for (const column of Object.values(getTableColumns(table))) {
-        if (!['id', 'localPlaceBrands'].includes(column.name))
+        if (!['id', 'localLocationBrands'].includes(column.name))
           sqlite.exec(
             `ALTER TABLE feature ADD COLUMN "${column.name}" ${column.getSQLType()}`,
           )
@@ -67,6 +67,13 @@ export async function rehearseCuratedAdoption(
     '0124_place_adoption_decisions.sql',
     '0125_place_identity_consolidation.sql',
     '0135_place_organisation_ownership.sql',
+    '0137_location_kinds.sql',
+    '0114_place_refresh.sql',
+    '0115_place_refresh_processing.sql',
+    '0119_place_source_changes.sql',
+    '0121_place_refresh_identity_scan.sql',
+    '0122_simplify_place_refresh.sql',
+    '0138_location_storage.sql',
   ]) {
     sqlite.exec(
       readFileSync(resolve(import.meta.dir, '../../../migrations', migration), 'utf8'),
@@ -101,10 +108,10 @@ export async function rehearseCuratedAdoption(
         'Keep pickup instructions',
         'Unresolved address',
       )
-    await prepareFeaturePlaceAssociationWrite(db, {
+    await prepareFeatureLocationAssociationWrite(db, {
       featureId: projectId,
       projectId,
-      placeId: baseline.placeId,
+      locationId: baseline.locationId,
       factsRevisionId: baseline.revisionId,
       locationRevisionId: baseline.revisionId,
       expectedFeatureModifiedAt: '2025-09-25T00:00:00Z',
@@ -114,11 +121,11 @@ export async function rehearseCuratedAdoption(
     }).query
   }
   assert.ok(
-    await saveProjectPlaceSettings(
+    await saveProjectLocationSettings(
       db,
       'automatic',
       {
-        ...DEFAULT_PROJECT_PLACE_POLICY,
+        ...DEFAULT_PROJECT_LOCATION_POLICY,
         address: 'automatic',
         unit: 'automatic',
       },
@@ -126,14 +133,14 @@ export async function rehearseCuratedAdoption(
     ),
   )
   const candidate = await persistSaanSeoiPlace(db, resolved)
-  assert.equal(candidate.placeId, baseline.placeId)
+  assert.equal(candidate.locationId, baseline.locationId)
   assert.notEqual(candidate.revisionId, baseline.revisionId)
   /** Apply the same hydrated source revision under each persisted Project policy. @param projectId Fixture scope. @returns Durable adoption result. */
   const adopt = (projectId: string) =>
-    adoptRefreshedPlaceForFeature(db, {
+    adoptRefreshedLocationForFeature(db, {
       featureId: projectId,
       projectId,
-      placeId: baseline.placeId,
+      locationId: baseline.locationId,
       candidateRevisionId: candidate.revisionId,
       guard: sql`1`,
     })
@@ -146,13 +153,13 @@ export async function rehearseCuratedAdoption(
   assert.equal(review.groups.location, 'review')
   for (const id of ['automatic', 'review']) {
     const association = sqlite
-      .query('SELECT * FROM featurePlace WHERE featureId=?')
+      .query('SELECT * FROM featureLocation WHERE featureId=?')
       .get(id) as {
-      placeId: string
+      locationId: string
       locationRevisionId: string
       overrides: string
     }
-    assert.equal(association.placeId, baseline.placeId)
+    assert.equal(association.locationId, baseline.locationId)
     assert.equal(
       association.locationRevisionId,
       id === 'automatic' ? candidate.revisionId : baseline.revisionId,
@@ -184,13 +191,13 @@ export async function rehearseCuratedAdoption(
   const snapshot = (): string =>
     JSON.stringify(
       [
-        'place',
-        'placeRevision',
+        'location',
+        'locationRevision',
         'feature',
         'featureI18n',
-        'featurePlace',
-        'featurePlaceHistory',
-        'placeAdoptionProposal',
+        'featureLocation',
+        'featureLocationHistory',
+        'locationAdoptionProposal',
       ].map(table => sqlite.query(`SELECT * FROM ${table} ORDER BY rowid`).all()),
     )
   const before = snapshot()

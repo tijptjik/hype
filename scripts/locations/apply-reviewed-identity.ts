@@ -7,16 +7,16 @@ import { resolve } from 'node:path'
 // DOMAIN
 import { preserveReviewedFeature } from './lib/preserve-reviewed-feature'
 import { openSqliteDomain } from './lib/sqlite-domain'
-import { equalPlaceValue } from '../../src/lib/places/baseline'
+import { equalLocationValue } from '../../src/lib/locations/baseline'
 import {
-  readPlaceIdentityBaseline,
-  captureMirroredPlaceIdentityReview,
-  acceptPlaceIdentityReview,
-} from '../../src/lib/db/services/placeIdentityReview'
+  readLocationIdentityBaseline,
+  captureMirroredLocationIdentityReview,
+  acceptLocationIdentityReview,
+} from '../../src/lib/db/services/locationIdentityReview'
 import {
-  capturePlaceMergeReview,
-  applyPlaceMergeReview,
-} from '../../src/lib/db/services/placeMerge'
+  captureLocationMergeReview,
+  applyLocationMergeReview,
+} from '../../src/lib/db/services/locationMerge'
 
 /**
  * Apply an independently reviewed and successfully rehearsed identity to primary local state.
@@ -45,7 +45,7 @@ async function main(): Promise<void> {
   const directory = realpathSync(rehearsal)
   assert.ok(
     directory.startsWith(realpathSync('.local/places') + '/'),
-    'Expected private Places rehearsal',
+    'Expected private Locations rehearsal',
   )
   const receipt = JSON.parse(readFileSync(resolve(directory, 'receipt.json'), 'utf8'))
   assert.equal(receipt.status, 'verified-isolated-identity-match')
@@ -76,10 +76,10 @@ async function main(): Promise<void> {
   const target = openSqliteDomain(database)
   try {
     const review = evidence.sqlite
-      .query('SELECT baseline FROM placeIdentityReview WHERE id=?')
+      .query('SELECT baseline FROM locationIdentityReview WHERE id=?')
       .get(receipt.identityReviewId) as { baseline: string }
     const merge = evidence.sqlite
-      .query(`SELECT json_extract(m.value,'$.sourceBaseline') AS sourceBaseline,json_extract(m.value,'$.sourceRevisionId') AS sourceRevisionId FROM placeIdentityReview r,json_each(r.mergeReviews) m WHERE json_extract(m.value,'$.id')=?`)
+      .query(`SELECT json_extract(m.value,'$.sourceBaseline') AS sourceBaseline,json_extract(m.value,'$.sourceRevisionId') AS sourceRevisionId FROM locationIdentityReview r,json_each(r.mergeReviews) m WHERE json_extract(m.value,'$.id')=?`)
       .get(receipt.mergeReviewId) as {
       sourceBaseline: string
       sourceRevisionId: string
@@ -89,10 +89,10 @@ async function main(): Promise<void> {
     const sourceBaseline = JSON.parse(merge.sourceBaseline)
     // Current identity/revision/history must still match the evidence selected before rehearsal.
     assert.ok(
-      equalPlaceValue(
-        await readPlaceIdentityBaseline(
+      equalLocationValue(
+        await readLocationIdentityBaseline(
           target.db,
-          baseline.placeId,
+          baseline.locationId,
           baseline.expectedOwnerOrganisationId,
         ),
         baseline,
@@ -100,10 +100,10 @@ async function main(): Promise<void> {
       'Target identity changed since rehearsal',
     )
     assert.ok(
-      equalPlaceValue(
-        await readPlaceIdentityBaseline(
+      equalLocationValue(
+        await readLocationIdentityBaseline(
           target.db,
-          sourceBaseline.placeId,
+          sourceBaseline.locationId,
           sourceBaseline.expectedOwnerOrganisationId,
         ),
         sourceBaseline,
@@ -147,7 +147,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     assert.equal(backup.status, 0, backup.stderr)
     const actorId = 'system:reviewed-place-migration'
     const reason = `Local application of reviewed rehearsal ${receipt.identityReviewId}: ${receipt.reason}`
-    const identityReviewId = await captureMirroredPlaceIdentityReview(
+    const identityReviewId = await captureMirroredLocationIdentityReview(
       target.db,
       baseline,
       merge.sourceRevisionId,
@@ -156,8 +156,8 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     assert.ok(identityReviewId)
     assert.equal(
       (
-        await acceptPlaceIdentityReview(target.db, {
-          placeId: baseline.placeId,
+        await acceptLocationIdentityReview(target.db, {
+          locationId: baseline.locationId,
           ownerOrganisationId: baseline.expectedOwnerOrganisationId,
           reviewId: identityReviewId,
           actorId,
@@ -167,20 +167,20 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
       'merge-required',
     )
     const scope = {
-      placeId: baseline.placeId,
+      locationId: baseline.locationId,
       ownerOrganisationId: baseline.expectedOwnerOrganisationId,
-      sourcePlaceId: sourceBaseline.placeId,
+      sourceLocationId: sourceBaseline.locationId,
       sourceOwnerOrganisationId: sourceBaseline.expectedOwnerOrganisationId,
       actorId,
     }
-    const prepared = await capturePlaceMergeReview(target.db, {
+    const prepared = await captureLocationMergeReview(target.db, {
       ...scope,
       identityReviewId,
     })
     assert.equal(prepared.status, 'ready')
     if (prepared.status !== 'ready') throw new Error('Merge no longer ready')
     assert.equal(prepared.affectedFeatures, 0)
-    const result = await applyPlaceMergeReview(target.db, {
+    const result = await applyLocationMergeReview(target.db, {
       ...scope,
       reviewId: prepared.reviewId,
       reason,
@@ -193,8 +193,8 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
         'Feature data changed: ' + name,
       )
     const identity = target.sqlite
-      .query('SELECT ssId,state FROM place WHERE id=?')
-      .get(baseline.placeId)
+      .query('SELECT ssId,state FROM location WHERE id=?')
+      .get(baseline.locationId)
     assert.deepEqual(identity, { ssId: receipt.ssId, state: 'linked' })
     assert.deepEqual(target.sqlite.query('PRAGMA foreign_key_check').all(), [])
     assert.equal(
@@ -208,7 +208,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
           status: 'applied-primary-local',
           featureId: receipt.featureId,
           ssId: receipt.ssId,
-          retainedPlaceId: baseline.placeId,
+          retainedLocationId: baseline.locationId,
           identityReviewId,
           mergeReviewId: prepared.reviewId,
           actorId,

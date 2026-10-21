@@ -12,10 +12,10 @@ import {
 import { resolve } from 'node:path'
 // DOMAIN
 import { feature } from '../../src/lib/db/schema/feature'
-import { featurePlace } from '../../src/lib/db/schema/place'
-import { readFeaturePlaceBaseline } from '../../src/lib/db/services/placeBaseline'
-import { applyUnresolvedFeatureSplit } from '../../src/lib/db/services/placeSplit'
-import { planUnresolvedFeatureSplit } from '../../src/lib/places/migrationPlan'
+import { featureLocation } from '../../src/lib/db/schema/location'
+import { readFeatureLocationBaseline } from '../../src/lib/db/services/locationBaseline'
+import { applyUnresolvedFeatureSplit } from '../../src/lib/db/services/locationSplit'
+import { planUnresolvedFeatureSplit } from '../../src/lib/locations/migrationPlan'
 import { planBreadlineFeatures } from '../breadline/features'
 import { openSqliteDomain } from './lib/sqlite-domain'
 
@@ -76,9 +76,9 @@ async function main(): Promise<void> {
       'Usage: rehearse-migration.ts HYPE_EXPORT.sqlite BREADLINE_MIRROR.sqlite NEW_OUTPUT_DIRECTORY',
     )
   const directory = resolve(directoryInput)
-  if (!directory.startsWith(resolve('.local/places') + '/') || existsSync(directory))
+  if (!directory.startsWith(resolve('.local/locations') + '/') || existsSync(directory))
     throw new Error(
-      'Choose a new .local/places/ directory; existing artifacts are never replaced',
+      'Choose a new .local/locations/ directory; existing artifacts are never replaced',
     )
   process.umask(0o077)
   mkdirSync(directory, { recursive: true })
@@ -127,7 +127,7 @@ async function main(): Promise<void> {
       .orderBy(feature.id)
     const linked = new Set(
       (
-        await connection.db.select({ id: featurePlace.featureId }).from(featurePlace)
+        await connection.db.select({ id: featureLocation.featureId }).from(featureLocation)
       ).map(row => row.id),
     )
     const plans = []
@@ -138,7 +138,7 @@ async function main(): Promise<void> {
         exclusions.push({ featureId: row.id, reason: 'already-linked' })
         continue
       }
-      const baseline = await readFeaturePlaceBaseline(
+      const baseline = await readFeatureLocationBaseline(
         connection.db,
         row.id,
         row.projectId,
@@ -191,7 +191,7 @@ async function main(): Promise<void> {
   }
   const splitVerification = JSON.parse(
     run('bun', [
-      'scripts/places/verify-feature-split.ts',
+      'scripts/locations/verify-feature-split.ts',
       resolve(directory, 'split.json'),
       baselinePath,
       resultPath,
@@ -229,7 +229,7 @@ async function main(): Promise<void> {
       String.raw`import sqlite3,json,sys
 from collections import Counter
 c=sqlite3.connect(sys.argv[1]);c.execute('ATTACH DATABASE ? AS baseline',(sys.argv[2],));c.execute('ATTACH DATABASE ? AS replay',(sys.argv[3],))
-tables=['feature','featureI18n','featureProperty','featurePropertyI18n','place','placeRevision','featurePlace','featurePlaceHistory','breadlineImportFeature','property','propertyValueI18n']
+tables=['feature','featureI18n','featureProperty','featurePropertyI18n','location','locationRevision','featureLocation','featureLocationHistory','breadlineImportFeature','property','propertyValueI18n']
 for table in tables:
  actual=Counter(c.execute('SELECT * FROM main.'+table).fetchall())
  original=Counter(c.execute('SELECT * FROM baseline.'+table).fetchall())
@@ -238,7 +238,7 @@ for table in tables:
  if replay!=actual: raise ValueError('Replay changed rows or multiplicities: '+table)
 assert c.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
 assert not c.execute('PRAGMA foreign_key_check').fetchall()
-print(json.dumps({'integrity':'ok','replayUnchanged':True,'tables':tables,'counts':{t:c.execute('SELECT count(*) FROM '+t).fetchone()[0] for t in ['feature','place','featurePlace']}}))`,
+print(json.dumps({'integrity':'ok','replayUnchanged':True,'tables':tables,'counts':{t:c.execute('SELECT count(*) FROM '+t).fetchone()[0] for t in ['feature','location','featureLocation']}}))`,
       resultPath,
       splitPath,
       replayBaseline,

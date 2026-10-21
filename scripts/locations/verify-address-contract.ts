@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 // TYPESCRIPT
 import ts from 'typescript'
 // DOMAIN
-import { LocalAddressI18nSchema, LocalAddressUnitSchema, LocalAddressUnitI18nSchema, LocalPlaceAddressSchema, ADDRESS_BLOCK_TYPES, ADDRESS_GRANULARITIES, ADDRESS_UNIT_TYPES, ADDRESS_FLOOR_TYPES } from '../../src/lib/addresses/localPlaceAddress'
+import { LocalAddressI18nSchema, LocalAddressUnitSchema, LocalAddressUnitI18nSchema, LocalLocationAddressSchema, ADDRESS_BLOCK_TYPES, ADDRESS_GRANULARITIES, ADDRESS_UNIT_TYPES, ADDRESS_FLOOR_TYPES } from '../../src/lib/addresses/localLocationAddress'
 
 const sourceRoot = resolve(process.argv[2] ?? '../saanseoi')
 /** Read upstream declarations without executing sibling-project code. @param file Relative source path. @returns Parsed source. */
@@ -42,7 +42,7 @@ function sameKeys(actual: Record<string, unknown>, upstream: string[], excluded:
 const shared = source('libs/db/src/schema/shared.ts')
 const units = source('libs/db/src/address3d.ts')
 sameKeys(LocalAddressI18nSchema.shape, keys(declaration(shared, 'canonicalAddress2dI18nColumns')), ['addressId', 'locale', 'meta'])
-sameKeys(LocalPlaceAddressSchema.shape, keys(declaration(shared, 'canonicalAddress2dColumns')), ['id', 'sources'], ['i18n', 'unit', 'unitI18n'])
+sameKeys(LocalLocationAddressSchema.shape, keys(declaration(shared, 'canonicalAddress2dColumns')), ['id', 'sources'], ['i18n', 'unit', 'unitI18n'])
 sameKeys(LocalAddressUnitSchema.shape, keys(declaration(units, 'Address3dUnit')), ['id'])
 sameKeys(LocalAddressUnitI18nSchema.shape, keys(declaration(units, 'Address3dUnitI18n')), [])
 for (const [file, name, values] of [

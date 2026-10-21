@@ -3,10 +3,10 @@ import { createHash } from 'node:crypto'
 // VALIDATION
 import { z } from 'zod'
 // DOMAIN
-import { applyUnresolvedFeatureSplit } from '../../../src/lib/db/services/placeSplit'
+import { applyUnresolvedFeatureSplit } from '../../../src/lib/db/services/locationSplit'
 // TYPES
 import type { Database } from '../../../src/lib/types'
-import type { UnresolvedFeatureSplit } from '../../../src/lib/places/migrationPlan'
+import type { UnresolvedFeatureSplit } from '../../../src/lib/locations/migrationPlan'
 
 export type SplitTarget =
   | { kind: 'sqlite'; path: string }

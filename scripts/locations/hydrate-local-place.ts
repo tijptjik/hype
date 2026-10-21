@@ -8,31 +8,31 @@ import { sql } from 'drizzle-orm'
 // DOMAIN
 import { openLocalSourceApi } from './lib/local-source-api'
 import { openSqliteDomain } from './lib/sqlite-domain'
-import { hydrateSaanSeoiPlaceAddress } from '../../src/lib/places/sourceAddress'
-import { persistSaanSeoiPlace } from '../../src/lib/db/services/placeSource'
+import { hydrateSaanSeoiPlaceAddress } from '../../src/lib/locations/sourceAddress'
+import { persistSaanSeoiPlace } from '../../src/lib/db/services/locationSource'
 // TYPES
-import type { SaanSeoiPlaceProjection } from '../../src/lib/places/saanseoi'
+import type { SaanSeoiPlaceProjection } from '../../src/lib/locations/saanseoi'
 
 /**
- * Resolve a retained Place's exact Address dependency using the local source API implementation.
+ * Resolve a retained Location's exact Address dependency using the local source API implementation.
  * @returns Private evidence and optional guarded local persistence receipt.
  * @remarks Default mode writes only a private report. --apply-local backs up HYPE,
  * persists one source revision and verifies unchanged Feature data. It never adopts
  * that revision into Features, changes source exports or opens a network listener.
  */
 async function main(): Promise<void> {
-  const [input, placeId, sourceDirectory, currentPath, output, flag] =
+  const [input, locationId, sourceDirectory, currentPath, output, flag] =
     process.argv.slice(2)
   if (
     !input ||
-    !placeId ||
+    !locationId ||
     !sourceDirectory ||
     !currentPath ||
     !output ||
     (flag && flag !== '--apply-local')
   )
     throw new Error(
-      'Usage: hydrate-local-place.ts LOCAL_D1.sqlite PLACE_ID SOURCE_DIRECTORY CURRENT.sqlite NEW_OUTPUT_DIRECTORY [--apply-local]',
+      'Usage: hydrate-local-place.ts LOCAL_D1.sqlite LOCATION_ID SOURCE_DIRECTORY CURRENT.sqlite NEW_OUTPUT_DIRECTORY [--apply-local]',
     )
   const database = realpathSync(input)
   assert.ok(
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   const directory = resolve(output)
   assert.ok(
     directory.startsWith(realpathSync('.local/places') + '/') && !existsSync(directory),
-    'Use a new private Places output directory',
+    'Use a new private Locations output directory',
   )
   process.umask(0o077)
   mkdirSync(directory, { recursive: true })
@@ -52,10 +52,10 @@ async function main(): Promise<void> {
   try {
     source = openLocalSourceApi(sourceDirectory, currentPath)
     const row = target.sqlite
-      .query(`SELECT r.* FROM placeRevision r JOIN place p ON p.id=r.placeId
+      .query(`SELECT r.* FROM locationRevision r JOIN location p ON p.id=r.locationId
       WHERE p.id=? AND p.state='linked' AND p.sourceAvailability='current' AND r.origin='saanseoi' AND r.ssId=p.ssId
-      AND r.sequence=(SELECT max(sequence) FROM placeRevision WHERE placeId=p.id)`)
-      .get(placeId) as {
+      AND r.sequence=(SELECT max(sequence) FROM locationRevision WHERE locationId=p.id)`)
+      .get(locationId) as {
       id: string
       ssId: string
       apiVersion: string
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
       facts: string
       payload: string
     } | null
-    assert.ok(row, 'Place needs a current source-backed latest revision')
+    assert.ok(row, 'Location needs a current source-backed latest revision')
     const { issues = [], ...payload } = JSON.parse(row.payload)
     const projection: SaanSeoiPlaceProjection = {
       ssId: row.ssId,
@@ -132,15 +132,15 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
       const result = await persistSaanSeoiPlace(
         target.db,
         hydrated,
-        sql`EXISTS(SELECT 1 FROM place p WHERE p.id=${placeId} AND p.ssId=${row.ssId} AND p.state='linked' AND p.sourceAvailability='current'
-          AND (SELECT id FROM placeRevision WHERE placeId=p.id ORDER BY sequence DESC LIMIT 1)=${row.id})`,
+        sql`EXISTS(SELECT 1 FROM location p WHERE p.id=${locationId} AND p.ssId=${row.ssId} AND p.state='linked' AND p.sourceAvailability='current'
+          AND (SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY sequence DESC LIMIT 1)=${row.id})`,
       )
-      assert.equal(result.placeId, placeId)
+      assert.equal(result.locationId, locationId)
       revisionId = result.revisionId
-      const count = target.sqlite.query('SELECT count(*) AS n FROM placeRevision').get()
+      const count = target.sqlite.query('SELECT count(*) AS n FROM locationRevision').get()
       assert.deepEqual(await persistSaanSeoiPlace(target.db, hydrated), result)
       assert.deepEqual(
-        target.sqlite.query('SELECT count(*) AS n FROM placeRevision').get(),
+        target.sqlite.query('SELECT count(*) AS n FROM locationRevision').get(),
         count,
       )
       assert.deepEqual(snapshot(), before)
@@ -153,7 +153,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     }
     const receipt = {
       status: flag ? 'hydrated-primary-local' : 'verified-address-hydration',
-      placeId,
+      locationId,
       previousRevisionId: row.id,
       revisionId,
       addressId: hydrated.facts.location.address.address2dId,

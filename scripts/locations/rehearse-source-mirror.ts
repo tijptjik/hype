@@ -9,7 +9,7 @@ import { openLocalSourceApi } from './lib/local-source-api'
 import { openSqliteDomain } from './lib/sqlite-domain'
 import { mirrorSourceSubset } from './lib/mirror-source-subset'
 import { readMirrorCheckpoint } from './lib/mirror-checkpoint'
-import { parsePlacePublication } from '../../src/lib/places/publication'
+import { parseLocationPublication } from '../../src/lib/locations/publication'
 
 /**
  * Rehearse bulk hydration and checkpoint upgrade against the real local source API.
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   const directory = resolve(output)
   assert.ok(
     directory.startsWith(resolve('.local/places') + '/') && !existsSync(directory),
-    'Use a new private Places directory',
+    'Use a new private Locations directory',
   )
   process.umask(0o077)
   mkdirSync(directory, { recursive: true })
@@ -52,7 +52,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     { encoding: 'utf8' },
   )
   assert.equal(backup.status, 0, backup.stderr)
-  const { pin } = parsePlacePublication(
+  const { pin } = parseLocationPublication(
     JSON.parse(readFileSync(publicationPath, 'utf8')),
   )
   const legacy = JSON.parse(readFileSync(checkpointPath, 'utf8'))
@@ -103,7 +103,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     assert.deepEqual(snapshot(), before)
     const requests = source.requests.length
     const revisionsBeforeReplay = target.sqlite
-      .query('SELECT * FROM placeRevision ORDER BY placeId,sequence')
+      .query('SELECT * FROM locationRevision ORDER BY locationId,sequence')
       .all()
     await mirrorSourceSubset({
       db: target.db,
@@ -117,14 +117,14 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     assert.equal(source.requests.length, requests)
     assert.deepEqual(
       target.sqlite
-        .query('SELECT * FROM placeRevision ORDER BY placeId,sequence')
+        .query('SELECT * FROM locationRevision ORDER BY locationId,sequence')
         .all(),
       revisionsBeforeReplay,
     )
     const addressStates: Record<string, number> = {}
     for (const id of final.revisions) {
       const row = target.sqlite
-        .query('SELECT facts,payload FROM placeRevision WHERE id=?')
+        .query('SELECT facts,payload FROM locationRevision WHERE id=?')
         .get(id) as { facts: string; payload: string }
       assert.ok(row)
       const facts = JSON.parse(row.facts),

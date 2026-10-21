@@ -3,13 +3,13 @@ import { readFileSync, writeFileSync } from 'node:fs'
 // SQLITE
 import { Database } from 'bun:sqlite'
 // ADDRESS CONTRACT
-import { createLocalPlaceAddress } from '../../src/lib/addresses/localPlaceAddress'
+import { createLocalLocationAddress } from '../../src/lib/addresses/localLocationAddress'
 import {
   emptyFeatureAddress,
   getAddressDisplay,
 } from '../../src/lib/addresses/featureAddress'
 
-/** Produce a private display-first migration preview, without accepting Place candidates.
+/** Produce a private display-first migration preview, without accepting Location candidates.
  * @returns Nothing; writes JSON plus a short Markdown review sample.
  * @remarks Candidate labels are 2D source evidence, not accepted Feature displays.
  * Unit inventory and Feature overrides must be reviewed before adoption.
@@ -63,7 +63,7 @@ function main(): void {
       if (candidate && !sourceRows.length) missingSourceAddresses++
       const labels = item.facts.location.address.fallbackDisplay
       const structured = emptyFeatureAddress()
-      structured.source.authored = createLocalPlaceAddress(labels)
+      structured.source.authored = createLocalLocationAddress(labels)
       return Object.entries(labels).map(([locale, before]) => {
         const hypeLocale =
           locale === 'zh-hant' ? 'zhHant' : locale === 'zh-hans' ? 'zhHans' : locale

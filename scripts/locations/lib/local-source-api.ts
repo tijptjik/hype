@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 // SOURCE API
 import app from '../../../../saanseoi/apps/atlas-api/src/index'
 // TYPES
-import type { PlaceSourceClient } from '../../../src/lib/places/sourceClient'
+import type { PlaceSourceClient } from '../../../src/lib/locations/sourceClient'
 
 /**
  * Serve SaanSeoi API reads in process from explicitly selected sealed local mirrors.

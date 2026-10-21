@@ -8,14 +8,14 @@ import { resolve } from 'node:path'
 // DOMAIN
 import { openSqliteDomain } from './lib/sqlite-domain'
 import {
-  readPlaceIdentityBaseline,
-  captureMirroredPlaceIdentityReview,
-  acceptPlaceIdentityReview,
-} from '../../src/lib/db/services/placeIdentityReview'
+  readLocationIdentityBaseline,
+  captureMirroredLocationIdentityReview,
+  acceptLocationIdentityReview,
+} from '../../src/lib/db/services/locationIdentityReview'
 import {
-  capturePlaceMergeReview,
-  applyPlaceMergeReview,
-} from '../../src/lib/db/services/placeMerge'
+  captureLocationMergeReview,
+  applyLocationMergeReview,
+} from '../../src/lib/db/services/locationMerge'
 
 /**
  * Rehearse one explicitly selected mirrored candidate against an existing Feature.
@@ -53,18 +53,18 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
   const { db, sqlite, close } = openSqliteDomain(database)
   try {
     const target = sqlite
-      .query(`SELECT p.id,p.ownerOrganisationId,p.state FROM featurePlace fp
-      JOIN place p ON p.id=fp.placeId WHERE fp.featureId=?`)
+      .query(`SELECT p.id,p.ownerOrganisationId,p.state FROM featureLocation fp
+      JOIN location p ON p.id=fp.locationId WHERE fp.featureId=?`)
       .get(featureId) as {
       id: string
       ownerOrganisationId: string | null
       state: string
     } | null
-    assert.ok(target, 'Feature must already have an unresolved Place')
+    assert.ok(target, 'Feature must already have an unresolved Location')
     assert.equal(target.state, 'unresolved')
     const source = sqlite
-      .query(`SELECT p.id,p.ownerOrganisationId,r.id AS revisionId FROM place p
-      JOIN placeRevision r ON r.placeId=p.id WHERE p.ssId=? AND p.state='linked'
+      .query(`SELECT p.id,p.ownerOrganisationId,r.id AS revisionId FROM location p
+      JOIN locationRevision r ON r.locationId=p.id WHERE p.ssId=? AND p.state='linked'
       AND p.sourceAvailability='current' ORDER BY r.sequence DESC LIMIT 1`)
       .get(ssId) as {
       id: string
@@ -75,7 +75,7 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
     assert.equal(
       (
         sqlite
-          .query('SELECT count(*) AS n FROM featurePlace WHERE placeId=?')
+          .query('SELECT count(*) AS n FROM featureLocation WHERE locationId=?')
           .get(source.id) as { n: number }
       ).n,
       0,
@@ -105,43 +105,43 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
       )
     const before = snapshot()
     const actorId = 'system:isolated-identity-rehearsal'
-    const baseline = await readPlaceIdentityBaseline(
+    const baseline = await readLocationIdentityBaseline(
       db,
       target.id,
       target.ownerOrganisationId,
     )
     assert.ok(baseline)
-    const reviewId = await captureMirroredPlaceIdentityReview(
+    const reviewId = await captureMirroredLocationIdentityReview(
       db,
       baseline,
       source.revisionId,
       actorId,
     )
     assert.ok(reviewId)
-    const acceptance = await acceptPlaceIdentityReview(db, {
-      placeId: target.id,
+    const acceptance = await acceptLocationIdentityReview(db, {
+      locationId: target.id,
       ownerOrganisationId: target.ownerOrganisationId,
       reviewId,
       actorId,
       reason,
     })
     assert.equal(acceptance.status, 'merge-required')
-    const merge = await capturePlaceMergeReview(db, {
-      placeId: target.id,
+    const merge = await captureLocationMergeReview(db, {
+      locationId: target.id,
       identityReviewId: reviewId,
       ownerOrganisationId: target.ownerOrganisationId,
-      sourcePlaceId: source.id,
+      sourceLocationId: source.id,
       sourceOwnerOrganisationId: source.ownerOrganisationId,
       actorId,
     })
     assert.equal(merge.status, 'ready')
     if (merge.status !== 'ready') throw new Error('Identity merge was not ready')
     assert.equal(merge.affectedFeatures, 0)
-    const applied = await applyPlaceMergeReview(db, {
+    const applied = await applyLocationMergeReview(db, {
       reviewId: merge.reviewId,
-      placeId: target.id,
+      locationId: target.id,
       ownerOrganisationId: target.ownerOrganisationId,
-      sourcePlaceId: source.id,
+      sourceLocationId: source.id,
       sourceOwnerOrganisationId: source.ownerOrganisationId,
       actorId,
       reason,
@@ -149,19 +149,19 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
     assert.equal(applied.status, 'applied')
     // Reusing a consumed review must not create another identity transition or redirect.
     const identityTables = [
-      'place',
-      'placeRevision',
-      'placeIdentityHistory',
-      'placeIdentityReview',
+      'location',
+      'locationRevision',
+      'locationIdentityHistory',
+      'locationIdentityReview',
     ]
     const acceptedRows = identityTables.map(table =>
       JSON.stringify(sqlite.query(`SELECT * FROM ${table} ORDER BY rowid`).all()),
     )
-    const replay = await applyPlaceMergeReview(db, {
+    const replay = await applyLocationMergeReview(db, {
       reviewId: merge.reviewId,
-      placeId: target.id,
+      locationId: target.id,
       ownerOrganisationId: target.ownerOrganisationId,
-      sourcePlaceId: source.id,
+      sourceLocationId: source.id,
       sourceOwnerOrganisationId: source.ownerOrganisationId,
       actorId,
       reason,
@@ -181,12 +181,12 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
         'Feature-owned data changed: ' + table,
       )
     const identity = sqlite
-      .query('SELECT id,ssId,state FROM place WHERE id=?')
+      .query('SELECT id,ssId,state FROM location WHERE id=?')
       .get(target.id) as { id: string; ssId: string; state: string }
     assert.deepEqual(identity, { id: target.id, ssId, state: 'linked' })
     assert.equal(
       (
-        sqlite.query('SELECT state FROM place WHERE id=?').get(source.id) as {
+        sqlite.query('SELECT state FROM location WHERE id=?').get(source.id) as {
           state: string
         }
       ).state,
@@ -199,8 +199,8 @@ target=sqlite3.connect(sys.argv[2]);source.backup(target);target.close();source.
       inputHash,
       featureId,
       ssId,
-      retainedPlaceId: target.id,
-      absorbedPlaceId: source.id,
+      retainedLocationId: target.id,
+      absorbedLocationId: source.id,
       actorId,
       reason,
       identityReviewId: reviewId,

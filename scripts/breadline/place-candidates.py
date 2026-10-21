@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build private, review-only Place candidates from fresh Breadline and pinned SaanSeoi mirrors."""
+"""Build private, review-only Location candidates from fresh Breadline and pinned SaanSeoi mirrors."""
 import argparse
 import importlib.util
 import json
@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Both migration cohorts use the same review-only evidence rules.
 _spec = importlib.util.spec_from_file_location(
-    'feature_place_matcher', Path(__file__).resolve().parents[1] / 'places' / 'match-feature-places.py')
+    'feature_location_matcher', Path(__file__).resolve().parents[1] / 'locations' / 'match-feature-places.py')
 matcher = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(matcher)
 
@@ -84,7 +84,7 @@ def main():
             'unusableSourcePhones':sum(x['phoneEvidence']=='unusable' for x in items)}
         evidence = {'version':2,'publication':publication['meta'],'permalink':publication['links']['permalink'],
             'snapshotId':snapshot,'policy':policy,'summary':summary,'records':items,'excluded':excluded,
-            'acceptance':'Review only. Distance, brand and names alone do not authorize shared Place identity.'}
+            'acceptance':'Review only. Distance, brand and names alone do not authorize shared Location identity.'}
         out = Path(args.output);out.parent.mkdir(parents=True,exist_ok=True)
         out.write_text(json.dumps(evidence,ensure_ascii=False,indent=2,sort_keys=True)+'\n')
         print(json.dumps(summary))

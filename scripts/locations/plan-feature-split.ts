@@ -4,10 +4,10 @@ import { dirname } from 'node:path'
 // DATABASE
 import { getPlatformProxy } from 'wrangler'
 import { drizzle } from 'drizzle-orm/d1'
-import { featurePlace, place } from '../../src/lib/db/schema/place'
-import { planUnresolvedFeatureSplit } from '../../src/lib/places/migrationPlan'
+import { featureLocation, location as locationTable } from '../../src/lib/db/schema/location'
+import { planUnresolvedFeatureSplit } from '../../src/lib/locations/migrationPlan'
 import { feature } from '../../src/lib/db/schema/feature'
-import { readFeaturePlaceBaseline } from '../../src/lib/db/services/placeBaseline'
+import { readFeatureLocationBaseline } from '../../src/lib/db/services/locationBaseline'
 // TYPES
 import type { Database } from '../../src/lib/types'
 import type { D1Database } from '@cloudflare/workers-types'
@@ -37,12 +37,12 @@ async function main(): Promise<void> {
     const plans = []
     const exclusions = []
     const existing = new Set(
-      (await db.select({ id: featurePlace.featureId }).from(featurePlace)).map(
+      (await db.select({ id: featureLocation.featureId }).from(featureLocation)).map(
         row => row.id,
       ),
     )
-    const placeIds = new Set(
-      (await db.select({ id: place.id }).from(place)).map(row => row.id),
+    const locationIds = new Set(
+      (await db.select({ id: locationTable.id }).from(locationTable)).map(row => row.id),
     )
     // Every Feature receives a proposal or explicit exclusion; no identity is guessed.
     for (const row of rows) {
@@ -51,14 +51,14 @@ async function main(): Promise<void> {
         exclusions.push({ featureId: row.id, reason: 'already-linked' })
         continue
       }
-      const baseline = await readFeaturePlaceBaseline(db, row.id, row.projectId)
+      const baseline = await readFeatureLocationBaseline(db, row.id, row.projectId)
       const result =
         baseline.status === 'ready'
           ? planUnresolvedFeatureSplit(baseline.baseline)
           : { status: baseline.status, reason: baseline.reason }
       if ('plan' in result) {
-        if (placeIds.has(result.plan.placeId))
-          throw new Error('Migration Place identity collision')
+        if (locationIds.has(result.plan.locationId))
+          throw new Error('Migration Location identity collision')
         plans.push(result.plan)
         counts.planned = (counts.planned ?? 0) + 1
       } else {

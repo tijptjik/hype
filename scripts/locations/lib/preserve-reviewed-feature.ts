@@ -5,8 +5,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 // DOMAIN
 import { openSqliteDomain } from './sqlite-domain'
-import { getAcceptedFeaturePlace } from '../../../src/lib/db/services/place'
-import { relinkFeaturePlace } from '../../../src/lib/db/services/placeRelink'
+import { getAcceptedFeatureLocation } from '../../../src/lib/db/services/location'
+import { relinkFeatureLocation } from '../../../src/lib/db/services/locationRelink'
 
 /**
  * Begin source inheritance after a reviewed local identity transition, retaining current values.
@@ -33,14 +33,14 @@ export async function preserveReviewedFeature(
   const target = openSqliteDomain(database)
   try {
     const identity = target.sqlite
-      .query(`SELECT h.sourceRevisionId FROM placeIdentityHistory h
-      JOIN place p ON p.id=h.placeId WHERE h.reviewId=? AND h.placeId=? AND h.ssId=?
+      .query(`SELECT h.sourceRevisionId FROM locationIdentityHistory h
+      JOIN location p ON p.id=h.locationId WHERE h.reviewId=? AND h.locationId=? AND h.ssId=?
       AND p.ssId=h.ssId AND p.state='linked' AND p.sourceAvailability='current'
-      AND NOT EXISTS (SELECT 1 FROM placeIdentityHistory n WHERE n.previousHistoryId=h.id)
-      AND h.sourceRevisionId=(SELECT id FROM placeRevision WHERE placeId=p.id ORDER BY sequence DESC LIMIT 1)`)
+      AND NOT EXISTS (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id)
+      AND h.sourceRevisionId=(SELECT id FROM locationRevision WHERE locationId=p.id ORDER BY sequence DESC LIMIT 1)`)
       .get(
         application.identityReviewId,
-        application.retainedPlaceId,
+        application.retainedLocationId,
         application.ssId,
       ) as { sourceRevisionId: string } | null
     assert.ok(identity, 'Identity or latest source revision changed since acceptance')
@@ -48,13 +48,13 @@ export async function preserveReviewedFeature(
       .query('SELECT projectId,modifiedAt FROM feature WHERE id=?')
       .get(application.featureId) as { projectId: string; modifiedAt: string } | null
     assert.ok(feature)
-    const before = await getAcceptedFeaturePlace(
+    const before = await getAcceptedFeatureLocation(
       target.db,
       application.featureId,
       feature.projectId,
     )
     assert.ok(before)
-    assert.equal(before.placeId, application.retainedPlaceId)
+    assert.equal(before.locationId, application.retainedLocationId)
     assert.notEqual(
       before.factsRevisionId,
       identity.sourceRevisionId,
@@ -68,7 +68,7 @@ export async function preserveReviewedFeature(
         .all() as { name: string }[]
     )
       .map(row => row.name)
-      .filter(name => !['featurePlace', 'featurePlaceHistory'].includes(name))
+      .filter(name => !['featureLocation', 'featureLocationHistory'].includes(name))
     /** Capture domain rows outside the single association/history write. @returns Sorted table bytes. */
     const snapshot = (): string[] =>
       tables.map(table =>
@@ -82,10 +82,10 @@ export async function preserveReviewedFeature(
       )
     const rowsBefore = snapshot()
     const associationsBefore = target.sqlite
-      .query('SELECT * FROM featurePlace WHERE featureId != ? ORDER BY featureId')
+      .query('SELECT * FROM featureLocation WHERE featureId != ? ORDER BY featureId')
       .all(application.featureId)
     const historiesBefore = target.sqlite
-      .query('SELECT * FROM featurePlaceHistory ORDER BY id')
+      .query('SELECT * FROM featureLocationHistory ORDER BY id')
       .all()
     // Retain a complete recovery copy before changing the Feature's accepted revision inputs.
     const backup = spawnSync(
@@ -104,39 +104,39 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     const input = {
       featureId: application.featureId,
       projectId: feature.projectId,
-      placeId: application.retainedPlaceId,
+      locationId: application.retainedLocationId,
       revisionId: identity.sourceRevisionId,
       expectedFeatureModifiedAt: feature.modifiedAt,
       expectedRevision: before.revision,
       actorId: 'system:reviewed-place-migration',
     }
-    const result = await relinkFeaturePlace(target.db, input)
+    const result = await relinkFeatureLocation(target.db, input)
     assert.equal(result.status, 'linked')
-    const after = await getAcceptedFeaturePlace(
+    const after = await getAcceptedFeatureLocation(
       target.db,
       application.featureId,
       feature.projectId,
     )
     assert.ok(after)
     assert.deepEqual(after.effective, before.effective)
-    assert.equal(after.placeId, before.placeId)
+    assert.equal(after.locationId, before.locationId)
     assert.equal(after.factsRevisionId, identity.sourceRevisionId)
     assert.equal(after.locationRevisionId, identity.sourceRevisionId)
     assert.deepEqual(snapshot(), rowsBefore)
     assert.deepEqual(
       target.sqlite
-        .query('SELECT * FROM featurePlace WHERE featureId != ? ORDER BY featureId')
+        .query('SELECT * FROM featureLocation WHERE featureId != ? ORDER BY featureId')
         .all(application.featureId),
       associationsBefore,
     )
     const historiesAfter = target.sqlite
-      .query('SELECT * FROM featurePlaceHistory ORDER BY id')
+      .query('SELECT * FROM featureLocationHistory ORDER BY id')
       .all()
     assert.equal(historiesAfter.length, historiesBefore.length + 1)
     assert.deepEqual(historiesAfter.slice(0, -1), historiesBefore)
-    assert.equal((await relinkFeaturePlace(target.db, input)).status, 'conflict')
+    assert.equal((await relinkFeatureLocation(target.db, input)).status, 'conflict')
     assert.deepEqual(
-      target.sqlite.query('SELECT * FROM featurePlaceHistory ORDER BY id').all(),
+      target.sqlite.query('SELECT * FROM featureLocationHistory ORDER BY id').all(),
       historiesAfter,
     )
     assert.deepEqual(target.sqlite.query('PRAGMA foreign_key_check').all(), [])
@@ -147,14 +147,14 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
     const overrides = JSON.parse(
       (
         target.sqlite
-          .query('SELECT overrides FROM featurePlace WHERE featureId=?')
+          .query('SELECT overrides FROM featureLocation WHERE featureId=?')
           .get(application.featureId) as { overrides: string }
       ).overrides,
     )
     const receipt = {
       status: 'preserved-reviewed-source-association',
       featureId: application.featureId,
-      placeId: before.placeId,
+      locationId: before.locationId,
       sourceRevisionId: identity.sourceRevisionId,
       previousRevision: before.revision,
       revision: after.revision,

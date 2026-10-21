@@ -13,8 +13,11 @@ import { validateBreadlineFeatureRows } from './lib/feature-validation'
 import { reviewedDonorMtr } from './lib/donor-mtr-decisions'
 // VALIDATION
 import { normalizeHongKongPhoneNumber } from '../../src/lib/utils/phone-property'
-import { derivePlaceId } from '../../src/lib/places/id.server'
-import { LocalPlaceInputSchema } from '../../src/lib/places/local'
+import {
+  deriveLocationId,
+  deriveLocationBaselineId,
+} from '../../src/lib/locations/id.server'
+import { LocalLocationInputSchema } from '../../src/lib/locations/local'
 import { emptyFeatureAddress } from '../../src/lib/addresses/featureAddress'
 import { createFeatureSpatialIndex } from '../../src/lib/map/featureSpatial'
 
@@ -45,7 +48,7 @@ function insert(table: string, row: Record<string, unknown>): string {
 }
 
 /**
- * Generates a repeatable Places + Features import against an explicit destination snapshot.
+ * Generates a repeatable Locations + Features import against an explicit destination snapshot.
  * @param args - --source mirror --target snapshot --output SQL path.
  * @returns Nothing; writes a private plan and count/diagnostic receipt.
  * @remarks Source changes to accepted mappings fail closed. No remote writes.
@@ -102,11 +105,11 @@ export function planBreadlineFeatures(args: string[]): void {
       { original: [number, number]; corrected: [number, number]; evidence: string }
     >
     const statements = [
-      '-- Breadline Places + Features migration. Requires schema migrations through 0111.',
+      '-- Breadline Locations + Features migration. Requires schema migrations through 0138.',
       '-- Generated from a fresh source snapshot; source hashes preserve accepted identity.',
       '-- Apply in an error-propagating transaction; do not use Bun multi-statement exec.',
     ]
-    // Known brand labels now populate Place facts; do not create new classifier options.
+    // Known brand labels now populate Location facts; do not create new classifier options.
     // Run history establishes participation; active status alone does not qualify a donor.
     const donorRuns = new Set(
       (
@@ -162,7 +165,7 @@ export function planBreadlineFeatures(args: string[]): void {
         `Breadline feature preflight blocked: ${quarantined} quarantined row(s); see ${output}.receipt.json`,
       )
     }
-    // Curated independent shop identities are retained directly in Place brand provenance.
+    // Curated independent shop identities are retained directly in Location brand provenance.
     const excludedDonors: {
       sourceId: string
       reason: string
@@ -241,11 +244,11 @@ export function planBreadlineFeatures(args: string[]): void {
           if (existing.featureId !== id || existing.sourceHash !== hash)
             throw new Error(`Source changed for ${table}:${sourceId}; review required`)
           const association = target
-            .query('SELECT placeId FROM featurePlace WHERE featureId=?')
+            .query('SELECT locationId FROM featureLocation WHERE featureId=?')
             .get(id)
           if (!association)
             throw new Error(
-              `Mapped ${table}:${sourceId} still needs the existing-Feature Place split`,
+              `Mapped ${table}:${sourceId} still needs the existing-Feature Location split`,
             )
           if (table === 'donors') {
             const feature = target
@@ -341,7 +344,7 @@ export function planBreadlineFeatures(args: string[]): void {
                   )
             if (!Object.keys(brandNames).length)
               throw new Error(
-                `Missing reviewed brand translations for ${table}:${sourceId}; supply localized Place brand names`,
+                `Missing reviewed brand translations for ${table}:${sourceId}; supply localized Location brand names`,
               )
             brands.push({
               identifiers: {
@@ -357,7 +360,7 @@ export function planBreadlineFeatures(args: string[]): void {
           ...emptyFeatureAddress(addresses).source,
           authored: addressParse.content,
         }
-        const local = LocalPlaceInputSchema.parse({
+        const local = LocalLocationInputSchema.parse({
           state: 'unresolved',
           facts: {
             names,
@@ -366,14 +369,14 @@ export function planBreadlineFeatures(args: string[]): void {
             location: { geometry, address: localAddress },
           },
         })
-        const placeId = derivePlaceId(
+        const locationId = deriveLocationId(
           table === 'donors' ? 'breadline-donor' : 'breadline-dropoff',
           sourceId,
         )
-        const revisionId = `blPlaceBaseline_${id}`
-        if (target.query('SELECT id FROM place WHERE id=?').get(placeId))
+        const revisionId = deriveLocationBaselineId(locationId)
+        if (target.query('SELECT id FROM location WHERE id=?').get(locationId))
           throw new Error(
-            `Unmapped Place identity collision for ${table}:${sourceId}; review the destination mapping`,
+            `Unmapped Location identity collision for ${table}:${sourceId}; review the destination mapping`,
           )
 
         // Peninsula remains privately managed; inactive donors remain unavailable/unpublished.
@@ -431,7 +434,7 @@ export function planBreadlineFeatures(args: string[]): void {
             }),
           )
         }
-        // The universal property is the materialized phone array; brands inherit from Place.
+        // The universal property is the materialized phone array; brands inherit from Location.
         statements.push(
           insert('featureProperty', {
             featureId: id,
@@ -453,16 +456,17 @@ export function planBreadlineFeatures(args: string[]): void {
           invalidPhone: table === 'donors' && Boolean(row.phone) && !phone,
         }
         statements.push(
-          insert('place', {
-            id: placeId,
+          insert('location', {
+            id: locationId,
+            kind: table === 'donors' ? 'establishment' : 'unknown',
             state: 'unresolved',
             ownerOrganisationId: scope.organisationId,
           }),
         )
         statements.push(
-          insert('placeRevision', {
+          insert('locationRevision', {
             id: revisionId,
-            placeId,
+            locationId,
             sequence: 1,
             origin: 'local',
             contentHash: createHash('sha256')
@@ -473,9 +477,9 @@ export function planBreadlineFeatures(args: string[]): void {
           }),
         )
         statements.push(
-          insert('featurePlace', {
+          insert('featureLocation', {
             featureId: id,
-            placeId,
+            locationId,
             factsRevisionId: revisionId,
             locationRevisionId: revisionId,
             overrides: {},
@@ -510,7 +514,7 @@ export function planBreadlineFeatures(args: string[]): void {
           quarantined: 0,
           diagnostics: [],
           created,
-          createdPlaces: created,
+          createdLocations: created,
           matched,
           invalidPhones,
           coordinateCorrections: corrected,

@@ -8,7 +8,7 @@ import { drizzle } from 'drizzle-orm/d1'
 // SOURCE
 import { mirrorSourceSubset } from './lib/mirror-source-subset'
 import { readMirrorCheckpoint } from './lib/mirror-checkpoint'
-import { parsePlacePublication } from '../../src/lib/places/publication'
+import { parseLocationPublication } from '../../src/lib/locations/publication'
 // TYPES
 import type { Database } from '../../src/lib/types'
 import type { D1Database } from '@cloudflare/workers-types'
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
     throw new Error('Use the default remirrored local HYPE database')
   process.umask(0o077)
   const publication = JSON.parse(readFileSync(publicationPath, 'utf8'))
-  const { pin } = parsePlacePublication(publication)
+  const { pin } = parseLocationPublication(publication)
   const filters = taxonomyPrimary ? { taxonomyPrimary } : {}
   const checkpoint = readMirrorCheckpoint(
     existsSync(checkpointPath)

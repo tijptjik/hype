@@ -5,11 +5,11 @@ import { resolve, sep } from 'node:path'
 import { getPlatformProxy } from 'wrangler'
 import { drizzle } from 'drizzle-orm/d1'
 // DOMAIN
-import { applyUnresolvedFeatureSplit } from '../../src/lib/db/services/placeSplit'
+import { applyUnresolvedFeatureSplit } from '../../src/lib/db/services/locationSplit'
 // TYPES
 import type { Database } from '../../src/lib/types'
 import type { D1Database } from '@cloudflare/workers-types'
-import type { UnresolvedFeatureSplit } from '../../src/lib/places/migrationPlan'
+import type { UnresolvedFeatureSplit } from '../../src/lib/locations/migrationPlan'
 
 /**
  * Apply a private split manifest to isolated state or explicitly selected primary LOCAL state.

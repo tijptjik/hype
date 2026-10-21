@@ -12,7 +12,7 @@ afterEach(() => {
     rmSync(path, { recursive: true, force: true })
 })
 
-/** Build minimal legacy source and destination schemas with actual Place/history migrations. */
+/** Build minimal legacy source and destination schemas with actual Location/history migrations. */
 function fixture() {
   const directory = mkdtempSync(join(tmpdir(), 'breadline-place-import-'))
   directories.push(directory)
@@ -65,6 +65,13 @@ function fixture() {
     '0124_place_adoption_decisions.sql',
     '0125_place_identity_consolidation.sql',
     '0135_place_organisation_ownership.sql',
+    '0137_location_kinds.sql',
+    '0114_place_refresh.sql',
+    '0115_place_refresh_processing.sql',
+    '0119_place_source_changes.sql',
+    '0121_place_refresh_identity_scan.sql',
+    '0122_simplify_place_refresh.sql',
+    '0138_location_storage.sql',
   ])
     target.exec(readFileSync(`migrations/${migration}`, 'utf8'))
   const generate = () =>
@@ -93,42 +100,51 @@ function fixture() {
   return { target, generate, apply, output, sourcePath }
 }
 
-test('imports participating donors/dropoffs as linked Places, with brands and phone arrays', () => {
+test('imports participating donors/dropoffs as linked Locations, with brands and phone arrays', () => {
   const { target, generate, apply, output } = fixture()
   try {
     generate()
-    const firstPlaces = readFileSync(output, 'utf8')
+    const firstLocations = readFileSync(output, 'utf8')
       .split('\n')
-      .filter(line => line.startsWith('INSERT INTO place '))
+      .filter(line => line.startsWith('INSERT INTO location '))
     generate()
     expect(
       readFileSync(output, 'utf8')
         .split('\n')
-        .filter(line => line.startsWith('INSERT INTO place ')),
-    ).toEqual(firstPlaces)
+        .filter(line => line.startsWith('INSERT INTO location ')),
+    ).toEqual(firstLocations)
     apply()
     expect(target.query('SELECT count(*) AS n FROM feature').get()).toEqual({ n: 2 })
-    expect(target.query('SELECT count(*) AS n FROM featurePlace').get()).toEqual({
+    expect(target.query('SELECT count(*) AS n FROM featureLocation').get()).toEqual({
       n: 2,
     })
-    expect(target.query('SELECT count(*) AS n FROM featurePlaceHistory').get()).toEqual(
-      { n: 2 },
-    )
-    const placeIds = target.query('SELECT id FROM place ORDER BY id').all() as {
+    expect(
+      target.query('SELECT count(*) AS n FROM featureLocationHistory').get(),
+    ).toEqual({ n: 2 })
+    const locationIds = target.query('SELECT id FROM location ORDER BY id').all() as {
       id: string
     }[]
-    for (const row of placeIds) expect(row.id).toMatch(/^[A-Za-z0-9_-]{12}$/)
+    for (const row of locationIds) expect(row.id).toMatch(/^[A-Za-z0-9_-]{12}$/)
+    for (const row of target.query('SELECT id FROM locationRevision').all() as {
+      id: string
+    }[])
+      expect(row.id).toMatch(/^[A-Za-z0-9_-]{12}$/)
     const donor = target
       .query(
-        "SELECT r.facts,p.state,p.ownerOrganisationId,p.ssId FROM breadlineImportFeature i JOIN featurePlace f ON f.featureId=i.featureId JOIN place p ON p.id=f.placeId JOIN placeRevision r ON r.id=f.factsRevisionId WHERE i.sourceTable='donors'",
+        "SELECT r.facts,p.kind,p.state,p.ownerOrganisationId,p.ssId FROM breadlineImportFeature i JOIN featureLocation f ON f.featureId=i.featureId JOIN location p ON p.id=f.locationId JOIN locationRevision r ON r.id=f.factsRevisionId WHERE i.sourceTable='donors'",
       )
       .get() as {
       facts: string
+      kind: string
       state: string
       ownerOrganisationId: string
       ssId: null
     }
     expect(donor.state).toBe('unresolved')
+    expect(donor.kind).toBe('establishment')
+    expect(
+      target.query("SELECT count(*) AS n FROM location WHERE kind='unknown'").get(),
+    ).toEqual({ n: 1 })
     expect(donor.ownerOrganisationId).toBe('org')
     expect(donor.ssId).toBeNull()
     const facts = JSON.parse(donor.facts)
@@ -151,9 +167,9 @@ test('imports participating donors/dropoffs as linked Places, with brands and ph
     ])
     generate()
     apply()
-    expect(target.query('SELECT count(*) AS n FROM featurePlaceHistory').get()).toEqual(
-      { n: 2 },
-    )
+    expect(
+      target.query('SELECT count(*) AS n FROM featureLocationHistory').get(),
+    ).toEqual({ n: 2 })
   } finally {
     target.close()
   }
@@ -164,14 +180,14 @@ test('rolls back the generated import if association history fails', () => {
   try {
     generate()
     target.exec(
-      "CREATE TRIGGER fail_import BEFORE INSERT ON featurePlaceHistory BEGIN SELECT RAISE(ABORT,'injected'); END",
+      "CREATE TRIGGER fail_import BEFORE INSERT ON featureLocationHistory BEGIN SELECT RAISE(ABORT,'injected'); END",
     )
     expect(apply).toThrow('injected')
     for (const table of [
       'feature',
-      'place',
-      'placeRevision',
-      'featurePlace',
+      'location',
+      'locationRevision',
+      'featureLocation',
       'breadlineImportFeature',
     ])
       expect(target.query(`SELECT count(*) AS n FROM ${table}`).get()).toEqual({ n: 0 })

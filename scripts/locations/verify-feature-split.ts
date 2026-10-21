@@ -4,14 +4,14 @@ import { resolve } from 'node:path'
 // SQLITE
 import { Database } from 'bun:sqlite'
 // DOMAIN
-import { equalPlaceValue } from '../../src/lib/places/baseline'
-import { resolveFeaturePlace } from '../../src/lib/places/resolve'
+import { equalLocationValue } from '../../src/lib/locations/baseline'
+import { resolveFeatureLocation } from '../../src/lib/locations/resolve'
 import {
-  PlaceFactsSchema,
-  FeaturePlaceOverridesSchema,
-} from '../../src/lib/places/validation'
+  LocationFactsSchema,
+  FeatureLocationOverridesSchema,
+} from '../../src/lib/locations/validation'
 // TYPES
-import type { UnresolvedFeatureSplit } from '../../src/lib/places/migrationPlan'
+import type { UnresolvedFeatureSplit } from '../../src/lib/locations/migrationPlan'
 
 /**
  * Verify a completed split against its untouched local baseline and private manifest.
@@ -60,12 +60,12 @@ function main(): void {
         .get() as { same: number }
       if (difference || !count.same) throw new Error(`Feature data changed: ${table}`)
     }
-    // Existing Place records must remain intact; only one new row per split is expected.
+    // Existing Location records must remain intact; only one new row per split is expected.
     for (const table of [
-      'place',
-      'placeRevision',
-      'featurePlace',
-      'featurePlaceHistory',
+      'location',
+      'locationRevision',
+      'featureLocation',
+      'featureLocationHistory',
     ]) {
       const changed = db
         .query(
@@ -81,15 +81,15 @@ function main(): void {
         throw new Error(`Unexpected migration changes: ${table}`)
     }
     const query =
-      db.query(`SELECT fp.placeId,fp.factsRevisionId,fp.locationRevisionId,fp.overrides,
+      db.query(`SELECT fp.locationId,fp.factsRevisionId,fp.locationRevisionId,fp.overrides,
       p.ownerOrganisationId,p.state,p.ssId,r.facts,r.origin,
-      (SELECT count(*) FROM featurePlaceHistory h WHERE h.featureId=fp.featureId) AS historyCount
-      FROM featurePlace fp JOIN place p ON p.id=fp.placeId
-      JOIN placeRevision r ON r.id=fp.factsRevisionId AND r.placeId=fp.placeId
+      (SELECT count(*) FROM featureLocationHistory h WHERE h.featureId=fp.featureId) AS historyCount
+      FROM featureLocation fp JOIN location p ON p.id=fp.locationId
+      JOIN locationRevision r ON r.id=fp.factsRevisionId AND r.locationId=fp.locationId
       WHERE fp.featureId=?`)
     for (const plan of plans) {
       const row = query.get(plan.featureId) as {
-        placeId: string
+        locationId: string
         factsRevisionId: string
         locationRevisionId: string
         overrides: string
@@ -102,7 +102,7 @@ function main(): void {
       } | null
       if (
         !row ||
-        row.placeId !== plan.placeId ||
+        row.locationId !== plan.locationId ||
         row.factsRevisionId !== plan.revisionId ||
         row.locationRevisionId !== plan.revisionId ||
         row.ownerOrganisationId !== (db.query('SELECT organisationId FROM project WHERE id=?').get(plan.projectId) as { organisationId: string } | null)?.organisationId ||
@@ -112,12 +112,12 @@ function main(): void {
         row.historyCount !== 1
       )
         throw new Error('Split identity, ownership or history mismatch')
-      const facts = PlaceFactsSchema.parse(JSON.parse(row.facts))
-      const overrides = FeaturePlaceOverridesSchema.parse(JSON.parse(row.overrides))
+      const facts = LocationFactsSchema.parse(JSON.parse(row.facts))
+      const overrides = FeatureLocationOverridesSchema.parse(JSON.parse(row.overrides))
       if (
-        !equalPlaceValue(
-          resolveFeaturePlace(facts, facts.location, overrides),
-          resolveFeaturePlace(plan.facts, plan.facts.location, plan.overrides),
+        !equalLocationValue(
+          resolveFeatureLocation(facts, facts.location, overrides),
+          resolveFeatureLocation(plan.facts, plan.facts.location, plan.overrides),
         )
       )
         throw new Error('Effective split values changed')

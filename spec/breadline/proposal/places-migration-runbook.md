@@ -1,8 +1,8 @@
-# Places migration rehearsal and release handoff
+# Locations migration rehearsal and release handoff
 
 Refs [#194](https://github.com/tijptjik/hype/issues/194), parent
 [#180](https://github.com/tijptjik/hype/issues/180). Domain:
-[Places and Features](01-places-features.md).
+[Locations and Features](01-places-features.md).
 
 ## Inputs and command
 
@@ -15,13 +15,13 @@ proximity suggestions as canonical identities.
 From the HYPE repository, with Bun, Python 3 and installed dependencies:
 
 ```sh
-bun scripts/places/rehearse-migration.ts \
-  .local/places/hype-production-20261020.sqlite \
-  .local/breadline/mirror.sqlite \
-  .local/places/NEW-migration-rehearsal
+bun scripts/locations/rehearse-migration.ts \
+  .local/locations/refresh-20261021/hype-production.sqlite \
+  .local/locations/refresh-20261021/breadline.sqlite \
+  .local/locations/NEW-migration-rehearsal
 ```
 
-The output directory must be new and under `.local/places/`. Existing artifacts are
+The output directory must be new and under `.local/locations/`. Existing artifacts are
 never overwritten. The script snapshots both SQLite inputs using SQLite's backup API,
 records their hashes and the code revision, and uses only the copies. It has no remote
 binding or primary-local reset operation. Any failure exits without a completion receipt;
@@ -36,7 +36,7 @@ the cause. Individual split operations additionally have tested idempotent repla
    the intended release: it includes all pending repository migrations, not just Places.
 2. Preserve `schema-baseline.sqlite`. Read existing Features through the application
    baseline reader and generate `split.json`. Each eligible row gets a deterministic
-   unresolved Place, preserved effective values and original provenance. Draft,
+   unresolved Location, preserved effective values and original provenance. Draft,
    intangible, non-point and already-linked exclusions are explicit; other review
    outcomes stop before split application.
 3. Apply each split through `applyUnresolvedFeatureSplit`, then replay it and require
@@ -57,14 +57,33 @@ the cause. Individual split operations additionally have tested idempotent repla
    counts, exclusions, validation receipts and plan hashes. The bundle contains private
    source data and belongs outside Git and public issue attachments.
 
-The completed 2026-10-20 rehearsal applied 17 missing migrations (0109–0125), split
-1,190 Features, excluded 56 intangible Features and 25 drafts, imported 311 donors plus
-19 drop-points, and skipped 155 donors without recorded runs. Replay created zero
-records and matched all 330 imports. All 64 reviewed MTR decisions were retained.
-Result: 1,601 Features, 1,520 Places and 1,520 associations; original Feature data
-preserved, replay unchanged, integrity valid and zero foreign-key violations.
-Additional canonical candidates mirrored during earlier development are not inputs to
-this production-export rehearsal and are not accepted canonical matches.
+The latest clean rehearsal uses the HYPE and Breadline exports verified on 2026-10-20,
+applies 28 pending migrations through 0136, and splits 1,205 existing Features. It
+excludes 56 intangible Features and 26 drafts, imports 311 donors plus 19 drop-points,
+and skips 155 donors without recorded runs. Replay leaves all imported data unchanged.
+All 64 reviewed MTR decisions remain in the import. The result contains 1,617 Features,
+1,535 Places and 1,535 associations, with valid integrity and zero foreign-key violations.
+Every new Place and baseline revision uses an opaque 12-character ID. Source matches
+remain a separate reviewed operation; this initial import has unresolved baselines.
+
+## Activate a rehearsal as primary local data
+
+An isolated rehearsal does not refresh the primary local database. When explicitly
+requested, verify the chosen export/rehearsal receipts and identify the exact local D1
+binding file. Stop its development server and database browser before replacing data.
+Use SQLite's backup API to retain the entire previous database, including committed WAL
+contents, then install the verified result into the primary binding. Avoid raw file copies
+while connections are open. Check integrity, foreign keys, import counts and ID format
+again against the actual primary file.
+
+Run local mirror preparation to initialize reserved development accounts and drain the
+import's division jobs. It needs server-side SaanSeoi connection settings; never print
+credentials. Keep other local database writers stopped during preparation to avoid
+SQLite lock contention, then restart the development server and database browser.
+Retain a private receipt with source, target, backup and verification results. This step
+replaces local experiments and reviewed local identities with the selected fresh import;
+the backup preserves them for recovery. It does not modify production or constitute
+acceptance of suggested canonical identities.
 
 ## Release boundary
 
@@ -94,7 +113,7 @@ manifest SHA-256 and an explicit receipt path. Description is the default and pe
 no connection, schema mutation or deployment:
 
 ```sh
-bun scripts/places/execute-feature-split.ts \
+bun scripts/locations/execute-feature-split.ts \
   --manifest .local/places/RELEASE/split.json \
   --sha256 MANIFEST_SHA256 \
   --receipt .local/places/RELEASE/execution.json \
@@ -140,7 +159,7 @@ After independently reviewing an establishment candidate, use the existing local
 database containing the imported Feature and pinned source candidate:
 
 ```sh
-bun scripts/places/rehearse-identity-match.ts \
+bun scripts/locations/rehearse-identity-match.ts \
   SOURCE.sqlite .local/places/NEW-identity-rehearsal \
   FEATURE_ID CANONICAL_SS_ID 'Evidence-based establishment review reason'
 ```
@@ -171,8 +190,8 @@ unchanged. No raw contacts or review exports belong in tracked documentation.
 After a successful independent identity rehearsal:
 
 ```sh
-bun scripts/places/apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY
-bun scripts/places/apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY --apply-local
+bun scripts/locations/apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY
+bun scripts/locations/apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY --apply-local
 ```
 
 The first command describes the operation. Only real SQLite paths beneath this
@@ -202,7 +221,7 @@ After the preceding identity application, explicitly select its exact reviewed s
 revision without replacing current effective values:
 
 ```sh
-bun scripts/places/apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY --preserve-feature-values
+bun scripts/locations/apply-reviewed-identity.ts LOCAL_D1.sqlite REHEARSAL_DIRECTORY --preserve-feature-values
 ```
 
 This separate step requires the accepted identity history tail and its source revision
@@ -227,11 +246,11 @@ replay does not undo later identity curation. Production remains untouched.
 ## Rehearse complete source mirroring and Address hydration
 
 The normal bulk command and the isolated rehearsal share
-`scripts/places/lib/mirror-source-subset.ts`; only their database/source transports
+`scripts/locations/lib/mirror-source-subset.ts`; only their database/source transports
 and checkpoint sinks differ. To verify against the retained source exports:
 
 ```sh
-bun scripts/places/rehearse-source-mirror.ts \
+bun scripts/locations/rehearse-source-mirror.ts \
   HYPE.sqlite SOURCE_EXPORT_DIRECTORY CURRENT.sqlite \
   PUBLICATION.json CHECKPOINT.json .local/places/NEW-source-mirror-rehearsal
 ```
@@ -265,7 +284,7 @@ private application directory. Keep the original checkpoint as evidence. The nor
 command accepts the same sealed source exports without requiring a hosted API key:
 
 ```sh
-bun scripts/places/mirror-source.ts PUBLICATION.json APPLICATION_CHECKPOINT.json bakery \
+bun scripts/locations/mirror-source.ts PUBLICATION.json APPLICATION_CHECKPOINT.json bakery \
   --source-export SOURCE_EXPORT_DIRECTORY --current-export CURRENT.sqlite
 ```
 
@@ -288,7 +307,7 @@ Use a local HYPE snapshot with migrations through 0125 installed, an idle refres
 already checked this UTC month, and sealed SaanSeoi exports:
 
 ```sh
-bun scripts/places/rehearse-canonical-refresh.ts \
+bun scripts/locations/rehearse-canonical-refresh.ts \
   HYPE.sqlite SOURCE_EXPORT_DIRECTORY CURRENT.sqlite \
   .local/places/NEW-canonical-refresh-rehearsal
 ```
@@ -322,8 +341,8 @@ pipeline is retired. Retain its old pages in the database backup.
 Rehearse against an explicit pre-0122 local snapshot in a new private directory:
 
 ```sh
-python scripts/places/rehearse-simplification.py INPUT.sqlite .local/places/NEW_SIMPLIFICATION_REHEARSAL
-python scripts/places/test_simplification.py
+python scripts/locations/rehearse-simplification.py INPUT.sqlite .local/places/NEW_SIMPLIFICATION_REHEARSAL
+python scripts/locations/test_simplification.py
 ```
 
 The command creates `before.sqlite`, migrates `result.sqlite` atomically and writes a
@@ -355,7 +374,7 @@ block cross-Organisation Feature and Project moves. Shared Places retain null ow
 Rehearse this conversion alone on a database through 0134:
 
 ```sh
-python scripts/places/rehearse-organisation-ownership.py \
+python scripts/locations/rehearse-organisation-ownership.py \
   INPUT.sqlite .local/places/NEW-organisation-ownership-rehearsal
 ```
 
@@ -399,7 +418,7 @@ not certification of a clean release commit.
 The reproducible display preview command is:
 
 ```sh
-bun scripts/places/preview-address-migration.ts SPLIT.json CANDIDATES.json \
+bun scripts/locations/preview-address-migration.ts SPLIT.json CANDIDATES.json \
   SAANSEOI_CURRENT.sqlite PRIVATE_OUTPUT_PREFIX
 ```
 
@@ -422,3 +441,46 @@ source provenance remain available. Unknown premises components require curation
 No granularity repair command is needed. The obsolete repair tooling is removed.
 Upstream address reconciliation and retirement of local content remain tracked in
 [#233](https://github.com/tijptjik/hype/issues/233).
+
+## Fresh primary local rebuild — 21 October 2026 (Refs #194)
+
+Read-only production exports of HYPE and all 15 Breadline tables were refreshed on
+21 October. HYPE canonical tables were exported individually because the full D1
+export rejects virtual FTS tables; the restore utility rebuilt derived FTS indexes.
+The fresh HYPE source contained 1,275 Features. No production writes were performed.
+
+Applied all 30 pending migrations through `0138_location_storage.sql`, split 1,205
+existing Features, then imported 311 donors and 19 drop-points. The donor import
+excludes 155 donors without recorded runs; scheduled dates constrain the review
+cohort, not the import policy. All 64 reviewed MTR decisions were retained. The
+accepted labels for donors #558/#727 still need entrance mappings.
+
+The primary local database was replaced with the rehearsed result, retaining a
+pre-activation backup. It contains 1,617 Features and 1,535 Locations, each with
+one initial revision, association and association-history row. Kinds are 311
+`establishment` and 1,224 `unknown`; unmatched legacy baselines are not silently
+assigned source identities. All Location IDs are opaque 12-character IDs.
+
+Import replay matched all 330 imports and created no additional rows. Integrity
+and foreign-key checks pass. All nine lifecycle tables now use Location names;
+there are no Place compatibility tables/views. Populated migration tests cover
+identity review/redirect receipts, nested baselines, history preservation, immutable
+guards and unmodified raw source payloads. Private exports, hashes, activation
+receipt and backups are under `.local/locations/refresh-20261021/`.
+
+Current runtime paths are `src/lib/locations/`, `scripts/locations/`,
+`workers/location-refresh/` and `/admin/locations`. Historical migration names
+and upstream SaanSeoi `places` contracts intentionally retain their original names.
+The refresh worker rename is local source/configuration work; it has not been deployed.
+
+Post-install preparation completed against the primary local database: October
+division release `data-hk-divisions-2026-10-01.0`, zero pending division jobs, valid
+integrity and foreign keys, and both reserved development personas initialized.
+The final schema has no legacy Place tables or local Place-named columns.
+
+Validation: 496 Vitest tests across 38 files pass, plus 30 Bun domain/import/split
+tests, nine Python historical/matching tests, the synthetic address-curation and
+adoption rehearsal, and the Location refresh worker TypeScript check. Full app
+checking retains its baseline 10 errors and 19 warnings. Chromium verified the
+Organisation-scoped directory, imported Location details and Project Locations
+tab against the primary local database.

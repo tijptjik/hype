@@ -1,4 +1,4 @@
-# Places, Feature inheritance and SaanSeoi Addresses
+# Locations, Feature inheritance and SaanSeoi Addresses
 
 Accepted architecture, 20 October 2026. Delivery tracking:
 [#194](https://github.com/tijptjik/hype/issues/194), parent
@@ -8,12 +8,14 @@ Accepted architecture, 20 October 2026. Delivery tracking:
 
 ## Identity and ownership
 
-A Place is an identifiable, spatially fixed entity. A Feature is a Project's
-interpretation of that Place: a bakery is a Place; its Breadline donor role is a
-Feature. Multiple Features can share one Place. Deleting a Feature never deletes
-its Place. Intangible and other non-place Features can remain unassociated.
+A Location is a shared physical entity; a Feature is a Project's interpretation
+of it. A bakery is an establishment Location; its Breadline donor role is a
+Feature. Multiple Features can share one Location. Deleting a Feature never deletes
+its Location. Intangible Features can remain unassociated. Establishments are the
+currently supported source kind; buildings and natural features remain unavailable.
+SaanSeoi's upstream `places` family retains its source name.
 
-HYPE owns the permanent `place.id`. New Places have opaque 12-character IDs using
+HYPE owns the permanent `location.id`. New Locations have opaque 12-character IDs using
 HYPE's NanoID alphabet. Manual creation uses `nanoid(12)`; repeatable Breadline imports,
 existing-Feature splits and initial source mirroring use the fixed versioned
 SHA-256/base64url derivation in `id.server.ts`. Source namespaces are hash inputs,
@@ -26,53 +28,54 @@ SaanSeoi Place; do not assume this always equals an Overture publisher ID. Sourc
 ID disappearance, proximity and matching brand alone never justify rebinding an
 establishment. Accepted identity changes preserve the HYPE ID and associations.
 
-Place states:
+Location states:
 
 - `linked`: identified SaanSeoi source, with immutable mirrored revisions.
 - `unresolved`: a local baseline awaiting establishment matching.
-- `manual`: an intentionally local Place, excluded from ordinary source matching.
-- `redirect`: an absorbed identity that resolves to its surviving HYPE Place.
+- `manual`: an intentionally local Location, excluded from ordinary source matching.
+- `redirect`: an absorbed identity that resolves to its surviving HYPE Location.
 
 Source availability (`current`, `missing`, `review`) is independent of identity
 state. Missing upstream data does not imply business closure, donor inactivity or
 deletion. Manual and unresolved baselines have explicit local provenance.
 
-Local Places belong to an owning Organisation (`ownerOrganisationId`). Null ownership
-means a shared canonical Place, administered by core administrators. Sibling Projects
-can discover and associate the Organisation's private Places through their authorized
+Local Locations belong to an owning Organisation (`ownerOrganisationId`). Null ownership
+means a shared canonical Location, administered by core administrators. Sibling Projects
+can discover and associate the Organisation's private Locations through their authorized
 Feature workflows. Creation, private catalogue access and identity administration
 require Organisation-level authority; Project roles do not grant upward authority.
 Merges authorize both persisted owners independently. Project users retain control of
 Feature overrides and per-Project adoption policies. Feature visibility never grants
 access to another Project's Features or private review evidence. Database guards block
-Feature or Project moves that would cross a private Place's Organisation boundary.
+Feature or Project moves that would cross a private Location's Organisation boundary.
 
 ## Storage: nine dedicated tables
 
 Drizzle declarations put `createdAt` and the existing update timestamp (`updatedAt`
-or `modifiedAt`) last. Declaration reordering does not migrate SQLite's physical
-column order; that change is deferred to the final schema migration. Conditional
-insert projections must follow the declared column order.
+or `modifiedAt`) last. Migration 0138 also rebuilds these nine tables with timestamps
+physically last; it does not reorder unrelated tables. Conditional insert projections
+must follow the declared column order.
 
-Migrations 0122–0125 consolidate the original twenty-table implementation. No
-compatibility views or replacement generic registry are introduced.
+Migrations 0122–0125 consolidate the original twenty-table implementation. Migration
+`0138_location_storage.sql` renames the nine lifecycle tables, columns, indexes and
+guards to Location terminology. No compatibility views or generic registry are introduced.
 
 | Table | Responsibility |
 | --- | --- |
-| `place` | Stable HYPE identity, source ID, ownership, availability; absorbed identities retain `redirectTargetId` and the immutable redirect receipt. |
-| `placeRevision` | Immutable source/local snapshots, normalized facts, content hash, API/release/snapshot references and provenance. |
-| `featurePlace` | Current association, accepted facts/location revisions, explicit overrides and concurrency token. |
-| `featurePlaceHistory` | Actor-attributed link, reassociation, override and unlink history. |
-| `placeIdentityHistory` | Accepted source-identity transitions and their immutable review references. |
-| `placeIdentityReview` | Retained establishment comparison, append-only merge impact versions, optional immutable rejection. |
-| `placeAdoptionProposal` | Immutable source-change assessment plus independently written `factsDecision` and `locationDecision`. |
-| `placeRefresh` | Monthly publication checkpoint, current run, cursor, lease and retry state. |
-| `placeRefreshItem` | Captured source identity, pinned evidence, processing cursor and outcomes keyed by Feature ID. |
+| `location` | Stable HYPE identity, source ID, ownership, availability; absorbed identities retain `redirectTargetId` and the immutable redirect receipt. |
+| `locationRevision` | Immutable source/local snapshots, normalized facts, content hash, API/release/snapshot references and provenance. |
+| `featureLocation` | Current association, accepted facts/location revisions, explicit overrides and concurrency token. |
+| `featureLocationHistory` | Actor-attributed link, reassociation, override and unlink history. |
+| `locationIdentityHistory` | Accepted source-identity transitions and their immutable review references. |
+| `locationIdentityReview` | Retained establishment comparison, append-only merge impact versions, optional immutable rejection. |
+| `locationAdoptionProposal` | Immutable source-change assessment plus independently written `factsDecision` and `locationDecision`. |
+| `locationRefresh` | Monthly publication checkpoint, current run, cursor, lease and retry state. |
+| `locationRefreshItem` | Captured source identity, pinned evidence, processing cursor and outcomes keyed by Feature ID. |
 
-Existing resources own their settings: `project.placePolicy` and
-`placePolicyRevision` store Project policy; `feature.localPlaceBrands` stores
+Existing resources own their settings: `project.locationPolicy` and
+`locationPolicyRevision` store Project policy; `feature.localLocationBrands` stores
 unlinked brand corrections and their revision/actor. These are not separate
-resources. Source-backed Feature corrections remain in `featurePlace.overrides`.
+resources. Source-backed Feature corrections remain in `featureLocation.overrides`.
 
 A merge comparison can have multiple impact assessments if its association set
 changes before acceptance. Their existing IDs, baselines, source revision,
@@ -91,7 +94,7 @@ source-change collector remains available for investigation.
 
 Existing Feature columns are effective read projections, preserving public IDs,
 URLs, spatial queries and existing consumers. Their authoritative inputs are the
-accepted Place revisions and explicit Feature overrides. Mutations use the shared
+accepted Location revisions and explicit Feature overrides. Mutations use the shared
 resolver and atomic association/projection services.
 
 Overrides use `inherit`, `override(value)` and `clear`. Missing override means
@@ -136,7 +139,7 @@ Acceptance Policy**, with the distance limit shown only for distance-based
 coordinate acceptance. Controls retain scenario-specific accessible names.
 
 The shared mirror advances independently of each Project's accepted data.
-`featurePlace` accepts facts and location revisions independently. Two Projects
+`featureLocation` accepts facts and location revisions independently. Two Projects
 can therefore accept different snapshots without duplicating Place identities.
 Geometry and address/unit references always advance together.
 
@@ -211,7 +214,7 @@ Only the canonical pipeline runs on the scheduler. Publisher-source comparisons
 are an optional read-only diagnostic, not an additional adoption dependency:
 
 ```sh
-bun --env-file=.dev.vars scripts/places/collect-source-changes.ts FROM_RELEASE TO_RELEASE RECEIPT_NAME [PAGES_PER_RUN]
+bun --env-file=.dev.vars scripts/locations/collect-source-changes.ts FROM_RELEASE TO_RELEASE RECEIPT_NAME [PAGES_PER_RUN]
 ```
 
 This follows `/places/v0.1/sources/changes` pins and cursors, retaining private pages
@@ -270,7 +273,7 @@ multilingual address components, unit/floor semantics and exact locale expressio
 Shared unit content belongs to the Place; Feature-only corrections and access hints
 remain independent. Editing a Place requires its Organisation's management authority.
 
-Edits append immutable `placeRevision` rows with actor, owner and predecessor evidence;
+Edits append immutable `locationRevision` rows with actor, owner and predecessor evidence;
 the insert fences both current owner and latest revision. Existing linked Features keep
 their accepted revisions. The Feature review command prepares the newer local revision
 for explicit adoption through the ordinary review flow, preserving Feature overrides.
@@ -282,7 +285,7 @@ structured editor content when opened. No historical revision is rewritten and n
 SQL table or destructive backfill is required. Saving performs the explicit upgrade.
 This is local authoring, not an upstream curation/publishing endpoint.
 
-Validation: `bun scripts/places/verify-address-contract.ts ../saanseoi` compares the
+Validation: `bun scripts/locations/verify-address-contract.ts ../saanseoi` compares the
 current sibling repository's canonical content keys and all four enum vocabularies.
 Focused tests cover multilingual round trips, invalid types/publication claims,
 immutable edits, stale-owner/revision fences, local review and Feature overrides.
@@ -323,6 +326,70 @@ The basic review section now presents pending adoption reviews as **Tasks**, wit
 a count and an action to prepare the latest locally authored address for review.
 The dedicated tab, unified identity tasks and richer component comparisons remain
 UI follow-up work; they do not require another persistence model.
+
+## Feature Address presentation
+
+The Address facet keeps the map and action bar fixed above an independently scrolling
+results/address region. The four discovery actions share the coordinate control’s quiet
+bordered styling and sit beside it in one toolbar row. At narrower content widths,
+actions retain accessible names and tooltips while showing their icons. The radius
+slider sits at the top right of the map; coverage warnings precede the results.
+Read mode shows the linked Place or an explicit
+No Place associated state with a struck-through shop icon; editing hides this empty
+placeholder to leave room for discovery actions. An unlinked editable
+Feature offers Show Nearby Addresses, Show Nearby Places, Find a Place and Create Place.
+The Project Places tab configures a default radius (300 m when absent, adjustable from
+50–1,000 m); the regular Project form owns saving it. Each discovery can override the
+radius without changing Project settings.
+
+Search results appear directly below the map as keyed FLIP rows. Local and canonical
+previews share stable row/marker numbers, preferred-language names and display
+addresses, and great-circle distance from the Feature pin (not walking distance).
+Hovering or keyboard-focusing a result highlights its existing numbered marker without
+selecting, importing, moving the camera, or recreating marker elements. Selecting a
+marker selects its row. Canonical preview details are read-only; explicit
+selection/import and the existing confirmation step still precede association.
+Unavailable preview details remain an explicit partial-search error above the results.
+Discovery reads latest-source details with exact ID/release checks; these previews are never
+canonical import evidence. Import/linking still requires publication-pinned verification.
+
+Create Place geocodes the current display address and replaces the result area with
+an editable structured address proposal. A unique resolved response seeds components;
+multiple or ambiguous candidates require selection. Existing unit details are retained.
+A failed lookup keeps the original text and local parser proposal, with an explicit
+error. Creating a local Place and linking it remain separate steps. A dirty Feature
+may prepare/create a Place, but must be saved before confirming its association.
+
+Nearby Address discovery uses the reverse geocoder with each Address's actual geometry;
+selecting a result does not move the Feature pin or save Feature values. Nearby Place
+search covers all intersecting resolution-nine H3 cells, paginates with a bounded budget,
+filters exact great-circle distances and resolves ID/release-checked preview facts before display. Scoped
+Organisation-local Places are included. Results rank by proximity and multilingual
+address agreement, weighting building, street, building number and unit evidence above
+freeform text. Missing addresses contribute no penalty. Pagination, the fifty-source-
+preview limit and partial failures are explicit; an incomplete search never silently
+becomes a verified absence. A changed pin/radius or cancellation invalidates late results.
+
+Create Place first searches nearby Places and the Feature name, then offers up to five
+plausible matches. Identity selection remains explicit: a shared building address alone
+is not proof of the same shop. With no matches from a complete search, the local creation
+form opens directly. Partial/limited searches require an explicit Create without a
+verified match action. A selected Address seeds the structured proposal, retaining the
+Feature's unit evidence. Choosing an existing Place retains the prepared address as a
+Feature draft after association; the normal Feature Save persists that correction.
+
+Local creation requires Create & allow sharing or Create privately. Both preserve
+Organisation ownership and the independent manual/unresolved distinction. The default
+is unresolved; intentional manual status remains an explicit choice. Sharing consent is
+stored in the immutable local-baseline payload (`input.sharingPreference`) with its
+author and revision timestamp. It is permission for future reconciliation, not public
+visibility or an upstream submission. Older payloads without a preference imply no
+sharing permission. No new table or schema migration is required.
+Upstream submission and receipt-driven reconciliation remain deferred under #233.
+
+Place settings and Tasks remain secondary disclosures. The next review should settle
+shared Place-address editing versus Feature-only corrections/access directions, and
+the dedicated Tasks presentation. No new persistence tables are needed for this UI.
 
 ## Display-first address migration plan
 
@@ -409,3 +476,251 @@ with the matched Place. Store an idempotent receipt tied to the submitted local
 revision. Only a subsequent compatible sync confirming the expected association
 and content can retire the redundant Place overlay. A newer local edit, changed
 unit or differing display returns to review; independent Feature overrides survive.
+
+
+Discovery compatibility note (21 October 2026, Refs #233): the deployed SaanSeoi
+canonical collection currently ignores `filter[id]`, returning the unfiltered page.
+HYPE deliberately rejects this for import/linking. Latest-source preview requests use
+`/places/v0.1/{id}` and validate the returned ID and resource release, allowing discovery
+to function independently. Canonical exact-ID lookup remains a source-deployment
+dependency; it must not be bypassed by persisting preview facts.
+
+Initial import revision IDs now use a versioned opaque twelve-character derivation,
+like Place IDs. Old imported identities are retained on replay; exports do not rename
+existing local records. A clean import emits opaque Place and baseline IDs.
+
+## Proposal: shared Locations beyond Overture Places
+
+Research date: 21 October 2026 HKT. Refs [#180](https://github.com/tijptjik/hype/issues/180)
+and [SaanSeoi #68](https://github.com/tijptjik/saanseoi/issues/68). This section records a
+proposal, not an approved schema change or implemented Buildings API.
+
+### Reviewed data and limits
+
+The latest retained SaanSeoi Hong Kong building extract was `2026-09-23.0`. Review
+also downloaded the published `2026-09-23.1` building and building-part data from
+Overture's public storage, using schema v2.0.0. To compare the same coverage, the latest
+building rows were restricted to the retained Hong Kong building IDs; parts were matched
+by retained parent ID and geometry. All 204,207 buildings were found with unchanged
+content, excluding implicit partition columns. All 2,982 corresponding parts were found,
+with none retaining its previous ID. Overture's September patch explicitly repairs
+building-part and base UUIDs. A district-union intersection would exclude 27 boundary
+buildings from the retained clipSmart scope; the review does not silently change that scope.
+
+The private local research bundle is `.local/research/buildings-20261021/`. Its latest
+extract receipt records scope, hashes and comparison results. The bounding-box downloads
+also include records outside Hong Kong and must not be counted as Hong Kong inventory.
+
+Measured building coverage in that scope:
+
+| Attribute | Populated records | Share |
+| --- | ---: | ---: |
+| Name | 35,263 | 17.27% |
+| Explicit height | 1,908 | 0.93% |
+| Above-ground floor count | 56,650 | 27.74% |
+| Broad subtype | 86,185 | 42.20% |
+| Detailed class | 85,170 | 41.71% |
+
+Sources are OpenStreetMap (118,834 buildings) and `doi:10.5281/zenodo.8174931`
+(85,373). Building parts belong to 1,254 parent buildings. The
+[Building schema](https://docs.overturemaps.org/schema/reference/buildings/building/)
+provides polygon/multipolygon geometry, names, current-use classifications, vertical
+measurements and optional roof/facade properties. The
+[BuildingPart schema](https://docs.overturemaps.org/schema/reference/buildings/building_part/)
+provides parent IDs and constituent geometry; a part is not a shop or unit inventory.
+The reviewed building payload has no structured address or Place-membership field.
+See the [patch release notes](https://docs.overturemaps.org/blog/2026/09/23/release-notes/).
+
+The [LandsD Building dataset](https://portal.csdi.gov.hk/csdi-webpage/dataset/landsd_rcd_1637211194312_35158)
+was checked against its live FeatureServer and published schema statistics, revision
+21 September 2026. It contains 342,195 active polygon records. These include towers,
+podiums, open-sided structures and temporary structures, so the count is not directly
+comparable with Overture buildings or proof of an Overture omission rate. It updates monthly.
+The schema reports 64,665 English names, 64,220 Traditional Chinese names, 235,946 base
+elevations, 237,348 top elevations and 59,308 storey counts. It supplies `BuildingCSUID`
+and iB1000 `BuildingID`; `GeoRefNo` is not unique in this release. `OBJECTID` is a service
+row identifier. The associated tables supply alternate names, works history, occupation
+permit structure links, permit dates/GFA and lot information. The
+[field dictionary](https://static.csdi.gov.hk/csdi-webpage/view/common/fcfd7619367e765fed971fbd1dde8ff7cee49d3fda1fdfce56e5b95deaa3ac05)
+defines base/top as elevations above Hong Kong Principal Datum, not building heights.
+Do not assign `TopHeight` directly to Overture `height`; retain vertical datum and derive
+height only from compatible base/top measurements.
+
+Other useful government sources:
+
+- [ALS](https://www.als.gov.hk/docs/Data_Dictionary_for_ALS_EN-v3.2.pdf): bilingual
+  structured frontage addresses, GeoAddress/CSU evidence, and limited floor/unit data.
+  One building can have several frontage addresses; address identity remains separate.
+- [Buildings Department building information and age records](https://data.gov.hk/en-data/dataset/hk-bd-opendata-building-information):
+  annual private-building address/type/use/block and occupation-permit enrichment.
+  It is not a territory-wide footprint replacement.
+- [3D visualisation and 3D-BIT00](https://www.landsd.gov.hk/en/survey-mapping/mapping/3d-mapping.html):
+  richer exterior models for visualisation; do not substitute mesh/tile IDs for entity IDs.
+- [3D Indoor Map](https://portal.csdi.gov.hk/csdi-webpage/dataset/landsd_rcd_1671437329821_60808)
+  and [Indoor Network](https://portal.csdi.gov.hk/csdi-webpage/dataset/landsd_rcd_1742809197336_78665):
+  selected venues' floors, units, openings/occupants and indoor/outdoor connectivity.
+  These can eventually support entrance selection; coverage is not every building.
+
+A bounded screenshot-area check found Overture's New Lucky House footprint at the
+current Toho Hotel pin. LandsD's corresponding named tower has 18 storeys and base/top
+values 7.5/57.6 m HKPD, but its footprint leaves that pin just outside. This is candidate
+evidence, not confirmation that the hotel occupies the building, and demonstrates why
+containment/proximity must not establish identity automatically.
+
+LandsD and Overture Buildings remain strictly separate inventories, with separate release
+histories, geometry and source identities. Comparison can propose an explicit cross-inventory
+relationship; it must never merge the inventories or publish a deduplicated combined inventory.
+Preserve vertical datums and the applicable
+[source attribution](https://docs.overturemaps.org/attribution/). ALS frontage links remain
+separate evidence-backed associations.
+
+The September 2026 comparison covers 342,195 LandsD footprints and 204,207 Overture
+footprints in the retained Hong Kong scope. Of LandsD records, 10.27% have more than 99%
+of their area covered by an Overture footprint; 3.82% also exceed 99% in the inverse
+direction. The remaining 6.46% are partial containment matches. Unique mutual candidates
+account for 3.64%; geometry alone does not establish physical identity or assign GERS IDs.
+Preparation, preview benchmarks and Harbour review are tracked in
+[SaanSeoi #68](https://github.com/saanseoi/saanseoi/issues/68).
+
+### Shared identity and inheritance
+
+Use **Location** in the UI and a shared typed entity internally. Generalize the existing
+Place lifecycle/revisions/association machinery instead of introducing a parallel set of
+Building tables in HYPE. The existing organisation ownership, local manual/unresolved
+states, authored addresses, review history and Project adoption policies remain useful.
+
+- A shared entity has an opaque HYPE ID, an explicit kind (establishment, building,
+  natural feature, site or unresolved), geometry and zero or more address references.
+  An address is optional; several frontages can belong to the same building.
+- Source references are typed: source/provider, resource family and source ID, with
+  version/release evidence. An unqualified `ssId` is insufficient once several families
+  participate. SaanSeoi owns reviewed relationships between its separate LandsD and
+  Overture inventories; HYPE references the selected inventory's identity and retains
+  its own ID. A partial footprint relationship is not an identity alias.
+- A Feature has one primary entity association governing inheritance, with a real FK.
+  Additional contextual relationships must have explicit roles and never compete to
+  supply Feature fields. A business can be located in a building; it is not the building.
+- Keep address selection separate from entity selection. Selecting an address alone
+  updates the address or suggests a verified related entity; it does not manufacture
+  an establishment identity. Keep coordinates-only Features valid.
+- Entity content needs typed schemas and raw source payloads: shared names/geometry/
+  addresses, establishment-specific phones/brands, building-specific details, and
+  natural-feature-specific facts. The current point-only `PlaceLocation` is insufficient.
+- Preserve a Feature's map/routing anchor separately from the entity polygon. A building
+  centroid, roof outline, frontage or nearest boundary is not proof of an entrance.
+  MTR routing continues to use the chosen access/pin location. Project adoption policy
+  should distinguish anchor changes, boundary changes, address changes and identity changes.
+- Locally authored addresses remain until equivalent source content is published and
+  accepted, as in the current Place reconciliation design. A Building match alone must
+  not discard that content or assume floor/unit inventory from a floor count.
+
+Migration should preserve IDs, histories, revisions and overrides while widening the
+model. Existing canonical Place matches can be typed as establishments where supported;
+unresolved records must not all be relabelled as businesses. Building parts need explicit
+source/parent treatment in SaanSeoi; do not expose every roof segment as a standalone
+Location by default. No additional universal relationship/ontology engine is proposed.
+
+### One discovery flow
+
+Replace the separate nearby actions with **Find Nearby**, alongside text search,
+**Create Location**, and a **Types** dropdown. Offer Places, Buildings and Addresses
+initially, with supported natural features added later. Project settings own defaults;
+temporary filters should not silently save Project settings. Unsupported families should
+be identified as unavailable instead of appearing as a successful empty search.
+
+Use one result list and map, with a type icon, textual badge and distinct theme-aware
+colour. Show building polygons as well as labelled markers. Hover/focus highlights the
+whole corresponding geometry. Names, preferred-locale addresses and distance stay in
+the list; addresses without a linked entity remain clearly address results.
+
+Rank using compatible evidence across types: text/address agreement, verified links,
+footprint containment and distance to geometry. Do not rank buildings by centroid distance
+or allow every unnamed footprint/broad natural polygon to displace relevant establishments.
+Use bounded per-type retrieval and a calibrated combined ranking. Dedupe source representations
+only through established identity mappings; keep business/building/frontage distinctions,
+grouping related results where the relationship is known. A containing-building badge is
+useful evidence and not an automatic association.
+
+Suggested sequence: agree this model; implement SaanSeoi #68 with LandsD/Overture sources
+and address links; generalize HYPE's existing model and adapters; unify discovery; then
+extend to supported natural-feature families. A unified discovery endpoint can normalize
+presentation while retaining source-specific contracts behind the API.
+
+
+### First HYPE Location slice (21 October 2026, Refs #194)
+
+The shared concept is now **Location** in the HYPE interface. **Establishment** is
+HYPE's label for the currently supported SaanSeoi Places adapter, not a literal
+Overture category: Overture's official theme/type remains `places/place`, covering
+businesses, facilities, services and amenities. Preserve that vocabulary in source
+contracts and attribution.
+
+Migration `0137_location_kinds.sql` adds `kind` to the existing shared identity.
+Canonical Places and evidence-backed Breadline donor imports become establishments;
+unclassified legacy Feature baselines and drop-points stay `unknown`. New local
+creation is explicitly establishment-only; Building/Natural feature input is rejected.
+Source ingestion and reviewed identity promotion/merge set the established kind.
+Application projections qualify source identity as `{ provider: 'saanseoi',
+family: 'places', id }`. IDs, revision history and Feature overrides remain unchanged.
+
+Migration `0138_location_storage.sql` completes the storage rename: `location` and
+`featureLocation` replace the old Place table names, local foreign keys use `locationId`,
+and routes/services/scripts use Locations. The same nine-table lifecycle is reused,
+with no compatibility aliases. Local audit receipts and nested baselines are migrated;
+raw upstream payloads and source projections are preserved byte-for-byte. Stable ID
+hash namespaces remain unchanged to prevent identity churn. Building and natural adapters, parent entity relationships,
+polygon geometry, multi-family source uniqueness and multiple address selection are
+still future work. Enabling another family requires implementing those contracts;
+unavailable UI choices must not be enabled by changing a flag alone.
+
+Discovery now combines Establishments and Addresses behind **Find Nearby**, with
+session-local **Types** checkboxes. Buildings and Natural features are disabled with
+an explicit unavailable explanation. The existing Project radius remains the default;
+changing search types does not save Project policy. Source results, private local
+identities and addresses retain their distinct IDs. Unclassified local baselines remain
+reusable and are labelled honestly. Text lookup and new establishment creation remain
+available, with pre-creation duplicate suggestions independent of the nearby type filter.
+
+Results and map markers distinguish address candidates with an amber colour; text
+badges/icons make the distinction independent of colour. Hover/focus highlights the
+matching marker. The existing fixed map/control bar and independently scrolling results
+remain. Search reports partial/truncated coverage, including when one selected family
+fails. Address-only selection stages the address through the regular Feature form;
+it neither creates an establishment, changes the existing association, nor moves the
+Feature's map/routing pin. Saving/Canceling remains the parent Feature form's responsibility.
+
+#### Address identity versus retained address content
+
+Do not add a new HYPE address master table for this slice. HYPE already retains canonical
+SaanSeoi address identities and publication-pinned structured content in Location
+revisions, with locally authored content when a canonical address is unavailable.
+Multiple Features share those revisions through their Location association; they do
+not need independently editable copies of the same address master.
+
+Addresses are not assumed immutable or reduced to display strings. Corrections, renamed
+buildings/streets, multiple frontages, floor/unit identity and different access points
+matter to reconciliation and review. Display/formatted addresses are projections;
+structured components and source provenance remain necessary. Division filtering uses
+`featureDivisionMembership`, maintained independently, and is not an address identity.
+
+When Buildings become available, model `Feature -> Establishment -> Building` as an
+explicit association chain, with direct Feature-to-Building association also possible.
+Do not let an establishment's street-level building fallback replace its own unit or
+chosen frontage. Keep one primary Feature association controlling inheritance, and
+retain the Feature's independent access pin. SaanSeoi owns shared canonical Building /
+Address relationships; HYPE retains accepted address snapshots and local corrections.
+Consider a separate HYPE Address resource only if addresses acquire independent local
+editing, ownership or reuse workflows beyond these revision snapshots.
+
+Verification for this slice: 194 focused app/service/discovery/migration tests and six
+Breadline importer tests pass; Place refresh Worker TypeScript passes. Primary local
+migration yields 311 establishments and 1,224 unclassified Locations, with integrity
+`ok`, zero FK violations and identical pre-existing columns across nine identity,
+revision, Feature and division-membership tables. No production migration was run.
+Chromium checks cover the authenticated Feature editor, mixed live source results,
+disabled future types, hover highlighting, fixed toolbar and independent address staging
+without coordinate changes. Light/dark token presentation was checked without saving
+account preferences. The test transport used SaanSeoi's configured `hype.localhost`
+Origin; the raw port-4173 origin is not allowlisted. A pre-existing layer preview 404
+remains outside this slice. Full application type-check reports ten unrelated errors
+and nineteen warnings; no changed Location file is among those diagnostics.

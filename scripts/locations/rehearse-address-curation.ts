@@ -1,5 +1,5 @@
 // Refs #194. See spec/breadline/proposal/places-address-curation.md.
-// Run: bun scripts/places/rehearse-address-curation.ts
+// Run: bun scripts/locations/rehearse-address-curation.ts
 // RUNTIME
 import { Database } from 'bun:sqlite'
 import assert from 'node:assert/strict'
@@ -462,7 +462,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
       }
     }
     const { readSaanSeoiPlacePage } = await import(
-      '../../src/lib/places/sourceClient.ts'
+      '../../src/lib/locations/sourceClient.ts'
     )
     const page = await readSaanSeoiPlacePage(
       { ...client, fetch: placeTransport as typeof fetch },
@@ -481,7 +481,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
     assert.equal(projection.snapshotId, placeSnapshotId)
     assert.equal(projection.facts.location.address.addressSnapshotId, snapshotId)
     const { hydrateSaanSeoiPlaceAddress } = await import(
-      '../../src/lib/places/sourceAddress.ts'
+      '../../src/lib/locations/sourceAddress.ts'
     )
     const hydrated = await hydrateSaanSeoiPlaceAddress(client as never, projection)
 
@@ -520,9 +520,9 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
     const { drizzle: hypeDrizzle } = await import('drizzle-orm/d1')
     const { readFileSync } = await import('node:fs')
     const { persistSaanSeoiPlace } = await import(
-      '../../src/lib/db/services/placeSource'
+      '../../src/lib/db/services/locationSource'
     )
-    const { resolveFeaturePlace } = await import('../../src/lib/places/resolve')
+    const { resolveFeatureLocation } = await import('../../src/lib/locations/resolve')
     const hype = new Database(':memory:')
     try {
       hype.exec(
@@ -589,16 +589,16 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
       const second = await persistSaanSeoiPlace(hypeDb as never, hydrated)
       assert.deepEqual(first, second)
       assert.equal(
-        (hype.query('SELECT count(*) AS n FROM placeRevision').get() as { n: number })
+        (hype.query('SELECT count(*) AS n FROM locationRevision').get() as { n: number })
           .n,
         2,
       )
       assert.equal(
-        (hype.query('SELECT count(*) AS n FROM place').get() as { n: number }).n,
+        (hype.query('SELECT count(*) AS n FROM location').get() as { n: number }).n,
         1,
       )
       const stored = hype
-        .query('SELECT facts FROM placeRevision ORDER BY sequence DESC LIMIT 1')
+        .query('SELECT facts FROM locationRevision ORDER BY sequence DESC LIMIT 1')
         .get() as {
         facts: string
       }
@@ -606,7 +606,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
         JSON.parse(stored.facts).location.address,
         hydrated.facts.location.address,
       )
-      const overridden = resolveFeaturePlace(hydrated.facts, hydrated.facts.location, {
+      const overridden = resolveFeatureLocation(hydrated.facts, hydrated.facts.location, {
         names: { en: { mode: 'override', value: 'Breadline collection label' } },
       })
       assert.equal(overridden.names.en, 'Breadline collection label')
@@ -625,7 +625,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
             exactSnapshot: true,
             pinnedRequests: 2,
             wrongSnapshotHeldForReview: true,
-            persistedPlaces: 1,
+            persistedLocations: 1,
             persistedRevisions: 2,
             ...adoption,
             replayUnchanged: true,

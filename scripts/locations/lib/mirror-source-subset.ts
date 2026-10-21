@@ -1,13 +1,13 @@
 // DATABASE
 import { eq } from 'drizzle-orm'
-import { placeRevision } from '../../../src/lib/db/schema/place'
-import { persistForwardSaanSeoiPlace } from '../../../src/lib/db/services/placeSource'
+import { locationRevision } from '../../../src/lib/db/schema/location'
+import { persistForwardSaanSeoiPlace } from '../../../src/lib/db/services/locationSource'
 // SOURCE
-import { readSaanSeoiPlacePage } from '../../../src/lib/places/sourceClient'
-import { hydrateSaanSeoiPlaceAddress } from '../../../src/lib/places/sourceAddress'
+import { readSaanSeoiPlacePage } from '../../../src/lib/locations/sourceClient'
+import { hydrateSaanSeoiPlaceAddress } from '../../../src/lib/locations/sourceAddress'
 // TYPES
 import type { Database } from '../../../src/lib/types'
-import type { PlaceSourceClient } from '../../../src/lib/places/sourceClient'
+import type { PlaceSourceClient } from '../../../src/lib/locations/sourceClient'
 import type { MirrorCheckpoint } from './mirror-checkpoint'
 
 /**
@@ -39,9 +39,9 @@ export async function mirrorSourceSubset(input: {
     for (const id of checkpoint.revisions) {
       if (
         !(await db
-          .select({ id: placeRevision.id })
-          .from(placeRevision)
-          .where(eq(placeRevision.id, id))
+          .select({ id: locationRevision.id })
+          .from(locationRevision)
+          .where(eq(locationRevision.id, id))
           .get())
       ) {
         receiptsPresent = false
@@ -77,7 +77,7 @@ export async function mirrorSourceSubset(input: {
       const hydrated = await hydrateSaanSeoiPlaceAddress(client, projection)
       const receipt = await persistForwardSaanSeoiPlace(db, hydrated)
       if (revisions.includes(receipt.revisionId))
-        throw new Error('Duplicate Place across source pages')
+        throw new Error('Duplicate Location across source pages')
       revisions.push(receipt.revisionId)
     }
     const processed = checkpoint.offset + page.places.length
