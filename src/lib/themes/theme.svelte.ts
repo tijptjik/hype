@@ -14,7 +14,8 @@ import { isMapStyleKey, type MapStyleKey } from '#lib/map/styles/registry.js'
 // TYPES
 import type { ThemeId } from './themes.types'
 
-const key = Symbol('theme')
+// Root and lazily evaluated surface modules must share the context key across dev module reloads.
+const key = Symbol.for('hype.context.theme')
 const MAP_STYLE_STORAGE_KEY = 'hype-map-style'
 const MAP_SYNC_STORAGE_KEY = 'hype-sync-ui-map-styles'
 const MAP_ACTIVE_STORAGE_KEY = 'hype-use-active-map-style'
