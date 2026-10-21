@@ -1340,6 +1340,13 @@ const buildReplacementMetadataDocument = (params: {
       null,
     capturedAt:
       params.incomingDocument.capturedAt ?? params.existingDocument?.capturedAt ?? null,
+    // Description-derived capture evidence survives non-destructive image replacement.
+    capture:
+      params.incomingDocument.capture ?? params.existingDocument?.capture ?? null,
+    captureSources:
+      params.incomingDocument.captureSources ??
+      params.existingDocument?.captureSources ??
+      null,
     credit: params.incomingDocument.credit ?? params.existingDocument?.credit ?? null,
     latitude:
       params.incomingDocument.latitude ?? params.existingDocument?.latitude ?? null,

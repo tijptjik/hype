@@ -783,6 +783,27 @@ Origin; the raw port-4173 origin is not allowlisted. A pre-existing layer previe
 remains outside this slice. Full application type-check reports ten unrelated errors
 and nineteen warnings; no changed Location file is among those diagnostics.
 
+### Description-derived image capture metadata (21 October 2026)
+
+Refs [#194](https://github.com/tijptjik/hype/issues/194) and existing image-date
+issue [#88](https://github.com/tijptjik/hype/issues/88). Capture annotations belong
+to per-image R2 metadata documents, independently of Location facts, Feature
+lifecycle, upload time and EXIF capture instants. The optional `capture` contract
+preserves date/time precision, intervals, approximation and original wording;
+full metadata retains source-description revisions and frozen gallery evidence.
+No database column or migration is needed. The conservative planner, staged
+applier ports, private inventory/rehearsal commands and integration obligations
+are documented in [capture extraction](../../../scripts/images/README.md).
+
+Current gallery intent/creation-time ordering is not evidence of historical
+ordinal references. Unverified order, missing metadata and contradictory shared
+image assertions remain unresolved. Description cleanup requires verified
+metadata writes, successful invalidation and a fenced transaction across every
+affected locale of the Feature. The concrete shipped adapter rehearses JSON
+copies only; reviewed environment-specific D1/R2 activation, active-writer fencing
+and application/restore acceptance remain integration dependencies. No remote
+rollout is implied and broad issue acceptance remains open.
+
 ## Versioned Location facts and building preparation (21 October 2026)
 
 Refs [#194](https://github.com/tijptjik/hype/issues/194); source research:

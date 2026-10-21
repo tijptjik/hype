@@ -5,6 +5,7 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'driz
 // DRIZZLE SCHEMA
 import { feature, featureImage, image } from '#lib/db/schema/index.js'
 // IMAGE
+import { ImageCaptureSchema, ImageCaptureSourceSchema } from '#lib/images/capture.js'
 import { ImageListFields } from './imageList.js'
 import { isSupportedUploadImageContentType } from '#lib/images/accept.js'
 import {
@@ -209,12 +210,15 @@ export const ImageMetadataBasicSchema = z.object({
   rotation: z.number().int().min(0).max(270).nullish(),
   cameraModel: z.string().nullish(),
   capturedAt: z.string().nullish(),
+  // Authored capture assertions remain separate from extracted EXIF instants.
+  capture: ImageCaptureSchema.nullish(),
   credit: z.string().nullish(),
   latitude: z.string().nullish(),
   longitude: z.string().nullish(),
 })
 
 export const ImageMetadataFullSchema = ImageMetadataBasicSchema.extend({
+  captureSources: z.array(ImageCaptureSourceSchema).nullish(),
   metadata: z.record(z.string(), z.string()).nullish(),
   sourceVersion: z.number().int().nullish(),
   uploadedAt: z.string().nullish(),

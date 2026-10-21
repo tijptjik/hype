@@ -75,6 +75,7 @@ const IMAGE_BUCKET_BY_STAGE = {
 // - readManifestVersion
 // - readMetadataDocument
 // - toMetadataProfilePayload
+// - stageImageMetadataRevision
 //
 // ---
 
@@ -629,8 +630,44 @@ export const toMetadataProfilePayload = (
     rotation: document.rotation ?? 0,
     cameraModel: document.cameraModel ?? null,
     capturedAt: document.capturedAt ?? null,
+    ...(document.capture ? { capture: document.capture } : {}),
     credit: document.credit ?? null,
     latitude: document.latitude ?? null,
     longitude: document.longitude ?? null,
   }
+}
+
+/**
+ * Stages a new immutable metadata revision in an explicitly selected originals bucket.
+ * @param params Exact bucket, public ID, fresh revision and full merged document.
+ * @returns Versioned object key after successful storage readback.
+ * @remarks Does not touch old revisions, aliases, manifests or the database. The caller must
+ * atomically fence image-version activation, publish its manifest, and invalidate retained
+ * metadata/gallery/Feature queries before clearing any description. No environment fallback.
+ */
+export async function stageImageMetadataRevision(params: {
+  bucket: ImageBucket
+  publicId: string
+  version: number
+  document: ImageMetadataDocument
+}): Promise<string> {
+  if (!Number.isSafeInteger(params.version) || params.version <= 0) {
+    throw new Error('Metadata revision must be a positive safe integer')
+  }
+  const key = toMetadataObjectKey(params.publicId, params.version)
+  const body = JSON.stringify(params.document)
+  // Conditional creation preserves historical sidecars even when concurrent planners collide.
+  const created = await params.bucket.put(key, body, {
+    onlyIf: { etagDoesNotMatch: '*' },
+    httpMetadata: { contentType: 'application/json' },
+  })
+  const readback = await params.bucket.get(key)
+  if (!readback || (await readback.text()) !== body) {
+    throw new Error(
+      created
+        ? 'Metadata revision readback failed'
+        : 'Metadata revision already exists with different content',
+    )
+  }
+  return key
 }
