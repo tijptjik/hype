@@ -51,7 +51,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`, input, database
       'SELECT id,ssId,state,ownerOrganisationId FROM location ORDER BY id',
     ).all()
     const overrides = target.sqlite.query(
-      'SELECT featureId,locationId,overrides FROM featureLocation ORDER BY featureId',
+      'SELECT featureId,locationId,acceptedOverrides AS overrides FROM featureLocation ORDER BY featureId',
     ).all()
     const state = target.sqlite.query('SELECT phase,checkedMonth FROM locationRefresh WHERE id=1').get() as {
       phase: string
@@ -84,7 +84,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`, input, database
       'SELECT id,ssId,state,ownerOrganisationId FROM location ORDER BY id',
     ).all(), identities)
     assert.deepEqual(target.sqlite.query(
-      'SELECT featureId,locationId,overrides FROM featureLocation ORDER BY featureId',
+      'SELECT featureId,locationId,acceptedOverrides AS overrides FROM featureLocation ORDER BY featureId',
     ).all(), overrides)
     for (const table of ['locationIdentityHistory', 'locationIdentityReview'])
       assert.equal(snapshot(table), before.get(table))

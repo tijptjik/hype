@@ -492,3 +492,43 @@ with zero page errors: Find Nearby is available and Buildings/Natural features a
 disabled. The isolated port-4173 browser received HTTP 401 from the external basemap
 TileJSON endpoint; map canvas and pin initialization were verified, but basemap tile
 rendering was not accepted by that check. The temporary server was stopped afterward.
+
+## Organisation correction conversion (21 October 2026)
+
+Migrations `0139_organisation_location_corrections.sql` and
+`0141_organisation_location_scope_guards.sql` separate shared visibility
+from baseline authority. Unmatched Locations are shared; manual Locations remain
+private; SaanSeoi-linked Locations are source-controlled and have no local owner.
+One `organisationLocation` row per Organisation/Location holds corrections and
+append-only history. Feature rows keep accepted snapshots and independent revision
+tokens, governed by the consuming Project's policy.
+
+The populated local rehearsal preserved all existing Feature/translation/property
+rows, identities and baseline revisions byte for byte: 1,617 Features, 1,535
+Locations and associations, 1,205 migrated correction heads, and 1,535 retained
+association-history rows. Integrity and foreign-key checks passed. No refresh jobs
+were created for the migration's unchanged projections. Primary local HYPE already
+has both installed; this work does not reset it or write to production. Guard 0141
+prevents correction-token leakage through cross-Organisation Feature/Project moves,
+while preserving moves between sibling Projects.
+
+Focused tests cover shared unmatched discovery, manual isolation, owner baseline
+edits, independent Organisation corrections, sibling-Project reuse, automatic/review
+adoption, durable rejection, stale writes and atomic rollback. Source snapshots
+remain clean after local address corrections and later source refreshes. Full app
+checking still has unrelated map/panel and fixture errors; it is not a clean check.
+
+Regenerate the diagram using a read-only local database connection:
+
+```sh
+python3 scripts/locations/render-schema.py LOCAL.sqlite .local/diagrams/location-system
+```
+
+The output includes SVG, PNG, Graphviz source and schema-only JSON. It contains no
+Location row data. SVG is the preferred scalable review artifact.
+
+The isolated implementation snapshot passes 356 Location tests, the refresh Worker
+TypeScript check and Biome. Fourteen importer/rehearsal tests and the real cross-project
+address-curation rehearsal also pass. The surrounding concurrent working checkout
+passes its broader Location suite; its full application check still reports the
+existing 10 errors and 20 warnings. These do not constitute deployment acceptance.

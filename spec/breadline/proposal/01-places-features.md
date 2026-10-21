@@ -39,17 +39,23 @@ Source availability (`current`, `missing`, `review`) is independent of identity
 state. Missing upstream data does not imply business closure, donor inactivity or
 deletion. Manual and unresolved baselines have explicit local provenance.
 
-Local Locations belong to an owning Organisation (`ownerOrganisationId`). Null ownership
-means a shared canonical Location, administered by core administrators. Sibling Projects
-can discover and associate the Organisation's private Locations through their authorized
-Feature workflows. Creation, private catalogue access and identity administration
-require Organisation-level authority; Project roles do not grant upward authority.
-Merges authorize both persisted owners independently. Project users retain control of
-Feature overrides and per-Project adoption policies. Feature visibility never grants
-access to another Project's Features or private review evidence. Database guards block
-Feature or Project moves that would cross a private Location's Organisation boundary.
+`ownerOrganisationId` grants baseline authority, independently of visibility:
 
-## Storage: nine dedicated tables
+| State | Baseline authority | Visibility | Organisation edits |
+| --- | --- | --- | --- |
+| `unresolved` | Owning Organisation | Shared across HYPE | Owner advances the baseline; other Organisations keep their own corrections. |
+| `manual` | Owning Organisation | Private to that Organisation | Owner advances the baseline. |
+| `linked` | SaanSeoi synchronization; owner is null | Shared across HYPE | Each Organisation keeps its own corrections. |
+
+Creation and physical-data correction require Organisation management authority.
+Project roles do not grant upward authority. Project policies govern whether baseline
+and Organisation correction changes are adopted automatically or held for review.
+A shared Location grants no access to another Organisation's Features or private
+corrections. Database guards restrict manual associations and Project/Feature moves.
+Matching preserves the HYPE ID, clears local ownership, retains Organisation-authored
+corrections and keeps subsequent canonical source snapshots free of local content.
+
+## Storage: ten dedicated tables
 
 Drizzle declarations put `createdAt` and the existing update timestamp (`updatedAt`
 or `modifiedAt`) last. Migration 0138 also rebuilds these nine tables with timestamps
@@ -58,24 +64,39 @@ must follow the declared column order.
 
 Migrations 0122–0125 consolidate the original twenty-table implementation. Migration
 `0138_location_storage.sql` renames the nine lifecycle tables, columns, indexes and
-guards to Location terminology. No compatibility views or generic registry are introduced.
+guards to Location terminology. Migration `0139_organisation_location_corrections.sql`
+adds one Organisation correction head per Location, preserving immutable snapshots
+in its append-only `history` array. It migrates existing accepted corrections, failing
+on conflicting corrections for the same Organisation/Location. No compatibility views
+or generic registry are introduced.
 
 | Table | Responsibility |
 | --- | --- |
 | `location` | Stable HYPE identity, source ID, ownership, availability; absorbed identities retain `redirectTargetId` and the immutable redirect receipt. |
 | `locationRevision` | Immutable source/local snapshots, normalized facts, content hash, API/release/snapshot references and provenance. |
-| `featureLocation` | Current association, accepted facts/location revisions, explicit overrides and concurrency token. |
-| `featureLocationHistory` | Actor-attributed link, reassociation, override and unlink history. |
+| `organisationLocation` | Unique `(organisationId, locationId)` correction head, immutable revision snapshots, actor and timestamps. |
+| `featureLocation` | Current association, accepted baseline revisions, `acceptedOverrides` cache, independently accepted Organisation revision tokens and concurrency token. |
+| `featureLocationHistory` | Actor-attributed link, reassociation, accepted baseline/correction snapshots and unlink history. |
 | `locationIdentityHistory` | Accepted source-identity transitions and their immutable review references. |
 | `locationIdentityReview` | Retained establishment comparison, append-only merge impact versions, optional immutable rejection. |
 | `locationAdoptionProposal` | Immutable source-change assessment plus independently written `factsDecision` and `locationDecision`. |
 | `locationRefresh` | Monthly publication checkpoint, current run, cursor, lease and retry state. |
-| `locationRefreshItem` | Captured source identity, pinned evidence, processing cursor and outcomes keyed by Feature ID. |
+| `locationRefreshItem` | Existing bounded work queue for source refresh and local baseline/Organisation changes; origin, correction scope, Feature cursor and durable outcomes. |
 
 Existing resources own their settings: `project.locationPolicy` and
 `locationPolicyRevision` store Project policy; `feature.localLocationBrands` stores
 unlinked brand corrections and their revision/actor. These are not separate
-resources. Source-backed Feature corrections remain in `featureLocation.overrides`.
+resources. Corrections live in `organisationLocation.overrides`, reusable across sibling
+Projects. `featureLocation.acceptedOverrides` is only the accepted snapshot; it is
+not an independently editable Feature override layer. The TypeScript property remains
+`overrides` internally for resolver compatibility. Facts and position may accept
+different correction revisions. Reviews/rejections include the Organisation revision
+in their candidate identity, so independent Organisations and later edits do not
+share decisions. Migration `0141_organisation_location_scope_guards.sql` fences accepted
+correction tokens to their Organisation namespace and rejects cross-Organisation
+Feature/Project moves until those corrections are explicitly reconciled. Sibling
+Project moves remain valid. Local changes use the existing refresh work queue and adoption
+proposal/decision lifecycle rather than a new task table.
 
 A merge comparison can have multiple impact assessments if its association set
 changes before acceptance. Their existing IDs, baselines, source revision,
@@ -84,6 +105,9 @@ review's `mergeReviews` array. Prior entries cannot be replaced or removed.
 Rejection belongs to that comparison; acceptance remains in identity history.
 The absorbed Place retains its redirect ID, old source ID, review, actor, reason
 and timestamp. Redirect chains are resolved without widening private ownership.
+Merges retain and copy non-overlapping Organisation correction histories to the survivor;
+overlapping Organisation scopes require explicit reconciliation before a merge, avoiding
+silent selection between two correction heads.
 
 Four publisher-diagnostic tables and their scheduled collector are removed.
 Canonical refresh already checks every associated source identity. Historical
@@ -94,13 +118,14 @@ source-change collector remains available for investigation.
 
 Existing Feature columns are effective read projections, preserving public IDs,
 URLs, spatial queries and existing consumers. Their authoritative inputs are the
-accepted Location revisions and explicit Feature overrides. Mutations use the shared
+accepted Location baseline and Organisation correction revisions. Mutations use the shared
 resolver and atomic association/projection services.
 
 Overrides use `inherit`, `override(value)` and `clear`. Missing override means
 inherit. Locale fields resolve independently. Ordered arrays replace whole
 collections; an empty array is explicit and never revives a legacy value.
-Equivalent values inherit when linking; meaningful differences become overrides.
+Equivalent values inherit when linking; meaningful preserved differences seed the
+Organisation correction row. Later links reuse that row rather than repeating fixes.
 Do not freeze every field as an override and thereby prevent future updates.
 
 `phoneNumber` remains the existing universal HYPE property. Scalars migrate to
@@ -110,7 +135,8 @@ and surface invalid-phone omissions rather than silently erasing contacts.
 
 Brands belong to Place facts and preserve source identifiers and localized names.
 SaanSeoi currently exposes `identifiers.wikidata.brandId` and `brandName`; normalize
-these into a one-element brand array. Features inherit or override that array.
+these into a one-element brand array. Organisation corrections can replace that array;
+Features consume their accepted Organisation snapshot.
 Existing classifier values survive as migration evidence/corrections, not as a
 second source of truth or an Organisation ownership relationship.
 
@@ -276,7 +302,7 @@ remain independent. Editing a Place requires its Organisation's management autho
 Edits append immutable `locationRevision` rows with actor, owner and predecessor evidence;
 the insert fences both current owner and latest revision. Existing linked Features keep
 their accepted revisions. The Feature review command prepares the newer local revision
-for explicit adoption through the ordinary review flow, preserving Feature overrides.
+for explicit adoption through the ordinary review flow, preserving accepted Organisation corrections.
 Local-to-local changes do not require fabricated publisher identity evidence; crossing
 between local and SaanSeoi source identity still requires the identity review workflow.
 
@@ -288,7 +314,7 @@ This is local authoring, not an upstream curation/publishing endpoint.
 Validation: `bun scripts/locations/verify-address-contract.ts ../saanseoi` compares the
 current sibling repository's canonical content keys and all four enum vocabularies.
 Focused tests cover multilingual round trips, invalid types/publication claims,
-immutable edits, stale-owner/revision fences, local review and Feature overrides.
+immutable edits, stale-owner/revision fences, local review and accepted Organisation corrections.
 Chromium verified saving structured components and unit details, reloading them from
 an isolated local database, and rendering the resulting address without page errors.
 
@@ -313,7 +339,7 @@ Each task opens a current/proposed comparison using the actual Feature display
 formatter, with language switching, map positions, source/revision provenance and
 an expandable component difference. The review explicitly calls out removed unit
 information, blank translations, coordinate displacement and retained overrides.
-Actions are **Accept update**, **Keep current** and **Edit Feature override**.
+Actions are **Accept update**, **Keep current** and **Edit Organisation correction**.
 Place matching additionally offers **Choose another Place** and **No suitable match**.
 A decision resolves the task for that candidate/revision; new evidence can create a
 new task. Simply opening a task never adopts a revision.
@@ -429,18 +455,18 @@ Accepted architecture; reconciliation is tracked in
 [#233](https://github.com/tijptjik/hype/issues/233), parent #180.
 
 A matched Place retains its HYPE ID and `ssId` independently of its address source.
-An absent SaanSeoi Address does not prevent an identity match or force the Place to
-remain unresolved. The address can remain locally authored while the Place is linked.
-Represent that content as a Place-level address overlay/revision, separate from the
-immutable source mirror and from Feature-specific corrections. Sibling Features
-inherit this Place content unless they have their own overrides. The local-address editor/service supports matched Places as well as manual and
-unresolved Places. Organisation managers edit owned Places; core stewards edit
-shared Places. Writes fence ownership, source identity and the latest revision.
+An absent SaanSeoi Address does not prevent an identity match or force the Location to
+remain unresolved. The address can remain locally authored while the Location is linked.
+That authored address lives in the Organisation correction row, separate from immutable
+source evidence. Sibling Projects reuse it; other Organisations maintain independent
+corrections. There is no additional Feature-authored correction layer. Organisation
+managers author corrections using baseline and correction-head concurrency fences.
+A linked baseline can only advance through SaanSeoi synchronization.
 
 Until reconciliation succeeds, incomplete or missing source addresses cannot erase
-local content. A new source address is a candidate for comparison, not permission to
-discard the local overlay. Resolve effective display from the accepted source plus
-Place-authored address and then Feature overrides, preserving explicit clearing.
+Organisation-authored content. A new source address is a candidate for comparison,
+not permission to discard corrections. Effective Feature display resolves its accepted
+baseline plus accepted Organisation corrections, preserving explicit clearing.
 
 The shared parser lives in SaanSeoi `libs/address` as `@saanseoi/address`, extracted
 from the existing Harbour Place address parser. It exports shared address content
@@ -475,7 +501,7 @@ submits HYPE's reviewed components when none exists, then associates that Addres
 with the matched Place. Store an idempotent receipt tied to the submitted local
 revision. Only a subsequent compatible sync confirming the expected association
 and content can retire the redundant Place overlay. A newer local edit, changed
-unit or differing display returns to review; independent Feature overrides survive.
+unit or differing display returns to review; independent Organisation corrections survive.
 
 
 Discovery compatibility note (21 October 2026, Refs #233): the deployed SaanSeoi

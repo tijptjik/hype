@@ -72,6 +72,7 @@ function fixture() {
     '0121_place_refresh_identity_scan.sql',
     '0122_simplify_place_refresh.sql',
     '0138_location_storage.sql',
+    '0139_organisation_location_corrections.sql',
   ])
     target.exec(readFileSync(`migrations/${migration}`, 'utf8'))
   const generate = () =>

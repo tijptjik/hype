@@ -1465,7 +1465,7 @@
   "feature_location_change_confirm": "改用此地点",
   "location_brand_title": "品牌",
   "location_brand_inherit": "使用地点品牌",
-  "location_brand_override": "修正此项目的品牌",
+  "location_brand_override": "修正品牌",
   "location_brand_clear": "隐藏品牌",
   "location_brand_remove": "移除品牌",
   "location_brand_add": "新增品牌",

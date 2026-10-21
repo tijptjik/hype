@@ -6,6 +6,7 @@ import { getTableColumns, sql } from 'drizzle-orm'
 // DOMAIN
 import { feature, featureI18n } from '../../../src/lib/db/schema/feature'
 import { persistSaanSeoiPlace } from '../../../src/lib/db/services/locationSource'
+import { prepareOrganisationLocationWrite } from '../../../src/lib/db/services/organisationLocation'
 import { prepareFeatureLocationAssociationWrite } from '../../../src/lib/db/services/locationAssociation'
 import { saveProjectLocationSettings } from '../../../src/lib/db/services/location'
 import { adoptRefreshedLocationForFeature } from '../../../src/lib/db/services/locationRefreshAdoption'
@@ -74,6 +75,8 @@ export async function rehearseCuratedAdoption(
     '0121_place_refresh_identity_scan.sql',
     '0122_simplify_place_refresh.sql',
     '0138_location_storage.sql',
+    '0139_organisation_location_corrections.sql',
+    '0141_organisation_location_scope_guards.sql',
   ]) {
     sqlite.exec(
       readFileSync(resolve(import.meta.dir, '../../../migrations', migration), 'utf8'),
@@ -108,6 +111,8 @@ export async function rehearseCuratedAdoption(
         'Keep pickup instructions',
         'Unresolved address',
       )
+    const correction=await prepareOrganisationLocationWrite(db,{organisationId:projectId,locationId:baseline.locationId,actorId:'synthetic-rehearsal',overrides,guard:sql`1`})
+    for(const query of correction.queries)await query
     await prepareFeatureLocationAssociationWrite(db, {
       featureId: projectId,
       projectId,
@@ -118,6 +123,8 @@ export async function rehearseCuratedAdoption(
       expectedRevision: null,
       actorId: 'synthetic-rehearsal',
       overrides,
+      factsOrganisationRevision:correction.revision,
+      locationOrganisationRevision:correction.revision,
     }).query
   }
   assert.ok(
@@ -157,14 +164,14 @@ export async function rehearseCuratedAdoption(
       .get(id) as {
       locationId: string
       locationRevisionId: string
-      overrides: string
+      acceptedOverrides: string
     }
     assert.equal(association.locationId, baseline.locationId)
     assert.equal(
       association.locationRevisionId,
       id === 'automatic' ? candidate.revisionId : baseline.revisionId,
     )
-    assert.deepEqual(JSON.parse(association.overrides), overrides)
+    assert.deepEqual(JSON.parse(association.acceptedOverrides), overrides)
     const row = sqlite
       .query(
         'SELECT title,description,displayAddress FROM featureI18n WHERE featureId=?',

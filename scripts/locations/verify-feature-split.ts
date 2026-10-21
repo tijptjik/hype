@@ -81,7 +81,7 @@ function main(): void {
         throw new Error(`Unexpected migration changes: ${table}`)
     }
     const query =
-      db.query(`SELECT fp.locationId,fp.factsRevisionId,fp.locationRevisionId,fp.overrides,
+      db.query(`SELECT fp.locationId,fp.factsRevisionId,fp.locationRevisionId,fp.acceptedOverrides AS overrides,
       p.ownerOrganisationId,p.state,p.ssId,r.facts,r.origin,
       (SELECT count(*) FROM featureLocationHistory h WHERE h.featureId=fp.featureId) AS historyCount
       FROM featureLocation fp JOIN location p ON p.id=fp.locationId

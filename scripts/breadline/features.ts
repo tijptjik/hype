@@ -105,7 +105,7 @@ export function planBreadlineFeatures(args: string[]): void {
       { original: [number, number]; corrected: [number, number]; evidence: string }
     >
     const statements = [
-      '-- Breadline Locations + Features migration. Requires schema migrations through 0138.',
+      '-- Breadline Locations + Features migration. Requires schema migrations through 0139.',
       '-- Generated from a fresh source snapshot; source hashes preserve accepted identity.',
       '-- Apply in an error-propagating transaction; do not use Bun multi-statement exec.',
     ]
@@ -482,7 +482,7 @@ export function planBreadlineFeatures(args: string[]): void {
             locationId,
             factsRevisionId: revisionId,
             locationRevisionId: revisionId,
-            overrides: {},
+            acceptedOverrides: {},
             revision: `breadline-import:${table}:${sourceId}:${hash}`,
             actorId: authors[0].id,
           }),
