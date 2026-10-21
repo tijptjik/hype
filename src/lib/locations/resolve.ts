@@ -62,15 +62,21 @@ export function resolveFeatureLocation(
       ? { footprint: resolveLocationField(facts.footprint, overrides.footprint) }
       : {}),
     ...(facts.entity ? { entity: facts.entity } : {}),
-    ...(facts.operatingStatus !== undefined
-      ? { operatingStatus: facts.operatingStatus }
-      : {}),
-    ...(facts.buildingStatus !== undefined
-      ? { buildingStatus: facts.buildingStatus }
-      : {}),
-    ...(facts.successorLocationId !== undefined
-      ? { successorLocationId: facts.successorLocationId }
-      : {}),
+    ...(overrides.operatingStatus?.mode === 'override'
+      ? { operatingStatus: overrides.operatingStatus.value }
+      : facts.operatingStatus !== undefined
+        ? { operatingStatus: facts.operatingStatus }
+        : {}),
+    ...(overrides.buildingStatus?.mode === 'override'
+      ? { buildingStatus: overrides.buildingStatus.value }
+      : facts.buildingStatus !== undefined
+        ? { buildingStatus: facts.buildingStatus }
+        : {}),
+    ...(overrides.successorLocationId?.mode === 'override'
+      ? { successorLocationId: overrides.successorLocationId.value }
+      : facts.successorLocationId !== undefined
+        ? { successorLocationId: facts.successorLocationId }
+        : {}),
     names,
     phoneNumber: resolveLocationField(facts.phoneNumber, overrides.phoneNumber),
     brands: resolveLocationField(facts.brands, overrides.brands),

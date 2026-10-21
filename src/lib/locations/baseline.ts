@@ -96,5 +96,23 @@ export function preserveFeatureLocationBaseline(
   if (phones) overrides.phoneNumber = phones
   if (brands) overrides.brands = brands
   if (correctedLocation) overrides.location = correctedLocation
+  if (
+    baseline.operatingStatus !== undefined &&
+    !equalLocationValue(baseline.operatingStatus, facts.operatingStatus)
+  )
+    overrides.operatingStatus = { mode: 'override', value: baseline.operatingStatus }
+  if (
+    baseline.buildingStatus !== undefined &&
+    !equalLocationValue(baseline.buildingStatus, facts.buildingStatus)
+  )
+    overrides.buildingStatus = { mode: 'override', value: baseline.buildingStatus }
+  if (
+    baseline.successorLocationId !== undefined &&
+    !equalLocationValue(baseline.successorLocationId, facts.successorLocationId)
+  )
+    overrides.successorLocationId = {
+      mode: 'override',
+      value: baseline.successorLocationId,
+    }
   return overrides
 }

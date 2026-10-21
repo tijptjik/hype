@@ -54,5 +54,21 @@ export function applyFeatureLocationEdits(
     result.brands = editedValue(after.brands)
   if (!equalLocationValue(before.location, after.location))
     result.location = editedValue(after.location)
+  // Ordinary Feature forms omit status/history relations; unrelated saves must preserve them.
+  if (
+    after.operatingStatus !== undefined &&
+    !equalLocationValue(before.operatingStatus, after.operatingStatus)
+  )
+    result.operatingStatus = { mode: 'override', value: after.operatingStatus }
+  if (
+    after.buildingStatus !== undefined &&
+    !equalLocationValue(before.buildingStatus, after.buildingStatus)
+  )
+    result.buildingStatus = { mode: 'override', value: after.buildingStatus }
+  if (
+    after.successorLocationId !== undefined &&
+    !equalLocationValue(before.successorLocationId, after.successorLocationId)
+  )
+    result.successorLocationId = { mode: 'override', value: after.successorLocationId }
   return result
 }

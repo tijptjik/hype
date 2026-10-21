@@ -7,6 +7,7 @@ import { location as locationTable, locationRevision } from '../schema/location'
 // LOCATION
 import { locationSourceReference } from '#lib/locations/kinds.js'
 // VALIDATION
+import type { LifecycleStatus } from '#lib/locations/lifecycle.js'
 import { LocationFactsSchema } from '#lib/locations/validation.js'
 import { resolveFeatureLocation } from '#lib/locations/resolve.js'
 import type { FeatureLocationOverrides } from '#lib/locations/model.js'
@@ -23,7 +24,13 @@ import type { LocationResource } from '#lib/locations/resource.js'
  */
 export async function listLocationResources(
   db: Database,
-  input: { organisationId?: string; q?: string; after?: string; id?: string },
+  input: {
+    organisationId?: string
+    q?: string
+    after?: string
+    id?: string
+    lifecycleStatus?: LifecycleStatus
+  },
 ): Promise<{ data: LocationResource[]; nextCursor: string | null }> {
   // Fence ownership before pagination; never search superseded revisions or raw payloads.
   const rows = await db
@@ -59,6 +66,17 @@ export async function listLocationResources(
               eq(locationTable.ownerOrganisationId, input.organisationId),
             )
           : sql`${locationTable.state} != 'manual'`,
+        // Filter the scoped effective assertion before pagination, retaining historic rows by default.
+        input.lifecycleStatus
+          ? sql`COALESCE(
+          CASE WHEN EXISTS(SELECT 1 FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.operatingStatus.mode')='override')
+            THEN (SELECT json_extract(o.overrides,'$.operatingStatus.value') FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
+            ELSE ${locationFactsFieldSql(locationRevision.facts, 'operatingStatus')} END,
+          CASE WHEN EXISTS(SELECT 1 FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null} AND json_extract(o.overrides,'$.buildingStatus.mode')='override')
+            THEN (SELECT json_extract(o.overrides,'$.buildingStatus.value') FROM organisationLocation o WHERE o.locationId=${locationTable.id} AND o.organisationId=${input.organisationId ?? null})
+            ELSE ${locationFactsFieldSql(locationRevision.facts, 'buildingStatus')} END,
+          'unknown')=${input.lifecycleStatus}`
+          : undefined,
         input.id ? eq(locationTable.id, input.id) : undefined,
         input.after ? gt(locationTable.id, input.after) : undefined,
         input.q
@@ -93,6 +111,15 @@ export async function listLocationResources(
         ),
         phoneNumber: effective.phoneNumber ?? [],
         brands: effective.brands ?? [],
+        ...(effective.operatingStatus !== undefined
+          ? { operatingStatus: effective.operatingStatus }
+          : {}),
+        ...(effective.buildingStatus !== undefined
+          ? { buildingStatus: effective.buildingStatus }
+          : {}),
+        ...(effective.successorLocationId !== undefined
+          ? { successorLocationId: effective.successorLocationId }
+          : {}),
         location: effective.location ?? facts.location,
       }
     }

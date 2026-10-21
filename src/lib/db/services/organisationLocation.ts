@@ -10,6 +10,7 @@ import {
 } from '../schema/location'
 // DOMAIN
 import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
+import { validateLocationStatusKind } from '#lib/locations/lifecycle.js'
 import {
   FeatureLocationOverridesSchema,
   LocationFactsSchema,
@@ -190,6 +191,25 @@ export async function prepareLocationCorrection(
     (owner.state === 'manual' && owner.ownerOrganisationId !== input.organisationId)
   )
     throw new Error('Location unavailable')
+  validateLocationStatusKind(owner.kind, input.after)
+  // An explicit successor must exist in the caller's visible scope; never expose a private ID.
+  if (input.after.successorLocationId) {
+    if (input.after.successorLocationId === input.locationId)
+      throw new Error('A Location cannot succeed itself')
+    const successor = await db
+      .select()
+      .from(locationTable)
+      .where(
+        and(
+          eq(locationTable.id, input.after.successorLocationId),
+          sql`${locationTable.state}!='redirect'`,
+          sql`(${locationTable.state}!='manual' OR ${locationTable.ownerOrganisationId}=${input.organisationId})`,
+        ),
+      )
+      .get()
+    if (!successor || (owner.state !== 'manual' && successor.state === 'manual'))
+      throw new Error('Successor Location unavailable')
+  }
   const head = await readOrganisationLocation(
     db,
     input.organisationId,
@@ -220,7 +240,14 @@ export async function prepareLocationCorrection(
   }
   let baselineRevision: { id: string; facts: LocationFacts } | undefined
   const queries: BatchItem<'sqlite'>[] = []
-  let guard = input.guard
+  // Recheck successor visibility in the write batch: a concurrent redirect/scope change must make the whole edit stale.
+  const successorGuard = input.after.successorLocationId
+    ? sql`EXISTS(SELECT 1 FROM location successor WHERE successor.id=${input.after.successorLocationId}
+        AND successor.state!='redirect' AND (successor.state!='manual' OR successor.ownerOrganisationId=${input.organisationId})
+        AND (${Number(owner.state === 'manual')} OR successor.state!='manual'))`
+    : sql`1`
+  const authoringGuard = sql`(${input.guard}) AND ${successorGuard}`
+  let guard = authoringGuard
   // Ownership controls baseline authority, independently of shared unmatched visibility.
   if (
     !input.reset &&
@@ -263,11 +290,11 @@ export async function prepareLocationCorrection(
       db
         .insert(locationRevision)
         .select(
-          sql`SELECT ${id},${input.locationId},${baseline.sequence + 1},'local',NULL,NULL,NULL,NULL,${id},${JSON.stringify(payload)},${serializeLocationFacts(facts, owner.kind)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${input.guard} AND ${predecessor}`,
+          sql`SELECT ${id},${input.locationId},${baseline.sequence + 1},'local',NULL,NULL,NULL,NULL,${id},${JSON.stringify(payload)},${serializeLocationFacts(facts, owner.kind)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${authoringGuard} AND ${predecessor}`,
         ),
     )
     baselineRevision = { id, facts }
-    guard = sql`${input.guard} AND EXISTS(SELECT 1 FROM locationRevision WHERE id=${id})`
+    guard = sql`${authoringGuard} AND EXISTS(SELECT 1 FROM locationRevision WHERE id=${id})`
     // Preserve pre-existing local differences while moving the edited fields into the owner's baseline.
     overrides = preserveFeatureLocationBaseline(input.after, facts, facts.location)
   }

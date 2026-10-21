@@ -1,8 +1,8 @@
 // VALIDATION
 import { z } from 'zod'
-import type { OperatingStatus, BuildingStatus } from './entityStatus'
 import type { LocationEntity } from './factsDetails'
 import type { LocationFootprint } from './footprint'
+import type { OperatingStatus, BuildingStatus } from './lifecycle'
 import type { LocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 
 /** Explicit clear differs from inheritance, including for empty arrays and locales. */
@@ -37,13 +37,16 @@ export type LocationPosition = {
   address: LocationAddress
 }
 
-/** Normalized Feature projection; persisted revisions use LocationFactsSnapshot. */
+/** Normalized Feature display projection; persisted revisions use LocationFactsSnapshot. */
 export type LocationFacts = {
   /** Optional area geometry; the Location point remains the map anchor. */
   footprint?: LocationFootprint | null
+  /** Additional typed facts survive editing without becoming generic Feature properties. */
   entity?: LocationEntity
+  /** Absent in legacy snapshots means unknown; never rewrite immutable history. */
   operatingStatus?: OperatingStatus | null
   buildingStatus?: BuildingStatus | null
+  /** Explicit successor or relocated branch; prior names/addresses remain in immutable revisions. */
   successorLocationId?: string | null
   names: Record<string, string>
   phoneNumber: string[]
@@ -53,6 +56,13 @@ export type LocationFacts = {
 
 export type FeatureLocationOverrides = {
   footprint?: LocationOverride<LocationFootprint>
+  operatingStatus?:
+    | { mode: 'inherit' }
+    | { mode: 'override'; value: OperatingStatus | null }
+  buildingStatus?:
+    | { mode: 'inherit' }
+    | { mode: 'override'; value: BuildingStatus | null }
+  successorLocationId?: { mode: 'inherit' } | { mode: 'override'; value: string | null }
   names?: Record<string, LocationOverride<string>>
   phoneNumber?: LocationOverride<string[]>
   brands?: LocationOverride<LocationBrand[]>

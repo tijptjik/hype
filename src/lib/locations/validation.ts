@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import { LocationEntitySchema } from './factsDetails'
 import { LocationFootprintSchema } from './footprint'
-import { OperatingStatusSchema, BuildingStatusSchema } from './entityStatus'
+import { OperatingStatusSchema, BuildingStatusSchema } from './lifecycle'
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 import { AddressDivisionOverridesSchema } from '#lib/addresses/divisions.js'
 // TYPES
@@ -74,7 +74,7 @@ function override<T>(valueSchema: z.ZodType<T>): z.ZodType<LocationOverride<T>> 
   ])
 }
 
-/** Normalized projection; factsSnapshot validates the versioned persistence envelope. */
+/** Validated display projection; factsSnapshot owns the discriminated storage envelope. */
 export const LocationFactsSchema = z.strictObject({
   footprint: LocationFootprintSchema.nullable().optional(),
   entity: LocationEntitySchema.optional(),
@@ -89,6 +89,33 @@ export const LocationFactsSchema = z.strictObject({
 
 export const FeatureLocationOverridesSchema = z.strictObject({
   footprint: override(LocationFootprintSchema).optional(),
+  operatingStatus: z
+    .discriminatedUnion('mode', [
+      z.strictObject({ mode: z.literal('inherit') }),
+      z.strictObject({
+        mode: z.literal('override'),
+        value: OperatingStatusSchema.nullable(),
+      }),
+    ])
+    .optional(),
+  buildingStatus: z
+    .discriminatedUnion('mode', [
+      z.strictObject({ mode: z.literal('inherit') }),
+      z.strictObject({
+        mode: z.literal('override'),
+        value: BuildingStatusSchema.nullable(),
+      }),
+    ])
+    .optional(),
+  successorLocationId: z
+    .discriminatedUnion('mode', [
+      z.strictObject({ mode: z.literal('inherit') }),
+      z.strictObject({
+        mode: z.literal('override'),
+        value: z.string().trim().min(1).max(200).nullable(),
+      }),
+    ])
+    .optional(),
   names: z.record(z.string(), override(z.string())).optional(),
   phoneNumber: override(z.array(z.string())).optional(),
   brands: override(brands).optional(),

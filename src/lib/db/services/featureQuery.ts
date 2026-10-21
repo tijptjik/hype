@@ -31,6 +31,7 @@ import {
 } from '#lib/db/schema/index.js'
 import { featureSearchDocument } from '#lib/db/schema/featureQuery.js'
 import { featureLocationBrandsSQL } from './locationBrandProjection'
+import { featureLocationLifecycleSQL } from './locationLifecycleProjection'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 import { getFeatureQueryCounts } from './featureCounts'
@@ -512,7 +513,10 @@ export async function queryFeaturePage(
     ? await retryBusyRead(() =>
         db.query.feature.findMany({
           with: getFeatureWithRelations('list') as never,
-          extras: { locationBrands: featureLocationBrandsSQL().as('locationBrands') },
+          extras: {
+            locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+            locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+          },
           columns: { spatialIndex: false },
           // Recheck visibility if a feature changes between candidate selection and hydration.
           where: and(...conditions, chunkedInArray(feature.id, pageIds)),

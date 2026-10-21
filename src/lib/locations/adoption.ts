@@ -27,6 +27,7 @@ export type LocationAdoptionPlan = {
     | 'establishment-evidence'
     | 'address-dependencies'
     | 'source-phone-omissions'
+    | 'lifecycle-review'
   >
   factsRevisionId: string
   locationRevisionId: string
@@ -231,8 +232,22 @@ export function planLocationAdoption(input: {
           !equalLocationValue(beforeEstablishment.data, afterEstablishment.data))),
   }
   const decision = evaluateLocationAdoption(evidence, input.policy)
+  // Status and successor changes require review even under an automatic adoption policy.
+  if (
+    ['operatingStatus', 'buildingStatus', 'successorLocationId'].some(key => {
+      const field = key as 'operatingStatus' | 'buildingStatus' | 'successorLocationId'
+      return !equalLocationValue(effectiveBefore[field], effectiveCandidate[field])
+    })
+  ) {
+    blockers.push('lifecycle-review')
+    decision.facts = 'review'
+  }
   // Incomplete source evidence cannot silently erase inherited values.
-  if (blockers.some(value => value !== 'address-dependencies')) {
+  if (
+    blockers.some(
+      value => value !== 'address-dependencies' && value !== 'lifecycle-review',
+    )
+  ) {
     decision.facts = 'review'
     decision.location = 'review'
   } else if (blockers.includes('address-dependencies')) decision.location = 'review'
@@ -240,7 +255,15 @@ export function planLocationAdoption(input: {
   const acceptedLocation = decision.location === 'adopt' ? next.location : oldLocation
   const acceptedOverrides = { ...overrides }
   if (decision.facts === 'adopt')
-    for (const key of ['footprint', 'names', 'phoneNumber', 'brands'] as const) {
+    for (const key of [
+      'footprint',
+      'names',
+      'phoneNumber',
+      'brands',
+      'operatingStatus',
+      'buildingStatus',
+      'successorLocationId',
+    ] as const) {
       delete acceptedOverrides[key]
       if (candidateOverrides[key] !== undefined)
         Object.assign(acceptedOverrides, { [key]: candidateOverrides[key] })

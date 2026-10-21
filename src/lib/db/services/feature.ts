@@ -23,6 +23,7 @@ import {
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 import { featureLocationBrandsSQL } from './locationBrandProjection'
+import { featureLocationLifecycleSQL } from './locationLifecycleProjection'
 import { validateFeaturePhoneProperties } from './feature-property-validation'
 // MAP
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
@@ -418,7 +419,10 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
   const pageRows = (await retryBusyRead(() =>
     db.query.feature.findMany({
       with: withRelations,
-      extras: { locationBrands: featureLocationBrandsSQL().as('locationBrands') },
+      extras: {
+        locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+        locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+      },
       where: whereClause,
       limit: pageLimit === undefined ? undefined : pageLimit + 1,
       offset: pagination?.offset ?? undefined,
@@ -476,7 +480,10 @@ export const getFeature = async <TRow extends Record<string, unknown> = FeatureD
   return (await retryBusyRead(() =>
     db.query.feature.findFirst({
       with: withRelations,
-      extras: { locationBrands: featureLocationBrandsSQL().as('locationBrands') },
+      extras: {
+        locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+        locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+      },
       where: allConditions.length > 0 ? and(...allConditions) : undefined,
     }),
   )) as unknown as TRow | undefined

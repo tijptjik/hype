@@ -14,7 +14,7 @@ import { location as locationTable, locationRevision } from '../schema/location'
 // SHARED PARSER
 import { parseAddressContent } from '@saanseoi/address'
 // SNAPSHOT CONTRACT
-import { prepareLocationFactsForWrite } from '#lib/locations/factsSnapshot.js'
+import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 // VALIDATION
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 import {
@@ -22,6 +22,12 @@ import {
   markerDerivedAddressContent,
 } from '#lib/addresses/divisions.js'
 import { validateAddressDivisionOverrides } from './addressDivisions'
+import {
+  validateLocationStatusKind,
+  type OperatingStatus,
+  type BuildingStatus,
+} from '#lib/locations/lifecycle.js'
+
 import { LocationNamesEditSchema } from '#lib/locations/validation.js'
 import { LocalLocationInputSchema } from '#lib/locations/local.js'
 import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
@@ -53,6 +59,22 @@ export async function createLocalLocation(
   actorId: string,
 ): Promise<{ locationId: string; revisionId: string }> {
   const parsed = LocalLocationInputSchema.parse(input)
+  // A newly authored historic record may point only to a visible existing successor.
+  if (parsed.facts.successorLocationId) {
+    const successor = await db
+      .select()
+      .from(locationTable)
+      .where(
+        and(
+          eq(locationTable.id, parsed.facts.successorLocationId),
+          sql`${locationTable.state}!='redirect'`,
+          sql`(${locationTable.state}!='manual' OR ${locationTable.ownerOrganisationId}=${organisationId})`,
+        ),
+      )
+      .get()
+    if (!successor || (parsed.state !== 'manual' && successor.state === 'manual'))
+      throw new Error('Successor Location unavailable')
+  }
   if (parsed.facts.location.address.authored)
     parsed.facts.location.address.authored = markerDerivedAddressContent(
       parsed.facts.location.address.authored,
@@ -84,24 +106,27 @@ export async function createLocalLocation(
   const contentHash = Array.from(new Uint8Array(digest), byte =>
     byte.toString(16).padStart(2, '0'),
   ).join('')
+  // Fence successor visibility in the same transaction as identity/baseline creation.
+  const successorGuard = parsed.facts.successorLocationId
+    ? sql`EXISTS(SELECT 1 FROM location successor WHERE successor.id=${parsed.facts.successorLocationId}
+        AND successor.state!='redirect' AND (successor.state!='manual' OR successor.ownerOrganisationId=${organisationId})
+        AND (${Number(parsed.state === 'manual')} OR successor.state!='manual'))`
+    : sql`1`
   // An atomic batch cannot leave an identity behind if its baseline insert fails.
-  await db.batch([
-    db.insert(locationTable).values({
-      id: locationId,
-      kind: parsed.kind,
-      state: parsed.state,
-      ownerOrganisationId: organisationId,
-    }),
-    db.insert(locationRevision).values({
-      id: revisionId,
-      locationId,
-      sequence: 1,
-      origin: 'local',
-      contentHash,
-      payload,
-      facts: prepareLocationFactsForWrite(parsed.facts, parsed.kind),
-    }),
+  // These SELECTs follow the schema column order, including generated timestamps.
+  const result = await db.batch([
+    db
+      .insert(locationTable)
+      .select(sql`SELECT ${locationId},NULL,${parsed.kind},${organisationId},${parsed.state},'current',
+      NULL,NULL,strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${successorGuard}`)
+      .returning({ id: locationTable.id }),
+    db
+      .insert(locationRevision)
+      .select(sql`SELECT ${revisionId},${locationId},1,'local',NULL,NULL,NULL,NULL,
+      ${contentHash},${JSON.stringify(payload)},${serializeLocationFacts(parsed.facts, parsed.kind)},
+      strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE EXISTS(SELECT 1 FROM location WHERE id=${locationId})`),
   ])
+  if (!result[0].length) throw new Error('Successor Location unavailable')
   return { locationId, revisionId }
 }
 
@@ -120,6 +145,9 @@ export async function updateLocalLocationAddress(
     expectedRevisionId: string
     expectedOrganisationRevision?: string | null
     footprint?: unknown
+    operatingStatus?: OperatingStatus | null
+    buildingStatus?: BuildingStatus | null
+    successorLocationId?: string | null
     names?: Record<string, string>
     address?: unknown
     coordinates?: [number, number]
@@ -169,10 +197,26 @@ export async function updateLocalLocationAddress(
   const facts = baseline.locationRevision.facts
   const before = resolveFeatureLocation(facts, facts.location, current?.overrides ?? {})
   if (!before.location) return null
+  // Omitted status fields stay absent, so a no-change save cannot create another revision.
+  const operatingStatus =
+    input.operatingStatus === undefined ? before.operatingStatus : input.operatingStatus
+  const buildingStatus =
+    input.buildingStatus === undefined ? before.buildingStatus : input.buildingStatus
+  const successorLocationId =
+    input.successorLocationId === undefined
+      ? before.successorLocationId
+      : input.successorLocationId
+  const status = {
+    ...(operatingStatus !== undefined ? { operatingStatus } : {}),
+    ...(buildingStatus !== undefined ? { buildingStatus } : {}),
+    ...(successorLocationId !== undefined ? { successorLocationId } : {}),
+  }
+  validateLocationStatusKind(baseline.location.kind, status)
   // Save name and location groups together while retaining untouched canonical address evidence.
   const after = {
     ...before,
     ...(footprint !== undefined ? { footprint } : {}),
+    ...status,
     ...(names ? { names } : {}),
     location: {
       ...before.location,

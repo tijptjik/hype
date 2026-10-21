@@ -97,7 +97,9 @@ export async function applyLocationAdoptionGroup(
     return { status: 'conflict' }
   if (
     preview.plan.blockers.some(
-      blocker => input.fieldGroup === 'location' || blocker !== 'address-dependencies',
+      blocker =>
+        blocker !== 'lifecycle-review' &&
+        (input.fieldGroup === 'location' || blocker !== 'address-dependencies'),
     )
   )
     return {
@@ -107,7 +109,8 @@ export async function applyLocationAdoptionGroup(
   if (
     input.mode === 'automatic' &&
     (preview.settings.revision !== proposal.policyRevision ||
-      proposal.evidence.plan.decision[input.fieldGroup] !== 'adopt')
+      proposal.evidence.plan.decision[input.fieldGroup] !== 'adopt' ||
+      preview.plan.decision[input.fieldGroup] !== 'adopt')
   )
     return {
       status: 'review',
@@ -146,7 +149,15 @@ export async function applyLocationAdoptionGroup(
   const proposedOverrides = proposal.evidence.candidateOverrides ?? current.overrides
   const nextOverrides = { ...current.overrides }
   if (input.fieldGroup === 'facts') {
-    for (const key of ['footprint', 'names', 'phoneNumber', 'brands'] as const) {
+    for (const key of [
+      'footprint',
+      'names',
+      'phoneNumber',
+      'brands',
+      'operatingStatus',
+      'buildingStatus',
+      'successorLocationId',
+    ] as const) {
       delete nextOverrides[key]
       if (proposedOverrides[key] !== undefined)
         Object.assign(nextOverrides, { [key]: proposedOverrides[key] })

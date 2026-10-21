@@ -100,8 +100,15 @@ export async function relinkFeatureLocation(
   if (!destination) return { status: 'place-unavailable' }
   const facts = LocationFactsSchema.parse(destination.facts)
   let overrides = preserveFeatureLocationBaseline(
-    // A footprint describes the old physical entity, never its replacement.
-    { ...current.effective, footprint: undefined },
+    // Lifecycle describes the selected entity; reassociation cannot copy the old entity's closure.
+    {
+      ...current.effective,
+      // A footprint describes the old physical entity, never its replacement.
+      footprint: undefined,
+      operatingStatus: undefined,
+      buildingStatus: undefined,
+      successorLocationId: undefined,
+    },
     facts,
     facts.location,
   )

@@ -1,4 +1,5 @@
 // PLACE CONTRACTS
+import { LocationLifecycleSummarySchema } from '#lib/locations/lifecycle.js'
 import { LocationResetSchema } from '#lib/locations/reset.js'
 import { LocationBrandEditSchema } from '#lib/locations/brandEdit.js'
 import { decodeLocationFormValue } from '#lib/locations/form.js'
@@ -273,6 +274,10 @@ export const UserFeatureInsert = createInsertSchema(userFeature)
 export const UserFeatureUpdate = createUpdateSchema(userFeature)
 
 // SQLite relational extras return JSON text; decode only in the read-only response contract.
+const ReadLocationLifecycle = z.preprocess(
+  value => (typeof value === 'string' ? JSON.parse(value) : value),
+  LocationLifecycleSummarySchema.nullish(),
+)
 const ReadLocationBrands = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
   LocationFactsSchema.shape.brands.nullish(),
@@ -280,6 +285,7 @@ const ReadLocationBrands = z.preprocess(
 
 export const FeatureListRow = FeatureBase.extend({
   locationBrands: ReadLocationBrands,
+  locationLifecycle: ReadLocationLifecycle,
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
@@ -306,6 +312,7 @@ export const FeatureCardRow = FeatureListRow.extend({
 
 export const FeatureAdminRow = FeatureBase.extend({
   locationBrands: ReadLocationBrands,
+  locationLifecycle: ReadLocationLifecycle,
   i18n: z.array(FeatureI18nBase).nullish(),
   properties: z
     .array(
@@ -542,6 +549,7 @@ const FeatureListFields = FeatureBase.pick({
 
 export const FeatureListProfileAPI = FeatureListFields.extend({
   locationBrands: ReadLocationBrands,
+  locationLifecycle: ReadLocationLifecycle,
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
@@ -563,6 +571,7 @@ export const FeatureDetailProfileAPI = FeatureCardProfileAPI.extend({
 
 export const FeatureAdminProfileAPI = FeatureBase.extend({
   locationBrands: ReadLocationBrands,
+  locationLifecycle: ReadLocationLifecycle,
   i18n: getLocales(FeatureI18nBase),
   properties: z.array(FeaturePropertyAPI).default([]),
   contributor: UserBasic.nullish(),

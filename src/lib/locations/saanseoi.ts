@@ -1,6 +1,7 @@
 // VALIDATION
 import { z } from 'zod'
 import { LocationFactsSchema } from './validation'
+import { mapOperatingStatus } from './lifecycle'
 import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
 // TYPES
 import type { LocationFacts } from './model'
@@ -19,6 +20,7 @@ const recordSchema = z.object({
     address3dId: optionalId,
     address3dUnitId: optionalId,
     phones: z.array(z.string()).nullable(),
+    operatingStatus: z.string().nullable().optional(),
     identifiers: z.object({ wikidata: z.object({ brandId: identifier }) }).nullable(),
     i18n: z.record(
       z.string(),
@@ -106,6 +108,9 @@ export function projectSaanSeoiPlace(
       names,
       phoneNumber,
       brands,
+      ...(mapOperatingStatus(source.operatingStatus)
+        ? { operatingStatus: mapOperatingStatus(source.operatingStatus) }
+        : {}),
       location: {
         geometry: source.geometry,
         address: {

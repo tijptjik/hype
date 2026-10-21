@@ -821,6 +821,34 @@ name-only application. Existing accepted Feature revisions are retained for the
 ordinary adoption flow; a venue name correction does not rename a book or move an
 event to a successor tenant.
 
+### Minimal operating state and retained history (Refs #194)
+
+Location facts use SaanSeoi/Overture's `operatingStatus` directly: `open`,
+`temporarily_closed`, or `permanently_closed`. Missing/null means unknown; missing
+upstream inventory never implies closure. Buildings use a separate `buildingStatus`
+(`standing` or `demolished`) because physical condition is not business operation.
+These optional facts live in existing immutable revision JSON and Organisation
+corrections, with the usual baseline/correction revision fences. No additional SQL
+migration, evidence assertion table, confidence field or verification-date system is
+needed. Raw source payloads remain untouched. Status changes require explicit
+Feature adoption review, including when ordinary adoption policy is automatic.
+
+The Feature's `isIntangible` and `isVisitable` remain independent of its Location:
+a removed sign can be intangible while its business is open; `isVisitable=false`
+means the Feature cannot currently be visited and does not prove that its business
+is permanently closed. The persisted field is `isVisitable`, not `isAccessible`.
+A temporary business closure belongs in `operatingStatus`; changing visitability is
+a separate author decision. No separate sign lifecycle model is introduced.
+
+Prior names and addresses stay dated by their existing immutable revisions instead
+of being copied to a second history system. One optional `successorLocationId`
+links a relocated branch or successor explicitly, without moving old geometry,
+merging identities or rewriting associated Features. It must name a visible,
+non-redirect Location and cannot name itself. Shared records cannot link to private
+successors. Removing the relation sets it to
+null through the same revisioned save flow. Research source URLs remain in local
+review material; researched names must still be supported before application.
+
 ## Versioned Location facts and building preparation (21 October 2026)
 
 Refs [#194](https://github.com/tijptjik/hype/issues/194); source research:

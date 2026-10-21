@@ -7,6 +7,11 @@ import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
 import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 // DOMAIN
+import {
+  LIFECYCLE_STATUSES,
+  OperatingStatusSchema,
+  BuildingStatusSchema,
+} from '#lib/locations/lifecycle.js'
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 import { updateLocalLocationAddress } from '#lib/db/services/locationLocal.js'
 import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
@@ -42,6 +47,7 @@ export const getLocations = guardedQuery(
     scope: z.string().max(4000).optional(),
     organisationId: z.string().min(1).max(200).optional(),
     q: z.string().trim().max(200).optional(),
+    lifecycleStatus: z.enum(LIFECYCLE_STATUSES).optional(),
     after: z.string().min(1).max(200).optional(),
   }),
   async (input, ctx) => {
@@ -113,6 +119,9 @@ export const saveLocalLocationAddress = guardedCommand(
     organisationId: z.string().min(1).optional(),
     expectedOrganisationRevision: z.string().min(1).nullable().optional(),
     footprint: LocalLocationFootprintSchema.nullable().optional(),
+    operatingStatus: OperatingStatusSchema.nullable().optional(),
+    buildingStatus: BuildingStatusSchema.nullable().optional(),
+    successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),
     address: LocalLocationAddressSchema.optional(),
     coordinates: z
       .tuple([
