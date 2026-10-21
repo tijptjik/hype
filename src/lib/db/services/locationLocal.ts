@@ -15,6 +15,11 @@ import { location as locationTable, locationRevision } from '../schema/location'
 import { parseAddressContent } from '@saanseoi/address'
 // VALIDATION
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
+import {
+  authoredDivisionOverrides,
+  markerDerivedAddressContent,
+} from '#lib/addresses/divisions.js'
+import { validateAddressDivisionOverrides } from './addressDivisions'
 import { LocationNamesEditSchema } from '#lib/locations/validation.js'
 import { LocalLocationInputSchema } from '#lib/locations/local.js'
 import {
@@ -23,6 +28,7 @@ import {
 } from './organisationLocation'
 import { resolveFeatureLocation } from '#lib/locations/resolve.js'
 // TYPES
+import type { AddressDivisionOverrides } from '#lib/addresses/divisions.js'
 import type { Database } from '#lib/types.js'
 
 /**
@@ -44,6 +50,14 @@ export async function createLocalLocation(
   actorId: string,
 ): Promise<{ locationId: string; revisionId: string }> {
   const parsed = LocalLocationInputSchema.parse(input)
+  if (parsed.facts.location.address.authored)
+    parsed.facts.location.address.authored = markerDerivedAddressContent(
+      parsed.facts.location.address.authored,
+    )
+  await validateAddressDivisionOverrides(db, {
+    ...authoredDivisionOverrides(parsed.facts.location.address.authored),
+    ...parsed.facts.location.address.divisionOverrides,
+  })
   const locationId = nanoid(12)
   const revisionId = nanoid(12)
   const payload = {
@@ -91,7 +105,7 @@ export async function createLocalLocation(
 /**
  * Save names and structured address content without rewriting accepted or historical revisions.
  * @param db Request-local database.
- * @param input Authorized Organisation, expected revisions and optional names, authored content and marker.
+ * @param input Authorized Organisation, expected revisions and optional names, authored content, marker and subjective selections.
  * @returns New revision identity, or null if ownership, source identity or revision changed.
  * @remarks Omitted groups retain their effective facts and canonical evidence. Existing Features retain their accepted revision until explicitly adopting this one.
  */
@@ -105,6 +119,7 @@ export async function updateLocalLocationAddress(
     names?: Record<string, string>
     address?: unknown
     coordinates?: [number, number]
+    divisionOverrides?: AddressDivisionOverrides
     parseSource?: Record<string, string>
     actorId: string
   },
@@ -115,7 +130,11 @@ export async function updateLocalLocationAddress(
   const address =
     input.address === undefined
       ? undefined
-      : LocalLocationAddressSchema.parse(input.address)
+      : markerDerivedAddressContent(LocalLocationAddressSchema.parse(input.address))
+  await validateAddressDivisionOverrides(db, {
+    ...authoredDivisionOverrides(address),
+    ...input.divisionOverrides,
+  })
   const baseline = await db
     .select()
     .from(locationRevision)
@@ -154,6 +173,9 @@ export async function updateLocalLocationAddress(
         : {}),
       address: address
         ? {
+            ...(input.divisionOverrides
+              ? { divisionOverrides: input.divisionOverrides }
+              : {}),
             status: 'unresolved' as const,
             address2dId: null,
             address3dId: null,
@@ -165,6 +187,9 @@ export async function updateLocalLocationAddress(
           }
         : {
             ...before.location.address,
+            ...(input.divisionOverrides
+              ? { divisionOverrides: input.divisionOverrides }
+              : {}),
           },
     },
   }

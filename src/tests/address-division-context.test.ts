@@ -34,7 +34,12 @@ function setup() {
     }),
   })
   const db = drizzle({ prepare } as unknown as D1Database) as unknown as Database
-  function insert(id: string, kind: string, geometry?: unknown) {
+  function insert(
+    id: string,
+    kind: string,
+    geometry?: unknown,
+    attributes: Record<string, unknown> = {},
+  ) {
     sqlite.prepare('INSERT INTO divisionDefinition VALUES(?,?,?)').run(
       id,
       'release',
@@ -44,6 +49,7 @@ function setup() {
         level: 5,
         names: { en: { name: id } },
         membershipGeometry: geometry ? [{ geometry }] : [],
+        ...attributes,
       }),
     )
   }
@@ -70,6 +76,38 @@ const square = {
 }
 
 describe('mirrored address geography', () => {
+  it('retains separate ancestry and resolves island groups even without a group polygon', async () => {
+    const { db, insert } = setup()
+    const ancestry = {
+      landform: [
+        [{ id: 'island-group', class: 'island_group', fullContainment: true }],
+      ],
+    }
+    insert('island', 'minor_island', square, {
+      category: 'landform',
+      hierarchies: ancestry,
+    })
+    insert('island-group', 'island_group', undefined, { category: 'landform' })
+    const result = await readAddressDivisionContext(db, [1, 1])
+    expect(result.memberships.map(item => item.id)).toEqual(['island', 'island-group'])
+    expect(result.memberships[0].hierarchies).toEqual(ancestry)
+    expect(result.options).toEqual([])
+  })
+  it('does not promote partially intersecting landform ancestors to marker memberships', async () => {
+    const { db, insert } = setup()
+    insert('island', 'minor_island', square, {
+      category: 'landform',
+      hierarchies: {
+        landform: [
+          [{ id: 'island-group', class: 'island_group', fullContainment: false }],
+        ],
+      },
+    })
+    insert('island-group', 'island_group', undefined, { category: 'landform' })
+    expect(
+      (await readAddressDivisionContext(db, [1, 1])).memberships.map(item => item.id),
+    ).toEqual(['island'])
+  })
   it('excludes mirrored cities from address memberships and editable locality choices', async () => {
     const { db, insert } = setup()
     insert('kowloon', 'city', square)
@@ -127,4 +165,54 @@ describe('mirrored address geography', () => {
       validateAddressDivisionOverrides(db, { neighbourhoodId: { mode: 'marker' } }),
     ).resolves.toBeUndefined()
   })
+})
+
+it('accepts only one complete source neighbourhood path and rejects invented ancestry', async () => {
+  const { db, insert } = setup()
+  insert('macro', 'macrohood', undefined, { level: 4 })
+  insert('hood', 'neighbourhood', undefined, {
+    level: 5,
+    hierarchies: {
+      locality: [[{ id: 'macro', class: 'macrohood', fullContainment: true }]],
+    },
+  })
+  insert('other-hood', 'neighbourhood', undefined, { level: 5 })
+  insert('micro', 'microhood', undefined, {
+    level: 6,
+    hierarchies: {
+      locality: [
+        [
+          { id: 'macro', class: 'macrohood', fullContainment: true },
+          { id: 'hood', class: 'neighbourhood', fullContainment: true },
+        ],
+      ],
+    },
+  })
+  insert('district', 'district', undefined, { level: 2 })
+  await expect(
+    validateAddressDivisionOverrides(db, {
+      localityPaths: [['macro', 'hood', 'micro']],
+    }),
+  ).resolves.toBeUndefined()
+  await expect(
+    validateAddressDivisionOverrides(db, { localityPaths: [] }),
+  ).resolves.toBeUndefined()
+  await expect(
+    validateAddressDivisionOverrides(db, {
+      localityPaths: [['macro', 'hood'], ['other-hood']],
+    }),
+  ).rejects.toThrow('INVALID_ADDRESS_DIVISION')
+  for (const path of [
+    ['hood', 'macro'],
+    ['hood', 'other-hood'],
+    ['hood', 'hood'],
+    ['district', 'hood'],
+    ['unknown'],
+    ['macro', 'micro'],
+    ['other-hood', 'micro'],
+  ]) {
+    await expect(
+      validateAddressDivisionOverrides(db, { localityPaths: [path] }),
+    ).rejects.toThrow('INVALID_ADDRESS_DIVISION')
+  }
 })

@@ -1611,5 +1611,19 @@
   "address_division_area": "地域",
   "address_division_district": "行政區",
   "address_division_island": "島嶼",
-  "address_division_islet": "小島"
+  "address_division_islet": "小島",
+  "address_divisions_administration": "行政區劃",
+  "address_divisions_localities": "社區及聚落",
+  "address_divisions_landforms": "島嶼",
+  "address_division_island_group": "群島",
+  "address_locality_results": "符合的社區及聚落",
+  "address_locality_no_results": "找不到符合的社區或聚落。",
+  "address_divisions_about": "關於分區",
+  "address_neighbourhood_current": "已選社區",
+  "address_neighbourhood_choose": "選擇社區",
+  "address_neighbourhood_search": "搜尋社區",
+  "address_neighbourhood_choose_path": "選擇{name}的分區路徑",
+  "address_neighbourhood_paths_help": "選擇其中一條現有的上層分區路徑。",
+  "address_neighbourhood_unavailable": "此社區的上層分區路徑暫未提供，請選擇其他社區。",
+  "address_neighbourhood_clear": "清除社區"
 }

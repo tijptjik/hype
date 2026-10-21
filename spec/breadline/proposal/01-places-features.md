@@ -737,6 +737,30 @@ division mirror may preserve that classification as source evidence; they do not
 make it an address field or an editable address role. Districts such as Kowloon
 City District remain districts and are unaffected.
 
+The address division display separates administration, locality memberships and
+islands (Refs #194). Source paths use the independent
+`hierarchies.administrative`, `.locality` and `.landform` ancestry, preserving
+alternatives. Full containment supports source connections; levels, shared names
+and polygon overlap alone do not establish ancestry. A mirrored island group may
+be shown through a fully contained island’s landform ancestry even without its
+own polygon. Missing source hierarchy metadata leaves memberships unconnected.
+
+Locality editing selects **one existing neighbourhood**, at any supported
+locality level, with one of its supplied source ancestor paths. A unique path
+fills automatically. Boundary cases such as Prince Edward prompt for one complete
+source branch, retaining a standalone branch when the source explicitly provides
+it. The editor cannot add children, combine unrelated parents, choose arbitrary
+levels, or create new hierarchy edges. Administration and islands remain marker-derived.
+
+`divisionOverrides.localityPaths` stores at most one selected root-to-leaf source
+path; an empty selection omits localities and null returns to marker membership.
+The server verifies the complete path against the selected division's mirrored
+ancestry, rejecting additional paths, invented parents and skipped ancestors even
+when their levels would otherwise fit. The choice travels through Feature/Location
+save and immutable revision JSON without changing SaanSeoi taxonomy or geometry.
+Read-only display omits locks and editing controls. The marker/locality explanation
+is shown in the existing info tooltip at the right of the Divisions title.
+
 When Buildings become available, model `Feature -> Establishment -> Building` as an
 explicit association chain, with direct Feature-to-Building association also possible.
 Do not let an establishment's street-level building fallback replace its own unit or

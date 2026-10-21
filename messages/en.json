@@ -1611,5 +1611,19 @@
   "address_division_area": "Area",
   "address_division_district": "District",
   "address_division_island": "Island",
-  "address_division_islet": "Islet"
+  "address_division_islet": "Islet",
+  "address_divisions_administration": "Administration",
+  "address_divisions_localities": "Localities",
+  "address_divisions_landforms": "Islands",
+  "address_division_island_group": "Island group",
+  "address_locality_results": "Matching localities",
+  "address_locality_no_results": "No matching localities.",
+  "address_divisions_about": "About divisions",
+  "address_neighbourhood_current": "Selected neighbourhood",
+  "address_neighbourhood_choose": "Choose neighbourhood",
+  "address_neighbourhood_search": "Search neighbourhoods",
+  "address_neighbourhood_choose_path": "Choose a path for {name}",
+  "address_neighbourhood_paths_help": "Choose one of the existing ancestor paths.",
+  "address_neighbourhood_unavailable": "The ancestor paths for this neighbourhood are unavailable. Choose another neighbourhood.",
+  "address_neighbourhood_clear": "Clear neighbourhood"
 }

@@ -5413,3 +5413,83 @@ describe('Organisation-wide Location corrections', () => {
     )
   })
 })
+
+it('persists one existing neighbourhood path in immutable Location revisions', async () => {
+  const { db, sqlite } = setup()
+  sqlite.exec(
+    'CREATE TABLE divisionDefinition(id TEXT PRIMARY KEY, apiReleaseSet TEXT, attributes TEXT)',
+  )
+  const insert = sqlite.prepare('INSERT INTO divisionDefinition VALUES (?,?,?)')
+  for (const [id, kind, level] of [
+    ['source-parent', 'macrohood', 4],
+    ['child', 'neighbourhood', 5],
+    ['same-level', 'neighbourhood', 5],
+  ] as const)
+    insert.run(
+      id,
+      'release',
+      JSON.stringify({
+        class: kind,
+        category: 'hood',
+        level,
+        ...(id === 'child'
+          ? {
+              hierarchies: {
+                locality: [
+                  [{ id: 'source-parent', class: 'macrohood', fullContainment: true }],
+                ],
+              },
+            }
+          : {}),
+      }),
+    )
+  const registry = sqlite.prepare('SELECT * FROM divisionDefinition ORDER BY id').all()
+  const created = await createLocalLocation(
+    db,
+    'p',
+    { state: 'manual', facts },
+    'actor',
+  )
+  const original = sqlite
+    .prepare('SELECT facts FROM locationRevision WHERE id=?')
+    .get(created.revisionId)
+  const address = {
+    granularity: 'building',
+    i18n: { en: { formattedAddress: 'Example Road' } },
+    unit: null,
+    unitI18n: {},
+  }
+  const divisionOverrides = { localityPaths: [['source-parent', 'child']] }
+  const saved = await updateLocalLocationAddress(db, {
+    locationId: created.locationId,
+    organisationId: 'p',
+    expectedRevisionId: created.revisionId,
+    expectedOrganisationRevision: null,
+    actorId: 'actor',
+    address,
+    divisionOverrides,
+  })
+  expect(saved).not.toBeNull()
+  const resource = (
+    await listLocationResources(db, { id: created.locationId, organisationId: 'p' })
+  ).data[0]
+  expect(resource.facts?.location.address.divisionOverrides).toEqual(divisionOverrides)
+  expect(
+    sqlite
+      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .get(created.revisionId),
+  ).toEqual(original)
+  await expect(
+    updateLocalLocationAddress(db, {
+      locationId: created.locationId,
+      organisationId: 'p',
+      expectedRevisionId: saved?.revisionId ?? '',
+      actorId: 'actor',
+      address,
+      divisionOverrides: { localityPaths: [['child', 'same-level']] },
+    }),
+  ).rejects.toThrow('INVALID_ADDRESS_DIVISION')
+  expect(sqlite.prepare('SELECT * FROM divisionDefinition ORDER BY id').all()).toEqual(
+    registry,
+  )
+})

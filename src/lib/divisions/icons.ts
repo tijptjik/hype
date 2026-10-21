@@ -19,6 +19,7 @@ export const divisionIcons = {
   area: MapIcon,
   district: DistrictIcon,
   major_island: IslandIcon,
+  island_group: IslandIcon,
   macrohood: MacrohoodIcon,
   town: TownIcon,
   neighbourhood: HoodIcon,

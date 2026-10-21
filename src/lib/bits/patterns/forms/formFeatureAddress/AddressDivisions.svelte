@@ -3,8 +3,14 @@
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import LockIcon from 'virtual:icons/lucide/lock-keyhole'
+import InfoIcon from 'virtual:icons/proicons/info'
+import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
 import { divisionClassLabel } from '#lib/divisions/classes.js'
 import { divisionIcons } from '#lib/divisions/icons.js'
+// BITS
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
+// COMPONENTS
+import AddressLocalityEditor from './AddressLocalityEditor.svelte'
 // API
 import { getAddressDivisionContext } from '#lib/api/division.remote.js'
 // DOMAIN
@@ -13,13 +19,14 @@ import {
   authoredDivisionOverrides,
   addressDivisionName,
   effectiveAddressDivisions,
+  groupAddressDivisions,
+  localityPathOverrides,
 } from '#lib/addresses/divisions.js'
 // TYPES
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import type {
   AddressDivisionContext,
-  AddressDivisionOverrides,
-  SubjectiveDivisionField,
+  AddressDivision,
 } from '#lib/addresses/divisions.js'
 
 let {
@@ -36,7 +43,6 @@ let {
 let result = $state<{ key: string; context: AddressDivisionContext } | null>(null)
 let loading = $state(false)
 let failed = $state(false)
-let showAll = $state(false)
 let retry = $state(0)
 const key = $derived(JSON.stringify(coordinates.slice(0, 2)))
 const context = $derived(result?.key === key ? result.context : null)
@@ -46,13 +52,20 @@ const overrides = $derived({
   ...address.divisionOverrides,
 })
 const divisions = $derived(context ? effectiveAddressDivisions(context, overrides) : [])
-const subjective = $derived(
-  Object.entries(SUBJECTIVE_DIVISIONS).filter(
-    ([field, kind]) =>
-      showAll ||
-      divisions.some(item => item.class === kind) ||
-      Object.hasOwn(overrides, field),
-  ),
+const groups = $derived(groupAddressDivisions(divisions))
+const groupLabels = $derived({
+  administrative: m.address_divisions_administration(),
+  locality: m.address_divisions_localities(),
+  landform: m.address_divisions_landforms(),
+})
+const displayedGroups = $derived(
+  isEditing && !groups.some(group => group.key === 'locality')
+    ? [
+        ...groups.filter(group => group.key === 'administrative'),
+        { key: 'locality' as const, paths: [] },
+        ...groups.filter(group => group.key === 'landform'),
+      ]
+    : groups,
 )
 const labels = $derived<Record<string, string>>({
   country: m.address_division_country(),
@@ -62,6 +75,7 @@ const labels = $derived<Record<string, string>>({
   major_island: m.address_division_island(),
   minor_island: m.address_division_island(),
   islet: m.address_division_islet(),
+  island_group: m.address_division_island_group(),
   town: m.address_division_town(),
   rural_area: m.address_division_rural_area(),
   macrohood: m.address_division_macrohood(),
@@ -73,11 +87,13 @@ const labels = $derived<Record<string, string>>({
 $effect(() => {
   const requestKey = key
   const refresh = retry
+  // Depend on the coordinate value, so ordinary draft edits cannot restart lookup and unmount the picker.
+  const point = JSON.parse(requestKey) as [number, number]
   let cancelled = false
   loading = true
   failed = false
   const request = getAddressDivisionContext({
-    coordinates: [coordinates[0], coordinates[1]],
+    coordinates: point,
   })
   Promise.resolve(refresh ? request.refresh().then(() => request) : request)
     .then(value => {
@@ -95,26 +111,87 @@ $effect(() => {
   }
 })
 
-/** Set one language-independent subjective selection; absence inherits current marker membership.
- * @param field Editable geographic role. @param value Stable identity, omission or marker inheritance.
- * @returns Nothing; persistence stays with the owning Location or Feature form.
+/** Save one existing neighbourhood ancestry path without changing division definitions.
+ * @param paths The selected source path or an empty selection. @returns Nothing; persistence stays with the owning form.
  */
-function select(field: SubjectiveDivisionField, value: string): void {
-  const next: AddressDivisionOverrides = { ...address.divisionOverrides }
-  if (value === '__marker') next[field] = { mode: 'marker' }
-  else next[field] = value || null
-  onChange({ ...address, divisionOverrides: next })
+function changePaths(paths: AddressDivision[][]): void {
+  onChange({
+    ...address,
+    divisionOverrides: {
+      ...address.divisionOverrides,
+      ...localityPathOverrides(paths),
+    },
+  })
+}
+
+/** Restore dynamic marker membership, including when a Location has inherited authored paths.
+ * @returns Nothing; explicit marker selections supersede inherited corrections.
+ */
+function resetPaths(): void {
+  onChange({
+    ...address,
+    divisionOverrides: {
+      ...address.divisionOverrides,
+      ...Object.fromEntries(
+        Object.keys(SUBJECTIVE_DIVISIONS).map(field => [
+          field,
+          { mode: 'marker' as const },
+        ]),
+      ),
+      localityPaths: null,
+    },
+  })
 }
 </script>
+
+{#snippet divisionNode(
+  division: AddressDivision,
+)}
+  {@const Icon =
+    divisionIcons[division.class as keyof typeof divisionIcons] ?? divisionIcons.area}
+  {@const factual = !Object.values(SUBJECTIVE_DIVISIONS).some(
+    kind => kind === division.class,
+  )}
+  <div
+    class="flex min-w-0 items-start gap-2 py-1.5"
+    title={factual ? m.address_divisions_factual() : m.address_divisions_subjective()}
+  >
+    <Icon class="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+    <div class="min-w-0">
+      <span class="text-sm font-medium leading-5 [overflow-wrap:anywhere]">
+        {addressDivisionName(division, getLocaleKey())}
+      </span>
+      <span class="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+        {labels[division.class] ?? divisionClassLabel(division.class)}
+        {#if factual && isEditing}
+          <LockIcon class="size-2.5" aria-label={m.address_divisions_factual()} />
+        {/if}
+      </span>
+    </div>
+  </div>
+{/snippet}
 
 <section
   class="space-y-4 border-t border-border pt-5"
   aria-label={m.feature_address_divisions()}
   data-address-divisions
 >
-  <div>
+  <div class="flex items-center justify-between gap-3">
     <h3 class="font-semibold">{m.feature_address_divisions()}</h3>
-    <p class="mt-1 text-sm text-muted-foreground">{m.address_divisions_policy()}</p>
+    <SimpleTooltip contentProps={{ role: 'tooltip' }}>
+      {#snippet trigger()}
+        <button
+          type="button"
+          class="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground transition hover:text-foreground"
+          aria-label={m.address_divisions_about()}
+        >
+          <InfoIcon class="size-4" aria-hidden="true" />
+        </button>
+      {/snippet}
+      <span class="block max-w-xs text-sm leading-5"
+        >{m.address_divisions_policy()}</span
+      >
+    </SimpleTooltip>
   </div>
   {#if loading}
     <p role="status" class="text-sm text-muted-foreground">
@@ -127,93 +204,62 @@ function select(field: SubjectiveDivisionField, value: string): void {
         {m.address_divisions_retry()}
       </button>
     </div>
-  {:else if !context?.available}
+  {:else if !context || (!context.available && !isEditing)}
     <p role="status" class="text-sm text-muted-foreground">
       {m.feature_address_divisions_unloaded()}
     </p>
   {:else}
-    <div class="flex flex-wrap gap-2">
-      {#each divisions as division (division.id)}
-        {@const Icon =
-          divisionIcons[division.class as keyof typeof divisionIcons] ??
-          divisionIcons.area}
-        {@const factual = !Object.values(SUBJECTIVE_DIVISIONS).some(
-          kind => kind === division.class,
-        )}
-        <div
-          class="flex items-center gap-2 rounded-lg border border-border bg-background/40 px-3 py-2"
-          title={factual
-            ? m.address_divisions_factual()
-            : m.address_divisions_subjective()}
+    <div
+      class="divide-y divide-border/60 rounded-xl border border-border/70 bg-background/40 px-4"
+    >
+      {#each displayedGroups as group (group.key)}
+        <section
+          class="grid gap-2 py-4 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
+          aria-label={groupLabels[group.key]}
+          data-division-group={group.key}
         >
-          <Icon class="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <span class="text-sm"
-            >{addressDivisionName(division, getLocaleKey())}<span
-              class="ml-1.5 text-xs text-muted-foreground"
-              >{labels[division.class] ?? divisionClassLabel(division.class)}</span
-            ></span
-          >
-          {#if factual}
-            <LockIcon
-              class="size-3 text-muted-foreground"
-              aria-label={m.address_divisions_factual()}
-            />
-          {/if}
-        </div>
+          <h4 class="pt-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+            {groupLabels[group.key]}
+          </h4>
+          <div class="min-w-0 space-y-2">
+            {#if isEditing && group.key === 'locality' && context}
+              <AddressLocalityEditor
+                paths={group.paths}
+                options={context.options}
+                node={divisionNode}
+                {labels}
+                onChange={changePaths}
+                onReset={resetPaths}
+              />
+            {:else}
+              {#each group.paths as path, pathIndex (JSON.stringify(
+                path.map(item => item.id),
+              ))}
+                <ol
+                  class="flex flex-wrap items-start gap-x-3 gap-y-1"
+                  aria-label={`${groupLabels[group.key]} ${pathIndex + 1}`}
+                >
+                  {#each path as division, index (division.id)}
+                    <li class="flex min-w-0 max-w-full items-start gap-3">
+                      {#if index > 0}
+                        <ChevronRightIcon
+                          class="mt-2 size-3.5 shrink-0 text-muted-foreground/60"
+                          aria-hidden="true"
+                        />
+                      {/if}
+                      {@render divisionNode(division)}
+                    </li>
+                  {/each}
+                </ol>
+              {/each}
+            {/if}
+          </div>
+        </section>
       {:else}
-        <p class="text-sm text-muted-foreground">
+        <p class="py-4 text-sm text-muted-foreground">
           {m.feature_address_divisions_empty()}
         </p>
       {/each}
     </div>
-  {/if}
-  {#if isEditing && context && !loading && !failed}
-    <div class="grid gap-3 sm:grid-cols-2">
-      {#each subjective as [field, kind]}
-        {@const automatic = context.memberships.filter(item => item.class === kind)}
-        {@const selection =
-          typeof overrides[field as SubjectiveDivisionField] === 'object' &&
-          overrides[field as SubjectiveDivisionField] !== null
-            ? '__marker'
-            : Object.hasOwn(overrides, field)
-              ? (overrides[field as SubjectiveDivisionField] ?? '')
-              : '__marker'}
-        <label class="flex min-w-0 flex-col gap-1 text-sm"
-          >{labels[kind]}
-          <select
-            class="min-h-11 w-full rounded-lg border border-border bg-panel px-3"
-            value={selection}
-            onchange={event =>
-              select(field as SubjectiveDivisionField, event.currentTarget.value)}
-          >
-            <option value="__marker">
-              {m.address_divisions_from_marker()}{automatic.length
-                ? ` · ${automatic.map(item => addressDivisionName(item, getLocaleKey())).join(' / ')}`
-                : ''}
-            </option>
-            <option value="">{m.address_divisions_omit()}</option>
-            {#each context.options
-              .filter(item => item.class === kind)
-              .sort((a, b) =>
-                addressDivisionName(a, getLocaleKey()).localeCompare(
-                  addressDivisionName(b, getLocaleKey()),
-                ),
-              ) as option}
-              <option value={option.id}>
-                {addressDivisionName(option, getLocaleKey())}
-              </option>
-            {/each}
-          </select>
-        </label>
-      {/each}
-    </div>
-    <button
-      type="button"
-      class="min-h-10 text-sm text-primary hover:underline"
-      aria-expanded={showAll}
-      onclick={() => (showAll = !showAll)}
-    >
-      {m.address_divisions_edit_localities()}
-    </button>
   {/if}
 </section>
