@@ -9,14 +9,14 @@
     "publicPath": "/mapStyles/noclit26.488ef9b5b60d.json",
     "hash": "488ef9b5b60d10a9dd4cba69c398fd4399ec06583b221cc2689a4c8d3e042956"
   },
-  "hyper": {
-    "fileName": "hyper.fbb9213ca0f4.json",
-    "publicPath": "/mapStyles/hyper.fbb9213ca0f4.json",
+  "hype-dark": {
+    "fileName": "hype-dark.fbb9213ca0f4.json",
+    "publicPath": "/mapStyles/hype-dark.fbb9213ca0f4.json",
     "hash": "fbb9213ca0f4d8de057862e4f7a1c68d09bdfd427c5f4678f7785b87da745497"
   },
-  "hyperLight": {
-    "fileName": "hyperLight.ffddb1729de6.json",
-    "publicPath": "/mapStyles/hyperLight.ffddb1729de6.json",
+  "hype-light": {
+    "fileName": "hype-light.ffddb1729de6.json",
+    "publicPath": "/mapStyles/hype-light.ffddb1729de6.json",
     "hash": "ffddb1729de652ddd27662bbc86ffc0fb0f864d62f3deb7a97763284d120001b"
   },
   "hyperpop": {
@@ -28,16 +28,6 @@
     "fileName": "ghostery.1949953afb7d.json",
     "publicPath": "/mapStyles/ghostery.1949953afb7d.json",
     "hash": "1949953afb7d9ae61a9d532cbadf22e13dc2d2d739a828c974f8dd3b296dd2af"
-  },
-  "ghostery-legacy": {
-    "fileName": "ghostery-legacy.a5c6e3ae32d0.json",
-    "publicPath": "/mapStyles/ghostery-legacy.a5c6e3ae32d0.json",
-    "hash": "a5c6e3ae32d0a47db1809978b964f719c4aeb8dfa25bc256cec85d192afd1672"
-  },
-  "neonmaster": {
-    "fileName": "neonmaster.1a38c23921e9.json",
-    "publicPath": "/mapStyles/neonmaster.1a38c23921e9.json",
-    "hash": "1a38c23921e9e169623288a61d59684495539c1c5e8bc40a1b944ed44a852763"
   },
   "neorange": {
     "fileName": "neorange.34ddd59d15c6.json",
@@ -58,11 +48,6 @@
     "fileName": "rosepunk.e9c67508f3a8.json",
     "publicPath": "/mapStyles/rosepunk.e9c67508f3a8.json",
     "hash": "e9c67508f3a8cf1556ce07d3d874319a4db365934d564313117d01a24830a389"
-  },
-  "breadline": {
-    "fileName": "breadline.6ce4b770c2c5.json",
-    "publicPath": "/mapStyles/breadline.6ce4b770c2c5.json",
-    "hash": "6ce4b770c2c50915885d82d4474d37e97029009511eb501e3db61de7e0718300"
   },
   "breadline-light": {
     "fileName": "breadline-light.1e2cb3ca3e28.json",
