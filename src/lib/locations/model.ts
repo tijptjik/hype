@@ -1,5 +1,7 @@
 // VALIDATION
 import { z } from 'zod'
+import type { OperatingStatus, BuildingStatus } from './entityStatus'
+import type { LocationEntity } from './factsDetails'
 import type { LocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 
 /** Explicit clear differs from inheritance, including for empty arrays and locales. */
@@ -34,7 +36,12 @@ export type LocationPosition = {
   address: LocationAddress
 }
 
+/** Normalized Feature projection; persisted revisions use LocationFactsSnapshot. */
 export type LocationFacts = {
+  entity?: LocationEntity
+  operatingStatus?: OperatingStatus | null
+  buildingStatus?: BuildingStatus | null
+  successorLocationId?: string | null
   names: Record<string, string>
   phoneNumber: string[]
   brands: LocationBrand[]

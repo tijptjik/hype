@@ -1,3 +1,5 @@
+// SNAPSHOT CONTRACT
+import { locationFactsFieldSql } from './locationFactsSql'
 // DRIZZLE
 import { and, eq, gt, isNull, or, sql } from 'drizzle-orm'
 // SCHEMA
@@ -63,7 +65,7 @@ export async function listLocationResources(
           ? or(
               eq(locationTable.id, input.q),
               eq(locationTable.ssId, input.q),
-              sql`EXISTS (SELECT 1 FROM json_each(${locationRevision.facts}, '$.names') n WHERE n.type='text' AND instr(lower(n.value), lower(${input.q}))>0)`,
+              sql`EXISTS (SELECT 1 FROM json_each(${locationFactsFieldSql(locationRevision.facts, 'names')}) n WHERE n.type='text' AND instr(lower(n.value), lower(${input.q}))>0)`,
             )
           : undefined,
       ),
@@ -79,6 +81,7 @@ export async function listLocationResources(
         JSON.parse(organisationOverrides) as FeatureLocationOverrides,
       )
       facts = {
+        ...facts,
         names: Object.fromEntries(
           Object.entries(effective.names).filter(
             (pair): pair is [string, string] => pair[1] !== null,

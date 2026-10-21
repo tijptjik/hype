@@ -218,6 +218,7 @@ export function planLocationAdoption(input: {
       unitContent(comparedAfter.address),
     ),
     establishmentChanged:
+      !equalLocationValue(oldFacts.entity ?? null, next.entity ?? null) ||
       !equalLocationValue(effectiveBefore.names, effectiveCandidate.names) ||
       !equalLocationValue(effectiveBefore.brands, effectiveCandidate.brands) ||
       (!localChain &&

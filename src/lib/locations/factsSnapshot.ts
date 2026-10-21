@@ -1,0 +1,156 @@
+// VALIDATION
+import { z } from 'zod'
+import { LocationFactsSchema } from './validation'
+import { LocationEntitySchema } from './factsDetails'
+// TYPES
+import type { LocationFacts } from './model'
+import type { LocationEntity } from './factsDetails'
+type LocationFactsKind = LocationEntity['kind']
+
+// ═══════════════════════
+// TABLE OF CONTENTS
+// 1. VERSIONED STORAGE CONTRACT
+// 2. DISPLAY PROJECTION AND STORAGE CODEC
+// ---
+
+const common = z.strictObject({
+  names: LocationFactsSchema.shape.names,
+  phoneNumber: z.array(z.string()).optional(),
+  successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),
+  location: LocationFactsSchema.shape.location.extend({
+    // A mountain or building need not have an address; the display projection supplies an empty one.
+    address: LocationFactsSchema.shape.location.shape.address.nullable().optional(),
+  }),
+})
+
+/** Every persisted revision carries its historical kind and explicit JSON contract version. */
+const envelope = { schemaVersion: z.literal(1), common }
+export const LocationFactsSnapshotSchema = z.discriminatedUnion('kind', [
+  LocationEntitySchema.options[0].extend(envelope),
+  LocationEntitySchema.options[1].extend(envelope),
+  LocationEntitySchema.options[2].extend(envelope),
+  LocationEntitySchema.options[3].extend(envelope),
+  LocationEntitySchema.options[4].extend(envelope),
+])
+export type LocationFactsSnapshot = z.infer<typeof LocationFactsSnapshotSchema>
+
+/** Convert an application projection to a validated immutable snapshot.
+ * @param facts Validated common display values and optional entity-specific facts.
+ * @param kind Entity kind at revision creation, never inferred from a later identity row.
+ * @returns Versioned storage envelope with a strict kind-specific details object.
+ * @remarks Contacts are optional common data because HYPE's phone property is universal.
+ */
+export function createLocationFactsSnapshot(
+  facts: LocationFacts,
+  kind: LocationFactsKind,
+): LocationFactsSnapshot {
+  if (facts.entity && facts.entity.kind !== kind)
+    throw new Error('Location details do not match the captured kind')
+  const entity = facts.entity
+  const details: Record<string, unknown> = { ...entity?.details }
+  if (kind === 'establishment' || kind === 'unknown') {
+    if (kind === 'establishment' || facts.brands.length) details.brands = facts.brands
+    if (facts.operatingStatus !== undefined)
+      details.operatingStatus = facts.operatingStatus
+  } else if (facts.brands.length || facts.operatingStatus != null)
+    throw new Error(
+      'Establishment facts require an establishment or unclassified snapshot',
+    )
+  if (kind === 'building' || kind === 'unknown') {
+    if (facts.buildingStatus !== undefined)
+      details.buildingStatus = facts.buildingStatus
+  } else if (facts.buildingStatus != null)
+    throw new Error('Building status requires a building or unclassified snapshot')
+  return LocationFactsSnapshotSchema.parse({
+    schemaVersion: 1,
+    kind,
+    common: {
+      names: facts.names,
+      location: facts.location,
+      ...(facts.phoneNumber.length ? { phoneNumber: facts.phoneNumber } : {}),
+      ...(facts.successorLocationId !== undefined
+        ? { successorLocationId: facts.successorLocationId }
+        : {}),
+    },
+    details,
+  })
+}
+
+/** Read a versioned snapshot or retained legacy projection without rewriting source evidence.
+ * @param value JSON text or a decoded snapshot/projection.
+ * @returns Existing Feature display projection; building/natural-specific details remain attached.
+ * @remarks Unsupported explicit versions fail closed. Legacy support is for retained evidence and old fixtures.
+ */
+export function readLocationFacts(value: unknown): LocationFacts {
+  const raw = typeof value === 'string' ? JSON.parse(value) : value
+  if (!raw || typeof raw !== 'object' || !('schemaVersion' in raw))
+    return LocationFactsSchema.parse(raw)
+  const snapshot = LocationFactsSnapshotSchema.parse(raw)
+  const entity = LocationEntitySchema.parse({
+    kind: snapshot.kind,
+    details: snapshot.details,
+  })
+  const address = snapshot.common.location.address ?? {
+    status: 'unresolved',
+    address2dId: null,
+    address3dId: null,
+    address3dUnitId: null,
+    addressSnapshotId: null,
+    records: {},
+    fallbackDisplay: {},
+  }
+  const details = entity.details
+  return LocationFactsSchema.parse({
+    names: snapshot.common.names,
+    phoneNumber: snapshot.common.phoneNumber ?? [],
+    brands: 'brands' in details ? (details.brands ?? []) : [],
+    location: { ...snapshot.common.location, address },
+    ...(snapshot.common.successorLocationId !== undefined
+      ? { successorLocationId: snapshot.common.successorLocationId }
+      : {}),
+    ...('operatingStatus' in details && details.operatingStatus !== undefined
+      ? { operatingStatus: details.operatingStatus }
+      : {}),
+    ...('buildingStatus' in details && details.buildingStatus !== undefined
+      ? { buildingStatus: details.buildingStatus }
+      : {}),
+    // Existing projections retain their stable shape; additional typed building/natural facts round-trip intact.
+    ...(entity.kind === 'building' || entity.kind === 'natural' ? { entity } : {}),
+  })
+}
+
+/** Serialize one validated revision envelope for Drizzle and conditional raw SQL writes.
+ * @param facts Existing display projection or an already-versioned snapshot.
+ * @param kind Kind captured at the authoring boundary, when starting from a projection.
+ * @returns Strict versioned JSON suitable for the locationRevision facts column.
+ */
+export function serializeLocationFacts(
+  facts: LocationFacts | LocationFactsSnapshot,
+  kind?: LocationFactsKind,
+): string {
+  if ('schemaVersion' in facts)
+    return JSON.stringify(LocationFactsSnapshotSchema.parse(facts))
+  const capturedKind = kind ?? facts.entity?.kind
+  if (!capturedKind)
+    throw new Error('A snapshot must capture an explicit Location kind')
+  return JSON.stringify(createLocationFactsSnapshot(facts, capturedKind))
+}
+
+/** Capture the kind for generic Drizzle value inserts without changing the display contract.
+ * @param facts Common display projection and retained typed details.
+ * @param kind Historical kind at creation.
+ * @returns A validated projection carrying the storage discriminator.
+ */
+export function prepareLocationFactsForWrite(
+  facts: LocationFacts,
+  kind: LocationFactsKind,
+): LocationFacts {
+  const snapshot = createLocationFactsSnapshot(facts, kind)
+  return {
+    ...readLocationFacts(snapshot),
+    entity: LocationEntitySchema.parse({
+      kind: snapshot.kind,
+      details: snapshot.details,
+    }),
+  }
+}

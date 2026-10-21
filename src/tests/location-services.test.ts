@@ -1,4 +1,8 @@
 import {
+  readLocationFacts,
+  LocationFactsSnapshotSchema,
+} from '#lib/locations/factsSnapshot.js'
+import {
   rejectLocationIdentityReview,
   rejectedFeatureLocationSourceIds,
 } from '#lib/db/services/locationIdentityRejection.js'
@@ -377,7 +381,7 @@ describe('local Location creation', () => {
         )
         .get(created.revisionId)
       if (!revision) throw new Error('Missing local baseline')
-      expect(JSON.parse(revision.facts as string).phoneNumber).toEqual([
+      expect(readLocationFacts(revision.facts as string).phoneNumber).toEqual([
         '+85223456789',
         '+85291234567',
       ])
@@ -568,7 +572,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
         'SELECT facts,payload FROM locationRevision WHERE locationId=? ORDER BY sequence DESC LIMIT 1',
       )
       .get(local.locationId)!
-    const address = JSON.parse(latest.facts as string).location.address
+    const address = readLocationFacts(latest.facts as string).location.address
     expect(address).toEqual(projection().facts.location.address)
     expect(address.authored).toBeUndefined()
     expect(address.address2dId).toBeNull()
@@ -1336,7 +1340,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
     const original = sqlite
       .prepare('SELECT facts,payload FROM locationRevision WHERE id=?')
       .get(first.revisionId)
-    expect(JSON.parse(String(original?.facts)).names.en).toBe('Bakery')
+    expect(readLocationFacts(original?.facts).names.en).toBe('Bakery')
     expect(JSON.parse(String(original?.payload)).resource.sources).toEqual([
       'retained-attribution',
     ])
@@ -3081,7 +3085,7 @@ describe('explicit Location unlink preservation', () => {
     const source = sqlite
       .prepare('SELECT facts FROM locationRevision WHERE id=?')
       .get(local.revisionId) as { facts: string }
-    expect(JSON.parse(source.facts).brands).toEqual(brands)
+    expect(readLocationFacts(source.facts).brands).toEqual(brands)
     expect(sqlite.prepare('SELECT id FROM location').all()).toHaveLength(1)
   })
 
@@ -3514,7 +3518,7 @@ describe('atomic source group application', () => {
         const row = sqlite
           .prepare('SELECT facts,payload FROM locationRevision WHERE id=?')
           .get(saved as string)
-        expect(JSON.parse(String(row?.facts)).location.address.status).toBe(
+        expect(readLocationFacts(row?.facts).location.address.status).toBe(
           mode === 'success' ? 'resolved' : 'unresolved',
         )
         if (mode === 'mismatch')
@@ -4561,7 +4565,7 @@ describe('forward-only bulk source persistence', () => {
     const row = sqlite
       .prepare('SELECT * FROM locationRevision WHERE id=?')
       .get(refreshed.revisionId)!
-    expect(JSON.parse(row.facts as string)).toEqual(source(9).facts)
+    expect(readLocationFacts(row.facts as string)).toEqual(source(9).facts)
     expect(JSON.parse(row.payload as string).localAddress).toBeUndefined()
     const scoped = await listLocationResources(db, {
       id: first.locationId,
@@ -4867,7 +4871,7 @@ describe('local Location address revisions', () => {
     const row = sqlite
       .prepare('SELECT facts,payload FROM locationRevision WHERE id=?')
       .get(updated!.revisionId)!
-    expect(JSON.parse(row.facts as string).location.address.authored).toEqual(
+    expect(readLocationFacts(row.facts as string).location.address.authored).toEqual(
       input.address,
     )
     expect(JSON.parse(row.payload as string)).toMatchObject({
@@ -5492,4 +5496,85 @@ it('persists one existing neighbourhood path in immutable Location revisions', a
   expect(sqlite.prepare('SELECT * FROM divisionDefinition ORDER BY id').all()).toEqual(
     registry,
   )
+})
+
+describe('versioned building baseline persistence', () => {
+  it('preserves typed building facts through owner edits and other Organisation corrections', async () => {
+    const { db, sqlite } = setup(true)
+    sqlite.exec(readFileSync('migrations/0142_location_facts_snapshots.sql', 'utf8'))
+    const details = {
+      storeysAboveGround: 16,
+      storeysBelowGround: 0,
+      elevations: { verticalDatum: 'HKPD' as const, baseMetres: 63.1, topMetres: 66.6 },
+      heightMetres: 3.5,
+      heightMethod: 'top_minus_base' as const,
+    }
+    // Seed the future adapter's snapshot without enabling building discovery/authoring.
+    const snapshot = LocationFactsSnapshotSchema.parse({
+      schemaVersion: 1,
+      kind: 'building',
+      common: { names: facts.names, location: facts.location },
+      details,
+    })
+    sqlite.exec(
+      "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('building','building','unresolved','p')",
+    )
+    sqlite
+      .prepare(
+        "INSERT INTO locationRevision(id,locationId,sequence,origin,contentHash,payload,facts) VALUES('building-1','building',1,'local','hash','{}',?)",
+      )
+      .run(JSON.stringify(snapshot))
+    const original = sqlite
+      .prepare("SELECT facts FROM locationRevision WHERE id='building-1'")
+      .get()!
+    const saved = await updateLocalLocationAddress(db, {
+      locationId: 'building',
+      organisationId: 'p',
+      expectedRevisionId: 'building-1',
+      names: { en: 'Corrected building name' },
+      actorId: 'curator',
+    })
+    expect(saved).not.toBeNull()
+    const latest = sqlite
+      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .get(saved!.revisionId)!
+    expect(
+      LocationFactsSnapshotSchema.parse(JSON.parse(String(latest.facts))),
+    ).toMatchObject({
+      kind: 'building',
+      common: { names: { en: 'Corrected building name' } },
+      details,
+    })
+    const corrected = await updateLocalLocationAddress(db, {
+      locationId: 'building',
+      organisationId: 'other',
+      expectedRevisionId: saved!.revisionId,
+      names: { en: 'Our building label' },
+      actorId: 'other-curator',
+    })
+    expect(corrected?.revisionId).toBe(saved!.revisionId)
+    expect(corrected?.organisationRevision).toBeTruthy()
+    const directory = await listLocationResources(db, {
+      id: 'building',
+      organisationId: 'other',
+    })
+    expect(directory.data[0].facts).toMatchObject({
+      names: { en: 'Our building label' },
+      entity: { kind: 'building', details },
+    })
+    const shared = await listLocationResources(db, { id: 'building' })
+    expect(shared.data[0].facts).toMatchObject({
+      names: { en: 'Corrected building name' },
+      entity: { kind: 'building', details },
+    })
+    expect(
+      sqlite.prepare("SELECT facts FROM locationRevision WHERE id='building-1'").get(),
+    ).toEqual(original)
+    expect(
+      sqlite
+        .prepare('SELECT facts FROM locationRevision WHERE id=?')
+        .get(saved!.revisionId),
+    ).toEqual(latest)
+    expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+  })
 })

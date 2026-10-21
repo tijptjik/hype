@@ -1,3 +1,5 @@
+// SNAPSHOT CONTRACT
+import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -178,7 +180,7 @@ export async function acceptLocationIdentity(
       (SELECT coalesce(max(sequence),0)+1 FROM locationRevision WHERE locationId=${input.locationId}),
       'saanseoi',${projection.ssId},${projection.apiVersion},${projection.releaseId},
       ${projection.snapshotId},${prepared.contentHash},${JSON.stringify(prepared.payload)},
-      ${JSON.stringify(prepared.facts)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${revisionGuard}`)
+      ${serializeLocationFacts(prepared.facts, 'establishment')},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${revisionGuard}`)
       .onConflictDoNothing({ target: locationRevision.id }),
     db
       .insert(locationIdentityHistory)

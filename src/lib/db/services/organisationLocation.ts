@@ -9,6 +9,7 @@ import {
   locationRevision,
 } from '../schema/location'
 // DOMAIN
+import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 import {
   FeatureLocationOverridesSchema,
   LocationFactsSchema,
@@ -262,7 +263,7 @@ export async function prepareLocationCorrection(
       db
         .insert(locationRevision)
         .select(
-          sql`SELECT ${id},${input.locationId},${baseline.sequence + 1},'local',NULL,NULL,NULL,NULL,${id},${JSON.stringify(payload)},${JSON.stringify(facts)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${input.guard} AND ${predecessor}`,
+          sql`SELECT ${id},${input.locationId},${baseline.sequence + 1},'local',NULL,NULL,NULL,NULL,${id},${JSON.stringify(payload)},${serializeLocationFacts(facts, owner.kind)},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${input.guard} AND ${predecessor}`,
         ),
     )
     baselineRevision = { id, facts }

@@ -2,6 +2,7 @@
 import { sql } from 'drizzle-orm'
 import {
   check,
+  customType,
   foreignKey,
   index,
   integer,
@@ -12,6 +13,10 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 // DOMAIN
+import {
+  readLocationFacts,
+  serializeLocationFacts,
+} from '#lib/locations/factsSnapshot.js'
 import { LOCATION_KINDS } from '#lib/locations/kinds.js'
 // SCHEMA
 import { feature } from './feature'
@@ -71,6 +76,13 @@ export const location = sqliteTable(
   ],
 )
 
+/** Persist a versioned envelope while exposing the existing normalized projection. */
+const locationFacts = customType<{ data: LocationFacts; driverData: string }>({
+  dataType: () => 'text',
+  fromDriver: readLocationFacts,
+  toDriver: value => serializeLocationFacts(value),
+})
+
 /** Append-only source snapshots or provenance-marked local baselines. */
 export const locationRevision = sqliteTable(
   'locationRevision',
@@ -90,7 +102,7 @@ export const locationRevision = sqliteTable(
     payload: text('payload', { mode: 'json' })
       .$type<Record<string, unknown>>()
       .notNull(),
-    facts: text('facts', { mode: 'json' }).$type<LocationFacts>().notNull(),
+    facts: locationFacts('facts').notNull(),
     createdAt: text('createdAt')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

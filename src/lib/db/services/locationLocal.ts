@@ -13,6 +13,8 @@ import { nanoid } from 'nanoid'
 import { location as locationTable, locationRevision } from '../schema/location'
 // SHARED PARSER
 import { parseAddressContent } from '@saanseoi/address'
+// SNAPSHOT CONTRACT
+import { prepareLocationFactsForWrite } from '#lib/locations/factsSnapshot.js'
 // VALIDATION
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 import {
@@ -96,7 +98,7 @@ export async function createLocalLocation(
       origin: 'local',
       contentHash,
       payload,
-      facts: parsed.facts,
+      facts: prepareLocationFactsForWrite(parsed.facts, parsed.kind),
     }),
   ])
   return { locationId, revisionId }

@@ -7,6 +7,7 @@ import {
   locationRevision,
 } from '../schema/location'
 // DOMAIN
+import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 import { equalLocationValue } from '#lib/locations/baseline.js'
 import { planUnresolvedFeatureSplit } from '#lib/locations/migrationPlan.js'
 // SERVICES
@@ -139,7 +140,7 @@ export async function applyUnresolvedFeatureSplit(
     db
       .insert(locationRevision)
       .select(sql`SELECT ${plan.revisionId},${plan.locationId},1,'local',
-      NULL,NULL,NULL,NULL,${contentHash},${JSON.stringify(payload)},${JSON.stringify(plan.facts)},
+      NULL,NULL,NULL,NULL,${contentHash},${JSON.stringify(payload)},${serializeLocationFacts(plan.facts, 'unknown')},
       strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
     ...correction.queries,
     associationWrite.query,

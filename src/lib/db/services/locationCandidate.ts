@@ -1,3 +1,5 @@
+// SNAPSHOT CONTRACT
+import { locationFactsFieldSql } from './locationFactsSql'
 // DRIZZLE
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm'
 // SCHEMA
@@ -138,7 +140,7 @@ export async function searchLocalLocationCandidates(
         or(eq(locationTable.state, 'manual'), eq(locationTable.state, 'unresolved')),
         eq(locationRevision.origin, 'local'),
         sql`${locationRevision.sequence} = (select max(latest.sequence) from locationRevision latest where latest.locationId = ${locationTable.id})`,
-        sql`exists (select 1 from json_each(${locationRevision.facts}, '$.names') names where names.type = 'text' and instr(lower(names.value), lower(${query})) > 0)`,
+        sql`exists (select 1 from json_each(${locationFactsFieldSql(locationRevision.facts, 'names')}) names where names.type = 'text' and instr(lower(names.value), lower(${query})) > 0)`,
       ),
     )
     .orderBy(desc(locationTable.createdAt), locationTable.id)
@@ -187,8 +189,8 @@ export async function nearbyLocalLocationCandidates(
         or(eq(locationTable.state, 'manual'), eq(locationTable.state, 'unresolved')),
         eq(locationRevision.origin, 'local'),
         sql`${locationRevision.sequence} = (select max(latest.sequence) from locationRevision latest where latest.locationId = ${locationTable.id})`,
-        sql`json_extract(${locationRevision.facts}, '$.location.geometry.coordinates[0]') BETWEEN ${lng - dx} AND ${lng + dx}`,
-        sql`json_extract(${locationRevision.facts}, '$.location.geometry.coordinates[1]') BETWEEN ${lat - dy} AND ${lat + dy}`,
+        sql`json_extract(${locationFactsFieldSql(locationRevision.facts, 'location')}, '$.geometry.coordinates[0]') BETWEEN ${lng - dx} AND ${lng + dx}`,
+        sql`json_extract(${locationFactsFieldSql(locationRevision.facts, 'location')}, '$.geometry.coordinates[1]') BETWEEN ${lat - dy} AND ${lat + dy}`,
       ),
     )
     .orderBy(locationTable.id)

@@ -1,5 +1,7 @@
 // VALIDATION
 import { z } from 'zod'
+import { LocationEntitySchema } from './factsDetails'
+import { OperatingStatusSchema, BuildingStatusSchema } from './entityStatus'
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 import { AddressDivisionOverridesSchema } from '#lib/addresses/divisions.js'
 // TYPES
@@ -71,7 +73,12 @@ function override<T>(valueSchema: z.ZodType<T>): z.ZodType<LocationOverride<T>> 
   ])
 }
 
+/** Normalized projection; factsSnapshot validates the versioned persistence envelope. */
 export const LocationFactsSchema = z.strictObject({
+  entity: LocationEntitySchema.optional(),
+  operatingStatus: OperatingStatusSchema.nullable().optional(),
+  buildingStatus: BuildingStatusSchema.nullable().optional(),
+  successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),
   names,
   phoneNumber: z.array(z.string()),
   brands,

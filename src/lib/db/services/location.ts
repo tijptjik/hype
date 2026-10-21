@@ -148,7 +148,9 @@ export async function getAcceptedFeatureLocation(
       revision: featureLocation.revision,
       locationId: locationTable.id,
       ssId: locationTable.ssId,
-      kind: locationTable.kind,
+      kind: sql<
+        import('#lib/locations/kinds.js').LocationKind
+      >`COALESCE(json_extract(${acceptedFacts.facts},'$.kind'),${locationTable.kind})`,
       state: locationTable.state,
       factsRevisionId: featureLocation.factsRevisionId,
       locationRevisionId: featureLocation.locationRevisionId,

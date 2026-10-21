@@ -15,6 +15,10 @@ import {
 // VALIDATION
 import { LocationFactsSchema } from '#lib/locations/validation.js'
 // DOMAIN
+import {
+  serializeLocationFacts,
+  readLocationFacts,
+} from '#lib/locations/factsSnapshot.js'
 import { deriveLocationId } from '#lib/locations/id.server.js'
 import { equalLocationSourceRecord } from '#lib/locations/sourceEvidence.js'
 import {
@@ -170,7 +174,7 @@ export async function persistSaanSeoiPlace(
       .select(sql`SELECT ${revisionId},${locationId},
         (SELECT coalesce(max(sequence),0)+1 FROM locationRevision WHERE locationId=${locationId}),
         'saanseoi',${projection.ssId},${projection.apiVersion},${projection.releaseId},
-        ${projection.snapshotId},${contentHash},${JSON.stringify(payload)},${JSON.stringify(facts)},
+        ${projection.snapshotId},${contentHash},${JSON.stringify(payload)},${serializeLocationFacts(facts, 'establishment')},
         strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${identityGuard}`)
       .onConflictDoNothing({ target: locationRevision.id }),
     db
@@ -250,8 +254,10 @@ export async function persistForwardSaanSeoiPlace(
           'Source mirror canonical evidence changed within its publication',
         )
       if (
-        (previousPayload.sourceAddress ?? JSON.parse(existing.facts).location.address)
-          .status === 'resolved' &&
+        (
+          previousPayload.sourceAddress ??
+          readLocationFacts(existing.facts).location.address
+        ).status === 'resolved' &&
         projection.facts.location.address.status !== 'resolved'
       )
         throw new LocationSourceReviewError(

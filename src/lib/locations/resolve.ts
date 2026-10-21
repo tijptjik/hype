@@ -21,6 +21,10 @@ export function resolveLocationField<T>(
 }
 
 export type EffectiveLocationFacts = {
+  entity?: LocationFacts['entity']
+  operatingStatus?: LocationFacts['operatingStatus']
+  buildingStatus?: LocationFacts['buildingStatus']
+  successorLocationId?: LocationFacts['successorLocationId']
   names: Record<string, string | null>
   phoneNumber: string[] | null
   brands: LocationFacts['brands'] | null
@@ -53,6 +57,16 @@ export function resolveFeatureLocation(
     )
   }
   return {
+    ...(facts.entity ? { entity: facts.entity } : {}),
+    ...(facts.operatingStatus !== undefined
+      ? { operatingStatus: facts.operatingStatus }
+      : {}),
+    ...(facts.buildingStatus !== undefined
+      ? { buildingStatus: facts.buildingStatus }
+      : {}),
+    ...(facts.successorLocationId !== undefined
+      ? { successorLocationId: facts.successorLocationId }
+      : {}),
     names,
     phoneNumber: resolveLocationField(facts.phoneNumber, overrides.phoneNumber),
     brands: resolveLocationField(facts.brands, overrides.brands),

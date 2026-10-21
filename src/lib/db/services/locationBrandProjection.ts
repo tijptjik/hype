@@ -1,3 +1,5 @@
+// SNAPSHOT CONTRACT
+import { locationFactsFieldSql } from './locationFactsSql'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // TYPES
@@ -17,7 +19,7 @@ export function featureLocationBrandsSQL(): SQL<string | null> {
   >`COALESCE((SELECT CASE json_extract(fp.acceptedOverrides,'$.brands.mode')
     WHEN 'clear' THEN '[]'
     WHEN 'override' THEN json_extract(fp.acceptedOverrides,'$.brands.value')
-    ELSE json_extract(pr.facts,'$.brands') END
+    ELSE ${locationFactsFieldSql(sql.raw('pr.facts'), 'brands')} END
     FROM featureLocation fp JOIN location p ON p.id=fp.locationId
     JOIN locationRevision pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
     WHERE fp.featureId="feature"."id" AND "feature"."isDraft"=0
