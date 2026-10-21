@@ -5,12 +5,15 @@ import { nanoid } from 'nanoid'
 // SCHEMA
 import { feature } from '../schema/feature'
 // DOMAIN
-import { PlaceBrandEditSchema, type PlaceBrandEdit } from '#lib/places/brandEdit.js'
-import { equalPlaceValue } from '#lib/places/baseline.js'
+import {
+  LocationBrandEditSchema,
+  type LocationBrandEdit,
+} from '#lib/locations/brandEdit.js'
+import { equalLocationValue } from '#lib/locations/baseline.js'
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // SERVICES
-import { getDetachedFeatureBrands } from './placeDetached'
-import { prepareFeatureFormRelations } from './placeRelations'
+import { getDetachedFeatureBrands } from './locationDetached'
+import { prepareFeatureFormRelations } from './locationRelations'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type {
@@ -34,7 +37,7 @@ import type {
  * @param input Authorized core values and validated translations/property snapshots.
  * @returns The inserted Feature after all relations commit.
  * @remarks Callers validate phone properties before calling. Any child failure rolls
- * back the parent too; initial Place linking cannot observe an incomplete baseline.
+ * back the parent too; initial Location linking cannot observe an incomplete baseline.
  */
 export async function createFeatureForm(
   db: Database,
@@ -68,7 +71,7 @@ export async function createFeatureForm(
 }
 
 /**
- * Atomically save an unlinked Feature form without racing initial Place association.
+ * Atomically save an unlinked Feature form without racing initial Location association.
  * @param db Request-local database.
  * @param input Authorized persisted scope, editor timestamp and validated form snapshot.
  * @returns Updated Feature or undefined if the Feature changed or became linked.
@@ -86,16 +89,16 @@ export async function saveUnlinkedFeatureForm(
     data: FeatureDBPartial
     i18n: Record<string, FeatureI18nPartial>
     properties?: NewFeatureProperty[]
-    placeBrandEdit?: PlaceBrandEdit
+    locationBrandEdit?: LocationBrandEdit
     actorId?: string
   },
 ): Promise<FeatureDB | undefined> {
-  const brandEdit = input.placeBrandEdit
-    ? PlaceBrandEditSchema.parse(input.placeBrandEdit)
+  const brandEdit = input.locationBrandEdit
+    ? LocationBrandEditSchema.parse(input.locationBrandEdit)
     : undefined
   if (brandEdit) {
     if (brandEdit.choice.mode === 'inherit')
-      throw new Error('Detached brands cannot inherit from a Place')
+      throw new Error('Detached brands cannot inherit from a Location')
     if (!input.actorId) throw new Error('Brand editor actor is required')
     const detached = await getDetachedFeatureBrands(
       db,
@@ -113,13 +116,13 @@ export async function saveUnlinkedFeatureForm(
   const formWriteToken = crypto.randomUUID()
   const { id: _id, modifiedAt: _modifiedAt, geometry, ...data } = input.data
   const geometryChanged =
-    geometry !== undefined && !equalPlaceValue(geometry, before.geometry)
+    geometry !== undefined && !equalLocationValue(geometry, before.geometry)
   const modifiedAt = new Date(
     Math.max(Date.now(), (Date.parse(input.updatedAt) || 0) + 1),
   ).toISOString()
   const guard = sql`EXISTS (SELECT 1 FROM feature WHERE id = ${input.featureId}
     AND formWriteToken = ${formWriteToken}) AND NOT EXISTS
-    (SELECT 1 FROM featurePlace WHERE featureId = ${input.featureId})`
+    (SELECT 1 FROM featureLocation WHERE featureId = ${input.featureId})`
   const parent = db
     .update(feature)
     .set({
@@ -128,7 +131,7 @@ export async function saveUnlinkedFeatureForm(
       formWriteToken,
       ...(brandEdit
         ? {
-            localPlaceBrands: {
+            localLocationBrands: {
               brands:
                 brandEdit.choice.mode === 'override' ? brandEdit.choice.value : [],
               revision: crypto.randomUUID(),
@@ -147,14 +150,14 @@ export async function saveUnlinkedFeatureForm(
         eq(feature.modifiedAt, input.updatedAt),
         ...(brandEdit
           ? [
-              sql`json_extract(${feature.localPlaceBrands},'$.revision')=${brandEdit.expectedRevision}`,
+              sql`json_extract(${feature.localLocationBrands},'$.revision')=${brandEdit.expectedRevision}`,
             ]
           : []),
         ...(input.expectedDraftState === undefined
           ? []
           : [eq(feature.isDraft, input.expectedDraftState)]),
         sql`NOT EXISTS
-      (SELECT 1 FROM featurePlace WHERE featureId = ${input.featureId})`,
+      (SELECT 1 FROM featureLocation WHERE featureId = ${input.featureId})`,
       ),
     )
     .returning()

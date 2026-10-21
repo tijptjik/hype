@@ -20,7 +20,7 @@ const feature = {
 }
 
 describe('effective brand property contract', () => {
-  it('renders all fourteen identities from an inherited or direct property without a Place dependency', () => {
+  it('renders all fourteen identities from an inherited or direct property without a Location dependency', () => {
     for (const brand of BRAND_IDENTITIES) {
       const direct = customMarkerModel('breadline', {
         feature: { properties: [{ property: { key: 'brand' }, value: brand.code }] },

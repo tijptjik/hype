@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import {
-  LocalPlaceAddressSchema,
-  createLocalPlaceAddress,
-} from '#lib/addresses/localPlaceAddress.js'
-import { LocalPlaceInputSchema } from '#lib/places/local.js'
+  LocalLocationAddressSchema,
+  createLocalLocationAddress,
+} from '#lib/addresses/localLocationAddress.js'
+import { LocalLocationInputSchema } from '#lib/locations/local.js'
 import {
   emptyFeatureAddress,
   getAddressDisplay,
   getAddressLocale,
 } from '#lib/addresses/featureAddress.js'
-import { materializePlaceAdoption } from '#lib/places/adoptionMaterialize.js'
-import { planPlaceAdoption } from '#lib/places/adoption.js'
-import { DEFAULT_PROJECT_PLACE_POLICY } from '#lib/places/model.js'
-import type { AdoptionSourceRevision } from '#lib/places/adoption.js'
+import { materializeLocationAdoption } from '#lib/locations/adoptionMaterialize.js'
+import { planLocationAdoption } from '#lib/locations/adoption.js'
+import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
+import type { AdoptionSourceRevision } from '#lib/locations/adoption.js'
 
-const authored = LocalPlaceAddressSchema.parse({
-  ...createLocalPlaceAddress(),
+const authored = LocalLocationAddressSchema.parse({
+  ...createLocalLocationAddress(),
   granularity: 'building',
   i18n: {
     en: {
@@ -57,14 +57,14 @@ describe('locally authored SaanSeoi address content', () => {
   it('uses unit and unit_portion scope while retaining room as a unit type', () => {
     for (const granularity of ['unit', 'unit_portion'])
       expect(
-        LocalPlaceAddressSchema.safeParse({ ...authored, granularity }).success,
+        LocalLocationAddressSchema.safeParse({ ...authored, granularity }).success,
       ).toBe(true)
     for (const granularity of ['room', 'room_part'])
       expect(
-        LocalPlaceAddressSchema.safeParse({ ...authored, granularity }).success,
+        LocalLocationAddressSchema.safeParse({ ...authored, granularity }).success,
       ).toBe(false)
     expect(
-      LocalPlaceAddressSchema.safeParse({
+      LocalLocationAddressSchema.safeParse({
         ...authored,
         unit: { ...authored.unit, unitType: 'R' },
       }).success,
@@ -73,7 +73,7 @@ describe('locally authored SaanSeoi address content', () => {
 
   it('round-trips canonical component types, locale content and unit semantics without upstream IDs', () => {
     expect(
-      LocalPlaceInputSchema.parse({ state: 'manual', facts }).facts.location.address
+      LocalLocationInputSchema.parse({ state: 'manual', facts }).facts.location.address
         .authored,
     ).toEqual(authored)
     expect(getAddressLocale(address, 'en')).toMatchObject({
@@ -87,7 +87,7 @@ describe('locally authored SaanSeoi address content', () => {
   })
   it('rejects invented publisher evidence and wrong canonical types', () => {
     expect(
-      LocalPlaceInputSchema.safeParse({
+      LocalLocationInputSchema.safeParse({
         state: 'manual',
         facts: {
           ...facts,
@@ -99,19 +99,19 @@ describe('locally authored SaanSeoi address content', () => {
       }).success,
     ).toBe(false)
     expect(
-      LocalPlaceAddressSchema.safeParse({
+      LocalLocationAddressSchema.safeParse({
         ...authored,
         unit: { ...authored.unit, floorType: 'invalid' },
       }).success,
     ).toBe(false)
     expect(
-      LocalPlaceAddressSchema.safeParse({
+      LocalLocationAddressSchema.safeParse({
         ...authored,
         i18n: { en: { formattedAddress: '', blockTypeBeforeNumber: 'true' } },
       }).success,
     ).toBe(false)
     expect(
-      LocalPlaceAddressSchema.safeParse({
+      LocalLocationAddressSchema.safeParse({
         ...authored,
         unit: null,
         unitI18n: { en: { floorExpression: '2/F', unitExpression: 'Shop A' } },
@@ -125,7 +125,7 @@ describe('locally authored SaanSeoi address content', () => {
     }
     expect(getAddressDisplay(corrected, 'en')).toContain('Feature label')
     expect(authored.i18n.en.buildingName).toBe('Example House')
-    const materialized = materializePlaceAdoption({
+    const materialized = materializeLocationAdoption({
       fieldGroup: 'location',
       facts,
       locationFacts: facts,
@@ -139,7 +139,7 @@ describe('locally authored SaanSeoi address content', () => {
   it('reviews local address and unit changes without requiring a fabricated publisher identity', () => {
     const old: AdoptionSourceRevision = {
       id: 'one',
-      placeId: 'p',
+      locationId: 'p',
       sequence: 1,
       origin: 'local',
       ssId: null,
@@ -151,12 +151,12 @@ describe('locally authored SaanSeoi address content', () => {
     next.sequence = 2
     next.facts.location.address.authored!.i18n.en.streetName = 'New Road'
     next.facts.location.address.authored!.unit!.unitRef = 'B'
-    const plan = planPlaceAdoption({
+    const plan = planLocationAdoption({
       facts: old,
       location: old,
       candidate: next,
       overrides: {},
-      policy: DEFAULT_PROJECT_PLACE_POLICY,
+      policy: DEFAULT_PROJECT_LOCATION_POLICY,
     })
     expect(plan.blockers).toEqual([])
     expect(plan.evidence).toMatchObject({
@@ -165,13 +165,13 @@ describe('locally authored SaanSeoi address content', () => {
       establishmentChanged: false,
     })
     expect(plan.decision.location).toBe('review')
-    const inherited = planPlaceAdoption({
+    const inherited = planLocationAdoption({
       facts: old,
       location: old,
       candidate: next,
       overrides: { location: { mode: 'override', value: facts.location } },
       policy: {
-        ...DEFAULT_PROJECT_PLACE_POLICY,
+        ...DEFAULT_PROJECT_LOCATION_POLICY,
         address: 'automatic',
         unit: 'automatic',
       },

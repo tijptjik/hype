@@ -10,6 +10,11 @@ import CheckIcon from 'virtual:icons/proicons/checkmark'
 
 let {
   map,
+  locationControl,
+  locationActions,
+  locationMapControls,
+  fixedMap = false,
+  showLookup = true,
   coordinatesControl,
   lookupControl,
   onLookup,
@@ -18,6 +23,11 @@ let {
   isLoading,
   sourceId = null,
 }: {
+  locationControl?: Snippet
+  locationActions?: Snippet
+  locationMapControls?: Snippet
+  fixedMap?: boolean
+  showLookup?: boolean
   coordinatesControl: Snippet
   lookupControl: Snippet
   sourceId?: string | null
@@ -96,14 +106,22 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
 }
 </script>
 
-<div class="relative w-full">
-  <div class="relative" style:height={`${height}px`}>
+<div class="relative w-full shrink-0" data-address-map-panel>
+  <div
+    class="relative"
+    style:height={fixedMap ? `min(${height}px, 40vh)` : `${height}px`}
+  >
     <div
       id={mapId}
       class="h-full w-full overflow-hidden border-b border-border [&_.bits-feature-map]:min-h-0 [&_.bits-feature-map]:rounded-none"
     >
       {@render map()}
     </div>
+    {#if locationMapControls}
+      <div class="absolute right-3 top-3 z-10" data-location-map-controls>
+        {@render locationMapControls()}
+      </div>
+    {/if}
     <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
     <!-- biome-ignore lint/a11y/useSemanticElements: This focusable window splitter supports keyboard and pointer resizing, rather than a static thematic break. -->
     <div
@@ -136,64 +154,75 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
     </div>
   </div>
   <div
-    class="pointer-events-none absolute inset-x-0 bottom-0 z-20 grid translate-y-1/2 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-6 @max-[1100px]:relative @max-[1100px]:translate-y-0 @max-[1100px]:grid-cols-1 @max-[1100px]:py-3"
+    class="relative z-20 flex items-center gap-3 border-b border-border/60 bg-panel px-6 py-3 {isEditing &&
+    showLookup
+      ? 'flex-wrap'
+      : 'flex-nowrap'}"
   >
-    <div class="pointer-events-auto min-w-0 justify-self-start">
+    {#if locationActions && isEditing}
+      <div class="min-w-0 flex-1 overflow-x-auto empty:hidden" data-address-map-actions>
+        {@render locationActions()}
+      </div>
+    {/if}
+    {#if locationControl}
+      <div class="min-w-64 flex-1">{@render locationControl()}</div>
+    {/if}
+    <div class="pointer-events-auto ml-auto min-w-0 shrink-0 justify-self-start">
       {@render coordinatesControl()}
     </div>
-    <div class="pointer-events-auto justify-self-center">
-      <div
-        class="inline-flex min-h-11 items-center gap-1 rounded-full border border-[color:color-mix(in_oklab,var(--color-foreground)_12%,transparent)] bg-panel px-2.5 py-1 text-foreground backdrop-blur-[14px]"
-      >
-        <SimpleTooltip>
-          {#snippet trigger()}
-            <button
-              type="button"
-              disabled={isEditing ? !canLookup || isLoading : !sourceId}
-              aria-busy={isEditing && isLoading}
-              onclick={() => {
-                if (isEditing) {
-                  if (canLookup && !isLoading) onLookup()
-                } else if (sourceId) void copySourceId()
-              }}
-              aria-label={isEditing
-                ? m.admin__geo_lookup_address_at_location()
-                : copiedId && copiedId === sourceId
-                  ? m.feature_address_id_copied()
-                  : m.feature_address_copy_id()}
-              class="flex size-11 items-center justify-center rounded-full transition hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary {sourceId
-                ? 'text-success'
-                : 'text-muted-foreground'}"
-            >
-              {#if !isEditing && copiedId && copiedId === sourceId}
-                <CheckIcon class="size-6" aria-hidden="true" />
-              {:else}
-                <span
-                  aria-hidden="true"
-                  class="size-6 bg-current [mask:url(/logos/saanseoi.svg)_center/contain_no-repeat]"
-                ></span>
-              {/if}
-            </button>
-          {/snippet}
-          {isEditing
-            ? m.admin__geo_lookup_address_at_location()
-            : sourceId
-              ? `${m.feature_address_copy_id()}: ${sourceId}`
-              : m.feature_address_unresolved()}
-        </SimpleTooltip>
-        <span class="sr-only" role="status"
-          >{copyFailed
-            ? m.feature_address_copy_failed()
-            : copiedId && copiedId === sourceId
-              ? m.feature_address_id_copied()
-              : ''}</span
-        >
+    {#if showLookup && (isEditing || sourceId)}
+      <div class="shrink-0">
+        <div class="inline-flex items-center text-foreground">
+          <SimpleTooltip>
+            {#snippet trigger()}
+              <button
+                type="button"
+                disabled={isEditing ? !canLookup || isLoading : !sourceId}
+                aria-busy={isEditing && isLoading}
+                onclick={() => {
+                  if (isEditing) {
+                    if (canLookup && !isLoading) onLookup()
+                  } else if (sourceId) void copySourceId()
+                }}
+                aria-label={isEditing
+                  ? m.admin__geo_lookup_address_at_location()
+                  : copiedId && copiedId === sourceId
+                    ? m.feature_address_id_copied()
+                    : m.feature_address_copy_id()}
+                class="flex size-11 items-center justify-center rounded-full transition hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary {sourceId
+                  ? 'text-success'
+                  : 'text-muted-foreground'}"
+              >
+                {#if !isEditing && copiedId && copiedId === sourceId}
+                  <CheckIcon class="size-6" aria-hidden="true" />
+                {:else}
+                  <span
+                    aria-hidden="true"
+                    class="size-6 bg-current [mask:url(/logos/saanseoi.svg)_center/contain_no-repeat]"
+                  ></span>
+                {/if}
+              </button>
+            {/snippet}
+            {isEditing
+              ? m.admin__geo_lookup_address_at_location()
+              : sourceId
+                ? `${m.feature_address_copy_id()}: ${sourceId}`
+                : m.feature_address_unresolved()}
+          </SimpleTooltip>
+          <span class="sr-only" role="status"
+            >{copyFailed
+              ? m.feature_address_copy_failed()
+              : copiedId && copiedId === sourceId
+                ? m.feature_address_id_copied()
+                : ''}</span
+          >
+        </div>
       </div>
-    </div>
-    <div
-      class="pointer-events-auto w-max min-w-80 max-w-full justify-self-end @max-[400px]:min-w-0"
-    >
-      {@render lookupControl()}
-    </div>
+    {/if}
+    {#if isEditing && showLookup}
+      <div class="min-w-0 basis-72 grow">
+        {@render lookupControl()}
+      </div>
+    {/if}
   </div>
 </div>

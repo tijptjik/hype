@@ -2,7 +2,11 @@
 // TESTS
 import { describe, expect, it, vi } from 'vitest'
 // API
-import { geocodeAddress, parseGeocodeResult } from '#lib/api/external/geocoding.js'
+import {
+  geocodeAddress,
+  geocodeAddressCandidates,
+  parseGeocodeResult,
+} from '#lib/api/external/geocoding.js'
 
 const pin = { lng: 114.1588, lat: 22.2788 }
 const response = (
@@ -136,4 +140,23 @@ describe('SaanSeoi geocoding', () => {
     expect(init.headers.Origin).toBeUndefined()
     expect(init.credentials).toBe('omit')
   })
+})
+
+it('nearby Address discovery uses candidate coordinates and configurable bounds', async () => {
+  const fetcher = vi.fn(async (request: RequestInfo | URL) => {
+    const url = new URL(String(request))
+    expect(url.searchParams.get('maxDistance')).toBe('250')
+    expect(url.searchParams.get('limit')).toBe('50')
+    return Response.json(response())
+  })
+  const results = await geocodeAddressCandidates(pin, {
+    maxDistance: 250,
+    limit: 50,
+    candidateCoordinates: true,
+    fetcher,
+  })
+  expect(results[0].addressMeta.address?.coordinates).toEqual([114.15862, 22.27886])
+  expect(parseGeocodeResult(response(), pin)?.addressMeta.address?.coordinates).toEqual(
+    [pin.lng, pin.lat],
+  )
 })

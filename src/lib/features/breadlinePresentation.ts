@@ -8,7 +8,7 @@ import {
 import { resolveBrandIdentity } from './brandIdentity'
 
 /**
- * Resolves accepted Place brands, with legacy fallback only for unassociated Features.
+ * Resolves accepted Location brands, with legacy fallback only for unassociated Features.
  * @param feature Hydrated feature.
  * @param locale Preferred display locale; all brands are retained.
  * @returns Bundled logo for a single known brand, or combined names for multiple brands.
@@ -22,8 +22,8 @@ export function breadlineBrand(
   color: string
   logoSrc?: string
 } {
-  if (feature.placeBrands != null) {
-    const names = feature.placeBrands
+  if (feature.locationBrands != null) {
+    const names = feature.locationBrands
       .map(
         brand =>
           brand.names[locale] ||
@@ -33,7 +33,8 @@ export function breadlineBrand(
       )
       .filter(Boolean)
     const name = names.join(' · ')
-    const single = feature.placeBrands.length === 1 ? feature.placeBrands[0] : null
+    const single =
+      feature.locationBrands.length === 1 ? feature.locationBrands[0] : null
     const known = single
       ? resolveBrandIdentity(
           single.identifiers.breadlineBrand || single.names.en || name,

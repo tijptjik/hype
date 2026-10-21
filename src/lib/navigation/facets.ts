@@ -2,6 +2,7 @@
 import { m } from '#lib/i18n.js'
 // ICONS
 import FormInputIcon from 'virtual:icons/proicons/button'
+import StoreIcon from 'virtual:icons/lucide/store'
 import FileTextIcon from 'virtual:icons/proicons/file-text'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import Layers3Icon from 'virtual:icons/proicons/layers'
@@ -84,7 +85,7 @@ export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
 export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
   Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
 > = {
-  project: { policies: () => m.place_policy_tab() },
+  project: { policies: () => m.location_policy_tab() },
   feature: {
     images: () => m.feature__images(),
   },
@@ -93,7 +94,7 @@ export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 export const ADMIN_FACET_ACTION_LABEL_OVERRIDES_BY_RESOURCE: Partial<
   Record<FirstClassResource, Partial<Record<FacetType, () => string>>>
 > = {
-  project: { policies: () => m.place_policy_tab() },
+  project: { policies: () => m.location_policy_tab() },
   feature: {
     fields: () => m.feature__fields_title(),
   },
@@ -147,6 +148,12 @@ export const getSupportedFacetForResource = (
   return getAdminFacetSetForResource(resourceType).includes(facet) ? facet : undefined
 }
 
+/**
+ * Build the resource's facet tabs with their labels and icons.
+ * @param resourceType - Resource whose tabs are being displayed.
+ * @param options - Optional restriction to the core facet.
+ * @returns Supported facet tabs in display order.
+ */
 export const getAdminFacetTabsForResource = (
   resourceType: FirstClassResource,
   options: { coreOnly?: boolean } = {},
@@ -160,7 +167,11 @@ export const getAdminFacetTabsForResource = (
     supported.map(facet => {
       const definition = ADMIN_FACET_DEFINITIONS[facet]
       const labelResolver = labelOverrides[facet] ?? definition.label
-      return [facet, { label: labelResolver(), icon: definition.icon }] as const
+      const icon =
+        resourceType === 'project' && facet === ADMIN_FACETS.policies
+          ? StoreIcon
+          : definition.icon
+      return [facet, { label: labelResolver(), icon }] as const
     }),
   )
 }

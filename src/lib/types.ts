@@ -1,4 +1,4 @@
-import type { PlaceResource } from '#lib/places/resource.js'
+import type { LocationResource } from '#lib/locations/resource.js'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type {
@@ -110,7 +110,7 @@ export type ResourceContext = {
 }
 
 export type ResourceType =
-  | 'place'
+  | 'location'
   | 'organisation'
   | 'project'
   | 'layer'
@@ -257,7 +257,7 @@ export type Field =
   | HubField
 
 export type Resource =
-  | PlaceResource
+  | LocationResource
   | Organisation
   | Project
   | Layer

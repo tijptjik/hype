@@ -1,5 +1,5 @@
 import type { MarkerStyleCode } from '#lib/features/markerStyle.js'
-import type { ProjectPlacePolicy } from '#lib/places/model.js'
+import type { ProjectLocationPolicy } from '#lib/locations/model.js'
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -39,8 +39,10 @@ export const project = sqliteTable('project', {
     .$type<import('#lib/projects/flags.js').ProjectFlags>()
     .notNull()
     .default({}),
-  placePolicy: text('placePolicy', { mode: 'json' }).$type<ProjectPlacePolicy>(),
-  placePolicyRevision: integer('placePolicyRevision').notNull().default(0),
+  locationPolicy: text('locationPolicy', {
+    mode: 'json',
+  }).$type<ProjectLocationPolicy>(),
+  locationPolicyRevision: integer('locationPolicyRevision').notNull().default(0),
   id: text('id')
     .primaryKey()
     .$defaultFn(() => nanoid(12)),

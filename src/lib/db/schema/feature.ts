@@ -24,7 +24,7 @@ import type { MtrResolution } from '#lib/routing/mtr.js'
 import type { GeometryObject } from 'geojson'
 import type { AddressProperties, AddressMeta } from '#lib/utils/address.types.js'
 import type { FeatureSpatialIndex } from '#lib/db/services/featureSpatial.types.js'
-import type { PlaceBrand } from '#lib/places/model.js'
+import type { LocationBrand } from '#lib/locations/model.js'
 
 /* ============================================================================
  * FEATURE MANAGEMENT
@@ -58,8 +58,8 @@ import type { PlaceBrand } from '#lib/places/model.js'
 export const feature = sqliteTable(
   'feature',
   {
-    localPlaceBrands: text('localPlaceBrands', { mode: 'json' }).$type<{
-      brands: PlaceBrand[]
+    localLocationBrands: text('localLocationBrands', { mode: 'json' }).$type<{
+      brands: LocationBrand[]
       revision: string
       sourceAssociationRevision?: string
       actorId: string

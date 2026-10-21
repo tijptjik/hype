@@ -1,4 +1,7 @@
-import { ProjectPlacePolicySchema, type ProjectPlacePolicy } from '#lib/places/model.js'
+import {
+  ProjectLocationPolicySchema,
+  type ProjectLocationPolicy,
+} from '#lib/locations/model.js'
 import { gt } from 'drizzle-orm'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
@@ -753,7 +756,7 @@ export const updateProjectById = async (
 
 /**
  * Updates project core fields with optimistic concurrency guard on `modifiedAt`.
- * Used by remote form updates to prevent stale writes. Optional Place settings are
+ * Used by remote form updates to prevent stale writes. Optional Location settings are
  * committed in one update, guarded by both Project and policy revisions.
  * @param db - The database instance.
  * @param params - Update payload including expected `updatedAt`.
@@ -764,7 +767,7 @@ export const updateProjectByIdWithConcurrency = async (
   params: {
     id: Id
     updatedAt: string
-    placeUpdatePolicy?: { policy: ProjectPlacePolicy; expectedRevision: number }
+    locationUpdatePolicy?: { policy: ProjectLocationPolicy; expectedRevision: number }
     data: {
       organisationId: ProjectDB['organisationId']
       code: string
@@ -777,7 +780,7 @@ export const updateProjectByIdWithConcurrency = async (
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
-  const settings = params.placeUpdatePolicy
+  const settings = params.locationUpdatePolicy
   if (
     settings &&
     (!Number.isSafeInteger(settings.expectedRevision) ||
@@ -786,10 +789,12 @@ export const updateProjectByIdWithConcurrency = async (
   ) {
     throw new Error('Invalid policy revision')
   }
-  const policy = settings ? ProjectPlacePolicySchema.parse(settings.policy) : undefined
+  const policy = settings
+    ? ProjectLocationPolicySchema.parse(settings.policy)
+    : undefined
   // Guard both revisions before updating the Project and its policy; absence is policy revision zero.
   const policyGuard = settings
-    ? eq(project.placePolicyRevision, settings.expectedRevision)
+    ? eq(project.locationPolicyRevision, settings.expectedRevision)
     : undefined
   const updateCore = db
     .update(project)
@@ -797,8 +802,8 @@ export const updateProjectByIdWithConcurrency = async (
       ...params.data,
       ...(settings && policy
         ? {
-            placePolicy: policy,
-            placePolicyRevision: settings.expectedRevision + 1,
+            locationPolicy: policy,
+            locationPolicyRevision: settings.expectedRevision + 1,
           }
         : {}),
     })

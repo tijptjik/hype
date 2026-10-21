@@ -1,5 +1,5 @@
 import { ProjectFlagsSchema } from '#lib/projects/flags.js'
-import { ProjectPlacePolicySchema } from '#lib/places/model.js'
+import { ProjectLocationPolicySchema } from '#lib/locations/model.js'
 import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
 import { CARD_STYLE_CODES, DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import { CompactAncestorsSchema } from './api'
@@ -318,11 +318,11 @@ export const ProjectLayerFormData = z.object({
 })
 
 /** Policy transport uses the same JSON field convention as project capabilities. */
-export const ProjectPlacePolicyFormData = z.preprocess(
+export const ProjectLocationPolicyFormData = z.preprocess(
   toProjectJsonValue,
   z
     .object({
-      policy: ProjectPlacePolicySchema,
+      policy: ProjectLocationPolicySchema,
       expectedRevision: z
         .number()
         .int()
@@ -333,7 +333,7 @@ export const ProjectPlacePolicyFormData = z.preprocess(
 )
 
 export const ProjectEntityFormData = z.object({
-  placeUpdatePolicy: ProjectPlacePolicyFormData,
+  locationUpdatePolicy: ProjectLocationPolicyFormData,
   cardStyleCode: z.enum(CARD_STYLE_CODES).default(DEFAULT_CARD_STYLE),
   markerStyleCode: z
     .union([z.enum(MARKER_STYLE_CODES), z.literal('')])

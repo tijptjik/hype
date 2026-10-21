@@ -129,10 +129,10 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   }
 
   items.push({
-    href: `${ADMIN_PATH}/places`,
-    label: m.place_policy_tab(),
+    href: `${ADMIN_PATH}/locations`,
+    label: m.location_policy_tab(),
     icon: StoreIcon,
-    onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.place),
+    onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.location),
   })
 
   if (canViewAnalytics(adminCtx.view.user as SessionUser)) {

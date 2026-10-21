@@ -53,7 +53,7 @@ function setup(withOrphan = false) {
   const columns = Object.values(getTableColumns(feature))
     .filter(
       column =>
-        column.name !== 'localPlaceBrands' &&
+        column.name !== 'localLocationBrands' &&
         !/^(country|area|district|town|ruralArea|macrohood|neighbourhood|village|microhood|hamlet|island)Id$|^divisionResolution$/.test(
           column.name,
         ),
@@ -92,7 +92,19 @@ function setup(withOrphan = false) {
   sqlite.exec(readFileSync('migrations/0110_feature_place_history.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0112_feature_place_detachment.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0123_place_owned_fields.sql', 'utf8'))
-  sqlite.exec('ALTER TABLE place ADD COLUMN ownerOrganisationId TEXT')
+  // This query-only fixture retains its minimal tables while matching current Location names.
+  sqlite.exec(`ALTER TABLE place ADD COLUMN ownerOrganisationId TEXT;
+    ALTER TABLE place ADD COLUMN kind TEXT NOT NULL DEFAULT 'unknown';
+    ALTER TABLE place RENAME TO location;
+    ALTER TABLE placeRevision RENAME TO locationRevision;
+    ALTER TABLE locationRevision RENAME COLUMN placeId TO locationId;
+    ALTER TABLE featurePlace RENAME TO featureLocation;
+    ALTER TABLE featureLocation RENAME COLUMN placeId TO locationId;
+    ALTER TABLE featurePlaceHistory RENAME TO featureLocationHistory;
+    ALTER TABLE featureLocationHistory RENAME COLUMN placeId TO locationId;
+    ALTER TABLE feature RENAME COLUMN localPlaceBrands TO localLocationBrands;
+    ALTER TABLE project RENAME COLUMN placePolicy TO locationPolicy;
+    ALTER TABLE project RENAME COLUMN placePolicyRevision TO locationPolicyRevision;`)
   const statements: string[] = []
   const prepare = (query: string, bindings: unknown[] = []) => ({
     bind: (...params: unknown[]) => prepare(query, params),
@@ -527,7 +539,7 @@ describe('indexed feature queries', () => {
     const { db, sqlite, add, statements } = setup()
     sqlite.exec(`INSERT INTO hub VALUES('hub', 'test', 'test.example');
       INSERT INTO organisation VALUES('org', 'org', 'hub', 0, 0, 1, 0),('org2', 'org2', NULL, 0, 0, 1, 0);
-      INSERT INTO project VALUES('project','project','org',1,0),('project2','project2','org',1,0),('project3','project3','org2',1,0);
+      INSERT INTO project(id,code,organisationId,isPublished,isArchived) VALUES('project','project','org',1,0),('project2','project2','org',1,0),('project3','project3','org2',1,0);
       INSERT INTO layer VALUES('layer','project','org',1,0),('other','project','org',1,0),('layer2','project2','org',1,0),('layer3','project3','org2',1,0);`)
     // The shared hub EXISTS helper selects the complete hierarchy schema.
     for (const [name, table] of Object.entries({

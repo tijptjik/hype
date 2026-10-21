@@ -1,0 +1,74 @@
+// VALIDATION
+import { z } from 'zod'
+import type { LocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
+
+/** Explicit clear differs from inheritance, including for empty arrays and locales. */
+export type LocationOverride<T> =
+  | { mode: 'inherit' }
+  | { mode: 'override'; value: T }
+  | { mode: 'clear' }
+
+export type LocationBrand = {
+  identifiers: Record<string, string>
+  names: Record<string, string>
+}
+
+/** Publication-pinned references; address records retain SaanSeoi's own schema. */
+export type LocationAddress = {
+  /** Locally authored SaanSeoi content; never a claim of upstream publication. */
+  authored?: LocalLocationAddress
+  status: 'resolved' | 'unresolved'
+  address2dId: string | null
+  address3dId: string | null
+  address3dUnitId: string | null
+  addressSnapshotId: string | null
+  records: Record<string, unknown>
+  fallbackDisplay: Record<string, string>
+}
+
+/** Location is adopted atomically so a new unit cannot inherit an old building. */
+export type LocationPosition = {
+  geometry: { type: 'Point'; coordinates: [number, number] }
+  address: LocationAddress
+}
+
+export type LocationFacts = {
+  names: Record<string, string>
+  phoneNumber: string[]
+  brands: LocationBrand[]
+  location: LocationPosition
+}
+
+export type FeatureLocationOverrides = {
+  names?: Record<string, LocationOverride<string>>
+  phoneNumber?: LocationOverride<string[]>
+  brands?: LocationOverride<LocationBrand[]>
+  location?: LocationOverride<LocationPosition>
+}
+
+export const ProjectLocationPolicySchema = z.strictObject({
+  version: z.literal(1),
+  discoveryRadiusMetres: z.number().int().min(50).max(1000).optional(),
+  coordinates: z.discriminatedUnion('mode', [
+    z.strictObject({ mode: z.literal('automatic') }),
+    z.strictObject({ mode: z.literal('review') }),
+    z.strictObject({
+      mode: z.literal('withinDistance'),
+      maxMetres: z.number().finite().nonnegative(),
+    }),
+  ]),
+  address: z.enum(['automatic', 'review']),
+  unit: z.enum(['automatic', 'review']),
+  establishment: z.enum(['automatic', 'review']),
+})
+
+export type ProjectLocationPolicy = z.infer<typeof ProjectLocationPolicySchema>
+
+/** Unconfigured projects never silently accept a changed location or identity. */
+export const DEFAULT_PROJECT_LOCATION_POLICY: ProjectLocationPolicy = {
+  version: 1,
+  coordinates: { mode: 'review' },
+  address: 'review',
+  unit: 'review',
+  establishment: 'review',
+}

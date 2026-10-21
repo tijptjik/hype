@@ -1,13 +1,13 @@
 <script lang="ts">
-import { show3dAddressOptions } from '#lib/projects/flags.js'
 import { isRangeProperty } from '#lib/properties/range.js'
+import { show3dAddressOptions } from '#lib/projects/flags.js'
 import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 
 // SVELTE
 import { goto } from '$app/navigation'
 
 import { page } from '$app/state'
-import { onMount, untrack, tick } from 'svelte'
+import { onMount, untrack, tick, type Snippet } from 'svelte'
 import { normalizePhoneNumber } from '#lib/utils/phone-property.js'
 
 // TOAST
@@ -116,11 +116,11 @@ import {
   getFeatureEditorFacetClass,
 } from './page.styles'
 import {
-  getFeaturePlace,
+  getFeatureLocation,
   getFeatureDetachedBrands,
-  unlinkFeaturePlace,
-} from '#lib/api/place.remote.js'
-import FeaturePlaceSection from '#lib/bits/patterns/forms/featurePlace/FeaturePlaceSection.svelte'
+  unlinkFeatureLocation,
+} from '#lib/api/location.remote.js'
+import FeatureLocationSection from '#lib/bits/patterns/forms/featureLocation/FeatureLocationSection.svelte'
 import FormFeatureAddress from '#lib/bits/patterns/forms/formFeatureAddress/FormFeatureAddress.svelte'
 import {
   geocodeAddressCandidates,
@@ -153,6 +153,7 @@ import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // TYPES
+import type { LocationSearchMarker } from '#lib/locations/searchPresentation.js'
 import type { Point } from 'geojson'
 
 import type { FacetType } from '#lib/context/facets.js'
@@ -390,6 +391,12 @@ const facetTabs = getAdminFacetTabsForResource(FirstClassResource.feature)
 
 const editorCtrl = getEditorCtrl({ headerCtrl, icon: FeatureIcon, facetTabs })
 const featureRef = $derived(page.params.feature as string)
+let locationSearchMarkers = $state<LocationSearchMarker[]>([])
+let selectLocationMarker = $state<(id: string) => void>(() => {})
+$effect(() => {
+  featureRef
+  locationSearchMarkers = []
+})
 
 // § i18n
 const locales = $derived(getLocaleOrder(getLocaleKey()))
@@ -791,7 +798,7 @@ const configuredFeatureForm = configureForm(() => ({
 
       if (!isNewFeatureRef) {
         updates.unshift(
-          getFeaturePlace({ featureId: featureRef }),
+          getFeatureLocation({ featureId: featureRef }),
           getFeatureDetachedBrands({ featureId: featureRef }),
           getFeature({
             ref: featureRef,
@@ -1533,9 +1540,9 @@ $effect(() => {
  *  SECTION : FIELDS STATE
  ************/
 
-// Linked Features edit brands through their Place association, never the legacy classifier.
+// Linked Features edit brands through their Location association, never the legacy classifier.
 const editableFeatureProperties = $derived(
-  feature?.data?.placeBrands != null
+  feature?.data?.locationBrands != null
     ? (currentFeatureData.properties ?? []).filter(
         property => property.property?.key !== 'brand',
       )
@@ -2342,6 +2349,7 @@ $effect(() => () => clearVisualSectionReopenState())
       isVisible={isAddressFacet}
       transition="fade"
       fillHeight={true}
+      contentClass="h-full overflow-hidden"
       class={getFeatureEditorFacetClass({
         showsVisualSection,
         isVisualSectionCollapsed,
@@ -2351,10 +2359,59 @@ $effect(() => () => clearVisualSectionReopenState())
       nextAction={buildFacetNavAction('address', 'next')}
       attrs={{ 'data-facet-id': 'address' }}
     >
-      <FormSurface class="pb-12">
+      <FormSurface class="flex h-full min-h-0 flex-col overflow-hidden">
         {#key featureRef}
+          {#snippet addressEditor(
+            locationControl?: Snippet,
+            locationContent?: Snippet,
+            hideDetails = false,
+            showLookup = true,
+            lookupOverride?: (query?: string) => void,
+            locationActions?: Snippet,
+            locationMapControls?: Snippet,
+          )}
+            <FormFeatureAddress
+              fixedMap={true}
+              {locationActions}
+              {locationMapControls}
+              {locationControl}
+              {locationContent}
+              {hideDetails}
+              {showLookup}
+              show3dAddressOptions={show3dAddressOptions(selectedProject?.flags)}
+              address={editorAddress}
+              coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
+              {isEditing}
+              isLoading={isAddressLookupLoading}
+              message={addressLookupMessage}
+              candidates={addressCandidates}
+              onSelectCandidate={selectAddressCandidate}
+              onCoordinateChange={handleCoordinateChange}
+              onLookup={lookupOverride ?? lookupFeatureAddress}
+              onChange={updateAddressDraft}
+            >
+              {#snippet map()}
+                <FormMapSection
+                  locationCandidates={locationSearchMarkers}
+                  onLocationCandidateSelect={selectLocationMarker}
+                  initialCenter={initialMapCenter}
+                  coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
+                  addressMeta={currentFeatureData.addressMeta ?? null}
+                  draggable={isEditing}
+                  onCoordinateChange={handleCoordinateChange}
+                />
+              {/snippet}
+            </FormFeatureAddress>
+          {/snippet}
           {#if currentFeatureId && feature?.data?.modifiedAt}
-            <FeaturePlaceSection
+            <FeatureLocationSection
+              onAddressSelected={updateAddressDraft}
+              address={editorAddress}
+              featureName={currentFeatureData.i18n?.[getLocaleKey()]?.title ?? ''}
+              onMapCandidates={(markers, select) => {
+                locationSearchMarkers = markers
+                selectLocationMarker = select
+              }}
               featureId={currentFeatureId}
               projectId={feature.data.projectId}
               coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
@@ -2372,7 +2429,7 @@ $effect(() => () => clearVisualSectionReopenState())
               onUnlink={async expectedRevision => {
                 const current = feature?.data
                 if (!current || isDirty) return
-                await unlinkFeaturePlace({
+                await unlinkFeatureLocation({
                   featureId: current.id,
                   expectedFeatureModifiedAt: current.modifiedAt,
                   expectedRevision,
@@ -2382,42 +2439,41 @@ $effect(() => () => clearVisualSectionReopenState())
                     refKey: 'id',
                     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
                   }),
-                  getFeaturePlace({ featureId: current.id }),
+                  getFeatureLocation({ featureId: current.id }),
                   getFeatureDetachedBrands({ featureId: current.id }),
                 )
                 await refreshFeature()
               }}
-              reset={currentFeatureData.placeReset}
+              reset={currentFeatureData.locationReset}
               onResetFields={reset =>
-                updateFeatureData(data => ({ ...data, placeReset: reset }))}
-              brandEdit={currentFeatureData.placeBrandEdit}
+                updateFeatureData(data => ({ ...data, locationReset: reset }))}
+              brandEdit={currentFeatureData.locationBrandEdit}
               onBrandEdit={edit =>
-                updateFeatureData(data => ({ ...data, placeBrandEdit: edit }))}
-            />
+                updateFeatureData(data => ({ ...data, locationBrandEdit: edit }))}
+            >
+              {#snippet children(
+                locationControl,
+                locationContent,
+                hideDetails,
+                showLookup,
+                lookupOverride,
+                locationActions,
+                locationMapControls,
+              )}
+                {@render addressEditor(
+                  locationControl,
+                  locationContent,
+                  hideDetails,
+                  showLookup,
+                  lookupOverride,
+                  locationActions,
+                  locationMapControls,
+                )}
+              {/snippet}
+            </FeatureLocationSection>
+          {:else}
+            {@render addressEditor()}
           {/if}
-          <FormFeatureAddress
-            show3dAddressOptions={show3dAddressOptions(selectedProject?.flags)}
-            address={editorAddress}
-            coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
-            {isEditing}
-            isLoading={isAddressLookupLoading}
-            message={addressLookupMessage}
-            candidates={addressCandidates}
-            onSelectCandidate={selectAddressCandidate}
-            onCoordinateChange={handleCoordinateChange}
-            onLookup={lookupFeatureAddress}
-            onChange={updateAddressDraft}
-          >
-            {#snippet map()}
-              <FormMapSection
-                initialCenter={initialMapCenter}
-                coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
-                addressMeta={currentFeatureData.addressMeta ?? null}
-                draggable={isEditing}
-                onCoordinateChange={handleCoordinateChange}
-              />
-            {/snippet}
-          </FormFeatureAddress>
         {/key}
       </FormSurface>
     </Main.Facet>

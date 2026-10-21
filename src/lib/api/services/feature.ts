@@ -1048,7 +1048,7 @@ export const createUserContributedFeature = async (
  * @param region Translation service region.
  * @param subscriptionKey Translation credential.
  * @returns The updated draft after its parent and relations commit together.
- * @remarks A finalized or Place-linked Feature cannot be overwritten as a draft.
+ * @remarks A finalized or Location-linked Feature cannot be overwritten as a draft.
  */
 export const updateUserContributedFeatureDraft = async (
   db: Database,

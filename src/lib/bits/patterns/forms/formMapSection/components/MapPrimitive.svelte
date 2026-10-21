@@ -13,6 +13,8 @@ import { THEME_MAP_STYLES } from '#lib/themes/themes.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 
 type Props = {
+  locationCandidates?: import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
+  onLocationCandidateSelect?: (id: string) => void
   coordinates: number[]
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
@@ -23,6 +25,8 @@ type Props = {
 }
 
 let {
+  locationCandidates = [],
+  onLocationCandidateSelect,
   coordinates,
   initialCenter = null,
   addressMeta,
@@ -45,6 +49,8 @@ const initialCollapsed =
 
 <div class="bits-feature-map">
   <LegacyMap
+    {locationCandidates}
+    {onLocationCandidateSelect}
     {coordinates}
     freezeForResize={resizeState?.active ?? false}
     {initialCenter}

@@ -71,7 +71,7 @@ export class ResourceFilters {
   }
 
   private sortableResources: FirstClassResource[] = [
-    FirstClassResource.place,
+    FirstClassResource.location,
     FirstClassResource.organisation,
     FirstClassResource.project,
     FirstClassResource.layer,

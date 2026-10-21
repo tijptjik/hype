@@ -59,7 +59,7 @@ import {
   createFeatureForm,
   saveUnlinkedFeatureForm,
 } from '#lib/db/services/featureFormSave.js'
-import { saveLinkedFeatureForm } from '#lib/db/services/placeEdit.js'
+import { saveLinkedFeatureForm } from '#lib/db/services/locationEdit.js'
 import { getInternalPropertyAccess } from '#lib/properties/audience.server.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
 import {
@@ -462,7 +462,7 @@ export const getFeatureForImport = guardedBatchByIdQuery<
  * - Duplicate property ids are rejected before any write occurs.
  * - Authorization is evaluated against a changed-field subset on update so unrelated
  *   permissions are not required for no-op fields.
- * - Parent and relation writes commit atomically, coordinated with Place associations.
+ * - Parent and relation writes commit atomically, coordinated with Location associations.
  */
 export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   const { db, user, userRoles, invalid } = ctx
@@ -484,7 +484,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('INVALID_MODE')))
   }
 
-  if (mode === 'create' && (data.placeBrandEdit || data.placeReset))
+  if (mode === 'create' && (data.locationBrandEdit || data.locationReset))
     invalid(issue('Inheritance requires an existing linked Feature'))
 
   let submittedProperties = Array.isArray(data.properties) ? data.properties : []
@@ -611,9 +611,9 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
   }
 
   // Authorize reset intent by its affected field groups before reading accepted source values.
-  if (data.placeBrandEdit || data.placeReset?.phoneNumber)
+  if (data.locationBrandEdit || data.locationReset?.phoneNumber)
     submittedDataBeforeHydration.properties = []
-  if (data.placeReset?.location) {
+  if (data.locationReset?.location) {
     submittedDataBeforeHydration.geometry = data.geometry
     submittedDataBeforeHydration.addressMeta = data.addressMeta
   }
@@ -674,13 +674,13 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     Boolean(data.isPendingReview) !== Boolean(current.isPendingReview)
   const submittedDataForUpdate: Record<string, unknown> = {}
 
-  if (i18nChanged || data.placeReset?.names.length)
+  if (i18nChanged || data.locationReset?.names.length)
     submittedDataForUpdate.i18n = data.i18n
-  if (propertiesChanged || data.placeBrandEdit || data.placeReset?.phoneNumber)
+  if (propertiesChanged || data.locationBrandEdit || data.locationReset?.phoneNumber)
     submittedDataForUpdate.properties = submittedProperties
-  if (geometryChanged || data.placeReset?.location)
+  if (geometryChanged || data.locationReset?.location)
     submittedDataForUpdate.geometry = data.geometry
-  if (addressChanged || data.placeReset?.location)
+  if (addressChanged || data.locationReset?.location)
     submittedDataForUpdate.addressMeta = data.addressMeta
   if (intangibleChanged) submittedDataForUpdate.isIntangible = data.isIntangible
   if (visitableChanged) submittedDataForUpdate.isVisitable = data.isVisitable
@@ -746,14 +746,14 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     },
     i18n: data.i18n,
     properties: propertiesChanged ? submittedProperties : undefined,
-    placeBrandEdit: data.placeBrandEdit,
-    placeReset: data.placeReset,
+    locationBrandEdit: data.locationBrandEdit,
+    locationReset: data.locationReset,
   }
   const linkedSave = await saveLinkedFeatureForm(db, saveInput)
   if (linkedSave.status === 'conflict')
     invalid(issue(toIssueDetailMessage('STALE_WRITE')))
   if (linkedSave.status === 'review')
-    invalid(issue(`Place-linked feature requires review: ${linkedSave.reason}`))
+    invalid(issue(`Location-linked feature requires review: ${linkedSave.reason}`))
   if (linkedSave.status === 'saved') {
     if (linkedSave.geometryChanged)
       scheduleFeatureMtr(ctx.event.locals.platform, linkedSave.feature.id)

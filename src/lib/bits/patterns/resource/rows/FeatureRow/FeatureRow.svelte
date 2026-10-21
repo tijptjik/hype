@@ -86,7 +86,7 @@ function toPlaceholderStatuses(statuses: FeatureRowStatMap): string[] {
   return Object.keys(statuses)
 }
 
-// Read accepted Place brands (or the legacy property) for the shared thumbnail.
+// Read accepted Location brands (or the legacy property) for the shared thumbnail.
 const brandLogoSrc = $derived(breadlineBrand(entity, getLocale()).logoSrc)
 const fallbackImageSrc = $derived(
   brandLogoSrc ??

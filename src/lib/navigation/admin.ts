@@ -227,7 +227,7 @@ export async function getBreadcrumbs(
     if (
       resourceType === 'property' ||
       resourceType === 'user' ||
-      resourceType === 'place'
+      resourceType === 'location'
     )
       return []
     const hierarchy = await appCtx.getHierarchy(

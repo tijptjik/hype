@@ -539,7 +539,7 @@ export class AdminCtx {
     if (
       queryEntry &&
       currentQueryMeta?.hasMore === false &&
-      resource !== FirstClassResource.place &&
+      resource !== FirstClassResource.location &&
       resource !== FirstClassResource.task &&
       resource !== FirstClassResource.property &&
       resource !== FirstClassResource.user

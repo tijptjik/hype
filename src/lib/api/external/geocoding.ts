@@ -89,6 +89,10 @@ const addressSchema = z.object({
 type AddressLocale = z.infer<typeof addressLocaleSchema>
 export type GeocodeInput = { lng: number; lat: number } | { address: string }
 export type GeocodeOptions = {
+  maxDistance?: number
+  limit?: number
+  /** Discovery markers use each Address's actual geometry, not the Feature pin. */
+  candidateCoordinates?: boolean
   footprint?: Polygon | MultiPolygon
   baseUrl?: string
   fetcher?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -146,6 +150,7 @@ function formatAddress(
  * Adapts the highest-ranked address through its JSON:API relationship.
  * @param body SaanSeoi response body.
  * @param input Original address or selected map coordinates.
+ * @param candidateCoordinates Use each candidate's geometry for nearby discovery markers.
  * @returns Canonical Hype address data, or null when no usable address exists.
  * @remarks Reverse results preserve the selected pin; forward results use address geometry.
  * Division membership is never inferred from address text or copied into the feature.
@@ -153,6 +158,7 @@ function formatAddress(
 export function parseGeocodeResult(
   body: unknown,
   input: GeocodeInput,
+  candidateCoordinates = false,
 ): ParsedReverseGeocodeResult | null {
   const response = responseSchema.parse(body)
   const candidate = response.data[0]
@@ -165,7 +171,10 @@ export function parseGeocodeResult(
   )
   if (!resource) throw new Error('SaanSeoi address relationship is missing')
   const address = addressSchema.parse(resource.attributes)
-  const point = 'lng' in input ? [input.lng, input.lat] : address.geometry?.coordinates
+  const point =
+    'lng' in input && !candidateCoordinates
+      ? [input.lng, input.lat]
+      : address.geometry?.coordinates
   if (!point) return null
   const english = address.i18n.en?.formattedAddress ?? ''
   const urban = /,\s*(?:HK|HKI|KL|KLN|KOWLOON|HONG KONG ISLAND)\s*$/i.test(english)
@@ -292,8 +301,22 @@ export async function geocodeAddressCandidates(
       : {}),
     profile: 'full',
     locales: 'en,zh-hant,zh-hans',
-    limit: '10',
-    maxDistance: '500',
+    limit: String(
+      z
+        .number()
+        .int()
+        .min(1)
+        .max(50)
+        .parse(options.limit ?? 10),
+    ),
+    maxDistance: String(
+      z
+        .number()
+        .finite()
+        .min(0)
+        .max(50000)
+        .parse(options.maxDistance ?? 500),
+    ),
   }).toString()
   const headers: Record<string, string> = { Accept: 'application/vnd.api+json' }
   const response = await (options.fetcher ?? fetch)(url, {
@@ -324,6 +347,7 @@ export async function geocodeAddressCandidates(
           data: [{ ...candidate, relationships: { address: { data: [link] } } }],
         },
         validated,
+        options.candidateCoordinates,
       )
       return result ? [result] : []
     }),

@@ -4,8 +4,8 @@ import {
   emptyFeatureAddress,
   getAddressDisplay,
 } from '#lib/addresses/featureAddress.js'
-import { retainAuthoredAddress } from '#lib/places/authoredAddress.js'
-import type { SaanSeoiPlaceProjection } from '#lib/places/saanseoi.js'
+import { retainAuthoredAddress } from '#lib/locations/authoredAddress.js'
+import type { SaanSeoiPlaceProjection } from '#lib/locations/saanseoi.js'
 
 describe('shared address parsing and local source overlays', () => {
   it('extracts units without inventing a building or dropping unresolved text', () => {

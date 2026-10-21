@@ -381,11 +381,11 @@ export function getProgrammaticFeatureInputEntries(
     }
   }
 
-  if (featureData?.placeReset)
-    appendEntry('data.placeReset', JSON.stringify(featureData.placeReset))
+  if (featureData?.locationReset)
+    appendEntry('data.locationReset', JSON.stringify(featureData.locationReset))
 
-  if (featureData?.placeBrandEdit)
-    appendEntry('data.placeBrandEdit', JSON.stringify(featureData.placeBrandEdit))
+  if (featureData?.locationBrandEdit)
+    appendEntry('data.locationBrandEdit', JSON.stringify(featureData.locationBrandEdit))
 
   appendEntry('data.isIntangible', Boolean(featureData?.isIntangible))
   appendEntry('data.isVisitable', Boolean(featureData?.isVisitable))

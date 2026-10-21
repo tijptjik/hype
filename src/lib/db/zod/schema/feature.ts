@@ -1,8 +1,8 @@
 // PLACE CONTRACTS
-import { PlaceResetSchema } from '#lib/places/reset.js'
-import { PlaceBrandEditSchema } from '#lib/places/brandEdit.js'
-import { decodePlaceFormValue } from '#lib/places/form.js'
-import { PlaceFactsSchema } from '#lib/places/validation.js'
+import { LocationResetSchema } from '#lib/locations/reset.js'
+import { LocationBrandEditSchema } from '#lib/locations/brandEdit.js'
+import { decodeLocationFormValue } from '#lib/locations/form.js'
+import { LocationFactsSchema } from '#lib/locations/validation.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // ZOD
@@ -273,13 +273,13 @@ export const UserFeatureInsert = createInsertSchema(userFeature)
 export const UserFeatureUpdate = createUpdateSchema(userFeature)
 
 // SQLite relational extras return JSON text; decode only in the read-only response contract.
-const ReadPlaceBrands = z.preprocess(
+const ReadLocationBrands = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
-  PlaceFactsSchema.shape.brands.nullish(),
+  LocationFactsSchema.shape.brands.nullish(),
 )
 
 export const FeatureListRow = FeatureBase.extend({
-  placeBrands: ReadPlaceBrands,
+  locationBrands: ReadLocationBrands,
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
@@ -305,7 +305,7 @@ export const FeatureCardRow = FeatureListRow.extend({
 })
 
 export const FeatureAdminRow = FeatureBase.extend({
-  placeBrands: ReadPlaceBrands,
+  locationBrands: ReadLocationBrands,
   i18n: z.array(FeatureI18nBase).nullish(),
   properties: z
     .array(
@@ -395,8 +395,10 @@ export const FeatureDraftI18nByLocaleFormData = z.object({
 })
 
 export const FeatureEntityFormData = z.object({
-  placeReset: z.preprocess(decodePlaceFormValue, PlaceResetSchema).optional(),
-  placeBrandEdit: z.preprocess(decodePlaceFormValue, PlaceBrandEditSchema).optional(),
+  locationReset: z.preprocess(decodeLocationFormValue, LocationResetSchema).optional(),
+  locationBrandEdit: z
+    .preprocess(decodeLocationFormValue, LocationBrandEditSchema)
+    .optional(),
   organisationId: z
     .string({ message: m.field_is_required({ field: m.field_organisation() }) })
     .min(1, { message: m.field_is_required({ field: m.field_organisation() }) }),
@@ -539,7 +541,7 @@ const FeatureListFields = FeatureBase.pick({
 })
 
 export const FeatureListProfileAPI = FeatureListFields.extend({
-  placeBrands: ReadPlaceBrands,
+  locationBrands: ReadLocationBrands,
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
@@ -560,7 +562,7 @@ export const FeatureDetailProfileAPI = FeatureCardProfileAPI.extend({
 })
 
 export const FeatureAdminProfileAPI = FeatureBase.extend({
-  placeBrands: ReadPlaceBrands,
+  locationBrands: ReadLocationBrands,
   i18n: getLocales(FeatureI18nBase),
   properties: z.array(FeaturePropertyAPI).default([]),
   contributor: UserBasic.nullish(),

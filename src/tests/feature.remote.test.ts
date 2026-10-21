@@ -86,7 +86,7 @@ const {
   ),
   mockSaveLinkedFeatureForm: vi.fn(
     async (): Promise<
-      import('#lib/db/services/placeEdit.js').LinkedFeatureSaveResult
+      import('#lib/db/services/locationEdit.js').LinkedFeatureSaveResult
     > => ({ status: 'unlinked' }),
   ),
   mockCreateFeatureForm: vi.fn(async () => ({
@@ -275,7 +275,7 @@ vi.mock('#lib/db/services/featureFormSave.js', () => ({
   saveUnlinkedFeatureForm: mockSaveUnlinkedFeatureForm,
 }))
 
-vi.mock('#lib/db/services/placeEdit.js', () => ({
+vi.mock('#lib/db/services/locationEdit.js', () => ({
   saveLinkedFeatureForm: mockSaveLinkedFeatureForm,
 }))
 
@@ -797,7 +797,7 @@ describe('feature.remote authz matrix', () => {
   )
 
   it.each(['inherit', 'clear', 'override'] as const)(
-    'rejects translator Place brand %s before persistence',
+    'rejects translator Location brand %s before persistence',
     async mode => {
       mockAuthorizeFeatureUpdateForSubmission.mockImplementation(
         authorizeFeatureUpdateForSubmission,
@@ -825,7 +825,7 @@ describe('feature.remote authz matrix', () => {
               isIntangible: false,
               isVisitable: true,
               isPendingReview: false,
-              placeBrandEdit: {
+              locationBrandEdit: {
                 expectedRevision: 'accepted',
                 choice: mode === 'override' ? { mode, value: [] } : { mode },
               },
@@ -841,7 +841,7 @@ describe('feature.remote authz matrix', () => {
   )
 
   it.each(['phoneNumber', 'location'] as const)(
-    'rejects translator Place %s reset before source reads',
+    'rejects translator Location %s reset before source reads',
     async field => {
       mockAuthorizeFeatureUpdateForSubmission.mockImplementation(
         authorizeFeatureUpdateForSubmission,
@@ -869,7 +869,7 @@ describe('feature.remote authz matrix', () => {
               isIntangible: false,
               isVisitable: true,
               isPendingReview: false,
-              placeReset: {
+              locationReset: {
                 expectedRevision: 'accepted',
                 names: [],
                 phoneNumber: false,

@@ -1,4 +1,4 @@
-/** Public brand identities shared by Place projections and legacy Feature properties. */
+/** Public brand identities shared by Location projections and legacy Feature properties. */
 export const BRAND_IDENTITIES = [
   {
     code: '7eleven',
@@ -108,10 +108,10 @@ export const BRAND_IDENTITIES = [
 ] as const
 
 /**
- * Resolves a brand value without consulting feature titles, source IDs or Place storage.
+ * Resolves a brand value without consulting feature titles, source IDs or Location storage.
  * @param value Effective feature-property value or its classifier label.
  * @returns Known brand with a bundled SVG, or undefined for an unknown identity.
- * @remarks Callers resolve Place inheritance before selecting a presentation identity.
+ * @remarks Callers resolve Location inheritance before selecting a presentation identity.
  */
 export function resolveBrandIdentity(
   value: string,

@@ -1,7 +1,7 @@
 import { UnitDetailsSchema, formatFloor, formatUnit } from './address3d.js'
 // VALIDATION
 import { z } from 'zod'
-import { PlaceFactsSchema } from '#lib/places/validation.js'
+import { LocationFactsSchema } from '#lib/locations/validation.js'
 // TYPES
 import type { AddressMeta } from '#lib/utils/address.types.js'
 import type { LocaleKey } from '#lib/types.js'
@@ -55,7 +55,7 @@ const fields = z.partialRecord(
 )
 const featureAddressBase = z.strictObject({
   version: z.literal(1),
-  source: PlaceFactsSchema.shape.location.shape.address,
+  source: LocationFactsSchema.shape.location.shape.address,
   coordinates: z
     .tuple([
       z.number().finite().min(-180).max(180),
@@ -66,7 +66,7 @@ const featureAddressBase = z.strictObject({
   overrides: z.record(z.string(), fields),
   // Feature-local semantics follow SaanSeoi unit fields without inventing inventory IDs.
   unitDetails: UnitDetailsSchema.optional(),
-  // Place-level directions are separate from canonical building/unit evidence.
+  // Location-level directions are separate from canonical building/unit evidence.
   accessHints: z.record(z.string(), z.string().max(4000).nullable()).optional(),
   legacy: z.record(z.string(), z.unknown()).optional(),
   query: z.string().optional(),

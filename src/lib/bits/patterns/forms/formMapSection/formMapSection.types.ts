@@ -1,4 +1,6 @@
 export type FormMapSectionProps = {
+  locationCandidates?: import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
+  onLocationCandidateSelect?: (id: string) => void
   coordinates: number[]
   initialCenter?: [number, number] | null
   addressMeta: import('#lib/utils/address.types.js').AddressMeta | null

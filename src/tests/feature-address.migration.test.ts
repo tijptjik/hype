@@ -12,7 +12,7 @@ describe('SaanSeoi address migration', () => {
       db.exec(`CREATE TABLE feature(id TEXT PRIMARY KEY, geometry TEXT, addressMeta TEXT);
         CREATE TABLE featureI18n(featureId TEXT, locale TEXT, displayAddress TEXT, displayAddressGen INTEGER, addressProperties TEXT);`)
       const meta = {
-        googlePlaceId: 'original',
+        googleLocationId: 'original',
         saanseoiAddressId: 'unverified-old-id',
         addressForwardGen: false,
       }

@@ -18,5 +18,5 @@ export * from './map'
 
 // Re-export all relations
 export * from './relations'
-export * from './place'
-export * from './placeRefresh'
+export * from './location'
+export * from './locationRefresh'

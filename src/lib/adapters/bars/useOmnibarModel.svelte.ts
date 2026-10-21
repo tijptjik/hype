@@ -172,7 +172,7 @@ export function useOmnibarModel(
       collection.i18n as Record<Locale | LocaleKey, { name: string }>,
       'name',
       appCtx.view.getUserPreferences(),
-      m.place(),
+      m.location(),
     )
 
     if (!activeFeature) {

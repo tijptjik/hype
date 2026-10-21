@@ -2007,7 +2007,7 @@ export function getAvailableFields(
     return [
       'geoAddressCode',
       'nearestLampPostNumber',
-      'googlePlaceId',
+      'googleLocationId',
       'plusCode',
       'longitude',
       'latitude',

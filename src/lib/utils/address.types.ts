@@ -88,8 +88,8 @@ export type AddressMeta = {
   geoAddressCode?: string
 
   // IDENTIFIERS :: GOOGLE
-  // // Google Place ID
-  googlePlaceId?: string
+  // // Google Location ID
+  googleLocationId?: string
   // // Plus Code
   plusCode?: string
 

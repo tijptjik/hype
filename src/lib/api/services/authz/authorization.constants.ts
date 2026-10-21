@@ -61,7 +61,7 @@ export const organisationAuthorizationFields = [
 
 export const projectAuthorizationFields = [
   'flags',
-  'placeUpdatePolicy',
+  'locationUpdatePolicy',
   'useAllInOrgContext',
   'cardStyleCode',
   'markerStyleCode',

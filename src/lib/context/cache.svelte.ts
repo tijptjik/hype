@@ -27,7 +27,7 @@ import type {
 /** Creates isolated raw view records. @returns Empty maps for each resource family. */
 function createEntityStore(): Cache {
   return {
-    place: new SvelteMap(),
+    location: new SvelteMap(),
     organisation: new SvelteMap(),
     project: new SvelteMap(),
     layer: new SvelteMap(),

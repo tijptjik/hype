@@ -1,8 +1,8 @@
 <script lang="ts">
 import { ProjectFlagsSchema, show3dAddressOptions } from '#lib/projects/flags.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
-import { getPlaceUpdatePolicy } from '#lib/api/place.remote.js'
-import PlacePolicyPanel from '#lib/bits/patterns/forms/placeUpdatePolicy/PlacePolicyPanel.svelte'
+import { getLocationUpdatePolicy } from '#lib/api/location.remote.js'
+import LocationPolicyPanel from '#lib/bits/patterns/forms/locationUpdatePolicy/LocationPolicyPanel.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
 import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 // PRESENTATION
@@ -440,7 +440,7 @@ const translatableI18nFieldsBySection: Record<
 > = {
   descriptor: ['name', 'nameShort', 'description'],
 }
-let placePolicyResetVersion = $state(0)
+let locationPolicyResetVersion = $state(0)
 // Main remote-form configuration for project create/update.
 const configuredProjectForm = configureForm(() => ({
   form: projectForm as never,
@@ -618,8 +618,8 @@ const configuredProjectForm = configureForm(() => ({
       const submittedCode = data.data?.code?.trim() ?? ''
       const refreshed = await refreshProject(shouldRedirect ? submittedCode : undefined)
       commitSettledProjectState(refreshed)
-      if (data.data?.placeUpdatePolicy && activeCommittedProjectData?.id) {
-        await getPlaceUpdatePolicy({
+      if (data.data?.locationUpdatePolicy && activeCommittedProjectData?.id) {
+        await getLocationUpdatePolicy({
           projectId: activeCommittedProjectData.id,
         }).refresh()
       }
@@ -1269,14 +1269,14 @@ function getHiddenProjectLicenseAttrs(): Record<string, unknown> {
 }
 
 /**
- * Register the optional Places JSON draft with the native Project remote form.
+ * Register the optional Locations JSON draft with the native Project remote form.
  * @returns Bound hidden attributes; the schema validates the policy and revision.
  */
-function getHiddenPlacePolicyAttrs(): Record<string, unknown> {
-  const { as } = formCtx.form.fields.data.placeUpdatePolicy as unknown as {
+function getHiddenLocationPolicyAttrs(): Record<string, unknown> {
+  const { as } = formCtx.form.fields.data.locationUpdatePolicy as unknown as {
     as(type: 'hidden', value: string): Record<string, unknown>
   }
-  return as('hidden', String(formCtx.form.fields.value().data?.placeUpdatePolicy))
+  return as('hidden', String(formCtx.form.fields.value().data?.locationUpdatePolicy))
 }
 
 const hiddenProjectLayerInputAttrs = $derived.by(() => {
@@ -1515,6 +1515,8 @@ const projectUserRoles = $derived.by(() => {
         user: {
           id: selectedUser.id,
           name: selectedUser.name,
+          username: selectedUser.username,
+          displayUsername: selectedUser.displayUsername,
           image: selectedUser.image,
           attribution: selectedUser.attribution,
         },
@@ -2412,7 +2414,7 @@ async function onDeleteToggle(): Promise<void> {
 }
 
 async function onReset(): Promise<void> {
-  placePolicyResetVersion += 1
+  locationPolicyResetVersion += 1
   fieldRemoveMode = false
   isProjectFieldResetInProgress = true
   fieldsLayoutMutationVersion += 1
@@ -3037,22 +3039,22 @@ $effect(() => {
       <FormSurface>
         {#if activeCommittedProjectData?.id}
           {#key activeCommittedProjectData.id}
-            <PlacePolicyPanel
+            <LocationPolicyPanel
               projectId={activeCommittedProjectData.id}
               {isEditing}
               saving={formCtx.submitting}
-              resetVersion={placePolicyResetVersion}
+              resetVersion={locationPolicyResetVersion}
               onChange={value => {
                 updateFormData(projectEntityUpdaterForm, data => {
-                  if (value === undefined) delete data.placeUpdatePolicy
-                  else data.placeUpdatePolicy = value
+                  if (value === undefined) delete data.locationUpdatePolicy
+                  else data.locationUpdatePolicy = value
                   return data
                 })
                 revalidateAfterProgrammaticChange()
               }}
             />
-            {#if formCtx.form.fields.value().data?.placeUpdatePolicy}
-              <input {...getHiddenPlacePolicyAttrs()}>
+            {#if formCtx.form.fields.value().data?.locationUpdatePolicy}
+              <input {...getHiddenLocationPolicyAttrs()}>
             {/if}
           {/key}
         {/if}

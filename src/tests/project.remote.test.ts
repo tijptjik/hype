@@ -579,9 +579,9 @@ describe('project.remote form organisation move authz', () => {
     },
   )
 
-  it('authorizes and persists Place settings through the Project form', async () => {
+  it('authorizes and persists Location settings through the Project form', async () => {
     const payload = buildUpdatePayload('org-1')
-    const placeUpdatePolicy = {
+    const locationUpdatePolicy = {
       policy: {
         version: 1,
         coordinates: { mode: 'review' },
@@ -594,18 +594,18 @@ describe('project.remote form organisation move authz', () => {
     await remote.projectForm(
       {
         ...payload,
-        data: { ...payload.data, placeUpdatePolicy },
+        data: { ...payload.data, locationUpdatePolicy },
       },
       throwingInvalid,
     )
     expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
       expect.objectContaining({
-        submittedData: expect.objectContaining({ placeUpdatePolicy }),
+        submittedData: expect.objectContaining({ locationUpdatePolicy }),
       }),
     )
     expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
       expect.any(Object),
-      expect.objectContaining({ placeUpdatePolicy }),
+      expect.objectContaining({ locationUpdatePolicy }),
     )
   })
 

@@ -31,6 +31,8 @@ import type { Id } from '#lib/types.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 import type { MapStyleCatalogKey } from '#lib/map/styles/catalog.js'
 type MapProps = {
+  locationCandidates?: import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
+  onLocationCandidateSelect?: (id: string) => void
   freezeForResize?: boolean
   coordinates: number[]
   initialCenter?: [number, number] | null
@@ -111,6 +113,81 @@ $effect(() => {
 const shouldFreeze = $derived(Boolean(mapProps.freezeForResize || containerResizing))
 $effect(() => {
   if (activeMapInstance && shouldFreeze) return freezeMapForResize(activeMapInstance)
+})
+
+// Numbered discovery markers are transient UI; removing results removes their map objects.
+// Keep marker elements stable while rows are hovered or focused; hover never selects.
+const candidateMarkers = new Map<string, maplibregl.Marker>()
+let candidateMap: MaplibreMap | undefined
+$effect(() => {
+  const target = activeMapInstance
+  const candidates = mapProps.locationCandidates ?? []
+  if (candidateMap !== target) {
+    for (const marker of candidateMarkers.values()) marker.remove()
+    candidateMarkers.clear()
+    candidateMap = target
+  }
+  const ids = new Set(candidates.map(candidate => candidate.id))
+  for (const [id, marker] of candidateMarkers) {
+    if (!ids.has(id)) {
+      marker.remove()
+      candidateMarkers.delete(id)
+    }
+  }
+  if (!target) return
+  for (const candidate of candidates) {
+    let marker = candidateMarkers.get(candidate.id)
+    if (!marker) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className =
+        'flex size-9 items-center justify-center rounded-full border-2 border-white bg-primary text-primary-content font-bold shadow-lg hover:ring-4 hover:ring-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+      button.dataset.locationCandidate = candidate.id
+      button.onclick = () => mapProps.onLocationCandidateSelect?.(candidate.id)
+      marker = new maplibregl.Marker({ element: button })
+        .setLngLat(candidate.coordinates)
+        .addTo(target)
+      candidateMarkers.set(candidate.id, marker)
+    }
+    marker.setLngLat(candidate.coordinates)
+    const button = marker.getElement()
+    // Source kind is visible in both map and list; selection never changes the Feature pin.
+    const addressCandidate = candidate.kind === 'address'
+    button.classList.toggle('bg-primary', !addressCandidate)
+    button.classList.toggle('text-primary-content', !addressCandidate)
+    button.classList.toggle('bg-amber-500', addressCandidate)
+    button.classList.toggle('dark:bg-amber-400', addressCandidate)
+    button.classList.toggle('text-black', addressCandidate)
+    button.textContent = String(candidate.number)
+    button.setAttribute('aria-label', `${candidate.number}. ${candidate.label}`)
+    button.setAttribute('aria-pressed', String(Boolean(candidate.selected)))
+    button.dataset.highlighted = String(Boolean(candidate.highlighted))
+    const emphasized = Boolean(candidate.selected || candidate.highlighted)
+    button.classList.toggle('ring-4', emphasized)
+    button.classList.toggle('ring-primary/40', emphasized)
+    button.style.zIndex = candidate.highlighted ? '2' : candidate.selected ? '1' : '0'
+  }
+})
+onDestroy(() => {
+  for (const marker of candidateMarkers.values()) marker.remove()
+  candidateMarkers.clear()
+})
+let lastCandidatesKey = ''
+$effect(() => {
+  const target = activeMapInstance
+  const candidates = mapProps.locationCandidates ?? []
+  const key = candidates.map(candidate => candidate.id).join('|')
+  if (!target || !candidates.length) {
+    lastCandidatesKey = ''
+    return
+  }
+  if (key === lastCandidatesKey) return
+  lastCandidatesKey = key
+  const bounds = new maplibregl.LngLatBounds()
+  const pin = getCoordinateTuple(mapProps.coordinates)
+  if (pin) bounds.extend(pin)
+  for (const candidate of candidates) bounds.extend(candidate.coordinates)
+  target.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 350 })
 })
 
 // STATE : DERIVED
