@@ -1625,5 +1625,16 @@
   "address_neighbourhood_choose_path": "选择{name}的分区路径",
   "address_neighbourhood_paths_help": "选择其中一条现有的上层分区路径。",
   "address_neighbourhood_unavailable": "此社区的上层分区路径暂未提供，请选择其他社区。",
-  "address_neighbourhood_clear": "清除社区"
+  "address_neighbourhood_clear": "清除社区",
+  "image_attribution_title": "鸣谢及图片信息",
+  "image_attribution_photo": "照片",
+  "image_attribution_credit": "摄影者／署名",
+  "image_attribution_captured": "拍摄日期",
+  "image_attribution_embedded_credit": "图片署名",
+  "image_attribution_uploaded": "上传日期",
+  "image_attribution_record": "地标记录",
+  "image_attribution_contributor": "提供者",
+  "image_attribution_record_created": "记录创建日期",
+  "image_attribution_loading": "加载中…",
+  "image_attribution_unknown_date": "日期不详"
 }

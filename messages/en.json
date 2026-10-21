@@ -1625,5 +1625,16 @@
   "address_neighbourhood_choose_path": "Choose a path for {name}",
   "address_neighbourhood_paths_help": "Choose one of the existing ancestor paths.",
   "address_neighbourhood_unavailable": "The ancestor paths for this neighbourhood are unavailable. Choose another neighbourhood.",
-  "address_neighbourhood_clear": "Clear neighbourhood"
+  "address_neighbourhood_clear": "Clear neighbourhood",
+  "image_attribution_title": "Attribution and image details",
+  "image_attribution_photo": "Photograph",
+  "image_attribution_credit": "Photographer / credit",
+  "image_attribution_captured": "Photographed",
+  "image_attribution_embedded_credit": "Image credit",
+  "image_attribution_uploaded": "Uploaded",
+  "image_attribution_record": "Feature record",
+  "image_attribution_contributor": "Contributed by",
+  "image_attribution_record_created": "Record created",
+  "image_attribution_loading": "Loading…",
+  "image_attribution_unknown_date": "Date unknown"
 }

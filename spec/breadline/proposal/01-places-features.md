@@ -804,6 +804,16 @@ copies only; reviewed environment-specific D1/R2 activation, active-writer fenci
 and application/restore acceptance remain integration dependencies. No remote
 rollout is implied and broad issue acceptance remains open.
 
+The Feature viewer mounts a Bits UI attribution popover on its shared image rail,
+so full and description-free cards use the same control. Photograph credit and
+capture date are separate from Feature contributor/creation date and image upload
+date. Unknown capture dates stay unknown; upload time is never a capture fallback.
+Authored capture ranges and approximate dates retain their supplied precision.
+The public basic metadata projection supplies camera and dimensions when available;
+full source annotations are not exposed by this UI. Requests are lazy and share
+the gallery's metadata cache, with stale contributor responses discarded when the
+selected image or Feature changes.
+
 ## Versioned Location facts and building preparation (21 October 2026)
 
 Refs [#194](https://github.com/tijptjik/hype/issues/194); source research:

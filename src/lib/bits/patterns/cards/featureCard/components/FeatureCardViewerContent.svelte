@@ -149,6 +149,17 @@ const viewerStyle = $derived.by(() => {
   />
 {/snippet}
 
+{#snippet leftRail()}
+  {#if model.state.activeImage}
+    {#key `${model.state.activeImage.ctxId}:${model.state.activeImage.image.id}`}
+      <ViewerPrimitive.Metadata
+        currentImage={model.state.activeImage}
+        gallery={model}
+      />
+    {/key}
+  {/if}
+{/snippet}
+
 {#snippet emptyState()}
   <ViewerPrimitive.EmptyState />
 {/snippet}
@@ -201,6 +212,7 @@ const viewerStyle = $derived.by(() => {
       showNavButtons={false}
       railPadding={3}
       centerAction="fullscreen"
+      {leftRail}
       {rightRail}
       {emptyState}
       onActiveIdChange={model.actions.select}

@@ -1625,5 +1625,16 @@
   "address_neighbourhood_choose_path": "選擇{name}的分區路徑",
   "address_neighbourhood_paths_help": "選擇其中一條現有的上層分區路徑。",
   "address_neighbourhood_unavailable": "此社區的上層分區路徑暫未提供，請選擇其他社區。",
-  "address_neighbourhood_clear": "清除社區"
+  "address_neighbourhood_clear": "清除社區",
+  "image_attribution_title": "鳴謝及圖片資料",
+  "image_attribution_photo": "照片",
+  "image_attribution_credit": "攝影者／署名",
+  "image_attribution_captured": "拍攝日期",
+  "image_attribution_embedded_credit": "圖片署名",
+  "image_attribution_uploaded": "上載日期",
+  "image_attribution_record": "地標記錄",
+  "image_attribution_contributor": "提供者",
+  "image_attribution_record_created": "記錄建立日期",
+  "image_attribution_loading": "載入中…",
+  "image_attribution_unknown_date": "日期不詳"
 }
