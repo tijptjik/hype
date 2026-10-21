@@ -1,5 +1,12 @@
 # Repository Guidelines
 
+## Response summaries
+
+- Before sending each final summary response, append its full Markdown text to `.local/prompts/{date}-{topic}.md`, creating the directory and file when needed.
+- Use `YYYY-MM-DD` for `{date}` in the user's timezone (Asia/Hong_Kong by default) and a concise lowercase kebab-case topic for `{topic}`.
+- Append subsequent summaries for the same date and topic to the same file, preserving earlier entries. Separate entries with a timestamp heading that includes the timezone.
+- Continue sending the summary in chat as usual; the local file is a searchable archive of those responses.
+
 ## Documentation
 
 - Authorisation Design is defined in `docs/specs/Design-Spec-Authorization.md`
