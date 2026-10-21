@@ -25,6 +25,7 @@ import {
   featureLocation,
   locationIdentityHistory,
   locationIdentityReview,
+  organisationLocation,
   type LocationMergeReviewRecord,
 } from '../schema/location'
 // DOMAIN
@@ -32,7 +33,6 @@ import { equalLocationValue } from '#lib/locations/baseline.js'
 // SERVICES
 import { readLocationIdentityBaseline } from './locationIdentityReview'
 import { prepareSaanSeoiRevision } from './locationSource'
-import { retainAuthoredAddress } from '#lib/locations/authoredAddress.js'
 import { locationAliasIds } from './locationRedirect'
 // TYPES
 import type { SQL } from 'drizzle-orm'
@@ -89,6 +89,8 @@ function mergeGuard(
   return sql`NOT EXISTS (SELECT 1 FROM locationIdentityReview WHERE rejection IS NOT NULL AND id=${row.identityReviewId})
     AND ${baselineGuard(target)} AND ${baselineGuard(source)}
     AND ${featureTokenSQL(source.locationId)}=${row.sourceFeatureToken}
+    AND NOT EXISTS(SELECT 1 FROM organisationLocation a JOIN organisationLocation b ON a.organisationId=b.organisationId
+      WHERE a.locationId=${source.locationId} AND b.locationId=${target.locationId})
     AND (${source.expectedOwnerOrganisationId} IS NULL OR ${source.expectedOwnerOrganisationId} IS ${target.expectedOwnerOrganisationId})
     AND NOT EXISTS(SELECT 1 FROM featureLocation fp JOIN feature f ON f.id=fp.featureId
       WHERE fp.locationId=${source.locationId} AND (f.isDraft!=0 OR
@@ -265,12 +267,12 @@ export async function captureLocationMergeReview(
       ),
     )
     .orderBy(locationRevision.sequence)
-  // Compare immutable source evidence while preserving each revision's authored address.
+  // Compare immutable source evidence without mixing in Organisation-authored addresses.
   let candidate: (typeof candidates)[number] | undefined
   for (const revision of candidates) {
     const evidence = await prepareSaanSeoiRevision(
       source.locationId,
-      retainAuthoredAddress(identity.projection, revision),
+      identity.projection,
     )
     if (revision.contentHash === evidence.contentHash) {
       candidate = revision
@@ -294,6 +296,10 @@ export async function captureLocationMergeReview(
     (target.expectedOwnerOrganisationId !== null && Boolean(outsideOwner))
   )
     return { status: 'scope-conflict' }
+  const overlapping = await db.get(
+    sql`SELECT 1 FROM organisationLocation a JOIN organisationLocation b ON a.organisationId=b.organisationId WHERE a.locationId=${source.locationId} AND b.locationId=${target.locationId} LIMIT 1`,
+  )
+  if (overlapping) return { status: 'scope-conflict' }
   const id = nanoid(24)
   const review: MergeReview = {
     id,
@@ -409,6 +415,14 @@ export async function applyLocationMergeReview(
       .select(sql`SELECT ${prefix}||sequence,${input.locationId},${targetLatest.sequence}+sequence,
       origin,ssId,apiVersion,releaseId,snapshotId,contentHash,payload,facts,createdAt FROM locationRevision
       WHERE locationId=${input.sourceLocationId} AND ${receipt} ORDER BY sequence`),
+    // Retain the original correction histories on the redirect; copy their snapshots into the survivor.
+    db
+      .insert(organisationLocation)
+      .select(sql`SELECT organisationId,${input.locationId},
+      ${'merge:' + id + ':'}||organisationId,overrides,
+      json_insert(history,'$[#]',json_object('revision',${'merge:' + id + ':'}||organisationId,'overrides',json(overrides),'actorId',${input.actorId},'createdAt',strftime('%Y-%m-%dT%H:%M:%fZ','now'))),
+      ${input.actorId},createdAt,strftime('%Y-%m-%dT%H:%M:%fZ','now') FROM organisationLocation
+      WHERE locationId=${input.sourceLocationId} AND ${receipt}`),
     db
       .update(featureLocation)
       .set({
@@ -428,6 +442,7 @@ export async function applyLocationMergeReview(
       .set({
         ssId: row.sourceBaseline.expectedSsId,
         state: 'linked',
+        ownerOrganisationId: null,
         kind: 'establishment',
         sourceAvailability: 'current',
       })
@@ -440,7 +455,7 @@ export async function applyLocationMergeReview(
       ${row.identityReviewId},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${receipt}`)
       .returning({ id: locationIdentityHistory.id }),
   ])
-  return result[5].length
+  return result[6].length
     ? { status: 'applied', redirectId: id, affectedFeatures: row.sourceFeatureCount }
     : { status: 'conflict' }
 }

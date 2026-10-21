@@ -381,6 +381,8 @@ export const linkFeatureLocation = guardedCommand(
       ...input,
       projectId: probe.projectId,
       actorId: ctx.user.id,
+      authorizeLocationCorrection: () =>
+        requireLocationOrganisationManager(ctx, probe.organisationId),
     })
     if (result.status === 'conflict') error(409, 'LOCATION_LINK_CHANGED')
     if (result.status === 'place-unavailable') error(404, 'LOCATION_NOT_FOUND')
@@ -596,6 +598,8 @@ export const relinkFeatureLocation = guardedCommand(
       ...input,
       projectId: probe.projectId,
       actorId: ctx.user.id,
+      authorizeLocationCorrection: () =>
+        requireLocationOrganisationManager(ctx, probe.organisationId),
     })
     if (result.status === 'conflict') error(409, 'LOCATION_LINK_CHANGED')
     if (result.status === 'place-unavailable') error(404, 'LOCATION_NOT_FOUND')

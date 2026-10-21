@@ -13,6 +13,7 @@ import { planUnresolvedFeatureSplit } from '#lib/locations/migrationPlan.js'
 import { readFeatureLocationBaseline } from './locationBaseline'
 import { readProjectLocationOwner, locationOwnerForProject } from './locationScope'
 import { prepareFeatureLocationAssociationWrite } from './locationAssociation'
+import { prepareOrganisationLocationWrite } from './organisationLocation'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { UnresolvedFeatureSplit } from '#lib/locations/migrationPlan.js'
@@ -107,6 +108,13 @@ export async function applyUnresolvedFeatureSplit(
     AND isDraft=0 AND isIntangible=0)
     AND ${locationOwnerForProject(plan.projectId)}=${ownerOrganisationId}
     AND NOT EXISTS (SELECT 1 FROM featureLocation WHERE featureId=${plan.featureId})`
+  const correction = await prepareOrganisationLocationWrite(db, {
+    organisationId: ownerOrganisationId,
+    locationId: plan.locationId,
+    actorId,
+    overrides: plan.overrides,
+    guard,
+  })
   const associationWrite = prepareFeatureLocationAssociationWrite(db, {
     featureId: plan.featureId,
     projectId: plan.projectId,
@@ -117,6 +125,9 @@ export async function applyUnresolvedFeatureSplit(
     locationRevisionId: plan.revisionId,
     overrides: plan.overrides,
     actorId,
+    factsOrganisationRevision: correction.revision,
+    locationOrganisationRevision: correction.revision,
+    additionalGuard: correction.guard,
   })
   // All three writes use one D1 transaction; a stale guard leaves no orphan Location/revision.
   // Raw SELECT follows schema column order, including nullable source fields and timestamps.
@@ -130,7 +141,15 @@ export async function applyUnresolvedFeatureSplit(
       .select(sql`SELECT ${plan.revisionId},${plan.locationId},1,'local',
       NULL,NULL,NULL,NULL,${contentHash},${JSON.stringify(payload)},${JSON.stringify(plan.facts)},
       strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
+    ...correction.queries,
     associationWrite.query,
+  ] as [
+    import('drizzle-orm/batch').BatchItem<'sqlite'>,
+    ...import('drizzle-orm/batch').BatchItem<'sqlite'>[],
   ])
-  return { status: results[2].length ? 'applied' : 'conflict' }
+  return {
+    status: (results[2 + correction.queries.length] as unknown[]).length
+      ? 'applied'
+      : 'conflict',
+  }
 }

@@ -12,6 +12,7 @@ import {
 // SERVICES
 import { locationOwnerForProject } from './locationScope'
 import { previewFeatureLocationAdoption } from './locationAdoption'
+import { readOrganisationLocation } from './organisationLocation'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
@@ -63,7 +64,7 @@ export async function listLocationAdoptionReviews(
       WHERE prior.featureId=locationAdoptionProposal.featureId
         AND prior.projectId=locationAdoptionProposal.projectId
         AND prior.locationId=locationAdoptionProposal.locationId
-        AND prior.candidateRevisionId=locationAdoptionProposal.candidateRevisionId)`,
+        AND prior.candidateRevisionId=locationAdoptionProposal.candidateRevisionId AND prior.organisationRevision=locationAdoptionProposal.organisationRevision)`,
     })
     .from(locationAdoptionProposal)
     .innerJoin(feature, eq(feature.id, locationAdoptionProposal.featureId))
@@ -81,6 +82,7 @@ export async function listLocationAdoptionReviews(
           AND newer.projectId=locationAdoptionProposal.projectId
           AND newer.locationId=locationAdoptionProposal.locationId
           AND newer.candidateRevisionId=locationAdoptionProposal.candidateRevisionId
+          AND newer.organisationRevision=locationAdoptionProposal.organisationRevision
           AND newer.rowid > locationAdoptionProposal.rowid)`,
       ),
     )
@@ -133,6 +135,10 @@ export async function readLocationAdoptionReview(
           locationAdoptionProposal.candidateRevisionId,
           rows.proposal.candidateRevisionId,
         ),
+        eq(
+          locationAdoptionProposal.organisationRevision,
+          rows.proposal.organisationRevision,
+        ),
       ),
     )
   return {
@@ -160,6 +166,7 @@ export async function proposeFeatureLocationAdoption(
     featureId: string
     projectId: string
     candidateRevisionId: string
+    organisationRevision?: string
     reevaluatePending?: boolean
     additionalGuard?: SQL
   },
@@ -182,6 +189,7 @@ export async function proposeFeatureLocationAdoption(
     eq(locationAdoptionProposal.projectId, input.projectId),
     eq(locationAdoptionProposal.locationId, association.locationId),
     eq(locationAdoptionProposal.candidateRevisionId, input.candidateRevisionId),
+    eq(locationAdoptionProposal.organisationRevision, input.organisationRevision ?? ''),
   )
   const previous = await db
     .select({ id: locationAdoptionProposal.id })
@@ -202,24 +210,28 @@ export async function proposeFeatureLocationAdoption(
   const preview = await previewFeatureLocationAdoption(db, input)
   if (!preview) return null
   const id = crypto.randomUUID()
-  const evidence = { policy: preview.settings.policy, plan: preview.plan }
+  const evidence = {
+    policy: preview.settings.policy,
+    plan: preview.plan,
+    candidateOverrides: preview.candidateOverrides,
+  }
   // Persist only while all inputs still match; concurrent proposers converge on one identity.
   await db
     .insert(locationAdoptionProposal)
     .select(sql`
     SELECT ${id}, ${input.featureId}, ${input.projectId}, ${association.locationId},
       ${input.candidateRevisionId}, ${preview.expectedRevision}, ${preview.expectedFeatureModifiedAt},
-      ${preview.settings.revision}, ${JSON.stringify(evidence)}, NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      ${preview.settings.revision}, ${JSON.stringify(evidence)},${input.organisationRevision ?? ''}, NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE (${input.additionalGuard ?? sql`1`}) AND EXISTS (SELECT 1 FROM feature f JOIN featureLocation fp ON fp.featureId=f.id
       JOIN location p ON p.id=fp.locationId
       WHERE f.id=${input.featureId} AND f.projectId=${input.projectId} AND f.isDraft=0
       AND f.modifiedAt=${preview.expectedFeatureModifiedAt} AND fp.revision=${preview.expectedRevision}
       AND fp.locationId=${association.locationId} AND p.sourceAvailability='current'
-      AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id=f.projectId)))
+      AND (p.state!='manual' OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id=f.projectId)))
     AND COALESCE((SELECT locationPolicyRevision FROM project WHERE id=${input.projectId}),0)=${preview.settings.revision}
     AND (SELECT COALESCE(MAX(ap.factsDecision IS NOT NULL),0) + COALESCE(MAX(ap.locationDecision IS NOT NULL),0) FROM locationAdoptionProposal ap
       WHERE ap.featureId=${input.featureId} AND ap.projectId=${input.projectId}
-      AND ap.locationId=${association.locationId} AND ap.candidateRevisionId=${input.candidateRevisionId}) < 2
+      AND ap.locationId=${association.locationId} AND ap.candidateRevisionId=${input.candidateRevisionId} AND ap.organisationRevision=${input.organisationRevision ?? ''}) < 2
   `)
     .onConflictDoNothing()
   const retained = await db
@@ -293,10 +305,10 @@ export async function rejectLocationAdoptionGroup(
           WHERE json_extract(prior.value,'$.action')='applied' AND json_extract(prior.value,'$.associationRevision')=${input.expectedRevision}))
       AND ap.rowid=(SELECT MAX(newer.rowid) FROM locationAdoptionProposal newer
         WHERE newer.featureId=ap.featureId AND newer.projectId=ap.projectId
-          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId)
+          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId AND newer.organisationRevision=ap.organisationRevision)
       AND NOT EXISTS (SELECT 1 FROM locationAdoptionProposal older
         WHERE older.featureId=ap.featureId AND older.projectId=ap.projectId
-          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId
+          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId AND older.organisationRevision=ap.organisationRevision
           AND (CASE WHEN ${input.fieldGroup}='facts' THEN older.factsDecision ELSE older.locationDecision END) IS NOT NULL))
   `)
     .returning({ decision: column })
@@ -313,28 +325,31 @@ export async function proposeLatestLocalLocationAdoption(
   db: Database,
   input: { featureId: string; projectId: string },
 ): Promise<{ proposal: Proposal; decisions: Decision[] } | null> {
-  const candidate = await db
-    .select({ id: locationRevision.id })
+  const association = await db
+    .select({
+      locationId: featureLocation.locationId,
+      organisationId: sql<string>`(SELECT organisationId FROM project WHERE id=${input.projectId})`,
+    })
     .from(featureLocation)
     .innerJoin(feature, eq(feature.id, featureLocation.featureId))
-    .innerJoin(locationTable, eq(locationTable.id, featureLocation.locationId))
-    .innerJoin(locationRevision, eq(locationRevision.locationId, locationTable.id))
-    .where(
-      and(
-        eq(feature.id, input.featureId),
-        eq(feature.projectId, input.projectId),
-        sql`(${locationTable.ownerOrganisationId} IS NULL OR ${locationTable.ownerOrganisationId}=${locationOwnerForProject(input.projectId)})`,
-        sql`${locationTable.state} IN ('manual','unresolved','linked')`,
-        eq(locationRevision.origin, 'local'),
-        sql`${locationRevision.sequence}=(SELECT max(r.sequence) FROM locationRevision r WHERE r.locationId=${locationTable.id})`,
-        sql`${locationRevision.id} IS NOT ${featureLocation.locationRevisionId}`,
-      ),
-    )
+    .where(and(eq(feature.id, input.featureId), eq(feature.projectId, input.projectId)))
     .get()
-  return candidate
-    ? proposeFeatureLocationAdoption(db, {
-        ...input,
-        candidateRevisionId: candidate.id,
-      })
-    : null
+  if (!association) return null
+  const correction = await readOrganisationLocation(
+    db,
+    association.organisationId,
+    association.locationId,
+  )
+  const latest = await db
+    .select({ id: locationRevision.id })
+    .from(locationRevision)
+    .where(eq(locationRevision.locationId, association.locationId))
+    .orderBy(sql`sequence DESC`)
+    .get()
+  if (!latest) return null
+  return proposeFeatureLocationAdoption(db, {
+    ...input,
+    candidateRevisionId: latest.id,
+    organisationRevision: correction?.revision,
+  })
 }

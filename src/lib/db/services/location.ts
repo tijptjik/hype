@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, isNull, or } from 'drizzle-orm'
+import { and, eq, isNull, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 // SCHEMA
 import {
@@ -184,7 +184,7 @@ export async function getAcceptedFeatureLocation(
       and(
         eq(featureLocation.featureId, featureId),
         or(
-          isNull(locationTable.ownerOrganisationId),
+          sql`${locationTable.state} != 'manual'`,
           eq(locationTable.ownerOrganisationId, locationOwnerForProject(projectId)),
         ),
       ),

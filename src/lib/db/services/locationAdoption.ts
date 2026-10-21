@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 // SCHEMA
 import { feature } from '../schema/feature'
 import {
@@ -11,6 +11,7 @@ import {
 import { planLocationAdoption } from '#lib/locations/adoption.js'
 // SERVICES
 import { getAcceptedFeatureLocation, getProjectLocationSettings } from './location'
+import { readOrganisationLocation } from './organisationLocation'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { LocationAdoptionPlan } from '#lib/locations/adoption.js'
@@ -26,9 +27,15 @@ import type { ProjectLocationSettings } from './location'
  */
 export async function previewFeatureLocationAdoption(
   db: Database,
-  input: { featureId: string; projectId: string; candidateRevisionId: string },
+  input: {
+    featureId: string
+    projectId: string
+    candidateRevisionId: string
+    organisationRevision?: string
+  },
 ): Promise<{
   plan: LocationAdoptionPlan
+  candidateOverrides: import('#lib/locations/model.js').FeatureLocationOverrides
   expectedRevision: string
   expectedFeatureModifiedAt: string
   settings: ProjectLocationSettings
@@ -77,12 +84,28 @@ export async function previewFeatureLocationAdoption(
     getProjectLocationSettings(db, input.projectId),
   ])
   if (!facts || !location || !candidate) return null
+  const organisation = await db.get<{ organisationId: string }>(
+    sql`SELECT organisationId FROM project WHERE id=${input.projectId}`,
+  )
+  const correction =
+    input.organisationRevision && organisation
+      ? await readOrganisationLocation(
+          db,
+          organisation.organisationId,
+          accepted.locationId,
+          input.organisationRevision,
+        )
+      : null
+  if (input.organisationRevision && !correction) return null
+  const candidateOverrides = correction?.overrides ?? association.overrides
   return {
+    candidateOverrides,
     plan: planLocationAdoption({
       facts,
       location,
       candidate,
       overrides: association.overrides,
+      candidateOverrides,
       policy: settings.policy,
     }),
     expectedRevision: accepted.revision,

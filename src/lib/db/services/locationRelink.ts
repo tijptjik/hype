@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, eq, isNull, ne, or } from 'drizzle-orm'
+import { and, eq, isNull, ne, or, sql } from 'drizzle-orm'
 // SCHEMA
 import {
   featureLocation,
@@ -18,6 +18,12 @@ import { readFeatureLocationBaseline } from './locationBaseline'
 import { prepareFeatureLocationAssociationWrite } from './locationAssociation'
 // OWNERSHIP
 import { locationOwnerForProject } from './locationScope'
+import {
+  readOrganisationLocation,
+  prepareOrganisationLocationWrite,
+} from './organisationLocation'
+import { readProjectLocationOwner } from './locationScope'
+import { prepareLinkedLocationProjection } from './locationLinkProjection'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { InitialLocationLinkResult } from './locationLink'
@@ -41,6 +47,7 @@ export async function relinkFeatureLocation(
     expectedFeatureModifiedAt: string
     expectedRevision: string
     actorId: string
+    authorizeLocationCorrection?: () => Promise<void>
   },
 ): Promise<InitialLocationLinkResult> {
   const current = await getAcceptedFeatureLocation(db, input.featureId, input.projectId)
@@ -80,7 +87,7 @@ export async function relinkFeatureLocation(
         eq(locationRevision.id, input.revisionId),
         eq(locationTable.sourceAvailability, 'current'),
         or(
-          isNull(locationTable.ownerOrganisationId),
+          sql`${locationTable.state} != 'manual'`,
           eq(
             locationTable.ownerOrganisationId,
             locationOwnerForProject(input.projectId),
@@ -91,7 +98,7 @@ export async function relinkFeatureLocation(
     .get()
   if (!destination) return { status: 'place-unavailable' }
   const facts = LocationFactsSchema.parse(destination.facts)
-  const overrides = preserveFeatureLocationBaseline(
+  let overrides = preserveFeatureLocationBaseline(
     current.effective,
     facts,
     facts.location,
@@ -108,13 +115,50 @@ export async function relinkFeatureLocation(
     if (override && override.mode !== 'inherit')
       Object.assign(overrides, { [key]: override })
   }
+  const organisationId = await readProjectLocationOwner(db, input.projectId)
+  const corrections = await readOrganisationLocation(
+    db,
+    organisationId,
+    input.locationId,
+  )
+  if (corrections) overrides = corrections.overrides
+  if (!corrections && Object.keys(overrides).length)
+    await input.authorizeLocationCorrection?.()
+  // Seed preserved values once at Organisation scope; subsequent Features reuse that head.
+  const fence = sql`EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND projectId=${input.projectId} AND modifiedAt=${input.expectedFeatureModifiedAt}) AND EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${input.featureId} AND revision=${input.expectedRevision})`
+  const correction = await prepareOrganisationLocationWrite(db, {
+    organisationId,
+    locationId: input.locationId,
+    actorId: input.actorId,
+    overrides,
+    guard: fence,
+  })
   const write = prepareFeatureLocationAssociationWrite(db, {
     ...input,
     factsRevisionId: input.revisionId,
     locationRevisionId: input.revisionId,
     overrides,
+    factsOrganisationRevision: correction.revision,
+    locationOrganisationRevision: correction.revision,
+    additionalGuard: correction.guard,
   })
-  const rows = await write.query
+  const projections = corrections
+    ? await prepareLinkedLocationProjection(db, {
+        ...input,
+        revision: write.revision,
+        facts,
+        overrides,
+      })
+    : []
+  const results = await db.batch([
+    ...correction.queries,
+    write.query,
+    ...projections,
+  ] as [
+    import('drizzle-orm/batch').BatchItem<'sqlite'>,
+    ...import('drizzle-orm/batch').BatchItem<'sqlite'>[],
+  ])
+  const rows = results[correction.queries.length] as Array<{ revision: string }>
   return rows.length
     ? { status: 'linked', revision: write.revision }
     : { status: 'conflict' }

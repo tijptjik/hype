@@ -36,7 +36,7 @@ export async function unlinkFeatureLocation(
   const guard = sql`EXISTS (SELECT 1 FROM feature f JOIN featureLocation fp ON fp.featureId=f.id
     JOIN location p ON p.id=fp.locationId
     WHERE f.id=${input.featureId} AND f.projectId=${input.projectId} AND f.isDraft=0
-      AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id=f.projectId))
+      AND (p.state!='manual' OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id=f.projectId))
       AND f.modifiedAt=${input.expectedFeatureModifiedAt} AND fp.revision=${input.expectedRevision})`
   const detachedGuard = sql`EXISTS (SELECT 1 FROM feature f
     WHERE f.id=${input.featureId} AND json_extract(f.localLocationBrands,'$.revision')=${revision})`

@@ -11,6 +11,13 @@ import type {
 } from './model'
 
 const names = z.record(z.string(), z.string())
+/** Complete authored name set; absent locales are explicitly removed by the correction writer. */
+export const LocationNamesEditSchema = z
+  .record(z.string().min(1).max(64), z.string().trim().min(1).max(1000))
+  .refine(
+    value => Object.keys(value).length > 0 && Object.keys(value).length <= 100,
+    'Keep at least one name and no more than 100 languages',
+  )
 const brands = z.array(z.strictObject({ identifiers: names, names }))
 const location = z.strictObject({
   geometry: z.strictObject({

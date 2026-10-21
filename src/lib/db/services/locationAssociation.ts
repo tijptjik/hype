@@ -18,6 +18,8 @@ export type FeatureLocationAssociationWrite = {
   locationRevisionId: string
   overrides: FeatureLocationOverrides
   actorId: string
+  factsOrganisationRevision?: string | null
+  locationOrganisationRevision?: string | null
   additionalGuard?: SQL
 }
 
@@ -62,7 +64,7 @@ export function prepareFeatureLocationAssociationWrite(
       .insert(featureLocation)
       .select(sql`
       SELECT ${input.featureId},${input.locationId},${revision},${input.actorId},
-        ${input.factsRevisionId},${input.locationRevisionId},${JSON.stringify(overrides)}
+        ${input.factsRevisionId},${input.locationRevisionId},${JSON.stringify(overrides)},${input.factsOrganisationRevision ?? null},${input.locationOrganisationRevision ?? null}
       WHERE ${featureGuard} AND NOT EXISTS
         (SELECT 1 FROM featureLocation WHERE featureId = ${input.featureId})
     `)
@@ -76,6 +78,12 @@ export function prepareFeatureLocationAssociationWrite(
       factsRevisionId: input.factsRevisionId,
       locationRevisionId: input.locationRevisionId,
       overrides,
+      ...(input.factsOrganisationRevision === undefined
+        ? {}
+        : { factsOrganisationRevision: input.factsOrganisationRevision }),
+      ...(input.locationOrganisationRevision === undefined
+        ? {}
+        : { locationOrganisationRevision: input.locationOrganisationRevision }),
       revision,
       actorId: input.actorId,
     })

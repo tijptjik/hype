@@ -82,6 +82,7 @@ import { LocalLocationInputSchema } from '#lib/locations/local.js'
 import { ProjectLocationPolicyFormData } from '#lib/db/zod/schema/project.js'
 import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
 import { LocationFactsSchema } from '#lib/locations/validation.js'
+import { parseAddressContent } from '@saanseoi/address'
 import {
   authorizeFeatureUpdateForSubmission,
   authorizeProjectUpdateForSubmission,
@@ -99,6 +100,7 @@ function setup(includeScope = false) {
   stores.push(sqlite)
   sqlite.exec(`PRAGMA foreign_keys=ON;
     CREATE TABLE organisation(id TEXT PRIMARY KEY);
+    CREATE TABLE organisationI18n(organisationId TEXT,locale TEXT,name TEXT,nameShort TEXT);
     INSERT INTO organisation VALUES ('p'),('other');
     CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
       organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
@@ -131,6 +133,12 @@ function setup(includeScope = false) {
   sqlite.exec(readFileSync('migrations/0121_place_refresh_identity_scan.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0138_location_storage.sql', 'utf8'))
+  sqlite.exec(
+    readFileSync('migrations/0139_organisation_location_corrections.sql', 'utf8'),
+  )
+  sqlite.exec(
+    readFileSync('migrations/0141_organisation_location_scope_guards.sql', 'utf8'),
+  )
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
     sqlite.exec(`DROP TRIGGER feature_location_scope_insert;
@@ -277,7 +285,7 @@ describe('accepted Location reads', () => {
     }
     sqlite
       .prepare(
-        'INSERT INTO featureLocation(featureId,locationId,factsRevisionId,locationRevisionId,overrides) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO featureLocation(featureId,locationId,factsRevisionId,locationRevisionId,acceptedOverrides) VALUES (?, ?, ?, ?, ?)',
       )
       .run(
         'f',
@@ -292,7 +300,7 @@ describe('accepted Location reads', () => {
     expect(result?.effective.phoneNumber).toBeNull()
     expect(JSON.stringify(result)).not.toContain('secret')
     expect(await getAcceptedFeatureLocation(db, 'f', 'other')).toBeNull()
-    sqlite.exec("UPDATE location SET ownerOrganisationId='other'")
+    sqlite.exec("UPDATE location SET ownerOrganisationId='other',state='manual'")
     expect(await getAcceptedFeatureLocation(db, 'f', 'p')).toBeNull()
     sqlite.exec(
       "UPDATE location SET ownerOrganisationId='p'; UPDATE feature SET isDraft=1",
@@ -561,10 +569,10 @@ describe('immutable SaanSeoi Place ingestion', () => {
       )
       .get(local.locationId)!
     const address = JSON.parse(latest.facts as string).location.address
-    expect(address.authored.i18n.en.formattedAddress).toBe('Original address')
-    expect(address.fallbackDisplay.en).toBe('Original address')
+    expect(address).toEqual(projection().facts.location.address)
+    expect(address.authored).toBeUndefined()
     expect(address.address2dId).toBeNull()
-    expect(JSON.parse(latest.payload as string).localAddress.review).toBe('required')
+    expect(JSON.parse(latest.payload as string).localAddress).toBeUndefined()
     expect(
       sqlite.prepare('SELECT ssId FROM location WHERE id=?').get(local.locationId)
         ?.ssId,
@@ -640,7 +648,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
     })
     sqlite.exec("INSERT INTO feature(id,projectId) VALUES('g','p')")
     const associate =
-      sqlite.prepare(`INSERT INTO featureLocation(featureId,locationId,factsRevisionId,locationRevisionId,overrides)
+      sqlite.prepare(`INSERT INTO featureLocation(featureId,locationId,factsRevisionId,locationRevisionId,acceptedOverrides)
       VALUES(?,?,?,?,?)`)
     associate.run(
       'f',
@@ -793,7 +801,10 @@ describe('immutable SaanSeoi Place ingestion', () => {
       locationId: target.locationId,
       ssId: 'canonical-shop',
     })
-    expect(await resolveLocationRedirect(db, source.locationId, 'other')).toBeNull()
+    expect(await resolveLocationRedirect(db, source.locationId, 'other')).toEqual({
+      locationId: target.locationId,
+      ssId: 'canonical-shop',
+    })
     const replay = await persistSaanSeoiPlace(db, projection())
     expect(replay.locationId).toBe(target.locationId)
     expect(
@@ -828,7 +839,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       const change = () =>
         sqlite
           .prepare(
-            "UPDATE featureLocation SET revision='concurrent',overrides=? WHERE featureId='g'",
+            "UPDATE featureLocation SET revision='concurrent',acceptedOverrides=? WHERE featureId='g'",
           )
           .run(
             JSON.stringify({
@@ -889,32 +900,11 @@ describe('immutable SaanSeoi Place ingestion', () => {
       status: 'scope-conflict',
     })
     sqlite.exec("UPDATE feature SET projectId='p' WHERE id='g'")
-    sqlite
-      .prepare("UPDATE location SET ownerOrganisationId='p' WHERE id=?")
-      .run(source.locationId)
-    const shared = await persistSaanSeoiPlace(db, {
-      ...projection(),
-      ssId: 'shared-survivor',
-    })
-    const baseline = await readLocationIdentityBaseline(db, shared.locationId, null)
-    if (!baseline) throw new Error('Missing shared baseline')
-    const review = await captureLocationIdentityReview(
-      db,
-      baseline,
-      projection(),
-      'core-reviewer',
-    )
-    if (!review) throw new Error('Missing review')
-    expect(
-      await captureLocationMergeReview(db, {
-        locationId: shared.locationId,
-        ownerOrganisationId: null,
-        identityReviewId: review,
-        sourceLocationId: source.locationId,
-        sourceOwnerOrganisationId: 'p',
-        actorId: 'core-reviewer',
-      }),
-    ).toEqual({ status: 'scope-conflict' })
+    expect(() =>
+      sqlite
+        .prepare("UPDATE location SET ownerOrganisationId='p' WHERE id=?")
+        .run(source.locationId),
+    ).toThrow('Source-linked Locations must be shared')
   })
 
   it('resolves multi-step redirects and retains historical identity claims with the survivor', async () => {
@@ -942,7 +932,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       identityReviewId,
       ownerOrganisationId: 'p',
       sourceLocationId: target.locationId,
-      sourceOwnerOrganisationId: 'p',
+      sourceOwnerOrganisationId: null,
       actorId: 'reviewer',
     })
     expect(captured).toMatchObject({ status: 'ready', affectedFeatures: 2 })
@@ -952,7 +942,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
         ...input,
         locationId: next.locationId,
         sourceLocationId: target.locationId,
-        sourceOwnerOrganisationId: 'p',
+        sourceOwnerOrganisationId: null,
         reviewId: captured.reviewId,
       }),
     ).toMatchObject({ status: 'applied' })
@@ -960,7 +950,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       locationId: next.locationId,
       ssId: 'canonical-shop',
     })
-    const current = await readLocationIdentityBaseline(db, next.locationId, 'p')
+    const current = await readLocationIdentityBaseline(db, next.locationId, null)
     if (!current) throw new Error('Missing current baseline')
     expect(
       await acceptLocationIdentity(
@@ -1017,17 +1007,11 @@ describe('immutable SaanSeoi Place ingestion', () => {
         reason: 'Same establishment',
       }),
     ).toEqual({ status: 'merge-required' })
-    sqlite
-      .prepare("UPDATE location SET ownerOrganisationId='other' WHERE id=?")
-      .run(source.locationId)
-    expect(
-      await captureMirroredLocationIdentityReview(
-        db,
-        baseline,
-        source.revisionId,
-        'actor',
-      ),
-    ).toBeNull()
+    expect(() =>
+      sqlite
+        .prepare("UPDATE location SET ownerOrganisationId='other' WHERE id=?")
+        .run(source.locationId),
+    ).toThrow('Source-linked Locations must be shared')
     sqlite
       .prepare(
         "UPDATE location SET ownerOrganisationId=NULL,sourceAvailability='missing' WHERE id=?",
@@ -1099,7 +1083,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
     ).toEqual({ actorId: 'approver', reason: 'Verified unit', reviewId })
     await persistSaanSeoiPlace(db, projection())
     expect(sqlite.prepare('SELECT count(*) n FROM locationRevision').get()?.n).toBe(2)
-    expect(await readLocationIdentityReview(db, input)).toMatchObject({ stale: true })
+    expect(await readLocationIdentityReview(db, input)).toBeNull()
     expect(
       await acceptLocationIdentityReview(db, {
         ...input,
@@ -1153,12 +1137,12 @@ describe('immutable SaanSeoi Place ingestion', () => {
   })
 
   it.each(['manual', 'unresolved'] as const)(
-    'promotes %s without changing identity, privacy or accepted values',
+    'promotes %s to a shared source-controlled identity without changing accepted values',
     async state => {
       const { db, sqlite } = setup()
       const local = await createLocalLocation(db, 'p', { state, facts }, 'actor')
       sqlite
-        .prepare(`INSERT INTO featureLocation(featureId,locationId,factsRevisionId,locationRevisionId,overrides)
+        .prepare(`INSERT INTO featureLocation(featureId,locationId,factsRevisionId,locationRevisionId,acceptedOverrides)
       VALUES ('f',?,?,?,?)`)
         .run(
           local.locationId,
@@ -1184,7 +1168,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
         id: local.locationId,
         ssId: 'canonical-shop',
         state: 'linked',
-        ownerOrganisationId: 'p',
+        ownerOrganisationId: null,
       })
       expect(sqlite.prepare('SELECT * FROM featureLocation').all()).toEqual(before)
       expect(
@@ -1407,18 +1391,12 @@ describe('immutable SaanSeoi Place ingestion', () => {
       ssId: source.ssId,
       resourceReleaseId: source.releaseId,
     }
-    sqlite
-      .prepare('UPDATE location SET ownerOrganisationId=? WHERE id=?')
-      .run('other', mirrored.locationId)
-    expect(await resolveLocationCandidate(db, input)).toEqual({
-      status: 'source-import-needed',
-    })
-    expect(
-      await resolveLocationCandidate(db, { ...input, projectId: 'other' }),
-    ).toMatchObject({ status: 'ready' })
-    sqlite
-      .prepare('UPDATE location SET ownerOrganisationId=NULL WHERE id=?')
-      .run(mirrored.locationId)
+    expect(() =>
+      sqlite
+        .prepare('UPDATE location SET ownerOrganisationId=? WHERE id=?')
+        .run('other', mirrored.locationId),
+    ).toThrow('Source-linked Locations must be shared')
+    expect(await resolveLocationCandidate(db, input)).toMatchObject({ status: 'ready' })
     for (const availability of ['missing', 'review']) {
       sqlite
         .prepare('UPDATE location SET sourceAvailability=? WHERE id=?')
@@ -1462,63 +1440,20 @@ describe('immutable SaanSeoi Place ingestion', () => {
         0,
       )
     })
-    it('rechecks ownership inside the write batch after a concurrent scope change', async () => {
+    it('forbids private canonical identities before source persistence', async () => {
       const { db, sqlite } = setup()
       const original = await persistSaanSeoiPlace(db, projection())
-      db.batch = new Proxy(db.batch, {
-        apply(target, receiver, args) {
-          sqlite
-            .prepare(
-              "UPDATE location SET ownerOrganisationId='other',sourceAvailability='missing' WHERE id=?",
-            )
-            .run(original.locationId)
-          return Reflect.apply(target, receiver, args)
-        },
-      })
-      const source = projection()
-      expect(
-        await persistLocationCandidate(db, 'p', {
-          ...source,
-          releaseId: 'new-release',
-          payload: { ...source.payload, meta: { apiReleaseSet: 'new-publication' } },
-        }),
-      ).toBeNull()
-      expect(
-        sqlite.prepare('SELECT count(*) AS n FROM locationRevision').get()?.n,
-      ).toBe(1)
-      expect(
-        sqlite
-          .prepare('SELECT sourceAvailability FROM location WHERE id=?')
-          .get(original.locationId)?.sourceAvailability,
-      ).toBe('missing')
-    })
-    it('does not mutate or disclose another project private Location', async () => {
-      const { db, sqlite } = setup()
-      const source = projection()
-      const original = await persistSaanSeoiPlace(db, source)
-      sqlite
-        .prepare(
-          "UPDATE location SET ownerOrganisationId='other',sourceAvailability='missing' WHERE id=?",
-        )
-        .run(original.locationId)
       const before = sqlite.prepare('SELECT * FROM location').all()
-      expect(
-        await persistLocationCandidate(db, 'p', {
-          ...source,
-          releaseId: 'new-release',
-        }),
-      ).toBeNull()
+      expect(() =>
+        sqlite
+          .prepare("UPDATE location SET ownerOrganisationId='other' WHERE id=?")
+          .run(original.locationId),
+      ).toThrow('Source-linked Locations must be shared')
       expect(sqlite.prepare('SELECT * FROM location').all()).toEqual(before)
-      expect(
-        sqlite.prepare('SELECT count(*) AS n FROM locationRevision').get()?.n,
-      ).toBe(1)
-      expect(
-        await persistLocationCandidate(db, 'other', {
-          ...source,
-          releaseId: 'new-release',
-          payload: { ...source.payload, meta: { apiReleaseSet: 'new-publication' } },
-        }),
-      ).toMatchObject({ status: 'ready', locationId: original.locationId })
+      expect(await persistLocationCandidate(db, 'other', projection())).toMatchObject({
+        status: 'ready',
+        locationId: original.locationId,
+      })
     })
   })
 })
@@ -1527,7 +1462,7 @@ describe('conditional association writes and immutable history', () => {
   it('gates effective writes on the winning token and leaves stale batches unchanged', async () => {
     const { db, sqlite } = setup()
     sqlite.exec(
-      readFileSync('migrations/0138_location_storage.sql', 'utf8')
+      readFileSync('migrations/0139_organisation_location_corrections.sql', 'utf8')
         .match(
           /CREATE TRIGGER feature_location_(?:scope_insert|scope_update|feature_scope|owner_scope)[\s\S]*?END;/g,
         )!
@@ -1619,7 +1554,7 @@ describe('conditional association writes and immutable history', () => {
     ).toEqual([])
     const history = sqlite
       .prepare(
-        'SELECT action, previousRevision, overrides, actorId FROM featureLocationHistory ORDER BY id',
+        'SELECT action, previousRevision, acceptedOverrides AS overrides, actorId FROM featureLocationHistory ORDER BY id',
       )
       .all()
     expect(history).toEqual([
@@ -1632,7 +1567,9 @@ describe('conditional association writes and immutable history', () => {
       },
     ])
     expect(() =>
-      sqlite.exec("UPDATE featureLocation SET overrides='{}' WHERE featureId='f'"),
+      sqlite.exec(
+        "UPDATE featureLocation SET acceptedOverrides='{}' WHERE featureId='f'",
+      ),
     ).toThrow('new revision')
     expect(() => sqlite.exec('DELETE FROM featureLocationHistory')).toThrow('immutable')
     expect(() =>
@@ -1736,7 +1673,7 @@ describe('persisted Feature baseline and initial linking', () => {
   it('preserves names, universal phone, brand identities and existing columns when linking', async () => {
     const { db, sqlite } = setup()
     sqlite.exec(
-      readFileSync('migrations/0138_location_storage.sql', 'utf8')
+      readFileSync('migrations/0139_organisation_location_corrections.sql', 'utf8')
         .match(
           /CREATE TRIGGER feature_location_(?:scope_insert|scope_update|feature_scope|owner_scope)[\s\S]*?END;/g,
         )!
@@ -2020,7 +1957,7 @@ describe('linked Feature form persistence', () => {
       .prepare("UPDATE feature SET geometry=? WHERE id='f'")
       .run(JSON.stringify(facts.location.geometry))
     sqlite.exec(
-      readFileSync('migrations/0138_location_storage.sql', 'utf8')
+      readFileSync('migrations/0139_organisation_location_corrections.sql', 'utf8')
         .match(
           /CREATE TRIGGER feature_location_(?:scope_insert|scope_update|feature_scope|owner_scope)[\s\S]*?END;/g,
         )!
@@ -2028,8 +1965,8 @@ describe('linked Feature form persistence', () => {
     )
     const local = await createLocalLocation(
       db,
-      'p',
-      { state: 'manual', facts: { ...facts, phoneNumber: [] } },
+      'other',
+      { state: 'unresolved', facts: { ...facts, phoneNumber: [] } },
       'actor',
     )
     const link = await linkInitialFeatureLocation(db, {
@@ -2064,17 +2001,31 @@ describe('linked Feature form persistence', () => {
     if (saved.status !== 'saved') throw new Error('Expected save')
     const accepted = await getAcceptedFeatureLocation(db, 'f', 'p')
     expect(accepted?.effective.phoneNumber).toEqual(['+85291234567', '+85223456789'])
-    const stored = sqlite.prepare('SELECT overrides FROM featureLocation').get()
+    const stored = sqlite
+      .prepare('SELECT acceptedOverrides AS overrides FROM featureLocation')
+      .get()
     expect(JSON.parse(stored!.overrides as string)).toEqual({
       phoneNumber: { mode: 'override', value: ['+85291234567', '+85223456789'] },
     })
+    const correction = sqlite
+      .prepare(
+        "SELECT overrides FROM organisationLocation WHERE organisationId='p' AND locationId=?",
+      )
+      .get(local.locationId)!
+    expect(JSON.parse(correction.overrides as string)).toEqual(
+      JSON.parse(stored!.overrides as string),
+    )
     expect(
       sqlite
         .prepare("SELECT title,description FROM featureI18n WHERE featureId='f'")
         .get(),
     ).toEqual({ title: 'Bakery', description: 'Collection instructions' })
     expect(
-      sqlite.prepare("SELECT value FROM featureProperty WHERE featureId='f'").get(),
+      sqlite
+        .prepare(
+          "SELECT value FROM featureProperty WHERE featureId='f' AND propertyId='phone'",
+        )
+        .get(),
     ).toEqual({ value: '["+85291234567","+85223456789"]' })
     expect(await saveLinkedFeatureForm(db, input)).toEqual({ status: 'conflict' })
     const snapshot = () =>
@@ -2584,7 +2535,7 @@ describe('private local Location discovery', () => {
     ).toHaveLength(1)
     expect(
       await searchLocalLocationCandidates(db, { projectId: 'p', q: 'Bakery' }),
-    ).toEqual([])
+    ).toHaveLength(1)
     expect(
       await searchLocalLocationCandidates(db, { projectId: 'other', q: '100%_' }),
     ).toEqual([])
@@ -2688,7 +2639,11 @@ describe('explicit Location reassociation', () => {
     })
     expect(after?.locationId).toBe(destination.locationId)
     const overrides = JSON.parse(
-      String(sqlite.prepare('SELECT overrides FROM featureLocation').get()?.overrides),
+      String(
+        sqlite
+          .prepare('SELECT acceptedOverrides AS overrides FROM featureLocation')
+          .get()?.overrides,
+      ),
     )
     expect(overrides.phoneNumber).toEqual({
       mode: 'override',
@@ -2866,7 +2821,7 @@ describe('atomic unresolved Feature split application', () => {
     const { db, sqlite, plan } = await fixture()
     await applyUnresolvedFeatureSplit(db, plan, 'actor')
     sqlite.exec(
-      `UPDATE featureLocation SET overrides='{"names":{"en":{"mode":"override","value":"Later"}}}',revision='later'`,
+      `UPDATE featureLocation SET acceptedOverrides='{"names":{"en":{"mode":"override","value":"Later"}}}',revision='later'`,
     )
     expect(await applyUnresolvedFeatureSplit(db, plan, 'actor')).toEqual({
       status: 'conflict',
@@ -2944,7 +2899,7 @@ describe('accepted Location brand read projection', () => {
     sqlite.exec('UPDATE feature SET isDraft=1')
     expect((await query())?.locationBrands).toBeNull()
     sqlite.exec(
-      "UPDATE feature SET isDraft=0; UPDATE location SET ownerOrganisationId='other'",
+      "UPDATE feature SET isDraft=0; UPDATE location SET ownerOrganisationId='other',state='manual'",
     )
     expect((await query())?.locationBrands).toBeNull()
   })
@@ -3113,7 +3068,7 @@ describe('explicit Location unlink preservation', () => {
   it('keeps an explicit brand clear empty after unlink and leaves source facts intact', async () => {
     const { db, sqlite, input, brands, local } = await linked()
     sqlite.exec(
-      `UPDATE featureLocation SET overrides='{"brands":{"mode":"clear"}}',revision='cleared'`,
+      `UPDATE featureLocation SET acceptedOverrides='{"brands":{"mode":"clear"}}',revision='cleared'`,
     )
     expect(
       await unlinkFeatureLocation(db, { ...input, expectedRevision: 'cleared' }),
@@ -4361,9 +4316,20 @@ describe('standalone Location directory', () => {
         }
         sqlite
           .prepare(
-            "INSERT INTO locationRevision(id,locationId,sequence,origin,contentHash,payload,facts) VALUES (?,?,?,'local',?,'{}',?)",
+            "INSERT INTO locationRevision(id,locationId,sequence,origin,ssId,apiVersion,releaseId,snapshotId,contentHash,payload,facts) VALUES (?,?,?,?,?,?,?,?,?,'{}',?)",
           )
-          .run(`${id}-${sequence}`, id, sequence, `${sequence}`, JSON.stringify(value))
+          .run(
+            `${id}-${sequence}`,
+            id,
+            sequence,
+            owner ? 'local' : 'saanseoi',
+            owner ? null : 'shared-ss',
+            owner ? null : 'v0.1',
+            owner ? null : 'release',
+            owner ? null : 'snapshot',
+            `${sequence}`,
+            JSON.stringify(value),
+          )
       }
     }
     const shared = await listLocationResources(db, {})
@@ -4564,18 +4530,9 @@ describe('forward-only bulk source persistence', () => {
       },
     }
   }
-  it('retains a matched Location local address and source evidence through refresh and replay', async () => {
+  it('retains Organisation-authored addresses independently of clean source refreshes', async () => {
     const { db, sqlite } = setup()
-    const initial = source()
-    initial.payload.resource = {
-      id: initial.ssId,
-      attributes: {
-        basicCategory: 'bakery',
-        taxonomy: { primary: 'bakery' },
-        operatingStatus: 'open',
-      },
-    }
-    const first = await persistForwardSaanSeoiPlace(db, initial)
+    const first = await persistForwardSaanSeoiPlace(db, source())
     const address = {
       granularity: 'unit',
       i18n: { en: { formattedAddress: 'Reviewed local address' } },
@@ -4585,7 +4542,7 @@ describe('forward-only bulk source persistence', () => {
     expect(
       await updateLocalLocationAddress(db, {
         locationId: first.locationId,
-        organisationId: 'p',
+        organisationId: null,
         expectedRevisionId: first.revisionId,
         address,
         actorId: 'actor',
@@ -4593,44 +4550,34 @@ describe('forward-only bulk source persistence', () => {
     ).toBeNull()
     const edit = await updateLocalLocationAddress(db, {
       locationId: first.locationId,
-      organisationId: null,
+      organisationId: 'p',
       expectedRevisionId: first.revisionId,
       address,
-      actorId: 'steward',
-      parseSource: { en: 'Shop 18, G/F, Example Road' },
+      actorId: 'actor',
     })
-    expect(edit).not.toBeNull()
-    const edited = sqlite
-      .prepare('SELECT * FROM locationRevision WHERE id=?')
-      .get(edit!.revisionId)!
-    expect(edited.ssId).toBe(initial.ssId)
-    expect(JSON.parse(edited.payload as string).resource).toEqual(
-      initial.payload.resource,
-    )
-    expect(JSON.parse(edited.payload as string).localAddress.parse.parserVersion).toBe(
-      '0.1.0',
-    )
-    const next = source(9)
-    next.payload.resource = initial.payload.resource
-    const refreshed = await persistForwardSaanSeoiPlace(db, next)
+    expect(edit?.revisionId).toBe(first.revisionId)
+    expect(edit?.organisationRevision).toBeTruthy()
+    const refreshed = await persistForwardSaanSeoiPlace(db, source(9))
     const row = sqlite
       .prepare('SELECT * FROM locationRevision WHERE id=?')
       .get(refreshed.revisionId)!
-    expect(JSON.parse(row.facts as string).location.address.authored).toEqual(address)
-    expect(JSON.parse(row.payload as string).localAddress.actorId).toBe('steward')
-    expect(JSON.parse(row.payload as string).sourceAddress).toEqual(
-      next.facts.location.address,
-    )
-    expect(await persistForwardSaanSeoiPlace(db, next)).toEqual(refreshed)
+    expect(JSON.parse(row.facts as string)).toEqual(source(9).facts)
+    expect(JSON.parse(row.payload as string).localAddress).toBeUndefined()
+    const scoped = await listLocationResources(db, {
+      id: first.locationId,
+      organisationId: 'p',
+    })
+    expect(scoped.data[0].facts?.location.address.authored).toEqual(address)
     expect(
-      sqlite.prepare('SELECT ssId FROM location WHERE id=?').get(first.locationId)
-        ?.ssId,
-    ).toBe(initial.ssId)
-    expect(
-      sqlite
-        .prepare('SELECT payload FROM locationRevision WHERE id=?')
-        .get(first.revisionId)?.payload,
-    ).not.toBe(edited.payload)
+      (
+        await listLocationResources(db, {
+          id: first.locationId,
+          organisationId: 'other',
+        })
+      ).data[0].facts,
+    ).toEqual(source(9).facts)
+    expect(await persistForwardSaanSeoiPlace(db, source(9))).toEqual(refreshed)
+    expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
   })
 
   it('creates, replays and advances while refusing older publications', async () => {
@@ -5083,4 +5030,386 @@ it('retains local structured Feature corrections and explicit clearing without d
       'en',
     ),
   ).toBe('')
+})
+
+describe('Organisation-wide Location corrections', () => {
+  /** Build real SQL projections so adoption and rollback exercise the same columns as production. */
+  async function fixture() {
+    const state = setup(true)
+    const { getTableColumns } = await import('drizzle-orm')
+    const { feature, featureI18n } = await import('#lib/db/schema/feature.js')
+    for (const [name, table] of [
+      ['feature', feature],
+      ['featureI18n', featureI18n],
+    ] as const) {
+      const existing = new Set(
+        state.sqlite
+          .prepare(`PRAGMA table_info(${name})`)
+          .all()
+          .map(row => row.name),
+      )
+      for (const column of Object.values(getTableColumns(table)))
+        if (!existing.has(column.name))
+          state.sqlite.exec(
+            `ALTER TABLE ${name} ADD COLUMN "${column.name}" ${column.getSQLType()}`,
+          )
+    }
+    state.sqlite.exec(`CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
+      INSERT INTO hub VALUES('core','core');
+      INSERT INTO property(id,key,scope,hubId) VALUES('phone','phoneNumber','hub','core');
+      INSERT INTO project(id,organisationId) VALUES('sibling','other');`)
+    const local = await createLocalLocation(
+      state.db,
+      'p',
+      { state: 'unresolved', facts: { ...facts, phoneNumber: [] } },
+      'curator',
+    )
+    /** Link a Feature with the same physical facts; its project defines the correction scope. */
+    async function link(id: string, projectId: string) {
+      if (id !== 'f')
+        state.sqlite
+          .prepare('INSERT INTO feature(id,projectId) VALUES(?,?)')
+          .run(id, projectId)
+      state.sqlite
+        .prepare('UPDATE feature SET geometry=? WHERE id=?')
+        .run(JSON.stringify(facts.location.geometry), id)
+      state.sqlite
+        .prepare(
+          "INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES(?,'en','Bakery','Original address')",
+        )
+        .run(id)
+      const result = await linkInitialFeatureLocation(state.db, {
+        featureId: id,
+        projectId,
+        locationId: local.locationId,
+        revisionId: local.revisionId,
+        expectedFeatureModifiedAt: 'original',
+        actorId: 'linker',
+      })
+      expect(result.status).toBe('linked')
+      return result
+    }
+    return { ...state, local, link }
+  }
+
+  it('lets the unmatched owner change the baseline and keeps non-owner corrections independent', async () => {
+    const { db, sqlite, local } = await fixture()
+    const edit = await updateLocalLocationAddress(db, {
+      ...local,
+      organisationId: 'p',
+      expectedRevisionId: local.revisionId,
+      names: { en: 'Curated baseline' },
+      actorId: 'owner',
+    })
+    expect(edit).not.toBeNull()
+    expect(edit!.revisionId).not.toBe(local.revisionId)
+    expect(sqlite.prepare('SELECT count(*) n FROM organisationLocation').get()?.n).toBe(
+      0,
+    )
+    const other = await updateLocalLocationAddress(db, {
+      locationId: local.locationId,
+      organisationId: 'other',
+      expectedRevisionId: edit!.revisionId,
+      names: { en: 'Our correction' },
+      actorId: 'other',
+    })
+    expect(other?.revisionId).toBe(edit!.revisionId)
+    expect(other?.organisationRevision).toBeTruthy()
+    expect(
+      (await listLocationResources(db, { id: local.locationId, organisationId: 'p' }))
+        .data[0].facts?.names.en,
+    ).toBe('Curated baseline')
+    expect(
+      (
+        await listLocationResources(db, {
+          id: local.locationId,
+          organisationId: 'other',
+        })
+      ).data[0].facts?.names.en,
+    ).toBe('Our correction')
+    const next = await updateLocalLocationAddress(db, {
+      locationId: local.locationId,
+      organisationId: 'p',
+      expectedRevisionId: edit!.revisionId,
+      names: { en: 'New baseline' },
+      actorId: 'owner',
+    })
+    expect(next).not.toBeNull()
+    expect(
+      (
+        await listLocationResources(db, {
+          id: local.locationId,
+          organisationId: 'other',
+        })
+      ).data[0].facts?.names.en,
+    ).toBe('Our correction')
+    expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+  })
+
+  it('reuses corrections across Projects and lets Project policy hold or adopt revisions', async () => {
+    const { db, sqlite, local, link } = await fixture()
+    await link('f', 'p')
+    await link('g', 'other')
+    const correction = await updateLocalLocationAddress(db, {
+      locationId: local.locationId,
+      organisationId: 'other',
+      expectedRevisionId: local.revisionId,
+      names: { en: 'Organisation name' },
+      actorId: 'editor',
+    })
+    expect(correction?.organisationRevision).toBeTruthy()
+    expect(
+      (await getAcceptedFeatureLocation(db, 'g', 'other'))?.effective.names.en,
+    ).toBe('Bakery')
+    await link('h', 'sibling')
+    expect(
+      (await getAcceptedFeatureLocation(db, 'h', 'sibling'))?.effective.names.en,
+    ).toBe('Organisation name')
+    expect((await getAcceptedFeatureLocation(db, 'f', 'p'))?.effective.names.en).toBe(
+      'Bakery',
+    )
+    const { processLocalLocationChanges } = await import(
+      '#lib/db/services/locationLocalRefresh.js'
+    )
+    expect(await processLocalLocationChanges(db)).toBe('review')
+    const proposal = sqlite
+      .prepare("SELECT id FROM locationAdoptionProposal WHERE featureId='g'")
+      .get()!
+    const accepted = await getAcceptedFeatureLocation(db, 'g', 'other')
+    expect(
+      await rejectLocationAdoptionGroup(db, {
+        featureId: 'g',
+        projectId: 'other',
+        proposalId: String(proposal.id),
+        fieldGroup: 'facts',
+        expectedRevision: accepted!.revision,
+        expectedFeatureModifiedAt: 'original',
+        actorId: 'reviewer',
+        reason: 'Keep accepted name',
+      }),
+    ).not.toBeNull()
+    await saveProjectLocationSettings(
+      db,
+      'other',
+      {
+        ...DEFAULT_PROJECT_LOCATION_POLICY,
+        coordinates: { mode: 'automatic' },
+        address: 'automatic',
+        unit: 'automatic',
+        establishment: 'automatic',
+      },
+      0,
+    )
+    // Retrying this item retains the explicit rejection even after a policy change.
+    sqlite.exec("UPDATE locationRefreshItem SET featureCursor='' WHERE origin='local'")
+    await processLocalLocationChanges(db)
+    expect(
+      (await getAcceptedFeatureLocation(db, 'g', 'other'))?.effective.names.en,
+    ).toBe('Bakery')
+    expect(sqlite.prepare('SELECT count(*) n FROM organisationLocation').get()?.n).toBe(
+      1,
+    )
+  })
+
+  it('automatically adopts shared baseline edits under the consuming Project policy', async () => {
+    const { db, local, link } = await fixture()
+    await link('g', 'other')
+    await saveProjectLocationSettings(
+      db,
+      'other',
+      {
+        ...DEFAULT_PROJECT_LOCATION_POLICY,
+        coordinates: { mode: 'automatic' },
+        address: 'automatic',
+        unit: 'automatic',
+        establishment: 'automatic',
+      },
+      0,
+    )
+    await updateLocalLocationAddress(db, {
+      locationId: local.locationId,
+      organisationId: 'p',
+      expectedRevisionId: local.revisionId,
+      names: { en: 'New shared name' },
+      actorId: 'owner',
+    })
+    const { processLocalLocationChanges } = await import(
+      '#lib/db/services/locationLocalRefresh.js'
+    )
+    expect(await processLocalLocationChanges(db)).toBe('progress')
+    expect(
+      (await getAcceptedFeatureLocation(db, 'g', 'other'))?.effective.names.en,
+    ).toBe('New shared name')
+    expect(await processLocalLocationChanges(db)).toBe('processed')
+  })
+
+  it('prevents accepted corrections from leaking through a cross-Organisation move', async () => {
+    const { db, sqlite, local, link } = await fixture()
+    await updateLocalLocationAddress(db, {
+      locationId: local.locationId,
+      organisationId: 'other',
+      expectedRevisionId: local.revisionId,
+      names: { en: 'Our correction' },
+      actorId: 'editor',
+    })
+    await link('g', 'other')
+    expect(() => sqlite.exec("UPDATE feature SET projectId='p' WHERE id='g'")).toThrow(
+      'reconcile accepted Organisation corrections',
+    )
+    expect(() =>
+      sqlite.exec("UPDATE project SET organisationId='p' WHERE id='other'"),
+    ).toThrow('reconcile accepted Organisation corrections')
+    sqlite.exec("UPDATE feature SET projectId='sibling' WHERE id='g'")
+    expect(
+      (await getAcceptedFeatureLocation(db, 'g', 'sibling'))?.effective.names.en,
+    ).toBe('Our correction')
+    expect(() =>
+      sqlite.exec(
+        "UPDATE featureLocation SET factsOrganisationRevision='foreign-token' WHERE featureId='g'",
+      ),
+    ).toThrow('correction scope mismatch')
+  })
+
+  it('automatically materializes an Organisation correction without changing the shared baseline', async () => {
+    const { db, sqlite, local, link } = await fixture()
+    await link('g', 'other')
+    await saveProjectLocationSettings(
+      db,
+      'other',
+      {
+        ...DEFAULT_PROJECT_LOCATION_POLICY,
+        coordinates: { mode: 'automatic' },
+        address: 'automatic',
+        unit: 'automatic',
+        establishment: 'automatic',
+      },
+      0,
+    )
+    const edit = await updateLocalLocationAddress(db, {
+      locationId: local.locationId,
+      organisationId: 'other',
+      expectedRevisionId: local.revisionId,
+      names: { en: 'Corrected for us' },
+      actorId: 'editor',
+    })
+    const { processLocalLocationChanges } = await import(
+      '#lib/db/services/locationLocalRefresh.js'
+    )
+    expect(await processLocalLocationChanges(db)).toBe('progress')
+    expect(
+      (await getAcceptedFeatureLocation(db, 'g', 'other'))?.effective.names.en,
+    ).toBe('Corrected for us')
+    expect(
+      sqlite.prepare("SELECT title FROM featureI18n WHERE featureId='g'").get()?.title,
+    ).toBe('Corrected for us')
+    expect(
+      sqlite
+        .prepare(
+          "SELECT factsOrganisationRevision FROM featureLocation WHERE featureId='g'",
+        )
+        .get()?.factsOrganisationRevision,
+    ).toBe(edit!.organisationRevision)
+    expect(
+      (await listLocationResources(db, { id: local.locationId })).data[0].facts?.names
+        .en,
+    ).toBe('Bakery')
+  })
+
+  it('does not let another Organisation read, link or edit a manual Location', async () => {
+    const { db, sqlite, link } = await fixture()
+    const privateLocation = await createLocalLocation(
+      db,
+      'p',
+      { state: 'manual', facts },
+      'owner',
+    )
+    expect(
+      (
+        await listLocationResources(db, {
+          id: privateLocation.locationId,
+          organisationId: 'other',
+        })
+      ).data,
+    ).toEqual([])
+    expect(
+      await updateLocalLocationAddress(db, {
+        locationId: privateLocation.locationId,
+        organisationId: 'other',
+        expectedRevisionId: privateLocation.revisionId,
+        names: { en: 'Forbidden' },
+        actorId: 'other',
+      }),
+    ).toBeNull()
+    sqlite
+      .prepare('UPDATE feature SET projectId=?,geometry=? WHERE id=?')
+      .run('other', JSON.stringify(facts.location.geometry), 'f')
+    expect(
+      await linkInitialFeatureLocation(db, {
+        featureId: 'f',
+        projectId: 'other',
+        ...privateLocation,
+        expectedFeatureModifiedAt: 'original',
+        actorId: 'other',
+      }),
+    ).toEqual({ status: 'place-unavailable' })
+    expect(sqlite.prepare('SELECT count(*) n FROM organisationLocation').get()?.n).toBe(
+      0,
+    )
+  })
+
+  it('rejects stale correction heads and rolls back all writes after a late failure', async () => {
+    const { db, sqlite, local } = await fixture()
+    const input = {
+      locationId: local.locationId,
+      organisationId: 'other',
+      expectedRevisionId: local.revisionId,
+      expectedOrganisationRevision: null,
+      names: { en: 'Our name' },
+      actorId: 'editor',
+    }
+    const edit = await updateLocalLocationAddress(db, input)
+    expect(edit?.organisationRevision).toBeTruthy()
+    const before = sqlite.prepare('SELECT * FROM organisationLocation').all()
+    expect(
+      await updateLocalLocationAddress(db, { ...input, names: { en: 'Stale' } }),
+    ).toBeNull()
+    sqlite.exec(
+      "CREATE TRIGGER fail_correction AFTER UPDATE ON organisationLocation BEGIN SELECT RAISE(ABORT,'late failure'); END",
+    )
+    await expect(
+      updateLocalLocationAddress(db, {
+        ...input,
+        expectedOrganisationRevision: edit!.organisationRevision,
+        names: { en: 'Fail' },
+      }),
+    ).rejects.toThrow('late failure')
+    expect(sqlite.prepare('SELECT * FROM organisationLocation').all()).toEqual(before)
+    expect(sqlite.prepare('SELECT count(*) n FROM locationRevision').get()?.n).toBe(1)
+  })
+
+  it('fences a baseline race inside a non-owner correction batch', async () => {
+    const { db, sqlite, local } = await fixture()
+    db.batch = new Proxy(db.batch, {
+      apply(target, receiver, args) {
+        sqlite
+          .prepare(
+            "INSERT INTO locationRevision SELECT 'raced',locationId,sequence+1,origin,ssId,apiVersion,releaseId,snapshotId,'raced',payload,facts,createdAt FROM locationRevision WHERE id=?",
+          )
+          .run(local.revisionId)
+        return Reflect.apply(target, receiver, args)
+      },
+    })
+    expect(
+      await updateLocalLocationAddress(db, {
+        locationId: local.locationId,
+        organisationId: 'other',
+        expectedRevisionId: local.revisionId,
+        names: { en: 'Stale correction' },
+        actorId: 'other',
+      }),
+    ).toBeNull()
+    expect(sqlite.prepare('SELECT count(*) n FROM organisationLocation').get()?.n).toBe(
+      0,
+    )
+  })
 })

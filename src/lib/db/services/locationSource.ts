@@ -15,7 +15,6 @@ import {
 // VALIDATION
 import { LocationFactsSchema } from '#lib/locations/validation.js'
 // DOMAIN
-import { retainAuthoredAddress } from '#lib/locations/authoredAddress.js'
 import { deriveLocationId } from '#lib/locations/id.server.js'
 import { equalLocationSourceRecord } from '#lib/locations/sourceEvidence.js'
 import {
@@ -133,7 +132,6 @@ export async function persistSaanSeoiPlace(
     .where(eq(locationRevision.locationId, locationId))
     .orderBy(sql`${locationRevision.sequence} DESC`)
     .get()
-  projection = retainAuthoredAddress(projection, latest)
   const {
     facts,
     payload,
@@ -262,12 +260,6 @@ export async function persistForwardSaanSeoiPlace(
     }
   }
   const locationId = existing?.id ?? deriveLocationId('saanseoi', projection.ssId)
-  projection = retainAuthoredAddress(
-    projection,
-    existing?.facts && existing.payload
-      ? { facts: JSON.parse(existing.facts), payload: JSON.parse(existing.payload) }
-      : null,
-  )
   const prepared = await prepareSaanSeoiRevision(locationId, projection)
   // The new revision is allowed in the guard after this batch inserts it, so availability can advance too.
   const guard = existing

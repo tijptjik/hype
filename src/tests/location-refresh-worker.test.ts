@@ -5,6 +5,9 @@ import type { MtrEnvironment } from '#lib/routing/mtr-refresh.js'
 import { refreshLocations } from '#lib/locations/refresh.js'
 import { refreshFeatureMtr } from '#lib/routing/mtr-refresh.js'
 
+vi.mock('#lib/db/services/locationLocalRefresh.js', () => ({
+  processLocalLocationChanges: vi.fn().mockResolvedValue('idle'),
+}))
 vi.mock('#lib/locations/refresh.js', () => ({ refreshLocations: vi.fn() }))
 vi.mock('#lib/routing/mtr-refresh.js', () => ({ refreshFeatureMtr: vi.fn() }))
 afterEach(() => vi.restoreAllMocks())

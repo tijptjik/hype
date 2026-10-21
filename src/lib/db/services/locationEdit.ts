@@ -23,6 +23,10 @@ import { getDetachedFeatureBrands } from './locationDetached'
 import { readFeatureLocationBaseline } from './locationBaseline'
 import { prepareFeatureLocationAssociationWrite } from './locationAssociation'
 import { prepareFeatureLocationRelations } from './locationRelations'
+// ORGANISATION CORRECTIONS
+import { prepareLocationCorrection } from './organisationLocation'
+import { resolveFeatureLocation } from '#lib/locations/resolve.js'
+import { materializeEffectiveLocation } from '#lib/locations/materialize.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type {
@@ -38,12 +42,12 @@ export type LinkedFeatureSaveResult =
   | { status: 'saved'; feature: FeatureDB; geometryChanged: boolean }
 
 /**
- * Save a linked Feature form and its override history in one conditional batch.
+ * Save a linked Feature and its Organisation correction/baseline revision atomically.
  * @param db Request-local database.
  * @param input Authorized form values, persisted scope and the editor's Feature timestamp.
  * @returns Saved Feature, stale conflict, review requirement or unlinked fallback.
  * @remarks Caller authorizes actual changed fields and validates property values before
- * invoking this service. All source revisions remain unchanged. Every child write is
+ * invoking this service. Source mirrors remain immutable; owner edits append a local baseline. Every child write is
  * gated by the new association token; a failed or stale save cannot partially replace data.
  */
 export async function saveLinkedFeatureForm(
@@ -58,6 +62,7 @@ export async function saveLinkedFeatureForm(
     properties?: NewFeatureProperty[]
     locationBrandEdit?: LocationBrandEdit
     locationReset?: LocationReset
+    authorizeLocationCorrection?: () => Promise<void>
   },
 ): Promise<LinkedFeatureSaveResult> {
   const association = await db
@@ -136,7 +141,7 @@ export async function saveLinkedFeatureForm(
     before.baseline.effective,
     after.baseline.effective,
   )
-  // Brand choices live only on the association; reset uses its accepted facts revision.
+  // Brand choices use the Organisation correction scope; reset reads the accepted baseline.
   if (brandEdit) overrides.brands = brandEdit.choice
   let materializedData = input.data
   let materializedI18n = input.i18n
@@ -171,6 +176,46 @@ export async function saveLinkedFeatureForm(
       }
     }
   }
+  let correction: Awaited<ReturnType<typeof prepareLocationCorrection>> | undefined
+  if (!equalLocationValue(overrides, association.overrides)) {
+    await input.authorizeLocationCorrection?.()
+    const sources = await readLocationResetSources(db, {
+      ...association,
+      projectId: input.projectId,
+    })
+    if (!sources) return { status: 'conflict' }
+    const organisation = await db.get<{ organisationId: string }>(
+      sql`SELECT organisationId FROM project WHERE id=${input.projectId}`,
+    )
+    if (!organisation) return { status: 'conflict' }
+    const desired = resolveFeatureLocation(
+      sources.facts,
+      sources.locationFacts.location,
+      overrides,
+    )
+    correction = await prepareLocationCorrection(db, {
+      organisationId: organisation.organisationId,
+      locationId: association.locationId,
+      actorId: input.actorId,
+      before: before.baseline.effective,
+      after: desired,
+      currentOverrides: association.overrides,
+      reset: Boolean(reset || brandEdit?.choice.mode === 'inherit'),
+      desiredOverrides: overrides,
+      guard: sql`EXISTS(SELECT 1 FROM feature f JOIN featureLocation fp ON fp.featureId=f.id WHERE f.id=${input.featureId} AND f.projectId=${input.projectId} AND f.modifiedAt=${input.updatedAt} AND fp.revision=${association.revision})`,
+    })
+    overrides = correction.overrides
+    const projected = materializeEffectiveLocation({
+      facts: correction.baselineRevision?.facts ?? sources.facts,
+      locationFacts: correction.baselineRevision?.facts ?? sources.locationFacts,
+      overrides,
+      data: materializedData,
+      i18n: materializedI18n,
+    })
+    materializedData = projected.data
+    materializedI18n = projected.i18n
+    resetPhones = projected.phones
+  }
   const associationWrite = prepareFeatureLocationAssociationWrite(db, {
     featureId: input.featureId,
     projectId: input.projectId,
@@ -178,8 +223,12 @@ export async function saveLinkedFeatureForm(
     expectedFeatureModifiedAt: input.updatedAt,
     expectedRevision: association.revision,
     locationId: association.locationId,
-    factsRevisionId: association.factsRevisionId,
-    locationRevisionId: association.locationRevisionId,
+    factsRevisionId: correction?.baselineRevision?.id ?? association.factsRevisionId,
+    locationRevisionId:
+      correction?.baselineRevision?.id ?? association.locationRevisionId,
+    factsOrganisationRevision: correction?.organisationRevision,
+    locationOrganisationRevision: correction?.organisationRevision,
+    additionalGuard: correction?.guard,
     overrides,
   })
   // Do not enqueue spatial/MTR work when the user changed only non-location values.
@@ -226,6 +275,7 @@ export async function saveLinkedFeatureForm(
   }
   // One batch covers the association, parent, translations and property snapshots.
   const result = await db.batch([
+    ...(correction?.queries ?? []),
     associationWrite.query,
     parent,
     ...prepareFeatureLocationRelations(
@@ -236,8 +286,11 @@ export async function saveLinkedFeatureForm(
       input.properties,
     ),
     ...phoneWrites,
+  ] as [
+    import('drizzle-orm/batch').BatchItem<'sqlite'>,
+    ...import('drizzle-orm/batch').BatchItem<'sqlite'>[],
   ])
-  const rows = result[1] as FeatureDB[]
+  const rows = result[(correction?.queries.length ?? 0) + 1] as FeatureDB[]
   return rows[0]
     ? { status: 'saved', feature: rows[0], geometryChanged }
     : { status: 'conflict' }

@@ -9,6 +9,7 @@ import {
 } from '../schema/location'
 // DOMAIN
 import { materializeLocationAdoption } from '#lib/locations/adoptionMaterialize.js'
+import { materializeEffectiveLocation } from '#lib/locations/materialize.js'
 import { equalLocationValue } from '#lib/locations/baseline.js'
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // SERVICES
@@ -86,6 +87,7 @@ export async function applyLocationAdoptionGroup(
   const preview = await previewFeatureLocationAdoption(db, {
     ...input,
     candidateRevisionId: proposal.candidateRevisionId,
+    organisationRevision: proposal.organisationRevision,
   })
   if (
     !preview ||
@@ -141,14 +143,31 @@ export async function applyLocationAdoptionGroup(
     .select()
     .from(featureI18n)
     .where(eq(featureI18n.featureId, input.featureId))
+  const proposedOverrides = proposal.evidence.candidateOverrides ?? current.overrides
+  const nextOverrides = { ...current.overrides }
+  if (input.fieldGroup === 'facts') {
+    for (const key of ['names', 'phoneNumber', 'brands'] as const) {
+      delete nextOverrides[key]
+      if (proposedOverrides[key] !== undefined)
+        Object.assign(nextOverrides, { [key]: proposedOverrides[key] })
+    }
+  } else {
+    delete nextOverrides.location
+    if (proposedOverrides.location !== undefined)
+      nextOverrides.location = proposedOverrides.location
+  }
   let materialized: ReturnType<typeof materializeLocationAdoption>
   try {
-    materialized = materializeLocationAdoption({
+    materialized = (
+      proposal.organisationRevision
+        ? materializeEffectiveLocation
+        : materializeLocationAdoption
+    )({
       fieldGroup: input.fieldGroup,
       facts: input.fieldGroup === 'facts' ? candidate.facts : sources.facts,
       locationFacts:
         input.fieldGroup === 'location' ? candidate.facts : sources.locationFacts,
-      overrides: current.overrides,
+      overrides: nextOverrides,
       data: {
         geometry: parentBefore.geometry,
         addressMeta: parentBefore.addressMeta ?? {},
@@ -164,17 +183,17 @@ export async function applyLocationAdoptionGroup(
   // A pending group may follow the other group's application, never an unrelated edit.
   const proposalGuard = sql`EXISTS (
     SELECT 1 FROM locationAdoptionProposal ap JOIN location p ON p.id=ap.locationId
-    WHERE ap.id=${proposal.id} AND p.sourceAvailability='current' AND p.ssId=${candidate.ssId}
-      AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=${locationOwnerForProject(input.projectId)})
+    WHERE ap.id=${proposal.id} AND p.sourceAvailability='current' AND p.ssId IS ${candidate.ssId}
+      AND (p.state!='manual' OR p.ownerOrganisationId=${locationOwnerForProject(input.projectId)})
       AND ap.rowid=(SELECT MAX(newer.rowid) FROM locationAdoptionProposal newer
         WHERE newer.featureId=ap.featureId AND newer.projectId=ap.projectId
-          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId)
+          AND newer.locationId=ap.locationId AND newer.candidateRevisionId=ap.candidateRevisionId AND newer.organisationRevision=ap.organisationRevision)
       AND ((ap.associationRevision=${input.expectedRevision} AND ap.featureModifiedAt=${input.expectedFeatureModifiedAt})
         OR EXISTS (SELECT 1 FROM json_each(json_array(json(ap.factsDecision),json(ap.locationDecision))) prior
           WHERE json_extract(prior.value,'$.action')='applied' AND json_extract(prior.value,'$.associationRevision')=${input.expectedRevision}))
       AND NOT EXISTS (SELECT 1 FROM locationAdoptionProposal older
         WHERE older.featureId=ap.featureId AND older.projectId=ap.projectId
-          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId
+          AND older.locationId=ap.locationId AND older.candidateRevisionId=ap.candidateRevisionId AND older.organisationRevision=ap.organisationRevision
           AND (CASE WHEN ${input.fieldGroup}='facts' THEN older.factsDecision ELSE older.locationDecision END) IS NOT NULL)
       AND (${Number(input.mode !== 'automatic')} OR
         COALESCE((SELECT locationPolicyRevision FROM project WHERE id=ap.projectId),0)=ap.policyRevision)
@@ -183,7 +202,15 @@ export async function applyLocationAdoptionGroup(
     ...input,
     expectedFeatureModifiedAt: input.expectedFeatureModifiedAt,
     locationId: current.locationId,
-    overrides: current.overrides,
+    overrides: nextOverrides,
+    factsOrganisationRevision:
+      input.fieldGroup === 'facts' && proposal.organisationRevision
+        ? proposal.organisationRevision
+        : current.factsOrganisationRevision,
+    locationOrganisationRevision:
+      input.fieldGroup === 'location' && proposal.organisationRevision
+        ? proposal.organisationRevision
+        : current.locationOrganisationRevision,
     factsRevisionId:
       input.fieldGroup === 'facts' ? candidate.id : current.factsRevisionId,
     locationRevisionId:
@@ -200,7 +227,7 @@ export async function applyLocationAdoptionGroup(
         Math.max(Date.now(), (Date.parse(input.expectedFeatureModifiedAt) || 0) + 1),
       ).toISOString(),
       ...(input.fieldGroup === 'location' &&
-      (current.overrides.location?.mode ?? 'inherit') === 'inherit'
+      !equalLocationValue(materialized.data.addressMeta, parentBefore.addressMeta ?? {})
         ? { addressMeta: materialized.data.addressMeta }
         : {}),
       ...(geometryChanged

@@ -66,7 +66,7 @@ export async function resolveLocationCandidate(
         eq(locationTable.state, 'linked'),
         eq(locationTable.sourceAvailability, 'current'),
         or(
-          isNull(locationTable.ownerOrganisationId),
+          sql`${locationTable.state} != 'manual'`,
           eq(
             locationTable.ownerOrganisationId,
             locationOwnerForProject(input.projectId),
@@ -128,7 +128,13 @@ export async function searchLocalLocationCandidates(
     .innerJoin(locationRevision, eq(locationRevision.locationId, locationTable.id))
     .where(
       and(
-        eq(locationTable.ownerOrganisationId, locationOwnerForProject(input.projectId)),
+        or(
+          sql`${locationTable.state} != 'manual'`,
+          eq(
+            locationTable.ownerOrganisationId,
+            locationOwnerForProject(input.projectId),
+          ),
+        ),
         or(eq(locationTable.state, 'manual'), eq(locationTable.state, 'unresolved')),
         eq(locationRevision.origin, 'local'),
         sql`${locationRevision.sequence} = (select max(latest.sequence) from locationRevision latest where latest.locationId = ${locationTable.id})`,
@@ -171,7 +177,13 @@ export async function nearbyLocalLocationCandidates(
     .innerJoin(locationRevision, eq(locationRevision.locationId, locationTable.id))
     .where(
       and(
-        eq(locationTable.ownerOrganisationId, locationOwnerForProject(input.projectId)),
+        or(
+          sql`${locationTable.state} != 'manual'`,
+          eq(
+            locationTable.ownerOrganisationId,
+            locationOwnerForProject(input.projectId),
+          ),
+        ),
         or(eq(locationTable.state, 'manual'), eq(locationTable.state, 'unresolved')),
         eq(locationRevision.origin, 'local'),
         sql`${locationRevision.sequence} = (select max(latest.sequence) from locationRevision latest where latest.locationId = ${locationTable.id})`,

@@ -1,6 +1,9 @@
 // SERVICES
 import { refreshLocations } from '../../../src/lib/locations/refresh'
 import { refreshFeatureMtr } from '../../../src/lib/routing/mtr-refresh'
+import { processLocalLocationChanges } from '../../../src/lib/db/services/locationLocalRefresh'
+import { drizzle } from 'drizzle-orm/d1'
+import type { Database } from '../../../src/lib/types'
 // TYPES
 import type { MtrEnvironment } from '../../../src/lib/routing/mtr-refresh'
 import type { PlaceSourceClient } from '../../../src/lib/locations/sourceClient'
@@ -20,6 +23,13 @@ export async function runLocationRefreshSchedule(
 ): Promise<void> {
   if (cron !== '*/5 * * * *') throw new Error('UNKNOWN_LOCATION_REFRESH_CRON')
   try {
+    await processLocalLocationChanges(
+      drizzle(
+        env.DB.withSession(
+          'first-primary',
+        ) as unknown as import('@cloudflare/workers-types').D1Database,
+      ) as Database,
+    )
     const phase = await refreshLocations(env.DB.withSession('first-primary'), source)
     console.log(JSON.stringify({ task: 'place-refresh', phase }))
   } catch {

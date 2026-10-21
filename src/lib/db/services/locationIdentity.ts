@@ -18,7 +18,12 @@ import {
 } from '../schema/location'
 // SERVICES
 import { locationAliasIds } from './locationRedirect'
-import { retainAuthoredAddress } from '#lib/locations/authoredAddress.js'
+import {
+  prepareOrganisationLocationWrite,
+  readOrganisationLocation,
+} from './organisationLocation'
+import { preserveFeatureLocationBaseline } from '#lib/locations/baseline.js'
+import { resolveFeatureLocation } from '#lib/locations/resolve.js'
 import { prepareSaanSeoiRevision } from './locationSource'
 // TYPES
 import type { Database } from '#lib/types.js'
@@ -54,7 +59,7 @@ export type LocationIdentityTransition = {
  * @param projection Server-verified canonical source evidence explicitly reviewed by the actor.
  * @returns Applied history/revision identities, a stale conflict, or a required merge review.
  * @remarks Trusted service only. Caller must authorize the Location owner or global steward,
- * never merely a linked Feature editor. Ownership remains private after promotion. Existing
+ * never merely a linked Feature editor. Source-linked identities become shared after promotion. Existing
  * accepted revisions, Feature values and overrides remain untouched: source adoption is separate.
  * This operation does not merge occupied identities or infer equivalence from names/proximity.
  */
@@ -88,11 +93,6 @@ export async function acceptLocationIdentity(
     .where(eq(locationRevision.locationId, input.locationId))
     .orderBy(sql`${locationRevision.sequence} DESC`)
     .get()
-  projection = retainAuthoredAddress(
-    projection,
-    retained,
-    input.expectedState !== 'linked',
-  )
   const prepared = await prepareSaanSeoiRevision(input.locationId, projection)
   const revisionId = `identityRevision_${nanoid(24)}`
   const current = await db
@@ -141,8 +141,37 @@ export async function acceptLocationIdentity(
     AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=${input.locationId}
       AND NOT EXISTS (SELECT 1 FROM locationIdentityHistory next WHERE next.previousHistoryId=h.id))
       IS ${input.expectedHistoryId}`
+  // Matching changes baseline authority; the curator's authored values remain Organisation-scoped.
+  let correction:
+    | Awaited<ReturnType<typeof prepareOrganisationLocationWrite>>
+    | undefined
+  if (current.ownerOrganisationId && retained) {
+    const prior = await readOrganisationLocation(
+      db,
+      current.ownerOrganisationId,
+      input.locationId,
+    )
+    const effective = resolveFeatureLocation(
+      retained.facts,
+      retained.facts.location,
+      prior?.overrides ?? {},
+    )
+    const overrides = preserveFeatureLocationBaseline(
+      effective,
+      prepared.facts,
+      prepared.facts.location,
+    )
+    correction = await prepareOrganisationLocationWrite(db, {
+      organisationId: current.ownerOrganisationId,
+      locationId: input.locationId,
+      actorId: input.actorId,
+      overrides,
+      guard: sql`${guard} AND ${revisionGuard}`,
+    })
+  }
   // Source revision, review evidence and identity change either all commit or all roll back.
   const results = await db.batch([
+    ...(correction?.queries ?? []),
     db
       .insert(locationRevision)
       .select(sql`SELECT ${revisionId},${input.locationId},
@@ -161,6 +190,7 @@ export async function acceptLocationIdentity(
       .update(locationTable)
       .set({
         state: 'linked',
+        ownerOrganisationId: null,
         kind: 'establishment',
         ssId: projection.ssId,
         sourceAvailability: 'current',
@@ -173,8 +203,11 @@ export async function acceptLocationIdentity(
         ),
       )
       .returning({ id: locationTable.id }),
+  ] as unknown as [
+    import('drizzle-orm/batch').BatchItem<'sqlite'>,
+    ...import('drizzle-orm/batch').BatchItem<'sqlite'>[],
   ])
-  return results[2].length
+  return (results[(correction?.queries.length ?? 0) + 2] as unknown[]).length
     ? { status: 'applied', historyId, revisionId }
     : { status: 'conflict' }
 }

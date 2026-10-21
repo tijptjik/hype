@@ -15,6 +15,7 @@ let { place, onSaved }: { place: LocationResource; onSaved: () => Promise<void> 
   $props()
 let value = $state(createLocalLocationAddress())
 let expectedRevisionId = $state('')
+let expectedOrganisationRevision = $state<string | null>(null)
 let parseSource = $state<Record<string, string> | undefined>()
 let editing = $state(false)
 let busy = $state(false)
@@ -29,6 +30,7 @@ function edit(): void {
   )
   parseSource = undefined
   expectedRevisionId = place.revisionId
+  expectedOrganisationRevision = place.organisationRevision ?? null
   editing = true
   saved = failed = false
 }
@@ -41,6 +43,8 @@ async function save(): Promise<void> {
     await saveLocalLocationAddress({
       locationId: place.id,
       expectedRevisionId,
+      organisationId: place.editingOrganisationId ?? undefined,
+      expectedOrganisationRevision,
       address: value,
       parseSource,
     })

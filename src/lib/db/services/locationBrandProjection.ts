@@ -14,14 +14,14 @@ import type { SQL } from 'drizzle-orm'
 export function featureLocationBrandsSQL(): SQL<string | null> {
   return sql<
     string | null
-  >`COALESCE((SELECT CASE json_extract(fp.overrides,'$.brands.mode')
+  >`COALESCE((SELECT CASE json_extract(fp.acceptedOverrides,'$.brands.mode')
     WHEN 'clear' THEN '[]'
-    WHEN 'override' THEN json_extract(fp.overrides,'$.brands.value')
+    WHEN 'override' THEN json_extract(fp.acceptedOverrides,'$.brands.value')
     ELSE json_extract(pr.facts,'$.brands') END
     FROM featureLocation fp JOIN location p ON p.id=fp.locationId
     JOIN locationRevision pr ON pr.id=fp.factsRevisionId AND pr.locationId=fp.locationId
     WHERE fp.featureId="feature"."id" AND "feature"."isDraft"=0
-      AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id="feature"."projectId"))),
+      AND (p.state!='manual' OR p.ownerOrganisationId=(SELECT organisationId FROM project WHERE id="feature"."projectId"))),
     (CASE WHEN "feature"."isDraft"=0 AND NOT EXISTS
         (SELECT 1 FROM featureLocation fp WHERE fp.featureId="feature"."id")
       THEN json_extract("feature"."localLocationBrands",'$.brands') END))`

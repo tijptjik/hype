@@ -5,6 +5,7 @@ import {
   foreignKey,
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   unique,
@@ -32,7 +33,7 @@ export const location = sqliteTable(
     id: text('id').primaryKey(),
     ssId: text('ssId').unique(),
     kind: text('kind', { enum: LOCATION_KINDS }).notNull().default('unknown'),
-    // Local baselines are private to their owning organisation until explicitly published.
+    // Ownership grants baseline authority. Only manual Locations are private; unmatched are shared.
     ownerOrganisationId: text('ownerOrganisationId').references(() => organisation.id, {
       onDelete: 'restrict',
     }),
@@ -111,7 +112,7 @@ export const locationRevision = sqliteTable(
   ],
 )
 
-/** Feature-local inheritance inputs; existing effective columns remain unchanged. */
+/** Accepted baseline and Organisation correction snapshots for one Feature. */
 export const featureLocation = sqliteTable(
   'featureLocation',
   {
@@ -125,10 +126,13 @@ export const featureLocation = sqliteTable(
     actorId: text('actorId'),
     factsRevisionId: text('factsRevisionId').notNull(),
     locationRevisionId: text('locationRevisionId').notNull(),
-    overrides: text('overrides', { mode: 'json' })
+    // Accepted Organisation correction snapshot; this is a projection, not a Feature-owned override.
+    overrides: text('acceptedOverrides', { mode: 'json' })
       .$type<FeatureLocationOverrides>()
       .notNull()
       .default({}),
+    factsOrganisationRevision: text('factsOrganisationRevision'),
+    locationOrganisationRevision: text('locationOrganisationRevision'),
   },
   table => [
     check('feature_location_overrides_json', sql`json_valid(${table.overrides})`),
@@ -159,10 +163,13 @@ export const featureLocationHistory = sqliteTable(
     locationId: text('locationId').notNull(),
     factsRevisionId: text('factsRevisionId').notNull(),
     locationRevisionId: text('locationRevisionId').notNull(),
-    overrides: text('overrides', { mode: 'json' })
+    // Accepted Organisation correction snapshot; this is a projection, not a Feature-owned override.
+    overrides: text('acceptedOverrides', { mode: 'json' })
       .$type<FeatureLocationOverrides>()
       .notNull(),
     actorId: text('actorId'),
+    factsOrganisationRevision: text('factsOrganisationRevision'),
+    locationOrganisationRevision: text('locationOrganisationRevision'),
     createdAt: text('createdAt')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
@@ -199,8 +206,10 @@ export const locationAdoptionProposal = sqliteTable(
       .$type<{
         policy: ProjectLocationPolicy
         plan: LocationAdoptionPlan
+        candidateOverrides?: FeatureLocationOverrides
       }>()
       .notNull(),
+    organisationRevision: text('organisationRevision').notNull().default(''),
     factsDecision: text('factsDecision', {
       mode: 'json',
     }).$type<LocationAdoptionDecisionRecord>(),
@@ -220,6 +229,7 @@ export const locationAdoptionProposal = sqliteTable(
       table.associationRevision,
       table.featureModifiedAt,
       table.policyRevision,
+      table.organisationRevision,
     ),
     index('location_adoption_project').on(table.projectId, table.featureId),
     check('location_adoption_policy_revision', sql`${table.policyRevision} >= 0`),
@@ -369,5 +379,42 @@ export type LocationIdentityRejectionRecord = {
   ssId: string
   actorId: string
   reason: string
+  createdAt: string
+}
+
+/** Versioned, Organisation-wide corrections; history retains every accepted snapshot. */
+export const organisationLocation = sqliteTable(
+  'organisationLocation',
+  {
+    organisationId: text('organisationId')
+      .notNull()
+      .references(() => organisation.id, { onDelete: 'restrict' }),
+    locationId: text('locationId')
+      .notNull()
+      .references(() => location.id, { onDelete: 'restrict' }),
+    revision: text('revision').notNull().unique(),
+    overrides: text('overrides', { mode: 'json' })
+      .$type<FeatureLocationOverrides>()
+      .notNull(),
+    history: text('history', { mode: 'json' })
+      .$type<OrganisationLocationRevision[]>()
+      .notNull(),
+    actorId: text('actorId').notNull(),
+    createdAt: text('createdAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+    updatedAt: text('updatedAt')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  table => [primaryKey({ columns: [table.organisationId, table.locationId] })],
+)
+
+/** Immutable correction version retained in its Organisation–Location association. */
+export type OrganisationLocationRevision = {
+  revision: string
+  provenance?: Record<string, unknown>
+  overrides: FeatureLocationOverrides
+  actorId: string
   createdAt: string
 }

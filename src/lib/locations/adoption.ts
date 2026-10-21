@@ -144,6 +144,7 @@ export function planLocationAdoption(input: {
   candidate: AdoptionSourceRevision
   overrides: FeatureLocationOverrides
   policy: unknown
+  candidateOverrides?: FeatureLocationOverrides
 }): LocationAdoptionPlan {
   const { facts, location, candidate } = input
   for (const revision of [facts, location, candidate]) {
@@ -161,6 +162,17 @@ export function planLocationAdoption(input: {
   const oldLocation = LocationFactsSchema.parse(location.facts).location
   const next = LocationFactsSchema.parse(candidate.facts)
   const overrides = FeatureLocationOverridesSchema.parse(input.overrides)
+  const candidateOverrides = FeatureLocationOverridesSchema.parse(
+    input.candidateOverrides ?? overrides,
+  )
+  const effectiveBefore = resolveFeatureLocation(oldFacts, oldLocation, overrides)
+  const effectiveCandidate = resolveFeatureLocation(
+    next,
+    next.location,
+    candidateOverrides,
+  )
+  const comparedBefore = effectiveBefore.location ?? oldLocation
+  const comparedAfter = effectiveCandidate.location ?? next.location
   const beforeEstablishment = establishmentSchema.safeParse(facts.payload)
   const afterEstablishment = establishmentSchema.safeParse(candidate.payload)
   const blockers: LocationAdoptionPlan['blockers'] = []
@@ -195,19 +207,19 @@ export function planLocationAdoption(input: {
   )
     blockers.push('source-phone-omissions')
   const evidence: LocationChangeEvidence = {
-    before: oldLocation,
-    after: next.location,
+    before: comparedBefore,
+    after: comparedAfter,
     addressChanged: !equalLocationValue(
-      addressContent(oldLocation.address),
-      addressContent(address),
+      addressContent(comparedBefore.address),
+      addressContent(comparedAfter.address),
     ),
     unitChanged: !equalLocationValue(
-      unitContent(oldLocation.address),
-      unitContent(address),
+      unitContent(comparedBefore.address),
+      unitContent(comparedAfter.address),
     ),
     establishmentChanged:
-      !equalLocationValue(oldFacts.names, next.names) ||
-      !equalLocationValue(oldFacts.brands, next.brands) ||
+      !equalLocationValue(effectiveBefore.names, effectiveCandidate.names) ||
+      !equalLocationValue(effectiveBefore.brands, effectiveCandidate.brands) ||
       (!localChain &&
         (!beforeEstablishment.success ||
           !afterEstablishment.success ||
@@ -221,15 +233,31 @@ export function planLocationAdoption(input: {
   } else if (blockers.includes('address-dependencies')) decision.location = 'review'
   const acceptedFacts = decision.facts === 'adopt' ? next : oldFacts
   const acceptedLocation = decision.location === 'adopt' ? next.location : oldLocation
+  const acceptedOverrides = { ...overrides }
+  if (decision.facts === 'adopt')
+    for (const key of ['names', 'phoneNumber', 'brands'] as const) {
+      delete acceptedOverrides[key]
+      if (candidateOverrides[key] !== undefined)
+        Object.assign(acceptedOverrides, { [key]: candidateOverrides[key] })
+    }
+  if (decision.location === 'adopt') {
+    delete acceptedOverrides.location
+    if (candidateOverrides.location !== undefined)
+      acceptedOverrides.location = candidateOverrides.location
+  }
   return {
     evidence,
     decision,
     blockers,
     factsRevisionId: decision.facts === 'adopt' ? candidate.id : facts.id,
     locationRevisionId: decision.location === 'adopt' ? candidate.id : location.id,
-    effective: resolveFeatureLocation(acceptedFacts, acceptedLocation, overrides),
+    effective: resolveFeatureLocation(
+      acceptedFacts,
+      acceptedLocation,
+      acceptedOverrides,
+    ),
     before: resolveFeatureLocation(oldFacts, oldLocation, overrides),
-    candidate: resolveFeatureLocation(next, next.location, overrides),
+    candidate: effectiveCandidate,
     source: {
       beforeFacts: oldFacts,
       beforeLocation: oldLocation,

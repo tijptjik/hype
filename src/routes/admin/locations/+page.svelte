@@ -143,7 +143,7 @@ onDestroy(() => {
       {#each rows as place (place.id)}
         <a
           class="flex items-center justify-between gap-4 p-4 hover:bg-muted"
-          href={`/admin/locations/${encodeURIComponent(place.id)}`}
+          href={`/admin/locations/${encodeURIComponent(place.id)}${activeSearch.organisationId ? '?organisation=' + encodeURIComponent(activeSearch.organisationId) : ''}`}
         >
           <div class="min-w-0">
             <div class="truncate text-lg font-medium">

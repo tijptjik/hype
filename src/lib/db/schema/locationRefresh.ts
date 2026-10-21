@@ -39,7 +39,7 @@ export const locationRefreshItem = sqliteTable(
   {
     runId: text('runId').notNull(),
     locationId: text('locationId').notNull(),
-    ssId: text('ssId').notNull(),
+    ssId: text('ssId'),
     sourceOffset: integer('sourceOffset'),
     revisionId: text('revisionId'),
     featureCursor: text('featureCursor').notNull().default(''),
@@ -63,6 +63,12 @@ export const locationRefreshItem = sqliteTable(
     status: text('status', { enum: ['missing', 'pending', 'processed', 'review'] })
       .notNull()
       .default('missing'),
+    origin: text('origin', { enum: ['source', 'local'] })
+      .notNull()
+      .default('source'),
+    organisationId: text('organisationId'),
+    organisationRevision: text('organisationRevision'),
+    actorId: text('actorId'),
   },
   table => [
     primaryKey({ columns: [table.runId, table.locationId] }),

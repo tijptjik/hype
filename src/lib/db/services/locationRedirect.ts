@@ -38,7 +38,7 @@ export async function resolveLocationRedirect(
     }>(sql`WITH RECURSIVE chain(id) AS (
     SELECT ${locationId} UNION SELECT r.redirectTargetId FROM location r JOIN chain c ON r.id=c.id
   ) SELECT p.id AS locationId,p.ssId FROM chain c JOIN location p ON p.id=c.id
-    WHERE p.state!='redirect' AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=${locationOwnerForProject(projectId)}) LIMIT 1`)) ??
+    WHERE p.state!='redirect' AND (p.state!='manual' OR p.ownerOrganisationId=${locationOwnerForProject(projectId)}) LIMIT 1`)) ??
     null
   )
 }

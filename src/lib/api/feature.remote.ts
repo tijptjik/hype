@@ -59,6 +59,7 @@ import {
   createFeatureForm,
   saveUnlinkedFeatureForm,
 } from '#lib/db/services/featureFormSave.js'
+import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/locationEdit.js'
 import { getInternalPropertyAccess } from '#lib/properties/audience.server.js'
 import { validateFeaturePhoneProperties } from '#lib/db/services/feature-property-validation.js'
@@ -748,6 +749,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
     properties: propertiesChanged ? submittedProperties : undefined,
     locationBrandEdit: data.locationBrandEdit,
     locationReset: data.locationReset,
+    authorizeLocationCorrection: () =>
+      requireLocationOrganisationManager(ctx, current.organisationId),
   }
   const linkedSave = await saveLinkedFeatureForm(db, saveInput)
   if (linkedSave.status === 'conflict')

@@ -15,13 +15,18 @@ import { location as locationTable, locationRevision } from '../schema/location'
 import { parseAddressContent } from '@saanseoi/address'
 // VALIDATION
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
-import { LocationFactsSchema } from '#lib/locations/validation.js'
+import { LocationNamesEditSchema } from '#lib/locations/validation.js'
 import { LocalLocationInputSchema } from '#lib/locations/local.js'
+import {
+  prepareLocationCorrection,
+  readOrganisationLocation,
+} from './organisationLocation'
+import { resolveFeatureLocation } from '#lib/locations/resolve.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
 /**
- * Create a private manual or unresolved Location and its immutable local baseline.
+ * Create a shared unresolved or private manual Location and its immutable baseline.
  * @param db Request-local database with atomic D1 batch support.
  * @param organisationId Persisted, authorized owning organisation.
  * @param input Local facts, the manual/unresolved distinction and explicit sharing preference.
@@ -29,8 +34,8 @@ import type { Database } from '#lib/types.js'
  * @returns Stable local Location identity and initial revision identity.
  * @remarks The caller must authorize organisation management. No Feature is linked or
  * rewritten; canonical identities and addresses require separate verified workflows.
- * Sharing permission is retained with the author in immutable provenance; it does not
- * publish the Location or change Organisation ownership.
+ * Sharing preference records upstream contribution consent, independently of shared
+ * unresolved visibility or private manual visibility. Organisation ownership is retained.
  */
 export async function createLocalLocation(
   db: Database,
@@ -84,11 +89,11 @@ export async function createLocalLocation(
 }
 
 /**
- * Append structured address content without rewriting accepted or historical revisions.
+ * Save names and structured address content without rewriting accepted or historical revisions.
  * @param db Request-local database.
- * @param input Authorized Organisation (null only for a shared-Location steward), expected revision and validated authored content.
+ * @param input Authorized Organisation, expected revisions and optional names, authored content and marker.
  * @returns New revision identity, or null if ownership, source identity or revision changed.
- * @remarks Existing Features retain their accepted revision until explicitly adopting this one.
+ * @remarks Omitted groups retain their effective facts and canonical evidence. Existing Features retain their accepted revision until explicitly adopting this one.
  */
 export async function updateLocalLocationAddress(
   db: Database,
@@ -96,84 +101,112 @@ export async function updateLocalLocationAddress(
     locationId: string
     organisationId: string | null
     expectedRevisionId: string
-    address: unknown
+    expectedOrganisationRevision?: string | null
+    names?: Record<string, string>
+    address?: unknown
+    coordinates?: [number, number]
     parseSource?: Record<string, string>
     actorId: string
   },
-): Promise<{ revisionId: string } | null> {
-  if (!input.actorId.trim()) throw new Error('Local Location edits require an author')
-  const address = LocalLocationAddressSchema.parse(input.address)
-  const current = await db
-    .select({
-      facts: locationRevision.facts,
-      payload: locationRevision.payload,
-      sequence: locationRevision.sequence,
-      ssId: locationTable.ssId,
-      apiVersion: locationRevision.apiVersion,
-      releaseId: locationRevision.releaseId,
-      snapshotId: locationRevision.snapshotId,
-    })
+): Promise<{ revisionId: string; organisationRevision: string | null } | null> {
+  if (!input.actorId.trim() || !input.organisationId) return null
+  const names =
+    input.names === undefined ? undefined : LocationNamesEditSchema.parse(input.names)
+  const address =
+    input.address === undefined
+      ? undefined
+      : LocalLocationAddressSchema.parse(input.address)
+  const baseline = await db
+    .select()
     .from(locationRevision)
     .innerJoin(locationTable, eq(locationTable.id, locationRevision.locationId))
     .where(
       and(
         eq(locationTable.id, input.locationId),
-        sql`${locationTable.ownerOrganisationId} IS ${input.organisationId}`,
         eq(locationRevision.id, input.expectedRevisionId),
-        sql`${locationTable.state} IN ('manual','unresolved','linked')`,
-        sql`${locationRevision.sequence}=(SELECT max(r.sequence) FROM locationRevision r WHERE r.locationId=${locationTable.id})`,
+        sql`${locationTable.state}!='redirect' AND (${locationTable.state}!='manual' OR ${locationTable.ownerOrganisationId}=${input.organisationId})`,
+        sql`${locationRevision.sequence}=(SELECT max(sequence) FROM locationRevision r WHERE r.locationId=${input.locationId} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
       ),
     )
     .get()
-  if (!current) return null
-  const facts = LocationFactsSchema.parse(current.facts)
-  facts.location.address = {
-    status: 'unresolved',
-    address2dId: null,
-    address3dId: null,
-    address3dUnitId: null,
-    addressSnapshotId: null,
-    records: {},
-    fallbackDisplay: {},
-    authored: address,
+  if (!baseline) return null
+  const current = await readOrganisationLocation(
+    db,
+    input.organisationId,
+    input.locationId,
+  )
+  if (
+    input.expectedOrganisationRevision !== undefined &&
+    input.expectedOrganisationRevision !== (current?.revision ?? null)
+  )
+    return null
+  const facts = baseline.locationRevision.facts
+  const before = resolveFeatureLocation(facts, facts.location, current?.overrides ?? {})
+  if (!before.location) return null
+  // Save name and location groups together while retaining untouched canonical address evidence.
+  const after = {
+    ...before,
+    ...(names ? { names } : {}),
+    location: {
+      ...before.location,
+      ...(input.coordinates
+        ? { geometry: { type: 'Point' as const, coordinates: input.coordinates } }
+        : {}),
+      address: address
+        ? {
+            status: 'unresolved' as const,
+            address2dId: null,
+            address3dId: null,
+            address3dUnitId: null,
+            addressSnapshotId: null,
+            records: {},
+            fallbackDisplay: {},
+            authored: address,
+          }
+        : {
+            ...before.location.address,
+          },
+    },
   }
-  const revisionId = nanoid(12)
-  const payload = {
-    ...current.payload,
-    kind: 'local-address-edit',
-    ...(current.ssId
+  const correction = await prepareLocationCorrection(db, {
+    organisationId: input.organisationId,
+    locationId: input.locationId,
+    actorId: input.actorId,
+    before,
+    after,
+    currentOverrides: current?.overrides ?? {},
+    ...(input.parseSource
       ? {
-          sourceAddress:
-            current.payload.sourceAddress ?? current.facts.location.address,
+          provenance: {
+            localAddress: {
+              parse: parseAddressContent(input.parseSource),
+              review: 'authored',
+            },
+          },
         }
       : {}),
-    localAddress: {
-      actorId: input.actorId,
-      organisationId: input.organisationId,
-      previousRevisionId: input.expectedRevisionId,
-      review: 'authored',
-      ...(input.parseSource ? { parse: parseAddressContent(input.parseSource) } : {}),
-    },
-    actorId: input.actorId,
-    organisationId: input.organisationId,
-    previousRevisionId: input.expectedRevisionId,
-  }
-  const bytes = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(JSON.stringify({ facts, payload })),
+    expectedBaselineRevisionId: input.expectedRevisionId,
+    expectedOrganisationRevision: current?.revision ?? null,
+    guard: sql`EXISTS(SELECT 1 FROM location p JOIN locationRevision r ON r.locationId=p.id
+      WHERE p.id=${input.locationId} AND p.state=${baseline.location.state} AND p.ssId IS ${baseline.location.ssId}
+      AND p.ownerOrganisationId IS ${baseline.location.ownerOrganisationId} AND r.id=${input.expectedRevisionId}
+      AND (${Number(baseline.location.ssId === null && baseline.location.ownerOrganisationId === input.organisationId)} OR r.sequence=(SELECT max(sequence) FROM locationRevision WHERE locationId=p.id AND (p.state!='linked' OR origin='saanseoi'))))
+`,
+  })
+  if (correction.queries.length)
+    await db.batch(
+      correction.queries as [
+        import('drizzle-orm/batch').BatchItem<'sqlite'>,
+        ...import('drizzle-orm/batch').BatchItem<'sqlite'>[],
+      ],
+    )
+  const owned = await db.get<{ owned: number }>(
+    sql`SELECT CASE WHEN ${correction.guard} THEN 1 ELSE 0 END AS owned`,
   )
-  const contentHash = Array.from(new Uint8Array(bytes), byte =>
-    byte.toString(16).padStart(2, '0'),
-  ).join('')
-  // The insert reads its expected predecessor and owner in the same SQLite statement.
-  const rows = await db
-    .insert(locationRevision)
-    .select(sql`SELECT ${revisionId},p.id,${current.sequence + 1},'local',${current.ssId},${current.apiVersion},${current.releaseId},${current.snapshotId},${contentHash},${JSON.stringify(payload)},${JSON.stringify(facts)},strftime('%Y-%m-%dT%H:%M:%fZ','now')
-    FROM location p JOIN locationRevision r ON r.locationId=p.id
-    WHERE p.id=${input.locationId} AND p.ownerOrganisationId IS ${input.organisationId}
-      AND p.ssId IS ${current.ssId} AND p.state IN ('manual','unresolved','linked')
-      AND r.id=${input.expectedRevisionId}
-      AND r.sequence=(SELECT max(latest.sequence) FROM locationRevision latest WHERE latest.locationId=p.id)`)
-    .returning({ revisionId: locationRevision.id })
-  return rows[0] ?? null
+  return owned.owned
+    ? {
+        revisionId: correction.baselineRevision?.id ?? input.expectedRevisionId,
+        organisationRevision: correction.organisationRevision,
+      }
+    : null
 }

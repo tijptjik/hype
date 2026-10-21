@@ -5,7 +5,6 @@ import { z } from 'zod'
 // REMOTE
 import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
-import { canManageSharedLocationIdentity } from '#lib/api/services/authz/location.js'
 import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 // DOMAIN
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
@@ -59,59 +58,83 @@ export const getLocations = guardedQuery(
 export const getLocation = guardedQuery(
   z.strictObject({
     id: z.string().min(1).max(200),
+    organisationId: z.string().min(1).max(200).optional(),
     scope: z.string().max(4000).optional(),
   }),
   async (input, ctx) => {
     await requireDirectoryAccess(ctx)
     const scope = await probeLocationIdentityScope(ctx.db, input.id)
     if (!scope) return null
-    await requireDirectoryAccess(ctx, scope.ownerOrganisationId ?? undefined)
+    const identity = scope
+    await requireDirectoryAccess(
+      ctx,
+      identity.state === 'manual'
+        ? (scope.ownerOrganisationId ?? undefined)
+        : input.organisationId,
+    )
+    let editingOrganisationId = input.organisationId ?? null
+    if (!editingOrganisationId && identity.ssId === null && scope.ownerOrganisationId) {
+      try {
+        await requireLocationOrganisationManager(ctx, scope.ownerOrganisationId)
+        editingOrganisationId = scope.ownerOrganisationId
+      } catch {
+        /* Shared reads do not grant the curator's authority. */
+      }
+    }
+    if (editingOrganisationId)
+      await requireLocationOrganisationManager(ctx, editingOrganisationId)
     const result = await listLocationResources(ctx.db, {
       id: input.id,
-      organisationId: scope.ownerOrganisationId ?? undefined,
+      organisationId: editingOrganisationId ?? undefined,
     })
     const resource = result.data[0]
     return resource
       ? {
           ...resource,
+          editingOrganisationId,
           canEditAddress:
-            scope.ownerOrganisationId !== null ||
-            canManageSharedLocationIdentity({
-              isAnonymous: ctx.user.isAnonymous,
-              userRoles: ctx.userRoles,
-            }),
+            editingOrganisationId !== null && identity.state !== 'redirect',
         }
       : null
   },
 )
 
 /**
- * Save locally authored address content on a private Location's next immutable revision.
- * @param input Location identity, expected latest revision and SaanSeoi-shaped content.
+ * Save authored address and marker edits in the Location's authorized authoring scope.
+ * @param input Location identity, expected revisions and changed name/address groups.
  * @returns New revision; conflicts require reloading rather than overwriting another edit.
+ * @remarks Name-only edits retain canonical address evidence. Source-linked edits remain Organisation corrections.
  */
 export const saveLocalLocationAddress = guardedCommand(
   z.strictObject({
     locationId: z.string().min(1),
     expectedRevisionId: z.string().min(1),
-    address: LocalLocationAddressSchema,
+    organisationId: z.string().min(1).optional(),
+    expectedOrganisationRevision: z.string().min(1).nullable().optional(),
+    address: LocalLocationAddressSchema.optional(),
+    coordinates: z
+      .tuple([
+        z.number().finite().min(-180).max(180),
+        z.number().finite().min(-90).max(90),
+      ])
+      .optional(),
     parseSource: z.record(z.string().max(32), z.string().max(4000)).optional(),
   }),
   async (input, ctx) => {
     const scope = await probeLocationIdentityScope(ctx.db, input.locationId)
     if (!scope) error(404, 'LOCATION_NOT_FOUND')
-    if (scope.ownerOrganisationId)
-      await requireLocationOrganisationManager(ctx, scope.ownerOrganisationId)
-    else if (
-      !canManageSharedLocationIdentity({
-        isAnonymous: ctx.user.isAnonymous,
-        userRoles: ctx.userRoles,
-      })
-    )
+    const identity = scope
+    if (!identity || identity.state === 'redirect') error(404, 'LOCATION_NOT_FOUND')
+    const organisationId =
+      input.organisationId ??
+      (identity.ssId === null ? scope.ownerOrganisationId : null)
+    if (!organisationId) error(403, 'ORGANISATION_CONTEXT_REQUIRED')
+    await requireLocationOrganisationManager(ctx, organisationId)
+    if (identity.state === 'manual' && scope.ownerOrganisationId !== organisationId)
       error(403, 'INSUFFICIENT_ROLE')
     const result = await updateLocalLocationAddress(ctx.db, {
       ...input,
-      organisationId: scope.ownerOrganisationId,
+      organisationId,
       actorId: ctx.user.id,
     })
     if (!result) error(409, 'LOCATION_CHANGED')

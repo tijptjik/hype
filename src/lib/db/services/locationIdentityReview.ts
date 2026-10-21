@@ -50,11 +50,18 @@ import type { SaanSeoiPlaceProjection } from '#lib/locations/saanseoi.js'
 export async function probeLocationIdentityScope(
   db: Database,
   locationId: string,
-): Promise<{ id: string; ownerOrganisationId: string | null } | null> {
+): Promise<{
+  id: string
+  ownerOrganisationId: string | null
+  state: 'linked' | 'manual' | 'unresolved' | 'redirect'
+  ssId: string | null
+} | null> {
   return (
     (await db
       .select({
         id: locationTable.id,
+        state: locationTable.state,
+        ssId: locationTable.ssId,
         ownerOrganisationId: locationTable.ownerOrganisationId,
       })
       .from(locationTable)

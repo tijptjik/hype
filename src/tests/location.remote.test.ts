@@ -237,7 +237,12 @@ beforeEach(() => {
   })
   mocks.context.user.isAnonymous = false
   mocks.context.userRoles = []
-  mocks.probeIdentity.mockResolvedValue({ id: 'location', ownerOrganisationId: 'p' })
+  mocks.probeIdentity.mockResolvedValue({
+    id: 'location',
+    ownerOrganisationId: 'p',
+    state: 'manual',
+    ssId: null,
+  })
   mocks.identityBaseline.mockResolvedValue({
     locationId: 'location',
     expectedOwnerOrganisationId: 'p',
@@ -421,6 +426,7 @@ describe('initial Location link command', () => {
       ...input,
       projectId: 'p',
       actorId: 'u',
+      authorizeLocationCorrection: expect.any(Function),
     })
   })
   it('rejects unauthorized links and client-supplied scope or baselines before writing', async () => {
@@ -634,6 +640,7 @@ it('authorizes reassociation and derives actor/scope while retaining both concur
     ...input,
     projectId: 'p',
     actorId: 'u',
+    authorizeLocationCorrection: expect.any(Function),
   })
   mocks.relinkLocation.mockResolvedValue({ status: 'conflict' })
   await expect(relinkFeatureLocation(input)).rejects.toMatchObject({ status: 409 })
@@ -1267,6 +1274,7 @@ describe('standalone Location reads', () => {
     expect(await getLocation({ id: 'location' })).toEqual({
       id: 'location',
       canEditAddress: true,
+      editingOrganisationId: 'p',
     })
     expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {
       id: 'location',

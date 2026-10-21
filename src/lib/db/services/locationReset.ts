@@ -59,7 +59,7 @@ export async function readLocationResetSources(
       and(
         eq(locationTable.id, input.locationId),
         or(
-          isNull(locationTable.ownerOrganisationId),
+          sql`${locationTable.state} != 'manual'`,
           eq(
             locationTable.ownerOrganisationId,
             locationOwnerForProject(input.projectId),

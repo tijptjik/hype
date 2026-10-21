@@ -18,7 +18,11 @@ import MapPin from 'virtual:icons/proicons/location'
 const header = getHeaderCtrl()
 const admin = getAdminCtx()
 const request = $derived.by(() => {
-  return getLocation({ id: page.params.id!, scope: admin.view.getRoleScopeQueryKey() })
+  return getLocation({
+    id: page.params.id!,
+    organisationId: page.url.searchParams.get('organisation') ?? undefined,
+    scope: admin.view.getRoleScopeQueryKey(),
+  })
 })
 $effect(() => {
   header.setHeaderForStandAlone(m.location_policy_tab(), MapPin, {
