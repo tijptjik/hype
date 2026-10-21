@@ -1,3 +1,4 @@
+import { readLocationFacts } from '../../src/lib/locations/factsSnapshot'
 // Refs #194. See spec/breadline/proposal/places-address-curation.md.
 // Run: bun scripts/locations/rehearse-address-curation.ts
 // RUNTIME
@@ -603,7 +604,7 @@ UPDATE datasets SET resourceTypes = json_insert(resourceTypes, '$[#]', 'address'
         facts: string
       }
       assert.deepEqual(
-        JSON.parse(stored.facts).location.address,
+        readLocationFacts(stored.facts).location.address,
         hydrated.facts.location.address,
       )
       const overridden = resolveFeatureLocation(hydrated.facts, hydrated.facts.location, {

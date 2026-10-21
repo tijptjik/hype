@@ -1,3 +1,4 @@
+import { createLocationFactsSnapshot } from '../../src/lib/locations/factsSnapshot'
 // SHARED ADDRESS PARSER
 import { parseAddressContent } from '@saanseoi/address'
 // NODE
@@ -105,7 +106,7 @@ export function planBreadlineFeatures(args: string[]): void {
       { original: [number, number]; corrected: [number, number]; evidence: string }
     >
     const statements = [
-      '-- Breadline Locations + Features migration. Requires schema migrations through 0139.',
+      '-- Breadline Locations + Features migration. Requires schema migrations through 0142.',
       '-- Generated from a fresh source snapshot; source hashes preserve accepted identity.',
       '-- Apply in an error-propagating transaction; do not use Bun multi-statement exec.',
     ]
@@ -473,7 +474,10 @@ export function planBreadlineFeatures(args: string[]): void {
               .update(JSON.stringify({ payload, facts: local.facts }))
               .digest('hex'),
             payload,
-            facts: local.facts,
+            facts: createLocationFactsSnapshot(
+              local.facts,
+              table === 'donors' ? 'establishment' : 'unknown',
+            ),
           }),
         )
         statements.push(

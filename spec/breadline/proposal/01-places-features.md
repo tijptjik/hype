@@ -782,3 +782,114 @@ account preferences. The test transport used SaanSeoi's configured `hype.localho
 Origin; the raw port-4173 origin is not allowlisted. A pre-existing layer preview 404
 remains outside this slice. Full application type-check reports ten unrelated errors
 and nineteen warnings; no changed Location file is among those diagnostics.
+
+## Versioned Location facts and building preparation (21 October 2026)
+
+Refs [#194](https://github.com/tijptjik/hype/issues/194); source research:
+[SaanSeoi LandsD Buildings](https://github.com/saanseoi/saanseoi/blob/preview/docs/datasets/sources/hkgov-landsd/building.md)
+and [separate building inventories](https://github.com/saanseoi/saanseoi/blob/preview/docs/datasets/families/buildings.md).
+The Buildings/Natural source adapters remain disabled. This prepares HYPE's selected
+Location snapshots; it does not import either complete upstream building inventory.
+
+`locationRevision.facts` stores a strict `LocationFactsSnapshot` envelope:
+
+```ts
+{
+  schemaVersion: 1,
+  kind: 'establishment' | 'building' | 'natural' | 'address' | 'unknown',
+  common: { names, location: { geometry, address? }, phoneNumber?, successorLocationId? },
+  details: /* validated according to kind */
+}
+```
+
+`kind` is captured in each immutable revision, so later identity reclassification cannot
+reinterpret an accepted historical snapshot. Shared fields keep the current map anchor
+and SaanSeoi-shaped address; addresses may be absent. Phones remain optional common
+contact data because HYPE's phone property is universal. Establishment details contain
+brands and operating status. Building details have their own strict schema. Natural
+details retain a classification scheme/category without inventing a source adapter.
+Unclassified legacy details preserve known brands/lifecycle until classification is reviewed.
+Unsupported explicit JSON versions and mismatched fields fail validation.
+
+`LocationFacts` remains the normalized display projection used by Feature consumers.
+The Drizzle facts codec and raw-write helpers validate/serialize the storage envelope;
+building/natural-specific details round-trip through `entity` in that projection.
+Existing display fields, spatial projections and Organisation corrections remain in
+place. SQL readers use version-aware fixed JSON paths for names, geometry, brands
+and lifecycle rather than scanning whole revision histories. Building details participate
+in the current facts adoption policy. Organisation edits cannot silently drop typed details.
+
+### Selected LandsD building facts
+
+The complete retained **21 September 2026** extract has **342,195 records**. Source
+schema and actual properties were checked, including all four `BuildingBlockType`
+values. The HYPE mapping deliberately excludes materials and roofing parameters.
+
+| LandsD input | HYPE building details | Interpretation |
+| --- | --- | --- |
+| `BuildingCSUID`, `BuildingID`, `GeoRefNo` | `source` identifiers | Keep the LandsD inventory and publisher ID; OBJECTID remains delivery evidence only. |
+| `BuildingBlockType` | `structureType` | tower, podium, temporary structure or open-sided structure. |
+| `Storeys` | `storeysAboveGround` | 59,308 populated records; missing remains unknown. |
+| `StoreysInBasement` | `storeysBelowGround` | 6,296 populated records; explicit zero is retained. |
+| `BaseHeight`, `TopHeight` | `elevations` with `verticalDatum: 'HKPD'` | Elevations above Hong Kong Principal Datum, including negative values. |
+| Both valid elevations | `heightMetres`, `heightMethod: 'top_minus_base'` | Derived only when both exist and top is not below base; top elevation alone is never physical height. |
+| Footprint / `Shape_Area` | `footprint`, optional `areaSquareMetres` | Inline geometry for local records or immutable inventory/record/release/geometry references. |
+| `Status` | `source.recordStatus` | All current records say Active; this does not assert business operation, occupancy or physical standing. |
+| `DateCreate`, `DateStamp` | `source.recordCreatedOn`, `recordUpdatedOn` | Source-record dates, never construction/completion dates. |
+
+Source names continue to populate shared localized names. The extract has 235,946
+base elevations and 237,348 top elevations, so these remain optional. No reviewed
+record has top below base; malformed combinations in future inputs retain their source
+elevations without producing a fabricated physical height.
+
+The same government delivery also exposes related records worth preserving when the
+SaanSeoi building adapter is implemented:
+
+- `BuildingName`: alternate bilingual names, `NameStatus` and `DataProviderID`, joined
+  by `BuildingCSUID`; useful for matching a Feature to a building beyond its default name.
+- `BuildingWorksHistory`: 168,042 events for 71,070 buildings, joined by
+  `BuildingCSUID`, with `WorksType`, `WorksDate` and `DataProviderID`. These can provide
+  attributed completion/works history; they are not equivalent to `DateCreate`.
+- `BuildingRelateOPStructure` → `OPStructure` → `OP`: links use `BuildingCSUID`,
+  `BuildingStructureID` and `OPNo`, not OBJECTID. Structure-specific usage text
+  (`OPBuildingType`), storey remarks and occupation-permit dates could help distinguish
+  premises and interpret floors. A permit can cover multiple structures: its domestic,
+  non-domestic and total gross floor area must not be copied onto every footprint as
+  that building's area. Permit date is not automatically a construction date or proof
+  of present occupancy. Multiple links must remain multiple; do not select one arbitrarily.
+- `BuildingLotNoInfo`: lot, DD/SD and section references join through
+  `BuildingStructureID`; useful for cadastral matching, not an automatic display address.
+
+These related tables are documented for the future adapter, not flattened into speculative
+HYPE facts now. The current projector deliberately accepts only the inspected Building
+layer fields. Related records, their cardinalities and source attribution need an explicit
+mapping when the adapter is added. The September schema has 53,349 building/OP links
+for 52,913 buildings; many-to-many relationships are a real concern, not just scaffolding.
+
+LandsD and Overture source assertions stay separate. A footprint reference must match
+the building's inventory and publisher record, and pin a geometry revision; a generic
+`latest` reference is insufficient. Attribute-only revisions can reuse that reference.
+A geometric match never replaces BuildingCSUID with a GERS ID. There are no new D1
+footprint tables or full-inventory imports in this change.
+
+### Conversion and verification
+
+Migration `0142_location_facts_snapshots.sql` wraps existing normalized facts, preserving
+revision IDs, sequences, raw publisher payloads, source content hashes and Feature
+projections. Historical kinds come from retained creation/import/type-change provenance;
+unrecoverable classifications remain unknown rather than using a later identity kind.
+It restores the immutable revision guard and rejects new unversioned revision writes.
+Application validators enforce the complete subtype contract. Legacy decoding remains
+available for retained audit envelopes and pre-migration rehearsal fixtures.
+
+Rehearse with a fresh private output directory:
+
+```sh
+bun scripts/locations/rehearse-facts-snapshots.ts INPUT.sqlite .local/locations/NEW-facts-rehearsal
+```
+
+The populated rehearsal validated 1,581 snapshots, preserved all effective values and
+source evidence, and verified 75 unrelated tables, integrity and foreign keys. Source
+and primary input databases are read-only during rehearsal. Regression coverage includes
+wrong subtype/version rejection, addressless buildings, typed-detail retention on edits,
+HKPD/height semantics, inventory/record/geometry identity, source replay and import SQL.

@@ -1,3 +1,7 @@
+import {
+  readLocationFacts,
+  LocationFactsSnapshotSchema,
+} from '../../src/lib/locations/factsSnapshot'
 import { afterEach, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
@@ -73,6 +77,7 @@ function fixture() {
     '0122_simplify_place_refresh.sql',
     '0138_location_storage.sql',
     '0139_organisation_location_corrections.sql',
+    '0142_location_facts_snapshots.sql',
   ])
     target.exec(readFileSync(`migrations/${migration}`, 'utf8'))
   const generate = () =>
@@ -148,7 +153,9 @@ test('imports participating donors/dropoffs as linked Locations, with brands and
     ).toEqual({ n: 1 })
     expect(donor.ownerOrganisationId).toBe('org')
     expect(donor.ssId).toBeNull()
-    const facts = JSON.parse(donor.facts)
+    const snapshot = LocationFactsSnapshotSchema.parse(JSON.parse(donor.facts))
+    expect(snapshot.kind).toBe('establishment')
+    const facts = readLocationFacts(donor.facts)
     expect(facts.phoneNumber).toEqual(['+85223456789'])
     expect(facts.brands[0].names.en).toBe('Maison Kayser')
     expect(facts.location.address.status).toBe('unresolved')

@@ -1,3 +1,4 @@
+import { readLocationFacts } from '../../src/lib/locations/factsSnapshot'
 // Refs #194. Full local source API and bulk mirror integration; no remote mutation.
 // RUNTIME
 import assert from 'node:assert/strict'
@@ -127,7 +128,7 @@ t=sqlite3.connect(sys.argv[2]);s.backup(t);t.close();s.close()`,
         .query('SELECT facts,payload FROM locationRevision WHERE id=?')
         .get(id) as { facts: string; payload: string }
       assert.ok(row)
-      const facts = JSON.parse(row.facts),
+      const facts = readLocationFacts(row.facts),
         payload = JSON.parse(row.payload)
       const state =
         facts.location.address.status === 'resolved'

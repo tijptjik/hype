@@ -77,6 +77,7 @@ export async function rehearseCuratedAdoption(
     '0138_location_storage.sql',
     '0139_organisation_location_corrections.sql',
     '0141_organisation_location_scope_guards.sql',
+    '0142_location_facts_snapshots.sql',
   ]) {
     sqlite.exec(
       readFileSync(resolve(import.meta.dir, '../../../migrations', migration), 'utf8'),

@@ -532,3 +532,30 @@ TypeScript check and Biome. Fourteen importer/rehearsal tests and the real cross
 address-curation rehearsal also pass. The surrounding concurrent working checkout
 passes its broader Location suite; its full application check still reports the
 existing 10 errors and 20 warnings. These do not constitute deployment acceptance.
+
+## Versioned facts envelope conversion (21 October 2026)
+
+Apply `0142_location_facts_snapshots.sql` after the ownership migrations. It converts
+only `locationRevision.facts` to the explicit v1 kind/common/details contract and adds
+a guard against old unversioned writers. Retained provenance determines historical
+kinds; raw source payloads, source content hashes, revision IDs and all accepted
+Feature projections remain unchanged. New code reads both retained legacy evidence
+and v1 snapshots; all application/import writers emit v1. Deploy these writers with
+the migration. Historical type changes stay captured in their individual revisions.
+
+The reproducible rehearsal command is `bun scripts/locations/rehearse-facts-snapshots.ts
+INPUT.sqlite .local/locations/NEW-facts-rehearsal`. The output includes a consistent
+SQLite copy and count/hash-only receipt. It validates every converted snapshot,
+compares normalized display/lifecycle values and immutable source evidence, checks
+unrelated tables and runs integrity/foreign-key checks before recording the migration.
+The populated rehearsal passed for 1,581 revisions and 75 unrelated tables. It neither
+reads a remote binding nor resets its input database. Building/Natural source
+association adapters are not enabled by this schema preparation.
+
+Primary local HYPE now has 0142 installed. A final read-only check confirms all 1,581
+revisions use v1, integrity is `ok` and foreign-key violations are zero. Runtime/schema
+commit: `f4103d7a` (local, not pushed). The isolated implementation passes 297 Location
+tests and the Location refresh Worker typecheck; the working checkout also passes 30
+Bun importer/rehearsal tests. Biome reports no errors on the staged TypeScript scope.
+The full application check remains at its earlier 10 unrelated errors and 19 warnings;
+this is not a clean whole-app check or deployment acceptance. Production is unchanged.

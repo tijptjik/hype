@@ -1,3 +1,4 @@
+import { readLocationFacts } from '../../src/lib/locations/factsSnapshot'
 // Refs #194. Real source API hydration from sealed exports; no remote writes.
 // RUNTIME
 import assert from 'node:assert/strict'
@@ -71,7 +72,7 @@ async function main(): Promise<void> {
       apiVersion: row.apiVersion,
       releaseId: row.releaseId,
       snapshotId: row.snapshotId,
-      facts: JSON.parse(row.facts),
+      facts: readLocationFacts(row.facts),
       payload,
       issues,
     }

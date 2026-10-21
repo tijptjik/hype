@@ -1,3 +1,4 @@
+import { readLocationFacts } from '../../src/lib/locations/factsSnapshot'
 // NODE
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -112,7 +113,7 @@ function main(): void {
         row.historyCount !== 1
       )
         throw new Error('Split identity, ownership or history mismatch')
-      const facts = LocationFactsSchema.parse(JSON.parse(row.facts))
+      const facts = readLocationFacts(row.facts)
       const overrides = FeatureLocationOverridesSchema.parse(JSON.parse(row.overrides))
       if (
         !equalLocationValue(
