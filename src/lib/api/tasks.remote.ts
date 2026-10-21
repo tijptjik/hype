@@ -259,7 +259,7 @@ const assertPublicContributionTarget = async (
  *
  * @param params List query params validated by `GetTasksSchema`.
  * @param params.conditions Optional task filters.
- * @param params.prisms Optional organisation/project prisms.
+ * @param params.prisms Optional organisation/project/layer prisms.
  * @param params.pagination Optional pagination controls.
  * @param params.sorting Optional sorting controls.
  * @param params.q Optional text query.
@@ -280,7 +280,7 @@ const getTasksQuery = guardedQuery(GetTasksSchema, async (params, ctx) => {
     normalizedConditions as Partial<TaskDB>,
     { isDraft: false } as Partial<TaskDB>,
   )
-  const normalizedPrisms = toTaskPrisms(params.prisms as never)
+  const normalizedPrisms = toTaskPrisms(params.prisms)
 
   const listDecision = authorizeTaskListForContext({
     user,

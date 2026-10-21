@@ -1,5 +1,5 @@
 // DRIZZLE
-import { eq, or, type SQL, sql } from 'drizzle-orm'
+import { and, eq, inArray, or, type SQL, sql } from 'drizzle-orm'
 // API
 import { applyQueryFilters } from '#lib/api/index.js'
 import { toBooleanOrUndefined } from '#lib/api/services/index.js'
@@ -18,7 +18,7 @@ import { chunkedInArray } from '#lib/utils/batch-query.js'
 // DB
 import { userColumnsWithPrivacyProtected } from '#lib/db/services/user.js'
 // SCHEMA
-import { task } from '#lib/db/schema/index.js'
+import { feature, task } from '#lib/db/schema/index.js'
 // DB
 import { applyPrismConstraints, transformI18nSafely } from '#lib/db/index.js'
 import { toNormalizedImageRecord } from '#lib/db/services/image.js'
@@ -267,13 +267,18 @@ export const toResponseShape = async <P extends TaskProfile = TaskProfile>(
 // 3. QUERY CONTEXT
 // ═══════════════════════
 
-export const toTaskPrisms = (prisms?: Prisms): Prisms | undefined => {
+/**
+ * Normalizes explicit task filters without discarding feature layer selections.
+ * @param prisms - Optional hierarchy selections from the request.
+ * @returns Complete prism arrays, or undefined when no filters were supplied.
+ */
+export const toTaskPrisms = (prisms?: Partial<Prisms>): Prisms | undefined => {
   if (!prisms) return undefined
 
   return {
     organisation: Array.isArray(prisms.organisation) ? prisms.organisation : [],
     project: Array.isArray(prisms.project) ? prisms.project : [],
-    layer: [],
+    layer: Array.isArray(prisms.layer) ? prisms.layer : [],
   }
 }
 
@@ -311,7 +316,22 @@ export const toQueryConditions = (
   const excludeColumns: string[] = []
 
   if (prisms) {
-    conditions.push(...applyPrismConstraints(db, HierarchicalResource.task, prisms))
+    // Tasks have no layerId: resolve layer prisms through their feature's hierarchy.
+    if (prisms.layer.length > 0) {
+      conditions.push(
+        inArray(
+          task.featureId,
+          db
+            .select({ id: feature.id })
+            .from(feature)
+            .where(
+              and(...applyPrismConstraints(db, HierarchicalResource.feature, prisms)),
+            ),
+        ),
+      )
+    } else {
+      conditions.push(...applyPrismConstraints(db, HierarchicalResource.task, prisms))
+    }
   }
 
   if (!isAdminRequest) {

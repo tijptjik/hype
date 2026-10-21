@@ -215,6 +215,7 @@ export class AdminCtx {
       FirstClassResource.task,
       this.getTaskListPrisms().organisation,
       this.getTaskListPrisms().project,
+      this.getTaskListPrisms().layer,
       this.view.filters.viewFilters[FirstClassResource.task].isReviewed,
       this.view.filters.viewFilters[FirstClassResource.task].type,
       this.view.filters.sorting.task.sortBy,
@@ -237,12 +238,17 @@ export class AdminCtx {
   /**
    * Builds the effective task prism scope for admin task queries.
    *
-   * @returns Explicit user-selected prisms; empty means all server-authorized tasks.
+   * @returns Explicit organisation, project, and layer prisms; empty means all server-authorized tasks.
    */
-  private getTaskListPrisms(): { organisation: string[]; project: string[] } {
+  private getTaskListPrisms(): {
+    organisation: string[]
+    project: string[]
+    layer: string[]
+  } {
     return {
       organisation: this.view.scope.prisms.organisation,
       project: this.view.scope.prisms.project,
+      layer: this.view.scope.prisms.layer,
     }
   }
 

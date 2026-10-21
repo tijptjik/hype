@@ -286,6 +286,7 @@ export const GetTasksSchema = ListQueryParamsSchema.extend({
     .object({
       organisation: z.array(z.string()).optional(),
       project: z.array(z.string()).optional(),
+      layer: z.array(z.string()).optional(),
     })
     .optional(),
   meta: TaskRemoteMetaSchema,
