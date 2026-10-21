@@ -1,0 +1,570 @@
+{
+  "manifestVersion": 1,
+  "projectId": "vGBvWfSZNELM",
+  "organisationCode": "eunic",
+  "projectCode": "eln",
+  "refs": "#194",
+  "venues": [
+    {
+      "key": "project-house",
+      "names": {
+        "en": "Project House"
+      },
+      "featureIds": [
+        "eln2025Book001"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "Project House"
+        }
+      ],
+      "notes": "",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2025Book001": {
+          "locationId": "rNovOxGaOFbe",
+          "displayAddress": "Project House 1 Queen's Rd W, Sheung Wan, Hong Kong"
+        }
+      }
+    },
+    {
+      "key": "commaa",
+      "names": {
+        "en": "COMMAA"
+      },
+      "featureIds": [
+        "eln2025Book002"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "COMMAA"
+        },
+        {
+          "url": "https://www.laab.pro/en/team/commaa/",
+          "quotedText": "commaa; shop 2・11 po yan street sheung wan・hong kong"
+        }
+      ],
+      "notes": "",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2025Book002": {
+          "locationId": "7JupfSQUUOtz",
+          "displayAddress": "COMMAA, Shop 2, G/F, 11 Po Yan St, Sheung Wan, Hong Kong"
+        }
+      }
+    },
+    {
+      "key": "la-galerie",
+      "names": {
+        "en": "La Galerie Paris 1839"
+      },
+      "featureIds": [
+        "eln2025Book003",
+        "eln2024Spot004"
+      ],
+      "evidence": [
+        {
+          "url": "https://iichongkong.esteri.it/en/gli_eventi/calendario/literature-night-hong-kong-2024-free-event/",
+          "quotedText": "La Galerie Paris 1839"
+        },
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "La Galerie Paris 1839"
+        },
+        {
+          "url": "https://www.lagalerie.hk/",
+          "quotedText": "La Galerie Paris 1839"
+        }
+      ],
+      "notes": "Same gallery at 74 Hollywood Road in 2024 and 2025; do not infer a permanent closure from current temporary-works notice.",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2025Book003": {
+          "locationId": "9hIQ95Gj6_Kh",
+          "displayAddress": "La Galerie Paris 1839, G/F, 74 Hollywood Rd, Central, Hong Kong"
+        },
+        "eln2024Spot004": {
+          "locationId": "7ZF7jO7CisTU",
+          "displayAddress": "La Galerie, G/F, 74 Hollywood Road, Central"
+        }
+      }
+    },
+    {
+      "key": "italian-library",
+      "names": {
+        "en": "La Biblioteca Italian Library",
+        "zh-hant": "意大利圖書館"
+      },
+      "featureIds": [
+        "eln2025Book004",
+        "eln2024Spot003",
+        "elnBook00008"
+      ],
+      "evidence": [
+        {
+          "url": "https://iichongkong.esteri.it/en/gli_eventi/calendario/literature-night-hong-kong-2024-free-event/",
+          "quotedText": "La Biblioteca Italian Library"
+        },
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "La Biblioteca Italian Library"
+        },
+        {
+          "url": "https://www.pmq.org.hk/shop/la-biblioteca-italian-library/?lang=ch",
+          "quotedText": "意大利圖書館; Hollywood / 2F / H210"
+        }
+      ],
+      "notes": "",
+      "traditionalChineseDecision": "supported",
+      "expectedRecords": {
+        "eln2025Book004": {
+          "locationId": "bnfCyDeYo_Gk",
+          "displayAddress": "La Biblioteca Italian Library Hong Kong, PMQ - Hollywood, Central, Hong Kong"
+        },
+        "eln2024Spot003": {
+          "locationId": "8Oqs-RfTgAdt",
+          "displayAddress": "La Biblioteca Italian Library, R H210, Block B, PMQ, 35 Aberdeen Street, Central"
+        },
+        "elnBook00008": {
+          "locationId": "T0eCBzwFALMN",
+          "displayAddress": "La Biblioteca Italian Library Hong Kong, PMQ, 35 Aberdeen St, Central"
+        }
+      }
+    },
+    {
+      "key": "taste-library",
+      "names": {
+        "en": "PMQ Taste Library",
+        "zh-hant": "PMQ 味道圖書館"
+      },
+      "featureIds": [
+        "eln2025Book005",
+        "eln2025Book008"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "PMQ Taste Library"
+        },
+        {
+          "url": "https://www.pmq.org.hk/shop/pmq-taste-library/?lang=ch",
+          "quotedText": "PMQ 味道圖書館; Hollywood / 5F / H502-H505 (Entrance: H504)"
+        }
+      ],
+      "notes": "Seed records describe H501 and H503. Same PMQ Taste Library brand; retain the event-specific room addresses without normalizing them from the current H502-H505 listing.",
+      "traditionalChineseDecision": "supported",
+      "expectedRecords": {
+        "eln2025Book005": {
+          "locationId": "UxhHlX6RfAU8",
+          "displayAddress": "Taste Library, H501, PMQ, 35 Aberdeen Street, Central"
+        },
+        "eln2025Book008": {
+          "locationId": "0p0LERHuJo3o",
+          "displayAddress": "Taste Library, H503, PMQ, 35 Aberdeen Street, Central"
+        }
+      }
+    },
+    {
+      "key": "habyt",
+      "names": {
+        "en": "Habyt"
+      },
+      "featureIds": [
+        "eln2025Book006",
+        "elnBook00010"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "Habyt"
+        }
+      ],
+      "notes": "Official 2025 programme plus matching imported venue address. No verified Traditional Chinese trading name; do not translate the brand.",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2025Book006": {
+          "locationId": "GwiPzqQPiCRg",
+          "displayAddress": "Habyt, 8 Wa In Fong West, Central"
+        },
+        "elnBook00010": {
+          "locationId": "oCcdZB4_ZdwT",
+          "displayAddress": "Habyt, 8 Wa In Fong West, Central"
+        }
+      }
+    },
+    {
+      "key": "bookazine-social",
+      "names": {
+        "en": "Bookazine Social"
+      },
+      "featureIds": [
+        "eln2025Book007",
+        "elnBook00009"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "Bookazine Social"
+        },
+        {
+          "url": "https://www.taikwun.hk/zh/lifestyle_enjoyment",
+          "quotedText": "Bookazine Social 03-G07舖"
+        }
+      ],
+      "notes": "Official Traditional Chinese tenant directory uses the Latin name; no separate Chinese name proposed.",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2025Book007": {
+          "locationId": "lEQDxSgjmcqU",
+          "displayAddress": "Bookazine Social, Tai Kwun, Central"
+        },
+        "elnBook00009": {
+          "locationId": "ODa_k_75Krqi",
+          "displayAddress": "Bookazine Social, Tai Kwun, 10 Hollywood Rd, Central"
+        }
+      }
+    },
+    {
+      "key": "parentheses",
+      "names": {
+        "en": "Parenthèses"
+      },
+      "featureIds": [
+        "eln2025Book009",
+        "elnBook00006"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "Parenthèses"
+        },
+        {
+          "url": "https://www.parentheses-hk.com/",
+          "quotedText": "La librairie Française de Hong Kong"
+        }
+      ],
+      "notes": "Retain official French trading name. Generic translated descriptions are not a verified Chinese trading name.",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2025Book009": {
+          "locationId": "x2l8Y9mxMh_D",
+          "displayAddress": "Parenthèses, 2/F, Duke of Wellington House, 14-24 Wellington Street, Central"
+        },
+        "elnBook00006": {
+          "locationId": "jjjXAQMaRtdu",
+          "displayAddress": "Parenthèses bookstore, 14 Wellington St, Central"
+        }
+      }
+    },
+    {
+      "key": "flying-club",
+      "names": {
+        "en": "The Flying Club"
+      },
+      "featureIds": [
+        "eln2025Book010"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "The Flying Club"
+        }
+      ],
+      "notes": "",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2025Book010": {
+          "locationId": "ZCB0fwrF0-Lk",
+          "displayAddress": "The Flying Club, 1802, 18/F, Wellington Place, 2-8 Wellington Street, Central"
+        }
+      }
+    },
+    {
+      "key": "wyndham-social",
+      "names": {
+        "en": "Wyndham Social"
+      },
+      "featureIds": [
+        "eln2025Book011",
+        "eln2025Book012",
+        "elnBook00004",
+        "elnBook00007",
+        "eln2027BookCZ",
+        "eln2027BookDE",
+        "eln2027Slot01",
+        "eln2027Slot02",
+        "eln2027Slot03",
+        "eln2027Slot04",
+        "eln2027Slot05",
+        "eln2027Slot06",
+        "eln2027Slot07",
+        "eln2027Slot08",
+        "eln2027Slot09"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "Wyndham Social"
+        },
+        {
+          "url": "https://www.wyndhamsocial.com/",
+          "quotedText": "Wyndham Social | 33 Wyndham Street"
+        }
+      ],
+      "notes": "2027 addresses are organiser-selected provisional venues. Correct Location names only; do not claim a confirmed 2027 programme or merge the independent Location IDs.",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2025Book011": {
+          "locationId": "d__AaCiJ3Xp3",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham St, Central"
+        },
+        "eln2025Book012": {
+          "locationId": "wiVt54fiSJ6Q",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham St, Central"
+        },
+        "elnBook00004": {
+          "locationId": "s3AvDj1kGo9q",
+          "displayAddress": "Wyndham Social, 33 Wyndham St, Central"
+        },
+        "elnBook00007": {
+          "locationId": "wuvEpmzcbWVw",
+          "displayAddress": "Wyndham Social, 33 Wyndham St, Central"
+        },
+        "eln2027BookCZ": {
+          "locationId": "foK9iaFcjTkL",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027BookDE": {
+          "locationId": "zdam5spyRB3N",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027Slot01": {
+          "locationId": "eRejoGPAtQ3y",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027Slot02": {
+          "locationId": "ca91N0e-zGg3",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027Slot03": {
+          "locationId": "7LQrTfETRikE",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027Slot04": {
+          "locationId": "YdX7TEc31fq3",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027Slot05": {
+          "locationId": "bkbIUFzSMlek",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027Slot06": {
+          "locationId": "oGSZilYdjLE3",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027Slot07": {
+          "locationId": "Dt_AuCq1yBY9",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027Slot08": {
+          "locationId": "fD3jZHf97Kyz",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        },
+        "eln2027Slot09": {
+          "locationId": "Zq612eF0FwOU",
+          "displayAddress": "Wyndham Social, G/F, 33 Wyndham Street, Central"
+        }
+      }
+    },
+    {
+      "key": "ztoryhome",
+      "names": {
+        "en": "Ztoryhome"
+      },
+      "featureIds": [
+        "eln2025Book013"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.exteriores.gob.es/Consulados/hongkong/en/Comunicacion/Noticias/Paginas/Articulos/20250818_not1.aspx",
+          "quotedText": "Ztoryhome"
+        },
+        {
+          "url": "https://www.instagram.com/ztoryhome/",
+          "quotedText": "ztoryhome (@ztoryhome)"
+        }
+      ],
+      "notes": "Official 2025 programme establishes venue; current Instagram profile has no verified Traditional Chinese trading name.",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2025Book013": {
+          "locationId": "2Uh210vHW-CS",
+          "displayAddress": "Ztoryhome, G/F, 118 Queen’s Road West, Sheung Wan"
+        }
+      }
+    },
+    {
+      "key": "taschen",
+      "names": {
+        "en": "TASCHEN"
+      },
+      "featureIds": [
+        "eln2024Spot001"
+      ],
+      "evidence": [
+        {
+          "url": "https://iichongkong.esteri.it/en/gli_eventi/calendario/literature-night-hong-kong-2024-free-event/",
+          "quotedText": "TASCHEN"
+        },
+        {
+          "url": "https://www.taikwun.hk/zh/lifestyle_enjoyment",
+          "quotedText": "TASCHEN 01-G02舖"
+        }
+      ],
+      "notes": "Official Traditional Chinese tenant directory retains TASCHEN in Latin letters; do not invent a Chinese name.",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2024Spot001": {
+          "locationId": "sI8Xovf7t42d",
+          "displayAddress": "Taschen, Shop 01-G02, Tai Kwun, 10 Hollywood Rd, Central"
+        }
+      }
+    },
+    {
+      "key": "novalis",
+      "names": {
+        "en": "Novalis Art Design"
+      },
+      "featureIds": [
+        "eln2024Spot002"
+      ],
+      "evidence": [
+        {
+          "url": "https://iichongkong.esteri.it/en/gli_eventi/calendario/literature-night-hong-kong-2024-free-event/",
+          "quotedText": "Novalis Art Design"
+        },
+        {
+          "url": "https://www.novalisartdesign.com/",
+          "quotedText": "Novalis Art Design; 197 Hollywood Road, Hong Kong"
+        }
+      ],
+      "notes": "",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "eln2024Spot002": {
+          "locationId": "Bu3Ex6VTy0ms",
+          "displayAddress": "Novalis Art Design, 197 Hollywood Road, Hong Kong"
+        }
+      }
+    },
+    {
+      "key": "siberian",
+      "names": {
+        "en": "The Siberian"
+      },
+      "featureIds": [
+        "elnBook00001"
+      ],
+      "evidence": [],
+      "notes": "Imported venue address is the available English evidence. First-party social profile and domain were unavailable; Chinese name remains unresolved.",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "elnBook00001": {
+          "locationId": "qaM6-vcDUFFc",
+          "displayAddress": "The Siberian, 29 Des Voeux Rd, Central"
+        }
+      }
+    },
+    {
+      "key": "mount-zero",
+      "names": {
+        "en": "Mount Zero Books"
+      },
+      "featureIds": [
+        "elnBook00002"
+      ],
+      "evidence": [],
+      "notes": "Imported venue address is English evidence. Candidate Chinese name 見山書店 was not retrievable from a first-party source in this research, so it is deliberately NOT proposed.",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "elnBook00002": {
+          "locationId": "OfR9iIysKnPb",
+          "displayAddress": "Mount Zero Books, 6 Tai Ping Shan St, Sheung Wan"
+        }
+      }
+    },
+    {
+      "key": "print-art",
+      "names": {
+        "en": "Print Art Contemporary",
+        "zh-hant": "當代印藝"
+      },
+      "featureIds": [
+        "elnBook00003"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.pmq.org.hk/shop/print-art-contemporary/?lang=ch",
+          "quotedText": "當代印藝; 中環元創方A座地下 SG03-07 室"
+        }
+      ],
+      "notes": "",
+      "traditionalChineseDecision": "supported",
+      "expectedRecords": {
+        "elnBook00003": {
+          "locationId": "9cVYm4V0xTBO",
+          "displayAddress": "Print Art Contemporary, PMQ, 35 Aberdeen St, Central"
+        }
+      }
+    },
+    {
+      "key": "onebite",
+      "names": {
+        "en": "One Bite Design Studio"
+      },
+      "featureIds": [
+        "elnBook00005"
+      ],
+      "evidence": [
+        {
+          "url": "https://onebitedesign.com/",
+          "quotedText": "© 2026 One Bite Design Studio. All rights reserved."
+        }
+      ],
+      "notes": "",
+      "traditionalChineseDecision": "unresolved",
+      "expectedRecords": {
+        "elnBook00005": {
+          "locationId": "MPq3YwshDq3x",
+          "displayAddress": "One Bite Design Studio, 50 Lok Ku Rd, Sheung Wan"
+        }
+      }
+    },
+    {
+      "key": "chancery-gallery",
+      "names": {
+        "en": "10 Chancery Lane Gallery",
+        "zh-hant": "10 號贊善里畫廊"
+      },
+      "featureIds": [
+        "elnBook00011"
+      ],
+      "evidence": [
+        {
+          "url": "https://www.10chancerylanegallery.com/zh/contact/",
+          "quotedText": "10 號贊善里畫廊; 香港中環贊善里10號地舖"
+        }
+      ],
+      "notes": "",
+      "traditionalChineseDecision": "supported",
+      "expectedRecords": {
+        "elnBook00011": {
+          "locationId": "d4ih7DV7OrC-",
+          "displayAddress": "10 Chancery Lane Gallery, 10 Chancery Ln, Central"
+        }
+      }
+    }
+  ]
+}

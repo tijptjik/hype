@@ -814,6 +814,13 @@ full source annotations are not exposed by this UI. Requests are lazy and share
 the gallery's metadata cache, with stale contributor responses discarded when the
 selected image or Feature changes.
 
+ELN venue names are corrected independently of literary Feature titles. The
+[review catalogue and local-only runner](../../../scripts/eln/venue-names.md)
+document the exact scope, first-party Traditional Chinese names and guarded
+name-only application. Existing accepted Feature revisions are retained for the
+ordinary adoption flow; a venue name correction does not rename a book or move an
+event to a successor tenant.
+
 ## Versioned Location facts and building preparation (21 October 2026)
 
 Refs [#194](https://github.com/tijptjik/hype/issues/194); source research:
