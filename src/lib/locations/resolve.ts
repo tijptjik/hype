@@ -21,6 +21,7 @@ export function resolveLocationField<T>(
 }
 
 export type EffectiveLocationFacts = {
+  footprint?: LocationFacts['footprint']
   entity?: LocationFacts['entity']
   operatingStatus?: LocationFacts['operatingStatus']
   buildingStatus?: LocationFacts['buildingStatus']
@@ -57,6 +58,9 @@ export function resolveFeatureLocation(
     )
   }
   return {
+    ...(facts.footprint !== undefined || overrides.footprint
+      ? { footprint: resolveLocationField(facts.footprint, overrides.footprint) }
+      : {}),
     ...(facts.entity ? { entity: facts.entity } : {}),
     ...(facts.operatingStatus !== undefined
       ? { operatingStatus: facts.operatingStatus }

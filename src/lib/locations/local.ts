@@ -1,22 +1,30 @@
 // VALIDATION
 import { z } from 'zod'
 import { LocationFactsSchema } from './validation'
+import { LocationKindSchema } from './kinds'
 import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
 
 /** Local baselines cannot claim unverified canonical Address identities. */
 export const LocalLocationInputSchema = z.strictObject({
   state: z.enum(['manual', 'unresolved']),
-  // New authored records are establishments; other source families are not supported yet.
-  kind: z.literal('establishment').default('establishment'),
+  // Authored type is independent of manual/unmatched state and source adapter availability.
+  kind: LocationKindSchema.default('establishment'),
   // Consent is independent of source matching state and Organisation visibility.
   sharingPreference: z.enum(['private', 'allow-sharing']).default('private'),
   parseSource: z.record(z.string().max(35), z.string().max(10000)).optional(),
   facts: LocationFactsSchema.superRefine((facts, context) => {
+    // Local authoring accepts geometry, not fabricated upstream geometry-publication claims.
+    if (facts.footprint?.mode === 'reference')
+      context.addIssue({
+        code: 'custom',
+        path: ['footprint'],
+        message: 'Author local footprints as inline geometry',
+      })
     if (!Object.values(facts.names).some(name => name.trim().length > 0)) {
       context.addIssue({
         code: 'custom',
         path: ['names'],
-        message: 'An establishment name is required',
+        message: 'A Location name is required',
       })
     }
     const address = facts.location.address

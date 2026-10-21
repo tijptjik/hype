@@ -63,7 +63,7 @@ describe('unified Location discovery', () => {
     })
   })
 
-  it('qualifies source identity and prohibits unsupported local entity kinds', () => {
+  it('qualifies source identity independently of locally authored entity kinds', () => {
     expect(locationSourceReference('id')).toEqual({
       provider: 'saanseoi',
       family: 'places',
@@ -71,9 +71,7 @@ describe('unified Location discovery', () => {
     })
     expect(locationSourceReference(null)).toBeNull()
     expect(LocalLocationInputSchema.shape.kind.parse(undefined)).toBe('establishment')
-    expect(LocalLocationInputSchema.shape.kind.safeParse('building').success).toBe(
-      false,
-    )
-    expect(LocalLocationInputSchema.shape.kind.safeParse('natural').success).toBe(false)
+    expect(LocalLocationInputSchema.shape.kind.safeParse('building').success).toBe(true)
+    expect(LocalLocationInputSchema.shape.kind.safeParse('natural').success).toBe(true)
   })
 })

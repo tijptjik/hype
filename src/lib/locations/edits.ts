@@ -42,6 +42,12 @@ export function applyFeatureLocationEdits(
       result.names[locale] = editedValue(value)
     }
   }
+  // Omitted footprint is an unrelated form save; explicit null clears the inherited extent.
+  if (
+    after.footprint !== undefined &&
+    !equalLocationValue(before.footprint, after.footprint)
+  )
+    result.footprint = editedValue(after.footprint)
   if (!equalLocationValue(before.phoneNumber, after.phoneNumber))
     result.phoneNumber = editedValue(after.phoneNumber)
   if (!equalLocationValue(before.brands, after.brands))

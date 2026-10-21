@@ -24,6 +24,7 @@ import {
 import { validateAddressDivisionOverrides } from './addressDivisions'
 import { LocationNamesEditSchema } from '#lib/locations/validation.js'
 import { LocalLocationInputSchema } from '#lib/locations/local.js'
+import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 import {
   prepareLocationCorrection,
   readOrganisationLocation,
@@ -105,7 +106,7 @@ export async function createLocalLocation(
 }
 
 /**
- * Save names and structured address content without rewriting accepted or historical revisions.
+ * Save names, optional footprints and structured address content without rewriting accepted or historical revisions.
  * @param db Request-local database.
  * @param input Authorized Organisation, expected revisions and optional names, authored content, marker and subjective selections.
  * @returns New revision identity, or null if ownership, source identity or revision changed.
@@ -118,6 +119,7 @@ export async function updateLocalLocationAddress(
     organisationId: string | null
     expectedRevisionId: string
     expectedOrganisationRevision?: string | null
+    footprint?: unknown
     names?: Record<string, string>
     address?: unknown
     coordinates?: [number, number]
@@ -127,6 +129,9 @@ export async function updateLocalLocationAddress(
   },
 ): Promise<{ revisionId: string; organisationRevision: string | null } | null> {
   if (!input.actorId.trim() || !input.organisationId) return null
+  const footprint = LocalLocationFootprintSchema.nullable()
+    .optional()
+    .parse(input.footprint)
   const names =
     input.names === undefined ? undefined : LocationNamesEditSchema.parse(input.names)
   const address =
@@ -167,6 +172,7 @@ export async function updateLocalLocationAddress(
   // Save name and location groups together while retaining untouched canonical address evidence.
   const after = {
     ...before,
+    ...(footprint !== undefined ? { footprint } : {}),
     ...(names ? { names } : {}),
     location: {
       ...before.location,

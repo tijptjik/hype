@@ -2,17 +2,19 @@
 import { describe, expect, it } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync } from 'node:fs'
-import { BuildingDetailsSchema } from '#lib/locations/factsDetails.js'
+import { LocationFootprintSchema } from '#lib/locations/footprint.js'
+import { LocalLocationInputSchema } from '#lib/locations/local.js'
+import { AvailableDiscoveryTypeSchema } from '#lib/locations/kinds.js'
 import {
   createLocationFactsSnapshot,
   readLocationFacts,
   serializeLocationFacts,
   LocationFactsSnapshotSchema,
 } from '#lib/locations/factsSnapshot.js'
-import { projectLandsdBuildingDetails } from '#lib/locations/landsdBuilding.js'
 import { resolveFeatureLocation } from '#lib/locations/resolve.js'
 import { planLocationAdoption } from '#lib/locations/adoption.js'
 import type { LocationFacts } from '#lib/locations/model.js'
+import type { LocationFootprint } from '#lib/locations/footprint.js'
 
 const facts: LocationFacts = {
   names: { en: 'Example' },
@@ -31,20 +33,25 @@ const facts: LocationFacts = {
     },
   },
 }
-const landsd = {
-  BuildingCSUID: '2899032335T20050430',
-  BuildingID: 1105760103,
-  GeoRefNo: '2899032335',
-  BuildingBlockType: 'Tower',
-  Status: 'Active',
-  BaseHeight: 63.1,
-  TopHeight: 66.6,
-  Storeys: 16,
-  StoreysInBasement: 0,
-  Shape_Area: 171.27415305665085,
-  DateCreate: '20050430',
-  DateStamp: '20130712',
-  OBJECTID: 1,
+const footprint = {
+  mode: 'inline' as const,
+  geometry: {
+    type: 'Polygon' as const,
+    coordinates: [
+      [
+        [114.17, 22.3],
+        [114.171, 22.3],
+        [114.171, 22.301],
+        [114.17, 22.3],
+      ],
+    ],
+  },
+} satisfies LocationFootprint
+const geometryReference = {
+  mode: 'reference',
+  ssId: 'canonical-entity',
+  releaseId: '2026-09-21',
+  geometryRevisionId: 'geometry-1',
 }
 
 describe('typed Location facts snapshots', () => {
@@ -72,16 +79,16 @@ describe('typed Location facts snapshots', () => {
     expect(() => serializeLocationFacts(facts)).toThrow('explicit Location kind')
     expect(() => readLocationFacts({ ...snapshot, schemaVersion: 99 })).toThrow()
   })
-  it('allows an addressless building without establishment fields and retains typed details across projection edits', () => {
-    const details = projectLandsdBuildingDetails(landsd, {
-      releaseId: '2026-09-21',
-      geometryRevisionId: 'geometry-1',
-    })
+  it('allows an addressless building and retains its optional extent across projection edits', () => {
     const snapshot = LocationFactsSnapshotSchema.parse({
       schemaVersion: 1,
       kind: 'building',
-      common: { names: facts.names, location: { geometry: facts.location.geometry } },
-      details,
+      common: {
+        names: facts.names,
+        footprint,
+        location: { geometry: facts.location.geometry },
+      },
+      details: {},
     })
     expect(snapshot).not.toHaveProperty('common.phoneNumber')
     expect(snapshot.details).not.toHaveProperty('brands')
@@ -91,115 +98,151 @@ describe('typed Location facts snapshots', () => {
     const next = JSON.parse(
       serializeLocationFacts({ ...projected, names: { en: 'Corrected building' } }),
     )
-    expect(next.details).toEqual(details)
+    expect(next.common.footprint).toEqual(footprint)
     expect(next.common.names.en).toBe('Corrected building')
-    expect(resolveFeatureLocation(projected, projected.location, {}).entity).toEqual(
-      projected.entity,
+    expect(resolveFeatureLocation(projected, projected.location, {}).footprint).toEqual(
+      footprint,
     )
   })
-  it('rejects establishment fields on buildings, building-only fields on establishments, and unsupported roofing/material properties', () => {
-    const base = { schemaVersion: 1, common: { names: {}, location: facts.location } }
+
+  it.each(['building', 'establishment', 'natural', 'unknown'] as const)(
+    'supports optional shared geometry for %s without inventing upstream data',
+    kind => {
+      const snapshot = createLocationFactsSnapshot({ ...facts, footprint }, kind)
+      expect(snapshot.common.footprint).toEqual(footprint)
+      expect(readLocationFacts(snapshot).footprint).toEqual(footprint)
+      expect(createLocationFactsSnapshot(facts, kind).common).not.toHaveProperty(
+        'footprint',
+      )
+      expect(snapshot.details).not.toHaveProperty('footprint')
+    },
+  )
+
+  it('keeps detailed publisher building attributes out of core HYPE facts', () => {
+    const base = {
+      schemaVersion: 1,
+      kind: 'building',
+      common: { names: {}, location: facts.location },
+    }
     for (const details of [
+      { source: { inventory: 'landsd', buildingCSUID: 'source-record' } },
+      { structureType: 'tower' },
+      { storeysAboveGround: 16 },
+      { storeysBelowGround: 1 },
+      { elevations: { verticalDatum: 'HKPD', topMetres: 66.6 } },
+      { heightMetres: 3.5 },
+      { footprint },
       { brands: [] },
-      { operatingStatus: 'open' },
       { roofShape: 'flat' },
       { material: 'concrete' },
     ])
-      expect(
-        LocationFactsSnapshotSchema.safeParse({ ...base, kind: 'building', details })
-          .success,
-      ).toBe(false)
+      expect(LocationFactsSnapshotSchema.safeParse({ ...base, details }).success).toBe(
+        false,
+      )
     expect(
       LocationFactsSnapshotSchema.safeParse({
         ...base,
-        kind: 'establishment',
-        details: { brands: [], storeysAboveGround: 3 },
-      }).success,
-    ).toBe(false)
-    expect(
-      LocationFactsSnapshotSchema.safeParse({
-        ...base,
-        kind: 'natural',
-        details: { classification: { scheme: 'overture', category: 'mountain' } },
+        details: { buildingStatus: 'standing' },
       }).success,
     ).toBe(true)
   })
-  it('preserves LandsD source facts without interpreting inventory status or record dates as physical lifecycle', () => {
-    const details = projectLandsdBuildingDetails(landsd)
-    expect(details).toMatchObject({
-      structureType: 'tower',
-      storeysAboveGround: 16,
-      storeysBelowGround: 0,
-      elevations: { verticalDatum: 'HKPD', baseMetres: 63.1, topMetres: 66.6 },
-      heightMetres: 3.5,
-      heightMethod: 'top_minus_base',
-      source: {
-        inventory: 'landsd',
-        buildingCSUID: landsd.BuildingCSUID,
-        recordStatus: 'Active',
-        recordCreatedOn: '2005-04-30',
-      },
-    })
-    expect(details).not.toHaveProperty('buildingStatus')
-    expect(details).not.toHaveProperty('constructionDate')
-    expect(details.source).not.toHaveProperty('OBJECTID')
+
+  it('validates polygons, multipolygons and immutable SaanSeoi references without accepting download URLs', () => {
+    expect(LocationFootprintSchema.parse(footprint)).toEqual(footprint)
     expect(
-      projectLandsdBuildingDetails({ ...landsd, BaseHeight: null, TopHeight: 66.6 }),
-    ).not.toHaveProperty('heightMetres')
-    expect(
-      projectLandsdBuildingDetails({ ...landsd, BaseHeight: -16, TopHeight: -9.3 }),
-    ).toMatchObject({ heightMetres: 6.7 })
-    expect(
-      projectLandsdBuildingDetails({ ...landsd, BaseHeight: 70, TopHeight: 66.6 }),
-    ).not.toHaveProperty('heightMetres')
-    expect(() =>
-      projectLandsdBuildingDetails({ ...landsd, DateCreate: '20260230' }),
-    ).toThrow()
-  })
-  it('keeps LandsD and Overture inventories distinct and pins footprint references to an immutable geometry revision', () => {
-    const details = projectLandsdBuildingDetails(landsd, {
-      releaseId: '2026-09-21',
-      geometryRevisionId: 'geometry-1',
-    })
-    expect(
-      BuildingDetailsSchema.safeParse({
-        ...details,
-        footprint: { ...details.footprint, inventory: 'overture' },
-      }).success,
-    ).toBe(false)
-    expect(
-      BuildingDetailsSchema.safeParse({
-        ...details,
-        footprint: {
-          mode: 'reference',
-          inventory: 'landsd',
-          sourceRecordId: 'id',
-          releaseId: 'latest',
+      LocationFootprintSchema.parse({
+        mode: 'inline',
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates: [footprint.geometry.coordinates],
         },
-      }).success,
-    ).toBe(false)
+      }),
+    ).toMatchObject({ mode: 'inline', geometry: { type: 'MultiPolygon' } })
+    expect(LocationFootprintSchema.parse(geometryReference)).toEqual(geometryReference)
     for (const alias of ['latest', 'CURRENT'])
       for (const field of ['releaseId', 'geometryRevisionId'])
         expect(
-          BuildingDetailsSchema.safeParse({
-            ...details,
-            footprint: { ...details.footprint, [field]: alias },
-          }).success,
+          LocationFootprintSchema.safeParse({ ...geometryReference, [field]: alias })
+            .success,
         ).toBe(false)
+    for (const coordinates of [
+      [],
+      [
+        [
+          [114, 22],
+          [115, 22],
+          [115, 23],
+          [116, 24],
+        ],
+      ],
+      [
+        [
+          [181, 22],
+          [115, 22],
+          [115, 23],
+          [181, 22],
+        ],
+      ],
+    ])
+      expect(
+        LocationFootprintSchema.safeParse({
+          mode: 'inline',
+          geometry: { type: 'Polygon', coordinates },
+        }).success,
+      ).toBe(false)
     expect(
-      BuildingDetailsSchema.safeParse({ ...details, heightMetres: 66.6 }).success,
+      LocationFootprintSchema.safeParse({ ...geometryReference, ssId: '' }).success,
+    ).toBe(false)
+    expect(
+      LocationFootprintSchema.safeParse({
+        ...geometryReference,
+        url: 'https://example.com/latest.geojson',
+      }).success,
     ).toBe(false)
   })
-  it('compares building-specific facts under the existing Project review policy', () => {
+
+  it.each(['manual', 'unresolved'] as const)(
+    'supports local building footprints in %s state while source discovery stays disabled',
+    state => {
+      expect(
+        LocalLocationInputSchema.parse({
+          state,
+          kind: 'building',
+          facts: { ...facts, footprint },
+        }).facts.footprint,
+      ).toEqual(footprint)
+      expect(
+        LocalLocationInputSchema.safeParse({
+          state,
+          kind: 'building',
+          facts: { ...facts, footprint: geometryReference },
+        }).success,
+      ).toBe(false)
+      expect(AvailableDiscoveryTypeSchema.safeParse('building').success).toBe(false)
+      expect(AvailableDiscoveryTypeSchema.safeParse('natural').success).toBe(false)
+    },
+  )
+
+  it('reviews footprint changes under the Project facts policy and preserves an Organisation correction', () => {
     const old = readLocationFacts(
-      createLocationFactsSnapshot(
-        { ...facts, entity: { kind: 'building', details: { storeysAboveGround: 3 } } },
-        'building',
-      ),
+      createLocationFactsSnapshot({ ...facts, footprint }, 'building'),
     )
-    const next = {
+    const next: LocationFacts = {
       ...old,
-      entity: { kind: 'building' as const, details: { storeysAboveGround: 4 } },
+      footprint: {
+        ...footprint,
+        geometry: {
+          ...footprint.geometry,
+          coordinates: [
+            [
+              [114.17, 22.3],
+              [114.172, 22.3],
+              [114.172, 22.302],
+              [114.17, 22.3],
+            ],
+          ],
+        },
+      },
     }
     const revision = {
       id: 'old',
@@ -210,21 +253,33 @@ describe('typed Location facts snapshots', () => {
       facts: old,
       payload: {},
     }
-    const plan = planLocationAdoption({
+    const policy = {
+      version: 1,
+      coordinates: { mode: 'automatic' },
+      address: 'automatic',
+      unit: 'automatic',
+      establishment: 'review',
+    }
+    const input = {
       facts: revision,
       location: revision,
       candidate: { ...revision, id: 'new', sequence: 2, facts: next },
       overrides: {},
-      policy: {
-        version: 1,
-        coordinates: { mode: 'automatic' },
-        address: 'automatic',
-        unit: 'automatic',
-        establishment: 'review',
-      },
+      policy,
+    }
+    expect(planLocationAdoption(input).decision.facts).toBe('review')
+    const accepted = planLocationAdoption({
+      ...input,
+      policy: { ...policy, establishment: 'automatic' },
     })
-    expect(plan.decision.facts).toBe('review')
+    expect(accepted.effective.footprint).toEqual(next.footprint)
+    const cleared = planLocationAdoption({
+      ...input,
+      overrides: { footprint: { mode: 'clear' } },
+    })
+    expect(cleared.effective.footprint).toBeNull()
   })
+
   it('migrates old revisions using their captured historical kind and preserves source evidence, IDs and effective values', () => {
     const db = new DatabaseSync(':memory:')
     try {

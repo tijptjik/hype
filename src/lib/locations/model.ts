@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import type { OperatingStatus, BuildingStatus } from './entityStatus'
 import type { LocationEntity } from './factsDetails'
+import type { LocationFootprint } from './footprint'
 import type { LocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 
 /** Explicit clear differs from inheritance, including for empty arrays and locales. */
@@ -38,6 +39,8 @@ export type LocationPosition = {
 
 /** Normalized Feature projection; persisted revisions use LocationFactsSnapshot. */
 export type LocationFacts = {
+  /** Optional area geometry; the Location point remains the map anchor. */
+  footprint?: LocationFootprint | null
   entity?: LocationEntity
   operatingStatus?: OperatingStatus | null
   buildingStatus?: BuildingStatus | null
@@ -49,6 +52,7 @@ export type LocationFacts = {
 }
 
 export type FeatureLocationOverrides = {
+  footprint?: LocationOverride<LocationFootprint>
   names?: Record<string, LocationOverride<string>>
   phoneNumber?: LocationOverride<string[]>
   brands?: LocationOverride<LocationBrand[]>

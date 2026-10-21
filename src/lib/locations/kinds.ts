@@ -11,7 +11,7 @@ export const LOCATION_KINDS = [
 export const LocationKindSchema = z.enum(LOCATION_KINDS)
 export type LocationKind = z.infer<typeof LocationKindSchema>
 
-/** Unsupported families are visible in discovery, but cannot be selected or authored yet. */
+/** Unsupported source families remain visible but disabled; local authoring is independent. */
 export const LOCATION_DISCOVERY_TYPES = [
   { type: 'establishment', available: true },
   { type: 'address', available: true },

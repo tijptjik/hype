@@ -797,7 +797,7 @@ Location snapshots; it does not import either complete upstream building invento
 {
   schemaVersion: 1,
   kind: 'establishment' | 'building' | 'natural' | 'address' | 'unknown',
-  common: { names, location: { geometry, address? }, phoneNumber?, successorLocationId? },
+  common: { names, footprint?, location: { geometry, address? }, phoneNumber?, successorLocationId? },
   details: /* validated according to kind */
 }
 ```
@@ -819,58 +819,49 @@ place. SQL readers use version-aware fixed JSON paths for names, geometry, brand
 and lifecycle rather than scanning whole revision histories. Building details participate
 in the current facts adoption policy. Organisation edits cannot silently drop typed details.
 
-### Selected LandsD building facts
+### Minimal spatial facts (22 October 2026)
 
-The complete retained **21 September 2026** extract has **342,195 records**. Source
-schema and actual properties were checked, including all four `BuildingBlockType`
-values. The HYPE mapping deliberately excludes materials and roofing parameters.
+HYPE retains only the optional physical footprint from additional building source data.
+The prior LandsD-specific projector and duplicated source/structure/storey/elevation/
+height fields have been removed. Source identifiers remain in the SaanSeoi response's
+`identifiers` and retained evidence; HYPE does not maintain a second publisher identity
+schema. Address content already models blocks, portions and floors. Storey counts are
+not floor identifiers and are deliberately outside HYPE's core facts. Permit/works,
+lot, alternate-name and other detailed source attributes can be reingested from
+SaanSeoi later if a concrete HYPE need arises.
 
-| LandsD input | HYPE building details | Interpretation |
-| --- | --- | --- |
-| `BuildingCSUID`, `BuildingID`, `GeoRefNo` | `source` identifiers | Keep the LandsD inventory and publisher ID; OBJECTID remains delivery evidence only. |
-| `BuildingBlockType` | `structureType` | tower, podium, temporary structure or open-sided structure. |
-| `Storeys` | `storeysAboveGround` | 59,308 populated records; missing remains unknown. |
-| `StoreysInBasement` | `storeysBelowGround` | 6,296 populated records; explicit zero is retained. |
-| `BaseHeight`, `TopHeight` | `elevations` with `verticalDatum: 'HKPD'` | Elevations above Hong Kong Principal Datum, including negative values. |
-| Both valid elevations | `heightMetres`, `heightMethod: 'top_minus_base'` | Derived only when both exist and top is not below base; top elevation alone is never physical height. |
-| Footprint / `Shape_Area` | `footprint`, optional `areaSquareMetres` | Inline geometry for local records or immutable inventory/record/release/geometry references. |
-| `Status` | `source.recordStatus` | All current records say Active; this does not assert business operation, occupancy or physical standing. |
-| `DateCreate`, `DateStamp` | `source.recordCreatedOn`, `recordUpdatedOn` | Source-record dates, never construction/completion dates. |
+The optional shared field is `common.footprint`, not a building-specific detail:
 
-Source names continue to populate shared localized names. The extract has 235,946
-base elevations and 237,348 top elevations, so these remain optional. No reviewed
-record has top below base; malformed combinations in future inputs retain their source
-elevations without producing a fabricated physical height.
+```ts
+footprint?:
+  | { mode: 'inline'; geometry: Polygon | MultiPolygon }
+  | { mode: 'reference'; ssId: string; releaseId: string; geometryRevisionId: string }
+  | null
+```
 
-The same government delivery also exposes related records worth preserving when the
-SaanSeoi building adapter is implemented:
+Both buildings and establishments may have an extent; natural/unclassified Locations
+can use the same field. Existing establishment sources do not supply footprints, so
+absence remains normal. Rings must be closed and coordinates valid WGS84. The point
+in `common.location.geometry` remains the existing map anchor. `details` remains
+strictly typed; buildings currently need only optional authored lifecycle status.
 
-- `BuildingName`: alternate bilingual names, `NameStatus` and `DataProviderID`, joined
-  by `BuildingCSUID`; useful for matching a Feature to a building beyond its default name.
-- `BuildingWorksHistory`: 168,042 events for 71,070 buildings, joined by
-  `BuildingCSUID`, with `WorksType`, `WorksDate` and `DataProviderID`. These can provide
-  attributed completion/works history; they are not equivalent to `DateCreate`.
-- `BuildingRelateOPStructure` → `OPStructure` → `OP`: links use `BuildingCSUID`,
-  `BuildingStructureID` and `OPNo`, not OBJECTID. Structure-specific usage text
-  (`OPBuildingType`), storey remarks and occupation-permit dates could help distinguish
-  premises and interpret floors. A permit can cover multiple structures: its domestic,
-  non-domestic and total gross floor area must not be copied onto every footprint as
-  that building's area. Permit date is not automatically a construction date or proof
-  of present occupancy. Multiple links must remain multiple; do not select one arbitrarily.
-- `BuildingLotNoInfo`: lot, DD/SD and section references join through
-  `BuildingStructureID`; useful for cadastral matching, not an automatic display address.
+Immutable references reserve a future SaanSeoi geometry association and carry only
+reference pins, not duplicate LandsD/Overture identifiers. Dynamic `latest`/`current`
+aliases and download URL fields are rejected. No source geometry downloader, full
+building inventory import or new D1 footprint table is enabled. Building and natural
+source choices remain visible but disabled in discovery.
 
-These related tables are documented for the future adapter, not flattened into speculative
-HYPE facts now. The current projector deliberately accepts only the inspected Building
-layer fields. Related records, their cardinalities and source attribution need an explicit
-mapping when the adapter is added. The September schema has 53,349 building/OP links
-for 52,913 buildings; many-to-many relationships are a real concern, not just scaffolding.
+Manual and unmatched authoring is independent of source availability: a local building,
+establishment or natural feature can be created with inline geometry now, without an
+`ssId`. Local authoring cannot invent an upstream geometry-publication reference.
+The existing local save API accepts inline footprint edits and explicit clearing;
+omitting the field preserves it. Ownership and Organisation correction rules apply to
+footprints too, including accepted Feature snapshots and Project facts adoption policy.
+No polygon-drawing UI is added by this schema preparation.
 
-LandsD and Overture source assertions stay separate. A footprint reference must match
-the building's inventory and publisher record, and pin a geometry revision; a generic
-`latest` reference is insufficient. Attribute-only revisions can reuse that reference.
-A geometric match never replaces BuildingCSUID with a GERS ID. There are no new D1
-footprint tables or full-inventory imports in this change.
+Primary local was checked read-only: none of its 1,581 revisions contain the removed
+building-only fields. The optional shared field is compatible with all existing v1
+snapshots, so no database rewrite or new migration is necessary for this simplification.
 
 ### Conversion and verification
 
@@ -892,4 +883,4 @@ The populated rehearsal validated 1,581 snapshots, preserved all effective value
 source evidence, and verified 75 unrelated tables, integrity and foreign keys. Source
 and primary input databases are read-only during rehearsal. Regression coverage includes
 wrong subtype/version rejection, addressless buildings, typed-detail retention on edits,
-HKPD/height semantics, inventory/record/geometry identity, source replay and import SQL.
+optional geometry, immutable reference pins, source replay and import SQL.

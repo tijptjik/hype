@@ -146,7 +146,7 @@ export async function applyLocationAdoptionGroup(
   const proposedOverrides = proposal.evidence.candidateOverrides ?? current.overrides
   const nextOverrides = { ...current.overrides }
   if (input.fieldGroup === 'facts') {
-    for (const key of ['names', 'phoneNumber', 'brands'] as const) {
+    for (const key of ['footprint', 'names', 'phoneNumber', 'brands'] as const) {
       delete nextOverrides[key]
       if (proposedOverrides[key] !== undefined)
         Object.assign(nextOverrides, { [key]: proposedOverrides[key] })

@@ -559,3 +559,27 @@ tests and the Location refresh Worker typecheck; the working checkout also passe
 Bun importer/rehearsal tests. Biome reports no errors on the staged TypeScript scope.
 The full application check remains at its earlier 10 unrelated errors and 19 warnings;
 this is not a clean whole-app check or deployment acceptance. Production is unchanged.
+
+
+## Minimal spatial facts correction (22 October 2026)
+
+The 21 October LandsD-specific building field mapping is superseded. HYPE's shared
+facts now allow optional inline/reference `common.footprint` for buildings and
+establishments alike; the existing map anchor remains a Point. Detailed publisher
+identifiers/attributes remain in retained SaanSeoi responses. Local manual/unmatched
+creation accepts inline polygons and multipolygons; save/correction/history/adoption
+paths preserve them. Local authors cannot claim unpublished source geometry references.
+Building/natural source downloads and discovery stay disabled. No polygon editor or
+full-inventory ingest is included.
+
+A read-only primary-local audit found zero removed building-detail fields across all
+1,581 revisions. Existing v1 snapshots remain valid, so no new migration or historical
+rewrite is required. Migration 0142 remains unchanged. Production is unchanged.
+
+Verification of the isolated correction passes 309 Location tests across 29 files,
+30 Bun import/rehearsal tests, Biome and the Location refresh Worker typecheck. A
+working-checkout check also passes 157 focused tests. Persistence regressions cover
+all six manual/unmatched × building/establishment/natural combinations, owner edits,
+Organisation correction/clearing, reviewed Feature adoption and reassociation to a
+different Location's footprint. All 1,581 primary-local snapshots validate under the
+simplified schema; integrity is ok and foreign-key violations are zero.

@@ -29,13 +29,14 @@ import type { Database } from '#lib/types.js'
 import type { InitialLocationLinkResult } from './locationLink'
 
 /**
- * Reassociate an existing Feature without changing its effective values or explicit corrections.
+ * Reassociate a Feature, preserving its editable values while adopting the new physical footprint.
  * @param db Request-local database.
  * @param input Authorized project, selected destination and both persisted concurrency tokens.
  * @returns New association revision, or a non-mutating conflict/unavailable/review result.
  * @remarks This changes one Feature's interpretation, not the old Location identity or other
  * Features. It is not ssId churn reconciliation. Existing explicit overrides/clears survive
- * even when equal to the new source. Database triggers retain the previous association and actor.
+ * even when equal to the new source, except the footprint of the old physical entity.
+ * Database triggers retain the previous association and actor.
  */
 export async function relinkFeatureLocation(
   db: Database,
@@ -99,7 +100,8 @@ export async function relinkFeatureLocation(
   if (!destination) return { status: 'place-unavailable' }
   const facts = LocationFactsSchema.parse(destination.facts)
   let overrides = preserveFeatureLocationBaseline(
-    current.effective,
+    // A footprint describes the old physical entity, never its replacement.
+    { ...current.effective, footprint: undefined },
     facts,
     facts.location,
   )

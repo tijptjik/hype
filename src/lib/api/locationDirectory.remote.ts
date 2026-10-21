@@ -9,6 +9,7 @@ import { requireLocationOrganisationManager } from '#lib/api/services/locationOw
 // DOMAIN
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 import { updateLocalLocationAddress } from '#lib/db/services/locationLocal.js'
+import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 // DB
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
 import { listLocationResources } from '#lib/db/services/locationDirectory.js'
@@ -111,6 +112,7 @@ export const saveLocalLocationAddress = guardedCommand(
     expectedRevisionId: z.string().min(1),
     organisationId: z.string().min(1).optional(),
     expectedOrganisationRevision: z.string().min(1).nullable().optional(),
+    footprint: LocalLocationFootprintSchema.nullable().optional(),
     address: LocalLocationAddressSchema.optional(),
     coordinates: z
       .tuple([

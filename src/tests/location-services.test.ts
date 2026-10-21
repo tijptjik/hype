@@ -5096,6 +5096,108 @@ describe('Organisation-wide Location corrections', () => {
     return { ...state, local, link }
   }
 
+  it('adopts an Organisation footprint through review and does not carry it to a different Location', async () => {
+    const { db, sqlite, local, link } = await fixture()
+    const footprint = {
+      mode: 'inline' as const,
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [
+          [
+            [114.17, 22.3],
+            [114.171, 22.3],
+            [114.171, 22.301],
+            [114.17, 22.3],
+          ],
+        ],
+      },
+    }
+    await link('g', 'other')
+    const correction = await updateLocalLocationAddress(db, {
+      locationId: local.locationId,
+      organisationId: 'other',
+      expectedRevisionId: local.revisionId,
+      footprint,
+      actorId: 'editor',
+    })
+    const { processLocalLocationChanges } = await import(
+      '#lib/db/services/locationLocalRefresh.js'
+    )
+    expect(await processLocalLocationChanges(db)).toBe('review')
+    const accepted = await getAcceptedFeatureLocation(db, 'g', 'other')
+    expect(accepted?.effective.footprint).toBeUndefined()
+    const proposal = sqlite
+      .prepare(
+        "SELECT id FROM locationAdoptionProposal WHERE featureId='g' ORDER BY rowid DESC LIMIT 1",
+      )
+      .get()!
+    const applied = await applyLocationAdoptionGroup(db, {
+      featureId: 'g',
+      projectId: 'other',
+      proposalId: String(proposal.id),
+      fieldGroup: 'facts',
+      mode: 'reviewed',
+      expectedRevision: accepted!.revision,
+      expectedFeatureModifiedAt: String(
+        sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='g'").get()?.modifiedAt,
+      ),
+      actorId: 'reviewer',
+      reason: 'Accept our footprint',
+    })
+    expect(applied.status).toBe('applied')
+    const current = await getAcceptedFeatureLocation(db, 'g', 'other')
+    expect(current?.effective.footprint).toEqual(footprint)
+    expect(
+      sqlite
+        .prepare(
+          "SELECT factsOrganisationRevision FROM featureLocation WHERE featureId='g'",
+        )
+        .get()?.factsOrganisationRevision,
+    ).toBe(correction?.organisationRevision)
+    expect(
+      (await listLocationResources(db, { id: local.locationId })).data[0].facts
+        ?.footprint,
+    ).toBeUndefined()
+    const destinationFootprint = {
+      ...footprint,
+      geometry: {
+        ...footprint.geometry,
+        coordinates: [
+          [
+            [114.18, 22.3],
+            [114.182, 22.3],
+            [114.182, 22.302],
+            [114.18, 22.3],
+          ],
+        ],
+      },
+    }
+    const destination = await createLocalLocation(
+      db,
+      'other',
+      {
+        state: 'unresolved',
+        kind: 'building',
+        facts: { ...facts, phoneNumber: [], footprint: destinationFootprint },
+      },
+      'editor',
+    )
+    const moved = await relinkFeatureLocation(db, {
+      featureId: 'g',
+      projectId: 'other',
+      ...destination,
+      expectedRevision: current!.revision,
+      expectedFeatureModifiedAt: String(
+        sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='g'").get()?.modifiedAt,
+      ),
+      actorId: 'editor',
+    })
+    expect(moved.status).toBe('linked')
+    expect(
+      (await getAcceptedFeatureLocation(db, 'g', 'other'))?.effective.footprint,
+    ).toEqual(destinationFootprint)
+  })
+
   it('lets the unmatched owner change the baseline and keeps non-owner corrections independent', async () => {
     const { db, sqlite, local } = await fixture()
     const edit = await updateLocalLocationAddress(db, {
@@ -5498,39 +5600,95 @@ it('persists one existing neighbourhood path in immutable Location revisions', a
   )
 })
 
-describe('versioned building baseline persistence', () => {
-  it('preserves typed building facts through owner edits and other Organisation corrections', async () => {
+describe('shared Location footprint persistence', () => {
+  const footprint = {
+    mode: 'inline' as const,
+    geometry: {
+      type: 'Polygon' as const,
+      coordinates: [
+        [
+          [114.17, 22.3],
+          [114.171, 22.3],
+          [114.171, 22.301],
+          [114.17, 22.3],
+        ],
+      ],
+    },
+  }
+  const correctedFootprint = {
+    ...footprint,
+    geometry: {
+      ...footprint.geometry,
+      coordinates: [
+        [
+          [114.17, 22.3],
+          [114.172, 22.3],
+          [114.172, 22.302],
+          [114.17, 22.3],
+        ],
+      ],
+    },
+  }
+
+  it.each([
+    ['manual', 'building'],
+    ['unresolved', 'building'],
+    ['manual', 'establishment'],
+    ['unresolved', 'establishment'],
+    ['manual', 'natural'],
+    ['unresolved', 'natural'],
+  ] as const)(
+    'creates a %s %s with authored geometry and no upstream source',
+    async (state, kind) => {
+      const { db, sqlite } = setup(true)
+      sqlite.exec(readFileSync('migrations/0142_location_facts_snapshots.sql', 'utf8'))
+      const created = await createLocalLocation(
+        db,
+        'p',
+        { state, kind, facts: { ...facts, footprint } },
+        'curator',
+      )
+      const stored = sqlite
+        .prepare('SELECT facts FROM locationRevision WHERE id=?')
+        .get(created.revisionId)!
+      expect(
+        LocationFactsSnapshotSchema.parse(JSON.parse(String(stored.facts))),
+      ).toMatchObject({ schemaVersion: 1, kind, common: { footprint } })
+      const directory = await listLocationResources(db, {
+        id: created.locationId,
+        organisationId: 'p',
+      })
+      expect(directory.data[0]).toMatchObject({
+        ssId: null,
+        kind,
+        state,
+        facts: { footprint },
+      })
+      const other = await listLocationResources(db, {
+        id: created.locationId,
+        organisationId: 'other',
+      })
+      expect(other.data).toHaveLength(state === 'manual' ? 0 : 1)
+      expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
+    },
+  )
+
+  it('retains footprints on ordinary saves and scopes geometry corrections and clears to their Organisation', async () => {
     const { db, sqlite } = setup(true)
     sqlite.exec(readFileSync('migrations/0142_location_facts_snapshots.sql', 'utf8'))
-    const details = {
-      storeysAboveGround: 16,
-      storeysBelowGround: 0,
-      elevations: { verticalDatum: 'HKPD' as const, baseMetres: 63.1, topMetres: 66.6 },
-      heightMetres: 3.5,
-      heightMethod: 'top_minus_base' as const,
-    }
-    // Seed the future adapter's snapshot without enabling building discovery/authoring.
-    const snapshot = LocationFactsSnapshotSchema.parse({
-      schemaVersion: 1,
-      kind: 'building',
-      common: { names: facts.names, location: facts.location },
-      details,
-    })
-    sqlite.exec(
-      "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('building','building','unresolved','p')",
+    const created = await createLocalLocation(
+      db,
+      'p',
+      { state: 'unresolved', kind: 'building', facts: { ...facts, footprint } },
+      'curator',
     )
-    sqlite
-      .prepare(
-        "INSERT INTO locationRevision(id,locationId,sequence,origin,contentHash,payload,facts) VALUES('building-1','building',1,'local','hash','{}',?)",
-      )
-      .run(JSON.stringify(snapshot))
     const original = sqlite
-      .prepare("SELECT facts FROM locationRevision WHERE id='building-1'")
-      .get()!
+      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .get(created.revisionId)!
     const saved = await updateLocalLocationAddress(db, {
-      locationId: 'building',
+      ...created,
       organisationId: 'p',
-      expectedRevisionId: 'building-1',
+      expectedRevisionId: created.revisionId,
       names: { en: 'Corrected building name' },
       actorId: 'curator',
     })
@@ -5542,39 +5700,70 @@ describe('versioned building baseline persistence', () => {
       LocationFactsSnapshotSchema.parse(JSON.parse(String(latest.facts))),
     ).toMatchObject({
       kind: 'building',
-      common: { names: { en: 'Corrected building name' } },
-      details,
+      common: { footprint, names: { en: 'Corrected building name' } },
     })
     const corrected = await updateLocalLocationAddress(db, {
-      locationId: 'building',
+      locationId: created.locationId,
       organisationId: 'other',
       expectedRevisionId: saved!.revisionId,
       names: { en: 'Our building label' },
+      footprint: correctedFootprint,
       actorId: 'other-curator',
     })
     expect(corrected?.revisionId).toBe(saved!.revisionId)
     expect(corrected?.organisationRevision).toBeTruthy()
     const directory = await listLocationResources(db, {
-      id: 'building',
+      id: created.locationId,
       organisationId: 'other',
     })
     expect(directory.data[0].facts).toMatchObject({
       names: { en: 'Our building label' },
-      entity: { kind: 'building', details },
+      footprint: correctedFootprint,
     })
-    const shared = await listLocationResources(db, { id: 'building' })
+    const shared = await listLocationResources(db, { id: created.locationId })
     expect(shared.data[0].facts).toMatchObject({
       names: { en: 'Corrected building name' },
-      entity: { kind: 'building', details },
+      footprint,
     })
+    const cleared = await updateLocalLocationAddress(db, {
+      locationId: created.locationId,
+      organisationId: 'other',
+      expectedRevisionId: saved!.revisionId,
+      expectedOrganisationRevision: corrected?.organisationRevision,
+      footprint: null,
+      actorId: 'other-curator',
+    })
+    expect(cleared?.organisationRevision).toBeTruthy()
     expect(
-      sqlite.prepare("SELECT facts FROM locationRevision WHERE id='building-1'").get(),
+      (
+        await listLocationResources(db, {
+          id: created.locationId,
+          organisationId: 'other',
+        })
+      ).data[0].facts?.footprint,
+    ).toBeNull()
+    expect(
+      sqlite
+        .prepare('SELECT facts FROM locationRevision WHERE id=?')
+        .get(created.revisionId),
     ).toEqual(original)
     expect(
       sqlite
         .prepare('SELECT facts FROM locationRevision WHERE id=?')
         .get(saved!.revisionId),
     ).toEqual(latest)
+    const ownerEdit = await updateLocalLocationAddress(db, {
+      locationId: created.locationId,
+      organisationId: 'p',
+      expectedRevisionId: saved!.revisionId,
+      footprint: correctedFootprint,
+      actorId: 'curator',
+    })
+    expect(ownerEdit?.revisionId).not.toBe(saved!.revisionId)
+    expect(
+      (await listLocationResources(db, { id: created.locationId })).data[0].facts
+        ?.footprint,
+    ).toEqual(correctedFootprint)
     expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
   })
 })

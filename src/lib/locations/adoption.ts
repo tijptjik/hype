@@ -218,6 +218,10 @@ export function planLocationAdoption(input: {
       unitContent(comparedAfter.address),
     ),
     establishmentChanged:
+      !equalLocationValue(
+        effectiveBefore.footprint ?? null,
+        effectiveCandidate.footprint ?? null,
+      ) ||
       !equalLocationValue(oldFacts.entity ?? null, next.entity ?? null) ||
       !equalLocationValue(effectiveBefore.names, effectiveCandidate.names) ||
       !equalLocationValue(effectiveBefore.brands, effectiveCandidate.brands) ||
@@ -236,7 +240,7 @@ export function planLocationAdoption(input: {
   const acceptedLocation = decision.location === 'adopt' ? next.location : oldLocation
   const acceptedOverrides = { ...overrides }
   if (decision.facts === 'adopt')
-    for (const key of ['names', 'phoneNumber', 'brands'] as const) {
+    for (const key of ['footprint', 'names', 'phoneNumber', 'brands'] as const) {
       delete acceptedOverrides[key]
       if (candidateOverrides[key] !== undefined)
         Object.assign(acceptedOverrides, { [key]: candidateOverrides[key] })

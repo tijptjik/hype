@@ -15,6 +15,7 @@ type LocationFactsKind = LocationEntity['kind']
 
 const common = z.strictObject({
   names: LocationFactsSchema.shape.names,
+  footprint: LocationFactsSchema.shape.footprint,
   phoneNumber: z.array(z.string()).optional(),
   successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),
   location: LocationFactsSchema.shape.location.extend({
@@ -66,6 +67,7 @@ export function createLocationFactsSnapshot(
     kind,
     common: {
       names: facts.names,
+      ...(facts.footprint !== undefined ? { footprint: facts.footprint } : {}),
       location: facts.location,
       ...(facts.phoneNumber.length ? { phoneNumber: facts.phoneNumber } : {}),
       ...(facts.successorLocationId !== undefined
@@ -102,6 +104,9 @@ export function readLocationFacts(value: unknown): LocationFacts {
   const details = entity.details
   return LocationFactsSchema.parse({
     names: snapshot.common.names,
+    ...(snapshot.common.footprint !== undefined
+      ? { footprint: snapshot.common.footprint }
+      : {}),
     phoneNumber: snapshot.common.phoneNumber ?? [],
     brands: 'brands' in details ? (details.brands ?? []) : [],
     location: { ...snapshot.common.location, address },

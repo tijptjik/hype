@@ -82,6 +82,10 @@ export async function listLocationResources(
       )
       facts = {
         ...facts,
+
+        ...(effective.footprint !== undefined
+          ? { footprint: effective.footprint }
+          : {}),
         names: Object.fromEntries(
           Object.entries(effective.names).filter(
             (pair): pair is [string, string] => pair[1] !== null,
