@@ -114,22 +114,37 @@ Note `deleteEventAttendence` is not available - user no shows are marked with `E
 - `readProject`
 - `readLayer`
 - `readFeature`
-- `updateFeature`
+- `updateProject`, `updateLayer`, `updateFeature` - translations only (`i18n` fields)
 #### Maintainer
 - `+` Translator capabilities 
+- `updateProject` (incl. publish; subject to hub-admin-only field restrictions)
+- `manageRoles` (`manageProjectRoles`) - add/update/remove project membership
+- `assignCapabilities` - assign operational capabilities to project members
 - `createFeature`
+- `updateFeature` - general feature edits, not limited to translations
 - `deleteFeature`
 - `manageReviewQueue` - accept/reject reports
 - manageTeam - assign Whip/DPM/Caller on a day
+
+Maintainers cannot create or delete layers, or update layer fields other than
+translations. They cannot configure project capabilities (`manageCapabilities`)
+or delete the project.
+
 #### Owner
 - `+` Maintainer capabilities
-- `updateProject` (incl. publish)
+- `deleteProject`
 - `createLayer`
 - `updateLayer`
 - `deleteLayer`
-- `manageRoles` - add/update/remove membership
+- `manageCapabilities` - configure project capabilities
 - `manageFields` - add/update/remove project & layer fields
 
+Project update, publishing and membership management are shared by Owners and
+Maintainers in the current server policy; they are not Owner-only permissions.
+The authoritative checks are in
+[`project.ts`](../../src/lib/api/services/authz/project.ts),
+[`layer.ts`](../../src/lib/api/services/authz/layer.ts) and
+[`feature.ts`](../../src/lib/api/services/authz/feature.ts).
 
 ### Effects
 
