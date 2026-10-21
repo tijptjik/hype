@@ -484,3 +484,11 @@ adoption rehearsal, and the Location refresh worker TypeScript check. Full app
 checking retains its baseline 10 errors and 19 warnings. Chromium verified the
 Organisation-scoped directory, imported Location details and Project Locations
 tab against the primary local database.
+
+The same fresh Breadline export is installed at the standard
+`.local/breadline/mirror.sqlite` path, with a pre-refresh backup and a count check
+for every source/metadata table. Feature edit/discovery controls were also verified
+with zero page errors: Find Nearby is available and Buildings/Natural features are
+disabled. The isolated port-4173 browser received HTTP 401 from the external basemap
+TileJSON endpoint; map canvas and pin initialization were verified, but basemap tile
+rendering was not accepted by that check. The temporary server was stopped afterward.
