@@ -1663,5 +1663,6 @@
   "feature_start_partial": "Some sources could not be searched. You can retry or choose an available result.",
   "feature_start_choose_position": "Select a location or drop a pin before saving.",
   "feature_start_find_place": "Find an existing Place",
-  "feature_start_description": "Find an existing place, or add your own."
+  "feature_start_description": "Find an existing place, or add your own.",
+  "feature_start_back_results": "Back to results"
 }

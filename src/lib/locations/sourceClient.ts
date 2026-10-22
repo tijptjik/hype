@@ -57,7 +57,7 @@ export async function searchSaanSeoiPlaces(
   const response = await client.fetch(url, {
     headers: { Accept: 'application/json', 'x-api-key': client.apiKey },
     redirect: 'error',
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(30_000),
   })
   if (!response.ok)
     throw new Error(`SaanSeoi Places search failed (${response.status})`)

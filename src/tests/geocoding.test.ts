@@ -165,14 +165,17 @@ it('uses local Atlas in development and preserves caller cancellation', async ()
   vi.stubEnv('DEV', true)
   vi.stubEnv('PUBLIC_SAANSEOI_API_URL', undefined)
   const controller = new AbortController()
-  const fetcher = vi.fn(
-    async (_url: RequestInfo | URL, _init?: RequestInit) =>
-      new Response(JSON.stringify(response())),
+  const fetcher = Object.assign(
+    vi.fn(
+      async (_url: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(JSON.stringify(response())),
+    ),
+    { preconnect: vi.fn() },
   )
   try {
     await geocodeAddressCandidates(
       { address: 'Central' },
-      { fetcher: fetcher as typeof fetch, signal: controller.signal },
+      { fetcher, signal: controller.signal },
     )
     expect(String(fetcher.mock.calls[0]?.[0])).toContain(
       'http://api.atlas.localhost/addresses/v1/geocode',

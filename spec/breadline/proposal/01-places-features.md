@@ -1003,3 +1003,17 @@ Titles remain editable and independent; this is neither a canonical Location lin
 nor a new name-following policy. Existing authored titles are retained.
 The Photos facet and image pane are omitted until the Feature has a saved ID.
 Draft search reports partial provider failures and discards superseded responses.
+
+Draft-discovery recovery and presentation (22 October 2026, Refs #194): result
+rows expose the source type with an icon and label, use the map's numbered badge
+colours, and separate the primary name from the address without repeating it.
+Back to results restores the previous query and result order, undoes only the
+selected Location fields, and preserves titles edited after selection. Discovery
+requests retain cancellation and use a bounded 30-second timeout.
+
+A local LEGO regression returned five Places only after 17.7 seconds because the
+address fallback hydrated non-matching records and blocked the shared local API.
+SaanSeoi now scans scorer fields first and hydrates matching identities only,
+retaining publication filters, normalization and complete ranking. Concurrent
+local requests measured 5.8 seconds after the change; further indexed address
+lookup remains desirable. Places with preview details alone measured 684 ms.

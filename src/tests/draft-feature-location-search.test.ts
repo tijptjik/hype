@@ -218,3 +218,57 @@ it('shows places while addresses are pending and ignores late results after sele
   expect(screen.queryByText(/no matching/i)).toBeNull()
   expect(screen.queryByRole('button', { name: /Fast Place/ })).toBeNull()
 })
+
+it('restores the previous results and map numbers after an incorrect selection without refetching', async () => {
+  vi.useRealTimers()
+  mocks.places.mockResolvedValue({ rows: [], partial: false })
+  mocks.addresses.mockResolvedValue([
+    {
+      addressMeta: {
+        address: {
+          version: 1,
+          source: {
+            rawSource: {},
+            status: 'unresolved',
+            address2dId: 'hollywood',
+            fallbackDisplay: { en: 'Hollywood Terrace, 123 Hollywood Rd' },
+          },
+          coordinates: [114.15, 22.28],
+          matchStatus: 'unresolved',
+          overrides: {},
+        },
+      },
+    },
+  ])
+  const onBack = vi.fn()
+  const onMapCandidates = vi.fn()
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    onSelect: vi.fn(),
+    onBack,
+    onMapCandidates,
+  })
+  await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'hollywood' } })
+  const row = await screen.findByRole('button', { name: /Hollywood Terrace/ })
+  expect(row.dataset.resultNumber).toBe('1')
+  expect(row.dataset.resultKind).toBe('address')
+  expect(screen.getByText('Hollywood Terrace')).toBeTruthy()
+  expect(screen.getByText('123 Hollywood Rd')).toBeTruthy()
+  await waitFor(() =>
+    expect(onMapCandidates.mock.lastCall?.[0][0]).toMatchObject({
+      number: 1,
+      id: 'address:hollywood:114.15,22.28',
+    }),
+  )
+  await fireEvent.click(row)
+  await fireEvent.click(screen.getByRole('button', { name: /back to results/i }))
+  expect(onBack).toHaveBeenCalledTimes(1)
+  expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('hollywood')
+  expect(
+    (await screen.findByRole('button', { name: /Hollywood Terrace/ })).dataset
+      .resultNumber,
+  ).toBe('1')
+  await waitFor(() => expect(onMapCandidates.mock.lastCall?.[0]).toHaveLength(1))
+  expect(mocks.addresses).toHaveBeenCalledTimes(1)
+})

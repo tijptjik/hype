@@ -325,8 +325,8 @@ export async function geocodeAddressCandidates(
     headers,
     credentials: 'omit',
     signal: options.signal
-      ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)])
-      : AbortSignal.timeout(15000),
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)])
+      : AbortSignal.timeout(30000),
   })
   if (!response.ok) throw new Error(`SaanSeoi geocoding failed (${response.status})`)
   const body: unknown = await response.json()
@@ -397,8 +397,8 @@ export async function loadGeocodedAddressUnits(
     headers: { Accept: 'application/vnd.api+json' },
     credentials: 'omit',
     signal: options.signal
-      ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)])
-      : AbortSignal.timeout(15000),
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)])
+      : AbortSignal.timeout(30000),
   })
   if (!response.ok)
     throw new Error(`SaanSeoi address units failed (${response.status})`)

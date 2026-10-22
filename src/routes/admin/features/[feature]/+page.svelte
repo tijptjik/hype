@@ -354,6 +354,7 @@ const noopHeaderAction = (): void => {}
 // - selectAddressCandidate
 // - startLocationSearch
 // - selectDraftLocation
+// - undoDraftLocationSelection
 // - handleCoordinateChange
 // - handleFeatureStateToggle
 // - onPublishToggle
@@ -597,6 +598,15 @@ let namingChosen = $state(false)
 let locationFocusRequest = $state(0)
 let draftHasPin = $state(false)
 let draftHasAddress = $state(false)
+let draftSelectionBefore: {
+  geometry: typeof currentFeatureData.geometry
+  addressMeta: typeof currentFeatureData.addressMeta
+  hasPin: boolean
+  hasAddress: boolean
+  titles: Record<string, string>
+  appliedTitles: Record<string, string>
+  camera: ReturnType<import('#lib/map/controller.js').MapController['getCamera']>
+} | null = null
 let draftMapController = $state.raw<
   import('#lib/map/controller.js').MapController | null
 >(null)
@@ -606,6 +616,7 @@ $effect(() => {
   locationFocusRequest = 0
   draftHasPin = false
   draftHasAddress = false
+  draftSelectionBefore = null
 })
 
 $effect(() => {
@@ -629,6 +640,21 @@ function selectDraftLocation(result: {
   names: Record<string, string>
   kind?: 'establishment' | 'address'
 }): void {
+  // Capture only Location-owned draft fields; recovery must preserve unrelated edits.
+  draftSelectionBefore = {
+    geometry: structuredClone($state.snapshot(currentFeatureData.geometry)),
+    addressMeta: structuredClone($state.snapshot(currentFeatureData.addressMeta)),
+    hasPin: draftHasPin,
+    hasAddress: draftHasAddress,
+    titles: Object.fromEntries(
+      Object.entries(currentFeatureData.i18n).map(([locale, value]) => [
+        locale,
+        value.title || '',
+      ]),
+    ),
+    appliedTitles: {},
+    camera: draftMapController?.getCamera() ?? null,
+  }
   if (result.address.coordinates) handleCoordinateChange(result.address.coordinates)
   updateAddressDraft(result.address)
   draftHasAddress = result.kind === 'address'
@@ -647,7 +673,49 @@ function selectDraftLocation(result: {
       ]),
     ) as typeof data.i18n,
   }))
+  draftSelectionBefore.appliedTitles = Object.fromEntries(
+    Object.entries(currentFeatureData.i18n).map(([locale, value]) => [
+      locale,
+      value.title || '',
+    ]),
+  )
   namingChosen = true
+}
+
+/** Undo the chosen preview while preserving titles the user edited afterwards.
+ * @returns Nothing; restores the previous Location fields, pin visibility and camera.
+ */
+function undoDraftLocationSelection(): void {
+  const before = draftSelectionBefore
+  if (!before) return
+  addressLookupRevision++
+  isAddressLookupLoading = false
+  addressLookupMessage = ''
+  addressCandidates = []
+  updateFeatureData(
+    data => ({
+      ...data,
+      geometry: before.geometry,
+      addressMeta: before.addressMeta,
+      i18n: Object.fromEntries(
+        Object.entries(data.i18n).map(([locale, value]) => [
+          locale,
+          {
+            ...value,
+            title:
+              value.title === before.appliedTitles[locale]
+                ? before.titles[locale]
+                : value.title,
+          },
+        ]),
+      ) as typeof data.i18n,
+    }),
+    { revalidate: true },
+  )
+  draftHasPin = before.hasPin
+  draftHasAddress = before.hasAddress
+  draftSelectionBefore = null
+  if (before.camera) draftMapController?.jumpTo(before.camera)
 }
 
 /** Place the draft pin only after an explicit action, at the current camera centre.
@@ -2617,6 +2685,7 @@ $effect(() => () => clearVisualSectionReopenState())
               active={isAddressFacet}
               focusRequest={locationFocusRequest}
               onSelect={selectDraftLocation}
+              onBack={undoDraftLocationSelection}
               hasPin={draftHasPin}
               onDropPin={draftMapController ? dropDraftPin : undefined}
               onMapCandidates={(markers, select) => {

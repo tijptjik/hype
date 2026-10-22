@@ -3,6 +3,10 @@
 import { onDestroy, tick, untrack, type Snippet } from 'svelte'
 import { flip } from 'svelte/animate'
 import { prefersReducedMotion } from 'svelte/motion'
+// COMPONENTS
+import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
+// ICONS
+import BackIcon from 'virtual:icons/lucide/arrow-left'
 // API
 import { searchDraftLocations } from '#lib/api/draftLocation.remote.js'
 import { geocodeAddressCandidates } from '#lib/api/external/geocoding.js'
@@ -27,6 +31,7 @@ let {
   active,
   focusRequest,
   onSelect,
+  onBack,
   onMapCandidates,
   onDropPin,
   hasPin = false,
@@ -35,6 +40,7 @@ let {
   active: boolean
   focusRequest: number
   onSelect: (result: Result) => void
+  onBack?: () => void
   onMapCandidates?: (
     markers: import('#lib/locations/searchPresentation.js').LocationSearchMarker[],
     select: (id: string) => void,
@@ -45,6 +51,9 @@ let {
 } = $props()
 let input: HTMLInputElement | undefined = $state()
 let query = $state('')
+let selected = $state<Result | null>(null)
+let previousRows: Result[] = []
+let previousQuery = ''
 let rows = $state.raw<Result[]>([])
 let loading = $state(false)
 let placesFailed = $state(false)
@@ -62,6 +71,7 @@ $effect(() => {
  */
 function schedule(): void {
   clearTimeout(timer)
+  selected = null
   version++
   addressController?.abort()
   rows = []
@@ -199,8 +209,39 @@ function choose(result: Result): void {
   clearTimeout(timer)
   loading = false
   searched = false
+  previousRows = rows
+  previousQuery = query
+  selected = result
   rows = []
   onSelect(result)
+}
+/** Restore the last result set and let the owner undo only the selected Location.
+ * @returns Nothing; no new request is needed to recover the previous choices.
+ */
+function backToResults(): void {
+  version++
+  addressController?.abort()
+  clearTimeout(timer)
+  onBack?.()
+  selected = null
+  query = previousQuery
+  rows = previousRows
+  searched = true
+  loading = false
+  void tick().then(() => input?.focus())
+}
+
+/** Separate the primary name from its address without repeating the same line.
+ * @param result Source candidate. @returns Primary and secondary display labels.
+ */
+function resultLabels(result: Result): { title: string; detail: string } {
+  const display = getAddressDisplay(result.address, getLocaleKey())
+  const name = result.names[getLocale()] || result.names.en || ''
+  const title = name || display.split(/[,，]/)[0] || display
+  const detail = display.startsWith(title)
+    ? display.slice(title.length).replace(/^[,，\s]+/, '')
+    : display
+  return { title, detail }
 }
 onDestroy(() => {
   version++
@@ -209,33 +250,51 @@ onDestroy(() => {
 })
 </script>
 {#snippet searchControl()}
-  <div class="flex items-center gap-3">
-    <input
-      bind:this={input}
-      bind:value={query}
-      oninput={schedule}
-      maxlength="200"
-      aria-label={m.feature_start_search()}
-      placeholder={m.feature_start_search()}
-      class="min-w-0 flex-1 rounded-lg border border-border bg-panel px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary"
-      onkeydown={event => {
-        if (event.key === 'Enter') {
-          event.preventDefault()
-          clearTimeout(timer)
-          void search()
-        }
-      }}
-    >
-    {#if !hasPin && onDropPin}
+  {#if selected}
+    <div class="flex min-w-0 items-center gap-3">
       <button
         type="button"
-        class="shrink-0 rounded-lg border border-border bg-panel px-4 py-3 text-sm"
-        onclick={onDropPin}
+        onclick={backToResults}
+        class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-panel px-3 py-3 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
       >
-        {m.feature_start_drop_pin()}
+        <BackIcon class="size-4" aria-hidden="true" />
+        {m.feature_start_back_results()}
       </button>
-    {/if}
-  </div>
+      <LocationIcon
+        kind={selected.kind}
+        class="size-5 shrink-0 text-muted-foreground"
+      />
+      <span class="truncate font-medium">{resultLabels(selected).title}</span>
+    </div>
+  {:else}
+    <div class="flex items-center gap-3">
+      <input
+        bind:this={input}
+        bind:value={query}
+        oninput={schedule}
+        maxlength="200"
+        aria-label={m.feature_start_search()}
+        placeholder={m.feature_start_search()}
+        class="min-w-0 flex-1 rounded-lg border border-border bg-panel px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary"
+        onkeydown={event => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            clearTimeout(timer)
+            void search()
+          }
+        }}
+      >
+      {#if !hasPin && onDropPin}
+        <button
+          type="button"
+          class="shrink-0 rounded-lg border border-border bg-panel px-4 py-3 text-sm"
+          onclick={onDropPin}
+        >
+          {m.feature_start_drop_pin()}
+        </button>
+      {/if}
+    </div>
+  {/if}
 {/snippet}
 {#snippet searchResults()}
   {#if loading || searched || rows.length}
@@ -268,27 +327,45 @@ onDestroy(() => {
         aria-label={m.feature_start_search()}
       >
         {#each rows as result, index (result.id)}
+          {@const labels = resultLabels(result)}
           <div animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180 }}>
             <button
               type="button"
-              class="flex h-16 w-full items-center gap-3 rounded-md px-3 text-left hover:bg-muted focus:bg-muted"
+              class="group flex min-h-20 w-full items-center gap-3 border-b border-border/50 px-3 py-3 text-left transition-colors last:border-0 hover:bg-muted focus:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+              data-result-number={index + 1}
+              data-result-kind={result.kind}
               onmouseenter={() => (hovered = result.id)}
               onmouseleave={() => (hovered = null)}
               onfocus={() => (hovered = result.id)}
               onblur={() => (hovered = null)}
               onclick={() => choose(result)}
             >
-              <span class="shrink-0 text-sm text-muted-foreground">{index + 1}</span>
-              <span class="min-w-0">
-                <span class="block truncate font-medium"
-                  >{result.names[getLocale()] ||
-                    result.names.en ||
-                    getAddressDisplay(result.address, getLocaleKey())}</span
+              <span
+                class={result.kind === 'address'
+                  ? 'flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-white bg-amber-500 font-bold text-black shadow-sm dark:bg-amber-400'
+                  : 'flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-white bg-primary font-bold text-primary-content shadow-sm'}
+                >{index + 1}</span
+              >
+              <LocationIcon
+                kind={result.kind}
+                class="size-5 shrink-0 text-muted-foreground"
+              />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-semibold text-foreground"
+                  >{labels.title}</span
                 >
-                <span class="block truncate text-sm text-muted-foreground"
-                  >{getAddressDisplay(result.address, getLocaleKey())}</span
-                >
+                {#if labels.detail}
+                  <span class="mt-1 block truncate text-sm text-muted-foreground"
+                    >{labels.detail}</span
+                  >
+                {/if}
               </span>
+              <span
+                class="shrink-0 rounded border border-border px-2 py-1 text-xs text-muted-foreground"
+                >{result.kind === 'address'
+                  ? m.location_type_address()
+                  : m.location_type_establishment()}</span
+              >
             </button>
           </div>
         {/each}

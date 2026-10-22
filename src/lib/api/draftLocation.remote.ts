@@ -26,13 +26,17 @@ export const searchDraftLocations = guardedQuery(
     const client = { ...endpoint, fetch: ctx.event.fetch }
     const candidates = await searchSaanSeoiPlaces(client, { ...input, limit: 5 })
     const settled = await Promise.allSettled(
-      candidates.map(async candidate => ({
-        id: candidate.placeId,
-        facts: await readSaanSeoiPlacePreview(client, {
+      candidates.map(async candidate => {
+        const facts = await readSaanSeoiPlacePreview(client, {
           ssId: candidate.placeId,
           resourceReleaseId: candidate.resourceReleaseId,
-        }),
-      })),
+        })
+        // Discovery can match a brand even when the establishment has no source name.
+        const label = candidate.nameText || candidate.brandText
+        if (label && !facts.names[candidate.locale])
+          facts.names[candidate.locale] = label
+        return { id: candidate.placeId, facts }
+      }),
     )
     return {
       rows: settled.flatMap(result =>

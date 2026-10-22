@@ -59,3 +59,18 @@ describe('unsaved Feature Location discovery', () => {
     )
   })
 })
+
+it('uses the matched brand when the preview has no name', async () => {
+  mocks.search.mockResolvedValue([
+    {
+      placeId: 'lego',
+      resourceReleaseId: 'release',
+      locale: 'en',
+      nameText: '',
+      brandText: 'LEGO',
+    },
+  ])
+  mocks.preview.mockResolvedValue({ names: {} })
+  const result = await searchDraftLocations({ q: 'lego', locale: 'en' })
+  expect(result.rows[0]?.facts.names.en).toBe('LEGO')
+})
