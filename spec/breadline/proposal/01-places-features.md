@@ -1035,3 +1035,11 @@ Location detail components.
 Authenticated local browser checks cover canvas identity, constant height,
 search focus, overlay visibility, title fallback, hover outlines and the actual
 Times Square establishment address. Focused search and division tests pass.
+
+Draft search type controls (Refs #194): the labelled Include group enables Shop
+and Address discovery independently. Building is visible but disabled pending a
+building discovery provider. Disabled types issue no requests; changing types
+invalidates stale responses and cancels pending address requests. The magnifier
+inside the input submits immediately and remains distinct from Drop Pin. Empty
+type selection prompts the user to enable a type. Desktop and 390px-wide Chrome
+checks and ten focused component tests verify the controls and request selection.

@@ -7,6 +7,7 @@ import { prefersReducedMotion } from 'svelte/motion'
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 // ICONS
 import BackIcon from 'virtual:icons/lucide/arrow-left'
+import SearchIcon from 'virtual:icons/lucide/search'
 // API
 import { searchDraftLocations } from '#lib/api/draftLocation.remote.js'
 import { geocodeAddressCandidates } from '#lib/api/external/geocoding.js'
@@ -20,6 +21,8 @@ import {
 import { getLocale, getLocaleKey, m } from '#lib/i18n.js'
 // TYPES
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
+
+const searchKinds = ['establishment', 'building', 'address'] as const
 
 type Result = {
   id: string
@@ -51,6 +54,9 @@ let {
 } = $props()
 let input: HTMLInputElement | undefined = $state()
 let query = $state('')
+let includeShops = $state(true)
+let includeAddresses = $state(true)
+const hasSearchTypes = $derived(includeShops || includeAddresses)
 let selected = $state<Result | null>(null)
 let previousRows: Result[] = []
 let previousQuery = ''
@@ -78,8 +84,8 @@ function schedule(): void {
   placesFailed = false
   addressesFailed = false
   searched = false
-  loading = Boolean(query.trim())
-  if (query.trim()) timer = setTimeout(() => void search(), 300)
+  loading = Boolean(query.trim()) && hasSearchTypes
+  if (query.trim() && hasSearchTypes) timer = setTimeout(() => void search(), 300)
 }
 /** Search Places and building/address evidence independently, retaining partial results.
  * @returns Completion of the latest read-only search.
@@ -87,7 +93,7 @@ function schedule(): void {
 async function search(): Promise<void> {
   const request = ++version
   const q = query.trim()
-  if (!q) {
+  if (!q || !hasSearchTypes) {
     loading = false
     return
   }
@@ -98,7 +104,7 @@ async function search(): Promise<void> {
   placesFailed = false
   addressesFailed = false
   searched = false
-  let pending = 2
+  let pending = Number(includeShops) + Number(includeAddresses)
   // Publish each provider immediately; a slow provider must not hide usable results.
   const finish = (): void => {
     if (request !== version) return
@@ -107,67 +113,71 @@ async function search(): Promise<void> {
     searched = true
   }
   await Promise.allSettled([
-    Promise.resolve(searchDraftLocations({ q, locale: getLocale(), limit: 5 }))
-      .then(places => {
-        if (request !== version) return
-        placesFailed = places.partial
-        rows = [
-          ...rows,
-          ...places.rows.map(place => ({
-            id: `place:${place.id}`,
-            kind: 'establishment' as const,
-            names: place.facts.names,
-            address: {
-              version: 1 as const,
-              source: place.facts.location.address,
-              coordinates: place.facts.location.geometry.coordinates,
-              matchStatus: place.facts.location.address.status,
-              overrides: {},
-            },
-          })),
-        ]
-      })
-      .catch(() => {
-        if (request === version) placesFailed = true
-      })
-      .finally(finish),
-    geocodeAddressCandidates({ address: q }, { signal: addressController.signal })
-      .then(addresses => {
-        if (request !== version) return
-        rows = [
-          ...rows,
-          ...addresses.flatMap(result => {
-            const address = result.addressMeta.address
-            if (!address) return []
-            return [
-              {
-                id: `address:${address.source.address2dId || getAddressDisplay(address, getLocaleKey())}:${address.coordinates?.join(',') || ''}`,
-                kind: 'address' as const,
-                address,
-                names: Object.fromEntries(
-                  Object.entries(ADDRESS_LOCALES).map(([locale, tag]) => {
-                    const values = getAddressLocale(
-                      address,
-                      locale as keyof typeof ADDRESS_LOCALES,
-                    )
-                    return [
-                      tag,
-                      [values.buildingName, values.premisesName].find(
-                        (value): value is string =>
-                          typeof value === 'string' && Boolean(value),
-                      ) || '',
-                    ]
-                  }),
-                ),
-              },
+    includeShops
+      ? Promise.resolve(searchDraftLocations({ q, locale: getLocale(), limit: 5 }))
+          .then(places => {
+            if (request !== version) return
+            placesFailed = places.partial
+            rows = [
+              ...rows,
+              ...places.rows.map(place => ({
+                id: `place:${place.id}`,
+                kind: 'establishment' as const,
+                names: place.facts.names,
+                address: {
+                  version: 1 as const,
+                  source: place.facts.location.address,
+                  coordinates: place.facts.location.geometry.coordinates,
+                  matchStatus: place.facts.location.address.status,
+                  overrides: {},
+                },
+              })),
             ]
-          }),
-        ]
-      })
-      .catch(() => {
-        if (request === version) addressesFailed = true
-      })
-      .finally(finish),
+          })
+          .catch(() => {
+            if (request === version) placesFailed = true
+          })
+          .finally(finish)
+      : Promise.resolve(),
+    includeAddresses
+      ? geocodeAddressCandidates({ address: q }, { signal: addressController.signal })
+          .then(addresses => {
+            if (request !== version) return
+            rows = [
+              ...rows,
+              ...addresses.flatMap(result => {
+                const address = result.addressMeta.address
+                if (!address) return []
+                return [
+                  {
+                    id: `address:${address.source.address2dId || getAddressDisplay(address, getLocaleKey())}:${address.coordinates?.join(',') || ''}`,
+                    kind: 'address' as const,
+                    address,
+                    names: Object.fromEntries(
+                      Object.entries(ADDRESS_LOCALES).map(([locale, tag]) => {
+                        const values = getAddressLocale(
+                          address,
+                          locale as keyof typeof ADDRESS_LOCALES,
+                        )
+                        return [
+                          tag,
+                          [values.buildingName, values.premisesName].find(
+                            (value): value is string =>
+                              typeof value === 'string' && Boolean(value),
+                          ) || '',
+                        ]
+                      }),
+                    ),
+                  },
+                ]
+              }),
+            ]
+          })
+          .catch(() => {
+            if (request === version) addressesFailed = true
+          })
+          .finally(finish)
+      : Promise.resolve(),
   ])
 }
 /** Highlight previews without changing the draft's accepted marker.
@@ -278,33 +288,99 @@ onDestroy(() => {
       <span class="truncate font-medium">{resultLabels(selected).title}</span>
     </div>
   {:else}
-    <div class="flex items-center gap-3">
-      <input
-        bind:this={input}
-        bind:value={query}
-        oninput={schedule}
-        maxlength="200"
-        aria-label={m.feature_start_search()}
-        placeholder={m.feature_start_search()}
-        class="min-w-0 flex-1 rounded-lg border border-border bg-panel px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary"
-        onkeydown={event => {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-            clearTimeout(timer)
-            void search()
-          }
-        }}
+    <div class="flex flex-wrap items-center gap-3">
+      <fieldset
+        class="flex shrink-0 items-center gap-2"
+        aria-label={m.feature_search_include()}
       >
-      {#if !hasPin && onDropPin}
-        <button
-          type="button"
-          class="shrink-0 rounded-lg border border-border bg-panel px-4 py-3 text-sm"
-          onclick={onDropPin}
+        <legend class="sr-only">{m.feature_search_include()}</legend>
+        <span class="text-sm text-muted-foreground" aria-hidden="true"
+          >{m.feature_search_include()}</span
         >
-          {m.feature_start_drop_pin()}
-        </button>
-      {/if}
+        <div
+          class="inline-flex items-center gap-1 rounded-lg border border-border bg-panel p-1"
+        >
+          {#each searchKinds as kind}
+            {@const enabled =
+              kind === 'establishment'
+                ? includeShops
+                : kind === 'address'
+                  ? includeAddresses
+                  : false}
+            {@const label =
+              kind === 'establishment'
+                ? m.feature_search_shops()
+                : kind === 'building'
+                  ? m.location_type_building()
+                  : m.location_type_address()}
+            <button
+              type="button"
+              aria-label={label}
+              aria-pressed={enabled}
+              title={kind === 'building'
+                ? m.feature_search_buildings_unavailable()
+                : label}
+              disabled={kind === 'building'}
+              onclick={() => {
+                if (kind === 'establishment') includeShops = !includeShops
+                if (kind === 'address') includeAddresses = !includeAddresses
+                schedule()
+              }}
+              class="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted aria-pressed:bg-primary aria-pressed:text-primary-content focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <LocationIcon {kind} class="size-5" />
+            </button>
+          {/each}
+        </div>
+      </fieldset>
+      <div class="flex min-w-64 flex-1 items-center gap-3">
+        <div class="relative min-w-0 flex-1">
+          <input
+            bind:this={input}
+            bind:value={query}
+            oninput={schedule}
+            maxlength="200"
+            aria-label={m.feature_start_search()}
+            placeholder={m.feature_start_search()}
+            class="w-full min-w-0 rounded-lg border border-border bg-panel py-3 pr-12 pl-4 text-foreground outline-none focus:ring-2 focus:ring-primary"
+            onkeydown={event => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                clearTimeout(timer)
+                void search()
+              }
+            }}
+          >
+          <button
+            type="button"
+            aria-label={m.feature_search_submit()}
+            title={m.feature_search_submit()}
+            disabled={!query.trim() || !hasSearchTypes}
+            onclick={() => {
+              clearTimeout(timer)
+              void search()
+            }}
+            class="absolute inset-y-1 right-1 flex w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40"
+          >
+            <SearchIcon class="size-5" aria-hidden="true" />
+          </button>
+        </div>
+        {#if !hasPin && onDropPin}
+          <button
+            type="button"
+            class="shrink-0 rounded-lg border border-border bg-panel px-4 py-3 text-sm"
+            onclick={onDropPin}
+          >
+            {m.feature_start_drop_pin()}
+          </button>
+        {/if}
+      </div>
     </div>
+    {#if !hasSearchTypes}
+      <p role="status" class="mt-2 text-sm text-muted-foreground">
+        {m.feature_search_select_types()}
+      </p>
+    {/if}
   {/if}
 {/snippet}
 {#snippet searchResults()}

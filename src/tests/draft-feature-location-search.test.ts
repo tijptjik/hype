@@ -88,7 +88,7 @@ it('publishes numbered map previews and highlights hovered rows without selectin
   render(DraftSearch, { active: true, focusRequest: 0, onSelect, onMapCandidates })
   await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'Road' } })
   const row = await screen.findByRole('button', { name: /1 Road 0/ })
-  expect(screen.getAllByRole('button')).toHaveLength(7)
+  expect(document.querySelectorAll('[data-result-number]')).toHaveLength(7)
   await waitFor(() => expect(onMapCandidates.mock.lastCall?.[0]).toHaveLength(7))
   await fireEvent.mouseEnter(row)
   await waitFor(() =>
@@ -271,4 +271,45 @@ it('restores the previous results and map numbers after an incorrect selection w
   ).toBe('1')
   await waitFor(() => expect(onMapCandidates.mock.lastCall?.[0]).toHaveLength(1))
   expect(mocks.addresses).toHaveBeenCalledTimes(1)
+})
+
+it('only requests enabled search types and keeps Building disabled', async () => {
+  vi.useRealTimers()
+  mocks.places.mockResolvedValue({ rows: [], partial: false })
+  mocks.addresses.mockResolvedValue([])
+  render(DraftSearch, { active: true, focusRequest: 0, onSelect: vi.fn() })
+  const shops = screen.getByRole('button', { name: 'Shops' })
+  const addresses = screen.getByRole('button', { name: 'Address' })
+  expect(
+    (screen.getByRole('button', { name: 'Building' }) as HTMLButtonElement).disabled,
+  ).toBe(true)
+  expect(shops.getAttribute('aria-pressed')).toBe('true')
+  expect(addresses.getAttribute('aria-pressed')).toBe('true')
+  await fireEvent.click(shops)
+  await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'lego' } })
+  await waitFor(() => expect(mocks.addresses).toHaveBeenCalledTimes(1))
+  expect(mocks.places).not.toHaveBeenCalled()
+  const signal = mocks.addresses.mock.lastCall?.[1].signal
+  await fireEvent.click(addresses)
+  expect(signal.aborted).toBe(true)
+  expect(screen.getByText('Select a search type.')).toBeTruthy()
+  expect(
+    (screen.getByRole('button', { name: 'Search' }) as HTMLButtonElement).disabled,
+  ).toBe(true)
+  await fireEvent.click(shops)
+  await waitFor(() => expect(mocks.places).toHaveBeenCalledTimes(1))
+  expect(mocks.addresses).toHaveBeenCalledTimes(1)
+})
+
+it('runs the search icon action immediately without repeating the debounced request', async () => {
+  vi.useRealTimers()
+  mocks.places.mockResolvedValue({ rows: [], partial: false })
+  mocks.addresses.mockResolvedValue([])
+  render(DraftSearch, { active: true, focusRequest: 0, onSelect: vi.fn() })
+  await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'lego' } })
+  await fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+  expect(mocks.places).toHaveBeenCalledTimes(1)
+  expect(mocks.addresses).toHaveBeenCalledTimes(1)
+  await new Promise(resolve => setTimeout(resolve, 350))
+  expect(mocks.places).toHaveBeenCalledTimes(1)
 })

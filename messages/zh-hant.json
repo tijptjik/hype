@@ -1665,5 +1665,10 @@
   "feature_start_find_place": "尋找現有地點",
   "feature_start_description": "尋找地點以使用其地址",
   "feature_start_back_results": "返回搜尋結果",
-  "feature_start_place_address": "所選地點提供的地址。"
+  "feature_start_place_address": "所選地點提供的地址。",
+  "feature_search_include": "搜尋類型",
+  "feature_search_shops": "商店",
+  "feature_search_buildings_unavailable": "暫未提供建築物搜尋",
+  "feature_search_submit": "搜尋",
+  "feature_search_select_types": "請選擇搜尋類型。"
 }

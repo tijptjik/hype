@@ -1665,5 +1665,10 @@
   "feature_start_find_place": "Find an existing Place",
   "feature_start_description": "Find a place to use its address",
   "feature_start_back_results": "Back to results",
-  "feature_start_place_address": "Address supplied by the selected place."
+  "feature_start_place_address": "Address supplied by the selected place.",
+  "feature_search_include": "Include",
+  "feature_search_shops": "Shops",
+  "feature_search_buildings_unavailable": "Building search is not available yet",
+  "feature_search_submit": "Search",
+  "feature_search_select_types": "Select a search type."
 }
