@@ -52,7 +52,27 @@ Normal rebuild preparation with and without mocks also passes user/Feature repla
 integrity and foreign-key checks. The full development run verifies 26 fixture
 scenarios; its map preparation now includes the task fixture namespace. Forty-nine
 focused importer/adoption/rebuild tests and the standalone adoption TypeScript check
-pass. Live development installation and production rollout remain separate steps.
+pass. Local installation is verified below; production rollout remains separate.
+
+### Current-state-preserving local installation (23 October 2026)
+
+After explicit installation approval, the temporary Google claim fixture was removed
+with scoped restoration of its former profile/credentials and latent cohort. Test
+sessions remain revoked. Newer local tasks, Location reviews and address revisions
+made the older prepared export unsuitable for installation. Instead, a fresh backup
+of current local state received the same reviewed adoption and name cleanup.
+
+An independent comparison verified 105,483 existing rows across 75 tables, permitting
+only approved ownership/attribution substitutions and duplicate membership coalescing.
+All other user fields, including current preferences, were retained. The exact
+application-state comparison passed again after stopping local writers; the guarded
+installer retained Miniflare metadata and an immutable pre-install rollback backup.
+
+Installed verification confirms all 25 anchors, 39 adopted source rows, four absorbed
+duplicate users, 3,073 imported name cleanups, zero unresolved source rows and zero
+inserts on normal replay. The temporary test eligibility is absent. Integrity and
+foreign-key checks pass. Existing event/run tables are still not imported; this is
+local identity acceptance only, with no production write or deployment.
 
 ### Manual Google claim acceptance (23 October 2026)
 
