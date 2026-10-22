@@ -443,8 +443,8 @@ export default defineConfig(async ({ command }) => ({
     },
     port: 5175,
     strictPort: true,
-    // Vite derives the websocket port from the browser origin, including local proxies.
-    hmr: {},
+    // Disable automatic browser updates; refresh manually to load development changes.
+    hmr: false,
     allowedHosts: [
       'localhost',
       '127.0.0.1',
