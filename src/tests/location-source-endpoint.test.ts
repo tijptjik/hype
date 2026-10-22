@@ -32,3 +32,11 @@ it.each([
   vi.stubEnv('HYPE_LOCATION_SOURCE_URL', url)
   expect(() => locationSourceEndpoint('hosted-key')).toThrow('loopback')
 })
+
+it('defaults development to the local Atlas API without hosted credentials', () => {
+  vi.stubEnv('DEV', true)
+  expect(locationSourceEndpoint('hosted-key')).toEqual({
+    baseUrl: 'http://api.atlas.localhost',
+    apiKey: 'local-development',
+  })
+})

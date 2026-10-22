@@ -89,6 +89,8 @@ const addressSchema = z.object({
 type AddressLocale = z.infer<typeof addressLocaleSchema>
 export type GeocodeInput = { lng: number; lat: number } | { address: string }
 export type GeocodeOptions = {
+  /** Cancel obsolete interactive lookups without removing the request timeout. */
+  signal?: AbortSignal
   maxDistance?: number
   limit?: number
   /** Discovery markers use each Address's actual geometry, not the Feature pin. */
@@ -290,7 +292,7 @@ export async function geocodeAddressCandidates(
     '/addresses/v1/geocode',
     options.baseUrl ??
       import.meta.env.PUBLIC_SAANSEOI_API_URL ??
-      'https://api.saanseoi.hk',
+      (import.meta.env.DEV ? 'http://api.atlas.localhost' : 'https://api.saanseoi.hk'),
   )
   url.search = new URLSearchParams({
     ...('lng' in validated
@@ -322,7 +324,9 @@ export async function geocodeAddressCandidates(
   const response = await (options.fetcher ?? fetch)(url, {
     headers,
     credentials: 'omit',
-    signal: AbortSignal.timeout(15000),
+    signal: options.signal
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)])
+      : AbortSignal.timeout(15000),
   })
   if (!response.ok) throw new Error(`SaanSeoi geocoding failed (${response.status})`)
   const body: unknown = await response.json()
@@ -381,7 +385,7 @@ export async function loadGeocodedAddressUnits(
     `/addresses/v0.1/${encodeURIComponent(address.source.address2dId)}`,
     options.baseUrl ??
       import.meta.env.PUBLIC_SAANSEOI_API_URL ??
-      'https://api.saanseoi.hk',
+      (import.meta.env.DEV ? 'http://api.atlas.localhost' : 'https://api.saanseoi.hk'),
   )
   url.search = new URLSearchParams({
     releaseSet,
@@ -392,7 +396,9 @@ export async function loadGeocodedAddressUnits(
   const response = await (options.fetcher ?? fetch)(url, {
     headers: { Accept: 'application/vnd.api+json' },
     credentials: 'omit',
-    signal: AbortSignal.timeout(15000),
+    signal: options.signal
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)])
+      : AbortSignal.timeout(15000),
   })
   if (!response.ok)
     throw new Error(`SaanSeoi address units failed (${response.status})`)

@@ -160,3 +160,27 @@ it('nearby Address discovery uses candidate coordinates and configurable bounds'
     [pin.lng, pin.lat],
   )
 })
+
+it('uses local Atlas in development and preserves caller cancellation', async () => {
+  vi.stubEnv('DEV', true)
+  vi.stubEnv('PUBLIC_SAANSEOI_API_URL', undefined)
+  const controller = new AbortController()
+  const fetcher = vi.fn(
+    async (_url: RequestInfo | URL, _init?: RequestInit) =>
+      new Response(JSON.stringify(response())),
+  )
+  try {
+    await geocodeAddressCandidates(
+      { address: 'Central' },
+      { fetcher: fetcher as typeof fetch, signal: controller.signal },
+    )
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain(
+      'http://api.atlas.localhost/addresses/v1/geocode',
+    )
+    const signal = (fetcher.mock.calls[0] as unknown as [URL, RequestInit])[1].signal!
+    controller.abort()
+    expect(signal.aborted).toBe(true)
+  } finally {
+    vi.unstubAllEnvs()
+  }
+})
