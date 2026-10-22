@@ -51,6 +51,28 @@ function destination(plan: ReturnType<typeof planUsers>): TargetIdentitySnapshot
 }
 
 describe('Breadline phone-based user mapping', () => {
+  it('title-cases imported names while retaining exact source evidence and replay', () => {
+    for (const [source, expected] of [
+      [' valerie CHAN ', 'Valerie Chan'],
+      ['ÉLODIE o’NEILL-SMITH', 'Élodie O’Neill-Smith'],
+      ['陳大文', '陳大文'],
+    ]) {
+      const rows = [row({ name: source })]
+      const plan = planUsers(rows, empty, 'seed')
+      expect(plan.users[0].name).toBe(expected)
+      expect(plan.identities[0].name).toBe(source.trim())
+      const replay = planUsers(rows, destination(plan), 'seed')
+      expect(replay.exceptions).toEqual([])
+      expect(replay.counts.matchedGroups).toBe(1)
+    }
+    const ambiguous = planUsers(
+      [row({ name: 'person' }), row({ id: 2, name: 'PERSON' })],
+      empty,
+      'seed',
+    )
+    expect(ambiguous.users[0].name).toBeNull()
+    expect(ambiguous.accounts).toEqual([])
+  })
   it('auto-claims a single identity with normalized phone, stable IDs and token-free credentials', () => {
     const plan = planUsers([row()], empty, 'seed')
     expect(plan.users[0]).toMatchObject({

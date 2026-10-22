@@ -5,6 +5,55 @@ Tracking: [account support #189](https://github.com/tijptjik/hype/issues/189),
 [identity parent #179](https://github.com/tijptjik/hype/issues/179), and
 [migration parent #180](https://github.com/tijptjik/hype/issues/180).
 
+## Reviewed existing-target adoption (23 October 2026)
+
+This supersedes the original fresh-destination-only limitation below. Email equality
+still cannot authorize adopting an existing HYPE user. The operator reviews each
+source cohort and explicitly chooses its existing anchor; multiple target owners
+require explicit merge approval. Private decisions and case evidence remain ignored.
+
+`scripts/breadline/lib/target-adoption.ts` validates the case manifest hash and exact
+source cohort, retains the anchor ID, and fences the source, target seed, source
+decisions, complete affected rows, credentials and authorization. Application uses
+an immediate SQLite transaction on an offline database, saves an exclusive full
+before-image, and rejects stale execution. Rebuild-stage preparation independently
+checks the reviewed snapshot's full users, accounts, passkeys, sessions, roles and
+import ownership; content is fenced at the current pre-import stage because later
+Feature import and development fixtures are absent at that point.
+
+Foreign-key introspection and explicit unconstrained user-reference columns cover
+content, attribution and history. Unknown embedded references stop a merge. Existing
+credentials retain their provider identifiers and secret fields; portable source
+Google identities may attach only to the approved owner. No source role is granted.
+Identical membership rows coalesce, and an existing Organisation Owner remains Owner
+when combined with Member. Other conflicting membership/content rows stop for review.
+Source names remain unchanged in private crosswalks; new profile names use title case,
+with explicitly reviewed names taking precedence for adopted accounts.
+
+The normal planner accepts retained anchors only through persisted import ownership
+and exact crosswalk replay, still enforcing phone ownership and archive/anonymous
+checks. Private replay receipts and before-images permit exact verification and
+offline rollback. This tool does not implement a live production write path.
+
+Run the standalone rehearsal with three positional paths: review JSON, case JSONL,
+and a new output directory. For normal development preparation, pass
+`--identity-review /absolute/private/review.json` to `scripts/dev/rebuild.ts`; the
+adjacent `cases.v1.jsonl` is mandatory. Use `--inputs` for the reviewed retained
+export. Omitting `--apply` leaves the running development database untouched.
+Changed source snapshots or reviewed identity/role state require renewed preparation
+and adjudication; the identity seed must never be replaced to resolve a collision.
+
+The reviewed 22 October checkpoint contains 14,226 source users: 14,219 now map,
+seven remain explicitly excluded, and none remain unresolved. The isolated rehearsal
+adopts 25 cohorts (39 rows), absorbs four duplicate HYPE users and preserves all 25
+anchors. Independent comparison verifies 77,529 existing rows across 70 tables,
+including 3,323 reference changes, without unrelated content/credential changes.
+Normal rebuild preparation with and without mocks also passes user/Feature replay,
+integrity and foreign-key checks. The full development run verifies 26 fixture
+scenarios; its map preparation now includes the task fixture namespace. Forty-nine
+focused importer/adoption/rebuild tests and the standalone adoption TypeScript check
+pass. Live development installation and production rollout remain separate steps.
+
 ## Phone-based latent users: replacement design (18 October 2026)
 
 Refs #189, #194. The user planner now groups by normalized phone and supports
@@ -31,6 +80,12 @@ these two outcomes:
 Repeated rows and casing/whitespace variants of the same email do not create
 additional identities. Names are trimmed but otherwise compared exactly; missing
 names do not introduce another identity. A name alone cannot establish a claim.
+Imported profile names are title-cased after the claim decision (Refs #189, #194),
+including letters after hyphens and apostrophes. Uncased scripts remain unchanged.
+Private source names and exact replay comparisons retain their original casing;
+this presentation cleanup does not resolve ambiguous identities or overwrite existing
+HYPE profiles on replay. Reviewed target adoptions and account merges remain a
+separate guarded workflow.
 Auto-claiming assigns the unambiguous legacy identity; it does not itself prove
 mailbox ownership. `emailVerified` retains the previous verified-Google evidence
 rule. Facebook/unknown subjects are retained as private source evidence, not turned

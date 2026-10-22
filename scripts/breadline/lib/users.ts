@@ -20,6 +20,21 @@ import { parseUserDecisions, type UserDecisions } from './user-decisions'
 // 3. REVIEW SQL
 // ---
 
+/**
+ * Normalize an imported display name to title case.
+ * @param name Source display name, if present.
+ * @returns Trimmed title-case name, or null for an empty name.
+ * @remarks Presentation only: source evidence and identity comparisons remain unchanged.
+ */
+export function titleCaseImportedName(name: string | null | undefined): string | null {
+  const trimmed = name?.trim()
+  if (!trimmed) return null
+  return trimmed.toLowerCase().replace(/\p{L}[\p{L}\p{M}]*/gu, word => {
+    const [first, ...rest] = Array.from(word)
+    return first.toUpperCase() + rest.join('')
+  })
+}
+
 export interface LegacyUser {
   id: number
   volunteer_id: number | null
@@ -170,8 +185,9 @@ function locale(value: string | null): ImportedUser['locale'] {
  * @returns Proposed inserts, private provenance and explicit unresolved groups; no writes.
  * @remarks Single-email/name identities are auto-claimed without inventing email verification.
  * Missing/invalid phones fall back to exact or reviewed email identities with a null phone.
- * Ambiguous identities have no primary email, name or credential. Existing non-imported
- * users are never merged or modified; this importer targets a fresh database.
+ * Ambiguous identities have no primary email, name or credential. This planner never
+ * merges existing users: a separate guarded adoption establishes reviewed ownership
+ * and exact crosswalks before the planner can reuse an existing HYPE anchor.
  */
 export function planUsers(
   source: LegacyUser[],
@@ -429,7 +445,8 @@ export function planUsers(
       reject('invalid_source_timestamps')
       continue
     }
-    // A repaired phone-less cohort keeps its persisted history owner; exact crosswalk equality is checked below.
+    // Repaired and explicitly adopted cohorts keep their persisted history owner;
+    // phone ownership and exact crosswalk equality are still checked below.
     const persistedOwners = new Set(
       rows.flatMap(row => {
         const owner = priorOwnerBySourceId.get(row.id)
@@ -437,7 +454,7 @@ export function planUsers(
       }),
     )
     const id =
-      !phone && persistedOwners.size === 1
+      persistedOwners.size === 1
         ? [...persistedOwners][0]
         : assignedId(
             seed,
@@ -466,7 +483,7 @@ export function planUsers(
       ),
     ]
     if (
-      [...(phoneOwners.get(phone) ?? [])].some(owner => owner !== id) ||
+      [...(phone ? (phoneOwners.get(phone) ?? []) : [])].some(owner => owner !== id) ||
       emails.some(email =>
         [...(emailOwners.get(email) ?? [])].some(owner => owner !== id),
       ) ||
@@ -568,7 +585,7 @@ export function planUsers(
         username,
         displayUsername,
         email,
-        name: claimed ? (names[0] ?? null) : null,
+        name: claimed ? titleCaseImportedName(names[0]) : null,
         telephone: phone,
         locale: locale(profile.locale),
         image: claimed ? profile.picture?.trim() || null : null,
