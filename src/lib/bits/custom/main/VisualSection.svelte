@@ -12,6 +12,7 @@ let {
   collapsedHeight = 64,
   imageAspectRatio = null,
   showImage = true,
+  showControls = true,
   leftControls,
   centerControls,
   rightControls,
@@ -108,19 +109,37 @@ const rootStyle = $derived(
   style={rootStyle}
 >
   {#if leftControls}
-    <div class="bits-feature-visual__controls bits-feature-visual__controls--left">
+    <div
+      class="bits-feature-visual__controls bits-feature-visual__controls--left transition-opacity duration-200 motion-reduce:transition-none {showControls
+        ? 'opacity-100'
+        : 'opacity-0 pointer-events-none'}"
+      inert={!showControls}
+      aria-hidden={!showControls}
+    >
       {@render leftControls()}
     </div>
   {/if}
 
   {#if centerControls}
-    <div class="bits-feature-visual__controls bits-feature-visual__controls--center">
+    <div
+      class="bits-feature-visual__controls bits-feature-visual__controls--center transition-opacity duration-200 motion-reduce:transition-none {showControls
+        ? 'opacity-100'
+        : 'opacity-0 pointer-events-none'}"
+      inert={!showControls}
+      aria-hidden={!showControls}
+    >
       {@render centerControls()}
     </div>
   {/if}
 
   {#if rightControls}
-    <div class="bits-feature-visual__controls bits-feature-visual__controls--right">
+    <div
+      class="bits-feature-visual__controls bits-feature-visual__controls--right transition-opacity duration-200 motion-reduce:transition-none {showControls
+        ? 'opacity-100'
+        : 'opacity-0 pointer-events-none'}"
+      inert={!showControls}
+      aria-hidden={!showControls}
+    >
       {@render rightControls()}
     </div>
   {/if}

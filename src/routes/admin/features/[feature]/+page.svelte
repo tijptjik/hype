@@ -146,7 +146,6 @@ import {
   getAdjacentResourceRefs,
   getAdminFacetOrderForResource,
   getAdminFacetTabsForResource,
-  getUrlForResource,
 } from '#lib/navigation/index.js'
 // UTILS
 import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
@@ -442,13 +441,8 @@ function goToFacet(facet: FacetType): void {
   if (facet === 'images' && isNewFeatureRef) return
   if (facet === 'fields' && !hasSelectedLayer) return
   if (facet === activeFacet) return
-  const href = getUrlForResource(
-    adminCtx,
-    FirstClassResource.feature,
-    featureRef,
-    facet,
-  )
-  if (!href) return
+  // The current route ref also covers unsaved Features, which have no cache record.
+  const href = `/admin/features/${encodeURIComponent(featureRef)}#${facet}`
   adminCtx.setFacet(facet, featureRef, FirstClassResource.feature)
   void goto(href, {
     reset: false,
@@ -598,6 +592,8 @@ let namingChosen = $state(false)
 let locationFocusRequest = $state(0)
 let draftHasPin = $state(false)
 let draftHasAddress = $state(false)
+let editorViewportHeight = $state(1040)
+let sharedLocationMapControls = $state<Snippet | undefined>()
 let draftSelectionBefore: {
   geometry: typeof currentFeatureData.geometry
   addressMeta: typeof currentFeatureData.addressMeta
@@ -756,7 +752,7 @@ const isEditing = $derived(headerCtrl.state.isEditing)
 
 // § Sections
 // Only keep the visual section mounted on facets that actually render it.
-const showsVisualSection = $derived(isCoreFacet || isFieldsFacet)
+const showsVisualSection = $derived(isCoreFacet || isFieldsFacet || isAddressFacet)
 
 let isVisualSectionCollapsed = $state(
   adminCtx.view.getUserPreferences().admin?.isAdminMapCollapsed ?? false,
@@ -2287,6 +2283,8 @@ async function getCreatableProjectRecords(
 $effect(() => () => clearVisualSectionReopenState())
 </script>
 
+<svelte:window bind:innerHeight={editorViewportHeight} />
+
 <Main.Root
   onDimensionsChange={(width, height) =>
     adminCtx.view.layout.setMainDimensions(width, height)}
@@ -2305,6 +2303,9 @@ $effect(() => () => clearVisualSectionReopenState())
 
     {#if showsVisualSection}
       <FormFeatureVisualSection
+        expandedHeight={Math.min(1200, editorViewportHeight * 0.5)}
+        showImage={!isAddressFacet}
+        showControls={!isAddressFacet}
         onHeightChange={height => (visualSectionHeight = height)}
         {hasPresentedCanonicalImageSizing}
         {isCanonicalImagePending}
@@ -2331,17 +2332,27 @@ $effect(() => () => clearVisualSectionReopenState())
       >
         {#snippet map()}
           <Main.VisualSectionMap isCollapsed={isVisualSectionCollapsed}>
-            <FormMapSection
-              showMarker={!isNewFeatureRef || draftHasPin}
-              initialCenter={isNewFeatureRef && !draftHasPin
-                ? [114.17, 22.3]
-                : initialMapCenter}
-              initialZoom={isNewFeatureRef && !draftHasPin ? 11.5 : 20}
-              coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
-              addressMeta={currentFeatureData.addressMeta ?? null}
-              draggable={isEditing}
-              onCoordinateChange={handleCoordinateChange}
-            />
+            <div class="relative h-full w-full">
+              <FormMapSection
+                onMapReady={controller => (draftMapController = controller)}
+                locationCandidates={isAddressFacet ? locationSearchMarkers : []}
+                onLocationCandidateSelect={selectLocationMarker}
+                showMarker={!isNewFeatureRef || draftHasPin}
+                initialCenter={isNewFeatureRef && !draftHasPin
+                  ? [114.17, 22.3]
+                  : initialMapCenter}
+                initialZoom={isNewFeatureRef && !draftHasPin ? 11.5 : 20}
+                coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
+                addressMeta={currentFeatureData.addressMeta ?? null}
+                draggable={isEditing}
+                onCoordinateChange={handleCoordinateChange}
+              />
+              {#if isAddressFacet && sharedLocationMapControls}
+                <div class="absolute right-3 top-3 z-10" data-location-map-controls>
+                  {@render sharedLocationMapControls()}
+                </div>
+              {/if}
+            </div>
           </Main.VisualSectionMap>
         {/snippet}
 
@@ -2363,6 +2374,7 @@ $effect(() => () => clearVisualSectionReopenState())
       transition="fade"
       fillHeight={true}
       class={getFeatureEditorFacetClass({
+        isVisible: isCoreFacet,
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
@@ -2487,6 +2499,7 @@ $effect(() => () => clearVisualSectionReopenState())
       transition="fade"
       fillHeight={true}
       class={getFeatureEditorFacetClass({
+        isVisible: isFieldsFacet,
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
@@ -2552,6 +2565,7 @@ $effect(() => () => clearVisualSectionReopenState())
       fillHeight={true}
       contentClass="h-full overflow-hidden"
       class={getFeatureEditorFacetClass({
+        isVisible: isAddressFacet,
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
@@ -2573,6 +2587,8 @@ $effect(() => () => clearVisualSectionReopenState())
           )}
             <FormFeatureAddress
               fixedMap={true}
+              showMap={false}
+              onMapControlsChange={controls => (sharedLocationMapControls = controls)}
               {locationActions}
               {locationMapControls}
               {locationControl}
@@ -2594,24 +2610,7 @@ $effect(() => () => clearVisualSectionReopenState())
               onCoordinateChange={handleCoordinateChange}
               onLookup={lookupOverride ?? lookupFeatureAddress}
               onChange={updateAddressDraft}
-            >
-              {#snippet map()}
-                <FormMapSection
-                  showMarker={!isNewFeatureRef || draftHasPin}
-                  onMapReady={controller => (draftMapController = controller)}
-                  locationCandidates={locationSearchMarkers}
-                  onLocationCandidateSelect={selectLocationMarker}
-                  initialCenter={isNewFeatureRef && !draftHasPin
-                    ? [114.17, 22.3]
-                    : initialMapCenter}
-                  initialZoom={isNewFeatureRef && !draftHasPin ? 11.5 : 20}
-                  coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
-                  addressMeta={currentFeatureData.addressMeta ?? null}
-                  draggable={isEditing}
-                  onCoordinateChange={handleCoordinateChange}
-                />
-              {/snippet}
-            </FormFeatureAddress>
+            />
           {/snippet}
           {#if currentFeatureId && feature?.data?.modifiedAt}
             <FeatureLocationSection

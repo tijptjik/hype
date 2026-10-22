@@ -6,6 +6,7 @@ import {
 } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 
 type FeatureEditorLayoutState = {
+  isVisible?: boolean
   showsVisualSection: boolean
   isVisualSectionCollapsed: boolean
 }
@@ -42,11 +43,13 @@ export const FEATURE_EDITOR_PLACEHOLDER_CLASS = cx(
  * @returns Theme-independent facet positioning classes.
  */
 export function getFeatureEditorFacetClass({
+  isVisible = true,
   showsVisualSection,
   isVisualSectionCollapsed,
 }: FeatureEditorLayoutState): string {
   return cx(
-    'left-0! right-0! bottom-6',
+    'left-0! right-0! bottom-6 transition-[opacity,transform]! duration-300! ease-out! motion-reduce:transition-none!',
+    isVisible ? 'translate-y-0' : 'translate-y-2',
     !showsVisualSection && 'top-0',
     showsVisualSection && isVisualSectionCollapsed && 'top-16',
     showsVisualSection &&

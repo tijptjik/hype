@@ -56,6 +56,8 @@ let {
   locationActions,
   locationMapControls,
   fixedMap = false,
+  showMap = true,
+  onMapControlsChange,
   locationContent,
   hideDetails = false,
   showAddressDetails = true,
@@ -79,6 +81,8 @@ let {
   locationActions?: Snippet
   locationMapControls?: Snippet
   fixedMap?: boolean
+  showMap?: boolean
+  onMapControlsChange?: (controls: Snippet | undefined) => void
   locationContent?: Snippet
   hideDetails?: boolean
   showAddressDetails?: boolean
@@ -92,7 +96,7 @@ let {
   message?: string
   candidates?: FeatureAddress[]
   onSelectCandidate: (address: FeatureAddress) => void
-  map: Snippet
+  map?: Snippet
   onCoordinateChange: (coordinates: number[]) => void
   onLookup: (query?: string) => void
   onChange: (address: FeatureAddress) => void
@@ -269,6 +273,10 @@ function moveMarker(): void {
   coordinateError = ''
   if (lng !== coordinates[0] || lat !== coordinates[1]) onCoordinateChange([lng, lat])
 }
+// A shared editor map owns the overlay while this form retains the search controls.
+$effect(() => {
+  onMapControlsChange?.(locationMapControls)
+})
 </script>
 
 {#snippet coordinatesControl()}
@@ -394,6 +402,7 @@ function moveMarker(): void {
   {locationActions}
   {locationMapControls}
   {fixedMap}
+  {showMap}
   {showCoordinates}
   {showLookup}
   {map}

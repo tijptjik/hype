@@ -14,6 +14,7 @@ let {
   locationActions,
   locationMapControls,
   fixedMap = false,
+  showMap = true,
   showLookup = true,
   showCoordinates = true,
   coordinatesControl,
@@ -28,12 +29,13 @@ let {
   locationActions?: Snippet
   locationMapControls?: Snippet
   fixedMap?: boolean
+  showMap?: boolean
   showLookup?: boolean
   showCoordinates?: boolean
   coordinatesControl: Snippet
   lookupControl: Snippet
   sourceId?: string | null
-  map: Snippet
+  map?: Snippet
   onLookup: () => void
   canLookup: boolean
   isEditing: boolean
@@ -113,52 +115,54 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
 </script>
 
 <div class="relative w-full shrink-0" data-address-map-panel>
-  <div
-    class="relative"
-    style:height={fixedMap ? `min(${height}px, 50vh)` : `${height}px`}
-  >
+  {#if showMap}
     <div
-      id={mapId}
-      class="h-full w-full overflow-hidden border-b border-border [&_.bits-feature-map]:min-h-0 [&_.bits-feature-map]:rounded-none"
+      class="relative"
+      style:height={fixedMap ? `min(${height}px, 50vh)` : `${height}px`}
     >
-      {@render map()}
-    </div>
-    {#if locationMapControls}
-      <div class="absolute right-3 top-3 z-10" data-location-map-controls>
-        {@render locationMapControls()}
+      <div
+        id={mapId}
+        class="h-full w-full overflow-hidden border-b border-border [&_.bits-feature-map]:min-h-0 [&_.bits-feature-map]:rounded-none"
+      >
+        {@render map?.()}
       </div>
-    {/if}
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
-    <!-- biome-ignore lint/a11y/useSemanticElements: This focusable window splitter supports keyboard and pointer resizing, rather than a static thematic break. -->
-    <div
-      role="separator"
-      tabindex="0"
-      aria-label={m.feature_address_resize_map()}
-      aria-orientation="horizontal"
-      aria-controls={mapId}
-      aria-valuemin={minimumHeight}
-      aria-valuemax={maximumHeight}
-      aria-valuenow={height}
-      class="absolute inset-x-0 bottom-[-6px] z-10 flex h-3 touch-none cursor-ns-resize items-center justify-end pr-8 outline-none hover:bg-primary/15 focus-visible:bg-primary/20"
-      onpointerdown={startResize}
-      onpointermove={event => {
-        if (drag?.pointerId === event.pointerId)
-          resize(drag.startHeight + event.clientY - drag.startY)
-      }}
-      onpointerup={event => {
-        if (drag?.pointerId === event.pointerId) {
-          event.currentTarget.releasePointerCapture(event.pointerId)
-          drag = null
-        }
-      }}
-      onpointercancel={() => (drag = null)}
-      onlostpointercapture={() => (drag = null)}
-      onkeydown={resizeWithKeyboard}
-      ondblclick={() => resize(320)}
-    >
-      <span aria-hidden="true" class="h-1 w-10 rounded-full bg-foreground/35"></span>
+      {#if locationMapControls}
+        <div class="absolute right-3 top-3 z-10" data-location-map-controls>
+          {@render locationMapControls()}
+        </div>
+      {/if}
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
+      <!-- biome-ignore lint/a11y/useSemanticElements: This focusable window splitter supports keyboard and pointer resizing, rather than a static thematic break. -->
+      <div
+        role="separator"
+        tabindex="0"
+        aria-label={m.feature_address_resize_map()}
+        aria-orientation="horizontal"
+        aria-controls={mapId}
+        aria-valuemin={minimumHeight}
+        aria-valuemax={maximumHeight}
+        aria-valuenow={height}
+        class="absolute inset-x-0 bottom-[-6px] z-10 flex h-3 touch-none cursor-ns-resize items-center justify-end pr-8 outline-none hover:bg-primary/15 focus-visible:bg-primary/20"
+        onpointerdown={startResize}
+        onpointermove={event => {
+          if (drag?.pointerId === event.pointerId)
+            resize(drag.startHeight + event.clientY - drag.startY)
+        }}
+        onpointerup={event => {
+          if (drag?.pointerId === event.pointerId) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+            drag = null
+          }
+        }}
+        onpointercancel={() => (drag = null)}
+        onlostpointercapture={() => (drag = null)}
+        onkeydown={resizeWithKeyboard}
+        ondblclick={() => resize(320)}
+      >
+        <span aria-hidden="true" class="h-1 w-10 rounded-full bg-foreground/35"></span>
+      </div>
     </div>
-  </div>
+  {/if}
   <div
     class="relative z-20 flex items-center gap-3 border-b border-border/60 bg-panel px-6 py-3 {isEditing &&
     showLookup

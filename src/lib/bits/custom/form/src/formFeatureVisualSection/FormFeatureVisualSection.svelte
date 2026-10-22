@@ -20,6 +20,9 @@ import ShrinkIcon from 'virtual:icons/proicons/full-screen-minimize'
 
 let {
   class: className = '',
+  expandedHeight = 520,
+  showImage = true,
+  showControls = true,
   hasPresentedCanonicalImageSizing = false,
   isCanonicalImagePending = false,
   imageAspectRatio = null,
@@ -55,20 +58,21 @@ const rootClass = $derived(
 </script>
 
 <Main.VisualSection
-  showImage={!isNewFeature}
+  showImage={!isNewFeature && showImage}
+  {showControls}
   {onHeightChange}
   class={rootClass}
   {imageAspectRatio}
   {isCollapsed}
   resizeLabel={m.feature_visual_resize()}
-  expandedHeight={520}
+  {expandedHeight}
   collapsedHeight={64}
 >
   {#snippet leftControls()}
     {#if isNewFeature && contributorUser}
       <article class="inline-flex items-center">
         <img
-          class="h-12 w-12 shrink-0 rounded-full bg-[color:color-mix(in_oklab,var(--color-foreground)_16%,transparent)] object-cover shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-foreground)_12%,transparent)]"
+          class="relative z-10 h-12 w-12 shrink-0 rounded-full bg-[color:color-mix(in_oklab,var(--color-foreground)_16%,transparent)] object-cover shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-foreground)_12%,transparent)]"
           src={resolveAvatarImageSrc(contributorUser.image) ?? ''}
           alt={contributorUser.name ??
             contributorUser.attribution ??
