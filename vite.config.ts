@@ -12,6 +12,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 // LOCAL DEVELOPMENT
 import { getDevPersona } from './scripts/dev/config.ts'
+import { getDevOutput } from './scripts/dev/output.ts'
 // DATA
 // import seed from './src/lib/db/seed';
 // TYPES
@@ -382,6 +383,7 @@ export default defineConfig(async ({ command }) => ({
     }),
     // seedDrizzle(),
     sveltekit({
+      outDir: getDevOutput(process.argv, command).outDir,
       // Consult https://kit.svelte.dev/docs/integrations#preprocessors
       // for more information about preprocessors
       compilerOptions: {
@@ -433,10 +435,12 @@ export default defineConfig(async ({ command }) => ({
     target: 'es2020',
   },
   // Enable build caching for CI environments
-  cacheDir: '.svelte-kit/vite',
+  cacheDir: `${getDevOutput(process.argv, command).outDir}/vite`,
   server: {
     // Local binding storage is runtime data, not an input to HMR or translations.
-    watch: { ignored: ['**/.wrangler/**'] },
+    watch: {
+      ignored: ['**/.wrangler/**', ...getDevOutput(process.argv, command).ignored],
+    },
     port: 5175,
     strictPort: true,
     // Vite derives the websocket port from the browser origin, including local proxies.
