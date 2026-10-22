@@ -1650,5 +1650,11 @@
   "location_lifecycle_filter": "存续状况",
   "location_lifecycle_all": "所有状况",
   "location_lifecycle_historic": "历史地点",
-  "location_successor_id": "后继／搬迁地点 ID"
+  "location_successor_id": "后继／搬迁地点 ID",
+  "feature_start_addresses_failed": "大厦及地址搜索暂时无法使用，请重试。",
+  "feature_start_drop_pin": "放置标记",
+  "feature_start_empty": "找不到匹配的地点或地址。",
+  "feature_start_places_failed": "场所搜索暂时无法使用，请重试。",
+  "feature_start_retry": "重新搜索",
+  "feature_start_search": "搜索地点"
 }

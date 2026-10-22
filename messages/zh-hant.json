@@ -1650,5 +1650,11 @@
   "location_lifecycle_filter": "存續狀況",
   "location_lifecycle_all": "所有狀況",
   "location_lifecycle_historic": "歷史地點",
-  "location_successor_id": "後繼／搬遷地點 ID"
+  "location_successor_id": "後繼／搬遷地點 ID",
+  "feature_start_addresses_failed": "大廈及地址搜尋暫時無法使用，請重試。",
+  "feature_start_drop_pin": "放置標記",
+  "feature_start_empty": "找不到相符的地點或地址。",
+  "feature_start_places_failed": "場所搜尋暫時無法使用，請重試。",
+  "feature_start_retry": "重新搜尋",
+  "feature_start_search": "搜尋地點"
 }

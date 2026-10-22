@@ -950,3 +950,20 @@ source evidence, and verified 75 unrelated tables, integrity and foreign keys. S
 and primary input databases are read-only during rehearsal. Regression coverage includes
 wrong subtype/version rejection, addressless buildings, typed-detail retention on edits,
 optional geometry, immutable reference pins, source replay and import SQL.
+
+### Development discovery latency (22 October 2026, Refs #194)
+
+Development address and Place discovery use `http://api.atlas.localhost`; production
+uses the hosted SaanSeoi API. The new-Feature search publishes each provider's results
+independently, appends later results without renumbering existing rows, and cancels
+obsolete address requests. Local preview requests use a development credential.
+
+Coverage lives in `src/tests/draft-feature-location-search.test.ts`,
+`src/tests/draft-location.remote.test.ts`, `src/tests/geocoding.test.ts` and
+`src/tests/location-source-endpoint.test.ts`. Chrome verification of the real component
+with controlled responses displayed addresses in 785 ms while Places remained pending
+for four seconds; selection survived the late response. Authenticated end-to-end
+verification remains outstanding. Local Central searches measured approximately
+3.5 seconds for addresses and 3.4 seconds for Places before preview hydration.
+Indexed address lookup and fewer Place preview round trips remain optimisation
+opportunities; backend streaming has not been introduced.
