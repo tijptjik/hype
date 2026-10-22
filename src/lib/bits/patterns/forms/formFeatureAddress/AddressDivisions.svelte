@@ -153,7 +153,7 @@ function resetPaths(): void {
     kind => kind === division.class,
   )}
   <div
-    class="flex min-w-0 items-start gap-2 py-1.5"
+    class="group/division flex min-w-0 items-start gap-2 py-1.5"
     title={factual ? m.address_divisions_factual() : m.address_divisions_subjective()}
   >
     <Icon class="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -164,7 +164,10 @@ function resetPaths(): void {
       <span class="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
         {labels[division.class] ?? divisionClassLabel(division.class)}
         {#if factual && isEditing}
-          <LockIcon class="size-2.5" aria-label={m.address_divisions_factual()} />
+          <LockIcon
+            class="size-2.5 opacity-0 transition-opacity group-hover/division:opacity-100 group-focus-within/division:opacity-100"
+            aria-label={m.address_divisions_factual()}
+          />
         {/if}
       </span>
     </div>

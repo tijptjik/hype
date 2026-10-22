@@ -1017,3 +1017,21 @@ SaanSeoi now scans scorer fields first and hydrates matching identities only,
 retaining publication filters, normalization and complete ranking. Concurrent
 local requests measured 5.8 seconds after the change; further indexed address
 lookup remains desirable. Places with preview details alone measured 684 ms.
+
+
+### Feature discovery interaction acceptance (22 October 2026, Refs #194)
+
+Profile and Location retain the same map canvas and height, initially half the
+viewport. Form panes fade and slide with reduced-motion support. Location hides
+the attribution and navigation overlays and focuses search when entered through
+the chooser. Parent search prefetch stays closed until interaction.
+
+Result titles fall back across locales and source brand labels. Hover highlights
+the numbered preview; selection flies to the accepted marker and shows the
+establishment's supplied address. The next action is Set Profile. Division clear,
+reset and lock controls appear on hover or keyboard focus, using the shared
+Location detail components.
+
+Authenticated local browser checks cover canvas identity, constant height,
+search focus, overlay visibility, title fallback, hover outlines and the actual
+Times Square establishment address. Focused search and division tests pass.

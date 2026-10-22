@@ -5,6 +5,7 @@ import { tick, type Snippet } from 'svelte'
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import XIcon from 'virtual:icons/lucide/x'
+import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
 import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
 // DOMAIN
 import {
@@ -85,7 +86,7 @@ function close(): void {
 }
 </script>
 
-<div class="min-w-0 space-y-3">
+<div class="group/selection relative min-w-0 space-y-3 pr-16">
   {#each paths as path (JSON.stringify(path.map(item => item.id)))}
     <ol
       class="flex flex-wrap items-start gap-x-3 gap-y-1"
@@ -99,7 +100,19 @@ function close(): void {
               aria-hidden="true"
             />
           {/if}
-          {@render node(division)}
+          <button
+            type="button"
+            class="text-left hover:text-primary"
+            aria-label={index === path.length - 1
+              ? m.address_neighbourhood_choose()
+              : addressDivisionName(division, getLocaleKey())}
+            onclick={() => {
+              searching = true
+              query = ''
+            }}
+          >
+            {@render node(division)}
+          </button>
         </li>
       {/each}
     </ol>
@@ -197,17 +210,23 @@ function close(): void {
       {/if}
     </div>
   {:else}
-    <div class="group/selection flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        class="min-h-9 text-sm text-primary hover:underline"
-        onclick={() => {
-          searching = true
-          query = ''
-        }}
-      >
-        {m.address_neighbourhood_choose()}
-      </button>
+    <div
+      class={paths.length
+        ? 'absolute right-0 top-0 flex items-center gap-1 opacity-0 transition-opacity group-hover/selection:opacity-100 group-focus-within/selection:opacity-100'
+        : 'flex flex-wrap items-center gap-2'}
+    >
+      {#if !paths.length}
+        <button
+          type="button"
+          class="min-h-9 text-sm text-primary hover:underline"
+          onclick={() => {
+            searching = true
+            query = ''
+          }}
+        >
+          {m.address_neighbourhood_choose()}
+        </button>
+      {/if}
       {#if paths.length}
         <button
           type="button"
@@ -224,13 +243,15 @@ function close(): void {
       {/if}
       <button
         type="button"
-        class="min-h-9 text-xs text-muted-foreground hover:underline"
+        class="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+        aria-label={m.address_divisions_from_marker()}
+        title={m.address_divisions_from_marker()}
         onclick={() => {
           close()
           onReset()
         }}
       >
-        {m.address_divisions_from_marker()}
+        <ResetIcon class="size-3.5" aria-hidden="true" />
       </button>
     </div>
   {/if}
