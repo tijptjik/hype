@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   search: vi.fn(),
+  nearby: vi.fn(),
   preview: vi.fn(),
   context: {
     user: { isAnonymous: false },
@@ -27,7 +28,10 @@ vi.mock('#lib/locations/sourceClient.js', async importOriginal => ({
 vi.mock('#lib/locations/sourcePreview.js', () => ({
   readSaanSeoiPlacePreview: mocks.preview,
 }))
-import { searchDraftLocations } from '#lib/api/draftLocation.remote.js'
+vi.mock('#lib/locations/nearbySource.js', () => ({
+  searchNearbySaanSeoiPlaces: mocks.nearby,
+}))
+import { searchDraftLocations, searchNearbyDraftLocations } from '#lib/api/draftLocation.remote.js'
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.context.user.isAnonymous = false
@@ -88,4 +92,24 @@ it('replaces a whitespace-only preview name with the matched source label', asyn
   mocks.preview.mockResolvedValue({ names: { en: '  ' } })
   const result = await searchDraftLocations({ q: 'lego', locale: 'en' })
   expect(result.rows[0]?.facts.names.en).toBe('LEGO')
+})
+
+it('bounds nearby preview hydration and reports truncated coverage', async () => {
+  mocks.nearby.mockResolvedValue({
+    candidates: Array.from({ length: 21 }, (_, index) => ({
+      placeId: String(index),
+      resourceReleaseId: 'release',
+    })),
+    partial: false,
+    limited: false,
+  })
+  mocks.preview.mockResolvedValue({ names: { en: 'Place' } })
+  const result = await searchNearbyDraftLocations({
+    coordinates: [114.15, 22.28],
+    radius: 300,
+  })
+  expect(result.rows).toHaveLength(20)
+  expect(result.partial).toBe(false)
+  expect(result.limited).toBe(true)
+  expect(mocks.preview).toHaveBeenCalledTimes(20)
 })

@@ -1043,3 +1043,9 @@ invalidates stale responses and cancels pending address requests. The magnifier
 inside the input submits immediately and remains distinct from Drop Pin. Empty
 type selection prompts the user to enable a type. Desktop and 390px-wide Chrome
 checks and ten focused component tests verify the controls and request selection.
+
+## Discovery coverage messages
+
+Refs #194. Nearby discovery reports its 20-preview cap and upstream pagination limits
+separately from incomplete coverage. The UI offers a narrower-search hint for limits,
+a retry for incomplete results, and an unavailable warning only for a failed request.

@@ -1654,6 +1654,7 @@
   "feature_start_addresses_failed": "大厦及地址搜索暂时无法使用，请重试。",
   "feature_start_drop_pin": "放置标记",
   "feature_start_empty": "找不到匹配的地点或地址。",
+  "feature_start_places_limited": "目前仅显示部分商户。请缩小搜索范围，以获取更精确的结果。",
   "feature_start_places_failed": "场所搜索暂时无法使用，请重试。",
   "feature_start_retry": "重新搜索",
   "feature_start_search": "搜索地点",

@@ -1654,6 +1654,7 @@
   "feature_start_addresses_failed": "大廈及地址搜尋暫時無法使用，請重試。",
   "feature_start_drop_pin": "放置標記",
   "feature_start_empty": "找不到相符的地點或地址。",
+  "feature_start_places_limited": "目前僅顯示部分商戶。請縮小搜尋範圍，以取得更精確的結果。",
   "feature_start_places_failed": "場所搜尋暫時無法使用，請重試。",
   "feature_start_retry": "重新搜尋",
   "feature_start_search": "搜尋地點",

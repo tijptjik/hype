@@ -313,3 +313,30 @@ it('runs the search icon action immediately without repeating the debounced requ
   await new Promise(resolve => setTimeout(resolve, 350))
   expect(mocks.places).toHaveBeenCalledTimes(1)
 })
+
+it.each([
+  { partial: false, limited: true, message: /Showing a limited set of establishments/, retry: false },
+  { partial: true, limited: false, message: /Some sources could not be searched/, retry: true },
+])('distinguishes search coverage $partial/$limited from an outage', async ({ partial, limited, message, retry }) => {
+  vi.useRealTimers()
+  mocks.places.mockResolvedValue({
+    rows: [{ id: 'bakery', facts: {
+      names: { en: 'Available Bakery' },
+      location: {
+        geometry: { type: 'Point', coordinates: [114.15, 22.28] },
+        address: { status: 'unresolved', rawSource: {}, records: {}, fallbackDisplay: {} },
+      },
+    } }],
+    partial,
+    limited,
+  })
+  mocks.addresses.mockResolvedValue([])
+  render(DraftSearch, {
+    active: true, focusRequest: 0, onSelect: vi.fn(),
+  })
+  await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'Bakery' } })
+  expect(await screen.findByText(message)).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Available Bakery/ })).toBeTruthy()
+  expect(screen.queryByText(/Places search is unavailable/)).toBeNull()
+  expect(Boolean(screen.queryByRole('button', { name: /retry/i }))).toBe(retry)
+})

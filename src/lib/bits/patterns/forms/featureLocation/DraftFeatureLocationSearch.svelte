@@ -63,6 +63,8 @@ let previousQuery = ''
 let rows = $state.raw<Result[]>([])
 let loading = $state(false)
 let placesFailed = $state(false)
+let placesPartial = $state(false)
+let placesLimited = $state(false)
 let addressesFailed = $state(false)
 let hovered = $state<string | null>(null)
 let searched = $state(false)
@@ -82,6 +84,8 @@ function schedule(): void {
   addressController?.abort()
   rows = []
   placesFailed = false
+  placesPartial = false
+  placesLimited = false
   addressesFailed = false
   searched = false
   loading = Boolean(query.trim()) && hasSearchTypes
@@ -102,6 +106,8 @@ async function search(): Promise<void> {
   addressController = new AbortController()
   rows = []
   placesFailed = false
+  placesPartial = false
+  placesLimited = false
   addressesFailed = false
   searched = false
   let pending = Number(includeShops) + Number(includeAddresses)
@@ -117,7 +123,8 @@ async function search(): Promise<void> {
       ? Promise.resolve(searchDraftLocations({ q, locale: getLocale(), limit: 5 }))
           .then(places => {
             if (request !== version) return
-            placesFailed = places.partial
+            placesPartial = places.partial
+            placesLimited = 'limited' in places && places.limited === true
             rows = [
               ...rows,
               ...places.rows.map(place => ({
@@ -406,6 +413,12 @@ onDestroy(() => {
       {#if placesFailed && searched}
         <p role="status" class="py-2 text-sm">{m.feature_start_places_failed()}</p>
       {/if}
+      {#if placesPartial && searched}
+        <p role="status" class="py-2 text-sm">{m.feature_start_partial()}</p>
+      {/if}
+      {#if placesLimited && searched}
+        <p role="status" class="py-2 text-sm">{m.feature_start_places_limited()}</p>
+      {/if}
       {#if addressesFailed && searched}
         <p role="status" class="py-2 text-sm">{m.feature_start_addresses_failed()}</p>
       {/if}
@@ -458,10 +471,10 @@ onDestroy(() => {
           </div>
         {/each}
       </section>
-      {#if searched && !loading && !rows.length && !placesFailed && !addressesFailed}
+      {#if searched && !loading && !rows.length && !placesFailed && !placesPartial && !addressesFailed}
         <p class="py-3 text-sm">{m.feature_start_empty()}</p>
       {/if}
-      {#if searched && (placesFailed || addressesFailed)}
+      {#if searched && (placesFailed || placesPartial || addressesFailed)}
         <button
           type="button"
           class="py-2 text-sm underline"

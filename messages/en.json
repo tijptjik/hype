@@ -1654,6 +1654,7 @@
   "feature_start_addresses_failed": "Address search is unavailable. Retry to search buildings and addresses.",
   "feature_start_drop_pin": "Drop Pin",
   "feature_start_empty": "No matching locations or addresses.",
+  "feature_start_places_limited": "Showing a limited set of establishments. Narrow your search for more specific results.",
   "feature_start_places_failed": "Places search is unavailable. Retry to search establishments.",
   "feature_start_retry": "Retry search",
   "feature_start_search": "Search for a Location",
