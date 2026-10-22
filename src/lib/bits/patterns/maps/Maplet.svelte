@@ -31,10 +31,12 @@ import type { Id } from '#lib/types.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 import type { MapStyleCatalogKey } from '#lib/map/styles/catalog.js'
 type MapProps = {
+  showMarker?: boolean
   locationCandidates?: import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
   onLocationCandidateSelect?: (id: string) => void
   freezeForResize?: boolean
   coordinates: number[]
+  initialZoom?: number
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
   mapStyleCode?: string | null
@@ -176,7 +178,9 @@ let lastCandidatesKey = ''
 $effect(() => {
   const target = activeMapInstance
   const candidates = mapProps.locationCandidates ?? []
-  const key = candidates.map(candidate => candidate.id).join('|')
+  const key = candidates
+    .map(candidate => `${candidate.id}:${candidate.coordinates.join(',')}`)
+    .join('|')
   if (!target || !candidates.length) {
     lastCandidatesKey = ''
     return
@@ -185,7 +189,7 @@ $effect(() => {
   lastCandidatesKey = key
   const bounds = new maplibregl.LngLatBounds()
   const pin = getCoordinateTuple(mapProps.coordinates)
-  if (pin) bounds.extend(pin)
+  if (pin && mapProps.showMarker !== false) bounds.extend(pin)
   for (const candidate of candidates) bounds.extend(candidate.coordinates)
   target.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 350 })
 })
@@ -193,9 +197,13 @@ $effect(() => {
 // STATE : DERIVED
 let markedAddressLngLat: [number, number] | null = $state(null)
 let addressLngLat: [number, number] | null = $derived(
-  getCoordinates(mapProps.addressMeta as LngLatLike),
+  mapProps.showMarker === false
+    ? null
+    : getCoordinates(mapProps.addressMeta as LngLatLike),
 )
-const coordinateTuple = $derived(getCoordinateTuple(mapProps.coordinates))
+const coordinateTuple = $derived(
+  mapProps.showMarker === false ? null : getCoordinateTuple(mapProps.coordinates),
+)
 const activeLocale = $derived(getLocaleKey())
 const resolvedMapStyleCode = $derived(mapProps.mapStyleCode?.trim() || 'hyperAdmin')
 const resolvedMapStyleKey = $derived.by(() => {
@@ -334,7 +342,7 @@ const isSameCoordinates = (
 
 // Handle address marker updates
 $effect(() => {
-  if (addressMarker && addressMarkerMap !== map) {
+  if (addressMarker && (addressMarkerMap !== map || !addressLngLat)) {
     addressMarker.remove()
     addressMarker = null
     addressMarkerMap = undefined
@@ -450,8 +458,9 @@ $effect(() => {
       bind:map={activeMapInstance}
       class="h-full w-full"
       style={resolvedMapStyle}
-      center={mapProps.initialCenter ?? coordinateTuple ?? [0, 0]}
-      zoom={20}
+      center={mapProps.initialCenter ??
+        getCoordinateTuple(mapProps.coordinates) ?? [114.17, 22.3]}
+      zoom={mapProps.initialZoom ?? 20}
       attributionControl={false}
       hash={false}
       canvasContextAttributes={{ antialias: true }}

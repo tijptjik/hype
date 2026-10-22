@@ -55,6 +55,7 @@ const rootClass = $derived(
 </script>
 
 <Main.VisualSection
+  showImage={!isNewFeature}
   {onHeightChange}
   class={rootClass}
   {imageAspectRatio}

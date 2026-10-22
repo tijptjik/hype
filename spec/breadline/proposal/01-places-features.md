@@ -983,3 +983,23 @@ changing search, scope or account clears stale rows and invalidates in-flight re
 The index automatically loads subsequent pages as the user scrolls, with loading
 skeletons inside the virtual list and no separate load-more footer. Header search is route-owned and cleared on departure. Browser acceptance
 with an authenticated account remains pending; the local browser redirects to sign-in.
+
+
+### New Feature naming entry (22 October 2026, Refs #194)
+
+New Features begin with “Find an existing Place” (primary) or “Add your own”
+(secondary), with icons and a short explanation. The Profile form expands and
+fades in, and visiting Location permanently dismisses this chooser for that draft.
+The unplaced map starts over Hong Kong at a harbour-wide zoom without a marker. Location
+follows Profile in navigation. Draft discovery searches read-only Places previews
+and building/address geocoding without requiring a Feature ID; selecting a result
+copies its marker/address and fills empty localized titles while remaining on Location.
+Search results animate in flow beneath the search control, with five visible rows
+before scrolling. Numbered map previews fit all results and highlight on hover or
+keyboard focus. New drafts have no accepted pin until a result is selected or
+Drop Pin places one at the current map centre. Divisions appear after placement;
+address fields appear only after an address result is selected.
+Titles remain editable and independent; this is neither a canonical Location link
+nor a new name-following policy. Existing authored titles are retained.
+The Photos facet and image pane are omitted until the Feature has a saved ID.
+Draft search reports partial provider failures and discards superseded responses.

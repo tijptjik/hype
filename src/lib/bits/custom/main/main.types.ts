@@ -45,6 +45,7 @@ export interface MainDualSectionProps {
 }
 
 export interface MainVisualSectionProps {
+  showImage?: boolean
   onHeightChange?: (height: number) => void
   resizeLabel?: string
   class?: string

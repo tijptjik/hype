@@ -87,6 +87,7 @@ export const ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 > = {
   project: { policies: () => m.location_policy_tab() },
   feature: {
+    address: () => m.feature_location_title(),
     images: () => m.feature__images(),
   },
 }
@@ -96,6 +97,7 @@ export const ADMIN_FACET_ACTION_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 > = {
   project: { policies: () => m.location_policy_tab() },
   feature: {
+    address: () => m.feature_location_title(),
     fields: () => m.feature__fields_title(),
   },
 }
@@ -128,8 +130,8 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   layer: [ADMIN_FACETS.core, ADMIN_FACETS.fields],
   feature: [
     ADMIN_FACETS.core,
-    ADMIN_FACETS.fields,
     ADMIN_FACETS.address,
+    ADMIN_FACETS.fields,
     ADMIN_FACETS.images,
   ],
   task: [ADMIN_FACETS.core],

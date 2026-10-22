@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy, type Snippet } from 'svelte'
+import { onDestroy, onMount, type Snippet } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
@@ -15,6 +15,7 @@ let {
   locationMapControls,
   fixedMap = false,
   showLookup = true,
+  showCoordinates = true,
   coordinatesControl,
   lookupControl,
   onLookup,
@@ -28,6 +29,7 @@ let {
   locationMapControls?: Snippet
   fixedMap?: boolean
   showLookup?: boolean
+  showCoordinates?: boolean
   coordinatesControl: Snippet
   lookupControl: Snippet
   sourceId?: string | null
@@ -67,6 +69,10 @@ const mapId = $props.id()
 const minimumHeight = 200
 const maximumHeight = 1200
 let height = $state(320)
+// Give the fixed Location map half the viewport on entry, retaining manual resizing.
+onMount(() => {
+  if (fixedMap) height = Math.min(maximumHeight, window.innerHeight * 0.5)
+})
 let drag = $state<{ pointerId: number; startY: number; startHeight: number } | null>(
   null,
 )
@@ -109,7 +115,7 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
 <div class="relative w-full shrink-0" data-address-map-panel>
   <div
     class="relative"
-    style:height={fixedMap ? `min(${height}px, 40vh)` : `${height}px`}
+    style:height={fixedMap ? `min(${height}px, 50vh)` : `${height}px`}
   >
     <div
       id={mapId}
@@ -167,9 +173,11 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
     {#if locationControl}
       <div class="min-w-64 flex-1">{@render locationControl()}</div>
     {/if}
-    <div class="pointer-events-auto ml-auto min-w-0 shrink-0 justify-self-start">
-      {@render coordinatesControl()}
-    </div>
+    {#if showCoordinates}
+      <div class="pointer-events-auto ml-auto min-w-0 shrink-0 justify-self-start">
+        {@render coordinatesControl()}
+      </div>
+    {/if}
     {#if showLookup && (isEditing || sourceId)}
       <div class="shrink-0">
         <div class="inline-flex items-center text-foreground">

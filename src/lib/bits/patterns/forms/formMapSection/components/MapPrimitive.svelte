@@ -13,9 +13,14 @@ import { THEME_MAP_STYLES } from '#lib/themes/themes.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 
 type Props = {
+  showMarker?: boolean
+  onMapReady?: (
+    controller: import('#lib/map/controller.js').MapController | null,
+  ) => void
   locationCandidates?: import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
   onLocationCandidateSelect?: (id: string) => void
   coordinates: number[]
+  initialZoom?: number
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
   draggable?: boolean
@@ -25,10 +30,13 @@ type Props = {
 }
 
 let {
+  showMarker = true,
+  onMapReady,
   locationCandidates = [],
   onLocationCandidateSelect,
   coordinates,
   initialCenter = null,
+  initialZoom = 20,
   addressMeta,
   draggable = false,
   onCoordinateChange,
@@ -49,11 +57,14 @@ const initialCollapsed =
 
 <div class="bits-feature-map">
   <LegacyMap
+    {showMarker}
+    {onMapReady}
     {locationCandidates}
     {onLocationCandidateSelect}
     {coordinates}
     freezeForResize={resizeState?.active ?? false}
     {initialCenter}
+    {initialZoom}
     {addressMeta}
     {mapStyleCode}
     {draggable}

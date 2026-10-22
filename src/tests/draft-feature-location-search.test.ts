@@ -32,8 +32,8 @@ it('focuses after navigation, searches while typing and returns the selected edi
         address2dId: null,
         address3dId: null,
         address3dUnitId: null,
-        addressSnapshotId: null,
-        records: {},
+        snapshotId: null,
+        rawSource: {},
         fallbackDisplay: { en: '1 Test Road' },
       },
     },
@@ -71,7 +71,7 @@ it('publishes numbered map previews and highlights hovered rows without selectin
         address: {
           version: 1,
           source: {
-            records: {},
+            rawSource: {},
             status: 'unresolved',
             address2dId: `address-${index}`,
             fallbackDisplay: { en: `Road ${index}` },
@@ -165,7 +165,7 @@ it('shows address results while places are pending and cancels obsolete lookups'
         address: {
           version: 1,
           source: {
-            records: {},
+            rawSource: {},
             status: 'unresolved',
             address2dId: 'first',
             fallbackDisplay: { en: 'Fast Road' },
@@ -204,7 +204,7 @@ it('shows places while addresses are pending and ignores late results after sele
           names: { en: 'Fast Place' },
           location: {
             geometry: { type: 'Point', coordinates: [114.1, 22.3] },
-            address: { status: 'unresolved', records: {}, fallbackDisplay: {} },
+            address: { status: 'unresolved', rawSource: {}, fallbackDisplay: {} },
           },
         },
       },

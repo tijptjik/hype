@@ -8,6 +8,8 @@ import { goto } from '$app/navigation'
 
 import { page } from '$app/state'
 import { onMount, untrack, tick, type Snippet } from 'svelte'
+import { slide } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 import { normalizePhoneNumber } from '#lib/utils/phone-property.js'
 
 // TOAST
@@ -120,6 +122,8 @@ import {
   getFeatureDetachedBrands,
   unlinkFeatureLocation,
 } from '#lib/api/location.remote.js'
+import DraftFeatureLocationSearch from '#lib/bits/patterns/forms/featureLocation/DraftFeatureLocationSearch.svelte'
+import { Button } from '#lib/bits/core/index.js'
 import FeatureLocationSection from '#lib/bits/patterns/forms/featureLocation/FeatureLocationSection.svelte'
 import FormFeatureAddress from '#lib/bits/patterns/forms/formFeatureAddress/FormFeatureAddress.svelte'
 import {
@@ -148,6 +152,7 @@ import {
 import { createSchemaRequiredInferer } from '#lib/utils/form-schema.js'
 // ICONS
 import FeatureIcon from 'virtual:icons/proicons/location'
+import AddFeatureIcon from 'virtual:icons/proicons/add'
 // CONFIG
 import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // ENUMS
@@ -347,6 +352,8 @@ const noopHeaderAction = (): void => {}
 // - updateAddressDraft
 // - lookupFeatureAddress
 // - selectAddressCandidate
+// - startLocationSearch
+// - selectDraftLocation
 // - handleCoordinateChange
 // - handleFeatureStateToggle
 // - onPublishToggle
@@ -412,7 +419,9 @@ const activeFacet = $derived(
 
 // Resolve the canonical facet order once so hash sync and step navigation use the same source.
 const featureFacetOrder = $derived.by(() =>
-  getAdminFacetOrderForResource(FirstClassResource.feature),
+  getAdminFacetOrderForResource(FirstClassResource.feature).filter(
+    facet => featureRef !== NEW_REF || facet !== 'images',
+  ),
 )
 
 /********************
@@ -429,6 +438,7 @@ const isImagesFacet = $derived(activeFacet === 'images')
  ************/
 
 function goToFacet(facet: FacetType): void {
+  if (facet === 'images' && isNewFeatureRef) return
   if (facet === 'fields' && !hasSelectedLayer) return
   if (facet === activeFacet) return
   const href = getUrlForResource(
@@ -495,7 +505,9 @@ $effect(() => {
       untrack(() => {
         const currentFacet = adminCtx.activeFacet
         const nextFacet =
-          currentFacet && resolvedFacetTabsSnapshot.has(currentFacet)
+          currentFacet &&
+          !(nextRef === NEW_REF && currentFacet === 'images') &&
+          resolvedFacetTabsSnapshot.has(currentFacet)
             ? currentFacet
             : 'core'
         adminCtx.setFacet(nextFacet as never, nextRef, FirstClassResource.feature)
@@ -510,6 +522,7 @@ $effect(() => {
 $effect(() => {
   activeFacet
   contentsElement
+  if (activeFacet === 'address' && isNewFeatureRef && locationFocusRequest > 0) return
   focusFacetFromHash(contentsElement, activeFacet)
 })
 
@@ -534,10 +547,12 @@ $effect(() => {
                 disabled: false,
               },
         )
-  ).map(facet => ({
-    ...facet,
-    disabled: facet.ref === 'fields' ? !hasSelectedLayer : Boolean(facet.disabled),
-  }))
+  )
+    .filter(facet => !isNewFeatureRef || facet.ref !== 'images')
+    .map(facet => ({
+      ...facet,
+      disabled: facet.ref === 'fields' ? !hasSelectedLayer : Boolean(facet.disabled),
+    }))
 
   const facetKey = displayFacets
     .map(
@@ -578,6 +593,80 @@ $effect(() => {
 // § Variant
 
 const isNewFeatureRef = $derived(featureRef === NEW_REF)
+let namingChosen = $state(false)
+let locationFocusRequest = $state(0)
+let draftHasPin = $state(false)
+let draftHasAddress = $state(false)
+let draftMapController = $state.raw<
+  import('#lib/map/controller.js').MapController | null
+>(null)
+$effect(() => {
+  featureRef
+  namingChosen = false
+  locationFocusRequest = 0
+  draftHasPin = false
+  draftHasAddress = false
+})
+
+$effect(() => {
+  if (isNewFeatureRef && isAddressFacet) namingChosen = true
+})
+
+/** Open draft Location discovery and request focus after the facet becomes visible.
+ * @returns Nothing.
+ */
+function startLocationSearch(): void {
+  goToFacet('address')
+  locationFocusRequest++
+}
+
+/** Use source names as an editable starting point without replacing authored titles.
+ * @param result Explicitly selected search preview. @returns Nothing.
+ * @remarks This does not create or link a canonical Location identity.
+ */
+function selectDraftLocation(result: {
+  address: FeatureAddress
+  names: Record<string, string>
+  kind?: 'establishment' | 'address'
+}): void {
+  if (result.address.coordinates) handleCoordinateChange(result.address.coordinates)
+  updateAddressDraft(result.address)
+  draftHasAddress = result.kind === 'address'
+  updateFeatureData(data => ({
+    ...data,
+    i18n: Object.fromEntries(
+      Object.entries(data.i18n).map(([locale, value]) => [
+        locale,
+        {
+          ...value,
+          title:
+            value.title ||
+            result.names[ADDRESS_LOCALES[locale as keyof typeof ADDRESS_LOCALES]] ||
+            '',
+        },
+      ]),
+    ) as typeof data.i18n,
+  }))
+  namingChosen = true
+}
+
+/** Place the draft pin only after an explicit action, at the current camera centre.
+ * @returns Nothing when the map is not ready.
+ */
+function dropDraftPin(): void {
+  const center = draftMapController?.getCamera()?.center
+  if (center) handleCoordinateChange(center)
+}
+
+/** Prevent a new Feature from silently saving the editor's default camera coordinates.
+ * @returns Whether the user has selected an actual position.
+ */
+function ensureDraftPin(): boolean {
+  if (!isNewFeatureRef || draftHasPin) return true
+  goToFacet('address')
+  toast.error(m.feature_start_choose_position())
+  return false
+}
 
 // § Header
 let lastHeaderKey = ''
@@ -772,6 +861,7 @@ let featureFormSource = $state<FeatureFormInput>(initialEmptyFeatureFormSeed)
 const configuredFeatureForm = configureForm(() => ({
   form: featureForm as never,
   onsubmit: (({ data }: { data: FeatureFormInput }) => {
+    if (!ensureDraftPin()) return false
     // Stamp create/update submit metadata late so the payload always matches the active ref.
     const submittedPayload = prepareSubmitPayloadMeta(data, {
       defaultMode: isNewFeatureRef ? 'create' : 'update',
@@ -831,6 +921,11 @@ const isDirty = $derived(Boolean(formCtx.dirty || hasProgrammaticDirtyChanges))
 const isRequiredInPreflight = createSchemaRequiredInferer(() => featureFormSource)
 const currentFormValue = $derived(formCtx.form.fields.value() as FeatureFormInput)
 const currentFeatureData = $derived(currentFormValue?.data ?? emptyFeatureFormSeed.data)
+const showNameFields = $derived(
+  !isNewFeatureRef ||
+    namingChosen ||
+    Object.values(currentFeatureData.i18n ?? {}).some(value => Boolean(value?.title)),
+)
 
 // Hide form-level issues during programmatic resets so transient invalid states do not flash.
 const visibleAllIssues = $derived.by((): unknown[] =>
@@ -1347,6 +1442,7 @@ async function selectAddressCandidate(candidate: FeatureAddress): Promise<void> 
  * @returns Nothing; the address is retained for review until a new lookup.
  */
 function handleCoordinateChange(nextCoordinates: number[]): void {
+  if (isNewFeatureRef) draftHasPin = true
   addressLookupRevision += 1
   isAddressLookupLoading = false
   addressLookupMessage = ''
@@ -1727,7 +1823,7 @@ function commitSettledFeatureState(value: FeaturePageState): void {
  */
 async function onSubmit(): Promise<void> {
   suppressFormLevelIssues = false
-  if (!isCurrentRefLoaded) return
+  if (!isCurrentRefLoaded || !ensureDraftPin()) return
   // Flush the last input edit before serializing custom property controls.
   await tick()
   const phoneInputs = Array.from(
@@ -2168,7 +2264,11 @@ $effect(() => () => clearVisualSectionReopenState())
         {#snippet map()}
           <Main.VisualSectionMap isCollapsed={isVisualSectionCollapsed}>
             <FormMapSection
-              initialCenter={initialMapCenter}
+              showMarker={!isNewFeatureRef || draftHasPin}
+              initialCenter={isNewFeatureRef && !draftHasPin
+                ? [114.17, 22.3]
+                : initialMapCenter}
+              initialZoom={isNewFeatureRef && !draftHasPin ? 11.5 : 20}
               coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
               addressMeta={currentFeatureData.addressMeta ?? null}
               draggable={isEditing}
@@ -2205,27 +2305,59 @@ $effect(() => () => clearVisualSectionReopenState())
     >
       <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-9! pb-12`}>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
-        <FormI18nSection
-          class={FEATURE_EDITOR_CONTENT_SECTION_CLASS}
-          {locales}
-          onTranslate={onTranslateDescriptorLocale}
-          onResetLocale={onResetDescriptorLocale}
-          sectionKey="descriptor"
-          {isEditing}
-        >
-          {#snippet children(
-            locale,
-          )}
-            <FormI18nDescriptorFields
-              form={formCtx.form}
-              fields={formCtx.form.fields.data.i18n[locale]}
-              {locale}
+        {#if !showNameFields}
+          <div
+            class="flex min-h-64 flex-col items-center justify-center gap-6 py-12"
+            out:slide={{ duration: prefersReducedMotion.current ? 0 : 180 }}
+          >
+            <div class="flex flex-wrap justify-center gap-4">
+              <Button
+                type="button"
+                text={m.feature_start_find_place()}
+                color="primary"
+                size="lg"
+                iconComponent={FeatureIcon}
+                onClick={startLocationSearch}
+              />
+              <Button
+                type="button"
+                text={m.feature_start_name()}
+                color="secondary"
+                style="outline"
+                size="lg"
+                iconComponent={AddFeatureIcon}
+                onClick={() => (namingChosen = true)}
+              />
+            </div>
+            <p class="text-center text-muted-foreground">
+              {m.feature_start_description()}
+            </p>
+          </div>
+        {:else}
+          <div in:slide={{ duration: prefersReducedMotion.current ? 0 : 280 }}>
+            <FormI18nSection
+              class={FEATURE_EDITOR_CONTENT_SECTION_CLASS}
+              {locales}
+              onTranslate={onTranslateDescriptorLocale}
+              onResetLocale={onResetDescriptorLocale}
+              sectionKey="descriptor"
               {isEditing}
-              fieldConfigs={featureDescriptorFieldConfigs as never}
-              {isRequiredInPreflight}
-            />
-          {/snippet}
-        </FormI18nSection>
+            >
+              {#snippet children(
+                locale,
+              )}
+                <FormI18nDescriptorFields
+                  form={formCtx.form}
+                  fields={formCtx.form.fields.data.i18n[locale]}
+                  {locale}
+                  {isEditing}
+                  fieldConfigs={featureDescriptorFieldConfigs as never}
+                  {isRequiredInPreflight}
+                />
+              {/snippet}
+            </FormI18nSection>
+          </div>
+        {/if}
 
         <FormFeatureParentSection
           class={cx(
@@ -2376,7 +2508,11 @@ $effect(() => () => clearVisualSectionReopenState())
               {locationMapControls}
               {locationControl}
               {locationContent}
-              {hideDetails}
+              hideDetails={hideDetails ||
+                (isNewFeatureRef && !draftHasPin && !draftHasAddress)}
+              showAddressDetails={!isNewFeatureRef || draftHasAddress}
+              showDivisions={!isNewFeatureRef || draftHasPin}
+              showCoordinates={!isNewFeatureRef || draftHasPin}
               {showLookup}
               show3dAddressOptions={show3dAddressOptions(selectedProject?.flags)}
               address={editorAddress}
@@ -2392,9 +2528,14 @@ $effect(() => () => clearVisualSectionReopenState())
             >
               {#snippet map()}
                 <FormMapSection
+                  showMarker={!isNewFeatureRef || draftHasPin}
+                  onMapReady={controller => (draftMapController = controller)}
                   locationCandidates={locationSearchMarkers}
                   onLocationCandidateSelect={selectLocationMarker}
-                  initialCenter={initialMapCenter}
+                  initialCenter={isNewFeatureRef && !draftHasPin
+                    ? [114.17, 22.3]
+                    : initialMapCenter}
+                  initialZoom={isNewFeatureRef && !draftHasPin ? 11.5 : 20}
                   coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
                   addressMeta={currentFeatureData.addressMeta ?? null}
                   draggable={isEditing}
@@ -2472,7 +2613,24 @@ $effect(() => () => clearVisualSectionReopenState())
               {/snippet}
             </FeatureLocationSection>
           {:else}
-            {@render addressEditor()}
+            <DraftFeatureLocationSearch
+              active={isAddressFacet}
+              focusRequest={locationFocusRequest}
+              onSelect={selectDraftLocation}
+              hasPin={draftHasPin}
+              onDropPin={draftMapController ? dropDraftPin : undefined}
+              onMapCandidates={(markers, select) => {
+                locationSearchMarkers = markers
+                selectLocationMarker = select
+              }}
+            >
+              {#snippet children(
+                searchControl,
+                searchResults,
+              )}
+                {@render addressEditor(searchControl, searchResults, false, false)}
+              {/snippet}
+            </DraftFeatureLocationSearch>
           {/if}
         {/key}
       </FormSurface>

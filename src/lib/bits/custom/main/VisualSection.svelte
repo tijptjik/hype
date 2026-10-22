@@ -11,6 +11,7 @@ let {
   expandedHeight = 520,
   collapsedHeight = 64,
   imageAspectRatio = null,
+  showImage = true,
   leftControls,
   centerControls,
   rightControls,
@@ -127,7 +128,9 @@ const rootStyle = $derived(
   <div class="bits-feature-visual__body">
     <div class="bits-feature-visual__map">{@render map?.()}</div>
 
-    <div class="bits-feature-visual__image">{@render image?.()}</div>
+    {#if showImage}
+      <div class="bits-feature-visual__image">{@render image?.()}</div>
+    {/if}
   </div>
   {#if resizeLabel && !isCollapsed}
     <!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->

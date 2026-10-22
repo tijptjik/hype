@@ -1658,5 +1658,10 @@
   "feature_start_retry": "重新搜尋",
   "feature_start_search": "搜尋地點",
   "location_type_premises": "場所",
-  "location_type_building": "建築物"
+  "location_type_building": "建築物",
+  "feature_start_name": "自行新增",
+  "feature_start_partial": "部分來源無法搜尋。你可以重試或選擇現有結果。",
+  "feature_start_choose_position": "儲存前請選擇地點或放置標記。",
+  "feature_start_find_place": "尋找現有地點",
+  "feature_start_description": "尋找現有地點，或自行新增。"
 }
