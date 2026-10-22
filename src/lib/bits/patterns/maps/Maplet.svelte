@@ -168,6 +168,9 @@ $effect(() => {
     button.classList.toggle('ring-4', emphasized)
     button.classList.toggle('ring-primary/40', emphasized)
     button.style.zIndex = candidate.highlighted ? '2' : candidate.selected ? '1' : '0'
+    button.style.outline = emphasized ? '4px solid var(--color-primary)' : ''
+    button.style.outlineOffset = emphasized ? '3px' : ''
+    button.style.filter = emphasized ? 'brightness(1.15)' : ''
   }
 })
 onDestroy(() => {

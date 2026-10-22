@@ -477,6 +477,13 @@ $effect(() => {
         />
       </div>
     {/if}
+    {#if showAddressDetails &&
+      address.matchStatus === 'unresolved' &&
+      getAddressDisplay(address, getLocaleKey())}
+      <p class="break-words px-6 pt-5 text-base leading-relaxed" data-source-address>
+        {getAddressDisplay(address, getLocaleKey())}
+      </p>
+    {/if}
     {#if showAddressDetails}
       <section
         class="border-t border-border/60"

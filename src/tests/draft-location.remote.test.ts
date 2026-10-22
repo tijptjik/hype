@@ -74,3 +74,18 @@ it('uses the matched brand when the preview has no name', async () => {
   const result = await searchDraftLocations({ q: 'lego', locale: 'en' })
   expect(result.rows[0]?.facts.names.en).toBe('LEGO')
 })
+
+it('replaces a whitespace-only preview name with the matched source label', async () => {
+  mocks.search.mockResolvedValue([
+    {
+      placeId: 'lego',
+      resourceReleaseId: 'release',
+      locale: 'en',
+      nameText: '  ',
+      brandText: 'LEGO',
+    },
+  ])
+  mocks.preview.mockResolvedValue({ names: { en: '  ' } })
+  const result = await searchDraftLocations({ q: 'lego', locale: 'en' })
+  expect(result.rows[0]?.facts.names.en).toBe('LEGO')
+})

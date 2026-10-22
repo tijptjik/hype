@@ -653,7 +653,19 @@ function selectDraftLocation(result: {
   }
   if (result.address.coordinates) handleCoordinateChange(result.address.coordinates)
   updateAddressDraft(result.address)
-  draftHasAddress = result.kind === 'address'
+  draftHasAddress =
+    result.kind === 'address' ||
+    Boolean(getAddressDisplay(result.address, getLocaleKey()))
+  if (result.address.coordinates) {
+    const center = result.address.coordinates as [number, number]
+    void tick().then(() =>
+      draftMapController?.flyTo({
+        center,
+        zoom: 17,
+        duration: prefersReducedMotion.current ? 0 : 900,
+      }),
+    )
+  }
   updateFeatureData(data => ({
     ...data,
     i18n: Object.fromEntries(
@@ -2604,7 +2616,12 @@ $effect(() => () => clearVisualSectionReopenState())
               coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
               {isEditing}
               isLoading={isAddressLookupLoading}
-              message={addressLookupMessage}
+              message={addressLookupMessage ||
+                (isNewFeatureRef &&
+                draftHasAddress &&
+                editorAddress.matchStatus === 'unresolved'
+                  ? m.feature_start_place_address()
+                  : '')}
               candidates={addressCandidates}
               onSelectCandidate={selectAddressCandidate}
               onCoordinateChange={handleCoordinateChange}

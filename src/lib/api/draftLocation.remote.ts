@@ -32,8 +32,8 @@ export const searchDraftLocations = guardedQuery(
           resourceReleaseId: candidate.resourceReleaseId,
         })
         // Discovery can match a brand even when the establishment has no source name.
-        const label = candidate.nameText || candidate.brandText
-        if (label && !facts.names[candidate.locale])
+        const label = candidate.nameText?.trim() || candidate.brandText?.trim()
+        if (label && !facts.names[candidate.locale]?.trim())
           facts.names[candidate.locale] = label
         return { id: candidate.placeId, facts }
       }),

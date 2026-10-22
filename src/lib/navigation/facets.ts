@@ -97,6 +97,7 @@ export const ADMIN_FACET_ACTION_LABEL_OVERRIDES_BY_RESOURCE: Partial<
 > = {
   project: { policies: () => m.location_policy_tab() },
   feature: {
+    core: () => m.resources__profile(),
     address: () => m.feature_location_title(),
     fields: () => m.feature__fields_title(),
   },

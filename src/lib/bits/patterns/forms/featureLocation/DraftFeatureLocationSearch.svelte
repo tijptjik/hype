@@ -185,6 +185,7 @@ function publishMarkers(): void {
             label:
               result.names[getLocale()] ||
               result.names.en ||
+              Object.values(result.names).find(value => value?.trim()) ||
               getAddressDisplay(result.address, getLocaleKey()),
             highlighted: hovered === result.id,
           },
@@ -236,8 +237,18 @@ function backToResults(): void {
  */
 function resultLabels(result: Result): { title: string; detail: string } {
   const display = getAddressDisplay(result.address, getLocaleKey())
-  const name = result.names[getLocale()] || result.names.en || ''
-  const title = name || display.split(/[,，]/)[0] || display
+  const name =
+    result.names[getLocale()]?.trim() ||
+    result.names.en?.trim() ||
+    Object.values(result.names).find(value => value?.trim()) ||
+    ''
+  const title =
+    name ||
+    display.split(/[,，]/)[0] ||
+    display ||
+    (result.kind === 'address'
+      ? m.location_type_address()
+      : m.location_type_establishment())
   const detail = display.startsWith(title)
     ? display.slice(title.length).replace(/^[,，\s]+/, '')
     : display
@@ -323,7 +334,7 @@ onDestroy(() => {
         <p role="status" class="py-2 text-sm">{m.feature_start_addresses_failed()}</p>
       {/if}
       <section
-        class="max-h-80 overflow-y-auto overscroll-contain"
+        class="max-h-100 overflow-y-auto overscroll-contain"
         aria-label={m.feature_start_search()}
       >
         {#each rows as result, index (result.id)}
@@ -332,6 +343,7 @@ onDestroy(() => {
             <button
               type="button"
               class="group flex min-h-20 w-full items-center gap-3 border-b border-border/50 px-3 py-3 text-left transition-colors last:border-0 hover:bg-muted focus:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+              data-result-id={result.id}
               data-result-number={index + 1}
               data-result-kind={result.kind}
               onmouseenter={() => (hovered = result.id)}
