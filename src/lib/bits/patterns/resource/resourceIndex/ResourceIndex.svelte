@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends Resource">
 // SVELTE
-import type { Snippet } from 'svelte'
+import { untrack, type Snippet } from 'svelte'
 import { page } from '$app/state'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -124,7 +124,49 @@ function buildItems(): Array<ResourceIndexItem<T>> {
   return rows
 }
 
-const items = $derived.by(() => buildItems())
+type IndexItem = { id: string; value: ResourceIndexItem<T> | null }
+type IndexCell = { id: string; entity: T | null; index: number }
+
+// Loading rows live inside the scrollable list, so pagination never shrinks its viewport.
+const items = $derived.by((): IndexItem[] => [
+  ...buildItems().map(value => ({ id: `resource:${value.id}`, value })),
+  ...(hasMore
+    ? Array.from({ length: 3 }, (_, index) => ({ id: `loading:${index}`, value: null }))
+    : []),
+])
+let visibleEnd = $state(0)
+
+/** Expand a grid row into stable cells, including placeholders for the next page.
+ * @param item Virtual resource or loading row.
+ * @returns Real cards or skeleton cells sharing the same grid geometry.
+ */
+function getGridCells(item: IndexItem): IndexCell[] {
+  if (!item.value)
+    return Array.from({ length: columnCount }, (_, index) => ({
+      id: `${item.id}:${index}`,
+      entity: null,
+      index,
+    }))
+  const gridRow = item.value as ResourceIndexGridRow<T>
+  return gridRow.entities.map((entity, offset) => ({
+    id: entity.id,
+    entity,
+    index: gridRow.startingIndex + offset,
+  }))
+}
+
+// Recheck after a page settles even when the visible range did not move.
+$effect(() => {
+  if (
+    isInitialised &&
+    entities.length > 0 &&
+    hasMore &&
+    !isLoadingMore &&
+    entities.length - visibleEnd * columnCount <= 10
+  ) {
+    untrack(() => onNearEnd?.())
+  }
+})
 
 $effect(() => {
   gridWidth
@@ -151,11 +193,15 @@ $effect(() => {
 </script>
 
 {#snippet children(
-  item: ResourceIndexItem<T>,
+  item: IndexItem,
   index: number,
 )}
-  {#if layoutMode === 'card'}
-    {@const cardRow = item as ResourceIndexGridRow<T>}
+  {#if !item.value}
+    <div class="px-2" role="status" aria-busy={isLoadingMore} aria-label={m.resource_loading()}>
+      {@render scrollPlaceholder(TABLE_ROW_HEIGHT_PX)}
+    </div>
+  {:else if layoutMode === 'card'}
+    {@const cardRow = item.value as ResourceIndexGridRow<T>}
     <ResourceCardRow
       entities={cardRow.entities}
       startingIndex={cardRow.startingIndex}
@@ -165,25 +211,29 @@ $effect(() => {
     />
   {:else if layoutMode === 'table' || layoutMode === 'list'}
     <ResourceTableRow
-      entity={item as T}
+      entity={item.value as T}
       {index}
       row={row as
         | Snippet<[T, number, ResourceIndexRowSelectionState | null, boolean]>
         | undefined}
-      selectionState={getRowSelectionState?.(item as T) ?? null}
+      selectionState={getRowSelectionState?.(item.value as T) ?? null}
       onSelectionToggle={onRowSelectionToggle}
     />
   {/if}
 {/snippet}
 
 {#snippet cardCell(
-  entity: T,
-  index: number,
+  cell: IndexCell,
+  _index: number,
 )}
-  {#if card}
-    {@render card(entity, index)}
+  {#if !cell.entity}
+    <div role="status" aria-busy={isLoadingMore} aria-label={m.resource_loading()}>
+      {@render scrollPlaceholder(CARD_ROW_HEIGHT_PX)}
+    </div>
+  {:else if card}
+    {@render card(cell.entity, cell.index)}
   {:else}
-    <article class="rounded-lg p-4"><p>{entity.id}</p></article>
+    <article class="rounded-lg p-4"><p>{cell.entity.id}</p></article>
   {/if}
 {/snippet}
 
@@ -204,17 +254,16 @@ $effect(() => {
 <div
   bind:clientWidth={gridWidth}
   bind:this={listContainer}
-  class="flex min-h-0 flex-1 flex-col gap-12 overflow-hidden overscroll-auto caret-transparent @container/grid"
+  class="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-auto caret-transparent @container/grid"
 >
   {#if isInitialised}
     {#if entities.length > 0 && items.length > 0}
       <div class="bits-resource-index-wrapper relative min-h-0 flex-1">
         <VirtualList
           {items}
-          getCells={layoutMode === 'card'
-            ? item => (item as ResourceIndexGridRow<T>).entities
-            : undefined}
-          getCellKey={(entity: T) => `${page.url.pathname}:${resource}:${entity.id}`}
+          getCells={layoutMode === 'card' ? getGridCells : undefined}
+          getCellKey={(cell: IndexCell) =>
+            `${page.url.pathname}:${resource}:${cell.id}`}
           cell={cardCell}
           {columnCount}
           columnGap={GRID_COLUMN_GAP_PX}
@@ -229,8 +278,7 @@ $effect(() => {
           padding={RESOURCE_INDEX_LIST_HORIZONTAL_PADDING_PX}
           {applyBottomOverflow}
           onRangeChange={(_start, end) => {
-            if (hasMore && !isLoadingMore && entities.length - end * columnCount <= 10)
-              onNearEnd?.()
+            visibleEnd = end
           }}
         />
       </div>
@@ -240,16 +288,6 @@ $effect(() => {
       >
         <ResourceEmptyState />
       </div>
-    {/if}
-    {#if hasMore}
-      <button
-        type="button"
-        class="shrink-0 px-3 py-2 text-sm"
-        disabled={isLoadingMore}
-        onclick={onNearEnd}
-      >
-        {isLoadingMore ? m.resource_loading() : m.resource_load_more()}
-      </button>
     {/if}
   {:else}
     <ResourceLoadingState {isRowLayout} />
