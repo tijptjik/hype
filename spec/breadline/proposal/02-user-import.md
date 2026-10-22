@@ -54,6 +54,30 @@ scenarios; its map preparation now includes the task fixture namespace. Forty-ni
 focused importer/adoption/rebuild tests and the standalone adoption TypeScript check
 pass. Live development installation and production rollout remain separate steps.
 
+### Manual Google claim acceptance (23 October 2026)
+
+A real Google sign-in on the normal local database successfully claimed a pre-existing
+latent user containing two Breadline source identities. Database verification confirmed
+the retained user ID and generated username, verified primary email, claimed ownership,
+one Google credential, one session, both unchanged source user/volunteer mappings and
+zero inherited roles. The additional eligible test identity uses a negative source key
+and `local-fixture` marker; it is not a real Breadline source row. The former local login
+was removed and its attribution profile archived, preserving authored content. Private
+before-images and a scoped restore tool remain outside Git.
+
+For this manual OAuth check, use `bun run dev -- --port 5173` and the registered
+`http://localhost:5173` origin. The ordinary configured port may differ; the OAuth
+callback must match the provider registration. Use the normal app rather than an
+automatic development-admin persona. Do not change provider registration or substitute
+test credentials in production to make the local callback work.
+
+The 13 production-handler claim integration tests also pass, including concurrent
+first-winner, stale loser, rollback and explicit later linking. The manual sign-in
+establishes the winning claim only; a second real Google candidate was not exercised.
+Run history is not yet imported into this database, so neither its ownership migration
+nor its UI display is accepted by this test. Restore the local fixture before installing
+the real reviewed identity-adoption rebuild. No production account was modified.
+
 ## Phone-based latent users: replacement design (18 October 2026)
 
 Refs #189, #194. The user planner now groups by normalized phone and supports
