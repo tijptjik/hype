@@ -12,6 +12,7 @@ import {
   OperatingStatusSchema,
   BuildingStatusSchema,
 } from '#lib/locations/lifecycle.js'
+import { LocationKindSchema } from '#lib/locations/kinds.js'
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
 import { updateLocalLocationAddress } from '#lib/db/services/locationLocal.js'
 import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
@@ -38,8 +39,8 @@ async function requireDirectoryAccess(
 }
 
 /**
- * Browse shared Locations and optionally one manageable Organisation's private Locations.
- * @param input Literal search, authorized owner scope and stable ID cursor.
+ * Browse shared Locations or the Locations owned by or associated with an Organisation.
+ * @param input Literal search, kind, authorized Organisation scope and stable ID cursor.
  * @returns A bounded page without source payloads or associated Features.
  */
 export const getLocations = guardedQuery(
@@ -48,11 +49,15 @@ export const getLocations = guardedQuery(
     organisationId: z.string().min(1).max(200).optional(),
     q: z.string().trim().max(200).optional(),
     lifecycleStatus: z.enum(LIFECYCLE_STATUSES).optional(),
+    kind: LocationKindSchema.optional(),
     after: z.string().min(1).max(200).optional(),
   }),
   async (input, ctx) => {
     await requireDirectoryAccess(ctx, input.organisationId)
-    return listLocationResources(ctx.db, input)
+    return listLocationResources(ctx.db, {
+      ...input,
+      restrictToOrganisation: Boolean(input.organisationId),
+    })
   },
 )
 

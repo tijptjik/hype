@@ -68,3 +68,17 @@ export function lifecycleStatus(
 ): LifecycleStatus {
   return facts?.operatingStatus ?? facts?.buildingStatus ?? 'unknown'
 }
+
+/** Return lifecycle choices applicable to a directory kind filter.
+ * @param kind Selected kind, or empty for all kinds.
+ * @returns Unknown plus the kind's supported lifecycle vocabulary.
+ * @remarks Premises, addresses and natural features currently have no lifecycle vocabulary.
+ */
+export function lifecycleStatusesForKind(
+  kind: LocationKind | '',
+): readonly LifecycleStatus[] {
+  if (!kind) return LIFECYCLE_STATUSES
+  if (kind === 'establishment') return ['unknown', ...OPERATING_STATUSES]
+  if (kind === 'building') return ['unknown', ...BUILDING_STATUSES]
+  return ['unknown']
+}

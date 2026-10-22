@@ -1500,7 +1500,7 @@
   "location_directory_search": "搜尋地點",
   "location_directory_scope": "機構範圍",
   "location_directory_shared": "共用地點",
-  "location_directory_help": "此處顯示共用地點。選擇機構以包含其私人地點；需要該機構的管理權限。",
+  "location_directory_help": "選擇機構以顯示其擁有或透過地標使用的地點；需要機構管理權限。",
   "location_directory_loading": "正在載入地點…",
   "location_directory_empty": "找不到地點。",
   "location_directory_more": "載入更多",
@@ -1656,5 +1656,7 @@
   "feature_start_empty": "找不到相符的地點或地址。",
   "feature_start_places_failed": "場所搜尋暫時無法使用，請重試。",
   "feature_start_retry": "重新搜尋",
-  "feature_start_search": "搜尋地點"
+  "feature_start_search": "搜尋地點",
+  "location_type_premises": "場所",
+  "location_type_building": "建築物"
 }

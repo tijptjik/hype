@@ -8,52 +8,63 @@ import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // API
 import { getLocations } from '#lib/api/locationDirectory.remote.js'
 import { runRemoteQuery } from '#lib/remote/index.js'
-// DOMAIN
-import {
-  LIFECYCLE_STATUSES,
-  lifecycleStatus as statusOf,
-  type LifecycleStatus,
-} from '#lib/locations/lifecycle.js'
-import { lifecycleLabel } from '#lib/locations/lifecycle.i18n.js'
 // BITS
-import { SelectField } from '#lib/bits/custom/form/index.js'
+import { ResourceIndex } from '#lib/bits/index.js'
+import LocationRow from '#lib/bits/patterns/resource/rows/locationRow/LocationRow.svelte'
+import LocationControlBar from '#lib/bits/patterns/resource/locationControlBar/LocationControlBar.svelte'
+import { FirstClassResource } from '#lib/enums.js'
 import { Button } from '#lib/bits/core/index.js'
 // I18N
-import { m } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import MapPin from 'virtual:icons/proicons/location'
+// DOMAIN
+import { lifecycleStatusesForKind } from '#lib/locations/lifecycle.js'
 // TYPES
+import type { LocationKind } from '#lib/locations/kinds.js'
+import type { LifecycleStatus } from '#lib/locations/lifecycle.js'
 import type { LocationResource } from '#lib/locations/resource.js'
 
 const admin = getAdminCtx()
 const header = getHeaderCtrl()
+admin.setFacet(false, false, FirstClassResource.location)
 const organisations = usePanelResources(admin.view, 'organisation', () => '')
 let query = $state('')
 let organisationId = $state('')
+let kind = $state<LocationKind | ''>('')
 let lifecycleStatus = $state<LifecycleStatus | ''>('')
-const lifecycleItems = $derived([
-  { value: '', label: m.location_lifecycle_all() },
-  ...LIFECYCLE_STATUSES.map(value => ({ value, label: lifecycleLabel(value) })),
-])
-let rows = $state<LocationResource[]>([])
+let rows = $state.raw<LocationResource[]>([])
 let cursor = $state<string | null>(null)
 let loading = $state(false)
+let initialised = $state(false)
 let failed = $state(false)
 let version = 0
 let activeSearch = $state<{
+  kind: LocationKind | ''
   q: string
   organisationId: string
   lifecycleStatus: LifecycleStatus | ''
-}>({ q: '', organisationId: '', lifecycleStatus: '' })
+}>({ kind: '', q: '', organisationId: '', lifecycleStatus: '' })
 
 /**
- * Load one server-authorized page, preserving settled rows during replacement.
+ * Load one server-authorized page, clearing stale rows when replacing the search.
  * @param more Whether to continue the submitted search.
  * @returns Completion after the newest request settles.
  */
 async function load(more = false): Promise<void> {
+  if (more && (loading || !cursor)) return
   const request = ++version
-  if (!more) activeSearch = { q: query, organisationId, lifecycleStatus }
+  if (!more) {
+    activeSearch = {
+      kind,
+      q: query.trim().slice(0, 200),
+      organisationId,
+      lifecycleStatus,
+    }
+    rows = []
+    cursor = null
+    initialised = false
+  }
   loading = true
   failed = false
   try {
@@ -61,6 +72,7 @@ async function load(more = false): Promise<void> {
       getLocations({
         scope: admin.view.getRoleScopeQueryKey(),
         q: activeSearch.q,
+        kind: activeSearch.kind || undefined,
         lifecycleStatus: activeSearch.lifecycleStatus || undefined,
         organisationId: activeSearch.organisationId || undefined,
         after: more ? (cursor ?? undefined) : undefined,
@@ -72,131 +84,112 @@ async function load(more = false): Promise<void> {
   } catch {
     if (request === version) failed = true
   } finally {
-    if (request === version) loading = false
+    if (request === version) {
+      loading = false
+      initialised = true
+    }
   }
 }
 
-// Account changes invalidate private rows before starting another authorized read.
+// Account and filter changes invalidate private rows before another authorized read.
 $effect(() => {
   admin.view.getRoleScopeQueryKey()
+  query
+  kind
+  organisationId
+  lifecycleStatus
   untrack(() => {
+    version++
     rows = []
     cursor = null
-    void load()
+    initialised = false
+    failed = false
+    loading = true
   })
+  const timeout = setTimeout(() => void load(), 200)
+  return () => clearTimeout(timeout)
 })
 $effect(() => {
-  header.setHeaderForStandAlone(m.location_policy_tab(), MapPin, {
+  header.setHeaderForIndex(m.location_policy_tab(), MapPin, {
     showNew: false,
-    showFilter: false,
-    showViewActions: false,
     showLayoutToggle: false,
-    showControlBarToggle: false,
   })
+  header.setSearch({
+    query,
+    placeholder: m.location_directory_search(),
+    onFilter: value => (query = value),
+  })
+  header.setControlBar(
+    LocationControlBar,
+    {
+      count: rows.length,
+      kind,
+      onKindChange: (value: string) => {
+        kind = value as LocationKind | ''
+        if (
+          lifecycleStatus &&
+          !lifecycleStatusesForKind(kind).includes(lifecycleStatus)
+        )
+          lifecycleStatus = ''
+      },
+      organisationId,
+      lifecycleStatus,
+      organisations: organisations.rows.map(organisation => ({
+        value: organisation.id,
+        label:
+          organisation.i18n?.[getLocaleKey()]?.name ||
+          organisation.i18n?.en?.name ||
+          organisation.id,
+      })),
+      onOrganisationChange: (value: string) => (organisationId = value),
+      onLifecycleChange: (value: string) =>
+        (lifecycleStatus = value as LifecycleStatus | ''),
+      onReset: () => {
+        organisationId = ''
+        kind = ''
+        lifecycleStatus = ''
+      },
+      hasMoreOrganisations: organisations.list.hasMore,
+      loadingOrganisations: organisations.list.loading,
+      organisationError: Boolean(organisations.list.error),
+      onMoreOrganisations: () => {
+        void organisations.list.next().catch(() => {})
+      },
+      onRetryOrganisations: () => organisations.retry(),
+    },
+    { isVisible: admin.listUi.state.isControlBarVisible.location },
+  )
   header.clearFooter()
 })
 onDestroy(() => {
   version++
+  header.setSearch(null)
 })
 </script>
 
-<div class="min-h-0 flex-1 overflow-y-auto bg-panel">
-  <div class="mx-auto flex w-full max-w-5xl flex-col gap-5 p-6">
-    <form
-      class="flex flex-wrap items-end gap-3"
-      onsubmit={event => {
-        event.preventDefault()
-        void load()
-      }}
-    >
-      <label class="flex min-w-56 flex-1 flex-col gap-2">
-        <span>{m.location_directory_search()}</span>
-        <input
-          class="rounded-lg border border-border bg-panel px-3 py-2"
-          bind:value={query}
-          maxlength="200"
-        >
-      </label>
-      <label class="flex flex-col gap-2">
-        <span>{m.location_directory_scope()}</span>
-        <select
-          class="rounded-lg border border-border bg-panel px-3 py-2"
-          bind:value={organisationId}
-        >
-          <option value="">{m.location_directory_shared()}</option>
-          {#each organisations.rows as organisation (organisation.id)}
-            <option value={organisation.id}>
-              {organisation.i18n?.en?.name ?? organisation.id}
-            </option>
-          {/each}
-        </select>
-      </label>
-      <div class="min-w-48">
-        <SelectField
-          id="location-lifecycle-filter"
-          label={m.location_lifecycle_filter()}
-          placeholder={m.location_lifecycle_all()}
-          value={lifecycleStatus}
-          items={lifecycleItems}
-          onValueChange={value => (lifecycleStatus = value as LifecycleStatus | '')}
-        />
-      </div>
-      {#if organisations.list.hasMore}
-        <Button
-          type="button"
-          disabled={organisations.list.loading}
-          text={m.location_directory_more_organisations()}
-          onClick={() => {
-            void organisations.list.next().catch(() => {})
-          }}
-        />
-      {/if}
-      {#if organisations.list.error}
-        <Button
-          type="button"
-          text={m.resource_action_failed()}
-          onClick={() => organisations.retry()}
-        />
-      {/if}
-      <Button type="submit" disabled={loading} text={m.location_directory_search()} />
-    </form>
-    <p class="text-sm text-muted-foreground">{m.location_directory_help()}</p>
-    {#if failed}
-      <p role="alert">{m.resource_action_failed()}</p>
-    {/if}
-    <div
-      class="divide-y divide-border rounded-xl border border-border"
-      aria-busy={loading}
-    >
-      {#each rows as place (place.id)}
-        <a
-          class="flex items-center justify-between gap-4 p-4 hover:bg-muted"
-          href={`/admin/locations/${encodeURIComponent(place.id)}${activeSearch.organisationId ? '?organisation=' + encodeURIComponent(activeSearch.organisationId) : ''}`}
-        >
-          <div class="min-w-0">
-            <div class="truncate text-lg font-medium">
-              {place.facts?.names.en ??
-                Object.values(place.facts?.names ?? {})[0] ??
-                place.id}
-            </div>
-            <div class="text-sm text-muted-foreground">{place.id}</div>
-          </div>
-          <span class="rounded-full bg-muted px-3 py-1 text-sm"
-            >{lifecycleLabel(statusOf(place.facts))}</span
-          >
-        </a>
-      {:else}
-        <p class="p-5">
-          {loading ? m.location_directory_loading() : m.location_directory_empty()}
-        </p>
-      {/each}
-    </div>
-    {#if cursor}
+<div class="flex min-h-0 flex-1 flex-col overflow-hidden text-foreground">
+  {#if failed}
+    <div role="alert" class="flex items-center gap-3 px-6 py-2">
+      <span>{m.resource_action_failed()}</span>
       <Button
-        disabled={loading || failed}
-        onClick={() => void load(true)}
-        text={m.location_directory_more()}
+        text={m.location_directory_search()}
+        onClick={() => void load(Boolean(cursor))}
       />
-    {/if}
-  </div>
+    </div>
+  {/if}
+  <ResourceIndex
+    resource={FirstClassResource.location}
+    entities={rows}
+    isInitialised={initialised}
+    hasMore={Boolean(cursor) && !failed}
+    isLoadingMore={loading}
+    onNearEnd={() => void load(true)}
+  >
+    {#snippet row(
+      entity,
+      index,
+    )}
+      <LocationRow {entity} {index} organisationId={activeSearch.organisationId} />
+    {/snippet}
+  </ResourceIndex>
 </div>

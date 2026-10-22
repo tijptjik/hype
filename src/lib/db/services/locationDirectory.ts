@@ -5,7 +5,7 @@ import { and, eq, gt, isNull, or, sql } from 'drizzle-orm'
 // SCHEMA
 import { location as locationTable, locationRevision } from '../schema/location'
 // LOCATION
-import { locationSourceReference } from '#lib/locations/kinds.js'
+import { locationSourceReference, type LocationKind } from '#lib/locations/kinds.js'
 // VALIDATION
 import type { LifecycleStatus } from '#lib/locations/lifecycle.js'
 import { LocationFactsSchema } from '#lib/locations/validation.js'
@@ -26,6 +26,8 @@ export async function listLocationResources(
   db: Database,
   input: {
     organisationId?: string
+    restrictToOrganisation?: boolean
+    kind?: LocationKind
     q?: string
     after?: string
     id?: string
@@ -41,6 +43,7 @@ export async function listLocationResources(
       state: locationTable.state,
       sourceAvailability: locationTable.sourceAvailability,
       ownerOrganisationId: locationTable.ownerOrganisationId,
+      ownerOrganisationNames: sql<string>`(SELECT json_group_object(locale, COALESCE(NULLIF(nameShort,''),name)) FROM organisationI18n WHERE organisationId=${locationTable.ownerOrganisationId})`,
       revisionId: locationRevision.id,
       facts: locationRevision.facts,
       organisationOverrides: sql<
@@ -66,6 +69,17 @@ export async function listLocationResources(
               eq(locationTable.ownerOrganisationId, input.organisationId),
             )
           : sql`${locationTable.state} != 'manual'`,
+        // Organisation indexes include owned records and current Feature associations only.
+        input.restrictToOrganisation && input.organisationId
+          ? or(
+              eq(locationTable.ownerOrganisationId, input.organisationId),
+              sql`EXISTS (SELECT 1 FROM featureLocation fl
+                JOIN feature f ON f.id=fl.featureId
+                JOIN project p ON p.id=f.projectId
+                WHERE fl.locationId=${locationTable.id} AND p.organisationId=${input.organisationId})`,
+            )
+          : undefined,
+        input.kind ? eq(locationTable.kind, input.kind) : undefined,
         // Filter the scoped effective assertion before pagination, retaining historic rows by default.
         input.lifecycleStatus
           ? sql`COALESCE(
@@ -90,45 +104,48 @@ export async function listLocationResources(
     )
     .orderBy(locationTable.id)
     .limit(26)
-  const data = rows.slice(0, 25).map(({ organisationOverrides, ...row }) => {
-    let facts = row.facts === null ? null : LocationFactsSchema.parse(row.facts)
-    if (facts && organisationOverrides) {
-      const effective = resolveFeatureLocation(
-        facts,
-        facts.location,
-        JSON.parse(organisationOverrides) as FeatureLocationOverrides,
-      )
-      facts = {
-        ...facts,
+  const data = rows
+    .slice(0, 25)
+    .map(({ organisationOverrides, ownerOrganisationNames, ...row }) => {
+      let facts = row.facts === null ? null : LocationFactsSchema.parse(row.facts)
+      if (facts && organisationOverrides) {
+        const effective = resolveFeatureLocation(
+          facts,
+          facts.location,
+          JSON.parse(organisationOverrides) as FeatureLocationOverrides,
+        )
+        facts = {
+          ...facts,
 
-        ...(effective.footprint !== undefined
-          ? { footprint: effective.footprint }
-          : {}),
-        names: Object.fromEntries(
-          Object.entries(effective.names).filter(
-            (pair): pair is [string, string] => pair[1] !== null,
+          ...(effective.footprint !== undefined
+            ? { footprint: effective.footprint }
+            : {}),
+          names: Object.fromEntries(
+            Object.entries(effective.names).filter(
+              (pair): pair is [string, string] => pair[1] !== null,
+            ),
           ),
-        ),
-        phoneNumber: effective.phoneNumber ?? [],
-        brands: effective.brands ?? [],
-        ...(effective.operatingStatus !== undefined
-          ? { operatingStatus: effective.operatingStatus }
-          : {}),
-        ...(effective.buildingStatus !== undefined
-          ? { buildingStatus: effective.buildingStatus }
-          : {}),
-        ...(effective.successorLocationId !== undefined
-          ? { successorLocationId: effective.successorLocationId }
-          : {}),
-        location: effective.location ?? facts.location,
+          phoneNumber: effective.phoneNumber ?? [],
+          brands: effective.brands ?? [],
+          ...(effective.operatingStatus !== undefined
+            ? { operatingStatus: effective.operatingStatus }
+            : {}),
+          ...(effective.buildingStatus !== undefined
+            ? { buildingStatus: effective.buildingStatus }
+            : {}),
+          ...(effective.successorLocationId !== undefined
+            ? { successorLocationId: effective.successorLocationId }
+            : {}),
+          location: effective.location ?? facts.location,
+        }
       }
-    }
-    return {
-      ...row,
-      editingOrganisationId: input.organisationId ?? null,
-      sourceReference: locationSourceReference(row.ssId),
-      facts,
-    }
-  })
+      return {
+        ...row,
+        ownerOrganisationNames: JSON.parse(ownerOrganisationNames),
+        editingOrganisationId: input.organisationId ?? null,
+        sourceReference: locationSourceReference(row.ssId),
+        facts,
+      }
+    })
   return { data, nextCursor: rows.length > 25 ? data.at(-1)!.id : null }
 }

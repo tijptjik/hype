@@ -14,6 +14,7 @@ export type LocationResource = {
   state: 'linked' | 'manual' | 'unresolved' | 'redirect'
   sourceAvailability: 'current' | 'missing' | 'review'
   ownerOrganisationId: string | null
+  ownerOrganisationNames?: Record<string, string>
   revisionId: string | null
   facts: LocationFacts | null
 }

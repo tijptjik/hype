@@ -569,7 +569,11 @@ export function useAdminHeaderModel(
   function handleControlsToggle(): void {
     const resourceType = adminCtx.activeResourceType
 
-    if (!resourceType || !isFilterResource(resourceType)) return
+    if (
+      !resourceType ||
+      (!isFilterResource(resourceType) && resourceType !== FirstClassResource.location)
+    )
+      return
 
     adminCtx.listUi.state.isControlBarVisible[resourceType] =
       !adminCtx.listUi.state.isControlBarVisible[resourceType]
@@ -652,7 +656,10 @@ export function useAdminHeaderModel(
   // Build automatic header visibility defaults from route shape and header control mode.
   const defaultVisibility = $derived.by(() => {
     const showLayoutToggle = isIndex && layoutModes.length > 1
-    const showControlBarToggle = isIndex && isFilterResource(headerResourceType)
+    const showControlBarToggle =
+      isIndex &&
+      (isFilterResource(headerResourceType) ||
+        headerResourceType === FirstClassResource.location)
     const showViewActionsBase = isIndex && (showLayoutToggle || showControlBarToggle)
     const showFormActionsBase = !isIndex
     const showViewActions =

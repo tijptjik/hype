@@ -1500,7 +1500,7 @@
   "location_directory_search": "Search Locations",
   "location_directory_scope": "Organisation scope",
   "location_directory_shared": "Shared Locations",
-  "location_directory_help": "Shared Locations are visible here. Select an Organisation to include its private Locations; organisation management access is required.",
+  "location_directory_help": "Select an Organisation to show Locations it owns or uses through its Features; organisation management access is required.",
   "location_directory_loading": "Loading Locations…",
   "location_directory_empty": "No Locations found.",
   "location_directory_more": "Load more",
@@ -1656,5 +1656,7 @@
   "feature_start_empty": "No matching locations or addresses.",
   "feature_start_places_failed": "Places search is unavailable. Retry to search establishments.",
   "feature_start_retry": "Retry search",
-  "feature_start_search": "Search for a Location"
+  "feature_start_search": "Search for a Location",
+  "location_type_premises": "Premises",
+  "location_type_building": "Building"
 }

@@ -1500,7 +1500,7 @@
   "location_directory_search": "搜索地点",
   "location_directory_scope": "机构范围",
   "location_directory_shared": "共享地点",
-  "location_directory_help": "此处显示共享地点。选择机构以包含其私人地点；需要该机构的管理权限。",
+  "location_directory_help": "选择机构以显示其拥有或通过地标使用的地点；需要机构管理权限。",
   "location_directory_loading": "正在加载地点…",
   "location_directory_empty": "找不到地点。",
   "location_directory_more": "加载更多",
@@ -1656,5 +1656,7 @@
   "feature_start_empty": "找不到匹配的地点或地址。",
   "feature_start_places_failed": "场所搜索暂时无法使用，请重试。",
   "feature_start_retry": "重新搜索",
-  "feature_start_search": "搜索地点"
+  "feature_start_search": "搜索地点",
+  "location_type_premises": "场所",
+  "location_type_building": "建筑物"
 }

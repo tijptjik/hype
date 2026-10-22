@@ -11,7 +11,7 @@ export class ResourceIndexUi {
     layoutMode: Record<NavigableResource, LayoutMode>
   }>({
     isControlBarVisible: {
-      location: false,
+      location: true,
       organisation: false,
       project: false,
       layer: false,

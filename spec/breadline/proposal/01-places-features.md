@@ -967,3 +967,19 @@ verification remains outstanding. Local Central searches measured approximately
 3.5 seconds for addresses and 3.4 seconds for Places before preview hydration.
 Indexed address lookup and fewer Place preview round trips remain optimisation
 opportunities; backend streaming has not been introduced.
+
+
+### Locations directory index (22 October 2026, Refs #194)
+
+`/admin/locations` uses the shared header search, control-bar filter primitives,
+`ResourceIndex` virtual list and row shell. The dedicated `LocationRow` presents
+localized names/address evidence, kind, lifecycle and ownership/source state.
+Organisation, kind and lifecycle are server-filtered before cursor pagination;
+selecting an Organisation narrows the directory to owned Locations and current
+Feature associations in that Organisation. Detail reads retain their existing
+authorized shared/private scope. Kind subsets the lifecycle choices and changing
+kind clears any incompatible lifecycle selection;
+changing search, scope or account clears stale rows and invalidates in-flight reads.
+The index automatically loads subsequent pages as the user scrolls, with loading
+skeletons inside the virtual list and no separate load-more footer. Header search is route-owned and cleared on departure. Browser acceptance
+with an authenticated account remains pending; the local browser redirects to sign-in.
