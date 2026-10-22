@@ -9,9 +9,7 @@ import { Icon } from '#lib/bits/index.js'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import ChevronRight from 'virtual:icons/proicons/chevron-right'
 
-let { isOpen = false } = $props<{
-  isOpen?: boolean
-}>()
+let { isOpen = false }: { isOpen?: boolean } = $props()
 
 // ═══════════════════════
 // 2. SECTION CONFIGURATION

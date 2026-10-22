@@ -1,5 +1,7 @@
+// MAP STYLE
+import { convertFilter } from '@maplibre/maplibre-gl-style-spec'
 // TYPES
-import type { FilterSpecification, Map as MapLibreMap } from 'maplibre-gl'
+import type { Map as MapLibreMap } from 'maplibre-gl'
 
 /**
  * Lets hidden street names try alternate positions without duplicating visible names.
@@ -53,10 +55,12 @@ export const installStreetLabelPlacement = (map: MapLibreMap): (() => void) => {
     const originalId = id.split('__shift_')[0]
     const originalFilter = map.getFilter(originalId)
     // Preserve the road-kind policy while excluding names already placed nearby.
-    const missingNameFilter: FilterSpecification = ['!in', 'name', ...visibleNames]
+    const missingNameFilter = convertFilter(['!in', 'name', ...visibleNames])
     map.setFilter(
       id,
-      originalFilter ? ['all', originalFilter, missingNameFilter] : missingNameFilter,
+      originalFilter
+        ? ['all', convertFilter(originalFilter), missingNameFilter]
+        : missingNameFilter,
     )
   }
 

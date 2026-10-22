@@ -1,6 +1,7 @@
+import { convertFilter } from '@maplibre/maplibre-gl-style-spec'
 import { describe, expect, it, vi } from 'vitest'
 import type { Map as MapLibreMap } from 'maplibre-gl'
-import { installStreetLabelPlacement } from '#lib/map/street-label-placement'
+import { installStreetLabelPlacement } from '#lib/map/street-label-placement.js'
 
 describe('alternate street label placement', () => {
   it('searches missing names in order and resets when the viewport changes', () => {
@@ -35,14 +36,14 @@ describe('alternate street label placement', () => {
     events.get('idle')?.()
     expect(filters).toHaveBeenLastCalledWith('roads_labels_minor__shift_0', [
       'all',
-      ['in', 'kind', 'minor_road', 'other'],
-      ['!in', 'name', '軒尼詩道'],
+      convertFilter(['in', 'kind', 'minor_road', 'other']),
+      convertFilter(['!in', 'name', '軒尼詩道']),
     ])
     events.get('idle')?.()
     expect(filters).toHaveBeenLastCalledWith('roads_labels_minor__shift_3', [
       'all',
-      ['in', 'kind', 'minor_road', 'other'],
-      ['!in', 'name', '軒尼詩道', '駱克道'],
+      convertFilter(['in', 'kind', 'minor_road', 'other']),
+      convertFilter(['!in', 'name', '軒尼詩道', '駱克道']),
     ])
     const settledCalls = filters.mock.calls.length
     events.get('idle')?.()

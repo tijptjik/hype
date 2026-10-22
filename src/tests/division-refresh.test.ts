@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getTableColumns } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { feature } from '#lib/db/schema/feature.js'
+import { FeatureInsert } from '#lib/db/zod/schema/feature.js'
 import {
   createFeature,
   updateFeatureByIdWithConcurrency,
@@ -181,19 +182,24 @@ describe('division refresh', () => {
           `ALTER TABLE feature ADD COLUMN "${column.name}" ${column.getSQLType()}`,
         )
     const db = drizzle(s.db) as Database
-    const created = await createFeature(db, {
-      id: 'created',
-      organisationId: 'org-1',
-      projectId: 'project-1',
-      layerId: 'layer-1',
-      geometry: { type: 'Point', coordinates: [5, 5] },
-    })
+    const created = await createFeature(
+      db,
+      FeatureInsert.parse({
+        id: 'created',
+        organisationId: 'org-1',
+        projectId: 'project-1',
+        layerId: 'layer-1',
+        geometry: { type: 'Point', coordinates: [5, 5] },
+      }),
+    )
     expect(s.count('featureSpatial')).toBe(13)
     expect(s.count('featureDivisionJob')).toBe(1)
     const initialCells = s.sqlite
       .prepare('SELECT cell FROM featureSpatial ORDER BY resolution')
       .all()
-    const fetcher = vi.fn<typeof fetch>(async () => Response.json(geocoded()))
+    const fetcher = vi.fn<
+      (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>
+    >(async () => Response.json(geocoded()))
     await s.tick(fetcher)
     await s.tick(fetcher)
     expect(s.count('featureDivisionJob')).toBe(0)

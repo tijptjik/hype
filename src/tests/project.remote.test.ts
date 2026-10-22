@@ -100,13 +100,21 @@ const {
     organisationId: 'org-1',
     hubId: 'hub-a',
   })),
-  mockProbeProjectQuery: vi.fn(async () => ({
-    id: 'project-1',
-    organisationId: 'org-1',
-    hubId: 'hub-a',
-    isPublished: true,
-    isArchived: false,
-  })),
+  mockProbeProjectQuery: vi.fn(
+    async (): Promise<{
+      id: string
+      organisationId: string
+      hubId: string
+      isPublished: boolean
+      isArchived: boolean
+    } | null> => ({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      isPublished: true,
+      isArchived: false,
+    }),
+  ),
   mockUpdateProjectPublishedStateById: vi.fn(async (): Promise<unknown> => null),
   mockUpdateProjectArchivedStateById: vi.fn(async (): Promise<unknown> => null),
   mockSetProjectMapStyleByCode: vi.fn(async () => undefined),

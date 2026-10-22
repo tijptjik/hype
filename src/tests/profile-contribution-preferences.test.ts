@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { flushSync } from 'svelte'
 import { createFeatureQueryEffectRoot } from './fixtures/featureQueryHarness.svelte'
-import { useProfileContributionPreferences } from '#lib/adapters/panels/useProfileContributionPreferences.svelte'
+import { useProfileContributionPreferences } from '#lib/adapters/panels/useProfileContributionPreferences.svelte.js'
 import { UserSelfProfileAPI } from '#lib/db/zod/schema/user.js'
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 

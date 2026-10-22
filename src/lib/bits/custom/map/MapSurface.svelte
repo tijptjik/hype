@@ -6,7 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import '#lib/styles/map.css'
 
 // MAP
-import { installStreetLabelPlacement } from '#lib/map/street-label-placement'
+import { installStreetLabelPlacement } from '#lib/map/street-label-placement.js'
 
 type MapSurfaceProps = Omit<MapOptions, 'container' | 'style'> & {
   style: MapOptions['style']
