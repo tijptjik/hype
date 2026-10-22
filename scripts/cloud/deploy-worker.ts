@@ -54,6 +54,30 @@ export const shouldTreatDeployErrorAsSuccess = (
   )
 }
 
+/** Deploy both database consumers before the application can enqueue new work.
+ * @param target Explicit deployment environment.
+ * @param run Command executor, injectable for fail-closed orchestration tests.
+ * @returns First failing exit code, or zero when both consumers deployed.
+ * @remarks Schema/data migrations must already have passed the release gate. This does
+ * not apply migrations or claim that deploying a worker drains its queue.
+ */
+export async function deployDatabaseConsumers(
+  target: DeployTarget,
+  run: (command: string[]) => Promise<number> = async command => {
+    const child = Bun.spawn(command, { stdout: 'inherit', stderr: 'inherit' })
+    return child.exited
+  },
+): Promise<number> {
+  for (const consumer of ['division-refresh', 'location-refresh']) {
+    const status = await run([
+      'bun', 'wrangler', 'deploy', '--config',
+      `workers/${consumer}/wrangler.jsonc`, '--env', target,
+    ])
+    if (status !== 0) return status
+  }
+  return 0
+}
+
 /**
  * Runs a Wrangler worker deployment for the requested environment.
  *
@@ -75,12 +99,8 @@ export const deployWorker = async (target: DeployTarget): Promise<number> => {
   const configPath = `.hub-deploy-${randomUUID()}.json`
   await writeFile(configPath, JSON.stringify(config), { mode: 0o600 })
   try {
-    // Deploy the database writer with the app so newly queued division jobs have a consumer.
-    const refresh = Bun.spawn([
-      'bun', 'wrangler', 'deploy', '--config',
-      'workers/division-refresh/wrangler.jsonc', '--env', env,
-    ], { stdout: 'inherit', stderr: 'inherit' })
-    const refreshExitCode = await refresh.exited
+    // Keep both database consumers compatible with the application release.
+    const refreshExitCode = await deployDatabaseConsumers(target)
     if (refreshExitCode !== 0) return refreshExitCode
 
     const command = ['bun', 'wrangler', 'deploy', '--config', configPath, '--name', name, '--env', env]
