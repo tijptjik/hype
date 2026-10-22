@@ -266,20 +266,20 @@ $effect(() => {
       {/snippet}
       {#snippet right()}
         {@render parentSearch()}
-        {#if isEditing}
+        {#if isEditing && !isSearchActive}
           <div
             class="bits-form__parent-resource-header-actions flex flex-row items-center justify-end gap-0"
           >
             <Button
-              text={isSearchActive ? m.cancel() : m.replace()}
+              text={m.replace()}
               style="ghost"
               color="light"
               size="sm"
               hideLabel={true}
               hideLabelInstantly={true}
-              iconComponent={isSearchActive ? XIcon : ReplaceIcon}
+              iconComponent={ReplaceIcon}
               onClick={toggleAdding}
-              disabled={isSubmitting || (isSearchActive && !isResultsVisible)}
+              disabled={isSubmitting}
               class="bits-form__parent-resource-replace-btn whitespace-nowrap h-10"
             />
           </div>

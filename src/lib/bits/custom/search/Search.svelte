@@ -80,9 +80,9 @@ function openResults(): void {
 
 async function handleQuery(
   nextQuery: string,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; open?: boolean } = {},
 ): Promise<void> {
-  openResults()
+  if (options.open !== false) openResults()
   query = nextQuery
   const trimmedQuery = nextQuery.trim()
 
@@ -195,7 +195,8 @@ $effect(() => {
   if (lastPrefetchKey === prefetchKey) return
   lastPrefetchKey = prefetchKey
   untrack(() => {
-    void handleQuery('', { force: true })
+    // Warm the cache without opening a dropdown before the user interacts.
+    void handleQuery('', { force: true, open: false })
   })
 })
 

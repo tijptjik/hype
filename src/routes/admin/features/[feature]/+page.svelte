@@ -2375,26 +2375,27 @@ $effect(() => () => clearVisualSectionReopenState())
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {#if !showNameFields}
           <div
-            class="flex min-h-64 flex-col items-center justify-center gap-6 py-12"
+            class="flex min-h-44 flex-col items-center justify-center gap-4 py-8"
             out:slide={{ duration: prefersReducedMotion.current ? 0 : 180 }}
           >
             <div class="flex flex-wrap justify-center gap-4">
               <Button
                 type="button"
-                text={m.feature_start_find_place()}
-                color="primary"
-                size="lg"
-                iconComponent={FeatureIcon}
-                onClick={startLocationSearch}
-              />
-              <Button
-                type="button"
                 text={m.feature_start_name()}
                 color="secondary"
                 style="outline"
-                size="lg"
+                size="md"
                 iconComponent={AddFeatureIcon}
                 onClick={() => (namingChosen = true)}
+              />
+              <Button
+                type="button"
+                text={m.feature_start_find_place()}
+                color="primary"
+                size="md"
+                class="text-white!"
+                iconComponent={FeatureIcon}
+                onClick={startLocationSearch}
               />
             </div>
             <p class="text-center text-muted-foreground">

@@ -1663,6 +1663,6 @@
   "feature_start_partial": "部分来源无法搜索。你可以重试或选择现有结果。",
   "feature_start_choose_position": "保存前请选择地点或放置标记。",
   "feature_start_find_place": "查找现有地点",
-  "feature_start_description": "查找现有地点，或自行新增。",
+  "feature_start_description": "查找地点以使用其地址",
   "feature_start_back_results": "返回搜索结果"
 }
