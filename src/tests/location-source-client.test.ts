@@ -171,3 +171,22 @@ describe('latest-source Location discovery', () => {
     ).rejects.toThrow()
   })
 })
+
+it('sends exact Places filters to upstream search before its result limit', async () => {
+  const c = client({ results: [] })
+  await searchSaanSeoiPlaces(c, {
+    q: 'Japanese',
+    limit: 5,
+    filters: {
+      basicCategory: 'restaurant',
+      taxonomyPrimary: 'japanese_restaurant',
+      operatingStatus: 'open',
+    },
+  })
+  const url = new URL(String(c.request.mock.calls[0][0]))
+  expect(url.searchParams.get('filter[basicCategory]')).toBe('restaurant')
+  expect(url.searchParams.get('filter[taxonomyPrimary]')).toBe('japanese_restaurant')
+  // Open also includes unknown status; verified previews apply that local policy.
+  expect(url.searchParams.get('filter[operatingStatus]')).toBeNull()
+  expect(url.searchParams.get('limit')).toBe('5')
+})

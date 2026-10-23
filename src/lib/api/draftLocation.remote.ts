@@ -4,6 +4,7 @@
 
 // SVELTE
 import { error } from '@sveltejs/kit'
+import { matchesPlaceSearchFilters } from '#lib/locations/placeSearchFilters.js'
 // REMOTE
 import { guardedQuery } from '#lib/api/server/guarded.js'
 // DOMAIN
@@ -30,7 +31,7 @@ export const searchDraftLocations = guardedQuery(
     const endpoint = locationSourceEndpoint(apiKey ?? '')
     if (!endpoint.apiKey.trim()) error(503, 'LOCATION_SEARCH_UNAVAILABLE')
     const client = { ...endpoint, fetch: ctx.event.fetch }
-    const candidates = await searchSaanSeoiPlaces(client, { ...input, limit: 5 })
+    const candidates = await searchSaanSeoiPlaces(client, { ...input, limit: 20 })
     const settled = await Promise.allSettled(
       candidates.map(async candidate => {
         const facts = await readSaanSeoiPlacePreview(client, {
@@ -41,14 +42,25 @@ export const searchDraftLocations = guardedQuery(
         const label = candidate.nameText?.trim() || candidate.brandText?.trim()
         if (label && !facts.names[candidate.locale]?.trim())
           facts.names[candidate.locale] = label
-        return { id: candidate.placeId, facts }
+        return {
+          id: candidate.placeId,
+          resourceReleaseId: candidate.resourceReleaseId,
+          facts,
+        }
       }),
     )
     return {
       rows: settled.flatMap(result =>
-        result.status === 'fulfilled' ? [result.value] : [],
+        result.status === 'fulfilled' &&
+        matchesPlaceSearchFilters(
+          input.filters,
+          result.value.facts.searchClassification ?? {},
+        )
+          ? [result.value]
+          : [],
       ),
       partial: settled.some(result => result.status === 'rejected'),
+      limited: candidates.length === 20,
     }
   },
 )
@@ -82,11 +94,15 @@ export const searchNearbyDraftLocations = guardedQuery(
     )
     return {
       rows: settled.flatMap(result =>
-        result.status === 'fulfilled' ? [result.value] : [],
+        result.status === 'fulfilled' &&
+        matchesPlaceSearchFilters(
+          input.filters,
+          result.value.facts.searchClassification ?? {},
+        )
+          ? [result.value]
+          : [],
       ),
-      partial:
-        found.partial ||
-        settled.some(result => result.status === 'rejected'),
+      partial: found.partial || settled.some(result => result.status === 'rejected'),
       limited: found.limited || found.candidates.length > 20,
     }
   },

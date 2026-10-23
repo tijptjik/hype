@@ -4,7 +4,7 @@ import { show3dAddressOptions } from '#lib/projects/flags.js'
 import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 
 // SVELTE
-import { goto } from '$app/navigation'
+import { goto, pushState } from '$app/navigation'
 
 import { page } from '$app/state'
 import { onMount, untrack, tick, type Snippet } from 'svelte'
@@ -122,6 +122,7 @@ import {
   getFeatureDetachedBrands,
   unlinkFeatureLocation,
 } from '#lib/api/location.remote.js'
+import { linkDraftPlace } from '#lib/locations/linkDraftPlace.js'
 import DraftFeatureLocationSearch from '#lib/bits/patterns/forms/featureLocation/DraftFeatureLocationSearch.svelte'
 import { Button } from '#lib/bits/core/index.js'
 import FeatureLocationSection from '#lib/bits/patterns/forms/featureLocation/FeatureLocationSection.svelte'
@@ -352,8 +353,10 @@ const noopHeaderAction = (): void => {}
 // - lookupFeatureAddress
 // - selectAddressCandidate
 // - startLocationSearch
+// - startManualLocation
 // - selectDraftLocation
 // - undoDraftLocationSelection
+// - recoverDraftSearchHistory
 // - handleCoordinateChange
 // - handleFeatureStateToggle
 // - onPublishToggle
@@ -590,11 +593,35 @@ $effect(() => {
 const isNewFeatureRef = $derived(featureRef === NEW_REF)
 let namingChosen = $state(false)
 let locationFocusRequest = $state(0)
+const DRAFT_MAP_CENTER: [number, number] = [114.17, 22.3]
+const BUILDING_ZOOM = 20
 let draftHasPin = $state(false)
 let draftHasAddress = $state(false)
 let editorViewportHeight = $state(1040)
+let draftFindMode = $state<'search' | 'pin'>('search')
+let pinHighlightRequest = $state(0)
+let draftSearch:
+  | { backToResults: () => void; addManualLocation: () => void }
+  | undefined = $state()
+let draftSearchFilterPanel: Snippet | undefined = $state()
+let draftSearchHasResults = $state(false)
+let draftResultHistoryId: string | null = $state(null)
+/** Recover a selected draft only for history traversal, not ordinary facet navigation.
+ * @returns Nothing after SvelteKit has applied the shallow history state.
+ */
+function recoverDraftSearchHistory(): void {
+  void tick().then(() => {
+    if (
+      isNewFeatureRef &&
+      isAddressFacet &&
+      draftSelectionBefore &&
+      page.state.draftLocationResult !== draftResultHistoryId
+    )
+      draftSearch?.backToResults()
+  })
+}
 let sharedLocationMapControls = $state<Snippet | undefined>()
-let draftSelectionBefore: {
+let draftSelectionBefore = $state.raw<{
   geometry: typeof currentFeatureData.geometry
   addressMeta: typeof currentFeatureData.addressMeta
   hasPin: boolean
@@ -602,7 +629,7 @@ let draftSelectionBefore: {
   titles: Record<string, string>
   appliedTitles: Record<string, string>
   camera: ReturnType<import('#lib/map/controller.js').MapController['getCamera']>
-} | null = null
+} | null>(null)
 let draftMapController = $state.raw<
   import('#lib/map/controller.js').MapController | null
 >(null)
@@ -627,15 +654,132 @@ function startLocationSearch(): void {
   locationFocusRequest++
 }
 
+/** Open manual address entry with a marker so geographic divisions can resolve.
+ * @returns Nothing; an existing pin is preserved, otherwise the visible map centre supplies it.
+ */
+function startManualLocation(): void {
+  // Wait for the map instead of fabricating a position before its camera is available.
+  if (!draftHasPin && !dropDraftPin()) return
+  draftPlaceSource = null
+  draftSelectionBefore = null
+  pinHighlightRequest += 1
+  draftSearch?.addManualLocation()
+  draftHasAddress = true
+  draftLocationAccepted = true
+}
+
+let draftLocationAccepted = $state(false)
+let draftPlaceSource = $state<{
+  ssId: string
+  resourceReleaseId: string
+  nameMode?: 'independent' | 'inherit'
+} | null>(null)
+let pendingPlaceLink = $state<{
+  featureId: string
+  ssId: string
+  resourceReleaseId: string
+  nameMode?: 'independent' | 'inherit'
+} | null>(null)
+let placeLinkBusy = $state(false)
+let placeLinkError = $state(false)
+
+/** Complete an explicitly requested association after the Feature has an ID.
+ * @param saved Persisted identity and concurrency token. @returns Completion.
+ * @remarks Creation remains successful if import/link fails; retain a retryable intent
+ * against the created ID so retry can never create a second Feature.
+ */
+async function finishDraftPlaceLink(saved: {
+  id: string
+  modifiedAt: string
+}): Promise<void> {
+  const source =
+    pendingPlaceLink?.featureId === saved.id ? pendingPlaceLink : draftPlaceSource
+  if (!source) return
+  pendingPlaceLink = {
+    featureId: saved.id,
+    ssId: source.ssId,
+    resourceReleaseId: source.resourceReleaseId,
+    nameMode: source.nameMode,
+  }
+  placeLinkBusy = true
+  placeLinkError = false
+  try {
+    sessionStorage.setItem(
+      `feature-place-link:${saved.id}`,
+      JSON.stringify(pendingPlaceLink),
+    )
+    await linkDraftPlace({
+      featureId: saved.id,
+      modifiedAt: saved.modifiedAt,
+      ssId: source.ssId,
+      resourceReleaseId: source.resourceReleaseId,
+      nameMode: source.nameMode,
+    })
+    sessionStorage.removeItem(`feature-place-link:${saved.id}`)
+    pendingPlaceLink = null
+    draftPlaceSource = null
+    await getFeatureLocation({ featureId: saved.id }).refresh()
+  } catch {
+    placeLinkError = true
+    toast.error(m.feature_search_link_failed())
+  } finally {
+    placeLinkBusy = false
+    draftPlaceSource = null
+  }
+}
+
+$effect(() => {
+  if (isNewFeatureRef || typeof sessionStorage === 'undefined') return
+  try {
+    const raw = sessionStorage.getItem(`feature-place-link:${featureRef}`)
+    if (!raw) return
+    const intent = JSON.parse(raw)
+    if (
+      intent.featureId === featureRef &&
+      typeof intent.ssId === 'string' &&
+      typeof intent.resourceReleaseId === 'string'
+    ) {
+      pendingPlaceLink = intent
+      placeLinkError = true
+    }
+  } catch {
+    /* Invalid local retry state is not an association. */
+  }
+})
+
+/** Preview the selected candidate without changing any Feature values.
+ * @param result Source candidate. @returns Nothing.
+ */
+function previewDraftLocation(result: { address: FeatureAddress }): void {
+  if (result.address.coordinates)
+    draftMapController?.flyTo({
+      center: result.address.coordinates as [number, number],
+      zoom: 17,
+      duration: prefersReducedMotion.current ? 0 : 900,
+    })
+}
+
 /** Use source names as an editable starting point without replacing authored titles.
  * @param result Explicitly selected search preview. @returns Nothing.
- * @remarks This does not create or link a canonical Location identity.
+ * @remarks Place linking is deferred until successful creation supplies a Feature ID.
  */
 function selectDraftLocation(result: {
   address: FeatureAddress
   names: Record<string, string>
   kind?: 'establishment' | 'address'
+  nameMode?: 'independent' | 'inherit'
+  source?: {
+    ssId: string
+    resourceReleaseId: string
+    nameMode?: 'independent' | 'inherit'
+  }
 }): void {
+  draftPlaceSource =
+    result.kind === 'establishment' && result.source
+      ? { ...result.source, nameMode: result.nameMode ?? 'independent' }
+      : null
+  draftResultHistoryId = crypto.randomUUID()
+  pushState(page.url.href, { ...page.state, draftLocationResult: draftResultHistoryId })
   // Capture only Location-owned draft fields; recovery must preserve unrelated edits.
   draftSelectionBefore = {
     geometry: structuredClone($state.snapshot(currentFeatureData.geometry)),
@@ -674,9 +818,10 @@ function selectDraftLocation(result: {
         {
           ...value,
           title:
-            value.title ||
-            result.names[ADDRESS_LOCALES[locale as keyof typeof ADDRESS_LOCALES]] ||
-            '',
+            result.kind === 'establishment' && result.nameMode === 'inherit'
+              ? result.names[ADDRESS_LOCALES[locale as keyof typeof ADDRESS_LOCALES]] ||
+                ''
+              : value.title || '',
         },
       ]),
     ) as typeof data.i18n,
@@ -694,6 +839,7 @@ function selectDraftLocation(result: {
  * @returns Nothing; restores the previous Location fields, pin visibility and camera.
  */
 function undoDraftLocationSelection(): void {
+  draftPlaceSource = null
   const before = draftSelectionBefore
   if (!before) return
   addressLookupRevision++
@@ -723,15 +869,24 @@ function undoDraftLocationSelection(): void {
   draftHasPin = before.hasPin
   draftHasAddress = before.hasAddress
   draftSelectionBefore = null
-  if (before.camera) draftMapController?.jumpTo(before.camera)
+  if (page.state.draftLocationResult === draftResultHistoryId) history.back()
+  draftResultHistoryId = null
+  if (before.camera)
+    draftMapController?.flyTo({
+      ...before.camera,
+      duration: prefersReducedMotion.current ? 0 : 700,
+    })
 }
 
-/** Place the draft pin only after an explicit action, at the current camera centre.
- * @returns Nothing when the map is not ready.
+/** Place the draft pin at the visible map centre and zoom one step toward building detail.
+ * @returns Whether the map was ready and its centre was used for the marker.
  */
-function dropDraftPin(): void {
+function dropDraftPin(): boolean {
   const center = draftMapController?.getCamera()?.center
-  if (center) handleCoordinateChange(center)
+  if (!center) return false
+  handlePinDrop([...center])
+  pinHighlightRequest += 1
+  return true
 }
 
 /** Prevent a new Feature from silently saving the editor's default camera coordinates.
@@ -980,7 +1135,18 @@ const configuredFeatureForm = configureForm(() => ({
     headerCtrl,
     resourceType: FirstClassResource.feature,
     getEntity: () => feature,
-    refreshResource: async () => {
+    refreshResource: async ({ success, result }) => {
+      if (
+        success &&
+        draftPlaceSource &&
+        result &&
+        typeof result === 'object' &&
+        'data' in result
+      ) {
+        const saved = result.data as { id?: unknown; modifiedAt?: unknown }
+        if (typeof saved?.id === 'string' && typeof saved.modifiedAt === 'string')
+          await finishDraftPlaceLink({ id: saved.id, modifiedAt: saved.modifiedAt })
+      }
       await refreshFeature()
     },
   }),
@@ -1512,6 +1678,26 @@ async function selectAddressCandidate(candidate: FeatureAddress): Promise<void> 
 /********************
  *  MAP MUTATION
  ************/
+
+/** Move the pin and progressively zoom toward the building detail used by saved Features.
+ * @param nextCoordinates Dropped marker longitude/latitude.
+ * @returns Nothing; the camera moves after reactive marker updates finish.
+ */
+function handlePinDrop(nextCoordinates: number[]): void {
+  const controller = draftMapController
+  const camera = controller?.getCamera()
+  handleCoordinateChange(nextCoordinates)
+  if (!controller || !camera) return
+  // Let Maplet synchronize the marker before starting the drop's camera animation.
+  void tick().then(() => {
+    if (draftMapController !== controller) return
+    controller.easeTo({
+      center: [nextCoordinates[0], nextCoordinates[1]],
+      zoom: Math.max(camera.zoom, Math.min(camera.zoom + 1, BUILDING_ZOOM)),
+      duration: prefersReducedMotion.current ? 0 : 520,
+    })
+  })
+}
 
 /** Moves the draft marker and invalidates any address tied to the previous point.
  * @param nextCoordinates Selected longitude/latitude.
@@ -2295,7 +2481,10 @@ async function getCreatableProjectRecords(
 $effect(() => () => clearVisualSectionReopenState())
 </script>
 
-<svelte:window bind:innerHeight={editorViewportHeight} />
+<svelte:window
+  bind:innerHeight={editorViewportHeight}
+  onpopstate={recoverDraftSearchHistory}
+/>
 
 <Main.Root
   onDimensionsChange={(width, height) =>
@@ -2346,19 +2535,26 @@ $effect(() => () => clearVisualSectionReopenState())
           <Main.VisualSectionMap isCollapsed={isVisualSectionCollapsed}>
             <div class="relative h-full w-full">
               <FormMapSection
+                {pinHighlightRequest}
                 onMapReady={controller => (draftMapController = controller)}
                 locationCandidates={isAddressFacet ? locationSearchMarkers : []}
                 onLocationCandidateSelect={selectLocationMarker}
                 showMarker={!isNewFeatureRef || draftHasPin}
-                initialCenter={isNewFeatureRef && !draftHasPin
-                  ? [114.17, 22.3]
-                  : initialMapCenter}
-                initialZoom={isNewFeatureRef && !draftHasPin ? 11.5 : 20}
+                initialCenter={isNewFeatureRef ? DRAFT_MAP_CENTER : initialMapCenter}
+                initialZoom={isNewFeatureRef ? 11.5 : BUILDING_ZOOM}
                 coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
                 addressMeta={currentFeatureData.addressMeta ?? null}
                 draggable={isEditing}
-                onCoordinateChange={handleCoordinateChange}
+                onCoordinateChange={handlePinDrop}
               />
+              {#if isAddressFacet && draftSearchFilterPanel}
+                <div
+                  class="absolute inset-0 z-20 flex items-end justify-center overflow-hidden bg-black/15"
+                  data-location-filter-panel
+                >
+                  {@render draftSearchFilterPanel()}
+                </div>
+              {/if}
               {#if isAddressFacet && sharedLocationMapControls}
                 <div class="absolute right-3 top-3 z-10" data-location-map-controls>
                   {@render sharedLocationMapControls()}
@@ -2582,14 +2778,28 @@ $effect(() => () => clearVisualSectionReopenState())
         isVisualSectionCollapsed,
       })}
       navMode="footer"
-      previousAction={buildFacetNavAction('address', 'previous')}
+      previousAction={isNewFeatureRef && draftSelectionBefore
+        ? {
+            text: m.feature_start_back_results(),
+            onClick: () => draftSearch?.backToResults(),
+          }
+        : buildFacetNavAction('address', 'previous')}
       nextAction={buildFacetNavAction('address', 'next')}
+      centerAction={isNewFeatureRef && (draftSearchHasResults || draftLocationAccepted)
+        ? {
+            id: 'draft-manual-entry',
+            disabled: !draftHasPin && !draftMapController,
+            centerInContent: !draftSearchHasResults && !draftLocationAccepted,
+            text: m.feature_search_manual_location(),
+            onClick: startManualLocation,
+          }
+        : null}
       attrs={{ 'data-facet-id': 'address' }}
     >
       <FormSurface class="flex h-full min-h-0 flex-col overflow-hidden">
         {#key featureRef}
           {#snippet addressEditor(
-            locationControl?: Snippet,
+            locationControl?: Snippet<[Snippet?]>,
             locationContent?: Snippet,
             hideDetails = false,
             showLookup = true,
@@ -2599,17 +2809,18 @@ $effect(() => () => clearVisualSectionReopenState())
           )}
             <FormFeatureAddress
               fixedMap={true}
+              coordinatesInLocationControl={isNewFeatureRef && !draftLocationAccepted}
               showMap={false}
               onMapControlsChange={controls => (sharedLocationMapControls = controls)}
               {locationActions}
               {locationMapControls}
               {locationControl}
               {locationContent}
-              hideDetails={hideDetails ||
-                (isNewFeatureRef && !draftHasPin && !draftHasAddress)}
+              hideDetails={hideDetails || (isNewFeatureRef && !draftLocationAccepted)}
               showAddressDetails={!isNewFeatureRef || draftHasAddress}
               showDivisions={!isNewFeatureRef || draftHasPin}
-              showCoordinates={!isNewFeatureRef || draftHasPin}
+              showCoordinates={!isNewFeatureRef ||
+                (draftHasPin && (draftFindMode === 'pin' || draftLocationAccepted))}
               {showLookup}
               show3dAddressOptions={show3dAddressOptions(selectedProject?.flags)}
               address={editorAddress}
@@ -2620,7 +2831,7 @@ $effect(() => () => clearVisualSectionReopenState())
                 (isNewFeatureRef &&
                 draftHasAddress &&
                 editorAddress.matchStatus === 'unresolved'
-                  ? m.feature_start_place_address()
+                  ? ''
                   : '')}
               candidates={addressCandidates}
               onSelectCandidate={selectAddressCandidate}
@@ -2629,6 +2840,40 @@ $effect(() => () => clearVisualSectionReopenState())
               onChange={updateAddressDraft}
             />
           {/snippet}
+          {#if placeLinkError && pendingPlaceLink?.featureId === currentFeatureId}
+            <div
+              role="alert"
+              class="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-6 py-3 text-sm"
+            >
+              <span>{m.feature_search_link_pending_saved()}</span>
+              <button
+                type="button"
+                class="rounded-lg bg-primary px-3 py-2 text-white"
+                disabled={placeLinkBusy || isDirty}
+                onclick={() => {
+                  if (feature?.data) void finishDraftPlaceLink(feature.data)
+                }}
+              >
+                {m.feature_search_retry_link()}
+              </button>
+              <button
+                type="button"
+                class="rounded-lg px-3 py-2 hover:bg-muted"
+                disabled={placeLinkBusy}
+                onclick={() => {
+                  if (pendingPlaceLink)
+                    sessionStorage.removeItem(
+                      `feature-place-link:${pendingPlaceLink.featureId}`,
+                    )
+                  pendingPlaceLink = null
+                  draftPlaceSource = null
+                  placeLinkError = false
+                }}
+              >
+                {m.feature_search_keep_address()}
+              </button>
+            </div>
+          {/if}
           {#if currentFeatureId && feature?.data?.modifiedAt}
             <FeatureLocationSection
               onAddressSelected={updateAddressDraft}
@@ -2699,11 +2944,28 @@ $effect(() => () => clearVisualSectionReopenState())
             </FeatureLocationSection>
           {:else}
             <DraftFeatureLocationSearch
+              bind:this={draftSearch}
+              onFilterPanelChange={panel => (draftSearchFilterPanel = panel)}
+              onResultsChange={hasResults => (draftSearchHasResults = hasResults)}
+              onResultsEnd={() => {
+                const button = document.getElementById('draft-manual-entry')
+                if (!button) return false
+                button.focus()
+                return document.activeElement === button
+              }}
               active={isAddressFacet}
               focusRequest={locationFocusRequest}
               onSelect={selectDraftLocation}
+              onPreview={previewDraftLocation}
+              onUnlink={() => (draftPlaceSource = null)}
+              onAcceptedChange={accepted => (draftLocationAccepted = accepted)}
               onBack={undoDraftLocationSelection}
               hasPin={draftHasPin}
+              coordinates={featureCoordinates
+                ? [featureCoordinates[0], featureCoordinates[1]]
+                : undefined}
+              onModeChange={mode => (draftFindMode = mode)}
+              onManualEntry={startManualLocation}
               onDropPin={draftMapController ? dropDraftPin : undefined}
               onMapCandidates={(markers, select) => {
                 locationSearchMarkers = markers
@@ -2713,8 +2975,17 @@ $effect(() => () => clearVisualSectionReopenState())
               {#snippet children(
                 searchControl,
                 searchResults,
+                mapControls,
               )}
-                {@render addressEditor(searchControl, searchResults, false, false)}
+                {@render addressEditor(
+                  searchControl,
+                  searchResults,
+                  false,
+                  false,
+                  undefined,
+                  undefined,
+                  mapControls,
+                )}
               {/snippet}
             </DraftFeatureLocationSearch>
           {/if}

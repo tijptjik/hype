@@ -13,6 +13,7 @@ import { THEME_MAP_STYLES } from '#lib/themes/themes.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 
 type Props = {
+  pinHighlightRequest?: number
   showMarker?: boolean
   onMapReady?: (
     controller: import('#lib/map/controller.js').MapController | null,
@@ -30,6 +31,7 @@ type Props = {
 }
 
 let {
+  pinHighlightRequest = 0,
   showMarker = true,
   onMapReady,
   locationCandidates = [],
@@ -57,6 +59,7 @@ const initialCollapsed =
 
 <div class="bits-feature-map">
   <LegacyMap
+    {pinHighlightRequest}
     {showMarker}
     {onMapReady}
     {locationCandidates}

@@ -15,6 +15,7 @@ export interface MainFacetProps {
   attrs?: Record<string, unknown>
   previousAction?: FormFacetNavAction | null
   nextAction?: FormFacetNavAction | null
+  centerAction?: FormFacetNavAction | null
   fillHeight?: boolean
   navMode?: 'centered' | 'footer'
   contentClass?: string

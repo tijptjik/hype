@@ -39,7 +39,9 @@ declare global {
       session?: SessionSession
       user?: SessionUser
     }
-    // interface PageState {}
+    interface PageState {
+      draftLocationResult?: string
+    }
     interface Platform {
       env: {
         ENVIRONMENT: string

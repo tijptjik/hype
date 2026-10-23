@@ -1,11 +1,14 @@
 <script lang="ts">
+// SEARCH PRESENTATION
+import { locationSearchColor } from '#lib/locations/searchPresentation.js'
 // SVELTE
 import { fade } from 'svelte/transition'
 import { onDestroy } from 'svelte'
+import { prefersReducedMotion } from 'svelte/motion'
 // MapLibre
 import { addAddressMarker } from '#lib/map/markers.js'
 import { getCoordinates } from '#lib/client/services/geospatial.js'
-import { getLocaleKey } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
 import {
   applyRuntimeBasemapSource,
   buildCatalogMapStyle,
@@ -31,6 +34,7 @@ import type { Id } from '#lib/types.js'
 import type { AddressMeta } from '#lib/utils/address.types.js'
 import type { MapStyleCatalogKey } from '#lib/map/styles/catalog.js'
 type MapProps = {
+  pinHighlightRequest?: number
   showMarker?: boolean
   locationCandidates?: import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
   onLocationCandidateSelect?: (id: string) => void
@@ -143,36 +147,69 @@ $effect(() => {
       const button = document.createElement('button')
       button.type = 'button'
       button.className =
-        'flex size-9 items-center justify-center rounded-full border-2 border-white bg-primary text-primary-content font-bold shadow-lg hover:ring-4 hover:ring-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+        'flex size-9 items-center justify-center rounded-full border-2 border-white text-white font-bold shadow-lg hover:ring-4 hover:ring-[var(--search-color)]/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--search-color)]'
       button.dataset.locationCandidate = candidate.id
       button.onclick = () => mapProps.onLocationCandidateSelect?.(candidate.id)
       marker = new maplibregl.Marker({ element: button })
         .setLngLat(candidate.coordinates)
         .addTo(target)
+      marker.on('dragend', () => {
+        const position = marker?.getLngLat()
+        if (position) mapProps.dragEndCallback?.(position.toArray())
+      })
       candidateMarkers.set(candidate.id, marker)
     }
-    marker.setLngLat(candidate.coordinates)
+    marker.setDraggable(
+      Boolean(candidate.selected && !candidate.previewOnly && mapProps.draggable),
+    )
+    marker.setLngLat(
+      candidate.selected && !candidate.previewOnly
+        ? (getCoordinateTuple(mapProps.coordinates) ?? candidate.coordinates)
+        : candidate.coordinates,
+    )
     const button = marker.getElement()
-    // Source kind is visible in both map and list; selection never changes the Feature pin.
-    const addressCandidate = candidate.kind === 'address'
-    button.classList.toggle('bg-primary', !addressCandidate)
-    button.classList.toggle('text-primary-content', !addressCandidate)
-    button.classList.toggle('bg-amber-500', addressCandidate)
-    button.classList.toggle('dark:bg-amber-400', addressCandidate)
-    button.classList.toggle('text-black', addressCandidate)
+    button.style.setProperty('--search-color', locationSearchColor(candidate.kind))
+    button.style.backgroundColor = locationSearchColor(candidate.kind)
+    // Keep every preview mounted while a selection fades the other choices away.
+    button.style.transition = prefersReducedMotion.current
+      ? 'none'
+      : 'opacity 250ms ease'
+    // MapLibre writes inline opacity during camera moves; keep UI visibility authoritative.
+    button.classList.toggle('opacity-0!', Boolean(candidate.hidden))
+    button.classList.toggle('opacity-100!', !candidate.hidden)
+    button.style.pointerEvents = candidate.hidden ? 'none' : ''
+    button.tabIndex = -1
+    button.setAttribute('aria-hidden', String(Boolean(candidate.hidden)))
     button.textContent = String(candidate.number)
     button.setAttribute('aria-label', `${candidate.number}. ${candidate.label}`)
     button.setAttribute('aria-pressed', String(Boolean(candidate.selected)))
     button.dataset.highlighted = String(Boolean(candidate.highlighted))
     const emphasized = Boolean(candidate.selected || candidate.highlighted)
     button.classList.toggle('ring-4', emphasized)
-    button.classList.toggle('ring-primary/40', emphasized)
+    button.classList.toggle('ring-[var(--search-color)]/40', emphasized)
     button.style.zIndex = candidate.highlighted ? '2' : candidate.selected ? '1' : '0'
-    button.style.outline = emphasized ? '4px solid var(--color-primary)' : ''
+    button.style.outline = emphasized ? '4px solid var(--search-color)' : ''
     button.style.outlineOffset = emphasized ? '3px' : ''
     button.style.filter = emphasized ? 'brightness(1.15)' : ''
   }
 })
+// Highlight the marker without animating MapLibre's positioning transform.
+$effect(() => {
+  if (!mapProps.pinHighlightRequest || !feature) return
+  const element = feature.getElement()
+  element.setAttribute('aria-label', m.feature_find_pin_help())
+  const animation = element.animate(
+    [
+      { filter: 'drop-shadow(0 0 0 transparent)', offset: 0 },
+      { filter: 'drop-shadow(0 0 10px #F04D7F) brightness(1.7)', offset: 0.2 },
+      { filter: 'drop-shadow(0 0 10px #F04D7F) brightness(1.7)', offset: 0.5 },
+      { filter: 'drop-shadow(0 0 0 transparent)' },
+    ],
+    { duration: prefersReducedMotion.current ? 0 : 380, iterations: 3 },
+  )
+  return () => animation.cancel()
+})
+
 onDestroy(() => {
   for (const marker of candidateMarkers.values()) marker.remove()
   candidateMarkers.clear()
@@ -182,7 +219,10 @@ $effect(() => {
   const target = activeMapInstance
   const candidates = mapProps.locationCandidates ?? []
   const key = candidates
-    .map(candidate => `${candidate.id}:${candidate.coordinates.join(',')}`)
+    .map(
+      candidate =>
+        `${candidate.id}:${candidate.coordinates.join(',')}:${Boolean(candidate.selected)}`,
+    )
     .join('|')
   if (!target || !candidates.length) {
     lastCandidatesKey = ''
@@ -190,22 +230,32 @@ $effect(() => {
   }
   if (key === lastCandidatesKey) return
   lastCandidatesKey = key
+  if (candidates.some(candidate => candidate.selected)) return
   const bounds = new maplibregl.LngLatBounds()
   const pin = getCoordinateTuple(mapProps.coordinates)
   if (pin && mapProps.showMarker !== false) bounds.extend(pin)
   for (const candidate of candidates) bounds.extend(candidate.coordinates)
-  target.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 350 })
+  target.fitBounds(bounds, {
+    padding: 60,
+    maxZoom: 17,
+    duration: prefersReducedMotion.current ? 0 : 350,
+  })
 })
 
 // STATE : DERIVED
+const hasSelectedPreview = $derived(
+  mapProps.locationCandidates?.some(candidate => candidate.selected) ?? false,
+)
 let markedAddressLngLat: [number, number] | null = $state(null)
 let addressLngLat: [number, number] | null = $derived(
-  mapProps.showMarker === false
+  mapProps.showMarker === false || hasSelectedPreview
     ? null
     : getCoordinates(mapProps.addressMeta as LngLatLike),
 )
 const coordinateTuple = $derived(
-  mapProps.showMarker === false ? null : getCoordinateTuple(mapProps.coordinates),
+  mapProps.showMarker === false || hasSelectedPreview
+    ? null
+    : getCoordinateTuple(mapProps.coordinates),
 )
 const activeLocale = $derived(getLocaleKey())
 const resolvedMapStyleCode = $derived(mapProps.mapStyleCode?.trim() || 'hyperAdmin')

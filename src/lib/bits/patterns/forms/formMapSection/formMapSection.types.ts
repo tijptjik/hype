@@ -1,4 +1,5 @@
 export type FormMapSectionProps = {
+  pinHighlightRequest?: number
   showMarker?: boolean
   onMapReady?: (
     controller: import('#lib/map/controller.js').MapController | null,

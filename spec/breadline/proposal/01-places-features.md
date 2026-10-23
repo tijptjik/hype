@@ -1058,3 +1058,42 @@ Verified locally at 114.15095, 22.28334 with a 1,000 m radius: Health care resto
 from 0 to 20 results, Shopping from 2 to 20, and Food and drink from 7 to 20. All
 60 restored previews loaded and matched their filters. Authenticated browser
 verification of this correction remains outstanding.
+
+### Draft discovery and address entry controls (Refs #194)
+
+Discovery rows show publisher taxonomy until explicitly previewed. Preview focuses
+that candidate while retaining all map markers; only the selected row exposes link
+or address acceptance actions. Accepted establishments keep their source name and
+Unlink action in the toolbar, independently of whether the Feature inherits the name.
+The last result's forward Tab reaches Add Manual Entry; reverse Tab retains footer
+navigation. The empty state centers three guided entry options. Manual entry remains available
+in the footer once results are available.
+
+The shared editor separates editable address details from marker-derived divisions.
+Only locality membership is editable. Display text is generated from structured
+components unless explicitly unlocked for a complete locale-specific label. Portion
+descriptions are locale-specific corrections; floor/unit identifiers remain shared.
+Block type, reference and type/reference ordering are explicit. English named floor
+levels (UG, LG, B, M, C, P, R) do not receive an automatic /F suffix. Source floor
+counts or ranges must not be represented as verified on-site floor-label inventories.
+
+Street selection uses the reviewed names manifest and data fixture at
+`/mocks/saanseoi/streets/names/`; illustrative building choices use the same names
+projection at `/mocks/saanseoi/buildings/names/`. Building fixture IDs are never
+persisted as canonical building or address identities. Public catalogue endpoints
+remain pending. Unassociated Place text is retained as evidence and can be locally
+structured; the English number-plus-street fallback requires an exact controlled
+street-name match. Unknown text remains visible rather than being guessed.
+
+Validation: `address-name-catalogue.test.ts`, `address-editor-controls.test.ts`,
+`address3d.test.ts` and `draft-feature-location-search.test.ts` cover parsing,
+translation boundaries, complete display overrides, preview/acceptance and keyboard
+handoff. `scripts/visual-checks/address-editor-check.ts` checks the shared editor's
+desktop columns, mobile overflow, display lock and real street catalogue selection.
+This fixture is not authenticated admin acceptance evidence.
+
+The new Feature discovery empty state offers name/address search, map-pin nearby search, and manual entry (Refs #194). Search is the default mode; map mode replaces text input with nearby search and coordinates while retaining inclusion and taxonomy filters. Entry actions focus the search input or highlight the draft pin, respecting reduced motion. Manual entry keeps the editable address workflow and resolves divisions from its pin.
+
+Pin placement uses the current map center and zooms one level per drop, capped at
+zoom 20 without zooming out. Entry highlights flash three times over 1.14 seconds
+and respect reduced-motion preferences.

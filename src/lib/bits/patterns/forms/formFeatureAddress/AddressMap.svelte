@@ -11,6 +11,7 @@ import CheckIcon from 'virtual:icons/proicons/checkmark'
 let {
   map,
   locationControl,
+  coordinatesInLocationControl = false,
   locationActions,
   locationMapControls,
   fixedMap = false,
@@ -25,7 +26,8 @@ let {
   isLoading,
   sourceId = null,
 }: {
-  locationControl?: Snippet
+  coordinatesInLocationControl?: boolean
+  locationControl?: Snippet<[Snippet?]>
   locationActions?: Snippet
   locationMapControls?: Snippet
   fixedMap?: boolean
@@ -164,8 +166,8 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
     </div>
   {/if}
   <div
-    class="relative z-20 flex items-center gap-3 border-b border-border/60 bg-panel px-6 py-3 {isEditing &&
-    showLookup
+    class="relative z-20 flex items-center gap-3 border-b border-border/60 bg-panel px-6 py-3 {locationControl ||
+    (isEditing && showLookup)
       ? 'flex-wrap'
       : 'flex-nowrap'}"
   >
@@ -175,9 +177,15 @@ function resizeWithKeyboard(event: KeyboardEvent): void {
       </div>
     {/if}
     {#if locationControl}
-      <div class="min-w-64 flex-1">{@render locationControl()}</div>
+      <div class="min-w-0 basis-64 flex-1">
+        {@render locationControl(
+          coordinatesInLocationControl && showCoordinates
+            ? coordinatesControl
+            : undefined,
+        )}
+      </div>
     {/if}
-    {#if showCoordinates}
+    {#if showCoordinates && !coordinatesInLocationControl}
       <div class="pointer-events-auto ml-auto min-w-0 shrink-0 justify-self-start">
         {@render coordinatesControl()}
       </div>

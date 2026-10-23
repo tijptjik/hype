@@ -31,7 +31,10 @@ vi.mock('#lib/locations/sourcePreview.js', () => ({
 vi.mock('#lib/locations/nearbySource.js', () => ({
   searchNearbySaanSeoiPlaces: mocks.nearby,
 }))
-import { searchDraftLocations, searchNearbyDraftLocations } from '#lib/api/draftLocation.remote.js'
+import {
+  searchDraftLocations,
+  searchNearbyDraftLocations,
+} from '#lib/api/draftLocation.remote.js'
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.context.user.isAnonymous = false
@@ -54,12 +57,15 @@ describe('unsaved Feature Location discovery', () => {
       .mockRejectedValueOnce(new Error('unavailable'))
     const result = await searchDraftLocations({ q: 'Bakery', locale: 'en' })
     expect(result).toEqual({
-      rows: [{ id: 'a', facts: { names: { en: 'Bakery' } } }],
+      rows: [
+        { id: 'a', resourceReleaseId: 'release', facts: { names: { en: 'Bakery' } } },
+      ],
       partial: true,
+      limited: false,
     })
     expect(mocks.search).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ limit: 5 }),
+      expect.objectContaining({ limit: 20 }),
     )
   })
 })
@@ -112,4 +118,32 @@ it('bounds nearby preview hydration and reports truncated coverage', async () =>
   expect(result.partial).toBe(false)
   expect(result.limited).toBe(true)
   expect(mocks.preview).toHaveBeenCalledTimes(20)
+})
+it('rejects anonymous nearby discovery before reading source data', async () => {
+  mocks.context.user.isAnonymous = true
+  await expect(
+    searchNearbyDraftLocations({ coordinates: [114.15, 22.28], radius: 300 }),
+  ).rejects.toMatchObject({ status: 403 })
+  expect(mocks.nearby).not.toHaveBeenCalled()
+})
+
+it('filters verified previews when upstream search ignores category or status filters', async () => {
+  mocks.search.mockResolvedValue(
+    ['match', 'wrong-type', 'closed'].map(placeId => ({
+      placeId,
+      resourceReleaseId: 'release',
+    })),
+  )
+  mocks.preview.mockImplementation(async (_client, input) => ({
+    names: { en: input.ssId },
+    searchClassification: {
+      taxonomyPrimary: input.ssId === 'wrong-type' ? 'restaurant' : 'abortion_clinic',
+      operatingStatus: input.ssId === 'closed' ? 'permanently_closed' : null,
+    },
+  }))
+  const result = await searchDraftLocations({
+    q: 'Clinic',
+    filters: { taxonomyPrimary: 'abortion_clinic' },
+  })
+  expect(result.rows.map(row => row.id)).toEqual(['match'])
 })

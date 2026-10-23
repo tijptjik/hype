@@ -12,6 +12,7 @@ let {
   attrs = {},
   previousAction = null,
   nextAction = null,
+  centerAction = null,
   fillHeight = false,
   navMode = 'centered',
   contentClass = '',
@@ -31,7 +32,7 @@ let tailSpacer = $state(0)
 let navShellStyle = $state('')
 let bodyBottomPadding = $state(0)
 
-const hasFacetNav = $derived(Boolean(previousAction || nextAction))
+const hasFacetNav = $derived(Boolean(previousAction || nextAction || centerAction))
 const FACET_BOTTOM_CLEARANCE = 24
 
 const facetClass = $derived(
@@ -76,6 +77,9 @@ const bodyStyle = $derived(
       ? `--bits-main-section-body-height: ${Math.max(0, bodyHeight)}px`
       : '--bits-main-section-body-height: auto',
     `padding-bottom: ${Math.max(0, bodyBottomPadding)}px`,
+    navMode === 'footer' && bodyHeight != null
+      ? `flex: 0 0 ${Math.max(0, bodyHeight)}px; height: ${Math.max(0, bodyHeight)}px`
+      : '',
   ].join('; '),
 )
 const tailSpacerStyle = $derived(`height: ${Math.max(0, tailSpacer)}px;`)
@@ -204,22 +208,34 @@ function measureLayout(): void {
   }
 
   const navHeight = hasFacetNav && navElement ? navElement.offsetHeight : 0
-  const bodyContentHeight = getBodyContentHeight(body)
-  const contentHeight = bodyContentHeight + navHeight
-  const remainingHeight = Math.max(0, availableHeight - contentHeight)
   const facetRect = facet.getBoundingClientRect()
   const bottomInset = Math.max(16, window.innerHeight - facetRect.bottom + 16)
   // Anchor to the facet itself; the navigation shell owns its content gutter.
   const left = Math.max(0, Math.round(facetRect.left))
   const width = Math.max(0, Math.round(facetRect.width))
 
+  // Move only the center action; previous/next navigation remains at the footer.
+  const bodyCenter =
+    facetRect.top + Math.max(0, availableHeight - getReservedBottomSpace(navHeight)) / 2
+  const navCenter = window.innerHeight - bottomInset - navHeight / 2
   navShellStyle =
     hasFacetNav && width > 0
-      ? `left: ${left}px; width: ${width}px; bottom: ${bottomInset}px;`
+      ? `left: ${left}px; width: ${width}px; bottom: ${bottomInset}px; --facet-center-action-offset: ${Math.min(0, bodyCenter - navCenter)}px;`
       : ''
 
+  // Fixed footer facets constrain the content box, so nested lists cannot grow beneath navigation.
+  if (isViewportConstrainedFacet) {
+    bodyMinHeight = 0
+    bodyHeight = Math.max(0, availableHeight - getReservedBottomSpace(navHeight))
+    bodyBottomPadding = 0
+    tailSpacer = 0
+    return
+  }
   bodyHeight = null
-  bodyBottomPadding = isViewportConstrainedFacet ? getReservedBottomSpace(navHeight) : 0
+  bodyBottomPadding = 0
+  const bodyContentHeight = getBodyContentHeight(body)
+  const contentHeight = bodyContentHeight + navHeight
+  const remainingHeight = Math.max(0, availableHeight - contentHeight)
 
   if (contentHeight <= availableHeight) {
     const leadSpace = Math.floor(remainingHeight / 2)
@@ -311,7 +327,12 @@ onMount(() => {
         {@render children?.()}
       </div>
       {#if tailSpacer > 0}
-        <div class="flex-none" aria-hidden="true" style={tailSpacerStyle}></div>
+        <!-- Clearance space must not intercept controls when asynchronous content grows. -->
+        <div
+          class="pointer-events-none flex-none"
+          aria-hidden="true"
+          style={tailSpacerStyle}
+        ></div>
       {/if}
     </div>
   </section>
@@ -322,7 +343,12 @@ onMount(() => {
       class={navShellClass}
       style={navShellStyle}
     >
-      <FormFacetNav {previousAction} {nextAction} class={navContentClass} />
+      <FormFacetNav
+        {previousAction}
+        {nextAction}
+        {centerAction}
+        class={navContentClass}
+      />
     </div>
   {/if}
 {:else}
@@ -338,7 +364,12 @@ onMount(() => {
         {@render children?.()}
       </div>
       {#if tailSpacer > 0}
-        <div class="flex-none" aria-hidden="true" style={tailSpacerStyle}></div>
+        <!-- Clearance space must not intercept controls when asynchronous content grows. -->
+        <div
+          class="pointer-events-none flex-none"
+          aria-hidden="true"
+          style={tailSpacerStyle}
+        ></div>
       {/if}
     </div>
   </section>
@@ -349,7 +380,12 @@ onMount(() => {
       class={navShellClass}
       style={navShellStyle}
     >
-      <FormFacetNav {previousAction} {nextAction} class={navContentClass} />
+      <FormFacetNav
+        {previousAction}
+        {nextAction}
+        {centerAction}
+        class={navContentClass}
+      />
     </div>
   {/if}
 {/if}

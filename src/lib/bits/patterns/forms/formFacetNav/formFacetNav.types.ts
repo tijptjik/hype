@@ -4,11 +4,15 @@ export interface FormFacetNavAction {
   text: string
   onClick: () => void
   disabled?: boolean
+  /** Center this action in the facet content until results are available. */
+  centerInContent?: boolean
+  id?: string
 }
 
 export interface FormFacetNavProps {
   previousAction?: FormFacetNavAction | null
   nextAction?: FormFacetNavAction | null
+  centerAction?: FormFacetNavAction | null
   class?: string
 }
 

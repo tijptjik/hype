@@ -54,3 +54,40 @@ export const getDivisionGeometry = guardedQuery(
     }
   },
 )
+
+/** Read a public division label for an explicit source address relationship.
+ * @param input Source division identity.
+ * @returns Classification and localized names, without polygon geometry.
+ * @remarks Does not infer membership or expose private resource data.
+ */
+export const getAddressDivisionLabel = guardedQuery(
+  z.strictObject({ id: z.string().min(1).max(200) }),
+  async (input, ctx) => {
+    const [row] = await ctx.db
+      .select({ attributes: divisionDefinition.attributes })
+      .from(divisionDefinition)
+      .where(eq(divisionDefinition.id, input.id))
+      .limit(1)
+    const parsed = z
+      .object({
+        class: z.string(),
+        category: z.string().optional(),
+        level: z.number().nullable().optional(),
+        names: z
+          .record(z.string(), z.object({ name: z.string().nullable() }))
+          .optional(),
+        i18n: z
+          .record(z.string(), z.object({ name: z.string().nullable() }))
+          .optional(),
+      })
+      .safeParse(row?.attributes)
+    if (!parsed.success || parsed.data.class === 'city') return null
+    return {
+      id: input.id,
+      class: parsed.data.class,
+      category: parsed.data.category ?? '',
+      level: parsed.data.level ?? null,
+      names: parsed.data.names ?? parsed.data.i18n ?? {},
+    }
+  },
+)

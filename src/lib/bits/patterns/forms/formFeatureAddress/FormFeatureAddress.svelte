@@ -28,6 +28,7 @@ import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 let {
   address,
   locationControl,
+  coordinatesInLocationControl = false,
   locationActions,
   locationMapControls,
   fixedMap = false,
@@ -53,7 +54,8 @@ let {
   onChange,
 }: {
   address: FeatureAddress
-  locationControl?: Snippet
+  coordinatesInLocationControl?: boolean
+  locationControl?: Snippet<[Snippet?]>
   locationActions?: Snippet
   locationMapControls?: Snippet
   fixedMap?: boolean
@@ -317,6 +319,7 @@ $effect(() => {
 {/snippet}
 <AddressMap
   {locationControl}
+  {coordinatesInLocationControl}
   {locationActions}
   {locationMapControls}
   {fixedMap}
@@ -335,20 +338,31 @@ $effect(() => {
     : null}
 />
 <div
-  class={fixedMap ? hideDetails ? 'flex min-h-0 flex-1 flex-col overflow-hidden' : 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-12' : ''}
+  class={fixedMap
+    ? hideDetails
+      ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+      : 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-12'
+    : ''}
   data-address-scroll
 >
   {#if locationContent}
     {@render locationContent()}
   {/if}
   {#if !hideDetails}
-    {#if coordinateError || message || address.matchStatus === 'stale' || address.matchStatus === 'ambiguous'}
-    <div class="px-6 py-3">
-      {#if coordinateError}
-        <p role="alert" class="text-sm text-error">{coordinateError}</p>
-      {/if}
-      {#if message || address.matchStatus === 'stale' || address.matchStatus === 'ambiguous'}<p role="status" class="text-sm text-muted-foreground">{message || status}</p>{/if}
-    </div>
+    {#if coordinateError ||
+      message ||
+      address.matchStatus === 'stale' ||
+      address.matchStatus === 'ambiguous'}
+      <div class="px-6 py-3">
+        {#if coordinateError}
+          <p role="alert" class="text-sm text-error">{coordinateError}</p>
+        {/if}
+        {#if message ||
+          address.matchStatus === 'stale' ||
+          address.matchStatus === 'ambiguous'}
+          <p role="status" class="text-sm text-muted-foreground">{message || status}</p>
+        {/if}
+      </div>
     {/if}
     {#if candidates.length}
       <div class="space-y-2 border-b border-border px-6 py-5">
@@ -397,12 +411,20 @@ $effect(() => {
         />
       </div>
     {/if}
-    <div class="grid items-start gap-8 border-t border-border/60 px-6 py-6 lg:grid-cols-2">
+    <div
+      class="grid items-start gap-8 border-t border-border/60 px-6 py-6 lg:grid-cols-2"
+    >
       {#if showAddressDetails}
         <AddressDetails {address} {isEditing} {show3dAddressOptions} {onChange} />
       {/if}
       {#if showDivisions}
-        <AddressDivisions class="lg:border-t-0 lg:pt-0" {address} {coordinates} {isEditing} {onChange} />
+        <AddressDivisions
+          class="lg:border-t-0 lg:pt-0"
+          {address}
+          {coordinates}
+          {isEditing}
+          {onChange}
+        />
       {/if}
     </div>
   {/if}

@@ -1,5 +1,6 @@
 // VALIDATION
 import { z } from 'zod'
+import { PlaceSearchFiltersSchema, placeSearchFilterParams } from './placeSearchFilters'
 // DOMAIN
 import { projectSaanSeoiPlace } from './saanseoi'
 // TYPES
@@ -17,6 +18,7 @@ export type PlaceSourceClient = {
 }
 
 export const PlaceSearchInputSchema = z.strictObject({
+  filters: PlaceSearchFiltersSchema.optional(),
   q: z.string().trim().min(1).max(200),
   locale: z.enum(['en', 'zh-hant', 'zh-hans']).optional(),
   limit: z.number().int().min(1).max(20).default(10),
@@ -49,6 +51,7 @@ export async function searchSaanSeoiPlaces(
   const query = PlaceSearchInputSchema.parse(input)
   const url = new URL('/places/v0.1/search', client.baseUrl)
   url.search = new URLSearchParams({
+    ...placeSearchFilterParams(query.filters),
     q: query.q,
     region: 'hk',
     limit: String(query.limit),
