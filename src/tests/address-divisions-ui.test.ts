@@ -4,6 +4,7 @@ import { flushSync } from 'svelte'
 // TESTS
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+vi.mock('svelte/transition', () => ({ slide: () => ({ duration: 0 }) }))
 import Fixture from './fixtures/components/AddressDivisionsFixture.svelte'
 // API
 import { getAddressDivisionContext } from '#lib/api/division.remote.js'
@@ -201,5 +202,49 @@ it('keeps neighbourhood editing controls out of display mode', async () => {
   await waitFor(() => expect(view.getByText('Lan Kwai Fong')).toBeTruthy())
   expect(view.queryByRole('button', { name: 'Choose neighbourhood' })).toBeNull()
   expect(view.queryByRole('button', { name: 'Clear neighbourhood' })).toBeNull()
-  expect(view.getByRole('region', { name: 'Islands' })).toBeTruthy()
+  expect(view.getByRole('region', { name: 'Island' })).toBeTruthy()
+})
+
+it('retains the same division nodes until the next marker context resolves', async () => {
+  let resolveNext!: (value: AddressDivisionContext) => void
+  vi.mocked(getAddressDivisionContext)
+    .mockReturnValueOnce(Promise.resolve(context) as never)
+    .mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveNext = resolve
+      }) as never,
+    )
+  const view = render(Fixture, { isEditing: false })
+  const previousDistrict = await view.findByText('Fixed district')
+  const previousIsland = view.getByText('Fixed island')
+  const locality = view.getByText('Central')
+  await fireEvent.click(view.getByText('Move marker'))
+  expect(view.getByText('Fixed district')).toBe(previousDistrict)
+  expect(view.getByText('Fixed island')).toBe(previousIsland)
+  expect(view.getByText('Central')).toBe(locality)
+  expect(
+    view.container.querySelector('[data-address-divisions]')?.getAttribute('aria-busy'),
+  ).toBe('true')
+  resolveNext({ ...context, memberships: [district, central] })
+  await waitFor(() => expect(view.queryByText('Fixed island')).toBeNull())
+  expect(view.queryByText('Lan Kwai Fong')).toBeNull()
+  expect(view.getByText('Fixed district')).toBe(previousDistrict)
+  expect(view.getByText('Central')).toBe(locality)
+})
+
+it('keeps the last resolved geography visible when the new marker lookup fails', async () => {
+  vi.mocked(getAddressDivisionContext)
+    .mockReturnValueOnce(Promise.resolve(context) as never)
+    .mockImplementationOnce(() => Promise.reject(new Error('offline')) as never)
+  const view = render(Fixture)
+  const districtNode = await view.findByText('Fixed district')
+  await fireEvent.click(view.getByText('Move marker'))
+  await waitFor(() => expect(view.getByRole('alert')).toBeTruthy())
+  expect(view.getByText('Fixed district')).toBe(districtNode)
+  expect(view.getByText('Lan Kwai Fong')).toBeTruthy()
+  expect(
+    view
+      .getByRole('button', { name: 'Choose neighbourhood' })
+      .closest('[aria-disabled="true"]'),
+  ).toBeTruthy()
 })

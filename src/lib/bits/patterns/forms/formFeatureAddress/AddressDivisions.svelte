@@ -1,4 +1,7 @@
 <script lang="ts">
+// SVELTE
+import { slide } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
@@ -34,7 +37,9 @@ let {
   coordinates,
   isEditing = false,
   onChange,
+  class: className = '',
 }: {
+  class?: string
   address: FeatureAddress
   coordinates: number[]
   isEditing?: boolean
@@ -45,7 +50,9 @@ let loading = $state(false)
 let failed = $state(false)
 let retry = $state(0)
 const key = $derived(JSON.stringify(coordinates.slice(0, 2)))
-const context = $derived(result?.key === key ? result.context : null)
+// Retain the last resolved projection while the next marker lookup is pending.
+const context = $derived(result?.context ?? null)
+const stale = $derived(result !== null && result.key !== key)
 const overrides = $derived({
   ...authoredDivisionOverrides(address.source.authored),
   ...address.source.divisionOverrides,
@@ -115,6 +122,7 @@ $effect(() => {
  * @param paths The selected source path or an empty selection. @returns Nothing; persistence stays with the owning form.
  */
 function changePaths(paths: AddressDivision[][]): void {
+  if (stale) return
   onChange({
     ...address,
     divisionOverrides: {
@@ -128,6 +136,7 @@ function changePaths(paths: AddressDivision[][]): void {
  * @returns Nothing; explicit marker selections supersede inherited corrections.
  */
 function resetPaths(): void {
+  if (stale) return
   onChange({
     ...address,
     divisionOverrides: {
@@ -175,9 +184,10 @@ function resetPaths(): void {
 {/snippet}
 
 <section
-  class="space-y-4 border-t border-border pt-5"
+  class={`space-y-4 border-t border-border pt-5 ${className}`}
   aria-label={m.feature_address_divisions()}
   data-address-divisions
+  aria-busy={loading}
 >
   <div class="flex items-center justify-between gap-3">
     <h3 class="font-semibold">{m.feature_address_divisions()}</h3>
@@ -197,21 +207,24 @@ function resetPaths(): void {
     </SimpleTooltip>
   </div>
   {#if loading}
-    <p role="status" class="text-sm text-muted-foreground">
+    <p role="status" class={context ? 'sr-only' : 'text-sm text-muted-foreground'}>
       {m.feature_address_divisions_loading()}
     </p>
-  {:else if failed}
+  {/if}
+  {#if failed}
     <div role="alert" class="text-sm text-destructive">
       {m.feature_address_divisions_failed()}
       <button type="button" class="underline" onclick={() => retry++}>
         {m.address_divisions_retry()}
       </button>
     </div>
-  {:else if !context || (!context.available && !isEditing)}
+  {/if}
+  {#if (!context && !loading && !failed) ||
+    (context && !context.available && !isEditing)}
     <p role="status" class="text-sm text-muted-foreground">
       {m.feature_address_divisions_unloaded()}
     </p>
-  {:else}
+  {:else if context}
     <div
       class="divide-y divide-border/60 rounded-xl border border-border/70 bg-background/40 px-4"
     >
@@ -220,30 +233,40 @@ function resetPaths(): void {
           class="grid gap-2 py-4 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-4"
           aria-label={groupLabels[group.key]}
           data-division-group={group.key}
+          transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
         >
           <h4 class="pt-1.5 text-xs font-medium tracking-wide text-muted-foreground">
             {groupLabels[group.key]}
           </h4>
           <div class="min-w-0 space-y-2">
             {#if isEditing && group.key === 'locality' && context}
-              <AddressLocalityEditor
-                paths={group.paths}
-                options={context.options}
-                node={divisionNode}
-                {labels}
-                onChange={changePaths}
-                onReset={resetPaths}
-              />
+              <div inert={stale} aria-disabled={stale}>
+                <AddressLocalityEditor
+                  paths={group.paths}
+                  options={context.options}
+                  node={divisionNode}
+                  {labels}
+                  onChange={changePaths}
+                  onReset={resetPaths}
+                />
+              </div>
             {:else}
-              {#each group.paths as path, pathIndex (JSON.stringify(
-                path.map(item => item.id),
-              ))}
+              {#each group.paths as path, pathIndex (pathIndex)}
                 <ol
                   class="flex flex-wrap items-start gap-x-3 gap-y-1"
+                  transition:slide={{
+                    duration: prefersReducedMotion.current ? 0 : 200,
+                  }}
                   aria-label={`${groupLabels[group.key]} ${pathIndex + 1}`}
                 >
                   {#each path as division, index (division.id)}
-                    <li class="flex min-w-0 max-w-full items-start gap-3">
+                    <li
+                      class="flex min-w-0 max-w-full items-start gap-3"
+                      transition:slide={{
+                        axis: 'x',
+                        duration: prefersReducedMotion.current ? 0 : 180,
+                      }}
+                    >
                       {#if index > 0}
                         <ChevronRightIcon
                           class="mt-2 size-3.5 shrink-0 text-muted-foreground/60"

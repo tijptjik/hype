@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { tick, type Snippet } from 'svelte'
+import { slide } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
@@ -87,13 +89,20 @@ function close(): void {
 </script>
 
 <div class="group/selection relative min-w-0 space-y-3 pr-16">
-  {#each paths as path (JSON.stringify(path.map(item => item.id)))}
+  {#each paths as path, pathIndex (pathIndex)}
     <ol
       class="flex flex-wrap items-start gap-x-3 gap-y-1"
+      transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
       aria-label={m.address_neighbourhood_current()}
     >
       {#each path as division, index (division.id)}
-        <li class="flex min-w-0 max-w-full items-start gap-3">
+        <li
+          class="flex min-w-0 max-w-full items-start gap-3"
+          transition:slide={{
+            axis: 'x',
+            duration: prefersReducedMotion.current ? 0 : 180,
+          }}
+        >
           {#if index > 0}
             <ChevronRightIcon
               class="mt-2 size-3.5 shrink-0 text-muted-foreground/60"
