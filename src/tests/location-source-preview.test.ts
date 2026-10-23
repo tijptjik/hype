@@ -9,6 +9,12 @@ const response = {
     resourceReleaseId: 'release',
     geometry: { type: 'Point', coordinates: [114.18201, 22.278698] },
     phones: ['3615 8777'],
+    basicCategory: 'bakery',
+    taxonomy: {
+      primary: 'bakery',
+      hierarchy: ['food_and_drink', 'bakery'],
+      alternates: ['cafe'],
+    },
   },
   i18n: {
     en: { name: 'Shop', freeformAddress: '8 Russell St' },
@@ -25,6 +31,10 @@ it('previews a latest-source record without canonical collection support or fabr
   const transport = client(response)
   const facts = await readSaanSeoiPlacePreview(transport, input)
   expect(facts.names).toEqual({ en: 'Shop', 'zh-hant': '商店' })
+  expect(facts.classification).toEqual({
+    basicCategory: response.place.basicCategory,
+    taxonomy: response.place.taxonomy,
+  })
   expect(facts.phoneNumber).toEqual(['+85236158777'])
   expect(facts.location.address).toMatchObject({
     status: 'unresolved',
@@ -54,4 +64,19 @@ it('never turns an unavailable detail endpoint into empty facts', async () => {
     async () => new Response('', { status: 503 }),
   ) as unknown as typeof fetch
   await expect(readSaanSeoiPlacePreview(transport, input)).rejects.toThrow('503')
+})
+
+it('preserves search status and resolves taxonomy primary from the source taxonomy', async () => {
+  const facts = await readSaanSeoiPlacePreview(
+    client({
+      ...response,
+      place: { ...response.place, operatingStatus: 'permanently_closed' },
+    }),
+    input,
+  )
+  expect(facts.searchClassification).toEqual({
+    basicCategory: 'bakery',
+    taxonomyPrimary: 'bakery',
+    operatingStatus: 'permanently_closed',
+  })
 })

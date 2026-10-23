@@ -1,3 +1,6 @@
+// DOMAIN
+import { placeCategoryLabel } from './placeSearchFilters'
+import type { PlacePreview } from './sourcePreview'
 // TYPES
 import type { LocationFacts } from './model'
 
@@ -7,8 +10,22 @@ export type LocationSearchMarker = {
   number: number
   coordinates: [number, number]
   label: string
+  hidden?: boolean
   selected?: boolean
+  previewOnly?: boolean
   highlighted?: boolean
+}
+
+/** Resolve the shared theme colour for search controls, result numbers and map markers.
+ * @param kind Candidate Location kind.
+ * @returns Theme colour variable for the candidate type.
+ */
+export function locationSearchColor(kind: LocationSearchMarker['kind']): string {
+  return kind === 'address'
+    ? 'var(--color-tertiary)'
+    : kind === 'building'
+      ? 'var(--color-secondary)'
+      : 'var(--color-primary)'
 }
 
 /** Measure direct distance from the Feature pin, independently of routing.
@@ -33,4 +50,31 @@ export function locationDistance(from: number[], to: number[]): number {
  */
 export function locationName(facts: LocationFacts, locale: string): string {
   return facts.names[locale] || Object.values(facts.names).find(Boolean) || ''
+}
+
+/** Format publisher taxonomy for discovery without inferring missing ancestry.
+ * @param classification Display-only classification from the Place preview.
+ * @returns Hierarchy followed by other categories, with duplicate identifiers removed.
+ */
+export function placeTaxonomyLabel(
+  classification: PlacePreview['classification'],
+): string {
+  const taxonomy = classification?.taxonomy
+  const hierarchy = [...new Set((taxonomy?.hierarchy ?? []).filter(Boolean))]
+  if (taxonomy?.primary && !hierarchy.includes(taxonomy.primary))
+    hierarchy.push(taxonomy.primary)
+  const additional = [
+    ...new Set(
+      [classification?.basicCategory, ...(taxonomy?.alternates ?? [])].filter(
+        (value): value is string =>
+          typeof value === 'string' && value.length > 0 && !hierarchy.includes(value),
+      ),
+    ),
+  ]
+  return [
+    hierarchy.map(placeCategoryLabel).join(' › '),
+    ...additional.map(placeCategoryLabel),
+  ]
+    .filter(Boolean)
+    .join(' · ')
 }

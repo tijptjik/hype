@@ -7,12 +7,38 @@ import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
 import type { PlaceSourceClient } from './sourceClient'
 import type { LocationFacts } from './model'
 
+export type PlacePreview = LocationFacts & {
+  searchClassification?: {
+    basicCategory?: string | null
+    taxonomyPrimary?: string | null
+    operatingStatus?: string | null
+  }
+  classification?: {
+    basicCategory?: string | null
+    taxonomy?: {
+      primary?: string | null
+      hierarchy?: string[] | null
+      alternates?: string[] | null
+    } | null
+  }
+}
+
 const previewSchema = z.object({
   place: z.object({
     id: z.string().min(1),
     resourceReleaseId: z.string().min(1),
     geometry: LocationFactsSchema.shape.location.shape.geometry,
     phones: z.array(z.string()).nullish(),
+    basicCategory: z.string().nullish(),
+    taxonomyPrimary: z.string().nullish(),
+    operatingStatus: z.string().nullish(),
+    taxonomy: z
+      .object({
+        primary: z.string().nullish(),
+        hierarchy: z.array(z.string()).nullish(),
+        alternates: z.array(z.string()).nullish(),
+      })
+      .nullish(),
   }),
   i18n: z.record(
     z.string(),
@@ -35,7 +61,7 @@ const previewSchema = z.object({
 export async function readSaanSeoiPlacePreview(
   client: PlaceSourceClient,
   input: { ssId: string; resourceReleaseId: string },
-): Promise<LocationFacts> {
+): Promise<PlacePreview> {
   const url = new URL(`/places/v0.1/${encodeURIComponent(input.ssId)}`, client.baseUrl)
   url.searchParams.set('region', 'hk')
   const response = await client.fetch(url, {
@@ -60,6 +86,15 @@ export async function readSaanSeoiPlacePreview(
     if (row.freeformAddress) fallbackDisplay[locale] = row.freeformAddress
   }
   return {
+    searchClassification: {
+      basicCategory: data.place.basicCategory,
+      taxonomyPrimary: data.place.taxonomyPrimary ?? data.place.taxonomy?.primary,
+      operatingStatus: data.place.operatingStatus,
+    },
+    classification: {
+      basicCategory: data.place.basicCategory,
+      taxonomy: data.place.taxonomy,
+    },
     names,
     brands: Object.keys(brands).length ? [{ identifiers: {}, names: brands }] : [],
     phoneNumber: (data.place.phones ?? []).flatMap(value => {

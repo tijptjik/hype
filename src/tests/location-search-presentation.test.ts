@@ -1,5 +1,8 @@
 import { expect, it } from 'vitest'
-import { locationDistance } from '#lib/locations/searchPresentation.js'
+import {
+  locationDistance,
+  placeTaxonomyLabel,
+} from '#lib/locations/searchPresentation.js'
 import { prepareLocalLocationAddress } from '#lib/addresses/locationDraft.js'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 
@@ -28,4 +31,21 @@ it('copies structured geocoder content without canonical IDs and retains the ori
   expect(result.unit?.unitRef).toBe('18')
   expect(result.unit?.floorType).toBe('G')
   expect(result).not.toHaveProperty('address2dId')
+})
+
+it('shows source taxonomy in order and avoids duplicate categories', () => {
+  expect(
+    placeTaxonomyLabel({
+      basicCategory: 'bakery',
+      taxonomy: {
+        primary: 'bakery',
+        hierarchy: ['food_and_drink', 'bakery'],
+        alternates: ['cafe', 'bakery', 'cafe'],
+      },
+    }),
+  ).toBe('Food and drink › Bakery · Cafe')
+  expect(placeTaxonomyLabel({ basicCategory: 'coffee_shop' })).toBe('Coffee shop')
+  expect(placeTaxonomyLabel({ taxonomy: { primary: 'bakery' } })).toBe('Bakery')
+  expect(placeTaxonomyLabel(undefined)).toBe('')
+  expect(placeTaxonomyLabel({ basicCategory: null, taxonomy: null })).toBe('')
 })
