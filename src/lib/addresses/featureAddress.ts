@@ -207,37 +207,30 @@ export function getAddressLocale(
   return { ...result, ...address.overrides[ADDRESS_LOCALES[locale]] }
 }
 
-/** Resolves display text without rewriting canonical evidence. @param address Address and corrections. @param locale HYPE locale. @returns Effective display label, including explicit clearing. @remarks Structured corrections compose a local label; an explicit formattedAddress override supplies the base label; 3D details remain composable. */
+/** Resolves display text without rewriting canonical evidence. @param address Address and corrections. @param locale HYPE locale. @returns Effective display label, including explicit clearing. @remarks Structured corrections compose a local label; an explicit formattedAddress override is the complete user-authored label, including any unit text. */
 export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): string {
   const tag = ADDRESS_LOCALES[locale]
   const overrides = address.overrides[tag] ?? {}
-  // Effective local location overrides may retain a complete display label, including unit text.
-  if (
-    address.source.authored &&
-    Object.hasOwn(address.source.fallbackDisplay, tag) &&
-    !Object.keys(overrides).length
-  )
-    return address.source.fallbackDisplay[tag]
   const hasDisplayOverride = Object.hasOwn(overrides, 'formattedAddress')
-  if (hasDisplayOverride && !overrides.formattedAddress) return ''
+  if (hasDisplayOverride) return String(overrides.formattedAddress ?? '')
   const value = getAddressLocale(address, locale)
+  // A partial component edit must not discard retained text that has not been structured yet.
+  const original = getAddressLocale({ ...address, overrides: {} }, locale)
+  const hasStructuredBase = [
+    'buildingName',
+    'premisesName',
+    'streetName',
+    'blockExpression',
+    'blockRef',
+    'phaseExpression',
+    'phaseRef',
+  ].some(field => Boolean(original[field as AddressField]))
   let display = hasDisplayOverride
     ? String(overrides.formattedAddress)
     : (address.source.fallbackDisplay[tag] ??
       address.source.authored?.i18n[tag]?.formattedAddress ??
       String(value.formattedAddress ?? ''))
-  if (
-    !hasDisplayOverride &&
-    ((Boolean(address.source.authored?.i18n[tag]) &&
-      !value.formattedAddress &&
-      !Object.hasOwn(address.source.fallbackDisplay, tag)) ||
-      Object.keys(overrides).some(
-        key =>
-          !['floorExpression', 'unitExpression', 'unitPortion', 'accessHint'].includes(
-            key,
-          ),
-      ))
-  ) {
+  if (hasStructuredBase || !display || value.streetName) {
     const text = (key: AddressField): string =>
       typeof value[key] === 'string' ? (value[key] as string) : ''
     const number = Object.hasOwn(overrides, 'buildingNumberExpression')
@@ -304,10 +297,12 @@ export function getAddressDisplay(address: FeatureAddress, locale: LocaleKey): s
     details && Object.hasOwn(details, 'unitRef')
       ? formatUnit(details, locale)
       : String(value.unitExpression ?? '')
-  const portion = details?.unitPortion ?? ''
+  const portion = String(value.unitPortion ?? '')
   const hasUnitCorrections =
     Boolean(details) ||
-    ['floorExpression', 'unitExpression'].some(key => Object.hasOwn(overrides, key))
+    ['floorExpression', 'unitExpression', 'unitPortion'].some(key =>
+      Object.hasOwn(overrides, key),
+    )
   const unitPart = hasUnitCorrections
     ? (locale === 'en' ? [portion, flat, floor] : [floor, flat, portion])
         .filter(Boolean)

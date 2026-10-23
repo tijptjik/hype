@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "mock": true,
+  "apiReleaseSetId": null,
+  "family": "streets",
+  "region": "hk",
+  "projection": "names",
+  "selection": "reviewed-baseline-fixture",
+  "source": {
+    "baselineSha256": "ab91ae54772360104220fe1cd1cb6c73c89d2492b1eb65197c082a86f67a9566",
+    "divisionCodeRegistryHash": "sha256:dc096fe2eac4c87e3692a3f9017c7dc4eb986003fa76caa0261cfa0ef93c036a"
+  },
+  "divisionScope": {
+    "family": "divisions",
+    "domain": "geographic",
+    "variant": "saanseoi",
+    "class": "district"
+  },
+  "locales": [
+    "en",
+    "zh-Hant"
+  ],
+  "recordCount": 4053,
+  "representations": [
+    {
+      "format": "json",
+      "envelope": "array",
+      "files": [
+        {
+          "href": "data.json",
+          "recordCount": 4053,
+          "byteLength": 511777,
+          "sha256": "ccbb4a9bf6b52e319784cdbf3791e6b793c8fa7885d1459e4c7d46760c7ce48a"
+        }
+      ]
+    }
+  ]
+}

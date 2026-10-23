@@ -254,6 +254,14 @@ export function setStructuredAddressExpression(
   value: string | undefined,
   type?: FloorType | UnitType,
 ): FeatureAddress {
+  // A portion is descriptive language, not a shared unit identifier.
+  if (field === 'unitPortion')
+    return setAddressOverride(
+      address,
+      locale,
+      field,
+      value?.trim() || (value === undefined ? undefined : null),
+    )
   const details = { ...address.unitDetails }
   const keys =
     field === 'floorExpression'
@@ -305,4 +313,57 @@ export function getStructuredAddressType(
   return field === 'floorExpression'
     ? (address.unitDetails?.floorType ?? unit?.floorType ?? 'F')
     : (address.unitDetails?.unitType ?? unit?.unitType ?? 'U')
+}
+
+/** Edit a block's type, reference and locale-specific order as one coherent expression.
+ * @param address Current draft. @param locale Edited language. @param type Block vocabulary code.
+ * @param ref Block reference. @param before Whether the type precedes the reference.
+ * @returns Corrections with a matching display expression and typed components.
+ */
+export function setAddressBlock(
+  address: FeatureAddress,
+  locale: LocaleKey,
+  type: string,
+  ref: string,
+  before: boolean,
+): FeatureAddress {
+  const term = addressBlockTypeLabel(type, locale)
+  const expression = (before ? [term, ref] : [ref, term])
+    .filter(Boolean)
+    .join(locale === 'en' ? ' ' : '')
+  for (const [key, value] of Object.entries({
+    blockType: type,
+    blockRef: ref,
+    blockTypeBeforeNumber: before,
+    blockExpression: ref ? expression : '',
+  }))
+    address = setAddressOverride(address, locale, key as AddressField, value)
+  return address
+}
+
+/** Translate a controlled block type for its selector and composed address.
+ * @param type Publisher type code. @param locale Display language.
+ * @returns Human-readable block term.
+ */
+export function addressBlockTypeLabel(type: string, locale: LocaleKey): string {
+  const labels: Record<string, [string, string, string]> = {
+    block: ['Block', '座', '座'],
+    tower: ['Tower', '幢', '幢'],
+    building: ['Building', '大廈', '大厦'],
+    house: ['House', '屋', '屋'],
+    villa: ['Villa', '別墅', '别墅'],
+    apartment: ['Apartment', '閣', '阁'],
+    mansion: ['Mansion', '大廈', '大厦'],
+    quarters: ['Quarters', '宿舍', '宿舍'],
+    phase: ['Phase', '期', '期'],
+    stage: ['Stage', '期', '期'],
+    commercial: ['Commercial', '商業', '商业'],
+    retail: ['Retail', '商舖', '商铺'],
+    garage: ['Garage', '車房', '车房'],
+    other: ['Other', '其他', '其他'],
+    parking: ['Carpark', '停車場', '停车场'],
+    flat: ['Flat', '室', '室'],
+    unit: ['Unit', '單位', '单位'],
+  }
+  return labels[type]?.[locale === 'en' ? 0 : locale === 'zhHant' ? 1 : 2] ?? type
 }

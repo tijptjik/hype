@@ -25,9 +25,9 @@ describe('structured SaanSeoi address entry', () => {
     ['B', 'F', 'B', 'B', 'B樓'],
     ['ground floor', 'G', '', 'G/F', '地下'],
     ['地下', 'G', '', 'G/F', '地下'],
-    ['mezzanine', 'M', '', 'M/F', '閣樓'],
-    ['lower ground', 'LG', '', 'LG/F', '下層地下'],
-    ['B2', 'B', '2', 'B2/F', '地庫2樓'],
+    ['mezzanine', 'M', '', 'M', '閣樓'],
+    ['lower ground', 'LG', '', 'LG', '下層地下'],
+    ['B2', 'B', '2', 'B2', '地庫2樓'],
     ['12樓', 'F', '12', '12/F', '12樓'],
     ['Lift 17/18', 'X', 'Lift 17/18', 'Lift 17/18', 'Lift 17/18'],
   ])('parses %s without losing its meaning', (input, type, ref, en, zh) => {
@@ -75,7 +75,7 @@ describe('structured SaanSeoi address entry', () => {
     expect(reset.unitDetails).toEqual({ unitRef: 'A', unitType: 'F' })
     expect(getAddressDisplay(reset, 'en')).toBe('Flat A, 70 Example St')
   })
-  it('composes 3D details onto a custom display base and keeps access hints separate', () => {
+  it('preserves a complete custom display address and keeps access hints separate', () => {
     let address = setAddressOverride(
       emptyFeatureAddress(),
       'en',
@@ -84,7 +84,7 @@ describe('structured SaanSeoi address entry', () => {
     )
     address = setStructuredAddressExpression(address, 'en', 'floorExpression', '12')
     address = setAddressExpression(address, 'en', 'accessHint', 'Use the rear entrance')
-    expect(getAddressDisplay(address, 'en')).toBe('12/F, Custom building')
+    expect(getAddressDisplay(address, 'en')).toBe('Custom building')
     expect(address.accessHints).toEqual({ en: 'Use the rear entrance' })
     expect(address.overrides.en).not.toHaveProperty('accessHint')
     expect(
@@ -120,8 +120,9 @@ it('stores room as a unit type and a portion as unitPortion, independently of th
     floorType: 'F',
     unitRef: 'B',
     unitType: 'R',
-    unitPortion: 'Rear part',
   })
+  expect(saved.overrides.en.unitPortion).toBe('Rear part')
+  expect(saved.overrides['zh-hant']?.unitPortion).toBeUndefined()
   expect(saved.source.address3dUnitId).toBeNull()
   expect(getAddressDisplay(saved, 'en')).toBe('Rear part, Room B, 12/F, Building')
   const withoutFloor = setStructuredAddressExpression(
@@ -133,7 +134,6 @@ it('stores room as a unit type and a portion as unitPortion, independently of th
   expect(withoutFloor.unitDetails).toEqual({
     unitRef: 'B',
     unitType: 'R',
-    unitPortion: 'Rear part',
   })
 })
 
@@ -152,6 +152,6 @@ it('rejects invented local IDs, room hierarchy levels and cross-domain type code
     ).toBe(false)
   }
   // R means Roof for floors and Room for units; the fields are never interchangeable.
-  expect(formatFloor({ floorType: 'R', floorRef: '' }, 'en')).toBe('R/F')
+  expect(formatFloor({ floorType: 'R', floorRef: '' }, 'en')).toBe('R')
   expect(formatUnit({ unitType: 'R', unitRef: 'B' }, 'en')).toBe('Room B')
 })
