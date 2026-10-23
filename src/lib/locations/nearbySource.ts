@@ -1,6 +1,7 @@
 // THIRD PARTY
 import { polygonToCellsExperimental, POLYGON_TO_CELLS_FLAGS } from 'h3-js'
 import { z } from 'zod'
+import { matchesPlaceSearchFilters, placeSearchFilterParams } from './placeSearchFilters'
 // DOMAIN
 import { NearbyPlacesInputSchema } from './discovery'
 import { locationDistance } from './searchPresentation'
@@ -12,6 +13,9 @@ const cellPage = z.object({
       z.object({
         placeId: z.string().min(1),
         resourceReleaseId: z.string().min(1),
+        basicCategory: z.string().nullish(),
+        operatingStatus: z.string().nullish(),
+        taxonomy: z.object({ primary: z.string().nullish() }).nullish(),
         geometry: z.object({
           type: z.literal('Point'),
           coordinates: z.tuple([z.number().finite(), z.number().finite()]),
@@ -85,6 +89,7 @@ export async function searchNearbySaanSeoiPlaces(
         for (let page = 0; page < 3; page++) {
           const url = new URL(`/places/v0.1/by-cell/9/${cell}`, client.baseUrl)
           url.search = new URLSearchParams({
+            ...placeSearchFilterParams(query.filters),
             region: 'hk',
             limit: '100',
             offset: String(page * 100),
@@ -99,10 +104,16 @@ export async function searchNearbySaanSeoiPlaces(
           const data = cellPage.parse(await response.json())
           if (data.meta.page.offset !== page * 100 || data.meta.page.limit !== 100)
             throw new Error('Nearby Locations pagination changed')
+          // Filter before nearest-candidate limits so unrelated places cannot crowd out matches.
           for (const row of data.places)
             if (
               locationDistance(query.coordinates, row.geometry.coordinates) <=
-              query.radius
+              query.radius &&
+              matchesPlaceSearchFilters(query.filters, {
+                basicCategory: row.basicCategory,
+                taxonomyPrimary: row.taxonomy?.primary,
+                operatingStatus: row.operatingStatus,
+              })
             )
               found.set(row.placeId, row)
           if (!data.meta.page.hasMore) return

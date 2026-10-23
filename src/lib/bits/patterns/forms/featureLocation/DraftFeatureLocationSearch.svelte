@@ -471,7 +471,7 @@ onDestroy(() => {
           </div>
         {/each}
       </section>
-      {#if searched && !loading && !rows.length && !placesFailed && !placesPartial && !addressesFailed}
+      {#if searched && !loading && !rows.length && !placesFailed && !placesPartial && !placesLimited && !addressesFailed}
         <p class="py-3 text-sm">{m.feature_start_empty()}</p>
       {/if}
       {#if searched && (placesFailed || placesPartial || addressesFailed)}

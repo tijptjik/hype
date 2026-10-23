@@ -1049,3 +1049,12 @@ checks and ten focused component tests verify the controls and request selection
 Refs #194. Nearby discovery reports its 20-preview cap and upstream pagination limits
 separately from incomplete coverage. The UI offers a narrower-search hint for limits,
 a retry for incomplete results, and an unavailable warning only for a failed request.
+
+Nearby category and operating-status filters run on the cell response before the
+nearest-50 candidate and 20-preview caps (Refs #194). Unrelated closer places must
+not crowd out matching establishments; detail previews recheck the selected filters.
+
+Verified locally at 114.15095, 22.28334 with a 1,000 m radius: Health care restored
+from 0 to 20 results, Shopping from 2 to 20, and Food and drink from 7 to 20. All
+60 restored previews loaded and matched their filters. Authenticated browser
+verification of this correction remains outstanding.

@@ -21,6 +21,7 @@ const input = { coordinates: [114.17, 22.3] as [number, number], radius: 300 }
 const row = (id: string, coordinates = input.coordinates) => ({
   placeId: id,
   resourceReleaseId: 'release',
+  taxonomy: { primary: 'japanese_restaurant' },
   geometry: { type: 'Point', coordinates },
 })
 const page = (places: ReturnType<typeof row>[], offset = 0, hasMore = false) =>
@@ -46,6 +47,9 @@ describe('nearby Places discovery', () => {
   it('paginates, deduplicates and filters actual distance; credentials cannot follow redirects', async () => {
     const fetcher = vi.fn(async (url: URL, init: RequestInit) => {
       expect(init.redirect).toBe('error')
+      expect(url.searchParams.get('filter[taxonomyPrimary]')).toBe(
+        'japanese_restaurant',
+      )
       expect(init.headers).toEqual({ Accept: 'application/json', 'x-api-key': 'test' })
       const offset = Number(url.searchParams.get('offset'))
       return offset === 0
@@ -58,7 +62,7 @@ describe('nearby Places discovery', () => {
         apiKey: 'test',
         fetch: fetcher as unknown as typeof fetch,
       },
-      input,
+      { ...input, filters: { taxonomyPrimary: 'japanese_restaurant' } },
     )
     expect(found.candidates.map(item => item.placeId)).toEqual(['a', 'b'])
     expect(found.partial).toBe(false)
@@ -151,4 +155,23 @@ describe('discovery ranking and independent preferences', () => {
       LocalLocationInputSchema.shape.sharingPreference.parse('allow-sharing'),
     ).toBe('allow-sharing')
   })
+})
+
+
+it('filters nearby types and status before the nearest-fifty candidate cap', async () => {
+  const unrelated = Array.from({ length: 60 }, (_, index) => ({
+    ...row(`unrelated-${index}`), taxonomy: { primary: 'clothing_store' },
+  }))
+  const closed = { ...row('closed'), operatingStatus: 'permanently_closed' }
+  const matching = row('matching', [114.171, 22.3])
+  const client = {
+    baseUrl: 'https://example.test', apiKey: 'test',
+    fetch: vi.fn(async () => page([...unrelated, closed, matching])) as unknown as typeof fetch,
+  }
+  const found = await searchNearbySaanSeoiPlaces(client, {
+    ...input, filters: { taxonomyCategory: 'food_and_drink' },
+  })
+  expect(found.candidates.map(candidate => candidate.placeId)).toEqual(['matching'])
+  expect(found.limited).toBe(false)
+  expect(found.partial).toBe(false)
 })

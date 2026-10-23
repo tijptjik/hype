@@ -1,5 +1,6 @@
 // VALIDATION
 import { z } from 'zod'
+import { PlaceSearchFiltersSchema } from './placeSearchFilters'
 // ADDRESS
 import { getAddressDisplay, getAddressLocale } from '#lib/addresses/featureAddress.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
@@ -8,6 +9,7 @@ import { locationDistance } from './searchPresentation'
 
 export const DiscoveryRadiusSchema = z.number().int().min(50).max(1000)
 export const NearbyPlacesInputSchema = z.strictObject({
+  filters: PlaceSearchFiltersSchema.optional(),
   coordinates: z.tuple([
     z.number().finite().min(113.7).max(114.6),
     z.number().finite().min(22.1).max(22.6),
