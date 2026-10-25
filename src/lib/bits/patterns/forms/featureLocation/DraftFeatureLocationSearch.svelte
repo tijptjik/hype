@@ -2,8 +2,10 @@
 // SVELTE
 import { onDestroy, tick, untrack, type Snippet } from 'svelte'
 import { flip } from 'svelte/animate'
+import { slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 // COMPONENTS
+import { searchBuildingNames } from '#lib/locations/buildingSearch.js'
 import { groupDraftSearchResults } from '#lib/locations/draftSearchGroups.js'
 import AddressSearchParts from './AddressSearchParts.svelte'
 import PlaceSearchFiltersPanel from './PlaceSearchFilters.svelte'
@@ -14,10 +16,7 @@ import {
 } from '#lib/locations/searchPresentation.js'
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 // ICONS
-import {
-  loadAddressNames,
-  structurePlaceAddress,
-} from '#lib/addresses/nameCatalogue.js'
+import { loadAddressNames, structurePlaceAddress } from '#lib/addresses/nameCatalogue.js'
 import UnlinkIcon from 'virtual:icons/lucide/unlink'
 import BackIcon from 'virtual:icons/lucide/arrow-left'
 import SearchIcon from 'virtual:icons/lucide/search'
@@ -45,7 +44,7 @@ const searchKinds = ['establishment', 'building', 'address'] as const
 
 type Result = {
   id: string
-  kind: 'establishment' | 'address'
+  kind: 'establishment' | 'building' | 'address'
   names: Record<string, string>
   taxonomyLabel?: string
   source?: { ssId: string; resourceReleaseId: string }
@@ -108,27 +107,21 @@ function setFindMode(mode: 'search' | 'pin'): void {
   void tick().then(() => {
     const target = mode === 'search' ? input : nearbyButton
     target?.focus()
-    if (!prefersReducedMotion.current)
-      target?.animate(
-        [
-          { boxShadow: '0 0 0 0 transparent', offset: 0 },
-          { boxShadow: '0 0 0 5px var(--color-primary)', offset: 0.2 },
-          { boxShadow: '0 0 0 5px var(--color-primary)', offset: 0.5 },
-          { boxShadow: '0 0 0 0 transparent' },
-        ],
-        { duration: 380, iterations: 3 },
-      )
+    if (!prefersReducedMotion.current) target?.animate(
+      [
+        { boxShadow: '0 0 0 0 transparent', offset: 0 },
+        { boxShadow: '0 0 0 5px var(--color-primary)', offset: 0.2 },
+        { boxShadow: '0 0 0 5px var(--color-primary)', offset: 0.5 },
+        { boxShadow: '0 0 0 0 transparent' },
+      ],
+      { duration: 380, iterations: 2 },
+    )
   })
 }
 let filters = $state<PlaceSearchFilters>({ operatingStatus: 'open' })
 let filtersOpen = $state(false)
 let filterButton: HTMLButtonElement | undefined = $state()
-const filterCount = $derived(
-  Object.entries(filters).filter(
-    ([key, value]) =>
-      Boolean(value) && !(key === 'operatingStatus' && value === 'open'),
-  ).length,
-)
+const filterCount = $derived(Object.entries(filters).filter(([key, value]) => Boolean(value) && !(key === 'operatingStatus' && value === 'open')).length)
 $effect(() => {
   onFilterPanelChange?.(filtersOpen ? filterPanel : undefined)
 })
@@ -147,8 +140,7 @@ function closeFilters(): void {
  */
 function applyFilters(value: PlaceSearchFilters): void {
   filters = { ...value }
-  if (value.basicCategory || value.taxonomyPrimary || value.taxonomyCategory)
-    includeShops = true
+  if (value.basicCategory || value.taxonomyPrimary || value.taxonomyCategory) includeShops = true
   expandedGroup = null
   selected = null
   accepted = false
@@ -168,29 +160,25 @@ function clearSearch(): void {
   previousQuery = ''
   hovered = null
   nearbyMode = false
-  void tick().then(() => {
-    if (findMode === 'search') input?.focus()
-  })
+  void tick().then(() => { if (findMode === 'search') input?.focus() })
 }
 let radius = $state(300)
 let nearbyMode = $state(false)
 let resultsElement: HTMLElement | undefined = $state()
 let includeShops = $state(true)
 let includeAddresses = $state(true)
-const hasPlaceCategory = $derived(
-  Boolean(filters.basicCategory || filters.taxonomyPrimary || filters.taxonomyCategory),
-)
+let includeBuildings = $state(true)
+const searchBuildings = $derived(includeBuildings && findMode === 'search')
+const hasPlaceCategory = $derived(Boolean(filters.basicCategory || filters.taxonomyPrimary || filters.taxonomyCategory))
 const searchAddresses = $derived(includeAddresses && !hasPlaceCategory)
 let subsetBackButton: HTMLButtonElement | undefined = $state()
-const hasSearchTypes = $derived(includeShops || searchAddresses)
+const hasSearchTypes = $derived(includeShops || searchAddresses || searchBuildings)
 let showSearchTypePrompt = $state(false)
 // Allow quick inclusion changes before replacing the search control with guidance.
 $effect(() => {
   showSearchTypePrompt = false
   if (hasSearchTypes) return
-  const promptTimer = setTimeout(() => {
-    showSearchTypePrompt = true
-  }, 2000)
+  const promptTimer = setTimeout(() => { showSearchTypePrompt = true }, 2000)
   return () => clearTimeout(promptTimer)
 })
 let selected = $state<Result | null>(null)
@@ -203,9 +191,10 @@ let previousRows: Result[] = []
 let previousQuery = ''
 let previousScrollTop = 0
 let receivedRows = $state.raw<Result[]>([])
+let requestedKinds = new Set<Result['kind']>()
 // Keep provider ranking within each kind while late responses reorder both list and map.
 const rows = $derived(
-  receivedRows.toSorted(
+  receivedRows.filter(row => row.kind === 'establishment' ? includeShops : row.kind === 'building' ? searchBuildings : searchAddresses).toSorted(
     (a, b) => searchKinds.indexOf(a.kind) - searchKinds.indexOf(b.kind),
   ),
 )
@@ -221,6 +210,7 @@ let placesFailed = $state(false)
 let placesPartial = $state(false)
 let placesLimited = $state(false)
 let addressesFailed = $state(false)
+let buildingsFailed = $state(false)
 let hovered = $state<string | null>(null)
 let searched = $state(false)
 let timer: ReturnType<typeof setTimeout> | undefined
@@ -244,6 +234,7 @@ function schedule(): void {
   placesPartial = false
   placesLimited = false
   addressesFailed = false
+  buildingsFailed = false
   searched = false
   loading = Boolean(query.trim()) && hasSearchTypes
   if (query.trim() && hasSearchTypes) timer = setTimeout(() => void search(), 300)
@@ -260,6 +251,7 @@ async function search(nearby = false): Promise<void> {
     return
   }
   loading = true
+  requestedKinds = new Set(searchKinds.filter(kind => kind === 'establishment' ? includeShops : kind === 'building' ? searchBuildings && !nearby : searchAddresses))
   addressController?.abort()
   addressController = new AbortController()
   receivedRows = []
@@ -267,8 +259,9 @@ async function search(nearby = false): Promise<void> {
   placesPartial = false
   placesLimited = false
   addressesFailed = false
+  buildingsFailed = false
   searched = false
-  let pending = Number(includeShops) + Number(searchAddresses)
+  let pending = Number(includeShops) + Number(searchAddresses) + Number(searchBuildings && !nearby)
   // Publish each provider immediately; a slow provider must not hide usable results.
   const finish = (): void => {
     if (request !== version) return
@@ -277,31 +270,38 @@ async function search(nearby = false): Promise<void> {
     searched = true
   }
   await Promise.allSettled([
+    searchBuildings && !nearby
+      ? searchBuildingNames(q, getLocaleKey(), () => request === version)
+          .then(buildings => { if (request === version) receivedRows = [...receivedRows, ...buildings] })
+          .catch(() => { if (request === version) buildingsFailed = true })
+          .finally(finish)
+      : Promise.resolve(),
     includeShops
       ? Promise.resolve(
           nearby && coordinates
             ? searchNearbyDraftLocations({ coordinates, radius, filters })
             : searchDraftLocations({ q, locale: getLocale(), limit: 5, filters }),
         )
-          .then(places => {
+          .then(async places => {
+            const streets = await loadAddressNames('streets').catch(() => [])
             if (request !== version) return
             placesPartial = places.partial
             placesLimited = 'limited' in places && places.limited === true
             receivedRows = [
-              ...rows,
+              ...receivedRows,
               ...places.rows.map(place => ({
                 id: `place:${place.id}`,
                 kind: 'establishment' as const,
                 source: { ssId: place.id, resourceReleaseId: place.resourceReleaseId },
                 names: place.facts.names,
                 taxonomyLabel: placeTaxonomyLabel(place.facts.classification),
-                address: {
+                address: structurePlaceAddress({
                   version: 1 as const,
                   source: place.facts.location.address,
                   coordinates: place.facts.location.geometry.coordinates,
                   matchStatus: place.facts.location.address.status,
                   overrides: {},
-                },
+                }, streets),
               })),
             ]
           })
@@ -325,7 +325,7 @@ async function search(nearby = false): Promise<void> {
           .then(addresses => {
             if (request !== version) return
             receivedRows = [
-              ...rows,
+              ...receivedRows,
               ...addresses.flatMap(result => {
                 const address = result.addressMeta.address
                 if (
@@ -396,7 +396,16 @@ function publishMarkers(): void {
   untrack(() =>
     onMapCandidates?.(markers, id => {
       const result = rows.find(row => row.id === id)
-      if (result) choose(result)
+      if (result) {
+        choose(result)
+        void tick().then(() => {
+          const row = Array.from(resultsElement?.querySelectorAll<HTMLElement>('[data-result-id]') ?? []).find(element => element.dataset.resultId === id)
+          if (row && resultsElement) resultsElement.scrollTo({
+            top: resultsElement.scrollTop + row.getBoundingClientRect().top - resultsElement.getBoundingClientRect().top - (resultsElement.clientHeight - row.clientHeight) / 2,
+            behavior: prefersReducedMotion.current ? 'instant' : 'smooth',
+          })
+        })
+      }
     }),
   )
 }
@@ -413,7 +422,7 @@ function choose(result: Result): void {
   loading = false
   searched = false
   previousScrollTop = resultsElement?.scrollTop ?? 0
-  previousRows = rows
+  previousRows = receivedRows
   previousQuery = query
   selected = result
   hovered = null
@@ -424,18 +433,11 @@ function choose(result: Result): void {
  * @param result Source row. @param nameMode Whether names follow the linked place.
  * @returns Nothing.
  */
-async function acceptResult(
-  result: Result,
-  nameMode: 'independent' | 'inherit',
-): Promise<void> {
+async function acceptResult(result: Result, nameMode: 'independent' | 'inherit'): Promise<void> {
   if (selected?.id !== result.id) choose(result)
   if (result.kind === 'establishment') {
     let streets: Awaited<ReturnType<typeof loadAddressNames>> = []
-    try {
-      streets = await loadAddressNames('streets')
-    } catch {
-      /* Preserve source text when the catalogue is unavailable. */
-    }
+    try { streets = await loadAddressNames('streets') } catch { /* Preserve source text when the catalogue is unavailable. */ }
     if (selected?.id !== result.id || accepted) return
     result = { ...result, address: structurePlaceAddress(result.address, streets) }
     selected = result
@@ -486,11 +488,16 @@ export function addManualLocation(): void {
  */
 function openResult(result: Result): void {
   const group = groups.find(group => group.representative.id === result.id)
-  if (!currentGroup && group && group.members.length > 1) {
+  if (!currentGroup && group && group.expandable) {
     expandedGroup = result.id
     void tick().then(() =>
       resultsElement?.querySelector<HTMLButtonElement>('[data-result-id]')?.focus(),
     )
+    return
+  }
+  // A second click confirms an already previewed address; establishments keep their explicit name choices.
+  if (selected?.id === result.id && result.kind !== 'establishment') {
+    void acceptResult(result, 'independent')
     return
   }
   choose(result)
@@ -532,11 +539,8 @@ onDestroy(() => {
 function handleResultTab(event: KeyboardEvent, index: number): void {
   if (event.key !== 'Tab' || event.shiftKey || index !== visibleRows.length - 1) return
   const target = event.currentTarget as HTMLButtonElement
-  const controls = target
-    .closest('[data-search-result]')
-    ?.querySelectorAll<HTMLButtonElement>('button:not([disabled]):not([tabindex="-1"])')
-  if (controls?.[controls.length - 1] === target && onResultsEnd?.())
-    event.preventDefault()
+  const controls = target.closest('[data-search-result]')?.querySelectorAll<HTMLButtonElement>('button:not([disabled]):not([tabindex="-1"])')
+  if (controls?.[controls.length - 1] === target && onResultsEnd?.()) event.preventDefault()
 }
 </script>
 {#snippet filterPanel()}
@@ -546,9 +550,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
     onClose={closeFilters}
   />
 {/snippet}
-{#snippet searchControl(
-  coordinatesControl?: Snippet,
-)}
+{#snippet searchControl(coordinatesControl?: Snippet)}
   {#if selected && accepted}
     <div class="flex min-w-0 items-center gap-3">
       <button
@@ -565,14 +567,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       />
       <span class="min-w-0 truncate font-medium">{resultLabels(selected).title}</span>
       {#if linked}
-        <button
-          type="button"
-          class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
-          onclick={() => {
-            linked = false
-            onUnlink?.()
-          }}
-        >
+        <button type="button" class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted" onclick={() => { linked = false; onUnlink?.() }}>
           <UnlinkIcon class="size-4" aria-hidden="true" />{m.account__unlink()}
         </button>
       {/if}
@@ -596,7 +591,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 ? includeShops
                 : kind === 'address'
                   ? includeAddresses
-                  : false}
+                  : includeBuildings && findMode === 'search'}
             {@const label =
               kind === 'establishment'
                 ? m.feature_search_shops()
@@ -608,17 +603,24 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               style:--search-color={locationSearchColor(kind)}
               aria-label={label}
               aria-pressed={enabled}
-              title={kind === 'building'
-                ? m.feature_search_buildings_unavailable()
+              title={kind === 'building' && findMode === 'pin'
+                ? m.feature_search_buildings_name_only()
                 : label}
-              disabled={kind === 'building'}
+              disabled={kind === 'building' && findMode === 'pin'}
               onclick={() => {
                 if (kind === 'establishment') {
                   includeShops = !includeShops
                   if (!includeShops) filtersOpen = false
                 }
+                if (kind === 'building') includeBuildings = !includeBuildings
                 if (kind === 'address') includeAddresses = !includeAddresses
-                if (findMode === 'pin') void search(true)
+                // Existing provider results stay cached while type toggles filter list and map.
+                if (receivedRows.length && (enabled || requestedKinds.has(kind))) {
+                  selected = null
+                  hovered = null
+                  expandedGroup = null
+                  searched = true
+                } else if (findMode === 'pin') void search(true)
                 else schedule()
               }}
               class="flex size-9 items-center justify-center rounded-md text-muted-foreground dark:text-white transition-colors hover:bg-muted aria-pressed:bg-[var(--search-color)] aria-pressed:text-white focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-30"
@@ -630,63 +632,63 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       </fieldset>
       <div class="flex min-w-0 basis-64 flex-1 items-center justify-center gap-3">
         {#if showSearchTypePrompt && !hasSearchTypes}
-          <p
-            role="status"
-            class="flex min-h-12 w-full items-center justify-center text-center text-sm text-muted-foreground"
-          >
+          <p role="status" class="flex min-h-12 w-full items-center justify-center text-center text-sm text-muted-foreground">
             {m.feature_search_select_types()}
           </p>
         {:else if findMode === 'search'}
-          <div class="relative min-w-0 flex-1">
-            <input
-              bind:this={input}
-              bind:value={query}
-              oninput={schedule}
-              maxlength="200"
-              aria-label={m.feature_start_search()}
-              placeholder={m.feature_start_search()}
-              class="w-full min-w-0 rounded-lg border border-border bg-panel py-3 pr-12 pl-4 text-foreground outline-none focus:ring-2 focus:ring-primary"
-              onkeydown={event => {
-                if (event.key === 'Tab' && !event.shiftKey && rows.length) {
-                  const first =
-                    resultsElement?.querySelector<HTMLButtonElement>('[data-result-id]')
-                  if (first) {
-                    event.preventDefault()
-                    first.focus()
-                  }
-                }
-                if (event.key === 'Enter') {
+        <div class="flex min-w-0 flex-1 items-center rounded-lg border border-border bg-panel focus-within:ring-2 focus-within:ring-primary">
+          <input
+            bind:this={input}
+            bind:value={query}
+            oninput={schedule}
+            maxlength="200"
+            aria-label={m.feature_start_search()}
+            placeholder={m.feature_start_search()}
+            class="w-full min-w-0 flex-1 rounded-lg bg-transparent py-3 pl-4 pr-2 text-foreground outline-none"
+            onkeydown={event => {
+              if (event.key === 'Tab' && !event.shiftKey && rows.length) {
+                const first =
+                  resultsElement?.querySelector<HTMLButtonElement>('[data-result-id]')
+                if (first) {
                   event.preventDefault()
-                  clearTimeout(timer)
-                  void search()
+                  first.focus()
                 }
-              }}
-            >
-            <button
-              type="button"
-              aria-label={searched || rows.length
-                ? m.feature_search_clear()
-                : m.feature_search_submit()}
-              title={searched || rows.length
-                ? m.feature_search_clear()
-                : m.feature_search_submit()}
-              disabled={!searched && !rows.length && (!query.trim() || !hasSearchTypes)}
-              onclick={() => {
-                if (searched || rows.length) clearSearch()
-                else {
-                  clearTimeout(timer)
-                  void search()
-                }
-              }}
-              class="absolute inset-y-1 right-1 flex w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40"
-            >
-              {#if searched || rows.length}
-                <ClearIcon class="size-5" aria-hidden="true" />
-              {:else}
-                <SearchIcon class="size-5" aria-hidden="true" />
-              {/if}
-            </button>
-          </div>
+              }
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                clearTimeout(timer)
+                void search()
+              }
+            }}
+          >
+          {#if !loading && (rows.length || searched)}
+            <span role="status" class="shrink-0 px-2 text-xs text-muted-foreground">{m.feature_search_result_count({ count: visibleRows.length })}</span>
+          {/if}
+          <button
+            type="button"
+            aria-label={searched || rows.length
+              ? m.feature_search_clear()
+              : m.feature_search_submit()}
+            title={searched || rows.length
+              ? m.feature_search_clear()
+              : m.feature_search_submit()}
+            disabled={!searched && !rows.length && (!query.trim() || !hasSearchTypes)}
+            onclick={() => {
+              if (searched || rows.length) clearSearch()
+              else {
+                clearTimeout(timer)
+                void search()
+              }
+            }}
+            class="mr-1 flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40"
+          >
+            {#if searched || rows.length}
+              <ClearIcon class="size-5" aria-hidden="true" />
+            {:else}
+              <SearchIcon class="size-5" aria-hidden="true" />
+            {/if}
+          </button>
+        </div>
         {:else if hasPin && coordinates}
           <button
             type="button"
@@ -697,46 +699,35 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
           >
             {m.feature_search_nearby()}
           </button>
-        {/if}
-        <button
-          bind:this={filterButton}
-          type="button"
-          aria-label={m.feature_search_filters()}
-          title={m.feature_search_filters()}
-          aria-expanded={filtersOpen}
-          disabled={!includeShops}
-          onclick={() => (filtersOpen = !filtersOpen)}
-          class="relative flex size-11 shrink-0 items-center justify-center rounded-lg border border-border bg-panel text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40"
-        >
-          <FilterIcon class="size-5" aria-hidden="true" />
-          {#if filterCount}
-            <span
-              class="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white"
-              >{filterCount}</span
-            >
+          {#if !loading && (rows.length || searched)}
+            <span role="status" class="shrink-0 text-xs text-muted-foreground">{m.feature_search_result_count({ count: visibleRows.length })}</span>
           {/if}
-        </button>
+        {/if}
+      <button
+        bind:this={filterButton}
+        type="button"
+        aria-label={m.feature_search_filters()}
+        title={m.feature_search_filters()}
+        aria-expanded={filtersOpen}
+        disabled={!includeShops}
+        onclick={() => (filtersOpen = !filtersOpen)}
+        class="relative flex size-11 shrink-0 items-center justify-center rounded-lg border border-border bg-panel text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40"
+      >
+        <FilterIcon class="size-5" aria-hidden="true" />
+        {#if filterCount}
+          <span
+            class="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white"
+            >{filterCount}</span
+          >
+        {/if}
+      </button>
       </div>
       {#if findMode === 'pin' && coordinatesControl}
         <div class="min-w-0 shrink-0">{@render coordinatesControl()}</div>
       {/if}
-      <fieldset
-        aria-label={m.feature_find_by()}
-        class="inline-flex shrink-0 rounded-lg border border-border bg-muted/40 p-1"
-      >
+      <fieldset  aria-label={m.feature_find_by()} class="inline-flex shrink-0 rounded-lg border border-border bg-muted/40 p-1">
         {#each ['search', 'pin'] as mode}
-          <button
-            type="button"
-            aria-label={mode === 'search'
-              ? `${m.feature_find_by()} ${m.feature_find_search()}`
-              : m.feature_find_pin()}
-            aria-pressed={findMode === mode}
-            disabled={mode === 'pin' && !onDropPin}
-            onclick={() => setFindMode(mode as 'search' | 'pin')}
-            class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors aria-pressed:bg-panel aria-pressed:text-foreground aria-pressed:shadow-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40"
-          >
-            {mode === 'search' ? m.feature_find_search() : m.feature_find_pin()}
-          </button>
+          <button type="button" aria-label={mode === 'search' ? `${m.feature_find_by()} ${m.feature_find_search()}` : m.feature_find_pin()} aria-pressed={findMode === mode} disabled={mode === 'pin' && !onDropPin} onclick={() => setFindMode(mode as 'search' | 'pin')} class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors aria-pressed:bg-panel aria-pressed:text-foreground aria-pressed:shadow-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40">{mode === 'search' ? m.feature_find_search() : m.feature_find_pin()}</button>
         {/each}
       </fieldset>
     </div>
@@ -747,52 +738,22 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
 {/snippet}
 {#snippet searchResults()}
   {#if !accepted && !loading && !searched && !rows.length}
-    <section
-      aria-label={m.feature_find_by()}
-      class="flex flex-1 items-center justify-center px-6 py-10"
-    >
-      <div
-        class="grid w-full max-w-4xl gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border/60"
-      >
+    <section aria-label={m.feature_find_by()} class="flex flex-1 items-center justify-center px-6 py-10">
+      <div class="grid w-full max-w-4xl gap-8 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border/60">
         {#each ['search', 'pin', 'manual'] as choice}
           <div class="flex flex-col items-center gap-4 px-6 text-center">
             <p class="max-w-64 text-sm leading-relaxed text-muted-foreground">
-              <strong
-                class="mb-2 block text-lg font-semibold leading-snug text-foreground"
-                >{choice === 'search'
-                  ? m.feature_find_search_lead()
-                  : choice === 'pin'
-                    ? m.feature_find_pin_lead()
-                    : m.feature_find_manual_lead()}</strong
-              >
-              {choice === 'search'
-                ? m.feature_find_search_detail()
-                : choice === 'pin'
-                  ? m.feature_find_pin_detail()
-                  : m.feature_find_manual_detail()}
+              <strong class="mb-2 block text-lg font-semibold leading-snug text-foreground">{choice === 'search' ? m.feature_find_search_lead() : choice === 'pin' ? m.feature_find_pin_lead() : m.feature_find_manual_lead()}</strong>
+              {choice === 'search' ? m.feature_find_search_detail() : choice === 'pin' ? m.feature_find_pin_detail() : m.feature_find_manual_detail()}
             </p>
-            <button
-              type="button"
-              disabled={choice !== 'search' && !onDropPin}
-              onclick={() =>
-                choice === 'manual'
-                  ? onManualEntry?.()
-                  : setFindMode(choice as 'search' | 'pin')}
-              class="mt-auto rounded-lg px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40"
-            >
-              {choice === 'search'
-                ? m.feature_find_name()
-                : choice === 'pin'
-                  ? m.feature_find_location()
-                  : m.feature_search_manual_location()}
-            </button>
+            <button type="button" disabled={choice !== 'search' && !onDropPin} onclick={() => choice === 'manual' ? onManualEntry?.() : setFindMode(choice as 'search' | 'pin')} class="mt-auto rounded-lg px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40">{choice === 'search' ? m.feature_find_name() : choice === 'pin' ? m.feature_find_location() : m.feature_search_manual_location()}</button>
           </div>
         {/each}
       </div>
     </section>
   {/if}
   {#if !accepted && (loading || searched || rows.length)}
-    <div class="flex min-h-0 flex-1 flex-col px-6 py-2" aria-busy={loading}>
+    <div class="flex min-h-0 flex-1 flex-col px-6" aria-busy={loading}>
       {#if loading && !rows.length}
         <div
           role="status"
@@ -819,54 +780,44 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       {#if placesLimited && searched}
         <p role="status" class="py-2 text-sm">{m.feature_start_places_limited()}</p>
       {/if}
+      {#if buildingsFailed && searched}
+        <p role="status" class="py-2 text-sm">{m.feature_search_buildings_failed()}</p>
+      {/if}
       {#if addressesFailed && searched}
         <p role="status" class="py-2 text-sm">{m.feature_start_addresses_failed()}</p>
       {/if}
-      {#if rows.length || searched}
-        <p
-          role="status"
-          class="flex items-center gap-2 py-2 text-xs text-muted-foreground"
-        >
-          {m.feature_search_result_count({ count: visibleRows.length })}
-          {#if loading}
-            <span
-              class="size-3 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none"
-              role="img"
-              aria-label={m.resource_loading()}
-            ></span>
-          {/if}
-        </p>
-      {/if}
-      {#if currentGroup || selected}
-        <button
-          bind:this={subsetBackButton}
-          type="button"
-          class="flex items-center gap-2 py-2 text-sm"
-          onclick={() => {
-            selected = null
-            hovered = null
-            expandedGroup = null
-            void tick().then(() => input?.focus())
-          }}
-        >
-          <BackIcon class="size-4" /> {m.feature_start_back_results()}
-        </button>
+      {#if currentGroup}
+        <div class="flex items-center" transition:slide={{ duration: prefersReducedMotion.current ? 0 : 160 }}>
+          <button
+            bind:this={subsetBackButton}
+            type="button"
+            class="flex items-center gap-2 py-2 text-sm"
+            onclick={() => {
+              selected = null
+              hovered = null
+              expandedGroup = null
+              void tick().then(() => input?.focus())
+            }}
+          >
+            <BackIcon class="size-4" /> {m.feature_start_back_results()}
+          </button>
+        </div>
       {/if}
       <section
         bind:this={resultsElement}
-        class="min-h-0 max-h-100 flex-1 overflow-y-auto overscroll-contain scroll-py-12 pb-12"
+        class="min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-py-12 pt-3 pb-16"
         aria-label={m.feature_start_search()}
       >
         {#each visibleRows as result, index (result.id)}
           {@const labels = resultLabels(result)}
           <div
             data-search-result={result.id}
-            class="flex items-center gap-3 border-b border-border/50 last:border-0"
+            class="relative flex items-center gap-3 rounded-md border-b border-border/50 transition-colors hover:bg-muted focus-within:bg-primary/10 last:border-0 [&:has([data-result-actions])_[data-division-class=town]]:invisible"
             animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180 }}
           >
             <button
               type="button"
-              class="group flex min-h-20 min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-muted focus-visible:bg-primary/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+              class="group flex min-h-20 min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-6 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
               data-result-id={result.id}
               data-result-number={index + 1}
               data-result-kind={result.kind}
@@ -905,19 +856,14 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 kind={result.kind}
                 class="size-5 shrink-0 text-muted-foreground"
               />
-              <span class="min-w-0 flex-1">
-                {#if result.kind === 'establishment'}
-                  <span class="mb-2 block font-semibold text-foreground"
-                    >{labels.title}</span
-                  >
-                {/if}
-                <AddressSearchParts address={result.address} />
+              <span class="relative min-w-0 flex-1">
+                <AddressSearchParts address={result.address} numberSummary={currentGroup ? undefined : groups.find(group => group.representative.id === result.id)?.numberRange} establishmentTitle={result.kind === 'establishment' ? labels.title : undefined} taxonomyLabel={result.taxonomyLabel} primaryName={result.kind === 'building' ? labels.title : undefined} collapsed={!currentGroup && result.kind === 'address' && Boolean(groups.find(group => group.representative.id === result.id)?.expandable)} />
                 {#if !currentGroup &&
                   groups.find(
                     group =>
-                      group.representative.id === result.id && group.members.length > 1,
+                      group.representative.id === result.id && group.expandable,
                   )}
-                  <span class="mt-1 block text-xs text-muted-foreground"
+                  <span class="absolute left-0 top-full mt-1 text-xs text-muted-foreground"
                     >{m.feature_search_group_count({
                       count:
                         groups.find(group => group.representative.id === result.id)
@@ -927,74 +873,24 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 {/if}
               </span>
             </button>
-            {#if selected?.id === result.id &&
-              (currentGroup ||
-                !groups.some(
-                  group =>
-                    group.representative.id === result.id && group.members.length > 1,
-                ))}
-              <div
-                class="flex shrink-0 flex-wrap justify-end gap-2 pr-3"
-                data-result-actions={result.id}
-              >
+            {#if selected?.id === result.id && (currentGroup || !groups.some(group => group.representative.id === result.id && group.expandable))}
+              <div class={["flex shrink-0 flex-wrap justify-end gap-2 pr-3", result.kind !== 'establishment' && 'absolute right-0 top-1/2 -translate-y-1/2']} data-result-actions={result.id}>
                 {#if result.kind === 'establishment'}
-                  <button
-                    type="button"
-                    onkeydown={event => handleResultTab(event, index)}
-                    tabindex={selected?.id === result.id ? 0 : -1}
-                    class="rounded-md border border-primary px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
-                    onclick={() => acceptResult(result, 'independent')}
-                  >
-                    {m.feature_search_link_place()}
-                  </button>
-                  <button
-                    type="button"
-                    onkeydown={event => handleResultTab(event, index)}
-                    tabindex={selected?.id === result.id ? 0 : -1}
-                    class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-white"
-                    onclick={() => acceptResult(result, 'inherit')}
-                  >
-                    {m.feature_search_link_name()}
-                  </button>
+                  <button type="button" onkeydown={event => handleResultTab(event, index)} tabindex={selected?.id === result.id ? 0 : -1} class="rounded-md border border-primary bg-white px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-white" onclick={() => acceptResult(result, 'independent')}>{m.feature_search_link_place()}</button>
+                  <button type="button" onkeydown={event => handleResultTab(event, index)} tabindex={selected?.id === result.id ? 0 : -1} class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-white" onclick={() => acceptResult(result, 'inherit')}>{m.feature_search_link_name()}</button>
                 {:else}
-                  <button
-                    type="button"
-                    onkeydown={event => handleResultTab(event, index)}
-                    tabindex={selected?.id === result.id ? 0 : -1}
-                    class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-white"
-                    onclick={() => acceptResult(result, 'independent')}
-                  >
-                    {m.feature_search_use_address()}
-                  </button>
+                  <button type="button" onkeydown={event => handleResultTab(event, index)} tabindex={selected?.id === result.id ? 0 : -1} class="rounded-md bg-primary px-3 py-2 text-sm font-medium text-white" onclick={() => acceptResult(result, 'independent')}>{m.feature_search_use_address()}</button>
                 {/if}
               </div>
-            {:else if result.kind === 'establishment' && result.taxonomyLabel}
-              <span
-                class="w-1/3 shrink-0 px-3 text-right text-xs leading-relaxed text-muted-foreground"
-                >{result.taxonomyLabel}</span
-              >
+
             {/if}
           </div>
         {/each}
       </section>
-      {#if searched &&
-        !loading &&
-        !rows.length &&
-        !placesFailed &&
-        !placesPartial &&
-        !placesLimited &&
-        !addressesFailed}
+      {#if searched && !loading && !rows.length && !placesFailed && !placesPartial && !placesLimited && !addressesFailed && !buildingsFailed}
         <p class="py-3 text-sm">{m.feature_start_empty()}</p>
       {/if}
-      {#if searched && (placesFailed || placesPartial || addressesFailed)}
-        <button
-          type="button"
-          class="py-2 text-sm underline"
-          onclick={() => void search(nearbyMode)}
-        >
-          {m.feature_start_retry()}
-        </button>
-      {/if}
+
     </div>
   {/if}
 {/snippet}

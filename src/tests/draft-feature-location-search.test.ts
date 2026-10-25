@@ -12,18 +12,20 @@ import DraftSearch from '#lib/bits/patterns/forms/featureLocation/DraftFeatureLo
 Element.prototype.animate = () => ({ cancel() {} }) as Animation
 Element.prototype.getAnimations = () => []
 Element.prototype.scrollTo = () => {}
-vi.mock('svelte/transition', () => ({ fly: () => ({ duration: 0 }) }))
+vi.mock('svelte/transition', () => ({ fly: () => ({ duration: 0 }), slide: () => ({ duration: 0 }) }))
 const mocks = vi.hoisted(() => ({
   places: vi.fn(),
   addresses: vi.fn(),
   nearby: vi.fn(),
+  buildings: vi.fn().mockResolvedValue([]),
 }))
+vi.mock('#lib/locations/buildingSearch.js', () => ({ searchBuildingNames: mocks.buildings }))
 vi.mock('#lib/api/draftLocation.remote.js', () => ({
   searchDraftLocations: mocks.places,
   searchNearbyDraftLocations: mocks.nearby,
 }))
 vi.mock('#lib/addresses/nameCatalogue.js', async importOriginal => ({
-  ...(await importOriginal<typeof import('#lib/addresses/nameCatalogue.js')>()),
+  ...await importOriginal<typeof import('#lib/addresses/nameCatalogue.js')>(),
   loadAddressNames: vi.fn().mockResolvedValue([]),
 }))
 vi.mock('#lib/api/division.remote.js', () => ({
@@ -39,14 +41,7 @@ afterEach(() => {
 it('focuses after navigation, searches while typing and returns the selected editable draft', async () => {
   vi.useRealTimers()
   const facts = {
-    classification: {
-      basicCategory: 'bakery',
-      taxonomy: {
-        primary: 'bakery',
-        hierarchy: ['food_and_drink', 'bakery'],
-        alternates: ['cafe'],
-      },
-    },
+    classification: { basicCategory: 'bakery', taxonomy: { primary: 'bakery', hierarchy: ['food_and_drink', 'bakery'], alternates: ['cafe'] } },
     names: { en: 'Test Bakery' },
     location: {
       geometry: { type: 'Point', coordinates: [114.1, 22.3] },
@@ -55,8 +50,8 @@ it('focuses after navigation, searches while typing and returns the selected edi
         address2dId: null,
         address3dId: null,
         address3dUnitId: null,
-        addressSnapshotId: null,
-        records: {},
+        snapshotId: null,
+        rawSource: {},
         fallbackDisplay: { en: '1 Test Road' },
       },
     },
@@ -80,14 +75,12 @@ it('focuses after navigation, searches while typing and returns the selected edi
   await fireEvent.click(await screen.findByRole('button', { name: /Test Bakery/ }))
   expect(onSelect).not.toHaveBeenCalled()
   await fireEvent.click(screen.getByRole('button', { name: 'Link and use Name' }))
-  await waitFor(() =>
-    expect(onSelect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        names: { en: 'Test Bakery' },
-        address: expect.objectContaining({ coordinates: [114.1, 22.3] }),
-      }),
-    ),
-  )
+  await waitFor(() => expect(onSelect).toHaveBeenCalledWith(
+    expect.objectContaining({
+      names: { en: 'Test Bakery' },
+      address: expect.objectContaining({ coordinates: [114.1, 22.3] }),
+    }),
+  ))
 })
 
 it('publishes numbered map previews and highlights hovered rows without selecting them', async () => {
@@ -99,7 +92,7 @@ it('publishes numbered map previews and highlights hovered rows without selectin
         address: {
           version: 1,
           source: {
-            records: {},
+            rawSource: {},
             status: 'unresolved',
             address2dId: `address-${index}`,
             fallbackDisplay: { en: `Road ${index}` },
@@ -130,23 +123,34 @@ it('publishes numbered map previews and highlights hovered rows without selectin
   await waitFor(() =>
     expect(onMapCandidates.mock.lastCall?.[0][0].highlighted).toBe(false),
   )
+  const addresses = screen.getByRole('button', { name: 'Address', exact: true })
+  await fireEvent.click(addresses)
+  expect(document.querySelectorAll('[data-result-number]')).toHaveLength(0)
+  await waitFor(() => expect(onMapCandidates.mock.lastCall?.[0]).toHaveLength(0))
+  await fireEvent.click(addresses)
+  expect(document.querySelectorAll('[data-result-number]')).toHaveLength(7)
+  await waitFor(() => expect(onMapCandidates.mock.lastCall?.[0]).toHaveLength(7))
+  await new Promise(resolve => setTimeout(resolve, 350))
+  expect(mocks.addresses).toHaveBeenCalledTimes(1)
+  expect(mocks.places).toHaveBeenCalledTimes(1)
 })
 
-it('shows provider failures instead of an empty-match message and retries', async () => {
+it('shows provider failures without a retry footer and permits searching again', async () => {
   vi.useRealTimers()
   mocks.places.mockRejectedValue(new Error('unavailable'))
   mocks.addresses.mockRejectedValue(new Error('timeout'))
   render(DraftSearch, { active: true, focusRequest: 0, onSelect: vi.fn() })
   await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'Kirby' } })
-  const retry = await screen.findByRole('button', { name: /retry/i })
+  await screen.findByText(/Places search is unavailable/)
+  expect(screen.queryByRole('button', { name: /retry/i })).toBeNull()
   expect(screen.queryByText(/no matching/i)).toBeNull()
   mocks.places.mockResolvedValue({ rows: [], partial: false })
   mocks.addresses.mockResolvedValue([])
-  await fireEvent.click(retry)
+  await fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' })
   await waitFor(() =>
     expect(screen.queryByRole('button', { name: /retry/i })).toBeNull(),
   )
-  expect(mocks.places).toHaveBeenCalledTimes(2)
+  await waitFor(() => expect(mocks.places).toHaveBeenCalledTimes(2))
 })
 
 it('only drops a pin when map mode is explicitly requested', async () => {
@@ -182,6 +186,8 @@ it('renders loading skeletons without visible loading text while search is pendi
   expect(status.textContent?.trim()).toBe('')
   expect(status.querySelectorAll('[aria-hidden="true"]')).toHaveLength(3)
   expect(screen.queryByText('Loading resources')).toBeNull()
+  expect(screen.queryByText('0 results shown')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Retry search' })).toBeNull()
 })
 
 it('shows address results while places are pending and cancels obsolete lookups', async () => {
@@ -193,7 +199,7 @@ it('shows address results while places are pending and cancels obsolete lookups'
         address: {
           version: 1,
           source: {
-            records: {},
+            rawSource: {},
             status: 'unresolved',
             address2dId: 'first',
             fallbackDisplay: { en: 'Fast Road' },
@@ -232,7 +238,7 @@ it('shows places while addresses are pending and ignores late results after sele
           names: { en: 'Fast Place' },
           location: {
             geometry: { type: 'Point', coordinates: [114.1, 22.3] },
-            address: { status: 'unresolved', records: {}, fallbackDisplay: {} },
+            address: { status: 'unresolved', rawSource: {}, fallbackDisplay: {} },
           },
         },
       },
@@ -247,7 +253,7 @@ it('shows places while addresses are pending and ignores late results after sele
   expect(screen.queryByRole('button', { name: /Fast Place/ })).not.toBeNull()
 })
 
-it('restores the previous results and map numbers after an incorrect selection without refetching', async () => {
+it('keeps singleton results and map numbers visible without a back button or refetch', async () => {
   vi.useRealTimers()
   mocks.places.mockResolvedValue({ rows: [], partial: false })
   mocks.addresses.mockResolvedValue([
@@ -256,7 +262,7 @@ it('restores the previous results and map numbers after an incorrect selection w
         address: {
           version: 1,
           source: {
-            records: {},
+            rawSource: {},
             status: 'unresolved',
             address2dId: 'hollywood',
             fallbackDisplay: { en: 'Hollywood Terrace, 123 Hollywood Rd' },
@@ -289,7 +295,7 @@ it('restores the previous results and map numbers after an incorrect selection w
     }),
   )
   await fireEvent.click(row)
-  await fireEvent.click(screen.getByRole('button', { name: /back to results/i }))
+  expect(screen.queryByRole('button', { name: /back to results/i })).toBeNull()
   expect(onBack).not.toHaveBeenCalled()
   expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('hollywood')
   expect(
@@ -300,7 +306,7 @@ it('restores the previous results and map numbers after an incorrect selection w
   expect(mocks.addresses).toHaveBeenCalledTimes(1)
 })
 
-it('only requests enabled search types and keeps Building disabled', async () => {
+it('only requests enabled search types including Buildings', async () => {
   vi.useRealTimers()
   mocks.places.mockResolvedValue({ rows: [], partial: false })
   mocks.addresses.mockResolvedValue([])
@@ -309,7 +315,8 @@ it('only requests enabled search types and keeps Building disabled', async () =>
   const addresses = screen.getByRole('button', { name: 'Address' })
   expect(
     (screen.getByRole('button', { name: 'Building' }) as HTMLButtonElement).disabled,
-  ).toBe(true)
+  ).toBe(false)
+  await fireEvent.click(screen.getByRole('button', { name: 'Building' }))
   expect(shops.getAttribute('aria-pressed')).toBe('true')
   expect(addresses.getAttribute('aria-pressed')).toBe('true')
   await fireEvent.click(shops)
@@ -324,9 +331,7 @@ it('only requests enabled search types and keeps Building disabled', async () =>
   expect(
     (screen.getByRole('button', { name: 'Search' }) as HTMLButtonElement).disabled,
   ).toBe(true)
-  expect(
-    await screen.findByText('Select a search type.', {}, { timeout: 3000 }),
-  ).toBeTruthy()
+  expect(await screen.findByText('Select a search type.', {}, { timeout: 3000 })).toBeTruthy()
   expect(screen.queryByRole('textbox')).toBeNull()
   await fireEvent.click(shops)
   expect(screen.queryByText('Select a search type.')).toBeNull()
@@ -348,7 +353,7 @@ it('runs the search icon action immediately without repeating the debounced requ
   expect(mocks.places).toHaveBeenCalledTimes(1)
 })
 
-it('retains all markers during preview and restores results without a request', async () => {
+it('retains all markers and singleton results during preview without a back button', async () => {
   vi.useRealTimers()
   mocks.places.mockResolvedValue({ rows: [], partial: false })
   mocks.addresses.mockResolvedValue(
@@ -357,7 +362,7 @@ it('retains all markers during preview and restores results without a request', 
         address: {
           version: 1,
           source: {
-            records: {},
+            rawSource: {},
             status: 'unresolved',
             address2dId: String(index),
             fallbackDisplay: { en: 'Road ' + index },
@@ -390,7 +395,7 @@ it('retains all markers during preview and restores results without a request', 
     expect(markers[0]).toMatchObject({ selected: true, hidden: false })
     expect(markers[1]).toMatchObject({ selected: false, hidden: false })
   })
-  await fireEvent.click(screen.getByRole('button', { name: /back to results/i }))
+  expect(screen.queryByRole('button', { name: /back to results/i })).toBeNull()
   await waitFor(() =>
     expect(
       onMapCandidates.mock.lastCall?.[0].every(
@@ -483,7 +488,7 @@ it('renumbers the list and map when establishments arrive after addresses', asyn
         address: {
           version: 1,
           source: {
-            records: {},
+            rawSource: {},
             status: 'unresolved',
             address2dId: 'fast',
             fallbackDisplay: { en: 'Fast Road' },
@@ -514,7 +519,7 @@ it('renumbers the list and map when establishments arrive after addresses', asyn
           names: { en: 'Late Shop' },
           location: {
             geometry: { type: 'Point', coordinates: [114.2, 22.3] },
-            address: { status: 'unresolved', records: {}, fallbackDisplay: {} },
+            address: { status: 'unresolved', rawSource: {}, fallbackDisplay: {} },
           },
         },
       },
@@ -543,78 +548,36 @@ it('renumbers the list and map when establishments arrive after addresses', asyn
   expect(address.dataset.resultNumber).toBe('2')
 })
 
-it('expands a premises group in numeric order, then previews without accepting', async () => {
+it('expands a premises group in numeric order, then previews and accepts on a second row click', async () => {
   vi.useRealTimers()
   mocks.places.mockResolvedValue({ rows: [], partial: false })
-  mocks.addresses.mockResolvedValue(
-    ['219', '209-223', '211'].map(number => ({
-      addressMeta: {
-        address: {
-          version: 1,
-          source: {
-            status: 'unresolved',
-            records: {},
-            fallbackDisplay: {},
-            address2dId: number,
-          },
-          matchStatus: 'unresolved',
-          coordinates: [114.15, 22.3],
-          overrides: {
-            en: {
-              premisesName: 'Curios Court',
-              streetName: 'Hollywood Road',
-              buildingNumberExpression: number,
-            },
-          },
-        },
-      },
-    })),
-  )
-  const onSelect = vi.fn(),
-    onPreview = vi.fn()
+  mocks.addresses.mockResolvedValue(['219', '209-223', '211'].map(number => ({ addressMeta: { address: {
+    version: 1, source: { status: 'unresolved', rawSource: {}, fallbackDisplay: {}, address2dId: number },
+    matchStatus: 'unresolved', coordinates: [114.15, 22.3],
+    overrides: { en: { premisesName: 'Curios Court', streetName: 'Hollywood Road', buildingNumberExpression: number } },
+  } } })))
+  const onSelect = vi.fn(), onPreview = vi.fn()
   render(DraftSearch, { active: true, focusRequest: 0, onSelect, onPreview })
   await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'Curios' } })
   await fireEvent.click(await screen.findByRole('button', { name: /3 addresses/ }))
   const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-result-id]')]
-  expect(buttons.map(button => button.dataset.resultId?.split(':')[1])).toEqual([
-    '209-223',
-    '211',
-    '219',
-  ])
+  expect(buttons.map(button => button.dataset.resultId?.split(':')[1])).toEqual(['209-223', '211', '219'])
   expect(onPreview).not.toHaveBeenCalled()
   await fireEvent.click(buttons[0])
   expect(onPreview).toHaveBeenCalledTimes(1)
   expect(onSelect).not.toHaveBeenCalled()
-  await fireEvent.click(screen.getAllByRole('button', { name: 'Use Address' })[0])
+  expect(screen.getByRole('button', { name: 'Use Address' })).toBeTruthy()
+  await fireEvent.click(buttons[0])
   expect(onSelect).toHaveBeenCalledTimes(1)
 })
 
 it('unlinking an accepted place cancels the association without undoing copied fields', async () => {
   vi.useRealTimers()
-  mocks.places.mockResolvedValue({
-    rows: [
-      {
-        id: 'place',
-        resourceReleaseId: 'release',
-        facts: {
-          names: { en: 'Bakery' },
-          location: {
-            geometry: { type: 'Point', coordinates: [114.15, 22.3] },
-            address: {
-              status: 'unresolved',
-              records: {},
-              fallbackDisplay: { en: '1 Road' },
-            },
-          },
-        },
-      },
-    ],
-    partial: false,
-  })
+  mocks.places.mockResolvedValue({ rows: [{ id: 'place', resourceReleaseId: 'release', facts: {
+    names: { en: 'Bakery' }, location: { geometry: { type: 'Point', coordinates: [114.15, 22.3] }, address: { status: 'unresolved', rawSource: {}, fallbackDisplay: { en: '1 Road' } } },
+  } }], partial: false })
   mocks.addresses.mockResolvedValue([])
-  const onSelect = vi.fn(),
-    onUnlink = vi.fn(),
-    onBack = vi.fn()
+  const onSelect = vi.fn(), onUnlink = vi.fn(), onBack = vi.fn()
   render(DraftSearch, { active: true, focusRequest: 0, onSelect, onUnlink, onBack })
   await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'Bakery' } })
   await fireEvent.click(await screen.findByRole('button', { name: /Bakery/ }))
@@ -626,112 +589,54 @@ it('unlinking an accepted place cancels the association without undoing copied f
 })
 
 it.each([
-  {
-    partial: false,
-    limited: true,
-    message: /Showing a limited set of establishments/,
-    retry: false,
-  },
-  {
-    partial: true,
-    limited: false,
-    message: /Some sources could not be searched/,
-    retry: true,
-  },
-])(
-  'distinguishes nearby coverage $partial/$limited from an outage',
-  async ({ partial, limited, message, retry }) => {
-    vi.useRealTimers()
-    mocks.nearby.mockResolvedValue({
-      rows: [
-        {
-          id: 'bakery',
-          facts: {
-            names: { en: 'Available Bakery' },
-            location: {
-              geometry: { type: 'Point', coordinates: [114.15, 22.28] },
-              address: { status: 'unresolved', records: {}, fallbackDisplay: {} },
-            },
-          },
-        },
-      ],
-      partial,
-      limited,
-    })
-    mocks.addresses.mockResolvedValue([])
-    render(DraftSearch, {
-      active: true,
-      focusRequest: 0,
-      onSelect: vi.fn(),
-      onDropPin: vi.fn(),
-      hasPin: true,
-      coordinates: [114.15, 22.28],
-    })
-    await fireEvent.click(screen.getByRole('button', { name: 'Map pin' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Search Nearby' }))
-    expect(await screen.findByText(message)).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Available Bakery/ })).toBeTruthy()
-    expect(screen.queryByText(/Places search is unavailable/)).toBeNull()
-    expect(Boolean(screen.queryByRole('button', { name: /retry/i }))).toBe(retry)
-  },
-)
+  { partial: false, limited: true, message: /Showing a limited set of establishments/, retry: false },
+  { partial: true, limited: false, message: /Some sources could not be searched/, retry: false },
+])('distinguishes nearby coverage $partial/$limited from an outage', async ({ partial, limited, message, retry }) => {
+  vi.useRealTimers()
+  mocks.nearby.mockResolvedValue({
+    rows: [{ id: 'bakery', facts: {
+      names: { en: 'Available Bakery' },
+      location: {
+        geometry: { type: 'Point', coordinates: [114.15, 22.28] },
+        address: { status: 'unresolved', rawSource: {}, fallbackDisplay: {} },
+      },
+    } }],
+    partial,
+    limited,
+  })
+  mocks.addresses.mockResolvedValue([])
+  render(DraftSearch, {
+    active: true, focusRequest: 0, onSelect: vi.fn(), onDropPin: vi.fn(), hasPin: true,
+    coordinates: [114.15, 22.28],
+  })
+  await fireEvent.click(screen.getByRole('button', { name: 'Map pin' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Search Nearby' }))
+  expect(await screen.findByText(message)).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Available Bakery/ })).toBeTruthy()
+  expect(screen.queryByText(/Places search is unavailable/)).toBeNull()
+  expect(Boolean(screen.queryByRole('button', { name: /retry/i }))).toBe(retry)
+})
 
 it('Shift+Tab from the first subset row focuses its Back to results button', async () => {
   vi.useRealTimers()
   mocks.places.mockResolvedValue({ rows: [], partial: false })
-  mocks.addresses.mockResolvedValue(
-    ['1', '3'].map(number => ({
-      addressMeta: {
-        address: {
-          version: 1,
-          source: {
-            status: 'unresolved',
-            records: {},
-            fallbackDisplay: {},
-            address2dId: number,
-          },
-          matchStatus: 'unresolved',
-          coordinates: [114.15, 22.3],
-          overrides: {
-            en: {
-              premisesName: 'Tai Hing House',
-              streetName: 'Square Street',
-              buildingNumberExpression: number,
-            },
-          },
-        },
-      },
-    })),
-  )
+  mocks.addresses.mockResolvedValue(['1', '3'].map(number => ({ addressMeta: { address: { version: 1, source: { status: 'unresolved', rawSource: {}, fallbackDisplay: {}, address2dId: number }, matchStatus: 'unresolved', coordinates: [114.15, 22.3], overrides: { en: { premisesName: 'Tai Hing House', streetName: 'Square Street', buildingNumberExpression: number } } } } })))
   render(DraftSearch, { active: true, focusRequest: 0, onSelect: vi.fn() })
   await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'Tai Hing' } })
-  await fireEvent.click(await screen.findByRole('button', { name: /2 addresses/ }))
+  const collapsed = await screen.findByRole('button', { name: /2 addresses/ })
+  expect(collapsed.textContent).toContain('1-3 Square Street')
+  await fireEvent.click(collapsed)
+  expect(screen.getByText('1 Square Street')).toBeTruthy()
+  expect(screen.getByText('3 Square Street')).toBeTruthy()
   const first = document.querySelector<HTMLButtonElement>('[data-result-id]')!
   first.focus()
   await fireEvent.keyDown(first, { key: 'Tab', shiftKey: true })
-  expect(document.activeElement).toBe(
-    screen.getByRole('button', { name: 'Back to results' }),
-  )
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Back to results' }))
 })
 
 it('Link Place explicitly keeps Feature names independent', async () => {
   vi.useRealTimers()
-  mocks.places.mockResolvedValue({
-    rows: [
-      {
-        id: 'place',
-        resourceReleaseId: 'release',
-        facts: {
-          names: { en: 'Place name' },
-          location: {
-            geometry: { type: 'Point', coordinates: [114.15, 22.3] },
-            address: { status: 'unresolved', records: {}, fallbackDisplay: {} },
-          },
-        },
-      },
-    ],
-    partial: false,
-  })
+  mocks.places.mockResolvedValue({ rows: [{ id: 'place', resourceReleaseId: 'release', facts: { names: { en: 'Place name' }, location: { geometry: { type: 'Point', coordinates: [114.15, 22.3] }, address: { status: 'unresolved', rawSource: {}, fallbackDisplay: {} } } } }], partial: false })
   mocks.addresses.mockResolvedValue([])
   const onSelect = vi.fn()
   render(DraftSearch, { active: true, focusRequest: 0, onSelect })
@@ -739,37 +644,24 @@ it('Link Place explicitly keeps Feature names independent', async () => {
   expect(screen.queryByRole('button', { name: 'Link Place' })).toBeNull()
   await fireEvent.click(await screen.findByRole('button', { name: /Place name/ }))
   await fireEvent.click(await screen.findByRole('button', { name: 'Link Place' }))
-  expect(onSelect).toHaveBeenCalledWith(
-    expect.objectContaining({
-      nameMode: 'independent',
-      source: { ssId: 'place', resourceReleaseId: 'release' },
-    }),
-  )
+  expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ nameMode: 'independent', source: { ssId: 'place', resourceReleaseId: 'release' } }))
 })
 
 it('hands forward Tab from the last result to manual entry without intercepting Shift+Tab', async () => {
   vi.useRealTimers()
-  mocks.places.mockResolvedValue({
-    rows: [1, 2].map(number => ({
-      id: `tab-${number}`,
-      facts: {
-        names: { en: `Tab shop ${number}` },
-        location: {
-          geometry: { type: 'Point', coordinates: [114.15, 22.28] },
-          address: { status: 'unresolved', records: {}, fallbackDisplay: {} },
-        },
+  mocks.places.mockResolvedValue({ rows: [1, 2].map(number => ({
+    id: `tab-${number}`,
+    facts: {
+      names: { en: `Tab shop ${number}` },
+      location: {
+        geometry: { type: 'Point', coordinates: [114.15, 22.28] },
+        address: { status: 'unresolved', rawSource: {}, fallbackDisplay: {} },
       },
-    })),
-    partial: false,
-  })
+    },
+  })), partial: false })
   mocks.addresses.mockResolvedValue([])
   const onResultsEnd = vi.fn(() => true)
-  render(DraftSearch, {
-    active: true,
-    focusRequest: 0,
-    onSelect: vi.fn(),
-    onResultsEnd,
-  })
+  render(DraftSearch, { active: true, focusRequest: 0, onSelect: vi.fn(), onResultsEnd })
   await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'Tab shop' } })
   const first = await screen.findByRole('button', { name: /Tab shop 1/ })
   const last = await screen.findByRole('button', { name: /Tab shop 2/ })
@@ -779,9 +671,7 @@ it('hands forward Tab from the last result to manual entry without intercepting 
   expect(await fireEvent.keyDown(last, { key: 'Tab' })).toBe(false)
   expect(onResultsEnd).toHaveBeenCalledTimes(1)
   await fireEvent.click(last)
-  const actions = document.querySelectorAll<HTMLButtonElement>(
-    '[data-result-actions="place:tab-2"] button',
-  )
+  const actions = document.querySelectorAll<HTMLButtonElement>('[data-result-actions="place:tab-2"] button')
   expect(actions.length).toBe(2)
   await fireEvent.keyDown(last, { key: 'Tab' })
   await fireEvent.keyDown(actions[0], { key: 'Tab' })
@@ -790,19 +680,12 @@ it('hands forward Tab from the last result to manual entry without intercepting 
   expect(onResultsEnd).toHaveBeenCalledTimes(2)
 })
 
+
 it('guides name, map and manual entry with distinct controls', async () => {
   vi.useRealTimers()
   const onDropPin = vi.fn()
   const onManualEntry = vi.fn()
-  render(DraftSearch, {
-    active: true,
-    focusRequest: 0,
-    onSelect: vi.fn(),
-    onDropPin,
-    onManualEntry,
-    hasPin: true,
-    coordinates: [114.15, 22.28],
-  })
+  render(DraftSearch, { active: true, focusRequest: 0, onSelect: vi.fn(), onDropPin, onManualEntry, hasPin: true, coordinates: [114.15, 22.28] })
   expect(screen.queryByRole('button', { name: 'Drop Pin' })).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Search by location' }))
   expect(onDropPin).toHaveBeenCalledTimes(1)
@@ -813,4 +696,18 @@ it('guides name, map and manual entry with distinct controls', async () => {
   await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('textbox')))
   await fireEvent.click(screen.getByRole('button', { name: 'Add Manual Entry' }))
   expect(onManualEntry).toHaveBeenCalledTimes(1)
+})
+
+it('runs Buildings independently and accepts a building point and address', async () => {
+  vi.useRealTimers()
+  mocks.places.mockResolvedValue({rows:[],partial:false})
+  mocks.addresses.mockResolvedValue([])
+  mocks.buildings.mockResolvedValueOnce([{id:'building:b',kind:'building',names:{en:'Example Tower'},address:{version:1,coordinates:[114.1,22.3],matchStatus:'unresolved',overrides:{en:{buildingName:'Example Tower',streetName:'Test Road',buildingNumberFrom:'12'}},source:{status:'unresolved',address2dId:null,address3dId:null,address3dUnitId:null,snapshotId:null,rawSource:{},fallbackDisplay:{}}}}])
+  const onSelect=vi.fn()
+  render(DraftSearch,{active:true,focusRequest:0,onSelect})
+  await fireEvent.input(screen.getByRole('textbox'),{target:{value:'Example'}})
+  await waitFor(()=>expect(mocks.buildings).toHaveBeenCalledWith('Example','en',expect.any(Function)))
+  await fireEvent.click(await screen.findByRole('button',{name:/Example Tower/}))
+  await fireEvent.click(screen.getByRole('button',{name:'Use Address'}))
+  expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({kind:'building',address:expect.objectContaining({coordinates:[114.1,22.3]})}))
 })

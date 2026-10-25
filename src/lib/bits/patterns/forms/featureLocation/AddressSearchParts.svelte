@@ -19,15 +19,21 @@ import PinIcon from 'virtual:icons/lucide/map-pin'
 // TYPES
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 
-let { address }: { address: FeatureAddress } = $props()
+let { address, numberSummary, primaryName, collapsed = false, establishmentTitle, taxonomyLabel }: { address: FeatureAddress; numberSummary?: string; primaryName?: string; collapsed?: boolean; establishmentTitle?: string; taxonomyLabel?: string } = $props()
 // Remote queries are cached by source ID, so neighbouring results share label reads.
 const divisions = $derived(
   addressLocalityIds(address).map(id => getAddressDivisionLabel({ id })),
 )
-const parts = $derived(addressSearchParts(address, getLocaleKey()))
+const parts = $derived.by(() => {
+  const all = addressSearchParts(address, getLocaleKey(), numberSummary)
+  if (primaryName) return [{ kind: 'building' as const, text: primaryName }, ...all.filter(part => part.kind !== 'building' && part.text.toLocaleLowerCase() !== primaryName.toLocaleLowerCase())]
+  if (collapsed && all.some(part => part.kind === 'premises')) return all.filter(part => !['phase', 'block', 'building'].includes(part.kind))
+  return all
+})
 const localities = $derived(
   divisions
     .flatMap(query => (query.current ? [query.current] : []))
+    .sort((a, b) => (b.level ?? 0) - (a.level ?? 0) || localityRank(b.class) - localityRank(a.class))
     .filter(
       division =>
         Object.values(SUBJECTIVE_DIVISIONS).some(kind => kind === division.class) &&
@@ -36,6 +42,10 @@ const localities = $derived(
         ),
     ),
 )
+/** Rank source locality classes from broadest to most specific. @param kind Published class. @returns Relative specificity. */
+function localityRank(kind: string): number {
+  return ['town', 'rural_area', 'macrohood', 'neighbourhood', 'village', 'microhood', 'hamlet'].indexOf(kind)
+}
 const icons = {
   building: BuildingIcon,
   premises: PremisesIcon,
@@ -49,23 +59,26 @@ const icons = {
 }
 </script>
 
-<span class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-  {#each parts as part (part.text)}
-    {@const PartIcon = icons[part.kind]}
-    <span
-      class="inline-flex min-w-0 items-center gap-1.5"
-      data-address-part={part.kind}
-    >
-      <PartIcon class="size-4 shrink-0" aria-hidden="true" />
-      <span>{part.text}</span>
-    </span>
-  {/each}
-  {#each localities as division (division.id)}
-    {@const Locality =
-      divisionIcons[division.class as keyof typeof divisionIcons] ?? LocalityIcon}
-    <span class="inline-flex min-w-0 items-center gap-1.5" data-address-part="locality">
-      <Locality class="size-4 shrink-0" aria-hidden="true" />
-      <span>{addressDivisionName(division, getLocaleKey())}</span>
-    </span>
-  {/each}
+<span class="relative block min-w-0">
+  <span class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground" data-address-components>
+    {#if establishmentTitle}
+      <span class="font-semibold text-foreground">{establishmentTitle}</span>
+    {/if}
+    {#each parts as part (part.text)}
+      {@const PartIcon = icons[part.kind]}
+      <span class="inline-flex min-w-0 items-center gap-1.5" class:font-semibold={Boolean(primaryName) && part.kind === 'building'} class:text-foreground={Boolean(primaryName) && part.kind === 'building'} data-address-part={part.kind} data-division-class={part.localityClass}>
+        {#if !(primaryName && part.kind === 'building')}<PartIcon class="size-4 shrink-0" aria-hidden="true" />{/if}
+        <span>{part.text}</span>
+      </span>
+    {/each}
+    {#each localities as division (division.id)}
+      {@const Locality = divisionIcons[division.class as keyof typeof divisionIcons] ?? LocalityIcon}
+      <span class="inline-flex min-w-0 items-center gap-1.5" data-division-class={division.class} data-address-part="locality">
+        <Locality class="size-4 shrink-0" aria-hidden="true" /><span>{addressDivisionName(division, getLocaleKey())}</span>
+      </span>
+    {/each}
+  </span>
+  {#if establishmentTitle && taxonomyLabel}
+    <span class="mt-1 block overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground" data-result-taxonomy>{taxonomyLabel}</span>
+  {/if}
 </span>

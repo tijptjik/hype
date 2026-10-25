@@ -42,3 +42,45 @@ it('does not manufacture a range option when only individual numbers exist', () 
   expect(result.members.map(row => row.id)).toEqual(['2', '11'])
   expect(result.representative).toBe(rows[1])
 })
+
+it('summarises collapsed addresses as a range without changing expanded records', () => {
+  const rows = [row('3'), row('1')]
+  const group = groupDraftSearchResults(rows)[0]
+  expect(group.numberRange).toBe('1-3')
+  expect(
+    group.members.map(member => member.address.overrides.en?.buildingNumberExpression),
+  ).toEqual(['1', '3'])
+  expect(group.representative.address.overrides.en?.buildingNumberExpression).toBe('1')
+})
+it('includes existing range endpoints and sorts suffixes naturally', () => {
+  expect(groupDraftSearchResults([row('10'), row('2-4')])[0].numberRange).toBe('2-10')
+  expect(groupDraftSearchResults([row('1B'), row('1A')])[0].numberRange).toBe('1A-1B')
+})
+it('does not invent a span for missing or nonnumeric source expressions', () => {
+  expect(groupDraftSearchResults([row(''), row('3')])[0].numberRange).toBeUndefined()
+  expect(
+    groupDraftSearchResults([row('1 & 3'), row('5')])[0].numberRange,
+  ).toBeUndefined()
+})
+
+it('groups blocks and buildings under their premises, keeping singleton premises direct', () => {
+  const first = row('1')
+  const second = row('3')
+  first.address.overrides.en!.blockExpression = 'Block 1'
+  second.address.overrides.en!.blockExpression = 'Block 2'
+  first.address.overrides.en!.buildingName = 'First House'
+  second.address.overrides.en!.buildingName = 'Second House'
+  expect(groupDraftSearchResults([first, second])).toHaveLength(1)
+  expect(groupDraftSearchResults([first])[0].expandable).toBe(false)
+})
+
+it('keeps singleton buildings direct while grouping multiple building addresses', () => {
+  const first = row('1')
+  const second = row('3')
+  for (const candidate of [first, second]) {
+    candidate.address.overrides.en!.premisesName = ''
+    candidate.address.overrides.en!.buildingName = 'Tai Hing Building'
+  }
+  expect(groupDraftSearchResults([first])[0].expandable).toBe(false)
+  expect(groupDraftSearchResults([first, second])[0].expandable).toBe(true)
+})
