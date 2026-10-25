@@ -47,6 +47,7 @@
 ### Browser UI verification (Playwright)
 
 - Use the installed `playwright` package directly with Bun for manual UI checks; do not add a dependency solely for this.
+- For admin UI verification, use the user's existing authenticated browser session. A redirect from a fresh unauthenticated Playwright context does not establish that no admin session is available.
 - Start the app with `bun run dev -- --host 127.0.0.1 --port 4173`, then stop it after the check.
 - Launch Chromium with `args: ['--disable-web-security']` for local map verification: the development origin otherwise cannot load the external map tiles because of CORS.
 
