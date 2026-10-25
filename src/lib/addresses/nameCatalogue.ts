@@ -7,7 +7,6 @@ import { loadSaanseoiNames, loadBuildingNames } from '#lib/sources/saanseoi.js'
 // ADDRESS
 import { ADDRESS_LOCALES, getAddressLocale, setAddressOverride } from './featureAddress'
 import { prepareLocalLocationAddress } from './locationDraft'
-import { parseFloor } from './address3d'
 // TYPES
 import type { FeatureAddress } from './featureAddress'
 
@@ -95,13 +94,6 @@ export function structurePlaceAddress(
   const parsed = parseAddressContent(labels, matcher).content
   if (mallUnit) parsed.i18n.en = { ...parsed.i18n.en, premisesName: mallUnit[3], formattedAddress: '' }
   if (parsed.unit) {
-    // Normalize duplicated named-floor references emitted by the shared free-text parser.
-    const floorExpression = Object.values(parsed.unitI18n).find(value => value.floorExpression)?.floorExpression
-    if (floorExpression) {
-      const floor = parseFloor(floorExpression)
-      parsed.unit.floorRef = floor.floorRef ?? ''
-      parsed.unit.floorType = floor.floorType ?? 'X'
-    }
     content.unit = parsed.unit
     content.unitI18n = parsed.unitI18n
   }

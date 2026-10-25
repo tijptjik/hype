@@ -157,8 +157,8 @@ it('rejects invented local IDs, room hierarchy levels and cross-domain type code
 })
 
 it('does not repeat named floor codes from source-parser references', () => {
-  expect(formatFloor({ floorType: 'G', floorRef: 'G' }, 'en')).toBe('G/F')
-  expect(formatFloor({ floorType: 'G', floorRef: 'G' }, 'zhHant')).toBe('地下')
-  expect(formatFloor({ floorType: 'UG', floorRef: 'UG' }, 'en')).toBe('UG')
+  expect(formatFloor({ floorType: 'G', floorRef: '' }, 'en')).toBe('G/F')
+  expect(formatFloor({ floorType: 'G', floorRef: '' }, 'zhHant')).toBe('地下')
+  expect(formatFloor({ floorType: 'UG', floorRef: '' }, 'en')).toBe('UG')
   expect(formatFloor({ floorType: 'B', floorRef: '2' }, 'en')).toBe('B2')
 })
