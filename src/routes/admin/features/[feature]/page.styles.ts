@@ -11,7 +11,8 @@ type FeatureEditorLayoutState = {
   isVisualSectionCollapsed: boolean
 }
 
-export const FEATURE_EDITOR_ROOT_CLASS = 'px-0 pt-0 pb-6'
+// Floating navigation overlays the editor; the workspace extends to its bottom edge.
+export const FEATURE_EDITOR_ROOT_CLASS = 'p-0'
 
 export const FEATURE_EDITOR_FORM_CLASS = '[&>:not([hidden])~:not([hidden])]:mt-0'
 
@@ -48,7 +49,7 @@ export function getFeatureEditorFacetClass({
   isVisualSectionCollapsed,
 }: FeatureEditorLayoutState): string {
   return cx(
-    'left-0! right-0! bottom-6 transition-[opacity,transform]! duration-300! ease-out! motion-reduce:transition-none!',
+    'left-0! right-0! bottom-0 transition-[opacity,transform]! duration-300! ease-out! motion-reduce:transition-none!',
     isVisible ? 'translate-y-0' : 'translate-y-2',
     !showsVisualSection && 'top-0',
     showsVisualSection && isVisualSectionCollapsed && 'top-16',

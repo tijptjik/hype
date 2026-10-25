@@ -17,7 +17,7 @@ export interface MainFacetProps {
   nextAction?: FormFacetNavAction | null
   centerAction?: FormFacetNavAction | null
   fillHeight?: boolean
-  navMode?: 'centered' | 'footer'
+  navMode?: 'centered' | 'footer' | 'overlay'
   contentClass?: string
   edgeToEdge?: boolean
 }

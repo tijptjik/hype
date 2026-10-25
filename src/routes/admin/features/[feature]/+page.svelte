@@ -1693,7 +1693,7 @@ function handlePinDrop(nextCoordinates: number[]): void {
     if (draftMapController !== controller) return
     controller.easeTo({
       center: [nextCoordinates[0], nextCoordinates[1]],
-      zoom: Math.max(camera.zoom, Math.min(camera.zoom + 1, BUILDING_ZOOM)),
+      zoom: Math.max(camera.zoom, Math.min(camera.zoom + 2, BUILDING_ZOOM)),
       duration: prefersReducedMotion.current ? 0 : 520,
     })
   })
@@ -2586,7 +2586,7 @@ $effect(() => () => clearVisualSectionReopenState())
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
-      navMode="footer"
+      navMode="overlay"
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
@@ -2711,7 +2711,7 @@ $effect(() => () => clearVisualSectionReopenState())
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
-      navMode="footer"
+      navMode="overlay"
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
@@ -2777,7 +2777,7 @@ $effect(() => () => clearVisualSectionReopenState())
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
-      navMode="footer"
+      navMode="overlay"
       previousAction={isNewFeatureRef && draftSelectionBefore
         ? {
             text: m.feature_start_back_results(),
@@ -2796,7 +2796,7 @@ $effect(() => () => clearVisualSectionReopenState())
         : null}
       attrs={{ 'data-facet-id': 'address' }}
     >
-      <FormSurface class="flex h-full min-h-0 flex-col overflow-hidden">
+      <FormSurface class="mb-0! flex h-full min-h-0 flex-col overflow-hidden">
         {#key featureRef}
           {#snippet addressEditor(
             locationControl?: Snippet<[Snippet?]>,

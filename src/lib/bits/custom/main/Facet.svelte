@@ -77,19 +77,19 @@ const bodyStyle = $derived(
       ? `--bits-main-section-body-height: ${Math.max(0, bodyHeight)}px`
       : '--bits-main-section-body-height: auto',
     `padding-bottom: ${Math.max(0, bodyBottomPadding)}px`,
-    navMode === 'footer' && bodyHeight != null
-      ? `flex: 0 0 ${Math.max(0, bodyHeight)}px; height: ${Math.max(0, bodyHeight)}px`
-      : '',
+    navMode !== 'centered' && bodyHeight != null ? `flex: 0 0 ${Math.max(0, bodyHeight)}px; height: ${Math.max(0, bodyHeight)}px` : '',
   ].join('; '),
 )
 const tailSpacerStyle = $derived(`height: ${Math.max(0, tailSpacer)}px;`)
 const navShellClass = $derived(
-  cx('fixed z-[120] flex min-h-12 items-center pt-0 pointer-events-auto'),
+  cx('fixed z-[120] flex min-h-12 items-center pt-0', navMode === 'overlay' ? 'pointer-events-none [&_button]:pointer-events-auto' : 'pointer-events-auto'),
 )
 const navContentClass = 'min-h-12 py-0'
-const isViewportConstrainedFacet = $derived(navMode === 'footer')
+const isViewportConstrainedFacet = $derived(navMode !== 'centered')
 
 function getReservedBottomSpace(navHeight: number): number {
+  // Overlay navigation does not reserve a blank band below the content.
+  if (navMode === 'overlay') return 0
   if (isViewportConstrainedFacet) {
     return Math.max(FACET_BOTTOM_CLEARANCE, navHeight + FACET_FOOTER_GUTTER)
   }
@@ -215,8 +215,7 @@ function measureLayout(): void {
   const width = Math.max(0, Math.round(facetRect.width))
 
   // Move only the center action; previous/next navigation remains at the footer.
-  const bodyCenter =
-    facetRect.top + Math.max(0, availableHeight - getReservedBottomSpace(navHeight)) / 2
+  const bodyCenter = facetRect.top + Math.max(0, availableHeight - getReservedBottomSpace(navHeight)) / 2
   const navCenter = window.innerHeight - bottomInset - navHeight / 2
   navShellStyle =
     hasFacetNav && width > 0
@@ -328,11 +327,7 @@ onMount(() => {
       </div>
       {#if tailSpacer > 0}
         <!-- Clearance space must not intercept controls when asynchronous content grows. -->
-        <div
-          class="pointer-events-none flex-none"
-          aria-hidden="true"
-          style={tailSpacerStyle}
-        ></div>
+        <div class="pointer-events-none flex-none" aria-hidden="true" style={tailSpacerStyle}></div>
       {/if}
     </div>
   </section>
@@ -343,12 +338,7 @@ onMount(() => {
       class={navShellClass}
       style={navShellStyle}
     >
-      <FormFacetNav
-        {previousAction}
-        {nextAction}
-        {centerAction}
-        class={navContentClass}
-      />
+      <FormFacetNav {previousAction} {nextAction} {centerAction} class={navContentClass} />
     </div>
   {/if}
 {:else}
@@ -365,11 +355,7 @@ onMount(() => {
       </div>
       {#if tailSpacer > 0}
         <!-- Clearance space must not intercept controls when asynchronous content grows. -->
-        <div
-          class="pointer-events-none flex-none"
-          aria-hidden="true"
-          style={tailSpacerStyle}
-        ></div>
+        <div class="pointer-events-none flex-none" aria-hidden="true" style={tailSpacerStyle}></div>
       {/if}
     </div>
   </section>
@@ -380,12 +366,7 @@ onMount(() => {
       class={navShellClass}
       style={navShellStyle}
     >
-      <FormFacetNav
-        {previousAction}
-        {nextAction}
-        {centerAction}
-        class={navContentClass}
-      />
+      <FormFacetNav {previousAction} {nextAction} {centerAction} class={navContentClass} />
     </div>
   {/if}
 {/if}
