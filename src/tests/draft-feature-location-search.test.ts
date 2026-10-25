@@ -123,7 +123,7 @@ it('publishes numbered map previews and highlights hovered rows without selectin
   await waitFor(() =>
     expect(onMapCandidates.mock.lastCall?.[0][0].highlighted).toBe(false),
   )
-  const addresses = screen.getByRole('button', { name: 'Address', exact: true })
+  const addresses = screen.getByRole('button', { name: 'Address' })
   await fireEvent.click(addresses)
   expect(document.querySelectorAll('[data-result-number]')).toHaveLength(0)
   await waitFor(() => expect(onMapCandidates.mock.lastCall?.[0]).toHaveLength(0))
