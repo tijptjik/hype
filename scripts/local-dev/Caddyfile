@@ -16,7 +16,14 @@ http://atlas.localhost {
 
 http://api.atlas.localhost {
 	bind 127.0.0.1 ::1
-	reverse_proxy localhost:8787
+	# Release files are served by the separate local SaanSeoi export Worker.
+	@exports path /streets/v0.1/exports/* /buildings/v0.1/exports/* /divisions/v0.2/exports/* /divisions/v1/exports/*
+	handle @exports {
+		reverse_proxy 127.0.0.1:8793
+	}
+	handle {
+		reverse_proxy localhost:8787
+	}
 }
 
 http://harbour.localhost {

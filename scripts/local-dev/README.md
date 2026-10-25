@@ -8,6 +8,7 @@ The local Caddy router gives each app a stable browser URL while the processes u
 | <http://assets.hype.localhost> | Hype asset Worker       | 8790          |
 | <http://atlas.localhost>       | SaanSeoi Atlas app      | 5173          |
 | <http://api.atlas.localhost>   | SaanSeoi Atlas API      | 8787          |
+| <http://api.atlas.localhost/*/exports/> | SaanSeoi export Worker | 8793 |
 | <http://harbour.localhost>     | SaanSeoi Harbour API    | 8788          |
 | <http://basemaps.localhost>    | SaanSeoi basemap viewer | 5174          |
 
@@ -45,3 +46,18 @@ Better Auth derives callbacks from the incoming hostname. Register the new redir
 Provider consoles may reject HTTP redirect URIs whose host is not exactly `localhost`. If so, use a trusted local HTTPS certificate and a verified development subdomain of `hype.hk` or `saanseoi.hk` for that provider. Re-register passkeys for the new hostname because a passkey is bound to the hostname where it was created.
 
 To undo the workstation router, run `sudo systemctl disable --now caddy` and restore the saved `/etc/caddy/Caddyfile.before-hype-local-dev` if it exists.
+
+## Release exports
+
+Export paths are served separately from the Atlas API on port 8793. Start the
+`release-exports` app from the SaanSeoi workspace that contains that app. Its
+`EXPORT_PORT` setting must match Caddy. `EXPORT_PERSIST_PATH` can select a prepared
+local store; initialise an empty store using the SaanSeoi export bootstrap before
+expecting street/building catalogues to load. Do not reuse port 8790 (Hype assets).
+
+The installed workstation router may use different Atlas/Harbour ports from this
+example. Preserve those ports and other local hosts when adding the export matcher.
+The 2026-10-23 workstation uses Atlas on 8791 and Harbour on 8792, with export paths
+on 8793. Its prepared store currently lives in the release-export workspace at
+`.local/export-preview-proof`; launch that app with
+`EXPORT_PERSIST_PATH=../../.local/export-preview-proof bun run dev`.
