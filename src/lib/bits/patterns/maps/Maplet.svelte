@@ -141,6 +141,7 @@ $effect(() => {
     }
   }
   if (!target) return
+  let entranceIndex = 0
   for (const candidate of candidates) {
     let marker = candidateMarkers.get(candidate.id)
     if (!marker) {
@@ -150,7 +151,10 @@ $effect(() => {
         'flex size-9 items-center justify-center rounded-full border-2 border-white text-white font-bold shadow-lg hover:ring-4 hover:ring-[var(--search-color)]/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--search-color)]'
       button.dataset.locationCandidate = candidate.id
       button.onclick = () => mapProps.onLocationCandidateSelect?.(candidate.id)
-      marker = new maplibregl.Marker({ element: button })
+      // Fade a separate shell so MapLibre positioning and visibility remain independent.
+      const shell = document.createElement('div')
+      shell.append(button)
+      marker = new maplibregl.Marker({ element: shell })
         .setLngLat(candidate.coordinates)
         .addTo(target)
       marker.on('dragend', () => {
@@ -158,6 +162,14 @@ $effect(() => {
         if (position) mapProps.dragEndCallback?.(position.toArray())
       })
       candidateMarkers.set(candidate.id, marker)
+      if (!prefersReducedMotion.current && !candidate.hidden) {
+        shell.animate([{ opacity: 0 }, { opacity: 1 }], {
+          duration: 240,
+          delay: Math.min(entranceIndex++ * 30, 600),
+          easing: 'ease-out',
+          fill: 'backwards',
+        })
+      }
     }
     marker.setDraggable(
       Boolean(candidate.selected && !candidate.previewOnly && mapProps.draggable),
@@ -167,7 +179,9 @@ $effect(() => {
         ? (getCoordinateTuple(mapProps.coordinates) ?? candidate.coordinates)
         : candidate.coordinates,
     )
-    const button = marker.getElement()
+    const shell = marker.getElement()
+    const button = shell.firstElementChild
+    if (!(button instanceof HTMLButtonElement)) continue
     button.style.setProperty('--search-color', locationSearchColor(candidate.kind))
     button.style.backgroundColor = locationSearchColor(candidate.kind)
     // Keep every preview mounted while a selection fades the other choices away.
@@ -187,7 +201,7 @@ $effect(() => {
     const emphasized = Boolean(candidate.selected || candidate.highlighted)
     button.classList.toggle('ring-4', emphasized)
     button.classList.toggle('ring-[var(--search-color)]/40', emphasized)
-    button.style.zIndex = candidate.highlighted ? '2' : candidate.selected ? '1' : '0'
+    shell.style.zIndex = candidate.highlighted ? '2' : candidate.selected ? '1' : '0'
     button.style.outline = emphasized ? '4px solid var(--search-color)' : ''
     button.style.outlineOffset = emphasized ? '3px' : ''
     button.style.filter = emphasized ? 'brightness(1.15)' : ''
