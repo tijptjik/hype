@@ -49,15 +49,15 @@ To undo the workstation router, run `sudo systemctl disable --now caddy` and res
 
 ## Release exports
 
-Export paths are served separately from the Atlas API on port 8793. Start the
-`release-exports` app from the SaanSeoi workspace that contains that app. Its
-`EXPORT_PORT` setting must match Caddy. `EXPORT_PERSIST_PATH` can select a prepared
-local store; initialise an empty store using the SaanSeoi export bootstrap before
-expecting street/building catalogues to load. Do not reuse port 8790 (Hype assets).
+Export paths are served separately from the Atlas API on port 8793. From the
+SaanSeoi `preview` checkout root, run `bun run dev:exports`. In another terminal,
+run `bun run exports:seed:local` once to prepare the building and street catalogues.
+The normal `bun run dev` and `bun run dev:atlas` commands also include this Worker.
+Its `EXPORT_PORT` setting must match Caddy. Do not reuse port 8790 (Hype assets).
 
 The installed workstation router may use different Atlas/Harbour ports from this
 example. Preserve those ports and other local hosts when adding the export matcher.
-The 2026-10-23 workstation uses Atlas on 8791 and Harbour on 8792, with export paths
-on 8793. Its prepared store currently lives in the release-export workspace at
-`.local/export-preview-proof`; launch that app with
-`EXPORT_PERSIST_PATH=../../.local/export-preview-proof bun run dev`.
+The workstation uses Atlas on 8791 and Harbour on 8792, with export paths on 8793.
+Export data persists in the SaanSeoi checkout's `.local/d1/dev` store.
+`EXPORT_PERSIST_PATH` can override that location, resolved relative to
+`apps/release-exports`; use the same setting when starting and seeding.
