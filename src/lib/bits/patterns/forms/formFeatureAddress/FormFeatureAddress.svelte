@@ -39,6 +39,7 @@ let {
   showAddressDetails = true,
   showDivisions = true,
   showCoordinates = true,
+  hasLocation = true,
   showLookup = true,
   onCoordinateValidityChange,
   coordinates,
@@ -66,6 +67,7 @@ let {
   showAddressDetails?: boolean
   showDivisions?: boolean
   showCoordinates?: boolean
+  hasLocation?: boolean
   showLookup?: boolean
   onCoordinateValidityChange?: (valid: boolean) => void
   coordinates: number[]
@@ -415,7 +417,7 @@ $effect(() => {
       class="grid items-start gap-8 border-t border-border/60 px-6 py-6 lg:grid-cols-2"
     >
       {#if showAddressDetails}
-        <AddressDetails {address} {isEditing} {show3dAddressOptions} {onChange} />
+        <AddressDetails {address} {isEditing} {show3dAddressOptions} {hasLocation} onChange={next => { if (!hasLocation && next.coordinates) onCoordinateChange(next.coordinates); onChange(next) }} />
       {/if}
       {#if showDivisions}
         <AddressDivisions

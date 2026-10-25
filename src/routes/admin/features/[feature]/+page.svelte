@@ -2586,7 +2586,7 @@ $effect(() => () => clearVisualSectionReopenState())
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
-      navMode="overlay"
+      navMode="footer"
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
@@ -2711,7 +2711,7 @@ $effect(() => () => clearVisualSectionReopenState())
         showsVisualSection,
         isVisualSectionCollapsed,
       })}
-      navMode="overlay"
+      navMode="footer"
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
@@ -2809,6 +2809,7 @@ $effect(() => () => clearVisualSectionReopenState())
           )}
             <FormFeatureAddress
               fixedMap={true}
+              hasLocation={!isNewFeatureRef || draftHasPin}
               coordinatesInLocationControl={isNewFeatureRef && !draftLocationAccepted}
               showMap={false}
               onMapControlsChange={controls => (sharedLocationMapControls = controls)}
