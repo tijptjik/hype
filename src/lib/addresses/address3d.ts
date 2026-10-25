@@ -10,7 +10,13 @@ import { formatFloor as sharedFormatFloor } from '@saanseoi/address/units'
 export function formatFloor(
   ...[details, locale]: Parameters<typeof sharedFormatFloor>
 ): string {
-  const formatted = sharedFormatFloor(details, locale)
+  // The source-text parser repeats named floor codes in floorRef; they are types, not suffixes.
+  const normalized = details.floorType &&
+    !['F', 'X'].includes(details.floorType) &&
+    details.floorRef?.toUpperCase() === details.floorType
+    ? { ...details, floorRef: '' }
+    : details
+  const formatted = sharedFormatFloor(normalized, locale)
   return locale === 'en' &&
     details.floorType &&
     !['F', 'G', 'X'].includes(details.floorType)

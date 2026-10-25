@@ -86,3 +86,10 @@ it('retains bare unit, explicit floor and mall premises without inventing identi
   expect(next.source.fallbackDisplay.en).toBe('A301, 3/F, YOHO Mall II')
   expect(next.source.address2dId).toBeNull()
 })
+
+it('normalizes a parsed ground floor before it reaches the editor', () => {
+  const next = structurePlaceAddress(emptyFeatureAddress({ en: 'Shop C, G/F' }), [])
+  expect(next.source.authored?.unit).toMatchObject({ floorType: 'G', floorRef: '', unitRef: 'C' })
+  expect(getAddressLocale(next, 'en').floorExpression).toBe('G/F')
+  expect(getAddressDisplay(next, 'en')).not.toContain('GG/F')
+})
