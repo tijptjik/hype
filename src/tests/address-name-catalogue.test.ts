@@ -70,3 +70,19 @@ it('does not copy a descriptive portion across languages and respects block orde
     blockExpression: '2 Tower',
   })
 })
+
+it('parses compound establishment addresses with unit and floor evidence', () => {
+  const address = structurePlaceAddress(emptyFeatureAddress({ en: 'Shop 26, G/F, Charming Garden, 8 Hoi Ting Road' }), [{ id: 'hoi-ting', names: { en: 'Hoi Ting Road' }, divisionCodes: [] }])
+  const fields = getAddressLocale(address, 'en')
+  expect(String(fields.streetName).toLowerCase()).toBe('hoi ting road')
+  expect(fields.unitExpression).toBeTruthy()
+  expect(fields.floorExpression).toBeTruthy()
+})
+
+it('retains bare unit, explicit floor and mall premises without inventing identity', () => {
+  const original = emptyFeatureAddress({ en: 'A301, 3/F, YOHO Mall II' })
+  const next = structurePlaceAddress(original, [])
+  expect(getAddressLocale(next, 'en')).toMatchObject({ premisesName: 'YOHO Mall II', floorExpression: '3/F', unitExpression: 'Unit A301' })
+  expect(next.source.fallbackDisplay.en).toBe('A301, 3/F, YOHO Mall II')
+  expect(next.source.address2dId).toBeNull()
+})

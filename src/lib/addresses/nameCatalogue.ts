@@ -1,6 +1,9 @@
+// SHARED ADDRESS PARSER
+import { createPlaceAddressMatcher, parseAddressContent } from '@saanseoi/address'
 // VALIDATION
 import { z } from 'zod'
-import { loadStreetCatalogue, MOCK_STREET_CATALOGUE_MANIFEST } from './streetCatalogue'
+// SOURCES
+import { loadSaanseoiNames, loadBuildingNames } from '#lib/sources/saanseoi.js'
 // ADDRESS
 import { ADDRESS_LOCALES, getAddressLocale, setAddressOverride } from './featureAddress'
 import { prepareLocalLocationAddress } from './locationDraft'
@@ -9,37 +12,32 @@ import type { FeatureAddress } from './featureAddress'
 
 export const AddressNameSchema = z.object({
   id: z.string().min(1),
+  name: z.string().nullable().optional(),
+  release: z.string().optional(),
   names: z.record(z.string(), z.string()),
   divisionCodes: z.array(z.string()),
 })
 export type AddressName = z.infer<typeof AddressNameSchema>
-const cache = new Map<string, Promise<AddressName[]>>()
-
-/** Load the temporary names projection; failed requests remain retryable.
+/** Load provider names through the shared daily dataset cache.
  * @param family Controlled vocabulary to retrieve.
- * @returns Validated names; fixture IDs are never persisted as canonical address IDs.
+ * @returns Named records only; absent translations are never fabricated.
  */
-export function loadAddressNames(
+export async function loadAddressNames(
   family: 'streets' | 'buildings',
 ): Promise<AddressName[]> {
-  let pending = cache.get(family)
-  if (!pending) {
-    pending = (
-      family === 'streets'
-        ? loadStreetCatalogue(
-            new URL(MOCK_STREET_CATALOGUE_MANIFEST, window.location.origin),
-          ).then(catalogue => catalogue.streets)
-        : fetch(`/mocks/saanseoi/${family}/names/data.json`).then(async response => {
-            if (!response.ok) throw new Error(`Names unavailable (${response.status})`)
-            return z.array(AddressNameSchema).parse(await response.json())
-          })
-    ).catch(error => {
-      cache.delete(family)
-      throw error
-    })
-    cache.set(family, pending)
-  }
-  return pending
+  const bundle = family === 'buildings' ? await loadBuildingNames() : null
+  const rows = bundle?.records ?? await loadSaanseoiNames(family)
+  return rows.flatMap(row => {
+    const names = Object.fromEntries(
+      Object.entries(row.names).filter(
+        (entry): entry is [string, string] =>
+          typeof entry[1] === 'string' && entry[1].length > 0,
+      ),
+    )
+    return Object.keys(names).length || row.name
+      ? [{ id: row.id, name: row.name, release: bundle?.release, names, divisionCodes: row.divisionCodes }]
+      : []
+  })
 }
 
 /** Apply all published translations together without fabricating missing translations.
@@ -75,8 +73,34 @@ export function structurePlaceAddress(
   address: FeatureAddress,
   streets: AddressName[],
 ): FeatureAddress {
-  if (address.source.address2dId || address.source.authored) return address
+  if (
+    address.source.address2dId ||
+    address.source.canonical ||
+    address.canonical ||
+    address.source.authored
+  )
+    return address
   const content = prepareLocalLocationAddress(address)
+  // Match compound source addresses against the same street vocabulary used by the pickers.
+  const matcher = createPlaceAddressMatcher([], streets.flatMap(street =>
+    Object.entries(street.names).map(([locale, name]) => ({ locale: locale.toLowerCase(), name, streetId: street.id })),
+  ))
+  // A bare unit reference is usable only alongside an explicit floor and named mall.
+  // This source-text pattern proposes editable components, never a canonical identity.
+  const mallUnit = /^([A-Z]\d+[A-Z]?),\s*((?:\d+|G|UG|LG|B\d*)\/F),\s*(.+\bMall(?:\s+[IVX]+|\s+\d+)?)$/i.exec(address.source.fallbackDisplay.en?.trim() ?? '')
+  const labels = mallUnit
+    ? { ...address.source.fallbackDisplay, en: `Unit ${mallUnit[1]}, ${mallUnit[2]}, ${mallUnit[3]}` }
+    : address.source.fallbackDisplay
+  const parsed = parseAddressContent(labels, matcher).content
+  if (mallUnit) parsed.i18n.en = { ...parsed.i18n.en, premisesName: mallUnit[3], formattedAddress: '' }
+  if (parsed.unit) {
+    content.unit = parsed.unit
+    content.unitI18n = parsed.unitI18n
+  }
+  for (const [locale, fields] of Object.entries(parsed.i18n)) {
+    if (fields.streetName || fields.buildingName || fields.premisesName)
+      content.i18n[locale] = { ...content.i18n[locale], ...fields }
+  }
   const english = address.source.fallbackDisplay.en?.trim() ?? ''
   const match = /^(\d+[A-Za-z]?(?:\s*[-–]\s*\d+[A-Za-z]?)?)\s+(.+)$/.exec(english)
   const street =
@@ -92,11 +116,11 @@ export function structurePlaceAddress(
       buildingNumberConnector: to ? '-' : null,
       buildingNumberExpression: match[1],
     }
-    content.granularity = 'building'
+    content.scope = 'building'
   }
   // Do not install an unstructured parser result merely to replace identical source text.
   if (
-    !Object.values(content.i18n).some(
+    !content.unit && !Object.values(content.i18n).some(
       row => row.streetName || row.buildingName || row.premisesName,
     )
   )
