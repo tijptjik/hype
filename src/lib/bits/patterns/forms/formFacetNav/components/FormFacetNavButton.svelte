@@ -15,7 +15,7 @@ const iconComponent = $derived(isNext ? ChevronRightIcon : ChevronLeftIcon)
 const resolvedAction = $derived(action ?? null)
 const buttonClass = $derived(
   cx(
-    'h-9 flex-none min-w-max whitespace-nowrap rounded-md px-3 text-sm font-medium shadow-none',
+    'h-9 flex-none min-w-max whitespace-nowrap rounded-md px-3 text-sm font-medium shadow-none transition-colors hover:bg-primary! hover:text-white!',
     isNext && 'ml-auto flex-row-reverse',
   ),
 )
