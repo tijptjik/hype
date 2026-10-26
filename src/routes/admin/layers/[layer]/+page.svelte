@@ -458,7 +458,9 @@ const configuredLayerForm = configureForm<LayerRemoteFormInput>(() => ({
         meta: { ...adminCtx.view.resources.queryMeta, profile: 'card' },
       })
 
-      const layerId = layer?.data?.id
+      // New-layer navigation can retain the previously edited record until the route
+      // settles. Only persisted-layer submissions may target explicit readback queries.
+      const layerId = isNewLayerRef ? undefined : layer?.data?.id
 
       const submittedData =
         data && typeof data === 'object' && 'data' in data
