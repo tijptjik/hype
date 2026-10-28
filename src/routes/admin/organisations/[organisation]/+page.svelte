@@ -102,6 +102,13 @@ import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 // BITS COMPONENTS
 import PublishChildrenDialog from '#lib/bits/patterns/resource/PublishChildrenDialog.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/ContentLocaleDefaults.svelte'
+// CONTENT LOCALES
+import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
+import { readContentLocaleForm, contentLocaleFormIssues } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
+import { normalizeContentLocales } from '#lib/content-locales/model.js'
+import { resolveContentLocales } from '#lib/content-locales/resolve.js'
+// BITS COMPONENTS
 import { formSectionDividerStyles } from '#lib/bits/patterns/forms/formSurface/formSurface.styles.js'
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import {
@@ -345,6 +352,33 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
 }))
 
 const formCtx = $derived(configuredOrganisationForm())
+// Shared authoring defaults remain distinct from the descriptor form's UI locales.
+const localeOptions = $derived(contentLocaleOptions(getLocaleKey()))
+const localeSettingsPatch = $derived(readContentLocaleForm(formCtx.form.fields.value().data?.settings))
+const inheritedContentLocales = $derived(resolveContentLocales({ userLocale: getLocaleKey() }))
+
+/**
+ * Stage an explicit default order or reset marker in the existing remote form.
+ * @param locales Ordered tags, or undefined to remove the stored override.
+ * @returns Nothing; the normal form save owns persistence and authorization.
+ */
+function setContentLocales(locales: string[] | undefined): void {
+  updateFormData(formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>, data => {
+    data.settings = { ...localeSettingsPatch, contentLocales: locales ? normalizeContentLocales(locales) : null }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+/** Register JSON settings without copying the resolved user default.
+ * @returns Hidden field attributes for the existing settings transport.
+ */
+function getHiddenLocaleSettingsAttrs(): Record<string, unknown> {
+  const { as } = formCtx.form.fields.data.settings as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }
+  return as('hidden', JSON.stringify(localeSettingsPatch))
+}
 const isRequiredInPreflight = createSchemaRequiredInferer(OrganisationPreflightFormData)
 const isDirty = $derived(Boolean(formCtx.dirty))
 
@@ -1492,6 +1526,20 @@ $effect(() => {
         {/if}
       </Main.Facet>
     {/snippet}
+    <Main.Facet isVisible={activeFacet === 'advanced'} transition="fade" fillHeight={true} previousAction={buildFacetNavAction('advanced', 'previous')} nextAction={buildFacetNavAction('advanced', 'next')} class="left-0! right-0!" attrs={{ 'data-facet-id': 'advanced' }}>
+      <FormSurface>
+        <section class="flex min-h-0 flex-col gap-4 pb-6">
+          <SectionHeader title={m.project_advanced()} />
+          <div class="mx-6 min-w-0">
+            <ContentLocaleDefaults scope="organisation" value={localeSettingsPatch.contentLocales ?? undefined}
+              inheritedLocales={inheritedContentLocales.locales} inheritedOrigin="user-default" options={localeOptions}
+              disabled={!isEditing || formCtx.submitting} onChange={setContentLocales}
+              issues={contentLocaleFormIssues(visibleAllIssues)} />
+            <input {...getHiddenLocaleSettingsAttrs()} />
+          </div>
+        </section>
+      </FormSurface>
+    </Main.Facet>
     <Main.Facet
       isVisible={isCoreFacet}
       transition="fade"

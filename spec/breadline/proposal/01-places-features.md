@@ -1102,3 +1102,15 @@ The new Feature discovery empty state offers name/address search, map-pin nearby
 Pin placement uses the current map center and zooms one level per drop, capped at
 zoom 20 without zooming out. Entry highlights flash three times over 1.14 seconds
 and respect reduced-motion preferences.
+
+The [LLM 3 locale-control contract](../../../docs/refactor-guides/profile-locales/03-contract.md)
+defines the controlled toolbar and Organisation/Project Advanced editors. Shared
+settings require explicit override/reset intents; opening Advanced never persists a
+resolved default. Profile visibility is presentation-only, with independent selected
+order and enabled subset. Search, duplicate reveal, pointer/keyboard/touch reorder,
+last-visible protection and inherited-order display are covered by fixtures. The
+combined UI/model/settings-service run passes 56 tests; Chromium and Firefox fixture
+screenshots at 320px, 390px and desktop are verified with reduced motion and no
+horizontal overflow. Authenticated Advanced save/reload remains unverified because
+browser inventory exposes no existing session. Feature Profile integration belongs to
+LLM 4 and final acceptance to LLM 5; this work does not close #194 or its parent.

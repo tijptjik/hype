@@ -18,6 +18,13 @@ import {
 // I18N
 import { m } from '#lib/i18n.js'
 import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '#lib/i18n.js'
+// CONTENT LOCALES
+import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/ContentLocaleDefaults.svelte'
+import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
+import { readContentLocaleForm, contentLocaleFormIssues } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
+import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
+import { normalizeContentLocales } from '#lib/content-locales/model.js'
+import { resolveContentLocales } from '#lib/content-locales/resolve.js'
 // TOAST
 import { toast } from 'svelte-sonner'
 // PUBLICATION
@@ -629,6 +636,31 @@ const configuredProjectForm = configureForm(() => ({
 
 // Bound form controller for template/actions.
 const formCtx = $derived(configuredProjectForm())
+const localeOptions = $derived(contentLocaleOptions(getLocaleKey()))
+const localeSettingsPatch = $derived(readContentLocaleForm(formCtx.form.fields.value().data?.settings))
+
+/**
+ * Stage an explicit Project locale override or reset in the normal remote form.
+ * @param locales Ordered tags, or undefined to inherit without copying defaults.
+ * @returns Nothing; normal save, reset and concurrency handling remain in charge.
+ */
+function setContentLocales(locales: string[] | undefined): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.settings = { ...localeSettingsPatch, contentLocales: locales ? normalizeContentLocales(locales) : null }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+/** Register the settings patch, never the derived inherited array.
+ * @returns Hidden JSON attributes consumed by the settings schema.
+ */
+function getHiddenLocaleSettingsAttrs(): Record<string, unknown> {
+  const { as } = formCtx.form.fields.data.settings as unknown as {
+    as(type: 'hidden', value: string): Record<string, unknown>
+  }
+  return as('hidden', JSON.stringify(localeSettingsPatch))
+}
 // All locale controls edit one project-wide naming policy.
 const projectFlags = $derived(
   ProjectFlagsSchema.parse(formCtx.form.fields.value().data?.flags ?? {}),
@@ -1679,7 +1711,9 @@ $effect(() => {
     | undefined
   const hasCapabilities =
     selected?.capabilities && typeof selected.capabilities === 'object'
-  if (hasCapabilities) return
+  // Advanced locale inheritance needs the same authorized parent profile.
+  const hasLocaleSettings = ContentLocaleSettingsSchema.safeParse(selectedParentOrganisationById[organisationId]?.settings).success
+  if (hasCapabilities && hasLocaleSettings) return
 
   let cancelled = false
   void getOrganisation({
@@ -1830,6 +1864,11 @@ const selectedParentOrganisation = $derived.by(() => {
     return hierarchy.organisation
   return null
 })
+const parentLocaleSettings = $derived(ContentLocaleSettingsSchema.safeParse(selectedParentOrganisation?.settings))
+const inheritedContentLocales = $derived(resolveContentLocales({
+  organisationSettings: parentLocaleSettings.success ? parentLocaleSettings.data : undefined,
+  userLocale: getLocaleKey(),
+}))
 const selectedMarkerStyle = $derived.by(() => {
   const code = formCtx.form.fields.data.markerStyleCode.value()
   return isMarkerStyleCode(code) ? code : null
@@ -3208,6 +3247,12 @@ $effect(() => {
             description={m.project_3d_address_options_help()}
           />
           <div class="mx-6 flex min-w-0 flex-col gap-3">
+            <ContentLocaleDefaults scope="project" value={localeSettingsPatch.contentLocales ?? undefined}
+              inheritedLocales={inheritedContentLocales.locales}
+              inheritedOrigin={inheritedContentLocales.origin === 'organisation' ? 'organisation' : 'user-default'}
+              options={localeOptions} disabled={!isEditing || formCtx.submitting || (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)}
+              onChange={setContentLocales} issues={contentLocaleFormIssues(visibleAllIssues)} />
+            <input {...getHiddenLocaleSettingsAttrs()} />
             <Card.Root
               size="md"
               class="min-h-14 rounded-lg border border-border bg-foreground/4 bg-none shadow-none before:hidden"
