@@ -1,3 +1,8 @@
+// CONTENT LOCALES
+import {
+  ContentLocaleSettingsSchema,
+  ContentLocaleSettingsFormSchema,
+} from '#lib/content-locales/settings.js'
 // I18N
 import { m } from '#lib/i18n.js'
 import type {
@@ -126,14 +131,17 @@ const CapabilityBase = z.preprocess(value => {
 // ═══════════════════════
 
 export const OrganisationBase = createSelectSchema(organisation).extend({
+  settings: ContentLocaleSettingsSchema.default({}),
   capabilities: CapabilityBase,
 })
 
 export const OrganisationInsert = createInsertSchema(organisation).extend({
+  settings: ContentLocaleSettingsSchema.default({}),
   capabilities: CapabilityBase,
 })
 
 export const OrganisationUpdate = createUpdateSchema(organisation).extend({
+  settings: ContentLocaleSettingsSchema.optional(),
   capabilities: CapabilityBase.optional(),
 })
 
@@ -232,6 +240,7 @@ export const OrganisationUserRolesFormData = z.preprocess(
 )
 
 export const OrganisationEntityFormData = z.object({
+  settings: ContentLocaleSettingsFormSchema,
   code: z
     .string()
     .min(1, { message: m.field_is_required({ field: m.field_code() }) })
@@ -325,6 +334,7 @@ export const OrganisationProfile = z.enum([
 ])
 
 const OrganisationListFields = OrganisationBase.pick({
+  settings: true,
   id: true,
   code: true,
   createdAt: true,
@@ -368,11 +378,14 @@ export const OrganisationAdminProfileAPI = OrganisationDetailProfileAPI.extend({
 
 /** Minimal identity and action state for paged resource lists. */
 export const OrganisationCompactProfileAPI = OrganisationBase.pick({
+  settings: true,
   id: true,
   isPublished: true,
   isArchived: true,
   modifiedAt: true,
   code: true,
 }).extend({
+  // Older cached compact payloads may predate shared content settings.
+  settings: ContentLocaleSettingsSchema.optional(),
   i18n: getLocales(OrganisationI18nBase.pick({ name: true, nameShort: true })),
 })

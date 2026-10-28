@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { toContentLocaleSettingsForm } from '#lib/content-locales/settings.js'
 // ENUMS
 import type { OrganisationRoleType } from '#lib/enums.js'
 import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '#lib/capabilities.js'
@@ -113,6 +115,11 @@ function normalizeOrganisationCapabilities(
   return normalized
 }
 
+/**
+ * Builds editable fields from committed Organisation data.
+ * @param data - Committed resource, or absent for creation.
+ * @returns Form baseline; missing locale settings inherit without persisting defaults.
+ */
 export function toOrganisationFormInput(
   data?: OrganisationFormSource | null,
 ): OrganisationFormInput {
@@ -120,6 +127,7 @@ export function toOrganisationFormInput(
     return {
       meta: { mode: 'create', isAdminRequest: true },
       data: {
+        settings: {},
         code: '',
         url: '',
         capabilities: {},
@@ -144,6 +152,7 @@ export function toOrganisationFormInput(
     data: {
       code: data.code ?? '',
       url: data.url ?? '',
+      settings: toContentLocaleSettingsForm(data.settings),
       capabilities: normalizeOrganisationCapabilities(data.capabilities),
       i18n: {
         en: normalizeOrganisationFormLocale(data.i18n?.en),

@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { applyContentLocaleSettingsPatch } from '#lib/content-locales/settings.js'
 import type { RemoteQuery } from '$app/server'
 import { error } from '@sveltejs/kit'
 
@@ -467,6 +469,7 @@ export const organisationForm = guardedForm(
         code: normalizedCode,
         url: data.url.trim() === '' ? null : data.url.trim(),
         hubId: activeHubId,
+        settings: applyContentLocaleSettingsPatch(undefined, data.settings),
         ...(data.capabilities !== undefined ? { capabilities: data.capabilities } : {}),
       })
 
@@ -562,6 +565,14 @@ export const organisationForm = guardedForm(
         updatedAt: updatedAt as string,
         data: {
           code: normalizedCode,
+          ...(data.settings !== undefined
+            ? {
+                settings: applyContentLocaleSettingsPatch(
+                  current.settings,
+                  data.settings,
+                ),
+              }
+            : {}),
           url: data.url.trim() === '' ? null : data.url.trim(),
           ...(data.capabilities !== undefined
             ? { capabilities: data.capabilities }

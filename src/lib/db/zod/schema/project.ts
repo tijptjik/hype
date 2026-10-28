@@ -1,3 +1,8 @@
+// CONTENT LOCALES
+import {
+  ContentLocaleSettingsSchema,
+  ContentLocaleSettingsFormSchema,
+} from '#lib/content-locales/settings.js'
 import { ProjectFlagsSchema } from '#lib/projects/flags.js'
 import { ProjectLocationPolicySchema } from '#lib/locations/model.js'
 import { MARKER_STYLE_CODES } from '#lib/features/markerStyle.js'
@@ -182,6 +187,7 @@ const ProjectLicenseBase = z.preprocess(
 // ═══════════════════════
 
 export const ProjectBase = createSelectSchema(project).extend({
+  settings: ContentLocaleSettingsSchema.default({}),
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().default(null),
   markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().default(null),
   flags: ProjectFlagsBase,
@@ -190,6 +196,7 @@ export const ProjectBase = createSelectSchema(project).extend({
 })
 
 export const ProjectInsert = createInsertSchema(project).extend({
+  settings: ContentLocaleSettingsSchema.default({}),
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().default(null),
   markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().default(null),
   flags: ProjectFlagsBase,
@@ -198,6 +205,7 @@ export const ProjectInsert = createInsertSchema(project).extend({
 })
 
 export const ProjectUpdate = createUpdateSchema(project).extend({
+  settings: ContentLocaleSettingsSchema.optional(),
   cardStyleCode: z.enum(CARD_STYLE_CODES).nullable().optional(),
   markerStyleCode: z.enum(MARKER_STYLE_CODES).nullable().optional(),
   flags: ProjectFlagsBase.optional(),
@@ -333,6 +341,7 @@ export const ProjectLocationPolicyFormData = z.preprocess(
 )
 
 export const ProjectEntityFormData = z.object({
+  settings: ContentLocaleSettingsFormSchema,
   locationUpdatePolicy: ProjectLocationPolicyFormData,
   cardStyleCode: z.enum(CARD_STYLE_CODES).default(DEFAULT_CARD_STYLE),
   markerStyleCode: z
@@ -437,6 +446,7 @@ export const ProjectProfile = z.enum([
 ])
 
 const ProjectListFields = ProjectBase.pick({
+  settings: true,
   flags: true,
   cardStyleCode: true,
   markerStyleCode: true,
@@ -483,6 +493,7 @@ export const ProjectAdminProfileAPI = ProjectBase.extend({
 
 /** Minimal identity and action state for paged resource lists. */
 export const ProjectCompactProfileAPI = ProjectBase.pick({
+  settings: true,
   flags: true,
   cardStyleCode: true,
   markerStyleCode: true,
@@ -494,6 +505,8 @@ export const ProjectCompactProfileAPI = ProjectBase.pick({
   code: true,
   organisationId: true,
 }).extend({
+  // Older cached compact payloads may predate shared content settings.
+  settings: ContentLocaleSettingsSchema.optional(),
   mapStyle: MapStyleResolved.nullish(),
   ancestors: CompactAncestorsSchema.optional(),
   i18n: getLocales(ProjectI18nBase.pick({ name: true, nameShort: true })),

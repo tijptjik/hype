@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { applyContentLocaleSettingsPatch } from '#lib/content-locales/settings.js'
 // PRESENTATION
 import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 import { error } from '@sveltejs/kit'
@@ -727,6 +729,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       organisationId: data.organisationId,
       code: normalizedCode,
       useAllInOrgContext: data.useAllInOrgContext,
+      settings: applyContentLocaleSettingsPatch(undefined, data.settings),
       flags: data.flags,
       cardStyleCode: data.cardStyleCode,
       markerStyleCode: data.markerStyleCode,
@@ -792,6 +795,9 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue('PROJECT_NOT_FOUND')),
   )
 
+  // Merge only submitted settings keys so old clients and unrelated preferences survive.
+  const nextSettings = applyContentLocaleSettingsPatch(current.settings, data.settings)
+
   // Authorize persisted scalar changes before loading the relation-heavy admin shape.
   const submittedDataBeforeHydration: Partial<
     Record<ProjectAuthorizationField, unknown>
@@ -815,6 +821,13 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     toProjectStableAuthzSignature(current.flags ?? {})
   ) {
     submittedDataBeforeHydration.flags = data.flags
+  }
+  if (
+    data.settings !== undefined &&
+    toProjectStableAuthzSignature(nextSettings) !==
+      toProjectStableAuthzSignature(current.settings ?? {})
+  ) {
+    submittedDataBeforeHydration.settings = data.settings
   }
   if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataBeforeHydration.cardStyleCode = data.cardStyleCode
@@ -946,6 +959,13 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
     toProjectStableAuthzSignature(current.flags ?? {})
   ) {
     submittedDataForUpdate.flags = data.flags
+  }
+  if (
+    data.settings !== undefined &&
+    toProjectStableAuthzSignature(nextSettings) !==
+      toProjectStableAuthzSignature(current.settings ?? {})
+  ) {
+    submittedDataForUpdate.settings = data.settings
   }
   if (data.cardStyleCode !== (current.cardStyleCode ?? DEFAULT_CARD_STYLE)) {
     submittedDataForUpdate.cardStyleCode = data.cardStyleCode
@@ -1088,6 +1108,7 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         organisationId: data.organisationId,
         code: normalizedCode,
         useAllInOrgContext: data.useAllInOrgContext,
+        ...(data.settings !== undefined ? { settings: nextSettings } : {}),
         flags: data.flags,
         cardStyleCode: data.cardStyleCode,
         markerStyleCode: data.markerStyleCode,

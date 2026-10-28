@@ -188,10 +188,16 @@ const hasAnyOrganisationOwnerRole = (roles: UserRoleDisco[]): boolean =>
 // INPUT NORMALIZERS
 /* -------- */
 
+/**
+ * Collects submitted organisation fields for the existing resource write policy.
+ * @param data - Submitted fields, including explicit shared-settings changes.
+ * @returns Fields requiring authorization; omitted settings are not an update.
+ */
 export const toOrganisationSubmittedFields = (
   data: Partial<Record<OrganisationAuthorizationField, unknown>>,
 ): OrganisationAuthorizationField[] => {
   const fields: OrganisationAuthorizationField[] = []
+  if (data.settings !== undefined) fields.push('settings')
   if ('code' in data) fields.push('code')
   if ('url' in data) fields.push('url')
   if ('i18n' in data) fields.push('i18n')

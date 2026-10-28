@@ -34,6 +34,11 @@ import { createDefaultProjectLicense } from '#lib/db/services/licence.js'
  * - Archive status
  */
 export const project = sqliteTable('project', {
+  // Ordered content defaults; missing keys inherit without changing boolean flags.
+  settings: text('settings', { mode: 'json' })
+    .$type<import('#lib/content-locales/settings.js').ContentLocaleSettings>()
+    .notNull()
+    .default({}),
   // Extensible project preferences and publication policies; absent keys inherit defaults.
   flags: text('flags', { mode: 'json' })
     .$type<import('#lib/projects/flags.js').ProjectFlags>()

@@ -42,6 +42,11 @@ import type { CapabilityDefinitions } from '#lib/capabilities.types.js'
  * - Archive status
  */
 export const organisation = sqliteTable('organisation', {
+  // Ordered content defaults; missing keys inherit without changing boolean flags.
+  settings: text('settings', { mode: 'json' })
+    .$type<import('#lib/content-locales/settings.js').ContentLocaleSettings>()
+    .notNull()
+    .default({}),
   // Database identifier
   id: text('id')
     .primaryKey()

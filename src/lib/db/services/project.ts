@@ -553,6 +553,7 @@ export const probeProjectForUpdate = async (
   organisationId: string
   capabilities: ProjectDB['capabilities']
   markerStyleCode: ProjectDB['markerStyleCode']
+  settings?: ProjectDB['settings']
   flags: ProjectDB['flags']
   cardStyleCode: ProjectDB['cardStyleCode']
   useAllInOrgContext: boolean
@@ -568,6 +569,7 @@ export const probeProjectForUpdate = async (
         capabilities: project.capabilities,
         useAllInOrgContext: project.useAllInOrgContext,
         flags: project.flags,
+        settings: project.settings,
         cardStyleCode: project.cardStyleCode,
         markerStyleCode: project.markerStyleCode,
         hubId: organisation.hubId,
@@ -774,6 +776,7 @@ export const updateProjectByIdWithConcurrency = async (
       license?: ProjectDB['license']
       capabilities: ProjectDB['capabilities']
       markerStyleCode: ProjectDB['markerStyleCode']
+      settings?: ProjectDB['settings']
       flags: ProjectDB['flags']
       cardStyleCode: ProjectDB['cardStyleCode']
       useAllInOrgContext: boolean

@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { toContentLocaleSettingsForm } from '#lib/content-locales/settings.js'
 // PRESENTATION
 import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 // I18N
@@ -293,6 +295,7 @@ export function toProjectFormInput(
     return {
       meta: { mode: 'create', isAdminRequest: true },
       data: {
+        settings: {},
         organisationId: defaults?.organisationId ?? '',
         mapStyleCode: '',
         cardStyleCode: DEFAULT_CARD_STYLE,
@@ -326,6 +329,7 @@ export function toProjectFormInput(
       mapStyleCode: data.mapStyle?.code ?? '',
       cardStyleCode: data.cardStyleCode ?? DEFAULT_CARD_STYLE,
       markerStyleCode: data.markerStyleCode ?? null,
+      settings: toContentLocaleSettingsForm(data.settings),
       flags: { ...data.flags },
       code: data.code,
       useAllInOrgContext: data.useAllInOrgContext ?? false,

@@ -587,6 +587,83 @@ describe('project.remote form organisation move authz', () => {
     },
   )
 
+  it.each([[['ja', 'zhHant']], [null], [undefined]])(
+    'preserves unrelated settings and flags for locale patch %j',
+    async contentLocales => {
+      const current = await mockProbeProjectForUpdate()
+      mockProbeProjectForUpdate.mockResolvedValue({
+        ...(current as object),
+        settings: { contentLocales: ['en'], future: { keep: true } },
+      })
+      const payload = buildUpdatePayload('org-1')
+      const flags = { show3dAddressOptions: false }
+      await remote.projectForm(
+        {
+          ...payload,
+          data: {
+            ...payload.data,
+            flags,
+            ...(contentLocales === undefined ? {} : { settings: { contentLocales } }),
+          },
+        },
+        throwingInvalid,
+      )
+      const data = (
+        mockUpdateProjectByIdWithConcurrency.mock.calls as unknown as Array<
+          [unknown, { data: Record<string, unknown> }]
+        >
+      )[0][1].data
+      expect(data.flags).toEqual(flags)
+      if (contentLocales === undefined) expect(data).not.toHaveProperty('settings')
+      else
+        expect(data.settings).toEqual({
+          future: { keep: true },
+          ...(contentLocales === null ? {} : { contentLocales: ['ja', 'zh-Hant'] }),
+        })
+    },
+  )
+
+  it('rejects unauthorized locale settings before any Project write or hydration', async () => {
+    mockAuthorizeProjectUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    const payload = buildUpdatePayload('org-1')
+    await expect(
+      remote.projectForm(
+        { ...payload, data: { ...payload.data, settings: { contentLocales: ['ja'] } } },
+        throwingInvalid,
+      ),
+    ).rejects.toThrow('INSUFFICIENT_ROLE')
+    expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({
+          settings: { contentLocales: ['ja'] },
+        }),
+      }),
+    )
+    expect(mockLoadProject).not.toHaveBeenCalled()
+    expect(mockUpdateProjectByIdWithConcurrency).not.toHaveBeenCalled()
+  })
+
+  it('does not require settings permission for unchanged loaded settings', async () => {
+    const current = await mockProbeProjectForUpdate()
+    mockProbeProjectForUpdate.mockResolvedValue({
+      ...(current as object),
+      settings: { contentLocales: ['ja'] },
+    })
+    const payload = buildUpdatePayload('org-1')
+    await remote.projectForm(
+      { ...payload, data: { ...payload.data, settings: { contentLocales: ['ja'] } } },
+      throwingInvalid,
+    )
+    expect(mockAuthorizeProjectUpdateForSubmission).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        submittedData: expect.objectContaining({ settings: expect.anything() }),
+      }),
+    )
+  })
+
   it('authorizes and persists Location settings through the Project form', async () => {
     const payload = buildUpdatePayload('org-1')
     const locationUpdatePolicy = {

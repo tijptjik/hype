@@ -48,6 +48,7 @@ export const hubAuthorizationActions = [
 ] as const
 
 export const organisationAuthorizationFields = [
+  'settings',
   'code',
   'url',
   'i18n',
@@ -60,6 +61,7 @@ export const organisationAuthorizationFields = [
 ] as const
 
 export const projectAuthorizationFields = [
+  'settings',
   'flags',
   'locationUpdatePolicy',
   'useAllInOrgContext',

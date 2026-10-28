@@ -57,6 +57,7 @@ type OrganisationProbe = {
 }
 
 type OrganisationUpdateProbe = {
+  settings?: OrganisationDB['settings']
   id: string
   code: string
   hubId: string | null
@@ -464,6 +465,7 @@ export const probeOrganisationForUpdate = async (
         code: organisation.code,
         hubId: organisation.hubId,
         capabilities: organisation.capabilities,
+        settings: organisation.settings,
         modifiedAt: organisation.modifiedAt,
       })
       .from(organisation)
@@ -616,6 +618,7 @@ export const updateOrganisationByIdWithConcurrency = async (
     data: {
       code: string
       url: string | null
+      settings?: OrganisationDB['settings']
       capabilities?: OrganisationDB['capabilities']
     }
   },

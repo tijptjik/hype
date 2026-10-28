@@ -683,6 +683,75 @@ describe('organisation.remote authz', () => {
     })
   })
 
+  it.each([[['ja', 'zhHant']], [null], [undefined]])(
+    'preserves other Organisation settings for locale patch %j',
+    async contentLocales => {
+      const services = await import('#lib/db/services/organisation.js')
+      const { ContentLocaleSettingsSchema } = await import(
+        '#lib/content-locales/settings.js'
+      )
+      vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
+        id: 'org-1',
+        code: 'org-code',
+        hubId: 'hub-a',
+        modifiedAt: 'before',
+        settings: ContentLocaleSettingsSchema.parse({
+          contentLocales: ['en'],
+          future: { keep: true },
+        }),
+      })
+      vi.mocked(services.updateOrganisationByIdWithConcurrency).mockResolvedValue({
+        id: 'org-1',
+        modifiedAt: 'after',
+      })
+      await remote.organisationForm({
+        meta: { id: 'org-1', mode: 'update', updatedAt: 'before' },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [{ userId: 'u-1', role: 'owner' }],
+          ...(contentLocales === undefined ? {} : { settings: { contentLocales } }),
+        },
+      })
+      const data = vi.mocked(services.updateOrganisationByIdWithConcurrency).mock
+        .calls[0]?.[1].data
+      if (contentLocales === undefined) expect(data).not.toHaveProperty('settings')
+      else
+        expect(data.settings).toEqual({
+          future: { keep: true },
+          ...(contentLocales === null ? {} : { contentLocales: ['ja', 'zh-Hant'] }),
+        })
+    },
+  )
+
+  it('rejects unauthorized Organisation locale writes before persistence', async () => {
+    const services = await import('#lib/db/services/organisation.js')
+    vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
+      id: 'org-1',
+      code: 'org-code',
+      hubId: 'hub-a',
+      modifiedAt: 'before',
+    })
+    mockAuthorizeOrganisationUpdateForSubmission.mockReturnValue({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    await expect(
+      remote.organisationForm({
+        meta: { id: 'org-1', mode: 'update', updatedAt: 'before' },
+        data: {
+          code: 'org-code',
+          url: '',
+          i18n: { en: {}, zhHans: {}, zhHant: {} },
+          userRoles: [{ userId: 'u-1', role: 'owner' }],
+          settings: { contentLocales: null },
+        },
+      }),
+    ).rejects.toThrow('INSUFFICIENT_ROLE')
+    expect(services.updateOrganisationByIdWithConcurrency).not.toHaveBeenCalled()
+  })
+
   it('organisationForm cascades capability removals to projects and project roles', async () => {
     const organisationServices = await import('#lib/db/services/organisation.js')
     const probeOrganisationForUpdate = vi.mocked(

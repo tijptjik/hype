@@ -315,10 +315,16 @@ export const canSetProjectParentOrganisation = (params: {
 // INPUT NORMALIZERS
 /* -------- */
 
+/**
+ * Collects submitted project fields for the existing resource write policy.
+ * @param data - Submitted fields, including explicit shared-settings changes.
+ * @returns Fields requiring authorization; omitted settings are not an update.
+ */
 export const toProjectSubmittedFields = (
   data: Partial<Record<ProjectAuthorizationField, unknown>>,
 ): ProjectAuthorizationField[] => {
   const fields: ProjectAuthorizationField[] = []
+  if (data.settings !== undefined) fields.push('settings')
   if ('locationUpdatePolicy' in data) fields.push('locationUpdatePolicy')
   if ('organisationId' in data) fields.push('organisationId')
   if ('code' in data) fields.push('code')
