@@ -1,5 +1,10 @@
 # Locations, Feature inheritance and SaanSeoi Addresses
 
+Visibility selector presentation (Refs #194, parent #180): use the shared Bits Select
+menu with **Shared** / **Organisation-only** labels and bold labels in its help
+tooltip. The stored values remain `shared` / `exclusive`; this presentation change
+does not change access rules or defaults.
+
 Accepted architecture, 20 October 2026. Delivery tracking:
 [#194](https://github.com/tijptjik/hype/issues/194), parent
 [#180](https://github.com/tijptjik/hype/issues/180); location/routing integration

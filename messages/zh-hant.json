@@ -1744,5 +1744,13 @@
   "feature_search_status": "營業狀態",
   "feature_search_status_help": "營業中包括狀態不明。關閉選項僅包括明確關閉的地點。任何狀態包括全部。",
   "feature_search_temporarily_closed": "暫停營業",
-  "feature_search_use_address": "使用此地址"
+  "feature_search_use_address": "使用此地址",
+  "location_visibility": "地點可見性",
+  "location_visibility_shared": "共享",
+  "location_visibility_exclusive": "僅限本組織",
+  "location_visibility_shared_help": "：任何專案均可在此地點新增要素。",
+  "location_visibility_exclusive_help": "：僅此組織可使用。",
+  "location_visibility_name_override_help": "組織名稱覆寫不會更改共享記錄的名稱。",
+  "organisation_location_visibility_default": "新地點的預設可見性",
+  "location_visibility_default_unavailable": "無法取得組織預設值。儲存前請選擇共享或僅限本組織。"
 }

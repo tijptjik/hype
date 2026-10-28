@@ -1744,5 +1744,13 @@
   "feature_search_status": "营业状态",
   "feature_search_status_help": "营业中包括状态不明。关闭选项仅包括明确关闭的地点。任何状态包括全部。",
   "feature_search_temporarily_closed": "暂停营业",
-  "feature_search_use_address": "使用此地址"
+  "feature_search_use_address": "使用此地址",
+  "location_visibility": "地点可见性",
+  "location_visibility_shared": "共享",
+  "location_visibility_exclusive": "仅限本组织",
+  "location_visibility_shared_help": "：任何项目都可在此地点添加要素。",
+  "location_visibility_exclusive_help": "：仅此组织可使用。",
+  "location_visibility_name_override_help": "组织名称覆盖不会更改共享记录的名称。",
+  "organisation_location_visibility_default": "新地点的默认可见性",
+  "location_visibility_default_unavailable": "无法获取组织默认值。保存前请选择共享或仅限本组织。"
 }

@@ -1744,5 +1744,13 @@
   "feature_search_status": "Operating status",
   "feature_search_status_help": "Open includes unknown status. Closed options include only explicitly closed places. Any includes all statuses.",
   "feature_search_temporarily_closed": "Temporarily closed",
-  "feature_search_use_address": "Use Address"
+  "feature_search_use_address": "Use Address",
+  "location_visibility": "Location visibility",
+  "location_visibility_shared": "Shared",
+  "location_visibility_exclusive": "Organisation-only",
+  "location_visibility_shared_help": ": any project can add features to this Location.",
+  "location_visibility_exclusive_help": ": only this organisation can use it.",
+  "location_visibility_name_override_help": "Organisation name overrides do not rename the shared record.",
+  "organisation_location_visibility_default": "Default visibility for new Locations",
+  "location_visibility_default_unavailable": "Organisation default unavailable. Choose Shared or Organisation-only before saving."
 }
