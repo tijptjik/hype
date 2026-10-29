@@ -57,6 +57,19 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox]] as c
       const overlayFill = await page.getByRole('combobox').evaluate(element => getComputedStyle(element.parentElement!.parentElement!).backgroundColor)
       if (overlayFill === 'rgba(0, 0, 0, 0)' || overlayFill === 'transparent') throw new Error('Search overlay is transparent')
       await page.getByRole('combobox').press('Escape')
+      if (await page.getByRole('combobox').inputValue() !== '') throw new Error('First Escape did not clear the query')
+      const closeButton = page.getByRole('button', { name: 'Close language search' })
+      await closeButton.focus()
+      const closeStyle = await closeButton.evaluate(element => {
+        const marker = document.createElement('span')
+        marker.style.color = 'var(--color-primary)'
+        element.append(marker)
+        const primary = getComputedStyle(marker).color
+        marker.remove()
+        return { outline: getComputedStyle(element).outlineStyle, color: getComputedStyle(element).color, primary }
+      })
+      if (closeStyle.outline !== 'none' || closeStyle.color !== closeStyle.primary) throw new Error('Close focus should use primary colour without an outline')
+      await closeButton.press('Escape')
       await page.waitForFunction(() => document.activeElement?.textContent?.includes('Add language'))
       await profile.getByRole('button', { name: '+ Add language' }).click()
       await page.getByRole('combobox').fill('日本語')

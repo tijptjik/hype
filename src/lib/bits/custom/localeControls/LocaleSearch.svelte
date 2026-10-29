@@ -43,11 +43,6 @@ function onKeydown(event: KeyboardEvent): void {
     else document.getElementById(`${id}-${(activeIndex + 1) % results.length}`)?.focus()
     return
   }
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    onClose()
-  }
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault()
     active = results.length
@@ -62,9 +57,22 @@ function onKeydown(event: KeyboardEvent): void {
     if (result) onSelect(result.tag)
   }
 }
+/** Clear a query before dismissing, including when a result or Close owns focus. */
+function onEscape(event: KeyboardEvent): void {
+  if (event.key !== 'Escape') return
+  event.preventDefault()
+  event.stopPropagation()
+  if (query) {
+    query = ''
+    active = 0
+    input.focus({ preventScroll: true })
+  } else onClose()
+}
 </script>
 
+<!-- biome-ignore lint/a11y/noStaticElementInteractions: Escape is delegated from the search and result controls. -->
 <div
+  onkeydown={onEscape}
   class="w-full min-w-0 rounded-xl border border-border/20 bg-panel p-3 text-foreground shadow-xl"
 >
   <div class="flex min-w-0 items-center gap-2">
@@ -90,7 +98,7 @@ function onKeydown(event: KeyboardEvent): void {
       tabindex="-1"
       aria-label={labels.close}
       onclick={onClose}
-      class="size-11 shrink-0 text-foreground! rounded-md hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-primary"
+      class="size-11 shrink-0 rounded-md text-foreground outline-none! ring-0! hover:bg-foreground/10 hover:text-primary focus:text-primary!"
     >
       ×
     </button>
