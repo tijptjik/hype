@@ -10,6 +10,8 @@ import {
   toSafeListResponse,
 } from '#lib/remote/index.js'
 import { debouncedUpdateUserPreferences } from '#lib/client/services/user.js'
+// I18N
+import { getLocaleKey } from '#lib/i18n.js'
 // CONTEXT
 import { FeatureMultilingualState } from './featureMultilingual.svelte.js'
 import { ResourceIndexUi } from './resourceIndexUi.svelte.js'
@@ -74,6 +76,11 @@ export class AdminCtx {
   // Remote queries own transport caching and refreshes.
   // Admin-owned resource view
   readonly listUi = new ResourceIndexUi()
+  // Retain only ordered identities from the index, including remote search matches.
+  private featureIndexSequence = $state.raw<{
+    key: string
+    rows: { id: string }[]
+  } | null>(null)
   view!: ResourceViewCtx
   // Load State
   isInitialised: boolean = $state(false)
@@ -500,6 +507,44 @@ export class AdminCtx {
   filteredFeatures = $derived.by(() => {
     return this.view.filteredFeatures
   })
+
+  /** Identifies the filters, ordering and account that own the Feature index.
+   * @returns A traversal scope shared by the index and detail route.
+   */
+  private getFeatureIndexKey(): string {
+    return JSON.stringify([
+      this.view.resources.scopeKey,
+      this.view.featuresQueryKey(),
+      getLocaleKey(),
+      this.view.filters.values.feature,
+      this.view.filters.viewFilters.feature,
+    ])
+  }
+
+  /** Retains the index's matching order when opening and stepping through Features.
+   * @param rows Final ordered matches, before the temporary search-focus display cap.
+   * @returns Nothing.
+   * @remarks Keep remote search matches even when they are absent from the base query.
+   */
+  rememberFeatureIndex(rows: readonly { id: string }[]): void {
+    this.featureIndexSequence = {
+      key: this.getFeatureIndexKey(),
+      rows: rows.map(({ id }) => ({ id })),
+    }
+  }
+
+  /** Resolves the index sequence, or the same active filters for a direct detail visit.
+   * @returns Ordered Feature identities for previous/next navigation.
+   * @remarks A changed account, prism, locale, sort or filter invalidates retained matches.
+   */
+  get featureNavigationRows(): { id: string }[] {
+    if (this.featureIndexSequence?.key === this.getFeatureIndexKey()) {
+      return this.featureIndexSequence.rows
+    }
+    return this.view.filters.getViewFilteredResource<Feature>(
+      FirstClassResource.feature,
+    )
+  }
 
   filteredTasks = $derived.by(() => {
     this.view.queries.rows.task

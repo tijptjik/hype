@@ -875,6 +875,11 @@ $effect(() => {
 })
 
 $effect(() => {
+  // Share the final filtered/search order with detail navigation across route unmounts.
+  adminCtx.rememberFeatureIndex(entities)
+})
+
+$effect(() => {
   if (isSearchFocused && normalizedTextQuery !== '') return
   footerEntities = entities
 })
@@ -1022,9 +1027,7 @@ function updateRowFocus(index: number) {
     ? toggleFeatureBulkSelection
     : undefined}
 >
-  {#snippet card(
-    entity: Feature,
-  )}
+  {#snippet card(entity: Feature)}
     <IndexCard
       {...createAdminIndexCardModel({
         adminCtx,
@@ -1035,12 +1038,7 @@ function updateRowFocus(index: number) {
       })}
     />
   {/snippet}
-  {#snippet row(
-    entity,
-    index,
-    selectionState,
-    isSelectionModeActive,
-  )}
+  {#snippet row(entity, index, selectionState, isSelectionModeActive)}
     <!-- Calculate only mounted rows, after the virtual list's scrolling placeholder settles. -->
     {@const rowModel = getCachedFeatureRowModel({
       appCtx: adminCtx.view,

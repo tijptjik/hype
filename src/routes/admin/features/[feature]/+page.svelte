@@ -992,7 +992,7 @@ let settledFeatureRef = $state<string | null>(null)
 /********************
  *  SET NAVIGATION STATE
  ************/
-const featureList = $derived(adminCtx.view.queries.rows.feature ?? [])
+const featureList = $derived(adminCtx.featureNavigationRows)
 
 const currentFeatureId = $derived(feature?.data?.id ?? null)
 const featureStepperRefs = $derived(
@@ -2203,7 +2203,9 @@ async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState
     // These lookups reuse the app's scoped ResourceDetail cache, fetching only on a miss/stale entry.
     // Settle with the parent policy ready so linked-name controls cannot appear late.
     const [project, layer] = await Promise.all([
-      result.data.projectId ? adminCtx.view.getProjectById(result.data.projectId) : null,
+      result.data.projectId
+        ? adminCtx.view.getProjectById(result.data.projectId)
+        : null,
       result.data.layerId ? adminCtx.view.getLayerById(result.data.layerId) : null,
     ])
     if (ref !== featureRef) return result
@@ -2650,9 +2652,7 @@ $effect(() => () => clearVisualSectionReopenState())
               sectionKey="descriptor"
               {isEditing}
             >
-              {#snippet children(
-                locale,
-              )}
+              {#snippet children(locale)}
                 <FormI18nDescriptorFields
                   form={formCtx.form}
                   fields={formCtx.form.fields.data.i18n[locale]}
@@ -2991,11 +2991,7 @@ $effect(() => () => clearVisualSectionReopenState())
                 selectLocationMarker = select
               }}
             >
-              {#snippet children(
-                searchControl,
-                searchResults,
-                mapControls,
-              )}
+              {#snippet children(searchControl, searchResults, mapControls)}
                 {@render addressEditor(
                   searchControl,
                   searchResults,

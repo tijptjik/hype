@@ -110,6 +110,13 @@ action visibility; the header adapter combines those with navigation and list
 preferences. Search focus resets on route navigation. The unused legacy header
 store has been removed rather than extracted into another context.
 
+Admin Feature previous/next navigation retains the index's ordered matching IDs,
+including remote search results and every active view filter. The temporary
+search-focus display cap does not limit traversal. Account, prism, locale, sort
+or filter changes invalidate that sequence; direct detail visits use the current
+filtered Feature rows. Traversal stops at either end and never falls back to
+unfiltered neighbours when a Feature is outside the matching list.
+
 ## Responsive and Surface Layout Ownership
 
 `ResponsiveCtx` is root-owned browser measurement state: layout viewport, visual
