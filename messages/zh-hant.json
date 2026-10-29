@@ -1767,5 +1767,16 @@
   "content_languages_heading": "語言",
   "content_multilingual_default": "預設顯示內容的多語言值",
   "content_visibility_heading": "可見範圍",
-  "address_multilingual_default": "預設顯示地址的多語言值"
+  "address_multilingual_default": "預設顯示地址的多語言值",
+  "profile_translation_unsupported": "不支援此語言組合。",
+  "profile_translation_complete": "已填入 {count} 項翻譯。",
+  "profile_translate_source": "從{language}翻譯空白欄位",
+  "feature_separate_name": "使用獨立地點項目名稱",
+  "feature_name_derived_help": "名稱跟隨地點。",
+  "profile_translation_skipped": "欄位已變更，已略過。",
+  "feature_use_location_name": "使用位置名稱",
+  "feature_use_location_name_prompt": "使用位置名稱命名此地點項目？",
+  "feature_edit_location": "編輯位置",
+  "feature_name_locked": "已連結 · 唯讀",
+  "profile_translate_from": "翻譯自"
 }

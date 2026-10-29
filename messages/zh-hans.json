@@ -1767,5 +1767,16 @@
   "content_languages_heading": "语言",
   "content_multilingual_default": "默认显示内容的多语言值",
   "content_visibility_heading": "可见范围",
-  "address_multilingual_default": "默认显示地址的多语言值"
+  "address_multilingual_default": "默认显示地址的多语言值",
+  "profile_translation_unsupported": "不支持此语言组合。",
+  "profile_translation_complete": "已填入 {count} 项翻译。",
+  "profile_translate_source": "从{language}翻译空白栏位",
+  "feature_separate_name": "使用独立地点项目名称",
+  "feature_name_derived_help": "名称跟随地点。",
+  "profile_translation_skipped": "栏位已变更，已跳过。",
+  "feature_use_location_name": "使用位置名称",
+  "feature_use_location_name_prompt": "使用位置名称命名此地点项目？",
+  "feature_edit_location": "编辑位置",
+  "feature_name_locked": "已关联 · 只读",
+  "profile_translate_from": "翻译自"
 }

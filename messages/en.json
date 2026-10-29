@@ -1767,5 +1767,16 @@
   "content_languages_heading": "Languages",
   "content_multilingual_default": "Always show multilingual values for content",
   "content_visibility_heading": "Visibility",
-  "address_multilingual_default": "Always show multilingual values for addresses"
+  "address_multilingual_default": "Always show multilingual values for addresses",
+  "profile_translation_unsupported": "Unsupported language pair.",
+  "profile_translation_complete": "Filled {count} translations.",
+  "profile_translate_source": "Translate empty values from {language}",
+  "feature_separate_name": "Use a separate Feature name",
+  "feature_name_derived_help": "Name follows Location.",
+  "profile_translation_skipped": "Skipped because the field changed.",
+  "feature_use_location_name": "Use Location name",
+  "feature_use_location_name_prompt": "Use the Location name for this Feature?",
+  "feature_edit_location": "Edit Location",
+  "feature_name_locked": "Linked · read-only",
+  "profile_translate_from": "Translate from"
 }
