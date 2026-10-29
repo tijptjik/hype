@@ -1,4 +1,4 @@
-<!-- biome-ignore-all lint/a11y/noNoninteractiveElementToInteractiveRole: ARIA combobox listbox/options use aria-activedescendant with DOM focus in the input. -->
+<!-- biome-ignore-all lint/a11y/noNoninteractiveElementToInteractiveRole: The listbox exposes options with both combobox arrow navigation and sequential keyboard focus. -->
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte'
@@ -83,7 +83,7 @@ function onKeydown(event: KeyboardEvent): void {
       }}
       onkeydown={onKeydown}
       placeholder={labels.search}
-      class="min-h-11 min-w-0 flex-1 rounded-md border border-border/30 bg-foreground/3 px-3 text-sm text-foreground! focus-visible:outline-2 focus-visible:outline-primary"
+      class="min-h-11 min-w-0 flex-1 rounded-md border border-border/30 bg-foreground/3 px-3 text-sm text-foreground! focus-visible:outline-1 focus-visible:outline-primary/30"
     >
     <button
       type="button"
@@ -98,18 +98,21 @@ function onKeydown(event: KeyboardEvent): void {
   <ul
     id={`${id}-results`}
     role="listbox"
+    tabindex="-1"
     aria-label={labels.search}
     class="mt-2 max-h-64 overflow-y-auto overscroll-contain"
   >
     {#each results as option, index (option.tag)}
-      <!-- biome-ignore lint/a11y/useFocusableInteractive: The combobox input owns focus and targets this option with aria-activedescendant. -->
-      <li id={`${id}-${index}`} role="option" aria-selected={index === activeIndex}>
+      <li role="presentation">
         <button
           type="button"
-          tabindex="-1"
+          id={`${id}-${index}`}
+          role="option"
+          aria-selected={index === activeIndex}
+          onfocus={() => (active = index)}
           onpointerdown={event => event.preventDefault()}
           onclick={() => onSelect(option.tag)}
-          class={`grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground! transition-colors hover:bg-primary/8 ${index === activeIndex ? 'bg-primary/10 ring-1 ring-inset ring-primary/25' : ''}`}
+          class={`grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground! transition-colors outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/30 hover:bg-primary/8 ${index === activeIndex ? 'bg-primary/10 ring-1 ring-inset ring-primary/25' : ''}`}
         >
           <span class="min-w-0 whitespace-normal break-words"
             ><span
