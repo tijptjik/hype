@@ -1752,5 +1752,16 @@
   "location_visibility_exclusive_help": "：仅此组织可使用。",
   "location_visibility_name_override_help": "组织名称覆盖不会更改共享记录的名称。",
   "organisation_location_visibility_default": "新地点的默认可见性",
-  "location_visibility_default_unavailable": "无法获取组织默认值。保存前请选择共享或仅限本组织。"
+  "location_visibility_default_unavailable": "无法获取组织默认值。保存前请选择共享或仅限本组织。",
+  "address_translate_error": "翻译失败，请重试",
+  "address_translate_from": "译自",
+  "content_languages_info": "关于默认语言",
+  "content_languages_project": "项目默认",
+  "content_languages_order": "默认语言",
+  "content_languages_help": "编辑器中可用的语言及其排序。",
+  "content_languages_reset": "重置为默认值",
+  "content_languages_org": "机构默认",
+  "content_languages_user": "按照你的语言偏好",
+  "content_languages_help_named": "{name} 各编辑器中可用的语言及其排序。",
+  "content_languages_inherited": "使用机构默认"
 }

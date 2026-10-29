@@ -17,8 +17,13 @@ import {
 } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
 import { applyContentLocaleSettingsPatch } from '#lib/content-locales/settings.js'
 
-afterEach(cleanup)
-beforeEach(() => vi.useRealTimers())
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+beforeEach(() => {
+  vi.useRealTimers()
+  if (!Element.prototype.getAnimations) Element.prototype.getAnimations = () => []
+  // JSDOM has no Web Animations API; exercise motion in the real-browser checks.
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }))
+})
 const profile = () => within(screen.getByRole('region', { name: 'Profile languages' }))
 const state = (): {
   selectedLocales: string[]
@@ -47,7 +52,8 @@ it('finds canonical tags, legacy aliases, localized names and autonyms', () => {
 it('adds by keyboard, returns focus to the chip and reveals duplicates without appending', async () => {
   render(Fixture)
   await fireEvent.click(profile().getByRole('button', { name: '+ Add language' }))
-  const input = screen.getByRole('combobox')
+  // JSDOM has no layout, so Floating UI keeps the overlay visually hidden.
+  const input = await screen.findByRole('combobox', { hidden: true })
   expect(document.activeElement).toBe(input)
   await fireEvent.input(input, { target: { value: 'Japanese' } })
   await fireEvent.keyDown(input, { key: 'Enter' })
@@ -58,8 +64,8 @@ it('adds by keyboard, returns focus to the chip and reveals duplicates without a
   await fireEvent.click(profile().getByRole('button', { name: 'Japanese' }))
   expect(state().visibleLocales).not.toContain('ja')
   await fireEvent.click(profile().getByRole('button', { name: '+ Add language' }))
-  await fireEvent.input(screen.getByRole('combobox'), { target: { value: '日本語' } })
-  await fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter' })
+  await fireEvent.input(await screen.findByRole('combobox', { hidden: true }), { target: { value: '日本語' } })
+  await fireEvent.keyDown(await screen.findByRole('combobox', { hidden: true }), { key: 'Enter' })
   expect(state().selectedLocales.filter(tag => tag === 'ja')).toHaveLength(1)
   expect(state().visibleLocales).toContain('ja')
 })
@@ -82,7 +88,7 @@ it('reorders with keyboard and touch buttons, preserves chip focus and uses firs
   await fireEvent.keyDown(chinese, { key: 'ArrowLeft', altKey: true })
   expect(state().selectedLocales[0]).toBe('zh-Hant')
   expect(document.activeElement).toBe(chinese)
-  await fireEvent.click(profile().getByRole('button', { name: 'Move English later' }))
+  await fireEvent.keyDown(profile().getByRole('button', { name: 'English' }), { key: 'ArrowRight', altKey: true })
   expect(state().selectedLocales).toEqual(['zh-Hant', 'zh-Hans', 'en'])
   await fireEvent.click(profile().getByRole('button', { name: 'Multilingual' }))
   expect(document.querySelectorAll('[data-field-locale]')).toHaveLength(1)
@@ -95,7 +101,7 @@ it('reorders with keyboard and touch buttons, preserves chip focus and uses firs
 
 it('follows external state updates and does not keep rejected optimistic selection', async () => {
   render(Fixture, { acceptChanges: false })
-  await fireEvent.click(profile().getByRole('button', { name: 'Move English later' }))
+  await fireEvent.keyDown(profile().getByRole('button', { name: 'English' }), { key: 'ArrowRight', altKey: true })
   expect(state().selectedLocales[0]).toBe('en')
   expect(state().changes).toBe(1)
   await fireEvent.click(screen.getByRole('button', { name: 'Replace caller state' }))
@@ -109,7 +115,8 @@ it('supports arrow navigation, empty results and Escape focus restoration withou
   render(Fixture)
   const add = profile().getByRole('button', { name: '+ Add language' })
   await fireEvent.click(add)
-  const input = screen.getByRole('combobox')
+  // JSDOM has no layout, so Floating UI keeps the overlay visually hidden.
+  const input = await screen.findByRole('combobox', { hidden: true })
   await fireEvent.keyDown(input, { key: 'ArrowDown' })
   expect(input.getAttribute('aria-activedescendant')).toMatch(/-1$/)
   await fireEvent.input(input, { target: { value: 'no-such-language' } })
@@ -117,19 +124,17 @@ it('supports arrow navigation, empty results and Escape focus restoration withou
   expect(state().changes).toBe(0)
   expect(screen.getByText('No languages found')).toBeTruthy()
   await fireEvent.keyDown(input, { key: 'Escape' })
-  expect(screen.queryByRole('combobox')).toBeNull()
+  expect(screen.queryByRole('combobox', { hidden: true })).toBeNull()
   expect(document.activeElement).toBe(add)
 })
 
 it('requires explicit overrides and resets to the live inherited order without materializing defaults', async () => {
   render(Fixture)
   expect(state().changes).toBe(0)
-  await fireEvent.click(screen.getByRole('button', { name: 'Override for Project' }))
-  expect(state().override).toEqual(['en', 'zh-Hant', 'zh-Hans'])
-  const settings = screen.getAllByRole('region', { name: 'Supported locales' })[0]
-  await fireEvent.click(
-    within(settings).getByRole('button', { name: 'Move English later' }),
-  )
+  await fireEvent.click(within(screen.getAllByRole('region', { name: 'Default Languages' })[0]).getByRole('button', { name: 'Edit' }))
+  expect(state().override).toBeUndefined()
+  const settings = screen.getAllByRole('region', { name: 'Default Languages' })[0]
+  await fireEvent.keyDown(settings.querySelector('[data-locale="en"]')!, { key: 'ArrowRight', altKey: true })
   expect(state().override).toEqual(['zh-Hant', 'en', 'zh-Hans'])
   await fireEvent.click(
     within(settings).getByRole('button', { name: 'Remove English' }),
@@ -141,26 +146,26 @@ it('requires explicit overrides and resets to the live inherited order without m
     within(settings).getByRole('button', { name: 'Remove Traditional Chinese' }),
   )
   expect(state().override).toEqual(['zh-Hant'])
-  await fireEvent.click(screen.getByRole('button', { name: 'Reset to inherited' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }))
   expect(state().override).toBeUndefined()
-  expect(within(settings).getByText('User-locale default')).toBeTruthy()
+  expect(within(settings).getByText('Based on your language preference')).toBeTruthy()
   await fireEvent.click(
-    screen.getByRole('button', { name: 'Set Organisation defaults' }),
+    within(screen.getAllByRole('region', { name: 'Default Languages' })[1]).getByRole('button', { name: 'Edit' }),
   )
-  expect(within(settings).getByText('Inherited from Organisation')).toBeTruthy()
+  await fireEvent.keyDown(screen.getAllByRole('region', { name: 'Default Languages' })[1].querySelector('[data-locale="en"]')!, { key: 'ArrowRight', altKey: true })
+  expect(within(settings).getByText('Uses organisation defaults')).toBeTruthy()
 })
 
-it('supports pointer dragging without revealing hidden locales', async () => {
-  render(Fixture)
-  const english = profile().getByRole('button', { name: 'English' })
-  await fireEvent.click(english)
-  await fireEvent.dragStart(english, { dataTransfer: { setData: vi.fn() } })
-  await fireEvent.dragOver(
-    profile().getByRole('button', { name: 'Simplified Chinese' }),
-  )
-  await fireEvent.drop(profile().getByRole('button', { name: 'Simplified Chinese' }))
+it('previews a drag locally and commits its final order without revealing hidden locales', async () => {
+  const view = render(Fixture)
+  await fireEvent.click(profile().getByRole('button', { name: 'English' }))
+  const zone = view.container.querySelector('[data-locale-dnd-zone]')!
+  const items = ['zh-Hant', 'zh-Hans', 'en'].map(tag => ({ id: tag, tag }))
+  await fireEvent(zone, new CustomEvent('consider', { detail: { items, info: { id: 'en', source: 'pointer', trigger: 'draggedOverIndex' } } }))
+  expect(state().selectedLocales).toEqual(['en', 'zh-Hant', 'zh-Hans'])
+  await fireEvent(zone, new CustomEvent('finalize', { detail: { items, info: { id: 'en', source: 'pointer', trigger: 'droppedIntoZone' } } }))
   expect(state().selectedLocales).toEqual(['zh-Hant', 'zh-Hans', 'en'])
-  expect(state().visibleLocales).toEqual(['zh-Hant', 'zh-Hans'])
+  expect(state().visibleLocales).not.toContain('en')
 })
 
 it('retains unknown saved tags and disables all editing when read-only', async () => {

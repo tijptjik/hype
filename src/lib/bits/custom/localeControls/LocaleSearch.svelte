@@ -2,6 +2,18 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte'
+// SELF-HOSTED SCRIPT FONTS
+import '@fontsource/noto-sans-arabic/arabic-400.css'
+import '@fontsource/noto-sans-hebrew/hebrew-400.css'
+import '@fontsource/noto-sans-devanagari/devanagari-400.css'
+import '@fontsource/noto-sans-bengali/bengali-400.css'
+import '@fontsource/noto-sans-gurmukhi/gurmukhi-400.css'
+import '@fontsource/noto-sans-tamil/tamil-400.css'
+import '@fontsource/noto-sans-telugu/telugu-400.css'
+import '@fontsource/noto-sans-thai/thai-400.css'
+import '@fontsource/noto-sans-myanmar/myanmar-400.css'
+import '@fontsource/noto-sans-khmer/khmer-400.css'
+import '@fontsource/noto-sans-lao/lao-400.css'
 // LOCAL
 import { searchLocaleOptions } from './localeControls.js'
 // TYPES
@@ -26,7 +38,16 @@ let active = $state(0)
 let input: HTMLInputElement
 const results = $derived(searchLocaleOptions(options, query))
 const activeIndex = $derived(Math.min(active, results.length - 1))
-onMount(() => input.focus())
+onMount(() => input.focus({ preventScroll: true }))
+
+/** Select a script-complete font for autonyms on systems without local font coverage.
+ * @param tag Content-language code. @returns A self-hosted font family or system fallback.
+ */
+function languageFont(tag: string): string {
+  const scripts: Record<string, string> = { ar: 'Arabic', fa: 'Arabic', ur: 'Arabic', he: 'Hebrew', hi: 'Devanagari', ne: 'Devanagari', bn: 'Bengali', pa: 'Gurmukhi', ta: 'Tamil', te: 'Telugu', th: 'Thai', my: 'Myanmar', km: 'Khmer', lo: 'Lao' }
+  const script = scripts[tag.split('-')[0]]
+  return script ? `"Noto Sans ${script}", sans-serif` : 'sans-serif'
+}
 
 /** Keep keyboard focus in the combobox while navigating its results. */
 function onKeydown(event: KeyboardEvent): void {
@@ -52,7 +73,7 @@ function onKeydown(event: KeyboardEvent): void {
 </script>
 
 <div
-  class="mt-2 w-full min-w-0 rounded-xl border border-border bg-background p-3 shadow-sm"
+  class="w-full min-w-0 rounded-xl border border-border/20 bg-panel p-3 text-foreground shadow-xl"
 >
   <div class="flex min-w-0 items-center gap-2">
     <input
@@ -70,13 +91,13 @@ function onKeydown(event: KeyboardEvent): void {
       }}
       onkeydown={onKeydown}
       placeholder={labels.search}
-      class="min-h-11 min-w-0 flex-1 rounded-md border border-border bg-transparent px-3 text-sm focus-visible:outline-2 focus-visible:outline-primary"
+      class="min-h-11 min-w-0 flex-1 rounded-md border border-border/30 bg-foreground/3 px-3 text-sm text-foreground! focus-visible:outline-2 focus-visible:outline-primary"
     >
     <button
       type="button"
       aria-label={labels.close}
       onclick={onClose}
-      class="size-11 shrink-0 rounded-md hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-primary"
+      class="size-11 shrink-0 text-foreground! rounded-md hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-primary"
     >
       ×
     </button>
@@ -95,10 +116,10 @@ function onKeydown(event: KeyboardEvent): void {
           tabindex="-1"
           onpointerdown={event => event.preventDefault()}
           onclick={() => onSelect(option.tag)}
-          class={`grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-foreground/10 ${index === activeIndex ? 'bg-foreground/5' : ''}`}
+          class={`grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground! transition-colors hover:bg-primary/8 ${index === activeIndex ? 'bg-primary/10 ring-1 ring-inset ring-primary/25' : ''}`}
         >
           <span class="min-w-0 whitespace-normal break-words"
-            ><span lang={option.tag} class="font-semibold">{option.autonym}</span
+            ><span lang={option.tag} dir="auto" style:font-family={languageFont(option.tag)} class="font-semibold text-foreground!">{option.autonym}</span
             ><span class="block text-muted-foreground">{option.name}</span></span
           >
           <span class="text-right text-xs text-muted-foreground"

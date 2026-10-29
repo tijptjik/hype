@@ -64,7 +64,7 @@ const values = {
         Replace caller state
       </button>
     </section>
-    <ContentLocaleDefaults
+    <ContentLocaleDefaults organisationName="HKFoodWorks"
       value={override}
       inheritedLocales={organisationOverride ?? inherited.locales}
       inheritedOrigin={organisationOverride ? 'organisation' : 'user-default'}
@@ -75,7 +75,7 @@ const values = {
         override = value
       }}
     />
-    <ContentLocaleDefaults
+    <ContentLocaleDefaults organisationName="HKFoodWorks"
       value={organisationOverride}
       inheritedLocales={inherited.locales}
       inheritedOrigin="user-default"

@@ -6,3 +6,6 @@ export { default as FormSpecifiersFields } from './components/FormSpecifiersFiel
 export { default as FormHubSpecifiersFields } from './components/FormHubSpecifiersFields.svelte'
 export { default as FormHubSubscriptionSection } from './components/FormHubSubscriptionSection.svelte'
 export type { FormI18nSectionProps, FormSectionProps } from './formI18nSection.types'
+export { default as FormI18nInlineRow } from './components/FormI18nInlineRow.svelte'
+export { default as FormI18nSourceBar } from './components/FormI18nSourceBar.svelte'
+export { default as FormI18nTranslationStatus } from './components/FormI18nTranslationStatus.svelte'

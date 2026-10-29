@@ -6,13 +6,15 @@ import AlertCircle from 'virtual:icons/proicons/alert-circle'
 import Eraser from 'virtual:icons/proicons/eraser'
 import Languages from 'virtual:icons/tabler/language'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
-import { toLocaleKey } from '#lib/i18n.js'
+import { m, toLocaleKey } from '#lib/i18n.js'
 import type { FormSectionProps } from '../formI18nSection.types'
 
 type Props = Pick<
   FormSectionProps,
   'localeCodeClass' | 'onTranslate' | 'onResetLocale' | 'sectionKey'
 > & {
+  compact?: boolean
+  availableLocales?: Locale[]
   targetLocale: Locale
   isVisible?: boolean
   isEditing?: boolean
@@ -20,6 +22,8 @@ type Props = Pick<
 }
 
 let {
+  compact = false,
+  availableLocales = supportedLocales,
   targetLocale,
   localeCodeClass = 'absolute right-5.5 top-4 text-2xl font-bold uppercase text-muted-foreground',
   onTranslate,
@@ -36,7 +40,7 @@ let errorResetTimer = $state<ReturnType<typeof setTimeout> | null>(null)
 let resetFlashToken = $state(0)
 
 const sourceLocales = $derived(
-  supportedLocales.filter(locale => locale !== targetLocale),
+  availableLocales.filter(locale => locale !== targetLocale),
 )
 const isLoading = $derived(status === 'loading')
 
@@ -86,6 +90,17 @@ $effect(() => {
 })
 </script>
 
+{#if compact}
+  <div class="flex min-h-12 items-center gap-2 text-xs text-muted-foreground" aria-busy={isLoading}>
+    <Languages class="size-4 shrink-0" />
+    <span>{m.address_translate_from()}</span>
+    {#each sourceLocales as sourceLocale}
+      <button type="button" class="rounded px-1.5 py-1 font-mono hover:bg-primary/10 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary" aria-label={`Translate from ${sourceLocale} to ${targetLocale}`} disabled={!onTranslate || isLoading} onclick={event => handleTranslate(event, sourceLocale)}>{sourceLocale === 'zh-hant' ? '繁中' : sourceLocale === 'zh-hans' ? '简中' : 'EN'}</button>
+    {/each}
+    {#if isLoading}<LoaderCircle class="size-4 animate-spin" />{/if}
+    {#if status === 'error'}<span role="alert">{m.address_translate_error()}</span>{/if}
+  </div>
+{:else}
 <div class="bits-form__i18n-translation" style={positionStyle}>
   <div data-locale-code class={localeCodeClass}>
     {#key status}
@@ -146,3 +161,5 @@ $effect(() => {
     </div>
   {/if}
 </div>
+
+{/if}

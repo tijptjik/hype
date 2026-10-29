@@ -48,14 +48,16 @@ let {
     />
   </div>
   <!-- biome-ignore format: Keep translated punctuation adjacent to the bold labels. -->
-  <SimpleTooltip>
+  <SimpleTooltip triggerProps={{ 'aria-label': m.location_visibility(), role: 'button' }}>
     {#snippet trigger()}
       <span class="inline-flex size-8 items-center justify-center text-muted-foreground"
         ><InfoIcon class="size-4" aria-label={m.location_visibility()} /></span
       >
     {/snippet}
-    <strong class="font-bold">{m.location_visibility_shared()}</strong>{m.location_visibility_shared_help()}
-    <strong class="font-bold">{m.location_visibility_exclusive()}</strong>{m.location_visibility_exclusive_help()}
-    {m.location_visibility_name_override_help()}
+    <ul class="list-disc space-y-2 pl-4">
+      <li><strong class="font-bold">{m.location_visibility_shared()}</strong>{m.location_visibility_shared_help()}</li>
+      <li><strong class="font-bold">{m.location_visibility_exclusive()}</strong>{m.location_visibility_exclusive_help()}</li>
+    </ul>
+    <p class="mt-3">{m.location_visibility_name_override_help()}</p>
   </SimpleTooltip>
 </div>

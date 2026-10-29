@@ -8,6 +8,7 @@ import {
 } from '#lib/content-locales/model.js'
 import {
   CONTENT_LOCALE_CATALOGUE,
+  SupportedContentLocaleSchema,
   getContentLocaleName,
   getContentLocaleRecord,
   queryContentLocales,
@@ -259,4 +260,14 @@ describe('shared defaults follow resource update permissions', () => {
       expect(decision.allowed).toBe(expected)
     }
   })
+})
+
+ it('offers script-level Chinese and Cantonese aliases while preserving retired settings', () => {
+  for (const query of ['Cantonese', 'yue', '粵語']) {
+    expect(queryContentLocales({ query }).map(row => row.locale)).toEqual(['zh-Hant'])
+  }
+  for (const tag of ['zh-Hant-HK', 'zh-Hant-TW', 'zh-Hans-CN', 'zh-Hans-SG', 'yue']) {
+    expect(CONTENT_LOCALE_CATALOGUE.some(row => row.locale === tag)).toBe(false)
+    expect(SupportedContentLocaleSchema.parse(tag)).toBe(tag)
+  }
 })

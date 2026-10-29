@@ -1752,5 +1752,16 @@
   "location_visibility_exclusive_help": ": only this organisation can use it.",
   "location_visibility_name_override_help": "Organisation name overrides do not rename the shared record.",
   "organisation_location_visibility_default": "Default visibility for new Locations",
-  "location_visibility_default_unavailable": "Organisation default unavailable. Choose Shared or Organisation-only before saving."
+  "location_visibility_default_unavailable": "Organisation default unavailable. Choose Shared or Organisation-only before saving.",
+  "address_translate_error": "Translation failed. Try again.",
+  "address_translate_from": "from",
+  "content_languages_info": "About language defaults",
+  "content_languages_project": "Project defaults",
+  "content_languages_order": "Default Languages",
+  "content_languages_help": "Availability and order of languages in the editors.",
+  "content_languages_reset": "Reset to defaults",
+  "content_languages_org": "Organisation defaults",
+  "content_languages_user": "Based on your language preference",
+  "content_languages_help_named": "Availability and order of languages in the editors used across {name}.",
+  "content_languages_inherited": "Uses organisation defaults"
 }

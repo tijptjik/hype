@@ -1752,5 +1752,16 @@
   "location_visibility_exclusive_help": "：僅此組織可使用。",
   "location_visibility_name_override_help": "組織名稱覆寫不會更改共享記錄的名稱。",
   "organisation_location_visibility_default": "新地點的預設可見性",
-  "location_visibility_default_unavailable": "無法取得組織預設值。儲存前請選擇共享或僅限本組織。"
+  "location_visibility_default_unavailable": "無法取得組織預設值。儲存前請選擇共享或僅限本組織。",
+  "address_translate_error": "翻譯失敗，請重試",
+  "address_translate_from": "譯自",
+  "content_languages_info": "關於預設語言",
+  "content_languages_project": "專案預設",
+  "content_languages_order": "預設語言",
+  "content_languages_help": "編輯器中可用的語言及其排序。",
+  "content_languages_reset": "重設為預設值",
+  "content_languages_org": "機構預設",
+  "content_languages_user": "依照你的語言偏好",
+  "content_languages_help_named": "{name} 各編輯器中可用的語言及其排序。",
+  "content_languages_inherited": "使用機構預設"
 }

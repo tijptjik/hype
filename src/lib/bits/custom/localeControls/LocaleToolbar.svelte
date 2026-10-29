@@ -1,9 +1,17 @@
 <script lang="ts">
 // SVELTE
-import { tick } from 'svelte'
+import { onMount, tick } from 'svelte'
+import type { TransitionConfig } from 'svelte/transition'
+import { flip } from 'svelte/animate'
+import { Popover } from 'bits-ui'
+// DRAG AND DROP
+import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action'
+// ICONS
+import LanguagesIcon from 'virtual:icons/lucide/languages'
+import GripIcon from 'virtual:icons/lucide/grip-vertical'
 // LOCAL
 import LocaleSearch from './LocaleSearch.svelte'
-import { defaultLocaleControlLabels } from './localeControls.js'
+import { defaultLocaleControlLabels, shortLocaleLabel } from './localeControls.js'
 // TYPES
 import type { LocaleChange, LocaleToolbarProps } from './localeControls.types.js'
 
@@ -23,10 +31,31 @@ let {
 const id = $props.id()
 let searching = $state(false)
 let announcement = $state('')
-let dragged: string | null = $state(null)
-let addButton: HTMLButtonElement
+type LocaleItem = { id: string; tag: string }
+let items = $state<LocaleItem[]>([])
+let sorting = $state(false)
+$effect(() => { if (!sorting) items = selectedLocales.map(tag => ({ id: tag, tag })) })
+let addButton = $state<HTMLButtonElement>()
 let root: HTMLDivElement
 const isExpanded = $derived(alwaysExpanded || expanded)
+let reducedMotion = $state(false)
+onMount(() => {
+  const preference = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+  if (!preference) return
+  const update = (): void => { reducedMotion = preference.matches }
+  update()
+  preference.addEventListener?.('change', update)
+  return () => preference.removeEventListener?.('change', update)
+})
+
+/** Reveal from the right-hand trigger without resizing/reflowing the locale chips.
+ * @param _node Mounted locale strip.
+ * @returns A clipped reveal, or an immediate change for reduced motion/settings.
+ */
+function revealLocales(_node: Element): TransitionConfig {
+  return { duration: reducedMotion || alwaysExpanded ? 0 : 180,
+    css: t => `clip-path: inset(0 0 0 ${(1 - t) * 100}%); opacity: ${t};` }
+}
 
 /** Resolve saved tags absent from the current catalogue without dropping them. */
 function optionFor(tag: string): { name: string; autonym: string } {
@@ -99,7 +128,7 @@ function toggle(tag: string): void {
 }
 
 /** Reorder one locale by identity; visibility and content are preserved. */
-function move(tag: string, to: number): void {
+function move(tag: string, to: number, restoreFocus = true): void {
   if (disabled) return
   const from = selectedLocales.indexOf(tag)
   if (from < 0 || to < 0 || to >= selectedLocales.length || from === to) return
@@ -115,7 +144,7 @@ function move(tag: string, to: number): void {
     visibleLocales: selected.filter(locale => visibleLocales.includes(locale)),
   }
   onChange(change)
-  void tick().then(() =>
+  if (restoreFocus) void tick().then(() =>
     Array.from(root.querySelectorAll<HTMLButtonElement>('[data-locale]'))
       .find(button => button.dataset.locale === tag)
       ?.focus(),
@@ -123,7 +152,35 @@ function move(tag: string, to: number): void {
   void announce(labels.moved(optionFor(tag).name, to + 1, selected.length))
 }
 
-/** Alt+Arrow keys provide a shortcut in addition to explicit touch/keyboard buttons. */
+/** Lift the library's pointer-following clone above the stationary chips.
+ * @param element Floating clone. @returns Nothing.
+ */
+function liftDraggedChip(element?: HTMLElement): void {
+  if (!element) return
+  element.style.boxShadow = '0 10px 24px rgb(0 0 0 / 0.18)'
+  element.style.cursor = 'grabbing'
+}
+
+/** Preview the insertion slot without persisting transient shadow items.
+ * @param event Drag-zone preview. @returns Nothing.
+ */
+function considerOrder(event: CustomEvent<DndEvent<LocaleItem>>): void {
+  sorting = event.detail.info.trigger !== 'dragStopped'
+  items = event.detail.items
+}
+
+/** Commit the dropped order once while preserving visibility and caller ownership.
+ * @param event Final drag-zone order. @returns Nothing.
+ */
+function finalizeOrder(event: CustomEvent<DndEvent<LocaleItem>>): void {
+  items = event.detail.items
+  const tag = String(event.detail.info.id)
+  const to = items.findIndex(item => item.tag === tag)
+  move(tag, to, event.detail.info.source !== 'keyboard')
+  sorting = false
+}
+
+/** Alt+Arrow keys reorder locales without requiring pointer dragging. */
 function keydown(event: KeyboardEvent, tag: string, index: number): void {
   if (
     event.altKey &&
@@ -135,44 +192,45 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
 }
 </script>
 
-<div bind:this={root} class={`min-w-0 ${className}`}>
-  <div class={alwaysExpanded ? 'min-w-0' : 'flex min-w-0 flex-wrap items-start gap-2'}>
-    {#if !alwaysExpanded}
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-controls={`${id}-strip`}
-        {disabled}
-        onclick={() => {
-          searching = false
-          onExpandedChange(!expanded)
-        }}
-        class="min-h-11 rounded-lg border border-border px-3 text-sm font-medium hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
-      >
-        {labels.multilingual}
-      </button>
-    {/if}
+<div data-locale-toolbar bind:this={root} class={`group/locale-toolbar min-w-0 ${className}`}>
+  <div class={alwaysExpanded ? 'min-w-0' : 'flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2 sm:flex-nowrap'}>
+    {#if isExpanded}
     <div
       id={`${id}-strip`}
+      transition:revealLocales
       inert={!isExpanded}
       aria-hidden={!isExpanded}
-      class="grid min-w-0 flex-1 origin-left transition-[grid-template-columns,opacity,max-width] duration-200 motion-reduce:transition-none motion-reduce:duration-0"
-      style:flex-basis={isExpanded ? '16rem' : '0px'}
-      style:max-width={isExpanded ? '100%' : '0px'}
-      style:max-height={isExpanded ? undefined : '0px'}
-      style:grid-template-columns={isExpanded ? '1fr' : '0fr'}
-      style:opacity={isExpanded ? 1 : 0}
+      class={alwaysExpanded ? 'min-w-0' : 'order-2 min-w-0 basis-full sm:order-none sm:basis-auto sm:max-w-[calc(100%_-_8rem)]'}
     >
       <div class="min-w-0 overflow-hidden">
-        <div class="flex min-w-0 flex-wrap items-center gap-2 p-0.5">
-          {#each selectedLocales as tag, index (tag)}
+        <div class="flex min-w-0 flex-wrap items-center {alwaysExpanded ? 'justify-start' : 'justify-end'} gap-1.5 p-0.5">
+
+          <div
+            use:dragHandleZone={{ items, type: id, flipDurationMs: reducedMotion ? 0 : 160, dragDisabled: disabled, dropFromOthersDisabled: true, dropTargetStyle: {}, transformDraggedElement: liftDraggedChip, delayTouchStart: true }}
+            onconsider={considerOrder}
+            onfinalize={finalizeOrder}
+            aria-label={labels.multilingual}
+            class="flex min-w-0 flex-wrap items-center {alwaysExpanded ? 'justify-start' : 'justify-end'} gap-1.5"
+            data-locale-dnd-zone
+          >
+          {#each items as item, index (item.id)}
+            {@const tag = item.tag}
             {@const option = optionFor(tag)}
             <!-- biome-ignore lint/a11y/useSemanticElements: This labels a compact locale action group, not a separate form fieldset. -->
             <div
               role="group"
               aria-label={option.name}
-              class="flex max-w-full min-w-0 flex-wrap items-center rounded-lg border border-border bg-foreground/4"
+              animate:flip={{ duration: reducedMotion ? 0 : 160 }}
+              class="flex max-w-full min-w-0 items-center rounded-md border border-border bg-panel text-foreground shadow-sm"
             >
+              <button
+                type="button"
+                use:dragHandle
+                {disabled}
+                aria-label={`Reorder ${option.name}`}
+                data-locale-handle={tag}
+                class="flex min-h-8 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-md text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing disabled:opacity-50"
+              ><GripIcon class="size-3" aria-hidden="true" /></button>
               <button
                 type="button"
                 data-locale={tag}
@@ -183,77 +241,55 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                   ? visibleLocales.includes(tag)
                   : undefined}
                 {disabled}
-                draggable={!disabled}
-                ondragstart={event => {
-                  dragged = tag
-                  event.dataTransfer?.setData('text/plain', tag)
-                }}
-                ondragend={() => (dragged = null)}
-                ondragover={event => {
-                  if (dragged) event.preventDefault()
-                }}
-                ondrop={event => {
-                  event.preventDefault()
-                  if (dragged) move(dragged, index)
-                  dragged = null
-                }}
+                aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown"
                 onkeydown={event => keydown(event, tag, index)}
                 onclick={() => toggle(tag)}
-                class={`min-h-11 min-w-0 flex-1 rounded-lg px-3 text-left text-sm whitespace-normal break-words focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50 ${mode === 'membership' || visibleLocales.includes(tag) ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
+                class={`inline-flex min-h-8 min-w-0 flex-1 items-center gap-1 rounded-r-md pr-2 pl-1 text-left text-xs whitespace-normal break-words focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50 ${mode === 'membership' || visibleLocales.includes(tag) ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
               >
-                <span lang={tag}>{option.autonym}</span>
+                <span lang={tag}>{mode === 'visibility' ? shortLocaleLabel(tag) : option.autonym}</span>
                 {#if mode === 'membership'}
                   <span aria-hidden="true" class="ml-2">×</span>
                 {/if}
               </button>
-              <div class="flex shrink-0">
-                <button
-                  type="button"
-                  aria-label={labels.moveEarlier(option.name)}
-                  disabled={disabled || index === 0}
-                  onclick={() => move(tag, index - 1)}
-                  class="min-h-11 min-w-9 rounded-md hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-30"
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  aria-label={labels.moveLater(option.name)}
-                  disabled={disabled || index === selectedLocales.length - 1}
-                  onclick={() => move(tag, index + 1)}
-                  class="min-h-11 min-w-9 rounded-md hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-30"
-                >
-                  →
-                </button>
-              </div>
             </div>
           {/each}
-          <button
-            bind:this={addButton}
-            type="button"
-            {disabled}
-            aria-expanded={searching && isExpanded}
-            aria-controls={`${id}-search`}
-            onclick={() => (searching = !searching)}
-            class="min-h-11 rounded-lg border border-dashed border-border px-3 text-sm hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
-          >
-            + {labels.add}
-          </button>
+          </div>
+          <Popover.Root bind:open={searching}>
+            <Popover.Trigger {disabled}>
+              {#snippet child({ props })}
+                <button {...props} bind:this={addButton} type="button"
+                  class="min-h-8 rounded-md border border-dashed border-border px-2 text-xs focus-visible:outline-2 focus-visible:outline-primary"
+                >+ {labels.add}</button>
+              {/snippet}
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content sideOffset={8} align="start" collisionPadding={16}
+                onOpenAutoFocus={event => event.preventDefault()} onCloseAutoFocus={event => { event.preventDefault(); if (!searching && !root.contains(document.activeElement)) addButton?.focus() }}
+                class="bits-theme z-[100] w-[min(24rem,calc(100vw-2rem))] outline-none">
+                <LocaleSearch {options} {selectedLocales} {labels} onSelect={select} onClose={closeSearch} />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </div>
       </div>
     </div>
+    {/if}
+    {#if !alwaysExpanded}
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={`${id}-strip`}
+        {disabled}
+        onclick={() => {
+          searching = false
+          onExpandedChange(!expanded)
+        }}
+        class="inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
+      >
+        <LanguagesIcon class="size-4" />{labels.multilingual}
+      </button>
+    {/if}
   </div>
-  {#if searching && isExpanded && !disabled}
-    <div id={`${id}-search`}>
-      <LocaleSearch
-        {options}
-        {selectedLocales}
-        {labels}
-        onSelect={select}
-        onClose={closeSearch}
-      />
-    </div>
-  {/if}
   <span role="status" aria-live="polite" aria-atomic="true" class="sr-only"
     >{announcement}</span
   >

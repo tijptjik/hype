@@ -26,9 +26,14 @@
     backdrop-filter: blur(14px) saturate(0.9);
     animation-duration: 160ms;
     animation-fill-mode: both;
-    transform-origin: var(--bits-tooltip-content-transform-origin);
+    transform-origin: var(
+      --bits-popover-content-transform-origin,
+      var(--bits-tooltip-content-transform-origin)
+    );
   }
 
+  .bits-theme.bits-tooltip__content[data-state="open"],
+  .bits-theme .bits-tooltip__content[data-state="open"],
   .bits-theme.bits-tooltip__content[data-state="delayed-open"],
   .bits-theme.bits-tooltip__content[data-state="instant-open"],
   .bits-theme .bits-tooltip__content[data-state="delayed-open"],

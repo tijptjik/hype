@@ -57,3 +57,16 @@ export function displayedLocales(state: LocaleSelection, expanded: boolean): str
   )
   return expanded && visible.length ? visible : state.selectedLocales.slice(0, 1)
 }
+
+/** Compact locale prefix for row labels and chips; full names remain accessible.
+ * @param tag Canonical or legacy content-locale tag.
+ * @returns A short script label or compact language code, retaining region variants.
+ */
+export function shortLocaleLabel(tag: string): string {
+  const normalized = tag.replace('zhHant', 'zh-Hant').replace('zhHans', 'zh-Hans')
+  if (/^zh-hant(?:-|$)/i.test(normalized)) return '繁中'
+  if (/^zh-hans(?:-|$)/i.test(normalized)) return '简中'
+  if (normalized === 'ja') return '日'
+  if (normalized === 'ko') return '韓'
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}

@@ -227,6 +227,7 @@
     "smartcrop": "^2.0.5",
     "substack-subscriber": "^1.0.0",
     "svelte-auto-animate": "^0.0.1",
+    "svelte-dnd-action": "^0.9.80",
     "svelte-fa": "^4.0.4",
     "svelte-file-dropzone": "^2.0.9",
     "svelte-gestures": "^5.2.2",
