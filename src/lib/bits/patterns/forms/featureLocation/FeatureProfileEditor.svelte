@@ -24,7 +24,7 @@ import {
   type ProfileTranslationResult,
 } from './profileTranslation'
 // ICONS
-import { Popover } from 'bits-ui'
+import UnlinkIcon from 'virtual:icons/lucide/unlink'
 import LinkIcon from 'virtual:icons/lucide/link'
 import FormI18nSourceBar from '../formI18nSection/components/FormI18nSourceBar.svelte'
 import FormI18nTranslationStatus from '../formI18nSection/components/FormI18nTranslationStatus.svelte'
@@ -188,29 +188,7 @@ function autonym(locale: string): string {
                 ].join(' ')
               : ''}
           />
-          {#if derived}
-            <div class="flex flex-wrap items-center justify-end gap-2" data-profile-derived>
-              {#if isEditing && !policyRequired}
-                <Popover.Root>
-                  <Popover.Trigger class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground hover:text-primary">
-                    <LinkIcon class="size-3" />{m.feature_name_derived_help()}
-                  </Popover.Trigger>
-                  <Popover.Portal>
-                    <Popover.Content sideOffset={6} collisionPadding={16} class="bits-theme z-50 rounded-lg border border-border bg-panel p-1 shadow-md">
-                      <Popover.Close onclick={onIndependentName} class="rounded px-3 py-2 text-xs hover:bg-muted">{m.feature_separate_name()}</Popover.Close>
-                    </Popover.Content>
-                  </Popover.Portal>
-                </Popover.Root>
-              {:else}
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground"><LinkIcon class="size-3" />{m.feature_name_derived_help()}</span>
-              {/if}
-              {#if isEditing}
-                <span class="overflow-hidden" data-profile-edit-action transition:slide={{ axis: 'x', duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 180 }}>
-                  <button type="button" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10" onclick={onEditLocation}><EditIcon class="size-3" />{m.feature_edit_location()}</button>
-                </span>
-              {/if}
-            </div>
-          {/if}
+
         </div>
         <FormI18nSourceBar
           visible={!showSkeleton &&
@@ -283,7 +261,19 @@ function autonym(locale: string): string {
             </div>
           {/each}
         </div>
-        {#if !showSkeleton && field === 'title' && offerName && isEditing}
+        {#if derived}
+          <div class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3" data-profile-derived>
+            <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground"><LinkIcon class="size-4 shrink-0 text-primary" />{m.feature_name_derived_help()}</span>
+            {#if isEditing}
+              <div class="ml-auto flex flex-wrap items-center justify-end gap-2 overflow-hidden" data-profile-edit-action transition:slide={{ axis: 'x', duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 180 }}>
+                {#if !policyRequired}
+                  <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-muted" onclick={onIndependentName}><UnlinkIcon class="size-3.5" />{m.feature_separate_name()}</button>
+                {/if}
+                <button type="button" class="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20" onclick={onEditLocation}><EditIcon class="size-3.5" />{m.feature_edit_location()}</button>
+              </div>
+            {/if}
+          </div>
+        {:else if !showSkeleton && field === 'title' && offerName && isEditing}
           <div
             class="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary/5 p-3 text-xs"
           >

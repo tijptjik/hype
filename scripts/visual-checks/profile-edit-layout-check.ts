@@ -24,7 +24,6 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox]] as c
       await page.getByRole('button', { name: 'Use Location name', exact: true }).click()
       if (await page.getByText('Linked · read-only').count()) throw new Error('Duplicate link indicator')
       await page.getByRole('button', { name: 'Edit Location', exact: true }).waitFor()
-      await page.getByRole('button', { name: 'Set by Location', exact: true }).click()
       await page.getByRole('button', { name: 'Unlink', exact: true }).waitFor()
       await page.getByRole('button', { name: 'Unlink', exact: true }).click()
       await page.getByRole('button', { name: 'title en', exact: true }).waitFor()

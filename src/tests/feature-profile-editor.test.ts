@@ -63,7 +63,7 @@ it('locks inherited titles including empty rows, keeps Edit Location and separat
   const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'title en' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Use Location name' }))
-  expect(screen.getByRole('button', { name: 'Set by Location' })).toBeTruthy()
+  expect(screen.getByText('Set by Location')).toBeTruthy()
   expect(screen.queryByRole('textbox', { name: 'title en' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'title en' })).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
@@ -74,8 +74,9 @@ it('locks inherited titles including empty rows, keeps Edit Location and separat
   ).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Edit Location' }))
   expect(state(view.container).editedLocation).toBe(true)
-  // The Bits popover and independent-name action are exercised in the real-browser layout check.
-  expect(screen.getByRole('button', { name: 'Set by Location' })).toBeTruthy()
+  // Both explicit linked-name actions remain discoverable in edit mode.
+  expect(screen.getByRole('button', { name: 'Unlink' })).toBeTruthy()
+  expect(screen.getByText('Set by Location')).toBeTruthy()
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
   expect(screen.queryByRole('button', { name: 'Edit Location' })).toBeNull()
   expect(screen.getAllByText('Set by Location')).toHaveLength(1)
