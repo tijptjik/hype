@@ -2621,7 +2621,7 @@ $effect(() => () => clearVisualSectionReopenState())
       nextAction={buildFacetNavAction('core', 'next')}
       attrs={{ 'data-facet-id': 'core' }}
     >
-      <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-9! pb-12`}>
+      <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-7! pb-12`}>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         {#if !showNameFields}
           <div

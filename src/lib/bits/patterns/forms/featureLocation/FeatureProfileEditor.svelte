@@ -1,6 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, type Snippet } from 'svelte'
+import { slide } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
+import EditIcon from 'virtual:icons/lucide/pencil'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 import { contentFormKey } from '#lib/i18n/contentRecords.js'
@@ -202,7 +205,9 @@ function autonym(locale: string): string {
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground"><LinkIcon class="size-3" />{m.feature_name_derived_help()}</span>
               {/if}
               {#if isEditing}
-                <button type="button" class="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10" onclick={onEditLocation}>{m.feature_edit_location()}</button>
+                <span class="overflow-hidden" data-profile-edit-action transition:slide={{ axis: 'x', duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 180 }}>
+                  <button type="button" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10" onclick={onEditLocation}><EditIcon class="size-3" />{m.feature_edit_location()}</button>
+                </span>
               {/if}
             </div>
           {/if}

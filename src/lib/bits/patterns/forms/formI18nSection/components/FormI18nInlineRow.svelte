@@ -41,7 +41,22 @@ function keydown(event: KeyboardEvent): void {
   }
 }
 $effect(() => { if (!editable) close() })
-const editorAttrs = $derived({ ...attrs, ...(multiline ? { style: `height: ${Math.max(40, editHeight - 2)}px; max-height: none; field-sizing: fixed;` } : {}), 'aria-label': label, onkeydown: keydown })
+/** Fit a typed description to its contents without introducing an inner scrollbar.
+ * @param event Native input event, forwarded to the registered form control first.
+ * @returns Nothing; updates the textarea and its retained height together.
+ */
+function input(event: Event): void {
+  if (typeof attrs.oninput === 'function') attrs.oninput(event)
+  if (!multiline) return
+  const control = event.currentTarget as HTMLTextAreaElement
+  control.style.height = 'auto'
+  const style = getComputedStyle(control)
+  const height = Math.max(40, control.scrollHeight + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth))
+  editHeight = height + 2
+  control.style.height = `${height}px`
+}
+const editorAttrs = $derived({ ...attrs, ...(multiline ? { style: `height: ${Math.max(40, editHeight - 2)}px; max-height: none; field-sizing: fixed; overflow-y: hidden;` } : {}), 'aria-label': label, onkeydown: keydown, oninput: input })
+
 </script>
 
 <div bind:this={root} class="grid min-w-0 items-start gap-2 {prefix ? 'grid-cols-[2.5rem_minmax(0,1fr)_2rem]' : 'grid-cols-[minmax(0,1fr)_2rem]'}" data-inline-locale-row>
