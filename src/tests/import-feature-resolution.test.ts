@@ -236,3 +236,12 @@ describe('import feature property resolution', () => {
     ).toBeUndefined()
   })
 })
+
+
+it('keeps fourth-language content and verification through an unrelated import merge', () => {
+  const importCtx = createImportCtx(new Map())
+  const merged = mergeFeatureData({ id: 'feature', i18n: { ja: { title: '喫茶店', titleGen: true, description: '<p>説明</p>', descriptionGen: false } }, properties: [] } as never,
+    { feature: { tangible: true } } as never, {} as never, importCtx)
+  expect(merged.i18n?.ja).toMatchObject({ locale: 'ja', title: '喫茶店', titleGen: true, description: '<p>説明</p>', descriptionGen: false })
+  expect(merged.i18n?.en?.title).not.toBe('喫茶店')
+})

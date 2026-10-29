@@ -19,7 +19,7 @@ import {
   userFeature,
 } from '#lib/db/schema/index.js'
 // CONSTRAINTS
-import { getLocales } from '../constraints'
+import { ContentTagInput, contentLocaleMap } from '#lib/i18n/contentRecords.js'
 import { FormBoolean } from '../form'
 import { AddressMetaSchema } from '#lib/addresses/featureAddress.js'
 // ZOD SCHEMAS
@@ -31,8 +31,6 @@ import {
 } from './property'
 import { ImageContextEnvelopeAPI } from './image'
 import { UserBasic } from './user'
-// ENUMS
-import { supportedLocales } from '#lib/enums.js'
 // TYPES
 import type { AddressProperties } from '#lib/utils/address.types.js'
 import type { GeometryObject } from 'geojson'
@@ -186,7 +184,7 @@ export const FeatureUpdate = createUpdateSchema(feature)
   })
 
 export const FeatureI18nBase = createSelectSchema(featureI18n).extend({
-  locale: z.enum(Object.values(supportedLocales) as [string, ...string[]]),
+  locale: ContentTagInput,
   addressProperties: z.custom<AddressProperties>().nullish(),
 })
 
@@ -245,7 +243,7 @@ export const FeaturePropertyUpdate = createUpdateSchema(featureProperty)
   })
 
 export const FeaturePropertyI18nBase = createSelectSchema(featurePropertyI18n).extend({
-  locale: z.enum(Object.values(supportedLocales) as [string, ...string[]]),
+  locale: ContentTagInput,
   valueGen: FormBoolean.optional(),
 })
 
@@ -336,7 +334,6 @@ export const FeatureAdminRow = FeatureBase.extend({
 export const FeatureI18nFormData = z.object({
   title: z
     .string()
-    .min(1, { message: m.field_is_required({ field: m.feature__title() }) })
     .max(128, { message: m.admin__validation_lte_128_chars() }),
   titleGen: FormBoolean.default(false),
   description: z
@@ -373,11 +370,7 @@ export const FeaturePropertyI18nFormData = z.object({
   valueGen: FormBoolean.default(false),
 })
 
-export const FeaturePropertyI18nByLocaleFormData = z.object({
-  en: FeaturePropertyI18nFormData.optional().default({ valueGen: false }),
-  zhHans: FeaturePropertyI18nFormData.optional().default({ valueGen: false }),
-  zhHant: FeaturePropertyI18nFormData.optional().default({ valueGen: false }),
-})
+export const FeaturePropertyI18nByLocaleFormData = contentLocaleMap(FeaturePropertyI18nFormData)
 
 export const FeaturePropertyFormData = z.object({
   propertyId: z.string().min(1),
@@ -389,17 +382,13 @@ export const FeaturePropertyFormData = z.object({
   propertyValue: PropertyValueAdminProfileAPI.nullish(),
 })
 
-export const FeatureI18nByLocaleFormData = z.object({
-  en: FeatureI18nFormData,
-  zhHans: FeatureI18nFormData,
-  zhHant: FeatureI18nFormData,
-})
+// A selected empty locale is valid; at least one authored title is required overall.
+export const FeatureI18nByLocaleFormData = contentLocaleMap(FeatureI18nFormData).refine(
+  rows => Object.values(rows).some(row => row.title.trim().length > 0),
+  { message: m.field_is_required({ field: m.feature__title() }) },
+)
 
-export const FeatureDraftI18nByLocaleFormData = z.object({
-  en: FeatureDraftI18nFormData,
-  zhHans: FeatureDraftI18nFormData,
-  zhHant: FeatureDraftI18nFormData,
-})
+export const FeatureDraftI18nByLocaleFormData = contentLocaleMap(FeatureDraftI18nFormData)
 
 export const FeatureEntityFormData = z.object({
   locationReset: z.preprocess(decodeLocationFormValue, LocationResetSchema).optional(),
@@ -502,13 +491,13 @@ export const FeatureProfile = z.enum([
 ])
 
 export const FeaturePropertyCollectionAPI = FeaturePropertyBase.extend({
-  i18n: getLocales(FeaturePropertyI18nBase, []).nullish(),
+  i18n: contentLocaleMap(FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true })).nullish(),
   property: PropertyDetailProfileAPI.optional(),
   propertyValue: PropertyValueDetailProfileAPI.nullish(),
 })
 
 export const FeaturePropertyAPI = FeaturePropertyBase.extend({
-  i18n: getLocales(FeaturePropertyI18nBase, []).nullish(),
+  i18n: contentLocaleMap(FeaturePropertyI18nBase.partial({ featureId: true, propertyId: true })).nullish(),
   property: PropertyAdminProfileAPI.optional(),
   propertyValue: PropertyValueAdminProfileAPI.nullish(),
 })
@@ -553,7 +542,7 @@ export const FeatureListProfileAPI = FeatureListFields.extend({
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
-  i18n: getLocales(FeatureI18nBase),
+  i18n: contentLocaleMap(FeatureI18nBase.partial({ featureId: true })).nullish(),
   properties: z.array(FeaturePropertyCollectionAPI).default([]),
   image: ImageContextEnvelopeAPI.nullish(),
   imageCount: z.number().int().default(0),
@@ -572,7 +561,7 @@ export const FeatureDetailProfileAPI = FeatureCardProfileAPI.extend({
 export const FeatureAdminProfileAPI = FeatureBase.extend({
   locationBrands: ReadLocationBrands,
   locationLifecycle: ReadLocationLifecycle,
-  i18n: getLocales(FeatureI18nBase),
+  i18n: contentLocaleMap(FeatureI18nBase.partial({ featureId: true })).nullish(),
   properties: z.array(FeaturePropertyAPI).default([]),
   contributor: UserBasic.nullish(),
   publisher: UserBasic.nullish(),
@@ -590,5 +579,5 @@ export const FeatureCompactProfileAPI = FeatureBase.pick({
   projectId: true,
   layerId: true,
 }).extend({
-  i18n: getLocales(FeatureI18nBase.pick({ title: true })),
+  i18n: contentLocaleMap(FeatureI18nBase.pick({ title: true })).nullish(),
 })

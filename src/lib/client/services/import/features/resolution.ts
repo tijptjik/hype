@@ -1,9 +1,11 @@
+// CONTENT LOCALE BOUNDARIES
+import { adaptContentMap, contentFormKey, contentStorageTag } from '#lib/i18n/contentRecords.js'
+import { FeatureI18nBase } from '#lib/db/zod/schema/feature.js'
 import type { RemoteForm, RemoteFormInput } from '$app/server'
 
 // REMOTE
 import { featureForm, getFeatureForImport } from '#lib/api/feature.remote.js'
 // I18N
-import { toLocaleKey } from '#lib/i18n.js'
 // SERVICES
 import { toFeatureFormInput } from '#lib/client/services/feature.js'
 // UTILS
@@ -1132,7 +1134,7 @@ function extractSubmittedData(
         if (!propertyKey) return
         if (!submitted.properties[propertyKey]) submitted.properties[propertyKey] = {}
         if (column.locale && column.locale !== 'None') {
-          const localeKey = toLocaleKey(column.locale)
+          const localeKey = contentFormKey(column.locale)
           const property = submitted.properties[propertyKey]
           property.i18n ??= {}
           property.i18n[localeKey] ??= {}
@@ -1550,7 +1552,13 @@ function getContributorId(
 
 /**
  * Merge i18n data with priority: submitted > enriched > existing
- * Also integrates translation data from the translation step
+ * Also integrates translation data from the translation step.
+ * @param existing Persisted translations and verification metadata.
+ * @param enriched Provider-enriched values.
+ * @param submitted Explicit import values with highest merge priority.
+ * @param enrichedFull Translation-step outputs.
+ * @param featureId Parent Feature identity.
+ * @returns Complete dynamic translation records without alias collisions.
  */
 function mergeI18nData(
   existing: Record<string, ImportLocaleRecord>,
@@ -1558,10 +1566,16 @@ function mergeI18nData(
   submitted: Record<string, ImportLocaleRecord>,
   enrichedFull: ImportData,
   featureId: string,
-): Record<string, ImportLocaleRecord> {
+): NonNullable<Feature['i18n']> {
   const merged: Record<string, ImportLocaleRecord> = {}
+  existing = adaptContentMap(existing)
+  enriched = adaptContentMap(enriched)
+  submitted = adaptContentMap(submitted)
 
-  // Helper to ensure locale object has required fields
+  // Helper to ensure locale object has required fields.
+  /** Add identity without discarding translated content.
+   * @param localeObj Locale fields. @param locale Incoming tag. @returns Identified row.
+   */
   function ensureLocaleFields(
     localeObj: ImportLocaleRecord,
     locale: string,
@@ -1574,22 +1588,27 @@ function mergeI18nData(
     }
   }
 
+  /** Adapt import tags to form identity.
+   * @param locale Incoming tag. @returns Legacy key or canonical additional tag.
+   */
   function getCanonicalLocaleKey(locale: string): string {
-    if (locale === 'zh-Hant') return 'zhHant'
-    if (locale === 'zh-Hans') return 'zhHans'
-    return toLocaleKey(locale as Parameters<typeof toLocaleKey>[0])
+    return contentFormKey(locale)
   }
 
+  /** Allocate a merge bucket for a validated locale.
+   * @param locale Incoming tag. @returns Bucket key.
+   */
   function ensureLocaleBucket(locale: string): string {
     const localeKey = getCanonicalLocaleKey(locale)
     if (!merged[localeKey]) merged[localeKey] = {}
     return localeKey
   }
 
+  /** Retain compatibility with existing stored Chinese rows.
+   * @param localeKey Form identity. @returns Storage tag.
+   */
   function toFeatureI18nLocaleValue(localeKey: string): string {
-    if (localeKey === 'zhHant') return 'zh-Hant'
-    if (localeKey === 'zhHans') return 'zh-Hans'
-    return 'en'
+    return contentStorageTag(localeKey)
   }
 
   // Normalize any existing persisted locale keys before applying import updates.
@@ -1741,7 +1760,14 @@ function mergeI18nData(
     merged[locale] = ensureLocaleFields(merged[locale], locale)
   })
 
-  return merged
+  return Object.fromEntries(Object.entries(merged).map(([locale, row]) => [locale,
+    FeatureI18nBase.parse({
+      ...row, featureId, locale: contentStorageTag(locale), title: row.title ?? '',
+      titleGen: row.titleGen ?? false, description: row.description ?? null,
+      descriptionGen: row.descriptionGen ?? false, displayAddress: row.displayAddress ?? null,
+      displayAddressGen: row.displayAddressGen ?? false,
+    }),
+  ]))
 }
 
 /**
@@ -1912,7 +1938,7 @@ function mergeProperties(
       i18n: propertyI18n
         ? Object.fromEntries(
             Object.entries(propertyI18n).map(([locale, entry]) => [
-              toLocaleKey(locale),
+              contentFormKey(locale),
               {
                 ...entry,
                 featureId,
@@ -1994,7 +2020,7 @@ function buildMergedFeaturePropertyI18n(params: {
 
         if (!trimmedValue) return
 
-        const localeKey = toLocaleKey(locale)
+        const localeKey = contentFormKey(locale)
 
         if (!mergedI18n[localeKey]?.value) {
           mergedI18n[localeKey] = { value: trimmedValue, valueGen: true }

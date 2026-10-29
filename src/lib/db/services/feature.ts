@@ -11,7 +11,7 @@ import {
   toRelatedRecords,
   transformI18nSafely,
 } from '..'
-import { delManyRelated, insert, insertManyRelated, replaceManyRelated } from '../crud'
+import { delManyRelated, insert, insertManyRelated } from '../crud'
 import {
   feature,
   featureI18n,
@@ -28,7 +28,8 @@ import { validateFeaturePhoneProperties } from './feature-property-validation'
 // MAP
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 // I18N
-import { normalizeI18nLocaleRecord, toLocaleKebab } from '#lib/i18n.js'
+import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
+import { prepareFeatureFormRelations } from './locationRelations'
 // PUBLICATION
 import { publishScopedFeatureImages } from './publication.js'
 // TYPES
@@ -125,12 +126,12 @@ export const createFeature = async (
  */
 export const createI18n = async (
   db: Database,
-  i18n: Record<LocaleKey, FeatureI18nNew>,
+  i18n: Record<string, FeatureI18nNew>,
   featureId: Id,
 ) => {
-  const normalizedI18n = normalizeI18nLocaleRecord(
+  const normalizedI18n = contentMapToStorage(
     i18n as Record<string, FeatureI18nNew>,
-  ) as Record<LocaleKey, FeatureI18nNew>
+  ) as Record<string, FeatureI18nNew>
   return await insertManyRelated(
     db,
     featureI18n,
@@ -166,10 +167,10 @@ const upsertFeaturePropertyI18n = async (
   propertyId: Id,
   i18n: Record<LocaleKey, { value?: string | null; valueGen?: boolean | null }>,
 ) => {
-  const i18nRecords = Object.entries(i18n).map(([locale, data]) => ({
+  const i18nRecords = Object.entries(contentMapToStorage(i18n)).map(([locale, data]) => ({
     featureId,
     propertyId,
-    locale: toLocaleKebab(locale as LocaleKey) as Locale,
+    locale,
     value: data.value ?? null,
     valueGen: Boolean(data.valueGen),
   }))
@@ -763,37 +764,23 @@ export const updateFeatureArchivedStateById = async (
 // ═══════════════════════
 
 /**
- * Replaces all persisted feature i18n rows with the submitted locale map.
+ * Upserts submitted feature locales while retaining omitted translations.
  * @param db - The database instance.
  * @param i18n - Locale-keyed feature translations.
  * @param featureId - The parent feature id.
  * @returns The persisted i18n rows.
  * @remarks
- * Feature edit forms submit full locale state, so replacement keeps persisted i18n
- * aligned with the current source of truth instead of applying partial patches.
+ * Omitted locale entries and fields are retained for older clients. Explicit empty
+ * strings clear values without discarding verification metadata in other locales.
  */
 export const updateI18n = async (
   db: Database,
-  i18n: Record<LocaleKey, FeatureI18nPartial>,
+  i18n: Record<string, FeatureI18nPartial>,
   featureId: Id,
 ) => {
-  const normalizedI18n = normalizeI18nLocaleRecord(
-    i18n as Record<string, FeatureI18nPartial>,
-  ) as Record<LocaleKey, FeatureI18nPartial>
-  const relatedRecords = toRelatedRecords(
-    normalizedI18n,
-    'featureId',
-    featureId,
-    'locale',
-  ) as InferInsertModel<typeof featureI18n>[]
-
-  return await replaceManyRelated(
-    db,
-    featureI18n,
-    relatedRecords,
-    featureI18n.featureId,
-    featureId,
-  )
+  const queries = prepareFeatureFormRelations(db, featureId, sql`1`, i18n)
+  if (queries.length) await db.batch(queries as [typeof queries[number], ...typeof queries])
+  return db.select().from(featureI18n).where(eq(featureI18n.featureId, featureId))
 }
 
 /**

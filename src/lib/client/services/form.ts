@@ -2,6 +2,7 @@ import type { RemoteQuery, RemoteQueryOverride, RemoteFormIssue } from '$app/ser
 import { toast } from 'svelte-sonner'
 import { onMount, untrack } from 'svelte'
 import { getLocale, toLocaleKey, translateI18nFields } from '#lib/i18n.js'
+import { contentFormKey } from '#lib/i18n/contentRecords.js'
 import { m } from '#lib/i18n.js'
 import type { Component } from 'svelte'
 import type { FormFacetNavAction } from '#lib/bits/patterns/forms/formFacetNav/index.js'
@@ -138,7 +139,7 @@ type GenAiStateResolverForm = {
   fields: {
     value: () => {
       data?: {
-        i18n?: Record<
+        i18n?: Partial<Record<
           string,
           {
             titleGen?: FormBooleanValue
@@ -149,7 +150,7 @@ type GenAiStateResolverForm = {
             privacyPolicyGen?: FormBooleanValue
             termsOfServiceGen?: FormBooleanValue
           }
-        >
+        >>
       }
     }
   }
@@ -1640,10 +1641,10 @@ export function resolveFacetTabsWithIssues(params: {
  */
 export function getGenAiState(
   form: GenAiStateResolverForm,
-  locale: LocaleKey,
+  locale: string,
   field: GenAiField,
 ): boolean {
-  const localeData = form.fields.value().data?.i18n?.[locale]
+  const localeData = form.fields.value().data?.i18n?.[contentFormKey(locale)]
   if (!localeData) return false
   if (field === 'title') return Boolean(localeData.titleGen)
   if (field === 'name') return Boolean(localeData.nameGen)
@@ -1666,7 +1667,7 @@ export function getGenAiState(
  */
 export function toggleGenAiField<
   T extends {
-    i18n?: Record<
+    i18n?: Partial<Record<
       string,
       {
         titleGen?: FormBooleanValue
@@ -1677,11 +1678,11 @@ export function toggleGenAiField<
         privacyPolicyGen?: FormBooleanValue
         termsOfServiceGen?: FormBooleanValue
       }
-    >
+    >>
   },
->(form: FormDataUpdaterForm<T>, locale: Locale | LocaleKey, field: GenAiField): void {
+>(form: FormDataUpdaterForm<T>, locale: string, field: GenAiField): void {
   updateFormData(form, data => {
-    const localeKey = toLocaleKey(locale)
+    const localeKey = contentFormKey(locale)
 
     if (!data.i18n?.[localeKey]) return data
 

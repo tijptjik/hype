@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { adaptContentMap, contentStorageTag } from '#lib/i18n/contentRecords.js'
 // ADDRESS
 import {
   ADDRESS_LOCALES,
@@ -30,9 +32,9 @@ export function materializeEffectiveLocation(input: {
   phones?: string[]
 } {
   const effective = resolveFeatureLocation(
-    input.facts,
+    { ...input.facts, names: adaptContentMap(input.facts.names, contentStorageTag) },
     input.locationFacts.location,
-    input.overrides,
+    { ...input.overrides, names: adaptContentMap(input.overrides.names ?? {}, contentStorageTag) },
   )
   if (!effective.location) throw new Error('A Feature requires Location coordinates')
   const address = FeatureAddressSchema.parse({
@@ -42,20 +44,16 @@ export function materializeEffectiveLocation(input: {
     matchStatus: effective.location.address.status,
     overrides: {},
   })
-  const i18n = Object.fromEntries(
-    Object.entries(structuredClone(input.i18n)).map(([locale, row]) => [
-      Object.entries(ADDRESS_LOCALES).find(([, tag]) => tag === locale)?.[0] ?? locale,
-      row,
-    ]),
-  )
+  const i18n = adaptContentMap(structuredClone(input.i18n))
+  const names = adaptContentMap(effective.names)
   if (input.fieldGroup !== 'location')
-    for (const [locale, tag] of Object.entries(ADDRESS_LOCALES)) {
-      const title = effective.names[tag]
+    for (const locale of new Set([...Object.keys(i18n), ...Object.keys(names)])) {
+      const title = names[locale]
       if (title === undefined && !i18n[locale]) continue
       i18n[locale] = { ...i18n[locale], title: title ?? '', titleGen: false }
     }
   if (input.fieldGroup !== 'facts')
-    for (const locale of Object.keys(i18n))
+    for (const locale of Object.keys(i18n).filter(locale => locale in ADDRESS_LOCALES))
       i18n[locale] = {
         ...i18n[locale],
         displayAddress: getAddressDisplay(

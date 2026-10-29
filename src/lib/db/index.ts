@@ -19,6 +19,7 @@ import {
 } from 'drizzle-orm'
 // I18N
 import { toLocaleKey, toLocaleKebab } from '#lib/i18n.js'
+import { contentStorageTag } from '#lib/i18n/contentRecords.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
 // SCHEMA
 import * as schema from './schema'
@@ -756,7 +757,7 @@ export const toRelatedRecords = <
     const valueRecord = rawValue as Record<string, unknown>
     const normalizedLocale =
       isLocaleKey && typeof valueRecord.locale === 'string'
-        ? toLocaleKebab(valueRecord.locale as Locale | LocaleKey)
+        ? contentStorageTag(valueRecord.locale)
         : undefined
     const normalizedKey = normalizedLocale ?? key
 

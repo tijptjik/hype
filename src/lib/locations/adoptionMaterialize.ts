@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { adaptContentMap } from '#lib/i18n/contentRecords.js'
 // DOMAIN
 import {
   ADDRESS_LOCALES,
@@ -34,21 +36,18 @@ export function materializeLocationAdoption(input: {
   const location = LocationFactsSchema.parse(input.locationFacts).location
   const overrides = FeatureLocationOverridesSchema.parse(input.overrides)
   const data = structuredClone(input.data)
-  const i18n = Object.fromEntries(
-    Object.entries(structuredClone(input.i18n)).map(([locale, row]) => [
-      Object.entries(ADDRESS_LOCALES).find(([, tag]) => tag === locale)?.[0] ?? locale,
-      row,
-    ]),
-  )
+  const i18n = adaptContentMap(structuredClone(input.i18n))
   let phones: string[] | undefined
   if (input.fieldGroup === 'facts') {
-    for (const [locale, tag] of Object.entries(ADDRESS_LOCALES)) {
-      if ((overrides.names?.[tag]?.mode ?? 'inherit') !== 'inherit') continue
-      const name = facts.names[tag]
+    const names = adaptContentMap(facts.names)
+    const nameOverrides = adaptContentMap(overrides.names ?? {})
+    for (const locale of new Set([...Object.keys(i18n), ...Object.keys(names)])) {
+      if ((nameOverrides[locale]?.mode ?? 'inherit') !== 'inherit') continue
+      const name = names[locale]
       if (name === undefined && !i18n[locale]) continue
-      if (!name?.trim() || name.length > 128)
+      if (name !== undefined && name.length > 128)
         throw new Error('Source Location has no valid inherited name for ' + locale)
-      i18n[locale] = { ...i18n[locale], title: name, titleGen: false }
+      i18n[locale] = { ...i18n[locale], title: name ?? '', titleGen: false }
     }
     if ((overrides.phoneNumber?.mode ?? 'inherit') === 'inherit')
       phones = facts.phoneNumber

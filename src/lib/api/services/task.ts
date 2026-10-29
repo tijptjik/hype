@@ -1,3 +1,5 @@
+// FEATURE CONTENT LOCALES
+import { contentRowsToForm } from '#lib/i18n/contentRecords.js'
 // DRIZZLE
 import { and, eq, inArray, or, type SQL, sql } from 'drizzle-orm'
 // API
@@ -202,7 +204,7 @@ export const toResponseShape = async <P extends TaskProfile = TaskProfile>(
   const transformedFeature = data.feature
     ? {
         ...data.feature,
-        i18n: transformI18nSafely(data.feature.i18n),
+        i18n: contentRowsToForm(data.feature.i18n ?? []),
         properties:
           data.feature.properties?.map(prop => ({
             ...prop,

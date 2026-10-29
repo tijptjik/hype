@@ -17,8 +17,6 @@ import { layer } from './layer'
 import { user } from './user'
 import { property } from './property'
 import { propertyValue } from './property'
-// ENUM
-import { supportedLocales } from '../../enums'
 // TYPES
 import type { MtrResolution } from '#lib/routing/mtr.js'
 import type { GeometryObject } from 'geojson'
@@ -206,9 +204,7 @@ export const featureI18n = sqliteTable(
     featureId: text('featureId')
       .notNull()
       .references(() => feature.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]],
-    }).notNull(),
+    locale: text('locale').notNull(),
     // Full Name in {locale}
     title: text('title').notNull(),
     titleGen: integer('titleGen', { mode: 'boolean' }).notNull().default(true),
@@ -294,9 +290,7 @@ export const featurePropertyI18n = sqliteTable(
     propertyId: text('propertyId')
       .notNull()
       .references(() => property.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-    locale: text('locale', {
-      enum: supportedLocales as [string, ...string[]],
-    }).notNull(),
+    locale: text('locale').notNull(),
     // Value in {locale}
     value: text('value'),
     valueGen: integer('valueGen', { mode: 'boolean' }),

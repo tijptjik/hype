@@ -1,3 +1,5 @@
+// CONTENT LOCALE ADAPTERS
+import { adaptContentMap } from '#lib/i18n/contentRecords.js'
 import { browser } from '$app/env'
 import { goto } from '$app/navigation'
 // PROPERTY CONTRACT
@@ -276,35 +278,12 @@ export function toFeatureFormInput(
       isIntangible: value.isIntangible,
       isVisitable: value.isVisitable,
       isPendingReview: value.isPendingReview,
-      i18n: {
-        en: {
-          title: value.i18n?.en?.title ?? '',
-          titleGen: value.i18n?.en?.titleGen ?? false,
-          description: value.i18n?.en?.description ?? '',
-          descriptionGen: value.i18n?.en?.descriptionGen ?? false,
-          displayAddress: value.i18n?.en?.displayAddress ?? '',
-          displayAddressGen: value.i18n?.en?.displayAddressGen ?? false,
-          addressProperties: value.i18n?.en?.addressProperties ?? {},
-        },
-        zhHans: {
-          title: value.i18n?.zhHans?.title ?? '',
-          titleGen: value.i18n?.zhHans?.titleGen ?? false,
-          description: value.i18n?.zhHans?.description ?? '',
-          descriptionGen: value.i18n?.zhHans?.descriptionGen ?? false,
-          displayAddress: value.i18n?.zhHans?.displayAddress ?? '',
-          displayAddressGen: value.i18n?.zhHans?.displayAddressGen ?? false,
-          addressProperties: value.i18n?.zhHans?.addressProperties ?? {},
-        },
-        zhHant: {
-          title: value.i18n?.zhHant?.title ?? '',
-          titleGen: value.i18n?.zhHant?.titleGen ?? false,
-          description: value.i18n?.zhHant?.description ?? '',
-          descriptionGen: value.i18n?.zhHant?.descriptionGen ?? false,
-          displayAddress: value.i18n?.zhHant?.displayAddress ?? '',
-          displayAddressGen: value.i18n?.zhHant?.displayAddressGen ?? false,
-          addressProperties: value.i18n?.zhHant?.addressProperties ?? {},
-        },
-      },
+      i18n: Object.fromEntries(Object.entries<Partial<NonNullable<Feature['i18n']>[string]>>({ en: {}, zhHans: {}, zhHant: {}, ...adaptContentMap(value.i18n ?? {}) }).map(([locale, row]) => [locale, {
+        title: row.title ?? '', titleGen: row.titleGen ?? false,
+        description: row.description ?? '', descriptionGen: row.descriptionGen ?? false,
+        displayAddress: row.displayAddress ?? '', displayAddressGen: row.displayAddressGen ?? false,
+        addressProperties: row.addressProperties ?? {},
+      }])),
 
       properties:
         value.properties?.map(property => ({
@@ -312,20 +291,9 @@ export function toFeatureFormInput(
           value: property.value ?? '',
           valueJson: property.valueJson ?? '',
           propertyValueId: sanitizeFeaturePropertyValueId(property.propertyValueId),
-          i18n: {
-            en: {
-              value: property.i18n?.en?.value ?? '',
-              valueGen: property.i18n?.en?.valueGen ?? false,
-            },
-            zhHans: {
-              value: property.i18n?.zhHans?.value ?? '',
-              valueGen: property.i18n?.zhHans?.valueGen ?? false,
-            },
-            zhHant: {
-              value: property.i18n?.zhHant?.value ?? '',
-              valueGen: property.i18n?.zhHant?.valueGen ?? false,
-            },
-          },
+          i18n: Object.fromEntries(Object.entries<{ value?: string | null; valueGen?: boolean }>({ en: {}, zhHans: {}, zhHant: {}, ...adaptContentMap(property.i18n ?? {}) }).map(([locale, row]) => [locale, {
+            value: row.value ?? '', valueGen: row.valueGen ?? false,
+          }])),
           property: property.property,
           propertyValue: property.propertyValue,
         })) ?? [],
@@ -401,7 +369,7 @@ export function getProgrammaticFeatureInputEntries(
   appendNestedEntries('data.addressMeta', addressMetadata)
   if (address) appendEntry('data.addressMeta.address', JSON.stringify(address))
 
-  ;(['en', 'zhHans', 'zhHant'] as const).forEach(locale => {
+  ;Object.keys(featureData?.i18n ?? {}).forEach(locale => {
     const localeI18n = featureData?.i18n?.[locale]
 
     appendEntry(`data.i18n.${locale}.displayAddress`, localeI18n?.displayAddress ?? '')
@@ -427,7 +395,7 @@ export function getProgrammaticFeatureInputEntries(
     if (property.property?.isTranslatable) {
       const propertyI18n = property.i18n ?? {}
 
-      ;(['en', 'zhHans', 'zhHant'] as const).forEach(locale => {
+      ;Object.keys(propertyI18n).forEach(locale => {
         appendEntry(
           `data.properties[${index}].i18n.${locale}.value`,
           propertyI18n[locale]?.value ?? '',

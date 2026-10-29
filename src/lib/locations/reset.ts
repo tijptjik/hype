@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { adaptContentMap, ContentTagInput, contentFormKey, contentStorageTag } from '#lib/i18n/contentRecords.js'
 // VALIDATION
 import { z } from 'zod'
 import { LocationFactsSchema } from './validation'
@@ -19,8 +21,8 @@ export const LocationResetSchema = z
   .strictObject({
     expectedRevision: z.string().min(1),
     names: z
-      .array(z.enum(['en', 'zhHant', 'zhHans']))
-      .max(3)
+      .array(ContentTagInput)
+      .max(100)
       .default([]),
     phoneNumber: z.boolean().default(false),
     location: z.boolean().default(false),
@@ -54,12 +56,15 @@ export function materializeLocationReset(input: {
   const facts = LocationFactsSchema.parse(input.facts)
   const location = LocationFactsSchema.parse(input.locationFacts).location
   const overrides = structuredClone(input.overrides)
+  if (overrides.names) overrides.names = adaptContentMap(overrides.names, contentStorageTag)
   const data = structuredClone(input.data)
-  const i18n = structuredClone(input.i18n)
+  const i18n = adaptContentMap(structuredClone(input.i18n))
+  const names = adaptContentMap(facts.names)
   // Reset only the requested locales; never fabricate a translation absent from the source.
-  for (const locale of input.reset.names) {
-    const tag = ADDRESS_LOCALES[locale]
-    const name = facts.names[tag]
+  for (const requested of input.reset.names) {
+    const locale = contentFormKey(requested)
+    const tag = contentStorageTag(requested)
+    const name = names[locale]
     if (!name?.trim() || name.length > 128)
       throw new Error(`Accepted Location has no valid name for ${locale}`)
     i18n[locale] = { ...i18n[locale], title: name, titleGen: false }

@@ -1,82 +1,126 @@
-// THIRD PARTY
-import { error } from '@sveltejs/kit'
-// TYPES
-import type { LocaleKey } from '#lib/types.js'
+// CONTENT LOCALES
+import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
+
+export type ContentTranslationResult =
+  | { status: 'translated'; text: string; source: string; target: string }
+  | { status: 'unsupported'; source: string; target: string; message: string }
+  | { status: 'error'; source: string; target: string; message: string }
+
+/** Provider failure retaining unsupported-pair identity for field-level callers. */
+export class TranslationProviderError extends Error {
+  constructor(
+    message: string,
+    readonly unsupported = false,
+  ) {
+    super(message)
+  }
+}
 
 /**
- * Translates text using Azure Cognitive Services Translator
- * @param text - The text to translate
- * @param targetLanguage - The target language code (e.g., 'zh-Hans', 'zh-Hant', 'en')
- * @param sourceLanguage - The source language code (optional, auto-detect if not provided)
- * @param region - The Azure region for the translation service
- * @param apiKey - The Azure translation API key
- * @returns Promise<string> - The translated text
+ * Translates text using Azure Cognitive Services Translator.
+ * @param texts Texts to translate, in response order.
+ * @param sourceLocale Source content tag or legacy form alias.
+ * @param targetLocale Target content tag or legacy form alias.
+ * @param region Azure region.
+ * @param apiKey Azure translation key.
+ * @returns Translated texts in input order.
+ * @remarks Unsupported pairs throw a typed error. This adapter never mutates form state.
  */
 export async function translateText(
   texts: string[],
-  sourceLocale: LocaleKey,
-  targetLocale: LocaleKey,
+  sourceLocale: string,
+  targetLocale: string,
   region: string,
   apiKey: string,
 ): Promise<string[]> {
-  const endpoint = 'https://api.cognitive.microsofttranslator.com'
-  const path = '/translate'
-  const constructed_url = endpoint + path
-
   const params = new URLSearchParams({
     'api-version': '3.0',
     ...localeToApiLanguageTag(sourceLocale, targetLocale),
   })
-
-  const headers = {
-    'Ocp-Apim-Subscription-Key': apiKey,
-    'Ocp-Apim-Subscription-Region': region,
-    'Content-type': 'application/json',
-    'X-ClientTraceId': crypto.randomUUID(),
-  }
-
-  const body = JSON.stringify(texts.map(text => ({ text })))
-
+  let response: Response
   try {
-    const response = await fetch(`${constructed_url}?${params}`, {
-      method: 'POST',
-      headers,
-      body,
-    })
-
-    if (!response.ok) {
-      throw new Error(
-        `Translation API error: ${response.status} ${response.statusText}`,
-      )
-    }
-
-    const data: Array<{ translations: Array<{ text: string }> }> = await response.json()
-    return data.map(item => item.translations[0].text)
-  } catch (err) {
-    console.error('Translation error:', err)
-    throw error(500, 'Translation service unavailable')
+    response = await fetch(
+      `https://api.cognitive.microsofttranslator.com/translate?${params}`,
+      {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': apiKey,
+          'Ocp-Apim-Subscription-Region': region,
+          'Content-type': 'application/json',
+          'X-ClientTraceId': crypto.randomUUID(),
+        },
+        body: JSON.stringify(texts.map(text => ({ text }))),
+        signal: AbortSignal.timeout(30_000),
+      },
+    )
+  } catch {
+    throw new TranslationProviderError('Translation service unavailable')
   }
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    // Azure reports unsupported source/target combinations separately from service errors.
+    const code = Number(data?.error?.code)
+    const unsupported = [400035, 400036].includes(code)
+    throw new TranslationProviderError(
+      unsupported
+        ? 'Unsupported translation language pair'
+        : 'Translation service unavailable',
+      unsupported,
+    )
+  }
+  if (
+    !Array.isArray(data) ||
+    data.length !== texts.length ||
+    data.some(item => typeof item?.translations?.[0]?.text !== 'string')
+  )
+    throw new TranslationProviderError('Invalid translation response')
+  return data.map(item => item.translations[0].text)
 }
 
-/*
- * Convert locale to API language tag
+/** Convert locale to API language tag.
+ * @param source Source content locale. @param target Target content locale.
+ * @returns Azure language identifiers.
+ * @remarks Preserve the established Traditional Chinese to Cantonese provider policy.
  */
-const localeToApiLanguageTag = (
-  source: LocaleKey,
-  target: LocaleKey,
-): { from: string; to: string } => {
-  const sourceMaps = {
-    en: 'en',
-    zhHant: 'yue',
-    zhHans: 'zh-Hans',
+function localeToApiLanguageTag(
+  source: string,
+  target: string,
+): { from: string; to: string } {
+  const azureTag = (value: string): string => {
+    const canonical = canonicalContentTag(value)
+    return canonical === 'zh-Hant' ? 'yue' : canonical
   }
-  const targetMaps = {
-    en: 'en',
-    zhHant: 'yue',
-    zhHans: 'zh-Hans',
-  }
-  return {
-    from: sourceMaps[source as keyof typeof sourceMaps] || source,
-    to: targetMaps[target as keyof typeof targetMaps] || target,
+  return { from: azureTag(source), to: azureTag(target) }
+}
+
+/** Translate one field from one tag to another with explicit per-target outcomes.
+ * @param input Immutable text and source/target tags.
+ * @param region Azure region. @param apiKey Azure translation key.
+ * @returns Success, unsupported-pair, or provider-error result; no form mutation.
+ */
+export async function translateContentField(
+  input: { text: string; source: string; target: string },
+  region: string,
+  apiKey: string,
+): Promise<ContentTranslationResult> {
+  const source = canonicalContentTag(input.source)
+  const target = canonicalContentTag(input.target)
+  try {
+    const [text] = await translateText([input.text], source, target, region, apiKey)
+    if (!text.trim()) throw new TranslationProviderError('Empty translation response')
+    return { status: 'translated', text, source, target }
+  } catch (error) {
+    return {
+      status:
+        error instanceof TranslationProviderError && error.unsupported
+          ? 'unsupported'
+          : 'error',
+      source,
+      target,
+      message:
+        error instanceof TranslationProviderError
+          ? error.message
+          : 'Translation service unavailable',
+    }
   }
 }

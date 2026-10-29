@@ -3,10 +3,11 @@ import { mockedRemoteModule, type MockedRemoteModule } from './remote-function-m
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
 
-const { mockTranslateWithAzure, mockGuardedContext } = vi.hoisted(() => ({
+const { mockTranslateWithAzure, mockTranslateField, mockGuardedContext } = vi.hoisted(() => ({
   mockTranslateWithAzure: vi.fn(async (texts: string[]) =>
     texts.map(text => `${text}-x`),
   ),
+  mockTranslateField: vi.fn(async (input: { source: string; target: string; text: string }) => ({ ...input, status: 'translated' as const, text: '翻訳' })),
   mockGuardedContext: vi.fn(),
 }))
 
@@ -30,6 +31,7 @@ vi.mock('@sveltejs/kit', () => ({
 
 vi.mock('#lib/api/external/translation.js', () => ({
   translateText: mockTranslateWithAzure,
+  translateContentField: mockTranslateField,
 }))
 
 let remote: MockedRemoteModule<typeof import('#lib/api/translation.remote.js')>
@@ -121,4 +123,18 @@ describe('translation.remote', () => {
     ).rejects.toMatchObject({ status: 403, message: 'ACCOUNT_REQUIRED' })
     expect(mockTranslateWithAzure).not.toHaveBeenCalled()
   })
+
+  it('exposes a single dynamic target result without changing the request', async () => {
+    const input = Object.freeze({ source: 'en', target: 'ja', text: 'Cafe' })
+    expect(await remote.translateContentField(input)).toEqual({ status: 'translated', source: 'en', target: 'ja', text: '翻訳' })
+    expect(mockTranslateField).toHaveBeenCalledWith(input, 'eastasia', 'key-1')
+    expect(input.text).toBe('Cafe')
+  })
+
+  it('guards single-field translation before spending provider quota', async () => {
+    mockGuardedContext.mockResolvedValue({ user: { id: 'guest', isAnonymous: true }, event: { locals: {} } })
+    await expect(remote.translateContentField({ source: 'en', target: 'ja', text: 'Cafe' })).rejects.toMatchObject({ status: 403 })
+    expect(mockTranslateField).not.toHaveBeenCalled()
+  })
+
 })

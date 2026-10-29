@@ -23,7 +23,8 @@ import {
 } from '#lib/db/services/feature.js'
 import { probeLayerForUpdate } from '#lib/db/services/layer.js'
 // I18N
-import { supportedLocaleKeys, toFormLocaleRecord, toLocaleKey } from '#lib/i18n.js'
+import { supportedLocaleKeys } from '#lib/i18n.js'
+import { adaptContentMap, contentFormKey, contentRowsToForm } from '#lib/i18n/contentRecords.js'
 // SCHEMA
 import { feature, layer } from '#lib/db/schema/index.js'
 import {
@@ -336,17 +337,16 @@ const toFeatureImageEnvelope = (
   }
 }
 
+/** Project property translations without requiring all compiled UI languages.
+ * @param properties Relational property rows. @returns Locale-preserving API values.
+ */
 const toPropertyShape = (properties: FeatureResponseRow['properties']) =>
   (properties ?? []).map(property => ({
     ...property,
     i18n: (() => {
       if (!property.property?.isTranslatable) return null
-      const transformed = transformI18nSafely(property.i18n as never)
+      const transformed = contentRowsToForm(property.i18n ?? [])
       if (!transformed) return null
-      const hasAllLocales = requiredLocaleKeys.every(
-        localeKey => transformed[localeKey],
-      )
-      if (!hasAllLocales) return null
       const hasValue = Object.values(transformed).some(entry => {
         const value =
           entry && typeof entry === 'object' && 'value' in entry
@@ -409,7 +409,7 @@ const toProfileResponseShape = async (
   if (profile === 'compact')
     return FeatureCompactProfileAPI.parse({
       ...row,
-      i18n: transformI18nSafely(row.i18n ?? []),
+      i18n: contentRowsToForm(row.i18n ?? []),
     })
   const imageProfile =
     profile === 'admin'
@@ -432,7 +432,7 @@ const toProfileResponseShape = async (
     ...row,
     geometry:
       profile === 'default' && row.geometry?.type !== 'Point' ? null : row.geometry,
-    i18n: transformI18nSafely(row.i18n as never),
+    i18n: contentRowsToForm(row.i18n ?? []),
     properties: toPropertyShape(row.properties),
     image:
       profile === 'list' ||
@@ -778,7 +778,14 @@ export const toQueryConditions = (
  ************/
 
 /**
- * Creates a user-contributed feature with translated fallback locales.
+ * Prepare submitted content and optional machine translations without copying fallback text.
+ * @param db Request database used to validate the layer and properties.
+ * @param newFeature Authored content, including locales outside the UI language set.
+ * @param region Translation provider region.
+ * @param subscriptionKey Optional provider credential; manual storage works without it.
+ * @param stage Draft or final required-title validation.
+ * @returns Validated Feature payload and authoritative layer scope.
+ * @remarks Populated values and their verification flags survive; failed targets stay empty.
  */
 const prepareUserContributedFeatureDraft = async (
   db: Database,
@@ -792,13 +799,15 @@ const prepareUserContributedFeatureDraft = async (
     throw new Error('Layer not found')
   }
 
-  const providedLocaleKeys = supportedLocaleKeys.filter(localeKey =>
+  newFeature = { ...newFeature, i18n: adaptContentMap(newFeature.i18n) }
+  const contentKeys = [...new Set([...supportedLocaleKeys, ...Object.keys(newFeature.i18n)])]
+  const providedLocaleKeys = contentKeys.filter(localeKey =>
     hasMeaningfulLocaleContent(
       newFeature.i18n[localeKey] as Record<string, unknown> | undefined,
     ),
   )
 
-  const enrichedI18n: Partial<Record<LocaleKey, DraftFeatureLocaleOutput>> = {}
+  const enrichedI18n: Record<string, DraftFeatureLocaleOutput> = {}
   const sourceLocaleKey =
     providedLocaleKeys.find(localeKey =>
       Boolean(newFeature.i18n[localeKey]?.title?.trim()),
@@ -807,15 +816,15 @@ const prepareUserContributedFeatureDraft = async (
   const hasSourceTitle = Boolean(sourceTextObj?.title?.trim())
 
   if (!sourceLocaleKey || !hasSourceTitle) {
-    for (const localeKey of supportedLocaleKeys) {
+    for (const localeKey of contentKeys) {
       const localeValue = newFeature.i18n[localeKey]
 
       enrichedI18n[localeKey] = {
         title: localeValue?.title?.trim() ?? '',
         description: localeValue?.description?.trim() ?? '',
         displayAddress: localeValue?.displayAddress?.trim() ?? '',
-        titleGen: false,
-        descriptionGen: false,
+        titleGen: localeValue?.titleGen ?? false,
+        descriptionGen: localeValue?.descriptionGen ?? false,
         displayAddressGen: localeValue?.displayAddressGen ?? false,
         addressProperties: localeValue?.addressProperties ?? {},
       }
@@ -825,7 +834,7 @@ const prepareUserContributedFeatureDraft = async (
       throw new Error('Source locale must have content')
     }
 
-    for (const localeKey of supportedLocaleKeys) {
+    for (const localeKey of contentKeys) {
       const targetTextObj = newFeature.i18n[localeKey]
       const isSourceLocale = localeKey === sourceLocaleKey
 
@@ -834,8 +843,8 @@ const prepareUserContributedFeatureDraft = async (
           title: toTrimmedString(sourceTextObj.title),
           description: toTrimmedString(sourceTextObj.description),
           displayAddress: toTrimmedString(sourceTextObj.displayAddress),
-          titleGen: false,
-          descriptionGen: false,
+          titleGen: sourceTextObj.titleGen ?? false,
+          descriptionGen: sourceTextObj.descriptionGen ?? false,
           displayAddressGen: sourceTextObj.displayAddressGen ?? false,
           addressProperties: sourceTextObj.addressProperties ?? {},
         }
@@ -895,12 +904,12 @@ const prepareUserContributedFeatureDraft = async (
           : null
 
       enrichedI18n[localeKey] = {
-        title: targetTitle || translatedTitle || sourceTitle,
-        description: targetDescription || translatedDescription || sourceDescription,
+        title: targetTitle || translatedTitle || '',
+        description: targetDescription || translatedDescription || '',
         displayAddress:
-          targetDisplayAddress || translatedDisplayAddress || sourceDisplayAddress,
-        titleGen: Boolean(translatedTitle),
-        descriptionGen: Boolean(translatedDescription),
+          targetDisplayAddress || translatedDisplayAddress || '',
+        titleGen: targetTitle ? (targetTextObj?.titleGen ?? false) : Boolean(translatedTitle),
+        descriptionGen: targetDescription ? (targetTextObj?.descriptionGen ?? false) : Boolean(translatedDescription),
         displayAddressGen: targetDisplayAddress
           ? (targetTextObj?.displayAddressGen ?? false)
           : Boolean(translatedDisplayAddress),
@@ -916,9 +925,10 @@ const prepareUserContributedFeatureDraft = async (
       if (!property.i18n) return property
 
       const propertyI18nByLocale =
-        toFormLocaleRecord(property.i18n as Record<string, DraftPropertyLocaleInput>) ??
+        adaptContentMap(property.i18n as Record<string, DraftPropertyLocaleInput>) ??
         {}
-      const propertySourceLocaleKey = supportedLocaleKeys.find(localeKey =>
+      const propertyKeys = [...new Set([...contentKeys, ...Object.keys(propertyI18nByLocale)])]
+      const propertySourceLocaleKey = propertyKeys.find(localeKey =>
         Boolean(propertyI18nByLocale[localeKey]?.value?.trim()),
       )
       if (!propertySourceLocaleKey) return property
@@ -927,15 +937,15 @@ const prepareUserContributedFeatureDraft = async (
       if (!propertySourceTextObj?.value?.trim()) return property
 
       const enrichedPropertyI18n: Partial<
-        Record<LocaleKey, { value: string; valueGen: boolean }>
+        Record<string, { value: string; valueGen: boolean }>
       > = {}
 
-      for (const localeKey of supportedLocaleKeys) {
+      for (const localeKey of propertyKeys) {
         const currentValue = toTrimmedString(propertyI18nByLocale[localeKey]?.value)
         if (localeKey === propertySourceLocaleKey || currentValue) {
           enrichedPropertyI18n[localeKey] = {
             value: currentValue || toTrimmedString(propertySourceTextObj.value),
-            valueGen: false,
+            valueGen: propertyI18nByLocale[localeKey]?.valueGen ?? false,
           }
           continue
         }
@@ -958,7 +968,7 @@ const prepareUserContributedFeatureDraft = async (
         }
 
         enrichedPropertyI18n[localeKey] = {
-          value: translatedValue || toTrimmedString(propertySourceTextObj.value),
+          value: translatedValue || '',
           valueGen: Boolean(translatedValue),
         }
       }
@@ -1129,7 +1139,7 @@ export const assertUserContributedFeatureDraftIsSubmittable = async (
   }
 
   const i18nByLocale = requiredLocaleKeys.reduce<
-    Record<LocaleKey, Record<string, unknown>>
+    Record<string, Record<string, unknown>>
   >(
     (accumulator, localeKey) => {
       accumulator[localeKey] = {
@@ -1143,11 +1153,11 @@ export const assertUserContributedFeatureDraftIsSubmittable = async (
       }
       return accumulator
     },
-    {} as Record<LocaleKey, Record<string, unknown>>,
+    {} as Record<string, Record<string, unknown>>,
   )
 
   persistedFeature.i18n?.forEach(localeRecord => {
-    const localeKey = toLocaleKey(localeRecord.locale as Locale)
+    const localeKey = contentFormKey(localeRecord.locale)
     i18nByLocale[localeKey] = {
       title: localeRecord.title ?? '',
       titleGen: Boolean(localeRecord.titleGen),
@@ -1165,16 +1175,16 @@ export const assertUserContributedFeatureDraftIsSubmittable = async (
     valueJson: propertyRow.valueJson ?? null,
     propertyValueId: propertyRow.propertyValueId ?? null,
     i18n: (propertyRow.i18n ?? []).reduce<
-      Record<LocaleKey, { value?: string; valueGen?: boolean }>
+      Record<string, { value?: string; valueGen?: boolean }>
     >(
       (accumulator, localeRecord) => {
-        accumulator[toLocaleKey(localeRecord.locale as Locale)] = {
+        accumulator[contentFormKey(localeRecord.locale)] = {
           value: localeRecord.value ?? undefined,
           valueGen: Boolean(localeRecord.valueGen),
         }
         return accumulator
       },
-      {} as Record<LocaleKey, { value?: string; valueGen?: boolean }>,
+      {} as Record<string, { value?: string; valueGen?: boolean }>,
     ),
   }))
 

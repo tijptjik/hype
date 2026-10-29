@@ -1,3 +1,5 @@
+// AUTHORED CONTENT LOCALES
+import { contentLocaleMap, contentStorageTag, adaptContentMap } from '#lib/i18n/contentRecords.js'
 // VALIDATION
 import { z } from 'zod'
 import { LocationEntitySchema } from './factsDetails'
@@ -15,8 +17,8 @@ import type {
 
 const names = z.record(z.string(), z.string())
 /** Complete authored name set; absent locales are explicitly removed by the correction writer. */
-export const LocationNamesEditSchema = z
-  .record(z.string().min(1).max(64), z.string().trim().min(1).max(1000))
+export const LocationNamesEditSchema = contentLocaleMap(z.string().trim().min(1).max(1000))
+  .transform(value => adaptContentMap(value, contentStorageTag))
   .refine(
     value => Object.keys(value).length > 0 && Object.keys(value).length <= 100,
     'Keep at least one name and no more than 100 languages',

@@ -1,3 +1,5 @@
+// FEATURE CONTENT LOCALES
+import { contentLocaleMap } from '#lib/i18n/contentRecords.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -153,7 +155,7 @@ export const TaskListProfileAPI = TaskBase.extend({
     i18n: getLocales(ProjectI18nBase),
   }),
   feature: FeatureBase.extend({
-    i18n: getLocales(FeatureI18nBase),
+    i18n: contentLocaleMap(FeatureI18nBase).nullish(),
   }),
   images: z
     .array(
@@ -185,7 +187,7 @@ export const TaskAdminProfileAPI = TaskBase.extend({
     i18n: getLocales(ProjectI18nBase),
   }),
   feature: FeatureBase.extend({
-    i18n: getLocales(FeatureI18nBase),
+    i18n: contentLocaleMap(FeatureI18nBase).nullish(),
     properties: z.array(
       FeaturePropertyAPI.extend({
         property: PropertyRecord.extend({
