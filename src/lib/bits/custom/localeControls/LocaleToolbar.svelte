@@ -5,7 +5,7 @@ import type { TransitionConfig } from 'svelte/transition'
 import { flip } from 'svelte/animate'
 import { Popover } from 'bits-ui'
 // DRAG AND DROP
-import { dragHandleZone, dragHandle, type DndEvent } from 'svelte-dnd-action'
+import { dndzone, type DndEvent } from 'svelte-dnd-action'
 // ICONS
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 import GripIcon from 'virtual:icons/lucide/grip-vertical'
@@ -231,7 +231,9 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
           >
             <!-- biome-ignore lint/a11y/useSemanticElements: This drag zone groups locale controls rather than form fields. -->
             <div
-              use:dragHandleZone={{
+              use:dndzone={{
+                zoneItemTabIndex: -1,
+                zoneTabIndex: -1,
                 items,
                 type: id,
                 flipDurationMs: reducedMotion ? 0 : 160,
@@ -258,42 +260,57 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                   role="group"
                   aria-label={option.name}
                   animate:flip={{ duration: reducedMotion ? 0 : 160 }}
-                  class="flex max-w-full min-w-0 items-center rounded-md border border-border bg-panel text-foreground shadow-sm"
+                  class="flex max-w-full min-w-0 cursor-grab select-none items-center rounded-md border border-border bg-panel text-foreground shadow-sm"
                 >
-                  <button
-                    type="button"
-                    use:dragHandle
-                    {disabled}
-                    aria-label={`Reorder ${option.name}`}
-                    data-locale-handle={tag}
-                    class="flex min-h-8 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-md text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing disabled:opacity-50"
+                  <span
+                    aria-hidden="true"
+                    class="flex min-h-8 w-5 shrink-0 items-center justify-center text-muted-foreground"
                   >
-                    <GripIcon class="size-3" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
+                    <GripIcon class="size-3" />
+                  </span>
+                  <!-- biome-ignore lint/a11y/useSemanticElements: A native button blocks the drag library's pointer initiation on its padding. -->
+                  <span
+                    role="button"
+                    tabindex={disabled ? -1 : 0}
                     data-locale={tag}
-                    aria-label={mode === 'membership'
-                      ? labels.remove(option.name)
-                      : option.name}
+                    aria-label={option.name}
+                    aria-disabled={disabled}
                     aria-pressed={mode === 'visibility'
                       ? visibleLocales.includes(tag)
                       : undefined}
-                    {disabled}
                     aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown"
-                    onkeydown={event => keydown(event, tag, index)}
-                    onclick={() => toggle(tag)}
-                    class={`inline-flex min-h-8 min-w-0 flex-1 items-center gap-1 rounded-r-md pr-2 pl-1 text-left text-xs whitespace-normal break-words focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50 ${mode === 'membership' || visibleLocales.includes(tag) ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
+                    onkeydown={event => {
+                      keydown(event, tag, index)
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (mode === 'visibility') toggle(tag)
+                      }
+                    }}
+                    onclick={() => {
+                      if (mode === 'visibility') toggle(tag)
+                    }}
+                    class={`inline-flex min-h-8 min-w-0 flex-1 cursor-grab items-center gap-1 rounded-md pr-2 pl-1 text-left text-xs whitespace-normal break-words focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing ${mode === 'membership' || visibleLocales.includes(tag) ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
                   >
                     <span lang={tag}
                       >{mode === 'visibility'
                         ? shortLocaleLabel(tag)
                         : option.autonym}</span
                     >
-                    {#if mode === 'membership'}
-                      <span aria-hidden="true" class="ml-2">×</span>
-                    {/if}
-                  </button>
+                  </span>
+                  {#if mode === 'membership'}
+                    <button
+                      type="button"
+                      {disabled}
+                      aria-label={labels.remove(option.name)}
+                      onmousedown={event => event.stopPropagation()}
+                      ontouchstart={event => event.stopPropagation()}
+                      onclick={() => toggle(tag)}
+                      class="flex min-h-8 w-6 shrink-0 items-center justify-center rounded-r-md text-xs hover:text-primary focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
+                    >
+                      ×
+                    </button>
+                  {/if}
                 </div>
               {/each}
             </div>

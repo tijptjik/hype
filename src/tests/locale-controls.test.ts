@@ -223,7 +223,7 @@ it('retains unknown saved tags and disables all editing when read-only', async (
     disabled: true,
   })
   const hawaiian = screen.getByRole('button', { name: 'haw' }) as HTMLButtonElement
-  expect(hawaiian.disabled).toBe(true)
+  expect(hawaiian.getAttribute('aria-disabled')).toBe('true')
   expect(hawaiian.draggable).toBe(false)
   await fireEvent.keyDown(hawaiian, { key: 'ArrowRight', altKey: true })
   expect(onChange).not.toHaveBeenCalled()

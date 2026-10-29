@@ -253,3 +253,8 @@ reaches Close, reverse Tab returns to search, and selection/dismissal restores A
 focus without an outline; Enter reopens search. Added chips do not receive focus.
 Chromium and Firefox verify these interactions at 320/390/1440px, with overlay
 geometry, reduced motion and narrow-layout checks retained.
+
+Whole-chip dragging uses the DnD zone across the grip, label and chip surface;
+membership removal is confined to the separate × control. Chromium and Firefox
+verify a drag initiated on the label, floating clone, reordered membership and
+independent removal in `scripts/visual-checks/locale-chip-drag-check.ts`.
