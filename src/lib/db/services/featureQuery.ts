@@ -1,3 +1,4 @@
+import { featureAuthoringSQL } from './featureAuthoringProjection'
 // DRIZZLE
 import {
   and,
@@ -515,6 +516,7 @@ export async function queryFeaturePage(
           with: getFeatureWithRelations('list') as never,
           extras: {
             locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+            authoring: featureAuthoringSQL().as('authoring'),
             locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
           },
           columns: { spatialIndex: false },

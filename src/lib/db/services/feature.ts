@@ -1,3 +1,4 @@
+import { featureAuthoringSQL } from './featureAuthoringProjection'
 import { gt } from 'drizzle-orm'
 // NANOID
 import { nanoid } from 'nanoid'
@@ -422,6 +423,7 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
       with: withRelations,
       extras: {
         locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+        authoring: featureAuthoringSQL().as('authoring'),
         locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
       },
       where: whereClause,
@@ -483,6 +485,7 @@ export const getFeature = async <TRow extends Record<string, unknown> = FeatureD
       with: withRelations,
       extras: {
         locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+        authoring: featureAuthoringSQL().as('authoring'),
         locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
       },
       where: allConditions.length > 0 ? and(...allConditions) : undefined,

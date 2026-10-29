@@ -276,6 +276,14 @@ const ReadLocationLifecycle = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
   LocationLifecycleSummarySchema.nullish(),
 )
+const ReadFeatureAuthoring = z.preprocess(
+  value => (typeof value === 'string' ? JSON.parse(value) : value),
+  z.object({
+    nameMode: z.enum(['inherit', 'independent']),
+    locationBasedNames: z.boolean(),
+    allowDescriptions: z.boolean(),
+  }).optional(),
+)
 const ReadLocationBrands = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
   LocationFactsSchema.shape.brands.nullish(),
@@ -283,6 +291,7 @@ const ReadLocationBrands = z.preprocess(
 
 export const FeatureListRow = FeatureBase.extend({
   locationBrands: ReadLocationBrands,
+  authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
@@ -310,6 +319,7 @@ export const FeatureCardRow = FeatureListRow.extend({
 
 export const FeatureAdminRow = FeatureBase.extend({
   locationBrands: ReadLocationBrands,
+  authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
   i18n: z.array(FeatureI18nBase).nullish(),
   properties: z
@@ -538,6 +548,7 @@ const FeatureListFields = FeatureBase.pick({
 
 export const FeatureListProfileAPI = FeatureListFields.extend({
   locationBrands: ReadLocationBrands,
+  authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
@@ -560,6 +571,7 @@ export const FeatureDetailProfileAPI = FeatureCardProfileAPI.extend({
 
 export const FeatureAdminProfileAPI = FeatureBase.extend({
   locationBrands: ReadLocationBrands,
+  authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
   i18n: contentLocaleMap(FeatureI18nBase.partial({ featureId: true })).nullish(),
   properties: z.array(FeaturePropertyAPI).default([]),

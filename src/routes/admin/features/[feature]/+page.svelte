@@ -2180,7 +2180,7 @@ function revalidateAfterProgrammaticChange(): void {
  *  SEARCH : PARENTS
  ************/
 
-/** Load the Feature and its naming dependencies before exposing the next editor record.
+/** Load the Feature with its projected naming state before exposing the next editor record.
  * @param ref Feature reference captured at the start of navigation.
  * @returns The loaded Feature; superseded navigation never changes the active form.
  */
@@ -2198,19 +2198,6 @@ async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState
     refKey: 'id',
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).catch(() => null)) as FeatureGetState
-
-  if (result?.data) {
-    // Warm the association query and parent policy caches before the Feature becomes visible.
-    // Otherwise the title briefly renders as independent while its ownership is still loading.
-    const [, project, layer] = await Promise.all([
-      getFeatureLocation({ featureId: result.data.id }),
-      result.data.projectId ? adminCtx.view.getProjectById(result.data.projectId) : null,
-      result.data.layerId ? adminCtx.view.getLayerById(result.data.layerId) : null,
-    ])
-    if (ref !== featureRef) return result
-    syncSelectedProject(toParentProjectItem(project as never))
-    syncSelectedLayer(toParentLayerItem(layer as never))
-  }
 
   // Slow responses from a previous Next/Previous navigation must not replace this form.
   if (ref !== featureRef) return result

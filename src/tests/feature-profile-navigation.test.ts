@@ -14,6 +14,7 @@ function deferred<T>() {
 }
 
 function setup() {
+  const response = deferred<unknown>()
   const location = deferred<unknown>()
   const project = deferred<unknown>()
   const layer = deferred<unknown>()
@@ -31,35 +32,30 @@ function setup() {
     return { load: refreshFeature, navigate: ref => { featureRef = ref }, form: () => featureFormSource };
   `)
   const api = create(
-    () => Promise.resolve(feature), () => location.promise,
+    () => response.promise, () => { throw new Error('Profile navigation must not fetch the Location') },
     { view: { resources: { queryMeta: {} }, getProjectById: () => project.promise, getLayerById: () => layer.promise, setFeatureById: setFeature } },
     commit, syncProject, syncLayer,
   )
-  return { ...api, location, project, layer, commit, syncProject, syncLayer, setFeature, feature }
+  return { ...api, response, location, project, layer, commit, syncProject, syncLayer, setFeature, feature }
 }
 
 describe('Feature profile navigation readiness', () => {
-  it('keeps the current record until association and both parent policies are ready', async () => {
+  it('commits cached authoring state without fetching the related Location or parents', async () => {
     const state = setup()
     const pending = state.load('next')
-    state.location.resolve({ nameMode: 'inherit' })
-    state.project.resolve({ flags: { locationBasedFeatureNames: true } })
-    await Promise.resolve()
-    await Promise.resolve()
     expect(state.commit).not.toHaveBeenCalled()
-    expect(state.form()).toBeNull()
-    state.layer.resolve({ metadata: {} })
+    state.response.resolve(state.feature)
     await pending
-    expect(state.syncProject).toHaveBeenCalledBefore(state.commit)
-    expect(state.syncLayer).toHaveBeenCalledBefore(state.commit)
     expect(state.commit).toHaveBeenCalledWith(state.feature)
     expect(state.form()).toEqual(state.feature.data)
+    expect(state.syncProject).not.toHaveBeenCalled()
   })
 
   it('does not replace the active form when a superseded navigation finishes late', async () => {
     const state = setup()
     const pending = state.load('next')
     state.navigate('later')
+    state.response.resolve(state.feature)
     state.location.resolve(null)
     state.project.resolve(null)
     state.layer.resolve(null)
