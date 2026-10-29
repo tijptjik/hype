@@ -147,6 +147,7 @@ import type { OrganisationFacet } from '#lib/navigation/index.js'
 // UTILS
 import { createSchemaRequiredInferer, toIssueMessages } from '#lib/utils/form-schema.js'
 // ICONS
+import LanguagesIcon from 'virtual:icons/lucide/languages'
 import Blend from 'virtual:icons/proicons/shape-intersect'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import ShieldIcon from 'virtual:icons/proicons/shield-checkmark'
@@ -1546,7 +1547,7 @@ $effect(() => {
         <section class="flex min-h-0 flex-col gap-4 pb-6">
           <SectionHeader title={m.project_advanced()} />
           <div class="mx-6 min-w-0">
-            <h2 class="mb-3 text-base font-semibold">{m.content_languages_heading()}</h2>
+            <h2 class="mb-3 flex items-center gap-2 text-base font-semibold"><LanguagesIcon class="size-5" aria-hidden="true" />{m.content_languages_heading()}</h2>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4">
             <ContentLocaleDefaults organisationName={formCtx.form.fields.value().data?.i18n?.[getLocaleKey()]?.nameShort || getNameForToast(organisation, 'nameShort')} scope="organisation" value={localeSettingsPatch.contentLocales ?? undefined}
               inheritedLocales={inheritedContentLocales.locales} inheritedOrigin="user-default" options={localeOptions}

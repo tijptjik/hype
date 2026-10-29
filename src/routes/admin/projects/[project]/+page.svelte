@@ -165,6 +165,7 @@ import type { MapStyleSelectionItem } from '#lib/bits/patterns/forms/formMapStyl
 import type { UserCapabilityMatrixRow } from '#lib/bits/patterns/capabilities/userCapabilityMatrix/index.js'
 import { SectionHeader, SectionHeaderPrimitive } from '#lib/bits/custom/form/index.js'
 // ICONS
+import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import MembersIcon from 'virtual:icons/proicons/person-multiple'
 // ADAPTERS
@@ -3260,17 +3261,6 @@ $effect(() => {
             description={m.project_3d_address_options_help()}
           />
           <div class="mx-6 flex min-w-0 flex-col gap-3">
-            <h2 class="text-base font-semibold">{m.content_languages_heading()}</h2>
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4">
-            <ContentLocaleDefaults organisationName={getNameForToast({ data: selectedParentOrganisation }, 'nameShort')} scope="project" value={localeSettingsPatch.contentLocales ?? undefined}
-              inheritedLocales={inheritedContentLocales.locales}
-              inheritedOrigin={inheritedContentLocales.origin === 'organisation' ? 'organisation' : 'user-default'}
-              options={localeOptions} disabled={!isEditing || formCtx.submitting || (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)}
-              onChange={setContentLocales} issues={contentLocaleFormIssues(visibleAllIssues)} />
-            <MultilingualDefaults scope="project" value={localeSettingsPatch} inherited={parentLocaleSettings.success ? parentLocaleSettings.data : undefined}
-              disabled={!isEditing || formCtx.submitting || (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)} onChange={setMultilingualDefaults} />
-            </div>
-            <input {...getHiddenLocaleSettingsAttrs()} />
             <Card.Root
               size="md"
               class="min-h-14 rounded-lg border border-border bg-foreground/4 bg-none shadow-none before:hidden"
@@ -3335,6 +3325,21 @@ $effect(() => {
                 </Card.Actions>
               </Card.Root>
             {/each}
+          </div>
+        </section>
+        <section class="flex min-h-0 flex-col gap-4 pb-6">
+          <SectionHeader title={m.content_languages_heading()} icon={LanguagesIcon} />
+          <div class="mx-6 min-w-0">
+            <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4">
+            <ContentLocaleDefaults organisationName={getNameForToast({ data: selectedParentOrganisation }, 'nameShort')} scope="project" value={localeSettingsPatch.contentLocales ?? undefined}
+              inheritedLocales={inheritedContentLocales.locales}
+              inheritedOrigin={inheritedContentLocales.origin === 'organisation' ? 'organisation' : 'user-default'}
+              options={localeOptions} disabled={!isEditing || formCtx.submitting || (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)}
+              onChange={setContentLocales} issues={contentLocaleFormIssues(visibleAllIssues)} />
+            <MultilingualDefaults scope="project" value={localeSettingsPatch} inherited={parentLocaleSettings.success ? parentLocaleSettings.data : undefined}
+              disabled={!isEditing || formCtx.submitting || (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)} onChange={setMultilingualDefaults} />
+            </div>
+            <input {...getHiddenLocaleSettingsAttrs()} />
           </div>
         </section>
       </FormSurface>
