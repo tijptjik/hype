@@ -206,6 +206,20 @@ Apply normal D1 migrations before deploying code that reads a new column. Render
 identities are code-owned rather than editable admin resources; no separate catalogue
 sync command or media upload is required for these bundled SVG previews.
 
+## Help Overlays
+
+`SimpleTooltip` uses the shared Bits popover primitive for hover previews and
+click/tap activation. Clicking keeps help open until the trigger is activated
+again, Escape is pressed, or the user interacts outside. Keyboard activation of
+nested buttons retains the button's action. Controlled notices can still bind
+`open` and override the content role. Image controls use this same behavior.
+Scrolling a trigger's ancestor or resizing the viewport dismisses its help;
+an overlay must not remain attached to a row that has scrolled away.
+
+Help content is portaled and positioned relative to the viewport. Opening or
+closing help does not trap focus, lock scrolling, or move focus into the overlay;
+form geometry and scroll positions must remain stable.
+
 ## Project Advanced Settings
 
 Tracking: [#232](https://github.com/tijptjik/hype/issues/232).
@@ -409,3 +423,20 @@ Migration `0126_project_flags.sql` adds the JSON column and must precede deploym
 - `utils/resourceGuards.ts` preserves the existing structural discriminators.
   Tightening them requires resource-union fixtures and a policy for overlapping
   resource shapes.
+
+### Reusable multilingual form rows and source controls
+
+`formI18nSection` exports `FormI18nInlineRow` and `FormI18nSourceBar` for use across
+resource types. The inline row composes shared Bits `TextInput`, `TextArea`, HTML
+preview and verification controls; its caller supplies bound field attributes,
+validation, labels and edit/cancel callbacks. It keeps registered controls mounted
+while displaying a value. The source bar owns the animated edit-mode reveal and
+accessible source buttons; callers supply eligible sources and translation actions.
+It does not select targets or implement resource policy. Shared text-emptiness
+handling lives in `formI18nSection/text.ts`, with no import from Feature components.
+
+`FeatureProfileEditor` remains the resource-specific composition: location-derived
+names, policy locks, translation concurrency and applying translated values belong
+there. Other resource editors can reuse the shared controls without adopting those
+Feature rules. These are app-owned Bits patterns, not wrappers around a nonexistent
+Bits UI multilingual-field primitive.

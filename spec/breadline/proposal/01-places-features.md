@@ -1116,3 +1116,84 @@ browser inventory exposes no existing session. Feature Profile integration belon
 LLM 4 and final acceptance to LLM 5; this work does not close #194 or its parent.
 
 The locale foundation uses the [LLM 1 content-locale contract](../../../docs/refactor-guides/profile-locales/01-contract.md): canonical content tags remain separate from compiled UI locales; ordered `settings.contentLocales` on Organisation and Project replace inherited defaults without touching Project boolean flags. Migration `0158_content_locale_settings.sql` adds the two JSON-object columns and must precede deployment. Existing form writes accept an optional settings patch, preserve unrelated keys, and remove `contentLocales` on explicit null reset under the existing resource authorization and concurrency guard. The maintained catalogue controls new default choices, not which stored record translations may survive. Feature/Location content migration and rendered Profile/Advanced acceptance remain separate workstreams (Refs #194).
+
+### Dynamic authored content persistence (29 October 2026, Refs #194)
+
+Feature translations and translatable property values use validated dynamic locale
+maps, independently of compiled interface languages. Boundary adapters consume the
+canonical content-locale model, retain legacy Chinese form/storage keys, and reject
+normalization collisions. Saves upsert submitted locale fields and retain omitted
+locales; explicit empty values clear content. Feature read, editable-copy, import and
+Task projections preserve additional languages and verification flags. Location name
+materialization projects available source languages and keeps missing translations
+empty; independent Feature titles and unrelated descriptions survive older-client
+saves. Existing address-language generation remains scoped to its current languages.
+
+The single-field translation remote returns translated, unsupported or error results.
+Manual storage does not depend on provider support. Client fanout and draft recovery
+remain separate integration work. The [persistence contract](../../../docs/refactor-guides/profile-locales/02-contract.md)
+defines form shapes, empty semantics, provider signatures and required recovery
+behavior for the Profile editor. No translation-row migration is required; the
+read-only `scripts/i18n/audit-content-locales.ts` checks actual SQLite constraints and
+normalization collisions before any future conversion. Shared settings migration
+coordination remains with the locale-model assignment.
+
+### Profile locale integration (29 October 2026, Refs #194)
+
+The [LLM 4 integration contract](../../../docs/refactor-guides/profile-locales/04-contract.md)
+wires ordered content defaults and the controlled toolbar into Profile Title and
+Description. Inline rows retain registered controls, rich-text display and field
+verification while locking inherited titles. Header source actions fill all empty
+selected targets, including hidden rows, with bounded requests and source/target/edit
+revision guards. Record reset invalidates pending work; development draft recovery
+retains full dynamic values plus separate locale order and visibility.
+
+The combined focused run passes 94 tests; Svelte checking reports zero errors and 19
+existing warnings. Chromium/Firefox fixture checks at 320px, 390px and desktop pass
+with screenshots inspected. Authenticated save/reload and live provider execution
+remain unverified because browser inventory exposes no existing session. This does
+not close #194 or #180; the contract identifies the remaining LLM 5 acceptance checks
+and reproducible artifacts. No persistent migration or deployment was performed.
+
+### Profile locale integration acceptance (29 October 2026, Refs #194)
+
+The integrated locale/Profile working tree has 596 passing checks and two reproduced
+Location service baseline failures across the 20-file acceptance suite. Both Chromium
+and Firefox pass Profile and locale-control fixtures at 320, 390 and 1440px. A new
+SQLite bridge test connects Organisation defaults, hidden-target bulk translation,
+draft recovery, dynamic form validation and save/reload with verification retention.
+The ten stale discovery assertions have been reconciled with the current selection
+contract. Svelte check reports zero errors and 19 existing warnings.
+
+See the [integration acceptance report](../../../docs/refactor-guides/profile-locales/05-acceptance-report.md)
+for reproducible failures and evidence boundaries. Authenticated Advanced/Profile
+save/reload and live-provider execution remain unverified; no broad acceptance or
+leaf-completion count is advanced by fixture coverage.
+
+Profile locale review follow-up (#194 / #180): language search uses an opaque
+portalled overlay; regional Chinese choices are retired from search while old
+settings remain writable, and Cantonese/yue search resolves to Traditional
+Chinese. Organisation visibility submits through SvelteKit's bound hidden-field
+API so changing locale settings does not hit `form_field_unbound`. See
+[acceptance evidence](../../../docs/refactor-guides/profile-locales/05-acceptance-report.md)
+for focused checks and the still-unverified authenticated persistence boundary.
+
+Multilingual presentation defaults (#194 / #180) use optional boolean
+`settings.multilingualContent` and `settings.multilingualAddresses` in the existing
+Organisation/Project settings JSON. Each key resolves independently: Project,
+Organisation, then false; explicit false is an override. The existing authorized
+settings patch accepts null to remove one override, preserves unrelated keys, and
+registers the whole JSON transport through the remote form binding. No migration
+is required. Advanced > Languages exposes both switches and per-key resets.
+
+An explicit Feature editor multilingual toggle is account-scoped, transient state
+owned by AdminCtx. It survives next/previous Feature navigation and Profile/Location
+facet remounts, taking precedence over each facet's separate initial default.
+Record language membership/order and translation content remain record-local.
+Profile translation-source controls are available only in multilingual edit mode.
+
+Advanced language settings use “Default Languages” with Organisation-specific
+help. Opening Edit does not create an override; a changed ordered list exposes
+reset. Add language remains visible at the end of the locale toolbar. Boolean
+reset controls reserve their space to avoid moving switches when overrides change.
+See the acceptance report for browser coverage and remaining persistence checks.
