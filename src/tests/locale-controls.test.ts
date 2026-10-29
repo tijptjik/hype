@@ -251,3 +251,17 @@ it('uses the backend patch contract without writing inherited defaults and retai
     ]),
   ).toEqual(['Choose a language'])
 })
+
+it('tabs from search to the result after its highlight and keeps Close out of the tab order', async () => {
+  render(Fixture)
+  await fireEvent.click(profile().getByRole('button', { name: '+ Add language' }))
+  const input = await screen.findByRole('combobox', { hidden: true })
+  const results = screen.getAllByRole('option', { hidden: true })
+  expect(input.parentElement?.querySelector('button')?.tabIndex).toBe(-1)
+  await fireEvent.keyDown(input, { key: 'Tab' })
+  expect(document.activeElement).toBe(results[1])
+  input.focus()
+  await fireEvent.keyDown(input, { key: 'ArrowDown' })
+  await fireEvent.keyDown(input, { key: 'Tab' })
+  expect(document.activeElement).toBe(results[3])
+})

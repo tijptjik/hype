@@ -25,7 +25,6 @@ const id = $props.id()
 let query = $state('')
 let active = $state(0)
 let input: HTMLInputElement
-let closeButton: HTMLButtonElement
 const results = $derived(
   searchLocaleOptions(options, query).filter(
     option => !selectedLocales.includes(option.tag),
@@ -34,13 +33,14 @@ const results = $derived(
 const activeIndex = $derived(Math.min(active, results.length - 1))
 onMount(() => input.focus({ preventScroll: true }))
 
-/** Keep keyboard focus in the combobox while navigating its results. */
+/** Arrow keys preview results; Tab advances past the highlighted result into the list. */
 function onKeydown(event: KeyboardEvent): void {
   if (event.key === 'Tab' && !event.shiftKey) {
     event.preventDefault()
     // The popover must not process the same Tab again after focus moves to its last control.
     event.stopPropagation()
-    closeButton.focus({ preventScroll: true })
+    if (!results.length) onClose()
+    else document.getElementById(`${id}-${(activeIndex + 1) % results.length}`)?.focus()
     return
   }
   if (event.key === 'Escape') {
@@ -87,7 +87,7 @@ function onKeydown(event: KeyboardEvent): void {
     >
     <button
       type="button"
-      bind:this={closeButton}
+      tabindex="-1"
       aria-label={labels.close}
       onclick={onClose}
       class="size-11 shrink-0 text-foreground! rounded-md hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-primary"

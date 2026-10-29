@@ -249,7 +249,8 @@ tests and whitespace checks instead of that hook, preserving unrelated edits.
 Default Languages now displays the Organisation-specific description directly,
 without an info trigger or separate Edit mode. The enclosing form enables locale
 controls. Search excludes existing members, including hidden locales. Forward Tab
-reaches Close, reverse Tab returns to search, and selection/dismissal restores Add
+from search skips Close and advances past the highlighted result; reverse Tab
+from the first result returns to search. Selection/dismissal restores Add
 focus without an outline; Enter reopens search. Added chips do not receive focus.
 Chromium and Firefox verify these interactions at 320/390/1440px, with overlay
 geometry, reduced motion and narrow-layout checks retained.
