@@ -18,12 +18,14 @@ let { value, label, prefix = '', multiline = false, editable, isGenAI, attrs, is
   onToggle: () => void; onStart: () => void; onCancel: () => void; onClear: () => void
 } = $props()
 let active = $state(false)
+let editHeight = $state(42)
 let root: HTMLDivElement
 let display: HTMLDivElement
 let session = 0
 
 async function open(): Promise<void> {
   if (!editable || active) return
+  editHeight = display.getBoundingClientRect().height
   onStart()
   active = true
   const token = ++session
@@ -39,7 +41,7 @@ function keydown(event: KeyboardEvent): void {
   }
 }
 $effect(() => { if (!editable) close() })
-const editorAttrs = $derived({ ...attrs, 'aria-label': label, onkeydown: keydown })
+const editorAttrs = $derived({ ...attrs, ...(multiline ? { style: `height: ${Math.max(40, editHeight - 2)}px; max-height: none; field-sizing: fixed;` } : {}), 'aria-label': label, onkeydown: keydown })
 </script>
 
 <div bind:this={root} class="grid min-w-0 items-start gap-2 {prefix ? 'grid-cols-[2.5rem_minmax(0,1fr)_2rem]' : 'grid-cols-[minmax(0,1fr)_2rem]'}" data-inline-locale-row>
