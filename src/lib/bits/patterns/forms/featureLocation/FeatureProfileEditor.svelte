@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, type Snippet } from 'svelte'
+import { prefersReducedMotion } from 'svelte/motion'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 import { contentFormKey } from '#lib/i18n/contentRecords.js'
@@ -35,6 +36,8 @@ let {
   contextKey,
   allowDescriptions = true,
   loading = false,
+  retainContent = false,
+  recordKey = '',
   inherited = false,
   policyRequired = false,
   offerName = false,
@@ -51,6 +54,8 @@ let {
   values: ProfileValues
   contextKey: string
   loading?: boolean
+  retainContent?: boolean
+  recordKey?: string
   allowDescriptions?: boolean
   inherited?: boolean
   policyRequired?: boolean
@@ -67,6 +72,31 @@ let {
   onTranslated: (field: ProfileField, locale: string, text: string) => void
   children: Snippet<[ProfileField, string, () => void, string]>
 } = $props()
+const showSkeleton = $derived(loading && !retainContent)
+let content: HTMLDivElement | undefined = $state()
+let presentedRecord = ''
+// Animate only a committed record change; editing and locale toggles keep their own motion.
+$effect(() => {
+  const next = recordKey
+  if (loading || !content || !next) return
+  const previous = presentedRecord
+  presentedRecord = next
+  if (
+    !previous ||
+    previous === next ||
+    prefersReducedMotion.current ||
+    !content.animate
+  )
+    return
+  const animation = content.animate(
+    [
+      { opacity: 0, transform: 'translateX(8px)' },
+      { opacity: 1, transform: 'translateX(0)' },
+    ],
+    { duration: 220, easing: 'ease-out' },
+  )
+  return () => animation.cancel()
+})
 const options = $derived(contentLocaleOptions(getLocaleKey()))
 const shown = $derived(displayedLocales(localeState, localeState.expanded))
 const fields = $derived(
@@ -130,6 +160,7 @@ function autonym(locale: string): string {
   class="px-6 pb-6 [&_.bits-form\_\_control-wrap]:bg-panel!"
   data-feature-profile-editor
   aria-busy={loading}
+  inert={loading}
 >
   <div class="mb-6 border-b border-border/50 pb-3" inert={loading}>
     <LocaleToolbar
@@ -145,7 +176,9 @@ function autonym(locale: string): string {
     />
   </div>
   <div
-    class="grid min-w-0 gap-6 {allowDescriptions
+    bind:this={content}
+    style:opacity={loading && retainContent ? 0.65 : 1}
+    class="grid min-w-0 gap-6 transition-opacity duration-200 motion-reduce:transition-none {allowDescriptions
       ? 'md:grid-cols-2 md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6'
       : ''}"
   >
@@ -187,7 +220,7 @@ function autonym(locale: string): string {
           {/if}
         </div>
         <FormI18nSourceBar
-          visible={!loading &&
+          visible={!showSkeleton &&
             localeState.expanded &&
             isEditing &&
             !derived &&
@@ -218,7 +251,7 @@ function autonym(locale: string): string {
               data-profile-locale={locale}
             >
               <div class="min-h-0 overflow-hidden">
-                {#if loading && shown.includes(locale)}
+                {#if showSkeleton && shown.includes(locale)}
                   <div
                     class="flex min-h-12 items-center gap-3 px-3 py-3"
                     data-profile-skeleton-row
@@ -234,7 +267,7 @@ function autonym(locale: string): string {
                   </div>
                 {/if}
                 <!-- Keep form registrations mounted, but hide stale values during navigation. -->
-                <div hidden={loading} inert={loading}>
+                <div hidden={showSkeleton} inert={loading}>
                   {@render children(
                     field,
                     locale,
@@ -275,7 +308,7 @@ function autonym(locale: string): string {
               </button>
             </div>
           </div>
-        {:else if !loading && field === 'title' && offerName && isEditing}
+        {:else if !showSkeleton && field === 'title' && offerName && isEditing}
           <div
             class="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary/5 p-3 text-xs"
           >

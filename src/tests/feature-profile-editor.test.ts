@@ -281,3 +281,25 @@ it('sizes navigation skeletons to the visible languages and preserves form regis
   expect(view.container.querySelectorAll('[data-profile-skeleton-row]')).toHaveLength(0)
   expect(screen.getByRole('button', { name: 'description en' })).toBeTruthy()
 })
+
+it('retains the current profile instead of skeletons while navigating to another record', async () => {
+  const view = render(Fixture, { retainContent: true })
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  const before = view.container.querySelector(
+    '[data-profile-field="description"]',
+  )!.textContent
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle loading' }))
+  expect(view.container.querySelectorAll('[data-profile-skeleton-row]')).toHaveLength(0)
+  expect(
+    view.container.querySelector('[data-profile-field="description"]')!.textContent,
+  ).toBe(before)
+  expect(
+    (view.container.querySelector('[data-feature-profile-editor]') as HTMLElement)
+      .inert,
+  ).toBe(true)
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle loading' }))
+  expect(
+    (view.container.querySelector('[data-feature-profile-editor]') as HTMLElement)
+      .inert,
+  ).toBe(false)
+})

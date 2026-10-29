@@ -11,6 +11,7 @@ import { restoreProfileLocales } from '#lib/bits/patterns/forms/featureLocation/
 import type { ProfileProviderResult } from '#lib/bits/patterns/forms/featureLocation/profileTranslation.js'
 
 let {
+  retainContent = false,
   provider = async (
     _source: string,
     target: string,
@@ -20,6 +21,7 @@ let {
     text: `${target}: ${text}`,
   }),
 }: {
+  retainContent?: boolean
   provider?: (
     source: string,
     target: string,
@@ -94,10 +96,12 @@ function fields(locale: string) {
     <FormSurface>
       <FeatureProfileEditor
         {loading}
+        {retainContent}
         {localeState}
         onLocaleStateChange={value => (localeState = value)}
         {values}
         contextKey={`fixture:${context}`}
+        recordKey={String(context)}
         {inherited}
         {isEditing}
         offerName={!inherited}
@@ -141,6 +145,19 @@ function fields(locale: string) {
       </FeatureProfileEditor>
     </FormSurface>
   </form>
+  <button
+    type="button"
+    onclick={async () => {
+      retainContent = true
+      loading = true
+      await new Promise(resolve => setTimeout(resolve, 400))
+      context++
+      values.en.description = 'Next record description'
+      loading = false
+    }}
+  >
+    Next record
+  </button>
   <button type="button" onclick={() => (loading = !loading)}>Toggle loading</button>
   <button type="button" onclick={() => (isEditing = !isEditing)}>Toggle editing</button>
   <button
