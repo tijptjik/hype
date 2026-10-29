@@ -10,7 +10,8 @@ export type FormFeatureFieldsTranslatableItem = NonNullable<
 >[number]
 
 export type FormFeatureFieldsProps = {
-  localeKey: keyof FeatureFormInput['data']['i18n']
+  // Non-translatable field labels follow the compiled interface language.
+  localeKey: LocaleKey
   locales: LocaleKey[]
   nonTranslatableItems: FeatureFieldSectionItem[]
   translatableSpecifierItems: FormFeatureFieldsTranslatableItem[]

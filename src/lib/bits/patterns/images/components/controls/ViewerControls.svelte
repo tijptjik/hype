@@ -3,7 +3,6 @@
 import { m } from '#lib/i18n.js'
 // BITS
 import { cx } from '#lib/bits/utils.js'
-import { Tooltip as TooltipPrimitive } from 'bits-ui'
 import { Button, SimpleTooltip, Swap } from '#lib/bits/index.js'
 // LIB
 import { SUPPORTED_UPLOAD_IMAGE_ACCEPT_ATTRIBUTE } from '#lib/images/accept.js'
@@ -112,8 +111,6 @@ const editButtonClass = $derived(
   }),
 )
 const isCoverPresentationMode = $derived(presentationMode === 'cover')
-const tooltipDelayDuration = 500
-const tooltipSkipDelayDuration = 200
 
 async function handlePresentationModeChange(nextChecked: boolean): Promise<void> {
   if (!onPresentationModeChange || disabled || isPresentationModePending) return
@@ -136,10 +133,6 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
   onchange={handleChange}
 >
 
-<TooltipPrimitive.Provider
-  delayDuration={tooltipDelayDuration}
-  skipDelayDuration={tooltipSkipDelayDuration}
->
   <div
     class={cx(
       VIEWER_CONTROLS_ROOT_CLASSES,
@@ -149,7 +142,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
     aria-busy={freezeInteractions}
   >
     {#if showPublishedToggle}
-      <SimpleTooltip withProvider={false}>
+      <SimpleTooltip>
         {#snippet trigger()}
           <Swap
             checked={isPublished}
@@ -182,7 +175,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
     {/if}
 
     {#if showPresentationModeToggle}
-      <SimpleTooltip withProvider={false}>
+      <SimpleTooltip>
         {#snippet trigger()}
           <Swap
             checked={isCoverPresentationMode}
@@ -215,7 +208,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
     {/if}
 
     {#if showReplaceButton}
-      <SimpleTooltip withProvider={false}>
+      <SimpleTooltip>
         {#snippet trigger()}
           <Button
             text={m.gallery__replace_image()}
@@ -238,7 +231,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
     {/if}
 
     {#if showDeleteButton}
-      <SimpleTooltip withProvider={false}>
+      <SimpleTooltip>
         {#snippet trigger()}
           <Button
             text={m.forms__delete()}
@@ -259,7 +252,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
     {/if}
 
     {#if showDownloadButton}
-      <SimpleTooltip withProvider={false}>
+      <SimpleTooltip>
         {#snippet trigger()}
           <Button
             text={m.gallery__download_raw_image()}
@@ -283,7 +276,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
 
     {#if shouldShowEditButton}
       <div class={VIEWER_CONTROLS_EDIT_GROUP_CLASSES}>
-        <SimpleTooltip withProvider={false}>
+        <SimpleTooltip>
           {#snippet trigger()}
             <Button
               text={isEditExpanded
@@ -319,7 +312,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
           })}
           aria-hidden={!isEditExpanded || !canRotate}
         >
-          <SimpleTooltip withProvider={false}>
+          <SimpleTooltip>
             {#snippet trigger()}
               <Button
                 text={m.gallery__rotate_image_left()}
@@ -336,7 +329,7 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
             <span>{m.gallery__rotate_image_left()}</span>
           </SimpleTooltip>
 
-          <SimpleTooltip withProvider={false}>
+          <SimpleTooltip>
             {#snippet trigger()}
               <Button
                 text={m.gallery__rotate_image_right()}
@@ -356,4 +349,3 @@ async function handlePresentationModeChange(nextChecked: boolean): Promise<void>
       </div>
     {/if}
   </div>
-</TooltipPrimitive.Provider>

@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('#lib/db/services/feature.js', () => mocks)
 vi.mock('#lib/db/services/featureFormSave.js', () => mocks)
 vi.mock('#lib/db/services/layer.js', () => mocks)
+vi.mock('#lib/db/services/historicalLayers.js', () => ({ historicalSourceLayerId: vi.fn(async () => null) }))
 vi.mock('#lib/db/zod/schema/feature.js', async importOriginal => ({
   ...(await importOriginal<object>()),
   FeatureDraftEntityFormData: { parse: mocks.draftParse },
@@ -150,4 +151,20 @@ it('requires the exact persisted draft state for atomic contribution updates', a
   await expect(
     updateUserContributedFeatureDraft({} as never, 'feature', input, '', ''),
   ).rejects.toThrow('Feature draft update failed')
+})
+
+
+it('preserves fourth-language content and verification without copying failed translation fallbacks', async () => {
+  mocks.probeLayerForUpdate.mockResolvedValue({ id: 'layer', projectId: 'project', organisationId: 'organisation' })
+  mocks.createFeatureForm.mockImplementation(async (_db, { data }) => ({ id: 'feature', ...data }))
+  await createUserContributedFeature({ query: { property: { findMany: async () => [] } } } as never, {
+    layerId: 'layer', isDraft: false, i18n: { ja: { title: '喫茶店', titleGen: true, description: '<p>説明</p>', descriptionGen: false } },
+    properties: [{ propertyId: 'p', i18n: { ja: { value: '値', valueGen: true } } }],
+  } as never, '', '')
+  const payload = mocks.finalParse.mock.lastCall?.[0]
+  expect(payload.i18n.ja).toMatchObject({ title: '喫茶店', titleGen: true, description: '<p>説明</p>', descriptionGen: false })
+  expect(payload.i18n.en.title).toBe('')
+  expect(payload.i18n.en.description).toBe('')
+  expect(payload.properties[0].i18n.ja).toEqual({ value: '値', valueGen: true })
+  expect(payload.properties[0].i18n.en.value).toBe('')
 })

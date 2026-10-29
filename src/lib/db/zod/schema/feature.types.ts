@@ -203,7 +203,7 @@ export type UserContributedFeatureProperty = {
   value?: string | null
   i18n?: Partial<
     Record<
-      Locale | LocaleKey,
+      string,
       { locale: string; value: string | null; valueGen?: boolean }
     >
   > | null
@@ -218,8 +218,10 @@ export type UserContributedFeature = {
   isDraft?: boolean
   i18n: Partial<
     Record<
-      LocaleKey,
+      string,
       {
+        titleGen?: boolean
+        descriptionGen?: boolean
         title?: string
         description?: string
         displayAddress: string
