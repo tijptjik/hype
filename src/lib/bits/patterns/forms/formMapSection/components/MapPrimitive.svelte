@@ -21,6 +21,7 @@ type Props = {
   locationCandidates?: import('#lib/locations/searchPresentation.js').LocationSearchMarker[]
   onLocationCandidateSelect?: (id: string) => void
   coordinates: number[]
+  coordinateTransitionPending?: boolean
   initialZoom?: number
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
@@ -37,6 +38,7 @@ let {
   locationCandidates = [],
   onLocationCandidateSelect,
   coordinates,
+  coordinateTransitionPending = false,
   initialCenter = null,
   initialZoom = 20,
   addressMeta,
@@ -65,6 +67,7 @@ const initialCollapsed =
     {locationCandidates}
     {onLocationCandidateSelect}
     {coordinates}
+    {coordinateTransitionPending}
     freezeForResize={resizeState?.active ?? false}
     {initialCenter}
     {initialZoom}

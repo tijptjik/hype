@@ -1,5 +1,54 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
 
+/** Fixes the renderer's dimensions while its surrounding pane changes size.
+ * @param map Renderer whose geographic centre must remain stable.
+ * @param disableInteraction Whether a static snapshot will cover the renderer.
+ * @param minimumWidth Extra canvas width to cover an expanding pane during a flight.
+ * @returns Cleanup restoring the container's original inline styles.
+ */
+function holdMapSize(
+  map: MapLibreMap,
+  disableInteraction: boolean,
+  minimumWidth = 0,
+): () => void {
+  const container = map.getContainer()
+  const originalStyle = container.getAttribute('style')
+  const { width, height } = container.getBoundingClientRect()
+  // Fix the live renderer's dimensions before the parent changes, preventing resize churn.
+  Object.assign(container.style, {
+    position: 'absolute',
+    width: `${Math.max(width, minimumWidth)}px`,
+    height: `${height}px`,
+    left: '50%',
+    top: '50%',
+    transform: 'translate(-50%, -50%)',
+    ...(disableInteraction ? { pointerEvents: 'none' } : {}),
+  })
+  return () => {
+    if (originalStyle === null) container.removeAttribute('style')
+    else container.setAttribute('style', originalStyle)
+  }
+}
+
+/** Keeps a flight's screen centre stable while the adjacent gallery changes width.
+ * @param map Renderer whose camera continues animating at stable dimensions.
+ * @returns Cleanup fitting the renderer to its pane after the flight finishes.
+ * @remarks MapLibre captures the screen centre at flight start; resizing mid-flight shifts its destination.
+ */
+export function holdMapSizeDuringFlight(map: MapLibreMap): () => void {
+  // Render enough width for the expanding pane; its overflow clips the extra canvas.
+  const restore = holdMapSize(
+    map,
+    false,
+    map.getContainer().ownerDocument.documentElement.clientWidth,
+  )
+  map.resize()
+  return () => {
+    restore()
+    map.resize()
+  }
+}
+
 /** Holds the map at its original size and covers its canvas with a rendered snapshot.
  * @param map Renderer being resized by its surrounding layout.
  * @returns Cleanup restoring layout and revealing the next complete map frame.
@@ -7,11 +56,8 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
  */
 export function freezeMapForResize(map: MapLibreMap): () => void {
   map.stop()
-  const container = map.getContainer()
   const canvas = map.getCanvas()
-  const originalStyle = container.getAttribute('style')
   const originalOpacity = canvas.style.opacity
-  const { width, height } = container.getBoundingClientRect()
   const snapshot = document.createElement('canvas')
   snapshot.setAttribute('aria-hidden', 'true')
   snapshot.dataset.mapResizeSnapshot = ''
@@ -22,16 +68,7 @@ export function freezeMapForResize(map: MapLibreMap): () => void {
     height: '100%',
     pointerEvents: 'none',
   })
-  // Fix the live renderer's dimensions before the parent changes, preventing resize churn.
-  Object.assign(container.style, {
-    position: 'absolute',
-    width: `${width}px`,
-    height: `${height}px`,
-    left: '50%',
-    top: '50%',
-    transform: 'translate(-50%, -50%)',
-    pointerEvents: 'none',
-  })
+  const restore = holdMapSize(map, true)
   let released = false
   const capture = (): void => {
     if (released) return
@@ -49,8 +86,7 @@ export function freezeMapForResize(map: MapLibreMap): () => void {
   return () => {
     released = true
     map.off('render', capture)
-    if (originalStyle === null) container.removeAttribute('style')
-    else container.setAttribute('style', originalStyle)
+    restore()
     const reveal = (): void => {
       map.off('render', reveal)
       map.off('remove', reveal)

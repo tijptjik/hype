@@ -304,6 +304,7 @@ const noopHeaderAction = (): void => {}
 // - isCanonicalImagePending
 // - canonicalImageMeasuredAspectRatio
 // - presentedCanonicalImageSrc
+// - presentedVisualFeatureRef
 // - presentedCanonicalImageHref
 // - presentedCanonicalImageTitle
 // - featureVisualSectionCtrl
@@ -595,6 +596,7 @@ let namingChosen = $state(false)
 let locationFocusRequest = $state(0)
 const DRAFT_MAP_CENTER: [number, number] = [114.17, 22.3]
 const BUILDING_ZOOM = 20
+const DEFAULT_FEATURE_MAP_ZOOM = 19
 let draftHasPin = $state(false)
 let draftHasAddress = $state(false)
 let editorViewportHeight = $state(1040)
@@ -1730,6 +1732,7 @@ let isCanonicalImagePending = $state(false)
 
 let canonicalImageMeasuredAspectRatio = $state<number | null>(null)
 let presentedCanonicalImageSrc = $state<string | null>(null)
+let presentedVisualFeatureRef = $state<string | null>(null)
 let presentedCanonicalImageHref = $state<string | undefined>(undefined)
 let presentedCanonicalImageTitle = $state(NEW_TITLE)
 
@@ -1833,7 +1836,7 @@ $effect(() => {
   const nextTitle = title
   const settled = isCurrentRefSettled
   // Invalidate pending decodes immediately when navigation requests another feature.
-  featureRef
+  const requestedRef = featureRef
 
   return untrack(() => {
     if (!settled) {
@@ -1846,12 +1849,14 @@ $effect(() => {
       presentedCanonicalImageTitle = nextTitle
       isCanonicalImagePending = false
       canonicalImageMeasuredAspectRatio = null
+      presentedVisualFeatureRef = requestedRef
       return
     }
     if (nextSrc === presentedCanonicalImageSrc) {
       presentedCanonicalImageHref = nextHref
       presentedCanonicalImageTitle = nextTitle
       isCanonicalImagePending = false
+      presentedVisualFeatureRef = requestedRef
       return
     }
 
@@ -1876,6 +1881,7 @@ $effect(() => {
       presentedCanonicalImageHref = nextHref
       presentedCanonicalImageTitle = nextTitle
       isCanonicalImagePending = false
+      presentedVisualFeatureRef = requestedRef
     }
     image.onerror = () => {
       if (cancelled) return
@@ -1885,6 +1891,7 @@ $effect(() => {
       presentedCanonicalImageTitle = nextTitle
       canonicalImageMeasuredAspectRatio = null
       isCanonicalImagePending = false
+      presentedVisualFeatureRef = requestedRef
     }
     image.src = nextSrc
 
@@ -2561,8 +2568,11 @@ $effect(() => () => clearVisualSectionReopenState())
                 onLocationCandidateSelect={selectLocationMarker}
                 showMarker={!isNewFeatureRef || draftHasPin}
                 initialCenter={isNewFeatureRef ? DRAFT_MAP_CENTER : initialMapCenter}
-                initialZoom={isNewFeatureRef ? 11.5 : BUILDING_ZOOM}
+                initialZoom={isNewFeatureRef ? 11.5 : DEFAULT_FEATURE_MAP_ZOOM}
                 coordinates={featureCoordinates ?? DEFAULT_NEW_FEATURE_COORDINATES}
+                coordinateTransitionPending={!isCurrentRefSettled ||
+                  ((isCoreFacet || isFieldsFacet) &&
+                    presentedVisualFeatureRef !== featureRef)}
                 addressMeta={currentFeatureData.addressMeta ?? null}
                 draggable={isEditing}
                 onCoordinateChange={handlePinDrop}

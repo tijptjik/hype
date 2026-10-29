@@ -1,6 +1,8 @@
 <script lang="ts">
 import { setContext, onDestroy } from 'svelte'
+import { prefersReducedMotion } from 'svelte/motion'
 import { VISUAL_RESIZE_CONTEXT } from './visualResize.js'
+import { VISUAL_TRANSITION_MS } from './visualTransition.js'
 import type { MainVisualSectionProps } from './main.types'
 
 let {
@@ -98,7 +100,7 @@ const rootClass = $derived(
     .join(' '),
 )
 const rootStyle = $derived(
-  `--bits-feature-visual-expanded-height:${height}px; --bits-feature-visual-collapsed-height:${collapsedHeight}px; --bits-feature-visual-image-ratio:${imageAspectRatio ?? 1};`,
+  `--bits-feature-visual-expanded-height:${height}px; --bits-feature-visual-collapsed-height:${collapsedHeight}px; --bits-feature-visual-image-ratio:${imageAspectRatio ?? 1}; --bits-feature-visual-transition-duration:${prefersReducedMotion.current ? 0 : VISUAL_TRANSITION_MS}ms;`,
 )
 </script>
 

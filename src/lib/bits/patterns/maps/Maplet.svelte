@@ -3,7 +3,7 @@
 import { locationSearchColor } from '#lib/locations/searchPresentation.js'
 // SVELTE
 import { fade } from 'svelte/transition'
-import { onDestroy } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
 import { prefersReducedMotion } from 'svelte/motion'
 // MapLibre
 import { addAddressMarker } from '#lib/map/markers.js'
@@ -15,9 +15,10 @@ import {
   getConfiguredBasemapAccessToken,
   listMapStyleCatalog,
 } from '#lib/map/styles/index.js'
-import { freezeMapForResize } from '#lib/map/resizeSnapshot.js'
+import { freezeMapForResize, holdMapSizeDuringFlight } from '#lib/map/resizeSnapshot.js'
 import { createMapController, type MapController } from '#lib/map/controller.js'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
+import { VISUAL_TRANSITION_MS } from '#lib/bits/custom/main/visualTransition.js'
 // ICONS
 import ArrowsPointingIn from 'virtual:icons/proicons/full-screen-minimize'
 import ArrowsPointingOut from 'virtual:icons/proicons/full-screen-maximize'
@@ -40,6 +41,8 @@ type MapProps = {
   onLocationCandidateSelect?: (id: string) => void
   freezeForResize?: boolean
   coordinates: number[]
+  /** Waits for the gallery to publish its decoded image before moving the pin and camera. */
+  coordinateTransitionPending?: boolean
   initialZoom?: number
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
@@ -70,6 +73,13 @@ const getCoordinateTuple = (coordinates: number[]): [number, number] | null => {
     : null
 }
 
+// Seed the renderer once; reactive center props jump before our coordinate-change flight.
+const initialCamera = untrack((): { center: [number, number]; zoom: number } => ({
+  center: mapProps.initialCenter ??
+    getCoordinateTuple(mapProps.coordinates) ?? [114.17, 22.3],
+  zoom: mapProps.initialZoom ?? 20,
+}))
+
 let isFullscreen = $state(false)
 let isCollapsed = $state(false)
 let hasInitialisedCollapse = false
@@ -86,6 +96,9 @@ let featureMap: MaplibreMap | undefined
 let isMapLoaded = $state(false)
 let hasSyncedViewport = $state(false)
 let lastCoordinateKey = $state('')
+let pendingViewport = $state.raw<{ center: [number, number]; zoom: number } | null>(
+  null,
+)
 let activeMapInstance = $state<MaplibreMap | undefined>(undefined)
 let resizeContainer = $state<HTMLDivElement>()
 let containerResizing = $state(false)
@@ -104,6 +117,12 @@ $effect(() => {
       return
     width = resizeContainer.clientWidth
     height = resizeContainer.clientHeight
+    // Keep rendering the flight while the surrounding gallery changes width.
+    if (pendingViewport) {
+      clearTimeout(timer)
+      containerResizing = false
+      return
+    }
     containerResizing = true
     clearTimeout(timer)
     timer = setTimeout(() => {
@@ -116,10 +135,9 @@ $effect(() => {
     clearTimeout(timer)
   }
 })
-const shouldFreeze = $derived(Boolean(mapProps.freezeForResize || containerResizing))
-$effect(() => {
-  if (activeMapInstance && shouldFreeze) return freezeMapForResize(activeMapInstance)
-})
+const shouldFreeze = $derived(
+  Boolean(mapProps.freezeForResize || (containerResizing && !pendingViewport)),
+)
 
 // Numbered discovery markers are transient UI; removing results removes their map objects.
 // Keep marker elements stable while rows are hovered or focused; hover never selects.
@@ -360,6 +378,7 @@ onDestroy(() => {
 
 // EFFECTS :: ON UPDATE
 $effect(() => {
+  if (!coordinateTuple) pendingViewport = null
   if (map && coordinateTuple && feature) {
     feature.setDraggable(mapProps.draggable ?? true)
     const coordinateKey = coordinateTuple.join(',')
@@ -372,18 +391,49 @@ $effect(() => {
         return
       }
     }
+    if (mapProps.coordinateTransitionPending) return
     if (lastCoordinateKey === coordinateKey) {
       feature.setLngLat(coordinateTuple)
       return
     }
     lastCoordinateKey = coordinateKey
-    map.flyTo({
+    pendingViewport = {
       center: coordinateTuple,
-      zoom: map.getZoom(),
-      duration: 520,
-    })
+      zoom: untrack(() => pendingViewport?.zoom) ?? map.getZoom(),
+    }
     feature.setLngLat(coordinateTuple)
   }
+})
+
+// Gallery resizing stays live; explicit map resizing can pause and resume the destination.
+$effect(() => {
+  const target = pendingViewport
+  const mapInstance = map
+  if (!mapInstance) return
+  if (shouldFreeze) return untrack(() => freezeMapForResize(mapInstance))
+  if (!target || mapProps.coordinateTransitionPending) return
+  const duration = prefersReducedMotion.current ? 0 : VISUAL_TRANSITION_MS
+  // Native camera events update Svelte bindings; they must not restart this flight effect.
+  return untrack(() => {
+    const releaseSize = holdMapSizeDuringFlight(mapInstance)
+    const finish = (): void => {
+      const center = mapInstance.getCenter()
+      const arrived =
+        Math.abs(center.lng - target.center[0]) < 1e-7 &&
+        Math.abs(center.lat - target.center[1]) < 1e-7
+      // Only layout freezes resume; user gestures and other camera commands take precedence.
+      if (pendingViewport === target && (arrived || !shouldFreeze))
+        pendingViewport = null
+    }
+    // Starting a replacement flight ends the previous one synchronously.
+    mapInstance.flyTo({ ...target, duration })
+    mapInstance.on('moveend', finish)
+    if (!mapInstance.isMoving()) finish()
+    return () => {
+      mapInstance.off('moveend', finish)
+      releaseSize()
+    }
+  })
 })
 
 // EVENTS
@@ -525,9 +575,8 @@ $effect(() => {
       bind:map={activeMapInstance}
       class="h-full w-full"
       style={resolvedMapStyle}
-      center={mapProps.initialCenter ??
-        getCoordinateTuple(mapProps.coordinates) ?? [114.17, 22.3]}
-      zoom={mapProps.initialZoom ?? 20}
+      center={initialCamera.center}
+      zoom={initialCamera.zoom}
       attributionControl={false}
       hash={false}
       canvasContextAttributes={{ antialias: true }}

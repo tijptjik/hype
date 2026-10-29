@@ -1,9 +1,11 @@
 <script lang="ts">
 // SVELTE
 import { fade } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 // BITS
 import { cx } from '#lib/bits/index.js'
 import * as ImagePrimitive from '#lib/bits/patterns/images/components/index.js'
+import { VISUAL_TRANSITION_MS } from './visualTransition.js'
 import type { MainVisualSectionImageProps } from './main.types'
 
 let {
@@ -46,7 +48,12 @@ const imageItem = $derived(
   <a class={mediaClass} {href}>
     {#if src}
       {#key src}
-        <div class="absolute inset-0" transition:fade={{ duration: 520 }}>
+        <div
+          class="absolute inset-0"
+          transition:fade={{
+            duration: prefersReducedMotion.current ? 0 : VISUAL_TRANSITION_MS,
+          }}
+        >
           <ImagePrimitive.ImageSurface
             item={imageItem}
             fit={isCollapsed ? 'cover' : 'fit'}
