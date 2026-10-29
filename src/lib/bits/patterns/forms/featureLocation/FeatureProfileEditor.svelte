@@ -262,14 +262,14 @@ function autonym(locale: string): string {
           {/each}
         </div>
         {#if derived}
-          <div class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3" data-profile-derived>
-            <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground"><LinkIcon class="size-4 shrink-0 text-primary" />{m.feature_name_derived_help()}</span>
+          <div class="group/location-link mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-transparent p-3 transition-colors duration-150 hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 motion-reduce:transition-none" data-profile-derived>
+            <span class="inline-flex items-center gap-2 text-xs text-muted-foreground"><LinkIcon class="size-4 shrink-0" />{m.feature_name_derived_help()}</span>
             {#if isEditing}
               <div class="ml-auto flex flex-wrap items-center justify-end gap-2 overflow-hidden" data-profile-edit-action transition:slide={{ axis: 'x', duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 180 }}>
                 {#if !policyRequired}
-                  <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-muted" onclick={onIndependentName}><UnlinkIcon class="size-3.5" />{m.feature_separate_name()}</button>
+                  <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-transparent px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onIndependentName}><UnlinkIcon class="size-3.5" />{m.feature_separate_name()}</button>
                 {/if}
-                <button type="button" class="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20" onclick={onEditLocation}><EditIcon class="size-3.5" />{m.feature_edit_location()}</button>
+                <button type="button" class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs text-muted-foreground transition-colors group-hover/location-link:text-primary group-focus-within/location-link:text-primary hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onEditLocation}><EditIcon class="size-3.5" />{m.feature_edit_location()}</button>
               </div>
             {/if}
           </div>
