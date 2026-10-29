@@ -50,8 +50,9 @@ it('opens visibility help on click with separate choices and a final paragraph',
   const help = await screen.findByRole('tooltip', { hidden: true })
   expect([...help.querySelectorAll('strong')].map(element => element.textContent)).toEqual(['Shared', 'Organisation-only'])
   expect(help.querySelectorAll('ul > li')).toHaveLength(2)
-  expect(help.querySelectorAll('p')).toHaveLength(1)
-  expect(help.textContent).toContain('Organisation name overrides do not rename the shared record.')
+  expect(help.querySelectorAll('p')).toHaveLength(2)
+  expect(help.textContent).toContain('Visibility defines reuse')
+  expect(help.textContent).toContain('Location edits by other organisations will NOT override yours')
 })
 
 it('dismisses pinned help when its list scrolls or the viewport resizes', async () => {

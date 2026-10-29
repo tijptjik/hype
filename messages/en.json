@@ -1750,7 +1750,7 @@
   "location_visibility_exclusive": "Organisation-only",
   "location_visibility_shared_help": ": any project can add features to this Location.",
   "location_visibility_exclusive_help": ": only this organisation can use it.",
-  "location_visibility_name_override_help": "Organisation name overrides do not rename the shared record.",
+  "location_visibility_name_override_help": "Location edits by other organisations will NOT override yours",
   "organisation_location_visibility_default": "Default visibility for new Locations",
   "location_visibility_default_unavailable": "Organisation default unavailable. Choose Shared or Organisation-only before saving.",
   "address_translate_error": "Translation failed. Try again.",
@@ -1778,5 +1778,6 @@
   "feature_use_location_name_prompt": "Use the Location name for this Feature?",
   "feature_edit_location": "Edit Location",
   "feature_name_locked": "Linked · read-only",
-  "profile_translate_from": "Translate from"
+  "profile_translate_from": "Translate from",
+  "location_visibility_reuse_help": "Visibility defines reuse"
 }

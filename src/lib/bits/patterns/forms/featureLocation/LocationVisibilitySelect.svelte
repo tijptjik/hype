@@ -54,6 +54,7 @@ let {
         ><InfoIcon class="size-4" aria-label={m.location_visibility()} /></span
       >
     {/snippet}
+    <p class="mb-3 font-semibold">{m.location_visibility_reuse_help()}</p>
     <ul class="list-disc space-y-2 pl-4">
       <li><strong class="font-bold">{m.location_visibility_shared()}</strong>{m.location_visibility_shared_help()}</li>
       <li><strong class="font-bold">{m.location_visibility_exclusive()}</strong>{m.location_visibility_exclusive_help()}</li>

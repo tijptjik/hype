@@ -1750,7 +1750,7 @@
   "location_visibility_exclusive": "僅限本組織",
   "location_visibility_shared_help": "：任何專案均可在此地點新增要素。",
   "location_visibility_exclusive_help": "：僅此組織可使用。",
-  "location_visibility_name_override_help": "組織名稱覆寫不會更改共享記錄的名稱。",
+  "location_visibility_name_override_help": "其他組織對地點的編輯不會覆蓋你的編輯",
   "organisation_location_visibility_default": "新地點的預設可見性",
   "location_visibility_default_unavailable": "無法取得組織預設值。儲存前請選擇共享或僅限本組織。",
   "address_translate_error": "翻譯失敗，請重試",
@@ -1778,5 +1778,6 @@
   "feature_use_location_name_prompt": "使用位置名稱命名此地點項目？",
   "feature_edit_location": "編輯位置",
   "feature_name_locked": "已連結 · 唯讀",
-  "profile_translate_from": "翻譯自"
+  "profile_translate_from": "翻譯自",
+  "location_visibility_reuse_help": "可見性決定誰可以重用此地點"
 }

@@ -1750,7 +1750,7 @@
   "location_visibility_exclusive": "仅限本组织",
   "location_visibility_shared_help": "：任何项目都可在此地点添加要素。",
   "location_visibility_exclusive_help": "：仅此组织可使用。",
-  "location_visibility_name_override_help": "组织名称覆盖不会更改共享记录的名称。",
+  "location_visibility_name_override_help": "其他组织对地点的编辑不会覆盖你的编辑",
   "organisation_location_visibility_default": "新地点的默认可见性",
   "location_visibility_default_unavailable": "无法获取组织默认值。保存前请选择共享或仅限本组织。",
   "address_translate_error": "翻译失败，请重试",
@@ -1778,5 +1778,6 @@
   "feature_use_location_name_prompt": "使用位置名称命名此地点项目？",
   "feature_edit_location": "编辑位置",
   "feature_name_locked": "已关联 · 只读",
-  "profile_translate_from": "翻译自"
+  "profile_translate_from": "翻译自",
+  "location_visibility_reuse_help": "可见性决定谁可以重用此地点"
 }
