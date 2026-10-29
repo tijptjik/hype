@@ -4,6 +4,7 @@ import { onMount, tick } from 'svelte'
 import type { TransitionConfig } from 'svelte/transition'
 import { flip } from 'svelte/animate'
 import { Popover } from 'bits-ui'
+import { m } from '#lib/i18n.js'
 // DRAG AND DROP
 import { dndzone, type DndEvent } from 'svelte-dnd-action'
 // ICONS
@@ -204,6 +205,48 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
 }
 </script>
 
+{#snippet addControl()}
+            <Popover.Root bind:open={searching}>
+              <Popover.Trigger {disabled}>
+                {#snippet child({ props })}
+                  <button
+                    {...props}
+                    bind:this={addButton}
+                    type="button"
+                    onblur={() => (quietAddFocus = false)}
+                    onkeydown={() => (quietAddFocus = false)}
+                    class="min-h-8 rounded-md border border-dashed border-border px-2 text-xs {quietAddFocus
+                      ? 'outline-none! ring-0!'
+                      : 'focus-visible:outline-2 focus-visible:outline-primary'}"
+                  >
+                    + {mode === 'visibility' ? m.address_neighbourhood_add() : labels.add}
+                  </button>
+                {/snippet}
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  sideOffset={8}
+                  align="start"
+                  collisionPadding={16}
+                  onOpenAutoFocus={event => event.preventDefault()}
+                  onCloseAutoFocus={event => {
+                    event.preventDefault()
+                    if (!searching) restoreAddFocus()
+                  }}
+                  class="bits-theme z-[100] w-[min(24rem,calc(100vw-2rem))] outline-none"
+                >
+                  <LocaleSearch
+                    {options}
+                    {selectedLocales}
+                    {labels}
+                    onSelect={select}
+                    onClose={closeSearch}
+                  />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+{/snippet}
+
 <div
   data-locale-toolbar
   bind:this={root}
@@ -230,6 +273,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
               ? 'justify-start'
               : 'justify-end'} gap-1.5 p-0.5"
           >
+            {#if mode === 'visibility'}{@render addControl()}{/if}
             <!-- biome-ignore lint/a11y/useSemanticElements: This drag zone groups locale controls rather than form fields. -->
             <div
               use:dndzone={{
@@ -315,45 +359,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                 </div>
               {/each}
             </div>
-            <Popover.Root bind:open={searching}>
-              <Popover.Trigger {disabled}>
-                {#snippet child({ props })}
-                  <button
-                    {...props}
-                    bind:this={addButton}
-                    type="button"
-                    onblur={() => (quietAddFocus = false)}
-                    onkeydown={() => (quietAddFocus = false)}
-                    class="min-h-8 rounded-md border border-dashed border-border px-2 text-xs {quietAddFocus
-                      ? 'outline-none! ring-0!'
-                      : 'focus-visible:outline-2 focus-visible:outline-primary'}"
-                  >
-                    + {labels.add}
-                  </button>
-                {/snippet}
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content
-                  sideOffset={8}
-                  align="start"
-                  collisionPadding={16}
-                  onOpenAutoFocus={event => event.preventDefault()}
-                  onCloseAutoFocus={event => {
-                    event.preventDefault()
-                    if (!searching) restoreAddFocus()
-                  }}
-                  class="bits-theme z-[100] w-[min(24rem,calc(100vw-2rem))] outline-none"
-                >
-                  <LocaleSearch
-                    {options}
-                    {selectedLocales}
-                    {labels}
-                    onSelect={select}
-                    onClose={closeSearch}
-                  />
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
+            {#if mode === 'membership'}{@render addControl()}{/if}
           </div>
         </div>
       </div>
