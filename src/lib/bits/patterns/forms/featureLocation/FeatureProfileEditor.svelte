@@ -144,6 +144,7 @@ function autonym(locale: string): string {
     <LocaleToolbar
       {...localeState}
       {options}
+      allowAdd={isEditing}
       onExpandedChange={expanded => onLocaleStateChange({ ...localeState, expanded })}
       onChange={change =>
         onLocaleStateChange({

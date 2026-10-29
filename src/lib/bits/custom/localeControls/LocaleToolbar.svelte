@@ -25,6 +25,7 @@ let {
   onExpandedChange,
   onChange,
   disabled = false,
+  allowAdd = true,
   mode = 'visibility',
   alwaysExpanded = false,
   labels = defaultLocaleControlLabels,
@@ -92,7 +93,7 @@ function closeSearch(): void {
 
 /** Emit an atomic add/reveal request; the caller retains ownership of all state. */
 async function select(tag: string): Promise<void> {
-  if (disabled) return
+  if (disabled || !allowAdd) return
   const exists = selectedLocales.includes(tag)
   const selected = exists ? [...selectedLocales] : [...selectedLocales, tag]
   const visible = selected.filter(
@@ -273,7 +274,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
               ? 'justify-start'
               : 'justify-end'} gap-1.5 p-0.5"
           >
-            {#if mode === 'visibility'}{@render addControl()}{/if}
+            {#if allowAdd && mode === 'visibility'}{@render addControl()}{/if}
             <!-- biome-ignore lint/a11y/useSemanticElements: This drag zone groups locale controls rather than form fields. -->
             <div
               use:dndzone={{
@@ -359,7 +360,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                 </div>
               {/each}
             </div>
-            {#if mode === 'membership'}{@render addControl()}{/if}
+            {#if allowAdd && mode === 'membership'}{@render addControl()}{/if}
           </div>
         </div>
       </div>
