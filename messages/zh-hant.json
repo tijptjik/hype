@@ -1772,7 +1772,7 @@
   "profile_translation_complete": "已填入 {count} 項翻譯。",
   "profile_translate_source": "從{language}翻譯空白欄位",
   "feature_separate_name": "取消連結",
-  "feature_name_derived_help": "由地點設定",
+  "feature_name_derived_help": "唯讀 — 由地點管理",
   "profile_translation_skipped": "欄位已變更，已略過。",
   "feature_use_location_name": "使用位置名稱",
   "feature_use_location_name_prompt": "使用位置名稱命名此地點項目？",

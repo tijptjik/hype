@@ -263,7 +263,7 @@ function autonym(locale: string): string {
         </div>
         {#if derived}
           <div class="group/location-link mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-transparent p-3 transition-colors duration-150 hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 motion-reduce:transition-none" data-profile-derived>
-            <span class="inline-flex items-center gap-2 text-xs text-muted-foreground"><LinkIcon class="size-4 shrink-0" />{m.feature_name_derived_help()}</span>
+            <span class="inline-flex items-center gap-2 text-xs text-muted-foreground"><LinkIcon class="size-4 shrink-0 text-primary" />{m.feature_name_derived_help()}</span>
             {#if isEditing}
               <div class="ml-auto flex flex-wrap items-center justify-end gap-2 overflow-hidden" data-profile-edit-action transition:slide={{ axis: 'x', duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 180 }}>
                 {#if !policyRequired}

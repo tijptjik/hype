@@ -63,7 +63,7 @@ it('locks inherited titles including empty rows, keeps Edit Location and separat
   const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'title en' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Use Location name' }))
-  expect(screen.getByText('Set by Location')).toBeTruthy()
+  expect(screen.getByText('READ ONLY — managed by location')).toBeTruthy()
   expect(screen.queryByRole('textbox', { name: 'title en' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'title en' })).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
@@ -76,10 +76,10 @@ it('locks inherited titles including empty rows, keeps Edit Location and separat
   expect(state(view.container).editedLocation).toBe(true)
   // Both explicit linked-name actions remain discoverable in edit mode.
   expect(screen.getByRole('button', { name: 'Unlink' })).toBeTruthy()
-  expect(screen.getByText('Set by Location')).toBeTruthy()
+  expect(screen.getByText('READ ONLY — managed by location')).toBeTruthy()
   await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
   expect(screen.queryByRole('button', { name: 'Edit Location' })).toBeNull()
-  expect(screen.getAllByText('Set by Location')).toHaveLength(1)
+  expect(screen.getAllByText('READ ONLY — managed by location')).toHaveLength(1)
 })
 it('fills all empty selected values from the header including a hidden target, preserving populated values and other fields', async () => {
   const view = render(Fixture)
