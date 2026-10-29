@@ -250,24 +250,35 @@ function autonym(locale: string): string {
                 : '0px'}
               data-profile-locale={locale}
             >
-              <div class="min-h-0 overflow-hidden">
+              <div class="relative min-h-0 overflow-hidden">
                 {#if showSkeleton && shown.includes(locale)}
                   <div
-                    class="flex min-h-12 items-center gap-3 px-3 py-3"
+                    class="absolute inset-0 grid min-h-[42px] items-center gap-2 {locale !==
+                    shown[0]
+                      ? 'grid-cols-[2.5rem_minmax(0,1fr)_2rem]'
+                      : 'grid-cols-[minmax(0,1fr)_2rem]'}"
                     data-profile-skeleton-row
                   >
                     {#if locale !== shown[0]}
                       <span
-                        class="w-8 shrink-0 text-center text-xs text-muted-foreground"
+                        class="text-center font-mono text-xs leading-[22px] text-muted-foreground"
                         >{shortLocaleLabel(locale)}</span
                       >
                     {/if}
-                    <Skeleton class={field === 'title' ? 'h-4 w-2/3' : 'h-4 w-4/5'} />
-                    <Skeleton class="ml-auto size-4 shrink-0 rounded-full" />
+                    <div class="min-w-0 pl-3 pr-9">
+                      <Skeleton class={field === 'title' ? 'h-4 w-2/3' : 'h-4 w-4/5'} />
+                    </div>
+                    <div class="flex justify-center">
+                      <Skeleton class="size-4 rounded-full" />
+                    </div>
                   </div>
                 {/if}
-                <!-- Keep form registrations mounted, but hide stale values during navigation. -->
-                <div hidden={showSkeleton} inert={loading}>
+                <!-- Preserve actual field geometry, including wrapped content, beneath the skeleton. -->
+                <div
+                  class={showSkeleton ? 'invisible [&_*]:invisible!' : ''}
+                  aria-hidden={showSkeleton}
+                  inert={loading}
+                >
                   {@render children(
                     field,
                     locale,
@@ -307,6 +318,13 @@ function autonym(locale: string): string {
                 {m.feature_edit_location()}
               </button>
             </div>
+          </div>
+        {:else if showSkeleton && !recordKey && field === 'title'}
+          <div
+            class="mt-6 flex min-h-8 items-center justify-between gap-4"
+            aria-hidden="true"
+          >
+            <Skeleton class="h-3 w-40" /><Skeleton class="h-8 w-24 rounded-md" />
           </div>
         {:else if !showSkeleton && field === 'title' && offerName && isEditing}
           <div

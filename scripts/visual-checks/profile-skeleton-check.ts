@@ -21,7 +21,14 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox]] as c
       await page.screenshot({ path: `${directory}/${name}-${width}-row.png` })
       for (const expanded of [false, true]) {
         if (expanded) await page.getByRole('button', { name: 'Multilingual', exact: true }).click()
+        // Wait for locale expansion before comparing the exact rendered geometry.
+        await page.waitForTimeout(250)
+        const before = await page.locator('[data-profile-field="title"]').boundingBox()
+        const footerBefore = await row.boundingBox()
         await page.getByRole('button', { name: 'Toggle loading' }).click()
+        const after = await page.locator('[data-profile-field="title"]').boundingBox()
+        const footerAfter = await row.boundingBox()
+        if (!before || !after || !footerBefore || !footerAfter || Math.abs(before.height - after.height) > 0.5 || Math.abs(footerBefore.y - footerAfter.y) > 0.5) throw new Error(`Skeleton shifted layout: ${JSON.stringify({ before, after, footerBefore, footerAfter })}`)
         const rows = await page.locator('[data-profile-skeleton-row]').count()
         if (rows !== (expanded ? 8 : 2)) throw new Error(`Unexpected skeleton row count: ${rows}`)
         if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Horizontal overflow')
