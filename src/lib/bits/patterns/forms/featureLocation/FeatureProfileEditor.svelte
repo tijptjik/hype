@@ -267,9 +267,9 @@ function autonym(locale: string): string {
             {#if isEditing}
               <div class="ml-auto flex flex-wrap items-center justify-end gap-2 overflow-hidden" data-profile-edit-action transition:slide={{ axis: 'x', duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 180 }}>
                 {#if !policyRequired}
-                  <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-transparent px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:bg-muted/50 focus-visible:text-foreground focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onIndependentName}><UnlinkIcon class="size-3.5" />{m.feature_separate_name()}</button>
+                  <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-transparent px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onIndependentName}><UnlinkIcon class="size-3.5" />{m.feature_separate_name()}</button>
                 {/if}
-                <button type="button" class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs text-muted-foreground transition-colors group-hover/location-link:text-primary group-focus-within/location-link:text-primary hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onEditLocation}><EditIcon class="size-3.5" />{m.feature_edit_location()}</button>
+                <button type="button" class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs text-muted-foreground transition-colors group-hover/location-link:text-primary group-focus-within/location-link:text-primary focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onEditLocation}><EditIcon class="size-3.5" />{m.feature_edit_location()}</button>
               </div>
             {/if}
           </div>
