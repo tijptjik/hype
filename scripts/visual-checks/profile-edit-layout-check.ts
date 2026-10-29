@@ -1,0 +1,40 @@
+import { chromium, firefox } from 'playwright'
+import { mkdir } from 'node:fs/promises'
+await mkdir('output/playwright/profile-edit-layout', { recursive: true })
+for (const [name, engine] of [['chromium', chromium], ['firefox', firefox]] as const) {
+  const browser = await engine.launch({ headless: true })
+  try {
+    for (const width of [390, 1440]) {
+      const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' })
+      await page.route('**/__profile-layout.html', route => route.fulfill({ contentType: 'text/html', body: '<html lang="en" data-theme="breadline-dark"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body><div id="app"></div><script type="module" src="/src/tests/fixtures/featureProfileCheck.ts"></script></body></html>' }))
+      await page.goto('http://127.0.0.1:4173/__profile-layout.html')
+      const display = page.getByRole('button', { name: 'description en', exact: true })
+      await display.click()
+      const input = page.getByRole('textbox', { name: 'description en', exact: true })
+      await input.fill(Array(12).fill('The shoemaker worked here for many years. Neighbours remember his careful craftsmanship and the stories he shared with visitors.').join('\n\n'))
+      await page.getByRole('button', { name: 'Checkpoint draft' }).click()
+      const before = await display.boundingBox()
+      await display.click()
+      const after = await input.evaluate(element => { const box = element.closest('.bits-form__control-wrap')!.getBoundingClientRect(); return { width: box.width, height: box.height } })
+      if (!before || !after || before.height < 384 || Math.abs(before.height - after.height) > 1 || Math.abs(before.width - after.width) > 1) throw new Error(`Focus changed size ${JSON.stringify({ before, after })}`)
+      await page.getByRole('button', { name: 'Checkpoint draft' }).click()
+      await page.getByRole('button', { name: 'Use Location name', exact: true }).click()
+      if (await page.getByText('Linked · read-only').count()) throw new Error('Duplicate link indicator')
+      await page.getByRole('button', { name: 'Edit Location', exact: true }).waitFor()
+      await page.getByRole('button', { name: 'Name follows Location.', exact: true }).click()
+      await page.getByRole('button', { name: 'Use a separate Feature name', exact: true }).waitFor()
+      await page.getByRole('button', { name: 'Use a separate Feature name', exact: true }).click()
+      await page.getByRole('button', { name: 'title en', exact: true }).waitFor()
+      await page.getByRole('button', { name: 'Use Location name', exact: true }).click()
+      await page.getByRole('button', { name: 'Multilingual', exact: true }).click()
+      const add = await page.getByRole('button', { name: '+ Add', exact: true }).boundingBox()
+      const first = await page.locator('[data-locale="en"]').boundingBox()
+      if (!add || !first || (add.y >= first.y && add.x >= first.x)) throw new Error('Add is not first')
+      await page.screenshot({ path: `output/playwright/profile-edit-layout/${name}-${width}.png` })
+      await page.getByRole('button', { name: 'Toggle editing' }).click()
+      if (await page.getByRole('button', { name: 'Edit Location', exact: true }).count()) throw new Error('Edit Location offered in display mode')
+      console.log(`${name} ${width}: stable textarea, Add-first toolbar, single link indicator passed`)
+      await page.close()
+    }
+  } finally { await browser.close() }
+}

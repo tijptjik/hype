@@ -15,9 +15,7 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox]] as c
       await page.getByRole('button', { name: 'Use Location name', exact: true }).click()
       await page.getByRole('button', { name: 'Toggle editing' }).click()
       const row = page.locator('[data-profile-derived]')
-      const text = await row.locator('p').boundingBox()
-      const button = await page.getByRole('button', { name: 'Edit Location', exact: true }).boundingBox()
-      if (!text || !button || (width === 1440 && Math.abs(text.y + text.height / 2 - button.y - button.height / 2) > 1)) throw new Error('Linked-name row is misaligned')
+      if (await page.getByRole('button', { name: 'Edit Location', exact: true }).count()) throw new Error('Display mode should not offer Edit Location')
       await page.screenshot({ path: `${directory}/${name}-${width}-row.png` })
       for (const expanded of [false, true]) {
         if (expanded) await page.getByRole('button', { name: 'Multilingual', exact: true }).click()

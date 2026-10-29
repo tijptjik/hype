@@ -63,7 +63,7 @@ it('locks inherited titles including empty rows, keeps Edit Location and separat
   const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'title en' }))
   await fireEvent.click(screen.getByRole('button', { name: 'Use Location name' }))
-  expect(screen.getByText('Linked · read-only')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Name follows Location.' })).toBeTruthy()
   expect(screen.queryByRole('textbox', { name: 'title en' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'title en' })).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
@@ -74,12 +74,11 @@ it('locks inherited titles including empty rows, keeps Edit Location and separat
   ).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Edit Location' }))
   expect(state(view.container).editedLocation).toBe(true)
-  await fireEvent.click(
-    screen.getByRole('button', { name: 'Use a separate Feature name' }),
-  )
-  expect(screen.getByRole('button', { name: 'title en' }).textContent).toContain(
-    'Fu Yee Court',
-  )
+  // The Bits popover and independent-name action are exercised in the real-browser layout check.
+  expect(screen.getByRole('button', { name: 'Name follows Location.' })).toBeTruthy()
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
+  expect(screen.queryByRole('button', { name: 'Edit Location' })).toBeNull()
+  expect(screen.getAllByText('Name follows Location.')).toHaveLength(1)
 })
 it('fills all empty selected values from the header including a hidden target, preserving populated values and other fields', async () => {
   const view = render(Fixture)
@@ -163,7 +162,7 @@ it('protects a user starting an empty target edit during translation', async () 
 it('registers an added locale in both fields, keeps its empty inherited title locked and permits verification', async () => {
   const view = render(Fixture)
   await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
-  await fireEvent.click(screen.getByRole('button', { name: '+ Add language' }))
+  await fireEvent.click(screen.getByRole('button', { name: '+ Add' }))
   const search = await screen.findByRole('combobox', { hidden: true })
   await fireEvent.input(search, { target: { value: '한국어' } })
   await fireEvent.keyDown(search, { key: 'Enter' })

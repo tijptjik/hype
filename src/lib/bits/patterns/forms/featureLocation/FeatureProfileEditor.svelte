@@ -21,7 +21,7 @@ import {
   type ProfileTranslationResult,
 } from './profileTranslation'
 // ICONS
-import LockIcon from 'virtual:icons/lucide/lock-keyhole'
+import { Popover } from 'bits-ui'
 import LinkIcon from 'virtual:icons/lucide/link'
 import FormI18nSourceBar from '../formI18nSection/components/FormI18nSourceBar.svelte'
 import FormI18nTranslationStatus from '../formI18nSection/components/FormI18nTranslationStatus.svelte'
@@ -186,10 +186,25 @@ function autonym(locale: string): string {
               : ''}
           />
           {#if derived}
-            <span
-              class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground"
-              ><LockIcon class="size-3" />{m.feature_name_locked()}</span
-            >
+            <div class="flex flex-wrap items-center justify-end gap-2" data-profile-derived>
+              {#if isEditing && !policyRequired}
+                <Popover.Root>
+                  <Popover.Trigger class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground hover:text-primary">
+                    <LinkIcon class="size-3" />{m.feature_name_derived_help()}
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content sideOffset={6} collisionPadding={16} class="bits-theme z-50 rounded-lg border border-border bg-panel p-1 shadow-md">
+                      <Popover.Close onclick={onIndependentName} class="rounded px-3 py-2 text-xs hover:bg-muted">{m.feature_separate_name()}</Popover.Close>
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
+              {:else}
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground"><LinkIcon class="size-3" />{m.feature_name_derived_help()}</span>
+              {/if}
+              {#if isEditing}
+                <button type="button" class="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10" onclick={onEditLocation}>{m.feature_edit_location()}</button>
+              {/if}
+            </div>
           {/if}
         </div>
         <FormI18nSourceBar
@@ -263,43 +278,7 @@ function autonym(locale: string): string {
             </div>
           {/each}
         </div>
-        {#if derived}
-          <div
-            class="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
-            data-profile-derived
-            inert={loading}
-          >
-            <div class="flex items-center gap-2 text-xs text-muted-foreground">
-              <LinkIcon class="size-4 shrink-0" />
-              <p>{m.feature_name_derived_help()}</p>
-            </div>
-            <div class="ml-auto flex flex-wrap items-center justify-end gap-2">
-              {#if isEditing && !policyRequired}
-                <button
-                  type="button"
-                  class="rounded px-2 py-1 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-                  onclick={onIndependentName}
-                >
-                  {m.feature_separate_name()}
-                </button>
-              {/if}
-              <button
-                type="button"
-                class="rounded-md bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/20"
-                onclick={onEditLocation}
-              >
-                {m.feature_edit_location()}
-              </button>
-            </div>
-          </div>
-        {:else if showSkeleton && !recordKey && field === 'title'}
-          <div
-            class="mt-6 flex min-h-8 items-center justify-between gap-4"
-            aria-hidden="true"
-          >
-            <Skeleton class="h-3 w-40" /><Skeleton class="h-8 w-24 rounded-md" />
-          </div>
-        {:else if !showSkeleton && field === 'title' && offerName && isEditing}
+        {#if !showSkeleton && field === 'title' && offerName && isEditing}
           <div
             class="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary/5 p-3 text-xs"
           >
