@@ -36,7 +36,12 @@ const id = $props.id()
 let query = $state('')
 let active = $state(0)
 let input: HTMLInputElement
-const results = $derived(searchLocaleOptions(options, query))
+let closeButton: HTMLButtonElement
+const results = $derived(
+  searchLocaleOptions(options, query).filter(
+    option => !selectedLocales.includes(option.tag),
+  ),
+)
 const activeIndex = $derived(Math.min(active, results.length - 1))
 onMount(() => input.focus({ preventScroll: true }))
 
@@ -44,13 +49,35 @@ onMount(() => input.focus({ preventScroll: true }))
  * @param tag Content-language code. @returns A self-hosted font family or system fallback.
  */
 function languageFont(tag: string): string {
-  const scripts: Record<string, string> = { ar: 'Arabic', fa: 'Arabic', ur: 'Arabic', he: 'Hebrew', hi: 'Devanagari', ne: 'Devanagari', bn: 'Bengali', pa: 'Gurmukhi', ta: 'Tamil', te: 'Telugu', th: 'Thai', my: 'Myanmar', km: 'Khmer', lo: 'Lao' }
+  const scripts: Record<string, string> = {
+    ar: 'Arabic',
+    fa: 'Arabic',
+    ur: 'Arabic',
+    he: 'Hebrew',
+    hi: 'Devanagari',
+    ne: 'Devanagari',
+    bn: 'Bengali',
+    pa: 'Gurmukhi',
+    ta: 'Tamil',
+    te: 'Telugu',
+    th: 'Thai',
+    my: 'Myanmar',
+    km: 'Khmer',
+    lo: 'Lao',
+  }
   const script = scripts[tag.split('-')[0]]
   return script ? `"Noto Sans ${script}", sans-serif` : 'sans-serif'
 }
 
 /** Keep keyboard focus in the combobox while navigating its results. */
 function onKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Tab' && !event.shiftKey) {
+    event.preventDefault()
+    // The popover must not process the same Tab again after focus moves to its last control.
+    event.stopPropagation()
+    closeButton.focus({ preventScroll: true })
+    return
+  }
   if (event.key === 'Escape') {
     event.preventDefault()
     event.stopPropagation()
@@ -95,6 +122,7 @@ function onKeydown(event: KeyboardEvent): void {
     >
     <button
       type="button"
+      bind:this={closeButton}
       aria-label={labels.close}
       onclick={onClose}
       class="size-11 shrink-0 text-foreground! rounded-md hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-primary"
@@ -119,15 +147,15 @@ function onKeydown(event: KeyboardEvent): void {
           class={`grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground! transition-colors hover:bg-primary/8 ${index === activeIndex ? 'bg-primary/10 ring-1 ring-inset ring-primary/25' : ''}`}
         >
           <span class="min-w-0 whitespace-normal break-words"
-            ><span lang={option.tag} dir="auto" style:font-family={languageFont(option.tag)} class="font-semibold text-foreground!">{option.autonym}</span
+            ><span
+              lang={option.tag}
+              dir="auto"
+              style:font-family={languageFont(option.tag)}
+              class="font-semibold text-foreground!"
+              >{option.autonym}</span
             ><span class="block text-muted-foreground">{option.name}</span></span
           >
-          <span class="text-right text-xs text-muted-foreground"
-            >{option.tag}
-            {#if selectedLocales.includes(option.tag)}
-              <span class="block">{labels.selected}</span>
-            {/if}</span
-          >
+          <span class="text-right text-xs text-muted-foreground">{option.tag} </span>
         </button>
       </li>
     {/each}

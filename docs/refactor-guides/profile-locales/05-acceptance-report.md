@@ -243,3 +243,13 @@ Their inclusion requires a clear ownership boundary before committing that rewri
 The pre-commit hook treats any partially staged file as a formatting failure and
 writes the whole working-tree file. Scoped commits therefore use separate focused
 tests and whitespace checks instead of that hook, preserving unrelated edits.
+
+### Default language picker focus refinement
+
+Default Languages now displays the Organisation-specific description directly,
+without an info trigger or separate Edit mode. The enclosing form enables locale
+controls. Search excludes existing members, including hidden locales. Forward Tab
+reaches Close, reverse Tab returns to search, and selection/dismissal restores Add
+focus without an outline; Enter reopens search. Added chips do not receive focus.
+Chromium and Firefox verify these interactions at 320/390/1440px, with overlay
+geometry, reduced motion and narrow-layout checks retained.
