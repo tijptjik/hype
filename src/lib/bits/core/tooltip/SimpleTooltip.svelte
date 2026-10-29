@@ -22,10 +22,18 @@ let triggerElement = $state<HTMLDivElement>()
 // A scroll invalidates the visible anchor; help must not follow a row out of view.
 $effect(() => {
   if (!open || !triggerElement) return
-  const dismiss = (): void => { open = false; restProps.onOpenChange?.(false) }
+  const dismiss = (): void => {
+    open = false
+    restProps.onOpenChange?.(false)
+  }
   const onScroll = (event: Event): void => {
     const target = event.target
-    if (target === document || target === window || target instanceof Node && triggerElement && target.contains(triggerElement)) dismiss()
+    if (
+      target === document ||
+      target === window ||
+      (target instanceof Node && triggerElement && target.contains(triggerElement))
+    )
+      dismiss()
   }
   document.addEventListener('scroll', onScroll, { capture: true, passive: true })
   window.addEventListener('resize', dismiss)
@@ -49,9 +57,8 @@ const contentClasses = $derived(
 {:else}
   <PopoverPrimitive.Root bind:open {...restProps}>
     <PopoverPrimitive.Trigger openOnHover {...triggerProps}>
-      {#snippet child(
-        _triggerChild,
-      )}
+      {#snippet child(_triggerChild)}
+        <!-- biome-ignore lint/a11y/noStaticElementInteractions: Bits supplies the trigger semantics through the spread props; nested controls retain their own role. -->
         <div
           {..._triggerChild.props}
           bind:this={triggerElement}
@@ -63,11 +70,16 @@ const contentClasses = $derived(
           class={triggerClasses}
           onkeydown={event => {
             // Nested buttons and inputs retain their own keyboard activation.
-            if (event.target === event.currentTarget && typeof _triggerChild.props.onkeydown === 'function') {
+            if (
+              event.target === event.currentTarget &&
+              typeof _triggerChild.props.onkeydown === 'function'
+            ) {
               _triggerChild.props.onkeydown(event)
             }
           }}
-        >{@render trigger()}</div>
+        >
+          {@render trigger()}
+        </div>
       {/snippet}
     </PopoverPrimitive.Trigger>
 
@@ -80,6 +92,7 @@ const contentClasses = $derived(
         side={contentProps.side ?? 'top'}
         sideOffset={contentProps.sideOffset ?? 8}
         strategy={contentProps.strategy ?? 'fixed'}
+        collisionPadding={contentProps.collisionPadding ?? 16}
         trapFocus={false}
         preventScroll={false}
         onOpenAutoFocus={event => {

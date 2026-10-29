@@ -12,6 +12,7 @@ import GripIcon from 'virtual:icons/lucide/grip-vertical'
 // LOCAL
 import LocaleSearch from './LocaleSearch.svelte'
 import { defaultLocaleControlLabels, shortLocaleLabel } from './localeControls.js'
+import { languageFont } from '#lib/bits/custom/localeControls/localeFont.js'
 // TYPES
 import type { LocaleChange, LocaleToolbarProps } from './localeControls.types.js'
 
@@ -292,7 +293,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                     }}
                     class={`inline-flex min-h-8 min-w-0 flex-1 cursor-grab items-center gap-1 rounded-md pr-2 pl-1 text-left text-xs whitespace-normal break-words focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing ${mode === 'membership' || visibleLocales.includes(tag) ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
                   >
-                    <span lang={tag}
+                    <span lang={tag} dir="auto" style:font-family={languageFont(tag)}
                       >{mode === 'visibility'
                         ? shortLocaleLabel(tag)
                         : option.autonym}</span

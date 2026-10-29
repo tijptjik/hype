@@ -258,3 +258,10 @@ Whole-chip dragging uses the DnD zone across the grip, label and chip surface;
 membership removal is confined to the separate × control. Chromium and Firefox
 verify a drag initiated on the label, floating clone, reordered membership and
 independent removal in `scripts/visual-checks/locale-chip-drag-check.ts`.
+
+Language settings cards now size independently. Shared tooltips use themed panel,
+foreground and border tokens with 16px viewport collision padding. The script-font
+resolver is shared by search, selected chips and read-only locale lists. Chromium
+and Firefox at 320/390/900/1440px verify stable switch-card heights after nine locale
+additions, Punjabi/Burmese/Khmer/Lao font coverage, viewport-corner tooltip clearance
+and distinct light/dark fills. Screenshots are under `output/playwright/`.

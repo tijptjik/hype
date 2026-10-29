@@ -5,6 +5,7 @@ import { m } from '#lib/i18n.js'
 import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
 // BITS COMPONENTS
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
+import { languageFont } from '#lib/bits/custom/localeControls/localeFont.js'
 // TYPES
 import type {
   LocaleControlLabels,
@@ -98,7 +99,7 @@ const differs = $derived(
           class="min-w-0 rounded-lg border border-border/30 bg-foreground/3 px-3 py-2 text-sm whitespace-normal break-words"
         >
           <span class="mr-2 text-muted-foreground">{index + 1}.</span
-          ><span lang={tag}
+          ><span lang={tag} dir="auto" style:font-family={languageFont(tag)}
             >{options.find(option => option.tag === tag)?.autonym ?? tag}</span
           >
         </li>
