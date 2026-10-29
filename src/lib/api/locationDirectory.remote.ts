@@ -17,6 +17,8 @@ import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.
 import { updateLocalLocationAddress } from '#lib/db/services/locationLocal.js'
 import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 // DB
+import { and, eq, ne } from 'drizzle-orm'
+import { location as locationTable } from '#lib/db/schema/location.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
 import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 // TYPES
@@ -58,6 +60,21 @@ export const getLocations = guardedQuery(
       ...input,
       restrictToOrganisation: Boolean(input.organisationId),
     })
+  },
+)
+
+/** Resolve a public discovery source to an existing shared Location details target.
+ * @param input Stable source identity from the accepted discovery result.
+ * @returns The permanent HYPE ID, or null if no shared Location has been imported.
+ * @remarks Read-only: never materializes source records or exposes private manual identities.
+ */
+export const getSharedLocationIdBySource = guardedQuery(
+  z.strictObject({ ssId: z.string().min(1).max(200) }),
+  async (input, ctx) => {
+    await requireDirectoryAccess(ctx)
+    const row = await ctx.db.select({ id: locationTable.id }).from(locationTable)
+      .where(and(eq(locationTable.ssId, input.ssId), ne(locationTable.state, 'manual'))).get()
+    return row?.id ?? null
   },
 )
 
