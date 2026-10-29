@@ -13,6 +13,7 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js'
 // LOCAL DEVELOPMENT
 import { getDevPersona } from './scripts/dev/config.ts'
 import { getDevOutput } from './scripts/dev/output.ts'
+import { manualBrowserUpdates } from './scripts/dev/manual-browser-updates.ts'
 // DATA
 // import seed from './src/lib/db/seed';
 // TYPES
@@ -374,6 +375,7 @@ export default defineConfig(async ({ command }) => ({
     hype_preview: {},
   },
   plugins: [
+    manualBrowserUpdates(),
     suppressOptimizedKyselyMigrationWarning(),
     paraglideVitePlugin({
       project: './project.inlang',
@@ -443,8 +445,8 @@ export default defineConfig(async ({ command }) => ({
     },
     port: 5175,
     strictPort: true,
-    // Disable automatic browser updates; refresh manually to load development changes.
-    hmr: false,
+    // Keep SSR invalidation enabled; the plugin preserves manual browser refresh.
+    hmr: true,
     allowedHosts: [
       'localhost',
       '127.0.0.1',
