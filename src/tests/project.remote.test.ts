@@ -587,6 +587,15 @@ describe('project.remote form organisation move authz', () => {
     },
   )
 
+  it.each([false, true, null])('persists or resets multilingual booleans without losing other settings (%j)', async mode => {
+    const current = await mockProbeProjectForUpdate()
+    mockProbeProjectForUpdate.mockResolvedValue({ ...(current as object), settings: { contentLocales: ['ja'], multilingualContent: true, future: 'kept' } })
+    const payload = buildUpdatePayload('org-1')
+    await remote.projectForm({ ...payload, data: { ...payload.data, settings: { multilingualContent: mode, multilingualAddresses: false } } }, throwingInvalid)
+    const data = (mockUpdateProjectByIdWithConcurrency.mock.calls as unknown as Array<[unknown, { data: Record<string, unknown> }]>)[0][1].data
+    expect(data.settings).toEqual({ contentLocales: ['ja'], future: 'kept', multilingualAddresses: false, ...(mode === null ? {} : { multilingualContent: mode }) })
+  })
+
   it.each([[['ja', 'zhHant']], [null], [undefined]])(
     'preserves unrelated settings and flags for locale patch %j',
     async contentLocales => {

@@ -470,6 +470,7 @@ export const organisationForm = guardedForm(
         url: data.url.trim() === '' ? null : data.url.trim(),
         hubId: activeHubId,
         settings: applyContentLocaleSettingsPatch(undefined, data.settings),
+        defaultLocationVisibility: data.defaultLocationVisibility,
         ...(data.capabilities !== undefined ? { capabilities: data.capabilities } : {}),
       })
 
@@ -573,6 +574,7 @@ export const organisationForm = guardedForm(
                 ),
               }
             : {}),
+          defaultLocationVisibility: data.defaultLocationVisibility,
           url: data.url.trim() === '' ? null : data.url.trim(),
           ...(data.capabilities !== undefined
             ? { capabilities: data.capabilities }

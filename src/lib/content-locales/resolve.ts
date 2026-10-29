@@ -42,3 +42,17 @@ export function resolveContentLocales(
         : ['en', 'zh-Hant', 'zh-Hans']
   return { locales: normalizeContentLocales(order), origin: 'user-default' }
 }
+
+/** Resolve independent multilingual presentation defaults without materializing inheritance.
+ * @param options Project and Organisation settings, in decreasing precedence.
+ * @returns Content/address defaults; explicit false overrides true and missing means false.
+ */
+export function resolveMultilingualDefaults(options: {
+  projectSettings?: ContentLocaleSettings | null
+  organisationSettings?: ContentLocaleSettings | null
+} = {}): { content: boolean; addresses: boolean } {
+  return {
+    content: options.projectSettings?.multilingualContent ?? options.organisationSettings?.multilingualContent ?? false,
+    addresses: options.projectSettings?.multilingualAddresses ?? options.organisationSettings?.multilingualAddresses ?? false,
+  }
+}

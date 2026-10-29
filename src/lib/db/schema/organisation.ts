@@ -71,6 +71,8 @@ export const organisation = sqliteTable('organisation', {
   isCoreInclusive: integer('isCoreInclusive', { mode: 'boolean' })
     .notNull()
     .default(true),
+  // Default visibility for newly authored Locations; existing identities are unaffected.
+  defaultLocationVisibility: text('defaultLocationVisibility', { enum: ['shared', 'exclusive'] }).notNull().default('shared'),
   // Configurable capability labels and assignable keys for this organisation's projects.
   capabilities: text('capabilities', {
     mode: 'json',

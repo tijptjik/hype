@@ -172,3 +172,26 @@ describe('new field collapse controls', () => {
     expect(onCollapseChange).toHaveBeenLastCalledWith(false)
   })
 })
+
+describe('Organisation locale settings submission', () => {
+  it.each(['shared', 'exclusive'])('binds the accompanying %s visibility field', visibility => {
+    const input = { data: { defaultLocationVisibility: visibility } }
+    const fields = kitForms.create_field_proxy({
+      form_id: 'organisation-form',
+      get: () => input,
+      set: vi.fn(),
+      get_issues: () => ({}),
+      get_touched: () => ({}),
+      get_dirty: () => ({}),
+    })
+    const attrs = fields.data.defaultLocationVisibility.as('hidden', visibility)
+    const submitted = new FormData()
+    submitted.set(attrs.name, attrs.value)
+    expect(kitForms.convert_formdata('organisation-form', submitted)).toEqual(input)
+
+    // Reproduce the preflight rejection from the old manually named control.
+    const unbound = new FormData()
+    unbound.set('data.defaultLocationVisibility', visibility)
+    expect(() => kitForms.convert_formdata('organisation-form', unbound)).toThrow()
+  })
+})

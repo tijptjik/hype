@@ -619,6 +619,7 @@ export const updateOrganisationByIdWithConcurrency = async (
       code: string
       url: string | null
       settings?: OrganisationDB['settings']
+      defaultLocationVisibility?: OrganisationDB['defaultLocationVisibility']
       capabilities?: OrganisationDB['capabilities']
     }
   },

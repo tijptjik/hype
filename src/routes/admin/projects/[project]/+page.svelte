@@ -20,6 +20,8 @@ import { m } from '#lib/i18n.js'
 import { getI18n, getLocaleKey, getLocaleOrder, toLocaleKey } from '#lib/i18n.js'
 // CONTENT LOCALES
 import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/ContentLocaleDefaults.svelte'
+import MultilingualDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/MultilingualDefaults.svelte'
+import type { MultilingualSettingKey } from '#lib/content-locales/settings.js'
 import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
 import { readContentLocaleForm, contentLocaleFormIssues } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
 import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
@@ -647,6 +649,17 @@ const localeSettingsPatch = $derived(readContentLocaleForm(formCtx.form.fields.v
 function setContentLocales(locales: string[] | undefined): void {
   updateFormData(projectEntityUpdaterForm, data => {
     data.settings = { ...localeSettingsPatch, contentLocales: locales ? normalizeContentLocales(locales) : null }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+/** Stage independent multilingual defaults through the existing authorized settings form.
+ * @param patch Explicit boolean overrides or null reset markers. @returns Nothing.
+ */
+function setMultilingualDefaults(patch: Partial<Record<MultilingualSettingKey, boolean | null>>): void {
+  updateFormData(projectEntityUpdaterForm, data => {
+    data.settings = { ...localeSettingsPatch, ...patch }
     return data
   })
   revalidateAfterProgrammaticChange()
@@ -3247,11 +3260,16 @@ $effect(() => {
             description={m.project_3d_address_options_help()}
           />
           <div class="mx-6 flex min-w-0 flex-col gap-3">
-            <ContentLocaleDefaults scope="project" value={localeSettingsPatch.contentLocales ?? undefined}
+            <h2 class="text-base font-semibold">{m.content_languages_heading()}</h2>
+            <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4">
+            <ContentLocaleDefaults organisationName={getNameForToast({ data: selectedParentOrganisation }, 'nameShort')} scope="project" value={localeSettingsPatch.contentLocales ?? undefined}
               inheritedLocales={inheritedContentLocales.locales}
               inheritedOrigin={inheritedContentLocales.origin === 'organisation' ? 'organisation' : 'user-default'}
               options={localeOptions} disabled={!isEditing || formCtx.submitting || (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)}
               onChange={setContentLocales} issues={contentLocaleFormIssues(visibleAllIssues)} />
+            <MultilingualDefaults scope="project" value={localeSettingsPatch} inherited={parentLocaleSettings.success ? parentLocaleSettings.data : undefined}
+              disabled={!isEditing || formCtx.submitting || (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)} onChange={setMultilingualDefaults} />
+            </div>
             <input {...getHiddenLocaleSettingsAttrs()} />
             <Card.Root
               size="md"

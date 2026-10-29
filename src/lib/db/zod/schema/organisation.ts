@@ -251,6 +251,7 @@ export const OrganisationEntityFormData = z.object({
     }),
   url: z.union([z.literal(''), z.url({ message: m.admin__validation_url_invalid() })]),
   capabilities: CapabilityBase,
+  defaultLocationVisibility: z.enum(['shared', 'exclusive']).default('shared'),
   i18n: OrganisationI18nByLocaleFormData,
   userRoles: OrganisationUserRolesFormData,
   properties: z.array(ProjectPropertyFormData).default([]),
@@ -349,6 +350,7 @@ const OrganisationCardFields = OrganisationBase.pick({
 })
 
 const OrganisationDetailFields = OrganisationBase.pick({
+  defaultLocationVisibility: true,
   publishedAt: true,
   publisherId: true,
 })

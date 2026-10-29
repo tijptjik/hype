@@ -683,6 +683,23 @@ describe('organisation.remote authz', () => {
     })
   })
 
+  it.each([false, true, null])('persists or resets Organisation multilingual defaults (%j)', async mode => {
+    const services = await import('#lib/db/services/organisation.js')
+    const { ContentLocaleSettingsSchema } = await import('#lib/content-locales/settings.js')
+    vi.mocked(services.probeOrganisationForUpdate).mockResolvedValue({
+      id: 'org-1', code: 'org-code', hubId: 'hub-a', modifiedAt: 'before',
+      settings: ContentLocaleSettingsSchema.parse({ contentLocales: ['ja'], multilingualContent: true, future: 'kept' }),
+    })
+    vi.mocked(services.updateOrganisationByIdWithConcurrency).mockResolvedValue({ id: 'org-1', modifiedAt: 'after' })
+    await remote.organisationForm({ meta: { id: 'org-1', mode: 'update', updatedAt: 'before' }, data: {
+      code: 'org-code', url: '', i18n: { en: {}, zhHans: {}, zhHant: {} }, userRoles: [{ userId: 'u-1', role: 'owner' }],
+      settings: { multilingualContent: mode, multilingualAddresses: false },
+    } })
+    expect(vi.mocked(services.updateOrganisationByIdWithConcurrency).mock.calls[0]?.[1].data.settings).toEqual({
+      contentLocales: ['ja'], future: 'kept', multilingualAddresses: false, ...(mode === null ? {} : { multilingualContent: mode }),
+    })
+  })
+
   it.each([[['ja', 'zhHant']], [null], [undefined]])(
     'preserves other Organisation settings for locale patch %j',
     async contentLocales => {

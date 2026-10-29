@@ -109,6 +109,7 @@ export type OrganisationPropertySource =
   | NonNullable<OrganisationFormInput['data']['properties']>[number]
 export type OrganisationFormSource = {
   settings?: import('#lib/content-locales/settings.js').ContentLocaleSettings
+  defaultLocationVisibility?: 'shared' | 'exclusive'
   id?: string
   modifiedAt?: string
   code?: string

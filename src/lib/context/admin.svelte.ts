@@ -11,6 +11,7 @@ import {
 } from '#lib/remote/index.js'
 import { debouncedUpdateUserPreferences } from '#lib/client/services/user.js'
 // CONTEXT
+import { FeatureMultilingualState } from './featureMultilingual.svelte.js'
 import { ResourceIndexUi } from './resourceIndexUi.svelte.js'
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 // ENUMS
@@ -38,6 +39,7 @@ import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 import type { AdminPreferences } from '#lib/db/zod/schema/user.types.js'
 
 export class AdminCtx {
+  readonly featureMultilingual = new FeatureMultilingualState()
   readonly navigation = new SurfaceNavigation((type, ref) => {
     if (type === 'organisation' || type === 'project' || type === 'hub')
       return this.view.getResourceByRefSync(type, ref)?.id ?? null

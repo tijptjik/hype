@@ -131,6 +131,7 @@ export function toOrganisationFormInput(
         code: '',
         url: '',
         capabilities: {},
+        defaultLocationVisibility: 'shared',
         i18n: {
           en: normalizeOrganisationFormLocale(undefined),
           zhHans: normalizeOrganisationFormLocale(undefined),
@@ -154,6 +155,7 @@ export function toOrganisationFormInput(
       url: data.url ?? '',
       settings: toContentLocaleSettingsForm(data.settings),
       capabilities: normalizeOrganisationCapabilities(data.capabilities),
+      defaultLocationVisibility: data.defaultLocationVisibility ?? 'shared',
       i18n: {
         en: normalizeOrganisationFormLocale(data.i18n?.en),
         zhHans: normalizeOrganisationFormLocale(data.i18n?.zhHans),
@@ -264,6 +266,7 @@ export function overrideOrganisationEntityFromFormInput(
     data: current.data
       ? {
           ...current.data,
+          ...(formData.data.defaultLocationVisibility !== undefined ? { defaultLocationVisibility: formData.data.defaultLocationVisibility } : {}),
           ...(nextCode !== undefined ? { code: nextCode } : {}),
           ...(nextUrl !== undefined ? { url: nextUrl } : {}),
           ...(nextCapabilities !== undefined

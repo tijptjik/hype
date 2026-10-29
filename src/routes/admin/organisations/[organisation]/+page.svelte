@@ -1,4 +1,5 @@
 <script lang="ts">
+import LocationVisibilitySelect from '#lib/bits/patterns/forms/featureLocation/LocationVisibilitySelect.svelte'
 import type { RemoteForm, RemoteFormInput } from '$app/server'
 
 // SVELTE
@@ -103,6 +104,8 @@ import { NEW_REF, NEW_TITLE } from '#lib/constants.js'
 import PublishChildrenDialog from '#lib/bits/patterns/resource/PublishChildrenDialog.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/ContentLocaleDefaults.svelte'
+import MultilingualDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/MultilingualDefaults.svelte'
+import type { MultilingualSettingKey } from '#lib/content-locales/settings.js'
 // CONTENT LOCALES
 import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
 import { readContentLocaleForm, contentLocaleFormIssues } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
@@ -365,6 +368,17 @@ const inheritedContentLocales = $derived(resolveContentLocales({ userLocale: get
 function setContentLocales(locales: string[] | undefined): void {
   updateFormData(formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>, data => {
     data.settings = { ...localeSettingsPatch, contentLocales: locales ? normalizeContentLocales(locales) : null }
+    return data
+  })
+  revalidateAfterProgrammaticChange()
+}
+
+/** Stage independent multilingual defaults through the existing authorized settings form.
+ * @param patch Explicit boolean overrides or null reset markers. @returns Nothing.
+ */
+function setMultilingualDefaults(patch: Partial<Record<MultilingualSettingKey, boolean | null>>): void {
+  updateFormData(formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>, data => {
+    data.settings = { ...localeSettingsPatch, ...patch }
     return data
   })
   revalidateAfterProgrammaticChange()
@@ -707,6 +721,7 @@ const userRoles = $derived.by(() =>
 // CAPABILITIES
 const capabilityFormUpdater = $derived(
   formCtx.form as unknown as FormDataUpdaterForm<{
+    defaultLocationVisibility?: 'shared' | 'exclusive'
     capabilities?: CapabilityDefinitions
   }>,
 )
@@ -1531,11 +1546,22 @@ $effect(() => {
         <section class="flex min-h-0 flex-col gap-4 pb-6">
           <SectionHeader title={m.project_advanced()} />
           <div class="mx-6 min-w-0">
-            <ContentLocaleDefaults scope="organisation" value={localeSettingsPatch.contentLocales ?? undefined}
+            <h2 class="mb-3 text-base font-semibold">{m.content_languages_heading()}</h2>
+            <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4">
+            <ContentLocaleDefaults organisationName={formCtx.form.fields.value().data?.i18n?.[getLocaleKey()]?.nameShort || getNameForToast(organisation, 'nameShort')} scope="organisation" value={localeSettingsPatch.contentLocales ?? undefined}
               inheritedLocales={inheritedContentLocales.locales} inheritedOrigin="user-default" options={localeOptions}
               disabled={!isEditing || formCtx.submitting} onChange={setContentLocales}
               issues={contentLocaleFormIssues(visibleAllIssues)} />
+            <MultilingualDefaults scope="organisation" value={localeSettingsPatch}
+              disabled={!isEditing || formCtx.submitting} onChange={setMultilingualDefaults} />
+            </div>
             <input {...getHiddenLocaleSettingsAttrs()} />
+          </div>
+          <h2 class="mx-6 mt-2 text-base font-semibold">{m.content_visibility_heading()}</h2>
+          <div class="mx-6 flex min-h-14 items-center justify-between rounded-lg border border-border bg-foreground/4 px-5 py-3">
+            <span class="text-sm font-semibold">{m.organisation_location_visibility_default()}</span>
+            <LocationVisibilitySelect value={formCtx.form.fields.value().data?.defaultLocationVisibility ?? 'shared'} disabled={!isEditing || formCtx.submitting} onChange={value => updateFormData(capabilityFormUpdater, data => { data.defaultLocationVisibility = value; return data })} />
+            <input {...formCtx.form.fields.data.defaultLocationVisibility.as('hidden', formCtx.form.fields.value().data?.defaultLocationVisibility ?? 'shared')} />
           </div>
         </section>
       </FormSurface>

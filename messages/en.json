@@ -1763,5 +1763,9 @@
   "content_languages_org": "Organisation defaults",
   "content_languages_user": "Based on your language preference",
   "content_languages_help_named": "Availability and order of languages in the editors used across {name}.",
-  "content_languages_inherited": "Uses organisation defaults"
+  "content_languages_inherited": "Uses organisation defaults",
+  "content_languages_heading": "Languages",
+  "content_multilingual_default": "Always show multilingual values for content",
+  "content_visibility_heading": "Visibility",
+  "address_multilingual_default": "Always show multilingual values for addresses"
 }
