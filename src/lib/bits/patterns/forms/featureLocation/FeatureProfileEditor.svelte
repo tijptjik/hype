@@ -1,7 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, type Snippet } from 'svelte'
-import { prefersReducedMotion } from 'svelte/motion'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 import { contentFormKey } from '#lib/i18n/contentRecords.js'
@@ -73,30 +72,6 @@ let {
   children: Snippet<[ProfileField, string, () => void, string]>
 } = $props()
 const showSkeleton = $derived(loading && !retainContent)
-let content: HTMLDivElement | undefined = $state()
-let presentedRecord = ''
-// Animate only a committed record change; editing and locale toggles keep their own motion.
-$effect(() => {
-  const next = recordKey
-  if (loading || !content || !next) return
-  const previous = presentedRecord
-  presentedRecord = next
-  if (
-    !previous ||
-    previous === next ||
-    prefersReducedMotion.current ||
-    !content.animate
-  )
-    return
-  const animation = content.animate(
-    [
-      { opacity: 0, transform: 'translateX(8px)' },
-      { opacity: 1, transform: 'translateX(0)' },
-    ],
-    { duration: 220, easing: 'ease-out' },
-  )
-  return () => animation.cancel()
-})
 const options = $derived(contentLocaleOptions(getLocaleKey()))
 const shown = $derived(displayedLocales(localeState, localeState.expanded))
 const fields = $derived(
@@ -176,9 +151,7 @@ function autonym(locale: string): string {
     />
   </div>
   <div
-    bind:this={content}
-    style:opacity={loading && retainContent ? 0.65 : 1}
-    class="grid min-w-0 gap-6 transition-opacity duration-200 motion-reduce:transition-none {allowDescriptions
+    class="grid min-w-0 gap-6 {allowDescriptions
       ? 'md:grid-cols-2 md:[&>section+section]:border-l md:[&>section+section]:border-border/50 md:[&>section+section]:pl-6'
       : ''}"
   >

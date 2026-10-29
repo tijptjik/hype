@@ -39,7 +39,8 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox]] as c
         const original = Element.prototype.animate
         ;(window as any).profileEntries = 0
         Element.prototype.animate = function(frames, options) {
-          if (JSON.stringify(frames).includes('translateX(8px)')) (window as any).profileEntries++
+          if (this.hasAttribute('data-inline-value')) (window as any).profileEntries++
+          else if (JSON.stringify(frames).includes('translateX')) throw new Error('Structural UI must not slide')
           return original.call(this, frames, options)
         }
       })
@@ -48,7 +49,8 @@ for (const [name, engine] of [['chromium', chromium], ['firefox', firefox]] as c
       if (!await page.locator('[data-feature-profile-editor]').evaluate(element => (element as HTMLElement).inert)) throw new Error('Outgoing content is interactive')
       await page.locator('[data-profile-field="description"]').getByText('Next record description', { exact: true }).waitFor()
       const entries = await page.evaluate(() => (window as any).profileEntries)
-      if (entries !== (width === 1440 ? 1 : 0)) throw new Error(`Unexpected incoming animations: ${entries}`)
+      if (width === 1440 && entries < 2) throw new Error(`Expected outgoing/incoming value fades: ${entries}`)
+      if (await page.locator('[data-profile-field="description"]').evaluate(element => element.parentElement!.getAnimations().length)) throw new Error('Structural UI animated')
       await page.screenshot({ path: `${directory}/${name}-${width}-navigation.png` })
       console.log(`${name} ${width}: compact row and single/multilingual skeletons passed`)
       await page.close()

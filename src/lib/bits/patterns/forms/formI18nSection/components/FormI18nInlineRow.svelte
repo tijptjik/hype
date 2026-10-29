@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { tick } from 'svelte'
+import { fade } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 import XIcon from 'virtual:icons/lucide/x'
 import { m } from '#lib/i18n.js'
 // COMPONENTS
@@ -54,9 +56,17 @@ const editorAttrs = $derived({ ...attrs, 'aria-label': label, onkeydown: keydown
     <div bind:this={display} hidden={active} role={editable ? 'button' : undefined} tabindex={editable ? 0 : undefined} aria-label={label} aria-readonly={!editable}
       class="min-h-[42px] min-w-0 whitespace-normal break-words rounded-md pl-[11px] pr-9 {multiline ? 'py-2' : 'py-[9px]'} text-[15px] leading-[22px] {editable ? 'cursor-text border border-border/30 hover:border-border/60 hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2' : 'border border-transparent'}"
       onclick={() => void open()} onkeydown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); void open() } }}>
-      {#if !hasMeaningfulText(value)}<span class="text-muted-foreground">—</span>
-      {:else if multiline}<HtmlPreview html={value} />
-      {:else}{value}{/if}
+      <!-- Overlap only the old/new values; prefixes, verification and actions stay mounted. -->
+      <div class="grid min-w-0">
+        {#key value}
+          <div class="col-start-1 row-start-1 min-w-0" data-inline-value
+            transition:fade={{ duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 200 }}>
+            {#if !hasMeaningfulText(value)}<span class="text-muted-foreground">—</span>
+            {:else if multiline}<HtmlPreview html={value} />
+            {:else}{value}{/if}
+          </div>
+        {/key}
+      </div>
     </div>
     {#if editable && value.length}
       <button type="button" aria-label={`${m.filters__clear()} ${label}`} title={m.filters__clear()}
