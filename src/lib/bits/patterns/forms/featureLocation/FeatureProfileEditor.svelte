@@ -167,10 +167,23 @@ function autonym(locale: string): string {
         locale => !hasProfileText(values[contentFormKey(locale)]?.[field]),
       )}
       <section class="min-w-0" data-profile-field={field}>
-        <div class="flex min-h-7 items-center justify-between gap-2">
+        <div class="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
           <h3 class="text-sm font-semibold">
             {field === 'title' ? m.feature__title() : m.feature__description()}
           </h3>
+        {#if derived}
+          <div class="group/location-link inline-flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-transparent px-2 py-1 transition-colors duration-150 hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 motion-reduce:transition-none" data-profile-derived>
+            <span class="inline-flex items-center gap-2 text-xs text-muted-foreground"><LinkIcon class="size-4 shrink-0 text-primary" />{m.feature_name_derived_help()}</span>
+            {#if isEditing}
+              <div class="flex flex-wrap items-center gap-1 overflow-hidden" data-profile-edit-action transition:slide={{ axis: 'x', duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 180 }}>
+                {#if !policyRequired}
+                  <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onIndependentName}><UnlinkIcon class="size-3.5" />{m.feature_separate_name()}</button>
+                {/if}
+                <button type="button" class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors group-hover/location-link:text-primary group-focus-within/location-link:text-primary focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onEditLocation}><EditIcon class="size-3.5" />{m.feature_edit_location()}</button>
+              </div>
+            {/if}
+          </div>
+        {/if}
           <FormI18nTranslationStatus
             message={results[field]?.length
               ? [
@@ -261,19 +274,7 @@ function autonym(locale: string): string {
             </div>
           {/each}
         </div>
-        {#if derived}
-          <div class="group/location-link mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-transparent p-3 transition-colors duration-150 hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 motion-reduce:transition-none" data-profile-derived>
-            <span class="inline-flex items-center gap-2 text-xs text-muted-foreground"><LinkIcon class="size-4 shrink-0 text-primary" />{m.feature_name_derived_help()}</span>
-            {#if isEditing}
-              <div class="ml-auto flex flex-wrap items-center justify-end gap-2 overflow-hidden" data-profile-edit-action transition:slide={{ axis: 'x', duration: prefersReducedMotion.current || typeof globalThis.Element?.prototype.animate !== 'function' ? 0 : 180 }}>
-                {#if !policyRequired}
-                  <button type="button" class="inline-flex items-center gap-1.5 rounded-md border border-transparent px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onIndependentName}><UnlinkIcon class="size-3.5" />{m.feature_separate_name()}</button>
-                {/if}
-                <button type="button" class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs text-muted-foreground transition-colors group-hover/location-link:text-primary group-focus-within/location-link:text-primary focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none" onclick={onEditLocation}><EditIcon class="size-3.5" />{m.feature_edit_location()}</button>
-              </div>
-            {/if}
-          </div>
-        {:else if !showSkeleton && field === 'title' && offerName && isEditing}
+        {#if !derived && !showSkeleton && field === 'title' && offerName && isEditing}
           <div
             class="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary/5 p-3 text-xs"
           >
