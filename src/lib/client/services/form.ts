@@ -631,7 +631,8 @@ export function syncAdminFacetFromHash<TFacet extends string>({
   resourceType: import('#lib/types.js').NavigableResource
   resourceRef: string
 }): void {
-  const hashFacet = hash.slice(1) as TFacet | ''
+  // A hashless history entry represents the first (default) form tab.
+  const hashFacet = (hash.slice(1) || facetOrder[0]) as TFacet | undefined
   if (!hashFacet || hashFacet === activeFacet) return
   if (!facetOrder.includes(hashFacet)) return
   adminCtx.setFacet(hashFacet as FacetType, resourceRef, resourceType)

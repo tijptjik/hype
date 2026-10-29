@@ -594,8 +594,9 @@ export function useAdminHeaderModel(
     url.hash = ref
     if (url.href === window.location.href) return
 
+    // Each tab selection is a history entry, so Back/Forward can retrace form tabs.
     // Preserve application state without nesting SvelteKit's serialized history metadata.
-    goto(url, { shallow: true, replace: true, state: page.state })
+    goto(url, { shallow: true, replace: false, state: page.state })
   }
 
   // ---
