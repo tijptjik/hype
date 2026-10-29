@@ -384,3 +384,19 @@ describe('profile-specific detail retention', () => {
     }
   })
 })
+
+it('reuses parent policy details across Feature reads within the same cache scope', async () => {
+  const cache = new CacheCtx(resourceProviders)
+  const data = { id: 'project', flags: { locationBasedFeatureNames: true } }
+  const handle = Object.assign(Promise.resolve({ data }), {
+    current: { data },
+    refresh: vi.fn(async () => {}),
+  })
+  const factory = vi.fn(() => handle)
+  const commit = vi.fn()
+  const key = 'project:project:default:admin-scope'
+  await expect(cache.ensureResource(key, factory, commit)).resolves.toEqual(data)
+  await expect(cache.ensureResource(key, factory, commit)).resolves.toEqual(data)
+  expect(factory).toHaveBeenCalledTimes(1)
+  expect(handle.refresh).toHaveBeenCalledTimes(1)
+})

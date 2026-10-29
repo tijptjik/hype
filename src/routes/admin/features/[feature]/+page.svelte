@@ -2199,6 +2199,18 @@ async function refreshFeature(ref: string = featureRef): Promise<FeatureGetState
     meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
   }).catch(() => null)) as FeatureGetState
 
+  if (result?.data && ref === featureRef) {
+    // These lookups reuse the app's scoped ResourceDetail cache, fetching only on a miss/stale entry.
+    // Settle with the parent policy ready so linked-name controls cannot appear late.
+    const [project, layer] = await Promise.all([
+      result.data.projectId ? adminCtx.view.getProjectById(result.data.projectId) : null,
+      result.data.layerId ? adminCtx.view.getLayerById(result.data.layerId) : null,
+    ])
+    if (ref !== featureRef) return result
+    syncSelectedProject(toParentProjectItem(project as never))
+    syncSelectedLayer(toParentLayerItem(layer as never))
+  }
+
   // Slow responses from a previous Next/Previous navigation must not replace this form.
   if (ref !== featureRef) return result
   commitSettledFeatureState(result)

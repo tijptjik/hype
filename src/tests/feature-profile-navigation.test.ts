@@ -40,15 +40,21 @@ function setup() {
 }
 
 describe('Feature profile navigation readiness', () => {
-  it('commits cached authoring state without fetching the related Location or parents', async () => {
+  it('settles after shared parent lookups without fetching the related Location', async () => {
     const state = setup()
     const pending = state.load('next')
     expect(state.commit).not.toHaveBeenCalled()
     state.response.resolve(state.feature)
+    state.project.resolve({ flags: { locationBasedFeatureNames: true } })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(state.commit).not.toHaveBeenCalled()
+    state.layer.resolve({ metadata: {} })
     await pending
     expect(state.commit).toHaveBeenCalledWith(state.feature)
     expect(state.form()).toEqual(state.feature.data)
-    expect(state.syncProject).not.toHaveBeenCalled()
+    expect(state.syncProject).toHaveBeenCalledBefore(state.commit)
+    expect(state.syncLayer).toHaveBeenCalledBefore(state.commit)
   })
 
   it('does not replace the active form when a superseded navigation finishes late', async () => {

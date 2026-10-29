@@ -280,8 +280,6 @@ const ReadFeatureAuthoring = z.preprocess(
   value => (typeof value === 'string' ? JSON.parse(value) : value),
   z.object({
     nameMode: z.enum(['inherit', 'independent']),
-    locationBasedNames: z.boolean(),
-    allowDescriptions: z.boolean(),
   }).optional(),
 )
 const ReadLocationBrands = z.preprocess(
