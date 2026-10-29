@@ -517,13 +517,38 @@ onDestroy(() => {
 }
 
 .viewer-backdrop-tint {
+  /* Lift the blurred photo into the light theme's surface instead of casting a grey shadow. */
   background:
     radial-gradient(
       circle at center,
-      rgba(0, 0, 0, 0.06) 0%,
-      rgba(0, 0, 0, 0.16) 62%,
-      rgba(0, 0, 0, 0.28) 100%
+      light-dark(
+          color-mix(in oklab, var(--theme-surface) 24%, transparent),
+          rgba(0, 0, 0, 0.06)
+        )
+        0%,
+      light-dark(
+          color-mix(in oklab, var(--theme-surface) 40%, transparent),
+          rgba(0, 0, 0, 0.16)
+        )
+        62%,
+      light-dark(
+          color-mix(in oklab, var(--theme-surface) 56%, transparent),
+          rgba(0, 0, 0, 0.28)
+        )
+        100%
     ),
-    linear-gradient(180deg, rgba(7, 7, 7, 0.08) 0%, rgba(7, 7, 7, 0.18) 100%);
+    linear-gradient(
+      180deg,
+      light-dark(
+          color-mix(in oklab, var(--theme-surface) 12%, transparent),
+          rgba(7, 7, 7, 0.08)
+        )
+        0%,
+      light-dark(
+          color-mix(in oklab, var(--theme-surface) 24%, transparent),
+          rgba(7, 7, 7, 0.18)
+        )
+        100%
+    );
 }
 </style>
