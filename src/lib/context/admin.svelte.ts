@@ -3,7 +3,7 @@ import { getContext, setContext, untrack } from 'svelte'
 // CONTEXT
 import { SurfaceNavigation, setSurfaceNavigation } from './surfaceNavigation.svelte.js'
 import { getHubs } from '#lib/api/hub.remote.js'
-import { getFeatures } from '#lib/api/feature.remote.js'
+import { getFeatureIds, getFeatures } from '#lib/api/feature.remote.js'
 import { getTasks } from '#lib/api/tasks.remote.js'
 import {
   refreshRemoteQuery as runRemoteQuery,
@@ -32,6 +32,7 @@ import type {
 import type {
   Feature,
   FeatureFromCollection,
+  FeatureListParamsByProfile,
 } from '#lib/db/zod/schema/feature.types.js'
 import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type { Organisation } from '#lib/db/zod/schema/organisation.types.js'
@@ -80,7 +81,28 @@ export class AdminCtx {
   private featureIndexSequence = $state.raw<{
     key: string
     rows: { id: string }[]
+    complete: boolean
   } | null>(null)
+  featureIndexReady = $state(false)
+  featureHasMore = $state(false)
+  featureLoadingMore = $state(false)
+  featurePageError = $state<unknown>(null)
+  private featureNextOffset = 0
+  private featurePageKey = ''
+  private featurePageRevision = 0
+  private featureIndexLoad: {
+    key: string
+    promise: Promise<FeatureFromCollection[]>
+  } | null = null
+  private featurePageQuery: typeof this.view.cacheCtx.featureCollection
+  private featureFirstPageIds = new Set<string>()
+  private navigationPage = $state.raw<{
+    key: string
+    rows: { id: string }[]
+    offset: number
+    complete: boolean
+  } | null>(null)
+  private navigationLoad: { key: string; promise: Promise<void> } | null = null
   view!: ResourceViewCtx
   // Load State
   isInitialised: boolean = $state(false)
@@ -287,23 +309,241 @@ export class AdminCtx {
    *
    * @returns Feature cards for the current admin prism and sort state.
    */
-  featuresQueryFn = async () => {
+  featuresQueryFn = async (): Promise<FeatureFromCollection[]> => {
+    const key = JSON.stringify(this.view.featuresQueryKey())
+    if (this.featureIndexLoad?.key === key) return this.featureIndexLoad.promise
+    const promise = this.loadFeatureIndexPage(key)
+    this.featureIndexLoad = { key, promise }
+    try {
+      return await promise
+    } finally {
+      if (this.featureIndexLoad?.promise === promise) this.featureIndexLoad = null
+    }
+  }
+
+  /** Read the first index page and invalidate continuation work from earlier reads.
+   * @param key Captured account, hierarchy and sort identity.
+   * @returns Feature cards; the query coordinator rejects stale scope responses.
+   */
+  private async loadFeatureIndexPage(key: string): Promise<FeatureFromCollection[]> {
+    // The index starts with a bounded page; detail routes never invoke this bootstrap.
+    const revision = ++this.featurePageRevision
+    this.featurePageKey = key
+    this.featurePageError = null
+    this.featureIndexReady = false
+    this.featureHasMore = false
+    this.featureLoadingMore = false
     const query = getFeatures({
+      ...this.featureListInput(),
+      pagination: { limit: 50, offset: 0 },
+    })
+    this.view.cacheCtx.featureCollectionScope = this.view.resources.scopeKey
+    this.view.cacheCtx.featureCollection = query
+    this.featurePageQuery = query
+    const result = await runRemoteQuery(query)
+      .then(value => toSafeListResponse<FeatureFromCollection>(value))
+      .catch(error => {
+        if (this.isCurrentFeaturePage(key, revision)) this.featurePageError = error
+        throw error
+      })
+    if (this.isCurrentFeaturePage(key, revision)) {
+      this.featureFirstPageIds = new Set(result.data.map(row => row.id))
+      this.featureIndexReady = true
+      this.featureHasMore = result.hasMore ?? false
+      this.featureNextOffset = result.nextOffset ?? result.data.length
+      this.view.setListQueryMeta(this.view.featuresQueryKey(), result)
+    }
+    return result.data
+  }
+
+  /** Check both request generation and live scope before accepting page state.
+   * @param key Scope captured by the request.
+   * @param revision First-page generation captured by the request.
+   * @returns Whether the response still belongs to this index.
+   */
+  private isCurrentFeaturePage(key: string, revision: number): boolean {
+    return (
+      revision === this.featurePageRevision &&
+      key === this.featurePageKey &&
+      key === JSON.stringify(this.view.featuresQueryKey())
+    )
+  }
+
+  /** Reconcile native first-page overrides without discarding retained later pages.
+   * @param query Native collection handle observed by the admin layout.
+   * @param current Its latest payload, including optimistic updates.
+   * @returns Nothing; another surface or scope cannot replace this index.
+   */
+  syncFeatureCollection(
+    query: typeof this.view.cacheCtx.featureCollection,
+    current: Pick<ListResponse<FeatureFromCollection>, 'data'>,
+  ): void {
+    if (
+      !this.featureIndexReady ||
+      query !== this.featurePageQuery ||
+      !this.isCurrentFeaturePage(this.featurePageKey, this.featurePageRevision) ||
+      this.view.cacheCtx.featureCollectionScope !== this.view.resources.scopeKey
+    )
+      return
+    const firstIds = new Set(current.data.map(row => row.id))
+    const laterRows = this.view.queries.rows.feature.filter(
+      row => !this.featureFirstPageIds.has(row.id) && !firstIds.has(row.id),
+    )
+    this.featureFirstPageIds = firstIds
+    this.view.queries.rows.feature = [...current.data, ...laterRows]
+  }
+
+  /** Build a shared authorized list scope for pages and lightweight traversal.
+   * @returns Feature conditions, hierarchy and ordering with native access metadata.
+   */
+  private featureListInput(): FeatureListParamsByProfile<'card'> {
+    return {
       conditions: this.view.isSuperAdmin()
         ? { isArchived: null, isPublished: null }
         : { isArchived: false, isPublished: null },
       prisms: this.view.scope.prisms,
       sorting: this.view.filters.sorting.feature,
-      meta: { ...this.view.resources.queryMeta, profile: 'card' },
-    })
-    this.view.cacheCtx.featureCollectionScope = this.view.resources.scopeKey
-    this.view.cacheCtx.featureCollection = query
-    const result = toSafeListResponse<FeatureFromCollection>(
-      await runRemoteQuery(query),
+      meta: { ...this.view.resources.queryMeta, profile: 'card' as const },
+    }
+  }
+
+  /** Reuse the retained index when returning from a detail page in the same scope.
+   * @returns Completion of the first page if this account/filter scope has not loaded.
+   */
+  async ensureFeatureIndex(): Promise<void> {
+    if (
+      this.featureIndexReady &&
+      this.featurePageKey === JSON.stringify(this.view.featuresQueryKey())
     )
-    // Persist response metadata so sorting and pagination-aware UI can reuse it without refetching.
-    this.view.setListQueryMeta(this.view.featuresQueryKey(), result)
-    return result.data
+      return
+    await this.view.queries.refreshFeatures(false)
+  }
+
+  /** Append one bounded index page without replacing already rendered rows.
+   * @returns Completion; stale scopes and overlapping scroll requests cannot append.
+   */
+  async loadMoreFeatures(): Promise<void> {
+    if (!this.featureIndexReady || !this.featureHasMore || this.featureLoadingMore)
+      return
+    const key = this.featurePageKey
+    const revision = this.featurePageRevision
+    if (!this.isCurrentFeaturePage(key, revision)) return
+    this.featureLoadingMore = true
+    this.featurePageError = null
+    try {
+      const result = await getFeatures({
+        ...this.featureListInput(),
+        pagination: { limit: 50, offset: this.featureNextOffset },
+      })
+      if (!this.isCurrentFeaturePage(key, revision)) return
+      const rows = new Map(this.view.queries.rows.feature.map(row => [row.id, row]))
+      for (const row of result.data) {
+        rows.set(row.id, row)
+        this.view.cache.feature.set(row.id, row)
+      }
+      this.view.queries.rows.feature = [...rows.values()]
+      this.featureHasMore = result.hasMore ?? false
+      this.featureNextOffset =
+        result.nextOffset ?? this.featureNextOffset + result.data.length
+    } catch (error) {
+      if (this.isCurrentFeaturePage(key, revision)) this.featurePageError = error
+    } finally {
+      if (revision === this.featurePageRevision) this.featureLoadingMore = false
+    }
+  }
+
+  /** Fill just enough ordered IDs to resolve a detail page's neighbours.
+   * @param featureId The requested record, which loads independently of traversal.
+   * @returns Background traversal completion; account/filter changes discard stale pages.
+   * @remarks Retained index matches remain authoritative. Complex client-only filters
+   * use bounded card pages so their existing predicates never become unfiltered neighbours.
+   */
+  async ensureFeatureNavigation(featureId: string): Promise<void> {
+    const key = this.getFeatureIndexKey()
+    const retained = this.featureIndexSequence
+    if (retained?.key === key && retained.complete) return
+    if (this.navigationLoad?.key === key) {
+      await this.navigationLoad.promise
+      if (key !== this.getFeatureIndexKey()) return
+      return this.ensureFeatureNavigation(featureId)
+    }
+    const state =
+      this.navigationPage?.key === key
+        ? this.navigationPage
+        : { key, rows: [], offset: 0, complete: false }
+    const index = state.rows.findIndex(row => row.id === featureId)
+    if (state.complete || (index >= 0 && index < state.rows.length - 1)) return
+    const promise = this.loadFeatureNavigationPages(featureId, state)
+    this.navigationLoad = { key, promise }
+    try {
+      await promise
+    } finally {
+      if (this.navigationLoad?.promise === promise) this.navigationLoad = null
+    }
+  }
+
+  /** Traverse bounded pages until both neighbours are known or the matching list ends.
+   * @param featureId Anchor whose neighbours are needed.
+   * @param state Captured scope, retained IDs and next page position.
+   * @returns Completion without delaying the editor or retaining feature relation graphs.
+   */
+  private async loadFeatureNavigationPages(
+    featureId: string,
+    state: { key: string; rows: { id: string }[]; offset: number; complete: boolean },
+  ): Promise<void> {
+    const filters = this.view.filters.viewFilters.feature
+    const statusKeys = [
+      'isPublished',
+      'isArchived',
+      'isIntangible',
+      'isVisitable',
+      'isPendingReview',
+    ] as const
+    const contentFilters = Object.entries(filters).some(([name, value]) => {
+      if (
+        name === 'translationLocales' ||
+        statusKeys.includes(name as (typeof statusKeys)[number])
+      )
+        return false
+      return typeof value === 'object' && value !== null
+        ? Object.values(value).some(item => item !== null)
+        : value !== null
+    })
+    const values = this.view.filters.values.feature
+    // Text search uses the same server predicate as the index; content filters need cards.
+    const needsRows =
+      contentFilters || Boolean(Object.keys(values.properties ?? {}).length)
+    const input = this.featureListInput()
+    const conditions: Record<string, unknown> = { ...input.conditions }
+    for (const name of statusKeys)
+      if (filters[name] !== null)
+        conditions[name] = name === 'isPendingReview' ? !filters[name] : filters[name]
+    let rows = [...state.rows],
+      offset = state.offset,
+      complete = state.complete
+    while (!complete && state.key === this.getFeatureIndexKey()) {
+      const params = {
+        ...input,
+        conditions,
+        q: values.text?.trim() || undefined,
+        pagination: { limit: needsRows ? 50 : 250, offset },
+      }
+      const result = needsRows ? await getFeatures(params) : await getFeatureIds(params)
+      if (state.key !== this.getFeatureIndexKey()) return
+      const matches = needsRows
+        ? this.view.filters.applyFeatureViewFilters(result.data as Feature[])
+        : result.data
+      const ids = new Set(rows.map(row => row.id))
+      rows = [
+        ...rows,
+        ...matches.filter(row => !ids.has(row.id)).map(row => ({ id: row.id })),
+      ]
+      complete = !result.hasMore
+      offset = result.nextOffset ?? offset + result.data.length
+      this.navigationPage = { key: state.key, rows, offset, complete }
+      const index = rows.findIndex(row => row.id === featureId)
+      if (index >= 0 && index < rows.length - 1) return
+    }
   }
 
   tasksQueryFn = async () => {
@@ -420,9 +660,11 @@ export class AdminCtx {
         await this.view.queries.refreshProjects(false)
       else if (resource === FirstClassResource.layer)
         await this.view.queries.refreshLayers(false, false)
-      else if (resource === FirstClassResource.feature)
-        await this.view.queries.refreshFeatures(false)
-      else if (resource === FirstClassResource.hub) await this.refreshHubs(false)
+      // Feature routes own their collection/detail reads; a known ref must mount first.
+      else if (resource === FirstClassResource.feature) {
+        this.isInitialised = scope === this.view.resources.scopeKey
+        return
+      } else if (resource === FirstClassResource.hub) await this.refreshHubs(false)
       else if (resource === FirstClassResource.task)
         await this.invalidateAndRefresh(resource)
 
@@ -521,15 +763,22 @@ export class AdminCtx {
     ])
   }
 
+  /** Current account/filter identity observed by background detail traversal. */
+  get featureNavigationScope(): string {
+    return this.getFeatureIndexKey()
+  }
+
   /** Retains the index's matching order when opening and stepping through Features.
    * @param rows Final ordered matches, before the temporary search-focus display cap.
+   * @param complete Whether every matching page is retained.
    * @returns Nothing.
    * @remarks Keep remote search matches even when they are absent from the base query.
    */
-  rememberFeatureIndex(rows: readonly { id: string }[]): void {
+  rememberFeatureIndex(rows: readonly { id: string }[], complete = true): void {
     this.featureIndexSequence = {
       key: this.getFeatureIndexKey(),
       rows: rows.map(({ id }) => ({ id })),
+      complete,
     }
   }
 
@@ -538,9 +787,11 @@ export class AdminCtx {
    * @remarks A changed account, prism, locale, sort or filter invalidates retained matches.
    */
   get featureNavigationRows(): { id: string }[] {
-    if (this.featureIndexSequence?.key === this.getFeatureIndexKey()) {
+    const key = this.getFeatureIndexKey()
+    if (this.featureIndexSequence?.key === key && this.featureIndexSequence.complete)
       return this.featureIndexSequence.rows
-    }
+    if (this.navigationPage?.key === key) return this.navigationPage.rows
+    if (this.featureIndexSequence?.key === key) return this.featureIndexSequence.rows
     return this.view.filters.getViewFilteredResource<Feature>(
       FirstClassResource.feature,
     )

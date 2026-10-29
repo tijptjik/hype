@@ -80,7 +80,7 @@ function handleDrop(state: DragDropState, targetLayerId: string): void {
           containerGroup: container,
           dragData: { id: item.id },
           disabled: isDisabled,
-          interactive: ['button', 'input', 'label'],
+          interactive: ['a', 'button', 'input', 'label'],
           attributes: { draggingClass: 'opacity-55' },
         }}
         use:droppable={{
@@ -95,7 +95,14 @@ function handleDrop(state: DragDropState, targetLayerId: string): void {
           reserveDragSpace={true}
           class="min-h-14 rounded-lg border border-border bg-foreground/4 bg-none shadow-none before:hidden"
         >
-          <ResourceCard.Body code={item.projectNameShort} name={item.layerName} />
+          <!-- biome-ignore lint/a11y/useAnchorContent: ResourceCard.Body renders the layer name and the link has an explicit accessible label. -->
+          <a
+            href={`/admin/layers/${encodeURIComponent(item.id)}`}
+            aria-label={item.layerName}
+            class="flex min-w-0 flex-1 items-center rounded-sm hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <ResourceCard.Body code={item.projectNameShort} name={item.layerName} />
+          </a>
           <Card.Actions
             padding="md"
             bg="none"

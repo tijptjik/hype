@@ -1,5 +1,7 @@
 // TESTS
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { FirstClassResource } from '#lib/enums.js'
+import * as featureRemote from '#lib/api/feature.remote.js'
 // CONTEXT
 import { AdminCtx } from '#lib/context/admin.svelte.js'
 import { AccountState } from '#lib/context/account.svelte.js'
@@ -13,6 +15,7 @@ import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
 
 const views: ResourceViewCtx[] = []
 afterEach(() => {
+  vi.restoreAllMocks()
   for (const view of views.splice(0)) view.dispose()
 })
 
@@ -136,5 +139,114 @@ describe('admin Feature list traversal', () => {
     view.account.syncSession({ id: 'another-user', roles: [] } as never)
     view.syncAccount()
     expect(admin.featureNavigationRows).toEqual([])
+  })
+})
+
+describe('feature detail loading priority', () => {
+  it('initializes a known feature without requesting its collection', async () => {
+    const { admin, view } = setup()
+    admin.setResourceRef('a', FirstClassResource.feature)
+    const collection = vi.spyOn(view.queries, 'refreshFeatures')
+    await admin.init()
+    expect(admin.isInitialised).toBe(true)
+    expect(collection).not.toHaveBeenCalled()
+  })
+
+  it('loads bounded ID pages only until the requested neighbour is known', async () => {
+    const { admin, view } = setup()
+    view.filters.values.feature.text = ''
+    const query = vi
+      .spyOn(featureRemote, 'getFeatureIds')
+      .mockResolvedValueOnce({
+        data: [{ id: 'z' }, { id: 'a' }],
+        hasMore: true,
+        nextOffset: 2,
+      } as never)
+      .mockResolvedValueOnce({
+        data: [{ id: 'm' }],
+        hasMore: false,
+        nextOffset: null,
+      } as never)
+    const full = vi.spyOn(featureRemote, 'getFeatures')
+    await admin.ensureFeatureNavigation('a')
+    expect(query).toHaveBeenCalledTimes(2)
+    expect(query.mock.calls.map(([input]) => input.pagination)).toEqual([
+      { limit: 250, offset: 0 },
+      { limit: 250, offset: 2 },
+    ])
+    expect(full).not.toHaveBeenCalled()
+    expect(getAdjacentResourceRefs(admin.featureNavigationRows, 'a')).toEqual({
+      currentIndex: 1,
+      previousRef: 'z',
+      nextRef: 'm',
+    })
+    await admin.ensureFeatureNavigation('m')
+    expect(query).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not request traversal for a complete retained filtered index', async () => {
+    const { admin } = setup()
+    admin.rememberFeatureIndex([{ id: 'z' }, { id: 'a' }])
+    const query = vi.spyOn(featureRemote, 'getFeatureIds')
+    await admin.ensureFeatureNavigation('a')
+    expect(query).not.toHaveBeenCalled()
+  })
+
+  it('uses server search matches when continuing a partial search index', async () => {
+    const { admin } = setup()
+    admin.rememberFeatureIndex([{ id: 'remote-match' }], false)
+    const query = vi.spyOn(featureRemote, 'getFeatureIds').mockResolvedValueOnce({
+      data: [{ id: 'remote-match' }, { id: 'remote-next' }],
+      hasMore: false,
+    } as never)
+    const cards = vi.spyOn(featureRemote, 'getFeatures')
+    await admin.ensureFeatureNavigation('remote-match')
+    expect(query.mock.calls[0][0].q).toBe('Tea')
+    expect(cards).not.toHaveBeenCalled()
+    expect(
+      getAdjacentResourceRefs(admin.featureNavigationRows, 'remote-match').nextRef,
+    ).toBe('remote-next')
+  })
+
+  it('continues through empty filtered card pages without using unfiltered neighbours', async () => {
+    const { admin, view } = setup()
+    view.filters.values.feature.text = ''
+    view.filters.viewFilters.feature.hasTitle = true
+    const query = vi
+      .spyOn(featureRemote, 'getFeatures')
+      .mockResolvedValueOnce({
+        data: [feature('no-title', '')],
+        hasMore: true,
+        nextOffset: 1,
+      } as never)
+      .mockResolvedValueOnce({
+        data: [feature('a', 'Tea'), feature('next', 'Next')],
+        hasMore: false,
+      } as never)
+    const ids = vi.spyOn(featureRemote, 'getFeatureIds')
+    await admin.ensureFeatureNavigation('a')
+    expect(query.mock.calls.map(([input]) => input.pagination)).toEqual([
+      { limit: 50, offset: 0 },
+      { limit: 50, offset: 1 },
+    ])
+    expect(ids).not.toHaveBeenCalled()
+    expect(admin.featureNavigationRows.map(row => row.id)).toEqual(['a', 'next'])
+  })
+
+  it('discards late navigation IDs after the active filters change', async () => {
+    const { admin, view } = setup()
+    view.filters.values.feature.text = ''
+    let resolve!: (value: never) => void
+    vi.spyOn(featureRemote, 'getFeatureIds').mockImplementation(
+      () =>
+        new Promise(done => {
+          resolve = done
+        }) as never,
+    )
+    const pending = admin.ensureFeatureNavigation('a')
+    view.filters.values.feature.text = 'Coffee'
+    resolve({ data: [{ id: 'old' }], hasMore: false } as never)
+    await pending
+    expect(admin.featureNavigationRows.map(row => row.id)).toEqual(['other'])
   })
 })

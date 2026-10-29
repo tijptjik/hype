@@ -1,4 +1,6 @@
 <script lang="ts">
+// BITS COMPONENTS
+import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
 import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerStyle.js'
 import type { RemoteForm, RemoteFormInput, RemoteFormFields } from '$app/server'
@@ -1397,9 +1399,7 @@ $effect(() => {
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
 
-          {#snippet children(
-            locale,
-          )}
+          {#snippet children(locale)}
             <FormI18nDescriptorFields
               form={formCtx.form}
               fields={formCtx.form.fields.data.i18n[locale]}
@@ -1516,6 +1516,20 @@ $effect(() => {
       </FormSurface>
     </Main.Facet>
   </Main.Form>
+  <Main.Facet
+    isVisible={activeFacet === 'features'}
+    transition="fade"
+    fillHeight={true}
+    edgeToEdge={true}
+    contentClass="h-full overflow-hidden"
+    attrs={{ 'data-facet-id': 'features' }}
+  >
+    {#if activeFacet === 'features' && layer?.data?.id}
+      {#key layer.data.id}
+        <ScopedFeatureIndex resourceType="layer" resourceId={layer.data.id} />
+      {/key}
+    {/if}
+  </Main.Facet>
 </Main.Root>
 
 {#if pendingPublishId && pendingPublishId === layer?.data?.id}

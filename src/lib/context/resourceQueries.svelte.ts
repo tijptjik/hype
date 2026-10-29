@@ -336,13 +336,16 @@ export class ResourceQueryCoordinator {
     const refreshSerial = ++this.featureRefreshSerial
     const selection = JSON.stringify(this.dependencies.prisms().layer)
     const query = this.getRequiredQueryConfig(FirstClassResource.feature)
+    const queryKey = JSON.stringify(query.queryKey)
     const features: FeatureFromCollection[] = await (query.queryFn() as Promise<
       FeatureFromCollection[]
     >)
 
     if (
       refreshSerial !== this.featureRefreshSerial ||
-      selection !== JSON.stringify(this.dependencies.prisms().layer)
+      selection !== JSON.stringify(this.dependencies.prisms().layer) ||
+      queryKey !==
+        JSON.stringify(this.getRequiredQueryConfig(FirstClassResource.feature).queryKey)
     ) {
       logMarkerBootstrap('stale feature data ignored after a newer refresh started', {
         refreshSerial,

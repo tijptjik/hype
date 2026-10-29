@@ -23,13 +23,21 @@ export const ADMIN_FACETS = {
   images: 'images',
   fields: 'fields',
   layers: 'layers',
+  features: 'features',
   policies: 'policies',
   advanced: 'advanced',
 } as const satisfies Record<FacetType, FacetType>
 
 export type HubFacet = 'core' | 'layers' | 'fields' | 'images' | 'policies'
-export type OrganisationFacet = 'advanced' | 'core' | 'capabilities' | 'fields' | 'images'
+export type OrganisationFacet =
+  | 'features'
+  | 'advanced'
+  | 'core'
+  | 'capabilities'
+  | 'fields'
+  | 'images'
 export type ProjectFacet =
+  | 'features'
   | 'advanced'
   | 'core'
   | 'capabilities'
@@ -37,9 +45,10 @@ export type ProjectFacet =
   | 'fields'
   | 'images'
   | 'policies'
-export type LayerFacet = 'core' | 'fields'
+export type LayerFacet = 'features' | 'core' | 'fields'
 
 export const ADMIN_FACET_DEFINITIONS = {
+  [ADMIN_FACETS.features]: { label: () => m.omni__title_features(), icon: MapPinIcon },
   [ADMIN_FACETS.advanced]: { label: () => m.project_advanced(), icon: SettingsIcon },
   [ADMIN_FACETS.core]: {
     label: () => m.resources__profile(),
@@ -72,6 +81,7 @@ export const ADMIN_FACET_DEFINITIONS = {
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
+  [ADMIN_FACETS.features]: () => m.omni__title_features(),
   [ADMIN_FACETS.advanced]: () => m.project_advanced(),
   [ADMIN_FACETS.core]: () => m.admin__forms_common_descriptors(),
   [ADMIN_FACETS.capabilities]: () => m.resources__capabilities(),
@@ -115,6 +125,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   organisation: [
     ADMIN_FACETS.core,
+    ADMIN_FACETS.features,
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.fields,
     ADMIN_FACETS.images,
@@ -122,6 +133,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   project: [
     ADMIN_FACETS.core,
+    ADMIN_FACETS.features,
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.layers,
     ADMIN_FACETS.fields,
@@ -129,7 +141,7 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.images,
     ADMIN_FACETS.advanced,
   ],
-  layer: [ADMIN_FACETS.core, ADMIN_FACETS.fields],
+  layer: [ADMIN_FACETS.core, ADMIN_FACETS.features, ADMIN_FACETS.fields],
   feature: [
     ADMIN_FACETS.core,
     ADMIN_FACETS.address,

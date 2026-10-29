@@ -213,6 +213,8 @@ function chunkImportFeatureLookupIds(ids: string[]): string[][] {
  * @param params.q - Optional text query applied by the DB list service.
  * @param params.meta - Optional request metadata.
  * @param params.meta.profile - Optional response profile (`list`, `card`, `detail`, `admin`).
+ * @param ctx - Guarded request authorization and database context.
+ * @param idsOnly - Skip relation hydration for bounded navigation reads.
  * @returns A promise resolving to a list response with `data`, pagination metadata,
  * sort metadata, and the applied filter summary.
  * @remarks
@@ -220,7 +222,13 @@ function chunkImportFeatureLookupIds(ids: string[]): string[][] {
  * are built. Prism filters, hub scope, locale-aware sorting, and response profile shaping
  * are then applied in sequence so list reads stay policy-safe and profile-consistent.
  */
-const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx) => {
+async function readFeatureList(
+  params: z.infer<typeof ListQueryParamsSchema>,
+  ctx: GuardedQueryContext,
+  idsOnly = false,
+): Promise<
+  ListResponse<FeatureListByProfile<FeatureProfile>> | ListResponse<{ id: string }>
+> {
   const { db, user, userRoles, isAdminRequest, event } = ctx
   const profile = toFeatureProfile(params.meta?.profile, 'list')
 
@@ -262,13 +270,15 @@ const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
       )
   const result = await listFeatures(
     db,
-    getFeatureWithRelations(profile) as never,
+    idsOnly ? {} : (getFeatureWithRelations(profile) as never),
     conditions,
     event.locals.hub,
     params.pagination,
     params.sorting,
-    { q: params.q, filtersToApply, locale: getLocale() },
+    { q: params.q, filtersToApply, locale: getLocale(), idsOnly },
   )
+
+  if (idsOnly) return result as ListResponse<{ id: string }>
 
   return (await toListResponseShape(
     {
@@ -279,7 +289,32 @@ const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, async (params, ctx)
     },
     profile,
   )) as ListResponse<FeatureListByProfile<typeof profile>>
-})
+}
+
+const getFeaturesQuery = guardedQuery(ListQueryParamsSchema, (params, ctx) =>
+  readFeatureList(params, ctx),
+)
+
+/** Load a bounded page of authorized IDs in the same order as the feature index.
+ * @param params Existing feature scope, search, sorting and pagination constraints.
+ * @returns Identifiers and traversal metadata, with no images, properties or parent graph.
+ * @remarks Every page uses the ordinary list authorization and hub predicates.
+ */
+export const getFeatureIds = guardedQuery(ListQueryParamsSchema, async (params, ctx) =>
+  readFeatureList(
+    {
+      ...params,
+      pagination: {
+        ...params.pagination,
+        limit: Math.min(params.pagination?.limit ?? 250, 250),
+      },
+    },
+    ctx,
+    true,
+  ),
+) as unknown as (
+  params: FeatureListParamsByProfile<'card'>,
+) => RemoteQuery<ListResponse<{ id: string }>>
 
 export const getFeatures = getFeaturesQuery as unknown as <
   P extends FeatureProfile = 'list',

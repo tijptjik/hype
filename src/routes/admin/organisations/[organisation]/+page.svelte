@@ -1,4 +1,6 @@
 <script lang="ts">
+// BITS COMPONENTS
+import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import LocationVisibilitySelect from '#lib/bits/patterns/forms/featureLocation/LocationVisibilitySelect.svelte'
 import type { RemoteForm, RemoteFormInput } from '$app/server'
 
@@ -108,7 +110,10 @@ import MultilingualDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults
 import type { MultilingualSettingKey } from '#lib/content-locales/settings.js'
 // CONTENT LOCALES
 import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
-import { readContentLocaleForm, contentLocaleFormIssues } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
+import {
+  readContentLocaleForm,
+  contentLocaleFormIssues,
+} from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { resolveContentLocales } from '#lib/content-locales/resolve.js'
 // BITS COMPONENTS
@@ -358,8 +363,12 @@ const configuredOrganisationForm = configureForm<OrganisationRemoteFormInput>(()
 const formCtx = $derived(configuredOrganisationForm())
 // Shared authoring defaults remain distinct from the descriptor form's UI locales.
 const localeOptions = $derived(contentLocaleOptions(getLocaleKey()))
-const localeSettingsPatch = $derived(readContentLocaleForm(formCtx.form.fields.value().data?.settings))
-const inheritedContentLocales = $derived(resolveContentLocales({ userLocale: getLocaleKey() }))
+const localeSettingsPatch = $derived(
+  readContentLocaleForm(formCtx.form.fields.value().data?.settings),
+)
+const inheritedContentLocales = $derived(
+  resolveContentLocales({ userLocale: getLocaleKey() }),
+)
 
 /**
  * Stage an explicit default order or reset marker in the existing remote form.
@@ -367,21 +376,32 @@ const inheritedContentLocales = $derived(resolveContentLocales({ userLocale: get
  * @returns Nothing; the normal form save owns persistence and authorization.
  */
 function setContentLocales(locales: string[] | undefined): void {
-  updateFormData(formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>, data => {
-    data.settings = { ...localeSettingsPatch, contentLocales: locales ? normalizeContentLocales(locales) : null }
-    return data
-  })
+  updateFormData(
+    formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
+    data => {
+      data.settings = {
+        ...localeSettingsPatch,
+        contentLocales: locales ? normalizeContentLocales(locales) : null,
+      }
+      return data
+    },
+  )
   revalidateAfterProgrammaticChange()
 }
 
 /** Stage independent multilingual defaults through the existing authorized settings form.
  * @param patch Explicit boolean overrides or null reset markers. @returns Nothing.
  */
-function setMultilingualDefaults(patch: Partial<Record<MultilingualSettingKey, boolean | null>>): void {
-  updateFormData(formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>, data => {
-    data.settings = { ...localeSettingsPatch, ...patch }
-    return data
-  })
+function setMultilingualDefaults(
+  patch: Partial<Record<MultilingualSettingKey, boolean | null>>,
+): void {
+  updateFormData(
+    formCtx.form as unknown as FormDataUpdaterForm<OrganisationEditorFormInput['data']>,
+    data => {
+      data.settings = { ...localeSettingsPatch, ...patch }
+      return data
+    },
+  )
   revalidateAfterProgrammaticChange()
 }
 
@@ -1542,27 +1562,73 @@ $effect(() => {
         {/if}
       </Main.Facet>
     {/snippet}
-    <Main.Facet isVisible={activeFacet === 'advanced'} transition="fade" fillHeight={true} previousAction={buildFacetNavAction('advanced', 'previous')} nextAction={buildFacetNavAction('advanced', 'next')} class="left-0! right-0!" attrs={{ 'data-facet-id': 'advanced' }}>
+    <Main.Facet
+      isVisible={activeFacet === 'advanced'}
+      transition="fade"
+      fillHeight={true}
+      previousAction={buildFacetNavAction('advanced', 'previous')}
+      nextAction={buildFacetNavAction('advanced', 'next')}
+      class="left-0! right-0!"
+      attrs={{ 'data-facet-id': 'advanced' }}
+    >
       <FormSurface>
         <section class="flex min-h-0 flex-col gap-4 pb-6">
           <SectionHeader title={m.project_advanced()} />
           <div class="mx-6 min-w-0">
-            <h2 class="mb-3 flex items-center gap-2 text-base font-semibold"><LanguagesIcon class="size-5" aria-hidden="true" />{m.content_languages_heading()}</h2>
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4">
-            <ContentLocaleDefaults organisationName={formCtx.form.fields.value().data?.i18n?.[getLocaleKey()]?.nameShort || getNameForToast(organisation, 'nameShort')} scope="organisation" value={localeSettingsPatch.contentLocales ?? undefined}
-              inheritedLocales={inheritedContentLocales.locales} inheritedOrigin="user-default" options={localeOptions}
-              disabled={!isEditing || formCtx.submitting} onChange={setContentLocales}
-              issues={contentLocaleFormIssues(visibleAllIssues)} />
-            <MultilingualDefaults scope="organisation" value={localeSettingsPatch}
-              disabled={!isEditing || formCtx.submitting} onChange={setMultilingualDefaults} />
+            <h2 class="mb-3 flex items-center gap-2 text-base font-semibold">
+              <LanguagesIcon class="size-5" aria-hidden="true" />
+              {m.content_languages_heading()}
+            </h2>
+            <div
+              class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4"
+            >
+              <ContentLocaleDefaults
+                organisationName={formCtx.form.fields.value().data?.i18n?.[
+                  getLocaleKey()
+                ]?.nameShort || getNameForToast(organisation, 'nameShort')}
+                {...{ scope: 'organisation' as const }}
+                value={localeSettingsPatch.contentLocales ?? undefined}
+                inheritedLocales={inheritedContentLocales.locales}
+                inheritedOrigin="user-default"
+                options={localeOptions}
+                disabled={!isEditing || formCtx.submitting}
+                onChange={setContentLocales}
+                issues={contentLocaleFormIssues(visibleAllIssues)}
+              />
+              <MultilingualDefaults
+                {...{ scope: 'organisation' as const }}
+                value={localeSettingsPatch}
+                disabled={!isEditing || formCtx.submitting}
+                onChange={setMultilingualDefaults}
+              />
             </div>
-            <input {...getHiddenLocaleSettingsAttrs()} />
+            <input {...getHiddenLocaleSettingsAttrs()}>
           </div>
-          <h2 class="mx-6 mt-2 text-base font-semibold">{m.content_visibility_heading()}</h2>
-          <div class="mx-6 flex min-h-14 items-center justify-between rounded-lg border border-border bg-foreground/4 px-5 py-3">
-            <span class="text-sm font-semibold">{m.organisation_location_visibility_default()}</span>
-            <LocationVisibilitySelect value={formCtx.form.fields.value().data?.defaultLocationVisibility ?? 'shared'} disabled={!isEditing || formCtx.submitting} onChange={value => updateFormData(capabilityFormUpdater, data => { data.defaultLocationVisibility = value; return data })} />
-            <input {...formCtx.form.fields.data.defaultLocationVisibility.as('hidden', formCtx.form.fields.value().data?.defaultLocationVisibility ?? 'shared')} />
+          <h2 class="mx-6 mt-2 text-base font-semibold">
+            {m.content_visibility_heading()}
+          </h2>
+          <div
+            class="mx-6 flex min-h-14 items-center justify-between rounded-lg border border-border bg-foreground/4 px-5 py-3"
+          >
+            <span class="text-sm font-semibold"
+              >{m.organisation_location_visibility_default()}</span
+            >
+            <LocationVisibilitySelect
+              value={formCtx.form.fields.value().data?.defaultLocationVisibility ??
+                'shared'}
+              disabled={!isEditing || formCtx.submitting}
+              onChange={value =>
+                updateFormData(capabilityFormUpdater, data => {
+                  data.defaultLocationVisibility = value
+                  return data
+                })}
+            />
+            <input
+              {...formCtx.form.fields.data.defaultLocationVisibility.as(
+                'hidden',
+                formCtx.form.fields.value().data?.defaultLocationVisibility ?? 'shared',
+              )}
+            >
           </div>
         </section>
       </FormSurface>
@@ -1596,9 +1662,7 @@ $effect(() => {
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
 
-          {#snippet children(
-            locale,
-          )}
+          {#snippet children(locale)}
             <FormI18nDescriptorFields
               form={formCtx.form}
               fields={formCtx.form.fields.data.i18n[locale]}
@@ -1798,6 +1862,23 @@ $effect(() => {
         {/if}
       </div>
     </FormSurface>
+  </Main.Facet>
+  <Main.Facet
+    isVisible={activeFacet === 'features'}
+    transition="fade"
+    fillHeight={true}
+    edgeToEdge={true}
+    contentClass="h-full overflow-hidden"
+    attrs={{ 'data-facet-id': 'features' }}
+  >
+    {#if activeFacet === 'features' && organisation?.data?.id}
+      {#key organisation.data.id}
+        <ScopedFeatureIndex
+          resourceType="organisation"
+          resourceId={organisation.data.id}
+        />
+      {/key}
+    {/if}
   </Main.Facet>
 </Main.Root>
 

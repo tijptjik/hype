@@ -59,7 +59,8 @@ export function getRowRootClass({
     'focus-within:shadow-[0_1.2rem_2.6rem_color-mix(in_oklab,black_18%,transparent),0_0_0_1px_color-mix(in_oklab,white_8%,transparent),0_0_0_3px_color-mix(in_oklab,var(--color-secondary)_92%,transparent),0_0_0_6px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]',
     'focus-within:outline-3 focus-within:outline-offset-3 focus-within:outline-transparent',
     resolvedSelectionState === 'selected' &&
-      'border-l-4 border-l-success hover:border-l-success transition-all pl-3 shadow-[inset_0.55rem_0_0_-0.35rem_color-mix(in_oklab,var(--color-success)_70%,white_8%),0_0_0_1px_color-mix(in_oklab,var(--color-success)_26%,transparent)]',
+      // Retain the original selection stripe and spacing with a flat, theme-coloured edge.
+      'border-l-4 border-l-primary/70 hover:border-l-primary transition-all pl-3 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--color-primary)_20%,var(--theme-border)),0_2px_4px_-2px_rgb(0_0_0/0.15)]',
     resolvedSelectionState === 'success' &&
       'border-l-4 border-l-info hover:border-l-info transition-all pl-3 shadow-[0_0_0_2px_color-mix(in_oklab,var(--color-success)_82%,white_8%),0_0_0_4px_color-mix(in_oklab,var(--color-success)_25%,transparent)]',
     resolvedSelectionState === 'error' &&

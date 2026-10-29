@@ -5,7 +5,8 @@ import Select from '#lib/bits/core/select/Select.svelte'
 // ICONS
 import CheckIcon from 'virtual:icons/proicons/checkmark'
 import ListChecksIcon from 'virtual:icons/proicons/task-list'
-import ShuffleIcon from 'virtual:icons/proicons/arrow-left-right'
+import InvertSelectionIcon from 'virtual:icons/lucide/replace'
+import SelectAllIcon from 'virtual:icons/lucide/list-checks'
 import XIcon from 'virtual:icons/proicons/cancel'
 // TYPES
 import type { ResourceBulkEditControlProps } from './components/resourceControlBarPrimitives.types'
@@ -15,6 +16,9 @@ let {
   onOpenChange,
   isOpen = $bindable(false),
 }: ResourceBulkEditControlProps = $props()
+
+const instanceId = $props.id()
+const actionId = `${instanceId}-bulk-action`
 
 let isOpening = $state(false)
 let openingTimeout: ReturnType<typeof setTimeout> | null = null
@@ -112,7 +116,7 @@ $effect(() => {
 })
 </script>
 
-<div class="bits-theme bits-resource-bulk-edit">
+<div class={`bits-theme bits-resource-bulk-edit ${isOpen ? 'w-full min-w-max' : ''}`}>
   <Button
     text={config.isActive ? `Bulk edit (${config.selectedCount})` : 'Bulk edit'}
     iconComponent={ListChecksIcon}
@@ -121,35 +125,52 @@ $effect(() => {
     size="sm"
     class="bits-resource-bulk-edit__trigger opacity-70 transition-opacity duration-300 hover:opacity-100"
     attrs={{
-      title: 'Bulk edit selected rows',
+      'data-tooltip': 'Bulk edit selected rows',
     }}
+    disabled={config.progress?.isApplying}
     onClick={toggleMenu}
   />
 
   <div
-    class={`bits-resource-bulk-edit__controls-wrap ${isOpen ? 'bits-resource-bulk-edit__controls-wrap--open' : ''}`.trim()}
+    class={`bits-resource-bulk-edit__controls-wrap ${isOpen ? 'bits-resource-bulk-edit__controls-wrap--open flex-1 min-w-max!' : ''}`.trim()}
+    inert={!isOpen}
+    aria-hidden={!isOpen}
   >
-    <div class="bits-resource-bulk-edit__controls">
-      {#if config.progress}
+    <div class="bits-resource-bulk-edit__controls w-full gap-3!">
+      {#if config.progress?.isApplying}
         <div class="bits-resource-bulk-edit__progress" aria-live="polite">
           {progressLabel}
         </div>
       {:else}
+        {#if config.onSelectAll}
+          <Button
+            text={config.isSelectingAll ? 'Selecting all…' : 'Select all matches'}
+            iconComponent={SelectAllIcon}
+            style="outline"
+            size="sm"
+            disabled={config.isSelectingAll}
+            onClick={() => void config.onSelectAll?.()}
+          />
+        {/if}
         <Button
           text="Invert selection"
-          iconComponent={ShuffleIcon}
-          hideLabel={true}
+          iconComponent={InvertSelectionIcon}
           style="ghost"
           color="dark"
           size="sm"
-          modifier="square"
+          disabled={config.isSelectingAll}
           class="bits-resource-bulk-edit__invert opacity-70 transition-opacity duration-300 hover:opacity-100"
           attrs={{
-            title: 'Invert selection',
+            'data-tooltip': 'Invert selection',
           }}
           onClick={config.onInvertSelection}
         />
+        <label for={actionId} class="ml-2 text-sm font-medium text-foreground"
+          >Action</label
+        >
         <Select
+          triggerAttrs={{ id: actionId }}
+          disabled={config.isSelectingAll}
           value={config.selectedOptionValue}
           items={config.options}
           placeholder="Action"
@@ -162,11 +183,12 @@ $effect(() => {
         <Button
           text="Apply"
           iconComponent={CheckIcon}
-          style="ghost"
-          color="dark"
+          style="none"
+          color="primary"
           size="sm"
-          class="bits-resource-bulk-edit__apply opacity-80 transition-opacity duration-300 hover:opacity-100 py-2 ml-2"
-          iconClasses="-pl-0"
+          class="bits-resource-bulk-edit__apply ml-auto! shrink-0 text-white!"
+          iconClasses="text-white!"
+          labelClasses="text-white!"
           disabled={config.applyDisabled}
           onClick={handleApply}
         />

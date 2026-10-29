@@ -19,6 +19,7 @@ import LayoutGrid from 'virtual:icons/proicons/grid'
 import List from 'virtual:icons/proicons/bullet-list'
 import LoaderCircle from 'virtual:icons/proicons/spinner'
 import Pencil from 'virtual:icons/proicons/pencil'
+import FeatureIcon from 'virtual:icons/proicons/location'
 import RotateCcw from 'virtual:icons/proicons/arrow-counterclockwise'
 import Save from 'virtual:icons/proicons/save'
 import Table2 from 'virtual:icons/proicons/table'
@@ -747,6 +748,25 @@ export function useAdminHeaderModel(
       onClick: handleAdvanceLayout,
     }
   })
+  const featuresAction = $derived.by((): HeaderButtonActionConfig | null => {
+    const resourceType = adminCtx.activeResourceType
+    const resourceRef = adminCtx.activeResourceRef
+    if (
+      !resourceRef ||
+      resourceRef === NEW_REF ||
+      (resourceType !== FirstClassResource.organisation &&
+        resourceType !== FirstClassResource.project &&
+        resourceType !== FirstClassResource.layer)
+    )
+      return null
+
+    return {
+      text: m.omni__title_features(),
+      icon: FeatureIcon,
+      style: adminCtx.activeFacet === 'features' ? 'soft' : 'outline',
+      onClick: () => navigateOnAdmin(adminCtx, resourceType, resourceRef, 'features'),
+    }
+  })
   const primaryAction = $derived.by((): HeaderButtonActionConfig | null => {
     if (!canEdit || (showDeleteAction && isDeleted)) return null
 
@@ -900,6 +920,7 @@ export function useAdminHeaderModel(
     formActions: {
       isVisible: resolvedVisibility.showFormActions,
       primaryAction,
+      featuresAction,
       saveAction,
       deleteAction,
       publishAction,

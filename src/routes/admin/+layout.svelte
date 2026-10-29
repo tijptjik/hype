@@ -87,8 +87,12 @@ $effect(() => {
 
 // Native admin feature payloads remain reactive during optimistic edits.
 $effect(() => {
-  const current = root.cacheCtx.featureCollection?.current
-  if (current) view.queries.rows.feature = current.data
+  const query = root.cacheCtx.featureCollection
+  const current = query?.current
+  view.resources.scopeKey
+  if (current && adminCtx.featureIndexReady) {
+    untrack(() => adminCtx.syncFeatureCollection(query, current))
+  }
 })
 
 onDestroy(() => {

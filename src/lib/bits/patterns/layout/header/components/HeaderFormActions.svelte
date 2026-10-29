@@ -20,6 +20,7 @@ import {
 
 let {
   primaryAction = null,
+  featuresAction = null,
   saveAction = null,
   deleteAction = null,
   publishAction = null,
@@ -37,6 +38,21 @@ function resolveIconClasses(icon?: unknown): string {
 </script>
 
 <div class={HEADER_FORM_ACTIONS_CLASSES}>
+  {#if featuresAction}
+    <Button
+      size="sm"
+      text={featuresAction.text}
+      color={featuresAction.color ?? 'neutral'}
+      style={featuresAction.style ?? 'outline'}
+      iconComponent={featuresAction.icon}
+      class={resolveActionClass(featuresAction.class)}
+      hideLabel
+      hideLabelInstantly
+      disabled={featuresAction.disabled}
+      onClick={() => featuresAction.onClick?.()}
+    />
+  {/if}
+
   {#if deleteAction}
     <Button
       size="sm"

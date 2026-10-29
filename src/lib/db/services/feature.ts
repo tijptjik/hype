@@ -168,13 +168,15 @@ const upsertFeaturePropertyI18n = async (
   propertyId: Id,
   i18n: Record<LocaleKey, { value?: string | null; valueGen?: boolean | null }>,
 ) => {
-  const i18nRecords = Object.entries(contentMapToStorage(i18n)).map(([locale, data]) => ({
-    featureId,
-    propertyId,
-    locale,
-    value: data.value ?? null,
-    valueGen: Boolean(data.valueGen),
-  }))
+  const i18nRecords = Object.entries(contentMapToStorage(i18n)).map(
+    ([locale, data]) => ({
+      featureId,
+      propertyId,
+      locale,
+      value: data.value ?? null,
+      valueGen: Boolean(data.valueGen),
+    }),
+  )
 
   for (const record of i18nRecords) {
     await db
@@ -356,6 +358,8 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
     q?: string | null
     filtersToApply?: QueryParams
     locale?: Locale
+    /** Return only traversal identities without hydrating relations. */
+    idsOnly?: boolean
   },
 ): Promise<ListResponse<TRow>> => {
   const startedAt = Date.now()
@@ -420,12 +424,15 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
 
   const pageRows = (await retryBusyRead(() =>
     db.query.feature.findMany({
-      with: withRelations,
-      extras: {
-        locationBrands: featureLocationBrandsSQL().as('locationBrands'),
-        authoring: featureAuthoringSQL().as('authoring'),
-        locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
-      },
+      columns: query?.idsOnly ? { id: true } : undefined,
+      with: query?.idsOnly ? {} : withRelations,
+      extras: query?.idsOnly
+        ? undefined
+        : {
+            locationBrands: featureLocationBrandsSQL().as('locationBrands'),
+            authoring: featureAuthoringSQL().as('authoring'),
+            locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+          },
       where: whereClause,
       limit: pageLimit === undefined ? undefined : pageLimit + 1,
       offset: pagination?.offset ?? undefined,
@@ -782,7 +789,8 @@ export const updateI18n = async (
   featureId: Id,
 ) => {
   const queries = prepareFeatureFormRelations(db, featureId, sql`1`, i18n)
-  if (queries.length) await db.batch(queries as [typeof queries[number], ...typeof queries])
+  if (queries.length)
+    await db.batch(queries as [(typeof queries)[number], ...typeof queries])
   return db.select().from(featureI18n).where(eq(featureI18n.featureId, featureId))
 }
 

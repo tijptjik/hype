@@ -22,6 +22,8 @@ export type ResourceBulkEditConfig = {
   selectedOptionValue: string
   progress?: ResourceBulkEditProgress | null
   applyDisabled?: boolean
+  isSelectingAll?: boolean
+  onSelectAll?: () => void | Promise<void>
   onToggleMode: () => void
   onInvertSelection: () => void
   onOptionChange: (value: string) => void

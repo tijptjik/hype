@@ -65,10 +65,7 @@ const rootClass = $derived(
       ? `--header-identity-width: ${contentStart + 12}px`
       : undefined}
   >
-    {#snippet left({
-      showButtonText,
-      isMeasuring,
-    })}
+    {#snippet left({ showButtonText, isMeasuring })}
       {#if brand}
         <svelte:element
           this={brand.href ? 'a' : 'div'}
@@ -119,9 +116,7 @@ const rootClass = $derived(
       />
     {/snippet}
 
-    {#snippet right({
-      showButtonText,
-    })}
+    {#snippet right({ showButtonText })}
       <div class="flex flex-1 items-center justify-end gap-0 mr-4 min-w-0">
         {#if showFacets || showTaskActions || showFormActions}
           <div
@@ -149,6 +144,7 @@ const rootClass = $derived(
             {#if showFormActions}
               <HeaderPrimitive.FormActions
                 primaryAction={formActions.primaryAction}
+                featuresAction={formActions.featuresAction}
                 saveAction={formActions.saveAction}
                 deleteAction={formActions.deleteAction}
                 publishAction={formActions.publishAction}

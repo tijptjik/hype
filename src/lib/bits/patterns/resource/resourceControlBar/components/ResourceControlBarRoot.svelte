@@ -331,8 +331,8 @@ $effect(() => {
   bind:clientWidth={rootWidth}
 >
   <div
-    class={isCompactSortOpen ? 'hidden' : 'flex min-w-0 items-center'}
-    inert={isCompactSortOpen}
+    class={isBulkOpen || isCompactSortOpen ? 'hidden' : 'flex min-w-0 items-center'}
+    inert={isBulkOpen || isCompactSortOpen}
   >
     <FilterCtrl
       label={filterLabel}
@@ -349,21 +349,22 @@ $effect(() => {
     />
   </div>
 
+  <!-- Expanded bulk actions own the row; keep every action reachable on narrow panels. -->
   <div
-    class={`flex min-w-0 items-center text-base-content/60 whitespace-nowrap ${isCompactSortOpen ? 'flex-1 gap-2 overflow-x-auto px-3' : 'gap-4 pr-8'}`}
+    class={`flex min-w-0 items-center text-base-content/60 whitespace-nowrap ${isBulkOpen ? 'flex-1 gap-4 overflow-x-auto px-6' : isCompactSortOpen ? 'flex-1 gap-2 overflow-x-auto px-3' : 'gap-4 pr-8'}`}
   >
     {#if showBulkEdit && bulkContent}
-      <SortCtrl bind:rootElement={bulkRootElement}>
+      <SortCtrl
+        bind:rootElement={bulkRootElement}
+        class={isBulkOpen ? 'w-full shrink-0' : 'shrink-0'}
+      >
         {@render bulkContent({
           isBulkOpen,
           handleBulkOpenChange,
         })}
       </SortCtrl>
     {/if}
-    {#if isBulkOpen && showSort && sortContent}
-      <span class="bits-resource-bulk-edit__sort-separator" aria-hidden="true"></span>
-    {/if}
-    {#if showSort && sortContent}
+    {#if !isBulkOpen && showSort && sortContent}
       <SortCtrl bind:rootElement={sortRootElement} class="shrink-0">
         {@render sortContent({
           isSortOpen,
@@ -371,7 +372,9 @@ $effect(() => {
         })}
       </SortCtrl>
     {/if}
-    <ResultCount {count} />
-    <FilterReset disabled={resetDisabled} onClick={onReset} />
+    {#if !isBulkOpen}
+      <ResultCount {count} />
+      <FilterReset disabled={resetDisabled} onClick={onReset} />
+    {/if}
   </div>
 </div>

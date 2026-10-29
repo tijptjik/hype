@@ -11,6 +11,7 @@ const Facets = [
   'images',
   'fields',
   'layers',
+  'features',
   'policies',
   'advanced',
 ] as const

@@ -1,4 +1,6 @@
 <script lang="ts">
+// BITS COMPONENTS
+import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import { ProjectFlagsSchema, show3dAddressOptions } from '#lib/projects/flags.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
 import { getLocationUpdatePolicy } from '#lib/api/location.remote.js'
@@ -23,7 +25,10 @@ import ContentLocaleDefaults from '#lib/bits/patterns/forms/contentLocaleDefault
 import MultilingualDefaults from '#lib/bits/patterns/forms/contentLocaleDefaults/MultilingualDefaults.svelte'
 import type { MultilingualSettingKey } from '#lib/content-locales/settings.js'
 import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
-import { readContentLocaleForm, contentLocaleFormIssues } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
+import {
+  readContentLocaleForm,
+  contentLocaleFormIssues,
+} from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleForm.js'
 import { ContentLocaleSettingsSchema } from '#lib/content-locales/settings.js'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { resolveContentLocales } from '#lib/content-locales/resolve.js'
@@ -640,7 +645,9 @@ const configuredProjectForm = configureForm(() => ({
 // Bound form controller for template/actions.
 const formCtx = $derived(configuredProjectForm())
 const localeOptions = $derived(contentLocaleOptions(getLocaleKey()))
-const localeSettingsPatch = $derived(readContentLocaleForm(formCtx.form.fields.value().data?.settings))
+const localeSettingsPatch = $derived(
+  readContentLocaleForm(formCtx.form.fields.value().data?.settings),
+)
 
 /**
  * Stage an explicit Project locale override or reset in the normal remote form.
@@ -649,7 +656,10 @@ const localeSettingsPatch = $derived(readContentLocaleForm(formCtx.form.fields.v
  */
 function setContentLocales(locales: string[] | undefined): void {
   updateFormData(projectEntityUpdaterForm, data => {
-    data.settings = { ...localeSettingsPatch, contentLocales: locales ? normalizeContentLocales(locales) : null }
+    data.settings = {
+      ...localeSettingsPatch,
+      contentLocales: locales ? normalizeContentLocales(locales) : null,
+    }
     return data
   })
   revalidateAfterProgrammaticChange()
@@ -658,7 +668,9 @@ function setContentLocales(locales: string[] | undefined): void {
 /** Stage independent multilingual defaults through the existing authorized settings form.
  * @param patch Explicit boolean overrides or null reset markers. @returns Nothing.
  */
-function setMultilingualDefaults(patch: Partial<Record<MultilingualSettingKey, boolean | null>>): void {
+function setMultilingualDefaults(
+  patch: Partial<Record<MultilingualSettingKey, boolean | null>>,
+): void {
   updateFormData(projectEntityUpdaterForm, data => {
     data.settings = { ...localeSettingsPatch, ...patch }
     return data
@@ -1726,7 +1738,9 @@ $effect(() => {
   const hasCapabilities =
     selected?.capabilities && typeof selected.capabilities === 'object'
   // Advanced locale inheritance needs the same authorized parent profile.
-  const hasLocaleSettings = ContentLocaleSettingsSchema.safeParse(selectedParentOrganisationById[organisationId]?.settings).success
+  const hasLocaleSettings = ContentLocaleSettingsSchema.safeParse(
+    selectedParentOrganisationById[organisationId]?.settings,
+  ).success
   if (hasCapabilities && hasLocaleSettings) return
 
   let cancelled = false
@@ -1878,11 +1892,17 @@ const selectedParentOrganisation = $derived.by(() => {
     return hierarchy.organisation
   return null
 })
-const parentLocaleSettings = $derived(ContentLocaleSettingsSchema.safeParse(selectedParentOrganisation?.settings))
-const inheritedContentLocales = $derived(resolveContentLocales({
-  organisationSettings: parentLocaleSettings.success ? parentLocaleSettings.data : undefined,
-  userLocale: getLocaleKey(),
-}))
+const parentLocaleSettings = $derived(
+  ContentLocaleSettingsSchema.safeParse(selectedParentOrganisation?.settings),
+)
+const inheritedContentLocales = $derived(
+  resolveContentLocales({
+    organisationSettings: parentLocaleSettings.success
+      ? parentLocaleSettings.data
+      : undefined,
+    userLocale: getLocaleKey(),
+  }),
+)
 const selectedMarkerStyle = $derived.by(() => {
   const code = formCtx.form.fields.data.markerStyleCode.value()
   return isMarkerStyleCode(code) ? code : null
@@ -2921,9 +2941,7 @@ $effect(() => {
             <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
           {/snippet}
 
-          {#snippet children(
-            locale,
-          )}
+          {#snippet children(locale)}
             <FormI18nDescriptorFields
               form={formCtx.form}
               fields={formCtx.form.fields.data.i18n[locale]}
@@ -3330,16 +3348,40 @@ $effect(() => {
         <section class="flex min-h-0 flex-col gap-4 pb-6">
           <SectionHeader title={m.content_languages_heading()} icon={LanguagesIcon} />
           <div class="mx-6 min-w-0">
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4">
-            <ContentLocaleDefaults organisationName={getNameForToast({ data: selectedParentOrganisation }, 'nameShort')} scope="project" value={localeSettingsPatch.contentLocales ?? undefined}
-              inheritedLocales={inheritedContentLocales.locales}
-              inheritedOrigin={inheritedContentLocales.origin === 'organisation' ? 'organisation' : 'user-default'}
-              options={localeOptions} disabled={!isEditing || formCtx.submitting || (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)}
-              onChange={setContentLocales} issues={contentLocaleFormIssues(visibleAllIssues)} />
-            <MultilingualDefaults scope="project" value={localeSettingsPatch} inherited={parentLocaleSettings.success ? parentLocaleSettings.data : undefined}
-              disabled={!isEditing || formCtx.submitting || (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)} onChange={setMultilingualDefaults} />
+            <div
+              class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),1fr))] gap-4"
+            >
+              <ContentLocaleDefaults
+                organisationName={getNameForToast(
+                  { data: selectedParentOrganisation },
+                  'nameShort',
+                )}
+                {...{ scope: 'project' as const }}
+                value={localeSettingsPatch.contentLocales ?? undefined}
+                inheritedLocales={inheritedContentLocales.locales}
+                inheritedOrigin={inheritedContentLocales.origin === 'organisation'
+                  ? 'organisation'
+                  : 'user-default'}
+                options={localeOptions}
+                disabled={!isEditing ||
+                  formCtx.submitting ||
+                  (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)}
+                onChange={setContentLocales}
+                issues={contentLocaleFormIssues(visibleAllIssues)}
+              />
+              <MultilingualDefaults
+                {...{ scope: 'project' as const }}
+                value={localeSettingsPatch}
+                inherited={parentLocaleSettings.success
+                  ? parentLocaleSettings.data
+                  : undefined}
+                disabled={!isEditing ||
+                  formCtx.submitting ||
+                  (Boolean(parentOrganisationIdValue) && !parentLocaleSettings.success)}
+                onChange={setMultilingualDefaults}
+              />
             </div>
-            <input {...getHiddenLocaleSettingsAttrs()} />
+            <input {...getHiddenLocaleSettingsAttrs()}>
           </div>
         </section>
       </FormSurface>
@@ -3400,6 +3442,20 @@ $effect(() => {
         {/if}
       </div>
     </FormSurface>
+  </Main.Facet>
+  <Main.Facet
+    isVisible={activeFacet === 'features'}
+    transition="fade"
+    fillHeight={true}
+    edgeToEdge={true}
+    contentClass="h-full overflow-hidden"
+    attrs={{ 'data-facet-id': 'features' }}
+  >
+    {#if activeFacet === 'features' && project?.data?.id}
+      {#key project.data.id}
+        <ScopedFeatureIndex resourceType="project" resourceId={project.data.id} />
+      {/key}
+    {/if}
   </Main.Facet>
 </Main.Root>
 
