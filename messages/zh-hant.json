@@ -1779,5 +1779,6 @@
   "feature_edit_location": "編輯位置",
   "feature_name_locked": "已連結 · 唯讀",
   "profile_translate_from": "翻譯自",
-  "location_visibility_reuse_help": "可見性決定誰可以重用此地點"
+  "location_visibility_reuse_help": "可見性決定誰可以重用此地點",
+  "location_building_catalogue_preview": "建築目錄 · 唯讀"
 }

@@ -1779,5 +1779,6 @@
   "feature_edit_location": "Edit Location",
   "feature_name_locked": "Linked · read-only",
   "profile_translate_from": "Translate from",
-  "location_visibility_reuse_help": "Visibility defines reuse"
+  "location_visibility_reuse_help": "Visibility defines reuse",
+  "location_building_catalogue_preview": "Building catalogue · read-only"
 }

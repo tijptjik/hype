@@ -19,10 +19,12 @@ import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 import { loadAddressNames, structurePlaceAddress } from '#lib/addresses/nameCatalogue.js'
 import UnlinkIcon from 'virtual:icons/lucide/unlink'
 import BackIcon from 'virtual:icons/lucide/arrow-left'
+import OpenDetailsIcon from 'virtual:icons/lucide/arrow-up-right'
 import SearchIcon from 'virtual:icons/lucide/search'
 import ClearIcon from 'virtual:icons/lucide/x'
 import FilterIcon from 'virtual:icons/lucide/list-filter'
 // API
+import { getSharedLocationIdBySource } from '#lib/api/locationDirectory.remote.js'
 import {
   searchDraftLocations,
   searchNearbyDraftLocations,
@@ -48,6 +50,8 @@ type Result = {
   names: Record<string, string>
   taxonomyLabel?: string
   source?: { ssId: string; resourceReleaseId: string }
+  buildingSource?: { id: string; release: string; addressId?: string }
+  identity?: { locationId: string; revisionId: string; ssId?: string }
   nameMode?: 'independent' | 'inherit'
   address: FeatureAddress
 }
@@ -183,6 +187,15 @@ $effect(() => {
 })
 let selected = $state<Result | null>(null)
 let accepted = $state(false)
+// Source previews need a persisted shared identity before linking to HYPE details.
+const selectedLocationLookup = $derived(accepted && selected?.source?.ssId && !selected.identity?.locationId
+  ? getSharedLocationIdBySource({ ssId: selected.source.ssId }) : null)
+const selectedLocationId = $derived(selected?.identity?.locationId ?? selectedLocationLookup?.current ?? null)
+const selectedLocationHref = $derived(selectedLocationId
+  ? `/admin/locations/${encodeURIComponent(selectedLocationId)}`
+  : selected?.buildingSource
+    ? `/admin/locations/building/${encodeURIComponent(selected.buildingSource.id)}?${new URLSearchParams({ release: selected.buildingSource.release, ...(selected.buildingSource.addressId ? { address: selected.buildingSource.addressId } : {}) })}`
+    : null)
 let linked = $state(false)
 let expandedGroup = $state<string | null>(null)
 $effect(() => onAcceptedChange?.(accepted))
@@ -561,11 +574,17 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         <BackIcon class="size-4" aria-hidden="true" />
         {m.feature_start_back_results()}
       </button>
-      <LocationIcon
-        kind={selected.kind}
-        class="size-5 shrink-0 text-muted-foreground"
-      />
-      <span class="min-w-0 truncate font-medium">{resultLabels(selected).title}</span>
+        {#if selectedLocationHref}
+          <a href={selectedLocationHref} class="group/location-details grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded text-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <LocationIcon kind={selected.kind} class="size-6 shrink-0 text-muted-foreground" />
+            <span class="min-w-0 whitespace-normal break-words underline decoration-primary/40 underline-offset-4 group-hover/location-details:decoration-primary">{resultLabels(selected).title}</span>
+            <OpenDetailsIcon class="size-4 shrink-0" />
+          </a>
+        {:else}
+          <LocationIcon kind={selected.kind} class="size-6 shrink-0 text-muted-foreground" />
+          <span class="min-w-0 whitespace-normal break-words text-sm font-medium">{resultLabels(selected).title}</span>
+        {/if}
+        <SimpleTooltip triggerProps={{ tabindex: -1 }}>{#snippet trigger()}<button type="button" aria-label={m.association_change()} class="inline-flex size-8 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary" onclick={() => selected && openAssociation(selected)}><ReplaceIcon class="size-4" /></button>{/snippet}{m.association_change()}</SimpleTooltip>
       {#if linked}
         <button type="button" class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted" onclick={() => { linked = false; onUnlink?.() }}>
           <UnlinkIcon class="size-4" aria-hidden="true" />{m.account__unlink()}
