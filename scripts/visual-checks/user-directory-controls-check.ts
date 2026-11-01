@@ -37,7 +37,7 @@ for (const [name, engine, executablePath] of engines) {
       assert(icon.left >= controls.left && icon.right <= controls.right, 'Direction icon must not be clipped')
       assert(direction.right <= count.left, 'Direction and result count must not overlap')
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal page overflow')
-      await page.getByRole('button', { name: 'Field', exact: true }).focus()
+      await page.getByLabel('Field', { exact: true }).focus()
       await page.keyboard.press('Tab')
       assert(await page.getByRole('button', { name: 'asc', exact: true }).evaluate(element => element === document.activeElement))
       await page.keyboard.press('Enter')
