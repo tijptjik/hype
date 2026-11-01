@@ -116,7 +116,7 @@ $effect(() => {
 })
 </script>
 
-<div class="bits-theme bits-resource-sort">
+<div class="bits-theme bits-resource-sort shrink-0">
   <Button
     text={isOpen || isOpening ? m.sort__sort_by() : m.sort__sort()}
     iconComponent={ArrowUpDownIcon}
@@ -131,7 +131,7 @@ $effect(() => {
   />
 
   <div
-    class={`bits-resource-sort__controls-wrap ${isOpen ? 'bits-resource-sort__controls-wrap--open' : ''}`.trim()}
+    class={`bits-resource-sort__controls-wrap shrink-0 ${isOpen ? 'bits-resource-sort__controls-wrap--open' : ''}`.trim()}
     aria-hidden={!isOpen}
   >
     <div class="bits-resource-sort__controls">
@@ -153,7 +153,7 @@ $effect(() => {
         color="dark"
         size="sm"
         modifier="square"
-        class="bits-resource-sort__direction opacity-80 transition-opacity duration-300 hover:opacity-100"
+        class="bits-resource-sort__direction w-[var(--btn-size)] shrink-0 opacity-80 transition-opacity duration-300 hover:opacity-100"
         attrs={{
           title: sortDirectionLabel,
         }}
