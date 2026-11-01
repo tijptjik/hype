@@ -1,5 +1,6 @@
 // BETTER-AUTH
 import { betterAuth } from 'better-auth'
+import { generateId } from '@better-auth/core/utils/id'
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { passkey } from '@better-auth/passkey'
@@ -257,17 +258,20 @@ function createAuthInstance(
         },
         create: {
           before: async user => {
-            // Generate username if not provided
+            // Generate username if not provided. Better Auth assigns IDs in its adapter,
+            // after this hook, so reserve and persist the ID before using it as a seed.
             const dbUser = user as Partial<typeof userSchema.$inferSelect>
             if (!dbUser.username && dbUser.isAnonymous !== true) {
               const { generateDisplayUsernameFromId } = await import(
                 '#lib/utils/username-generator.server.js'
               )
-              const displayUsername = generateDisplayUsernameFromId(user.id)
+              const id = user.id || generateId()
+              const displayUsername = generateDisplayUsernameFromId(id)
               const username = displayUsername.toLowerCase()
               return {
                 data: {
                   ...user,
+                  id,
                   username,
                   displayUsername,
                 },
