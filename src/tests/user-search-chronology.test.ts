@@ -1,6 +1,7 @@
 // @vitest-environment node
 // NODE
 import { DatabaseSync } from 'node:sqlite'
+import { readFileSync } from 'node:fs'
 // DRIZZLE
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 // TESTS
@@ -10,9 +11,11 @@ import { searchUsersByConditions } from '#lib/db/services/user.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
-describe('user directory chronology', () => {
+const repairSql = readFileSync('migrations/0159_user_numeric_timestamps.sql', 'utf8')
+
+describe('user directory numeric timestamp repair', () => {
   it.each(['createdAt', 'updatedAt'] as const)(
-    'sorts mixed legacy ISO and millisecond %s values chronologically across pages',
+    'repairs ISO dates once and sorts numeric %s values across pages',
     async sortBy => {
       const sqlite = new DatabaseSync(':memory:')
       try {
@@ -32,6 +35,21 @@ describe('user directory chronology', () => {
             .prepare('INSERT INTO user (id, createdAt, updatedAt) VALUES (?, ?, ?)')
             .run(id, timestamp, timestamp)
         }
+        sqlite.exec(repairSql)
+        const repaired = sqlite.prepare('SELECT * FROM user ORDER BY id').all()
+        // The deployed migration may run after a direct repair and must be a no-op.
+        sqlite.exec(repairSql)
+        expect(sqlite.prepare('SELECT * FROM user ORDER BY id').all()).toEqual(repaired)
+        expect(
+          sqlite
+            .prepare(
+              "SELECT count(*) AS count FROM user WHERE typeof(createdAt) != 'integer' OR typeof(updatedAt) != 'integer'",
+            )
+            .get(),
+        ).toEqual({ count: 0 })
+        expect(
+          sqlite.prepare("SELECT createdAt FROM user WHERE id = 'old-numeric'").get(),
+        ).toEqual({ createdAt: dates[0][1] })
         const db = drizzle(async (query, params) => {
           const statement = sqlite.prepare(query)
           statement.setReturnArrays(true)
@@ -68,14 +86,14 @@ describe('user directory chronology', () => {
           'recent-a',
           'recent-b',
         ])
-        // Normalization is read-only; retain the original stored values.
+        // Directory reads now rely only on the repaired numeric storage.
         expect(
           sqlite
             .prepare(
               "SELECT typeof(createdAt) AS type FROM user WHERE id = 'legacy-iso'",
             )
             .get(),
-        ).toEqual({ type: 'text' })
+        ).toEqual({ type: 'integer' })
       } finally {
         sqlite.close()
       }
