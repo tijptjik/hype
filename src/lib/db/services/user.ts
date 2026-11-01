@@ -38,6 +38,7 @@ import { autochunk, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 //    - getUsersForHydration
 //
 // 2.2 CRUD :: READ (SEARCH)
+//    - toUserTimestamp
 //    - searchUsersByConditions
 //    - toSearchCondition
 //
@@ -160,6 +161,21 @@ export const getUsersForHydration = async (
 // ═══════════════════════
 
 /**
+ * Normalizes legacy ISO text and current millisecond timestamps for directory reads.
+ * @param column User creation or update timestamp column.
+ * @returns A numeric SQL timestamp decoded using the column's Date mapping.
+ * @remarks SQLite sorts text after numbers regardless of chronology. Normalize both
+ * ordering and projection without rewriting existing account records.
+ */
+function toUserTimestamp(
+  column: typeof user.createdAt | typeof user.updatedAt,
+): SQL<Date> {
+  return sql`case when typeof(${column}) = 'text'
+    then cast(round((julianday(${column}) - 2440587.5) * 86400000) as integer)
+    else ${column} end`.mapWith(column)
+}
+
+/**
  * Executes paginated user search from prebuilt SQL conditions.
  *
  * @param db - Database handle.
@@ -192,11 +208,13 @@ export const searchUsersByConditions = async (
   }>
   totalCount: number
 }> => {
+  // Compare legacy and current dates on the same millisecond scale before paging.
+  const createdAt = toUserTimestamp(user.createdAt)
   const sortColumns = {
     name: user.name,
     email: user.email,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
+    createdAt,
+    updatedAt: toUserTimestamp(user.updatedAt),
   } as const
 
   const sortColumn = sortColumns[params.sortBy] ?? sortColumns.name
@@ -215,7 +233,7 @@ export const searchUsersByConditions = async (
       locale: user.locale,
       emailVerified: sql<null>`null`,
       isArchived: user.isArchived,
-      createdAt: user.createdAt,
+      createdAt,
     })
     .from(user)
     .where(and(...params.conditions))
