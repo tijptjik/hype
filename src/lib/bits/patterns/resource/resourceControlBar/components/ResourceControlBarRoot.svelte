@@ -41,6 +41,10 @@ let sortRootElement: HTMLDivElement | undefined = $state()
 let isSortOpen = $state(false)
 let bulkRootElement: HTMLDivElement | undefined = $state()
 let isBulkOpen = $state(false)
+// Expanded sorting owns narrow rows so the field, direction and count cannot overlap.
+const isCompactSortOpen = $derived(
+  isSortOpen && !isBulkOpen && rootWidth > 0 && rootWidth < 640,
+)
 let isFilterSuppressedByCollision = $state(false)
 let shouldRestoreFilterAfterCollision = $state(false)
 let collisionCheckTimeout: ReturnType<typeof setTimeout> | null = $state(null)
@@ -326,7 +330,10 @@ $effect(() => {
   class={`bits-theme relative flex h-16 w-full flex-row items-center justify-between gap-4 bg-base-200 ${className}`.trim()}
   bind:clientWidth={rootWidth}
 >
-  <div class="flex min-w-0 items-center">
+  <div
+    class={isCompactSortOpen ? 'hidden' : 'flex min-w-0 items-center'}
+    inert={isCompactSortOpen}
+  >
     <FilterCtrl
       label={filterLabel}
       icon={filterIcon}
@@ -342,7 +349,9 @@ $effect(() => {
     />
   </div>
 
-  <div class="flex items-center gap-4 pr-8 text-base-content/60 whitespace-nowrap">
+  <div
+    class={`flex min-w-0 items-center text-base-content/60 whitespace-nowrap ${isCompactSortOpen ? 'flex-1 gap-2 overflow-x-auto px-3' : 'gap-4 pr-8'}`}
+  >
     {#if showBulkEdit && bulkContent}
       <SortCtrl bind:rootElement={bulkRootElement}>
         {@render bulkContent({
@@ -355,7 +364,7 @@ $effect(() => {
       <span class="bits-resource-bulk-edit__sort-separator" aria-hidden="true"></span>
     {/if}
     {#if showSort && sortContent}
-      <SortCtrl bind:rootElement={sortRootElement}>
+      <SortCtrl bind:rootElement={sortRootElement} class="shrink-0">
         {@render sortContent({
           isSortOpen,
           handleSortOpenChange,
