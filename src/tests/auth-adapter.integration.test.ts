@@ -17,6 +17,10 @@ import {
 // AUTH
 import { getAuthForRequest } from '#lib/auth.js'
 import { toLinkedAccountSelector } from '#lib/auth/account-selector.js'
+import { generateDisplayUsernameFromId } from '#lib/utils/username-generator.server.js'
+
+// Signup coverage needs the real seeded generator, not the shared constant stub.
+vi.unmock('unique-names-generator')
 
 // Role enrichment is unrelated to account storage; all auth persistence uses Drizzle/D1.
 vi.mock('#lib/db/services/user.js', () => ({
@@ -107,6 +111,32 @@ function createAuth(): ReturnType<typeof getAuthForRequest> {
 }
 
 describe('Better Auth production Drizzle adapter', () => {
+  it('registers consecutive accounts without a client-supplied username', async () => {
+    sqlite.exec(migration)
+    const auth = createAuth()
+    const users = []
+    for (const name of ['First', 'Second']) {
+      const result = await auth.api.signUpEmail({
+        body: {
+          name,
+          email: `${name.toLowerCase()}@example.com`,
+          password: 'integration-password-123',
+        },
+      })
+      users.push(result.user)
+      const displayUsername = generateDisplayUsernameFromId(result.user.id)
+      expect(result.user).toMatchObject({
+        username: displayUsername.toLowerCase(),
+        displayUsername,
+      })
+      expect(
+        sqlite.prepare('SELECT username FROM user WHERE id = ?').get(result.user.id),
+      ).toMatchObject({ username: displayUsername.toLowerCase() })
+    }
+    expect(users[0].id).not.toBe(users[1].id)
+    expect(users[0].username).not.toBe(users[1].username)
+  })
+
   it('reproduces issuer failure before migration and persists credentials after migration', async () => {
     const auth = createAuth()
     const context = await auth.$context
