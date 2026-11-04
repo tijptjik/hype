@@ -2,6 +2,7 @@
 import { refreshLocations } from '../../../src/lib/locations/refresh'
 import { refreshFeatureMtr } from '../../../src/lib/routing/mtr-refresh'
 import { processLocalLocationChanges } from '../../../src/lib/db/services/locationLocalRefresh'
+import { processLocationRematching } from '../../../src/lib/db/services/locationRematch'
 import { drizzle } from 'drizzle-orm/d1'
 import type { Database } from '../../../src/lib/types'
 // TYPES
@@ -36,6 +37,25 @@ export async function runLocationRefreshSchedule(
     // The durable state retains a stable retry code; do not leak source errors to logs.
     throw new Error('LOCATION_REFRESH_STEP_FAILED')
   } finally {
+    try {
+      const db = drizzle(
+        env.DB.withSession(
+          'first-primary',
+        ) as unknown as import('@cloudflare/workers-types').D1Database,
+      ) as Database
+      const deadline = Date.now() + 60_000
+      // Drain a bounded burst so each candidate does not cost a whole five-minute cron interval.
+      for (let step = 0; step < 10 && Date.now() < deadline; step++) {
+        const phase = await processLocationRematching(db, source)
+        console.log(JSON.stringify({ task: 'location-rematch', phase, step }))
+        if (
+          ['idle', 'busy', 'failed', 'publication-review', 'superseded'].includes(phase)
+        )
+          break
+      }
+    } catch {
+      console.warn('Location rematching deferred to durable retry')
+    }
     try {
       const phase = await refreshFeatureMtr(env, undefined, 90_000)
       console.log(JSON.stringify({ task: 'place-refresh-routing', phase }))
