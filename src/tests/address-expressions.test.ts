@@ -8,7 +8,65 @@ import {
   parseAddressExpression,
   setAddressExpression,
   getAddressDivisions,
+  customAddressType,
+  setCustomAddressUnit,
+  setAddressFloorReference,
+  addressFloorReference,
+  setAddressBlock,
+  addressUnitReference,
+  clearAddressComponent,
+  resetAddressComponent,
 } from '#lib/addresses/addressExpressions.js'
+import { localAddressContent, localAddressDraft } from '#lib/addresses/locationDraft.js'
+
+it('keeps numbered named-floor references clean through composition and saving', () => {
+  const address = setAddressFloorReference(emptyFeatureAddress(), '2', 'UG')
+  expect(address.unitDetails).toMatchObject({ floorRef: '2', floorType: 'UG' })
+  expect(address.overrides.en.floorExpression).toBe('UG2')
+  const restored = localAddressDraft(localAddressContent(address))
+  expect(addressFloorReference(restored, 'en')).toBe('2')
+  expect(getAddressDisplay(restored, 'en')).toContain('UG2')
+})
+
+it('retains custom unit types entered before references and through persistence', () => {
+  let address = setCustomAddressUnit(emptyFeatureAddress(), 'en', '', 'Booth')
+  expect(customAddressType(address, 'en', 'unitExpression')).toBe('Booth')
+  address = setCustomAddressUnit(
+    address,
+    'en',
+    '7',
+    customAddressType(address, 'en', 'unitExpression'),
+  )
+  const content = localAddressContent(address)
+  expect(content.unit).toMatchObject({ unitType: 'X', unitRef: '7' })
+  const restored = localAddressDraft(content)
+  expect(addressUnitReference(restored, 'en')).toBe('7')
+  expect(customAddressType(restored, 'en', 'unitExpression')).toBe('Booth')
+  expect(getAddressDisplay(restored, 'en')).toContain('Booth 7')
+})
+
+it('retains custom block types before and after editing the reference', () => {
+  let address = setAddressBlock(
+    emptyFeatureAddress(),
+    'en',
+    'other',
+    '',
+    true,
+    'Pavilion',
+  )
+  expect(customAddressType(address, 'en', 'blockExpression')).toBe('Pavilion')
+  address = setAddressBlock(address, 'en', 'other', 'A', true)
+  expect(address.overrides.en).toMatchObject({
+    blockRef: 'A',
+    blockType: 'other',
+    blockExpression: 'Pavilion A',
+  })
+  address = setAddressBlock(address, 'en', 'other', 'B', true)
+  expect(address.overrides.en).toMatchObject({
+    blockRef: 'B',
+    blockExpression: 'Pavilion B',
+  })
+})
 import { geocodeAddressCandidates } from '#lib/api/external/geocoding.js'
 
 it('parses number ranges once across languages and resets all components', () => {
@@ -23,7 +81,7 @@ it('parses number ranges once across languages and resets all components', () =>
       buildingNumberExpression: '26–30',
       buildingNumberFrom: '26',
       buildingNumberTo: '30',
-      buildingNumberConnector: '–',
+      buildingNumberConnector: '-',
     })
   expect(
     setAddressExpression(address, 'en', 'buildingNumberExpression', undefined).overrides
@@ -61,7 +119,7 @@ it('keeps expressions authoritative and parses known block and phase vocabulary'
 })
 it('uses actual division relationships and ignores unrelated included divisions', () => {
   const address = emptyFeatureAddress()
-  address.source.records = {
+  address.source.rawSource = {
     data: {
       relationships: {
         divisions: { data: [{ id: 'district', meta: { role: 'district' } }] },
@@ -86,7 +144,7 @@ it('uses actual division relationships and ignores unrelated included divisions'
 })
 it('excludes city relationships by role or source class without changing retained evidence', () => {
   const address = emptyFeatureAddress()
-  address.source.records = {
+  address.source.rawSource = {
     data: {
       relationships: {
         divisions: {
@@ -114,11 +172,11 @@ it('excludes city relationships by role or source class without changing retaine
       },
     ],
   }
-  const evidence = structuredClone(address.source.records)
+  const evidence = structuredClone(address.source.rawSource)
   expect(getAddressDivisions(address, 'en')).toEqual([
     { id: 'district', role: 'district', name: 'Kowloon City District' },
   ])
-  expect(address.source.records).toEqual(evidence)
+  expect(address.source.rawSource).toEqual(evidence)
 })
 it('retains every returned address candidate instead of silently selecting the first', async () => {
   const result = await geocodeAddressCandidates(
@@ -163,8 +221,8 @@ it('hydrates division details using the actual geocoder release metadata', async
   )
   const address = emptyFeatureAddress()
   address.source.address2dId = 'a'
-  address.source.addressSnapshotId = 'snapshot'
-  address.source.records = { meta: { release: { apiReleaseSet: 'address-release' } } }
+  address.source.snapshotId = 'snapshot'
+  address.source.rawSource = { meta: { release: { apiReleaseSet: 'address-release' } } }
   expect(hasAddressDivisionDetails(address)).toBe(false)
   const hydrated = await loadGeocodedAddressUnits(address, {
     fetcher: async input => {
@@ -197,7 +255,7 @@ it('hydrates division details using the actual geocoder release metadata', async
   expect(getAddressDivisions(hydrated, 'en')).toEqual([
     { id: 'd', role: 'district', name: 'Central and Western' },
   ])
-  expect(address.source.records).toEqual({
+  expect(address.source.rawSource).toEqual({
     meta: { release: { apiReleaseSet: 'address-release' } },
   })
 })
@@ -210,7 +268,7 @@ it('orders division memberships by descending source level without changing sour
     { id: 'neighbourhood', level: 5 },
     { id: 'macrohood', level: 4 },
   ]
-  address.source.records = {
+  address.source.rawSource = {
     data: {
       relationships: { divisions: { data: memberships.map(({ id }) => ({ id })) } },
     },
@@ -226,7 +284,7 @@ it('orders division memberships by descending source level without changing sour
     'district',
     'china',
   ])
-  expect(address.source.records.data).toEqual({
+  expect(address.source.rawSource.data).toEqual({
     relationships: { divisions: { data: memberships.map(({ id }) => ({ id })) } },
   })
 })
@@ -245,7 +303,7 @@ it.each([
       { id: 'district', role: 'district', level: 3 },
       { id: 'hood', role: 'neighbourhood', level: 5 },
     ]
-    address.source.records = {
+    address.source.rawSource = {
       data: {
         relationships: {
           divisions: { data: members.map(({ id, role }) => ({ id, meta: { role } })) },
@@ -270,3 +328,25 @@ it.each([
     }
   },
 )
+
+it('omits linked unit and floor values while retaining their source for reset', () => {
+  const source = emptyFeatureAddress()
+  source.source.rawSource = {
+    data: {
+      attributes: {
+        i18n: { en: { unitExpression: 'Flat 8', floorExpression: '12/F' } },
+      },
+    },
+  }
+  for (const field of ['unitExpression', 'floorExpression'] as const) {
+    const omitted = clearAddressComponent(source, field)
+    expect(omitted.source).toEqual(source.source)
+    expect(omitted.overrides.en[field]).toBeNull()
+    expect(
+      field === 'unitExpression'
+        ? addressUnitReference(omitted, 'en')
+        : addressFloorReference(omitted, 'en'),
+    ).toBe('')
+    expect(resetAddressComponent(omitted, field).overrides.en[field]).toBeUndefined()
+  }
+})
