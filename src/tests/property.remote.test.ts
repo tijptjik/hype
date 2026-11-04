@@ -166,6 +166,34 @@ describe('property.remote', () => {
     mockAuthorizeHubUpdateForSubmission.mockReturnValue({ allowed: true })
   })
 
+  it('creates the property and its relations through one atomic service call', async () => {
+    mockPropertyScopeRows.mockResolvedValue([])
+    mockProbeProjectQuery.mockResolvedValue({
+      id: 'project-1',
+      organisationId: 'org-1',
+    })
+    mockLoadProperty.mockResolvedValue({ id: 'property-created' })
+    const i18n = { en: { label: 'New property' } }
+    const values = [{ value: 'option', i18n: { en: { value: 'Option' } } }]
+    await remote.createProjectProperty({
+      data: {
+        projectId: 'project-1',
+        key: 'new',
+        component: 'select',
+        i18n,
+        values,
+      },
+    } as never)
+    expect(mockCreateBaseProperty).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ projectId: 'project-1', scope: 'project' }),
+      { i18n, values },
+    )
+    expect(mockCreateI18n).not.toHaveBeenCalled()
+    expect(mockCreatePropertyValues).not.toHaveBeenCalled()
+    expect(mockCreatePropertyValueI18n).not.toHaveBeenCalled()
+  })
+
   it('filters getProperties rows to projects the actor can read', async () => {
     mockListProperties.mockResolvedValue([
       { id: 'prop-1', projectId: 'project-1' },
@@ -379,15 +407,34 @@ describe('property.remote', () => {
     const result = await remote.appendPropertyValues({
       data: {
         propertyId: 'prop-1',
-        values: [{ value: 'new-value' }],
+        values: [
+          {
+            value: 'new-value',
+            i18n: {
+              en: { value: 'New value' },
+              zhHans: { value: '新' },
+              zhHant: { value: '新' },
+            },
+          },
+        ],
       },
     })
 
     expect(result).toEqual({ data: { row: { id: 'prop-1', scope: 'project' } } })
     expect(mockLoadProperty).toHaveBeenCalledTimes(2)
+    expect(mockCreatePropertyValueI18n).not.toHaveBeenCalled()
     expect(mockCreatePropertyValues).toHaveBeenCalledWith(
       expect.anything(),
-      [{ value: 'new-value', propertyId: 'prop-1' }],
+      [
+        {
+          value: 'new-value',
+          i18n: {
+            en: { value: 'New value' },
+            zhHans: { value: '新' },
+            zhHant: { value: '新' },
+          },
+        },
+      ],
       'prop-1',
     )
   })

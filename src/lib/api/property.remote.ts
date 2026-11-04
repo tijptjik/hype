@@ -25,9 +25,7 @@ import {
   listResolvedProjectProperties,
   getProperty as loadProperty,
   createBaseProperty,
-  createI18n,
   createPropertyValues,
-  createPropertyValueI18n,
 } from '#lib/db/services/property.js'
 import { probeProjectQuery } from '#lib/db/services/project.js'
 import { retryBusyRead } from '#lib/db/services/sqlite.js'
@@ -49,7 +47,6 @@ import type {
   Property,
   PropertyDB,
   PropertyI18nNew,
-  PropertyValueI18nNew,
   PropertyValueNew,
 } from '#lib/db/zod/schema/property.types.js'
 
@@ -603,45 +600,29 @@ export const createProjectProperty = guardedCommand(
     let createdBase: Awaited<ReturnType<typeof createBaseProperty>>
 
     try {
-      createdBase = await createBaseProperty(db, {
-        ...baseProperty,
-        projectId: data.projectId,
-        hubId: null,
-        organisationId: null,
-        scope: 'project',
-        type: data.type ?? 'specifier',
-        isDefaultEnabled: Boolean(data.isDefaultEnabled),
-      } as InferInsertModel<typeof property>)
+      createdBase = await createBaseProperty(
+        db,
+        {
+          ...baseProperty,
+          projectId: data.projectId,
+          hubId: null,
+          organisationId: null,
+          scope: 'project',
+          type: data.type ?? 'specifier',
+          isDefaultEnabled: Boolean(data.isDefaultEnabled),
+        } as InferInsertModel<typeof property>,
+        {
+          i18n: i18n as unknown as Record<Locale, PropertyI18nNew>,
+          values: values as unknown as NonNullable<
+            Parameters<typeof createBaseProperty>[2]
+          >['values'],
+        },
+      )
     } catch (createError) {
       if (isPropertyKeyConflictError(createError)) {
         throw error(409, 'PROPERTY_KEY_TAKEN')
       }
       throw createError
-    }
-
-    await createI18n(
-      db,
-      i18n as unknown as Record<Locale, PropertyI18nNew>,
-      createdBase.id,
-    )
-
-    if (Array.isArray(values) && values.length > 0) {
-      const createdValues = await createPropertyValues(
-        db,
-        values.map(({ i18n: _i18n, ...value }) => value) as PropertyValueNew[],
-        createdBase.id,
-      )
-
-      for (const [index, createdValue] of createdValues.entries()) {
-        const submittedValue = values[index]
-        if (!submittedValue?.i18n) continue
-
-        await createPropertyValueI18n(
-          db,
-          submittedValue.i18n as unknown as Record<Locale, PropertyValueI18nNew>,
-          createdValue.id,
-        )
-      }
     }
 
     const created = await loadProperty(db, propertyCollectionWithRelations, [
@@ -701,25 +682,7 @@ export const appendPropertyValues = guardedCommand(
       throw error(404, 'PROPERTY_NOT_FOUND')
     }
 
-    const createdValues = await createPropertyValues(
-      db,
-      values.map(({ i18n: _i18n, ...value }) => ({
-        ...value,
-        propertyId: existingProperty.id,
-      })) as PropertyValueNew[],
-      existingProperty.id,
-    )
-
-    for (const [index, createdValue] of createdValues.entries()) {
-      const submittedValue = values[index]
-      if (!submittedValue?.i18n) continue
-
-      await createPropertyValueI18n(
-        db,
-        submittedValue.i18n as unknown as Record<Locale, PropertyValueI18nNew>,
-        createdValue.id,
-      )
-    }
+    await createPropertyValues(db, values as PropertyValueNew[], existingProperty.id)
 
     const updatedProperty = await loadProperty(db, propertyCollectionWithRelations, [
       eq(property.id, existingProperty.id),

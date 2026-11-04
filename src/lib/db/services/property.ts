@@ -11,13 +11,7 @@ import { rangeDomain } from '#lib/properties/range.js'
 import { transformI18nSafely, toRelatedRecords } from '#lib/db/index.js'
 import { inferPropertyDiscriminatorFromComponent } from '#lib/api/services/index.js'
 import { toPropertyResponseFromRaw } from '#lib/api/services/property.js'
-import {
-  insert,
-  update,
-  insertMany,
-  insertManyRelated,
-  replaceManyRelated,
-} from '../crud'
+import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 // SCHEMA
 import {
   hub,
@@ -55,11 +49,20 @@ import type {
   PropertyValueI18nDB,
   PropertyValueI18nNew,
   PropertyValueI18nPartial,
-  PropertyValueNew,
   ProjectPropertyForm,
 } from '#lib/db/zod/schema/property.types.js'
 import { retryBusyRead } from './sqlite'
+import { prepareGuardedReplacement } from './guardedReplacement.js'
 // TYPES
+
+/** New value content; the write service always supplies its owning property. */
+type NewPropertyValueInput = Omit<
+  InferInsertModel<typeof propertyValue>,
+  'propertyId'
+> & {
+  propertyId?: string
+  i18n?: Record<string, Omit<PropertyValueI18nNew, 'propertyValueId' | 'locale'>> | null
+}
 
 /** Server-owned parent scope for an atomic property catalog save. */
 type PropertyCatalogTarget = {
@@ -116,12 +119,80 @@ type PropertyCatalogTarget = {
  * Creates a new base property record.
  * @param db Database instance
  * @param data Data for the new property (parsed by Zod schema, e.g., PropertyRecordCreate)
+ * @param relations Optional translations and values saved atomically with the base.
  * @returns The newly created property record from DB.
+ * @remarks A relation failure rolls back creation, including the reserved property key.
  */
 export const createBaseProperty = async (
   db: Database,
   data: InferInsertModel<typeof property>,
+  relations?: {
+    i18n: Record<string, Omit<PropertyI18nNew, 'propertyId' | 'locale'>>
+    values?: NewPropertyValueInput[]
+  },
 ): Promise<PropertyDB> => {
+  if (relations) {
+    const id = data.id ?? nanoid(12)
+    const values = (relations.values ?? []).map(({ i18n, ...value }) => ({
+      ...value,
+      id: value.id ?? nanoid(12),
+      propertyId: id,
+      i18n,
+    }))
+    // Allocate identities first so each translation follows its value in the same commit.
+    const translations = toRelatedRecords(
+      normalizeI18nLocaleRecord(relations.i18n),
+      'propertyId',
+      id,
+      'locale',
+    ) as InferInsertModel<typeof propertyI18n>[]
+    const writes: BatchItem<'sqlite'>[] = [
+      ...prepareGuardedReplacement(
+        db,
+        propertyI18n,
+        translations,
+        propertyI18n.propertyId,
+        id,
+        sql`1`,
+      ),
+      ...prepareGuardedReplacement(
+        db,
+        propertyValue,
+        values.map(({ i18n: _i18n, ...value }) => value),
+        propertyValue.propertyId,
+        id,
+        sql`1`,
+      ),
+    ]
+    for (const value of values) {
+      const localized = toRelatedRecords(
+        normalizeI18nLocaleRecord(value.i18n ?? {}),
+        'propertyValueId',
+        value.id,
+        'locale',
+      ) as InferInsertModel<typeof propertyValueI18n>[]
+      writes.push(
+        ...prepareGuardedReplacement(
+          db,
+          propertyValueI18n,
+          localized,
+          propertyValueI18n.propertyValueId,
+          value.id,
+          sql`1`,
+        ),
+      )
+    }
+    // The base insert must succeed before any relation replacement can run.
+    const [created] = await db.batch([
+      db
+        .insert(property)
+        .values({ ...data, id })
+        .returning(),
+      ...writes,
+    ])
+    if (!created[0]) throw new Error('Property creation returned no row')
+    return created[0] as PropertyDB
+  }
   return await insert<typeof property>(db, property, data)
 }
 
@@ -156,22 +227,59 @@ export const createI18n = async (
 }
 
 /**
- * Creates multiple property value records.
+ * Creates property values and their translations in one transaction.
  * @param db Database instance
  * @param values Array of new property value data.
  * @param propertyId The ID of the parent property.
- * @returns Array of created propertyValue records.
+ * @returns Array of created propertyValue records in submission order.
+ * @remarks Existing values are retained; any value or translation failure rolls back the append.
  */
 export const createPropertyValues = async (
   db: Database,
-  values: PropertyValueNew[],
+  values: NewPropertyValueInput[],
   propertyId: string,
 ): Promise<PropertyValueDB[]> => {
-  const dataToInsert = values.map(val => ({
-    ...val, // Spread PropertyValueNew
-    propertyId: propertyId,
-  })) as InferInsertModel<typeof propertyValue>[]
-  return await insertMany(db, propertyValue, dataToInsert)
+  if (values.length === 0) return []
+  // Allocate identity before batching so translations do not depend on RETURNING row order.
+  const prepared = values.map(({ i18n, ...value }) => ({
+    ...value, // Preserve submitted value fields while enforcing the authorized parent.
+    id: value.id ?? nanoid(12),
+    propertyId,
+    i18n,
+  }))
+  const inserts: BatchItem<'sqlite'>[] = []
+  const translations: BatchItem<'sqlite'>[] = []
+  const batchSize = Math.max(
+    1,
+    Math.floor(SQL_BATCH_SIZE / Object.keys(getTableColumns(propertyValue)).length),
+  )
+  // Budget all value columns, including defaults, and keep every chunk in the same commit.
+  for (let offset = 0; offset < prepared.length; offset += batchSize) {
+    inserts.push(
+      db
+        .insert(propertyValue)
+        .values(
+          prepared
+            .slice(offset, offset + batchSize)
+            .map(({ i18n: _i18n, ...value }) => value),
+        )
+        .returning(),
+    )
+  }
+  for (const value of prepared) {
+    const localized = normalizeI18nLocaleRecord(value.i18n ?? {})
+    for (const [locale, translation] of Object.entries(localized)) {
+      translations.push(
+        db.insert(propertyValueI18n).values({
+          ...translation,
+          propertyValueId: value.id,
+          locale,
+        } as InferInsertModel<typeof propertyValueI18n>),
+      )
+    }
+  }
+  const results = await db.batch([inserts[0], ...inserts.slice(1), ...translations])
+  return results.slice(0, inserts.length).flat() as PropertyValueDB[]
 }
 
 /**
