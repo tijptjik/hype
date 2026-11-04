@@ -53,3 +53,20 @@ export const assertTaskFeatureScope = async (
     .limit(1)
   if (!scope) throw error(400, 'TASK_FEATURE_SCOPE_MISMATCH')
 }
+
+/**
+ * Checks submitted task ancestry against live rows inside a write transaction.
+ * @param data Submitted feature and parent identities.
+ * @returns Predicate that rejects missing or reparented contribution targets.
+ */
+export function taskSubmissionScopeCondition(
+  data: Pick<TaskNew, 'featureId' | 'projectId' | 'organisationId'>,
+): SQL {
+  return sql`EXISTS (
+    SELECT 1 FROM feature f
+    JOIN project p ON p.id=f.projectId
+    JOIN organisation o ON o.id=p.organisationId
+    WHERE f.id=${data.featureId} AND p.id=${data.projectId}
+      AND o.id=${data.organisationId}
+  )`
+}

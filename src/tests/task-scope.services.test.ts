@@ -31,11 +31,31 @@ describe('task feature scope integrity', () => {
         INSERT INTO organisation VALUES ('org', 'hub'), ('other-org', 'other-hub');
         INSERT INTO project VALUES ('project', 'org'), ('other-project', 'other-org');
         INSERT INTO feature VALUES ('feature', 'project'), ('other-feature', 'other-project');`)
+      let beforeWrite: (() => void) | undefined
+      const runBeforeWrite = () => {
+        const change = beforeWrite
+        beforeWrite = undefined
+        change?.()
+      }
       const db = drizzle(
         {
+          batch: async (statements: Array<{ all(): Promise<unknown> }>) => {
+            runBeforeWrite()
+            sqlite.exec('BEGIN')
+            try {
+              const results = []
+              for (const statement of statements) results.push(await statement.all())
+              sqlite.exec('COMMIT')
+              return results
+            } catch (error) {
+              sqlite.exec('ROLLBACK')
+              throw error
+            }
+          },
           prepare: (sql: string) => ({
             bind: (...params: unknown[]) => ({
               raw: async () => {
+                if (/^insert/i.test(sql)) runBeforeWrite()
                 const statement = sqlite.prepare(sql)
                 statement.setReturnArrays(true)
                 return statement.all(...(params as never[]))
@@ -103,6 +123,23 @@ describe('task feature scope integrity', () => {
       const listed = await listTasks(db, withFeature, [], opts)
       expect(listed.data.map(row => row.id)).toEqual(['valid'])
       expect(listed.totalCount).toBe(1)
+      // Reparenting after preparation must not create a task in the former scope.
+      for (const change of [
+        "UPDATE feature SET projectId='other-project' WHERE id='feature'",
+        "UPDATE project SET organisationId='other-org' WHERE id='project'",
+      ]) {
+        beforeWrite = () => sqlite.exec(change)
+        await expect(createTask(db, { ...valid, id: 'raced' })).rejects.toMatchObject({
+          status: 400,
+          body: { message: 'TASK_FEATURE_SCOPE_MISMATCH' },
+        })
+        expect(
+          sqlite.prepare("SELECT id FROM task WHERE id='raced'").get(),
+        ).toBeUndefined()
+        sqlite.exec(
+          "UPDATE feature SET projectId='project' WHERE id='feature'; UPDATE project SET organisationId='org' WHERE id='project'",
+        )
+      }
     } finally {
       sqlite.close()
     }
