@@ -900,3 +900,41 @@ and 20 warnings as its unmodified Git base under the same dependencies, with no 
 diagnostics. This Git-base comparison is separate from the deployed release comparison
 above. A committed-path audit covers 61 scoped paths and excludes all private data
 artifacts.
+
+### Guarded production identity reconciliation (5 November 2026)
+
+Refs #189 and #194. This supersedes the earlier status that no reviewed adoption had
+run. Fresh, scoped projections cover 30 existing accounts and their ownership
+references; passwords, tokens and passkey public keys are omitted. The local rehearsal
+uses the exact deployed schema. Independent organisation grants coalesce at their
+strongest levels. The remote writer changes only reviewed columns, retaining current
+opaque credentials and sessions in place. Schema, complete before/after scopes and
+undeclared embedded references are guarded inside one atomic D1 batch.
+Cloudflare-protected `_cf_` storage is excluded from application reference scans; its
+schema remains guarded. Derived cache counters coalesce after reference triggers run and
+before absorbed users are removed.
+
+One initial application failed on the protected internal-table scan and rolled back
+entirely. After correction and read-only production SQL validation, 24 reviewed cohorts
+were applied in one 145-statement transaction. Four duplicate account roots were
+absorbed; 24 Breadline owners and 34 historic source mappings now exist. Production has
+1,701 users, including 16 with reviewed phone values. All 14 owner and nine member roles
+remain, with zero foreign-key errors. The complete after-state replay succeeds with zero
+writes. Private before-images, the recovery bookmark, source evidence, hashed plan and
+production receipts are retained under `.local/breadline/reconcile-20261105/`.
+
+The accepted local baseline is promoted from the verified atomic rehearsal. Planning
+against the fresh source now leaves one conflicting cohort that combines two independent
+accounts, including administrator/content ownership. Its saved merge decision awaits
+explicit clarification; neither account has been changed. The remaining bulk plan
+contains 13,468 new users and is not applied while that conflict remains. Organisation
+user grants and full import/claim/directory acceptance remain pending. Do not interpret
+the successful adoption replay as proof of full-import recovery or live provider flows.
+
+Wrangler remote bindings run under Node; the Bun parent retains SQLite baseline handling
+and the local operator lock. A pure shared contract keeps Bun SQLite out of the Node
+bundle. Remote progress and completion receipts remain local, with baseline promotion
+only after confirmed remote completion. Validation: 60 focused importer/adoption tests,
+scoped TypeScript checks, exact-schema SQL rehearsal, Node operator bundles, production
+preflight and post-application replay pass. No further schema or application deployment
+was needed for this operational reconciliation.
