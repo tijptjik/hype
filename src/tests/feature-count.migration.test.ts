@@ -1,11 +1,9 @@
 // NODE
-import { execFile } from 'node:child_process'
+import { DatabaseSync } from 'node:sqlite'
 import { readFileSync } from 'node:fs'
-import { promisify } from 'node:util'
 // VITEST
 import { describe, expect, it } from 'vitest'
 
-const execFileAsync = promisify(execFile)
 const spatialMigration = readFileSync(
   'migrations/0078_feature_spatial_index.sql',
   'utf8',
@@ -71,19 +69,28 @@ async function query(
   beforeMigration = '',
   recursive = false,
 ): Promise<Array<Record<string, unknown>>> {
-  const { stdout } = await execFileAsync(
-    'sqlite3',
-    [
-      ':memory:',
-      '-batch',
-      '-json',
-      '-cmd',
-      '.explain off',
-      `${schema}\nPRAGMA recursive_triggers = ${recursive ? 1 : 0};\n${spatialMigration}\n${searchMigration}\n${beforeMigration}\n${migration}\n${searchFtsMigration}\n${statements}`,
-    ],
-    { maxBuffer: 2 * 1024 * 1024 },
-  )
-  return JSON.parse(stdout.trim() || '[]')
+  const sqlite = new DatabaseSync(':memory:')
+  try {
+    sqlite.exec(`${schema}
+PRAGMA recursive_triggers = ${recursive ? 1 : 0};
+${spatialMigration}
+${searchMigration}
+${beforeMigration}
+${migration}
+${searchFtsMigration}`)
+    let remaining = statements.trim()
+    let result: Array<Record<string, unknown>> = []
+    // SQLite parses each statement itself, including CTEs and quoted semicolons.
+    while (remaining) {
+      const statement = sqlite.prepare(remaining)
+      remaining = remaining.slice(statement.sourceSQL.length).trim()
+      if (statement.columns().length) result = statement.all()
+      else statement.run()
+    }
+    return result
+  } finally {
+    sqlite.close()
+  }
 }
 
 /**
