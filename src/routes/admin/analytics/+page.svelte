@@ -55,6 +55,9 @@ const ANALYTICS_FACETS = [
 adminCtx.setResourceType(false)
 
 let activeFacet = $state<AnalyticsFacet>(DEFAULT_ANALYTICS_FACET)
+const analyticsScope = $derived(
+  JSON.stringify([adminCtx.view.account.revision, adminCtx.view.resources.scopeKey]),
+)
 const prismOrganisationIds = $derived([
   ...adminCtx.view.scope.getPrism(FirstClassResource.organisation),
 ])
@@ -107,14 +110,16 @@ async function resolvePrismScopePrefixes(): Promise<string[]> {
 /**
  * Builds the admin analytics remote query payload from the current prism state.
  *
+ * @param scope - Captured account and role cache identity.
  * @returns Remote query parameters including explicit admin intent metadata.
  */
-async function buildAnalyticsQueryParams(): Promise<{
+async function buildAnalyticsQueryParams(scope: string): Promise<{
   scopePrefixes: string[]
   organisationIds: string[]
   projectIds: string[]
   meta: {
     isAdminRequest: boolean
+    scope: string
   }
 }> {
   const scopePrefixes = await resolvePrismScopePrefixes()
@@ -128,18 +133,26 @@ async function buildAnalyticsQueryParams(): Promise<{
     scopePrefixes,
     organisationIds: prismOrganisationIds,
     projectIds: prismProjectIds,
-    meta: { isAdminRequest: true },
+    meta: { isAdminRequest: true, scope },
   }
 }
 
 /**
  * Loads the current asset analytics snapshot for the active prism scope.
  *
+ * @param scope - Captured account and role cache identity.
+ * @param refresh - Whether an explicit refresh must bypass the native cached result.
  * @returns A normalized analytics summary result from the remote query.
  */
-async function loadAnalytics(): Promise<AssetAnalyticsSummaryResult> {
-  const params = await buildAnalyticsQueryParams()
-  const result = await runRemoteQuery(getAssetAnalyticsSummary(params))
+async function loadAnalytics(
+  scope: string,
+  refresh = false,
+): Promise<AssetAnalyticsSummaryResult> {
+  const params = await buildAnalyticsQueryParams(scope)
+  const query = getAssetAnalyticsSummary(params)
+  // Explicit refresh actions must update the native handle before reading its result.
+  if (refresh) await query.refresh()
+  const result = await runRemoteQuery(query)
   console.debug('Asset analytics response summary', {
     params,
     status: result.status,
@@ -215,6 +228,7 @@ async function loadAnalytics(): Promise<AssetAnalyticsSummaryResult> {
 async function runAnalyticsLoad(options?: {
   preservePreview?: boolean
 }): Promise<void> {
+  const requestScope = analyticsScope
   const requestVersion = ++analyticsRequestVersion
   const preservePreview = options?.preservePreview ?? false
 
@@ -228,32 +242,35 @@ async function runAnalyticsLoad(options?: {
       const query = getPlatformAnalyticsSummary({
         facet: activeFacet,
         hostname: hostname || undefined,
-        meta: { isAdminRequest: true },
+        meta: { isAdminRequest: true, scope: requestScope },
       })
       if (preservePreview) await query.refresh()
       const result = await runRemoteQuery(query)
-      if (requestVersion !== analyticsRequestVersion) return
+      if (requestVersion !== analyticsRequestVersion || requestScope !== analyticsScope)
+        return
       platformState = result
       isRefreshing = false
       return
     }
-    const result = await loadAnalytics()
+    const result = await loadAnalytics(requestScope, preservePreview)
 
-    if (requestVersion !== analyticsRequestVersion) return
+    if (requestVersion !== analyticsRequestVersion || requestScope !== analyticsScope)
+      return
 
     analyticsState = result
     analyticsPreviewState = result
   } catch (cause) {
     console.error(`${activeFacet} analytics remote query failed`, cause)
 
-    if (requestVersion !== analyticsRequestVersion) return
+    if (requestVersion !== analyticsRequestVersion || requestScope !== analyticsScope)
+      return
 
     const message = formatAnalyticsError(cause)
     analyticsState = { status: 'error', message }
     platformState = { status: 'error', message }
   }
 
-  if (requestVersion === analyticsRequestVersion) {
+  if (requestVersion === analyticsRequestVersion && requestScope === analyticsScope) {
     isRefreshing = false
   }
 }
@@ -294,6 +311,7 @@ function handleFacetChange(nextFacet: string): void {
 }
 
 let lastPrismSignature = $state('')
+let lastAnalyticsScope = ''
 
 $effect(() => {
   // Analytics owns its controls and must clear the previous resource list's filter bar.
@@ -337,7 +355,16 @@ $effect(() => {
 
 $effect(() => {
   if (!browser) return
-  const signature = `${activeFacet}:${activeFacet === 'assets' ? prismSignature : hostname}`
+  // Account transitions discard all snapshots, including previews and selected hosts.
+  if (lastAnalyticsScope !== analyticsScope) {
+    lastAnalyticsScope = analyticsScope
+    analyticsState = null
+    analyticsPreviewState = null
+    platformState = null
+    hostname = ''
+    isRefreshing = false
+  }
+  const signature = `${analyticsScope}:${activeFacet}:${activeFacet === 'assets' ? prismSignature : hostname}`
   if (signature === lastPrismSignature) return
   lastPrismSignature = signature
   if (!lastPrismSignature) return

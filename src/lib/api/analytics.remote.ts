@@ -33,6 +33,8 @@ const assetAnalyticsSummaryParamsSchema = z.object({
   meta: z
     .object({
       isAdminRequest: FormBoolean.optional(),
+      // Client cache identity only; authorization always uses guarded server context.
+      scope: z.string().optional(),
     })
     .optional(),
 })
@@ -100,7 +102,9 @@ export const getPlatformAnalyticsSummary = guardedQuery(
   z.object({
     facet: z.enum(['views', 'audience', 'data']),
     hostname: z.string().max(253).optional(),
-    meta: z.object({ isAdminRequest: FormBoolean.optional() }).optional(),
+    meta: z
+      .object({ isAdminRequest: FormBoolean.optional(), scope: z.string().optional() })
+      .optional(),
   }),
   async (params, ctx) => {
     if (
