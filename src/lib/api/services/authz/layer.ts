@@ -398,7 +398,7 @@ export const resolveLayerListReadPolicy = (params: {
     actor.userRoles
       .filter(
         (role): role is Extract<UserRoleDisco, { type: 'organisation' }> =>
-          role.type === 'organisation' && role.role !== 'owner',
+          role.type === 'organisation' && role.role === 'member',
       )
       .map(role => role.organisationId),
   )

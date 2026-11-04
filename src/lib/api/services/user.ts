@@ -606,7 +606,12 @@ export const toEntityRoleExistsCondition = (
     }
 
     case 'organisation': {
-      const roleConditions = toRoleConditions(organisationRole.role, filter)
+      const roleConditions = toRoleConditions(
+        organisationRole.role,
+        filter.role === 'user' || filter.roles?.includes('user')
+          ? { ...filter, role: undefined, roles: ['user', 'member', 'owner'] }
+          : filter,
+      )
       return exists(
         db
           .select({ userId: organisationRole.userId })

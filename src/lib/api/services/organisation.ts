@@ -80,13 +80,13 @@ import { chunkedInArray } from '#lib/utils/batch-query.js'
 const organisationWithRelations = {
   i18n: true as const,
   userRoles: {
-    columns: { grant: false as const },
     where: (
       role: Pick<
         typeof import('#lib/db/schema/organisation.js').organisationRole,
         'role'
       >,
     ) => sql`${role.role} IN ('member','owner')`,
+    columns: { grant: false as const },
     with: {
       user: {
         columns: userColumnsWithPrivacyProtected,

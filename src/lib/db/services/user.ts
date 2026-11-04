@@ -64,6 +64,8 @@ import { autochunk, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 
 export const userColumnsWithPrivacyProtected = {
   id: true,
+  username: true,
+  displayUsername: true,
   name: true,
   image: true,
   attribution: true,

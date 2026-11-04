@@ -118,7 +118,7 @@ export const UsernameSchema = z
   .regex(/^[a-zA-Z0-9_]+$/)
 
 const HubRoleBase = createSelectSchema(hubRole)
-const OrganisationRoleBase = createSelectSchema(organisationRole)
+const OrganisationRoleBase = createSelectSchema(organisationRole).omit({ grant: true })
 const ProjectRoleBase = createSelectSchema(projectRole)
 const UserFeatureBase = createSelectSchema(userFeature)
 

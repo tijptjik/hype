@@ -1,4 +1,6 @@
 <script lang="ts">
+// ROLE HIERARCHY
+import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 // SVELTE
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
@@ -951,9 +953,11 @@ const allowedOrganisationIds = $derived.by(() => {
     user && typeof user === 'object' && 'roles' in user && Array.isArray(user.roles)
       ? (user.roles as UserRoleDisco[])
       : []
-  const ids = roles
-    .filter(role => role.type === 'organisation')
-    .map(role => role.organisationId)
+  const ids = roles.flatMap(role =>
+    role.type === 'organisation' && isOrganisationStaffRole(role.role)
+      ? [role.organisationId]
+      : [],
+  )
   return ids.length > 0 ? ids : []
 })
 const allowedOrganisationIdSet = $derived(new Set(allowedOrganisationIds ?? []))
