@@ -1,163 +1,177 @@
 # Component Architecture
 
-This document defines the UI layering model for Bits components and how logic should be distributed.
+This document defines the UI layering model for Bits components and how logic should be
+distributed.
 
 ## Route Context Ownership
 
-Hype remains a single SvelteKit application. Hub mini-apps and dashboards do not
-require a monorepo or separate frontend deployments.
+Hype remains a single SvelteKit application. Hub mini-apps and dashboards do not require
+a monorepo or separate frontend deployments.
 
-| Context | Owner | Responsibility |
-| --- | --- | --- |
-| `RootCTX` | Root layout, shared by all routes | Shared session, locale, theme, responsive state and resolved hub identity |
-| `CacheCtx` | Root layout instance, coordinated by `RootCTX` | Scoped resource retention, invalidation and optimistic reconciliation, accessed through typed resource clients |
-| `AppCtx` | Public Hype app layout | User-facing app state, including the map, feature collections, filters, panels and app navigation |
-| `AdminCtx` | `/admin` layout | Admin resource views, editing, filters and admin navigation |
-| `{Hub}DashCtx` | The corresponding hub dashboard layout | Hub-specific operational workflows; use `BreadlineDashCtx` for Breadline |
+| Context        | Owner                                          | Responsibility                                                                                                 |
+| -------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `RootCTX`      | Root layout, shared by all routes              | Shared session, locale, theme, responsive state, resolved hub identity and background mutation jobs            |
+| `CacheCtx`     | Root layout instance, coordinated by `RootCTX` | Scoped resource retention, invalidation and optimistic reconciliation, accessed through typed resource clients |
+| `AppCtx`       | Public Hype app layout                         | User-facing app state, including the map, feature collections, filters, panels and app navigation              |
+| `AdminCtx`     | `/admin` layout                                | Admin resource views, editing, filters and admin navigation                                                    |
+| `{Hub}DashCtx` | The corresponding hub dashboard layout         | Hub-specific operational workflows; use `BreadlineDashCtx` for Breadline                                       |
 
 Keep the exact `RootCTX` spelling. Dashboard context names use the hub name in
-PascalCase followed by `DashCtx`. Introduce a dashboard context only when its
-routes need shared state or orchestration; individual views can keep local state.
-The public app includes the hub-branded map experience described in the
+PascalCase followed by `DashCtx`. Introduce a dashboard context only when its routes
+need shared state or orchestration; individual views can keep local state. The public
+app includes the hub-branded map experience described in the
 [Breadline mini-app specification](../spec/breadline/breadline.v4.spec.md#mini-apps).
 
-Surface contexts consume shared state from `RootCTX`. Admin and hub dashboards
-must not require `AppCtx` or the map bootstrap to initialise. Share domain
-services, contracts and reusable UI through their owning modules rather than
-coupling one surface context to another. Context state supports the UI;
-server-side services remain responsible for authorisation and domain invariants.
+Surface contexts consume shared state from `RootCTX`. Admin and hub dashboards must not
+require `AppCtx` or the map bootstrap to initialise. Share domain services, contracts
+and reusable UI through their owning modules rather than coupling one surface context to
+another. Context state supports the UI; server-side services remain responsible for
+authorisation and domain invariants.
 
-The root layout creates `RootCTX`. The `(public)` layout creates `AppCtx`;
-`/admin` creates `AdminCtx`. Both surfaces compose a `ResourceViewCtx`, exposed as
-`appCtx.view` and `adminCtx.view`; neither inherits resource behavior.
-`ResourceViewCtx` is reusable surface-local implementation, not a root singleton.
-Reusable UI resolves that view through `getSurfaceCtx()` or receives explicit
-adapter props. Only public map code should require `getAppCtx()`.
+The root layout creates `RootCTX`. The `(public)` layout creates `AppCtx`; `/admin`
+creates `AdminCtx`. Both surfaces compose a `ResourceViewCtx`, exposed as `appCtx.view`
+and `adminCtx.view`; neither inherits resource behavior. `ResourceViewCtx` is reusable
+surface-local implementation, not a root singleton. Reusable UI resolves that view
+through `getSurfaceCtx()` or receives explicit adapter props. Only public map code
+should require `getAppCtx()`.
 
 Resource query ownership and the standard internal API are defined in
 [Context boundaries and resource queries](refactor-guides/Refactor-Guide-Context-Boundaries.md).
-Surface contexts own query intent and traversal. `ResourceClient` binds access
-metadata, while `CacheCtx` retains compatible native handles. SvelteKit remains
-the owner of remote payloads and transport deduplication. Dispose view controllers
-on unmount; keep public map mechanics out of root and admin imports.
+Surface contexts own query intent and traversal. `ResourceClient` binds access metadata,
+while `CacheCtx` retains compatible native handles. SvelteKit remains the owner of
+remote payloads and transport deduplication. Dispose view controllers on unmount; keep
+public map mechanics out of root and admin imports.
 
-Draft creation lives in `FeatureDraft` (`view.draft`). Panel commands and URL
-state use `PanelController` (`view.panels`); keyboard registration belongs to
-`SurfaceInteractions` (`view.interactions`). These owners receive explicit
-capabilities rather than the entire resource view. Use them directly instead of
-adding forwarding methods to the view. View disposal releases keyboard listeners
-and pending panel focus, and account changes discard creation drafts.
+Draft creation lives in `FeatureDraft` (`view.draft`). Panel commands and URL state use
+`PanelController` (`view.panels`); keyboard registration belongs to
+`SurfaceInteractions` (`view.interactions`). These owners receive explicit capabilities
+rather than the entire resource view. Use them directly instead of adding forwarding
+methods to the view. View disposal releases keyboard listeners and pending panel focus,
+and account changes discard creation drafts.
 
-Hierarchy selection belongs to `view.scope`, filters and query inputs to
-`view.filters`, and loading/result projections to `view.queries`. Wishlist and
-visited membership belong to the root account's `collections`, shared across
-surfaces. Use these owners directly rather than adding forwarding APIs. Public
-map visibility, selection and camera orchestration remain on `AppCtx`.
+Hierarchy selection belongs to `view.scope`, filters and query inputs to `view.filters`,
+and loading/result projections to `view.queries`. Wishlist and visited membership belong
+to the root account's `collections`, shared across surfaces. Use these owners directly
+rather than adding forwarding APIs. Public map visibility, selection and camera
+orchestration remain on `AppCtx`.
 
 ## Account and Map Ownership
 
-`RootCTX.account` owns `AccountState`. Its authoritative session identity and roles
-are separate from self-profile enrichment (preferences, display fields and saved
-layers). Surfaces receive that same account instance and expose a read-only `user`
-snapshot. Profile responses are restricted to presentation fields; another user's
-profile stays in its resource cache or profile panel. Async saves capture the account
-revision so responses and rollbacks cannot cross identity or role changes.
+`RootCTX.account` owns `AccountState`. Its authoritative session identity and roles are
+separate from self-profile enrichment (preferences, display fields and saved layers).
+Surfaces receive that same account instance and expose a read-only `user` snapshot.
+Profile responses are restricted to presentation fields; another user's profile stays in
+its resource cache or profile panel. Async saves capture the account revision so
+responses and rollbacks cannot cross identity or role changes.
 
-Only the root publishes session changes. Surface layouts call `syncAccount()` to
-clear their own identity-bound data after a change; resource views never replace
-the session. `isInitialised` means the resource view's initialization is complete,
-not that a map has loaded.
+Only the root publishes session changes. Surface layouts call `syncAccount()` to clear
+their own identity-bound data after a change; resource views never replace the session.
+`isInitialised` means the resource view's initialization is complete, not that a map has
+loaded.
 
 Native MapLibre instances and marker DOM elements belong to the renderer.
 `AppCtx.mapController` holds only the public map's camera capability, supplied by
 `MapCanvas.onMapReady` and cleared on teardown. Other map renderers, such as the
-screensaver, have their own controllers. Shared creation flows receive a
-`getMapCenter` callback; marker transitions receive the clicked element directly.
-`ResourceViewCtx` and admin views require neither a map instance nor a DOM registry.
+screensaver, have their own controllers. Shared creation flows receive a `getMapCenter`
+callback; marker transitions receive the clicked element directly. `ResourceViewCtx` and
+admin views require neither a map instance nor a DOM registry.
 
 ## Navigation, Selection and Resource Presentation
 
-`ResourceViewCtx` owns resource queries, filters, sorting and retained data. It has
-no navigation, selected feature, header state or list-presentation preferences.
-The public `AppCtx` and `AdminCtx` each own a `SurfaceNavigation`, provided beside
-the resource view through `getSurfaceNavigation()`. Their layouts project the
-current SvelteKit URL on initial render and subsequent navigation, including
-shallow facet changes and browser history. Navigation commands update the URL;
-page configuration can supply supported facet defaults without maintaining a
-second route store. Resource references resolve against the owning view's cache.
+`ResourceViewCtx` owns resource queries, filters, sorting and retained data. It has no
+navigation, selected feature, header state or list-presentation preferences. The public
+`AppCtx` and `AdminCtx` each own a `SurfaceNavigation`, provided beside the resource
+view through `getSurfaceNavigation()`. Their layouts project the current SvelteKit URL
+on initial render and subsequent navigation, including shallow facet changes and browser
+history. Navigation commands update the URL; page configuration can supply supported
+facet defaults without maintaining a second route store. Resource references resolve
+against the owning view's cache.
 
-`AppCtx.selection` owns the selected feature identity and active collection.
-Cards resolve fresh data for that identity; the selection retains a preview if
-its query page is evicted. Map markers derive their selected ID and highlighted
-collection IDs from this same model. There is no separate selected-marker store.
-Collection context survives feature stepping and feature-only dismissal; returning
-home, clearing the collection, account changes and disposal clear selection.
-Public card timers, navigation intent and camera commands belong to `AppCtx` and
-its adapters. Shared filter services only mutate filter data.
+`AppCtx.selection` owns the selected feature identity and active collection. Cards
+resolve fresh data for that identity; the selection retains a preview if its query page
+is evicted. Map markers derive their selected ID and highlighted collection IDs from
+this same model. There is no separate selected-marker store. Collection context survives
+feature stepping and feature-only dismissal; returning home, clearing the collection,
+account changes and disposal clear selection. Public card timers, navigation intent and
+camera commands belong to `AppCtx` and its adapters. Shared filter services only mutate
+filter data.
 
-Admin feature and task indexes treat empty prisms as all records the caller is
-permitted to read, subject to explicit state and search filters. Clicking Features
-in the admin menu selects the first displayed sidebar layer if none is selected;
-existing layer selections are preserved. Direct index URLs and the Tasks menu do
-not select a layer. Saved default map layers initialise the public map
-only; admin starts without hierarchy selections. Server permissions constrain task
-lists to the union of owned organisations and managed projects independently of
-prism selections, with hub administrator access resolved by the existing policy.
+Admin feature and task indexes treat empty prisms as all records the caller is permitted
+to read, subject to explicit state and search filters. Clicking Features or Tasks in the
+admin menu preserves the current organisation, project, and layer prisms, including an
+empty selection. Menu navigation and direct index URLs do not select a layer. Saved
+default map layers initialise the public map only; admin starts without hierarchy
+selections. Server permissions constrain task lists to the union of owned organisations
+and managed projects independently of prism selections, with hub administrator access
+resolved by the existing policy.
 
-`AdminCtx.listUi` retains per-resource layout mode and control-bar visibility
-within that surface. `HeaderCtrl` owns transient search focus, page metadata and
-action visibility; the header adapter combines those with navigation and list
-preferences. Search focus resets on route navigation. The unused legacy header
-store has been removed rather than extracted into another context.
+`AdminCtx.listUi` retains per-resource layout mode and control-bar visibility within
+that surface. `HeaderCtrl` owns transient search focus, page metadata and action
+visibility; the header adapter combines those with navigation and list preferences.
+Search focus resets on route navigation. The unused legacy header store has been removed
+rather than extracted into another context.
 
 Admin Feature previous/next navigation retains the index's ordered matching IDs,
-including remote search results and every active view filter. The temporary
-search-focus display cap does not limit traversal. Account, prism, locale, sort
-or filter changes invalidate that sequence; direct detail visits use the current
-filtered Feature rows. Traversal stops at either end and never falls back to
-unfiltered neighbours when a Feature is outside the matching list.
+including remote search results and every active view filter. The temporary search-focus
+display cap does not limit traversal. Account, prism, locale, sort or filter changes
+invalidate that sequence. Direct detail visits resolve neighbours in the background
+through authorized pages of at most 250 IDs; content/property filters use 50-card pages
+with the existing predicates. Text searches use the same server search as the index.
+Stop fetching when the next neighbour is known or the matching collection ends.
+Traversal stops at either end and never falls back to unfiltered neighbours when a
+Feature is outside the matching list.
 
-Feature detail readiness depends on the requested record, never its collection or
-parent cards. Parents hydrate independently without reseeding the form. Location
-and Photos mount on first visit per Feature, then remain mounted across tab changes.
-Previous/Next resolves bounded identities in the background after the record loads;
-submitting the editor refreshes only the first 50 collection records.
+Feature detail readiness depends on the requested record, never the index or its parent
+cards. The first Feature response projects two effective presentation-policy flags so
+the initial editable frame respects Layer overrides; independently loaded Project/Layer
+records remain the policy owners. Locale defaults reuse their shared cache. Location,
+Photos, and saved-only Updates mount on first visit per Feature, then remain mounted to
+preserve drafts across tab changes.
+
+The admin Feature index owns its initial 50-card page and loads further pages on demand.
+Empty filtered pages continue while more data exists; errors retain visible rows and
+allow retry. Returning from a detail reuses pages in the same scope. Initial reads and
+continuations reject obsolete account, hierarchy, sort and search scopes. Native
+first-page optimistic overrides preserve appended pages. Completion totals are shown
+only when the matching collection is fully loaded.
 
 ## Responsive and Surface Layout Ownership
 
 `ResponsiveCtx` is root-owned browser measurement state: layout viewport, visual
 viewport, offsets, and keyboard inset. It does not own panels or main-element
-measurements. Shared chrome breakpoint policy lives in `src/lib/layout/chrome.ts`
-and has no Svelte/context dependency. Viewer-specific breakpoints stay with the viewer.
+measurements. Shared chrome breakpoint policy lives in `src/lib/layout/chrome.ts` and
+has no Svelte/context dependency. Viewer-specific breakpoints stay with the viewer.
 
-Each `ResourceViewCtx` (including `AppCtx`) owns a `PanelController` at `panels`
-and a `SurfaceLayout` at `layout`. `panels.state` is the canonical logical and
-visual panel state, including panel metadata; no root mirror is maintained.
-Use controller mutation methods to preserve opening recency. URL synchronization,
-focus and profile loading remain surface orchestration. Visual-only openings do
-not reserve content width or affect resize arbitration.
+Each `ResourceViewCtx` (including `AppCtx`) owns a `PanelController` at `panels` and a
+`SurfaceLayout` at `layout`. `panels.state` is the canonical logical and visual panel
+state, including panel metadata; no root mirror is maintained. Use controller mutation
+methods to preserve opening recency. URL synchronization, focus and profile loading
+remain surface orchestration. Visual-only openings do not reserve content width or
+affect resize arbitration.
 
 `setSurfaceCtx` provides that surface's layout through a lightweight layout context.
-Patterns can read geometry without importing resource orchestration. Standalone
-patterns use local, unmeasured layout models; they never publish surface state at
-root scope. `Main.Root` reports dimensions through `onDimensionsChange`, wired by
-its owning route. The app shell measures its own main region. A surface's measured
-width and panel state must never affect another surface.
+Patterns can read geometry without importing resource orchestration. Standalone patterns
+use local, unmeasured layout models; they never publish surface state at root scope.
+`Main.Root` reports dimensions through `onDimensionsChange`, wired by its owning route.
+The app shell measures its own main region. A surface's measured width and panel state
+must never affect another surface.
 
 Keep layout viewport width (panel arbitration), visual viewport dimensions
 (keyboard/visible content), and effective main width (space after logical panels)
-distinct. Menu reservation intentionally uses layout viewport height and effective
-main width; shared chrome policy accepts explicit dimensions from its caller.
+distinct. Menu reservation intentionally uses layout viewport height and effective main
+width; shared chrome policy accepts explicit dimensions from its caller.
 
 ## Layering
 
 1. `src/lib/bits/custom/{componentType}/src/*`
+
 - Lowest-level subcomponents.
 - Raw HTML structure only.
 - Headless by default; no app/domain coupling.
 - No component-theme styles applied here.
 
 2. `src/lib/bits/custom/{componentType}/{ComponentType}.svelte`
+
 - Smallest complete reusable custom component.
 - Composes only local subcomponents.
 - Provides default classes/styles.
@@ -165,73 +179,96 @@ main width; shared chrome policy accepts explicit dimensions from its caller.
 - No app/domain coupling.
 
 3. `src/lib/bits/core/{componentType}/{ComponentType}.svelte`
+
 - Same as 2, but but built from official Bits UI primitives.
 
 4. `src/lib/bits/patterns/{componentType}/components/*`
+
 - Pattern subcomponents that adapt core/custom components to app usage.
 - Can include conditional rendering and UI behavior.
 - Should remain context-agnostic where possible.
 
 5. `src/lib/bits/patterns/{componentType}/{ComponentType}.svelte`
+
 - Pattern composite.
 - Mostly routes nested props to pattern subcomponents.
 - Minimal orchestration state only.
 - Avoid direct app context coupling unless unavoidable.
 
 6. `+page.svelte` / `+layout.svelte`
+
 - Consumption boundary.
 - Owns app wiring, state ownership, and side effects.
-- Owns controller intent (for example `HeaderCtrl`) for page-level visibility/mode overrides.
+- Owns controller intent (for example `HeaderCtrl`) for page-level visibility/mode
+  overrides.
 - Integrates with `appCtx`/`adminCtx`.
-- Builds/uses an adapter model (for example `createAdminHeaderModel`) to map app/context state into pattern props.
+- Builds/uses an adapter model (for example `createAdminHeaderModel`) to map app/context
+  state into pattern props.
 - Passes controlled/bindable state + callbacks into patterns via the adapter output.
+
+## Development Feature Drafts
+
+The admin New Feature route checkpoints incomplete field values, its active facet, and
+Location discovery/identity choices to account- and tab-scoped `sessionStorage` during
+Vite development. Refreshes retain progress, while each tab/window writes and resets its
+own draft. Duplicated tabs may inherit an initial copy but then evolve independently;
+old shared localStorage checkpoints are not restored. `src/lib/client/devFormDraft.ts`
+disables storage access in production and SSR and tolerates disabled/full storage. The
+route owns restoration and the development-only Start over action;
+`DraftFeatureLocationSearch` exposes serializable progress without retaining DOM,
+callbacks or live requests. Restoring progress never replays selection or submit
+actions. Successful creation clears the checkpoint. Header Reset on NEW and Start over
+share the same complete reset of fields, naming choices, Location discovery and browser
+history selection state. Discovery Back remains the separate action for retaining search
+results. Saved Feature editors and the public contribution flow are unchanged.
 
 ## Feature Card Presentation
 
 `src/lib/features/cardStyle.ts` owns stable presentation codes and SVG preview paths.
-`full` renders the standard card; `no-description` renders the compact title/action
-band and raised map portal. The renderer mapping stays separate from user-facing,
-localized names. `conditional` selects Full when the localized description has
-content and No Description otherwise, reusing both existing renderers. Empty
-rich-text paragraphs and placeholder dashes count as no content. Both variants reuse the viewer, actions and contribution forms.
+`full` renders the standard card; `no-description` renders the compact title/action band
+and raised map portal. The renderer mapping stays separate from user-facing, localized
+names. `conditional` selects Full when the localized description has content and No
+Description otherwise, reusing both existing renderers. Empty rich-text paragraphs and
+placeholder dashes count as no content. Both variants reuse the viewer, actions and
+contribution forms.
 
-Migration `0094_conditional_card_style.sql` adds the Conditional choice without
-changing existing selections. Migration `0093_card_styles.sql` registers the catalogue in `cardStyle` and adds
-`project.cardStyleCode` as a foreign key. Existing projects are initialized to
-`full` by that original migration; existing saved choices are preserved.
-Null/absent project choices now resolve to Conditional, and new project forms
-explicitly save Conditional. Layer overrides use validated `metadata.cardStyleCode`, like
-layer map-style overrides. Clearing an override removes the metadata key and
-inherits the project, without discarding map or other metadata. There is no
-remaining neon-specific selection rule.
+Migration `0094_conditional_card_style.sql` adds the Conditional choice without changing
+existing selections. Migration `0093_card_styles.sql` registers the catalogue in
+`cardStyle` and adds `project.cardStyleCode` as a foreign key. Existing projects are
+initialized to `full` by that original migration; existing saved choices are preserved.
+Null/absent project choices now resolve to Conditional, and new project forms explicitly
+save Conditional. Layer overrides use validated `metadata.cardStyleCode`, like layer
+map-style overrides. Clearing an override removes the metadata key and inherits the
+project, without discarding map or other metadata. There is no remaining neon-specific
+selection rule.
 
-Project and layer Profile tabs share `FormCardStyleSection`, SVG choice previews,
-and the same selection primitives as map styles. Project changes pass the existing
-project write policy; layer overrides pass the existing metadata write policy.
-Both use the remote form's optimistic-concurrency, save, reset and validation flow.
-Public project ancestors and layer profiles expose the selected codes so direct
-feature links resolve layer override, project choice, then Conditional.
+Project and layer Profile tabs share `FormCardStyleSection`, SVG choice previews, and
+the same selection primitives as map styles. Project changes pass the existing project
+write policy; layer overrides pass the existing metadata write policy. Both use the
+remote form's optimistic-concurrency, save, reset and validation flow. Public project
+ancestors and layer profiles expose the selected codes so direct feature links resolve
+layer override, project choice, then Conditional.
 
-To add a style, add its code/renderer/preview to the catalogue, localized labels to
-the selector, and a migration registering the code in `cardStyle`. Implement a new
-display body at the card composition boundary rather than copying entire cards.
-Apply normal D1 migrations before deploying code that reads a new column. Renderer
-identities are code-owned rather than editable admin resources; no separate catalogue
-sync command or media upload is required for these bundled SVG previews.
+To add a style, add its code/renderer/preview to the catalogue, localized labels to the
+selector, and a migration registering the code in `cardStyle`. Implement a new display
+body at the card composition boundary rather than copying entire cards. Apply normal D1
+migrations before deploying code that reads a new column. Renderer identities are
+code-owned rather than editable admin resources; no separate catalogue sync command or
+media upload is required for these bundled SVG previews.
 
 ## Help Overlays
 
-`SimpleTooltip` uses the shared Bits popover primitive for hover previews and
-click/tap activation. Clicking keeps help open until the trigger is activated
-again, Escape is pressed, or the user interacts outside. Keyboard activation of
-nested buttons retains the button's action. Controlled notices can still bind
-`open` and override the content role. Image controls use this same behavior.
-Scrolling a trigger's ancestor or resizing the viewport dismisses its help;
-an overlay must not remain attached to a row that has scrolled away.
+`SimpleTooltip` uses the shared Bits popover primitive for hover previews and click/tap
+activation. Clicking keeps help open until the trigger is activated again, Escape is
+pressed, or the user interacts outside. Keyboard activation of nested buttons retains
+the button's action. Controlled notices can still bind `open` and override the content
+role. Image controls use this same behavior. Scrolling a trigger's ancestor or resizing
+the viewport dismisses its help; an overlay must not remain attached to a row that has
+scrolled away.
 
-Help content is portaled and positioned relative to the viewport. Opening or
-closing help does not trap focus, lock scrolling, or move focus into the overlay;
-form geometry and scroll positions must remain stable.
+Help content is portaled and positioned relative to the viewport. Opening or closing
+help does not trap focus, lock scrolling, or move focus into the overlay; form geometry
+and scroll positions must remain stable.
 
 ## Project Advanced Settings
 
@@ -240,22 +277,22 @@ Tracking: [#232](https://github.com/tijptjik/hype/issues/232).
 The project Advanced tab stores evolving boolean UI preferences in `project.flags`
 (JSON), validated by `ProjectFlagsSchema`. Missing keys inherit application defaults.
 `show3dAddressOptions` defaults to true and makes optional portion, unit and floor
-controls available in Add detail, ordered from specific to broad. Existing values
-remain visible when enabled; empty fields are added explicitly. Entry uses the app
-locale with separate Floor type and Unit type dropdowns and validation. `address.unitDetails` retains SaanSeoi's shared
-`unitRef`, `unitType`, `floorRef`, `floorType`, and `unitPortion` fields. Original
-expressions stay in locale overrides; recognized semantics generate other languages
-and display text. Unknown expressions remain literal (`X`), without invented source
-unit IDs. Source inventory selection remains available when compatible data exists.
-HYPE does not store a local granularity enum or a local inventory ID in these details.
-Room is `unitType: "R"`, at the same level as flat, shop, and other units; a portion
-is `unitPortion`. Floor `R` means Roof and belongs only to `floorType`. The local
-schema rejects `id`, `granularity`, `room`, and `room_part` keys. A selected source
-unit may retain its external ID only in `source.address3dUnitId`; raw source records
-remain unmodified evidence, including any upstream granularity labels.
+controls available in Add detail, ordered from specific to broad. Existing values remain
+visible when enabled; empty fields are added explicitly. Entry uses the app locale with
+separate Floor type and Unit type dropdowns and validation. `address.unitDetails`
+retains SaanSeoi's shared `unitRef`, `unitType`, `floorRef`, `floorType`, and
+`unitPortion` fields. Original expressions stay in locale overrides; recognized
+semantics generate other languages and display text. Unknown expressions remain literal
+(`X`), without invented source unit IDs. Source inventory selection remains available
+when compatible data exists. HYPE does not store a local granularity enum or a local
+inventory ID in these details. Room is `unitType: "R"`, at the same level as flat, shop,
+and other units; a portion is `unitPortion`. Floor `R` means Roof and belongs only to
+`floorType`. The local schema rejects `id`, `granularity`, `room`, and `room_part` keys.
+A selected source unit may retain its external ID only in `source.address3dUnitId`; raw
+source records remain unmodified evidence, including any upstream granularity labels.
 Feature-local `address.accessHints` stores localized directions separately from the
-building/unit evidence and display address, matching SaanSeoi's Place-level ownership
-of `accessHint`. Disabling 3D options preserves parsed details and saved selections.
+building/unit evidence and display address, matching SaanSeoi's Place-level ownership of
+`accessHint`. Disabling 3D options preserves parsed details and saved selections.
 Compact project responses retain flags for the Feature parent selection flow. Changes
 use the normal project form, write authorization, and optimistic concurrency checks.
 Migration `0126_project_flags.sql` adds the JSON column and must precede deployment.
@@ -278,38 +315,55 @@ Migration `0126_project_flags.sql` adds the JSON column and must precede deploym
 
 - Prefer controlled/bindable props for pattern components.
 - Keep pattern components "dumb" relative to app domain.
-- Use adapters (for example `createAdminHeaderModel`) when page/layout glue becomes too large.
+- Use adapters (for example `createAdminHeaderModel`) when page/layout glue becomes too
+  large.
 - Avoid hardcoded data dependencies inside reusable components; inject via props.
 
 ## Layout Component Control Pattern
 
-- Use a page-callable controller context (e.g. `HeaderCtrl`) for per-route header visibility/behavior overrides.
+- Use a page-callable controller context (e.g. `HeaderCtrl`) for per-route header
+  visibility/behavior overrides.
 - Keep the Header pattern itself stateless and prop-driven.
-- Keep admin defaults in the adapter (`createAdminHeaderModel`) and merge `HeaderCtrl` overrides last.
+- Keep admin defaults in the adapter (`createAdminHeaderModel`) and merge `HeaderCtrl`
+  overrides last.
 - Enforce separation:
-  - Automatic wiring (adapter): derive structural defaults from app/admin state (`activeResource`, `activeRef`, UI mode state).
-  - Manual wiring (page): set programmatic header metadata (`title`, `icon`, `facets`) and per-page visibility intent via `HeaderCtrl`.
-- Header metadata lives in `HeaderCtrl`; do not add a parallel header store to resource contexts.
+  - Automatic wiring (adapter): derive structural defaults from app/admin state
+    (`activeResource`, `activeRef`, UI mode state).
+  - Manual wiring (page): set programmatic header metadata (`title`, `icon`, `facets`)
+    and per-page visibility intent via `HeaderCtrl`.
+- Header metadata lives in `HeaderCtrl`; do not add a parallel header store to resource
+  contexts.
 - Recommended merge precedence:
   1. app/admin derived defaults
   2. adapter-level mode mapping (`auto` / `view` / `form` / `none`)
   3. page-level `HeaderCtrl.setVisibility(...)` overrides
-- Place domain decisions in route/page code; keep components focused on rendering and local UI interactions.
+- Place domain decisions in route/page code; keep components focused on rendering and
+  local UI interactions.
 
 ## Pattern Styling Placement
 
-- Prefer inline Tailwind utility classes directly in Svelte markup for component and pattern styling.
-- Do not introduce semantic wrapper classes by default when they only mirror a local set of utility classes.
-- Reserve shared CSS in `bits-*.css` files for the relatively small set of genuinely reusable theme tokens, CSS variables, cross-component states, or styling that cannot be expressed cleanly inline.
-- When styling needs to be reused across components, prefer extracting theme variables or a small reusable primitive over adding another layer of semantic class indirection.
-- When a component's styling logic grows into large class maps or CSS-variable maps, move that styling configuration into a colocated `component.styles.ts` file and keep the `.svelte` file focused on props, state, and markup.
+- Prefer inline Tailwind utility classes directly in Svelte markup for component and
+  pattern styling.
+- Do not introduce semantic wrapper classes by default when they only mirror a local set
+  of utility classes.
+- Reserve shared CSS in `bits-*.css` files for the relatively small set of genuinely
+  reusable theme tokens, CSS variables, cross-component states, or styling that cannot
+  be expressed cleanly inline.
+- When styling needs to be reused across components, prefer extracting theme variables
+  or a small reusable primitive over adding another layer of semantic class indirection.
+- When a component's styling logic grows into large class maps or CSS-variable maps,
+  move that styling configuration into a colocated `component.styles.ts` file and keep
+  the `.svelte` file focused on props, state, and markup.
 - Treat semantic classes as the exception, not the default.
 
 ## Primitive Composition Convention
 
-- When composing pattern or custom primitives, prefer namespaced usage: `<ComponentPrimitive.Root>`, `<ComponentPrimitive.Part>`.
-- For pattern components, expose a local namespace via `components/index.ts` and import it as `import * as ComponentPrimitive from './components'`.
-- This keeps composition explicit, aligns with Bits-style API shape, and avoids flat import sprawl in composites.
+- When composing pattern or custom primitives, prefer namespaced usage:
+  `<ComponentPrimitive.Root>`, `<ComponentPrimitive.Part>`.
+- For pattern components, expose a local namespace via `components/index.ts` and import
+  it as `import * as ComponentPrimitive from './components'`.
+- This keeps composition explicit, aligns with Bits-style API shape, and avoids flat
+  import sprawl in composites.
 
 ## Folding Regions
 
@@ -327,7 +381,9 @@ Migration `0126_project_flags.sql` adds the JSON column and must precede deploym
 
 ## TOC Comment Convention
 
-- For large service/module files, start with a dedicated TOC fold region using this exact heading block:
+- For large service/module files, start with a dedicated TOC fold region using this
+  exact heading block:
+
 ```ts
 // +++ Table Of Contents
 // ═══════════════════════
@@ -335,13 +391,18 @@ Migration `0126_project_flags.sql` adds the JSON column and must precede deploym
 // ═══════════════════════
 //
 ```
-- After the heading block, list numbered section labels in file order using `// <N>. <SECTION NAME>`.
-- Numbering may start at `0` when a leading utility/mutation section should sort ahead of the main flow.
+
+- After the heading block, list numbered section labels in file order using
+  `// <N>. <SECTION NAME>`.
+- Numbering may start at `0` when a leading utility/mutation section should sort ahead
+  of the main flow.
 - Under each section label, list function entries as `// - <functionName>`.
-- Include both exported and file-local helpers when they are part of the section's navigable surface.
+- Include both exported and file-local helpers when they are part of the section's
+  navigable surface.
 - Keep TOC section order aligned with the actual region order in the file.
 - Close the TOC region with `// ---`.
 - Each implementation section should start with this exact wrapper shape:
+
 ```ts
 // ---
 /********************
@@ -349,9 +410,11 @@ Migration `0126_project_flags.sql` adds the JSON column and must precede deploym
  ************/
 // +++ Resource Editor Factories
 ```
+
 - The numbered banner text should match the TOC section label exactly.
 - The fold-region label should be the same section name in Title Case.
 - Preferred example:
+
 ```ts
 // +++ Table Of Contents
 // ═══════════════════════
@@ -382,26 +445,36 @@ Migration `0126_project_flags.sql` adds the JSON column and must precede deploym
 
 ## File Naming Convention
 
-- Directories: use `camelCase` for component folders in `src/lib/bits/**` (for example `formI18nSection`, `inputField`, `labelPrimitive`).
-- Svelte components (`*.svelte`): use `TitleCase` filenames (for example `HeaderRoot.svelte`).
-- Non-component modules (`*.ts`, `*.svelte.ts`): use `camelCase` filenames (for example `useAdminHeaderModel.svelte.ts`).
-- Keep SvelteKit route-convention files unchanged (`+page.svelte`, `+layout.svelte`, `+server.ts`, etc.).
+- Directories: use `camelCase` for component folders in `src/lib/bits/**` (for example
+  `formI18nSection`, `inputField`, `labelPrimitive`).
+- Svelte components (`*.svelte`): use `TitleCase` filenames (for example
+  `HeaderRoot.svelte`).
+- Non-component modules (`*.ts`, `*.svelte.ts`): use `camelCase` filenames (for example
+  `useAdminHeaderModel.svelte.ts`).
+- Keep SvelteKit route-convention files unchanged (`+page.svelte`, `+layout.svelte`,
+  `+server.ts`, etc.).
 
 ## Type File Convention
 
-- Default for component-scoped types: `name.types.ts` in the same folder as the component entry.
-- Use `types.ts` only when the file is intentionally shared by multiple subcomponents in a local `src/` primitive package (for example `custom/*/src/types.ts`).
-- Primitive component prop types should live alongside primitive components, typically under the same `components/` folder (for example `components/headerPrimitives.types.ts`), not in the parent composite type file.
+- Default for component-scoped types: `name.types.ts` in the same folder as the
+  component entry.
+- Use `types.ts` only when the file is intentionally shared by multiple subcomponents in
+  a local `src/` primitive package (for example `custom/*/src/types.ts`).
+- Primitive component prop types should live alongside primitive components, typically
+  under the same `components/` folder (for example
+  `components/headerPrimitives.types.ts`), not in the parent composite type file.
 - Primitive bundle type files should be named `<component>Primitives.types.ts`.
 - Prefer naming by public component contract:
-  - `button.types.ts`, `header.types.ts`, `sectionHeader.types.ts`, `formI18nSection.types.ts`.
+  - `button.types.ts`, `header.types.ts`, `sectionHeader.types.ts`,
+    `formI18nSection.types.ts`.
 - Placement rules:
   - `core/{componentType}/name.types.ts` for core wrappers.
   - `custom/{componentType}/name.types.ts` for custom component public APIs.
   - `custom/{componentType}/src/types.ts` only for shared internal primitive contracts.
   - `patterns/{patternType}/name.types.ts` for pattern public APIs.
 - Avoid adding new plain `types.ts` files outside internal `src/` primitive folders.
-- Existing inconsistent files can remain until touched; when editing or adding nearby types, migrate to this convention.
+- Existing inconsistent files can remain until touched; when editing or adding nearby
+  types, migrate to this convention.
 
 ## Type Ownership
 
@@ -413,58 +486,57 @@ Migration `0126_project_flags.sql` adds the JSON column and must precede deploym
   session, generic response, and TypeScript utility contracts. A high consumer count
   does not override clear domain ownership.
 - Keep runtime constants and guards in implementation or constants modules. Use
-  `import type` for dependencies needed only by type declarations, including
-  constants referenced through `typeof`.
-- Browser-safe contracts must not import server code at runtime. Server-only
-  request contexts belong with the API; inferred request/remote signatures may use
-  type-only imports from their implementations.
-- Preserve schema/framework inference. Do not copy inferred entity shapes into
-  manually maintained interfaces or broaden types to suppress diagnostics.
+  `import type` for dependencies needed only by type declarations, including constants
+  referenced through `typeof`.
+- Browser-safe contracts must not import server code at runtime. Server-only request
+  contexts belong with the API; inferred request/remote signatures may use type-only
+  imports from their implementations.
+- Preserve schema/framework inference. Do not copy inferred entity shapes into manually
+  maintained interfaces or broaden types to suppress diagnostics.
 - Keep related contracts together when splitting them would add unnecessary hops.
-  Changes to nullability, optionality, accepted values, or API behavior require
-  separate implementation and validation from a relocation.
+  Changes to nullability, optionality, accepted values, or API behavior require separate
+  implementation and validation from a relocation.
 
 ### Legacy Contracts Requiring Separate Design
 
 - `client/services/form.types.ts` retains opaque `unknown` legacy form aliases.
-  Replacing these requires deciding which consumers use current remote forms and
-  which still expect store-backed forms; inventing a common interface would hide
-  this mismatch.
+  Replacing these requires deciding which consumers use current remote forms and which
+  still expect store-backed forms; inventing a common interface would hide this
+  mismatch.
 - `client/services/fieldComponents.ts` retains the legacy constructor contract.
   Migrating it to Svelte's `Component` requires checking the remaining constructor
   consumers and snippets.
-- `utils/resourceGuards.ts` preserves the existing structural discriminators.
-  Tightening them requires resource-union fixtures and a policy for overlapping
-  resource shapes.
+- `utils/resourceGuards.ts` preserves the existing structural discriminators. Tightening
+  them requires resource-union fixtures and a policy for overlapping resource shapes.
 
 ### Reusable multilingual form rows and source controls
 
 `formI18nSection` exports `FormI18nInlineRow` and `FormI18nSourceBar` for use across
 resource types. The inline row composes shared Bits `TextInput`, `TextArea`, HTML
 preview and verification controls; its caller supplies bound field attributes,
-validation, labels and edit/cancel callbacks. It keeps registered controls mounted
-while displaying a value. The source bar owns the animated edit-mode reveal and
-accessible source buttons; callers supply eligible sources and translation actions.
-It does not select targets or implement resource policy. Shared text-emptiness
-handling lives in `formI18nSection/text.ts`, with no import from Feature components.
+validation, labels and edit/cancel callbacks. It keeps registered controls mounted while
+displaying a value. The source bar owns the animated edit-mode reveal and accessible
+source buttons; callers supply eligible sources and translation actions. It does not
+select targets or implement resource policy. Shared text-emptiness handling lives in
+`formI18nSection/text.ts`, with no import from Feature components.
 
 `FeatureProfileEditor` remains the resource-specific composition: location-derived
 names, policy locks, translation concurrency and applying translated values belong
 there. Other resource editors can reuse the shared controls without adopting those
-Feature rules. These are app-owned Bits patterns, not wrappers around a nonexistent
-Bits UI multilingual-field primitive.
+Feature rules. These are app-owned Bits patterns, not wrappers around a nonexistent Bits
+UI multilingual-field primitive.
 
 ## Messaging contact settings
 
-The Settings panel places Messaging between Language and Theme. Each platform uses
-one phone-or-username field in `UserMessagingSettings`; `contactInput.ts` normalizes
+The Settings panel places Messaging between Language and Theme. Each platform uses one
+phone-or-username field in `UserMessagingSettings`; `contactInput.ts` normalizes
 eight-digit Hong Kong numbers to +852 and validates international numbers and usernames.
 `useUserMessagingSettingsModel` waits for eight national phone digits or four username
 characters (excluding @) before starting its 400 ms typing debounce; blur validates the
 current draft immediately. It serializes saves per platform, preserves the other field's
-draft and rejects obsolete lookup results. Warning icons
-explain invalid input or failed confirmation and allow retry; confirmed accounts show
-a checkmark. The platform preference appears only when both contacts have been saved.
+draft and rejects obsolete lookup results. Warning icons explain invalid input or failed
+confirmation and allow retry; confirmed accounts show a checkmark. The platform
+preference appears only when both contacts have been saved.
 
 `checkUserMessagingIdentity` checks an exact saved revision through an organisation
 account the actor may already access. It returns no provider profile data and does not
@@ -472,3 +544,40 @@ send messages or grant ownership verification. Missing provider access and priva
 unresolved contacts produce warnings. WhatsApp usernames can be retained, but its
 current bridge can confirm phone numbers only. Administrator ownership verification
 remains a separate action.
+
+## Messaging appearance and offline media
+
+`useMessagingAppearance` loads and saves a shared organisation background through
+`messagingAppearance.remote.ts`. Settings and inbox providers are keyed by organisation;
+only the timeline inherits the repeating image and intensity. Bubbles retain opaque
+theme surfaces. Background writes use messaging membership authorization and patch only
+`settings.messagingAppearance`, preserving concurrent locale settings.
+
+The Toastie & friends preset uses the existing Breadline toast crew artwork from
+`documents/ChatGPT/Breadline/mascots/hong-kong/toast-crew.png`, copied unchanged to
+`static/messaging/toastie-and-friends.png`. CSS applies its adjustable intensity.
+
+The account model and media picker share one IndexedDB cache scoped to the operator and
+organisation account. Catalogues, previews, profile data and ordinary attachment blobs
+share the 1 GB / 30-day budget. Profiles paint from disk before refreshing; failed
+refreshes keep the last cached profile and retry after 30 seconds. Media loads check
+native identity and edit revision; deleted and view-once media are excluded. Object URLs
+belong to the mounted model and are released on disposal; their blobs remain available
+for the next view. The picker footer includes all stored media in its usage count, and
+clearing invalidates pending cache writes.
+
+## Tooltip presentation
+
+Mount `TooltipProvider` once in the root layout. Use `data-tooltip={label}` for
+plain-text help on native controls and in component `attrs` / `triggerAttrs`. The
+provider anchors a Bits popover to the existing element, so labels share the cream-frame
+theme styling without adding layout wrappers or changing tab order. It opens on hover or
+keyboard focus and dismisses on Escape, activation, scrolling, or resize. Keep an
+explicit `aria-label` on icon-only controls; tooltip text is a description, not a
+replacement for the control's accessible name.
+
+Use `SimpleTooltip` for rich help cards, interactive help, and tap-to-open info buttons.
+Do not add native HTML `title` tooltips. Component properties named `title` that render
+headings, document titles, and accessible SVG names retain their normal meaning.
+Third-party map controls use `bridgeNativeTooltips` at the map boundary to translate
+library-generated titles into the same tooltip labels.
