@@ -701,3 +701,11 @@ describe('public contribution target guard', () => {
     expect(reviewMocks.createTaskWithDependencies).toHaveBeenCalledOnce()
   })
 })
+
+it('routes source-backed Location decisions through their review APIs instead of contribution task writes', async () => {
+  await expect(
+    reviewHandler({ id: 'locationFacts:feature:candidate:', action: 'accept' }, {}),
+  ).rejects.toMatchObject({ status: 400 })
+  expect(reviewMocks.commitTaskFeatureReview).not.toHaveBeenCalled()
+  expect(reviewMocks.commitTaskImageReview).not.toHaveBeenCalled()
+})
