@@ -28,9 +28,10 @@ const resolvedName = $derived(
   (name ?? (attrs?.name as string | undefined) ?? resolvedId) || undefined,
 )
 
+// A block input avoids baseline space that offsets extension-injected field controls.
 const inputClass = $derived(
   [
-    'bits-form__control bits-form__control--input',
+    'bits-form__control bits-form__control--input block min-w-0',
     value === '' ? 'bits-form__control--placeholder' : 'bits-form__control--filled',
     isTranslated && locale !== 'core' ? 'bits-form__control--translated' : '',
     className,
