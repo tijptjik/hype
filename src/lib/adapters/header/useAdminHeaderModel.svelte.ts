@@ -924,6 +924,7 @@ export function useAdminHeaderModel(
       saveAction,
       deleteAction,
       publishAction,
+      publishPrompt: formActions?.publishPrompt ?? null,
       previewAction,
     },
     avatar: {

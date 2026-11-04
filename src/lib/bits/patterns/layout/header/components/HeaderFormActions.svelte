@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { fly } from 'svelte/transition'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // BITS
@@ -24,6 +26,7 @@ let {
   saveAction = null,
   deleteAction = null,
   publishAction = null,
+  publishPrompt = null,
   previewAction = null,
   hideLabel = false,
 }: HeaderFormActionsProps = $props()
@@ -37,7 +40,7 @@ function resolveIconClasses(icon?: unknown): string {
 }
 </script>
 
-<div class={HEADER_FORM_ACTIONS_CLASSES}>
+<div class={cx(HEADER_FORM_ACTIONS_CLASSES, 'relative')}>
   {#if featuresAction}
     <Button
       size="sm"
@@ -162,5 +165,25 @@ function resolveIconClasses(icon?: unknown): string {
       disabled={previewAction.disabled}
       onClick={() => previewAction.onClick?.()}
     />
+  {/if}
+
+  {#if publishPrompt}
+    <div
+      class="border-border/60 bg-panel absolute top-[calc(100%+0.75rem)] right-0 z-50 flex w-[min(22rem,calc(100vw-3rem))] items-center gap-4 rounded-md border px-4 py-2 shadow-[var(--shadow-mini)]"
+      in:fly={{ y: -8, duration: 180, opacity: 0 }}
+      out:fly={{ y: -8, duration: 140, opacity: 0 }}
+      role="status"
+    >
+      <span class="text-foreground min-w-0 text-sm font-medium"
+        >{publishPrompt.text}</span
+      >
+      <Button
+        text={publishPrompt.actionText}
+        color="primary"
+        size="sm"
+        class="h-9 shrink-0 rounded-md px-4 text-sm font-medium shadow-none"
+        onClick={publishPrompt.onClick}
+      />
+    </div>
   {/if}
 </div>

@@ -5,6 +5,7 @@ import type {
   HeaderTitleMenuItemConfig,
   HeaderButtonActionConfig,
   HeaderLayoutRegionConfig,
+  HeaderPublishPromptConfig,
 } from '#lib/bits/patterns/layout/header/header.types.js'
 
 /* ----------------- */
@@ -57,6 +58,7 @@ export type HeaderFormActionsState = {
   canEdit: boolean
   disableEdit: boolean
   canPublish: boolean
+  publishPrompt?: HeaderPublishPromptConfig | null
   preview?: (() => void) | null
   showDeleteAction: boolean
   showPublishAction: boolean

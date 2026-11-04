@@ -72,14 +72,14 @@ const rootClass = $derived(
           href={brand.href}
           aria-label={brand.href ? (brand.label ?? brand.alt) : undefined}
           tabindex={isMeasuring && brand.href ? -1 : undefined}
-          class="flex size-10 shrink-0 items-center justify-center p-0.5 focus-visible:outline-2 focus-visible:outline-focus"
+          class="focus-visible:outline-focus flex size-10 shrink-0 items-center justify-center p-0.5 focus-visible:outline-2"
         >
           {#if brand.monochrome}
             <span
               role="img"
               aria-label={isMeasuring ? undefined : brand.alt}
               aria-hidden={isMeasuring}
-              class="size-full bg-panel text-base-content"
+              class="bg-panel text-base-content size-full"
             >
               <span
                 class="block size-full bg-current"
@@ -117,10 +117,10 @@ const rootClass = $derived(
     {/snippet}
 
     {#snippet right({ showButtonText })}
-      <div class="flex flex-1 items-center justify-end gap-0 mr-4 min-w-0">
+      <div class="mr-4 flex min-w-0 flex-1 items-center justify-end gap-0">
         {#if showFacets || showTaskActions || showFormActions}
           <div
-            class="flex flex-1 items-center gap-4 min-w-0"
+            class="flex min-w-0 flex-1 items-center gap-4"
             in:fade={{ duration: 140 }}
             out:fade={{ duration: 140 }}
           >
@@ -148,6 +148,7 @@ const rootClass = $derived(
                 saveAction={formActions.saveAction}
                 deleteAction={formActions.deleteAction}
                 publishAction={formActions.publishAction}
+                publishPrompt={formActions.publishPrompt}
                 previewAction={formActions.previewAction}
                 hideLabel={!showButtonText}
               />
@@ -157,7 +158,7 @@ const rootClass = $derived(
 
         {#if showFilter || showViewActions}
           <div
-            class="flex items-center gap-0 w-max max-w-full flex-none flex items-center gap-0"
+            class="flex flex w-max max-w-full flex-none items-center items-center gap-0 gap-0"
             in:fly={{ x: -12, delay: 180, duration: 180, opacity: 0.15 }}
             out:fly={{ x: 12, duration: 180, opacity: 0.15 }}
           >

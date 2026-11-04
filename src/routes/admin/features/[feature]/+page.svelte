@@ -75,6 +75,7 @@ import {
   getFeature,
   getFeatures,
   publishFeature,
+  publishFeatureImages,
 } from '#lib/api/feature.remote.js'
 import { getLayer, getLayers } from '#lib/api/layer.remote.js'
 import { getOrganisationsWhichHaveLayers } from '#lib/api/organisation.remote.js'
@@ -1300,7 +1301,43 @@ const layerIssues = $derived(
 /********************
  *  SECTION : CORE FLAGS
  ************/
+let imagePublicationPrompt = $state<{
+  featureId: string
+  routeRef: string
+} | null>(null)
 
+// Action ownership also covers the hydrated creation route, which skips form reloading.
+let featureActionRevision = 0
+$effect(() => {
+  featureRef
+  adminCtx.view.resources.scopeKey
+  featureActionRevision += 1
+  untrack(() => headerCtrl.setFormActions({ isPublishing: false, isDeleting: false }))
+  imagePublicationPrompt = null
+  return () => {
+    featureActionRevision += 1
+  }
+})
+
+/**
+ * Captures the current Feature action lifecycle independently of form hydration.
+ * @returns A predicate rejecting completions after navigation, scope change or unmount.
+ */
+function captureFeatureAction(): () => boolean {
+  const revision = featureActionRevision
+  const ref = featureRef
+  const scope = adminCtx.view.resources.scopeKey
+  return () =>
+    revision === featureActionRevision &&
+    ref === featureRef &&
+    scope === adminCtx.view.resources.scopeKey
+}
+
+/**
+ * Applies a Feature toggle acknowledgement and its native detail update.
+ * @param field Publication or archive field to toggle.
+ * @returns Completion of the write and current-route feedback.
+ */
 async function handleFeatureStateToggle(
   field: 'isPublished' | 'isArchived',
 ): Promise<void> {
@@ -1309,6 +1346,7 @@ async function handleFeatureStateToggle(
 
   if (!current) return
 
+  const isCurrentAction = captureFeatureAction()
   const nextState = !current[field]
 
   const setBusy =
@@ -1321,20 +1359,32 @@ async function handleFeatureStateToggle(
     data: { [field]: nextState },
   })
   try {
-    await (field === 'isPublished' ? publishFeature : archiveFeature)({
+    const detail = getFeature({
+      ref: current.id,
+      refKey: 'id',
+      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+    })
+    const result = await (field === 'isPublished' ? publishFeature : archiveFeature)({
       id: current.id,
       state: nextState,
       meta: { isAdminRequest: true },
-    }).updates(
-      ...mutation.updates,
-      getFeature({
-        ref: current.id,
-        refKey: 'id',
-        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
-      }),
-    )
+    }).updates(...mutation.updates, detail)
     mutation.settle(true)
-    commitSettledFeatureState(await refreshFeature())
+    if (!isCurrentAction()) return
+    // The requested native update includes publication image policy; avoid a second read.
+    if (feature?.data?.id === current.id) {
+      const refreshed =
+        detail.current?.data?.id === current.id ? detail.current.data : undefined
+      commitSettledFeatureState({
+        ...feature,
+        data: { ...feature.data, ...refreshed, ...result.data },
+      } as FeatureGetState)
+    }
+    if (field === 'isPublished') {
+      imagePublicationPrompt = nextState
+        ? { featureId: current.id, routeRef: featureRef }
+        : null
+    }
     toast.success(
       field === 'isPublished'
         ? nextState
@@ -1346,11 +1396,143 @@ async function handleFeatureStateToggle(
     )
   } catch {
     mutation.settle(false)
+    if (!isCurrentAction()) return
     toast.error(m.long_crazy_peacock_care())
   } finally {
-    setBusy(false)
+    if (isCurrentAction()) setBusy(false)
   }
 }
+
+const shouldOfferImagePublication = $derived(
+  selectedProject?.flags?.autoFeatureFirstImage === false &&
+    (feature?.data?.images ?? []).some(
+      image => image.intent !== 'research' && !image.isPublished,
+    ),
+)
+
+/**
+ * Applies the bulk-publication result to every active non-research image envelope.
+ *
+ * @param value Feature record whose gallery state should be projected locally.
+ * @returns A Feature record with only publishable image assignments updated.
+ */
+function withPublishedFeatureImages(value: Feature): Feature {
+  const markPublished = (
+    image: NonNullable<Feature['images']>[number],
+  ): NonNullable<Feature['images']>[number] =>
+    image.intent === 'research' || image.isPublished
+      ? image
+      : { ...image, isPublished: true }
+
+  return {
+    ...value,
+    image: value.image ? markPublished(value.image) : value.image,
+    images: value.images?.map(markPublished),
+  }
+}
+
+/** Publishes all active non-research photos after the editor explicitly opts in.
+ * @returns Resolves when the Feature image state has been refreshed.
+ */
+async function publishRemainingFeatureImages(): Promise<void> {
+  const current = feature?.data
+  const previousFeatureState = feature
+  if (!current || !previousFeatureState) return
+  const isCurrentAction = captureFeatureAction()
+  headerCtrl.setPublishing(true)
+  const optimisticFeature = withPublishedFeatureImages(current)
+  const optimisticFeatureState = { ...previousFeatureState, data: optimisticFeature }
+  const mutation = adminCtx.view.cacheCtx.beginMutation('feature', {
+    meta: { id: current.id },
+    data: {
+      image: optimisticFeature.image,
+      images: optimisticFeature.images,
+    },
+  })
+  // Keep the form and gallery in step with the shared cache while the command is in flight.
+  commitFeatureState(optimisticFeatureState)
+  // Svelte wraps the assigned record; compare the retained proxy rather than the input object.
+  const appliedFeatureState = feature
+  // Retain only changed publication fields, keyed by the actual assigned image proxies.
+  type GalleryImage = NonNullable<Feature['image']>
+  const publicationBefore = new Map<GalleryImage, GalleryImage['isPublished']>()
+  if (feature?.data?.image && current.image && feature.data.image !== current.image)
+    publicationBefore.set(feature.data.image, current.image.isPublished)
+  feature?.data?.images?.forEach((image, index) => {
+    const previous = current.images?.[index]
+    if (previous && image !== previous)
+      publicationBefore.set(image, previous.isPublished)
+  })
+  /**
+   * Reverts this action's publication field without replacing other image data.
+   * @param image Current image envelope, potentially edited while the command was pending.
+   * @returns The preserved envelope with only an owned publication change reverted.
+   */
+  const rollbackImage = (image: GalleryImage): GalleryImage =>
+    publicationBefore.has(image)
+      ? { ...image, isPublished: publicationBefore.get(image)! }
+      : image
+  try {
+    const detail = getFeature({
+      ref: current.id,
+      refKey: 'id',
+      meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+    })
+    await publishFeatureImages({
+      id: current.id,
+      meta: { isAdminRequest: true },
+    }).updates(...mutation.updates, detail)
+    mutation.settle(true)
+    if (!isCurrentAction()) return
+    // Use the native refresh, retaining newer editor data if no detail was returned.
+    if (detail.current?.data?.id === current.id) {
+      commitSettledFeatureState(detail.current as FeatureGetState)
+    } else if (feature === appliedFeatureState) {
+      commitSettledFeatureState(feature)
+    }
+    toast.success(m.feature_images_published())
+  } catch {
+    mutation.settle(false)
+    if (!isCurrentAction()) return
+    // Preserve gallery membership and metadata edits while reverting owned publication fields.
+    if (feature?.data?.id === current.id) {
+      commitFeatureState({
+        ...feature,
+        data: {
+          ...feature.data,
+          image: feature.data.image
+            ? rollbackImage(feature.data.image)
+            : feature.data.image,
+          images: feature.data.images?.map(rollbackImage),
+        },
+      })
+    }
+    toast.error(m.long_crazy_peacock_care())
+  } finally {
+    if (isCurrentAction()) headerCtrl.setPublishing(false)
+  }
+}
+
+// Anchor the follow-up action to the publish control so it moves with the admin drawer without resizing content.
+$effect(() => {
+  const current = feature?.data
+  if (
+    !current?.isPublished ||
+    !shouldOfferImagePublication ||
+    imagePublicationPrompt?.featureId !== current.id ||
+    imagePublicationPrompt?.routeRef !== featureRef
+  ) {
+    headerCtrl.setFormActions({ publishPrompt: null })
+    return
+  }
+  headerCtrl.setFormActions({
+    publishPrompt: {
+      text: m.feature_unpublished_photos(),
+      actionText: m.publish_children__all(),
+      onClick: () => void publishRemainingFeatureImages(),
+    },
+  })
+})
 
 function onPublishToggle(): void {
   void handleFeatureStateToggle('isPublished')
@@ -2597,7 +2779,7 @@ $effect(() => () => clearVisualSectionReopenState())
                 </div>
               {/if}
               {#if isAddressFacet && sharedLocationMapControls}
-                <div class="absolute right-3 top-3 z-10" data-location-map-controls>
+                <div class="absolute top-3 right-3 z-10" data-location-map-controls>
                   {@render sharedLocationMapControls()}
                 </div>
               {/if}
@@ -2659,7 +2841,7 @@ $effect(() => () => clearVisualSectionReopenState())
                 onClick={startLocationSearch}
               />
             </div>
-            <p class="text-center text-muted-foreground">
+            <p class="text-muted-foreground text-center">
               {m.feature_start_description()}
             </p>
           </div>
@@ -2757,32 +2939,32 @@ $effect(() => () => clearVisualSectionReopenState())
     >
       {#if nonTranslatableItems.length === 0 && translatableSpecifierItems.length === 0}
         <div
-          class="flex min-h-72 h-full flex-col items-center justify-center gap-3 px-6 py-12 text-center"
+          class="flex h-full min-h-72 flex-col items-center justify-center gap-3 px-6 py-12 text-center"
         >
           <h2 class="text-xl font-semibold tracking-tight">
             {m.feature__fields_empty_title()}
           </h2>
-          <p class="max-w-md text-sm text-muted-foreground">
+          <p class="text-muted-foreground max-w-md text-sm">
             {m.feature__fields_empty_description()}
           </p>
           <div class="mt-2 flex flex-wrap justify-center gap-4">
             {#if projectIdValue}
               <a
-                class="font-medium text-primary underline underline-offset-4"
+                class="text-primary font-medium underline underline-offset-4"
                 href={`/admin/projects/${projectIdValue}#fields`}
                 >{m.feature__fields_configure_project()}</a
               >
             {/if}
             {#if layerIdValue}
               <a
-                class="font-medium text-primary underline underline-offset-4"
+                class="text-primary font-medium underline underline-offset-4"
                 href={`/admin/layers/${layerIdValue}#fields`}
                 >{m.feature__fields_configure_layer()}</a
               >
             {/if}
             {#if !layerIdValue}
               <a
-                class="font-medium text-primary underline underline-offset-4"
+                class="text-primary font-medium underline underline-offset-4"
                 href="#core"
                 >{m.feature__fields_choose_layer()}</a
               >
@@ -2884,12 +3066,12 @@ $effect(() => () => clearVisualSectionReopenState())
             {#if placeLinkError && pendingPlaceLink?.featureId === currentFeatureId}
               <div
                 role="alert"
-                class="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-6 py-3 text-sm"
+                class="border-border flex shrink-0 flex-wrap items-center gap-3 border-b px-6 py-3 text-sm"
               >
                 <span>{m.feature_search_link_pending_saved()}</span>
                 <button
                   type="button"
-                  class="rounded-lg bg-primary px-3 py-2 text-white"
+                  class="bg-primary rounded-lg px-3 py-2 text-white"
                   disabled={placeLinkBusy || isDirty}
                   onclick={() => {
                     if (feature?.data) void finishDraftPlaceLink(feature.data)
@@ -2899,7 +3081,7 @@ $effect(() => () => clearVisualSectionReopenState())
                 </button>
                 <button
                   type="button"
-                  class="rounded-lg px-3 py-2 hover:bg-muted"
+                  class="hover:bg-muted rounded-lg px-3 py-2"
                   disabled={placeLinkBusy}
                   onclick={() => {
                     if (pendingPlaceLink)

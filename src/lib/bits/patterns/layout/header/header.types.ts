@@ -36,6 +36,12 @@ export type HeaderActionConfig =
   | ({ kind: 'button' } & HeaderButtonActionConfig)
   | ({ kind: 'status' } & HeaderStatusActionConfig)
 
+export interface HeaderPublishPromptConfig {
+  text: string
+  actionText: string
+  onClick: () => void
+}
+
 export interface HeaderTitleMenuItemConfig {
   label: string
   onSelect?: () => void
@@ -112,6 +118,7 @@ export interface HeaderFormActionsConfig {
   saveAction?: HeaderButtonActionConfig | null
   deleteAction?: HeaderButtonActionConfig | null
   publishAction?: HeaderActionConfig | null
+  publishPrompt?: HeaderPublishPromptConfig | null
   previewAction?: HeaderButtonActionConfig | null
 }
 
