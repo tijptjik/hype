@@ -1,5 +1,7 @@
 // DRIZZLE
 import { and, eq, exists, isNull, like, or, sql, type SQL } from 'drizzle-orm'
+// IDENTITY
+import { nanoid } from 'nanoid'
 // SCHEMA
 import {
   organisation,
@@ -23,8 +25,12 @@ import {
   toRelatedRecords,
 } from '..'
 import { insertMany, insertManyRelated, replaceManyRelated } from '../crud'
+import { prepareGuardedReplacement } from './guardedReplacement.js'
+import { preparePropertyCatalog } from './property.js'
+import { executeRevisionBatch } from './revisionBatch.js'
 // TYPES
 import type { InferInsertModel } from 'drizzle-orm'
+import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database, ListResponse, Locale, LocaleKey, Id } from '#lib/types.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
 import type {
@@ -62,6 +68,7 @@ type HubCommandProbe = {
 //
 // 1.1 CRUD :: CREATE
 //    - createHub
+//    - prepareHubRelations (internal)
 //    - createI18n
 //    - createUserRoles
 //
@@ -105,6 +112,7 @@ type HubCommandProbe = {
 //    - syncUserRoles
 //    - upsertHubUserState
 //    - syncOrganisations
+//    - prepareHubOrganisations (internal)
 //    - syncHubLayerDefaults
 //
 // 4. CRUD :: DELETE
@@ -123,11 +131,110 @@ type HubCommandProbe = {
 // 1.1 CRUD :: CREATE
 // ═══════════════════════
 
+/** Complete optional hub collections, already authorized by the form handler. */
+type HubRelations = {
+  properties?: Array<Record<string, unknown>>
+  i18n?: Record<LocaleKey, HubI18nPartial>
+  userRoles?: Array<{ userId: string; role: string }>
+  organisations?: Array<{
+    organisationId: string
+    isCoreInclusive: boolean
+    isHubExclusive: boolean
+  }>
+  layerDefaults?: Array<{ layerId: string; isDefaultVisible: boolean }>
+}
+
 /**
- * createHub operation.
- * Used by hub DB workflows to keep persistence behavior centralized.
+ * Prepares owned hub relations under one parent revision.
+ * @param db Request database.
+ * @param id Authorized hub identity.
+ * @param relations Complete submitted collections; omitted collections stay intact.
+ * @param guard Parent revision predicate for each mutation.
+ * @returns Unexecuted statements for the enclosing atomic batch.
  */
-export const createHub = async (db: Database, data: HubDBNew): Promise<HubDB> => {
+function prepareHubRelations(
+  db: Database,
+  id: Id,
+  relations: HubRelations,
+  guard: SQL,
+): BatchItem<'sqlite'>[] {
+  const writes: BatchItem<'sqlite'>[] = []
+  // Each replacement rechecks the parent token before deleting or inserting owned rows.
+  if (relations.i18n !== undefined)
+    writes.push(
+      ...prepareGuardedReplacement(
+        db,
+        hubI18n,
+        toRelatedRecords(relations.i18n, 'hubId', id, 'locale') as InferInsertModel<
+          typeof hubI18n
+        >[],
+        hubI18n.hubId,
+        id,
+        guard,
+      ),
+    )
+  if (relations.userRoles !== undefined)
+    writes.push(
+      ...prepareGuardedReplacement(
+        db,
+        hubRole,
+        toUserRoles(relations.userRoles, id),
+        hubRole.hubId,
+        id,
+        guard,
+      ),
+    )
+  if (relations.organisations !== undefined)
+    writes.push(...prepareHubOrganisations(db, id, relations.organisations, guard))
+  if (relations.layerDefaults !== undefined)
+    writes.push(
+      ...prepareGuardedReplacement(
+        db,
+        hubLayer,
+        relations.layerDefaults.map(row => ({ ...row, hubId: id })),
+        hubLayer.hubId,
+        id,
+        guard,
+      ),
+    )
+  return writes
+}
+
+/**
+ * Creates a hub with optional translations, roles, organisation assignments and defaults.
+ * @param db Request database.
+ * @param data New hub fields.
+ * @param relations Optional complete collections from the authorized form.
+ * @returns The persisted hub.
+ * @remarks All submitted collections commit with the parent; failure rolls back the entire batch.
+ */
+export const createHub = async (
+  db: Database,
+  data: HubDBNew,
+  relations?: HubRelations,
+): Promise<HubDB> => {
+  if (relations) {
+    const id = data.id ?? nanoid(12)
+    const catalog =
+      relations.properties !== undefined
+        ? await preparePropertyCatalog(
+            db,
+            relations.properties as Parameters<typeof preparePropertyCatalog>[1],
+            { scope: 'hub', id },
+          )
+        : null
+    // Parent identity conflicts must fail before any existing assignments can be changed.
+    const [created] = await db.batch([
+      db
+        .insert(hub)
+        .values({ ...data, id })
+        .returning(),
+      ...prepareHubRelations(db, id, relations, sql`1`),
+      ...(catalog?.statements ?? []),
+    ])
+    if (!created[0]) throw new Error('Hub creation returned no row')
+    return created[0] as HubDB
+  }
   const [created] = await db.insert(hub).values(data).returning()
   return created
 }
@@ -671,10 +778,11 @@ export const listHubLayerDefaults = async (
  * @param db - The database instance.
  * @param params - Update payload including expected `updatedAt`.
  * @returns Updated id/modifiedAt pair or `null` when stale/missing.
+ * @remarks Submitted relations and assignments share the parent revision and transaction.
  */
 export const updateHubByIdWithConcurrency = async (
   db: Database,
-  params: {
+  params: HubRelations & {
     id: Id
     updatedAt: string
     data: Partial<
@@ -690,15 +798,39 @@ export const updateHubByIdWithConcurrency = async (
     }
   },
 ): Promise<{ id: string; modifiedAt: string } | null> => {
-  const [updated] = await db
-    .update(hub)
-    .set(params.data)
-    .where(and(eq(hub.id, params.id), eq(hub.modifiedAt, params.updatedAt)))
-    .returning({
-      id: hub.id,
-      modifiedAt: hub.modifiedAt,
-    })
+  const revisionGuard = and(eq(hub.id, params.id), eq(hub.modifiedAt, params.updatedAt))
+  const updateCore = db.update(hub).set(params.data).where(revisionGuard).returning({
+    id: hub.id,
+    modifiedAt: hub.modifiedAt,
+  })
 
+  const guard = exists(db.select({ id: hub.id }).from(hub).where(revisionGuard))
+  const writes = prepareHubRelations(db, params.id, params, guard)
+
+  if (params.properties !== undefined) {
+    const catalog = await preparePropertyCatalog(
+      db,
+      params.properties as Parameters<typeof preparePropertyCatalog>[1],
+      { scope: 'hub', id: params.id },
+    )
+    // Check the revision inside the batch before any catalog mutation can run.
+    const results = await executeRevisionBatch(db, guard, [
+      catalog.statements[0],
+      ...catalog.statements.slice(1),
+      ...writes,
+      updateCore,
+    ])
+    if (!results) return null
+    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
+    return rows[0] ?? null
+  }
+  if (writes.length) {
+    // Advance the parent token last, after every related mutation checked the same revision.
+    const results = await db.batch([writes[0], ...writes.slice(1), updateCore])
+    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
+    return rows[0] ?? null
+  }
+  const [updated] = await updateCore
   return updated ?? null
 }
 
@@ -859,12 +991,29 @@ export const syncOrganisations = async (
     isHubExclusive: boolean
   }>,
 ): Promise<void> => {
+  await db.batch(prepareHubOrganisations(db, hubId, nextRows, sql`1`))
+}
+
+/**
+ * Prepares organisation assignments without executing a separate transaction.
+ * @param db Request database.
+ * @param hubId Authorized hub identity.
+ * @param nextRows Complete organisation assignment set.
+ * @param guard Parent revision predicate; stale submissions leave all assignments intact.
+ * @returns Statements that validate targets, detach previous assignments and apply replacements.
+ */
+function prepareHubOrganisations(
+  db: Database,
+  hubId: Id,
+  nextRows: NonNullable<HubRelations['organisations']>,
+  guard: SQL,
+): [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]] {
   const ids = [...new Set(nextRows.map(row => row.organisationId))]
   // CASE short-circuits: invalid JSON deliberately aborts the batch only when a target is missing.
   // Keep this existence check inside the transaction, not in a stale preflight read.
   const targetCheck = db
     .select({
-      valid: sql<number>`case when count(*) = ${ids.length} then 1
+      valid: sql<number>`case when not (${guard}) or count(*) = ${ids.length} then 1
       else json('HUB_ORGANISATION_NOT_FOUND') end`,
     })
     .from(organisation)
@@ -872,7 +1021,7 @@ export const syncOrganisations = async (
   const detach = db
     .update(organisation)
     .set({ hubId: null, isCoreInclusive: true, isHubExclusive: false })
-    .where(eq(organisation.hubId, hubId))
+    .where(and(eq(organisation.hubId, hubId), guard))
   const assignments = nextRows.map(row =>
     db
       .update(organisation)
@@ -881,12 +1030,11 @@ export const syncOrganisations = async (
         isCoreInclusive: row.isCoreInclusive,
         isHubExclusive: row.isHubExclusive,
       })
-      .where(eq(organisation.id, row.organisationId)),
+      .where(and(eq(organisation.id, row.organisationId), guard)),
   )
 
   // Each update has a bounded parameter count; do not split the transaction by statement count.
-  if (ids.length === 0) await db.batch([detach])
-  else await db.batch([targetCheck, detach, ...assignments])
+  return ids.length === 0 ? [detach] : [targetCheck, detach, ...assignments]
 }
 
 /**

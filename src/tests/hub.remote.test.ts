@@ -475,15 +475,28 @@ describe('hub.remote form image handling', () => {
       'substack.sid=substack-session',
     )
     expect(createPayload).not.toHaveProperty('subscriptionBenefits')
-    expect(mockCreateI18n).toHaveBeenCalledWith(
+    expect(mockCreateHub).toHaveBeenCalledWith(
       db,
+      expect.any(Object),
       expect.objectContaining({
-        en: expect.objectContaining({
-          subscriptionBenefits: 'Subscriber-only updates',
+        i18n: expect.objectContaining({
+          en: expect.objectContaining({
+            subscriptionBenefits: 'Subscriber-only updates',
+          }),
         }),
+        userRoles: [{ userId: 'u-1', role: 'admin' }],
+        organisations: [],
+        layerDefaults: [],
+        properties: [],
       }),
-      expect.any(String),
     )
+    expect(mockCreateI18n).not.toHaveBeenCalled()
+    expect(mockCreateHubUserRoles).not.toHaveBeenCalled()
+    expect(
+      (await import('#lib/db/services/property.js')).syncHubProperties,
+    ).not.toHaveBeenCalled()
+    expect(mockSyncHubOrganisations).not.toHaveBeenCalled()
+    expect(mockSyncHubLayerDefaults).not.toHaveBeenCalled()
   })
 
   it('update mode ignores imageId from incoming form payload', async () => {
@@ -599,15 +612,22 @@ describe('hub.remote form image handling', () => {
     expect(
       mockUpdateHubByIdWithConcurrency.mock.calls[0]?.[1]?.data,
     ).not.toHaveProperty('subscriptionBenefits')
-    expect(mockUpdateI18n).toHaveBeenCalledWith(
+    expect(mockUpdateHubByIdWithConcurrency).toHaveBeenCalledWith(
       db,
       expect.objectContaining({
-        en: expect.objectContaining({
-          subscriptionBenefits: 'Subscriber-only invites',
+        i18n: expect.objectContaining({
+          en: expect.objectContaining({
+            subscriptionBenefits: 'Subscriber-only invites',
+          }),
         }),
+        userRoles: expect.any(Array),
+        organisations: expect.any(Array),
       }),
-      'hub-1',
     )
+    expect(mockUpdateI18n).not.toHaveBeenCalled()
+    expect(mockSyncHubUserRoles).not.toHaveBeenCalled()
+    expect(mockSyncHubOrganisations).not.toHaveBeenCalled()
+    expect(mockSyncHubLayerDefaults).not.toHaveBeenCalled()
   })
 
   it('update mode tolerates submissions that omit legalContactAddress', async () => {

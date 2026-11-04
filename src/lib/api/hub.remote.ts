@@ -48,8 +48,6 @@ import { isReservedHubCode } from '#lib/hub-domains.js'
 // SERVICES
 import {
   createHub,
-  createI18n,
-  createUserRoles,
   getHubSubscriptionTarget,
   probeExistingHub,
   probeHubForUpdate,
@@ -58,17 +56,12 @@ import {
   updateHubArchivedStateById,
   updateHubByIdWithConcurrency,
   probeHubQuery,
-  updateI18n,
-  syncUserRoles,
   upsertHubUserState,
   listUserRoles,
   listOrganisations,
   listHubs,
   getHub as loadHub,
-  syncOrganisations,
-  syncHubLayerDefaults,
 } from '#lib/db/services/hub.js'
-import { syncHubProperties } from '#lib/db/services/property.js'
 import {
   normalizeSubstackSessionCookie,
   normalizeSubstackSubscriptionId,
@@ -372,32 +365,34 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     }
 
     // Create main record and related rows.
-    const created = await createHub(db, {
-      id: nanoid(12),
-      code: normalizedCode,
-      domain: normalizedDomain === '' ? null : normalizedDomain,
-      legalContactAddress:
-        normalizedLegalContactAddress === '' ? null : normalizedLegalContactAddress,
-      isSubscriptionAvailable: Boolean(data.isSubscriptionAvailable),
-      subscriptionService: data.subscriptionService,
-      subscriptionId: normalizedSubscriptionId === '' ? null : normalizedSubscriptionId,
-      subscriptionSessionCookie:
-        normalizedSubscriptionSessionCookie === ''
-          ? null
-          : normalizedSubscriptionSessionCookie,
-      subscriptionPlacement: data.subscriptionPlacement,
-      isPublished: true,
-      isArchived: false,
-    })
-
-    await createI18n(db, data.i18n, created.id)
-    await createUserRoles(db, submittedRoles, created.id)
-    await syncOrganisations(db, created.id, submittedOrganisations)
-    await syncHubLayerDefaults(db, created.id, submittedLayerDefaults)
-    await syncHubProperties(db, {
-      hubId: created.id,
-      properties: normalizedSubmittedProperties as Array<Record<string, unknown>>,
-    })
+    const created = await createHub(
+      db,
+      {
+        id: nanoid(12),
+        code: normalizedCode,
+        domain: normalizedDomain === '' ? null : normalizedDomain,
+        legalContactAddress:
+          normalizedLegalContactAddress === '' ? null : normalizedLegalContactAddress,
+        isSubscriptionAvailable: Boolean(data.isSubscriptionAvailable),
+        subscriptionService: data.subscriptionService,
+        subscriptionId:
+          normalizedSubscriptionId === '' ? null : normalizedSubscriptionId,
+        subscriptionSessionCookie:
+          normalizedSubscriptionSessionCookie === ''
+            ? null
+            : normalizedSubscriptionSessionCookie,
+        subscriptionPlacement: data.subscriptionPlacement,
+        isPublished: true,
+        isArchived: false,
+      },
+      {
+        i18n: data.i18n,
+        userRoles: submittedRoles,
+        organisations: submittedOrganisations,
+        layerDefaults: submittedLayerDefaults,
+        properties: normalizedSubmittedProperties as Array<Record<string, unknown>>,
+      },
+    )
 
     return toCreatedResponseShape(created)
   }
@@ -486,6 +481,15 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
   const result = await updateHubByIdWithConcurrency(db, {
     id: current.id,
     updatedAt: updatedAt as string,
+    i18n: data.i18n,
+    userRoles: submittedRoles,
+    organisations: submittedOrganisations,
+    ...(hasSubmittedLayerDefaultsField
+      ? { layerDefaults: submittedLayerDefaults }
+      : {}),
+    ...(hasSubmittedPropertiesField
+      ? { properties: normalizedSubmittedProperties as Array<Record<string, unknown>> }
+      : {}),
     data: {
       code: normalizedCode,
       domain: normalizedDomain === '' ? null : normalizedDomain,
@@ -506,19 +510,7 @@ export const hubForm = guardedForm('unchecked', async (input, ctx) => {
     invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
   )
 
-  // Persist related i18n, roles, and organisation assignments.
-  await updateI18n(db, data.i18n, current.id)
-  await syncUserRoles(db, submittedRoles, current.id)
-  await syncOrganisations(db, current.id, submittedOrganisations)
-  if (hasSubmittedLayerDefaultsField) {
-    await syncHubLayerDefaults(db, current.id, submittedLayerDefaults)
-  }
-  if (hasSubmittedPropertiesField) {
-    await syncHubProperties(db, {
-      hubId: current.id,
-      properties: normalizedSubmittedProperties as Array<Record<string, unknown>>,
-    })
-  }
+  // Translations, roles, organisation assignments and submitted layer defaults committed above.
 
   // Return persisted identity and write token.
   return toCreatedResponseShape(persisted)
