@@ -69,8 +69,8 @@ function setup(withOrphan = false) {
     CREATE TABLE userFeature(userId TEXT, featureId TEXT, isWishlisted INTEGER, isVisited INTEGER, visitedAt TEXT, createdAt TEXT, modifiedAt TEXT, PRIMARY KEY(userId,featureId));
     CREATE TABLE featureSpatial(featureId TEXT, resolution INTEGER, cell TEXT, latitude REAL, longitude REAL, PRIMARY KEY(featureId,resolution));
     CREATE INDEX featureSpatial_cell_layer_idx ON featureSpatial(resolution,cell,featureId,longitude,latitude);
-    CREATE TABLE layer(id TEXT PRIMARY KEY, projectId TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER);
-    CREATE TABLE project(id TEXT PRIMARY KEY, code TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER);
+    CREATE TABLE layer(id TEXT PRIMARY KEY, projectId TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER, historicalSourceLayerId TEXT);
+    CREATE TABLE project(id TEXT PRIMARY KEY, code TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER, flags TEXT DEFAULT '{}');
     CREATE TABLE organisation(id TEXT PRIMARY KEY, code TEXT, hubId TEXT, isHubExclusive INTEGER, isCoreInclusive INTEGER, isPublished INTEGER, isArchived INTEGER);
     CREATE TABLE hub(id TEXT PRIMARY KEY, code TEXT, domain TEXT);
     CREATE TABLE hubRole(hubId TEXT, userId TEXT, role TEXT);
@@ -100,6 +100,8 @@ function setup(withOrphan = false) {
     ALTER TABLE locationRevision RENAME COLUMN placeId TO locationId;
     ALTER TABLE featurePlace RENAME TO featureLocation;
     ALTER TABLE featureLocation RENAME COLUMN placeId TO locationId;
+    ALTER TABLE featureLocation RENAME COLUMN overrides TO acceptedOverrides;
+    ALTER TABLE featureLocation ADD COLUMN acceptancePolicy TEXT NOT NULL DEFAULT '{}';
     ALTER TABLE featurePlaceHistory RENAME TO featureLocationHistory;
     ALTER TABLE featureLocationHistory RENAME COLUMN placeId TO locationId;
     ALTER TABLE feature RENAME COLUMN localPlaceBrands TO localLocationBrands;
@@ -540,7 +542,7 @@ describe('indexed feature queries', () => {
     sqlite.exec(`INSERT INTO hub VALUES('hub', 'test', 'test.example');
       INSERT INTO organisation VALUES('org', 'org', 'hub', 0, 0, 1, 0),('org2', 'org2', NULL, 0, 0, 1, 0);
       INSERT INTO project(id,code,organisationId,isPublished,isArchived) VALUES('project','project','org',1,0),('project2','project2','org',1,0),('project3','project3','org2',1,0);
-      INSERT INTO layer VALUES('layer','project','org',1,0),('other','project','org',1,0),('layer2','project2','org',1,0),('layer3','project3','org2',1,0);`)
+      INSERT INTO layer(id,projectId,organisationId,isPublished,isArchived) VALUES('layer','project','org',1,0),('other','project','org',1,0),('layer2','project2','org',1,0),('layer3','project3','org2',1,0);`)
     // The shared hub EXISTS helper selects the complete hierarchy schema.
     for (const [name, table] of Object.entries({
       layer: schema.layer,
@@ -1117,6 +1119,37 @@ describe('indexed feature queries', () => {
       expect(plan.join('\n')).toContain(
         'SEARCH featureProperty USING INDEX sqlite_autoindex_featureProperty_1 (featureId=? AND propertyId=?)',
       )
+  })
+
+  it('navigation pages select only IDs while retaining authorization and localized ordering', async () => {
+    const { db, statements } = setup()
+    const first = await listFeatures(
+      db,
+      {},
+      [...base],
+      hub,
+      { limit: 2 },
+      { sortBy: 'title', sortOrder: 'asc' },
+      { idsOnly: true, locale: 'en' },
+    )
+    expect(first.data.every(row => Object.keys(row).join(',') === 'id')).toBe(true)
+    expect(first.data).toHaveLength(2)
+    expect(first.hasMore).toBe(true)
+    const second = await listFeatures(
+      db,
+      {},
+      [...base],
+      hub,
+      { limit: 2, offset: 2 },
+      { sortBy: 'title', sortOrder: 'asc' },
+      { idsOnly: true, locale: 'en' },
+    )
+    expect(new Set([...first.data, ...second.data].map(row => row.id)).size).toBe(4)
+    expect(second.hasMore).toBe(false)
+    const sql = statements.join('\n')
+    expect(sql).not.toContain('featureLocation')
+    expect(sql).not.toContain('featureProperty')
+    expect(sql).not.toContain('featureImage')
   })
 
   it('legacy feature pages count before both ID and sort-value cursors without mutating authorization', async () => {
