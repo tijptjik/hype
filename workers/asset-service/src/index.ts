@@ -2169,17 +2169,29 @@ const handleRawRequest = async (
     return new Response('Image not found', { status: 404 })
   }
 
+  // Export saved orientation at full resolution without rewriting or resizing the stored source.
+  const rotation = resolvedMetadata.document?.renderRotation
+  const shouldRotate = rotation === 90 || rotation === 180 || rotation === 270
+  const contentType = shouldRotate ? 'image/png' : source.contentType
+  let body = source.body
+  if (shouldRotate && request.method !== 'HEAD') {
+    const decoded = await decodeSourceImage(source)
+    const rotated = rotatePixels(decoded.data, rotation)
+    // PNG retains every decoded pixel and its alpha instead of adding lossy recompression.
+    body = (await encodeOutput(rotated, 'png', 'auto', decoded.hasAlpha)).body
+  }
+
   const filename = toRawDownloadFilename(
     rawRequest.publicId,
     source.objectKey,
-    source.contentType,
+    contentType,
     resolvedMetadata.document,
   )
 
-  return new Response(request.method === 'HEAD' ? null : source.body, {
+  return new Response(request.method === 'HEAD' ? null : body, {
     headers: {
       'cache-control': source.version ? CACHE_CONTROL_IMMUTABLE : CACHE_CONTROL_SHORT,
-      'content-type': source.contentType,
+      'content-type': contentType,
       'content-disposition': `attachment; filename="${filename}"`,
       'x-image-source-env': source.stage,
       ...(source.version ? { 'x-image-version': String(source.version) } : {}),

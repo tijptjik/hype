@@ -2666,7 +2666,7 @@ export class ImageCtx {
   // 9. Download Functionality
   // ═══════════════════════
   /**
-   * Starts a browser download for the provided image's original asset.
+   * Starts a full-resolution browser download with the image's saved orientation.
    *
    * @param _e Click event placeholder for template compatibility.
    * @param image Optional image to download; defaults to the active image.
@@ -2683,6 +2683,8 @@ export class ImageCtx {
         raw: true,
         rawTransformation: '',
       })
+      // Avoid reusing a cached original from before raw downloads applied saved orientation.
+      downloadUrl += '?download=1'
     } else {
       throw new Error('Unsupported CDN')
     }
