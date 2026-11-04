@@ -3,6 +3,8 @@ import { m, toLocaleKey, translateI18nFields } from '#lib/i18n.js'
 // API
 import { createLayer, getLayer, getLayers } from '#lib/api/layer.remote.js'
 import { getProjectProperties as getProjectPropertiesRemote } from '#lib/api/property.remote.js'
+// REMOTE
+import { refreshRemoteQuery } from '#lib/remote/index.js'
 // CONTEXT
 import type { ImportCtx } from '#lib/context/import.svelte.js'
 // TYPES
@@ -148,35 +150,77 @@ function _mergeProjectProperties(layer: Layer, properties: Property[]): Layer {
 }
 
 // Get project properties for merging with new layer
+/**
+ * Loads the property definitions required for creating a complete import layer.
+ * @param projectId Destination project identity.
+ * @returns Project properties, including an empty list for projects without properties.
+ * @remarks Lookup failures propagate so they cannot be mistaken for an empty project.
+ */
 async function getProjectProperties(projectId: string): Promise<Property[]> {
   try {
-    const result = await getProjectPropertiesRemote({
-      projectId,
-      meta: { isAdminRequest: true },
-    })
+    const result = await refreshRemoteQuery(
+      getProjectPropertiesRemote({
+        projectId,
+        meta: { isAdminRequest: true },
+      }),
+    )
     return (Array.isArray(result.data) ? result.data : []) as Property[]
   } catch (error) {
     console.error('Error fetching project properties:', error)
-    return []
+    throw error
   }
 }
 
 // Preload all layers for the project
-export async function preloadLayers(projectId: string): Promise<Layer[]> {
+/**
+ * Reads every accessible layer page required for import matching.
+ * @param projectId Destination project identity.
+ * @param isCurrent Whether this preload still owns the import requesting it.
+ * @returns All matching layers, or an empty list on cancellation.
+ * @throws When any catalogue page cannot be loaded.
+ * @remarks Follows server pagination; never expose a successful partial catalogue.
+ */
+export async function preloadLayers(
+  projectId: string,
+  isCurrent: () => boolean = () => true,
+): Promise<Layer[]> {
   try {
-    const result = await getLayers({
-      conditions: {
-        projectId,
-        isPublished: null,
-        isArchived: false,
-      },
-      pagination: { limit: 500, offset: 0 },
-      meta: { isAdminRequest: true, profile: 'admin' },
-    })
-    return (Array.isArray(result.data) ? result.data : []) as Layer[]
+    const layers = new Map<string, Layer>()
+    let offset = 0
+    const limit = 500
+    // Follow the server continuation so project size cannot hide valid import targets.
+    while (true) {
+      if (!isCurrent()) return []
+      const result = await refreshRemoteQuery(
+        getLayers({
+          conditions: {
+            projectId,
+            isPublished: null,
+            isArchived: false,
+          },
+          pagination: { limit, offset },
+          meta: { isAdminRequest: true, profile: 'admin' },
+        }),
+      )
+      if (!isCurrent()) return []
+      const rows = (Array.isArray(result.data) ? result.data : []) as Layer[]
+      for (const row of rows) layers.set(row.id, row)
+      const hasMore =
+        result.hasMore ??
+        (typeof result.totalCount === 'number'
+          ? offset + rows.length < result.totalCount
+          : rows.length === limit)
+      if (!hasMore) break
+      const nextOffset = result.nextOffset ?? offset + rows.length
+      if (rows.length === 0 || nextOffset <= offset) {
+        throw new Error('Layer pagination did not advance')
+      }
+      offset = nextOffset
+    }
+    return [...layers.values()]
   } catch (error) {
     console.error('Error preloading layers:', error)
-    return []
+    throw error
   }
 }
 
@@ -540,6 +584,20 @@ function getLayerReferenceForRow(
 }
 
 // Layer validation orchestration
+/**
+ * Validates mapped layer references while the caller owns the import operation.
+ * @param layerColumns Mapped layer columns.
+ * @param sampleData CSV rows.
+ * @param headers CSV header order.
+ * @param projectId Destination project.
+ * @param locale Fallback name locale.
+ * @param onProgress Current validation progress callback.
+ * @param onResults Completed result callback.
+ * @param isCurrent Ownership check before further processing or publication.
+ * @param refreshedCatalogue Optional catalogue freshly loaded by this validation operation.
+ * @returns Validation results, or an empty result when superseded.
+ * @remarks Callers must recheck ownership before advancing or enriching rows.
+ */
 export async function validateLayers(
   layerColumns: FeatureCSVColumn[],
   sampleData: string[][],
@@ -548,13 +606,17 @@ export async function validateLayers(
   locale: string,
   onProgress: (progress: number, total: number) => void,
   onResults: (results: LayerValidationResult[]) => void,
+  isCurrent: () => boolean = () => true,
+  refreshedCatalogue?: Layer[],
 ): Promise<{ invalidCount: number; results: LayerValidationResult[] }> {
   const layerReferences = getLayerReferences(layerColumns, sampleData, headers, locale)
   const results: LayerValidationResult[] = []
-  const allLayers = await preloadLayers(projectId)
+  if (!isCurrent()) return { invalidCount: 0, results: [] }
+  const allLayers = refreshedCatalogue ?? (await preloadLayers(projectId, isCurrent))
 
   // Validate each unique row-level layer reference.
   for (let i = 0; i < layerReferences.length; i++) {
+    if (!isCurrent()) return { invalidCount: 0, results: [] }
     const reference = layerReferences[i]
 
     try {
@@ -580,6 +642,7 @@ export async function validateLayers(
     await new Promise(resolve => setTimeout(resolve, 100))
   }
 
+  if (!isCurrent()) return { invalidCount: 0, results: [] }
   onResults(results)
 
   // Check if all validations passed
@@ -727,7 +790,10 @@ export function enrichFeaturesWithLayerData(
 }
 
 // Layer creation functions
+const layerDrafts = new WeakMap<ImportCtx, object>()
+
 export function showLayerCreationForm(importCtx: ImportCtx, prefillValue?: string) {
+  layerDrafts.set(importCtx, {})
   importCtx.setIsCreatingLayer(true)
 
   // Get the selected locale from step 1
@@ -780,6 +846,7 @@ export async function translateLayerFormLocale(
 ): Promise<boolean> {
   const layerForm = importCtx.getLayerForm()
   if (!layerForm?.i18n) return false
+  const draft = layerDrafts.get(importCtx)
 
   const sourceLocaleKey = toLocaleKey(sourceLocale)
   const targetLocaleKey = toLocaleKey(targetLocale)
@@ -800,6 +867,11 @@ export async function translateLayerFormLocale(
   if (fieldsToTranslate.length === 0) return false
 
   const i18n = toLayerTranslationPayload(layerForm.i18n, fieldsToTranslate)
+  const sourceValues = new Map(
+    fieldsToTranslate.map(field => [field, sourceLocaleData[field]]),
+  )
+  const importData = importCtx.getData()
+  const project = importCtx.getSelectedProject()
   const translated = await translateI18nFields({
     source: sourceLocaleKey,
     target: targetLocaleKey,
@@ -808,20 +880,33 @@ export async function translateLayerFormLocale(
   })
 
   const currentLayerForm = importCtx.getLayerForm()
-  if (!currentLayerForm?.i18n?.[targetLocaleKey]) return false
+  if (
+    layerDrafts.get(importCtx) !== draft ||
+    importCtx.getData() !== importData ||
+    importCtx.getSelectedProject() !== project ||
+    !currentLayerForm?.i18n?.[targetLocaleKey]
+  )
+    return false
 
+  // Keep manual target edits and reject translations whose source changed in flight.
   const nextTargetLocaleData = { ...currentLayerForm.i18n[targetLocaleKey] }
+  let changed = false
   for (const field of fieldsToTranslate) {
+    if (currentLayerForm.i18n[sourceLocaleKey]?.[field] !== sourceValues.get(field))
+      continue
     const currentValue = nextTargetLocaleData[field]
     if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
       continue
     }
 
     const nextValue = translated[field] ?? ''
+    if (!nextValue.trim()) continue
     nextTargetLocaleData[field] = nextValue
     nextTargetLocaleData[`${field}Gen`] = nextValue.trim().length > 0
+    changed = true
   }
 
+  if (!changed) return false
   importCtx.setLayerForm({
     ...currentLayerForm,
     i18n: {
@@ -865,15 +950,39 @@ export function resetLayerFormLocale(importCtx: ImportCtx, targetLocale: Locale)
 }
 
 export function hideLayerCreationForm(importCtx: ImportCtx) {
+  layerDrafts.delete(importCtx)
   importCtx.setIsCreatingLayer(false)
   importCtx.setLayerForm(null)
   importCtx.setActiveLayerCreation(null)
 }
 
-export async function submitLayerForm(importCtx: ImportCtx, event: Event) {
+// Per-context ownership prevents old completions from changing a newer layer operation.
+const layerSubmissions = new WeakMap<ImportCtx, object>()
+
+/**
+ * Creates an import layer and selects it while the originating form remains current.
+ * @param importCtx Import owning the layer form and destination project.
+ * @param event Form event whose default submission is suppressed.
+ * @returns Resolves when creation settles or the operation is superseded.
+ * @remarks Reset can stop later requests but cannot undo a write already sent.
+ */
+export async function submitLayerForm(
+  importCtx: ImportCtx,
+  event: Event,
+): Promise<void> {
   event.preventDefault()
   const layerForm = importCtx.getLayerForm()
   if (!layerForm || !importCtx.getSelectedProject()) return
+
+  const project = importCtx.getSelectedProject()
+  const data = importCtx.getData()
+  const operation = {}
+  layerSubmissions.set(importCtx, operation)
+  const ownsState = (): boolean =>
+    layerSubmissions.get(importCtx) === operation &&
+    importCtx.getSelectedProject() === project &&
+    importCtx.getData() === data
+  const isCurrent = (): boolean => ownsState() && importCtx.getLayerForm() === layerForm
 
   importCtx.setIsSubmittingLayer(true)
 
@@ -885,6 +994,7 @@ export async function submitLayerForm(importCtx: ImportCtx, event: Event) {
 
     // Fetch project properties and create layer properties for the new layer
     const projectProperties = await getProjectProperties(selectedProject.id)
+    if (!isCurrent()) return
 
     // Create layer properties array for the new layer
     const layerProperties = projectProperties.map((projectProp: Property) => {
@@ -956,16 +1066,20 @@ export async function submitLayerForm(importCtx: ImportCtx, event: Event) {
       },
       data: layerData,
     })
+    if (!isCurrent()) return
 
     if (!created.data?.id) {
       throw new Error('Layer creation did not return a layer id')
     }
 
-    const createdLayerState = await getLayer({
-      ref: created.data.id,
-      refKey: 'id',
-      meta: { isAdminRequest: true, profile: 'admin' },
-    })
+    const createdLayerState = await refreshRemoteQuery(
+      getLayer({
+        ref: created.data.id,
+        refKey: 'id',
+        meta: { isAdminRequest: true, profile: 'admin' },
+      }),
+    )
+    if (!isCurrent()) return
     const newLayer = createdLayerState.data as Layer | null
     if (!newLayer) throw new Error('Created layer could not be loaded')
 
@@ -1002,8 +1116,9 @@ export async function submitLayerForm(importCtx: ImportCtx, event: Event) {
     // Hide the form
     hideLayerCreationForm(importCtx)
   } catch (error) {
+    if (!isCurrent()) return
     console.error('Error creating layer:', error)
   } finally {
-    importCtx.setIsSubmittingLayer(false)
+    if (ownsState()) importCtx.setIsSubmittingLayer(false)
   }
 }
