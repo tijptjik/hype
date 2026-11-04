@@ -37,6 +37,7 @@ const platforms: MessagingPlatform[] = ['whatsapp', 'telegram']
         <MessagingAccountCard
           {platform}
           status={model.statuses[platform]}
+          connectionError={model.connectionErrors[platform]}
           registered={Boolean(account)}
           enabled={account?.enabled}
           busy={model.busy !== null}

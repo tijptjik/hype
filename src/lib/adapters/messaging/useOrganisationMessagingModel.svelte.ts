@@ -1,9 +1,21 @@
 // SVELTE
 import { onMount } from 'svelte'
 // API
-import { connectMessagingAccount, disconnectMessagingAccount, getMessagingAccounts, loginTelegramAccount, registerMessagingAccount, unwatchMessagingAccount, watchMessagingAccount } from '#lib/api/messaging.remote.js'
+import {
+  connectMessagingAccount,
+  disconnectMessagingAccount,
+  getMessagingAccounts,
+  loginTelegramAccount,
+  registerMessagingAccount,
+  unwatchMessagingAccount,
+  watchMessagingAccount,
+} from '#lib/api/messaging.remote.js'
 // TYPES
-import type { BridgeStatus, LoginInput, MessagingPlatform } from '#lib/messaging/types.js'
+import type {
+  BridgeStatus,
+  LoginInput,
+  MessagingPlatform,
+} from '#lib/messaging/types.js'
 
 type Account = Awaited<ReturnType<typeof getMessagingAccounts>>[number]
 const meta = { isAdminRequest: true as const }
@@ -43,19 +55,37 @@ export function useOrganisationMessagingModel(organisationId: string) {
         const revision = statusRevision[account.platform]
         // One unavailable bridge must not prevent the other account renewing its lease.
         try {
-          const status = await watchMessagingAccount({ meta, accountId: account.id, tabId })
-          if (alive && revision === statusRevision[account.platform] && busy !== account.platform) {
+          const status = await watchMessagingAccount({
+            meta,
+            accountId: account.id,
+            tabId,
+          })
+          if (
+            alive &&
+            revision === statusRevision[account.platform] &&
+            busy !== account.platform
+          ) {
             statuses[account.platform] = status
             delete accountFailures[account.platform]
-          } else if (!alive) await unwatchMessagingAccount({ meta, accountId: account.id, tabId }).catch(() => {})
+          } else if (!alive)
+            await unwatchMessagingAccount({ meta, accountId: account.id, tabId }).catch(
+              () => {},
+            )
         } catch (cause) {
-          if (alive && revision === statusRevision[account.platform] && busy !== account.platform) {
+          if (
+            alive &&
+            revision === statusRevision[account.platform] &&
+            busy !== account.platform
+          ) {
             const platform = account.platform === 'telegram' ? 'Telegram' : 'WhatsApp'
-            accountFailures[account.platform] = `${platform}: ${cause instanceof Error ? cause.message : 'Unable to reach the messaging service'}`
+            accountFailures[account.platform] =
+              `${platform}: ${cause instanceof Error ? cause.message : 'Unable to reach the messaging service'}`
           }
         }
       }
-    } finally { polling = false }
+    } finally {
+      polling = false
+    }
   }
 
   /** Resolve or register the organisation's account, never an operator's personal account. */
@@ -68,7 +98,10 @@ export function useOrganisationMessagingModel(organisationId: string) {
   }
 
   /** Run an explicit operator action and refresh its shared status. */
-  async function act(platform: MessagingPlatform, action: 'connect' | 'stop' | LoginInput): Promise<void> {
+  async function act(
+    platform: MessagingPlatform,
+    action: 'connect' | 'stop' | LoginInput,
+  ): Promise<void> {
     if (busy || !alive || !tabId) return
     busy = platform
     pendingAction = typeof action === 'string' ? action : action.kind
@@ -81,31 +114,83 @@ export function useOrganisationMessagingModel(organisationId: string) {
       const input = { meta, accountId, tabId }
       if (action === 'stop') {
         await disconnectMessagingAccount({ meta, accountId })
-        if (alive) statuses[platform] = { ...statuses[platform], connected: false, loggedOut: false, qr: null, qrExpiresAt: null, authState: 'disconnected' }
+        if (alive)
+          statuses[platform] = {
+            ...statuses[platform],
+            connected: false,
+            loggedOut: false,
+            qr: null,
+            qrExpiresAt: null,
+            authState: 'disconnected',
+          }
       } else {
-        const status = action === 'connect' ? await connectMessagingAccount(input) : await loginTelegramAccount({ ...input, login: action })
+        const status =
+          action === 'connect'
+            ? await connectMessagingAccount(input)
+            : await loginTelegramAccount({ ...input, login: action })
         if (alive) statuses[platform] = status
       }
       await refresh()
     } catch (cause) {
-      if (alive) failure = cause instanceof Error ? cause.message : 'Unable to update messaging account'
-    } finally { statusRevision[platform]++; busy = null; pendingAction = null }
+      if (alive)
+        failure =
+          cause instanceof Error ? cause.message : 'Unable to update messaging account'
+    } finally {
+      statusRevision[platform]++
+      busy = null
+      pendingAction = null
+    }
   }
 
   onMount(() => {
     alive = true
     tabId = crypto.randomUUID()
-    void refresh().then(poll).catch(cause => {
-      if (alive) failure = cause instanceof Error ? cause.message : 'Unable to load messaging accounts'
-    }).finally(() => { if (alive) loading = false })
-    const timer = setInterval(() => { void poll() }, 3_000)
+    void refresh()
+      .then(poll)
+      .catch(cause => {
+        if (alive)
+          failure =
+            cause instanceof Error ? cause.message : 'Unable to load messaging accounts'
+      })
+      .finally(() => {
+        if (alive) loading = false
+      })
+    const timer = setInterval(() => {
+      void poll()
+    }, 3_000)
     return () => {
       alive = false
       clearInterval(timer)
-      for (const account of accounts) void unwatchMessagingAccount({ meta, accountId: account.id, tabId }).catch(() => {})
+      for (const account of accounts)
+        void unwatchMessagingAccount({ meta, accountId: account.id, tabId }).catch(
+          () => {},
+        )
       // A tab crash or failed release is handled by the bridge's expiring lease.
     }
   })
 
-  return { get accounts() { return accounts }, get statuses() { return statuses }, get busy() { return busy }, get pendingAction() { return pendingAction }, get error() { return [failure, ...Object.values(accountFailures)].filter(Boolean).join(' · ') }, get loading() { return loading }, act }
+  return {
+    get accounts() {
+      return accounts
+    },
+    get statuses() {
+      return statuses
+    },
+    get connectionErrors() {
+      return accountFailures
+    },
+    get busy() {
+      return busy
+    },
+    get pendingAction() {
+      return pendingAction
+    },
+    get error() {
+      return [failure, ...Object.values(accountFailures)].filter(Boolean).join(' · ')
+    },
+    get loading() {
+      return loading
+    },
+    act,
+  }
 }
