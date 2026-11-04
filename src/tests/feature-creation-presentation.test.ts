@@ -11,9 +11,10 @@ afterEach(() => {
 it('places Location immediately after Profile in Feature navigation', () => {
   expect(getAdminFacetOrderForResource(FirstClassResource.feature)).toEqual([
     'core',
-    'address',
+    'location',
     'fields',
     'images',
+    'updates',
   ])
 })
 it('omits the image pane during creation while retaining the map, and restores it after creation', async () => {
