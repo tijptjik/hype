@@ -109,4 +109,109 @@ describe('Feature profile navigation readiness', () => {
     expect(state.syncProject).not.toHaveBeenCalled()
     expect(state.form()).toBeNull()
   })
+
+  it('hydrates a newly created record while its draft URL is still active', async () => {
+    const state = setup()
+    state.navigate('new')
+    const pending = state.load('next', { adoptCreated: true })
+    state.response.resolve(state.feature)
+    state.project.resolve(null)
+    state.layer.resolve(null)
+    await pending
+    expect(state.commit).toHaveBeenCalledWith(state.feature)
+    expect(state.form()).toEqual(state.feature.data)
+    expect(state.setFeature).toHaveBeenCalledWith(state.feature.data)
+  })
+
+  it('does not adopt a created record after the user has left its draft', async () => {
+    const state = setup()
+    state.navigate('new')
+    const pending = state.load('next', { adoptCreated: true })
+    state.navigate('later')
+    state.response.resolve(state.feature)
+    state.project.resolve(null)
+    state.layer.resolve(null)
+    await pending
+    expect(state.commit).not.toHaveBeenCalled()
+    expect(state.setFeature).not.toHaveBeenCalled()
+    expect(state.form()).toBeNull()
+  })
+})
+
+it('does not dirty an already-inherited name when the separate Location query is absent', () => {
+  const start = route.indexOf('function inheritLocationNames(')
+  const end = route.indexOf('/** Choose Location naming', start)
+  const source = ts.transpileModule(route.slice(start, end), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText
+  const update = vi.fn()
+  const run = new Function(
+    'updateFeatureData',
+    `
+    const currentFeatureData = { i18n: { en: { title: 'Venue' } } };
+    const feature = { data: { authoring: { nameMode: 'inherit' } } };
+    const isNewFeatureRef = false, acceptedNameSource = null;
+    const adaptContentMap = value => value;
+    ${source}
+    inheritLocationNames({ en: 'Venue' });
+  `,
+  )
+  run(update)
+  expect(update).not.toHaveBeenCalled()
+})
+
+describe('initial Feature presentation policy', () => {
+  const marker = 'const featurePresentationPolicy = $derived.by(() => {'
+  const body = route.slice(
+    route.indexOf(marker) + marker.length,
+    route.indexOf('\n})\nconst acceptedNameSource'),
+  )
+  const read = new Function(
+    'adminCtx',
+    'projectIdValue',
+    'layerIdValue',
+    'selectedProject',
+    'selectedLayer',
+    'feature',
+    'resolveFeaturePresentationPolicy',
+    body,
+  )
+
+  it('retains the initial Layer override while Project and Layer hydrate separately', async () => {
+    const { resolveFeaturePresentationPolicy } = await import(
+      '#lib/features/presentationPolicy.js'
+    )
+    const cache = { project: new Map(), layer: new Map() }
+    const feature = {
+      data: {
+        projectId: 'p',
+        layerId: 'l',
+        presentationPolicy: { allowDescriptions: false, locationBasedNames: true },
+      },
+    }
+    const policy = () =>
+      read(
+        { view: { cache } },
+        'p',
+        'l',
+        undefined,
+        undefined,
+        feature,
+        resolveFeaturePresentationPolicy,
+      )
+    expect(policy()).toEqual(feature.data.presentationPolicy)
+    cache.project.set('p', {
+      flags: { allowFeatureDescriptions: true, locationBasedFeatureNames: false },
+    })
+    expect(policy()).toEqual(feature.data.presentationPolicy)
+    cache.layer.set('l', {
+      metadata: { allowFeatureDescriptions: false, locationBasedFeatureNames: true },
+    })
+    expect(policy()).toEqual(feature.data.presentationPolicy)
+    // Loaded parent updates are authoritative; the projection is only the initial snapshot.
+    cache.layer.set('l', {
+      metadata: { allowFeatureDescriptions: true, locationBasedFeatureNames: false },
+    })
+    expect(policy()).toEqual({ allowDescriptions: true, locationBasedNames: false })
+  })
 })
