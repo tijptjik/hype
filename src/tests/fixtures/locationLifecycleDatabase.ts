@@ -62,8 +62,15 @@ export function setupLifecycleDatabase(
   ])
     sqlite.exec(readFileSync('migrations/' + migration, 'utf8'))
   beforeCorrections?.(sqlite)
-  for (const migration of ['0153_location_relationship_review.sql'])
+  for (const migration of [
+    '0149_location_correction_rows.sql',
+    '0150_location_placement_candidates.sql',
+    '0151_location_placement_acceptance.sql',
+    '0153_location_relationship_review.sql',
+    '0154_location_version_names.sql',
+  ])
     sqlite.exec(readFileSync('migrations/' + migration, 'utf8'))
+  sqlite.exec(readFileSync('migrations/0157_location_rematching.sql', 'utf8'))
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
     sqlite.exec(`DROP TRIGGER feature_location_scope_insert;
