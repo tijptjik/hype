@@ -1,17 +1,20 @@
 # Refactor Roadmap
 
 ## Scope
+
 This document tracks the multi-phase refactor of UI, forms, and supporting libraries.
 
 Current strategic goals:
+
 - Migrate forms from `sveltekit-superforms` to SvelteKit remote function `form` calls.
 - Build new UI with Bits UI primitives and phase out DaisyUI usage.
 - Continue Tailwind v4 + DaisyUI v5 migration safely while legacy UI remains.
 
-Related checklist: `docs/refactor-todo.md`
-Resource cache architecture: `docs/specs/Design-Spec-Resource-Cache.md`
+Related checklist: `docs/refactor-todo.md` Resource cache architecture:
+`docs/specs/Design-Spec-Resource-Cache.md`
 
 ## Principles
+
 - Keep behavior stable while migrating implementation.
 - Use incremental PRs by feature area, not one large rewrite.
 - Keep legacy and new UI imports clearly separated in mixed files:
@@ -22,37 +25,48 @@ Resource cache architecture: `docs/specs/Design-Spec-Resource-Cache.md`
 ## Phases
 
 ### Phase 1: Foundation
+
 - [x] Tailwind v4 config moved to CSS-first (`src/lib/styles/app.css`).
 - [x] DaisyUI v5 theme config aligned with Tailwind v4.
-- [x] Font loading moved to `<svelte:head>` and locale-specific CJK fonts loaded conditionally.
-- [x] Guardrails added for post-migration UX regressions (pointer cursor, button border defaults).
+- [x] Font loading moved to `<svelte:head>` and locale-specific CJK fonts loaded
+      conditionally.
+- [x] Guardrails added for post-migration UX regressions (pointer cursor, button border
+      defaults).
 
 ### Phase 2: Forms Migration (`in progress`)
+
 - [x] Identify all `sveltekit-superforms` usage by route/feature.
 - [x] Replace with SvelteKit remote functions `form` call patterns.
 - [x] Keep validation and error UX equivalent.
 - [x] Add tests for submission success/error flows where missing.
 
 ### Phase 3: Component Migration (Bits UI) (`in progress`)
+
 - [x] Build new primitives/components in `src/lib/bits`.
 - [x] Migrate feature UIs progressively from DaisyUI to Bits UI.
 - [x] Keep legacy components functional until parity is reached.
 
 ### Phase 4: Dependency and Styling Cleanup
+
 - Remove dead CSS/classes and old framework-specific overrides.
 - [x] Remove unused DaisyUI dependencies when migration completes.
 - Confirm no regressions in map, filters, and admin flows.
 
 ### Phase 5: Resource Cache Unification
-- Introduce `CacheCtx` as a dedicated canonical entity/query cache dependency for `AppCtx`.
+
+- Introduce `CacheCtx` as a dedicated canonical entity/query cache dependency for
+  `AppCtx`.
 - Treat Svelte remote-function cache as transport cache only.
 - Introduce query-index model (ids + metadata) for active collections.
-- Add stale-while-revalidate + persistence strategy (IndexedDB) for cross-session offline support.
+- Add stale-while-revalidate + persistence strategy (IndexedDB) for cross-session
+  offline support.
 - Start rollout with organisations only, then expand to projects/layers/features.
 
 ## Workstreams from Previous Cursor Checklist
+
 - Svelte modernization:
-  - Evaluate async branch guidance: https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944
+  - Evaluate async branch guidance:
+    https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944
   - Evaluate `@attach` migration path: https://svelte.dev/docs/svelte/@attach
   - Continue using `<svelte:boundary>` where async/error boundaries are beneficial.
 - Map stack:
@@ -68,6 +82,7 @@ Resource cache architecture: `docs/specs/Design-Spec-Resource-Cache.md`
   - https://runed.dev/docs/utilities/resource
 
 ## Definition of Done
+
 - [x] No active feature routes depend on `sveltekit-superforms`.
 - [x] New UI work is implemented in `src/lib/bits`.
 - [x] DaisyUI usage reduced to approved legacy areas or fully removed.

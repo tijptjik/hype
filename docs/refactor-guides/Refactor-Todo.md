@@ -3,13 +3,16 @@
 Use this checklist for execution tracking. Keep items small enough for one PR.
 
 ## Now
+
 - [x] Inventory all `sveltekit-superforms` usage by route and component.
 - [x] Define the first migration slice (1 route) to SvelteKit remote `form` call.
 - [x] Create/standardize first Bits UI primitives under `src/lib/bits`.
 - [x] Add migration note template for PRs (before/after behavior + screenshots).
-- [x] Review and approve `docs/Resource-Cache-Architecture.md` as the cache/source-of-truth direction.
+- [x] Review and approve `docs/Resource-Cache-Architecture.md` as the
+      cache/source-of-truth direction.
 
 ## Forms: Superforms -> Remote `form`
+
 - [x] Replace first production form end-to-end.
 - [x] Preserve server validation and error message behavior.
 - [x] Confirm optimistic/pending UI behavior.
@@ -17,6 +20,7 @@ Use this checklist for execution tracking. Keep items small enough for one PR.
 - [x] Repeat per route until no `sveltekit-superforms` remains.
 
 ## UI: DaisyUI -> Bits UI
+
 - [x] Add `// BITS COMPONENTS` import grouping in mixed files.
 - [x] Keep legacy imports under `// COMPONENTS`.
 - [x] Rebuild key interactive elements with Bits UI primitives.
@@ -24,12 +28,16 @@ Use this checklist for execution tracking. Keep items small enough for one PR.
 - [x] Track screens still on DaisyUI and prioritize by usage.
 
 ## Svelte / Architecture Items (migrated from old cursor checklist)
-- [ ] Evaluate async guidance: https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944
-- [ ] Evaluate `@attach` for replacing action patterns: https://svelte.dev/docs/svelte/@attach
+
+- [ ] Evaluate async guidance:
+      https://github.com/sveltejs/svelte/discussions/15845#discussioncomment-13456944
+- [ ] Evaluate `@attach` for replacing action patterns:
+      https://svelte.dev/docs/svelte/@attach
 - [ ] Use `<svelte:boundary>` where relevant.
 - [x] Use `@debug` for targeted debugging as needed.
 
 ## Icon System
+
 - [x] Evaluate move to Iconify:
   - https://github.com/unplugin/unplugin-icons/tree/main/examples/vite-svelte
   - https://github.com/unplugin/unplugin-icons/tree/main
@@ -39,15 +47,20 @@ Use this checklist for execution tracking. Keep items small enough for one PR.
 - [x] Add/verify Vite config integration for SvelteKit if adopted.
 
 ## Map Stack
+
 - [ ] Evaluate migration to `svelte-maplibre-gl`:
   - https://github.com/MIERUNE/svelte-maplibre-gl
 
 ## Resource Cache Unification
+
 - [ ] Create `CacheCtx` and inject it as a dependency into `AppCtx`.
-- [ ] Implement organisation-only canonical store (`entities`, `entityMeta`, `queryIndex`) in `CacheCtx`.
+- [ ] Implement organisation-only canonical store (`entities`, `entityMeta`,
+      `queryIndex`) in `CacheCtx`.
 - [ ] Add organisation projection graph and `satisfiesProjection(...)` checks.
-- [ ] Implement `ensureResource(type, id, { minProjection, policy })` with in-flight dedupe.
-- [ ] Implement `ensureQuery(queryKey, fetcher, { projection, policy })` with in-flight dedupe.
+- [ ] Implement `ensureResource(type, id, { minProjection, policy })` with in-flight
+      dedupe.
+- [ ] Implement `ensureQuery(queryKey, fetcher, { projection, policy })` with in-flight
+      dedupe.
 - [ ] Migrate organisations list/detail to `CacheCtx` read path.
 - [ ] Migrate organisation mutations to `CacheCtx.mutateResource` optimistic flow.
 - [ ] Persist organisation cache to IndexedDB and hydrate on boot.
@@ -56,6 +69,7 @@ Use this checklist for execution tracking. Keep items small enough for one PR.
 - [ ] Remove duplicated cache sync logic from `AppCtx` after parity validation.
 
 ## Runed Utilities
+
 - [ ] Evaluate `useGeolocation`.
 - [ ] Evaluate `onClickOutside`.
 - [ ] Evaluate `TextareaAutosize`.
@@ -65,5 +79,6 @@ Use this checklist for execution tracking. Keep items small enough for one PR.
 - [ ] Evaluate `resource`.
 
 Reference docs:
+
 - `docs/refactor-roadmap.md`
 - `docs/Resource-Cache-Architecture.md`

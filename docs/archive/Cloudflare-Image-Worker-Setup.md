@@ -46,8 +46,8 @@ PUBLIC_ASSET_BASE_URL=https://assets.hype.hk
 The app now resolves both transformed delivery and explicit normalized-intermediate
 delivery against `PUBLIC_ASSET_BASE_URL`.
 
-If `PUBLIC_ASSET_BASE_URL` is omitted during local development, the app now falls
-back to `https://assets.hype.hk` rather than a local asset worker.
+If `PUBLIC_ASSET_BASE_URL` is omitted during local development, the app now falls back
+to `https://assets.hype.hk` rather than a local asset worker.
 
 Canonical public paths:
 
@@ -56,8 +56,8 @@ Canonical public paths:
 /image/raw/h_2048,w_2048[/v<version>]/<publicId>
 ```
 
-The `/image/raw/h_2048,w_2048...` route serves the normalized intermediate object
-at `{publicId}` and intentionally does not fall back to `{publicId}.raw`.
+The `/image/raw/h_2048,w_2048...` route serves the normalized intermediate object at
+`{publicId}` and intentionally does not fall back to `{publicId}.raw`.
 
 The bare `/image/raw[/v<version>]/<publicId>` route remains the original-download
 endpoint and may serve `{publicId}.raw` when present.
@@ -89,17 +89,31 @@ raw.assets.hype.hk
 
 The app now uses a three-step upload flow:
 
-1. `authImageUpload(...)` issues a short-lived presigned R2 `PUT` URL plus a confirmation token.
-2. The browser uploads the original file directly to the stage originals bucket at the stable `{publicId}` key.
-3. `finalizeImageUpload(...)` confirms the object exists, writes `{publicId}.json`, `{publicId}.v{version}.json`, and `{publicId}.manifest.json`, persists the requested relation links, and returns the saved image payload.
+1. `authImageUpload(...)` issues a short-lived presigned R2 `PUT` URL plus a
+   confirmation token.
+2. The browser uploads the original file directly to the stage originals bucket at the
+   stable `{publicId}` key.
+3. `finalizeImageUpload(...)` confirms the object exists, writes `{publicId}.json`,
+   `{publicId}.v{version}.json`, and `{publicId}.manifest.json`, persists the requested
+   relation links, and returns the saved image payload.
 
-For local development, the app worker and asset worker R2 bindings use `remote = true` so direct uploads and reads target the same real buckets instead of separate local Miniflare state.
+For local development, the app worker and asset worker R2 bindings use `remote = true`
+so direct uploads and reads target the same real buckets instead of separate local
+Miniflare state.
 
-Apply the companion R2 CORS policy from `scripts/cloud/r2-image-upload.cors.json` to each raw asset bucket so browser `PUT` uploads are allowed from local, preview, and production app origins. The policy must allow `if-none-match` before rolling out create-only signed uploads. The browser must send the returned `If-None-Match: *` header; it is bound into the signature. An occupied destination returns 412 and requires a fresh upload grant, because the response alone cannot prove matching file contents. Previously issued URLs retain their original permissions until expiration.
+Apply the companion R2 CORS policy from `scripts/cloud/r2-image-upload.cors.json` to
+each raw asset bucket so browser `PUT` uploads are allowed from local, preview, and
+production app origins. The policy must allow `if-none-match` before rolling out
+create-only signed uploads. The browser must send the returned `If-None-Match: *`
+header; it is bound into the signature. An occupied destination returns 412 and requires
+a fresh upload grant, because the response alone cannot prove matching file contents.
+Previously issued URLs retain their original permissions until expiration.
 
 ## Asset Analytics
 
-The asset worker now writes one Workers Analytics Engine event for each successful `GET` asset delivery. The dataset is bound as `ASSET_ANALYTICS` and writes into `hype_asset_delivery`, recording:
+The asset worker now writes one Workers Analytics Engine event for each successful `GET`
+asset delivery. The dataset is bound as `ASSET_ANALYTICS` and writes into
+`hype_asset_delivery`, recording:
 
 - `publicId`
 - canonical transformation key
@@ -126,7 +140,8 @@ It returns `24h`, `7d`, and `30d` windows for:
 - derived miss %
 - p95 response time for cache / derived hit / derived miss
 
-To enable the summary endpoint in preview and production, set these secrets on the image worker:
+To enable the summary endpoint in preview and production, set these secrets on the image
+worker:
 
 ```bash
 bunx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config workers/asset-service/wrangler.toml --env preview
@@ -143,9 +158,20 @@ The Cloudflare API token needs permission to query Analytics Engine for the acco
 
 - Originals are read from the stage-specific originals buckets.
 - Derived variants are written to the stage-specific derived buckets.
-- Lower stages can read higher-stage originals if the requested asset is not present locally.
-- Metadata sidecars are stored next to the original object as `{publicId}.json` and `{publicId}.v{version}.json`.
+- Lower stages can read higher-stage originals if the requested asset is not present
+  locally.
+- Metadata sidecars are stored next to the original object as `{publicId}.json` and
+  `{publicId}.v{version}.json`.
 
 ### Replacing an image
 
-Replacement uploads use a fresh object key and keep the existing image record and associations. The signed grant captures the original image, assignment and resource scope. Confirmation selects the new object in one guarded database transaction; competing edits or a moved resource reject stale grants. Replaying a completed confirmation preserves the committed version and repairs missing metadata mirrors. The previous source object stays untouched, and replacement metadata records its storage identity. Image rotation preserves the original object and public ID, selects a guarded immutable metadata revision, and applies renderRotation during derivative/intermediate delivery. The app and asset-service changes must be released together; raw downloads preserve source bytes.
+Replacement uploads use a fresh object key and keep the existing image record and
+associations. The signed grant captures the original image, assignment and resource
+scope. Confirmation selects the new object in one guarded database transaction;
+competing edits or a moved resource reject stale grants. Replaying a completed
+confirmation preserves the committed version and repairs missing metadata mirrors. The
+previous source object stays untouched, and replacement metadata records its storage
+identity. Image rotation preserves the original object and public ID, selects a guarded
+immutable metadata revision, and applies renderRotation during derivative/intermediate
+delivery. The app and asset-service changes must be released together; raw downloads
+preserve source bytes.

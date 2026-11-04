@@ -2,13 +2,16 @@
 
 ## Goal
 
-This spec defines the current responsive contract for the feature card shell and its immediate children while the remaining legacy internals are being ported into `src/lib/bits/patterns/cards/featureCard`.
+This spec defines the current responsive contract for the feature card shell and its
+immediate children while the remaining legacy internals are being ported into
+`src/lib/bits/patterns/cards/featureCard`.
 
 ## Ownership
 
 - Page/layout code should own the viewport budget when possible.
 - `FeatureCardRoot` therefore accepts an optional `heightBudgetPx` prop.
-- If `heightBudgetPx` is omitted, the feature card falls back to a viewport-derived max height using the app-menu footprint and safe-area inset.
+- If `heightBudgetPx` is omitted, the feature card falls back to a viewport-derived max
+  height using the app-menu footprint and safe-area inset.
 - Longer term, the preferred flow is:
   1. page/layout computes available card height
   2. page passes `heightBudgetPx`
@@ -39,7 +42,8 @@ This spec defines the current responsive contract for the feature card shell and
 - Card remains edge-to-edge.
 - Container is not scrollable.
 - Viewer minimum height is `300px`.
-- Content must fit the available height budget except for explicit internal overflow areas such as expanded description.
+- Content must fit the available height budget except for explicit internal overflow
+  areas such as expanded description.
 
 ### Wider Small
 
@@ -102,6 +106,9 @@ The following still rely on legacy internals and should be ported next:
 
 ## Open Follow-Up
 
-- Move portal centering away from DOM lookups and onto an explicit `flyTo(offset)` callback contract.
-- Replace legacy `FeatureInfoLandscape` with Bits subcomponents for `PortalLayer`, `Address`, `Description`, and `Fields`.
-- Push final height-budget calculation fully to page/layout once omnibar and app-menu offsets are surfaced as stable inputs.
+- Move portal centering away from DOM lookups and onto an explicit `flyTo(offset)`
+  callback contract.
+- Replace legacy `FeatureInfoLandscape` with Bits subcomponents for `PortalLayer`,
+  `Address`, `Description`, and `Fields`.
+- Push final height-budget calculation fully to page/layout once omnibar and app-menu
+  offsets are surfaced as stable inputs.

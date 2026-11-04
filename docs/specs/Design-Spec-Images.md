@@ -41,7 +41,8 @@ The main remaining gaps are orchestration and legacy overlap:
 
 - `ImageCtx` is still the real provider contract
 - gallery state still depends on image-domain adapters instead of a gallery-owned store
-- upload/delete/metadata behavior is normalized for current consumers, but still not fully package-owned
+- upload/delete/metadata behavior is normalized for current consumers, but still not
+  fully package-owned
 - legacy gallery and viewer implementations still exist in parallel
 
 ## Current Status
@@ -51,20 +52,28 @@ The main remaining gaps are orchestration and legacy overlap:
 - The package lives at `src/lib/bits/patterns/images`.
 - The public barrel exports all root patterns, `entityImage/*`, and `images.types.ts`.
 - `$lib/bits` re-exports the gallery roots for app consumption.
-- `FeatureImageEditor.svelte` consumes `ImageEditor` through `useImageEditorGalleryModel(...)`.
-- `ResourceViewer.svelte` consumes `AdminViewer` + `Dropzone` through `useEntityImageViewerModel(...)`.
+- `FeatureImageEditor.svelte` consumes `ImageEditor` through
+  `useImageEditorGalleryModel(...)`.
+- `ResourceViewer.svelte` consumes `AdminViewer` + `Dropzone` through
+  `useEntityImageViewerModel(...)`.
 - `ViewerRenderable` is the current normalized render contract for all package roots.
 - `ViewerRenderableStatus` distinguishes:
   - `persisted`
   - `optimistic-upload`
   - `replacement-upload`
   - `finalized-upload`
-- `ImageSurface` owns delayed skeletons, fallback identity imagery, source promotion crossfades, blurred fit backdrops, and rotation-overlay handling.
-- `ViewerStage` holds previous, displayed, incoming, and pending scenes, preloads required scene assets, and crossfades both foreground and fit-mode backdrop layers.
-- `ThumbnailWrapper` owns rail scrolling, hover-preview debounce, active-item centering by request key/id, FLIP animation, and optimistic-upload batch scroll handling for the vertical admin rail.
-- `AdminThumbnail` supports publish-state overlay, upload-state overlay, retry, local delete confirmation, and prop-driven intent selection.
+- `ImageSurface` owns delayed skeletons, fallback identity imagery, source promotion
+  crossfades, blurred fit backdrops, and rotation-overlay handling.
+- `ViewerStage` holds previous, displayed, incoming, and pending scenes, preloads
+  required scene assets, and crossfades both foreground and fit-mode backdrop layers.
+- `ThumbnailWrapper` owns rail scrolling, hover-preview debounce, active-item centering
+  by request key/id, FLIP animation, and optimistic-upload batch scroll handling for the
+  vertical admin rail.
+- `AdminThumbnail` supports publish-state overlay, upload-state overlay, retry, local
+  delete confirmation, and prop-driven intent selection.
 - `AdminViewer` provides an empty-state upload affordance through `Dropzone`.
-- `CameraViewer` adds `CameraCaptureButton` and routes captured files to the upload callback path.
+- `CameraViewer` adds `CameraCaptureButton` and routes captured files to the upload
+  callback path.
 - `ImageEditor` provides the current feature image editor layout:
   - fullscreen viewer toggling
   - bottom viewer edit controls
@@ -79,11 +88,16 @@ The main remaining gaps are orchestration and legacy overlap:
 
 ### Partially Implemented
 
-- The package uses normalized items and status variants, but collection state is still projected out of `ImageCtx`.
-- `ThumbnailIntent` is now context-agnostic at the component layer, but intent persistence still flows through adapter actions that call `ImageCtx.handleSetIntent(...)`.
-- Full upload and replacement flows are normalized for current feature/resource consumers, but not yet packaged as a general gallery store API.
+- The package uses normalized items and status variants, but collection state is still
+  projected out of `ImageCtx`.
+- `ThumbnailIntent` is now context-agnostic at the component layer, but intent
+  persistence still flows through adapter actions that call
+  `ImageCtx.handleSetIntent(...)`.
+- Full upload and replacement flows are normalized for current feature/resource
+  consumers, but not yet packaged as a general gallery store API.
 - Metadata loading is handled in adapters rather than in package-owned orchestration.
-- `CameraViewer` reuses the capture-button path, but robust mobile camera capability/session handling is still outside this package.
+- `CameraViewer` reuses the capture-button path, but robust mobile camera
+  capability/session handling is still outside this package.
 
 ### Not Yet Implemented
 
@@ -98,9 +112,12 @@ The main remaining gaps are orchestration and legacy overlap:
 - Keep image/gallery rendering in Bits patterns and local image primitives.
 - Keep non-thumbnail patterns layout-stable with `h-full w-full`.
 - Ensure source image dimensions never dictate viewer layout.
-- Keep `fit` and `cover` behavior consistent between viewer, image, and thumbnail surfaces.
-- Preserve optimistic upload, replacement, and finalized-asset transitions without viewer flicker.
-- Continue moving feature- and resource-specific image concerns out of route/component scope and into adapters or future package-level abstractions.
+- Keep `fit` and `cover` behavior consistent between viewer, image, and thumbnail
+  surfaces.
+- Preserve optimistic upload, replacement, and finalized-asset transitions without
+  viewer flicker.
+- Continue moving feature- and resource-specific image concerns out of route/component
+  scope and into adapters or future package-level abstractions.
 
 ## Non-Goals For The Current Package
 
@@ -202,13 +219,18 @@ type ViewerRenderableStatus =
 
 Notes on the implemented fields:
 
-- `renderKey` lets optimistic rows preserve animation identity separately from persisted ids.
-- `sourceFallbackSrc` supports optimistic preview to finalized-asset promotion without abrupt swaps.
+- `renderKey` lets optimistic rows preserve animation identity separately from persisted
+  ids.
+- `sourceFallbackSrc` supports optimistic preview to finalized-asset promotion without
+  abrupt swaps.
 - `thumbnailSrc` allows thumbnail-specific derivatives when available.
 - `blurSrc` drives fit-mode backdrop imagery.
-- `rotationDegrees` and `animateRotation` are already part of the render contract because the current editor/resource consumers support rotation workflows.
-- `status` carries sorting, upload, retry, and replacement semantics required by current consumers.
-- `meta` is currently used for internal render hints such as forced source-transition behavior.
+- `rotationDegrees` and `animateRotation` are already part of the render contract
+  because the current editor/resource consumers support rotation workflows.
+- `status` carries sorting, upload, retry, and replacement semantics required by current
+  consumers.
+- `meta` is currently used for internal render hints such as forced source-transition
+  behavior.
 
 ## State Ownership Today
 
@@ -289,7 +311,8 @@ Implemented behavior:
 
 Current limitation:
 
-- intent selection UI is package-level, but actual mutation still depends on adapter-provided callbacks backed by `ImageCtx`
+- intent selection UI is package-level, but actual mutation still depends on
+  adapter-provided callbacks backed by `ImageCtx`
 
 ### `Image`
 
@@ -325,7 +348,8 @@ Implemented behavior:
 
 Important scope note:
 
-- full drag-and-drop composition for non-empty states is handled by wrappers such as `ResourceViewer`, not by `AdminViewer` alone
+- full drag-and-drop composition for non-empty states is handled by wrappers such as
+  `ResourceViewer`, not by `AdminViewer` alone
 
 ### `CameraViewer`
 
@@ -357,7 +381,8 @@ Implemented behavior:
 - default and admin variants
 - click selection
 - hover preview callback with debounce while the user is moving or scrolling the rail
-- requested active-item centering through `followActiveIdRequestKey` and `followActiveIdRequestId`
+- requested active-item centering through `followActiveIdRequestKey` and
+  `followActiveIdRequestId`
 - optional FLIP animation
 - upload-batch-aware scroll reset for the vertical admin rail
 - optional footer snippet
@@ -390,28 +415,27 @@ Implemented behavior:
 
 Current reality:
 
-- `entityImage/EntityImage.svelte` is still an older Bits wrapper around `ImageProvider` and the legacy common viewer path
+- `entityImage/EntityImage.svelte` is still an older Bits wrapper around `ImageProvider`
+  and the legacy common viewer path
 - it has not yet been migrated onto `ResourceViewer`
 
 ## Provider Reality
 
 `ImageProvider.svelte` is still a thin mount point around `setImageCtx(...)`.
-`useImageProviderModel.svelte.ts` keeps `ImageCtx` synchronized with page state,
-URL state, context changes, and fetched image envelopes.
+`useImageProviderModel.svelte.ts` keeps `ImageCtx` synchronized with page state, URL
+state, context changes, and fetched image envelopes.
 
-That means the current package is reusable at the render/composition layer, but
-the application still depends on `ImageCtx` for collection state, mutation
-actions, metadata fetching, upload orchestration, and navigation semantics.
+That means the current package is reusable at the render/composition layer, but the
+application still depends on `ImageCtx` for collection state, mutation actions, metadata
+fetching, upload orchestration, and navigation semantics.
 
-This is currently expressed through adapters rather than direct package-owned
-stores:
+This is currently expressed through adapters rather than direct package-owned stores:
 
-- `useImageEditorGalleryModel.svelte.ts` adapts `ImageCtx` state, upload queue
-  state, promoted asset URLs, rotation state, metadata state, and admin actions
-  into the `ImageEditor` contract.
+- `useImageEditorGalleryModel.svelte.ts` adapts `ImageCtx` state, upload queue state,
+  promoted asset URLs, rotation state, metadata state, and admin actions into the
+  `ImageEditor` contract.
 - `useEntityImageViewerModel.svelte.ts` narrows that model to the single-image
-  resource-viewer contract while preserving upload/replacement and metadata
-  behavior.
+  resource-viewer contract while preserving upload/replacement and metadata behavior.
 
 ## What Matches The Earlier Design Direction
 
@@ -431,7 +455,8 @@ stores:
 - package orchestration is still adapter-driven instead of provider/store-driven
 - metadata, presentation mode, and rotation persistence live outside the pattern layer
 - `entityImage/*` and other legacy image/gallery code still exist in parallel
-- standalone gallery patterns do not yet provide a fully self-contained orchestration layer beyond prop wiring
+- standalone gallery patterns do not yet provide a fully self-contained orchestration
+  layer beyond prop wiring
 
 ## TODO
 
@@ -444,22 +469,27 @@ stores:
   - navigation actions
   - preview/hover intent
   - transition hints
-- Move `FeatureImageEditor` and `ResourceViewer` orchestration onto that contract instead of projecting `ImageCtx` directly through adapters.
-- Migrate `entityImage/*` onto the package roots so the older viewer path can be removed.
+- Move `FeatureImageEditor` and `ResourceViewer` orchestration onto that contract
+  instead of projecting `ImageCtx` directly through adapters.
+- Migrate `entityImage/*` onto the package roots so the older viewer path can be
+  removed.
 
 ### Medium Priority
 
 - Formalize metadata-loading ownership and API boundaries.
-- Decide whether hover preview should remain component-local or move into provider-owned preview intent.
+- Decide whether hover preview should remain component-local or move into provider-owned
+  preview intent.
 - Add explicit delete lifecycle states beyond local confirmation UI.
 - Audit and migrate additional legacy consumers to the package roots.
 
 ### Lower Priority
 
 - Add drag-and-drop reorder support.
-- Add rank-based ordering support and document any deferred migration in `docs/Deferred-Migrations.md` when implementation starts.
+- Add rank-based ordering support and document any deferred migration in
+  `docs/Deferred-Migrations.md` when implementation starts.
 - Add collection prefetch APIs for cross-entity transitions.
-- Add more reusable metadata/download side-rail patterns beyond the current editor/resource compositions.
+- Add more reusable metadata/download side-rail patterns beyond the current
+  editor/resource compositions.
 - Add robust mobile camera flow:
   - capability detection
   - native capture preference
@@ -469,26 +499,29 @@ stores:
 
 ## Open Questions
 
-- Should the next provider abstraction own transition timing globally, or should transitions remain primarily inside `ViewerStage` with provider hints?
-- Should optimistic upload ids remain stable through finalization, or should a gallery store reconcile temporary ids to final ids explicitly?
-- Should hover preview be treated as immediate active selection, or as a separate preview channel that can be disabled on touch devices and throttled centrally?
-- Should `ResourceViewer` remain a specialized root, or should it collapse into a documented composition recipe once the gallery store exists?
+- Should the next provider abstraction own transition timing globally, or should
+  transitions remain primarily inside `ViewerStage` with provider hints?
+- Should optimistic upload ids remain stable through finalization, or should a gallery
+  store reconcile temporary ids to final ids explicitly?
+- Should hover preview be treated as immediate active selection, or as a separate
+  preview channel that can be disabled on touch devices and throttled centrally?
+- Should `ResourceViewer` remain a specialized root, or should it collapse into a
+  documented composition recipe once the gallery store exists?
 
 ## Project publication policies
 
 Project Advanced settings persist `autoPublishClassifiedImages` and
-`autoFeatureFirstImage` in `project.flags`; omitted keys default to enabled.
-Migration `0133_project_image_publication.sql` explicitly disables first-image
-classification for `hkghostsigns` and `independentBookstores`, preserving other
-saved preferences.
+`autoFeatureFirstImage` in `project.flags`; omitted keys default to enabled. Migration
+`0133_project_image_publication.sql` explicitly disables first-image classification for
+`hkghostsigns` and `independentBookstores`, preserving other saved preferences.
 
 Publishing a feature, layer, project or organisation applies these policies to
-published, non-archived features in that scope. Automatic classification preserves
-an existing Featured (`canonical`) choice; otherwise it selects the earliest
-uploaded non-archived image with an unclassified or public intent, breaking timestamp
-ties by image ID. Research images are never promoted or automatically published.
-Classification runs before publication, so the selected cover can publish in the
-same operation. Each switch acts independently. Classification and image publication
-are a database batch; already published image attribution is retained on retries.
-Ancestor publishing respects each descendant feature's own project flags and the
-existing choice of whether to include draft descendants.
+published, non-archived features in that scope. Automatic classification preserves an
+existing Featured (`canonical`) choice; otherwise it selects the earliest uploaded
+non-archived image with an unclassified or public intent, breaking timestamp ties by
+image ID. Research images are never promoted or automatically published. Classification
+runs before publication, so the selected cover can publish in the same operation. Each
+switch acts independently. Classification and image publication are a database batch;
+already published image attribution is retained on retries. Ancestor publishing respects
+each descendant feature's own project flags and the existing choice of whether to
+include draft descendants.

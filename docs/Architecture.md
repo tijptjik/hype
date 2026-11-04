@@ -1,6 +1,8 @@
 # Architecture
 
-The application is deployed on Cloudflare's edge computing platform, utilizing Cloudflare Workers for hosting and D1 for database storage. The infrastructure is designed with two distinct environments (`prod` & `preview`).
+The application is deployed on Cloudflare's edge computing platform, utilizing
+Cloudflare Workers for hosting and D1 for database storage. The infrastructure is
+designed with two distinct environments (`prod` & `preview`).
 
 ## Table of Contents
 
@@ -24,7 +26,8 @@ The application is deployed on Cloudflare's edge computing platform, utilizing C
 
 ### Core Principle
 
-Instead of building separately for each environment, we build once for preview and promote the same artifacts to production with different runtime configuration.
+Instead of building separately for each environment, we build once for preview and
+promote the same artifacts to production with different runtime configuration.
 
 ### Benefits
 
@@ -35,13 +38,14 @@ Instead of building separately for each environment, we build once for preview a
 
 ### Dynamic Runtime Variables
 
-All environment-specific configuration is read at **runtime** from Cloudflare's `platform.env`, not baked into the build.
+All environment-specific configuration is read at **runtime** from Cloudflare's
+`platform.env`, not baked into the build.
 
 #### Old Style (Static - Build Time)
 
 ```javascript
 // ❌ Baked into build artifacts
-import { PUBLIC_API_URL } from '$env/static/public';
+import { PUBLIC_API_URL } from '$env/static/public'
 ```
 
 #### New Style (Dynamic - Runtime)
@@ -49,8 +53,8 @@ import { PUBLIC_API_URL } from '$env/static/public';
 ```javascript
 // ✅ Read at runtime from platform.env
 export const GET = async ({ platform }) => {
-  const apiUrl = platform?.env?.PUBLIC_API_URL;
-};
+  const apiUrl = platform?.env?.PUBLIC_API_URL
+}
 ```
 
 ## Database Architecture
@@ -90,4 +94,5 @@ export const GET = async ({ platform }) => {
 2. **Verified Builds**: Only tested builds reach production
 3. **Dependency Pinning**: Locked dependency versions via `bun.lockb`
 
-This architecture ensures a secure, efficient, and reliable deployment pipeline that scales with the team and maintains high confidence in production deployments.
+This architecture ensures a secure, efficient, and reliable deployment pipeline that
+scales with the team and maintains high confidence in production deployments.

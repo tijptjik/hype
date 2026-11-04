@@ -12,8 +12,8 @@ The content area is composed from three moving parts:
 - the optional feature-property grid
 
 The layout must be deterministic and case-driven rather than heuristic. The collapsed
-state should make it obvious why content appears above the portal, adjacent to the portal,
-or below the portal.
+state should make it obvious why content appears above the portal, adjacent to the
+portal, or below the portal.
 
 ## Shared Rules
 
@@ -39,22 +39,24 @@ or below the portal.
 The adjacent field region is the column to the left of the portal.
 
 - With no description, fields in this region are top-aligned to the top of the portal.
-- With a description, fields in this region are bottom-aligned to the bottom of the portal.
+- With a description, fields in this region are bottom-aligned to the bottom of the
+  portal.
 - Fields should remain adjacent to the portal where possible.
-- If not all fields fit in the adjacent region, remaining fields continue in the overflow
-  region below the portal at full available width.
+- If not all fields fit in the adjacent region, remaining fields continue in the
+  overflow region below the portal at full available width.
 
 ### Short Description
 
 A description is considered short when the collapsed composition can show the full
-description and the applicable field layout without pushing content below the bottom of the
-portal.
+description and the applicable field layout without pushing content below the bottom of
+the portal.
 
 This definition includes fields:
 
-- if there are no fields, the description alone must finish at or above the portal bottom
-- if there are fields, the combined description plus adjacent field composition must finish
-  at or above the portal bottom
+- if there are no fields, the description alone must finish at or above the portal
+  bottom
+- if there are fields, the combined description plus adjacent field composition must
+  finish at or above the portal bottom
 
 ### Long Description
 
@@ -64,7 +66,8 @@ content below the bottom of the portal.
 In this case:
 
 - fields are prioritized in the adjacent field region
-- only the remaining collapsed height budget above the portal bottom is available for text
+- only the remaining collapsed height budget above the portal bottom is available for
+  text
 - the description is truncated in collapsed mode
 - the `Read More` button is shown
 
@@ -83,8 +86,8 @@ In this case:
 ### Case 3: Many Fields, No Description
 
 - Same as Case 2 for the adjacent field region.
-- Any additional rows that do not fit adjacent to the portal continue below the portal in a
-  full-width grid.
+- Any additional rows that do not fit adjacent to the portal continue below the portal
+  in a full-width grid.
 
 ### Case 4: No Fields, Short Description
 
@@ -96,18 +99,18 @@ In this case:
 
 - Show the full description with Pretext layout.
 - Lay out fields immediately after the description.
-- Allow the adjacent field block to move upward as needed, but never above the top of the
-  portal.
+- Allow the adjacent field block to move upward as needed, but never above the top of
+  the portal.
 - If the description uses less than the space above the portal, fields should occupy the
   newly available adjacent area.
 - Do not show a toggle.
 
 ### Case 6: Any Number of Fields, Long Description
 
-- First compute the adjacent field layout to determine how much of the portal-height column
-  is consumed.
-- Keep fields adjacent to the portal where possible and bottom-align that adjacent block to
-  the bottom of the portal.
+- First compute the adjacent field layout to determine how much of the portal-height
+  column is consumed.
+- Keep fields adjacent to the portal where possible and bottom-align that adjacent block
+  to the bottom of the portal.
 - Any remaining fields flow below the portal in a full-width grid.
 - Use the remaining collapsed vertical budget for the description.
 - Route collapsed text around the top-right toggle and the portal.
@@ -120,29 +123,29 @@ In this case:
   button.
 - The button should stay anchored and not jump when the user expands.
 - The text viewport scrolls independently under the sticky button.
-- The expanded starting scroll position should preserve continuity with the collapsed text
-  reveal.
+- The expanded starting scroll position should preserve continuity with the collapsed
+  text reveal.
 
 ## Implementation Notes
 
-- The layout engine should prefer explicit intermediate measurements over implicit visual
-  guesses.
+- The layout engine should prefer explicit intermediate measurements over implicit
+  visual guesses.
 - Property placement should be derived from measured adjacent-region and overflow-region
   widths and heights.
-- The collapsed short/long decision should come from measured layout output, not from raw
-  character count or a fixed description line budget alone.
+- The collapsed short/long decision should come from measured layout output, not from
+  raw character count or a fixed description line budget alone.
 
 ## Property width and text rhythm
 
 Property grids preserve their input order and use content-sized columns when those
-columns fit; spare width must not spread short values across the field region.
-Short values prefer one line; longer names and prose receive wider cells or spans.
-Compare candidate arrangements rather than accepting the first four-column fit.
-Measured label/value fonts, line heights and gaps must match their rendered CSS;
-wrapped labels contribute to row height. The grid must not exceed its container.
-Region fit checks allow a half-pixel rounding tolerance and evaluate later
-arrangements before moving fields below the portal.
-Expanded descriptions retain the property grid below both the text and portal.
+columns fit; spare width must not spread short values across the field region. Short
+values prefer one line; longer names and prose receive wider cells or spans. Compare
+candidate arrangements rather than accepting the first four-column fit. Measured
+label/value fonts, line heights and gaps must match their rendered CSS; wrapped labels
+contribute to row height. The grid must not exceed its container. Region fit checks
+allow a half-pixel rounding tolerance and evaluate later arrangements before moving
+fields below the portal. Expanded descriptions retain the property grid below both the
+text and portal.
 
 Future structured links and numbered references are proposed separately in
 [Structured property values](Design-Spec-Structured-Properties.md).

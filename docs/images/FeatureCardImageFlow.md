@@ -1,12 +1,14 @@
 # Feature Card Image Flow Documentation
 
-This document defines the responsibilities and possible states for image loading flows between components, organized by file/component in the order of data flow.
+This document defines the responsibilities and possible states for image loading flows
+between components, organized by file/component in the order of data flow.
 
 ## Data Flow Chain
 
 **Feature Page** → **ImageProvider** → **ImageCtx** → **UI Components**
 
-Each component manages its own state and passes data/calls to the next component in the chain.
+Each component manages its own state and passes data/calls to the next component in the
+chain.
 
 ---
 
@@ -94,7 +96,8 @@ Each component manages its own state and passes data/calls to the next component
 
 ### **Critical Issues:**
 
-- **Timing Mismatch**: `featureId` updates immediately on URL change, but `feature` loading is async
+- **Timing Mismatch**: `featureId` updates immediately on URL change, but `feature`
+  loading is async
 - **Solution**: Guard with `feature?.id === featureId` check and use `isValid` property
 
 ---
@@ -202,9 +205,9 @@ state = {
   activeImage: Image | null,
   targetImage: Image | null,
   targetImageId: Id | null,
-  isTransitioning: boolean
+  isTransitioning: boolean,
   // ... other state including upload, deletion, status tracking
-};
+}
 ```
 
 ### **Key Functions:**
@@ -290,7 +293,8 @@ state = {
 1. **Page**: URL change → `featureId` updates immediately
 2. **Page**: `imageProviderProps` updates with `isValid: false` (prevents mismatch)
 3. **ImageProvider**: Context change blocked by validity check
-4. **Page**: `loadFeatureAndSetContext()` completes → `imageProviderProps` updates with `isValid: true`
+4. **Page**: `loadFeatureAndSetContext()` completes → `imageProviderProps` updates with
+   `isValid: true`
 5. **ImageProvider**: Context change → `imageCtx.setContext()`
 6. **ImageCtx**: Images load → display
 

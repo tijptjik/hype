@@ -16,7 +16,10 @@
 
 ## Overview
 
-This project is deployed on Cloudflare's edge computing platform with a build promotion strategy. For detailed information about deployment workflows, CI/CD pipeline, and environment variables, see [Deployment.md](./Deployment.md). For architectural details, see [Architecture.md](./Architecture.md).
+This project is deployed on Cloudflare's edge computing platform with a build promotion
+strategy. For detailed information about deployment workflows, CI/CD pipeline, and
+environment variables, see [Deployment.md](./Deployment.md). For architectural details,
+see [Architecture.md](./Architecture.md).
 
 ## Technology Stack
 
@@ -107,18 +110,21 @@ bun run db:migration:run:cf:preview
 
 ### 5. Configure GitHub Secrets
 
-In your GitHub repository, add Cloudflare credentials in `prod` and `preview` [environments](https://github.com/tijptjik/hype/settings/environments/):
+In your GitHub repository, add Cloudflare credentials in `prod` and `preview`
+[environments](https://github.com/tijptjik/hype/settings/environments/):
 
 ```
 CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
 CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
 ```
 
-Then add the other secrets the build relies on. See `.dev.vars.production` and `.dev.vars.preview` for the keys and values.
+Then add the other secrets the build relies on. See `.dev.vars.production` and
+`.dev.vars.preview` for the keys and values.
 
 ### 6. Environment Variables
 
-Public environment variables are configured in `wrangler.toml` and read at runtime. Secret variables are uploaded separately using `wrangler secret put`.
+Public environment variables are configured in `wrangler.toml` and read at runtime.
+Secret variables are uploaded separately using `wrangler secret put`.
 
 **Public Variables** (in `wrangler.toml`):
 
@@ -128,13 +134,15 @@ PUBLIC_DRIZZLE_LOGGER=false
 # ... other public vars
 ```
 
-For detailed information about environment variable configuration and usage patterns, see [Deployment.md](./Deployment.md).
+For detailed information about environment variable configuration and usage patterns,
+see [Deployment.md](./Deployment.md).
 
 ### 7. Upload Secrets
 
 Upon a successful deployment, the worker resources should have been created.
 
-For all the secrets defined in `.dev.vars.*`, upload them manually with wrangler to both production and preview environments:
+For all the secrets defined in `.dev.vars.*`, upload them manually with wrangler to both
+production and preview environments:
 
 ```bash
 # PRODUCTION: Replace <KEY> with the Env Variable you want to set
@@ -146,8 +154,12 @@ npx wrangler secret put <KEY> --env preview
 
 ### 8. Google OAuth
 
-Visit the [Google Cloud Console](https://console.cloud.google.com/auth/clients/234870059065-fb1jvv6e72jb7ogtd755424bjm8pqgij.apps.googleusercontent.com?inv=1&invt=Abz-Pg&project=hypehk) and add `{https://domain.tld}` to the Authorized JavaScript origins and `{https://domain.tld/api/auth/callback/google}` to the Authorized redirect URIs.
+Visit the
+[Google Cloud Console](https://console.cloud.google.com/auth/clients/234870059065-fb1jvv6e72jb7ogtd755424bjm8pqgij.apps.googleusercontent.com?inv=1&invt=Abz-Pg&project=hypehk)
+and add `{https://domain.tld}` to the Authorized JavaScript origins and
+`{https://domain.tld/api/auth/callback/google}` to the Authorized redirect URIs.
 
 ## Workers
 
-For the asynchronous map preview pipeline, bucket layout, and provisioning commands, see [Map-Preview-Infrastructure.md](./Map-Preview-Infrastructure.md).
+For the asynchronous map preview pipeline, bucket layout, and provisioning commands, see
+[Map-Preview-Infrastructure.md](./Map-Preview-Infrastructure.md).

@@ -1,15 +1,19 @@
 # Design Spec: Cloudinary Replacement
 
 ## Purpose
+
 Replace Cloudinary with a Cloudflare-based image system that:
 
 - stores originals in stage-specific R2 buckets
 - serves Cloudinary-compatible transformation URLs through a Worker
-- performs transforms in Worker code using TypeScript/Wasm libraries instead of Cloudflare Images
+- performs transforms in Worker code using TypeScript/Wasm libraries instead of
+  Cloudflare Images
 - moves image metadata out of the database and into sidecar objects in R2
 - supports controlled replacement uploads without keeping historical source binaries
 
-This design keeps the app-facing image contract close to the current one while removing Cloudinary-specific storage and upload assumptions that are currently embedded in the image stack.
+This design keeps the app-facing image contract close to the current one while removing
+Cloudinary-specific storage and upload assumptions that are currently embedded in the
+image stack.
 
 Relevant current surfaces:
 
@@ -17,31 +21,39 @@ Relevant current surfaces:
 - Current Cloudinary upload and URL generation logic: `src/lib/client/services/image.ts`
 - Current remote image API: `src/lib/api/server/image.remote.ts`
 - Existing EXIF parsing helpers: `src/lib/client/services/image.ts`
-- Current DB mirror command for migration prep: `package.json` script `db:mirror:prod:to:local`
+- Current DB mirror command for migration prep: `package.json` script
+  `db:mirror:prod:to:local`
 
 ## Current State Summary
+
 The current implementation is still Cloudinary-shaped end to end:
 
-- image records persist Cloudinary-specific values in `cdn`, `env`, `cdnId`, `publicId`, and `version`
+- image records persist Cloudinary-specific values in `cdn`, `env`, `cdnId`, `publicId`,
+  and `version`
 - uploads are signed and sent directly to Cloudinary
 - image URLs are generated as Cloudinary transformation URLs
 - image EXIF metadata is stored both as raw JSON and as denormalized DB columns
 - delete flow attempts Cloudinary cleanup after DB removal
 
-The enum already includes `cloudflareR2`, but the active implementation does not yet support it.
+The enum already includes `cloudflareR2`, but the active implementation does not yet
+support it.
 
 ## Target Architecture
 
 ### High-level shape
+
 Use three logical responsibilities:
 
 1. app codebase upload auth + finalize flow
 2. browser direct upload to R2
-3. Cloudflare Worker for image access, metadata access, transform-on-miss, and derived-cache writes
+3. Cloudflare Worker for image access, metadata access, transform-on-miss, and
+   derived-cache writes
 
-There is no separate upload Worker. Upload authorization lives in the Svelte remote layer in this repo.
+There is no separate upload Worker. Upload authorization lives in the Svelte remote
+layer in this repo.
 
 ### Storage model
+
 Use stage-specific buckets.
 
 - Originals bucket per stage:
@@ -75,20 +87,25 @@ Rationale:
 - metadata lives next to the image, not in a separate top-level tree
 - the source binary key remains stable
 - replacement uploads overwrite the source binary at the same key
-- versioned metadata snapshots allow version-specific metadata reads without keeping historical source binaries
+- versioned metadata snapshots allow version-specific metadata reads without keeping
+  historical source binaries
 
 ### Version semantics
+
 `version` is cache-busting only.
 
 - The original binary is overwritten in place on replacement.
 - The database row stores the current live version.
-- Derived outputs are keyed by `version`, so replacement invalidates all cached variants without deleting the source key.
+- Derived outputs are keyed by `version`, so replacement invalidates all cached variants
+  without deleting the source key.
 - Historical source binaries are not retained in v1.
 
 ## Data Model Changes
 
 ### Image table contract
-Keep the image row as the canonical pointer to the live image asset, but remove metadata payloads from the relational model.
+
+Keep the image row as the canonical pointer to the live image asset, but remove metadata
+payloads from the relational model.
 
 Keep:
 
@@ -124,12 +141,15 @@ Follow-up work required alongside schema change:
 - remove these fields from Zod image schemas and response shapes
 - remove DB reads/writes for metadata in image create/update flows
 - move metadata consumers to remote metadata fetches
-- add an entry to `docs/Deferred-Migrations.md` only if rollout requires a staged compatibility period without the physical column drop
+- add an entry to `docs/Deferred-Migrations.md` only if rollout requires a staged
+  compatibility period without the physical column drop
 
 ## Upload Authorization and Finalization
 
 ### New remote auth function
-Add a Svelte remote command, for example `authImageUpload()`, in the image remote module.
+
+Add a Svelte remote command, for example `authImageUpload()`, in the image remote
+module.
 
 Input:
 
@@ -141,7 +161,8 @@ Input:
 - `size`
 - `replaceImageId?`
 
-`scope` must include enough information to determine the final path and authorization chain, for example:
+`scope` must include enough information to determine the final path and authorization
+chain, for example:
 
 - `organisationId`
 - `projectId`
@@ -156,6 +177,7 @@ Output:
 - whether the upload is a replacement
 
 ### Authz requirements
+
 Authz must explicitly distinguish create-vs-replace.
 
 - New upload permission:
@@ -176,13 +198,16 @@ New upload flow:
 
 - generate a new base id with `nanoid(16)`
 - join `scopePath/baseId` into `publicId`
-- before issuing upload auth, verify the generated base id does not already exist for that scope
+- before issuing upload auth, verify the generated base id does not already exist for
+  that scope
 - if collision occurs, generate another id
 - do not allow best-effort overwrite for non-replacement uploads
 
-This uniqueness check is required because v1 source binaries are stored at stable keys and no historical source versions are kept.
+This uniqueness check is required because v1 source binaries are stored at stable keys
+and no historical source versions are kept.
 
 ### Upload object layout
+
 The browser uploads the original binary directly to:
 
 - `{publicId}`
@@ -193,7 +218,8 @@ Finalize responsibilities:
 
 - validate upload session
 - validate object existence and expected size/type where possible
-- extract EXIF and derive metadata using the existing helper logic currently in `src/lib/client/services/image.ts`
+- extract EXIF and derive metadata using the existing helper logic currently in
+  `src/lib/client/services/image.ts`
 - compute the live `version`
 - write metadata sidecars:
   - `{publicId}.json`
@@ -209,6 +235,7 @@ Finalize responsibilities:
 ## Access, Transform, and Metadata Worker
 
 ### Worker responsibilities
+
 Use one Worker with two route families:
 
 - image delivery:
@@ -229,13 +256,15 @@ Worker responsibilities:
 - enforce cross-stage read rules
 
 ### Cross-stage read policy
+
 Lower stages can always read higher stages.
 
 - local/dev can read preview and production
 - preview can read production
 - production reads production only
 
-If the live image record points at a higher-stage bucket, the Worker reads it directly from that bucket.
+If the live image record points at a higher-stage bucket, the Worker reads it directly
+from that bucket.
 
 If a stage reads from a different stage bucket, emit a structured warning log with:
 
@@ -245,6 +274,7 @@ If a stage reads from a different stage bucket, emit a structured warning log wi
 - resolved version
 
 ### Metadata route contract
+
 Support:
 
 - `p_auto`
@@ -288,6 +318,7 @@ Metadata sources:
 ## URL Parsing and Canonicalization
 
 ### Delivery URL compatibility
+
 Preserve Cloudinary-style request shapes:
 
 - `{BASE_URL}/{env}/image/upload/c_fill,w_100,h_100,q_auto/g_auto/f_auto/v1750585336/scope/baseId`
@@ -298,6 +329,7 @@ Preserve Cloudinary-style request shapes:
 - `{BASE_URL}/{env}/image/upload/c_fit,w_256,h_256/scope/baseId.webp`
 
 ### Canonical transform defaults
+
 Defaults:
 
 - gravity: `g_auto`
@@ -345,6 +377,7 @@ Normalization rules:
 ## Transform Engine
 
 ### Libraries
+
 Use:
 
 - `@jsquash/jpeg`
@@ -356,6 +389,7 @@ Use:
 - `smartcrop`
 
 ### Transform behavior
+
 Execution flow:
 
 1. load original binary from originals bucket
@@ -407,6 +441,7 @@ Quality policy for `q_auto`:
 ## Client and Remote API Changes
 
 ### New remote functions
+
 Add:
 
 - `authImageUpload(...)`
@@ -422,7 +457,9 @@ Add:
 This function should not read image metadata from the DB.
 
 ### URL generation
-Replace Cloudinary-only URL generation in the client image service with provider-aware URL generation that keeps the current call shape.
+
+Replace Cloudinary-only URL generation in the client image service with provider-aware
+URL generation that keeps the current call shape.
 
 For `cloudflareR2` rows:
 
@@ -431,12 +468,15 @@ For `cloudflareR2` rows:
 - default gravity to `g_auto`
 
 ### Component migration to remote metadata reads
-Components that currently rely on DB-backed image metadata must call the new remote function themselves.
+
+Components that currently rely on DB-backed image metadata must call the new remote
+function themselves.
 
 Known current consumers to migrate:
 
 - `src/lib/components/tasks/controls/ReportedMissing.svelte`
-  - currently reads `latitude`, `longitude`, and `capturedAt` from `task.images?.[0]?.image?.metadata`
+  - currently reads `latitude`, `longitude`, and `capturedAt` from
+    `task.images?.[0]?.image?.metadata`
 - `src/lib/components/featureCard/gallery/Attribution.svelte`
   - currently reads `credit` and `capturedAt` from the image payload
 
@@ -444,7 +484,8 @@ The gallery metadata UI in:
 
 - `src/lib/components/featureCard/gallery/Metadata.svelte`
 
-should remain a presentational wrapper, while the child component that needs metadata performs the remote call.
+should remain a presentational wrapper, while the child component that needs metadata
+performs the remote call.
 
 Migration rule:
 
@@ -466,8 +507,10 @@ Delete:
 
 - delete DB row first
 - attempt source object deletion from the correct stage originals bucket
-- optionally delete derived variants lazily by leaving them unreachable through versioned URLs
-- explicit derived-bucket purge is optional operational cleanup, not required for correctness
+- optionally delete derived variants lazily by leaving them unreachable through
+  versioned URLs
+- explicit derived-bucket purge is optional operational cleanup, not required for
+  correctness
 
 Replace:
 
@@ -480,11 +523,13 @@ Replace:
 ## Migration Strategy: Cloudinary to R2
 
 ### Scope
+
 Only migrate images that are currently referenced in the production database.
 
 Do not attempt to mirror the full Cloudinary library.
 
 ### Migration steps
+
 1. Mirror production DB to local using the existing command:
    - `bun run db:mirror:prod:to:local`
 2. Query the local mirrored DB for image rows that still point at Cloudinary.
@@ -503,19 +548,24 @@ Do not attempt to mirror the full Cloudinary library.
    - `{publicId}.v{version}.json`
    - `{publicId}.manifest.json`
 7. Verify uploaded objects exist and metadata sidecars are readable.
-8. Generate a data migration that updates production DB image rows from Cloudinary to Cloudflare/R2 semantics:
+8. Generate a data migration that updates production DB image rows from Cloudinary to
+   Cloudflare/R2 semantics:
    - `cdn = 'cloudflareR2'`
    - `env = <production-stage-env>`
    - `cdnId = null`
    - keep `publicId`
    - keep `version`
 9. Deploy the application and Worker changes.
-10. Run the production DB data migration so live reads switch from Cloudinary URLs to Cloudflare URLs.
+10. Run the production DB data migration so live reads switch from Cloudinary URLs to
+    Cloudflare URLs.
 11. After production verification, remove Cloudinary-specific credentials and dead code.
 
 ### Migration safety requirements
-- migration script must skip DB rows whose Cloudinary source download fails and report them explicitly
-- no DB row should be switched until its source binary and metadata sidecars have been written successfully
+
+- migration script must skip DB rows whose Cloudinary source download fails and report
+  them explicitly
+- no DB row should be switched until its source binary and metadata sidecars have been
+  written successfully
 - migration should be idempotent for reruns
 - verification output should include counts for:
   - discovered DB images
@@ -527,6 +577,7 @@ Do not attempt to mirror the full Cloudinary library.
 ## Testing Plan
 
 ### URL normalization
+
 - all accepted delivery URL variants normalize to one canonical transform key
 - missing `g_*` defaults to `g_auto`
 - missing `q_*` defaults to `q_auto`
@@ -535,6 +586,7 @@ Do not attempt to mirror the full Cloudinary library.
 - unsupported `e_*` values are ignored without parse failure
 
 ### Upload auth and replacement
+
 - new upload auth rejects unauthorized contexts
 - replacement auth rejects users without replace permission
 - replacement auth reuses existing `publicId`
@@ -542,6 +594,7 @@ Do not attempt to mirror the full Cloudinary library.
 - base id collision triggers regeneration before upload auth is returned
 
 ### Metadata storage and retrieval
+
 - finalize writes latest and versioned metadata sidecars next to the image
 - `getMetadata(publicId, p_basic)` returns expected subset
 - `getMetadata(publicId, p_full)` returns full JSON payload
@@ -549,6 +602,7 @@ Do not attempt to mirror the full Cloudinary library.
 - latest metadata reads resolve through manifest/current version correctly
 
 ### Worker transform behavior
+
 - `c_fit` preserves aspect ratio
 - `c_fill` produces exact output size
 - `c_thumb` behaves as `c_fill + g_auto`
@@ -557,12 +611,14 @@ Do not attempt to mirror the full Cloudinary library.
 - SVG requests pass through unchanged
 
 ### Migration
+
 - local manifest generation includes only DB-backed images
 - successful mirrored images produce source binary plus sidecar metadata
 - generated DB data migration updates only successfully mirrored rows
 - post-migration URL generation points at the Worker base URL, not Cloudinary
 
 ## Assumptions and Defaults
+
 - Upload auth lives in this codebase, not in a separate Worker.
 - Originals and derived outputs use separate buckets for each stage.
 - Metadata lives next to the original image object under the same prefix.
@@ -570,4 +626,5 @@ Do not attempt to mirror the full Cloudinary library.
 - Lower stages can always read higher stages.
 - Historical source binaries are not retained.
 - Version-specific metadata snapshots are retained even though source binaries are not.
-- Metadata consumers will fetch metadata through the new remote function rather than through standard image DB payloads.
+- Metadata consumers will fetch metadata through the new remote function rather than
+  through standard image DB payloads.

@@ -130,7 +130,8 @@ Notes:
 - This copies from `hype-images-{stage}` into `hype-assets-raw-{stage}`.
 - It prefixes non-namespaced keys to `h/{oldKey}`.
 - It skips keys that already exist in the target bucket.
-- It writes a JSON report to `tmp/r2-image-asset-raw-migration-report.json` unless overridden with `--out`.
+- It writes a JSON report to `tmp/r2-image-asset-raw-migration-report.json` unless
+  overridden with `--out`.
 
 ## 7. Verify cutover
 
@@ -166,4 +167,5 @@ curl -H "Authorization: Bearer $ASSET_ANALYTICS_READ_TOKEN" https://raw.assets.h
 
 - Leave old `hype-images-*` buckets in place until you are satisfied with rollback risk.
 - Do not route any production traffic to the old asset-gateway worker.
-- After the migration is stable, remove legacy buckets and any stale dashboard routes manually.
+- After the migration is stable, remove legacy buckets and any stale dashboard routes
+  manually.

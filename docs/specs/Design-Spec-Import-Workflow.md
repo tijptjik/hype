@@ -2,8 +2,9 @@
 
 ## Summary
 
-This document captures the admin import system that existed on `feat/data-import`
-as a future reimplementation target, not as a recommendation to restore the old code verbatim.
+This document captures the admin import system that existed on `feat/data-import` as a
+future reimplementation target, not as a recommendation to restore the old code
+verbatim.
 
 The source snapshot was centered on:
 
@@ -48,12 +49,12 @@ The old code also had an `events.ts` stub, but event import was not implemented.
 
 - The workflow model was correct: import is not one form submit, it is a staged
   reconciliation pipeline.
-- The property reconciliation step recognized a real domain need:
-  property creation, value matching, translation prompting, and type-sensitive value
-  handling cannot be reduced to naive CSV mapping.
+- The property reconciliation step recognized a real domain need: property creation,
+  value matching, translation prompting, and type-sensitive value handling cannot be
+  reduced to naive CSV mapping.
 - The feature preview/diff step was useful and should remain part of any future design.
-- The image upload path had a practical operational contract:
-  map filenames to feature ids, batch uploads, show per-file status.
+- The image upload path had a practical operational contract: map filenames to feature
+  ids, batch uploads, show per-file status.
 
 ## What Should Not Be Reintroduced
 
@@ -95,8 +96,8 @@ Optional later expansion:
 
 Reason:
 
-- feature CSV import and feature-image upload have different validation,
-  authorization, and failure models
+- feature CSV import and feature-image upload have different validation, authorization,
+  and failure models
 - the legacy page combined them for convenience, but they are separate jobs
 
 ## Target Architecture
@@ -287,8 +288,8 @@ implicitly advances workflow state.
 
 ### Stage 4: Reference Validation
 
-Split validation by reference type. Each validator should run server-side against current
-data:
+Split validation by reference type. Each validator should run server-side against
+current data:
 
 - users
 - layers
@@ -301,11 +302,19 @@ Validation output should be a durable stage payload:
 type ImportValidationResult = {
   users: {
     valid: number
-    invalid: Array<{ value: string; reason: string; suggestions: Array<{ id: string; label: string }> }>
+    invalid: Array<{
+      value: string
+      reason: string
+      suggestions: Array<{ id: string; label: string }>
+    }>
   }
   layers: {
     valid: number
-    invalid: Array<{ value: string; reason: string; suggestions: Array<{ id: string; label: string }> }>
+    invalid: Array<{
+      value: string
+      reason: string
+      suggestions: Array<{ id: string; label: string }>
+    }>
   }
   featureTargets: {
     missingIds: string[]
@@ -454,8 +463,8 @@ change:
 - execution row result
 
 The exact legacy types do not need to be copied into `src/lib/types.ts` unchanged.
-Instead, introduce new import-domain types under the correct import/resource heading when
-the feature is rebuilt.
+Instead, introduce new import-domain types under the correct import/resource heading
+when the feature is rebuilt.
 
 ## Authorization Requirements
 

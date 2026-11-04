@@ -2,7 +2,9 @@
 
 ## Goal
 
-Move resource-specific TypeScript types out of [`src/lib/types.ts`](/home/io/code/hype/src/lib/types.ts) and colocate them with the resource schema that defines their contract.
+Move resource-specific TypeScript types out of
+[`src/lib/types.ts`](/home/io/code/hype/src/lib/types.ts) and colocate them with the
+resource schema that defines their contract.
 
 This reduces drift between:
 
@@ -19,15 +21,19 @@ For each resource:
 1. Keep runtime Zod schemas in `src/lib/db/zod/schema/<resource>.ts`.
 2. Add colocated resource types in `src/lib/db/zod/schema/<resource>.types.ts`.
 3. Import resource-specific types directly from that local `*.types.ts` file.
-4. Do not re-export those new resource types from [`src/lib/types.ts`](/home/io/code/hype/src/lib/types.ts).
-5. Leave only genuinely shared, cross-resource, or app-wide types in [`src/lib/types.ts`](/home/io/code/hype/src/lib/types.ts).
+4. Do not re-export those new resource types from
+   [`src/lib/types.ts`](/home/io/code/hype/src/lib/types.ts).
+5. Leave only genuinely shared, cross-resource, or app-wide types in
+   [`src/lib/types.ts`](/home/io/code/hype/src/lib/types.ts).
 
 ## Project Example
 
 The `project` refactor now uses:
 
-- schema: [`src/lib/db/zod/schema/project.ts`](/home/io/code/hype/src/lib/db/zod/schema/project.ts)
-- colocated types: [`src/lib/db/zod/schema/project.types.ts`](/home/io/code/hype/src/lib/db/zod/schema/project.types.ts)
+- schema:
+  [`src/lib/db/zod/schema/project.ts`](/home/io/code/hype/src/lib/db/zod/schema/project.ts)
+- colocated types:
+  [`src/lib/db/zod/schema/project.types.ts`](/home/io/code/hype/src/lib/db/zod/schema/project.types.ts)
 
 That local type file owns:
 
@@ -66,7 +72,8 @@ For each resource:
 
 1. Add or complete current Zod schema exports in `<resource>.ts`.
 2. Create `<resource>.types.ts` next to it.
-3. Move resource-owned types from [`src/lib/types.ts`](/home/io/code/hype/src/lib/types.ts) into the local file.
+3. Move resource-owned types from
+   [`src/lib/types.ts`](/home/io/code/hype/src/lib/types.ts) into the local file.
 4. Update all imports to point to the local file directly.
 5. Replace deprecated raw aliases with current profile-aware row types.
 6. Verify the DB service, API service, remote entrypoints, and main admin page together.
@@ -93,4 +100,5 @@ Move these into resource-local `*.types.ts` files:
 
 ## Rule Of Thumb
 
-If a type cannot be understood without reading one resource's schema, it belongs next to that resource, not in the global types file.
+If a type cannot be understood without reading one resource's schema, it belongs next to
+that resource, not in the global types file.

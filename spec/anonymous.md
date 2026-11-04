@@ -7,18 +7,18 @@ Proposed implementation specification.
 ## Summary
 
 HYPE should open directly into the application without requiring a login or showing a
-landing page. On the first application visit, the system automatically creates a
-Better Auth anonymous user and session. Returning visitors continue with the anonymous
-user identified by their Better Auth session cookie.
+landing page. On the first application visit, the system automatically creates a Better
+Auth anonymous user and session. Returning visitors continue with the anonymous user
+identified by their Better Auth session cookie.
 
 The product must describe this state as **continuing without an account**, not as
 anonymous use. HYPE stores the user's preferences and activity in D1, but the user has
 not yet associated that data with a durable login method.
 
-Users can browse the application, configure it, and save places without an account.
-When they attempt an operation that requires durable identity, attribution, moderation,
-or privileged authorization, HYPE prompts them to **Upgrade account**. Upgrading
-links an email/password or social login to the existing server data.
+Users can browse the application, configure it, and save places without an account. When
+they attempt an operation that requires durable identity, attribution, moderation, or
+privileged authorization, HYPE prompts them to **Upgrade account**. Upgrading links an
+email/password or social login to the existing server data.
 
 ## Product Decisions
 
@@ -104,8 +104,8 @@ session creation fails.
 
 ### Routes that do not create anonymous users
 
-Infrastructure endpoints, asset requests, health checks, current landing page, headless rendering routes, and
-auth callbacks must not create anonymous users.
+Infrastructure endpoints, asset requests, health checks, current landing page, headless
+rendering routes, and auth callbacks must not create anonymous users.
 
 An unauthenticated direct visit to an admin route should show or redirect to an account
 login prompt with a validated return URL. It does not need to create an anonymous user
@@ -115,7 +115,9 @@ must show the upgrade prompt before loading or mutating account-only data.
 ### Logout
 
 Logging out of an upgraded account removes its session and returns the user directly to
-a modified version of the current landing page. The application offers logins with 3 socials and email and password or continuing as a guest, which is a new anonymous user/session as part of normal bootstrap.
+a modified version of the current landing page. The application offers logins with 3
+socials and email and password or continuing as a guest, which is a new anonymous
+user/session as part of normal bootstrap.
 
 ## Better Auth Configuration
 
@@ -223,9 +225,9 @@ The upgrade dialog should offer:
 - Apple, present but disabled until credentials and developer access are available
 - WeChat, present but disabled until credentials and developer access are available
 
-User intent and a validated same-origin return URL should survive the upgrade flow so the
-application can resume the requested action where safe. File objects and sensitive form
-contents must not be persisted for resumption.
+User intent and a validated same-origin return URL should survive the upgrade flow so
+the application can resume the requested action where safe. File objects and sensitive
+form contents must not be persisted for resumption.
 
 ### Link and migration flow
 
@@ -267,8 +269,8 @@ After success:
 ### Existing accounts
 
 Signing in to an existing account while using an anonymous session must also run the
-merge. This is not limited to creating a new account. Existing account security and roles
-remain authoritative while anonymous saved state is merged using the rules above.
+merge. This is not limited to creating a new account. Existing account security and
+roles remain authoritative while anonymous saved state is merged using the rules above.
 
 ## Email and Password
 
@@ -285,8 +287,8 @@ Required flows:
 - Add a password to an existing social-login account without creating a duplicate user
 - Generic error responses that avoid email enumeration
 
-Password reset should revoke other sessions. Email delivery must use a Cloudflare email / Worker-compatible
-sender and background execution where possible.
+Password reset should revoke other sessions. Email delivery must use a Cloudflare email
+/ Worker-compatible sender and background execution where possible.
 
 ## Apple and WeChat
 
@@ -354,8 +356,8 @@ traffic and abandoned sessions:
 - Keep anonymous custom sessions inexpensive by skipping unnecessary role queries.
 
 Turnstile should not be required for ordinary browsing because it would reintroduce the
-friction this feature is intended to remove. It may be considered later only for detected
-abuse or account/contribution workflows.
+friction this feature is intended to remove. It may be considered later only for
+detected abuse or account/contribution workflows.
 
 ## UI and Application Changes
 
@@ -363,11 +365,11 @@ Primary integration points:
 
 - `src/lib/auth/client.ts`: add the anonymous client plugin.
 - `src/lib/auth.ts`: correct link migration and anonymous cleanup behavior.
-- `src/hooks.server.ts`: remove the broad signed-out redirect; retain explicit protection
-  for admin and other account-only server routes.
+- `src/hooks.server.ts`: remove the broad signed-out redirect; retain explicit
+  protection for admin and other account-only server routes.
 - `src/routes/+layout.svelte`: own the one-time anonymous bootstrap and auth transition.
-- `src/routes/(public)/(app)/+layout.svelte`: render the application for anonymous and upgraded
-  sessions; remove the session-based landing-page branch.
+- `src/routes/(public)/(app)/+layout.svelte`: render the application for anonymous and
+  upgraded sessions; remove the session-based landing-page branch.
 - `src/routes/(public)/(app)/+page.svelte`: remove the Google-only landing experience.
 - `src/lib/context/app.svelte.ts`: initialize resources for anonymous user IDs and keep
   user state/caches isolated across anonymous-to-account transitions.
@@ -405,16 +407,16 @@ email service configuration, provider flags, and cleanup schedule.
 ### Authorization
 
 - Anonymous users can read published, non-archived hierarchy and features.
-- Anonymous users cannot read unpublished or archived records by list filters, direct ID,
-  relation hydration, response profile, or cache reuse.
+- Anonymous users cannot read unpublished or archived records by list filters, direct
+  ID, relation hydration, response profile, or cache reuse.
 - Anonymous write commands return `ACCOUNT_REQUIRED`.
 - Upgraded users still require the appropriate role for privileged writes.
 - Admin routes require an upgraded account and relevant role.
 
 ### Persistence
 
-- Preferences, locale, default layers, wishlist, and visited state survive reloads through
-  the anonymous session.
+- Preferences, locale, default layers, wishlist, and visited state survive reloads
+  through the anonymous session.
 - Clearing the cookie prevents the new session from accessing the old anonymous user.
 - User-scoped query keys do not leak state between old anonymous, new anonymous, and
   upgraded sessions.
@@ -424,7 +426,8 @@ email service configuration, provider flags, and cleanup schedule.
 - New email/password signup migrates anonymous state.
 - Google signup/sign-in migrates anonymous state.
 - Existing-account sign-in merges anonymous state without overwriting identity or roles.
-- Wishlist, visited dates, layers, locale, and preferences follow the defined merge rules.
+- Wishlist, visited dates, layers, locale, and preferences follow the defined merge
+  rules.
 - Link migration is idempotent and safe under retry.
 - Source anonymous user is deleted only after successful migration.
 - Failed migration does not silently discard anonymous data.
@@ -444,7 +447,8 @@ email service configuration, provider flags, and cleanup schedule.
 4. Enable server persistence for preferences, layers, wishlist, and visits.
 5. Add centralized upgrade prompts and enforce `ACCOUNT_REQUIRED` on all writes.
 6. Enable email/password, verification, reset, and existing-account merging.
-7. Add cleanup scheduling, rate limiting, metrics, privacy updates, and operational alerts.
+7. Add cleanup scheduling, rate limiting, metrics, privacy updates, and operational
+   alerts.
 8. Enable automatic anonymous bootstrap in preview, monitor D1/session behavior, then
    release to production.
 
@@ -457,6 +461,7 @@ email service configuration, provider flags, and cleanup schedule.
 - Contributions, uploads, subscriptions, own-profile access, and administration require
   an upgraded account at both UI and server boundaries.
 - Upgrading with email/password or Google preserves the anonymous user's saved state.
-- Clearing or expiring the anonymous cookie may lose access, and the UI communicates this.
+- Clearing or expiring the anonymous cookie may lose access, and the UI communicates
+  this.
 - Abandoned anonymous users are removed by a safe, observable retention process.
 - Apple and WeChat are scaffolded but cannot be used until explicitly enabled.

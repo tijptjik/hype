@@ -2,7 +2,10 @@
 
 ## Overview
 
-The image system in Hype manages the display, upload, and manipulation of images across various contexts (features, projects, organizations, tasks). The system is built around a centralized `ImageCtx` class that provides reactive state management using Svelte 5's `$state` and coordinates between multiple components.
+The image system in Hype manages the display, upload, and manipulation of images across
+various contexts (features, projects, organizations, tasks). The system is built around
+a centralized `ImageCtx` class that provides reactive state management using Svelte 5's
+`$state` and coordinates between multiple components.
 
 ## Core Components
 
@@ -42,8 +45,8 @@ state = $state({
 
   // Context configuration
   context: null as ImageContextConfig | null,
-  lastChangeType: null as 'target' | 'nav' | 'context' | null
-});
+  lastChangeType: null as 'target' | 'nav' | 'context' | null,
+})
 ```
 
 #### Key Reactive Derived States
@@ -94,13 +97,13 @@ The core image display component with smooth crossfade transitions:
 
 ```typescript
 // Smart crossfade logic
-let baseImage = $state<Image | null>(null);
-let overlayImage = $state<Image | null>(null);
-let overlayOpacity = $state(0);
+let baseImage = $state<Image | null>(null)
+let overlayImage = $state<Image | null>(null)
+let overlayOpacity = $state(0)
 
 // Handles transition interruption
 if (isTransitioning && overlayImage) {
-  baseImage = overlayImage; // Current overlay becomes new base
+  baseImage = overlayImage // Current overlay becomes new base
 }
 ```
 
@@ -127,9 +130,9 @@ Individual thumbnail component with:
 ```typescript
 // Reactive publish status
 let isPublished = $derived.by(() => {
-  const contextImage = imageCtx.getImage(image.id);
-  return contextImage?.isPublished ?? image.isPublished;
-});
+  const contextImage = imageCtx.getImage(image.id)
+  return contextImage?.isPublished ?? image.isPublished
+})
 ```
 
 #### IntentLabel (`src/lib/components/images/IntentLabel.svelte`)
@@ -161,17 +164,17 @@ const upload: ImageUpload = {
 
 ```typescript
 // Add to upload queue
-imageCtx.addToUploadQueue(files, imageToReplace);
+imageCtx.addToUploadQueue(files, imageToReplace)
 
 // Process uploads with status tracking
 await imageCtx.processUploadQueue({
-  onSuccess: (savedImage) => {
+  onSuccess: savedImage => {
     // Handle successful upload
   },
   onError: () => {
     // Handle upload failure
-  }
-});
+  },
+})
 ```
 
 ### 3. Viewer State During Upload
@@ -219,16 +222,16 @@ Components use `$derived.by()` for complex reactive computations:
 ```typescript
 // In Thumbnail.svelte
 let isPublished = $derived.by(() => {
-  const contextImage = imageCtx.getImage(image.id);
-  return contextImage?.isPublished ?? image.isPublished;
-});
+  const contextImage = imageCtx.getImage(image.id)
+  return contextImage?.isPublished ?? image.isPublished
+})
 
 // In Viewer.svelte
 let isPublished = $derived.by(() => {
-  if (!activeImage) return false;
-  const contextImage = imageCtx.getImage(activeImage.id);
-  return (contextImage)?.isPublished ?? activeImage.isPublished ?? false;
-});
+  if (!activeImage) return false
+  const contextImage = imageCtx.getImage(activeImage.id)
+  return contextImage?.isPublished ?? activeImage.isPublished ?? false
+})
 ```
 
 ## Image Sorting & Prioritization
@@ -247,25 +250,25 @@ export function sortImages(images: Image[]): Image[] {
   return images.sort((a, b) => {
     // Priority 1: Unpublished + no intent
     const aIsUnpublishedNoIntent =
-      !a.isPublished && (!a.intent || a.intent === 'undefined');
+      !a.isPublished && (!a.intent || a.intent === 'undefined')
     const bIsUnpublishedNoIntent =
-      !b.isPublished && (!b.intent || b.intent === 'undefined');
+      !b.isPublished && (!b.intent || b.intent === 'undefined')
 
-    if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1;
-    if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1;
+    if (aIsUnpublishedNoIntent && !bIsUnpublishedNoIntent) return -1
+    if (!aIsUnpublishedNoIntent && bIsUnpublishedNoIntent) return 1
 
     // Priority 2: Published vs unpublished
-    if (a.isPublished && !b.isPublished) return -1;
-    if (!a.isPublished && b.isPublished) return 1;
+    if (a.isPublished && !b.isPublished) return -1
+    if (!a.isPublished && b.isPublished) return 1
 
     // Priority 3: Intent order
-    const aIntentIndex = intentOrder.indexOf(a.intent as Intent);
-    const bIntentIndex = intentOrder.indexOf(b.intent as Intent);
-    if (aIntentIndex !== bIntentIndex) return aIntentIndex - bIntentIndex;
+    const aIntentIndex = intentOrder.indexOf(a.intent as Intent)
+    const bIntentIndex = intentOrder.indexOf(b.intent as Intent)
+    if (aIntentIndex !== bIntentIndex) return aIntentIndex - bIntentIndex
 
     // Priority 4: Creation date
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
 }
 ```
 
@@ -279,14 +282,14 @@ The system handles deletion constraints gracefully:
 // Server-side error detection
 if (error.message.includes('FOREIGN KEY constraint failed')) {
   if (error.message.includes('taskImage.imageId')) {
-    return error(400, 'Cannot delete image. It belongs to a Task');
+    return error(400, 'Cannot delete image. It belongs to a Task')
   }
 }
 
 // Client-side error display
-this.setErrorMessage(imageId, errorMessage);
+this.setErrorMessage(imageId, errorMessage)
 // Auto-clear after 5 seconds
-setTimeout(() => this.clearErrorMessage(imageId), 5000);
+setTimeout(() => this.clearErrorMessage(imageId), 5000)
 ```
 
 ### Deletion Order
@@ -295,14 +298,14 @@ Critical: Delete from database first, then Cloudinary:
 
 ```typescript
 // 1. Delete from database (stops UI from trying to load)
-await deleteImageFromDatabase(imageId);
+await deleteImageFromDatabase(imageId)
 
 // 2. Delete from Cloudinary (with error handling)
 try {
-  await deleteImageFromCloudinary(publicId);
+  await deleteImageFromCloudinary(publicId)
 } catch (error) {
   // Cloudinary deletion failures don't roll back database changes
-  console.error('Cloudinary deletion failed:', error);
+  console.error('Cloudinary deletion failed:', error)
 }
 ```
 
@@ -387,22 +390,22 @@ graph TD
 
 ### Reactivity Fix for Publish Toggle
 
-**Problem**: Publish toggle worked once but not on subsequent toggles
-**Solution**: Fixed `setForImage` to create new objects instead of mutating
+**Problem**: Publish toggle worked once but not on subsequent toggles **Solution**:
+Fixed `setForImage` to create new objects instead of mutating
 
 ```typescript
 // Before (broken reactivity)
-(image)[key] = value;
+image[key] = value
 
 // After (proper reactivity)
-const updatedImage = { ...image, [key]: value };
-this.state.images.set(imageId, updatedImage as ImageDB);
+const updatedImage = { ...image, [key]: value }
+this.state.images.set(imageId, updatedImage as ImageDB)
 ```
 
 ### Intent Label Visibility
 
-**Problem**: Intent labels hidden by z-index conflicts
-**Solution**: Proper z-index hierarchy and removed removeMode condition
+**Problem**: Intent labels hidden by z-index conflicts **Solution**: Proper z-index
+hierarchy and removed removeMode condition
 
 ```typescript
 // Intent labels always visible with z-20
@@ -411,18 +414,18 @@ class="absolute bottom-0 left-0 right-0 z-20 flex justify-center p-2"
 
 ### Gallery Performance
 
-**Problem**: Extensive debug logging affecting performance
-**Solution**: Removed ~30+ console.log statements from ImageCtx
+**Problem**: Extensive debug logging affecting performance **Solution**: Removed ~30+
+console.log statements from ImageCtx
 
 ### Crossfade Transitions
 
-**Problem**: Weird scale/pop-in effects during transitions
-**Solution**: Proper crossfade with overlay opacity management
+**Problem**: Weird scale/pop-in effects during transitions **Solution**: Proper
+crossfade with overlay opacity management
 
 ```typescript
 // Smart transition interruption
 if (isTransitioning && overlayImage) {
-  baseImage = overlayImage; // Current overlay becomes new base
+  baseImage = overlayImage // Current overlay becomes new base
 }
 ```
 
@@ -490,9 +493,9 @@ Use `$derived.by()` for complex reactive computations that depend on context sta
 
 ```typescript
 let isPublished = $derived.by(() => {
-  const contextImage = imageCtx.getImage(image.id);
-  return contextImage?.isPublished ?? image.isPublished;
-});
+  const contextImage = imageCtx.getImage(image.id)
+  return contextImage?.isPublished ?? image.isPublished
+})
 ```
 
 ### 3. Manage Z-Index Hierarchy

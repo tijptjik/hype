@@ -8,14 +8,14 @@ Tracking: [account support #189](https://github.com/tijptjik/hype/issues/189),
 ## Reviewed existing-target adoption (23 October 2026)
 
 This supersedes the original fresh-destination-only limitation below. Email equality
-still cannot authorize adopting an existing HYPE user. The operator reviews each
-source cohort and explicitly chooses its existing anchor; multiple target owners
-require explicit merge approval. Private decisions and case evidence remain ignored.
+still cannot authorize adopting an existing HYPE user. The operator reviews each source
+cohort and explicitly chooses its existing anchor; multiple target owners require
+explicit merge approval. Private decisions and case evidence remain ignored.
 
 `scripts/breadline/lib/target-adoption.ts` validates the case manifest hash and exact
 source cohort, retains the anchor ID, and fences the source, target seed, source
-decisions, complete affected rows, credentials and authorization. Application uses
-an immediate SQLite transaction on an offline database, saves an exclusive full
+decisions, complete affected rows, credentials and authorization. Application uses an
+immediate SQLite transaction on an offline database, saves an exclusive full
 before-image, and rejects stale execution. Rebuild-stage preparation independently
 checks the reviewed snapshot's full users, accounts, passkeys, sessions, roles and
 import ownership; content is fenced at the current pre-import stage because later
@@ -23,44 +23,44 @@ Feature import and development fixtures are absent at that point.
 
 Foreign-key introspection and explicit unconstrained user-reference columns cover
 content, attribution and history. Unknown embedded references stop a merge. Existing
-credentials retain their provider identifiers and secret fields; portable source
-Google identities may attach only to the approved owner. No source role is granted.
-Identical membership rows coalesce, and an existing Organisation Owner remains Owner
-when combined with Member. Other conflicting membership/content rows stop for review.
-Source names remain unchanged in private crosswalks; new profile names use title case,
-with explicitly reviewed names taking precedence for adopted accounts.
+credentials retain their provider identifiers and secret fields; portable source Google
+identities may attach only to the approved owner. No source role is granted. Identical
+membership rows coalesce, and an existing Organisation Owner remains Owner when combined
+with Member. Other conflicting membership/content rows stop for review. Source names
+remain unchanged in private crosswalks; new profile names use title case, with
+explicitly reviewed names taking precedence for adopted accounts.
 
-The normal planner accepts retained anchors only through persisted import ownership
-and exact crosswalk replay, still enforcing phone ownership and archive/anonymous
-checks. Private replay receipts and before-images permit exact verification and
-offline rollback. This tool does not implement a live production write path.
+The normal planner accepts retained anchors only through persisted import ownership and
+exact crosswalk replay, still enforcing phone ownership and archive/anonymous checks.
+Private replay receipts and before-images permit exact verification and offline
+rollback. This tool does not implement a live production write path.
 
-Run the standalone rehearsal with three positional paths: review JSON, case JSONL,
-and a new output directory. For normal development preparation, pass
+Run the standalone rehearsal with three positional paths: review JSON, case JSONL, and a
+new output directory. For normal development preparation, pass
 `--identity-review /absolute/private/review.json` to `scripts/dev/rebuild.ts`; the
-adjacent `cases.v1.jsonl` is mandatory. Use `--inputs` for the reviewed retained
-export. Omitting `--apply` leaves the running development database untouched.
-Changed source snapshots or reviewed identity/role state require renewed preparation
-and adjudication; the identity seed must never be replaced to resolve a collision.
+adjacent `cases.v1.jsonl` is mandatory. Use `--inputs` for the reviewed retained export.
+Omitting `--apply` leaves the running development database untouched. Changed source
+snapshots or reviewed identity/role state require renewed preparation and adjudication;
+the identity seed must never be replaced to resolve a collision.
 
-The reviewed 22 October checkpoint contains 14,226 source users: 14,219 now map,
-seven remain explicitly excluded, and none remain unresolved. The isolated rehearsal
-adopts 25 cohorts (39 rows), absorbs four duplicate HYPE users and preserves all 25
-anchors. Independent comparison verifies 77,529 existing rows across 70 tables,
-including 3,323 reference changes, without unrelated content/credential changes.
-Normal rebuild preparation with and without mocks also passes user/Feature replay,
-integrity and foreign-key checks. The full development run verifies 26 fixture
-scenarios; its map preparation now includes the task fixture namespace. Forty-nine
-focused importer/adoption/rebuild tests and the standalone adoption TypeScript check
-pass. Local installation is verified below; production rollout remains separate.
+The reviewed 22 October checkpoint contains 14,226 source users: 14,219 now map, seven
+remain explicitly excluded, and none remain unresolved. The isolated rehearsal adopts 25
+cohorts (39 rows), absorbs four duplicate HYPE users and preserves all 25 anchors.
+Independent comparison verifies 77,529 existing rows across 70 tables, including 3,323
+reference changes, without unrelated content/credential changes. Normal rebuild
+preparation with and without mocks also passes user/Feature replay, integrity and
+foreign-key checks. The full development run verifies 26 fixture scenarios; its map
+preparation now includes the task fixture namespace. Forty-nine focused
+importer/adoption/rebuild tests and the standalone adoption TypeScript check pass. Local
+installation is verified below; production rollout remains separate.
 
 ### Current-state-preserving local installation (23 October 2026)
 
 After explicit installation approval, the temporary Google claim fixture was removed
 with scoped restoration of its former profile/credentials and latent cohort. Test
-sessions remain revoked. Newer local tasks, Location reviews and address revisions
-made the older prepared export unsuitable for installation. Instead, a fresh backup
-of current local state received the same reviewed adoption and name cleanup.
+sessions remain revoked. Newer local tasks, Location reviews and address revisions made
+the older prepared export unsuitable for installation. Instead, a fresh backup of
+current local state received the same reviewed adoption and name cleanup.
 
 An independent comparison verified 105,483 existing rows across 75 tables, permitting
 only approved ownership/attribution substitutions and duplicate membership coalescing.
@@ -71,8 +71,8 @@ installer retained Miniflare metadata and an immutable pre-install rollback back
 Installed verification confirms all 25 anchors, 39 adopted source rows, four absorbed
 duplicate users, 3,073 imported name cleanups, zero unresolved source rows and zero
 inserts on normal replay. The temporary test eligibility is absent. Integrity and
-foreign-key checks pass. Existing event/run tables are still not imported; this is
-local identity acceptance only, with no production write or deployment.
+foreign-key checks pass. Existing event/run tables are still not imported; this is local
+identity acceptance only, with no production write or deployment.
 
 ### Manual Google claim acceptance (23 October 2026)
 
@@ -81,9 +81,9 @@ latent user containing two Breadline source identities. Database verification co
 the retained user ID and generated username, verified primary email, claimed ownership,
 one Google credential, one session, both unchanged source user/volunteer mappings and
 zero inherited roles. The additional eligible test identity uses a negative source key
-and `local-fixture` marker; it is not a real Breadline source row. The former local login
-was removed and its attribution profile archived, preserving authored content. Private
-before-images and a scoped restore tool remain outside Git.
+and `local-fixture` marker; it is not a real Breadline source row. The former local
+login was removed and its attribution profile archived, preserving authored content.
+Private before-images and a scoped restore tool remain outside Git.
 
 For this manual OAuth check, use `bun run dev -- --port 5173` and the registered
 `http://localhost:5173` origin. The ordinary configured port may differ; the OAuth
@@ -102,43 +102,43 @@ the real reviewed identity-adoption rebuild. No production account was modified.
 
 Refs #189, #194. The user planner now groups by normalized phone and supports
 single-identity auto-claiming. The destination will be reset: reconciliation of
-previously imported HYPE users is outside this implementation. Local preparation and the phone-completion update have been applied only to local D1;
-production and the source mirror are unchanged. Old email-based plans must be regenerated.
-The first-login claim workflow is now integrated with verified social sign-in and
-one-time email sign-in links; apply migration 0090 with the reset schema.
+previously imported HYPE users is outside this implementation. Local preparation and the
+phone-completion update have been applied only to local D1; production and the source
+mirror are unchanged. Old email-based plans must be regenerated. The first-login claim
+workflow is now integrated with verified social sign-in and one-time email sign-in
+links; apply migration 0090 with the reset schema.
 
 ### Identity and ownership
 
 A HYPE `user` is the persistent person/history identity. An `account` is a linked
 authentication credential. One user can have several explicitly linked credentials.
-Import one user per structurally valid normalized E.164 phone. Without a usable
-phone, group by exact normalized email or a reviewed email family instead, storing
-NULL telephone and preserving all user/volunteer mappings. Both grouping paths have
-these two outcomes:
+Import one user per structurally valid normalized E.164 phone. Without a usable phone,
+group by exact normalized email or a reviewed email family instead, storing NULL
+telephone and preserving all user/volunteer mappings. Both grouping paths have these two
+outcomes:
 
-| Source identities within a phone group | Import result |
-| --- | --- |
-| Exactly one distinct normalized email and at most one distinct nonblank trimmed name | Auto-claimed: retain that email/name and import portable Google credentials |
-| Multiple emails, multiple names, or no email | Latent: NULL primary email/name/image, false email verification, no login credentials |
+| Source identities within a phone group                                               | Import result                                                                         |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| Exactly one distinct normalized email and at most one distinct nonblank trimmed name | Auto-claimed: retain that email/name and import portable Google credentials           |
+| Multiple emails, multiple names, or no email                                         | Latent: NULL primary email/name/image, false email verification, no login credentials |
 
-Repeated rows and casing/whitespace variants of the same email do not create
-additional identities. Names are trimmed but otherwise compared exactly; missing
-names do not introduce another identity. A name alone cannot establish a claim.
-Imported profile names are title-cased after the claim decision (Refs #189, #194),
-including letters after hyphens and apostrophes. Uncased scripts remain unchanged.
-Private source names and exact replay comparisons retain their original casing;
-this presentation cleanup does not resolve ambiguous identities or overwrite existing
-HYPE profiles on replay. Reviewed target adoptions and account merges remain a
-separate guarded workflow.
-Auto-claiming assigns the unambiguous legacy identity; it does not itself prove
-mailbox ownership. `emailVerified` retains the previous verified-Google evidence
-rule. Facebook/unknown subjects are retained as private source evidence, not turned
-into invented provider accounts. Auto-claimed users without portable credentials
-need the normal verified-email recovery/sign-in flow.
+Repeated rows and casing/whitespace variants of the same email do not create additional
+identities. Names are trimmed but otherwise compared exactly; missing names do not
+introduce another identity. A name alone cannot establish a claim. Imported profile
+names are title-cased after the claim decision (Refs #189, #194), including letters
+after hyphens and apostrophes. Uncased scripts remain unchanged. Private source names
+and exact replay comparisons retain their original casing; this presentation cleanup
+does not resolve ambiguous identities or overwrite existing HYPE profiles on replay.
+Reviewed target adoptions and account merges remain a separate guarded workflow.
+Auto-claiming assigns the unambiguous legacy identity; it does not itself prove mailbox
+ownership. `emailVerified` retains the previous verified-Google evidence rule.
+Facebook/unknown subjects are retained as private source evidence, not turned into
+invented provider accounts. Auto-claimed users without portable credentials need the
+normal verified-email recovery/sign-in flow.
 
 Both classes use `isAnonymous=false` and `isArchived=false`. Do not reuse the guest
-marker: guests can have usable sessions, whereas latent users have no credential
-or session created by the import. No placeholder email is generated.
+marker: guests can have usable sessions, whereas latent users have no credential or
+session created by the import. No placeholder email is generated.
 
 ### Schema and private provenance
 
@@ -146,108 +146,109 @@ or session created by the import. No placeholder email is generated.
 `0086_username_display_case.sql` adds display casing and case-insensitive username
 uniqueness. `0089_breadline_phone_identity.sql` adds:
 
-- A unique index on `user.telephone`; multiple NULLs remain possible for users awaiting phone completion.
+- A unique index on `user.telephone`; multiple NULLs remain possible for users awaiting
+  phone completion.
 - `breadlineImportUser`: unique user and imported phone, `claimed`/`unclaimed` state,
-  and `claimedEmail` (NULL while unclaimed). Import auto-claims are distinguishable
-  from verified-email state on `user`; no login timestamp is invented.
-- `breadlineImportIdentity`: every retained source user/volunteer ID, normalized
-  source email, trimmed name and original provider subject, mapped to its HYPE user.
-  These records supply history ownership and first-login eligibility.
+  and `claimedEmail` (NULL while unclaimed). Import auto-claims are distinguishable from
+  verified-email state on `user`; no login timestamp is invented.
+- `breadlineImportIdentity`: every retained source user/volunteer ID, normalized source
+  email, trimmed name and original provider subject, mapped to its HYPE user. These
+  records supply history ownership and first-login eligibility.
 
 These tables are private migration evidence, not public profile or session fields.
-Migration `0091_breadline_email_identity.sql` makes the imported phone nullable
-without changing user IDs, source mappings or claim audit fields. The Drizzle
-definitions and rehearsal include it. The migration intentionally
-fails on duplicate existing phones rather than merging or deleting existing users;
-apply it as part of the planned database reset. Phone uniqueness constrains users,
-not the number of credentials on `account`.
+Migration `0091_breadline_email_identity.sql` makes the imported phone nullable without
+changing user IDs, source mappings or claim audit fields. The Drizzle definitions and
+rehearsal include it. The migration intentionally fails on duplicate existing phones
+rather than merging or deleting existing users; apply it as part of the planned database
+reset. Phone uniqueness constrains users, not the number of credentials on `account`.
 
 ### Normalization and review boundaries
 
-The shared `src/lib/utils/telephone.ts` normalizer strips whitespace before parsing
-HK national numbers, `+852`, bare `852`, international `00` prefixes and other
-international numbers into E.164. All HK numbers require exactly eight national
-digits; other countries use the library's structural length checks. Extensions and
-unparseable inputs fail validation. Allocation-range warnings remain separate from
-structural validity and do not establish reachability or phone ownership.
+The shared `src/lib/utils/telephone.ts` normalizer strips whitespace before parsing HK
+national numbers, `+852`, bare `852`, international `00` prefixes and other
+international numbers into E.164. All HK numbers require exactly eight national digits;
+other countries use the library's structural length checks. Extensions and unparseable
+inputs fail validation. Allocation-range warnings remain separate from structural
+validity and do not establish reachability or phone ownership.
 
 Missing or malformed phones can inherit the sole known valid phone for an exact
-normalized email or explicitly reviewed email family. Otherwise a usable email
-preserves the user with NULL telephone; unrelated NULL phones never form a shared
-identity. Missing both a valid phone and usable email still requires review. Existing
-crosswalks retain their history owner when a malformed imported phone is cleared.
+normalized email or explicitly reviewed email family. Otherwise a usable email preserves
+the user with NULL telephone; unrelated NULL phones never form a shared identity.
+Missing both a valid phone and usable email still requires review. Existing crosswalks
+retain their history owner when a malformed imported phone is cleared.
 
 Emails are trimmed and lowercased without rewriting dots, plus-addresses or provider
 aliases. Invalid emails/timestamps, one email or Google subject spanning multiple
-phones, and one volunteer spanning multiple phones are quarantined with every source
-ID retained. Existing destination identities colliding by phone, email or Google
-subject block the group; this importer does not consolidate established HYPE users.
+phones, and one volunteer spanning multiple phones are quarantined with every source ID
+retained. Existing destination identities colliding by phone, email or Google subject
+block the group; this importer does not consolidate established HYPE users.
 
-Reviewed exclusions still come from private `.local/breadline/user-decisions.json`
-(or `--decisions path`) and preserve explicit excluded source user/volunteer entries.
-A volunteer shared by an excluded and retained source identity blocks the retained
-group. Prior explicit email-merge rules must agree with phone grouping; they cannot
-choose a winning email in an ambiguous group or combine different phones.
-Real addresses and private decisions must remain outside Git and public issue bodies.
+Reviewed exclusions still come from private `.local/breadline/user-decisions.json` (or
+`--decisions path`) and preserve explicit excluded source user/volunteer entries. A
+volunteer shared by an excluded and retained source identity blocks the retained group.
+Prior explicit email-merge rules must agree with phone grouping; they cannot choose a
+winning email in an ambiguous group or combine different phones. Real addresses and
+private decisions must remain outside Git and public issue bodies.
 
 ### Stable IDs, profiles and history
 
 User IDs are opaque 12-character HMAC-derived IDs keyed by normalized phone and a
-private durable per-target seed. Keep `.local/breadline/users/<target>/identity-seed.json`
-across retries. Plan model `phone-v2` rejects legacy plan artifacts at SQL rendering
-and rehearsal. Username generation still uses the shared positive-adjective whitelist
-and `AdjectiveRunner00` display spelling, with a lowercase canonical username and
-case-insensitive collision retries. Existing username migrations and reviewed HYPE
-renames remain independent of this import.
+private durable per-target seed. Keep
+`.local/breadline/users/<target>/identity-seed.json` across retries. Plan model
+`phone-v2` rejects legacy plan artifacts at SQL rendering and rehearsal. Username
+generation still uses the shared positive-adjective whitelist and `AdjectiveRunner00`
+display spelling, with a lowercase canonical username and case-insensitive collision
+retries. Existing username migrations and reviewed HYPE renames remain independent of
+this import.
 
 For auto-claimed groups, choose the latest Google profile, otherwise latest source
 profile, for locale/image. Creation/modification dates span the group. Default
-preferences remain database defaults. Old tokens, sessions, passwords and NGO links
-are not imported.
+preferences remain database defaults. Old tokens, sessions, passwords and NGO links are
+not imported.
 
-Every contributing source user and volunteer maps to the same HYPE user. Future
-claims, runs and collection imports must use that crosswalk and exclusions, preserve
-source event IDs, and deduplicate repeated extraction/join rows rather than distinct
-source events. Do not sum legacy counters into reconciled event totals. The broader
+Every contributing source user and volunteer maps to the same HYPE user. Future claims,
+runs and collection imports must use that crosswalk and exclusions, preserve source
+event IDs, and deduplicate repeated extraction/join rows rather than distinct source
+events. Do not sum legacy counters into reconciled event totals. The broader
 event/schedule/property schema remains inactive under `drafts/`; this stage imports
 identity/provenance, not run or collection event records.
 
 Repeat planning recognizes only an existing seeded user with its persisted import
-ownership and identical source identity cohort. It creates no new rows, never
-reopens a claim or attaches losing credentials, and permits the owner's primary
-email to have changed after claiming. A changed source cohort is quarantined for
-review rather than silently altering accepted eligibility. Target IDs and history
-crosswalks remain stable while the source grouping and seed are unchanged.
+ownership and identical source identity cohort. It creates no new rows, never reopens a
+claim or attaches losing credentials, and permits the owner's primary email to have
+changed after claiming. A changed source cohort is quarantined for review rather than
+silently altering accepted eligibility. Target IDs and history crosswalks remain stable
+while the source grouping and seed are unchanged.
 
 ### First verified login for latent users
 
 `src/lib/auth/breadline-claim.server.ts` integrates with Better Auth's validated
 user-creation flow and the production Drizzle adapter. Verified OAuth profiles resolve
-private email eligibility and retain the latent user ID. User creation is deferred;
-a single guarded D1 batch assigns ownership, fills the primary verified email/profile,
-and inserts only the proven provider credential. The batch's request nonce gates
-every write. Constraint failures roll back the entire claim. A losing stale request
-cannot update the profile or attach an account; a retry by the winning provider uses
-Better Auth's ordinary persisted account lookup. Sessions are issued after commit.
+private email eligibility and retain the latent user ID. User creation is deferred; a
+single guarded D1 batch assigns ownership, fills the primary verified email/profile, and
+inserts only the proven provider credential. The batch's request nonce gates every
+write. Constraint failures roll back the entire claim. A losing stale request cannot
+update the profile or attach an account; a retry by the winning provider uses Better
+Auth's ordinary persisted account lookup. Sessions are issued after commit.
 
 The sign-in panel also offers **Email me a sign-in link**. Better Auth stores a hashed,
 15-minute, single-use token and verifies mailbox control before claiming the latent
-user. This supports providers without a verified-email assertion. An unverified
-social login cannot claim and receives instructions to use the email link. A typed
-password signup for an eligible email sends a sign-in link while returning Better
-Auth's opaque signup response, so it neither reserves the email nor strands the user.
-Normal sign-in-link requests do not disclose private candidate names or eligibility.
+user. This supports providers without a verified-email assertion. An unverified social
+login cannot claim and receives instructions to use the email link. A typed password
+signup for an eligible email sends a sign-in link while returning Better Auth's opaque
+signup response, so it neither reserves the email nor strands the user. Normal
+sign-in-link requests do not disclose private candidate names or eligibility.
 
 Migration `0090_breadline_claim_audit.sql` adds `claimedAt` and a private batch nonce
 `claimKey`. Import auto-claims retain NULL audit timestamps until any future separate
-login-activity tracking; they are not fabricated login events. Pending proof lives
-only in request-local context, never a cross-request identity map or client field.
+login-activity tracking; they are not fabricated login events. Pending proof lives only
+in request-local context, never a cross-request identity map or client field.
 
 Remaining candidate emails cannot access the imported user after claiming. They may
 create separate ordinary HYPE accounts without its history. The claimed owner can
-explicitly link another social identity using the existing authenticated linking
-flow. Email/phone edits, unlinking and repeat imports do not reopen eligibility.
-Profile email changes cannot reserve an unclaimed import's email.
+explicitly link another social identity using the existing authenticated linking flow.
+Email/phone edits, unlinking and repeat imports do not reopen eligibility. Profile email
+changes cannot reserve an unclaimed import's email.
 
 Session creation and cached-session/authenticated-request checks deny unclaimed and
 archived users. The claim batch checks archive state again to reject stale proofs.
@@ -256,8 +257,8 @@ Consolidation of a separately established HYPE user remains outside the reset/im
 scope; the claim flow does not transfer another user's credentials, roles or activity.
 
 `src/tests/breadline-claim.integration.test.ts` exercises the production auth factory,
-Drizzle adapter and actual SQLite constraints behind a D1-compatible atomic batch.
-It covers verified/unverified social login, first-winner concurrency, rollback/retry,
+Drizzle adapter and actual SQLite constraints behind a D1-compatible atomic batch. It
+covers verified/unverified social login, first-winner concurrency, rollback/retry,
 losing aliases, explicit owner linking, email-link redemption/replay/expiry, profile
 reservation, archive state and cached-session denial. Provider verification and email
 transport are stubbed only at the external boundaries; no live OAuth or email delivery
@@ -275,8 +276,9 @@ bun run breadline:users:plan --target production
 The planner reads only explicitly targeted identity/ownership columns, backs up the
 local source mirror, records source checkpoints, and writes private artifacts under
 `.local/breadline/users/<target>/<run>/`. It does not refresh the source, apply schema,
-or insert users. For an offline destination use `--target-snapshot /private/hype.sqlite`;
-that snapshot must contain the current ownership/crosswalk tables.
+or insert users. For an offline destination use
+`--target-snapshot /private/hype.sqlite`; that snapshot must contain the current
+ownership/crosswalk tables.
 
 Artifacts are `plan.json`, `target-identities.json`, and `review.sql` containing
 user/account/ownership/crosswalk inserts. Rehearse with:
@@ -287,66 +289,68 @@ bun run breadline:db:test
 ```
 
 Rehearsal executes the actual review SQL against the real Drizzle schema in disposable
-memory and checks all four table counts, foreign keys and SQLite integrity. The command does not accept `--apply`.
-Execute no stale SQL: applying still needs a fresh destination check, backup,
-atomic batches and post-write reconciliation. The general conversion stage registry
-remains empty; this change does not enable remote imports or prove live OAuth.
+memory and checks all four table counts, foreign keys and SQLite integrity. The command
+does not accept `--apply`. Execute no stale SQL: applying still needs a fresh
+destination check, backup, atomic batches and post-write reconciliation. The general
+conversion stage registry remains empty; this change does not enable remote imports or
+prove live OAuth.
 
 ## Phone audit correction and local rebuild (19 October 2026)
 
 Refs #189, #194. The source is exclusively `breadline__public__users` from the private
-Breadline mirror, checkpoint 2026-10-16 15:18:18 UTC. Source rows total 14,186.
-There are 2,746 NULL phones, including seven reviewed exclusions: the earlier
-“2,739 missing/invalid” count was entirely missing phones. No supplied nonblank phone
-is unparseable under the existing possible-number policy. Fifteen supplied numbers
-fail full `isValid()` validation and remain explicit private warnings; these are
-separate from the missing-phone count and are not claims of reachability/ownership.
+Breadline mirror, checkpoint 2026-10-16 15:18:18 UTC. Source rows total 14,186. There
+are 2,746 NULL phones, including seven reviewed exclusions: the earlier “2,739
+missing/invalid” count was entirely missing phones. No supplied nonblank phone is
+unparseable under the existing possible-number policy. Fifteen supplied numbers fail
+full `isValid()` validation and remain explicit private warnings; these are separate
+from the missing-phone count and are not claims of reachability/ownership.
 
-The earlier ten “cross-phone conflict” rows were a planner bug: NULL identity phones
-had been inserted into phone sets as synthetic distinct keys. Six groups had only one
-real phone. Exact-email/reviewed-merge recovery now maps eleven additional missing-phone
-rows and admits the ten falsely blocked valid-phone rows. Genuine multiple-number
-conflicts still fail closed. The completion policy below supersedes the former
-quarantine of missing/invalid phones.
+The earlier ten “cross-phone conflict” rows were a planner bug: NULL identity phones had
+been inserted into phone sets as synthetic distinct keys. Six groups had only one real
+phone. Exact-email/reviewed-merge recovery now maps eleven additional missing-phone rows
+and admits the ten falsely blocked valid-phone rows. Genuine multiple-number conflicts
+still fail closed. The completion policy below supersedes the former quarantine of
+missing/invalid phones.
 
-The initial corrected local import created 10,667 Breadline users (9,965 auto-claimed and
-702 latent), persists 11,451 source-user mappings, retains seven reviewed exclusions,
-and initially quarantined 2,728 rows with no resolvable phone (superseded below). A repeat plan against the installed
-database produces zero new users/accounts/crosswalk inserts and identical exceptions.
-These counts exclude local fixtures and development personas.
+The initial corrected local import created 10,667 Breadline users (9,965 auto-claimed
+and 702 latent), persists 11,451 source-user mappings, retains seven reviewed
+exclusions, and initially quarantined 2,728 rows with no resolvable phone (superseded
+below). A repeat plan against the installed database produces zero new
+users/accounts/crosswalk inserts and identical exceptions. These counts exclude local
+fixtures and development personas.
 
 ### Email fallback and mandatory phone completion (19 October 2026)
 
-Refs #189, #194. Of the fifteen allocation-validation warnings, four HK values have
-six, seven or nine national digits after whitespace removal. They are now rejected
-as phones. Eleven other values remain structurally possible allocation warnings.
-Five of these fifteen source identities have eight run rows and 88 recorded collected
-pieces in total; source user/volunteer mappings are preserved independently of phone
-acceptance. Historical event application remains deferred.
+Refs #189, #194. Of the fifteen allocation-validation warnings, four HK values have six,
+seven or nine national digits after whitespace removal. They are now rejected as phones.
+Eleven other values remain structurally possible allocation warnings. Five of these
+fifteen source identities have eight run rows and 88 recorded collected pieces in total;
+source user/volunteer mappings are preserved independently of phone acceptance.
+Historical event application remains deferred.
 
-The updated source plan maps all 14,179 retained rows to 13,386 Breadline users
-(12,678 auto-claimed, 708 latent), with seven reviewed exclusions and zero exceptions.
-There are 2,723 imported users awaiting a phone, including formerly missing-phone
-email identities. Fresh preparation and incremental local application both prove
+The updated source plan maps all 14,179 retained rows to 13,386 Breadline users (12,678
+auto-claimed, 708 latent), with seven reviewed exclusions and zero exceptions. There are
+2,723 imported users awaiting a phone, including formerly missing-phone email
+identities. Fresh preparation and incremental local application both prove
 repeatability; the incremental update preserves existing user IDs, credentials and
 sessions while clearing only four malformed phones. Source totals exclude fixtures,
 reserved dev personas and anonymous browsing sessions.
 
-After any durable-account login on the Breadline hub, `handleBreadlinePhone` reads
-the current persisted phone before page/data/API/remote access. Missing/invalid phones
-redirect navigation and SvelteKit data loads to `/account/phone`; direct API and
-remote calls receive `403 BREADLINE_PHONE_REQUIRED`. Auth/sign-out, policies, static
-assets and completion remain reachable. Guests and other hubs keep their existing
-access policy. Client-side sign-in also navigates to completion. Neither cookie
-caches nor a stale valid session phone bypass the server check.
+After any durable-account login on the Breadline hub, `handleBreadlinePhone` reads the
+current persisted phone before page/data/API/remote access. Missing/invalid phones
+redirect navigation and SvelteKit data loads to `/account/phone`; direct API and remote
+calls receive `403 BREADLINE_PHONE_REQUIRED`. Auth/sign-out, policies, static assets and
+completion remain reachable. Guests and other hubs keep their existing access policy.
+Client-side sign-in also navigates to completion. Neither cookie caches nor a stale
+valid session phone bypass the server check.
 
-The same-origin completion action accepts only the session owner's phone, applies
-the shared normalizer and preserves the user's identity/history. The unique phone
-index arbitrates collisions: a phone on another account returns recoverable feedback,
-never an automatic merge or history transfer. This is a structural contact check;
-SMS verification is not introduced. Auth profile updates cannot write telephone
-through Better Auth's additional-fields input. The form is localized in all three
-supported languages.
+The same-origin completion action accepts only the session owner's phone, applies the
+shared normalizer and preserves the user's identity/history. The unique phone index
+arbitrates collisions: a phone on another account returns recoverable feedback, never an
+automatic merge or history transfer. This is a structural contact check; SMS
+verification is not introduced. Auth profile updates cannot write telephone through
+Better Auth's additional-fields input. The form is localized in all three supported
+languages.
 
 ### Reviewed telephone overrides
 
@@ -355,14 +359,14 @@ entries with `sourceUserId`, `expectedTelephone` and `telephone` (NULL or a cano
 corrected number). A NULL override suppresses phone inference for that source row,
 retains its normalized email and all source/volunteer mappings, and requires phone
 completion after login. The original source remains unchanged. An expected-source
-comparison ignores whitespace but fails closed if the stored number changes, so a
-later source correction cannot be silently erased by an obsolete decision. Invalid
-correction formats and duplicate source IDs are rejected before planning.
+comparison ignores whitespace but fails closed if the stored number changes, so a later
+source correction cannot be silently erased by an obsolete decision. Invalid correction
+formats and duplicate source IDs are rejected before planning.
 
 The reviewed correction set covers four single-email identities from the five-user
 run-history audit. The explicitly retained fifth phone is not overridden. Personal
-names, contacts and the exact correction set stay in the private decision file. A
-later supplied correction can replace NULL with a validated canonical number.
+names, contacts and the exact correction set stay in the private decision file. A later
+supplied correction can replace NULL with a validated canonical number.
 
 ### Reproducible fresh local preparation
 
@@ -385,8 +389,8 @@ are retained with their scopes reconciled to the restored hub IDs.
 The original 19 October minimal install incorrectly replaced the pre-existing local
 application dataset and used mismatched hub IDs. Local recovery restored eight
 organisations, seven projects, sixteen layers and 1,830 features from the verified
-pre-rebuild backup. Twenty-nine missing historical publisher/contributor references
-were retained as archived, credential-free profiles with NULL email/phone; original
+pre-rebuild backup. Twenty-nine missing historical publisher/contributor references were
+retained as archived, credential-free profiles with NULL email/phone; original
 credentials were not restored or linked to imported accounts. Thirty-one pre-existing
 orphan translation rows cannot satisfy the current schema's feature FK and remain
 preserved in the private recovery receipt/source backup instead of inventing features.
@@ -396,11 +400,11 @@ integrity pass. See `scripts/breadline/restore-local-application.py` and its reg
 tests; no remote database or source mirror was modified.
 
 The source identity plan and optional private `.local/breadline/local-users.json`
-fixture plan are imported separately. Local fixtures contain a canonical phone and
-at least one distinct eligible email. Stable negative source keys, NULL volunteer
-IDs and the `local-fixture` subject marker distinguish them from real Breadline rows;
-fixture rows never contribute to source counts or history mappings. An email named
-“admin” does not grant an admin role. Fixtures remain unclaimed without credentials.
+fixture plan are imported separately. Local fixtures contain a canonical phone and at
+least one distinct eligible email. Stable negative source keys, NULL volunteer IDs and
+the `local-fixture` subject marker distinguish them from real Breadline rows; fixture
+rows never contribute to source counts or history mappings. An email named “admin” does
+not grant an admin role. Fixtures remain unclaimed without credentials.
 
 ```sh
 # Build/rehearse privately without touching the active database.
@@ -420,8 +424,8 @@ source refresh. A local installation was completed and verified through Wrangler
 production and live OAuth/email delivery are not acceptance claims of this workflow.
 
 Tests: `scripts/breadline/users.test.ts`, `scripts/breadline/local-users.test.ts`, and
-`scripts/breadline/local-bootstrap.test.ts` cover phone recovery/conflicts, local fixture
-isolation/idempotence and the complete source/migration/bootstrap chain.
+`scripts/breadline/local-bootstrap.test.ts` cover phone recovery/conflicts, local
+fixture isolation/idempotence and the complete source/migration/bootstrap chain.
 
 ## TODO: donor and group account treatment
 
@@ -429,15 +433,15 @@ Tracking: [user import #194](https://github.com/tijptjik/hype/issues/194),
 [account support #189](https://github.com/tijptjik/hype/issues/189).
 
 - [ ] Decide and implement import handling for the legacy donor/group accounts below.
-  Distinguish shared service identities from individual users assigned the `group`
-  role; do not exclude all users with that role. Preserve history and selection
-  ownership, and record decisions in the offline crosswalk before applying imports.
-- [ ] Review the four accounts sharing pseudonym Person A under the phone-group
-  policy. Two share a phone number; their emails and Google
-  subjects differ, so they form a latent group rather than an automatically claimed
-  user. Confirm shared/service-number exceptions before applying.
-- [ ] Add import tests for the agreed treatment of shared identities, individual
-  group accounts, and associated history/drop-off selections.
+      Distinguish shared service identities from individual users assigned the `group`
+      role; do not exclude all users with that role. Preserve history and selection
+      ownership, and record decisions in the offline crosswalk before applying imports.
+- [ ] Review the four accounts sharing pseudonym Person A under the phone-group policy.
+      Two share a phone number; their emails and Google subjects differ, so they form a
+      latent group rather than an automatically claimed user. Confirm
+      shared/service-number exceptions before applying.
+- [ ] Add import tests for the agreed treatment of shared identities, individual group
+      accounts, and associated history/drop-off selections.
 
 The identifiers below are legacy `users.id` values (not OAuth `users.uid` subjects).
 Names and email addresses are pseudonymized; email labels use the reserved
@@ -446,65 +450,63 @@ emails, phone numbers and OAuth subjects remain in the private local source expo
 Counts reflect the 2026-10-16 15:18 UTC source snapshot and represent stored records,
 not necessarily completed runs or unique attendance days.
 
-| Legacy user ID | Role | Pseudonym | Anonymized email | Run records | Drop-off selections | Review classification |
-| --- | --- | --- | --- | ---: | ---: | --- |
-| 6 | donor | Shared Donor Identity | donor-service@example.invalid | 0 | 0 | Hard-coded shared donor identity |
-| 6828 | group | Shared Group Identity | group-service@example.invalid | 0 | 0 | Hard-coded shared group identity |
-| 82573 | group | Person A | person-a-1@example.invalid | 11 | 24 | Individual-looking Google account; retain pending review |
-| 85354 | group | Person A | person-a-2@example.invalid | 0 | 0 | Individual-looking Google account; retain pending review |
-| 85486 | group | Person A | person-a-3@example.invalid | 8 | 14 | Individual-looking Google account; retain pending review |
-| 92110 | group | Person A | person-a-4@example.invalid | 0 | 3 | Individual-looking Google account; retain pending review |
-| 109097 | group | Person B | person-b@example.invalid | 3 | 8 | Individual-looking Google account; retain pending review |
+| Legacy user ID | Role  | Pseudonym             | Anonymized email              | Run records | Drop-off selections | Review classification                                    |
+| -------------- | ----- | --------------------- | ----------------------------- | ----------: | ------------------: | -------------------------------------------------------- |
+| 6              | donor | Shared Donor Identity | donor-service@example.invalid |           0 |                   0 | Hard-coded shared donor identity                         |
+| 6828           | group | Shared Group Identity | group-service@example.invalid |           0 |                   0 | Hard-coded shared group identity                         |
+| 82573          | group | Person A              | person-a-1@example.invalid    |          11 |                  24 | Individual-looking Google account; retain pending review |
+| 85354          | group | Person A              | person-a-2@example.invalid    |           0 |                   0 | Individual-looking Google account; retain pending review |
+| 85486          | group | Person A              | person-a-3@example.invalid    |           8 |                  14 | Individual-looking Google account; retain pending review |
+| 92110          | group | Person A              | person-a-4@example.invalid    |           0 |                   3 | Individual-looking Google account; retain pending review |
+| 109097         | group | Person B              | person-b@example.invalid      |           3 |                   8 | Individual-looking Google account; retain pending review |
 
-Legacy auth code explicitly uses user 6 for donor tokens and user 6828 for group
-link tokens, carrying the actual donor/leader in token claims. The other accounts
-are identified by their assigned role, not by hard-coded service use. No account
-has been excluded or merged as a result of this TODO.
+Legacy auth code explicitly uses user 6 for donor tokens and user 6828 for group link
+tokens, carrying the actual donor/leader in token claims. The other accounts are
+identified by their assigned role, not by hard-coded service use. No account has been
+excluded or merged as a result of this TODO.
 
 ## Hype user directory
 
 Related account work: [#189](https://github.com/tijptjik/hype/issues/189).
 
 The `/admin/users` directory and its sidebar link are available to administrators of the
-active hub and core administrators. Both the server page guard and the directory
-variant of `searchUsers` enforce this policy. Organisation/project owners retain
-the existing member-picker search without access to the extra directory fields.
+active hub and core administrators. Both the server page guard and the directory variant
+of `searchUsers` enforce this policy. Organisation/project owners retain the existing
+member-picker search without access to the extra directory fields.
 
-The list loads 25 users per page, with server-side search across name, username,
-email and attribution. Rows show avatar, name, case-preserving username,
-attribution, locale, archive status and join date, with permission-filtered contacts.
-HYPE/core HubAdmin and explicit SuperAdmin can see all email addresses and phone
-numbers. Other HubAdmins await hub-specific interaction/onboarding rules for email
-access. Telephone is additionally available to explicit `manageVolunteers` or
-`manageDropOffs` holders for users in a shared, non-archived project in the active
-hub. Email verification metadata is omitted.
-The shared admin header and control bar provide server-side sorting by name, email,
-join date or update date, plus tri-state archived, has-email and has-phone filters.
-Presence filters treat blank values as missing and apply before paging/counting.
-The initial view excludes archived users. Settled rows and empty results remain
-mounted during replacement queries; keyed FLIP and fades animate result changes.
-No account identifiers, tokens or legacy import metadata are returned.
+The list loads 25 users per page, with server-side search across name, username, email
+and attribution. Rows show avatar, name, case-preserving username, attribution, locale,
+archive status and join date, with permission-filtered contacts. HYPE/core HubAdmin and
+explicit SuperAdmin can see all email addresses and phone numbers. Other HubAdmins await
+hub-specific interaction/onboarding rules for email access. Telephone is additionally
+available to explicit `manageVolunteers` or `manageDropOffs` holders for users in a
+shared, non-archived project in the active hub. Email verification metadata is omitted.
+The shared admin header and control bar provide server-side sorting by name, email, join
+date or update date, plus tri-state archived, has-email and has-phone filters. Presence
+filters treat blank values as missing and apply before paging/counting. The initial view
+excludes archived users. Settled rows and empty results remain mounted during
+replacement queries; keyed FLIP and fades animate result changes. No account
+identifiers, tokens or legacy import metadata are returned.
 
 ### Admin user profiles
 
-`/admin/users/{username}` resolves canonical usernames case-insensitively. The
-user directory and admin attribution cards link to it. Profile reads reuse the
-user-search entitlement: authenticated hub administrators, organisation/project
-owners and explicitly assigned volunteer/drop-off managers may open profiles;
-ordinary members and guests cannot.
+`/admin/users/{username}` resolves canonical usernames case-insensitively. The user
+directory and admin attribution cards link to it. Profile reads reuse the user-search
+entitlement: authenticated hub administrators, organisation/project owners and
+explicitly assigned volunteer/drop-off managers may open profiles; ordinary members and
+guests cannot.
 
 The `getAdminUserProfile` remote chooses fields on the server. Active-hub/core
 administrators and super administrators receive the directory's non-contact fields.
-Contact fields follow the same core/SuperAdmin and scoped management-capability
-rules as the listing. Eligible managers receive details for targets whose phone
-they may read; other eligible viewers receive only username/display username,
-avatar, attribution and contribution summaries. Non-directory viewers cannot read
-archived profiles. No provider accounts, tokens,
-preferences or experimental settings are returned. This is a read-only view and
-introduces no additional profile-editing or role-assignment permissions.
+Contact fields follow the same core/SuperAdmin and scoped management-capability rules as
+the listing. Eligible managers receive details for targets whose phone they may read;
+other eligible viewers receive only username/display username, avatar, attribution and
+contribution summaries. Non-directory viewers cannot read archived profiles. No provider
+accounts, tokens, preferences or experimental settings are returned. This is a read-only
+view and introduces no additional profile-editing or role-assignment permissions.
 
-Contributions reuse the existing hub-scoped public profile query and shared feature
-and photo sections, with links into admin feature pages. They cover published map
+Contributions reuse the existing hub-scoped public profile query and shared feature and
+photo sections, with links into admin feature pages. They cover published map
 features/photos and associated submission/report counters, not Breadline run history,
-which remains a later event-import stage. See `src/tests/admin-user-profile.test.ts`
-for field-projection, role, archive-filter and username-lookup checks.
+which remains a later event-import stage. See `src/tests/admin-user-profile.test.ts` for
+field-projection, role, archive-filter and username-lookup checks.

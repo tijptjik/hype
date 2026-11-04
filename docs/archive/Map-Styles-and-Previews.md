@@ -51,7 +51,8 @@ source files.
 Map style JSON is generated in two stages:
 
 1. Style registry code builds a `StyleSpecification` for each registered style key.
-2. The build step serializes each style into immutable JSON artifacts in `static/mapStyles`.
+2. The build step serializes each style into immutable JSON artifacts in
+   `static/mapStyles`.
 
 Relevant implementation files:
 
@@ -70,8 +71,8 @@ Generation behavior:
 - The plugin regenerates `static/mapStyles` when files under `src/lib/map/styles`
   change.
 - `manifest.json` is regenerated alongside the hashed JSON assets.
-- Runtime callers can request the style inline with `?inline=1`, or receive a
-  redirect to the immutable hashed asset path by default.
+- Runtime callers can request the style inline with `?inline=1`, or receive a redirect
+  to the immutable hashed asset path by default.
 
 ## Map Style Runtime Usage
 
@@ -81,11 +82,11 @@ The app treats style JSON and preview PNGs as separate concerns.
 - The route validates the style key and serves the built-in style response.
 - By default, the route issues a `307` redirect to the hashed file under
   `/mapStyles/...json`.
-- `?inline=1` returns JSON directly with ETag support. This is used when the app
-  needs to mutate the style payload at runtime, such as hiding symbol layers for
-  no-labels mode.
-- Current callers include the main map canvas, headless preview pages, and small
-  map components.
+- `?inline=1` returns JSON directly with ETag support. This is used when the app needs
+  to mutate the style payload at runtime, such as hiding symbol layers for no-labels
+  mode.
+- Current callers include the main map canvas, headless preview pages, and small map
+  components.
 
 This separation matters:
 
@@ -103,22 +104,15 @@ There are three preview kinds in the current implementation:
 Current preview endpoints:
 
 - Style preview asset resolution
-  - local static path:
-    `/mapRender/styles/{styleCode}.png`
+  - local static path: `/mapRender/styles/{styleCode}.png`
 - Layer preview routes
-  - asset:
-    `GET /api/mapRenders/layers/[layer]/asset`
-  - render payload:
-    `GET /api/mapRenders/layers/[layer]/render`
-  - single refresh:
-    `POST /api/mapRenders/layers/[layer]/refresh`
+  - asset: `GET /api/mapRenders/layers/[layer]/asset`
+  - render payload: `GET /api/mapRenders/layers/[layer]/render`
+  - single refresh: `POST /api/mapRenders/layers/[layer]/refresh`
 - Project preview routes
-  - asset:
-    `GET /api/mapRenders/projects/[project]/asset`
-  - render payload:
-    `GET /api/mapRenders/projects/[project]/render`
-  - single refresh:
-    `POST /api/mapRenders/projects/[project]/refresh`
+  - asset: `GET /api/mapRenders/projects/[project]/asset`
+  - render payload: `GET /api/mapRenders/projects/[project]/render`
+  - single refresh: `POST /api/mapRenders/projects/[project]/refresh`
 - Batch planning / refresh
   - `POST /api/mapRenders/refresh`
 - Headless render pages
@@ -227,12 +221,12 @@ Local development differences:
 
 Three workers currently participate in the preview pipeline:
 
-- App worker:
-  [`wrangler.toml`](/home/io/code/hype/wrangler.toml)
+- App worker: [`wrangler.toml`](/home/io/code/hype/wrangler.toml)
   - serves the SvelteKit app
   - serves generated `static/mapStyles` artifacts
   - handles `api/mapStyles/[key]` style requests
-  - handles preview planning, asset routes, render payload routes, and local refresh routes
+  - handles preview planning, asset routes, render payload routes, and local refresh
+    routes
   - enqueues remote preview render jobs through `MAP_RENDER_QUEUE`
 - Preview renderer worker:
   [`workers/map-render-service/wrangler.toml`](/home/io/code/hype/workers/map-render-service/wrangler.toml)
@@ -256,7 +250,8 @@ Authenticate first:
 bunx wrangler login
 ```
 
-Map previews now live in the shared asset buckets, so there are no separate remote preview buckets to create.
+Map previews now live in the shared asset buckets, so there are no separate remote
+preview buckets to create.
 
 Create the remote queues:
 
@@ -324,11 +319,11 @@ curl "http://localhost:8787/__scheduled?cron=0+*+*+*+*"
 
 1. Register or update built-in map style definitions in `src/lib/map/styles`.
 2. Let the Vite plugin rebuild immutable JSON artifacts in `static/mapStyles`.
-3. Generate style preview PNGs explicitly with `bun run map:preview:styles` or via
-   the Cloudflare build scripts.
+3. Generate style preview PNGs explicitly with `bun run map:preview:styles` or via the
+   Cloudflare build scripts.
 4. Request `GET /api/mapStyles/[key]`.
-5. Redirect to the hashed `/mapStyles/...json` asset by default, or return inline
-   JSON with `?inline=1`.
+5. Redirect to the hashed `/mapStyles/...json` asset by default, or return inline JSON
+   with `?inline=1`.
 6. Let runtime consumers load or lightly transform the style JSON as needed.
 
 ### Layer / Project Preview Flow
@@ -343,15 +338,15 @@ curl "http://localhost:8787/__scheduled?cron=0+*+*+*+*"
 5. Preview / production:
    - enqueue the job through the app worker's `MAP_RENDER_QUEUE` binding
    - let the preview renderer worker capture and upload the PNG into R2
-6. Serve the preview through `GET /api/mapRenders/{layers|projects}/[id]/asset`,
-   which computes the current hash live and resolves the correct local file or remote
+6. Serve the preview through `GET /api/mapRenders/{layers|projects}/[id]/asset`, which
+   computes the current hash live and resolves the correct local file or remote
    immutable URL.
 
 ### Scheduled Regeneration Flow
 
 1. The scheduler worker runs on cron.
 2. It calls `POST /api/mapRenders/refresh?mode=enqueue`.
-3. The app worker plans layer/project preview jobs whose effective inputs changed
-   within the configured time window.
+3. The app worker plans layer/project preview jobs whose effective inputs changed within
+   the configured time window.
 4. The app enqueues only the relevant preview jobs.
 5. The preview renderer worker processes the queue and uploads the new immutable PNGs.

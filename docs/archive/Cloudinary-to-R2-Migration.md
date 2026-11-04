@@ -1,6 +1,7 @@
 # Cloudinary to R2 Migration
 
-This backfill reads legacy Cloudinary image rows from the ordered production SQL dump and restores missing raw sidecars in the remote production raw bucket.
+This backfill reads legacy Cloudinary image rows from the ordered production SQL dump
+and restores missing raw sidecars in the remote production raw bucket.
 
 ## Current Source And Target
 
@@ -22,7 +23,8 @@ This backfill reads legacy Cloudinary image rows from the ordered production SQL
    - `{publicId}.json`
    - `{publicId}.v{version}.json`
    - `{publicId}.manifest.json`
-7. Retry Cloudinary export fetches up to 3 times and write a missing-source log when they still fail.
+7. Retry Cloudinary export fetches up to 3 times and write a missing-source log when
+   they still fail.
 
 ## Required Environment Variables
 
@@ -32,7 +34,8 @@ export R2_S3_ACCESS_KEY_ID=...
 export R2_S3_SECRET_ACCESS_KEY=...
 ```
 
-`PUBLIC_CLOUDINARY_CLOUD_NAME` is optional because most legacy rows already carry the Cloudinary cloud name in `image.env`.
+`PUBLIC_CLOUDINARY_CLOUD_NAME` is optional because most legacy rows already carry the
+Cloudinary cloud name in `image.env`.
 
 ## Commands
 
@@ -73,5 +76,6 @@ tmp/cloudinary-migration-missing-images.log
 - `--source` accepts either a `.sql` ordered dump or a `.sqlite` mirror.
 - `--db` is still accepted as an alias for `--source`.
 - In `plan` mode, the script validates the source rows but does not hit R2.
-- In `sync` mode, existing working objects at `publicId` are left in place; missing `.raw` objects are backfilled at `{publicId}.raw`.
+- In `sync` mode, existing working objects at `publicId` are left in place; missing
+  `.raw` objects are backfilled at `{publicId}.raw`.
 - If a row fails to download from Cloudinary or write to R2, it is reported and skipped.

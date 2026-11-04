@@ -24,8 +24,8 @@ uploads only the app secret and does not deploy Hype. The `--clients PATH` optio
 selects another private client registry. Credentials remain server-only.
 
 See [shared routing operations](../../docs/operations/Feature-Routing.md) for the
-service contract, quotas and deployment workflow. Graph generation, downloads,
-retention and compute deployments are owned by the SaanSeoi repository.
+service contract, quotas and deployment workflow. Graph generation, downloads, retention
+and compute deployments are owned by the SaanSeoi repository.
 
-Historical runtime measurements remain under `docs/benchmarks`. The retired
-benchmark Workers, deployment configurations and experiment runners are removed.
+Historical runtime measurements remain under `docs/benchmarks`. The retired benchmark
+Workers, deployment configurations and experiment runners are removed.

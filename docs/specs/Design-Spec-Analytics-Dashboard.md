@@ -37,7 +37,8 @@ host analytics.
   - `data`
 - No unified analytics service layer for Cloudflare Web Analytics or zone analytics.
 - No facet-specific server routes beyond the asset summary route.
-- No explicit local-dev strategy for auth/bootstrap contention versus analytics failures.
+- No explicit local-dev strategy for auth/bootstrap contention versus analytics
+  failures.
 
 ## Goals
 
@@ -45,7 +46,8 @@ host analytics.
 - Implement a first live non-asset facet, starting with `views`.
 - Keep analytics reads server-side and policy-aware.
 - Make partial failures legible in the UI instead of collapsing to generic error states.
-- Ensure prism constraints can be applied consistently across asset and traffic analytics.
+- Ensure prism constraints can be applied consistently across asset and traffic
+  analytics.
 
 ## Non-Goals
 
@@ -113,8 +115,8 @@ Shared concerns should stay in a small common helper module:
 ### UI Layer
 
 Add one dashboard component per facet, but build them out of shared analytics primitives
-instead of duplicating the current asset layout. The current asset dashboard already gives
-us reusable shells for:
+instead of duplicating the current asset layout. The current asset dashboard already
+gives us reusable shells for:
 
 - card chrome and section headers
 - partial/empty/error states
@@ -126,8 +128,7 @@ Recommended structure:
 
 - keep asset-specific composition in
   `src/lib/bits/patterns/analytics/assetAnalyticsDashboard`
-- add shared facet-agnostic analytics primitives under
-  `src/lib/bits/patterns/analytics`
+- add shared facet-agnostic analytics primitives under `src/lib/bits/patterns/analytics`
 - add facet-specific compositions for:
   - `ViewsAnalyticsDashboard.svelte`
   - `AudienceAnalyticsDashboard.svelte`
@@ -140,8 +141,8 @@ The route-level page should only:
 - keep refresh behavior
 - render a facet-specific dashboard
 
-The route-level page is currently still asset-specific. Refactoring that page into a small
-facet loader is a prerequisite for shipping `views` cleanly.
+The route-level page is currently still asset-specific. Refactoring that page into a
+small facet loader is a prerequisite for shipping `views` cleanly.
 
 ## Workstream 1: Asset Analytics Completion
 
@@ -171,13 +172,10 @@ Make the existing asset analytics dashboard stable and shippable.
 
 ### Open Questions
 
-- Should local dev always read production asset analytics by default?
-YES
-- Should 1h and 24h windows be hidden automatically when the dataset is sparse?
-NO
+- Should local dev always read production asset analytics by default? YES
+- Should 1h and 24h windows be hidden automatically when the dataset is sparse? NO
 - Should the asset worker return per-query metadata for debugging, or keep the contract
-  UI-only?
-UI only
+  UI-only? UI only
 
 ## Workstream 2: Views Facet
 
@@ -197,9 +195,9 @@ The first version should answer:
 
 ### Filtering Requirement
 
-The first live traffic facet should be host-first rather than prism-attributed. We do not
-currently record organisation or project ownership inside the web analytics engine, so
-`views` and `audience` should operate on hostname scope directly:
+The first live traffic facet should be host-first rather than prism-attributed. We do
+not currently record organisation or project ownership inside the web analytics engine,
+so `views` and `audience` should operate on hostname scope directly:
 
 - select one tracked host at a time
 - report metrics for that host only
@@ -218,15 +216,14 @@ type ViewsAnalyticsSummary = {
   }
   windows: Record<
     '1h' | '24h' | '7d' | '30d',
-    | null
-    | {
-        totalPageViews: number
-        totalVisits?: number
-        topHosts: Array<{ host: string; views: number }>
-        topPaths: Array<{ path: string; views: number }>
-        topReferrers: Array<{ referrer: string; views: number }>
-        timeseries: Array<{ date: string; views: number }>
-      }
+    null | {
+      totalPageViews: number
+      totalVisits?: number
+      topHosts: Array<{ host: string; views: number }>
+      topPaths: Array<{ path: string; views: number }>
+      topReferrers: Array<{ referrer: string; views: number }>
+      timeseries: Array<{ date: string; views: number }>
+    }
   >
   windowErrors: Partial<Record<'1h' | '24h' | '7d' | '30d', string>>
 }
@@ -290,14 +287,17 @@ Recommended reuse:
 - Should `views` use Cloudflare Web Analytics per-site APIs, zone analytics, or a mixed
   strategy?
 - How should host filtering behave when a prism maps to multiple custom domains?
-- Should `localhost` or preview hosts ever appear in the dashboard when developing locally?
+- Should `localhost` or preview hosts ever appear in the dashboard when developing
+  locally?
 
 Current answer direction:
 
 - default to production hostnames only in local dev
-- exclude `localhost`, preview hosts, and internal test domains unless explicitly requested
+- exclude `localhost`, preview hosts, and internal test domains unless explicitly
+  requested
 - select a single host at a time instead of attempting organisation/project attribution
-- do not aggregate hosts into prism-owned totals unless we later add a reliable mapping layer
+- do not aggregate hosts into prism-owned totals unless we later add a reliable mapping
+  layer
 
 ## Workstream 3: Audience Facet
 
@@ -365,7 +365,8 @@ Local analytics testing is currently polluted by unrelated failures:
 
 ### Required Hardening
 
-- Keep local analytics reads pinned to production where production data is the test target.
+- Keep local analytics reads pinned to production where production data is the test
+  target.
 - Ensure analytics facet fetches fail independently from non-analytics app bootstrap.
 - Reduce duplicate auth/session reads during one request where possible.
 - Keep retry behavior limited to transient local D1 lock contention only.
@@ -406,8 +407,8 @@ Recommended first-pass caching:
 - worker summary routes: short-lived private cache
 - no client-side persistent caching beyond current query lifetimes
 
-The analytics page should feel fresh enough for admin usage without turning every refresh
-into a full upstream query storm.
+The analytics page should feel fresh enough for admin usage without turning every
+refresh into a full upstream query storm.
 
 ## Implementation Order
 
@@ -452,8 +453,8 @@ Likely refactors:
 - reduce cross-facet coupling in `AssetAnalyticsDashboard.svelte`
 - split shared primitives out of the asset dashboard package instead of cloning its
   internals into new facet components
-- keep traffic host selection separate from prism-derived asset scope until a trustworthy
-  attribution model exists
+- keep traffic host selection separate from prism-derived asset scope until a
+  trustworthy attribution model exists
 
 ## Facet Content Proposal
 
@@ -534,95 +535,97 @@ visitor-behavior analytics.
 
 ## Acceptance Criteria
 
-- `assets` is usable in local dev against production data without collapsing on single-window failures.
+- `assets` is usable in local dev against production data without collapsing on
+  single-window failures.
 - `views` is live and no longer placeholder copy.
 - Partial failures are visible and specific.
 - The analytics page can be refreshed repeatedly in dev without generic opaque failures.
-- Server logs are sufficient to distinguish local request problems from upstream analytics issues.
+- Server logs are sufficient to distinguish local request problems from upstream
+  analytics issues.
 
 ## Implementation update — 2026-10-19
 
-The Views, Audience and Data placeholders now use `getPlatformAnalyticsSummary`
-and `platformAnalytics.ts`. The shared `PlatformAnalyticsDashboard` composes the
-same AnalyticsCard primitives as Assets, including window headers, tooltips,
-warning/empty states, responsive columns and window toggle styling. Assets keeps
-its specialized transformation and delivery views. Only the active facet loads;
-refresh retains the previous snapshot and request versions discard stale replies.
+The Views, Audience and Data placeholders now use `getPlatformAnalyticsSummary` and
+`platformAnalytics.ts`. The shared `PlatformAnalyticsDashboard` composes the same
+AnalyticsCard primitives as Assets, including window headers, tooltips, warning/empty
+states, responsive columns and window toggle styling. Assets keeps its specialized
+transformation and delivery views. Only the active facet loads; refresh retains the
+previous snapshot and request versions discard stale replies.
 
-Views and Audience query Cloudflare's `rumPageloadEventsAdaptiveGroups`, filtered
-by one persisted hub domain. The hostname selector is shared across those tabs. Its default is the active hub's
-authorized production domain, then `hype.hk` when authorized, then the first
-available domain. Explicit selections take precedence.
-Hub administrators can select only their own hub domains; core administrators and
-superadmins can select all persisted production hub domains. Organisation/project
-prisms apply only to Assets. Traffic figures are sampled page loads and visits,
-not unique people. Rankings show shares of displayed rows, including when the top
-25 truncates the distribution. Core Web Vitals are not yet included.
+Views and Audience query Cloudflare's `rumPageloadEventsAdaptiveGroups`, filtered by one
+persisted hub domain. The hostname selector is shared across those tabs. Its default is
+the active hub's authorized production domain, then `hype.hk` when authorized, then the
+first available domain. Explicit selections take precedence. Hub administrators can
+select only their own hub domains; core administrators and superadmins can select all
+persisted production hub domains. Organisation/project prisms apply only to Assets.
+Traffic figures are sampled page loads and visits, not unique people. Rankings show
+shares of displayed rows, including when the top 25 truncates the distribution. Core Web
+Vitals are not yet included.
 
-Data is restricted to core administrators and superadmins because Hype's database
-and render queues are shared infrastructure. It queries `d1AnalyticsAdaptiveGroups`
-for read/write queries, rows, response bytes, batch latency mean/p50/p95/p99,
-regional reads and daily query totals. `queueMessageOperationsAdaptiveGroups`
-provides writes, reads and deletions grouped by queue and outcome. These operation
-counts must not be interpreted as backlog or completed jobs. Storage growth,
-pipeline-level failures and backlog remain unimplemented.
+Data is restricted to core administrators and superadmins because Hype's database and
+render queues are shared infrastructure. It queries `d1AnalyticsAdaptiveGroups` for
+read/write queries, rows, response bytes, batch latency mean/p50/p95/p99, regional reads
+and daily query totals. `queueMessageOperationsAdaptiveGroups` provides writes, reads
+and deletions grouped by queue and outcome. These operation counts must not be
+interpreted as backlog or completed jobs. Storage growth, pipeline-level failures and
+backlog remain unimplemented.
 
 Server configuration:
 
 - `CLOUDFLARE_ACCOUNT_ID` and secret `CLOUDFLARE_ANALYTICS_API_TOKEN` authorize the
   GraphQL reads. The token needs access to the RUM, D1 and Queue analytics datasets.
-- `ANALYTICS_DATABASE_ID` and comma-separated `ANALYTICS_QUEUE_IDS` constrain Data.
-  The checked-in local, preview and production configurations deliberately monitor
-  Hype production, matching the existing analytics development policy.
-- Credentials stay server-side. Upstream errors are normalized to safe messages;
-  each of the four windows has a timeout and fails independently. Missing sections
-  remain unavailable, while successful empty datasets display zero/empty results.
+- `ANALYTICS_DATABASE_ID` and comma-separated `ANALYTICS_QUEUE_IDS` constrain Data. The
+  checked-in local, preview and production configurations deliberately monitor Hype
+  production, matching the existing analytics development policy.
+- Credentials stay server-side. Upstream errors are normalized to safe messages; each of
+  the four windows has a timeout and fails independently. Missing sections remain
+  unavailable, while successful empty datasets display zero/empty results.
 
 Validation: focused service tests cover host rejection, resource filters, rolling
-cutoffs, partial failures, safe errors, and empty-versus-unavailable semantics.
-Live read-only queries returned all four windows for all three facets on October
-19. No deployment or changes to Cloudflare credentials were performed.
+cutoffs, partial failures, safe errors, and empty-versus-unavailable semantics. Live
+read-only queries returned all four windows for all three facets on October 19. No
+deployment or changes to Cloudflare credentials were performed.
 
-Desktop/mobile browser verification used a temporary component preview populated
-with those live responses: all three panels rendered, facet/window controls worked,
-no-window states rendered, and the 390px viewport had no page overflow. The preview
-was removed afterward. The authenticated admin route was not exercised end to end.
-Repository type checking still reports ten unrelated errors; the changed analytics
-files have no diagnostics.
+Desktop/mobile browser verification used a temporary component preview populated with
+those live responses: all three panels rendered, facet/window controls worked, no-window
+states rendered, and the 390px viewport had no page overflow. The preview was removed
+afterward. The authenticated admin route was not exercised end to end. Repository type
+checking still reports ten unrelated errors; the changed analytics files have no
+diagnostics.
 
 Local configuration correction: `wrangler.local.toml` also supplies the production
 analytics database and queue IDs. This is the configuration selected by
 `HYPE_LOCAL_R2=1` / `dev:agent`; omitting these variables produced the Data tab's
-"analytics database is not configured" error. A read through this configuration's
-actual platform proxy now returns D1 metrics. The same credentials return page
-views for `breadline.hk`, while `hype.hk` and `hkghostsigns.com` currently return
-zero RUM events across all four windows; zero counts do not establish that a host
-has no visitors, only that this dataset has no recorded events for it.
+"analytics database is not configured" error. A read through this configuration's actual
+platform proxy now returns D1 metrics. The same credentials return page views for
+`breadline.hk`, while `hype.hk` and `hkghostsigns.com` currently return zero RUM events
+across all four windows; zero counts do not establish that a host has no visitors, only
+that this dataset has no recorded events for it.
 
 Follow-up end-to-end verification used the existing local admin persona with
 `HYPE_LOCAL_R2=1` and the actual admin route. Views and Audience rendered live
-`breadline.hk` counts and breakdowns, and Data rendered production D1 and queue
-metrics with the corrected local config. This supersedes the earlier limitation
-that only the component preview had been browser-verified.
+`breadline.hk` counts and breakdowns, and Data rendered production D1 and queue metrics
+with the corrected local config. This supersedes the earlier limitation that only the
+component preview had been browser-verified.
 
 ## Production tracking investigation — 2026-10-19
 
 Both `hype.hk` and `hkghostsigns.com` returned HTTP 200 HTML without a Web Analytics
-script. Chrome likewise observed no script or collector request. Cloudflare's
-existing `hype.hk` Web Analytics site has automatic installation enabled and an
-active include-all rule, but injection is absent from the served app. Ghost Signs
-has automatic installation disabled. The configured API token can read RUM site
-settings, but Cloudflare rejected its attempted Ghost Signs update with error
-10000 (authentication/insufficient permission); the remote settings are unchanged.
+script. Chrome likewise observed no script or collector request. Cloudflare's existing
+`hype.hk` Web Analytics site has automatic installation enabled and an active
+include-all rule, but injection is absent from the served app. Ghost Signs has automatic
+installation disabled. The configured API token can read RUM site settings, but
+Cloudflare rejected its attempted Ghost Signs update with error 10000
+(authentication/insufficient permission); the remote settings are unchanged.
 
-`src/lib/analytics/webAnalytics.ts` supplies a fallback using the existing public
-site tokens. The production root layout installs it only on the exact HTTPS
-production hosts, without custom ports. It skips any existing Cloudflare beacon
-and relies on the beacon's own SPA navigation tracking. Development, preview,
-Breadline and other hosts are excluded.
+`src/lib/analytics/webAnalytics.ts` supplies a fallback using the existing public site
+tokens. The production root layout installs it only on the exact HTTPS production hosts,
+without custom ports. It skips any existing Cloudflare beacon and relies on the beacon's
+own SPA navigation tracking. Development, preview, Breadline and other hosts are
+excluded.
 
-The two collectors were verified separately with the fallback injected only into
-an isolated test browser:
+The two collectors were verified separately with the fallback injected only into an
+isolated test browser:
 
 - Hype: `https://hype.hk/cdn-cgi/rum` returned 204. Its request to the public
   cross-origin collector failed CORS in Chrome, so the fallback uses same-origin.
@@ -630,26 +633,26 @@ an isolated test browser:
   same-origin collector returned 404, so it uses the public endpoint.
 
 Nine focused tests cover the production host allowlist, collector selection and
-idempotence. The fallback is prepared in source but requires deployment before
-ordinary visitors are tracked. No production application deployment was performed.
-The current production version is `39db399e-1fff-4eca-89ea-c2d86202f438`, created
-at 2026-10-19 11:15 UTC; its annotations do not identify a Git revision. The current
-checkout includes later commits and unrelated pending work, so a production
-rollout must explicitly select the release scope rather than deploying this tree
-as an incidental analytics configuration change. Historical missing traffic
-cannot be recovered from the RUM dataset.
+idempotence. The fallback is prepared in source but requires deployment before ordinary
+visitors are tracked. No production application deployment was performed. The current
+production version is `39db399e-1fff-4eca-89ea-c2d86202f438`, created at 2026-10-19
+11:15 UTC; its annotations do not identify a Git revision. The current checkout includes
+later commits and unrelated pending work, so a production rollout must explicitly select
+the release scope rather than deploying this tree as an incidental analytics
+configuration change. Historical missing traffic cannot be recovered from the RUM
+dataset.
 
 ## Skeleton containment and request errors — 2026-10-19
 
-The global map-marker `pulse` keyframes overrode Tailwind's opacity animation,
-scaling analytics placeholders outside their containers. The marker animation is
-now named `map-marker-pulse`; shared skeleton blocks also constrain their width.
-Browser sampling across the animation found no placeholder overflow at 1200px
-(the admin minimum supported width) or 1336px.
+The global map-marker `pulse` keyframes overrode Tailwind's opacity animation, scaling
+analytics placeholders outside their containers. The marker animation is now named
+`map-marker-pulse`; shared skeleton blocks also constrain their width. Browser sampling
+across the animation found no placeholder overflow at 1200px (the admin minimum
+supported width) or 1336px.
 
-Rejected remote queries now retain public server error details and HTTP status
-with recovery guidance. Data no longer queries hub domains, which it does not use.
-Initial Data loading and refresh both succeeded locally; the originally reported
-failure was not reproduced. A simulated HTTP 503 displayed its status and Refresh
-successfully recovered the panel. The workspace type check still reports its ten
-unrelated existing errors; these analytics changes introduce no new diagnostics.
+Rejected remote queries now retain public server error details and HTTP status with
+recovery guidance. Data no longer queries hub domains, which it does not use. Initial
+Data loading and refresh both succeeded locally; the originally reported failure was not
+reproduced. A simulated HTTP 503 displayed its status and Refresh successfully recovered
+the panel. The workspace type check still reports its ten unrelated existing errors;
+these analytics changes introduce no new diagnostics.

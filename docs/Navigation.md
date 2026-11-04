@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document outlines the cleaner separation of concerns for navigation state management between different contexts in the application.
+This document outlines the cleaner separation of concerns for navigation state
+management between different contexts in the application.
 
 ## Responsibilities
 
@@ -19,7 +20,8 @@ This document outlines the cleaner separation of concerns for navigation state m
 - **Card State**: Manages `state.isCardOpen`
 - **Search**: Handles search results and search-related UI
 - **Initialization**: Provides clean API for setting up navigation context
-- **Collection Helpers**: Provides factory methods for creating different collection types
+- **Collection Helpers**: Provides factory methods for creating different collection
+  types
 
 ### `featureCardCtx` (card.svelte.ts)
 
@@ -47,8 +49,8 @@ omniCtx.initNeighbourhood('Central', {
   focus: true,
   focusFeature: true,
   highlight: true,
-  openCard: true
-});
+  openCard: true,
+})
 ```
 
 ### `omniCtx.initWalk(walkRef, options, items?, customI18n?)`
@@ -61,22 +63,22 @@ Sets up a walk-based navigation context (stars, user collections, etc.):
 
 ```typescript
 // Stars collection
-omniCtx.initWalk('stars');
+omniCtx.initWalk('stars')
 
 // Custom collection
 omniCtx.initWalk(
   'userFeatures',
   {
     activeFeatureId: featureId,
-    focus: false
+    focus: false,
   },
   features,
   {
     en: 'My Features',
     zhHant: '我的功能',
-    'zhHans': '我的功能'
-  }
-);
+    zhHans: '我的功能',
+  },
+)
 ```
 
 ### `omniCtx.initFeature(featureId, options)`
@@ -92,8 +94,8 @@ await omniCtx.initFeature(featureId, {
   focus: true,
   focusFeature: true,
   highlight: true,
-  openCard: true
-});
+  openCard: true,
+})
 ```
 
 ### `omniCtx.switchToFeatureInCollection(featureId, options)`
@@ -108,13 +110,14 @@ Switches to a different feature within the current collection:
 ```typescript
 const success = omniCtx.switchToFeatureInCollection(featureId, {
   openCard: true,
-  focus: true
-});
+  focus: true,
+})
 ```
 
 ### `omniCtx.handleFeatureSelection(featureId, options)`
 
-Smart feature selection that determines whether to switch within collection or initialize new:
+Smart feature selection that determines whether to switch within collection or
+initialize new:
 
 - If feature is in current collection: calls `switchToFeatureInCollection()`
 - Otherwise: calls `initFeature()`
@@ -122,10 +125,10 @@ Smart feature selection that determines whether to switch within collection or i
 
 ```typescript
 // Used in StandaloneMap.svelte with card state awareness
-const isCardAlreadyOpen = omniCtx.state.isCardOpen;
+const isCardAlreadyOpen = omniCtx.state.isCardOpen
 omniCtx.handleFeatureSelection(featureId, {
-  focus: !isCardAlreadyOpen // Don't auto-center if card is already open
-});
+  focus: !isCardAlreadyOpen, // Don't auto-center if card is already open
+})
 ```
 
 ## Collection Helper Methods
@@ -135,7 +138,7 @@ omniCtx.handleFeatureSelection(featureId, {
 Creates a single-feature collection from a feature object:
 
 ```typescript
-const collection = omniCtx.toFeatureCollection(feature);
+const collection = omniCtx.toFeatureCollection(feature)
 ```
 
 ### `omniCtx.toWalkCollection(walkRef, items, customI18n?)`
@@ -144,14 +147,14 @@ Creates a walk collection with proper i18n:
 
 ```typescript
 // Built-in stars collection
-const starsCollection = omniCtx.toWalkCollection('stars', wishlistedFeatures);
+const starsCollection = omniCtx.toWalkCollection('stars', wishlistedFeatures)
 
 // Custom collection
 const customCollection = omniCtx.toWalkCollection('myWalk', features, {
   en: 'My Walk',
   zhHant: '我的路線',
-  'zhHans': '我的路线'
-});
+  zhHans: '我的路线',
+})
 ```
 
 ### `omniCtx.toNeighbourhoodCollection(neighbourhood, items)`
@@ -159,7 +162,7 @@ const customCollection = omniCtx.toWalkCollection('myWalk', features, {
 Creates a neighbourhood collection with localized names:
 
 ```typescript
-const collection = omniCtx.toNeighbourhoodCollection('Central', features);
+const collection = omniCtx.toNeighbourhoodCollection('Central', features)
 ```
 
 ### `omniCtx.toContributedFeaturesCollection(username, features, projectId, projectName)`
@@ -171,15 +174,17 @@ const collection = omniCtx.toContributedFeaturesCollection(
   'john_doe',
   features,
   'project123',
-  'Hong Kong Ghost Signs'
-);
+  'Hong Kong Ghost Signs',
+)
 ```
 
 ## Helper State Check Methods
 
-- `omniCtx.isCollectionInitialized(collectionId)`: Check if specific collection is active
+- `omniCtx.isCollectionInitialized(collectionId)`: Check if specific collection is
+  active
 - `omniCtx.isFeatureInitialized(featureId)`: Check if specific feature is active
-- `omniCtx.isFeatureInCollection(featureId)`: Check if feature exists in current collection
+- `omniCtx.isFeatureInCollection(featureId)`: Check if feature exists in current
+  collection
 - `omniCtx.isColdStart(featureId)`: Check if page represents a cold start
 
 ## Standard Option Parameters
@@ -218,14 +223,14 @@ if (!isClosing && omniCtx.isColdStart(featureId)) {
     focus: false, // Let FeaturePortal handle animation
     focusFeature: false,
     highlight: true,
-    openCard: true
-  });
+    openCard: true,
+  })
 } else if (!isClosing && !omniCtx.isFeatureInitialized(featureId)) {
   // Try to switch within existing collection
   const success = omniCtx.switchToFeatureInCollection(featureId, {
     openCard: true,
-    focus: false // Let FeaturePortal handle animation
-  });
+    focus: false, // Let FeaturePortal handle animation
+  })
 
   if (!success) {
     // Fallback: initialize as single feature
@@ -233,8 +238,8 @@ if (!isClosing && omniCtx.isColdStart(featureId)) {
       focus: false,
       focusFeature: false,
       highlight: true,
-      openCard: true
-    });
+      openCard: true,
+    })
   }
 }
 ```
@@ -243,10 +248,10 @@ if (!isClosing && omniCtx.isColdStart(featureId)) {
 
 ```typescript
 // Check if we can switch within current collection
-const expectedCollectionId = `${username}${projectId}Features`;
+const expectedCollectionId = `${username}${projectId}Features`
 if (omniCtx.isCollectionInitialized(expectedCollectionId)) {
-  const success = omniCtx.switchToFeatureInCollection(featureId);
-  if (success) return;
+  const success = omniCtx.switchToFeatureInCollection(featureId)
+  if (success) return
 }
 
 // Initialize new contributed features collection
@@ -254,8 +259,8 @@ const collection = omniCtx.toContributedFeaturesCollection(
   username,
   features,
   projectId,
-  projectName
-);
+  projectName,
+)
 omniCtx.initWalk(
   `${username}${projectId}Features`,
   {
@@ -263,32 +268,33 @@ omniCtx.initWalk(
     focus: true,
     focusFeature: true,
     highlight: true,
-    openCard: true
+    openCard: true,
   },
   features,
   {
     en: `${projectName} by ${username}`,
     zhHant: `貢獻者 ${username}`,
-    'zhHans': `贡献者 ${username}`
-  }
-);
+    zhHans: `贡献者 ${username}`,
+  },
+)
 ```
 
 ### Map Click Handling
 
 ```typescript
 // In StandaloneMap.svelte - smart card state awareness
-const isCardAlreadyOpen = omniCtx.state.isCardOpen;
+const isCardAlreadyOpen = omniCtx.state.isCardOpen
 omniCtx.handleFeatureSelection(featureId, {
-  focus: !isCardAlreadyOpen // Don't auto-center if card open (let FeaturePortal animate)
-});
+  focus: !isCardAlreadyOpen, // Don't auto-center if card open (let FeaturePortal animate)
+})
 ```
 
 ## Benefits
 
 1. **Clear Separation**: Each context has well-defined responsibilities
 2. **Smart Defaults**: Options have sensible defaults with override capability
-3. **Animation Coordination**: Map centering is disabled when card is open to allow FeaturePortal animations
+3. **Animation Coordination**: Map centering is disabled when card is open to allow
+   FeaturePortal animations
 4. **Collection Factories**: Helper methods ensure consistent i18n and structure
 5. **State Awareness**: Methods understand current context and make smart decisions
 6. **Reusable API**: Same patterns work for different navigation scenarios

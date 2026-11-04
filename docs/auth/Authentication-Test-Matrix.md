@@ -1,14 +1,13 @@
 # Authentication test matrix
 
-This is the release checklist for HYPE authentication. It covers the flows
-implemented today; it is not a proposed product-policy matrix. Mark the result
-column as **Pass**, **Fail**, **Blocked**, or **Not applicable** for the
-environment tested, and attach the browser/device, hub host, and error details
-to every failure.
+This is the release checklist for HYPE authentication. It covers the flows implemented
+today; it is not a proposed product-policy matrix. Mark the result column as **Pass**,
+**Fail**, **Blocked**, or **Not applicable** for the environment tested, and attach the
+browser/device, hub host, and error details to every failure.
 
 For role-based content and admin permissions, use
-[Policy Matrix.md](./Policy%20Matrix.md) alongside this document. That matrix
-covers resource authorization after a durable account has authenticated.
+[Policy Matrix.md](./Policy%20Matrix.md) alongside this document. That matrix covers
+resource authorization after a durable account has authenticated.
 
 ## Scope and current availability
 
@@ -27,9 +26,8 @@ covers resource authorization after a durable account has authenticated.
 
 ## Test accounts and setup
 
-Use fresh, unique email aliases for each run. Do not reuse a social identity in
-two test accounts: Better Auth correctly treats that as an account-linking
-conflict.
+Use fresh, unique email aliases for each run. Do not reuse a social identity in two test
+accounts: Better Auth correctly treats that as an account-linking conflict.
 
 | ID  | Persona                 | Minimum setup                                                                                                                                                    | Use for                                                              |
 | --- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -42,12 +40,11 @@ conflict.
 | M   | Multi-method account    | E plus Google/Facebook and a passkey                                                                                                                             | Link/unlink and method-removal safeguards.                           |
 | R   | Role test accounts      | Durable account per applicable role: core admin, scoped hub admin, organisation owner/member, project owner/maintainer/translator/member/user, unrelated account | Apply the companion authorization matrix.                            |
 
-Before testing, confirm the selected host is an entry in `trustedOrigins`; for
-OAuth, its provider callback URL must also match the host. Test every host that
-will be released: core production, preview, each hub subdomain/custom domain,
-and local development as applicable. Passkeys must be tested using HTTPS (or a
-browser-approved secure local origin) and a genuine platform authenticator or
-password manager.
+Before testing, confirm the selected host is an entry in `trustedOrigins`; for OAuth,
+its provider callback URL must also match the host. Test every host that will be
+released: core production, preview, each hub subdomain/custom domain, and local
+development as applicable. Passkeys must be tested using HTTPS (or a browser-approved
+secure local origin) and a genuine platform authenticator or password manager.
 
 ## Account-state matrix
 
@@ -67,9 +64,9 @@ Use this table to choose the correct expected outcome before each scenario.
 
 ## End-to-end scenario matrix
 
-Run every row that is available in the deployment. “State to check” is the
-minimum observable assertion; verify the browser console and network response
-when the UI gives only a generic error.
+Run every row that is available in the deployment. “State to check” is the minimum
+observable assertion; verify the browser console and network response when the UI gives
+only a generic error.
 
 | ID   | Actor          | Scenario and steps                                                                                                                                                                   | Expected result / state to check                                                                                                                                                                     | Result |
 | ---- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
@@ -127,32 +124,32 @@ when the UI gives only a generic error.
 
 ### Password setup request boundary
 
-`POST /api/account/password` delegates to `/api/auth/account-password` through
-Better Auth's HTTP handler. Both paths share the configured five-attempt,
-60-second IP bucket, including rejected and concurrent attempts. The default
-limiter is isolate-local, not a globally coordinated Cloudflare quota.
+`POST /api/account/password` delegates to `/api/auth/account-password` through Better
+Auth's HTTP handler. Both paths share the configured five-attempt, 60-second IP bucket,
+including rejected and concurrent attempts. The default limiter is isolate-local, not a
+globally coordinated Cloudflare quota.
 
 Password setup requires a same-origin request, an upgraded account, and a valid
 authoritative session. An older session can add a first password without another
-sign-in, including after Better Auth's default 24-hour freshness window. Expired
-or revoked sessions must be rejected even if their cookie cache says active.
-This exception applies only to first-password setup; other authentication
-operations retain their existing session requirements. Throttled
-responses retain Better Auth's `429` status and `X-Retry-After` header; they must
-not change email, send verification mail, or hash a password.
+sign-in, including after Better Auth's default 24-hour freshness window. Expired or
+revoked sessions must be rejected even if their cookie cache says active. This exception
+applies only to first-password setup; other authentication operations retain their
+existing session requirements. Throttled responses retain Better Auth's `429` status and
+`X-Retry-After` header; they must not change email, send verification mail, or hash a
+password.
 
-When password setup includes a different email address, a successful email-change
-HTTP response is not proof that the address changed. Password creation must wait
-until that address is persisted on the current user. Pending verification and
-unchanged/conflicting addresses return the generic `PASSWORD_NOT_SET` failure;
-after completing verification, retry password setup. Invalid password lengths and
-existing password credentials must be rejected before attempting an email change.
+When password setup includes a different email address, a successful email-change HTTP
+response is not proof that the address changed. Password creation must wait until that
+address is persisted on the current user. Pending verification and unchanged/conflicting
+addresses return the generic `PASSWORD_NOT_SET` failure; after completing verification,
+retry password setup. Invalid password lengths and existing password credentials must be
+rejected before attempting an email change.
 
 ## Roles and authorization follow-through
 
-Authentication proves who the person is; it does not grant resource access.
-For every durable role account in R, run the relevant **Allow** and **Deny**
-cells from [Policy Matrix.md](./Policy%20Matrix.md), at minimum for:
+Authentication proves who the person is; it does not grant resource access. For every
+durable role account in R, run the relevant **Allow** and **Deny** cells from
+[Policy Matrix.md](./Policy%20Matrix.md), at minimum for:
 
 | Resource area             | Required scenario coverage                                                                                                                   |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -162,16 +159,16 @@ cells from [Policy Matrix.md](./Policy%20Matrix.md), at minimum for:
 | Layer and feature         | Public vs unpublished/archived visibility; create/update/publish/archive; translator field limits; maintainer/owner escalation.              |
 | Tasks, images, properties | Read/list scope and every write/assignment/upload action used by the release.                                                                |
 
-For every denied server mutation, assert both that the UI blocks it and that a
-direct request is denied with the documented authorization code (for example
-`UNAUTHENTICATED`, `ACCOUNT_REQUIRED`, `INSUFFICIENT_ROLE`, or a scope/field
-code). Verify the record did not change.
+For every denied server mutation, assert both that the UI blocks it and that a direct
+request is denied with the documented authorization code (for example `UNAUTHENTICATED`,
+`ACCOUNT_REQUIRED`, `INSUFFICIENT_ROLE`, or a scope/field code). Verify the record did
+not change.
 
 ## Existing automated coverage and gaps
 
-The following tests give useful regression coverage, but they do **not** prove
-provider email delivery, provider configuration, browser passkey UX, or the
-full guest-state migration against a real D1 database:
+The following tests give useful regression coverage, but they do **not** prove provider
+email delivery, provider configuration, browser passkey UX, or the full guest-state
+migration against a real D1 database:
 
 | Area                                                       | Existing automated checks                                                                                                |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -184,6 +181,6 @@ full guest-state migration against a real D1 database:
 | Email content                                              | `src/tests/auth-email.test.ts`                                                                                           |
 | Resource authorization                                     | `src/tests/authorization.*.test.ts` and corresponding `*.remote.test.ts` files                                           |
 
-High-value additions after this manual pass are browser E2E coverage for the
-email verification/reset cycle, each available OAuth provider, guest-state
-migration, cross-host passkeys, and link/unlink/removal safeguards.
+High-value additions after this manual pass are browser E2E coverage for the email
+verification/reset cycle, each available OAuth provider, guest-state migration,
+cross-host passkeys, and link/unlink/removal safeguards.
