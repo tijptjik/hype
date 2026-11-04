@@ -178,6 +178,9 @@ type FeatureImportFooterPropsParams = {
  ************/
 // +++ Csv Drop Orchestration
 
+// A slow file read must not replace a later drop or revive a cancelled import.
+const csvDrops = new WeakMap<ImportCtx, object>()
+
 function getDropPayload(event: CSVDropPayload): {
   acceptedFiles?: File[]
   type?: 'features' | 'users' | 'events' | 'images'
@@ -197,6 +200,9 @@ export async function handleCSVDropEvent(
   importCtx: ImportCtx,
   event: CSVDropPayload,
 ): Promise<void> {
+  const operation = {}
+  csvDrops.set(importCtx, operation)
+  const previousData = importCtx.getData()
   const payload = getDropPayload(event)
   const csvEvent: CSVDropEvent = {
     acceptedFiles: payload.acceptedFiles ?? [],
@@ -209,6 +215,8 @@ export async function handleCSVDropEvent(
   }
 
   await handleCSVDrop(csvEvent, (file: File, data: ParsedCSVData) => {
+    if (csvDrops.get(importCtx) !== operation || importCtx.getData() !== previousData)
+      return
     importCtx.setFile(file)
     importCtx.setHeaders(data.headers)
     importCtx.setData(data.data) // Store the complete dataset
@@ -1787,6 +1795,9 @@ export function enrichFeatureImportBooleanFields(importCtx: ImportCtx): void {
  ************/
 // +++ Project Selection
 
+// Retain only the latest selection operation while its import context is alive.
+const projectSelections = new WeakMap<ImportCtx, object>()
+
 /**
  * Applies the selected project and re-parses CSV column mappings with project context.
  *
@@ -1796,6 +1807,7 @@ export function enrichFeatureImportBooleanFields(importCtx: ImportCtx): void {
  * @param fetchAvailablePropertyKeys - Loader for project-scoped property metadata.
  * @param setTypeSelected - Callback that marks the import type as selected.
  * @returns A promise that resolves after project metadata and columns are refreshed.
+ * @remarks Superseded selections do not remap columns or advance the import flow.
  */
 export async function handleProjectSelection(
   selectedProject: Project,
@@ -1803,9 +1815,15 @@ export async function handleProjectSelection(
   appCtx: FeatureImportAppContext,
   fetchAvailablePropertyKeys: (ctx?: ImportCtx) => Promise<void>,
   setTypeSelected: (selected: boolean) => void,
-) {
+): Promise<void> {
   // Cast to Project type and store
   importCtx.setSelectedProject(selectedProject)
+  const project = importCtx.getSelectedProject()
+  const data = importCtx.getData()
+  const headers = importCtx.getHeaders()
+  const columns = importCtx.getColumns()
+  const operation = {}
+  projectSelections.set(importCtx, operation)
 
   // Get the organisation for this project
   const organisation = appCtx.getResourceByIdSync(
@@ -1817,6 +1835,16 @@ export async function handleProjectSelection(
 
   // Fetch available property keys for the selected project
   await fetchAvailablePropertyKeys(importCtx)
+
+  // Preserve resets, newer selections and manual mappings made during metadata loading.
+  if (
+    projectSelections.get(importCtx) !== operation ||
+    importCtx.getSelectedProject() !== project ||
+    importCtx.getData() !== data ||
+    importCtx.getHeaders() !== headers ||
+    importCtx.getColumns() !== columns
+  )
+    return
 
   // Re-parse headers now that we know the project context
   importCtx.setColumns(
