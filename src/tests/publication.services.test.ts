@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SQL } from 'drizzle-orm'
-import { feature, layer, project } from '#lib/db/schema/index.js'
+import { feature, featureImage, layer, project } from '#lib/db/schema/index.js'
 import {
   cascadeOrganisationArchivedStateToDescendants,
   cascadeOrganisationPublishedStateToDescendants,
@@ -28,10 +28,12 @@ const createDbMock = (): {
   const updateCalls: UpdateCall[] = []
 
   const db = {
+    batch: vi.fn(async (statements: Promise<unknown>[]) => Promise.all(statements)),
     update: vi.fn((table: unknown) => ({
       set: vi.fn((values: Record<string, unknown>) => ({
         where: vi.fn(async (where: unknown) => {
-          updateCalls.push({ table, values, where })
+          // These assertions inspect hierarchy state; image policy SQL has separate SQLite coverage.
+          if (table !== featureImage) updateCalls.push({ table, values, where })
         }),
       })),
     })),
