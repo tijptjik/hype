@@ -16,7 +16,7 @@ import type { AdoptionSourceRevision } from '#lib/locations/adoption.js'
 
 const authored = LocalLocationAddressSchema.parse({
   ...createLocalLocationAddress(),
-  granularity: 'building',
+  scope: 'building',
   i18n: {
     en: {
       formattedAddress: '',
@@ -55,14 +55,14 @@ const facts = {
 
 describe('locally authored SaanSeoi address content', () => {
   it('uses unit and unit_portion scope while retaining room as a unit type', () => {
-    for (const granularity of ['unit', 'unit_portion'])
-      expect(
-        LocalLocationAddressSchema.safeParse({ ...authored, granularity }).success,
-      ).toBe(true)
-    for (const granularity of ['room', 'room_part'])
-      expect(
-        LocalLocationAddressSchema.safeParse({ ...authored, granularity }).success,
-      ).toBe(false)
+    for (const scope of ['unit', 'unit_portion'])
+      expect(LocalLocationAddressSchema.safeParse({ ...authored, scope }).success).toBe(
+        true,
+      )
+    for (const scope of ['room', 'room_part'])
+      expect(LocalLocationAddressSchema.safeParse({ ...authored, scope }).success).toBe(
+        false,
+      )
     expect(
       LocalLocationAddressSchema.safeParse({
         ...authored,
@@ -140,15 +140,15 @@ describe('locally authored SaanSeoi address content', () => {
     const old: AdoptionSourceRevision = {
       id: 'one',
       locationId: 'p',
-      sequence: 1,
+      version: 1,
       origin: 'local',
       ssId: null,
-      payload: {},
+      rawSource: {},
       facts,
     }
     const next = structuredClone(old)
     next.id = 'two'
-    next.sequence = 2
+    next.version = 2
     next.facts.location.address.authored!.i18n.en.streetName = 'New Road'
     next.facts.location.address.authored!.unit!.unitRef = 'B'
     const plan = planLocationAdoption({
@@ -159,7 +159,7 @@ describe('locally authored SaanSeoi address content', () => {
       policy: DEFAULT_PROJECT_LOCATION_POLICY,
     })
     expect(plan.blockers).toEqual([])
-    expect(plan.evidence).toMatchObject({
+    expect(plan.comparison).toMatchObject({
       addressChanged: true,
       unitChanged: true,
       establishmentChanged: false,
@@ -172,10 +172,35 @@ describe('locally authored SaanSeoi address content', () => {
       overrides: { location: { mode: 'override', value: facts.location } },
       policy: {
         ...DEFAULT_PROJECT_LOCATION_POLICY,
-        address: 'automatic',
-        unit: 'automatic',
+        address: 'follow',
+        unit: 'follow',
       },
     })
     expect(inherited.effective.location).toEqual(facts.location)
   })
+})
+
+it('retains premises names in each locale through shared address materialisation', async () => {
+  const { localAddressDraft, localAddressContent } = await import(
+    '#lib/addresses/locationDraft.js'
+  )
+  const content = LocalLocationAddressSchema.parse({
+    ...createLocalLocationAddress(),
+    scope: 'unit',
+    i18n: {
+      en: {
+        formattedAddress: 'Shop A, Example Estate',
+        premisesName: 'Example Estate',
+      },
+      'zh-hant': {
+        formattedAddress: '示例屋苑A舖',
+        premisesName: '示例屋苑',
+      },
+    },
+  })
+  const draft = localAddressDraft(content)
+  expect(getAddressLocale(draft, 'en').premisesName).toBe('Example Estate')
+  expect(getAddressLocale(draft, 'zhHant').premisesName).toBe('示例屋苑')
+  expect(localAddressContent(draft)).toEqual(content)
+  expect(content).not.toHaveProperty('premisesType')
 })
