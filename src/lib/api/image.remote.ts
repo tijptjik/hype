@@ -2098,6 +2098,7 @@ export const setImagePublished = guardedCommand(
  * @param ctx Authorized request context.
  * @returns Updated image envelope after its metadata revision is selected atomically.
  * @remarks Source bytes and public ID remain unchanged; immutable metadata is selected by a guarded database update.
+ * Legacy images without sidecars start at their stored pixel orientation after source existence is verified.
  */
 export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx) => {
   const { db, user, userId, userRoles, event } = ctx
@@ -2136,7 +2137,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
   const env = toImageStage(
     existing.env ?? event.locals.platform?.env.ENVIRONMENT ?? ImageEnv.local,
   )
-  const { document, resolvedEnv } = await readMetadataDocument({
+  const { document: storedDocument, resolvedEnv } = await readMetadataDocument({
     platform: event.locals.platform,
     env,
     publicId: existing.publicId,
@@ -2144,11 +2145,24 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     fetchFn: event.fetch,
   })
 
-  if (!document) {
-    throw error(404, 'Image metadata not found')
+  const originalsBucket = getOriginalsBucketForStage(event.locals.platform, resolvedEnv)
+  // Legacy imports may have a source without sidecars; verify it before creating rotation metadata.
+  if (!storedDocument) {
+    const source = await verifyUploadedOriginal({
+      bucket: originalsBucket,
+      key: existing.publicId,
+      stage: resolvedEnv,
+      event,
+    })
+    if (!source) throw error(404, 'Image source not found')
+  }
+  const document: ImageMetadataDocument = storedDocument ?? {
+    rotation: 0,
+    sourceRotation: 0,
+    renderRotation: 0,
+    uploadedAt: existing.createdAt,
   }
 
-  const originalsBucket = getOriginalsBucketForStage(event.locals.platform, resolvedEnv)
   // Rotation changes delivery metadata only; the stored source and public identity are immutable.
   const publicId = existing.publicId
   const targetRotation = normalizeRotation(params.rotation)

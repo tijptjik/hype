@@ -1575,7 +1575,14 @@ describe('image.remote', () => {
     expect(mockLoadFeatureCanonicalImageOccupancy).not.toHaveBeenCalled()
   })
 
-  it.each(['success', 'stale', 'database-failure', 'source-drift'] as const)(
+  it.each([
+    'success',
+    'stale',
+    'database-failure',
+    'source-drift',
+    'missing-metadata',
+    'missing-source',
+  ] as const)(
     'rotateImage preserves source objects while selecting metadata: %s',
     async scenario => {
       const put = vi.fn(async () => undefined)
@@ -1633,7 +1640,15 @@ describe('image.remote', () => {
                 R2_S3_ACCESS_KEY_ID: 'access-key',
                 R2_S3_SECRET_ACCESS_KEY: 'secret-key',
                 PUBLIC_ASSET_BASE_URL: 'https://assets.example.test',
-                ASSET_RAW_DEV: { get: originalGet, head: vi.fn(), put },
+                ASSET_RAW_DEV: {
+                  get: originalGet,
+                  head: vi.fn(async () =>
+                    scenario === 'missing-metadata'
+                      ? { size: 1024, httpMetadata: { contentType: 'image/png' } }
+                      : null,
+                  ),
+                  put,
+                },
                 ASSET_RAW_PREVIEW: { get: vi.fn(), head: vi.fn(), put },
                 ASSET_RAW_PRODUCTION: { get: vi.fn(), head: vi.fn(), put },
                 ASSET_PUBLIC_DEV: { put, get: vi.fn() },
@@ -1673,6 +1688,16 @@ describe('image.remote', () => {
         resolvedVersion: 1234,
       })
 
+      if (scenario === 'missing-metadata' || scenario === 'missing-source') {
+        mockReadMetadataDocument.mockResolvedValue({
+          document: null,
+          resolvedEnv: 'local',
+          resolvedVersion: 1234,
+        })
+      }
+      if (scenario === 'missing-source')
+        fetchSpy.mockResolvedValue(new Response(null, { status: 404 }))
+
       const { getImageMutationSnapshot } = await import(
         '#lib/db/services/imageMutationScope.js'
       )
@@ -1701,6 +1726,16 @@ describe('image.remote', () => {
         rotation: 90,
       })
 
+      if (scenario === 'missing-source') {
+        const rejected = expect(operation).rejects.toMatchObject({ status: 404 })
+        await vi.runAllTimersAsync()
+        await rejected
+        expect(put).not.toHaveBeenCalled()
+        expect(mockUpdateImageForContext).not.toHaveBeenCalled()
+        fetchSpy.mockRestore()
+        dateNowSpy.mockRestore()
+        return
+      }
       if (scenario === 'source-drift') {
         await expect(operation).rejects.toMatchObject({ status: 409 })
         expect(put).not.toHaveBeenCalled()
@@ -1709,7 +1744,7 @@ describe('image.remote', () => {
         dateNowSpy.mockRestore()
         return
       }
-      if (scenario !== 'success') {
+      if (scenario === 'stale' || scenario === 'database-failure') {
         await expect(operation).rejects.toBeDefined()
         expect(put).toHaveBeenCalledTimes(1)
         for (const [key] of put.mock.calls as unknown as [string][])
@@ -1750,6 +1785,19 @@ describe('image.remote', () => {
         expect.stringContaining('"rotation":90'),
         expect.any(Object),
       )
+      if (scenario === 'missing-metadata') {
+        const document = JSON.parse(
+          (put.mock.calls as unknown as [string, string][])[0][1],
+        )
+        expect(document).toMatchObject({
+          rotation: 90,
+          sourceRotation: 0,
+          renderRotation: 90,
+        })
+        expect(document.originalWidth).toBeNull()
+        expect(document.originalHeight).toBeNull()
+        expect(document.cameraModel).toBeUndefined()
+      }
       expect(mockEnqueueDerivedAssetWarmup).toHaveBeenCalledWith({
         event: expect.objectContaining({
           request: expect.any(Request),
