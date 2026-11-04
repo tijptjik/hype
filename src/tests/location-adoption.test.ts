@@ -2,25 +2,26 @@
 import { describe, expect, it } from 'vitest'
 import {
   planLocationAdoption,
+  readLocationAdoptionPlan,
   type AdoptionSourceRevision,
 } from '#lib/locations/adoption.js'
 import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
 
 const automatic = {
   ...DEFAULT_PROJECT_LOCATION_POLICY,
-  coordinates: { mode: 'automatic' },
-  address: 'automatic',
-  unit: 'automatic',
-  establishment: 'automatic',
+  coordinates: { mode: 'follow' },
+  address: 'follow',
+  unit: 'follow',
+  establishment: 'follow',
 }
-function source(id = 'old', sequence = 1): AdoptionSourceRevision {
+function source(id = 'old', version = 1): AdoptionSourceRevision {
   return {
     id,
-    sequence,
+    version,
     locationId: 'location',
     ssId: 'ss',
     origin: 'saanseoi',
-    payload: {
+    rawSource: {
       resource: {
         attributes: {
           basicCategory: 'bakery',
@@ -40,8 +41,8 @@ function source(id = 'old', sequence = 1): AdoptionSourceRevision {
           address2dId: null,
           address3dId: null,
           address3dUnitId: null,
-          addressSnapshotId: null,
-          records: {},
+          snapshotId: null,
+          rawSource: {},
           fallbackDisplay: { en: 'Old address' },
         },
       },
@@ -87,7 +88,7 @@ describe('source revision adoption evidence', () => {
   })
   it('holds name/category identity changes and preserves explicit overrides when adopted', () => {
     const next = source('new', 2)
-    next.payload = {
+    next.rawSource = {
       resource: {
         attributes: {
           basicCategory: 'cafe',
@@ -120,7 +121,7 @@ describe('source revision adoption evidence', () => {
   it('blocks missing establishment evidence, identity churn and omitted invalid phones even under automatic policy', () => {
     const next = source('new', 2)
     next.ssId = 'different'
-    next.payload = { issues: [{ kind: 'invalidPhone', index: 0, value: 'bad' }] }
+    next.rawSource = { issues: [{ kind: 'invalidPhone', index: 0, value: 'bad' }] }
     const result = plan(next, automatic)
     expect(result.blockers).toEqual([
       'source-identity',
@@ -147,8 +148,8 @@ describe('source revision adoption evidence', () => {
       address2dId: 'a',
       address3dId: 'inventory',
       address3dUnitId: 'unit',
-      addressSnapshotId: 'snapshot1',
-      records: {
+      snapshotId: 'snapshot1',
+      rawSource: {
         meta: { apiReleaseSet: 'release1' },
         data: {
           id: 'a',
@@ -174,9 +175,9 @@ describe('source revision adoption evidence', () => {
     })
     const next = structuredClone(old)
     next.id = 'new'
-    next.sequence = 2
-    next.facts.location.address.addressSnapshotId = 'snapshot2'
-    const records = next.facts.location.address.records as {
+    next.version = 2
+    next.facts.location.address.snapshotId = 'snapshot2'
+    const records = next.facts.location.address.rawSource as {
       meta: unknown
       data: { attributes: Record<string, unknown> }
       included: Array<{
@@ -205,7 +206,7 @@ describe('source revision adoption evidence', () => {
     location.facts.location.geometry.coordinates[0] += 0.01
     const next = structuredClone(location)
     next.id = 'next'
-    next.sequence = 3
+    next.version = 3
     expect(
       planLocationAdoption({
         facts: source(),
@@ -226,5 +227,24 @@ describe('source revision adoption evidence', () => {
     ).toThrow('backwards')
     next.locationId = 'other'
     expect(() => plan(next)).toThrow('identity')
+  })
+})
+
+describe('stored adoption comparison compatibility', () => {
+  it('reads legacy evidence without rewriting the stored assessment', () => {
+    const plan = planLocationAdoption({
+      facts: source(),
+      location: source(),
+      candidate: source('next', 2),
+      overrides: {},
+      policy: automatic,
+    })
+    const { comparison, ...assessment } = plan
+    const legacy = { ...assessment, evidence: comparison }
+    const saved = JSON.stringify(legacy)
+    expect(readLocationAdoptionPlan(legacy)).toEqual(plan)
+    expect(JSON.stringify(legacy)).toBe(saved)
+    expect(readLocationAdoptionPlan(plan)).toBe(plan)
+    expect(plan).not.toHaveProperty('evidence')
   })
 })
