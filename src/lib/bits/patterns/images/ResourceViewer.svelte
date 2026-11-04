@@ -322,12 +322,12 @@ onDestroy(() => {
 
 <div
   class={flush
-    ? 'h-full min-h-0 w-full select-none bg-transparent'
+    ? 'h-full min-h-0 w-full bg-transparent select-none'
     : workspace
-      ? 'h-full min-h-0 w-full select-none bg-transparent p-6'
+      ? 'h-full min-h-0 w-full bg-transparent p-6 select-none'
       : hasBottomPadding
-        ? 'h-full w-full select-none bg-base-100 pb-4 pr-4 pt-1'
-        : 'h-full w-full select-none bg-base-100 pr-4 pt-1'}
+        ? 'bg-base-100 h-full w-full pt-1 pr-4 pb-4 select-none'
+        : 'bg-base-100 h-full w-full pt-1 pr-4 select-none'}
 >
   <Dropzone
     disabled={!hasItems || isDropzoneDisabled}
@@ -355,9 +355,7 @@ onDestroy(() => {
       onActiveIdChange={model.actions.select}
       onCurrentItemLoad={handleCurrentItemLoad}
     >
-      {#snippet leftRail(
-        _item,
-      )}
+      {#snippet leftRail(_item)}
         {#if displayedActiveImage}
           <UserAttributionCard
             userId={displayedActiveImage.image.contributorId}
@@ -370,9 +368,7 @@ onDestroy(() => {
         {/if}
       {/snippet}
 
-      {#snippet centerRail(
-        _item,
-      )}
+      {#snippet centerRail(_item)}
         <ViewerControls
           presentationMode={displayedPresentationMode}
           canMutate={displayedCanChangePresentationMode}
@@ -401,9 +397,7 @@ onDestroy(() => {
         />
       {/snippet}
 
-      {#snippet rightRail(
-        _item,
-      )}
+      {#snippet rightRail(_item)}
         {#if displayedActiveImage}
           <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
           <div
@@ -446,11 +440,13 @@ onDestroy(() => {
             </button>
 
             <div
-              class="pointer-events-none absolute bottom-0 right-0 origin-bottom-right transition-opacity duration-150"
+              class="pointer-events-none absolute right-0 bottom-0 origin-bottom-right transition-opacity duration-150"
               class:opacity-0={!isMetadataOpen}
               class:opacity-100={isMetadataOpen}
             >
-              <div class="pointer-events-auto">
+              <div
+                class={isMetadataOpen ? 'pointer-events-auto' : 'pointer-events-none'}
+              >
                 {#if displayedIsMetadataLoading || displayedHasLoadedMetadata}
                   <ImageMetadataCard
                     image={displayedActiveImage.image}

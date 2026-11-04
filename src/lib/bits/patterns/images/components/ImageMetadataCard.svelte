@@ -49,7 +49,18 @@ function toDisplayFilename(
   extension: string | null | undefined,
 ): string | null {
   if (!filename) return null
-  return extension ? `${filename}.${extension}` : filename
+  const fullFilename =
+    extension && !filename.toLowerCase().endsWith(`.${extension.toLowerCase()}`)
+      ? `${filename}.${extension}`
+      : filename
+  return fullFilename
+}
+
+function abbreviateFilename(filename: string): string {
+  const characters = Array.from(filename)
+  return characters.length > 32
+    ? `${characters.slice(0, 16).join('')}...${characters.slice(-16).join('')}`
+    : filename
 }
 
 function parseOriginalMetadataSnapshot(
@@ -182,14 +193,14 @@ const metadataRows = $derived.by<MetadataRow[]>(() => {
       ? {
           icon: Document,
           label: 'Original filename',
-          value: originalFilename,
+          value: abbreviateFilename(originalFilename),
         }
       : null,
     editedFilename
       ? {
           icon: Document,
           label: originalFilename ? 'Edited filename' : m.image__metadata_filename(),
-          value: editedFilename,
+          value: abbreviateFilename(editedFilename),
         }
       : null,
     resolvedMetadata.credit
@@ -270,26 +281,32 @@ $effect(() => {
 </script>
 
 <div
-  class="flex min-w-50 items-center gap-3 rounded-xl border border-border bg-base-100 p-3 text-base-content shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+  class="border-border bg-base-100 text-base-content max-h-[min(28rem,calc(100dvh-6rem))] w-80 max-w-[calc(100vw-3rem)] min-w-0 overflow-y-auto rounded-xl border p-3 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
 >
-  <div class="flex flex-col gap-2">
+  <div class="flex min-w-0 flex-col gap-2">
     {#if metadataRows.length > 0}
       {#each metadataRows as row}
         <div
-          class="grid grid-cols-[1rem_1fr] gap-x-2 gap-y-1 text-sm text-muted-foreground"
+          class="text-muted-foreground grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] gap-x-2 gap-y-1 text-sm"
         >
           <div class="flex items-center justify-center">
-            <Icon src={row.icon} class="h-4 w-4 grow-0 text-base-content" />
+            <Icon src={row.icon} class="text-base-content h-4 w-4 grow-0" />
           </div>
-          <p class="font-medium text-base-content">{row.label}</p>
+          <p
+            class="text-base-content min-w-0 font-medium break-words whitespace-normal"
+          >
+            {row.label}
+          </p>
           <div></div>
           {#if typeof row.value === 'string'}
-            <span>{row.value}</span>
+            <span class="min-w-0 [overflow-wrap:anywhere] whitespace-normal"
+              >{row.value}</span
+            >
           {:else}
-            <div class="flex flex-col gap-0.5">
+            <div class="flex min-w-0 flex-col gap-0.5 break-words whitespace-normal">
               <span>
                 <span
-                  class="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground"
+                  class="text-muted-foreground font-mono text-[10px] tracking-[0.18em] uppercase"
                 >
                   LAT
                 </span>
@@ -298,7 +315,7 @@ $effect(() => {
               {#if row.value.secondary}
                 <span>
                   <span
-                    class="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground"
+                    class="text-muted-foreground font-mono text-[10px] tracking-[0.18em] uppercase"
                   >
                     LNG
                   </span>
@@ -312,9 +329,9 @@ $effect(() => {
     {/if}
 
     {#if resolvedLoading}
-      <div class="text-sm text-muted-foreground">{m.image__metadata_loading()}</div>
+      <div class="text-muted-foreground text-sm">{m.image__metadata_loading()}</div>
     {:else if metadataRows.length === 0}
-      <div class="text-sm text-muted-foreground">{m.image__metadata_empty()}</div>
+      <div class="text-muted-foreground text-sm">{m.image__metadata_empty()}</div>
     {/if}
   </div>
 </div>

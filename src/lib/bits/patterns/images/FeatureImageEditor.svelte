@@ -49,9 +49,7 @@ const model = useImageEditorGalleryModel(getImageCtx())
   onIntentChange={model.actions.setIntent}
   onRetryUpload={model.actions.retryUpload}
 >
-  {#snippet leftRail(
-    _item,
-  )}
+  {#snippet leftRail(_item)}
     {#if model.state.activeImage}
       <UserAttributionCard
         userId={model.state.activeImage.image.contributorId}
@@ -64,9 +62,7 @@ const model = useImageEditorGalleryModel(getImageCtx())
     {/if}
   {/snippet}
 
-  {#snippet rightRail(
-    _item,
-  )}
+  {#snippet rightRail(_item)}
     {#if model.state.activeImage}
       <!-- biome-ignore lint/a11y/noStaticElementInteractions: Hover and focus events keep the metadata popover open around its button. -->
       <div
@@ -91,9 +87,11 @@ const model = useImageEditorGalleryModel(getImageCtx())
         </button>
 
         <div
-          class="pointer-events-none absolute bottom-0 right-0 origin-bottom-right opacity-0 transition-opacity duration-150 group-hover/metadata:opacity-100 group-focus-within/metadata:opacity-100"
+          class="pointer-events-none absolute right-0 bottom-0 origin-bottom-right opacity-0 transition-opacity duration-150 group-focus-within/metadata:opacity-100 group-hover/metadata:opacity-100"
         >
-          <div class="pointer-events-auto">
+          <div
+            class="pointer-events-none group-focus-within/metadata:pointer-events-auto group-hover/metadata:pointer-events-auto"
+          >
             {#if model.state.hasLoadedMetadata && !model.state.isMetadataLoading}
               <ImageMetadataCard
                 image={model.state.activeImage.image}
