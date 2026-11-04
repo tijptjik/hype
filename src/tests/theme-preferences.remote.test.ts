@@ -41,7 +41,7 @@ import {
 
 const preferences = {
   uiTheme: 'hype-light',
-  mapStyle: 'hyperLight',
+  mapStyle: 'hype-light',
   syncUiAndMap: true,
   useActiveMapStyle: false,
 } as const
