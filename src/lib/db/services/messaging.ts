@@ -42,12 +42,13 @@ import type {
 // - resolveMessagingPhone
 // - lookupMessagingPhone
 // - readMessagingRecipients
-// - authorizeMessagingRecipient
+// - authorizeMessagingConversation
 // - messagingService
 // - messagingViewer
 // 2. INBOX PROJECTION
 // - projectMessagingSnapshot
 // - projectMessagingArchive
+// - withMessagingOperators
 // - readMessagingMessages
 // 3. SEND JOURNAL
 // - dispatchMessagingSend
@@ -79,7 +80,7 @@ export async function authorizeMessagingOrganisation(
   return target
 }
 
-/** Resolve an organisation-owned account after verifying its actual parent.
+/** Resolve a linked account after checking access to its assigned organisation.
  * @param ctx Authenticated request context.
  * @param accountId Application account identifier; never a bridge identifier.
  * @returns The authorized account record.
@@ -106,7 +107,7 @@ export interface MessagingRecipient {
 
 /** Resolve only active Hype users whose verified identity still owns this exact native thread.
  * @param db Application database.
- * @param account Authorized organisation-owned account.
+ * @param account Authorized linked provider account.
  * @param addresses Native peers from a bounded bridge page or an explicit action.
  * @returns Verified Hype recipients keyed by canonical platform address.
  * @remarks A stored recipient association is never reassigned to a different person.
@@ -319,22 +320,35 @@ export async function resolveMessagingPhone(
   return result
 }
 
-/** Require a verified Hype person before exposing a profile or acting on a native address.
+/** Require an existing account chat or a verified HYPE destination before acting on a native address.
  * @param ctx Authenticated request context.
- * @param account Already-authorized organisation account.
- * @param address Canonical native peer; names and arbitrary provider lookups are not accepted.
- * @returns The verified active Hype recipient.
+ * @param account Already-authorized linked account.
+ * @param address Native chat ID; arbitrary addresses cannot open new external conversations.
+ * @returns The current verified HYPE association, or null for an unlinked account chat.
+ * @remarks The account owns the chat. A missing or revoked HYPE association does not revoke account access.
  */
-export async function authorizeMessagingRecipient(
+export async function authorizeMessagingConversation(
   ctx: GuardedBaseContext,
   account: MessagingAccount,
   address: string,
-): Promise<MessagingRecipient> {
+): Promise<MessagingRecipient | null> {
   const recipient = (await readMessagingRecipients(ctx.db, account, [address])).get(
     address,
   )
-  if (!recipient) throw error(403, 'Messaging is limited to verified HYPE users')
-  return recipient
+  if (recipient) return recipient
+  const [conversation] = await ctx.db
+    .select({ id: messagingConversation.id })
+    .from(messagingConversation)
+    .where(
+      and(
+        eq(messagingConversation.accountId, account.id),
+        eq(messagingConversation.chatId, address),
+      ),
+    )
+    .limit(1)
+  if (!conversation)
+    throw error(403, 'This chat is not available on the linked account')
+  return null
 }
 
 /** Select a private binding only from the stored platform.
@@ -408,12 +422,18 @@ export async function projectMessagingSnapshot(
           chatId: message.chat,
           lastMessageAt: message.timestamp,
           recipientUserId: recipients.get(message.chat) ?? null,
+          // Only a direct peer's push name can label its chat; group senders are not group titles.
+          displayName:
+            !message.fromMe && message.chat === message.sender
+              ? message.senderName
+              : null,
         })
         .onConflictDoUpdate({
           target: [messagingConversation.accountId, messagingConversation.chatId],
           set: {
             lastMessageAt: sql`max(${messagingConversation.lastMessageAt}, excluded.lastMessageAt)`,
             recipientUserId: sql`coalesce(${messagingConversation.recipientUserId}, excluded.recipientUserId)`,
+            displayName: sql`coalesce(${messagingConversation.displayName}, excluded.displayName)`,
           },
         }),
       db
@@ -519,6 +539,61 @@ export async function projectMessagingArchive(
     })
 }
 
+/** Attach only the original HYPE send actor, never an editor or a provider-supplied claim.
+ * @param db Application database.
+ * @param accountId Already authorized organisation messaging account.
+ * @param messages Bounded native projections from replay, search, or history.
+ * @returns Projections with audited operator names and avatars where known.
+ */
+export async function withMessagingOperators(
+  db: Database,
+  accountId: string,
+  messages: BridgeMessage[],
+): Promise<BridgeMessage[]> {
+  const ids = messages.filter(message => message.fromMe).map(message => message.id)
+  if (!ids.length) return messages.map(message => ({ ...message, operator: undefined }))
+  // Match the account, native message, and exact recipient; reaction/edit receipts are not authorship.
+  const rows = await db
+    .select({
+      messageId: messagingSend.messageId,
+      request: messagingSend.request,
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      image: user.image,
+    })
+    .from(messagingSend)
+    .innerJoin(user, eq(user.id, messagingSend.actorUserId))
+    .where(
+      and(
+        eq(messagingSend.accountId, accountId),
+        eq(messagingSend.state, 'submitted'),
+        chunkedInArray(messagingSend.messageId, ids),
+        sql`json_extract(${messagingSend.request}, '$.editTo') IS NULL`,
+        sql`json_extract(${messagingSend.request}, '$.reaction') IS NULL`,
+      ),
+    )
+    .orderBy(asc(messagingSend.createdAt))
+  return messages.map(message => {
+    const actor = message.fromMe
+      ? rows.find(
+          row => row.messageId === message.id && row.request.to === message.chat,
+        )
+      : undefined
+    return {
+      ...message,
+      operator: actor
+        ? {
+            id: actor.id,
+            name: actor.name,
+            username: actor.username,
+            image: actor.image,
+          }
+        : undefined,
+    }
+  })
+}
+
 /** Read bounded projections independently of bridge connection lifetime.
  * @param db Application database.
  * @param accountId Authorized account ID.
@@ -546,7 +621,11 @@ export async function readMessagingMessages(
     )
     .orderBy(asc(messagingMessage.sourceSequence))
     .limit(100)
-  return rows.map(row => row.payload)
+  return withMessagingOperators(
+    db,
+    accountId,
+    rows.map(row => row.payload),
+  )
 }
 
 /** Freeze route and actor before external I/O, then reconcile the provider's durable result.

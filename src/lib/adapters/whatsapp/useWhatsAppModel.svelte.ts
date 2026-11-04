@@ -76,6 +76,7 @@ export function createWhatsAppModel(options: {
   platform: MessagingPlatform
   configurationHref?: string
   recipientLocked?: boolean
+  preserveNativeChatIds?: boolean
   transport: ChatTransport
 }): WhatsAppConsoleModel {
   const platform = options.platform
@@ -313,11 +314,12 @@ export function createWhatsAppModel(options: {
     }
   }
 
-  /** Use only SDK-verified aliases to join PN and LID conversation history.
+  /** Preserve account-owned thread IDs, or use SDK-verified aliases when the surface allows canonical merging.
    * @param jid Existing conversation identity.
    * @returns Phone JID when disclosed, otherwise the original identity.
    */
   function canonicalChat(jid: string): string {
+    if (options.preserveNativeChatIds) return jid
     if (platform === 'telegram') return profiles[jid]?.jid ?? jid
     const address = profileAddress(chatAddress(jid))
     const profile = profiles[address]
@@ -487,10 +489,12 @@ export function createWhatsAppModel(options: {
       outbox = snapshot.outbox
       void restoreSendPreviews(snapshot.outbox)
       for (const message of snapshot.messages) {
-        if (message.sequence > cursor) {
+        if (snapshot.replayCursor !== undefined || message.sequence > cursor) {
           // Replays contain edits/deletions too; replace the native message, preserving its newest projection.
           mergeMessage(message)
-          cursor = message.sequence
+          // Account snapshots may also include recent history for the selected chat.
+          // Only their explicit replay cursor may acknowledge other chats' incoming events.
+          if (snapshot.replayCursor === undefined) cursor = message.sequence
         }
       }
       // Keep local sends visible across an empty or lagging poll until the exact native echo arrives.
@@ -985,7 +989,7 @@ export function createWhatsAppModel(options: {
       options.recipientLocked &&
       (!selectedChat || canonicalChat(to) !== canonicalChat(selectedChat))
     ) {
-      actionError = 'Select a HYPE-user conversation before sending'
+      actionError = 'Select an account conversation before sending'
       return
     }
     if (!pending) {

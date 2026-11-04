@@ -1,14 +1,17 @@
 # Messaging preferences and recipient identities
 
 The main HYPE database owns recipient preferences and identity associations.
-Organisation account credentials remain in the private messaging bridges.
+Linked Telegram/WhatsApp account credentials remain in the private messaging bridges.
+Each account is assigned to exactly one organisation for access control; the provider
+account owns its native chats. Chats have no separate organisation association.
 
 | Record | Key | Responsibility |
 | --- | --- | --- |
 | `user.preferredMessagingPlatform` | User ID | Nullable `whatsapp` / `telegram` preference for new outreach. Null uses WhatsApp as the application default. |
 | `userMessagingIdentity` | `(userId, platform)` | Independently nullable `phoneNumber`, `username`, and `nativeId`, plus verification and discovery provenance. |
 | `userMessagingIdentityAlias` | `(platform, nativeId)` | Unique ownership of verified provider IDs and aliases, linked to the user's platform identity. |
-| `messagingConversation` | Conversation ID; unique `(accountId, chatId)` | An existing thread stays attached to its original organisation account and native chat. |
+| `messagingAccount` | Account ID; unique provider identity | Linked Telegram/WhatsApp account, assigned to one organisation for operator access. |
+| `messagingConversation` | Conversation ID; unique `(accountId, chatId)` | Account-owned native chat imported from the provider or opened in HYPE. An optional `recipientUserId` enriches the chat; it does not control visibility. |
 
 Phone numbers use international `+` notation. Usernames are stored without `@`
 and normalized to lowercase. Native IDs remain strings, including numeric Telegram
@@ -27,8 +30,11 @@ verification commit atomically. A conflicting alias rolls back the verification.
 Migration-created triggers keep the canonical ID in the alias table whenever an
 identity is verified, and clear aliases when verification is removed, renewed, or the
 canonical ID changes. Provider-confirmed aliases are added in the same verification
-batch. Recipient authorization checks the current verification, profile-phone
+batch. HYPE association checks the current verification, profile-phone
 provenance, active HYPE user, and any existing thread owner before accepting an alias.
+Account access permits reading and replying to existing native chats even without
+a verified HYPE association. Arbitrary new external addresses remain disallowed;
+new HYPE-user outreach still requires a verified destination.
 
 Automatic discovery continues to use the saved HYPE profile phone. Its raw value
 is retained in `sourceTelephone`, and changing that profile value invalidates the
@@ -39,6 +45,32 @@ New outreach and directory results prefer the user's configured platform, fallin
 back to the other reachable platform once the preferred platform's check finishes.
 An explicit platform selection takes precedence. Existing threads and recorded
 sends retain their original route.
+
+## Account inbox
+
+The inbox includes recent native chats from both linked accounts, including chats
+started outside the web UI, unlinked contacts, groups, and channels. Telegram dialog
+discovery runs on connection; WhatsApp uses the linked bridge’s synced history.
+Stored chats and Telegram dialogs can be paged with **Load more chats**. History
+availability remains bounded by what the provider supplies to the linked session.
+Opening a chat also loads its recent saved messages immediately, without advancing
+past other chats awaiting account replay. Provider aliases may enrich its display
+profile but do not rewrite the native chat ID used to read or reply.
+
+Unmatched contacts have a subtle red avatar ring in the list, with a **Not linked
+to HYPE** tooltip and accessible label. The conversation header retains the explicit label.
+This means there is no verified HYPE association, not proof that the person has no
+HYPE account. Provider usernames are labelled Telegram/WhatsApp; group chats are
+labelled separately. Native names and previews remain available from saved history.
+Notifications follow account access as well and include unlinked contacts.
+
+Previews, unread counts, and fallback names are scoped to the exact account/chat
+pair, including when different accounts share the same native chat ID.
+
+**Pin chat** and **Unpin chat** in the context menu persist shared HYPE account-inbox
+state. Pinned chats stay above unpinned chats regardless of message recency, with
+most recently pinned first. Pinning preserves the current selection and draft and
+does not modify native Telegram or WhatsApp pins.
 
 ## Migration and validation
 
@@ -55,11 +87,14 @@ backfill, including Hong Kong national numbers and `00` international prefixes.
 It only updates numbers that still match the original profile-phone backfill,
 preserving independently edited messaging numbers and exact discovery provenance.
 
+`0167_messaging_conversation_pins.sql` adds nullable `pinnedAt` and the inbox sorting
+index without changing existing chat routes or messages.
+
 Apply through the D1 migration runner's transaction boundary after backing up the
 target. Deploy the matching application and notification worker code together with
 this schema change: older code expects the removed preference table and `address`
-column. The notification worker resolves the same verified aliases and ownership
-guards as the inbox. The local phone-lookup backfill also uses the new identifiers
+column. The notification worker checks operator access to the assigned organisation and
+includes all eligible incoming account chats, independently of HYPE matching. The local phone-lookup backfill also uses the new identifiers
 and skips pending manual claims.
 
 Regression coverage lives in `src/tests/messaging-identifiers.migration.test.ts`,

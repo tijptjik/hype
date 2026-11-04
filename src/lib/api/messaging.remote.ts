@@ -2,14 +2,14 @@
 import { error } from '@sveltejs/kit'
 // THIRD PARTY
 import { z } from 'zod'
-import { and, asc, desc, eq, gt, isNotNull, isNull, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
 // API
 import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 import {
   resolveMessagingPhone,
   authorizeMessagingAccount,
   authorizeMessagingOrganisation,
-  authorizeMessagingRecipient,
+  authorizeMessagingConversation,
   readMessagingRecipients,
   dispatchMessagingSend,
   messagingService,
@@ -17,6 +17,7 @@ import {
   projectMessagingArchive,
   projectMessagingSnapshot,
   readMessagingMessages,
+  withMessagingOperators,
 } from '#lib/db/services/messaging.js'
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
 import { canUpdateUserProfile } from '#lib/api/services/authz/user.js'
@@ -29,6 +30,8 @@ import {
 } from '#lib/messaging/identity.js'
 import { normalizeTelephone } from '#lib/utils/telephone.js'
 import { isCoreHubAdmin } from '#lib/api/services/authz/hub.js'
+// I18N
+import { getLocale } from '#lib/i18n.js'
 // DB
 import {
   messagingPhoneLookup,
@@ -73,6 +76,7 @@ import type {
 // 3. INBOX AND DELIVERY
 // - getMessagingInbox
 // - getMessagingConversations
+// - setMessagingConversationPinned
 // - setMessagingConversationArchived
 // - searchMessagingUsers
 // - checkMessagingUser
@@ -350,13 +354,17 @@ export const disconnectMessagingAccount = guardedCommand(
 )
 
 /** Sync bounded provider events and return the browser's independent D1 replay.
- * @param params Authorized account and browser cursor.
+ * @param params Authorized account, browser cursor and optional selected native chat.
  * @returns Connection, inbox, calls and audited send states for this account.
  */
 export const getMessagingInbox = guardedQuery(
-  accountInput.extend({ after: z.number().int().nonnegative().default(0) }),
-  async ({ accountId, after }, ctx): Promise<BridgeSnapshot> => {
+  accountInput.extend({
+    after: z.number().int().nonnegative().default(0),
+    chat: id.optional(),
+  }),
+  async ({ accountId, after, chat }, ctx): Promise<BridgeSnapshot> => {
     const account = await authorizeMessagingAccount(ctx, accountId)
+    if (chat) await authorizeMessagingConversation(ctx, account, chat)
     let snapshot: BridgeSnapshot
     try {
       snapshot = await messagingService(ctx, account.platform).snapshot(
@@ -392,32 +400,39 @@ export const getMessagingInbox = guardedQuery(
       .orderBy(desc(messagingSend.createdAt))
       .limit(50)
     const page = await readMessagingMessages(ctx.db, accountId, after)
-    // Advance through hidden native peers too, but never skip beyond this bounded D1 page.
+    // Replay every account chat, retaining a cursor independent of the currently selected conversation.
     const replayCursor = page.length ? page[page.length - 1].sequence : after
-    const peers = await readMessagingRecipients(ctx.db, account, [
-      ...page.map(message => message.chat),
-      ...outbox.map(result => result.request.to),
-      ...(snapshot.calls?.incoming.map(call => call.peer) ?? []),
-      ...(snapshot.calls?.current ? [snapshot.calls.current.peer] : []),
-    ])
+    // Opening a recent chat must not wait for the entire account replay to catch up.
+    // These saved projections never advance the account-wide browser cursor.
+    const selected = chat
+      ? await ctx.db
+          .select({ payload: messagingMessage.payload })
+          .from(messagingMessage)
+          .where(
+            and(
+              eq(messagingMessage.accountId, accountId),
+              eq(messagingMessage.chatId, chat),
+            ),
+          )
+          .orderBy(
+            desc(messagingMessage.timestamp),
+            desc(messagingMessage.sourceSequence),
+          )
+          .limit(100)
+      : []
     return {
       ...snapshot,
       conversations: undefined,
       replayCursor,
-      messages: page.filter(message => peers.has(message.chat)),
-      outbox: outbox.filter(result => peers.has(result.request.to)),
-      ...(snapshot.calls
-        ? {
-            calls: {
-              ...snapshot.calls,
-              incoming: snapshot.calls.incoming.filter(call => peers.has(call.peer)),
-              current:
-                snapshot.calls.current && peers.has(snapshot.calls.current.peer)
-                  ? snapshot.calls.current
-                  : null,
-            },
-          }
-        : {}),
+      messages: [
+        ...page,
+        ...(await withMessagingOperators(
+          ctx.db,
+          accountId,
+          selected.map(row => row.payload),
+        )),
+      ],
+      outbox,
     }
   },
 )
@@ -430,7 +445,7 @@ export const searchMessagingMessages = guardedQuery(
   accountInput.extend({ chat: id, search: z.string().trim().min(1).max(200) }),
   async ({ accountId, chat, search }, ctx) => {
     const account = await authorizeMessagingAccount(ctx, accountId)
-    await authorizeMessagingRecipient(ctx, account, chat)
+    await authorizeMessagingConversation(ctx, account, chat)
     const pattern = `%${search.replace(/[!%_]/g, c => `!${c}`)}%`
     const rows = await ctx.db
       .select({
@@ -448,7 +463,11 @@ export const searchMessagingMessages = guardedQuery(
       )
       .orderBy(desc(messagingMessage.timestamp))
       .limit(50)
-    return rows.map(row => ({ ...row.payload, sequence: row.sequence }))
+    return withMessagingOperators(
+      ctx.db,
+      accountId,
+      rows.map(row => ({ ...row.payload, sequence: row.sequence })),
+    )
   },
 )
 
@@ -462,7 +481,7 @@ export const loadMessagingQuotedMessage = guardedCommand(
   accountInput.extend({ chat: id, source: target }),
   async ({ accountId, chat, source }, ctx): Promise<BridgeMessage | null> => {
     const account = await authorizeMessagingAccount(ctx, accountId)
-    await authorizeMessagingRecipient(ctx, account, chat)
+    await authorizeMessagingConversation(ctx, account, chat)
     const [storedSource] = await ctx.db
       .select({ payload: messagingMessage.payload })
       .from(messagingMessage)
@@ -499,7 +518,10 @@ export const loadMessagingQuotedMessage = guardedCommand(
       storedSource.payload,
       stored.map(row => row.payload),
     )
-    if (original || account.platform !== 'telegram') return original
+    if (original || account.platform !== 'telegram')
+      return original
+        ? (await withMessagingOperators(ctx.db, accountId, [original]))[0]
+        : null
     // A direct native anchor avoids downloading every intervening page for an old reply.
     if (!/^[1-9]\d{0,9}$/.test(quote.id) || Number(quote.id) >= 2_147_483_647)
       return null
@@ -522,7 +544,10 @@ export const loadMessagingQuotedMessage = guardedCommand(
       },
       false,
     )
-    return findQuotedMessage(storedSource.payload, messages)
+    return findQuotedMessage(
+      storedSource.payload,
+      await withMessagingOperators(ctx.db, accountId, messages),
+    )
   },
 )
 
@@ -546,7 +571,7 @@ export const loadMessagingHistory = guardedCommand(
     const account = await authorizeMessagingAccount(ctx, accountId)
     if (account.platform !== 'telegram')
       throw error(400, 'History pagination is not supported for this account')
-    await authorizeMessagingRecipient(ctx, account, chat)
+    await authorizeMessagingConversation(ctx, account, chat)
     const service = (ctx.event.platform?.env ?? ctx.event.locals.platform?.env)
       ?.TELEGRAM
     if (!service) throw error(503, 'The Telegram service is not configured')
@@ -562,7 +587,10 @@ export const loadMessagingHistory = guardedCommand(
       },
       false,
     )
-    return page
+    return {
+      ...page,
+      messages: await withMessagingOperators(ctx.db, accountId, page.messages),
+    }
   },
 )
 
@@ -601,92 +629,131 @@ export const loadMessagingConversations = guardedCommand(
       },
       false,
     )
-    const peers = await readMessagingRecipients(
-      ctx.db,
-      account,
-      page.messages.map(message => message.chat),
-    )
-    return {
-      ...page,
-      messages: page.messages.filter(message => peers.has(message.chat)),
-    }
+    return page
   },
 )
 
-/** List stored threads even when the connection is idle.
- * @param params Authorized account and requested inbox/archive folder.
- * @returns Recent conversations pinned to that account's platform.
+/** List recent account-owned chats, independently of any HYPE identity association.
+ * @param params Authorized account, folder and optional stable pagination cursor.
+ * @returns Up to one hundred chats with optional verified HYPE enrichment and saved native metadata.
  */
 export const getMessagingConversations = guardedQuery(
-  accountInput.extend({ archived: z.boolean().default(false) }),
-  async ({ accountId, archived }, ctx) => {
+  accountInput.extend({
+    archived: z.boolean().default(false),
+    before: z
+      .object({
+        lastMessageAt: z.number().int().nonnegative(),
+        id,
+        pinnedAt: z.number().int().nonnegative().nullable().default(null),
+      })
+      .optional(),
+  }),
+  async ({ accountId, archived, before }, ctx) => {
     const account = await authorizeMessagingAccount(ctx, accountId)
-    // A verified identity joins older imported threads too, without trusting their display names.
-    return ctx.db
+    // Explicit outer-table qualification is essential: bare column names inside a subquery resolve to its message table.
+    const threadAccount = sql`${messagingConversation}.${sql.identifier('accountId')}`
+    const threadChat = sql`${messagingConversation}.${sql.identifier('chatId')}`
+    const afterMessage = before
+      ? or(
+          lt(messagingConversation.lastMessageAt, before.lastMessageAt),
+          and(
+            eq(messagingConversation.lastMessageAt, before.lastMessageAt),
+            gt(messagingConversation.id, before.id),
+          ),
+        )
+      : undefined
+    // Account access controls visibility; HYPE matching enriches rows without excluding external peers or groups.
+    const rows = await ctx.db
       .select({
         id: messagingConversation.id,
         accountId: messagingConversation.accountId,
-        platform: messagingAccount.platform,
-        unreadCount: sql<number>`(SELECT count(*) FROM messagingMessage m WHERE m.accountId=${messagingConversation.accountId} AND m.chatId=${messagingConversation.chatId} AND json_extract(m.payload,'$.fromMe')=0 AND coalesce(json_extract(m.payload,'$.readByMe'),0)=0 AND coalesce(json_extract(m.payload,'$.deleted'),0)=0 AND coalesce(json_extract(m.payload,'$.content.kind'),'text') NOT IN ('protocol','reaction'))`,
         chatId: messagingConversation.chatId,
+        displayName: sql<
+          string | null
+        >`coalesce(${messagingConversation.displayName}, (SELECT json_extract(m.payload,'$.senderName') FROM messagingMessage m WHERE m.accountId=${threadAccount} AND m.chatId=${threadChat} AND m.senderId=m.chatId AND json_extract(m.payload,'$.fromMe')=0 AND nullif(json_extract(m.payload,'$.senderName'),'') IS NOT NULL ORDER BY m.timestamp DESC LIMIT 1))`,
         lastMessageAt: messagingConversation.lastMessageAt,
         isArchived: messagingConversation.isArchived,
-        recipient: {
-          id: user.id,
-          name: user.name,
-          username: user.username,
-          image: user.image,
-        },
+        pinnedAt: messagingConversation.pinnedAt,
+        unreadCount: sql<number>`(SELECT count(*) FROM messagingMessage m WHERE m.accountId=${threadAccount} AND m.chatId=${threadChat} AND json_extract(m.payload,'$.fromMe')=0 AND coalesce(json_extract(m.payload,'$.readByMe'),0)=0 AND coalesce(json_extract(m.payload,'$.deleted'),0)=0 AND coalesce(json_extract(m.payload,'$.content.kind'),'text') NOT IN ('protocol','reaction'))`,
+        preview: sql<
+          string | null
+        >`(SELECT coalesce(nullif(json_extract(m.payload,'$.content.text'),''), nullif(json_extract(m.payload,'$.text'),''), json_extract(m.payload,'$.content.kind'), 'Message') FROM messagingMessage m WHERE m.accountId=${threadAccount} AND m.chatId=${threadChat} AND coalesce(json_extract(m.payload,'$.deleted'),0)=0 AND coalesce(json_extract(m.payload,'$.content.kind'),'text') NOT IN ('protocol','reaction') ORDER BY m.timestamp DESC, m.sourceSequence DESC LIMIT 1)`,
       })
       .from(messagingConversation)
-      .innerJoin(
-        messagingAccount,
-        eq(messagingAccount.id, messagingConversation.accountId),
-      )
-      .innerJoin(
-        userMessagingIdentityAlias,
-        and(
-          eq(userMessagingIdentityAlias.platform, account.platform),
-          eq(userMessagingIdentityAlias.nativeId, messagingConversation.chatId),
-        ),
-      )
-      .innerJoin(
-        userMessagingIdentity,
-        and(
-          eq(userMessagingIdentity.platform, userMessagingIdentityAlias.platform),
-          eq(userMessagingIdentity.userId, userMessagingIdentityAlias.userId),
-          isNotNull(userMessagingIdentity.verifiedAt),
-        ),
-      )
-      .innerJoin(
-        user,
-        and(
-          eq(user.id, userMessagingIdentity.userId),
-          eq(user.isArchived, false),
-          eq(user.isAnonymous, false),
-        ),
-      )
       .where(
         and(
           eq(messagingConversation.accountId, accountId),
           eq(messagingConversation.isArchived, archived),
-          or(
-            isNull(userMessagingIdentity.sourceTelephone),
-            eq(userMessagingIdentity.sourceTelephone, user.telephone),
-          ),
-          or(
-            isNull(messagingConversation.recipientUserId),
-            eq(messagingConversation.recipientUserId, user.id),
-          ),
+          before
+            ? before.pinnedAt === null
+              ? and(isNull(messagingConversation.pinnedAt), afterMessage)
+              : or(
+                  isNull(messagingConversation.pinnedAt),
+                  lt(messagingConversation.pinnedAt, before.pinnedAt),
+                  and(
+                    eq(messagingConversation.pinnedAt, before.pinnedAt),
+                    afterMessage,
+                  ),
+                )
+            : undefined,
         ),
       )
-      .orderBy(desc(messagingConversation.lastMessageAt), asc(messagingConversation.id))
+      .orderBy(
+        desc(messagingConversation.pinnedAt),
+        desc(messagingConversation.lastMessageAt),
+        asc(messagingConversation.id),
+      )
       .limit(100)
+    const peers = await readMessagingRecipients(
+      ctx.db,
+      account,
+      rows.map(row => row.chatId),
+    )
+    return rows.map(row => ({
+      ...row,
+      platform: account.platform,
+      recipient: peers.get(row.chatId) ?? null,
+    }))
+  },
+)
+
+/** Pin or unpin an existing account chat in the shared HYPE inbox.
+ * @param params Authorized account, exact native chat and desired pin state.
+ * @returns The persisted pin timestamp; pinning again retains the existing order.
+ * @remarks This is a HYPE inbox preference and does not mutate Telegram or WhatsApp's own pinned chats.
+ */
+export const setMessagingConversationPinned = guardedCommand(
+  accountInput.extend({ chat: id, pinned: z.boolean() }),
+  async (
+    { accountId, chat, pinned },
+    ctx,
+  ): Promise<{ id: string; pinnedAt: number | null }> => {
+    await authorizeMessagingAccount(ctx, accountId)
+    // Update only the stored chat on this account; a native ID from another account cannot create a pin.
+    const [row] = await ctx.db
+      .update(messagingConversation)
+      .set({
+        pinnedAt: pinned
+          ? sql`coalesce(${messagingConversation.pinnedAt}, ${Date.now()})`
+          : null,
+      })
+      .where(
+        and(
+          eq(messagingConversation.accountId, accountId),
+          eq(messagingConversation.chatId, chat),
+        ),
+      )
+      .returning({
+        id: messagingConversation.id,
+        pinnedAt: messagingConversation.pinnedAt,
+      })
+    if (!row) throw error(404, 'Conversation not found')
+    return row
   },
 )
 
 /** Archive or restore one thread natively and project the acknowledged provider state.
- * @param params Authorized account, exact verified chat and desired archive state.
+ * @param params Authorized account, exact account chat and desired archive state.
  * @returns The stored thread identity and archive state.
  * @remarks A provider failure leaves Hype's saved state unchanged. Replay repairs a lost response.
  */
@@ -697,7 +764,7 @@ export const setMessagingConversationArchived = guardedCommand(
     ctx,
   ): Promise<{ id: string; isArchived: boolean }> => {
     const account = await authorizeMessagingAccount(ctx, accountId)
-    await authorizeMessagingRecipient(ctx, account, chat)
+    await authorizeMessagingConversation(ctx, account, chat)
     const [conversation] = await ctx.db
       .select({ id: messagingConversation.id })
       .from(messagingConversation)
@@ -787,7 +854,7 @@ export const sendMessagingMessage = guardedCommand(
     })
     if (saved && JSON.stringify(saved.request) !== JSON.stringify(request))
       throw error(409, 'This request ID already belongs to a different message')
-    const recipient = await authorizeMessagingRecipient(ctx, account, request.to)
+    const recipient = await authorizeMessagingConversation(ctx, account, request.to)
     if (request.replyTo?.quote) {
       if (account.platform !== 'telegram' || request.reaction !== undefined)
         throw error(400, 'Selected-text quotes are supported for Telegram replies')
@@ -844,7 +911,7 @@ export const sendMessagingMessage = guardedCommand(
       )
         throw error(409, 'WhatsApp messages can only be edited within 15 minutes')
     }
-    return dispatchMessagingSend(ctx, account, request, recipient.id)
+    return dispatchMessagingSend(ctx, account, request, recipient?.id ?? null)
   },
 )
 
@@ -856,7 +923,7 @@ export const markMessagingMessagesRead = guardedCommand(
   accountInput.extend({ chat: id, targets: z.array(target).min(1).max(100) }),
   async ({ accountId, chat, targets }, ctx) => {
     const account = await authorizeMessagingAccount(ctx, accountId)
-    await authorizeMessagingRecipient(ctx, account, chat)
+    await authorizeMessagingConversation(ctx, account, chat)
     for (const messageTarget of targets) {
       const [stored] = await ctx.db
         .select()
@@ -907,7 +974,7 @@ export const deleteMessagingMessage = guardedCommand(
   accountInput.extend({ chat: id, target, requestId: z.string().uuid() }),
   async ({ accountId, chat, target: messageTarget, requestId }, ctx) => {
     const account = await authorizeMessagingAccount(ctx, accountId)
-    await authorizeMessagingRecipient(ctx, account, chat)
+    await authorizeMessagingConversation(ctx, account, chat)
     const [stored] = await ctx.db
       .select()
       .from(messagingMessage)
@@ -1127,7 +1194,7 @@ export const downloadMessagingMedia = guardedCommand(
   accountInput.extend({ chat: id, target }),
   async ({ accountId, chat, target }, ctx) => {
     const account = await authorizeMessagingAccount(ctx, accountId)
-    await authorizeMessagingRecipient(ctx, account, chat)
+    await authorizeMessagingConversation(ctx, account, chat)
     return new Uint8Array(
       await messagingService(ctx, account.platform).media(
         account.bridgeAccountId,
@@ -1146,12 +1213,36 @@ export const getMessagingProfile = guardedQuery(
   accountInput.extend({ address: id }),
   async ({ accountId, address }, ctx) => {
     const account = await authorizeMessagingAccount(ctx, accountId)
-    if (address !== account.externalAccountId)
-      await authorizeMessagingRecipient(ctx, account, address)
-    return messagingService(ctx, account.platform).profile(
+    if (address !== account.externalAccountId) {
+      // Group senders may have profiles without a direct chat; require evidence from this account's messages.
+      const [sender] = await ctx.db
+        .select({ id: messagingMessage.messageId })
+        .from(messagingMessage)
+        .where(
+          and(
+            eq(messagingMessage.accountId, account.id),
+            eq(messagingMessage.senderId, address),
+          ),
+        )
+        .limit(1)
+      if (!sender) await authorizeMessagingConversation(ctx, account, address)
+    }
+    const profile = await messagingService(ctx, account.platform).profile(
       account.bridgeAccountId,
       address,
     )
+    // Cache a provider display name for offline lists without turning it into a HYPE identity claim.
+    if (profile.name)
+      await ctx.db
+        .update(messagingConversation)
+        .set({ displayName: profile.name })
+        .where(
+          and(
+            eq(messagingConversation.accountId, accountId),
+            eq(messagingConversation.chatId, address),
+          ),
+        )
+    return profile
   },
 )
 
@@ -1166,6 +1257,10 @@ export const getMessagingOrganisations = guardedQuery(
       .select({
         id: organisation.id,
         code: organisation.code,
+        name: sql<string>`coalesce((select oi.name from organisationI18n oi
+          where oi.organisationId = ${organisation.id} and oi.name != ''
+          order by case when oi.locale = ${getLocale()} then 0 when oi.locale = 'en' then 1 else 2 end, oi.locale
+          limit 1), ${organisation.code})`,
         hubId: organisation.hubId,
         isArchived: organisation.isArchived,
         hasMessaging: sql<boolean>`count(${messagingAccount.id}) > 0`.mapWith(Boolean),
@@ -1185,9 +1280,10 @@ export const getMessagingOrganisations = guardedQuery(
       .filter(target =>
         canManageOrganisationMessaging({ ...ctx.user, roles: ctx.userRoles }, target),
       )
-      .map(({ id, code, hasMessaging }) => ({
+      .map(({ id, code, name, hasMessaging }) => ({
         id,
         code,
+        name,
         hasMessaging,
         isMember: ctx.userRoles.some(
           role =>

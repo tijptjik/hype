@@ -47,6 +47,7 @@ const mock = vi.hoisted(() => ({
   search: vi.fn(),
   open: vi.fn(),
   archive: vi.fn(),
+  pin: vi.fn(),
 }))
 vi.mock('#lib/context/admin.svelte.js', () => ({
   getAdminCtx: () => ({ view: { scope: mock.scope } }),
@@ -59,6 +60,7 @@ vi.mock('#lib/api/messaging.remote.js', () => ({
   searchMessagingUsers: mock.search,
   openUserMessagingConversation: mock.open,
   setMessagingConversationArchived: mock.archive,
+  setMessagingConversationPinned: mock.pin,
 }))
 
 /** @returns A query-shaped promise that never contacts an account or provider. */
@@ -85,6 +87,7 @@ function conversation(accountId: string) {
     lastMessageAt: 1,
     isArchived: false,
     unreadCount: 0,
+    pinnedAt: null as number | null,
     recipient: {
       id: 'person',
       name: 'Synthetic Person',
@@ -469,4 +472,126 @@ it('retains the saved platform preference when asynchronous availability checks 
     expect(model.results[0]?.channels.every(channel => channel.available)).toBe(true),
   )
   expect(model.results[0].platform).toBe('telegram')
+})
+
+it('presents unlinked native contacts distinctly and searches their saved display names', async () => {
+  mock.conversations.mockImplementation(({ accountId }: { accountId: string }) =>
+    query([
+      conversation(accountId),
+      {
+        ...conversation(accountId),
+        id: 'native',
+        chatId: '77',
+        recipient: null,
+        displayName: 'Native Contact',
+        preview: 'An existing native chat',
+        lastMessageAt: 2,
+      },
+      {
+        ...conversation(accountId),
+        id: 'group',
+        chatId: '-100123',
+        recipient: null,
+        displayName: 'Native Group',
+        lastMessageAt: 3,
+      },
+    ]),
+  )
+  const model = setup(['a'])
+  await waitFor(() => expect(model.conversations).toHaveLength(3))
+  expect(model.conversations.find(row => row.chatId === '77')).toMatchObject({
+    hypeLinked: false,
+    isGroup: false,
+    recipient: { id: null, name: 'Native Contact', username: null },
+    preview: 'An existing native chat',
+  })
+  expect(model.conversations.find(row => row.chatId === '-100123')).toMatchObject({
+    hypeLinked: false,
+    isGroup: true,
+  })
+  expect(model.conversations.find(row => row.chatId === '42')).toMatchObject({
+    hypeLinked: true,
+  })
+  flushSync(() => {
+    model.search = 'Native Contact'
+  })
+  expect(model.visibleConversations.map(row => row.chatId)).toEqual(['77'])
+  const nativeRuntime = runtime()
+  model.registerRuntime('a', nativeRuntime)
+  await model.selectConversation('a:77')
+  expect(nativeRuntime.selectChat).toHaveBeenCalledWith('77')
+  expect(model.selected?.hypeLinked).toBe(false)
+})
+
+it('discovers Telegram dialogs on connection and retains native metadata without inventing HYPE membership', async () => {
+  mock.conversations.mockImplementation(({ accountId }: { accountId: string }) =>
+    query([
+      {
+        ...conversation(accountId),
+        recipient: null,
+        displayName: null,
+        preview: 'Saved preview',
+      },
+    ]),
+  )
+  const model = setup(['a'])
+  await waitFor(() => expect(model.accounts).toHaveLength(1))
+  const nativeRuntime = {
+    ...runtime(),
+    status: { connected: true },
+    conversations: [
+      {
+        id: '42',
+        name: 'Provider Name',
+        username: 'provider_handle',
+        photo: null,
+        timestamp: 2,
+        preview: 'Native preview',
+      },
+    ],
+    loadConversations: vi.fn().mockResolvedValue(undefined),
+    conversationsComplete: true,
+  } as unknown as WhatsAppConsoleModel
+  flushSync(() => {
+    model.registerRuntime('a', nativeRuntime)
+  })
+  await waitFor(() => expect(nativeRuntime.loadConversations).toHaveBeenCalledOnce())
+  expect(model.conversations[0]).toMatchObject({
+    hypeLinked: false,
+    recipient: { name: 'Provider Name', username: 'provider_handle' },
+    preview: 'Native preview',
+  })
+  expect(model.hasMoreConversations).toBe(false)
+})
+
+it('pins without changing selection or drafts, retains pins during refresh, and rolls back failed unpins', async () => {
+  const rows = [
+    { ...conversation('a'), id: 'new', chatId: '42', lastMessageAt: 100 },
+    { ...conversation('a'), id: 'old', chatId: '77', lastMessageAt: 1 },
+  ]
+  mock.conversations.mockImplementation(() => query(structuredClone(rows)))
+  mock.pin.mockImplementation(
+    async ({ chat, pinned }: { chat: string; pinned: boolean }) => {
+      const row = rows.find(row => row.chatId === chat)!
+      row.pinnedAt = pinned ? 500 : null
+      return { id: row.id, pinnedAt: row.pinnedAt }
+    },
+  )
+  const model = setup(['a'])
+  await waitFor(() => expect(model.conversations).toHaveLength(2))
+  const live = runtime()
+  model.registerRuntime('a', live)
+  await model.selectConversation('a:42')
+  await model.pinConversation('a:77', true)
+  expect(model.conversations.map(row => row.chatId)).toEqual(['77', '42'])
+  expect(model.selected?.chatId).toBe('42')
+  rows[0].lastMessageAt = 999999
+  await model.refreshDirectory(true)
+  expect(model.conversations.map(row => row.chatId)).toEqual(['77', '42'])
+  mock.pin.mockRejectedValueOnce(new Error('Pin save failed'))
+  await model.pinConversation('a:77', false)
+  expect(model.conversations[0].chatId).toBe('77')
+  expect(model.error).toBe('Pin save failed')
+  await model.pinConversation('a:77', false)
+  expect(model.conversations.map(row => row.chatId)).toEqual(['42', '77'])
 })

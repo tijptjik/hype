@@ -372,6 +372,13 @@
 
 /* Milque: cool frosting blue and teal separate the canvas from warm peach cards. */
 [data-theme="breadline-light"] {
+  /* Cool selection stays distinct; warm paper messages and sand quotes complement the wallpaper. */
+  --chat-active-fill: #d7eaf2;
+  --chat-outgoing-fill: #fffaf3;
+  --chat-outgoing-border: #d8cabc;
+  --chat-quote-fill: #eee3d5;
+  --chat-quote-border: #b8a48e;
+  --chat-quote-hover: #e7dac9;
   /* Quiet paper surfaces keep peach on editable fields and teal on actions. */
   --admin-form-workspace: var(--theme-panel);
   --admin-form-control-fill: #fcf5ef;

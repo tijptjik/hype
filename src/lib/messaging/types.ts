@@ -44,6 +44,13 @@ export interface MessageContent {
   } | null
 }
 export interface BridgeMessage {
+  /** HYPE audit attribution; absent for messages sent outside this application. */
+  operator?: {
+    id: string
+    name: string | null
+    username: string | null
+    image: string | null
+  }
   sequence: number
   chat: string
   sender: string
@@ -131,7 +138,7 @@ export interface BridgeCalls {
 export interface BridgeSnapshot {
   /** Native archive changes have their own cursor, independent of message replay. */
   conversations?: BridgeConversationState[]
-  /** Hype replay position before filtering non-Hype peers; independent of visible messages. */
+  /** Account replay position, independent of which conversation is currently visible. */
   replayCursor?: number
   status: BridgeStatus
   messages: BridgeMessage[]

@@ -18,7 +18,7 @@ import type { BridgeMessage, SendRequest } from '#lib/messaging/types.js'
 
 const platforms = ['whatsapp', 'telegram'] as const
 
-/** Organisation-owned bridge identity. Credentials remain in private bridge storage. */
+/** Linked provider account assigned to one organisation for access control. Credentials remain in private bridge storage. */
 export const messagingAccount = sqliteTable(
   'messagingAccount',
   {
@@ -110,7 +110,7 @@ export const userMessagingIdentityAlias = sqliteTable(
   ],
 )
 
-/** One platform thread remains pinned even when the recipient changes preference. */
+/** Account-owned native chat, including imported contacts and groups with no HYPE association. */
 export const messagingConversation = sqliteTable(
   'messagingConversation',
   {
@@ -119,17 +119,26 @@ export const messagingConversation = sqliteTable(
       .notNull()
       .references(() => messagingAccount.id, { onDelete: 'cascade' }),
     chatId: text('chatId').notNull(),
+    // Optional enrichment; account access and chat visibility do not depend on HYPE membership.
     recipientUserId: text('recipientUserId').references(() => user.id, {
       onDelete: 'set null',
     }),
     displayName: text('displayName'),
     lastMessageAt: integer('lastMessageAt').notNull().default(0),
     isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
+    pinnedAt: integer('pinnedAt'),
     archiveSequence: integer('archiveSequence').notNull().default(0),
   },
   table => [
     uniqueIndex('messaging_conversation_native').on(table.accountId, table.chatId),
     index('messaging_conversation_recipient').on(table.recipientUserId),
+    index('messaging_conversation_pins').on(
+      table.accountId,
+      table.isArchived,
+      sql`${table.pinnedAt} DESC`,
+      sql`${table.lastMessageAt} DESC`,
+      table.id,
+    ),
     index('messaging_conversation_archive').on(
       table.accountId,
       table.isArchived,

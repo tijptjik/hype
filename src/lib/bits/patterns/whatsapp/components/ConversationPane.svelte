@@ -13,6 +13,7 @@ import { messageMediaKey } from '#lib/messaging/message-key.js'
 import * as WhatsApp from './index.js'
 import CatalogSendBubble from '#lib/bits/patterns/messaging/CatalogSendBubble.svelte'
 import PendingSendBubble from '#lib/bits/patterns/messaging/PendingSendBubble.svelte'
+import MessagingContactStatus from '#lib/bits/patterns/messaging/MessagingContactStatus.svelte'
 // TYPES
 import type { WhatsAppMessage } from '#lib/api/services/whatsover.types.js'
 import type { WhatsAppConsoleModel } from '../whatsapp.types.js'
@@ -20,18 +21,24 @@ import type { WhatsAppConsoleModel } from '../whatsapp.types.js'
 let {
   model,
   recipientLocked = false,
+  organisationName,
   displayName,
   username,
   photo,
+  hypeLinked,
+  isGroup = false,
   onForward,
   composerDisabled = false,
   fill = true,
 }: {
   model: WhatsAppConsoleModel
+  organisationName?: string
   recipientLocked?: boolean
   displayName?: string
   username?: string | null
   photo?: string | null
+  hypeLinked?: boolean
+  isGroup?: boolean
   onForward?: (message: WhatsAppMessage) => void
   composerDisabled?: boolean
   fill?: boolean
@@ -375,13 +382,28 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
         <Avatar name={chatName} src={chatPhoto} />
         <div class="min-w-0 flex-1 basis-24">
           <h3 class="break-words font-semibold [overflow-wrap:anywhere]">{chatName}</h3>
-          {#if chatUsername}
-            <p class="break-words text-xs text-muted-foreground">
-              @{chatUsername.replace(/^@/, '')}
-            </p>
-          {/if}
+          <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            {#if chatUsername}
+              <p class="break-words text-xs text-muted-foreground">
+                @{chatUsername.replace(/^@/, '')}
+              </p>
+            {/if}
+            {#if hypeLinked !== undefined && isGroup}
+              <MessagingContactStatus
+                linked={hypeLinked}
+                group={isGroup}
+                platform={isTelegram ? 'telegram' : 'whatsapp'}
+              />
+            {/if}
+          </div>
         </div>
         <div class="ml-auto flex shrink-0 items-center gap-1">
+          {#if hypeLinked === false && !isGroup}
+            <MessagingContactStatus
+              linked={false}
+              platform={isTelegram ? 'telegram' : 'whatsapp'}
+            />
+          {/if}
           {#if recipientLocked}
             <span
               class="mr-1 shrink-0 rounded-full border border-border px-2 py-1 text-xs text-muted-foreground"
@@ -511,6 +533,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
     {/if}
     {#each visible as message (`${message.chat}:${message.sender}:${message.id}`)}
       <WhatsApp.MessageBubble
+        {organisationName}
         {platformLabel}
         {message}
         quoteOriginal={model.quoteOriginal?.(message)}
@@ -523,8 +546,8 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
         onOpenQuote={model.canOpenQuote?.(message)
           ? () => openQuote(message)
           : undefined}
-        displayName={message.fromMe && selfProfile?.name
-          ? selfProfile.name
+        displayName={message.fromMe
+          ? selfProfile?.name || model.status.identity?.name || 'Shared account'
           : model.displayName(message.sender, message.senderName)}
         username={(
           (message.fromMe ? selfProfile : undefined) ??
@@ -535,7 +558,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
           model.profiles[model.canonicalChat(message.sender)]
         )?.photo}
         quoteName={model.quoteOriginal?.(message)?.fromMe
-          ? 'You'
+          ? organisationName || 'Organisation'
           : model.quoteOriginal?.(message)
             ? model.displayName(
                 model.quoteOriginal!(message)!.sender,
@@ -569,6 +592,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
     {/each}
     {#each query ? [] : outgoing as row (row.request.requestId)}
       <PendingSendBubble
+        {organisationName}
         {row}
         {now}
         {platformLabel}
@@ -602,6 +626,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
     {/if}
     {#each query ? [] : catalogOutgoing as row (row.id)}
       <CatalogSendBubble
+        {organisationName}
         {row}
         {now}
         {platformLabel}

@@ -36,6 +36,7 @@ interface Props {
   showTime?: boolean
   sendState?: 'pending' | 'submitted' | 'uncertain' | 'failed'
   transitionName?: string
+  organisationName?: string
   platformLabel?: string
   message: WhatsAppMessage
   now: number
@@ -66,6 +67,7 @@ let {
   sendState,
   transitionName,
   platformLabel = 'WhatsApp',
+  organisationName,
   message,
   now,
   displayName,
@@ -202,6 +204,17 @@ const canDelete = $derived(Boolean(onDelete && message.fromMe && !message.delete
 const actionCount = $derived(
   2 + Number(canEdit) + Number(canForward) + Number(canCopy) + Number(canDelete),
 )
+// Outgoing identity belongs to the organisation; operator attribution stays on hover.
+const authorName = $derived(
+  message.fromMe ? organisationName || 'Organisation' : displayName,
+)
+const authorPhoto = $derived(photo)
+const authorUsername = $derived(message.fromMe ? undefined : username)
+const operatorDetail = $derived(
+  message.fromMe
+    ? message.operator?.name || message.operator?.username || 'Operator not recorded'
+    : undefined,
+)
 </script>
 
 <div class="flex min-w-0 {message.fromMe ? 'justify-end' : 'justify-start'}">
@@ -215,22 +228,25 @@ const actionCount = $derived(
       if (event.pointerType === 'touch')
         event.currentTarget.focus({ preventScroll: true })
     }}
-    class="group/message relative flex min-w-0 max-w-[min(36rem,85%,calc(100%-var(--message-actions-width)))] flex-col gap-2 rounded-2xl border border-border p-3 text-sm shadow-sm outline-none {highlighted
+    class="group/message relative flex min-w-0 max-w-[min(36rem,85%,calc(100%-var(--message-actions-width)))] flex-col gap-2 rounded-2xl border p-3 text-sm shadow-sm outline-none {highlighted
       ? 'ring-2 ring-primary'
-      : ''} {message.fromMe ? 'bg-raised' : 'bg-panel'}"
-    aria-label={`Message from ${message.fromMe ? 'you' : displayName}`}
+      : ''} {message.fromMe
+      ? 'bg-[var(--chat-outgoing-fill,var(--theme-raised))] border-[var(--chat-outgoing-border,var(--theme-border))]'
+      : 'bg-panel border-border'}"
+    aria-label={`Message from ${authorName}`}
   >
     <header
+      title={operatorDetail}
       class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 text-xs"
     >
-      <Avatar name={displayName} src={photo} class="size-8!" />
+      <Avatar name={authorName} src={authorPhoto} class="size-8!" />
       <div class="min-w-0 leading-4">
         <span class="break-words font-medium text-base-content [overflow-wrap:anywhere]"
-          >{message.fromMe ? 'You' : displayName}</span
+          >{authorName}</span
         >
-        {#if username}
+        {#if authorUsername}
           <p class="text-muted-foreground [overflow-wrap:anywhere]">
-            @{username.replace(/^@/, '')}
+            @{authorUsername.replace(/^@/, '')}
           </p>
         {/if}
       </div>
@@ -281,7 +297,7 @@ const actionCount = $derived(
     </header>
     {#if message.content?.quoted && !message.deleted}
       <blockquote
-        class="min-w-0 rounded-lg border-l-2 border-primary bg-surface text-xs"
+        class="min-w-0 rounded-lg border-l-2 border-[var(--chat-quote-border,var(--theme-primary))] bg-[var(--chat-quote-fill,var(--theme-surface))] text-xs"
       >
         {#if onOpenQuote}
           <button
@@ -290,7 +306,7 @@ const actionCount = $derived(
             aria-busy={quoteLoading}
             title="Go to the original message"
             disabled={quoteLoading}
-            class="block w-full min-w-0 rounded-lg p-3 text-left transition-colors hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
+            class="block w-full min-w-0 rounded-lg p-3 text-left transition-colors hover:bg-[var(--chat-quote-hover,var(--theme-raised))] focus-visible:outline-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
             onclick={() => void onOpenQuote?.()}
           >
             <span class="mb-1 block break-words font-medium"

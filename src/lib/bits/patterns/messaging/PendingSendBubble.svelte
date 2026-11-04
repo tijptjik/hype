@@ -18,6 +18,7 @@ let {
   error,
   now,
   platformLabel,
+  organisationName,
   canReset = false,
   onReset,
 }: {
@@ -27,6 +28,7 @@ let {
   profile?: WhatsAppProfile
   error?: string
   now: number
+  organisationName?: string
   platformLabel: string
   canReset?: boolean
   onReset: () => void
@@ -47,6 +49,7 @@ const message = $derived<WhatsAppMessage>(
 
 <div data-pending-send={row.request.requestId} class="flex min-w-0 flex-col gap-1">
   <MessageBubble
+    {organisationName}
     {message}
     {now}
     {platformLabel}
@@ -56,7 +59,7 @@ const message = $derived<WhatsAppMessage>(
         (!preview || (preview.content?.kind === 'document' && !mediaUrl)),
     )}
     showTime={Boolean(preview || row.createdAt)}
-    displayName={profile?.name || 'You'}
+    displayName={profile?.name || 'Shared account'}
     username={profile?.username}
     photo={profile?.photo}
     reactions={[]}

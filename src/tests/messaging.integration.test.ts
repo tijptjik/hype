@@ -16,6 +16,7 @@ import {
   projectMessagingArchive,
   projectMessagingSnapshot,
   readMessagingMessages,
+  withMessagingOperators,
   resolveMessagingPhone,
 } from '#lib/db/services/messaging.js'
 // TYPES
@@ -44,6 +45,7 @@ vi.mock('#lib/api/server/guarded.js', () => {
 })
 import {
   setMessagingConversationArchived,
+  setMessagingConversationPinned,
   loadMessagingQuotedMessage,
   markMessagingMessagesRead,
   deleteMessagingMessage,
@@ -106,6 +108,9 @@ beforeEach(() => {
   sqlite.exec(
     "PRAGMA foreign_keys=ON; CREATE TABLE user (id TEXT PRIMARY KEY, username TEXT, name TEXT, image TEXT, telephone TEXT, updatedAt INTEGER NOT NULL DEFAULT 1, isAnonymous INTEGER DEFAULT 0, isArchived INTEGER DEFAULT 0); INSERT INTO user(id,username) VALUES ('operator-a','operator_a'), ('operator-b','operator_b')",
   )
+  sqlite.exec(
+    'CREATE TABLE organisationI18n (organisationId TEXT, locale TEXT, name TEXT)',
+  )
   const config = getTableConfig(organisation)
   sqlite.exec(
     `CREATE TABLE organisation (${config.columns.map(column => `"${column.name}" ${column.getSQLType()}${column.primary ? ' PRIMARY KEY' : ''}`).join(',')})`,
@@ -127,6 +132,7 @@ beforeEach(() => {
   sqlite.exec(
     readFileSync('migrations/0166_messaging_discovered_phone_format.sql', 'utf8'),
   )
+  sqlite.exec(readFileSync('migrations/0167_messaging_conversation_pins.sql', 'utf8'))
   // Exercise actual Drizzle D1 SQL, including atomic batches and JSON projections.
   function prepared(query: string, params: never[] = []) {
     return {
@@ -874,7 +880,7 @@ it('links a pre-existing inbox conversation after verification without rewriting
     to: '42',
     text: 'Synthetic reply',
   }
-  // Model a legacy send made before Hype-only recipient enforcement; do not permit a new arbitrary send.
+  // An existing native chat can have a send receipt before its optional HYPE association is verified.
   const { meta: _meta, accountId: _accountId, ...request } = input
   expect((await dispatchMessagingSend(state.ctx, account, request)).state).toBe(
     'uncertain',
@@ -990,7 +996,7 @@ it('searches HYPE names and usernames within an authorised organisation without 
   expect(bridge.send).not.toHaveBeenCalled()
 })
 
-it('annotates imported conversations with current verified HYPE identities and hides unassociated peers', async () => {
+it('includes unassociated native chats and enriches only current verified HYPE matches', async () => {
   const messages: BridgeMessage[] = [
     {
       sequence: 1,
@@ -1019,8 +1025,13 @@ it('annotates imported conversations with current verified HYPE identities and h
   // Older imported rows may lack recipientUserId; a verified identity still provides an explicit association.
   sqlite.exec('UPDATE messagingConversation SET recipientUserId=NULL')
   const conversations = await getMessagingConversations({ meta, accountId: account.id })
-  expect(conversations).toHaveLength(1)
+  expect(conversations).toHaveLength(2)
   expect(conversations[0]).toMatchObject({
+    chatId: '99',
+    recipient: null,
+    preview: 'Unknown account',
+  })
+  expect(conversations[1]).toMatchObject({
     accountId: account.id,
     platform: 'telegram',
     chatId: '42',
@@ -1029,10 +1040,12 @@ it('annotates imported conversations with current verified HYPE identities and h
   sqlite.exec(
     "UPDATE messagingConversation SET recipientUserId='operator-a' WHERE chatId='42'",
   )
-  expect(await getMessagingConversations({ meta, accountId: account.id })).toEqual([])
+  const unlinked = await getMessagingConversations({ meta, accountId: account.id })
+  expect(unlinked).toHaveLength(2)
+  expect(unlinked.every(row => row.recipient === null)).toBe(true)
 })
 
-it('advances filtered inbox replay without exposing unknown peers or skipping a later HYPE message', async () => {
+it('replays all native chats and calls without skipping a later HYPE message', async () => {
   const messages: BridgeMessage[] = Array.from({ length: 102 }, (_, index) => ({
     sequence: index + 1,
     chat: index === 101 ? '42' : '99',
@@ -1055,16 +1068,20 @@ it('advances filtered inbox replay without exposing unknown peers or skipping a 
     },
   })
   const first = await getMessagingInbox({ meta, accountId: account.id, after: 0 })
-  expect(first.messages).toEqual([])
+  expect(first.messages).toHaveLength(100)
+  expect(first.messages.every(message => message.chat === '99')).toBe(true)
   expect(first.replayCursor).toBe(100)
-  expect(first.calls?.incoming.map(call => call.id)).toEqual(['known-call'])
-  expect(first.calls?.current).toBeNull()
+  expect(first.calls?.incoming.map(call => call.id)).toEqual([
+    'external-call',
+    'known-call',
+  ])
+  expect(first.calls?.current).toMatchObject({ peer: '99' })
   const second = await getMessagingInbox({
     meta,
     accountId: account.id,
     after: first.replayCursor,
   })
-  expect(second.messages.map(message => message.id)).toEqual(['102'])
+  expect(second.messages.map(message => message.id)).toEqual(['101', '102'])
   expect(second.replayCursor).toBe(102)
 })
 
@@ -1110,12 +1127,12 @@ it('marks only linked organisation accounts as configured and reports actual mem
     "UPDATE organisation SET code=id; UPDATE messagingAccount SET externalAccountId='owned',enabled=0",
   )
   expect(await getMessagingOrganisations({ meta })).toEqual([
-    { id: 'org-a', code: 'org-a', hasMessaging: true, isMember: true },
+    { id: 'org-a', code: 'org-a', name: 'org-a', hasMessaging: true, isMember: true },
   ])
   state.ctx.user.superAdmin = true
   expect(await getMessagingOrganisations({ meta })).toEqual([
-    { id: 'org-a', code: 'org-a', hasMessaging: true, isMember: true },
-    { id: 'org-b', code: 'org-b', hasMessaging: false, isMember: false },
+    { id: 'org-a', code: 'org-a', name: 'org-a', hasMessaging: true, isMember: true },
+    { id: 'org-b', code: 'org-b', name: 'org-b', hasMessaging: false, isMember: false },
   ])
 })
 
@@ -1230,15 +1247,28 @@ it.each(['whatsapp', 'telegram'] as const)(
         username: 'operator_b',
       }),
     ).rejects.toMatchObject({ status: 409 })
-    await expect(
-      sendMessagingMessage({
+    // A changed phone removes HYPE enrichment, but the account still owns this existing native chat.
+    bridge.send.mockImplementation(async (_account, request) => ({
+      request,
+      state: 'submitted',
+      messageId: 'native-reply',
+    }))
+    expect(
+      await sendMessagingMessage({
         meta,
         accountId: conversation.accountId,
         requestId: 'stale-phone',
         to: address,
-        text: 'must not send',
+        text: 'Native account reply',
       }),
-    ).rejects.toMatchObject({ status: 403 })
+    ).toMatchObject({ state: 'submitted' })
+    expect(
+      sqlite
+        .prepare(
+          "SELECT recipientUserId FROM messagingSend WHERE requestId='stale-phone'",
+        )
+        .get(),
+    ).toEqual({ recipientUserId: null })
   },
 )
 
@@ -2071,7 +2101,7 @@ it.each(['telegram', 'whatsapp'] as const)(
   },
 )
 
-it('rejects archive writes outside the operator organisation or verified recipient', async () => {
+it('rejects archive writes outside the operator organisation or known account chats', async () => {
   await projectMessagingSnapshot(state.ctx.db, account, {
     status,
     messages: [
@@ -2681,4 +2711,375 @@ it('rejects provider group IDs instead of displaying a confirmation checkmark', 
     }),
   ).toMatchObject({ status: 'not-found' })
   expect(bridge.send).not.toHaveBeenCalled()
+})
+
+it.each(['telegram', 'whatsapp'] as const)(
+  'operates an imported %s chat without requiring a HYPE user',
+  async platform => {
+    account.platform = platform
+    sqlite
+      .prepare('UPDATE messagingAccount SET platform=? WHERE id=?')
+      .run(platform, account.id)
+    const chat = platform === 'telegram' ? '77' : '85291234567@s.whatsapp.net'
+    const message: BridgeMessage = {
+      id: 'native',
+      sequence: 1,
+      chat,
+      sender: chat,
+      senderName: 'Native contact',
+      timestamp: 100,
+      fromMe: false,
+      text: 'Started outside HYPE',
+    }
+    await projectMessagingSnapshot(state.ctx.db, account, {
+      status,
+      messages: [message],
+      outbox: [],
+    })
+    const input = { meta, accountId: account.id }
+    expect((await getMessagingConversations(input))[0]).toMatchObject({
+      chatId: chat,
+      displayName: 'Native contact',
+      recipient: null,
+      preview: message.text,
+    })
+    expect((await getMessagingInbox({ ...input, after: 0 })).messages).toHaveLength(1)
+    expect(
+      await searchMessagingMessages({ ...input, chat, search: 'outside' }),
+    ).toHaveLength(1)
+    bridge.profile.mockResolvedValue({
+      jid: chat,
+      name: 'Provider contact',
+      username: 'native_contact',
+      phone: null,
+      aliases: [chat],
+      photo: null,
+    })
+    expect(await getMessagingProfile({ ...input, address: chat })).toMatchObject({
+      name: 'Provider contact',
+    })
+    expect((await getMessagingConversations(input))[0]).toMatchObject({
+      displayName: 'Provider contact',
+      recipient: null,
+    })
+    bridge.media.mockResolvedValue(new Uint8Array([1, 2]))
+    expect(
+      await downloadMessagingMedia({
+        ...input,
+        chat,
+        target: { id: message.id, sender: chat },
+      }),
+    ).toEqual(new Uint8Array([1, 2]))
+    await markMessagingMessagesRead({
+      ...input,
+      chat,
+      targets: [{ id: message.id, sender: chat }],
+    })
+    expect(bridge.messageAction).toHaveBeenCalledWith(
+      account.bridgeAccountId,
+      chat,
+      { id: message.id, sender: chat },
+      'read',
+      expect.any(String),
+    )
+    bridge.send.mockImplementation(async (_account, request) => ({
+      request,
+      state: 'submitted',
+      messageId: 'reply',
+    }))
+    expect(
+      await sendMessagingMessage({
+        ...input,
+        to: chat,
+        text: 'Reply to native chat',
+        requestId: 'unlinked-reply',
+      }),
+    ).toMatchObject({ state: 'submitted' })
+    expect(
+      sqlite
+        .prepare(
+          "SELECT recipientUserId FROM messagingSend WHERE requestId='unlinked-reply'",
+        )
+        .get(),
+    ).toEqual({ recipientUserId: null })
+    await setMessagingConversationArchived({ ...input, chat, archived: true })
+    expect(
+      (await getMessagingConversations({ ...input, archived: true }))[0],
+    ).toMatchObject({ chatId: chat, recipient: null })
+    expect(
+      sqlite.prepare('SELECT count(*) AS count FROM userMessagingIdentity').get(),
+    ).toEqual({ count: 2 })
+  },
+)
+
+it('imports unlinked Telegram groups and permits observed sender profiles without allowing arbitrary lookups', async () => {
+  const message: BridgeMessage = {
+    id: 'group-message',
+    sequence: 1,
+    chat: '-100123',
+    sender: '88',
+    senderName: 'Group member',
+    timestamp: 100,
+    fromMe: false,
+    text: 'Native group',
+  }
+  bridge.dialogs.mockResolvedValue({ messages: [message], next: null })
+  const input = { meta, accountId: account.id }
+  expect((await loadMessagingConversations(input)).messages).toEqual([message])
+  expect((await getMessagingConversations(input))[0]).toMatchObject({
+    chatId: '-100123',
+    displayName: null,
+    recipient: null,
+  })
+  bridge.profile.mockResolvedValue({ jid: '88', name: 'Group member', aliases: [] })
+  await getMessagingProfile({ ...input, address: '88' })
+  await expect(getMessagingProfile({ ...input, address: '89' })).rejects.toMatchObject({
+    status: 403,
+  })
+  bridge.history.mockResolvedValue({ messages: [], nextBefore: null })
+  await loadMessagingHistory({ ...input, chat: '-100123' })
+  expect(bridge.history).toHaveBeenCalledWith(
+    account.bridgeAccountId,
+    '-100123',
+    undefined,
+  )
+})
+
+it('paginates all stored chats with tied timestamps without duplicates or HYPE-only filtering', async () => {
+  const insert = sqlite.prepare(
+    'INSERT INTO messagingConversation(id,accountId,chatId,lastMessageAt) VALUES (?,?,?,?)',
+  )
+  for (let index = 0; index < 105; index++)
+    insert.run(
+      `native-${String(index).padStart(3, '0')}`,
+      account.id,
+      String(1000 + index),
+      100,
+    )
+  const input = { meta, accountId: account.id }
+  const first = await getMessagingConversations(input)
+  expect(first).toHaveLength(100)
+  const last = first[first.length - 1]
+  const second = await getMessagingConversations({
+    ...input,
+    before: { id: last.id, lastMessageAt: last.lastMessageAt },
+  })
+  expect(second).toHaveLength(5)
+  expect(new Set([...first, ...second].map(row => row.id)).size).toBe(105)
+  expect([...first, ...second].every(row => row.recipient === null)).toBe(true)
+})
+
+it('does not authorize an unlinked chat or sender recorded only on another account', async () => {
+  sqlite.exec(`INSERT INTO messagingAccount(id,organisationId,platform,bridgeAccountId,enabled,createdAt,updatedAt) VALUES ('other-account','org-b','telegram','other-bridge',1,1,1);
+    INSERT INTO messagingConversation(id,accountId,chatId) VALUES ('other-chat','other-account','77');
+    INSERT INTO messagingMessage VALUES ('other-account','77','message','88',1,1,'{}');`)
+  const input = { meta, accountId: account.id }
+  await expect(
+    sendMessagingMessage({
+      ...input,
+      to: '77',
+      text: 'No cross-account access',
+      requestId: 'other-chat',
+    }),
+  ).rejects.toMatchObject({ status: 403 })
+  await expect(getMessagingProfile({ ...input, address: '88' })).rejects.toMatchObject({
+    status: 403,
+  })
+  await expect(
+    getMessagingConversations({ meta, accountId: 'other-account' }),
+  ).rejects.toMatchObject({ status: 403 })
+  expect(bridge.send).not.toHaveBeenCalled()
+  expect(bridge.profile).not.toHaveBeenCalled()
+})
+
+it('attributes only original sends in the exact account and chat, never edits or provider claims', async () => {
+  const insert = sqlite.prepare(
+    'INSERT INTO messagingSend(accountId,requestId,actorUserId,request,state,messageId,createdAt,updatedAt) VALUES (?,?,?,?,?,?,?,?)',
+  )
+  insert.run(
+    account.id,
+    'original-author',
+    'operator-a',
+    JSON.stringify({ requestId: 'original-author', to: '42', text: 'Original' }),
+    'submitted',
+    '7',
+    1,
+    1,
+  )
+  insert.run(
+    account.id,
+    'later-editor',
+    'operator-b',
+    JSON.stringify({
+      requestId: 'later-editor',
+      to: '42',
+      text: 'Edited',
+      editTo: { id: '7', sender: '99' },
+    }),
+    'submitted',
+    '7',
+    2,
+    2,
+  )
+  const message: BridgeMessage = {
+    id: '7',
+    chat: '42',
+    sender: '99',
+    fromMe: true,
+    text: 'Edited',
+    sequence: 1,
+    timestamp: 1,
+  }
+  const rows = await withMessagingOperators(state.ctx.db, account.id, [
+    message,
+    { ...message, chat: '43' },
+    { ...message, fromMe: false },
+    {
+      ...message,
+      id: 'external',
+      operator: { id: 'forged', name: 'Forged', username: null, image: null },
+    },
+  ])
+  expect(rows[0].operator).toMatchObject({ id: 'operator-a', username: 'operator_a' })
+  expect(rows.slice(1).every(row => !row.operator)).toBe(true)
+})
+
+it('loads the selected native chat immediately without advancing past other chats awaiting replay', async () => {
+  const messages: BridgeMessage[] = Array.from({ length: 105 }, (_, index) => ({
+    sequence: index + 1,
+    id: String(index + 1),
+    chat: index === 104 ? '77' : '42',
+    sender: index === 104 ? '77' : '42',
+    timestamp: index + 1,
+    fromMe: false,
+    text: `Stored ${index + 1}`,
+  }))
+  await projectMessagingSnapshot(state.ctx.db, account, {
+    status,
+    messages,
+    outbox: [],
+  })
+  const selected = await getMessagingInbox({
+    meta,
+    accountId: account.id,
+    after: 0,
+    chat: '77',
+  })
+  expect(selected.replayCursor).toBe(100)
+  expect(selected.messages.find(message => message.chat === '77')).toMatchObject({
+    id: '105',
+    text: 'Stored 105',
+  })
+  const next = await getMessagingInbox({
+    meta,
+    accountId: account.id,
+    after: selected.replayCursor,
+  })
+  expect(next.messages.map(message => message.id)).toEqual([
+    '101',
+    '102',
+    '103',
+    '104',
+    '105',
+  ])
+  bridge.snapshot.mockClear()
+  await expect(
+    getMessagingInbox({ meta, accountId: account.id, after: 0, chat: 'unknown' }),
+  ).rejects.toMatchObject({ status: 403 })
+  expect(bridge.snapshot).not.toHaveBeenCalled()
+})
+
+it('isolates each chat preview, unread count and fallback name across chats and accounts', async () => {
+  sqlite.exec(`INSERT INTO messagingAccount(id,organisationId,platform,bridgeAccountId,createdAt,updatedAt) VALUES ('other','org-b','telegram','other',1,1);
+    INSERT INTO messagingConversation(id,accountId,chatId,lastMessageAt) VALUES ('first','account-a','77',100),('second','account-a','78',200),('empty','account-a','79',0),('other','other','77',300);`)
+  const insert = sqlite.prepare('INSERT INTO messagingMessage VALUES (?,?,?,?,?,?,?)')
+  for (const [accountId, chat, text, name, time, read] of [
+    ['account-a', '77', 'Only first chat', 'First contact', 100, false],
+    ['account-a', '78', 'Only second chat', 'Second contact', 200, true],
+    ['other', '77', 'Must never appear here', 'Other account contact', 300, false],
+  ] as const)
+    insert.run(
+      accountId,
+      chat,
+      'msg',
+      chat,
+      time,
+      time,
+      JSON.stringify({
+        id: 'msg',
+        chat,
+        sender: chat,
+        senderName: name,
+        sequence: time,
+        timestamp: time,
+        fromMe: false,
+        readByMe: read,
+        text,
+      }),
+    )
+  const rows = await getMessagingConversations({ meta, accountId: account.id })
+  expect(rows.find(row => row.chatId === '77')).toMatchObject({
+    preview: 'Only first chat',
+    unreadCount: 1,
+    displayName: 'First contact',
+  })
+  expect(rows.find(row => row.chatId === '78')).toMatchObject({
+    preview: 'Only second chat',
+    unreadCount: 0,
+    displayName: 'Second contact',
+  })
+  expect(rows.find(row => row.chatId === '79')).toMatchObject({
+    preview: null,
+    unreadCount: 0,
+    displayName: null,
+  })
+})
+
+it('persists account chat pins above newer messages and restores recency order when unpinned', async () => {
+  sqlite.exec(
+    `INSERT INTO messagingConversation(id,accountId,chatId,lastMessageAt) VALUES ('older','account-a','77',1),('newer','account-a','78',999);`,
+  )
+  const input = { meta, accountId: account.id, chat: '77' }
+  const pinned = await setMessagingConversationPinned({ ...input, pinned: true })
+  expect(pinned.pinnedAt).toBeGreaterThan(0)
+  expect(await setMessagingConversationPinned({ ...input, pinned: true })).toEqual(
+    pinned,
+  )
+  sqlite.exec("UPDATE messagingConversation SET lastMessageAt=99999 WHERE id='newer'")
+  const rows = await getMessagingConversations({ meta, accountId: account.id })
+  expect(rows.map(row => row.id)).toEqual(['older', 'newer'])
+  expect(rows[0].pinnedAt).toBe(pinned.pinnedAt)
+  await setMessagingConversationPinned({ ...input, pinned: false })
+  expect(
+    (await getMessagingConversations({ meta, accountId: account.id })).map(
+      row => row.id,
+    ),
+  ).toEqual(['newer', 'older'])
+  await expect(
+    setMessagingConversationPinned({ ...input, chat: 'absent', pinned: true }),
+  ).rejects.toMatchObject({ status: 404 })
+  state.ctx.userRoles = []
+  await expect(
+    setMessagingConversationPinned({ ...input, pinned: true }),
+  ).rejects.toMatchObject({ status: 403 })
+  expect(bridge.send).not.toHaveBeenCalled()
+})
+
+it('paginates across pinned and unpinned chats without dropping older pinned threads', async () => {
+  const insert = sqlite.prepare(
+    'INSERT INTO messagingConversation(id,accountId,chatId,lastMessageAt,pinnedAt) VALUES (?,?,?,?,?)',
+  )
+  for (let i = 0; i < 103; i++)
+    insert.run(`pin-${String(i).padStart(3, '0')}`, account.id, String(1000 + i), 1, 20)
+  insert.run('plain', account.id, '9999', 99999, null)
+  const first = await getMessagingConversations({ meta, accountId: account.id })
+  expect(first).toHaveLength(100)
+  expect(first.every(row => row.pinnedAt === 20)).toBe(true)
+  const last = first[first.length - 1]
+  const rest = await getMessagingConversations({
+    meta,
+    accountId: account.id,
+    before: { id: last.id, lastMessageAt: last.lastMessageAt, pinnedAt: last.pinnedAt },
+  })
+  expect(rest.map(row => row.id)).toEqual(['pin-100', 'pin-101', 'pin-102', 'plain'])
 })

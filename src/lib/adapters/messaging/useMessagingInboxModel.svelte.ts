@@ -13,6 +13,7 @@ import {
   openUserMessagingConversation,
   searchMessagingUsers,
   setMessagingConversationArchived,
+  setMessagingConversationPinned,
 } from '#lib/api/messaging.remote.js'
 // MESSAGING
 import { chooseMessagingOrganisation } from '#lib/messaging/organisation-selection.js'
@@ -25,14 +26,21 @@ type Organisation = Awaited<ReturnType<typeof getMessagingOrganisations>>[number
 type StoredConversation = Awaited<ReturnType<typeof getMessagingConversations>>[number]
 export type MessagingUser = Awaited<ReturnType<typeof searchMessagingUsers>>[number]
 export type InboxConversation = Omit<StoredConversation, 'recipient'> & {
-  recipient: StoredConversation['recipient'] & { name: string }
+  recipient: {
+    id: string | null
+    name: string
+    username: string | null
+    image: string | null
+  }
+  hypeLinked: boolean
+  isGroup: boolean
   key: string
   platform: MessagingPlatform
   preview: string
   timestamp: number
 }
 
-/** One prism-selected organisation and one list of its HYPE-user conversations.
+/** One prism-selected organisation and the native chats belonging to its linked accounts.
  * @returns Reactive inbox state; child runtimes retain one live session per account.
  */
 export function useMessagingInboxModel() {
@@ -59,6 +67,11 @@ export function useMessagingInboxModel() {
   let directoryRevision = 0
   let archived = $state(false)
   let archiving = $state<string[]>([])
+  let pinning = $state<string[]>([])
+  let directoryPages = 1
+  let moreStored = $state(false)
+  let loadingMore = $state(false)
+  const initialDiscovery = new Set<string>()
 
   const conversations = $derived.by((): InboxConversation[] =>
     directory
@@ -70,17 +83,37 @@ export function useMessagingInboxModel() {
         )
         return {
           ...row,
+          hypeLinked: Boolean(row.recipient),
+          isGroup:
+            row.chatId.endsWith('@g.us') ||
+            (row.platform === 'telegram' && /^-\d+$/.test(row.chatId)),
           recipient: {
-            ...row.recipient,
-            name: row.recipient.name || row.recipient.username || 'HYPE user',
+            id: row.recipient?.id ?? null,
+            name:
+              row.recipient?.name ||
+              row.recipient?.username ||
+              row.displayName ||
+              native?.name ||
+              model?.displayName?.(row.chatId) ||
+              (row.chatId.endsWith('@s.whatsapp.net')
+                ? `+${row.chatId.split('@')[0]}`
+                : row.chatId),
+            username: row.recipient
+              ? row.recipient.username
+              : (native?.username ?? null),
+            image: row.recipient?.image || native?.photo || null,
           },
           key: `${row.accountId}:${row.chatId}`,
-          preview: native?.preview ?? '',
+          preview:
+            native && native.timestamp >= row.lastMessageAt
+              ? native.preview
+              : (row.preview ?? ''),
           timestamp: Math.max(row.lastMessageAt, native?.timestamp ?? 0),
         }
       })
       .sort(
         (a, b) =>
+          (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0) ||
           b.timestamp - a.timestamp ||
           (a.recipient.name || a.recipient.username || '').localeCompare(
             b.recipient.name || b.recipient.username || '',
@@ -96,12 +129,13 @@ export function useMessagingInboxModel() {
   const selected = $derived(conversations.find(row => row.key === selectedKey) ?? null)
   const selectedModel = $derived(selected ? runtimes[selected.accountId] : undefined)
 
-  /** Reload verified HYPE associations without disturbing selection, drafts, or live cursors. */
+  /** Reload account chats and optional HYPE associations without disturbing selection, drafts, or live cursors. */
   async function refreshDirectory(force = false): Promise<void> {
     if (
       !active ||
       (!force && refreshing !== null) ||
       archiving.length ||
+      pinning.length ||
       !accounts.length
     )
       return
@@ -113,23 +147,47 @@ export function useMessagingInboxModel() {
     try {
       const responses = await Promise.allSettled(
         current.map(async account => {
-          const query = getMessagingConversations({
-            meta,
-            accountId: account.id,
-            archived: folder,
-          })
-          await query.refresh()
-          return (await query).map(row => ({ ...row, platform: account.platform }))
+          const rows: StoredConversation[] = []
+          let before:
+            | { id: string; lastMessageAt: number; pinnedAt: number | null }
+            | undefined
+          let more = false
+          for (let page = 0; page < directoryPages; page++) {
+            const query = getMessagingConversations({
+              meta,
+              accountId: account.id,
+              archived: folder,
+              ...(before ? { before } : {}),
+            })
+            await query.refresh()
+            const batch = await query
+            rows.push(...batch)
+            more = batch.length === 100
+            if (!more) break
+            const last = batch[batch.length - 1]
+            before = {
+              id: last.id,
+              lastMessageAt: last.lastMessageAt,
+              pinnedAt: last.pinnedAt,
+            }
+          }
+          return {
+            rows: rows.map(row => ({ ...row, platform: account.platform })),
+            more,
+          }
         }),
       )
       if (!active || scopeRevision !== generation || revision !== directoryRevision)
         return
       const next = responses.flatMap((result, index) =>
         result.status === 'fulfilled'
-          ? result.value
+          ? result.value.rows
           : directory.filter(row => row.accountId === current[index].id),
       )
       directory = next
+      moreStored = responses.some(
+        result => result.status === 'fulfilled' && result.value.more,
+      )
       directoryFailure = responses.some(result => result.status === 'rejected')
         ? 'Some conversations could not be refreshed. Saved conversations remain available.'
         : ''
@@ -145,6 +203,11 @@ export function useMessagingInboxModel() {
     refreshing = null
     archived = false
     archiving = []
+    pinning = []
+    directoryPages = 1
+    moreStored = false
+    loadingMore = false
+    initialDiscovery.clear()
     searchGeneration++
     forwarding = null
     preparingForward = false
@@ -202,6 +265,56 @@ export function useMessagingInboxModel() {
       )
       .join('|'),
   )
+
+  $effect(() => {
+    // Import the provider's recent dialogs on connection, even when none were started in HYPE.
+    void connectionState
+    for (const account of accounts) {
+      const runtime = runtimes[account.id]
+      if (
+        account.platform === 'telegram' &&
+        runtime?.status?.connected &&
+        runtime.loadConversations &&
+        !initialDiscovery.has(account.id)
+      )
+        untrack(() => {
+          initialDiscovery.add(account.id)
+          const revision = generation
+          void runtime.loadConversations!()
+            .then(() => {
+              if (active && revision === generation) return refreshDirectory(true)
+            })
+            .catch(() => {
+              if (active && revision === generation)
+                directoryFailure =
+                  'Some native chats could not be loaded. Try loading more chats.'
+            })
+        })
+    }
+  })
+
+  /** Load another bounded native/stored page without changing selection or drafts.
+   * @returns Resolves after the expanded account directory has refreshed.
+   */
+  async function loadMoreConversations(): Promise<void> {
+    if (loadingMore || archiving.length) return
+    loadingMore = true
+    const revision = generation
+    try {
+      directoryPages++
+      await Promise.all(
+        accounts
+          .filter(account => account.platform === 'telegram')
+          .map(account => runtimes[account.id]?.loadConversations?.()),
+      )
+      if (active && revision === generation) await refreshDirectory(true)
+    } catch {
+      if (active && revision === generation)
+        directoryFailure = 'Some chats could not be loaded. Try again.'
+    } finally {
+      if (revision === generation) loadingMore = false
+    }
+  }
 
   $effect(() => {
     // A connection transition retries the current search after pairing/reconnection.
@@ -311,6 +424,7 @@ export function useMessagingInboxModel() {
     model.selectChat(row.chatId)
     selectedKey = key
     failure = ''
+    void model.refresh?.()
     if (forwarding) await stageForward(model)
   }
 
@@ -325,6 +439,7 @@ export function useMessagingInboxModel() {
       return
     }
     archived = value
+    directoryPages = 1
     selectedKey = ''
     directory = []
     failure = ''
@@ -383,7 +498,52 @@ export function useMessagingInboxModel() {
     }
   }
 
-  /** Choose a HYPE destination before staging a forward; the Send button remains explicit. */
+  /** Persist a shared inbox pin without selecting the chat or disturbing its draft.
+   * @param key Exact account/chat key from the displayed row.
+   * @param pinned Whether the chat should stay above unpinned conversations.
+   * @returns Resolves after persistence or restores the prior position on failure.
+   */
+  async function pinConversation(key: string, pinned: boolean): Promise<void> {
+    const row = conversations.find(item => item.key === key)
+    if (!row || pinning.includes(key)) return
+    const revision = generation
+    directoryRevision++
+    refreshing = null
+    pinning = [...pinning, key]
+    failure = ''
+    directory = directory.map(item =>
+      item.id === row.id && item.accountId === row.accountId
+        ? { ...item, pinnedAt: pinned ? (row.pinnedAt ?? Date.now()) : null }
+        : item,
+    )
+    try {
+      const saved = await setMessagingConversationPinned({
+        meta,
+        accountId: row.accountId,
+        chat: row.chatId,
+        pinned,
+      })
+      if (active && revision === generation)
+        directory = directory.map(item =>
+          item.id === row.id && item.accountId === row.accountId
+            ? { ...item, pinnedAt: saved.pinnedAt }
+            : item,
+        )
+    } catch (cause) {
+      if (active && revision === generation) {
+        directory = directory.map(item =>
+          item.id === row.id && item.accountId === row.accountId
+            ? { ...item, pinnedAt: row.pinnedAt }
+            : item,
+        )
+        failure = cause instanceof Error ? cause.message : 'Unable to update this pin'
+      }
+    } finally {
+      if (revision === generation) pinning = pinning.filter(item => item !== key)
+    }
+  }
+
+  /** Choose an existing chat or verified HYPE destination before staging a forward; Send remains explicit. */
   function beginForward(message: WhatsAppMessage): void {
     if (!selectedModel || message.deleted || message.content?.viewOnce) return
     forwarding = { message, source: selectedModel }
@@ -544,6 +704,16 @@ export function useMessagingInboxModel() {
     get conversations() {
       return conversations
     },
+    get visibleConversations() {
+      const term = search.trim().toLocaleLowerCase().replace(/^@/, '')
+      return term
+        ? conversations.filter(row =>
+            [row.recipient.name, row.recipient.username, row.chatId].some(value =>
+              value?.toLocaleLowerCase().includes(term),
+            ),
+          )
+        : conversations
+    },
     get selected() {
       return selected
     },
@@ -558,6 +728,10 @@ export function useMessagingInboxModel() {
     },
     showArchived,
     archiveConversation,
+    pinConversation,
+    get pinning() {
+      return pinning
+    },
     get search() {
       return search
     },
@@ -577,7 +751,14 @@ export function useMessagingInboxModel() {
       return routing
     },
     get error() {
-      return failure || directoryFailure
+      return (
+        failure ||
+        directoryFailure ||
+        Object.values(runtimes)
+          .map(runtime => runtime.conversationsError)
+          .filter(Boolean)
+          .join(' · ')
+      )
     },
     get preparingForward() {
       return preparingForward
@@ -593,5 +774,20 @@ export function useMessagingInboxModel() {
     openUser,
     registerRuntime,
     refreshDirectory,
+    loadMoreConversations,
+    get loadingMore() {
+      return loadingMore
+    },
+    get hasMoreConversations() {
+      return (
+        moreStored ||
+        accounts.some(
+          account =>
+            account.platform === 'telegram' &&
+            Boolean(runtimes[account.id]?.loadConversations) &&
+            !runtimes[account.id]?.conversationsComplete,
+        )
+      )
+    },
   }
 }

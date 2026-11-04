@@ -11,6 +11,8 @@ import SettingsIcon from 'virtual:icons/lucide/settings-2'
 import ArchiveIcon from 'virtual:icons/lucide/archive'
 import ArchiveRestoreIcon from 'virtual:icons/lucide/archive-restore'
 import InboxIcon from 'virtual:icons/lucide/inbox'
+import PinIcon from 'virtual:icons/lucide/pin'
+import PinOffIcon from 'virtual:icons/lucide/pin-off'
 // COMPONENTS
 import MessagingNotifications from './MessagingNotifications.svelte'
 import MessagingAccountCard from './MessagingAccountCard.svelte'
@@ -26,9 +28,8 @@ const configurationHref = $derived(
 )
 </script>
 
-<section
+<div
   class="@container flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-canvas"
-  aria-label="Organisation messaging inbox"
 >
   {#each model.accounts as account (account.id)}
     <MessagingAccountRuntime
@@ -160,21 +161,22 @@ const configurationHref = $derived(
     >
       <aside
         class="flex min-h-0 min-w-0 flex-col overflow-hidden max-h-[34dvh] border-b border-border bg-panel @min-[48rem]:max-h-none @min-[48rem]:border-r @min-[48rem]:border-b-0"
-        aria-label="HYPE user conversations"
+        aria-label="Linked account conversations"
       >
         <div class="shrink-0 p-3">
           <TextInputField
             id="messaging-user-search"
-            label="Search HYPE users"
-            placeholder="Name or HYPE username"
+            label="Search chats and HYPE users"
+            placeholder="Name, username or number"
             bind:value={model.search}
             inputAttrs={{ autocomplete: 'off' }}
           />
         </div>
-        <!-- Forwarding uses the same verified HYPE recipient picker as normal outreach. -->
+        <!-- Forwarding supports existing account chats and the verified HYPE recipient picker. -->
         {#if model.forwarding}
           <div class="p-3 text-sm" role="status">
-            Choose a HYPE user to forward to. You can review it before sending.<Button
+            Choose a conversation or search for a HYPE user to forward to. You can
+            review it before sending.<Button
               text="Cancel forward"
               style="ghost"
               onClick={model.cancelForward}
@@ -185,6 +187,142 @@ const configurationHref = $derived(
           class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-2 pb-2"
           aria-label="Conversations"
         >
+          {#each model.visibleConversations as conversation (conversation.key)}
+            {@const actions = [
+              {
+                label: conversation.pinnedAt ? 'Unpin chat' : 'Pin chat',
+                icon: conversation.pinnedAt ? PinOffIcon : PinIcon,
+                disabled: model.pinning.includes(conversation.key),
+                onSelect: () => {
+                  void model.pinConversation(conversation.key, !conversation.pinnedAt)
+                },
+              },
+              {
+                label: conversation.isArchived ? 'Restore thread' : 'Archive thread',
+                icon: conversation.isArchived ? ArchiveRestoreIcon : ArchiveIcon,
+                disabled:
+                  model.preparingForward ||
+                  model.archiving.includes(conversation.key) ||
+                  model.runtimes[conversation.accountId]?.busy ||
+                  model.runtimes[conversation.accountId]?.recording,
+                onSelect: () => {
+                  void model.archiveConversation(
+                    conversation.key,
+                    !conversation.isArchived,
+                  )
+                },
+              },
+            ]}
+            <ContextMenu items={actions}>
+              <div
+                class="flex min-w-0 items-center rounded-xl border transition-colors {model
+                  .selected?.key === conversation.key
+                  ? 'border-primary bg-[var(--chat-active-fill,var(--theme-raised))]'
+                  : 'border-transparent hover:bg-surface'}"
+              >
+                <button
+                  type="button"
+                  aria-current={model.selected?.key === conversation.key
+                    ? 'true'
+                    : undefined}
+                  class="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-xl px-3 py-3 text-left focus-visible:outline-2 focus-visible:outline-focus"
+                  onclick={() => model.selectConversation(conversation.key)}
+                >
+                  <span
+                    class="inline-flex rounded-full {!conversation.hypeLinked &&
+                    !conversation.isGroup
+                      ? 'ring-2 ring-red-500 ring-offset-2 ring-offset-panel'
+                      : ''}"
+                    title={!conversation.hypeLinked && !conversation.isGroup
+                      ? 'Not linked to HYPE'
+                      : undefined}
+                  >
+                    <Avatar
+                      name={conversation.recipient.name}
+                      src={conversation.recipient.image ||
+                        model.runtimes[conversation.accountId]?.profiles[
+                          model.runtimes[conversation.accountId]?.canonicalChat(
+                            conversation.chatId,
+                          ) ?? conversation.chatId
+                        ]?.photo}
+                    />
+                    {#if !conversation.hypeLinked && !conversation.isGroup}
+                      <span class="sr-only">Not linked to HYPE</span>
+                    {/if}
+                  </span>
+                  <span class="grid min-w-0 gap-1">
+                    <span class="flex min-w-0 items-start gap-1.5">
+                      <span class="inline-flex shrink-0 pt-0.5">
+                        <MessagingPlatformIcon platform={conversation.platform} />
+                      </span>
+                      <span
+                        class="min-w-0 flex-1 whitespace-normal break-words text-sm font-semibold leading-5"
+                        >{conversation.recipient.name}</span
+                      >
+                      {#if conversation.pinnedAt}
+                        <span
+                          class="inline-flex shrink-0 text-muted-foreground"
+                          title="Pinned chat"
+                          role="img"
+                          aria-label="Pinned chat"
+                          ><PinIcon class="size-3.5" aria-hidden="true" /></span
+                        >
+                      {/if}
+                      {#if conversation.unreadCount}
+                        <span
+                          role="img"
+                          aria-label={`${conversation.unreadCount} unread messages`}
+                          class="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] leading-none tabular-nums text-primary-content"
+                          >{conversation.unreadCount}</span
+                        >
+                      {/if}
+                    </span>
+                    <span
+                      class="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted-foreground"
+                    >
+                      <span class="min-w-0 whitespace-normal break-words"
+                        >{conversation.recipient.username
+                          ? `@${conversation.recipient.username}`
+                          : conversation.isGroup
+                            ? conversation.platform === 'telegram'
+                              ? 'Group / channel'
+                              : 'Group chat'
+                            : conversation.platform === 'telegram'
+                              ? 'Telegram contact'
+                              : 'WhatsApp contact'}</span
+                      >
+                    </span>
+                    <span
+                      class="line-clamp-1 break-words text-xs leading-4 text-muted-foreground [overflow-wrap:anywhere]"
+                      title={conversation.preview || undefined}
+                      >{conversation.preview || 'No messages yet'}</span
+                    >
+                  </span>
+                </button>
+              </div>
+            </ContextMenu>
+          {:else}
+            <p class="p-3 text-sm text-muted-foreground">
+              {model.search.trim()
+                ? 'No matching chats.'
+                : model.archived
+                  ? 'No archived conversations.'
+                  : 'Chats from your linked accounts will appear here. You can also search for a HYPE user to start chatting.'}
+            </p>
+          {/each}
+          {#if model.hasMoreConversations}
+            <Button
+              text={model.loadingMore ? 'Loading chats…' : 'Load more chats'}
+              disabled={model.loadingMore}
+              style="ghost"
+              onClick={model.loadMoreConversations}
+            />
+          {/if}
+          {#if model.search.trim()}
+            <p class="px-3 pt-3 text-xs font-semibold text-muted-foreground">
+              HYPE users
+            </p>
+          {/if}
           {#if model.search.trim()}
             {#if model.searching}
               <p role="status" class="p-3 text-sm text-muted-foreground">
@@ -238,81 +376,6 @@ const configurationHref = $derived(
                 <p class="p-3 text-sm text-muted-foreground">No matching HYPE users.</p>
               {/if}
             {/each}
-          {:else}
-            {#each model.conversations as conversation (conversation.key)}
-              {@const actions = [
-                {
-                  label: conversation.isArchived ? 'Restore thread' : 'Archive thread',
-                  icon: conversation.isArchived ? ArchiveRestoreIcon : ArchiveIcon,
-                  disabled:
-                    model.preparingForward ||
-                    model.archiving.includes(conversation.key) ||
-                    model.runtimes[conversation.accountId]?.busy ||
-                    model.runtimes[conversation.accountId]?.recording,
-                  onSelect: () => {
-                    void model.archiveConversation(
-                      conversation.key,
-                      !conversation.isArchived,
-                    )
-                  },
-                },
-              ]}
-              <ContextMenu items={actions}>
-                <div
-                  class="flex min-w-0 items-center rounded-xl border transition-colors {model
-                    .selected?.key === conversation.key
-                    ? 'border-primary bg-raised'
-                    : 'border-transparent hover:bg-surface'}"
-                >
-                  <button
-                    type="button"
-                    aria-current={model.selected?.key === conversation.key
-                      ? 'true'
-                      : undefined}
-                    class="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl p-3 text-left focus-visible:outline-2 focus-visible:outline-focus"
-                    onclick={() => model.selectConversation(conversation.key)}
-                  >
-                    <Avatar
-                      name={conversation.recipient.name}
-                      src={conversation.recipient.image}
-                    />
-                    <span class="grid min-w-0 gap-1">
-                      <span class="flex min-w-0 items-start gap-2"
-                        ><span
-                          class="min-w-0 whitespace-normal break-words text-sm font-semibold"
-                          >{conversation.recipient.name}</span
-                        ><span class="ml-auto inline-flex shrink-0"
-                          ><MessagingPlatformIcon
-                            platform={conversation.platform}
-                          /></span
-                        >
-                        {#if conversation.unreadCount}
-                          <span
-                            role="img"
-                            aria-label={`${conversation.unreadCount} unread messages`}
-                            class="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-content"
-                            >{conversation.unreadCount}</span
-                          >
-                        {/if}</span
-                      >
-                      <span class="break-words text-xs text-muted-foreground"
-                        >@{conversation.recipient.username}</span
-                      >
-                      <span
-                        class="line-clamp-2 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]"
-                        >{conversation.preview || 'Start a conversation'}</span
-                      >
-                    </span>
-                  </button>
-                </div>
-              </ContextMenu>
-            {:else}
-              <p class="p-3 text-sm text-muted-foreground">
-                {model.archived
-                  ? 'No archived conversations.'
-                  : 'Search for a HYPE user to start chatting. Messages from linked HYPE users will appear here.'}
-              </p>
-            {/each}
           {/if}
         </nav>
         <div class="shrink-0 border-t border-border px-3 py-2">
@@ -336,6 +399,7 @@ const configurationHref = $derived(
           {#key model.selectedOrganisation}
             <MessagingAppearanceProvider organisationId={model.selectedOrganisation}>
               <ConversationPane
+                organisationName={model.organisation?.name || model.organisation?.code}
                 composerDisabled={model.preparingForward}
                 onForward={model.beginForward}
                 model={model.selectedModel}
@@ -343,6 +407,8 @@ const configurationHref = $derived(
                 displayName={model.selected.recipient.name}
                 username={model.selected.recipient.username}
                 photo={model.selected.recipient.image}
+                hypeLinked={model.selected.hypeLinked}
+                isGroup={model.selected.isGroup}
               />
             </MessagingAppearanceProvider>
           {/key}
@@ -357,4 +423,4 @@ const configurationHref = $derived(
       </div>
     </div>
   {/if}
-</section>
+</div>

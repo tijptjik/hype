@@ -174,7 +174,7 @@ afterEach(() => {
   for (const db of databases.splice(0)) db.close()
 })
 
-it('delivers only new unread HYPE-user messages and deduplicates later receipt replays', async () => {
+it('delivers new unread account messages including unlinked peers and deduplicates later receipt replays', async () => {
   await worker.subscribe('operator', 'org', subscription, 'https://hype.example')
   messages = [
     message('new', 1),
@@ -185,12 +185,12 @@ it('delivers only new unread HYPE-user messages and deduplicates later receipt r
     message('stranger', 6, { chat: '77' }),
   ]
   await delivery().alarm()
-  expect(sendPush).toHaveBeenCalledTimes(1)
+  expect(sendPush).toHaveBeenCalledTimes(2)
   expect(sendPush.mock.calls[0][0]).toBe(subscription.endpoint)
   expect(sendPush.mock.calls[0][1].redirect).toBe('error')
   messages = [message('new', 7)]
   await delivery().alarm()
-  expect(sendPush).toHaveBeenCalledTimes(1)
+  expect(sendPush).toHaveBeenCalledTimes(2)
 })
 
 it('delivers through a verified provider alias while preserving the existing conversation route', async () => {
@@ -232,14 +232,14 @@ it.each([
     "INSERT INTO messagingConversation(id,accountId,chatId,recipientUserId) VALUES ('thread','account','43','operator')",
   ],
   ['another platform', "UPDATE messagingAccount SET platform='whatsapp'"],
-])('rejects alias notifications for %s', async (_label, change) => {
+])('keeps account notifications independent of %s', async (_label, change) => {
   db.exec("INSERT INTO userMessagingIdentityAlias VALUES ('recipient','telegram','43')")
   db.exec(change)
   environment.WHATSOVER.snapshot = environment.TELEGRAM.snapshot
   await worker.subscribe('operator', 'org', subscription, 'https://hype.example')
   messages = [message('guarded-alias', 1, { chat: '43' })]
   await delivery().alarm()
-  expect(sendPush).not.toHaveBeenCalled()
+  expect(sendPush).toHaveBeenCalledTimes(1)
 })
 
 it('retries a failed subscriber without delaying or duplicating successful subscribers', async () => {
