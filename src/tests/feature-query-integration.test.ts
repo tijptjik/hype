@@ -187,7 +187,7 @@ describe('map query integration', () => {
       ref: 'prismFeatures',
     })
     const input = vi.mocked(getFeaturePage).mock.calls[0][0]
-    expect(input.prisms.layer).toEqual(['layer-a'])
+    expect(input.prisms?.layer).toEqual(['layer-a'])
     expect(input.filters?.list).toBeUndefined()
     expect(input.spatial).toBeUndefined()
 
