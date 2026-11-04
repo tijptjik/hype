@@ -767,15 +767,19 @@ export function createFeatureTranslationBatches(texts: string[]): string[][] {
 /**
  * Processes translation work grouped by source/target locale direction.
  *
- * @param params - Analysis, current results, remote translator, and status callback.
+ * @param params - Analysis, current results, remote translator, status and ownership callbacks.
  * @returns Updated translation result map after all remote batches complete.
+ * @remarks Superseded work returns its starting results and issues no subsequent batches.
  */
 export async function processFeatureTranslations(params: {
   analysis: FeatureTranslationAnalysis
   translationResults: FeatureTranslationResultMap
   translateText: FeatureTranslationRemoteTranslate
   onBatchStatus?: (status: FeatureTranslationBatchStatus) => void
+  isCurrent?: () => boolean
 }): Promise<FeatureTranslationResultMap> {
+  const isCurrent = params.isCurrent ?? (() => true)
+  if (!isCurrent()) return params.translationResults
   let nextResults = new Map(params.translationResults)
   const groupedWork = getGroupedFeatureTranslationWork(params.analysis.scenarios)
   const groupedBatches = groupedWork.map(([direction, items]) => ({
@@ -798,6 +802,7 @@ export async function processFeatureTranslations(params: {
     ]
 
     for (let index = 0; index < group.batches.length; index += 1) {
+      if (!isCurrent()) return params.translationResults
       batchNumber += 1
       params.onBatchStatus?.({
         footerStatus: `Batch ${batchNumber} / ${totalBatches}: ${sourceLocale} -> ${targetLocale}`,
@@ -809,6 +814,7 @@ export async function processFeatureTranslations(params: {
         target: targetLocale,
         texts: group.batches[index],
       })
+      if (!isCurrent()) return params.translationResults
 
       const batchStartIndex = group.batches
         .slice(0, index)
@@ -879,7 +885,7 @@ function saveFeatureTranslationBatchResults(params: {
     const item = params.items[params.batchStartIndex + index]
     if (!item) return
 
-    const scenarioResults = nextResults.get(item.scenarioIndex) ?? {}
+    const scenarioResults = { ...nextResults.get(item.scenarioIndex) }
     scenarioResults[params.targetLocale] = translation
     nextResults.set(item.scenarioIndex, scenarioResults)
   })

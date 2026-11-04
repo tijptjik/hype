@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { onDestroy, onMount } from 'svelte'
 // CONTEXT
 import type { ImportCtx } from '#lib/context/import.svelte.js'
 // I18N
@@ -37,6 +37,21 @@ let {
 }: Props = $props()
 
 let translationResults = $state<FeatureTranslationResultMap>(new Map())
+let disposed = false
+let activeData: ReturnType<ImportCtx['getData']> | undefined
+
+// Unmounted steps must stop publishing and allow translation to restart on return.
+onDestroy(() => {
+  disposed = true
+  if (
+    isProcessing &&
+    importCtx.getData() === activeData &&
+    importCtx.getTranslation().status === 'translating'
+  ) {
+    importCtx.updateTranslation({ status: 'idle' })
+  }
+  isProcessing = false
+})
 
 const analysis = $derived(
   analyzeFeatureTranslation(importCtx, translationResults, isProcessing),
@@ -53,7 +68,19 @@ const rowsNeedingTranslation = $derived(
  * @returns Resolves after translation completes or fails.
  */
 async function startTranslation(): Promise<void> {
-  if (isProcessing) return
+  if (disposed || isProcessing || importCtx.getCurrentStep() !== 'translation') return
+
+  const data = importCtx.getData()
+  const columns = importCtx.getColumns()
+  const headers = importCtx.getHeaders()
+  const startedAnalysis = analysis
+  activeData = data
+  const isCurrent = (): boolean =>
+    !disposed &&
+    importCtx.getCurrentStep() === 'translation' &&
+    importCtx.getData() === data &&
+    importCtx.getColumns() === columns &&
+    importCtx.getHeaders() === headers
 
   if (analysis.scenarios.length === 0) {
     markTranslationComplete()
@@ -71,21 +98,30 @@ async function startTranslation(): Promise<void> {
   })
 
   try {
-    translationResults = await processFeatureTranslations({
-      analysis,
+    const results = await processFeatureTranslations({
+      analysis: startedAnalysis,
       translationResults,
+      isCurrent,
       translateText: async params => await translateText(params),
       onBatchStatus: ({ footerStatus: nextFooterStatus, updates }) => {
+        if (!isCurrent()) return
         if (nextFooterStatus) {
           footerStatus = nextFooterStatus
         }
         syncTranslationSnapshot(updates)
       },
     })
-    saveFeatureTranslationResults(importCtx, analysis.scenarios, translationResults)
+    if (!isCurrent()) return
+    translationResults = results
+    saveFeatureTranslationResults(
+      importCtx,
+      startedAnalysis.scenarios,
+      translationResults,
+    )
     markTranslationComplete()
     proceedToNextStep()
   } catch (error) {
+    if (!isCurrent()) return
     console.error('Translation step failed:', error)
     footerStatus = 'Translation failed'
     importCtx.updateTranslation({
@@ -93,7 +129,7 @@ async function startTranslation(): Promise<void> {
       error: error instanceof Error ? error.message : 'Translation failed',
     })
   } finally {
-    isProcessing = false
+    if (!disposed && importCtx.getData() === data) isProcessing = false
   }
 }
 
@@ -180,12 +216,12 @@ onMount(() => {
 
   {#if analysis.translationColumns.length === 0}
     <section
-      class="rounded-3xl border border-warning/25 bg-warning/8 p-5 text-warning shadow-[var(--shadow-mini)]"
+      class="border-warning/25 bg-warning/8 text-warning rounded-3xl border p-5 shadow-[var(--shadow-mini)]"
     >
       <h3 class="text-lg font-black tracking-tight">
         {m.feature_import__translation_no_columns_title()}
       </h3>
-      <p class="mt-2 text-sm leading-relaxed text-warning/80">
+      <p class="text-warning/80 mt-2 text-sm leading-relaxed">
         {m.feature_import__translation_no_columns_description()}
       </p>
     </section>
