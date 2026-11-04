@@ -187,7 +187,8 @@ email-domain and explicit card-onboarding rules. Policy updates compare the obse
 revision. Sign-in writes re-read publication/archive state, current hub, policy and
 persisted user/email verification in the INSERT itself. Card onboarding uses the session
 owner and trusted active hub; core access additionally requires core-inclusive,
-non-exclusive publication. A grant is not a staff role.
+non-exclusive publication. These enrolment rules grant only the user level, never staff
+membership.
 
 Migration 0168 must precede this runtime. The existing organisation role uses
 independent grant reasons; only member/owner grants confer staff access. Source
