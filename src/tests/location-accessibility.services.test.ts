@@ -64,15 +64,15 @@ function revision(
         address2dId: null,
         address3dId: null,
         address3dUnitId: null,
-        addressSnapshotId: null,
-        records: {},
+        snapshotId: null,
+        rawSource: {},
         fallbackDisplay: {},
       },
     },
   }
   s.sqlite
     .prepare(
-      "INSERT INTO locationRevision(id,locationId,sequence,origin,contentHash,payload,facts) VALUES (?,?,?,'local',?,'{}',?)",
+      "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES (?,?,?,'local',?,'{}',?)",
     )
     .run(
       `${id}-${version}`,
