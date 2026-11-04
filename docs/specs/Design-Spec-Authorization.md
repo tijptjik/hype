@@ -17,7 +17,10 @@ field-level permissions, and remote-function query APIs.
 ## Current Role Model
 
 - Hub roles: `hubRole` (`HubRoleType.admin`)
-- Organisation roles: `organisationRole` (`owner`, `member`)
+- Organisation roles: `organisationRole`, ordered `user < member < owner`. Its `grant`
+  JSON map retains independent reasons; the effective role is the strongest. User
+  inclusion accepts all three levels. Staff checks accept only member/owner. User-only
+  grants never confer staff access or upward editing rights.
 - Project roles: `projectRole` (`owner`, `maintainer`, `member`, `translator`, `user`)
 - Existing checks are spread across:
   - `src/lib/client/services/auth.ts`
@@ -169,6 +172,31 @@ back the hierarchy command. Existing local archive restoration rules are retaine
 - Integrity rule: an organisation must always retain at least one owner after any role
   mutation.
 
+## Organisation Users Policy
+
+Refs #189, #194. `canManageOrganisationUsers` requires a durable, non-anonymous actor
+and a non-archived organisation, then an Owner assignment for that exact organisation,
+relevant scoped Hub Admin, or explicit SuperAdmin. Policy reads/writes and organisation
+directory reads use this check. The directory additionally requires an enabled Users
+policy and a server-side correlated membership predicate for both results and counts.
+Authorized audience managers receive contact fields only for the returned members.
+Global user-directory and profile permissions stay independent.
+
+`organisationUserPolicy` stores independently selectable hub-sign-in, verified exact
+email-domain and explicit card-onboarding rules. Policy updates compare the observed
+revision. Sign-in writes re-read publication/archive state, current hub, policy and
+persisted user/email verification in the INSERT itself. Card onboarding uses the session
+owner and trusted active hub; core access additionally requires core-inclusive,
+non-exclusive publication. A grant is not a staff role.
+
+Migrations 0168/0169 must precede this runtime. During an applying Breadline sync, auth
+mutation requests are held (session reads/sign-out remain available), claim SQL cannot
+acquire ownership, and enrolment cannot add grants. Deleted source identities cannot
+claim a latent account. A failed remote batch retains its application fence until the
+same reviewed plan resumes or a reviewed recovery is completed. This fence is not a
+global lock on unrelated application writes; exact row before-images guard sync writes
+against concurrent HYPE changes.
+
 ## Request Handling and Error Model
 
 - Unauthorized write attempts return HTTP `403`.
@@ -253,9 +281,9 @@ back the hierarchy command. Existing local archive restoration rules are retaine
   preceded by an in-batch revision check; external domain registration remains separate.
 - Layer form creation and updates commit core fields, translations and submitted
   property links in one D1 batch. Update relation writes require the unchanged layer
-  timestamp, with the parent token advanced last. Missing or stale parents cannot delete
-  or insert related rows; omitted collections remain intact and explicit empty
-  collections clear them.
+  timestamp and optional relocation-policy revision, with the parent token advanced
+  last. Missing or stale parents cannot delete or insert related rows; omitted
+  collections remain intact and explicit empty collections clear them.
 - New project, organisation and hub upload grants sign the current image pointer,
   resource revision and parent scope, captured before authorization. Confirmation
   commits the image and pointer in one guarded D1 batch. It accepts an unchanged grant
