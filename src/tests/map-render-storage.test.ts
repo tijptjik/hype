@@ -16,16 +16,15 @@ import {
 } from '#lib/map/styles/render.shared.js'
 
 describe('map render storage helpers', () => {
-  it('reuses existing previews for renamed map styles', async () => {
-    for (const [current, legacy] of [
-      ['hype-dark', 'hyper'],
-      ['hype-light', 'hyperLight'],
-    ] as const) {
-      expect(getMapStyleRenderAssetPath(current)).toBe(
-        getMapStyleRenderAssetPath(legacy),
+  it('uses current style codes for previews', async () => {
+    for (const key of ['hype-dark', 'hype-light'] as const) {
+      expect(getMapStyleRenderAssetPath(key)).toBe(
+        `/api/mapRenders/styles/${key}/asset`,
       )
-      expect(await resolveMapStyleRenderPathForKey('production', current)).toBe(
-        await resolveMapStyleRenderPathForKey('production', legacy),
+      expect(await resolveMapStyleRenderPathForKey('production', key)).toMatch(
+        new RegExp(
+          String.raw`^https://assets\.hype\.hk/mapRender/styles/${key}/[a-f0-9]+\.png$`,
+        ),
       )
     }
   })
@@ -40,13 +39,13 @@ describe('map render storage helpers', () => {
     expect(
       buildMapRenderObjectKey({
         kind: 'styles',
-        identifier: 'hyper',
+        identifier: 'hype-dark',
         hash: 'abc123',
       }),
-    ).toBe('mapRender/styles/hyper/abc123.png')
+    ).toBe('mapRender/styles/hype-dark/abc123.png')
 
-    expect(getMapStyleRenderObjectKey('hyper', 'abc123')).toBe(
-      'mapRender/styles/hyper/abc123.png',
+    expect(getMapStyleRenderObjectKey('hype-dark', 'abc123')).toBe(
+      'mapRender/styles/hype-dark/abc123.png',
     )
   })
 
@@ -59,15 +58,15 @@ describe('map render storage helpers', () => {
         'local',
         {
           kind: 'styles',
-          identifier: 'hyper',
+          identifier: 'hype-dark',
           hash: 'abc123',
         },
-        '/mapRender/styles/hyper/abc123.png',
+        '/mapRender/styles/hype-dark/abc123.png',
       ),
-    ).toBe('/mapRender/styles/hyper/abc123.png')
+    ).toBe('/mapRender/styles/hype-dark/abc123.png')
 
-    expect(resolveMapStyleRenderUrl('local', 'hyper', 'abc123')).toBe(
-      '/api/mapRenders/styles/hyper/asset',
+    expect(resolveMapStyleRenderUrl('local', 'hype-dark', 'abc123')).toBe(
+      '/api/mapRenders/styles/hype-dark/asset',
     )
   })
 
@@ -76,12 +75,12 @@ describe('map render storage helpers', () => {
     expect(getMapRenderAssetBaseUrl('preview')).toBe('https://assets.preview.hype.hk')
     expect(getMapRenderAssetBaseUrl('production')).toBe('https://assets.hype.hk')
 
-    expect(resolveMapStyleRenderUrl('preview', 'hyper', 'abc123')).toBe(
-      'https://assets.preview.hype.hk/mapRender/styles/hyper/abc123.png',
+    expect(resolveMapStyleRenderUrl('preview', 'hype-dark', 'abc123')).toBe(
+      'https://assets.preview.hype.hk/mapRender/styles/hype-dark/abc123.png',
     )
 
-    expect(resolveMapStyleRenderUrl('production', 'hyper', 'abc123')).toBe(
-      'https://assets.hype.hk/mapRender/styles/hyper/abc123.png',
+    expect(resolveMapStyleRenderUrl('production', 'hype-dark', 'abc123')).toBe(
+      'https://assets.hype.hk/mapRender/styles/hype-dark/abc123.png',
     )
   })
 
