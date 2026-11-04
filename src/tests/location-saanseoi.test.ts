@@ -39,13 +39,13 @@ describe('SaanSeoi full Location projection', () => {
     expect(result.facts.location.address).toMatchObject({
       status: 'unresolved',
       address2dId: 'address',
-      addressSnapshotId: 'addresses-snapshot',
+      snapshotId: 'addresses-snapshot',
     })
     expect(result.issues).toEqual([
       { kind: 'invalidPhone', index: 2, value: 'invalid' },
       { kind: 'addressRecordsPending' },
     ])
-    expect(result.payload).toEqual({ resource, meta })
+    expect(result.rawSource).toEqual({ resource, meta })
     expect(result.releaseId).toBe('source-release')
   })
   it('rejects mixed publications and partial records rather than treating absent fields as empty', () => {
