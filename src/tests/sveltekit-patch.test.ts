@@ -42,10 +42,10 @@ describe('SvelteKit 3 dependency compatibility', () => {
       }
       const enabled = await createGuard(true);
       assert.equal(enabled.load.handler(remote), undefined);
-      assert.throws(() => enabled.load.handler(misplaced), /config_feature_disabled|server_only_import/);
+      assert.throws(() => enabled.load.handler(misplaced), /remote_module_server_only/);
       assert.throws(() => enabled.load.handler(server), /server_only_import/);
       const disabled = await createGuard(false);
-      assert.throws(() => disabled.load.handler(misplaced), /config_feature_disabled|server_only_import/);
+      assert.throws(() => disabled.load.handler(misplaced), /config_feature_disabled/);
       console.log('ok');
     `).trim(),
     ).toBe('ok')
