@@ -53,7 +53,7 @@ describe('user directory numeric timestamp repair', () => {
         const db = drizzle(async (query, params) => {
           const statement = sqlite.prepare(query)
           statement.setReturnArrays(true)
-          return { rows: statement.all(...params) as unknown[][] }
+          return { rows: statement.all(...params) as unknown as unknown[][] }
         }) as unknown as Database
         const first = await searchUsersByConditions(db, {
           conditions: [],
