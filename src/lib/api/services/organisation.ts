@@ -1,5 +1,5 @@
 // DRIZZLE
-import { and, or, asc, eq, type SQL } from 'drizzle-orm'
+import { and, or, asc, eq, sql, type SQL } from 'drizzle-orm'
 // LIB
 import {
   applyQueryFilters,
@@ -76,15 +76,21 @@ import { chunkedInArray } from '#lib/utils/batch-query.js'
  * Keeps common list/detail queries cheap while preserving core UI fields.
  */
 const organisationWithRelations = {
-  i18n: true,
+  i18n: true as const,
   userRoles: {
+    where: (
+      role: Pick<
+        typeof import('#lib/db/schema/organisation.js').organisationRole,
+        'role'
+      >,
+    ) => sql`${role.role} IN ('member','owner')`,
     with: {
       user: {
         columns: userColumnsWithPrivacyProtected,
       },
     },
   },
-  image: true,
+  image: true as const,
   publisher: {
     columns: userColumnsWithPrivacyProtected,
   },
@@ -93,21 +99,24 @@ const organisationWithRelations = {
 /**
  * Resolves the organisation relation graph for the requested profile.
  * Adds deep property relations for admin profile and hub relation for super admins.
+ * @param profile Requested organisation payload profile.
+ * @param isSuperAdmin Whether the caller may hydrate the hub relation.
+ * @returns Relation graph with the staff-role filter bound to the SQL tag.
  */
 export const getOrganisationWithRelations = (
   profile: OrganisationProfile,
   isSuperAdmin: boolean,
 ) => {
-  if (profile === 'compact') return { i18n: true }
+  if (profile === 'compact') return { i18n: true as const }
   if (profile === 'admin') {
     return {
       ...organisationWithRelations,
       properties: {
         with: {
-          i18n: true,
+          i18n: true as const,
           values: {
             with: {
-              i18n: true,
+              i18n: true as const,
             },
           },
         },
@@ -117,17 +126,17 @@ export const getOrganisationWithRelations = (
         with: {
           property: {
             with: {
-              i18n: true,
+              i18n: true as const,
               values: {
                 with: {
-                  i18n: true,
+                  i18n: true as const,
                 },
               },
             },
           },
         },
       },
-      ...(isSuperAdmin ? { hub: true } : {}),
+      ...(isSuperAdmin ? { hub: true as const } : {}),
     }
   }
 
@@ -139,13 +148,13 @@ export const getOrganisationWithRelations = (
     profile === 'full'
   ) {
     return {
-      i18n: true,
-      image: true,
+      i18n: true as const,
+      image: true as const,
     }
   }
 
   return {
-    i18n: true,
+    i18n: true as const,
   }
 }
 

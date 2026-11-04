@@ -1,8 +1,37 @@
+// TESTS
 import { describe, expect, it } from 'vitest'
-import { toQueryConditions } from '#lib/api/services/organisation.js'
+// DRIZZLE
+import { drizzle } from 'drizzle-orm/d1'
+// SERVICES
+import {
+  getOrganisationWithRelations,
+  toQueryConditions,
+} from '#lib/api/services/organisation.js'
 import { overrideOrganisationEntityFromFormInput } from '#lib/client/services/organisation.js'
+// DB
+import * as schema from '#lib/db/schema/index.js'
+// TYPES
+import type { D1Database } from '@cloudflare/workers-types'
 import type { OrganisationFormInput } from '#lib/db/zod/schema/organisation.types.js'
 import type { SessionUser } from '#lib/types.js'
+
+describe('organisation admin profile query', () => {
+  it.each([false, true])(
+    'builds its staff-role filter for superAdmin=%s',
+    superAdmin => {
+      // Compile the real relation graph so deferred Drizzle filters run before any I/O.
+      const db = drizzle({} as D1Database, { schema })
+      const query = db.query.organisation
+        .findFirst({
+          with: getOrganisationWithRelations('admin', superAdmin),
+        })
+        .toSQL()
+
+      expect(query.sql).toContain("IN ('member','owner')")
+      expect(query.sql).not.toContain('"grant"')
+    },
+  )
+})
 
 describe('organisation service overrides', () => {
   it('does not overwrite i18n/code/url when role-only submit payload omits them', () => {
