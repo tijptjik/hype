@@ -8,6 +8,7 @@ import Avatar from '#lib/bits/core/avatar/Avatar.svelte'
 import EmojiPicker from './EmojiPicker.svelte'
 import MessageText from './MessageText.svelte'
 import MessageMedia from './MessageMedia.svelte'
+import MediaSkeleton from '#lib/bits/patterns/messaging/MediaSkeleton.svelte'
 // ICONS
 import CheckIcon from 'virtual:icons/lucide/check'
 import ClockIcon from 'virtual:icons/lucide/clock-3'
@@ -31,6 +32,7 @@ import { relativeMessageTime } from './message-time.js'
 // TYPES
 import type { WhatsAppMessage } from '#lib/api/services/whatsover.types.js'
 interface Props {
+  attachmentPending?: boolean
   showTime?: boolean
   sendState?: 'pending' | 'submitted' | 'uncertain' | 'failed'
   transitionName?: string
@@ -59,6 +61,7 @@ interface Props {
   onReact: (emoji: string) => void
 }
 let {
+  attachmentPending = false,
   showTime = true,
   sendState,
   transitionName,
@@ -150,7 +153,14 @@ let saving = $state(false)
 let editInput = $state<HTMLTextAreaElement>()
 /** Keep inline text and failures visible until the provider confirms the edit. */
 async function saveEdit(): Promise<void> {
-  if (!onEdit || saving || disabled || !editText.trim()) return
+  if (
+    !onEdit ||
+    saving ||
+    disabled ||
+    !editText.trim() ||
+    editText === (message.content?.text || message.text || '')
+  )
+    return
   saving = true
   editError = ''
   try {
@@ -224,15 +234,26 @@ const actionCount = $derived(
           </p>
         {/if}
       </div>
-      <span class="flex items-center gap-1.5"
-        >{#if showTime}
-          <time
-            class="whitespace-nowrap text-[11px] text-muted-foreground"
-            datetime={new Date(message.timestamp).toISOString()}
-            title={new Date(message.timestamp).toLocaleString()}
-            >{relativeMessageTime(message.timestamp, now)}</time
-          >
-        {/if}
+      <span class="flex items-start gap-1.5"
+        ><span class="flex flex-col items-end gap-1"
+          >{#if showTime}
+            <time
+              class="whitespace-nowrap text-[11px] text-muted-foreground"
+              datetime={new Date(message.timestamp).toISOString()}
+              title={new Date(message.timestamp).toLocaleString()}
+              >{relativeMessageTime(message.timestamp, now)}</time
+            >
+          {/if}
+          {#if message.editedAt}
+            <span
+              role="img"
+              aria-label="Edited"
+              title={`Edited ${new Date(message.editedAt).toLocaleString()}`}
+              class="inline-flex text-muted-foreground"
+              ><EditIcon class="size-3" aria-hidden="true" /></span
+            >
+          {/if}
+        </span>
         {#if message.fromMe && !message.deleted}
           <span
             role="img"
@@ -308,10 +329,15 @@ const actionCount = $derived(
     {:else if message.content?.viewOnce}
       <p class="text-muted-foreground">View-once {kind} · Open in {platformLabel}</p>
     {:else}
-      {#if ['image', 'sticker', 'audio', 'video', 'document'].includes(kind)}
+      {#if attachmentPending}
+        <div class="w-80 max-w-full">
+          <MediaSkeleton label="Restoring attachment preview" />
+        </div>
+      {:else if ['image', 'sticker', 'audio', 'video', 'document'].includes(kind)}
         {#if message.content}
           <MessageMedia
             content={message.content}
+            revision={message.editedAt ?? 0}
             url={mediaUrl}
             error={mediaError}
             onLoad={onLoadMedia}
@@ -333,10 +359,17 @@ const actionCount = $derived(
           <textarea
             bind:this={editInput}
             aria-label="Edit message text"
+            aria-keyshortcuts="Control+Enter"
             class="min-h-20 w-full rounded-lg border border-border bg-panel p-2"
             maxlength="16384"
             bind:value={editText}
             disabled={saving}
+            onkeydown={event => {
+              if (event.key === 'Enter' && event.ctrlKey && !event.isComposing) {
+                event.preventDefault()
+                void saveEdit()
+              }
+            }}
           ></textarea>
           <div class="flex gap-2">
             <Button
@@ -399,9 +432,6 @@ const actionCount = $derived(
     {/if}
     {#if actionError}
       <p role="alert" class="text-xs">{actionError}</p>
-    {/if}
-    {#if message.editedAt}
-      <span class="text-xs text-muted-foreground">edited</span>
     {/if}
     {#if reactions.length}
       <section class="flex flex-wrap gap-1" aria-label="Reactions">

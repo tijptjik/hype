@@ -1,10 +1,11 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { untrack } from 'svelte'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // COMPONENTS
 import CatalogPreview from '#lib/bits/patterns/messaging/CatalogPreview.svelte'
+import MediaSkeleton from '#lib/bits/patterns/messaging/MediaSkeleton.svelte'
 // TYPES
 import type { WhatsAppContent } from '#lib/api/services/whatsover.types.js'
 
@@ -14,11 +15,13 @@ interface Props {
   error?: string
   onLoad: () => Promise<void>
   transitionName?: string
+  revision?: number
 }
-let { content, url, error, onLoad, transitionName }: Props = $props()
+let { content, url, error, onLoad, transitionName, revision = 0 }: Props = $props()
 let preview = $state<HTMLDialogElement>()
-let frame: HTMLDivElement
+let frame = $state<HTMLDivElement>()
 let loading = $state(false)
+let attemptedRevision = ''
 const automatic = $derived(
   ['image', 'sticker', 'audio', 'video'].includes(content.kind),
 )
@@ -38,7 +41,7 @@ async function setPreview(open: boolean): Promise<void> {
   if (previewTransition) await previewTransition
   const dialog = preview
   if (!dialog || dialog.open === open) return
-  const thumbnail = frame.querySelector<HTMLImageElement>('button img')
+  const thumbnail = frame?.querySelector<HTMLImageElement>('button img')
   const enlarged = dialog.querySelector<HTMLImageElement>('img')
   const update = (): void => {
     if (open) dialog.showModal()
@@ -84,22 +87,37 @@ async function load(): Promise<void> {
   }
 }
 
-onMount(() => {
-  if (!automatic || content.viewOnce || url || error) return
-  // Fetch only media approaching the visible conversation, for either sender direction.
-  if (typeof IntersectionObserver === 'undefined') {
+$effect(() => {
+  const element = frame,
+    current = content
+  const currentRevision = JSON.stringify([
+    revision,
+    current.kind,
+    current.mimeType,
+    current.byteLength,
+    current.fileName,
+  ])
+  if (!element || !automatic || current.viewOnce || url || error || loading) return
+  if (attemptedRevision === currentRevision) return
+  const request = (): void => {
+    attemptedRevision = currentRevision
     void load()
+  }
+  // Fetch only media approaching the visible conversation, for either sender direction.
+  // Reobserve when an edit replaces media under the same native message identity.
+  if (typeof IntersectionObserver === 'undefined') {
+    untrack(request)
     return
   }
   const observer = new IntersectionObserver(
     entries => {
       if (!entries.some(entry => entry.isIntersecting)) return
       observer.disconnect()
-      void load()
+      request()
     },
-    { root: frame.closest('[role="log"]'), rootMargin: '160px 0px' },
+    { root: element.closest('[role="log"]'), rootMargin: '160px 0px' },
   )
-  observer.observe(frame)
+  observer.observe(element)
   return () => observer.disconnect()
 })
 </script>
@@ -190,35 +208,45 @@ onMount(() => {
       >
     {/if}
   {:else}
-    <div
-      class="flex flex-col items-center justify-center gap-2 rounded-lg bg-surface p-3 text-muted-foreground {content.kind ===
-        'image' ||
-      content.kind === 'sticker' ||
-      content.kind === 'video'
-        ? 'aspect-square'
-        : 'min-h-16'}"
-    >
-      <span>{label}{content.duration ? ` · ${content.duration}s` : ''}</span>
-      {#if error}
-        <Button
-          text="Retry media"
-          style="soft"
-          disabled={loading}
-          onClick={() => void load()}
-        />
-      {:else if automatic}
-        <span role="status" class="text-xs"
-          >{loading ? 'Loading…' : 'Waiting to load…'}</span
-        >
-      {:else}
-        <Button
-          text={loading ? 'Loading…' : 'Load document'}
-          style="soft"
-          disabled={loading}
-          onClick={() => void load()}
-        />
-      {/if}
-    </div>
+    {#if !error && (automatic || loading)}
+      <MediaSkeleton
+        label={`Loading ${label.toLowerCase()} preview`}
+        compact={content.kind === 'audio' || content.kind === 'document'}
+      />
+      <span role="status" class="sr-only"
+        >{loading ? 'Loading…' : 'Waiting to load…'}</span
+      >
+    {:else}
+      <div
+        class="flex flex-col items-center justify-center gap-2 rounded-lg bg-surface p-3 text-muted-foreground {content.kind ===
+          'image' ||
+        content.kind === 'sticker' ||
+        content.kind === 'video'
+          ? 'aspect-square'
+          : 'min-h-16'}"
+      >
+        <span>{label}{content.duration ? ` · ${content.duration}s` : ''}</span>
+        {#if error}
+          <Button
+            text="Retry media"
+            style="soft"
+            disabled={loading}
+            onClick={() => void load()}
+          />
+        {:else if automatic}
+          <span role="status" class="text-xs"
+            >{loading ? 'Loading…' : 'Waiting to load…'}</span
+          >
+        {:else}
+          <Button
+            text={loading ? 'Loading…' : 'Load document'}
+            style="soft"
+            disabled={loading}
+            onClick={() => void load()}
+          />
+        {/if}
+      </div>
+    {/if}
   {/if}
   {#if error}
     <p role="alert" class="break-words text-xs text-muted-foreground">{error}</p>

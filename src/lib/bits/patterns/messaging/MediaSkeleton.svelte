@@ -1,9 +1,14 @@
 <script lang="ts">
-let { label = 'Loading preview' }: { label?: string } = $props()
+let {
+  label = 'Loading preview',
+  compact = false,
+}: { label?: string; compact?: boolean } = $props()
 </script>
 <section
   aria-label={label}
-  class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-surface motion-safe:animate-pulse"
+  class="relative flex w-full items-center justify-center overflow-hidden rounded-xl bg-surface motion-safe:animate-pulse {compact
+    ? 'h-16'
+    : 'aspect-square'}"
 >
   <div aria-hidden="true" class="h-2/5 w-2/5 rounded-xl bg-base-content/5"></div>
   <div

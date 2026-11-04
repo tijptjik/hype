@@ -331,7 +331,9 @@ const chatUsername = $derived(
   username !== undefined ? username : model.profiles[model.selectedChat]?.username,
 )
 const chatPhoto = $derived(
-  photo !== undefined ? photo : model.profiles[model.selectedChat]?.photo,
+  photo ||
+    model.profiles[model.canonicalChat(model.selectedChat)]?.photo ||
+    model.profiles[model.selectedChat]?.photo,
 )
 
 /** Fold each sender's latest reaction, including removal, for one message.
@@ -366,9 +368,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
   aria-label="Conversation"
 >
   <WhatsApp.CallControls {model} compact>
-    {#snippet header(
-      actions,
-    )}
+    {#snippet header(actions)}
       <header
         class="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-panel px-4 py-3"
       >
@@ -468,7 +468,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
       {quoteError}
     </p>
   {/if}
-  <section
+  <div
     bind:this={log}
     onpointerdown={() => {
       quoteScroll = false
@@ -526,13 +526,13 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
         displayName={message.fromMe && selfProfile?.name
           ? selfProfile.name
           : model.displayName(message.sender, message.senderName)}
-        username={(message.fromMe
-          ? selfProfile
-          : model.profiles[model.canonicalChat(message.sender)]
+        username={(
+          (message.fromMe ? selfProfile : undefined) ??
+          model.profiles[model.canonicalChat(message.sender)]
         )?.username}
-        photo={(message.fromMe
-          ? selfProfile
-          : model.profiles[model.canonicalChat(message.sender)]
+        photo={(
+          (message.fromMe ? selfProfile : undefined) ??
+          model.profiles[model.canonicalChat(message.sender)]
         )?.photo}
         quoteName={model.quoteOriginal?.(message)?.fromMe
           ? 'You'
@@ -574,6 +574,9 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
         {platformLabel}
         profile={selfProfile}
         preview={model.sendPreviews?.[row.request.requestId]}
+        mediaUrl={model.sendPreviews?.[row.request.requestId]
+          ? model.mediaUrls[messageMediaKey(model.sendPreviews[row.request.requestId])]
+          : undefined}
         error={model.sendErrors?.[row.request.requestId]}
         canReset={!model.busy && model.requestId === row.request.requestId}
         onReset={model.newMessage}
@@ -589,7 +592,12 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
             Reaction delivery is uncertain. Check the conversation before trying again.
           </p>
         {/if}
-        <Button text="New message" size="sm" style="ghost" onClick={model.newMessage} />
+        <Button
+          text="Dismiss reaction attempt"
+          size="sm"
+          style="ghost"
+          onClick={model.newMessage}
+        />
       </div>
     {/if}
     {#each query ? [] : catalogOutgoing as row (row.id)}
@@ -614,7 +622,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
           : 'Select a conversation or enter a recipient below to start one.'}
       </p>
     {/if}
-  </section>
+  </div>
   <div class="shrink-0">
     <WhatsApp.MessageComposer
       {model}

@@ -1300,7 +1300,7 @@ it('preserves separate locked-recipient drafts and restores an uncertain send af
   expect(mocks.send).toHaveBeenCalledTimes(2)
 })
 
-it('edits an outgoing text inline while preserving the composer draft', async () => {
+it('saves an inline edit with Ctrl+Enter despite stale replay while preserving the composer draft', async () => {
   const original = {
     sequence: 1,
     id: 'original',
@@ -1312,12 +1312,7 @@ it('edits an outgoing text inline while preserving the composer draft', async ()
   }
   mocks.snapshot.mockResolvedValue({ ...connected, messages: [original] })
   mocks.send.mockImplementation(async request => {
-    mocks.snapshot.mockResolvedValue({
-      ...connected,
-      messages: [
-        { ...original, sequence: 2, text: request.text, editedAt: Date.now() },
-      ],
-    })
+    // The provider has accepted the edit, but its replay still contains the original.
     return { request, messageId: original.id, state: 'submitted' }
   })
   const screen = render(Console)
@@ -1329,7 +1324,17 @@ it('edits an outgoing text inline while preserving the composer draft', async ()
   await fireEvent.input(screen.getByLabelText('Edit message text'), {
     target: { value: 'After edit' },
   })
-  await fireEvent.click(screen.getByRole('button', { name: 'Save edit' }))
+  await fireEvent.keyDown(screen.getByLabelText('Edit message text'), { key: 'Enter' })
+  await fireEvent.keyDown(screen.getByLabelText('Edit message text'), {
+    key: 'Enter',
+    ctrlKey: true,
+    isComposing: true,
+  })
+  expect(mocks.send).not.toHaveBeenCalled()
+  await fireEvent.keyDown(screen.getByLabelText('Edit message text'), {
+    key: 'Enter',
+    ctrlKey: true,
+  })
   await waitFor(() => expect(mocks.send).toHaveBeenCalledOnce())
   expect(mocks.send.mock.calls[0][0]).toMatchObject({
     to: original.chat,
@@ -1340,7 +1345,7 @@ it('edits an outgoing text inline while preserving the composer draft', async ()
   expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe(
     'Unsent draft',
   )
-  expect(screen.getByText('edited')).toBeTruthy()
+  expect(screen.getByRole('img', { name: 'Edited' })).toBeTruthy()
 })
 
 it('sends with Ctrl+Enter while leaving Enter and IME composition alone', async () => {
@@ -2243,7 +2248,9 @@ it.each([
     // Exercise reaction recovery through the real adapter; the browser check covers its portaled picker.
     await model.react(original, '👍')
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'New message' })).toBeTruthy(),
+      expect(
+        screen.getByRole('button', { name: 'Dismiss reaction attempt' }),
+      ).toBeTruthy(),
     )
     expect(mocks.send.mock.calls[0][0]).toMatchObject({
       reaction: '👍',
@@ -2251,11 +2258,89 @@ it.each([
     })
     const composer = within(screen.getByRole('form', { name: 'Message composer' }))
     expect(composer.queryByRole('status')).toBeNull()
-    expect(composer.queryByRole('button', { name: 'New message' })).toBeNull()
-    await fireEvent.click(screen.getByRole('button', { name: 'New message' }))
+    expect(
+      composer.queryByRole('button', { name: 'Dismiss reaction attempt' }),
+    ).toBeNull()
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'Dismiss reaction attempt' }),
+    )
     expect((screen.getByLabelText('Message') as HTMLTextAreaElement).readOnly).toBe(
       false,
     )
     expect(mocks.send).toHaveBeenCalledOnce()
   },
 )
+
+it('recovers an old Telegram attachment receipt by native ID without showing a fake document or resending', async () => {
+  const chat = '42',
+    requestId = 'old-media-request'
+  let finish!: (page: { messages: WhatsAppMessage[]; nextBefore: null }) => void
+  const history = vi.fn(
+    () =>
+      new Promise<{ messages: WhatsAppMessage[]; nextBefore: null }>(resolve => {
+        finish = resolve
+      }),
+  )
+  mocks.snapshot.mockResolvedValue({
+    ...connected,
+    outbox: [
+      {
+        request: { requestId, to: chat, text: '', attachmentId: 'old-sticker' },
+        state: 'submitted',
+        messageId: '51',
+        createdAt: 1,
+      },
+    ],
+  })
+  const screen = renderComponent(Pane, {
+    selectedChat: chat,
+    options: {
+      platform: 'telegram',
+      recipientLocked: true,
+      transport: {
+        snapshot: mocks.snapshot,
+        connect: mocks.connect,
+        disconnect: mocks.stop,
+        send: mocks.send,
+        profile: mocks.profile,
+        upload: mocks.upload,
+        media: mocks.download,
+        voiceTicket: mocks.ticket,
+        declineCall: mocks.decline,
+        history,
+      },
+    },
+  })
+  await waitFor(() => expect(history).toHaveBeenCalledWith(chat, '52'))
+  expect(screen.getByLabelText('Restoring attachment preview')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Load document' })).toBeNull()
+  finish({
+    messages: [
+      {
+        id: '51',
+        chat,
+        sender: '99',
+        sequence: 1,
+        timestamp: 1,
+        fromMe: true,
+        text: 'Recovered sticker',
+        content: {
+          kind: 'sticker',
+          mimeType: 'image/webp',
+          text: null,
+          fileName: null,
+          byteLength: 10,
+          duration: null,
+          voiceNote: false,
+          viewOnce: false,
+          quoted: null,
+          reaction: null,
+        },
+      },
+    ],
+    nextBefore: null,
+  })
+  await waitFor(() => expect(screen.getByText('Recovered sticker')).toBeTruthy())
+  expect(screen.container.querySelector('[data-pending-send]')).toBeNull()
+  expect(mocks.send).not.toHaveBeenCalled()
+})

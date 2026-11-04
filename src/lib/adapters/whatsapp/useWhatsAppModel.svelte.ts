@@ -1,10 +1,11 @@
-import { findQuotedMessage, validTextQuote } from '#lib/messaging/quoted-message.js'
-import { messageMediaKey, messageMediaRevision } from '#lib/messaging/message-key.js'
-import { createMediaCache } from '#lib/messaging/media-cache.js'
 // SVELTE
 import { onMount } from 'svelte'
 // ADAPTERS
 import { createMediaPickerModel } from '#lib/adapters/messaging/useMediaPickerModel.svelte.js'
+// MESSAGING
+import { findQuotedMessage, validTextQuote } from '#lib/messaging/quoted-message.js'
+import { messageMediaKey, messageMediaRevision } from '#lib/messaging/message-key.js'
+import { createMediaCache } from '#lib/messaging/media-cache.js'
 // MEDIA
 import { webmOpusToOgg } from './voiceRecording.js'
 import { TelegramBrowserCall } from '#lib/adapters/telegram/call.js'
@@ -108,6 +109,9 @@ export function createWhatsAppModel(options: {
   let outbox = $state<WhatsAppSend[]>([])
   let localOutbox = $state<Record<string, WhatsAppSend>>({})
   let sendPreviews = $state<Record<string, WhatsAppMessage>>({})
+  const restoredPreviews = new Set<string>()
+  const restoredSendAttempts = new Map<string, number>()
+  let restoringSentMedia = false
   let sendErrors = $state<Record<string, string>>({})
   const displayedOutbox = $derived([
     ...Object.values(localOutbox).toReversed(),
@@ -196,6 +200,7 @@ export function createWhatsAppModel(options: {
     preview: string | undefined,
     resolve: (refresh?: boolean) => Promise<MediaCatalogItem>,
   ): () => void {
+    const cacheEpoch = cache.revision
     const id = crypto.randomUUID(),
       chat = canonicalChat(to || selectedChat)
     const quote = reply
@@ -226,6 +231,9 @@ export function createWhatsAppModel(options: {
           const url = URL.createObjectURL(blob)
           catalogUrls.add(url)
           row.url = url
+          mediaUrls[messageMediaKey({ chat, sender: 'self', id })] = url
+          if (cacheEpoch === cache.revision)
+            void cache.put(`send-media:${id}`, blob, blob.size)
           const native = messages.find(
             message =>
               message.id === row.messageId &&
@@ -267,6 +275,18 @@ export function createWhatsAppModel(options: {
           attachmentId: staged.id,
           ...(quote ? { replyTo: quote } : {}),
         }
+        const message: WhatsAppMessage = {
+          id,
+          chat,
+          sender: 'self',
+          fromMe: true,
+          sequence: 0,
+          timestamp: row.timestamp,
+          text: '',
+          content: staged.content,
+        }
+        sendPreviews[id] = message
+        if (cacheEpoch === cache.revision) void cache.put(`send-preview:${id}`, message)
       } catch (cause) {
         row.state = 'failed'
         row.error =
@@ -469,23 +489,7 @@ export function createWhatsAppModel(options: {
       for (const message of snapshot.messages) {
         if (message.sequence > cursor) {
           // Replays contain edits/deletions too; replace the native message, preserving its newest projection.
-          const previous = messages.findIndex(
-            row =>
-              row.chat === message.chat &&
-              row.id === message.id &&
-              row.sender === message.sender,
-          )
-          if (
-            message.deleted ||
-            message.content?.viewOnce ||
-            (previous >= 0 &&
-              messageMediaRevision(messages[previous]) !==
-                messageMediaRevision(message))
-          )
-            forgetMedia(message)
-          if (previous < 0) messages.push(message)
-          else if (messages[previous].sequence < message.sequence)
-            messages[previous] = message
+          mergeMessage(message)
           cursor = message.sequence
         }
       }
@@ -537,6 +541,27 @@ export function createWhatsAppModel(options: {
         )
         if (native) {
           if (row.url) mediaUrls[messageMediaKey(native)] = row.url
+          // The picker cache also seeds native history, avoiding a second download after reload.
+          const epoch = cache.revision,
+            revision = messageMediaRevision(native),
+            key = messageMediaKey(native)
+          void cache.get<Blob>(`media:${row.item.key}`).then(blob => {
+            const current = messages.find(message => messageMediaKey(message) === key)
+            if (
+              blob &&
+              active &&
+              current &&
+              !current.deleted &&
+              !current.content?.viewOnce &&
+              messageMediaRevision(current) === revision &&
+              epoch === cache.revision
+            )
+              return cache.put(
+                `message-media:${key}`,
+                { revision, blob },
+                blob.size + revision.length,
+              )
+          })
           catalogRetries.delete(row.id)
         }
       }
@@ -568,6 +593,7 @@ export function createWhatsAppModel(options: {
         if (attempt?.state === 'submitted' && !sendingBatch) releaseSubmittedDraft()
       }
       pollError = ''
+      void restoreSentMedia(snapshot.outbox)
       void resolveProfiles()
     } catch (error) {
       if (active && revision === generation)
@@ -599,15 +625,7 @@ export function createWhatsAppModel(options: {
         const page = await api.dialogs(conversationCursor)
         if (!active || revision !== generation) return
         for (const message of page.messages) {
-          const previous = messages.findIndex(
-            row =>
-              row.chat === message.chat &&
-              row.id === message.id &&
-              row.sender === message.sender,
-          )
-          if (previous < 0) messages.push(message)
-          else if (messages[previous].sequence < message.sequence)
-            messages[previous] = message
+          mergeMessage(message)
         }
         conversationCursor = page.next
         if (!page.next || page.messages.some(message => !known.has(message.chat))) break
@@ -642,15 +660,7 @@ export function createWhatsAppModel(options: {
       const page = await api.history(chat, historyCursors[chat])
       if (!active || revision !== generation) return
       for (const message of page.messages) {
-        const previous = messages.findIndex(
-          row =>
-            row.chat === message.chat &&
-            row.id === message.id &&
-            row.sender === message.sender,
-        )
-        if (previous < 0) messages.push(message)
-        else if (messages[previous].sequence < message.sequence)
-          messages[previous] = message
+        mergeMessage(message)
       }
       historyCursors[chat] = page.nextBefore
     } catch (error) {
@@ -753,15 +763,7 @@ export function createWhatsAppModel(options: {
     )
       return null
     if (!findQuotedMessage(source, [original], canonicalChat)) return null
-    const previous = messages.findIndex(
-      message =>
-        message.chat === original.chat &&
-        message.id === original.id &&
-        message.sender === original.sender,
-    )
-    if (previous < 0) messages.push(original)
-    else if (messages[previous].sequence < original.sequence)
-      messages[previous] = original
+    mergeMessage(original)
     return findQuotedMessage(source, messages, canonicalChat)
   }
 
@@ -820,6 +822,23 @@ export function createWhatsAppModel(options: {
       if (result.state !== 'submitted')
         throw new Error(
           'Edit outcome is uncertain. Check the conversation before trying again.',
+        )
+      // Show the acknowledged edit immediately while native replay catches up, retaining its cursor.
+      if (active)
+        messages = messages.map(current =>
+          current.chat === message.chat &&
+          current.sender === message.sender &&
+          current.id === message.id &&
+          !current.deleted
+            ? {
+                ...current,
+                text: replacement,
+                ...(current.content
+                  ? { content: { ...current.content, text: replacement } }
+                  : {}),
+                editedAt: Date.now(),
+              }
+            : current,
         )
       editAttempts.delete(key)
     } finally {
@@ -916,6 +935,13 @@ export function createWhatsAppModel(options: {
           `send-preview:${request.requestId}`,
           $state.snapshot(sendPreviews[request.requestId]),
         )
+        if (request.attachmentId)
+          void cache.get<Blob>(`staged-media:${request.attachmentId}`).then(blob => {
+            if (!active || !blob) return
+            const preview = sendPreviews[request.requestId]
+            if (preview) mediaUrls[messageMediaKey(preview)] = URL.createObjectURL(blob)
+            return cache.put(`send-media:${request.requestId}`, blob, blob.size)
+          })
       }
     }
     try {
@@ -1234,6 +1260,7 @@ export function createWhatsAppModel(options: {
         fileName: file.name,
         bytes: new Uint8Array(await file.arrayBuffer()),
       })
+      if (active) void cache.put(`staged-media:${staged.id}`, file, file.size)
       if (active) {
         const item = { ...staged, name: file.name }
         if (attachment) queuedAttachments.push(item)
@@ -1391,6 +1418,29 @@ export function createWhatsAppModel(options: {
     }
   }
 
+  /** Merge a native projection and invalidate replaced or restricted media on every history path.
+   * @param message Authorized provider message, potentially an older replay.
+   * @returns Nothing; obsolete projections leave current media untouched.
+   */
+  function mergeMessage(message: WhatsAppMessage): void {
+    const previous = messages.findIndex(
+      row =>
+        row.chat === message.chat &&
+        row.id === message.id &&
+        row.sender === message.sender,
+    )
+    if (previous >= 0 && messages[previous].sequence >= message.sequence) return
+    if (
+      message.deleted ||
+      message.content?.viewOnce ||
+      (previous >= 0 &&
+        messageMediaRevision(messages[previous]) !== messageMediaRevision(message))
+    )
+      forgetMedia(message)
+    if (previous < 0) messages.push(message)
+    else messages[previous] = message
+  }
+
   /** Restore attachment/reply presentation for acknowledged sends after a view remount.
    * @param rows Authorized outbox receipts; cached data never creates an independent send.
    * @returns Completion after the bounded receipt page is hydrated.
@@ -1398,15 +1448,74 @@ export function createWhatsAppModel(options: {
   async function restoreSendPreviews(rows: WhatsAppSend[]): Promise<void> {
     await Promise.all(
       rows
-        .filter(row => !sendPreviews[row.request.requestId])
+        .filter(
+          row =>
+            !sendPreviews[row.request.requestId] &&
+            !restoredPreviews.has(row.request.requestId),
+        )
         .map(async row => {
+          restoredPreviews.add(row.request.requestId)
           const preview = await cache.get<WhatsAppMessage>(
             `send-preview:${row.request.requestId}`,
           )
-          if (active && preview && !sendPreviews[row.request.requestId])
+          if (active && preview && !sendPreviews[row.request.requestId]) {
             sendPreviews[row.request.requestId] = preview
+            const blob = await cache.get<Blob>(`send-media:${row.request.requestId}`)
+            if (active && blob && !mediaUrls[messageMediaKey(preview)])
+              mediaUrls[messageMediaKey(preview)] = URL.createObjectURL(blob)
+          }
         }),
     )
+  }
+
+  /** Recover historical attachment receipts from their exact native message, never by resending.
+   * @param rows Authorized account receipts returned by the inbox.
+   * @returns Completion after a bounded batch for the visible Telegram conversation.
+   */
+  async function restoreSentMedia(rows: WhatsAppSend[]): Promise<void> {
+    if (!active || !status.connected || !api.history || restoringSentMedia) return
+    restoringSentMedia = true
+    try {
+      const candidates = rows
+        .filter(
+          row =>
+            row.state === 'submitted' &&
+            row.request.attachmentId &&
+            /^\d+$/.test(row.messageId) &&
+            canonicalChat(row.request.to) === canonicalChat(selectedChat) &&
+            !messages.some(
+              message =>
+                message.fromMe &&
+                message.id === row.messageId &&
+                canonicalChat(message.chat) === canonicalChat(row.request.to),
+            ) &&
+            Date.now() - (restoredSendAttempts.get(row.request.requestId) ?? 0) >
+              30_000,
+        )
+        .slice(0, 3)
+      for (const row of candidates) {
+        if (!active || !status.connected) break
+        restoredSendAttempts.set(row.request.requestId, Date.now())
+        try {
+          const page = await api.history(
+            row.request.to,
+            String(Number(row.messageId) + 1),
+          )
+          if (!active) return
+          const native = page.messages.find(
+            message =>
+              message.fromMe &&
+              message.id === row.messageId &&
+              canonicalChat(message.chat) === canonicalChat(row.request.to),
+          )
+          if (native) mergeMessage(native)
+        } catch {
+          /* Keep the receipt and cached preview while the provider is unavailable. */
+        }
+      }
+    } finally {
+      restoringSentMedia = false
+    }
   }
 
   /** Remove media when the provider deletes, restricts or replaces its source.
