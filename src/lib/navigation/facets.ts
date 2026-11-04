@@ -3,6 +3,7 @@ import { m } from '#lib/i18n.js'
 // ICONS
 import FormInputIcon from 'virtual:icons/proicons/button'
 import StoreIcon from 'virtual:icons/lucide/store'
+import ChatIcon from 'virtual:icons/lucide/message-circle'
 import FileTextIcon from 'virtual:icons/proicons/file-text'
 import ImageIcon from 'virtual:icons/proicons/photo'
 import Layers3Icon from 'virtual:icons/proicons/layers'
@@ -50,7 +51,7 @@ export type ProjectFacet =
 export type LayerFacet = 'features' | 'core' | 'fields'
 
 export const ADMIN_FACET_DEFINITIONS = {
-  [ADMIN_FACETS.messaging]: { label: () => 'Messaging', icon: FileTextIcon },
+  [ADMIN_FACETS.messaging]: { label: () => 'Messaging', icon: ChatIcon },
   [ADMIN_FACETS.features]: { label: () => m.omni__title_features(), icon: MapPinIcon },
   [ADMIN_FACETS.advanced]: { label: () => m.project_advanced(), icon: SettingsIcon },
   [ADMIN_FACETS.core]: {
