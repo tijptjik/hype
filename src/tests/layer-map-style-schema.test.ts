@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LayerMetadataSchema } from '#lib/db/zod/schema/layer.js'
+import { LayerEntityFormData, LayerMetadataSchema } from '#lib/db/zod/schema/layer.js'
 import { toLayerFormInput } from '#lib/client/services/layer.js'
 import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 
@@ -48,14 +48,29 @@ describe('layer map style metadata', () => {
     )
     expect(toLayerFormInput().data.metadata).toHaveProperty('mapStyleCode', '')
   })
+
+  it('selects new layers by default when their parent project is selected', () => {
+    expect(toLayerFormInput().data.isDefaultVisible).toBe(true)
+    expect(
+      LayerEntityFormData.parse({
+        projectId: 'project',
+        i18n: {
+          en: { name: 'Layer', nameShort: 'Layer' },
+          zhHans: { name: '图层', nameShort: '图层' },
+          zhHant: { name: '圖層', nameShort: '圖層' },
+        },
+      }).isDefaultVisible,
+    ).toBe(true)
+  })
 })
 
-it.each(['compact', 'card', 'list'] as const)(
+it.each(['compact', 'card', 'list', 'map', 'default'] as const)(
   'retains the public map preference in %s profiles without exposing metadata',
   async profile => {
     const { toEntityResponseShape } = await import('#lib/api/services/layer.js')
     const row = {
       id: 'layer',
+      historicalSourceLayerId: null,
       organisationId: 'org',
       projectId: 'project',
       rank: 0,
@@ -66,10 +81,15 @@ it.each(['compact', 'card', 'list'] as const)(
       isArchived: false,
       i18n: [],
       properties: [],
-      metadata: { mapStyleCode: null, privateSetting: 'retained' },
+      metadata: {
+        mapStyleCode: null,
+        markerStyleCode: 'image-bw',
+        privateSetting: 'retained',
+      },
     }
     const result = await toEntityResponseShape(row as never, profile)
     expect(result.data).toHaveProperty('mapStyleCode', null)
+    expect(result.data).toHaveProperty('markerStyleCode', 'image-bw')
     expect(result.data).not.toHaveProperty('metadata')
   },
 )
