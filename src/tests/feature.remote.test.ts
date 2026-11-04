@@ -35,6 +35,7 @@ const {
   mockUpdateFeatureArchivedStateById,
   mockUpdateI18n,
   mockUpdateProperties,
+  mockPublishAllFeatureImagesExceptResearch,
   mockPublishAllImagesWithPublicIntent,
   mockToQueryConditions,
   mockToLookupConditions,
@@ -100,6 +101,7 @@ const {
   mockUpdateFeatureArchivedStateById: vi.fn(async (): Promise<unknown> => null),
   mockUpdateI18n: vi.fn(async () => undefined),
   mockUpdateProperties: vi.fn(async () => undefined),
+  mockPublishAllFeatureImagesExceptResearch: vi.fn(async () => true),
   mockPublishAllImagesWithPublicIntent: vi.fn(async () => undefined),
   mockToQueryConditions: vi.fn(() => ({ conditions: [], filtersToApply: {} })),
   mockToLookupConditions: vi.fn((params: unknown) => params),
@@ -300,6 +302,7 @@ vi.mock('#lib/db/services/layer.js', () => ({
 }))
 
 vi.mock('#lib/db/services/image.js', () => ({
+  publishAllFeatureImagesExceptResearch: mockPublishAllFeatureImagesExceptResearch,
   publishAllImagesWithPublicIntent: mockPublishAllImagesWithPublicIntent,
 }))
 
@@ -311,6 +314,7 @@ vi.mock('#lib/db/zod/index.js', () => ({
   },
   GetQueryParamsSchema: {},
   ListQueryParamsSchema: {},
+  PublishFeatureImagesSchema: {},
   PublishFeatureSchema: {},
   RemoveFeatureSchema: {},
 }))
@@ -458,6 +462,32 @@ describe('feature.remote authz matrix', () => {
       code: 'INSUFFICIENT_ROLE',
     })
     expect(mockListFeatures).not.toHaveBeenCalled()
+  })
+
+  it('ID traversal enforces list authorization before reading and caps every page', async () => {
+    mockAuthorizeFeatureListForContext.mockReturnValueOnce({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    await expect(
+      remote.getFeatureIds({ meta: { isAdminRequest: true, profile: 'card' } }),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(mockListFeatures).not.toHaveBeenCalled()
+    await remote.getFeatureIds({
+      pagination: { limit: 999, offset: 250 },
+      meta: { isAdminRequest: true, profile: 'card' },
+    })
+    expect(mockListFeatures).toHaveBeenCalledWith(
+      expect.anything(),
+      {},
+      expect.any(Array),
+      expect.anything(),
+      { limit: 250, offset: 250 },
+      undefined,
+      expect.objectContaining({ idsOnly: true }),
+    )
+    expect(mockGetFeatureWithRelations).not.toHaveBeenCalled()
+    expect(mockToListResponseShape).not.toHaveBeenCalled()
   })
 
   it('getFeatures allows admin-scoped unpublished list requests', async () => {
@@ -1018,6 +1048,11 @@ describe('feature.remote authz matrix', () => {
       expect.objectContaining({
         id: 'feature-1',
         state: true,
+        expectedScope: expect.objectContaining({
+          organisationId: 'org-1',
+          projectId: 'project-1',
+          layerId: 'layer-1',
+        }),
         publisherId: 'u-1',
       }),
     )
@@ -1038,33 +1073,133 @@ describe('feature.remote authz matrix', () => {
     })
   })
 
-  it('updateFeatureBulkState publishes through dedicated publish flow', async () => {
-    const result = await remote.updateFeatureBulkState({
-      id: 'feature-1',
-      field: 'isPublished',
-      value: true,
-      meta: { isAdminRequest: true },
+  it('publishFeatureImages publishes active non-research images when allowed', async () => {
+    const result = await remote.publishFeatureImages({ id: 'feature-1' })
+
+    expect(mockPublishAllFeatureImagesExceptResearch).toHaveBeenCalledWith(
+      expect.any(Object),
+      'feature-1',
+      'u-1',
+      expect.objectContaining({
+        organisationId: 'org-1',
+        projectId: 'project-1',
+        layerId: 'layer-1',
+      }),
+    )
+    expect(result).toEqual({ data: { id: 'feature-1' } })
+  })
+
+  it('rejects image publication when its authorized scope changed', async () => {
+    mockPublishAllFeatureImagesExceptResearch.mockResolvedValueOnce(false)
+    await expect(
+      remote.publishFeatureImages({ id: 'feature-1' }),
+    ).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('declares bulk writes as commands rather than refreshable queries', () => {
+    expect(
+      (remote.updateFeatureBulkState as unknown as { __: { type: string } }).__.type,
+    ).toBe('command')
+  })
+
+  it('preserves input order and independent failures for a bulk command', async () => {
+    mockAuthorizeFeaturePublishForSubmission.mockReturnValueOnce({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
     })
+    const result = await remote.updateFeatureBulkState([
+      {
+        id: 'denied',
+        field: 'isPublished',
+        value: true,
+        meta: { isAdminRequest: true },
+      },
+      {
+        id: 'allowed',
+        field: 'isPublished',
+        value: true,
+        meta: { isAdminRequest: true },
+      },
+    ])
+    expect(result).toEqual([
+      expect.objectContaining({ id: 'denied', ok: false }),
+      expect.objectContaining({ id: 'allowed', ok: true }),
+    ])
+    expect(mockUpdateFeaturePublishedStateById).toHaveBeenCalledOnce()
+  })
+
+  it('updateFeatureBulkState publishes through dedicated publish flow', async () => {
+    const result = await remote.updateFeatureBulkState([
+      {
+        id: 'feature-1',
+        field: 'isPublished',
+        value: true,
+        meta: { isAdminRequest: true },
+      },
+    ])
 
     expect(mockUpdateFeaturePublishedStateById).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
         id: 'feature-1',
         state: true,
+        expectedScope: expect.objectContaining({
+          organisationId: 'org-1',
+          projectId: 'project-1',
+          layerId: 'layer-1',
+        }),
         publisherId: 'u-1',
       }),
     )
     // The database publication command owns image policy enforcement.
     expect(mockPublishAllImagesWithPublicIntent).not.toHaveBeenCalled()
-    expect(result).toEqual({
-      id: 'feature-1',
-      ok: true,
-      data: {
+    expect(result).toEqual([
+      {
         id: 'feature-1',
-        isPublished: true,
+        ok: true,
+        data: {
+          id: 'feature-1',
+          isPublished: true,
+        },
       },
-    })
+    ])
   })
+
+  it.each(['direct', 'bulk'])(
+    'forwards the authorized archive scope through %s commands',
+    async route => {
+      if (route === 'bulk') {
+        const context = await mockGuardedContext()
+        mockGuardedContext.mockResolvedValue({
+          ...context,
+          user: { ...context.user, superAdmin: true },
+        })
+      }
+      if (route === 'direct')
+        await remote.archiveFeature({ id: 'feature-1', state: true })
+      else
+        await remote.updateFeatureBulkState([
+          {
+            id: 'feature-1',
+            field: 'isArchived',
+            value: true,
+            meta: { isAdminRequest: true },
+          },
+        ])
+      expect(mockUpdateFeatureArchivedStateById).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          id: 'feature-1',
+          state: true,
+          expectedScope: expect.objectContaining({
+            organisationId: 'org-1',
+            projectId: 'project-1',
+            layerId: 'layer-1',
+          }),
+        }),
+      )
+    },
+  )
 
   it('archiveFeature denies when delete authz denies', async () => {
     mockAuthorizeFeatureDeleteForSubmission.mockReturnValue({

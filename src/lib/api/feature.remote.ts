@@ -5,7 +5,6 @@ import { error } from '@sveltejs/kit'
 import './resources.remote'
 // REMOTE
 import {
-  guardedBatchQuery,
   guardedBatchByIdQuery,
   guardedCommand,
   guardedForm,
@@ -74,7 +73,10 @@ import {
   updateFeaturePublishedStateById,
 } from '#lib/db/services/feature.js'
 import { probeLayerForUpdate } from '#lib/db/services/layer.js'
-import { publishAllImagesWithPublicIntent } from '#lib/db/services/image.js'
+import {
+  publishAllFeatureImagesExceptResearch,
+  publishAllImagesWithPublicIntent,
+} from '#lib/db/services/image.js'
 // SCHEMA
 import { feature } from '#lib/db/schema/index.js'
 import { FormBoolean } from '#lib/db/zod/form.js'
@@ -82,6 +84,7 @@ import {
   FeatureFormData,
   GetQueryParamsSchema,
   ListQueryParamsSchema,
+  PublishFeatureImagesSchema,
   PublishFeatureSchema,
   RemoveFeatureSchema,
 } from '#lib/db/zod/index.js'
@@ -117,6 +120,7 @@ import type {
 //
 // COMMAND
 // - publishFeature
+// - publishFeatureImages
 // - archiveFeature
 // - updateFeatureState
 // - updateFeatureBulkState
@@ -846,6 +850,7 @@ export const publishFeature = guardedCommand(
     const persisted = requireValue(
       await updateFeaturePublishedStateById(db, {
         id: featureId,
+        expectedScope: probed,
         state: params.state,
         publisherId: user.id,
       }),
@@ -855,6 +860,48 @@ export const publishFeature = guardedCommand(
     )
 
     return toBooleanStateResponseShape(persisted, 'isPublished')
+  },
+)
+
+/**
+ * Publishes every active non-research image assigned to an already published Feature.
+ * @param params The Feature id and request metadata.
+ * @returns A promise resolving to the published Feature id.
+ * @remarks Uses the same persisted hierarchy authorization as feature publication so the
+ * follow-up editor action cannot bypass project publish permissions.
+ */
+export const publishFeatureImages = guardedCommand(
+  PublishFeatureImagesSchema,
+  async (params, ctx) => {
+    const { db, user, userRoles } = ctx
+    const featureId = params.id as Id
+    const probed = (await resolveFeatureCommandProbe(db, featureId, () => {
+      throw error(404, 'FEATURE_NOT_FOUND')
+    })) as FeatureCommandProbe
+
+    ensureFeatureCommandAllowed(
+      authorizeFeaturePublishForSubmission({
+        user,
+        userRoles,
+        resource: {
+          id: probed.id,
+          organisationId: probed.organisationId,
+          projectId: probed.projectId,
+          layerId: probed.layerId,
+          resourceHubId: probed.resourceHubId,
+        },
+      }),
+      toIssueDetailMessage,
+    )
+
+    const published = await publishAllFeatureImagesExceptResearch(
+      db,
+      featureId,
+      user.id as Id,
+      probed,
+    )
+    if (!published) throw error(409, 'STALE_FEATURE_PUBLICATION_SCOPE')
+    return { data: { id: featureId } }
   },
 )
 
@@ -898,6 +945,7 @@ export const archiveFeature = guardedCommand(
     const persisted = requireValue(
       await updateFeatureArchivedStateById(db, {
         id: featureId,
+        expectedScope: probed,
         state: params.state,
       }),
       () => {
@@ -1005,6 +1053,7 @@ async function applyFeatureBulkStateField(
     const persisted = requireValue(
       await updateFeaturePublishedStateById(db, {
         id: featureId,
+        expectedScope: probed,
         state: params.value,
         publisherId: user.id,
       }),
@@ -1043,6 +1092,7 @@ async function applyFeatureBulkStateField(
     const persisted = requireValue(
       await updateFeatureArchivedStateById(db, {
         id: featureId,
+        expectedScope: probed,
         state: params.value,
       }),
       () => {

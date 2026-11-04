@@ -1,9 +1,16 @@
-import { featureAuthoringSQL } from './featureAuthoringProjection'
-import { gt } from 'drizzle-orm'
 // NANOID
 import { nanoid } from 'nanoid'
 // DRIZZLE
-import { and, eq, exists, or, sql, type InferInsertModel, type SQL } from 'drizzle-orm'
+import {
+  and,
+  eq,
+  exists,
+  gt,
+  or,
+  sql,
+  type InferInsertModel,
+  type SQL,
+} from 'drizzle-orm'
 // DB
 import {
   firstOrNull,
@@ -21,6 +28,7 @@ import {
   property,
   featurePropertyI18n,
 } from '../schema'
+import { featureAuthoringSQL } from './featureAuthoringProjection'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 import { featureLocationBrandsSQL } from './locationBrandProjection'
@@ -32,7 +40,9 @@ import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
 import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
 import { prepareFeatureFormRelations } from './locationRelations'
 // PUBLICATION
-import { publishScopedFeatureImages } from './publication.js'
+import { buildScopedFeatureImagePublication } from './publication.js'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
+import { buildFeatureCommandScopeGuard } from './featureCommandScope.js'
 // TYPES
 import type {
   Database,
@@ -47,6 +57,7 @@ import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type {
   Feature,
   FeatureDB,
+  FeatureCommandProbe,
   FeatureDBNew,
   FeatureDBPartial,
   FeatureI18nNew,
@@ -712,19 +723,23 @@ export const updateFeatureByIdWithConcurrency = async (
 
 /**
  * Toggles persisted feature publish state and updates publisher metadata.
+ * @remarks Publishing commits Feature state and eligible image-policy writes atomically.
+ * Both states recheck authorized ancestry; role grants are not re-read in the transaction.
  * @param db - The database instance.
  * @param params - The target feature id, next publish state, and optional publisher id.
- * @returns The updated feature row or `undefined` when the feature is missing.
+ * @param params.expectedScope - Persisted ancestry used to authorize the command.
+ * @returns The updated row, or `undefined` for missing, moved or skipped targets.
  */
 export const updateFeaturePublishedStateById = async (
   db: Database,
   params: {
     id: Id
+    expectedScope: Omit<FeatureCommandProbe, 'id'>
     state: boolean
     publisherId?: Id | null
   },
 ): Promise<FeatureDB | undefined> => {
-  const [updated] = await db
+  const updateState = db
     .update(feature)
     .set({
       isPublished: params.state,
@@ -734,27 +749,38 @@ export const updateFeaturePublishedStateById = async (
     .where(eq(feature.id, params.id))
     .returning()
 
-  if (updated && params.state) {
-    await publishScopedFeatureImages(
-      db,
-      { kind: 'feature', id: params.id },
-      params.publisherId,
-    )
-  }
-
-  return updated as FeatureDB | undefined
+  // Recheck authorized ancestry for both states; assert the write before image policy runs.
+  const results = await executeRevisionBatch(
+    db,
+    buildFeatureCommandScopeGuard(db, params.id, params.expectedScope),
+    [
+      updateState,
+      prepareRevisionCheck(db, sql`changes() = 1`),
+      ...(params.state
+        ? buildScopedFeatureImagePublication(
+            db,
+            { kind: 'feature', id: params.id },
+            params.publisherId,
+          )
+        : []),
+    ],
+  )
+  return results ? (results[0] as FeatureDB[])[0] : undefined
 }
 
 /**
  * Toggles persisted feature archived state.
  * @param db - The database instance.
  * @param params - The target feature id and next archived state.
- * @returns The updated feature row or `undefined` when the feature is missing.
+ * @param params.expectedScope Persisted ancestry used to authorize the command.
+ * @returns Updated Feature, or undefined for a missing, moved or skipped target.
+ * @remarks Scope is rechecked in the UPDATE statement; role grants are not re-read.
  */
 export const updateFeatureArchivedStateById = async (
   db: Database,
   params: {
     id: Id
+    expectedScope: Omit<FeatureCommandProbe, 'id'>
     state: boolean
   },
 ): Promise<FeatureDB | undefined> => {
@@ -763,7 +789,12 @@ export const updateFeatureArchivedStateById = async (
     .set({
       isArchived: params.state,
     })
-    .where(eq(feature.id, params.id))
+    .where(
+      and(
+        eq(feature.id, params.id),
+        buildFeatureCommandScopeGuard(db, params.id, params.expectedScope),
+      ),
+    )
     .returning()
 
   return updated as FeatureDB | undefined
