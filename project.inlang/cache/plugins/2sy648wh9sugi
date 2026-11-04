@@ -1804,7 +1804,7 @@ function flattenMessageKeys(json) {
   };
   const complex = (key, items, inLegacy, lenient, inObject) => {
     const [first, ...later] = items;
-    const { declarations, selectors, match, ...rest } = first;
+    const { declarations, selectors, match, description, ...rest } = first;
     const isComplexEntry = (item) => isComplexMessage([item]);
     const split = inObject || isComplexMessageObject(rest["0"]) || // a complex message in it, e.g. `a.0.x`
     Object.values(rest).some(
@@ -1820,9 +1820,12 @@ function flattenMessageKeys(json) {
       key,
       [
         Object.fromEntries(
-          Object.entries({ declarations, selectors, match }).filter(
-            ([, part]) => part !== void 0
-          )
+          Object.entries({
+            declarations,
+            selectors,
+            match,
+            description
+          }).filter(([, part]) => part !== void 0)
         )
       ],
       inLegacy,
@@ -2185,7 +2188,9 @@ function isNumber(value) {
 
 // src/import-export/importFiles.ts
 var importFiles = async ({
-  files
+  files,
+  settings,
+  sdkCapabilities
 }) => {
   const bundles = [];
   const bundlesById = /* @__PURE__ */ new Map();
@@ -2207,6 +2212,17 @@ var importFiles = async ({
         file.locale,
         value
       );
+      if (sdkCapabilities?.includes("bundle-description") && file.locale === settings.baseLocale) {
+        const descriptions = typeof value === "string" ? [] : value.flatMap((entry) => {
+          if (entry.description === void 0) return [];
+          if (typeof entry.description !== "string")
+            throw new Error(`Invalid description for "${key}"`);
+          return [entry.description];
+        });
+        if (new Set(descriptions).size > 1)
+          throw new Error(`Conflicting descriptions for "${key}"`);
+        result.bundle.description = descriptions[0] ?? null;
+      }
       messages.push(result.message);
       const start = variants.length;
       variants.push(...result.variants);
@@ -2225,6 +2241,11 @@ var importFiles = async ({
         bundles.push(result.bundle);
         bundlesById.set(result.bundle.id, result.bundle);
       } else {
+        if (result.bundle.description !== void 0) {
+          if (existingBundle.description !== void 0 && existingBundle.description !== result.bundle.description)
+            throw new Error(`Conflicting descriptions for "${key}"`);
+          existingBundle.description = result.bundle.description;
+        }
         existingBundle.declarations = mergeDeclarations(
           existingBundle.declarations,
           result.bundle.declarations
@@ -3481,6 +3502,7 @@ function rowsFromImport(imported) {
       continue;
     bundles.set(bundle.id, {
       id: bundle.id,
+      ...bundle.description !== void 0 ? { description: bundle.description } : {},
       // an upsert keeps what isn't provided
       declarations: bundle.declarations ?? bundles.get(bundle.id)?.declarations ?? []
     });
@@ -3657,8 +3679,12 @@ var exportFiles = async (args) => keepUnchangedJsonEntries({
   exported: await exportWholeFiles(args),
   files: args.files,
   settings: args.settings,
-  importFiles,
-  exportFiles: exportWholeFiles,
+  importFiles: (input) => importFiles({ ...input, sdkCapabilities: args.sdkCapabilities }),
+  exportFiles: (input) => exportWholeFiles({
+    ...input,
+    files: args.files,
+    sdkCapabilities: args.sdkCapabilities
+  }),
   splitKey: flatKeyPath(args.messages)
 });
 function flatKeyPath(messages) {
@@ -3679,8 +3705,41 @@ function flatKeyPath(messages) {
     return path;
   };
 }
-var exportWholeFiles = async ({ bundles, messages, variants, settings }) => {
+var exportWholeFiles = async ({
+  bundles,
+  messages,
+  variants,
+  settings,
+  sdkCapabilities,
+  files: existingFiles
+}) => {
   const files = {};
+  const fileDescriptions = /* @__PURE__ */ new Map();
+  for (const file of existingFiles ?? []) {
+    if (sdkCapabilities?.includes("bundle-description") && file.locale === settings.baseLocale)
+      continue;
+    let previous;
+    try {
+      previous = JSON.parse(new TextDecoder().decode(file.content));
+    } catch {
+      continue;
+    }
+    for (const [id, value] of flattenMessageKeys(previous)) {
+      if (!Array.isArray(value)) continue;
+      const descriptions = value.flatMap(
+        (entry) => typeof entry.description === "string" ? [entry.description] : []
+      );
+      if (new Set(descriptions).size > 1)
+        throw new Error(
+          `Conflicting file descriptions for "${id}" in ${file.locale}; keep one description before editing`
+        );
+      if (descriptions[0] !== void 0)
+        fileDescriptions.set(
+          JSON.stringify([id, file.locale]),
+          descriptions[0]
+        );
+    }
+  }
   const variantsByMatches = /* @__PURE__ */ new Map();
   for (const message of messages) {
     variantsByMatches.set(message.id, /* @__PURE__ */ new Map());
@@ -3704,15 +3763,17 @@ var exportWholeFiles = async ({ bundles, messages, variants, settings }) => {
   }
   for (const message of messages) {
     const bundle = bundlesById.get(message.bundleId);
-    (files[message.locale] ??= /* @__PURE__ */ new Map()).set(
-      message.bundleId,
-      serializeVariants(
-        bundle,
-        message,
-        variantsByMessage.get(message.id),
-        bundlesWithComplexMessage.has(message.bundleId)
-      )
+    const description = sdkCapabilities?.includes("bundle-description") && message.locale === settings.baseLocale ? bundle?.description : fileDescriptions.get(
+      JSON.stringify([message.bundleId, message.locale])
     );
+    const serialized = serializeVariants(
+      bundle,
+      message,
+      variantsByMessage.get(message.id),
+      bundlesWithComplexMessage.has(message.bundleId),
+      description
+    );
+    (files[message.locale] ??= /* @__PURE__ */ new Map()).set(message.bundleId, serialized);
   }
   const result = [];
   for (const locale in files) {
@@ -3741,8 +3802,8 @@ var exportWholeFiles = async ({ bundles, messages, variants, settings }) => {
 function isPlainMessage(message, variants) {
   return message.selectors.length === 0 && variants.length === 1 && variants[0].matches.length === 0;
 }
-function serializeVariants(bundle, message, variants, bundleHasComplexMessage) {
-  if (isPlainMessage(message, variants) && (bundleHasComplexMessage || bundle.declarations.some((d) => d.type !== "input-variable") === false)) {
+function serializeVariants(bundle, message, variants, bundleHasComplexMessage, description) {
+  if (description == null && isPlainMessage(message, variants) && (bundleHasComplexMessage || bundle.declarations.some((d) => d.type !== "input-variable") === false)) {
     return serializePattern(variants[0].pattern);
   }
   const selectors = orderSelectors(
@@ -3770,6 +3831,7 @@ function serializeVariants(bundle, message, variants, bundleHasComplexMessage) {
   }
   return [
     {
+      ...description != null ? { description } : {},
       // naively adding all declarations, even if unused in the variants
       // can be optimized later.
       declarations: [
@@ -3913,6 +3975,7 @@ function serializeDeclaration(declaration) {
 // src/plugin.ts
 var plugin2 = {
   key: PLUGIN_KEY,
+  supportsBundleDescriptions: true,
   // legacy v2 stuff for backwards compatibility
   // given that most people don't have a major version
   // pinning in their settings
