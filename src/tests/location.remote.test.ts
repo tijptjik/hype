@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
 import type { UserRoleDisco } from '#lib/types.js'
 import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
@@ -211,7 +211,11 @@ import {
   rejectLocationIdentityReview,
 } from '#lib/api/locationIdentity.remote.js'
 
+afterEach(() => vi.unstubAllEnvs())
+
 beforeEach(() => {
+  // Exercise hosted API authorization independently of the development endpoint.
+  vi.stubEnv('DEV', false)
   vi.clearAllMocks()
   mocks.rejectedSourceIds.mockResolvedValue(new Set())
   mocks.rejectIdentity.mockResolvedValue({ status: 'rejected' })
@@ -788,7 +792,7 @@ describe('Location adoption review API boundaries', () => {
     })
     expect(mocks.proposeReview).not.toHaveBeenCalled()
     mocks.readReview.mockResolvedValue({
-      proposal: { candidateRevisionId: 'retained-candidate' },
+      proposal: { candidateRevisionId: 'retained-candidate', evidence: {} },
     })
     mocks.proposeReview.mockResolvedValue({
       proposal: { id: 'new-assessment' },
@@ -1259,6 +1263,7 @@ describe('standalone Location reads', () => {
     expect(mocks.directory).toHaveBeenCalledWith(mocks.context.db, {
       q: 'shop',
       scope: 'client-cache-only',
+      restrictToOrganisation: false,
     })
   })
   it('rejects project discovery and private details before reading facts', async () => {

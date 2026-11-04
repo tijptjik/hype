@@ -204,13 +204,14 @@ describe('surface context boundaries', () => {
       'admin',
     )
     const admin = new AdminCtx(view)
-    admin.setResourceType(FirstClassResource.feature)
+    // Organisation initialization awaits a request; Feature routes own their reads.
+    admin.setResourceType(FirstClassResource.organisation)
     let finish!: () => void
     const firstRequest = new Promise<void>(resolve => {
       finish = resolve
     })
     const refresh = vi
-      .spyOn(view.queries, 'refreshFeatures')
+      .spyOn(view.queries, 'refreshOrganisations')
       .mockImplementationOnce(() => firstRequest)
       .mockResolvedValue(undefined)
     const initializing = admin.init()

@@ -115,7 +115,7 @@ describe('default map selection boundary', () => {
       conditions: { isArchived: false, isPublished: true },
       pagination: { limit: 250, afterId: 'a' },
       sorting: { sortBy: 'id', sortOrder: 'asc' },
-      meta: { isAdminRequest: false, profile: 'default' },
+      meta: { isAdminRequest: false, profile: 'default', scope: meta.scope },
     })
   })
 })
