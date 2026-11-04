@@ -38,7 +38,7 @@ it('previews a latest-source record without canonical collection support or fabr
   expect(facts.phoneNumber).toEqual(['+85236158777'])
   expect(facts.location.address).toMatchObject({
     status: 'unresolved',
-    records: {},
+    rawSource: {},
     address2dId: null,
     fallbackDisplay: { en: '8 Russell St' },
   })
