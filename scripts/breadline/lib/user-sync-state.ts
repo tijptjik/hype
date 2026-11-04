@@ -13,7 +13,7 @@ import {
 import { dirname, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 // SYNC
-import { emptyUserSyncLocalState, type UserSyncLocalState } from './user-sync'
+import { emptyUserSyncLocalState, type UserSyncLocalState } from './user-sync-contract'
 
 /** Read private sync state, defaulting only when no accepted file exists.
  * @param path Private state file.

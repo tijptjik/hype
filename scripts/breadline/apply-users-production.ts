@@ -13,14 +13,12 @@ import {
   userSyncHash,
   type UserSyncPlan,
 } from './lib/user-sync'
-import { applyUserSyncRemote, type UserSyncJournal } from './lib/user-sync-remote'
+import type { UserSyncJournal } from './lib/user-sync-remote'
 import {
   lockUserSyncState,
   readUserSyncState,
   writeUserSyncState,
 } from './lib/user-sync-state'
-// TYPES
-import type { D1Database } from '@cloudflare/workers-types'
 
 /**
  * Apply an explicitly hashed production plan and promote its accepted local baseline.
@@ -103,44 +101,56 @@ async function main(): Promise<void> {
       }),
       { mode: 0o600 },
     )
-    const { getPlatformProxy } = await import('wrangler')
-    const proxy = await getPlatformProxy<{ DB: D1Database }>({
-      configPath,
-      envFiles: [],
-      persist: false,
-      remoteBindings: true,
+    // Wrangler requires Node for remote bindings; keep Bun's SQLite baseline in this process.
+    const operatorPath = resolve(directory, 'apply-users-remote.mjs')
+    const build = await Bun.build({
+      entrypoints: [resolve('scripts/breadline/apply-users-remote.ts')],
+      target: 'node',
+      external: ['wrangler'],
+      outdir: directory,
+      naming: 'apply-users-remote.mjs',
     })
-    try {
-      const remote = await applyUserSyncRemote(
-        proxy.env.DB,
-        plan,
+    if (!build.success) throw new Error('Remote operator build failed')
+    const remoteReceiptPath = resolve(directory, `${randomUUID()}.remote.json`)
+    const child = Bun.spawn(
+      [
+        'node',
+        operatorPath,
+        resolve(required('--plan')),
         required('--target'),
-        samePlan ? journal : null,
-        progress => writeUserSyncState(journalPath, progress),
-      )
-      // Persist remote completion before touching the local baseline so a retry can recover.
-      const receiptPath = resolve(directory, `${randomUUID()}.receipt.json`)
-      writeFileSync(
-        receiptPath,
-        JSON.stringify(
-          {
-            ...remote,
-            beforeImage,
-            targetIdentity: plan.targetIdentity,
-            completedAt: new Date().toISOString(),
-          },
-          null,
-          2,
-        ),
-        { mode: 0o600, flag: 'wx' },
-      )
-      if (!accepted && (plan.mutations.length || plan.checkpointChanged))
-        applyUserSync(db, plan, state, samePlan)
-      if (!accepted) writeUserSyncState(statePath, acceptUserSyncPlan(plan, state))
-      console.log(JSON.stringify({ ...remote, receiptPath, acceptedLocally: true }))
-    } finally {
-      await proxy.dispose()
+        hash,
+        configPath,
+        journalPath,
+        remoteReceiptPath,
+      ],
+      { stdout: 'inherit', stderr: 'inherit' },
+    )
+    if ((await child.exited) !== 0) throw new Error('Remote operator stopped')
+    const remote = JSON.parse(readFileSync(remoteReceiptPath, 'utf8')) as {
+      planHash: string
+      mutations: number
     }
+    if (remote.planHash !== hash) throw new Error('Remote receipt differs')
+    // Persist remote completion before touching the local baseline so a retry can recover.
+    const receiptPath = resolve(directory, `${randomUUID()}.receipt.json`)
+    writeFileSync(
+      receiptPath,
+      JSON.stringify(
+        {
+          ...remote,
+          beforeImage,
+          targetIdentity: plan.targetIdentity,
+          completedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      ),
+      { mode: 0o600, flag: 'wx' },
+    )
+    if (!accepted && (plan.mutations.length || plan.checkpointChanged))
+      applyUserSync(db, plan, state, samePlan)
+    if (!accepted) writeUserSyncState(statePath, acceptUserSyncPlan(plan, state))
+    console.log(JSON.stringify({ ...remote, receiptPath, acceptedLocally: true }))
   } finally {
     db.close()
     release()

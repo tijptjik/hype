@@ -1,7 +1,17 @@
-// NODE
-import { createHash } from 'node:crypto'
 // BUN
 import type { Database } from 'bun:sqlite'
+// SHARED CONTRACT
+import {
+  canonicalJson,
+  userSyncHash,
+  USER_SYNC_RUNTIME_TABLES,
+  emptyUserSyncLocalState,
+  type Row,
+  type SourceUserSnapshot,
+  type UserSyncSource,
+  type UserSyncPlan,
+  type UserSyncLocalState,
+} from './user-sync-contract'
 // IMPORT POLICY
 import {
   planUsers,
@@ -16,66 +26,32 @@ import {
   type OrganisationRoleGrants,
 } from '../../../src/lib/roles/organisation'
 
+export {
+  canonicalJson,
+  userSyncHash,
+  USER_SYNC_RUNTIME_TABLES,
+  emptyUserSyncLocalState,
+} from './user-sync-contract'
+export type {
+  Row,
+  SourceUserSnapshot,
+  UserSyncSource,
+  UserSyncMutation,
+  UserSyncPlan,
+  UserSyncLocalState,
+} from './user-sync-contract'
+
 // ═══════════════════════
 // TABLE OF CONTENTS
 // 1. SNAPSHOTS AND HASHES
 // 2. RECONCILIATION PLAN
 // 3. TRANSACTIONAL LOCAL APPLICATION
 
-type Row = Record<string, string | number | null>
-export type SourceUserSnapshot = { user: LegacyUser; related: Record<string, Row[]> }
-export type UserSyncSource = {
-  complete: boolean
-  snapshotAt: string
-  rows: SourceUserSnapshot[]
-}
-export type UserSyncMutation = {
-  table: string
-  key: Row
-  before: Row | null
-  after: Row | null
-}
-export type UserSyncPlan = {
-  version: 2
-  targetIdentity: string
-  organisationId: string
-  baselineHash: string
-  sourceHash: string
-  sourceSnapshotAt: string
-  previousPlanHash: string | null
-  checkpointChanged: boolean
-  mutations: UserSyncMutation[]
-  exceptions: Array<{ sourceUserIds: number[]; reason: string }>
-  counts: {
-    source: number
-    excluded: number
-    created: number
-    updated: number
-    removed: number
-    restored: number
-  }
-}
-export const USER_SYNC_RUNTIME_TABLES = [
-  'user',
-  'account',
-  'breadlineImportUser',
-  'breadlineImportIdentity',
-  'organisationRole',
-] as const
 const tables = [
   ...USER_SYNC_RUNTIME_TABLES,
   'breadlineUserSyncState',
   'breadlineUserSyncCheckpoint',
 ] as const
-export type UserSyncLocalState = { version: 1; rows: Row[]; checkpoint: Row | null }
-/** Create an empty private sync baseline.
- * @returns Local-only source state without a checkpoint.
- */
-export const emptyUserSyncLocalState = (): UserSyncLocalState => ({
-  version: 1,
-  rows: [],
-  checkpoint: null,
-})
 const keys: Record<string, string[]> = {
   user: ['id'],
   account: ['id'],
@@ -84,28 +60,6 @@ const keys: Record<string, string[]> = {
   organisationRole: ['organisationId', 'userId'],
   breadlineUserSyncState: ['sourceUserId'],
   breadlineUserSyncCheckpoint: ['id'],
-}
-
-/** Canonicalize nested values for stable fingerprints independent of property order.
- * @param value JSON-compatible input.
- * @returns Deterministic JSON text.
- */
-export function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
-  if (value && typeof value === 'object')
-    return `{${Object.entries(value)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`)
-      .join(',')}}`
-  return JSON.stringify(value)
-}
-
-/** Hash private state without including its values in logs.
- * @param value JSON-compatible state.
- * @returns SHA-256 fingerprint.
- */
-export function userSyncHash(value: unknown): string {
-  return createHash('sha256').update(canonicalJson(value)).digest('hex')
 }
 
 /** Read the last accepted local target state; never connects to production.

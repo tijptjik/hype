@@ -4,7 +4,7 @@ import {
   userSyncHash,
   type UserSyncPlan,
   type UserSyncMutation,
-} from './user-sync'
+} from './user-sync-contract'
 // TYPES
 import type { D1Database } from '@cloudflare/workers-types'
 
