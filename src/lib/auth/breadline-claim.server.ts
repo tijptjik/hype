@@ -47,7 +47,8 @@ async function candidateForEmail(
     FROM breadlineImportIdentity i
     JOIN breadlineImportUser o ON o.userId = i.userId
     JOIN user u ON u.id = o.userId
-    WHERE i.email = ? AND o.state = 'unclaimed'`)
+    WHERE i.email = ? AND o.state = 'unclaimed'
+      AND i.active=1`)
     .bind(email)
     .all<Candidate>()
   if (found.results.length > 1) throw unavailable()
@@ -92,7 +93,8 @@ export async function claimBreadlineUser(
     db
       .prepare(`UPDATE breadlineImportUser SET state = 'claimed', claimedEmail = ?, claimedAt = ?, claimKey = ?
       WHERE userId = ? AND state = 'unclaimed'
-      AND EXISTS (SELECT 1 FROM breadlineImportIdentity WHERE userId = ? AND email = ?)
+      AND EXISTS (SELECT 1 FROM breadlineImportIdentity i WHERE userId = ? AND email = ?
+        AND i.active=1)
       AND EXISTS (SELECT 1 FROM user WHERE id = ? AND isArchived = 0 AND isAnonymous = 0 AND email IS NULL)
       AND NOT EXISTS (SELECT 1 FROM account WHERE userId = ?)
       AND NOT EXISTS (SELECT 1 FROM session WHERE userId = ?)

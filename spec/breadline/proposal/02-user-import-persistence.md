@@ -23,3 +23,10 @@ email rule uses the current hub domain, and the write checks both the policy rev
 and parent revision before any child mutation commits. Stale policy or parent revisions
 return a conflict without changing any relation. Translation or policy write failures
 roll back the entire form.
+
+## Imported identity eligibility
+
+The durable source crosswalk retains source IDs when an imported identity becomes
+inactive. Verified-login candidate selection and the atomic claim update both require
+the source identity to remain active. An inactive email cannot claim ownership; a
+surviving eligible identity for the same durable user can still complete the claim.

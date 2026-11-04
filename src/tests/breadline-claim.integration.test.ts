@@ -18,6 +18,8 @@ import {
   breadlineImportUser,
   breadlineImportIdentity,
 } from '#lib/db/schema/user.js'
+// FIXTURES
+import { createAuthHookTables } from './fixtures/authDatabase.js'
 // TYPES
 import type { D1Database } from '@cloudflare/workers-types'
 
@@ -43,6 +45,7 @@ beforeEach(() => {
   sqlite = new DatabaseSync(':memory:')
   sqlite.exec('PRAGMA foreign_keys=ON')
   for (const statement of ddl) sqlite.exec(statement)
+  createAuthHookTables(sqlite)
   sqlite
     .prepare(
       `INSERT INTO user (id, username, telephone, isArchived, isAnonymous, createdAt, updatedAt) VALUES ('latent', 'latent-runner', '+85291234567', 0, 0, 1, 1)`,
@@ -179,6 +182,25 @@ function cookies(response: Response): Headers {
 }
 
 describe('Breadline first verified login', () => {
+  it('rejects a deleted source identity and permits the surviving eligible identity', async () => {
+    const { DB } = await setup()
+    sqlite.exec('UPDATE breadlineImportIdentity SET active=0 WHERE sourceUserId=1')
+    const proof = {
+      userId: 'latent',
+      email: 'first@example.com',
+      name: 'Runner',
+      image: null,
+      method: 'magic-link' as const,
+    }
+    await expect(claimBreadlineUser(DB, proof)).rejects.toThrow()
+    expect(ownership()).toMatchObject({ state: 'unclaimed' })
+    await claimBreadlineUser(DB, { ...proof, email: 'second@example.com' })
+    expect(ownership()).toMatchObject({
+      state: 'claimed',
+      claimedEmail: 'second@example.com',
+    })
+  })
+
   it('claims the existing user ID with one proven provider and resolves its real session', async () => {
     const { auth, social } = await setup()
     const response = await social()
