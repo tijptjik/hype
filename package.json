@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "vite dev",
+    "dev:messaging-notifications": "wrangler dev --config workers/messaging-notifications/wrangler.jsonc --local --ip 127.0.0.1 --port 8796 --persist-to .wrangler/state",
     "dev:agent": "bun run scripts/dev/agent.ts",
     "dev:cf:preview": "CLOUDFLARE_ENV=preview vite dev",
     "dev:cf:prod": "CLOUDFLARE_ENV=production vite dev",
@@ -192,6 +193,7 @@
   ],
   "dependencies": {
     "@better-auth/passkey": "^1.7.12",
+    "@block65/webcrypto-web-push": "^2.0.0",
     "@chenglou/pretext": "^1.0.0",
     "@emeraldpay/hashicon": "^0.5.2",
     "@internationalized/date": "3.12.4",
