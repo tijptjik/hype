@@ -1,10 +1,15 @@
 // CONTENT LOCALE BOUNDARIES
-import { adaptContentMap, contentFormKey, contentStorageTag } from '#lib/i18n/contentRecords.js'
+import {
+  adaptContentMap,
+  contentFormKey,
+  contentStorageTag,
+} from '#lib/i18n/contentRecords.js'
 import { FeatureI18nBase } from '#lib/db/zod/schema/feature.js'
 import type { RemoteForm, RemoteFormInput } from '$app/server'
 
 // REMOTE
 import { featureForm, getFeatureForImport } from '#lib/api/feature.remote.js'
+import { refreshRemoteQuery } from '#lib/remote/index.js'
 // I18N
 // SERVICES
 import { toFeatureFormInput } from '#lib/client/services/feature.js'
@@ -262,16 +267,23 @@ export function canDownloadFeatureResolutionResults(
  *
  * @param importCtx - Active import context.
  * @param ignoreMissingFeatureIds - Whether supplied unknown IDs should be accepted.
- * @returns Initialized resolution rows.
+ * @returns Initialized resolution rows, or an empty array for superseded work.
+ * @remarks Only the newest refresh for unchanged input identities publishes state.
  */
 export async function refreshFeatureResolution(
   importCtx: ImportCtx,
   ignoreMissingFeatureIds: boolean,
 ): Promise<FeatureResolutionData[]> {
+  const operation = {}
+  resolutionRefreshes.set(importCtx, operation)
+  const inputsCurrent = captureResolutionInputs(importCtx)
+  const isCurrent = (): boolean =>
+    resolutionRefreshes.get(importCtx) === operation && inputsCurrent()
   try {
     const results = await initializeFeatureResolution(importCtx, {
       ignoreMissingFeatureIds,
     })
+    if (!isCurrent()) return []
     importCtx.setFeatureResolutionResults(results)
     importCtx.updateFeatureResolution({
       total: results.length,
@@ -279,6 +291,7 @@ export async function refreshFeatureResolution(
     })
     return results
   } catch (error) {
+    if (!isCurrent()) return []
     console.error('Failed to initialize feature resolution:', error)
     importCtx.setFeatureResolutionResults([])
     importCtx.updateFeatureResolution({
@@ -289,12 +302,32 @@ export async function refreshFeatureResolution(
   }
 }
 
+// Weak ownership prevents completed imports from being retained by request ordering.
+const resolutionRefreshes = new WeakMap<ImportCtx, object>()
+
+/**
+ * Captures the input identities replaced when an import is reset or remapped.
+ * @param importCtx Import whose pending work must remain scoped to its input.
+ * @returns A read-only check for whether the input snapshot is still current.
+ */
+function captureResolutionInputs(importCtx: ImportCtx): () => boolean {
+  const data = importCtx.getData()
+  const headers = importCtx.getHeaders()
+  const columns = importCtx.getColumns()
+  return () =>
+    importCtx.getData() === data &&
+    importCtx.getHeaders() === headers &&
+    importCtx.getColumns() === columns
+}
+
 /**
  * Processes all pending feature-resolution rows in order.
  *
  * @param importCtx - Active import context.
  * @param results - Snapshot of current resolution rows.
  * @returns Resolves after all pending rows have been processed.
+ * @remarks Replaced inputs/results stop further submissions and state publication;
+ * an already submitted server request cannot be rolled back by this client guard.
  */
 export async function processFeatureResolutionQueue(
   importCtx: ImportCtx,
@@ -302,17 +335,29 @@ export async function processFeatureResolutionQueue(
 ): Promise<void> {
   if (importCtx.getFeatureResolution().isProcessing) return
 
+  const inputsCurrent = captureResolutionInputs(importCtx)
+  const retainedResults = importCtx.getFeatureResolution().results
+  const isCurrent = (): boolean =>
+    inputsCurrent() && importCtx.getFeatureResolution().results === retainedResults
+
   importCtx.updateFeatureResolution({ isProcessing: true, currentIndex: 0 })
 
   for (let index = 0; index < results.length; index += 1) {
+    if (!isCurrent()) return
     if (results[index].status !== 'pending') continue
 
     importCtx.updateFeatureResolution({ currentIndex: index })
 
     try {
-      const updatedResult = await processFeatureResolution(results[index], importCtx)
+      const updatedResult = await processFeatureResolution(
+        results[index],
+        importCtx,
+        isCurrent,
+      )
+      if (!isCurrent()) return
       importCtx.updateFeatureResolutionResult(index, updatedResult)
     } catch (error) {
+      if (!isCurrent()) return
       importCtx.updateFeatureResolutionResult(index, {
         ...results[index],
         status: 'error',
@@ -321,7 +366,7 @@ export async function processFeatureResolutionQueue(
     }
   }
 
-  importCtx.updateFeatureResolution({ isProcessing: false })
+  if (isCurrent()) importCtx.updateFeatureResolution({ isProcessing: false })
 }
 
 /**
@@ -760,18 +805,25 @@ function getMissingFeatureIdMessage(featureId: string): string {
   return `Feature ${featureId} is not in the database yet. Accept it to create a new feature with this id.`
 }
 
-const featureLookupCache = new Map<string, Promise<Feature | null>>()
-
 /**
- * Prime the existing-feature lookup cache with one concurrent pass so the
- * remote `query.batch(...)` transport can collapse requests by id.
+ * Read one initialization pass concurrently so the remote batch transport can group IDs.
+ * @param featureIds Submitted Feature identities, possibly repeated.
+ * @returns Results retained only by the calling initialization pass.
  */
-async function prefetchExistingFeatures(featureIds: string[]): Promise<void> {
+async function prefetchExistingFeatures(
+  featureIds: string[],
+): Promise<Map<string, Feature | null>> {
   const uniqueIds = Array.from(
     new Set(featureIds.map(featureId => featureId.trim()).filter(Boolean)),
   )
 
-  await Promise.all(uniqueIds.map(featureId => fetchExistingFeature(featureId)))
+  return new Map(
+    await Promise.all(
+      uniqueIds.map(
+        async featureId => [featureId, await fetchExistingFeature(featureId)] as const,
+      ),
+    ),
+  )
 }
 
 /**
@@ -945,6 +997,7 @@ export async function initializeFeatureResolution(
     ignoreMissingFeatureIds?: boolean
   } = {},
 ): Promise<FeatureResolutionData[]> {
+  const inputsCurrent = captureResolutionInputs(importCtx)
   const data = importCtx.getData()
   const columns = importCtx.getColumns()
   const headers = importCtx.getHeaders()
@@ -953,16 +1006,19 @@ export async function initializeFeatureResolution(
     col => col.modelType === 'Feature' && col.field === 'id',
   )
   const results: FeatureResolutionData[] = []
+  let existingFeatures = new Map<string, Feature | null>()
 
   if (featureIdColumn) {
     const featureIdColumnIndex = headers.indexOf(featureIdColumn.header)
     if (featureIdColumnIndex !== -1) {
-      await prefetchExistingFeatures(
+      existingFeatures = await prefetchExistingFeatures(
         data.map(row => row[featureIdColumnIndex]?.trim() ?? ''),
       )
     }
   }
 
+  // A reset during lookup must not merge old rows with the new import's enrichment.
+  if (!inputsCurrent()) return []
   for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
     const row = data[rowIndex]
     const submitted = extractSubmittedData(row, columns, headers)
@@ -985,7 +1041,7 @@ export async function initializeFeatureResolution(
         const featureId = submitted.feature?.id
 
         try {
-          existing = (await fetchExistingFeature(featureId)) ?? undefined
+          existing = existingFeatures.get(featureId.trim()) ?? undefined
           if (!existing) {
             hasProvidedIdWithoutMatch = true
             acceptProvidedIdAsCreate = ignoreMissingFeatureIds
@@ -1163,22 +1219,17 @@ function extractSubmittedData(
 }
 
 /**
- * Fetch existing feature via the remote feature query.
+ * Fetch current Feature data for import comparison and post-save confirmation.
+ * @param featureId Exact Feature identity to reauthorize and read.
+ * @returns Current accessible Feature or null; failed reads remain retryable.
+ * @remarks Do not retain resolved promises across imports, mutations or account changes.
  */
 export async function fetchExistingFeature(featureId: string): Promise<Feature | null> {
   try {
-    if (!featureLookupCache.has(featureId)) {
-      featureLookupCache.set(
-        featureId,
-        Promise.resolve(
-          getFeatureForImport({ id: featureId, meta: { isAdminRequest: true } }),
-        ).then(result => (result.data as Feature | null | undefined) ?? null),
-      )
-    }
-
-    const featurePromise = featureLookupCache.get(featureId)
-    if (!featurePromise) throw new Error(`Feature lookup was not cached: ${featureId}`)
-    return await featurePromise
+    const result = await refreshRemoteQuery(
+      getFeatureForImport({ id: featureId, meta: { isAdminRequest: true } }),
+    )
+    return (result.data as Feature | null | undefined) ?? null
   } catch (error) {
     console.error('Error fetching existing feature:', error)
     throw error
@@ -1760,14 +1811,22 @@ function mergeI18nData(
     merged[locale] = ensureLocaleFields(merged[locale], locale)
   })
 
-  return Object.fromEntries(Object.entries(merged).map(([locale, row]) => [locale,
-    FeatureI18nBase.parse({
-      ...row, featureId, locale: contentStorageTag(locale), title: row.title ?? '',
-      titleGen: row.titleGen ?? false, description: row.description ?? null,
-      descriptionGen: row.descriptionGen ?? false, displayAddress: row.displayAddress ?? null,
-      displayAddressGen: row.displayAddressGen ?? false,
-    }),
-  ]))
+  return Object.fromEntries(
+    Object.entries(merged).map(([locale, row]) => [
+      locale,
+      FeatureI18nBase.parse({
+        ...row,
+        featureId,
+        locale: contentStorageTag(locale),
+        title: row.title ?? '',
+        titleGen: row.titleGen ?? false,
+        description: row.description ?? null,
+        descriptionGen: row.descriptionGen ?? false,
+        displayAddress: row.displayAddress ?? null,
+        displayAddressGen: row.displayAddressGen ?? false,
+      }),
+    ]),
+  )
 }
 
 /**
@@ -2231,11 +2290,18 @@ function toNumericPointGeometry(geometry: unknown): unknown {
 
 /**
  * Process a single feature resolution
+ * @param resolutionData Row approved for processing.
+ * @param importCtx Import providing merge context.
+ * @param isCurrent Checks whether this operation still owns its input and results.
+ * @returns Processed row, or the original row when superseded.
+ * @remarks Cancellation prevents subsequent requests but cannot undo a submitted write.
  */
 export async function processFeatureResolution(
   resolutionData: FeatureResolutionData,
   importCtx: ImportCtx,
+  isCurrent: () => boolean = captureResolutionInputs(importCtx),
 ): Promise<FeatureResolutionData> {
+  if (!isCurrent()) return resolutionData
   // Keep unapproved provided ids out of the batch until the user decides.
   if (resolutionData.status === 'skipped' && !resolutionData.acceptProvidedIdAsCreate) {
     return resolutionData
@@ -2248,6 +2314,7 @@ export async function processFeatureResolution(
     // Fetch existing feature if this row still resolves to an update.
     if (!isCreate && updated.submitted.feature?.id && !updated.existing) {
       const existingFeature = await fetchExistingFeature(updated.submitted.feature?.id)
+      if (!isCurrent()) return resolutionData
       updated.existing = existingFeature || undefined
     }
 
@@ -2271,6 +2338,7 @@ export async function processFeatureResolution(
     if (!isCreate && updated.merged.id) {
       try {
         const stillExists = await fetchExistingFeature(updated.merged.id)
+        if (!isCurrent()) return resolutionData
         if (!stillExists) {
           updated.status = 'error'
           updated.error = `Feature ${updated.merged.id} no longer exists and cannot be updated`
@@ -2283,7 +2351,9 @@ export async function processFeatureResolution(
       }
     }
 
+    if (!isCurrent()) return resolutionData
     const result = await submitFeature(updated.merged, isCreate)
+    if (!isCurrent()) return resolutionData
 
     if (result.success) {
       updated.status = 'success'
