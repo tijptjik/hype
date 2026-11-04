@@ -6,7 +6,7 @@ import StatsPips from '#lib/bits/custom/featureStats/components/StatsPips.svelte
 beforeEach(() => vi.useRealTimers())
 afterEach(cleanup)
 
-it('keeps native status labels and tri-state colors current without tooltip trees', async () => {
+it('keeps delegated status labels and tri-state colors current without tooltip trees', async () => {
   const view = render(StatsPips, {
     title: 'Content',
     tooltipMode: 'native',
@@ -19,9 +19,9 @@ it('keeps native status labels and tri-state colors current without tooltip tree
   expect(screen.getByRole('img', { name: 'Translation pending' }).className).toContain(
     '--pending',
   )
-  expect(screen.getByRole('img', { name: 'Published' }).getAttribute('title')).toBe(
-    'Published',
-  )
+  expect(
+    screen.getByRole('img', { name: 'Published' }).getAttribute('data-tooltip'),
+  ).toBe('Published')
   expect(view.container.querySelector('[data-tooltip-trigger]')).toBeNull()
   await view.rerender({
     title: 'Content',
