@@ -2,10 +2,66 @@
 import { describe, expect, it } from 'vitest'
 import {
   parseFloor,
+  parseFloorReference,
+  parseUnitReference,
   parseUnit,
   formatFloor,
   formatUnit,
 } from '#lib/addresses/address3d.js'
+
+it('extracts floor terms while preserving selected types for numeric references', () => {
+  expect(parseFloorReference('floor', 'UG')).toEqual({
+    floorType: 'F',
+    floorRef: '',
+    extracted: true,
+  })
+  expect(parseFloorReference('Upper ground', 'F')).toEqual({
+    floorType: 'UG',
+    floorRef: '',
+    extracted: true,
+  })
+  expect(parseFloorReference('Basement 2', 'F')).toEqual({
+    floorType: 'B',
+    floorRef: '2',
+    extracted: true,
+  })
+  expect(parseFloorReference('88/F', 'UG')).toEqual({
+    floorType: 'F',
+    floorRef: '88',
+    extracted: true,
+  })
+  expect(parseFloorReference('地庫2', 'F')).toEqual({
+    floorType: 'B',
+    floorRef: '2',
+    extracted: true,
+  })
+  expect(parseFloorReference('88', 'UG')).toEqual({
+    floorType: 'UG',
+    floorRef: '88',
+    extracted: false,
+  })
+  expect(parseFloorReference('UG3', 'F')).toEqual({
+    floorType: 'UG',
+    floorRef: '3',
+    extracted: true,
+  })
+})
+it('infers unit types without changing bare references', () => {
+  expect(parseUnitReference('Office 2', 'R')).toEqual({
+    unitRef: '2',
+    unitType: 'O',
+    extracted: true,
+  })
+  expect(parseUnitReference('Room 2', 'X')).toMatchObject({
+    unitRef: '2',
+    extracted: true,
+  })
+  expect(parseUnitReference('3B', 'X')).toEqual({
+    unitRef: '3B',
+    unitType: 'X',
+    extracted: false,
+  })
+})
 import {
   emptyFeatureAddress,
   getAddressDisplay,
@@ -17,7 +73,32 @@ import {
   EDITABLE_ADDRESS_FIELDS,
   setStructuredAddressExpression,
   setAddressExpression,
+  setAddressBlock,
+  parseBlockReference,
 } from '#lib/addresses/addressExpressions.js'
+
+it('extracts block types from complete labels and expressions', () => {
+  expect(parseBlockReference('Block', 'apartment')).toEqual({
+    blockType: 'block',
+    blockRef: '',
+    extracted: true,
+  })
+  expect(parseBlockReference('Tower A', 'block')).toEqual({
+    blockType: 'tower',
+    blockRef: 'A',
+    extracted: true,
+  })
+  expect(parseBlockReference('A座', 'tower')).toEqual({
+    blockType: 'block',
+    blockRef: 'A',
+    extracted: true,
+  })
+  expect(parseBlockReference('Bloc', 'apartment')).toEqual({
+    blockType: 'apartment',
+    blockRef: 'Bloc',
+    extracted: false,
+  })
+})
 
 describe('structured SaanSeoi address entry', () => {
   it.each([
@@ -97,8 +178,8 @@ describe('structured SaanSeoi address entry', () => {
       'unitPortion',
       'unitExpression',
       'floorExpression',
-      'blockExpression',
       'buildingName',
+      'blockExpression',
       'phaseExpression',
       'premisesName',
       'buildingNumberExpression',
@@ -124,7 +205,7 @@ it('stores room as a unit type and a portion as unitPortion, independently of th
   expect(saved.overrides.en.unitPortion).toBe('Rear part')
   expect(saved.overrides['zh-hant']?.unitPortion).toBeUndefined()
   expect(saved.source.address3dUnitId).toBeNull()
-  expect(getAddressDisplay(saved, 'en')).toBe('Rear part, Room B, 12/F, Building')
+  expect(getAddressDisplay(saved, 'en')).toBe('Rear part, Rm B, 12/F, Building')
   const withoutFloor = setStructuredAddressExpression(
     saved,
     'en',
@@ -153,7 +234,7 @@ it('rejects invented local IDs, room hierarchy levels and cross-domain type code
   }
   // R means Roof for floors and Room for units; the fields are never interchangeable.
   expect(formatFloor({ floorType: 'R', floorRef: '' }, 'en')).toBe('R')
-  expect(formatUnit({ unitType: 'R', unitRef: 'B' }, 'en')).toBe('Room B')
+  expect(formatUnit({ unitType: 'R', unitRef: 'B' }, 'en')).toBe('Rm B')
 })
 
 it('does not repeat named floor codes from source-parser references', () => {
@@ -161,4 +242,57 @@ it('does not repeat named floor codes from source-parser references', () => {
   expect(formatFloor({ floorType: 'G', floorRef: '' }, 'zhHant')).toBe('地下')
   expect(formatFloor({ floorType: 'UG', floorRef: '' }, 'en')).toBe('UG')
   expect(formatFloor({ floorType: 'B', floorRef: '2' }, 'en')).toBe('B2')
+})
+
+it.each([
+  ['Room Room 3308', undefined, '3308', 'R', 'Rm 3308'],
+  ['Rm 3308', undefined, '3308', 'R', 'Rm 3308'],
+  ['Suite St 3308', undefined, '3308', 'SU', 'St 3308'],
+  ['Shop 3308', 'R', '3308', 'R', 'Rm 3308'],
+  ['3308套房', undefined, '3308', 'SU', 'St 3308'],
+  ['ROOM-A', undefined, 'ROOM-A', 'U', 'Unit ROOM-A'],
+] as const)(
+  'normalizes %s while preserving the selected type',
+  (input, type, ref, code, display) => {
+    const parsed = parseUnit(input, type)
+    expect(parsed).toEqual({ unitRef: ref, unitType: code })
+    expect(formatUnit(parsed, 'en')).toBe(display)
+  },
+)
+
+it('stores only the reference while composing canonical units in every language', () => {
+  const address = setStructuredAddressExpression(
+    emptyFeatureAddress({ en: 'Building' }),
+    'en',
+    'unitExpression',
+    'Room Rm 3308',
+    'R',
+  )
+  expect(address.overrides.en.unitExpression).toBe('3308')
+  expect(address.unitDetails).toMatchObject({ unitRef: '3308', unitType: 'R' })
+  expect(getAddressDisplay(address, 'en')).toBe('Rm 3308, Building')
+  expect(formatUnit(address.unitDetails!, 'zhHant')).toBe('3308房')
+})
+
+it('shares block references between Chinese scripts while preserving local type and order', () => {
+  let address = emptyFeatureAddress()
+  address = setAddressBlock(address, 'en', 'block', 'A', true)
+  address = setAddressOverride(address, 'zhHans', 'blockType', 'tower')
+  address = setAddressOverride(address, 'zhHans', 'blockTypeBeforeNumber', true)
+  address = setAddressBlock(address, 'zhHant', 'block', '2', false)
+  expect(getAddressLocale(address, 'zhHant')).toMatchObject({
+    blockRef: '2',
+    blockExpression: '2座',
+  })
+  expect(getAddressLocale(address, 'zhHans')).toMatchObject({
+    blockRef: '2',
+    blockType: 'tower',
+    blockTypeBeforeNumber: true,
+  })
+  address = setAddressBlock(address, 'zhHans', 'tower', '3', true)
+  expect(getAddressLocale(address, 'zhHant')).toMatchObject({
+    blockRef: '3',
+    blockExpression: '3座',
+  })
+  expect(getAddressLocale(address, 'en').blockRef).toBe('A')
 })
