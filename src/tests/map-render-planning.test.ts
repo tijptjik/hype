@@ -107,7 +107,7 @@ describe('layer map render refresh planning', () => {
           },
         ],
       },
-      { result: [{ code: 'hyper' }] },
+      { result: [{ code: 'hype-dark' }] },
       { result: [] },
     ])
 
@@ -141,7 +141,7 @@ describe('layer map render refresh planning', () => {
           },
         ],
       },
-      { result: [{ code: 'hyper' }] },
+      { result: [{ code: 'hype-dark' }] },
       { result: [] },
     ])
 
@@ -167,14 +167,14 @@ describe('unpublished preview SQL eligibility', () => {
     const sqlite = new DatabaseSync(':memory:')
     sqlite.exec(`
       CREATE TABLE organisation(id TEXT, isPublished INTEGER, isArchived INTEGER);
-      CREATE TABLE project(id TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, markerStyleCode TEXT);
-      CREATE TABLE layer(id TEXT, projectId TEXT, isPublished INTEGER, isArchived INTEGER, isDefaultVisible INTEGER, modifiedAt TEXT, rank INTEGER, metadata TEXT);
-      CREATE TABLE feature(id TEXT, layerId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, geometry TEXT);
+      CREATE TABLE project(id TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, markerStyleCode TEXT, flags TEXT);
+      CREATE TABLE layer(id TEXT, projectId TEXT, isPublished INTEGER, isArchived INTEGER, isDefaultVisible INTEGER, modifiedAt TEXT, rank INTEGER, metadata TEXT, historicalSourceLayerId TEXT);
+      CREATE TABLE feature(id TEXT, layerId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, geometry TEXT, isIntangible INTEGER DEFAULT 0);
       CREATE TABLE mapStyles(id TEXT, code TEXT);
       CREATE TABLE projectMapStyles(projectId TEXT, mapStyleId TEXT);
       INSERT INTO organisation VALUES('org',0,0);
-      INSERT INTO project VALUES('draft','org',0,0,'2000-01-01T00:00:00.000Z','breadline');
-      INSERT INTO layer VALUES('draft-layer','draft',0,0,1,'2099-01-01T00:00:00.000Z',1,NULL);
+      INSERT INTO project VALUES('draft','org',0,0,'2000-01-01T00:00:00.000Z','breadline',NULL);
+      INSERT INTO layer VALUES('draft-layer','draft',0,0,1,'2099-01-01T00:00:00.000Z',1,NULL,NULL);
     `)
     const db = drizzle(async (query, params) => ({
       rows: sqlite
@@ -209,7 +209,7 @@ describe('unpublished preview SQL eligibility', () => {
         .prepare('UPDATE layer SET metadata = ?')
         .run(JSON.stringify({ mapStyleCode: null }))
       expect(await getLayerMapRenderData(db as never, 'draft-layer')).toMatchObject({
-        styleCode: 'hyper',
+        styleCode: 'hype-dark',
       })
       sqlite.exec('UPDATE layer SET isArchived = 1')
       expect(await getLayerMapRenderData(db as never, 'draft-layer')).toBeNull()
@@ -222,4 +222,95 @@ describe('unpublished preview SQL eligibility', () => {
       sqlite.close()
     }
   })
+
+  it.each([
+    [
+      'archived feature',
+      "UPDATE feature SET isArchived=1,modifiedAt='2099-01-01'",
+      true,
+    ],
+    [
+      'unpublished feature',
+      "UPDATE feature SET isPublished=0,modifiedAt='2099-01-01'",
+      true,
+    ],
+    ['archived layer', "UPDATE layer SET isArchived=1,modifiedAt='2099-01-01'", false],
+    [
+      'hidden default layer',
+      "UPDATE layer SET isDefaultVisible=0,modifiedAt='2099-01-01'",
+      false,
+    ],
+  ])(
+    'refreshes thumbnails after a previously rendered %s is removed',
+    async (_label, mutation, refreshLayer) => {
+      const sqlite = new DatabaseSync(':memory:')
+      sqlite.exec(`
+      CREATE TABLE organisation(id TEXT, isPublished INTEGER, isArchived INTEGER);
+      CREATE TABLE project(id TEXT, organisationId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, markerStyleCode TEXT, flags TEXT);
+      CREATE TABLE layer(id TEXT, projectId TEXT, isPublished INTEGER, isArchived INTEGER, isDefaultVisible INTEGER, modifiedAt TEXT, rank INTEGER, metadata TEXT, historicalSourceLayerId TEXT);
+      CREATE TABLE feature(id TEXT, layerId TEXT, isPublished INTEGER, isArchived INTEGER, modifiedAt TEXT, geometry TEXT, isIntangible INTEGER DEFAULT 0);
+      CREATE TABLE mapStyles(id TEXT, code TEXT);
+      CREATE TABLE projectMapStyles(projectId TEXT, mapStyleId TEXT);
+      INSERT INTO organisation VALUES('org',0,0);
+      INSERT INTO project VALUES('draft','org',0,0,'2000-01-01T00:00:00.000Z','breadline',NULL);
+      INSERT INTO layer VALUES('draft-layer','draft',0,0,1,'2099-01-01T00:00:00.000Z',1,NULL,NULL);
+    `)
+      const db = drizzle(async (query, params) => ({
+        rows: sqlite
+          .prepare(query)
+          .all(...params)
+          .map(row => Object.values(row)),
+      }))
+      try {
+        sqlite.exec(`
+        UPDATE layer SET modifiedAt='2000-01-01';
+        INSERT INTO feature VALUES('point','draft-layer',1,0,'2000-01-01','{"type":"Point","coordinates":[114,22]}',0);
+      `)
+        const layerBefore = await planLayerMapRenderRefreshJobs(
+          db as never,
+          'http://localhost',
+          null,
+          24,
+          true,
+        )
+        const before = await planProjectMapRenderRefreshJobs(
+          db as never,
+          'http://localhost',
+          null,
+          24,
+          true,
+        )
+        expect(before).toHaveLength(1)
+        expect(
+          await planProjectMapRenderRefreshJobs(
+            db as never,
+            'http://localhost',
+            null,
+            24,
+          ),
+        ).toEqual([])
+        sqlite.exec(mutation)
+        const after = await planProjectMapRenderRefreshJobs(
+          db as never,
+          'http://localhost',
+          null,
+          24,
+        )
+        expect(after.map(job => job.identifier)).toEqual(['draft'])
+        expect(after[0].hash).not.toBe(before[0].hash)
+        if (refreshLayer) {
+          const layerAfter = await planLayerMapRenderRefreshJobs(
+            db as never,
+            'http://localhost',
+            null,
+            24,
+          )
+          expect(layerAfter.map(job => job.identifier)).toEqual(['draft-layer'])
+          expect(layerAfter[0].hash).not.toBe(layerBefore[0].hash)
+        }
+      } finally {
+        sqlite.close()
+      }
+    },
+  )
 })

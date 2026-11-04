@@ -365,6 +365,13 @@ export const buildProjectMapRenderHash = async (
     })),
   })
 
+/**
+ * Find resources whose current or removed contents may have changed the thumbnail.
+ * @param db Request database.
+ * @param cutoffIso Earliest modification timestamp to consider.
+ * @param force Whether to consider every resource.
+ * @returns Candidate identities; payload loading applies current visibility rules.
+ */
 const buildLayerMapRenderRefreshCandidates = async (
   db: Database,
   cutoffIso: string,
@@ -382,6 +389,7 @@ const buildLayerMapRenderRefreshCandidates = async (
     return rows.map(row => row.id)
   }
 
+  // Changes that remove rendered content must also invalidate the retained thumbnail.
   const rows = await db
     .select({
       id: layer.id,
@@ -396,7 +404,6 @@ const buildLayerMapRenderRefreshCandidates = async (
             SELECT 1
             FROM "feature"
             WHERE "feature"."layerId" = ${layer.id}
-              AND "feature"."isArchived" = 0
               AND "feature"."modifiedAt" >= ${cutoffIso}
           )
         )`,
@@ -407,6 +414,13 @@ const buildLayerMapRenderRefreshCandidates = async (
   return rows.map(row => row.id)
 }
 
+/**
+ * Find resources whose current or removed contents may have changed the thumbnail.
+ * @param db Request database.
+ * @param cutoffIso Earliest modification timestamp to consider.
+ * @param force Whether to consider every resource.
+ * @returns Candidate identities; payload loading applies current visibility rules.
+ */
 const buildProjectMapRenderRefreshCandidates = async (
   db: Database,
   cutoffIso: string,
@@ -423,6 +437,7 @@ const buildProjectMapRenderRefreshCandidates = async (
     return rows.map(row => row.id)
   }
 
+  // Changes that remove rendered content must also invalidate the retained thumbnail.
   const rows = await db
     .select({
       id: project.id,
@@ -435,8 +450,6 @@ const buildProjectMapRenderRefreshCandidates = async (
           SELECT 1
           FROM "layer"
           WHERE "layer"."projectId" = ${project.id}
-            AND "layer"."isDefaultVisible" = 1
-            AND "layer"."isArchived" = 0
             AND "layer"."modifiedAt" >= ${cutoffIso}
         )
         OR EXISTS (
@@ -447,8 +460,6 @@ const buildProjectMapRenderRefreshCandidates = async (
           WHERE "defaultLayer"."projectId" = ${project.id}
             AND "defaultLayer"."isDefaultVisible" = 1
             AND "defaultLayer"."isArchived" = 0
-            AND "feature"."isPublished" = 1
-            AND "feature"."isArchived" = 0
             AND "feature"."modifiedAt" >= ${cutoffIso}
         )
       )`,
