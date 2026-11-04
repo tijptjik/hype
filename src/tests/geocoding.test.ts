@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   geocodeAddress,
   geocodeAddressCandidates,
+  geocodeAddressPage,
+  GeocodeRequestError,
   parseGeocodeResult,
 } from '#lib/api/external/geocoding.js'
 
@@ -188,6 +190,62 @@ it('uses local Atlas in development and preserves caller cancellation', async ()
   }
 })
 
+it('loads Address pages with a stable query, exact total and pinned continuation release', async () => {
+  const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+    const url = new URL(String(input))
+    expect(url.searchParams.get('paginate')).toBe('true')
+    expect(url.searchParams.get('locatedOnly')).toBe('true')
+    expect(url.searchParams.get('address')).toBe('holly')
+    expect(url.searchParams.get('limit')).toBe('20')
+    const next = url.searchParams.get('cursor')
+    expect(url.searchParams.get('releaseSet')).toBe(next ? 'address-release' : null)
+    return Response.json({
+      ...response(),
+      meta: {
+        total: 278,
+        nextCursor: next ? null : 'opaque-next',
+        release: { apiReleaseSet: 'address-release' },
+      },
+    })
+  })
+  const first = await geocodeAddressPage({ address: 'holly' }, { fetcher })
+  expect(first).toMatchObject({
+    total: 278,
+    nextCursor: 'opaque-next',
+    releaseSet: 'address-release',
+  })
+  expect(first.rows).toHaveLength(1)
+  const next = await geocodeAddressPage(
+    { address: 'holly' },
+    { fetcher, cursor: first.nextCursor!, releaseSet: first.releaseSet },
+  )
+  expect(next.nextCursor).toBeNull()
+  expect(fetcher).toHaveBeenCalledTimes(2)
+})
+
+it('exposes expired search sessions and refuses a changed continuation publication', async () => {
+  const expired = vi.fn(async () => new Response('', { status: 410 }))
+  await expect(
+    geocodeAddressPage(
+      { address: 'holly' },
+      { fetcher: expired, cursor: 'opaque-next' },
+    ),
+  ).rejects.toMatchObject({ status: 410 })
+  expect(new GeocodeRequestError(410)).toBeInstanceOf(Error)
+  const changed = vi.fn(async () =>
+    Response.json({
+      ...response(),
+      meta: { total: 1, nextCursor: null, release: { apiReleaseSet: 'other' } },
+    }),
+  )
+  await expect(
+    geocodeAddressPage(
+      { address: 'holly' },
+      { fetcher: changed, releaseSet: 'pinned' },
+    ),
+  ).rejects.toThrow('publication changed')
+})
+
 it('normalizes uppercase components independently while preserving mixed-case branding and source evidence', () => {
   const body = response()
   body.included[1].attributes.i18n!.en.buildingName = 'iSQUARE'
@@ -196,7 +254,7 @@ it('normalizes uppercase components independently while preserving mixed-case br
   const result = parseGeocodeResult(body, pin)!
   expect(result.i18n.en.displayAddress).toBe('iSQUARE, Phase IV, 18 Lower Albert Rd')
   expect(body).toEqual(original)
-  expect(result.addressMeta.address?.source.records).toMatchObject({
+  expect(result.addressMeta.address?.source.rawSource).toMatchObject({
     data: original.included[1],
   })
 })
