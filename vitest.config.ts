@@ -172,9 +172,10 @@ export default defineConfig({
       '**/src/lib/db/**', // Exclude database files that might keep connections open
       '**/src/hooks.server.ts', // Exclude server hooks
       '**/src/app.html',
-      '**/scripts/breadline/**/*.test.ts', // Bun-only SQLite tests run through breadline:db:test.
+      // Script suites use bun:test/bun:sqlite and run through test:scripts in every full-run command.
+      // This includes Breadline SQLite and the geocoding benchmark's Bun-only tests.
+      '**/scripts/**/*.test.ts',
       '**/src/lib/locations/location.test.ts', // Bun-only SQLite suite runs through test:locations.
-      '**/scripts/geocoding/**/*.test.ts', // Bun-only benchmark tests run directly with bun test.
     ],
   },
 })
