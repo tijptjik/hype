@@ -25,7 +25,10 @@ import {
   calculateImageContentHash,
   uploadAndProcessImage,
 } from '#lib/client/services/image.js'
-import { handleImageDrop } from '#lib/client/services/import/images.js'
+import {
+  getContextsForFeatures,
+  handleImageDrop,
+} from '#lib/client/services/import/images.js'
 import { normalizeUploadFileForAssetPipeline } from '#lib/images/upload.js'
 // TYPES
 import type { BatchUploadResult } from '#lib/client/services/import/types.js'
@@ -133,4 +136,119 @@ describe('image import queue failures', () => {
     ])
     expect(uploadAndProcessImage).not.toHaveBeenCalled()
   })
+})
+
+it('stops uploads and callbacks when cancellation occurs during hierarchy lookup', async () => {
+  let current = true
+  let finish!: (value: unknown) => void
+  vi.mocked(getFeatureForImport).mockReturnValueOnce(
+    new Promise(resolve => {
+      finish = resolve
+    }) as never,
+  )
+  const progress = vi.fn()
+  const update = vi.fn()
+  const complete = vi.fn()
+  const error = vi.fn()
+  const pending = handleImageDrop(
+    { acceptedFiles: [new File(['image'], 'feature.1.jpg')], fileRejections: [] },
+    progress,
+    update,
+    complete,
+    error,
+    () => current,
+  )
+  current = false
+  finish({ data: null })
+  await pending
+  expect(getProject).not.toHaveBeenCalled()
+  expect(getOrganisation).not.toHaveBeenCalled()
+  expect(getFeatureCanonicalImageOccupancy).not.toHaveBeenCalled()
+  expect(uploadAndProcessImage).not.toHaveBeenCalled()
+  expect(progress).not.toHaveBeenCalled()
+  expect(update).not.toHaveBeenCalled()
+  expect(complete).not.toHaveBeenCalled()
+  expect(error).not.toHaveBeenCalled()
+})
+
+it('stops before upload and later batches when cancelled during image hashing', async () => {
+  let current = true
+  let finish!: (hash: string) => void
+  let reached!: () => void
+  const hashing = new Promise<void>(resolve => {
+    reached = resolve
+  })
+  const hash = new Promise<string>(resolve => {
+    finish = resolve
+  })
+  vi.mocked(calculateImageContentHash).mockImplementation(() => {
+    reached()
+    return hash
+  })
+  const complete = vi.fn()
+  const pending = handleImageDrop(
+    {
+      acceptedFiles: Array.from(
+        { length: 6 },
+        (_, index) => new File(['image'], `feature.${index + 1}.jpg`),
+      ),
+      fileRejections: [],
+    },
+    vi.fn(),
+    vi.fn(),
+    complete,
+    vi.fn(),
+    () => current,
+  )
+  await hashing
+  current = false
+  finish('hash')
+  await pending
+  expect(uploadAndProcessImage).not.toHaveBeenCalled()
+  expect(normalizeUploadFileForAssetPipeline).toHaveBeenCalledTimes(5)
+  expect(complete).not.toHaveBeenCalled()
+})
+
+it.each(['feature', 'project', 'organisation'])(
+  'refreshes retained %s hierarchy before preparing uploads',
+  async family => {
+    const old =
+      family === 'feature'
+        ? {
+            id: 'feature',
+            projectId: 'project',
+            organisationId: 'organisation',
+            images: [],
+          }
+        : { id: family }
+    const query = Object.assign(Promise.resolve({ data: old }), {
+      current: { data: old } as { data: unknown },
+      refresh: vi.fn(async () => {
+        query.current = { data: null }
+      }),
+    })
+    const remote =
+      family === 'feature'
+        ? getFeatureForImport
+        : family === 'project'
+          ? getProject
+          : getOrganisation
+    vi.mocked(remote).mockReturnValue(query as never)
+    expect((await getContextsForFeatures(['feature'])).size).toBe(0)
+    expect(query.refresh).toHaveBeenCalledOnce()
+  },
+)
+
+it('refreshes canonical occupancy before deciding image import intent', async () => {
+  const query = Object.assign(Promise.resolve({ data: [] as string[] }), {
+    current: { data: [] as string[] },
+    refresh: vi.fn(async () => {
+      query.current = { data: ['feature'] }
+    }),
+  })
+  vi.mocked(getFeatureCanonicalImageOccupancy).mockReturnValue(query as never)
+  expect(
+    (await getContextsForFeatures(['feature'])).get('feature')?.hasCanonicalImage,
+  ).toBe(true)
+  expect(query.refresh).toHaveBeenCalledOnce()
 })

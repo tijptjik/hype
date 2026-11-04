@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { onDestroy } from 'svelte'
 import { beforeNavigate } from '$app/navigation'
 import { fade } from 'svelte/transition'
 // PATTERN COMPONENTS
@@ -36,13 +37,19 @@ let isUploading = $state(false)
 let currentBatch = $state(0)
 let totalBatches = $state(0)
 let imageUploadSessionId = $state(0)
+let disposed = false
+onDestroy(() => {
+  disposed = true
+  imageUploadSessionId += 1
+})
 let lastProcessedDrop = $state.raw<Props['pendingDrop']>(null)
 let currentPhase = $state<'uploading' | 'finished'>('uploading')
 let replacingResultIds = $state(new Set<string>())
 
 // Keep active uploads mounted; leaving the document invokes the browser's unload warning.
 beforeNavigate(navigation => {
-  if (!navigation.shallow && (isUploading || replacingResultIds.size > 0)) navigation.cancel()
+  if (!navigation.shallow && (isUploading || replacingResultIds.size > 0))
+    navigation.cancel()
 })
 
 // IMPORT :: STATS
@@ -112,6 +119,11 @@ function handleImageDropEventWrapper(event: {
   fileRejections?: unknown[]
 }): void {
   const activeSessionId = ++imageUploadSessionId
+  const scope = adminCtx.view.getRoleScopeQueryKey()
+  const isCurrent = (): boolean =>
+    !disposed &&
+    activeSessionId === imageUploadSessionId &&
+    adminCtx.view.getRoleScopeQueryKey() === scope
 
   handleImageDropEvent(
     new CustomEvent('drop', {
@@ -134,6 +146,7 @@ function handleImageDropEventWrapper(event: {
       currentBatch = current
       totalBatches = total
     },
+    isCurrent,
   )
 }
 
@@ -160,6 +173,12 @@ function handleContinue(): void {
   }
 }
 async function handleReplaceUpload(resultId: string): Promise<void> {
+  const activeSessionId = imageUploadSessionId
+  const scope = adminCtx.view.getRoleScopeQueryKey()
+  const isCurrent = (): boolean =>
+    !disposed &&
+    activeSessionId === imageUploadSessionId &&
+    adminCtx.view.getRoleScopeQueryKey() === scope
   if (!canQueueReplacements) return
   if (replacingResultIds.has(resultId)) return
 
@@ -199,12 +218,14 @@ async function handleReplaceUpload(resultId: string): Promise<void> {
         )
       },
       () => 'Replace requested but the feature could not be resolved.',
-      { replaceExisting: true },
+      { replaceExisting: true, isCurrent },
     )
   } finally {
-    const nextReplacingResultIds = new Set(replacingResultIds)
-    nextReplacingResultIds.delete(resultId)
-    replacingResultIds = nextReplacingResultIds
+    if (isCurrent()) {
+      const nextReplacingResultIds = new Set(replacingResultIds)
+      nextReplacingResultIds.delete(resultId)
+      replacingResultIds = nextReplacingResultIds
+    }
   }
 }
 
@@ -252,7 +273,7 @@ $effect(() => {
         >
           <div class="space-y-2">
             <h3 class="text-lg font-semibold">{m.batch_upload__results()}</h3>
-            <p class="text-sm text-base-content/70">
+            <p class="text-base-content/70 text-sm">
               {m.batch_upload__preparing_queue()}
             </p>
           </div>
@@ -264,9 +285,10 @@ $effect(() => {
           <div class="flex max-w-md flex-col items-center gap-5 text-center">
             <button
               type="button"
-              class="rounded-full border border-primary/20 bg-primary/10 p-6 text-primary transition-colors hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              class="border-primary/20 bg-primary/10 text-primary hover:bg-primary/15 focus:ring-primary/30 rounded-full border p-6 transition-colors focus:ring-2 focus:outline-none"
               onclick={() => downloadImageUploadResults(uploadResults)}
-              title={m.batch_upload__download_results()}
+              aria-label={m.batch_upload__download_results()}
+              data-tooltip={m.batch_upload__download_results()}
             >
               <Icon src={ArrowDownTray} class="h-12 w-12" />
             </button>
@@ -274,7 +296,7 @@ $effect(() => {
               <h3 class="text-2xl font-semibold">
                 {m.batch_upload__import_complete()}
               </h3>
-              <p class="text-sm text-base-content/70">
+              <p class="text-base-content/70 text-sm">
                 {m.batch_upload__finished_subtitle()}
               </p>
             </div>

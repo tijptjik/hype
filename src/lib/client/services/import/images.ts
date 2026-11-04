@@ -32,6 +32,9 @@
 // - handleImageDrop
 // ---
 
+// REMOTE
+import { refreshRemoteQuery } from '#lib/remote/index.js'
+// API
 import { getFeatureForImport } from '#lib/api/feature.remote.js'
 import { getFeatureCanonicalImageOccupancy } from '#lib/api/image.remote.js'
 import { getOrganisation } from '#lib/api/organisation.remote.js'
@@ -316,12 +319,14 @@ export function downloadImageUploadResults(uploadResults: BatchUploadResult[]): 
  * Fetch feature-scoped upload contexts in batches using admin-safe remotes.
  *
  * @param featureIds Unique feature identifiers derived from filenames.
+ * @param isCurrent Whether the upload session still owns this prefetch.
  * @returns A map of resolved upload contexts keyed by feature id.
  * @remarks This prefetch keeps upload processing deterministic by resolving
  * feature hierarchy and canonical image state before batch uploads begin.
  */
 export async function getContextsForFeatures(
   featureIds: string[],
+  isCurrent: () => boolean = () => true,
 ): Promise<Map<string, FeatureContext>> {
   const contexts = new Map<string, FeatureContext>()
   const uniqueFeatureIds = [...new Set(featureIds.filter(Boolean))]
@@ -333,11 +338,15 @@ export async function getContextsForFeatures(
   const chunkSize = 100
 
   for (let index = 0; index < uniqueFeatureIds.length; index += chunkSize) {
+    if (!isCurrent()) return new Map()
     const chunk = uniqueFeatureIds.slice(index, index + chunkSize)
     const featureResponses = await Promise.all(
-      chunk.map(id => getFeatureForImport({ id, meta: { isAdminRequest: true } })),
+      chunk.map(id =>
+        refreshRemoteQuery(getFeatureForImport({ id, meta: { isAdminRequest: true } })),
+      ),
     )
 
+    if (!isCurrent()) return new Map()
     const features = featureResponses
       .map(response => response.data as Feature | null | undefined)
       .filter((feature): feature is Feature => Boolean(feature))
@@ -352,24 +361,29 @@ export async function getContextsForFeatures(
     const [projectResponses, organisationResponses] = await Promise.all([
       Promise.all(
         projectIds.map(id =>
-          getProject({
-            ref: id,
-            refKey: 'id',
-            meta: { isAdminRequest: true, profile: 'admin' },
-          }),
+          refreshRemoteQuery(
+            getProject({
+              ref: id,
+              refKey: 'id',
+              meta: { isAdminRequest: true, profile: 'admin' },
+            }),
+          ),
         ),
       ),
       Promise.all(
         organisationIds.map(id =>
-          getOrganisation({
-            ref: id,
-            refKey: 'id',
-            meta: { isAdminRequest: true, profile: 'admin' },
-          }),
+          refreshRemoteQuery(
+            getOrganisation({
+              ref: id,
+              refKey: 'id',
+              meta: { isAdminRequest: true, profile: 'admin' },
+            }),
+          ),
         ),
       ),
     ])
 
+    if (!isCurrent()) return new Map()
     const projectsById = new Map(
       projectResponses
         .map(response => response.data as Project | null | undefined)
@@ -384,11 +398,14 @@ export async function getContextsForFeatures(
     )
     const canonicalOccupancyResponse =
       chunk.length > 0
-        ? await getFeatureCanonicalImageOccupancy({
-            featureIds: chunk,
-            meta: { isAdminRequest: true },
-          })
+        ? await refreshRemoteQuery(
+            getFeatureCanonicalImageOccupancy({
+              featureIds: chunk,
+              meta: { isAdminRequest: true },
+            }),
+          )
         : { data: [] }
+    if (!isCurrent()) return new Map()
     const canonicalFeatureIds = new Set(canonicalOccupancyResponse.data)
 
     for (const feature of features) {
@@ -601,7 +618,7 @@ export async function createUploadContextForFeature(
  * @param featureContexts Prefetched feature upload contexts keyed by feature id.
  * @param updateResults UI callback for queue updates.
  * @param getErrorMessage Error factory used when the filename cannot be mapped to a feature.
- * @param options Upload behavior flags.
+ * @param options Upload behavior flags and optional session ownership check.
  * @returns Resolves when the queue item reaches a terminal status.
  * @remarks Replacement uploads skip conflict checks and pass the selected existing
  * image through the upload context so the asset service can replace it.
@@ -613,8 +630,10 @@ export async function processSingleUpload(
   featureContexts: Map<string, FeatureContext>,
   updateResults: (results: BatchUploadResult[]) => void,
   getErrorMessage: () => string,
-  options: { replaceExisting?: boolean } = {},
+  options: { replaceExisting?: boolean; isCurrent?: () => boolean } = {},
 ): Promise<void> {
+  const isCurrent = options.isCurrent ?? (() => true)
+  if (!isCurrent()) return
   if (!result.featureId) {
     uploadResults[index] = {
       ...result,
@@ -663,6 +682,7 @@ export async function processSingleUpload(
           isConflict: false,
         }
       : await resolveUploadIntent(result, context)
+    if (!isCurrent()) return
 
     if (resolvedIntent.isConflict && !options.replaceExisting) {
       uploadResults[index] = {
@@ -684,6 +704,7 @@ export async function processSingleUpload(
       context,
       options.replaceExisting ? replacementTarget : undefined,
     )
+    if (!isCurrent()) return
     if (!uploadCtx) {
       uploadResults[index] = {
         ...result,
@@ -706,6 +727,7 @@ export async function processSingleUpload(
       isPublished: resolvedIntent.isPublished,
       intent: resolvedIntent.intent,
     })
+    if (!isCurrent()) return
 
     uploadResults[index] = {
       ...result,
@@ -716,6 +738,7 @@ export async function processSingleUpload(
     }
     emitUploadResults(uploadResults, updateResults)
   } catch (error) {
+    if (!isCurrent()) return
     uploadResults[index] = {
       ...result,
       status: 'error',
@@ -742,6 +765,7 @@ export async function processSingleUpload(
  * @param setUploadResults UI callback for queue updates.
  * @param setUploading UI callback for upload lifecycle state.
  * @param setBatches UI callback for batch progress.
+ * @param isCurrent Whether the originating upload session still owns the work.
  * @returns Nothing. Upload work continues asynchronously.
  */
 export function handleImageDropEvent(
@@ -750,7 +774,9 @@ export function handleImageDropEvent(
   setUploadResults: (results: BatchUploadResult[]) => void,
   setUploading: (uploading: boolean) => void,
   setBatches: (current: number, total: number) => void,
+  isCurrent: () => boolean = () => true,
 ): void {
+  if (!isCurrent()) return
   const imageEvent: ImageDropEvent = {
     acceptedFiles: e.detail.acceptedFiles,
     fileRejections: e.detail.fileRejections,
@@ -791,6 +817,7 @@ export function handleImageDropEvent(
       console.error('Upload failed:', error)
       setUploading(false)
     },
+    isCurrent,
   )
 }
 
@@ -802,6 +829,7 @@ export function handleImageDropEvent(
  * @param onUpdateResults Callback invoked whenever queue item status changes.
  * @param onComplete Callback invoked once all queue items reach a terminal state.
  * @param onError Callback invoked when the batch orchestration itself fails.
+ * @param isCurrent Whether further requests and UI publication are still allowed.
  * @returns Resolves when all queued files have been processed.
  */
 export async function handleImageDrop(
@@ -810,7 +838,9 @@ export async function handleImageDrop(
   onUpdateResults: (results: BatchUploadResult[]) => void,
   onComplete: (results: BatchUploadResult[]) => void,
   onError: (error: Error) => void,
+  isCurrent: () => boolean = () => true,
 ): Promise<void> {
+  if (!isCurrent()) return
   const { acceptedFiles } = event
 
   if (acceptedFiles.length === 0) {
@@ -831,7 +861,9 @@ export async function handleImageDrop(
       initialUploadResults
         .map(result => result.featureId)
         .filter((featureId): featureId is string => Boolean(featureId)),
+      isCurrent,
     )
+    if (!isCurrent()) return
     uploadResults = enrichUploadResultsWithContexts(
       initialUploadResults,
       featureContexts,
@@ -840,6 +872,7 @@ export async function handleImageDrop(
     onUpdateResults(uploadResults)
 
     for (let i = 0; i < totalBatches; i++) {
+      if (!isCurrent()) return
       const start = i * batchSize
       const end = Math.min(start + batchSize, acceptedFiles.length)
       const batch = uploadResults.slice(start, end)
@@ -856,18 +889,21 @@ export async function handleImageDrop(
             onUpdateResults,
             () =>
               `No matching feature found for filename "${result.file.name}". Expected the filename to follow "featureId.sequence.ext" or "featureId-sequence.ext" (dash separator only recognised when the feature ID is ${FEATURE_ID_LENGTH} characters).`,
+            { isCurrent },
           ),
         ),
       )
 
+      if (!isCurrent()) return
       // Small delay between batches to prevent overwhelming the server.
       if (i < totalBatches - 1) {
         await new Promise(resolve => setTimeout(resolve, 500))
       }
     }
 
-    onComplete([...uploadResults])
+    if (isCurrent()) onComplete([...uploadResults])
   } catch (error) {
+    if (!isCurrent()) return
     const failure = error instanceof Error ? error : new Error('Upload failed')
     // Preserve completed rows while making unprocessed files explicitly retryable.
     uploadResults = uploadResults.map(result =>
