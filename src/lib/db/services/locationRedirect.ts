@@ -42,3 +42,10 @@ export async function resolveLocationRedirect(
     null
   )
 }
+
+/** Resolve a relationship endpoint through identity aliases without changing its historical reference.
+ * @param expression Trusted SQL endpoint expression. @returns Scalar current identity expression.
+ */
+export function canonicalLocationSQL(expression: SQL): SQL {
+  return sql`COALESCE((SELECT locationId FROM locationCanonical WHERE aliasId=${expression}),${expression})`
+}
