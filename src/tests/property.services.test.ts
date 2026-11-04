@@ -179,6 +179,8 @@ describe('property services', () => {
     expect(getData().properties[0].i18n.zhHans).toEqual({
       label: '设施',
       placeholder: '请选择',
+      labelGen: true,
+      placeholderGen: true,
     })
   })
 

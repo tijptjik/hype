@@ -55,6 +55,8 @@ const resolvedCardContext = $derived.by(() => {
       {totalItems}
       removeMode={card.removeMode}
       locales={card.locales}
+      multilingual={card.multilingual}
+      visibleLocales={card.visibleLocales}
       classifierComponents={card.classifierComponents}
       specifierComponents={card.specifierComponents}
       isRequiredInPreflight={card.isRequiredInPreflight}

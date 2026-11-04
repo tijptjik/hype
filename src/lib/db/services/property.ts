@@ -8,7 +8,7 @@ import { chunkedInArray, SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // DB
 // PROPERTY CONTRACT
 import { rangeDomain } from '#lib/properties/range.js'
-import { transformI18nSafely, toRelatedRecords } from '#lib/db/index.js'
+import { toRelatedRecords } from '#lib/db/index.js'
 import { inferPropertyDiscriminatorFromComponent } from '#lib/api/services/index.js'
 import { toPropertyResponseFromRaw } from '#lib/api/services/property.js'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
@@ -31,7 +31,8 @@ import {
 // ZOD
 import { PropertyRecordCreate, PropertyRecordUpdate } from '../zod'
 // I18N
-import { normalizeI18nLocaleRecord } from '#lib/i18n.js'
+import { contentMapToStorage } from '#lib/i18n/contentRecords.js'
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // TYPES
 import type { InferInsertModel, SQL } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
@@ -144,7 +145,7 @@ export const createBaseProperty = async (
     }))
     // Allocate identities first so each translation follows its value in the same commit.
     const translations = toRelatedRecords(
-      normalizeI18nLocaleRecord(relations.i18n),
+      contentMapToStorage(relations.i18n),
       'propertyId',
       id,
       'locale',
@@ -169,7 +170,7 @@ export const createBaseProperty = async (
     ]
     for (const value of values) {
       const localized = toRelatedRecords(
-        normalizeI18nLocaleRecord(value.i18n ?? {}),
+        contentMapToStorage(value.i18n ?? {}),
         'propertyValueId',
         value.id,
         'locale',
@@ -211,9 +212,7 @@ export const createI18n = async (
   i18n: Record<Locale, PropertyI18nNew>,
   propertyId: string,
 ): Promise<PropertyI18nDB[]> => {
-  const normalizedI18n = normalizeI18nLocaleRecord(
-    i18n as Record<string, PropertyI18nNew>,
-  )
+  const normalizedI18n = contentMapToStorage(i18n as Record<string, PropertyI18nNew>)
   const relatedRecords = toRelatedRecords(
     normalizedI18n,
     'propertyId',
@@ -270,7 +269,7 @@ export const createPropertyValues = async (
     )
   }
   for (const value of prepared) {
-    const localized = normalizeI18nLocaleRecord(value.i18n ?? {})
+    const localized = contentMapToStorage(value.i18n ?? {})
     for (const [locale, translation] of Object.entries(localized)) {
       translations.push(
         db.insert(propertyValueI18n).values({
@@ -297,7 +296,7 @@ export const createPropertyValueI18n = async (
   i18n: Record<Locale, PropertyValueI18nNew>,
   propertyValueId: string,
 ): Promise<PropertyValueI18nDB[]> => {
-  const normalizedI18n = normalizeI18nLocaleRecord(
+  const normalizedI18n = contentMapToStorage(
     i18n as Record<string, PropertyValueI18nNew>,
   )
   const relatedRecords = toRelatedRecords(
@@ -653,7 +652,7 @@ export const updateI18n = async (
   i18n: Record<Locale, PropertyI18nPartial>,
   propertyId: string,
 ): Promise<PropertyI18nDB[]> => {
-  const normalizedI18n = normalizeI18nLocaleRecord(
+  const normalizedI18n = contentMapToStorage(
     i18n as Record<string, PropertyI18nPartial>,
   )
   const relatedRecords = toRelatedRecords(
@@ -799,7 +798,7 @@ export const updatePropertyValueI18n = async (
   i18n: Record<Locale, PropertyValueI18nPartial>,
   propertyValueId: string,
 ): Promise<PropertyValueI18nDB[]> => {
-  const normalizedI18n = normalizeI18nLocaleRecord(
+  const normalizedI18n = contentMapToStorage(
     i18n as Record<string, PropertyValueI18nPartial>,
   )
   const relatedRecords = toRelatedRecords(
@@ -960,9 +959,7 @@ export const preparePropertyCatalog = async (
       existing,
       parsed,
       values: normalizedValues,
-      i18n: normalizeI18nLocaleRecord(
-        (i18n ?? {}) as Record<string, PropertyI18nPartial>,
-      ),
+      i18n: contentMapToStorage((i18n ?? {}) as Record<string, PropertyI18nPartial>),
     }
   })
   const ids = prepared.map(row => row.id)
@@ -1071,7 +1068,7 @@ export const preparePropertyCatalog = async (
           .delete(propertyValueI18n)
           .where(eq(propertyValueI18n.propertyValueId, value.id)),
       )
-      const translations = normalizeI18nLocaleRecord(
+      const translations = contentMapToStorage(
         (i18n ?? {}) as Record<string, PropertyValueI18nPartial>,
       )
       for (const [locale, translation] of Object.entries(translations)) {
@@ -1141,11 +1138,11 @@ export const preparePropertyCatalog = async (
       }
       return rows.map(row => ({
         ...row,
-        i18n: transformI18nSafely(row.i18n),
+        i18n: propertyLocalesToForm(row.i18n),
         values:
           row.values?.map(value => ({
             ...value,
-            i18n: transformI18nSafely(value.i18n),
+            i18n: propertyLocalesToForm(value.i18n),
           })) ?? [],
       })) as Property[]
     },

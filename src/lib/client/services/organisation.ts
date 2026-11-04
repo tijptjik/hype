@@ -1,3 +1,5 @@
+// CONTENT LOCALES
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // ROLE POLICY
 import { isOrganisationStaffRole } from '#lib/roles/organisation.js'
 // CONTENT LOCALES
@@ -6,7 +8,6 @@ import { toContentLocaleSettingsForm } from '#lib/content-locales/settings.js'
 import { CAPABILITY_I18N_BY_KEY, isProjectCapabilityKey } from '#lib/capabilities.js'
 // I18N
 import { toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
-import { toFormLocaleRecord } from '#lib/i18n.js'
 // SERVICES
 import {
   overrideResourceEntityBoolean,
@@ -31,20 +32,20 @@ import type {
 /**
  * Converts persisted property locales and nullable values to editable form fields.
  * @param properties Stored or already editable organisation properties.
- * @returns Property inputs with all supported locale buckets initialized.
+ * @returns Property inputs with all stored content locale buckets retained.
  */
 function cloneOrganisationProperties(
   properties: OrganisationPropertySource[] | null | undefined,
 ): OrganisationFormInput['data']['properties'] {
   return (properties ?? []).map(property => {
-    const locales = toFormLocaleRecord<{
+    const locales = propertyLocalesToForm<{
       label: string
       labelGen?: boolean | 'true' | 'false'
       placeholder?: string | null
       placeholderGen?: boolean | 'true' | 'false'
     }>(property.i18n)
-    // Initialize all editable labels while retaining stored generation flags.
-    const locale = (key: 'en' | 'zhHans' | 'zhHant') => ({
+    // Initialize editable labels while retaining every locale and stored generation flag.
+    const locale = (key: string) => ({
       label: locales?.[key]?.label ?? '',
       labelGen: locales?.[key]?.labelGen ?? false,
       placeholder: locales?.[key]?.placeholder ?? '',
@@ -57,25 +58,23 @@ function cloneOrganisationProperties(
           ? property.scope
           : 'project',
       projectId: property.projectId ?? undefined,
-      i18n: { en: locale('en'), zhHans: locale('zhHans'), zhHant: locale('zhHant') },
+      i18n: Object.fromEntries(Object.keys(locales).map(key => [key, locale(key)])),
       values: property.values?.map(value => {
-        const valueLocales = toFormLocaleRecord<{
+        const valueLocales = propertyLocalesToForm<{
           value: string
           valueGen?: boolean | 'true' | 'false'
         }>(value.i18n)
         // Normalize nullable stored values into editable text.
-        const valueLocale = (key: 'en' | 'zhHans' | 'zhHant') => ({
+        const valueLocale = (key: string) => ({
           value: valueLocales?.[key]?.value ?? '',
           valueGen: valueLocales?.[key]?.valueGen ?? false,
         })
         return {
           ...value,
           value: value.value ?? '',
-          i18n: {
-            en: valueLocale('en'),
-            zhHans: valueLocale('zhHans'),
-            zhHant: valueLocale('zhHant'),
-          },
+          i18n: Object.fromEntries(
+            Object.keys(valueLocales).map(key => [key, valueLocale(key)]),
+          ),
         }
       }),
     }

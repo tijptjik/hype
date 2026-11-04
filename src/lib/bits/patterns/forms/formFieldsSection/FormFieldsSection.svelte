@@ -3,9 +3,14 @@
 import { untrack } from 'svelte'
 // ICONS
 import Plus from 'virtual:icons/proicons/add'
+// I18N
+import { getLocaleKey } from '#lib/i18n.js'
+import { normalizeContentLocales } from '#lib/content-locales/model.js'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 import Header from '#lib/bits/custom/header/Header.svelte'
+import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
+import { contentLocaleOptions } from '../contentLocaleDefaults/contentLocaleOptions'
 // STYLES
 import {
   getHeaderActionClasses,
@@ -18,6 +23,10 @@ import type {
   FormFieldsSectionLoadingItem,
   FormFieldsSectionProps,
 } from './formFieldsSection.types'
+import type {
+  LocaleChange,
+  LocaleSelection,
+} from '#lib/bits/custom/localeControls/localeControls.types.js'
 
 let {
   items,
@@ -52,6 +61,9 @@ const rootClass = $derived(
 const hasIssues = $derived(issues.length > 0)
 
 let isCollapsedAll = $state(false)
+let multilingual = $state(false)
+// Language order and visibility apply to the entire section without removing content.
+let localeSelection = $state<LocaleSelection | null>(null)
 let collapseAllVersion = $state(0)
 let layoutFlipLocked = $state(false)
 let introItemId = $state<string | null>(null)
@@ -66,6 +78,38 @@ const hasOptimisticItems = $derived(hasItems || loadingItems.length > 0)
 const showEmptyState = $derived(!hasOptimisticItems && !isLoading)
 const showHeaderActions = $derived(hasOptimisticItems && !isLoading)
 const flipDisabled = $derived(layoutFlipLocked || isIntroActive || forceFlipDisabled)
+const availableLocales = $derived(
+  normalizeContentLocales([
+    ...(card?.locales ?? []),
+    ...items.flatMap(property => [
+      ...Object.keys(property.i18n ?? {}),
+      ...(property.values ?? []).flatMap(value => Object.keys(value.i18n ?? {})),
+    ]),
+  ]),
+)
+const locales = $derived(
+  normalizeContentLocales([
+    ...(localeSelection?.selectedLocales ?? availableLocales),
+    ...availableLocales,
+  ]),
+)
+const visibleLocales = $derived(localeSelection?.visibleLocales ?? locales)
+const localeOptions = $derived(contentLocaleOptions(getLocaleKey()))
+const sectionCard = $derived(
+  card ? { ...card, multilingual, locales, visibleLocales } : undefined,
+)
+
+/** Apply one language-selection intent to every field in this section.
+ * @param change Ordered languages and their visible subset.
+ * @returns Nothing; stored translations remain intact.
+ */
+function changeLocales(change: LocaleChange): void {
+  triggerFlipLock()
+  localeSelection = {
+    selectedLocales: change.selectedLocales,
+    visibleLocales: change.visibleLocales,
+  }
+}
 
 const triggerFlipLock = (): void => {
   layoutFlipLocked = true
@@ -207,7 +251,7 @@ $effect(() => {
     {onCardCollapseToggle}
     onCollapseChange={onCardCollapseChange}
     {isItemVisible}
-    {card}
+    card={sectionCard}
     {onAdd}
   />
 {:else}
@@ -254,6 +298,24 @@ $effect(() => {
       {/if}
       {#snippet right()}
         {#if showHeaderActions}
+          {#if card}
+            <LocaleToolbar
+              options={localeOptions}
+              selectedLocales={locales}
+              {visibleLocales}
+              expanded={multilingual}
+              class="min-w-0 grow basis-1/2 sm:grow-0 sm:basis-auto"
+              onExpandedChange={expanded => {
+                triggerFlipLock()
+                multilingual = expanded
+              }}
+              onChange={changeLocales}
+            />
+          {/if}
+        {/if}
+      {/snippet}
+      {#snippet afterControls()}
+        {#if showHeaderActions}
           <div class="bits-form__section-header-actions">
             <FormFieldsSectionPrimitive.Actions
               actions={{
@@ -286,7 +348,7 @@ $effect(() => {
       {onCardCollapseToggle}
       onCollapseChange={onCardCollapseChange}
       {isItemVisible}
-      {card}
+      card={sectionCard}
       {onAdd}
     />
   </section>

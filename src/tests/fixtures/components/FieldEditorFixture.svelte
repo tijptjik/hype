@@ -1,0 +1,175 @@
+<script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
+// SVELTEKIT
+// @ts-expect-error Exercise the installed remote-form registration contract.
+import * as kitForms from '../../../../node_modules/@sveltejs/kit/src/runtime/form-utils.js'
+// CONTEXT
+import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
+// COMPONENTS
+import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
+// SERVICES
+import {
+  updateProjectPropertyBase,
+  updateProjectPropertyI18n,
+  addProjectPropertyValue,
+  sortProjectPropertyValuesAlphabetically,
+  removeProjectPropertyValue,
+  reorderProjectPropertyValue,
+  updateProjectPropertyValue,
+  updateProjectPropertyValueI18n,
+} from '#lib/client/services/property.js'
+// TYPES
+import type { Property, PropertyFormData } from '#lib/db/zod/schema/property.types.js'
+import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
+
+setResponsiveCtx()
+let {
+  translatable = true,
+  fieldCount = 1,
+}: { translatable?: boolean; fieldCount?: number } = $props()
+let data = $state<PropertyFormData>({
+  properties: [
+    {
+      id: 'religion',
+      scope: 'hub',
+      hubId: 'core',
+      key: 'religion',
+      type: 'classifier',
+      component: 'SelectField',
+      rank: 0,
+      isTranslatable: untrack(() => translatable),
+      audience: 'public',
+      isDefaultEnabled: true,
+      i18n: {
+        en: {
+          locale: 'en',
+          label: 'Religion',
+          labelGen: false,
+          placeholder: 'Select religion',
+          placeholderGen: false,
+        },
+        zhHant: {
+          locale: 'zh-hant',
+          label: '宗教',
+          labelGen: true,
+          placeholder: '選擇宗教',
+          placeholderGen: true,
+        },
+        zhHans: {
+          locale: 'zh-hans',
+          label: '宗教',
+          labelGen: true,
+          placeholder: '选择宗教',
+          placeholderGen: true,
+        },
+      },
+      values: [
+        'Christian',
+        'Catholic',
+        'Buddhist',
+        'Taoist',
+        'Muslim',
+        'Hindu',
+        'Other',
+      ].map((value, rank) => ({
+        id: `option-${rank}`,
+        propertyId: 'religion',
+        rank,
+        value,
+        i18n: {
+          en: { locale: 'en', value, valueGen: false },
+          zhHant: {
+            locale: 'zh-hant',
+            value: ['基督教', '天主教', '佛教', '道教', '伊斯蘭教', '印度教', '其他'][
+              rank
+            ],
+            valueGen: true,
+          },
+          zhHans: { locale: 'zh-hans', value: '', valueGen: false },
+        },
+      })),
+    } as unknown as Property,
+  ],
+})
+// Exercise section controls against independent field identities when requested.
+const properties = data.properties
+if (!properties?.[0]) throw new Error('Missing fixture property')
+for (let index = 1; index < untrack(() => fieldCount); index++) {
+  const property = structuredClone($state.snapshot(properties[0]))
+  property.id = `field-${index}`
+  property.rank = index
+  property.values = property.values?.map((value, rank) => ({
+    ...value,
+    id: `field-${index}-option-${rank}`,
+    propertyId: property.id,
+  }))
+  properties.push(property)
+}
+const fields = kitForms.create_field_proxy({
+  form_id: 'field-editor',
+  get: () => ({ data }),
+  set: (path: (string | number)[], value: unknown) => {
+    if (!path.length) data = (value as { data: PropertyFormData }).data
+    else kitForms.deep_set({ data }, path, value)
+  },
+  get_issues: () => ({}),
+  get_touched: () => ({}),
+  get_dirty: () => ({}),
+})
+const form = { fields } as FormDataUpdaterForm<PropertyFormData>
+let editing = $state(true)
+</script>
+
+<main class="bits-theme bg-background text-foreground min-h-screen min-w-0">
+  <div class="border-border flex gap-4 border-b p-4">
+    <h1 class="text-lg font-semibold">Fields</h1>
+    <button type="button" onclick={() => (editing = !editing)}>Toggle editing</button>
+  </div>
+  <form data-field-form>
+    <FormFieldsSection
+      title="Fields"
+      description="Categorical and free form fields"
+      items={data.properties ?? []}
+      isEditing={editing}
+      actions={{
+        add: () => {},
+        remove: () => {},
+        increaseRank: () => {},
+        decreaseRank: () => {},
+      }}
+      card={{
+        removeMode: false,
+        locales: ['en', 'zhHant', 'zhHans'],
+        classifierComponents: ['SelectField'],
+        specifierComponents: [
+          'InputField',
+          'PhoneField',
+          'RangeField',
+          'DateRangeField',
+          'TimeRangeField',
+          'LinkField',
+        ],
+        isRequiredInPreflight: () => false,
+        isEditing: editing,
+        getPropertyIndex: (_id, index) => index,
+        getPropertyFields: (_id, index) => fields.data.properties[index],
+        onIncreaseRank: () => {},
+        onDecreaseRank: () => {},
+        onRemove: () => {},
+        onUpdateBase: (...args) => updateProjectPropertyBase(form, ...args),
+        onUpdateI18n: (...args) => updateProjectPropertyI18n(form, ...args),
+        onAddValue: id => addProjectPropertyValue(form, id),
+        onSortValuesAlphabetically: (...args) =>
+          sortProjectPropertyValuesAlphabetically(form, ...args),
+        onRemoveValue: (...args) => removeProjectPropertyValue(form, ...args),
+        onMoveValue: (...args) => reorderProjectPropertyValue(form, ...args),
+        onUpdateValue: (...args) => updateProjectPropertyValue(form, ...args),
+        onUpdateValueI18n: (...args) => updateProjectPropertyValueI18n(form, ...args),
+        onTranslateLocale: async () => false,
+        onResetLocale: () => {},
+      }}
+    />
+  </form>
+  <output hidden data-property-state={JSON.stringify(data)}></output>
+</main>

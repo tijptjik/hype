@@ -2,6 +2,8 @@
 // SVELTE
 import { cubicInOut } from 'svelte/easing'
 import { slide } from 'svelte/transition'
+// CONTENT LOCALES
+import { contentFormKey } from '#lib/i18n/contentRecords.js'
 // COMPONENTS
 import FormFieldCardHeader from './FormFieldCardHeader.svelte'
 import FormFieldCardBody from './FormFieldCardBody.svelte'
@@ -18,6 +20,8 @@ let {
   totalItems,
   removeMode,
   locales,
+  multilingual = false,
+  visibleLocales,
   classifierComponents,
   specifierComponents,
   isRequiredInPreflight,
@@ -84,7 +88,9 @@ const isInheritedEnabled = $derived(
       : Boolean(property.isDefaultEnabled),
 )
 
-const localeKeys = ['en', 'zhHans', 'zhHant'] as const
+const localeKeys = $derived([
+  ...new Set([...locales.map(contentFormKey), ...Object.keys(property.i18n ?? {})]),
+])
 
 /**
  * Binds hidden property controls to the owning remote form.
@@ -125,10 +131,7 @@ const cardClass = $derived(
 </script>
 
 <article class={cardClass}>
-  {#snippet hiddenInput(
-    path: string[],
-    value: string | number | boolean,
-  )}
+  {#snippet hiddenInput(path: string[], value: string | number | boolean)}
     {@const attrs = getHiddenFieldAttrs(path, value)}
     {#if attrs}
       <input {...attrs}>
@@ -220,6 +223,8 @@ const cardClass = $derived(
           {propertyFields}
           {allIssues}
           {locales}
+          {multilingual}
+          {visibleLocales}
           {classifierComponents}
           {specifierComponents}
           {isRequiredInPreflight}

@@ -1,9 +1,10 @@
 <script lang="ts">
 // SVELTE
 import { tick } from 'svelte'
-import { fade } from 'svelte/transition'
 // I18N
-import { m, toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
+import { m } from '#lib/i18n.js'
+import { canonicalContentTag, contentFormKey } from '#lib/i18n/contentRecords.js'
+import { normalizeContentLocales } from '#lib/content-locales/model.js'
 // ICONS
 import GripVertical from 'virtual:icons/lucide/grip-vertical'
 // SERVICES
@@ -16,7 +17,12 @@ import { getDropIndex } from '#lib/client/services/dragDrop.js'
 // COMPONENTS
 import FormFieldSettingsSwitches from './FormFieldSettingsSwitches.svelte'
 import { SelectField, TextInput } from '#lib/bits/custom/form/index.js'
-import { FormI18nSection } from '#lib/bits/patterns/forms/formI18nSection/index.js'
+import {
+  displayedLocales,
+  shortLocaleLabel,
+} from '#lib/bits/custom/localeControls/localeControls.js'
+import FormI18nSourceBar from '../../formI18nSection/components/FormI18nSourceBar.svelte'
+import FormFieldLocaleText from './FormFieldLocaleText.svelte'
 import FormFieldPropertyValueItem from './FormFieldPropertyValueItem.svelte'
 import FormFieldPropertyValueWrapper from './FormFieldPropertyValueWrapper.svelte'
 import PropertyComponentPreview from './PropertyComponentPreview.svelte'
@@ -24,7 +30,6 @@ import PropertySettingPreview from './PropertySettingPreview.svelte'
 // TYPES
 import type { SelectItem } from '#lib/bits/core/select/select.types.js'
 import type { FormIssueLike } from '#lib/client/services/form.types.js'
-import type { Locale, LocaleKey } from '#lib/types.js'
 import type { FormFieldCardBodyProps } from '#lib/db/zod/schema/property.types.js'
 import type {
   DragDropState,
@@ -37,7 +42,9 @@ let {
   propertyIndex,
   propertyFields,
   allIssues = [],
-  locales,
+  locales: defaultLocales,
+  multilingual = false,
+  visibleLocales,
   classifierComponents,
   specifierComponents,
   isRequiredInPreflight,
@@ -52,7 +59,6 @@ let {
   onUpdateValue,
   onUpdateValueI18n,
   onTranslateLocale,
-  onResetLocale,
   onLayoutMutationStart,
 }: FormFieldCardBodyProps = $props()
 
@@ -119,13 +125,10 @@ const supportsTranslations = $derived(
     (!property.dataType || property.dataType === 'text'),
 )
 const canShowRange = $derived(property.component === 'RangeField')
-// Share intrinsic row heights across locales, including validation messages.
+// Component-specific settings stay together in the first column.
 const hasComponentSettings = $derived(
   ['TextField', 'InputField'].includes(property.component) ||
     ['dateRange', 'timeRange', 'link'].includes(property.dataType ?? ''),
-)
-const localeRowsClass = $derived(
-  canShowRange || hasComponentSettings ? 'md:row-span-7' : 'md:row-span-6',
 )
 const rangeBoundsAreRequired = $derived(canShowRange)
 const canShowValues = $derived(
@@ -142,7 +145,7 @@ const sortedValues = $derived(
 )
 const valueEditableRefs = new Map<string, HTMLElement>()
 let pendingAddedValueFocus = $state<{
-  locale: LocaleKey
+  locale: string
   expectedCount: number
 } | null>(null)
 
@@ -151,14 +154,71 @@ type FormFieldAccessor = {
   issues?: () => FormIssueLike[] | undefined
 }
 
+// Section-owned ordering and visibility never remove stored translations.
+const locales = $derived(
+  normalizeContentLocales([
+    ...defaultLocales,
+    ...Object.keys(property.i18n ?? {}),
+    ...(property.values ?? []).flatMap(value => Object.keys(value.i18n ?? {})),
+  ]),
+)
+const shownLocales = $derived(
+  displayedLocales(
+    {
+      selectedLocales: locales,
+      visibleLocales: visibleLocales ?? locales,
+    },
+    multilingual,
+  ),
+)
+const optionLocales = $derived<string[]>(
+  valuesAreTranslatable ? locales : locales.slice(0, 1),
+)
 const primaryLocale = $derived(locales[0])
+let translating = $state(false)
+let translationMessage = $state('')
+const translationSources = $derived(
+  locales
+    .filter(locale => {
+      const row = getLocaleEntry(property.i18n, locale)
+      return (
+        row?.label?.trim() ||
+        row?.placeholder?.trim() ||
+        sortedValues.some(value => getLocaleEntry(value.i18n, locale)?.value?.trim())
+      )
+    })
+    .map(locale => ({
+      locale,
+      label: shortLocaleLabel(locale),
+      accessibleLabel: `Translate missing fields from ${locale}`,
+    })),
+)
+
+/** Fill missing translations using the selected source without overwriting authored cells.
+ * @param source Source content language. @returns Completion of the selected targets.
+ */
+async function translateMissing(source: string): Promise<void> {
+  if (translating) return
+  translating = true
+  translationMessage = ''
+  try {
+    for (const target of locales) {
+      if (source !== target) await onTranslateLocale(property.id, source, target)
+    }
+  } catch {
+    translationMessage = m.address_translate_error()
+  } finally {
+    translating = false
+  }
+}
+
 const propertyPathPrefix = $derived<Array<string | number>>([
   'data',
   'properties',
   propertyIndex,
 ])
 
-function isPrimary(locale: LocaleKey): boolean {
+function isPrimary(locale: string): boolean {
   return locale === primaryLocale
 }
 
@@ -169,52 +229,30 @@ function sanitizeDragPayloadArtifacts(input: string): string {
     .trim()
 }
 
-function getValueRefKey(valueId: string, locale: LocaleKey): string {
+function getValueRefKey(valueId: string, locale: string): string {
   return `${valueId}:${locale}`
-}
-
-function getLocaleArticleSelector(locale: LocaleKey): string {
-  return `[data-locale="${locale}"]`
-}
-
-/**
- * Resolve the locale-card grid that owns the currently focused control.
- * Keeps keyboard routing scoped to this property card instead of querying the whole document.
- */
-function getLocaleGridFromTarget(target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof HTMLElement)) return null
-  const article = target.closest<HTMLElement>('article[data-locale]')
-  return article?.parentElement as HTMLElement | null
 }
 
 function getLocaleEntry<T extends Record<string, unknown>>(
   i18n: Record<string, T> | null | undefined,
-  locale: Locale | LocaleKey,
+  locale: string,
 ): T | undefined {
   if (!i18n) return undefined
-  const localeKey = toLocaleKey(locale)
-  return (i18n[locale] ?? i18n[localeKey]) as T | undefined
+  const localeKey = contentFormKey(locale)
+  return (i18n[localeKey] ??
+    i18n[locale] ??
+    i18n[canonicalContentTag(locale).toLowerCase()]) as T | undefined
 }
 
-function getValueDisplayText(valueId: string, locale: LocaleKey): string {
+function getValueDisplayText(valueId: string, locale: string): string {
   const match = sortedValues.find(value => value.id === valueId)
-  if (!valuesAreTranslatable) {
-    if (typeof match?.value === 'string')
-      return sanitizeDragPayloadArtifacts(match.value)
-  }
+  if (!valuesAreTranslatable) return sanitizeDragPayloadArtifacts(match?.value ?? '')
   const localeValue = getLocaleEntry(
     match?.i18n as Record<string, { value?: string }> | null | undefined,
     locale,
   )
-  const fallbackValue =
-    typeof match?.value === 'string'
-      ? match.value
-      : Object.values(
-          (match?.i18n as Record<string, { value?: string }> | null | undefined) ?? {},
-        ).find(
-          entry => typeof entry?.value === 'string' && entry.value.trim().length > 0,
-        )?.value
-  return sanitizeDragPayloadArtifacts(localeValue?.value ?? fallbackValue ?? '')
+  // Empty translations remain empty; a display fallback must never become authored data.
+  return sanitizeDragPayloadArtifacts(localeValue?.value ?? '')
 }
 
 function getPropertyField(pathSuffix: Array<string | number>): unknown {
@@ -294,135 +332,7 @@ function getFieldAttrs(
   return field.as(kind) as Record<string, unknown>
 }
 
-function withCoreFieldAttrs(
-  attrs: Record<string, unknown>,
-  locale: LocaleKey,
-  field: 'key' | 'label' | 'placeholder',
-): Record<string, unknown> {
-  const forwardedKeydown = attrs.onkeydown
-  return {
-    ...attrs,
-    'data-property-core-field': field,
-    onkeydown: (event: KeyboardEvent) => {
-      if (typeof forwardedKeydown === 'function') {
-        forwardedKeydown(event)
-      }
-      if (!event.defaultPrevented) {
-        onCoreFieldKeydown(event, locale, field)
-      }
-    },
-  }
-}
-
-type CoreFieldKey = 'key' | 'label' | 'placeholder' | 'component'
-
-/**
- * Find a specific core field inside one locale card.
- */
-function getCoreFieldElement(
-  localeGrid: HTMLElement | null,
-  locale: LocaleKey,
-  field: CoreFieldKey,
-): HTMLElement | null {
-  if (!localeGrid) return null
-  return localeGrid.querySelector<HTMLElement>(
-    `${getLocaleArticleSelector(locale)} [data-property-core-field="${field}"]`,
-  )
-}
-
-/**
- * Collect translation-bar buttons for one locale card.
- * We intentionally do not filter by tabindex because this helper is used to
- * override browser navigation and may need to focus controls before the bar
- * becomes naturally tabbable.
- */
-function getTranslationBarButtons(
-  localeGrid: HTMLElement | null,
-  locale: LocaleKey,
-): HTMLElement[] {
-  const localeArticle = localeGrid?.querySelector<HTMLElement>(
-    getLocaleArticleSelector(locale),
-  )
-  if (!localeArticle) return []
-  return Array.from(
-    localeArticle.querySelectorAll<HTMLElement>('.bits-form__i18n-translation-source'),
-  )
-}
-
-/**
- * Focus the trailing control in the translation bar for the current locale.
- * This gives Shift+Tab from the first field a stable "go to translation tools" target.
- */
-function focusTranslationBar(
-  localeGrid: HTMLElement | null,
-  locale: LocaleKey,
-): boolean {
-  const buttons = getTranslationBarButtons(localeGrid, locale)
-  const target = buttons[buttons.length - 1]
-  if (!target) return false
-  target.focus()
-  return true
-}
-
-/**
- * Focus the canonical Add action in the first locale card.
- * Used as the handoff from core locale fields into the values area.
- */
-function focusFirstValueAction(localeGrid: HTMLElement | null): boolean {
-  const firstLocale = locales[0]
-  if (!localeGrid || !firstLocale) return false
-  const localeArticle = localeGrid.querySelector<HTMLElement>(
-    getLocaleArticleSelector(firstLocale),
-  )
-  const target = localeArticle?.querySelector<HTMLElement>(
-    '[data-property-value-action="add"]',
-  )
-  if (!target) return false
-  target.focus()
-  return true
-}
-
-/**
- * Override Tab / Shift+Tab only at the boundaries of the core fields.
- * Browser tab order still handles the normal flow inside each locale card.
- */
-function onCoreFieldKeydown(
-  event: KeyboardEvent,
-  locale: LocaleKey,
-  field: CoreFieldKey,
-): void {
-  if (!isEditing || !canShowValues) return
-  if (event.key !== 'Tab') return
-
-  const localeGrid = getLocaleGridFromTarget(event.currentTarget)
-  const isPrimaryLocale = isPrimary(locale)
-  const firstField = isPrimaryLocale ? 'key' : 'label'
-  const lastField = isPrimaryLocale ? 'component' : 'placeholder'
-
-  if (event.shiftKey && field === firstField) {
-    if (focusTranslationBar(localeGrid, locale)) {
-      preventDefaultAndPropagation(event)
-    }
-    return
-  }
-
-  if (!event.shiftKey && field === lastField) {
-    const localeIndex = locales.indexOf(locale)
-    const nextLocale = locales[localeIndex + 1]
-    const nextTarget = nextLocale
-      ? getCoreFieldElement(localeGrid, nextLocale, 'label')
-      : null
-    if (nextTarget) {
-      preventDefaultAndPropagation(event)
-      nextTarget.focus()
-      return
-    }
-
-    if (focusFirstValueAction(localeGrid)) {
-      preventDefaultAndPropagation(event)
-    }
-  }
-}
+// Native Tab order follows settings, labels, placeholders, then option columns.
 
 /**
  * Registers a control and its explicit value with the owning remote form.
@@ -442,10 +352,10 @@ function getFieldAttrsWithValue(
 }
 
 function getPropertyGenState(
-  locale: LocaleKey,
+  locale: string,
   key: 'labelGen' | 'placeholderGen',
 ): boolean {
-  const localeKey = toLocaleKey(locale)
+  const localeKey = contentFormKey(locale)
   const attrs = getFieldAttrs(['i18n', localeKey, key], 'text') as {
     value?: unknown
   }
@@ -461,10 +371,7 @@ function getPropertyGenState(
   return Boolean(localeEntry?.[key])
 }
 
-function getValueIssues(
-  valueId: string,
-  locale: LocaleKey,
-): FormIssueLike[] | undefined {
+function getValueIssues(valueId: string, locale: string): FormIssueLike[] | undefined {
   const valueIndex = (property.values || []).findIndex(value => value.id === valueId)
   if (valueIndex < 0) return undefined
   if (!valuesAreTranslatable) {
@@ -472,8 +379,11 @@ function getValueIssues(
       ? getFieldIssues(['values', valueIndex, 'value'])
       : undefined
   }
-  const localeKey = toLocaleKey(locale)
-  return getFieldIssues(['values', valueIndex, 'i18n', localeKey, 'value'])
+  const localeKey = contentFormKey(locale)
+  return (
+    getFieldIssues(['values', valueIndex, 'i18n', localeKey, 'value']) ??
+    getFieldIssues(['values', valueIndex, 'i18n'])
+  )
 }
 
 function isFieldRequired(pathSuffix: Array<string | number>): boolean {
@@ -484,8 +394,8 @@ const keyAttrs = $derived(getFieldAttrs(['key'], 'text'))
 const keyInputAttrs = $derived(keyAttrs)
 const keyIssues = $derived(getFieldIssues(['key']))
 const getPropertyLocaleFieldAttrs = $derived(
-  (locale: LocaleKey, field: 'label' | 'placeholder') =>
-    getFieldAttrs(['i18n', locale, field], 'text'),
+  (locale: string, field: 'label' | 'placeholder') =>
+    getFieldAttrs(['i18n', contentFormKey(locale), field], 'text'),
 )
 const componentAttrs = $derived(
   getFieldAttrs(['component'], 'select') as { name?: string; value?: string },
@@ -496,9 +406,12 @@ const minAttrs = $derived(getFieldAttrs(['min'], 'number'))
 const minIssues = $derived(getFieldIssues(['min']))
 const maxAttrs = $derived(getFieldAttrs(['max'], 'number'))
 const maxIssues = $derived(getFieldIssues(['max']))
-const propertyRootIssues = $derived(getFieldIssues([]) ?? [])
+const propertyRootIssues = $derived([
+  ...(getFieldIssues([]) ?? []),
+  ...(getFieldIssues(['i18n']) ?? []),
+])
 
-function onValueBlur(event: FocusEvent, valueId: string, locale: LocaleKey): void {
+function onValueBlur(event: FocusEvent, valueId: string, locale: string): void {
   if (!isEditing) return
   const target = event.currentTarget as HTMLElement
   const rawValue = target.textContent?.trim() ?? ''
@@ -509,10 +422,16 @@ function onValueBlur(event: FocusEvent, valueId: string, locale: LocaleKey): voi
     onUpdateValue(property.id, valueId, 'value', nextValue)
     return
   }
-  onUpdateValueI18n(property.id, valueId, toLocaleKebab(locale), 'value', nextValue)
+  onUpdateValueI18n(
+    property.id,
+    valueId,
+    canonicalContentTag(locale),
+    'value',
+    nextValue,
+  )
 }
 
-function onValueInput(event: Event, valueId: string, locale: LocaleKey): void {
+function onValueInput(event: Event, valueId: string, locale: string): void {
   if (!isEditing) return
   const target = event.currentTarget as HTMLElement
   const rawValue = target.textContent ?? ''
@@ -522,7 +441,13 @@ function onValueInput(event: Event, valueId: string, locale: LocaleKey): void {
     onUpdateValue(property.id, valueId, 'value', nextValue)
     return
   }
-  onUpdateValueI18n(property.id, valueId, toLocaleKebab(locale), 'value', nextValue)
+  onUpdateValueI18n(
+    property.id,
+    valueId,
+    canonicalContentTag(locale),
+    'value',
+    nextValue,
+  )
 }
 
 function preventDefaultAndPropagation(event: Event): void {
@@ -570,6 +495,7 @@ function getValueDraggableConfig(valueId: string): DraggableOptions<{ id: string
   return {
     container: `${valueContainerGroup}-${valueId}`,
     containerGroup: valueContainerGroup,
+    direction: 'horizontal',
     dragData: { id: valueId },
     handle: '.bits-project-field-card__value-handle',
     disabled: isValueDnDDisabled(),
@@ -587,6 +513,7 @@ function getValueDroppableConfig(valueId: string): DragDropOptions<{ id: string 
   return {
     container: `${valueContainerGroup}-${valueId}`,
     containerGroup: valueContainerGroup,
+    direction: 'horizontal',
     disabled: isValueDnDDisabled(),
     callbacks: {
       onDrop: state => onValueDrop(state, valueId),
@@ -621,10 +548,10 @@ function onValueDoubleClick(event: MouseEvent): void {
 
 function resolveAdjacentValueEditable(
   valueId: string,
-  locale: LocaleKey,
+  locale: string,
   direction: 1 | -1,
 ): HTMLElement | null {
-  const localeIndex = locales.indexOf(locale)
+  const localeIndex = optionLocales.indexOf(locale)
   const valueIndex = sortedValues.findIndex(value => value.id === valueId)
   if (localeIndex < 0 || valueIndex < 0) return null
 
@@ -633,7 +560,7 @@ function resolveAdjacentValueEditable(
 
   while (true) {
     if (direction === 1) {
-      if (nextLocaleIndex + 1 < locales.length) {
+      if (nextLocaleIndex + 1 < optionLocales.length) {
         nextLocaleIndex += 1
       } else if (nextValueIndex + 1 < sortedValues.length) {
         nextValueIndex += 1
@@ -646,22 +573,22 @@ function resolveAdjacentValueEditable(
         nextLocaleIndex -= 1
       } else if (nextValueIndex - 1 >= 0) {
         nextValueIndex -= 1
-        nextLocaleIndex = locales.length - 1
+        nextLocaleIndex = optionLocales.length - 1
       } else {
         return null
       }
     }
 
     const nextValue = sortedValues[nextValueIndex]
-    const nextLocale = locales[nextLocaleIndex]
+    const nextLocale = optionLocales[nextLocaleIndex]
     if (!nextValue || !nextLocale) return null
 
     const target = valueEditableRefs.get(getValueRefKey(nextValue.id, nextLocale))
-    if (target) return target
+    if (target && !target.closest('[hidden]')) return target
   }
 }
 
-async function onValueEnter(event: KeyboardEvent, locale: LocaleKey): Promise<void> {
+async function onValueEnter(event: KeyboardEvent, locale: string): Promise<void> {
   if (!isEditing) return
   if (event.key !== 'Enter') return
   if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
@@ -676,7 +603,7 @@ async function onValueEnter(event: KeyboardEvent, locale: LocaleKey): Promise<vo
   onAddValue(property.id)
 }
 
-function onValueTab(event: KeyboardEvent, valueId: string, locale: LocaleKey): void {
+function onValueTab(event: KeyboardEvent, valueId: string, locale: string): void {
   if (!isEditing) return
   if (event.key !== 'Tab') return
 
@@ -690,9 +617,9 @@ function onValueTab(event: KeyboardEvent, valueId: string, locale: LocaleKey): v
 
 function bindValueEditable(
   node: HTMLElement,
-  params: { valueId: string; locale: LocaleKey; text: string },
+  params: { valueId: string; locale: string; text: string },
 ): {
-  update: (next: { valueId: string; locale: LocaleKey; text: string }) => void
+  update: (next: { valueId: string; locale: string; text: string }) => void
   destroy: () => void
 } {
   let current = params
@@ -765,533 +692,525 @@ $effect(() => {
 {#snippet componentPreview(component: string)}
   <PropertyComponentPreview {component} />
 {/snippet}
-
 {#snippet settingPreview(value: string)}
   <PropertySettingPreview {value} />
 {/snippet}
 
-<!-- Shared definition settings sit above the locale-specific fields. -->
-<div
-  class="bits-theme border-border/40 flex flex-wrap justify-center gap-x-10 gap-y-3 border-b px-6 py-4"
->
-  <FormFieldSettingsSwitches
-    propertyId={property.id}
-    showTranslations={supportsTranslations}
-    isTranslatable={Boolean(property.isTranslatable)}
-    isPublic={property.audience !== 'internal'}
-    {isEditing}
-    onTranslationsChange={value => {
-      onLayoutMutationStart?.()
-      onUpdateBase(property.id, 'isTranslatable', value)
-    }}
-    onAudienceChange={value =>
-      onUpdateBase(property.id, 'audience', value ? 'public' : 'internal')}
-  />
-</div>
-
-<FormI18nSection
-  title=""
-  class="bits-theme w-full"
-  gridClass="bits-project-field-card__i18n-grid grid-cols-1! md:grid-cols-3! gap-x-0! gap-y-3! border-0! bg-transparent!"
-  cardClass={`bits-form__i18n-card grid! gap-3! rounded-none! bg-transparent! shadow-none ${localeRowsClass} md:grid-rows-subgrid`}
-  contentClass={`grid gap-3 pb-2 pt-2 md:grid-rows-subgrid ${localeRowsClass}`}
-  {locales}
-  sectionKey={`property:${property.id}`}
-  {isEditing}
-  onTranslate={(sourceLocale, targetLocale) =>
-    onTranslateLocale(property.id, sourceLocale, targetLocale)}
-  onResetLocale={targetLocale => {
-    onLayoutMutationStart?.()
-    return onResetLocale(property.id, targetLocale)
-  }}
->
-  {#snippet children(locale)}
-    {@const showCoreFields = isPrimary(locale)}
-    {@const labelGenValue = getPropertyGenState(locale, 'labelGen')}
-    {@const placeholderGenValue = getPropertyGenState(locale, 'placeholderGen')}
-    {@const labelGenAttrs = getFieldAttrsWithValue(
-      ['i18n', locale, 'labelGen'],
-      'hidden',
-      labelGenValue,
-    )}
-    {@const placeholderGenAttrs = getFieldAttrsWithValue(
-      ['i18n', locale, 'placeholderGen'],
-      'hidden',
-      placeholderGenValue,
-    )}
-
-    <div class={`grid gap-3 md:grid-rows-subgrid ${localeRowsClass}`}>
-      {#if labelGenAttrs}
-        <input {...labelGenAttrs}>
-      {/if}
-      {#if placeholderGenAttrs}
-        <input {...placeholderGenAttrs}>
-      {/if}
-
-      {#if showCoreFields}
-        <!-- Register custom hidden controls with this property row's remote fields. -->
-        <input {...getFieldAttrsWithValue(['id'], 'hidden', property.id ?? '')}>
-        <input {...getFieldAttrsWithValue(['type'], 'hidden', property.type ?? '')}>
-        <input
-          {...getFieldAttrsWithValue(['scope'], 'hidden', property.scope ?? 'project')}
-        >
-        <input {...getFieldAttrsWithValue(['hubId'], 'hidden', property.hubId ?? '')}>
-        <input
-          {...getFieldAttrsWithValue(
-            ['isDefaultEnabled'],
-            'hidden',
-            Boolean(property.isDefaultEnabled),
-          )}
-        >
-        <input
-          {...getFieldAttrsWithValue(
-            ['isTranslatable'],
-            'hidden',
-            Boolean(property.isTranslatable),
-          )}
-        >
-
-        <TextInput
-          label={m.admin__forms_property_name_api()}
-          required={isFieldRequired(['key'])}
-          value={(keyInputAttrs as { value?: string }).value ?? property.key ?? ''}
-          issues={keyIssues}
-          {isEditing}
-          inputAttrs={withCoreFieldAttrs(keyInputAttrs, locale, 'key')}
-          onValueChange={value => onUpdateBase(property.id, 'key', value)}
-        />
-      {:else}
-        <!-- Reserve the API row only while locales are displayed side by side. -->
-        <div class="hidden md:block" aria-hidden="true"></div>
-      {/if}
+<div class="bits-theme min-w-0 px-6 py-4" data-property-editor>
+  <!-- Settings are independent of the ordered locale rows in the two text columns. -->
+  <div class="mt-4 grid min-w-0 gap-6 lg:grid-cols-3 lg:gap-0" data-property-columns>
+    <section
+      class="grid min-w-0 content-start gap-3 lg:pr-6"
+      aria-label="Field settings"
+      data-property-settings
+    >
+      <!-- Register custom hidden controls with this property row's remote fields. -->
+      <input {...getFieldAttrsWithValue(['id'], 'hidden', property.id ?? '')}>
+      <input {...getFieldAttrsWithValue(['type'], 'hidden', property.type ?? '')}>
+      <input
+        {...getFieldAttrsWithValue(['scope'], 'hidden', property.scope ?? 'project')}
+      >
+      <input {...getFieldAttrsWithValue(['hubId'], 'hidden', property.hubId ?? '')}>
+      <input
+        {...getFieldAttrsWithValue(
+          ['isDefaultEnabled'],
+          'hidden',
+          Boolean(property.isDefaultEnabled),
+        )}
+      >
+      <input
+        {...getFieldAttrsWithValue(
+          ['isTranslatable'],
+          'hidden',
+          Boolean(property.isTranslatable),
+        )}
+      >
 
       <TextInput
-        label={m.admin__forms_property_name_ui()}
-        required={isFieldRequired(['i18n', locale, 'label'])}
-        {locale}
-        isTranslated={true}
-        isGenAI={labelGenValue}
-        onToggleGenAI={() =>
-          onUpdateI18n(property.id, toLocaleKebab(locale), 'labelGen', !labelGenValue)}
-        value={(getPropertyLocaleFieldAttrs(locale, 'label') as { value?: string })
-          .value ??
-          getLocaleEntry(
-            property.i18n as Record<string, { label?: string }> | null | undefined,
-            locale,
-          )?.label ??
-          ''}
-        issues={getFieldIssues(['i18n', locale, 'label'])}
+        label={m.admin__forms_property_name_api()}
+        required={isFieldRequired(['key'])}
+        value={(keyInputAttrs as { value?: string }).value ?? property.key ?? ''}
+        issues={keyIssues}
         {isEditing}
-        inputAttrs={withCoreFieldAttrs(
-          getPropertyLocaleFieldAttrs(locale, 'label'),
-          locale,
-          'label',
-        )}
-        onValueChange={value =>
-          onUpdateI18n(property.id, toLocaleKebab(locale), 'label', value)}
+        inputAttrs={keyInputAttrs}
+        onValueChange={value => onUpdateBase(property.id, 'key', value)}
       />
 
-      <TextInput
-        label={m.admin__forms_property_input_placeholder()}
-        required={isFieldRequired(['i18n', locale, 'placeholder'])}
-        {locale}
-        isTranslated={true}
-        isGenAI={placeholderGenValue}
-        onToggleGenAI={() =>
-          onUpdateI18n(
-            property.id,
-            toLocaleKebab(locale),
-            'placeholderGen',
-            !placeholderGenValue,
+      {#each ['dataType', 'cardinality', 'presentation', 'audience'] as key}
+        <input
+          {...getFieldAttrsWithValue(
+            [key],
+            'hidden',
+            property[key as 'dataType'] ??
+              (key === 'dataType' || key === 'presentation'
+                ? 'text'
+                : key === 'cardinality'
+                  ? 'one'
+                  : 'public'),
           )}
-        value={(
-          getPropertyLocaleFieldAttrs(locale, 'placeholder') as {
-            value?: string
+        >
+      {/each}
+      <SelectField
+        value={property.component}
+        displayClass="bg-foreground/4 border-foreground/10"
+        items={componentOptions}
+        itemPreview={componentPreview}
+        contentClass="max-h-[calc(100dvh-2rem)] w-[var(--bits-select-anchor-width)] max-w-[calc(100vw-2rem)]"
+        label={m.admin__forms_property_component()}
+        required={isFieldRequired(['component'])}
+        placeholder={m.admin__forms_property_component()}
+        issues={componentIssues}
+        {isEditing}
+        name={componentName}
+        onValueChange={value => {
+          onLayoutMutationStart?.()
+          onUpdateBase(property.id, 'component', value)
+          if (
+            (value === 'RangeField' || value === 'PhoneField') &&
+            property.isTranslatable
+          ) {
+            onUpdateBase(property.id, 'isTranslatable', false)
           }
-        ).value ??
-          getLocaleEntry(
-            property.i18n as
-              | Record<string, { placeholder?: string }>
-              | null
-              | undefined,
-            locale,
-          )?.placeholder ??
-          ''}
-        issues={getFieldIssues(['i18n', locale, 'placeholder'])}
-        {isEditing}
-        inputAttrs={withCoreFieldAttrs(
-          getPropertyLocaleFieldAttrs(locale, 'placeholder'),
-          locale,
-          'placeholder',
-        )}
-        onValueChange={value =>
-          onUpdateI18n(property.id, toLocaleKebab(locale), 'placeholder', value)}
+        }}
       />
-
-      {#if showCoreFields}
-        {#each ['dataType', 'cardinality', 'presentation', 'audience'] as key}
-          <input
-            {...getFieldAttrsWithValue(
-              [key],
-              'hidden',
-              property[key as 'dataType'] ??
-                (key === 'dataType' || key === 'presentation'
-                  ? 'text'
-                  : key === 'cardinality'
-                    ? 'one'
-                    : 'public'),
-            )}
-          >
-        {/each}
-        <SelectField
-          value={property.component}
-          displayClass="bg-foreground/4 border-foreground/10"
-          items={componentOptions}
-          itemPreview={componentPreview}
-          contentClass="max-h-[calc(100dvh-2rem)] w-[var(--bits-select-anchor-width)] max-w-[calc(100vw-2rem)]"
-          label={m.admin__forms_property_component()}
-          required={isFieldRequired(['component'])}
-          placeholder={m.admin__forms_property_component()}
-          issues={componentIssues}
-          {isEditing}
-          name={componentName}
-          wrapperAttrs={{
-            'data-property-core-field': 'component',
-            onkeydown: (event: KeyboardEvent) =>
-              onCoreFieldKeydown(event, locale, 'component'),
-          }}
-          onValueChange={value => {
-            onLayoutMutationStart?.()
-            onUpdateBase(property.id, 'component', value)
-            if (
-              (value === 'RangeField' || value === 'PhoneField') &&
-              property.isTranslatable
-            ) {
-              onUpdateBase(property.id, 'isTranslatable', false)
-            }
-          }}
-        />
-        <input
-          {...getFieldAttrsWithValue(
-            ['dateResolution'],
-            'hidden',
-            property.dateResolution ?? 'day',
-          )}
-        >
-        <input
-          {...getFieldAttrsWithValue(
-            ['timeMaxHour'],
-            'hidden',
-            property.timeMaxHour ?? 24,
-          )}
-        >
-        {#if hasComponentSettings}
-          <div class="grid min-w-0 gap-3">
-            {#if property.component === 'TextField' ||
-              property.component === 'InputField'}
-              <SelectField
-                label="Data type"
-                value={property.dataType ?? 'text'}
-                items={[
-                  { value: 'text', label: 'Text' },
-                  { value: 'number', label: 'Number' },
-                  { value: 'date', label: 'Date' },
-                  { value: 'boolean', label: 'Boolean' },
-                ]}
-                itemPreview={settingPreview}
-                {isEditing}
-                contentClass="w-[var(--bits-select-anchor-width)]"
-                onValueChange={value => onUpdateBase(property.id, 'dataType', value)}
-              />
-            {/if}
-            {#if property.dataType === 'dateRange'}
-              <SelectField
-                label="Resolution"
-                value={property.dateResolution ?? 'day'}
-                items={['decade', 'year', 'month', 'day'].map(value => ({
-                  value,
-                  label: value[0].toUpperCase() + value.slice(1),
-                }))}
-                itemPreview={settingPreview}
-                {isEditing}
-                contentClass="w-[var(--bits-select-anchor-width)]"
-                onValueChange={value =>
-                  onUpdateBase(property.id, 'dateResolution', value)}
-              />
-              <div class="grid min-w-0 grid-cols-2 gap-3">
-                {#each ['min', 'max'] as bound}
-                  <input
-                    {...getFieldAttrsWithValue(
-                      [bound],
-                      'hidden',
-                      rangeDomain(property)[bound as 'min'],
-                    )}
-                  >
-                  <TextInput
-                    label={bound === 'min' ? 'Min' : 'Max'}
-                    required={true}
-                    {isEditing}
-                    inputType={property.dateResolution === 'day'
-                      ? 'date'
-                      : property.dateResolution === 'month'
-                        ? 'month'
-                        : 'text'}
-                    value={formatRangeEndpoint(
-                      property,
-                      rangeDomain(property)[bound as 'min'],
-                    )}
-                    inputClass="min-w-0 w-full"
-                    issues={getFieldIssues([bound])}
-                    inputAttrs={{
-                      onchange: (event: Event) => {
-                        const input = event.currentTarget as HTMLInputElement
-                        try {
-                          onUpdateBase(
-                            property.id,
-                            bound as 'min' | 'max',
-                            parseRangeEndpoint(property, input.value),
-                          )
-                          input.setCustomValidity('')
-                        } catch (error) {
-                          input.setCustomValidity(
-                            error instanceof Error ? error.message : 'Invalid date',
-                          )
-                          input.reportValidity()
-                        }
-                      },
-                    }}
-                  />
-                {/each}
-              </div>
-            {:else if property.dataType === 'timeRange'}
-              <SelectField
-                label="Service day"
-                value={String(property.timeMaxHour ?? 24)}
-                items={[
-                  { value: '24', label: '24 hours' },
-                  { value: '36', label: '36 hours' },
-                ]}
-                itemPreview={settingPreview}
-                {isEditing}
-                contentClass="w-[var(--bits-select-anchor-width)]"
-                onValueChange={value =>
-                  onUpdateBase(property.id, 'timeMaxHour', Number(value))}
-              />
-              <div class="grid min-w-0 grid-cols-2 gap-3">
-                <TextInput label="Min" value="00:00" readonly={true} {isEditing} />
+      <input
+        {...getFieldAttrsWithValue(
+          ['dateResolution'],
+          'hidden',
+          property.dateResolution ?? 'day',
+        )}
+      >
+      <input
+        {...getFieldAttrsWithValue(
+          ['timeMaxHour'],
+          'hidden',
+          property.timeMaxHour ?? 24,
+        )}
+      >
+      {#if hasComponentSettings}
+        <div class="grid min-w-0 gap-3">
+          {#if property.component === 'TextField' ||
+            property.component === 'InputField'}
+            <SelectField
+              label="Data type"
+              value={property.dataType ?? 'text'}
+              items={[
+                { value: 'text', label: 'Text' },
+                { value: 'number', label: 'Number' },
+                { value: 'date', label: 'Date' },
+                { value: 'boolean', label: 'Boolean' },
+              ]}
+              itemPreview={settingPreview}
+              {isEditing}
+              contentClass="w-[var(--bits-select-anchor-width)]"
+              onValueChange={value => onUpdateBase(property.id, 'dataType', value)}
+            />
+          {/if}
+          {#if property.dataType === 'dateRange'}
+            <SelectField
+              label="Resolution"
+              value={property.dateResolution ?? 'day'}
+              items={['decade', 'year', 'month', 'day'].map(value => ({
+                value,
+                label: value[0].toUpperCase() + value.slice(1),
+              }))}
+              itemPreview={settingPreview}
+              {isEditing}
+              contentClass="w-[var(--bits-select-anchor-width)]"
+              onValueChange={value =>
+                onUpdateBase(property.id, 'dateResolution', value)}
+            />
+            <div class="grid min-w-0 grid-cols-2 gap-3">
+              {#each ['min', 'max'] as bound}
+                <input
+                  {...getFieldAttrsWithValue(
+                    [bound],
+                    'hidden',
+                    rangeDomain(property)[bound as 'min'],
+                  )}
+                >
                 <TextInput
-                  label="Max"
-                  value={`${property.timeMaxHour ?? 24}:00`}
-                  readonly={true}
+                  label={bound === 'min' ? 'Min' : 'Max'}
+                  required={true}
                   {isEditing}
+                  inputType={property.dateResolution === 'day'
+                    ? 'date'
+                    : property.dateResolution === 'month'
+                      ? 'month'
+                      : 'text'}
+                  value={formatRangeEndpoint(
+                    property,
+                    rangeDomain(property)[bound as 'min'],
+                  )}
+                  inputClass="min-w-0 w-full"
+                  issues={getFieldIssues([bound])}
+                  inputAttrs={{
+                    onchange: (event: Event) => {
+                      const input = event.currentTarget as HTMLInputElement
+                      try {
+                        onUpdateBase(
+                          property.id,
+                          bound as 'min' | 'max',
+                          parseRangeEndpoint(property, input.value),
+                        )
+                        input.setCustomValidity('')
+                      } catch (error) {
+                        input.setCustomValidity(
+                          error instanceof Error ? error.message : 'Invalid date',
+                        )
+                        input.reportValidity()
+                      }
+                    },
+                  }}
                 />
-              </div>
-            {/if}
-            {#if property.dataType === 'link'}
-              <SelectField
-                label="Cardinality"
-                value={property.cardinality ?? 'one'}
-                items={[
-                  { value: 'one', label: 'One' },
-                  { value: 'many', label: 'Many' },
-                ]}
-                itemPreview={settingPreview}
-                {isEditing}
-                contentClass="w-[var(--bits-select-anchor-width)]"
-                onValueChange={value => onUpdateBase(property.id, 'cardinality', value)}
-              />
-              <SelectField
-                label="Link text"
-                value={property.presentation ?? 'labelledLinks'}
-                items={[
-                  { value: 'numberedReferences', label: 'As Footnotes' },
-                  { value: 'labelledLinks', label: 'Display text' },
-                ]}
-                itemPreview={settingPreview}
-                {isEditing}
-                contentClass="w-[var(--bits-select-anchor-width)]"
-                onValueChange={value =>
-                  onUpdateBase(property.id, 'presentation', value)}
-              />
-            {/if}
-          </div>
-        {/if}
-      {:else}
-        <!-- Match the component and configuration rows across locale columns. -->
-        <div class="hidden md:block" aria-hidden="true"></div>
-        {#if hasComponentSettings}
-          <div class="hidden md:block" aria-hidden="true"></div>
-        {/if}
-      {/if}
-
-      {#if canShowRange}
-        <div class="bits-project-field-card__range-row">
-          {#if showCoreFields}
-            <TextInput
-              label={m.admin__forms_property_minimum()}
-              inputType="number"
-              value={(minAttrs as { value?: string }).value ??
-                (property.min == null ? '' : String(property.min))}
-              required={rangeBoundsAreRequired}
-              issues={minIssues}
+              {/each}
+            </div>
+          {:else if property.dataType === 'timeRange'}
+            <SelectField
+              label="Service day"
+              value={String(property.timeMaxHour ?? 24)}
+              items={[
+                { value: '24', label: '24 hours' },
+                { value: '36', label: '36 hours' },
+              ]}
+              itemPreview={settingPreview}
               {isEditing}
-              inputAttrs={minAttrs}
+              contentClass="w-[var(--bits-select-anchor-width)]"
+              onValueChange={value =>
+                onUpdateBase(property.id, 'timeMaxHour', Number(value))}
             />
-            <TextInput
-              label={m.admin__forms_property_maximum()}
-              inputType="number"
-              value={(maxAttrs as { value?: string }).value ??
-                (property.max == null ? '' : String(property.max))}
-              required={rangeBoundsAreRequired}
-              issues={maxIssues}
+            <div class="grid min-w-0 grid-cols-2 gap-3">
+              <TextInput label="Min" value="00:00" readonly={true} {isEditing} />
+              <TextInput
+                label="Max"
+                value={`${property.timeMaxHour ?? 24}:00`}
+                readonly={true}
+                {isEditing}
+              />
+            </div>
+          {/if}
+          {#if property.dataType === 'link'}
+            <SelectField
+              label="Cardinality"
+              value={property.cardinality ?? 'one'}
+              items={[
+                { value: 'one', label: 'One' },
+                { value: 'many', label: 'Many' },
+              ]}
+              itemPreview={settingPreview}
               {isEditing}
-              inputAttrs={maxAttrs}
+              contentClass="w-[var(--bits-select-anchor-width)]"
+              onValueChange={value => onUpdateBase(property.id, 'cardinality', value)}
             />
-          {:else}
-            <div class="hidden md:block" aria-hidden="true"></div>
-            <div class="hidden md:block" aria-hidden="true"></div>
+            <SelectField
+              label="Link text"
+              value={property.presentation ?? 'labelledLinks'}
+              items={[
+                { value: 'numberedReferences', label: 'As Footnotes' },
+                { value: 'labelledLinks', label: 'Display text' },
+              ]}
+              itemPreview={settingPreview}
+              {isEditing}
+              contentClass="w-[var(--bits-select-anchor-width)]"
+              onValueChange={value => onUpdateBase(property.id, 'presentation', value)}
+            />
           {/if}
         </div>
       {/if}
 
-      {#if canShowValues}
-        <FormFieldPropertyValueWrapper
-          {isEditing}
-          {optionRemoveMode}
-          onAdd={() => {
-            onLayoutMutationStart?.()
-            onAddValue(property.id)
-          }}
-          onSort={() => {
-            onLayoutMutationStart?.()
-            onSortValuesAlphabetically(property.id, toLocaleKebab(locale))
-          }}
-          onToggleRemoveMode={toggleOptionRemoveMode}
-        >
-          {#snippet rows()}
-            {#each sortedValues as value, valueIndex (value.id)}
-              {@const formValueIndex = (property.values || []).findIndex(
-                candidate => candidate.id === value.id,
-              )}
-              {@const resolvedValueIndex =
-                formValueIndex >= 0 ? formValueIndex : valueIndex}
-              {@const valueDisplayText = getValueDisplayText(value.id, locale)}
-              {@const valueIdInputAttrs = getFieldAttrsWithValue(
-                ['values', resolvedValueIndex, 'id'],
-                'hidden',
-                value.id,
-              )}
-              {@const valueRankInputAttrs = getFieldAttrsWithValue(
-                ['values', resolvedValueIndex, 'rank'],
-                'hidden',
-                valueIndex,
-              )}
-              <FormFieldPropertyValueItem
-                {isEditing}
-                {optionRemoveMode}
-                isPlaceholder={!valuesAreTranslatable && !showCoreFields}
-                hasIssues={Boolean(getValueIssues(value.id, locale)?.length)}
-                valueId={value.id}
-                propertyId={property.id}
-                onRemove={(propertyId, valueId) => {
-                  onLayoutMutationStart?.()
-                  onRemoveValue(propertyId, valueId)
-                }}
-                draggableConfig={getValueDraggableConfig(value.id)}
-                droppableConfig={getValueDroppableConfig(value.id)}
-              >
-                {#snippet content()}
-                  {#if showCoreFields}
-                    {#if valueIdInputAttrs}
-                      <input {...valueIdInputAttrs} type="hidden">
-                    {/if}
-                    {#if valueRankInputAttrs}
-                      <input {...valueRankInputAttrs} type="hidden">
-                    {/if}
-                  {/if}
-                  {#if valuesAreTranslatable}
-                    <input
-                      {...getFieldAttrsWithValue(
-                        ['values', resolvedValueIndex, 'i18n', locale, 'value'],
-                        'hidden',
-                        valueDisplayText,
-                      )}
-                    >
-                  {:else if showCoreFields}
-                    <input
-                      {...getFieldAttrsWithValue(
-                        ['values', resolvedValueIndex, 'value'],
-                        'hidden',
-                        valueDisplayText,
-                      )}
-                    >
-                  {/if}
-
-                  {#if valuesAreTranslatable || showCoreFields}
-                    <button
-                      type="button"
-                      class={`bits-project-field-card__value-handle ${!isEditing ? 'bits-project-field-card__value-handle--disabled' : ''}`}
-                      tabindex={-1}
-                      aria-hidden={!isEditing}
-                    >
-                      <GripVertical />
-                    </button>
-                  {/if}
-
-                  {#if valuesAreTranslatable || showCoreFields}
-                    <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
-                    <div
-                      class={`bits-project-field-card__value-editable focus-override empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
-                      role="textbox"
-                      aria-label={`Option ${valueIndex + 1}`}
-                      data-placeholder="Option label"
-                      aria-readonly={!isEditing}
-                      contenteditable={isEditing &&
-                      (!showCoreFields || !valuesAreTranslatable)
-                        ? 'plaintext-only'
-                        : isEditing}
-                      tabindex={isEditing ? 0 : -1}
-                      use:bindValueEditable={{
-                        valueId: value.id,
-                        locale,
-                        text: valueDisplayText,
-                      }}
-                      onbeforeinput={preventDropBeforeInput}
-                      onkeydown={event => {
-                        onValueTab(event, value.id, locale)
-                        void onValueEnter(event, locale)
-                      }}
-                      oninput={event => onValueInput(event, value.id, locale)}
-                      ondragover={preventNativeDropOver}
-                      ondrop={preventNativeDropInsert}
-                      onfocus={onValueFocus}
-                      ondblclick={onValueDoubleClick}
-                      onblur={event => onValueBlur(event, value.id, locale)}
-                    ></div>
-                  {:else}
-                    <div
-                      class="bits-project-field-card__value-placeholder"
-                      aria-hidden="true"
-                    ></div>
-                  {/if}
-                  {#if getValueIssues(value.id, locale)?.length}
-                    <div class="bits-form__error">
-                      {getValueIssues(value.id, locale)
-                        ?.map(issue => issue.message)
-                        .join(' ')}
-                    </div>
-                  {/if}
-                {/snippet}
-              </FormFieldPropertyValueItem>
-            {/each}
-          {/snippet}
-        </FormFieldPropertyValueWrapper>
-      {/if}
-      {#if propertyRootIssues.length > 0}
-        <div class="bits-form__error">
-          {propertyRootIssues.map(issue => issue.message).join(' ')}
+      {#if canShowRange}
+        <div class="bits-project-field-card__range-row">
+          <TextInput
+            label={m.admin__forms_property_minimum()}
+            inputType="number"
+            value={(minAttrs as { value?: string }).value ??
+              (property.min == null ? '' : String(property.min))}
+            required={rangeBoundsAreRequired}
+            issues={minIssues}
+            {isEditing}
+            inputAttrs={minAttrs}
+          />
+          <TextInput
+            label={m.admin__forms_property_maximum()}
+            inputType="number"
+            value={(maxAttrs as { value?: string }).value ??
+              (property.max == null ? '' : String(property.max))}
+            required={rangeBoundsAreRequired}
+            issues={maxIssues}
+            {isEditing}
+            inputAttrs={maxAttrs}
+          />
         </div>
       {/if}
+      <!-- Shared definition settings apply to every language. -->
+      <FormFieldSettingsSwitches
+        propertyId={property.id}
+        showTranslations={supportsTranslations}
+        isTranslatable={Boolean(property.isTranslatable)}
+        isPublic={property.audience !== 'internal'}
+        {isEditing}
+        onTranslationsChange={value => {
+          onLayoutMutationStart?.()
+          onUpdateBase(property.id, 'isTranslatable', value)
+        }}
+        onAudienceChange={value =>
+          onUpdateBase(property.id, 'audience', value ? 'public' : 'internal')}
+      />
+    </section>
+    {#each ['label', 'placeholder'] as const as field}
+      {@const label =
+        field === 'label'
+          ? m.admin__forms_property_name_ui()
+          : m.admin__forms_property_input_placeholder()}
+      <section
+        class="border-border/50 min-w-0 border-t pt-4 lg:border-t-0 lg:border-l lg:px-6 lg:pt-0"
+        aria-label={label}
+        data-property-text-column={field}
+      >
+        <h4 class="mb-3 text-sm font-bold text-[var(--form-label)]">{label}</h4>
+        <div class="grid gap-2">
+          {#each locales as locale (locale)}
+            {@const key = contentFormKey(locale)}
+            {@const genKey = field === 'label' ? 'labelGen' : 'placeholderGen'}
+            {@const gen = getPropertyGenState(locale, genKey)}
+            {@const value =
+              (getPropertyLocaleFieldAttrs(key, field) as { value?: string }).value ??
+              getLocaleEntry(property.i18n, locale)?.[field] ??
+              ''}
+            <div hidden={!shownLocales.includes(locale)} data-property-locale={locale}>
+              <input {...getFieldAttrsWithValue(['i18n', key, genKey], 'hidden', gen)}>
+              <FormFieldLocaleText
+                {value}
+                {gen}
+                {locale}
+                label={`${label} ${locale}`}
+                prefix={multilingual ? shortLocaleLabel(locale) : ''}
+                attrs={getPropertyLocaleFieldAttrs(key, field)}
+                issues={getFieldIssues(['i18n', key, field])}
+                required={isFieldRequired(['i18n', key, field])}
+                {isEditing}
+                onValue={text => onUpdateI18n(property.id, locale, field, text)}
+                onGen={next => onUpdateI18n(property.id, locale, genKey, next)}
+              />
+            </div>
+          {/each}
+        </div>
+      </section>
+    {/each}
+  </div>
+
+  {#if canShowValues}
+    <!-- One draggable option column retains all locale cells and its stable identity. -->
+    <div class="mt-6 min-w-0" data-property-options>
+      <FormFieldPropertyValueWrapper
+        {isEditing}
+        {optionRemoveMode}
+        onAdd={() => {
+          onLayoutMutationStart?.()
+          onAddValue(property.id)
+        }}
+        onSort={() => {
+          onLayoutMutationStart?.()
+          onSortValuesAlphabetically(property.id, primaryLocale)
+        }}
+        onToggleRemoveMode={toggleOptionRemoveMode}
+      >
+        {#snippet rows()}
+          <section
+            class="min-w-0 overflow-x-auto overscroll-x-contain pb-2"
+            data-property-options-scroll
+            aria-label="Dropdown options"
+          >
+            <div
+              class="grid w-max min-w-full auto-cols-[minmax(16rem,20rem)] grid-flow-col items-stretch gap-3"
+              style:grid-template-rows={`auto repeat(${valuesAreTranslatable ? shownLocales.length : 1}, minmax(2.5rem, auto))`}
+            >
+              {#each sortedValues as value, valueIndex (value.id)}
+                {@const formValueIndex = (property.values || []).findIndex(
+                  candidate => candidate.id === value.id,
+                )}
+                {@const resolvedValueIndex =
+                  formValueIndex >= 0 ? formValueIndex : valueIndex}
+                <FormFieldPropertyValueItem
+                  {isEditing}
+                  {optionRemoveMode}
+                  class="row-span-full grid! h-auto! grid-rows-subgrid items-stretch!"
+                  hasIssues={optionLocales.some(locale =>
+                    Boolean(getValueIssues(value.id, locale)?.length),
+                  )}
+                  valueId={value.id}
+                  propertyId={property.id}
+                  onRemove={(propertyId, valueId) => {
+                    onLayoutMutationStart?.()
+                    onRemoveValue(propertyId, valueId)
+                  }}
+                  draggableConfig={getValueDraggableConfig(value.id)}
+                  droppableConfig={getValueDroppableConfig(value.id)}
+                >
+                  {#snippet content()}
+                    <input
+                      {...getFieldAttrsWithValue(
+                        ['values', resolvedValueIndex, 'id'],
+                        'hidden',
+                        value.id,
+                      )}
+                    >
+                    <input
+                      {...getFieldAttrsWithValue(
+                        ['values', resolvedValueIndex, 'rank'],
+                        'hidden',
+                        valueIndex,
+                      )}
+                    >
+                    <div class="border-border/40 flex items-center gap-2 border-b pb-2">
+                      <button
+                        type="button"
+                        class="bits-project-field-card__value-handle"
+                        disabled={!isEditing || optionRemoveMode}
+                        aria-label={`Reorder option ${valueIndex + 1}`}
+                        aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+                        onkeydown={event => {
+                          if (
+                            event.altKey &&
+                            ['ArrowLeft', 'ArrowRight'].includes(event.key)
+                          ) {
+                            event.preventDefault()
+                            const nextIndex =
+                              valueIndex + (event.key === 'ArrowLeft' ? -1 : 1)
+                            if (nextIndex >= 0 && nextIndex < sortedValues.length) {
+                              onLayoutMutationStart?.()
+                              onMoveValue(property.id, value.id, nextIndex)
+                            }
+                          }
+                        }}
+                      >
+                        <GripVertical />
+                      </button>
+                      <span class="text-muted-foreground text-xs font-semibold"
+                        >Option {valueIndex + 1}</span
+                      >
+                    </div>
+                    {#each optionLocales as locale (locale)}
+                      {@const showCoreFields = isPrimary(locale)}
+                      {@const valueDisplayText = getValueDisplayText(value.id, locale)}
+                      <div
+                        hidden={valuesAreTranslatable && !shownLocales.includes(locale)}
+                        data-option-locale={locale}
+                      >
+                        <div
+                          class="grid min-w-0 items-start gap-2 {multilingual &&
+                          valuesAreTranslatable
+                            ? 'grid-cols-[2.5rem_minmax(0,1fr)]'
+                            : 'grid-cols-1'}"
+                        >
+                          {#if multilingual && valuesAreTranslatable}
+                            <span
+                              class="text-muted-foreground py-2 text-center font-mono text-xs"
+                              >{shortLocaleLabel(locale)}</span
+                            >
+                          {/if}
+                          {#if valuesAreTranslatable}
+                            <input
+                              {...getFieldAttrsWithValue(
+                                [
+                                  'values',
+                                  resolvedValueIndex,
+                                  'i18n',
+                                  contentFormKey(locale),
+                                  'valueGen',
+                                ],
+                                'hidden',
+                                Boolean(getLocaleEntry(value.i18n, locale)?.valueGen),
+                              )}
+                            >
+                            <input
+                              {...getFieldAttrsWithValue(
+                                [
+                                  'values',
+                                  resolvedValueIndex,
+                                  'i18n',
+                                  contentFormKey(locale),
+                                  'value',
+                                ],
+                                'hidden',
+                                valueDisplayText,
+                              )}
+                            >
+                          {:else if showCoreFields}
+                            <input
+                              {...getFieldAttrsWithValue(
+                                ['values', resolvedValueIndex, 'value'],
+                                'hidden',
+                                valueDisplayText,
+                              )}
+                            >
+                          {/if}
+
+                          {#if valuesAreTranslatable || showCoreFields}
+                            <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
+                            <div
+                              class={`bits-project-field-card__value-editable focus-override empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                              role="textbox"
+                              aria-label={`Option ${valueIndex + 1} ${locale}`}
+                              data-placeholder="Option label"
+                              aria-readonly={!isEditing}
+                              contenteditable={isEditing ? 'plaintext-only' : false}
+                              tabindex={isEditing ? 0 : -1}
+                              use:bindValueEditable={{
+                                valueId: value.id,
+                                locale,
+                                text: valueDisplayText,
+                              }}
+                              onbeforeinput={preventDropBeforeInput}
+                              onkeydown={event => {
+                                onValueTab(event, value.id, locale)
+                                void onValueEnter(event, locale)
+                              }}
+                              oninput={event => onValueInput(event, value.id, locale)}
+                              ondragover={preventNativeDropOver}
+                              ondrop={preventNativeDropInsert}
+                              onfocus={onValueFocus}
+                              ondblclick={onValueDoubleClick}
+                              onblur={event => onValueBlur(event, value.id, locale)}
+                            ></div>
+                          {:else}
+                            <div
+                              class="bits-project-field-card__value-placeholder"
+                              aria-hidden="true"
+                            ></div>
+                          {/if}
+                          {#if getValueIssues(value.id, locale)?.length}
+                            <div class="bits-form__error">
+                              {getValueIssues(value.id, locale)
+                                ?.map(issue => issue.message)
+                                .join(' ')}
+                            </div>
+                          {/if}
+                        </div>
+                      </div>
+                    {/each}
+                  {/snippet}
+                </FormFieldPropertyValueItem>
+              {/each}
+            </div>
+          </section>
+        {/snippet}
+      </FormFieldPropertyValueWrapper>
     </div>
-  {/snippet}
-</FormI18nSection>
+  {/if}
+  <FormI18nSourceBar
+    visible={multilingual && isEditing}
+    sources={translationSources}
+    label={m.address_translate_from()}
+    busy={translating}
+    onTranslate={source => void translateMissing(source)}
+  />
+  {#if translationMessage}
+    <p role="alert" class="text-error mt-2 text-sm">{translationMessage}</p>
+  {/if}
+  {#if propertyRootIssues.length > 0}
+    <div class="bits-form__error">
+      {propertyRootIssues.map(issue => issue.message).join(' ')}
+    </div>
+  {/if}
+</div>

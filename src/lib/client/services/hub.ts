@@ -1,6 +1,7 @@
+// CONTENT LOCALES
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // I18N
 import { toLocaleKebab, toLocaleKey } from '#lib/i18n.js'
-import { toFormLocaleRecord } from '#lib/i18n.js'
 // ENUMS
 import { HubSubscriptionService } from '#lib/enums.js'
 // SERVICES
@@ -103,11 +104,11 @@ function cloneHubProperties(
   if (!properties) return []
   return properties.map(property => ({
     ...property,
-    i18n: toFormLocaleRecord(property.i18n) as typeof property.i18n,
+    i18n: propertyLocalesToForm(property.i18n) as typeof property.i18n,
     values: Array.isArray(property.values)
       ? property.values.map(value => ({
           ...value,
-          i18n: toFormLocaleRecord(value.i18n) as typeof value.i18n,
+          i18n: propertyLocalesToForm(value.i18n) as typeof value.i18n,
         }))
       : property.values,
   })) as HubFormInput['data']['properties']

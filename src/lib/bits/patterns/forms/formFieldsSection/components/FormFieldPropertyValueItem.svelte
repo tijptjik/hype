@@ -17,6 +17,7 @@ let {
   draggableConfig,
   droppableConfig,
   content,
+  class: className = '',
 }: FormFieldPropertyValueItemProps = $props()
 </script>
 
@@ -24,7 +25,7 @@ let {
   data-dnd-item
   data-dnd-active={dndState.isDragging}
   style="--bits-dnd-border-width: 1px"
-  class={`bits-project-field-card__value-item ${!isEditing ? 'bits-project-field-card__value-item--readonly' : ''} ${isPlaceholder ? 'bits-project-field-card__value-item--placeholder' : ''} ${hasIssues ? 'bits-project-field-card__value-item--issue' : ''}`}
+  class={`bits-project-field-card__value-item ${!isEditing ? 'bits-project-field-card__value-item--readonly' : ''} ${isPlaceholder ? 'bits-project-field-card__value-item--placeholder' : ''} ${hasIssues ? 'bits-project-field-card__value-item--issue' : ''} ${className}`}
   aria-invalid={hasIssues}
   use:draggable={draggableConfig}
   use:droppable={droppableConfig}

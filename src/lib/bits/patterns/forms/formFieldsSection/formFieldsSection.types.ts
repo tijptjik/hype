@@ -1,4 +1,4 @@
-import type { Id, Locale, LocaleKey } from '#lib/types.js'
+import type { Id } from '#lib/types.js'
 import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type { Snippet } from 'svelte'
 import type { DragDropOptions, DraggableOptions } from '@thisux/sveltednd'
@@ -96,7 +96,10 @@ export interface FormFieldsSectionItemProps {
 }
 
 export interface FormFieldsSectionCardConfig extends FormFieldCardCallbacks {
-  locales: LocaleKey[]
+  /** Section-owned language presentation; stored translations are unchanged. */
+  multilingual?: boolean
+  visibleLocales?: string[]
+  locales: string[]
   classifierComponents: readonly string[]
   specifierComponents: readonly string[]
   isRequiredInPreflight: (path: Array<string | number>) => boolean
@@ -145,18 +148,18 @@ export interface FormFieldCardCallbacks {
   ) => void
   onUpdateI18n: (
     propertyId: Id,
-    locale: Locale,
+    locale: string,
     key: PropertyI18nField,
     value: string | boolean,
   ) => void
   onAddValue: (propertyId: Id) => void
-  onSortValuesAlphabetically: (propertyId: Id, locale: Locale) => void
+  onSortValuesAlphabetically: (propertyId: Id, locale: string) => void
   onRemoveValue: (propertyId: Id, valueId: Id) => void
   onMoveValue: (propertyId: Id, valueId: Id, targetIndex: number) => void
   onUpdateValueI18n: (
     propertyId: Id,
     valueId: Id,
-    locale: Locale,
+    locale: string,
     key: ValueI18nField,
     value: string,
   ) => void
@@ -168,14 +171,16 @@ export interface FormFieldCardCallbacks {
   ) => void
   onTranslateLocale: (
     propertyId: Id,
-    sourceLocale: Locale,
-    targetLocale: Locale,
+    sourceLocale: string,
+    targetLocale: string,
   ) => Promise<boolean | void>
-  onResetLocale: (propertyId: Id, targetLocale: Locale) => void | Promise<void>
+  onResetLocale: (propertyId: Id, targetLocale: string) => void | Promise<void>
   removeMode?: boolean
 }
 
 export interface FormFieldCardProps extends FormFieldCardCallbacks {
+  multilingual?: boolean
+  visibleLocales?: string[]
   property: Property
   propertyIndex: number
   sectionRank: number
@@ -185,7 +190,7 @@ export interface FormFieldCardProps extends FormFieldCardCallbacks {
   allIssues?: Array<{ message: string; path?: Array<string | number> }>
   totalItems: number
   removeMode: boolean
-  locales: LocaleKey[]
+  locales: string[]
   classifierComponents: readonly string[]
   specifierComponents: readonly string[]
   isRequiredInPreflight: (path: Array<string | number>) => boolean
@@ -206,6 +211,7 @@ export interface FormFieldCardProps extends FormFieldCardCallbacks {
 }
 
 export interface FormFieldPropertyValueItemProps {
+  class?: string
   isEditing?: boolean
   optionRemoveMode?: boolean
   isPlaceholder?: boolean

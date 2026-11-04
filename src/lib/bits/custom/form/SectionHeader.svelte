@@ -29,6 +29,7 @@ let {
   left,
   center,
   right,
+  afterControls,
   class: className = '',
 }: SectionHeaderProps = $props()
 
@@ -131,26 +132,36 @@ const handleVisibilityToggle = (event: MouseEvent): void => {
       </SimpleTooltip>
     {/if}
 
-    {#if onCollapsableToggle}
-      <SimpleTooltip disabled={showControlLabels} contentProps={{ role: 'tooltip' }}>
-        {#snippet trigger()}
-          <SectionHeaderPrimitive.Action
-            text={collapsableToggleLabel}
-            size="sm"
-            style="ghost"
-            color="light"
-            hideLabel={!showControlLabels}
-            hideLabelInstantly={true}
-            iconClasses={showControlLabels ? 'size-5! [&_svg]:size-5!' : ''}
-            iconComponent={collapsableToggleIcon}
-            class={showControlLabels
-              ? 'min-h-10 gap-2 px-3 [&_svg]:size-5'
-              : 'bits-form__section-header-action-btn'}
-            onClick={handleCollapsableToggle}
-          />
-        {/snippet}
-        {collapsableToggleLabel}
-      </SimpleTooltip>
+    {#snippet collapseControl()}
+      {#if onCollapsableToggle}
+        <SimpleTooltip disabled={showControlLabels} contentProps={{ role: 'tooltip' }}>
+          {#snippet trigger()}
+            <SectionHeaderPrimitive.Action
+              text={collapsableToggleLabel}
+              size="sm"
+              style="ghost"
+              color="light"
+              hideLabel={!showControlLabels}
+              hideLabelInstantly={true}
+              iconClasses={showControlLabels ? 'size-5! [&_svg]:size-5!' : ''}
+              iconComponent={collapsableToggleIcon}
+              class={showControlLabels
+                ? 'min-h-10 gap-2 px-3 [&_svg]:size-5'
+                : 'bits-form__section-header-action-btn'}
+              onClick={handleCollapsableToggle}
+            />
+          {/snippet}
+          {collapsableToggleLabel}
+        </SimpleTooltip>
+      {/if}
+    {/snippet}
+    {#if afterControls}
+      <div class="flex shrink-0 items-center">
+        {@render collapseControl()}
+        {@render afterControls()}
+      </div>
+    {:else}
+      {@render collapseControl()}
     {/if}
   </div>
 </header>

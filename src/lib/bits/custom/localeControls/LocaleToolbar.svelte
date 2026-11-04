@@ -207,45 +207,45 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
 </script>
 
 {#snippet addControl()}
-            <Popover.Root bind:open={searching}>
-              <Popover.Trigger {disabled}>
-                {#snippet child({ props })}
-                  <button
-                    {...props}
-                    bind:this={addButton}
-                    type="button"
-                    onblur={() => (quietAddFocus = false)}
-                    onkeydown={() => (quietAddFocus = false)}
-                    class="min-h-8 rounded-md border border-dashed border-border px-2 text-xs {quietAddFocus
-                      ? 'outline-none! ring-0!'
-                      : 'focus-visible:outline-2 focus-visible:outline-primary'}"
-                  >
-                    + {mode === 'visibility' ? m.address_neighbourhood_add() : labels.add}
-                  </button>
-                {/snippet}
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content
-                  sideOffset={8}
-                  align="start"
-                  collisionPadding={16}
-                  onOpenAutoFocus={event => event.preventDefault()}
-                  onCloseAutoFocus={event => {
-                    event.preventDefault()
-                    if (!searching) restoreAddFocus()
-                  }}
-                  class="bits-theme z-[100] w-[min(24rem,calc(100vw-2rem))] outline-none"
-                >
-                  <LocaleSearch
-                    {options}
-                    {selectedLocales}
-                    {labels}
-                    onSelect={select}
-                    onClose={closeSearch}
-                  />
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
+  <Popover.Root bind:open={searching}>
+    <Popover.Trigger {disabled}>
+      {#snippet child({ props })}
+        <button
+          {...props}
+          bind:this={addButton}
+          type="button"
+          onblur={() => (quietAddFocus = false)}
+          onkeydown={() => (quietAddFocus = false)}
+          class="min-h-8 rounded-md border border-dashed border-border px-2 text-xs {quietAddFocus
+            ? 'outline-none! ring-0!'
+            : 'focus-visible:outline-2 focus-visible:outline-primary'}"
+        >
+          + {mode === 'visibility' ? m.address_neighbourhood_add() : labels.add}
+        </button>
+      {/snippet}
+    </Popover.Trigger>
+    <Popover.Portal>
+      <Popover.Content
+        sideOffset={8}
+        align="start"
+        collisionPadding={16}
+        onOpenAutoFocus={event => event.preventDefault()}
+        onCloseAutoFocus={event => {
+          event.preventDefault()
+          if (!searching) restoreAddFocus()
+        }}
+        class="bits-theme z-[100] w-[min(24rem,calc(100vw-2rem))] outline-none"
+      >
+        <LocaleSearch
+          {options}
+          {selectedLocales}
+          {labels}
+          onSelect={select}
+          onClose={closeSearch}
+        />
+      </Popover.Content>
+    </Popover.Portal>
+  </Popover.Root>
 {/snippet}
 
 <div
@@ -266,7 +266,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
         aria-hidden={!isExpanded}
         class={alwaysExpanded
           ? 'min-w-0'
-          : 'order-2 min-w-0 basis-full sm:order-none sm:basis-auto sm:max-w-[calc(100%_-_8rem)]'}
+          : 'order-2 min-w-0 basis-full sm:order-none sm:flex-1 sm:basis-auto'}
       >
         <div class="min-w-0 overflow-hidden">
           <div
@@ -274,7 +274,9 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
               ? 'justify-start'
               : 'justify-end'} gap-1.5 p-0.5"
           >
-            {#if allowAdd && mode === 'visibility'}{@render addControl()}{/if}
+            {#if allowAdd && mode === 'visibility'}
+              {@render addControl()}
+            {/if}
             <!-- biome-ignore lint/a11y/useSemanticElements: This drag zone groups locale controls rather than form fields. -->
             <div
               use:dndzone={{
@@ -306,11 +308,11 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                   role="group"
                   aria-label={option.name}
                   animate:flip={{ duration: reducedMotion ? 0 : 160 }}
-                  class="flex max-w-full min-w-0 cursor-grab select-none items-center rounded-md border border-border bg-panel text-foreground shadow-sm"
+                  class="border-border bg-panel text-foreground flex max-w-full min-w-0 cursor-grab items-center rounded-md border shadow-sm select-none"
                 >
                   <span
                     aria-hidden="true"
-                    class="flex min-h-8 w-5 shrink-0 items-center justify-center text-muted-foreground"
+                    class="text-muted-foreground flex min-h-8 w-5 shrink-0 items-center justify-center"
                   >
                     <GripIcon class="size-3" />
                   </span>
@@ -336,7 +338,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                     onclick={() => {
                       if (mode === 'visibility') toggle(tag)
                     }}
-                    class={`inline-flex min-h-8 min-w-0 flex-1 cursor-grab items-center gap-1 rounded-md pr-2 pl-1 text-left text-xs whitespace-normal break-words focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing ${mode === 'membership' || visibleLocales.includes(tag) ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
+                    class={`focus-visible:outline-primary inline-flex min-h-8 min-w-0 flex-1 cursor-grab items-center gap-1 rounded-md pr-2 pl-1 text-left text-xs break-words whitespace-normal focus-visible:outline-2 active:cursor-grabbing ${mode === 'membership' || visibleLocales.includes(tag) ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}
                   >
                     <span lang={tag} dir="auto" style:font-family={languageFont(tag)}
                       >{mode === 'visibility'
@@ -352,7 +354,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                       onmousedown={event => event.stopPropagation()}
                       ontouchstart={event => event.stopPropagation()}
                       onclick={() => toggle(tag)}
-                      class="flex min-h-8 w-6 shrink-0 items-center justify-center rounded-r-md text-xs hover:text-primary focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
+                      class="hover:text-primary focus-visible:outline-primary flex min-h-8 w-6 shrink-0 items-center justify-center rounded-r-md text-xs focus-visible:outline-2 disabled:opacity-50"
                     >
                       ×
                     </button>
@@ -360,7 +362,9 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
                 </div>
               {/each}
             </div>
-            {#if allowAdd && mode === 'membership'}{@render addControl()}{/if}
+            {#if allowAdd && mode === 'membership'}
+              {@render addControl()}
+            {/if}
           </div>
         </div>
       </div>
@@ -375,7 +379,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
           searching = false
           onExpandedChange(!expanded)
         }}
-        class="inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
+        class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
       >
         <LanguagesIcon class="size-4" />{labels.multilingual}
       </button>

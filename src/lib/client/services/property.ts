@@ -9,7 +9,7 @@ import {
   RangeValueSchema,
 } from '#lib/properties/range.js'
 import { m } from '#lib/i18n.js'
-import { ensureLocaleEntryForWrite } from '#lib/i18n.js'
+import { contentFormKey, contentStorageTag } from '#lib/i18n/contentRecords.js'
 import { getI18n } from '#lib/i18n.js'
 import { toLocaleKey } from '#lib/i18n.js'
 // FORMS
@@ -585,37 +585,41 @@ function reorderRankedItems<T extends { id: Id; rank?: number }>(
   return sorted.map((item, index) => ({ ...item, rank: index }))
 }
 
+/** Collect nonblank source cells whose target is still empty.
+ * @param property Source definition. @param sourceLocale Source content tag. @param targetLocale Target content tag.
+ * @returns A bounded-provider payload and stable cell identities, or null without source content.
+ */
 function collectMissingPropertyTranslations(
   property: Property,
-  sourceLocale: Locale,
-  targetLocale: Locale,
+  sourceLocale: string,
+  targetLocale: string,
 ): { texts: string[]; origins: PropertyTranslationOrigin[] } | null {
   const texts: string[] = []
   const origins: PropertyTranslationOrigin[] = []
 
-  const sourceLocaleKey = toLocaleKey(sourceLocale)
-  const targetLocaleKey = toLocaleKey(targetLocale)
+  const sourceLocaleKey = contentFormKey(sourceLocale)
+  const targetLocaleKey = contentFormKey(targetLocale)
   const sourcePropertyI18n = (property.i18n as WritableI18nRecord | undefined)?.[
     sourceLocaleKey
   ] as { label?: string; placeholder?: string } | undefined
   const targetPropertyI18n = (property.i18n as WritableI18nRecord | undefined)?.[
     targetLocaleKey
   ] as { label?: string; placeholder?: string } | undefined
-  if (!sourcePropertyI18n || !targetPropertyI18n) return null
+  if (!sourcePropertyI18n) return null
 
-  if (!targetPropertyI18n.label?.trim() && sourcePropertyI18n.label?.trim()) {
+  if (!targetPropertyI18n?.label?.trim() && sourcePropertyI18n.label?.trim()) {
     texts.push(sourcePropertyI18n.label)
     origins.push({ type: 'label' })
   }
   if (
-    !targetPropertyI18n.placeholder?.trim() &&
+    !targetPropertyI18n?.placeholder?.trim() &&
     sourcePropertyI18n.placeholder?.trim()
   ) {
     texts.push(sourcePropertyI18n.placeholder)
     origins.push({ type: 'placeholder' })
   }
 
-  for (const value of property.values || []) {
+  for (const value of property.isTranslatable ? property.values || [] : []) {
     const sourceValue =
       (
         (value.i18n as WritableI18nRecord | undefined)?.[sourceLocaleKey] as
@@ -644,8 +648,8 @@ function collectMissingPropertyTranslations(
  * @returns Translated strings, or null when the request fails.
  */
 async function requestPropertyTranslations(
-  sourceLocale: Locale,
-  targetLocale: Locale,
+  sourceLocale: string,
+  targetLocale: string,
   texts: string[],
 ): Promise<string[] | null> {
   try {
@@ -653,8 +657,8 @@ async function requestPropertyTranslations(
       '#lib/api/translation.remote.js'
     )
     const translatedTexts = await translateTextRemote({
-      source: toLocaleKey(sourceLocale),
-      target: toLocaleKey(targetLocale),
+      source: contentFormKey(sourceLocale),
+      target: contentFormKey(targetLocale),
       texts,
     })
     return Array.isArray(translatedTexts) ? translatedTexts : null
@@ -663,10 +667,14 @@ async function requestPropertyTranslations(
   }
 }
 
+/** Apply generated content only to cells that remain empty after the request.
+ * @param form Owning form. @param propertyId Definition identity. @param targetLocale Target content tag. @param origins Stable cell identities. @param translatedTexts Provider results.
+ * @returns Nothing; preserves concurrent authored edits and marks generated provenance.
+ */
 function applyPropertyTranslations(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
-  targetLocale: Locale,
+  targetLocale: string,
   origins: PropertyTranslationOrigin[],
   translatedTexts: string[],
 ): void {
@@ -677,19 +685,32 @@ function applyPropertyTranslations(
         const targetValue = targetProperty.values?.find(
           value => value.id === origin.valueId,
         )
-        if (!targetValue?.i18n) return
-        const valueLocaleKey = toLocaleKey(targetLocale)
-        if (!targetValue.i18n[valueLocaleKey]) return
-        targetValue.i18n[valueLocaleKey].value = translatedText
+        if (!targetValue) return
+        targetValue.i18n ??= {}
+        const valueLocaleKey = contentFormKey(targetLocale)
+        const row = (targetValue.i18n as WritableI18nRecord)[valueLocaleKey] ?? {
+          locale: contentStorageTag(targetLocale),
+          value: '',
+        }
+        ;(targetValue.i18n as WritableI18nRecord)[valueLocaleKey] = row
+        if (typeof row.value === 'string' && row.value.trim()) return
+        row.value = translatedText
+        row.valueGen = true
         return
       }
 
-      if (!targetProperty.i18n) return
-      const propertyLocaleKey = toLocaleKey(targetLocale)
-      if (!targetProperty.i18n[propertyLocaleKey]) return
-      ;(targetProperty.i18n[propertyLocaleKey] as Record<string, unknown>)[
-        origin.type
-      ] = translatedText
+      targetProperty.i18n ??= {}
+      const propertyLocaleKey = contentFormKey(targetLocale)
+      const row = (targetProperty.i18n as WritableI18nRecord)[propertyLocaleKey] ?? {
+        locale: contentStorageTag(targetLocale),
+        label: '',
+        placeholder: '',
+      }
+      ;(targetProperty.i18n as WritableI18nRecord)[propertyLocaleKey] = row
+      if (typeof row[origin.type] === 'string' && String(row[origin.type]).trim())
+        return
+      row[origin.type] = translatedText
+      row[`${origin.type}Gen`] = true
     })
   })
 }
@@ -1203,19 +1224,28 @@ export function updateProjectPropertyBase(
   })
 }
 
+/** Update one property text or verification field in its own content language.
+ * @param form Owning form. @param propertyId Definition identity. @param locale Content tag. @param key Locale field. @param value Authored content or verification flag.
+ * @returns Nothing; creates missing locale buckets without a UI-language fallback.
+ */
 export function updateProjectPropertyI18n(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
-  locale: Locale,
+  locale: string,
   key: 'label' | 'placeholder' | 'labelGen' | 'placeholderGen',
   value: string | boolean,
 ): void {
   mutatePropertyById(form, propertyId, target => {
-    const localeEntry = ensureLocaleEntryForWrite(
-      target.i18n as WritableI18nRecord | undefined,
-      locale,
-    )
-    if (!localeEntry) return
+    target.i18n ??= {}
+    const localeKey = contentFormKey(locale)
+    const localeEntry = (target.i18n as WritableI18nRecord)[localeKey] ?? {
+      locale: contentStorageTag(locale),
+      label: '',
+      labelGen: false,
+      placeholder: '',
+      placeholderGen: false,
+    }
+    ;(target.i18n as WritableI18nRecord)[localeKey] = localeEntry
     localeEntry[key] = value
   })
 }
@@ -1247,15 +1277,19 @@ export function addProjectPropertyValue(
   })
 }
 
+/** Sort option columns using the selected content language.
+ * @param form Owning form. @param propertyId Definition identity. @param locale Content tag supplying the sort text.
+ * @returns Nothing; updates ranks while preserving option IDs and every translation.
+ */
 export function sortProjectPropertyValuesAlphabetically(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
-  locale: Locale,
+  locale: string,
 ): void {
   mutatePropertyById(form, propertyId, target => {
     if (!target.values || target.values.length < 2) return
 
-    const localeKey = toLocaleKey(locale)
+    const localeKey = contentFormKey(locale)
     const sortedValues = [...target.values].sort((left, right) => {
       const leftLocalized =
         (
@@ -1332,21 +1366,29 @@ export function reorderProjectPropertyValue(
   })
 }
 
+/** Update one translated option cell and mark it as authored.
+ * @param form Owning form. @param propertyId Definition identity. @param valueId Option identity. @param locale Content tag. @param key Value field. @param value Authored text.
+ * @returns Nothing; creates the locale bucket while preserving sibling cells.
+ */
 export function updateProjectPropertyValueI18n(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
   valueId: Id,
-  locale: Locale,
+  locale: string,
   key: 'value',
   value: string,
 ): void {
   mutatePropertyValueById(form, propertyId, valueId, targetValue => {
-    const localeEntry = ensureLocaleEntryForWrite(
-      targetValue.i18n as WritableI18nRecord | undefined,
-      locale,
-    )
-    if (!localeEntry) return
+    targetValue.i18n ??= {}
+    const localeKey = contentFormKey(locale)
+    const localeEntry = (targetValue.i18n as WritableI18nRecord)[localeKey] ?? {
+      locale: contentStorageTag(locale),
+      value: '',
+      valueGen: false,
+    }
+    ;(targetValue.i18n as WritableI18nRecord)[localeKey] = localeEntry
     localeEntry[key] = value
+    localeEntry.valueGen = false
   })
 }
 
@@ -1354,11 +1396,15 @@ export function updateProjectPropertyValueI18n(
 // 3.2.4 LOCALE MUTATORS
 // ───────────────────────
 
+/** Fill missing text and option translations in one content language.
+ * @param form Owning form. @param propertyId Definition identity. @param sourceLocale Source content tag. @param targetLocale Target content tag.
+ * @returns Whether provider results were applied; existing target content is retained.
+ */
 export async function translateProjectPropertyLocale(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
-  sourceLocale: Locale,
-  targetLocale: Locale,
+  sourceLocale: string,
+  targetLocale: string,
 ): Promise<boolean> {
   const current = form.fields.value().data
   const property = (current?.properties || []).find(item => item.id === propertyId)
@@ -1394,13 +1440,17 @@ export async function translateProjectPropertyLocale(
   return true
 }
 
+/** Clear one content language across labels, placeholders and option cells.
+ * @param form Owning form. @param propertyId Definition identity. @param targetLocale Content tag to clear.
+ * @returns Nothing; retains option identities and other languages.
+ */
 export function resetProjectPropertyLocale(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
-  targetLocale: Locale,
+  targetLocale: string,
 ): void {
   mutatePropertyById(form, propertyId, targetProperty => {
-    const targetFormLocale = toLocaleKey(targetLocale)
+    const targetFormLocale = contentFormKey(targetLocale)
     if (!targetProperty.i18n?.[targetFormLocale]) return
 
     targetProperty.i18n[targetFormLocale].label = ''

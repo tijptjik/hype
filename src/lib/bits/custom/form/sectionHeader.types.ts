@@ -28,6 +28,8 @@ export interface SectionHeaderProps {
   left?: Snippet
   center?: Snippet
   right?: Snippet
+  /** Additional actions after the visibility and collapse controls. */
+  afterControls?: Snippet
   children?: Snippet
   class?: string
 }

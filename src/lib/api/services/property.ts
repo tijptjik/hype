@@ -1,10 +1,11 @@
+// CONTENT LOCALES
+import { propertyLocalesToForm } from '#lib/properties/locales.js'
 // DRIZZLE
 import type { SQL } from 'drizzle-orm'
 // API
 import { applyQueryFilters } from '..'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
 // DB
-import { transformI18nSafely } from '#lib/db/index.js'
 // SCHEMA
 import { property, project as projectTable } from '#lib/db/schema/index.js'
 // ZOD
@@ -79,13 +80,13 @@ export const toPropertyResponseFromRaw = (
 ): Property => {
   const values = (row.values ?? []).map(value => ({
     ...value,
-    i18n: transformI18nSafely(value.i18n),
+    i18n: propertyLocalesToForm(value.i18n),
   }))
 
   return PropertyDetailProfileAPI.parse({
     ...row,
     rank: typeof rankOverride === 'number' ? rankOverride : 0,
-    i18n: transformI18nSafely(row.i18n),
+    i18n: propertyLocalesToForm(row.i18n),
     values,
   })
 }

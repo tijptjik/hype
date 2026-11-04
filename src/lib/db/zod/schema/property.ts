@@ -1,5 +1,6 @@
 // I18N
 import { m } from '#lib/i18n.js'
+import { contentLocaleMap, ContentTagInput } from '#lib/i18n/contentRecords.js'
 // ZOD
 import { z } from 'zod'
 // DRIZZLE
@@ -13,7 +14,7 @@ import {
   propertyValueI18n,
 } from '#lib/db/schema/index.js'
 // CONSTRAINTS
-import { getDefaultConstraints, getLocales } from '../constraints'
+import { getDefaultConstraints } from '../constraints'
 import { FormBoolean } from '../form'
 import {
   PropertyDataType,
@@ -295,7 +296,9 @@ export const PropertyValueRecord = createSelectSchema(propertyValue)
 export const PropertyValueRecordCreate = createInsertSchema(propertyValue)
 export const PropertyValueRecordUpdate = createUpdateSchema(propertyValue)
 
-export const PropertyI18nRecord = createSelectSchema(propertyI18n)
+export const PropertyI18nRecord = createSelectSchema(propertyI18n).extend({
+  locale: ContentTagInput,
+})
 export const PropertyI18nRecordCreate = createInsertSchema(propertyI18n).extend({
   ...getDefaultConstraints(propertyI18n),
   labelGen: FormBoolean.optional(),
@@ -307,7 +310,9 @@ export const PropertyI18nRecordUpdate = createUpdateSchema(propertyI18n).extend(
   placeholderGen: FormBoolean.optional(),
 })
 
-export const PropertyValueI18nRecord = createSelectSchema(propertyValueI18n)
+export const PropertyValueI18nRecord = createSelectSchema(propertyValueI18n).extend({
+  locale: ContentTagInput,
+})
 export const PropertyValueI18nRecordCreate = createInsertSchema(
   propertyValueI18n,
 ).extend({
@@ -335,7 +340,7 @@ export const PropertyRecordRaw = PropertyRecord.extend({
 export const PropertyValueProfile = z.enum(['detail', 'admin'])
 
 export const PropertyValueDetailProfileAPI = PropertyValueRecord.extend({
-  i18n: getLocales(PropertyValueI18nRecord).nullish(),
+  i18n: contentLocaleMap(PropertyValueI18nRecord).nullish(),
 })
 
 export const PropertyValueAdminProfileAPI = PropertyValueDetailProfileAPI
@@ -345,14 +350,14 @@ export const PropertyProfile = z.enum(['detail', 'admin'])
 export const PropertyDetailProfileAPI = PropertyRecord.extend({
   rank: z.number().int().optional(),
   isEnabled: z.boolean().optional(),
-  i18n: getLocales(PropertyI18nRecord),
+  i18n: contentLocaleMap(PropertyI18nRecord),
   values: z.array(PropertyValueDetailProfileAPI).nullish(),
 })
 
 export const PropertyAdminProfileAPI = PropertyRecord.extend({
   rank: z.number().int().optional(),
   isEnabled: z.boolean().optional(),
-  i18n: getLocales(PropertyI18nRecord),
+  i18n: contentLocaleMap(PropertyI18nRecord),
   values: z.array(PropertyValueAdminProfileAPI).nullish(),
 })
 
@@ -361,12 +366,7 @@ export const PropertyAdminProfileAPI = PropertyRecord.extend({
 // ═══════════════════════
 
 export const PropertyI18nFormData = z.object({
-  label: z
-    .string()
-    .min(1, {
-      message: m.field_is_required({ field: m.field_label() }),
-    })
-    .max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
+  label: z.string().max(32, { message: m.admin__validation_short_name_lte_32_chars() }),
   labelGen: FormBoolean.default(false),
   placeholder: z
     .string()
@@ -375,23 +375,21 @@ export const PropertyI18nFormData = z.object({
   placeholderGen: FormBoolean.default(false),
 })
 
-export const PropertyI18nByLocaleFormData = z.object({
-  en: PropertyI18nFormData,
-  zhHans: PropertyI18nFormData,
-  zhHant: PropertyI18nFormData,
+export const PropertyI18nByLocaleFormData = contentLocaleMap(
+  PropertyI18nFormData,
+).refine(rows => Object.values(rows).some(row => row.label.trim()), {
+  message: m.field_is_required({ field: m.field_label() }),
 })
 
 export const PropertyValueI18nFormData = z.object({
-  value: z
-    .string()
-    .min(1, { message: m.field_is_required({ field: m.field_value() }) }),
+  value: z.string(),
   valueGen: FormBoolean.default(false),
 })
 
-export const PropertyValueI18nByLocaleFormData = z.object({
-  en: PropertyValueI18nFormData,
-  zhHans: PropertyValueI18nFormData,
-  zhHant: PropertyValueI18nFormData,
+export const PropertyValueI18nByLocaleFormData = contentLocaleMap(
+  PropertyValueI18nFormData,
+).refine(rows => Object.values(rows).some(row => row.value.trim()), {
+  message: m.field_is_required({ field: m.field_value() }),
 })
 
 export const ProjectPropertyValueFormData = z.object({
