@@ -59,6 +59,6 @@ describe("NocLit'25", () => {
     expect(
       REGISTERED_MAP_STYLE_CATALOG.find(entry => entry.key === 'noclit25')?.projectCode,
     ).toBe('eln')
-    expect(isProjectOnlyMapStyle('hyper')).toBe(false)
+    expect(isProjectOnlyMapStyle('hype-dark')).toBe(false)
   })
 })
