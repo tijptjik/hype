@@ -1,5 +1,5 @@
 // SVELTE
-import { getContext, setContext } from 'svelte'
+import { getContext, setContext, untrack } from 'svelte'
 import { ResourceClient } from '#lib/resources/resourceClient.svelte.js'
 import { createHierarchyClient } from '#lib/resources/hierarchyClient.js'
 import { resourceProviders } from '#lib/resources/providers.js'
@@ -259,7 +259,7 @@ export class ResourceViewCtx {
   // Whether the app is in mobile mode
   isMobile: boolean = $state(false)
 
-  listQueryMeta = new Map<string, Omit<ListResponse<unknown>, 'data'>>()
+  listQueryMeta = new SvelteMap<string, Omit<ListResponse<unknown>, 'data'>>()
 
   // Remote function map for list/get queries (parallel to queryMap).
   remoteMap: RemoteMap = {
@@ -877,7 +877,7 @@ export class ResourceViewCtx {
   /**
    * Converts a query key into a stable map key for storing list response metadata.
    *
-   * @param queryKey - TanStack query key for a resource list.
+   * @param queryKey - Complete query identity for a resource list.
    * @returns Serialized key suitable for `listQueryMeta`.
    * @remarks Metadata is tracked separately from cached list data so UI logic can read
    * pagination and sort state without duplicating full query responses in app state.
@@ -889,21 +889,32 @@ export class ResourceViewCtx {
   /**
    * Stores list response metadata for a query while excluding the entity array payload.
    *
-   * @param queryKey - TanStack query key for the fetched list.
+   * @param queryKey - Complete query identity for the fetched list.
    * @param response - Full list response returned by the remote API.
    * @returns Nothing.
-   * @remarks The data array stays in TanStack Query and resource state; only the metadata is
-   * retained here for pagination-aware admin and collection interactions.
+   * @remarks Native query handles and resource state own the rows. Reactive metadata
+   * independently notifies count and completeness consumers without duplicating rows.
+   * Retains the 128 most recently written identities; eviction disables completeness-based sort reuse.
    */
   setListQueryMeta<T>(queryKey: unknown[], response: ListResponse<T>): void {
     const { data: _data, ...meta } = response
-    this.listQueryMeta.set(this.toQueryMetaKey(queryKey), meta)
+    // Bound history without subscribing a calling effect to retention bookkeeping.
+    untrack(() => {
+      const key = this.toQueryMetaKey(queryKey)
+      this.listQueryMeta.delete(key)
+      this.listQueryMeta.set(key, meta)
+      while (this.listQueryMeta.size > 128) {
+        const oldest = this.listQueryMeta.keys().next().value
+        if (oldest === undefined) break
+        this.listQueryMeta.delete(oldest)
+      }
+    })
   }
 
   /**
    * Returns cached list metadata for a previously fetched query key.
    *
-   * @param queryKey - TanStack query key for the list.
+   * @param queryKey - Complete query identity for the list.
    * @returns The stored response metadata, or `null` when nothing has been cached yet.
    */
   getListQueryMeta(queryKey: unknown[]): Omit<ListResponse<unknown>, 'data'> | null {
@@ -1924,6 +1935,8 @@ export class ResourceViewCtx {
       return
     }
     this.appliedAccountRevision = this.account.revision
+    // Counts and completeness belong to the previous account's retained rows.
+    this.listQueryMeta.clear()
     this.draft.reset()
     this.draft.resetMode()
 
@@ -2083,6 +2096,7 @@ export class ResourceViewCtx {
     this.interactions.dispose()
     this.panels.dispose()
     this.disposed = true
+    this.listQueryMeta.clear()
     this.queries.featureRefreshSerial++
     this.queries.invalidateResourceRefreshes()
     this.resources.release()
@@ -2093,6 +2107,7 @@ export class ResourceViewCtx {
   // Clear all cache maps (for actual data reset scenarios)
   clearAllCaches = (): void => {
     this.cacheCtx.clear()
+    this.listQueryMeta.clear()
     // Invalidate in-flight feature reads before removing their committed state.
     this.queries.featureRefreshSerial += 1
     this.queries.invalidateResourceRefreshes()

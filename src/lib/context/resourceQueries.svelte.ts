@@ -90,6 +90,21 @@ export class ResourceQueryCoordinator {
     this.resourceRefreshSerials.get(resource) === serial
 
   /**
+   * Checks request ordering and the captured filter/sort identity before publishing rows.
+   * @param resource Resource associated with the request.
+   * @param serial Request serial captured before loading.
+   * @param queryKey Serialized query identity captured before loading.
+   * @returns Whether the response still belongs to the selected query.
+   */
+  private isCurrentQueryRefresh = (
+    resource: FirstClassResource,
+    serial: number,
+    queryKey: string,
+  ): boolean =>
+    this.isCurrentResourceRefresh(resource, serial) &&
+    queryKey === JSON.stringify(this.getRequiredQueryConfig(resource).queryKey)
+
+  /**
    * Invalidates all tracked list refreshes before identity or cache transitions.
    *
    * @returns Nothing.
@@ -235,9 +250,15 @@ export class ResourceQueryCoordinator {
   ): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.organisation)
     const query = this.getRequiredQueryConfig(FirstClassResource.organisation)
+    // Snapshot by value: selections can change before another refresh starts.
+    const queryKey = JSON.stringify(query.queryKey)
     const organisations = await (query.queryFn() as Promise<Organisation[]>)
     if (
-      !this.isCurrentResourceRefresh(FirstClassResource.organisation, refreshSerial)
+      !this.isCurrentQueryRefresh(
+        FirstClassResource.organisation,
+        refreshSerial,
+        queryKey,
+      )
     ) {
       return
     }
@@ -267,8 +288,12 @@ export class ResourceQueryCoordinator {
   ): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.project)
     const query = this.getRequiredQueryConfig(FirstClassResource.project)
+    // Snapshot by value: selections can change before another refresh starts.
+    const queryKey = JSON.stringify(query.queryKey)
     const projects = await (query.queryFn() as Promise<Project[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.project, refreshSerial)) {
+    if (
+      !this.isCurrentQueryRefresh(FirstClassResource.project, refreshSerial, queryKey)
+    ) {
       return
     }
     if (!(!expectedRoleScope || expectedRoleScope === this.dependencies.roleScope()))
@@ -300,8 +325,12 @@ export class ResourceQueryCoordinator {
   ): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.layer)
     const query = this.getRequiredQueryConfig(FirstClassResource.layer)
+    // Snapshot by value: selections can change before another refresh starts.
+    const queryKey = JSON.stringify(query.queryKey)
     const layers = await (query.queryFn() as Promise<Layer[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.layer, refreshSerial)) {
+    if (
+      !this.isCurrentQueryRefresh(FirstClassResource.layer, refreshSerial, queryKey)
+    ) {
       return
     }
     if (!(!expectedRoleScope || expectedRoleScope === this.dependencies.roleScope()))
@@ -384,8 +413,10 @@ export class ResourceQueryCoordinator {
   refreshTasks = async (_isCascading: boolean = true): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.task)
     const query = this.getRequiredQueryConfig(FirstClassResource.task)
+    // Snapshot by value: selections can change before another refresh starts.
+    const queryKey = JSON.stringify(query.queryKey)
     const tasks = await (query.queryFn() as Promise<Task[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.task, refreshSerial)) {
+    if (!this.isCurrentQueryRefresh(FirstClassResource.task, refreshSerial, queryKey)) {
       return
     }
     this.rows.task = tasks
@@ -397,8 +428,10 @@ export class ResourceQueryCoordinator {
     if (!this.dependencies.isAdmin()) return
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.hub)
     const query = this.getRequiredQueryConfig(FirstClassResource.hub)
+    // Snapshot by value: selections can change before another refresh starts.
+    const queryKey = JSON.stringify(query.queryKey)
     const hubs = await (query.queryFn() as Promise<Hub[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.hub, refreshSerial)) {
+    if (!this.isCurrentQueryRefresh(FirstClassResource.hub, refreshSerial, queryKey)) {
       return
     }
     this.rows.hub = hubs
@@ -419,8 +452,12 @@ export class ResourceQueryCoordinator {
   ): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.property)
     const query = this.getRequiredQueryConfig(FirstClassResource.property)
+    // Snapshot by value: selections can change before another refresh starts.
+    const queryKey = JSON.stringify(query.queryKey)
     const properties = await (query.queryFn() as Promise<Property[]>)
-    if (!this.isCurrentResourceRefresh(FirstClassResource.property, refreshSerial)) {
+    if (
+      !this.isCurrentQueryRefresh(FirstClassResource.property, refreshSerial, queryKey)
+    ) {
       return
     }
     if (!(!expectedRoleScope || expectedRoleScope === this.dependencies.roleScope()))

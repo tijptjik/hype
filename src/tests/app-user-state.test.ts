@@ -242,6 +242,40 @@ describe('AppCtx user updates', () => {
     expect(appCtx.view.queries.rows.project).toEqual([{ id: 'new-project' }])
   })
 
+  it.each([
+    ['organisation', 'refreshOrganisations'],
+    ['project', 'refreshProjects'],
+    ['layer', 'refreshLayers'],
+    ['property', 'refreshProperties'],
+    ['task', 'refreshTasks'],
+    ['hub', 'refreshHubs'],
+  ] as const)(
+    'rejects pending %s rows after the query identity changes',
+    async (resource, method) => {
+      const pending = createDeferred<Array<{ id: string }>>()
+      const app = new AppCtx(
+        {} as DivisionCtx,
+        new AccountState(null),
+        {} as ResponsiveCtx,
+      )
+      vi.spyOn(app.view, 'isAdmin').mockReturnValue(true)
+      vi.spyOn(app.view, 'postLayerMutation').mockResolvedValue()
+      // Mutate the original key array to verify that request identity is captured by value.
+      const selection = ['before']
+      app.view.queries.queryMap.set(FirstClassResource[resource], {
+        queryKey: () => [resource, selection],
+        queryFn: () => pending.promise,
+      })
+      const refresh = app.view.queries[method](false)
+      selection[0] = 'after'
+      pending.resolve([{ id: 'obsolete' }])
+      await refresh
+
+      expect(app.view.cache[resource].has('obsolete')).toBe(false)
+      if (resource !== 'property') expect(app.view.queries.rows[resource]).toEqual([])
+    },
+  )
+
   it('invalidates dependent resource caches before the next explicit refresh', async () => {
     const appCtx = new AppCtx(
       {} as DivisionCtx,
