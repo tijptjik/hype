@@ -164,9 +164,10 @@ import type { Point } from 'geojson'
 
 import type { FacetType } from '#lib/context/facets.js'
 import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
-import type { Feature, Id, Locale } from '#lib/types.js'
+import type { Id, Locale } from '#lib/types.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type {
+  Feature,
   FeatureFormInput,
   FeatureGetState,
 } from '#lib/db/zod/schema/feature.types.js'
