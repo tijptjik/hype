@@ -33,7 +33,7 @@ afterEach(() => {
   for (const db of stores.splice(0)) db.close()
 })
 
-function setup(includeScope = false) {
+function setup(includeScope = false, includeAddressKind = true) {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
   sqlite.exec(`PRAGMA foreign_keys=ON;
@@ -77,6 +77,19 @@ function setup(includeScope = false) {
   sqlite.exec(
     readFileSync('migrations/0141_organisation_location_scope_guards.sql', 'utf8'),
   )
+  if (includeAddressKind)
+    sqlite.exec(readFileSync('migrations/0140_location_address_kind.sql', 'utf8'))
+  // Keep legacy facts fixtures available for their explicit conversion tests while installing current relationship/correction storage.
+  const relationships = readFileSync(
+    'migrations/0148_location_relationships.sql',
+    'utf8',
+  )
+  sqlite.exec(relationships.slice(relationships.indexOf('CREATE TABLE address (')))
+  sqlite.exec(readFileSync('migrations/0149_location_correction_rows.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0150_location_placement_candidates.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0151_location_placement_acceptance.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0153_location_relationship_review.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0154_location_version_names.sql', 'utf8'))
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
     sqlite.exec(`DROP TRIGGER feature_location_scope_insert;
@@ -137,8 +150,8 @@ const facts = {
       address2dId: null,
       address3dId: null,
       address3dUnitId: null,
-      addressSnapshotId: null,
-      records: {},
+      snapshotId: null,
+      rawSource: {},
       fallbackDisplay: { en: 'Original address' },
     },
   },
@@ -191,7 +204,7 @@ async function linkedFixture(state: 'manual' | 'unresolved' = 'unresolved') {
     overrides: {},
   })
   await write.query
-  return { ...fixture, ...created, associationRevision: write.revision }
+  return { ...fixture, ...created, associationRevision: write.version }
 }
 
 describe('operating state and historical adoption', () => {
@@ -258,7 +271,7 @@ describe('operating state and historical adoption', () => {
       projectId: 'p',
       proposalId: review.proposal.id,
       fieldGroup: 'facts' as const,
-      expectedRevision: accepted.revision,
+      expectedRevision: accepted.version,
       expectedFeatureModifiedAt: 'original',
       actorId: 'actor',
       reason: 'Verified closure notice',
@@ -408,7 +421,7 @@ describe('operating state and historical adoption', () => {
         ...facts,
         operatingStatus: mapOperatingStatus('open'),
       },
-      payload: {},
+      rawSource: {},
       issues: [],
     }
     const retained = await persistSaanSeoiPlace(db, source as never)
@@ -435,7 +448,7 @@ describe('operating state and historical adoption', () => {
       await persistSaanSeoiPlace(db, {
         ...source,
         snapshotId: 'snapshot2',
-        payload: { marker: operatingStatus ? 'open' : 'omitted' },
+        rawSource: { marker: operatingStatus ? 'open' : 'omitted' },
         facts: { ...facts, ...(operatingStatus ? { operatingStatus } : {}) },
       } as never)
       const scoped = (
@@ -451,7 +464,9 @@ describe('operating state and historical adoption', () => {
       expect(shared.facts?.operatingStatus).not.toBe('permanently_closed')
     }
     expect(
-      sqlite.prepare('SELECT history FROM organisationLocation').get()?.history,
+      JSON.stringify(
+        sqlite.prepare('SELECT overrides FROM organisationLocation').all(),
+      ),
     ).toContain('permanently_closed')
     expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
   })
@@ -571,7 +586,7 @@ describe('operating state and historical adoption', () => {
       releaseId: 'release1',
       snapshotId: 'snapshot1',
       facts: { ...facts, operatingStatus: 'open' },
-      payload: {},
+      rawSource: {},
       issues: [],
     } as never)
     await updateLocalLocationAddress(db, {
@@ -615,8 +630,8 @@ describe('operating state and historical adoption', () => {
       await linkedFixture()
     // Append retained pre-versioning evidence without changing any immutable fixture revision.
     sqlite
-      .prepare(`INSERT INTO locationRevision(id,locationId,sequence,origin,contentHash,payload,facts)
-      SELECT 'legacy-operating',locationId,sequence+1,'local','legacy-operating','{}',?
+      .prepare(`INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts)
+      SELECT 'legacy-operating',locationId,version+1,'local','legacy-operating','{}',?
       FROM locationRevision WHERE id=?`)
       .run(JSON.stringify({ ...facts, operatingStatus: closure }), revisionId)
     const adoption = prepareFeatureLocationAssociationWrite(db, {
@@ -740,5 +755,101 @@ describe('operating state and historical adoption', () => {
     expect(sqlite.prepare('SELECT * FROM locationRevision ORDER BY id').all()).toEqual(
       before,
     )
+  })
+})
+
+describe('Location directory index filters', () => {
+  it('narrows organisation results to owned or currently associated Locations', async () => {
+    const { db, sqlite, locationId } = await linkedFixture()
+    // Prove association membership independently of who authored the shared record.
+    sqlite
+      .prepare("UPDATE location SET ownerOrganisationId='other' WHERE id=?")
+      .run(locationId)
+    const owned = await createLocalLocation(
+      db,
+      'p',
+      {
+        state: 'manual',
+        kind: 'building',
+        facts: { ...facts, buildingStatus: 'standing' },
+      },
+      'actor',
+    )
+    const unrelated = await createLocalLocation(
+      db,
+      'other',
+      {
+        state: 'unresolved',
+        kind: 'building',
+        facts: { ...facts, buildingStatus: 'demolished' },
+      },
+      'actor',
+    )
+    const result = await listLocationResources(db, {
+      organisationId: 'p',
+      restrictToOrganisation: true,
+    })
+    expect(result.data.map(row => row.id).sort()).toEqual(
+      [locationId, owned.locationId].sort(),
+    )
+    expect(result.data.some(row => row.id === unrelated.locationId)).toBe(false)
+    // Detail reads still permit shared identities outside the selected index subset.
+    expect(
+      (
+        await listLocationResources(db, {
+          id: unrelated.locationId,
+          organisationId: 'p',
+        })
+      ).data,
+    ).toHaveLength(1)
+    expect(
+      (
+        await listLocationResources(db, {
+          organisationId: 'p',
+          restrictToOrganisation: true,
+          kind: 'building',
+          lifecycleStatus: 'demolished',
+        })
+      ).data,
+    ).toEqual([])
+  })
+
+  it('applies kind and lifecycle before pagination, retaining the filters on subsequent pages', async () => {
+    const { db } = setup(true)
+    for (let index = 0; index < 28; index++) {
+      await createLocalLocation(
+        db,
+        'p',
+        {
+          state: 'unresolved',
+          kind: 'building',
+          facts: { ...facts, buildingStatus: index < 2 ? 'standing' : 'demolished' },
+        },
+        'actor',
+      )
+    }
+    const filters = { kind: 'building', lifecycleStatus: 'demolished' } as const
+    const first = await listLocationResources(db, filters)
+    expect(first.data).toHaveLength(25)
+    expect(
+      first.data.every(
+        row => row.kind === 'building' && row.facts?.buildingStatus === 'demolished',
+      ),
+    ).toBe(true)
+    const second = await listLocationResources(db, {
+      ...filters,
+      after: first.nextCursor!,
+    })
+    expect(second.data).toHaveLength(1)
+    expect(second.nextCursor).toBeNull()
+    expect(new Set([...first.data, ...second.data].map(row => row.id)).size).toBe(26)
+    expect(
+      (
+        await listLocationResources(db, {
+          kind: 'establishment',
+          lifecycleStatus: 'demolished',
+        })
+      ).data,
+    ).toEqual([])
   })
 })
