@@ -4,7 +4,11 @@ import { runLocationRefreshSchedule } from '../../workers/location-refresh/src/s
 import type { MtrEnvironment } from '#lib/routing/mtr-refresh.js'
 import { refreshLocations } from '#lib/locations/refresh.js'
 import { refreshFeatureMtr } from '#lib/routing/mtr-refresh.js'
+import { processLocationRematching } from '#lib/db/services/locationRematch.js'
 
+vi.mock('#lib/db/services/locationRematch.js', () => ({
+  processLocationRematching: vi.fn().mockResolvedValue('idle'),
+}))
 vi.mock('#lib/db/services/locationLocalRefresh.js', () => ({
   processLocalLocationChanges: vi.fn().mockResolvedValue('idle'),
 }))
@@ -30,6 +34,15 @@ function environment() {
 }
 
 describe('scheduled Locations refresh', () => {
+  it('caps rematching at ten durable steps per scheduled invocation', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.mocked(refreshLocations).mockResolvedValue('idle')
+    vi.mocked(refreshFeatureMtr).mockResolvedValue('idle')
+    vi.mocked(processLocationRematching).mockClear().mockResolvedValue('candidate')
+    await runLocationRefreshSchedule(event, environment().env, source)
+    expect(processLocationRematching).toHaveBeenCalledTimes(10)
+    vi.mocked(processLocationRematching).mockResolvedValue('idle')
+  })
   it('uses primary-session state and drains one routing job after the bounded step', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.mocked(refreshLocations).mockResolvedValue('assessed')
@@ -48,20 +61,22 @@ describe('scheduled Locations refresh', () => {
   })
   it('still wakes durable routing after refresh failure without exposing upstream errors', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
-    vi.mocked(refreshLocations).mockRejectedValue(new Error('private source payload'))
+    vi.mocked(refreshLocations).mockRejectedValue(new Error('private source rawSource'))
     vi.mocked(refreshFeatureMtr).mockResolvedValue('idle')
     const e = environment()
     await expect(runLocationRefreshSchedule(event, e.env, source)).rejects.toThrow(
       'LOCATION_REFRESH_STEP_FAILED',
     )
     expect(refreshFeatureMtr).toHaveBeenCalledWith(e.env, undefined, 90000)
-    expect(JSON.stringify(log.mock.calls)).not.toContain('private source payload')
+    expect(JSON.stringify(log.mock.calls)).not.toContain('private source rawSource')
   })
   it('does not fail a completed refresh when routing is temporarily unavailable', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {})
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.mocked(refreshLocations).mockResolvedValue('complete')
-    vi.mocked(refreshFeatureMtr).mockRejectedValue(new Error('private routing payload'))
+    vi.mocked(refreshFeatureMtr).mockRejectedValue(
+      new Error('private routing rawSource'),
+    )
     await expect(
       runLocationRefreshSchedule(event, environment().env, source),
     ).resolves.toBeUndefined()
