@@ -31,7 +31,8 @@ This application uses a **build promotion architecture** designed for:
 
 ### Core Principle
 
-Instead of building separately for each environment, we build once for preview and promote the same artifacts to production with different runtime configuration.
+Instead of building separately for each environment, we build once for preview and
+promote the same artifacts to production with different runtime configuration.
 
 ### Benefits
 
@@ -42,32 +43,32 @@ Instead of building separately for each environment, we build once for preview a
 
 ## SvelteKit 3 Runtime
 
-SvelteKit and adapter configuration lives in `vite.config.ts`. The optional static
-web build (`SVELTE_ADAPTER=static`) removes native Worker imports through the
-`HYPE_STATIC_BUILD` build constant; its fallback still requires the hosted backend
-for server APIs. Application library
-imports use the package import map (`#lib/...`) with explicit file extensions.
+SvelteKit and adapter configuration lives in `vite.config.ts`. The optional static web
+build (`SVELTE_ADAPTER=static`) removes native Worker imports through the
+`HYPE_STATIC_BUILD` build constant; its fallback still requires the hosted backend for
+server APIs. Application library imports use the package import map (`#lib/...`) with
+explicit file extensions.
 
-The Cloudflare adapter no longer provides `event.platform`. The first server hook
-reads native `env` and `waitUntil` from `cloudflare:workers` and exposes the existing
-service binding bundle through `event.locals.platform`. Adapter 8 owns the development
-binding proxy: `HYPE_LOCAL_R2=1` selects `wrangler.local.toml`, and `CLOUDFLARE_ENV`
-selects the named environment through `platformProxy.environment`. The separate
-Cloudflare Vite plugin is no longer used for this application. This bundle is app-owned;
-its `context.waitUntil` member preserves the service API. Remote queries receive
-route-dependent filters as validated arguments rather than reading `event.url`.
-Custom remote form controls must obtain their names from their owning field's
-`.as(...)` method, including generated hidden inputs.
+The Cloudflare adapter no longer provides `event.platform`. The first server hook reads
+native `env` and `waitUntil` from `cloudflare:workers` and exposes the existing service
+binding bundle through `event.locals.platform`. Adapter 8 owns the development binding
+proxy: `HYPE_LOCAL_R2=1` selects `wrangler.local.toml`, and `CLOUDFLARE_ENV` selects the
+named environment through `platformProxy.environment`. The separate Cloudflare Vite
+plugin is no longer used for this application. This bundle is app-owned; its
+`context.waitUntil` member preserves the service API. Remote queries receive
+route-dependent filters as validated arguments rather than reading `event.url`. Custom
+remote form controls must obtain their names from their owning field's `.as(...)`
+method, including generated hidden inputs.
 
 Bun applies `patches/@sveltejs%2Fkit@3.1.0.patch` to restore missing client-side
 remote-query return values. Remote entry points live in `src/lib/api/*.remote.ts`,
 outside directories named `server`, as required by
 [SvelteKit's remote-function rules](https://svelte.dev/docs/kit/remote-functions).
-Server-only helpers remain in `src/lib/api/server/`; the framework's import guard
-is unchanged. After installing or upgrading dependencies, run
-`bun run verify:sveltekit-patch` and the regression
-tests in `src/tests/sveltekit-patch.test.ts` and `src/tests/remote-form-fields.test.ts`.
-CI checks the installed patch and includes patch contents in dependency cache keys.
+Server-only helpers remain in `src/lib/api/server/`; the framework's import guard is
+unchanged. After installing or upgrading dependencies, run
+`bun run verify:sveltekit-patch` and the regression tests in
+`src/tests/sveltekit-patch.test.ts` and `src/tests/remote-form-fields.test.ts`. CI
+checks the installed patch and includes patch contents in dependency cache keys.
 Reassess the query fix before changing the pinned patch version. The verifier also
 rejects a stale installation that still contains the obsolete import-guard bypass.
 
@@ -75,42 +76,42 @@ The manual migration findings have been reviewed against the
 [SvelteKit 3 guide](https://svelte.dev/docs/kit/migrating-to-sveltekit-3):
 
 - Auth and root-layout URL mutations operate on `new URL(page.url.href)` copies.
-- Navigation uses internal application routes. Post-auth return paths fall back to
-  `/` when Kit rejects a missing route; unresolved admin-card references have no
-  navigation action.
+- Navigation uses internal application routes. Post-auth return paths fall back to `/`
+  when Kit rejects a missing route; unresolved admin-card references have no navigation
+  action.
 - Navigation options use `reset`, `replace`, and `shallow`. No deprecated
-  `invalidateAll`, `noScroll`, or `keepFocus` usages remain. Preserving `page.state`
-  is consistent with the application's panel and collection routing.
+  `invalidateAll`, `noScroll`, or `keepFocus` usages remain. Preserving `page.state` is
+  consistent with the application's panel and collection routing.
 - Response helpers use native `Response` APIs; property-service SQL `json(...)`
   expressions are SQLite functions and remain unchanged.
-- Remote queries receive validated prism filters and do not read request route
-  data. Project form controls use attributes from their submitted form fields.
+- Remote queries receive validated prism filters and do not read request route data.
+  Project form controls use attributes from their submitted form fields.
 - The live adapter uses native Worker bindings rather than `platform.ctx`. The
   application-owned `locals.platform.context` compatibility API remains intentional.
-- Static assets are requested from the app origin; map rendering navigates to an
-  app page and external tiles/assets use their own origins. No cross-origin access
-  to Vite's static assets was found, so Vite's default development CORS policy is
-  sufficient.
+- Static assets are requested from the app origin; map rendering navigates to an app
+  page and external tiles/assets use their own origins. No cross-origin access to Vite's
+  static assets was found, so Vite's default development CORS policy is sufficient.
 
 `tsconfig.json` extends `$app/tsconfig` and inherits Kit 3's recommended defaults,
-including `allowJs`, `checkJs`, `esModuleInterop`,
-`forceConsistentCasingInFileNames`, `resolveJsonModule`, `skipLibCheck`, and
-`moduleResolution: "bundler"`. Only project overrides and file selection remain
-in the root config. Migration validation includes the full test suite, Cloudflare
-and static builds, and browser checks. The broad type checker still reports
-existing application type debt; it is not a clean validation gate yet.
+including `allowJs`, `checkJs`, `esModuleInterop`, `forceConsistentCasingInFileNames`,
+`resolveJsonModule`, `skipLibCheck`, and `moduleResolution: "bundler"`. Only project
+overrides and file selection remain in the root config. Migration validation includes
+the full test suite, Cloudflare and static builds, and browser checks. The broad type
+checker still reports existing application type debt; it is not a clean validation gate
+yet.
 
 ## Environment Variables
 
 ### Dynamic Runtime Variables
 
-All environment-specific configuration is read at **runtime** from the app's `locals.platform.env`, not baked into the build.
+All environment-specific configuration is read at **runtime** from the app's
+`locals.platform.env`, not baked into the build.
 
 #### Old Style (Static - Build Time)
 
 ```javascript
 // ❌ Baked into build artifacts
-import { PUBLIC_API_URL } from '$env/static/public';
+import { PUBLIC_API_URL } from '$env/static/public'
 ```
 
 #### New Style (Dynamic - Runtime)
@@ -118,8 +119,8 @@ import { PUBLIC_API_URL } from '$env/static/public';
 ```javascript
 // ✅ Read native Worker bindings bridged by the server hook
 export const GET = async ({ locals }) => {
-  const apiUrl = locals.platform?.env?.PUBLIC_API_URL;
-};
+  const apiUrl = locals.platform?.env?.PUBLIC_API_URL
+}
 ```
 
 ### Configuration Strategy
@@ -150,7 +151,8 @@ Stored in `wrangler.toml` and accessible in both server and client contexts:
 - `PUBLIC_HUB_CODE` - Hub override for development
 - `PUBLIC_AZURE_TRANSLATION_REGION` - Azure translation region
 - `PUBLIC_GIPHY_KEY` - Giphy API key
-- `PUBLIC_SAANSEOI_API_KEY` - Optional SaanSeoi basemap key; when unset, maps use the legacy Hype TileJSON endpoint
+- `PUBLIC_SAANSEOI_API_KEY` - Optional SaanSeoi basemap key; when unset, maps use the
+  legacy Hype TileJSON endpoint
 
 #### **Secret Variables** (Sensitive)
 
@@ -195,8 +197,10 @@ wrangler.toml                # PUBLIC vars for all environments
 **Key Principles:**
 
 - **Public vars**: Defined in `wrangler.toml`, read at runtime via `platform.env`
-- **Secret vars**: Uploaded to Cloudflare via `wrangler secret put`, accessed via `platform.env`
-- **No static imports**: All environment access is dynamic for build promotion compatibility
+- **Secret vars**: Uploaded to Cloudflare via `wrangler secret put`, accessed via
+  `platform.env`
+- **No static imports**: All environment access is dynamic for build promotion
+  compatibility
 
 ### Mode Selection
 
@@ -221,7 +225,8 @@ feature/* → preview → main
 ### Branch Protection Rules
 
 - **Main**: Requires successful "DEPLOY :: Preview" status check (enforced for admins)
-- **Preview**: Requires successful "BUILD :: Build Application" and "TEST :: Run Tests" status checks (enforced for admins)
+- **Preview**: Requires successful "BUILD :: Build Application" and "TEST :: Run Tests"
+  status checks (enforced for admins)
 - **Rebase Strategy**: All merges use rebase to maintain linear Git history
 - **No Force Push**: Force pushes are disabled on protected branches
 
@@ -328,40 +333,37 @@ key: ${{ runner.os }}-test-${{ github.sha }}
 
 ### Guest Accounts and Transactional Email
 
-- Onboard `hype.hk` for Cloudflare Email Sending before enabling email/password
-  flows. In the Cloudflare dashboard, open **Compute & AI → Email Service → Email
-  Sending**, first ensure the account has an Email Service plan, then choose
-  **Onboard Domain**, select `hype.hk`, and let Cloudflare add the
-  bounce MX, SPF, DKIM, and DMARC records. Alternatively, use
-  the Cloudflare dashboard or the current Email Service API with an API token that
-  can manage Email Sending and DNS for the zone; the pinned Wrangler release does
-  not provide the `email sending enable`, `list`, or `dns get` commands.
-  DNS verification may take several minutes. Review the resulting DMARC policy
-  against the domain's existing Google Workspace mail flow before making it stricter.
+- Onboard `hype.hk` for Cloudflare Email Sending before enabling email/password flows.
+  In the Cloudflare dashboard, open **Compute & AI → Email Service → Email Sending**,
+  first ensure the account has an Email Service plan, then choose **Onboard Domain**,
+  select `hype.hk`, and let Cloudflare add the bounce MX, SPF, DKIM, and DMARC records.
+  Alternatively, use the Cloudflare dashboard or the current Email Service API with an
+  API token that can manage Email Sending and DNS for the zone; the pinned Wrangler
+  release does not provide the `email sending enable`, `list`, or `dns get` commands.
+  DNS verification may take several minutes. Review the resulting DMARC policy against
+  the domain's existing Google Workspace mail flow before making it stricter.
 - The Worker binding is `EMAIL` in every environment and requires no email API key.
   `AUTH_EMAIL_FROM` is the non-secret verified sender `account@hype.hk` in local,
   preview, and production configuration.
 - Configure the Google and Facebook OAuth ID/secret pairs together. WeChat remains
   disabled until explicit provider flags and complete credentials are added.
-- Run `bun run auth:secrets:configure` after Wrangler authentication is configured.
-  The script securely prompts for `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and
-  `AUTH_GOOGLE_SECRET` for preview and production. It generates a different
-  `ANONYMOUS_CLEANUP_TOKEN` for each environment and uploads the same value to the app
-  and maintenance-scheduler Workers without printing or storing it. Pass `preview` or
-  `production` to configure only one environment.
-- Provision a separate `SCHEDULER_SECRET` in each maintenance-scheduler environment
-  and use it as the Bearer credential for manual `POST /run` requests; it must never
-  be reused as the application or cleanup token.
+- Run `bun run auth:secrets:configure` after Wrangler authentication is configured. The
+  script securely prompts for `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and `AUTH_GOOGLE_SECRET`
+  for preview and production. It generates a different `ANONYMOUS_CLEANUP_TOKEN` for
+  each environment and uploads the same value to the app and maintenance-scheduler
+  Workers without printing or storing it. Pass `preview` or `production` to configure
+  only one environment.
+- Provision a separate `SCHEDULER_SECRET` in each maintenance-scheduler environment and
+  use it as the Bearer credential for manual `POST /run` requests; it must never be
+  reused as the application or cleanup token.
 - The maintenance-scheduler Worker refreshes map renders hourly and runs the
   authenticated guest cleanup daily at 03:15 UTC by posting to
-  `/api/maintenance/anonymous-cleanup`.
-  Cleanup removes only guest users older than 45 days with no unexpired session and
-  logs aggregate counts without deleted identifiers.
+  `/api/maintenance/anonymous-cleanup`. Cleanup removes only guest users older than 45
+  days with no unexpired session and logs aggregate counts without deleted identifiers.
 - The scheduler environments deploy as `hype-scheduler-preview` and
-  `hype-scheduler-production`.
-  After confirming its cron triggers and logs, remove the superseded
-  `hype-render-scheduler-*` Workers in the Cloudflare dashboard to prevent duplicate
-  hourly render refreshes.
+  `hype-scheduler-production`. After confirming its cron triggers and logs, remove the
+  superseded `hype-render-scheduler-*` Workers in the Cloudflare dashboard to prevent
+  duplicate hourly render refreshes.
 
 ### Access Control
 
@@ -375,4 +377,5 @@ key: ${{ runner.os }}-test-${{ github.sha }}
 2. **Verified Builds**: Only tested builds reach production
 3. **Dependency Pinning**: Locked dependency versions via `bun.lockb`
 
-This deployment strategy ensures a secure, efficient, and reliable pipeline that scales with the team and maintains high confidence in production deployments.
+This deployment strategy ensures a secure, efficient, and reliable pipeline that scales
+with the team and maintains high confidence in production deployments.
