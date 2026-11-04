@@ -440,3 +440,109 @@ describe('incremental map markers', () => {
     expect(featureQueryKey(viewport())).not.toBe(featureQueryKey(viewport(9)))
   })
 })
+
+it.each([401, 403, 404])(
+  'hides map snapshots after shared denial %s and refetches without excluded private IDs',
+  async status => {
+    const first = controlledPage(),
+      recovered = controlledPage()
+    const fetcher = vi
+      .fn()
+      .mockReturnValueOnce(first.query)
+      .mockReturnValue(recovered.query)
+    const map = new FeatureQuery(fetcher, undefined, undefined, true)
+    const initial = map.load(viewport())
+    first.resolve(rows(0, 2))
+    await initial
+    Object.assign(first.query, { error: { status } })
+    expect(map.rows).toEqual([])
+    expect(map.hasMore).toBe(false)
+    const recovery = map.load(viewport())
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(fetcher.mock.calls[1][0].excludeIds).toEqual([])
+    recovered.resolve(rows(2, 1))
+    await recovery
+    expect(map.rows.map(row => row.id)).toEqual(rows(2, 1).map(row => row.id))
+  },
+)
+
+it('does not restore denied cached map markers on a return visit', async () => {
+  const first = controlledPage(),
+    away = controlledPage(),
+    returned = controlledPage()
+  const fetcher = vi
+    .fn()
+    .mockReturnValueOnce(first.query)
+    .mockReturnValueOnce(away.query)
+    .mockReturnValue(returned.query)
+  const map = new FeatureQuery(fetcher, undefined, undefined, true)
+  const initial = map.load(viewport())
+  first.resolve(rows(0, 2))
+  await initial
+  const pan = map.load(viewport(8, pointB))
+  away.resolve(rows(2, 1, pointB))
+  await pan
+  Object.assign(first.query, { error: { status: 403 } })
+  const back = map.load(viewport())
+  expect(map.rows).toEqual([])
+  expect(fetcher.mock.calls[2][0].excludeIds).toEqual([])
+  returned.resolve(rows(3, 1))
+  await back
+  expect(map.rows.map(row => row.id)).toEqual(rows(3, 1).map(row => row.id))
+})
+
+it('removes a snapshot when its native page drops the row and restores native rollback', async () => {
+  const first = controlledPage()
+  const map = new FeatureQuery(() => first.query, undefined, undefined, true)
+  const initial = map.load(viewport())
+  first.resolve(rows(0, 2))
+  await initial
+  const original = first.query.current!
+  Object.assign(first.query, { current: { ...original, data: original.data.slice(1) } })
+  expect(map.rows.map(row => row.id)).toEqual(['feature-0001'])
+  Object.assign(first.query, { current: original })
+  expect(map.rows.map(row => row.id)).toEqual(['feature-0000', 'feature-0001'])
+})
+
+it('does not revive an overlapping marker from an older owner after native removal', async () => {
+  const first = controlledPage(),
+    second = controlledPage()
+  const fetcher = vi
+    .fn()
+    .mockReturnValueOnce(first.query)
+    .mockReturnValueOnce(second.query)
+  const map = new FeatureQuery(fetcher, undefined, undefined, true)
+  const initial = map.load(viewport())
+  first.resolve([rows(0, 1)[0], rows(2, 1)[0]])
+  await initial
+  const pan = map.load(viewport(9))
+  second.resolve(rows(0, 2))
+  await pan
+  expect(map.rows.map(row => row.id)).toEqual([
+    'feature-0000',
+    'feature-0002',
+    'feature-0001',
+  ])
+  Object.assign(second.query, { current: { ...second.query.current, data: [] } })
+  expect(map.rows.map(row => row.id)).toEqual(['feature-0002'])
+})
+
+it('retries a failed forced map refresh within the previous freshness window', async () => {
+  const first = controlledPage()
+  const next = controlledPage()
+  next.resolve([])
+  const fetch = vi.fn().mockReturnValueOnce(first.query).mockReturnValue(next.query)
+  const map = new FeatureQuery(fetch, undefined, undefined, true)
+  const initial = map.load(viewport())
+  first.resolve(rows(0, 1))
+  await initial
+  const failure = new Error('refresh unavailable')
+  vi.mocked(first.query.refresh).mockRejectedValueOnce(failure)
+  await expect(map.load(viewport(), true)).rejects.toBe(failure)
+  expect(map.rows.map(row => row.id)).toEqual(['feature-0000'])
+  expect(map.error).toBe(failure)
+  await map.load(viewport())
+  expect(first.query.refresh).toHaveBeenCalledTimes(2)
+  expect(map.error).toBeNull()
+  expect(map.loading).toBe(false)
+})

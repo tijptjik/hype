@@ -64,6 +64,58 @@ const MAX_RETAINED_PAGES = 20
 const MAX_MAP_MARKERS = 500
 const MAP_PAGE_SIZE = 100
 
+/**
+ * Identifies failures that invalidate a previously authorized feature payload.
+ * @param error - Local traversal or shared native query failure.
+ * @returns Whether retained data must be hidden until a successful request.
+ */
+function isAccessDenied(error: unknown): boolean {
+  return [401, 403, 404].includes((error as { status?: number })?.status ?? 0)
+}
+
+/**
+ * Resolves a retained identity against its current native owner, including removals.
+ * @param entry - Retained feature and optional native provenance.
+ * @returns Current authorized row, or no row after denial/removal from its source.
+ */
+function retainedFeatureRow(
+  entry: FeatureQueryCachedEntity,
+): FeatureFromCollection | undefined {
+  const page = entry.nativeSource?.page
+  if (isAccessDenied(page?.error)) return undefined
+  return page?.current
+    ? page.current.data.find(row => row.id === entry.row.id)
+    : entry.row
+}
+
+/**
+ * Applies current selectors while preserving fresh server-confirmed list membership.
+ * @param entry - Retained identity with its current native payload.
+ * @param input - Active query selectors.
+ * @param context - Current hierarchy and user-list facts.
+ * @returns Whether the retained row still belongs in this preview.
+ */
+function matchesRetainedFeature(
+  entry: FeatureQueryCachedEntity,
+  input: FeatureQueryInput,
+  context: FeatureQueryMatchContext,
+): boolean {
+  return matchesFeatureQuery(entry.row, input, {
+    ...context,
+    listMembership: (row, list) => {
+      const known = context.listMembership?.(row, list)
+
+      if (known !== undefined) return known
+
+      const checkedAt = entry.listMemberships?.[featureListMembershipKey(list)]
+
+      return checkedAt !== undefined && Date.now() - checkedAt < FRESHNESS_MS
+        ? true
+        : undefined
+    },
+  })
+}
+
 /********************
  *  1. SHARED ENTITY RETENTION
  ************/
@@ -142,23 +194,14 @@ export class FeatureQueryRetention {
     const scope = featureQueryScopeKey(input.meta)
 
     return [...this.entities.values()]
+      .flatMap(entry => {
+        const row = retainedFeatureRow(entry)
+        return row ? [{ ...entry, row }] : []
+      })
       .filter(entry => {
         if (featureQueryScopeKey(entry.meta) !== scope) return false
 
-        return matchesFeatureQuery(entry.row, input, {
-          ...context,
-          listMembership: (row, list) => {
-            const known = context.listMembership?.(row, list)
-
-            if (known !== undefined) return known
-
-            const checkedAt = entry.listMemberships?.[featureListMembershipKey(list)]
-
-            return checkedAt !== undefined && Date.now() - checkedAt < FRESHNESS_MS
-              ? true
-              : undefined
-          },
-        })
+        return matchesRetainedFeature(entry, input, context)
       })
       .sort((left, right) => left.row.id.localeCompare(right.row.id))
       .slice(0, input.limit ?? 100)
@@ -239,10 +282,12 @@ export class FeatureQuery {
   private preview: FeatureQueryCachedEntity[] = $state.raw([])
   private validatedAt = 0
   private generation = 0
+  private activeLoad: { key: string; promise: Promise<void> } | undefined
   private pendingPage: RemoteQuery<FeatureQueryPage> | undefined
   private history = new Map<string, FeatureQueryHistory>()
   private matchContext: FeatureQueryMatchContext = {}
   private mapRows: FeatureFromCollection[] = $state.raw([])
+  private mapRowSources = $state.raw(new Map<string, RemoteQuery<FeatureQueryPage>>())
   private mapIncomingPage: RemoteQuery<FeatureQueryPage> | undefined = $state.raw()
   private mapPageInputs = new WeakMap<
     RemoteQuery<FeatureQueryPage>,
@@ -256,8 +301,31 @@ export class FeatureQuery {
     private readonly bounded = false,
   ) {}
 
+  /** Shared refresh failures invalidate active snapshots as well as native payloads. */
+  private get denied(): boolean {
+    return (
+      isAccessDenied(this.error) ||
+      isAccessDenied(this.pendingPage?.error) ||
+      this.pages.some(page => isAccessDenied(page.error))
+    )
+  }
+
+  /** Discards denied traversal state before a recovery request. @returns Nothing. */
+  private discardDeniedPages(): void {
+    this.pages = []
+    this.preview = []
+    this.mapRows = []
+    this.mapRowSources = new Map()
+    this.mapIncomingPage = undefined
+    this.pendingPage = undefined
+    this.retained.clear()
+    this.history.clear()
+    this.validatedAt = 0
+  }
+
   /** Ordered native results take precedence over duplicate optimistic cached matches. */
   get rows(): FeatureFromCollection[] {
+    if (this.denied) return []
     if (this.bounded) return this.visibleMapRows()
     const rows = new Map<string, FeatureFromCollection>()
     const list = this.input?.filters?.list
@@ -266,30 +334,35 @@ export class FeatureQuery {
       for (const row of page.current?.data ?? [])
         if (!list || context.listMembership?.(row, list) !== false)
           rows.set(row.id, row)
-    for (const entry of this.preview)
+    for (const entry of this.preview) {
+      const row = retainedFeatureRow(entry)
       if (
+        row &&
         Date.now() - entry.fetchedAt < FRESHNESS_MS &&
-        !rows.has(entry.row.id) &&
-        (!list || context.listMembership?.(entry.row, list) !== false)
+        !rows.has(row.id) &&
+        this.input &&
+        matchesRetainedFeature({ ...entry, row }, this.input, context)
       )
-        rows.set(entry.row.id, entry.row)
+        rows.set(row.id, row)
+    }
     return [...rows.values()]
   }
 
   /** Total matching records from the server; a new uncached query remains unknown. */
   get totalCount(): number | null {
-    if (this.bounded) return null
+    if (this.bounded || this.denied) return null
     return this.pages[0]?.current?.totalCount ?? null
   }
 
   /** Server aggregates for exactly the active query, never locally inferred counts. */
   get facets(): FeatureQueryPage['facets'] | null {
-    if (this.bounded) return null
+    if (this.bounded || this.denied) return null
     return this.pages[0]?.current?.facets ?? null
   }
 
   /** Whether the server returned another cursor for this query. */
   get hasMore(): boolean {
+    if (this.denied) return false
     if (this.bounded && this.rows.length >= MAX_MAP_MARKERS) return false
     return Boolean(this.pages.at(-1)?.current?.nextCursor)
   }
@@ -315,6 +388,25 @@ export class FeatureQuery {
    * @returns Completion of the first page; superseded results never change the active view.
    */
   async load(input: FeatureQueryInput, force = false): Promise<void> {
+    const key = featureQueryKey(input)
+    // Share controller settlement, not an already-resolved native query handle.
+    if (!force && this.activeLoad?.key === key) return this.activeLoad.promise
+    const operation = { key, promise: this.performLoad(input, force) }
+    this.activeLoad = operation
+    try {
+      await operation.promise
+    } finally {
+      if (this.activeLoad === operation) this.activeLoad = undefined
+    }
+  }
+
+  /**
+   * Runs one complete traversal load and reconciles its reactive state.
+   * @param input Complete query identity and filters.
+   * @param force Whether to bypass retained freshness.
+   * @returns Completion after native reads and controller reconciliation.
+   */
+  private async performLoad(input: FeatureQueryInput, force: boolean): Promise<void> {
     if (this.bounded) return await this.loadMap(input, force)
     const key = featureQueryKey(input)
     const sameQuery = this.input && featureQueryKey(this.input) === key
@@ -324,12 +416,15 @@ export class FeatureQuery {
     }
     if (
       !force &&
+      !this.denied &&
       sameQuery &&
       this.pages.length &&
       this.validatedAt > 0 &&
       Date.now() - this.validatedAt < FRESHNESS_MS
     )
       return
+
+    if (this.denied) this.discardDeniedPages()
 
     // Saved lists keep their committed page and count while a replacement is pending.
     const listId = input.filters?.list?.listId
@@ -350,7 +445,12 @@ export class FeatureQuery {
         ...this.matchContext,
       })
     const history = this.history.get(key)
-    if (!force && history && Date.now() - history.fetchedAt < FRESHNESS_MS) {
+    if (
+      !force &&
+      history &&
+      !history.pages.some(page => isAccessDenied(page.error)) &&
+      Date.now() - history.fetchedAt < FRESHNESS_MS
+    ) {
       this.pendingPage = undefined
       this.pages = history.pages
       this.validatedAt = history.fetchedAt
@@ -360,12 +460,14 @@ export class FeatureQuery {
     this.history.delete(key)
     // Retained rows belong to the previous result; they cannot mark a failed replacement fresh.
     this.validatedAt = 0
-    const page = this.query(this.input)
-    this.pendingPage = page
-    if (!preserveSavedList) this.pages = [page]
-    else if (!keepPrevious) this.pages = []
+    // Retire obsolete handles before query construction can fail under a new scope.
+    this.pendingPage = undefined
+    if (!keepPrevious) this.pages = []
     this.loading = true
     try {
+      const page = this.query(this.input)
+      this.pendingPage = page
+      if (!preserveSavedList) this.pages = [page]
       if (force || page.ready) await page.refresh()
       else await page
       if (generation !== this.generation) return
@@ -379,12 +481,7 @@ export class FeatureQuery {
     } catch (error) {
       if (generation === this.generation) {
         this.error = error
-        if ([401, 403, 404].includes((error as { status?: number })?.status ?? 0)) {
-          this.pages = []
-          this.preview = []
-          this.retained.clear()
-          this.history.clear()
-        }
+        if (isAccessDenied(error)) this.discardDeniedPages()
       }
       throw error
     } finally {
@@ -400,6 +497,7 @@ export class FeatureQuery {
    * @returns Completion of the next page; obsolete responses and duplicate triggers are ignored.
    */
   async next(): Promise<void> {
+    if (this.denied) return
     if (this.bounded) {
       if (!this.loading && this.input && this.hasMore)
         await this.loadMap(this.input, true)
@@ -413,7 +511,9 @@ export class FeatureQuery {
     this.error = null
     try {
       const page = this.query({ ...input, cursor })
-      await page
+      // Revalidate resolved cursor handles before retaining potentially stale or revoked rows.
+      if (page.ready) await page.refresh()
+      else await page
       if (generation !== this.generation) return
       this.pages = [...this.pages, page]
       if (page.current)
@@ -422,12 +522,7 @@ export class FeatureQuery {
     } catch (error) {
       if (generation === this.generation) {
         this.error = error
-        if ([401, 403, 404].includes((error as { status?: number })?.status ?? 0)) {
-          this.pages = []
-          this.preview = []
-          this.retained.clear()
-          this.history.clear()
-        }
+        if (isAccessDenied(error)) this.discardDeniedPages()
       }
     } finally {
       if (generation === this.generation) this.loading = false
@@ -468,7 +563,9 @@ export class FeatureQuery {
   async revalidate(): Promise<void> {
     if (
       this.loading ||
-      (this.validatedAt > 0 && Date.now() - this.validatedAt < FRESHNESS_MS) ||
+      (!this.denied &&
+        this.validatedAt > 0 &&
+        Date.now() - this.validatedAt < FRESHNESS_MS) ||
       !this.input
     )
       return
@@ -514,6 +611,7 @@ export class FeatureQuery {
    */
   invalidate(): void {
     this.generation++
+    this.activeLoad = undefined
     this.pendingPage = undefined
     this.loading = false
     this.history.clear()
@@ -527,10 +625,12 @@ export class FeatureQuery {
    */
   clear(): void {
     this.generation++
+    this.activeLoad = undefined
     this.pendingPage = undefined
     this.input = undefined
     this.preview = []
     this.mapRows = []
+    this.mapRowSources = new Map()
     this.mapIncomingPage = undefined
     this.pages = []
     this.history.clear()
@@ -549,7 +649,19 @@ export class FeatureQuery {
   private visibleMapRows(): FeatureFromCollection[] {
     const input = this.input
     if (!input) return []
-    const rows = new Map(this.mapRows.map(row => [row.id, row]))
+    const snapshotIds = new Set(this.mapRows.map(row => row.id))
+    // A successful native refresh may remove rows entirely, without returning a tombstone.
+    const rows = new Map(
+      this.mapRows
+        .filter(row => {
+          const source = this.mapRowSources.get(row.id)
+          return (
+            !source?.current ||
+            source.current.data.some(current => current.id === row.id)
+          )
+        })
+        .map(row => [row.id, row]),
+    )
     const context = { ...this.context(), ...this.matchContext }
     for (const page of this.pages) {
       const sourceList = this.mapPageInputs.get(page)?.filters?.list
@@ -560,7 +672,9 @@ export class FeatureQuery {
         featureListMembershipKey(sourceList) === featureListMembershipKey(currentList)
       for (const row of page.current?.data ?? []) {
         // Older page handles may update retained IDs, but cannot revive stale offscreen rows.
-        if (!rows.has(row.id) && page !== this.mapIncomingPage) continue
+        if (!snapshotIds.has(row.id) && page !== this.mapIncomingPage) continue
+        const source = this.mapRowSources.get(row.id)
+        if (source && source !== page && page !== this.mapIncomingPage) continue
         if (
           matchesFeatureQuery(row, input, {
             ...context,
@@ -587,6 +701,19 @@ export class FeatureQuery {
   }
 
   /**
+   * Binds marker snapshots to their latest retained native membership owner.
+   * @returns Nothing; ownership uses only the existing bounded page handles.
+   */
+  private captureMapSources(): void {
+    const ids = new Set(this.mapRows.map(row => row.id))
+    const sources = new Map<string, RemoteQuery<FeatureQueryPage>>()
+    for (const page of this.pages)
+      for (const row of page.current?.data ?? [])
+        if (ids.has(row.id)) sources.set(row.id, page)
+    this.mapRowSources = sources
+  }
+
+  /**
    * Retains only native handles that can update currently visible marker records.
    * @param ids - Marker identities retained after viewport and filter matching.
    * @param candidates - Current and freshly restored native owners, in arrival order.
@@ -600,7 +727,11 @@ export class FeatureQuery {
     const pages: RemoteQuery<FeatureQueryPage>[] = []
     // Prefer the latest native owner of each ID while avoiding redundant old page payloads.
     for (const page of [...new Set(candidates)].reverse()) {
-      if (!page.current?.data.some(row => uncovered.has(row.id))) continue
+      if (
+        isAccessDenied(page.error) ||
+        !page.current?.data.some(row => uncovered.has(row.id))
+      )
+        continue
       pages.unshift(page)
       for (const row of page.current.data) uncovered.delete(row.id)
       if (pages.length >= MAX_RETAINED_PAGES || !uncovered.size) break
@@ -623,11 +754,14 @@ export class FeatureQuery {
 
     if (
       !force &&
+      !this.denied &&
       sameQuery &&
       this.validatedAt > 0 &&
       Date.now() - this.validatedAt < FRESHNESS_MS
     )
       return
+
+    if (this.denied) this.discardDeniedPages()
 
     const previousInput = this.input
     const sameScope =
@@ -677,8 +811,11 @@ export class FeatureQuery {
       ...sources.map(source => source.page),
       ...(sameScope ? this.pages : []),
     ])
+    this.captureMapSources()
     this.preview = []
     this.error = null
+    // A failed replacement cannot inherit the previous viewport's freshness.
+    this.validatedAt = 0
     this.loading = true
     try {
       // Refresh existing native payloads in place so ordinary staleness never clears the map.
@@ -727,17 +864,13 @@ export class FeatureQuery {
         this.mapRows = this.rows
         this.mapIncomingPage = undefined
         this.pages = this.visibleMapPages(new Set(this.mapRows.map(row => row.id)))
+        this.captureMapSources()
       }
       this.validatedAt = Date.now()
     } catch (error) {
       if (generation === this.generation) {
         this.error = error
-        if ([401, 403, 404].includes((error as { status?: number })?.status ?? 0)) {
-          this.mapRows = []
-          this.mapIncomingPage = undefined
-          this.pages = []
-          this.retained.clear()
-        }
+        if (isAccessDenied(error)) this.discardDeniedPages()
       }
       throw error
     } finally {

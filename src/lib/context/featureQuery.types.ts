@@ -31,10 +31,18 @@ export type FeatureCollectionHandle = import('$app/server').RemoteQuery<{
 }>
 
 export type ResourceDetailHandle = {
+  /** One refresh operation and reconciliation callbacks for its current consumers. */
+  pending?: {
+    promise: Promise<unknown>
+    commits: Set<(data: unknown) => void>
+  }
   snapshot?: unknown
   query: Promise<{ data?: unknown }> & {
     refresh?: () => Promise<void>
     current?: { data?: unknown }
+    ready?: boolean
+    loading?: boolean
+    error?: unknown
     withOverride?: import('$app/server').RemoteQuery<{ data?: unknown }>['withOverride']
   }
   fetchedAt: number

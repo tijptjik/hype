@@ -591,3 +591,263 @@ describe('cached interval overlap', () => {
     },
   )
 })
+
+describe('shared native access failures', () => {
+  it.each([401, 403, 404])(
+    'hides rows, totals, facets and cursors after %s and retries immediately',
+    async status => {
+      const first = controlledQuery()
+      const query = new FeatureQuery(() => first.query)
+      const initial = query.load(input)
+      first.resolve({
+        ...page([row('private')], 42),
+        nextCursor: { id: 'private', signature: 'scope' },
+      })
+      await initial
+      Object.assign(first.query, { error: { status } })
+      expect(query.rows).toEqual([])
+      expect(query.totalCount).toBeNull()
+      expect(query.facets).toBeNull()
+      expect(query.hasMore).toBe(false)
+      vi.mocked(first.query.refresh).mockImplementation(async () => {
+        Object.assign(first.query, {
+          error: undefined,
+          current: page([row('recovered')]),
+        })
+      })
+      await query.load(input)
+      expect(first.query.refresh).toHaveBeenCalledOnce()
+      expect(query.rows.map(row => row.id)).toEqual(['recovered'])
+    },
+  )
+
+  it('removes denied provenance from already displayed and newly requested previews', async () => {
+    const source = controlledQuery(),
+      replacement = controlledQuery()
+    const retained = new FeatureQueryRetention()
+    source.resolve(page([row('private')]))
+    retained.retain(source.query.current!.data, input, source.query)
+    const query = new FeatureQuery(() => replacement.query, retained)
+    const pending = query.load(input)
+    expect(query.rows.map(row => row.id)).toEqual(['private'])
+    Object.assign(source.query, { error: { status: 403 } })
+    expect(query.rows).toEqual([])
+    expect(retained.preview(input, {})).toEqual([])
+    replacement.resolve(page([row('authorized')]))
+    await pending
+    expect(query.rows.map(row => row.id)).toEqual(['authorized'])
+  })
+
+  it('revalidates denied inactive history instead of restoring its payload', async () => {
+    const first = controlledQuery(),
+      second = controlledQuery()
+    const fetcher = vi
+      .fn()
+      .mockReturnValueOnce(first.query)
+      .mockReturnValueOnce(second.query)
+      .mockReturnValue(first.query)
+    const query = new FeatureQuery(fetcher)
+    const initial = query.load(input)
+    first.resolve(page([row('private')]))
+    await initial
+    const changed = query.load({ ...input, q: 'other' })
+    second.resolve(page([]))
+    await changed
+    Object.assign(first.query, { error: { status: 403 } })
+    vi.mocked(first.query.refresh).mockRejectedValue({ status: 403 })
+    await expect(query.load(input)).rejects.toEqual({ status: 403 })
+    expect(query.rows).toEqual([])
+    expect(first.query.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('preserves native rows and aggregates after a transient shared failure', async () => {
+    const first = controlledQuery()
+    const query = new FeatureQuery(() => first.query)
+    const initial = query.load(input)
+    first.resolve(page([row('available')], 42))
+    await initial
+    Object.assign(first.query, { error: { status: 503 } })
+    expect(query.rows.map(row => row.id)).toEqual(['available'])
+    expect(query.totalCount).toBe(42)
+  })
+})
+
+it('uses current native membership and payload for retained previews', async () => {
+  const first = controlledQuery(),
+    replacement = controlledQuery()
+  first.resolve(page([row('removed'), row('updated', 'Old')]))
+  const retained = new FeatureQueryRetention()
+  retained.retain(first.query.current!.data, input, first.query)
+  const query = new FeatureQuery(() => replacement.query, retained)
+  const pending = query.load(input)
+  expect(query.rows.map(row => row.id)).toEqual(['removed', 'updated'])
+  Object.assign(first.query, { current: page([row('updated', 'New')]) })
+  expect(query.rows.map(row => row.id)).toEqual(['updated'])
+  expect(query.rows[0].i18n?.en?.title).toBe('New')
+  expect(retained.preview(input, {}).map(entry => entry.row.id)).toEqual(['updated'])
+  expect(retained.preview({ ...input, q: 'Old' }, {})).toEqual([])
+  expect(retained.preview({ ...input, q: 'New' }, {})).toHaveLength(1)
+  replacement.resolve(page([]))
+  await pending
+  expect(query.rows.map(row => row.id)).toEqual(['updated'])
+})
+
+it('rechecks active preview selectors after its native source changes', async () => {
+  const source = controlledQuery(),
+    replacement = controlledQuery()
+  source.resolve(page([row('feature', 'Old')]))
+  const retained = new FeatureQueryRetention()
+  retained.retain(source.query.current!.data, input, source.query)
+  const query = new FeatureQuery(() => replacement.query, retained)
+  const pending = query.load({ ...input, q: 'Old' })
+  expect(query.rows.map(row => row.id)).toEqual(['feature'])
+  Object.assign(source.query, { current: page([row('feature', 'New')]) })
+  expect(query.rows).toEqual([])
+  replacement.resolve(page([]))
+  await pending
+})
+
+it.each([false, true])(
+  'refreshes a resolved feature cursor before appending it (denied: %s)',
+  async denied => {
+    const first = controlledQuery()
+    const second = controlledQuery()
+    second.resolve(page([row('stale')]))
+    const failure = { status: 403 }
+    vi.mocked(second.query.refresh).mockImplementation(async () => {
+      if (denied) throw failure
+      Object.assign(second.query, { current: page([row('current')]) })
+    })
+    const retained = new FeatureQueryRetention()
+    const results = new FeatureQuery(
+      vi.fn().mockReturnValueOnce(first.query).mockReturnValueOnce(second.query),
+      retained,
+    )
+    const initial = results.load(input)
+    first.resolve({
+      ...page([row('first')]),
+      nextCursor: { id: 'first', signature: 'scope' },
+    })
+    await initial
+    await results.next()
+    expect(second.query.refresh).toHaveBeenCalledOnce()
+    expect(results.rows.map(entry => entry.id)).toEqual(
+      denied ? [] : ['first', 'current'],
+    )
+    expect(retained.preview(input, {}).some(entry => entry.row.id === 'stale')).toBe(
+      false,
+    )
+    expect(results.error).toEqual(denied ? failure : null)
+  },
+)
+
+it.each([false, true])(
+  'recovers from query construction failure across scopes (pending: %s)',
+  async pending => {
+    const old = controlledQuery()
+    const replacement = controlledQuery()
+    const failure = new Error('query construction failed')
+    const factory = vi
+      .fn()
+      .mockReturnValueOnce(old.query)
+      .mockImplementationOnce(() => {
+        throw failure
+      })
+      .mockReturnValue(replacement.query)
+    const results = new FeatureQuery(factory)
+    const initial = results.load(input)
+    if (!pending) {
+      old.resolve(page([row('old-account')]))
+      await initial
+    }
+    const changed = { ...input, meta: { ...input.meta, scope: 'another-account' } }
+    await expect(results.load(changed)).rejects.toBe(failure)
+    expect(results.error).toBe(failure)
+    expect(results.loading).toBe(false)
+    expect(results.rows).toEqual([])
+    if (pending) {
+      old.resolve(page([row('old-account')]))
+      await initial
+      expect(results.rows).toEqual([])
+    }
+    const recovery = results.load(changed)
+    replacement.resolve(page([row('current-account')]))
+    await recovery
+    expect(factory).toHaveBeenCalledTimes(3)
+    expect(results.rows.map(entry => entry.id)).toEqual(['current-account'])
+    expect(results.error).toBeNull()
+  },
+)
+
+it.each([false, true])(
+  'joins Feature refresh completion including failure (%s)',
+  async fails => {
+    const first = controlledQuery()
+    first.resolve(page([row('old')]))
+    const results = new FeatureQuery(() => first.query)
+    await results.load(input)
+    let finish!: () => void
+    let reject!: (error: unknown) => void
+    vi.mocked(first.query.refresh).mockImplementation(
+      () =>
+        new Promise<void>((resolve, fail) => {
+          finish = resolve
+          reject = fail
+        }),
+    )
+    const outcome = (pending: Promise<void>) =>
+      pending.then(
+        () => 'success',
+        error => error,
+      )
+    const refresh = outcome(results.load(input, true))
+    let joinedFinished = false
+    const joined = outcome(results.load(input)).then(value => {
+      joinedFinished = true
+      return value
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(joinedFinished).toBe(false)
+    const failure = { status: 403 }
+    if (fails) reject(failure)
+    else finish()
+    expect(await refresh).toEqual(fails ? failure : 'success')
+    expect(await joined).toEqual(fails ? failure : 'success')
+    expect(results.loading).toBe(false)
+  },
+)
+
+it.each([
+  ['clear', false],
+  ['invalidate', false],
+  ['clear', true],
+  ['invalidate', true],
+] as const)('detaches obsolete loads on %s (map: %s)', async (reset, bounded) => {
+  const old = controlledQuery()
+  const current = controlledQuery()
+  const fetcher = vi
+    .fn()
+    .mockReturnValueOnce(old.query)
+    .mockReturnValueOnce(current.query)
+  const results = new FeatureQuery(fetcher, undefined, undefined, bounded)
+  const obsolete = results.load(input)
+  results[reset]()
+  const pending = results.load(input)
+  old.resolve(page([row('obsolete')]))
+  await obsolete
+  let joinedFinished = false
+  const joined = results.load(input).then(() => {
+    joinedFinished = true
+  })
+  await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(joinedFinished).toBe(false)
+  expect(fetcher).toHaveBeenCalledTimes(2)
+  current.resolve(page([row('current')]))
+  await Promise.all([pending, joined])
+  expect(results.rows.map(entry => entry.id)).toEqual(['current'])
+  expect(results.loading).toBe(false)
+})
