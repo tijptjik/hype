@@ -4,6 +4,8 @@ import { and, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // DB
 import { firstOrNull, transformI18nSafely } from '..'
+import { prepareGuardedReplacement } from './guardedReplacement.js'
+import type { BatchItem } from 'drizzle-orm/batch'
 import {
   hub,
   mapStyleI18n,
@@ -31,6 +33,8 @@ import type {
 //    - syncMapStyleCatalog
 //
 // 1.2 CRUD :: UPSERT
+//    - prepareProjectMapStyle
+//    - isProjectMapStyleUnavailable
 //    - setProjectMapStyleByCode
 //
 // 2.1 CRUD :: READ
@@ -243,6 +247,86 @@ export const syncMapStyleCatalog = async (db: Database): Promise<void> => {
  ************/
 
 /**
+ * Prepares a map-style replacement for an enclosing project transaction.
+ * @param db Request database.
+ * @param params Authorized destination identity, code and organisation plus desired style.
+ * @param guard Project revision predicate checked by every assignment mutation.
+ * @returns Unexecuted assignment statements with a write-time visibility lookup.
+ * @remarks The prospective project code supports creation/renaming before the final parent write.
+ * Hub visibility uses the destination organisation's live affiliation. An unavailable style
+ * produces NULL in the required assignment column, aborting the enclosing transaction.
+ */
+export function prepareProjectMapStyle(
+  db: Database,
+  params: {
+    projectId: string
+    projectCode: string
+    organisationId: string
+    mapStyleCode?: string | null
+  },
+  guard: SQL,
+): [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]] {
+  const code = params.mapStyleCode?.trim()
+  const liveHub = sql`(select ${organisation.hubId} from ${organisation} where ${organisation.id} = ${params.organisationId})`
+  const visible = db
+    .select({ id: mapStyles.id })
+    .from(mapStyles)
+    .where(
+      and(
+        eq(mapStyles.code, code ?? ''),
+        isVisibleToScope(
+          { id: params.projectId, organisationId: params.organisationId, hubId: null },
+          liveHub,
+          params.projectCode,
+        ),
+      ),
+    )
+    .limit(1)
+  // The assignment and the core record either both commit or both retain their previous state.
+  return prepareGuardedReplacement(
+    db,
+    projectMapStyles,
+    code
+      ? [{ projectId: params.projectId, mapStyleId: sql`(${visible})` } as never]
+      : [],
+    projectMapStyles.projectId,
+    params.projectId,
+    guard,
+  )
+}
+
+/**
+ * Recognizes only the required-style constraint used by transactional style selection.
+ * @param cause Database error, potentially wrapped by Drizzle or D1.
+ * @returns Whether the assignment failed because its visible style was unavailable.
+ */
+export function isProjectMapStyleUnavailable(cause: unknown): boolean {
+  const pending: unknown[] = [cause]
+  const seen = new Set<object>()
+  while (pending.length) {
+    const value = pending.pop()
+    if (!value || typeof value !== 'object' || seen.has(value)) continue
+    seen.add(value)
+    const wrapped = value as {
+      message?: unknown
+      cause?: unknown
+      error?: unknown
+      errors?: unknown[]
+    }
+    if (
+      typeof wrapped.message === 'string' &&
+      /NOT NULL constraint failed: projectMapStyles\.mapStyleId\b/i.test(
+        wrapped.message,
+      )
+    )
+      return true
+    pending.push(wrapped.cause, wrapped.error)
+    if (Array.isArray(wrapped.errors)) pending.push(...wrapped.errors)
+  }
+  return false
+}
+
+/**
  * Replaces a project's map-style assignment using a catalog code.
  *
  * @param db - Database handle.
@@ -419,21 +503,36 @@ const toResolvedMapStyle = (row: MapStyleRowDB): MapStyleResolvedDB => ({
  * Builds the visibility predicate for a scope-aware map-style query.
  *
  * @param scope - Organisation and optional hub scope for the caller.
+ * @param liveHub - Optional execution-time hub lookup for a transactional write.
+ * @param projectCode - Optional authorized prospective code during project creation or rename.
  * @returns SQL predicate that keeps global styles visible while honoring scoped styles.
  * @remarks
  * A `null` hub means "core/global only", so hub-scoped styles are excluded in that case.
  * Project-only catalog entries also require a matching persisted project id and code.
  */
-const isVisibleToScope = (scope: ProjectScope): SQL | undefined =>
+const isVisibleToScope = (
+  scope: ProjectScope,
+  liveHub?: SQL,
+  projectCode?: string,
+): SQL | undefined =>
   and(
+    // Missing persisted owner IDs must not turn catalog-restricted styles into global styles.
+    ...REGISTERED_MAP_STYLE_CATALOG.filter(entry => entry.hubCode).map(entry =>
+      or(
+        sql`${mapStyles.code} != ${entry.key}`,
+        sql`EXISTS (SELECT 1 FROM "hub" AS "styleHub" WHERE "styleHub"."id" = ${liveHub ?? scope.hubId} AND "styleHub"."code" = ${entry.hubCode})`,
+      ),
+    ),
     // Keep owner identifiers literal: relational queries re-alias Drizzle column references.
     // Resolve the owning project inside SQL so missing projects fail closed.
     ...REGISTERED_MAP_STYLE_CATALOG.filter(entry => entry.projectCode).map(entry =>
       or(
         sql`${mapStyles.code} != ${entry.key}`,
-        scope.id
-          ? sql`EXISTS (SELECT 1 FROM "project" AS "styleOwner" WHERE "styleOwner"."id" = ${scope.id} AND "styleOwner"."code" = ${entry.projectCode})`
-          : sql`0`,
+        projectCode !== undefined
+          ? sql`${projectCode} = ${entry.projectCode}`
+          : scope.id
+            ? sql`EXISTS (SELECT 1 FROM "project" AS "styleOwner" WHERE "styleOwner"."id" = ${scope.id} AND "styleOwner"."code" = ${entry.projectCode})`
+            : sql`0`,
       ),
     ),
     or(
@@ -442,7 +541,11 @@ const isVisibleToScope = (scope: ProjectScope): SQL | undefined =>
     ),
     or(
       isNull(mapStyles.hubId),
-      scope.hubId ? eq(mapStyles.hubId, scope.hubId) : isNull(mapStyles.hubId),
+      liveHub
+        ? eq(mapStyles.hubId, liveHub)
+        : scope.hubId
+          ? eq(mapStyles.hubId, scope.hubId)
+          : isNull(mapStyles.hubId),
     ),
   )
 
