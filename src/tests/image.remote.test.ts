@@ -1576,7 +1576,7 @@ describe('image.remote', () => {
   })
 
   it.each(['success', 'stale', 'database-failure', 'source-drift'] as const)(
-    'rotateImage isolates stored objects before database selection: %s',
+    'rotateImage preserves source objects while selecting metadata: %s',
     async scenario => {
       const put = vi.fn(async () => undefined)
       const originalGet = vi.fn(async (key: string) => {
@@ -1711,17 +1711,15 @@ describe('image.remote', () => {
       }
       if (scenario !== 'success') {
         await expect(operation).rejects.toBeDefined()
-        expect(put).toHaveBeenCalledTimes(4)
+        expect(put).toHaveBeenCalledTimes(1)
         for (const [key] of put.mock.calls as unknown as [string][])
-          expect(key).toMatch(/^h\/rotations\//)
+          expect(key).toMatch(/^h\/features\/feature-1\/image-a\.v2468\.json$/)
         expect(mockEnqueueDerivedAssetWarmup).not.toHaveBeenCalled()
         expect(mockUpdateImageForContext).toHaveBeenCalledWith(
           expect.objectContaining({
-            replacement: expect.objectContaining({
-              snapshot: expect.objectContaining({
-                imageRevision: 'revision',
-                assignmentRevision: 'assignment',
-              }),
+            expectedSnapshot: expect.objectContaining({
+              imageRevision: 'revision',
+              assignmentRevision: 'assignment',
             }),
           }),
         )
@@ -1731,10 +1729,9 @@ describe('image.remote', () => {
       }
       const result = await operation
       for (const [key] of put.mock.calls as unknown as [string][])
-        expect(key).toMatch(/^h\/rotations\//)
+        expect(key).toMatch(/^h\/features\/feature-1\/image-a.*\.json$/)
       expect(mockAssertPermissionsToUpdateImage).toHaveBeenCalled()
-      expect(originalGet).toHaveBeenCalledWith('h/features/feature-1/image-a')
-      expect(originalGet).toHaveBeenCalledTimes(1)
+      expect(originalGet).not.toHaveBeenCalled()
       expect(put).toHaveBeenCalledTimes(4)
       expect(mockUpdateImageForContext).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1742,14 +1739,14 @@ describe('image.remote', () => {
           ctxType: 'feature',
           ctxId: 'feature-1',
           data: {
-            publicId: expect.stringMatching(/^h\/rotations\//),
+            publicId: 'h/features/feature-1/image-a',
             env: 'local',
             version: 2468,
           },
         }),
       )
       expect(put).toHaveBeenCalledWith(
-        expect.stringMatching(/^h\/rotations\/.+\.json$/),
+        'h/features/feature-1/image-a.v2468.json',
         expect.stringContaining('"rotation":90'),
         expect.any(Object),
       )
@@ -1758,7 +1755,7 @@ describe('image.remote', () => {
           request: expect.any(Request),
         }),
         env: 'local',
-        publicId: expect.stringMatching(/^h\/rotations\//),
+        publicId: 'h/features/feature-1/image-a',
         version: 2468,
       })
       expect(fetchSpy).not.toHaveBeenCalled()
@@ -1769,7 +1766,7 @@ describe('image.remote', () => {
     },
   )
 
-  it('rotateImage falls back to direct R2 reads and writes when the binding cannot access the original', async () => {
+  it('rotateImage falls back to direct R2 metadata writes without reading the original', async () => {
     const put = vi
       .fn()
       .mockRejectedValueOnce(new Error('binding write unavailable'))
@@ -1893,7 +1890,7 @@ describe('image.remote', () => {
       rotation: 90,
     })
 
-    expect(previewGet).toHaveBeenCalledWith('h/features/feature-2/image-b')
+    expect(previewGet).not.toHaveBeenCalled()
     expect(fetchSpy).toHaveBeenCalled()
     expect(mockUpdateImageForContext).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1909,7 +1906,7 @@ describe('image.remote', () => {
         request: expect.any(Request),
       }),
       env: 'preview',
-      publicId: expect.stringMatching(/^h\/rotations\//),
+      publicId: 'h/features/feature-2/image-b',
       version: 97531,
     })
     expect(result).toEqual({ data: { id: 'img-1' } })

@@ -1,3 +1,4 @@
+import { rotatePixels } from './rotation'
 import { simd } from 'wasm-feature-detect'
 import resize, { initResize } from '@jsquash/resize'
 import squooshResizeWasm from '@jsquash/resize/lib/resize/pkg/squoosh_resize_bg.wasm'
@@ -73,6 +74,7 @@ type ImageMetadataDocument = {
 }
 
 type TransformRequest = {
+  renderRotation?: 0 | 90 | 180 | 270
   requestedStage: ImageStage
   publicId: string
   version?: number
@@ -633,7 +635,10 @@ const transformSourceWithCloudflareImages = async (
     request.width,
     request.height,
   )
-  const transformer = env.IMAGES.input(toImageSourceStream(source.body))
+  const input = env.IMAGES.input(toImageSourceStream(source.body))
+  const transformer = request.renderRotation
+    ? input.transform({ rotate: request.renderRotation })
+    : input
   const transformed =
     dimensions.width !== undefined || dimensions.height !== undefined
       ? transformer.transform({
@@ -913,7 +918,7 @@ const handleFetch = async (
     if (!parsed.ok) {
       return Response.json({ error: parsed.error }, { status: 400 })
     }
-    return handleRawRequest(request, env, parsed.value)
+    return handleRawRequest(request, env, parsed.value, ctx)
   }
 
   if (serviceType === 'upload') {
@@ -2109,24 +2114,41 @@ const handleRawRequest = async (
   request: Request,
   env: Env,
   rawRequest: RawRequest,
+  ctx: ExecutionContext,
 ): Promise<Response> => {
   if (typeof rawRequest.width === 'number' || typeof rawRequest.height === 'number') {
-    const source = await resolveIntermediateAsset(env, rawRequest.requestedStage, {
+    const metadata = await resolveMetadataDocument(
+      env,
+      rawRequest.requestedStage,
+      rawRequest,
+    )
+    if (!metadata.document?.renderRotation) {
+      const source = await resolveIntermediateAsset(
+        env,
+        rawRequest.requestedStage,
+        rawRequest,
+      )
+      if (!source) return new Response('Image not found', { status: 404 })
+      return new Response(request.method === 'HEAD' ? null : source.body, {
+        headers: {
+          'cache-control': source.version
+            ? CACHE_CONTROL_IMMUTABLE
+            : CACHE_CONTROL_SHORT,
+          'content-type': source.contentType,
+          'x-image-source-env': source.stage,
+          ...(source.version ? { 'x-image-version': String(source.version) } : {}),
+        },
+      })
+    }
+    return handleTransformRequest(request, env, ctx, {
+      requestedStage: rawRequest.requestedStage,
       publicId: rawRequest.publicId,
       version: rawRequest.version,
-    })
-
-    if (!source) {
-      return new Response('Image not found', { status: 404 })
-    }
-
-    return new Response(request.method === 'HEAD' ? null : source.body, {
-      headers: {
-        'cache-control': source.version ? CACHE_CONTROL_IMMUTABLE : CACHE_CONTROL_SHORT,
-        'content-type': source.contentType,
-        'x-image-source-env': source.stage,
-        ...(source.version ? { 'x-image-version': String(source.version) } : {}),
-      },
+      cropMode: 'c_fit',
+      gravity: 'g_center',
+      format: 'auto',
+      quality: 'auto',
+      effects: [],
     })
   }
 
@@ -2513,7 +2535,15 @@ const handleTransformRequest = async (
     }
 
     const transformStartedAt = Date.now()
+    const rotationMetadata = await resolveMetadataDocument(env, source.stage, {
+      publicId: transformRequest.publicId,
+      version: resolvedVersion,
+    })
+    const rotation = rotationMetadata.document?.renderRotation
+    const renderRotation: 0 | 90 | 180 | 270 =
+      rotation === 90 || rotation === 180 || rotation === 270 ? rotation : 0
     const resolvedTransformRequest = {
+      renderRotation,
       ...transformRequest,
       version: resolvedVersion,
       format: outputFormat,
@@ -3319,7 +3349,11 @@ const decodeAndTransformSourceAsset = async (
     hasAlpha: decoded.hasAlpha,
   })
 
-  const transformed = await applyTransforms(decoded.data, request, debug)
+  const transformed = await applyTransforms(
+    rotatePixels(decoded.data, request.renderRotation ?? 0),
+    request,
+    debug,
+  )
 
   return {
     image: transformed.image,

@@ -208,6 +208,8 @@ export const ImageMetadataBasicSchema = z.object({
   originalWidth: z.number().int().nullish(),
   originalHeight: z.number().int().nullish(),
   rotation: z.number().int().min(0).max(270).nullish(),
+  sourceRotation: z.number().int().min(0).max(270).nullish(),
+  renderRotation: z.number().int().min(0).max(270).nullish(),
   cameraModel: z.string().nullish(),
   capturedAt: z.string().nullish(),
   // Authored capture assertions remain separate from extracted EXIF instants.

@@ -107,7 +107,6 @@ import {
   getOriginalsBucketNameForStage,
   getReadableStages,
   readMetadataDocument,
-  readR2ObjectViaApi,
   readR2JsonViaApi,
   headR2ObjectViaApi,
   putR2ObjectViaApi,
@@ -152,15 +151,12 @@ const normalizeMetadataPublicId = (publicId: string): string =>
 // - safeOriginalsBucketHead
 // - waitForOriginalUploadVisibility
 // - verifyUploadedOriginal
-// - readOriginalObjectViaBindingsOrApi
-// - putOriginalObjectViaBindingsOrApi
 // - persistOriginalMetadataSidecars
 // - deleteBucketKeys
 // - deleteBucketPrefix
 // - loadCurrentResourceImage
 // - cleanupDetachedResourceImage
 // - normalizeRotation
-// - rotateStoredImageObject
 // - rotateDimensionsForRotation
 // - toRotatedMetadataDocument
 // - buildReplacementMetadataDocument
@@ -624,11 +620,6 @@ const attachImageLinks = async (params: {
   }
 }
 
-const loadSharp = async (): Promise<typeof import('sharp').default> => {
-  const module = await import('sharp')
-  return module.default
-}
-
 const decodeXmlEntities = (value: string): string =>
   value
     .replace(/&quot;/gu, '"')
@@ -780,96 +771,6 @@ const verifyUploadedOriginal = async (params: {
 }
 
 /**
- * Reads an original image object through the binding first, then falls back to
- * the direct R2 API when the local/dev binding cannot see the remote object.
- *
- * @param params Read parameters.
- * @returns Original bytes plus content type, or `null` when the object does not exist.
- */
-const readOriginalObjectViaBindingsOrApi = async (params: {
-  bucket: ReturnType<typeof getOriginalsBucketForStage>
-  key: string
-  stage: ReturnType<typeof toImageStage>
-  event: {
-    locals: Pick<App.Locals, 'platform'>
-    fetch: typeof fetch
-  }
-}): Promise<{ body: Uint8Array; contentType: string | null } | null> => {
-  const bucketObject = await safeOriginalsBucketGet(params.bucket, params.key)
-
-  if (bucketObject) {
-    return {
-      body: new Uint8Array(await bucketObject.arrayBuffer()),
-      contentType: bucketObject.httpMetadata?.contentType ?? null,
-    }
-  }
-
-  const credentials = getStorageApiCredentials(params.event.locals.platform)
-
-  if (!credentials) {
-    return null
-  }
-
-  return readR2ObjectViaApi({
-    ...credentials,
-    bucket: getOriginalsBucketNameForStage(params.stage),
-    objectKey: params.key,
-    fetchFn: params.event.fetch,
-  })
-}
-
-/**
- * Writes an original image object through the binding first, then falls back to
- * the direct R2 API when the binding cannot write to the same remote bucket.
- *
- * @param params Write parameters.
- * @returns Nothing.
- */
-const putOriginalObjectViaBindingsOrApi = async (params: {
-  bucket: ReturnType<typeof getOriginalsBucketForStage>
-  key: string
-  body: Uint8Array
-  contentType: string
-  stage: ReturnType<typeof toImageStage>
-  event: {
-    locals: Pick<App.Locals, 'platform'>
-    fetch: typeof fetch
-  }
-}): Promise<void> => {
-  try {
-    await params.bucket.put(params.key, params.body, {
-      httpMetadata: {
-        contentType: params.contentType,
-      },
-    })
-    return
-  } catch (cause) {
-    const credentials = getStorageApiCredentials(params.event.locals.platform)
-
-    if (!credentials) {
-      throw cause
-    }
-
-    console.warn(
-      '[image.remote.rotateImage] bucket original put failed; falling back to direct R2 API',
-      {
-        key: params.key,
-        cause,
-      },
-    )
-
-    await putR2ObjectViaApi({
-      ...credentials,
-      bucket: getOriginalsBucketNameForStage(params.stage),
-      objectKey: params.key,
-      body: new Uint8Array(params.body),
-      contentType: params.contentType,
-      fetchFn: params.event.fetch,
-    })
-  }
-}
-
-/**
  * Persists metadata sidecars beside the original upload, using the Worker
  * bucket binding first and falling back to direct R2 API writes in local/dev
  * environments where the binding cannot write to the same remote bucket.
@@ -883,6 +784,7 @@ const persistOriginalMetadataSidecars = async (params: {
   version: number
   metadataDocument: ImageMetadataDocument
   manifestDocument: { publicId: string; version: number; updatedAt: string }
+  immutableOnly?: boolean
   stage: ReturnType<typeof toImageStage>
   event: {
     locals: Pick<App.Locals, 'platform'>
@@ -935,8 +837,14 @@ const persistOriginalMetadataSidecars = async (params: {
       throw new Error(
         'Committed image metadata is missing or has a conflicting version',
       )
+    if (
+      params.immutableOnly &&
+      JSON.stringify(stored) !== JSON.stringify(params.metadataDocument)
+    )
+      throw error(409, 'STALE_IMAGE_METADATA_VERSION')
     document = stored
   }
+  if (params.immutableOnly) return
 
   // Repair mirrors even when the immutable document survived an earlier partial failure.
   const writes = [
@@ -1175,72 +1083,6 @@ const normalizeRotation = (rotation: number | null | undefined): 0 | 90 | 180 | 
 }
 
 /**
- * Rotates a stored image object relative to its displayed orientation.
- *
- * @param params Rotation inputs for a single R2 object body.
- * @returns The rotated bytes plus the content type that should be persisted.
- */
-const rotateStoredImageObject = async (params: {
-  body: ArrayBuffer
-  contentType?: string | null
-  rotation: 0 | 90 | 180 | 270
-}): Promise<{
-  body: Uint8Array
-  contentType: string
-  sourceOrientation: number | null
-  sourceWidth: number | null
-  sourceHeight: number | null
-}> => {
-  const input = new Uint8Array(params.body)
-  const sharp = await loadSharp()
-  const source = sharp(input, {
-    animated: false,
-    limitInputPixels: false,
-  })
-  const metadata = await source.metadata()
-
-  if ((metadata.pages ?? 1) > 1) {
-    throw error(400, 'Animated images cannot be rotated in-place')
-  }
-
-  let pipeline = sharp(input, {
-    animated: false,
-    limitInputPixels: false,
-  }).rotate(params.rotation)
-
-  if (metadata.format === 'jpeg') {
-    pipeline = pipeline.jpeg({ mozjpeg: true, quality: 90 })
-  } else if (metadata.format === 'png') {
-    pipeline = pipeline.png({ compressionLevel: 9 })
-  } else if (metadata.format === 'webp') {
-    pipeline = pipeline.webp({ quality: 90 })
-  } else if (metadata.format === 'tiff') {
-    pipeline = pipeline.tiff({ compression: 'lzw', quality: 90 })
-  }
-
-  const rotated = await pipeline.toBuffer()
-
-  const contentType =
-    metadata.format === 'jpeg'
-      ? 'image/jpeg'
-      : metadata.format === 'png'
-        ? 'image/png'
-        : metadata.format === 'webp'
-          ? 'image/webp'
-          : metadata.format === 'tiff'
-            ? 'image/tiff'
-            : params.contentType || 'application/octet-stream'
-
-  return {
-    body: new Uint8Array(rotated),
-    contentType,
-    sourceOrientation: metadata.orientation ?? null,
-    sourceWidth: metadata.width ?? null,
-    sourceHeight: metadata.height ?? null,
-  }
-}
-
-/**
  * Applies an absolute quarter-turn rotation to image dimensions.
  *
  * @param width Existing width value.
@@ -1266,7 +1108,7 @@ const rotateDimensionsForRotation = (
       }
 
 /**
- * Updates the persisted metadata document to reflect an in-place rotation.
+ * Updates delivery metadata while preserving the source pixel orientation.
  *
  * @param params Current metadata document and new manifest version metadata.
  * @returns Rotated metadata document for unversioned and versioned sidecars.
@@ -1280,7 +1122,7 @@ const toRotatedMetadataDocument = (params: {
   const originalDimensions = rotateDimensionsForRotation(
     params.document.originalWidth,
     params.document.originalHeight,
-    params.rotation,
+    normalizeRotation(params.rotation - (params.document.rotation ?? 0)),
   )
   const metadataEntries = params.document.metadata
     ? { ...params.document.metadata }
@@ -1294,7 +1136,7 @@ const toRotatedMetadataDocument = (params: {
       metadataEntries.uploadedHeight
         ? Number.parseInt(metadataEntries.uploadedHeight, 10)
         : null,
-      params.rotation,
+      normalizeRotation(params.rotation - (params.document.rotation ?? 0)),
     )
 
     if (uploadedDimensions.width !== null && !Number.isNaN(uploadedDimensions.width)) {
@@ -1313,12 +1155,22 @@ const toRotatedMetadataDocument = (params: {
     originalWidth: originalDimensions.width ?? null,
     originalHeight: originalDimensions.height ?? null,
     rotation: params.rotation,
+    sourceRotation: params.document.sourceRotation ?? params.document.rotation ?? 0,
+    renderRotation: normalizeRotation(
+      params.rotation -
+        (params.document.sourceRotation ?? params.document.rotation ?? 0),
+    ),
     metadata: metadataEntries,
     sourceVersion: params.version,
     modifiedAt: params.timestamp,
   }
 }
 
+/**
+ * Preserves source metadata and records provenance for an isolated replacement object.
+ * @param params Original metadata, incoming upload fields and editor/source identities.
+ * @returns Replacement sidecar document with the retained source location.
+ */
 const buildReplacementMetadataDocument = (params: {
   existingDocument: ImageMetadataDocument | null
   incomingDocument: ImageMetadataDocument
@@ -2242,6 +2094,10 @@ export const setImagePublished = guardedCommand(
 
 /**
  * Rotates an image and refreshes its normalized intermediate and standard derivatives.
+ * @param params Image identifier, context and requested rotation.
+ * @param ctx Authorized request context.
+ * @returns Updated image envelope after its metadata revision is selected atomically.
+ * @remarks Source bytes and public ID remain unchanged; immutable metadata is selected by a guarded database update.
  */
 export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx) => {
   const { db, user, userId, userRoles, event } = ctx
@@ -2293,49 +2149,9 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
   }
 
   const originalsBucket = getOriginalsBucketForStage(event.locals.platform, resolvedEnv)
-  const originalObject = await readOriginalObjectViaBindingsOrApi({
-    bucket: originalsBucket,
-    key: existing.publicId,
-    stage: resolvedEnv,
-    event,
-  })
-
-  if (!originalObject) {
-    throw error(404, 'Stored image original not found or unreadable')
-  }
-
-  const currentRotation = normalizeRotation(document.rotation)
+  // Rotation changes delivery metadata only; the stored source and public identity are immutable.
+  const publicId = existing.publicId
   const targetRotation = normalizeRotation(params.rotation)
-  const sourceRotation = normalizeRotation(targetRotation - currentRotation)
-
-  const rotatedIntermediate = await rotateStoredImageObject({
-    body: new Uint8Array(originalObject.body).buffer,
-    contentType: originalObject.contentType,
-    rotation: sourceRotation,
-  })
-  console.info('[image.remote.rotateImage] applying rotation', {
-    imageId: existing.id,
-    publicId: existing.publicId,
-    resolvedEnv,
-    requestedRotation: targetRotation,
-    currentRotation,
-    appliedDeltaRotation: sourceRotation,
-    sourceOrientation: rotatedIntermediate.sourceOrientation,
-    sourceWidth: rotatedIntermediate.sourceWidth,
-    sourceHeight: rotatedIntermediate.sourceHeight,
-    previousVersion: existing.version ?? null,
-  })
-  // Prepare a separate asset so failures and competing rotations cannot alter the active source.
-  const publicId = `h/rotations/${nanoid(24)}`
-  await putOriginalObjectViaBindingsOrApi({
-    bucket: originalsBucket,
-    key: publicId,
-    body: rotatedIntermediate.body,
-    contentType: rotatedIntermediate.contentType,
-    stage: resolvedEnv,
-    event,
-  })
-
   const version = Date.now()
   const timestamp = new Date(version).toISOString()
   const metadataDocument = toRotatedMetadataDocument({
@@ -2356,6 +2172,7 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     version,
     metadataDocument,
     manifestDocument,
+    immutableOnly: true,
     stage: resolvedEnv,
     event,
   })
@@ -2370,12 +2187,25 @@ export const rotateImage = guardedCommand(RotateImageSchema, async (params, ctx)
     id: params.id,
     ctxType: params.ctxType as ImageContextType,
     ctxId: params.ctxId,
-    replacement: { snapshot, publicId, env: resolvedEnv },
+    expectedSnapshot: snapshot,
     data: {
       publicId,
       env: resolvedEnv,
       version,
     },
+  })
+
+  // Publish unversioned mirrors only after the database selects the immutable metadata revision.
+  await persistOriginalMetadataSidecars({
+    bucket: originalsBucket,
+    publicId,
+    version,
+    metadataDocument,
+    manifestDocument,
+    stage: resolvedEnv,
+    event,
+  }).catch(cause => {
+    console.warn('Rotation saved, but metadata mirrors could not refresh', cause)
   })
 
   event.locals.platform?.context.waitUntil(

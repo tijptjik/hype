@@ -636,6 +636,7 @@ export const updateImageForContext = async (args: {
   ctxId: string
   data: Record<string, unknown>
   replacement?: { snapshot: ImageMutationSnapshot; publicId: string; env: string }
+  expectedSnapshot?: ImageMutationSnapshot
 }): Promise<{ data: ImageContextEnvelope<'detail'>; replayed?: boolean }> => {
   const { db, user, userId, userRoles, isAdminRequest, id, ctxType, ctxId, data } = args
 
@@ -658,6 +659,8 @@ export const updateImageForContext = async (args: {
   )
 
   if (!snapshot) throw error(409, 'STALE_IMAGE_UPDATE')
+  if (args.expectedSnapshot && args.expectedSnapshot.imageId !== id)
+    throw error(409, 'STALE_IMAGE_UPDATE')
 
   // Read attribution only after the caller has passed the resource authorization check.
   const userWithAttribution = await getUserById(db, userId)
@@ -704,7 +707,8 @@ export const updateImageForContext = async (args: {
     imageToUpdate,
     assignment,
     id,
-    replacementGuards ?? createImageMutationGuards(db, ctxType, ctxId, snapshot),
+    replacementGuards ??
+      createImageMutationGuards(db, ctxType, ctxId, args.expectedSnapshot ?? snapshot),
     replacementGuards?.replay,
   )
 
