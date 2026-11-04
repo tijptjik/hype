@@ -73,9 +73,6 @@ import {
 } from '#lib/api/services/authz/index.js'
 // DB
 import {
-  cascadeOrganisationToDescendants,
-  createI18n,
-  createUserRoles,
   createProject,
   getProject as loadProject,
   listUserRoleAssignments,
@@ -86,29 +83,19 @@ import {
   probeProjectQuery,
   probeProjectForUpdate,
   resolveProjectCommandProbe,
-  syncUserRoles,
   toUserRoles,
-  updateI18n,
   updateProjectArchivedStateById,
   updateProjectByIdWithConcurrency,
   updateProjectPublishedStateById,
-  cascadeProjectPublishedStateToDescendants,
 } from '#lib/db/services/project.js'
 import { probeOrganisationQuery } from '#lib/db/services/organisation.js'
 import { hasProjectLayersCondition } from '#lib/db/services/layer.js'
-import { syncProjectLayerPresentation } from '#lib/db/services/layer.js'
-import {
-  listResolvedProjectProperties,
-  seedDefaultInheritedPropertiesForProject,
-  syncProjectInheritedProperties,
-  upsertProjectProperties,
-} from '#lib/db/services/property.js'
+import { listResolvedProjectProperties } from '#lib/db/services/property.js'
 import {
   getOrganisationMapStyleScope,
-  listMapStylesForProject,
   listMapStylesForScope,
   syncMapStyleCatalog,
-  setProjectMapStyleByCode,
+  isProjectMapStyleUnavailable,
 } from '#lib/db/services/map.js'
 import {
   appendProjectLicenseHistory,
@@ -443,6 +430,9 @@ export const getProjectMapStylesQuery = guardedQuery(
   async (params, ctx): Promise<{ data: MapStyleResolvedDB[] }> => {
     const { db, event } = ctx
     const environment = event.locals.platform?.env?.ENVIRONMENT
+    let authorizedProjectScope:
+      | { id: string; organisationId: string; hubId: string | null }
+      | undefined
 
     if (params.projectId && params.organisationId) {
       throw error(400, 'Only one map style scope may be requested')
@@ -464,6 +454,12 @@ export const getProjectMapStylesQuery = guardedQuery(
 
       if (!decision.allowed) {
         throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+      }
+      // Bind catalog visibility to the exact identity and ancestry that were authorized.
+      authorizedProjectScope = {
+        id: probe.id,
+        organisationId: probe.organisationId,
+        hubId: probe.hubId,
       }
     } else if (params.organisationId) {
       const probe = await probeOrganisationQuery(db, {
@@ -500,10 +496,10 @@ export const getProjectMapStylesQuery = guardedQuery(
         })),
       )
 
-    if (params.projectId) {
+    if (authorizedProjectScope) {
       return {
         data: await withResolvedPreviewPath(
-          await listMapStylesForProject(db, params.projectId),
+          await listMapStylesForScope(db, authorizedProjectScope),
         ),
       }
     }
@@ -723,60 +719,51 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
         invalid(issue.data.code(toIssueDetailMessage('CODE_ALREADY_EXISTS'))),
     })
 
-    // Create main record and related rows.
-    const created = await createProject(db, {
-      id: nanoid(12),
-      organisationId: data.organisationId,
-      code: normalizedCode,
-      useAllInOrgContext: data.useAllInOrgContext,
-      settings: applyContentLocaleSettingsPatch(undefined, data.settings),
-      flags: data.flags,
-      cardStyleCode: data.cardStyleCode,
-      markerStyleCode: data.markerStyleCode,
-      license: data.license,
-      capabilities: submittedProjectCapabilities,
-      isPublished: false,
-      isArchived: false,
-    })
-
-    await createI18n(db, data.i18n, created.id)
-    await createUserRoles(
-      db,
-      toUserRoles(submittedRolesWithCapabilities, created.id),
-      created.id,
-      created.organisationId,
+    // Create main record, translations, and roles in one transaction.
+    const newProjectId = nanoid(12)
+    const submittedPropertiesWithProjectId = toSubmittedLocalPropertiesWithProjectId(
+      submittedLocalProperties,
+      newProjectId,
     )
-    try {
-      await setProjectMapStyleByCode(db, {
-        projectId: created.id,
-        organisationId: created.organisationId,
-        hubId: organisationScope.hubId,
-        mapStyleCode: data.mapStyleCode,
-      })
-    } catch {
-      invalid(issue('MAP_STYLE_NOT_AVAILABLE'))
-    }
-
-    if (normalizedSubmittedProperties.length > 0) {
-      const submittedPropertiesWithProjectId = toSubmittedLocalPropertiesWithProjectId(
-        submittedLocalProperties,
-        created.id,
-      )
-      if (submittedPropertiesWithProjectId.length > 0) {
-        await upsertProjectProperties(db, submittedPropertiesWithProjectId, created.id)
-      }
-      await syncProjectInheritedProperties(db, {
-        projectId: created.id,
-        properties: mergeProjectInheritedPropertySyncItems(
-          submittedPropertiesWithProjectId,
-          submittedInheritedProperties,
-        ),
-      })
-    }
-    await seedDefaultInheritedPropertiesForProject(db, {
-      projectId: created.id,
-      hubId: organisationScope.hubId,
-      startingRank: submittedLocalProperties.length,
+    const created = await createProject(
+      db,
+      {
+        id: newProjectId,
+        organisationId: data.organisationId,
+        code: normalizedCode,
+        useAllInOrgContext: data.useAllInOrgContext,
+        settings: applyContentLocaleSettingsPatch(undefined, data.settings),
+        flags: data.flags,
+        cardStyleCode: data.cardStyleCode,
+        markerStyleCode: data.markerStyleCode,
+        license: data.license,
+        capabilities: submittedProjectCapabilities,
+        isPublished: false,
+        isArchived: false,
+      },
+      {
+        i18n: data.i18n,
+        userRoles: toUserRoles(submittedRolesWithCapabilities, newProjectId),
+        mapStyleCode: data.mapStyleCode ?? null,
+        ...(submittedPropertiesWithProjectId.length
+          ? { properties: submittedPropertiesWithProjectId }
+          : {}),
+        ...(normalizedSubmittedProperties.length
+          ? {
+              inheritedProperties: mergeProjectInheritedPropertySyncItems(
+                submittedPropertiesWithProjectId,
+                submittedInheritedProperties,
+              ),
+            }
+          : {}),
+        seedInheritedDefaults: {
+          hubId: organisationScope.hubId,
+          startingRank: submittedLocalProperties.length,
+        },
+      },
+    ).catch(cause => {
+      if (isProjectMapStyleUnavailable(cause)) invalid(issue('MAP_STYLE_NOT_AVAILABLE'))
+      throw cause
     })
 
     return toCreatedResponseShape(created)
@@ -1098,70 +1085,10 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
   // UPDATE FLOW: PERSISTENCE
   /* -------- */
 
-  // Persist main record atomically with optimistic concurrency.
-  const persisted = requireValue(
-    await updateProjectByIdWithConcurrency(db, {
-      id: current.id as Id,
-      updatedAt: updatedAt as string,
-      locationUpdatePolicy: data.locationUpdatePolicy,
-      data: {
-        organisationId: data.organisationId,
-        code: normalizedCode,
-        useAllInOrgContext: data.useAllInOrgContext,
-        ...(data.settings !== undefined ? { settings: nextSettings } : {}),
-        flags: data.flags,
-        cardStyleCode: data.cardStyleCode,
-        markerStyleCode: data.markerStyleCode,
-        ...(persistedLicense ? { license: persistedLicense } : {}),
-        capabilities: submittedProjectCapabilities,
-      },
-    }),
-    () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
-  )
-
-  if (organisationChanged) {
-    await cascadeOrganisationToDescendants(db, {
-      projectId: current.id as Id,
-      organisationId: data.organisationId as Id,
-    })
-  }
-  const targetMapStyleScope = organisationChanged
-    ? requireValue(
-        await probeOrganisationHubForProject(db, data.organisationId as Id),
-        () => invalid(issue('ORGANISATION_NOT_FOUND')),
-      )
-    : {
-        hubId: current.hubId,
-      }
-  try {
-    await setProjectMapStyleByCode(db, {
-      projectId: current.id,
-      organisationId: data.organisationId,
-      hubId: targetMapStyleScope.hubId,
-      mapStyleCode: data.mapStyleCode,
-    })
-  } catch {
-    invalid(issue('MAP_STYLE_NOT_AVAILABLE'))
-  }
-
-  /* ----------------- */
-  // UPDATE FLOW: RELATED RECORD SYNC
-  /* -------- */
-
-  // Persist related i18n,role assignments, and properties
-  await updateI18n(db, data.i18n, current.id)
-  if (
-    hasSubmittedUserRoles &&
-    (roleMembershipChanged || roleCapabilityAssignmentsChanged)
-  ) {
-    await syncUserRoles(
-      db,
-      toUserRoles(submittedRolesWithCapabilities, current.id),
-      current.id as Id,
-      data.organisationId as Id,
-    )
-  }
-
+  let propertyRelations: Pick<
+    Parameters<typeof updateProjectByIdWithConcurrency>[1],
+    'properties' | 'inheritedProperties'
+  > = {}
   if (hasSubmittedProperties) {
     const submittedPropertiesWithProjectId = toSubmittedLocalPropertiesWithProjectId(
       submittedLocalProperties,
@@ -1188,18 +1115,50 @@ export const projectForm = guardedForm('unchecked', async (input, ctx) => {
       ...submittedPropertiesWithProjectId,
       ...preservedLocalProperties,
     ]
-    await upsertProjectProperties(db, localPropertiesToPersist, current.id)
-    await syncProjectInheritedProperties(db, {
-      projectId: current.id,
-      properties: mergeProjectInheritedPropertySyncItems(
+    propertyRelations = {
+      properties: localPropertiesToPersist,
+      inheritedProperties: mergeProjectInheritedPropertySyncItems(
         localPropertiesToPersist,
         submittedInheritedProperties,
       ),
-    })
+    }
   }
-  if (hasSubmittedLayers) {
-    await syncProjectLayerPresentation(db, current.id, normalizedSubmittedLayers)
-  }
+
+  // Persist main record atomically with optimistic concurrency.
+  const persisted = requireValue(
+    await updateProjectByIdWithConcurrency(db, {
+      id: current.id as Id,
+      updatedAt: updatedAt as string,
+      i18n: data.i18n,
+      ...(hasSubmittedUserRoles &&
+      (roleMembershipChanged || roleCapabilityAssignmentsChanged)
+        ? { userRoles: toUserRoles(submittedRolesWithCapabilities, current.id) }
+        : {}),
+      mapStyleCode: data.mapStyleCode ?? null,
+      ...propertyRelations,
+      ...(hasSubmittedLayers ? { layers: normalizedSubmittedLayers } : {}),
+      locationUpdatePolicy: data.locationUpdatePolicy,
+      data: {
+        organisationId: data.organisationId,
+        code: normalizedCode,
+        useAllInOrgContext: data.useAllInOrgContext,
+        ...(data.settings !== undefined ? { settings: nextSettings } : {}),
+        flags: data.flags,
+        cardStyleCode: data.cardStyleCode,
+        markerStyleCode: data.markerStyleCode,
+        ...(persistedLicense ? { license: persistedLicense } : {}),
+        capabilities: submittedProjectCapabilities,
+      },
+    }).catch(cause => {
+      if (isProjectMapStyleUnavailable(cause)) invalid(issue('MAP_STYLE_NOT_AVAILABLE'))
+      throw cause
+    }),
+    () => invalid(issue(toIssueDetailMessage('STALE_WRITE'))),
+  )
+
+  /* ----------------- */
+  // UPDATE FLOW: COMMITTED RESPONSE
+  /* -------- */
 
   return toCreatedResponseShape(persisted)
 })
@@ -1249,21 +1208,18 @@ export const publishProject = guardedCommand(
       await updateProjectPublishedStateById(db, {
         id: projectId,
         state: params.state,
+        expectedScope: probed,
+        publishChildren: params.publishChildren,
         publisherId: user.id,
         publishedAt,
-        license: nextLicense,
+        ...(nextLicense
+          ? { license: nextLicense, expectedLicense: probed.license }
+          : { license: undefined, expectedLicense: undefined }),
       }),
       () => {
-        throw error(404, 'PROJECT_NOT_FOUND')
+        throw error(409, 'STALE_PROJECT_PUBLICATION')
       },
     )
-
-    await cascadeProjectPublishedStateToDescendants(db, {
-      projectId,
-      state: params.state,
-      publishChildren: params.publishChildren,
-      publisherId: user.id,
-    })
 
     // guardedCommand refreshes every requested editor and hierarchy query variant.
     // Do not consume only one variant here: skipped queries become client errors.
@@ -1308,6 +1264,7 @@ export const archiveProject = guardedCommand(
       await updateProjectArchivedStateById(db, {
         id: projectId,
         state: params.state,
+        expectedScope: probed,
       }),
       () => {
         throw error(404, 'PROJECT_NOT_FOUND')

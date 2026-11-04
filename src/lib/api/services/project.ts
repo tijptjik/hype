@@ -1,5 +1,7 @@
 import { compactAncestorRelations, toCompactAncestors } from './resource-profiles'
 import type { CompactAncestorRow } from '#lib/api/services/resourcePage.types.js'
+// IDENTITY
+import { nanoid } from 'nanoid'
 // DRIZZLE
 import { and, eq, inArray, or, type SQL } from 'drizzle-orm'
 // CAPABILITIES
@@ -621,21 +623,32 @@ export const resolveCanonicalScopeByPropertyId = async <
  *
  * @param properties - Submitted local properties.
  * @param projectId - Target project id.
- * @returns Local properties with enforced project linkage and scope defaults.
+ * @returns Local properties with stable identities, enforced linkage and scope defaults.
+ * @remarks Allocate missing IDs once before catalog and assignment payloads diverge;
+ * persisted IDs are retained and the submitted objects are never mutated.
  */
 export const toSubmittedLocalPropertiesWithProjectId = <
   T extends ProjectLocalPropertyCandidate,
 >(
   properties: T[],
   projectId: Id,
-): Array<T & { projectId: Id; hubId: null; scope: 'project'; isEnabled: true }> =>
-  properties.map(property => ({
-    ...property,
-    projectId,
-    hubId: null,
-    scope: 'project',
-    isEnabled: true,
-  }))
+): Array<
+  T & { id: Id; projectId: Id; hubId: null; scope: 'project'; isEnabled: true }
+> =>
+  properties.map(property => {
+    if (property.id != null && typeof property.id !== 'string') {
+      throw new TypeError('Project property IDs must be strings')
+    }
+    // Catalog and assignment writes must share the same identity for every new property.
+    return {
+      ...property,
+      id: property.id || nanoid(12),
+      projectId,
+      hubId: null,
+      scope: 'project' as const,
+      isEnabled: true as const,
+    }
+  })
 
 /**
  * Collects a set of valid property ids from submitted property-like records.

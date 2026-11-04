@@ -24,6 +24,7 @@ beforeEach(() => {
   sqlite = new DatabaseSync(':memory:')
   sqlite.exec(`PRAGMA foreign_keys = ON;
     CREATE TABLE project (id TEXT PRIMARY KEY, code TEXT);
+    CREATE TABLE hub (id TEXT PRIMARY KEY, code TEXT);
     CREATE TABLE mapStyles (
       id TEXT PRIMARY KEY, code TEXT NOT NULL UNIQUE,
       organisationId TEXT, hubId TEXT, previewImagePath TEXT,
@@ -240,4 +241,72 @@ describe('project map-style replacement', () => {
       expect(snapshot()).toEqual([other])
     },
   )
+})
+
+it('keeps catalog hub restrictions when persisted ownership is null', async () => {
+  sqlite.exec(
+    "INSERT INTO mapStyles (id, code) VALUES ('breadline-style', 'breadline-light')",
+  )
+  const shared = { organisationId: 'org', hubId: 'hub' }
+  expect(
+    await resolveVisibleMapStyleIdForScope(db, shared, 'breadline-light'),
+  ).toBeNull()
+  sqlite.exec("INSERT INTO hub VALUES ('owner-hub', 'breadline'), ('hub', 'unrelated')")
+  expect(
+    await resolveVisibleMapStyleIdForScope(db, shared, 'breadline-light'),
+  ).toBeNull()
+  expect((await listMapStylesForScope(db, shared)).map(row => row.code)).not.toContain(
+    'breadline-light',
+  )
+  expect(
+    await resolveVisibleMapStyleIdForScope(
+      db,
+      { ...shared, hubId: null },
+      'breadline-light',
+    ),
+  ).toBeNull()
+  expect(
+    await resolveVisibleMapStyleIdForScope(
+      db,
+      { ...shared, hubId: 'owner-hub' },
+      'breadline-light',
+    ),
+  ).toBe('breadline-style')
+})
+
+it.each(['missing', 'foreign', 'changed-before-write'] as const)(
+  'preserves the saved style when catalog hub ownership is %s',
+  async scenario => {
+    sqlite.exec(
+      "INSERT INTO mapStyles (id, code) VALUES ('breadline-style', 'breadline-light')",
+    )
+    if (scenario !== 'missing') {
+      sqlite.exec(
+        `INSERT INTO hub VALUES ('hub', '${scenario === 'foreign' ? 'unrelated' : 'breadline'}')`,
+      )
+    }
+    if (scenario === 'changed-before-write') {
+      beforeBatch = () =>
+        sqlite.exec("UPDATE hub SET code = 'unrelated' WHERE id = 'hub'")
+    }
+    const before = snapshot()
+    await expect(
+      setProjectMapStyleByCode(db, { ...scope, mapStyleCode: 'breadline-light' }),
+    ).rejects.toThrow()
+    expect(snapshot()).toEqual(before)
+    expect(batches).toEqual(scenario === 'changed-before-write' ? [2] : [])
+  },
+)
+
+it('assigns a catalog hub style to its owner despite unresolved persisted ownership', async () => {
+  sqlite.exec(
+    "INSERT INTO hub VALUES ('hub', 'breadline'); INSERT INTO mapStyles (id, code) VALUES ('breadline-style', 'breadline-light')",
+  )
+  await setProjectMapStyleByCode(db, { ...scope, mapStyleCode: 'breadline-light' })
+  expect(
+    sqlite
+      .prepare("SELECT mapStyleId FROM projectMapStyles WHERE projectId = 'project'")
+      .get(),
+  ).toEqual({ mapStyleId: 'breadline-style' })
+  expect(batches).toEqual([2])
 })

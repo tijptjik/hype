@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 // Panel query registration is isolated from this resource's authorization fixtures.
 vi.mock('#lib/api/resources.remote.js', () => ({}))
+import { createDefaultProjectLicense } from '#lib/db/services/licence.js'
 import { createPolicyMatrixReporter } from './policy-matrix-report'
 import { withRemoteMeta } from './remote-function-mock'
 
@@ -99,6 +100,7 @@ const {
     id: 'project-1',
     organisationId: 'org-1',
     hubId: 'hub-a',
+    license: null as unknown,
   })),
   mockProbeProjectQuery: vi.fn(
     async (): Promise<{
@@ -303,7 +305,11 @@ vi.mock('#lib/api/services/project.js', () => ({
   ),
   toPreservedLocalPropertiesForProject: vi.fn(
     (params: {
-      existingLocalProperties: Array<{ id: string; projectId?: string; scope?: string }>
+      existingLocalProperties: Array<{
+        id: string
+        projectId?: string
+        scope?: string
+      }>
       submittedLocalPropertyIds: Set<string>
       projectId: string
     }) =>
@@ -432,7 +438,8 @@ vi.mock('#lib/db/services/layer.js', () => ({
   syncProjectLayerPresentation: mockSyncProjectLayerPresentation,
 }))
 
-vi.mock('#lib/db/services/map.js', () => ({
+vi.mock('#lib/db/services/map.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('#lib/db/services/map.js')>()),
   listMapStylesForProject: vi.fn(async (): Promise<unknown[]> => []),
   getOrganisationMapStyleScope: vi.fn(async (): Promise<unknown> => null),
   listMapStylesForScope: vi.fn(async (): Promise<unknown[]> => []),
@@ -533,7 +540,9 @@ describe('project.remote form organisation move authz', () => {
     mockAuthorizeProjectCreateForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeProjectDeleteForSubmission.mockReturnValue({ allowed: true })
     mockAuthorizeProjectPublishForSubmission.mockReturnValue({ allowed: true })
-    mockAuthorizeProjectManageRolesForSubmission.mockReturnValue({ allowed: true })
+    mockAuthorizeProjectManageRolesForSubmission.mockReturnValue({
+      allowed: true,
+    })
     mockAuthorizeProjectAssignCapabilitiesForSubmission.mockReturnValue({
       allowed: true,
     })
@@ -568,7 +577,10 @@ describe('project.remote form organisation move authz', () => {
       user: { id: 'u-1', isAnonymous: false, superAdmin: false },
       userRoles: [],
       isAdminRequest: true,
-      event: { locals: { hub: null }, url: new URL('https://example.test/admin') },
+      event: {
+        locals: { hub: null },
+        url: new URL('https://example.test/admin'),
+      },
     })
   })
 
@@ -579,22 +591,63 @@ describe('project.remote form organisation move authz', () => {
   it.each([true, false])(
     'forwards explicit child publication choice %s',
     async publishChildren => {
-      await remote.publishProject({ id: 'project-1', state: true, publishChildren })
-      expect(mockCascadeProjectPublishedStateToDescendants).toHaveBeenCalledWith(
+      await remote.publishProject({
+        id: 'project-1',
+        state: true,
+        publishChildren,
+      })
+      expect(mockUpdateProjectPublishedStateById).toHaveBeenCalledWith(
         expect.any(Object),
-        expect.objectContaining({ state: true, publishChildren, publisherId: 'u-1' }),
+        expect.objectContaining({
+          state: true,
+          publishChildren,
+          expectedScope: expect.objectContaining({ hubId: 'hub-a' }),
+          publisherId: 'u-1',
+        }),
       )
+      expect(mockCascadeProjectPublishedStateToDescendants).not.toHaveBeenCalled()
     },
   )
 
-  it.each([false, true, null])('persists or resets multilingual booleans without losing other settings (%j)', async mode => {
-    const current = await mockProbeProjectForUpdate()
-    mockProbeProjectForUpdate.mockResolvedValue({ ...(current as object), settings: { contentLocales: ['ja'], multilingualContent: true, future: 'kept' } })
-    const payload = buildUpdatePayload('org-1')
-    await remote.projectForm({ ...payload, data: { ...payload.data, settings: { multilingualContent: mode, multilingualAddresses: false } } }, throwingInvalid)
-    const data = (mockUpdateProjectByIdWithConcurrency.mock.calls as unknown as Array<[unknown, { data: Record<string, unknown> }]>)[0][1].data
-    expect(data.settings).toEqual({ contentLocales: ['ja'], future: 'kept', multilingualAddresses: false, ...(mode === null ? {} : { multilingualContent: mode }) })
-  })
+  it.each([false, true, null])(
+    'persists or resets multilingual booleans without losing other settings (%j)',
+    async mode => {
+      const current = await mockProbeProjectForUpdate()
+      mockProbeProjectForUpdate.mockResolvedValue({
+        ...(current as object),
+        settings: {
+          contentLocales: ['ja'],
+          multilingualContent: true,
+          future: 'kept',
+        },
+      })
+      const payload = buildUpdatePayload('org-1')
+      await remote.projectForm(
+        {
+          ...payload,
+          data: {
+            ...payload.data,
+            settings: {
+              multilingualContent: mode,
+              multilingualAddresses: false,
+            },
+          },
+        },
+        throwingInvalid,
+      )
+      const data = (
+        mockUpdateProjectByIdWithConcurrency.mock.calls as unknown as Array<
+          [unknown, { data: Record<string, unknown> }]
+        >
+      )[0][1].data
+      expect(data.settings).toEqual({
+        contentLocales: ['ja'],
+        future: 'kept',
+        multilingualAddresses: false,
+        ...(mode === null ? {} : { multilingualContent: mode }),
+      })
+    },
+  )
 
   it.each([[['ja', 'zhHant']], [null], [undefined]])(
     'preserves unrelated settings and flags for locale patch %j',
@@ -640,7 +693,10 @@ describe('project.remote form organisation move authz', () => {
     const payload = buildUpdatePayload('org-1')
     await expect(
       remote.projectForm(
-        { ...payload, data: { ...payload.data, settings: { contentLocales: ['ja'] } } },
+        {
+          ...payload,
+          data: { ...payload.data, settings: { contentLocales: ['ja'] } },
+        },
         throwingInvalid,
       ),
     ).rejects.toThrow('INSUFFICIENT_ROLE')
@@ -663,7 +719,10 @@ describe('project.remote form organisation move authz', () => {
     })
     const payload = buildUpdatePayload('org-1')
     await remote.projectForm(
-      { ...payload, data: { ...payload.data, settings: { contentLocales: ['ja'] } } },
+      {
+        ...payload,
+        data: { ...payload.data, settings: { contentLocales: ['ja'] } },
+      },
       throwingInvalid,
     )
     expect(mockAuthorizeProjectUpdateForSubmission).not.toHaveBeenCalledWith(
@@ -706,12 +765,17 @@ describe('project.remote form organisation move authz', () => {
   it('authorizes and persists the selected card style with the project update', async () => {
     const payload = buildUpdatePayload('org-1')
     await remote.projectForm(
-      { ...payload, data: { ...payload.data, cardStyleCode: 'no-description' } },
+      {
+        ...payload,
+        data: { ...payload.data, cardStyleCode: 'no-description' },
+      },
       throwingInvalid,
     )
     expect(mockAuthorizeProjectUpdateForSubmission).toHaveBeenCalledWith(
       expect.objectContaining({
-        submittedData: expect.objectContaining({ cardStyleCode: 'no-description' }),
+        submittedData: expect.objectContaining({
+          cardStyleCode: 'no-description',
+        }),
       }),
     )
     expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
@@ -770,13 +834,7 @@ describe('project.remote form organisation move authz', () => {
       }),
     )
     expect(mockSyncProjectUserRoles).not.toHaveBeenCalled()
-    expect(mockCascadeProjectOrganisationToDescendants).toHaveBeenCalledWith(
-      expect.any(Object),
-      {
-        projectId: 'project-1',
-        organisationId: 'org-2',
-      },
-    )
+    expect(mockCascadeProjectOrganisationToDescendants).not.toHaveBeenCalled()
     expect(result).toEqual({
       data: {
         id: 'project-1',
@@ -862,23 +920,55 @@ describe('project.remote form organisation move authz', () => {
 
     await remote.projectForm(payload, throwingInvalid)
 
-    expect(mockUpdatePropertiesWithRelated).toHaveBeenCalledWith(
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
       expect.any(Object),
-      [
-        expect.objectContaining({
-          id: 'p-class-a',
-          type: 'classifier',
-          rank: 1,
-          values: [
-            expect.objectContaining({ id: 'pv-a-2', rank: 0 }),
-            expect.objectContaining({ id: 'pv-a-1', rank: 1 }),
-          ],
-        }),
-        expect.objectContaining({ id: 'p-class-b', type: 'classifier', rank: 0 }),
-        expect.objectContaining({ id: 'p-spec-a', type: 'specifier', rank: 0 }),
-      ],
-      'project-1',
+      expect.objectContaining({
+        properties: [
+          expect.objectContaining({
+            id: 'p-class-a',
+            type: 'classifier',
+            rank: 1,
+            values: [
+              expect.objectContaining({ id: 'pv-a-2', rank: 0 }),
+              expect.objectContaining({ id: 'pv-a-1', rank: 1 }),
+            ],
+          }),
+          expect.objectContaining({
+            id: 'p-class-b',
+            type: 'classifier',
+            rank: 0,
+          }),
+          expect.objectContaining({ id: 'p-spec-a', type: 'specifier', rank: 0 }),
+        ],
+      }),
     )
+  })
+
+  it('reports unavailable style failures from the atomic save without a follow-up style write', async () => {
+    mockUpdateProjectByIdWithConcurrency.mockRejectedValueOnce(
+      new Error('NOT NULL constraint failed: projectMapStyles.mapStyleId'),
+    )
+    await expect(
+      remote.projectForm(buildUpdatePayload('org-1'), throwingInvalid),
+    ).rejects.toThrow('MAP_STYLE_NOT_AVAILABLE')
+    expect(mockSetProjectMapStyleByCode).not.toHaveBeenCalled()
+    expect(mockUpdateI18n).not.toHaveBeenCalled()
+  })
+
+  it('sends translations and changed roles to the atomic project update', async () => {
+    const payload = buildUpdatePayload('org-1')
+    payload.data.userRoles = [{ userId: 'u-2', role: 'owner', capabilities: {} }]
+    await remote.projectForm(payload, throwingInvalid)
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        i18n: payload.data.i18n,
+        mapStyleCode: 'hyper',
+        userRoles: [expect.objectContaining({ userId: 'u-2', role: 'owner' })],
+      }),
+    )
+    expect(mockUpdateI18n).not.toHaveBeenCalled()
+    expect(mockSyncProjectUserRoles).not.toHaveBeenCalled()
   })
 
   it('skips role/property submission and persistence when userRoles and properties are omitted', async () => {
@@ -927,13 +1017,14 @@ describe('project.remote form organisation move authz', () => {
 
     await remote.projectForm(payload, throwingInvalid)
 
-    expect(mockSyncProjectLayerPresentation).toHaveBeenCalledWith(
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
       expect.any(Object),
-      'project-1',
-      [
-        { id: 'layer-1', rank: 0, isDefaultVisible: false },
-        { id: 'layer-2', rank: 1, isDefaultVisible: true },
-      ],
+      expect.objectContaining({
+        layers: [
+          { id: 'layer-1', rank: 0, isDefaultVisible: false },
+          { id: 'layer-2', rank: 1, isDefaultVisible: true },
+        ],
+      }),
     )
   })
 
@@ -972,16 +1063,17 @@ describe('project.remote form organisation move authz', () => {
 
     await remote.projectForm(payload, throwingInvalid)
 
-    expect(mockUpdatePropertiesWithRelated).toHaveBeenCalledWith(
+    expect(mockUpdateProjectByIdWithConcurrency).toHaveBeenCalledWith(
       expect.any(Object),
-      [
-        expect.objectContaining({
-          id: 'p-local-existing',
-          scope: 'project',
-          projectId: 'project-1',
-        }),
-      ],
-      'project-1',
+      expect.objectContaining({
+        properties: [
+          expect.objectContaining({
+            id: 'p-local-existing',
+            scope: 'project',
+            projectId: 'project-1',
+          }),
+        ],
+      }),
     )
   })
 
@@ -1144,6 +1236,18 @@ describe('project.remote form organisation move authz', () => {
     expect(mockAuthorizeProjectReadForProbe).toHaveBeenCalled()
   })
 
+  it('uses the authorized project scope without resolving its reference again', async () => {
+    const mapServices = await import('#lib/db/services/map.js')
+    mockAuthorizeProjectReadForProbe.mockReturnValue({ allowed: true })
+    await remote.getProjectMapStyles({ projectId: 'ambiguous-reference' })
+    expect(mapServices.listMapStylesForScope).toHaveBeenCalledWith(expect.anything(), {
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+    })
+    expect(mapServices.listMapStylesForProject).not.toHaveBeenCalled()
+  })
+
   it('authorizes project map-style reads against the persisted project scope', async () => {
     mockAuthorizeProjectReadForProbe.mockReturnValue({
       allowed: false,
@@ -1162,20 +1266,87 @@ describe('project.remote form organisation move authz', () => {
     })
   })
 
+  it.each(['conflicting', 'missing', 'denied'] as const)(
+    'does not touch the map catalog for a %s project scope',
+    async scenario => {
+      const mapServices = await import('#lib/db/services/map.js')
+      if (scenario === 'missing') {
+        mockProbeProjectQuery.mockResolvedValueOnce(null).mockResolvedValueOnce(null)
+      }
+      if (scenario === 'denied') {
+        mockAuthorizeProjectReadForProbe.mockReturnValue({
+          allowed: false,
+          code: 'INSUFFICIENT_ROLE',
+        })
+      }
+      const result = remote.getProjectMapStyles({
+        projectId: 'project-1',
+        ...(scenario === 'conflicting' ? { organisationId: 'org-1' } : {}),
+      })
+      if (scenario === 'missing') await expect(result).resolves.toEqual({ data: [] })
+      else
+        await expect(result).rejects.toMatchObject({
+          status: scenario === 'conflicting' ? 400 : 403,
+        })
+      expect(mapServices.syncMapStyleCatalog).not.toHaveBeenCalled()
+      expect(mapServices.listMapStylesForScope).not.toHaveBeenCalled()
+      expect(mapServices.listMapStylesForProject).not.toHaveBeenCalled()
+      expect(mapServices.getOrganisationMapStyleScope).not.toHaveBeenCalled()
+    },
+  )
+
+  it('passes the original license snapshot with publication history', async () => {
+    const license = createDefaultProjectLicense('original owner')
+    mockResolveProjectCommandProbe.mockResolvedValueOnce({
+      id: 'project-1',
+      organisationId: 'org-1',
+      hubId: 'hub-a',
+      license,
+    })
+    await remote.publishProject({ id: 'project-1', state: true })
+    expect(mockUpdateProjectPublishedStateById).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        expectedLicense: license,
+        license: expect.objectContaining({
+          meta: expect.objectContaining({
+            history: [expect.objectContaining({ attribution: 'original owner' })],
+          }),
+        }),
+      }),
+    )
+  })
+
+  it('does not replace license history when unpublishing', async () => {
+    await remote.publishProject({ id: 'project-1', state: false })
+    const input = (
+      mockUpdateProjectPublishedStateById.mock.calls as unknown[][]
+    )[0]?.[1]
+    expect(input).toMatchObject({ license: undefined, expectedLicense: undefined })
+  })
+
+  it('reports a publication conflict instead of success when the transaction rejects its snapshot', async () => {
+    mockUpdateProjectPublishedStateById.mockResolvedValueOnce(null)
+    await expect(
+      remote.publishProject({ id: 'project-1', state: true }),
+    ).rejects.toMatchObject({ status: 409 })
+  })
+
   it('cascades descendant publish state after a successful publish command', async () => {
     await remote.publishProject({ id: 'project-1', state: true })
 
     // Consuming only one requested variant would strand the populated editor query.
     expect(mockRequested).not.toHaveBeenCalled()
-    expect(mockCascadeProjectPublishedStateToDescendants).toHaveBeenCalledWith(
+    expect(mockUpdateProjectPublishedStateById).toHaveBeenCalledWith(
       expect.any(Object),
-      {
-        projectId: 'project-1',
+      expect.objectContaining({
+        id: 'project-1',
         state: true,
         publishChildren: undefined,
         publisherId: 'u-1',
-      },
+      }),
     )
+    expect(mockCascadeProjectPublishedStateToDescendants).not.toHaveBeenCalled()
   })
 
   it.each([true, false])(
@@ -1185,7 +1356,14 @@ describe('project.remote form organisation move authz', () => {
 
       expect(mockUpdateProjectArchivedStateById).toHaveBeenCalledWith(
         expect.any(Object),
-        { id: 'project-1', state },
+        expect.objectContaining({
+          id: 'project-1',
+          state,
+          expectedScope: expect.objectContaining({
+            organisationId: 'org-1',
+            hubId: 'hub-a',
+          }),
+        }),
       )
       expect(mockCascadeProjectArchivedStateToDescendants).not.toHaveBeenCalled()
       // The shared guarded command must receive every requested query variant.

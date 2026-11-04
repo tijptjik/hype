@@ -5,21 +5,19 @@ import {
 import { gt } from 'drizzle-orm'
 // SVELTEKIT
 import { error } from '@sveltejs/kit'
+// IDENTITY
+import { nanoid } from 'nanoid'
 // DRIZZLE
-import { and, eq, like, or, sql, getTableColumns, type SQL } from 'drizzle-orm'
+import { and, eq, exists, like, or, sql, getTableColumns, type SQL } from 'drizzle-orm'
 import { SQL_BATCH_SIZE } from '#lib/utils/batch-query.js'
 // CAPABILITIES
 import {
   getCapabilityKeysFromDefinitions,
   isProjectCapabilityKey,
   normalizeProjectCapabilities,
-  normalizeProjectRoleCapabilities,
 } from '#lib/capabilities.js'
 // PUBLICATION
-import {
-  descendantPublicationState,
-  publishScopedFeatureImages,
-} from './publication.js'
+import { buildDescendantPublication } from './publication.js'
 // SCHEMA
 import {
   feature,
@@ -40,6 +38,17 @@ import {
 } from '..'
 import { insert, update, insertManyRelated, replaceManyRelated } from '../crud'
 import { retryBusyRead } from './sqlite'
+import { prepareGuardedReplacement } from './guardedReplacement.js'
+import { prepareProjectMapStyle } from './map.js'
+import {
+  preparePropertyCatalog,
+  prepareProjectInheritedProperties,
+  prepareDefaultInheritedProperties,
+} from './property.js'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch.js'
+import type { BatchItem } from 'drizzle-orm/batch'
+import type { InferInsertModel } from 'drizzle-orm'
+import { buildOrganisationCapabilityCascade } from './capabilityCascade.js'
 // ZOD
 import { getProjectHubFilter } from './hub'
 // TYPES
@@ -71,6 +80,7 @@ import type {
 //
 // 1.1 CRUD :: CREATE
 //    - createProject
+//    - prepareProjectRelations (internal)
 //    - createI18n
 //    - createUserRoles
 //    - commitUserRoles
@@ -104,7 +114,9 @@ import type {
 //    - updateProjectByIdWithConcurrency
 //    - updateProjectPublishedStateById
 //    - cascadeProjectPublishedStateToDescendants
+//    - buildProjectCommandScopeGuard
 //    - updateProjectArchivedStateById
+//    - buildProjectArchivedDescendantUpdates
 //    - cascadeProjectArchivedStateToDescendants
 //    - buildProjectArchivedDescendantUpdates
 //    - updateI18n
@@ -121,20 +133,144 @@ import type {
 // 1.1 CRUD :: CREATE
 // ═══════════════════════
 
+/** Optional complete project form collections. */
+type ProjectRelations = {
+  properties?: Parameters<typeof preparePropertyCatalog>[1]
+  inheritedProperties?: Parameters<
+    typeof prepareProjectInheritedProperties
+  >[1]['properties']
+  seedInheritedDefaults?: { hubId: string | null; startingRank?: number }
+  layers?: Array<{ id: Id; rank: number; isDefaultVisible: boolean }>
+  mapStyleCode?: string | null
+  i18n?: Record<LocaleKey, ProjectI18nPartial>
+  userRoles?: ProjectRoleNew[]
+}
+
+/**
+ * Prepares project translations, roles, and required organisation memberships.
+ * @param db Request database.
+ * @param id Authorized project identity.
+ * @param organisationId Destination organisation, including an authorized project move.
+ * @param relations Complete submitted collections; omitted collections remain intact.
+ * @param guard Parent revision predicate checked by every mutation.
+ * @returns Unexecuted statements for the parent's transaction.
+ * @remarks Existing organisation privileges are never downgraded.
+ */
+function prepareProjectRelations(
+  db: Database,
+  id: Id,
+  organisationId: Id,
+  relations: ProjectRelations,
+  guard: SQL,
+): BatchItem<'sqlite'>[] {
+  const writes: BatchItem<'sqlite'>[] = []
+  if (relations.i18n !== undefined)
+    writes.push(
+      ...prepareGuardedReplacement(
+        db,
+        projectI18n,
+        toRelatedRecords(relations.i18n, 'projectId', id, 'locale') as InferInsertModel<
+          typeof projectI18n
+        >[],
+        projectI18n.projectId,
+        id,
+        guard,
+      ),
+    )
+  if (relations.userRoles !== undefined) {
+    // Provision memberships from one bound JSON list; conflict handling preserves live privileges.
+    const userIds = [...new Set(relations.userRoles.map(role => role.userId))]
+    if (userIds.length)
+      writes.push(
+        db
+          .insert(organisationRole)
+          .select(
+            sql`select ${organisationId}, value, 'member' from json_each(${JSON.stringify(userIds)}) where ${guard}`,
+          )
+          .onConflictDoNothing({
+            target: [organisationRole.organisationId, organisationRole.userId],
+          }),
+      )
+    writes.push(
+      ...prepareGuardedReplacement(
+        db,
+        projectRole,
+        relations.userRoles as InferInsertModel<typeof projectRole>[],
+        projectRole.projectId,
+        id,
+        guard,
+      ),
+    )
+  }
+  return writes
+}
+
 /**
  * Creates a new project in the database.
- * @param db - The database instance.
- * @param data - The project data to insert.
+ * @param db The database instance.
+ * @param data The project data to insert.
+ * @param relations Optional translations and initial roles.
  * @returns The newly created project.
+ * @remarks Submitted roles, parent memberships, translations, map style, property catalog
+ * and inherited defaults commit with the project.
  */
 export const createProject = async (
   db: Database,
   data: ProjectDBNew,
-): Promise<ProjectDB> =>
-  (await insert(db, project, {
+  relations?: ProjectRelations,
+): Promise<ProjectDB> => {
+  if (relations) {
+    const id = data.id ?? nanoid(12)
+    const catalog =
+      relations.properties !== undefined
+        ? await preparePropertyCatalog(db, relations.properties, {
+            scope: 'project',
+            id,
+          })
+        : null
+    // A conflicting parent identity fails before any memberships or relations can change.
+    const [created] = await db.batch([
+      db
+        .insert(project)
+        .values({ ...data, id, isPublished: data.isPublished ?? false })
+        .returning(),
+      ...prepareProjectRelations(db, id, data.organisationId, relations, sql`1`),
+      ...(catalog?.statements ?? []),
+      ...(relations.inheritedProperties !== undefined
+        ? prepareProjectInheritedProperties(db, {
+            projectId: id,
+            properties: relations.inheritedProperties,
+          })
+        : []),
+      ...(relations.seedInheritedDefaults
+        ? [
+            prepareDefaultInheritedProperties(db, {
+              projectId: id,
+              ...relations.seedInheritedDefaults,
+            }),
+          ]
+        : []),
+      ...(relations.mapStyleCode !== undefined
+        ? prepareProjectMapStyle(
+            db,
+            {
+              projectId: id,
+              projectCode: data.code,
+              organisationId: data.organisationId,
+              mapStyleCode: relations.mapStyleCode,
+            },
+            sql`1`,
+          )
+        : []),
+    ])
+    if (!created[0]) throw new Error('Project creation returned no row')
+    return created[0] as ProjectDB
+  }
+  return (await insert(db, project, {
     ...data,
     isPublished: data.isPublished ?? false,
   })) as ProjectDB
+}
 
 /**
  * Creates relational i18n records for a project.
@@ -759,17 +895,23 @@ export const updateProjectById = async (
 /**
  * Updates project core fields with optimistic concurrency guard on `modifiedAt`.
  * Used by remote form updates to prevent stale writes. Optional Location settings are
- * committed in one update, guarded by both Project and policy revisions.
+ * committed in one update, guarded by both Project and policy revisions. Organisation
+ * moves include descendant ancestry writes in the same transaction.
+ * @remarks Submitted translations, role replacements and required organisation memberships
+ * share the revision guard and commit before the parent token advances.
  * @param db - The database instance.
  * @param params - Update payload including expected `updatedAt`.
  * @returns Updated id/modifiedAt pair, or `null` when stale/missing.
  */
 export const updateProjectByIdWithConcurrency = async (
   db: Database,
-  params: {
+  params: ProjectRelations & {
     id: Id
     updatedAt: string
-    locationUpdatePolicy?: { policy: ProjectLocationPolicy; expectedRevision: number }
+    locationUpdatePolicy?: {
+      policy: ProjectLocationPolicy
+      expectedRevision: number
+    }
     data: {
       organisationId: ProjectDB['organisationId']
       code: string
@@ -799,6 +941,22 @@ export const updateProjectByIdWithConcurrency = async (
   const policyGuard = settings
     ? eq(project.locationPolicyRevision, settings.expectedRevision)
     : undefined
+  const revisionGuard = and(
+    eq(project.id, params.id),
+    eq(project.modifiedAt, params.updatedAt),
+    policyGuard,
+  )
+  // Observe whether ancestry changes, then recheck this revision inside every write.
+  const current = await db
+    .select({ organisationId: project.organisationId })
+    .from(project)
+    .where(revisionGuard)
+    .get()
+  if (!current) return null
+  const guardedProject = and(
+    revisionGuard,
+    eq(project.organisationId, current.organisationId),
+  )
   const updateCore = db
     .update(project)
     .set({
@@ -810,39 +968,123 @@ export const updateProjectByIdWithConcurrency = async (
           }
         : {}),
     })
-    .where(
-      and(
-        eq(project.id, params.id),
-        eq(project.modifiedAt, params.updatedAt),
-        policyGuard,
-      ),
-    )
+    .where(guardedProject)
     .returning({ id: project.id, modifiedAt: project.modifiedAt })
 
+  const moveGuard = exists(
+    db.select({ id: project.id }).from(project).where(guardedProject),
+  )
+  const writes = prepareProjectRelations(
+    db,
+    params.id,
+    params.data.organisationId,
+    params,
+    moveGuard,
+  )
+  if (params.mapStyleCode !== undefined)
+    writes.push(
+      ...prepareProjectMapStyle(
+        db,
+        {
+          projectId: params.id,
+          projectCode: params.data.code,
+          organisationId: params.data.organisationId,
+          mapStyleCode: params.mapStyleCode,
+        },
+        moveGuard,
+      ),
+    )
+  if (current.organisationId !== params.data.organisationId) {
+    // Keep the parent revision unchanged until every descendant passes its existing scope guards.
+    writes.push(
+      db
+        .update(layer)
+        .set({ organisationId: params.data.organisationId })
+        .where(and(eq(layer.projectId, params.id), moveGuard)),
+      db
+        .update(feature)
+        .set({ organisationId: params.data.organisationId })
+        .where(and(eq(feature.projectId, params.id), moveGuard)),
+      db
+        .update(task)
+        .set({ organisationId: params.data.organisationId })
+        .where(and(eq(task.projectId, params.id), moveGuard)),
+    )
+  }
+  if (
+    params.properties !== undefined ||
+    params.inheritedProperties !== undefined ||
+    params.layers !== undefined
+  ) {
+    const catalog =
+      params.properties !== undefined
+        ? await preparePropertyCatalog(db, params.properties, {
+            scope: 'project',
+            id: params.id,
+          })
+        : null
+    const beforeCore = [...(catalog?.statements ?? []), ...writes]
+    const afterCore: BatchItem<'sqlite'>[] = [
+      ...(params.inheritedProperties !== undefined
+        ? prepareProjectInheritedProperties(db, {
+            projectId: params.id,
+            properties: params.inheritedProperties,
+          })
+        : []),
+      ...(params.layers ?? []).map(row =>
+        db
+          .update(layer)
+          .set({ rank: row.rank, isDefaultVisible: row.isDefaultVisible })
+          .where(and(eq(layer.projectId, params.id), eq(layer.id, row.id))),
+      ),
+    ]
+    // Check the old revision first; resolve inherited scope only after the parent move.
+    const statements = [...beforeCore, updateCore, ...afterCore]
+    const results = await executeRevisionBatch(db, moveGuard, [
+      statements[0],
+      ...statements.slice(1),
+    ])
+    if (!results) return null
+    const rows = results[beforeCore.length] as { id: string; modifiedAt: string }[]
+    return rows[0] ?? null
+  }
+  if (writes.length) {
+    const results = await db.batch([writes[0], ...writes.slice(1), updateCore])
+    const rows = results.at(-1) as { id: string; modifiedAt: string }[]
+    return rows[0] ?? null
+  }
   const [updated] = await updateCore
   return updated ?? null
 }
 
 /**
- * Toggles published state and publication metadata for a project.
+ * Atomically toggles publication for a project, its descendants, and eligible images.
  * @param db - The database instance.
  * @param params - Target id, next publish state, and publisher id.
- * @returns Updated id/state pair or `null`.
+ * @param params.publishChildren - Explicitly include draft descendants when publishing.
+ * @param params.expectedScope - Persisted ancestry used for authorization before this transaction.
+ * @param params.expectedLicense Required original license snapshot when replacing license history.
+ * @remarks Changed ancestry or license returns null without writes; role grants are not re-read here.
+ * @returns Updated id/state pair or `null`; any write failure rolls back the entire hierarchy command.
  */
 export const updateProjectPublishedStateById = async (
   db: Database,
   params: {
     id: Id
+    expectedScope: { organisationId: Id; hubId: string | null }
     state: boolean
     publisherId: string | null
+    publishChildren?: boolean
     publishedAt?: string
-    license?: ProjectDB['license']
-  },
+  } & (
+    | { license?: undefined; expectedLicense?: undefined }
+    | { license: ProjectDB['license']; expectedLicense: ProjectDB['license'] }
+  ),
 ): Promise<{ id: string; isPublished: boolean } | null> => {
   const publishedAt = params.state
     ? (params.publishedAt ?? new Date().toISOString())
     : null
-  const [updated] = await db
+  const parentUpdate = db
     .update(project)
     .set({
       isPublished: params.state,
@@ -856,7 +1098,37 @@ export const updateProjectPublishedStateById = async (
       isPublished: project.isPublished,
     })
 
-  return updated ?? null
+  // License history is derived from a prior probe; reject replacement of a newer license snapshot.
+  const licenseGuard =
+    params.license === undefined
+      ? sql`1`
+      : exists(
+          db
+            .select({ id: project.id })
+            .from(project)
+            .where(
+              and(
+                eq(project.id, params.id),
+                sql`json(${project.license}) IS json(${JSON.stringify(params.expectedLicense)})`,
+              ),
+            ),
+        )
+
+  // Commit parent, descendant snapshots, and image policies as one transaction.
+  // Recheck the authorized ancestry before any publication writes can execute.
+  const results = await executeRevisionBatch(
+    db,
+    and(buildProjectCommandScopeGuard(db, params), licenseGuard)!,
+    [
+      parentUpdate,
+      // A skipped parent write must not commit descendant publication changes.
+      prepareRevisionCheck(db, sql`changes() = 1`),
+      ...buildDescendantPublication(db, { kind: 'project', id: params.id }, params),
+    ],
+  )
+  return results
+    ? ((results[0] as { id: string; isPublished: boolean }[])[0] ?? null)
+    : null
 }
 
 /**
@@ -877,59 +1149,52 @@ export const cascadeProjectPublishedStateToDescendants = async (
     publisherId?: Id
   },
 ): Promise<void> => {
-  await db
-    .update(layer)
-    .set({
-      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
-      ...(params.state && params.publishChildren
-        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
-        : {}),
-      localIsPublished: params.state
-        ? null
-        : sql`coalesce(${layer.localIsPublished}, ${layer.isPublished})`,
-      isPublished: params.state
-        ? params.publishChildren
-          ? true
-          : descendantPublicationState(layer)
-        : sql`0`,
-    })
-    .where(eq(layer.projectId, params.projectId))
+  await db.batch(
+    buildDescendantPublication(db, { kind: 'project', id: params.projectId }, params),
+  )
+}
 
-  await db
-    .update(feature)
-    .set({
-      // Explicit bulk publication includes drafts; ordinary restoration keeps local state.
-      ...(params.state && params.publishChildren
-        ? { publishedAt: new Date().toISOString(), publisherId: params.publisherId }
-        : {}),
-      localIsPublished: params.state
-        ? null
-        : sql`coalesce(${feature.localIsPublished}, ${feature.isPublished})`,
-      isPublished: params.state
-        ? params.publishChildren
-          ? true
-          : descendantPublicationState(feature)
-        : sql`0`,
-    })
-    .where(eq(feature.projectId, params.projectId))
-  if (params.state) {
-    await publishScopedFeatureImages(
-      db,
-      { kind: 'project', id: params.projectId },
-      params.publisherId,
-    )
-  }
+/**
+ * Rechecks persisted ancestry used to authorize a state command.
+ * @param db Request database.
+ * @param params Target identity and authorized scope.
+ * @returns Transaction predicate requiring unchanged ancestry, including nullable hub identity.
+ * @remarks Role grants are not re-read by this scope predicate.
+ */
+function buildProjectCommandScopeGuard(
+  db: Database,
+  params: { id: Id; expectedScope: { organisationId: Id; hubId: string | null } },
+): SQL {
+  return exists(
+    db
+      .select({ id: project.id })
+      .from(project)
+      .innerJoin(organisation, eq(project.organisationId, organisation.id))
+      .where(
+        and(
+          eq(project.id, params.id),
+          eq(project.organisationId, params.expectedScope.organisationId),
+          sql`${organisation.hubId} IS ${params.expectedScope.hubId}`,
+        ),
+      ),
+  )
 }
 
 /**
  * Atomically toggles archived state for a project and its descendants.
  * @param db - The database instance.
  * @param params - Target id and next archived state.
+ * @param params.expectedScope Ancestry captured before authorization.
+ * @remarks Parent and descendant writes roll back together; changed scope returns null.
  * @returns Updated id/state pair or `null`.
  */
 export const updateProjectArchivedStateById = async (
   db: Database,
-  params: { id: Id; state: boolean },
+  params: {
+    id: Id
+    state: boolean
+    expectedScope: { organisationId: Id; hubId: string | null }
+  },
 ): Promise<{ id: string; isArchived: boolean } | null> => {
   const parentUpdate = db
     .update(project)
@@ -942,15 +1207,22 @@ export const updateProjectArchivedStateById = async (
       isArchived: project.isArchived,
     })
 
-  // Commit the parent and descendants together so failed restoration cannot split state.
-  const [updated] = await db.batch([
-    parentUpdate,
-    ...buildProjectArchivedDescendantUpdates(db, {
-      projectId: params.id,
-      state: params.state,
-    }),
-  ])
-  return updated[0] ?? null
+  // Commit the parent and descendant snapshots only in the authorized scope.
+  const results = await executeRevisionBatch(
+    db,
+    buildProjectCommandScopeGuard(db, params),
+    [
+      parentUpdate,
+      prepareRevisionCheck(db, sql`changes() = 1`),
+      ...buildProjectArchivedDescendantUpdates(db, {
+        projectId: params.id,
+        state: params.state,
+      }),
+    ],
+  )
+  return results
+    ? ((results[0] as { id: string; isArchived: boolean }[])[0] ?? null)
+    : null
 }
 
 /**
@@ -974,9 +1246,7 @@ export const cascadeProjectArchivedStateToDescendants = async (
     state: boolean
   },
 ): Promise<void> => {
-  const updates = buildProjectArchivedDescendantUpdates(db, params)
-  await updates[0]
-  await updates[1]
+  await db.batch(buildProjectArchivedDescendantUpdates(db, params))
 }
 
 /**
@@ -988,7 +1258,7 @@ export const cascadeProjectArchivedStateToDescendants = async (
 function buildProjectArchivedDescendantUpdates(
   db: Database,
   params: { projectId: Id; state: boolean },
-) {
+): [BatchItem<'sqlite'>, BatchItem<'sqlite'>] {
   // Preserve descendant archive snapshots until the organisation no longer hides them.
   const layers = db
     .update(layer)
@@ -1041,7 +1311,7 @@ function buildProjectArchivedDescendantUpdates(
           end`,
     })
     .where(eq(feature.projectId, params.projectId))
-  return [layers, features] as const
+  return [layers, features]
 }
 
 /**
@@ -1088,9 +1358,11 @@ export const syncUserRoles = async (
 }
 
 /**
- * Cascades parent organisation id changes to descendant layer/feature/task rows.
+ * Atomically cascades parent organisation id changes to descendant layer/feature/task rows.
  * @param db - The database instance.
  * @param params - Target project and organisation ids.
+ * @returns Resolves after all descendant ancestry writes commit together.
+ * @remarks Project form moves use updateProjectByIdWithConcurrency to include the parent.
  */
 export const cascadeOrganisationToDescendants = async (
   db: Database,
@@ -1099,26 +1371,30 @@ export const cascadeOrganisationToDescendants = async (
     organisationId: Id
   },
 ): Promise<void> => {
-  await db
-    .update(layer)
-    .set({ organisationId: params.organisationId })
-    .where(eq(layer.projectId, params.projectId))
+  await db.batch([
+    db
+      .update(layer)
+      .set({ organisationId: params.organisationId })
+      .where(eq(layer.projectId, params.projectId)),
 
-  await db
-    .update(feature)
-    .set({ organisationId: params.organisationId })
-    .where(eq(feature.projectId, params.projectId))
+    db
+      .update(feature)
+      .set({ organisationId: params.organisationId })
+      .where(eq(feature.projectId, params.projectId)),
 
-  await db
-    .update(task)
-    .set({ organisationId: params.organisationId })
-    .where(eq(task.projectId, params.projectId))
+    db
+      .update(task)
+      .set({ organisationId: params.organisationId })
+      .where(eq(task.projectId, params.projectId)),
+  ])
 }
 
 /**
  * Cascades organisation capability restrictions into child projects and project roles.
  * @param db - The database instance.
  * @param params - Organisation id and effective organisation capabilities.
+ * @returns Resolves when both levels of restrictions commit atomically.
+ * @remarks Organisation edits use updateOrganisationByIdWithConcurrency to include the parent.
  */
 export const cascadeOrganisationCapabilitiesToProjects = async (
   db: Database,
@@ -1127,61 +1403,13 @@ export const cascadeOrganisationCapabilitiesToProjects = async (
     organisationCapabilities: CapabilityDefinitions | null | undefined
   },
 ): Promise<void> => {
-  const allowedKeys = new Set(
-    getCapabilityKeysFromDefinitions(params.organisationCapabilities),
+  await db.batch(
+    buildOrganisationCapabilityCascade(
+      db,
+      params.organisationId,
+      params.organisationCapabilities,
+    ),
   )
-  const projectRows = await db
-    .select({
-      id: project.id,
-      capabilities: project.capabilities,
-    })
-    .from(project)
-    .where(eq(project.organisationId, params.organisationId))
-
-  for (const projectRow of projectRows) {
-    const nextProjectCapabilities = normalizeProjectCapabilities(
-      projectRow.capabilities,
-    )
-    for (const key of Object.keys(nextProjectCapabilities)) {
-      if (!isProjectCapabilityKey(key)) continue
-      if (allowedKeys.has(key)) continue
-      nextProjectCapabilities[key] = false
-    }
-
-    await db
-      .update(project)
-      .set({ capabilities: nextProjectCapabilities })
-      .where(eq(project.id, projectRow.id))
-
-    const projectRoleRows = await db
-      .select({
-        userId: projectRole.userId,
-        capabilities: projectRole.capabilities,
-      })
-      .from(projectRole)
-      .where(eq(projectRole.projectId, projectRow.id))
-
-    for (const roleRow of projectRoleRows) {
-      const nextRoleCapabilities = normalizeProjectRoleCapabilities(
-        roleRow.capabilities,
-      )
-      for (const key of Object.keys(nextRoleCapabilities)) {
-        if (!isProjectCapabilityKey(key)) continue
-        if (nextProjectCapabilities[key]) continue
-        nextRoleCapabilities[key] = false
-      }
-
-      await db
-        .update(projectRole)
-        .set({ capabilities: nextRoleCapabilities })
-        .where(
-          and(
-            eq(projectRole.projectId, projectRow.id),
-            eq(projectRole.userId, roleRow.userId),
-          ),
-        )
-    }
-  }
 }
 
 // ═══════════════════════

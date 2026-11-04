@@ -12,6 +12,21 @@ import {
   syncOrganisationProperties,
 } from '#lib/db/services/property.js'
 import * as schema from '#lib/db/schema/index.js'
+import {
+  createProject,
+  updateProjectByIdWithConcurrency,
+} from '#lib/db/services/project.js'
+import {
+  toSubmittedLocalPropertiesWithProjectId,
+  mergeProjectInheritedPropertySyncItems,
+} from '#lib/api/services/project.js'
+import { syncProjectLayerPresentation } from '#lib/db/services/layer.js'
+import { createDefaultProjectLicense } from '#lib/db/services/licence.js'
+import { createHub, updateHubByIdWithConcurrency } from '#lib/db/services/hub.js'
+import {
+  createOrganisation,
+  updateOrganisationByIdWithConcurrency,
+} from '#lib/db/services/organisation.js'
 import type { Database } from '#lib/types.js'
 import type { ProjectPropertyForm } from '#lib/db/zod/schema/property.types.js'
 
@@ -28,6 +43,12 @@ beforeEach(() => {
   sqlite.exec('PRAGMA foreign_keys = ON')
   // Include every real selected column so nested hydration runs through Drizzle SQL.
   for (const table of [
+    schema.hubRole,
+    schema.hubI18n,
+    schema.organisationRole,
+    schema.organisationI18n,
+    schema.feature,
+    schema.task,
     schema.project,
     schema.projectProperty,
     schema.organisation,
@@ -80,6 +101,8 @@ beforeEach(() => {
     CREATE UNIQUE INDEX project_property_unique ON projectProperty(projectId, propertyId);
     INSERT INTO hub (id, code) VALUES ('core', 'core'), ('scoped', 'scoped'), ('outside', 'outside');
     INSERT INTO organisation (id, hubId) VALUES ('org', 'scoped');
+    INSERT INTO hubRole(hubId,userId,role) VALUES ('scoped','old','admin');
+    INSERT INTO organisationRole(organisationId,userId,role) VALUES ('org','old','owner');
     INSERT INTO project (id, organisationId) VALUES ('project', 'org'), ('other-project', NULL);
     INSERT INTO layer (id, projectId) VALUES ('layer', 'project'), ('second', 'project'), ('other-layer', 'other-project');
     INSERT INTO layerProperty VALUES ('layer', 'old', 1, 1), ('other-layer', 'other', 1, 0);
@@ -121,6 +144,7 @@ beforeEach(() => {
         sqlite.exec('BEGIN')
         try {
           const results = statements.map(({ sql, params }) => {
+            writeParameterCounts.push(params.length)
             if (params.length > 100) throw new Error('D1 parameter budget exceeded')
             return { results: sqlite.prepare(sql).all(...params) }
           })
@@ -182,6 +206,127 @@ describe.each(['hub', 'organisation'] as const)(
         )
         .all(),
     })
+
+    const formProperties = [
+      {
+        key: 'form_property',
+        component: 'SelectField',
+        i18n: { en: { label: 'Form property' } },
+        values: [{ value: 'option', i18n: { en: { value: 'Option' } } }],
+      },
+    ]
+    const hubData = {
+      code: 'changed',
+      domain: null,
+      legalContactAddress: null,
+      subscriptionService: 'substack',
+      subscriptionId: null,
+      subscriptionSessionCookie: null,
+      subscriptionPlacement: { hubPanel: false, topBar: false, menu: true },
+    }
+    const updateParent = () =>
+      scope === 'hub'
+        ? updateHubByIdWithConcurrency(db, {
+            id: ownerId,
+            updatedAt: 'before',
+            data: hubData,
+            properties: formProperties,
+            userRoles: [{ userId: 'new-user', role: 'admin' }],
+          })
+        : updateOrganisationByIdWithConcurrency(db, {
+            id: ownerId,
+            updatedAt: 'before',
+            data: { code: 'changed', url: null },
+            properties: formProperties,
+            userRoles: [{ userId: 'new-user', role: 'owner' }],
+          })
+    const createParent = () =>
+      scope === 'hub'
+        ? createHub(
+            db,
+            { ...hubData, id: 'created' },
+            {
+              properties: formProperties,
+              userRoles: [{ userId: 'new-user', role: 'admin' }],
+            },
+          )
+        : createOrganisation(
+            db,
+            { id: 'created', code: 'created', settings: {} },
+            {
+              properties: formProperties,
+              userRoles: [{ userId: 'new-user', role: 'owner' }],
+            },
+          )
+    const formSnapshot = () => ({
+      catalog: catalogSnapshot(),
+      parents: sqlite.prepare(`SELECT * FROM ${scope} ORDER BY id`).all(),
+      roles: sqlite.prepare(`SELECT * FROM ${scope}Role ORDER BY userId`).all(),
+    })
+
+    it.each([false, true])(
+      'updates parent and catalog atomically with parent failure %s',
+      async fail => {
+        sqlite.exec(`UPDATE ${scope} SET modifiedAt='before' WHERE id='${ownerId}'`)
+        if (fail)
+          sqlite.exec(
+            `CREATE TRIGGER fail_parent BEFORE UPDATE ON ${scope} BEGIN SELECT RAISE(ABORT,'parent failure'); END`,
+          )
+        const before = formSnapshot()
+        if (fail) {
+          await expect(updateParent()).rejects.toThrow('parent failure')
+          expect(formSnapshot()).toEqual(before)
+        } else {
+          expect(await updateParent()).toMatchObject({ id: ownerId })
+          expect(
+            sqlite.prepare(`SELECT code FROM ${scope} WHERE id=?`).get(ownerId),
+          ).toEqual({ code: 'changed' })
+          expect(
+            sqlite
+              .prepare(
+                `SELECT count(*) n FROM property WHERE ${ownerColumn}=? AND key='form_property'`,
+              )
+              .get(ownerId),
+          ).toEqual({ n: 1 })
+        }
+        expect(batches).toHaveLength(1)
+      },
+    )
+
+    it('fences a parent revision change after catalog preparation', async () => {
+      sqlite.exec(`UPDATE ${scope} SET modifiedAt='before' WHERE id='${ownerId}'`)
+      let before: ReturnType<typeof formSnapshot>
+      beforeBatch = () => {
+        sqlite.exec(`UPDATE ${scope} SET modifiedAt='concurrent' WHERE id='${ownerId}'`)
+        before = formSnapshot()
+      }
+      expect(await updateParent()).toBeNull()
+      expect(formSnapshot()).toEqual(before!)
+      expect(batches).toHaveLength(1)
+    })
+
+    it.each([false, true])(
+      'creates parent and catalog atomically with late translation failure %s',
+      async fail => {
+        if (fail)
+          sqlite.exec(
+            "CREATE TRIGGER fail_translation BEFORE INSERT ON propertyValueI18n BEGIN SELECT RAISE(ABORT,'translation failure'); END",
+          )
+        const before = formSnapshot()
+        if (fail) {
+          await expect(createParent()).rejects.toThrow('translation failure')
+          expect(formSnapshot()).toEqual(before)
+        } else {
+          expect(await createParent()).toMatchObject({ id: 'created' })
+          expect(
+            sqlite
+              .prepare(`SELECT count(*) n FROM property WHERE ${ownerColumn}='created'`)
+              .get(),
+          ).toEqual({ n: 1 })
+        }
+        expect(batches).toHaveLength(1)
+      },
+    )
 
     it('saves ranked hydrated properties with generated value IDs and server-owned parents', async () => {
       const result = await save([
@@ -629,6 +774,260 @@ describe('local project property value translations', () => {
       'First',
     )
     expect(submitted).toEqual(original)
+  })
+})
+
+describe('complete project property form transaction', () => {
+  const data = {
+    organisationId: 'org',
+    code: 'updated',
+    capabilities: {
+      manageBakeries: false,
+      manageVolunteers: false,
+      manageDropOffs: false,
+    },
+    flags: {},
+    cardStyleCode: null,
+    markerStyleCode: null,
+    useAllInOrgContext: false,
+  }
+  const properties = [
+    {
+      id: 'fresh',
+      key: 'fresh',
+      component: 'SelectField',
+      i18n: { en: { label: 'Fresh' } },
+      values: [],
+      isDefaultEnabled: true,
+    },
+  ] as unknown as ProjectPropertyForm[]
+  const relations = {
+    properties,
+    inheritedProperties: [
+      { id: 'fresh', scope: 'project', isDefaultEnabled: true },
+      { id: 'old', scope: 'organisation', isEnabled: true },
+    ],
+    layers: [
+      { id: 'layer', rank: 9, isDefaultVisible: false },
+      { id: 'second', rank: 10, isDefaultVisible: true },
+    ],
+  }
+  const allRows = () =>
+    [
+      'project',
+      'property',
+      'propertyI18n',
+      'propertyValue',
+      'projectProperty',
+      'layerProperty',
+      'layer',
+    ].map(table => sqlite.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all())
+
+  it.each(['create', 'update'])(
+    'retains assignment ranks and flags for ID-less properties during %s',
+    async mode => {
+      const submitted = [
+        {
+          key: 'z_first',
+          component: 'SelectField',
+          rank: 0,
+          i18n: { en: { label: 'First' } },
+          isDefaultEnabled: false,
+        },
+        {
+          id: '',
+          key: 'a_second',
+          component: 'SelectField',
+          rank: 1,
+          i18n: { en: { label: 'Second' } },
+          isDefaultEnabled: true,
+        },
+      ]
+      const original = structuredClone(submitted)
+      const target = mode === 'create' ? 'created' : 'project'
+      const normalized = toSubmittedLocalPropertiesWithProjectId(submitted, target)
+      const propertyRelations = {
+        properties: normalized as unknown as ProjectPropertyForm[],
+        inheritedProperties: mergeProjectInheritedPropertySyncItems(normalized),
+      }
+      if (mode === 'create')
+        await createProject(
+          db,
+          { ...data, id: target, settings: {}, license: createDefaultProjectLicense() },
+          propertyRelations,
+        )
+      else {
+        sqlite.exec("UPDATE project SET modifiedAt='before' WHERE id='project'")
+        await updateProjectByIdWithConcurrency(db, {
+          id: target,
+          updatedAt: 'before',
+          data,
+          ...propertyRelations,
+        })
+      }
+      expect(
+        sqlite
+          .prepare(
+            `SELECT p.key,a.rank,a.isEnabled,a.isDefaultEnabled FROM property p JOIN projectProperty a ON a.propertyId=p.id WHERE a.projectId=? ORDER BY a.rank`,
+          )
+          .all(target),
+      ).toEqual([
+        { key: 'z_first', rank: 0, isEnabled: 1, isDefaultEnabled: 0 },
+        { key: 'a_second', rank: 1, isEnabled: 1, isDefaultEnabled: 1 },
+      ])
+      expect(submitted).toEqual(original)
+    },
+  )
+
+  it.each([false, true])(
+    'saves the catalog, assignments, core and layer presentation with late failure %s',
+    async fail => {
+      sqlite.exec("UPDATE project SET modifiedAt='before' WHERE id='project'")
+      if (fail)
+        sqlite.exec(
+          "CREATE TRIGGER fail_presentation BEFORE UPDATE ON layer WHEN NEW.rank=10 BEGIN SELECT RAISE(ABORT,'late layer failure'); END",
+        )
+      const before = allRows()
+      const saving = updateProjectByIdWithConcurrency(db, {
+        id: 'project',
+        updatedAt: 'before',
+        data,
+        ...relations,
+      })
+      if (fail) {
+        await expect(saving).rejects.toThrow('late layer failure')
+        expect(allRows()).toEqual(before)
+      } else {
+        expect(await saving).toMatchObject({ id: 'project' })
+        expect(
+          sqlite
+            .prepare("SELECT count(*) n FROM layerProperty WHERE propertyId='fresh'")
+            .get(),
+        ).toEqual({ n: 2 })
+        expect(
+          sqlite
+            .prepare("SELECT rank,isDefaultVisible FROM layer WHERE id='layer'")
+            .get(),
+        ).toEqual({ rank: 9, isDefaultVisible: 0 })
+      }
+      expect(batches).toHaveLength(1)
+    },
+  )
+
+  it('fences a concurrent edit before any catalog or layer mutation', async () => {
+    sqlite.exec("UPDATE project SET modifiedAt='before' WHERE id='project'")
+    let before: ReturnType<typeof allRows>
+    beforeBatch = () => {
+      sqlite.exec("UPDATE project SET modifiedAt='concurrent' WHERE id='project'")
+      before = allRows()
+    }
+    expect(
+      await updateProjectByIdWithConcurrency(db, {
+        id: 'project',
+        updatedAt: 'before',
+        data,
+        ...relations,
+      }),
+    ).toBeNull()
+    expect(allRows()).toEqual(before!)
+  })
+
+  it('resolves inherited catalogs from the destination after an organisation move', async () => {
+    sqlite.exec(
+      "INSERT INTO organisation(id,hubId) VALUES ('destination','outside'); UPDATE project SET modifiedAt='before' WHERE id='project'",
+    )
+    await updateProjectByIdWithConcurrency(db, {
+      id: 'project',
+      updatedAt: 'before',
+      data: { ...data, organisationId: 'destination' },
+      properties,
+      inheritedProperties: [{ id: 'outside-prop', scope: 'hub', isEnabled: true }],
+    })
+    expect(
+      sqlite
+        .prepare(
+          "SELECT count(*) n FROM layerProperty WHERE layerId='layer' AND propertyId='outside-prop'",
+        )
+        .get(),
+    ).toEqual({ n: 1 })
+    expect(
+      sqlite
+        .prepare(
+          "SELECT count(*) n FROM layerProperty WHERE layerId='layer' AND propertyId='old'",
+        )
+        .get(),
+    ).toEqual({ n: 0 })
+    expect(
+      sqlite.prepare("SELECT organisationId FROM project WHERE id='project'").get(),
+    ).toEqual({ organisationId: 'destination' })
+  })
+
+  it.each([false, true])(
+    'creates project and seeds defaults in one transaction with late failure %s',
+    async fail => {
+      if (fail)
+        sqlite.exec(
+          "CREATE TRIGGER fail_default BEFORE INSERT ON projectProperty WHEN NEW.propertyId='new' BEGIN SELECT RAISE(ABORT,'late seed failure'); END",
+        )
+      const before = allRows()
+      const saving = createProject(
+        db,
+        {
+          ...data,
+          id: 'created',
+          settings: {},
+          license: createDefaultProjectLicense(),
+        },
+        { properties, seedInheritedDefaults: { hubId: 'scoped', startingRank: 1 } },
+      )
+      if (fail) {
+        await expect(saving).rejects.toThrow('late seed failure')
+        expect(allRows()).toEqual(before)
+      } else {
+        expect(await saving).toMatchObject({ id: 'created' })
+        expect(
+          sqlite.prepare("SELECT projectId FROM property WHERE id='fresh'").get(),
+        ).toEqual({ projectId: 'created' })
+        expect(
+          sqlite
+            .prepare("SELECT count(*) n FROM projectProperty WHERE projectId='created'")
+            .get()!.n,
+        ).toBeGreaterThan(0)
+      }
+      expect(batches).toHaveLength(1)
+    },
+  )
+})
+
+describe('standalone layer presentation transaction', () => {
+  it('rolls back earlier layer changes on a later presentation failure', async () => {
+    sqlite.exec(
+      "CREATE TRIGGER fail_presentation BEFORE UPDATE ON layer WHEN NEW.id='second' BEGIN SELECT RAISE(ABORT,'presentation failure'); END",
+    )
+    const before = sqlite.prepare('SELECT * FROM layer ORDER BY id').all()
+    await expect(
+      syncProjectLayerPresentation(db, 'project', [
+        { id: 'layer', rank: 9, isDefaultVisible: false },
+        { id: 'second', rank: 10, isDefaultVisible: true },
+      ]),
+    ).rejects.toThrow('presentation failure')
+    expect(sqlite.prepare('SELECT * FROM layer ORDER BY id').all()).toEqual(before)
+  })
+
+  it('updates owned layers only and ignores missing or foreign IDs', async () => {
+    const outside = sqlite.prepare("SELECT * FROM layer WHERE id='other-layer'").get()
+    await syncProjectLayerPresentation(db, 'project', [
+      { id: 'layer', rank: 9, isDefaultVisible: false },
+      { id: 'other-layer', rank: 10, isDefaultVisible: false },
+      { id: 'missing', rank: 11, isDefaultVisible: false },
+    ])
+    expect(
+      sqlite.prepare("SELECT rank,isDefaultVisible FROM layer WHERE id='layer'").get(),
+    ).toEqual({ rank: 9, isDefaultVisible: 0 })
+    expect(sqlite.prepare("SELECT * FROM layer WHERE id='other-layer'").get()).toEqual(
+      outside,
+    )
+    expect(batches).toHaveLength(1)
   })
 })
 
