@@ -102,3 +102,12 @@ it('shows search in edit mode without opening results on mount', async () => {
   expect(screen.queryByPlaceholderText('Add users')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Remove Alex Self' })).toBeNull()
 })
+
+it.each([true, false])('links member usernames in editing=%s mode', async isEditing => {
+  render(Fixture, { isEditing })
+  const link = await screen.findByRole('link', { name: '@Alex' })
+  expect(link.getAttribute('href')).toBe('/admin/users/alex')
+  expect(screen.getAllByRole('link')).toHaveLength(1)
+  const names = screen.getAllByText('Robin Other')
+  expect(names.filter(name => !name.closest('[aria-hidden="true"]'))).toHaveLength(1)
+})
