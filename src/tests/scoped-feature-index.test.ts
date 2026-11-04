@@ -81,12 +81,14 @@ describe('entity feature tabs', () => {
         layer: ['other-layer', 'another-layer'],
       })
       expect(scoped.account).toBe(parent.account)
+      // Organisations reuse the scoped index through shortcuts, without a duplicate Features tab.
+      const hasFeaturesTab = resource !== 'organisation'
       expect(
         getSupportedFacetForResource(FirstClassResource[resource], 'features'),
-      ).toBe('features')
+      ).toBe(hasFeaturesTab ? 'features' : undefined)
       expect(
         getAdminFacetTabsForResource(FirstClassResource[resource]).has('features'),
-      ).toBe(true)
+      ).toBe(hasFeaturesTab)
       expect(
         getAdminFacetTabsForResource(FirstClassResource[resource], {
           coreOnly: true,
