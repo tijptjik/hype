@@ -20,3 +20,5 @@ export * from './map'
 export * from './relations'
 export * from './location'
 export * from './locationRefresh'
+
+export * from './messaging'

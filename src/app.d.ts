@@ -50,6 +50,17 @@ declare global {
         DB: D1Database
         ASSETS: Fetcher
         ROUTING_SERVICE?: Fetcher
+      MESSAGING_NOTIFICATIONS?: {
+        publicKey():Promise<string>
+        subscribe(userId:string,organisationId:string,subscription:{endpoint:string;keys:{p256dh:string;auth:string};expirationTime?:number|null},origin:string):Promise<void>
+        unsubscribe(userId:string,organisationId:string,endpoint:string):Promise<void>
+        focus(userId:string,organisationId:string,endpoint:string,focused?:boolean):Promise<void>
+        status(userId:string,organisationId:string,endpoint:string):Promise<boolean>
+      }
+        WHATSOVER?: import('#lib/api/services/whatsover.types.js').WhatsoverBinding
+        WHATSOVER_VOICE_URL?: string
+        TELEGRAM_CALLS_URL?: string
+        TELEGRAM?: import('#lib/messaging/binding.js').TelegramBinding
         ROUTING_LIMITER?: RateLimit
         ROUTING_TOKEN?: string
         MAP_RENDER_QUEUE: Queue<MapRenderJob>
