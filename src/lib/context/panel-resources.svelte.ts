@@ -55,6 +55,15 @@ export function usePanelResources(
   )
   const pins = $derived(selected.map(id => app.cacheCtx.pin(type, id, input.meta)))
   $effect(() => {
+    const ids = selected
+    const meta = input.meta
+    const release = untrack(() => ids.map(id => app.cacheCtx.retainPin(type, id, meta)))
+    return () =>
+      release.forEach(detach => {
+        detach()
+      })
+  })
+  $effect(() => {
     const next = input
     const timer = setTimeout(
       () => {
@@ -64,9 +73,22 @@ export function usePanelResources(
     )
     return () => clearTimeout(timer)
   })
+  /**
+   * Refreshes the current traversal and its independently fetched selections.
+   * @param force Whether to bypass traversal freshness for an explicit retry.
+   * @returns Nothing; native query errors remain available to reactive consumers.
+   */
+  function refreshResources(force = false): void {
+    const next = input
+    // Refresh only this panel's current pins; Kit coalesces shared native query requests.
+    void Promise.allSettled([
+      Promise.resolve().then(() => (force ? list.load(next, true) : list.revalidate())),
+      ...pins.map(async pin => pin.refresh()),
+    ])
+  }
   onMount(() => {
     const refresh = () => {
-      if (document.visibilityState === 'visible') void list.revalidate()
+      if (document.visibilityState === 'visible') refreshResources()
     }
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', refresh)
@@ -76,15 +98,30 @@ export function usePanelResources(
     }
   })
   const rows = $derived.by(() => {
+    // A denied collection must not be repopulated from older selection queries.
+    if (list.denied) return []
     const byId = new Map<string, PanelResource>()
-    const pageRows = new Map(list.rows.map(row => [row.id, row]))
+    // Native queries retain their last payload on failure; denied pins must not revive it.
+    const denied = new Set(
+      pins.flatMap((pin, index) =>
+        [401, 403, 404].includes(
+          (pin.error as { status?: number } | undefined)?.status ?? 0,
+        )
+          ? [selected[index]]
+          : [],
+      ),
+    )
+    const visiblePins = pins.filter((_, index) => !denied.has(selected[index]))
+    const pageRows = new Map(
+      list.rows.filter(row => !denied.has(row.id)).map(row => [row.id, row]),
+    )
     // Only prism selections lead the list; navigation keeps paged rows in their existing order.
-    for (const pin of pins)
+    for (const pin of visiblePins)
       if (pin.current && app.scope.prisms[type].includes(pin.current.id))
         byId.set(pin.current.id, pageRows.get(pin.current.id) ?? pin.current)
-    for (const row of list.rows) if (!byId.has(row.id)) byId.set(row.id, row)
+    for (const row of pageRows.values()) if (!byId.has(row.id)) byId.set(row.id, row)
     // Retain an off-page active resource without promoting it above the current page.
-    for (const pin of pins)
+    for (const pin of visiblePins)
       if (pin.current && !byId.has(pin.current.id))
         byId.set(pin.current.id, pin.current)
     return [...byId.values()]
@@ -95,6 +132,9 @@ export function usePanelResources(
   })
   return {
     list,
+    get error(): unknown {
+      return list.error ?? pins.find(pin => pin.error)?.error
+    },
     get rows() {
       return rows
     },
@@ -102,7 +142,7 @@ export function usePanelResources(
       return viewKey
     },
     retry: () => {
-      void list.load(input, true).catch(() => {})
+      refreshResources(true)
     },
   }
 }

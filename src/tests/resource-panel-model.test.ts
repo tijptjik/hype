@@ -53,6 +53,9 @@ function setup(
     mode?: 'admin' | 'prisms'
     layers?: string[]
     organisationMember?: string
+    pinError?: () => unknown
+    listDenied?: () => boolean
+    onPinRefresh?: () => Promise<void>
   } = {},
 ) {
   const resources = ['a', 'b', 'c'].map(id => ({
@@ -65,6 +68,7 @@ function setup(
     : ['a', 'b', 'c']
   const toggleOrganisation = vi.fn()
   const selectOrganisation = vi.fn()
+  const refreshPin = vi.fn(options.onPinRefresh ?? (async () => {}))
   const list = {
     rows: resources,
     loading: false,
@@ -74,7 +78,22 @@ function setup(
     revalidate: vi.fn().mockResolvedValue(undefined),
   }
   const app = {
-    account: { revision: 0 },
+    account: {
+      user: {
+        id: 'operator',
+        isAnonymous: false,
+        superAdmin: !options.organisationMember,
+        roles: options.organisationMember
+          ? [
+              {
+                type: 'organisation',
+                role: 'member',
+                organisationId: options.organisationMember,
+              },
+            ]
+          : [],
+      },
+    },
     scope: {
       prisms: { organisation: selected, project: [], layer: options.layers ?? [] },
       moveLayer: vi.fn(),
@@ -85,13 +104,21 @@ function setup(
       selectOrganisation,
     },
     cacheCtx: {
+      retainPin: vi.fn(() => vi.fn()),
       pin: (_type: string, id: string) => ({
         current: resources.find(row => row.id === id) ?? { id, name: id },
+        get error() {
+          return options.pinError?.()
+        },
+        refresh: refreshPin,
       }),
     },
     resources: {
       createCollection: (type: string) => ({
         ...list,
+        get denied() {
+          return options.listDenied?.() ?? false
+        },
         rows:
           type === 'organisation' || (type === 'layer' && options.layers)
             ? resources
@@ -121,6 +148,7 @@ function setup(
     app,
     toggleOrganisation,
     selectOrganisation,
+    refreshPin,
   }
 }
 
@@ -230,4 +258,143 @@ it('uses server-authorised IDs even when compact rows omit hub ownership', async
   route.url = new URL('http://localhost/admin/messaging')
   const { sections } = setup([], 'b', { organisationMember: 'b' })
   await vi.waitFor(() => expect(sections[0].rows.map(row => row.id)).toEqual(['b']))
+})
+
+it('releases every panel selection owner on teardown', async () => {
+  const { flushSync } = await import('svelte')
+  const { app } = setup(['c'])
+  flushSync()
+  const retain = vi.mocked(app.cacheCtx.retainPin)
+  expect(retain.mock.calls.map(([, id]) => id).sort()).toEqual(['b', 'c'])
+  const releases = retain.mock.results.map(result => result.value)
+  for (const release of releases) expect(release).not.toHaveBeenCalled()
+  cleanup()
+  for (const release of releases) expect(release).toHaveBeenCalledOnce()
+})
+
+it.each([401, 403, 404])(
+  'hides denied pin data on status %s, including overlapping page rows',
+  async status => {
+    const { flushSync } = await import('svelte')
+    const { detailQueryProbe } = await import(
+      './fixtures/resourceDetailHarness.svelte.js'
+    )
+    const native = detailQueryProbe(null)
+    const { sections } = setup(['c'], 'outside', { pinError: () => native.query.error })
+    flushSync()
+    expect(sections[0].rows.map(row => row.id)).toEqual(['c', 'a', 'b', 'outside'])
+    native.setError(status)
+    flushSync()
+    expect(sections[0].rows.map(row => row.id)).toEqual(['a', 'b'])
+    native.setError()
+    flushSync()
+    expect(sections[0].rows.map(row => row.id)).toEqual(['c', 'a', 'b', 'outside'])
+  },
+)
+
+it('keeps pin previews on transient refresh failures', async () => {
+  const { flushSync } = await import('svelte')
+  const { detailQueryProbe } = await import(
+    './fixtures/resourceDetailHarness.svelte.js'
+  )
+  const native = detailQueryProbe(null)
+  const { sections } = setup([], 'outside', { pinError: () => native.query.error })
+  native.setError(503)
+  flushSync()
+  expect(sections[0].rows.map(row => row.id)).toEqual(['a', 'b', 'c', 'outside'])
+})
+
+it('does not restore old pins when the collection loses access', async () => {
+  const { flushSync } = await import('svelte')
+  const { detailQueryProbe } = await import(
+    './fixtures/resourceDetailHarness.svelte.js'
+  )
+  const native = detailQueryProbe(null)
+  const { sections } = setup(['c'], 'outside', {
+    listDenied: () => Boolean(native.query.error),
+  })
+  flushSync()
+  expect(sections[0].rows).toHaveLength(4)
+  native.setError(403)
+  flushSync()
+  expect(sections[0].rows).toEqual([])
+  native.setError()
+  flushSync()
+  expect(sections[0].rows).toHaveLength(4)
+})
+
+it.each(['retry', 'focus', 'visibility'] as const)(
+  'refreshes off-page selections on %s',
+  async trigger => {
+    const { flushSync } = await import('svelte')
+    const { detailQueryProbe } = await import(
+      './fixtures/resourceDetailHarness.svelte.js'
+    )
+    const native = detailQueryProbe(null)
+    const { sections, refreshPin } = setup([], 'outside', {
+      pinError: () => native.query.error,
+      onPinRefresh: async () => {
+        native.setError()
+      },
+    })
+    const visibility = vi
+      .spyOn(document, 'visibilityState', 'get')
+      .mockReturnValue('visible')
+    try {
+      native.setError(403)
+      flushSync()
+      expect(sections[0].rows.map(row => row.id)).not.toContain('outside')
+      expect(sections[0].error).toBe(true)
+      if (trigger === 'retry') sections[0].onRetry()
+      else if (trigger === 'focus') window.dispatchEvent(new Event('focus'))
+      else document.dispatchEvent(new Event('visibilitychange'))
+      await vi.waitFor(() => expect(refreshPin).toHaveBeenCalledOnce())
+      flushSync()
+      expect(sections[0].rows.map(row => row.id)).toContain('outside')
+      expect(sections[0].error).toBe(false)
+    } finally {
+      visibility.mockRestore()
+    }
+  },
+)
+
+it('skips focus refreshes while hidden and removes listeners on teardown', async () => {
+  const { flushSync } = await import('svelte')
+  const { refreshPin } = setup([], 'outside')
+  const visibility = vi
+    .spyOn(document, 'visibilityState', 'get')
+    .mockReturnValue('hidden')
+  try {
+    flushSync()
+    window.dispatchEvent(new Event('focus'))
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(refreshPin).not.toHaveBeenCalled()
+    cleanup()
+    visibility.mockReturnValue('visible')
+    window.dispatchEvent(new Event('focus'))
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(refreshPin).not.toHaveBeenCalled()
+  } finally {
+    visibility.mockRestore()
+  }
+})
+
+it('handles rejected pin refreshes without dropping transient previews', async () => {
+  const { flushSync } = await import('svelte')
+  const { detailQueryProbe } = await import(
+    './fixtures/resourceDetailHarness.svelte.js'
+  )
+  const native = detailQueryProbe(null)
+  const { sections, refreshPin } = setup([], 'outside', {
+    pinError: () => native.query.error,
+    onPinRefresh: async () => {
+      native.setError(503)
+      throw { status: 503 }
+    },
+  })
+  flushSync()
+  sections[0].onRetry()
+  await vi.waitFor(() => expect(refreshPin).toHaveBeenCalledOnce())
+  flushSync()
+  expect(sections[0].rows.map(row => row.id)).toContain('outside')
 })
