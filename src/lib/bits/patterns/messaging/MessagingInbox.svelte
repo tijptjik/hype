@@ -13,6 +13,7 @@ import ArchiveRestoreIcon from 'virtual:icons/lucide/archive-restore'
 import InboxIcon from 'virtual:icons/lucide/inbox'
 import PinIcon from 'virtual:icons/lucide/pin'
 import PinOffIcon from 'virtual:icons/lucide/pin-off'
+import PhoneIcon from 'virtual:icons/lucide/phone'
 // COMPONENTS
 import MessagingNotifications from './MessagingNotifications.svelte'
 import MessagingAccountCard from './MessagingAccountCard.svelte'
@@ -310,14 +311,6 @@ const configurationHref = $derived(
                   : 'Chats from your linked accounts will appear here. You can also search for a HYPE user to start chatting.'}
             </p>
           {/each}
-          {#if model.hasMoreConversations}
-            <Button
-              text={model.loadingMore ? 'Loading chats…' : 'Load more chats'}
-              disabled={model.loadingMore}
-              style="ghost"
-              onClick={model.loadMoreConversations}
-            />
-          {/if}
           {#if model.search.trim()}
             <p class="px-3 pt-3 text-xs font-semibold text-muted-foreground">
               HYPE users
@@ -346,19 +339,30 @@ const configurationHref = $derived(
                       >@{user.username}</span
                     >
                     {#if !user.available}
-                      <span class="text-xs text-muted-foreground"
-                        >{user.unavailableReason}</span
-                      >
+                      {#if user.unavailableReason ===
+                        'No valid phone number on this HYPE profile'}
+                        <span
+                          class="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                          aria-label="Missing phone number"
+                          role="img"
+                          title={user.unavailableReason}
+                          >Missing <PhoneIcon class="size-3" aria-hidden="true" /></span
+                        >
+                      {:else}
+                        <span class="text-xs text-muted-foreground"
+                          >{user.unavailableReason}</span
+                        >
+                      {/if}
                     {/if}</span
                   >
                 </button>
-                <span class="mt-2 flex shrink-0 gap-1"
+                <span class="mt-2 flex shrink-0 gap-0"
                   >{#each user.channels as channel (channel.platform)}
                     <button
                       type="button"
                       aria-label={`Open ${channel.platform === 'telegram' ? 'Telegram' : 'WhatsApp'} chat with ${user.name}`}
                       disabled={model.routing || !channel.available}
-                      class="flex size-9 items-center justify-center rounded-full hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-30"
+                      class="flex size-7 items-center justify-center rounded-full hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-30"
                       title={channel.checking
                         ? `Checking ${channel.platform}…`
                         : channel.available
