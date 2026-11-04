@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { beforeNavigate, goto } from '$app/navigation'
+import { onDestroy } from 'svelte'
 import { fade } from 'svelte/transition'
 // CONTEXT
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
@@ -74,8 +75,39 @@ type Props = {
 }
 
 let { appCtx, importCtx, pendingDrop, onCancel }: Props = $props()
+let disposed = false
+const validationReads = new Map<string, object>()
+onDestroy(() => {
+  disposed = true
+  validationReads.clear()
+})
 
-let lastProcessedDrop = $state<Props['pendingDrop']>(null)
+/**
+ * Captures ownership for an asynchronous validation or preload operation.
+ * @param key Independent operation family whose newest invocation owns publication.
+ * @returns Whether the operation still belongs to this mounted import and step.
+ */
+function beginValidationRead(key: string): () => boolean {
+  const operation = {}
+  validationReads.set(key, operation)
+  const data = importCtx.getData()
+  const columns = importCtx.getColumns()
+  const headers = importCtx.getHeaders()
+  const project = importCtx.getSelectedProject()
+  const step = importCtx.getCurrentStep()
+  const scope = appCtx.getRoleScopeQueryKey()
+  return () =>
+    !disposed &&
+    validationReads.get(key) === operation &&
+    importCtx.getData() === data &&
+    importCtx.getColumns() === columns &&
+    importCtx.getHeaders() === headers &&
+    importCtx.getSelectedProject() === project &&
+    importCtx.getCurrentStep() === step &&
+    appCtx.getRoleScopeQueryKey() === scope
+}
+
+let lastProcessedDrop = $state.raw<Props['pendingDrop']>(null)
 let propertyBackInspection = $state(false)
 
 // STATE :: FLOW ORCHESTRATION
@@ -93,6 +125,9 @@ const dataLabel = $derived(
 // STEP 1 :: COLUMN MAPPING
 let showEmptyColumnsModal = $state(false)
 let emptyColumnsErrors = $state<string[]>([])
+let layerLoadError = $state(false)
+let layerLoadPending = $state(false)
+let layerLoadRequest = 0
 // STEP 4 :: PROPERTY MATCHING
 let propertyAction: (() => void) | undefined = $state()
 let propertyActionLabel = $state('')
@@ -120,7 +155,11 @@ let featureResolutionFooterStatus = $state('')
 
 // Pending import work belongs to this flow and must finish or be explicitly cancelled first.
 beforeNavigate(navigation => {
-  if (!navigation.shallow && (translationIsProcessing || geoLookupIsBusy || featureResolutionIsProcessing)) navigation.cancel()
+  if (
+    !navigation.shallow &&
+    (translationIsProcessing || geoLookupIsBusy || featureResolutionIsProcessing)
+  )
+    navigation.cancel()
 })
 
 // STATE :: RESOURCE HIERACHY
@@ -183,9 +222,6 @@ async function handleFeaturesDropWrapper(
 ): Promise<void> {
   propertyBackInspection = false
   await handleCSVDropEvent(importCtx, event)
-  importCtx.setShowAssociationModal(false)
-  importCtx.setIsTypeSelected(true)
-  importCtx.setCurrentStep('column-mapping')
 }
 // Empty columns modal handlers
 function handleEditMapping(): void {
@@ -212,7 +248,6 @@ async function handleProjectSelectionWrapper(selectedProject: Resource): Promise
       importCtx.setIsTypeSelected(selected)
     },
   )
-  importCtx.state.showAssociationModal = false
 }
 
 async function onSearchParentOrganisations(
@@ -276,6 +311,7 @@ function onRemoveParentProject(): void {
 // Wrapper functions for service integration
 async function validateUsersWrapper(): Promise<void> {
   importCtx.setCurrentStep('user-matching')
+  const isCurrent = beginValidationRead('users')
 
   const userColumns = importCtx.getColumns().filter(col => col.modelType === 'User')
 
@@ -298,17 +334,21 @@ async function validateUsersWrapper(): Promise<void> {
       importCtx.getData(),
       importCtx.getHeaders(),
       (progress, total) => {
+        if (!isCurrent()) return
         const nextUserValidation = importCtx.getUserValidation()
         nextUserValidation.progress = progress
         nextUserValidation.total = total
         importCtx.setUserValidation(nextUserValidation)
       },
       results => {
+        if (!isCurrent()) return
         const nextUserValidation = importCtx.getUserValidation()
         nextUserValidation.results = results
         importCtx.setUserValidation(nextUserValidation)
       },
+      isCurrent,
     )
+    if (!isCurrent()) return
 
     const finalUserValidation = importCtx.getUserValidation()
     finalUserValidation.isValidating = false
@@ -326,6 +366,7 @@ async function validateUsersWrapper(): Promise<void> {
       })
     }
   } catch (error) {
+    if (!isCurrent()) return
     console.error('Error during user validation:', error)
     const finalUserValidation = importCtx.getUserValidation()
     finalUserValidation.isValidating = false
@@ -356,6 +397,7 @@ function canCompleteUserResolutionWrapper(): boolean {
 
 // Wrapper functions for service integration
 async function preloadLayersWrapper(): Promise<void> {
+  const isCurrent = beginValidationRead('preload-layers')
   const selectedProject = importCtx.getSelectedProject()
   if (!selectedProject) {
     importCtx.setAllLayers([])
@@ -364,14 +406,17 @@ async function preloadLayersWrapper(): Promise<void> {
   }
 
   try {
-    const layers = await preloadLayers(selectedProject.id)
+    const layers = await preloadLayers(selectedProject.id, isCurrent)
+    if (!isCurrent()) return
     importCtx.setAllLayers(layers)
     importCtx.setLayersLoaded(true)
     importCtx.setLayerSearchResults(layers)
   } catch (error) {
+    if (!isCurrent()) return
     console.error('Error preloading layers:', error)
     importCtx.setAllLayers([])
     importCtx.setLayersLoaded(false)
+    throw error
   }
 }
 
@@ -385,67 +430,93 @@ function canCompleteLayerResolutionWrapper(): boolean {
 
 async function validateLayersWrapper(): Promise<void> {
   importCtx.setCurrentStep('layer-matching')
+  const isCurrent = beginValidationRead('layers')
+  const request = ++layerLoadRequest
+  layerLoadError = false
+  layerLoadPending = true
 
-  // Preload layers for the project
-  if (!importCtx.getLayersLoaded()) {
+  try {
+    // Refresh once so matching and resolution choices share the current catalogue.
     await preloadLayersWrapper()
-  }
+    if (!isCurrent()) return
 
-  const layerColumns = importCtx.getColumns().filter(col => col.modelType === 'Layer')
+    const layerColumns = importCtx.getColumns().filter(col => col.modelType === 'Layer')
 
-  // If no layer columns, show layer selection modal
-  if (layerColumns.length === 0) {
+    // If no layer columns, show layer selection modal
+    if (layerColumns.length === 0) {
+      const layerValidation = importCtx.getLayerValidation()
+      // Retained selections must still exist in the refreshed authorized catalogue.
+      const selectedLayer = importCtx
+        .getAllLayers()
+        .find(layer => layer.id === layerValidation.fallbackLayerId)
+      importCtx.setSelectedLayer(selectedLayer ?? null)
+      layerValidation.fallbackLayerId = selectedLayer?.id
+      layerValidation.showLayerSelection = true
+      importCtx.setLayerValidation(layerValidation)
+      return
+    }
+
     const layerValidation = importCtx.getLayerValidation()
-    layerValidation.showLayerSelection = true
+    layerValidation.isValidating = true
+    layerValidation.progress = 0
+    layerValidation.results = []
     importCtx.setLayerValidation(layerValidation)
-    return
-  }
 
-  const layerValidation = importCtx.getLayerValidation()
-  layerValidation.isValidating = true
-  layerValidation.progress = 0
-  layerValidation.results = []
-  importCtx.setLayerValidation(layerValidation)
+    const selectedProject = importCtx.getSelectedProject()
+    if (!selectedProject) return
 
-  const selectedProject = importCtx.getSelectedProject()
-  if (!selectedProject) return
+    const { invalidCount, results } = await validateLayers(
+      layerColumns,
+      importCtx.getData(),
+      importCtx.getHeaders(),
+      selectedProject.id,
+      importCtx.getSelectedLocale() || 'en',
+      (progress, total) => {
+        if (!isCurrent()) return
+        const nextLayerValidation = importCtx.getLayerValidation()
+        nextLayerValidation.progress = progress
+        nextLayerValidation.total = total
+        importCtx.setLayerValidation(nextLayerValidation)
+      },
+      results => {
+        if (!isCurrent()) return
+        const nextLayerValidation = importCtx.getLayerValidation()
+        nextLayerValidation.results = results
+        importCtx.setLayerValidation(nextLayerValidation)
+      },
+      isCurrent,
+      importCtx.getAllLayers(),
+    )
+    if (!isCurrent()) return
 
-  const { invalidCount, results } = await validateLayers(
-    layerColumns,
-    importCtx.getData(),
-    importCtx.getHeaders(),
-    selectedProject.id,
-    importCtx.getSelectedLocale() || 'en',
-    (progress, total) => {
-      const nextLayerValidation = importCtx.getLayerValidation()
-      nextLayerValidation.progress = progress
-      nextLayerValidation.total = total
-      importCtx.setLayerValidation(nextLayerValidation)
-    },
-    results => {
-      const nextLayerValidation = importCtx.getLayerValidation()
-      nextLayerValidation.results = results
-      importCtx.setLayerValidation(nextLayerValidation)
-    },
-  )
+    const finalLayerValidation = importCtx.getLayerValidation()
+    finalLayerValidation.isValidating = false
+    importCtx.setLayerValidation(finalLayerValidation)
 
-  const finalLayerValidation = importCtx.getLayerValidation()
-  finalLayerValidation.isValidating = false
-  importCtx.setLayerValidation(finalLayerValidation)
-
-  if (invalidCount === 0) {
-    // Enrich feature data with validated layer IDs
-    enrichFeaturesWithLayerData(importCtx, results)
-    importCtx.setCurrentStep('property-matching')
-  } else {
-    // Prepare layer resolution data but don't automatically show the resolution interface
-    // User needs to click "Resolve Invalid Layers" button to enter resolution mode
-    importCtx.setLayerResolution({
-      invalidValues: results
-        .filter(result => !result.isValid)
-        .map(result => result.value),
-      resolutions: new Map(),
-    })
+    if (invalidCount === 0) {
+      // Enrich feature data with validated layer IDs
+      enrichFeaturesWithLayerData(importCtx, results)
+      importCtx.setCurrentStep('property-matching')
+    } else {
+      // Prepare layer resolution data but don't automatically show the resolution interface
+      // User needs to click "Resolve Invalid Layers" button to enter resolution mode
+      importCtx.setLayerResolution({
+        invalidValues: results
+          .filter(result => !result.isValid)
+          .map(result => result.value),
+        resolutions: new Map(),
+      })
+    }
+  } catch (error) {
+    if (!isCurrent()) return
+    console.error('Error loading layers for validation:', error)
+    layerLoadError = true
+    importCtx.setAllLayers([])
+    importCtx.setLayerSearchResults([])
+    importCtx.setLayersLoaded(false)
+    importCtx.updateLayerValidation({ isValidating: false })
+  } finally {
+    if (request === layerLoadRequest) layerLoadPending = false
   }
 }
 
@@ -545,6 +616,7 @@ function handleContinue(): void {
       void validateLayersWrapper()
     }
   } else if (currentStep === 'layer-matching') {
+    if (layerLoadError || layerLoadPending) return
     propertyBackInspection = false
     if (importCtx.getLayerValidation().showLayerSelection) {
       enrichFeaturesWithLayerData(importCtx, [])
@@ -655,7 +727,7 @@ $effect(() => {
 {#snippet featureResolutionStatsAction()}
   <div class="flex items-center gap-4">
     <div
-      class="font-mono text-sm font-semibold uppercase tracking-[0.22em] text-warning"
+      class="text-warning font-mono text-sm font-semibold tracking-[0.22em] uppercase"
     >
       {m.feature_import__resolution_update_policy()}
     </div>
@@ -709,7 +781,20 @@ $effect(() => {
         {:else if currentStep === 'user-matching'}
           <ImportPrimitive.UserMatchingStep {importCtx} />
         {:else if currentStep === 'layer-matching'}
-          <ImportPrimitive.LayerMatchingStep {importCtx} />
+          {#if layerLoadError}
+            <div role="alert" class="space-y-3 p-4">
+              <p>Could not load layers. Retry before continuing.</p>
+              <button
+                type="button"
+                class="btn btn-outline"
+                onclick={() => void validateLayersWrapper()}
+              >
+                Retry loading layers
+              </button>
+            </div>
+          {:else}
+            <ImportPrimitive.LayerMatchingStep {importCtx} />
+          {/if}
         {:else if currentStep === 'property-matching'}
           <ImportPrimitive.PropertyReconciliationStep
             autoAdvance={!propertyBackInspection}
@@ -753,7 +838,11 @@ $effect(() => {
       </ImportPrimitive.ImportStep>
     </ImportPrimitive.Body>
 
-    <ImportPrimitive.Footer {...footerProps} />
+    <ImportPrimitive.Footer
+      {...footerProps}
+      continueDisabled={footerProps.continueDisabled ||
+        (currentStep === 'layer-matching' && (layerLoadError || layerLoadPending))}
+    />
   </ImportPrimitive.Root>
 </div>
 
