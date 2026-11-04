@@ -43,8 +43,8 @@ describe('shared address parsing and local source overlays', () => {
       address2dId: null,
       address3dId: null,
       address3dUnitId: null,
-      addressSnapshotId: null,
-      records: {},
+      snapshotId: null,
+      rawSource: {},
       fallbackDisplay: {},
       authored,
     }
@@ -65,20 +65,20 @@ describe('shared address parsing and local source overlays', () => {
       authored: undefined,
       status: 'resolved' as const,
       address2dId: 'new-address',
-      addressSnapshotId: 'snapshot',
-      records: { retained: 'evidence' },
+      snapshotId: 'snapshot',
+      rawSource: { retained: 'evidence' },
     }
     const projection = {
       facts: { ...facts, location: { ...facts.location, address: canonical } },
-      payload: { resource: { id: 'source' } },
+      rawSource: { resource: { id: 'source' } },
     } as unknown as SaanSeoiPlaceProjection
     const result = retainAuthoredAddress(projection, {
       facts,
-      payload: { localAddress: { actorId: 'author' } },
+      rawSource: { localAddress: { actorId: 'author' } },
     })
     expect(result.facts.location.address.authored).toEqual(authored)
-    expect(result.payload.sourceAddress).toEqual(canonical)
-    expect(result.payload.resource).toEqual(projection.payload.resource)
+    expect(result.rawSource.sourceAddress).toEqual(canonical)
+    expect(result.rawSource.resource).toEqual(projection.rawSource.resource)
     expect(projection.facts.location.address).toEqual(canonical)
   })
 })
