@@ -16,7 +16,7 @@ let sqlite: DatabaseSync
 let db: Database
 const settings: ThemePreferences = {
   uiTheme: 'hype-light',
-  mapStyle: 'hyperLight',
+  mapStyle: 'hype-light',
   syncUiAndMap: true,
   useActiveMapStyle: true,
 }
