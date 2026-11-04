@@ -14,7 +14,7 @@ it('copies structured geocoder content without canonical IDs and retains the ori
   const original = emptyFeatureAddress({ en: 'Shop 18, G/F, Example Road' })
   const geocoded = emptyFeatureAddress({ en: '12 Example Road' })
   geocoded.source.authored = {
-    granularity: 'building',
+    scope: 'building',
     i18n: {
       en: {
         formattedAddress: '12 Example Road',
