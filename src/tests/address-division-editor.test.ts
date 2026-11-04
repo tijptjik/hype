@@ -5,15 +5,22 @@ import {
   effectiveAddressDivisions,
   orderAddressDivisions,
 } from '#lib/addresses/divisions.js'
+import { localAddressContent, localAddressDraft } from '#lib/addresses/locationDraft.js'
 import {
   createLocalLocationAddress,
   LocalLocationAddressSchema,
 } from '#lib/addresses/localLocationAddress.js'
 import {
+  setAddressExpression,
+  setStructuredAddressExpression,
+} from '#lib/addresses/addressExpressions.js'
+import {
   emptyFeatureAddress,
   FeatureAddressSchema,
+  getAddressDisplay,
 } from '#lib/addresses/featureAddress.js'
 import { LocationFactsSchema } from '#lib/locations/validation.js'
+import { addressComponentValue } from '#lib/addresses/presentation.js'
 import type {
   AddressDivision,
   AddressDivisionContext,
@@ -90,29 +97,27 @@ describe('marker-derived geography and subjective address choices', () => {
       expect(
         AddressDivisionOverridesSchema.safeParse({ [key]: 'invented' }).success,
       ).toBe(false)
-    expect(AddressDivisionOverridesSchema.parse({ neighbourhoodId: other.id })).toEqual(
-      { neighbourhoodId: other.id },
-    )
+    expect(AddressDivisionOverridesSchema.parse({ localityPath: [other.id] })).toEqual({
+      localityPath: [other.id],
+    })
   })
   it('replaces or omits a hood while factual geography stays fixed', () => {
     expect(
-      effectiveAddressDivisions(context, { neighbourhoodId: other.id }).map(
+      effectiveAddressDivisions(context, { localityPath: [other.id] }).map(
         item => item.id,
       ),
     ).toEqual([other.id, district.id, island.id])
     expect(
-      effectiveAddressDivisions(context, { neighbourhoodId: null }).map(
-        item => item.id,
-      ),
+      effectiveAddressDivisions(context, { localityPath: [] }).map(item => item.id),
     ).toEqual([district.id, island.id])
     expect(
-      effectiveAddressDivisions(context, { neighbourhoodId: district.id }).map(
+      effectiveAddressDivisions(context, { localityPath: [district.id] }).map(
         item => item.id,
       ),
     ).toEqual([district.id, island.id])
   })
   it('keeps From marker dynamic across moves, instead of freezing the old membership', () => {
-    const reset = { neighbourhoodId: { mode: 'marker' as const } }
+    const reset = { localityPath: null }
     expect(effectiveAddressDivisions(context, reset)).toContain(hood)
     const moved = { ...context, memberships: [district, island, other] }
     expect(effectiveAddressDivisions(moved, reset)).toContain(other)
@@ -130,5 +135,112 @@ describe('marker-derived geography and subjective address choices', () => {
     expect(
       orderAddressDivisions([country, minor, district, area]).map(item => item.id),
     ).toEqual([minor.id, district.id, area.id, country.id])
+  })
+})
+
+describe('shared Location/Feature expression editor round trips', () => {
+  it('preserves unparsed address text through a partial component correction', () => {
+    const content = createLocalLocationAddress({
+      en: 'Virtue Court, Man Mo Temple, 130 Hollywood Rd',
+    })
+    const draft = setAddressExpression(
+      localAddressDraft(content),
+      'en',
+      'buildingNumberExpression',
+      '140-142',
+    )
+    expect(getAddressDisplay(draft, 'en')).toBe(content.i18n.en.formattedAddress)
+    const saved = localAddressContent(draft)
+    expect(getAddressDisplay(localAddressDraft(saved), 'en')).toBe(
+      content.i18n.en.formattedAddress,
+    )
+    expect(saved.i18n.en.buildingNumberFrom).toBe('140')
+  })
+  it('combines stored number endpoints into one field and saves parsed changes in all languages', () => {
+    const content = createLocalLocationAddress()
+    content.i18n = {
+      en: {
+        formattedAddress: '',
+        streetName: 'Hollywood Road',
+        buildingNumberFrom: '130',
+        buildingNumberTo: '132',
+      },
+      'zh-hant': { formattedAddress: '', streetName: '荷李活道' },
+    }
+    const original = structuredClone(content)
+    let draft = localAddressDraft(content)
+    expect(addressComponentValue(draft, 'en', 'buildingNumberExpression')).toBe(
+      '130-132',
+    )
+    draft = setAddressExpression(draft, 'en', 'buildingNumberExpression', '140-142')
+    const saved = localAddressContent(draft)
+    expect(saved.i18n.en).toMatchObject({
+      buildingNumberFrom: '140',
+      buildingNumberTo: '142',
+      buildingNumberExpression: '140-142',
+    })
+    expect(saved.i18n['zh-hant']).toMatchObject({
+      streetName: '荷李活道',
+      buildingNumberFrom: '140',
+    })
+    expect(getAddressDisplay(localAddressDraft(saved), 'en')).toBe(
+      '140-142 Hollywood Road',
+    )
+    expect(content).toEqual(original)
+  })
+  it('saves floor/unit semantics and translated expressions without source inventory identities', () => {
+    const content = createLocalLocationAddress({ en: 'Example Road' })
+    let draft = localAddressDraft(content)
+    draft = setStructuredAddressExpression(draft, 'en', 'floorExpression', '3/F')
+    draft = setStructuredAddressExpression(draft, 'en', 'unitExpression', 'Shop A')
+    const saved = localAddressContent(draft)
+    expect(saved.unit).toMatchObject({
+      floorRef: '3',
+      floorType: 'F',
+      unitRef: 'A',
+      unitType: 'S',
+    })
+    expect(saved.unitI18n['zh-hant'].floorExpression).toBeTruthy()
+    expect(saved).not.toHaveProperty('address3dUnitId')
+    expect(getAddressDisplay(localAddressDraft(saved), 'en')).toContain('Shop A')
+  })
+  it('removes factual authored IDs and resets inherited subjective IDs without storing fake IDs', () => {
+    const content = createLocalLocationAddress()
+    Object.assign(content, {
+      countryId: 'country',
+      areaId: 'area',
+      districtId: 'district',
+      islandId: 'island',
+      neighbourhoodId: hood.id,
+    })
+    const draft = localAddressDraft(content)
+    draft.divisionOverrides = { localityPath: null }
+    const saved = localAddressContent(draft)
+    for (const field of [
+      'countryId',
+      'areaId',
+      'districtId',
+      'islandId',
+      'neighbourhoodId',
+    ])
+      expect(saved).not.toHaveProperty(field)
+  })
+  it('retains other-language names while changing one locale and derives block ordering', () => {
+    const content = createLocalLocationAddress()
+    content.i18n = {
+      en: {
+        formattedAddress: '',
+        buildingName: 'Old House',
+        blockRef: 'A',
+        blockType: 'block',
+      },
+      'zh-hant': { formattedAddress: '', buildingName: '舊大廈' },
+    }
+    let draft = localAddressDraft(content)
+    expect(addressComponentValue(draft, 'en', 'blockExpression')).toBe('Block A')
+    draft = setAddressExpression(draft, 'en', 'buildingName', 'New House')
+    const saved = localAddressContent(draft)
+    expect(saved.i18n['zh-hant'].buildingName).toBe('舊大廈')
+    expect(saved.i18n.en.buildingName).toBe('New House')
   })
 })
