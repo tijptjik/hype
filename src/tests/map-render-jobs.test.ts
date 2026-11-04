@@ -40,19 +40,19 @@ describe('map render job helpers', () => {
   })
 
   it('builds queue payloads for map style previews', () => {
-    expect(buildMapStyleRenderUrl('https://preview.hype.hk', 'hyper')).toBe(
-      'https://preview.hype.hk/headless/map-style-render/hyper?lng=114.16834&lat=22.32412&zoom=17.83&bearing=15.2&pitch=0.5',
+    expect(buildMapStyleRenderUrl('https://preview.hype.hk', 'hype-dark')).toBe(
+      'https://preview.hype.hk/headless/map-style-render/hype-dark?lng=114.16834&lat=22.32412&zoom=17.83&bearing=15.2&pitch=0.5',
     )
 
     expect(
-      buildMapStyleMapRenderJob('https://preview.hype.hk', 'hyper', 'style-hash'),
+      buildMapStyleMapRenderJob('https://preview.hype.hk', 'hype-dark', 'style-hash'),
     ).toEqual({
       kind: 'styles',
-      identifier: 'hyper',
+      identifier: 'hype-dark',
       hash: 'style-hash',
       sourceUrl:
-        'https://preview.hype.hk/headless/map-style-render/hyper?lng=114.16834&lat=22.32412&zoom=17.83&bearing=15.2&pitch=0.5',
-      targetObjectKey: 'mapRender/styles/hyper/style-hash.png',
+        'https://preview.hype.hk/headless/map-style-render/hype-dark?lng=114.16834&lat=22.32412&zoom=17.83&bearing=15.2&pitch=0.5',
+      targetObjectKey: 'mapRender/styles/hype-dark/style-hash.png',
     })
   })
 })
