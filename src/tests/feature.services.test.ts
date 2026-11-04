@@ -188,6 +188,7 @@ describe('feature service property normalization', () => {
   it('preserves loaded translatable feature-property values in form input', () => {
     const formInput = toFeatureFormInput({
       id: 'feature-1',
+      localLocationBrands: null,
       organisationId: 'org-1',
       projectId: 'project-1',
       layerId: 'layer-1',
@@ -235,6 +236,7 @@ describe('feature service property normalization', () => {
   it('accepts blank feature-property locale values in admin profiles', () => {
     const parsed = FeatureAdminProfileAPI.safeParse({
       id: 'feature-1',
+      localLocationBrands: null,
       organisationId: 'org-1',
       projectId: 'project-1',
       layerId: 'layer-1',
