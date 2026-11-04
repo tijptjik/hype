@@ -6,6 +6,8 @@ import { getLocaleKey, m, translateText, toLocaleKey } from '#lib/i18n.js'
 // COMPONENTS
 import AddressDisplayField from './AddressDisplayField.svelte'
 import FormI18nTranslationBar from '../formI18nSection/components/FormI18nTranslationBar.svelte'
+import LockIcon from 'virtual:icons/lucide/lock-keyhole'
+import UnlockIcon from 'virtual:icons/lucide/lock-keyhole-open'
 import AddressNamePicker from './AddressNamePicker.svelte'
 import { loadAddressNames, setAddressName } from '#lib/addresses/nameCatalogue.js'
 import { ADDRESS_BLOCK_TYPES } from '@saanseoi/address/content'
@@ -29,6 +31,7 @@ import {
   ADDRESS_LOCALES,
   getAddressDisplay,
   getAddressLocale,
+  setAddressOverride,
 } from '#lib/addresses/featureAddress.js'
 import { addressComponentValue } from '#lib/addresses/presentation.js'
 import {
@@ -369,13 +372,62 @@ onMount(() => {
                   />
                 {/if}
                 {#if field === 'formattedAddress'}
-                  <AddressDisplayField
-                    {address}
-                    {locale}
-                    {isEditing}
-                    showLocale={translations}
-                    {onChange}
-                  />
+                  {#if translations}
+                    <AddressDisplayField
+                      {address}
+                      {locale}
+                      {isEditing}
+                      showLocale={translations}
+                      {onChange}
+                    />
+                  {:else}
+                    {@const unlocked = Object.hasOwn(
+                      address.overrides[ADDRESS_LOCALES[locale]] ?? {},
+                      'formattedAddress',
+                    )}
+                    <div class="flex min-w-0 flex-1 items-center gap-2">
+                      <input
+                        aria-label={translations
+                          ? `${labels[field]} · ${ADDRESS_LOCALES[locale]}`
+                          : labels[field]}
+                        {value}
+                        readonly={!unlocked}
+                        class="border-border bg-input read-only:bg-panel min-w-0 flex-1 rounded-md border px-3 py-2 text-base font-medium"
+                        oninput={event =>
+                          onChange(
+                            setAddressOverride(
+                              address,
+                              locale,
+                              field,
+                              event.currentTarget.value,
+                            ),
+                          )}
+                      >
+                      <button
+                        type="button"
+                        aria-label={unlocked
+                          ? m.address_display_lock()
+                          : m.address_display_unlock()}
+                        aria-pressed={unlocked}
+                        class="border-border hover:bg-muted rounded-md border p-2"
+                        onclick={() =>
+                          onChange(
+                            setAddressOverride(
+                              address,
+                              locale,
+                              field,
+                              unlocked ? undefined : value,
+                            ),
+                          )}
+                      >
+                        {#if unlocked}
+                          <UnlockIcon class="size-4" />
+                        {:else}
+                          <LockIcon class="size-4" />
+                        {/if}
+                      </button>
+                    </div>
+                  {/if}
                 {:else if field === 'streetName' || field === 'buildingName'}
                   <AddressNamePicker
                     {locale}
