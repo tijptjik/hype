@@ -447,3 +447,22 @@ names, policy locks, translation concurrency and applying translated values belo
 there. Other resource editors can reuse the shared controls without adopting those
 Feature rules. These are app-owned Bits patterns, not wrappers around a nonexistent
 Bits UI multilingual-field primitive.
+
+## Messaging contact settings
+
+The Settings panel places Messaging between Language and Theme. Each platform uses
+one phone-or-username field in `UserMessagingSettings`; `contactInput.ts` normalizes
+eight-digit Hong Kong numbers to +852 and validates international numbers and usernames.
+`useUserMessagingSettingsModel` waits for eight national phone digits or four username
+characters (excluding @) before starting its 400 ms typing debounce; blur validates the
+current draft immediately. It serializes saves per platform, preserves the other field's
+draft and rejects obsolete lookup results. Warning icons
+explain invalid input or failed confirmation and allow retry; confirmed accounts show
+a checkmark. The platform preference appears only when both contacts have been saved.
+
+`checkUserMessagingIdentity` checks an exact saved revision through an organisation
+account the actor may already access. It returns no provider profile data and does not
+send messages or grant ownership verification. Missing provider access and private or
+unresolved contacts produce warnings. WhatsApp usernames can be retained, but its
+current bridge can confirm phone numbers only. Administrator ownership verification
+remains a separate action.

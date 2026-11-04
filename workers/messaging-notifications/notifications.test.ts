@@ -1,4 +1,5 @@
 // Synthetic SQLite and push transport; these tests never contact a messaging account or push vendor.
+import { readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import MessagingNotifications, { NotificationDelivery, validEndpoint } from './index'
@@ -76,19 +77,33 @@ beforeEach(async () => {
   }
   db = sqlite()
   db.exec(`
-    CREATE TABLE user(id TEXT PRIMARY KEY,isAnonymous INT DEFAULT 0,isArchived INT DEFAULT 0,telephone TEXT);
+    PRAGMA foreign_keys=ON;
+    CREATE TABLE user(id TEXT PRIMARY KEY,isAnonymous INT DEFAULT 0,isArchived INT DEFAULT 0,telephone TEXT,updatedAt INT NOT NULL DEFAULT 0);
     CREATE TABLE organisation(id TEXT PRIMARY KEY,hubId TEXT,isArchived INT DEFAULT 0);
     CREATE TABLE organisationRole(organisationId TEXT,userId TEXT,role TEXT);
     CREATE TABLE hubRole(hubId TEXT,userId TEXT,role TEXT);
     CREATE TABLE hub(id TEXT,code TEXT);
-    CREATE TABLE messagingAccount(id TEXT,organisationId TEXT,platform TEXT,bridgeAccountId TEXT,enabled INT,externalAccountId TEXT);
-    CREATE TABLE userMessagingIdentity(userId TEXT,platform TEXT,address TEXT,verifiedAt INT,sourceTelephone TEXT);
-    CREATE TABLE messagingConversation(accountId TEXT,chatId TEXT,recipientUserId TEXT);
     INSERT INTO user(id) VALUES ('operator'),('recipient');
     INSERT INTO organisation(id,hubId) VALUES ('org','hub'),('other','hub');
     INSERT INTO organisationRole VALUES ('org','operator','member'),('other','operator','member');
-    INSERT INTO messagingAccount VALUES ('account','org','telegram','bridge',1,'native');
-    INSERT INTO userMessagingIdentity VALUES ('recipient','telegram','42',1,NULL);
+  `)
+  for (const name of [
+    '0160_organisation_messaging',
+    '0161_messaging_phone_discovery',
+    '0162_messaging_phone_lookup',
+    '0163_messaging_conversation_archive',
+    '0164_messaging_native_archive',
+    '0165_user_messaging_identifiers',
+    '0166_messaging_discovered_phone_format',
+  ])
+    db.exec(
+      readFileSync(new URL(`../../migrations/${name}.sql`, import.meta.url), 'utf8'),
+    )
+  db.exec(`
+    INSERT INTO messagingAccount(id,organisationId,platform,bridgeAccountId,enabled,externalAccountId,createdAt,updatedAt)
+    VALUES ('account','org','telegram','bridge',1,'native',1,1);
+    INSERT INTO userMessagingIdentity(userId,platform,nativeId,verifiedAt,updatedAt)
+    VALUES ('recipient','telegram','42',1,1);
   `)
   instances = new Map()
   messages = []
@@ -176,6 +191,55 @@ it('delivers only new unread HYPE-user messages and deduplicates later receipt r
   messages = [message('new', 7)]
   await delivery().alarm()
   expect(sendPush).toHaveBeenCalledTimes(1)
+})
+
+it('delivers through a verified provider alias while preserving the existing conversation route', async () => {
+  db.exec(`
+    UPDATE messagingAccount SET platform='whatsapp';
+    DELETE FROM userMessagingIdentity;
+    INSERT INTO userMessagingIdentity(userId,platform,phoneNumber,username,nativeId,verifiedAt,updatedAt)
+    VALUES ('recipient','whatsapp','+85291234567','recipient','85291234567@s.whatsapp.net',1,1);
+    INSERT INTO userMessagingIdentityAlias VALUES ('recipient','whatsapp','123456789@lid');
+    INSERT INTO messagingConversation(id,accountId,chatId,recipientUserId)
+    VALUES ('thread','account','123456789@lid','recipient');
+  `)
+  environment.WHATSOVER.snapshot = environment.TELEGRAM.snapshot
+  await worker.subscribe('operator', 'org', subscription, 'https://hype.example')
+  messages = [message('alias', 1, { chat: '123456789@lid' })]
+  await delivery().alarm()
+  expect(sendPush).toHaveBeenCalledTimes(1)
+  expect(
+    db
+      .prepare('SELECT accountId,chatId,recipientUserId FROM messagingConversation')
+      .get(),
+  ).toEqual({
+    accountId: 'account',
+    chatId: '123456789@lid',
+    recipientUserId: 'recipient',
+  })
+})
+
+it.each([
+  ['revoked verification', 'UPDATE userMessagingIdentity SET verifiedAt=NULL'],
+  [
+    'stale discovery',
+    "UPDATE userMessagingIdentity SET sourceTelephone='+85291234567'; UPDATE user SET telephone='+85291234568' WHERE id='recipient'",
+  ],
+  ['archived recipient', "UPDATE user SET isArchived=1 WHERE id='recipient'"],
+  ['anonymous recipient', "UPDATE user SET isAnonymous=1 WHERE id='recipient'"],
+  [
+    'another thread owner',
+    "INSERT INTO messagingConversation(id,accountId,chatId,recipientUserId) VALUES ('thread','account','43','operator')",
+  ],
+  ['another platform', "UPDATE messagingAccount SET platform='whatsapp'"],
+])('rejects alias notifications for %s', async (_label, change) => {
+  db.exec("INSERT INTO userMessagingIdentityAlias VALUES ('recipient','telegram','43')")
+  db.exec(change)
+  environment.WHATSOVER.snapshot = environment.TELEGRAM.snapshot
+  await worker.subscribe('operator', 'org', subscription, 'https://hype.example')
+  messages = [message('guarded-alias', 1, { chat: '43' })]
+  await delivery().alarm()
+  expect(sendPush).not.toHaveBeenCalled()
 })
 
 it('retries a failed subscriber without delaying or duplicating successful subscribers', async () => {

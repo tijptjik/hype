@@ -223,6 +223,7 @@ it('ignores obsolete HYPE-user search responses and clears results on organisati
       name: 'Old result',
       username: 'old',
       image: null,
+      preferredPlatform: null,
       platform: 'telegram',
       accountId: 'a',
       chatId: '42',
@@ -240,6 +241,7 @@ it('ignores obsolete HYPE-user search responses and clears results on organisati
       name: 'New result',
       username: 'new',
       image: null,
+      preferredPlatform: null,
       platform: 'telegram',
       accountId: 'a',
       chatId: '43',
@@ -308,6 +310,7 @@ it('shows directory results while a provider is slow and ignores obsolete accoun
       name: 'Person',
       username: 'person',
       image: null,
+      preferredPlatform: null,
       platform: 'telegram',
       accountId: 'a',
       chatId: null,
@@ -427,4 +430,43 @@ it('uses the native acknowledgment when another client changes the folder during
   expect(model.conversations).toHaveLength(1)
   expect(model.selected?.key).toBe('a:42')
   expect(model.error).toBe('')
+})
+
+it('retains the saved platform preference when asynchronous availability checks finish', async () => {
+  const pending = (['whatsapp', 'telegram'] as const).map(platform => ({
+    platform,
+    accountId: platform,
+    chatId: null,
+    available: false,
+    unavailableReason: 'Checking…',
+    checking: true,
+  }))
+  mock.search.mockResolvedValue([
+    {
+      userId: 'person',
+      name: 'Person',
+      username: 'person',
+      image: null,
+      preferredPlatform: 'telegram',
+      ...pending[1],
+      channels: pending,
+    },
+  ])
+  mock.check.mockImplementation(async ({ platform }) => ({
+    platform,
+    accountId: platform,
+    chatId: '42',
+    available: true,
+    unavailableReason: null,
+    checking: false,
+  }))
+  const model = setup(['a'])
+  await waitFor(() => expect(model.selectedOrganisation).toBe('a'))
+  flushSync(() => {
+    model.search = 'person'
+  })
+  await waitFor(() =>
+    expect(model.results[0]?.channels.every(channel => channel.available)).toBe(true),
+  )
+  expect(model.results[0].platform).toBe('telegram')
 })

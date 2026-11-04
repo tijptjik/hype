@@ -278,8 +278,17 @@ export class NotificationDelivery extends DurableObject<Env> {
               ['protocol', 'reaction'].includes(message.content?.kind ?? '')
             )
               continue
+            // Resolve verified provider aliases while retaining provenance and existing thread ownership.
             const recipient = await this.env.DB.prepare(
-              `SELECT u.id FROM userMessagingIdentity i JOIN user u ON u.id=i.userId LEFT JOIN messagingConversation c ON c.accountId=? AND c.chatId=i.address WHERE i.platform=? AND i.address=? AND i.verifiedAt IS NOT NULL AND (i.sourceTelephone IS NULL OR i.sourceTelephone=u.telephone) AND u.isArchived=0 AND u.isAnonymous=0 AND (c.recipientUserId IS NULL OR c.recipientUserId=u.id)`,
+              `SELECT u.id
+               FROM userMessagingIdentityAlias alias
+               JOIN userMessagingIdentity i ON i.userId=alias.userId AND i.platform=alias.platform
+               JOIN user u ON u.id=i.userId
+               LEFT JOIN messagingConversation c ON c.accountId=? AND c.chatId=alias.nativeId
+               WHERE alias.platform=? AND alias.nativeId=? AND i.verifiedAt IS NOT NULL
+                 AND (i.sourceTelephone IS NULL OR i.sourceTelephone=u.telephone)
+                 AND u.isArchived=0 AND u.isAnonymous=0
+                 AND (c.recipientUserId IS NULL OR c.recipientUserId=u.id)`,
             )
               .bind(account.id, account.platform, message.chat)
               .first()

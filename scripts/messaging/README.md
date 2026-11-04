@@ -2,7 +2,7 @@
 
 Search reads HYPE users and fresh availability from D1 immediately. The UI checks both platforms for uncached users independently with up to three concurrent requests. A result is scoped to the organisation account, its external identity, the user and the exact saved phone. A changed number or linked account invalidates it. Positive results expire after seven days; negative and privacy-unresolved results after one day; temporary failures after one minute. Verified manual identities remain authoritative.
 
-Apply `migrations/0162_messaging_phone_lookup.sql` through the normal migration workflow first. No credentials belong in this directory.
+First apply the messaging migrations up to `migrations/0166_messaging_discovered_phone_format.sql` using the normal migration workflow. The backfill uses the separate identifiers and verified aliases introduced in `0165_user_messaging_identifiers.sql`; see [the identity model](../../docs/Messaging-Identity-Model.md). No credentials belong in this directory.
 
 The backfill currently supports **local D1 and local bridges only**. Start the local WhatsApp/Telegram bridges, then run from the HYPE checkout:
 
@@ -10,7 +10,7 @@ The backfill currently supports **local D1 and local bridges only**. Start the l
 bun scripts/messaging/backfill-phone-lookups.ts --organisation hkfoodworks --database /absolute/path/to/local.sqlite --limit 50
 ```
 
-This defaults to a dry run. Add `--apply` to check and persist the bounded batch. It checks both WhatsApp and Telegram independently, skips valid verified identities and fresh cache entries, waits 500 ms between checks, and stops on a temporary provider failure. Rerun to continue. Limits are 1–500 per invocation. Output contains aggregate counts only.
+This defaults to a dry run. Add `--apply` to check and persist the bounded batch. It checks both WhatsApp and Telegram independently, skips pending manual claims, valid verified identities and fresh cache entries, waits 500 ms between checks, and stops on a temporary provider failure. Native ID claims, verified aliases and existing conversation owners prevent cross-user discovery. Rerun to continue. Limits are 1–500 per invocation. Output contains aggregate counts only.
 
 The script only writes `messagingPhoneLookup`; it does not send messages, create conversations, import contacts, or write verified identity associations. Telegram resolution can be limited by privacy settings. A cached registration check establishes availability, not ownership. Conversation opening still enforces identity uniqueness and recipient association.
 

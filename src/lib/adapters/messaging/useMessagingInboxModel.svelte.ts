@@ -245,6 +245,7 @@ export function useMessagingInboxModel() {
                             value.channels.map(channel =>
                               channel.platform === row.platform ? checked : channel,
                             ),
+                            value.preferredPlatform,
                           ),
                         }
                       : value,
@@ -267,6 +268,7 @@ export function useMessagingInboxModel() {
                                   }
                                 : channel,
                             ),
+                            value.preferredPlatform,
                           ),
                         }
                       : value,

@@ -22,6 +22,11 @@ import { canManageOrganisationMessaging } from '#lib/api/services/authz/messagin
 import { canUpdateUserProfile } from '#lib/api/services/authz/user.js'
 import { findQuotedMessage, validTextQuote } from '#lib/messaging/quoted-message.js'
 import { messagingAvailability } from '#lib/messaging/availability.js'
+import {
+  isMessagingNativeId,
+  messagingIdentityLookups,
+  normalizeMessagingIdentity,
+} from '#lib/messaging/identity.js'
 import { normalizeTelephone } from '#lib/utils/telephone.js'
 import { isCoreHubAdmin } from '#lib/api/services/authz/hub.js'
 // DB
@@ -33,13 +38,14 @@ import {
   messagingSend,
   organisation,
   user,
-  userMessagingPreference,
   userMessagingIdentity,
+  userMessagingIdentityAlias,
 } from '#lib/db/schema/index.js'
 // TYPES
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
 import type { MessagingAccount } from '#lib/db/services/messaging.js'
 import type { TelegramBinding } from '#lib/messaging/binding.js'
+import type { MessagingAvailability } from '#lib/messaging/availability.js'
 import type {
   BridgeDialogPage,
   BridgeHistoryPage,
@@ -47,6 +53,7 @@ import type {
   BridgeSnapshot,
   BridgeStatus,
   LoginInput,
+  MessagingPlatform,
 } from '#lib/messaging/types.js'
 
 // +++ Table Of Contents
@@ -91,14 +98,29 @@ import type {
 // - getUserMessagingSettings
 // - setUserMessagingPreference
 // - setUserMessagingIdentity
+// - checkUserMessagingIdentity
 // - verifyUserMessagingIdentity
 // - openUserMessagingConversation
 // ---
 
 const meta = z.object({ isAdminRequest: z.literal(true) })
+type MessagingDirectoryEntry = MessagingAvailability & {
+  userId: string
+  name: string | null
+  username: string
+  image: string | null
+  preferredPlatform: MessagingPlatform | null
+}
 const id = z.string().min(1).max(100)
 const accountInput = z.object({ meta, accountId: id })
 const viewerInput = accountInput.extend({ tabId: z.string().uuid() })
+const identityFieldsInput = z
+  .object({
+    phoneNumber: z.string().trim().max(100).nullable(),
+    username: z.string().trim().max(100).nullable(),
+    nativeId: z.string().trim().max(100).nullable(),
+  })
+  .strict()
 const target = z.object({ id: z.string().min(1).max(128), sender: id }).strict()
 const login = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('qr') }),
@@ -622,10 +644,17 @@ export const getMessagingConversations = guardedQuery(
         eq(messagingAccount.id, messagingConversation.accountId),
       )
       .innerJoin(
+        userMessagingIdentityAlias,
+        and(
+          eq(userMessagingIdentityAlias.platform, account.platform),
+          eq(userMessagingIdentityAlias.nativeId, messagingConversation.chatId),
+        ),
+      )
+      .innerJoin(
         userMessagingIdentity,
         and(
-          eq(userMessagingIdentity.platform, account.platform),
-          eq(userMessagingIdentity.address, messagingConversation.chatId),
+          eq(userMessagingIdentity.platform, userMessagingIdentityAlias.platform),
+          eq(userMessagingIdentity.userId, userMessagingIdentityAlias.userId),
           isNotNull(userMessagingIdentity.verifiedAt),
         ),
       )
@@ -1191,10 +1220,10 @@ export const searchMessagingUsers = guardedQuery(
     )
     return whatsapp.map(row => ({
       ...row,
-      ...messagingAvailability([
-        row,
-        telegram.find(value => value.userId === row.userId)!,
-      ]),
+      ...messagingAvailability(
+        [row, telegram.find(value => value.userId === row.userId)!],
+        row.preferredPlatform,
+      ),
     }))
   },
 )
@@ -1211,7 +1240,7 @@ async function searchMessagingPlatform(
   organisationId: string,
   search: string,
   platform: 'whatsapp' | 'telegram',
-) {
+): Promise<MessagingDirectoryEntry[]> {
   const pattern = `%${search.replace(/^@/, '').replace(/[!%_]/g, character => `!${character}`)}%`
   const effectivePlatform = sql<'whatsapp' | 'telegram'>`${platform}`
   const rows = await ctx.db
@@ -1221,8 +1250,12 @@ async function searchMessagingPlatform(
       username: user.username,
       image: user.image,
       telephone: user.telephone,
+      preferredPlatform: user.preferredMessagingPlatform,
       platform: effectivePlatform,
-      address: userMessagingIdentity.address,
+      address: userMessagingIdentity.nativeId,
+      identityUserId: userMessagingIdentity.userId,
+      verifiedAt: userMessagingIdentity.verifiedAt,
+      sourceTelephone: userMessagingIdentity.sourceTelephone,
       accountId: messagingAccount.id,
       externalAccountId: messagingAccount.externalAccountId,
       enabled: messagingAccount.enabled,
@@ -1237,11 +1270,6 @@ async function searchMessagingPlatform(
       and(
         eq(userMessagingIdentity.userId, user.id),
         eq(userMessagingIdentity.platform, effectivePlatform),
-        isNotNull(userMessagingIdentity.verifiedAt),
-        or(
-          isNull(userMessagingIdentity.sourceTelephone),
-          eq(userMessagingIdentity.sourceTelephone, user.telephone),
-        ),
       ),
     )
     .leftJoin(
@@ -1255,7 +1283,7 @@ async function searchMessagingPlatform(
       messagingConversation,
       and(
         eq(messagingConversation.accountId, messagingAccount.id),
-        eq(messagingConversation.chatId, userMessagingIdentity.address),
+        eq(messagingConversation.chatId, userMessagingIdentity.nativeId),
       ),
     )
     .leftJoin(
@@ -1283,26 +1311,38 @@ async function searchMessagingPlatform(
     .limit(20)
   return rows.map(row => {
     const connected = Boolean(row.accountId && row.externalAccountId && row.enabled)
-    const address = row.address ?? row.cachedAddress
+    const pendingClaim = Boolean(
+      row.identityUserId && !row.verifiedAt && row.sourceTelephone === null,
+    )
+    const verifiedAddress =
+      row.verifiedAt &&
+      (row.sourceTelephone === null || row.sourceTelephone === row.telephone)
+        ? row.address
+        : null
+    const address = pendingClaim ? null : (verifiedAddress ?? row.cachedAddress)
     const checking =
       connected &&
-      !row.address &&
+      !pendingClaim &&
+      !verifiedAddress &&
       !row.cachedAt &&
       Boolean(normalizeTelephone(row.telephone))
     const unavailableReason = !connected
       ? `Connect this organisation’s ${row.platform === 'telegram' ? 'Telegram' : 'WhatsApp'} account first`
-      : checking
-        ? `Checking ${row.platform === 'telegram' ? 'Telegram' : 'WhatsApp'}…`
-        : !address
-          ? (row.cachedReason ?? 'No valid phone number on this HYPE profile')
-          : row.storedRecipientId && row.storedRecipientId !== row.userId
-            ? 'This conversation belongs to a different recipient; review the identity association'
-            : null
+      : pendingClaim
+        ? 'Awaiting ownership verification of the saved messaging identity'
+        : checking
+          ? `Checking ${row.platform === 'telegram' ? 'Telegram' : 'WhatsApp'}…`
+          : !address
+            ? (row.cachedReason ?? 'No valid phone number on this HYPE profile')
+            : row.storedRecipientId && row.storedRecipientId !== row.userId
+              ? 'This conversation belongs to a different recipient; review the identity association'
+              : null
     return {
       userId: row.userId,
       name: row.name,
       username: row.username!,
       image: row.image,
+      preferredPlatform: row.preferredPlatform,
       platform: row.platform,
       accountId: row.accountId,
       chatId: address,
@@ -1342,7 +1382,7 @@ async function checkUserPlatform(
   organisationId: string,
   userId: string,
   platform: 'whatsapp' | 'telegram',
-) {
+): Promise<MessagingAvailability> {
   const [recipient] = await ctx.db
     .select({ id: user.id, telephone: user.telephone })
     .from(user)
@@ -1381,17 +1421,23 @@ async function checkUserPlatform(
       and(
         eq(userMessagingIdentity.userId, userId),
         eq(userMessagingIdentity.platform, platform),
-        isNotNull(userMessagingIdentity.verifiedAt),
-        or(
-          isNull(userMessagingIdentity.sourceTelephone),
-          eq(userMessagingIdentity.sourceTelephone, recipient.telephone ?? ''),
-        ),
       ),
     )
     .limit(1)
-  const result = identity
-    ? { address: identity.address, reason: null }
-    : await resolveMessagingPhone(ctx, account, recipient)
+  if (identity && !identity.verifiedAt && identity.sourceTelephone === null)
+    return {
+      ...base,
+      chatId: null,
+      available: false,
+      unavailableReason:
+        'Awaiting ownership verification of the saved messaging identity',
+    }
+  const result =
+    identity?.verifiedAt &&
+    (identity.sourceTelephone === null ||
+      identity.sourceTelephone === recipient.telephone)
+      ? { address: identity.nativeId, reason: null }
+      : await resolveMessagingPhone(ctx, account, recipient)
   return {
     ...base,
     chatId: result.address,
@@ -1505,19 +1551,26 @@ export const getUserMessagingSettings = guardedQuery(
   async ({ userId }, ctx) => {
     const target = await authorizeMessagingUser(ctx, userId ?? ctx.user.id)
     const [preference] = await ctx.db
-      .select()
-      .from(userMessagingPreference)
-      .where(eq(userMessagingPreference.userId, target))
+      .select({ platform: user.preferredMessagingPlatform })
+      .from(user)
+      .where(eq(user.id, target))
       .limit(1)
     const identities = await ctx.db
       .select({
         platform: userMessagingIdentity.platform,
-        address: userMessagingIdentity.address,
+        phoneNumber: userMessagingIdentity.phoneNumber,
+        username: userMessagingIdentity.username,
+        nativeId: userMessagingIdentity.nativeId,
         verifiedAt: userMessagingIdentity.verifiedAt,
+        updatedAt: userMessagingIdentity.updatedAt,
       })
       .from(userMessagingIdentity)
       .where(eq(userMessagingIdentity.userId, target))
-    return { platform: preference?.platform ?? 'whatsapp', identities }
+    return {
+      platform: preference?.platform ?? 'whatsapp',
+      preferredPlatform: preference?.platform ?? null,
+      identities,
+    }
   },
 )
 
@@ -1533,74 +1586,72 @@ export const setUserMessagingPreference = guardedCommand(
   async ({ userId, platform }, ctx) => {
     const target = await authorizeMessagingUser(ctx, userId ?? ctx.user.id)
     await ctx.db
-      .insert(userMessagingPreference)
-      .values({ userId: target, platform, updatedAt: Date.now() })
-      .onConflictDoUpdate({
-        target: userMessagingPreference.userId,
-        set: { platform, updatedAt: Date.now() },
-      })
+      .update(user)
+      .set({ preferredMessagingPlatform: platform, updatedAt: new Date() })
+      .where(eq(user.id, target))
     return { platform: platform ?? 'whatsapp' }
   },
 )
 
 /** Save a recipient claim; changing it always clears its previous verification.
- * @param params User, platform and address; null removes an association.
+ * @param params User, platform and separate identity fields; null removes an association.
  * @returns Confirmation; unverified claims never drive automatic routing.
  */
 export const setUserMessagingIdentity = guardedCommand(
   z.object({
     userId: id.optional(),
     platform: z.enum(['whatsapp', 'telegram']),
-    address: z.string().trim().min(1).max(100).nullable(),
+    identity: identityFieldsInput.nullable(),
   }),
-  async ({ userId, platform, address }, ctx) => {
+  async ({ userId, platform, identity }, ctx) => {
     const target = await authorizeMessagingUser(ctx, userId ?? ctx.user.id)
     const key = and(
       eq(userMessagingIdentity.userId, target),
       eq(userMessagingIdentity.platform, platform),
     )
-    if (address === null) {
+    if (identity === null) {
       await ctx.db.delete(userMessagingIdentity).where(key)
       return { saved: true }
     }
-    const normalized =
-      platform === 'whatsapp'
-        ? address
-            .replace(/[ ()-]/g, '')
-            .replace(/^\+([1-9]\d{6,14})$/, '$1@s.whatsapp.net')
-        : address
-    if (
-      platform === 'whatsapp'
-        ? !/^[1-9]\d{6,14}@s\.whatsapp\.net$/.test(normalized)
-        : !/^([1-9]\d{0,15}|@[a-zA-Z0-9_]{5,32}|\+[1-9]\d{6,14})$/.test(normalized)
-    )
-      throw error(
-        400,
-        'Use an international phone number or a Telegram username/user ID',
-      )
+    let normalized: ReturnType<typeof normalizeMessagingIdentity>
+    try {
+      normalized = normalizeMessagingIdentity(platform, identity)
+    } catch (cause) {
+      throw error(400, (cause as Error).message)
+    }
+    if (!Object.values(normalized).some(Boolean))
+      throw error(400, 'Supply a phone number or messaging username')
     const [previous] = await ctx.db
       .select()
       .from(userMessagingIdentity)
       .where(key)
       .limit(1)
-    if (previous?.address === normalized) return { saved: true }
+    if (
+      previous &&
+      previous.phoneNumber === normalized.phoneNumber &&
+      previous.username === normalized.username &&
+      previous.nativeId === normalized.nativeId
+    )
+      return { saved: true }
+    // Every changed claim gets a new revision, even when two edits occur in one millisecond.
+    const updatedAt = Math.max(Date.now(), (previous?.updatedAt ?? 0) + 1)
     try {
       await ctx.db
         .insert(userMessagingIdentity)
         .values({
           userId: target,
           platform,
-          address: normalized,
-          updatedAt: Date.now(),
+          ...normalized,
+          updatedAt,
         })
         .onConflictDoUpdate({
           target: [userMessagingIdentity.userId, userMessagingIdentity.platform],
           set: {
-            address: normalized,
+            ...normalized,
             sourceTelephone: null,
             verifiedAt: null,
             verifiedBy: null,
-            updatedAt: Date.now(),
+            updatedAt,
           },
         })
     } catch (cause) {
@@ -1618,15 +1669,144 @@ export const setUserMessagingIdentity = guardedCommand(
   },
 )
 
+/** Check whether a saved contact exists without granting it ownership verification.
+ * @param params User, platform and the exact saved claim revision to check.
+ * @returns Confirmation or a safe warning, without exposing provider profile data.
+ * @remarks Only an already accessible organisation account may perform the lookup.
+ * No message is sent and no verified identity, alias or routing state is written.
+ */
+export const checkUserMessagingIdentity = guardedCommand(
+  z.object({
+    userId: id.optional(),
+    platform: z.enum(['whatsapp', 'telegram']),
+    expectedUpdatedAt: z.number().int().nonnegative(),
+  }),
+  async (
+    { userId, platform, expectedUpdatedAt },
+    ctx,
+  ): Promise<{
+    status: 'confirmed' | 'not-found' | 'unavailable'
+    message: string
+  }> => {
+    const target = await authorizeMessagingUser(ctx, userId ?? ctx.user.id)
+    const key = and(
+      eq(userMessagingIdentity.userId, target),
+      eq(userMessagingIdentity.platform, platform),
+      eq(userMessagingIdentity.updatedAt, expectedUpdatedAt),
+    )
+    const [claim] = await ctx.db
+      .select()
+      .from(userMessagingIdentity)
+      .where(key)
+      .limit(1)
+    if (!claim) throw error(409, 'The contact details changed; check them again')
+    const label = platform === 'telegram' ? 'Telegram' : 'WhatsApp'
+    if (!claim.phoneNumber && !claim.nativeId && platform === 'whatsapp')
+      return {
+        status: 'unavailable',
+        message:
+          'Saved. WhatsApp username confirmation is unavailable; use a phone number to confirm the account.',
+      }
+
+    // Select the provider account on the server, respecting existing organisation access.
+    const candidates = await ctx.db
+      .select({ account: messagingAccount, organisation })
+      .from(messagingAccount)
+      .innerJoin(organisation, eq(organisation.id, messagingAccount.organisationId))
+      .where(
+        and(
+          eq(messagingAccount.platform, platform),
+          eq(messagingAccount.enabled, true),
+          isNotNull(messagingAccount.externalAccountId),
+          eq(organisation.isArchived, false),
+        ),
+      )
+      .orderBy(asc(messagingAccount.id))
+    const account = candidates.find(row =>
+      canManageOrganisationMessaging(
+        { ...ctx.user, roles: ctx.userRoles },
+        row.organisation,
+      ),
+    )?.account
+    if (!account)
+      return {
+        status: 'unavailable',
+        message:
+          'Saved. Account confirmation is currently unavailable. Try again later.',
+      }
+
+    // Provider existence is deliberately separate from the administrator's ownership check.
+    try {
+      const service = messagingService(ctx, platform)
+      let nativeId: string
+      if (claim.phoneNumber) {
+        const result = await service.lookupPhone(
+          account.bridgeAccountId,
+          claim.phoneNumber,
+        )
+        if (result.status !== 'registered')
+          return result.status === 'not_found'
+            ? {
+                status: 'not-found',
+                message: `No ${label} account was found for this number. Check the details.`,
+              }
+            : {
+                status: 'unavailable',
+                message: `Saved. ${label} could not confirm this number right now; it may be private or temporarily unavailable.`,
+              }
+        nativeId = result.address
+      } else {
+        const address = claim.username ? `@${claim.username}` : claim.nativeId
+        if (!address)
+          return {
+            status: 'not-found',
+            message: 'Add a phone number or username first.',
+          }
+        const profile = await service.profile(account.bridgeAccountId, address)
+        nativeId = profile.jid
+      }
+      if (!isMessagingNativeId(platform, nativeId))
+        return {
+          status: 'not-found',
+          message: `Enter a personal ${label} account, not a group or channel.`,
+        }
+      // A late response must never confirm a claim that changed while the provider was checking it.
+      const [current] = await ctx.db
+        .select({ userId: userMessagingIdentity.userId })
+        .from(userMessagingIdentity)
+        .where(key)
+        .limit(1)
+      if (!current) throw error(409, 'The contact details changed; check them again')
+      return { status: 'confirmed', message: `Saved. ${label} account confirmed.` }
+    } catch (cause) {
+      if (
+        cause &&
+        typeof cause === 'object' &&
+        'status' in cause &&
+        cause.status === 409
+      )
+        throw cause
+      return {
+        status: 'unavailable',
+        message: `Saved. ${label} could not confirm this account. Check the details or try again.`,
+      }
+    }
+  },
+)
+
 /** Confirm the person-to-account association after an administrator checks ownership.
- * @param params User, organisation account, expected claim, and explicit ownership confirmation.
- * @returns The provider-resolved stable address.
+ * @param params User, organisation account, expected claim revision, and explicit ownership confirmation.
+ * @returns The provider-resolved stable ID, retaining independently supplied contact fields.
  * @remarks Provider lookup proves the address exists, not who owns it. The operator
  * must independently confirm ownership; usernames and display names are insufficient.
  */
 export const verifyUserMessagingIdentity = guardedCommand(
-  accountInput.extend({ userId: id, address: id, confirmOwnership: z.literal(true) }),
-  async ({ accountId, userId, address }, ctx) => {
+  accountInput.extend({
+    userId: id,
+    expectedUpdatedAt: z.number().int().nonnegative(),
+    confirmOwnership: z.literal(true),
+  }),
+  async ({ accountId, userId, expectedUpdatedAt }, ctx) => {
     await authorizeMessagingUser(ctx, userId)
     if (!(ctx.user.superAdmin === true || isCoreHubAdmin(ctx.userRoles)))
       throw error(403, 'Recipient verification requires a global administrator')
@@ -1634,7 +1814,7 @@ export const verifyUserMessagingIdentity = guardedCommand(
     const key = and(
       eq(userMessagingIdentity.userId, userId),
       eq(userMessagingIdentity.platform, account.platform),
-      eq(userMessagingIdentity.address, address),
+      eq(userMessagingIdentity.updatedAt, expectedUpdatedAt),
     )
     const [claim] = await ctx.db
       .select()
@@ -1642,33 +1822,100 @@ export const verifyUserMessagingIdentity = guardedCommand(
       .where(key)
       .limit(1)
     if (!claim) throw error(409, 'The recipient claim changed; review it again')
-    const profile = await messagingService(ctx, account.platform).profile(
-      account.bridgeAccountId,
-      claim.address,
+    // Every supplied lookup must resolve to the same provider account before any field is trusted.
+    const service = messagingService(ctx, account.platform)
+    const profiles = await Promise.all(
+      messagingIdentityLookups(account.platform, claim).map(address =>
+        service.profile(account.bridgeAccountId, address),
+      ),
     )
+    const profile = profiles[0]
     if (
-      account.platform === 'telegram'
-        ? !/^[1-9]\d*$/.test(profile.jid)
-        : !/^[1-9]\d+@(s\.whatsapp\.net|lid)$/.test(profile.jid)
+      !profile ||
+      profiles.some(value => !isMessagingNativeId(account.platform, value.jid))
     )
       throw error(400, 'A user identity is required, not a group or channel')
-    const rows = await ctx.db
-      .update(userMessagingIdentity)
-      .set({
-        address: profile.jid,
-        sourceTelephone: null,
-        verifiedAt: Date.now(),
-        verifiedBy: ctx.user.id,
-        updatedAt: Date.now(),
-      })
-      .where(key)
-      .returning({ userId: userMessagingIdentity.userId })
+    const nativeIds = profiles.map(
+      value =>
+        new Set(
+          [value.jid, ...(value.aliases ?? [])].filter(alias =>
+            isMessagingNativeId(account.platform, alias),
+          ),
+        ),
+    )
+    if (
+      !Array.from(nativeIds[0]).some(value =>
+        nativeIds.every(aliases => aliases.has(value)),
+      )
+    )
+      throw error(
+        409,
+        'These identifiers belong to different messaging accounts; review them separately',
+      )
+    const aliases = [...new Set(nativeIds.flatMap(values => [...values]))]
+    const reportedPhone = profiles.find(value => value.phone)?.phone
+    const reportedUsername = profiles.find(value => value.username)?.username
+    const fields = normalizeMessagingIdentity(account.platform, {
+      nativeId: profile.jid,
+      phoneNumber: reportedPhone
+        ? `+${reportedPhone.replace(/^\+/, '')}`
+        : claim.phoneNumber,
+      username: reportedUsername ?? claim.username,
+    })
+    const now = Math.max(Date.now(), claim.updatedAt + 1)
+    let rows: { userId: string }[]
+    try {
+      // Bind provider aliases to the same committed verification; unique claims roll the whole batch back.
+      ;[rows] = await ctx.db.batch([
+        ctx.db
+          .update(userMessagingIdentity)
+          .set({
+            ...fields,
+            sourceTelephone: null,
+            verifiedAt: now,
+            verifiedBy: ctx.user.id,
+            updatedAt: now,
+          })
+          .where(key)
+          .returning({ userId: userMessagingIdentity.userId }),
+        ctx.db.insert(userMessagingIdentityAlias).select(
+          ctx.db
+            .select({
+              userId: sql<string>`${userId}`.as('userId'),
+              platform: sql<'whatsapp' | 'telegram'>`${account.platform}`.as(
+                'platform',
+              ),
+              nativeId: sql<string>`candidate.value`.as('nativeId'),
+            })
+            .from(sql`json_each(${JSON.stringify(aliases)}) AS candidate`)
+            .where(sql`
+            EXISTS (SELECT 1 FROM ${userMessagingIdentity}
+              WHERE ${userMessagingIdentity.userId} = ${userId}
+                AND ${userMessagingIdentity.platform} = ${account.platform}
+                AND ${userMessagingIdentity.nativeId} = ${fields.nativeId}
+                AND ${userMessagingIdentity.verifiedAt} = ${now}
+                AND ${userMessagingIdentity.updatedAt} = ${now})
+            AND NOT EXISTS (SELECT 1 FROM ${userMessagingIdentityAlias}
+              WHERE ${userMessagingIdentityAlias.userId} = ${userId}
+                AND ${userMessagingIdentityAlias.platform} = ${account.platform}
+                AND ${userMessagingIdentityAlias.nativeId} = candidate.value)
+          `),
+        ),
+      ])
+    } catch (cause) {
+      if (`${cause} ${(cause as Error)?.cause}`.includes('UNIQUE'))
+        throw error(
+          409,
+          'This messaging identity is already associated with another user',
+        )
+      throw cause
+    }
     if (!rows.length) throw error(409, 'The recipient claim changed; review it again')
-    return { address: profile.jid }
+    return { nativeId: profile.jid }
   },
 )
 
-/** Open new outreach on WhatsApp when reachable, otherwise Telegram, using verified identity.
+/** Open new outreach on the preferred reachable platform, using verified identity.
  * @param params Authorized organisation and an exact Hype username.
  * @returns A conversation pinned to the selected organisation account and native chat.
  * @remarks Existing conversations and immutable sends continue using their saved account.
@@ -1683,7 +1930,11 @@ export const openUserMessagingConversation = guardedCommand(
   async ({ organisationId, username, platform: requestedPlatform }, ctx) => {
     await authorizeMessagingOrganisation(ctx, organisationId)
     const [recipient] = await ctx.db
-      .select({ id: user.id, telephone: user.telephone })
+      .select({
+        id: user.id,
+        telephone: user.telephone,
+        preferredPlatform: user.preferredMessagingPlatform,
+      })
       .from(user)
       .where(
         and(
@@ -1700,7 +1951,9 @@ export const openUserMessagingConversation = guardedCommand(
         : (['whatsapp', 'telegram'] as const)
       ).map(platform => checkUserPlatform(ctx, organisationId, recipient.id, platform)),
     )
-    const selected = requestedPlatform ? channels[0] : messagingAvailability(channels)
+    const selected = requestedPlatform
+      ? channels[0]
+      : messagingAvailability(channels, recipient.preferredPlatform)
     if (!selected.available)
       throw error(
         409,
@@ -1754,7 +2007,11 @@ export const openUserMessagingConversation = guardedCommand(
               .select({
                 userId: user.id,
                 platform: sql`${platform}`.as('platform'),
-                address: sql`${resolved.address}`.as('address'),
+                phoneNumber: sql`${normalizeTelephone(recipient.telephone)}`.as(
+                  'phoneNumber',
+                ),
+                username: sql`null`.as('username'),
+                nativeId: sql`${resolved.address}`.as('nativeId'),
                 sourceTelephone: user.telephone,
                 verifiedAt: sql`${now}`.as('verifiedAt'),
                 verifiedBy: sql`null`.as('verifiedBy'),
@@ -1773,16 +2030,15 @@ export const openUserMessagingConversation = guardedCommand(
           .onConflictDoUpdate({
             target: [userMessagingIdentity.userId, userMessagingIdentity.platform],
             set: {
-              address: resolved.address,
+              phoneNumber: normalizeTelephone(recipient.telephone),
+              username: null,
+              nativeId: resolved.address,
               sourceTelephone: recipient.telephone,
               verifiedAt: now,
               verifiedBy: null,
               updatedAt: now,
             },
-            setWhere: or(
-              isNotNull(userMessagingIdentity.sourceTelephone),
-              isNull(userMessagingIdentity.verifiedAt),
-            ),
+            setWhere: isNotNull(userMessagingIdentity.sourceTelephone),
           })
       } catch {
         throw error(
@@ -1813,13 +2069,16 @@ export const openUserMessagingConversation = guardedCommand(
       )
         throw error(409, 'The profile phone changed; search again')
     }
+    if (!identity.nativeId)
+      throw error(409, 'The messaging identity has no verified native ID')
+    const nativeId = identity.nativeId
     // An inbox thread may predate identity verification; fill only its missing association.
     await ctx.db
       .insert(messagingConversation)
       .values({
         id: crypto.randomUUID(),
         accountId: account.id,
-        chatId: identity.address,
+        chatId: nativeId,
         recipientUserId: recipient.id,
       })
       .onConflictDoUpdate({
@@ -1834,21 +2093,22 @@ export const openUserMessagingConversation = guardedCommand(
       .where(
         and(
           eq(messagingConversation.accountId, account.id),
-          eq(messagingConversation.chatId, identity.address),
+          eq(messagingConversation.chatId, nativeId),
         ),
       )
       .limit(1)
-    if (conversation?.recipientUserId && conversation.recipientUserId !== recipient.id)
+    if (!conversation) throw error(409, 'The messaging conversation changed; try again')
+    if (conversation.recipientUserId && conversation.recipientUserId !== recipient.id)
       throw error(
         409,
         'This conversation belongs to a different recipient; review the identity association',
       )
     return {
-      id: conversation!.id,
+      id: conversation.id,
       accountId: account.id,
       platform: account.platform,
-      chatId: identity.address,
-      isArchived: conversation!.isArchived,
+      chatId: nativeId,
+      isArchived: conversation.isArchived,
     }
   },
 )

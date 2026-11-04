@@ -7,6 +7,7 @@ import {
   text,
   uniqueIndex,
   check,
+  foreignKey,
 } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 // SCHEMA
@@ -54,24 +55,6 @@ export const messagingAccount = sqliteTable(
   ],
 )
 
-/** A user's preferred delivery platform is distinct from their external identity. */
-export const userMessagingPreference = sqliteTable(
-  'userMessagingPreference',
-  {
-    userId: text('userId')
-      .primaryKey()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    platform: text('platform', { enum: platforms }),
-    updatedAt: integer('updatedAt').notNull(),
-  },
-  table => [
-    check(
-      'messaging_preference_platform',
-      sql`${table.platform} IS NULL OR ${table.platform} IN ('whatsapp', 'telegram')`,
-    ),
-  ],
-)
-
 /** Only verified associations may drive automatic routing; names never establish identity. */
 export const userMessagingIdentity = sqliteTable(
   'userMessagingIdentity',
@@ -80,7 +63,9 @@ export const userMessagingIdentity = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     platform: text('platform', { enum: platforms }).notNull(),
-    address: text('address').notNull(),
+    phoneNumber: text('phoneNumber'),
+    username: text('username'),
+    nativeId: text('nativeId'),
     // Raw profile number used for automatic discovery; changing it invalidates the association.
     sourceTelephone: text('sourceTelephone'),
     verifiedAt: integer('verifiedAt'),
@@ -89,11 +74,39 @@ export const userMessagingIdentity = sqliteTable(
   },
   table => [
     primaryKey({ columns: [table.userId, table.platform] }),
-    uniqueIndex('messaging_identity_address').on(table.platform, table.address),
+    uniqueIndex('messaging_identity_native_id').on(table.platform, table.nativeId),
     check(
       'messaging_identity_platform',
       sql`${table.platform} IN ('whatsapp', 'telegram')`,
     ),
+    check(
+      'messaging_identity_identifier',
+      sql`${table.phoneNumber} IS NOT NULL OR ${table.username} IS NOT NULL OR ${table.nativeId} IS NOT NULL`,
+    ),
+    check(
+      'messaging_identity_verified_native_id',
+      sql`${table.verifiedAt} IS NULL OR ${table.nativeId} IS NOT NULL`,
+    ),
+  ],
+)
+
+/** Verified provider aliases share one ownership namespace, including the canonical native ID.
+ * @remarks Migration triggers maintain canonical aliases and clear them when verification changes.
+ */
+export const userMessagingIdentityAlias = sqliteTable(
+  'userMessagingIdentityAlias',
+  {
+    userId: text('userId').notNull(),
+    platform: text('platform', { enum: platforms }).notNull(),
+    nativeId: text('nativeId').notNull(),
+  },
+  table => [
+    primaryKey({ columns: [table.platform, table.nativeId] }),
+    index('messaging_identity_alias_user').on(table.userId, table.platform),
+    foreignKey({
+      columns: [table.userId, table.platform],
+      foreignColumns: [userMessagingIdentity.userId, userMessagingIdentity.platform],
+    }).onDelete('cascade'),
   ],
 )
 

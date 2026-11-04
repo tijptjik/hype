@@ -1,7 +1,7 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
 // DRIZZLE
-import { and, asc, eq, gt, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, isNotNull, isNull, lte, ne, or, sql } from 'drizzle-orm'
 // SCHEMA
 import {
   messagingPhoneLookup,
@@ -12,6 +12,7 @@ import {
   organisation,
   user,
   userMessagingIdentity,
+  userMessagingIdentityAlias,
 } from '#lib/db/schema/index.js'
 // API
 import { canManageOrganisationMessaging } from '#lib/api/services/authz/messaging.js'
@@ -119,13 +120,20 @@ export async function readMessagingRecipients(
   if (!addresses.length) return new Map()
   const rows = await db
     .select({
-      address: userMessagingIdentity.address,
+      address: userMessagingIdentityAlias.nativeId,
       id: user.id,
       name: user.name,
       username: user.username,
       image: user.image,
     })
-    .from(userMessagingIdentity)
+    .from(userMessagingIdentityAlias)
+    .innerJoin(
+      userMessagingIdentity,
+      and(
+        eq(userMessagingIdentity.userId, userMessagingIdentityAlias.userId),
+        eq(userMessagingIdentity.platform, userMessagingIdentityAlias.platform),
+      ),
+    )
     .innerJoin(
       user,
       and(
@@ -138,7 +146,7 @@ export async function readMessagingRecipients(
       messagingConversation,
       and(
         eq(messagingConversation.accountId, account.id),
-        eq(messagingConversation.chatId, userMessagingIdentity.address),
+        eq(messagingConversation.chatId, userMessagingIdentityAlias.nativeId),
       ),
     )
     .where(
@@ -149,7 +157,7 @@ export async function readMessagingRecipients(
           isNull(userMessagingIdentity.sourceTelephone),
           eq(userMessagingIdentity.sourceTelephone, user.telephone),
         ),
-        chunkedInArray(userMessagingIdentity.address, [...new Set(addresses)], 5),
+        chunkedInArray(userMessagingIdentityAlias.nativeId, [...new Set(addresses)], 5),
         or(
           isNull(messagingConversation.recipientUserId),
           eq(messagingConversation.recipientUserId, user.id),
@@ -204,13 +212,25 @@ async function lookupMessagingPhone(
     )
       return { address: null, reason: `${label} returned an invalid user identity` }
     // Never attach a discovered address to a different HYPE person or repoint an existing thread.
+    // Search specifically for another owner so a same-user alias cannot hide a conflicting claim.
     const [owner] = await ctx.db
       .select({ id: userMessagingIdentity.userId })
       .from(userMessagingIdentity)
+      .leftJoin(
+        userMessagingIdentityAlias,
+        and(
+          eq(userMessagingIdentity.userId, userMessagingIdentityAlias.userId),
+          eq(userMessagingIdentity.platform, userMessagingIdentityAlias.platform),
+        ),
+      )
       .where(
         and(
           eq(userMessagingIdentity.platform, account.platform),
-          eq(userMessagingIdentity.address, result.address),
+          ne(userMessagingIdentity.userId, recipient.id),
+          or(
+            eq(userMessagingIdentity.nativeId, result.address),
+            eq(userMessagingIdentityAlias.nativeId, result.address),
+          ),
         ),
       )
       .limit(1)
@@ -373,23 +393,10 @@ export async function projectMessagingSnapshot(
     if (!Number.isSafeInteger(message.sequence) || message.sequence <= cursor)
       throw new Error('Invalid bridge replay order')
     if (!recipients.has(message.chat)) {
-      const [identity] = await db
-        .select({ userId: userMessagingIdentity.userId })
-        .from(userMessagingIdentity)
-        .innerJoin(user, eq(user.id, userMessagingIdentity.userId))
-        .where(
-          and(
-            eq(userMessagingIdentity.platform, account.platform),
-            eq(userMessagingIdentity.address, message.chat),
-            isNotNull(userMessagingIdentity.verifiedAt),
-            or(
-              isNull(userMessagingIdentity.sourceTelephone),
-              eq(userMessagingIdentity.sourceTelephone, user.telephone),
-            ),
-          ),
-        )
-        .limit(1)
-      recipients.set(message.chat, identity?.userId ?? null)
+      const identity = (await readMessagingRecipients(db, account, [message.chat])).get(
+        message.chat,
+      )
+      recipients.set(message.chat, identity?.id ?? null)
     }
     // Commit the conversation and message atomically before acknowledging the replay.
     await db.batch([

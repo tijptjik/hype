@@ -45,6 +45,11 @@ export const user = sqliteTable(
       .notNull()
       .default(SupportedLocales.en),
     telephone: text('telephone'),
+    // A user's preferred delivery platform is distinct from their external identity.
+    // A null preference uses the application's default for new messaging outreach.
+    preferredMessagingPlatform: text('preferredMessagingPlatform', {
+      enum: ['whatsapp', 'telegram'],
+    }),
     attribution: text('attribution'),
     // Better Auth guest marker; guest preferences and saved-place state are stored by user ID.
     isAnonymous: integer('isAnonymous', { mode: 'boolean' }).default(false),
@@ -73,6 +78,10 @@ export const user = sqliteTable(
   table => [
     uniqueIndex('user_username_nocase_uidx').on(sql`lower(${table.username})`),
     uniqueIndex('user_telephone_uidx').on(table.telephone),
+    check(
+      'user_preferred_messaging_platform',
+      sql`${table.preferredMessagingPlatform} IS NULL OR ${table.preferredMessagingPlatform} IN ('whatsapp', 'telegram')`,
+    ),
   ],
 )
 

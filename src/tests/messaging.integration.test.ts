@@ -16,6 +16,7 @@ import {
   projectMessagingArchive,
   projectMessagingSnapshot,
   readMessagingMessages,
+  resolveMessagingPhone,
 } from '#lib/db/services/messaging.js'
 // TYPES
 import {
@@ -66,6 +67,7 @@ import {
   getUserMessagingSettings,
   setUserMessagingPreference,
   setUserMessagingIdentity,
+  checkUserMessagingIdentity,
   verifyUserMessagingIdentity,
   openUserMessagingConversation,
 } from '#lib/api/messaging.remote.js'
@@ -102,7 +104,7 @@ beforeEach(() => {
   vi.resetAllMocks()
   sqlite = new DatabaseSync(':memory:')
   sqlite.exec(
-    "PRAGMA foreign_keys=ON; CREATE TABLE user (id TEXT PRIMARY KEY, username TEXT, name TEXT, image TEXT, telephone TEXT, isAnonymous INTEGER DEFAULT 0, isArchived INTEGER DEFAULT 0); INSERT INTO user(id,username) VALUES ('operator-a','operator_a'), ('operator-b','operator_b')",
+    "PRAGMA foreign_keys=ON; CREATE TABLE user (id TEXT PRIMARY KEY, username TEXT, name TEXT, image TEXT, telephone TEXT, updatedAt INTEGER NOT NULL DEFAULT 1, isAnonymous INTEGER DEFAULT 0, isArchived INTEGER DEFAULT 0); INSERT INTO user(id,username) VALUES ('operator-a','operator_a'), ('operator-b','operator_b')",
   )
   const config = getTableConfig(organisation)
   sqlite.exec(
@@ -120,6 +122,10 @@ beforeEach(() => {
   sqlite.exec(readFileSync('migrations/0164_messaging_native_archive.sql', 'utf8'))
   sqlite.exec(
     "INSERT INTO userMessagingIdentity(userId,platform,address,verifiedAt,updatedAt) VALUES ('operator-b','telegram','42',1,1), ('operator-b','whatsapp','15555550100@s.whatsapp.net',1,1)",
+  )
+  sqlite.exec(readFileSync('migrations/0165_user_messaging_identifiers.sql', 'utf8'))
+  sqlite.exec(
+    readFileSync('migrations/0166_messaging_discovered_phone_format.sql', 'utf8'),
   )
   // Exercise actual Drizzle D1 SQL, including atomic batches and JSON projections.
   function prepared(query: string, params: never[] = []) {
@@ -210,6 +216,24 @@ beforeEach(() => {
   }))
 })
 afterEach(() => sqlite.close())
+
+/** Build a complete claim from the identifiers relevant to a scenario. */
+function identityFields(
+  fields: Partial<import('#lib/messaging/identity.js').MessagingIdentityFields>,
+) {
+  return { phoneNumber: null, username: null, nativeId: null, ...fields }
+}
+
+/** Read the exact saved claim revision being independently verified. */
+function identityRevision(userId: string, platform: string): number {
+  return (
+    sqlite
+      .prepare(
+        'SELECT updatedAt FROM userMessagingIdentity WHERE userId=? AND platform=?',
+      )
+      .get(userId, platform) as { updatedAt: number }
+  ).updatedAt
+}
 
 it('authorizes media search, previews and selection before reaching the account bridge', async () => {
   const input = {
@@ -459,10 +483,13 @@ it('returns saved organisation history when the bridge is unavailable', async ()
 
 it('keeps self-entered identities unverified and prevents ordinary users editing another profile', async () => {
   await setUserMessagingPreference({ platform: 'telegram' })
-  await setUserMessagingIdentity({ platform: 'telegram', address: '@synthetic' })
+  await setUserMessagingIdentity({
+    platform: 'telegram',
+    identity: identityFields({ username: '@synthetic' }),
+  })
   expect(await getUserMessagingSettings({})).toMatchObject({
     platform: 'telegram',
-    identities: [{ address: '@synthetic', verifiedAt: null }],
+    identities: [{ username: 'synthetic', nativeId: null, verifiedAt: null }],
   })
   await expect(
     setUserMessagingPreference({ userId: 'operator-b', platform: 'whatsapp' }),
@@ -479,7 +506,7 @@ it('keeps self-entered identities unverified and prevents ordinary users editing
       meta,
       userId: 'operator-a',
       accountId: account.id,
-      address: '@synthetic',
+      expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
       confirmOwnership: true,
     }),
   ).rejects.toMatchObject({ status: 403 })
@@ -491,7 +518,7 @@ it('routes to Telegram alone, then defaults to WhatsApp when both are available 
   await setUserMessagingIdentity({
     userId: 'operator-b',
     platform: 'telegram',
-    address: '@synthetic',
+    identity: identityFields({ username: '@synthetic' }),
   })
   bridge.profile.mockResolvedValue({
     jid: '42',
@@ -502,7 +529,7 @@ it('routes to Telegram alone, then defaults to WhatsApp when both are available 
     meta,
     userId: 'operator-b',
     accountId: account.id,
-    address: '@synthetic',
+    expectedUpdatedAt: identityRevision('operator-b', 'telegram'),
     confirmOwnership: true,
   })
   sqlite.exec(
@@ -523,9 +550,11 @@ it('routes to Telegram alone, then defaults to WhatsApp when both are available 
   await setUserMessagingIdentity({
     userId: 'operator-b',
     platform: 'whatsapp',
-    address: '+15555550100',
+    identity: identityFields({ phoneNumber: '+15555550100' }),
   })
-  sqlite.exec("UPDATE userMessagingIdentity SET verifiedAt=1 WHERE platform='whatsapp'")
+  sqlite.exec(
+    "UPDATE userMessagingIdentity SET nativeId='15555550100@s.whatsapp.net',verifiedAt=1 WHERE platform='whatsapp'",
+  )
   await setUserMessagingPreference({ userId: 'operator-b', platform: 'whatsapp' })
   const whatsapp = await openUserMessagingConversation({
     meta,
@@ -545,7 +574,7 @@ it('routes to Telegram alone, then defaults to WhatsApp when both are available 
   await setUserMessagingIdentity({
     userId: 'operator-b',
     platform: 'telegram',
-    address: '@changed',
+    identity: identityFields({ username: '@changed' }),
   })
   expect(
     (await getUserMessagingSettings({ userId: 'operator-b' })).identities.find(
@@ -622,7 +651,7 @@ it('authorizes history before using the bridge and bounds the native cursor', as
 
 it('discovers conversations within the organisation without advancing incoming replay', async () => {
   sqlite.exec(
-    "INSERT INTO userMessagingIdentity(userId,platform,address,verifiedAt,updatedAt) VALUES ('operator-a','telegram','900',1,1)",
+    "INSERT INTO userMessagingIdentity(userId,platform,nativeId,verifiedAt,updatedAt) VALUES ('operator-a','telegram','900',1,1)",
   )
   const message: BridgeMessage = {
     sequence: 80,
@@ -854,7 +883,7 @@ it('links a pre-existing inbox conversation after verification without rewriting
   await setUserMessagingIdentity({
     userId: 'operator-b',
     platform: 'telegram',
-    address: '@synthetic',
+    identity: identityFields({ username: '@synthetic' }),
   })
   bridge.profile.mockResolvedValue({
     jid: '42',
@@ -865,7 +894,7 @@ it('links a pre-existing inbox conversation after verification without rewriting
     meta,
     userId: 'operator-b',
     accountId: account.id,
-    address: '@synthetic',
+    expectedUpdatedAt: identityRevision('operator-b', 'telegram'),
     confirmOwnership: true,
   })
   await setUserMessagingPreference({ userId: 'operator-b', platform: 'telegram' })
@@ -899,7 +928,7 @@ it('links a pre-existing inbox conversation after verification without rewriting
 
 it('searches HYPE names and usernames within an authorised organisation without resolving provider accounts', async () => {
   sqlite.exec(
-    "UPDATE user SET name='Synthetic Person', image='https://example.invalid/avatar.png' WHERE id='operator-b'; UPDATE messagingAccount SET externalAccountId='owned-telegram'; INSERT INTO userMessagingPreference(userId,platform,updatedAt) VALUES ('operator-b','telegram',1)",
+    "UPDATE user SET name='Synthetic Person', image='https://example.invalid/avatar.png' WHERE id='operator-b'; UPDATE messagingAccount SET externalAccountId='owned-telegram'; UPDATE user SET preferredMessagingPlatform='telegram' WHERE id='operator-b'",
   )
   expect(
     await searchMessagingUsers({ meta, organisationId: 'org-a', search: 'synthetic' }),
@@ -951,7 +980,8 @@ it('searches HYPE names and usernames within an authorised organisation without 
   ).toMatchObject({
     available: false,
     chatId: null,
-    unavailableReason: 'No valid phone number on this HYPE profile',
+    unavailableReason:
+      'Awaiting ownership verification of the saved messaging identity',
   })
   await expect(
     searchMessagingUsers({ meta, organisationId: 'org-b', search: 'operator_b' }),
@@ -1177,9 +1207,9 @@ it.each(['whatsapp', 'telegram'] as const)(
     expect(conversation).toMatchObject({ platform, chatId: address })
     expect(
       sqlite
-        .prepare('SELECT sourceTelephone, address FROM userMessagingIdentity')
+        .prepare('SELECT sourceTelephone, nativeId FROM userMessagingIdentity')
         .get(),
-    ).toEqual({ sourceTelephone: '+15555550100', address })
+    ).toEqual({ sourceTelephone: '+15555550100', nativeId: address })
     expect(bridge.send).not.toHaveBeenCalled()
     expect(bridge.profile).not.toHaveBeenCalled()
     sqlite.exec("UPDATE user SET telephone='+15555550101' WHERE id='operator-b'")
@@ -1270,6 +1300,28 @@ it('rejects discovered addresses owned by another user and does not look up unau
     searchMessagingUsers({ meta, organisationId: 'org-b', search: 'operator_a' }),
   ).rejects.toMatchObject({ status: 403 })
   expect(bridge.lookupPhone).not.toHaveBeenCalled()
+})
+
+it('does not let a same-user provider alias hide another native ID claim during discovery', async () => {
+  account.externalAccountId = 'owned-telegram'
+  sqlite.exec(`
+    UPDATE messagingAccount SET externalAccountId='owned-telegram';
+    UPDATE user SET telephone='+15555550100' WHERE id='operator-b';
+    INSERT INTO userMessagingIdentity(userId,platform,nativeId,updatedAt)
+    VALUES ('operator-a','telegram','43',1);
+    INSERT INTO userMessagingIdentityAlias VALUES ('operator-b','telegram','43');
+  `)
+  bridge.lookupPhone.mockResolvedValue({ status: 'registered', address: '43' })
+  expect(
+    await resolveMessagingPhone(state.ctx, account, {
+      id: 'operator-b',
+      telephone: '+15555550100',
+    }),
+  ).toMatchObject({
+    address: null,
+    reason: 'This account belongs to a different HYPE user; review the phone number',
+  })
+  expect(bridge.send).not.toHaveBeenCalled()
 })
 
 it('requests fresh pairing for enabled signed-out WhatsApp accounts only', async () => {
@@ -1416,7 +1468,7 @@ it('caches negative checks, expires failures and isolates account changes', asyn
   ).rejects.toMatchObject({ status: 403 })
 })
 
-it('checks and caches both platforms despite a saved preference, then defaults to WhatsApp', async () => {
+it('checks and caches both platforms, then honors the saved Telegram preference', async () => {
   state.ctx.user.superAdmin = true
   sqlite.exec(
     "DELETE FROM userMessagingIdentity; UPDATE user SET telephone='+15555550100' WHERE id='operator-b'; UPDATE messagingAccount SET externalAccountId='owned-telegram'; INSERT INTO messagingAccount(id,organisationId,platform,bridgeAccountId,externalAccountId,enabled,createdAt,updatedAt) VALUES ('account-wa','org-a','whatsapp','bridge-wa','owned-wa',1,1,1)",
@@ -1448,7 +1500,7 @@ it('checks and caches both platforms despite a saved preference, then defaults t
     search: 'operator_b',
   })
   expect(checked.channels.map(channel => channel.available)).toEqual([true, true])
-  expect(checked.platform).toBe('whatsapp')
+  expect(checked.platform).toBe('telegram')
   expect(
     sqlite.prepare('SELECT count(*) AS count FROM messagingPhoneLookup').get(),
   ).toEqual({ count: 2 })
@@ -1458,7 +1510,7 @@ it('checks and caches both platforms despite a saved preference, then defaults t
       organisationId: 'org-a',
       username: 'operator_b',
     }),
-  ).toMatchObject({ platform: 'whatsapp' })
+  ).toMatchObject({ platform: 'telegram' })
   expect(bridge.lookupPhone).toHaveBeenCalledTimes(2)
 })
 
@@ -2154,3 +2206,479 @@ it.each(['telegram', 'whatsapp'] as const)(
     ).toHaveLength(1)
   },
 )
+
+it('retains phone, username and native ID independently through verification and privacy-limited profiles', async () => {
+  state.ctx.user.superAdmin = true
+  sqlite.exec("UPDATE user SET telephone='+85291234567' WHERE id='operator-b'")
+  const identity = identityFields({
+    phoneNumber: '+1 (555) 555-0100',
+    username: '@Synthetic',
+    nativeId: '42',
+  })
+  await setUserMessagingIdentity({
+    userId: 'operator-b',
+    platform: 'telegram',
+    identity,
+  })
+  const pending = (
+    await getUserMessagingSettings({ userId: 'operator-b' })
+  ).identities.find(row => row.platform === 'telegram')!
+  expect(pending).toMatchObject({
+    phoneNumber: '+15555550100',
+    username: 'synthetic',
+    nativeId: '42',
+    verifiedAt: null,
+  })
+  bridge.profile.mockResolvedValue({
+    jid: '42',
+    username: 'synthetic',
+    phone: null,
+    aliases: ['42'],
+  })
+  await verifyUserMessagingIdentity({
+    meta,
+    userId: 'operator-b',
+    accountId: account.id,
+    expectedUpdatedAt: pending.updatedAt,
+    confirmOwnership: true,
+  })
+  expect(bridge.profile.mock.calls.map(call => call[1]).sort()).toEqual(
+    ['+15555550100', '42', '@synthetic'].sort(),
+  )
+  expect(
+    sqlite
+      .prepare(
+        "SELECT phoneNumber,username,nativeId,verifiedBy,sourceTelephone FROM userMessagingIdentity WHERE userId='operator-b' AND platform='telegram'",
+      )
+      .get(),
+  ).toEqual({
+    phoneNumber: '+15555550100',
+    username: 'synthetic',
+    nativeId: '42',
+    verifiedBy: 'operator-a',
+    sourceTelephone: null,
+  })
+  expect(
+    sqlite.prepare("SELECT telephone FROM user WHERE id='operator-b'").get(),
+  ).toEqual({ telephone: '+85291234567' })
+  const verified = identityRevision('operator-b', 'telegram')
+  await setUserMessagingIdentity({
+    userId: 'operator-b',
+    platform: 'telegram',
+    identity,
+  })
+  expect(identityRevision('operator-b', 'telegram')).toBe(verified)
+  expect(
+    (await getUserMessagingSettings({ userId: 'operator-b' })).identities.find(
+      row => row.platform === 'telegram',
+    )?.verifiedAt,
+  ).toBeTruthy()
+})
+
+it('rejects identifiers for different provider accounts and does not promote a partial match', async () => {
+  state.ctx.user.superAdmin = true
+  await setUserMessagingIdentity({
+    userId: 'operator-b',
+    platform: 'telegram',
+    identity: identityFields({ phoneNumber: '+15555550100', username: 'synthetic' }),
+  })
+  bridge.profile.mockImplementation(async (_account, address) => ({
+    jid: address === '@synthetic' ? '42' : '43',
+    aliases: [],
+  }))
+  await expect(
+    verifyUserMessagingIdentity({
+      meta,
+      userId: 'operator-b',
+      accountId: account.id,
+      expectedUpdatedAt: identityRevision('operator-b', 'telegram'),
+      confirmOwnership: true,
+    }),
+  ).rejects.toMatchObject({ status: 409 })
+  expect(
+    sqlite
+      .prepare(
+        "SELECT nativeId,verifiedAt FROM userMessagingIdentity WHERE userId='operator-b' AND platform='telegram'",
+      )
+      .get(),
+  ).toEqual({ nativeId: null, verifiedAt: null })
+  expect(
+    sqlite
+      .prepare("SELECT * FROM userMessagingIdentityAlias WHERE platform='telegram'")
+      .all(),
+  ).toEqual([])
+})
+
+it('does not overwrite a claim edited while provider verification is in flight', async () => {
+  state.ctx.user.superAdmin = true
+  await setUserMessagingIdentity({
+    userId: 'operator-b',
+    platform: 'telegram',
+    identity: identityFields({ username: 'synthetic' }),
+  })
+  const expectedUpdatedAt = identityRevision('operator-b', 'telegram')
+  bridge.profile.mockImplementationOnce(async () => {
+    await setUserMessagingIdentity({
+      userId: 'operator-b',
+      platform: 'telegram',
+      identity: identityFields({ username: 'changed' }),
+    })
+    return { jid: '42', aliases: ['42'] }
+  })
+  await expect(
+    verifyUserMessagingIdentity({
+      meta,
+      userId: 'operator-b',
+      accountId: account.id,
+      expectedUpdatedAt,
+      confirmOwnership: true,
+    }),
+  ).rejects.toMatchObject({ status: 409 })
+  expect(
+    sqlite
+      .prepare(
+        "SELECT username,nativeId,verifiedAt FROM userMessagingIdentity WHERE userId='operator-b' AND platform='telegram'",
+      )
+      .get(),
+  ).toEqual({ username: 'changed', nativeId: null, verifiedAt: null })
+  expect(
+    sqlite
+      .prepare("SELECT * FROM userMessagingIdentityAlias WHERE platform='telegram'")
+      .all(),
+  ).toEqual([])
+})
+
+it('retains provider aliases so verification does not lose a pinned WhatsApp thread', async () => {
+  state.ctx.user.superAdmin = true
+  account.platform = 'whatsapp'
+  sqlite.exec(
+    "UPDATE messagingAccount SET platform='whatsapp',externalAccountId='owned-wa'",
+  )
+  const chat = '15555550100@s.whatsapp.net'
+  await projectMessagingSnapshot(state.ctx.db, account, {
+    status,
+    messages: [
+      {
+        sequence: 1,
+        id: 'old',
+        chat,
+        sender: chat,
+        timestamp: 1,
+        fromMe: false,
+        text: 'Keep this conversation',
+      },
+    ],
+    outbox: [],
+  })
+  const before = sqlite.prepare('SELECT * FROM messagingConversation').get()
+  bridge.profile.mockResolvedValue({
+    jid: '987654321@lid',
+    phone: '15555550100',
+    username: null,
+    aliases: [chat, '987654321@lid'],
+  })
+  await verifyUserMessagingIdentity({
+    meta,
+    userId: 'operator-b',
+    accountId: account.id,
+    expectedUpdatedAt: identityRevision('operator-b', 'whatsapp'),
+    confirmOwnership: true,
+  })
+  expect(sqlite.prepare('SELECT * FROM messagingConversation').get()).toEqual(before)
+  expect(
+    (await getMessagingConversations({ meta, accountId: account.id }))[0],
+  ).toMatchObject({ chatId: chat, recipient: { id: 'operator-b' } })
+  expect(
+    sqlite
+      .prepare(
+        "SELECT nativeId FROM userMessagingIdentityAlias WHERE platform='whatsapp' ORDER BY nativeId",
+      )
+      .all(),
+  ).toEqual([{ nativeId: chat }, { nativeId: '987654321@lid' }])
+  expect(
+    await getMessagingProfile({ meta, accountId: account.id, address: chat }),
+  ).toMatchObject({ jid: '987654321@lid' })
+})
+
+it('rolls verification back when a provider alias already belongs to another HYPE user', async () => {
+  state.ctx.user.superAdmin = true
+  sqlite.exec("UPDATE messagingAccount SET platform='whatsapp'")
+  await setUserMessagingIdentity({
+    platform: 'whatsapp',
+    identity: identityFields({ nativeId: '987654321@lid' }),
+  })
+  bridge.profile.mockResolvedValue({
+    jid: '987654321@lid',
+    aliases: ['987654321@lid', '15555550100@s.whatsapp.net'],
+  })
+  await expect(
+    verifyUserMessagingIdentity({
+      meta,
+      userId: 'operator-a',
+      accountId: account.id,
+      expectedUpdatedAt: identityRevision('operator-a', 'whatsapp'),
+      confirmOwnership: true,
+    }),
+  ).rejects.toMatchObject({ status: 409 })
+  expect(
+    sqlite
+      .prepare("SELECT verifiedAt FROM userMessagingIdentity WHERE userId='operator-a'")
+      .get(),
+  ).toEqual({ verifiedAt: null })
+  expect(
+    sqlite
+      .prepare(
+        "SELECT userId,nativeId FROM userMessagingIdentityAlias WHERE platform='whatsapp'",
+      )
+      .all(),
+  ).toEqual([{ userId: 'operator-b', nativeId: '15555550100@s.whatsapp.net' }])
+})
+
+it('keeps a manual messaging claim separate from automatic discovery of a different profile phone', async () => {
+  state.ctx.user.superAdmin = true
+  sqlite.exec(
+    "UPDATE user SET telephone='+15555550100' WHERE id='operator-b'; UPDATE messagingAccount SET externalAccountId='owned-telegram'",
+  )
+  await setUserMessagingIdentity({
+    userId: 'operator-b',
+    platform: 'telegram',
+    identity: identityFields({ phoneNumber: '+85291234567', username: 'synthetic' }),
+  })
+  const result = await checkMessagingUser({
+    meta,
+    organisationId: 'org-a',
+    userId: 'operator-b',
+    platform: 'telegram',
+  })
+  expect(result).toMatchObject({
+    available: false,
+    unavailableReason:
+      'Awaiting ownership verification of the saved messaging identity',
+  })
+  await expect(
+    openUserMessagingConversation({
+      meta,
+      organisationId: 'org-a',
+      username: 'operator_b',
+      platform: 'telegram',
+    }),
+  ).rejects.toMatchObject({ status: 409 })
+  expect(bridge.lookupPhone).not.toHaveBeenCalled()
+  expect(
+    sqlite
+      .prepare(
+        "SELECT phoneNumber,username,nativeId FROM userMessagingIdentity WHERE platform='telegram'",
+      )
+      .get(),
+  ).toEqual({ phoneNumber: '+85291234567', username: 'synthetic', nativeId: null })
+})
+
+it('uses the user preference for new outreach, supports explicit selection and falls back when unavailable', async () => {
+  state.ctx.user.superAdmin = true
+  sqlite.exec(
+    "UPDATE messagingAccount SET externalAccountId='owned-telegram'; INSERT INTO messagingAccount(id,organisationId,platform,bridgeAccountId,externalAccountId,enabled,createdAt,updatedAt) VALUES ('account-wa','org-a','whatsapp','bridge-wa','owned-wa',1,1,1)",
+  )
+  await setUserMessagingPreference({ userId: 'operator-b', platform: 'telegram' })
+  expect(
+    sqlite
+      .prepare("SELECT preferredMessagingPlatform FROM user WHERE id='operator-b'")
+      .get(),
+  ).toEqual({ preferredMessagingPlatform: 'telegram' })
+  expect(
+    await openUserMessagingConversation({
+      meta,
+      organisationId: 'org-a',
+      username: 'operator_b',
+    }),
+  ).toMatchObject({ platform: 'telegram' })
+  expect(
+    await openUserMessagingConversation({
+      meta,
+      organisationId: 'org-a',
+      username: 'operator_b',
+      platform: 'whatsapp',
+    }),
+  ).toMatchObject({ platform: 'whatsapp' })
+  sqlite.exec("UPDATE messagingAccount SET enabled=0 WHERE platform='telegram'")
+  expect(
+    await openUserMessagingConversation({
+      meta,
+      organisationId: 'org-a',
+      username: 'operator_b',
+    }),
+  ).toMatchObject({ platform: 'whatsapp' })
+  await setUserMessagingPreference({ userId: 'operator-b', platform: null })
+  expect(await getUserMessagingSettings({ userId: 'operator-b' })).toMatchObject({
+    platform: 'whatsapp',
+    preferredPlatform: null,
+  })
+})
+
+it('confirms a saved username without granting ownership, storing aliases or sending messages', async () => {
+  sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
+  await setUserMessagingIdentity({
+    platform: 'telegram',
+    identity: identityFields({ username: 'synthetic' }),
+  })
+  bridge.profile.mockResolvedValue({
+    jid: '77',
+    username: 'synthetic',
+    name: 'Private provider name',
+  })
+  const result = await checkUserMessagingIdentity({
+    platform: 'telegram',
+    expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
+  })
+  expect(result).toEqual({
+    status: 'confirmed',
+    message: 'Saved. Telegram account confirmed.',
+  })
+  expect(bridge.profile).toHaveBeenCalledWith('bridge-org-a', '@synthetic')
+  expect(
+    sqlite
+      .prepare(
+        "SELECT nativeId, verifiedAt FROM userMessagingIdentity WHERE userId='operator-a'",
+      )
+      .get(),
+  ).toEqual({ nativeId: null, verifiedAt: null })
+  expect(
+    sqlite
+      .prepare(
+        "SELECT count(*) AS count FROM userMessagingIdentityAlias WHERE userId='operator-a'",
+      )
+      .get(),
+  ).toEqual({ count: 0 })
+  expect(bridge.send).not.toHaveBeenCalled()
+})
+
+it.each(['registered', 'not_found', 'unresolved', 'unavailable'] as const)(
+  'reports %s phone lookup truthfully',
+  async status => {
+    sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
+    await setUserMessagingIdentity({
+      platform: 'telegram',
+      identity: identityFields({ phoneNumber: '+85291234567' }),
+    })
+    bridge.lookupPhone.mockResolvedValue(
+      status === 'registered' ? { status, address: '77' } : { status },
+    )
+    const result = await checkUserMessagingIdentity({
+      platform: 'telegram',
+      expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
+    })
+    expect(result.status).toBe(
+      status === 'registered'
+        ? 'confirmed'
+        : status === 'not_found'
+          ? 'not-found'
+          : 'unavailable',
+    )
+    expect(bridge.lookupPhone).toHaveBeenCalledWith('bridge-org-a', '+85291234567')
+    expect(bridge.profile).not.toHaveBeenCalled()
+    expect(bridge.send).not.toHaveBeenCalled()
+  },
+)
+
+it('does not borrow another organisation account or disclose another user contact', async () => {
+  sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
+  await setUserMessagingIdentity({
+    platform: 'telegram',
+    identity: identityFields({ username: 'synthetic' }),
+  })
+  state.ctx.userRoles = [
+    {
+      type: 'organisation',
+      organisationId: 'org-b',
+      userId: 'operator-a',
+      role: 'member',
+    },
+  ]
+  expect(
+    await checkUserMessagingIdentity({
+      platform: 'telegram',
+      expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
+    }),
+  ).toMatchObject({ status: 'unavailable' })
+  await expect(
+    checkUserMessagingIdentity({
+      userId: 'operator-b',
+      platform: 'telegram',
+      expectedUpdatedAt: 1,
+    }),
+  ).rejects.toMatchObject({ status: 403 })
+  expect(bridge.profile).not.toHaveBeenCalled()
+})
+
+it('rejects a confirmation that finishes after the saved claim changes', async () => {
+  sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
+  await setUserMessagingIdentity({
+    platform: 'telegram',
+    identity: identityFields({ username: 'synthetic' }),
+  })
+  bridge.profile.mockImplementation(async () => {
+    await setUserMessagingIdentity({
+      platform: 'telegram',
+      identity: identityFields({ username: 'different' }),
+    })
+    return { jid: '77' }
+  })
+  await expect(
+    checkUserMessagingIdentity({
+      platform: 'telegram',
+      expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
+    }),
+  ).rejects.toMatchObject({ status: 409 })
+})
+
+it('retains WhatsApp usernames without pretending its bridge can confirm them', async () => {
+  await setUserMessagingIdentity({
+    platform: 'whatsapp',
+    identity: identityFields({ username: 'synthetic' }),
+  })
+  expect(
+    await checkUserMessagingIdentity({
+      platform: 'whatsapp',
+      expectedUpdatedAt: identityRevision('operator-a', 'whatsapp'),
+    }),
+  ).toMatchObject({ status: 'unavailable' })
+  expect(bridge.profile).not.toHaveBeenCalled()
+  expect(bridge.lookupPhone).not.toHaveBeenCalled()
+})
+
+it('confirms WhatsApp phones through the accessible WhatsApp account', async () => {
+  sqlite.exec(
+    "INSERT INTO messagingAccount(id,organisationId,platform,bridgeAccountId,externalAccountId,enabled,createdAt,updatedAt) VALUES ('account-wa','org-a','whatsapp','bridge-wa','connected-wa',1,1,1)",
+  )
+  await setUserMessagingIdentity({
+    platform: 'whatsapp',
+    identity: identityFields({ phoneNumber: '+85291234567' }),
+  })
+  bridge.lookupPhone.mockResolvedValue({
+    status: 'registered',
+    address: '85291234567@s.whatsapp.net',
+  })
+  expect(
+    await checkUserMessagingIdentity({
+      platform: 'whatsapp',
+      expectedUpdatedAt: identityRevision('operator-a', 'whatsapp'),
+    }),
+  ).toEqual({ status: 'confirmed', message: 'Saved. WhatsApp account confirmed.' })
+  expect(bridge.lookupPhone).toHaveBeenCalledWith('bridge-wa', '+85291234567')
+  expect(bridge.send).not.toHaveBeenCalled()
+})
+
+it('rejects provider group IDs instead of displaying a confirmation checkmark', async () => {
+  sqlite.exec("UPDATE messagingAccount SET externalAccountId='connected'")
+  await setUserMessagingIdentity({
+    platform: 'telegram',
+    identity: identityFields({ username: 'synthetic' }),
+  })
+  bridge.profile.mockResolvedValue({ jid: '-1001234' })
+  expect(
+    await checkUserMessagingIdentity({
+      platform: 'telegram',
+      expectedUpdatedAt: identityRevision('operator-a', 'telegram'),
+    }),
+  ).toMatchObject({ status: 'not-found' })
+  expect(bridge.send).not.toHaveBeenCalled()
+})
