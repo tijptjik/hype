@@ -47,7 +47,7 @@ const legalContactAddressIssues = $derived(
 )
 </script>
 
-<section class="bits-form__section">
+<section class="bits-form__section pb-0!">
   <SectionHeader
     title={m.admin__forms_hub_routing_title()}
     description={m.admin__forms_hub_routing_subtitle()}
