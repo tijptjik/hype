@@ -57,6 +57,7 @@ vi.mock('#lib/navigation/facets.js', () => ({
 import { FirstClassResource } from '#lib/enums.js'
 import {
   createCodeRefResourceResult,
+  getEditorCtrl,
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
   resolveFacetTabsWithIssues,
@@ -189,5 +190,41 @@ describe('form helpers', () => {
         },
       ),
     ).toThrowError('Cannot update resource without a valid ID')
+  })
+})
+
+describe('editor route ownership', () => {
+  it('invalidates action ownership on reload and cleanup without revoking a newer route', async () => {
+    const controller = getEditorCtrl({
+      headerCtrl: {
+        setEditing: vi.fn(),
+        setFormActions: vi.fn(),
+        setHeaderForEntity: vi.fn(),
+        clearFormActions: vi.fn(),
+      },
+      icon: (() => ({})) as import('svelte').Component,
+      facetTabs: new Map(),
+    })
+    const inactive = controller.captureRoute()
+    expect(inactive()).toBe(false)
+    const params = {
+      ref: 'one',
+      resetFormActionsSignature: vi.fn(),
+      setFacetForRef: vi.fn(),
+      load: async () => 'loaded',
+      commit: vi.fn(),
+    }
+    const firstCleanup = controller.syncRouteAndLoad(params)
+    const first = controller.captureRoute()
+    expect(first()).toBe(true)
+    await Promise.resolve()
+    const secondCleanup = controller.syncRouteAndLoad({ ...params, ref: 'two' })
+    const second = controller.captureRoute()
+    expect(first()).toBe(false)
+    firstCleanup()
+    expect(second()).toBe(true)
+    secondCleanup()
+    expect(second()).toBe(false)
+    expect(controller.captureRoute()()).toBe(false)
   })
 })
