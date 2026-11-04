@@ -988,3 +988,37 @@ migration or application deployment was required. Authenticated production direc
 live provider claims and enrolment acceptance remain open: the browser access host was
 unavailable. Data import completion does not close those broader release checks, and
 WhatsApp/Telegram discovery remains disabled.
+
+### Reviewed single-email profile resolution (5 November 2026)
+
+Refs #189 and #194. Seven groups were already consolidated into seven stable HYPE IDs,
+but two distinct source name strings kept each profile unclaimed despite one shared
+email. Private `profileResolutions` now record an exact source-ID cohort, its sole
+normalized email and an explicitly reviewed canonical name. The planner rejects changed
+cohorts/emails. This does not broaden automatic matching for multi-email groups.
+
+The guarded sync resolves existing unclaimed profiles in place, restores their primary
+email and reviewed name, preserves existing photos or uses the selected source photo,
+and attaches only eligible portable Google identities. It does not manufacture a
+first-login timestamp. Independent profile edits remain protected on subsequent syncs.
+Raw source names and historic identity mappings remain intact.
+
+Both production and the primary local database applied **seven profile updates, seven
+import-ownership updates and six portable Google account inserts**. Exact read-back has
+zero mismatches; the fourteen source mappings and existing role grants are unchanged.
+There were no user inserts/deletions, history transfers, phone changes or additional
+schema migrations. Total users remain 15,169 production / 15,012 local; phone-bearing
+users remain 10,767 / 10,700. Unclaimed counts drop from 719 to 712 production and from
+712 to 705 local. The remaining production groups have multiple candidate emails and are
+not resolved by these seven explicit decisions.
+
+Six source photo URLs were restored: five return HTTP 200 images, one returns HTTP 400.
+The seventh profile has no photo in either source record. URL checks are not rendered
+browser verification; those two missing/broken photos remain unresolved.
+
+Validation: 64 focused importer/adoption tests and scoped TypeScript pass. Exact-schema
+rehearsal and both post-application repeat plans produce zero mutations, exceptions and
+checkpoint changes; FK errors and duplicate provider subjects are zero. Private plans,
+source evidence, decisions and receipts remain ignored under `.local`. The production
+accepted-sync manifest and local decisions now retain these resolutions for future runs.
+Authenticated production UI, live provider and enrolment checks remain open.
