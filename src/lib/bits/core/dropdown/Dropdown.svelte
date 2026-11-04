@@ -8,6 +8,7 @@ import type { DropdownProps } from './dropdown.types'
 
 let {
   ariaLabel,
+  disabled = false,
   triggerClass = '',
   triggerIcon: TriggerIcon = null,
   triggerIconClass = '',
@@ -43,7 +44,7 @@ const resolvedItemClass = $derived(
 </script>
 
 <DropdownMenu.Root>
-  <DropdownMenu.Trigger class={resolvedTriggerClass} aria-label={ariaLabel}>
+  <DropdownMenu.Trigger class={resolvedTriggerClass} aria-label={ariaLabel} {disabled}>
     {#if TriggerIcon}
       <TriggerIcon class={resolvedTriggerIconClass} />
     {/if}

@@ -11,6 +11,7 @@ export type DropdownItem = {
 
 export type DropdownProps = {
   ariaLabel: string
+  disabled?: boolean
   triggerClass?: string
   triggerIcon?: Component | null
   triggerIconClass?: string

@@ -119,6 +119,20 @@ export class ResourceScope {
     }
   }
 
+  /**
+   * Selects one organisation without changing unrelated project or layer preferences.
+   * @param id Organisation to select, or null to clear the organisation scope.
+   * @returns Completion of dependent resource refreshes; repeated selection is a no-op.
+   * @remarks Assignment is atomic so shared consumers never observe an intermediate empty scope.
+   */
+  selectOrganisation = async (id: Id | null): Promise<void> => {
+    const next = id ? [id] : []
+    const previous = this.prisms.organisation
+    if (previous.length === next.length && previous.every((value, index) => value === next[index])) return
+    this.prisms.organisation = next
+    await this.dependencies.refreshProjects()
+  }
+
   // Toggle methods for hierarchical filters
   toggleOrganisation = async (id: Id): Promise<void> => {
     await this.togglePrism(FirstClassResource.organisation, id)

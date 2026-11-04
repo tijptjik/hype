@@ -47,6 +47,17 @@ function setup() {
 }
 
 describe('resource scope', () => {
+  it('selects one organisation atomically while retaining hidden project and layer pins', async () => {
+    const { scope, calls } = setup()
+    scope.prisms = { organisation: ['o', 'other'], project: ['p'], layer: ['a'] }
+    await scope.selectOrganisation('other')
+    expect(scope.prisms).toEqual({ organisation: ['other'], project: ['p'], layer: ['a'] })
+    expect(calls).toEqual(['projects'])
+    await scope.selectOrganisation('other')
+    expect(calls).toEqual(['projects'])
+    await scope.selectOrganisation(null)
+    expect(scope.prisms.organisation).toEqual([])
+  })
   it('reorders active layers without changing filters or triggering dependent refreshes', () => {
     const { scope, calls } = setup()
     scope.prisms = { organisation: ['o'], project: ['p'], layer: ['a', 'b', 'c'] }
