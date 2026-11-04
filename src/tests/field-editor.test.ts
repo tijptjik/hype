@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 // TESTING
-import { cleanup, fireEvent, render, screen } from '@testing-library/svelte/pure'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/svelte/pure'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 // SVELTEKIT
 // @ts-expect-error Exercise the installed remote-form parser.
@@ -212,4 +219,64 @@ it('uses one header language strip to add, hide and reorder languages across eve
   await fireEvent.click(toggle)
   expect(view.container.querySelectorAll('[data-locale-dnd-zone]')).toHaveLength(1)
   expect(submitted(view.container).i18n.zhHans.label).toBe('宗教')
+})
+
+it('places translation controls in the option header and scopes requests to that option', async () => {
+  const translate = vi.fn(async () => true)
+  const view = render(Fixture, { translate })
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  const option = view.container.querySelector('[data-dnd-item]') as HTMLElement
+  const header = option.querySelector('[data-option-header]') as HTMLElement
+  await fireEvent.click(
+    within(header).getByRole('button', { name: 'Translate empty values from en' }),
+  )
+  await waitFor(() => expect(translate).toHaveBeenCalledTimes(2))
+  expect(translate.mock.calls).toEqual([
+    ['religion', 'en', 'zh-Hant', { type: 'value', valueId: 'option-0' }],
+    ['religion', 'en', 'zh-Hans', { type: 'value', valueId: 'option-0' }],
+  ])
+  expect(screen.queryByRole('heading', { name: 'Options' })).toBeNull()
+  expect(submitted(view.container).values[1].i18n.zhHans.value).toBe('')
+})
+
+it('clears one generated option locale without removing the option or changing sibling values', async () => {
+  const view = render(Fixture)
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  const before = submitted(view.container)
+  const editor = screen.getByRole('textbox', { name: 'Option 1 zh-Hant' })
+  await fireEvent.click(screen.getByRole('button', { name: 'Clear Option 1 zh-Hant' }))
+  await waitFor(() => expect(document.activeElement).toBe(editor))
+  const after = submitted(view.container)
+  expect(after.values).toHaveLength(before.values.length)
+  expect(after.values[0]).toMatchObject({
+    id: 'option-0',
+    rank: 0,
+    i18n: { zhHant: { value: '', valueGen: false }, en: { value: 'Christian' } },
+  })
+  expect(after.values[1]).toEqual(before.values[1])
+  expect(after.i18n).toEqual(before.i18n)
+  expect(editor.textContent).toBe('')
+  expect(screen.queryByRole('button', { name: 'Clear Option 1 zh-Hant' })).toBeNull()
+})
+
+it('clears a canonical option value without deleting its option or stored translations', async () => {
+  const view = render(Fixture, { translatable: false })
+  const before = submitted(view.container)
+  await fireEvent.click(screen.getByRole('button', { name: 'Clear Option 1 en' }))
+  const after = submitted(view.container)
+  expect(after.values).toHaveLength(before.values.length)
+  expect(after.values[0].value).toBe('')
+  expect(after.values[0].i18n).toEqual(before.values[0].i18n)
+  expect(after.values[1]).toEqual(before.values[1])
+})
+
+it('tabs from a cleared option to the next visible option when languages are collapsed', async () => {
+  render(Fixture)
+  await fireEvent.click(screen.getByRole('button', { name: 'Clear Option 1 en' }))
+  const first = screen.getByRole('textbox', { name: 'Option 1 en' })
+  await waitFor(() => expect(document.activeElement).toBe(first))
+  await fireEvent.keyDown(first, { key: 'Tab' })
+  expect(document.activeElement).toBe(
+    screen.getByRole('textbox', { name: 'Option 2 en' }),
+  )
 })

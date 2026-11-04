@@ -587,12 +587,14 @@ function reorderRankedItems<T extends { id: Id; rank?: number }>(
 
 /** Collect nonblank source cells whose target is still empty.
  * @param property Source definition. @param sourceLocale Source content tag. @param targetLocale Target content tag.
+ * @param origin Optional single text field or option identity to translate.
  * @returns A bounded-provider payload and stable cell identities, or null without source content.
  */
 function collectMissingPropertyTranslations(
   property: Property,
   sourceLocale: string,
   targetLocale: string,
+  origin?: PropertyTranslationOrigin,
 ): { texts: string[]; origins: PropertyTranslationOrigin[] } | null {
   const texts: string[] = []
   const origins: PropertyTranslationOrigin[] = []
@@ -605,21 +607,26 @@ function collectMissingPropertyTranslations(
   const targetPropertyI18n = (property.i18n as WritableI18nRecord | undefined)?.[
     targetLocaleKey
   ] as { label?: string; placeholder?: string } | undefined
-  if (!sourcePropertyI18n) return null
 
-  if (!targetPropertyI18n?.label?.trim() && sourcePropertyI18n.label?.trim()) {
+  if (
+    (!origin || origin.type === 'label') &&
+    !targetPropertyI18n?.label?.trim() &&
+    sourcePropertyI18n?.label?.trim()
+  ) {
     texts.push(sourcePropertyI18n.label)
     origins.push({ type: 'label' })
   }
   if (
+    (!origin || origin.type === 'placeholder') &&
     !targetPropertyI18n?.placeholder?.trim() &&
-    sourcePropertyI18n.placeholder?.trim()
+    sourcePropertyI18n?.placeholder?.trim()
   ) {
     texts.push(sourcePropertyI18n.placeholder)
     origins.push({ type: 'placeholder' })
   }
 
   for (const value of property.isTranslatable ? property.values || [] : []) {
+    if (origin && (origin.type !== 'value' || origin.valueId !== value.id)) continue
     const sourceValue =
       (
         (value.i18n as WritableI18nRecord | undefined)?.[sourceLocaleKey] as
@@ -1396,8 +1403,10 @@ export function updateProjectPropertyValueI18n(
 // 3.2.4 LOCALE MUTATORS
 // ───────────────────────
 
-/** Fill missing text and option translations in one content language.
+/** Fill missing text and option translations in one content language, optionally scoped to one cell.
  * @param form Owning form. @param propertyId Definition identity. @param sourceLocale Source content tag. @param targetLocale Target content tag.
+ * @param origin Optional field or option identity; omitted callers retain whole-definition translation.
+ * @remarks Existing target content and sibling cells outside the chosen origin are preserved.
  * @returns Whether provider results were applied; existing target content is retained.
  */
 export async function translateProjectPropertyLocale(
@@ -1405,15 +1414,18 @@ export async function translateProjectPropertyLocale(
   propertyId: Id,
   sourceLocale: string,
   targetLocale: string,
+  origin?: PropertyTranslationOrigin,
 ): Promise<boolean> {
   const current = form.fields.value().data
   const property = (current?.properties || []).find(item => item.id === propertyId)
   if (!property) return false
 
+  // Scope the provider payload before requesting translations so sibling cells stay untouched.
   const translationPayload = collectMissingPropertyTranslations(
     property,
     sourceLocale,
     targetLocale,
+    origin,
   )
   if (!translationPayload || translationPayload.texts.length === 0) return false
 

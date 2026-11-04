@@ -32,10 +32,7 @@ let labelledWidth = $state(0)
 const hideLabels = $derived(labelledWidth > availableWidth)
 </script>
 
-{#snippet actions(
-  compact: boolean,
-  measuring = false,
-)}
+{#snippet actions(compact: boolean, measuring = false)}
   <Button
     text={m.wacky_home_sawfish_accept()}
     hideLabel={compact}
@@ -85,10 +82,7 @@ const hideLabels = $derived(labelledWidth > availableWidth)
   />
 {/snippet}
 
-<section class="bits-project-field-card__values rounded-lg border border-border/40 p-2">
-  <h4 class="px-2 text-sm font-bold text-[var(--form-label)]">
-    {m.admin__forms_property_options()}
-  </h4>
+<section class="bits-project-field-card__values">
   {#if isEditing}
     <div class="relative min-h-8.5">
       <div
@@ -97,7 +91,7 @@ const hideLabels = $derived(labelledWidth > availableWidth)
       >
         <!-- Measure the full labels independently so compact mode cannot oscillate. -->
         <div
-          class="invisible pointer-events-none absolute inset-0 overflow-hidden"
+          class="pointer-events-none invisible absolute inset-0 overflow-hidden"
           aria-hidden="true"
           inert
         >

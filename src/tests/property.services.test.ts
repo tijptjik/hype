@@ -247,3 +247,81 @@ describe('property services', () => {
     expect(getData().properties[0]?.values?.[0]?.i18n?.zhHans?.value).toBe('')
   })
 })
+
+describe('scoped property translations', () => {
+  beforeEach(() => translateTextMock.mockReset())
+  it.each([
+    { origin: { type: 'label' } as const, source: 'Name' },
+    { origin: { type: 'placeholder' } as const, source: 'Choose' },
+    { origin: { type: 'value', valueId: 'first' } as const, source: 'First' },
+  ])('translates only the requested $origin.type cell', async ({ origin, source }) => {
+    translateTextMock.mockResolvedValue(['Generated'])
+    const { form, getData } = createForm({
+      properties: [
+        {
+          id: 'scoped',
+          isTranslatable: true,
+          i18n: {
+            en: { label: 'Name', placeholder: 'Choose' },
+            zhHans: { label: '', placeholder: '' },
+          },
+          values: [
+            { id: 'first', i18n: { en: { value: 'First' }, zhHans: { value: '' } } },
+            { id: 'second', i18n: { en: { value: 'Second' }, zhHans: { value: '' } } },
+          ],
+        },
+      ],
+    })
+    expect(
+      await translateProjectPropertyLocale(
+        form as never,
+        'scoped',
+        'en',
+        'zh-Hans',
+        origin,
+      ),
+    ).toBe(true)
+    expect(translateTextMock).toHaveBeenCalledWith({
+      source: 'en',
+      target: 'zhHans',
+      texts: [source],
+    })
+    const property = getData().properties[0]
+    expect(property.i18n.zhHans.label).toBe(origin.type === 'label' ? 'Generated' : '')
+    expect(property.i18n.zhHans.placeholder).toBe(
+      origin.type === 'placeholder' ? 'Generated' : '',
+    )
+    expect(property.values[0].i18n.zhHans.value).toBe(
+      origin.type === 'value' ? 'Generated' : '',
+    )
+    expect(property.values[1].i18n.zhHans.value).toBe('')
+  })
+  it('translates an option language even when the definition has no matching language bucket', async () => {
+    translateTextMock.mockResolvedValue(['Generated'])
+    const { form, getData } = createForm({
+      properties: [
+        {
+          id: 'scoped',
+          isTranslatable: true,
+          i18n: { en: { label: 'Name' } },
+          values: [{ id: 'first', i18n: { ja: { value: '最初' } } }],
+        },
+      ],
+    })
+    expect(
+      await translateProjectPropertyLocale(form as never, 'scoped', 'ja', 'zh-Hant', {
+        type: 'value',
+        valueId: 'first',
+      }),
+    ).toBe(true)
+    expect(translateTextMock).toHaveBeenCalledWith({
+      source: 'ja',
+      target: 'zhHant',
+      texts: ['最初'],
+    })
+    expect(getData().properties[0].values[0].i18n).toMatchObject({
+      zhHant: { value: 'Generated', valueGen: true },
+    })
+    expect(getData().properties[0].i18n).toEqual({ en: { label: 'Name' } })
+  })
+})

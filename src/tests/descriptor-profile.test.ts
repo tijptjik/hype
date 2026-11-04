@@ -12,6 +12,15 @@ import Fixture from './fixtures/components/DescriptorProfileFixture.svelte'
 
 beforeEach(() => {
   vi.useRealTimers()
+  // JSDOM has no layout observer; browser checks cover the measured sticky offset.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
   vi.stubGlobal('matchMedia', () => ({
     matches: true,
     addEventListener() {},
@@ -155,5 +164,88 @@ it('keeps organisation search in the header and removes directly without changin
     expect(screen.getAllByRole('button', { name: 'Remove organisation' })).toHaveLength(
       2,
     ),
+  )
+})
+
+it('keeps multilingual mode shared in both directions when hub Profile and Policies remount', async () => {
+  const view = render(Fixture)
+  await fireEvent.click(screen.getByRole('button', { name: 'Hub profile' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Policies tab' }))
+  expect(
+    screen.getByRole('button', { name: 'Multilingual' }).getAttribute('aria-expanded'),
+  ).toBe('true')
+  expect(
+    [...view.container.querySelectorAll('[data-profile-field]')].map(field =>
+      field.getAttribute('data-profile-field'),
+    ),
+  ).toEqual(['privacyPolicy', 'termsOfService'])
+  const privacy = view.container.querySelector('[data-profile-field="privacyPolicy"]')!
+  expect(
+    privacy
+      .querySelector('[data-profile-locale="zh-Hant"]')
+      ?.getAttribute('aria-hidden'),
+  ).toBe('false')
+  expect(
+    within(privacy as HTMLElement).getByRole('heading', {
+      name: 'Privacy Policy',
+      level: 1,
+    }),
+  ).toBeTruthy()
+  expect(privacy.querySelector('strong')?.textContent).toBe('your data')
+  expect(privacy.querySelector('table')).toBeTruthy()
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Profile tab' }))
+  expect(
+    screen.getByRole('button', { name: 'Multilingual' }).getAttribute('aria-expanded'),
+  ).toBe('false')
+  await fireEvent.click(screen.getByRole('button', { name: 'Policies tab' }))
+  expect(
+    screen.getByRole('button', { name: 'Multilingual' }).getAttribute('aria-expanded'),
+  ).toBe('false')
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Profile tab' }))
+  expect(
+    screen.getByRole('button', { name: 'Multilingual' }).getAttribute('aria-expanded'),
+  ).toBe('true')
+})
+
+it('edits policy markdown inline, cancels safely and translates only the chosen policy', async () => {
+  const provider = vi.fn(async (_source: string, target: string, text: string) => ({
+    status: 'translated' as const,
+    text: `${target}: ${text}`,
+  }))
+  const view = render(Fixture, { provider })
+  await fireEvent.click(screen.getByRole('button', { name: 'Hub profile' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Policies tab' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
+  const original = snapshot(view.container).data.i18n.en.privacyPolicy
+  await fireEvent.click(
+    screen.getByRole('button', { name: 'Privacy Policy · English' }),
+  )
+  const input = screen.getByRole('textbox', { name: 'Privacy Policy · English' })
+  expect((input as HTMLTextAreaElement).value).toBe(original)
+  await fireEvent.input(input, { target: { value: '# Changed policy' } })
+  expect(snapshot(view.container).data.i18n.en.privacyPolicyGen).toBe(false)
+  await fireEvent.keyDown(input, { key: 'Escape' })
+  expect(snapshot(view.container).data.i18n.en.privacyPolicy).toBe(original)
+  expect(snapshot(view.container).data.i18n.en.privacyPolicyGen).toBe(true)
+  await fireEvent.click(screen.getByRole('button', { name: 'Multilingual' }))
+  const privacy = view.container.querySelector(
+    '[data-profile-field="privacyPolicy"]',
+  ) as HTMLElement
+  await fireEvent.click(
+    within(privacy).getByRole('button', {
+      name: 'Translate empty values from English',
+    }),
+  )
+  await waitFor(() =>
+    expect(snapshot(view.container).data.i18n.zhHant.privacyPolicyGen).toBe(true),
+  )
+  expect(snapshot(view.container).data.i18n.en.privacyPolicy).toBe(original)
+  expect(snapshot(view.container).data.i18n.zhHant.termsOfService).toBeUndefined()
+  expect(snapshot(view.container).data.i18n.zhHant.description).toBe('')
+  expect(snapshot(view.container).data.i18n.en.termsOfService).toContain(
+    '# Terms of Service',
   )
 })

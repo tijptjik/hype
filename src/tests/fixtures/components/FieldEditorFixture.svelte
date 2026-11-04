@@ -12,6 +12,7 @@ import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFi
 import { contentFormKey, contentStorageTag } from '#lib/i18n/contentRecords.js'
 // SERVICES
 import {
+  translateProjectPropertyLocale,
   updateProjectPropertyBase,
   updateProjectPropertyI18n,
   addProjectPropertyValue,
@@ -22,15 +23,32 @@ import {
   updateProjectPropertyValueI18n,
 } from '#lib/client/services/property.js'
 // TYPES
-import type { Property, PropertyFormData } from '#lib/db/zod/schema/property.types.js'
+import type {
+  Property,
+  PropertyFormData,
+  PropertyTranslationOrigin,
+} from '#lib/db/zod/schema/property.types.js'
 import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
 
 setResponsiveCtx()
 let {
   translatable = true,
   fieldCount = 1,
+  panelPadding = false,
   extraLocales = [],
-}: { translatable?: boolean; fieldCount?: number; extraLocales?: string[] } = $props()
+  translate,
+}: {
+  translatable?: boolean
+  fieldCount?: number
+  panelPadding?: boolean
+  extraLocales?: string[]
+  translate?: (
+    propertyId: string,
+    source: string,
+    target: string,
+    origin?: PropertyTranslationOrigin,
+  ) => Promise<boolean | void>
+} = $props()
 let data = $state<PropertyFormData>({
   properties: [
     {
@@ -153,6 +171,7 @@ let editing = $state(true)
   </div>
   <form data-field-form>
     <FormFieldsSection
+      class={panelPadding ? 'shrink-0 pb-[320px]' : ''}
       title="Fields"
       description="Categorical and free form fields"
       items={data.properties ?? []}
@@ -191,7 +210,10 @@ let editing = $state(true)
         onMoveValue: (...args) => reorderProjectPropertyValue(form, ...args),
         onUpdateValue: (...args) => updateProjectPropertyValue(form, ...args),
         onUpdateValueI18n: (...args) => updateProjectPropertyValueI18n(form, ...args),
-        onTranslateLocale: async () => false,
+        onTranslateLocale: (propertyId, source, target, origin) =>
+          translate
+            ? translate(propertyId, source, target, origin)
+            : translateProjectPropertyLocale(form, propertyId, source, target, origin),
         onResetLocale: () => {},
       }}
     />

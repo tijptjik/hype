@@ -190,7 +190,10 @@ import type {
 import type { CapabilityDefinitions, CapabilityKey } from '#lib/capabilities.types.js'
 import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
-import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type {
+  Property,
+  PropertyTranslationOrigin,
+} from '#lib/db/zod/schema/property.types.js'
 
 import type {
   OrganisationBooleanField,
@@ -678,16 +681,26 @@ const updatePropertyValue = (
   revalidateAfterProgrammaticChange()
 }
 
+/** Translate missing property content within an optional field or option scope.
+ * @param propertyId Definition being edited.
+ * @param sourceLocale Source content language.
+ * @param targetLocale Target content language.
+ * @param origin Optional text field or stable option identity.
+ * @returns Whether translations were applied to the form.
+ * @remarks Revalidates after successful translation while preserving unrelated cells.
+ */
 const onTranslatePropertyLocale = async (
   propertyId: Id,
-  sourceLocale: Locale,
-  targetLocale: Locale,
+  sourceLocale: string,
+  targetLocale: string,
+  origin?: PropertyTranslationOrigin,
 ): Promise<boolean> => {
   const translated = await translateProjectPropertyLocale(
     organisationPropertyFormAdapter,
     propertyId,
     sourceLocale,
     targetLocale,
+    origin,
   )
 
   if (translated) revalidateAfterProgrammaticChange()
@@ -1869,7 +1882,9 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <!-- Reserve usable scroll space below the final option row and fixed facet actions. -->
         <FormFieldsSection
+          class="shrink-0 pb-[320px]"
           icon={Type}
           keepHeader
           items={organisationFieldsInSection}

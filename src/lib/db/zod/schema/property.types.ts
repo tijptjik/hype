@@ -96,6 +96,7 @@ export type FormFieldCardBodyProps = {
     propertyId: Id,
     sourceLocale: string,
     targetLocale: string,
+    origin?: PropertyTranslationOrigin,
   ) => Promise<boolean | void>
   onResetLocale: (propertyId: Id, targetLocale: string) => void | Promise<void>
   onLayoutMutationStart?: () => void

@@ -18,7 +18,6 @@ import {
   createFacetNavActionBuilder,
   createResourceFormConfig,
   focusFacetFromHash,
-  getGenAiState,
   getEditorCtrl,
   guardRefDesync,
   getUserRoleHiddenInputAttrs,
@@ -31,12 +30,9 @@ import {
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   syncAdminFacetFromHash,
-  toggleGenAiField,
   toIssueMessage,
-  translateLocaleIntoEmptyFields,
   updateFormData,
   updateUserRoleSelection,
-  resetLocaleFields,
 } from '#lib/client/services/form.js'
 import {
   getHubOrganisationHiddenInputAttrs,
@@ -47,6 +43,7 @@ import {
   toHubFormInput,
 } from '#lib/client/services/hub.js'
 import {
+  renderPolicyMarkdown,
   createDefaultHubPrivacyPolicy,
   createDefaultHubTermsOfService,
 } from '#lib/services/policy.js'
@@ -106,13 +103,12 @@ import {
   FormHubSpecifiersFields,
   FormHubSubscriptionSection,
   FormOrganisationsSection,
-  FormI18nSection,
   FormUserRolesSection,
   Main,
   ResourceViewer,
   SectionHeader,
 } from '#lib/bits/index.js'
-import FormPolicyField from '#lib/bits/patterns/forms/formPolicyField/FormPolicyField.svelte'
+import HubPolicyDocumentBody from '#lib/bits/patterns/policies/hubPolicyDialog/components/HubPolicyDocumentBody.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import {
   formSectionDividerStyles,
@@ -163,7 +159,10 @@ import type {
 import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
 import type { HubSubscriptionPlacement } from '#lib/api/services/hub.types.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
-import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type {
+  Property,
+  PropertyTranslationOrigin,
+} from '#lib/db/zod/schema/property.types.js'
 import type {
   Hub,
   HubFormInput,
@@ -273,10 +272,6 @@ const optimisticHubData = $derived.by(() =>
 
 // § Form
 
-const translatableI18nFieldsBySection = {
-  descriptors: ['name', 'nameShort', 'description'],
-  policies: ['privacyPolicy', 'termsOfService'],
-} as const
 type HubOrganisationSelection = NonNullable<
   HubFormInput['data']['organisations']
 >[number]
@@ -604,16 +599,26 @@ const updatePropertyValue = (
   revalidateAfterProgrammaticChange()
 }
 
+/** Translate missing property content within an optional field or option scope.
+ * @param propertyId Definition being edited.
+ * @param sourceLocale Source content language.
+ * @param targetLocale Target content language.
+ * @param origin Optional text field or stable option identity.
+ * @returns Whether translations were applied to the form.
+ * @remarks Revalidates after successful translation while preserving unrelated cells.
+ */
 const onTranslatePropertyLocale = async (
   propertyId: Id,
-  sourceLocale: Locale,
-  targetLocale: Locale,
+  sourceLocale: string,
+  targetLocale: string,
+  origin?: PropertyTranslationOrigin,
 ): Promise<boolean> => {
   const translated = await translateProjectPropertyLocale(
     hubPropertyFormAdapter,
     propertyId,
     sourceLocale,
     targetLocale,
+    origin,
   )
   if (translated) revalidateAfterProgrammaticChange()
   return translated
@@ -964,72 +969,11 @@ const allowedOrganisationIdSet = $derived(new Set(allowedOrganisationIds ?? []))
 
 // § Handlers
 
-function getPolicyFields(locale: LocaleKey) {
-  return formCtx.form.fields.data.i18n[locale]
-}
-
-function getPolicyTextareaAttrs(
-  locale: LocaleKey,
-  field: 'privacyPolicy' | 'termsOfService',
-): Record<string, unknown> {
-  return getPolicyFields(locale)[field].as('text') as Record<string, unknown>
-}
-
-function getPolicyGenValue(
-  locale: LocaleKey,
-  field: 'privacyPolicy' | 'termsOfService',
-): boolean {
-  return getGenAiState(formCtx.form, locale, field)
-}
-
-function getPolicyGenAttrs(
-  locale: LocaleKey,
-  field: 'privacyPolicyGen' | 'termsOfServiceGen',
-  value: boolean,
-): Record<string, unknown> {
-  return getPolicyFields(locale)[field].as(
-    'hidden',
-    value ? 'true' : 'false',
-  ) as Record<string, unknown>
-}
-
 function revalidateAfterProgrammaticChange(): void {
   revalidateAfterSubmitAttempt({
     wasSubmitAttempted: formCtx.wasSubmitAttempted,
     validate: formCtx.validate,
   })
-}
-
-async function onTranslate(
-  sourceLocale: Locale,
-  targetLocale: Locale,
-  sectionKey?: string,
-): Promise<boolean> {
-  const fields =
-    sectionKey === 'policies'
-      ? translatableI18nFieldsBySection.policies
-      : translatableI18nFieldsBySection.descriptors
-  const translated = await translateLocaleIntoEmptyFields({
-    form: formCtx.form,
-    sourceLocale,
-    targetLocale,
-    fields: [...fields],
-  })
-  if (translated) revalidateAfterProgrammaticChange()
-  return translated
-}
-
-function onResetLocale(targetLocale: Locale, sectionKey?: string): void {
-  const fields =
-    sectionKey === 'policies'
-      ? translatableI18nFieldsBySection.policies
-      : translatableI18nFieldsBySection.descriptors
-  resetLocaleFields({
-    form: formCtx.form,
-    targetLocale,
-    fields: [...fields],
-  })
-  revalidateAfterProgrammaticChange()
 }
 
 function onRegeneratePolicies(): void {
@@ -1428,6 +1372,8 @@ async function onDeleteToggle(): Promise<void> {
   })
 }
 
+// Keep multilingual presentation shared across hub tabs; resetting content must preserve it.
+let multilingualExpanded = $state(false)
 let profileResetVersion = $state(0)
 
 function onReset(): void {
@@ -1654,6 +1600,7 @@ $effect(() => {
       <FormSurface>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
+          bind:expanded={multilingualExpanded}
           form={formCtx.form}
           fields={formCtx.form.fields.data.i18n}
           defaultLocales={locales}
@@ -1783,7 +1730,9 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <!-- Reserve usable scroll space below the final option row and fixed facet actions. -->
         <FormFieldsSection
+          class="shrink-0 pb-[320px]"
           icon={Type}
           keepHeader
           items={hubFieldsInSection}
@@ -1845,12 +1794,9 @@ $effect(() => {
       attrs={{ 'data-facet-id': 'policies' }}
     >
       <FormSurface>
-        <FormI18nSection
+        <SectionHeader
           title="Policies"
-          subtitle="Configure the privacy policy and terms of service shown for this hub."
-          {locales}
-          {onTranslate}
-          {onResetLocale}
+          description="Configure the privacy policy and terms of service shown for this hub."
           actions={[
             {
               text: 'Regenerate',
@@ -1859,64 +1805,48 @@ $effect(() => {
               hideLabelBelow: 0,
               size: 'sm',
               style: 'ghost',
-              onClick: () => {
-                onRegeneratePolicies()
-              },
+              onClick: onRegeneratePolicies,
               disabled: !isEditing,
             },
           ]}
-          sectionKey="policies"
+        />
+        <FormI18nDescriptorProfile
+          bind:expanded={multilingualExpanded}
+          form={formCtx.form}
+          fields={formCtx.form.fields.data.i18n}
+          defaultLocales={locales}
+          recordKey={hubRef}
+          resetVersion={profileResetVersion}
           {isEditing}
+          {isRequiredInPreflight}
+          stackNames={false}
+          stickyFieldHeaders
+          stickyToolbar
+          fieldConfigs={[
+            {
+              key: 'privacyPolicy',
+              label: 'Privacy Policy',
+              kind: 'textarea',
+              renderHtml: false,
+            },
+            {
+              key: 'termsOfService',
+              label: 'Terms of Service',
+              kind: 'textarea',
+              renderHtml: false,
+            },
+          ]}
+          translate={(source, target, text) =>
+            translateContentField({ source, target, text })}
+          onChange={revalidateAfterProgrammaticChange}
         >
-          {#snippet children(locale)}
-            <input
-              {...getPolicyGenAttrs(
-                locale,
-                'privacyPolicyGen',
-                getPolicyGenValue(locale, 'privacyPolicy'),
-              )}
-            >
-            <input
-              {...getPolicyGenAttrs(
-                locale,
-                'termsOfServiceGen',
-                getPolicyGenValue(locale, 'termsOfService'),
-              )}
-            >
-
-            <FormPolicyField
-              label="Privacy Policy"
-              {locale}
-              isTranslated={true}
-              {isEditing}
-              isGenAI={getPolicyGenValue(locale, 'privacyPolicy')}
-              onToggleGenAI={() =>
-                toggleGenAiField(formCtx.form, locale, 'privacyPolicy')}
-              value={(
-                getPolicyTextareaAttrs(locale, 'privacyPolicy') as { value?: string }
-              ).value ?? ''}
-              issues={getPolicyFields(locale).privacyPolicy.issues()}
-              rows={24}
-              textareaAttrs={getPolicyTextareaAttrs(locale, 'privacyPolicy')}
-            />
-
-            <FormPolicyField
-              label="Terms Of Service"
-              {locale}
-              isTranslated={true}
-              {isEditing}
-              isGenAI={getPolicyGenValue(locale, 'termsOfService')}
-              onToggleGenAI={() =>
-                toggleGenAiField(formCtx.form, locale, 'termsOfService')}
-              value={(
-                getPolicyTextareaAttrs(locale, 'termsOfService') as { value?: string }
-              ).value ?? ''}
-              issues={getPolicyFields(locale).termsOfService.issues()}
-              rows={20}
-              textareaAttrs={getPolicyTextareaAttrs(locale, 'termsOfService')}
+          {#snippet renderValue(_field, value)}
+            <HubPolicyDocumentBody
+              html={renderPolicyMarkdown(value)}
+              class="min-w-0 overflow-x-auto break-words"
             />
           {/snippet}
-        </FormI18nSection>
+        </FormI18nDescriptorProfile>
       </FormSurface>
     </Main.Facet>
   </Main.Form>

@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { tick } from 'svelte'
+import { tick, type Snippet } from 'svelte'
 import { fade } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 import XIcon from 'virtual:icons/lucide/x'
@@ -13,6 +13,8 @@ import HtmlPreview from '#lib/bits/custom/htmlPreview/HtmlPreview.svelte'
 import { hasMeaningfulText } from '../text'
 
 let {
+  preview,
+  showPreview = true,
   value,
   label,
   prefix = '',
@@ -29,6 +31,8 @@ let {
   onCancel,
   onClear,
 }: {
+  preview?: Snippet
+  showPreview?: boolean
   value: string
   label: string
   prefix?: string
@@ -206,6 +210,8 @@ const editorAttrs = $derived({
           >
             {#if !hasMeaningfulText(value)}
               <span class="text-muted-foreground">—</span>
+            {:else if showPreview && preview}
+              {@render preview()}
             {:else if renderHtml}
               <HtmlPreview html={value} />
             {:else}
@@ -219,7 +225,6 @@ const editorAttrs = $derived({
       <button
         type="button"
         aria-label={`${m.filters__clear()} ${label}`}
-        title={m.filters__clear()}
         class="text-muted-foreground hover:text-primary focus-visible:outline-primary absolute top-1 right-1 flex size-8 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/inline-field:opacity-100 group-hover/inline-field:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 [@media(hover:none)]:opacity-100"
         onpointerdown={event => event.preventDefault()}
         onclick={() => {

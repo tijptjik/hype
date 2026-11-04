@@ -7,6 +7,7 @@ import { canonicalContentTag, contentFormKey } from '#lib/i18n/contentRecords.js
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 // ICONS
 import GripVertical from 'virtual:icons/lucide/grip-vertical'
+import XIcon from 'virtual:icons/lucide/x'
 // SERVICES
 import {
   rangeDomain,
@@ -30,7 +31,10 @@ import PropertySettingPreview from './PropertySettingPreview.svelte'
 // TYPES
 import type { SelectItem } from '#lib/bits/core/select/select.types.js'
 import type { FormIssueLike } from '#lib/client/services/form.types.js'
-import type { FormFieldCardBodyProps } from '#lib/db/zod/schema/property.types.js'
+import type {
+  FormFieldCardBodyProps,
+  PropertyTranslationOrigin,
+} from '#lib/db/zod/schema/property.types.js'
 import type {
   DragDropState,
   DraggableOptions,
@@ -175,40 +179,71 @@ const optionLocales = $derived<string[]>(
   valuesAreTranslatable ? locales : locales.slice(0, 1),
 )
 const primaryLocale = $derived(locales[0])
-let translating = $state(false)
+let translating = $state<string | null>(null)
 let translationMessage = $state('')
-const translationSources = $derived(
-  locales
-    .filter(locale => {
-      const row = getLocaleEntry(property.i18n, locale)
-      return (
-        row?.label?.trim() ||
-        row?.placeholder?.trim() ||
-        sortedValues.some(value => getLocaleEntry(value.i18n, locale)?.value?.trim())
-      )
-    })
+
+/** Identify the field or option owning a translation request.
+ * @param origin Stable text-cell identity. @returns Its request key.
+ */
+function translationKey(origin: PropertyTranslationOrigin): string {
+  return origin.type === 'value' ? `value:${origin.valueId}` : origin.type
+}
+
+/** Read only the selected field's text without borrowing another option's translation.
+ * @param origin Stable text-cell identity. @param locale Content language.
+ * @returns Authored or generated text, or an empty string.
+ */
+function translationText(origin: PropertyTranslationOrigin, locale: string): string {
+  return origin.type === 'value'
+    ? (getLocaleEntry(
+        property.values?.find(value => value.id === origin.valueId)?.i18n,
+        locale,
+      )?.value ?? '')
+    : (getLocaleEntry(property.i18n, locale)?.[origin.type] ?? '')
+}
+
+/** Offer languages with content in this field or option only.
+ * @param origin Stable text-cell identity. @returns Compact source controls.
+ */
+function getTranslationSources(
+  origin: PropertyTranslationOrigin,
+): Array<{ locale: string; label: string; accessibleLabel: string }> {
+  return locales
+    .filter(locale => translationText(origin, locale).trim())
     .map(locale => ({
       locale,
       label: shortLocaleLabel(locale),
-      accessibleLabel: `Translate missing fields from ${locale}`,
-    })),
-)
+      accessibleLabel: m.profile_translate_source({ language: locale }),
+    }))
+}
 
-/** Fill missing translations using the selected source without overwriting authored cells.
- * @param source Source content language. @returns Completion of the selected targets.
+/** Check for unfilled target languages, including temporarily hidden locales.
+ * @param origin Stable text-cell identity. @returns Whether translation can fill an empty cell.
  */
-async function translateMissing(source: string): Promise<void> {
+function hasTranslationTargets(origin: PropertyTranslationOrigin): boolean {
+  return locales.some(locale => !translationText(origin, locale).trim())
+}
+
+/** Fill missing translations in one field or option without overwriting authored cells.
+ * @param source Source content language. @param origin Stable field or option identity.
+ * @returns Completion of the selected targets.
+ */
+async function translateMissing(
+  source: string,
+  origin: PropertyTranslationOrigin,
+): Promise<void> {
   if (translating) return
-  translating = true
+  translating = translationKey(origin)
   translationMessage = ''
   try {
     for (const target of locales) {
-      if (source !== target) await onTranslateLocale(property.id, source, target)
+      if (source !== target)
+        await onTranslateLocale(property.id, source, target, origin)
     }
   } catch {
     translationMessage = m.address_translate_error()
   } finally {
-    translating = false
+    translating = null
   }
 }
 
@@ -450,6 +485,24 @@ function onValueInput(event: Event, valueId: string, locale: string): void {
   )
 }
 
+/** Clear one option cell while retaining its identity and every other language.
+ * @param valueId Stable option identity. @param locale Cell language.
+ * @returns Resolves after restoring keyboard focus to the emptied editor.
+ */
+async function clearOptionValue(valueId: string, locale: string): Promise<void> {
+  if (!isEditing) return
+  const editor = valueEditableRefs.get(getValueRefKey(valueId, locale))
+  // Active contenteditable controls deliberately ignore reactive text updates.
+  if (editor) editor.textContent = ''
+  if (valuesAreTranslatable) {
+    onUpdateValueI18n(property.id, valueId, canonicalContentTag(locale), 'value', '')
+  } else if (isPrimary(locale)) {
+    onUpdateValue(property.id, valueId, 'value', '')
+  }
+  await tick()
+  editor?.focus({ preventScroll: true })
+}
+
 function preventDefaultAndPropagation(event: Event): void {
   event.preventDefault()
   event.stopPropagation()
@@ -497,11 +550,11 @@ function getValueDraggableConfig(valueId: string): DraggableOptions<{ id: string
     containerGroup: valueContainerGroup,
     direction: 'horizontal',
     dragData: { id: valueId },
-    handle: '.bits-project-field-card__value-handle',
+    handle: '[data-option-drag-handle]',
     disabled: isValueDnDDisabled(),
     interactive: [
       '.bits-project-field-card__value-editable',
-      '.bits-project-field-card__value-remove',
+      '[data-option-translations]',
     ],
     attributes: {
       draggingClass: 'bits-project-field-card__value-item--dragging',
@@ -584,7 +637,8 @@ function resolveAdjacentValueEditable(
     if (!nextValue || !nextLocale) return null
 
     const target = valueEditableRefs.get(getValueRefKey(nextValue.id, nextLocale))
-    if (target && !target.closest('[hidden]')) return target
+    if (target && !target.closest('[hidden], [inert], [aria-hidden="true"]'))
+      return target
   }
 }
 
@@ -606,6 +660,8 @@ async function onValueEnter(event: KeyboardEvent, locale: string): Promise<void>
 function onValueTab(event: KeyboardEvent, valueId: string, locale: string): void {
   if (!isEditing) return
   if (event.key !== 'Tab') return
+  // Nonempty cells expose their clear button as the next native keyboard stop.
+  if (!event.shiftKey && getValueDisplayText(valueId, locale).length) return
 
   const target = resolveAdjacentValueEditable(valueId, locale, event.shiftKey ? -1 : 1)
   if (!target) return
@@ -968,6 +1024,16 @@ $effect(() => {
         data-property-text-column={field}
       >
         <h4 class="mb-3 text-sm font-bold text-[var(--form-label)]">{label}</h4>
+        <FormI18nSourceBar
+          visible={multilingual &&
+            isEditing &&
+            getTranslationSources({ type: field }).length > 0}
+          sources={getTranslationSources({ type: field })}
+          label={m.address_translate_from()}
+          busy={translating === field}
+          disabled={translating !== null || !hasTranslationTargets({ type: field })}
+          onTranslate={source => void translateMissing(source, { type: field })}
+        />
         <!-- Keep controls mounted while each language reveals its content and spacing. -->
         <div class="-mb-2 grid">
           {#each locales as locale (locale)}
@@ -1045,6 +1111,7 @@ $effect(() => {
                 )}
                 {@const resolvedValueIndex =
                   formValueIndex >= 0 ? formValueIndex : valueIndex}
+                <!-- Only the grip owns touch reordering; option bodies keep native panning. -->
                 <FormFieldPropertyValueItem
                   {isEditing}
                   {optionRemoveMode}
@@ -1076,11 +1143,19 @@ $effect(() => {
                         valueIndex,
                       )}
                     >
-                    <div class="border-border/40 flex items-center gap-2 border-b pb-2">
+                    <div
+                      class="border-border/40 flex min-w-0 items-stretch border-b"
+                      class:pr-8={optionRemoveMode}
+                      data-option-header
+                    >
                       <button
                         type="button"
-                        class="bits-project-field-card__value-handle"
-                        disabled={!isEditing || optionRemoveMode}
+                        class="flex min-w-0 flex-1 items-center gap-2 pb-2 text-left"
+                        class:cursor-grab={!isValueDnDDisabled()}
+                        class:select-none={!isValueDnDDisabled()}
+                        data-option-drag-handle
+                        class:touch-none={!isValueDnDDisabled()}
+                        disabled={isValueDnDDisabled()}
                         aria-label={`Reorder option ${valueIndex + 1}`}
                         aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
                         onkeydown={event => {
@@ -1098,11 +1173,40 @@ $effect(() => {
                           }
                         }}
                       >
-                        <GripVertical />
+                        <GripVertical class="text-muted-foreground size-4 shrink-0" />
+                        <span
+                          class="text-muted-foreground shrink-0 text-xs font-semibold"
+                          >Option {valueIndex + 1}</span
+                        >
                       </button>
-                      <span class="text-muted-foreground text-xs font-semibold"
-                        >Option {valueIndex + 1}</span
-                      >
+                      <div class="ml-auto min-w-0 pb-2" data-option-translations>
+                        <FormI18nSourceBar
+                          compact
+                          visible={multilingual &&
+                            valuesAreTranslatable &&
+                            isEditing &&
+                            getTranslationSources({ type: 'value', valueId: value.id })
+                              .length > 0}
+                          sources={getTranslationSources({
+                            type: 'value',
+                            valueId: value.id,
+                          })}
+                          label={m.address_translate_from()}
+                          busy={translating ===
+                            translationKey({ type: 'value', valueId: value.id })}
+                          disabled={optionRemoveMode ||
+                            translating !== null ||
+                            !hasTranslationTargets({
+                              type: 'value',
+                              valueId: value.id,
+                            })}
+                          onTranslate={source =>
+                            void translateMissing(source, {
+                              type: 'value',
+                              valueId: value.id,
+                            })}
+                        />
+                      </div>
                     </div>
                     {#each optionLocales as locale (locale)}
                       {@const showCoreFields = isPrimary(locale)}
@@ -1168,32 +1272,46 @@ $effect(() => {
                           {/if}
 
                           {#if valuesAreTranslatable || showCoreFields}
-                            <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
-                            <div
-                              class={`bits-project-field-card__value-editable focus-override empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
-                              role="textbox"
-                              aria-label={`Option ${valueIndex + 1} ${locale}`}
-                              data-placeholder="Option label"
-                              aria-readonly={!isEditing}
-                              contenteditable={isEditing ? 'plaintext-only' : false}
-                              tabindex={isEditing ? 0 : -1}
-                              use:bindValueEditable={{
-                                valueId: value.id,
-                                locale,
-                                text: valueDisplayText,
-                              }}
-                              onbeforeinput={preventDropBeforeInput}
-                              onkeydown={event => {
-                                onValueTab(event, value.id, locale)
-                                void onValueEnter(event, locale)
-                              }}
-                              oninput={event => onValueInput(event, value.id, locale)}
-                              ondragover={preventNativeDropOver}
-                              ondrop={preventNativeDropInsert}
-                              onfocus={onValueFocus}
-                              ondblclick={onValueDoubleClick}
-                              onblur={event => onValueBlur(event, value.id, locale)}
-                            ></div>
+                            <div class="group/option-value relative min-w-0">
+                              <!-- biome-ignore lint/a11y/useSemanticElements: Contenteditable preserves the existing inline selection and paste behavior. -->
+                              <div
+                                class={`bits-project-field-card__value-editable focus-override pr-9! empty:before:opacity-50 empty:before:content-[attr(data-placeholder)] ${!isEditing ? 'bits-project-field-card__value-editable--readonly' : ''}`}
+                                role="textbox"
+                                aria-label={`Option ${valueIndex + 1} ${locale}`}
+                                data-placeholder="Option label"
+                                aria-readonly={!isEditing}
+                                contenteditable={isEditing ? 'plaintext-only' : false}
+                                tabindex={isEditing ? 0 : -1}
+                                use:bindValueEditable={{
+                                  valueId: value.id,
+                                  locale,
+                                  text: valueDisplayText,
+                                }}
+                                onbeforeinput={preventDropBeforeInput}
+                                onkeydown={event => {
+                                  onValueTab(event, value.id, locale)
+                                  void onValueEnter(event, locale)
+                                }}
+                                oninput={event => onValueInput(event, value.id, locale)}
+                                ondragover={preventNativeDropOver}
+                                ondrop={preventNativeDropInsert}
+                                onfocus={onValueFocus}
+                                ondblclick={onValueDoubleClick}
+                                onblur={event => onValueBlur(event, value.id, locale)}
+                              ></div>
+                              {#if isEditing && valueDisplayText.length}
+                                <button
+                                  type="button"
+                                  aria-label={`${m.filters__clear()} Option ${valueIndex + 1} ${locale}`}
+                                  class="text-muted-foreground hover:text-primary focus-visible:outline-primary absolute top-0 right-0 flex size-8 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/option-value:opacity-100 group-hover/option-value:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:-outline-offset-2 [@media(hover:none)]:opacity-100"
+                                  onpointerdown={event => event.preventDefault()}
+                                  onclick={() =>
+                                    void clearOptionValue(value.id, locale)}
+                                >
+                                  <XIcon class="size-3.5" aria-hidden="true" />
+                                </button>
+                              {/if}
+                            </div>
                           {:else}
                             <div
                               class="bits-project-field-card__value-placeholder"
@@ -1219,13 +1337,6 @@ $effect(() => {
       </FormFieldPropertyValueWrapper>
     </div>
   {/if}
-  <FormI18nSourceBar
-    visible={multilingual && isEditing}
-    sources={translationSources}
-    label={m.address_translate_from()}
-    busy={translating}
-    onTranslate={source => void translateMissing(source)}
-  />
   {#if translationMessage}
     <p role="alert" class="text-error mt-2 text-sm">{translationMessage}</p>
   {/if}

@@ -2,6 +2,8 @@
 // CONTEXT
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
+import HubPolicyDocumentBody from '#lib/bits/patterns/policies/hubPolicyDialog/components/HubPolicyDocumentBody.svelte'
+import { renderPolicyMarkdown } from '#lib/services/policy.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import FormI18nDescriptorProfile from '#lib/bits/patterns/forms/formI18nSection/FormI18nDescriptorProfile.svelte'
 import FormHubSpecifiersFields from '#lib/bits/patterns/forms/formI18nSection/components/FormHubSpecifiersFields.svelte'
@@ -32,6 +34,8 @@ let {
 } = $props()
 setResponsiveCtx()
 let mode = $state('organisation')
+let tab = $state('profile')
+let multilingualExpanded = $state(false)
 let editing = $state(false)
 type FixtureData = DescriptorData & {
   code?: string
@@ -62,6 +66,10 @@ $effect(() => {
         description: '<p>Working together for a <strong>better tomorrow</strong>.</p>',
         descriptionGen: true,
         subscriptionBenefits: '<p>Community news and opportunities.</p>',
+        privacyPolicy:
+          '# Privacy Policy\n\nWe protect **your data**.\n\n| Party | Role |\n| --- | --- |\n| HYPE | Provider |',
+        privacyPolicyGen: true,
+        termsOfService: '# Terms of Service\n\nPlease respect the community.',
       },
       zhHant: {
         name: '香港劇場',
@@ -189,87 +197,150 @@ const form = {
     >
       Toggle editing
     </button>
+    {#if mode === 'hub'}
+      <button
+        type="button"
+        onclick={() => {
+          tab = 'profile'
+        }}
+      >
+        Profile tab
+      </button>
+      <button
+        type="button"
+        onclick={() => {
+          tab = 'policies'
+        }}
+      >
+        Policies tab
+      </button>
+    {/if}
   </nav>
   <div class="h-[calc(100dvh-72px)] overflow-y-auto" data-fixture-scroll>
     <FormSurface>
       {#if mode === 'organisation'}
         <SectionHeader title="Profile" />
       {/if}
-      <FormI18nDescriptorProfile
-        {form}
-        {fields}
-        defaultLocales={['en', 'zh-Hant', 'zh-Hans']}
-        recordKey={mode}
-        isEditing={editing}
-        isRequiredInPreflight={() => false}
-        stickyToolbar
-        translate={provider}
-        onChange={() => {}}
-      >
-        {#snippet children(localeState)}
-          {#if mode === 'hub'}
-            <FormOrganisationsSection
-              title="Organisations"
-              subtitle="Belonging to this hub"
-              class={formSelectionSectionStyles}
-              {organisations}
-              {selections}
-              isEditing={editing}
-              canSetCoreInclusive
-              onSearchOrganisations={async () => [
-                {
-                  id: 'new',
-                  code: 'new',
-                  image: null,
-                  i18n: { en: { name: 'New partner' } },
-                },
-              ]}
-              onAddOrganisation={organisation => {
-                organisations = [
-                  ...organisations,
-                  organisation as (typeof organisations)[number],
-                ]
-              }}
-              onRemoveOrganisation={id => {
-                organisations = organisations.filter(
-                  organisation => organisation.id !== id,
-                )
-              }}
-              onToggleCoreInclusive={(id, value) => {
-                selections = selections.map(row =>
-                  row.organisationId === id ? { ...row, isCoreInclusive: value } : row,
-                )
-              }}
-              onToggleHubExclusive={(id, value) => {
-                selections = selections.map(row =>
-                  row.organisationId === id ? { ...row, isHubExclusive: value } : row,
-                )
-              }}
+      {#if tab === 'policies'}
+        <SectionHeader
+          title="Policies"
+          description="Configure the privacy policy and terms of service shown for this hub."
+        />
+        <FormI18nDescriptorProfile
+          bind:expanded={multilingualExpanded}
+          {form}
+          {fields}
+          defaultLocales={['en', 'zh-Hant', 'zh-Hans']}
+          recordKey={mode}
+          isEditing={editing}
+          isRequiredInPreflight={() => false}
+          stickyToolbar
+          stickyFieldHeaders
+          stackNames={false}
+          fieldConfigs={[
+            {
+              key: 'privacyPolicy',
+              label: 'Privacy Policy',
+              kind: 'textarea',
+              renderHtml: false,
+            },
+            {
+              key: 'termsOfService',
+              label: 'Terms of Service',
+              kind: 'textarea',
+              renderHtml: false,
+            },
+          ]}
+          translate={provider}
+          onChange={() => {}}
+        >
+          {#snippet renderValue(_field, value)}
+            <HubPolicyDocumentBody
+              html={renderPolicyMarkdown(value)}
+              class="min-w-0 overflow-x-auto break-words"
             />
-            <FormHubSpecifiersFields
-              {form}
-              isEditing={editing}
-              isRequiredInPreflight={() => false}
-            />
-            <FormHubSubscriptionSection
-              {form}
-              {localeState}
-              recordKey={mode}
-              isEditing={editing}
-              isSubscriptionAvailable={available}
-              subscriptionService={HubSubscriptionService.substack}
-              subscriptionPlacement={placement}
-              translate={provider}
-              onAvailabilityChange={value => {
-                available = value
-              }}
-              onPlacementChange={(key, value) => {
-                placement = { ...placement, [key]: value }
-              }}
-            />
-          {/if}
-        {/snippet}
-      </FormI18nDescriptorProfile>
+          {/snippet}
+        </FormI18nDescriptorProfile>
+      {:else}
+        <FormI18nDescriptorProfile
+          bind:expanded={multilingualExpanded}
+          {form}
+          {fields}
+          defaultLocales={['en', 'zh-Hant', 'zh-Hans']}
+          recordKey={mode}
+          isEditing={editing}
+          isRequiredInPreflight={() => false}
+          stickyToolbar
+          translate={provider}
+          onChange={() => {}}
+        >
+          {#snippet children(localeState)}
+            {#if mode === 'hub'}
+              <FormOrganisationsSection
+                title="Organisations"
+                subtitle="Belonging to this hub"
+                class={formSelectionSectionStyles}
+                {organisations}
+                {selections}
+                isEditing={editing}
+                canSetCoreInclusive
+                onSearchOrganisations={async () => [
+                  {
+                    id: 'new',
+                    code: 'new',
+                    image: null,
+                    i18n: { en: { name: 'New partner' } },
+                  },
+                ]}
+                onAddOrganisation={organisation => {
+                  organisations = [
+                    ...organisations,
+                    organisation as (typeof organisations)[number],
+                  ]
+                }}
+                onRemoveOrganisation={id => {
+                  organisations = organisations.filter(
+                    organisation => organisation.id !== id,
+                  )
+                }}
+                onToggleCoreInclusive={(id, value) => {
+                  selections = selections.map(row =>
+                    row.organisationId === id
+                      ? { ...row, isCoreInclusive: value }
+                      : row,
+                  )
+                }}
+                onToggleHubExclusive={(id, value) => {
+                  selections = selections.map(row =>
+                    row.organisationId === id ? { ...row, isHubExclusive: value } : row,
+                  )
+                }}
+              />
+              <FormHubSpecifiersFields
+                {form}
+                isEditing={editing}
+                isRequiredInPreflight={() => false}
+              />
+              <FormHubSubscriptionSection
+                {form}
+                {localeState}
+                recordKey={mode}
+                isEditing={editing}
+                isSubscriptionAvailable={available}
+                subscriptionService={HubSubscriptionService.substack}
+                subscriptionPlacement={placement}
+                translate={provider}
+                onAvailabilityChange={value => {
+                  available = value
+                }}
+                onPlacementChange={(key, value) => {
+                  placement = { ...placement, [key]: value }
+                }}
+              />
+            {/if}
+          {/snippet}
+        </FormI18nDescriptorProfile>
+      {/if}
     </FormSurface>
   </div>
   <div data-descriptor-state={JSON.stringify({ data, selections })}></div>

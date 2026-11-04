@@ -222,7 +222,10 @@ import type {
   ProjectLicenseMediaType,
 } from '#lib/db/zod/schema/projectLicense.types.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
-import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type {
+  Property,
+  PropertyTranslationOrigin,
+} from '#lib/db/zod/schema/property.types.js'
 import type { User } from '#lib/db/zod/schema/user.types.js'
 import type { OrganisationGetState } from '#lib/db/zod/schema/organisation.types.js'
 import type {
@@ -2106,16 +2109,26 @@ function onResetLocale(targetLocale: Locale, _sectionKey: string = 'descriptor')
   revalidateAfterProgrammaticChange()
 }
 
+/** Translate missing property content within an optional field or option scope.
+ * @param propertyId Definition being edited.
+ * @param sourceLocale Source content language.
+ * @param targetLocale Target content language.
+ * @param origin Optional text field or stable option identity.
+ * @returns Whether translations were applied to the form.
+ * @remarks Revalidates after successful translation while preserving unrelated cells.
+ */
 async function onTranslatePropertyLocale(
   propertyId: Id,
-  sourceLocale: Locale,
-  targetLocale: Locale,
+  sourceLocale: string,
+  targetLocale: string,
+  origin?: PropertyTranslationOrigin,
 ): Promise<boolean> {
   const translated = await translateProjectPropertyLocale(
     projectPropertyFormAdapter,
     propertyId,
     sourceLocale,
     targetLocale,
+    origin,
   )
   if (translated) revalidateAfterProgrammaticChange()
   return translated
@@ -2942,7 +2955,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('core', 'previous')}
       nextAction={buildFacetNavAction('core', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'core' }}
     >
       <FormSurface>
@@ -2956,7 +2969,7 @@ $effect(() => {
         >
           {#snippet left()}
             <div class="flex items-center gap-3">
-              <ProjectIcon class="size-6 text-primary" aria-hidden="true" />
+              <ProjectIcon class="text-primary size-6" aria-hidden="true" />
               <h2 class="text-xl font-semibold tracking-tight">Profile</h2>
             </div>
           {/snippet}
@@ -3025,7 +3038,7 @@ $effect(() => {
             />
           </div>
           {#if canSetParentOrganisation}
-            <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+            <div class="border-border min-w-0 border-t xl:border-t-0 xl:border-l">
               <FormParentSection
                 class={formSelectionSectionStyles}
                 title="Parent Organisation"
@@ -3060,7 +3073,7 @@ $effect(() => {
               {onSelectMapStyle}
             />
           </div>
-          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+          <div class="border-border min-w-0 border-t xl:border-t-0 xl:border-l">
             <FormMarkerStyleSection
               value={selectedMarkerStyle}
               inputAttrs={formCtx.form.fields.data.markerStyleCode.as(
@@ -3073,7 +3086,7 @@ $effect(() => {
               onSelect={onSelectMarkerStyle}
             />
           </div>
-          <div class="min-w-0 border-t border-border xl:border-l xl:border-t-0">
+          <div class="border-border min-w-0 border-t xl:border-t-0 xl:border-l">
             <FormCardStyleSection
               value={selectedCardStyle}
               inputAttrs={formCtx.form.fields.data.cardStyleCode.as(
@@ -3108,7 +3121,7 @@ $effect(() => {
           </div>
 
           <div
-            class="min-w-0 border-t border-border md:border-l md:border-t-0 [&_.no-i18n>div:first-child]:grid-cols-1!"
+            class="border-border min-w-0 border-t md:border-t-0 md:border-l [&_.no-i18n>div:first-child]:grid-cols-1!"
           >
             <FormSpecifiersFields
               title={m.admin__project_identifiers_title()}
@@ -3127,7 +3140,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('policies', 'previous')}
       nextAction={buildFacetNavAction('policies', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'policies' }}
     >
       <FormSurface>
@@ -3160,7 +3173,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('capabilities', 'previous')}
       nextAction={buildFacetNavAction('capabilities', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'capabilities' }}
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
@@ -3181,7 +3194,7 @@ $effect(() => {
       isVisible={isLayersFacet}
       transition="fade"
       fillHeight={true}
-      class="bits-theme min-h-0 left-0! right-0!"
+      class="bits-theme right-0! left-0! min-h-0"
       previousAction={buildFacetNavAction('layers', 'previous')}
       nextAction={buildFacetNavAction('layers', 'next')}
       attrs={{ 'data-facet-id': 'layers' }}
@@ -3214,14 +3227,16 @@ $effect(() => {
     <Main.Facet
       isVisible={isFieldsFacet}
       transition="fade"
-      class="bits-theme min-h-0 left-0! right-0!"
+      class="bits-theme right-0! left-0! min-h-0"
       fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        <!-- Reserve usable scroll space below the final option row and fixed facet actions. -->
         <FormFieldsSection
+          class="shrink-0 pb-[320px]"
           icon={Type}
           keepHeader
           items={projectFieldsInSection}
@@ -3292,7 +3307,7 @@ $effect(() => {
       fillHeight={true}
       previousAction={buildFacetNavAction('advanced', 'previous')}
       nextAction={buildFacetNavAction('advanced', 'next')}
-      class="left-0! right-0!"
+      class="right-0! left-0!"
       attrs={{ 'data-facet-id': 'advanced' }}
     >
       <FormSurface>
@@ -3304,7 +3319,7 @@ $effect(() => {
           <div class="mx-6 flex min-w-0 flex-col gap-3">
             <Card.Root
               size="md"
-              class="min-h-14 rounded-lg border border-border bg-foreground/4 bg-none shadow-none before:hidden"
+              class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
             >
               <label
                 for="project-show-3d-address-options"
@@ -3315,7 +3330,7 @@ $effect(() => {
               <Card.Actions
                 padding="md"
                 bg="none"
-                class="w-auto! min-w-0! shrink-0 border-l border-border/60"
+                class="border-border/60 w-auto! min-w-0! shrink-0 border-l"
               >
                 <Switch
                   id="project-show-3d-address-options"
@@ -3338,7 +3353,7 @@ $effect(() => {
             ] as setting (setting.key)}
               <Card.Root
                 size="md"
-                class="min-h-14 rounded-lg border border-border bg-foreground/4 bg-none shadow-none before:hidden"
+                class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
               >
                 <label
                   for={`project-${setting.key}`}
@@ -3348,7 +3363,7 @@ $effect(() => {
                 <Card.Actions
                   padding="md"
                   bg="none"
-                  class="w-auto! min-w-0! shrink-0 border-l border-border/60"
+                  class="border-border/60 w-auto! min-w-0! shrink-0 border-l"
                 >
                   <Switch
                     id={`project-${setting.key}`}
@@ -3458,7 +3473,7 @@ $effect(() => {
           </ImageProvider>
         {:else}
           <div
-            class="flex h-full w-full items-center justify-center p-6 text-center text-sm text-base-content/65"
+            class="text-base-content/65 flex h-full w-full items-center justify-center p-6 text-center text-sm"
           >
             {m.admin__forms_project_image_save_hint()}
           </div>

@@ -12,12 +12,18 @@ import FormI18nDescriptorFields from './components/FormI18nDescriptorFields.svel
 import { restoreProfileLocales } from '../featureLocation/profileLocales.js'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
 // TYPES
-import type { FormDataUpdaterForm } from '#lib/client/services/form.types.js'
-import type { DescriptorData } from './components/formI18nDescriptorFields.types.js'
+import type {
+  FormDataUpdaterForm,
+  GenAiField,
+} from '#lib/client/services/form.types.js'
+import type {
+  DescriptorData,
+  DescriptorFieldConfig,
+} from './components/formI18nDescriptorFields.types.js'
 import type { ProfileProviderResult } from '../featureLocation/profileTranslation.js'
 import type { ProfileLocaleState } from '../featureLocation/profileLocales.js'
 
-type DescriptorField = 'name' | 'nameShort' | 'description'
+type DescriptorField = GenAiField
 
 let {
   form,
@@ -30,7 +36,12 @@ let {
   translate,
   onChange,
   stickyToolbar = false,
+  stickyFieldHeaders = false,
   children,
+  expanded = $bindable(false),
+  fieldConfigs,
+  stackNames = true,
+  renderValue,
 }: {
   form: FormDataUpdaterForm<T>
   fields: Record<string, object>
@@ -46,35 +57,45 @@ let {
   ) => Promise<ProfileProviderResult>
   onChange: () => void
   stickyToolbar?: boolean
+  stickyFieldHeaders?: boolean
   children?: Snippet<[ProfileLocaleState]>
+  expanded?: boolean
+  fieldConfigs?: DescriptorFieldConfig[]
+  stackNames?: boolean
+  renderValue?: Snippet<[GenAiField, string]>
 } = $props()
 
-const configs = $derived([
-  {
-    key: 'name' as const,
-    label: m.admin__forms_common_name_full(),
-    kind: 'input' as const,
-  },
-  {
-    key: 'nameShort' as const,
-    label: m.admin__forms_common_name_short(),
-    kind: 'input' as const,
-  },
-  {
-    key: 'description' as const,
-    label: m.feature__description(),
-    kind: 'textarea' as const,
-  },
-])
+const configs = $derived(
+  fieldConfigs ?? [
+    {
+      key: 'name' as const,
+      label: m.admin__forms_common_name_full(),
+      kind: 'input' as const,
+    },
+    {
+      key: 'nameShort' as const,
+      label: m.admin__forms_common_name_short(),
+      kind: 'input' as const,
+    },
+    {
+      key: 'description' as const,
+      label: m.feature__description(),
+      kind: 'textarea' as const,
+    },
+  ],
+)
 const values = $derived(form.fields.value().data?.i18n ?? {})
-// The locale controller retains every stored language, including short-name-only records.
+// Retain configured content languages, including policy-only and short-name-only records.
 const localeValues = $derived(
   Object.fromEntries(
     Object.entries(values).map(([locale, row]) => [
       locale,
       {
-        title: row?.name || row?.nameShort || row?.subscriptionBenefits,
-        description: row?.description,
+        title: [
+          ...configs.map(config => row?.[config.key] ?? ''),
+          row?.subscriptionBenefits ?? '',
+        ].join('\n'),
+        description: '',
       },
     ]),
   ),
@@ -82,6 +103,9 @@ const localeValues = $derived(
 let localeState = $state(
   untrack(() => restoreProfileLocales(defaultLocales, localeValues)),
 )
+const displayLocaleState = $derived({ ...localeState, expanded })
+// Wrapped language chips change the sticky offset on narrow screens and on expansion.
+let toolbarHeight = $state(0)
 $effect(() => {
   recordKey
   resetVersion
@@ -122,20 +146,24 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
 }
 </script>
 
-<div data-profile-locale-scope>
+<div
+  data-profile-locale-scope
+  style:--profile-locale-toolbar-height={`${stickyToolbar ? toolbarHeight : 0}px`}
+>
   <div
     class="z-[220] mb-6 border-b border-border/50 bg-[var(--form-workspace,var(--color-panel))] px-6 pb-3 pt-4 {stickyToolbar
       ? 'sticky top-0'
       : ''}"
+    bind:offsetHeight={toolbarHeight}
     data-profile-locale-toolbar
   >
     <!-- Descriptor schemas own their locale set; the toolbar controls order and visibility. -->
     <LocaleToolbar
-      {...localeState}
+      {...displayLocaleState}
       options={contentLocaleOptions(getLocaleKey())}
       allowAdd={false}
-      onExpandedChange={expanded => {
-        localeState = { ...localeState, expanded }
+      onExpandedChange={value => {
+        expanded = value
       }}
       onChange={change => {
         localeState = { ...localeState, ...change }
@@ -143,11 +171,13 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
     />
   </div>
   <FeatureProfileEditor
-    stackNames
+    {stackNames}
+    {stickyFieldHeaders}
     showToolbar={false}
-    {localeState}
+    localeState={displayLocaleState}
     onLocaleStateChange={state => {
       localeState = state
+      expanded = state.expanded
     }}
     {values}
     {recordKey}
@@ -167,6 +197,7 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
         locale={key}
         {isEditing}
         inline
+        {renderValue}
         {onEditStart}
         fieldConfigs={[
           { ...config, label: prefix, ariaLabel: `${config.label} · ${language.name}` },
@@ -175,5 +206,5 @@ function applyTranslation(field: DescriptorField, locale: string, text: string):
       />
     {/snippet}
   </FeatureProfileEditor>
-  {@render children?.(localeState)}
+  {@render children?.(displayLocaleState)}
 </div>

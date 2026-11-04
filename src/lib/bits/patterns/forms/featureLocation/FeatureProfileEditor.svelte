@@ -1,12 +1,13 @@
 <script lang="ts" generics="Field extends string = ProfileField">
 // SVELTE
 import { onDestroy, type Snippet } from 'svelte'
+import type { Attachment } from 'svelte/attachments'
 import { slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 import EditIcon from 'virtual:icons/lucide/pencil'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
-import { contentFormKey } from '#lib/i18n/contentRecords.js'
+import { canonicalContentTag, contentFormKey } from '#lib/i18n/contentRecords.js'
 import { contentLocaleOptions } from '../contentLocaleDefaults/contentLocaleOptions'
 // COMPONENTS
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
@@ -40,6 +41,7 @@ let {
   fieldConfigs,
   stackNames = false,
   showToolbar = true,
+  stickyFieldHeaders = false,
   loading = false,
   retainContent = false,
   recordKey = '',
@@ -64,6 +66,7 @@ let {
   fieldConfigs?: ReadonlyArray<{ key: Field; label: string }>
   stackNames?: boolean
   showToolbar?: boolean
+  stickyFieldHeaders?: boolean
   allowDescriptions?: boolean
   inherited?: boolean
   policyRequired?: boolean
@@ -95,6 +98,23 @@ const fields = $derived(
       label: string
     }>),
 )
+let fieldHeaderHeights = $state<Partial<Record<Field, number>>>({})
+
+/** Measure each policy heading so locale badges stick below wrapped translation controls.
+ * @param field Field owning this header. @returns Attachment with observer cleanup.
+ */
+function measureFieldHeader(field: Field): Attachment<HTMLElement> {
+  return node => {
+    const measure = (): void => {
+      fieldHeaderHeights[field] = node.offsetHeight
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    measure()
+    return () => observer.disconnect()
+  }
+}
+
 let busy = $state<Partial<Record<Field, boolean>>>({})
 let busySource = $state<Partial<Record<Field, string>>>({})
 let results = $state<Partial<Record<Field, ProfileTranslationResult[]>>>({})
@@ -192,89 +212,103 @@ function autonym(locale: string): string {
               ? 'md:col-start-1 md:row-start-2'
               : 'md:col-start-1 md:row-start-1'
           : ''}"
+        style:--profile-field-header-height={`${fieldHeaderHeights[field] ?? 0}px`}
         data-profile-field={field}
       >
-        <div class="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
-          <h3 class="text-sm font-semibold">
-            {label}
-          </h3>
-          {#if derived}
-            <div
-              class="group/location-link hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 inline-flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-transparent px-2 py-1 transition-colors duration-150 motion-reduce:transition-none"
-              data-profile-derived
-            >
-              <span class="text-muted-foreground inline-flex items-center gap-2 text-xs"
-                ><LinkIcon class="text-primary size-4 shrink-0" />
-                {m.feature_name_derived_help()}</span
+        <!-- Long policy documents keep their field-specific translation actions in view. -->
+        <div
+          class={stickyFieldHeaders
+            ? 'sticky z-[210] bg-[var(--form-workspace,var(--color-panel))] py-2'
+            : ''}
+          style:top={stickyFieldHeaders
+            ? 'var(--profile-locale-toolbar-height, 0px)'
+            : undefined}
+          {@attach stickyFieldHeaders ? measureFieldHeader(field) : undefined}
+          data-profile-field-header
+        >
+          <div class="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
+            <h3 class="text-sm font-semibold">
+              {label}
+            </h3>
+            {#if derived}
+              <div
+                class="group/location-link hover:border-border/40 hover:bg-muted/20 focus-within:border-border/40 focus-within:bg-muted/20 inline-flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-transparent px-2 py-1 transition-colors duration-150 motion-reduce:transition-none"
+                data-profile-derived
               >
-              {#if isEditing}
-                <div
-                  class="flex flex-wrap items-center gap-1 overflow-hidden"
-                  data-profile-edit-action
-                  transition:slide={{
-                    axis: 'x',
-                    duration:
-                      prefersReducedMotion.current ||
-                      typeof globalThis.Element?.prototype.animate !== 'function'
-                        ? 0
-                        : 180,
-                  }}
+                <span
+                  class="text-muted-foreground inline-flex items-center gap-2 text-xs"
+                  ><LinkIcon class="text-primary size-4 shrink-0" />
+                  {m.feature_name_derived_help()}</span
                 >
-                  {#if !policyRequired}
+                {#if isEditing}
+                  <div
+                    class="flex flex-wrap items-center gap-1 overflow-hidden"
+                    data-profile-edit-action
+                    transition:slide={{
+                      axis: 'x',
+                      duration:
+                        prefersReducedMotion.current ||
+                        typeof globalThis.Element?.prototype.animate !== 'function'
+                          ? 0
+                          : 180,
+                    }}
+                  >
+                    {#if !policyRequired}
+                      <button
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:outline-primary inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs transition-colors focus-visible:outline-2 motion-reduce:transition-none"
+                        onclick={onIndependentName}
+                      >
+                        <UnlinkIcon class="size-3.5" />{m.feature_separate_name()}
+                      </button>
+                    {/if}
                     <button
                       type="button"
-                      class="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:outline-primary inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs transition-colors focus-visible:outline-2 motion-reduce:transition-none"
-                      onclick={onIndependentName}
+                      class="text-muted-foreground group-hover/location-link:text-primary group-focus-within/location-link:text-primary focus-visible:outline-primary inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors focus-visible:outline-2 motion-reduce:transition-none"
+                      onclick={onEditLocation}
                     >
-                      <UnlinkIcon class="size-3.5" />{m.feature_separate_name()}
+                      <EditIcon class="size-3.5" />{m.feature_edit_location()}
                     </button>
-                  {/if}
-                  <button
-                    type="button"
-                    class="text-muted-foreground group-hover/location-link:text-primary group-focus-within/location-link:text-primary focus-visible:outline-primary inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors focus-visible:outline-2 motion-reduce:transition-none"
-                    onclick={onEditLocation}
-                  >
-                    <EditIcon class="size-3.5" />{m.feature_edit_location()}
-                  </button>
-                </div>
-              {/if}
-            </div>
-          {/if}
-          <FormI18nTranslationStatus
-            message={results[field]?.length
-              ? [
-                  m.profile_translation_complete({
-                    count: results[field]!.filter(
-                      result => result.status === 'translated',
-                    ).length,
-                  }),
-                  ...results[field]!.filter(
-                    result => result.status !== 'translated',
-                  ).map(
-                    result =>
-                      `${name(result.locale)}: ${result.status === 'unsupported' ? m.profile_translation_unsupported() : result.status === 'stale' ? m.profile_translation_skipped() : m.address_translate_error()}`,
-                  ),
-                ].join(' ')
-              : ''}
+                  </div>
+                {/if}
+              </div>
+            {/if}
+            <FormI18nTranslationStatus
+              message={results[field]?.length
+                ? [
+                    m.profile_translation_complete({
+                      count: results[field]!.filter(
+                        result => result.status === 'translated',
+                      ).length,
+                    }),
+                    ...results[field]!.filter(
+                      result => result.status !== 'translated',
+                    ).map(
+                      result =>
+                        `${name(result.locale)}: ${result.status === 'unsupported' ? m.profile_translation_unsupported() : result.status === 'stale' ? m.profile_translation_skipped() : m.address_translate_error()}`,
+                    ),
+                  ].join(' ')
+                : ''}
+            />
+          </div>
+          <FormI18nSourceBar
+            visible={!showSkeleton &&
+              localeState.expanded &&
+              isEditing &&
+              !derived &&
+              sources.length > 0}
+            sources={sources.map(source => ({
+              locale: source,
+              label: autonym(source),
+              accessibleLabel: m.profile_translate_source({ language: name(source) }),
+            }))}
+            label={m.profile_translate_from()}
+            busy={busy[field] ?? false}
+            busySource={busySource[field]}
+            disabled={!hasTargets}
+            onTranslate={source => void fill(source, field)}
           />
         </div>
-        <FormI18nSourceBar
-          visible={!showSkeleton &&
-            localeState.expanded &&
-            isEditing &&
-            !derived &&
-            sources.length > 0}
-          sources={sources.map(source => ({
-            locale: source,
-            label: autonym(source),
-            accessibleLabel: m.profile_translate_source({ language: name(source) }),
-          }))}
-          label={m.profile_translate_from()}
-          busy={busy[field] ?? false}
-          busySource={busySource[field]}
-          disabled={!hasTargets}
-          onTranslate={source => void fill(source, field)}
-        />
         <div class="mt-3">
           {#each localeState.selectedLocales as locale (locale)}
             <!-- Keep every locale registered with the form even while translations are collapsed. -->
@@ -289,16 +323,34 @@ function autonym(locale: string): string {
                 : '0px'}
               data-profile-locale={locale}
             >
-              <div class="relative min-h-0 overflow-hidden">
+              <div
+                class="relative min-h-0 {stickyFieldHeaders && shown.includes(locale)
+                  ? 'overflow-visible'
+                  : 'overflow-hidden'}"
+              >
+                {#if stickyFieldHeaders}
+                  <!-- Each language identifies its own long document and releases at its end. -->
+                  <div
+                    class="sticky z-[200] bg-[var(--form-workspace,var(--color-panel))] py-2"
+                    style:top="calc(var(--profile-locale-toolbar-height, 0px) + var(--profile-field-header-height, 0px))"
+                    data-profile-locale-header={locale}
+                    lang={canonicalContentTag(locale)}
+                  >
+                    <span
+                      class="bg-muted/50 text-muted-foreground inline-flex rounded-md px-2 py-1 font-mono text-xs font-medium"
+                      >{shortLocaleLabel(locale)}</span
+                    >
+                  </div>
+                {/if}
                 {#if showSkeleton && shown.includes(locale)}
                   <div
-                    class="absolute inset-0 grid min-h-[42px] items-center gap-2 {locale !==
-                    shown[0]
+                    class="absolute inset-0 grid min-h-[42px] items-center gap-2 {!stickyFieldHeaders &&
+                    locale !== shown[0]
                       ? 'grid-cols-[2.5rem_minmax(0,1fr)_2rem]'
                       : 'grid-cols-[minmax(0,1fr)_2rem]'}"
                     data-profile-skeleton-row
                   >
-                    {#if locale !== shown[0]}
+                    {#if !stickyFieldHeaders && locale !== shown[0]}
                       <span
                         class="text-muted-foreground text-center font-mono text-xs leading-[22px]"
                         >{shortLocaleLabel(locale)}</span
@@ -322,7 +374,9 @@ function autonym(locale: string): string {
                     field,
                     locale,
                     () => translator.touch(locale, field),
-                    locale === shown[0] ? '' : shortLocaleLabel(locale),
+                    stickyFieldHeaders || locale === shown[0]
+                      ? ''
+                      : shortLocaleLabel(locale),
                   )}
                 </div>
               </div>

@@ -11,3 +11,13 @@ export type DescriptorData = {
     >
   >
 }
+
+/** Configure a translated profile or policy field using the shared inline editor. */
+export type DescriptorFieldConfig = {
+  key: GenAiField
+  label: string
+  kind: 'input' | 'textarea'
+  readonly?: boolean
+  ariaLabel?: string
+  renderHtml?: boolean
+}

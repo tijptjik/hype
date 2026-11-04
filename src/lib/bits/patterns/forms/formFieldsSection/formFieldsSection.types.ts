@@ -1,5 +1,8 @@
 import type { Id } from '#lib/types.js'
-import type { Property } from '#lib/db/zod/schema/property.types.js'
+import type {
+  Property,
+  PropertyTranslationOrigin,
+} from '#lib/db/zod/schema/property.types.js'
 import type { Snippet } from 'svelte'
 import type { DragDropOptions, DraggableOptions } from '@thisux/sveltednd'
 import type { Component } from 'svelte'
@@ -173,6 +176,7 @@ export interface FormFieldCardCallbacks {
     propertyId: Id,
     sourceLocale: string,
     targetLocale: string,
+    origin?: PropertyTranslationOrigin,
   ) => Promise<boolean | void>
   onResetLocale: (propertyId: Id, targetLocale: string) => void | Promise<void>
   removeMode?: boolean
