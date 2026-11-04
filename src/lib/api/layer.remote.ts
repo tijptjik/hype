@@ -415,7 +415,6 @@ export const layerForm = guardedForm('unchecked', async (input, ctx) => {
       updatedAt,
       i18n: data.i18n,
       ...(propertiesChanged ? { properties: submittedProperties } : {}),
-      relocationUpdatePolicy: data.relocationUpdatePolicy,
       data: {
         organisationId: resolvedOrganisationId,
         projectId: data.projectId,

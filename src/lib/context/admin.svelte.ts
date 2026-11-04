@@ -981,7 +981,7 @@ export class AdminCtx {
 
   isViewportContained = $derived(
     this.navigation.state.resourceRef === false ||
-      this.navigation.state.facet === 'location' ||
+      this.navigation.state.facet === 'address' ||
       this.navigation.state.facet === 'images' ||
       (this.navigation.state.resourceType === 'feature' &&
         (this.navigation.state.facet === 'core' ||
