@@ -19,6 +19,8 @@ export interface MainFacetProps {
   fillHeight?: boolean
   navMode?: 'centered' | 'footer' | 'overlay'
   contentClass?: string
+  /** Minimum trailing scroll space beneath content in scrolling facets. */
+  bottomClearance?: number
   edgeToEdge?: boolean
 }
 

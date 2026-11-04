@@ -7,6 +7,8 @@ import * as kitForms from '../../../../node_modules/@sveltejs/kit/src/runtime/fo
 // CONTEXT
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import { resourceTabsStyles } from '#lib/bits/patterns/forms/formSurface/resourceTabs.styles.js'
 import FormFieldsSection from '#lib/bits/patterns/forms/formFieldsSection/FormFieldsSection.svelte'
 // CONTENT LOCALES
 import { contentFormKey, contentStorageTag } from '#lib/i18n/contentRecords.js'
@@ -164,59 +166,78 @@ const form = { fields } as FormDataUpdaterForm<PropertyFormData>
 let editing = $state(true)
 </script>
 
-<main class="bits-theme bg-background text-foreground min-h-screen min-w-0">
+<main
+  class="bits-theme bg-background text-foreground min-w-0 {panelPadding
+    ? 'flex min-h-0 flex-1 flex-col'
+    : 'min-h-screen'}"
+>
   <div class="border-border flex gap-4 border-b p-4">
     <h1 class="text-lg font-semibold">Fields</h1>
     <button type="button" onclick={() => (editing = !editing)}>Toggle editing</button>
   </div>
-  <form data-field-form>
-    <FormFieldsSection
-      class={panelPadding ? 'shrink-0 pb-[320px]' : ''}
-      title="Fields"
-      description="Categorical and free form fields"
-      items={data.properties ?? []}
-      isEditing={editing}
-      actions={{
-        add: () => {},
-        remove: () => {},
-        increaseRank: () => {},
-        decreaseRank: () => {},
-      }}
-      card={{
-        removeMode: false,
-        locales: ['en', 'zhHant', 'zhHans'],
-        classifierComponents: ['SelectField'],
-        specifierComponents: [
-          'InputField',
-          'PhoneField',
-          'RangeField',
-          'DateRangeField',
-          'TimeRangeField',
-          'LinkField',
-        ],
-        isRequiredInPreflight: () => false,
-        isEditing: editing,
-        getPropertyIndex: (_id, index) => index,
-        getPropertyFields: (_id, index) => fields.data.properties[index],
-        onIncreaseRank: () => {},
-        onDecreaseRank: () => {},
-        onRemove: () => {},
-        onUpdateBase: (...args) => updateProjectPropertyBase(form, ...args),
-        onUpdateI18n: (...args) => updateProjectPropertyI18n(form, ...args),
-        onAddValue: id => addProjectPropertyValue(form, id),
-        onSortValuesAlphabetically: (...args) =>
-          sortProjectPropertyValuesAlphabetically(form, ...args),
-        onRemoveValue: (...args) => removeProjectPropertyValue(form, ...args),
-        onMoveValue: (...args) => reorderProjectPropertyValue(form, ...args),
-        onUpdateValue: (...args) => updateProjectPropertyValue(form, ...args),
-        onUpdateValueI18n: (...args) => updateProjectPropertyValueI18n(form, ...args),
-        onTranslateLocale: (propertyId, source, target, origin) =>
-          translate
-            ? translate(propertyId, source, target, origin)
-            : translateProjectPropertyLocale(form, propertyId, source, target, origin),
-        onResetLocale: () => {},
-      }}
-    />
+  <form data-field-form class={panelPadding ? 'flex min-h-0 flex-1 flex-col' : ''}>
+    {#snippet fieldsSection()}
+      <FormFieldsSection
+        class={panelPadding ? 'shrink-0' : ''}
+        title="Fields"
+        description="Categorical and free form fields"
+        items={data.properties ?? []}
+        isEditing={editing}
+        actions={{
+          add: () => {},
+          remove: () => {},
+          increaseRank: () => {},
+          decreaseRank: () => {},
+        }}
+        card={{
+          removeMode: false,
+          locales: ['en', 'zhHant', 'zhHans'],
+          classifierComponents: ['SelectField'],
+          specifierComponents: [
+            'InputField',
+            'PhoneField',
+            'RangeField',
+            'DateRangeField',
+            'TimeRangeField',
+            'LinkField',
+          ],
+          isRequiredInPreflight: () => false,
+          isEditing: editing,
+          getPropertyIndex: (_id, index) => index,
+          getPropertyFields: (_id, index) => fields.data.properties[index],
+          onIncreaseRank: () => {},
+          onDecreaseRank: () => {},
+          onRemove: () => {},
+          onUpdateBase: (...args) => updateProjectPropertyBase(form, ...args),
+          onUpdateI18n: (...args) => updateProjectPropertyI18n(form, ...args),
+          onAddValue: id => addProjectPropertyValue(form, id),
+          onSortValuesAlphabetically: (...args) =>
+            sortProjectPropertyValuesAlphabetically(form, ...args),
+          onRemoveValue: (...args) => removeProjectPropertyValue(form, ...args),
+          onMoveValue: (...args) => reorderProjectPropertyValue(form, ...args),
+          onUpdateValue: (...args) => updateProjectPropertyValue(form, ...args),
+          onUpdateValueI18n: (...args) => updateProjectPropertyValueI18n(form, ...args),
+          onTranslateLocale: (propertyId, source, target, origin) =>
+            translate
+              ? translate(propertyId, source, target, origin)
+              : translateProjectPropertyLocale(
+                  form,
+                  propertyId,
+                  source,
+                  target,
+                  origin,
+                ),
+          onResetLocale: () => {},
+        }}
+      />
+    {/snippet}
+    {#if panelPadding}
+      <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
+        {@render fieldsSection()}
+      </FormSurface>
+    {:else}
+      {@render fieldsSection()}
+    {/if}
   </form>
   <output hidden data-property-state={JSON.stringify(data)}></output>
 </main>

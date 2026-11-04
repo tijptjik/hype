@@ -10,7 +10,7 @@ setResponsiveCtx()
 
 <div class="relative h-dvh overflow-hidden">
   <Facet
-    fillHeight
+    bottomClearance={320}
     class="right-0! left-0!"
     previousAction={{ text: 'Previous tab', onClick: () => {} }}
     nextAction={{ text: 'Next tab', onClick: () => {} }}

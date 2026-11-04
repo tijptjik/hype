@@ -12,9 +12,14 @@ for (const [name, engine] of [
 ] as const) {
   const browser = await engine.launch()
   try {
-    for (const width of [1360, 390]) {
+    for (const [width, height] of [
+      [1360, 1000],
+      [1360, 600],
+      [390, 1000],
+      [390, 600],
+    ]) {
       const page = await browser.newPage({
-        viewport: { width, height: 1000 },
+        viewport: { width, height },
         reducedMotion: 'reduce',
       })
       const errors: string[] = []
@@ -29,7 +34,9 @@ for (const [name, engine] of [
       await page.getByRole('button', { name: 'Multilingual', exact: true }).click()
       const first = page.locator('[data-dnd-item]').first()
       const handle = first.locator('[data-option-drag-handle]')
-      await handle.scrollIntoViewIfNeeded()
+      await handle.evaluate(element =>
+        element.scrollIntoView({ block: 'center', inline: 'nearest' }),
+      )
       const box = await handle.boundingBox()
       assert(box)
       // The option name and empty header space both belong to the native handle.
@@ -81,10 +88,10 @@ for (const [name, engine] of [
         return data && JSON.parse(data).properties[0].values[1].id === 'option-0'
       })
       const facet = page.locator('[data-facet-id="fields"]')
-      const body = facet.locator('[class~="pb-[320px]"]')
-      assert.equal(
-        await body.evaluate(element => getComputedStyle(element).paddingBottom),
-        '320px',
+      const clearance = facet.locator('[data-facet-scroll-clearance]')
+      assert(
+        (await clearance.evaluate(element => element.getBoundingClientRect().height)) >=
+          320,
       )
       await facet.evaluate(element => {
         element.scrollTop = element.scrollHeight
@@ -107,11 +114,26 @@ for (const [name, engine] of [
         'Final options should clear the fixed facet navigation',
       )
       await page.screenshot({
-        path: `${directory}/${name}-${width}-bottom-clearance.png`,
+        path: `${directory}/${name}-${width}-${height}-bottom-clearance.png`,
+      })
+      await page.getByRole('button', { name: 'Multilingual', exact: true }).click()
+      await page.waitForFunction(() => {
+        const facet = document.querySelector('[data-facet-id="fields"]')
+        const options = facet?.querySelector('[data-property-options]')
+        if (!facet || !options) return false
+        facet.scrollTop = facet.scrollHeight
+        return (
+          facet.getBoundingClientRect().bottom -
+            options.getBoundingClientRect().bottom >=
+          319
+        )
+      })
+      await page.screenshot({
+        path: `${directory}/${name}-${width}-${height}-collapsed-clearance.png`,
       })
       assert.deepEqual(errors, [])
       console.log(
-        `${name} ${width}: full header handle, excluded controls, keyboard reorder/clear and 320px clearance passed`,
+        `${name} ${width}x${height}: expanded/collapsed clearance, full header handle, excluded controls, keyboard reorder/clear and 320px clearance passed`,
       )
       await page.close()
     }

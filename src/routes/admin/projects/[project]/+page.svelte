@@ -3226,17 +3226,17 @@ $effect(() => {
     </Main.Facet>
     <Main.Facet
       isVisible={isFieldsFacet}
+      bottomClearance={320}
       transition="fade"
       class="bits-theme right-0! left-0! min-h-0"
-      fillHeight={true}
       previousAction={buildFacetNavAction('fields', 'previous')}
       nextAction={buildFacetNavAction('fields', 'next')}
       attrs={{ 'data-facet-id': 'fields' }}
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
-        <!-- Reserve usable scroll space below the final option row and fixed facet actions. -->
+        <!-- Keep fields at natural height; the facet owns trailing scroll clearance. -->
         <FormFieldsSection
-          class="shrink-0 pb-[320px]"
+          class="shrink-0"
           icon={Type}
           keepHeader
           items={projectFieldsInSection}
