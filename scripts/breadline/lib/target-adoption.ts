@@ -534,6 +534,8 @@ export function applyAdoptions(
         throw new Error('Stale adoption plan')
       // Revalidate grouping, identifier owners, archive state and latent/claimed ownership under the write lock.
       prepareAdoptions(db, source, review, seed, decisions)
+      // Adoption must use the same reviewed phone corrections and grouping as normal import.
+      const canonical = planUsers(source, { users: [], accounts: [] }, seed, decisions)
       const references = userReferences(db)
       for (const id of approvedOwners(review.decisions)) {
         const user = db.query<Row, [string]>('SELECT * FROM user WHERE id=?').get(id)
@@ -557,15 +559,16 @@ export function applyAdoptions(
         const anchor = decision.anchorHypeUserId
         const members = approvedOwners([decision])
         const rows = source.filter(row => decision.sourceUserIds.includes(row.id))
-        const phones = [
-          ...new Set(
-            rows
-              .map(r => normalizeTelephone(r.telephone))
-              .filter((phone): phone is string => phone !== null),
-          ),
-        ]
-        if (phones.length > 1) throw new Error('Adoption spans multiple source phones')
-        const phone = phones[0] ?? null
+        const canonicalOwners = new Set(
+          canonical.identities
+            .filter(row => decision.sourceUserIds.includes(row.sourceUserId))
+            .map(row => row.userId),
+        )
+        if (canonicalOwners.size !== 1)
+          throw new Error('Adoption spans multiple reviewed identities')
+        const canonicalOwner = canonical.users.find(row => canonicalOwners.has(row.id))
+        if (!canonicalOwner) throw new Error('Reviewed adoption identity is missing')
+        const phone = canonicalOwner.telephone
         // Validate every candidate's current phone and every colliding identifier, including non-Google emails.
         for (const user of db
           .query<Row, []>('SELECT id,email,telephone FROM user')

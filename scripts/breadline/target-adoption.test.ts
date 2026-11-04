@@ -95,6 +95,78 @@ function fixture(multiple = false, google = true) {
 }
 
 describe('reviewed target adoption', () => {
+  it('keeps reviewed distinct people separate when a shared source phone is cleared', () => {
+    const f = fixture(true)
+    try {
+      f.source[1].name = 'Different person'
+      const corrected = {
+        ...decisions,
+        telephoneOverrides: f.source.map(row => ({
+          sourceUserId: row.id,
+          expectedTelephone: row.telephone!,
+          telephone: null,
+        })),
+      }
+      f.review.decisions = [
+        {
+          caseId: 'first',
+          sourceUserIds: [1],
+          anchorHypeUserId: 'anchor',
+          scope: 'target_adoption',
+        },
+        {
+          caseId: 'second',
+          sourceUserIds: [3],
+          anchorHypeUserId: 'loser',
+          scope: 'target_adoption',
+        },
+      ]
+      const beforeReferences = f.db
+        .query('SELECT * FROM organisationRole ORDER BY userId')
+        .all()
+      const plan = prepareAdoptions(f.db, f.source, f.review, 'seed', corrected)
+      const receipt = applyAdoptions(
+        f.db,
+        f.source,
+        f.review,
+        plan,
+        'seed',
+        corrected,
+        f.backup,
+      )
+      expect(receipt.mergedUsers).toBe(0)
+      expect(f.db.query('SELECT id,telephone FROM user ORDER BY id').all()).toEqual([
+        { id: 'anchor', telephone: null },
+        { id: 'loser', telephone: null },
+      ])
+      expect(
+        f.db
+          .query(
+            'SELECT sourceUserId,userId FROM breadlineImportIdentity ORDER BY sourceUserId',
+          )
+          .all(),
+      ).toEqual([
+        { sourceUserId: 1, userId: 'anchor' },
+        { sourceUserId: 3, userId: 'loser' },
+      ])
+      expect(
+        f.db.query('SELECT * FROM organisationRole ORDER BY userId').all(),
+      ).toEqual(beforeReferences)
+      expect(
+        f.db.query("SELECT userId,password FROM account WHERE id='password'").get(),
+      ).toEqual({ userId: 'loser', password: 'synthetic-password-hash' })
+      expect(f.db.query('SELECT contributorId FROM image').get()).toEqual({
+        contributorId: 'loser',
+      })
+      expect(
+        planUsers(f.source, readIdentitySnapshot(f.db), 'seed', corrected).exceptions,
+      ).toEqual([])
+      expect(f.source.every(row => row.telephone === '+85291234567')).toBe(true)
+    } finally {
+      f.close()
+    }
+  })
+
   it('coalesces independent organisation grants without weakening either assignment', () => {
     const f = fixture(true)
     try {
