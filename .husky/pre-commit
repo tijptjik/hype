@@ -12,11 +12,21 @@ if [ -n "$STAGED_FILES" ]; then
     
     # Get only the staged files that biome supports
     BIOME_FILES=""
+    MARKDOWN_FILES=""
     for file in $STAGED_FILES; do
         case "$file" in
             *.js|*.jsx|*.ts|*.tsx|*.json|*.css|*.svelte)
                 if [ -f "$file" ]; then
                     BIOME_FILES="$BIOME_FILES $file"
+                fi
+                ;;
+        esac
+
+        # Format Markdown with Prettier, matching the documentation configuration.
+        case "$file" in
+            *.md)
+                if [ -f "$file" ]; then
+                    MARKDOWN_FILES="$MARKDOWN_FILES $file"
                 fi
                 ;;
         esac
@@ -37,8 +47,24 @@ if [ -n "$STAGED_FILES" ]; then
                 exit $BIOME_STATUS
             fi
         fi
-        
-        # Check if any staged files were modified by formatting
+    fi
+
+    if [ -n "$MARKDOWN_FILES" ]; then
+        echo "🎨 Running Prettier on staged Markdown files..."
+
+        set +e
+        PRETTIER_OUTPUT=$(bun x prettier --write $MARKDOWN_FILES 2>&1)
+        PRETTIER_STATUS=$?
+        set -e
+
+        if [ $PRETTIER_STATUS -ne 0 ]; then
+            echo "$PRETTIER_OUTPUT"
+            exit $PRETTIER_STATUS
+        fi
+    fi
+
+    if [ -n "$BIOME_FILES" ] || [ -n "$MARKDOWN_FILES" ]; then
+        # Check if any staged files were modified by formatting.
         MODIFIED_FILES=$(git diff --name-only)
         MODIFIED_STAGED=""
         for file in $STAGED_FILES; do
@@ -49,7 +75,7 @@ if [ -n "$STAGED_FILES" ]; then
         
         if [ -n "$MODIFIED_STAGED" ]; then
             echo ""
-            echo "❌ Biome modified some of your staged files:"
+            echo "❌ Formatting tools modified some of your staged files:"
             echo "$MODIFIED_STAGED" | tr ' ' '\n' | grep -v '^$' | sed 's/^/  - /'
             echo ""
             echo "📝 Please review the changes and re-stage the files:"
